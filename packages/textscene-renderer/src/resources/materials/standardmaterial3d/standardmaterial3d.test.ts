@@ -4,6 +4,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { parseColor, parseStandardMaterial3D } from './parser';
+import * as logger from '../../../logger';
 
 describe('parseColor', () => {
   it('should parse valid Color format', () => {
@@ -67,14 +68,14 @@ describe('parseColor', () => {
 });
 
 describe('parseStandardMaterial3D', () => {
-  let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
+  let loggerWarnSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    loggerWarnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
   });
 
   afterEach(() => {
-    consoleWarnSpy.mockRestore();
+    loggerWarnSpy.mockRestore();
   });
 
   it('should parse material with albedo_color only', () => {
@@ -132,7 +133,7 @@ describe('parseStandardMaterial3D', () => {
 
     expect(result.albedo_color).toBeUndefined();
     expect(result.metallic).toBe(0.5);
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
+    expect(loggerWarnSpy).toHaveBeenCalledWith(
       expect.stringContaining('Failed to parse albedo_color')
     );
   });

@@ -3,6 +3,7 @@
  */
 
 import type { Color, StandardMaterial3DProperties } from './types';
+import { warn } from '../../../logger';
 
 /**
  * Parse Color from Godot format: Color(r, g, b, a)
@@ -33,7 +34,7 @@ export function parseStandardMaterial3D(properties: Record<string, string>): Sta
     try {
       result.albedo_color = parseColor(properties.albedo_color);
     } catch (error) {
-      console.warn(
+      warn(
         `Failed to parse albedo_color: ${error instanceof Error ? error.message : String(error)}`
       );
     }

@@ -5,6 +5,7 @@
 import type { ParsedHeading } from '../../parser/utils';
 import type { Node3DProperties, Transform3D } from './types';
 import { parseTransform3D, identityTransform3D } from '../../utils/transform';
+import { warn } from '../../logger';
 
 export function parseNode3D(
   heading: ParsedHeading,
@@ -19,7 +20,7 @@ export function parseNode3D(
     try {
       transform = parseTransform3D(properties.transform);
     } catch (error) {
-      console.warn(
+      warn(
         `Failed to parse transform for node "${name}": ${error instanceof Error ? error.message : String(error)}`
       );
       transform = identityTransform3D();

@@ -8,16 +8,17 @@ import { createMeshInstance3D } from './renderer';
 import type { MeshInstance3DProperties } from './types';
 import { applyNode3DTransform } from '../node3d/renderer';
 import { parseTransform3D } from '../../utils/transform';
+import * as logger from '../../logger';
 
 describe('MeshInstance3D Renderer', () => {
-  let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
+  let loggerWarnSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    loggerWarnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
   });
 
   afterEach(() => {
-    consoleWarnSpy.mockRestore();
+    loggerWarnSpy.mockRestore();
   });
 
   describe('createMeshInstance3D', () => {
@@ -88,7 +89,7 @@ describe('MeshInstance3D Renderer', () => {
 
       createMeshInstance3D('TestMesh', properties);
 
-      expect(consoleWarnSpy).toHaveBeenCalledWith(
+      expect(loggerWarnSpy).toHaveBeenCalledWith(
         expect.stringContaining('No scene provided')
       );
     });

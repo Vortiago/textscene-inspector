@@ -3,6 +3,7 @@
  */
 
 import type { TscnNode } from './types';
+import { warn } from '../logger';
 
 /**
  * Build scene tree from flat node list using parent path references.
@@ -61,7 +62,7 @@ export function buildSceneTree(nodes: TscnNode[]): TscnNode[] {
   // Warn about any orphaned nodes
   if (remaining.length > 0) {
     for (const node of remaining) {
-      console.warn(`Could not find parent "${node.parent}" for node "${node.name}"`);
+      warn(`Could not find parent "${node.parent}" for node "${node.name}"`);
     }
   }
 

@@ -15,13 +15,14 @@
     "dist"
   ],
   "scripts": {
+    "prebuild": "rimraf tsconfig.tsbuildinfo",
     "build": "tsc --build",
     "dev": "tsc --watch",
     "test": "vitest",
     "test:watch": "vitest --watch",
     "test:ui": "vitest --ui",
     "type-check": "tsc --noEmit",
-    "clean": "rimraf dist"
+    "clean": "rimraf dist tsconfig.tsbuildinfo"
   },
   "keywords": [
     "tscn",

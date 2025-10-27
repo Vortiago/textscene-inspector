@@ -10,6 +10,9 @@ import { buildSceneTree } from './sceneTreeBuilder';
 import * as logger from '../logger';
 import '../nodes/node3d';
 import '../nodes/meshinstance3d';
+import '../nodes/spotlight3d';
+import '../nodes/directionallight3d';
+import '../nodes/omnilight3d';
 
 type SectionType = 'none' | 'node' | 'ext_resource' | 'sub_resource';
 

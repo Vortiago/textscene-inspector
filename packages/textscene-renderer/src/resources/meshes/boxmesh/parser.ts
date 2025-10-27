@@ -3,6 +3,7 @@
  */
 
 import type { BoxMeshProperties, Vector3 } from './types';
+import { warn } from '../../../logger';
 
 /**
  * Parse Vector3 from Godot format: Vector3(x, y, z)
@@ -31,7 +32,7 @@ export function parseBoxMesh(properties: Record<string, string>): BoxMeshPropert
     try {
       size = parseVector3(properties.size);
     } catch (error) {
-      console.warn(
+      warn(
         `Failed to parse BoxMesh size: ${error instanceof Error ? error.message : String(error)}`
       );
     }

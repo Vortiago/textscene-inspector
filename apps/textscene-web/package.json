@@ -4,7 +4,9 @@
   "description": "Web-based text scene file inspector for development and debugging",
   "type": "module",
   "scripts": {
+    "predev": "pnpm --filter @textscene/renderer build",
     "dev": "vite",
+    "prebuild": "pnpm --filter @textscene/renderer build",
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest",

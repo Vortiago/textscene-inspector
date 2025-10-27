@@ -5,6 +5,7 @@
 import * as THREE from 'three';
 import type { ParsedHeading } from '../parser/utils';
 import type { TscnNode, TscnScene } from '../parser/types';
+import { warn } from '../logger';
 
 export interface NodeTypeRegistration {
   /** Node type name (e.g., 'MeshInstance3D', 'Node3D') */
@@ -27,7 +28,7 @@ class NodeRegistry {
 
   register(registration: NodeTypeRegistration): void {
     if (this.registrations.has(registration.typeName)) {
-      console.warn(`Node type "${registration.typeName}" is already registered. Overwriting.`);
+      warn(`Node type "${registration.typeName}" is already registered. Overwriting.`);
     }
     this.registrations.set(registration.typeName, registration);
   }
@@ -64,7 +65,7 @@ export function parseNodeWithRegistry(
 
   if (!registration) {
     const nodeType = heading.attributes.type || 'unknown';
-    console.warn(`Unsupported node type: ${nodeType}`);
+    warn(`Unsupported node type: ${nodeType}`);
     return null;
   }
 
@@ -86,7 +87,7 @@ export function renderNodeWithRegistry(
   const registration = nodeRegistry.getRegistration(node.type);
 
   if (!registration) {
-    console.warn(`Unsupported node type for rendering: ${node.type}`);
+    warn(`Unsupported node type for rendering: ${node.type}`);
     return null;
   }
 

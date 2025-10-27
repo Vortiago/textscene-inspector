@@ -7,6 +7,7 @@ import { TscnParser } from '../parser/TscnParser';
 import { TscnRenderer } from '../core/TscnRenderer';
 import { SceneTreeViewer } from './SceneTreeViewer';
 import { formatNodeDetails } from './NodeDetailsFormatter';
+import { error } from '../logger';
 
 export interface TscnPreviewElements {
   canvas: HTMLCanvasElement;
@@ -150,12 +151,12 @@ export class TscnPreviewUI {
       if (this.treeViewer) {
         this.treeViewer.renderTree(scene.nodes);
       }
-    } catch (error) {
-      console.error('Error rendering TSCN:', error);
+    } catch (err) {
+      error('Error rendering TSCN:', err);
       const errorMsg =
-        error instanceof Error ? error.message : 'Unknown error occurred';
+        err instanceof Error ? err.message : 'Unknown error occurred';
       this.showError(`Failed to render TSCN: ${errorMsg}`);
-      throw error;
+      throw err;
     }
   }
 
@@ -212,11 +213,11 @@ export class TscnPreviewUI {
 
       // Update scene info
       this.updateSceneInfo(sceneData);
-    } catch (error) {
-      console.error('Error applying incremental update:', error);
-      const errorMsg = error instanceof Error ? error.message : 'Unknown error occurred';
+    } catch (err) {
+      error('Error applying incremental update:', err);
+      const errorMsg = err instanceof Error ? err.message : 'Unknown error occurred';
       this.showError(`Failed to apply incremental update: ${errorMsg}`);
-      throw error;
+      throw err;
     }
   }
 }

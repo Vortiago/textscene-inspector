@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import type { MeshInstance3DProperties } from './types';
 import type { TscnScene } from '../../parser/types';
 import { resolveGeometry, resolveMaterial } from '../../resources/ResourceManager';
+import { warn } from '../../logger';
 
 /**
  * Create a three.js mesh for a MeshInstance3D node.
@@ -55,13 +56,13 @@ export function createMeshInstance3D(
     } else {
       geometry = createPlaceholderGeometry();
       material = createPlaceholderMaterial();
-      console.warn(`MeshInstance3D "${nodeName}": Failed to resolve mesh "${properties.mesh}", using placeholder`);
+      warn(`MeshInstance3D "${nodeName}": Failed to resolve mesh "${properties.mesh}", using placeholder`);
     }
   } else {
     geometry = createPlaceholderGeometry();
     material = createPlaceholderMaterial();
     if (properties.mesh) {
-      console.warn(`MeshInstance3D "${nodeName}": No scene provided, using placeholder geometry`);
+      warn(`MeshInstance3D "${nodeName}": No scene provided, using placeholder geometry`);
     }
   }
 

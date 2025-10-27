@@ -54,7 +54,7 @@ export class TscnRenderer {
   addNode(nodePath: string, node: TscnNode, sceneData: TscnScene, parentPath?: string): void {
     const parent = parentPath ? this.nodePathMap.get(parentPath) : this.scene;
     if (!parent) {
-      console.warn(`Parent not found for node: ${nodePath}`);
+      logger.warn(`Parent not found for node: ${nodePath}`);
       return;
     }
 
@@ -80,7 +80,7 @@ export class TscnRenderer {
   removeNode(nodePath: string): void {
     const object = this.nodePathMap.get(nodePath);
     if (!object) {
-      console.warn(`Node not found for removal: ${nodePath}`);
+      logger.warn(`Node not found for removal: ${nodePath}`);
       return;
     }
 
@@ -103,7 +103,7 @@ export class TscnRenderer {
     // Simple update: remove and re-add the node
     const object = this.nodePathMap.get(nodePath);
     if (!object) {
-      console.warn(`Node not found for update: ${nodePath}`);
+      logger.warn(`Node not found for update: ${nodePath}`);
       return;
     }
 
@@ -169,7 +169,7 @@ export class TscnRenderer {
 
     const object = this.nodePathMap.get(nodePath);
     if (!object) {
-      console.warn(`Node not found for highlighting: ${nodePath}`);
+      logger.warn(`Node not found for highlighting: ${nodePath}`);
       return;
     }
 

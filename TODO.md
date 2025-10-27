@@ -57,19 +57,19 @@ This plan prioritizes node types based on their frequency in real-world Godot sc
 
 ## Phase 2: Lighting (Essential for Visual Quality)
 
-### [ ] #WI-10: Implement SpotLight3D Node - Not Done
+### [x] #WI-10: Implement SpotLight3D Node - Done
 - Create parser and renderer in `packages/textscene-renderer/src/nodes/spotlight3d/`
 - Parse light_color, light_energy, spot_range, spot_angle, shadow_enabled
 - Generate THREE.SpotLight with shadows
 - **Frequency**: 15+ instances in hallway scene (sunrise lighting)
 
-### [ ] #WI-11: Implement DirectionalLight3D Node - Not Done
+### [x] #WI-11: Implement DirectionalLight3D Node - Done
 - Create parser and renderer in `packages/textscene-renderer/src/nodes/directionallight3d/`
 - Parse light properties and shadow parameters
 - Generate THREE.DirectionalLight
 - **Common**: Standard sun/moon lighting in most scenes
 
-### [ ] #WI-12: Implement OmniLight3D Node - Not Done
+### [x] #WI-12: Implement OmniLight3D Node - Done
 - Create parser and renderer in `packages/textscene-renderer/src/nodes/omnilight3d/`
 - Generate THREE.PointLight
 - **Common**: Lamps, candles, point light sources

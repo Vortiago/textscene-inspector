@@ -5,6 +5,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { buildSceneTree } from './sceneTreeBuilder';
 import type { TscnNode } from './types';
+import * as logger from '../logger';
 
 describe('buildSceneTree', () => {
   describe('empty and basic cases', () => {
@@ -244,7 +245,7 @@ describe('buildSceneTree', () => {
 
   describe('error handling', () => {
     it('should warn and treat node as root when parent not found', () => {
-      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const loggerWarnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
 
       const nodes: TscnNode[] = [
         {
@@ -264,14 +265,14 @@ describe('buildSceneTree', () => {
 
       const result = buildSceneTree(nodes);
 
-      expect(consoleWarnSpy).toHaveBeenCalledWith(
+      expect(loggerWarnSpy).toHaveBeenCalledWith(
         'Could not find parent "NonExistentParent" for node "Orphan"'
       );
       // Orphaned nodes are not added as additional roots (Godot requires single root)
       expect(result).toHaveLength(1);
       expect(result[0].name).toBe('Root');
 
-      consoleWarnSpy.mockRestore();
+      loggerWarnSpy.mockRestore();
     });
 
     it('should handle all nodes having parent attributes (no explicit root)', () => {

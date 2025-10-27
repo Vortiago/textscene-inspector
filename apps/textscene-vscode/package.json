@@ -49,8 +49,10 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "pnpm build",
+    "vscode:prepublish": "pnpm --filter @textscene/renderer build && pnpm build",
+    "prebuild": "pnpm --filter @textscene/renderer build",
     "build": "node esbuild.config.mjs",
+    "predev": "pnpm --filter @textscene/renderer build",
     "dev": "node esbuild.config.mjs --watch",
     "test": "vitest",
     "type-check": "tsc --noEmit",
