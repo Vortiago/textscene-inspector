@@ -250,6 +250,32 @@ export function generateWebviewHtml(scriptUri: string, nonce: string): string {
           flex-shrink: 0;
         }
 
+        .tree-visibility-icon {
+          font-size: 0.875rem;
+          cursor: pointer;
+          flex-shrink: 0;
+          padding: 0 0.125rem;
+          opacity: 0.6;
+          transition: opacity 0.15s;
+        }
+
+        .tree-visibility-icon:hover {
+          opacity: 1;
+        }
+
+        .tree-node-header.hidden {
+          opacity: 0.5;
+        }
+
+        .tree-node-header.hidden .tree-node-name {
+          color: #777;
+          text-decoration: line-through;
+        }
+
+        .tree-node-header.hidden .tree-node-type {
+          opacity: 0.6;
+        }
+
         .tree-node-children {
           margin-left: 0;
         }

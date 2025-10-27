@@ -3,6 +3,7 @@
  */
 
 import type { TscnNode } from '../parser/types';
+import { joinPath } from './nodePath';
 
 /**
  * FNV-1a hash algorithm for fast, deterministic string hashing.
@@ -54,7 +55,7 @@ export function buildNodeHashMap(nodes: TscnNode[], parentPath = ''): Map<string
   const map = new Map<string, string>();
 
   for (const node of nodes) {
-    const nodePath = parentPath ? `${parentPath}/${node.name}` : node.name;
+    const nodePath = joinPath(parentPath, node.name);
     const hash = hashTscnNode(node);
     map.set(nodePath, hash);
 

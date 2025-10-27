@@ -4,10 +4,12 @@
 
 import type { TscnNode } from '../parser/types';
 import { findNodeByPath } from '../utils/sceneGraphUtils';
+import { joinPath, getAncestorPaths } from '../utils/nodePath';
 
 export interface SceneTreeViewerOptions {
   onNodeSelect?: (node: TscnNode, path: string) => void;
   onNodeDoubleClick?: (node: TscnNode, path: string) => void;
+  onNodeVisibilityChange?: (nodePath: string, visible: boolean) => void;
 }
 
 export class SceneTreeViewer {
@@ -17,6 +19,7 @@ export class SceneTreeViewer {
   private selectedNodePath: string | null = null;
   private currentNodes: TscnNode[] = [];
   private searchTerm: string = '';
+  private hiddenNodes: Set<string> = new Set();
 
   constructor(container: HTMLElement, options: SceneTreeViewerOptions = {}) {
     this.container = container;
@@ -60,11 +63,72 @@ export class SceneTreeViewer {
     this.container.appendChild(treeRoot);
   }
 
+  private createIcon(config: {
+    className: string;
+    content: string;
+    title?: string;
+    onClick?: (e: Event) => void;
+  }): HTMLSpanElement {
+    const icon = document.createElement('span');
+    icon.className = config.className;
+    icon.textContent = config.content;
+
+    if (config.title) {
+      icon.title = config.title;
+    }
+
+    if (config.onClick) {
+      icon.addEventListener('click', config.onClick);
+    }
+
+    return icon;
+  }
+
+  private isNodeVisible(nodePath: string): boolean {
+    if (this.hiddenNodes.has(nodePath)) {
+      return false;
+    }
+
+    // Check if any ancestor is hidden
+    return !getAncestorPaths(nodePath).some(ancestor =>
+      this.hiddenNodes.has(ancestor)
+    );
+  }
+
+  private toggleNodeVisibility(nodePath: string): void {
+    const isCurrentlyVisible = !this.hiddenNodes.has(nodePath);
+
+    if (isCurrentlyVisible) {
+      this.hiddenNodes.add(nodePath);
+    } else {
+      this.hiddenNodes.delete(nodePath);
+    }
+
+    if (this.options.onNodeVisibilityChange) {
+      this.options.onNodeVisibilityChange(nodePath, !isCurrentlyVisible);
+    }
+
+    this.refreshDisplay();
+  }
+
+  private createVisibilityIcon(nodePath: string): HTMLSpanElement {
+    const isVisible = this.isNodeVisible(nodePath);
+    return this.createIcon({
+      className: 'tree-visibility-icon',
+      content: isVisible ? '👁️' : '🙈',
+      title: isVisible ? 'Click to hide' : 'Click to show',
+      onClick: (e) => {
+        e.stopPropagation();
+        this.toggleNodeVisibility(nodePath);
+      },
+    });
+  }
+
   /**
    * Create a tree node element with all children.
    */
   private createNodeElement(node: TscnNode, parentPath: string, depth: number): HTMLElement {
-    const nodePath = parentPath ? `${parentPath}/${node.name}` : node.name;
+    const nodePath = joinPath(parentPath, node.name);
     const hasChildren = node.children && node.children.length > 0;
     const isExpanded = this.expandedNodes.has(nodePath);
     const isSelected = this.selectedNodePath === nodePath;
@@ -82,18 +146,20 @@ export class SceneTreeViewer {
 
     // Expand/collapse icon
     if (hasChildren) {
-      const expandIcon = document.createElement('span');
-      expandIcon.className = `tree-expand-icon ${isExpanded ? 'expanded' : 'collapsed'}`;
-      expandIcon.textContent = isExpanded ? '▼' : '▶';
-      expandIcon.addEventListener('click', (e) => {
-        e.stopPropagation();
-        this.toggleNode(nodePath);
+      const expandIcon = this.createIcon({
+        className: `tree-expand-icon ${isExpanded ? 'expanded' : 'collapsed'}`,
+        content: isExpanded ? '▼' : '▶',
+        onClick: (e) => {
+          e.stopPropagation();
+          this.toggleNode(nodePath);
+        },
       });
       nodeHeader.appendChild(expandIcon);
     } else {
-      const spacer = document.createElement('span');
-      spacer.className = 'tree-expand-spacer';
-      spacer.textContent = '•';
+      const spacer = this.createIcon({
+        className: 'tree-expand-spacer',
+        content: '•',
+      });
       nodeHeader.appendChild(spacer);
     }
 
@@ -112,11 +178,19 @@ export class SceneTreeViewer {
 
     // Transform indicator
     if (this.hasTransform(node)) {
-      const transformIcon = document.createElement('span');
-      transformIcon.className = 'tree-transform-icon';
-      transformIcon.textContent = '⌖';
-      transformIcon.title = 'Has transform';
+      const transformIcon = this.createIcon({
+        className: 'tree-transform-icon',
+        content: '⌖',
+        title: 'Has transform',
+      });
       nodeHeader.appendChild(transformIcon);
+    }
+
+    const visibilityIcon = this.createVisibilityIcon(nodePath);
+    nodeHeader.appendChild(visibilityIcon);
+
+    if (!this.isNodeVisible(nodePath)) {
+      nodeHeader.classList.add('hidden');
     }
 
     // Click handlers
@@ -186,6 +260,32 @@ export class SceneTreeViewer {
   }
 
   /**
+<<<<<<< HEAD
+=======
+   * Find a node by its path.
+   */
+  private findNodeByPath(targetPath: string): TscnNode | null {
+    const findInNodes = (nodes: TscnNode[], currentPath: string): TscnNode | null => {
+      for (const node of nodes) {
+        const nodePath = joinPath(currentPath, node.name);
+
+        if (nodePath === targetPath) {
+          return node;
+        }
+
+        if (node.children && node.children.length > 0) {
+          const found = findInNodes(node.children, nodePath);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+
+    return findInNodes(this.currentNodes, '');
+  }
+
+  /**
+>>>>>>> claude/session-011CUYJ5XRzWHKDmkuuNsELY
    * Expand all nodes in the tree.
    */
   expandAll(): void {
@@ -223,7 +323,7 @@ export class SceneTreeViewer {
    */
   private addAllNodePaths(nodes: TscnNode[], parentPath = ''): void {
     nodes.forEach(node => {
-      const nodePath = parentPath ? `${parentPath}/${node.name}` : node.name;
+      const nodePath = joinPath(parentPath, node.name);
       if (node.children && node.children.length > 0) {
         this.expandedNodes.add(nodePath);
         this.addAllNodePaths(node.children, nodePath);
@@ -330,7 +430,7 @@ export class SceneTreeViewer {
   private shouldShowNode(node: TscnNode, parentPath: string): boolean {
     if (!this.searchTerm) return true;
 
-    const nodePath = parentPath ? `${parentPath}/${node.name}` : node.name;
+    const nodePath = joinPath(parentPath, node.name);
 
     // If node matches, show it
     if (this.nodeMatchesSearch(node)) {

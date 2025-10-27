@@ -63,6 +63,9 @@ export class TscnPreviewUI {
         this.renderer.highlightNode(path);
       },
       onNodeDoubleClick: this.options.onNodeDoubleClick,
+      onNodeVisibilityChange: (nodePath, visible) => {
+        this.renderer.setNodeVisibility(nodePath, visible);
+      },
     });
 
     // Setup expand/collapse buttons

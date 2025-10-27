@@ -8,6 +8,7 @@ import type { TscnScene, TscnNode } from '../parser/types';
 import { renderNodeWithRegistry } from './NodeRegistry';
 import { setupThreeJsScene } from './SceneSetup';
 import * as logger from '../logger';
+import { getParentPath, joinPath } from '../utils/nodePath';
 
 export interface CameraState {
   position: { x: number; y: number; z: number };
@@ -73,7 +74,7 @@ export class TscnRenderer {
     // Recursively add children using addNode for consistency
     if (node.children && node.children.length > 0) {
       for (const child of node.children) {
-        const childPath = `${nodePath}/${child.name}`;
+        const childPath = joinPath(nodePath, child.name);
         this.addNode(childPath, child, sceneData, nodePath);
       }
     }
@@ -115,9 +116,7 @@ export class TscnRenderer {
     }
 
     // Determine parent path
-    const pathParts = nodePath.split('/');
-    pathParts.pop();
-    const parentPath = pathParts.length > 0 ? pathParts.join('/') : undefined;
+    const parentPath = getParentPath(nodePath) || undefined;
 
     this.removeNode(nodePath);
     this.addNode(nodePath, node, sceneData, parentPath);
@@ -262,6 +261,16 @@ export class TscnRenderer {
 
   clearHoverEffect(): void {
     this.clearHelper('hover');
+  }
+
+  setNodeVisibility(nodePath: string, visible: boolean): void {
+    const object = this.nodePathMap.get(nodePath);
+    if (!object) {
+      logger.warn(`Node not found for visibility change: ${nodePath}`);
+      return;
+    }
+
+    object.visible = visible;
   }
 
   dispose(): void {
