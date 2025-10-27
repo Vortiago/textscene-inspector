@@ -8,64 +8,18 @@ import { createNode3DGizmo, applyNode3DTransform } from './renderer';
 import type { Node3DProperties } from './types';
 
 describe('createNode3DGizmo', () => {
-  it('should create a THREE.Group with a mesh', () => {
+  it('should create an empty THREE.Group', () => {
     const gizmo = createNode3DGizmo('TestNode');
 
     expect(gizmo).toBeInstanceOf(THREE.Group);
     expect(gizmo.name).toBe('TestNode');
-    expect(gizmo.children).toHaveLength(1);
-    expect(gizmo.children[0]).toBeInstanceOf(THREE.Mesh);
+    expect(gizmo.children).toHaveLength(0);
   });
 
-  it('should create mesh with box geometry', () => {
-    const gizmo = createNode3DGizmo('TestNode');
-    const mesh = gizmo.children[0] as THREE.Mesh;
+  it('should set the correct name', () => {
+    const gizmo = createNode3DGizmo('MyNode3D');
 
-    expect(mesh.geometry).toBeInstanceOf(THREE.BoxGeometry);
-
-    // BoxGeometry should be 0.5 x 0.5 x 0.5
-    const geometry = mesh.geometry as THREE.BoxGeometry;
-    expect(geometry.parameters.width).toBe(0.5);
-    expect(geometry.parameters.height).toBe(0.5);
-    expect(geometry.parameters.depth).toBe(0.5);
-  });
-
-  it('should create mesh with standard material', () => {
-    const gizmo = createNode3DGizmo('TestNode');
-    const mesh = gizmo.children[0] as THREE.Mesh;
-
-    expect(mesh.material).toBeInstanceOf(THREE.MeshStandardMaterial);
-
-    const material = mesh.material as THREE.MeshStandardMaterial;
-    expect(material.metalness).toBe(0.3);
-    expect(material.roughness).toBe(0.7);
-  });
-
-  it('should generate consistent colors for same node name', () => {
-    const gizmo1 = createNode3DGizmo('SameName');
-    const gizmo2 = createNode3DGizmo('SameName');
-
-    const mesh1 = gizmo1.children[0] as THREE.Mesh;
-    const mesh2 = gizmo2.children[0] as THREE.Mesh;
-
-    const material1 = mesh1.material as THREE.MeshStandardMaterial;
-    const material2 = mesh2.material as THREE.MeshStandardMaterial;
-
-    expect(material1.color.getHex()).toBe(material2.color.getHex());
-  });
-
-  it('should generate different colors for different node names', () => {
-    const gizmo1 = createNode3DGizmo('Node1');
-    const gizmo2 = createNode3DGizmo('Node2');
-
-    const mesh1 = gizmo1.children[0] as THREE.Mesh;
-    const mesh2 = gizmo2.children[0] as THREE.Mesh;
-
-    const material1 = mesh1.material as THREE.MeshStandardMaterial;
-    const material2 = mesh2.material as THREE.MeshStandardMaterial;
-
-    // Different names should produce different colors (highly likely)
-    expect(material1.color.getHex()).not.toBe(material2.color.getHex());
+    expect(gizmo.name).toBe('MyNode3D');
   });
 });
 
