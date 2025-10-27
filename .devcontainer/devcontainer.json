@@ -1,0 +1,36 @@
+{
+  "name": "TextScene Inspector Development",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:1-22-bullseye",
+
+  "features": {
+    "ghcr.io/devcontainers-contrib/features/pnpm:2": {
+      "version": "9"
+    }
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "vitest.explorer",
+        "ms-vscode.vscode-typescript-next",
+        "bradlc.vscode-tailwindcss",
+        "usernamehw.errorlens"
+      ],
+      "settings": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "dbaeumer.vscode-eslint",
+        "editor.codeActionsOnSave": {
+          "source.fixAll.eslint": "explicit"
+        },
+        "eslint.validate": ["typescript", "javascript"],
+        "typescript.tsdk": "node_modules/typescript/lib",
+        "npm.packageManager": "pnpm"
+      }
+    }
+  },
+
+  "postCreateCommand": "pnpm install",
+
+  "remoteUser": "node"
+}

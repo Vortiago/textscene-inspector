@@ -1,0 +1,33 @@
+{
+  "name": "@textscene/web-previewer",
+  "version": "0.0.1",
+  "description": "Web-based text scene file inspector for development and debugging",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest",
+    "type-check": "tsc --noEmit",
+    "clean": "rimraf dist node_modules/.vite"
+  },
+  "keywords": [
+    "tscn",
+    "textscene",
+    "text-scene",
+    "inspector",
+    "web",
+    "3d"
+  ],
+  "author": "Vortiago",
+  "license": "MIT",
+  "dependencies": {
+    "@textscene/renderer": "workspace:*"
+  },
+  "devDependencies": {
+    "rimraf": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:"
+  }
+}

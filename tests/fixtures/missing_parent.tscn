@@ -1,0 +1,7 @@
+[gd_scene format=3]
+
+[node name="Root" type="Node3D"]
+
+[node name="Orphan" type="Node3D" parent="NonExistentParent"]
+
+[node name="AnotherOrphan" type="Node3D" parent="AlsoMissing"]

@@ -1,0 +1,51 @@
+{
+  "name": "textscene-inspector",
+  "version": "0.0.1",
+  "private": true,
+  "description": "A monorepo for TextScene Inspector - view and navigate text-based 3D scene files",
+  "type": "module",
+  "scripts": {
+    "build": "pnpm -r build",
+    "test": "vitest",
+    "test:unit": "vitest run",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage",
+    "preview:test": "cd apps/textscene-web && pnpm preview",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "type-check": "pnpm -r type-check",
+    "clean": "pnpm -r clean && rimraf node_modules",
+    "vsc:package": "pnpm --filter textscene-inspector package",
+    "vsc:publish": "pnpm --filter textscene-inspector publish"
+  },
+  "keywords": [
+    "tscn",
+    "textscene",
+    "text-scene",
+    "3d",
+    "inspector",
+    "viewer",
+    "vscode",
+    "three.js"
+  ],
+  "author": "Vortiago",
+  "license": "MIT",
+  "devDependencies": {
+    "@eslint/js": "^9.18.0",
+    "@types/node": "catalog:",
+    "@typescript-eslint/eslint-plugin": "^8.20.0",
+    "@typescript-eslint/parser": "^8.20.0",
+    "@vitest/ui": "catalog:",
+    "eslint": "^9.18.0",
+    "globals": "^16.4.0",
+    "happy-dom": "^20.0.8",
+    "rimraf": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  },
+  "packageManager": "pnpm@9.15.4",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  }
+}

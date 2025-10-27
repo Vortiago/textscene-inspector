@@ -1,0 +1,87 @@
+{
+  "name": "textscene-inspector",
+  "displayName": "TextScene Inspector",
+  "description": "Inspect and view text-based 3D scene files (.tscn) in VS Code with 3D rendering",
+  "version": "0.0.1",
+  "publisher": "vortiago",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Visualization",
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:textscene.openPreviewToSide"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "tscn",
+        "extensions": [".tscn"],
+        "aliases": ["TSCN", "Text Scene"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "textscene.openPreviewToSide",
+        "title": "Open Preview to the Side",
+        "category": "TextScene",
+        "icon": "$(open-preview)"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "textscene.openPreviewToSide",
+          "when": "resourceExtname == .tscn",
+          "group": "navigation"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "textscene.openPreviewToSide",
+          "when": "editorLangId == tscn || resourceExtname == .tscn"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "pnpm build",
+    "build": "node esbuild.config.mjs",
+    "dev": "node esbuild.config.mjs --watch",
+    "test": "vitest",
+    "type-check": "tsc --noEmit",
+    "package": "npx @vscode/vsce package --no-dependencies",
+    "publish": "npx @vscode/vsce publish --no-dependencies",
+    "clean": "rimraf dist *.vsix"
+  },
+  "keywords": [
+    "tscn",
+    "textscene",
+    "text-scene",
+    "inspector",
+    "viewer",
+    "3d",
+    "visualization"
+  ],
+  "author": "Vortiago",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vortiago/tscn-file-previewer"
+  },
+  "dependencies": {
+    "@textscene/renderer": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^3.2.1",
+    "esbuild": "catalog:",
+    "rimraf": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

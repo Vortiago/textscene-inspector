@@ -1,0 +1,22 @@
+# Source files
+src/
+tsconfig.json
+esbuild.config.mjs
+
+# Tests
+**/*.test.ts
+**/*.test.js
+
+# Node modules
+node_modules/
+
+# Build artifacts (except dist which we need)
+*.log
+*.vsix
+
+# Development files
+.vscode/
+.gitignore
+
+# Only include what's needed for the extension
+!dist/

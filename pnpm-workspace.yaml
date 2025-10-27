@@ -1,0 +1,21 @@
+# pnpm workspace configuration
+# Defines the monorepo structure for the TSCN File Previewer project
+
+packages:
+  # Main library packages
+  - 'packages/*'
+
+  # Application projects
+  - 'apps/*'
+
+# Catalog: Central dependency version management
+# Use "catalog:" in package.json to reference these versions
+catalog:
+  # Shared dev dependencies
+  typescript: ^5.7.3
+  vitest: ^4.0.3
+  rimraf: ^6.0.1
+  '@vitest/ui': ^4.0.3
+  '@types/node': ^22.10.5
+  vite: ^6.0.7
+  esbuild: ^0.24.2
