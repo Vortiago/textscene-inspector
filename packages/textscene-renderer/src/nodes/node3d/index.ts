@@ -7,6 +7,7 @@ import { nodeRegistry } from '../../core/NodeRegistry';
 import type { NodeTypeRegistration } from '../../core/NodeRegistry';
 import { parseNode3D, isNode3D } from './parser';
 import { createNode3DGizmo, applyNode3DTransform } from './renderer';
+import { formatNode3DProperties } from './propertyFormatter';
 import type { Node3DProperties } from './types';
 
 const node3DRegistration: NodeTypeRegistration = {
@@ -22,6 +23,7 @@ const node3DRegistration: NodeTypeRegistration = {
 
     return object3D;
   },
+  propertyFormatter: formatNode3DProperties,
 };
 
 nodeRegistry.register(node3DRegistration);
@@ -29,4 +31,5 @@ nodeRegistry.register(node3DRegistration);
 export { node3DRegistration };
 export * from './parser';
 export * from './renderer';
+export * from './propertyFormatter';
 export * from './types';

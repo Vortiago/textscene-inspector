@@ -7,6 +7,19 @@ import type { ParsedHeading } from '../parser/utils';
 import type { TscnNode, TscnScene } from '../parser/types';
 import { warn } from '../logger';
 
+export interface PropertyItem {
+  label: string;
+  value: string;
+}
+
+export interface PropertySection {
+  title: string;
+  items: PropertyItem[];
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Generic formatter accepts any parsed properties
+export type PropertyFormatter = (properties: any) => PropertySection[];
+
 export interface NodeTypeRegistration {
   /** Node type name (e.g., 'MeshInstance3D', 'Node3D') */
   typeName: string;
@@ -21,6 +34,9 @@ export interface NodeTypeRegistration {
   /** Create THREE.js object from parsed properties */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Generic registry accepts any parsed properties
   renderer: (name: string, properties: any, scene?: TscnScene) => THREE.Object3D;
+
+  /** Optional property formatter for custom details panel display */
+  propertyFormatter?: PropertyFormatter;
 }
 
 class NodeRegistry {

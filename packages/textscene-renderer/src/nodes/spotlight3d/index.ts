@@ -8,6 +8,7 @@ import type { NodeTypeRegistration } from '../../core/NodeRegistry';
 import type { TscnScene } from '../../parser/types';
 import { parseSpotLight3D, isSpotLight3D } from './parser';
 import { createSpotLight3D, positionSpotLightTarget } from './renderer';
+import { formatSpotLight3DProperties } from './propertyFormatter';
 import { applyNode3DTransform } from '../node3d/renderer';
 import type { SpotLight3DProperties } from './types';
 import { decomposeTransform3D } from '../../utils/transform';
@@ -31,6 +32,7 @@ const spotLight3DRegistration: NodeTypeRegistration = {
 
     return group;
   },
+  propertyFormatter: formatSpotLight3DProperties,
 };
 
 nodeRegistry.register(spotLight3DRegistration);
@@ -38,4 +40,5 @@ nodeRegistry.register(spotLight3DRegistration);
 export { spotLight3DRegistration };
 export * from './parser';
 export * from './renderer';
+export * from './propertyFormatter';
 export * from './types';

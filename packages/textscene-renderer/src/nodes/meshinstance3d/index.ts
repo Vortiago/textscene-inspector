@@ -8,6 +8,7 @@ import type { NodeTypeRegistration } from '../../core/NodeRegistry';
 import type { TscnScene } from '../../parser/types';
 import { parseMeshInstance3D, isMeshInstance3D } from './parser';
 import { createMeshInstance3D } from './renderer';
+import { formatMeshInstance3DProperties } from './propertyFormatter';
 import { applyNode3DTransform } from '../node3d/renderer';
 import type { MeshInstance3DProperties } from './types';
 
@@ -24,6 +25,7 @@ const meshInstance3DRegistration: NodeTypeRegistration = {
 
     return mesh;
   },
+  propertyFormatter: formatMeshInstance3DProperties,
 };
 
 nodeRegistry.register(meshInstance3DRegistration);
@@ -31,4 +33,5 @@ nodeRegistry.register(meshInstance3DRegistration);
 export { meshInstance3DRegistration };
 export * from './parser';
 export * from './renderer';
+export * from './propertyFormatter';
 export * from './types';

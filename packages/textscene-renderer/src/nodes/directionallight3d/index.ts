@@ -8,6 +8,7 @@ import type { NodeTypeRegistration } from '../../core/NodeRegistry';
 import type { TscnScene } from '../../parser/types';
 import { parseDirectionalLight3D, isDirectionalLight3D } from './parser';
 import { createDirectionalLight3D, positionDirectionalLightTarget } from './renderer';
+import { formatDirectionalLight3DProperties } from './propertyFormatter';
 import { applyNode3DTransform } from '../node3d/renderer';
 import type { DirectionalLight3DProperties } from './types';
 import { decomposeTransform3D } from '../../utils/transform';
@@ -35,6 +36,7 @@ const directionalLight3DRegistration: NodeTypeRegistration = {
 
     return group;
   },
+  propertyFormatter: formatDirectionalLight3DProperties,
 };
 
 nodeRegistry.register(directionalLight3DRegistration);
@@ -42,4 +44,5 @@ nodeRegistry.register(directionalLight3DRegistration);
 export { directionalLight3DRegistration };
 export * from './parser';
 export * from './renderer';
+export * from './propertyFormatter';
 export * from './types';

@@ -8,6 +8,7 @@ import type { NodeTypeRegistration } from '../../core/NodeRegistry';
 import type { TscnScene } from '../../parser/types';
 import { parseOmniLight3D, isOmniLight3D } from './parser';
 import { createOmniLight3D } from './renderer';
+import { formatOmniLight3DProperties } from './propertyFormatter';
 import { applyNode3DTransform } from '../node3d/renderer';
 import type { OmniLight3DProperties } from './types';
 
@@ -28,6 +29,7 @@ const omniLight3DRegistration: NodeTypeRegistration = {
 
     return light;
   },
+  propertyFormatter: formatOmniLight3DProperties,
 };
 
 nodeRegistry.register(omniLight3DRegistration);
@@ -35,4 +37,5 @@ nodeRegistry.register(omniLight3DRegistration);
 export { omniLight3DRegistration };
 export * from './parser';
 export * from './renderer';
+export * from './propertyFormatter';
 export * from './types';
