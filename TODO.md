@@ -169,6 +169,16 @@ This plan prioritizes node types based on their frequency in real-world Godot sc
 - **Current Behavior**: All updates use full reload with camera state preservation (fast enough for most use cases)
 - **Future Enhancement**: Add smart diff detection to enable true incremental updates for property-only changes
 
+### [x] #WI-25: Click-to-Select in 3D Viewport - Done
+- Add THREE.Raycaster to TscnRenderer for detecting clicked objects
+- Implement `getNodePathAtScreenPosition()` method
+- Add canvas click event listener in TscnPreviewUI
+- Detect drag vs click (prevent selection when rotating camera)
+- Only selectable objects are visible meshes (MeshInstance3D)
+- Add hover effect with BoxHelper (orange color 0xff8800)
+- Reuse existing selection flow (tree highlight + details panel)
+- **Value**: Direct viewport interaction, intuitive object selection
+
 ---
 
 ## Testing & Documentation
@@ -189,26 +199,26 @@ This plan prioritizes node types based on their frequency in real-world Godot sc
 
 ## Phase 7: C# Integration (High Value for Godot C# Developers)
 
-### [ ] #WI-25: GetNode() Path Validation - Not Done
+### [ ] #WI-26: GetNode() Path Validation - Not Done
 - Parse .tscn file when C# files open in workspace
 - Find GetNode() calls using C# language service
 - Validate node paths exist in scene hierarchy
 - Underline invalid paths with diagnostics
 - **Value**: Prevents 90% of runtime GetNode() errors at edit-time
 
-### [ ] #WI-26: GetNode() IntelliSense and Autocomplete - Not Done
+### [ ] #WI-27: GetNode() IntelliSense and Autocomplete - Not Done
 - Provide autocomplete for node paths in GetNode() calls
 - Show available child nodes with type information
 - Support both absolute and relative paths
 - **Value**: Fast, type-safe node path entry
 
-### [ ] #WI-27: C# Class → Scene Type Matching - Not Done
+### [ ] #WI-28: C# Class → Scene Type Matching - Not Done
 - Parse scene root node type from .tscn file
 - Extract C# script base class from associated .cs file
 - Show warning when types don't match (e.g., "Scene root: Node2D, Script base: CharacterBody2D")
 - **Value**: Catches scene-script compatibility issues before runtime
 
-### [ ] #WI-28: Scene-to-C# Code Generation - Not Done
+### [ ] #WI-29: Scene-to-C# Code Generation - Not Done
 - Command to generate C# partial class with strongly-typed node properties
 - Generate `public NodeType PropertyName { get; private set; }` for each child node
 - Generate GetNode calls in initialization method
@@ -219,14 +229,14 @@ This plan prioritizes node types based on their frequency in real-world Godot sc
 
 ## Phase 8: Interactive Editing (Major Differentiator)
 
-### [ ] #WI-29: Real-time Property Editing - Not Done
+### [ ] #WI-30: Real-time Property Editing - Not Done
 - Add editable property fields in node details panel
 - Support common property types (numbers, vectors, colors, bools)
 - Write changes back to .tscn file on edit
 - Update 3D preview in real-time
 - **Value**: Edit properties without switching to Godot editor
 
-### [ ] #WI-30: Node Transformation Gizmos - Not Done
+### [ ] #WI-31: Node Transformation Gizmos - Not Done
 - Implement TransformControls for selected nodes
 - Support translate, rotate, and scale modes
 - Update node transform properties in .tscn file
@@ -234,7 +244,7 @@ This plan prioritizes node types based on their frequency in real-world Godot sc
 - **Value**: Visual manipulation of node positions/rotations/scales
 - **Priority**: Highest-requested feature from community feedback
 
-### [ ] #WI-31: Undo/Redo Support - Not Done
+### [ ] #WI-32: Undo/Redo Support - Not Done
 - Implement command pattern for all editing operations
 - Track edit history with undo/redo stack
 - Integrate with VS Code undo/redo UI (Ctrl+Z, Ctrl+Y)
@@ -245,21 +255,21 @@ This plan prioritizes node types based on their frequency in real-world Godot sc
 
 ## Phase 9: Enhanced Visualization
 
-### [ ] #WI-32: Resource Thumbnail Previews - Not Done
+### [ ] #WI-33: Resource Thumbnail Previews - Not Done
 - Load texture images from project paths
 - Display thumbnails in scene tree next to nodes with textures
 - Show material preview icons (color swatches, PBR indicators)
 - Support hover to enlarge thumbnails
 - **Value**: Visual identification of assets without opening files
 
-### [ ] #WI-33: Texture/Material Inspector Panel - Not Done
+### [ ] #WI-34: Texture/Material Inspector Panel - Not Done
 - Dedicated panel for texture/material inspection
 - Show full texture preview with dimensions, format, file size
 - Display material properties with visual previews
 - Support clicking textures/materials in tree to inspect
 - **Value**: Asset verification without running game
 
-### [ ] #WI-34: Scene Complexity Metrics - Not Done
+### [ ] #WI-35: Scene Complexity Metrics - Not Done
 - Calculate and display scene statistics:
   - Total node count
   - Maximum tree depth
@@ -269,32 +279,45 @@ This plan prioritizes node types based on their frequency in real-world Godot sc
 - Display in status bar or info panel
 - **Value**: Optimization guidance for scene performance
 
+### [ ] #WI-36: Visual Icons for Non-Mesh Nodes - Not Done
+- Add visual representations for Camera3D (camera icon/frustum)
+- Add visual representations for Light3D nodes (light bulb/gizmo)
+- Add visual representations for empty Node3D (axis gizmo)
+- Show icons/gizmos in 3D viewport
+- Enable click-to-select for these nodes after icons are visible
+- **Value**: Makes invisible nodes visible and selectable in viewport
+
+### [ ] #WI-37: Viewport Cursor Feedback - Not Done
+- Change cursor to pointer when hovering over selectable objects
+- Add visual feedback for interactive elements
+- **Value**: Improved UX, clear indication of clickable objects
+
 ---
 
 ## Phase 10: Advanced Navigation
 
-### [ ] #WI-35: Signal Connection Visualization - Not Done
+### [ ] #WI-38: Signal Connection Visualization - Not Done
 - Parse [connection] sections from .tscn files
 - Display signal connections in tree (badges, icons)
 - Show connection graph or list view
 - Support jumping to signal handler code (C# or GDScript)
 - **Value**: Understanding event flow, especially for C# devs
 
-### [ ] #WI-36: Enhanced Scene Instance Tracking - Not Done
+### [ ] #WI-39: Enhanced Scene Instance Tracking - Not Done
 - Parse `instance=ExtResource()` to identify scene instances
 - Show "Go to Scene Definition" action for instances
 - Display instance inheritance chain
 - Visualize packed scene relationships
 - **Value**: Navigate complex scene hierarchies
 
-### [ ] #WI-37: Node Path Copy/Generation - Not Done
+### [ ] #WI-40: Node Path Copy/Generation - Not Done
 - "Copy Node Path" context menu action
 - Generate GetNode() code snippets for C#/GDScript
 - Support both absolute and relative paths
 - Drag-and-drop node from tree to code editor (generates path)
 - **Value**: Fast, error-free node path entry in code
 
-### [ ] #WI-38: Cross-Reference Analysis - Not Done
+### [ ] #WI-41: Cross-Reference Analysis - Not Done
 - "Find All References" command for scenes
 - Show all scenes using a specific scene as instance
 - Show all C# scripts referencing a scene path
@@ -305,14 +328,14 @@ This plan prioritizes node types based on their frequency in real-world Godot sc
 
 ## Phase 11: Animation and Performance
 
-### [ ] #WI-39: Animation Preview Support - Not Done
+### [ ] #WI-42: Animation Preview Support - Not Done
 - Parse AnimationPlayer nodes and animations
 - Add playback controls (play, pause, scrub timeline)
 - Preview animations in 3D viewport
 - Support animation blending visualization
 - **Value**: Verify animations without running game
 
-### [ ] #WI-40: Performance Optimization for Large Scenes - Not Done
+### [ ] #WI-43: Performance Optimization for Large Scenes - Not Done
 - Implement level-of-detail (LOD) for tree viewer
 - Use virtual scrolling for scenes with 1000+ nodes
 - Lazy-load node details and properties
@@ -320,7 +343,7 @@ This plan prioritizes node types based on their frequency in real-world Godot sc
 - Add "Simplify View" mode for complex scenes
 - **Value**: Smooth experience with production-scale scenes
 
-### [ ] #WI-41: Live Godot Editor Synchronization - Not Done
+### [ ] #WI-44: Live Godot Editor Synchronization - Not Done
 - Experimental: Connect to running Godot editor via remote debug protocol
 - Bidirectional property editing (changes in VS Code → Godot and vice versa)
 - Show runtime node states during game execution

@@ -6,6 +6,7 @@ import type { TscnScene, TscnNode } from '../parser/types';
 import { TscnParser } from '../parser/TscnParser';
 import { TscnRenderer } from '../core/TscnRenderer';
 import { SceneTreeViewer } from './SceneTreeViewer';
+import { ViewportSelector } from './ViewportSelector';
 import { formatNodeDetails } from './NodeDetailsFormatter';
 import { error } from '../logger';
 
@@ -36,6 +37,7 @@ export class TscnPreviewUI {
   private renderer: TscnRenderer;
   private options: TscnPreviewUIOptions;
   private treeViewer: SceneTreeViewer | null = null;
+  private viewportSelector: ViewportSelector | null = null;
   private currentScene: TscnScene | null = null;
 
   constructor(elements: TscnPreviewElements, options: TscnPreviewUIOptions = {}) {
@@ -46,6 +48,7 @@ export class TscnPreviewUI {
 
     this.setupResizeHandler();
     this.setupTreeViewer();
+    this.setupViewportSelection();
     this.renderer.startAnimationLoop();
   }
 
@@ -82,6 +85,23 @@ export class TscnPreviewUI {
         this.treeViewer?.setSearchTerm(searchTerm);
       });
     }
+  }
+
+  private setupViewportSelection(): void {
+    this.viewportSelector = new ViewportSelector(this.elements.canvas, this.renderer, {
+      onNodeSelect: (node, path) => {
+        this.treeViewer?.selectNode(path, node);
+        this.renderer.highlightNode(path);
+        this.showNodeDetails(node, path);
+      },
+      onNodeHover: (nodePath) => {
+        if (nodePath) {
+          this.renderer.showHoverEffect(nodePath);
+        } else {
+          this.renderer.clearHoverEffect();
+        }
+      },
+    });
   }
 
   private showNodeDetails(node: TscnNode, path: string): void {
@@ -151,6 +171,10 @@ export class TscnPreviewUI {
       if (this.treeViewer) {
         this.treeViewer.renderTree(scene.nodes);
       }
+
+      if (this.viewportSelector) {
+        this.viewportSelector.setScene(scene);
+      }
     } catch (err) {
       error('Error rendering TSCN:', err);
       const errorMsg =
@@ -209,6 +233,11 @@ export class TscnPreviewUI {
       // Update tree viewer with new scene data
       if (this.treeViewer) {
         this.treeViewer.renderTree(sceneData.nodes);
+      }
+
+      // Update viewport selector with new scene data
+      if (this.viewportSelector) {
+        this.viewportSelector.setScene(sceneData);
       }
 
       // Update scene info

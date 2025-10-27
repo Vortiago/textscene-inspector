@@ -3,6 +3,7 @@
  */
 
 import type { TscnNode } from '../parser/types';
+import { findNodeByPath } from '../utils/sceneGraphUtils';
 
 export interface SceneTreeViewerOptions {
   onNodeSelect?: (node: TscnNode, path: string) => void;
@@ -171,7 +172,7 @@ export class SceneTreeViewer {
 
     // If node not provided, try to find it by path
     if (!node && this.options.onNodeSelect) {
-      const foundNode = this.findNodeByPath(nodePath);
+      const foundNode = findNodeByPath(this.currentNodes, nodePath);
       if (foundNode) {
         node = foundNode;
       }
@@ -182,29 +183,6 @@ export class SceneTreeViewer {
     }
 
     this.refreshDisplay();
-  }
-
-  /**
-   * Find a node by its path.
-   */
-  private findNodeByPath(targetPath: string): TscnNode | null {
-    const findInNodes = (nodes: TscnNode[], currentPath: string): TscnNode | null => {
-      for (const node of nodes) {
-        const nodePath = currentPath ? `${currentPath}/${node.name}` : node.name;
-
-        if (nodePath === targetPath) {
-          return node;
-        }
-
-        if (node.children && node.children.length > 0) {
-          const found = findInNodes(node.children, nodePath);
-          if (found) return found;
-        }
-      }
-      return null;
-    };
-
-    return findInNodes(this.currentNodes, '');
   }
 
   /**

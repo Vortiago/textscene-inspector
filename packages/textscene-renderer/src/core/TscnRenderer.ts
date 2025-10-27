@@ -20,7 +20,8 @@ export class TscnRenderer {
   private renderer: THREE.WebGLRenderer;
   private controls: OrbitControls;
   private nodePathMap: Map<string, THREE.Object3D> = new Map();
-  private highlightHelper: THREE.BoxHelper | null = null;
+  private helpers: Map<string, THREE.BoxHelper> = new Map();
+  private raycaster: THREE.Raycaster;
 
   constructor(canvas: HTMLCanvasElement) {
     logger.info('Initializing TscnRenderer');
@@ -29,12 +30,13 @@ export class TscnRenderer {
     this.camera = components.camera;
     this.renderer = components.renderer;
     this.controls = components.controls;
+    this.raycaster = new THREE.Raycaster();
   }
 
   render(sceneData: TscnScene): void {
     logger.info(`Rendering scene with ${sceneData.nodes.length} root nodes`);
     const objectsToRemove: THREE.Object3D[] = [];
-    this.scene.children.forEach(child => {
+    this.scene.children.forEach((child: THREE.Object3D) => {
       if (!(child instanceof THREE.Light) && !(child instanceof THREE.GridHelper)) {
         objectsToRemove.push(child);
       }
@@ -42,7 +44,7 @@ export class TscnRenderer {
     objectsToRemove.forEach(obj => this.scene.remove(obj));
 
     this.nodePathMap.clear();
-    this.clearHighlight();
+    this.clearAllHelpers();
 
     // Use addNode for each root node to ensure consistent code path
     for (const node of sceneData.nodes) {
@@ -164,29 +166,106 @@ export class TscnRenderer {
     this.controls.update();
   }
 
-  highlightNode(nodePath: string): void {
-    this.clearHighlight();
+  getNodePathAtScreenPosition(x: number, y: number): string | null {
+    const canvas = this.renderer.domElement;
+    const rect = canvas.getBoundingClientRect();
+
+    // Convert to normalized device coordinates (-1 to +1)
+    const mouse = new THREE.Vector2(
+      ((x - rect.left) / rect.width) * 2 - 1,
+      -((y - rect.top) / rect.height) * 2 + 1
+    );
+
+    this.raycaster.setFromCamera(mouse, this.camera);
+    const intersects = this.raycaster.intersectObjects(this.scene.children, true);
+
+    for (const intersection of intersects) {
+      const nodePath = this.findNodePathInHierarchy(intersection.object);
+      if (nodePath) {
+        // Only return paths for mesh objects (filter out lights, cameras, etc.)
+        const object = this.nodePathMap.get(nodePath);
+        if (object && this.isMeshObject(object)) {
+          return nodePath;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  private findNodePathInHierarchy(object: THREE.Object3D): string | null {
+    let current: THREE.Object3D | null = object;
+    while (current) {
+      if (current.userData.nodePath) {
+        return current.userData.nodePath;
+      }
+      current = current.parent;
+    }
+    return null;
+  }
+
+  private isMeshObject(object: THREE.Object3D): boolean {
+    let hasMesh = false;
+    object.traverse((child: THREE.Object3D) => {
+      if (child instanceof THREE.Mesh) {
+        hasMesh = true;
+      }
+    });
+    return hasMesh;
+  }
+
+  private setHelper(key: string, nodePath: string, color: number): void {
+    this.clearHelper(key);
 
     const object = this.nodePathMap.get(nodePath);
     if (!object) {
-      logger.warn(`Node not found for highlighting: ${nodePath}`);
+      if (key === 'highlight') {
+        logger.warn(`Node not found for highlighting: ${nodePath}`);
+      }
       return;
     }
 
-    this.highlightHelper = new THREE.BoxHelper(object, 0x00ff00);
-    this.scene.add(this.highlightHelper);
+    const helper = new THREE.BoxHelper(object, color);
+    this.helpers.set(key, helper);
+    this.scene.add(helper);
   }
 
-  clearHighlight(): void {
-    if (this.highlightHelper) {
-      this.scene.remove(this.highlightHelper);
-      this.highlightHelper.dispose();
-      this.highlightHelper = null;
+  private clearHelper(key: string): void {
+    const helper = this.helpers.get(key);
+    if (helper) {
+      this.scene.remove(helper);
+      helper.dispose();
+      this.helpers.delete(key);
     }
   }
 
+  private clearAllHelpers(): void {
+    this.helpers.forEach((helper) => {
+      this.scene.remove(helper);
+      helper.dispose();
+    });
+    this.helpers.clear();
+  }
+
+  highlightNode(nodePath: string): void {
+    this.clearHelper('hover');
+    this.setHelper('highlight', nodePath, 0x00ff00);
+  }
+
+  clearHighlight(): void {
+    this.clearHelper('highlight');
+  }
+
+  showHoverEffect(nodePath: string): void {
+    this.setHelper('hover', nodePath, 0xff8800);
+  }
+
+  clearHoverEffect(): void {
+    this.clearHelper('hover');
+  }
+
   dispose(): void {
-    this.clearHighlight();
+    this.clearAllHelpers();
     this.renderer.dispose();
   }
 }
