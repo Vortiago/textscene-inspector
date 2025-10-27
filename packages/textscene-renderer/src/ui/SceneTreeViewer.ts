@@ -244,6 +244,12 @@ export class SceneTreeViewer {
   selectNode(nodePath: string, node?: TscnNode): void {
     this.selectedNodePath = nodePath;
 
+    // Auto-expand ancestors to make the selected node visible
+    const ancestors = getAncestorPaths(nodePath);
+    ancestors.forEach(ancestorPath => {
+      this.expandedNodes.add(ancestorPath);
+    });
+
     // If node not provided, try to find it by path
     if (!node && this.options.onNodeSelect) {
       const foundNode = findNodeByPath(this.currentNodes, nodePath);
@@ -260,32 +266,6 @@ export class SceneTreeViewer {
   }
 
   /**
-<<<<<<< HEAD
-=======
-   * Find a node by its path.
-   */
-  private findNodeByPath(targetPath: string): TscnNode | null {
-    const findInNodes = (nodes: TscnNode[], currentPath: string): TscnNode | null => {
-      for (const node of nodes) {
-        const nodePath = joinPath(currentPath, node.name);
-
-        if (nodePath === targetPath) {
-          return node;
-        }
-
-        if (node.children && node.children.length > 0) {
-          const found = findInNodes(node.children, nodePath);
-          if (found) return found;
-        }
-      }
-      return null;
-    };
-
-    return findInNodes(this.currentNodes, '');
-  }
-
-  /**
->>>>>>> claude/session-011CUYJ5XRzWHKDmkuuNsELY
    * Expand all nodes in the tree.
    */
   expandAll(): void {
