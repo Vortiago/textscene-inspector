@@ -5,6 +5,7 @@
 import { TscnPreviewUI } from '@textscene/renderer';
 import type { TscnPreviewElements } from '@textscene/renderer';
 import { initLogger } from './logger';
+import { getFixturesByCategory } from './fixtures';
 
 initLogger();
 
@@ -57,3 +58,49 @@ fileInput.addEventListener('change', async (event) => {
 resetButton.addEventListener('click', () => {
   previewUI.resetCamera();
 });
+
+const fixturesHeader = document.getElementById('fixtures-header') as HTMLDivElement;
+const fixturesList = document.getElementById('fixtures-list') as HTMLDivElement;
+
+function renderFixtureList() {
+  const fixturesByCategory = getFixturesByCategory();
+  const categoriesHtml: string[] = [];
+
+  for (const [category, fixtures] of fixturesByCategory) {
+    categoriesHtml.push(`<div class="fixture-category">${category}</div>`);
+    for (const fixture of fixtures) {
+      categoriesHtml.push(
+        `<div class="fixture-item" data-fixture="${fixture.file}">${fixture.name}</div>`
+      );
+    }
+  }
+
+  fixturesList.innerHTML = categoriesHtml.join('');
+
+  fixturesList.querySelectorAll('.fixture-item').forEach((item) => {
+    item.addEventListener('click', async () => {
+      const fixtureFile = (item as HTMLElement).dataset.fixture;
+      if (!fixtureFile) return;
+
+      try {
+        const response = await fetch(`/fixtures/${fixtureFile}`);
+        if (!response.ok) {
+          throw new Error(`Failed to load fixture: ${response.statusText}`);
+        }
+        const content = await response.text();
+        previewUI.loadTscn(content);
+        resetButton.disabled = false;
+      } catch (error) {
+        console.error('Error loading fixture:', error);
+      }
+    });
+  });
+}
+
+fixturesHeader.addEventListener('click', () => {
+  const toggle = fixturesHeader.querySelector('.fixtures-toggle');
+  toggle?.classList.toggle('expanded');
+  fixturesList.classList.toggle('expanded');
+});
+
+renderFixtureList();

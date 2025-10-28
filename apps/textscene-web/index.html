@@ -406,6 +406,87 @@
       .copy-btn:hover {
         background: #555;
       }
+
+      /* Test Fixtures Selector Styles */
+      .fixtures-section {
+        margin-top: 1rem;
+        border: 1px solid #3e3e42;
+        border-radius: 4px;
+        overflow: hidden;
+      }
+
+      .fixtures-header {
+        padding: 0.5rem 0.75rem;
+        background: #3e3e42;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        user-select: none;
+      }
+
+      .fixtures-header:hover {
+        background: #4a4a4e;
+      }
+
+      .fixtures-header h3 {
+        font-size: 0.875rem;
+        font-weight: 600;
+        margin: 0;
+      }
+
+      .fixtures-toggle {
+        font-size: 0.75rem;
+        color: #888;
+        transition: transform 0.2s;
+      }
+
+      .fixtures-toggle.expanded {
+        transform: rotate(180deg);
+      }
+
+      .fixtures-list {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease-out;
+        background: #2a2a2e;
+      }
+
+      .fixtures-list.expanded {
+        max-height: 400px;
+        overflow-y: auto;
+      }
+
+      .fixture-category {
+        padding: 0.5rem 0.75rem 0.25rem;
+        font-size: 0.7rem;
+        font-weight: 600;
+        color: #888;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border-top: 1px solid #3e3e42;
+      }
+
+      .fixture-category:first-child {
+        border-top: none;
+      }
+
+      .fixture-item {
+        padding: 0.375rem 0.75rem 0.375rem 1.5rem;
+        font-size: 0.8125rem;
+        color: #ddd;
+        cursor: pointer;
+        transition: background 0.15s;
+      }
+
+      .fixture-item:hover {
+        background: #3e3e42;
+        color: #fff;
+      }
+
+      .fixture-item:active {
+        background: #094771;
+      }
     </style>
   </head>
   <body>
@@ -418,6 +499,14 @@
           <div class="file-input">
             <label for="file-upload">Upload TSCN File:</label>
             <input type="file" id="file-upload" accept=".tscn" />
+          </div>
+
+          <div class="fixtures-section">
+            <div class="fixtures-header" id="fixtures-header">
+              <h3>Test Fixtures</h3>
+              <span class="fixtures-toggle">▼</span>
+            </div>
+            <div class="fixtures-list" id="fixtures-list"></div>
           </div>
 
           <button id="reset-camera" disabled>Reset Camera</button>

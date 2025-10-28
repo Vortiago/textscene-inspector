@@ -4,8 +4,6 @@
 
 import { describe, it, expect } from 'vitest';
 import { TscnParser } from './TscnParser';
-import { readFileSync } from 'fs';
-import { join } from 'path';
 
 describe('TscnParser', () => {
   it('should create a parser instance', () => {
@@ -157,9 +155,18 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, 0)`;
   describe('parse complete fixture file', () => {
     it('should parse simple_node3d.tscn fixture', () => {
       const parser = new TscnParser();
-      // Path from packages/tscn-renderer to root tests/fixtures
-      const fixturePath = join(__dirname, '../../../../tests/fixtures/simple_node3d.tscn');
-      const content = readFileSync(fixturePath, 'utf-8');
+      const content = `[gd_scene format=3]
+
+[node name="Root" type="Node3D"]
+
+[node name="Child1" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, 0)
+
+[node name="Child2" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 1, 0)
+
+[node name="GrandChild" type="Node3D" parent="Child1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)`;
 
       const result = parser.parse(content);
 
