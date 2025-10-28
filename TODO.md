@@ -179,6 +179,31 @@ This plan prioritizes node types based on their frequency in real-world Godot sc
 - Reuse existing selection flow (tree highlight + details panel)
 - **Value**: Direct viewport interaction, intuitive object selection
 
+### [ ] #WI-50: VSCode Outline Provider Integration - Not Done
+- Implement `DocumentSymbolProvider` for .tscn files
+- Register provider with VS Code language API
+- Parse TSCN files using existing `parseTscn()` from `@textscene/renderer`
+- Map TSCN node hierarchy to VS Code `DocumentSymbol` objects
+- Assign appropriate `SymbolKind` for different node types (MeshInstance3D → Class, properties → Property, etc.)
+- Support breadcrumbs navigation in editor
+- Enable "Go to Symbol" (Ctrl+Shift+O) quick navigation
+- Enable Outline view in sidebar showing scene hierarchy
+- **Value**: Native VS Code integration without duplicating webview tree, lightweight (~100 lines)
+- **Benefit**: Complements webview tree with native navigation features (breadcrumbs, outline panel, symbol search)
+
+### [ ] #WI-51: SubResource/ExtResource Go to Definition - Not Done
+- Implement `DefinitionProvider` for .tscn files
+- Detect SubResource("id") and ExtResource("id") references in document
+- Parse document to find matching [sub_resource id="..."] and [ext_resource id="..."] definitions
+- Support Ctrl+Click (Cmd+Click) to jump to definition
+- Enable F12 "Go to Definition" command
+- Enable Alt+F12 "Peek Definition" command
+- Show hover preview of resource definition
+- Support both SubResource (internal) and ExtResource (external file references)
+- Handle resource IDs with quotes and special characters
+- **Value**: Fast navigation between resource references and definitions, eliminate manual searching
+- **Benefit**: Essential for understanding material/mesh/scene relationships in complex TSCN files
+
 ---
 
 ## Testing & Documentation
@@ -349,6 +374,65 @@ This plan prioritizes node types based on their frequency in real-world Godot sc
 - Show runtime node states during game execution
 - **Value**: Ultimate integration - edit in VS Code, see in Godot instantly
 - **Note**: Advanced feature, requires Godot remote API research
+
+---
+
+## Phase 12: Code Quality & Tooling Improvements
+
+### [x] #WI-45: Consolidate Claude Skills Configuration - Done
+- Replace 3 separate skills (tscn-renderer-dev, vscode-extension-dev, web-previewer-dev) with unified `textscene-dev` skill
+- Create `.claude/skills/textscene-dev/SKILL.md` covering all TypeScript development work
+- Update skill descriptions and trigger conditions for better auto-discovery
+- Delete unused `.claude/skills/vscode-extension-dev/` and `.claude/skills/web-previewer-dev/`
+- Update `.claude/skills/tscn-renderer-dev/` to become the new unified skill
+- **Value**: 75% reduction in skills (4→2), improved auto-triggering, clearer purpose
+- **Benefit**: Skill will always be relevant for development work instead of being too narrowly scoped
+
+### [x] #WI-46: Add Codebase Architect Agent - Done
+- Create `.claude/agents/codebase-architect.md` for architecture analysis and improvement planning
+- Configure agent to:
+  - Analyze code for duplication, complexity, KISS/DRY violations
+  - Create actionable improvement plans with prioritized work items
+  - Suggest refactoring opportunities following Rule of Three
+  - Add findings to TODO.md automatically
+  - Evaluate maintainability and technical debt
+- Add usage documentation to CLAUDE.md
+- **Value**: Proactive code quality monitoring, systematic improvement planning
+- **Use when**: Reviewing code, planning refactors, analyzing maintainability, auditing architecture
+
+### [ ] #WI-47: Extract Light Base Property Parsing (Optional) - Not Done
+- Create `packages/textscene-renderer/src/utils/lightParser.ts`
+- Implement `parseLightBaseProperties(properties)` function
+  - Parse light_color, light_energy, shadow_enabled, shadow_bias, shadow_filter
+  - Return typed object with base light properties
+- Refactor directionallight3d/omnilight3d/spotlight3d parsers to use shared function
+- Each light parser calls base function then adds light-specific properties
+- Add tests for shared parsing logic
+- **Value**: Reduces ~45 lines of duplication across 3 light types
+- **Priority**: LOW - Code quality improvement, not critical functionality
+
+### [ ] #WI-48: Extract Shadow Property Formatting (Optional) - Not Done
+- Create `packages/textscene-renderer/src/utils/lightPropertyFormatter.ts`
+- Implement `formatShadowSection(properties)` helper
+  - Takes shadow-related properties
+  - Returns `PropertySection['items']` array for shadow section
+  - Handles conditional shadow property display (bias, filter, etc.)
+- Refactor directionallight3d/omnilight3d/spotlight3d property formatters
+- Each formatter calls base function then adds light-specific shadow properties
+- **Value**: Reduces ~60 lines of duplication in property display logic
+- **Priority**: LOW - Code quality improvement, not critical functionality
+
+### [ ] #WI-49: Documentation Updates for Claude Configuration - Not Done
+- Update CLAUDE.md with skill usage guidelines
+  - When to use textscene-dev vs e2e-testing
+  - Examples of triggering conditions
+- Document agent invocation patterns
+  - When to invoke codebase-architect
+  - When to invoke e2e-test-orchestrator
+  - When to invoke tscn-threejs-docs-researcher
+- Add examples to REFERENCES.md if needed
+- **Value**: Clear guidance for effective Claude Code usage
+- **Priority**: MEDIUM - Improves developer experience and tool discoverability
 
 ---
 
