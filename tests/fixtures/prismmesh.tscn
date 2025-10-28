@@ -1,0 +1,20 @@
+[gd_scene format=3]
+
+[sub_resource type="PrismMesh" id="PrismMesh_1"]
+left_to_right = 0.5
+size = Vector3(2, 3, 2)
+subdivide_width = 0
+subdivide_height = 2
+subdivide_depth = 0
+
+[sub_resource type="StandardMaterial3D" id="Material_prism"]
+albedo_color = Color(0.7, 0.2, 0.7, 1)
+metallic = 0.3
+roughness = 0.6
+
+[node name="Root" type="Node3D"]
+
+[node name="Prism" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+mesh = SubResource("PrismMesh_1")
+surface_material_override/0 = SubResource("Material_prism")

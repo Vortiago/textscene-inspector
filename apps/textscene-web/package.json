@@ -10,6 +10,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest",
+    "pretype-check": "pnpm --filter @textscene/renderer build",
     "type-check": "tsc --noEmit",
     "clean": "rimraf dist node_modules/.vite"
   },

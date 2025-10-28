@@ -1,16 +1,8 @@
-/**
- * Parsing utilities for TSCN heading-based format.
- */
-
 export interface ParsedHeading {
   type: string;
   attributes: Record<string, string>;
 }
 
-/**
- * Parse a heading line from TSCN format.
- * Example: [node name="Hallway" type="Node3D"]
- */
 export function parseHeading(line: string): ParsedHeading | null {
   const trimmed = line.trim();
 
@@ -49,10 +41,6 @@ export function parseHeading(line: string): ParsedHeading | null {
   return { type, attributes };
 }
 
-/**
- * Parse a property line from TSCN format.
- * Example: transform = Transform3D(...)
- */
 export function parseProperty(line: string): { key: string; value: string } | null {
   const trimmed = line.trim();
 

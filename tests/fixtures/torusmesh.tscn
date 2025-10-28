@@ -1,0 +1,19 @@
+[gd_scene format=3]
+
+[sub_resource type="TorusMesh" id="TorusMesh_1"]
+inner_radius = 0.5
+outer_radius = 1.5
+rings = 32
+ring_segments = 16
+
+[sub_resource type="StandardMaterial3D" id="Material_torus"]
+albedo_color = Color(0.9, 0.5, 0.2, 1)
+metallic = 0.8
+roughness = 0.2
+
+[node name="Root" type="Node3D"]
+
+[node name="Torus" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+mesh = SubResource("TorusMesh_1")
+surface_material_override/0 = SubResource("Material_torus")

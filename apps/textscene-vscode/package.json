@@ -55,6 +55,7 @@
     "predev": "pnpm --filter @textscene/renderer build",
     "dev": "node esbuild.config.mjs --watch",
     "test": "vitest",
+    "pretype-check": "pnpm --filter @textscene/renderer build",
     "type-check": "tsc --noEmit",
     "package": "npx @vscode/vsce package --no-dependencies",
     "publish": "npx @vscode/vsce publish --no-dependencies",

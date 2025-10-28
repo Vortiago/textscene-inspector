@@ -1,0 +1,90 @@
+[gd_scene format=3]
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_floor"]
+size = Vector2(20, 20)
+subdivide_width = 10
+subdivide_depth = 10
+orientation = 1
+
+[sub_resource type="StandardMaterial3D" id="Material_floor"]
+albedo_color = Color(0.2, 0.3, 0.2, 1)
+roughness = 0.8
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_1"]
+radius = 0.5
+height = 2.5
+radial_segments = 32
+rings = 8
+
+[sub_resource type="StandardMaterial3D" id="Material_capsule"]
+albedo_color = Color(0.2, 0.5, 0.9, 1)
+metallic = 0.5
+roughness = 0.3
+
+[sub_resource type="TorusMesh" id="TorusMesh_1"]
+inner_radius = 0.5
+outer_radius = 1.5
+rings = 32
+ring_segments = 16
+
+[sub_resource type="StandardMaterial3D" id="Material_torus"]
+albedo_color = Color(0.9, 0.5, 0.2, 1)
+metallic = 0.8
+roughness = 0.2
+
+[sub_resource type="PrismMesh" id="PrismMesh_1"]
+left_to_right = 0.5
+size = Vector3(2, 2.5, 2)
+subdivide_height = 3
+
+[sub_resource type="StandardMaterial3D" id="Material_prism"]
+albedo_color = Color(0.7, 0.2, 0.7, 1)
+metallic = 0.3
+roughness = 0.6
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_wall"]
+size = Vector2(10, 5)
+orientation = 0
+
+[sub_resource type="StandardMaterial3D" id="Material_wall"]
+albedo_color = Color(0.6, 0.6, 0.7, 1)
+roughness = 0.9
+
+[node name="Root" type="Node3D"]
+
+[node name="Floor" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -2, 0)
+mesh = SubResource("PlaneMesh_floor")
+surface_material_override/0 = SubResource("Material_floor")
+
+[node name="Capsule" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 0, 0)
+mesh = SubResource("CapsuleMesh_1")
+surface_material_override/0 = SubResource("Material_capsule")
+
+[node name="Torus" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+mesh = SubResource("TorusMesh_1")
+surface_material_override/0 = SubResource("Material_torus")
+
+[node name="Prism" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 0, 0)
+mesh = SubResource("PrismMesh_1")
+surface_material_override/0 = SubResource("Material_prism")
+
+[node name="BackWall" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -8)
+mesh = SubResource("PlaneMesh_wall")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="DirectionalLight" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866, -0.433, 0.25, 0, 0.5, 0.866, -0.5, -0.75, 0.433, 0, 5, 5)
+light_color = Color(1, 0.95, 0.9, 1)
+light_energy = 1.5
+shadow_enabled = true
+
+[node name="FillLight" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 3, 5)
+light_color = Color(0.7, 0.8, 1, 1)
+light_energy = 0.5
+omni_range = 15

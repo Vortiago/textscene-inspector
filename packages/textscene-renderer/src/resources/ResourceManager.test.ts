@@ -130,15 +130,15 @@ describe('ResourceManager', () => {
         internalResources: [
           {
             id: 0,
-            type: 'PlaneMesh',
+            type: 'UnsupportedMesh',
             data: {
-              id: 'PlaneMesh_1',
+              id: 'UnsupportedMesh_1',
             },
           },
         ],
       };
 
-      const geometry = resolveGeometry('SubResource("PlaneMesh_1")', scene);
+      const geometry = resolveGeometry('SubResource("UnsupportedMesh_1")', scene);
 
       expect(geometry).toBeNull();
     });

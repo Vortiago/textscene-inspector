@@ -115,8 +115,8 @@ This plan prioritizes node types based on their frequency in real-world Godot sc
 
 ## Phase 5: Additional Mesh Primitives (As Needed)
 
-### [ ] #WI-18: Implement Additional Mesh Types - Not Done
-- PlaneMesh, CapsuleMesh, TorusMesh as discovered in scenes
+### [x] #WI-18: Implement Additional Mesh Types - Done
+- PlaneMesh, CapsuleMesh, TorusMesh, PrismMesh
 - Follow vertical slicing pattern
 - Add based on real-world scene requirements
 
