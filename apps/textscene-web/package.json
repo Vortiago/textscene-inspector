@@ -4,14 +4,16 @@
   "description": "Web-based text scene file inspector for development and debugging",
   "type": "module",
   "scripts": {
-    "predev": "pnpm --filter @textscene/renderer build",
+    "copy-fixtures": "node scripts/copy-fixtures.js",
+    "predev": "pnpm copy-fixtures && pnpm --filter @textscene/renderer build",
     "dev": "vite",
-    "prebuild": "pnpm --filter @textscene/renderer build",
+    "prebuild": "pnpm copy-fixtures && pnpm --filter @textscene/renderer build",
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest",
+    "pretype-check": "pnpm --filter @textscene/renderer build",
     "type-check": "tsc --noEmit",
-    "clean": "rimraf dist node_modules/.vite"
+    "clean": "rimraf dist node_modules/.vite public/fixtures"
   },
   "keywords": [
     "tscn",

@@ -53,6 +53,22 @@ pnpm dev          # Watch mode
 pnpm package      # Create .vsix for testing
 ```
 
+### Test Fixtures and Web Previewer
+
+**Test fixtures** live in `tests/fixtures/*.tscn` as the single source of truth. They are automatically copied to the web app during build/dev.
+
+When adding or removing fixtures from `tests/fixtures/`:
+1. The fixture files are automatically copied during `pnpm dev` or `pnpm build`
+2. **Manually update** `apps/textscene-web/src/fixtures.ts` to add/remove the fixture from the UI selector
+3. Provide a display name and category (Basic, Primitives, Edge Cases, Performance, Complex)
+
+Example fixture entry:
+```typescript
+{ name: 'Plane Mesh', file: 'planemesh.tscn', category: 'Primitives' }
+```
+
+The web previewer includes a collapsible "Test Fixtures" selector for quick loading during development.
+
 ## Architecture
 
 ### Monorepo Structure
