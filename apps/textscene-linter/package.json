@@ -1,0 +1,43 @@
+{
+  "name": "@textscene/linter",
+  "version": "0.1.0",
+  "description": "CLI linter for .tscn files",
+  "type": "module",
+  "bin": {
+    "tscn-lint": "./bin/tscn-lint.js"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/cli.js",
+      "types": "./dist/cli.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "bin"
+  ],
+  "scripts": {
+    "build": "esbuild src/cli.ts --bundle --platform=node --format=esm --outfile=dist/cli.js --external:commander",
+    "dev": "esbuild src/cli.ts --bundle --platform=node --format=esm --outfile=dist/cli.js --external:commander --watch",
+    "clean": "rimraf dist",
+    "type-check": "tsc --noEmit"
+  },
+  "keywords": [
+    "tscn",
+    "linter",
+    "validator",
+    "cli"
+  ],
+  "author": "Vortiago",
+  "license": "MIT",
+  "dependencies": {
+    "@textscene/renderer": "workspace:*",
+    "commander": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "esbuild": "catalog:",
+    "rimraf": "catalog:",
+    "typescript": "catalog:"
+  }
+}

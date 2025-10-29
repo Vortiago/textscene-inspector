@@ -1,0 +1,7 @@
+[gd_scene format=3 uid="uid://test"]
+
+[sub_resource type="BoxMesh" id="mesh_1"]
+
+[node name="TestNode" type="MeshInstance3D"]
+mesh = SubResource("mesh_1")
+cast_shadow = 99
