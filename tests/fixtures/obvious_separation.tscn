@@ -1,0 +1,26 @@
+[gd_scene load_steps=6 format=3 uid="uid://obvious_separation"]
+
+[ext_resource type="PackedScene" path="res://child_sphere.tscn" id="1_sphere"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_parent"]
+size = Vector3(3, 3, 3)
+
+[sub_resource type="StandardMaterial3D" id="Material_parent"]
+albedo_color = Color(1, 0.2, 0.2, 1)
+metallic = 0.3
+roughness = 0.6
+
+[node name="ObviousSeparation" type="Node3D"]
+
+[node name="ParentBigRedBox" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 1.5, 0)
+mesh = SubResource("BoxMesh_parent")
+surface_material_override/0 = SubResource("Material_parent")
+
+[node name="ExternalSphereInstance" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 0.5, 0)
+instance = ExtResource("1_sphere")
+
+[node name="Light" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866025, -0.25, 0.433013, 0, 0.866025, 0.5, -0.5, -0.433013, 0.75, 0, 8, 5)
+light_energy = 1.0

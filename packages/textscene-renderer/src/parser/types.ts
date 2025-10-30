@@ -3,6 +3,7 @@
  */
 
 import type { Node3DProperties } from '../nodes/node3d/types';
+import type { ResourceRegistry } from '../resources/ResourceRegistry';
 
 /**
  * Represents a complete TSCN scene
@@ -14,6 +15,8 @@ export interface TscnScene {
   externalResources: TscnExternalResource[];
   /** Internal resource definitions */
   internalResources: TscnInternalResource[];
+  /** Resource registry for loading external resources */
+  resourceRegistry?: ResourceRegistry;
 }
 
 /**
@@ -30,13 +33,15 @@ export interface TscnNode {
   children: TscnNode[];
   /** Type-specific properties (e.g., Node3DProperties for Node3D nodes) */
   properties: Node3DProperties | Record<string, unknown>;
+  /** External scene instance reference (e.g., ExtResource("1_abc")) */
+  instance?: string;
 }
 
 /**
  * Represents an external resource reference
  */
 export interface TscnExternalResource {
-  id: number;
+  id: string;
   path: string;
   type: string;
 }
@@ -45,7 +50,30 @@ export interface TscnExternalResource {
  * Represents an internal resource
  */
 export interface TscnInternalResource {
-  id: number;
+  id: string;
   type: string;
   data: Record<string, unknown>;
 }
+
+/**
+ * Represents a missing external resource that failed to load
+ */
+export interface MissingResource {
+  /** Godot resource path (e.g., res://scenes/Door.tscn) */
+  path: string;
+  /** Resource type (e.g., PackedScene, Texture2D, StandardMaterial3D) */
+  type: string;
+  /** Node path that references this resource */
+  referencedBy: string;
+  /** Error message from failed load attempt */
+  error?: string;
+}
+
+/**
+ * Callback invoked when renderer needs a resource that isn't available.
+ * Return the resource content if available, or null if unavailable.
+ *
+ * @param resource - Details about the missing resource
+ * @returns Resource content (string for text, ArrayBuffer for binary), or null if unavailable
+ */
+export type ResourceNeededCallback = (resource: MissingResource) => Promise<string | ArrayBuffer | null>;

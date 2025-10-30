@@ -17,8 +17,12 @@ export { setLogAdapter } from './logger';
 export type { LogAdapter } from './logger';
 
 // Export types
-export type { TscnScene, TscnNode } from './parser/types';
+export type { TscnScene, TscnNode, MissingResource, ResourceNeededCallback } from './parser/types';
 export type { TscnPreviewElements, TscnPreviewUIOptions } from './ui/TscnPreviewUI';
 export type { SceneTreeViewerOptions } from './ui/SceneTreeViewer';
-export type { CameraState } from './core/TscnRenderer';
+export type { CameraState, TscnRendererOptions } from './core/TscnRenderer';
 export type { NodeChange, NodeChangeType, IncrementalUpdateData } from './types/changes';
+export type { ResourceProvider } from './resources/ResourceProvider';
+
+// Export resource provider utilities
+export { isBinaryResourceType, stripResPrefix } from './resources/resourceProviderUtils';

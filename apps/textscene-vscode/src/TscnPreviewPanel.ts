@@ -4,8 +4,10 @@
 
 import * as vscode from 'vscode';
 import { generateWebviewHtml, generateNonce } from './webview/webviewHtml';
-import type { IncrementalUpdateData } from '@textscene/renderer';
+import type { IncrementalUpdateData, MissingResource } from '@textscene/renderer';
 import { computeIncrementalChanges } from './diffUtils';
+import { VSCodeResourceProvider } from './providers/VSCodeResourceProvider';
+import * as logger from './logger';
 
 export class TscnPreviewPanel {
   public static readonly viewType = 'tscnPreview';
@@ -63,6 +65,12 @@ export class TscnPreviewPanel {
             return;
           case 'jumpToNode':
             this._jumpToNodeDefinition(message.nodeName);
+            return;
+          case 'loadResource':
+            this._handleLoadResource(message.path, message.resourceType, message.requestId);
+            return;
+          case 'resourceNeeded':
+            this._handleResourceNeeded(message.resource);
             return;
         }
       },
@@ -190,6 +198,60 @@ export class TscnPreviewPanel {
       vscode.window.showErrorMessage(
         `Failed to jump to node: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
+    }
+  }
+
+  private async _handleLoadResource(
+    resourcePath: string,
+    resourceType: string,
+    requestId: string
+  ): Promise<void> {
+    try {
+      const workspaceFolder = vscode.workspace.getWorkspaceFolder(this._currentResource);
+      if (!workspaceFolder) {
+        throw new Error('No workspace folder found');
+      }
+
+      const provider = new VSCodeResourceProvider(
+        workspaceFolder.uri,
+        this._currentResource
+      );
+
+      const content = await provider.loadResource(resourcePath, resourceType);
+
+      // Convert ArrayBuffer to base64 for binary data
+      let responseContent: string;
+      if (content instanceof ArrayBuffer) {
+        const bytes = new Uint8Array(content);
+        responseContent = btoa(String.fromCharCode(...bytes));
+      } else {
+        responseContent = content;
+      }
+
+      this._panel.webview.postMessage({
+        type: 'resourceLoaded',
+        requestId,
+        content: responseContent,
+        isBinary: content instanceof ArrayBuffer,
+      });
+    } catch (error) {
+      this._panel.webview.postMessage({
+        type: 'resourceLoadError',
+        requestId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  private _handleResourceNeeded(resource: MissingResource): void {
+    const channel = logger.getChannel();
+    if (channel) {
+      channel.warn(`Missing resource: ${resource.path} (${resource.type})`);
+      channel.warn(`  Referenced by node: ${resource.referencedBy}`);
+      channel.warn(`  Error: ${resource.error}`);
+
+      // Show the output channel so user can see the error
+      logger.show();
     }
   }
 }

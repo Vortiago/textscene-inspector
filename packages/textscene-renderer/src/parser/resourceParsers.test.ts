@@ -72,7 +72,7 @@ describe('parseExternalResource', () => {
     expect(result).not.toBeNull();
     expect(result!.path).toBe('');
     expect(result!.type).toBe('');
-    expect(result!.id).toBe(0);
+    expect(result!.id).toBe('');
   });
 
   it('should parse PackedScene resource', () => {

@@ -8,12 +8,12 @@ import type { ParsedHeading } from './utils';
 export function parseExternalResource(heading: ParsedHeading | null): TscnExternalResource | null {
   if (!heading) return null;
 
-  const _id = heading.attributes.id;
+  const id = heading.attributes.id;
   const path = heading.attributes.path;
   const type = heading.attributes.type;
 
   return {
-    id: 0,
+    id: id || '',
     path: path || '',
     type: type || '',
   };
@@ -29,7 +29,7 @@ export function parseInternalResource(
   const type = heading.attributes.type;
 
   return {
-    id: 0,
+    id: id || '',
     type: type || '',
     data: { ...properties, id },
   };

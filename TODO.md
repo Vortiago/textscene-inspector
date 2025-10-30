@@ -78,13 +78,13 @@ This plan prioritizes node types based on their frequency in real-world Godot sc
 
 ## Phase 3: Scene Composition
 
-### [ ] #WI-13: Implement ExtResource Loading System - Not Done
+### [x] #WI-13: Implement ExtResource Loading System - Done
 - Parse [ext_resource] headings
 - Build resource registry (uid � path mapping)
 - Create resource loader for PackedScene references
 - **Frequency**: 20+ external scene instances in test scene
 
-### [ ] #WI-14: Implement Scene Instancing - Not Done
+### [x] #WI-14: Implement Scene Instancing - Done
 - Handle `instance=ExtResource("id")` in node headings
 - Load and instantiate sub-scenes
 - Maintain parent-child relationships across instances

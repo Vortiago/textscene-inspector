@@ -3,6 +3,7 @@
  */
 
 import type { Transform3D, DecomposedTransform } from '../nodes/node3d/types';
+import { warn } from '../logger';
 
 /**
  * Threshold for detecting gimbal lock singularity in rotation extraction.
@@ -117,4 +118,29 @@ export function identityTransform3D(): Transform3D {
     basis_z: { x: 0, y: 0, z: 1 },
     origin: { x: 0, y: 0, z: 0 },
   };
+}
+
+/**
+ * Parse optional transform property with error handling.
+ * Returns undefined if no transform string provided.
+ * Returns identity transform if parsing fails (with warning logged).
+ */
+export function parseOptionalTransform(
+  transformString: string | undefined,
+  nodeName: string
+): Transform3D | undefined {
+  if (!transformString) {
+    return undefined;
+  }
+
+  try {
+    return parseTransform3D(transformString);
+  } catch (error) {
+    warn(
+      `Failed to parse transform for node "${nodeName}": ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    );
+    return identityTransform3D();
+  }
 }

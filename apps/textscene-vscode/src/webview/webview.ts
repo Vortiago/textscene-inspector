@@ -4,6 +4,7 @@
 
 import { TscnPreviewUI } from '@textscene/renderer';
 import type { TscnPreviewElements, CameraState } from '@textscene/renderer';
+import { WebviewResourceProvider } from './WebviewResourceProvider';
 
 declare const acquireVsCodeApi: () => {
   postMessage: (message: unknown) => void;
@@ -17,6 +18,7 @@ interface WebviewState {
 }
 
 const vscode = acquireVsCodeApi();
+const resourceProvider = new WebviewResourceProvider(vscode);
 
 const elements: TscnPreviewElements = {
   canvas: document.getElementById('canvas') as HTMLCanvasElement,
@@ -41,6 +43,16 @@ const previewUI = new TscnPreviewUI(elements, {
       type: 'jumpToNode',
       nodeName: node.name,
     });
+  },
+  resourceProvider,
+  onResourceNeeded: async (resource) => {
+    // Send message to extension to log missing resource
+    vscode.postMessage({
+      type: 'resourceNeeded',
+      resource,
+    });
+    // Cannot provide resource immediately in VSCode - user must add file to workspace
+    return null;
   },
 });
 

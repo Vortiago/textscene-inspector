@@ -40,6 +40,15 @@ function renderBaseProperties(node: TscnNode, path: string): string {
     `;
   }
 
+  if (node.instance) {
+    html += `
+      <div class="detail-row detail-external-instance">
+        <span class="detail-label">📦 External Scene:</span>
+        <span class="detail-value">${node.instance}</span>
+      </div>
+    `;
+  }
+
   return html;
 }
 

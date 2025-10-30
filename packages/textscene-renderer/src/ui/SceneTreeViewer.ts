@@ -186,6 +186,16 @@ export class SceneTreeViewer {
       nodeHeader.appendChild(transformIcon);
     }
 
+    // External scene instance indicator
+    if (node.instance) {
+      const instanceIcon = this.createIcon({
+        className: 'tree-instance-icon',
+        content: '📦',
+        title: `External scene: ${node.instance}`,
+      });
+      nodeHeader.appendChild(instanceIcon);
+    }
+
     const visibilityIcon = this.createVisibilityIcon(nodePath);
     nodeHeader.appendChild(visibilityIcon);
 

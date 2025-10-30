@@ -61,8 +61,9 @@ export function buildSceneTree(nodes: TscnNode[]): TscnNode[] {
 
   // Warn about any orphaned nodes
   if (remaining.length > 0) {
+    warn(`WARNING: ${remaining.length} orphaned nodes will be dropped from scene tree!`);
     for (const node of remaining) {
-      warn(`Could not find parent "${node.parent}" for node "${node.name}"`);
+      warn(`  Orphaned: "${node.name}" (type: ${node.type}, parent: "${node.parent}", instance: ${node.instance || 'none'})`);
     }
   }
 

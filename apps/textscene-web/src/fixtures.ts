@@ -35,6 +35,16 @@ export const fixtures: Fixture[] = [
 
   // Complex
   { name: 'Hallway Scene', file: 'Hallway.tscn', category: 'Complex' },
+
+  // External Resources (Scene Instancing Tests)
+  { name: '🎯 External Only (No Parent Geometry)', file: 'external_only.tscn', category: 'External Resources' },
+  { name: '🎯 Obvious Separation (Red Box + Sphere)', file: 'obvious_separation.tscn', category: 'External Resources' },
+  { name: '🎯 Three Cubes (Same External x3)', file: 'three_cubes.tscn', category: 'External Resources' },
+  { name: 'External Texture Reference', file: 'external_texture.tscn', category: 'External Resources' },
+  { name: 'Parent with Child Scene', file: 'parent_with_external.tscn', category: 'External Resources' },
+  { name: 'Multiple External Scenes', file: 'multiple_externals.tscn', category: 'External Resources' },
+  { name: 'Child Cube (Standalone)', file: 'child_cube.tscn', category: 'External Resources' },
+  { name: 'Child Sphere (Standalone)', file: 'child_sphere.tscn', category: 'External Resources' },
 ];
 
 export function getFixturesByCategory(): Map<string, Fixture[]> {

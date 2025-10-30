@@ -265,10 +265,14 @@ describe('buildSceneTree', () => {
 
       const result = buildSceneTree(nodes);
 
+      // New behavior: warns about orphaned nodes being dropped
       expect(loggerWarnSpy).toHaveBeenCalledWith(
-        'Could not find parent "NonExistentParent" for node "Orphan"'
+        'WARNING: 1 orphaned nodes will be dropped from scene tree!'
       );
-      // Orphaned nodes are not added as additional roots (Godot requires single root)
+      expect(loggerWarnSpy).toHaveBeenCalledWith(
+        '  Orphaned: "Orphan" (type: Node3D, parent: "NonExistentParent", instance: none)'
+      );
+      // Orphaned nodes are dropped (not added as roots)
       expect(result).toHaveLength(1);
       expect(result[0].name).toBe('Root');
 

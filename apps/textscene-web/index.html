@@ -61,7 +61,7 @@
       }
 
       #controls {
-        width: 300px;
+        width: 450px;
         padding: 1rem;
         background: var(--bg-panel);
         border-right: 1px solid var(--border-color);
@@ -499,6 +499,97 @@
       .fixture-item:active {
         background: var(--bg-select);
       }
+
+      /* Resource Files Panel Styles */
+      .resource-files {
+        margin-top: 1rem;
+        padding: 1rem;
+        background: var(--bg-input);
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        font-size: 0.875rem;
+        display: none;
+      }
+
+      .resource-files.visible {
+        display: block;
+      }
+
+      .resource-files h3 {
+        font-size: 1rem;
+        margin-bottom: 0.75rem;
+        color: var(--text-primary);
+      }
+
+      .resource-file-item {
+        margin-bottom: 0.375rem;
+        padding: 0.5rem;
+        background: var(--bg-panel);
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        display: grid;
+        grid-template-columns: auto 1fr;
+        grid-template-rows: auto auto;
+        gap: 0.25rem 0.5rem;
+      }
+
+      .resource-file-item.uploaded {
+        border-left: 3px solid #6c9;
+      }
+
+      .resource-file-item.missing {
+        border-left: 3px solid #ffcc00;
+      }
+
+      .resource-file-icon {
+        font-size: 0.875rem;
+        grid-row: 1 / 3; /* Span both rows */
+        align-self: center;
+      }
+
+      .resource-file-icon.uploaded {
+        color: #6c9;
+      }
+
+      .resource-file-icon.missing {
+        color: #ffcc00;
+      }
+
+      .resource-file-path {
+        font-family: 'Consolas', 'Monaco', monospace;
+        font-size: 0.75rem;
+        color: var(--text-primary);
+        word-break: break-all;
+        grid-column: 2;
+        grid-row: 1;
+      }
+
+      .resource-file-action {
+        grid-column: 2;
+        grid-row: 2;
+      }
+
+      .resource-file-remove {
+        padding: 0.25rem 0.5rem;
+        background: #3d1e1e;
+        border: 1px solid #5a2d2d;
+        color: #ff9999;
+        border-radius: 3px;
+        font-size: 0.7rem;
+        cursor: pointer;
+        flex-shrink: 0;
+        white-space: nowrap;
+      }
+
+      .resource-file-remove:hover {
+        background: #5a2d2d;
+        color: #ffcccc;
+      }
+
+      .tree-instance-icon {
+        font-size: 0.875rem;
+        flex-shrink: 0;
+      }
     </style>
   </head>
   <body>
@@ -519,6 +610,11 @@
               <span class="fixtures-toggle">▼</span>
             </div>
             <div class="fixtures-list" id="fixtures-list"></div>
+          </div>
+
+          <div class="resource-files" id="resource-files">
+            <h3>📁 Resource Files</h3>
+            <div id="resource-files-list"></div>
           </div>
 
           <button id="reset-camera" disabled>Reset Camera</button>

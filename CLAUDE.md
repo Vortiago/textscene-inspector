@@ -162,6 +162,26 @@ See https://docs.godotengine.org/en/4.4/contributing/development/file_formats/ts
 - **Self-registering patterns**: New features should register themselves, not require editing central files
 - **Feature parity**: Keep web-previewer and vscode-extension functionality in sync via shared library
 
+## Logging Guidelines
+
+**Verbose logging is encouraged for rapid prototyping and debugging:**
+- Use `logger.info()` liberally for tracing execution flow during development
+- Prefix related logs with categories (e.g., `[External Scene]`, `[Parser]`)
+- Include relevant context (IDs, paths, counts) to make debugging easier
+- Keep `logger.error()` and `logger.warn()` for production issues
+
+**Host applications control log levels:**
+- VS Code extension and web app should configure log output filtering
+- Production builds can suppress info logs while keeping errors/warnings
+- Don't remove verbose logging from the core library - let apps decide what to show
+
+**Example of good verbose logging:**
+```typescript
+logger.info(`[External Scene] Loading content from: ${resourceMetadata.path}`);
+logger.info(`[External Scene] Parsed scene with ${externalScene.nodes.length} root nodes`);
+logger.info(`[External Scene] ✅ Successfully loaded external scene: ${path} with ${count} nodes`);
+```
+
 ## Code Comment Guidelines
 
 Following KISS principles, keep comments concise and informative:

@@ -77,23 +77,64 @@ export function parseNodeWithRegistry(
   heading: ParsedHeading,
   properties: Record<string, string>
 ): TscnNode | null {
+  // Check if this is an instance node (has instance attribute but no type)
+  const instanceRef = heading.attributes.instance || properties.instance;
+  const hasInstanceAttribute = !!instanceRef;
+
   const registration = nodeRegistry.findRegistration(heading);
 
+  // If no registration found, use base Node type as fallback
+  // This keeps unsupported types and instance nodes in the tree hierarchy
   if (!registration) {
     const nodeType = heading.attributes.type || 'unknown';
-    warn(`Unsupported node type: ${nodeType}`);
-    return null;
+
+    // Warn for truly unsupported types, but not for instance nodes (which have no type until loaded)
+    if (!hasInstanceAttribute) {
+      warn(`Unsupported node type: ${nodeType} - using Node fallback`);
+    }
+
+    const nodeRegistration = nodeRegistry.getRegistration('Node');
+    if (!nodeRegistration) {
+      warn('Node registration not found - cannot create fallback node');
+      return null;
+    }
+
+    const parsedProps = nodeRegistration.parser(heading, properties);
+    const node: TscnNode = {
+      name: parsedProps.name,
+      type: 'Node',
+      parent: parsedProps.parent,
+      children: [],
+      properties: parsedProps,
+    };
+
+    // Preserve instance attribute for external scene loading
+    if (hasInstanceAttribute) {
+      node.instance = instanceRef;
+    }
+
+    return node;
   }
 
   const parsedProps = registration.parser(heading, properties);
 
-  return {
+  const node: TscnNode = {
     name: parsedProps.name,
     type: registration.typeName,
     parent: parsedProps.parent,
     children: [],
     properties: parsedProps,
   };
+
+  // Capture instance property for external scene references
+  // instance can be in heading attributes OR body properties
+  if (heading.attributes.instance) {
+    node.instance = heading.attributes.instance;
+  } else if (properties.instance) {
+    node.instance = properties.instance;
+  }
+
+  return node;
 }
 
 export function renderNodeWithRegistry(

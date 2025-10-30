@@ -1,15 +1,15 @@
 /**
- * Node3D parser - parses Node3D nodes from TSCN.
+ * Base Node parser - minimal parsing for hierarchy tracking.
  */
 
 import type { ParsedHeading } from '../../parser/utils';
-import type { Node3DProperties } from './types';
+import type { NodeProperties } from './types';
 import { parseOptionalTransform } from '../../utils/transform';
 
-export function parseNode3D(
+export function parseNode(
   heading: ParsedHeading,
   properties: Record<string, string>
-): Node3DProperties {
+): NodeProperties {
   const name = heading.attributes.name || '';
   const parent = heading.attributes.parent;
   const instance = heading.attributes.instance;
@@ -18,11 +18,11 @@ export function parseNode3D(
   return {
     name,
     parent,
-    transform,
     instance,
+    transform,
   };
 }
 
-export function isNode3D(heading: ParsedHeading): boolean {
-  return heading.type === 'node' && heading.attributes.type === 'Node3D';
+export function isNode(heading: ParsedHeading): boolean {
+  return heading.type === 'node' && heading.attributes.type === 'Node';
 }

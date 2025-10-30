@@ -85,7 +85,7 @@ export default [
     },
   },
 
-  // Config files - Node.js environment
+  // Config files and scripts - Node.js environment
   {
     files: ['**/*.config.js', '**/*.config.mjs', '**/scripts/**/*.js'],
     languageOptions: {

@@ -2,7 +2,8 @@
  * Manages UI state for TSCN preview applications.
  */
 
-import type { TscnScene, TscnNode } from '../parser/types';
+import type { TscnScene, TscnNode, ResourceNeededCallback } from '../parser/types';
+import type { ResourceProvider } from '../resources/ResourceProvider';
 import { TscnParser } from '../parser/TscnParser';
 import { TscnRenderer } from '../core/TscnRenderer';
 import { SceneTreeViewer } from './SceneTreeViewer';
@@ -29,6 +30,8 @@ export interface TscnPreviewElements {
 export interface TscnPreviewUIOptions {
   customResize?: (canvas: HTMLCanvasElement, renderer: TscnRenderer) => void;
   onNodeDoubleClick?: (node: TscnNode, path: string) => void;
+  onResourceNeeded?: ResourceNeededCallback;
+  resourceProvider?: ResourceProvider;
 }
 
 export class TscnPreviewUI {
@@ -44,7 +47,9 @@ export class TscnPreviewUI {
     this.elements = elements;
     this.options = options;
     this.parser = new TscnParser();
-    this.renderer = new TscnRenderer(elements.canvas);
+    this.renderer = new TscnRenderer(elements.canvas, {
+      onResourceNeeded: options.onResourceNeeded,
+    });
 
     this.setupResizeHandler();
     this.setupTreeViewer();
@@ -161,14 +166,19 @@ export class TscnPreviewUI {
     return count;
   }
 
-  loadTscn(content: string): void {
+  async loadTscn(content: string): Promise<void> {
     try {
       this.hideError();
 
       const scene = this.parser.parse(content);
       this.currentScene = scene;
 
-      this.renderer.render(scene);
+      // Set resource provider if available
+      if (this.options.resourceProvider && scene.resourceRegistry) {
+        scene.resourceRegistry.setProvider(this.options.resourceProvider);
+      }
+
+      await this.renderer.render(scene);
       this.updateSceneInfo(scene);
 
       if (this.treeViewer) {
@@ -199,7 +209,7 @@ export class TscnPreviewUI {
     return this.parser;
   }
 
-  handleIncrementalUpdate(changes: import('../types/changes').NodeChange[], sceneData: TscnScene): void {
+  async handleIncrementalUpdate(changes: import('../types/changes').NodeChange[], sceneData: TscnScene): Promise<void> {
     try {
       this.hideError();
       this.currentScene = sceneData;
@@ -222,14 +232,14 @@ export class TscnPreviewUI {
       // Process updates
       for (const change of updates) {
         if (change.node) {
-          this.renderer.updateNode(change.nodePath, change.node, sceneData);
+          await this.renderer.updateNode(change.nodePath, change.node, sceneData);
         }
       }
 
       // Process adds
       for (const change of adds) {
         if (change.node) {
-          this.renderer.addNode(change.nodePath, change.node, sceneData, change.parentPath);
+          await this.renderer.addNode(change.nodePath, change.node, sceneData, change.parentPath);
         }
       }
 

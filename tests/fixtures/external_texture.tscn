@@ -1,0 +1,22 @@
+[gd_scene load_steps=4 format=3 uid="uid://test_external_texture"]
+
+[ext_resource type="Texture2D" path="res://textures/test_texture.png" id="1_texture"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_1"]
+size = Vector3(2, 2, 2)
+
+[sub_resource type="StandardMaterial3D" id="Material_1"]
+albedo_color = Color(0.8, 0.8, 0.8, 1)
+metallic = 0.5
+roughness = 0.3
+
+[node name="Scene" type="Node3D"]
+
+[node name="TexturedCube" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+mesh = SubResource("BoxMesh_1")
+surface_material_override/0 = SubResource("Material_1")
+
+[node name="DirectionalLight" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866025, -0.25, 0.433013, 0, 0.866025, 0.5, -0.5, -0.433013, 0.75, 0, 5, 0)
+light_energy = 1.0

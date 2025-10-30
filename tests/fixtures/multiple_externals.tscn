@@ -1,0 +1,35 @@
+[gd_scene load_steps=7 format=3 uid="uid://multiple_externals"]
+
+[ext_resource type="PackedScene" path="res://child_cube.tscn" id="1_cube"]
+[ext_resource type="PackedScene" path="res://child_sphere.tscn" id="2_sphere"]
+[ext_resource type="PackedScene" uid="uid://child_cube_scene" path="res://child_cube.tscn" id="3_cube2"]
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_1"]
+top_radius = 0.2
+bottom_radius = 0.2
+height = 2.0
+
+[sub_resource type="StandardMaterial3D" id="Material_1"]
+albedo_color = Color(0.9, 0.9, 0.2, 1)
+metallic = 0.5
+roughness = 0.4
+
+[node name="MultipleExternals" type="Node3D"]
+
+[node name="CenterPole" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+mesh = SubResource("CylinderMesh_1")
+surface_material_override/0 = SubResource("Material_1")
+
+[node name="ChildLeft" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0.5, 0)
+
+[node name="ChildRight" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0.5, 0)
+
+[node name="ChildTop" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 0)
+
+[node name="Light" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866025, -0.25, 0.433013, 0, 0.866025, 0.5, -0.5, -0.433013, 0.75, 0, 8, 5)
+light_energy = 1.0

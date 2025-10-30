@@ -1,0 +1,25 @@
+[gd_scene load_steps=5 format=3 uid="uid://parent_with_external"]
+
+[ext_resource type="PackedScene" path="res://child_cube.tscn" id="1_child"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_parent"]
+size = Vector3(3, 0.5, 3)
+
+[sub_resource type="StandardMaterial3D" id="Material_parent"]
+albedo_color = Color(0.4, 0.7, 0.4, 1)
+metallic = 0.0
+roughness = 0.8
+
+[node name="ParentScene" type="Node3D"]
+
+[node name="Platform" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+mesh = SubResource("BoxMesh_parent")
+surface_material_override/0 = SubResource("Material_parent")
+
+[node name="ChildInstance" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
+
+[node name="Light" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866025, -0.25, 0.433013, 0, 0.866025, 0.5, -0.5, -0.433013, 0.75, 0, 5, 5)
+light_energy = 1.0
