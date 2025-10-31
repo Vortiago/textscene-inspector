@@ -10,7 +10,7 @@
 
 ### 1. Dead Code: `findNodeInTree()` Method
 
-**Location**: `packages/textscene-renderer/src/core/TscnRenderer.ts:509-521`
+**Location**: `packages/textscene-core/src/core/TscnRenderer.ts:509-521`
 
 **Problem**:
 - Method is defined but **never called** anywhere in codebase
@@ -47,7 +47,7 @@ private findNodeInTree(nodePath: string, nodes: TscnNode[], currentPath = ''): T
 
 ### 2. Parser Re-instantiation for Every External Scene
 
-**Location**: `packages/textscene-renderer/src/core/TscnRenderer.ts:226`
+**Location**: `packages/textscene-core/src/core/TscnRenderer.ts:226`
 
 **Problem**:
 - Creates new `TscnParser()` instance for every external scene load
@@ -76,7 +76,7 @@ const externalScene = parser.parse(externalSceneContent);
 
 ### 3. No Parsed Scene Caching
 
-**Location**: `packages/textscene-renderer/src/resources/ResourceRegistry.ts`
+**Location**: `packages/textscene-core/src/resources/ResourceRegistry.ts`
 
 **Problem**:
 - Same external scene parsed multiple times if instanced multiple times
@@ -133,7 +133,7 @@ export class ResourceRegistry {
 
 ### 4. God Object Pattern Emerging in TscnRenderer
 
-**Location**: `packages/textscene-renderer/src/core/TscnRenderer.ts` (527 lines)
+**Location**: `packages/textscene-core/src/core/TscnRenderer.ts` (527 lines)
 
 **Problem**: Class has too many responsibilities (Single Responsibility Principle violation)
 
@@ -197,7 +197,7 @@ class SelectionManager {
 
 ### 5. Dual Map Maintenance Burden
 
-**Location**: `packages/textscene-renderer/src/core/TscnRenderer.ts:116-117`
+**Location**: `packages/textscene-core/src/core/TscnRenderer.ts:116-117`
 
 **Problem**: Two maps tracking the same keys, must stay synchronized
 
@@ -267,7 +267,7 @@ class NodeTracker {
 
 ### 6. No Circular Instance Protection at Renderer Level
 
-**Location**: `packages/textscene-renderer/src/core/TscnRenderer.ts` (external scene loading)
+**Location**: `packages/textscene-core/src/core/TscnRenderer.ts` (external scene loading)
 
 **Problem**: No protection against circular scene instances
 
@@ -328,7 +328,7 @@ export class TscnRenderer {
 
 ### 7. No Validation of External Resource Types
 
-**Location**: `packages/textscene-renderer/src/core/TscnRenderer.ts:125-128`
+**Location**: `packages/textscene-core/src/core/TscnRenderer.ts:125-128`
 
 **Problem**: Assumes all `instance` attributes reference PackedScene resources
 
@@ -378,7 +378,7 @@ private async loadExternalSceneInstance(...): Promise<void> {
 
 ### 8. ResourceProvider Interface Too Minimal
 
-**Location**: `packages/textscene-renderer/src/resources/ResourceProvider.ts`
+**Location**: `packages/textscene-core/src/resources/ResourceProvider.ts`
 
 **Current Interface**:
 ```typescript
@@ -431,7 +431,7 @@ export interface ResourceProvider {
 
 ### 9. External Scene Context Complexity
 
-**Location**: `packages/textscene-renderer/src/core/TscnRenderer.ts:77, 90-114`
+**Location**: `packages/textscene-core/src/core/TscnRenderer.ts:77, 90-114`
 
 **Problem**: `externalSceneContext` parameter grows more complex as nesting support added
 
@@ -499,7 +499,7 @@ interface NodeAdditionStrategy {
 
 ### 10. No Visual Error Indication for Failed Scenes
 
-**Location**: `packages/textscene-renderer/src/core/TscnRenderer.ts` (external scene loading failure)
+**Location**: `packages/textscene-core/src/core/TscnRenderer.ts` (external scene loading failure)
 
 **Problem**: Failed external scenes are invisible in 3D viewport
 
@@ -559,7 +559,7 @@ private addErrorMarker(parent: THREE.Object3D, path: string, error: Error): void
 
 ### 11. Verbose Logging Throughout
 
-**Location**: Throughout `packages/textscene-renderer/src/`
+**Location**: Throughout `packages/textscene-core/src/`
 
 **Observation**:
 - 50+ `logger.info()` calls in TscnRenderer.ts alone
@@ -610,8 +610,8 @@ logger.info(`[External Scene] Parsed scene with ${externalScene.nodes.length} ro
 ### 13. No Registry Cleanup on Scene Unload
 
 **Location**:
-- `packages/textscene-renderer/src/core/NodeRegistry.ts`
-- `packages/textscene-renderer/src/resources/ResourceRegistry.ts`
+- `packages/textscene-core/src/core/NodeRegistry.ts`
+- `packages/textscene-core/src/resources/ResourceRegistry.ts`
 
 **Problem**: Registries never call `.clear()` method
 

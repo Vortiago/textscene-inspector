@@ -73,7 +73,7 @@ importers:
     dependencies:
       '@textscene/core':
         specifier: workspace:*
-        version: link:../../packages/textscene-renderer
+        version: link:../../packages/textscene-core
       commander:
         specifier: 'catalog:'
         version: 12.1.0
@@ -95,7 +95,7 @@ importers:
     dependencies:
       '@textscene/core':
         specifier: workspace:*
-        version: link:../../packages/textscene-renderer
+        version: link:../../packages/textscene-core
     devDependencies:
       '@types/vscode':
         specifier: ^1.85.0
@@ -120,7 +120,7 @@ importers:
     dependencies:
       '@textscene/core':
         specifier: workspace:*
-        version: link:../../packages/textscene-renderer
+        version: link:../../packages/textscene-core
     devDependencies:
       rimraf:
         specifier: 'catalog:'
@@ -135,7 +135,7 @@ importers:
         specifier: 'catalog:'
         version: 4.0.3(@types/node@22.18.12)(@vitest/ui@4.0.3)(happy-dom@20.0.8)
 
-  packages/textscene-renderer:
+  packages/textscene-core:
     dependencies:
       three:
         specifier: ^0.171.0
