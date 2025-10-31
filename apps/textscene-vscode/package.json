@@ -49,13 +49,13 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "pnpm --filter @textscene/renderer build && pnpm build",
-    "prebuild": "pnpm --filter @textscene/renderer build",
+    "vscode:prepublish": "pnpm --filter @textscene/core build && pnpm build",
+    "prebuild": "pnpm --filter @textscene/core build",
     "build": "node esbuild.config.mjs",
-    "predev": "pnpm --filter @textscene/renderer build",
+    "predev": "pnpm --filter @textscene/core build",
     "dev": "node esbuild.config.mjs --watch",
     "test": "vitest",
-    "pretype-check": "pnpm --filter @textscene/renderer build",
+    "pretype-check": "pnpm --filter @textscene/core build",
     "type-check": "tsc --noEmit",
     "package": "npx @vscode/vsce package --no-dependencies",
     "publish": "npx @vscode/vsce publish --no-dependencies",
