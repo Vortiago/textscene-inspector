@@ -13,6 +13,123 @@ TextScene Inspector is a monorepo for parsing and rendering text-based 3D scene 
 - **[ARCHITECTURE.md](./ARCHITECTURE.md)**: Read for detailed architecture explanation, especially when working on the vertical slicing structure or understanding TSCN format components
 - **[REFERENCES.md](./REFERENCES.md)**: Read when you need to look up documentation links or Context7 library IDs
 
+## Development Workflow
+
+### ⚠️ MANDATORY: Pre-Commit Checklist
+
+**NEVER commit without running all these checks first:**
+
+```bash
+# 1. Build everything
+pnpm build
+
+# 2. Type check (catches type errors)
+pnpm type-check
+
+# 3. Lint (catches code style issues)
+pnpm lint
+
+# 4. Run tests (catches logic errors)
+pnpm test
+
+# 5. If you created/modified .tscn files, lint them
+pnpm --filter @textscene/linter build
+node apps/textscene-linter/dist/cli.js scenes/fixtures/*.tscn scenes/examples/*.tscn
+```
+
+**If ANY check fails, fix it before committing.** Do not commit code with errors.
+
+### Development Cycle (Test as You Go)
+
+**Bad approach:** Write lots of code → Run checks → Fix errors
+**Good approach:** Write small piece → Run checks → Next piece
+
+**Recommended workflow:**
+
+1. **Write a small change** (single function, single file)
+2. **Build immediately:** `pnpm --filter <package> build`
+3. **Type check immediately:** `pnpm type-check`
+4. **If types fail, fix NOW** (while the context is fresh)
+5. **Write tests for the change**
+6. **Run tests:** `pnpm test`
+7. **Repeat for next small change**
+8. **Before commit:** Run full pre-commit checklist above
+
+**Key principle:** Catch errors in seconds, not minutes. Test incrementally.
+
+### Common Pitfalls to Avoid
+
+**1. Type Assertions - Know When to Cast**
+
+```typescript
+// ❌ BAD - Will cause type error
+node.properties['__instance_index'] = heading.attributes.index;
+
+// ✅ GOOD - Cast to Record when adding dynamic properties
+(node.properties as Record<string, unknown>)['__instance_index'] = heading.attributes.index;
+```
+
+**2. Unused Variables - Don't Declare If Not Using**
+
+```typescript
+// ❌ BAD - ESLint error: unused variable
+const startLine = currentLineNumber;
+// ... startLine never used again
+
+// ✅ GOOD - Only declare if you'll use it
+// Don't declare it at all if not needed
+```
+
+**3. Type Imports - Import Types Correctly**
+
+```typescript
+// ❌ BAD - May cause circular dependency
+import { SomeType } from './module';
+
+// ✅ GOOD - Use type-only imports
+import type { SomeType } from './module';
+```
+
+**4. Rebuild After Changes - Don't Forget Dependencies**
+
+```typescript
+// If you modify packages/textscene-renderer/...
+// Apps depend on it, so rebuild:
+pnpm --filter @textscene/renderer build
+// THEN rebuild apps that use it
+```
+
+**5. Array Access - Use Non-Null Assertion Carefully**
+
+```typescript
+// ❌ BAD - Might be undefined
+const line = lines[i];
+
+// ✅ GOOD - Only use ! when you KNOW it exists (e.g., within loop bounds)
+const line = lines[i]!; // Safe if: i < lines.length
+```
+
+**6. Testing Pattern - Rebuild → Run Tests**
+
+```bash
+# ❌ BAD - Running tests without rebuilding
+pnpm test  # Uses old build, tests pass but code is broken
+
+# ✅ GOOD - Always rebuild before testing
+pnpm --filter @textscene/renderer build
+pnpm test
+```
+
+### Quick Reference: Fix Common Errors
+
+| Error | Cause | Fix |
+|-------|-------|-----|
+| `Property 'X' does not exist on type 'Y'` | Type mismatch or missing cast | Add type assertion: `as Record<string, unknown>` |
+| `'variable' is assigned but never used` | Declared unused variable | Remove the variable declaration |
+| `Cannot find module 'X'` | Missing import or wrong path | Check import path, use type-only imports |
+| `Command failed with exit code 2` | Type check failed | Run `pnpm type-check` to see actual error |
+| Linter builds but tests fail | Stale build artifacts | Run `pnpm clean` then `pnpm install && pnpm build` |
+
 ## Commands
 
 ### Essential Commands
@@ -21,7 +138,7 @@ TextScene Inspector is a monorepo for parsing and rendering text-based 3D scene 
 # Install dependencies
 pnpm install
 
-# Type checking (run before commits)
+# Type checking (ALWAYS run before commits)
 pnpm type-check
 
 # Run all tests
@@ -53,21 +170,67 @@ pnpm dev          # Watch mode
 pnpm package      # Create .vsix for testing
 ```
 
-### Test Fixtures and Web Previewer
+### Scenes and Web Previewer
 
-**Test fixtures** live in `tests/fixtures/*.tscn` as the single source of truth. They are automatically copied to the web app during build/dev.
+**Scene files** are organized in the `scenes/` directory:
+- `scenes/fixtures/` - Minimal unit-level scenes for testing individual node types (e.g., `unit-plane-mesh.tscn`)
+- `scenes/examples/` - Integration and complex demo scenes (e.g., `integration-all-primitives.tscn`, `example-hallway.tscn`)
 
-When adding or removing fixtures from `tests/fixtures/`:
-1. The fixture files are automatically copied during `pnpm dev` or `pnpm build`
-2. **Manually update** `apps/textscene-web/src/fixtures.ts` to add/remove the fixture from the UI selector
-3. Provide a display name and category (Basic, Primitives, Edge Cases, Performance, Complex)
+Files are automatically copied to the web app during build/dev.
+
+When adding or removing scenes:
+1. Place new files in `scenes/fixtures/` or `scenes/examples/` with descriptive names:
+   - Fixtures: `unit-<node-type>.tscn`, `edge-<issue>.tscn`
+   - Examples: `integration-<feature>.tscn`, `example-<name>.tscn`
+2. Files are automatically copied during `pnpm dev` or `pnpm build`
+3. **Manually update** `apps/textscene-web/src/fixtures.ts` to add the scene to the UI selector
+4. Use appropriate categories (Unit - Basic Nodes, Unit - Primitive Meshes, Edge Cases, Integration - Multi-Node, Examples - Complex Scenes)
 
 Example fixture entry:
 ```typescript
-{ name: 'Plane Mesh', file: 'planemesh.tscn', category: 'Primitives' }
+{ name: 'Plane Mesh', file: 'unit-plane-mesh.tscn', category: 'Unit - Primitive Meshes' }
 ```
 
-The web previewer includes a collapsible "Test Fixtures" selector for quick loading during development.
+The web previewer includes a categorized scene selector for quick loading during development.
+
+### Fixture Creation Rules
+
+**IMPORTANT: Every implemented feature must have a fixture**
+
+**Rule of thumb:** If code exists in `src/`, there should be a fixture to test it visually.
+
+When implementing new features (node types, mesh types, materials, etc.):
+
+1. **Create a fixture immediately** after implementing the feature
+   - Place in `scenes/fixtures/` for unit-level testing
+   - Use naming convention: `unit-<feature>.tscn`
+   - Example: After implementing `SphereMesh` renderer, create `unit-sphere-mesh.tscn`
+
+2. **Validate with linter before committing**
+   ```bash
+   # Build linter first
+   pnpm --filter @textscene/linter build
+
+   # Lint your new fixture
+   node apps/textscene-linter/dist/cli.js scenes/fixtures/your-new-fixture.tscn
+   ```
+   - Fixture must pass linting with zero errors (unless it's an edge case fixture)
+   - Fix any linting errors before committing
+
+3. **Add to fixtures.ts** for web UI visibility
+   - Update `apps/textscene-web/src/fixtures.ts`
+   - Choose appropriate category (create new if needed)
+   - Maintain alphabetical order within categories
+
+**What to create fixtures for:**
+- ✅ Every mesh type (BoxMesh, SphereMesh, etc.)
+- ✅ Every node type (Camera3D, Light3D, etc.)
+- ✅ Material property variations (metallic, emissive, transparent)
+- ✅ Edge cases for linter testing
+- ❌ Don't create redundant parameter combinations
+- ❌ Don't create fixtures for unimplemented features
+
+**Integration examples:** When multiple features work together, create integration scenes in `scenes/examples/` (e.g., `integration-all-meshes.tscn` shows all 7 mesh types together).
 
 ## Architecture
 

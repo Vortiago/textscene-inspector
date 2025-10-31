@@ -1,6 +1,6 @@
-# TSCN Test Fixtures
+# TSCN Scenes
 
-This directory contains test fixtures for manually verifying the TSCN renderer implementations.
+This directory contains scene files organized into fixtures (minimal unit-level scenes) and examples (integration and complex demo scenes).
 
 ## Quick Start - Testing New Mesh Primitives
 
@@ -14,11 +14,11 @@ This directory contains test fixtures for manually verifying the TSCN renderer i
 2. Open http://localhost:5173 in your browser
 
 3. Click "Choose File" and select one of these test files:
-   - `tests/fixtures/planemesh.tscn` - Green floor plane
-   - `tests/fixtures/capsulemesh.tscn` - Blue capsule
-   - `tests/fixtures/torusmesh.tscn` - Orange torus (donut)
-   - `tests/fixtures/prismmesh.tscn` - Purple triangular prism
-   - `tests/fixtures/all_new_primitives.tscn` - **All primitives together with lighting**
+   - `scenes/fixtures/unit-plane-mesh.tscn` - Green floor plane
+   - `scenes/fixtures/unit-capsule-mesh.tscn` - Blue capsule
+   - `scenes/fixtures/unit-torus-mesh.tscn` - Orange torus (donut)
+   - `scenes/fixtures/unit-prism-mesh.tscn` - Purple triangular prism
+   - `scenes/examples/integration-all-primitives.tscn` - **All primitives together with lighting**
 
 4. Interact with the 3D view:
    - **Rotate**: Left mouse drag
@@ -40,30 +40,36 @@ This directory contains test fixtures for manually verifying the TSCN renderer i
    - Click "..." → "Install from VSIX"
    - Select `apps/textscene-vscode/textscene-inspector-0.0.1.vsix`
 
-3. Open any `.tscn` file from `tests/fixtures/` in VS Code
+3. Open any `.tscn` file from `scenes/fixtures/` or `scenes/examples/` in VS Code
 
 4. Click the preview icon in the top-right corner or use:
    - Command Palette (Ctrl+Shift+P) → "TextScene: Open Preview to the Side"
 
-## Test Fixtures Overview
+## Scene Organization
 
-### Individual Mesh Primitives
+### Fixtures (fixtures/)
+Minimal unit-level scenes for testing individual node types.
 
 | File | Mesh Type | Description | What to Verify |
 |------|-----------|-------------|----------------|
-| `planemesh.tscn` | PlaneMesh | Green 10x10 floor plane with subdivisions | Check orientation (horizontal), subdivisions visible |
-| `capsulemesh.tscn` | CapsuleMesh | Blue capsule (cylinder with rounded ends) | Verify smooth hemisphere caps, height conversion correct |
-| `torusmesh.tscn` | TorusMesh | Orange metallic donut shape | Check inner/outer radius, ring details |
-| `prismmesh.tscn` | PrismMesh | Purple triangular prism | Verify triangular cross-section, 3 sides |
+| `unit-plane-mesh.tscn` | PlaneMesh | Green 10x10 floor plane with subdivisions | Check orientation (horizontal), subdivisions visible |
+| `unit-capsule-mesh.tscn` | CapsuleMesh | Blue capsule (cylinder with rounded ends) | Verify smooth hemisphere caps, height conversion correct |
+| `unit-torus-mesh.tscn` | TorusMesh | Orange metallic donut shape | Check inner/outer radius, ring details |
+| `unit-prism-mesh.tscn` | PrismMesh | Purple triangular prism | Verify triangular cross-section, 3 sides |
+| `unit-mesh-instance-basic.tscn` | BoxMesh | Basic mesh instance | Baseline comparison |
+| `unit-node3d-basic.tscn` | Node3D | Simple node | Basic node verification |
+| `unit-camera-basic.tscn` | Camera3D | Camera node | Camera setup verification |
 
-### Comprehensive Scenes
+### Examples (examples/)
+Integration and complex demo scenes for testing multiple nodes together.
 
 | File | Contents | Purpose |
 |------|----------|---------|
-| `all_new_primitives.tscn` | All 4 new mesh types + lighting | **Best for full verification** - Shows all primitives with proper materials and lighting |
-| `mesh_instance.tscn` | BoxMesh (existing) | Baseline comparison |
-| `lights.tscn` | Various light types | Light rendering verification |
-| `Hallway.tscn` | Complex scene | Performance/integration testing |
+| `integration-all-primitives.tscn` | All 4 new mesh types + lighting | **Best for full verification** - Shows all primitives with proper materials and lighting |
+| `integration-lights-all-types.tscn` | Directional, Omni, and Spot lights | Light rendering verification |
+| `example-hallway.tscn` | Complex architectural scene | Performance/integration testing |
+| `example-hierarchy-deep.tscn` | Deep node hierarchy | Performance testing |
+| `example-hierarchy-wide.tscn` | Wide node hierarchy | Performance testing |
 
 ## What to Look For
 

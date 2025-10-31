@@ -1,0 +1,117 @@
+[gd_scene format=3]
+
+[sub_resource type="BoxMesh" id="BoxMesh_1"]
+size = Vector3(1, 1, 1)
+
+[sub_resource type="StandardMaterial3D" id="Material_box"]
+albedo_color = Color(0.8, 0.2, 0.2, 1)
+metallic = 0.3
+roughness = 0.5
+
+[sub_resource type="SphereMesh" id="SphereMesh_1"]
+radius = 0.5
+height = 1.0
+radial_segments = 32
+rings = 16
+
+[sub_resource type="StandardMaterial3D" id="Material_sphere"]
+albedo_color = Color(0.9, 0.3, 0.3, 1)
+metallic = 0.3
+roughness = 0.4
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_1"]
+top_radius = 0.4
+bottom_radius = 0.4
+height = 1.5
+radial_segments = 32
+rings = 4
+
+[sub_resource type="StandardMaterial3D" id="Material_cylinder"]
+albedo_color = Color(0.3, 0.8, 0.3, 1)
+metallic = 0.4
+roughness = 0.5
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_1"]
+radius = 0.4
+height = 1.8
+radial_segments = 32
+rings = 8
+
+[sub_resource type="StandardMaterial3D" id="Material_capsule"]
+albedo_color = Color(0.2, 0.5, 0.9, 1)
+metallic = 0.5
+roughness = 0.3
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_1"]
+size = Vector2(1, 1)
+subdivide_width = 5
+subdivide_depth = 5
+
+[sub_resource type="StandardMaterial3D" id="Material_plane"]
+albedo_color = Color(0.4, 0.7, 0.4, 1)
+metallic = 0.2
+roughness = 0.7
+
+[sub_resource type="TorusMesh" id="TorusMesh_1"]
+inner_radius = 0.3
+outer_radius = 0.6
+rings = 32
+ring_segments = 16
+
+[sub_resource type="StandardMaterial3D" id="Material_torus"]
+albedo_color = Color(0.9, 0.5, 0.2, 1)
+metallic = 0.8
+roughness = 0.2
+
+[sub_resource type="PrismMesh" id="PrismMesh_1"]
+left_to_right = 0.5
+size = Vector3(1, 1.2, 1)
+subdivide_height = 2
+
+[sub_resource type="StandardMaterial3D" id="Material_prism"]
+albedo_color = Color(0.7, 0.2, 0.7, 1)
+metallic = 0.3
+roughness = 0.6
+
+[node name="Root" type="Node3D"]
+
+[node name="Box" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 0, 0)
+mesh = SubResource("BoxMesh_1")
+surface_material_override/0 = SubResource("Material_box")
+
+[node name="Sphere" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 0, 0)
+mesh = SubResource("SphereMesh_1")
+surface_material_override/0 = SubResource("Material_sphere")
+
+[node name="Cylinder" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, 0)
+mesh = SubResource("CylinderMesh_1")
+surface_material_override/0 = SubResource("Material_cylinder")
+
+[node name="Capsule" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+mesh = SubResource("CapsuleMesh_1")
+surface_material_override/0 = SubResource("Material_capsule")
+
+[node name="Plane" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, 0)
+mesh = SubResource("PlaneMesh_1")
+surface_material_override/0 = SubResource("Material_plane")
+
+[node name="Torus" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 0, 0)
+mesh = SubResource("TorusMesh_1")
+surface_material_override/0 = SubResource("Material_torus")
+
+[node name="Prism" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6, 0, 0)
+mesh = SubResource("PrismMesh_1")
+surface_material_override/0 = SubResource("Material_prism")
+
+[node name="DirectionalLight" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866, -0.433, 0.25, 0, 0.5, 0.866, -0.5, -0.75, 0.433, 0, 5, 5)
+light_color = Color(1, 0.95, 0.9, 1)
+light_energy = 1.2
+shadow_enabled = true

@@ -1,0 +1,20 @@
+[gd_scene format=3]
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_1"]
+top_radius = 0.5
+bottom_radius = 0.5
+height = 2.0
+radial_segments = 32
+rings = 4
+
+[sub_resource type="StandardMaterial3D" id="Material_cylinder"]
+albedo_color = Color(0.3, 0.8, 0.3, 1)
+metallic = 0.4
+roughness = 0.5
+
+[node name="Root" type="Node3D"]
+
+[node name="Cylinder" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+mesh = SubResource("CylinderMesh_1")
+surface_material_override/0 = SubResource("Material_cylinder")
