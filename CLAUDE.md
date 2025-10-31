@@ -13,6 +13,123 @@ TextScene Inspector is a monorepo for parsing and rendering text-based 3D scene 
 - **[ARCHITECTURE.md](./ARCHITECTURE.md)**: Read for detailed architecture explanation, especially when working on the vertical slicing structure or understanding TSCN format components
 - **[REFERENCES.md](./REFERENCES.md)**: Read when you need to look up documentation links or Context7 library IDs
 
+## Development Workflow
+
+### ⚠️ MANDATORY: Pre-Commit Checklist
+
+**NEVER commit without running all these checks first:**
+
+```bash
+# 1. Build everything
+pnpm build
+
+# 2. Type check (catches type errors)
+pnpm type-check
+
+# 3. Lint (catches code style issues)
+pnpm lint
+
+# 4. Run tests (catches logic errors)
+pnpm test
+
+# 5. If you created/modified .tscn files, lint them
+pnpm --filter @textscene/linter build
+node apps/textscene-linter/dist/cli.js scenes/fixtures/*.tscn scenes/examples/*.tscn
+```
+
+**If ANY check fails, fix it before committing.** Do not commit code with errors.
+
+### Development Cycle (Test as You Go)
+
+**Bad approach:** Write lots of code → Run checks → Fix errors
+**Good approach:** Write small piece → Run checks → Next piece
+
+**Recommended workflow:**
+
+1. **Write a small change** (single function, single file)
+2. **Build immediately:** `pnpm --filter <package> build`
+3. **Type check immediately:** `pnpm type-check`
+4. **If types fail, fix NOW** (while the context is fresh)
+5. **Write tests for the change**
+6. **Run tests:** `pnpm test`
+7. **Repeat for next small change**
+8. **Before commit:** Run full pre-commit checklist above
+
+**Key principle:** Catch errors in seconds, not minutes. Test incrementally.
+
+### Common Pitfalls to Avoid
+
+**1. Type Assertions - Know When to Cast**
+
+```typescript
+// ❌ BAD - Will cause type error
+node.properties['__instance_index'] = heading.attributes.index;
+
+// ✅ GOOD - Cast to Record when adding dynamic properties
+(node.properties as Record<string, unknown>)['__instance_index'] = heading.attributes.index;
+```
+
+**2. Unused Variables - Don't Declare If Not Using**
+
+```typescript
+// ❌ BAD - ESLint error: unused variable
+const startLine = currentLineNumber;
+// ... startLine never used again
+
+// ✅ GOOD - Only declare if you'll use it
+// Don't declare it at all if not needed
+```
+
+**3. Type Imports - Import Types Correctly**
+
+```typescript
+// ❌ BAD - May cause circular dependency
+import { SomeType } from './module';
+
+// ✅ GOOD - Use type-only imports
+import type { SomeType } from './module';
+```
+
+**4. Rebuild After Changes - Don't Forget Dependencies**
+
+```typescript
+// If you modify packages/textscene-renderer/...
+// Apps depend on it, so rebuild:
+pnpm --filter @textscene/renderer build
+// THEN rebuild apps that use it
+```
+
+**5. Array Access - Use Non-Null Assertion Carefully**
+
+```typescript
+// ❌ BAD - Might be undefined
+const line = lines[i];
+
+// ✅ GOOD - Only use ! when you KNOW it exists (e.g., within loop bounds)
+const line = lines[i]!; // Safe if: i < lines.length
+```
+
+**6. Testing Pattern - Rebuild → Run Tests**
+
+```bash
+# ❌ BAD - Running tests without rebuilding
+pnpm test  # Uses old build, tests pass but code is broken
+
+# ✅ GOOD - Always rebuild before testing
+pnpm --filter @textscene/renderer build
+pnpm test
+```
+
+### Quick Reference: Fix Common Errors
+
+| Error | Cause | Fix |
+|-------|-------|-----|
+| `Property 'X' does not exist on type 'Y'` | Type mismatch or missing cast | Add type assertion: `as Record<string, unknown>` |
+| `'variable' is assigned but never used` | Declared unused variable | Remove the variable declaration |
+| `Cannot find module 'X'` | Missing import or wrong path | Check import path, use type-only imports |
+| `Command failed with exit code 2` | Type check failed | Run `pnpm type-check` to see actual error |
+| Linter builds but tests fail | Stale build artifacts | Run `pnpm clean` then `pnpm install && pnpm build` |
+
 ## Commands
 
 ### Essential Commands
@@ -21,7 +138,7 @@ TextScene Inspector is a monorepo for parsing and rendering text-based 3D scene 
 # Install dependencies
 pnpm install
 
-# Type checking (run before commits)
+# Type checking (ALWAYS run before commits)
 pnpm type-check
 
 # Run all tests
