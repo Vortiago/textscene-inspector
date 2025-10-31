@@ -298,6 +298,82 @@ nodeRegistry.register({
 
 Then import in TscnParser.ts: `import '../nodes/mynodetype';`
 
+### Two-Parser Architecture
+
+The codebase uses **two different parsers** for different purposes:
+
+**`TscnParser`** (Lenient Parser for Rendering):
+- Location: `packages/textscene-renderer/src/parser/TscnParser.ts`
+- Purpose: Parse TSCN files for rendering in the viewer
+- Strategy: **Lenient/Recovering** - attempts to recover from errors and warnings
+- Behavior: Logs issues but keeps rendering whatever it can
+- Use when: Rendering scenes, displaying previews, tolerating malformed input
+- Export: `TscnParser` class with `parse()` method
+
+**`StrictTscnParser`** (Strict Parser for Linting):
+- Location: `packages/textscene-renderer/src/linter/StrictTscnParser.ts`
+- Purpose: Validate TSCN files and report all issues
+- Strategy: **Strict/Validating** - reports ALL syntax and format errors as diagnostics
+- Behavior: Returns detailed error list with line/column information
+- Use when: Linting files, validating before save, showing errors to users
+- Export: `StrictTscnParser` class with `parse()` method
+
+**Why Two Parsers?**
+- **Rendering needs resilience**: Show what you can, warn about problems, don't crash
+- **Linting needs strictness**: Report every single issue so users can fix them
+- Separation of concerns: Different use cases, different error handling strategies
+
+### Linter Architecture
+
+**Two-Phase Validation Strategy:**
+
+1. **Phase 1: Strict Parsing** (Syntax/Format Validation)
+   - Uses `StrictTscnParser` to catch syntax errors
+   - Validates: malformed brackets, invalid Vector3 formats, type mismatches, etc.
+   - Returns: `ParseError[]` with line/column locations
+
+2. **Phase 2: Semantic Validation** (Rule-Based Validation)
+   - Uses self-registered lint rules from `ruleRegistry`
+   - Validates: missing resources, invalid node references, property constraints, etc.
+   - Returns: `Diagnostic[]` with severity levels (error/warning/info)
+
+**Linter Exports** (`packages/textscene-renderer/src/linter/index.ts`):
+- `Linter` class - Main API, use `linter.lint(content)` to validate TSCN content
+- `StrictTscnParser` class - Strict validation parser
+- `ruleRegistry` - Singleton for self-registered lint rules
+- `validatorRegistry` - Singleton for property validators
+- **NOT exported**: Standalone `lintTscnFile()` or `lintTscnContent()` functions
+
+**Self-Registration Pattern for Lint Rules:**
+- Lint rules self-register on module import (side effects)
+- Each node type's `linter.ts` registers rules via `ruleRegistry.register()`
+- Test files must import `./linter/index` to trigger all registrations
+- Example:
+```typescript
+// In nodes/base/node3d/linter.ts
+import { ruleRegistry } from '../../../linter/RuleRegistry';
+
+const node3DValidationRule: LintRule = {
+  meta: { name: 'valid-node3d-visibility', ... },
+  check: (context) => { /* validation logic */ }
+};
+
+ruleRegistry.register(node3DValidationRule);
+```
+
+**Usage Example:**
+```typescript
+import { Linter } from '@textscene/core/linter';
+
+const linter = new Linter();
+const diagnostics = linter.lint(tscnContent);
+
+// diagnostics contains both parse errors and rule violations
+diagnostics.forEach(d => {
+  console.log(`${d.severity}: ${d.message} at ${d.nodeName}`);
+});
+```
+
 ### Dependency Management
 
 Uses **pnpm Catalogs** for shared dependencies. Versions are centrally defined in `pnpm-workspace.yaml` under the `catalog:` section. Reference with `"catalog:"` in package.json files.
