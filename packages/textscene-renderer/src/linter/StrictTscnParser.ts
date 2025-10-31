@@ -26,7 +26,9 @@ type SectionType = 'none' | 'node' | 'ext_resource' | 'sub_resource';
 function createSimpleNode(heading: ParsedHeading, properties: Record<string, string>): TscnNode {
   const node: TscnNode = {
     name: heading.attributes.name || '',
-    type: heading.attributes.type || '',
+    // Use type if available, otherwise use index or instance identifier
+    // Note: For index=/instance= nodes, type may be inferred from parent scene or remain as identifier
+    type: heading.attributes.type || heading.attributes.index || heading.attributes.instance || '',
     properties,
     children: [], // Will be populated by buildSceneTree
   };
@@ -34,6 +36,14 @@ function createSimpleNode(heading: ParsedHeading, properties: Record<string, str
   // Only set parent if it exists (optional property)
   if (heading.attributes.parent) {
     node.parent = heading.attributes.parent;
+  }
+
+  // Store special attributes if present
+  if (heading.attributes.index) {
+    (node.properties as Record<string, unknown>)['__instance_index'] = heading.attributes.index;
+  }
+  if (heading.attributes.instance) {
+    (node.properties as Record<string, unknown>)['__instance'] = heading.attributes.instance;
   }
 
   return node;
@@ -119,17 +129,23 @@ export class StrictTscnParser {
               code: 'MISSING_NODE_NAME',
             });
           }
-          if (!currentHeading.attributes.type) {
+          // Nodes must have one of: type= (new nodes), index= (instanced scene child mods), or instance= (PackedScene instantiation)
+          if (!currentHeading.attributes.type && !currentHeading.attributes.index && !currentHeading.attributes.instance) {
             errors.push({
               severity: 'error',
-              message: 'Node heading must have "type=" attribute',
+              message: 'Node heading must have "type=", "index=", or "instance=" attribute',
               line: currentLineNumber,
               column: 1,
-              code: 'MISSING_NODE_TYPE',
+              code: 'MISSING_NODE_IDENTIFIER',
             });
-          } else {
-            // Only set currentNodeType if type attribute exists
+          }
+
+          // Set currentNodeType for type-specific validation (only if type exists)
+          if (currentHeading.attributes.type) {
             currentNodeType = currentHeading.attributes.type;
+          } else {
+            // For index= or instance= nodes, skip type-specific validation (type may be unknown)
+            currentNodeType = undefined;
           }
         }
       } else {
@@ -146,8 +162,33 @@ export class StrictTscnParser {
           continue;
         }
 
-        // Validate property value using registry
-        if (currentSection === 'node' && currentNodeType) {
+        // Handle multi-line string properties (e.g., shader code)
+        // Check if value starts with quote but doesn't end with quote
+        if (property.value.startsWith('"') && !property.value.endsWith('"')) {
+          let fullValue = property.value;
+          const startLine = currentLineNumber;
+
+          // Keep reading lines until we find the closing quote
+          while (i + 1 < lines.length) {
+            i++;
+            currentLineNumber = i + 1;
+            const continuationLine = lines[i]!;
+            fullValue += '\n' + continuationLine;
+
+            // Check if this line ends with a closing quote
+            const trimmed = continuationLine.trim();
+            if (trimmed === '"' || trimmed.endsWith('"')) {
+              break; // Found closing quote
+            }
+          }
+
+          // Update property value with full multi-line content
+          property.value = fullValue;
+        }
+
+        // Validate property value using registry (skip validation for multi-line strings like shader code)
+        const isMultiLineString = property.value.includes('\n');
+        if (currentSection === 'node' && currentNodeType && !isMultiLineString) {
           const validator = validatorRegistry.findValidator(currentNodeType, property.key);
           if (validator) {
             const error = validator(property.key, property.value, currentLineNumber);
