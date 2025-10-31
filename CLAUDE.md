@@ -9,9 +9,32 @@ TextScene Inspector is a monorepo for parsing and rendering text-based 3D scene 
 ## Additional Documentation
 
 - **[README.md](./README.md)**: Read for project status, installation steps, and available scripts
-- **[TODO.md](./TODO.md)**: **CRITICAL** - Read to understand current progress. Wait for user to specify which work item (#WI) to work on. Focus on ONE work item at a time. Never attempt multiple WIs simultaneously. Mark item as done (change `[ ]` to `[x]` and "Not Done" to "Done") immediately after completing it. Do NOT automatically start the next item - wait for user instruction
+- **[TODO.md](./TODO.md)**: **CRITICAL** - High-level roadmap with work item summaries. Wait for user to specify which work item (#WI) to work on. Focus on ONE work item at a time. Never attempt multiple WIs simultaneously. Mark item as done (change `[ ]` to `[x]`) immediately after completing it. Do NOT automatically start the next item - wait for user instruction
+- **[work_items/](./work_items/)**: Detailed work item documentation. Each `WI{number}.md` file contains implementation details, testing strategies, code examples, and architecture decisions. Read the specific work item file when starting work on that WI
 - **[ARCHITECTURE.md](./ARCHITECTURE.md)**: Read for detailed architecture explanation, especially when working on the vertical slicing structure or understanding TSCN format components
 - **[REFERENCES.md](./REFERENCES.md)**: Read when you need to look up documentation links or Context7 library IDs
+
+## Work Item Workflow
+
+**Purpose**: Reduce context window usage by separating high-level roadmap from detailed implementation notes.
+
+**Structure**:
+- `TODO.md` - Compact roadmap (~130 lines) with work item summaries and links
+- `work_items/WI{number}.md` - Detailed files with implementation specifics (~500-800 lines each)
+
+**When working on a work item**:
+1. User specifies which WI to work on (e.g., "work on WI-50")
+2. **Read** `work_items/WI{number}.md` for full details (implementation steps, testing strategy, code examples)
+3. **Implement** following the detailed plan
+4. **Test** according to the testing checklist in the work item file
+5. **Update** `TODO.md` - change `[ ]` to `[x]` immediately after completion
+6. **Do NOT** auto-start next item - wait for user to specify
+
+**Benefits**:
+- TODO.md stays small (low context window usage)
+- Full details available when needed (read specific WI file)
+- Completed items don't clutter the roadmap
+- Easy to scan overall progress
 
 ## Development Workflow
 
