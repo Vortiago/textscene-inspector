@@ -53,21 +53,28 @@ pnpm dev          # Watch mode
 pnpm package      # Create .vsix for testing
 ```
 
-### Test Fixtures and Web Previewer
+### Scenes and Web Previewer
 
-**Test fixtures** live in `tests/fixtures/*.tscn` as the single source of truth. They are automatically copied to the web app during build/dev.
+**Scene files** are organized in the `scenes/` directory:
+- `scenes/fixtures/` - Minimal unit-level scenes for testing individual node types (e.g., `unit-plane-mesh.tscn`)
+- `scenes/examples/` - Integration and complex demo scenes (e.g., `integration-all-primitives.tscn`, `example-hallway.tscn`)
 
-When adding or removing fixtures from `tests/fixtures/`:
-1. The fixture files are automatically copied during `pnpm dev` or `pnpm build`
-2. **Manually update** `apps/textscene-web/src/fixtures.ts` to add/remove the fixture from the UI selector
-3. Provide a display name and category (Basic, Primitives, Edge Cases, Performance, Complex)
+Files are automatically copied to the web app during build/dev.
+
+When adding or removing scenes:
+1. Place new files in `scenes/fixtures/` or `scenes/examples/` with descriptive names:
+   - Fixtures: `unit-<node-type>.tscn`, `edge-<issue>.tscn`
+   - Examples: `integration-<feature>.tscn`, `example-<name>.tscn`
+2. Files are automatically copied during `pnpm dev` or `pnpm build`
+3. **Manually update** `apps/textscene-web/src/fixtures.ts` to add the scene to the UI selector
+4. Use appropriate categories (Unit - Basic Nodes, Unit - Primitive Meshes, Edge Cases, Integration - Multi-Node, Examples - Complex Scenes)
 
 Example fixture entry:
 ```typescript
-{ name: 'Plane Mesh', file: 'planemesh.tscn', category: 'Primitives' }
+{ name: 'Plane Mesh', file: 'unit-plane-mesh.tscn', category: 'Unit - Primitive Meshes' }
 ```
 
-The web previewer includes a collapsible "Test Fixtures" selector for quick loading during development.
+The web previewer includes a categorized scene selector for quick loading during development.
 
 ## Architecture
 

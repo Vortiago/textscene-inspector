@@ -1,5 +1,5 @@
 /**
- * Test fixture manifest for the web previewer.
+ * Scene manifest for the web previewer.
  */
 
 export interface Fixture {
@@ -9,42 +9,46 @@ export interface Fixture {
 }
 
 export const fixtures: Fixture[] = [
-  // Basic
-  { name: 'Simple Node3D', file: 'simple_node3d.tscn', category: 'Basic' },
-  { name: 'Empty Scene', file: 'empty_scene.tscn', category: 'Basic' },
-  { name: 'Camera', file: 'camera.tscn', category: 'Basic' },
-  { name: 'Mesh Instance', file: 'mesh_instance.tscn', category: 'Basic' },
-  { name: 'Lights', file: 'lights.tscn', category: 'Basic' },
-  { name: 'Mixed Nodes', file: 'mixed_nodes.tscn', category: 'Basic' },
+  // Unit - Basic Nodes
+  { name: 'Node3D Basic', file: 'unit-node3d-basic.tscn', category: 'Unit - Basic Nodes' },
+  { name: 'Empty Scene', file: 'unit-empty-scene.tscn', category: 'Unit - Basic Nodes' },
+  { name: 'Camera Basic', file: 'unit-camera-basic.tscn', category: 'Unit - Basic Nodes' },
+  { name: 'Mesh Instance Basic', file: 'unit-mesh-instance-basic.tscn', category: 'Unit - Basic Nodes' },
 
-  // Primitives
-  { name: 'Plane Mesh', file: 'planemesh.tscn', category: 'Primitives' },
-  { name: 'Capsule Mesh', file: 'capsulemesh.tscn', category: 'Primitives' },
-  { name: 'Torus Mesh', file: 'torusmesh.tscn', category: 'Primitives' },
-  { name: 'Prism Mesh', file: 'prismmesh.tscn', category: 'Primitives' },
-  { name: 'All New Primitives', file: 'all_new_primitives.tscn', category: 'Primitives' },
+  // Unit - Primitive Meshes
+  { name: 'Plane Mesh', file: 'unit-plane-mesh.tscn', category: 'Unit - Primitive Meshes' },
+  { name: 'Capsule Mesh', file: 'unit-capsule-mesh.tscn', category: 'Unit - Primitive Meshes' },
+  { name: 'Torus Mesh', file: 'unit-torus-mesh.tscn', category: 'Unit - Primitive Meshes' },
+  { name: 'Prism Mesh', file: 'unit-prism-mesh.tscn', category: 'Unit - Primitive Meshes' },
+
+  // Unit - External Resources
+  { name: 'External Cube (Standalone)', file: 'unit-external-cube.tscn', category: 'Unit - External Resources' },
+  { name: 'External Sphere (Standalone)', file: 'unit-external-sphere.tscn', category: 'Unit - External Resources' },
+  { name: 'External Texture', file: 'unit-external-texture.tscn', category: 'Unit - External Resources' },
 
   // Edge Cases
-  { name: 'Malformed: Missing Bracket', file: 'malformed_missing_bracket.tscn', category: 'Edge Cases' },
-  { name: 'Malformed: Invalid Transform', file: 'malformed_invalid_transform.tscn', category: 'Edge Cases' },
-  { name: 'Missing Parent', file: 'missing_parent.tscn', category: 'Edge Cases' },
+  { name: 'Malformed: Missing Bracket', file: 'edge-malformed-bracket.tscn', category: 'Edge Cases' },
+  { name: 'Invalid Transform', file: 'edge-invalid-transform.tscn', category: 'Edge Cases' },
+  { name: 'Missing Parent', file: 'edge-missing-parent.tscn', category: 'Edge Cases' },
+  { name: 'Invalid Cast Shadow', file: 'edge-invalid-cast-shadow.tscn', category: 'Edge Cases' },
+  { name: 'Unsupported 2D Audio', file: 'edge-unsupported-2d-audio.tscn', category: 'Edge Cases' },
 
-  // Performance
-  { name: 'Large Hierarchy (Deep)', file: 'large_hierarchy_deep.tscn', category: 'Performance' },
-  { name: 'Large Hierarchy (Wide)', file: 'large_hierarchy_wide.tscn', category: 'Performance' },
+  // Integration - Multi-Node
+  { name: 'Mixed Nodes', file: 'integration-mixed-nodes.tscn', category: 'Integration - Multi-Node' },
+  { name: 'All Light Types', file: 'integration-lights-all-types.tscn', category: 'Integration - Multi-Node' },
+  { name: 'All Primitives', file: 'integration-all-primitives.tscn', category: 'Integration - Multi-Node' },
 
-  // Complex
-  { name: 'Hallway Scene', file: 'Hallway.tscn', category: 'Complex' },
+  // Integration - External Scenes
+  { name: 'Three Cubes (Same External x3)', file: 'integration-three-cubes.tscn', category: 'Integration - External Scenes' },
+  { name: 'External Only (No Parent Geometry)', file: 'integration-external-only.tscn', category: 'Integration - External Scenes' },
+  { name: 'External Separation (Red Box + Sphere)', file: 'integration-external-separation.tscn', category: 'Integration - External Scenes' },
+  { name: 'Parent with Child Scene', file: 'integration-parent-child-scene.tscn', category: 'Integration - External Scenes' },
+  { name: 'Multiple External Scenes', file: 'integration-multiple-externals.tscn', category: 'Integration - External Scenes' },
 
-  // External Resources (Scene Instancing Tests)
-  { name: '🎯 External Only (No Parent Geometry)', file: 'external_only.tscn', category: 'External Resources' },
-  { name: '🎯 Obvious Separation (Red Box + Sphere)', file: 'obvious_separation.tscn', category: 'External Resources' },
-  { name: '🎯 Three Cubes (Same External x3)', file: 'three_cubes.tscn', category: 'External Resources' },
-  { name: 'External Texture Reference', file: 'external_texture.tscn', category: 'External Resources' },
-  { name: 'Parent with Child Scene', file: 'parent_with_external.tscn', category: 'External Resources' },
-  { name: 'Multiple External Scenes', file: 'multiple_externals.tscn', category: 'External Resources' },
-  { name: 'Child Cube (Standalone)', file: 'child_cube.tscn', category: 'External Resources' },
-  { name: 'Child Sphere (Standalone)', file: 'child_sphere.tscn', category: 'External Resources' },
+  // Examples - Complex Scenes
+  { name: 'Hallway', file: 'example-hallway.tscn', category: 'Examples - Complex Scenes' },
+  { name: 'Hierarchy (Deep)', file: 'example-hierarchy-deep.tscn', category: 'Examples - Complex Scenes' },
+  { name: 'Hierarchy (Wide)', file: 'example-hierarchy-wide.tscn', category: 'Examples - Complex Scenes' },
 ];
 
 export function getFixturesByCategory(): Map<string, Fixture[]> {
