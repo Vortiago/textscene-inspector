@@ -374,6 +374,31 @@ diagnostics.forEach(d => {
 });
 ```
 
+**Bundle Size Optimization (Critical):**
+
+The linter uses **direct imports** instead of node `index.ts` files to prevent bundling THREE.js:
+
+```typescript
+// ❌ WRONG - pulls in renderer + THREE.js (898KB bundle)
+import '../nodes/base/node3d/index.js';
+
+// ✅ CORRECT - only linter code (~396KB bundle)
+import '../nodes/base/node3d/linterParser.js';
+import '../nodes/base/node3d/linter.js';
+```
+
+**Why this matters:**
+- With 150-200 nodes planned (all with renderers), importing `index.ts` would bundle THREE.js for all nodes
+- Linter CLI would balloon from ~400KB to 5-10MB+ unnecessarily
+- The "asymmetry" (direct imports for linter, index.ts for renderer apps) is **intentional**
+
+**Pattern for all nodes:**
+- `linter/index.ts`: ALWAYS imports `linterParser.js` + `linter.js` directly (even for nodes with renderers)
+- Renderer apps (web/VSCode): Import node `index.ts` files (gets renderer + linter, needs THREE.js anyway)
+- Result: Linter stays minimal, renderer apps get everything they need
+
+This is not technical debt - it's essential architecture for scale.
+
 ### Dependency Management
 
 Uses **pnpm Catalogs** for shared dependencies. Versions are centrally defined in `pnpm-workspace.yaml` under the `catalog:` section. Reference with `"catalog:"` in package.json files.
