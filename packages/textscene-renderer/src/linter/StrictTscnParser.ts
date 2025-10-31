@@ -166,7 +166,6 @@ export class StrictTscnParser {
         // Check if value starts with quote but doesn't end with quote
         if (property.value.startsWith('"') && !property.value.endsWith('"')) {
           let fullValue = property.value;
-          const startLine = currentLineNumber;
 
           // Keep reading lines until we find the closing quote
           while (i + 1 < lines.length) {
