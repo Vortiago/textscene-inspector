@@ -14,7 +14,7 @@ import {
   createCollisionMaskValidator,
   createDisableModeValidator,
   createStringValidator,
-} from '../../../../linting/validators/index.js';
+} from '../../../../linter/validators/index.js';
 
 validatorRegistry.registerAll('Area2D', {
   'monitoring': createBooleanValidator('monitoring', 'INVALID_MONITORING_FORMAT'),

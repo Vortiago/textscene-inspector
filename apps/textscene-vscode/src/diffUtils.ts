@@ -2,7 +2,7 @@
  * Utilities for computing incremental changes between TSCN scene versions.
  */
 
-import { TscnParser, buildNodeHashMap, type TscnScene, type TscnNode, type NodeChange } from '@textscene/renderer';
+import { TscnParser, buildNodeHashMap, type TscnScene, type TscnNode, type NodeChange } from '@textscene/core';
 
 interface DiffResult {
   updateType: 'full' | 'incremental';

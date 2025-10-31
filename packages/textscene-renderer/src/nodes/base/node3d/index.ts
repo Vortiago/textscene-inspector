@@ -2,14 +2,17 @@
  * Node3D registration - auto-registers Node3D parser and renderer with the node registry.
  */
 
-import * as THREE from 'three';
-import { nodeRegistry } from '../../../core/NodeRegistry';
-import type { NodeTypeRegistration } from '../../../core/NodeRegistry';
-import { parseNode3D, isNode3D } from './parser';
-import { createNode3DGizmo, applyNode3DTransform } from './renderer';
 import { formatNode3DProperties } from './propertyFormatter';
+import { parseNode3D, isNode3D } from './parser';
+import { nodeRegistry } from '../../../core/NodeRegistry';
+import * as THREE from 'three';
 import type { Node3DProperties } from './types';
+import { createNode3DGizmo, applyNode3DTransform } from './renderer';
+import type { NodeTypeRegistration } from '../../../core/NodeRegistry';
 
+// Import linter components to trigger self-registration
+import './linterParser.js';
+import './linter.js';
 const node3DRegistration: NodeTypeRegistration = {
   typeName: 'Node3D',
   typeGuard: isNode3D,

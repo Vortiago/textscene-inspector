@@ -3,7 +3,7 @@
  * Requests resources from the extension via message passing.
  */
 
-import type { ResourceProvider } from '@textscene/renderer';
+import type { ResourceProvider } from '@textscene/core';
 
 interface VsCodeApi {
   postMessage: (message: unknown) => void;

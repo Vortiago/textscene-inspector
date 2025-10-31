@@ -1,7 +1,7 @@
 {
-  "name": "@textscene/renderer",
+  "name": "@textscene/core",
   "version": "0.0.1",
-  "description": "Parser and renderer for text-based 3D scene files (.tscn) using three.js",
+  "description": "Core library for parsing, linting, and rendering TSCN files",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -10,9 +10,17 @@
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
     },
+    "./parser": {
+      "import": "./dist/parser/index.js",
+      "types": "./dist/parser/index.d.ts"
+    },
     "./linter": {
       "import": "./dist/linter/index.js",
       "types": "./dist/linter/index.d.ts"
+    },
+    "./renderer": {
+      "import": "./dist/core/TscnRenderer.js",
+      "types": "./dist/core/TscnRenderer.d.ts"
     }
   },
   "files": [
@@ -33,9 +41,11 @@
     "textscene",
     "text-scene",
     "parser",
+    "linter",
     "renderer",
     "three.js",
-    "3d"
+    "3d",
+    "godot"
   ],
   "author": "Vortiago",
   "license": "MIT",

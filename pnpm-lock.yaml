@@ -71,7 +71,7 @@ importers:
 
   apps/textscene-linter:
     dependencies:
-      '@textscene/renderer':
+      '@textscene/core':
         specifier: workspace:*
         version: link:../../packages/textscene-renderer
       commander:
@@ -93,7 +93,7 @@ importers:
 
   apps/textscene-vscode:
     dependencies:
-      '@textscene/renderer':
+      '@textscene/core':
         specifier: workspace:*
         version: link:../../packages/textscene-renderer
     devDependencies:
@@ -118,7 +118,7 @@ importers:
 
   apps/textscene-web:
     dependencies:
-      '@textscene/renderer':
+      '@textscene/core':
         specifier: workspace:*
         version: link:../../packages/textscene-renderer
     devDependencies:

@@ -1,6 +1,6 @@
 /** Browser console logging adapter for web previewer. */
 
-import { setLogAdapter, type LogAdapter } from '@textscene/renderer';
+import { setLogAdapter, type LogAdapter } from '@textscene/core';
 
 class ConsoleLogAdapter implements LogAdapter {
   trace(message: string, ...args: unknown[]): void {

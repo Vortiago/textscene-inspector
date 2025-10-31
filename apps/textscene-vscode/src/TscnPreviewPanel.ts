@@ -4,7 +4,7 @@
 
 import * as vscode from 'vscode';
 import { generateWebviewHtml, generateNonce } from './webview/webviewHtml';
-import type { IncrementalUpdateData, MissingResource } from '@textscene/renderer';
+import type { IncrementalUpdateData, MissingResource } from '@textscene/core';
 import { computeIncrementalChanges } from './diffUtils';
 import { VSCodeResourceProvider } from './providers/VSCodeResourceProvider';
 import * as logger from './logger';

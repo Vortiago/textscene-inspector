@@ -2,17 +2,20 @@
  * SpotLight3D registration - auto-registers SpotLight3D parser and renderer with the node registry.
  */
 
-import * as THREE from 'three';
-import { nodeRegistry } from '../../../../core/NodeRegistry';
-import type { NodeTypeRegistration } from '../../../../core/NodeRegistry';
-import type { TscnScene } from '../../../../parser/types';
-import { parseSpotLight3D, isSpotLight3D } from './parser';
 import { createSpotLight3D, positionSpotLightTarget } from './renderer';
+import type { TscnScene } from '../../../../parser/types';
+import { nodeRegistry } from '../../../../core/NodeRegistry';
+import * as THREE from 'three';
 import { formatSpotLight3DProperties } from './propertyFormatter';
 import { applyNode3DTransform } from '../../../base/node3d/renderer';
-import type { SpotLight3DProperties } from './types';
+import { parseSpotLight3D, isSpotLight3D } from './parser';
+import type { NodeTypeRegistration } from '../../../../core/NodeRegistry';
 import { decomposeTransform3D } from '../../../../utils/transform';
+import type { SpotLight3DProperties } from './types';
 
+// Import linter components to trigger self-registration
+import './linterParser.js';
+import './linter.js';
 const spotLight3DRegistration: NodeTypeRegistration = {
   typeName: 'SpotLight3D',
   typeGuard: isSpotLight3D,

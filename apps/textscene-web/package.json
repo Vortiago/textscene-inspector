@@ -26,7 +26,7 @@
   "author": "Vortiago",
   "license": "MIT",
   "dependencies": {
-    "@textscene/renderer": "workspace:*"
+    "@textscene/core": "workspace:*"
   },
   "devDependencies": {
     "rimraf": "catalog:",

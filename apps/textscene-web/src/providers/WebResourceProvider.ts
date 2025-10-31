@@ -3,8 +3,8 @@
  * Loads resources from user-uploaded files stored in memory.
  */
 
-import { isBinaryResourceType } from '@textscene/renderer';
-import type { ResourceProvider } from '@textscene/renderer';
+import { isBinaryResourceType } from '@textscene/core';
+import type { ResourceProvider } from '@textscene/core';
 
 export class WebResourceProvider implements ResourceProvider {
   private uploadedFiles: Map<string, File> = new Map();

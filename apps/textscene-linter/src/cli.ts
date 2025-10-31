@@ -6,7 +6,7 @@
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import { Command } from 'commander';
-import { Linter, type Diagnostic } from '@textscene/renderer/linter';
+import { Linter, type Diagnostic } from '@textscene/core/linter';
 
 const program = new Command();
 

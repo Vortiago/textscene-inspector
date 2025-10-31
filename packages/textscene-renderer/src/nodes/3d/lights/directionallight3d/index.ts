@@ -2,17 +2,20 @@
  * DirectionalLight3D registration - auto-registers DirectionalLight3D parser and renderer with the node registry.
  */
 
-import * as THREE from 'three';
-import { nodeRegistry } from '../../../../core/NodeRegistry';
-import type { NodeTypeRegistration } from '../../../../core/NodeRegistry';
-import type { TscnScene } from '../../../../parser/types';
-import { parseDirectionalLight3D, isDirectionalLight3D } from './parser';
 import { createDirectionalLight3D, positionDirectionalLightTarget } from './renderer';
+import type { TscnScene } from '../../../../parser/types';
+import { nodeRegistry } from '../../../../core/NodeRegistry';
+import * as THREE from 'three';
 import { formatDirectionalLight3DProperties } from './propertyFormatter';
 import { applyNode3DTransform } from '../../../base/node3d/renderer';
-import type { DirectionalLight3DProperties } from './types';
+import { parseDirectionalLight3D, isDirectionalLight3D } from './parser';
+import type { NodeTypeRegistration } from '../../../../core/NodeRegistry';
 import { decomposeTransform3D } from '../../../../utils/transform';
+import type { DirectionalLight3DProperties } from './types';
 
+// Import linter components to trigger self-registration
+import './linterParser.js';
+import './linter.js';
 const directionalLight3DRegistration: NodeTypeRegistration = {
   typeName: 'DirectionalLight3D',
   typeGuard: isDirectionalLight3D,

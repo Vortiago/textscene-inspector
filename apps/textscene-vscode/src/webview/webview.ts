@@ -2,8 +2,8 @@
  * TSCN webview entry point - runs inside VS Code webview.
  */
 
-import { TscnPreviewUI } from '@textscene/renderer';
-import type { TscnPreviewElements, CameraState } from '@textscene/renderer';
+import { TscnPreviewUI } from '@textscene/core';
+import type { TscnPreviewElements, CameraState } from '@textscene/core';
 import { WebviewResourceProvider } from './WebviewResourceProvider';
 
 declare const acquireVsCodeApi: () => {
