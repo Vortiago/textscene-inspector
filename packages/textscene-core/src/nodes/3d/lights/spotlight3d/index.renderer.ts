@@ -1,5 +1,5 @@
 /**
- * SpotLight3D registration - auto-registers SpotLight3D parser and renderer with the node registry.
+ * SpotLight3D renderer registration - auto-registers SpotLight3D parser and renderer with the node registry.
  */
 
 import { createSpotLight3D, positionSpotLightTarget } from './renderer';
@@ -13,9 +13,6 @@ import type { NodeTypeRegistration } from '../../../../core/NodeRegistry';
 import { decomposeTransform3D } from '../../../../utils/transform';
 import type { SpotLight3DProperties } from './types';
 
-// Import linter components to trigger self-registration
-import './linterParser.js';
-import './linter.js';
 const spotLight3DRegistration: NodeTypeRegistration = {
   typeName: 'SpotLight3D',
   typeGuard: isSpotLight3D,

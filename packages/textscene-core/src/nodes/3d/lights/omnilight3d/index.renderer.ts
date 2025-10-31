@@ -1,5 +1,5 @@
 /**
- * OmniLight3D registration - auto-registers OmniLight3D parser, renderer, and linter.
+ * OmniLight3D renderer registration - auto-registers OmniLight3D parser and renderer.
  */
 
 import * as THREE from 'three';
@@ -11,10 +11,6 @@ import { createOmniLight3D } from './renderer';
 import { formatOmniLight3DProperties } from './propertyFormatter';
 import { applyNode3DTransform } from '../../../base/node3d/renderer';
 import type { OmniLight3DProperties } from './types';
-
-// Import linter components to trigger self-registration
-import './linterParser.js';
-import './linter.js';
 
 const omniLight3DRegistration: NodeTypeRegistration = {
   typeName: 'OmniLight3D',

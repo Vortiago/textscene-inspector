@@ -1,5 +1,5 @@
 /**
- * MeshInstance3D registration - auto-registers MeshInstance3D parser and renderer with the node registry.
+ * MeshInstance3D renderer registration - auto-registers MeshInstance3D parser and renderer with the node registry.
  */
 
 import { createMeshInstance3D } from './renderer';
@@ -12,9 +12,6 @@ import { parseMeshInstance3D, isMeshInstance3D } from './parser';
 import type { NodeTypeRegistration } from '../../../core/NodeRegistry';
 import type { MeshInstance3DProperties } from './types';
 
-// Import linter components to trigger self-registration
-import './linterParser.js';
-import './linter.js';
 const meshInstance3DRegistration: NodeTypeRegistration = {
   typeName: 'MeshInstance3D',
   typeGuard: isMeshInstance3D,
