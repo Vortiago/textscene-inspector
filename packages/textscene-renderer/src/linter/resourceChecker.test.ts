@@ -128,8 +128,9 @@ describe('checkResourceExists', () => {
         nodes: [],
         externalResources: [
           {
+            id: 'texture_1',
             type: 'Texture2D',
-            path: 'texture_1',
+            path: 'res://textures/texture.png',
           },
         ] as TscnExternalResource[],
         internalResources: [],
@@ -178,16 +179,19 @@ describe('checkResourceExists', () => {
         nodes: [],
         externalResources: [
           {
+            id: 'texture_1',
             type: 'Texture2D',
-            path: 'texture_1',
+            path: 'res://textures/texture.png',
           },
           {
+            id: 'material_1',
             type: 'Material',
-            path: 'material_1',
+            path: 'res://materials/mat.tres',
           },
           {
+            id: 'scene_1',
             type: 'PackedScene',
-            path: 'scene_1',
+            path: 'res://scenes/scene.tscn',
           },
         ] as TscnExternalResource[],
         internalResources: [],
@@ -270,8 +274,9 @@ describe('checkResourceExists', () => {
         nodes: [],
         externalResources: [
           {
+            id: 'resource_1',
             type: 'Texture2D',
-            path: 'resource_1',
+            path: 'res://texture.png',
           },
         ] as TscnExternalResource[],
         internalResources: [
@@ -292,8 +297,9 @@ describe('checkResourceExists', () => {
         nodes: [],
         externalResources: [
           {
+            id: 'resource_1',
             type: 'Texture2D',
-            path: 'resource_1',
+            path: 'res://texture.png',
           },
         ] as TscnExternalResource[],
         internalResources: [],

@@ -5,11 +5,11 @@
  */
 
 // Register node types (triggers side-effect imports for renderers and parsers)
-import '../nodes/node3d/index.js';
-import '../nodes/meshinstance3d/index.js';
-import '../nodes/spotlight3d/index.js';
-import '../nodes/directionallight3d/index.js';
-import '../nodes/omnilight3d/index.js';
+import '../nodes/base/node3d/index.js';
+import '../nodes/3d/meshinstance3d/index.js';
+import '../nodes/3d/lights/spotlight3d/index.js';
+import '../nodes/3d/lights/directionallight3d/index.js';
+import '../nodes/3d/lights/omnilight3d/index.js';
 
 import type { TscnScene } from './types.js';
 import { TscnParserCore } from './TscnParserCore.js';

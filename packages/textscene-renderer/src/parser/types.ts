@@ -2,7 +2,7 @@
  * Type definitions for TSCN data structures
  */
 
-import type { Node3DProperties } from '../nodes/node3d/types';
+import type { Node3DProperties } from '../nodes/base/node3d/types';
 import type { ResourceRegistry } from '../resources/ResourceRegistry';
 
 /**

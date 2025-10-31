@@ -35,6 +35,8 @@ jobs:
 
       - run: pnpm --filter @textscene/web-previewer build
 
+      - run: pnpm --filter @textscene/linter build
+
       - run: pnpm vsc:package
 
       - uses: actions/upload-artifact@v4
@@ -46,6 +48,11 @@ jobs:
         with:
           name: vscode-extension
           path: apps/textscene-vscode/*.vsix
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tscn-linter-cli
+          path: apps/textscene-linter/dist/cli.js
 
       # GitHub Pages deployment (disabled for private repo)
       # - if: github.ref == 'refs/heads/main'

@@ -2,7 +2,7 @@
  * Base Node type - minimal properties for hierarchy tracking.
  */
 
-import type { Transform3D } from '../node3d/types';
+import type { Transform3D } from '../base/node3d/types';
 
 export interface NodeProperties {
   name: string;

@@ -20,6 +20,7 @@ describe('parseExternalResource', () => {
     const result = parseExternalResource(heading);
 
     expect(result).not.toBeNull();
+    expect(result!.id).toBe('1_abc');
     expect(result!.path).toBe('res://textures/test.png');
     expect(result!.type).toBe('Texture2D');
   });

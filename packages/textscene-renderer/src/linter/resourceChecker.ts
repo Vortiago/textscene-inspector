@@ -33,8 +33,8 @@ export function checkResourceExists(scene: TscnScene, resourceRef: string): bool
     // SubResource ID is stored in data.id (string), not top-level id (number)
     return scene.internalResources?.some((r: TscnInternalResource) => r.data?.id === resourceId) ?? false;
   } else if (resourceType === 'ExtResource') {
-    // ExtResource ID is stored in path property
-    return scene.externalResources?.some((r: TscnExternalResource) => r.path === resourceId) ?? false;
+    // ExtResource ID is stored in id property
+    return scene.externalResources?.some((r: TscnExternalResource) => r.id === resourceId) ?? false;
   }
 
   return false;

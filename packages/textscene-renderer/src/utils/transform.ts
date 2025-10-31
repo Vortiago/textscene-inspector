@@ -2,7 +2,7 @@
  * Transform utilities for decomposing Transform3D matrices.
  */
 
-import type { Transform3D, DecomposedTransform } from '../nodes/node3d/types';
+import type { Transform3D, DecomposedTransform } from '../nodes/base/node3d/types';
 import { warn } from '../logger';
 
 /**

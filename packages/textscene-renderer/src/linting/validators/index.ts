@@ -1,0 +1,6 @@
+/** Shared validator utilities for TSCN linting */
+
+export * from './commonValidators.js';
+export * from './vectorValidators.js';
+export * from './physicsValidators.js';
+export * from './resourceValidators.js';
