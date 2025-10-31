@@ -1,16 +1,23 @@
 /**
  * Linter entry point - imports all lint rules and validators to trigger registration
+ *
+ * IMPORTANT: Only imports linterParser.js and linter.js files, NOT index.js
+ * This keeps the linter CLI bundle small by avoiding THREE.js imports.
+ * Even for nodes with renderers, we import linter files directly.
  */
 
-// Import nodes with renderers (triggers both renderer AND linter registration via index.ts)
-import '../nodes/base/node3d/index.js';
-import '../nodes/3d/meshinstance3d/index.js';
-import '../nodes/3d/lights/omnilight3d/index.js';
-import '../nodes/3d/lights/directionallight3d/index.js';
-import '../nodes/3d/lights/spotlight3d/index.js';
-
-// Import linter-only nodes (not yet implemented for rendering)
-// These nodes only have linter.ts and linterParser.ts, no index.ts
+// Import linter files for all nodes (including those with renderers)
+// Direct imports avoid bundling THREE.js in the linter CLI
+import '../nodes/base/node3d/linterParser.js';
+import '../nodes/base/node3d/linter.js';
+import '../nodes/3d/meshinstance3d/linterParser.js';
+import '../nodes/3d/meshinstance3d/linter.js';
+import '../nodes/3d/lights/omnilight3d/linterParser.js';
+import '../nodes/3d/lights/omnilight3d/linter.js';
+import '../nodes/3d/lights/directionallight3d/linterParser.js';
+import '../nodes/3d/lights/directionallight3d/linter.js';
+import '../nodes/3d/lights/spotlight3d/linterParser.js';
+import '../nodes/3d/lights/spotlight3d/linter.js';
 import '../nodes/animation/animationplayer/linterParser.js';
 import '../nodes/animation/animationplayer/linter.js';
 import '../nodes/physics/2d/area2d/linterParser.js';
