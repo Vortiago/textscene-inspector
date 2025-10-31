@@ -29,15 +29,23 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - run: pnpm test:unit
+      - name: Lint
+        run: pnpm lint
 
-      - run: pnpm --filter @textscene/renderer build
+      - name: Type Check
+        run: pnpm type-check
 
-      - run: pnpm --filter @textscene/web-previewer build
+      - name: Run Tests
+        run: pnpm test:unit
 
-      - run: pnpm --filter @textscene/linter build
+      - name: Build Web Previewer
+        run: pnpm --filter @textscene/web-previewer build
 
-      - run: pnpm vsc:package
+      - name: Build Linter CLI
+        run: pnpm --filter @textscene/linter build
+
+      - name: Package VS Code Extension
+        run: pnpm vsc:package
 
       - uses: actions/upload-artifact@v4
         with:

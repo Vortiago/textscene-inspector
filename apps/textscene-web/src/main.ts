@@ -2,8 +2,8 @@
  * Standalone web application for previewing TSCN files.
  */
 
-import { TscnPreviewUI } from '@textscene/renderer';
-import type { TscnPreviewElements, MissingResource } from '@textscene/renderer';
+import { TscnPreviewUI } from '@textscene/core';
+import type { TscnPreviewElements, MissingResource } from '@textscene/core';
 import { initLogger } from './logger';
 import { getFixturesByCategory } from './fixtures';
 import { WebResourceProvider } from './providers/WebResourceProvider';

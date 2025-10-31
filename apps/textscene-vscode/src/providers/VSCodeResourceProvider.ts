@@ -4,8 +4,8 @@
  */
 
 import * as vscode from 'vscode';
-import { isBinaryResourceType, stripResPrefix } from '@textscene/renderer';
-import type { ResourceProvider } from '@textscene/renderer';
+import { isBinaryResourceType, stripResPrefix } from '@textscene/core';
+import type { ResourceProvider } from '@textscene/core';
 
 export class VSCodeResourceProvider implements ResourceProvider {
   constructor(

@@ -5,13 +5,13 @@
   "type": "module",
   "scripts": {
     "copy-fixtures": "node scripts/copy-fixtures.js",
-    "predev": "pnpm copy-fixtures && pnpm --filter @textscene/renderer build",
+    "predev": "pnpm copy-fixtures && pnpm --filter @textscene/core build",
     "dev": "vite",
-    "prebuild": "pnpm copy-fixtures && pnpm --filter @textscene/renderer build",
+    "prebuild": "pnpm copy-fixtures && pnpm --filter @textscene/core build",
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest",
-    "pretype-check": "pnpm --filter @textscene/renderer build",
+    "pretype-check": "pnpm --filter @textscene/core build",
     "type-check": "tsc --noEmit",
     "clean": "rimraf dist node_modules/.vite public/fixtures"
   },
@@ -26,7 +26,7 @@
   "author": "Vortiago",
   "license": "MIT",
   "dependencies": {
-    "@textscene/renderer": "workspace:*"
+    "@textscene/core": "workspace:*"
   },
   "devDependencies": {
     "rimraf": "catalog:",

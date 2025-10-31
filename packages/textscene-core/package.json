@@ -1,0 +1,61 @@
+{
+  "name": "@textscene/core",
+  "version": "0.0.1",
+  "description": "Core library for parsing, linting, and rendering TSCN files",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./parser": {
+      "import": "./dist/parser/index.js",
+      "types": "./dist/parser/index.d.ts"
+    },
+    "./linter": {
+      "import": "./dist/linter/index.js",
+      "types": "./dist/linter/index.d.ts"
+    },
+    "./renderer": {
+      "import": "./dist/core/TscnRenderer.js",
+      "types": "./dist/core/TscnRenderer.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "prebuild": "rimraf tsconfig.tsbuildinfo",
+    "build": "tsc --build",
+    "dev": "tsc --watch",
+    "test": "vitest",
+    "test:watch": "vitest --watch",
+    "test:ui": "vitest --ui",
+    "type-check": "tsc --noEmit",
+    "clean": "rimraf dist tsconfig.tsbuildinfo"
+  },
+  "keywords": [
+    "tscn",
+    "textscene",
+    "text-scene",
+    "parser",
+    "linter",
+    "renderer",
+    "three.js",
+    "3d",
+    "godot"
+  ],
+  "author": "Vortiago",
+  "license": "MIT",
+  "dependencies": {
+    "three": "^0.171.0"
+  },
+  "devDependencies": {
+    "@types/three": "^0.171.0",
+    "rimraf": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

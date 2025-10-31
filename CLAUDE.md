@@ -116,7 +116,7 @@ import type { SomeType } from './module';
 **4. Rebuild After Changes - Don't Forget Dependencies**
 
 ```typescript
-// If you modify packages/textscene-renderer/...
+// If you modify packages/textscene-core/...
 // Apps depend on it, so rebuild:
 pnpm --filter @textscene/renderer build
 // THEN rebuild apps that use it
@@ -179,7 +179,7 @@ pnpm lint:fix
 
 ```bash
 # Core library (tscn-renderer)
-cd packages/textscene-renderer
+cd packages/textscene-core
 pnpm dev          # Watch mode for TypeScript
 pnpm test:watch   # Watch mode for tests
 
@@ -259,13 +259,13 @@ When implementing new features (node types, mesh types, materials, etc.):
 
 ### Monorepo Structure
 
-- **packages/textscene-renderer**: Core library using three.js
+- **packages/textscene-core**: Core library using three.js
 - **apps/textscene-vscode**: VS Code custom editor integration
 - **apps/textscene-web**: Standalone web app for debugging
 
 ### Vertical Slicing Pattern
 
-The core library (`packages/textscene-renderer/src/nodes/`) uses vertical slicing - each TSCN node type (Mesh, Camera, Light, etc.) gets its own folder containing:
+The core library (`packages/textscene-core/src/nodes/`) uses vertical slicing - each TSCN node type (Mesh, Camera, Light, etc.) gets its own folder containing:
 - `parser.ts` - Parsing logic for that node type
 - `renderer.ts` - three.js rendering logic
 - `index.ts` - Self-registration with NodeRegistry
@@ -275,7 +275,7 @@ This keeps related functionality together for quick iteration.
 
 ### Node Registry Pattern
 
-Node types self-register using the `NodeRegistry` (packages/textscene-renderer/src/core/NodeRegistry.ts):
+Node types self-register using the `NodeRegistry` (packages/textscene-core/src/core/NodeRegistry.ts):
 - Each node type exports a registration object in its `index.ts`
 - Registration happens on import - no central file to edit
 - Adding new node types requires NO changes to parser/renderer core files
@@ -283,7 +283,7 @@ Node types self-register using the `NodeRegistry` (packages/textscene-renderer/s
 
 **Example**: To add a new node type, create the folder structure and register:
 ```typescript
-// packages/textscene-renderer/src/nodes/mynodetype/index.ts
+// packages/textscene-core/src/nodes/mynodetype/index.ts
 import { nodeRegistry } from '../../core/NodeRegistry';
 import { isMyNodeType, parseMyNodeType } from './parser';
 import { createMyNodeType } from './renderer';
@@ -298,6 +298,107 @@ nodeRegistry.register({
 
 Then import in TscnParser.ts: `import '../nodes/mynodetype';`
 
+### Two-Parser Architecture
+
+The codebase uses **two different parsers** for different purposes:
+
+**`TscnParser`** (Lenient Parser for Rendering):
+- Location: `packages/textscene-core/src/parser/TscnParser.ts`
+- Purpose: Parse TSCN files for rendering in the viewer
+- Strategy: **Lenient/Recovering** - attempts to recover from errors and warnings
+- Behavior: Logs issues but keeps rendering whatever it can
+- Use when: Rendering scenes, displaying previews, tolerating malformed input
+- Export: `TscnParser` class with `parse()` method
+
+**`StrictTscnParser`** (Strict Parser for Linting):
+- Location: `packages/textscene-core/src/linter/StrictTscnParser.ts`
+- Purpose: Validate TSCN files and report all issues
+- Strategy: **Strict/Validating** - reports ALL syntax and format errors as diagnostics
+- Behavior: Returns detailed error list with line/column information
+- Use when: Linting files, validating before save, showing errors to users
+- Export: `StrictTscnParser` class with `parse()` method
+
+**Why Two Parsers?**
+- **Rendering needs resilience**: Show what you can, warn about problems, don't crash
+- **Linting needs strictness**: Report every single issue so users can fix them
+- Separation of concerns: Different use cases, different error handling strategies
+
+### Linter Architecture
+
+**Two-Phase Validation Strategy:**
+
+1. **Phase 1: Strict Parsing** (Syntax/Format Validation)
+   - Uses `StrictTscnParser` to catch syntax errors
+   - Validates: malformed brackets, invalid Vector3 formats, type mismatches, etc.
+   - Returns: `ParseError[]` with line/column locations
+
+2. **Phase 2: Semantic Validation** (Rule-Based Validation)
+   - Uses self-registered lint rules from `ruleRegistry`
+   - Validates: missing resources, invalid node references, property constraints, etc.
+   - Returns: `Diagnostic[]` with severity levels (error/warning/info)
+
+**Linter Exports** (`packages/textscene-core/src/linter/index.ts`):
+- `Linter` class - Main API, use `linter.lint(content)` to validate TSCN content
+- `StrictTscnParser` class - Strict validation parser
+- `ruleRegistry` - Singleton for self-registered lint rules
+- `validatorRegistry` - Singleton for property validators
+- **NOT exported**: Standalone `lintTscnFile()` or `lintTscnContent()` functions
+
+**Self-Registration Pattern for Lint Rules:**
+- Lint rules self-register on module import (side effects)
+- Each node type's `linter.ts` registers rules via `ruleRegistry.register()`
+- Test files must import `./linter/index` to trigger all registrations
+- Example:
+```typescript
+// In nodes/base/node3d/linter.ts
+import { ruleRegistry } from '../../../linter/RuleRegistry';
+
+const node3DValidationRule: LintRule = {
+  meta: { name: 'valid-node3d-visibility', ... },
+  check: (context) => { /* validation logic */ }
+};
+
+ruleRegistry.register(node3DValidationRule);
+```
+
+**Usage Example:**
+```typescript
+import { Linter } from '@textscene/core/linter';
+
+const linter = new Linter();
+const diagnostics = linter.lint(tscnContent);
+
+// diagnostics contains both parse errors and rule violations
+diagnostics.forEach(d => {
+  console.log(`${d.severity}: ${d.message} at ${d.nodeName}`);
+});
+```
+
+**Bundle Size Optimization (Critical):**
+
+The linter uses **direct imports** instead of node `index.ts` files to prevent bundling THREE.js:
+
+```typescript
+// ❌ WRONG - pulls in renderer + THREE.js (898KB bundle)
+import '../nodes/base/node3d/index.js';
+
+// ✅ CORRECT - only linter code (~396KB bundle)
+import '../nodes/base/node3d/linterParser.js';
+import '../nodes/base/node3d/linter.js';
+```
+
+**Why this matters:**
+- With 150-200 nodes planned (all with renderers), importing `index.ts` would bundle THREE.js for all nodes
+- Linter CLI would balloon from ~400KB to 5-10MB+ unnecessarily
+- The "asymmetry" (direct imports for linter, index.ts for renderer apps) is **intentional**
+
+**Pattern for all nodes:**
+- `linter/index.ts`: ALWAYS imports `linterParser.js` + `linter.js` directly (even for nodes with renderers)
+- Renderer apps (web/VSCode): Import node `index.ts` files (gets renderer + linter, needs THREE.js anyway)
+- Result: Linter stays minimal, renderer apps get everything they need
+
+This is not technical debt - it's essential architecture for scale.
+
 ### Dependency Management
 
 Uses **pnpm Catalogs** for shared dependencies. Versions are centrally defined in `pnpm-workspace.yaml` under the `catalog:` section. Reference with `"catalog:"` in package.json files.
@@ -308,17 +409,17 @@ To add/update shared dependencies:
 
 ### Core Utilities and Patterns
 
-**Generic Resource Resolution** (`packages/textscene-renderer/src/resources/resourceResolver.ts`):
+**Generic Resource Resolution** (`packages/textscene-core/src/resources/resourceResolver.ts`):
 - `resolveResource<T>()` - Generic function for resolving any resource type
 - Eliminates duplication between mesh and material resolution
 - Type-safe handler registration pattern
 
-**Scene Setup Utilities** (`packages/textscene-renderer/src/core/SceneSetup.ts`):
+**Scene Setup Utilities** (`packages/textscene-core/src/core/SceneSetup.ts`):
 - `setupThreeJsScene()` - One-line three.js initialization
 - Extracts scene, camera, renderer, and controls setup
 - Reusable across applications
 
-**UI Composition** (`packages/textscene-renderer/src/ui/`):
+**UI Composition** (`packages/textscene-core/src/ui/`):
 - `NodeDetailsFormatter` - Generates HTML for node property display
 - `SceneTreeViewer` - Interactive tree hierarchy viewer
 - `TscnPreviewUI` - Coordinates all UI components

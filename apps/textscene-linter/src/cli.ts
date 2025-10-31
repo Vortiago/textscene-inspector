@@ -6,7 +6,7 @@
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import { Command } from 'commander';
-import { Linter, type Diagnostic } from '@textscene/renderer/linter';
+import { Linter, type Diagnostic } from '@textscene/core/linter';
 
 const program = new Command();
 
@@ -47,7 +47,7 @@ function lintFile(filePath: string, hasColor: boolean): { hasErrors: boolean } {
     printResults(filePath, diagnostics, hasColor);
 
     // Check if any errors were found
-    const hasErrors = diagnostics.some(d => d.severity === 'error');
+    const hasErrors = diagnostics.some((d: Diagnostic) => d.severity === 'error');
     return { hasErrors };
 
   } catch (error) {

@@ -20,6 +20,7 @@
     "build": "esbuild src/cli.ts --bundle --platform=node --format=esm --outfile=dist/cli.js --external:commander",
     "dev": "esbuild src/cli.ts --bundle --platform=node --format=esm --outfile=dist/cli.js --external:commander --watch",
     "clean": "rimraf dist",
+    "pretype-check": "pnpm --filter @textscene/core build",
     "type-check": "tsc --noEmit"
   },
   "keywords": [
@@ -31,7 +32,7 @@
   "author": "Vortiago",
   "license": "MIT",
   "dependencies": {
-    "@textscene/renderer": "workspace:*",
+    "@textscene/core": "workspace:*",
     "commander": "catalog:"
   },
   "devDependencies": {

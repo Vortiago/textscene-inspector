@@ -53,9 +53,9 @@ export default [
     },
   },
 
-  // TypeScript files - Browser + Node.js environment (renderer package - runs in both)
+  // TypeScript files - Browser + Node.js environment (core package - runs in both)
   {
-    files: ['packages/textscene-renderer/src/**/*.ts'],
+    files: ['packages/textscene-core/src/**/*.ts'],
     languageOptions: {
       parser: tsparser,
       parserOptions: {
