@@ -31,7 +31,7 @@ jobs:
 
       - run: pnpm test:unit
 
-      - run: pnpm --filter @textscene/renderer build
+      - run: pnpm --filter @textscene/core build
 
       - run: pnpm --filter @textscene/web-previewer build
 
