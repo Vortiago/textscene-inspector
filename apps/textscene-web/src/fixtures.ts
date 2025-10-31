@@ -16,10 +16,17 @@ export const fixtures: Fixture[] = [
   { name: 'Mesh Instance Basic', file: 'unit-mesh-instance-basic.tscn', category: 'Unit - Basic Nodes' },
 
   // Unit - Primitive Meshes
-  { name: 'Plane Mesh', file: 'unit-plane-mesh.tscn', category: 'Unit - Primitive Meshes' },
+  { name: 'Box Mesh', file: 'unit-box-mesh.tscn', category: 'Unit - Primitive Meshes' },
+  { name: 'Sphere Mesh', file: 'unit-sphere-mesh.tscn', category: 'Unit - Primitive Meshes' },
+  { name: 'Cylinder Mesh', file: 'unit-cylinder-mesh.tscn', category: 'Unit - Primitive Meshes' },
   { name: 'Capsule Mesh', file: 'unit-capsule-mesh.tscn', category: 'Unit - Primitive Meshes' },
+  { name: 'Plane Mesh', file: 'unit-plane-mesh.tscn', category: 'Unit - Primitive Meshes' },
   { name: 'Torus Mesh', file: 'unit-torus-mesh.tscn', category: 'Unit - Primitive Meshes' },
   { name: 'Prism Mesh', file: 'unit-prism-mesh.tscn', category: 'Unit - Primitive Meshes' },
+
+  // Unit - Materials
+  { name: 'Metallic Material', file: 'unit-material-metallic.tscn', category: 'Unit - Materials' },
+  { name: 'Emissive Material', file: 'unit-material-emissive.tscn', category: 'Unit - Materials' },
 
   // Unit - External Resources
   { name: 'External Cube (Standalone)', file: 'unit-external-cube.tscn', category: 'Unit - External Resources' },
@@ -36,6 +43,7 @@ export const fixtures: Fixture[] = [
   // Integration - Multi-Node
   { name: 'Mixed Nodes', file: 'integration-mixed-nodes.tscn', category: 'Integration - Multi-Node' },
   { name: 'All Light Types', file: 'integration-lights-all-types.tscn', category: 'Integration - Multi-Node' },
+  { name: 'All Mesh Types', file: 'integration-all-meshes.tscn', category: 'Integration - Multi-Node' },
   { name: 'All Primitives', file: 'integration-all-primitives.tscn', category: 'Integration - Multi-Node' },
 
   // Integration - External Scenes

@@ -1,0 +1,19 @@
+[gd_scene format=3]
+
+[sub_resource type="BoxMesh" id="BoxMesh_1"]
+size = Vector3(1.5, 2.0, 1.0)
+subdivide_width = 2
+subdivide_height = 3
+subdivide_depth = 2
+
+[sub_resource type="StandardMaterial3D" id="Material_box"]
+albedo_color = Color(0.8, 0.6, 0.2, 1)
+metallic = 0.2
+roughness = 0.6
+
+[node name="Root" type="Node3D"]
+
+[node name="Box" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+mesh = SubResource("BoxMesh_1")
+surface_material_override/0 = SubResource("Material_box")

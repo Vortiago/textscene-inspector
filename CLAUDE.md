@@ -76,6 +76,45 @@ Example fixture entry:
 
 The web previewer includes a categorized scene selector for quick loading during development.
 
+### Fixture Creation Rules
+
+**IMPORTANT: Every implemented feature must have a fixture**
+
+**Rule of thumb:** If code exists in `src/`, there should be a fixture to test it visually.
+
+When implementing new features (node types, mesh types, materials, etc.):
+
+1. **Create a fixture immediately** after implementing the feature
+   - Place in `scenes/fixtures/` for unit-level testing
+   - Use naming convention: `unit-<feature>.tscn`
+   - Example: After implementing `SphereMesh` renderer, create `unit-sphere-mesh.tscn`
+
+2. **Validate with linter before committing**
+   ```bash
+   # Build linter first
+   pnpm --filter @textscene/linter build
+
+   # Lint your new fixture
+   node apps/textscene-linter/dist/cli.js scenes/fixtures/your-new-fixture.tscn
+   ```
+   - Fixture must pass linting with zero errors (unless it's an edge case fixture)
+   - Fix any linting errors before committing
+
+3. **Add to fixtures.ts** for web UI visibility
+   - Update `apps/textscene-web/src/fixtures.ts`
+   - Choose appropriate category (create new if needed)
+   - Maintain alphabetical order within categories
+
+**What to create fixtures for:**
+- ✅ Every mesh type (BoxMesh, SphereMesh, etc.)
+- ✅ Every node type (Camera3D, Light3D, etc.)
+- ✅ Material property variations (metallic, emissive, transparent)
+- ✅ Edge cases for linter testing
+- ❌ Don't create redundant parameter combinations
+- ❌ Don't create fixtures for unimplemented features
+
+**Integration examples:** When multiple features work together, create integration scenes in `scenes/examples/` (e.g., `integration-all-meshes.tscn` shows all 7 mesh types together).
+
 ## Architecture
 
 ### Monorepo Structure
