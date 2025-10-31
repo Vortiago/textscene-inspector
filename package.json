@@ -5,7 +5,7 @@
   "description": "A monorepo for TextScene Inspector - view and navigate text-based 3D scene files",
   "type": "module",
   "scripts": {
-    "build": "pnpm --filter @textscene/renderer build && pnpm -r build",
+    "build": "pnpm --filter @textscene/core build && pnpm -r build",
     "build:linter": "pnpm --filter @textscene/linter build",
     "dev:web": "pnpm --filter @textscene/web-previewer dev",
     "dev:vscode": "pnpm --filter textscene-inspector dev",
@@ -18,7 +18,7 @@
     "lint:fix": "eslint . --fix",
     "lint:tscn": "node apps/textscene-linter/bin/tscn-lint.js",
     "type-check": "pnpm -r type-check",
-    "type-check:all": "pnpm --filter @textscene/renderer build && pnpm -r type-check",
+    "type-check:all": "pnpm --filter @textscene/core build && pnpm -r type-check",
     "validate": "pnpm lint && pnpm type-check:all && pnpm test:unit",
     "generate:fixtures": "node scripts/generate-fixtures.js",
     "clean": "pnpm -r clean && rimraf node_modules",
