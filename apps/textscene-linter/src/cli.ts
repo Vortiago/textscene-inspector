@@ -47,7 +47,7 @@ function lintFile(filePath: string, hasColor: boolean): { hasErrors: boolean } {
     printResults(filePath, diagnostics, hasColor);
 
     // Check if any errors were found
-    const hasErrors = diagnostics.some(d => d.severity === 'error');
+    const hasErrors = diagnostics.some((d: Diagnostic) => d.severity === 'error');
     return { hasErrors };
 
   } catch (error) {
