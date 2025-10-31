@@ -6,7 +6,6 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
-import type { TscnNode } from '../../../../parser/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 
 // Thresholds for warnings
