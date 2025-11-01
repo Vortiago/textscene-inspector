@@ -86,15 +86,32 @@ export class SceneManager {
   }
 
   /**
+   * Add external scene nodes as children of an instance node
+   * Sets instanceRoot on all added nodes and their descendants
+   */
+  private async addExternalSceneNodes(
+    externalScene: TscnScene,
+    instancePath: string
+  ): Promise<void> {
+    for (const externalNode of externalScene.nodes) {
+      const childPath = joinPath(instancePath, externalNode.name);
+      logger.info(`[SceneManager] Adding external node: ${externalNode.name} at path: ${childPath}`);
+      await this.nodeLifecycle!.addNode(childPath, externalNode, externalScene, instancePath);
+
+      // Set instanceRoot flag on the created object and all its descendants
+      const childObject = this.nodeTracker.getObject(childPath);
+      if (childObject) {
+        this.setInstanceRootOnDescendants(childObject, instancePath);
+        logger.info(`[SceneManager] Set instanceRoot=${instancePath} on ${childPath} and descendants`);
+      }
+    }
+  }
+
+  /**
    * Add scene instance to the graph
    * Registers this instance path as using the scene
    */
-  async addScene(
-    instancePath: string,
-    scenePath: string,
-    _parentNode: THREE.Object3D,
-    _sceneData: TscnScene
-  ): Promise<void> {
+  async addScene(instancePath: string, scenePath: string): Promise<void> {
     if (!this.nodeLifecycle) {
       throw new Error('NodeLifecycleManager not set. Call setNodeLifecycleManager() first.');
     }
@@ -114,18 +131,7 @@ export class SceneManager {
     );
 
     // Add all root nodes from external scene as children of instance node
-    for (const externalNode of externalScene.nodes) {
-      const childPath = joinPath(instancePath, externalNode.name);
-      logger.info(`[SceneManager] Adding external node: ${externalNode.name} at path: ${childPath}`);
-      await this.nodeLifecycle.addNode(childPath, externalNode, externalScene, instancePath);
-
-      // Set instanceRoot flag on the created object and all its descendants
-      const childObject = this.nodeTracker.getObject(childPath);
-      if (childObject) {
-        this.setInstanceRootOnDescendants(childObject, instancePath);
-        logger.info(`[SceneManager] Set instanceRoot=${instancePath} on ${childPath} and descendants`);
-      }
-    }
+    await this.addExternalSceneNodes(externalScene, instancePath);
 
     logger.info(`[SceneManager] ✅ Successfully added scene instance: ${instancePath}`);
   }
@@ -211,6 +217,7 @@ export class SceneManager {
 
         // Remove old instance content (but keep the instance node itself)
         // We need to remove children, not the instance node
+        // TODO: O(n) optimization - NodeTracker could maintain parent→children map for O(k) lookup
         const childrenToRemove: string[] = [];
         for (const path of this.nodeTracker.getAllPaths()) {
           if (path.startsWith(instancePath + '/')) {
@@ -223,16 +230,7 @@ export class SceneManager {
         }
 
         // Re-add external scene nodes as children
-        for (const externalNode of updatedScene.nodes) {
-          const childPath = joinPath(instancePath, externalNode.name);
-          await this.nodeLifecycle.addNode(childPath, externalNode, updatedScene, instancePath);
-
-          // Set instanceRoot flag on the created object and all its descendants
-          const childObject = this.nodeTracker.getObject(childPath);
-          if (childObject) {
-            this.setInstanceRootOnDescendants(childObject, instancePath);
-          }
-        }
+        await this.addExternalSceneNodes(updatedScene, instancePath);
 
         successCount++;
         logger.info(`[SceneManager] ✓ Updated instance: ${instancePath}`);

@@ -87,7 +87,7 @@ export class NodeLifecycleManager {
       };
 
       // Delegate to SceneManager
-      await this.sceneManager.addScene(nodePath, metadata.path, object3D, sceneData);
+      await this.sceneManager.addScene(nodePath, metadata.path);
     }
 
     // Recursively add children
@@ -115,6 +115,7 @@ export class NodeLifecycleManager {
     }
 
     // Clean up from maps (including children)
+    // TODO: O(n) optimization - NodeTracker could maintain parent→children map for O(k) lookup
     const pathsToRemove: string[] = [];
     for (const path of this.nodeTracker.getAllPaths()) {
       if (path === nodePath || path.startsWith(nodePath + '/')) {
