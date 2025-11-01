@@ -11,13 +11,21 @@ export interface Color {
 
 /**
  * Parse Color from Godot format: Color(r, g, b, a)
- * Values are in range 0-1
+ * Values are in range 0-1, but negative values and values > 1 are accepted
+ * Returns white color { r: 1, g: 1, b: 1, a: 1 } if parsing fails
  */
-export function parseColor(value: string): Color {
-  const match = value.match(/^Color\s*\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*\)$/);
+export function parseColor(value: string | undefined): Color {
+  // Handle undefined/null/empty input - return white as fallback
+  if (!value) {
+    return { r: 1, g: 1, b: 1, a: 1 };
+  }
+
+  // Updated regex to support negative numbers and decimals
+  const match = value.match(/^Color\s*\(\s*([-\d.]+)\s*,\s*([-\d.]+)\s*,\s*([-\d.]+)\s*,\s*([-\d.]+)\s*\)$/);
 
   if (!match || !match[1] || !match[2] || !match[3] || !match[4]) {
-    throw new Error(`Invalid Color format: ${value}`);
+    // Return white as fallback instead of throwing
+    return { r: 1, g: 1, b: 1, a: 1 };
   }
 
   return {
@@ -31,14 +39,17 @@ export function parseColor(value: string): Color {
 /**
  * Convert Godot Color string to three.js hex color number.
  * Example: "Color(1, 0.5, 0, 1)" -> 0xff8000
+ * Returns white (0xffffff) if parsing fails
  */
-export function parseColorToHex(value: string): number {
+export function parseColorToHex(value: string | undefined): number {
   const color = parseColor(value);
 
-  // Convert 0-1 range to 0-255 and combine into hex
-  const r = Math.round(color.r * 255);
-  const g = Math.round(color.g * 255);
-  const b = Math.round(color.b * 255);
+  // Clamp values to 0-1 range before converting to 0-255
+  const clamp = (val: number) => Math.max(0, Math.min(1, val));
+
+  const r = Math.round(clamp(color.r) * 255);
+  const g = Math.round(clamp(color.g) * 255);
+  const b = Math.round(clamp(color.b) * 255);
 
   return (r << 16) | (g << 8) | b;
 }

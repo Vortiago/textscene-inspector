@@ -27,10 +27,25 @@ describe('colorParser', () => {
       expect(result).toEqual({ r: 0, g: 0, b: 0, a: 1 });
     });
 
-    it('should throw error for invalid format', () => {
-      expect(() => parseColor('invalid')).toThrow('Invalid Color format');
-      expect(() => parseColor('Color(1, 2, 3)')).toThrow('Invalid Color format');
-      expect(() => parseColor('Color(a, b, c, d)')).toThrow('Invalid Color format');
+    it('should return white fallback for invalid format', () => {
+      // Changed from throwing to graceful fallback - returns white color
+      expect(parseColor('invalid')).toEqual({ r: 1, g: 1, b: 1, a: 1 });
+      expect(parseColor('Color(1, 2, 3)')).toEqual({ r: 1, g: 1, b: 1, a: 1 });
+      expect(parseColor('Color(a, b, c, d)')).toEqual({ r: 1, g: 1, b: 1, a: 1 });
+    });
+
+    it('should return white fallback for undefined input', () => {
+      expect(parseColor(undefined)).toEqual({ r: 1, g: 1, b: 1, a: 1 });
+    });
+
+    it('should parse negative color values', () => {
+      const result = parseColor('Color(-0.5, 0.5, 1.5, 1)');
+      expect(result).toEqual({ r: -0.5, g: 0.5, b: 1.5, a: 1 });
+    });
+
+    it('should parse color values above 1', () => {
+      const result = parseColor('Color(2.0, 1.5, 0.5, 1)');
+      expect(result).toEqual({ r: 2.0, g: 1.5, b: 0.5, a: 1 });
     });
   });
 
@@ -74,6 +89,21 @@ describe('colorParser', () => {
       const result1 = parseColorToHex('Color(1, 0, 0, 1)');
       const result2 = parseColorToHex('Color(1, 0, 0, 0.5)');
       expect(result1).toBe(result2); // Alpha should not affect hex color
+    });
+
+    it('should clamp values outside 0-1 range', () => {
+      // Values above 1 should be clamped to 1 (0xFF)
+      const result1 = parseColorToHex('Color(2.0, 1.5, 0.5, 1)');
+      expect(result1).toBe(0xffff80); // (255, 255, 128)
+
+      // Negative values should be clamped to 0
+      const result2 = parseColorToHex('Color(-0.5, 0.5, 1.0, 1)');
+      expect(result2).toBe(0x0080ff); // (0, 128, 255)
+    });
+
+    it('should return white for invalid input', () => {
+      expect(parseColorToHex('invalid')).toBe(0xffffff);
+      expect(parseColorToHex(undefined)).toBe(0xffffff);
     });
   });
 });
