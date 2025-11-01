@@ -76,6 +76,16 @@ export class SceneManager {
   }
 
   /**
+   * Recursively set userData.instanceRoot on an object and all its descendants
+   */
+  private setInstanceRootOnDescendants(object: THREE.Object3D, instancePath: string): void {
+    object.userData.instanceRoot = instancePath;
+    for (const child of object.children) {
+      this.setInstanceRootOnDescendants(child, instancePath);
+    }
+  }
+
+  /**
    * Add scene instance to the graph
    * Registers this instance path as using the scene
    */
@@ -108,6 +118,13 @@ export class SceneManager {
       const childPath = joinPath(instancePath, externalNode.name);
       logger.info(`[SceneManager] Adding external node: ${externalNode.name} at path: ${childPath}`);
       await this.nodeLifecycle.addNode(childPath, externalNode, externalScene, instancePath);
+
+      // Set instanceRoot flag on the created object and all its descendants
+      const childObject = this.nodeTracker.getObject(childPath);
+      if (childObject) {
+        this.setInstanceRootOnDescendants(childObject, instancePath);
+        logger.info(`[SceneManager] Set instanceRoot=${instancePath} on ${childPath} and descendants`);
+      }
     }
 
     logger.info(`[SceneManager] ✅ Successfully added scene instance: ${instancePath}`);
@@ -213,6 +230,12 @@ export class SceneManager {
         for (const externalNode of updatedScene.nodes) {
           const childPath = joinPath(instancePath, externalNode.name);
           await this.nodeLifecycle.addNode(childPath, externalNode, updatedScene, instancePath);
+
+          // Set instanceRoot flag on the created object and all its descendants
+          const childObject = this.nodeTracker.getObject(childPath);
+          if (childObject) {
+            this.setInstanceRootOnDescendants(childObject, instancePath);
+          }
         }
 
         successCount++;

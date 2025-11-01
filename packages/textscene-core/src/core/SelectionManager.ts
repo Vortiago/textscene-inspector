@@ -63,9 +63,9 @@ export class SelectionManager {
     let current: THREE.Object3D | null = object;
     while (current) {
       if (current.userData.nodePath) {
-        // If this node belongs to an external scene, return the instance node path instead
-        if (current.userData.isExternalSceneContent && current.userData.belongsToExternalInstance) {
-          return current.userData.belongsToExternalInstance;
+        // If this node belongs to an external scene instance, return the instance root path instead
+        if (current.userData.instanceRoot) {
+          return current.userData.instanceRoot;
         }
         return current.userData.nodePath;
       }
