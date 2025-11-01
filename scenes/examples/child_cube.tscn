@@ -1,0 +1,15 @@
+[gd_scene load_steps=3 format=3 uid="uid://child_cube_scene"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_1"]
+size = Vector3(1, 1, 1)
+
+[sub_resource type="StandardMaterial3D" id="Material_1"]
+albedo_color = Color(0.2, 0.6, 0.9, 1)
+metallic = 0.2
+roughness = 0.5
+
+[node name="ChildCube" type="Node3D"]
+
+[node name="Cube" type="MeshInstance3D" parent="."]
+mesh = SubResource("BoxMesh_1")
+surface_material_override/0 = SubResource("Material_1")
