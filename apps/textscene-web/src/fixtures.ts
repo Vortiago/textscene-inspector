@@ -106,6 +106,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - External Resources"
   },
   {
+    "name": "Missing External Scene",
+    "file": "unit-external-missing.tscn",
+    "category": "Unit - External Resources"
+  },
+  {
     "name": "Material Emissive",
     "file": "unit-material-emissive.tscn",
     "category": "Unit - Materials"
