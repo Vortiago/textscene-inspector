@@ -1,0 +1,9 @@
+[gd_scene load_steps=2 format=3 uid="uid://test_missing_external"]
+
+[ext_resource type="PackedScene" path="res://this_file_does_not_exist.tscn" id="1_missing"]
+
+[node name="TestMissingExternal" type="Node3D"]
+
+[node name="MissingSceneInstance" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+instance = ExtResource("1_missing")

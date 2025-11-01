@@ -153,6 +153,262 @@ pnpm test
 | `Command failed with exit code 2` | Type check failed | Run `pnpm type-check` to see actual error |
 | Linter builds but tests fail | Stale build artifacts | Run `pnpm clean` then `pnpm install && pnpm build` |
 
+## Testing Best Practices
+
+### Why Comprehensive Testing Matters
+
+**Real Example**: Bug #2 (missing resource UI not showing) was not caught by tests because:
+1. Tests had outdated function signatures (4 params vs 2 params)
+2. No tests for error handling paths
+3. No tests for callback invocation
+
+This resulted in a critical regression that broke user-facing functionality.
+
+### Test Coverage Requirements
+
+**For every public method, test:**
+
+1. ✅ **Happy Path** - Normal successful execution
+2. ✅ **Error Paths** - What happens when things fail
+3. ✅ **Edge Cases** - Boundary conditions, empty inputs, null checks
+4. ✅ **Callbacks** - Verify callbacks are invoked with correct data
+5. ✅ **State Changes** - Verify internal state updates correctly
+
+**Bad Example** (only happy path):
+```typescript
+describe('SceneManager.addScene', () => {
+  it('should track scene instances', async () => {
+    await sceneManager.addScene('Enemy1', scenePath);
+    expect(sceneManager.getInstances(scenePath)).toHaveLength(1);
+  });
+});
+```
+
+**Good Example** (comprehensive):
+```typescript
+describe('SceneManager.addScene', () => {
+  it('should track scene instances on success', async () => {
+    await sceneManager.addScene('Enemy1', scenePath);
+    expect(sceneManager.getInstances(scenePath)).toHaveLength(1);
+  });
+
+  it('should call onResourceNeeded callback when scene fails to load', async () => {
+    const callbackSpy = vi.fn().mockResolvedValue(null);
+    sceneManager.setOnResourceNeeded(callbackSpy);
+
+    await sceneManager.addScene('Missing', 'res://missing.tscn');
+
+    expect(callbackSpy).toHaveBeenCalledWith({
+      path: 'res://missing.tscn',
+      type: 'PackedScene',
+      referencedBy: 'Missing',
+      error: expect.any(String)
+    });
+  });
+
+  it('should not throw when scene fails and no callback set', async () => {
+    await expect(
+      sceneManager.addScene('Missing', 'res://missing.tscn')
+    ).resolves.not.toThrow();
+  });
+
+  it('should not track instance when scene fails to load', async () => {
+    await sceneManager.addScene('Missing', 'res://missing.tscn');
+    expect(sceneManager.getInstances('res://missing.tscn')).toHaveLength(0);
+  });
+});
+```
+
+### Test-First Refactoring
+
+When refactoring existing code:
+
+1. **Update tests FIRST** to match new signatures
+   ```typescript
+   // Before refactor: Update this first
+   await sceneManager.addScene(path, scene, mockParent, mockData);
+
+   // After refactor signature change
+   await sceneManager.addScene(path, scene);
+   ```
+
+2. **Run tests** - Should fail if behavior changed
+3. **Fix implementation** - Make tests pass
+4. **Verify** - All tests green
+
+**Why**: Ensures refactors don't silently break functionality. Tests document expected behavior.
+
+### Callback Testing Pattern
+
+When implementing callback-based features:
+
+```typescript
+// 1. Test callback is invoked
+it('should invoke callback on error', async () => {
+  const callbackSpy = vi.fn().mockResolvedValue(null);
+  manager.setCallback(callbackSpy);
+
+  await manager.performAction();
+
+  expect(callbackSpy).toHaveBeenCalled();
+});
+
+// 2. Test callback receives correct data
+it('should pass correct data to callback', async () => {
+  const callbackSpy = vi.fn();
+  manager.setCallback(callbackSpy);
+
+  await manager.performAction();
+
+  expect(callbackSpy).toHaveBeenCalledWith({
+    expectedField1: 'value',
+    expectedField2: 42
+  });
+});
+
+// 3. Test graceful degradation without callback
+it('should not throw when callback not set', async () => {
+  await expect(manager.performAction()).resolves.not.toThrow();
+});
+```
+
+### Integration Testing
+
+For callback chains across multiple classes:
+
+```typescript
+// Test end-to-end callback wiring
+it('should invoke app callback when core error occurs', async () => {
+  const appCallbackSpy = vi.fn();
+
+  // Create system with callback wiring
+  const renderer = new TscnRenderer(canvas, {
+    onResourceNeeded: appCallbackSpy
+  });
+
+  // Trigger error condition
+  await renderer.render(sceneWithMissingExternal);
+
+  // Verify callback reached app layer
+  expect(appCallbackSpy).toHaveBeenCalled();
+});
+```
+
+### TypeScript Strict Mode
+
+The project uses strict type checking to catch errors early:
+
+```json
+// tsconfig.base.json
+{
+  "compilerOptions": {
+    "strict": true,                    // Enables all strict checks
+    "noUncheckedIndexedAccess": true, // Array access returns T | undefined
+    "noImplicitOverride": true,       // Must use override keyword
+    "noUnusedParameters": true         // Catches unused function params
+  }
+}
+```
+
+**Benefits**:
+- Catches outdated function signatures in tests
+- Prevents silent parameter passing errors
+- Documents intentional vs accidental unused params
+
+**Pattern for intentionally unused parameters**:
+```typescript
+// Prefix with underscore to indicate "intentionally unused"
+uploadedFiles.forEach((_file, path) => {
+  // Only using path, not file
+});
+```
+
+### Test Metrics
+
+Current coverage (as of last audit):
+- **Total tests**: 2,319
+- **Test files**: 67
+- **All passing**: ✅
+
+**Target**: Every public method should have at least 3 tests:
+1. Happy path test
+2. Error path test
+3. Edge case or callback test
+
+### Common Test Smells
+
+❌ **Smell**: Tests only cover happy paths
+```typescript
+it('should work', async () => {
+  await method();
+  expect(result).toBe(expected);
+});
+```
+
+✅ **Fix**: Add error and edge case tests
+```typescript
+it('should work with valid input', async () => { /* ... */ });
+it('should handle invalid input gracefully', async () => { /* ... */ });
+it('should invoke callback on error', async () => { /* ... */ });
+```
+
+❌ **Smell**: Outdated test signatures that still "pass"
+```typescript
+// Method signature changed but test not updated
+await method(arg1, arg2, oldArg3, oldArg4); // Extra params ignored
+```
+
+✅ **Fix**: Update tests when refactoring
+```typescript
+await method(arg1, arg2); // Matches current signature
+```
+
+❌ **Smell**: No integration tests for callback chains
+```typescript
+// Only unit tests, no end-to-end validation
+expect(manager.callback).toBeDefined();
+```
+
+✅ **Fix**: Test the full chain
+```typescript
+// Verify callback reaches application layer
+const appCallback = vi.fn();
+system.init({ onError: appCallback });
+await system.triggerError();
+expect(appCallback).toHaveBeenCalled();
+```
+
+### Test Organization
+
+```
+src/
+  core/
+    SceneManager.ts          # Implementation
+    SceneManager.test.ts     # Unit tests co-located
+```
+
+**Co-located tests** make it easy to:
+- Find tests for any file
+- Update tests when changing implementation
+- See test coverage at a glance
+
+### When Tests Catch Real Bugs
+
+Example from SceneManager refactor:
+
+**Before fix**: 15 tests, all passing ✅
+**Problem**: Missing resource UI broken in production
+**Root cause**: No tests for error handling or callbacks
+
+**After fix**: 21 tests (+6), all passing ✅
+**Prevention**: New tests would catch this regression:
+- `should call onResourceNeeded callback when external scene fails to load` ← **KEY TEST**
+- `should not throw when external scene fails to load`
+- `should not track instance when external scene fails to load`
+
+**Impact**: Future regressions in callback chains now caught immediately.
+
+
 ## Commands
 
 ### Essential Commands

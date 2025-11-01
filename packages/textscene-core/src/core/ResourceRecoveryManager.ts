@@ -2,35 +2,25 @@
  * Manages missing resources and recovery workflow.
  */
 
-import * as THREE from 'three';
-import type { MissingResource, TscnScene, TscnNode } from '../parser/types';
+import type { MissingResource, TscnScene } from '../parser/types';
 import { NodeTracker } from './NodeTracker';
+import type { SceneManager } from './SceneManager';
 import * as logger from '../logger';
 
 export class ResourceRecoveryManager {
   private missingResources: Map<string, MissingResource> = new Map();
-  private nodeTracker: NodeTracker;
-  private loadExternalSceneCallback: (
-    instancePath: string,
-    instanceNode: TscnNode,
-    sceneData: TscnScene,
-    instanceObject: THREE.Object3D
-  ) => Promise<void>;
-  private getCurrentSceneData: () => TscnScene | null;
+  private _nodeTracker: NodeTracker;
+  private sceneManager: SceneManager;
+  private _getCurrentSceneData: () => TscnScene | null;
 
   constructor(
     nodeTracker: NodeTracker,
-    loadExternalSceneCallback: (
-      instancePath: string,
-      instanceNode: TscnNode,
-      sceneData: TscnScene,
-      instanceObject: THREE.Object3D
-    ) => Promise<void>,
+    sceneManager: SceneManager,
     getCurrentSceneData: () => TscnScene | null
   ) {
-    this.nodeTracker = nodeTracker;
-    this.loadExternalSceneCallback = loadExternalSceneCallback;
-    this.getCurrentSceneData = getCurrentSceneData;
+    this._nodeTracker = nodeTracker;
+    this.sceneManager = sceneManager;
+    this._getCurrentSceneData = getCurrentSceneData;
   }
 
   /**
@@ -64,42 +54,19 @@ export class ResourceRecoveryManager {
       return;
     }
 
-    const sceneData = this.getCurrentSceneData();
-    if (!sceneData) {
-      logger.error(`provideResource: No scene data available`);
-      return;
-    }
-
-    logger.info(`[Resource Provided] Re-attempting load of: ${path} for node: ${missingResource.referencedBy}`);
-
-    // Find the node object in THREE.js scene
-    const instanceObject = this.nodeTracker.getObject(missingResource.referencedBy);
-    if (!instanceObject) {
-      logger.error(`[Resource Provided] Could not find node object: ${missingResource.referencedBy}`);
-      return;
-    }
-
-    // Find the TscnNode
-    const tscnNode = this.nodeTracker.getNode(missingResource.referencedBy);
-    if (!tscnNode) {
-      logger.error(`[Resource Provided] Could not find TscnNode: ${missingResource.referencedBy}`);
-      return;
-    }
+    logger.info(`[Resource Provided] Re-attempting load of: ${path}`);
 
     // Remove from missing list (will be re-added if it fails again)
     this.missingResources.delete(path);
 
-    // Re-attempt to load the external scene
+    // Re-attempt to load the external scene using SceneManager
     try {
-      await this.loadExternalSceneCallback(
-        missingResource.referencedBy,
-        tscnNode,
-        sceneData,
-        instanceObject
-      );
+      await this.sceneManager.updateScene(path);
       logger.info(`[Resource Provided] ✅ Successfully loaded: ${path}`);
     } catch (error) {
       logger.error(`[Resource Provided] ❌ Failed to load: ${path}`, error);
+      // Re-add to missing resources if it failed again
+      this.missingResources.set(path, missingResource);
     }
   }
 }
