@@ -4,7 +4,7 @@
  */
 
 import * as THREE from 'three';
-import type { TscnScene, TscnNode } from '../parser/types';
+import type { TscnScene } from '../parser/types';
 import type { TscnParser } from '../parser/TscnParser';
 import type { ResourceRegistry } from '../resources/ResourceRegistry';
 import type { NodeLifecycleManager } from './NodeLifecycleManager';
@@ -92,8 +92,8 @@ export class SceneManager {
   async addScene(
     instancePath: string,
     scenePath: string,
-    parentNode: THREE.Object3D,
-    sceneData: TscnScene
+    _parentNode: THREE.Object3D,
+    _sceneData: TscnScene
   ): Promise<void> {
     if (!this.nodeLifecycle) {
       throw new Error('NodeLifecycleManager not set. Call setNodeLifecycleManager() first.');
@@ -206,10 +206,6 @@ export class SceneManager {
           logger.warn(`[SceneManager] Instance not found in tracker: ${instancePath}`);
           continue;
         }
-
-        // Get parent info before removal
-        const parentObject = instanceObject.parent;
-        const parentPath = parentObject?.userData?.nodePath;
 
         logger.info(`[SceneManager] Updating instance: ${instancePath}`);
 

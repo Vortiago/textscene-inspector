@@ -263,6 +263,20 @@ export function generateWebviewHtml(scriptUri: string, nonce: string): string {
           opacity: 1;
         }
 
+        .tree-instance-icon {
+          font-size: 0.875rem;
+          flex-shrink: 0;
+        }
+
+        .tree-node-header.instance-root {
+          border-left: 2px solid #66c;
+          padding-left: calc(0.5rem - 2px);
+        }
+
+        .tree-node-header.instance-root .tree-node-name {
+          font-weight: 500;
+        }
+
         .tree-node-header.hidden {
           opacity: 0.5;
         }

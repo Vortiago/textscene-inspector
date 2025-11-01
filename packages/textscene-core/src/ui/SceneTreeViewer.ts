@@ -188,12 +188,21 @@ export class SceneTreeViewer {
 
     // External scene instance indicator
     if (node.instance) {
+      // Use instanceMetadata for enhanced tooltip if available
+      const sourcePath = node.instanceMetadata?.sourcePath || node.instance;
+      const isInstanceRoot = node.instanceMetadata?.isInstanceRoot || false;
+
       const instanceIcon = this.createIcon({
         className: 'tree-instance-icon',
         content: '📦',
-        title: `External scene: ${node.instance}`,
+        title: `External scene: ${sourcePath}${isInstanceRoot ? ' (instance root)' : ''}`,
       });
       nodeHeader.appendChild(instanceIcon);
+
+      // Add CSS class for instance root nodes
+      if (isInstanceRoot) {
+        nodeHeader.classList.add('instance-root');
+      }
     }
 
     const visibilityIcon = this.createVisibilityIcon(nodePath);
