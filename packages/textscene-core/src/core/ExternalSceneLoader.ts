@@ -15,6 +15,7 @@ export class ExternalSceneLoader {
   private instanceLoadingStack: Set<string> = new Set();
   private missingResources: Map<string, MissingResource>;
   private onResourceNeeded?: ResourceNeededCallback;
+  private parser: TscnParser = new TscnParser();
   private addNodeCallback: (
     nodePath: string,
     node: TscnNode,
@@ -112,12 +113,12 @@ export class ExternalSceneLoader {
       // Track this instance loading to detect circular dependencies
       resourcePath = resourceMetadata.path;
       this.instanceLoadingStack.add(resourcePath);
-      logger.info(`[External Scene] Loading content from: ${resourcePath}`);
+      logger.info(`[External Scene] Loading and parsing from: ${resourcePath}`);
 
-      // Try to load the external scene
-      let externalSceneContent: string | ArrayBuffer | null = null;
+      // Try to load and parse the external scene (uses caching)
+      let externalScene: TscnScene | null = null;
       try {
-        externalSceneContent = await registry.loadByPath(resourceId);
+        externalScene = await registry.loadAndParseScene(resourceId, this.parser);
       } catch (loadError) {
         // Track as missing resource
         const missingResource: MissingResource = {
@@ -134,10 +135,12 @@ export class ExternalSceneLoader {
           logger.info(`[External Scene] Calling onResourceNeeded callback for: ${resourceMetadata.path}`);
           try {
             const providedContent = await this.onResourceNeeded(missingResource);
-            if (providedContent) {
-              logger.info(`[External Scene] App provided resource immediately: ${resourceMetadata.path}`);
-              externalSceneContent = providedContent;
+            if (providedContent && typeof providedContent === 'string') {
+              logger.info(`[External Scene] App provided resource, parsing: ${resourceMetadata.path}`);
+              externalScene = this.parser.parse(providedContent);
               this.missingResources.delete(resourceMetadata.path);
+            } else if (providedContent) {
+              logger.warn(`[External Scene] App provided non-string content: ${typeof providedContent}`);
             } else {
               logger.info(`[External Scene] App did not provide resource, remaining in missing list`);
             }
@@ -146,36 +149,23 @@ export class ExternalSceneLoader {
           }
         }
 
-        // If still no content after callback, bail out
-        if (!externalSceneContent) {
+        // If still no scene after callback, bail out
+        if (!externalScene) {
           return;
         }
       }
 
-      logger.info(
-        `[External Scene] Loaded content type: ${typeof externalSceneContent}, length: ${typeof externalSceneContent === 'string' ? externalSceneContent.length : 'N/A'}`
-      );
-
-      // Parse the external scene if it's a string (text content)
-      if (typeof externalSceneContent === 'string') {
-        const parser = new TscnParser();
-        const externalScene = parser.parse(externalSceneContent);
-        logger.info(`[External Scene] Parsed scene with ${externalScene.nodes.length} root nodes`);
-
-        // Render external scene nodes as children of instance node
-        const externalContext = { instancePath, parentObject: instanceObject };
-        for (const externalNode of externalScene.nodes) {
-          const externalNodePath = joinPath(instancePath, externalNode.name);
-          logger.info(`[External Scene] Adding external node: ${externalNode.name} at path: ${externalNodePath}`);
-          await this.addNodeCallback(externalNodePath, externalNode, externalScene, undefined, externalContext);
-        }
-
-        logger.info(
-          `[External Scene] ✅ Successfully loaded external scene: ${resourceMetadata.path} with ${externalScene.nodes.length} nodes`
-        );
-      } else {
-        logger.warn(`[External Scene] Expected string content but got: ${typeof externalSceneContent}`);
+      // Render external scene nodes as children of instance node
+      const externalContext = { instancePath, parentObject: instanceObject };
+      for (const externalNode of externalScene.nodes) {
+        const externalNodePath = joinPath(instancePath, externalNode.name);
+        logger.info(`[External Scene] Adding external node: ${externalNode.name} at path: ${externalNodePath}`);
+        await this.addNodeCallback(externalNodePath, externalNode, externalScene, undefined, externalContext);
       }
+
+      logger.info(
+        `[External Scene] ✅ Successfully loaded external scene: ${resourceMetadata.path} with ${externalScene.nodes.length} nodes`
+      );
     } catch (error) {
       logger.error(`[External Scene] ❌ Failed to load external scene for ${instancePath}:`, error);
     } finally {
