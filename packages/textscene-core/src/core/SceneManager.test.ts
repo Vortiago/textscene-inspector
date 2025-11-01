@@ -1,9 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import * as THREE from 'three';
 import { SceneManager } from './SceneManager';
 import { TscnParser } from '../parser/TscnParser';
 import { ResourceRegistry } from '../resources/ResourceRegistry';
 import { NodeTracker } from './NodeTracker';
-import type { TscnScene, TscnNode, MissingResource } from '../parser/types';
+import type { TscnNode } from '../parser/types';
 import type { NodeLifecycleManager } from './NodeLifecycleManager';
 
 describe('SceneManager', () => {
@@ -114,9 +115,6 @@ describe('SceneManager', () => {
         type: 'PackedScene',
       });
 
-      const mockParentNode = {} as any;
-      const mockSceneData = {} as TscnScene;
-
       await sceneManager.addScene(instancePath, scenePath);
 
       const instances = sceneManager.getInstances(scenePath);
@@ -141,9 +139,6 @@ describe('SceneManager', () => {
         path: scenePath,
         type: 'PackedScene',
       });
-
-      const mockParentNode = {} as any;
-      const mockSceneData = {} as TscnScene;
 
       await sceneManager.addScene('Enemy1', scenePath);
       await sceneManager.addScene('Enemy2', scenePath);
@@ -176,9 +171,6 @@ describe('SceneManager', () => {
         type: 'PackedScene',
       });
 
-      const mockParentNode = {} as any;
-      const mockSceneData = {} as TscnScene;
-
       await sceneManager.addScene('Enemy1', scenePath);
 
       // Should call addNode for the root node
@@ -204,9 +196,6 @@ describe('SceneManager', () => {
         path: scenePath,
         type: 'PackedScene',
       });
-
-      const mockParentNode = {} as any;
-      const mockSceneData = {} as TscnScene;
 
       await sceneManager.addScene('Enemy1', scenePath);
       expect(sceneManager.getInstances(scenePath)).toHaveLength(1);
@@ -243,15 +232,12 @@ describe('SceneManager', () => {
         type: 'PackedScene',
       });
 
-      const mockParentNode = {} as any;
-      const mockSceneData = {} as TscnScene;
-
       // Add instance
       await sceneManager.addScene('Enemy1', scenePath);
 
       // Mock node tracker to return node data
       const mockNode = { name: 'Enemy1', type: 'Node3D', children: [], properties: {}, instance: 'ExtResource("1_enemy")' } as TscnNode;
-      const mockObject = { parent: null, userData: {} } as any;
+      const mockObject = { parent: null, userData: {} } as THREE.Object3D;
       vi.spyOn(nodeTracker, 'getNode').mockReturnValue(mockNode);
       vi.spyOn(nodeTracker, 'getObject').mockReturnValue(mockObject);
       vi.spyOn(nodeTracker, 'getAllPaths').mockReturnValue(['Enemy1', 'Enemy1/EnemyRoot']);
@@ -297,9 +283,6 @@ describe('SceneManager', () => {
         type: 'PackedScene',
       });
 
-      const mockParentNode = {} as any;
-      const mockSceneData = {} as TscnScene;
-
       await sceneManager.addScene('Enemy1', scenePath);
 
       expect(sceneManager.hasInstances(scenePath)).toBe(true);
@@ -320,9 +303,6 @@ describe('SceneManager', () => {
 
       resourceRegistry.register({ id: '1', path: scene1Path, type: 'PackedScene' });
       resourceRegistry.register({ id: '2', path: scene2Path, type: 'PackedScene' });
-
-      const mockParentNode = {} as any;
-      const mockSceneData = {} as TscnScene;
 
       await sceneManager.addScene('Enemy1', scene1Path);
       await sceneManager.addScene('Enemy2', scene1Path);
@@ -347,9 +327,6 @@ describe('SceneManager', () => {
       resourceRegistry.register({ id: '1', path: scene1Path, type: 'PackedScene' });
       resourceRegistry.register({ id: '2', path: scene2Path, type: 'PackedScene' });
 
-      const mockParentNode = {} as any;
-      const mockSceneData = {} as TscnScene;
-
       await sceneManager.addScene('Enemy1', scene1Path);
       await sceneManager.addScene('Player1', scene2Path);
 
@@ -372,9 +349,6 @@ describe('SceneManager', () => {
       resourceRegistry.setProvider(mockProvider);
 
       resourceRegistry.register({ id: '1', path: scenePath, type: 'PackedScene' });
-
-      const mockParentNode = {} as any;
-      const mockSceneData = {} as TscnScene;
 
       await sceneManager.addScene('Enemy1', scenePath);
 
@@ -486,7 +460,7 @@ describe('SceneManager', () => {
 
       await sceneManager.addScene(instancePath, scenePath);
 
-      const callbackArg = callbackSpy.mock.calls[0]![0] as any;
+      const callbackArg = callbackSpy.mock.calls[0]![0] as { error: unknown };
       expect(callbackArg.error).toBe(errorMessage);
     });
 
@@ -511,7 +485,7 @@ describe('SceneManager', () => {
 
       await sceneManager.addScene(instancePath, scenePath);
 
-      const callbackArg = callbackSpy.mock.calls[0]![0] as any;
+      const callbackArg = callbackSpy.mock.calls[0]![0] as { error: unknown };
       expect(callbackArg.error).toBe('String error');
     });
 
