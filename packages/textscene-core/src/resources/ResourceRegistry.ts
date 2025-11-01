@@ -3,7 +3,7 @@
  * Delegates actual loading to app-provided ResourceProvider.
  */
 
-import type { TscnExternalResource, TscnScene } from '../parser/types';
+import type { TscnExternalResource } from '../parser/types';
 import type { ResourceProvider } from './ResourceProvider';
 import * as logger from '../logger';
 
@@ -12,7 +12,6 @@ export class ResourceRegistry {
   private loadedCache: Map<string, string | ArrayBuffer> = new Map();
   private loadingPromises: Map<string, Promise<string | ArrayBuffer>> = new Map();
   private loadingStack: Set<string> = new Set();
-  private parsedSceneCache: Map<string, TscnScene> = new Map();
   private provider: ResourceProvider | null = null;
 
   /**
@@ -118,37 +117,6 @@ export class ResourceRegistry {
   }
 
   /**
-   * Load and parse a PackedScene resource.
-   * Returns cached parsed scene if already loaded and parsed.
-   * Caches both raw content and parsed scene for performance.
-   */
-  async loadAndParseScene(
-    path: string,
-    parser: { parse(content: string): TscnScene }
-  ): Promise<TscnScene> {
-    // Check parsed scene cache first
-    if (this.parsedSceneCache.has(path)) {
-      logger.info(`Using cached parsed scene: ${path}`);
-      return this.parsedSceneCache.get(path)!;
-    }
-
-    // Load raw content (uses existing file cache)
-    const content = await this.loadByPath(path);
-
-    if (typeof content !== 'string') {
-      throw new Error(`Expected text content for scene ${path}, got ${typeof content}`);
-    }
-
-    // Parse and cache
-    logger.info(`Parsing scene: ${path}`);
-    const scene = parser.parse(content);
-    this.parsedSceneCache.set(path, scene);
-    logger.info(`Cached parsed scene: ${path} with ${scene.nodes.length} root nodes`);
-
-    return scene;
-  }
-
-  /**
    * Parse ExtResource("id") reference and return the path.
    * Returns null if not a valid ExtResource reference.
    */
@@ -172,7 +140,6 @@ export class ResourceRegistry {
   clearCache(path: string): void {
     this.loadedCache.delete(path);
     this.loadingPromises.delete(path);
-    this.parsedSceneCache.delete(path);
     logger.info(`Cleared cache for: ${path}`);
   }
 
@@ -184,7 +151,6 @@ export class ResourceRegistry {
     this.loadedCache.clear();
     this.loadingPromises.clear();
     this.loadingStack.clear();
-    this.parsedSceneCache.clear();
     logger.info('ResourceRegistry cleared');
   }
 }

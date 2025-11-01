@@ -175,6 +175,13 @@ export class SceneManager {
       throw new Error('ResourceRegistry not set. Call setResourceRegistry() first.');
     }
 
+    // Find all instances using this scene first
+    const instances = this.sceneInstances.get(scenePath);
+    if (!instances || instances.size === 0) {
+      logger.info(`[SceneManager] No instances found for ${scenePath}, nothing to update`);
+      return;
+    }
+
     logger.info(`[SceneManager] 🔄 Hot-reloading scene: ${scenePath}`);
 
     // Clear cache to force reload
@@ -184,13 +191,6 @@ export class SceneManager {
 
     // Reload the scene
     const updatedScene = await this.loadScene(scenePath);
-
-    // Find all instances using this scene
-    const instances = this.sceneInstances.get(scenePath);
-    if (!instances || instances.size === 0) {
-      logger.info(`[SceneManager] No instances found for ${scenePath}, nothing to update`);
-      return;
-    }
 
     logger.info(`[SceneManager] Updating ${instances.size} instances of ${scenePath}`);
 
