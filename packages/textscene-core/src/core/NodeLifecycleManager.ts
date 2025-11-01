@@ -6,19 +6,26 @@ import * as THREE from 'three';
 import type { TscnScene, TscnNode } from '../parser/types';
 import { renderNodeWithRegistry } from './NodeRegistry';
 import { NodeTracker } from './NodeTracker';
-import { ExternalSceneLoader } from './ExternalSceneLoader';
+import type { SceneManager } from './SceneManager';
+import { ResourceRegistry } from '../resources/ResourceRegistry';
 import * as logger from '../logger';
 import { joinPath } from '../utils/nodePath';
 
 export class NodeLifecycleManager {
   private scene: THREE.Scene;
   private nodeTracker: NodeTracker;
-  private externalSceneLoader: ExternalSceneLoader;
+  private sceneManager: SceneManager | null = null;
 
-  constructor(scene: THREE.Scene, nodeTracker: NodeTracker, externalSceneLoader: ExternalSceneLoader) {
+  constructor(scene: THREE.Scene, nodeTracker: NodeTracker) {
     this.scene = scene;
     this.nodeTracker = nodeTracker;
-    this.externalSceneLoader = externalSceneLoader;
+  }
+
+  /**
+   * Set the scene manager (called after construction to break circular dependency)
+   */
+  setSceneManager(sceneManager: SceneManager): void {
+    this.sceneManager = sceneManager;
   }
 
   /**
@@ -28,15 +35,10 @@ export class NodeLifecycleManager {
     nodePath: string,
     node: TscnNode,
     sceneData: TscnScene,
-    parentPath?: string,
-    externalSceneContext?: { instancePath: string; parentObject: THREE.Object3D }
+    parentPath?: string
   ): Promise<void> {
     // Determine parent
-    const parent = externalSceneContext
-      ? externalSceneContext.parentObject
-      : parentPath
-        ? this.nodeTracker.getObject(parentPath)
-        : this.scene;
+    const parent = parentPath ? this.nodeTracker.getObject(parentPath) : this.scene;
 
     if (!parent) {
       logger.warn(`Parent not found for node: ${nodePath}`);
@@ -44,57 +46,55 @@ export class NodeLifecycleManager {
     }
 
     // Render node
-    if (externalSceneContext) {
-      logger.info(`[External Scene Node] Rendering node: ${node.name} (type: ${node.type}) at path: ${nodePath}`);
-    }
-
     const object3D = renderNodeWithRegistry(node, sceneData);
     if (!object3D) {
-      if (externalSceneContext) {
-        logger.warn(`[External Scene Node] Failed to render node: ${node.name} (type: ${node.type})`);
-      }
+      logger.warn(`Failed to render node: ${node.name} (type: ${node.type})`);
       return;
-    }
-
-    if (externalSceneContext) {
-      logger.info(
-        `[External Scene Node] Successfully rendered ${node.name}, adding to parent "${parent.userData.nodeName || 'scene'}"`
-      );
     }
 
     // Set common userData
     object3D.userData.nodePath = nodePath;
     object3D.userData.nodeName = node.name;
 
-    // Set external scene specific userData
-    if (externalSceneContext) {
-      object3D.userData.isExternalSceneContent = true;
-      object3D.userData.belongsToExternalInstance = externalSceneContext.instancePath;
-    }
-
     this.nodeTracker.set(nodePath, object3D, node);
     parent.add(object3D);
 
-    if (externalSceneContext) {
-      logger.info(
-        `[External Scene Node] Added ${node.name} to scene graph. Parent now has ${parent.children.length} children`
-      );
-    }
-
-    // Handle external scene instance (nested instances are allowed)
+    // Handle external scene instance (delegate to SceneManager)
     if (node.instance) {
+      if (!this.sceneManager) {
+        logger.warn(`SceneManager not set, cannot load instance: ${nodePath}`);
+        return;
+      }
+
       logger.info(`Node ${nodePath} has instance attribute: ${node.instance}`);
-      await this.externalSceneLoader.loadExternalSceneInstance(nodePath, node, sceneData, object3D);
+
+      const resourceId = ResourceRegistry.parseReference(node.instance);
+      if (!resourceId) {
+        logger.warn(`Invalid instance reference: ${node.instance}`);
+        return;
+      }
+
+      const metadata = sceneData.resourceRegistry?.getMetadata(resourceId);
+      if (!metadata || metadata.type !== 'PackedScene') {
+        logger.warn(`Invalid PackedScene reference: ${resourceId}`);
+        return;
+      }
+
+      // Set instance metadata for UI layer
+      node.instanceMetadata = {
+        sourcePath: metadata.path,
+        isInstanceRoot: true
+      };
+
+      // Delegate to SceneManager
+      await this.sceneManager.addScene(nodePath, metadata.path, object3D, sceneData);
     }
 
     // Recursively add children
     if (node.children && node.children.length > 0) {
-      if (externalSceneContext) {
-        logger.info(`[External Scene Node] Processing ${node.children.length} children of ${node.name}`);
-      }
       for (const child of node.children) {
         const childPath = joinPath(nodePath, child.name);
-        await this.addNode(childPath, child, sceneData, nodePath, externalSceneContext);
+        await this.addNode(childPath, child, sceneData, nodePath);
       }
     }
   }

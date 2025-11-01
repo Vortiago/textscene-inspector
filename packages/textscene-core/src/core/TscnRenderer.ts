@@ -11,8 +11,9 @@ import { NodeTracker } from './NodeTracker';
 import { HelperManager } from './HelperManager';
 import { SelectionManager } from './SelectionManager';
 import { ResourceRecoveryManager } from './ResourceRecoveryManager';
-import { ExternalSceneLoader } from './ExternalSceneLoader';
+import { SceneManager } from './SceneManager';
 import { NodeLifecycleManager } from './NodeLifecycleManager';
+import { TscnParser } from '../parser/TscnParser';
 import * as logger from '../logger';
 
 export interface CameraState {
@@ -39,7 +40,7 @@ export class TscnRenderer {
   private helperManager: HelperManager;
   private selectionManager: SelectionManager;
   private resourceRecovery: ResourceRecoveryManager;
-  private externalSceneLoader: ExternalSceneLoader;
+  private sceneManager: SceneManager;
   private nodeLifecycle: NodeLifecycleManager;
 
   // State
@@ -64,19 +65,20 @@ export class TscnRenderer {
     this.helperManager = new HelperManager(this.scene, this.nodeTracker);
     this.selectionManager = new SelectionManager(this.scene, this.camera, this.renderer, this.nodeTracker);
 
-    // External scene loader needs reference to addNode and missing resources
-    this.externalSceneLoader = new ExternalSceneLoader(
-      this.nodeTracker,
-      this.missingResources,
-      this.addNode.bind(this),
-      this.options.onResourceNeeded
-    );
+    // Initialize SceneManager with parser and tracker
+    const parser = new TscnParser();
+    this.sceneManager = new SceneManager(parser, this.nodeTracker);
 
-    this.nodeLifecycle = new NodeLifecycleManager(this.scene, this.nodeTracker, this.externalSceneLoader);
+    // Initialize NodeLifecycleManager (without SceneManager initially to break circular dependency)
+    this.nodeLifecycle = new NodeLifecycleManager(this.scene, this.nodeTracker);
+
+    // Wire up circular dependencies
+    this.sceneManager.setNodeLifecycleManager(this.nodeLifecycle);
+    this.nodeLifecycle.setSceneManager(this.sceneManager);
 
     this.resourceRecovery = new ResourceRecoveryManager(
       this.nodeTracker,
-      this.externalSceneLoader.loadExternalSceneInstance.bind(this.externalSceneLoader),
+      this.sceneManager,
       () => this.currentSceneData
     );
   }
@@ -107,6 +109,11 @@ export class TscnRenderer {
     logger.info(`Rendering scene with ${sceneData.nodes.length} root nodes`);
     this.currentSceneData = sceneData;
 
+    // Set ResourceRegistry on SceneManager for scene loading
+    if (sceneData.resourceRegistry) {
+      this.sceneManager.setResourceRegistry(sceneData.resourceRegistry);
+    }
+
     // Clear scene (keep lights and grid)
     const objectsToRemove: THREE.Object3D[] = [];
     this.scene.children.forEach((child: THREE.Object3D) => {
@@ -119,7 +126,7 @@ export class TscnRenderer {
     // Clear all state
     this.nodeTracker.clear();
     this.helperManager.clearAll();
-    this.externalSceneLoader.clearLoadingStack();
+    this.sceneManager.clear();
     this.resourceRecovery.clear();
 
     // Add all root nodes
@@ -226,6 +233,30 @@ export class TscnRenderer {
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(width, height);
+  }
+
+  // ========== Scene Management API ==========
+
+  /**
+   * Hot-reload a scene file - updates all instances
+   * Call this when a .tscn file changes on disk
+   */
+  async reloadScene(scenePath: string): Promise<void> {
+    return this.sceneManager.updateScene(scenePath);
+  }
+
+  /**
+   * Get all instance paths using a scene
+   */
+  getSceneInstances(scenePath: string): string[] {
+    return this.sceneManager.getInstances(scenePath);
+  }
+
+  /**
+   * Check if a scene is currently loaded (has instances)
+   */
+  hasScene(scenePath: string): boolean {
+    return this.sceneManager.hasInstances(scenePath);
   }
 
   dispose(): void {
