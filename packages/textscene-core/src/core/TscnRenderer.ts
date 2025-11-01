@@ -47,7 +47,6 @@ export class TscnRenderer {
   private currentSceneData: TscnScene | null = null;
   private renderInProgress: Promise<void> | null = null;
   private _options: TscnRendererOptions;
-  private _missingResources: Map<string, MissingResource> = new Map();
 
   constructor(canvas: HTMLCanvasElement, options: TscnRendererOptions = {}) {
     logger.info('Initializing TscnRenderer');
@@ -75,13 +74,24 @@ export class TscnRenderer {
     // Wire up circular dependencies
     this.sceneManager.setNodeLifecycleManager(this.nodeLifecycle);
     this.nodeLifecycle.setSceneManager(this.sceneManager);
-    this.sceneManager.setOnResourceNeeded(options.onResourceNeeded);
 
+    // Initialize ResourceRecoveryManager (must be before wrapping onResourceNeeded)
     this.resourceRecovery = new ResourceRecoveryManager(
       this.nodeTracker,
       this.sceneManager,
       () => this.currentSceneData
     );
+
+    // Wrap user's onResourceNeeded callback to also track missing resources
+    if (options.onResourceNeeded) {
+      const userCallback = options.onResourceNeeded;
+      this.sceneManager.setOnResourceNeeded(async (resource) => {
+        // Track missing resource in ResourceRecoveryManager
+        this.resourceRecovery.recordMissing(resource);
+        // Call user's callback
+        return await userCallback(resource);
+      });
+    }
   }
 
   /**
