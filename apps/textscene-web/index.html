@@ -614,24 +614,62 @@
          MOBILE RESPONSIVE - TABS UI (HORIZONTAL)
          ============================================ */
       @media (max-width: 768px) {
-        /* Grid layout: tabs row + content row */
+        /* Grid: tab headers row + content row */
         main {
           display: grid;
-          grid-template-columns: repeat(3, 1fr); /* 3 equal-width tabs */
-          grid-template-rows: auto 1fr; /* Tab bar + content area */
+          grid-template-columns: repeat(3, 1fr);
+          grid-template-rows: auto 1fr;
         }
 
-        /* Make <details> transparent to grid (children become direct grid items) */
+        /* Details elements as grid items */
         main details {
-          display: contents;
-          border: none;
-          margin: 0;
+          display: grid;
+          grid-template-columns: subgrid;
+          grid-column: span 3;
         }
 
-        /* Tab headers - all in first row, flowing horizontally */
-        main summary {
-          display: block; /* Show on mobile */
+        /* First details: columns 1-3, row 1 for summary */
+        main details:nth-child(1) {
+          grid-row: 1 / 3;
+        }
+        main details:nth-child(1) summary {
+          grid-column: 1;
           grid-row: 1;
+        }
+        main details:nth-child(1) .tab-pane {
+          grid-column: 1 / -1;
+          grid-row: 2;
+        }
+
+        /* Second details */
+        main details:nth-child(2) {
+          grid-row: 1 / 3;
+        }
+        main details:nth-child(2) summary {
+          grid-column: 2;
+          grid-row: 1;
+        }
+        main details:nth-child(2) .tab-pane {
+          grid-column: 1 / -1;
+          grid-row: 2;
+        }
+
+        /* Third details */
+        main details:nth-child(3) {
+          grid-row: 1 / 3;
+        }
+        main details:nth-child(3) summary {
+          grid-column: 3;
+          grid-row: 1;
+        }
+        main details:nth-child(3) .tab-pane {
+          grid-column: 1 / -1;
+          grid-row: 2;
+        }
+
+        /* Tab headers styling */
+        main summary {
+          display: block;
           list-style: none;
           padding: 0.875rem 0.75rem;
           background: var(--bg-panel);
@@ -650,7 +688,7 @@
         }
 
         /* Remove right border from last tab */
-        main summary:last-of-type {
+        main details:last-child summary {
           border-right: none;
         }
 
@@ -664,13 +702,6 @@
           background: var(--bg-dark);
           color: var(--text-primary);
           border-bottom: 3px solid #0e639c;
-          position: relative;
-        }
-
-        /* Content panes - second row, full width */
-        main .tab-pane {
-          grid-row: 2;
-          grid-column: 1 / -1; /* Span all 3 columns */
         }
 
         /* Hide content of closed tabs */
@@ -682,16 +713,22 @@
         main details[open] .tab-pane {
           display: block;
           overflow: auto;
-          height: calc(100vh - 60px - 48px); /* Subtract header + tab bar height */
+          height: calc(100vh - 60px - 48px);
         }
 
         /* Make panes full width on mobile */
         #controls,
         #tree-viewer-panel,
         .canvas-wrapper {
-          width: 100%;
+          width: 100% !important;
+          max-width: 100%;
           height: 100%;
           border-right: none;
+        }
+
+        /* Ensure controls content is full width */
+        #controls {
+          padding: 1rem;
         }
 
         /* Canvas wrapper for mobile */
