@@ -60,6 +60,21 @@
         overflow: hidden;
       }
 
+      /* Desktop: <details> acts transparent (no tab behavior) */
+      @media (min-width: 769px) {
+        main details {
+          display: contents; /* Makes details transparent to grid */
+        }
+
+        main summary {
+          display: none; /* Hide tab headers on desktop */
+        }
+      }
+
+      .tab-pane {
+        /* Container for each pane's content */
+      }
+
       #controls {
         width: 450px;
         padding: 1rem;
@@ -120,6 +135,10 @@
         flex: 1;
         overflow-y: auto;
         padding: 0.5rem;
+      }
+
+      .canvas-wrapper {
+        display: contents; /* Transparent wrapper on desktop */
       }
 
       #canvas-container {
@@ -590,6 +609,128 @@
         font-size: 0.875rem;
         flex-shrink: 0;
       }
+
+      /* ============================================
+         MOBILE RESPONSIVE - TABS UI
+         ============================================ */
+      @media (max-width: 768px) {
+        /* Stack details elements vertically */
+        main {
+          display: flex;
+          flex-direction: column;
+          grid-template-columns: none;
+        }
+
+        /* Style <details> elements as tabs */
+        main details {
+          border: none;
+          margin: 0;
+          display: flex;
+          flex-direction: column;
+        }
+
+        /* Tab headers (summary elements) */
+        main summary {
+          display: block; /* Show on mobile */
+          list-style: none;
+          padding: 0.875rem 1.25rem;
+          background: var(--bg-panel);
+          color: var(--text-secondary);
+          font-weight: 600;
+          font-size: 0.9rem;
+          cursor: pointer;
+          border-bottom: 1px solid var(--border-color);
+          user-select: none;
+          transition: background 0.15s, color 0.15s;
+          text-align: center;
+          flex-shrink: 0;
+        }
+
+        /* Remove default disclosure triangle */
+        main summary::-webkit-details-marker {
+          display: none;
+        }
+
+        /* Active tab styling */
+        main details[open] > summary {
+          background: var(--bg-dark);
+          color: var(--text-primary);
+          border-bottom: 2px solid #0e639c;
+        }
+
+        /* Hide content of closed tabs */
+        main details:not([open]) .tab-pane {
+          display: none;
+        }
+
+        /* Show content of open tab */
+        main details[open] .tab-pane {
+          display: block;
+          flex: 1;
+          overflow: auto;
+          height: calc(100vh - 60px - 50px); /* Subtract header + tab height */
+        }
+
+        /* Make panes full width on mobile */
+        #controls,
+        #tree-viewer-panel,
+        .canvas-wrapper {
+          width: 100%;
+          height: 100%;
+          border-right: none;
+        }
+
+        /* Canvas wrapper for mobile */
+        .canvas-wrapper {
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+        }
+
+        /* Canvas takes full space */
+        #canvas-container {
+          flex: 1;
+          width: 100%;
+          height: 100%;
+          position: relative;
+        }
+
+        /* Ensure canvas scales properly */
+        #canvas {
+          width: 100% !important;
+          height: 100% !important;
+        }
+
+        /* Tree viewer adjustments */
+        #tree-viewer-panel {
+          display: flex;
+          flex-direction: column;
+          height: 100%;
+        }
+
+        #tree-viewer-container {
+          flex: 1;
+          overflow-y: auto;
+        }
+
+        /* Node details panel on mobile */
+        #node-details-panel {
+          max-height: 40vh;
+          overflow-y: auto;
+          border-top: 2px solid var(--border-color);
+        }
+      }
+
+      /* Tablet breakpoint - slightly larger touch targets */
+      @media (max-width: 1024px) and (min-width: 769px) {
+        #controls {
+          width: 350px;
+        }
+
+        #tree-viewer-panel {
+          width: 300px;
+        }
+      }
     </style>
   </head>
   <body>
@@ -598,61 +739,83 @@
         <h1>TextScene Inspector</h1>
       </header>
       <main>
-        <div id="controls">
-          <div class="file-input">
-            <label for="file-upload">Upload TSCN File:</label>
-            <input type="file" id="file-upload" accept=".tscn" />
-          </div>
+        <!-- Tab 1: Controls -->
+        <details name="pane-tabs">
+          <summary>⚙️ Controls</summary>
+          <div class="tab-pane">
+            <div id="controls">
+              <div class="file-input">
+                <label for="file-upload">Upload TSCN File:</label>
+                <input type="file" id="file-upload" accept=".tscn" />
+              </div>
 
-          <div class="fixtures-section">
-            <div class="fixtures-header" id="fixtures-header">
-              <h3>Test Fixtures</h3>
-              <span class="fixtures-toggle">▼</span>
+              <div class="fixtures-section">
+                <div class="fixtures-header" id="fixtures-header">
+                  <h3>Test Fixtures</h3>
+                  <span class="fixtures-toggle">▼</span>
+                </div>
+                <div class="fixtures-list" id="fixtures-list"></div>
+              </div>
+
+              <div class="resource-files" id="resource-files">
+                <h3>📁 Resource Files</h3>
+                <div id="resource-files-list"></div>
+              </div>
+
+              <button id="reset-camera" disabled>Reset Camera</button>
+
+              <div class="error" id="error-display">
+                <strong>Error:</strong>
+                <p id="error-message"></p>
+              </div>
+
+              <div class="scene-info" id="scene-info">
+                <h3>Scene Info</h3>
+                <p id="node-count">Nodes: 0</p>
+                <p id="root-node">Root: None</p>
+              </div>
+
+              <div class="info">
+                <p>Select a .tscn file to preview it in 3D.</p>
+                <p style="margin-top: 0.5rem; color: #888;">
+                  Use mouse/touch to orbit camera. Scroll/pinch to zoom.
+                </p>
+              </div>
             </div>
-            <div class="fixtures-list" id="fixtures-list"></div>
           </div>
+        </details>
 
-          <div class="resource-files" id="resource-files">
-            <h3>📁 Resource Files</h3>
-            <div id="resource-files-list"></div>
+        <!-- Tab 2: Tree -->
+        <details name="pane-tabs">
+          <summary>🌳 Tree</summary>
+          <div class="tab-pane">
+            <div id="tree-viewer-panel">
+              <div id="tree-viewer-header">
+                <h2>Scene Tree</h2>
+                <button class="tree-control-btn" id="expand-all-btn" title="Expand All">⊞</button>
+                <button class="tree-control-btn" id="collapse-all-btn" title="Collapse All">⊟</button>
+              </div>
+              <input type="text" id="tree-search" placeholder="Search nodes..." />
+              <div id="tree-viewer-container"></div>
+              <div id="node-details-panel">
+                <h3 id="details-node-name">No node selected</h3>
+                <div id="details-content"></div>
+              </div>
+            </div>
           </div>
+        </details>
 
-          <button id="reset-camera" disabled>Reset Camera</button>
-
-          <div class="error" id="error-display">
-            <strong>Error:</strong>
-            <p id="error-message"></p>
+        <!-- Tab 3: Scene (default open on mobile) -->
+        <details name="pane-tabs" open>
+          <summary>🎬 Scene</summary>
+          <div class="tab-pane">
+            <div class="canvas-wrapper">
+              <div id="canvas-container">
+                <canvas id="canvas"></canvas>
+              </div>
+            </div>
           </div>
-
-          <div class="scene-info" id="scene-info">
-            <h3>Scene Info</h3>
-            <p id="node-count">Nodes: 0</p>
-            <p id="root-node">Root: None</p>
-          </div>
-
-          <div class="info">
-            <p>Select a .tscn file to preview it in 3D.</p>
-            <p style="margin-top: 0.5rem; color: #888;">
-              Use mouse to orbit camera. Scroll to zoom.
-            </p>
-          </div>
-        </div>
-        <div id="tree-viewer-panel">
-          <div id="tree-viewer-header">
-            <h2>Scene Tree</h2>
-            <button class="tree-control-btn" id="expand-all-btn" title="Expand All">⊞</button>
-            <button class="tree-control-btn" id="collapse-all-btn" title="Collapse All">⊟</button>
-          </div>
-          <input type="text" id="tree-search" placeholder="Search nodes..." />
-          <div id="tree-viewer-container"></div>
-          <div id="node-details-panel">
-            <h3 id="details-node-name">No node selected</h3>
-            <div id="details-content"></div>
-          </div>
-        </div>
-        <div id="canvas-container">
-          <canvas id="canvas"></canvas>
-        </div>
+        </details>
       </main>
     </div>
     <script type="module" src="/src/main.ts"></script>

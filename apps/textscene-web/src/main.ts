@@ -227,3 +227,26 @@ fixturesHeader.addEventListener('click', () => {
 });
 
 renderFixtureList();
+
+// Mobile: Handle canvas resize when Scene tab is opened
+if (window.matchMedia('(max-width: 768px)').matches) {
+  const detailsElements = document.querySelectorAll('details[name="pane-tabs"]');
+  detailsElements.forEach((details) => {
+    details.addEventListener('toggle', (event) => {
+      const target = event.target as HTMLDetailsElement;
+      if (target.open && target.querySelector('#canvas-container')) {
+        // Scene tab was opened - trigger resize
+        setTimeout(() => {
+          const container = canvas.parentElement;
+          if (container) {
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+            canvas.width = width;
+            canvas.height = height;
+            previewUI.getRenderer().resize(width, height);
+          }
+        }, 100); // Small delay to ensure layout is complete
+      }
+    });
+  });
+}
