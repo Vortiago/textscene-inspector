@@ -3,7 +3,7 @@ import { SceneManager } from './SceneManager';
 import { TscnParser } from '../parser/TscnParser';
 import { ResourceRegistry } from '../resources/ResourceRegistry';
 import { NodeTracker } from './NodeTracker';
-import type { TscnScene, TscnNode } from '../parser/types';
+import type { TscnScene, TscnNode, MissingResource } from '../parser/types';
 import type { NodeLifecycleManager } from './NodeLifecycleManager';
 
 describe('SceneManager', () => {
@@ -117,7 +117,7 @@ describe('SceneManager', () => {
       const mockParentNode = {} as any;
       const mockSceneData = {} as TscnScene;
 
-      await sceneManager.addScene(instancePath, scenePath, mockParentNode, mockSceneData);
+      await sceneManager.addScene(instancePath, scenePath);
 
       const instances = sceneManager.getInstances(scenePath);
       expect(instances).toHaveLength(1);
@@ -145,9 +145,9 @@ describe('SceneManager', () => {
       const mockParentNode = {} as any;
       const mockSceneData = {} as TscnScene;
 
-      await sceneManager.addScene('Enemy1', scenePath, mockParentNode, mockSceneData);
-      await sceneManager.addScene('Enemy2', scenePath, mockParentNode, mockSceneData);
-      await sceneManager.addScene('Enemy3', scenePath, mockParentNode, mockSceneData);
+      await sceneManager.addScene('Enemy1', scenePath);
+      await sceneManager.addScene('Enemy2', scenePath);
+      await sceneManager.addScene('Enemy3', scenePath);
 
       const instances = sceneManager.getInstances(scenePath);
       expect(instances).toHaveLength(3);
@@ -179,7 +179,7 @@ describe('SceneManager', () => {
       const mockParentNode = {} as any;
       const mockSceneData = {} as TscnScene;
 
-      await sceneManager.addScene('Enemy1', scenePath, mockParentNode, mockSceneData);
+      await sceneManager.addScene('Enemy1', scenePath);
 
       // Should call addNode for the root node
       expect(mockNodeLifecycle.addNode).toHaveBeenCalled();
@@ -208,7 +208,7 @@ describe('SceneManager', () => {
       const mockParentNode = {} as any;
       const mockSceneData = {} as TscnScene;
 
-      await sceneManager.addScene('Enemy1', scenePath, mockParentNode, mockSceneData);
+      await sceneManager.addScene('Enemy1', scenePath);
       expect(sceneManager.getInstances(scenePath)).toHaveLength(1);
 
       sceneManager.removeScene('Enemy1');
@@ -247,7 +247,7 @@ describe('SceneManager', () => {
       const mockSceneData = {} as TscnScene;
 
       // Add instance
-      await sceneManager.addScene('Enemy1', scenePath, mockParentNode, mockSceneData);
+      await sceneManager.addScene('Enemy1', scenePath);
 
       // Mock node tracker to return node data
       const mockNode = { name: 'Enemy1', type: 'Node3D', children: [], properties: {}, instance: 'ExtResource("1_enemy")' } as TscnNode;
@@ -300,7 +300,7 @@ describe('SceneManager', () => {
       const mockParentNode = {} as any;
       const mockSceneData = {} as TscnScene;
 
-      await sceneManager.addScene('Enemy1', scenePath, mockParentNode, mockSceneData);
+      await sceneManager.addScene('Enemy1', scenePath);
 
       expect(sceneManager.hasInstances(scenePath)).toBe(true);
     });
@@ -324,9 +324,9 @@ describe('SceneManager', () => {
       const mockParentNode = {} as any;
       const mockSceneData = {} as TscnScene;
 
-      await sceneManager.addScene('Enemy1', scene1Path, mockParentNode, mockSceneData);
-      await sceneManager.addScene('Enemy2', scene1Path, mockParentNode, mockSceneData);
-      await sceneManager.addScene('Player1', scene2Path, mockParentNode, mockSceneData);
+      await sceneManager.addScene('Enemy1', scene1Path);
+      await sceneManager.addScene('Enemy2', scene1Path);
+      await sceneManager.addScene('Player1', scene2Path);
 
       expect(sceneManager.getTotalInstanceCount()).toBe(3);
     });
@@ -350,8 +350,8 @@ describe('SceneManager', () => {
       const mockParentNode = {} as any;
       const mockSceneData = {} as TscnScene;
 
-      await sceneManager.addScene('Enemy1', scene1Path, mockParentNode, mockSceneData);
-      await sceneManager.addScene('Player1', scene2Path, mockParentNode, mockSceneData);
+      await sceneManager.addScene('Enemy1', scene1Path);
+      await sceneManager.addScene('Player1', scene2Path);
 
       const tracked = sceneManager.getTrackedScenes();
       expect(tracked).toHaveLength(2);
@@ -376,12 +376,152 @@ describe('SceneManager', () => {
       const mockParentNode = {} as any;
       const mockSceneData = {} as TscnScene;
 
-      await sceneManager.addScene('Enemy1', scenePath, mockParentNode, mockSceneData);
+      await sceneManager.addScene('Enemy1', scenePath);
 
       sceneManager.clear();
 
       expect(sceneManager.getTotalInstanceCount()).toBe(0);
       expect(sceneManager.getTrackedScenes()).toHaveLength(0);
+    });
+  });
+
+  describe('error handling and callbacks', () => {
+    it('should call onResourceNeeded callback when external scene fails to load', async () => {
+      const scenePath = 'res://scenes/missing.tscn';
+      const instancePath = 'MissingInstance';
+
+      // Mock provider that throws error
+      const mockProvider = {
+        loadResource: vi.fn().mockRejectedValue(new Error('File not found')),
+      };
+      resourceRegistry.setProvider(mockProvider);
+
+      resourceRegistry.register({
+        id: '1_missing',
+        path: scenePath,
+        type: 'PackedScene',
+      });
+
+      // Set up callback spy
+      const callbackSpy = vi.fn().mockResolvedValue(null);
+      sceneManager.setOnResourceNeeded(callbackSpy);
+
+      // Attempt to add scene (should not throw)
+      await sceneManager.addScene(instancePath, scenePath);
+
+      // Verify callback was called with correct data
+      expect(callbackSpy).toHaveBeenCalledTimes(1);
+      expect(callbackSpy).toHaveBeenCalledWith({
+        path: scenePath,
+        type: 'PackedScene',
+        referencedBy: instancePath,
+        error: 'File not found'
+      });
+    });
+
+    it('should not throw when external scene fails to load (graceful degradation)', async () => {
+      const scenePath = 'res://scenes/missing.tscn';
+      const instancePath = 'MissingInstance';
+
+      // Mock provider that throws error
+      const mockProvider = {
+        loadResource: vi.fn().mockRejectedValue(new Error('File not found')),
+      };
+      resourceRegistry.setProvider(mockProvider);
+
+      resourceRegistry.register({
+        id: '1_missing',
+        path: scenePath,
+        type: 'PackedScene',
+      });
+
+      // No callback set - should handle gracefully
+
+      // Should not throw
+      await expect(sceneManager.addScene(instancePath, scenePath)).resolves.not.toThrow();
+    });
+
+    it('should not track instance when external scene fails to load', async () => {
+      const scenePath = 'res://scenes/missing.tscn';
+      const instancePath = 'MissingInstance';
+
+      // Mock provider that throws error
+      const mockProvider = {
+        loadResource: vi.fn().mockRejectedValue(new Error('File not found')),
+      };
+      resourceRegistry.setProvider(mockProvider);
+
+      resourceRegistry.register({
+        id: '1_missing',
+        path: scenePath,
+        type: 'PackedScene',
+      });
+
+      await sceneManager.addScene(instancePath, scenePath);
+
+      // Instance should not be tracked since load failed
+      expect(sceneManager.getInstances(scenePath)).toHaveLength(0);
+      expect(sceneManager.hasInstances(scenePath)).toBe(false);
+    });
+
+    it('should include error message in callback data', async () => {
+      const scenePath = 'res://scenes/missing.tscn';
+      const instancePath = 'MissingInstance';
+      const errorMessage = 'Network error: 404 Not Found';
+
+      // Mock provider that throws specific error
+      const mockProvider = {
+        loadResource: vi.fn().mockRejectedValue(new Error(errorMessage)),
+      };
+      resourceRegistry.setProvider(mockProvider);
+
+      resourceRegistry.register({
+        id: '1_missing',
+        path: scenePath,
+        type: 'PackedScene',
+      });
+
+      const callbackSpy = vi.fn().mockResolvedValue(null);
+      sceneManager.setOnResourceNeeded(callbackSpy);
+
+      await sceneManager.addScene(instancePath, scenePath);
+
+      const callbackArg = callbackSpy.mock.calls[0]![0] as any;
+      expect(callbackArg.error).toBe(errorMessage);
+    });
+
+    it('should handle non-Error objects in callback', async () => {
+      const scenePath = 'res://scenes/missing.tscn';
+      const instancePath = 'MissingInstance';
+
+      // Mock provider that throws non-Error object
+      const mockProvider = {
+        loadResource: vi.fn().mockRejectedValue('String error'),
+      };
+      resourceRegistry.setProvider(mockProvider);
+
+      resourceRegistry.register({
+        id: '1_missing',
+        path: scenePath,
+        type: 'PackedScene',
+      });
+
+      const callbackSpy = vi.fn().mockResolvedValue(null);
+      sceneManager.setOnResourceNeeded(callbackSpy);
+
+      await sceneManager.addScene(instancePath, scenePath);
+
+      const callbackArg = callbackSpy.mock.calls[0]![0] as any;
+      expect(callbackArg.error).toBe('String error');
+    });
+
+    it('should allow unsetting callback', () => {
+      const callback = vi.fn();
+      sceneManager.setOnResourceNeeded(callback);
+      sceneManager.setOnResourceNeeded(undefined);
+
+      // Should not throw - callback successfully unset
+      expect(true).toBe(true);
     });
   });
 });
