@@ -24,7 +24,7 @@ export class ResourceRecoveryManager {
       instancePath: string,
       instanceNode: TscnNode,
       sceneData: TscnScene,
-      instanceObject: any
+      instanceObject: THREE.Object3D
     ) => Promise<void>,
     getCurrentSceneData: () => TscnScene | null
   ) {

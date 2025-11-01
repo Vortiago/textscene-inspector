@@ -6,6 +6,7 @@
 import { describe, it, expect } from 'vitest';
 import { nodeRegistry } from './core/NodeRegistry';
 import { ruleRegistry } from './linter/RuleRegistry';
+import type { LintRule } from './linter/types';
 
 // Import main index and linter index to trigger all self-registrations
 import './index';
@@ -49,7 +50,7 @@ describe('Architecture: Self-Registration Pattern', () => {
       expect(rules.length).toBeGreaterThan(0);
 
       // Check for specific known rules
-      const ruleNames = rules.map((r: any) => r.meta.name);
+      const ruleNames = rules.map((r: LintRule) => r.meta.name);
 
       // Known rules from implemented nodes
       const knownRules = [
@@ -69,7 +70,7 @@ describe('Architecture: Self-Registration Pattern', () => {
       const rules = ruleRegistry.getRules();
       const validCategories = ['validation', 'performance', 'best-practice'];
 
-      rules.forEach((rule: any) => {
+      rules.forEach((rule: LintRule) => {
         expect(rule.meta).toBeDefined();
         expect(rule.meta.name).toBeDefined();
         expect(rule.meta.description).toBeDefined();
