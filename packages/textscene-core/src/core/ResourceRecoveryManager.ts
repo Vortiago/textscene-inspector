@@ -9,18 +9,18 @@ import * as logger from '../logger';
 
 export class ResourceRecoveryManager {
   private missingResources: Map<string, MissingResource> = new Map();
-  private nodeTracker: NodeTracker;
+  private _nodeTracker: NodeTracker;
   private sceneManager: SceneManager;
-  private getCurrentSceneData: () => TscnScene | null;
+  private _getCurrentSceneData: () => TscnScene | null;
 
   constructor(
     nodeTracker: NodeTracker,
     sceneManager: SceneManager,
     getCurrentSceneData: () => TscnScene | null
   ) {
-    this.nodeTracker = nodeTracker;
+    this._nodeTracker = nodeTracker;
     this.sceneManager = sceneManager;
-    this.getCurrentSceneData = getCurrentSceneData;
+    this._getCurrentSceneData = getCurrentSceneData;
   }
 
   /**

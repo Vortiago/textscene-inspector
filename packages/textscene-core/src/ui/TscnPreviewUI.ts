@@ -41,7 +41,7 @@ export class TscnPreviewUI {
   private options: TscnPreviewUIOptions;
   private treeViewer: SceneTreeViewer | null = null;
   private viewportSelector: ViewportSelector | null = null;
-  private currentScene: TscnScene | null = null;
+  private _currentScene: TscnScene | null = null;
 
   constructor(elements: TscnPreviewElements, options: TscnPreviewUIOptions = {}) {
     this.elements = elements;
@@ -171,7 +171,7 @@ export class TscnPreviewUI {
       this.hideError();
 
       const scene = this.parser.parse(content);
-      this.currentScene = scene;
+      this._currentScene = scene;
 
       // Set resource provider if available
       if (this.options.resourceProvider && scene.resourceRegistry) {
@@ -212,7 +212,7 @@ export class TscnPreviewUI {
   async handleIncrementalUpdate(changes: import('../types/changes').NodeChange[], sceneData: TscnScene): Promise<void> {
     try {
       this.hideError();
-      this.currentScene = sceneData;
+      this._currentScene = sceneData;
 
       // Sort changes to process in optimal order:
       // 1. Removals first (deepest nodes first to avoid orphans)

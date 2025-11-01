@@ -55,7 +55,7 @@ function updateResourceFilesList(): void {
   resourceFilesList.innerHTML = '';
 
   // Add uploaded files first (with green indicator)
-  uploadedFiles.forEach((file, path) => {
+  uploadedFiles.forEach((_file, path) => {
     const item = document.createElement('div');
     item.className = 'resource-file-item uploaded';
 

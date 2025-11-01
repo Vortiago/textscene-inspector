@@ -46,12 +46,12 @@ export class TscnRenderer {
   // State
   private currentSceneData: TscnScene | null = null;
   private renderInProgress: Promise<void> | null = null;
-  private options: TscnRendererOptions;
-  private missingResources: Map<string, MissingResource> = new Map();
+  private _options: TscnRendererOptions;
+  private _missingResources: Map<string, MissingResource> = new Map();
 
   constructor(canvas: HTMLCanvasElement, options: TscnRendererOptions = {}) {
     logger.info('Initializing TscnRenderer');
-    this.options = options;
+    this._options = options;
 
     // Setup three.js
     const components = setupThreeJsScene(canvas);
