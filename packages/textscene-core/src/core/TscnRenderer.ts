@@ -75,6 +75,7 @@ export class TscnRenderer {
     // Wire up circular dependencies
     this.sceneManager.setNodeLifecycleManager(this.nodeLifecycle);
     this.nodeLifecycle.setSceneManager(this.sceneManager);
+    this.sceneManager.setOnResourceNeeded(options.onResourceNeeded);
 
     this.resourceRecovery = new ResourceRecoveryManager(
       this.nodeTracker,

@@ -4,7 +4,7 @@
  */
 
 import * as THREE from 'three';
-import type { TscnScene } from '../parser/types';
+import type { TscnScene, ResourceNeededCallback, MissingResource } from '../parser/types';
 import type { TscnParser } from '../parser/TscnParser';
 import type { ResourceRegistry } from '../resources/ResourceRegistry';
 import type { NodeLifecycleManager } from './NodeLifecycleManager';
@@ -17,6 +17,7 @@ export class SceneManager {
   private resourceRegistry: ResourceRegistry | null = null;
   private nodeLifecycle: NodeLifecycleManager | null = null;
   private nodeTracker: NodeTracker;
+  private onResourceNeeded: ResourceNeededCallback | null = null;
 
   // Track which instances come from which scene files
   // Map<scenePath, Set<instanceNodePath>>
@@ -42,6 +43,13 @@ export class SceneManager {
    */
   setNodeLifecycleManager(nodeLifecycle: NodeLifecycleManager): void {
     this.nodeLifecycle = nodeLifecycle;
+  }
+
+  /**
+   * Set the resource needed callback (called when external scene fails to load)
+   */
+  setOnResourceNeeded(callback: ResourceNeededCallback | undefined): void {
+    this.onResourceNeeded = callback || null;
   }
 
   /**
@@ -118,22 +126,42 @@ export class SceneManager {
 
     logger.info(`[SceneManager] Adding scene instance: ${instancePath} from ${scenePath}`);
 
-    // Load the external scene
-    const externalScene = await this.loadScene(scenePath);
+    try {
+      // Load the external scene
+      const externalScene = await this.loadScene(scenePath);
 
-    // Track this instance
-    if (!this.sceneInstances.has(scenePath)) {
-      this.sceneInstances.set(scenePath, new Set());
+      // Track this instance
+      if (!this.sceneInstances.has(scenePath)) {
+        this.sceneInstances.set(scenePath, new Set());
+      }
+      this.sceneInstances.get(scenePath)!.add(instancePath);
+      logger.info(
+        `[SceneManager] Tracking instance: ${instancePath} (total instances of ${scenePath}: ${this.sceneInstances.get(scenePath)!.size})`
+      );
+
+      // Add all root nodes from external scene as children of instance node
+      await this.addExternalSceneNodes(externalScene, instancePath);
+
+      logger.info(`[SceneManager] ✅ Successfully added scene instance: ${instancePath}`);
+    } catch (error) {
+      logger.warn(`[SceneManager] Failed to load external scene: ${scenePath}`, error);
+
+      // Call onResourceNeeded callback if available
+      if (this.onResourceNeeded) {
+        const missingResource: MissingResource = {
+          path: scenePath,
+          type: 'PackedScene',
+          referencedBy: instancePath,
+          error: error instanceof Error ? error.message : String(error)
+        };
+        logger.info(`[SceneManager] Calling onResourceNeeded for: ${scenePath}`);
+        await this.onResourceNeeded(missingResource);
+      } else {
+        logger.warn(`[SceneManager] No onResourceNeeded callback set, cannot notify about missing resource: ${scenePath}`);
+      }
+
+      // Don't re-throw - allow rendering to continue with other nodes
     }
-    this.sceneInstances.get(scenePath)!.add(instancePath);
-    logger.info(
-      `[SceneManager] Tracking instance: ${instancePath} (total instances of ${scenePath}: ${this.sceneInstances.get(scenePath)!.size})`
-    );
-
-    // Add all root nodes from external scene as children of instance node
-    await this.addExternalSceneNodes(externalScene, instancePath);
-
-    logger.info(`[SceneManager] ✅ Successfully added scene instance: ${instancePath}`);
   }
 
   /**
