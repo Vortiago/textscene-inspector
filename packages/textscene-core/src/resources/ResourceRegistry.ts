@@ -166,6 +166,17 @@ export class ResourceRegistry {
   }
 
   /**
+   * Clear cache for specific resource (for hot-reload).
+   * This forces the resource to be reloaded on next access.
+   */
+  clearCache(path: string): void {
+    this.loadedCache.delete(path);
+    this.loadingPromises.delete(path);
+    this.parsedSceneCache.delete(path);
+    logger.info(`Cleared cache for: ${path}`);
+  }
+
+  /**
    * Clear all cached resources and registered metadata.
    */
   clear(): void {
