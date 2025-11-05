@@ -78,58 +78,58 @@ describe('parseStandardMaterial3D', () => {
     loggerWarnSpy.mockRestore();
   });
 
-  it('should parse material with albedo_color only', () => {
+  it('should parse material with albedo_color only', async () => {
     const properties = {
       albedo_color: 'Color(1, 0, 0, 1)',
     };
 
-    const result = parseStandardMaterial3D(properties);
+    const result = await parseStandardMaterial3D(properties);
 
     expect(result.albedo_color).toEqual({ r: 1, g: 0, b: 0, a: 1 });
     expect(result.metallic).toBeUndefined();
     expect(result.roughness).toBeUndefined();
   });
 
-  it('should parse material with all PBR properties', () => {
+  it('should parse material with all PBR properties', async () => {
     const properties = {
       albedo_color: 'Color(0.5, 0.5, 0.5, 1)',
       metallic: '0.8',
       roughness: '0.3',
     };
 
-    const result = parseStandardMaterial3D(properties);
+    const result = await parseStandardMaterial3D(properties);
 
     expect(result.albedo_color).toEqual({ r: 0.5, g: 0.5, b: 0.5, a: 1 });
     expect(result.metallic).toBe(0.8);
     expect(result.roughness).toBe(0.3);
   });
 
-  it('should parse material without albedo_color', () => {
+  it('should parse material without albedo_color', async () => {
     const properties = {
       metallic: '0.5',
       roughness: '0.7',
     };
 
-    const result = parseStandardMaterial3D(properties);
+    const result = await parseStandardMaterial3D(properties);
 
     expect(result.albedo_color).toBeUndefined();
     expect(result.metallic).toBe(0.5);
     expect(result.roughness).toBe(0.7);
   });
 
-  it('should parse empty properties', () => {
-    const result = parseStandardMaterial3D({});
+  it('should parse empty properties', async () => {
+    const result = await parseStandardMaterial3D({});
 
     expect(result).toEqual({});
   });
 
-  it('should handle invalid albedo_color gracefully', () => {
+  it('should handle invalid albedo_color gracefully', async () => {
     const properties = {
       albedo_color: 'Invalid',
       metallic: '0.5',
     };
 
-    const result = parseStandardMaterial3D(properties);
+    const result = await parseStandardMaterial3D(properties);
 
     expect(result.albedo_color).toBeUndefined();
     expect(result.metallic).toBe(0.5);
@@ -138,34 +138,34 @@ describe('parseStandardMaterial3D', () => {
     );
   });
 
-  it('should handle invalid metallic gracefully', () => {
+  it('should handle invalid metallic gracefully', async () => {
     const properties = {
       albedo_color: 'Color(1, 0, 0, 1)',
       metallic: 'not_a_number',
     };
 
-    const result = parseStandardMaterial3D(properties);
+    const result = await parseStandardMaterial3D(properties);
 
     expect(result.albedo_color).toEqual({ r: 1, g: 0, b: 0, a: 1 });
     expect(result.metallic).toBeUndefined();
   });
 
-  it('should handle invalid roughness gracefully', () => {
+  it('should handle invalid roughness gracefully', async () => {
     const properties = {
       roughness: 'invalid',
     };
 
-    const result = parseStandardMaterial3D(properties);
+    const result = await parseStandardMaterial3D(properties);
 
     expect(result.roughness).toBeUndefined();
   });
 
-  it('should parse brown table material from Hallway scene', () => {
+  it('should parse brown table material from Hallway scene', async () => {
     const properties = {
       albedo_color: 'Color(0.545098, 0.270588, 0.0745098, 1)',
     };
 
-    const result = parseStandardMaterial3D(properties);
+    const result = await parseStandardMaterial3D(properties);
 
     expect(result.albedo_color).toEqual({
       r: 0.545098,
@@ -175,12 +175,12 @@ describe('parseStandardMaterial3D', () => {
     });
   });
 
-  it('should parse gold material from Hallway scene', () => {
+  it('should parse gold material from Hallway scene', async () => {
     const properties = {
       albedo_color: 'Color(1, 0.843137, 0, 1)',
     };
 
-    const result = parseStandardMaterial3D(properties);
+    const result = await parseStandardMaterial3D(properties);
 
     expect(result.albedo_color).toEqual({
       r: 1,
@@ -190,47 +190,47 @@ describe('parseStandardMaterial3D', () => {
     });
   });
 
-  it('should parse metallic and roughness values', () => {
+  it('should parse metallic and roughness values', async () => {
     const properties = {
       metallic: '0.8',
       roughness: '0.1',
     };
 
-    const result = parseStandardMaterial3D(properties);
+    const result = await parseStandardMaterial3D(properties);
 
     expect(result.metallic).toBe(0.8);
     expect(result.roughness).toBe(0.1);
   });
 
-  it('should parse transparency property', () => {
+  it('should parse transparency property', async () => {
     const properties = {
       transparency: '1',
     };
 
-    const result = parseStandardMaterial3D(properties);
+    const result = await parseStandardMaterial3D(properties);
 
     expect(result.transparency).toBe(1);
   });
 
-  it('should parse zero values correctly', () => {
+  it('should parse zero values correctly', async () => {
     const properties = {
       metallic: '0',
       roughness: '0',
     };
 
-    const result = parseStandardMaterial3D(properties);
+    const result = await parseStandardMaterial3D(properties);
 
     expect(result.metallic).toBe(0);
     expect(result.roughness).toBe(0);
   });
 
-  it('should parse values at upper bounds', () => {
+  it('should parse values at upper bounds', async () => {
     const properties = {
       metallic: '1',
       roughness: '1',
     };
 
-    const result = parseStandardMaterial3D(properties);
+    const result = await parseStandardMaterial3D(properties);
 
     expect(result.metallic).toBe(1);
     expect(result.roughness).toBe(1);

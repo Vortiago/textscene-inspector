@@ -2,6 +2,8 @@
  * StandardMaterial3D types for Godot materials.
  */
 
+import type * as THREE from 'three';
+
 export interface Color {
   r: number;
   g: number;
@@ -14,4 +16,12 @@ export interface StandardMaterial3DProperties {
   metallic?: number;
   roughness?: number;
   transparency?: number;
+
+  // Texture maps
+  albedo_texture?: THREE.Texture;
+  normal_texture?: THREE.Texture;
+  metallic_texture?: THREE.Texture;
+  roughness_texture?: THREE.Texture;
+  ao_texture?: THREE.Texture;
+  emission_texture?: THREE.Texture;
 }

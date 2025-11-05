@@ -16,8 +16,8 @@ const meshInstance3DRegistration: NodeTypeRegistration = {
   typeName: 'MeshInstance3D',
   typeGuard: isMeshInstance3D,
   parser: parseMeshInstance3D,
-  renderer: (name: string, properties: MeshInstance3DProperties, scene?: TscnScene): THREE.Object3D => {
-    const mesh = createMeshInstance3D(name, properties, scene);
+  renderer: async (name: string, properties: MeshInstance3DProperties, scene?: TscnScene): Promise<THREE.Object3D> => {
+    const mesh = await createMeshInstance3D(name, properties, scene);
 
     if (properties.transform) {
       applyNode3DTransform(mesh, properties);

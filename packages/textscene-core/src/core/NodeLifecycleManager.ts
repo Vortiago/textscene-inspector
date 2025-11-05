@@ -45,8 +45,8 @@ export class NodeLifecycleManager {
       return;
     }
 
-    // Render node
-    const object3D = renderNodeWithRegistry(node, sceneData);
+    // Render node (may be async for resource loading)
+    const object3D = await renderNodeWithRegistry(node, sceneData);
     if (!object3D) {
       logger.warn(`Failed to render node: ${node.name} (type: ${node.type})`);
       return;

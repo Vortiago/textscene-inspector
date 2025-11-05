@@ -44,7 +44,7 @@ describe('ResourceManager', () => {
   });
 
   describe('resolveGeometry', () => {
-    it('should resolve BoxMesh geometry', () => {
+    it('should resolve BoxMesh geometry', async () => {
       const scene: TscnScene = {
         nodes: [],
         externalResources: [],
@@ -60,13 +60,13 @@ describe('ResourceManager', () => {
         ],
       };
 
-      const geometry = resolveGeometry('SubResource("BoxMesh_1")', scene);
+      const geometry = await resolveGeometry('SubResource("BoxMesh_1")', scene);
 
       expect(geometry).toBeInstanceOf(THREE.BoxGeometry);
       expect(geometry?.type).toBe('BoxGeometry');
     });
 
-    it('should return correct BoxGeometry dimensions', () => {
+    it('should return correct BoxGeometry dimensions', async () => {
       const scene: TscnScene = {
         nodes: [],
         externalResources: [],
@@ -82,7 +82,7 @@ describe('ResourceManager', () => {
         ],
       };
 
-      const geometry = resolveGeometry('SubResource("BoxMesh_1")', scene) as THREE.BoxGeometry | null;
+      const geometry = await resolveGeometry('SubResource("BoxMesh_1")', scene) as THREE.BoxGeometry | null;
 
       expect(geometry).toBeInstanceOf(THREE.BoxGeometry);
       expect(geometry?.parameters.width).toBe(3);
@@ -90,19 +90,19 @@ describe('ResourceManager', () => {
       expect(geometry?.parameters.depth).toBe(5);
     });
 
-    it('should return null for missing mesh reference', () => {
+    it('should return null for missing mesh reference', async () => {
       const scene: TscnScene = {
         nodes: [],
         externalResources: [],
         internalResources: [],
       };
 
-      const geometry = resolveGeometry(undefined, scene);
+      const geometry = await resolveGeometry(undefined, scene);
 
       expect(geometry).toBeNull();
     });
 
-    it('should return null for resource not found', () => {
+    it('should return null for resource not found', async () => {
       const scene: TscnScene = {
         nodes: [],
         externalResources: [],
@@ -118,12 +118,12 @@ describe('ResourceManager', () => {
         ],
       };
 
-      const geometry = resolveGeometry('SubResource("BoxMesh_2")', scene);
+      const geometry = await resolveGeometry('SubResource("BoxMesh_2")', scene);
 
       expect(geometry).toBeNull();
     });
 
-    it('should return null for unsupported mesh type', () => {
+    it('should return null for unsupported mesh type', async () => {
       const scene: TscnScene = {
         nodes: [],
         externalResources: [],
@@ -138,24 +138,24 @@ describe('ResourceManager', () => {
         ],
       };
 
-      const geometry = resolveGeometry('SubResource("UnsupportedMesh_1")', scene);
+      const geometry = await resolveGeometry('SubResource("UnsupportedMesh_1")', scene);
 
       expect(geometry).toBeNull();
     });
 
-    it('should return null for ExtResource (not yet supported)', () => {
+    it('should return null for ExtResource (not yet supported)', async () => {
       const scene: TscnScene = {
         nodes: [],
         externalResources: [],
         internalResources: [],
       };
 
-      const geometry = resolveGeometry('ExtResource("1_abc")', scene);
+      const geometry = await resolveGeometry('ExtResource("1_abc")', scene);
 
       expect(geometry).toBeNull();
     });
 
-    it('should handle BoxMesh with default size', () => {
+    it('should handle BoxMesh with default size', async () => {
       const scene: TscnScene = {
         nodes: [],
         externalResources: [],
@@ -171,7 +171,7 @@ describe('ResourceManager', () => {
         ],
       };
 
-      const geometry = resolveGeometry('SubResource("BoxMesh_1")', scene) as THREE.BoxGeometry | null;
+      const geometry = await resolveGeometry('SubResource("BoxMesh_1")', scene) as THREE.BoxGeometry | null;
 
       expect(geometry).toBeInstanceOf(THREE.BoxGeometry);
       expect(geometry?.parameters.width).toBe(1);

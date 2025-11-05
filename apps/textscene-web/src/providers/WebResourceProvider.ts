@@ -39,23 +39,37 @@ export class WebResourceProvider implements ResourceProvider {
       return isBinaryResourceType(type) ? uploadedFile.arrayBuffer() : uploadedFile.text();
     }
 
-    // For PackedScene resources (.tscn files), try fetching from /fixtures/
-    if (type === 'PackedScene' && path.startsWith('res://')) {
+    // For resources from /fixtures/, try fetching them
+    if (path.startsWith('res://')) {
       try {
         // Convert Godot path to fixture path
         const filename = path.replace('res://', '');
         const fixtureUrl = `/fixtures/${filename}`;
 
-        console.log(`[WebResourceProvider] Attempting to fetch external scene: ${fixtureUrl}`);
+        console.log(`[WebResourceProvider] Attempting to fetch ${type}: ${fixtureUrl}`);
         const response = await fetch(fixtureUrl);
 
         if (response.ok) {
-          const content = await response.text();
-          console.log(`[WebResourceProvider] Successfully loaded external scene: ${path}`);
-          return content;
+          // Check Content-Type to detect if server returned HTML fallback (missing file)
+          const contentType = response.headers.get('content-type') || '';
+          if (contentType.includes('text/html')) {
+            // Server returned HTML fallback (SPA behavior) - file doesn't exist
+            console.warn(`[WebResourceProvider] File not found (got HTML fallback): ${path}`);
+            throw new Error(`Resource not found: ${path}`);
+          }
+
+          if (isBinaryResourceType(type)) {
+            const content = await response.arrayBuffer();
+            console.log(`[WebResourceProvider] Successfully loaded ${type}: ${path}`);
+            return content;
+          } else {
+            const content = await response.text();
+            console.log(`[WebResourceProvider] Successfully loaded ${type}: ${path}`);
+            return content;
+          }
         }
       } catch (error) {
-        console.warn(`[WebResourceProvider] Failed to fetch external scene from fixtures: ${path}`, error);
+        console.warn(`[WebResourceProvider] Failed to fetch ${type} from fixtures: ${path}`, error);
       }
     }
 

@@ -55,6 +55,9 @@ describe('WebResourceProvider', () => {
       const tscnContent = '[gd_scene format=3]\n[node name="Child" type="Node3D"]';
       (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
         ok: true,
+        headers: {
+          get: (name: string) => name === 'content-type' ? 'text/plain' : null
+        },
         text: async () => tscnContent
       } as Response);
 
@@ -69,6 +72,9 @@ describe('WebResourceProvider', () => {
       const tscnContent = '[gd_scene format=3]';
       (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
         ok: true,
+        headers: {
+          get: (name: string) => name === 'content-type' ? 'text/plain' : null
+        },
         text: async () => tscnContent
       } as Response);
 
@@ -114,18 +120,20 @@ describe('WebResourceProvider', () => {
       ).rejects.toThrow('Resource not found');
     });
 
-    // Edge case: Fetch returns HTML error page instead of TSCN
-    it('should return HTML error page content (caller handles parse error)', async () => {
+    // Edge case: Fetch returns HTML fallback (SPA behavior for missing files)
+    it('should detect HTML fallback and throw error', async () => {
       const htmlError = '<html><body>404 Not Found</body></html>';
       (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
         ok: true,
+        headers: {
+          get: (name: string) => name === 'content-type' ? 'text/html' : null
+        },
         text: async () => htmlError
       } as Response);
 
-      const content = await provider.loadResource('res://fake.tscn', 'PackedScene');
-
-      // Provider returns the content as-is; parser will fail later
-      expect(content).toBe(htmlError);
+      await expect(
+        provider.loadResource('res://fake.tscn', 'PackedScene')
+      ).rejects.toThrow('Resource not found');
     });
 
     // Integration: Uploaded files prioritized over fixture fetch
@@ -264,14 +272,20 @@ describe('WebResourceProvider', () => {
       ).rejects.toThrow('Resource not found');
     });
 
-    // Error path: Non-PackedScene type (no fetch fallback)
-    it('should throw immediately for non-PackedScene types not in uploaded files', async () => {
+    // Error path: All resource types attempt fetch from fixtures
+    it('should attempt fetch for all resource types from fixtures', async () => {
+      // Mock failed fetch
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: false,
+        statusText: 'Not Found'
+      } as Response);
+
       await expect(
         provider.loadResource('res://texture.png', 'Texture2D')
       ).rejects.toThrow('Resource not found');
 
-      // Should NOT attempt fetch for non-PackedScene types
-      expect(global.fetch).not.toHaveBeenCalled();
+      // Should attempt fetch for all resource types
+      expect(global.fetch).toHaveBeenCalledWith('/fixtures/texture.png');
     });
   });
 });

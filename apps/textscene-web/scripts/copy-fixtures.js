@@ -1,4 +1,4 @@
-import { copyFileSync, mkdirSync, readdirSync } from 'node:fs';
+import { copyFileSync, mkdirSync, readdirSync, statSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -14,6 +14,22 @@ mkdirSync(fixturesTarget, { recursive: true });
 const fixtureFiles = readdirSync(fixturesSource).filter((file) => file.endsWith('.tscn'));
 for (const file of fixtureFiles) {
   copyFileSync(join(fixturesSource, file), join(fixturesTarget, file));
+}
+
+// Copy textures directory from scenes/fixtures/
+const texturesSource = join(fixturesSource, 'textures');
+const texturesTarget = join(fixturesTarget, 'textures');
+try {
+  if (statSync(texturesSource).isDirectory()) {
+    mkdirSync(texturesTarget, { recursive: true });
+    const textureFiles = readdirSync(texturesSource);
+    for (const file of textureFiles) {
+      copyFileSync(join(texturesSource, file), join(texturesTarget, file));
+    }
+    console.log(`Copied ${textureFiles.length} texture files to public/fixtures/textures/`);
+  }
+} catch {
+  // Textures directory doesn't exist yet, skip
 }
 
 // Copy from scenes/examples/

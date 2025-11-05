@@ -12,10 +12,13 @@
 - [x] #WI-11: DirectionalLight3D → [Details](work_items/WI11.md)
 - [x] #WI-12: OmniLight3D → [Details](work_items/WI12.md)
 
-## Phase 3: Scene Composition ✅
+## Phase 3: Scene Composition 🔄 (In Progress)
 
-- [x] #WI-13: ExtResource Loading System → [Details](work_items/WI13.md)
-- [x] #WI-14: Scene Instancing → [Details](work_items/WI14.md)
+- [x] #WI-13: ExtResource Loading System (PackedScene only) → [Details](work_items/WI13.md)
+- [x] #WI-14: Scene Instancing (Complete) → [Details](work_items/WI14.md)
+- [x] #WI-52: External Texture Loading → [Details](work_items/WI52.md) ⭐
+- [ ] #WI-53: External Material Loading → [Details](work_items/WI53.md)
+- [ ] #WI-54: External Audio Loading → [Details](work_items/WI54.md)
 
 ## Phase 4: Advanced Features
 
@@ -120,6 +123,8 @@ Each work item has a corresponding file in `work_items/` containing:
 ✅ **Hot-Reload** - Automatic preview update on file save
 ✅ **Click-to-Select** - Click objects in 3D viewport to select in tree
 ✅ **MeshInstance3D** - Box, Sphere, Cylinder, Plane, Capsule, Torus, Prism meshes
-✅ **StandardMaterial3D** - PBR materials with albedo, metallic, roughness
+✅ **StandardMaterial3D** - PBR materials with albedo, metallic, roughness, external textures
 ✅ **Lighting** - Spot, Directional, and Omni lights with shadows
 ✅ **External Scenes** - Load and instantiate PackedScene references
+✅ **External Textures** - Load Texture2D from external files (PNG, SVG, WebP, etc.)
+⚠️ **External Resources** - PackedScene and Texture2D supported (Materials, Audio pending)

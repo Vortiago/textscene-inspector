@@ -22,46 +22,46 @@ describe('MeshInstance3D Renderer', () => {
   });
 
   describe('createMeshInstance3D', () => {
-    it('should create a THREE.Mesh', () => {
+    it('should create a THREE.Mesh', async () => {
       const properties: MeshInstance3DProperties = {
         name: 'TestMesh',
         surfaceMaterialOverrides: new Map(),
       };
 
-      const mesh = createMeshInstance3D('TestMesh', properties);
+      const mesh = await createMeshInstance3D('TestMesh', properties);
 
       expect(mesh).toBeInstanceOf(THREE.Mesh);
     });
 
-    it('should set the mesh name from nodeName', () => {
+    it('should set the mesh name from nodeName', async () => {
       const properties: MeshInstance3DProperties = {
         name: 'MyMeshInstance',
         surfaceMaterialOverrides: new Map(),
       };
 
-      const mesh = createMeshInstance3D('MyMeshInstance', properties);
+      const mesh = await createMeshInstance3D('MyMeshInstance', properties);
 
       expect(mesh.name).toBe('MyMeshInstance');
     });
 
-    it('should use placeholder BoxGeometry', () => {
+    it('should use placeholder BoxGeometry', async () => {
       const properties: MeshInstance3DProperties = {
         name: 'TestMesh',
         surfaceMaterialOverrides: new Map(),
       };
 
-      const mesh = createMeshInstance3D('TestMesh', properties);
+      const mesh = await createMeshInstance3D('TestMesh', properties);
 
       expect(mesh.geometry).toBeInstanceOf(THREE.BoxGeometry);
     });
 
-    it('should use wireframe material for placeholder', () => {
+    it('should use wireframe material for placeholder', async () => {
       const properties: MeshInstance3DProperties = {
         name: 'TestMesh',
         surfaceMaterialOverrides: new Map(),
       };
 
-      const mesh = createMeshInstance3D('TestMesh', properties);
+      const mesh = await createMeshInstance3D('TestMesh', properties);
 
       expect(mesh.material).toBeInstanceOf(THREE.MeshBasicMaterial);
       const material = mesh.material as THREE.MeshBasicMaterial;
@@ -69,25 +69,25 @@ describe('MeshInstance3D Renderer', () => {
       expect(material.color.getHex()).toBe(0xff00ff);
     });
 
-    it('should default receiveShadow to true', () => {
+    it('should default receiveShadow to true', async () => {
       const properties: MeshInstance3DProperties = {
         name: 'TestMesh',
         surfaceMaterialOverrides: new Map(),
       };
 
-      const mesh = createMeshInstance3D('TestMesh', properties);
+      const mesh = await createMeshInstance3D('TestMesh', properties);
 
       expect(mesh.receiveShadow).toBe(true);
     });
 
-    it('should log warning when mesh property exists but no scene provided', () => {
+    it('should log warning when mesh property exists but no scene provided', async () => {
       const properties: MeshInstance3DProperties = {
         name: 'TestMesh',
         mesh: 'SubResource("BoxMesh_1")',
         surfaceMaterialOverrides: new Map(),
       };
 
-      createMeshInstance3D('TestMesh', properties);
+      await createMeshInstance3D('TestMesh', properties);
 
       expect(loggerWarnSpy).toHaveBeenCalledWith(
         expect.stringContaining('No scene provided')
@@ -96,71 +96,71 @@ describe('MeshInstance3D Renderer', () => {
   });
 
   describe('Shadow Casting', () => {
-    it('should set castShadow=false when castShadow=0 (OFF)', () => {
+    it('should set castShadow=false when castShadow=0 (OFF)', async () => {
       const properties: MeshInstance3DProperties = {
         name: 'TestMesh',
         castShadow: 0,
         surfaceMaterialOverrides: new Map(),
       };
 
-      const mesh = createMeshInstance3D('TestMesh', properties);
+      const mesh = await createMeshInstance3D('TestMesh', properties);
 
       expect(mesh.castShadow).toBe(false);
     });
 
-    it('should set castShadow=true when castShadow=1 (ON)', () => {
+    it('should set castShadow=true when castShadow=1 (ON)', async () => {
       const properties: MeshInstance3DProperties = {
         name: 'TestMesh',
         castShadow: 1,
         surfaceMaterialOverrides: new Map(),
       };
 
-      const mesh = createMeshInstance3D('TestMesh', properties);
+      const mesh = await createMeshInstance3D('TestMesh', properties);
 
       expect(mesh.castShadow).toBe(true);
     });
 
-    it('should set castShadow=true and shadowSide=DoubleSide when castShadow=2 (DOUBLE_SIDED)', () => {
+    it('should set castShadow=true and shadowSide=DoubleSide when castShadow=2 (DOUBLE_SIDED)', async () => {
       const properties: MeshInstance3DProperties = {
         name: 'TestMesh',
         castShadow: 2,
         surfaceMaterialOverrides: new Map(),
       };
 
-      const mesh = createMeshInstance3D('TestMesh', properties);
+      const mesh = await createMeshInstance3D('TestMesh', properties);
 
       expect(mesh.castShadow).toBe(true);
       const material = mesh.material as THREE.MeshBasicMaterial;
       expect(material.shadowSide).toBe(THREE.DoubleSide);
     });
 
-    it('should set castShadow=true and visible=false when castShadow=3 (SHADOWS_ONLY)', () => {
+    it('should set castShadow=true and visible=false when castShadow=3 (SHADOWS_ONLY)', async () => {
       const properties: MeshInstance3DProperties = {
         name: 'TestMesh',
         castShadow: 3,
         surfaceMaterialOverrides: new Map(),
       };
 
-      const mesh = createMeshInstance3D('TestMesh', properties);
+      const mesh = await createMeshInstance3D('TestMesh', properties);
 
       expect(mesh.castShadow).toBe(true);
       expect(mesh.visible).toBe(false);
     });
 
-    it('should default to castShadow=false when castShadow is undefined', () => {
+    it('should default to castShadow=false when castShadow is undefined', async () => {
       const properties: MeshInstance3DProperties = {
         name: 'TestMesh',
         surfaceMaterialOverrides: new Map(),
       };
 
-      const mesh = createMeshInstance3D('TestMesh', properties);
+      const mesh = await createMeshInstance3D('TestMesh', properties);
 
       expect(mesh.castShadow).toBe(false);
     });
   });
 
   describe('Integration with Node3D Transform', () => {
-    it('should work with applyNode3DTransform', () => {
+    it('should work with applyNode3DTransform', async () => {
       const transform = parseTransform3D('Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 3, 4)');
       const properties: MeshInstance3DProperties = {
         name: 'TestMesh',
@@ -168,7 +168,7 @@ describe('MeshInstance3D Renderer', () => {
         surfaceMaterialOverrides: new Map(),
       };
 
-      const mesh = createMeshInstance3D('TestMesh', properties);
+      const mesh = await createMeshInstance3D('TestMesh', properties);
       applyNode3DTransform(mesh, properties);
 
       expect(mesh.position.x).toBe(2);

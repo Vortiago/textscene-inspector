@@ -74,16 +74,16 @@ const materialTypeHandlers: ResourceTypeMap<THREE.Material> = {
   },
 };
 
-export function resolveGeometry(
+export async function resolveGeometry(
   meshRef: string | undefined,
   scene: TscnScene
-): THREE.BufferGeometry | null {
-  return resolveResource(meshRef, scene, meshTypeHandlers, 'mesh');
+): Promise<THREE.BufferGeometry | null> {
+  return await resolveResource(meshRef, scene, meshTypeHandlers, 'mesh');
 }
 
-export function resolveMaterial(
+export async function resolveMaterial(
   materialRef: string | undefined,
   scene: TscnScene
-): THREE.Material | null {
-  return resolveResource(materialRef, scene, materialTypeHandlers, 'material');
+): Promise<THREE.Material | null> {
+  return await resolveResource(materialRef, scene, materialTypeHandlers, 'material');
 }

@@ -5,12 +5,13 @@
 import type { TscnScene, TscnInternalResource } from '../parser/types';
 import { parseResourceReference } from './ResourceManager';
 import { warn } from '../logger';
+import type { ResourceRegistry } from './ResourceRegistry';
 
 export interface ResourceHandler<T> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Generic handler supports any parsed property type
-  parser: (data: Record<string, string>) => any;
+  parser: (data: Record<string, string>, registry?: ResourceRegistry) => any | Promise<any>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Generic handler accepts any parsed properties
-  renderer: (props: any) => T;
+  renderer: (props: any) => T | Promise<T>;
 }
 
 export type ResourceTypeMap<T> = Record<string, ResourceHandler<T>>;
@@ -18,13 +19,14 @@ export type ResourceTypeMap<T> = Record<string, ResourceHandler<T>>;
 /**
  * Generic resource resolver that works for any resource type.
  * Handles common logic: reference parsing, resource lookup, type checking, error handling.
+ * Now async to support async parsers (e.g., texture loading in materials).
  */
-export function resolveResource<T>(
+export async function resolveResource<T>(
   resourceRef: string | undefined,
   scene: TscnScene,
   typeHandlers: ResourceTypeMap<T>,
   resourceCategory: string
-): T | null {
+): Promise<T | null> {
   if (!resourceRef) {
     return null;
   }
@@ -59,8 +61,11 @@ export function resolveResource<T>(
   }
 
   try {
-    const props = handler.parser(resource.data as Record<string, string>);
-    return handler.renderer(props);
+    // Parser may be async (e.g., loading textures), so await it
+    const props = await handler.parser(resource.data as Record<string, string>, scene.resourceRegistry);
+
+    // Renderer may be async, so await it
+    return await handler.renderer(props);
   } catch (error) {
     warn(
       `Failed to create ${resourceType}: ${error instanceof Error ? error.message : String(error)}`
