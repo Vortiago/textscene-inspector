@@ -12,7 +12,7 @@ interface VsCodeApi {
 }
 
 export class WebviewResourceProvider implements ResourceProvider {
-  private pendingRequests: Map<string, { resolve: (value: string | ArrayBuffer) => void; reject: (error: Error) => void }> = new Map();
+  private pendingRequests: Map<string, { resolve: (value: string | ArrayBuffer) => void; reject: (error: Error) => void; timeoutId: number }> = new Map();
   private requestCounter = 0;
 
   constructor(private vscode: VsCodeApi) {
@@ -23,6 +23,7 @@ export class WebviewResourceProvider implements ResourceProvider {
       if (message.type === 'resourceLoaded') {
         const pending = this.pendingRequests.get(message.requestId);
         if (pending) {
+          clearTimeout(pending.timeoutId);
           this.pendingRequests.delete(message.requestId);
 
           // Convert base64 back to content
@@ -41,6 +42,7 @@ export class WebviewResourceProvider implements ResourceProvider {
       } else if (message.type === 'resourceLoadError') {
         const pending = this.pendingRequests.get(message.requestId);
         if (pending) {
+          clearTimeout(pending.timeoutId);
           this.pendingRequests.delete(message.requestId);
           pending.reject(new Error(message.error));
         }
@@ -52,7 +54,15 @@ export class WebviewResourceProvider implements ResourceProvider {
     const requestId = `resource_${this.requestCounter++}`;
 
     return new Promise((resolve, reject) => {
-      this.pendingRequests.set(requestId, { resolve, reject });
+      // Timeout after 10 seconds
+      const timeoutId = window.setTimeout(() => {
+        if (this.pendingRequests.has(requestId)) {
+          this.pendingRequests.delete(requestId);
+          reject(new Error(`Resource load timeout: ${path}`));
+        }
+      }, 10000);
+
+      this.pendingRequests.set(requestId, { resolve, reject, timeoutId });
 
       // Send request to extension
       this.vscode.postMessage({
@@ -61,14 +71,6 @@ export class WebviewResourceProvider implements ResourceProvider {
         resourceType: type,
         requestId,
       });
-
-      // Timeout after 10 seconds
-      setTimeout(() => {
-        if (this.pendingRequests.has(requestId)) {
-          this.pendingRequests.delete(requestId);
-          reject(new Error(`Resource load timeout: ${path}`));
-        }
-      }, 10000);
     });
   }
 

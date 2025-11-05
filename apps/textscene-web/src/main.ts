@@ -175,6 +175,8 @@ fileInput.addEventListener('change', async (event) => {
     resetButton.disabled = false;
   } catch (error) {
     console.error('Error loading TSCN:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    previewUI.showError(`Failed to load file: ${errorMessage}`);
   }
 });
 
@@ -184,6 +186,9 @@ resetButton.addEventListener('click', () => {
 
 const fixturesHeader = document.getElementById('fixtures-header') as HTMLDivElement;
 const fixturesList = document.getElementById('fixtures-list') as HTMLDivElement;
+
+// Track current fixture fetch to abort on rapid clicks
+let currentFixtureAbortController: AbortController | null = null;
 
 function renderFixtureList() {
   const fixturesByCategory = getFixturesByCategory();
@@ -205,8 +210,18 @@ function renderFixtureList() {
       const fixtureFile = (item as HTMLElement).dataset.fixture;
       if (!fixtureFile) return;
 
+      // Abort previous fetch if still in progress
+      if (currentFixtureAbortController) {
+        currentFixtureAbortController.abort();
+      }
+
+      // Create new AbortController for this fetch
+      currentFixtureAbortController = new AbortController();
+
       try {
-        const response = await fetch(`/fixtures/${fixtureFile}`);
+        const response = await fetch(`/fixtures/${fixtureFile}`, {
+          signal: currentFixtureAbortController.signal
+        });
         if (!response.ok) {
           throw new Error(`Failed to load fixture: ${response.statusText}`);
         }
@@ -214,7 +229,14 @@ function renderFixtureList() {
         await previewUI.loadTscn(content);
         resetButton.disabled = false;
       } catch (error) {
+        // Ignore AbortError (expected when user clicks another fixture)
+        if (error instanceof Error && error.name === 'AbortError') {
+          console.log('Fixture load aborted (user clicked another fixture)');
+          return;
+        }
         console.error('Error loading fixture:', error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        previewUI.showError(`Failed to load fixture: ${errorMessage}`);
       }
     });
   });

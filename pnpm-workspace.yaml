@@ -19,6 +19,7 @@ catalog:
   '@types/node': ^22.10.5
   vite: ^6.0.7
   esbuild: ^0.24.2
+  happy-dom: ^20.0.10
 
   # CLI dependencies
   commander: ^12.1.0

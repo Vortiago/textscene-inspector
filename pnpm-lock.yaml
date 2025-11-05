@@ -18,6 +18,9 @@ catalogs:
     esbuild:
       specifier: ^0.24.2
       version: 0.24.2
+    happy-dom:
+      specifier: ^20.0.10
+      version: 20.0.10
     rimraf:
       specifier: ^6.0.1
       version: 6.0.1
@@ -106,6 +109,9 @@ importers:
       esbuild:
         specifier: 'catalog:'
         version: 0.24.2
+      happy-dom:
+        specifier: 'catalog:'
+        version: 20.0.10
       rimraf:
         specifier: 'catalog:'
         version: 6.0.1
@@ -114,7 +120,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: 'catalog:'
-        version: 4.0.3(@types/node@22.18.12)(@vitest/ui@4.0.3)(happy-dom@20.0.8)
+        version: 4.0.3(@types/node@22.18.12)(@vitest/ui@4.0.3)(happy-dom@20.0.10)
 
   apps/textscene-web:
     dependencies:
@@ -122,6 +128,9 @@ importers:
         specifier: workspace:*
         version: link:../../packages/textscene-core
     devDependencies:
+      happy-dom:
+        specifier: 'catalog:'
+        version: 20.0.10
       rimraf:
         specifier: 'catalog:'
         version: 6.0.1
@@ -133,7 +142,7 @@ importers:
         version: 6.4.1(@types/node@22.18.12)
       vitest:
         specifier: 'catalog:'
-        version: 4.0.3(@types/node@22.18.12)(@vitest/ui@4.0.3)(happy-dom@20.0.8)
+        version: 4.0.3(@types/node@22.18.12)(@vitest/ui@4.0.3)(happy-dom@20.0.10)
 
   packages/textscene-core:
     dependencies:
@@ -152,7 +161,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: 'catalog:'
-        version: 4.0.3(@types/node@22.18.12)(@vitest/ui@4.0.3)(happy-dom@20.0.8)
+        version: 4.0.3(@types/node@22.18.12)(@vitest/ui@4.0.3)(happy-dom@20.0.10)
 
 packages:
 
@@ -1448,6 +1457,10 @@ packages:
 
   graphemer@1.4.0:
     resolution: {integrity: sha512-EtKwoO6kxCL9WO5xipiHTZlSzBm7WLT627TqC/uVRd0HKmq8NXyebnNYxDoBi7wt8eTWrUrKXCOVaFq9x1kgag==}
+
+  happy-dom@20.0.10:
+    resolution: {integrity: sha512-6umCCHcjQrhP5oXhrHQQvLB0bwb1UzHAHdsXy+FjtKoYjUhmNZsQL8NivwM1vDvNEChJabVrUYxUnp/ZdYmy2g==}
+    engines: {node: '>=20.0.0'}
 
   happy-dom@20.0.8:
     resolution: {integrity: sha512-TlYaNQNtzsZ97rNMBAm8U+e2cUQXNithgfCizkDgc11lgmN4j9CKMhO3FPGKWQYPwwkFcPpoXYF/CqEPLgzfOg==}
@@ -3669,6 +3682,12 @@ snapshots:
 
   graphemer@1.4.0: {}
 
+  happy-dom@20.0.10:
+    dependencies:
+      '@types/node': 20.19.23
+      '@types/whatwg-mimetype': 3.0.2
+      whatwg-mimetype: 3.0.0
+
   happy-dom@20.0.8:
     dependencies:
       '@types/node': 20.19.23
@@ -4457,6 +4476,46 @@ snapshots:
     optionalDependencies:
       '@types/node': 22.18.12
       fsevents: 2.3.3
+
+  vitest@4.0.3(@types/node@22.18.12)(@vitest/ui@4.0.3)(happy-dom@20.0.10):
+    dependencies:
+      '@vitest/expect': 4.0.3
+      '@vitest/mocker': 4.0.3(vite@6.4.1(@types/node@22.18.12))
+      '@vitest/pretty-format': 4.0.3
+      '@vitest/runner': 4.0.3
+      '@vitest/snapshot': 4.0.3
+      '@vitest/spy': 4.0.3
+      '@vitest/utils': 4.0.3
+      debug: 4.4.3
+      es-module-lexer: 1.7.0
+      expect-type: 1.2.2
+      magic-string: 0.30.21
+      pathe: 2.0.3
+      picomatch: 4.0.3
+      std-env: 3.10.0
+      tinybench: 2.9.0
+      tinyexec: 0.3.2
+      tinyglobby: 0.2.15
+      tinyrainbow: 3.0.3
+      vite: 6.4.1(@types/node@22.18.12)
+      why-is-node-running: 2.3.0
+    optionalDependencies:
+      '@types/node': 22.18.12
+      '@vitest/ui': 4.0.3(vitest@4.0.3)
+      happy-dom: 20.0.10
+    transitivePeerDependencies:
+      - jiti
+      - less
+      - lightningcss
+      - msw
+      - sass
+      - sass-embedded
+      - stylus
+      - sugarss
+      - supports-color
+      - terser
+      - tsx
+      - yaml
 
   vitest@4.0.3(@types/node@22.18.12)(@vitest/ui@4.0.3)(happy-dom@20.0.8):
     dependencies:

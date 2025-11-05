@@ -39,11 +39,24 @@ export class VSCodeResourceProvider implements ResourceProvider {
   /**
    * Convert Godot resource path (res://) to VS Code Uri.
    * Resolves relative to workspace root.
+   * Validates that resolved path stays within workspace bounds (prevents path traversal attacks).
    */
   private resolveGodotPath(godotPath: string): vscode.Uri {
     const relativePath = stripResPrefix(godotPath);
-    // For now, resolve relative to workspace root
-    // In future, could also check relative to .tscn file directory
-    return vscode.Uri.joinPath(this.workspaceRoot, relativePath);
+
+    // Resolve the path
+    const resolvedUri = vscode.Uri.joinPath(this.workspaceRoot, relativePath);
+
+    // Validate that resolved path is within workspace bounds
+    const workspacePathNormalized = this.workspaceRoot.fsPath.toLowerCase().replace(/\\/g, '/');
+    const resolvedPathNormalized = resolvedUri.fsPath.toLowerCase().replace(/\\/g, '/');
+
+    if (!resolvedPathNormalized.startsWith(workspacePathNormalized)) {
+      throw new Error(
+        `Path traversal detected: ${godotPath} resolves outside workspace bounds`
+      );
+    }
+
+    return resolvedUri;
   }
 }

@@ -1,0 +1,321 @@
+/**
+ * Test setup file for VSCode extension tests.
+ * Mocks VSCode API and provides test utilities.
+ */
+
+import { vi } from 'vitest';
+import * as path from 'path';
+
+// ============================================================================
+// Helper Factories
+// ============================================================================
+
+/**
+ * Create a mock vscode.Uri object
+ */
+export function createMockUri(fsPath: string) {
+  // Normalize path for cross-platform compatibility
+  const normalizedPath = fsPath.replace(/\\/g, '/');
+
+  return {
+    fsPath: fsPath,
+    path: normalizedPath,
+    scheme: 'file',
+    authority: '',
+    query: '',
+    fragment: '',
+    with: vi.fn(),
+    toString: () => `file://${normalizedPath}`,
+    toJSON: () => ({ fsPath, path: normalizedPath, scheme: 'file' })
+  };
+}
+
+/**
+ * Create mock Uint8Array from string content
+ */
+export function createMockFileData(content: string): Uint8Array {
+  return new TextEncoder().encode(content);
+}
+
+/**
+ * Create mock Uint8Array from binary data
+ */
+export function createMockBinaryData(bytes: number[]): Uint8Array {
+  return new Uint8Array(bytes);
+}
+
+// ============================================================================
+// VSCode API Mocks
+// ============================================================================
+
+/**
+ * Mock vscode.Uri namespace
+ * Provides path manipulation utilities
+ */
+const mockUri = {
+  /**
+   * Join path segments
+   * Example: joinPath(file:///workspace, 'scenes', 'Door.tscn')
+   */
+  joinPath: vi.fn((base: any, ...pathSegments: string[]) => {
+    const basePath = base.fsPath || base.path || '/';
+    const joined = path.posix.join(basePath, ...pathSegments);
+    return createMockUri(joined);
+  }),
+
+  /**
+   * Create Uri from file path
+   */
+  file: vi.fn((fsPath: string) => createMockUri(fsPath)),
+
+  /**
+   * Parse Uri from string
+   */
+  parse: vi.fn((value: string) => {
+    const fsPath = value.replace('file://', '');
+    return createMockUri(fsPath);
+  })
+};
+
+/**
+ * Mock vscode.workspace namespace
+ * Provides filesystem and workspace operations
+ */
+const mockWorkspace = {
+  fs: {
+    /**
+     * Read file as Uint8Array
+     * Tests should mock this to return specific content
+     */
+    readFile: vi.fn().mockResolvedValue(new Uint8Array()),
+
+    /**
+     * Write file
+     */
+    writeFile: vi.fn().mockResolvedValue(undefined),
+
+    /**
+     * Check if file exists
+     */
+    stat: vi.fn().mockResolvedValue({ type: 1, size: 0, ctime: 0, mtime: 0 }),
+
+    /**
+     * Delete file
+     */
+    delete: vi.fn().mockResolvedValue(undefined),
+
+    /**
+     * Create directory
+     */
+    createDirectory: vi.fn().mockResolvedValue(undefined),
+
+    /**
+     * Read directory
+     */
+    readDirectory: vi.fn().mockResolvedValue([])
+  },
+
+  /**
+   * Get workspace folders
+   */
+  workspaceFolders: [],
+
+  /**
+   * Open text document
+   */
+  openTextDocument: vi.fn(),
+
+  /**
+   * Get workspace folder for Uri
+   */
+  getWorkspaceFolder: vi.fn(),
+
+  /**
+   * On did save text document event
+   */
+  onDidSaveTextDocument: vi.fn()
+};
+
+/**
+ * Mock vscode.window namespace
+ * Provides UI operations
+ */
+const mockWindow = {
+  /**
+   * Create webview panel
+   */
+  createWebviewPanel: vi.fn(),
+
+  /**
+   * Show information message
+   */
+  showInformationMessage: vi.fn(),
+
+  /**
+   * Show error message
+   */
+  showErrorMessage: vi.fn(),
+
+  /**
+   * Show warning message
+   */
+  showWarningMessage: vi.fn(),
+
+  /**
+   * Show text document in editor
+   */
+  showTextDocument: vi.fn(),
+
+  /**
+   * Active text editor
+   */
+  activeTextEditor: undefined,
+
+  /**
+   * Create output channel
+   */
+  createOutputChannel: vi.fn().mockReturnValue({
+    append: vi.fn(),
+    appendLine: vi.fn(),
+    clear: vi.fn(),
+    show: vi.fn(),
+    hide: vi.fn(),
+    dispose: vi.fn()
+  })
+};
+
+/**
+ * Mock vscode.commands namespace
+ * Provides command operations
+ */
+const mockCommands = {
+  /**
+   * Register command
+   */
+  registerCommand: vi.fn()
+};
+
+/**
+ * Mock vscode.Range class
+ */
+export class MockRange {
+  constructor(
+    public start: any,
+    public end: any
+  ) {}
+}
+
+/**
+ * Mock vscode.Position class
+ */
+export class MockPosition {
+  constructor(
+    public line: number,
+    public character: number
+  ) {}
+}
+
+/**
+ * Mock vscode.Selection class
+ */
+export class MockSelection {
+  constructor(
+    public start: any,
+    public end: any
+  ) {}
+}
+
+/**
+ * Mock vscode.EventEmitter class
+ */
+export class MockEventEmitter {
+  private listeners: Array<(...args: any[]) => void> = [];
+
+  event = (listener: (...args: any[]) => void) => {
+    this.listeners.push(listener);
+    return { dispose: vi.fn() };
+  };
+
+  fire(...args: any[]) {
+    this.listeners.forEach(listener => listener(...args));
+  }
+
+  dispose() {
+    this.listeners = [];
+  }
+}
+
+// ============================================================================
+// VSCode Module Mock
+// ============================================================================
+
+/**
+ * Complete vscode module mock
+ * Add more APIs as needed by tests
+ */
+vi.mock('vscode', () => ({
+  Uri: mockUri,
+  workspace: mockWorkspace,
+  window: mockWindow,
+  commands: mockCommands,
+  Range: MockRange,
+  Position: MockPosition,
+  Selection: MockSelection,
+  EventEmitter: MockEventEmitter,
+
+  // Enums
+  ViewColumn: {
+    One: 1,
+    Two: 2,
+    Three: 3,
+    Active: -1,
+    Beside: -2
+  },
+
+  FileType: {
+    Unknown: 0,
+    File: 1,
+    Directory: 2,
+    SymbolicLink: 64
+  },
+
+  TextEditorRevealType: {
+    Default: 0,
+    InCenter: 1,
+    InCenterIfOutsideViewport: 2,
+    AtTop: 3
+  }
+}));
+
+// ============================================================================
+// Global Test Setup
+// ============================================================================
+
+// Reset all mocks after each test
+afterEach(() => {
+  vi.clearAllMocks();
+});
+
+// Export mocks for test access
+export const vscode = {
+  Uri: mockUri,
+  workspace: mockWorkspace,
+  window: mockWindow,
+  commands: mockCommands,
+  Range: MockRange,
+  Position: MockPosition,
+  Selection: MockSelection,
+  ViewColumn: {
+    One: 1,
+    Two: 2,
+    Three: 3,
+    Active: -1,
+    Beside: -2
+  },
+  TextEditorRevealType: {
+    Default: 0,
+    InCenter: 1,
+    InCenterIfOutsideViewport: 2,
+    AtTop: 3
+  }
+};

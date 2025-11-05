@@ -54,7 +54,7 @@
     "build": "node esbuild.config.mjs",
     "predev": "pnpm --filter @textscene/core build",
     "dev": "node esbuild.config.mjs --watch",
-    "test": "vitest",
+    "test": "vitest run",
     "pretype-check": "pnpm --filter @textscene/core build",
     "type-check": "tsc --noEmit",
     "package": "npx @vscode/vsce package --no-dependencies",
@@ -83,6 +83,7 @@
     "@types/vscode": "^1.85.0",
     "@vscode/vsce": "^3.2.1",
     "esbuild": "catalog:",
+    "happy-dom": "catalog:",
     "rimraf": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
