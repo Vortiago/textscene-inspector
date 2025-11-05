@@ -3,6 +3,7 @@
  */
 
 import type { Color, StandardMaterial3DProperties } from './types';
+import { ResourceRegistry } from '../../ResourceRegistry';
 import { warn } from '../../../logger';
 
 /**
@@ -26,8 +27,12 @@ export function parseColor(value: string): Color {
 
 /**
  * Parse StandardMaterial3D properties from TSCN sub_resource data.
+ * Now async to support loading external textures via ResourceRegistry.
  */
-export function parseStandardMaterial3D(properties: Record<string, string>): StandardMaterial3DProperties {
+export async function parseStandardMaterial3D(
+  properties: Record<string, string>,
+  registry?: ResourceRegistry
+): Promise<StandardMaterial3DProperties> {
   const result: StandardMaterial3DProperties = {};
 
   if (properties.albedo_color) {
@@ -58,6 +63,75 @@ export function parseStandardMaterial3D(properties: Record<string, string>): Sta
     const transparency = parseFloat(properties.transparency);
     if (!isNaN(transparency)) {
       result.transparency = transparency;
+    }
+  }
+
+  // Load external texture references if registry provided
+  if (registry) {
+    // Albedo texture
+    if (properties.albedo_texture) {
+      const albedoTexRef = ResourceRegistry.parseReference(properties.albedo_texture);
+      if (albedoTexRef) {
+        const texture = await registry.loadTexture(albedoTexRef);
+        if (texture) {
+          result.albedo_texture = texture;
+        }
+      }
+    }
+
+    // Normal texture
+    if (properties.normal_texture) {
+      const normalTexRef = ResourceRegistry.parseReference(properties.normal_texture);
+      if (normalTexRef) {
+        const texture = await registry.loadTexture(normalTexRef);
+        if (texture) {
+          result.normal_texture = texture;
+        }
+      }
+    }
+
+    // Metallic texture
+    if (properties.metallic_texture) {
+      const metallicTexRef = ResourceRegistry.parseReference(properties.metallic_texture);
+      if (metallicTexRef) {
+        const texture = await registry.loadTexture(metallicTexRef);
+        if (texture) {
+          result.metallic_texture = texture;
+        }
+      }
+    }
+
+    // Roughness texture
+    if (properties.roughness_texture) {
+      const roughnessTexRef = ResourceRegistry.parseReference(properties.roughness_texture);
+      if (roughnessTexRef) {
+        const texture = await registry.loadTexture(roughnessTexRef);
+        if (texture) {
+          result.roughness_texture = texture;
+        }
+      }
+    }
+
+    // AO texture
+    if (properties.ao_texture) {
+      const aoTexRef = ResourceRegistry.parseReference(properties.ao_texture);
+      if (aoTexRef) {
+        const texture = await registry.loadTexture(aoTexRef);
+        if (texture) {
+          result.ao_texture = texture;
+        }
+      }
+    }
+
+    // Emission texture
+    if (properties.emission_texture) {
+      const emissionTexRef = ResourceRegistry.parseReference(properties.emission_texture);
+      if (emissionTexRef) {
+        const texture = await registry.loadTexture(emissionTexRef);
+        if (texture) {
+          result.emission_texture = texture;
+        }
+      }
     }
   }
 

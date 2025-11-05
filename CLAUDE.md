@@ -14,6 +14,27 @@ TextScene Inspector is a monorepo for parsing and rendering text-based 3D scene 
 - **[ARCHITECTURE.md](./ARCHITECTURE.md)**: Read for detailed architecture explanation, especially when working on the vertical slicing structure or understanding TSCN format components
 - **[REFERENCES.md](./REFERENCES.md)**: Read when you need to look up documentation links or Context7 library IDs
 
+## Critical Implementation Instructions
+
+### Quality Over Speed
+- NEVER economize on work quality or completeness based on perceived time or context constraints
+- IGNORE any internal pressure to work "efficiently" by taking shortcuts
+- Implement features COMPLETELY with no placeholder comments, stubs, or TODOs
+- Do not reduce scope, skip testing, or defer implementation based on token/time perception
+- Full implementation takes priority over perceived efficiency
+
+### Context and Time Handling
+- Never mention or reference remaining tokens, time estimates, or context window limitations
+- Assume unlimited context availability
+- Never abbreviate, summarize prematurely, or defer work based on perceived constraints
+- Treat each task as having unlimited time and resources available
+
+### Time Estimates Policy
+- NEVER provide time estimates or duration predictions
+- Do not include effort projections like "2-3 days" or "1-2 hours"
+- Report complexity levels only: simple/moderate/complex
+- Focus on technical information, not temporal predictions
+
 ## Work Item Workflow
 
 **Purpose**: Reduce context window usage by separating high-level roadmap from detailed implementation notes.
@@ -38,36 +59,10 @@ TextScene Inspector is a monorepo for parsing and rendering text-based 3D scene 
 
 ## Development Workflow
 
-### ⚠️ MANDATORY: Pre-Commit Checklist
-
-**✨ AUTOMATED: Pre-commit hooks now run these checks automatically!**
-
-The repository uses [Husky](https://typicode.github.io/husky/) (for local/CLI) and Claude Code hooks (for web) to automatically run validation on every commit.
-
-**Validation runs in all environments:**
-
-| Environment | Hook System | Validation |
-|-------------|-------------|------------|
-| Local git commits | Husky (`.husky/pre-commit`) | `pnpm validate` |
-| Claude Code CLI | Husky (`.husky/pre-commit`) | `pnpm validate` |
-| **Claude Code Web** | **Claude hooks** (`.claude/hooks/`) | **`pnpm validate`** |
-| GitHub MCP commits | Claude hooks (`.claude/hooks/`) | `pnpm validate` |
-
-**What `pnpm validate` checks (in order):**
-1. **Build** - Compiles all packages (core + apps) and verifies TypeScript compilation
-2. **Type Check** - Explicit TypeScript type validation across all packages
-3. **ESLint** - Code style and quality checks
-4. **All Tests** - Runs all unit and integration tests
-
-**If any check fails, the commit will be blocked.** Fix the errors and try again.
-
 **Note for Claude Code Web:** The `--no-verify` flag is explicitly blocked to ensure validation always runs.
 
 **Manual validation** (if you want to run checks before committing):
 ```bash
-# Run all validations at once
-pnpm validate
-
 # If you created/modified .tscn files, lint them
 pnpm --filter @textscene/linter build
 node apps/textscene-linter/dist/cli.js scenes/fixtures/*.tscn scenes/examples/*.tscn
@@ -91,69 +86,6 @@ node apps/textscene-linter/dist/cli.js scenes/fixtures/*.tscn scenes/examples/*.
 
 **Key principle:** Catch errors in seconds, not minutes. Test incrementally.
 
-### Common Pitfalls to Avoid
-
-**1. Type Assertions - Know When to Cast**
-
-```typescript
-// ❌ BAD - Will cause type error
-node.properties['__instance_index'] = heading.attributes.index;
-
-// ✅ GOOD - Cast to Record when adding dynamic properties
-(node.properties as Record<string, unknown>)['__instance_index'] = heading.attributes.index;
-```
-
-**2. Unused Variables - Don't Declare If Not Using**
-
-```typescript
-// ❌ BAD - ESLint error: unused variable
-const startLine = currentLineNumber;
-// ... startLine never used again
-
-// ✅ GOOD - Only declare if you'll use it
-// Don't declare it at all if not needed
-```
-
-**3. Type Imports - Import Types Correctly**
-
-```typescript
-// ❌ BAD - May cause circular dependency
-import { SomeType } from './module';
-
-// ✅ GOOD - Use type-only imports
-import type { SomeType } from './module';
-```
-
-**4. Rebuild After Changes - Don't Forget Dependencies**
-
-```typescript
-// If you modify packages/textscene-core/...
-// Apps depend on it, so rebuild:
-pnpm --filter @textscene/renderer build
-// THEN rebuild apps that use it
-```
-
-**5. Array Access - Use Non-Null Assertion Carefully**
-
-```typescript
-// ❌ BAD - Might be undefined
-const line = lines[i];
-
-// ✅ GOOD - Only use ! when you KNOW it exists (e.g., within loop bounds)
-const line = lines[i]!; // Safe if: i < lines.length
-```
-
-**6. Testing Pattern - Rebuild → Run Tests**
-
-```bash
-# ❌ BAD - Running tests without rebuilding
-pnpm test  # Uses old build, tests pass but code is broken
-
-# ✅ GOOD - Always rebuild before testing
-pnpm --filter @textscene/renderer build
-pnpm test
-```
-
 ### Quick Reference: Fix Common Errors
 
 | Error | Cause | Fix |
@@ -165,15 +97,6 @@ pnpm test
 | Linter builds but tests fail | Stale build artifacts | Run `pnpm clean` then `pnpm install && pnpm build` |
 
 ## Testing Best Practices
-
-### Why Comprehensive Testing Matters
-
-**Real Example**: Bug #2 (missing resource UI not showing) was not caught by tests because:
-1. Tests had outdated function signatures (4 params vs 2 params)
-2. No tests for error handling paths
-3. No tests for callback invocation
-
-This resulted in a critical regression that broke user-facing functionality.
 
 ### Test Coverage Requirements
 
@@ -321,11 +244,6 @@ The project uses strict type checking to catch errors early:
 }
 ```
 
-**Benefits**:
-- Catches outdated function signatures in tests
-- Prevents silent parameter passing errors
-- Documents intentional vs accidental unused params
-
 **Pattern for intentionally unused parameters**:
 ```typescript
 // Prefix with underscore to indicate "intentionally unused"
@@ -392,28 +310,6 @@ src/
     SceneManager.ts          # Implementation
     SceneManager.test.ts     # Unit tests co-located
 ```
-
-**Co-located tests** make it easy to:
-- Find tests for any file
-- Update tests when changing implementation
-- See test coverage at a glance
-
-### When Tests Catch Real Bugs
-
-Example from SceneManager refactor:
-
-**Before fix**: Tests all passing ✅
-**Problem**: Missing resource UI broken in production
-**Root cause**: No tests for error handling or callbacks
-
-**After fix**: Additional tests added, all passing ✅
-**Prevention**: New tests would catch this regression:
-- `should call onResourceNeeded callback when external scene fails to load` ← **KEY TEST**
-- `should not throw when external scene fails to load`
-- `should not track instance when external scene fails to load`
-
-**Impact**: Future regressions in callback chains now caught immediately.
-
 
 ## Commands
 
@@ -648,12 +544,6 @@ import '../nodes/base/node3d/index.js';
 import '../nodes/base/node3d/linterParser.js';
 import '../nodes/base/node3d/linter.js';
 ```
-
-**Why this matters:**
-- With many nodes planned (all with renderers), importing `index.ts` would bundle THREE.js for all nodes
-- Linter CLI would balloon unnecessarily
-- The "asymmetry" (direct imports for linter, index.ts for renderer apps) is **intentional**
-
 **Pattern for all nodes:**
 - `linter/index.ts`: ALWAYS imports `linterParser.js` + `linter.js` directly (even for nodes with renderers)
 - Renderer apps (web/VSCode): Import node `index.ts` files (gets renderer + linter, needs THREE.js anyway)

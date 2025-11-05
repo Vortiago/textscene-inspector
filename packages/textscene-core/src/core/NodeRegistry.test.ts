@@ -363,7 +363,7 @@ describe('NodeRegistry', () => {
   });
 
   describe('renderNodeWithRegistry', () => {
-    it('should render node using registered renderer', () => {
+    it('should render node using registered renderer', async () => {
       nodeRegistry.register(testRegistration);
 
       const node = {
@@ -373,14 +373,14 @@ describe('NodeRegistry', () => {
         properties: { testProp: 'myValue' }
       };
 
-      const object = renderNodeWithRegistry(node);
+      const object = await renderNodeWithRegistry(node);
 
       expect(object).toBeDefined();
       expect(object?.name).toBe('MyNode');
       expect(object?.userData.testProp).toBe('myValue');
     });
 
-    it('should warn for unsupported node type', () => {
+    it('should warn for unsupported node type', async () => {
       const node = {
         name: 'MyNode',
         type: 'UnsupportedType',
@@ -388,7 +388,7 @@ describe('NodeRegistry', () => {
         properties: {}
       };
 
-      const object = renderNodeWithRegistry(node);
+      const object = await renderNodeWithRegistry(node);
 
       expect(object).toBeNull();
       expect(logger.warn).toHaveBeenCalledWith(
@@ -441,7 +441,7 @@ describe('NodeRegistry', () => {
   });
 
   describe('Integration', () => {
-    it('should parse and render a node end-to-end', () => {
+    it('should parse and render a node end-to-end', async () => {
       nodeRegistry.register(testRegistration);
 
       // Parse
@@ -455,13 +455,13 @@ describe('NodeRegistry', () => {
       expect(node).toBeDefined();
 
       // Render
-      const object = renderNodeWithRegistry(node!);
+      const object = await renderNodeWithRegistry(node!);
       expect(object).toBeDefined();
       expect(object?.name).toBe('MyNode');
       expect(object?.userData.testProp).toBe('myValue');
     });
 
-    it('should handle multiple node types correctly', () => {
+    it('should handle multiple node types correctly', async () => {
       nodeRegistry.register(testRegistration);
       nodeRegistry.register(node3dRegistration);
 
@@ -482,8 +482,8 @@ describe('NodeRegistry', () => {
       expect(node3dNode?.type).toBe('Node3D');
 
       // Render both
-      const testObject = renderNodeWithRegistry(testNode!);
-      const node3dObject = renderNodeWithRegistry(node3dNode!);
+      const testObject = await renderNodeWithRegistry(testNode!);
+      const node3dObject = await renderNodeWithRegistry(node3dNode!);
 
       expect(testObject?.name).toBe('TestNode1');
       expect(node3dObject?.name).toBe('Node3D1');

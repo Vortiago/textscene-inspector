@@ -6,11 +6,13 @@
 import * as THREE from 'three';
 import type { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import type { TscnScene, MissingResource, ResourceNeededCallback } from '../parser/types';
+import type { ResourceProvider } from '../resources/ResourceProvider';
 import { setupThreeJsScene } from './SceneSetup';
 import { NodeTracker } from './NodeTracker';
 import { HelperManager } from './HelperManager';
 import { SelectionManager } from './SelectionManager';
 import { ResourceRecoveryManager } from './ResourceRecoveryManager';
+import { ResourceRegistry } from '../resources/ResourceRegistry';
 import { SceneManager } from './SceneManager';
 import { NodeLifecycleManager } from './NodeLifecycleManager';
 import { TscnParser } from '../parser/TscnParser';
@@ -23,6 +25,7 @@ export interface CameraState {
 
 export interface TscnRendererOptions {
   onResourceNeeded?: ResourceNeededCallback;
+  resourceProvider?: ResourceProvider;
 }
 
 /**
@@ -40,6 +43,7 @@ export class TscnRenderer {
   private helperManager: HelperManager;
   private selectionManager: SelectionManager;
   private resourceRecovery: ResourceRecoveryManager;
+  private resourceRegistry: ResourceRegistry;
   private sceneManager: SceneManager;
   private nodeLifecycle: NodeLifecycleManager;
 
@@ -82,6 +86,15 @@ export class TscnRenderer {
       () => this.currentSceneData
     );
 
+    // Initialize ResourceRegistry for external resource loading (textures, etc.)
+    this.resourceRegistry = new ResourceRegistry();
+    if (options.resourceProvider) {
+      this.resourceRegistry.setProvider(options.resourceProvider);
+    }
+    if (options.onResourceNeeded) {
+      this.resourceRegistry.setOnResourceNeeded(options.onResourceNeeded);
+    }
+
     // Wrap user's onResourceNeeded callback to also track missing resources
     if (options.onResourceNeeded) {
       const userCallback = options.onResourceNeeded;
@@ -102,6 +115,14 @@ export class TscnRenderer {
     if (this.renderInProgress) {
       logger.info('Waiting for previous render to complete');
       await this.renderInProgress;
+    }
+
+    // Attach ResourceRegistry to scene for external resource loading
+    sceneData.resourceRegistry = this.resourceRegistry;
+
+    // Register external resources with the ResourceRegistry
+    for (const extRes of sceneData.externalResources) {
+      this.resourceRegistry.register(extRes);
     }
 
     this.renderInProgress = this.performRender(sceneData);

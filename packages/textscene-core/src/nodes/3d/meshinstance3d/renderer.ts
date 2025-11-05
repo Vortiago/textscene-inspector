@@ -10,17 +10,18 @@ import { warn } from '../../../logger';
 
 /**
  * Create a three.js mesh for a MeshInstance3D node.
+ * Now async to support async material resolution (texture loading).
  */
-export function createMeshInstance3D(
+export async function createMeshInstance3D(
   nodeName: string,
   properties: MeshInstance3DProperties,
   scene?: TscnScene
-): THREE.Mesh {
+): Promise<THREE.Mesh> {
   let geometry: THREE.BufferGeometry;
   let material: THREE.Material;
 
   if (scene && properties.mesh) {
-    const resolvedGeometry = resolveGeometry(properties.mesh, scene);
+    const resolvedGeometry = await resolveGeometry(properties.mesh, scene);
     if (resolvedGeometry) {
       geometry = resolvedGeometry;
 
@@ -34,7 +35,7 @@ export function createMeshInstance3D(
       }
 
       if (materialOverride) {
-        const resolvedMaterial = resolveMaterial(materialOverride, scene);
+        const resolvedMaterial = await resolveMaterial(materialOverride, scene);
         if (resolvedMaterial) {
           material = resolvedMaterial;
         } else {

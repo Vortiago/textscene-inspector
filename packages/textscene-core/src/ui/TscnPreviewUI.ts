@@ -49,6 +49,7 @@ export class TscnPreviewUI {
     this.parser = new TscnParser();
     this.renderer = new TscnRenderer(elements.canvas, {
       onResourceNeeded: options.onResourceNeeded,
+      resourceProvider: options.resourceProvider,
     });
 
     this.setupResizeHandler();
@@ -172,11 +173,6 @@ export class TscnPreviewUI {
 
       const scene = this.parser.parse(content);
       this._currentScene = scene;
-
-      // Set resource provider if available
-      if (this.options.resourceProvider && scene.resourceRegistry) {
-        scene.resourceRegistry.setProvider(this.options.resourceProvider);
-      }
 
       await this.renderer.render(scene);
       this.updateSceneInfo(scene);

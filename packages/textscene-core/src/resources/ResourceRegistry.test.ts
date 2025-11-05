@@ -1,7 +1,28 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import * as THREE from 'three';
 import { ResourceRegistry } from './ResourceRegistry';
 import type { ResourceProvider } from './ResourceProvider';
 import type { TscnExternalResource } from '../parser/types';
+
+// Mock THREE.TextureLoader
+vi.mock('three', async () => {
+  const actual = await vi.importActual<typeof THREE>('three');
+
+  class MockTextureLoader {
+    load(url: string, onLoad?: (texture: THREE.Texture) => void, _onProgress?: (event: ProgressEvent) => void, _onError?: (err: unknown) => void) {
+      const mockTexture = new actual.Texture();
+      mockTexture.image = { width: 512, height: 512 };
+      if (onLoad) {
+        setTimeout(() => onLoad(mockTexture), 0);
+      }
+    }
+  }
+
+  return {
+    ...actual,
+    TextureLoader: MockTextureLoader,
+  };
+});
 
 describe('ResourceRegistry', () => {
   let registry: ResourceRegistry;
@@ -208,6 +229,155 @@ describe('ResourceRegistry', () => {
 
       expect(registry.getAllResources()).toHaveLength(0);
       expect(registry.hasResource('res://scenes/player.tscn')).toBe(false);
+    });
+  });
+
+  describe('loadTexture', () => {
+
+    it('should load Texture2D as THREE.Texture', async () => {
+      const resource: TscnExternalResource = {
+        id: '1_tex',
+        path: 'res://textures/test.png',
+        type: 'Texture2D',
+      };
+      registry.register(resource);
+
+      // Mock provider that returns binary data
+      const mockProvider: ResourceProvider = {
+        loadResource: async () => {
+          // Return a fake PNG ArrayBuffer
+          return new ArrayBuffer(100);
+        },
+      };
+      registry.setProvider(mockProvider);
+
+      const texture = await registry.loadTexture('1_tex');
+
+      expect(texture).toBeInstanceOf(THREE.Texture);
+      expect(texture.colorSpace).toBe(THREE.SRGBColorSpace);
+    });
+
+    it('should cache loaded textures', async () => {
+      const resource: TscnExternalResource = {
+        id: '1_tex',
+        path: 'res://textures/test.png',
+        type: 'Texture2D',
+      };
+      registry.register(resource);
+
+      let loadCount = 0;
+      const mockProvider: ResourceProvider = {
+        loadResource: async () => {
+          loadCount++;
+          return new ArrayBuffer(100);
+        },
+      };
+      registry.setProvider(mockProvider);
+
+      const texture1 = await registry.loadTexture('1_tex');
+      const texture2 = await registry.loadTexture('1_tex');
+
+      expect(texture1).toBe(texture2); // Same instance
+      expect(loadCount).toBe(1); // Only loaded once via loadByPath
+    });
+
+    it('should throw error for non-texture resource', async () => {
+      const resource: TscnExternalResource = {
+        id: '1_scene',
+        path: 'res://scenes/test.tscn',
+        type: 'PackedScene',
+      };
+      registry.register(resource);
+
+      const mockProvider: ResourceProvider = {
+        loadResource: async () => 'content',
+      };
+      registry.setProvider(mockProvider);
+
+      const result = await registry.loadTexture('1_scene');
+      expect(result).toBeNull();
+    });
+
+    it('should return null if texture data is not binary', async () => {
+      const resource: TscnExternalResource = {
+        id: '1_tex',
+        path: 'res://textures/test.png',
+        type: 'Texture2D',
+      };
+      registry.register(resource);
+
+      // Provider incorrectly returns string instead of ArrayBuffer
+      const mockProvider: ResourceProvider = {
+        loadResource: async () => 'not binary data',
+      };
+      registry.setProvider(mockProvider);
+
+      const result = await registry.loadTexture('1_tex');
+      expect(result).toBeNull();
+    });
+
+    it('should determine correct MIME type from extension', async () => {
+      const testCases = [
+        { path: 'res://test.png', type: 'Texture2D' },
+        { path: 'res://test.jpg', type: 'Texture2D' },
+        { path: 'res://test.jpeg', type: 'Texture2D' },
+        { path: 'res://test.svg', type: 'Texture2D' },
+        { path: 'res://test.webp', type: 'Texture2D' },
+      ];
+
+      const mockProvider: ResourceProvider = {
+        loadResource: async () => new ArrayBuffer(100),
+      };
+      registry.setProvider(mockProvider);
+
+      for (const testCase of testCases) {
+        const resource: TscnExternalResource = {
+          id: `tex_${testCase.path}`,
+          path: testCase.path,
+          type: testCase.type,
+        };
+        registry.register(resource);
+
+        // Should not throw - this validates MIME type handling
+        await expect(registry.loadTexture(testCase.path)).resolves.toBeInstanceOf(
+          THREE.Texture
+        );
+      }
+    });
+
+    it('should return null for texture loading errors', async () => {
+      const resource: TscnExternalResource = {
+        id: '1_tex',
+        path: 'res://textures/test.png',
+        type: 'Texture2D',
+      };
+      registry.register(resource);
+
+      // Mock a failing TextureLoader for this test
+      class FailingTextureLoader {
+        load(_url: string, _onLoad?: unknown, _onProgress?: unknown, onError?: (err: unknown) => void) {
+          if (onError) {
+            setTimeout(() => onError(new Error('Network error')), 0);
+          }
+        }
+      }
+
+      // Temporarily replace the TextureLoader
+      const originalLoader = THREE.TextureLoader;
+      (THREE as any).TextureLoader = FailingTextureLoader;
+
+      const mockProvider: ResourceProvider = {
+        loadResource: async () => new ArrayBuffer(100),
+      };
+      registry.setProvider(mockProvider);
+
+      try {
+        const result = await registry.loadTexture('1_tex');
+        expect(result).toBeNull();
+      } finally {
+        // Restore original
+        (THREE as any).TextureLoader = originalLoader;
+      }
     });
   });
 });

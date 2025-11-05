@@ -96,6 +96,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - External Resources"
   },
   {
+    "name": "External Missing",
+    "file": "unit-external-missing.tscn",
+    "category": "Unit - External Resources"
+  },
+  {
     "name": "External Sphere",
     "file": "unit-external-sphere.tscn",
     "category": "Unit - External Resources"
@@ -103,11 +108,6 @@ export const fixtures: Fixture[] = [
   {
     "name": "External Texture",
     "file": "unit-external-texture.tscn",
-    "category": "Unit - External Resources"
-  },
-  {
-    "name": "Missing External Scene",
-    "file": "unit-external-missing.tscn",
     "category": "Unit - External Resources"
   },
   {
@@ -119,6 +119,21 @@ export const fixtures: Fixture[] = [
     "name": "Material Metallic",
     "file": "unit-material-metallic.tscn",
     "category": "Unit - Materials"
+  },
+  {
+    "name": "Material Textured",
+    "file": "unit-material-textured.tscn",
+    "category": "Unit - Materials"
+  },
+  {
+    "name": "Child_cube",
+    "file": "child_cube.tscn",
+    "category": "Examples - Complex Scenes"
+  },
+  {
+    "name": "Child_sphere",
+    "file": "child_sphere.tscn",
+    "category": "Examples - Complex Scenes"
   },
   {
     "name": "Hallway",

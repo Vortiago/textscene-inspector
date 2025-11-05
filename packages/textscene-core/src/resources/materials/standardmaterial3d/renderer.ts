@@ -34,5 +34,30 @@ export function createStandardMaterial(properties: StandardMaterial3DProperties)
     materialOptions.roughness = properties.roughness;
   }
 
+  // Map texture properties
+  if (properties.albedo_texture) {
+    materialOptions.map = properties.albedo_texture;
+  }
+
+  if (properties.normal_texture) {
+    materialOptions.normalMap = properties.normal_texture;
+  }
+
+  if (properties.metallic_texture) {
+    materialOptions.metalnessMap = properties.metallic_texture;
+  }
+
+  if (properties.roughness_texture) {
+    materialOptions.roughnessMap = properties.roughness_texture;
+  }
+
+  if (properties.ao_texture) {
+    materialOptions.aoMap = properties.ao_texture;
+  }
+
+  if (properties.emission_texture) {
+    materialOptions.emissiveMap = properties.emission_texture;
+  }
+
   return new THREE.MeshStandardMaterial(materialOptions);
 }

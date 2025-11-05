@@ -31,9 +31,9 @@ export interface NodeTypeRegistration {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Generic registry supports any node property type
   parser: (heading: ParsedHeading, properties: Record<string, string>) => any;
 
-  /** Create THREE.js object from parsed properties */
+  /** Create THREE.js object from parsed properties (may be async for texture/resource loading) */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Generic registry accepts any parsed properties
-  renderer: (name: string, properties: any, scene?: TscnScene) => THREE.Object3D;
+  renderer: (name: string, properties: any, scene?: TscnScene) => THREE.Object3D | Promise<THREE.Object3D>;
 
   /** Optional property formatter for custom details panel display */
   propertyFormatter?: PropertyFormatter;
@@ -137,10 +137,10 @@ export function parseNodeWithRegistry(
   return node;
 }
 
-export function renderNodeWithRegistry(
+export async function renderNodeWithRegistry(
   node: TscnNode,
   scene?: TscnScene
-): THREE.Object3D | null {
+): Promise<THREE.Object3D | null> {
   const registration = nodeRegistry.getRegistration(node.type);
 
   if (!registration) {
@@ -148,5 +148,6 @@ export function renderNodeWithRegistry(
     return null;
   }
 
-  return registration.renderer(node.name, node.properties, scene);
+  // Renderer may be async (e.g., MeshInstance3D loading materials/textures)
+  return await registration.renderer(node.name, node.properties, scene);
 }

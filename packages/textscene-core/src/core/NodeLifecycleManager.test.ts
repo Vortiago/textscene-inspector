@@ -7,7 +7,7 @@ import type { SceneManager } from './SceneManager';
 
 // Mock NodeRegistry
 vi.mock('./NodeRegistry', () => ({
-  renderNodeWithRegistry: vi.fn((node: TscnNode) => {
+  renderNodeWithRegistry: vi.fn(async (node: TscnNode) => {
     // Return a THREE.Group for all node types
     const object = new THREE.Group();
     object.name = node.name;
