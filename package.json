@@ -19,11 +19,12 @@
     "lint:tscn": "node apps/textscene-linter/bin/tscn-lint.js",
     "type-check": "pnpm -r type-check",
     "type-check:all": "pnpm --filter @textscene/core build && pnpm -r type-check",
-    "validate": "pnpm lint && pnpm type-check:all && pnpm test:unit",
+    "validate": "pnpm build && pnpm type-check && pnpm lint && pnpm test:unit",
     "generate:fixtures": "node scripts/generate-fixtures.js",
     "clean": "pnpm -r clean && rimraf node_modules",
     "vsc:package": "pnpm --filter textscene-inspector package",
-    "vsc:publish": "pnpm --filter textscene-inspector publish"
+    "vsc:publish": "pnpm --filter textscene-inspector publish",
+    "prepare": "husky"
   },
   "keywords": [
     "tscn",
@@ -47,6 +48,8 @@
     "eslint": "^9.18.0",
     "globals": "^16.4.0",
     "happy-dom": "^20.0.8",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.6",
     "rimraf": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
@@ -55,5 +58,15 @@
   "engines": {
     "node": ">=20.0.0",
     "pnpm": ">=9.0.0"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx}": [
+      "eslint --fix",
+      "vitest related --run"
+    ],
+    "*.tscn": [
+      "pnpm build:linter",
+      "node apps/textscene-linter/dist/cli.js"
+    ]
   }
 }

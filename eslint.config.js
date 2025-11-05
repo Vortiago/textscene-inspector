@@ -15,6 +15,7 @@ export default [
       '**/dist/',
       '**/build/',
       '**/.vscode-test/',
+      '**/.claude/',
     ],
   },
 
@@ -128,7 +129,7 @@ export default [
 
   // Test files
   {
-    files: ['**/*.test.ts', '**/*.spec.ts'],
+    files: ['**/*.test.ts', '**/*.spec.ts', '**/test-setup.ts'],
     languageOptions: {
       parser: tsparser,
       parserOptions: {
@@ -153,7 +154,7 @@ export default [
         },
       ],
       '@typescript-eslint/explicit-function-return-type': 'off',
-      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-explicit-any': 'off', // Allow 'any' in test files for mocking
     },
   },
 ];

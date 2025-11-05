@@ -19,8 +19,8 @@ TextScene Inspector is a monorepo for parsing and rendering text-based 3D scene 
 **Purpose**: Reduce context window usage by separating high-level roadmap from detailed implementation notes.
 
 **Structure**:
-- `TODO.md` - Compact roadmap (~130 lines) with work item summaries and links
-- `work_items/WI{number}.md` - Detailed files with implementation specifics (~500-800 lines each)
+- `TODO.md` - Compact roadmap with work item summaries and links
+- `work_items/WI{number}.md` - Detailed files with implementation specifics
 
 **When working on a work item**:
 1. User specifies which WI to work on (e.g., "work on WI-50")
@@ -40,27 +40,38 @@ TextScene Inspector is a monorepo for parsing and rendering text-based 3D scene 
 
 ### ⚠️ MANDATORY: Pre-Commit Checklist
 
-**NEVER commit without running all these checks first:**
+**✨ AUTOMATED: Pre-commit hooks now run these checks automatically!**
 
+The repository uses [Husky](https://typicode.github.io/husky/) (for local/CLI) and Claude Code hooks (for web) to automatically run validation on every commit.
+
+**Validation runs in all environments:**
+
+| Environment | Hook System | Validation |
+|-------------|-------------|------------|
+| Local git commits | Husky (`.husky/pre-commit`) | `pnpm validate` |
+| Claude Code CLI | Husky (`.husky/pre-commit`) | `pnpm validate` |
+| **Claude Code Web** | **Claude hooks** (`.claude/hooks/`) | **`pnpm validate`** |
+| GitHub MCP commits | Claude hooks (`.claude/hooks/`) | `pnpm validate` |
+
+**What `pnpm validate` checks (in order):**
+1. **Build** - Compiles all packages (core + apps) and verifies TypeScript compilation
+2. **Type Check** - Explicit TypeScript type validation across all packages
+3. **ESLint** - Code style and quality checks
+4. **All Tests** - Runs all unit and integration tests
+
+**If any check fails, the commit will be blocked.** Fix the errors and try again.
+
+**Note for Claude Code Web:** The `--no-verify` flag is explicitly blocked to ensure validation always runs.
+
+**Manual validation** (if you want to run checks before committing):
 ```bash
-# 1. Build everything
-pnpm build
+# Run all validations at once
+pnpm validate
 
-# 2. Type check (catches type errors)
-pnpm type-check
-
-# 3. Lint (catches code style issues)
-pnpm lint
-
-# 4. Run tests (catches logic errors)
-pnpm test
-
-# 5. If you created/modified .tscn files, lint them
+# If you created/modified .tscn files, lint them
 pnpm --filter @textscene/linter build
 node apps/textscene-linter/dist/cli.js scenes/fixtures/*.tscn scenes/examples/*.tscn
 ```
-
-**If ANY check fails, fix it before committing.** Do not commit code with errors.
 
 ### Development Cycle (Test as You Go)
 
@@ -323,12 +334,7 @@ uploadedFiles.forEach((_file, path) => {
 });
 ```
 
-### Test Metrics
-
-Current coverage (as of last audit):
-- **Total tests**: 2,319
-- **Test files**: 67
-- **All passing**: ✅
+### Test Coverage Targets
 
 **Target**: Every public method should have at least 3 tests:
 1. Happy path test
@@ -396,11 +402,11 @@ src/
 
 Example from SceneManager refactor:
 
-**Before fix**: 15 tests, all passing ✅
+**Before fix**: Tests all passing ✅
 **Problem**: Missing resource UI broken in production
 **Root cause**: No tests for error handling or callbacks
 
-**After fix**: 21 tests (+6), all passing ✅
+**After fix**: Additional tests added, all passing ✅
 **Prevention**: New tests would catch this regression:
 - `should call onResourceNeeded callback when external scene fails to load` ← **KEY TEST**
 - `should not throw when external scene fails to load`
@@ -509,7 +515,7 @@ When implementing new features (node types, mesh types, materials, etc.):
 - ❌ Don't create redundant parameter combinations
 - ❌ Don't create fixtures for unimplemented features
 
-**Integration examples:** When multiple features work together, create integration scenes in `scenes/examples/` (e.g., `integration-all-meshes.tscn` shows all 7 mesh types together).
+**Integration examples:** When multiple features work together, create integration scenes in `scenes/examples/` (e.g., `integration-all-meshes.tscn` shows all implemented mesh types together).
 
 ## Architecture
 
@@ -635,17 +641,17 @@ diagnostics.forEach(d => {
 The linter uses **direct imports** instead of node `index.ts` files to prevent bundling THREE.js:
 
 ```typescript
-// ❌ WRONG - pulls in renderer + THREE.js (898KB bundle)
+// ❌ WRONG - pulls in renderer + THREE.js (significantly larger bundle)
 import '../nodes/base/node3d/index.js';
 
-// ✅ CORRECT - only linter code (~396KB bundle)
+// ✅ CORRECT - only linter code (minimal bundle)
 import '../nodes/base/node3d/linterParser.js';
 import '../nodes/base/node3d/linter.js';
 ```
 
 **Why this matters:**
-- With 150-200 nodes planned (all with renderers), importing `index.ts` would bundle THREE.js for all nodes
-- Linter CLI would balloon from ~400KB to 5-10MB+ unnecessarily
+- With many nodes planned (all with renderers), importing `index.ts` would bundle THREE.js for all nodes
+- Linter CLI would balloon unnecessarily
 - The "asymmetry" (direct imports for linter, index.ts for renderer apps) is **intentional**
 
 **Pattern for all nodes:**
