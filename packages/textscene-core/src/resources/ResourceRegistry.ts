@@ -15,6 +15,7 @@ export class ResourceRegistry {
   private loadingStack: Set<string> = new Set();
   private provider: ResourceProvider | null = null;
   private textureCache: Map<string, THREE.Texture> = new Map();
+  private materialCache: Map<string, THREE.Material> = new Map();
   private onResourceNeeded: ResourceNeededCallback | null = null;
 
   /**
@@ -208,6 +209,102 @@ export class ResourceRegistry {
   }
 
   /**
+   * Load material resource and return THREE.js Material.
+   * Returns cached material if already loaded.
+   * Returns null if material cannot be loaded (and calls onResourceNeeded if set).
+   */
+  async loadMaterial(idOrPath: string): Promise<THREE.Material | null> {
+    // Check material cache first
+    if (this.materialCache.has(idOrPath)) {
+      logger.info(`Using cached material: ${idOrPath}`);
+      return this.materialCache.get(idOrPath)!;
+    }
+
+    // Get resource metadata
+    const resource = this.getMetadata(idOrPath);
+    if (!resource || !resource.type.includes('Material')) {
+      logger.error(`Not a material resource: ${idOrPath}`);
+      return null;
+    }
+
+    try {
+      // Load raw content via provider (returns string for .tres files)
+      const content = await this.loadByPath(resource.path);
+      if (typeof content !== 'string') {
+        throw new Error(`Material must be text content: ${resource.path}`);
+      }
+
+      // Parse .tres file
+      const { parseResourceFile } = await import('../parser/resourceParsers');
+      const { type, properties } = parseResourceFile(content);
+
+      // Parse and create material based on type
+      let material: THREE.Material;
+
+      switch (type) {
+        case 'StandardMaterial3D': {
+          const { parseStandardMaterial3D } = await import('./materials/standardmaterial3d/parser');
+          const { createStandardMaterial } = await import('./materials/standardmaterial3d/renderer');
+
+          // Convert parsed properties to string format for compatibility with existing parser
+          const stringProps: Record<string, string> = {};
+          for (const [key, value] of Object.entries(properties)) {
+            if (value && typeof value === 'object' && 'type' in value) {
+              // Handle ParsedColor and ParsedVector3
+              if (value.type === 'Color' && 'r' in value && 'g' in value && 'b' in value && 'a' in value) {
+                stringProps[key] = `Color(${value.r}, ${value.g}, ${value.b}, ${value.a})`;
+              } else if (value.type === 'Vector3' && 'x' in value && 'y' in value && 'z' in value) {
+                stringProps[key] = `Vector3(${value.x}, ${value.y}, ${value.z})`;
+              } else {
+                stringProps[key] = String(value);
+              }
+            } else {
+              stringProps[key] = String(value);
+            }
+          }
+
+          const matProps = await parseStandardMaterial3D(stringProps, this);
+          material = createStandardMaterial(matProps);
+          break;
+        }
+
+        case 'ShaderMaterial':
+          // Future: WI-16
+          throw new Error('ShaderMaterial not yet supported');
+
+        default:
+          throw new Error(`Unsupported material type: ${type}`);
+      }
+
+      // Cache the loaded material
+      this.materialCache.set(idOrPath, material);
+      logger.info(`Successfully loaded material: ${resource.path}`);
+
+      return material;
+    } catch (error) {
+      // Material failed to load - call onResourceNeeded callback
+      logger.warn(`Material not available: ${resource.path}`);
+
+      if (this.onResourceNeeded) {
+        try {
+          await this.onResourceNeeded({
+            path: resource.path,
+            type: resource.type,
+            referencedBy: `Node using material ${idOrPath}`,
+            error: error instanceof Error ? error.message : String(error)
+          });
+        } catch (callbackError) {
+          // Log but don't propagate callback errors
+          logger.warn(`onResourceNeeded callback failed:`, callbackError);
+        }
+      }
+
+      // Return null to allow rendering to continue without the material
+      return null;
+    }
+  }
+
+  /**
    * Get MIME type from file extension.
    */
   private getMimeType(path: string): string {
@@ -263,6 +360,7 @@ export class ResourceRegistry {
     this.loadingPromises.clear();
     this.loadingStack.clear();
     this.textureCache.clear();
+    this.materialCache.clear();
     logger.info('ResourceRegistry cleared');
   }
 }

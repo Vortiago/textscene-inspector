@@ -380,4 +380,205 @@ describe('ResourceRegistry', () => {
       }
     });
   });
+
+  describe('loadMaterial', () => {
+    it('should load StandardMaterial3D from .tres file', async () => {
+      const resource: TscnExternalResource = {
+        id: '1_mat',
+        path: 'res://materials/test.tres',
+        type: 'StandardMaterial3D',
+      };
+      registry.register(resource);
+
+      const mockProvider: ResourceProvider = {
+        loadResource: async () => `
+[gd_resource type="StandardMaterial3D" format=3]
+
+[resource]
+albedo_color = Color(1, 0, 0, 1)
+metallic = 0.8
+roughness = 0.3
+        `,
+      };
+      registry.setProvider(mockProvider);
+
+      const material = await registry.loadMaterial('1_mat');
+
+      expect(material).toBeInstanceOf(THREE.MeshStandardMaterial);
+      expect((material as THREE.MeshStandardMaterial).color.r).toBeCloseTo(1.0);
+      expect((material as THREE.MeshStandardMaterial).metalness).toBe(0.8);
+      expect((material as THREE.MeshStandardMaterial).roughness).toBe(0.3);
+    });
+
+    it('should cache loaded materials', async () => {
+      const resource: TscnExternalResource = {
+        id: '1_mat',
+        path: 'res://materials/test.tres',
+        type: 'StandardMaterial3D',
+      };
+      registry.register(resource);
+
+      let loadCount = 0;
+      const mockProvider: ResourceProvider = {
+        loadResource: async () => {
+          loadCount++;
+          return `
+[gd_resource type="StandardMaterial3D" format=3]
+
+[resource]
+albedo_color = Color(0.5, 0.5, 0.5, 1)
+          `;
+        },
+      };
+      registry.setProvider(mockProvider);
+
+      const mat1 = await registry.loadMaterial('1_mat');
+      const mat2 = await registry.loadMaterial('1_mat');
+
+      expect(mat1).toBe(mat2); // Same instance
+      expect(loadCount).toBe(1); // Only loaded once via loadByPath
+    });
+
+    it('should return null for non-material resource', async () => {
+      const resource: TscnExternalResource = {
+        id: '1_tex',
+        path: 'res://textures/test.png',
+        type: 'Texture2D',
+      };
+      registry.register(resource);
+
+      const mockProvider: ResourceProvider = {
+        loadResource: async () => new ArrayBuffer(100),
+      };
+      registry.setProvider(mockProvider);
+
+      const result = await registry.loadMaterial('1_tex');
+      expect(result).toBeNull();
+    });
+
+    it('should return null if material data is not text', async () => {
+      const resource: TscnExternalResource = {
+        id: '1_mat',
+        path: 'res://materials/test.tres',
+        type: 'StandardMaterial3D',
+      };
+      registry.register(resource);
+
+      // Provider incorrectly returns ArrayBuffer instead of string
+      const mockProvider: ResourceProvider = {
+        loadResource: async () => new ArrayBuffer(100),
+      };
+      registry.setProvider(mockProvider);
+
+      const result = await registry.loadMaterial('1_mat');
+      expect(result).toBeNull();
+    });
+
+    it('should handle invalid .tres file format', async () => {
+      const resource: TscnExternalResource = {
+        id: '1_mat',
+        path: 'res://materials/test.tres',
+        type: 'StandardMaterial3D',
+      };
+      registry.register(resource);
+
+      const mockProvider: ResourceProvider = {
+        loadResource: async () => 'invalid content',
+      };
+      registry.setProvider(mockProvider);
+
+      const result = await registry.loadMaterial('1_mat');
+      expect(result).toBeNull();
+    });
+
+    it('should handle material with emission properties', async () => {
+      const resource: TscnExternalResource = {
+        id: '1_mat',
+        path: 'res://materials/emissive.tres',
+        type: 'StandardMaterial3D',
+      };
+      registry.register(resource);
+
+      const mockProvider: ResourceProvider = {
+        loadResource: async () => `
+[gd_resource type="StandardMaterial3D" format=3]
+
+[resource]
+albedo_color = Color(0.2, 0.2, 0.2, 1)
+emission_enabled = true
+emission = Color(1, 0.5, 0, 1)
+emission_energy_multiplier = 2.0
+        `,
+      };
+      registry.setProvider(mockProvider);
+
+      const material = await registry.loadMaterial('1_mat');
+
+      // Material should load successfully even with unsupported emission properties
+      expect(material).toBeInstanceOf(THREE.MeshStandardMaterial);
+      const stdMat = material as THREE.MeshStandardMaterial;
+      expect(stdMat.color.r).toBeCloseTo(0.2);
+    });
+
+    it('should call onResourceNeeded callback on material load failure', async () => {
+      const resource: TscnExternalResource = {
+        id: '1_mat',
+        path: 'res://materials/missing.tres',
+        type: 'StandardMaterial3D',
+      };
+      registry.register(resource);
+
+      const mockProvider: ResourceProvider = {
+        loadResource: async () => {
+          throw new Error('File not found');
+        },
+      };
+      registry.setProvider(mockProvider);
+
+      const callbackSpy = vi.fn();
+      registry.setOnResourceNeeded(callbackSpy);
+
+      const result = await registry.loadMaterial('1_mat');
+
+      expect(result).toBeNull();
+      expect(callbackSpy).toHaveBeenCalledWith({
+        path: 'res://materials/missing.tres',
+        type: 'StandardMaterial3D',
+        referencedBy: expect.stringContaining('1_mat'),
+        error: expect.any(String)
+      });
+    });
+
+    it('should handle material loading with multiple properties', async () => {
+      const resource: TscnExternalResource = {
+        id: '1_mat',
+        path: 'res://materials/complex.tres',
+        type: 'StandardMaterial3D',
+      };
+      registry.register(resource);
+
+      const mockProvider: ResourceProvider = {
+        loadResource: async () => `
+[gd_resource type="StandardMaterial3D" format=3]
+
+[resource]
+albedo_color = Color(0.7, 0.7, 0.75, 1)
+metallic = 0.9
+roughness = 0.2
+emission_enabled = true
+emission = Color(1, 0.5, 0, 1)
+transparency = 0.5
+        `,
+      };
+      registry.setProvider(mockProvider);
+
+      const material = await registry.loadMaterial('1_mat');
+
+      expect(material).toBeInstanceOf(THREE.MeshStandardMaterial);
+      const stdMat = material as THREE.MeshStandardMaterial;
+      expect(stdMat.color.r).toBeCloseTo(0.7);
+      expect(stdMat.metalness).toBe(0.9);
+      expect(stdMat.roughness).toBe(0.2);
+    });
+  });
 });

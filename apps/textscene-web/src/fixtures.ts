@@ -111,6 +111,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - External Resources"
   },
   {
+    "name": "External Material",
+    "file": "unit-external-material.tscn",
+    "category": "Unit - External Resources"
+  },
+  {
     "name": "Material Emissive",
     "file": "unit-material-emissive.tscn",
     "category": "Unit - Materials"
@@ -188,6 +193,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Parent Child Scene",
     "file": "integration-parent-child-scene.tscn",
+    "category": "Examples - Complex Scenes"
+  },
+  {
+    "name": "Material Reuse",
+    "file": "integration-material-reuse.tscn",
     "category": "Examples - Complex Scenes"
   },
   {
