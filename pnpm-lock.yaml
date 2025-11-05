@@ -3216,7 +3216,7 @@ snapshots:
       magicast: 0.3.5
       std-env: 3.10.0
       tinyrainbow: 3.0.3
-      vitest: 4.0.3(@types/node@22.18.12)(@vitest/ui@4.0.3)(happy-dom@20.0.8)
+      vitest: 4.0.3(@types/node@22.18.12)(@vitest/ui@4.0.3)(happy-dom@20.0.8)(yaml@2.8.1)
     transitivePeerDependencies:
       - supports-color
 
