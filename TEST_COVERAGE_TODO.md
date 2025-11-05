@@ -314,16 +314,30 @@ Verify visual correctness by testing renderers and add comprehensive integration
   - Transform parsing
   - Malformed transform handling (identity fallback)
 
-#### [ ] Integration Tests (0 tests)
-**Note**: Integration test framework created but requires debugging (TSCN format parsing issues). Deferred to future sprint.
+#### [x] Integration Tests (8 tests) ✅
+**Status**: ISSUE RESOLVED - The "TSCN parsing issues" were actually **WebGL context issues** in headless test environment.
 
-**Not completed**:
-- Full render pipeline tests
+**Solution**: Mock `THREE.WebGLRenderer` + add `getSceneForTesting()` accessor. See `INTEGRATION_TESTS_SOLUTION.md` for details.
+
+**Tests Completed** (renderPipeline.integration.test.ts):
+- ✅ Full render pipeline tests (3 tests)
+  - Simple scene with one node
+  - MeshInstance3D with BoxMesh
+  - Mesh with StandardMaterial3D
+- ✅ Complex scene rendering (2 tests)
+  - Multiple node types (meshes + lights)
+  - Nested node hierarchy with transform inheritance
+- ✅ Error handling tests (3 tests)
+  - Missing mesh resource handling
+  - Malformed TSCN content handling
+  - Unknown node type handling
+
+**Not yet completed** (can now be implemented using same pattern):
 - External scene loading tests
 - Hot-reload flow tests
 - Missing resource flow tests
 - Incremental update tests
-- Complex scenario tests
+- Complex scenario tests (performance, memory)
 
 ### Success Criteria
 
@@ -601,11 +615,12 @@ const mockAsync = vi.fn().mockResolvedValue(value);
 - [x] Sprint 1: Core Managers Foundation (124 tests added) ✅
 - [x] Sprint 2: Linter System (67 tests added) ✅
 - [x] Sprint 3: Supporting Managers + Error Paths (148 tests added) ✅
-- [x] Sprint 4: Renderer Tests + Integration (152 tests added) ✅
+- [x] Sprint 4: Renderer Tests + Integration (160 tests added) ✅
 - [ ] Sprint 5: UI Components + Web App (145 tests)
 - [ ] Cleanup & Maintenance (ongoing)
 
-**Total Progress**: 491 / 620 tests added (79%)
+**Total Progress**: 499 / 620 tests added (80%)
+**Sprint 4 Update**: +8 integration tests (was 152, now 160 total)
 **Note**: Sprint 0 was infrastructure/documentation work (no new tests added)
 
 ### Progress Update Frequency

@@ -270,6 +270,14 @@ export class TscnRenderer {
     return this.sceneManager.hasInstances(scenePath);
   }
 
+  /**
+   * Get the THREE.js scene for testing purposes
+   * @internal - For testing only
+   */
+  getSceneForTesting(): THREE.Scene {
+    return this.scene;
+  }
+
   dispose(): void {
     this.helperManager.clearAll();
     this.renderer.dispose();
