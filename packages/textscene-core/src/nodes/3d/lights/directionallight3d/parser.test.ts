@@ -180,4 +180,108 @@ describe('DirectionalLight3D Parser', () => {
       });
     });
   });
+
+  describe('Error Path Testing', () => {
+    it('should return NaN for invalid light_energy', () => {
+      const heading = parseHeading('[node name="Light" type="DirectionalLight3D" parent="."]');
+      expect(heading).not.toBeNull();
+
+      const result = parseDirectionalLight3D(heading!, { light_energy: 'invalid' });
+      expect(result.light_energy).toBeNaN();
+    });
+
+    it('should return NaN for invalid shadow_bias', () => {
+      const heading = parseHeading('[node name="Light" type="DirectionalLight3D" parent="."]');
+      expect(heading).not.toBeNull();
+
+      const result = parseDirectionalLight3D(heading!, { shadow_bias: 'not-a-number' });
+      expect(result.shadow_bias).toBeNaN();
+    });
+
+    it('should return NaN for invalid shadow_normal_bias', () => {
+      const heading = parseHeading('[node name="Light" type="DirectionalLight3D" parent="."]');
+      expect(heading).not.toBeNull();
+
+      const result = parseDirectionalLight3D(heading!, { shadow_normal_bias: 'abc' });
+      expect(result.shadow_normal_bias).toBeNaN();
+    });
+
+    it('should return NaN for invalid directional_shadow_max_distance', () => {
+      const heading = parseHeading('[node name="Light" type="DirectionalLight3D" parent="."]');
+      expect(heading).not.toBeNull();
+
+      const result = parseDirectionalLight3D(heading!, { directional_shadow_max_distance: 'xyz' });
+      expect(result.directional_shadow_max_distance).toBeNaN();
+    });
+
+    it('should return NaN for invalid shadow_filter', () => {
+      const heading = parseHeading('[node name="Light" type="DirectionalLight3D" parent="."]');
+      expect(heading).not.toBeNull();
+
+      const result = parseDirectionalLight3D(heading!, { shadow_filter: 'invalid' });
+      expect(result.shadow_filter).toBeNaN();
+    });
+
+    it('should return NaN for invalid directional_shadow_mode', () => {
+      const heading = parseHeading('[node name="Light" type="DirectionalLight3D" parent="."]');
+      expect(heading).not.toBeNull();
+
+      const result = parseDirectionalLight3D(heading!, { directional_shadow_mode: 'bad' });
+      expect(result.directional_shadow_mode).toBeNaN();
+    });
+
+    it('should handle empty strings as falsy and return defaults', () => {
+      const heading = parseHeading('[node name="Light" type="DirectionalLight3D" parent="."]');
+      expect(heading).not.toBeNull();
+
+      const result = parseDirectionalLight3D(heading!, {
+        light_energy: '',
+        shadow_bias: '',
+        directional_shadow_max_distance: ''
+      });
+
+      // Empty strings are falsy, so defaults are used
+      expect(result.light_energy).toBe(1.0); // Default
+      expect(result.shadow_bias).toBeUndefined(); // Default
+      expect(result.directional_shadow_max_distance).toBeUndefined(); // Default
+    });
+
+    it('should handle negative values in numeric properties', () => {
+      const heading = parseHeading('[node name="Light" type="DirectionalLight3D" parent="."]');
+      expect(heading).not.toBeNull();
+
+      const result = parseDirectionalLight3D(heading!, {
+        light_energy: '-1.5',
+        shadow_bias: '-0.1',
+        directional_shadow_max_distance: '-100.0'
+      });
+
+      // Parsers accept negative values (validation happens elsewhere)
+      expect(result.light_energy).toBe(-1.5);
+      expect(result.shadow_bias).toBe(-0.1);
+      expect(result.directional_shadow_max_distance).toBe(-100.0);
+    });
+
+    it('should handle malformed color strings', () => {
+      const heading = parseHeading('[node name="Light" type="DirectionalLight3D" parent="."]');
+      expect(heading).not.toBeNull();
+
+      // Parser accepts any string for light_color (validation happens in renderer)
+      const result = parseDirectionalLight3D(heading!, { light_color: 'invalid-color' });
+      expect(result.light_color).toBe('invalid-color');
+    });
+
+    it('should handle extremely large numeric values', () => {
+      const heading = parseHeading('[node name="Light" type="DirectionalLight3D" parent="."]');
+      expect(heading).not.toBeNull();
+
+      const result = parseDirectionalLight3D(heading!, {
+        light_energy: '999999999.999',
+        directional_shadow_max_distance: '1e10'
+      });
+
+      expect(result.light_energy).toBe(999999999.999);
+      expect(result.directional_shadow_max_distance).toBe(1e10);
+    });
+  });
 });
