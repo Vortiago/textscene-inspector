@@ -75,7 +75,7 @@ Prepare test infrastructure and identify actual cleanup targets before starting 
 
 **Priority**: P0 - Critical
 **Estimated Tests**: 150 tests (~3-4 days)
-**Status**: [ ] Not Started
+**Status**: [x] COMPLETE (124 tests added)
 
 ### Goals
 
@@ -83,44 +83,44 @@ Test the main orchestration layer that has NO tests currently. High risk for reg
 
 ### Tasks
 
-#### [ ] TscnRenderer.ts (50-80 tests)
+#### [x] TscnRenderer.ts (47 tests) ✅
 **File**: `packages/textscene-core/src/core/TscnRenderer.test.ts`
 
-- [ ] Constructor initialization and manager wiring
-- [ ] render() method queue/concurrency handling
-- [ ] Delegation methods (addNode, removeNode, updateNode, etc.)
-- [ ] Camera state management (getCameraState, setCameraState, resetCamera)
-- [ ] Resource callback wiring (onResourceNeeded propagation)
-- [ ] Error handling when managers fail
-- [ ] dispose() cleanup and resource release
-- [ ] Integration with all managers (SceneManager, NodeLifecycleManager, etc.)
+- [x] Constructor initialization and manager wiring
+- [x] render() method queue/concurrency handling
+- [x] Delegation methods (addNode, removeNode, updateNode, etc.)
+- [x] Camera state management (getCameraState, setCameraState, resetCamera)
+- [x] Resource callback wiring (onResourceNeeded propagation)
+- [x] Error handling when managers fail
+- [x] dispose() cleanup and resource release
+- [x] Integration with all managers (SceneManager, NodeLifecycleManager, etc.)
 
-#### [ ] NodeLifecycleManager.ts (40-50 tests)
+#### [x] NodeLifecycleManager.ts (44 tests) ✅
 **File**: `packages/textscene-core/src/core/NodeLifecycleManager.test.ts`
 
-- [ ] addNode() with parent path resolution
-- [ ] External scene instance handling
-- [ ] Recursive child addition
-- [ ] removeNode() with descendant cleanup
-- [ ] updateNode() remove/re-add logic
-- [ ] setNodeVisibility() traversal
-- [ ] Error paths (parent not found, invalid paths)
-- [ ] SceneManager integration for external scenes
+- [x] addNode() with parent path resolution
+- [x] External scene instance handling
+- [x] Recursive child addition
+- [x] removeNode() with descendant cleanup
+- [x] updateNode() remove/re-add logic
+- [x] setNodeVisibility() traversal
+- [x] Error paths (parent not found, invalid paths)
+- [x] SceneManager integration for external scenes
 
-#### [ ] transform.ts (20-30 tests)
+#### [x] transform.ts (33 tests) ✅
 **File**: `packages/textscene-core/src/utils/transform.test.ts`
 
-- [ ] parseOptionalTransform() parsing
-- [ ] Transform3D matrix conversion accuracy
-- [ ] Edge cases (invalid formats, missing values, malformed input)
-- [ ] Default values when transform missing
+- [x] parseOptionalTransform() parsing
+- [x] Transform3D matrix conversion accuracy
+- [x] Edge cases (invalid formats, missing values, malformed input)
+- [x] Default values when transform missing
 
 ### Success Criteria
 
-- [ ] TscnRenderer public API fully tested (render, addNode, camera operations)
-- [ ] NodeLifecycleManager scene graph operations verified
-- [ ] Transform parsing edge cases covered
-- [ ] All tests passing, no regressions introduced
+- [x] TscnRenderer public API fully tested (render, addNode, camera operations)
+- [x] NodeLifecycleManager scene graph operations verified
+- [x] Transform parsing edge cases covered
+- [x] All tests passing, no regressions introduced
 
 ---
 
@@ -601,14 +601,14 @@ const mockAsync = vi.fn().mockResolvedValue(value);
 ### Overall Progress
 
 - [ ] Sprint 0: Preparation & Infrastructure Audit (1-2 days)
-- [ ] Sprint 1: Core Managers Foundation (150 tests)
+- [x] Sprint 1: Core Managers Foundation (124 tests added) ✅
 - [ ] Sprint 2: Linter System (70 tests)
 - [ ] Sprint 3: Supporting Managers + Error Paths (145 tests)
 - [ ] Sprint 4: Renderer Tests + Integration (110 tests)
 - [ ] Sprint 5: UI Components + Web App (145 tests)
 - [ ] Cleanup & Maintenance (ongoing)
 
-**Total Progress**: 0 / 620 tests added
+**Total Progress**: 124 / 620 tests added (20%)
 
 ### Progress Update Frequency
 
@@ -726,4 +726,4 @@ If you encounter blockers:
 
 ---
 
-**Last Updated**: 2025-11-05
+**Last Updated**: 2025-11-05 (Sprint 1 Complete - 124 tests added)
