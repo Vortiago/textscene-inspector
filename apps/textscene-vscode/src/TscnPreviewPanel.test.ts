@@ -24,7 +24,7 @@ const mockLoadResource = vi.fn();
 
 vi.mock('./providers/VSCodeResourceProvider', () => ({
   VSCodeResourceProvider: class MockVSCodeResourceProvider {
-    constructor(workspaceRoot: any, documentUri: any) {}
+    constructor(_workspaceRoot: unknown, _documentUri: unknown) {}
     loadResource = mockLoadResource;
   }
 }));
@@ -44,9 +44,9 @@ export { mockLoadResource };
 describe('TscnPreviewPanel', () => {
   let extensionUri: ReturnType<typeof createMockUri>;
   let resourceUri: ReturnType<typeof createMockUri>;
-  let mockPanel: any;
-  let mockWebview: any;
-  let messageHandler: ((message: any) => void) | null;
+  let mockPanel: { webview: unknown; dispose: ReturnType<typeof vi.fn>; reveal: ReturnType<typeof vi.fn>; onDidDispose: ReturnType<typeof vi.fn>; onDidChangeViewState: ReturnType<typeof vi.fn> };
+  let mockWebview: { postMessage: ReturnType<typeof vi.fn>; asWebviewUri: ReturnType<typeof vi.fn>; onDidReceiveMessage: ReturnType<typeof vi.fn>; cspSource: string };
+  let messageHandler: ((message: unknown) => void) | null;
 
   beforeEach(() => {
     // Reset all mocks
@@ -77,7 +77,7 @@ describe('TscnPreviewPanel', () => {
       title: '',
       reveal: vi.fn(),
       dispose: vi.fn(),
-      onDidDispose: vi.fn((handler: () => void) => {
+      onDidDispose: vi.fn((_handler: () => void) => {
         // Store handler for later invocation if needed
         return { dispose: vi.fn() };
       })
@@ -283,7 +283,7 @@ describe('TscnPreviewPanel', () => {
         createMockFileData('')
       );
 
-      const panel = TscnPreviewPanel.create(extensionUri, resourceUri);
+      const _panel = TscnPreviewPanel.create(extensionUri, resourceUri);
       await new Promise(resolve => setTimeout(resolve, 10));
 
       expect(mockWebview.postMessage).toHaveBeenCalledWith({

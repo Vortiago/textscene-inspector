@@ -23,7 +23,7 @@ vi.mock('@textscene/core', () => ({
 describe('Web App Integration - File Upload', () => {
   let fileInput: HTMLInputElement;
   let resetButton: HTMLButtonElement;
-  let mockPreviewUI: any;
+  let mockPreviewUI: MockTscnPreviewUI;
 
   beforeEach(() => {
     // Reset DOM
@@ -75,7 +75,6 @@ describe('Web App Integration - File Upload', () => {
     mockPreviewUI = new MockTscnPreviewUI();
 
     // Simulate file upload
-    const event = new Event('change', { bubbles: true });
     Object.defineProperty(fileInput, 'files', {
       value: [mockFile],
       writable: false
@@ -304,7 +303,7 @@ describe('Web App Integration - Fixture Loading', () => {
   it('should abort previous fetch when user clicks another fixture rapidly', async () => {
     let currentAbortController: AbortController | null = null;
 
-    const tscnContent1 = '[gd_scene format=3]\n[node name="First" type="Node3D"]';
+    const _tscnContent1 = '[gd_scene format=3]\n[node name="First" type="Node3D"]';
     const tscnContent2 = '[gd_scene format=3]\n[node name="Second" type="Node3D"]';
 
     // Simulate clicking first fixture
@@ -381,7 +380,7 @@ describe('Web App Integration - Fixture Loading', () => {
 
 describe('Web App Integration - Resource Management', () => {
   let mockResourceMap: Map<string, { path: string; type: string; referencedBy: string; error: string }>;
-  let mockPreviewUI: any;
+  let mockPreviewUI: MockTscnPreviewUI;
 
   beforeEach(() => {
     mockResourceMap = new Map();
@@ -413,7 +412,7 @@ describe('Web App Integration - Resource Management', () => {
 
   // Happy path: Missing resource → callback → UI shows missing
   it('should detect missing resource and show in UI', async () => {
-    const { TscnPreviewUI } = await import('@textscene/core');
+    const { TscnPreviewUI: _TscnPreviewUI } = await import('@textscene/core');
 
     const missingResource = {
       path: 'res://textures/door.png',
@@ -452,7 +451,7 @@ describe('Web App Integration - Resource Management', () => {
     mockResourceMap.set(missingResource.path, missingResource);
 
     // Simulate user uploading the resource
-    const uploadedFile = new File(['[gd_scene format=3]'], 'Door.tscn');
+    const _uploadedFile = new File(['[gd_scene format=3]'], 'Door.tscn');
 
     // User uploads → remove from missing map
     mockResourceMap.delete(missingResource.path);
@@ -468,7 +467,7 @@ describe('Web App Integration - Resource Management', () => {
 
   // State change: Resource panel visibility logic
   it('should show resource panel when resources missing', () => {
-    const resourceFilesPanel = document.getElementById('resource-files')!;
+    const _resourceFilesPanel = document.getElementById('resource-files')!;
 
     const uploadedFiles = new Map();
     const hasMissing = mockResourceMap.size > 0;
@@ -528,7 +527,7 @@ describe('Web App Integration - Resource Management', () => {
     mockResourceMap.set(missingResource.path, missingResource);
 
     // User uploads wrong file type (image instead of scene)
-    const wrongFile = new File(['PNG\x89\x50\x4E\x47'], 'Door.png', { type: 'image/png' });
+    const _wrongFile = new File(['PNG\x89\x50\x4E\x47'], 'Door.png', { type: 'image/png' });
 
     // Attempt to provide resource (will fail at parse time)
     mockPreviewUI = new MockTscnPreviewUI();

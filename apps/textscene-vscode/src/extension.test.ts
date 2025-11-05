@@ -25,8 +25,8 @@ vi.mock('./logger', () => ({
 describe('Extension', () => {
   let mockContext: any;
   let mockPanel: any;
-  let commandHandlers: Map<string, Function>;
-  let saveDocumentHandlers: Array<Function>;
+  let commandHandlers: Map<string, (...args: unknown[]) => unknown>;
+  let saveDocumentHandlers: Array<(...args: unknown[]) => unknown>;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -45,7 +45,7 @@ describe('Extension', () => {
       reveal: vi.fn(),
       update: vi.fn(),
       dispose: vi.fn(),
-      onDidDispose: vi.fn((callback: Function) => {
+      onDidDispose: vi.fn((callback: () => void) => {
         // Store the callback for later invocation
         mockPanel._disposeCallback = callback;
         return { dispose: vi.fn() };
@@ -57,13 +57,13 @@ describe('Extension', () => {
     (TscnPreviewPanel.create as Mock).mockReturnValue(mockPanel);
 
     // Mock vscode.commands.registerCommand
-    (vscode.commands.registerCommand as Mock) = vi.fn((command: string, handler: Function) => {
+    (vscode.commands.registerCommand as Mock) = vi.fn((command: string, handler: (...args: unknown[]) => unknown) => {
       commandHandlers.set(command, handler);
       return { dispose: vi.fn() };
     });
 
     // Mock vscode.workspace.onDidSaveTextDocument
-    (vscode.workspace.onDidSaveTextDocument as Mock) = vi.fn((handler: Function) => {
+    (vscode.workspace.onDidSaveTextDocument as Mock) = vi.fn((handler: (...args: unknown[]) => unknown) => {
       saveDocumentHandlers.push(handler);
       return { dispose: vi.fn() };
     });
