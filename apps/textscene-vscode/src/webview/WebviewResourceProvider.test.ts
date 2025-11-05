@@ -9,7 +9,7 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { WebviewResourceProvider } from './WebviewResourceProvider';
 
 describe('WebviewResourceProvider', () => {
-  let mockVsCode: any;
+  let mockVsCode: { postMessage: ReturnType<typeof vi.fn>; getState: ReturnType<typeof vi.fn>; setState: ReturnType<typeof vi.fn> };
   let provider: WebviewResourceProvider;
   let messageListeners: Array<(event: MessageEvent) => void>;
 
@@ -18,9 +18,9 @@ describe('WebviewResourceProvider', () => {
     messageListeners = [];
 
     // Mock window.addEventListener
-    vi.spyOn(window, 'addEventListener').mockImplementation((event: string, listener: any) => {
-      if (event === 'message') {
-        messageListeners.push(listener);
+    vi.spyOn(window, 'addEventListener').mockImplementation((event: string, listener: EventListenerOrEventListenerObject) => {
+      if (event === 'message' && typeof listener === 'function') {
+        messageListeners.push(listener as (event: MessageEvent) => void);
       }
     });
 
@@ -43,7 +43,7 @@ describe('WebviewResourceProvider', () => {
   });
 
   // Helper to simulate message from extension
-  function simulateExtensionMessage(data: any) {
+  function simulateExtensionMessage(data: unknown) {
     const event = { data } as MessageEvent;
     messageListeners.forEach(listener => listener(event));
   }
@@ -124,8 +124,7 @@ describe('WebviewResourceProvider', () => {
       const loadPromise = provider.loadResource('res://test.txt', 'Resource');
 
       // Get the timeout ID that was set
-      const setTimeoutCall = (window.setTimeout as any).mock.calls[0];
-      const timeoutId = (window.setTimeout as any).mock.results[0].value;
+      const timeoutId = (window.setTimeout as ReturnType<typeof vi.spyOn>).mock.results[0]?.value as number;
 
       // Simulate response
       simulateExtensionMessage({
@@ -195,7 +194,7 @@ describe('WebviewResourceProvider', () => {
     it('should clear timeout on successful binary load', async () => {
       const loadPromise = provider.loadResource('res://test.png', 'Texture2D');
 
-      const timeoutId = (window.setTimeout as any).mock.results[0].value;
+      const timeoutId = (window.setTimeout as ReturnType<typeof vi.spyOn>).mock.results[0]?.value as number;
 
       simulateExtensionMessage({
         type: 'resourceLoaded',
@@ -230,7 +229,7 @@ describe('WebviewResourceProvider', () => {
     it('should clear timeout on error', async () => {
       const loadPromise = provider.loadResource('res://error.txt', 'Resource');
 
-      const timeoutId = (window.setTimeout as any).mock.results[0].value;
+      const timeoutId = (window.setTimeout as ReturnType<typeof vi.spyOn>).mock.results[0]?.value as number;
 
       simulateExtensionMessage({
         type: 'resourceLoadError',

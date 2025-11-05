@@ -3,7 +3,7 @@
  * Validates workspace resource loading, path resolution, and security
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { VSCodeResourceProvider } from './VSCodeResourceProvider';
 import { createMockUri, createMockFileData, vscode } from '../test-setup';
 

@@ -1,9 +1,11 @@
+/// <reference types="vitest/globals" />
+
 /**
  * Test setup file for VSCode extension tests.
  * Mocks VSCode API and provides test utilities.
  */
 
-import { vi } from 'vitest';
+import { vi, afterEach } from 'vitest';
 import * as path from 'path';
 
 // ============================================================================
