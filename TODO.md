@@ -17,7 +17,7 @@
 - [x] #WI-13: ExtResource Loading System (PackedScene only) → [Details](work_items/WI13.md)
 - [x] #WI-14: Scene Instancing (Complete) → [Details](work_items/WI14.md)
 - [x] #WI-52: External Texture Loading → [Details](work_items/WI52.md) ⭐
-- [ ] #WI-53: External Material Loading → [Details](work_items/WI53.md)
+- [x] #WI-53: External Material Loading → [Details](work_items/WI53.md)
 - [ ] #WI-54: External Audio Loading → [Details](work_items/WI54.md)
 
 ## Phase 4: Advanced Features
