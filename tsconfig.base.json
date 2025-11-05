@@ -5,6 +5,8 @@
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
+    "noUnusedParameters": true,
+    // Note: noUnusedLocals disabled - we store some fields for future use
 
     // Module Resolution
     "module": "ESNext",

@@ -127,7 +127,7 @@ validatorRegistry.registerAll('Skeleton3D', {
       };
     }
 
-    const _boneIndex = parseInt(match[1], 10);
+    // Bone index is in match[1] if needed for future validation
     const propertyName = match[2];
 
     // Validate common bone property formats

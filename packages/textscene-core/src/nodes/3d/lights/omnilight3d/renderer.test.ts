@@ -230,4 +230,237 @@ describe('OmniLight3D Renderer', () => {
       expect(light.distance).toBe(25.0);
     });
   });
+
+  describe('Error Handling and Edge Cases', () => {
+    it('should handle invalid color format gracefully', () => {
+      const properties: OmniLight3DProperties = {
+        name: 'BadColorLight',
+        light_color: 'InvalidColor',
+        light_energy: 1.0,
+        omni_range: 10.0,
+        omni_attenuation: 2.0,
+        shadow_enabled: false,
+      };
+
+      const light = createOmniLight3D('BadColorLight', properties);
+
+      // Should fallback to white or handle gracefully
+      expect(light).toBeInstanceOf(THREE.PointLight);
+      expect(light.color).toBeDefined();
+    });
+
+    it('should handle missing light_color', () => {
+      const properties: OmniLight3DProperties = {
+        name: 'NoColorLight',
+        // light_color is missing
+        light_energy: 1.0,
+        omni_range: 10.0,
+        omni_attenuation: 2.0,
+        shadow_enabled: false,
+      };
+
+      const light = createOmniLight3D('NoColorLight', properties);
+
+      expect(light).toBeInstanceOf(THREE.PointLight);
+      expect(light.color).toBeDefined();
+    });
+
+    it('should handle zero light energy', () => {
+      const properties: OmniLight3DProperties = {
+        name: 'ZeroEnergyLight',
+        light_color: 'Color(1, 1, 1, 1)',
+        light_energy: 0,
+        omni_range: 10.0,
+        omni_attenuation: 2.0,
+        shadow_enabled: false,
+      };
+
+      const light = createOmniLight3D('ZeroEnergyLight', properties);
+
+      expect(light.intensity).toBe(0);
+    });
+
+    it('should handle negative light energy', () => {
+      const properties: OmniLight3DProperties = {
+        name: 'NegativeEnergyLight',
+        light_color: 'Color(1, 1, 1, 1)',
+        light_energy: -1.0,
+        omni_range: 10.0,
+        omni_attenuation: 2.0,
+        shadow_enabled: false,
+      };
+
+      const light = createOmniLight3D('NegativeEnergyLight', properties);
+
+      // Should handle gracefully (clamp or allow negative)
+      expect(light).toBeInstanceOf(THREE.PointLight);
+      expect(typeof light.intensity).toBe('number');
+    });
+
+    it('should handle zero range', () => {
+      const properties: OmniLight3DProperties = {
+        name: 'ZeroRangeLight',
+        light_color: 'Color(1, 1, 1, 1)',
+        light_energy: 1.0,
+        omni_range: 0,
+        omni_attenuation: 2.0,
+        shadow_enabled: false,
+      };
+
+      const light = createOmniLight3D('ZeroRangeLight', properties);
+
+      expect(light.distance).toBe(0);
+    });
+
+    it('should handle negative range', () => {
+      const properties: OmniLight3DProperties = {
+        name: 'NegativeRangeLight',
+        light_color: 'Color(1, 1, 1, 1)',
+        light_energy: 1.0,
+        omni_range: -10.0,
+        omni_attenuation: 2.0,
+        shadow_enabled: false,
+      };
+
+      const light = createOmniLight3D('NegativeRangeLight', properties);
+
+      // Should handle gracefully
+      expect(light).toBeInstanceOf(THREE.PointLight);
+      expect(typeof light.distance).toBe('number');
+    });
+
+    it('should handle missing omni_range', () => {
+      const properties: OmniLight3DProperties = {
+        name: 'NoRangeLight',
+        light_color: 'Color(1, 1, 1, 1)',
+        light_energy: 1.0,
+        // omni_range is missing
+        omni_attenuation: 2.0,
+        shadow_enabled: false,
+      };
+
+      const light = createOmniLight3D('NoRangeLight', properties);
+
+      expect(light).toBeInstanceOf(THREE.PointLight);
+      expect(typeof light.distance).toBe('number');
+    });
+
+    it('should handle zero attenuation', () => {
+      const properties: OmniLight3DProperties = {
+        name: 'ZeroAttenuationLight',
+        light_color: 'Color(1, 1, 1, 1)',
+        light_energy: 1.0,
+        omni_range: 10.0,
+        omni_attenuation: 0,
+        shadow_enabled: false,
+      };
+
+      const light = createOmniLight3D('ZeroAttenuationLight', properties);
+
+      expect(light.decay).toBe(0);
+    });
+
+    it('should handle negative attenuation', () => {
+      const properties: OmniLight3DProperties = {
+        name: 'NegativeAttenuationLight',
+        light_color: 'Color(1, 1, 1, 1)',
+        light_energy: 1.0,
+        omni_range: 10.0,
+        omni_attenuation: -1.0,
+        shadow_enabled: false,
+      };
+
+      const light = createOmniLight3D('NegativeAttenuationLight', properties);
+
+      // Should handle gracefully
+      expect(light).toBeInstanceOf(THREE.PointLight);
+      expect(typeof light.decay).toBe('number');
+    });
+
+    it('should handle extreme shadow bias values', () => {
+      const properties: OmniLight3DProperties = {
+        name: 'ExtremeBiasLight',
+        light_color: 'Color(1, 1, 1, 1)',
+        light_energy: 1.0,
+        omni_range: 10.0,
+        omni_attenuation: 2.0,
+        shadow_enabled: true,
+        shadow_bias: 1000.0,
+      };
+
+      const light = createOmniLight3D('ExtremeBiasLight', properties);
+
+      expect(light.castShadow).toBe(true);
+      expect(typeof light.shadow.bias).toBe('number');
+    });
+
+    it('should handle negative shadow bias', () => {
+      const properties: OmniLight3DProperties = {
+        name: 'NegativeBiasLight',
+        light_color: 'Color(1, 1, 1, 1)',
+        light_energy: 1.0,
+        omni_range: 10.0,
+        omni_attenuation: 2.0,
+        shadow_enabled: true,
+        shadow_bias: -100.0,
+      };
+
+      const light = createOmniLight3D('NegativeBiasLight', properties);
+
+      expect(light.castShadow).toBe(true);
+      expect(typeof light.shadow.bias).toBe('number');
+    });
+
+    it('should handle invalid shadow filter (too high)', () => {
+      const properties: OmniLight3DProperties = {
+        name: 'InvalidFilterLight',
+        light_color: 'Color(1, 1, 1, 1)',
+        light_energy: 1.0,
+        omni_range: 10.0,
+        omni_attenuation: 2.0,
+        shadow_enabled: true,
+        shadow_filter: 999,
+      };
+
+      const light = createOmniLight3D('InvalidFilterLight', properties);
+
+      expect(light.castShadow).toBe(true);
+      // Should clamp or handle gracefully
+      expect(light.shadow.mapSize.width).toBeGreaterThan(0);
+    });
+
+    it('should handle negative shadow filter', () => {
+      const properties: OmniLight3DProperties = {
+        name: 'NegativeFilterLight',
+        light_color: 'Color(1, 1, 1, 1)',
+        light_energy: 1.0,
+        omni_range: 10.0,
+        omni_attenuation: 2.0,
+        shadow_enabled: true,
+        shadow_filter: -5,
+      };
+
+      const light = createOmniLight3D('NegativeFilterLight', properties);
+
+      expect(light.castShadow).toBe(true);
+      // Should handle gracefully
+      expect(light.shadow.mapSize.width).toBeGreaterThan(0);
+    });
+
+    it('should handle color values outside 0-1 range', () => {
+      const properties: OmniLight3DProperties = {
+        name: 'ExtremeColorLight',
+        light_color: 'Color(2.5, -0.5, 1.5, 1)',
+        light_energy: 1.0,
+        omni_range: 10.0,
+        omni_attenuation: 2.0,
+        shadow_enabled: false,
+      };
+
+      const light = createOmniLight3D('ExtremeColorLight', properties);
+
+      expect(light).toBeInstanceOf(THREE.PointLight);
+      expect(light.color).toBeDefined();
+    });
+  });
 });

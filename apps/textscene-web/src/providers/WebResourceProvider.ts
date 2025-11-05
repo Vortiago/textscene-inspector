@@ -33,10 +33,30 @@ export class WebResourceProvider implements ResourceProvider {
   }
 
   async loadResource(path: string, type: string): Promise<string | ArrayBuffer> {
-    // Only load from uploaded files (uploaded by user or pre-loaded by fixture system)
+    // Check uploaded files first
     const uploadedFile = this.uploadedFiles.get(path);
     if (uploadedFile) {
       return isBinaryResourceType(type) ? uploadedFile.arrayBuffer() : uploadedFile.text();
+    }
+
+    // For PackedScene resources (.tscn files), try fetching from /fixtures/
+    if (type === 'PackedScene' && path.startsWith('res://')) {
+      try {
+        // Convert Godot path to fixture path
+        const filename = path.replace('res://', '');
+        const fixtureUrl = `/fixtures/${filename}`;
+
+        console.log(`[WebResourceProvider] Attempting to fetch external scene: ${fixtureUrl}`);
+        const response = await fetch(fixtureUrl);
+
+        if (response.ok) {
+          const content = await response.text();
+          console.log(`[WebResourceProvider] Successfully loaded external scene: ${path}`);
+          return content;
+        }
+      } catch (error) {
+        console.warn(`[WebResourceProvider] Failed to fetch external scene from fixtures: ${path}`, error);
+      }
     }
 
     // Resource not available - will trigger onResourceNeeded callback
