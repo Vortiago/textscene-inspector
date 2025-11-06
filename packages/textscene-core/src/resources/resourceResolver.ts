@@ -20,6 +20,7 @@ export type ResourceTypeMap<T> = Record<string, ResourceHandler<T>>;
  * Generic resource resolver that works for any resource type.
  * Handles common logic: reference parsing, resource lookup, type checking, error handling.
  * Now async to support async parsers (e.g., texture loading in materials).
+ * Supports both SubResource and ExtResource (for materials).
  */
 export async function resolveResource<T>(
   resourceRef: string | undefined,
@@ -37,11 +38,18 @@ export async function resolveResource<T>(
     return null;
   }
 
-  if (ref.type !== 'SubResource') {
-    warn(`External ${resourceCategory} resources not yet supported: ${resourceRef}`);
-    return null;
+  // Handle ExtResource for materials (requires ResourceRegistry)
+  if (ref.type === 'ExtResource') {
+    if (resourceCategory === 'material' && scene.resourceRegistry) {
+      // Use ResourceRegistry to load external material
+      return (await scene.resourceRegistry.loadMaterial(ref.id)) as T | null;
+    } else {
+      warn(`External ${resourceCategory} resources not yet supported: ${resourceRef}`);
+      return null;
+    }
   }
 
+  // Handle SubResource (internal resources)
   const resource = scene.internalResources.find((r: TscnInternalResource) => {
     const resourceId = r.data.id as string | undefined;
     return resourceId === ref.id || String(r.id) === ref.id;

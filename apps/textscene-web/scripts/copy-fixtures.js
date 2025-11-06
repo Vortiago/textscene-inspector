@@ -40,3 +40,19 @@ for (const file of exampleFiles) {
 
 const totalFiles = fixtureFiles.length + exampleFiles.length;
 console.log(`Copied ${totalFiles} scene files to public/fixtures/ (${fixtureFiles.length} fixtures + ${exampleFiles.length} examples)`);
+
+// Copy materials directory from scenes/materials/
+const materialsSource = join(scenesRoot, 'materials');
+const materialsTarget = join(fixturesTarget, 'materials');
+try {
+  if (statSync(materialsSource).isDirectory()) {
+    mkdirSync(materialsTarget, { recursive: true });
+    const materialFiles = readdirSync(materialsSource);
+    for (const file of materialFiles) {
+      copyFileSync(join(materialsSource, file), join(materialsTarget, file));
+    }
+    console.log(`Copied ${materialFiles.length} material files to public/fixtures/materials/`);
+  }
+} catch {
+  // Materials directory doesn't exist yet, skip
+}
