@@ -3,6 +3,7 @@
  * Downloads VS Code and runs tests in Extension Development Host.
  */
 import * as path from 'path';
+import * as os from 'os';
 import { runTests } from '@vscode/test-electron';
 
 async function main() {
@@ -16,9 +17,13 @@ async function main() {
     // The test workspace path (will be set up by setupWorkspace)
     const testWorkspace = path.resolve(__dirname, '../../../.test-workspace');
 
+    // Use shorter user data path to avoid macOS IPC socket path length limit (103 chars)
+    const userDataDir = path.join(os.tmpdir(), 'vscode-test-data');
+
     console.log('Extension Development Path:', extensionDevelopmentPath);
     console.log('Extension Tests Path:', extensionTestsPath);
     console.log('Test Workspace:', testWorkspace);
+    console.log('User Data Dir:', userDataDir);
 
     // Download VS Code, unzip it and run the integration tests
     await runTests({
@@ -27,6 +32,7 @@ async function main() {
       launchArgs: [
         testWorkspace,
         '--disable-extensions', // Disable other extensions to avoid interference
+        `--user-data-dir=${userDataDir}`, // Use shorter path for IPC socket
       ],
     });
   } catch (err) {
