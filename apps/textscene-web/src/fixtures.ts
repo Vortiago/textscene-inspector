@@ -36,6 +36,21 @@ export const fixtures: Fixture[] = [
     "category": "Edge Cases"
   },
   {
+    "name": "Test Nested Leaf",
+    "file": "test-nested-leaf.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Test Nested Middle",
+    "file": "test-nested-middle.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Test Nested Top",
+    "file": "test-nested-top.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Box Mesh",
     "file": "unit-box-mesh.tscn",
     "category": "Unit - Primitive Meshes"

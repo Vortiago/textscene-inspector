@@ -78,6 +78,7 @@
 - [ ] #WI-47: Extract Light Base Property Parsing → [Details](work_items/WI47.md)
 - [ ] #WI-48: Extract Shadow Property Formatting → [Details](work_items/WI48.md)
 - [ ] #WI-49: Documentation Updates for Claude Config → [Details](work_items/WI49.md)
+- [ ] #WI-55: "Resolve Early, Use Late" Architecture for External Scenes → [Details](work_items/WI55.md)
 
 ## Testing & Documentation
 

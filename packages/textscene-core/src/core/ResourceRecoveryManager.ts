@@ -59,9 +59,9 @@ export class ResourceRecoveryManager {
     // Remove from missing list (will be re-added if it fails again)
     this.missingResources.delete(path);
 
-    // Re-attempt to load the external scene using SceneManager
+    // Provide the external scene using SceneManager (non-destructive)
     try {
-      await this.sceneManager.updateScene(path);
+      await this.sceneManager.provideScene(path);
       logger.info(`[Resource Provided] ✅ Successfully loaded: ${path}`);
     } catch (error) {
       logger.error(`[Resource Provided] ❌ Failed to load: ${path}`, error);
