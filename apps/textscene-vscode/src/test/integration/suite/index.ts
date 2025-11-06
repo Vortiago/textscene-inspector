@@ -13,7 +13,7 @@ export async function run(): Promise<void> {
 
   // Create the mocha test
   const mocha = new Mocha({
-    ui: 'bdd',
+    ui: 'tdd', // Use TDD interface for suite() and test()
     color: true,
     timeout: 20000, // 20 seconds for integration tests
   });

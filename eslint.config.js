@@ -13,8 +13,10 @@ export default [
     ignores: [
       '**/node_modules/',
       '**/dist/',
+      '**/out/',
       '**/build/',
       '**/.vscode-test/',
+      '**/.test-workspace/',
       '**/.claude/',
     ],
   },
@@ -139,6 +141,7 @@ export default [
       },
       globals: {
         ...globals.node,
+        ...globals.mocha,
       },
     },
     plugins: {

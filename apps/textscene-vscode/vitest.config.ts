@@ -6,6 +6,7 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./src/test-setup.ts'],
     include: ['src/**/*.{test,spec}.ts'],
+    exclude: ['src/test/integration/**/*.{test,spec}.ts'], // Integration tests run separately with @vscode/test-electron
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],

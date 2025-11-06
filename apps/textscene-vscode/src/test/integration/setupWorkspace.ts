@@ -20,8 +20,11 @@ export function setupTestWorkspace(workspaceRoot: string): void {
   }
   mkdirSync(workspaceRoot, { recursive: true });
 
-  // Paths relative to this file
-  const scenesRoot = join(__dirname, '../../../../../scenes');
+  // Paths relative to the project root
+  // __dirname points to out/test/integration after tsc compile
+  // Go up: integration -> test -> out -> vscode root -> apps -> repo root
+  const projectRoot = join(__dirname, '../../../../..');
+  const scenesRoot = join(projectRoot, 'scenes');
   const fixturesSource = join(scenesRoot, 'fixtures');
   const examplesSource = join(scenesRoot, 'examples');
   const fixturesTarget = join(workspaceRoot, 'fixtures');

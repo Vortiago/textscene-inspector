@@ -5,6 +5,7 @@ node_modules/
 
 # Build outputs
 dist/
+out/
 build/
 *.tsbuildinfo
 
@@ -31,6 +32,7 @@ Thumbs.db
 # VS Code Extension
 *.vsix
 .vscode-test/
+.test-workspace/
 
 # Logs
 *.log
