@@ -1,16 +1,9 @@
-[gd_scene load_steps=3 format=3 uid="uid://child_sphere_scene"]
+[gd_scene load_steps=2 format=3 uid="uid://test_external_sphere"]
 
-[sub_resource type="SphereMesh" id="SphereMesh_1"]
-radius = 0.5
-height = 1.0
+[ext_resource type="PackedScene" uid="uid://child_sphere_scene" path="res://child_sphere.tscn" id="1_sphere"]
 
-[sub_resource type="StandardMaterial3D" id="Material_1"]
-albedo_color = Color(0.9, 0.3, 0.3, 1)
-metallic = 0.7
-roughness = 0.2
+[node name="TestExternalSphere" type="Node3D"]
 
-[node name="ChildSphere" type="Node3D"]
-
-[node name="Sphere" type="MeshInstance3D" parent="."]
-mesh = SubResource("SphereMesh_1")
-surface_material_override/0 = SubResource("Material_1")
+[node name="SphereInstance" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+instance = ExtResource("1_sphere")

@@ -260,6 +260,162 @@ describe('SceneManager', () => {
     });
   });
 
+  describe('provideScene', () => {
+    it('should do nothing if no instances exist', async () => {
+      const scenePath = 'res://scenes/enemy.tscn';
+
+      await sceneManager.provideScene(scenePath);
+
+      // Should not call any node lifecycle methods
+      expect(mockNodeLifecycle.removeNode).not.toHaveBeenCalled();
+      expect(mockNodeLifecycle.addNode).not.toHaveBeenCalled();
+    });
+
+    it('should call loadScene when instances exist', async () => {
+      const scenePath = 'res://scenes/enemy.tscn';
+      const instancePath = 'Enemy1';
+
+      // Track instance (simulating failed initial load)
+      sceneManager['sceneInstances'].set(scenePath, new Set([instancePath]));
+
+      // Spy on loadScene method to verify it's called
+      const loadSceneSpy = vi.spyOn(sceneManager as any, 'loadScene').mockResolvedValue({
+        nodes: [{ name: 'EnemyRoot', type: 'Node3D', properties: {} }],
+        externalResources: [],
+        internalResources: []
+      });
+
+      // Setup nodeTracker spies
+      vi.spyOn(nodeTracker, 'getNode').mockReturnValue({ name: 'Enemy1', type: 'Node3D', properties: {} });
+      vi.spyOn(nodeTracker, 'getObject').mockReturnValue(new THREE.Object3D());
+      vi.spyOn(nodeTracker, 'getAllPaths').mockReturnValue([instancePath]);
+
+      await sceneManager.provideScene(scenePath);
+
+      // Should call loadScene
+      expect(loadSceneSpy).toHaveBeenCalledWith(scenePath);
+      // Should call addNode to provide content (does NOT call removeNode)
+      expect(mockNodeLifecycle.addNode).toHaveBeenCalled();
+      expect(mockNodeLifecycle.removeNode).not.toHaveBeenCalled();
+    });
+
+    it('should skip instances that already have children', async () => {
+      const scenePath = 'res://scenes/enemy.tscn';
+      const instancePath = 'Enemy1';
+
+      // Track instance
+      sceneManager['sceneInstances'].set(scenePath, new Set([instancePath]));
+
+      // Spy on loadScene
+      const loadSceneSpy = vi.spyOn(sceneManager as any, 'loadScene').mockResolvedValue({
+        nodes: [{ name: 'EnemyRoot', type: 'Node3D', properties: {} }],
+        externalResources: [],
+        internalResources: []
+      });
+
+      // Setup nodeTracker spies - instance already has children
+      vi.spyOn(nodeTracker, 'getNode').mockReturnValue({ name: 'Enemy1', type: 'Node3D', properties: {} });
+      vi.spyOn(nodeTracker, 'getObject').mockReturnValue(new THREE.Object3D());
+      vi.spyOn(nodeTracker, 'getAllPaths').mockReturnValue([instancePath, instancePath + '/Child1', instancePath + '/Child2']);
+
+      await sceneManager.provideScene(scenePath);
+
+      // Should load scene but not add content since instance already has children
+      expect(loadSceneSpy).toHaveBeenCalledWith(scenePath);
+      expect(mockNodeLifecycle.addNode).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('ResourceRegistry sharing', () => {
+    it('should share ResourceRegistry with external scenes', async () => {
+      const externalScenePath = 'res://scenes/external.tscn';
+      const externalSceneContent = `[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://nested.tscn" id="1_nested"]
+
+[node name="ExternalRoot" type="Node3D"]
+
+[node name="NestedInstance" type="Node3D" parent="."]
+instance = ExtResource("1_nested")
+`;
+
+      const mockProvider = {
+        loadResource: vi.fn().mockResolvedValue(externalSceneContent),
+      };
+      resourceRegistry.setProvider(mockProvider);
+
+      // Register the resource before loading (required by ResourceRegistry)
+      resourceRegistry.register({
+        type: 'PackedScene',
+        path: externalScenePath,
+        id: 'external_scene'
+      });
+
+      // Load external scene
+      const loadedScene = await sceneManager['loadScene'](externalScenePath);
+
+      // Should have ResourceRegistry attached
+      expect(loadedScene.resourceRegistry).toBeDefined();
+      expect(loadedScene.resourceRegistry).toBe(resourceRegistry);
+
+      // External scene's resources should be registered in shared registry
+      const nestedMetadata = resourceRegistry.getMetadata('1_nested');
+      expect(nestedMetadata).toBeDefined();
+      expect(nestedMetadata?.path).toBe('res://nested.tscn');
+      expect(nestedMetadata?.type).toBe('PackedScene');
+    });
+
+    it('should register resources from multiple external scenes', async () => {
+      const scene1Path = 'res://scene1.tscn';
+      const scene1Content = `[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://child1.tscn" id="1_child"]
+
+[node name="Scene1" type="Node3D"]
+`;
+
+      const scene2Path = 'res://scene2.tscn';
+      const scene2Content = `[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://child2.tscn" id="2_child"]
+
+[node name="Scene2" type="Node3D"]
+`;
+
+      const mockProvider = {
+        loadResource: vi.fn().mockImplementation(async (path: string) => {
+          if (path === scene1Path) return scene1Content;
+          if (path === scene2Path) return scene2Content;
+          throw new Error(`Not found: ${path}`);
+        }),
+      };
+      resourceRegistry.setProvider(mockProvider);
+
+      // Register both resources before loading
+      resourceRegistry.register({
+        type: 'PackedScene',
+        path: scene1Path,
+        id: 'scene1'
+      });
+      resourceRegistry.register({
+        type: 'PackedScene',
+        path: scene2Path,
+        id: 'scene2'
+      });
+
+      // Load both scenes
+      await sceneManager['loadScene'](scene1Path);
+      await sceneManager['loadScene'](scene2Path);
+
+      // Both scenes' resources should be registered
+      expect(resourceRegistry.getMetadata('1_child')).toBeDefined();
+      expect(resourceRegistry.getMetadata('1_child')?.path).toBe('res://child1.tscn');
+
+      expect(resourceRegistry.getMetadata('2_child')).toBeDefined();
+      expect(resourceRegistry.getMetadata('2_child')?.path).toBe('res://child2.tscn');
+    });
+  });
+
   describe('utility methods', () => {
     it('hasInstances should return false for unknown scene', () => {
       expect(sceneManager.hasInstances('res://unknown.tscn')).toBe(false);
@@ -415,7 +571,7 @@ describe('SceneManager', () => {
       await expect(sceneManager.addScene(instancePath, scenePath)).resolves.not.toThrow();
     });
 
-    it('should not track instance when external scene fails to load', async () => {
+    it('should track instance even when external scene fails to load', async () => {
       const scenePath = 'res://scenes/missing.tscn';
       const instancePath = 'MissingInstance';
 
@@ -433,9 +589,9 @@ describe('SceneManager', () => {
 
       await sceneManager.addScene(instancePath, scenePath);
 
-      // Instance should not be tracked since load failed
-      expect(sceneManager.getInstances(scenePath)).toHaveLength(0);
-      expect(sceneManager.hasInstances(scenePath)).toBe(false);
+      // Instance should still be tracked to enable hot-reload when resource is provided later
+      expect(sceneManager.getInstances(scenePath)).toHaveLength(1);
+      expect(sceneManager.hasInstances(scenePath)).toBe(true);
     });
 
     it('should include error message in callback data', async () => {
@@ -496,6 +652,52 @@ describe('SceneManager', () => {
 
       // Should not throw - callback successfully unset
       expect(true).toBe(true);
+    });
+
+    it('should hot-reload scene when resource is provided after initial load failure', async () => {
+      const scenePath = 'res://scenes/external.tscn';
+      const instancePath = 'ExternalInstance';
+
+      // Mock provider that initially fails, then succeeds
+      let loadAttempts = 0;
+      const mockProvider = {
+        loadResource: vi.fn().mockImplementation(() => {
+          loadAttempts++;
+          if (loadAttempts === 1) {
+            return Promise.reject(new Error('File not found'));
+          }
+          // Second attempt succeeds with valid scene
+          return Promise.resolve(`[gd_scene format=3]
+
+[node name="ExternalRoot" type="Node3D"]
+
+[node name="ChildNode" type="Node3D" parent="."]
+`);
+        }),
+      };
+      resourceRegistry.setProvider(mockProvider);
+
+      resourceRegistry.register({
+        id: '1_external',
+        path: scenePath,
+        type: 'PackedScene',
+      });
+
+      // Initial load should fail but track instance
+      await sceneManager.addScene(instancePath, scenePath);
+      expect(sceneManager.hasInstances(scenePath)).toBe(true);
+      expect(loadAttempts).toBe(1);
+
+      // Now simulate user uploading the file - updateScene should reload
+      await sceneManager.updateScene(scenePath);
+
+      // Verify second load was attempted
+      expect(loadAttempts).toBe(2);
+
+      // Verify nodes were added
+      const instances = sceneManager.getInstances(scenePath);
+      expect(instances).toHaveLength(1);
+      expect(instances[0]).toBe(instancePath);
     });
   });
 });

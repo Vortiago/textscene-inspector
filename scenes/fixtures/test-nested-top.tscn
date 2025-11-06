@@ -1,0 +1,24 @@
+[gd_scene load_steps=4 format=3 uid="uid://test_nested_top"]
+
+[ext_resource type="PackedScene" uid="uid://test_nested_middle" path="res://test-nested-middle.tscn" id="1_middle"]
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_1"]
+top_radius = 0.5
+bottom_radius = 0.5
+height = 2.0
+
+[sub_resource type="StandardMaterial3D" id="Material_1"]
+albedo_color = Color(0.2, 0.8, 0.3, 1)
+metallic = 0.4
+roughness = 0.4
+
+[node name="NestedTop" type="Node3D"]
+
+[node name="TopCylinder" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -3)
+mesh = SubResource("CylinderMesh_1")
+surface_material_override/0 = SubResource("Material_1")
+
+[node name="MiddleInstance" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3)
+instance = ExtResource("1_middle")

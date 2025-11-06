@@ -144,7 +144,7 @@ describe('ResourceRecoveryManager', () => {
   });
 
   describe('provideResource()', () => {
-    it('should call sceneManager.updateScene() for missing resource', async () => {
+    it('should call sceneManager.provideScene() for missing resource', async () => {
       const missingResource: MissingResource = {
         path: 'res://scenes/Enemy.tscn',
         type: 'PackedScene',
@@ -153,11 +153,11 @@ describe('ResourceRecoveryManager', () => {
 
       resourceRecovery.recordMissing(missingResource);
 
-      const updateSceneSpy = vi.spyOn(sceneManager, 'updateScene').mockResolvedValue();
+      const provideSceneSpy = vi.spyOn(sceneManager, 'provideScene').mockResolvedValue();
 
       await resourceRecovery.provideResource('res://scenes/Enemy.tscn');
 
-      expect(updateSceneSpy).toHaveBeenCalledWith('res://scenes/Enemy.tscn');
+      expect(provideSceneSpy).toHaveBeenCalledWith('res://scenes/Enemy.tscn');
     });
 
     it('should remove resource from missing list on successful load', async () => {
@@ -170,7 +170,7 @@ describe('ResourceRecoveryManager', () => {
       resourceRecovery.recordMissing(missingResource);
       expect(resourceRecovery.getMissingResources()).toHaveLength(1);
 
-      vi.spyOn(sceneManager, 'updateScene').mockResolvedValue();
+      vi.spyOn(sceneManager, 'provideScene').mockResolvedValue();
 
       await resourceRecovery.provideResource('res://scenes/Enemy.tscn');
 
@@ -187,7 +187,7 @@ describe('ResourceRecoveryManager', () => {
 
       resourceRecovery.recordMissing(missingResource);
 
-      vi.spyOn(sceneManager, 'updateScene').mockRejectedValue(new Error('Still not found'));
+      vi.spyOn(sceneManager, 'provideScene').mockRejectedValue(new Error('Still not found'));
 
       await resourceRecovery.provideResource('res://scenes/Enemy.tscn');
 
@@ -197,11 +197,11 @@ describe('ResourceRecoveryManager', () => {
     });
 
     it('should do nothing if resource was not missing', async () => {
-      const updateSceneSpy = vi.spyOn(sceneManager, 'updateScene').mockResolvedValue();
+      const provideSceneSpy = vi.spyOn(sceneManager, 'provideScene').mockResolvedValue();
 
       await resourceRecovery.provideResource('res://scenes/NotMissing.tscn');
 
-      expect(updateSceneSpy).not.toHaveBeenCalled();
+      expect(provideSceneSpy).not.toHaveBeenCalled();
     });
   });
 
@@ -224,7 +224,7 @@ describe('ResourceRecoveryManager', () => {
       expect(resourceRecovery.getMissingResources()).toHaveLength(2);
 
       // Provide first resource successfully
-      vi.spyOn(sceneManager, 'updateScene').mockResolvedValue();
+      vi.spyOn(sceneManager, 'provideScene').mockResolvedValue();
       await resourceRecovery.provideResource('res://scenes/Enemy.tscn');
       expect(resourceRecovery.getMissingResources()).toHaveLength(1);
 

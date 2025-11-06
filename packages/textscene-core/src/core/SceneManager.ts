@@ -77,6 +77,19 @@ export class SceneManager {
     // Parse and cache
     logger.info(`[SceneManager] Parsing scene: ${scenePath}`);
     const scene = this.parser.parse(content);
+
+    // Share ResourceRegistry with external scene
+    scene.resourceRegistry = this.resourceRegistry;
+
+    // Register external scene's own resources in shared registry
+    // This allows nested external scenes (L2+) to resolve their own dependencies
+    for (const extResource of scene.externalResources) {
+      this.resourceRegistry.register(extResource);
+      logger.info(
+        `[SceneManager] Registered resource from ${scenePath}: ${extResource.id} → ${extResource.path}`
+      );
+    }
+
     this.sceneCache.set(scenePath, scene);
     logger.info(`[SceneManager] Cached parsed scene: ${scenePath} with ${scene.nodes.length} root nodes`);
 
@@ -85,10 +98,18 @@ export class SceneManager {
 
   /**
    * Recursively set userData.instanceRoot on an object and all its descendants
+   * Skips children that already have a different instanceRoot (nested instances)
    */
   private setInstanceRootOnDescendants(object: THREE.Object3D, instancePath: string): void {
     object.userData.instanceRoot = instancePath;
     for (const child of object.children) {
+      const existingInstanceRoot = child.userData.instanceRoot as string | undefined;
+
+      // If child already has a different instanceRoot, it's a nested instance - don't overwrite
+      if (existingInstanceRoot && existingInstanceRoot !== instancePath) {
+        continue;
+      }
+
       this.setInstanceRootOnDescendants(child, instancePath);
     }
   }
@@ -126,18 +147,19 @@ export class SceneManager {
 
     logger.info(`[SceneManager] Adding scene instance: ${instancePath} from ${scenePath}`);
 
+    // Track this instance BEFORE attempting load
+    // This ensures hot-reload works even if initial load fails
+    if (!this.sceneInstances.has(scenePath)) {
+      this.sceneInstances.set(scenePath, new Set());
+    }
+    this.sceneInstances.get(scenePath)!.add(instancePath);
+    logger.info(
+      `[SceneManager] Tracking instance: ${instancePath} (total instances of ${scenePath}: ${this.sceneInstances.get(scenePath)!.size})`
+    );
+
     try {
       // Load the external scene
       const externalScene = await this.loadScene(scenePath);
-
-      // Track this instance
-      if (!this.sceneInstances.has(scenePath)) {
-        this.sceneInstances.set(scenePath, new Set());
-      }
-      this.sceneInstances.get(scenePath)!.add(instancePath);
-      logger.info(
-        `[SceneManager] Tracking instance: ${instancePath} (total instances of ${scenePath}: ${this.sceneInstances.get(scenePath)!.size})`
-      );
 
       // Add all root nodes from external scene as children of instance node
       await this.addExternalSceneNodes(externalScene, instancePath);
@@ -268,6 +290,77 @@ export class SceneManager {
     }
 
     logger.info(`[SceneManager] ✅ Hot-reload complete for ${scenePath}: ${successCount}/${instances.size} instances updated`);
+  }
+
+  /**
+   * Provide missing external scene - add content to instances without removing existing children
+   * Used when user uploads a previously missing external scene file
+   * Unlike updateScene(), this does NOT remove existing children
+   */
+  async provideScene(scenePath: string): Promise<void> {
+    if (!this.nodeLifecycle) {
+      throw new Error('NodeLifecycleManager not set. Call setNodeLifecycleManager() first.');
+    }
+
+    if (!this.resourceRegistry) {
+      throw new Error('ResourceRegistry not set. Call setResourceRegistry() first.');
+    }
+
+    // Find all instances waiting for this scene
+    const instances = this.sceneInstances.get(scenePath);
+    if (!instances || instances.size === 0) {
+      logger.info(`[SceneManager] No instances found for ${scenePath}, nothing to provide`);
+      return;
+    }
+
+    logger.info(`[SceneManager] 📦 Providing missing external scene: ${scenePath}`);
+
+    // Clear cache to force reload
+    this.sceneCache.delete(scenePath);
+    this.resourceRegistry.clearCache(scenePath);
+    logger.info(`[SceneManager] Cleared caches for: ${scenePath}`);
+
+    // Load the scene
+    const providedScene = await this.loadScene(scenePath);
+
+    logger.info(`[SceneManager] Providing content to ${instances.size} instances of ${scenePath}`);
+
+    // Provide content to each instance
+    let successCount = 0;
+    for (const instancePath of instances) {
+      try {
+        // Get the instance node data
+        const instanceNode = this.nodeTracker.getNode(instancePath);
+        const instanceObject = this.nodeTracker.getObject(instancePath);
+
+        if (!instanceNode || !instanceObject) {
+          logger.warn(`[SceneManager] Instance not found in tracker: ${instancePath}`);
+          continue;
+        }
+
+        logger.info(`[SceneManager] Providing content to instance: ${instancePath}`);
+
+        // Check if content already exists (instance may already have children from previous provision)
+        const hasExistingChildren = this.nodeTracker.getAllPaths().some(path =>
+          path.startsWith(instancePath + '/')
+        );
+
+        if (hasExistingChildren) {
+          logger.info(`[SceneManager] Instance ${instancePath} already has content, skipping`);
+          continue;
+        }
+
+        // Add external scene nodes as children (does NOT remove existing children)
+        await this.addExternalSceneNodes(providedScene, instancePath);
+
+        successCount++;
+        logger.info(`[SceneManager] ✓ Provided content to instance: ${instancePath}`);
+      } catch (error) {
+        logger.error(`[SceneManager] ✗ Failed to provide content to instance ${instancePath}:`, error);
+      }
+    }
+
+    logger.info(`[SceneManager] ✅ Provision complete for ${scenePath}: ${successCount}/${instances.size} instances received content`);
   }
 
   /**
