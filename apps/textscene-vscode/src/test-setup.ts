@@ -15,7 +15,17 @@ import * as path from 'path';
 /**
  * Create a mock vscode.Uri object
  */
-export function createMockUri(fsPath: string) {
+export function createMockUri(fsPath: string): {
+  fsPath: string;
+  path: string;
+  scheme: string;
+  authority: string;
+  query: string;
+  fragment: string;
+  with: ReturnType<typeof vi.fn>;
+  toString: () => string;
+  toJSON: () => { fsPath: string; path: string; scheme: string };
+} {
   // Normalize path for cross-platform compatibility
   const normalizedPath = fsPath.replace(/\\/g, '/');
 
@@ -83,7 +93,7 @@ const mockUri = {
  * Mock vscode.workspace namespace
  * Provides filesystem and workspace operations
  */
-const mockWorkspace = {
+const mockWorkspace: any = {
   fs: {
     /**
      * Read file as Uint8Array
@@ -142,7 +152,7 @@ const mockWorkspace = {
  * Mock vscode.window namespace
  * Provides UI operations
  */
-const mockWindow = {
+const mockWindow: any = {
   /**
    * Create webview panel
    */
@@ -190,7 +200,7 @@ const mockWindow = {
  * Mock vscode.commands namespace
  * Provides command operations
  */
-const mockCommands = {
+const mockCommands: any = {
   /**
    * Register command
    */
@@ -233,7 +243,7 @@ export class MockSelection {
 export class MockEventEmitter {
   private listeners: Array<(...args: any[]) => void> = [];
 
-  event = (listener: (...args: any[]) => void) => {
+  event = (listener: (...args: any[]) => void): { dispose: ReturnType<typeof vi.fn> } => {
     this.listeners.push(listener);
     return { dispose: vi.fn() };
   };
@@ -299,7 +309,18 @@ afterEach(() => {
 });
 
 // Export mocks for test access
-export const vscode = {
+export const vscode: {
+  Uri: typeof mockUri;
+  workspace: typeof mockWorkspace;
+  window: typeof mockWindow;
+  commands: typeof mockCommands;
+  Range: typeof MockRange;
+  Position: typeof MockPosition;
+  Selection: typeof MockSelection;
+  EventEmitter: typeof MockEventEmitter;
+  ViewColumn: { One: number; Two: number; Three: number; Active: number; Beside: number };
+  TextEditorRevealType: { Default: number; InCenter: number; InCenterIfOutsideViewport: number; AtTop: number };
+} = {
   Uri: mockUri,
   workspace: mockWorkspace,
   window: mockWindow,
@@ -307,6 +328,7 @@ export const vscode = {
   Range: MockRange,
   Position: MockPosition,
   Selection: MockSelection,
+  EventEmitter: MockEventEmitter,
   ViewColumn: {
     One: 1,
     Two: 2,
