@@ -56,10 +56,63 @@ cd apps/textscene-vscode
 pnpm build
 ```
 
+## Testing
+
+### Unit Tests
+
+```bash
+# Run all unit tests
+pnpm test:unit
+
+# Watch mode for development
+cd packages/textscene-core
+pnpm test:watch
+```
+
+### Integration Tests
+
+The VS Code extension includes comprehensive integration tests that run in a real VS Code instance:
+
+```bash
+# Run integration tests (45 tests covering all fixtures)
+cd apps/textscene-vscode
+pnpm test:integration
+
+# Debug integration tests
+pnpm test:integration:debug
+```
+
+**Debug Configuration**: Add to `.vscode/launch.json` for debugging:
+
+```json
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug Integration Tests",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/apps/textscene-vscode/out/test/integration/runTests.js",
+      "cwd": "${workspaceFolder}/apps/textscene-vscode",
+      "preLaunchTask": "npm: build",
+      "outFiles": ["${workspaceFolder}/apps/textscene-vscode/out/**/*.js"]
+    }
+  ]
+}
+```
+
+### Continuous Integration
+
+Integration tests run on all platforms (Ubuntu, macOS, Windows) in GitHub Actions:
+- Uses `xvfb-run` for headless testing on Linux
+- Verifies VSIX installation on all platforms
+- Tests all 42 scene fixtures automatically
+
 ## Scripts
 
 - `pnpm build` - Build all packages
-- `pnpm test` - Run all tests
+- `pnpm test` - Run all tests (unit + integration)
+- `pnpm test:unit` - Run unit tests only
 - `pnpm lint` - Lint code
 - `pnpm type-check` - Type check
 - `pnpm clean` - Clean artifacts
