@@ -35,6 +35,11 @@ TextScene Inspector is a monorepo for parsing and rendering text-based 3D scene 
 - Report complexity levels only: simple/moderate/complex
 - Focus on technical information, not temporal predictions
 
+### Git Commit Messages
+- NEVER include "🤖 Generated with [Claude Code]" or similar AI attribution lines
+- NEVER include "Co-Authored-By: Claude" or similar co-authorship lines
+- Keep commit messages professional and focused on the technical changes
+
 ## Work Item Workflow
 
 **Purpose**: Reduce context window usage by separating high-level roadmap from detailed implementation notes.
@@ -98,209 +103,20 @@ node apps/textscene-linter/dist/cli.js scenes/fixtures/*.tscn scenes/examples/*.
 
 ## Testing Best Practices
 
-### Test Coverage Requirements
-
 **For every public method, test:**
+1. Happy path - normal execution
+2. Error paths - what happens when things fail
+3. Edge cases - boundary conditions, empty inputs, null checks
+4. Callbacks - verify invoked with correct data
+5. State changes - verify internal state updates
 
-1. ✅ **Happy Path** - Normal successful execution
-2. ✅ **Error Paths** - What happens when things fail
-3. ✅ **Edge Cases** - Boundary conditions, empty inputs, null checks
-4. ✅ **Callbacks** - Verify callbacks are invoked with correct data
-5. ✅ **State Changes** - Verify internal state updates correctly
+**Test-first refactoring:** Update test signatures before changing implementation.
 
-**Bad Example** (only happy path):
-```typescript
-describe('SceneManager.addScene', () => {
-  it('should track scene instances', async () => {
-    await sceneManager.addScene('Enemy1', scenePath);
-    expect(sceneManager.getInstances(scenePath)).toHaveLength(1);
-  });
-});
-```
+**Callback testing:** Test (1) callback is invoked, (2) receives correct data, (3) graceful degradation when not set.
 
-**Good Example** (comprehensive):
-```typescript
-describe('SceneManager.addScene', () => {
-  it('should track scene instances on success', async () => {
-    await sceneManager.addScene('Enemy1', scenePath);
-    expect(sceneManager.getInstances(scenePath)).toHaveLength(1);
-  });
+**TypeScript strict mode:** Prefix intentionally unused parameters with underscore: `(_file, path) => ...`
 
-  it('should call onResourceNeeded callback when scene fails to load', async () => {
-    const callbackSpy = vi.fn().mockResolvedValue(null);
-    sceneManager.setOnResourceNeeded(callbackSpy);
-
-    await sceneManager.addScene('Missing', 'res://missing.tscn');
-
-    expect(callbackSpy).toHaveBeenCalledWith({
-      path: 'res://missing.tscn',
-      type: 'PackedScene',
-      referencedBy: 'Missing',
-      error: expect.any(String)
-    });
-  });
-
-  it('should not throw when scene fails and no callback set', async () => {
-    await expect(
-      sceneManager.addScene('Missing', 'res://missing.tscn')
-    ).resolves.not.toThrow();
-  });
-
-  it('should not track instance when scene fails to load', async () => {
-    await sceneManager.addScene('Missing', 'res://missing.tscn');
-    expect(sceneManager.getInstances('res://missing.tscn')).toHaveLength(0);
-  });
-});
-```
-
-### Test-First Refactoring
-
-When refactoring existing code:
-
-1. **Update tests FIRST** to match new signatures
-   ```typescript
-   // Before refactor: Update this first
-   await sceneManager.addScene(path, scene, mockParent, mockData);
-
-   // After refactor signature change
-   await sceneManager.addScene(path, scene);
-   ```
-
-2. **Run tests** - Should fail if behavior changed
-3. **Fix implementation** - Make tests pass
-4. **Verify** - All tests green
-
-**Why**: Ensures refactors don't silently break functionality. Tests document expected behavior.
-
-### Callback Testing Pattern
-
-When implementing callback-based features:
-
-```typescript
-// 1. Test callback is invoked
-it('should invoke callback on error', async () => {
-  const callbackSpy = vi.fn().mockResolvedValue(null);
-  manager.setCallback(callbackSpy);
-
-  await manager.performAction();
-
-  expect(callbackSpy).toHaveBeenCalled();
-});
-
-// 2. Test callback receives correct data
-it('should pass correct data to callback', async () => {
-  const callbackSpy = vi.fn();
-  manager.setCallback(callbackSpy);
-
-  await manager.performAction();
-
-  expect(callbackSpy).toHaveBeenCalledWith({
-    expectedField1: 'value',
-    expectedField2: 42
-  });
-});
-
-// 3. Test graceful degradation without callback
-it('should not throw when callback not set', async () => {
-  await expect(manager.performAction()).resolves.not.toThrow();
-});
-```
-
-### Integration Testing
-
-For callback chains across multiple classes:
-
-```typescript
-// Test end-to-end callback wiring
-it('should invoke app callback when core error occurs', async () => {
-  const appCallbackSpy = vi.fn();
-
-  // Create system with callback wiring
-  const renderer = new TscnRenderer(canvas, {
-    onResourceNeeded: appCallbackSpy
-  });
-
-  // Trigger error condition
-  await renderer.render(sceneWithMissingExternal);
-
-  // Verify callback reached app layer
-  expect(appCallbackSpy).toHaveBeenCalled();
-});
-```
-
-### TypeScript Strict Mode
-
-The project uses strict type checking to catch errors early:
-
-```json
-// tsconfig.base.json
-{
-  "compilerOptions": {
-    "strict": true,                    // Enables all strict checks
-    "noUncheckedIndexedAccess": true, // Array access returns T | undefined
-    "noImplicitOverride": true,       // Must use override keyword
-    "noUnusedParameters": true         // Catches unused function params
-  }
-}
-```
-
-**Pattern for intentionally unused parameters**:
-```typescript
-// Prefix with underscore to indicate "intentionally unused"
-uploadedFiles.forEach((_file, path) => {
-  // Only using path, not file
-});
-```
-
-### Test Coverage Targets
-
-**Target**: Every public method should have at least 3 tests:
-1. Happy path test
-2. Error path test
-3. Edge case or callback test
-
-### Common Test Smells
-
-❌ **Smell**: Tests only cover happy paths
-```typescript
-it('should work', async () => {
-  await method();
-  expect(result).toBe(expected);
-});
-```
-
-✅ **Fix**: Add error and edge case tests
-```typescript
-it('should work with valid input', async () => { /* ... */ });
-it('should handle invalid input gracefully', async () => { /* ... */ });
-it('should invoke callback on error', async () => { /* ... */ });
-```
-
-❌ **Smell**: Outdated test signatures that still "pass"
-```typescript
-// Method signature changed but test not updated
-await method(arg1, arg2, oldArg3, oldArg4); // Extra params ignored
-```
-
-✅ **Fix**: Update tests when refactoring
-```typescript
-await method(arg1, arg2); // Matches current signature
-```
-
-❌ **Smell**: No integration tests for callback chains
-```typescript
-// Only unit tests, no end-to-end validation
-expect(manager.callback).toBeDefined();
-```
-
-✅ **Fix**: Test the full chain
-```typescript
-// Verify callback reaches application layer
-const appCallback = vi.fn();
-system.init({ onError: appCallback });
-await system.triggerError();
-expect(appCallback).toHaveBeenCalled();
-```
+**Target:** Minimum 3 tests per public method (happy, error, edge/callback).
 
 ### Test Organization
 

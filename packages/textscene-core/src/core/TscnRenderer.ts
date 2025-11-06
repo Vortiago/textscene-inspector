@@ -187,6 +187,20 @@ export class TscnRenderer {
     return this.nodeLifecycle.setNodeVisibility(nodePath, visible);
   }
 
+  /**
+   * Add an event listener for node lifecycle events (add, remove, update)
+   */
+  addNodeLifecycleListener(listener: Parameters<NodeLifecycleManager['addEventListener']>[0]): void {
+    return this.nodeLifecycle.addEventListener(listener);
+  }
+
+  /**
+   * Remove an event listener for node lifecycle events
+   */
+  removeNodeLifecycleListener(listener: Parameters<NodeLifecycleManager['removeEventListener']>[0]): void {
+    return this.nodeLifecycle.removeEventListener(listener);
+  }
+
   // ========== Selection Delegation ==========
 
   getNodePathAtScreenPosition(x: number, y: number): string | null {

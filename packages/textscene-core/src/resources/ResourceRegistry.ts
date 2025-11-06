@@ -335,6 +335,42 @@ export class ResourceRegistry {
   }
 
   /**
+   * Resolve instance reference to scene path.
+   * Handles parsing, validation, and error logging.
+   * Returns scene path if valid PackedScene, null otherwise.
+   */
+  resolveInstancePath(instanceRef: string | undefined): string | null {
+    if (!instanceRef) {
+      return null;
+    }
+
+    // Parse resource ID from ExtResource("id") format
+    const resourceId = ResourceRegistry.parseReference(instanceRef);
+    if (!resourceId) {
+      logger.warn(`[ResourceRegistry] Invalid instance reference format: ${instanceRef}`);
+      return null;
+    }
+
+    // Look up resource metadata
+    const metadata = this.getMetadata(resourceId);
+    if (!metadata) {
+      logger.warn(`[ResourceRegistry] Instance resource not found: ${resourceId}`);
+      return null;
+    }
+
+    // Validate resource type
+    if (metadata.type !== 'PackedScene') {
+      logger.warn(
+        `[ResourceRegistry] Instance resource is not a PackedScene: ${resourceId} ` +
+        `(type: ${metadata.type})`
+      );
+      return null;
+    }
+
+    return metadata.path;
+  }
+
+  /**
    * Check if a resource exists in the registry.
    */
   hasResource(path: string): boolean {

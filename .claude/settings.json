@@ -26,5 +26,7 @@
         ]
       }
     ]
-  }
+  },
+  "includeCoAuthoredBy": false,
+  "gitAttribution": false
 }

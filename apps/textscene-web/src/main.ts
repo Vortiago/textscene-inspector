@@ -122,7 +122,7 @@ function updateResourceFilesList(): void {
       // Update UI first
       updateResourceFilesList();
 
-      // Provide to renderer
+      // Provide to renderer (tree viewer will auto-refresh via lifecycle events)
       await previewUI.getRenderer().provideResource(resource.path);
     };
 
@@ -170,6 +170,10 @@ fileInput.addEventListener('change', async (event) => {
   if (!file) return;
 
   try {
+    // Clear previous missing resources when loading new scene
+    missingResourcesMap.clear();
+    updateResourceFilesList();
+
     const content = await file.text();
     await previewUI.loadTscn(content);
     resetButton.disabled = false;
@@ -225,6 +229,11 @@ function renderFixtureList() {
         if (!response.ok) {
           throw new Error(`Failed to load fixture: ${response.statusText}`);
         }
+
+        // Clear previous missing resources when loading new scene
+        missingResourcesMap.clear();
+        updateResourceFilesList();
+
         const content = await response.text();
         await previewUI.loadTscn(content);
         resetButton.disabled = false;
