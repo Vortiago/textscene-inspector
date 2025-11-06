@@ -19,8 +19,13 @@
     "languages": [
       {
         "id": "tscn",
-        "extensions": [".tscn"],
-        "aliases": ["TSCN", "Text Scene"],
+        "extensions": [
+          ".tscn"
+        ],
+        "aliases": [
+          "TSCN",
+          "Text Scene"
+        ],
         "configuration": "./language-configuration.json"
       }
     ],
@@ -80,10 +85,15 @@
     "@textscene/core": "workspace:*"
   },
   "devDependencies": {
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^24.10.0",
     "@types/vscode": "^1.85.0",
+    "@vscode/test-electron": "^2.5.2",
     "@vscode/vsce": "^3.2.1",
     "esbuild": "catalog:",
+    "glob": "^11.0.3",
     "happy-dom": "catalog:",
+    "mocha": "^11.7.5",
     "rimraf": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
