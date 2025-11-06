@@ -3,6 +3,7 @@
  */
 import * as assert from 'assert';
 import * as vscode from 'vscode';
+import * as path from 'path';
 
 suite('Extension Activation Tests', () => {
   test('Extension should be present', () => {
@@ -34,20 +35,11 @@ suite('Extension Activation Tests', () => {
     );
     await extension?.activate();
 
-    // Wait for workspace to be available (VS Code may take time to initialize)
-    let workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-    if (!workspaceFolder) {
-      // Wait up to 5 seconds for workspace to be ready
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-    }
-
-    assert.ok(workspaceFolder, 'Workspace folder should exist');
-
-    const fixturePath = vscode.Uri.joinPath(
-      workspaceFolder.uri,
-      'fixtures',
-      'unit-empty-scene.tscn',
+    // Construct path directly instead of using workspace folders
+    // (workspace folders may not be available immediately on CI runners)
+    const workspaceRoot = path.resolve(__dirname, '../../../../.test-workspace');
+    const fixturePath = vscode.Uri.file(
+      path.join(workspaceRoot, 'fixtures', 'unit-empty-scene.tscn'),
     );
 
     // Open the document
