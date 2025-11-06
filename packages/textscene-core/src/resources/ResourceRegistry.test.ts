@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { ResourceRegistry } from './ResourceRegistry';
 import type { ResourceProvider } from './ResourceProvider';
 import type { TscnExternalResource } from '../parser/types';
+import * as logger from '../logger';
 
 // Mock THREE.TextureLoader
 vi.mock('three', async () => {
@@ -104,6 +105,77 @@ describe('ResourceRegistry', () => {
       // Godot uses double quotes, but test robustness
       const result = ResourceRegistry.parseReference("ExtResource('1_abc')");
       expect(result).toBeNull(); // Should only match double quotes
+    });
+  });
+
+  describe('resolveInstancePath', () => {
+    it('should resolve valid instance reference to scene path', () => {
+      const resource: TscnExternalResource = {
+        id: '1_scene',
+        path: 'res://scenes/enemy.tscn',
+        type: 'PackedScene',
+      };
+      registry.register(resource);
+
+      const result = registry.resolveInstancePath('ExtResource("1_scene")');
+      expect(result).toBe('res://scenes/enemy.tscn');
+    });
+
+    it('should return null for undefined instance', () => {
+      expect(registry.resolveInstancePath(undefined)).toBeNull();
+    });
+
+    it('should return null for invalid reference format', () => {
+      const result = registry.resolveInstancePath('not a reference');
+      expect(result).toBeNull();
+    });
+
+    it('should return null for missing resource', () => {
+      const result = registry.resolveInstancePath('ExtResource("missing_id")');
+      expect(result).toBeNull();
+    });
+
+    it('should return null for non-PackedScene resource', () => {
+      const resource: TscnExternalResource = {
+        id: '1_texture',
+        path: 'res://textures/icon.png',
+        type: 'Texture2D',
+      };
+      registry.register(resource);
+
+      const result = registry.resolveInstancePath('ExtResource("1_texture")');
+      expect(result).toBeNull();
+    });
+
+    it('should log warning for invalid reference format', () => {
+      const warnSpy = vi.spyOn(logger, 'warn');
+      registry.resolveInstancePath('invalid');
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Invalid instance reference format')
+      );
+    });
+
+    it('should log warning for missing resource', () => {
+      const warnSpy = vi.spyOn(logger, 'warn');
+      registry.resolveInstancePath('ExtResource("missing")');
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Instance resource not found')
+      );
+    });
+
+    it('should log warning for wrong resource type', () => {
+      const warnSpy = vi.spyOn(logger, 'warn');
+      const resource: TscnExternalResource = {
+        id: '1_mat',
+        path: 'res://materials/test.tres',
+        type: 'StandardMaterial3D',
+      };
+      registry.register(resource);
+
+      registry.resolveInstancePath('ExtResource("1_mat")');
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('not a PackedScene')
+      );
     });
   });
 

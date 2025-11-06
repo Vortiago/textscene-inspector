@@ -55,6 +55,7 @@ export class TscnPreviewUI {
     this.setupResizeHandler();
     this.setupTreeViewer();
     this.setupViewportSelection();
+    this.setupLifecycleEvents();
     this.renderer.startAnimationLoop();
   }
 
@@ -110,6 +111,17 @@ export class TscnPreviewUI {
           this.renderer.clearHoverEffect();
         }
       },
+    });
+  }
+
+  private setupLifecycleEvents(): void {
+    // Listen to node lifecycle events and automatically refresh the tree viewer
+    this.renderer.addNodeLifecycleListener((event) => {
+      // Only refresh on add/remove events (update already emits both)
+      // Refresh after any structural change to keep tree viewer in sync
+      if (event.type === 'nodeAdded' || event.type === 'nodeRemoved') {
+        this.refreshTreeViewer();
+      }
     });
   }
 
@@ -203,6 +215,16 @@ export class TscnPreviewUI {
 
   getParser(): TscnParser {
     return this.parser;
+  }
+
+  /**
+   * Refresh the tree viewer with current scene data
+   * Call this after dynamic updates (e.g., resource provision)
+   */
+  refreshTreeViewer(): void {
+    if (this.treeViewer && this._currentScene) {
+      this.treeViewer.renderTree(this._currentScene.nodes);
+    }
   }
 
   async handleIncrementalUpdate(changes: import('../types/changes').NodeChange[], sceneData: TscnScene): Promise<void> {

@@ -4,6 +4,7 @@ import { NodeLifecycleManager } from './NodeLifecycleManager';
 import { NodeTracker } from './NodeTracker';
 import type { TscnScene, TscnNode } from '../parser/types';
 import type { SceneManager } from './SceneManager';
+import { joinPath } from '../utils/nodePath';
 
 // Mock NodeRegistry
 vi.mock('./NodeRegistry', () => ({
@@ -239,6 +240,7 @@ describe('NodeLifecycleManager', () => {
         ],
         subResources: [],
         resourceRegistry: {
+          resolveInstancePath: vi.fn().mockReturnValue('res://scenes/enemy.tscn'),
           getMetadata: vi.fn().mockReturnValue({
             id: '1_enemy',
             path: 'res://scenes/enemy.tscn',
@@ -275,6 +277,9 @@ describe('NodeLifecycleManager', () => {
         nodes: [],
         externalResources: [],
         subResources: [],
+        resourceRegistry: {
+          resolveInstancePath: vi.fn().mockReturnValue(null),
+        } as never,
       };
 
       await manager.addNode('BadInstance', node, sceneData);
@@ -304,6 +309,7 @@ describe('NodeLifecycleManager', () => {
         ],
         subResources: [],
         resourceRegistry: {
+          resolveInstancePath: vi.fn().mockReturnValue('res://scenes/enemy.tscn'),
           getMetadata: vi.fn().mockReturnValue({
             id: '1_enemy',
             path: 'res://scenes/enemy.tscn',
@@ -1199,6 +1205,204 @@ describe('NodeLifecycleManager', () => {
     });
   });
 
+  describe('TscnNode.children synchronization', () => {
+    it('should add child to parent TscnNode.children array when adding node', async () => {
+      const parentNode: TscnNode = {
+        name: 'Parent',
+        type: 'Node3D',
+        properties: {},
+        children: [],
+      };
+
+      const childNode: TscnNode = {
+        name: 'Child',
+        type: 'Node3D',
+        properties: {},
+        children: [],
+      };
+
+      const sceneData: TscnScene = {
+        format: 3,
+        nodes: [],
+        externalResources: [],
+        subResources: [],
+      };
+
+      // Add parent first
+      await manager.addNode('Parent', parentNode, sceneData);
+
+      // Add child dynamically (simulates external scene provision)
+      await manager.addNode('Parent/Child', childNode, sceneData, 'Parent');
+
+      // Verify child is in parent's TscnNode.children array
+      const trackedParent = nodeTracker.getNode('Parent');
+      expect(trackedParent?.children).toHaveLength(1);
+      expect(trackedParent?.children?.[0]).toBe(childNode);
+    });
+
+    it('should remove child from parent TscnNode.children array when removing node', async () => {
+      const parentNode: TscnNode = {
+        name: 'Parent',
+        type: 'Node3D',
+        properties: {},
+        children: [
+          {
+            name: 'Child1',
+            type: 'Node3D',
+            properties: {},
+            children: [],
+          },
+          {
+            name: 'Child2',
+            type: 'Node3D',
+            properties: {},
+            children: [],
+          },
+        ],
+      };
+
+      const sceneData: TscnScene = {
+        format: 3,
+        nodes: [],
+        externalResources: [],
+        subResources: [],
+      };
+
+      await manager.addNode('Parent', parentNode, sceneData);
+
+      // Verify both children are in array
+      const trackedParent = nodeTracker.getNode('Parent');
+      expect(trackedParent?.children).toHaveLength(2);
+
+      // Remove one child
+      manager.removeNode('Parent/Child1');
+
+      // Verify child was removed from TscnNode.children array
+      expect(trackedParent?.children).toHaveLength(1);
+      expect(trackedParent?.children?.[0]?.name).toBe('Child2');
+    });
+
+    it('should not add duplicate children to TscnNode.children array', async () => {
+      const parentNode: TscnNode = {
+        name: 'Parent',
+        type: 'Node3D',
+        properties: {},
+        children: [],
+      };
+
+      const childNode: TscnNode = {
+        name: 'Child',
+        type: 'Node3D',
+        properties: {},
+        children: [],
+      };
+
+      const sceneData: TscnScene = {
+        format: 3,
+        nodes: [],
+        externalResources: [],
+        subResources: [],
+      };
+
+      await manager.addNode('Parent', parentNode, sceneData);
+      await manager.addNode('Parent/Child', childNode, sceneData, 'Parent');
+      await manager.addNode('Parent/Child', childNode, sceneData, 'Parent');
+
+      // Should only have one child in array (no duplicates)
+      const trackedParent = nodeTracker.getNode('Parent');
+      expect(trackedParent?.children).toHaveLength(1);
+    });
+
+    it('should handle removing child that was dynamically added', async () => {
+      const parentNode: TscnNode = {
+        name: 'Parent',
+        type: 'Node3D',
+        properties: {},
+        children: [],
+      };
+
+      const dynamicChild: TscnNode = {
+        name: 'DynamicChild',
+        type: 'Node3D',
+        properties: {},
+        children: [],
+      };
+
+      const sceneData: TscnScene = {
+        format: 3,
+        nodes: [],
+        externalResources: [],
+        subResources: [],
+      };
+
+      // Add parent
+      await manager.addNode('Parent', parentNode, sceneData);
+
+      // Dynamically add child (simulates external scene loading)
+      await manager.addNode('Parent/DynamicChild', dynamicChild, sceneData, 'Parent');
+
+      const trackedParent = nodeTracker.getNode('Parent');
+      expect(trackedParent?.children).toHaveLength(1);
+
+      // Remove dynamic child
+      manager.removeNode('Parent/DynamicChild');
+
+      // Verify child was removed from TscnNode.children array
+      expect(trackedParent?.children).toHaveLength(0);
+    });
+
+    it('should maintain TscnNode.children array during complex operations', async () => {
+      const rootNode: TscnNode = {
+        name: 'Root',
+        type: 'Node3D',
+        properties: {},
+        children: [
+          {
+            name: 'StaticChild',
+            type: 'Node3D',
+            properties: {},
+            children: [],
+          },
+        ],
+      };
+
+      const dynamicChild: TscnNode = {
+        name: 'DynamicChild',
+        type: 'Node3D',
+        properties: {},
+        children: [],
+      };
+
+      const sceneData: TscnScene = {
+        format: 3,
+        nodes: [],
+        externalResources: [],
+        subResources: [],
+      };
+
+      // Add root with one static child
+      await manager.addNode('Root', rootNode, sceneData);
+
+      const trackedRoot = nodeTracker.getNode('Root');
+      expect(trackedRoot?.children).toHaveLength(1);
+      expect(trackedRoot?.children?.[0]?.name).toBe('StaticChild');
+
+      // Add dynamic child (simulates external scene provision)
+      await manager.addNode('Root/DynamicChild', dynamicChild, sceneData, 'Root');
+
+      // Should now have 2 children
+      expect(trackedRoot?.children).toHaveLength(2);
+      expect(trackedRoot?.children?.map(c => c.name)).toEqual(['StaticChild', 'DynamicChild']);
+
+      // Remove static child
+      manager.removeNode('Root/StaticChild');
+
+      // Should only have dynamic child left
+      expect(trackedRoot?.children).toHaveLength(1);
+      expect(trackedRoot?.children?.[0]?.name).toBe('DynamicChild');
+    });
+  });
+
   describe('scene reference tracking', () => {
     it('should track nodes added to scene root', async () => {
       const sceneData: TscnScene = {
@@ -1238,6 +1442,727 @@ describe('NodeLifecycleManager', () => {
 
       expect(childObject?.parent).toBe(parentObject);
       expect(parentObject?.children).toContain(childObject);
+    });
+  });
+
+  describe('verifyInvariants', () => {
+    it('should pass verification for correctly synced node', async () => {
+      const node: TscnNode = {
+        name: 'TestNode',
+        type: 'Node3D',
+        properties: {},
+        children: [],
+      };
+
+      const sceneData: TscnScene = {
+        format: 3,
+        nodes: [],
+        externalResources: [],
+        subResources: [],
+      };
+
+      await manager.addNode('TestNode', node, sceneData);
+
+      // Should not throw (verification passes)
+      expect(() => manager['verifyInvariants']('TestNode')).not.toThrow();
+    });
+
+    it('should pass verification for node with parent', async () => {
+      const parentNode: TscnNode = {
+        name: 'Parent',
+        type: 'Node3D',
+        properties: {},
+        children: [],
+      };
+
+      const childNode: TscnNode = {
+        name: 'Child',
+        type: 'Node3D',
+        properties: {},
+        children: [],
+      };
+
+      const sceneData: TscnScene = {
+        format: 3,
+        nodes: [],
+        externalResources: [],
+        subResources: [],
+      };
+
+      await manager.addNode('Parent', parentNode, sceneData);
+      await manager.addNode('Parent/Child', childNode, sceneData, 'Parent');
+
+      // Should not throw (verification passes)
+      expect(() => manager['verifyInvariants']('Parent/Child')).not.toThrow();
+    });
+
+    it('should detect missing node in tracker', async () => {
+      const node: TscnNode = {
+        name: 'Test',
+        type: 'Node3D',
+        properties: {},
+        children: [],
+      };
+
+      const sceneData: TscnScene = {
+        format: 3,
+        nodes: [],
+        externalResources: [],
+        subResources: [],
+      };
+
+      await manager.addNode('Test', node, sceneData);
+
+      // Manually corrupt state by deleting from tracker
+      nodeTracker.delete('Test');
+
+      // Should throw
+      expect(() => manager['verifyInvariants']('Test')).toThrow(/Incomplete tracking/);
+    });
+
+    it('should detect userData.nodePath mismatch', async () => {
+      const node: TscnNode = {
+        name: 'Test',
+        type: 'Node3D',
+        properties: {},
+        children: [],
+      };
+
+      const sceneData: TscnScene = {
+        format: 3,
+        nodes: [],
+        externalResources: [],
+        subResources: [],
+      };
+
+      await manager.addNode('Test', node, sceneData);
+
+      // Manually corrupt userData
+      const object = nodeTracker.getObject('Test');
+      if (object) {
+        object.userData.nodePath = 'WrongPath';
+      }
+
+      // Should throw
+      expect(() => manager['verifyInvariants']('Test')).toThrow(/userData.nodePath mismatch/);
+    });
+
+    it('should detect missing node in parent.children array', async () => {
+      const parentNode: TscnNode = {
+        name: 'Parent',
+        type: 'Node3D',
+        properties: {},
+        children: [],
+      };
+
+      const childNode: TscnNode = {
+        name: 'Child',
+        type: 'Node3D',
+        properties: {},
+        children: [],
+      };
+
+      const sceneData: TscnScene = {
+        format: 3,
+        nodes: [],
+        externalResources: [],
+        subResources: [],
+      };
+
+      await manager.addNode('Parent', parentNode, sceneData);
+      await manager.addNode('Parent/Child', childNode, sceneData, 'Parent');
+
+      // Manually corrupt TscnNode.children array
+      const trackedParent = nodeTracker.getNode('Parent');
+      if (trackedParent) {
+        trackedParent.children = [];
+      }
+
+      // Should throw
+      expect(() => manager['verifyInvariants']('Parent/Child')).toThrow(/not in parent.children array/);
+    });
+
+    it('should skip verification in production mode', async () => {
+      const originalEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = 'production';
+
+      try {
+        const node: TscnNode = {
+          name: 'Test',
+          type: 'Node3D',
+          properties: {},
+          children: [],
+        };
+
+        const sceneData: TscnScene = {
+          format: 3,
+          nodes: [],
+          externalResources: [],
+          subResources: [],
+        };
+
+        await manager.addNode('Test', node, sceneData);
+
+        // Manually corrupt userData
+        const object = nodeTracker.getObject('Test');
+        if (object) {
+          object.userData.nodePath = 'WrongPath';
+        }
+
+        // Should NOT throw in production mode
+        expect(() => manager['verifyInvariants']('Test')).not.toThrow();
+      } finally {
+        process.env.NODE_ENV = originalEnv;
+      }
+    });
+  });
+
+  describe('syncNodeAdd', () => {
+    it('should synchronize all three structures when adding node to scene root', () => {
+      const manager = new NodeLifecycleManager(scene, nodeTracker);
+      const node: TscnNode = { name: 'TestNode', type: 'Node3D', children: [] };
+      const object3D = new THREE.Object3D();
+
+      // Call helper
+      manager['syncNodeAdd']('TestNode', node, object3D, scene);
+
+      // Verify 1: userData set correctly
+      expect(object3D.userData.nodePath).toBe('TestNode');
+      expect(object3D.userData.nodeName).toBe('TestNode');
+
+      // Verify 2: NodeTracker updated
+      expect(nodeTracker.getObject('TestNode')).toBe(object3D);
+      expect(nodeTracker.getNode('TestNode')).toBe(node);
+
+      // Verify 3: Added to THREE.js scene
+      expect(object3D.parent).toBe(scene);
+      expect(scene.children).toContain(object3D);
+
+      // Verify 4: No parent TscnNode (root level)
+      // No parent.children to update
+
+      // Verify 5: No errors thrown (verifyInvariants passed)
+    });
+
+    it('should synchronize all three structures when adding child node', () => {
+      const manager = new NodeLifecycleManager(scene, nodeTracker);
+
+      // Setup parent
+      const parentNode: TscnNode = { name: 'Parent', type: 'Node3D', children: [] };
+      const parentObject = new THREE.Object3D();
+      parentObject.userData.nodePath = 'Parent';
+      parentObject.userData.nodeName = 'Parent';
+      nodeTracker.set('Parent', parentObject, parentNode);
+      scene.add(parentObject);
+
+      // Add child
+      const childNode: TscnNode = { name: 'Child', type: 'Node3D', children: [] };
+      const childObject = new THREE.Object3D();
+
+      // Call helper
+      manager['syncNodeAdd']('Parent/Child', childNode, childObject, parentObject, 'Parent');
+
+      // Verify 1: userData set correctly
+      expect(childObject.userData.nodePath).toBe('Parent/Child');
+      expect(childObject.userData.nodeName).toBe('Child');
+
+      // Verify 2: NodeTracker updated
+      expect(nodeTracker.getObject('Parent/Child')).toBe(childObject);
+      expect(nodeTracker.getNode('Parent/Child')).toBe(childNode);
+
+      // Verify 3: Added to THREE.js parent
+      expect(childObject.parent).toBe(parentObject);
+      expect(parentObject.children).toContain(childObject);
+
+      // Verify 4: TscnNode.children array updated
+      expect(parentNode.children).toContain(childNode);
+      expect(parentNode.children).toHaveLength(1);
+
+      // Verify 5: No errors thrown (verifyInvariants passed)
+    });
+
+    it('should prevent duplicate entries in TscnNode.children array', () => {
+      const manager = new NodeLifecycleManager(scene, nodeTracker);
+
+      // Setup parent
+      const parentNode: TscnNode = { name: 'Parent', type: 'Node3D', children: [] };
+      const parentObject = new THREE.Object3D();
+      parentObject.userData.nodePath = 'Parent';
+      parentObject.userData.nodeName = 'Parent';
+      nodeTracker.set('Parent', parentObject, parentNode);
+      scene.add(parentObject);
+
+      // Add child twice (should only appear once in children array)
+      const childNode: TscnNode = { name: 'Child', type: 'Node3D', children: [] };
+      const childObject = new THREE.Object3D();
+
+      // First call
+      manager['syncNodeAdd']('Parent/Child', childNode, childObject, parentObject, 'Parent');
+      expect(parentNode.children).toHaveLength(1);
+
+      // Second call (simulate re-add)
+      manager['syncNodeAdd']('Parent/Child', childNode, childObject, parentObject, 'Parent');
+      expect(parentNode.children).toHaveLength(1); // Still 1, not 2
+    });
+
+    it('should handle parent with no existing children array', () => {
+      const manager = new NodeLifecycleManager(scene, nodeTracker);
+
+      // Setup parent WITHOUT children array
+      const parentNode: TscnNode = { name: 'Parent', type: 'Node3D' };
+      const parentObject = new THREE.Object3D();
+      parentObject.userData.nodePath = 'Parent';
+      parentObject.userData.nodeName = 'Parent';
+      nodeTracker.set('Parent', parentObject, parentNode);
+      scene.add(parentObject);
+
+      // Add child
+      const childNode: TscnNode = { name: 'Child', type: 'Node3D', children: [] };
+      const childObject = new THREE.Object3D();
+
+      // Call helper
+      manager['syncNodeAdd']('Parent/Child', childNode, childObject, parentObject, 'Parent');
+
+      // Verify children array was created
+      expect(parentNode.children).toBeDefined();
+      expect(parentNode.children).toContain(childNode);
+      expect(parentNode.children).toHaveLength(1);
+    });
+
+    it('should handle missing parent gracefully (logs warning, no crash)', () => {
+      const manager = new NodeLifecycleManager(scene, nodeTracker);
+
+      // No parent in tracker
+      const childNode: TscnNode = { name: 'Child', type: 'Node3D', children: [] };
+      const childObject = new THREE.Object3D();
+
+      // Call helper with non-existent parent
+      // Should not throw, but object won't be added to parent
+      expect(() => {
+        manager['syncNodeAdd']('NonExistent/Child', childNode, childObject, null, 'NonExistent');
+      }).not.toThrow();
+
+      // Verify userData and NodeTracker still updated
+      expect(childObject.userData.nodePath).toBe('NonExistent/Child');
+      expect(nodeTracker.getNode('NonExistent/Child')).toBe(childNode);
+
+      // Object not added to any parent (parent is null)
+      expect(childObject.parent).toBeNull();
+    });
+
+    it('should call verifyInvariants in development mode', () => {
+      const originalEnv = process.env.NODE_ENV;
+      try {
+        process.env.NODE_ENV = 'development';
+
+        const manager = new NodeLifecycleManager(scene, nodeTracker);
+
+        // Setup node
+        const node: TscnNode = { name: 'Test', type: 'Node3D', children: [] };
+        const object3D = new THREE.Object3D();
+
+        // Call helper (should run verifyInvariants without throwing)
+        expect(() => {
+          manager['syncNodeAdd']('Test', node, object3D, scene);
+        }).not.toThrow();
+
+        // Verify it actually synced
+        expect(nodeTracker.getNode('Test')).toBe(node);
+      } finally {
+        process.env.NODE_ENV = originalEnv;
+      }
+    });
+  });
+
+  describe('syncNodeRemove', () => {
+    it('should remove node from all three structures', () => {
+      const manager = new NodeLifecycleManager(scene, nodeTracker);
+
+      // Setup node
+      const node: TscnNode = { name: 'TestNode', type: 'Node3D', children: [] };
+      const object3D = new THREE.Object3D();
+      object3D.userData.nodePath = 'TestNode';
+      object3D.userData.nodeName = 'TestNode';
+      nodeTracker.set('TestNode', object3D, node);
+      scene.add(object3D);
+
+      // Verify it's there
+      expect(nodeTracker.getNode('TestNode')).toBe(node);
+      expect(scene.children).toContain(object3D);
+
+      // Remove it
+      manager['syncNodeRemove']('TestNode');
+
+      // Verify 1: Removed from NodeTracker
+      expect(nodeTracker.getNode('TestNode')).toBeUndefined();
+      expect(nodeTracker.getObject('TestNode')).toBeUndefined();
+
+      // Verify 2: Removed from THREE.js scene
+      expect(scene.children).not.toContain(object3D);
+      expect(object3D.parent).toBeNull();
+    });
+
+    it('should remove child node and update parent TscnNode.children array', () => {
+      const manager = new NodeLifecycleManager(scene, nodeTracker);
+
+      // Setup parent
+      const parentNode: TscnNode = { name: 'Parent', type: 'Node3D', children: [] };
+      const parentObject = new THREE.Object3D();
+      parentObject.userData.nodePath = 'Parent';
+      parentObject.userData.nodeName = 'Parent';
+      nodeTracker.set('Parent', parentObject, parentNode);
+      scene.add(parentObject);
+
+      // Setup child
+      const childNode: TscnNode = { name: 'Child', type: 'Node3D', children: [] };
+      const childObject = new THREE.Object3D();
+      childObject.userData.nodePath = 'Parent/Child';
+      childObject.userData.nodeName = 'Child';
+      nodeTracker.set('Parent/Child', childObject, childNode);
+      parentObject.add(childObject);
+      parentNode.children.push(childNode);
+
+      // Verify child is there
+      expect(parentNode.children).toContain(childNode);
+      expect(parentObject.children).toContain(childObject);
+
+      // Remove child
+      manager['syncNodeRemove']('Parent/Child');
+
+      // Verify 1: Removed from parent TscnNode.children array
+      expect(parentNode.children).not.toContain(childNode);
+      expect(parentNode.children).toHaveLength(0);
+
+      // Verify 2: Removed from THREE.js parent
+      expect(parentObject.children).not.toContain(childObject);
+
+      // Verify 3: Removed from NodeTracker
+      expect(nodeTracker.getNode('Parent/Child')).toBeUndefined();
+    });
+
+    it('should cascade removal to all descendants', () => {
+      const manager = new NodeLifecycleManager(scene, nodeTracker);
+
+      // Setup parent → child → grandchild hierarchy
+      const parentNode: TscnNode = { name: 'Parent', type: 'Node3D', children: [] };
+      const parentObject = new THREE.Object3D();
+      parentObject.userData.nodePath = 'Parent';
+      parentObject.userData.nodeName = 'Parent';
+      nodeTracker.set('Parent', parentObject, parentNode);
+      scene.add(parentObject);
+
+      const childNode: TscnNode = { name: 'Child', type: 'Node3D', children: [] };
+      const childObject = new THREE.Object3D();
+      childObject.userData.nodePath = 'Parent/Child';
+      childObject.userData.nodeName = 'Child';
+      nodeTracker.set('Parent/Child', childObject, childNode);
+      parentObject.add(childObject);
+
+      const grandchildNode: TscnNode = { name: 'Grandchild', type: 'Node3D', children: [] };
+      const grandchildObject = new THREE.Object3D();
+      grandchildObject.userData.nodePath = 'Parent/Child/Grandchild';
+      grandchildObject.userData.nodeName = 'Grandchild';
+      nodeTracker.set('Parent/Child/Grandchild', grandchildObject, grandchildNode);
+      childObject.add(grandchildObject);
+
+      // Verify all are there
+      expect(nodeTracker.getNode('Parent')).toBe(parentNode);
+      expect(nodeTracker.getNode('Parent/Child')).toBe(childNode);
+      expect(nodeTracker.getNode('Parent/Child/Grandchild')).toBe(grandchildNode);
+
+      // Remove parent (should cascade to child and grandchild)
+      manager['syncNodeRemove']('Parent');
+
+      // Verify all removed from NodeTracker
+      expect(nodeTracker.getNode('Parent')).toBeUndefined();
+      expect(nodeTracker.getNode('Parent/Child')).toBeUndefined();
+      expect(nodeTracker.getNode('Parent/Child/Grandchild')).toBeUndefined();
+
+      // Verify removed from THREE.js scene
+      expect(scene.children).not.toContain(parentObject);
+    });
+
+    it('should handle removing non-existent node gracefully', () => {
+      const manager = new NodeLifecycleManager(scene, nodeTracker);
+
+      // Try to remove node that doesn't exist
+      expect(() => {
+        manager['syncNodeRemove']('NonExistent');
+      }).not.toThrow();
+
+      // Should log warning but not crash
+    });
+
+    it('should handle removing node with multiple descendants', () => {
+      const manager = new NodeLifecycleManager(scene, nodeTracker);
+
+      // Setup parent with 3 children
+      const parentNode: TscnNode = { name: 'Parent', type: 'Node3D', children: [] };
+      const parentObject = new THREE.Object3D();
+      parentObject.userData.nodePath = 'Parent';
+      parentObject.userData.nodeName = 'Parent';
+      nodeTracker.set('Parent', parentObject, parentNode);
+      scene.add(parentObject);
+
+      for (let i = 1; i <= 3; i++) {
+        const childNode: TscnNode = { name: `Child${i}`, type: 'Node3D', children: [] };
+        const childObject = new THREE.Object3D();
+        childObject.userData.nodePath = `Parent/Child${i}`;
+        childObject.userData.nodeName = `Child${i}`;
+        nodeTracker.set(`Parent/Child${i}`, childObject, childNode);
+        parentObject.add(childObject);
+      }
+
+      // Verify all children are there
+      expect(nodeTracker.getNode('Parent/Child1')).toBeDefined();
+      expect(nodeTracker.getNode('Parent/Child2')).toBeDefined();
+      expect(nodeTracker.getNode('Parent/Child3')).toBeDefined();
+
+      // Remove parent (should cascade to all children)
+      manager['syncNodeRemove']('Parent');
+
+      // Verify all children removed
+      expect(nodeTracker.getNode('Parent')).toBeUndefined();
+      expect(nodeTracker.getNode('Parent/Child1')).toBeUndefined();
+      expect(nodeTracker.getNode('Parent/Child2')).toBeUndefined();
+      expect(nodeTracker.getNode('Parent/Child3')).toBeUndefined();
+    });
+
+    it('should only remove descendants, not siblings with similar names', () => {
+      const manager = new NodeLifecycleManager(scene, nodeTracker);
+
+      // Setup nodes with similar names
+      const node1: TscnNode = { name: 'Node', type: 'Node3D', children: [] };
+      const object1 = new THREE.Object3D();
+      object1.userData.nodePath = 'Node';
+      object1.userData.nodeName = 'Node';
+      nodeTracker.set('Node', object1, node1);
+      scene.add(object1);
+
+      const node2: TscnNode = { name: 'NodeOther', type: 'Node3D', children: [] };
+      const object2 = new THREE.Object3D();
+      object2.userData.nodePath = 'NodeOther';
+      object2.userData.nodeName = 'NodeOther';
+      nodeTracker.set('NodeOther', object2, node2);
+      scene.add(object2);
+
+      const childNode: TscnNode = { name: 'Child', type: 'Node3D', children: [] };
+      const childObject = new THREE.Object3D();
+      childObject.userData.nodePath = 'Node/Child';
+      childObject.userData.nodeName = 'Child';
+      nodeTracker.set('Node/Child', childObject, childNode);
+      object1.add(childObject);
+
+      // Verify all are there
+      expect(nodeTracker.getNode('Node')).toBe(node1);
+      expect(nodeTracker.getNode('NodeOther')).toBe(node2);
+      expect(nodeTracker.getNode('Node/Child')).toBe(childNode);
+
+      // Remove 'Node' (should NOT remove 'NodeOther')
+      manager['syncNodeRemove']('Node');
+
+      // Verify 'Node' and 'Node/Child' removed
+      expect(nodeTracker.getNode('Node')).toBeUndefined();
+      expect(nodeTracker.getNode('Node/Child')).toBeUndefined();
+
+      // Verify 'NodeOther' still there
+      expect(nodeTracker.getNode('NodeOther')).toBe(node2);
+      expect(scene.children).toContain(object2);
+    });
+  });
+
+  describe('Instance Nodes with Children', () => {
+    it('should not duplicate external scene nodes', async () => {
+      const manager = new NodeLifecycleManager(scene, nodeTracker);
+
+      const sceneData: TscnScene = {
+        format: 3,
+        nodes: [],
+        externalResources: [],
+        subResources: [],
+      };
+
+      // Create mock SceneManager
+      const mockSceneManager = {
+        addScene: vi.fn(async (instancePath: string) => {
+          // Simulate SceneManager adding external scene nodes
+          const externalNode: TscnNode = {
+            name: 'ExternalChild',
+            type: 'Node3D',
+            children: [],
+            properties: {},
+          };
+
+          // This simulates what SceneManager does: adds node and modifies parent.children
+          const childPath = joinPath(instancePath, externalNode.name);
+          await manager['addNode'](childPath, externalNode, sceneData, instancePath);
+        }),
+      };
+      manager.setSceneManager(mockSceneManager as any);
+
+      // Create instance node
+      const instanceNode: TscnNode = {
+        name: 'InstanceNode',
+        type: 'Node3D',
+        instance: 'ExtResource("1")' as any,
+        children: [], // Empty initially
+        properties: {},
+      };
+
+      // Setup scene data with resource resolution
+      const testSceneData: TscnScene = {
+        ...sceneData,
+        resourceRegistry: {
+          resolveInstancePath: () => 'res://external.tscn',
+        } as any,
+      };
+
+      // Add instance node (no parent, so it's a root node)
+      await manager.addNode('InstanceNode', instanceNode, testSceneData);
+
+      // Verify SceneManager was called
+      expect(mockSceneManager.addScene).toHaveBeenCalledOnce();
+
+      // Verify external node was added only once
+      const externalPath = 'InstanceNode/ExternalChild';
+      expect(nodeTracker.getObject(externalPath)).toBeDefined();
+      expect(nodeTracker.getNode(externalPath)).toBeDefined();
+
+      // Count objects with same path (should be exactly 1)
+      let count = 0;
+      scene.traverse(obj => {
+        if (obj.userData.nodePath === externalPath) count++;
+      });
+      expect(count).toBe(1); // Not 2!
+    });
+
+    it('should process additional children defined in parent scene', async () => {
+      const manager = new NodeLifecycleManager(scene, nodeTracker);
+
+      const sceneData: TscnScene = {
+        format: 3,
+        nodes: [],
+        externalResources: [],
+        subResources: [],
+      };
+
+      // Create mock SceneManager
+      const mockSceneManager = {
+        addScene: vi.fn(async (instancePath: string) => {
+          // Simulate SceneManager adding external scene node
+          const externalNode: TscnNode = {
+            name: 'ExternalChild',
+            type: 'Node3D',
+            children: [],
+            properties: {},
+          };
+
+          const childPath = joinPath(instancePath, externalNode.name);
+          await manager['addNode'](childPath, externalNode, sceneData, instancePath);
+        }),
+      };
+      manager.setSceneManager(mockSceneManager as any);
+
+      // Create instance node WITH additional child in parent scene
+      const additionalChild: TscnNode = {
+        name: 'AdditionalChild',
+        type: 'Node3D',
+        children: [],
+        properties: {},
+      };
+
+      const instanceNode: TscnNode = {
+        name: 'InstanceNode',
+        type: 'Node3D',
+        instance: 'ExtResource("1")' as any,
+        children: [additionalChild], // Has additional child!
+        properties: {},
+      };
+
+      // Setup scene data with resource resolution
+      const testSceneData: TscnScene = {
+        ...sceneData,
+        resourceRegistry: {
+          resolveInstancePath: () => 'res://external.tscn',
+        } as any,
+      };
+
+      // Add instance node
+      await manager.addNode('InstanceNode', instanceNode, testSceneData);
+
+      // Verify BOTH children were added:
+      // 1. ExternalChild (from external scene)
+      expect(nodeTracker.getObject('InstanceNode/ExternalChild')).toBeDefined();
+
+      // 2. AdditionalChild (from parent scene)
+      expect(nodeTracker.getObject('InstanceNode/AdditionalChild')).toBeDefined();
+
+      // Both should be children of InstanceNode
+      const instanceObject = nodeTracker.getObject('InstanceNode');
+      expect(instanceObject?.children.length).toBe(2);
+    });
+
+    it('should preserve correct order: external children first, then additional children', async () => {
+      const manager = new NodeLifecycleManager(scene, nodeTracker);
+
+      const sceneData: TscnScene = {
+        format: 3,
+        nodes: [],
+        externalResources: [],
+        subResources: [],
+      };
+
+      let addNodeCallOrder: string[] = [];
+      const originalAddNode = manager['addNode'].bind(manager);
+      manager['addNode'] = async function(path: string, node: TscnNode, sceneData: TscnScene, parentPath?: string) {
+        addNodeCallOrder.push(node.name);
+        return originalAddNode(path, node, sceneData, parentPath);
+      };
+
+      // Create mock SceneManager
+      const mockSceneManager = {
+        addScene: vi.fn(async (instancePath: string) => {
+          const externalNode: TscnNode = {
+            name: 'ExternalChild',
+            type: 'Node3D',
+            children: [],
+            properties: {},
+          };
+
+          const childPath = joinPath(instancePath, externalNode.name);
+          // Call through manager to go through spy
+          await manager['addNode'](childPath, externalNode, sceneData, instancePath);
+        }),
+      };
+      manager.setSceneManager(mockSceneManager as any);
+
+      const additionalChild: TscnNode = {
+        name: 'AdditionalChild',
+        type: 'Node3D',
+        children: [],
+        properties: {},
+      };
+
+      const instanceNode: TscnNode = {
+        name: 'InstanceNode',
+        type: 'Node3D',
+        instance: 'ExtResource("1")' as any,
+        children: [additionalChild],
+        properties: {},
+      };
+
+      const testSceneData: TscnScene = {
+        ...sceneData,
+        resourceRegistry: {
+          resolveInstancePath: () => 'res://external.tscn',
+        } as any,
+      };
+
+      // Call through manager to go through spy
+      await manager.addNode('InstanceNode', instanceNode, testSceneData);
+
+      // Verify order: InstanceNode, then ExternalChild (from SceneManager), then AdditionalChild
+      expect(addNodeCallOrder).toEqual(['InstanceNode', 'ExternalChild', 'AdditionalChild']);
     });
   });
 });
