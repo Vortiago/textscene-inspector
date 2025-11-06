@@ -12,45 +12,81 @@
 - [x] #WI-11: DirectionalLight3D → [Details](work_items/WI11.md)
 - [x] #WI-12: OmniLight3D → [Details](work_items/WI12.md)
 
-## Phase 3: Scene Composition 🔄 (In Progress)
+## Phase 3: Scene Composition ✅
 
 - [x] #WI-13: ExtResource Loading System (PackedScene only) → [Details](work_items/WI13.md)
 - [x] #WI-14: Scene Instancing (Complete) → [Details](work_items/WI14.md)
 - [x] #WI-52: External Texture Loading → [Details](work_items/WI52.md) ⭐
-- [x] #WI-53: External Material Loading → [Details](work_items/WI53.md)
-- [ ] #WI-54: External Audio Loading → [Details](work_items/WI54.md)
+- [x] #WI-53: External Material Loading → [Details](work_items/WI53.md) ✅ **Verified working**
+- [ ] #WI-54: External Audio Loading → [Details](work_items/WI54.md) (Deferred - not visual)
 
-## Phase 4: Advanced Features
+## Phase 4: Version 1 Roadmap (ld-58 Support) 🎯
 
-- [ ] #WI-15: Camera3D Node → [Details](work_items/WI15.md)
-- [ ] #WI-16: ShaderMaterial SubResource → [Details](work_items/WI16.md)
-- [ ] #WI-17: Custom Shader Support → [Details](work_items/WI17.md)
+**Goal**: Render all major scenes from ld-58 game jam project with correct materials, lighting, and atmosphere.
+
+**Phase 1 Verification Complete** ✅ (Automated testing with Chrome DevTools):
+- ✅ WI-53 (External Materials): Working perfectly
+- ❌ Camera3D (WI-15): Not registered - falls back to generic Node
+- ⚠️ PlaneMesh center_offset (WI-58): Cannot verify (no fixture)
+- ❌ WorldEnvironment (WI-57): Not implemented
+
+**Critical Path** (Revised order based on verification):
+1. [ ] #WI-15: Camera3D Node → [Details](work_items/WI15.md) ⭐⭐⭐ **START HERE** (90% done, needs registration)
+2. [ ] #WI-56: Material Override Support → [Details](work_items/WI-56.md) ⭐⭐⭐ **CRITICAL** (207 instances)
+3. [ ] #WI-57: WorldEnvironment + Environment SubResource → [Details](work_items/WI-57.md) ⭐⭐ (Not implemented)
+4. [ ] #WI-58: PlaneMesh center_offset Property → [Details](work_items/WI-58.md) ⭐ (Needs verification)
+5. [ ] #WI-59: Normal Map Support (StandardMaterial3D) → [Details](work_items/WI-59.md) ⭐ (Quality polish)
+6. [ ] #WI-60: UV Transform (uv1_scale) → [Details](work_items/WI-60.md) ⭐ (Quality polish)
+7. [ ] #WI-55: Generic Node Parsing (Fallback Support) → [Details](work_items/WI-55.md) (UX improvement)
+
+**Dependencies**:
+- WI-15: Directory exists, needs registration/export fixes
+- WI-56: Requires WI-53 (External Material Loading) ✅
+- WI-57: Independent (new implementation)
+- WI-58: Requires WI-18 (PlaneMesh) ✅ - Needs test fixture
+- WI-59: Requires WI-52 (External Texture Loading) ✅
+- WI-60: Requires WI-52 (External Texture Loading) ✅
+
+**Version 1 Success Criteria**:
+- ✅ All ld-58 major scenes load without errors
+- ✅ Complete scene hierarchy visible (including non-rendered nodes)
+- ✅ Material overrides apply correctly to furniture/decorative elements
+- ✅ WorldEnvironment provides correct atmosphere
+- ✅ Walls/ceilings position correctly with center_offset
+- ✅ Normal maps add surface detail
+- ✅ Textures tile correctly with UV scale
 
 ## Phase 5: Additional Mesh Primitives ✅
 
 - [x] #WI-18: PlaneMesh, CapsuleMesh, TorusMesh, PrismMesh → [Details](work_items/WI18.md)
 
-## Phase 6: VS Code Extension UX ✅ (Core Infrastructure)
+## Phase 6: Advanced Features
+
+- [ ] #WI-15: Camera3D Node → [Details](work_items/WI15.md)
+- [ ] #WI-16: ShaderMaterial SubResource → [Details](work_items/WI16.md)
+- [ ] #WI-17: Custom Shader Support → [Details](work_items/WI17.md)
+
+## Phase 7: VS Code Extension UX ✅ (Core Infrastructure)
 
 - [x] #WI-21-24: Multi-Panel Support, Camera State, Incremental Updates
 - [x] #WI-25: Click-to-Select in 3D Viewport → [Details](work_items/WI25.md)
 - [ ] #WI-50: VSCode Outline Provider → [Details](work_items/WI50.md) ⭐
 - [ ] #WI-51: SubResource/ExtResource Go to Definition → [Details](work_items/WI51.md) ⭐
 
-## Phase 7: C# Integration
+## Phase 8: C# Integration
 
 - [ ] #WI-26: GetNode() Path Validation → [Details](work_items/WI26.md)
 - [ ] #WI-27: GetNode() IntelliSense → [Details](work_items/WI27.md)
 - [ ] #WI-28: C# Class → Scene Type Matching → [Details](work_items/WI28.md)
 - [ ] #WI-29: Scene-to-C# Code Generation → [Details](work_items/WI29.md)
 
-## Phase 8: Interactive Editing
+## Phase 9: Interactive Editing
 
 - [ ] #WI-30: Real-time Property Editing → [Details](work_items/WI30.md)
 - [ ] #WI-31: Node Transformation Gizmos → [Details](work_items/WI31.md) ⭐
 - [ ] #WI-32: Undo/Redo Support → [Details](work_items/WI32.md)
 
-## Phase 9: Enhanced Visualization
+## Phase 10: Enhanced Visualization
 
 - [ ] #WI-33: Resource Thumbnail Previews → [Details](work_items/WI33.md)
 - [ ] #WI-34: Texture/Material Inspector Panel → [Details](work_items/WI34.md)
@@ -58,20 +94,20 @@
 - [ ] #WI-36: Visual Icons for Non-Mesh Nodes → [Details](work_items/WI36.md)
 - [ ] #WI-37: Viewport Cursor Feedback → [Details](work_items/WI37.md)
 
-## Phase 10: Advanced Navigation
+## Phase 11: Advanced Navigation
 
 - [ ] #WI-38: Signal Connection Visualization → [Details](work_items/WI38.md)
 - [ ] #WI-39: Enhanced Scene Instance Tracking → [Details](work_items/WI39.md)
 - [ ] #WI-40: Node Path Copy/Generation → [Details](work_items/WI40.md)
 - [ ] #WI-41: Cross-Reference Analysis → [Details](work_items/WI41.md)
 
-## Phase 11: Animation and Performance
+## Phase 12: Animation and Performance
 
 - [ ] #WI-42: Animation Preview Support → [Details](work_items/WI42.md)
 - [ ] #WI-43: Performance Optimization for Large Scenes → [Details](work_items/WI43.md)
 - [ ] #WI-44: Live Godot Editor Synchronization → [Details](work_items/WI44.md)
 
-## Phase 12: Code Quality & Tooling
+## Phase 13: Code Quality & Tooling
 
 - [x] #WI-45: Consolidate Claude Skills Configuration
 - [x] #WI-46: Add Codebase Architect Agent
