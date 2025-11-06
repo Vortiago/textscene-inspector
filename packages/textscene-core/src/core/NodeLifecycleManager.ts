@@ -7,7 +7,6 @@ import type { TscnScene, TscnNode } from '../parser/types';
 import { renderNodeWithRegistry } from './NodeRegistry';
 import { NodeTracker } from './NodeTracker';
 import type { SceneManager } from './SceneManager';
-import { ResourceRegistry } from '../resources/ResourceRegistry';
 import * as logger from '../logger';
 import { joinPath } from '../utils/nodePath';
 
@@ -68,26 +67,21 @@ export class NodeLifecycleManager {
 
       logger.info(`Node ${nodePath} has instance attribute: ${node.instance}`);
 
-      const resourceId = ResourceRegistry.parseReference(node.instance);
-      if (!resourceId) {
-        logger.warn(`Invalid instance reference: ${node.instance}`);
-        return;
-      }
-
-      const metadata = sceneData.resourceRegistry?.getMetadata(resourceId);
-      if (!metadata || metadata.type !== 'PackedScene') {
-        logger.warn(`Invalid PackedScene reference: ${resourceId}`);
+      // Resolve instance path via ResourceRegistry
+      const scenePath = sceneData.resourceRegistry?.resolveInstancePath(node.instance);
+      if (!scenePath) {
+        // Error already logged by resolveInstancePath()
         return;
       }
 
       // Set instance metadata for UI layer
       node.instanceMetadata = {
-        sourcePath: metadata.path,
+        sourcePath: scenePath,
         isInstanceRoot: true
       };
 
       // Delegate to SceneManager
-      await this.sceneManager.addScene(nodePath, metadata.path);
+      await this.sceneManager.addScene(nodePath, scenePath);
     }
 
     // Recursively add children

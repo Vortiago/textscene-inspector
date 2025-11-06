@@ -239,6 +239,7 @@ describe('NodeLifecycleManager', () => {
         ],
         subResources: [],
         resourceRegistry: {
+          resolveInstancePath: vi.fn().mockReturnValue('res://scenes/enemy.tscn'),
           getMetadata: vi.fn().mockReturnValue({
             id: '1_enemy',
             path: 'res://scenes/enemy.tscn',
@@ -275,6 +276,9 @@ describe('NodeLifecycleManager', () => {
         nodes: [],
         externalResources: [],
         subResources: [],
+        resourceRegistry: {
+          resolveInstancePath: vi.fn().mockReturnValue(null),
+        } as never,
       };
 
       await manager.addNode('BadInstance', node, sceneData);
@@ -304,6 +308,7 @@ describe('NodeLifecycleManager', () => {
         ],
         subResources: [],
         resourceRegistry: {
+          resolveInstancePath: vi.fn().mockReturnValue('res://scenes/enemy.tscn'),
           getMetadata: vi.fn().mockReturnValue({
             id: '1_enemy',
             path: 'res://scenes/enemy.tscn',
