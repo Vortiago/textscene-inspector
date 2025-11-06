@@ -25,6 +25,9 @@ async function main() {
     console.log('Test Workspace:', testWorkspace);
     console.log('User Data Dir:', userDataDir);
 
+    // Set test environment variable
+    process.env.VSCODE_TEST_RUNNER = 'true';
+
     // Download VS Code, unzip it and run the integration tests
     await runTests({
       extensionDevelopmentPath,
@@ -34,6 +37,9 @@ async function main() {
         '--disable-extensions', // Disable other extensions to avoid interference
         `--user-data-dir=${userDataDir}`, // Use shorter path for IPC socket
       ],
+      extensionTestsEnv: {
+        VSCODE_TEST_RUNNER: 'true',
+      },
     });
   } catch (err) {
     console.error('Failed to run tests:', err);

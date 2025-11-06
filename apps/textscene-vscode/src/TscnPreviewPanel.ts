@@ -9,6 +9,25 @@ import { computeIncrementalChanges } from './diffUtils';
 import { VSCodeResourceProvider } from './providers/VSCodeResourceProvider';
 import * as logger from './logger';
 
+// Test observability hooks (only active when running in test context)
+// Check for mocha test functions in global scope
+const IS_TEST_MODE =
+  typeof (global as { it?: unknown }).it === 'function' ||
+  typeof (global as { describe?: unknown }).describe === 'function' ||
+  typeof (global as { suite?: unknown }).suite === 'function' ||
+  process.env.VSCODE_TEST_RUNNER === 'true';
+
+if (IS_TEST_MODE) {
+  // Global registry of active panels for testing
+  (global as { _testActivePanels?: Map<string, TscnPreviewPanel> })._testActivePanels =
+    (global as { _testActivePanels?: Map<string, TscnPreviewPanel> })._testActivePanels || new Map();
+
+  // Global event emitter for panel creation
+  (global as { _testPanelCreated?: vscode.EventEmitter<TscnPreviewPanel> })._testPanelCreated =
+    (global as { _testPanelCreated?: vscode.EventEmitter<TscnPreviewPanel> })._testPanelCreated ||
+    new vscode.EventEmitter<TscnPreviewPanel>();
+}
+
 export class TscnPreviewPanel {
   public static readonly viewType = 'tscnPreview';
 
@@ -19,6 +38,9 @@ export class TscnPreviewPanel {
   private _previousContent: string | undefined;
   private _onDidDispose: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
   public readonly onDidDispose: vscode.Event<void> = this._onDidDispose.event;
+
+  // Test observability: message history
+  private _messageHistory: Array<{ type: string; [key: string]: unknown }> = [];
 
   public static create(extensionUri: vscode.Uri, resource: vscode.Uri): TscnPreviewPanel {
     const column = vscode.window.activeTextEditor
@@ -37,7 +59,22 @@ export class TscnPreviewPanel {
       }
     );
 
-    return new TscnPreviewPanel(panel, extensionUri, resource);
+    const instance = new TscnPreviewPanel(panel, extensionUri, resource);
+
+    // Test observability: register panel and emit creation event
+    if (IS_TEST_MODE) {
+      const registry = (global as { _testActivePanels?: Map<string, TscnPreviewPanel> })._testActivePanels;
+      if (registry) {
+        registry.set(resource.fsPath, instance);
+      }
+
+      const emitter = (global as { _testPanelCreated?: vscode.EventEmitter<TscnPreviewPanel> })._testPanelCreated;
+      if (emitter) {
+        emitter.fire(instance);
+      }
+    }
+
+    return instance;
   }
 
   public reveal(column?: vscode.ViewColumn): void {
@@ -92,6 +129,14 @@ export class TscnPreviewPanel {
     }
 
     this._onDidDispose.dispose();
+
+    // Test observability: remove from registry
+    if (IS_TEST_MODE) {
+      const registry = (global as { _testActivePanels?: Map<string, TscnPreviewPanel> })._testActivePanels;
+      if (registry) {
+        registry.delete(this._currentResource.fsPath);
+      }
+    }
   }
 
   public get resource(): vscode.Uri {
@@ -117,10 +162,11 @@ export class TscnPreviewPanel {
       // First load always does full load
       if (!this._previousContent) {
         this._previousContent = textContent;
-        this._panel.webview.postMessage({
+        const message = {
           type: 'loadTscn',
           content: textContent,
-        });
+        };
+        this._postMessageToWebview(message);
         return;
       }
 
@@ -130,20 +176,22 @@ export class TscnPreviewPanel {
 
       if (diffResult.updateType === 'full' || !diffResult.changes || !diffResult.newScene) {
         // Full reload
-        this._panel.webview.postMessage({
+        const message = {
           type: 'loadTscn',
           content: textContent,
-        });
+        };
+        this._postMessageToWebview(message);
       } else {
         // Incremental update
         const updateData: IncrementalUpdateData = {
           changes: diffResult.changes,
           sceneData: diffResult.newScene,
         };
-        this._panel.webview.postMessage({
+        const message = {
           type: 'incrementalUpdate',
           data: updateData,
-        });
+        };
+        this._postMessageToWebview(message);
       }
     } catch (error) {
       vscode.window.showErrorMessage(
@@ -228,18 +276,72 @@ export class TscnPreviewPanel {
         responseContent = content;
       }
 
-      this._panel.webview.postMessage({
+      this._postMessageToWebview({
         type: 'resourceLoaded',
         requestId,
         content: responseContent,
         isBinary: content instanceof ArrayBuffer,
       });
     } catch (error) {
-      this._panel.webview.postMessage({
+      this._postMessageToWebview({
         type: 'resourceLoadError',
         requestId,
         error: error instanceof Error ? error.message : 'Unknown error',
       });
+    }
+  }
+
+  /**
+   * Post a message to the webview with test observability.
+   */
+  private _postMessageToWebview(message: { type: string; [key: string]: unknown }): void {
+    // Record message in test mode
+    if (IS_TEST_MODE) {
+      this._messageHistory.push(message);
+    }
+
+    this._panel.webview.postMessage(message);
+  }
+
+  /**
+   * Test hook: Get all messages sent to the webview.
+   * Only available in test mode.
+   */
+  public _testGetMessages(): Array<{ type: string; [key: string]: unknown }> {
+    if (!IS_TEST_MODE) {
+      throw new Error('Test hooks not available outside test mode');
+    }
+    return [...this._messageHistory];
+  }
+
+  /**
+   * Test hook: Simulate a message from the webview.
+   * Only available in test mode.
+   */
+  public _testTriggerMessage(message: { type: string; [key: string]: unknown }): void {
+    if (!IS_TEST_MODE) {
+      throw new Error('Test hooks not available outside test mode');
+    }
+
+    // Simulate the webview message handler
+    // Note: Arrow functions or explicit binding to preserve 'this' context
+    switch (message.type) {
+      case 'error':
+        vscode.window.showErrorMessage((message.message as string) || 'Unknown error');
+        return;
+      case 'jumpToNode':
+        void this._jumpToNodeDefinition(message.nodeName as string);
+        return;
+      case 'loadResource':
+        void this._handleLoadResource(
+          message.path as string,
+          message.resourceType as string,
+          message.requestId as string,
+        );
+        return;
+      case 'resourceNeeded':
+        this._handleResourceNeeded(message.resource as MissingResource);
+        return;
     }
   }
 
