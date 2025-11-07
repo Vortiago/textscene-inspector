@@ -2,6 +2,8 @@
  * Generates HTML content for TSCN preview webview.
  */
 
+import { sharedStyles } from '@textscene/core';
+
 export function generateNonce(): string {
   let text = '';
   const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -21,6 +23,10 @@ export function generateWebviewHtml(scriptUri: string, nonce: string): string {
       <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}';">
       <title>TSCN Preview</title>
       <style>
+        /* Shared UI styles from core library */
+        ${sharedStyles}
+
+        /* App-specific layout styles */
         * {
           margin: 0;
           padding: 0;
@@ -146,155 +152,7 @@ export function generateWebviewHtml(scriptUri: string, nonce: string): string {
           color: #ccc;
         }
 
-        /* Scene Tree Viewer Styles */
-        .tree-root {
-          font-size: 0.8125rem;
-          user-select: none;
-        }
-
-        .tree-empty {
-          padding: 1rem;
-          text-align: center;
-          color: #888;
-        }
-
-        .tree-node {
-          margin: 0;
-        }
-
-        .tree-node-header {
-          display: flex;
-          align-items: center;
-          gap: 0.375rem;
-          padding: 0.25rem 0.5rem;
-          cursor: pointer;
-          border-radius: 3px;
-          transition: background-color 0.15s;
-        }
-
-        .tree-node-header:hover {
-          background: #2a2d2e;
-        }
-
-        .tree-node-header.selected {
-          background: #094771;
-        }
-
-        .tree-node-header.selected:hover {
-          background: #0d5a8c;
-        }
-
-        .tree-expand-icon {
-          width: 12px;
-          font-size: 0.625rem;
-          color: #ccc;
-          cursor: pointer;
-          flex-shrink: 0;
-        }
-
-        .tree-expand-spacer {
-          width: 12px;
-          text-align: center;
-          font-size: 0.5rem;
-          color: #555;
-          flex-shrink: 0;
-        }
-
-        .tree-node-type {
-          display: inline-block;
-          padding: 0.125rem 0.375rem;
-          border-radius: 3px;
-          font-size: 0.625rem;
-          font-weight: 600;
-          text-transform: uppercase;
-          letter-spacing: 0.025em;
-          flex-shrink: 0;
-        }
-
-        .type-node3d {
-          background: #3e3e42;
-          color: #ccc;
-        }
-
-        .type-mesh {
-          background: #1e4d2b;
-          color: #95e3b3;
-        }
-
-        .type-camera {
-          background: #3d2e00;
-          color: #ffcc00;
-        }
-
-        .type-light {
-          background: #4d3319;
-          color: #ffcc99;
-        }
-
-        .type-unknown {
-          background: #2a1a2e;
-          color: #c792ea;
-        }
-
-        .tree-node-name {
-          flex: 1;
-          color: #ddd;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-
-        .tree-transform-icon {
-          color: #6c9;
-          font-size: 0.75rem;
-          flex-shrink: 0;
-        }
-
-        .tree-visibility-icon {
-          font-size: 0.875rem;
-          cursor: pointer;
-          flex-shrink: 0;
-          padding: 0 0.125rem;
-          opacity: 0.6;
-          transition: opacity 0.15s;
-        }
-
-        .tree-visibility-icon:hover {
-          opacity: 1;
-        }
-
-        .tree-instance-icon {
-          font-size: 0.875rem;
-          flex-shrink: 0;
-        }
-
-        .tree-node-header.instance-root {
-          border-left: 2px solid #66c;
-          padding-left: calc(0.5rem - 2px);
-        }
-
-        .tree-node-header.instance-root .tree-node-name {
-          font-weight: 500;
-        }
-
-        .tree-node-header.hidden {
-          opacity: 0.5;
-        }
-
-        .tree-node-header.hidden .tree-node-name {
-          color: #777;
-          text-decoration: line-through;
-        }
-
-        .tree-node-header.hidden .tree-node-type {
-          opacity: 0.6;
-        }
-
-        .tree-node-children {
-          margin-left: 0;
-        }
-
-        /* Node Details Panel Styles */
+        /* VSCode-specific node details panel layout */
         #node-details-panel {
           border-top: 1px solid #3e3e42;
           padding: 1rem;
@@ -317,55 +175,6 @@ export function generateWebviewHtml(scriptUri: string, nonce: string): string {
 
         #details-content {
           overflow-y: auto;
-        }
-
-        .detail-row {
-          display: flex;
-          margin-bottom: 0.5rem;
-        }
-
-        .detail-label {
-          color: #888;
-          min-width: 70px;
-          flex-shrink: 0;
-        }
-
-        .detail-value {
-          color: #ddd;
-          font-family: 'Consolas', 'Monaco', monospace;
-          flex: 1;
-          word-break: break-all;
-        }
-
-        .transform-section {
-          margin-top: 0.75rem;
-          padding-top: 0.75rem;
-          border-top: 1px solid #3e3e42;
-        }
-
-        .transform-section h4 {
-          font-size: 0.75rem;
-          margin: 0 0 0.5rem 0;
-          color: #888;
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
-        }
-
-        .transform-grid {
-          display: grid;
-          grid-template-columns: 20px 1fr;
-          gap: 0.375rem;
-          font-family: 'Consolas', 'Monaco', monospace;
-          font-size: 0.75rem;
-        }
-
-        .transform-axis {
-          color: #888;
-          font-weight: bold;
-        }
-
-        .transform-value {
-          color: #6c9;
         }
       </style>
     </head>

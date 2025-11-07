@@ -259,7 +259,7 @@ describe('NodeRegistry', () => {
       expect(node?.properties.testProp).toBe('myValue');
     });
 
-    it('should fall back to Node type for unsupported types', () => {
+    it('should fall back to Node renderer for unsupported types while preserving type', () => {
       nodeRegistry.register(nodeRegistration);
 
       const heading: ParsedHeading = {
@@ -270,10 +270,10 @@ describe('NodeRegistry', () => {
       const node = parseNodeWithRegistry(heading, {});
 
       expect(node).toBeDefined();
-      expect(node?.type).toBe('Node');
+      expect(node?.type).toBe('UnsupportedType');
       expect(node?.name).toBe('MyNode');
       expect(logger.warn).toHaveBeenCalledWith(
-        'Unsupported node type: UnsupportedType - using Node fallback'
+        expect.stringContaining('Unsupported node type: UnsupportedType')
       );
     });
 
@@ -344,7 +344,10 @@ describe('NodeRegistry', () => {
 
       expect(node).toBeNull();
       expect(logger.warn).toHaveBeenCalledWith(
-        'Node registration not found - cannot create fallback node'
+        expect.stringContaining('Unsupported node type: UnsupportedType')
+      );
+      expect(logger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('Node registration not found')
       );
     });
 
@@ -380,7 +383,9 @@ describe('NodeRegistry', () => {
       expect(object?.userData.testProp).toBe('myValue');
     });
 
-    it('should warn for unsupported node type', async () => {
+    it('should use Node fallback for unsupported node type', async () => {
+      nodeRegistry.register(nodeRegistration);
+
       const node = {
         name: 'MyNode',
         type: 'UnsupportedType',
@@ -390,9 +395,10 @@ describe('NodeRegistry', () => {
 
       const object = await renderNodeWithRegistry(node);
 
-      expect(object).toBeNull();
+      expect(object).not.toBeNull();
+      expect(object?.userData.isUnsupportedType).toBe(true);
       expect(logger.warn).toHaveBeenCalledWith(
-        'Unsupported node type for rendering: UnsupportedType'
+        expect.stringContaining('No renderer for UnsupportedType')
       );
     });
 
@@ -487,6 +493,132 @@ describe('NodeRegistry', () => {
 
       expect(testObject?.name).toBe('TestNode1');
       expect(node3dObject?.name).toBe('Node3D1');
+    });
+  });
+
+  describe('Unsupported Node Type Fallback', () => {
+    beforeEach(() => {
+      // Register only Node type (base fallback)
+      nodeRegistry.register(nodeRegistration);
+    });
+
+    it('should preserve original type during parsing', () => {
+      const heading: ParsedHeading = {
+        headingName: 'node',
+        attributes: { name: 'CollisionArea', type: 'Area3D', parent: '.' }
+      };
+      const properties = {};
+
+      const node = parseNodeWithRegistry(heading, properties);
+
+      expect(node).not.toBeNull();
+      expect(node!.name).toBe('CollisionArea');
+      expect(node!.type).toBe('Area3D');
+      expect(node!.parent).toBe('.');
+    });
+
+    it('should use Node renderer for unsupported types', async () => {
+      const node = {
+        name: 'AnimPlayer',
+        type: 'AnimationPlayer',
+        parent: '.',
+        children: [],
+        properties: {}
+      };
+
+      const object3D = await renderNodeWithRegistry(node);
+
+      expect(object3D).not.toBeNull();
+      expect(object3D).toBeInstanceOf(THREE.Object3D);
+      expect(object3D!.name).toBe('AnimPlayer');
+      expect(object3D!.userData.isUnsupportedType).toBe(true);
+    });
+
+    it('should not flag supported types as unsupported', async () => {
+      // Register a supported type
+      nodeRegistry.register(testRegistration);
+
+      const node = {
+        name: 'MyTest',
+        type: 'TestNode',
+        parent: '.',
+        children: [],
+        properties: { testProp: 'value' }
+      };
+
+      const object3D = await renderNodeWithRegistry(node);
+
+      expect(object3D).not.toBeNull();
+      expect(object3D!.userData.isUnsupportedType).toBeUndefined();
+    });
+
+    it('should warn when parsing unsupported type', () => {
+      const heading: ParsedHeading = {
+        headingName: 'node',
+        attributes: { name: 'PhysicsBody', type: 'StaticBody3D', parent: '.' }
+      };
+
+      parseNodeWithRegistry(heading, {});
+
+      expect(logger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('Unsupported node type: StaticBody3D')
+      );
+    });
+
+    it('should warn when rendering unsupported type', async () => {
+      const node = {
+        name: 'Timer',
+        type: 'Timer',
+        parent: '.',
+        children: [],
+        properties: {}
+      };
+
+      await renderNodeWithRegistry(node);
+
+      expect(logger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('No renderer for Timer')
+      );
+    });
+
+    it('should handle multiple unsupported types', async () => {
+      const area3dNode = {
+        name: 'Area',
+        type: 'Area3D',
+        parent: '.',
+        children: [],
+        properties: {}
+      };
+
+      const timerNode = {
+        name: 'Timer',
+        type: 'Timer',
+        parent: '.',
+        children: [],
+        properties: {}
+      };
+
+      const area3dObj = await renderNodeWithRegistry(area3dNode);
+      const timerObj = await renderNodeWithRegistry(timerNode);
+
+      expect(area3dObj!.userData.isUnsupportedType).toBe(true);
+      expect(timerObj!.userData.isUnsupportedType).toBe(true);
+    });
+
+    it('should return null if Node renderer is not registered', async () => {
+      nodeRegistry.clear();
+
+      const node = {
+        name: 'Unsupported',
+        type: 'UnknownType',
+        parent: '.',
+        children: [],
+        properties: {}
+      };
+
+      const object3D = await renderNodeWithRegistry(node);
+
+      expect(object3D).toBeNull();
     });
   });
 });

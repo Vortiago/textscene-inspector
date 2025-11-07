@@ -1,0 +1,13 @@
+[gd_scene format=3]
+
+[node name="Root" type="Node3D"]
+
+[node name="PhysicsArea" type="Area3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
+monitorable = false
+
+[node name="AnimPlayer" type="AnimationPlayer" parent="."]
+autoplay = "idle"
+
+[node name="GameTimer" type="Timer" parent="."]
+wait_time = 2.0

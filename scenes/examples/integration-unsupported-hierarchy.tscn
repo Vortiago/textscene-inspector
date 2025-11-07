@@ -1,0 +1,15 @@
+[gd_scene format=3]
+
+[sub_resource type="BoxMesh" id="mesh_1"]
+
+[node name="Root" type="Node3D"]
+
+[node name="PhysicsBody" type="StaticBody3D" parent="."]
+
+[node name="CollisionArea" type="Area3D" parent="PhysicsBody"]
+
+[node name="VisibleMesh" type="MeshInstance3D" parent="CollisionArea"]
+mesh = SubResource("mesh_1")
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+
+[node name="CollisionShape" type="CollisionShape3D" parent="CollisionArea/VisibleMesh"]
