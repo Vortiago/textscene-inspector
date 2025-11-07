@@ -87,7 +87,7 @@ far = 100.0
       // Verify it's an orthographic camera (check the camera object in the group)
       const cameraGroup = cameras[0]?.object;
       expect(cameraGroup).toBeDefined();
-      expect((cameraGroup as any).isCamera3D).toBe(true);
+      expect(cameraGroup.userData.nodeType).toBe('Camera3D');
     });
 
     it('should create camera helpers for visualization', async () => {

@@ -5,7 +5,11 @@
 import * as THREE from 'three';
 import type { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import type { NodeTracker } from './NodeTracker';
+import { getCameraFromGroup, getHelperFromGroup } from '../nodes/3d/camera3d/renderer';
 import * as logger from '../logger';
+
+// Distance for camera look-at target when switching cameras
+const CAMERA_LOOK_DISTANCE = 10;
 
 export interface CameraInfo {
   path: string;
@@ -36,7 +40,7 @@ export class CameraManager {
 
     for (const path of this.nodeTracker.getAllPaths()) {
       const object = this.nodeTracker.getObject(path);
-      if (object && (object as any).isCamera3D) {
+      if (object && object.userData.nodeType === 'Camera3D') {
         cameras.push({
           path,
           name: object.name,
@@ -56,14 +60,14 @@ export class CameraManager {
     logger.info(`[Camera Switch] Switching to camera: ${nodePath}`);
 
     const cameraGroup = this.nodeTracker.getObject(nodePath);
-    if (!cameraGroup || !(cameraGroup as any).isCamera3D) {
+    if (!cameraGroup || cameraGroup.userData.nodeType !== 'Camera3D') {
       logger.warn(`[Camera Switch] Node not found or not a Camera3D: ${nodePath}`);
       return false;
     }
 
-    // Find the camera and helper in the group
-    const camera = cameraGroup.children.find(c => c.name.endsWith('_camera')) as THREE.Camera | undefined;
-    const helper = cameraGroup.children.find(c => c.name.endsWith('_helper')) as THREE.CameraHelper | undefined;
+    // Get camera and helper using utility functions
+    const camera = getCameraFromGroup(cameraGroup as THREE.Group);
+    const helper = getHelperFromGroup(cameraGroup as THREE.Group);
 
     if (!camera) {
       logger.warn(`[Camera Switch] Camera object not found in group: ${nodePath}`);
@@ -102,7 +106,7 @@ export class CameraManager {
     // Update controls target (look at the direction the camera is facing)
     const direction = new THREE.Vector3(0, 0, -1);
     direction.applyQuaternion(this.camera.quaternion);
-    this.controls.target.copy(worldPosition).add(direction.multiplyScalar(10));
+    this.controls.target.copy(worldPosition).add(direction.multiplyScalar(CAMERA_LOOK_DISTANCE));
     this.controls.update();
 
     logger.info(`[Camera Switch] Successfully switched to camera: ${nodePath}`);
@@ -135,8 +139,8 @@ export class CameraManager {
   private showAllCameraHelpers(): void {
     for (const path of this.nodeTracker.getAllPaths()) {
       const object = this.nodeTracker.getObject(path);
-      if (object && (object as any).isCamera3D) {
-        const helper = object.children.find(c => c.name.endsWith('_helper')) as THREE.CameraHelper | undefined;
+      if (object && object.userData.nodeType === 'Camera3D') {
+        const helper = getHelperFromGroup(object as THREE.Group);
         if (helper) {
           helper.visible = true;
         }

@@ -39,7 +39,7 @@ describe('Camera3D Renderer', () => {
 
       expect(group).toBeInstanceOf(THREE.Group);
       expect(group.name).toBe('MainCamera');
-      expect((group as any).isCamera3D).toBe(true);
+      expect(group.userData.nodeType).toBe('Camera3D');
     });
 
     it('should create PerspectiveCamera for perspective projection', () => {
@@ -123,11 +123,13 @@ describe('Camera3D Renderer', () => {
       expect(camera!.far).toBeGreaterThan(camera!.near);
     });
 
-    it('should store properties on group', () => {
+    it('should store properties and references in userData', () => {
       const group = createCamera3D('Camera', baseCameraProps);
 
-      expect((group as any).cameraProperties).toBeDefined();
-      expect((group as any).cameraProperties.fov).toBe(75.0);
+      expect(group.userData.cameraProperties).toBeDefined();
+      expect(group.userData.cameraProperties.fov).toBe(75.0);
+      expect(group.userData.camera).toBeDefined();
+      expect(group.userData.helper).toBeDefined();
     });
   });
 

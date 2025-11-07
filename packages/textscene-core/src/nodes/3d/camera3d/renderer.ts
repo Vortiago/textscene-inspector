@@ -39,9 +39,11 @@ export function createCamera3D(name: string, properties: Camera3DProperties): TH
     group.position.y += properties.v_offset;
   }
 
-  // Store properties on group for later access
-  (group as any).cameraProperties = properties;
-  (group as any).isCamera3D = true;
+  // Store properties and references in userData (THREE.js idiomatic pattern)
+  group.userData.nodeType = 'Camera3D';
+  group.userData.cameraProperties = properties;
+  group.userData.camera = camera;
+  group.userData.helper = helper;
 
   return group;
 }
@@ -99,8 +101,8 @@ function createOrthographicCamera(properties: Camera3DProperties): THREE.Orthogr
  * Update camera aspect ratio (for window resize)
  */
 export function updateCameraAspect(group: THREE.Group, aspect: number): void {
-  const camera = group.children.find(c => c.name.endsWith('_camera')) as THREE.Camera | undefined;
-  const properties = (group as any).cameraProperties as Camera3DProperties | undefined;
+  const camera = group.userData.camera as THREE.Camera | undefined;
+  const properties = group.userData.cameraProperties as Camera3DProperties | undefined;
 
   if (!camera || !properties) return;
 
@@ -119,7 +121,7 @@ export function updateCameraAspect(group: THREE.Group, aspect: number): void {
   }
 
   // Update helper
-  const helper = group.children.find(c => c.name.endsWith('_helper')) as THREE.CameraHelper | undefined;
+  const helper = group.userData.helper as THREE.CameraHelper | undefined;
   if (helper) {
     helper.update();
   }
@@ -129,16 +131,14 @@ export function updateCameraAspect(group: THREE.Group, aspect: number): void {
  * Get the actual camera from a Camera3D group
  */
 export function getCameraFromGroup(group: THREE.Group): THREE.Camera | null {
-  const camera = group.children.find(c => c.name.endsWith('_camera')) as THREE.Camera | undefined;
-  return camera || null;
+  return (group.userData.camera as THREE.Camera) || null;
 }
 
 /**
  * Get the helper from a Camera3D group
  */
 export function getHelperFromGroup(group: THREE.Group): THREE.CameraHelper | null {
-  const helper = group.children.find(c => c.name.endsWith('_helper')) as THREE.CameraHelper | undefined;
-  return helper || null;
+  return (group.userData.helper as THREE.CameraHelper) || null;
 }
 
 /**
