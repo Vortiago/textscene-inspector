@@ -6,8 +6,14 @@ import * as THREE from 'three';
 import { NodeTracker } from './NodeTracker';
 import * as logger from '../logger';
 
+interface ColoredHelperState {
+  object: THREE.Object3D;
+  originalColor: number;
+}
+
 export class HelperManager {
   private helpers: Map<string, THREE.BoxHelper> = new Map();
+  private coloredHelpers: Map<string, ColoredHelperState> = new Map();
   private scene: THREE.Scene;
   private nodeTracker: NodeTracker;
 
@@ -18,6 +24,12 @@ export class HelperManager {
 
   /**
    * Set a helper (highlight or hover) for a node
+   *
+   * Nodes can customize highlighting via userData:
+   * - `userData.getHighlightTarget()` - Returns the object to highlight (default: the node itself)
+   *
+   * If a custom target is provided AND it has a material.color property, we change the color directly.
+   * Otherwise, we create a BoxHelper around the target.
    */
   private setHelper(key: string, nodePath: string, color: number): void {
     // Clear existing helper with this key
@@ -29,8 +41,24 @@ export class HelperManager {
       return;
     }
 
-    // Create BoxHelper
-    const helper = new THREE.BoxHelper(object, color);
+    // Check if node provides a custom highlight target via userData callback
+    const customTarget = object.userData.getHighlightTarget?.();
+    const targetObject = customTarget || object;
+
+    // If a CUSTOM target is provided and it has a material with color, use color-based highlighting
+    // This avoids changing scene geometry colors (which have material.color but shouldn't be highlighted that way)
+    if (customTarget) {
+      const material = (targetObject as any).material;
+      if (material?.color instanceof THREE.Color) {
+        const originalColor = material.color.getHex();
+        this.coloredHelpers.set(key, { object: targetObject, originalColor });
+        material.color.setHex(color);
+        return;
+      }
+    }
+
+    // Otherwise, create a BoxHelper around the target
+    const helper = new THREE.BoxHelper(targetObject, color);
     this.scene.add(helper);
     this.helpers.set(key, helper);
   }
@@ -39,6 +67,18 @@ export class HelperManager {
    * Clear a specific helper by key
    */
   private clearHelper(key: string): void {
+    // Check if this is a colored helper (object with changed material color)
+    const coloredHelper = this.coloredHelpers.get(key);
+    if (coloredHelper) {
+      const material = (coloredHelper.object as any).material;
+      if (material?.color instanceof THREE.Color) {
+        material.color.setHex(coloredHelper.originalColor);
+      }
+      this.coloredHelpers.delete(key);
+      return;
+    }
+
+    // Otherwise, handle box helper
     const helper = this.helpers.get(key);
     if (helper) {
       this.scene.remove(helper);
@@ -51,6 +91,16 @@ export class HelperManager {
    * Clear all helpers
    */
   clearAll(): void {
+    // Restore colored helper colors
+    this.coloredHelpers.forEach(state => {
+      const material = (state.object as any).material;
+      if (material?.color instanceof THREE.Color) {
+        material.color.setHex(state.originalColor);
+      }
+    });
+    this.coloredHelpers.clear();
+
+    // Remove box helpers
     this.helpers.forEach(helper => {
       this.scene.remove(helper);
       helper.dispose();
@@ -59,7 +109,7 @@ export class HelperManager {
   }
 
   /**
-   * Highlight a node with green box
+   * Highlight a node (green box for most nodes, or color change if material supports it)
    */
   highlightNode(nodePath: string): void {
     this.clearHelper('hover'); // Clear hover when highlighting
@@ -74,7 +124,7 @@ export class HelperManager {
   }
 
   /**
-   * Show hover effect with orange box
+   * Show hover effect (orange box for most nodes, or color change if material supports it)
    */
   showHoverEffect(nodePath: string): void {
     this.setHelper('hover', nodePath, 0xff8800);

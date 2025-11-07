@@ -68,12 +68,12 @@ describe('Camera3D Renderer', () => {
       expect(orthoCam.bottom).toBe(-5.0);
     });
 
-    it('should create CameraHelper with default visibility OFF', () => {
+    it('should create CameraHelper with default visibility ON', () => {
       const group = createCamera3D('Camera', baseCameraProps);
       const helper = getHelperFromGroup(group);
 
       expect(helper).toBeInstanceOf(THREE.CameraHelper);
-      expect(helper!.visible).toBe(false); // Default OFF for clean preview
+      expect(helper!.visible).toBe(true); // Default ON to show camera positioning
     });
 
     it('should apply transform to group', () => {

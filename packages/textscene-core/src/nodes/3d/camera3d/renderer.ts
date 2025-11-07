@@ -24,7 +24,7 @@ export function createCamera3D(name: string, properties: Camera3DProperties): TH
   // Create camera helper for visualization
   const helper = new THREE.CameraHelper(camera);
   helper.name = `${name}_helper`;
-  helper.visible = false; // Hidden by default for clean preview view
+  helper.visible = true; // Visible by default to show camera positioning
 
   // Add both to group
   group.add(camera);
@@ -44,6 +44,9 @@ export function createCamera3D(name: string, properties: Camera3DProperties): TH
   group.userData.cameraProperties = properties;
   group.userData.camera = camera;
   group.userData.helper = helper;
+
+  // Provide custom highlight target - highlight the frustum helper instead of the group
+  group.userData.getHighlightTarget = () => helper;
 
   return group;
 }
