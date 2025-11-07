@@ -24,7 +24,7 @@ export function createCamera3D(name: string, properties: Camera3DProperties): TH
   // Create camera helper for visualization
   const helper = new THREE.CameraHelper(camera);
   helper.name = `${name}_helper`;
-  helper.visible = true; // Visible by default, will be hidden when camera is active
+  helper.visible = false; // Hidden by default for clean preview view
 
   // Add both to group
   group.add(camera);

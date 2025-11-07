@@ -134,6 +134,24 @@ export class CameraManager {
   }
 
   /**
+   * Set visibility of all camera helpers
+   * Useful for toggling camera frustum visualization on/off
+   */
+  setCameraHelpersVisible(visible: boolean): void {
+    logger.info(`[Camera Helpers] Setting camera helpers visible: ${visible}`);
+
+    for (const path of this.nodeTracker.getAllPaths()) {
+      const object = this.nodeTracker.getObject(path);
+      if (object && object.userData.nodeType === 'Camera3D') {
+        const helper = getHelperFromGroup(object as THREE.Group);
+        if (helper) {
+          helper.visible = visible;
+        }
+      }
+    }
+  }
+
+  /**
    * Show all camera helpers (make them visible)
    */
   private showAllCameraHelpers(): void {

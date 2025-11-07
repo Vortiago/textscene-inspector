@@ -290,6 +290,14 @@ export class TscnRenderer {
     return this.cameraManager.switchToCamera(nodePath);
   }
 
+  /**
+   * Set visibility of all camera helpers (frustum visualizations)
+   * Useful for toggling camera visualization on/off
+   */
+  setCameraHelpersVisible(visible: boolean): void {
+    return this.cameraManager.setCameraHelpersVisible(visible);
+  }
+
   // ========== Animation & Rendering ==========
 
   startAnimationLoop(): void {

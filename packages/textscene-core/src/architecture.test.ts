@@ -92,8 +92,8 @@ describe('Architecture: TscnRenderer Responsibilities', () => {
     // TscnRenderer should delegate to managers, keeping its API surface small
     // This test ensures it doesn't become a god object again
     // If this number grows significantly, consider extracting more managers
-    // Camera delegation adds 3 methods (getSceneCameras, switchToCamera, returnToFreeView)
-    expect(methodNames.length).toBeLessThan(29);
+    // Camera delegation adds 4 methods (getSceneCameras, switchToCamera, returnToFreeView, setCameraHelpersVisible)
+    expect(methodNames.length).toBeLessThan(30);
   });
 });
 
