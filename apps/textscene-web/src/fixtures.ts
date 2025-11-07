@@ -36,6 +36,21 @@ export const fixtures: Fixture[] = [
     "category": "Edge Cases"
   },
   {
+    "name": "Nested Leaf Orange Sphere",
+    "file": "nested-leaf-orange-sphere.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Nested Middle Blue Box",
+    "file": "nested-middle-blue-box.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Nested Top Green Cylinder",
+    "file": "nested-top-green-cylinder.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Test Nested Leaf",
     "file": "test-nested-leaf.tscn",
     "category": "Other"
@@ -48,6 +63,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Test Nested Top",
     "file": "test-nested-top.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Multi Camera",
+    "file": "unit-multi-camera.tscn",
     "category": "Other"
   },
   {
@@ -111,6 +131,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - External Resources"
   },
   {
+    "name": "External Material",
+    "file": "unit-external-material.tscn",
+    "category": "Unit - External Resources"
+  },
+  {
     "name": "External Missing",
     "file": "unit-external-missing.tscn",
     "category": "Unit - External Resources"
@@ -123,11 +148,6 @@ export const fixtures: Fixture[] = [
   {
     "name": "External Texture",
     "file": "unit-external-texture.tscn",
-    "category": "Unit - External Resources"
-  },
-  {
-    "name": "External Material",
-    "file": "unit-external-material.tscn",
     "category": "Unit - External Resources"
   },
   {
@@ -196,6 +216,11 @@ export const fixtures: Fixture[] = [
     "category": "Examples - Complex Scenes"
   },
   {
+    "name": "Material Reuse",
+    "file": "integration-material-reuse.tscn",
+    "category": "Examples - Complex Scenes"
+  },
+  {
     "name": "Mixed Nodes",
     "file": "integration-mixed-nodes.tscn",
     "category": "Examples - Complex Scenes"
@@ -208,11 +233,6 @@ export const fixtures: Fixture[] = [
   {
     "name": "Parent Child Scene",
     "file": "integration-parent-child-scene.tscn",
-    "category": "Examples - Complex Scenes"
-  },
-  {
-    "name": "Material Reuse",
-    "file": "integration-material-reuse.tscn",
     "category": "Examples - Complex Scenes"
   },
   {

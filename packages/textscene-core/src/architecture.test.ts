@@ -92,8 +92,8 @@ describe('Architecture: TscnRenderer Responsibilities', () => {
     // TscnRenderer should delegate to managers, keeping its API surface small
     // This test ensures it doesn't become a god object again
     // If this number grows significantly, consider extracting more managers
-    // Updated to 27 to account for addNodeLifecycleListener/removeNodeLifecycleListener
-    expect(methodNames.length).toBeLessThan(27);
+    // Camera delegation adds 4 methods (getSceneCameras, switchToCamera, returnToFreeView, setCameraHelpersVisible)
+    expect(methodNames.length).toBeLessThan(30);
   });
 });
 
@@ -154,5 +154,14 @@ describe('Architecture: Manager Pattern (TscnRenderer)', () => {
     const renderer = TscnRenderer.prototype;
     expect(renderer.getMissingResources).toBeDefined();
     expect(renderer.provideResource).toBeDefined();
+  });
+
+  it('should delegate camera management to managers', async () => {
+    const { TscnRenderer } = await import('./core/TscnRenderer');
+
+    const renderer = TscnRenderer.prototype;
+    expect(renderer.getSceneCameras).toBeDefined();
+    expect(renderer.switchToCamera).toBeDefined();
+    expect(renderer.returnToFreeView).toBeDefined();
   });
 });

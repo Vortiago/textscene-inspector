@@ -133,6 +133,25 @@ export class TscnPreviewUI {
     this.elements.nodeDetailsPanel.classList.add('visible');
     this.elements.detailsNodeName.textContent = node.name;
     this.elements.detailsContent.innerHTML = formatNodeDetails(node, path);
+
+    // Add event listener for camera switch button
+    const useCameraBtn = this.elements.detailsContent.querySelector('.use-camera-btn');
+    if (useCameraBtn) {
+      useCameraBtn.addEventListener('click', () => {
+        const cameraPath = useCameraBtn.getAttribute('data-camera-path');
+        if (cameraPath) {
+          this.renderer.switchToCamera(cameraPath);
+        }
+      });
+    }
+
+    // Add event listener for reset camera button
+    const resetCameraBtn = this.elements.detailsContent.querySelector('.reset-camera-btn');
+    if (resetCameraBtn) {
+      resetCameraBtn.addEventListener('click', () => {
+        this.renderer.returnToFreeView();
+      });
+    }
   }
 
   private setupResizeHandler(): void {

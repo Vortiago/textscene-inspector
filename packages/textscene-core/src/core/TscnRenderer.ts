@@ -12,6 +12,7 @@ import { NodeTracker } from './NodeTracker';
 import { HelperManager } from './HelperManager';
 import { SelectionManager } from './SelectionManager';
 import { ResourceRecoveryManager } from './ResourceRecoveryManager';
+import { CameraManager } from './CameraManager';
 import { ResourceRegistry } from '../resources/ResourceRegistry';
 import { SceneManager } from './SceneManager';
 import { NodeLifecycleManager } from './NodeLifecycleManager';
@@ -43,6 +44,7 @@ export class TscnRenderer {
   private helperManager: HelperManager;
   private selectionManager: SelectionManager;
   private resourceRecovery: ResourceRecoveryManager;
+  private cameraManager: CameraManager;
   private resourceRegistry: ResourceRegistry;
   private sceneManager: SceneManager;
   private nodeLifecycle: NodeLifecycleManager;
@@ -67,6 +69,7 @@ export class TscnRenderer {
     this.nodeTracker = new NodeTracker();
     this.helperManager = new HelperManager(this.scene, this.nodeTracker);
     this.selectionManager = new SelectionManager(this.scene, this.camera, this.renderer, this.nodeTracker);
+    this.cameraManager = new CameraManager(this.nodeTracker, this.camera, this.controls);
 
     // Initialize SceneManager with parser and tracker
     const parser = new TscnParser();
@@ -262,6 +265,37 @@ export class TscnRenderer {
     this.camera.position.set(10, 10, 10);
     this.camera.lookAt(0, 0, 0);
     this.controls.reset();
+  }
+
+  /**
+   * Return to free view (default OrbitControls camera)
+   * Shows all camera helpers and resets to default perspective camera
+   */
+  returnToFreeView(): void {
+    return this.cameraManager.returnToFreeView();
+  }
+
+  /**
+   * Get all Camera3D nodes in the scene
+   */
+  getSceneCameras(): Array<{ path: string; name: string; object: THREE.Object3D }> {
+    return this.cameraManager.getSceneCameras();
+  }
+
+  /**
+   * Switch to a Camera3D node by path
+   * Updates the renderer's active camera and hides the helper for the active camera
+   */
+  switchToCamera(nodePath: string): boolean {
+    return this.cameraManager.switchToCamera(nodePath);
+  }
+
+  /**
+   * Set visibility of all camera helpers (frustum visualizations)
+   * Useful for toggling camera visualization on/off
+   */
+  setCameraHelpersVisible(visible: boolean): void {
+    return this.cameraManager.setCameraHelpersVisible(visible);
   }
 
   // ========== Animation & Rendering ==========
