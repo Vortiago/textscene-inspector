@@ -5,6 +5,7 @@
 import type { TscnNode } from '../parser/types';
 import { findNodeByPath } from '../utils/sceneGraphUtils';
 import { joinPath, getAncestorPaths } from '../utils/nodePath';
+import { nodeRegistry } from '../core/NodeRegistry';
 
 export interface SceneTreeViewerOptions {
   onNodeSelect?: (node: TscnNode, path: string) => void;
@@ -169,6 +170,22 @@ export class SceneTreeViewer {
     typeBadge.textContent = this.getTypeShorthand(node.type);
     typeBadge.title = node.type;
     nodeHeader.appendChild(typeBadge);
+
+    // Check if this is an unsupported type (no registration except for 'Node')
+    const registration = nodeRegistry.getRegistration(node.type);
+    const isUnsupported = !registration && node.type !== 'Node';
+
+    // Add "Not Implemented" badge for unsupported types
+    if (isUnsupported) {
+      const notImplBadge = document.createElement('span');
+      notImplBadge.className = 'not-implemented-badge';
+      notImplBadge.textContent = 'Not Implemented';
+      notImplBadge.title = `${node.type} is not yet supported by the renderer`;
+      nodeHeader.appendChild(notImplBadge);
+
+      // Add class to row for styling
+      nodeHeader.classList.add('unsupported-node');
+    }
 
     // Node name
     const nodeName = document.createElement('span');

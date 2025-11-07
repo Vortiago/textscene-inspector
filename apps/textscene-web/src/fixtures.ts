@@ -71,6 +71,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Unsupported Nodes",
+    "file": "unit-unsupported-nodes.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Box Mesh",
     "file": "unit-box-mesh.tscn",
     "category": "Unit - Primitive Meshes"
@@ -238,6 +243,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Three Cubes",
     "file": "integration-three-cubes.tscn",
+    "category": "Examples - Complex Scenes"
+  },
+  {
+    "name": "Unsupported Hierarchy",
+    "file": "integration-unsupported-hierarchy.tscn",
     "category": "Examples - Complex Scenes"
   }
 ];
