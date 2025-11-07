@@ -26,24 +26,26 @@ export function createCamera3D(name: string, properties: Camera3DProperties): TH
   helper.name = `${name}_helper`;
   helper.visible = true; // Visible by default to show camera positioning
 
-  // Add both to group
-  group.add(camera);
-  group.add(helper);
+  // Apply transform to camera, not group - this ensures helper visualizes correctly
+  applyNode3DTransform(camera, properties);
 
-  // Apply transform from properties
-  applyNode3DTransform(group, properties);
-
-  // Apply offsets
+  // Apply offsets to camera
   if (properties.h_offset !== 0 || properties.v_offset !== 0) {
-    group.position.x += properties.h_offset;
-    group.position.y += properties.v_offset;
+    camera.position.x += properties.h_offset;
+    camera.position.y += properties.v_offset;
   }
 
-  // Update world matrices so helper can see camera's final position/rotation
-  group.updateMatrixWorld(true);
+  // Add camera to group (camera now has the transform)
+  group.add(camera);
 
-  // Update helper to reflect the camera's final transform
+  // Update camera's matrices before creating/updating helper
+  camera.updateMatrixWorld(true);
+
+  // Update helper to reflect the camera's transform
   helper.update();
+
+  // Add helper to group (helper visualizes the already-transformed camera)
+  group.add(helper);
 
   // Store properties and references in userData (THREE.js idiomatic pattern)
   group.userData.nodeType = 'Camera3D';

@@ -111,15 +111,17 @@ describe('Camera3D Renderer', () => {
       expect(helper!.matrixWorld.equals(new THREE.Matrix4())).toBe(false);
     });
 
-    it('should apply transform to group', () => {
+    it('should apply transform to camera', () => {
       const group = createCamera3D('Camera', baseCameraProps);
+      const camera = getCameraFromGroup(group);
 
-      expect(group.position.x).toBeCloseTo(0);
-      expect(group.position.y).toBeCloseTo(5);
-      expect(group.position.z).toBeCloseTo(10);
+      expect(camera).toBeDefined();
+      expect(camera!.position.x).toBeCloseTo(0);
+      expect(camera!.position.y).toBeCloseTo(5);
+      expect(camera!.position.z).toBeCloseTo(10);
     });
 
-    it('should apply h_offset and v_offset', () => {
+    it('should apply h_offset and v_offset to camera', () => {
       const propsWithOffset: Camera3DProperties = {
         ...baseCameraProps,
         h_offset: 2.0,
@@ -127,10 +129,12 @@ describe('Camera3D Renderer', () => {
       };
 
       const group = createCamera3D('Camera', propsWithOffset);
+      const camera = getCameraFromGroup(group);
 
-      expect(group.position.x).toBeCloseTo(2.0);
-      expect(group.position.y).toBeCloseTo(4.0); // 5 + (-1)
-      expect(group.position.z).toBeCloseTo(10);
+      expect(camera).toBeDefined();
+      expect(camera!.position.x).toBeCloseTo(2.0);
+      expect(camera!.position.y).toBeCloseTo(4.0); // 5 + (-1)
+      expect(camera!.position.z).toBeCloseTo(10);
     });
 
     it('should enforce near > 0 constraint', () => {
