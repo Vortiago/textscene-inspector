@@ -12,6 +12,7 @@ import { NodeTracker } from './NodeTracker';
 import { HelperManager } from './HelperManager';
 import { SelectionManager } from './SelectionManager';
 import { ResourceRecoveryManager } from './ResourceRecoveryManager';
+import { CameraManager } from './CameraManager';
 import { ResourceRegistry } from '../resources/ResourceRegistry';
 import { SceneManager } from './SceneManager';
 import { NodeLifecycleManager } from './NodeLifecycleManager';
@@ -43,6 +44,7 @@ export class TscnRenderer {
   private helperManager: HelperManager;
   private selectionManager: SelectionManager;
   private resourceRecovery: ResourceRecoveryManager;
+  private cameraManager: CameraManager;
   private resourceRegistry: ResourceRegistry;
   private sceneManager: SceneManager;
   private nodeLifecycle: NodeLifecycleManager;
@@ -67,6 +69,7 @@ export class TscnRenderer {
     this.nodeTracker = new NodeTracker();
     this.helperManager = new HelperManager(this.scene, this.nodeTracker);
     this.selectionManager = new SelectionManager(this.scene, this.camera, this.renderer, this.nodeTracker);
+    this.cameraManager = new CameraManager(this.nodeTracker, this.camera, this.controls);
 
     // Initialize SceneManager with parser and tracker
     const parser = new TscnParser();
@@ -269,48 +272,14 @@ export class TscnRenderer {
    * Shows all camera helpers and resets to default perspective camera
    */
   returnToFreeView(): void {
-    logger.info('[Camera Switch] Returning to free view');
-
-    // Show all camera helpers
-    for (const path of this.nodeTracker.getAllPaths()) {
-      const object = this.nodeTracker.getObject(path);
-      if (object && (object as any).isCamera3D) {
-        const helper = object.children.find(c => c.name.endsWith('_helper')) as THREE.CameraHelper | undefined;
-        if (helper) {
-          helper.visible = true;
-        }
-      }
-    }
-
-    // Reset to default camera properties
-    this.camera.fov = 75;
-    this.camera.near = 0.1;
-    this.camera.far = 1000;
-    this.camera.updateProjectionMatrix();
-
-    // Don't reset position - keep current view
-    logger.info('[Camera Switch] Returned to free view');
+    return this.cameraManager.returnToFreeView();
   }
 
   /**
    * Get all Camera3D nodes in the scene
    */
   getSceneCameras(): Array<{ path: string; name: string; object: THREE.Object3D }> {
-    const cameras: Array<{ path: string; name: string; object: THREE.Object3D }> = [];
-
-    // Iterate through all tracked paths to find Camera3D nodes
-    for (const path of this.nodeTracker.getAllPaths()) {
-      const object = this.nodeTracker.getObject(path);
-      if (object && (object as any).isCamera3D) {
-        cameras.push({
-          path,
-          name: object.name,
-          object,
-        });
-      }
-    }
-
-    return cameras;
+    return this.cameraManager.getSceneCameras();
   }
 
   /**
@@ -318,65 +287,7 @@ export class TscnRenderer {
    * Updates the renderer's active camera and hides the helper for the active camera
    */
   switchToCamera(nodePath: string): boolean {
-    logger.info(`[Camera Switch] Switching to camera: ${nodePath}`);
-
-    const cameraGroup = this.nodeTracker.getObject(nodePath);
-    if (!cameraGroup || !(cameraGroup as any).isCamera3D) {
-      logger.warn(`[Camera Switch] Node not found or not a Camera3D: ${nodePath}`);
-      return false;
-    }
-
-    // Find the camera and helper in the group
-    const camera = cameraGroup.children.find(c => c.name.endsWith('_camera')) as THREE.Camera | undefined;
-    const helper = cameraGroup.children.find(c => c.name.endsWith('_helper')) as THREE.CameraHelper | undefined;
-
-    if (!camera) {
-      logger.warn(`[Camera Switch] Camera object not found in group: ${nodePath}`);
-      return false;
-    }
-
-    // Show all camera helpers first
-    this.scene.traverse((object: THREE.Object3D) => {
-      if ((object as any).isCamera3D) {
-        const h = object.children.find(c => c.name.endsWith('_helper')) as THREE.CameraHelper | undefined;
-        if (h) h.visible = true;
-      }
-    });
-
-    // Hide the helper for the camera we're switching to
-    if (helper) {
-      helper.visible = false;
-    }
-
-    // Get the world position and rotation of the camera
-    const worldPosition = new THREE.Vector3();
-    const worldQuaternion = new THREE.Quaternion();
-    const worldScale = new THREE.Vector3();
-    camera.getWorldPosition(worldPosition);
-    camera.getWorldQuaternion(worldQuaternion);
-    camera.getWorldScale(worldScale);
-
-    // Update the renderer's camera
-    this.camera.position.copy(worldPosition);
-    this.camera.quaternion.copy(worldQuaternion);
-    this.camera.scale.copy(worldScale);
-
-    // Copy projection properties
-    if (camera instanceof THREE.PerspectiveCamera && this.camera instanceof THREE.PerspectiveCamera) {
-      this.camera.fov = camera.fov;
-      this.camera.near = camera.near;
-      this.camera.far = camera.far;
-      this.camera.updateProjectionMatrix();
-    }
-
-    // Update controls target (look at the direction the camera is facing)
-    const direction = new THREE.Vector3(0, 0, -1);
-    direction.applyQuaternion(this.camera.quaternion);
-    this.controls.target.copy(worldPosition).add(direction.multiplyScalar(10));
-    this.controls.update();
-
-    logger.info(`[Camera Switch] Successfully switched to camera: ${nodePath}`);
-    return true;
+    return this.cameraManager.switchToCamera(nodePath);
   }
 
   // ========== Animation & Rendering ==========
