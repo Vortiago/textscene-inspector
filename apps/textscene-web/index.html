@@ -66,6 +66,7 @@
         background: var(--bg-panel);
         border-right: 1px solid var(--border-color);
         overflow-y: auto;
+        overflow-x: hidden;
       }
 
       #tree-viewer-panel {
@@ -117,9 +118,11 @@
       }
 
       #tree-viewer-container {
-        flex: 1;
+        flex: 1 1 auto;
         overflow-y: auto;
+        overflow-x: hidden;
         padding: 0.5rem;
+        min-height: 0; /* Critical for proper flex scrolling */
       }
 
       #canvas-container {
@@ -339,26 +342,35 @@
       /* Node Details Panel Styles */
       #node-details-panel {
         border-top: 1px solid var(--border-color);
-        padding: 1rem;
         background: var(--bg-panel);
         font-size: 0.8125rem;
         display: none;
-        max-height: 40vh;
+        flex: 0 1 auto;
+        max-height: 50vh;
+        min-height: 0;
         overflow-y: auto;
+        overflow-x: hidden;
       }
 
       #node-details-panel.visible {
-        display: block;
+        display: flex;
+        flex-direction: column;
       }
 
       #node-details-panel h3 {
         font-size: 0.875rem;
-        margin: 0 0 0.75rem 0;
+        margin: 0;
+        padding: 1rem 1rem 0.5rem;
         color: var(--text-primary);
+        flex-shrink: 0;
       }
 
       #details-content {
+        flex: 1 1 auto;
         overflow-y: auto;
+        overflow-x: hidden;
+        padding: 0.5rem 1rem 1rem;
+        min-height: 0;
       }
 
       .detail-row {
@@ -376,7 +388,9 @@
         color: var(--text-primary);
         font-family: var(--font-mono);
         flex: 1;
-        word-break: break-all;
+        word-break: break-word;
+        overflow-wrap: break-word;
+        min-width: 0;
       }
 
       .transform-section {
@@ -637,6 +651,8 @@
         margin: 8px 0;
         color: #ffd966;
         line-height: 1.5;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
       }
 
       .warning-text strong {
