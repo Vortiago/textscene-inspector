@@ -39,6 +39,9 @@ export function createCamera3D(name: string, properties: Camera3DProperties): TH
     group.position.y += properties.v_offset;
   }
 
+  // Update world matrices so helper can see camera's final position/rotation
+  group.updateMatrixWorld(true);
+
   // Update helper to reflect the camera's final transform
   helper.update();
 

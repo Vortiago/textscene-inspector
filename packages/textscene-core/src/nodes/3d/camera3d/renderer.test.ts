@@ -76,6 +76,41 @@ describe('Camera3D Renderer', () => {
       expect(helper!.visible).toBe(true); // Default ON to show camera positioning
     });
 
+    it('should update helper to reflect camera world transform', () => {
+      // Create camera with 90-degree rotation around Y axis
+      const rotatedProps: Camera3DProperties = {
+        ...baseCameraProps,
+        transform: {
+          basis_x: { x: 0, y: 0, z: 1 }, // 90° rotation
+          basis_y: { x: 0, y: 1, z: 0 },
+          basis_z: { x: -1, y: 0, z: 0 },
+          origin: { x: 10, y: 5, z: 0 },
+        },
+      };
+
+      const group = createCamera3D('RotatedCamera', rotatedProps);
+      const camera = getCameraFromGroup(group);
+      const helper = getHelperFromGroup(group);
+
+      expect(camera).toBeDefined();
+      expect(helper).toBeDefined();
+
+      // Force matrix update (simulates being added to scene)
+      group.updateMatrixWorld(true);
+
+      // Camera should be at world position (10, 5, 0)
+      const cameraWorldPos = new THREE.Vector3();
+      camera!.getWorldPosition(cameraWorldPos);
+      expect(cameraWorldPos.x).toBeCloseTo(10);
+      expect(cameraWorldPos.y).toBeCloseTo(5);
+      expect(cameraWorldPos.z).toBeCloseTo(0);
+
+      // Helper should have valid matrix (not zero/identity when camera is transformed)
+      // The helper's matrixWorld should match the camera's world transform
+      helper!.updateMatrixWorld(true);
+      expect(helper!.matrixWorld.equals(new THREE.Matrix4())).toBe(false);
+    });
+
     it('should apply transform to group', () => {
       const group = createCamera3D('Camera', baseCameraProps);
 
