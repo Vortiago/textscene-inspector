@@ -33,6 +33,18 @@ See [TODO.md](./TODO.md) for complete roadmap.
 - Node.js 20+
 - pnpm 9+
 
+### Developer Environment Setup (Windows)
+
+For Windows developers, you can quickly install Node.js and pnpm using WinGet:
+
+```bash
+winget configure scripts/winget-dev-setup.yaml
+```
+
+This installs the required versions from the official package sources.
+
+**Requirements:** WinGet v1.6.2631 or later (check with `winget --version`)
+
 ### Installation
 
 ```bash

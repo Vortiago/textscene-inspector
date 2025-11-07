@@ -1,11 +1,15 @@
 {
   "name": "TextScene Inspector Development",
-  "image": "mcr.microsoft.com/devcontainers/typescript-node:1-22-bullseye",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:1-22-bookworm",
 
   "features": {
     "ghcr.io/devcontainers-contrib/features/pnpm:2": {
       "version": "9"
-    }
+    },
+    "ghcr.io/devcontainers/features/desktop-lite:1": {
+      "password": "vscode"
+    },
+    "ghcr.io/devcontainers/features/chromium:1": {}
   },
 
   "customizations": {
@@ -14,7 +18,6 @@
         "dbaeumer.vscode-eslint",
         "vitest.explorer",
         "ms-vscode.vscode-typescript-next",
-        "bradlc.vscode-tailwindcss",
         "usernamehw.errorlens"
       ],
       "settings": {
