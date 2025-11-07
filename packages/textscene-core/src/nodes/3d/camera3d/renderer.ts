@@ -39,6 +39,9 @@ export function createCamera3D(name: string, properties: Camera3DProperties): TH
     group.position.y += properties.v_offset;
   }
 
+  // Update helper to reflect the camera's final transform
+  helper.update();
+
   // Store properties and references in userData (THREE.js idiomatic pattern)
   group.userData.nodeType = 'Camera3D';
   group.userData.cameraProperties = properties;

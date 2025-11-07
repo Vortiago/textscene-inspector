@@ -343,6 +343,8 @@
         background: var(--bg-panel);
         font-size: 0.8125rem;
         display: none;
+        max-height: 40vh;
+        overflow-y: auto;
       }
 
       #node-details-panel.visible {
@@ -353,6 +355,10 @@
         font-size: 0.875rem;
         margin: 0 0 0.75rem 0;
         color: var(--text-primary);
+      }
+
+      #details-content {
+        overflow-y: auto;
       }
 
       .detail-row {

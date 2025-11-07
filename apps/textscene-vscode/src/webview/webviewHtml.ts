@@ -301,6 +301,8 @@ export function generateWebviewHtml(scriptUri: string, nonce: string): string {
           background: #1e1e1e;
           font-size: 0.8125rem;
           display: none;
+          max-height: 40vh;
+          overflow-y: auto;
         }
 
         #node-details-panel.visible {
@@ -311,6 +313,10 @@ export function generateWebviewHtml(scriptUri: string, nonce: string): string {
           font-size: 0.875rem;
           margin: 0 0 0.75rem 0;
           color: #ddd;
+        }
+
+        #details-content {
+          overflow-y: auto;
         }
 
         .detail-row {
