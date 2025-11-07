@@ -16,11 +16,19 @@ export function formatNodeDetails(node: TscnNode, path: string): string {
         <button
           class="use-camera-btn"
           data-camera-path="${path}"
-          style="width: 100%; padding: 8px; background: #0078d4; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;"
+          style="width: 100%; padding: 8px; background: #0078d4; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; margin-bottom: 8px;"
           onmouseover="this.style.background='#106ebe'"
           onmouseout="this.style.background='#0078d4'"
         >
           📷 Use This Camera
+        </button>
+        <button
+          class="reset-camera-btn"
+          style="width: 100%; padding: 8px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;"
+          onmouseover="this.style.background='#5a6268'"
+          onmouseout="this.style.background='#6c757d'"
+        >
+          🔄 Return to Free View
         </button>
       </div>
     `;

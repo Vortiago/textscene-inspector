@@ -144,6 +144,14 @@ export class TscnPreviewUI {
         }
       });
     }
+
+    // Add event listener for reset camera button
+    const resetCameraBtn = this.elements.detailsContent.querySelector('.reset-camera-btn');
+    if (resetCameraBtn) {
+      resetCameraBtn.addEventListener('click', () => {
+        this.renderer.returnToFreeView();
+      });
+    }
   }
 
   private setupResizeHandler(): void {

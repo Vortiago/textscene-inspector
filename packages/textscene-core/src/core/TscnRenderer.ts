@@ -265,6 +265,34 @@ export class TscnRenderer {
   }
 
   /**
+   * Return to free view (default OrbitControls camera)
+   * Shows all camera helpers and resets to default perspective camera
+   */
+  returnToFreeView(): void {
+    logger.info('[Camera Switch] Returning to free view');
+
+    // Show all camera helpers
+    for (const path of this.nodeTracker.getAllPaths()) {
+      const object = this.nodeTracker.getObject(path);
+      if (object && (object as any).isCamera3D) {
+        const helper = object.children.find(c => c.name.endsWith('_helper')) as THREE.CameraHelper | undefined;
+        if (helper) {
+          helper.visible = true;
+        }
+      }
+    }
+
+    // Reset to default camera properties
+    this.camera.fov = 75;
+    this.camera.near = 0.1;
+    this.camera.far = 1000;
+    this.camera.updateProjectionMatrix();
+
+    // Don't reset position - keep current view
+    logger.info('[Camera Switch] Returned to free view');
+  }
+
+  /**
    * Get all Camera3D nodes in the scene
    */
   getSceneCameras(): Array<{ path: string; name: string; object: THREE.Object3D }> {
