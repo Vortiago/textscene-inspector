@@ -27,7 +27,8 @@
     "dist"
   ],
   "scripts": {
-    "prebuild": "rimraf tsconfig.tsbuildinfo",
+    "generate:styles": "node scripts/generate-styles.mjs",
+    "prebuild": "pnpm generate:styles && rimraf tsconfig.tsbuildinfo",
     "build": "tsc --build",
     "dev": "tsc --watch",
     "test": "vitest",
