@@ -39,7 +39,7 @@
       #app {
         display: flex;
         flex-direction: column;
-        height: 100vh;
+        height: 100dvh; /* Dynamic viewport height - better for mobile */
       }
 
       header {
@@ -58,7 +58,7 @@
         display: grid;
         grid-template-columns: auto auto 1fr;
         grid-template-rows: 1fr;
-        overflow: hidden;
+        overflow: clip; /* Prevents scroll chaining */
       }
 
       #controls {
@@ -66,8 +66,8 @@
         padding: 1rem;
         background: var(--bg-panel);
         border-right: 1px solid var(--border-color);
-        overflow-y: auto;
-        overflow-x: hidden;
+        overflow: hidden auto; /* x: hidden, y: auto */
+        overscroll-behavior: contain;
         min-height: 0;
       }
 
@@ -121,16 +121,16 @@
       }
 
       #tree-viewer-container {
-        flex: 1 1 auto;
-        overflow-y: auto;
-        overflow-x: hidden;
+        flex: 1;
+        overflow: hidden auto; /* x: hidden, y: auto */
+        overscroll-behavior: contain;
         padding: 0.5rem;
-        min-height: 0; /* Critical for proper flex scrolling */
+        min-height: 0; /* Critical for flex scrolling in grid child */
       }
 
       #canvas-container {
         position: relative;
-        overflow: hidden;
+        overflow: clip; /* No scrolling, no scroll chaining */
         min-height: 0;
       }
 
@@ -350,10 +350,10 @@
         font-size: 0.8125rem;
         display: none;
         flex: 0 1 auto;
-        max-height: 50vh;
+        max-height: 50dvh; /* Dynamic viewport height */
         min-height: 0;
-        overflow-y: auto;
-        overflow-x: hidden;
+        overflow: hidden auto; /* x: hidden, y: auto */
+        overscroll-behavior: contain;
       }
 
       #node-details-panel.visible {
@@ -370,9 +370,9 @@
       }
 
       #details-content {
-        flex: 1 1 auto;
-        overflow-y: auto;
-        overflow-x: hidden;
+        flex: 1;
+        overflow: hidden auto; /* x: hidden, y: auto */
+        overscroll-behavior: contain;
         padding: 0.5rem 1rem 1rem;
         min-height: 0;
       }
