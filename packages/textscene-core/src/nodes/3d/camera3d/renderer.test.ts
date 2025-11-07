@@ -268,4 +268,190 @@ describe('Camera3D Renderer', () => {
       expect(() => updateCameraAspect(emptyGroup, 1.5)).not.toThrow();
     });
   });
+
+  describe('Hierarchical Transform Composition', () => {
+    it('should compose camera world position with parent Node3D transform', () => {
+      // Create parent with transform
+      const parent = new THREE.Group();
+      parent.position.set(10, 20, 30); // Parent offset
+
+      // Create camera with its own transform
+      const cameraProps: Camera3DProperties = {
+        ...baseCameraProps,
+        transform: {
+          basis_x: { x: 1, y: 0, z: 0 },
+          basis_y: { x: 0, y: 1, z: 0 },
+          basis_z: { x: 0, y: 0, z: 1 },
+          origin: { x: 5, y: 5, z: 5 }, // Camera local position
+        },
+      };
+
+      const cameraGroup = createCamera3D('Camera', cameraProps);
+      parent.add(cameraGroup);
+
+      // Update world matrices (simulates being in a scene)
+      parent.updateMatrixWorld(true);
+
+      // Get camera's world position
+      const camera = getCameraFromGroup(cameraGroup);
+      expect(camera).toBeDefined();
+
+      const worldPos = new THREE.Vector3();
+      camera!.getWorldPosition(worldPos);
+
+      // World position should be parent + camera local
+      expect(worldPos.x).toBeCloseTo(15); // 10 + 5
+      expect(worldPos.y).toBeCloseTo(25); // 20 + 5
+      expect(worldPos.z).toBeCloseTo(35); // 30 + 5
+    });
+
+    it('should compose camera world rotation with parent Node3D rotation', () => {
+      // Create parent rotated 90° around Y
+      const parent = new THREE.Group();
+      parent.rotation.y = Math.PI / 2; // 90° rotation
+
+      // Create camera rotated 90° around X (looking up)
+      const cameraProps: Camera3DProperties = {
+        ...baseCameraProps,
+        transform: {
+          basis_x: { x: 1, y: 0, z: 0 },
+          basis_y: { x: 0, y: 0, z: -1 }, // 90° rotation around X
+          basis_z: { x: 0, y: 1, z: 0 },
+          origin: { x: 0, y: 0, z: 0 },
+        },
+      };
+
+      const cameraGroup = createCamera3D('Camera', cameraProps);
+      parent.add(cameraGroup);
+      parent.updateMatrixWorld(true);
+
+      const camera = getCameraFromGroup(cameraGroup);
+      expect(camera).toBeDefined();
+
+      // Get world quaternion
+      const worldQuat = new THREE.Quaternion();
+      camera!.getWorldQuaternion(worldQuat);
+
+      // World rotation should be composition of parent and camera rotations
+      // The actual values depend on rotation order, but we verify it's not identity
+      const identityQuat = new THREE.Quaternion();
+      expect(worldQuat.equals(identityQuat)).toBe(false);
+
+      // Also verify the camera's local rotation is preserved
+      const localQuat = camera!.quaternion.clone();
+      expect(localQuat.equals(worldQuat)).toBe(false); // Local ≠ World when there's a parent transform
+    });
+
+    it('should compose through multiple levels of hierarchy', () => {
+      // Create 3-level hierarchy: Root → Container → Camera
+      const root = new THREE.Group();
+      root.position.set(100, 0, 0);
+
+      const container = new THREE.Group();
+      container.position.set(0, 100, 0);
+      root.add(container);
+
+      const cameraProps: Camera3DProperties = {
+        ...baseCameraProps,
+        transform: {
+          basis_x: { x: 1, y: 0, z: 0 },
+          basis_y: { x: 0, y: 1, z: 0 },
+          basis_z: { x: 0, y: 0, z: 1 },
+          origin: { x: 0, y: 0, z: 100 },
+        },
+      };
+
+      const cameraGroup = createCamera3D('Camera', cameraProps);
+      container.add(cameraGroup);
+      root.updateMatrixWorld(true);
+
+      const camera = getCameraFromGroup(cameraGroup);
+      const worldPos = new THREE.Vector3();
+      camera!.getWorldPosition(worldPos);
+
+      // Should compose: root + container + camera
+      expect(worldPos.x).toBeCloseTo(100); // from root
+      expect(worldPos.y).toBeCloseTo(100); // from container
+      expect(worldPos.z).toBeCloseTo(100); // from camera
+    });
+
+    it('should work correctly with CameraManager when camera has parent transforms', () => {
+      // Simulate what CameraManager does
+      const parent = new THREE.Group();
+      parent.position.set(50, 50, 50);
+      parent.rotation.y = Math.PI / 4; // 45° rotation
+
+      const cameraProps: Camera3DProperties = {
+        ...baseCameraProps,
+        transform: {
+          basis_x: { x: 1, y: 0, z: 0 },
+          basis_y: { x: 0, y: 1, z: 0 },
+          basis_z: { x: 0, y: 0, z: 1 },
+          origin: { x: 0, y: 5, z: 10 },
+        },
+      };
+
+      const cameraGroup = createCamera3D('Camera', cameraProps);
+      parent.add(cameraGroup);
+      parent.updateMatrixWorld(true);
+
+      const camera = getCameraFromGroup(cameraGroup);
+
+      // Extract world transform (like CameraManager does)
+      const worldPosition = new THREE.Vector3();
+      const worldQuaternion = new THREE.Quaternion();
+      const worldScale = new THREE.Vector3();
+      camera!.getWorldPosition(worldPosition);
+      camera!.getWorldQuaternion(worldQuaternion);
+      camera!.getWorldScale(worldScale);
+
+      // Verify we got valid world-space values
+      expect(worldPosition.length()).toBeGreaterThan(0);
+      expect(worldScale.x).toBeCloseTo(1);
+      expect(worldScale.y).toBeCloseTo(1);
+      expect(worldScale.z).toBeCloseTo(1);
+
+      // Verify world position is not just the local position
+      expect(worldPosition.x).not.toBeCloseTo(0);
+      expect(worldPosition.y).not.toBeCloseTo(5);
+      expect(worldPosition.z).not.toBeCloseTo(10);
+    });
+
+    it('should have helper visualize camera correctly when parent has transform', () => {
+      // Parent with position and rotation
+      const parent = new THREE.Group();
+      parent.position.set(10, 10, 10);
+      parent.rotation.y = Math.PI / 2;
+
+      const cameraProps: Camera3DProperties = {
+        ...baseCameraProps,
+        transform: {
+          basis_x: { x: 1, y: 0, z: 0 },
+          basis_y: { x: 0, y: 1, z: 0 },
+          basis_z: { x: 0, y: 0, z: 1 },
+          origin: { x: 0, y: 5, z: 0 },
+        },
+      };
+
+      const cameraGroup = createCamera3D('Camera', cameraProps);
+      parent.add(cameraGroup);
+      parent.updateMatrixWorld(true);
+
+      const camera = getCameraFromGroup(cameraGroup);
+      const helper = getHelperFromGroup(cameraGroup);
+
+      expect(camera).toBeDefined();
+      expect(helper).toBeDefined();
+
+      // Helper should be added to the camera group, not to the camera itself
+      expect(cameraGroup.children).toContain(helper);
+
+      // Camera should have the local transform from TSCN
+      expect(camera!.position.y).toBeCloseTo(5);
+
+      // Helper's matrix should be updated (non-identity when camera is transformed)
+      helper!.updateMatrixWorld(true);
+      expect(helper!.matrixWorld.equals(new THREE.Matrix4())).toBe(false);
+    });
+  });
 });
