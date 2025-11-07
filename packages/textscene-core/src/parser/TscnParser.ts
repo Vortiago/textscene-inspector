@@ -8,6 +8,7 @@
 import '../nodes/node/index.renderer.js';
 import '../nodes/base/node3d/index.renderer.js';
 import '../nodes/3d/meshinstance3d/index.renderer.js';
+import '../nodes/3d/camera3d/index.renderer.js';
 import '../nodes/3d/lights/spotlight3d/index.renderer.js';
 import '../nodes/3d/lights/directionallight3d/index.renderer.js';
 import '../nodes/3d/lights/omnilight3d/index.renderer.js';

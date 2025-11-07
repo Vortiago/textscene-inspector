@@ -92,8 +92,8 @@ describe('Architecture: TscnRenderer Responsibilities', () => {
     // TscnRenderer should delegate to managers, keeping its API surface small
     // This test ensures it doesn't become a god object again
     // If this number grows significantly, consider extracting more managers
-    // Updated to 27 to account for addNodeLifecycleListener/removeNodeLifecycleListener
-    expect(methodNames.length).toBeLessThan(27);
+    // Updated to 29 to account for camera management methods (getSceneCameras, switchToCamera)
+    expect(methodNames.length).toBeLessThan(29);
   });
 });
 

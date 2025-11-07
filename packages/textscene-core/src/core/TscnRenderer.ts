@@ -264,6 +264,93 @@ export class TscnRenderer {
     this.controls.reset();
   }
 
+  /**
+   * Get all Camera3D nodes in the scene
+   */
+  getSceneCameras(): Array<{ path: string; name: string; object: THREE.Object3D }> {
+    const cameras: Array<{ path: string; name: string; object: THREE.Object3D }> = [];
+
+    // Iterate through all tracked paths to find Camera3D nodes
+    for (const path of this.nodeTracker.getAllPaths()) {
+      const object = this.nodeTracker.getObject(path);
+      if (object && (object as any).isCamera3D) {
+        cameras.push({
+          path,
+          name: object.name,
+          object,
+        });
+      }
+    }
+
+    return cameras;
+  }
+
+  /**
+   * Switch to a Camera3D node by path
+   * Updates the renderer's active camera and hides the helper for the active camera
+   */
+  switchToCamera(nodePath: string): boolean {
+    logger.info(`[Camera Switch] Switching to camera: ${nodePath}`);
+
+    const cameraGroup = this.nodeTracker.getObject(nodePath);
+    if (!cameraGroup || !(cameraGroup as any).isCamera3D) {
+      logger.warn(`[Camera Switch] Node not found or not a Camera3D: ${nodePath}`);
+      return false;
+    }
+
+    // Find the camera and helper in the group
+    const camera = cameraGroup.children.find(c => c.name.endsWith('_camera')) as THREE.Camera | undefined;
+    const helper = cameraGroup.children.find(c => c.name.endsWith('_helper')) as THREE.CameraHelper | undefined;
+
+    if (!camera) {
+      logger.warn(`[Camera Switch] Camera object not found in group: ${nodePath}`);
+      return false;
+    }
+
+    // Show all camera helpers first
+    this.scene.traverse((object: THREE.Object3D) => {
+      if ((object as any).isCamera3D) {
+        const h = object.children.find(c => c.name.endsWith('_helper')) as THREE.CameraHelper | undefined;
+        if (h) h.visible = true;
+      }
+    });
+
+    // Hide the helper for the camera we're switching to
+    if (helper) {
+      helper.visible = false;
+    }
+
+    // Get the world position and rotation of the camera
+    const worldPosition = new THREE.Vector3();
+    const worldQuaternion = new THREE.Quaternion();
+    const worldScale = new THREE.Vector3();
+    camera.getWorldPosition(worldPosition);
+    camera.getWorldQuaternion(worldQuaternion);
+    camera.getWorldScale(worldScale);
+
+    // Update the renderer's camera
+    this.camera.position.copy(worldPosition);
+    this.camera.quaternion.copy(worldQuaternion);
+    this.camera.scale.copy(worldScale);
+
+    // Copy projection properties
+    if (camera instanceof THREE.PerspectiveCamera && this.camera instanceof THREE.PerspectiveCamera) {
+      this.camera.fov = camera.fov;
+      this.camera.near = camera.near;
+      this.camera.far = camera.far;
+      this.camera.updateProjectionMatrix();
+    }
+
+    // Update controls target (look at the direction the camera is facing)
+    const direction = new THREE.Vector3(0, 0, -1);
+    direction.applyQuaternion(this.camera.quaternion);
+    this.controls.target.copy(worldPosition).add(direction.multiplyScalar(10));
+    this.controls.update();
+
+    logger.info(`[Camera Switch] Successfully switched to camera: ${nodePath}`);
+    return true;
+  }
+
   // ========== Animation & Rendering ==========
 
   startAnimationLoop(): void {

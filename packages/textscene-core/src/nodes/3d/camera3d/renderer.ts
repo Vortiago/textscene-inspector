@@ -1,0 +1,152 @@
+/**
+ * Camera3D renderer - creates three.js cameras with visualization helpers
+ */
+
+import * as THREE from 'three';
+import type { Camera3DProperties } from './types';
+import { ProjectionMode } from './types';
+import { applyNode3DTransform } from '../../base/node3d/renderer';
+
+const DEFAULT_ASPECT = 16 / 9;
+
+/**
+ * Create a Camera3D with visualization helper
+ * Returns a Group containing the camera and a CameraHelper for visualization
+ */
+export function createCamera3D(name: string, properties: Camera3DProperties): THREE.Group {
+  const group = new THREE.Group();
+  group.name = name;
+
+  // Create the appropriate camera type
+  const camera = createCameraByProjection(properties);
+  camera.name = `${name}_camera`;
+
+  // Create camera helper for visualization
+  const helper = new THREE.CameraHelper(camera);
+  helper.name = `${name}_helper`;
+  helper.visible = true; // Visible by default, will be hidden when camera is active
+
+  // Add both to group
+  group.add(camera);
+  group.add(helper);
+
+  // Apply transform from properties
+  applyNode3DTransform(group, properties);
+
+  // Apply offsets
+  if (properties.h_offset !== 0 || properties.v_offset !== 0) {
+    group.position.x += properties.h_offset;
+    group.position.y += properties.v_offset;
+  }
+
+  // Store properties on group for later access
+  (group as any).cameraProperties = properties;
+  (group as any).isCamera3D = true;
+
+  return group;
+}
+
+/**
+ * Create camera based on projection mode
+ */
+function createCameraByProjection(properties: Camera3DProperties): THREE.Camera {
+  if (properties.projection === ProjectionMode.PROJECTION_PERSPECTIVE) {
+    return createPerspectiveCamera(properties);
+  } else if (properties.projection === ProjectionMode.PROJECTION_ORTHOGONAL) {
+    return createOrthographicCamera(properties);
+  } else {
+    // PROJECTION_FRUSTUM not yet supported, default to perspective
+    return createPerspectiveCamera(properties);
+  }
+}
+
+/**
+ * Create a three.js PerspectiveCamera
+ */
+function createPerspectiveCamera(properties: Camera3DProperties): THREE.PerspectiveCamera {
+  const camera = new THREE.PerspectiveCamera(
+    properties.fov,
+    DEFAULT_ASPECT,
+    Math.max(0.001, properties.near), // Ensure near > 0
+    Math.max(properties.near + 0.1, properties.far) // Ensure far > near
+  );
+
+  camera.updateProjectionMatrix();
+  return camera;
+}
+
+/**
+ * Create a three.js OrthographicCamera
+ */
+function createOrthographicCamera(properties: Camera3DProperties): THREE.OrthographicCamera {
+  const halfHeight = properties.size;
+  const halfWidth = properties.size * DEFAULT_ASPECT;
+
+  const camera = new THREE.OrthographicCamera(
+    -halfWidth,
+    halfWidth,
+    halfHeight,
+    -halfHeight,
+    Math.max(0.001, properties.near),
+    Math.max(properties.near + 0.1, properties.far)
+  );
+
+  camera.updateProjectionMatrix();
+  return camera;
+}
+
+/**
+ * Update camera aspect ratio (for window resize)
+ */
+export function updateCameraAspect(group: THREE.Group, aspect: number): void {
+  const camera = group.children.find(c => c.name.endsWith('_camera')) as THREE.Camera | undefined;
+  const properties = (group as any).cameraProperties as Camera3DProperties | undefined;
+
+  if (!camera || !properties) return;
+
+  if (camera instanceof THREE.PerspectiveCamera) {
+    camera.aspect = aspect;
+    camera.updateProjectionMatrix();
+  } else if (camera instanceof THREE.OrthographicCamera) {
+    const halfHeight = properties.size;
+    const halfWidth = properties.size * aspect;
+
+    camera.left = -halfWidth;
+    camera.right = halfWidth;
+    camera.top = halfHeight;
+    camera.bottom = -halfHeight;
+    camera.updateProjectionMatrix();
+  }
+
+  // Update helper
+  const helper = group.children.find(c => c.name.endsWith('_helper')) as THREE.CameraHelper | undefined;
+  if (helper) {
+    helper.update();
+  }
+}
+
+/**
+ * Get the actual camera from a Camera3D group
+ */
+export function getCameraFromGroup(group: THREE.Group): THREE.Camera | null {
+  const camera = group.children.find(c => c.name.endsWith('_camera')) as THREE.Camera | undefined;
+  return camera || null;
+}
+
+/**
+ * Get the helper from a Camera3D group
+ */
+export function getHelperFromGroup(group: THREE.Group): THREE.CameraHelper | null {
+  const helper = group.children.find(c => c.name.endsWith('_helper')) as THREE.CameraHelper | undefined;
+  return helper || null;
+}
+
+/**
+ * Show/hide camera helper
+ */
+export function setHelperVisibility(group: THREE.Group, visible: boolean): void {
+  const helper = getHelperFromGroup(group);
+  if (helper) {
+    helper.visible = visible;
+  }
+}
