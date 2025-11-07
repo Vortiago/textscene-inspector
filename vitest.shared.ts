@@ -9,6 +9,9 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
+    reporters: process.env.GITHUB_ACTIONS
+      ? ['default', 'github-actions']
+      : ['default'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
