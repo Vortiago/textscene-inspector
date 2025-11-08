@@ -13,6 +13,12 @@ import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { checkResourceExists } from '../../../linter/resourceChecker.js';
 
 /**
+ * Threshold for warning about unusually high surface indices.
+ * Most meshes have 1-8 surfaces; indices above this may indicate an issue.
+ */
+const SURFACE_INDEX_WARNING_THRESHOLD = 32;
+
+/**
  * Check if properties are valid MeshInstance3D properties
  */
 function isMeshInstance3DProperties(props: unknown): props is MeshInstance3DProperties {
@@ -111,11 +117,24 @@ function checkMeshInstance3D(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // Check if surface material override resources exist
+  // Check if surface material override resources exist and validate indices
   for (const [key, value] of Object.entries(rawProps)) {
     const match = key.match(/^surface_material_override\/(\d+)$/);
     if (match) {
       const surfaceIndex = parseInt(match[1]!, 10);
+
+      // Warn on unusually high indices (may indicate a problem)
+      if (surfaceIndex > SURFACE_INDEX_WARNING_THRESHOLD) {
+        diagnostics.push({
+          severity: 'warning',
+          message: `Surface material override index ${surfaceIndex} is unusually high (most meshes have < 32 surfaces), may indicate an error or impact performance`,
+          nodeName: node.name,
+          nodeType: node.type,
+          ruleName: 'valid-meshinstance3d-surface-index',
+        });
+      }
+
+      // Check if resource exists
       const resourceExists = checkResourceExists(scene, value);
       if (!resourceExists) {
         diagnostics.push({

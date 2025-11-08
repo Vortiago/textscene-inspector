@@ -9,6 +9,12 @@ import { resolveGeometry, resolveMaterial } from '../../../resources/ResourceMan
 import { warn } from '../../../logger';
 
 /**
+ * Threshold for warning about unusually high surface indices.
+ * Most meshes have 1-8 surfaces; indices above this may indicate an issue.
+ */
+const SURFACE_INDEX_WARNING_THRESHOLD = 32;
+
+/**
  * Create a three.js mesh for a MeshInstance3D node.
  * Now async to support async material resolution (texture loading).
  */
@@ -99,6 +105,7 @@ async function applyMaterialOverrides(
 /**
  * Normalize surfaceMaterialOverrides to Map format.
  * Handles both Map (from parser) and plain object (from postMessage serialization).
+ * Rejects negative indices; warns about unusually high indices.
  */
 function normalizeSurfaceMaterialOverrides(
   overrides: Map<number, string> | Record<number, string> | undefined
@@ -107,17 +114,37 @@ function normalizeSurfaceMaterialOverrides(
     return new Map();
   }
 
-  if (overrides instanceof Map) {
-    return overrides;
-  }
-
-  // Convert plain object to Map
   const map = new Map<number, string>();
-  for (const [key, value] of Object.entries(overrides)) {
-    const index = parseInt(key, 10);
-    if (!isNaN(index)) {
+
+  // Handle Map format
+  if (overrides instanceof Map) {
+    for (const [index, value] of overrides) {
+      if (index < 0) {
+        warn(`Surface material override index ${index} is negative, skipping`);
+        continue;
+      }
+      if (index > SURFACE_INDEX_WARNING_THRESHOLD) {
+        warn(`Surface material override index ${index} is unusually high (most meshes have < 32 surfaces), may impact performance`);
+      }
       map.set(index, value);
     }
+    return map;
+  }
+
+  // Handle plain object format
+  for (const [key, value] of Object.entries(overrides)) {
+    const index = parseInt(key, 10);
+    if (isNaN(index)) {
+      continue;
+    }
+    if (index < 0) {
+      warn(`Surface material override index ${index} is negative, skipping`);
+      continue;
+    }
+    if (index > SURFACE_INDEX_WARNING_THRESHOLD) {
+      warn(`Surface material override index ${index} is unusually high (most meshes have < 32 surfaces), may impact performance`);
+    }
+    map.set(index, value);
   }
   return map;
 }
