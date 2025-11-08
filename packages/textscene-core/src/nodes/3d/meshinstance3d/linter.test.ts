@@ -602,6 +602,74 @@ skeleton = NodePath("")
     });
   });
 
+  describe('Semantic Validation (Surface Index Range)', () => {
+    it('should warn about unusually high surface index but accept it', () => {
+      const content = `[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="mat_1"]
+
+[node name="ExcessiveIndex" type="MeshInstance3D"]
+surface_material_override/256 = SubResource("mat_1")
+`;
+
+      const diagnostics = linter.lint(content);
+      expect(diagnostics.length).toBeGreaterThan(0);
+      const indexError = diagnostics.find(d => d.ruleName === 'valid-meshinstance3d-surface-index');
+      expect(indexError).toBeDefined();
+      expect(indexError?.severity).toBe('warning');
+      expect(indexError?.message).toContain('unusually high');
+      
+    });
+
+    it('should accept surface index 0 (lower boundary)', () => {
+      const content = `[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="mat_1"]
+
+[node name="ValidIndex0" type="MeshInstance3D"]
+surface_material_override/0 = SubResource("mat_1")
+`;
+
+      const diagnostics = linter.lint(content);
+      expect(diagnostics).toHaveLength(0);
+    });
+
+    it('should accept surface index within threshold (no warnings)', () => {
+      const content = `[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="mat_1"]
+
+[node name="ValidIndex31" type="MeshInstance3D"]
+surface_material_override/31 = SubResource("mat_1")
+`;
+
+      const diagnostics = linter.lint(content);
+      expect(diagnostics).toHaveLength(0);
+    });
+
+    it('should warn about high index and check resource existence', () => {
+      const content = `[gd_scene format=3]
+
+[node name="HighIndexMissingResource" type="MeshInstance3D"]
+surface_material_override/999 = SubResource("nonexistent")
+`;
+
+      const diagnostics = linter.lint(content);
+      expect(diagnostics.length).toBeGreaterThan(0);
+      // Should warn about high index
+      const indexWarning = diagnostics.find(d => d.ruleName === 'valid-meshinstance3d-surface-index');
+      expect(indexWarning).toBeDefined();
+      expect(indexWarning?.severity).toBe('warning');
+      expect(indexWarning?.message).toContain('unusually high');
+
+      // Should also report resource not found
+      const resourceError = diagnostics.find(d => d.message.includes('resource not found'));
+      expect(resourceError).toBeDefined();
+      expect(resourceError?.severity).toBe('error');
+    });
+
+  });
+
   describe('Edge Cases', () => {
     it('should handle multiple validation errors', () => {
       const content = `[gd_scene format=3]

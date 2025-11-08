@@ -47,14 +47,12 @@ export class HelperManager {
 
     // If a CUSTOM target is provided and it has a material with color, use color-based highlighting
     // This avoids changing scene geometry colors (which have material.color but shouldn't be highlighted that way)
-    if (customTarget) {
-      const material = (targetObject as any).material;
-      if (material?.color instanceof THREE.Color) {
-        const originalColor = material.color.getHex();
-        this.coloredHelpers.set(key, { object: targetObject, originalColor });
-        material.color.setHex(color);
-        return;
-      }
+    if (customTarget && this.hasMaterialWithColor(targetObject)) {
+      const material = (targetObject as THREE.Mesh).material as THREE.Material & { color: THREE.Color };
+      const originalColor = material.color.getHex();
+      this.coloredHelpers.set(key, { object: targetObject, originalColor });
+      material.color.setHex(color);
+      return;
     }
 
     // Otherwise, create a BoxHelper around the target
@@ -69,11 +67,9 @@ export class HelperManager {
   private clearHelper(key: string): void {
     // Check if this is a colored helper (object with changed material color)
     const coloredHelper = this.coloredHelpers.get(key);
-    if (coloredHelper) {
-      const material = (coloredHelper.object as any).material;
-      if (material?.color instanceof THREE.Color) {
-        material.color.setHex(coloredHelper.originalColor);
-      }
+    if (coloredHelper && this.hasMaterialWithColor(coloredHelper.object)) {
+      const material = (coloredHelper.object as THREE.Mesh).material as THREE.Material & { color: THREE.Color };
+      material.color.setHex(coloredHelper.originalColor);
       this.coloredHelpers.delete(key);
       return;
     }
@@ -93,8 +89,8 @@ export class HelperManager {
   clearAll(): void {
     // Restore colored helper colors
     this.coloredHelpers.forEach(state => {
-      const material = (state.object as any).material;
-      if (material?.color instanceof THREE.Color) {
+      if (this.hasMaterialWithColor(state.object)) {
+        const material = (state.object as THREE.Mesh).material as THREE.Material & { color: THREE.Color };
         material.color.setHex(state.originalColor);
       }
     });
@@ -106,6 +102,16 @@ export class HelperManager {
       helper.dispose();
     });
     this.helpers.clear();
+  }
+
+  /**
+   * Type guard to check if an object has a material with a color property
+   */
+  private hasMaterialWithColor(object: THREE.Object3D): boolean {
+    const mesh = object as THREE.Mesh;
+    if (!mesh.material) return false;
+    const material = mesh.material as THREE.Material & { color?: THREE.Color };
+    return material.color instanceof THREE.Color;
   }
 
   /**
