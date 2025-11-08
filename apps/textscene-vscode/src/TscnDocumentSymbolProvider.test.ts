@@ -1,0 +1,244 @@
+/**
+ * Tests for TscnDocumentSymbolProvider
+ * Validates document symbol extraction for VS Code Outline view
+ */
+
+import { describe, it, expect, vi } from 'vitest';
+import * as vscode from 'vscode';
+import { TscnDocumentSymbolProvider } from './TscnDocumentSymbolProvider';
+
+// Mock helpers
+function createMockDocument(content: string): vscode.TextDocument {
+  const lines = content.split('\n');
+  return {
+    getText: () => content,
+    lineAt: (line: number) => ({
+      text: lines[line] || '',
+      lineNumber: line,
+    }),
+    lineCount: lines.length,
+    uri: vscode.Uri.file('/test.tscn'),
+  } as unknown as vscode.TextDocument;
+}
+
+const mockCancellationToken: vscode.CancellationToken = {
+  isCancellationRequested: false,
+  onCancellationRequested: vi.fn(),
+};
+
+describe('TscnDocumentSymbolProvider', () => {
+  // ============================================================================
+  // Happy Path: Symbol Extraction
+  // ============================================================================
+
+  describe('Symbol Extraction', () => {
+    it('should provide symbols for simple scene', () => {
+      const tscnContent = `[gd_scene format=3]
+
+[node name="Root" type="Node3D"]
+
+[node name="Player" type="MeshInstance3D" parent="."]
+mesh = SubResource("BoxMesh_abc123")
+
+[node name="Camera" type="Camera3D" parent="Player"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 5)
+`;
+
+      const document = createMockDocument(tscnContent);
+      const provider = new TscnDocumentSymbolProvider();
+      const symbols = provider.provideDocumentSymbols(document, mockCancellationToken);
+
+      expect(symbols).toHaveLength(1); // Root
+      expect(symbols![0].name).toBe('Root');
+      expect(symbols![0].detail).toBe('Node3D');
+      expect(symbols![0].children).toHaveLength(1); // Player
+      expect(symbols![0].children[0].name).toBe('Player');
+      expect(symbols![0].children[0].detail).toBe('MeshInstance3D');
+      expect(symbols![0].children[0].children).toHaveLength(1); // Camera
+      expect(symbols![0].children[0].children[0].name).toBe('Camera');
+      expect(symbols![0].children[0].children[0].detail).toBe('Camera3D');
+    });
+
+    it('should assign correct symbol kinds', () => {
+      const tscnContent = `[gd_scene format=3]
+
+[node name="Root" type="Node3D"]
+
+[node name="Mesh" type="MeshInstance3D" parent="."]
+
+[node name="Light" type="SpotLight3D" parent="."]
+
+[node name="Cam" type="Camera3D" parent="."]
+`;
+
+      const document = createMockDocument(tscnContent);
+      const provider = new TscnDocumentSymbolProvider();
+      const symbols = provider.provideDocumentSymbols(document, mockCancellationToken);
+
+      // Verify we have the root and its children
+      expect(symbols).toHaveLength(1);
+      expect(symbols![0].kind).toBe(vscode.SymbolKind.Module); // Node3D
+      expect(symbols![0].children).toHaveLength(3);
+
+      // Check each child's symbol kind
+      const meshChild = symbols![0].children.find(c => c.name === 'Mesh');
+      const lightChild = symbols![0].children.find(c => c.name === 'Light');
+      const camChild = symbols![0].children.find(c => c.name === 'Cam');
+
+      expect(meshChild?.kind).toBe(vscode.SymbolKind.Class); // MeshInstance3D
+      expect(lightChild?.kind).toBe(vscode.SymbolKind.Object); // SpotLight3D
+      expect(camChild?.kind).toBe(vscode.SymbolKind.Struct); // Camera3D
+    });
+
+    it('should use default symbol kind for unknown node types', () => {
+      const tscnContent = `[gd_scene format=3]
+
+[node name="Root" type="CustomNodeType"]
+`;
+
+      const document = createMockDocument(tscnContent);
+      const provider = new TscnDocumentSymbolProvider();
+      const symbols = provider.provideDocumentSymbols(document, mockCancellationToken);
+
+      expect(symbols![0].kind).toBe(vscode.SymbolKind.Object); // Default fallback
+    });
+  });
+
+  // ============================================================================
+  // Edge Cases
+  // ============================================================================
+
+  describe('Edge Cases', () => {
+    it('should handle empty files', () => {
+      const document = createMockDocument('[gd_scene format=3]\n');
+      const provider = new TscnDocumentSymbolProvider();
+      const symbols = provider.provideDocumentSymbols(document, mockCancellationToken);
+
+      expect(symbols).toEqual([]);
+    });
+
+    it('should handle parse errors gracefully', () => {
+      const document = createMockDocument('invalid tscn content @#$%');
+      const provider = new TscnDocumentSymbolProvider();
+      const symbols = provider.provideDocumentSymbols(document, mockCancellationToken);
+
+      // Should return empty array, not throw
+      expect(symbols).toEqual([]);
+    });
+
+    it('should handle scene with single root', () => {
+      const tscnContent = `[gd_scene format=3]
+
+[node name="Root" type="Node3D"]
+
+[node name="Child" type="Node3D" parent="."]
+`;
+
+      const document = createMockDocument(tscnContent);
+      const provider = new TscnDocumentSymbolProvider();
+      const symbols = provider.provideDocumentSymbols(document, mockCancellationToken);
+
+      expect(symbols).toHaveLength(1);
+      expect(symbols![0].name).toBe('Root');
+      expect(symbols![0].children).toHaveLength(1);
+      expect(symbols![0].children[0].name).toBe('Child');
+    });
+
+    it('should handle deeply nested hierarchies', () => {
+      const tscnContent = `[gd_scene format=3]
+
+[node name="Root" type="Node3D"]
+
+[node name="Level1" type="Node3D" parent="."]
+
+[node name="Level2" type="Node3D" parent="Level1"]
+
+[node name="Level3" type="Node3D" parent="Level1/Level2"]
+`;
+
+      const document = createMockDocument(tscnContent);
+      const provider = new TscnDocumentSymbolProvider();
+      const symbols = provider.provideDocumentSymbols(document, mockCancellationToken);
+
+      expect(symbols).toHaveLength(1);
+      expect(symbols![0].children).toHaveLength(1); // Level1
+      expect(symbols![0].children[0].children).toHaveLength(1); // Level2
+      expect(symbols![0].children[0].children[0].children).toHaveLength(1); // Level3
+      expect(symbols![0].children[0].children[0].children[0].name).toBe('Level3');
+    });
+  });
+
+  // ============================================================================
+  // Range Calculation
+  // ============================================================================
+
+  describe('Range Calculation', () => {
+    it('should calculate ranges for nodes', () => {
+      const tscnContent = `[gd_scene format=3]
+
+[node name="Root" type="Node3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+
+[node name="Child" type="Node3D" parent="."]
+`;
+
+      const document = createMockDocument(tscnContent);
+      const provider = new TscnDocumentSymbolProvider();
+      const symbols = provider.provideDocumentSymbols(document, mockCancellationToken);
+
+      // Verify symbols exist and have range information
+      expect(symbols).toHaveLength(1);
+      expect(symbols![0].name).toBe('Root');
+      expect(symbols![0].range).toBeDefined();
+      expect(symbols![0].selectionRange).toBeDefined();
+    });
+
+    it('should assign ranges for nested nodes', () => {
+      const tscnContent = `[gd_scene format=3]
+
+[node name="Root" type="Node3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+visible = true
+
+[node name="Child" type="Node3D" parent="."]
+`;
+
+      const document = createMockDocument(tscnContent);
+      const provider = new TscnDocumentSymbolProvider();
+      const symbols = provider.provideDocumentSymbols(document, mockCancellationToken);
+
+      // Verify nested nodes have ranges
+      expect(symbols![0].children).toHaveLength(1);
+      expect(symbols![0].children[0].range).toBeDefined();
+      expect(symbols![0].children[0].selectionRange).toBeDefined();
+    });
+  });
+
+  // ============================================================================
+  // Light Node Types
+  // ============================================================================
+
+  describe('Light Node Types', () => {
+    it('should recognize all light types with correct symbols', () => {
+      const tscnContent = `[gd_scene format=3]
+
+[node name="Root" type="Node3D"]
+
+[node name="Spot" type="SpotLight3D" parent="."]
+
+[node name="Directional" type="DirectionalLight3D" parent="."]
+
+[node name="Omni" type="OmniLight3D" parent="."]
+`;
+
+      const document = createMockDocument(tscnContent);
+      const provider = new TscnDocumentSymbolProvider();
+      const symbols = provider.provideDocumentSymbols(document, mockCancellationToken);
+
+      expect(symbols![0].children).toHaveLength(3);
+      expect(symbols![0].children[0].kind).toBe(vscode.SymbolKind.Object); // SpotLight3D
+      expect(symbols![0].children[1].kind).toBe(vscode.SymbolKind.Object); // DirectionalLight3D
+      expect(symbols![0].children[2].kind).toBe(vscode.SymbolKind.Object); // OmniLight3D
+    });
+  });
+});

@@ -70,7 +70,7 @@
 
 - [x] #WI-21-24: Multi-Panel Support, Camera State, Incremental Updates
 - [x] #WI-25: Click-to-Select in 3D Viewport → [Details](work_items/WI25.md)
-- [ ] #WI-50: VSCode Outline Provider → [Details](work_items/WI50.md) ⭐
+- [x] #WI-50: VSCode Outline Provider → [Details](work_items/WI50.md) ⭐
 - [ ] #WI-51: SubResource/ExtResource Go to Definition → [Details](work_items/WI51.md) ⭐
 
 ## Phase 8: C# Integration
