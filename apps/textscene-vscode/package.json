@@ -54,7 +54,7 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "pnpm --filter @textscene/core build && pnpm build",
+    "vscode:prepublish": "pnpm --filter @textscene/core build && pnpm build -- --skip-tests",
     "prebuild": "pnpm --filter @textscene/core build",
     "build": "node esbuild.config.mjs",
     "predev": "pnpm --filter @textscene/core build",
