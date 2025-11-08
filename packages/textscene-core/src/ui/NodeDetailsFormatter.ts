@@ -7,6 +7,40 @@ import type { PropertySection, PropertyItem } from '../core/NodeRegistry';
 import { nodeRegistry } from '../core/NodeRegistry';
 
 export function formatNodeDetails(node: TscnNode, path: string): string {
+  // Check if this is an unsupported type
+  const typeRegistration = nodeRegistry.getRegistration(node.type);
+  const isUnsupported = !typeRegistration && node.type !== 'Node';
+
+  if (isUnsupported) {
+    return `
+      <div class="node-details">
+        <div class="detail-section warning-section">
+          <h3>⚠️ Not Implemented</h3>
+          <p class="warning-text">
+            The node type <strong>${node.type}</strong> is not yet supported by the renderer.
+            The node is preserved in the tree hierarchy, but it won't be visualized in the 3D viewport.
+          </p>
+        </div>
+
+        <div class="detail-section">
+          <h3>Node Information</h3>
+          <div class="detail-row">
+            <span class="detail-label">Name:</span>
+            <span class="detail-value">${node.name}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Type:</span>
+            <span class="detail-value"><code>${node.type}</code></span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Path:</span>
+            <span class="detail-value"><code>${path}</code></span>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
   let html = renderBaseProperties(node, path);
 
   // Add camera switch button for Camera3D nodes

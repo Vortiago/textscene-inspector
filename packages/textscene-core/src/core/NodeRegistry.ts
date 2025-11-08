@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import type { ParsedHeading } from '../parser/utils';
 import type { TscnNode, TscnScene } from '../parser/types';
-import { warn } from '../logger';
+import { warn, error } from '../logger';
 
 export interface PropertyItem {
   label: string;
@@ -86,23 +86,23 @@ export function parseNodeWithRegistry(
   // If no registration found, use base Node type as fallback
   // This keeps unsupported types and instance nodes in the tree hierarchy
   if (!registration) {
-    const nodeType = heading.attributes.type || 'unknown';
+    const originalType = heading.attributes.type || 'Node';
 
     // Warn for truly unsupported types, but not for instance nodes (which have no type until loaded)
     if (!hasInstanceAttribute) {
-      warn(`Unsupported node type: ${nodeType} - using Node fallback`);
+      warn(`[NodeRegistry] Unsupported node type: ${originalType} - using Node fallback renderer`);
     }
 
     const nodeRegistration = nodeRegistry.getRegistration('Node');
     if (!nodeRegistration) {
-      warn('Node registration not found - cannot create fallback node');
+      warn('[NodeRegistry] Node registration not found - cannot create fallback node');
       return null;
     }
 
     const parsedProps = nodeRegistration.parser(heading, properties);
     const node: TscnNode = {
       name: parsedProps.name,
-      type: 'Node',
+      type: originalType,
       parent: parsedProps.parent,
       children: [],
       properties: parsedProps,
@@ -144,8 +144,24 @@ export async function renderNodeWithRegistry(
   const registration = nodeRegistry.getRegistration(node.type);
 
   if (!registration) {
-    warn(`Unsupported node type for rendering: ${node.type}`);
-    return null;
+    // Fall back to Node renderer for unsupported types
+    warn(`[NodeRegistry] No renderer for ${node.type}, using Node fallback`);
+
+    const nodeRegistration = nodeRegistry.getRegistration('Node');
+    if (!nodeRegistration) {
+      error(`[NodeRegistry] Node renderer not found - cannot render ${node.type}`);
+      return null;
+    }
+
+    // Render using Node renderer (empty Object3D container)
+    const object3D = await nodeRegistration.renderer(node.name, node.properties, scene);
+
+    // Mark as unsupported for UI detection
+    if (object3D) {
+      object3D.userData.isUnsupportedType = true;
+    }
+
+    return object3D;
   }
 
   // Renderer may be async (e.g., MeshInstance3D loading materials/textures)

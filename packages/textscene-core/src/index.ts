@@ -10,6 +10,7 @@ export { TscnParser } from './parser/TscnParser';
 export { TscnRenderer } from './core/TscnRenderer';
 export { TscnPreviewUI } from './ui/TscnPreviewUI';
 export { SceneTreeViewer } from './ui/SceneTreeViewer';
+export { sharedStyles } from './ui/styles';
 export { hashTscnNode, buildNodeHashMap } from './utils/nodeHash';
 
 // Export logging

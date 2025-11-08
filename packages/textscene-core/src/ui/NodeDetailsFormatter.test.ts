@@ -2,12 +2,30 @@
  * Tests for NodeDetailsFormatter - HTML generation for node property display
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
 import { formatNodeDetails } from './NodeDetailsFormatter';
 import { nodeRegistry } from '../core/NodeRegistry';
 import type { TscnNode } from '../parser/types';
+import type { NodeTypeRegistration } from '../core/NodeRegistry';
 
 describe('NodeDetailsFormatter', () => {
+  // Mock Node3D registration for tests
+  const node3DRegistration: NodeTypeRegistration = {
+    typeName: 'Node3D',
+    typeGuard: (h) => h.attributes.type === 'Node3D',
+    parser: (h, p) => ({ name: h.attributes.name || '', properties: p }),
+    renderer: () => ({ name: '', type: '' } as any),
+    propertyFormatter: () => []
+  };
+
+  beforeAll(() => {
+    nodeRegistry.register(node3DRegistration);
+  });
+
+  afterAll(() => {
+    nodeRegistry.clear();
+  });
+
   describe('formatNodeDetails()', () => {
     describe('Base Properties', () => {
       it('should render node type and path', () => {

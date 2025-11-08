@@ -2,13 +2,18 @@
  * Standalone web application for previewing TSCN files.
  */
 
-import { TscnPreviewUI } from '@textscene/core';
+import { TscnPreviewUI, sharedStyles } from '@textscene/core';
 import type { TscnPreviewElements, MissingResource } from '@textscene/core';
 import { initLogger } from './logger';
 import { getFixturesByCategory } from './fixtures';
 import { WebResourceProvider } from './providers/WebResourceProvider';
 
 initLogger();
+
+// Inject shared UI styles
+const styleElement = document.createElement('style');
+styleElement.textContent = sharedStyles;
+document.head.appendChild(styleElement);
 
 const fileInput = document.getElementById('file-upload') as HTMLInputElement;
 const canvas = document.getElementById('canvas') as HTMLCanvasElement;
