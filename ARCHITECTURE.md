@@ -79,6 +79,31 @@ Related code stays together for easy iteration. No central files need editing wh
 - Single error handling path
 - Eliminates 75 lines of duplicated code
 
+### Shared Light Utilities
+
+**Location**: `packages/textscene-core/src/nodes/3d/lights/shared/`
+
+Light nodes (DirectionalLight3D, OmniLight3D, SpotLight3D) share common properties and formatting logic. Shared utilities eliminate ~105 lines of duplication:
+
+**Parser Utilities** (`shared/parser.ts`):
+- `parseBaseLightProperties()` - Parses light_color, light_energy, shadow_enabled, shadow_bias, shadow_filter
+- `parseBaseLightWithNormalBias()` - Extends base properties with shadow_normal_bias (for DirectionalLight3D, OmniLight3D)
+
+**Formatter Utilities** (`shared/propertyFormatter.ts`):
+- `formatBaseLightSection()` - Formats Light section (Color, Energy + optional items)
+- `formatBaseShadowSection()` - Formats Shadow section (Enabled, Bias, Filter + optional items)
+- `formatShadowSectionWithNormalBias()` - Extends base shadow section with Normal Bias
+
+**Type Definitions** (`shared/types.ts`):
+- `BaseLightProperties` - Common light properties interface
+- `BaseLightWithNormalBias` - Extended interface with shadow_normal_bias
+
+**Benefits**:
+- Light-specific parsers/formatters reduced to ~10-15 lines
+- New light types easier to implement
+- Consistent property handling across all lights
+- Type-safe property inheritance
+
 ### Scene Management Architecture
 
 **Problem**: External scene instances (PackedScene) needed proper lifecycle management, hot-reload support, and instance tracking without code duplication.
