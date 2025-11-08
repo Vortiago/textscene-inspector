@@ -44,11 +44,6 @@ export function createCamera3D(name: string, properties: Camera3DProperties): TH
   // Update helper to reflect the camera's transform
   helper.update();
 
-  // Scale down helper to avoid dominating the scene visually
-  // This makes helper lines ~10 units long regardless of camera's far plane
-  // IMPORTANT: Must be set AFTER helper.update() to avoid being reset
-  helper.scale.set(0.2, 0.2, 0.2);
-
   // Add helper to group (helper visualizes the already-transformed camera)
   group.add(helper);
 
@@ -140,8 +135,6 @@ export function updateCameraAspect(group: THREE.Group, aspect: number): void {
   const helper = group.userData.helper as THREE.CameraHelper | undefined;
   if (helper) {
     helper.update();
-    // Reapply scale after update (update() resets scale to 1.0)
-    helper.scale.set(0.2, 0.2, 0.2);
   }
 }
 
