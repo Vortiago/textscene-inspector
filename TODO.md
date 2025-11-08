@@ -26,12 +26,12 @@
 
 **Phase 1 Verification Complete** ✅ (Automated testing with Chrome DevTools):
 - ✅ WI-53 (External Materials): Working perfectly
-- ❌ Camera3D (WI-15): Not registered - falls back to generic Node
+- ✅ Camera3D (WI-15): Registered and working
 - ⚠️ PlaneMesh center_offset (WI-58): Cannot verify (no fixture)
 - ❌ WorldEnvironment (WI-57): Not implemented
 
 **Critical Path** (Revised order based on verification):
-1. [ ] #WI-15: Camera3D Node → [Details](work_items/WI15.md) ⭐⭐⭐ **START HERE** (90% done, needs registration)
+1. [x] #WI-15: Camera3D Node → [Details](work_items/WI15.md) ⭐⭐⭐ ✅ Complete
 2. [x] #WI-56: Material Override Support → [Details](work_items/WI-56.md) ⭐⭐⭐ **CRITICAL** (207 instances)
 3. [ ] #WI-57: WorldEnvironment + Environment SubResource → [Details](work_items/WI-57.md) ⭐⭐ (Not implemented)
 4. [ ] #WI-58: PlaneMesh center_offset Property → [Details](work_items/WI-58.md) ⭐ (Needs verification)
@@ -62,7 +62,7 @@
 
 ## Phase 6: Advanced Features
 
-- [ ] #WI-15: Camera3D Node → [Details](work_items/WI15.md)
+- [x] #WI-15: Camera3D Node → [Details](work_items/WI15.md)
 - [ ] #WI-16: ShaderMaterial SubResource → [Details](work_items/WI16.md)
 - [ ] #WI-17: Custom Shader Support → [Details](work_items/WI17.md)
 
