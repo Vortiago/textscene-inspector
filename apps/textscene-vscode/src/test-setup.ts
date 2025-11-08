@@ -273,6 +273,16 @@ export class MockDocumentSymbol {
 }
 
 /**
+ * Mock vscode.Location class
+ */
+export class MockLocation {
+  constructor(
+    public uri: any,
+    public range: any
+  ) {}
+}
+
+/**
  * Mock vscode.languages namespace
  */
 const mockLanguages: any = {
@@ -299,6 +309,7 @@ vi.mock('vscode', () => ({
   Selection: MockSelection,
   EventEmitter: MockEventEmitter,
   DocumentSymbol: MockDocumentSymbol,
+  Location: MockLocation,
 
   // Enums
   ViewColumn: {
@@ -374,6 +385,7 @@ export const vscode: {
   Selection: typeof MockSelection;
   EventEmitter: typeof MockEventEmitter;
   DocumentSymbol: typeof MockDocumentSymbol;
+  Location: typeof MockLocation;
   ViewColumn: { One: number; Two: number; Three: number; Active: number; Beside: number };
   TextEditorRevealType: { Default: number; InCenter: number; InCenterIfOutsideViewport: number; AtTop: number };
   SymbolKind: Record<string, number>;
@@ -388,6 +400,7 @@ export const vscode: {
   Selection: MockSelection,
   EventEmitter: MockEventEmitter,
   DocumentSymbol: MockDocumentSymbol,
+  Location: MockLocation,
   ViewColumn: {
     One: 1,
     Two: 2,

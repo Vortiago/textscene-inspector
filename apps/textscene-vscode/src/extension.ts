@@ -5,6 +5,7 @@
 import * as vscode from 'vscode';
 import { TscnPreviewPanel } from './TscnPreviewPanel';
 import { TscnDocumentSymbolProvider } from './TscnDocumentSymbolProvider';
+import { TscnDefinitionProvider } from './TscnDefinitionProvider';
 import { initLogger, dispose as disposeLogger } from './logger';
 
 export function activate(context: vscode.ExtensionContext) {
@@ -50,6 +51,14 @@ export function activate(context: vscode.ExtensionContext) {
       {
         label: 'TSCN Scene Hierarchy',
       }
+    )
+  );
+
+  // Register Definition Provider for .tscn files
+  context.subscriptions.push(
+    vscode.languages.registerDefinitionProvider(
+      { language: 'tscn' },
+      new TscnDefinitionProvider()
     )
   );
 
