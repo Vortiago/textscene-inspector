@@ -68,7 +68,7 @@
     "type-check": "tsc --noEmit",
     "package": "npx @vscode/vsce package --no-dependencies",
     "publish": "npx @vscode/vsce publish --no-dependencies",
-    "clean": "rimraf dist out *.vsix .test-workspace"
+    "clean": "rimraf dist out .test-workspace"
   },
   "keywords": [
     "tscn",
