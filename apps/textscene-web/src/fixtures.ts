@@ -71,6 +71,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Surface Material Override",
+    "file": "unit-surface-material-override.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Unsupported Nodes",
     "file": "unit-unsupported-nodes.tscn",
     "category": "Other"
@@ -163,6 +168,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Material Metallic",
     "file": "unit-material-metallic.tscn",
+    "category": "Unit - Materials"
+  },
+  {
+    "name": "Material Override",
+    "file": "unit-material-override.tscn",
     "category": "Unit - Materials"
   },
   {

@@ -18,42 +18,13 @@ export async function createMeshInstance3D(
   scene?: TscnScene
 ): Promise<THREE.Mesh> {
   let geometry: THREE.BufferGeometry;
-  let material: THREE.Material;
+  let material: THREE.Material | THREE.Material[];
 
   if (scene && properties.mesh) {
     const resolvedGeometry = await resolveGeometry(properties.mesh, scene);
     if (resolvedGeometry) {
       geometry = resolvedGeometry;
-
-      // Try to resolve material override for surface 0 (default surface)
-      // Handle both Map (parsed) and plain object (from postMessage serialization)
-      let materialOverride: string | undefined;
-      if (properties.surfaceMaterialOverrides instanceof Map) {
-        materialOverride = properties.surfaceMaterialOverrides.get(0);
-      } else if (properties.surfaceMaterialOverrides && typeof properties.surfaceMaterialOverrides === 'object') {
-        materialOverride = (properties.surfaceMaterialOverrides as Record<number, string>)[0];
-      }
-
-      if (materialOverride) {
-        const resolvedMaterial = await resolveMaterial(materialOverride, scene);
-        if (resolvedMaterial) {
-          material = resolvedMaterial;
-        } else {
-          // Fall back to default material if override resolution fails
-          material = new THREE.MeshStandardMaterial({
-            color: 0xcccccc,
-            metalness: 0.3,
-            roughness: 0.7,
-          });
-        }
-      } else {
-        // No material override, use default gray material
-        material = new THREE.MeshStandardMaterial({
-          color: 0xcccccc,
-          metalness: 0.3,
-          roughness: 0.7,
-        });
-      }
+      material = createDefaultMaterial();
     } else {
       geometry = createPlaceholderGeometry();
       material = createPlaceholderMaterial();
@@ -70,11 +41,93 @@ export async function createMeshInstance3D(
   const mesh = new THREE.Mesh(geometry, material);
   mesh.name = nodeName;
 
+  // Apply material overrides if scene is available
+  if (scene && properties.mesh) {
+    await applyMaterialOverrides(mesh, properties, scene);
+  }
+
   mesh.receiveShadow = true;
 
   applyShadowCasting(mesh, properties.castShadow);
 
   return mesh;
+}
+
+/**
+ * Apply material_override and surface_material_override properties.
+ * Precedence: surface_material_override/N > material_override > default
+ */
+async function applyMaterialOverrides(
+  mesh: THREE.Mesh,
+  properties: MeshInstance3DProperties,
+  scene: TscnScene
+): Promise<void> {
+  // Step 1: Apply material_override to all surfaces (if specified)
+  if (properties.materialOverride) {
+    const material = await resolveMaterial(properties.materialOverride, scene);
+    if (material) {
+      mesh.material = material;
+    }
+  }
+
+  // Step 2: Apply surface_material_override/N to specific surfaces (takes precedence)
+  const surfaceOverrides = normalizeSurfaceMaterialOverrides(properties.surfaceMaterialOverrides);
+
+  if (surfaceOverrides.size > 0) {
+    // Ensure material is an array for multi-surface support
+    const materials = Array.isArray(mesh.material)
+      ? [...mesh.material]
+      : [mesh.material];
+
+    // Apply each surface-specific override
+    for (const [surfaceIndex, materialRef] of surfaceOverrides) {
+      const material = await resolveMaterial(materialRef, scene);
+      if (material) {
+        // Expand materials array if needed
+        while (materials.length <= surfaceIndex) {
+          materials.push(createDefaultMaterial());
+        }
+        materials[surfaceIndex] = material;
+      }
+    }
+
+    // Update mesh material (materials[0] is guaranteed to exist)
+    mesh.material = materials.length === 1 ? materials[0]! : materials;
+  }
+}
+
+/**
+ * Normalize surfaceMaterialOverrides to Map format.
+ * Handles both Map (from parser) and plain object (from postMessage serialization).
+ */
+function normalizeSurfaceMaterialOverrides(
+  overrides: Map<number, string> | Record<number, string> | undefined
+): Map<number, string> {
+  if (!overrides) {
+    return new Map();
+  }
+
+  if (overrides instanceof Map) {
+    return overrides;
+  }
+
+  // Convert plain object to Map
+  const map = new Map<number, string>();
+  for (const [key, value] of Object.entries(overrides)) {
+    const index = parseInt(key, 10);
+    if (!isNaN(index)) {
+      map.set(index, value);
+    }
+  }
+  return map;
+}
+
+function createDefaultMaterial(): THREE.Material {
+  return new THREE.MeshStandardMaterial({
+    color: 0xcccccc,
+    metalness: 0.3,
+    roughness: 0.7,
+  });
 }
 
 function createPlaceholderGeometry(): THREE.BufferGeometry {
