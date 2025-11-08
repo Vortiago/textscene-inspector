@@ -6,6 +6,13 @@ esbuild.config.mjs
 # Tests
 **/*.test.ts
 **/*.test.js
+dist/test/
+out/
+.test-workspace/
+
+# Test configuration
+tsconfig.test.json
+vitest.config.ts
 
 # Node modules
 node_modules/
