@@ -26,6 +26,10 @@ export function createCamera3D(name: string, properties: Camera3DProperties): TH
   helper.name = `${name}_helper`;
   helper.visible = true; // Visible by default to show camera positioning
 
+  // Scale down helper to avoid dominating the scene visually
+  // This makes helper lines ~10 units long regardless of camera's far plane
+  helper.scale.set(0.2, 0.2, 0.2);
+
   // Apply transform to camera, not group - this ensures helper visualizes correctly
   applyNode3DTransform(camera, properties);
 
