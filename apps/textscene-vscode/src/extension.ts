@@ -4,6 +4,7 @@
 
 import * as vscode from 'vscode';
 import { TscnPreviewPanel } from './TscnPreviewPanel';
+import { TscnDocumentSymbolProvider } from './TscnDocumentSymbolProvider';
 import { initLogger, dispose as disposeLogger } from './logger';
 
 export function activate(context: vscode.ExtensionContext) {
@@ -39,6 +40,17 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.window.showInformationMessage('Open a .tscn file to preview it.');
       }
     })
+  );
+
+  // Register Document Symbol Provider for .tscn files
+  context.subscriptions.push(
+    vscode.languages.registerDocumentSymbolProvider(
+      { language: 'tscn' },
+      new TscnDocumentSymbolProvider(),
+      {
+        label: 'TSCN Scene Hierarchy',
+      }
+    )
   );
 
   context.subscriptions.push(
