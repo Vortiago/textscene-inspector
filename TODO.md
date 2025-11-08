@@ -111,8 +111,8 @@
 
 - [x] #WI-45: Consolidate Claude Skills Configuration
 - [x] #WI-46: Add Codebase Architect Agent
-- [ ] #WI-47: Extract Light Base Property Parsing → [Details](work_items/WI47.md)
-- [ ] #WI-48: Extract Shadow Property Formatting → [Details](work_items/WI48.md)
+- [x] #WI-47: Extract Light Base Property Parsing → [Details](work_items/WI47.md)
+- [x] #WI-48: Extract Shadow Property Formatting → [Details](work_items/WI48.md)
 - [ ] #WI-49: Documentation Updates for Claude Config → [Details](work_items/WI49.md)
 - [x] #WI-55: Instance Resolution Encapsulation (Alternative 1 implemented) → [Details](work_items/WI55.md)
 
