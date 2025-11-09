@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { PlaneMeshProperties } from './types';
 
 export function createPlaneMeshGeometry(properties: PlaneMeshProperties): THREE.PlaneGeometry {
-  const { size, subdivideWidth, subdivideDepth, orientation } = properties;
+  const { size, subdivideWidth, subdivideDepth, orientation, centerOffset } = properties;
 
   // Size mapping verified against Godot source (scene/resources/3d/primitive_meshes.cpp):
   // FACE_X: Vector3(0.0, z, x) → Y=size.y, Z=size.x
@@ -32,6 +32,11 @@ export function createPlaneMeshGeometry(properties: PlaneMeshProperties): THREE.
       // FACE_Y: rotate to XZ plane with normal pointing in +Y
       geometry.rotateX(-Math.PI / 2);
       break;
+  }
+
+  // Apply center offset if provided
+  if (centerOffset) {
+    geometry.translate(centerOffset.x, centerOffset.y, centerOffset.z);
   }
 
   return geometry;

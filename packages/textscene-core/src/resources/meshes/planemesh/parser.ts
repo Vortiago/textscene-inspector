@@ -1,5 +1,5 @@
 import type { PlaneMeshProperties } from './types';
-import { parseVector2, type Vector2 } from '../../../parser/vectors';
+import { parseVector2, parseVector3, type Vector2, type Vector3 } from '../../../parser/vectors';
 import { warn } from '../../../logger';
 
 export function parsePlaneMesh(properties: Record<string, string>): PlaneMeshProperties {
@@ -7,6 +7,7 @@ export function parsePlaneMesh(properties: Record<string, string>): PlaneMeshPro
   let subdivideWidth = 0;
   let subdivideDepth = 0;
   let orientation = 1;
+  let centerOffset: Vector3 | undefined = undefined;
 
   if (properties.size) {
     try {
@@ -42,5 +43,15 @@ export function parsePlaneMesh(properties: Record<string, string>): PlaneMeshPro
     }
   }
 
-  return { size, subdivideWidth, subdivideDepth, orientation };
+  if (properties.center_offset) {
+    try {
+      centerOffset = parseVector3(properties.center_offset);
+    } catch (error) {
+      warn(
+        `Failed to parse PlaneMesh center_offset: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+  }
+
+  return { size, subdivideWidth, subdivideDepth, orientation, centerOffset };
 }
