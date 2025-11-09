@@ -14,9 +14,13 @@ export class ResourceRegistry {
   private loadingPromises: Map<string, Promise<string | ArrayBuffer>> = new Map();
   private loadingStack: Set<string> = new Set();
   private provider: ResourceProvider | null = null;
-  private textureCache: Map<string, THREE.Texture> = new Map();
-  private materialCache: Map<string, THREE.Material> = new Map();
+  private textureCache: Map<string, THREE.Texture | null> = new Map();
+  private materialCache: Map<string, THREE.Material | null> = new Map();
   private onResourceNeeded: ResourceNeededCallback | null = null;
+
+  // In-flight tracking for texture and material loading
+  private textureLoadingPromises: Map<string, Promise<THREE.Texture | null>> = new Map();
+  private materialLoadingPromises: Map<string, Promise<THREE.Material | null>> = new Map();
 
   /**
    * Register an external resource from parsed TSCN data.
@@ -43,6 +47,59 @@ export class ResourceRegistry {
    */
   setOnResourceNeeded(callback: ResourceNeededCallback): void {
     this.onResourceNeeded = callback;
+  }
+
+  /**
+   * Generic helper for loading resources with deduplication.
+   * Prevents multiple simultaneous loads of the same resource.
+   *
+   * @param key - Unique identifier for the resource
+   * @param cache - Cache map for successfully loaded resources
+   * @param loadingPromises - Map tracking in-flight loading operations
+   * @param loadFn - Async function that performs the actual loading
+   * @returns Loaded resource or null if loading fails
+   */
+  private async loadWithDeduplication<T>(
+    key: string,
+    cache: Map<string, T | null>,
+    loadingPromises: Map<string, Promise<T | null>>,
+    loadFn: () => Promise<T | null>
+  ): Promise<T | null> {
+    // Check cache first
+    if (cache.has(key)) {
+      logger.info(`[loadWithDeduplication] Cache hit for: ${key}`);
+      return cache.get(key)!;
+    }
+
+    // Check if already loading (deduplication)
+    if (loadingPromises.has(key)) {
+      logger.info(`[loadWithDeduplication] Waiting for in-flight load: ${key}`);
+      return await loadingPromises.get(key)!;
+    }
+
+    // Start loading and track the promise
+    logger.info(`[loadWithDeduplication] Starting new load: ${key}`);
+    const loadingPromise = loadFn()
+      .then((result) => {
+        // Cache ALL results, including null (failed loads), to prevent retries
+        cache.set(key, result);
+        if (result !== null) {
+          logger.info(`[loadWithDeduplication] Cached successful load: ${key}`);
+        } else {
+          logger.info(`[loadWithDeduplication] Cached null result (failed load): ${key}`);
+        }
+        loadingPromises.delete(key);
+        return result;
+      })
+      .catch((error) => {
+        // Don't cache failures, just clean up
+        loadingPromises.delete(key);
+        logger.error(`[loadWithDeduplication] Load failed for ${key}:`, error);
+        throw error;
+      });
+
+    loadingPromises.set(key, loadingPromise);
+    return await loadingPromise;
   }
 
   /**
@@ -133,79 +190,101 @@ export class ResourceRegistry {
    * Returns null if texture cannot be loaded (and calls onResourceNeeded if set).
    */
   async loadTexture(idOrPath: string): Promise<THREE.Texture | null> {
-    // Check texture cache first
-    if (this.textureCache.has(idOrPath)) {
-      logger.info(`Using cached texture: ${idOrPath}`);
-      return this.textureCache.get(idOrPath)!;
-    }
+    const startTime = performance.now();
+    const cacheStatus = this.textureCache.has(idOrPath) ? 'HIT' : 'MISS';
 
-    // Get resource metadata
-    const resource = this.getMetadata(idOrPath);
-    if (!resource || !resource.type.includes('Texture')) {
-      logger.error(`Not a texture resource: ${idOrPath}`);
-      return null;
-    }
+    logger.info(`[loadTexture] START: ${idOrPath} (cache: ${cacheStatus})`);
 
-    try {
-      // Load raw content via provider (returns ArrayBuffer)
-      const content = await this.loadByPath(resource.path);
-      if (!(content instanceof ArrayBuffer)) {
-        throw new Error(`Texture must be binary data: ${resource.path}`);
-      }
-
-      // Convert ArrayBuffer to Blob
-      const mimeType = this.getMimeType(resource.path);
-      const blob = new Blob([content], { type: mimeType });
-      const blobUrl = URL.createObjectURL(blob);
-
-      // Load with THREE.js TextureLoader
-      const loader = new THREE.TextureLoader();
-
-      try {
-        const texture = await new Promise<THREE.Texture>((resolve, reject) => {
-          loader.load(
-            blobUrl,
-            (loadedTexture: THREE.Texture) => {
-              loadedTexture.colorSpace = THREE.SRGBColorSpace;
-              resolve(loadedTexture);
-            },
-            undefined,
-            () => {
-              reject(new Error(`Failed to load texture: ${resource.path}`));
-            }
-          );
-        });
-
-        // Cache the loaded texture
-        this.textureCache.set(idOrPath, texture);
-        logger.info(`Successfully loaded texture: ${resource.path}`);
-
-        return texture;
-      } finally {
-        // Always clean up blob URL to prevent memory leaks
-        URL.revokeObjectURL(blobUrl);
-      }
-    } catch (error) {
-      // Texture failed to load - call onResourceNeeded callback
-      logger.warn(`Texture not available: ${resource.path}`);
-
-      if (this.onResourceNeeded) {
+    return await this.loadWithDeduplication(
+      idOrPath,
+      this.textureCache,
+      this.textureLoadingPromises,
+      async (): Promise<THREE.Texture | null> => {
+        // CRITICAL: This function must NEVER throw errors - always return null for failures
+        // This ensures failed loads are cached and not retried
         try {
-          await this.onResourceNeeded({
-            path: resource.path,
-            type: resource.type,
-            referencedBy: `Material using texture ${idOrPath}`,
-            error: error instanceof Error ? error.message : String(error)
-          });
-        } catch (callbackError) {
-          // Log but don't propagate callback errors
-          logger.warn(`onResourceNeeded callback failed:`, callbackError);
+          // Get resource metadata
+          const resource = this.getMetadata(idOrPath);
+          if (!resource || !resource.type.includes('Texture')) {
+            logger.error(`[loadTexture] ERROR: Not a texture resource: ${idOrPath}`);
+            return null;
+          }
+
+          logger.info(`[loadTexture] LOADING: ${resource.path} for texture ${idOrPath}`);
+
+          // Load raw content via provider (returns ArrayBuffer)
+          const content = await this.loadByPath(resource.path);
+          if (!(content instanceof ArrayBuffer)) {
+            throw new Error(`Texture must be binary data: ${resource.path}`);
+          }
+
+          // Convert ArrayBuffer to Blob
+          const mimeType = this.getMimeType(resource.path);
+          const blob = new Blob([content], { type: mimeType });
+          const blobUrl = URL.createObjectURL(blob);
+
+          // Load with THREE.js TextureLoader
+          const loader = new THREE.TextureLoader();
+
+          try {
+            const texture = await new Promise<THREE.Texture>((resolve, reject) => {
+              loader.load(
+                blobUrl,
+                (loadedTexture: THREE.Texture) => {
+                  loadedTexture.colorSpace = THREE.SRGBColorSpace;
+                  resolve(loadedTexture);
+                },
+                undefined,
+                () => {
+                  reject(new Error(`Failed to load texture: ${resource.path}`));
+                }
+              );
+            });
+
+            const elapsed = performance.now() - startTime;
+            logger.info(`[loadTexture] SUCCESS: ${idOrPath} (${elapsed.toFixed(2)}ms)`);
+
+            return texture;
+          } finally {
+            // Always clean up blob URL to prevent memory leaks
+            URL.revokeObjectURL(blobUrl);
+          }
+        } catch (error) {
+          // Texture failed to load - call onResourceNeeded callback
+          const elapsed = performance.now() - startTime;
+          const errorMsg = error instanceof Error ? error.message : String(error);
+          const stack = error instanceof Error ? error.stack : 'No stack trace';
+
+          logger.error(`[loadTexture] FAILED: ${idOrPath} (${elapsed.toFixed(2)}ms)`);
+          logger.error(`  Path: ${this.getMetadata(idOrPath)?.path || 'unknown'}`);
+          logger.error(`  Error: ${errorMsg}`);
+          logger.error(`  Stack trace:`, stack);
+
+          if (this.onResourceNeeded) {
+            try {
+              const resource = this.getMetadata(idOrPath);
+              if (resource) {
+                logger.info(`[loadTexture] Calling onResourceNeeded callback for: ${idOrPath}`);
+                await this.onResourceNeeded({
+                  path: resource.path,
+                  type: resource.type,
+                  referencedBy: `Material using texture ${idOrPath}`,
+                  error: errorMsg
+                });
+                logger.info(`[loadTexture] onResourceNeeded callback completed for: ${idOrPath}`);
+              }
+            } catch (callbackError) {
+              // Log but don't propagate callback errors
+              logger.error(`[loadTexture] onResourceNeeded callback FAILED for ${idOrPath}:`, callbackError);
+            }
+          }
+
+          // Return null to allow rendering to continue without the texture
+          logger.info(`[loadTexture] RETURNING NULL: ${idOrPath}`);
+          return null;
         }
       }
-
-      // Return null to allow rendering to continue without the texture
-      return null;
-    }
+    );
   }
 
   /**
@@ -214,94 +293,116 @@ export class ResourceRegistry {
    * Returns null if material cannot be loaded (and calls onResourceNeeded if set).
    */
   async loadMaterial(idOrPath: string): Promise<THREE.Material | null> {
-    // Check material cache first
-    if (this.materialCache.has(idOrPath)) {
-      logger.info(`Using cached material: ${idOrPath}`);
-      return this.materialCache.get(idOrPath)!;
-    }
+    const startTime = performance.now();
+    const cacheStatus = this.materialCache.has(idOrPath) ? 'HIT' : 'MISS';
 
-    // Get resource metadata
-    const resource = this.getMetadata(idOrPath);
-    if (!resource || !resource.type.includes('Material')) {
-      logger.error(`Not a material resource: ${idOrPath}`);
-      return null;
-    }
+    logger.info(`[loadMaterial] START: ${idOrPath} (cache: ${cacheStatus})`);
 
-    try {
-      // Load raw content via provider (returns string for .tres files)
-      const content = await this.loadByPath(resource.path);
-      if (typeof content !== 'string') {
-        throw new Error(`Material must be text content: ${resource.path}`);
-      }
+    return await this.loadWithDeduplication(
+      idOrPath,
+      this.materialCache,
+      this.materialLoadingPromises,
+      async (): Promise<THREE.Material | null> => {
+        // CRITICAL: This function must NEVER throw errors - always return null for failures
+        // This ensures failed loads are cached and not retried
+        try {
+          // Get resource metadata
+          const resource = this.getMetadata(idOrPath);
+          if (!resource || !resource.type.includes('Material')) {
+            logger.error(`[loadMaterial] ERROR: Not a material resource: ${idOrPath}`);
+            return null;
+          }
 
-      // Parse .tres file
-      const { parseResourceFile } = await import('../parser/resourceParsers');
-      const { type, properties } = parseResourceFile(content);
+          logger.info(`[loadMaterial] LOADING: ${resource.path} for material ${idOrPath}`);
 
-      // Parse and create material based on type
-      let material: THREE.Material;
+          // Load raw content via provider (returns string for .tres files)
+          const content = await this.loadByPath(resource.path);
+          if (typeof content !== 'string') {
+            throw new Error(`Material must be text content: ${resource.path}`);
+          }
 
-      switch (type) {
-        case 'StandardMaterial3D': {
-          const { parseStandardMaterial3D } = await import('./materials/standardmaterial3d/parser');
-          const { createStandardMaterial } = await import('./materials/standardmaterial3d/renderer');
+          // Parse .tres file
+          const { parseResourceFile } = await import('../parser/resourceParsers');
+          const { type, properties } = parseResourceFile(content);
 
-          // Convert parsed properties to string format for compatibility with existing parser
-          const stringProps: Record<string, string> = {};
-          for (const [key, value] of Object.entries(properties)) {
-            if (value && typeof value === 'object' && 'type' in value) {
-              // Handle ParsedColor and ParsedVector3
-              if (value.type === 'Color' && 'r' in value && 'g' in value && 'b' in value && 'a' in value) {
-                stringProps[key] = `Color(${value.r}, ${value.g}, ${value.b}, ${value.a})`;
-              } else if (value.type === 'Vector3' && 'x' in value && 'y' in value && 'z' in value) {
-                stringProps[key] = `Vector3(${value.x}, ${value.y}, ${value.z})`;
-              } else {
-                stringProps[key] = String(value);
+          // Parse and create material based on type
+          let material: THREE.Material;
+
+          switch (type) {
+            case 'StandardMaterial3D': {
+              const { parseStandardMaterial3D } = await import('./materials/standardmaterial3d/parser');
+              const { createStandardMaterial } = await import('./materials/standardmaterial3d/renderer');
+
+              // Convert parsed properties to string format for compatibility with existing parser
+              const stringProps: Record<string, string> = {};
+              for (const [key, value] of Object.entries(properties)) {
+                if (value && typeof value === 'object' && 'type' in value) {
+                  // Handle ParsedColor and ParsedVector3
+                  if (value.type === 'Color' && 'r' in value && 'g' in value && 'b' in value && 'a' in value) {
+                    stringProps[key] = `Color(${value.r}, ${value.g}, ${value.b}, ${value.a})`;
+                  } else if (value.type === 'Vector3' && 'x' in value && 'y' in value && 'z' in value) {
+                    stringProps[key] = `Vector3(${value.x}, ${value.y}, ${value.z})`;
+                  } else {
+                    stringProps[key] = String(value);
+                  }
+                } else {
+                  stringProps[key] = String(value);
+                }
               }
-            } else {
-              stringProps[key] = String(value);
+
+              const matProps = await parseStandardMaterial3D(stringProps, this);
+              material = createStandardMaterial(matProps);
+              break;
+            }
+
+            case 'ShaderMaterial':
+              // Future: WI-16
+              throw new Error('ShaderMaterial not yet supported');
+
+            default:
+              throw new Error(`Unsupported material type: ${type}`);
+          }
+
+          const elapsed = performance.now() - startTime;
+          logger.info(`[loadMaterial] SUCCESS: ${idOrPath} (${elapsed.toFixed(2)}ms)`);
+
+          return material;
+        } catch (error) {
+          // Material failed to load - call onResourceNeeded callback
+          const elapsed = performance.now() - startTime;
+          const errorMsg = error instanceof Error ? error.message : String(error);
+          const stack = error instanceof Error ? error.stack : 'No stack trace';
+
+          logger.error(`[loadMaterial] FAILED: ${idOrPath} (${elapsed.toFixed(2)}ms)`);
+          logger.error(`  Path: ${this.getMetadata(idOrPath)?.path || 'unknown'}`);
+          logger.error(`  Error: ${errorMsg}`);
+          logger.error(`  Stack trace:`, stack);
+
+          if (this.onResourceNeeded) {
+            try {
+              const resource = this.getMetadata(idOrPath);
+              if (resource) {
+                logger.info(`[loadMaterial] Calling onResourceNeeded callback for: ${idOrPath}`);
+                await this.onResourceNeeded({
+                  path: resource.path,
+                  type: resource.type,
+                  referencedBy: `Node using material ${idOrPath}`,
+                  error: errorMsg
+                });
+                logger.info(`[loadMaterial] onResourceNeeded callback completed for: ${idOrPath}`);
+              }
+            } catch (callbackError) {
+              // Log but don't propagate callback errors
+              logger.error(`[loadMaterial] onResourceNeeded callback FAILED for ${idOrPath}:`, callbackError);
             }
           }
 
-          const matProps = await parseStandardMaterial3D(stringProps, this);
-          material = createStandardMaterial(matProps);
-          break;
-        }
-
-        case 'ShaderMaterial':
-          // Future: WI-16
-          throw new Error('ShaderMaterial not yet supported');
-
-        default:
-          throw new Error(`Unsupported material type: ${type}`);
-      }
-
-      // Cache the loaded material
-      this.materialCache.set(idOrPath, material);
-      logger.info(`Successfully loaded material: ${resource.path}`);
-
-      return material;
-    } catch (error) {
-      // Material failed to load - call onResourceNeeded callback
-      logger.warn(`Material not available: ${resource.path}`);
-
-      if (this.onResourceNeeded) {
-        try {
-          await this.onResourceNeeded({
-            path: resource.path,
-            type: resource.type,
-            referencedBy: `Node using material ${idOrPath}`,
-            error: error instanceof Error ? error.message : String(error)
-          });
-        } catch (callbackError) {
-          // Log but don't propagate callback errors
-          logger.warn(`onResourceNeeded callback failed:`, callbackError);
+          // Return null to allow rendering to continue without the material
+          logger.info(`[loadMaterial] RETURNING NULL: ${idOrPath}`);
+          return null;
         }
       }
-
-      // Return null to allow rendering to continue without the material
-      return null;
-    }
+    );
   }
 
   /**
@@ -397,6 +498,8 @@ export class ResourceRegistry {
     this.loadingStack.clear();
     this.textureCache.clear();
     this.materialCache.clear();
+    this.textureLoadingPromises.clear();
+    this.materialLoadingPromises.clear();
     logger.info('ResourceRegistry cleared');
   }
 }

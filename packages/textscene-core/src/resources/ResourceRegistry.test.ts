@@ -653,4 +653,191 @@ transparency = 0.5
       expect(stdMat.roughness).toBe(0.2);
     });
   });
+
+  describe('Regression: Stack Overflow with Missing Textures', () => {
+    it('should handle many concurrent missing texture loads without stack overflow', async () => {
+      // Simulate LD-58 scenario: many textures referenced but files missing
+      const textureCount = 50;
+      const textures: TscnExternalResource[] = [];
+
+      for (let i = 0; i < textureCount; i++) {
+        textures.push({
+          id: `${i}_tex`,
+          path: `res://textures/missing_${i}.png`,
+          type: 'Texture2D',
+        });
+      }
+
+      textures.forEach(tex => registry.register(tex));
+
+      // Mock provider that throws errors for all missing files
+      let loadAttempts = 0;
+      const mockProvider: ResourceProvider = {
+        loadResource: async (path: string) => {
+          loadAttempts++;
+          throw new Error(`File not found: ${path}`);
+        },
+      };
+      registry.setProvider(mockProvider);
+
+      const callbackSpy = vi.fn();
+      registry.setOnResourceNeeded(callbackSpy);
+
+      // Load all textures concurrently (simulates material parser loading dependencies)
+      const loadPromises = textures.map(tex => registry.loadTexture(tex.id));
+      const results = await Promise.all(loadPromises);
+
+      // All should return null
+      expect(results.every(r => r === null)).toBe(true);
+
+      // Each texture should only be attempted once (deduplication working)
+      expect(loadAttempts).toBe(textureCount);
+
+      // Callback should be called for each failed texture
+      expect(callbackSpy).toHaveBeenCalledTimes(textureCount);
+
+      // Verify null results are cached - subsequent loads should hit cache
+      const secondLoadAttempts = loadAttempts;
+      const cachedResults = await Promise.all(
+        textures.map(tex => registry.loadTexture(tex.id))
+      );
+
+      expect(cachedResults.every(r => r === null)).toBe(true);
+      expect(loadAttempts).toBe(secondLoadAttempts); // No new load attempts
+      expect(callbackSpy).toHaveBeenCalledTimes(textureCount); // No new callbacks
+    });
+
+    it('should handle concurrent duplicate requests for same missing texture', async () => {
+      const resource: TscnExternalResource = {
+        id: '1_tex',
+        path: 'res://textures/missing.png',
+        type: 'Texture2D',
+      };
+      registry.register(resource);
+
+      let loadAttempts = 0;
+      const mockProvider: ResourceProvider = {
+        loadResource: async () => {
+          loadAttempts++;
+          // Simulate async file system operation
+          await new Promise(resolve => setTimeout(resolve, 10));
+          throw new Error('File not found');
+        },
+      };
+      registry.setProvider(mockProvider);
+
+      // Fire off 20 concurrent requests for the same texture
+      const requests = Array.from({ length: 20 }, () =>
+        registry.loadTexture('1_tex')
+      );
+
+      const results = await Promise.all(requests);
+
+      // All should return null
+      expect(results.every(r => r === null)).toBe(true);
+
+      // Should only attempt to load once (deduplication)
+      expect(loadAttempts).toBe(1);
+    });
+
+    it('should cache null for missing textures and not retry on subsequent access', async () => {
+      const resource: TscnExternalResource = {
+        id: '1_tex',
+        path: 'res://textures/missing.png',
+        type: 'Texture2D',
+      };
+      registry.register(resource);
+
+      let loadAttempts = 0;
+      const mockProvider: ResourceProvider = {
+        loadResource: async () => {
+          loadAttempts++;
+          throw new Error('File not found');
+        },
+      };
+      registry.setProvider(mockProvider);
+
+      // First load
+      const result1 = await registry.loadTexture('1_tex');
+      expect(result1).toBeNull();
+      expect(loadAttempts).toBe(1);
+
+      // Second load - should hit cache
+      const result2 = await registry.loadTexture('1_tex');
+      expect(result2).toBeNull();
+      expect(loadAttempts).toBe(1); // Still 1, not 2
+
+      // Third load - should still hit cache
+      const result3 = await registry.loadTexture('1_tex');
+      expect(result3).toBeNull();
+      expect(loadAttempts).toBe(1); // Still 1, not 3
+    });
+
+    it('should handle provider errors gracefully without propagating exceptions', async () => {
+      const resource: TscnExternalResource = {
+        id: '1_tex',
+        path: 'res://textures/error.png',
+        type: 'Texture2D',
+      };
+      registry.register(resource);
+
+      // Provider that throws various types of errors
+      const mockProvider: ResourceProvider = {
+        loadResource: async () => {
+          throw new Error('Maximum call stack size exceeded');
+        },
+      };
+      registry.setProvider(mockProvider);
+
+      // Should NOT throw - must return null
+      const result = await registry.loadTexture('1_tex');
+      expect(result).toBeNull();
+
+      // Should be cached as null
+      const cachedResult = await registry.loadTexture('1_tex');
+      expect(cachedResult).toBeNull();
+    });
+
+    it('should handle missing materials without stack overflow', async () => {
+      const materialCount = 20;
+      const materials: TscnExternalResource[] = [];
+
+      for (let i = 0; i < materialCount; i++) {
+        materials.push({
+          id: `${i}_mat`,
+          path: `res://materials/missing_${i}.tres`,
+          type: 'StandardMaterial3D',
+        });
+      }
+
+      materials.forEach(mat => registry.register(mat));
+
+      let loadAttempts = 0;
+      const mockProvider: ResourceProvider = {
+        loadResource: async () => {
+          loadAttempts++;
+          throw new Error('File not found');
+        },
+      };
+      registry.setProvider(mockProvider);
+
+      // Load all materials concurrently
+      const loadPromises = materials.map(mat => registry.loadMaterial(mat.id));
+      const results = await Promise.all(loadPromises);
+
+      // All should return null
+      expect(results.every(r => r === null)).toBe(true);
+
+      // Each material should only be attempted once
+      expect(loadAttempts).toBe(materialCount);
+
+      // Verify null results are cached
+      const cachedResults = await Promise.all(
+        materials.map(mat => registry.loadMaterial(mat.id))
+      );
+
+      expect(cachedResults.every(r => r === null)).toBe(true);
+      expect(loadAttempts).toBe(materialCount); // No new attempts
+    });
+  });
 });

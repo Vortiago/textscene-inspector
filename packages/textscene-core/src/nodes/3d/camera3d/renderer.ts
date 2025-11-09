@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import type { Camera3DProperties } from './types';
 import { ProjectionMode } from './types';
 import { applyNode3DTransform } from '../../base/node3d/renderer';
+import { info } from '../../../logger';
 
 const DEFAULT_ASPECT = 16 / 9;
 
@@ -21,31 +22,48 @@ export function createCamera3D(name: string, properties: Camera3DProperties): TH
   const camera = createCameraByProjection(properties);
   camera.name = `${name}_camera`;
 
-  // Create camera helper for visualization
-  const helper = new THREE.CameraHelper(camera);
-  helper.name = `${name}_helper`;
-  helper.visible = true; // Visible by default to show camera positioning
+  // Apply transform to group (not camera) so it inherits parent hierarchy correctly
+  applyNode3DTransform(group, properties);
 
-  // Apply transform to camera, not group - this ensures helper visualizes correctly
-  applyNode3DTransform(camera, properties);
-
-  // Apply offsets to camera
+  // Apply offsets to camera (offsets are in camera's local space)
   if (properties.h_offset !== 0 || properties.v_offset !== 0) {
     camera.position.x += properties.h_offset;
     camera.position.y += properties.v_offset;
   }
 
-  // Add camera to group (camera now has the transform)
+  // Add camera to group
   group.add(camera);
 
-  // Update camera's matrices before creating/updating helper
-  camera.updateMatrixWorld(true);
+  // Create helper - it will track the camera automatically
+  const helper = new THREE.CameraHelper(camera);
+  helper.name = `${name}_helper`;
+  helper.visible = true;
 
-  // Update helper to reflect the camera's transform
-  helper.update();
+  // CRITICAL: Reset helper's position to origin
+  // CameraHelper calculates geometry based on camera's world matrix,
+  // but we want it positioned at the group's origin, not offset
+  helper.position.set(0, 0, 0);
+  helper.rotation.set(0, 0, 0);
+  helper.scale.set(1, 1, 1);
 
-  // Add helper to group (helper visualizes the already-transformed camera)
+  // Add helper to group
   group.add(helper);
+
+  // Log transforms for debugging camera helper positioning
+  const groupWorldPos = new THREE.Vector3();
+  const cameraWorldPos = new THREE.Vector3();
+  const helperWorldPos = new THREE.Vector3();
+  group.getWorldPosition(groupWorldPos);
+  camera.getWorldPosition(cameraWorldPos);
+  helper.getWorldPosition(helperWorldPos);
+
+  info(`[Camera3D] ${name} transforms:`);
+  info(`  Group local: pos(${group.position.x.toFixed(2)}, ${group.position.y.toFixed(2)}, ${group.position.z.toFixed(2)})`);
+  info(`  Group world: pos(${groupWorldPos.x.toFixed(2)}, ${groupWorldPos.y.toFixed(2)}, ${groupWorldPos.z.toFixed(2)})`);
+  info(`  Camera local: pos(${camera.position.x.toFixed(2)}, ${camera.position.y.toFixed(2)}, ${camera.position.z.toFixed(2)})`);
+  info(`  Camera world: pos(${cameraWorldPos.x.toFixed(2)}, ${cameraWorldPos.y.toFixed(2)}, ${cameraWorldPos.z.toFixed(2)})`);
+  info(`  Helper local: pos(${helper.position.x.toFixed(2)}, ${helper.position.y.toFixed(2)}, ${helper.position.z.toFixed(2)})`);
+  info(`  Helper world: pos(${helperWorldPos.x.toFixed(2)}, ${helperWorldPos.y.toFixed(2)}, ${helperWorldPos.z.toFixed(2)})`);
 
   // Store properties and references in userData (THREE.js idiomatic pattern)
   group.userData.nodeType = 'Camera3D';

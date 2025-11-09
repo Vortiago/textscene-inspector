@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { PlaneMeshProperties } from './types';
 
 export function createPlaneMeshGeometry(properties: PlaneMeshProperties): THREE.PlaneGeometry {
-  const { size, subdivideWidth, subdivideDepth, orientation } = properties;
+  const { size, subdivideWidth, subdivideDepth, orientation, centerOffset } = properties;
 
   const geometry = new THREE.PlaneGeometry(
     size.x,
@@ -19,6 +19,11 @@ export function createPlaneMeshGeometry(properties: PlaneMeshProperties): THREE.
     case 1:
       geometry.rotateX(-Math.PI / 2);
       break;
+  }
+
+  // Apply center_offset by translating geometry vertices
+  if (centerOffset.x !== 0 || centerOffset.y !== 0 || centerOffset.z !== 0) {
+    geometry.translate(centerOffset.x, centerOffset.y, centerOffset.z);
   }
 
   return geometry;

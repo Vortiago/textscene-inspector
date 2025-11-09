@@ -116,9 +116,14 @@ describe('Camera3D Renderer', () => {
       const camera = getCameraFromGroup(group);
 
       expect(camera).toBeDefined();
+      // Transform is applied to group, so camera's local position is (0,0,0)
       expect(camera!.position.x).toBeCloseTo(0);
-      expect(camera!.position.y).toBeCloseTo(5);
-      expect(camera!.position.z).toBeCloseTo(10);
+      expect(camera!.position.y).toBeCloseTo(0);
+      expect(camera!.position.z).toBeCloseTo(0);
+      // Group has the transform position
+      expect(group.position.x).toBeCloseTo(0);
+      expect(group.position.y).toBeCloseTo(5);
+      expect(group.position.z).toBeCloseTo(10);
     });
 
     it('should apply h_offset and v_offset to camera', () => {
@@ -132,9 +137,13 @@ describe('Camera3D Renderer', () => {
       const camera = getCameraFromGroup(group);
 
       expect(camera).toBeDefined();
+      // Offsets are applied to camera's local position
       expect(camera!.position.x).toBeCloseTo(2.0);
-      expect(camera!.position.y).toBeCloseTo(4.0); // 5 + (-1)
-      expect(camera!.position.z).toBeCloseTo(10);
+      expect(camera!.position.y).toBeCloseTo(-1.0);
+      expect(camera!.position.z).toBeCloseTo(0);
+      // Group still has the transform position
+      expect(group.position.y).toBeCloseTo(5);
+      expect(group.position.z).toBeCloseTo(10);
     });
 
     it('should enforce near > 0 constraint', () => {
@@ -446,8 +455,10 @@ describe('Camera3D Renderer', () => {
       // Helper should be added to the camera group, not to the camera itself
       expect(cameraGroup.children).toContain(helper);
 
-      // Camera should have the local transform from TSCN
-      expect(camera!.position.y).toBeCloseTo(5);
+      // Transform is applied to group, camera has local position (0,0,0)
+      expect(camera!.position.y).toBeCloseTo(0);
+      // Group has the transform position
+      expect(cameraGroup.position.y).toBeCloseTo(5);
 
       // Helper's matrix should be updated (non-identity when camera is transformed)
       helper!.updateMatrixWorld(true);

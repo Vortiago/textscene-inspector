@@ -2,7 +2,7 @@
  * TSCN webview entry point - runs inside VS Code webview.
  */
 
-import { TscnPreviewUI } from '@textscene/core';
+import { TscnPreviewUI, setLogAdapter, type LogAdapter } from '@textscene/core';
 import type { TscnPreviewElements, CameraState } from '@textscene/core';
 import { WebviewResourceProvider } from './WebviewResourceProvider';
 
@@ -19,6 +19,36 @@ interface WebviewState {
 
 const vscode = acquireVsCodeApi();
 const resourceProvider = new WebviewResourceProvider(vscode);
+
+// Set up log adapter to forward core library logs to extension host
+class WebviewLogAdapter implements LogAdapter {
+  trace(message: string, ...args: unknown[]): void {
+    console.log(`[TRACE] ${message}`, ...args);
+    vscode.postMessage({ type: 'log', level: 'trace', message, args });
+  }
+
+  debug(message: string, ...args: unknown[]): void {
+    console.log(`[DEBUG] ${message}`, ...args);
+    vscode.postMessage({ type: 'log', level: 'debug', message, args });
+  }
+
+  info(message: string, ...args: unknown[]): void {
+    console.log(`[INFO] ${message}`, ...args);
+    vscode.postMessage({ type: 'log', level: 'info', message, args });
+  }
+
+  warn(message: string, ...args: unknown[]): void {
+    console.warn(`[WARN] ${message}`, ...args);
+    vscode.postMessage({ type: 'log', level: 'warn', message, args });
+  }
+
+  error(message: string, ...args: unknown[]): void {
+    console.error(`[ERROR] ${message}`, ...args);
+    vscode.postMessage({ type: 'log', level: 'error', message, args });
+  }
+}
+
+setLogAdapter(new WebviewLogAdapter());
 
 const elements: TscnPreviewElements = {
   canvas: document.getElementById('canvas') as HTMLCanvasElement,

@@ -106,6 +106,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Primitive Meshes"
   },
   {
+    "name": "Planemesh Center Offset",
+    "file": "unit-planemesh-center-offset.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
     "name": "Prism Mesh",
     "file": "unit-prism-mesh.tscn",
     "category": "Unit - Primitive Meshes"

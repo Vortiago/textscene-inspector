@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import type { MeshInstance3DProperties } from './types';
 import type { TscnScene } from '../../../parser/types';
 import { resolveGeometry, resolveMaterial } from '../../../resources/ResourceManager';
+import { parseResourceReference } from '../../../resources/ResourceManager';
 import { warn } from '../../../logger';
 
 /**
@@ -13,6 +14,46 @@ import { warn } from '../../../logger';
  * Most meshes have 1-8 surfaces; indices above this may indicate an issue.
  */
 const SURFACE_INDEX_WARNING_THRESHOLD = 32;
+
+/**
+ * Resolve material attached to a mesh SubResource.
+ * Godot allows mesh resources to have a 'material' property that provides a default material.
+ * This is distinct from MeshInstance3D material overrides.
+ *
+ * Material Precedence (Godot-compliant):
+ * 1. Mesh material (from mesh SubResource) - Base/default material
+ * 2. material_override (from MeshInstance3D) - Overrides all surfaces
+ * 3. surface_material_override/N (from MeshInstance3D) - Overrides specific surfaces
+ */
+async function resolveMeshMaterial(
+  meshRef: string,
+  scene: TscnScene
+): Promise<THREE.Material | null> {
+  // Parse mesh reference
+  const ref = parseResourceReference(meshRef);
+  if (!ref || ref.type !== 'SubResource') {
+    return null;
+  }
+
+  // Find mesh SubResource
+  const meshResource = scene.internalResources.find(r => {
+    const resourceId = r.data.id as string | undefined;
+    return resourceId === ref.id || String(r.id) === ref.id;
+  });
+
+  if (!meshResource) {
+    return null;
+  }
+
+  // Check if mesh has material property
+  const materialRef = meshResource.data.material;
+  if (!materialRef || typeof materialRef !== 'string') {
+    return null;
+  }
+
+  // Resolve the material
+  return await resolveMaterial(materialRef, scene);
+}
 
 /**
  * Create a three.js mesh for a MeshInstance3D node.
@@ -30,7 +71,9 @@ export async function createMeshInstance3D(
     const resolvedGeometry = await resolveGeometry(properties.mesh, scene);
     if (resolvedGeometry) {
       geometry = resolvedGeometry;
-      material = createDefaultMaterial();
+      // Try to resolve mesh material first, fallback to default
+      const meshMaterial = await resolveMeshMaterial(properties.mesh, scene);
+      material = meshMaterial || createDefaultMaterial();
     } else {
       geometry = createPlaceholderGeometry();
       material = createPlaceholderMaterial();
@@ -61,7 +104,7 @@ export async function createMeshInstance3D(
 
 /**
  * Apply material_override and surface_material_override properties.
- * Precedence: surface_material_override/N > material_override > default
+ * Precedence: surface_material_override/N > material_override > mesh material > default
  */
 async function applyMaterialOverrides(
   mesh: THREE.Mesh,

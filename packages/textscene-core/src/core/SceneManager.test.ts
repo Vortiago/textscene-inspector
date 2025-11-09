@@ -299,28 +299,29 @@ describe('SceneManager', () => {
       expect(mockNodeLifecycle.removeNode).not.toHaveBeenCalled();
     });
 
-    it('should skip instances that already have children', async () => {
+    it('should skip instances that already have external scene content', async () => {
       const scenePath = 'res://scenes/enemy.tscn';
       const instancePath = 'Enemy1';
 
       // Track instance
       sceneManager['sceneInstances'].set(scenePath, new Set([instancePath]));
 
-      // Spy on loadScene
+      // Spy on loadScene - external scene has a node called "EnemyRoot"
       const loadSceneSpy = vi.spyOn(sceneManager as any, 'loadScene').mockResolvedValue({
         nodes: [{ name: 'EnemyRoot', type: 'Node3D', properties: {} }],
         externalResources: [],
         internalResources: []
       });
 
-      // Setup nodeTracker spies - instance already has children
+      // Setup nodeTracker spies - instance already has the external scene's root node
       vi.spyOn(nodeTracker, 'getNode').mockReturnValue({ name: 'Enemy1', type: 'Node3D', properties: {} });
       vi.spyOn(nodeTracker, 'getObject').mockReturnValue(new THREE.Object3D());
-      vi.spyOn(nodeTracker, 'getAllPaths').mockReturnValue([instancePath, instancePath + '/Child1', instancePath + '/Child2']);
+      // Mock nodeTracker.has to return true for the external scene node "Enemy1/EnemyRoot"
+      vi.spyOn(nodeTracker, 'has').mockImplementation((path) => path === instancePath + '/EnemyRoot');
 
       await sceneManager.provideScene(scenePath);
 
-      // Should load scene but not add content since instance already has children
+      // Should load scene but not add content since instance already has external scene's nodes
       expect(loadSceneSpy).toHaveBeenCalledWith(scenePath);
       expect(mockNodeLifecycle.addNode).not.toHaveBeenCalled();
     });

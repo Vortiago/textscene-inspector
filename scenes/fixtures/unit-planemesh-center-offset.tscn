@@ -1,0 +1,39 @@
+[gd_scene load_steps=7 format=3]
+
+[sub_resource type="StandardMaterial3D" id="ground_mat"]
+albedo_color = Color(0.3, 0.3, 0.3, 1)
+
+[sub_resource type="PlaneMesh" id="ground"]
+material = SubResource("ground_mat")
+size = Vector2(10, 10)
+orientation = 1
+
+[sub_resource type="StandardMaterial3D" id="wall_no_offset_mat"]
+albedo_color = Color(0.8, 0.4, 0.2, 1)
+
+[sub_resource type="PlaneMesh" id="wall_no_offset"]
+material = SubResource("wall_no_offset_mat")
+size = Vector2(2, 4)
+orientation = 0
+
+[sub_resource type="StandardMaterial3D" id="wall_with_offset_mat"]
+albedo_color = Color(0.2, 0.8, 0.4, 1)
+
+[sub_resource type="PlaneMesh" id="wall_with_offset"]
+material = SubResource("wall_with_offset_mat")
+size = Vector2(2, 4)
+center_offset = Vector3(0, 2, 0)
+orientation = 0
+
+[node name="CenterOffsetTest" type="Node3D"]
+
+[node name="Ground" type="MeshInstance3D" parent="."]
+mesh = SubResource("ground")
+
+[node name="WallNoOffset" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 0, 0)
+mesh = SubResource("wall_no_offset")
+
+[node name="WallWithOffset" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0, 0)
+mesh = SubResource("wall_with_offset")
