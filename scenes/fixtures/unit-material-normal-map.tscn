@@ -1,0 +1,38 @@
+[gd_scene load_steps=6 format=3 uid="uid://test_normal_map"]
+
+[ext_resource type="Texture2D" path="res://textures/albedo-red.svg" id="1_albedo"]
+[ext_resource type="Texture2D" path="res://textures/normal-default.svg" id="2_normal"]
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_enabled"]
+size = Vector2(3, 3)
+
+[sub_resource type="StandardMaterial3D" id="Material_enabled"]
+albedo_color = Color(1, 1, 1, 1)
+albedo_texture = ExtResource("1_albedo")
+normal_enabled = true
+normal_texture = ExtResource("2_normal")
+metallic = 0.0
+roughness = 0.5
+
+[sub_resource type="StandardMaterial3D" id="Material_disabled"]
+albedo_color = Color(1, 1, 1, 1)
+albedo_texture = ExtResource("1_albedo")
+normal_enabled = false
+metallic = 0.0
+roughness = 0.5
+
+[node name="Scene" type="Node3D"]
+
+[node name="PlaneWithNormalMap" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, 0)
+mesh = SubResource("PlaneMesh_enabled")
+surface_material_override/0 = SubResource("Material_enabled")
+
+[node name="PlaneWithoutNormalMap" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, 0)
+mesh = SubResource("PlaneMesh_enabled")
+surface_material_override/0 = SubResource("Material_disabled")
+
+[node name="DirectionalLight" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866025, -0.25, 0.433013, 0, 0.866025, 0.5, -0.5, -0.433013, 0.75, 0, 5, 5)
+light_energy = 1.5

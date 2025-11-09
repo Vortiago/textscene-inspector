@@ -66,6 +66,10 @@ export async function parseStandardMaterial3D(
     }
   }
 
+  if (properties.normal_enabled !== undefined) {
+    result.normal_enabled = properties.normal_enabled === 'true';
+  }
+
   // Load external texture references if registry provided
   if (registry) {
     // Albedo texture

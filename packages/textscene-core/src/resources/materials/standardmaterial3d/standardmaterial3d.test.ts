@@ -235,4 +235,60 @@ describe('parseStandardMaterial3D', () => {
     expect(result.metallic).toBe(1);
     expect(result.roughness).toBe(1);
   });
+
+  it('should parse normal_enabled as true from string "true"', async () => {
+    const properties = {
+      normal_enabled: 'true',
+    };
+
+    const result = await parseStandardMaterial3D(properties);
+
+    expect(result.normal_enabled).toBe(true);
+  });
+
+  it('should parse normal_enabled as false from string "false"', async () => {
+    const properties = {
+      normal_enabled: 'false',
+    };
+
+    const result = await parseStandardMaterial3D(properties);
+
+    expect(result.normal_enabled).toBe(false);
+  });
+
+  it('should parse normal_enabled as false for any non-"true" value', async () => {
+    const properties = {
+      normal_enabled: 'anything',
+    };
+
+    const result = await parseStandardMaterial3D(properties);
+
+    expect(result.normal_enabled).toBe(false);
+  });
+
+  it('should leave normal_enabled undefined when not provided', async () => {
+    const properties = {
+      metallic: '0.5',
+    };
+
+    const result = await parseStandardMaterial3D(properties);
+
+    expect(result.normal_enabled).toBeUndefined();
+  });
+
+  it('should parse material with normal_enabled and other properties', async () => {
+    const properties = {
+      albedo_color: 'Color(1, 1, 1, 1)',
+      normal_enabled: 'true',
+      metallic: '0.8',
+      roughness: '0.2',
+    };
+
+    const result = await parseStandardMaterial3D(properties);
+
+    expect(result.albedo_color).toEqual({ r: 1, g: 1, b: 1, a: 1 });
+    expect(result.normal_enabled).toBe(true);
+    expect(result.metallic).toBe(0.8);
+    expect(result.roughness).toBe(0.2);
+  });
 });
