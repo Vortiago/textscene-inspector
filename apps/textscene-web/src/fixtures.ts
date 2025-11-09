@@ -81,6 +81,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Label3d",
+    "file": "unit-label3d.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Multi Camera",
     "file": "unit-multi-camera.tscn",
     "category": "Other"

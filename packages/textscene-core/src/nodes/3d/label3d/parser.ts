@@ -1,0 +1,47 @@
+/**
+ * Label3D parser - parses Label3D TSCN properties
+ */
+
+import type { ParsedHeading } from '../../../parser/utils';
+import type { Label3DProperties } from './types';
+import { BillboardMode } from './types';
+import { parseNode3D } from '../../base/node3d/parser';
+import { parseColor } from '../../../utils/colorParser';
+
+export function isLabel3D(heading: ParsedHeading): boolean {
+  return heading.type === 'node' && heading.attributes.type === 'Label3D';
+}
+
+export function parseLabel3D(
+  heading: ParsedHeading,
+  properties: Record<string, string>
+): Label3DProperties {
+  const baseProps = parseNode3D(heading, properties);
+
+  return {
+    ...baseProps,
+    text: parseText(properties.text),
+    pixel_size: parseFloat(properties.pixel_size ?? '0.01'),
+    billboard: parseBillboardMode(properties.billboard),
+    modulate: parseColor(properties.modulate),
+    outline_size: parseFloat(properties.outline_size ?? '0'),
+    outline_modulate: properties.outline_modulate ? parseColor(properties.outline_modulate) : { r: 0, g: 0, b: 0, a: 1 },
+  };
+}
+
+function parseText(value: string | undefined): string {
+  if (!value) return '';
+
+  // Remove surrounding quotes
+  return value.replace(/^"(.*)"$/, '$1');
+}
+
+function parseBillboardMode(value: string | undefined): BillboardMode {
+  if (value === undefined) return BillboardMode.BILLBOARD_ENABLED;  // default
+  const num = parseInt(value, 10);
+
+  if (num === 0) return BillboardMode.BILLBOARD_DISABLED;
+  if (num === 2) return BillboardMode.BILLBOARD_FIXED_Y;
+
+  return BillboardMode.BILLBOARD_ENABLED;  // default to enabled (1)
+}
