@@ -2,7 +2,7 @@
  * TSCN webview entry point - runs inside VS Code webview.
  */
 
-import { TscnPreviewUI, setLogAdapter, type LogAdapter } from '@textscene/core';
+import { TscnPreviewUI, setLogAdapter, info, error, type LogAdapter } from '@textscene/core';
 import type { TscnPreviewElements, CameraState } from '@textscene/core';
 import { WebviewResourceProvider } from './WebviewResourceProvider';
 
@@ -92,19 +92,19 @@ function saveState() {
   const state: WebviewState = {
     cameraState,
   };
-  console.log('[TSCN Webview] Saving camera state:', cameraState);
+  info('[TSCN Webview] Saving camera state:', cameraState);
   vscode.setState(state);
 }
 
 function restoreState() {
   const state = vscode.getState() as WebviewState | undefined;
-  console.log('[TSCN Webview] Restoring state:', state);
+  info('[TSCN Webview] Restoring state:', state);
   if (state?.cameraState) {
     const renderer = previewUI.getRenderer();
     renderer.setCameraState(state.cameraState);
-    console.log('[TSCN Webview] Camera state restored');
+    info('[TSCN Webview] Camera state restored');
   } else {
-    console.log('[TSCN Webview] No saved state to restore');
+    info('[TSCN Webview] No saved state to restore');
   }
 }
 
@@ -136,25 +136,25 @@ window.addEventListener('message', (event) => {
 
   switch (message.type) {
     case 'loadTscn':
-      console.log('[TSCN Webview] Received loadTscn message, loading scene...');
+      info('[TSCN Webview] Received loadTscn message, loading scene...');
       try {
         previewUI.loadTscn(message.content);
-        console.log('[TSCN Webview] Scene loaded, restoring state...');
+        info('[TSCN Webview] Scene loaded, restoring state...');
         // Restore camera state after scene loads
         restoreState();
-      } catch (error) {
-        console.error('[TSCN Webview] Error in webview message handler:', error);
+      } catch (err) {
+        error('[TSCN Webview] Error in webview message handler:', err);
       }
       break;
 
     case 'incrementalUpdate':
-      console.log('[TSCN Webview] Received incrementalUpdate message with', message.data.changes.length, 'changes');
+      info('[TSCN Webview] Received incrementalUpdate message with', message.data.changes.length, 'changes');
       try {
         previewUI.handleIncrementalUpdate(message.data.changes, message.data.sceneData);
-        console.log('[TSCN Webview] Incremental update applied, restoring camera state...');
+        info('[TSCN Webview] Incremental update applied, restoring camera state...');
         restoreState();
-      } catch (error) {
-        console.error('[TSCN Webview] Error applying incremental update:', error);
+      } catch (err) {
+        error('[TSCN Webview] Error applying incremental update:', err);
       }
       break;
   }

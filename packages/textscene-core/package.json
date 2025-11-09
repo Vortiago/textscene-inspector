@@ -21,6 +21,10 @@
     "./renderer": {
       "import": "./dist/core/TscnRenderer.js",
       "types": "./dist/core/TscnRenderer.d.ts"
+    },
+    "./logger": {
+      "import": "./dist/logger.js",
+      "types": "./dist/logger.d.ts"
     }
   },
   "files": [

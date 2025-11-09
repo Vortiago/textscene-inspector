@@ -3,6 +3,7 @@
  */
 
 import type { LintRule } from './types';
+import * as logger from '../logger';
 
 export class RuleRegistry {
   private rules: Map<string, LintRule> = new Map();
@@ -13,7 +14,7 @@ export class RuleRegistry {
    */
   register(rule: LintRule): void {
     if (this.rules.has(rule.meta.name)) {
-      console.warn(`Rule "${rule.meta.name}" is already registered. Overwriting.`);
+      logger.warn(`Rule "${rule.meta.name}" is already registered. Overwriting.`);
     }
     this.rules.set(rule.meta.name, rule);
   }

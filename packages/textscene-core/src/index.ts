@@ -14,8 +14,8 @@ export { sharedStyles } from './ui/styles';
 export { hashTscnNode, buildNodeHashMap } from './utils/nodeHash';
 
 // Export logging
-export { setLogAdapter } from './logger';
-export type { LogAdapter } from './logger';
+export { setLogAdapter, trace, debug, info, warn, error } from './logger';
+export type { LogAdapter, LogLevel } from './logger';
 
 // Export types
 export type { TscnScene, TscnNode, MissingResource, ResourceNeededCallback } from './parser/types';
