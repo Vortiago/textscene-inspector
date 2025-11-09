@@ -56,37 +56,39 @@ export function decomposeTransform3D(
 ): DecomposedTransform {
   const position = { ...transform.origin };
 
+  // Godot uses column-major matrices, so scale is the magnitude of each column
   const scaleX = Math.sqrt(
     transform.basis_x.x ** 2 +
-      transform.basis_x.y ** 2 +
-      transform.basis_x.z ** 2
+      transform.basis_y.x ** 2 +  // ← changed from basis_x.y
+      transform.basis_z.x ** 2    // ← changed from basis_x.z
   );
   const scaleY = Math.sqrt(
-    transform.basis_y.x ** 2 +
+    transform.basis_x.y ** 2 +    // ← changed from basis_y.x
       transform.basis_y.y ** 2 +
-      transform.basis_y.z ** 2
+      transform.basis_z.y ** 2    // ← changed from basis_y.z
   );
   const scaleZ = Math.sqrt(
-    transform.basis_z.x ** 2 +
-      transform.basis_z.y ** 2 +
+    transform.basis_x.z ** 2 +    // ← changed from basis_z.x
+      transform.basis_y.z ** 2 +  // ← changed from basis_z.y
       transform.basis_z.z ** 2
   );
 
   const scale = { x: scaleX, y: scaleY, z: scaleZ };
 
+  // Normalize columns (not rows) to extract rotation
   const basisX = {
     x: transform.basis_x.x / scaleX,
-    y: transform.basis_x.y / scaleX,
-    z: transform.basis_x.z / scaleX,
+    y: transform.basis_y.x / scaleX,  // ← changed from basis_x.y
+    z: transform.basis_z.x / scaleX,  // ← changed from basis_x.z
   };
   const basisY = {
-    x: transform.basis_y.x / scaleY,
+    x: transform.basis_x.y / scaleY,  // ← changed from basis_y.x
     y: transform.basis_y.y / scaleY,
-    z: transform.basis_y.z / scaleY,
+    z: transform.basis_z.y / scaleY,  // ← changed from basis_y.z
   };
   const basisZ = {
-    x: transform.basis_z.x / scaleZ,
-    y: transform.basis_z.y / scaleZ,
+    x: transform.basis_x.z / scaleZ,  // ← changed from basis_z.x
+    y: transform.basis_y.z / scaleZ,  // ← changed from basis_z.y
     z: transform.basis_z.z / scaleZ,
   };
 
@@ -97,14 +99,14 @@ export function decomposeTransform3D(
     z: 0,
   };
 
-  rotation.y = Math.asin(-basisZ.x);
+  rotation.y = Math.asin(basisZ.x);
 
   if (Math.abs(basisZ.x) < ROTATION_SINGULARITY_THRESHOLD) {
-    rotation.x = Math.atan2(basisZ.y, basisZ.z);
-    rotation.z = Math.atan2(basisY.x, basisX.x);
+    rotation.x = Math.atan2(-basisZ.y, basisZ.z);
+    rotation.z = Math.atan2(-basisY.x, basisX.x); 
   } else {
     // Gimbal lock - use alternative calculation
-    rotation.x = Math.atan2(-basisY.z, basisY.y);
+    rotation.x = Math.atan2(basisY.z, basisY.y); 
     rotation.z = 0;
   }
 

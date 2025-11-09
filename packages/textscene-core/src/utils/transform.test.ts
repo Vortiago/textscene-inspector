@@ -242,6 +242,40 @@ describe('transform utils', () => {
       expect(result.scale.z).toBeCloseTo(2);
     });
 
+    describe('rotation + scale combined (bug fix: column-major interpretation)', () => {
+      it('should decompose 90° Y-rotation with Z-scale=6 (edge-plane-rotated-scaled.tscn TestWall)', () => {
+        // The actual bug case from the fixture
+        // Transform: basis rotated 90° around Y, then Z-axis scaled by 6
+        const transform = parseTransform3D(
+          'Transform3D(-4.371139e-08, 0, 6, 0, 1, 0, -1, 0, -2.6226832e-07, 0, 0, 0)'
+        );
+        const result = decomposeTransform3D(transform);
+
+        // Expected: Rotation Y=90°, Scale Z=6
+        // Bug: Currently extracts Scale X=6 (wrong axis)
+        expect(result.scale.x).toBeCloseTo(1, 5);
+        expect(result.scale.y).toBeCloseTo(1, 5);
+        expect(result.scale.z).toBeCloseTo(6, 5); // FAILS: gets scaleX=6 instead
+        expect(result.rotation.y).toBeCloseTo(Math.PI / 2, 5);
+      });
+
+
+      it('should match Godot for edge-plane-rotated-scaled.tscn ReferenceWall', () => {
+        // This should already work (no rotation, just scale)
+        const transformString = 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 6, 0, 0, 5)';
+        const transform = parseTransform3D(transformString);
+        const result = decomposeTransform3D(transform);
+
+        // No rotation, Z-scale=6, Z-position=5
+        expect(result.rotation.x).toBeCloseTo(0, 5);
+        expect(result.rotation.y).toBeCloseTo(0, 5);
+        expect(result.rotation.z).toBeCloseTo(0, 5);
+        expect(result.scale.x).toBeCloseTo(1, 5);
+        expect(result.scale.y).toBeCloseTo(1, 5);
+        expect(result.scale.z).toBeCloseTo(6, 5);
+        expect(result.position.z).toBeCloseTo(5, 5);
+      });
+    });
     it('should preserve original transform object (immutability)', () => {
       const transform: Transform3D = {
         basis_x: { x: 1, y: 0, z: 0 },
