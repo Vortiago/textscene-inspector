@@ -36,7 +36,7 @@ describe('PlaneMesh Parser', () => {
       expect(result.subdivideWidth).toBe(0);
       expect(result.subdivideDepth).toBe(0);
       expect(result.orientation).toBe(1); // FACE_Y
-      expect(result.centerOffset).toEqual({ x: 0, y: 0, z: 0 });
+      expect(result.centerOffset).toBeUndefined();
     });
 
     it('should parse custom PlaneMesh properties', () => {
@@ -107,7 +107,7 @@ describe('PlaneMesh Parser', () => {
       };
       const result = parsePlaneMesh(properties);
 
-      expect(result.centerOffset).toEqual({ x: 0, y: 0, z: 0 }); // Falls back to default
+      expect(result.centerOffset).toBeUndefined(); // Falls back to undefined on parse error
     });
 
     it('should parse all properties including center_offset', () => {
