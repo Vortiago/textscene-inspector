@@ -109,6 +109,9 @@ export class TscnPreviewPanel {
           case 'resourceNeeded':
             this._handleResourceNeeded(message.resource);
             return;
+          case 'log':
+            this._handleLog(message.level, message.message, message.args);
+            return;
         }
       },
       null,
@@ -271,7 +274,14 @@ export class TscnPreviewPanel {
       let responseContent: string;
       if (content instanceof ArrayBuffer) {
         const bytes = new Uint8Array(content);
-        responseContent = btoa(String.fromCharCode(...bytes));
+        // Convert to base64 in chunks to avoid stack overflow with large files
+        const chunkSize = 8192; // Process 8KB at a time
+        let binaryString = '';
+        for (let i = 0; i < bytes.length; i += chunkSize) {
+          const chunk = bytes.subarray(i, Math.min(i + chunkSize, bytes.length));
+          binaryString += String.fromCharCode(...chunk);
+        }
+        responseContent = btoa(binaryString);
       } else {
         responseContent = content;
       }
@@ -342,6 +352,13 @@ export class TscnPreviewPanel {
       case 'resourceNeeded':
         this._handleResourceNeeded(message.resource as MissingResource);
         return;
+      case 'log':
+        this._handleLog(
+          message.level as string,
+          message.message as string,
+          message.args as unknown[]
+        );
+        return;
     }
   }
 
@@ -354,6 +371,49 @@ export class TscnPreviewPanel {
 
       // Show the output channel so user can see the error
       logger.show();
+    }
+  }
+
+  private _handleLog(level: string, message: string, args: unknown[]): void {
+    const channel = logger.getChannel();
+    if (!channel) {
+      return;
+    }
+
+    // Format args for display
+    const formattedArgs = args.map((arg) => {
+      if (typeof arg === 'object' && arg !== null) {
+        try {
+          return JSON.stringify(arg);
+        } catch {
+          return String(arg);
+        }
+      }
+      return String(arg);
+    });
+
+    const fullMessage = formattedArgs.length > 0
+      ? `${message} ${formattedArgs.join(' ')}`
+      : message;
+
+    switch (level) {
+      case 'trace':
+        channel.trace(fullMessage);
+        break;
+      case 'debug':
+        channel.debug(fullMessage);
+        break;
+      case 'info':
+        channel.info(fullMessage);
+        break;
+      case 'warn':
+        channel.warn(fullMessage);
+        break;
+      case 'error':
+        channel.error(fullMessage);
+        break;
+      default:
+        channel.info(fullMessage);
     }
   }
 }

@@ -23,6 +23,7 @@
     "generate:fixtures": "node scripts/generate-fixtures.js",
     "clean": "pnpm -r clean && rimraf node_modules",
     "vsc:package": "pnpm --filter textscene-inspector package",
+    "vsc:install": "pnpm vsc:package && code --install-extension apps/textscene-vscode/textscene-inspector-0.0.1.vsix --force",
     "vsc:publish": "pnpm --filter textscene-inspector publish",
     "prepare": "husky"
   },

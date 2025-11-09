@@ -14,7 +14,8 @@ describe('PlaneMesh Renderer', () => {
         size: { x: 2.0, y: 2.0 },
         subdivideWidth: 1,
         subdivideDepth: 1,
-        orientation: 2 // FACE_Z
+        orientation: 2, // FACE_Z
+        centerOffset: { x: 0, y: 0, z: 0 }
       };
 
       const geometry = createPlaneMeshGeometry(properties);
@@ -29,7 +30,8 @@ describe('PlaneMesh Renderer', () => {
         size: { x: 5.0, y: 3.0 },
         subdivideWidth: 1,
         subdivideDepth: 1,
-        orientation: 2
+        orientation: 2,
+        centerOffset: { x: 0, y: 0, z: 0 }
       };
 
       const geometry = createPlaneMeshGeometry(properties);
@@ -43,7 +45,8 @@ describe('PlaneMesh Renderer', () => {
         size: { x: 2.0, y: 2.0 },
         subdivideWidth: 5,
         subdivideDepth: 3,
-        orientation: 2
+        orientation: 2,
+        centerOffset: { x: 0, y: 0, z: 0 }
       };
 
       const geometry = createPlaneMeshGeometry(properties);
@@ -57,7 +60,8 @@ describe('PlaneMesh Renderer', () => {
         size: { x: 2.0, y: 2.0 },
         subdivideWidth: 0,
         subdivideDepth: 1,
-        orientation: 2
+        orientation: 2,
+        centerOffset: { x: 0, y: 0, z: 0 }
       };
 
       const geometry = createPlaneMeshGeometry(properties);
@@ -70,7 +74,8 @@ describe('PlaneMesh Renderer', () => {
         size: { x: 2.0, y: 2.0 },
         subdivideWidth: -5,
         subdivideDepth: 1,
-        orientation: 2
+        orientation: 2,
+        centerOffset: { x: 0, y: 0, z: 0 }
       };
 
       const geometry = createPlaneMeshGeometry(properties);
@@ -83,7 +88,8 @@ describe('PlaneMesh Renderer', () => {
         size: { x: 2.0, y: 2.0 },
         subdivideWidth: 1,
         subdivideDepth: 0,
-        orientation: 2
+        orientation: 2,
+        centerOffset: { x: 0, y: 0, z: 0 }
       };
 
       const geometry = createPlaneMeshGeometry(properties);
@@ -96,7 +102,8 @@ describe('PlaneMesh Renderer', () => {
         size: { x: 2.0, y: 2.0 },
         subdivideWidth: 1,
         subdivideDepth: -3,
-        orientation: 2
+        orientation: 2,
+        centerOffset: { x: 0, y: 0, z: 0 }
       };
 
       const geometry = createPlaneMeshGeometry(properties);
@@ -109,7 +116,8 @@ describe('PlaneMesh Renderer', () => {
         size: { x: 2.0, y: 2.0 },
         subdivideWidth: 1,
         subdivideDepth: 1,
-        orientation: 0 // FACE_X
+        orientation: 0, // FACE_X
+        centerOffset: { x: 0, y: 0, z: 0 }
       };
 
       const geometry = createPlaneMeshGeometry(properties);
@@ -127,7 +135,8 @@ describe('PlaneMesh Renderer', () => {
         size: { x: 2.0, y: 2.0 },
         subdivideWidth: 1,
         subdivideDepth: 1,
-        orientation: 1 // FACE_Y
+        orientation: 1, // FACE_Y
+        centerOffset: { x: 0, y: 0, z: 0 }
       };
 
       const geometry = createPlaneMeshGeometry(properties);
@@ -145,7 +154,8 @@ describe('PlaneMesh Renderer', () => {
         size: { x: 2.0, y: 2.0 },
         subdivideWidth: 1,
         subdivideDepth: 1,
-        orientation: 2 // FACE_Z
+        orientation: 2, // FACE_Z
+        centerOffset: { x: 0, y: 0, z: 0 }
       };
 
       const geometry = createPlaneMeshGeometry(properties);
@@ -162,7 +172,8 @@ describe('PlaneMesh Renderer', () => {
         size: { x: 0.01, y: 0.01 },
         subdivideWidth: 1,
         subdivideDepth: 1,
-        orientation: 2
+        orientation: 2,
+        centerOffset: { x: 0, y: 0, z: 0 }
       };
 
       const geometry = createPlaneMeshGeometry(properties);
@@ -177,7 +188,8 @@ describe('PlaneMesh Renderer', () => {
         size: { x: 1000, y: 2000 },
         subdivideWidth: 1,
         subdivideDepth: 1,
-        orientation: 2
+        orientation: 2,
+        centerOffset: { x: 0, y: 0, z: 0 }
       };
 
       const geometry = createPlaneMeshGeometry(properties);
@@ -191,7 +203,8 @@ describe('PlaneMesh Renderer', () => {
         size: { x: 2.0, y: 2.0 },
         subdivideWidth: 100,
         subdivideDepth: 50,
-        orientation: 2
+        orientation: 2,
+        centerOffset: { x: 0, y: 0, z: 0 }
       };
 
       const geometry = createPlaneMeshGeometry(properties);
@@ -205,7 +218,8 @@ describe('PlaneMesh Renderer', () => {
         size: { x: 10.0, y: 2.0 },
         subdivideWidth: 1,
         subdivideDepth: 1,
-        orientation: 2
+        orientation: 2,
+        centerOffset: { x: 0, y: 0, z: 0 }
       };
 
       const geometry = createPlaneMeshGeometry(properties);
@@ -219,7 +233,8 @@ describe('PlaneMesh Renderer', () => {
         size: { x: 2.0, y: 2.0 },
         subdivideWidth: 5,
         subdivideDepth: 5,
-        orientation: 2
+        orientation: 2,
+        centerOffset: { x: 0, y: 0, z: 0 }
       };
 
       const geometry = createPlaneMeshGeometry(properties);
@@ -242,7 +257,8 @@ describe('PlaneMesh Renderer', () => {
         size: { x: 2.0, y: 2.0 },
         subdivideWidth: 1,
         subdivideDepth: 1,
-        orientation: 2
+        orientation: 2,
+        centerOffset: { x: 0, y: 0, z: 0 }
       };
 
       const geometry = createPlaneMeshGeometry(properties);
@@ -256,7 +272,8 @@ describe('PlaneMesh Renderer', () => {
         size: { x: 4.0, y: 2.0 },
         subdivideWidth: 1,
         subdivideDepth: 1,
-        orientation: 2
+        orientation: 2,
+        centerOffset: { x: 0, y: 0, z: 0 }
       };
 
       const geometry = createPlaneMeshGeometry(properties);
@@ -276,7 +293,8 @@ describe('PlaneMesh Renderer', () => {
         size: { x: 2.0, y: 2.0 },
         subdivideWidth: 1,
         subdivideDepth: 1,
-        orientation: 2
+        orientation: 2,
+        centerOffset: { x: 0, y: 0, z: 0 }
       };
 
       const geometry = createPlaneMeshGeometry(properties);
@@ -291,7 +309,8 @@ describe('PlaneMesh Renderer', () => {
         size: { x: 4.0, y: 2.0 },
         subdivideWidth: 1,
         subdivideDepth: 1,
-        orientation: 2
+        orientation: 2,
+        centerOffset: { x: 0, y: 0, z: 0 }
       };
 
       const geometry = createPlaneMeshGeometry(properties);

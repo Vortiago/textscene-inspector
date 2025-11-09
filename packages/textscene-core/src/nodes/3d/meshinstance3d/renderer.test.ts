@@ -444,6 +444,232 @@ describe('MeshInstance3D Renderer', () => {
     });
   });
 
+  describe('Mesh Material Support', () => {
+    it('should use mesh material when mesh has material property', async () => {
+      const boxGeometry = new THREE.BoxGeometry(1, 1, 1);
+
+      const mockScene = {
+        internalResources: [
+          {
+            id: 'StandardMaterial3D_yellow',
+            type: 'StandardMaterial3D',
+            data: { id: 'StandardMaterial3D_yellow', albedo_color: 'Color(1, 1, 0, 1)' },
+          },
+          {
+            id: 'BoxMesh_1',
+            type: 'BoxMesh',
+            data: { id: 'BoxMesh_1', material: 'SubResource("StandardMaterial3D_yellow")' },
+            renderedObject: boxGeometry,
+          },
+        ],
+        externalResources: [],
+        nodes: [],
+      };
+
+      const properties: MeshInstance3DProperties = {
+        name: 'TestMesh',
+        mesh: 'SubResource("BoxMesh_1")',
+        surfaceMaterialOverrides: new Map(),
+      };
+
+      const mesh = await createMeshInstance3D('TestMesh', properties, mockScene as any);
+
+      expect(mesh.material).toBeInstanceOf(THREE.MeshStandardMaterial);
+      const material = mesh.material as THREE.MeshStandardMaterial;
+      expect(material.color.getHex()).toBe(0xffff00); // Yellow
+    });
+
+    it('should use default material when mesh has no material property', async () => {
+      const boxGeometry = new THREE.BoxGeometry(1, 1, 1);
+
+      const mockScene = {
+        internalResources: [
+          {
+            id: 'BoxMesh_1',
+            type: 'BoxMesh',
+            data: { id: 'BoxMesh_1' },
+            renderedObject: boxGeometry,
+          },
+        ],
+        externalResources: [],
+        nodes: [],
+      };
+
+      const properties: MeshInstance3DProperties = {
+        name: 'TestMesh',
+        mesh: 'SubResource("BoxMesh_1")',
+        surfaceMaterialOverrides: new Map(),
+      };
+
+      const mesh = await createMeshInstance3D('TestMesh', properties, mockScene as any);
+
+      expect(mesh.material).toBeInstanceOf(THREE.MeshStandardMaterial);
+      const material = mesh.material as THREE.MeshStandardMaterial;
+      expect(material.color.getHex()).toBe(0xcccccc); // Default gray
+    });
+
+    it('should prioritize materialOverride over mesh material', async () => {
+      const boxGeometry = new THREE.BoxGeometry(1, 1, 1);
+
+      const mockScene = {
+        internalResources: [
+          {
+            id: 'StandardMaterial3D_yellow',
+            type: 'StandardMaterial3D',
+            data: { id: 'StandardMaterial3D_yellow', albedo_color: 'Color(1, 1, 0, 1)' },
+          },
+          {
+            id: 'StandardMaterial3D_red',
+            type: 'StandardMaterial3D',
+            data: { id: 'StandardMaterial3D_red', albedo_color: 'Color(1, 0, 0, 1)' },
+          },
+          {
+            id: 'BoxMesh_1',
+            type: 'BoxMesh',
+            data: { id: 'BoxMesh_1', material: 'SubResource("StandardMaterial3D_yellow")' },
+            renderedObject: boxGeometry,
+          },
+        ],
+        externalResources: [],
+        nodes: [],
+      };
+
+      const properties: MeshInstance3DProperties = {
+        name: 'TestMesh',
+        mesh: 'SubResource("BoxMesh_1")',
+        materialOverride: 'SubResource("StandardMaterial3D_red")',
+        surfaceMaterialOverrides: new Map(),
+      };
+
+      const mesh = await createMeshInstance3D('TestMesh', properties, mockScene as any);
+
+      expect(mesh.material).toBeInstanceOf(THREE.MeshStandardMaterial);
+      const material = mesh.material as THREE.MeshStandardMaterial;
+      expect(material.color.getHex()).toBe(0xff0000); // Red from override, not yellow from mesh
+    });
+
+    it('should prioritize surface_material_override over mesh material', async () => {
+      const boxGeometry = new THREE.BoxGeometry(1, 1, 1);
+
+      const mockScene = {
+        internalResources: [
+          {
+            id: 'StandardMaterial3D_yellow',
+            type: 'StandardMaterial3D',
+            data: { id: 'StandardMaterial3D_yellow', albedo_color: 'Color(1, 1, 0, 1)' },
+          },
+          {
+            id: 'StandardMaterial3D_blue',
+            type: 'StandardMaterial3D',
+            data: { id: 'StandardMaterial3D_blue', albedo_color: 'Color(0, 0, 1, 1)' },
+          },
+          {
+            id: 'BoxMesh_1',
+            type: 'BoxMesh',
+            data: { id: 'BoxMesh_1', material: 'SubResource("StandardMaterial3D_yellow")' },
+            renderedObject: boxGeometry,
+          },
+        ],
+        externalResources: [],
+        nodes: [],
+      };
+
+      const surfaceOverrides = new Map<number, string>();
+      surfaceOverrides.set(0, 'SubResource("StandardMaterial3D_blue")');
+
+      const properties: MeshInstance3DProperties = {
+        name: 'TestMesh',
+        mesh: 'SubResource("BoxMesh_1")',
+        surfaceMaterialOverrides: surfaceOverrides,
+      };
+
+      const mesh = await createMeshInstance3D('TestMesh', properties, mockScene as any);
+
+      expect(mesh.material).toBeInstanceOf(THREE.MeshStandardMaterial);
+      const material = mesh.material as THREE.MeshStandardMaterial;
+      expect(material.color.getHex()).toBe(0x0000ff); // Blue from surface override, not yellow from mesh
+    });
+
+    it('should handle invalid mesh material reference gracefully', async () => {
+      const boxGeometry = new THREE.BoxGeometry(1, 1, 1);
+
+      const mockScene = {
+        internalResources: [
+          {
+            id: 'BoxMesh_1',
+            type: 'BoxMesh',
+            data: { id: 'BoxMesh_1', material: 'SubResource("NonExistent")' },
+            renderedObject: boxGeometry,
+          },
+        ],
+        externalResources: [],
+        nodes: [],
+      };
+
+      const properties: MeshInstance3DProperties = {
+        name: 'TestMesh',
+        mesh: 'SubResource("BoxMesh_1")',
+        surfaceMaterialOverrides: new Map(),
+      };
+
+      const mesh = await createMeshInstance3D('TestMesh', properties, mockScene as any);
+
+      // Should fall back to default material
+      expect(mesh.material).toBeInstanceOf(THREE.MeshStandardMaterial);
+      const material = mesh.material as THREE.MeshStandardMaterial;
+      expect(material.color.getHex()).toBe(0xcccccc); // Default gray
+    });
+
+    it('should validate complete material precedence: mesh < materialOverride < surface override', async () => {
+      const boxGeometry = new THREE.BoxGeometry(1, 1, 1);
+
+      const mockScene = {
+        internalResources: [
+          {
+            id: 'StandardMaterial3D_yellow',
+            type: 'StandardMaterial3D',
+            data: { id: 'StandardMaterial3D_yellow', albedo_color: 'Color(1, 1, 0, 1)' },
+          },
+          {
+            id: 'StandardMaterial3D_red',
+            type: 'StandardMaterial3D',
+            data: { id: 'StandardMaterial3D_red', albedo_color: 'Color(1, 0, 0, 1)' },
+          },
+          {
+            id: 'StandardMaterial3D_blue',
+            type: 'StandardMaterial3D',
+            data: { id: 'StandardMaterial3D_blue', albedo_color: 'Color(0, 0, 1, 1)' },
+          },
+          {
+            id: 'BoxMesh_1',
+            type: 'BoxMesh',
+            data: { id: 'BoxMesh_1', material: 'SubResource("StandardMaterial3D_yellow")' },
+            renderedObject: boxGeometry,
+          },
+        ],
+        externalResources: [],
+        nodes: [],
+      };
+
+      const surfaceOverrides = new Map<number, string>();
+      surfaceOverrides.set(0, 'SubResource("StandardMaterial3D_blue")');
+
+      const properties: MeshInstance3DProperties = {
+        name: 'TestMesh',
+        mesh: 'SubResource("BoxMesh_1")',
+        materialOverride: 'SubResource("StandardMaterial3D_red")',
+        surfaceMaterialOverrides: surfaceOverrides,
+      };
+
+      const mesh = await createMeshInstance3D('TestMesh', properties, mockScene as any);
+
+      expect(mesh.material).toBeInstanceOf(THREE.MeshStandardMaterial);
+      const material = mesh.material as THREE.MeshStandardMaterial;
+      // Blue should win (highest precedence)
+      expect(material.color.getHex()).toBe(0x0000ff);
+    });
+  });
+
   describe('Surface Index Validation', () => {
     it('should reject negative surface indices', async () => {
       const boxGeometry = new THREE.BoxGeometry(1, 1, 1);

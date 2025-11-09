@@ -114,6 +114,140 @@ mesh = SubResource("BoxMesh_abc123")
     });
   });
 
+  describe('Material Precedence', () => {
+    it('should use mesh material when no overrides specified', async () => {
+      const tscnContent = `[gd_scene load_steps=3 format=3]
+
+[sub_resource type="StandardMaterial3D" id="mat_yellow"]
+albedo_color = Color(1, 1, 0, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_1"]
+material = SubResource("mat_yellow")
+
+[node name="Root" type="Node3D"]
+
+[node name="Cube" type="MeshInstance3D" parent="."]
+mesh = SubResource("BoxMesh_1")
+`;
+
+      const parser = new TscnParser();
+      const scene = parser.parse(tscnContent);
+
+      await renderer.render(scene);
+
+      const threeScene = renderer.getSceneForTesting();
+      const meshes = findMeshesInScene(threeScene);
+      expect(meshes.length).toBe(1);
+
+      const material = meshes[0]?.material as THREE.MeshStandardMaterial;
+      expect(material).toBeInstanceOf(THREE.MeshStandardMaterial);
+      expect(material.color.getHex()).toBe(0xffff00); // Yellow from mesh material
+    });
+
+    it('should prioritize materialOverride over mesh material', async () => {
+      const tscnContent = `[gd_scene load_steps=4 format=3]
+
+[sub_resource type="StandardMaterial3D" id="mat_yellow"]
+albedo_color = Color(1, 1, 0, 1)
+
+[sub_resource type="StandardMaterial3D" id="mat_red"]
+albedo_color = Color(1, 0, 0, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_1"]
+material = SubResource("mat_yellow")
+
+[node name="Root" type="Node3D"]
+
+[node name="Cube" type="MeshInstance3D" parent="."]
+mesh = SubResource("BoxMesh_1")
+material_override = SubResource("mat_red")
+`;
+
+      const parser = new TscnParser();
+      const scene = parser.parse(tscnContent);
+
+      await renderer.render(scene);
+
+      const threeScene = renderer.getSceneForTesting();
+      const meshes = findMeshesInScene(threeScene);
+      expect(meshes.length).toBe(1);
+
+      const material = meshes[0]?.material as THREE.MeshStandardMaterial;
+      expect(material).toBeInstanceOf(THREE.MeshStandardMaterial);
+      expect(material.color.getHex()).toBe(0xff0000); // Red from material_override
+    });
+
+    it('should prioritize surface_material_override over mesh material', async () => {
+      const tscnContent = `[gd_scene load_steps=4 format=3]
+
+[sub_resource type="StandardMaterial3D" id="mat_yellow"]
+albedo_color = Color(1, 1, 0, 1)
+
+[sub_resource type="StandardMaterial3D" id="mat_blue"]
+albedo_color = Color(0, 0, 1, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_1"]
+material = SubResource("mat_yellow")
+
+[node name="Root" type="Node3D"]
+
+[node name="Cube" type="MeshInstance3D" parent="."]
+mesh = SubResource("BoxMesh_1")
+surface_material_override/0 = SubResource("mat_blue")
+`;
+
+      const parser = new TscnParser();
+      const scene = parser.parse(tscnContent);
+
+      await renderer.render(scene);
+
+      const threeScene = renderer.getSceneForTesting();
+      const meshes = findMeshesInScene(threeScene);
+      expect(meshes.length).toBe(1);
+
+      const material = meshes[0]?.material as THREE.MeshStandardMaterial;
+      expect(material).toBeInstanceOf(THREE.MeshStandardMaterial);
+      expect(material.color.getHex()).toBe(0x0000ff); // Blue from surface_material_override
+    });
+
+    it('should validate complete precedence: mesh < materialOverride < surface override', async () => {
+      const tscnContent = `[gd_scene load_steps=5 format=3]
+
+[sub_resource type="StandardMaterial3D" id="mat_yellow"]
+albedo_color = Color(1, 1, 0, 1)
+
+[sub_resource type="StandardMaterial3D" id="mat_red"]
+albedo_color = Color(1, 0, 0, 1)
+
+[sub_resource type="StandardMaterial3D" id="mat_blue"]
+albedo_color = Color(0, 0, 1, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_1"]
+material = SubResource("mat_yellow")
+
+[node name="Root" type="Node3D"]
+
+[node name="Cube" type="MeshInstance3D" parent="."]
+mesh = SubResource("BoxMesh_1")
+material_override = SubResource("mat_red")
+surface_material_override/0 = SubResource("mat_blue")
+`;
+
+      const parser = new TscnParser();
+      const scene = parser.parse(tscnContent);
+
+      await renderer.render(scene);
+
+      const threeScene = renderer.getSceneForTesting();
+      const meshes = findMeshesInScene(threeScene);
+      expect(meshes.length).toBe(1);
+
+      const material = meshes[0]?.material as THREE.MeshStandardMaterial;
+      expect(material).toBeInstanceOf(THREE.MeshStandardMaterial);
+      expect(material.color.getHex()).toBe(0x0000ff); // Blue wins (highest precedence)
+    });
+  });
+
   describe('Complex Scene Rendering', () => {
     it('should render scene with multiple node types', async () => {
       const tscnContent = `[gd_scene load_steps=4 format=3]

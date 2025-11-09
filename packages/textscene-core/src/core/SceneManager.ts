@@ -340,17 +340,20 @@ export class SceneManager {
 
         logger.info(`[SceneManager] Providing content to instance: ${instancePath}`);
 
-        // Check if content already exists (instance may already have children from previous provision)
-        const hasExistingChildren = this.nodeTracker.getAllPaths().some(path =>
-          path.startsWith(instancePath + '/')
-        );
+        // Check if the external scene's root nodes already exist
+        // (Check for specific nodes from the external scene, not just any children)
+        const externalNodesAlreadyExist = providedScene.nodes.every(externalNode => {
+          const childPath = joinPath(instancePath, externalNode.name);
+          return this.nodeTracker.has(childPath);
+        });
 
-        if (hasExistingChildren) {
-          logger.info(`[SceneManager] Instance ${instancePath} already has content, skipping`);
+        if (externalNodesAlreadyExist) {
+          logger.info(`[SceneManager] Instance ${instancePath} already has external scene content, skipping`);
           continue;
         }
 
         // Add external scene nodes as children (does NOT remove existing children)
+        // This will now correctly add external scene nodes even if inline children exist
         await this.addExternalSceneNodes(providedScene, instancePath);
 
         successCount++;

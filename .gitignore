@@ -54,3 +54,6 @@ settings.local.json
 
 # Test fixtures copied to web app during build
 apps/textscene-web/public/fixtures/
+
+# Test projects
+ld-58/
