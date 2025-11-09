@@ -36,7 +36,7 @@
 3. [ ] #WI-57: WorldEnvironment + Environment SubResource → [Details](work_items/WI-57.md) ⭐⭐ (Not implemented)
 4. [x] #WI-58: PlaneMesh center_offset Property → [Details](work_items/WI-58.md) ⭐ ✅ Complete
 5. [x] #WI-59: Normal Map Support (StandardMaterial3D) → [Details](work_items/WI-59.md) ⭐ ✅ Complete
-6. [ ] #WI-62: Emission Enable Flag (StandardMaterial3D) → [Details](work_items/WI-62.md) ⭐ **CRITICAL** (Existing fixture broken)
+6. [x] #WI-62: Emission Enable Flag (StandardMaterial3D) → [Details](work_items/WI-62.md) ⭐ ✅ Complete
 7. [x] #WI-63: Comprehensive Texture Enable Flags (Research) → [Details](work_items/WI-63.md) ⭐ ✅ Complete
 8. [ ] #WI-60: UV Transform (uv1_scale) → [Details](work_items/WI-60.md) ⭐ (Quality polish)
 9. [x] #WI-55: Generic Node Parsing (Fallback Support) → [Details](work_items/WI-55.md) (UX improvement)
@@ -69,11 +69,12 @@
 - [x] #WI-15: Camera3D Node → [Details](work_items/WI15.md)
 - [ ] #WI-16: ShaderMaterial SubResource → [Details](work_items/WI16.md)
 - [ ] #WI-17: Custom Shader Support → [Details](work_items/WI17.md)
+- [ ] #WI-64: Label3D Node Support → [Details](work_items/WI-64.md) (3D text labels for fixture annotations)
 
 ## Phase 6.5: Material Feature Enable Flags (from WI-63 Research)
 
 **High Priority** (Implement Next):
-- [ ] #WI-64: Ambient Occlusion Enable Flag → [Details](work_items/WI-64.md) ⭐⭐⭐ (Common in PBR)
+- [ ] #WI-76: Ambient Occlusion Enable Flag → [Details](work_items/WI-76.md) ⭐⭐⭐ (Common in PBR)
 
 **Medium Priority** (Create Work Items):
 - [ ] #WI-65: Height Mapping Enable Flag → [Details](work_items/WI-65.md) ⭐⭐ (Parallax/displacement)

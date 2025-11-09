@@ -41,6 +41,11 @@ export const fixtures: Fixture[] = [
     "category": "Edge Cases"
   },
   {
+    "name": "Material Features",
+    "file": "integration-material-features.tscn",
+    "category": "Integration - Multi-Node"
+  },
+  {
     "name": "Plane Orientations",
     "file": "integration-plane-orientations.tscn",
     "category": "Integration - Multi-Node"

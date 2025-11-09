@@ -41,6 +41,26 @@ describe('StandardMaterial3D Linter Validators', () => {
     });
   });
 
+  describe('emission_enabled validator', () => {
+    it('should accept "true"', () => {
+      const validator = validatorRegistry.findValidator('StandardMaterial3D', 'emission_enabled');
+      expect(validator).not.toBeNull();
+
+      const result = validator!('emission_enabled', 'true', 1);
+      expect(result).toBeNull();
+    });
+
+    it('should reject invalid boolean', () => {
+      const validator = validatorRegistry.findValidator('StandardMaterial3D', 'emission_enabled');
+      const result = validator!('emission_enabled', 'on', 1);
+
+      expect(result).not.toBeNull();
+      expect(result!.severity).toBe('error');
+      expect(result!.message).toContain('must be "true" or "false"');
+      expect(result!.code).toBe('INVALID_BOOLEAN');
+    });
+  });
+
   describe('normal_texture validator', () => {
     it('should accept valid ExtResource reference', () => {
       const validator = validatorRegistry.findValidator('StandardMaterial3D', 'normal_texture');

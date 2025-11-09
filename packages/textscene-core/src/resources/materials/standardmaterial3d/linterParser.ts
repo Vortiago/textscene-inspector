@@ -46,6 +46,7 @@ const validateExtResource: PropertyValidator = (key, value, line) => {
 // Register validators for StandardMaterial3D properties
 validatorRegistry.registerAll('StandardMaterial3D', {
   normal_enabled: validateBoolean,
+  emission_enabled: validateBoolean,
   normal_texture: validateExtResource,
   albedo_texture: validateExtResource,
   metallic_texture: validateExtResource,
