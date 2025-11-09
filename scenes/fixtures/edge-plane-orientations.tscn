@@ -8,6 +8,13 @@ orientation = 0
 albedo_color = Color(1, 0, 0, 1)
 cull_mode = 2
 
+[sub_resource type="SphereMesh" id="SphereMesh_IndicatorX"]
+radius = 0.3
+height = 0.6
+
+[sub_resource type="StandardMaterial3D" id="Material_IndicatorX"]
+albedo_color = Color(1, 0.5, 0.5, 1)
+
 [sub_resource type="PlaneMesh" id="PlaneMesh_FaceY"]
 size = Vector2(4, 2)
 orientation = 1
@@ -15,6 +22,13 @@ orientation = 1
 [sub_resource type="StandardMaterial3D" id="Material_FaceY"]
 albedo_color = Color(0, 1, 0, 1)
 cull_mode = 2
+
+[sub_resource type="SphereMesh" id="SphereMesh_IndicatorY"]
+radius = 0.3
+height = 0.6
+
+[sub_resource type="StandardMaterial3D" id="Material_IndicatorY"]
+albedo_color = Color(0.5, 1, 0.5, 1)
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_FaceZ"]
 size = Vector2(4, 2)
@@ -24,6 +38,13 @@ orientation = 2
 albedo_color = Color(0, 0, 1, 1)
 cull_mode = 2
 
+[sub_resource type="SphereMesh" id="SphereMesh_IndicatorZ"]
+radius = 0.3
+height = 0.6
+
+[sub_resource type="StandardMaterial3D" id="Material_IndicatorZ"]
+albedo_color = Color(0.5, 0.5, 1, 1)
+
 [node name="Root" type="Node3D"]
 
 [node name="PlaneX_Red" type="MeshInstance3D" parent="."]
@@ -31,12 +52,27 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
 mesh = SubResource("PlaneMesh_FaceX")
 surface_material_override/0 = SubResource("Material_FaceX")
 
+[node name="IndicatorX_Sphere" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 0, 0)
+mesh = SubResource("SphereMesh_IndicatorX")
+surface_material_override/0 = SubResource("Material_IndicatorX")
+
 [node name="PlaneY_Green" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 0)
 mesh = SubResource("PlaneMesh_FaceY")
 surface_material_override/0 = SubResource("Material_FaceY")
 
+[node name="IndicatorY_Sphere" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.5, 0)
+mesh = SubResource("SphereMesh_IndicatorY")
+surface_material_override/0 = SubResource("Material_IndicatorY")
+
 [node name="PlaneZ_Blue" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6, 0)
 mesh = SubResource("PlaneMesh_FaceZ")
 surface_material_override/0 = SubResource("Material_FaceZ")
+
+[node name="IndicatorZ_Sphere" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6, 1.5)
+mesh = SubResource("SphereMesh_IndicatorZ")
+surface_material_override/0 = SubResource("Material_IndicatorZ")
