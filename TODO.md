@@ -115,6 +115,7 @@
 - [ ] #WI-48: Extract Shadow Property Formatting → [Details](work_items/WI48.md)
 - [ ] #WI-49: Documentation Updates for Claude Config → [Details](work_items/WI49.md)
 - [x] #WI-55: Instance Resolution Encapsulation (Alternative 1 implemented) → [Details](work_items/WI55.md)
+- [ ] #WI-61: Standardize Logging Across All Applications → [Details](work_items/WI61.md)
 
 ## Testing & Documentation
 

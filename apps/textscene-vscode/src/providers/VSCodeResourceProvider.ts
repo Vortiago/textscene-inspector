@@ -97,16 +97,14 @@ export class VSCodeResourceProvider implements ResourceProvider {
 
     console.log(`[VSCodeResourceProvider] Starting search from: ${currentDir.fsPath}`);
 
-    // Search upward until we find project.godot or reach workspace root
-    let iterations = 0;
-    while (true) {
-      iterations++;
-      if (iterations > 20) {
-        console.error(`[VSCodeResourceProvider] Too many iterations searching for project.godot - breaking`);
-        this.projectRoot = startDir;
-        return startDir;
-      }
+    // Normalize workspace root path for comparison
+    const workspacePathNormalized = this.workspaceRoot.fsPath.toLowerCase().replace(/\\/g, '/');
 
+    // Search upward until we find project.godot or reach workspace root
+    while (true) {
+      const currentPathNormalized = currentDir.fsPath.toLowerCase().replace(/\\/g, '/');
+
+      // Try to find project.godot in current directory
       const projectFile = vscode.Uri.joinPath(currentDir, 'project.godot');
       console.log(`[VSCodeResourceProvider] Checking: ${projectFile.fsPath}`);
 
@@ -120,17 +118,11 @@ export class VSCodeResourceProvider implements ResourceProvider {
         // Not found, continue searching
       }
 
-      // Check if we've reached workspace root
-      const currentPath = currentDir.fsPath.toLowerCase().replace(/\\/g, '/');
-      const workspacePath = this.workspaceRoot.fsPath.toLowerCase().replace(/\\/g, '/');
-
-      console.log(`[VSCodeResourceProvider] Current: ${currentPath}`);
-      console.log(`[VSCodeResourceProvider] Workspace: ${workspacePath}`);
-
-      if (currentPath === workspacePath || currentPath.length <= workspacePath.length) {
+      // Check if we've reached or passed workspace root
+      if (currentPathNormalized === workspacePathNormalized ||
+          !currentPathNormalized.startsWith(workspacePathNormalized)) {
         // Reached workspace root without finding project.godot
         // Fall back to document's directory (where the .tscn file is)
-        // This allows resources to be resolved relative to the scene file
         console.log(`[VSCodeResourceProvider] Reached workspace root, falling back to: ${startDir.fsPath}`);
         this.projectRoot = startDir;
         return startDir;
