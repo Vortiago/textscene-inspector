@@ -238,5 +238,66 @@ describe('StandardMaterial3D Renderer', () => {
       expect(material.map).toBe(albedoTexture);
       expect(material.normalMap).toBe(normalTexture);
     });
+
+    it('should apply emission map when emission_enabled is true and texture provided', () => {
+      const mockTexture = new THREE.Texture();
+      const properties: StandardMaterial3DProperties = {
+        emission_enabled: true,
+        emission_texture: mockTexture,
+      };
+
+      const material = createStandardMaterial(properties);
+
+      expect(material.emissiveMap).toBe(mockTexture);
+    });
+
+    it('should NOT apply emission map when emission_enabled is false', () => {
+      const mockTexture = new THREE.Texture();
+      const properties: StandardMaterial3DProperties = {
+        emission_enabled: false,
+        emission_texture: mockTexture,
+      };
+
+      const material = createStandardMaterial(properties);
+
+      expect(material.emissiveMap).toBeNull();
+    });
+
+    it('should NOT apply emission map when emission_enabled is undefined', () => {
+      const mockTexture = new THREE.Texture();
+      const properties: StandardMaterial3DProperties = {
+        emission_texture: mockTexture,
+      };
+
+      const material = createStandardMaterial(properties);
+
+      expect(material.emissiveMap).toBeNull();
+    });
+
+    it('should NOT apply emission map when texture is null', () => {
+      const properties: StandardMaterial3DProperties = {
+        emission_enabled: true,
+      };
+
+      const material = createStandardMaterial(properties);
+
+      expect(material.emissiveMap).toBeNull();
+    });
+
+    it('should NOT apply emission map when both flag and texture missing', () => {
+      const properties: StandardMaterial3DProperties = {};
+
+      const material = createStandardMaterial(properties);
+
+      expect(material.emissiveMap).toBeNull();
+    });
+
+    it('should allow emission_enabled without texture (no crash)', () => {
+      const properties: StandardMaterial3DProperties = {
+        emission_enabled: true,
+      };
+
+      expect(() => createStandardMaterial(properties)).not.toThrow();
+    });
   });
 });

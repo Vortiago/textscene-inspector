@@ -55,7 +55,7 @@ export function createStandardMaterial(properties: StandardMaterial3DProperties)
     materialOptions.aoMap = properties.ao_texture;
   }
 
-  if (properties.emission_texture) {
+  if (properties.emission_enabled && properties.emission_texture) {
     materialOptions.emissiveMap = properties.emission_texture;
   }
 
