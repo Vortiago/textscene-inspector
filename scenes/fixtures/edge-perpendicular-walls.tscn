@@ -31,7 +31,7 @@ mesh = SubResource("PlaneMesh_WallZ")
 surface_material_override/0 = SubResource("Material_WallZ")
 
 [node name="WallZ_North" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 5)
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 2, 5)
 mesh = SubResource("PlaneMesh_WallZ")
 surface_material_override/0 = SubResource("Material_WallZ")
 
@@ -41,7 +41,7 @@ mesh = SubResource("PlaneMesh_WallX")
 surface_material_override/0 = SubResource("Material_WallX")
 
 [node name="WallX_East" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 2, 0)
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 5, 2, 0)
 mesh = SubResource("PlaneMesh_WallX")
 surface_material_override/0 = SubResource("Material_WallX")
 
