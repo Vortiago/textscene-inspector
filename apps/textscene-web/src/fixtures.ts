@@ -31,6 +31,11 @@ export const fixtures: Fixture[] = [
     "category": "Edge Cases"
   },
   {
+    "name": "Perpendicular Walls",
+    "file": "edge-perpendicular-walls.tscn",
+    "category": "Edge Cases"
+  },
+  {
     "name": "Plane Orientations",
     "file": "edge-plane-orientations.tscn",
     "category": "Edge Cases"
