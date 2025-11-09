@@ -69,6 +69,7 @@
 - [x] #WI-15: Camera3D Node → [Details](work_items/WI15.md)
 - [ ] #WI-16: ShaderMaterial SubResource → [Details](work_items/WI16.md)
 - [ ] #WI-17: Custom Shader Support → [Details](work_items/WI17.md)
+- [ ] #WI-64: Label3D Node Support → [Details](work_items/WI-64.md) (3D text labels for fixture annotations)
 
 ## Phase 7: VS Code Extension UX ✅ (Core Infrastructure)
 
