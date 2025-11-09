@@ -1,0 +1,42 @@
+[gd_scene format=3]
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_FaceX"]
+size = Vector2(4, 2)
+orientation = 0
+
+[sub_resource type="StandardMaterial3D" id="Material_FaceX"]
+albedo_color = Color(1, 0, 0, 1)
+cull_mode = 2
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_FaceY"]
+size = Vector2(4, 2)
+orientation = 1
+
+[sub_resource type="StandardMaterial3D" id="Material_FaceY"]
+albedo_color = Color(0, 1, 0, 1)
+cull_mode = 2
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_FaceZ"]
+size = Vector2(4, 2)
+orientation = 2
+
+[sub_resource type="StandardMaterial3D" id="Material_FaceZ"]
+albedo_color = Color(0, 0, 1, 1)
+cull_mode = 2
+
+[node name="Root" type="Node3D"]
+
+[node name="PlaneX_Red" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+mesh = SubResource("PlaneMesh_FaceX")
+surface_material_override/0 = SubResource("Material_FaceX")
+
+[node name="PlaneY_Green" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 0)
+mesh = SubResource("PlaneMesh_FaceY")
+surface_material_override/0 = SubResource("Material_FaceY")
+
+[node name="PlaneZ_Blue" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6, 0)
+mesh = SubResource("PlaneMesh_FaceZ")
+surface_material_override/0 = SubResource("Material_FaceZ")
