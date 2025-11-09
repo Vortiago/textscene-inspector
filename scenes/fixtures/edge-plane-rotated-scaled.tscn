@@ -1,0 +1,16 @@
+[gd_scene load_steps=2 format=3 uid="uid://edge_plane_rotated_scaled"]
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_test"]
+size = Vector2(2, 4)
+orientation = 0
+center_offset = Vector3(0, 2, 0)
+
+[node name="RotatedScaledPlane" type="Node3D"]
+
+[node name="TestWall" type="MeshInstance3D" parent="."]
+transform = Transform3D(-4.371139e-08, 0, 6, 0, 1, 0, -1, 0, -2.6226832e-07, 0, 0, 0)
+mesh = SubResource("PlaneMesh_test")
+
+[node name="ReferenceWall" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 6, 0, 0, 5)
+mesh = SubResource("PlaneMesh_test")
