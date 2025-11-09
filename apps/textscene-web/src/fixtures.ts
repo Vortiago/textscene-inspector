@@ -31,6 +31,11 @@ export const fixtures: Fixture[] = [
     "category": "Edge Cases"
   },
   {
+    "name": "Plane Orientations",
+    "file": "edge-plane-orientations.tscn",
+    "category": "Edge Cases"
+  },
+  {
     "name": "Unsupported 2d Audio",
     "file": "edge-unsupported-2d-audio.tscn",
     "category": "Edge Cases"
