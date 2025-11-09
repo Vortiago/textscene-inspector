@@ -70,8 +70,8 @@
 
 - [x] #WI-21-24: Multi-Panel Support, Camera State, Incremental Updates
 - [x] #WI-25: Click-to-Select in 3D Viewport → [Details](work_items/WI25.md)
-- [ ] #WI-50: VSCode Outline Provider → [Details](work_items/WI50.md) ⭐
-- [ ] #WI-51: SubResource/ExtResource Go to Definition → [Details](work_items/WI51.md) ⭐
+- [x] #WI-50: VSCode Outline Provider → [Details](work_items/WI50.md) ⭐
+- [x] #WI-51: SubResource/ExtResource Go to Definition → [Details](work_items/WI51.md) ⭐
 
 ## Phase 8: C# Integration
 
@@ -111,8 +111,8 @@
 
 - [x] #WI-45: Consolidate Claude Skills Configuration
 - [x] #WI-46: Add Codebase Architect Agent
-- [ ] #WI-47: Extract Light Base Property Parsing → [Details](work_items/WI47.md)
-- [ ] #WI-48: Extract Shadow Property Formatting → [Details](work_items/WI48.md)
+- [x] #WI-47: Extract Light Base Property Parsing → [Details](work_items/WI47.md)
+- [x] #WI-48: Extract Shadow Property Formatting → [Details](work_items/WI48.md)
 - [ ] #WI-49: Documentation Updates for Claude Config → [Details](work_items/WI49.md)
 - [x] #WI-55: Instance Resolution Encapsulation (Alternative 1 implemented) → [Details](work_items/WI55.md)
 - [ ] #WI-61: Standardize Logging Across All Applications → [Details](work_items/WI61.md)

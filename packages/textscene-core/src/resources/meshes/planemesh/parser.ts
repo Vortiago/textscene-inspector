@@ -7,7 +7,7 @@ export function parsePlaneMesh(properties: Record<string, string>): PlaneMeshPro
   let subdivideWidth = 0;
   let subdivideDepth = 0;
   let orientation = 1;
-  let centerOffset: Vector3 = { x: 0, y: 0, z: 0 };
+  let centerOffset: Vector3 | undefined = undefined;
 
   if (properties.size) {
     try {

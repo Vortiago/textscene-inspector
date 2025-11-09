@@ -257,6 +257,39 @@ export class MockEventEmitter {
   }
 }
 
+/**
+ * Mock vscode.DocumentSymbol class
+ */
+export class MockDocumentSymbol {
+  children: MockDocumentSymbol[] = [];
+
+  constructor(
+    public name: string,
+    public detail: string,
+    public kind: number,
+    public range: any,
+    public selectionRange: any
+  ) {}
+}
+
+/**
+ * Mock vscode.Location class
+ */
+export class MockLocation {
+  constructor(
+    public uri: any,
+    public range: any
+  ) {}
+}
+
+/**
+ * Mock vscode.languages namespace
+ */
+const mockLanguages: any = {
+  registerDocumentSymbolProvider: vi.fn(),
+  registerDefinitionProvider: vi.fn()
+};
+
 // ============================================================================
 // VSCode Module Mock
 // ============================================================================
@@ -270,10 +303,13 @@ vi.mock('vscode', () => ({
   workspace: mockWorkspace,
   window: mockWindow,
   commands: mockCommands,
+  languages: mockLanguages,
   Range: MockRange,
   Position: MockPosition,
   Selection: MockSelection,
   EventEmitter: MockEventEmitter,
+  DocumentSymbol: MockDocumentSymbol,
+  Location: MockLocation,
 
   // Enums
   ViewColumn: {
@@ -296,6 +332,35 @@ vi.mock('vscode', () => ({
     InCenter: 1,
     InCenterIfOutsideViewport: 2,
     AtTop: 3
+  },
+
+  SymbolKind: {
+    File: 0,
+    Module: 1,
+    Namespace: 2,
+    Package: 3,
+    Class: 4,
+    Method: 5,
+    Property: 6,
+    Field: 7,
+    Constructor: 8,
+    Enum: 9,
+    Interface: 10,
+    Function: 11,
+    Variable: 12,
+    Constant: 13,
+    String: 14,
+    Number: 15,
+    Boolean: 16,
+    Array: 17,
+    Object: 18,
+    Key: 19,
+    Null: 20,
+    EnumMember: 21,
+    Struct: 22,
+    Event: 23,
+    Operator: 24,
+    TypeParameter: 25
   }
 }));
 
@@ -314,21 +379,28 @@ export const vscode: {
   workspace: typeof mockWorkspace;
   window: typeof mockWindow;
   commands: typeof mockCommands;
+  languages: typeof mockLanguages;
   Range: typeof MockRange;
   Position: typeof MockPosition;
   Selection: typeof MockSelection;
   EventEmitter: typeof MockEventEmitter;
+  DocumentSymbol: typeof MockDocumentSymbol;
+  Location: typeof MockLocation;
   ViewColumn: { One: number; Two: number; Three: number; Active: number; Beside: number };
   TextEditorRevealType: { Default: number; InCenter: number; InCenterIfOutsideViewport: number; AtTop: number };
+  SymbolKind: Record<string, number>;
 } = {
   Uri: mockUri,
   workspace: mockWorkspace,
   window: mockWindow,
   commands: mockCommands,
+  languages: mockLanguages,
   Range: MockRange,
   Position: MockPosition,
   Selection: MockSelection,
   EventEmitter: MockEventEmitter,
+  DocumentSymbol: MockDocumentSymbol,
+  Location: MockLocation,
   ViewColumn: {
     One: 1,
     Two: 2,
@@ -341,5 +413,33 @@ export const vscode: {
     InCenter: 1,
     InCenterIfOutsideViewport: 2,
     AtTop: 3
+  },
+  SymbolKind: {
+    File: 0,
+    Module: 1,
+    Namespace: 2,
+    Package: 3,
+    Class: 4,
+    Method: 5,
+    Property: 6,
+    Field: 7,
+    Constructor: 8,
+    Enum: 9,
+    Interface: 10,
+    Function: 11,
+    Variable: 12,
+    Constant: 13,
+    String: 14,
+    Number: 15,
+    Boolean: 16,
+    Array: 17,
+    Object: 18,
+    Key: 19,
+    Null: 20,
+    EnumMember: 21,
+    Struct: 22,
+    Event: 23,
+    Operator: 24,
+    TypeParameter: 25
   }
 };

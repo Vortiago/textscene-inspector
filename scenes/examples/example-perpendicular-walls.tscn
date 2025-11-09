@@ -1,0 +1,66 @@
+[gd_scene format=3]
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_WallZ"]
+size = Vector2(10, 4)
+orientation = 2
+
+[sub_resource type="StandardMaterial3D" id="Material_WallZ"]
+albedo_color = Color(0, 0, 1, 1)
+cull_mode = 2
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_WallX"]
+size = Vector2(10, 4)
+orientation = 0
+
+[sub_resource type="StandardMaterial3D" id="Material_WallX"]
+albedo_color = Color(1, 0, 0, 1)
+cull_mode = 2
+
+[sub_resource type="SphereMesh" id="SphereMesh_Corner"]
+radius = 0.5
+height = 1.0
+
+[sub_resource type="StandardMaterial3D" id="Material_Corner"]
+albedo_color = Color(1, 1, 0, 1)
+
+[node name="Root" type="Node3D"]
+
+[node name="WallZ_South" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, -5)
+mesh = SubResource("PlaneMesh_WallZ")
+surface_material_override/0 = SubResource("Material_WallZ")
+
+[node name="WallZ_North" type="MeshInstance3D" parent="."]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 2, 5)
+mesh = SubResource("PlaneMesh_WallZ")
+surface_material_override/0 = SubResource("Material_WallZ")
+
+[node name="WallX_West" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 2, 0)
+mesh = SubResource("PlaneMesh_WallX")
+surface_material_override/0 = SubResource("Material_WallX")
+
+[node name="WallX_East" type="MeshInstance3D" parent="."]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 5, 2, 0)
+mesh = SubResource("PlaneMesh_WallX")
+surface_material_override/0 = SubResource("Material_WallX")
+
+[node name="Corner_SW" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 2, -5)
+mesh = SubResource("SphereMesh_Corner")
+surface_material_override/0 = SubResource("Material_Corner")
+
+[node name="Corner_SE" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 2, -5)
+mesh = SubResource("SphereMesh_Corner")
+surface_material_override/0 = SubResource("Material_Corner")
+
+[node name="Corner_NW" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 2, 5)
+mesh = SubResource("SphereMesh_Corner")
+surface_material_override/0 = SubResource("Material_Corner")
+
+[node name="Corner_NE" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 2, 5)
+mesh = SubResource("SphereMesh_Corner")
+surface_material_override/0 = SubResource("Material_Corner")

@@ -5,5 +5,5 @@ export interface PlaneMeshProperties {
   subdivideWidth: number;
   subdivideDepth: number;
   orientation: number;
-  centerOffset: Vector3;
+  centerOffset?: Vector3;
 }

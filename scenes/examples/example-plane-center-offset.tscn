@@ -1,0 +1,103 @@
+[gd_scene format=3]
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_FloorMain"]
+size = Vector2(10, 5)
+orientation = 1
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_FloorExt"]
+size = Vector2(5, 5)
+orientation = 1
+
+[sub_resource type="StandardMaterial3D" id="Material_Floor"]
+albedo_color = Color(0.4, 0.4, 0.4, 1)
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_Wall10"]
+size = Vector2(10, 4)
+orientation = 2
+center_offset = Vector3(0, 2, 0)
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_Wall5"]
+size = Vector2(5, 4)
+orientation = 2
+center_offset = Vector3(0, 2, 0)
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_Wall7_5"]
+size = Vector2(7.5, 4)
+orientation = 2
+center_offset = Vector3(0, 2, 0)
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_WallX10"]
+size = Vector2(10, 4)
+orientation = 0
+center_offset = Vector3(0, 2, 0)
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_WallX5"]
+size = Vector2(5, 4)
+orientation = 0
+center_offset = Vector3(0, 2, 0)
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_WallX2_5"]
+size = Vector2(2.5, 4)
+orientation = 0
+center_offset = Vector3(0, 2, 0)
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_Wall2_5"]
+size = Vector2(2.5, 4)
+orientation = 2
+center_offset = Vector3(0, 2, 0)
+
+[sub_resource type="StandardMaterial3D" id="Material_Wall"]
+albedo_color = Color(0.6, 0.5, 0.4, 1)
+cull_mode = 2
+
+[node name="Root" type="Node3D"]
+
+[node name="Floor_Main" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+mesh = SubResource("PlaneMesh_FloorMain")
+surface_material_override/0 = SubResource("Material_Floor")
+
+[node name="Floor_Extension" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 0, 5)
+mesh = SubResource("PlaneMesh_FloorExt")
+surface_material_override/0 = SubResource("Material_Floor")
+
+[node name="Wall_South" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -2.5)
+mesh = SubResource("PlaneMesh_Wall10")
+surface_material_override/0 = SubResource("Material_Wall")
+
+[node name="Wall_East_Main" type="MeshInstance3D" parent="."]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 5, 0, 0)
+mesh = SubResource("PlaneMesh_WallX5")
+surface_material_override/0 = SubResource("Material_Wall")
+
+[node name="Wall_North_Main" type="MeshInstance3D" parent="."]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 1.25, 0, 2.5)
+mesh = SubResource("PlaneMesh_Wall7_5")
+surface_material_override/0 = SubResource("Material_Wall")
+
+[node name="Wall_West_Main" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 0, 0)
+mesh = SubResource("PlaneMesh_WallX5")
+surface_material_override/0 = SubResource("Material_Wall")
+
+[node name="Wall_North_Ext" type="MeshInstance3D" parent="."]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, -5, 0, 7.5)
+mesh = SubResource("PlaneMesh_Wall5")
+surface_material_override/0 = SubResource("Material_Wall")
+
+[node name="Wall_West_Ext" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.5, 0, 5)
+mesh = SubResource("PlaneMesh_WallX5")
+surface_material_override/0 = SubResource("Material_Wall")
+
+[node name="Wall_East_Ext" type="MeshInstance3D" parent="."]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, -2.5, 0, 5)
+mesh = SubResource("PlaneMesh_WallX5")
+surface_material_override/0 = SubResource("Material_Wall")
+
+[node name="Wall_South_Ext" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.25, 0, 2.5)
+mesh = SubResource("PlaneMesh_Wall2_5")
+surface_material_override/0 = SubResource("Material_Wall")

@@ -36,6 +36,11 @@ export const fixtures: Fixture[] = [
     "category": "Edge Cases"
   },
   {
+    "name": "Plane Orientations",
+    "file": "integration-plane-orientations.tscn",
+    "category": "Integration - Multi-Node"
+  },
+  {
     "name": "Nested Leaf Orange Sphere",
     "file": "nested-leaf-orange-sphere.tscn",
     "category": "Other"
@@ -208,6 +213,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Hierarchy Wide",
     "file": "example-hierarchy-wide.tscn",
+    "category": "Examples - Complex Scenes"
+  },
+  {
+    "name": "Perpendicular Walls",
+    "file": "example-perpendicular-walls.tscn",
+    "category": "Examples - Complex Scenes"
+  },
+  {
+    "name": "Plane Center Offset",
+    "file": "example-plane-center-offset.tscn",
     "category": "Examples - Complex Scenes"
   },
   {
