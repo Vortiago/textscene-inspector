@@ -37,7 +37,7 @@
 4. [x] #WI-58: PlaneMesh center_offset Property → [Details](work_items/WI-58.md) ⭐ ✅ Complete
 5. [x] #WI-59: Normal Map Support (StandardMaterial3D) → [Details](work_items/WI-59.md) ⭐ ✅ Complete
 6. [x] #WI-62: Emission Enable Flag (StandardMaterial3D) → [Details](work_items/WI-62.md) ⭐ ✅ Complete
-7. [ ] #WI-63: Comprehensive Texture Enable Flags → [Details](work_items/WI-63.md) ⭐ (Material completeness)
+7. [x] #WI-63: Comprehensive Texture Enable Flags (Research) → [Details](work_items/WI-63.md) ⭐ ✅ Complete
 8. [ ] #WI-60: UV Transform (uv1_scale) → [Details](work_items/WI-60.md) ⭐ (Quality polish)
 9. [x] #WI-55: Generic Node Parsing (Fallback Support) → [Details](work_items/WI-55.md) (UX improvement)
 
@@ -70,6 +70,32 @@
 - [ ] #WI-16: ShaderMaterial SubResource → [Details](work_items/WI16.md)
 - [ ] #WI-17: Custom Shader Support → [Details](work_items/WI17.md)
 - [ ] #WI-64: Label3D Node Support → [Details](work_items/WI-64.md) (3D text labels for fixture annotations)
+
+## Phase 6.5: Material Feature Enable Flags (from WI-63 Research)
+
+**High Priority** (Implement Next):
+- [ ] #WI-76: Ambient Occlusion Enable Flag → [Details](work_items/WI-76.md) ⭐⭐⭐ (Common in PBR)
+
+**Medium Priority** (Create Work Items):
+- [ ] #WI-65: Height Mapping Enable Flag → [Details](work_items/WI-65.md) ⭐⭐ (Parallax/displacement)
+- [ ] #WI-66: Clearcoat Enable Flag → [Details](work_items/WI-66.md) ⭐⭐ (Glossy finishes)
+- [ ] #WI-67: Rim Lighting Enable Flag → [Details](work_items/WI-67.md) ⭐ (Edge highlights)
+
+**Low Priority** (Deferred Until Requested):
+- [ ] #WI-68: Anisotropy Enable Flag → [Details](work_items/WI-68.md) (Brushed metal)
+- [ ] #WI-69: Refraction Enable Flag → [Details](work_items/WI-69.md) (Glass/water)
+- [ ] #WI-70: Backlight Enable Flag → [Details](work_items/WI-70.md) (Translucency)
+- [ ] #WI-71: Detail Map Enable Flag → [Details](work_items/WI-71.md) (Texture layering)
+- [ ] #WI-72: Subsurface Scattering Enable Flag → [Details](work_items/WI-72.md) (Skin/wax)
+- [ ] #WI-73: Subsurface Transmittance Enable Flag → [Details](work_items/WI-73.md) (Enhanced SSS)
+- [ ] #WI-74: Bent Normal Mapping Enable Flag → [Details](work_items/WI-74.md) (Advanced lighting)
+- [ ] #WI-75: Proximity Fade Enable Flag → [Details](work_items/WI-75.md) (Distance-based fade)
+
+**Notes**:
+- WI-63 research identified 13 feature flags total
+- Core PBR textures (metallic, roughness) do NOT need enable flags
+- Current implementation already correct for those textures
+- See `work_items/WI-63-research.md` for full analysis
 
 ## Phase 7: VS Code Extension UX ✅ (Core Infrastructure)
 
