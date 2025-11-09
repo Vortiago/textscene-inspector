@@ -3,7 +3,7 @@
  * Loads resources from user-uploaded files stored in memory.
  */
 
-import { isBinaryResourceType } from '@textscene/core';
+import { isBinaryResourceType, info, warn } from '@textscene/core';
 import type { ResourceProvider } from '@textscene/core';
 
 export class WebResourceProvider implements ResourceProvider {
@@ -46,7 +46,7 @@ export class WebResourceProvider implements ResourceProvider {
         const filename = path.replace('res://', '');
         const fixtureUrl = `/fixtures/${filename}`;
 
-        console.log(`[WebResourceProvider] Attempting to fetch ${type}: ${fixtureUrl}`);
+        info(`[WebResourceProvider] Attempting to fetch ${type}: ${fixtureUrl}`);
         const response = await fetch(fixtureUrl);
 
         if (response.ok) {
@@ -54,22 +54,22 @@ export class WebResourceProvider implements ResourceProvider {
           const contentType = response.headers.get('content-type') || '';
           if (contentType.includes('text/html')) {
             // Server returned HTML fallback (SPA behavior) - file doesn't exist
-            console.warn(`[WebResourceProvider] File not found (got HTML fallback): ${path}`);
+            warn(`[WebResourceProvider] File not found (got HTML fallback): ${path}`);
             throw new Error(`Resource not found: ${path}`);
           }
 
           if (isBinaryResourceType(type)) {
             const content = await response.arrayBuffer();
-            console.log(`[WebResourceProvider] Successfully loaded ${type}: ${path}`);
+            info(`[WebResourceProvider] Successfully loaded ${type}: ${path}`);
             return content;
           } else {
             const content = await response.text();
-            console.log(`[WebResourceProvider] Successfully loaded ${type}: ${path}`);
+            info(`[WebResourceProvider] Successfully loaded ${type}: ${path}`);
             return content;
           }
         }
       } catch (error) {
-        console.warn(`[WebResourceProvider] Failed to fetch ${type} from fixtures: ${path}`, error);
+        warn(`[WebResourceProvider] Failed to fetch ${type} from fixtures: ${path}`, error);
       }
     }
 

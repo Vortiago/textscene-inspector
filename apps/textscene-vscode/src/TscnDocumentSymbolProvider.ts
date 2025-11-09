@@ -3,7 +3,7 @@
  */
 
 import * as vscode from 'vscode';
-import { TscnParser, type TscnNode } from '@textscene/core';
+import { TscnParser, error, type TscnNode } from '@textscene/core';
 
 export class TscnDocumentSymbolProvider implements vscode.DocumentSymbolProvider {
   private readonly nodeTypeToSymbolKind: Record<string, vscode.SymbolKind> = {
@@ -32,8 +32,8 @@ export class TscnDocumentSymbolProvider implements vscode.DocumentSymbolProvider
       return parsed.nodes.map(node =>
         this.convertNodeToSymbol(node, document, '')
       );
-    } catch (error) {
-      console.error('Error providing document symbols:', error);
+    } catch (err) {
+      error('Error providing document symbols:', err);
       return [];
     }
   }

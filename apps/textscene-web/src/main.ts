@@ -2,7 +2,7 @@
  * Standalone web application for previewing TSCN files.
  */
 
-import { TscnPreviewUI, sharedStyles } from '@textscene/core';
+import { TscnPreviewUI, sharedStyles, info, error } from '@textscene/core';
 import type { TscnPreviewElements, MissingResource } from '@textscene/core';
 import { initLogger } from './logger';
 import { getFixturesByCategory } from './fixtures';
@@ -81,7 +81,7 @@ function updateResourceFilesList(): void {
     removeBtn.onclick = () => {
       resourceProvider.getUploadedFiles().delete(path);
       updateResourceFilesList();
-      console.log('[Resource Files] Removed:', path);
+      info('[Resource Files] Removed:', path);
     };
 
     actionDiv.appendChild(removeBtn);
@@ -116,7 +116,7 @@ function updateResourceFilesList(): void {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
 
-      console.log('[Resource Files] User uploaded:', resource.path);
+      info('[Resource Files] User uploaded:', resource.path);
 
       // Add to provider's cache
       resourceProvider.addUploadedFile(resource.path, file);
@@ -145,7 +145,7 @@ function addMissingResourceToUI(resource: MissingResource): void {
   }
 
   missingResourcesMap.set(resource.path, resource);
-  console.log('[Resource Files] Adding missing resource:', resource.path);
+  info('[Resource Files] Adding missing resource:', resource.path);
 
   // Update unified list
   updateResourceFilesList();
@@ -163,7 +163,7 @@ const previewUI = new TscnPreviewUI(elements, {
     }
   },
   onResourceNeeded: async (resource) => {
-    console.log('[Resource Needed]', resource);
+    info('[Resource Needed]', resource);
     addMissingResourceToUI(resource);
     return null; // User will upload later
   },
@@ -182,9 +182,9 @@ fileInput.addEventListener('change', async (event) => {
     const content = await file.text();
     await previewUI.loadTscn(content);
     resetButton.disabled = false;
-  } catch (error) {
-    console.error('Error loading TSCN:', error);
-    const errorMessage = error instanceof Error ? error.message : String(error);
+  } catch (err) {
+    error('Error loading TSCN:', err);
+    const errorMessage = err instanceof Error ? err.message : String(err);
     previewUI.showError(`Failed to load file: ${errorMessage}`);
   }
 });
@@ -242,14 +242,14 @@ function renderFixtureList() {
         const content = await response.text();
         await previewUI.loadTscn(content);
         resetButton.disabled = false;
-      } catch (error) {
+      } catch (err) {
         // Ignore AbortError (expected when user clicks another fixture)
-        if (error instanceof Error && error.name === 'AbortError') {
-          console.log('Fixture load aborted (user clicked another fixture)');
+        if (err instanceof Error && err.name === 'AbortError') {
+          info('Fixture load aborted (user clicked another fixture)');
           return;
         }
-        console.error('Error loading fixture:', error);
-        const errorMessage = error instanceof Error ? error.message : String(error);
+        error('Error loading fixture:', err);
+        const errorMessage = err instanceof Error ? err.message : String(err);
         previewUI.showError(`Failed to load fixture: ${errorMessage}`);
       }
     });

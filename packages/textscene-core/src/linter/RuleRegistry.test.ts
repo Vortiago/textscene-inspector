@@ -5,6 +5,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { RuleRegistry } from './RuleRegistry.js';
 import type { LintRule } from './types.js';
+import * as logger from '../logger.js';
 
 describe('RuleRegistry', () => {
   let registry: RuleRegistry;
@@ -32,7 +33,7 @@ describe('RuleRegistry', () => {
     });
 
     it('should warn when registering duplicate rule', () => {
-      const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const loggerWarn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
 
       const rule1 = createMockRule('duplicate-rule');
       const rule2 = createMockRule('duplicate-rule');
@@ -40,12 +41,12 @@ describe('RuleRegistry', () => {
       registry.register(rule1);
       registry.register(rule2);
 
-      expect(consoleWarn).toHaveBeenCalledWith(
+      expect(loggerWarn).toHaveBeenCalledWith(
         'Rule "duplicate-rule" is already registered. Overwriting.'
       );
       expect(registry.getRule('duplicate-rule')).toBe(rule2);
 
-      consoleWarn.mockRestore();
+      loggerWarn.mockRestore();
     });
 
     it('should register multiple rules', () => {

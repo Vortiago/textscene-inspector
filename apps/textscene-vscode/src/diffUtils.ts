@@ -2,7 +2,7 @@
  * Utilities for computing incremental changes between TSCN scene versions.
  */
 
-import { TscnParser, buildNodeHashMap, type TscnScene, type TscnNode, type NodeChange } from '@textscene/core';
+import { TscnParser, buildNodeHashMap, error, type TscnScene, type TscnNode, type NodeChange } from '@textscene/core';
 
 interface DiffResult {
   updateType: 'full' | 'incremental';
@@ -120,8 +120,8 @@ export function computeIncrementalChanges(oldContent: string, newContent: string
       changes,
       newScene,
     };
-  } catch (error) {
-    console.error('[TscnPreviewPanel] Error computing diff:', error);
+  } catch (err) {
+    error('[TscnPreviewPanel] Error computing diff:', err);
     // On error, fall back to full reload
     return { updateType: 'full' };
   }

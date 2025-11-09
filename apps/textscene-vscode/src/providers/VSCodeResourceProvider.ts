@@ -4,7 +4,7 @@
  */
 
 import * as vscode from 'vscode';
-import { isBinaryResourceType, stripResPrefix } from '@textscene/core';
+import { isBinaryResourceType, stripResPrefix, info, error } from '@textscene/core';
 import type { ResourceProvider } from '@textscene/core';
 
 export class VSCodeResourceProvider implements ResourceProvider {
@@ -16,16 +16,16 @@ export class VSCodeResourceProvider implements ResourceProvider {
   ) {}
 
   async loadResource(resourcePath: string, type: string): Promise<string | ArrayBuffer> {
-    console.log(`[VSCodeResourceProvider] Loading ${type}: ${resourcePath}`);
-    console.log(`[VSCodeResourceProvider] Workspace root: ${this.workspaceRoot.fsPath}`);
-    console.log(`[VSCodeResourceProvider] Document URI: ${this.documentUri.fsPath}`);
+    info(`[VSCodeResourceProvider] Loading ${type}: ${resourcePath}`);
+    info(`[VSCodeResourceProvider] Workspace root: ${this.workspaceRoot.fsPath}`);
+    info(`[VSCodeResourceProvider] Document URI: ${this.documentUri.fsPath}`);
 
     try {
       const fsPath = await this.resolveGodotPath(resourcePath);
-      console.log(`[VSCodeResourceProvider] Resolved to: ${fsPath.fsPath}`);
+      info(`[VSCodeResourceProvider] Resolved to: ${fsPath.fsPath}`);
 
       const fileData = await vscode.workspace.fs.readFile(fsPath);
-      console.log(`[VSCodeResourceProvider] Successfully read ${fileData.byteLength} bytes`);
+      info(`[VSCodeResourceProvider] Successfully read ${fileData.byteLength} bytes`);
 
       // Return as ArrayBuffer for binary files (textures, audio)
       if (isBinaryResourceType(type)) {
@@ -39,7 +39,7 @@ export class VSCodeResourceProvider implements ResourceProvider {
       // Return as string for text files (scenes, scripts, shaders)
       return new TextDecoder('utf-8').decode(fileData);
     } catch (primaryError) {
-      console.log(`[VSCodeResourceProvider] Primary resolution failed:`, primaryError);
+      info(`[VSCodeResourceProvider] Primary resolution failed:`, primaryError);
 
       // If primary resolution failed, try relative to document's directory as fallback
       try {
@@ -47,7 +47,7 @@ export class VSCodeResourceProvider implements ResourceProvider {
         const documentDir = vscode.Uri.joinPath(this.documentUri, '..');
         const fallbackPath = vscode.Uri.joinPath(documentDir, relativePath);
 
-        console.log(`[VSCodeResourceProvider] Trying fallback path: ${fallbackPath.fsPath}`);
+        info(`[VSCodeResourceProvider] Trying fallback path: ${fallbackPath.fsPath}`);
 
         // Validate within workspace bounds
         const workspacePathNormalized = this.workspaceRoot.fsPath.toLowerCase().replace(/\\/g, '/');
@@ -55,7 +55,7 @@ export class VSCodeResourceProvider implements ResourceProvider {
 
         if (fallbackPathNormalized.startsWith(workspacePathNormalized)) {
           const fileData = await vscode.workspace.fs.readFile(fallbackPath);
-          console.log(`[VSCodeResourceProvider] Fallback succeeded: ${fileData.byteLength} bytes`);
+          info(`[VSCodeResourceProvider] Fallback succeeded: ${fileData.byteLength} bytes`);
 
           // Return as ArrayBuffer for binary files
           if (isBinaryResourceType(type)) {
@@ -69,11 +69,11 @@ export class VSCodeResourceProvider implements ResourceProvider {
           return new TextDecoder('utf-8').decode(fileData);
         }
       } catch (fallbackError) {
-        console.log(`[VSCodeResourceProvider] Fallback also failed:`, fallbackError);
+        info(`[VSCodeResourceProvider] Fallback also failed:`, fallbackError);
       }
 
       const errorMsg = `Failed to load resource: ${resourcePath} (${primaryError instanceof Error ? primaryError.message : 'Unknown error'})`;
-      console.error(`[VSCodeResourceProvider] ${errorMsg}`);
+      error(`[VSCodeResourceProvider] ${errorMsg}`);
       throw new Error(errorMsg);
     }
   }
@@ -85,17 +85,17 @@ export class VSCodeResourceProvider implements ResourceProvider {
    */
   private async findProjectRoot(): Promise<vscode.Uri> {
     if (this.projectRoot) {
-      console.log(`[VSCodeResourceProvider] Using cached project root: ${this.projectRoot.fsPath}`);
+      info(`[VSCodeResourceProvider] Using cached project root: ${this.projectRoot.fsPath}`);
       return this.projectRoot;
     }
 
-    console.log(`[VSCodeResourceProvider] Searching for project.godot...`);
+    info(`[VSCodeResourceProvider] Searching for project.godot...`);
 
     // Start from document's directory
     let currentDir = vscode.Uri.joinPath(this.documentUri, '..');
     const startDir = currentDir; // Remember where we started for fallback
 
-    console.log(`[VSCodeResourceProvider] Starting search from: ${currentDir.fsPath}`);
+    info(`[VSCodeResourceProvider] Starting search from: ${currentDir.fsPath}`);
 
     // Normalize workspace root path for comparison
     const workspacePathNormalized = this.workspaceRoot.fsPath.toLowerCase().replace(/\\/g, '/');
@@ -106,12 +106,12 @@ export class VSCodeResourceProvider implements ResourceProvider {
 
       // Try to find project.godot in current directory
       const projectFile = vscode.Uri.joinPath(currentDir, 'project.godot');
-      console.log(`[VSCodeResourceProvider] Checking: ${projectFile.fsPath}`);
+      info(`[VSCodeResourceProvider] Checking: ${projectFile.fsPath}`);
 
       try {
         await vscode.workspace.fs.stat(projectFile);
         // Found it!
-        console.log(`[VSCodeResourceProvider] Found project.godot at: ${currentDir.fsPath}`);
+        info(`[VSCodeResourceProvider] Found project.godot at: ${currentDir.fsPath}`);
         this.projectRoot = currentDir;
         return currentDir;
       } catch {
@@ -123,7 +123,7 @@ export class VSCodeResourceProvider implements ResourceProvider {
           !currentPathNormalized.startsWith(workspacePathNormalized)) {
         // Reached workspace root without finding project.godot
         // Fall back to document's directory (where the .tscn file is)
-        console.log(`[VSCodeResourceProvider] Reached workspace root, falling back to: ${startDir.fsPath}`);
+        info(`[VSCodeResourceProvider] Reached workspace root, falling back to: ${startDir.fsPath}`);
         this.projectRoot = startDir;
         return startDir;
       }
