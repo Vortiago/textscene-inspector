@@ -34,3 +34,24 @@ surface_material_override/0 = SubResource("Material_disabled")
 [node name="DirectionalLight" type="DirectionalLight3D" parent="."]
 transform = Transform3D(0.707, -0.5, 0.5, 0, 0.707, 0.707, -0.707, -0.5, 0.5, 0, 8, 4)
 light_energy = 2.0
+
+[node name="Title" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 0)
+text = "Normal Map Comparison"
+pixel_size = 0.008
+billboard = 1
+modulate = Color(1, 1, 0.7, 1)
+
+[node name="LabelLeft" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, -2.5, 0)
+text = "With Normal Map"
+pixel_size = 0.006
+billboard = 1
+modulate = Color(1, 1, 1, 1)
+
+[node name="LabelRight" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, -2.5, 0)
+text = "Without Normal Map"
+pixel_size = 0.006
+billboard = 1
+modulate = Color(1, 1, 1, 1)

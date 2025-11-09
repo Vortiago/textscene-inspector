@@ -17,3 +17,17 @@ roughness = 0.6
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
 mesh = SubResource("BoxMesh_1")
 surface_material_override/0 = SubResource("Material_box")
+
+[node name="Title" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 0)
+text = "BoxMesh Test"
+pixel_size = 0.008
+billboard = 1
+modulate = Color(1, 1, 0.7, 1)
+
+[node name="Description" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -2, 0)
+text = "BoxMesh with custom size (1.5x2x1) and subdivisions"
+pixel_size = 0.006
+billboard = 1
+modulate = Color(1, 1, 1, 1)

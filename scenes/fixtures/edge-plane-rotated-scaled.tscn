@@ -14,3 +14,24 @@ mesh = SubResource("PlaneMesh_test")
 [node name="ReferenceWall" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 6, 0, 0, 5)
 mesh = SubResource("PlaneMesh_test")
+
+[node name="Title" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5, 0)
+text = "Plane Rotation+Scale Edge Case"
+pixel_size = 0.008
+billboard = 1
+modulate = Color(1, 1, 0.7, 1)
+
+[node name="LabelRotatedScaled" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 0)
+text = "Rotated and scaled wall (complex transform)"
+pixel_size = 0.006
+billboard = 1
+modulate = Color(1, 1, 1, 1)
+
+[node name="LabelReference" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 5)
+text = "Reference wall (simple scale)"
+pixel_size = 0.006
+billboard = 1
+modulate = Color(1, 1, 1, 1)

@@ -37,3 +37,31 @@ mesh = SubResource("wall_no_offset")
 [node name="WallWithOffset" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0, 0)
 mesh = SubResource("wall_with_offset")
+
+[node name="Title" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5, 0)
+text = "PlaneMesh center_offset Test"
+pixel_size = 0.008
+billboard = 1
+modulate = Color(1, 1, 0.7, 1)
+
+[node name="LabelGround" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+text = "Ground (no offset)"
+pixel_size = 0.006
+billboard = 1
+modulate = Color(1, 1, 1, 1)
+
+[node name="LabelWallNoOffset" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 2.5, 0)
+text = "Wall WITHOUT center_offset (bottom at origin)"
+pixel_size = 0.006
+billboard = 1
+modulate = Color(1, 1, 1, 1)
+
+[node name="LabelWallWithOffset" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 2.5, 0)
+text = "Wall WITH center_offset=(0,2,0) (bottom at origin)"
+pixel_size = 0.006
+billboard = 1
+modulate = Color(1, 1, 1, 1)

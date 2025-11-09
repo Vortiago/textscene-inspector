@@ -35,3 +35,45 @@ projection = 1
 size = 5.0
 near = 0.1
 far = 100.0
+
+[node name="Title" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.5, 0)
+text = "Multi-Camera Test"
+pixel_size = 0.008
+billboard = 1
+modulate = Color(1, 1, 0.7, 1)
+
+[node name="LabelBox" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.5, 0)
+text = "Red test box"
+pixel_size = 0.006
+billboard = 1
+modulate = Color(1, 1, 1, 1)
+
+[node name="LabelMainCam" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 5)
+text = "MainCamera (perspective, FOV=75 degrees)"
+pixel_size = 0.005
+billboard = 1
+modulate = Color(0.7, 1, 0.7, 1)
+
+[node name="LabelTopCam" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 10.5, 0)
+text = "TopCamera (looking down, FOV=60 degrees)"
+pixel_size = 0.005
+billboard = 1
+modulate = Color(0.7, 1, 0.7, 1)
+
+[node name="LabelSideCam" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.5, 2.5, 0)
+text = "SideCamera (from side, FOV=70 degrees)"
+pixel_size = 0.005
+billboard = 1
+modulate = Color(0.7, 1, 0.7, 1)
+
+[node name="LabelOrthoCam" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.5, 5.5, 5.5)
+text = "OrthoCamera (orthographic projection)"
+pixel_size = 0.005
+billboard = 1
+modulate = Color(0.7, 1, 0.7, 1)

@@ -7,3 +7,17 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 5, 5)
 fov = 75.0
 near = 0.1
 far = 1000.0
+
+[node name="Title" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+text = "Camera3D Basic Test"
+pixel_size = 0.008
+billboard = 1
+modulate = Color(1, 1, 0.7, 1)
+
+[node name="Description" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
+text = "Single Camera3D at position (5,5,5), FOV=75 degrees"
+pixel_size = 0.006
+billboard = 1
+modulate = Color(1, 1, 1, 1)
