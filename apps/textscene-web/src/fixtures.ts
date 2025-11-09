@@ -31,24 +31,14 @@ export const fixtures: Fixture[] = [
     "category": "Edge Cases"
   },
   {
-    "name": "Perpendicular Walls",
-    "file": "edge-perpendicular-walls.tscn",
-    "category": "Edge Cases"
-  },
-  {
-    "name": "Plane Center Offset Room",
-    "file": "edge-plane-center-offset-room.tscn",
+    "name": "Unsupported 2d Audio",
+    "file": "edge-unsupported-2d-audio.tscn",
     "category": "Edge Cases"
   },
   {
     "name": "Plane Orientations",
-    "file": "edge-plane-orientations.tscn",
-    "category": "Edge Cases"
-  },
-  {
-    "name": "Unsupported 2d Audio",
-    "file": "edge-unsupported-2d-audio.tscn",
-    "category": "Edge Cases"
+    "file": "integration-plane-orientations.tscn",
+    "category": "Integration - Multi-Node"
   },
   {
     "name": "Nested Leaf Orange Sphere",
@@ -218,6 +208,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Hierarchy Wide",
     "file": "example-hierarchy-wide.tscn",
+    "category": "Examples - Complex Scenes"
+  },
+  {
+    "name": "Perpendicular Walls",
+    "file": "example-perpendicular-walls.tscn",
+    "category": "Examples - Complex Scenes"
+  },
+  {
+    "name": "Plane Center Offset",
+    "file": "example-plane-center-offset.tscn",
     "category": "Examples - Complex Scenes"
   },
   {
