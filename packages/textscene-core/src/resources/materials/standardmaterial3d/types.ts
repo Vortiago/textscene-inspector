@@ -17,6 +17,9 @@ export interface StandardMaterial3DProperties {
   roughness?: number;
   transparency?: number;
 
+  // Normal map
+  normal_enabled?: boolean;
+
   // Texture maps
   albedo_texture?: THREE.Texture;
   normal_texture?: THREE.Texture;

@@ -38,6 +38,9 @@ import '../nodes/physics/3d/staticbody3d/index.linter.js';
 import '../nodes/paths/path3d/index.linter.js';
 import '../nodes/paths/pathfollow3d/index.linter.js';
 
+// Import resource validators
+import '../resources/materials/standardmaterial3d/linterParser.js';
+
 // Re-export core linter classes
 export { Linter } from './Linter.js';
 export { StrictTscnParser } from './StrictTscnParser.js';

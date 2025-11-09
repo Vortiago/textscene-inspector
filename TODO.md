@@ -35,9 +35,11 @@
 2. [x] #WI-56: Material Override Support → [Details](work_items/WI-56.md) ⭐⭐⭐ **CRITICAL** (207 instances)
 3. [ ] #WI-57: WorldEnvironment + Environment SubResource → [Details](work_items/WI-57.md) ⭐⭐ (Not implemented)
 4. [x] #WI-58: PlaneMesh center_offset Property → [Details](work_items/WI-58.md) ⭐ ✅ Complete
-5. [ ] #WI-59: Normal Map Support (StandardMaterial3D) → [Details](work_items/WI-59.md) ⭐ (Quality polish)
-6. [ ] #WI-60: UV Transform (uv1_scale) → [Details](work_items/WI-60.md) ⭐ (Quality polish)
-7. [x] #WI-55: Generic Node Parsing (Fallback Support) → [Details](work_items/WI-55.md) (UX improvement)
+5. [x] #WI-59: Normal Map Support (StandardMaterial3D) → [Details](work_items/WI-59.md) ⭐ ✅ Complete
+6. [ ] #WI-62: Emission Enable Flag (StandardMaterial3D) → [Details](work_items/WI-62.md) ⭐ **CRITICAL** (Existing fixture broken)
+7. [ ] #WI-63: Comprehensive Texture Enable Flags → [Details](work_items/WI-63.md) ⭐ (Material completeness)
+8. [ ] #WI-60: UV Transform (uv1_scale) → [Details](work_items/WI-60.md) ⭐ (Quality polish)
+9. [x] #WI-55: Generic Node Parsing (Fallback Support) → [Details](work_items/WI-55.md) (UX improvement)
 
 **Dependencies**:
 - WI-15: Directory exists, needs registration/export fixes
@@ -45,6 +47,8 @@
 - WI-57: Independent (new implementation)
 - WI-58: Requires WI-18 (PlaneMesh) ✅ ✅ Complete
 - WI-59: Requires WI-52 (External Texture Loading) ✅
+- WI-62: Requires WI-59 (establishes enable flag pattern) ✅
+- WI-63: Requires WI-59, WI-62 (research phase first)
 - WI-60: Requires WI-52 (External Texture Loading) ✅
 
 **Version 1 Success Criteria**:

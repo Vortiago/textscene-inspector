@@ -186,6 +186,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Materials"
   },
   {
+    "name": "Material Normal Map",
+    "file": "unit-material-normal-map.tscn",
+    "category": "Unit - Materials"
+  },
+  {
     "name": "Material Override",
     "file": "unit-material-override.tscn",
     "category": "Unit - Materials"

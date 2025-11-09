@@ -178,5 +178,65 @@ describe('StandardMaterial3D Renderer', () => {
       expect(material.transparent).toBe(true);
       expect(material.opacity).toBe(0.75);
     });
+
+    it('should apply normal map when normal_enabled is true and texture provided', () => {
+      const mockTexture = new THREE.Texture();
+      const properties: StandardMaterial3DProperties = {
+        normal_enabled: true,
+        normal_texture: mockTexture,
+      };
+
+      const material = createStandardMaterial(properties);
+
+      expect(material.normalMap).toBe(mockTexture);
+    });
+
+    it('should NOT apply normal map when normal_enabled is false', () => {
+      const mockTexture = new THREE.Texture();
+      const properties: StandardMaterial3DProperties = {
+        normal_enabled: false,
+        normal_texture: mockTexture,
+      };
+
+      const material = createStandardMaterial(properties);
+
+      expect(material.normalMap).toBeNull();
+    });
+
+    it('should NOT apply normal map when normal_enabled is undefined', () => {
+      const mockTexture = new THREE.Texture();
+      const properties: StandardMaterial3DProperties = {
+        normal_texture: mockTexture,
+      };
+
+      const material = createStandardMaterial(properties);
+
+      expect(material.normalMap).toBeNull();
+    });
+
+    it('should NOT apply normal map when normal_enabled is true but no texture', () => {
+      const properties: StandardMaterial3DProperties = {
+        normal_enabled: true,
+      };
+
+      const material = createStandardMaterial(properties);
+
+      expect(material.normalMap).toBeNull();
+    });
+
+    it('should apply albedo texture and normal map together', () => {
+      const albedoTexture = new THREE.Texture();
+      const normalTexture = new THREE.Texture();
+      const properties: StandardMaterial3DProperties = {
+        albedo_texture: albedoTexture,
+        normal_enabled: true,
+        normal_texture: normalTexture,
+      };
+
+      const material = createStandardMaterial(properties);
+
+      expect(material.map).toBe(albedoTexture);
+      expect(material.normalMap).toBe(normalTexture);
+    });
   });
 });

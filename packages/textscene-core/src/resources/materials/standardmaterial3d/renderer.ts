@@ -39,7 +39,7 @@ export function createStandardMaterial(properties: StandardMaterial3DProperties)
     materialOptions.map = properties.albedo_texture;
   }
 
-  if (properties.normal_texture) {
+  if (properties.normal_enabled && properties.normal_texture) {
     materialOptions.normalMap = properties.normal_texture;
   }
 
