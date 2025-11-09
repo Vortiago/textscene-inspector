@@ -36,6 +36,11 @@ export const fixtures: Fixture[] = [
     "category": "Edge Cases"
   },
   {
+    "name": "Plane Center Offset Room",
+    "file": "edge-plane-center-offset-room.tscn",
+    "category": "Edge Cases"
+  },
+  {
     "name": "Plane Orientations",
     "file": "edge-plane-orientations.tscn",
     "category": "Edge Cases"
