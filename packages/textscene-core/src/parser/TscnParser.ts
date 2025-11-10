@@ -13,6 +13,7 @@ import '../nodes/3d/label3d/index.renderer.js';
 import '../nodes/3d/lights/spotlight3d/index.renderer.js';
 import '../nodes/3d/lights/directionallight3d/index.renderer.js';
 import '../nodes/3d/lights/omnilight3d/index.renderer.js';
+import '../nodes/3d/worldenvironment/index.renderer.js';
 
 import type { TscnScene } from './types.js';
 import { TscnParserCore } from './TscnParserCore.js';

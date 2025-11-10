@@ -43,6 +43,28 @@ const validateExtResource: PropertyValidator = (key, value, line) => {
   return null;
 };
 
+/**
+ * Validate Vector3 format for uv1_scale
+ * Note: Zero component validation should be added as a separate lint rule if needed,
+ * as property validators can only return errors, not warnings.
+ */
+const validateUv1Scale: PropertyValidator = (key, value, line) => {
+  const vector3Pattern = /^Vector3\s*\(\s*([-\d.]+)\s*,\s*([-\d.]+)\s*,\s*([-\d.]+)\s*\)$/;
+  const match = value.match(vector3Pattern);
+
+  if (!match) {
+    return {
+      severity: 'error',
+      message: `Property "${key}" must be a Vector3 like Vector3(1, 1, 1), got: ${value}`,
+      line,
+      column: 0,
+      code: 'INVALID_VECTOR3',
+    };
+  }
+
+  return null;
+};
+
 // Register validators for StandardMaterial3D properties
 validatorRegistry.registerAll('StandardMaterial3D', {
   normal_enabled: validateBoolean,
@@ -53,4 +75,5 @@ validatorRegistry.registerAll('StandardMaterial3D', {
   roughness_texture: validateExtResource,
   ao_texture: validateExtResource,
   emission_texture: validateExtResource,
+  uv1_scale: validateUv1Scale,
 });

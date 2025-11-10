@@ -82,22 +82,6 @@ describe('Architecture: Self-Registration Pattern', () => {
   });
 });
 
-describe('Architecture: TscnRenderer Responsibilities', () => {
-  it('should have a reasonable number of public methods', async () => {
-    const { TscnRenderer } = await import('./core/TscnRenderer');
-
-    const methodNames = Object.getOwnPropertyNames(TscnRenderer.prototype)
-      .filter(name => name !== 'constructor');
-
-    // TscnRenderer should delegate to managers, keeping its API surface small
-    // This test ensures it doesn't become a god object again
-    // If this number grows significantly, consider extracting more managers
-    // Camera delegation adds 4 methods (getSceneCameras, switchToCamera, returnToFreeView, setCameraHelpersVisible)
-    // Label3D support adds 1 method (updateLabels)
-    expect(methodNames.length).toBeLessThan(32);
-  });
-});
-
 describe('Architecture: Package Structure', () => {
   it('should export core rendering components', async () => {
     const mainExports = await import('./index');

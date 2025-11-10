@@ -28,17 +28,17 @@
 - ✅ WI-53 (External Materials): Working perfectly
 - ✅ Camera3D (WI-15): Registered and working
 - ✅ PlaneMesh center_offset (WI-58): Complete
-- ❌ WorldEnvironment (WI-57): Not implemented
+- ✅ WorldEnvironment (WI-57): Complete
 
 **Critical Path** (Revised order based on verification):
 1. [x] #WI-15: Camera3D Node → [Details](work_items/WI15.md) ⭐⭐⭐ ✅ Complete
 2. [x] #WI-56: Material Override Support → [Details](work_items/WI-56.md) ⭐⭐⭐ **CRITICAL** (207 instances)
-3. [ ] #WI-57: WorldEnvironment + Environment SubResource → [Details](work_items/WI-57.md) ⭐⭐ (Not implemented)
+3. [x] #WI-57: WorldEnvironment + Environment SubResource → [Details](work_items/WI-57.md) ⭐⭐ ✅ Complete
 4. [x] #WI-58: PlaneMesh center_offset Property → [Details](work_items/WI-58.md) ⭐ ✅ Complete
 5. [x] #WI-59: Normal Map Support (StandardMaterial3D) → [Details](work_items/WI-59.md) ⭐ ✅ Complete
 6. [x] #WI-62: Emission Enable Flag (StandardMaterial3D) → [Details](work_items/WI-62.md) ⭐ ✅ Complete
 7. [x] #WI-63: Comprehensive Texture Enable Flags (Research) → [Details](work_items/WI-63.md) ⭐ ✅ Complete
-8. [ ] #WI-60: UV Transform (uv1_scale) → [Details](work_items/WI-60.md) ⭐ (Quality polish)
+8. [x] #WI-60: UV Transform (uv1_scale) → [Details](work_items/WI-60.md) ⭐ ✅ Complete
 9. [x] #WI-55: Generic Node Parsing (Fallback Support) → [Details](work_items/WI-55.md) (UX improvement)
 
 **Dependencies**:
@@ -70,6 +70,7 @@
 - [ ] #WI-16: ShaderMaterial SubResource → [Details](work_items/WI16.md)
 - [ ] #WI-17: Custom Shader Support → [Details](work_items/WI17.md)
 - [x] #WI-64: Label3D Node Support → [Details](work_items/WI-64.md) (3D text labels for fixture annotations)
+- [ ] #WI-77: Advanced Environment Features → [Details](work_items/WI-77.md) (Post-processing, Sky, SSAO, SSR) **Deferred from WI-57**
 
 ## Phase 6.5: Material Feature Enable Flags (from WI-63 Research)
 
@@ -147,6 +148,26 @@
 - [ ] #WI-49: Documentation Updates for Claude Config → [Details](work_items/WI49.md)
 - [x] #WI-55: Instance Resolution Encapsulation (Alternative 1 implemented) → [Details](work_items/WI55.md)
 - [x] #WI-61: Standardize Logging Across All Applications → [Details](work_items/WI61.md)
+
+## Phase 13.5: Architecture Improvements
+
+### Core Architecture Refactoring (React Pattern, Not MVVM)
+
+- [ ] #WI-76: Event-Based Resource Loading System → [Details](work_items/WI-76.md) ⭐⭐⭐ **ARCHITECTURAL**
+- [ ] #WI-78: Immutable Scene Hierarchies with Reconciliation → [Details](work_items/WI-78.md) ⭐⭐⭐ **ARCHITECTURAL** (Depends on WI-76)
+  - [ ] #WI-78.1: Immutable SceneGraph Model → [Details](work_items/WI-78-1.md)
+  - [ ] #WI-78.2: Scene Resolution & Flattening → [Details](work_items/WI-78-2.md)
+  - [ ] #WI-78.3: Hierarchy Registry → [Details](work_items/WI-78-3.md)
+  - [ ] #WI-78.4: Dependency Tracking → [Details](work_items/WI-78-4.md)
+  - [ ] #WI-78.5: Reconciliation Engine → [Details](work_items/WI-78-5.md)
+  - [ ] #WI-78.6: Panel Integration → [Details](work_items/WI-78-6.md)
+- [ ] #WI-77: Multi-Panel Coordination (Revised & Simplified) → [Details](work_items/WI-77-revised.md) ⭐⭐⭐ **ARCHITECTURAL** (Depends on WI-78)
+  - [ ] #WI-77.1: Selective Update Strategies → Moderate complexity
+  - [ ] #WI-77.2: Property Diffing Utility → Simple
+  - [ ] #WI-77.3: Multi-Panel Event Routing → Already done in WI-78.3!
+  - [ ] #WI-77.4: VSCode File Watcher Integration → Simple
+
+**Pattern Note**: Using React's Immutable + Reconciliation pattern, NOT traditional MVVM/MVC. Simpler, proven at scale, easier to maintain.
 
 ## Testing & Documentation
 

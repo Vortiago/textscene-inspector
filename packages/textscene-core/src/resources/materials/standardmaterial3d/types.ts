@@ -21,6 +21,9 @@ export interface StandardMaterial3DProperties {
   normal_enabled?: boolean;
   emission_enabled?: boolean;
 
+  // UV transform
+  uv1_scale?: { x: number; y: number; z: number };
+
   // Texture maps
   albedo_texture?: THREE.Texture;
   normal_texture?: THREE.Texture;

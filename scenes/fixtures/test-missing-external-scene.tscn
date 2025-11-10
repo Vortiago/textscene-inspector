@@ -1,0 +1,10 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://subscenes/child.tscn" id="1"]
+
+[node name="World" type="Node3D"]
+
+[node name="ExternalNode" type="Node3D" parent="." instance=ExtResource("1")]
+
+[node name="Camera" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 5)

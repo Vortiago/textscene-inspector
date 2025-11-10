@@ -41,6 +41,7 @@ import '../nodes/paths/pathfollow3d/index.linter.js';
 
 // Import resource validators
 import '../resources/materials/standardmaterial3d/linterParser.js';
+import '../resources/environment/linterParser.js';
 
 // Re-export core linter classes
 export { Linter } from './Linter.js';
