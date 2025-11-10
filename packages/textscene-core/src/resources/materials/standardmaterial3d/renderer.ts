@@ -11,18 +11,27 @@ import { info } from '../../../logger';
  * In Godot, uv1_scale scales UV coordinates (smaller scale = more repetitions).
  * In THREE.js, texture.repeat scales texture (larger repeat = more repetitions).
  * Conversion: THREE.repeat = 1 / Godot.uv1_scale
+ *
+ * Returns a cloned texture with the UV transform applied if uv1_scale is set,
+ * otherwise returns the original texture.
  */
-function applyUVTransform(texture: THREE.Texture, properties: StandardMaterial3DProperties): void {
+function applyUVTransform(texture: THREE.Texture, properties: StandardMaterial3DProperties): THREE.Texture {
   if (properties.uv1_scale) {
-    texture.repeat.set(1 / properties.uv1_scale.x, 1 / properties.uv1_scale.y);
-    texture.wrapS = THREE.RepeatWrapping;
-    texture.wrapT = THREE.RepeatWrapping;
-    texture.needsUpdate = true;
+    // Clone the texture to avoid modifying the shared cached instance
+    const clonedTexture = texture.clone();
+    clonedTexture.repeat.set(1 / properties.uv1_scale.x, 1 / properties.uv1_scale.y);
+    clonedTexture.wrapS = THREE.RepeatWrapping;
+    clonedTexture.wrapT = THREE.RepeatWrapping;
+    clonedTexture.needsUpdate = true;
 
     info(
-      `[StandardMaterial3D] Applied uv1_scale: (${properties.uv1_scale.x}, ${properties.uv1_scale.y}) -> repeat: (${texture.repeat.x}, ${texture.repeat.y})`
+      `[StandardMaterial3D] Applied uv1_scale: (${properties.uv1_scale.x}, ${properties.uv1_scale.y}) -> repeat: (${clonedTexture.repeat.x}, ${clonedTexture.repeat.y})`
     );
+
+    return clonedTexture;
   }
+
+  return texture;
 }
 
 /**
@@ -56,33 +65,27 @@ export function createStandardMaterial(properties: StandardMaterial3DProperties)
 
   // Map texture properties and apply UV transforms
   if (properties.albedo_texture) {
-    materialOptions.map = properties.albedo_texture;
-    applyUVTransform(properties.albedo_texture, properties);
+    materialOptions.map = applyUVTransform(properties.albedo_texture, properties);
   }
 
   if (properties.normal_enabled && properties.normal_texture) {
-    materialOptions.normalMap = properties.normal_texture;
-    applyUVTransform(properties.normal_texture, properties);
+    materialOptions.normalMap = applyUVTransform(properties.normal_texture, properties);
   }
 
   if (properties.metallic_texture) {
-    materialOptions.metalnessMap = properties.metallic_texture;
-    applyUVTransform(properties.metallic_texture, properties);
+    materialOptions.metalnessMap = applyUVTransform(properties.metallic_texture, properties);
   }
 
   if (properties.roughness_texture) {
-    materialOptions.roughnessMap = properties.roughness_texture;
-    applyUVTransform(properties.roughness_texture, properties);
+    materialOptions.roughnessMap = applyUVTransform(properties.roughness_texture, properties);
   }
 
   if (properties.ao_texture) {
-    materialOptions.aoMap = properties.ao_texture;
-    applyUVTransform(properties.ao_texture, properties);
+    materialOptions.aoMap = applyUVTransform(properties.ao_texture, properties);
   }
 
   if (properties.emission_enabled && properties.emission_texture) {
-    materialOptions.emissiveMap = properties.emission_texture;
-    applyUVTransform(properties.emission_texture, properties);
+    materialOptions.emissiveMap = applyUVTransform(properties.emission_texture, properties);
   }
 
   return new THREE.MeshStandardMaterial(materialOptions);
