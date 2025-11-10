@@ -147,6 +147,26 @@
 - [x] #WI-55: Instance Resolution Encapsulation (Alternative 1 implemented) → [Details](work_items/WI55.md)
 - [x] #WI-61: Standardize Logging Across All Applications → [Details](work_items/WI61.md)
 
+## Phase 13.5: Architecture Improvements
+
+### Core Architecture Refactoring (React Pattern, Not MVVM)
+
+- [ ] #WI-76: Event-Based Resource Loading System → [Details](work_items/WI-76.md) ⭐⭐⭐ **ARCHITECTURAL**
+- [ ] #WI-78: Immutable Scene Hierarchies with Reconciliation → [Details](work_items/WI-78.md) ⭐⭐⭐ **ARCHITECTURAL** (Depends on WI-76)
+  - [ ] #WI-78.1: Immutable SceneGraph Model → [Details](work_items/WI-78-1.md)
+  - [ ] #WI-78.2: Scene Resolution & Flattening → [Details](work_items/WI-78-2.md)
+  - [ ] #WI-78.3: Hierarchy Registry → [Details](work_items/WI-78-3.md)
+  - [ ] #WI-78.4: Dependency Tracking → [Details](work_items/WI-78-4.md)
+  - [ ] #WI-78.5: Reconciliation Engine → [Details](work_items/WI-78-5.md)
+  - [ ] #WI-78.6: Panel Integration → [Details](work_items/WI-78-6.md)
+- [ ] #WI-77: Multi-Panel Coordination (Revised & Simplified) → [Details](work_items/WI-77-revised.md) ⭐⭐⭐ **ARCHITECTURAL** (Depends on WI-78)
+  - [ ] #WI-77.1: Selective Update Strategies → Moderate complexity
+  - [ ] #WI-77.2: Property Diffing Utility → Simple
+  - [ ] #WI-77.3: Multi-Panel Event Routing → Already done in WI-78.3!
+  - [ ] #WI-77.4: VSCode File Watcher Integration → Simple
+
+**Pattern Note**: Using React's Immutable + Reconciliation pattern, NOT traditional MVVM/MVC. Simpler, proven at scale, easier to maintain.
+
 ## Testing & Documentation
 
 - [ ] #WI-19: End-to-End Scene Testing → [Details](work_items/WI19.md)

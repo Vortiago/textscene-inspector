@@ -110,8 +110,8 @@ export class NodeLifecycleManager {
     object3D.userData.nodePath = nodePath;
     object3D.userData.nodeName = node.name;
 
-    // 2. Update NodeTracker
-    this.nodeTracker.set(nodePath, object3D, node);
+    // 2. Update NodeTracker with type for O(1) lookups
+    this.nodeTracker.set(nodePath, object3D, node, node.type);
 
     // 3. Add to THREE.js parent
     if (parent) {

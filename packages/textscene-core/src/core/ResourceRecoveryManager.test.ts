@@ -7,23 +7,38 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ResourceRecoveryManager } from './ResourceRecoveryManager';
 import { NodeTracker } from './NodeTracker';
 import { SceneManager } from './SceneManager';
+import { NodeLifecycleManager } from './NodeLifecycleManager';
 import { TscnParser } from '../parser/TscnParser';
+import { ResourceRegistry } from '../resources/ResourceRegistry';
 import type { MissingResource } from '../parser/types';
+import type { SceneData } from './types';
 
 describe('ResourceRecoveryManager', () => {
   let resourceRecovery: ResourceRecoveryManager;
   let nodeTracker: NodeTracker;
   let sceneManager: SceneManager;
+  let resourceRegistry: ResourceRegistry;
+  let nodeLifecycle: NodeLifecycleManager;
+  let mockSceneData: SceneData;
 
   beforeEach(() => {
     nodeTracker = new NodeTracker();
     const parser = new TscnParser();
     sceneManager = new SceneManager(parser, nodeTracker);
+    resourceRegistry = new ResourceRegistry();
+    nodeLifecycle = new NodeLifecycleManager(nodeTracker);
+
+    // Create mock scene data
+    mockSceneData = {
+      scene: { nodes: [], externalResources: [], subResources: [] },
+      resourceRegistry,
+      nodeLifecycle,
+    };
 
     resourceRecovery = new ResourceRecoveryManager(
       nodeTracker,
       sceneManager,
-      () => null // getCurrentSceneData
+      () => mockSceneData // Return mock scene data
     );
   });
 
@@ -144,7 +159,7 @@ describe('ResourceRecoveryManager', () => {
   });
 
   describe('provideResource()', () => {
-    it('should call sceneManager.provideScene() for missing resource', async () => {
+    it('should call sceneManager.provideScene() for missing PackedScene resource', async () => {
       const missingResource: MissingResource = {
         path: 'res://scenes/Enemy.tscn',
         type: 'PackedScene',
@@ -160,7 +175,7 @@ describe('ResourceRecoveryManager', () => {
       expect(provideSceneSpy).toHaveBeenCalledWith('res://scenes/Enemy.tscn');
     });
 
-    it('should remove resource from missing list on successful load', async () => {
+    it('should remove PackedScene resource from missing list on successful load', async () => {
       const missingResource: MissingResource = {
         path: 'res://scenes/Enemy.tscn',
         type: 'PackedScene',
@@ -206,7 +221,7 @@ describe('ResourceRecoveryManager', () => {
   });
 
   describe('Integration with SceneManager', () => {
-    it('should work with multiple resources in sequence', async () => {
+    it('should work with multiple PackedScene resources in sequence', async () => {
       const missing1: MissingResource = {
         path: 'res://scenes/Enemy.tscn',
         type: 'PackedScene',
@@ -224,13 +239,15 @@ describe('ResourceRecoveryManager', () => {
       expect(resourceRecovery.getMissingResources()).toHaveLength(2);
 
       // Provide first resource successfully
-      vi.spyOn(sceneManager, 'provideScene').mockResolvedValue();
+      const provideSceneSpy = vi.spyOn(sceneManager, 'provideScene').mockResolvedValue();
       await resourceRecovery.provideResource('res://scenes/Enemy.tscn');
       expect(resourceRecovery.getMissingResources()).toHaveLength(1);
 
       // Provide second resource successfully
       await resourceRecovery.provideResource('res://scenes/Player.tscn');
       expect(resourceRecovery.getMissingResources()).toHaveLength(0);
+
+      expect(provideSceneSpy).toHaveBeenCalledTimes(2);
     });
   });
 });

@@ -53,6 +53,16 @@ export class SceneManager {
   }
 
   /**
+   * Get the node lifecycle manager
+   */
+  getNodeLifecycle(): NodeLifecycleManager {
+    if (!this.nodeLifecycle) {
+      throw new Error('NodeLifecycleManager not set. Call setNodeLifecycleManager() first.');
+    }
+    return this.nodeLifecycle;
+  }
+
+  /**
    * Load and cache a scene from external file
    */
   async loadScene(scenePath: string): Promise<TscnScene> {
