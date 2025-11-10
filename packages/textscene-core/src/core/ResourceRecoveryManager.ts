@@ -95,9 +95,10 @@ export class ResourceRecoveryManager {
         logger.info(`[Resource Provided] ✅ Successfully provided Texture and updated meshes: ${path}`);
       } else if (missingResource.type.includes('Material')) {
         // Material: Clear material cache, re-render meshes
-        logger.info(`[Resource Provided] Clearing material cache for: ${path}`);
+        // NOTE: Clear ALL materials since they're cached by ID, not path
+        logger.info(`[Resource Provided] Clearing all material caches for: ${path}`);
 
-        sceneData.resourceRegistry.clearMaterialCache(path);
+        sceneData.resourceRegistry.clearMaterialCache(); // Clear ALL materials
 
         // Find all MeshInstance3D nodes and re-render them
         // IMPORTANT: Convert Set to Array to avoid modifying collection while iterating

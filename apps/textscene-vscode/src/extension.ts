@@ -72,6 +72,37 @@ export function activate(context: vscode.ExtensionContext) {
       }
     })
   );
+
+  // Watch for external resource file changes (textures, materials, external scenes)
+  const resourceWatcher = vscode.workspace.createFileSystemWatcher(
+    '**/*.{tres,png,jpg,jpeg,svg,tscn}',
+    false, // Don't ignore creates
+    false, // Don't ignore changes
+    false  // Don't ignore deletes
+  );
+
+  context.subscriptions.push(resourceWatcher);
+
+  // When a resource file changes, update all panels (they will do incremental updates if possible)
+  const handleResourceChange = async (uri: vscode.Uri) => {
+    // Skip .tscn files that are main scene files (already handled by onDidSaveTextDocument)
+    for (const panelUri of panels.keys()) {
+      if (panelUri === uri.toString()) {
+        continue; // This is a main scene file, already handled
+      }
+    }
+
+    // Update all panels - they will only reload if they reference this resource
+    // The incremental update system will minimize the cost of checking
+    for (const panel of panels.values()) {
+      panel.update(panel.resource);
+    }
+  };
+
+  context.subscriptions.push(
+    resourceWatcher.onDidChange(handleResourceChange),
+    resourceWatcher.onDidCreate(handleResourceChange)
+  );
 }
 
 export function deactivate() {
