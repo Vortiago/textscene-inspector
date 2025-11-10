@@ -91,6 +91,16 @@ describe('TscnRenderer - WorldEnvironment Integration', () => {
     expect(loggerInfoSpy).toHaveBeenCalledWith(
       expect.stringContaining('Applied background color')
     );
+
+    // CRITICAL: Verify scene.background is actually set on the THREE.js scene
+    const threeScene = renderer.getSceneForTesting();
+    expect(threeScene.background).toBeDefined();
+    expect(threeScene.background).toBeInstanceOf(THREE.Color);
+    if (threeScene.background && threeScene.background instanceof THREE.Color) {
+      expect(threeScene.background.r).toBeCloseTo(0.15, 2);
+      expect(threeScene.background.g).toBeCloseTo(0.12, 2);
+      expect(threeScene.background.b).toBeCloseTo(0.1, 2);
+    }
   });
 
   it('should apply volumetric fog from WorldEnvironment', async () => {
@@ -280,6 +290,56 @@ describe('TscnRenderer - WorldEnvironment Integration', () => {
     );
   });
 
+  it('should not apply background with BG_CLEAR_COLOR mode', async () => {
+    const scene: TscnScene = {
+      nodes: [
+        {
+          name: 'WorldEnvironment',
+          type: 'WorldEnvironment',
+          properties: { environment: 'SubResource("Environment_1")' },
+          children: [],
+        },
+      ],
+      externalResources: [],
+      internalResources: [
+        {
+          id: 'Environment_1',
+          type: 'Environment',
+          data: {
+            id: 'Environment_1',
+            background_mode: '0', // BG_CLEAR_COLOR - don't apply
+            background_color: 'Color(1, 0, 0, 1)', // Should be ignored
+            background_energy_multiplier: '1.0',
+            volumetric_fog_enabled: 'false',
+            volumetric_fog_density: '0.05',
+            volumetric_fog_albedo: 'Color(1, 1, 1, 1)',
+            volumetric_fog_emission: 'Color(0, 0, 0, 1)',
+            adjustment_enabled: 'false',
+            adjustment_brightness: '1.0',
+            adjustment_contrast: '1.0',
+            adjustment_saturation: '1.0',
+            ssr_enabled: 'false',
+          },
+        },
+      ],
+    };
+
+    await renderer.render(scene);
+
+    // Should NOT log background color application
+    expect(loggerInfoSpy).not.toHaveBeenCalledWith(
+      expect.stringContaining('Applied background color')
+    );
+
+    // Verify scene.background was NOT set
+    const threeScene = renderer.getSceneForTesting();
+    // Background should be null or the default scene background (not the red color)
+    if (threeScene.background instanceof THREE.Color) {
+      // If it's a color, it should NOT be red (1, 0, 0)
+      expect(threeScene.background.r).not.toBeCloseTo(1, 2);
+    }
+  });
+
   it('should handle scene without WorldEnvironment gracefully', async () => {
     const scene: TscnScene = {
       nodes: [
@@ -298,6 +358,51 @@ describe('TscnRenderer - WorldEnvironment Integration', () => {
 
     // Should not throw and should not log warnings
     expect(loggerWarnSpy).not.toHaveBeenCalled();
+  });
+
+  it('should warn about non-default background_energy_multiplier', async () => {
+    const scene: TscnScene = {
+      nodes: [
+        {
+          name: 'WorldEnvironment',
+          type: 'WorldEnvironment',
+          properties: { environment: 'SubResource("Environment_1")' },
+          children: [],
+        },
+      ],
+      externalResources: [],
+      internalResources: [
+        {
+          id: 'Environment_1',
+          type: 'Environment',
+          data: {
+            id: 'Environment_1',
+            background_mode: '1', // BG_COLOR
+            background_color: 'Color(0.5, 0.5, 0.5, 1)',
+            background_energy_multiplier: '2.0', // NON-DEFAULT
+            volumetric_fog_enabled: 'false',
+            volumetric_fog_density: '0.05',
+            volumetric_fog_albedo: 'Color(1, 1, 1, 1)',
+            volumetric_fog_emission: 'Color(0, 0, 0, 1)',
+            adjustment_enabled: 'false',
+            adjustment_brightness: '1.0',
+            adjustment_contrast: '1.0',
+            adjustment_saturation: '1.0',
+            ssr_enabled: 'false',
+          },
+        },
+      ],
+    };
+
+    await renderer.render(scene);
+
+    // Check that warning was logged
+    expect(loggerWarnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Background energy multiplier')
+    );
+    expect(loggerWarnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('WI-77')
+    );
   });
 
   it('should log info about fog emission when non-zero', async () => {

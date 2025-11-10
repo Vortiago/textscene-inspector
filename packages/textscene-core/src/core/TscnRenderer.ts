@@ -216,6 +216,11 @@ export class TscnRenderer {
       const bgColor = new THREE.Color(r, g, b);
       this.scene.background = bgColor;
       logger.info(`Applied background color: rgb(${r.toFixed(2)}, ${g.toFixed(2)}, ${b.toFixed(2)})`);
+
+      // Warn if energy multiplier is not default (1.0)
+      if (Math.abs(envSettings.background.energyMultiplier - 1.0) > 0.001) {
+        logger.warn(`Background energy multiplier (${envSettings.background.energyMultiplier}) is not supported - requires tone mapping/HDR pipeline (see WI-77)`);
+      }
     } else if (envSettings.background.mode > BackgroundMode.BG_COLOR) {
       logger.warn(`Background mode ${envSettings.background.mode} not yet supported (only BG_CLEAR_COLOR=0 and BG_COLOR=1 are implemented)`);
     }
