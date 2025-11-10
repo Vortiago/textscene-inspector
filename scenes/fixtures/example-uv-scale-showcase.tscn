@@ -3,42 +3,42 @@
 [ext_resource type="Texture2D" path="res://textures/checkerboard.svg" id="1"]
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_1"]
-size = Vector2(2, 2)
+size = Vector2(4, 4)
 
 [sub_resource type="StandardMaterial3D" id="Material_025"]
 albedo_texture = ExtResource("1")
 uv1_scale = Vector3(0.25, 0.25, 1)
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_2"]
-size = Vector2(2, 2)
+size = Vector2(4, 4)
 
 [sub_resource type="StandardMaterial3D" id="Material_05"]
 albedo_texture = ExtResource("1")
 uv1_scale = Vector3(0.5, 0.5, 1)
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_3"]
-size = Vector2(2, 2)
+size = Vector2(4, 4)
 
 [sub_resource type="StandardMaterial3D" id="Material_1"]
 albedo_texture = ExtResource("1")
 uv1_scale = Vector3(1, 1, 1)
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_4"]
-size = Vector2(2, 2)
+size = Vector2(4, 4)
 
 [sub_resource type="StandardMaterial3D" id="Material_2"]
 albedo_texture = ExtResource("1")
 uv1_scale = Vector3(2, 2, 1)
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_5"]
-size = Vector2(2, 2)
+size = Vector2(4, 4)
 
 [sub_resource type="StandardMaterial3D" id="Material_4"]
 albedo_texture = ExtResource("1")
 uv1_scale = Vector3(4, 4, 1)
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_6"]
-size = Vector2(2, 2)
+size = Vector2(4, 4)
 
 [sub_resource type="StandardMaterial3D" id="Material_8"]
 albedo_texture = ExtResource("1")
@@ -47,39 +47,39 @@ uv1_scale = Vector3(8, 8, 1)
 [node name="UVScaleShowcase" type="Node3D"]
 
 [node name="Camera3D" type="Camera3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 0.866025, 0.5, 0, -0.5, 0.866025, 0, 4, 8)
+transform = Transform3D(1, 0, 0, 0, 0.866025, 0.5, 0, -0.5, 0.866025, 0, 8, 16)
 fov = 60.0
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
-transform = Transform3D(0.866025, -0.25, 0.433013, 0, 0.866025, 0.5, -0.5, -0.433013, 0.75, 0, 5, 0)
+transform = Transform3D(0.866025, -0.25, 0.433013, 0, 0.866025, 0.5, -0.5, -0.433013, 0.75, 0, 10, 0)
 light_energy = 1.0
 
 [node name="Plane_025" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.5, 2, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 5, 0)
 material_override = SubResource("Material_025")
 mesh = SubResource("PlaneMesh_1")
 
 [node name="Plane_05" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, 2, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 5, 0)
 material_override = SubResource("Material_05")
 mesh = SubResource("PlaneMesh_2")
 
 [node name="Plane_1" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.5, 0, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 0, 0)
 material_override = SubResource("Material_1")
 mesh = SubResource("PlaneMesh_3")
 
 [node name="Plane_2" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, 0, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 0, 0)
 material_override = SubResource("Material_2")
 mesh = SubResource("PlaneMesh_4")
 
 [node name="Plane_4" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.5, -2, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, -5, 0)
 material_override = SubResource("Material_4")
 mesh = SubResource("PlaneMesh_5")
 
 [node name="Plane_8" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, -2, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, -5, 0)
 material_override = SubResource("Material_8")
 mesh = SubResource("PlaneMesh_6")
