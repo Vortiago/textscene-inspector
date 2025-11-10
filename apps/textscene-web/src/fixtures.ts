@@ -41,6 +41,16 @@ export const fixtures: Fixture[] = [
     "category": "Edge Cases"
   },
   {
+    "name": "World Environment Unsupported",
+    "file": "edge-world-environment-unsupported.tscn",
+    "category": "Edge Cases"
+  },
+  {
+    "name": "Material Features",
+    "file": "integration-material-features.tscn",
+    "category": "Integration - Multi-Node"
+  },
+  {
     "name": "Plane Orientations",
     "file": "integration-plane-orientations.tscn",
     "category": "Integration - Multi-Node"
@@ -108,6 +118,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Unsupported Nodes",
     "file": "unit-unsupported-nodes.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "World Environment Basic",
+    "file": "unit-world-environment-basic.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "World Environment No Fog",
+    "file": "unit-world-environment-no-fog.tscn",
     "category": "Other"
   },
   {

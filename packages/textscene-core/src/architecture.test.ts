@@ -93,7 +93,8 @@ describe('Architecture: TscnRenderer Responsibilities', () => {
     // This test ensures it doesn't become a god object again
     // If this number grows significantly, consider extracting more managers
     // Camera delegation adds 4 methods (getSceneCameras, switchToCamera, returnToFreeView, setCameraHelpersVisible)
-    expect(methodNames.length).toBeLessThan(30);
+    // WorldEnvironment adds 1 private method (applyWorldEnvironment)
+    expect(methodNames.length).toBeLessThan(31);
   });
 });
 

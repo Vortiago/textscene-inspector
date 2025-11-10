@@ -291,4 +291,75 @@ describe('parseStandardMaterial3D', () => {
     expect(result.metallic).toBe(0.8);
     expect(result.roughness).toBe(0.2);
   });
+
+  it('should parse emission_enabled as true from string "true"', async () => {
+    const properties = {
+      emission_enabled: 'true',
+    };
+
+    const result = await parseStandardMaterial3D(properties);
+
+    expect(result.emission_enabled).toBe(true);
+  });
+
+  it('should parse emission_enabled as false from string "false"', async () => {
+    const properties = {
+      emission_enabled: 'false',
+    };
+
+    const result = await parseStandardMaterial3D(properties);
+
+    expect(result.emission_enabled).toBe(false);
+  });
+
+  it('should parse emission_enabled as false for any non-"true" value', async () => {
+    const properties = {
+      emission_enabled: 'invalid',
+    };
+
+    const result = await parseStandardMaterial3D(properties);
+
+    expect(result.emission_enabled).toBe(false);
+  });
+
+  it('should leave emission_enabled undefined when not specified', async () => {
+    const properties = {};
+
+    const result = await parseStandardMaterial3D(properties);
+
+    expect(result.emission_enabled).toBeUndefined();
+  });
+
+  it('should parse emission_enabled independently of emission_texture', async () => {
+    const properties = {
+      emission_enabled: 'true',
+      emission_texture: 'ExtResource("1")',
+    };
+
+    const result = await parseStandardMaterial3D(properties);
+
+    expect(result.emission_enabled).toBe(true);
+  });
+
+  it('should handle emission_enabled=true without texture', async () => {
+    const properties = {
+      emission_enabled: 'true',
+    };
+
+    const result = await parseStandardMaterial3D(properties);
+
+    expect(result.emission_enabled).toBe(true);
+    expect(result.emission_texture).toBeUndefined();
+  });
+
+  it('should handle emission_enabled=false with texture present', async () => {
+    const properties = {
+      emission_enabled: 'false',
+      emission_texture: 'ExtResource("1")',
+    };
+
+    const result = await parseStandardMaterial3D(properties);
+
+    expect(result.emission_enabled).toBe(false);
+  });
 });

@@ -70,6 +70,10 @@ export async function parseStandardMaterial3D(
     result.normal_enabled = properties.normal_enabled === 'true';
   }
 
+  if (properties.emission_enabled !== undefined) {
+    result.emission_enabled = properties.emission_enabled === 'true';
+  }
+
   // Load external texture references if registry provided
   if (registry) {
     // Albedo texture

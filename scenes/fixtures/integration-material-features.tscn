@@ -1,0 +1,149 @@
+[gd_scene format=3]
+
+[sub_resource type="SphereMesh" id="SphereMesh_1"]
+radius = 0.8
+height = 1.6
+radial_segments = 32
+rings = 16
+
+[sub_resource type="StandardMaterial3D" id="Mat_AlbedoOnly"]
+albedo_color = Color(0.8, 0.2, 0.2, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat_MetallicRough"]
+albedo_color = Color(0.7, 0.7, 0.7, 1)
+metallic = 0.9
+roughness = 0.2
+
+[sub_resource type="StandardMaterial3D" id="Mat_NonMetallic"]
+albedo_color = Color(0.2, 0.6, 0.8, 1)
+metallic = 0.0
+roughness = 0.8
+
+[sub_resource type="StandardMaterial3D" id="Mat_EmissionColor"]
+albedo_color = Color(0.1, 0.1, 0.1, 1)
+emission_enabled = true
+emission = Color(0.0, 1.0, 0.5, 1)
+emission_energy_multiplier = 3.0
+
+[sub_resource type="StandardMaterial3D" id="Mat_EmissionDisabled"]
+albedo_color = Color(0.1, 0.1, 0.1, 1)
+emission_enabled = false
+emission = Color(1.0, 0.0, 0.0, 1)
+emission_energy_multiplier = 5.0
+
+[sub_resource type="StandardMaterial3D" id="Mat_NormalEnabled"]
+albedo_color = Color(0.6, 0.4, 0.2, 1)
+normal_enabled = true
+roughness = 0.4
+
+[sub_resource type="StandardMaterial3D" id="Mat_NormalDisabled"]
+albedo_color = Color(0.6, 0.4, 0.2, 1)
+normal_enabled = false
+roughness = 0.4
+
+[sub_resource type="StandardMaterial3D" id="Mat_FullPBR"]
+albedo_color = Color(0.9, 0.9, 0.9, 1)
+metallic = 0.7
+roughness = 0.3
+normal_enabled = true
+
+[sub_resource type="StandardMaterial3D" id="Mat_Emissive_Metallic"]
+albedo_color = Color(0.3, 0.3, 0.8, 1)
+metallic = 0.8
+roughness = 0.1
+emission_enabled = true
+emission = Color(0.5, 0.5, 1.0, 1)
+emission_energy_multiplier = 2.0
+
+[sub_resource type="StandardMaterial3D" id="Mat_Transparent"]
+albedo_color = Color(0.2, 0.8, 0.2, 0.6)
+metallic = 0.0
+roughness = 0.3
+
+[sub_resource type="StandardMaterial3D" id="Mat_Glass"]
+albedo_color = Color(0.9, 0.9, 1.0, 0.3)
+metallic = 0.1
+roughness = 0.05
+
+[node name="Root" type="Node3D"]
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866025, -0.433013, 0.25, 0, 0.5, 0.866025, -0.5, -0.75, 0.433013, 0, 5, 3)
+light_energy = 1.0
+shadow_enabled = true
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.866025, 0.5, 0, -0.5, 0.866025, 0, 4, 8)
+fov = 60.0
+
+[node name="Row1_Basic" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
+
+[node name="Sphere_AlbedoOnly" type="MeshInstance3D" parent="Row1_Basic"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 0, 0)
+mesh = SubResource("SphereMesh_1")
+surface_material_override/0 = SubResource("Mat_AlbedoOnly")
+
+[node name="Sphere_MetallicRough" type="MeshInstance3D" parent="Row1_Basic"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 0, 0)
+mesh = SubResource("SphereMesh_1")
+surface_material_override/0 = SubResource("Mat_MetallicRough")
+
+[node name="Sphere_NonMetallic" type="MeshInstance3D" parent="Row1_Basic"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, 0)
+mesh = SubResource("SphereMesh_1")
+surface_material_override/0 = SubResource("Mat_NonMetallic")
+
+[node name="Row2_Emission" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+
+[node name="Sphere_EmissionEnabled" type="MeshInstance3D" parent="Row2_Emission"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 0, 0)
+mesh = SubResource("SphereMesh_1")
+surface_material_override/0 = SubResource("Mat_EmissionColor")
+
+[node name="Sphere_EmissionDisabled" type="MeshInstance3D" parent="Row2_Emission"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 0, 0)
+mesh = SubResource("SphereMesh_1")
+surface_material_override/0 = SubResource("Mat_EmissionDisabled")
+
+[node name="Sphere_NormalEnabled" type="MeshInstance3D" parent="Row2_Emission"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, 0)
+mesh = SubResource("SphereMesh_1")
+surface_material_override/0 = SubResource("Mat_NormalEnabled")
+
+[node name="Row3_Advanced" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -2, 0)
+
+[node name="Sphere_NormalDisabled" type="MeshInstance3D" parent="Row3_Advanced"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 0, 0)
+mesh = SubResource("SphereMesh_1")
+surface_material_override/0 = SubResource("Mat_NormalDisabled")
+
+[node name="Sphere_FullPBR" type="MeshInstance3D" parent="Row3_Advanced"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 0, 0)
+mesh = SubResource("SphereMesh_1")
+surface_material_override/0 = SubResource("Mat_FullPBR")
+
+[node name="Sphere_EmissiveMetallic" type="MeshInstance3D" parent="Row3_Advanced"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, 0)
+mesh = SubResource("SphereMesh_1")
+surface_material_override/0 = SubResource("Mat_Emissive_Metallic")
+
+[node name="Row4_Transparency" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -4, 0)
+
+[node name="Sphere_Transparent" type="MeshInstance3D" parent="Row4_Transparency"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 0, 0)
+mesh = SubResource("SphereMesh_1")
+surface_material_override/0 = SubResource("Mat_Transparent")
+
+[node name="Sphere_Glass" type="MeshInstance3D" parent="Row4_Transparency"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 0, 0)
+mesh = SubResource("SphereMesh_1")
+surface_material_override/0 = SubResource("Mat_Glass")
+
+[node name="BackgroundPlane" type="MeshInstance3D" parent="."]
+transform = Transform3D(20, 0, 0, 0, 20, 0, 0, 0, 1, -4, 0, -3)
+mesh = SubResource("SphereMesh_1")
+surface_material_override/0 = SubResource("Mat_AlbedoOnly")
