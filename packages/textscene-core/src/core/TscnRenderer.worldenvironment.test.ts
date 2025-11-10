@@ -114,8 +114,8 @@ describe('TscnRenderer - WorldEnvironment Integration', () => {
             background_color: 'Color(0, 0, 0, 1)',
             background_energy_multiplier: '1.0',
             volumetric_fog_enabled: 'true',
-            volumetric_fog_density: '0.001',
-            volumetric_fog_albedo: 'Color(0.8, 0.8, 0.9, 1)',
+            volumetric_fog_density: '0.05',
+            volumetric_fog_albedo: 'Color(0.6, 0.7, 0.9, 1)',
             volumetric_fog_emission: 'Color(0, 0, 0, 1)',
             adjustment_enabled: 'false',
             adjustment_brightness: '1.0',
@@ -133,6 +133,19 @@ describe('TscnRenderer - WorldEnvironment Integration', () => {
     expect(loggerInfoSpy).toHaveBeenCalledWith(
       expect.stringContaining('Applied volumetric fog')
     );
+
+    // CRITICAL: Verify scene.fog is actually set on the THREE.js scene
+    const threeScene = renderer.getSceneForTesting();
+    expect(threeScene.fog).toBeDefined();
+    expect(threeScene.fog).toBeInstanceOf(THREE.FogExp2);
+    if (threeScene.fog && 'density' in threeScene.fog) {
+      expect(threeScene.fog.density).toBe(0.05);
+      // Check fog color is approximately correct (blue-ish)
+      const fogColor = threeScene.fog.color;
+      expect(fogColor.r).toBeCloseTo(0.6, 2);
+      expect(fogColor.g).toBeCloseTo(0.7, 2);
+      expect(fogColor.b).toBeCloseTo(0.9, 2);
+    }
   });
 
   it('should warn about unsupported color adjustments', async () => {

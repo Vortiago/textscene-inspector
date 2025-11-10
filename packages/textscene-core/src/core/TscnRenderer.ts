@@ -225,7 +225,8 @@ export class TscnRenderer {
       const { r, g, b } = envSettings.fog.albedo;
       const fogColor = new THREE.Color(r, g, b);
       // Use THREE.FogExp2 for exponential fog density
-      this.scene.fog = new THREE.FogExp2(fogColor.getHex(), envSettings.fog.density);
+      // Pass the Color instance directly (not getHex()) to ensure proper color handling
+      this.scene.fog = new THREE.FogExp2(fogColor, envSettings.fog.density);
       logger.info(`Applied volumetric fog: density=${envSettings.fog.density.toFixed(4)}, albedo=rgb(${r.toFixed(2)}, ${g.toFixed(2)}, ${b.toFixed(2)})`);
 
       // Log info if emission is non-zero (visual-only feature not fully supported)
