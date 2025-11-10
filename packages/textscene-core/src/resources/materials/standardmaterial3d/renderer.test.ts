@@ -300,4 +300,164 @@ describe('StandardMaterial3D Renderer', () => {
       expect(() => createStandardMaterial(properties)).not.toThrow();
     });
   });
+
+  describe('UV Transform (uv1_scale)', () => {
+    it('should apply UV transform to albedo texture with uv1_scale=0.5', () => {
+      const albedoTexture = new THREE.Texture();
+      const properties: StandardMaterial3DProperties = {
+        albedo_texture: albedoTexture,
+        uv1_scale: { x: 0.5, y: 0.5, z: 0.5 },
+      };
+
+      const material = createStandardMaterial(properties);
+
+      expect(material.map).toBe(albedoTexture);
+      expect(albedoTexture.repeat.x).toBe(2); // 1 / 0.5 = 2
+      expect(albedoTexture.repeat.y).toBe(2);
+      expect(albedoTexture.wrapS).toBe(THREE.RepeatWrapping);
+      expect(albedoTexture.wrapT).toBe(THREE.RepeatWrapping);
+    });
+
+    it('should apply UV transform to albedo texture with uv1_scale=2.4', () => {
+      const albedoTexture = new THREE.Texture();
+      const properties: StandardMaterial3DProperties = {
+        albedo_texture: albedoTexture,
+        uv1_scale: { x: 2.4, y: 2.4, z: 2.4 },
+      };
+
+      const material = createStandardMaterial(properties);
+
+      expect(material.map).toBe(albedoTexture);
+      expect(albedoTexture.repeat.x).toBeCloseTo(1 / 2.4, 5);
+      expect(albedoTexture.repeat.y).toBeCloseTo(1 / 2.4, 5);
+      expect(albedoTexture.wrapS).toBe(THREE.RepeatWrapping);
+      expect(albedoTexture.wrapT).toBe(THREE.RepeatWrapping);
+    });
+
+    it('should apply UV transform to normal texture', () => {
+      const normalTexture = new THREE.Texture();
+      const properties: StandardMaterial3DProperties = {
+        normal_enabled: true,
+        normal_texture: normalTexture,
+        uv1_scale: { x: 0.5, y: 0.5, z: 0.5 },
+      };
+
+      const material = createStandardMaterial(properties);
+
+      expect(material.normalMap).toBe(normalTexture);
+      expect(normalTexture.repeat.x).toBe(2);
+      expect(normalTexture.repeat.y).toBe(2);
+      expect(normalTexture.wrapS).toBe(THREE.RepeatWrapping);
+      expect(normalTexture.wrapT).toBe(THREE.RepeatWrapping);
+    });
+
+    it('should apply UV transform to metallic texture', () => {
+      const metallicTexture = new THREE.Texture();
+      const properties: StandardMaterial3DProperties = {
+        metallic_texture: metallicTexture,
+        uv1_scale: { x: 0.5, y: 0.5, z: 0.5 },
+      };
+
+      const material = createStandardMaterial(properties);
+
+      expect(material.metalnessMap).toBe(metallicTexture);
+      expect(metallicTexture.repeat.x).toBe(2);
+      expect(metallicTexture.repeat.y).toBe(2);
+    });
+
+    it('should apply UV transform to roughness texture', () => {
+      const roughnessTexture = new THREE.Texture();
+      const properties: StandardMaterial3DProperties = {
+        roughness_texture: roughnessTexture,
+        uv1_scale: { x: 0.5, y: 0.5, z: 0.5 },
+      };
+
+      const material = createStandardMaterial(properties);
+
+      expect(material.roughnessMap).toBe(roughnessTexture);
+      expect(roughnessTexture.repeat.x).toBe(2);
+      expect(roughnessTexture.repeat.y).toBe(2);
+    });
+
+    it('should apply UV transform to AO texture', () => {
+      const aoTexture = new THREE.Texture();
+      const properties: StandardMaterial3DProperties = {
+        ao_texture: aoTexture,
+        uv1_scale: { x: 0.5, y: 0.5, z: 0.5 },
+      };
+
+      const material = createStandardMaterial(properties);
+
+      expect(material.aoMap).toBe(aoTexture);
+      expect(aoTexture.repeat.x).toBe(2);
+      expect(aoTexture.repeat.y).toBe(2);
+    });
+
+    it('should apply UV transform to emission texture', () => {
+      const emissionTexture = new THREE.Texture();
+      const properties: StandardMaterial3DProperties = {
+        emission_enabled: true,
+        emission_texture: emissionTexture,
+        uv1_scale: { x: 0.5, y: 0.5, z: 0.5 },
+      };
+
+      const material = createStandardMaterial(properties);
+
+      expect(material.emissiveMap).toBe(emissionTexture);
+      expect(emissionTexture.repeat.x).toBe(2);
+      expect(emissionTexture.repeat.y).toBe(2);
+    });
+
+    it('should apply UV transform to multiple textures', () => {
+      const albedoTexture = new THREE.Texture();
+      const normalTexture = new THREE.Texture();
+      const properties: StandardMaterial3DProperties = {
+        albedo_texture: albedoTexture,
+        normal_enabled: true,
+        normal_texture: normalTexture,
+        uv1_scale: { x: 0.5, y: 0.5, z: 0.5 },
+      };
+
+      createStandardMaterial(properties);
+
+      expect(albedoTexture.repeat.x).toBe(2);
+      expect(albedoTexture.repeat.y).toBe(2);
+      expect(normalTexture.repeat.x).toBe(2);
+      expect(normalTexture.repeat.y).toBe(2);
+    });
+
+    it('should handle different x and y values in uv1_scale', () => {
+      const albedoTexture = new THREE.Texture();
+      const properties: StandardMaterial3DProperties = {
+        albedo_texture: albedoTexture,
+        uv1_scale: { x: 0.5, y: 2.0, z: 1.0 },
+      };
+
+      createStandardMaterial(properties);
+
+      expect(albedoTexture.repeat.x).toBe(2); // 1 / 0.5
+      expect(albedoTexture.repeat.y).toBe(0.5); // 1 / 2.0
+    });
+
+    it('should NOT apply UV transform when uv1_scale is undefined', () => {
+      const albedoTexture = new THREE.Texture();
+      const properties: StandardMaterial3DProperties = {
+        albedo_texture: albedoTexture,
+      };
+
+      const material = createStandardMaterial(properties);
+
+      expect(material.map).toBe(albedoTexture);
+      expect(albedoTexture.repeat.x).toBe(1); // THREE.js default
+      expect(albedoTexture.repeat.y).toBe(1);
+    });
+
+    it('should NOT crash when uv1_scale provided but no textures', () => {
+      const properties: StandardMaterial3DProperties = {
+        uv1_scale: { x: 0.5, y: 0.5, z: 0.5 },
+      };
+
+      expect(() => createStandardMaterial(properties)).not.toThrow();
+    });
+  });
 });

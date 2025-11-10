@@ -38,7 +38,7 @@
 5. [x] #WI-59: Normal Map Support (StandardMaterial3D) → [Details](work_items/WI-59.md) ⭐ ✅ Complete
 6. [x] #WI-62: Emission Enable Flag (StandardMaterial3D) → [Details](work_items/WI-62.md) ⭐ ✅ Complete
 7. [x] #WI-63: Comprehensive Texture Enable Flags (Research) → [Details](work_items/WI-63.md) ⭐ ✅ Complete
-8. [ ] #WI-60: UV Transform (uv1_scale) → [Details](work_items/WI-60.md) ⭐ (Quality polish)
+8. [x] #WI-60: UV Transform (uv1_scale) → [Details](work_items/WI-60.md) ⭐ ✅ Complete
 9. [x] #WI-55: Generic Node Parsing (Fallback Support) → [Details](work_items/WI-55.md) (UX improvement)
 
 **Dependencies**:

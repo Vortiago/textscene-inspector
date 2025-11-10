@@ -5,6 +5,7 @@
 import type { Color, StandardMaterial3DProperties } from './types';
 import { ResourceRegistry } from '../../ResourceRegistry';
 import { warn } from '../../../logger';
+import { parseVector3 } from '../../../parser/vectors';
 
 /**
  * Parse Color from Godot format: Color(r, g, b, a)
@@ -72,6 +73,16 @@ export async function parseStandardMaterial3D(
 
   if (properties.emission_enabled !== undefined) {
     result.emission_enabled = properties.emission_enabled === 'true';
+  }
+
+  if (properties.uv1_scale) {
+    try {
+      result.uv1_scale = parseVector3(properties.uv1_scale);
+    } catch (error) {
+      warn(
+        `Failed to parse uv1_scale: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
   }
 
   // Load external texture references if registry provided

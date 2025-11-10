@@ -101,6 +101,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Uv Scale",
+    "file": "unit-uv-scale.tscn",
+    "category": "Other"
+  },
+  {
     "name": "World Environment Basic",
     "file": "unit-world-environment-basic.tscn",
     "category": "Other"
