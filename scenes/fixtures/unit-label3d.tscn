@@ -1,0 +1,40 @@
+[gd_scene format=3]
+
+[node name="Root" type="Node3D"]
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.866025, 0.5, 0, -0.5, 0.866025, 0, 3, 5)
+fov = 75.0
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866025, -0.433013, 0.25, 0, 0.5, 0.866025, -0.5, -0.75, 0.433013, 0, 3, 3)
+
+[node name="Label_Billboard" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 1, 0)
+text = "Billboard Enabled"
+pixel_size = 0.01
+billboard = 1
+modulate = Color(1, 1, 0, 1)
+
+[node name="Label_Fixed" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 1, 0)
+text = "Billboard Disabled"
+pixel_size = 0.01
+billboard = 0
+modulate = Color(0, 1, 1, 1)
+
+[node name="Label_YAxis" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -2)
+text = "Y-Axis Billboard"
+pixel_size = 0.01
+billboard = 2
+modulate = Color(1, 0, 1, 1)
+
+[node name="Label_WithOutline" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1, 0)
+text = "Outlined Text"
+pixel_size = 0.015
+billboard = 1
+modulate = Color(1, 1, 1, 1)
+outline_size = 8
+outline_modulate = Color(0, 0, 0, 1)

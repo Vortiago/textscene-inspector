@@ -380,10 +380,48 @@ export class TscnRenderer {
 
   // ========== Animation & Rendering ==========
 
+  /**
+   * Updates all Label3D nodes to face the camera based on their billboard mode.
+   * Should be called in the render loop before rendering.
+   */
+  updateLabels(): void {
+    this.scene.traverse((object) => {
+      if (object.userData.isLabel3D) {
+        const mode = object.userData.billboardMode as number;
+
+        if (mode === 1) {
+          // Full billboard: always face camera
+          object.quaternion.copy(this.camera.quaternion);
+        } else if (mode === 2) {
+          // Y-axis only billboard: rotate around Y to face camera
+          this.updateYAxisBillboard(object, this.camera);
+        }
+        // mode === 0: disabled, no rotation applied
+      }
+    });
+  }
+
+  private updateYAxisBillboard(object: THREE.Object3D, camera: THREE.Camera): void {
+    // Get positions
+    const objectPos = object.position;
+    const camPos = camera.position;
+
+    // Calculate horizontal direction to camera (ignore Y)
+    const dx = camPos.x - objectPos.x;
+    const dz = camPos.z - objectPos.z;
+
+    // Calculate rotation angle in XZ plane only
+    const angle = Math.atan2(dx, dz);
+
+    // Apply only Y-axis rotation
+    object.rotation.set(0, angle, 0);
+  }
+
   startAnimationLoop(): void {
     const animate = (): void => {
       requestAnimationFrame(animate);
       this.controls.update();
+      this.updateLabels();  // Update billboards before rendering
       this.renderer.render(this.scene, this.camera);
     };
     animate();

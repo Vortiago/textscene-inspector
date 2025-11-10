@@ -7,3 +7,17 @@
 [node name="CubeInstance" type="Node3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
 instance = ExtResource("1_cube")
+
+[node name="Title" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 0)
+text = "External Scene Test (Cube)"
+pixel_size = 0.008
+billboard = 1
+modulate = Color(1, 1, 0.7, 1)
+
+[node name="Description" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -2, 0)
+text = "Loads external cube scene from child_cube.tscn"
+pixel_size = 0.006
+billboard = 1
+modulate = Color(1, 1, 1, 1)

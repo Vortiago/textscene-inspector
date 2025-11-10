@@ -18,3 +18,17 @@ roughness = 0.6
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
 mesh = SubResource("PrismMesh_1")
 surface_material_override/0 = SubResource("Material_prism")
+
+[node name="Title" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 0)
+text = "PrismMesh Test"
+pixel_size = 0.008
+billboard = 1
+modulate = Color(1, 1, 0.7, 1)
+
+[node name="Description" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -2, 0)
+text = "PrismMesh with size=(2,3,2), purple material"
+pixel_size = 0.006
+billboard = 1
+modulate = Color(1, 1, 1, 1)

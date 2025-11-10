@@ -14,6 +14,7 @@ import '../nodes/3d/lights/omnilight3d/index.linter.js';
 import '../nodes/3d/lights/directionallight3d/index.linter.js';
 import '../nodes/3d/lights/spotlight3d/index.linter.js';
 import '../nodes/3d/camera3d/index.linter.js';
+import '../nodes/3d/label3d/index.linter.js';
 import '../nodes/3d/particles/gpuparticles3d/index.linter.js';
 import '../nodes/3d/sprite3d/index.linter.js';
 import '../nodes/3d/worldenvironment/index.linter.js';

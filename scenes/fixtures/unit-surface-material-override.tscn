@@ -15,3 +15,17 @@ transparency = 1
 [node name="MultiMaterialBox" type="MeshInstance3D" parent="."]
 mesh = SubResource("BoxMesh_multi")
 surface_material_override/0 = SubResource("StandardMaterial3D_gold")
+
+[node name="Title" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
+text = "Surface Material Override"
+pixel_size = 0.008
+billboard = 1
+modulate = Color(1, 1, 0.7, 1)
+
+[node name="Description" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.5, 0)
+text = "Box with gold surface_material_override/0"
+pixel_size = 0.006
+billboard = 1
+modulate = Color(1, 1, 1, 1)
