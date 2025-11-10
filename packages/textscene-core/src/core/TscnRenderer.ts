@@ -182,11 +182,15 @@ export class TscnRenderer {
    * Applies background color and fog if a WorldEnvironment node exists
    */
   private applyWorldEnvironment(sceneData: TscnScene): void {
+    logger.info(`[WorldEnvironment] Searching for WorldEnvironment node in ${sceneData.nodes.length} root nodes`);
+
     // Find WorldEnvironment node in the scene
     const findWorldEnvironment = (nodes: typeof sceneData.nodes): THREE.Group | null => {
       for (const node of nodes) {
         const obj = this.nodeTracker.getObject(node.name);
+        logger.info(`[WorldEnvironment] Checking node "${node.name}" (type: ${node.type}), obj.userData.nodeType: ${obj?.userData?.nodeType}`);
         if (obj && obj.userData.nodeType === 'WorldEnvironment') {
+          logger.info(`[WorldEnvironment] ✅ Found WorldEnvironment node: ${node.name}`);
           return obj as THREE.Group;
         }
         // Check children recursively
@@ -200,6 +204,7 @@ export class TscnRenderer {
 
     const worldEnvGroup = findWorldEnvironment(sceneData.nodes);
     if (!worldEnvGroup) {
+      logger.info('[WorldEnvironment] ⚠️ No WorldEnvironment node found in scene');
       // No WorldEnvironment node - use defaults
       return;
     }
