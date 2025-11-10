@@ -18,6 +18,8 @@ import { SceneManager } from './SceneManager';
 import { NodeLifecycleManager } from './NodeLifecycleManager';
 import { TscnParser } from '../parser/TscnParser';
 import * as logger from '../logger';
+import { getEnvironmentSettings } from '../nodes/3d/worldenvironment/renderer.js';
+import { BackgroundMode } from '../resources/environment/types.js';
 
 export interface CameraState {
   position: { x: number; y: number; z: number };
@@ -169,7 +171,78 @@ export class TscnRenderer {
       await this.nodeLifecycle.addNode(node.name, node, sceneData);
     }
 
+    // Apply WorldEnvironment settings to scene (background, fog, etc.)
+    this.applyWorldEnvironment(sceneData);
+
     logger.info('Rendering complete');
+  }
+
+  /**
+   * Apply WorldEnvironment settings to the THREE.js scene
+   * Applies background color and fog if a WorldEnvironment node exists
+   */
+  private applyWorldEnvironment(sceneData: TscnScene): void {
+    // Find WorldEnvironment node in the scene
+    const findWorldEnvironment = (nodes: typeof sceneData.nodes): THREE.Group | null => {
+      for (const node of nodes) {
+        const obj = this.nodeTracker.getObject(node.name);
+        if (obj && obj.userData.nodeType === 'WorldEnvironment') {
+          return obj as THREE.Group;
+        }
+        // Check children recursively
+        if (node.children && node.children.length > 0) {
+          const found = findWorldEnvironment(node.children);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+
+    const worldEnvGroup = findWorldEnvironment(sceneData.nodes);
+    if (!worldEnvGroup) {
+      // No WorldEnvironment node - use defaults
+      return;
+    }
+
+    const envSettings = getEnvironmentSettings(worldEnvGroup);
+    if (!envSettings) {
+      logger.warn('WorldEnvironment node found but has no environment settings');
+      return;
+    }
+
+    // Apply background color (BG_COLOR mode only)
+    if (envSettings.background.mode === BackgroundMode.BG_COLOR) {
+      const { r, g, b } = envSettings.background.color;
+      const bgColor = new THREE.Color(r, g, b);
+      this.scene.background = bgColor;
+      logger.info(`Applied background color: rgb(${r.toFixed(2)}, ${g.toFixed(2)}, ${b.toFixed(2)})`);
+    } else if (envSettings.background.mode > BackgroundMode.BG_COLOR) {
+      logger.warn(`Background mode ${envSettings.background.mode} not yet supported (only BG_CLEAR_COLOR=0 and BG_COLOR=1 are implemented)`);
+    }
+
+    // Apply volumetric fog if enabled
+    if (envSettings.fog && envSettings.fog.enabled) {
+      const { r, g, b } = envSettings.fog.albedo;
+      const fogColor = new THREE.Color(r, g, b);
+      // Use THREE.FogExp2 for exponential fog density
+      this.scene.fog = new THREE.FogExp2(fogColor.getHex(), envSettings.fog.density);
+      logger.info(`Applied volumetric fog: density=${envSettings.fog.density.toFixed(4)}, albedo=rgb(${r.toFixed(2)}, ${g.toFixed(2)}, ${b.toFixed(2)})`);
+
+      // Log info if emission is non-zero (visual-only feature not fully supported)
+      const emission = envSettings.fog.emission;
+      if (emission.r > 0 || emission.g > 0 || emission.b > 0) {
+        logger.info(`Fog emission color detected (${emission.r}, ${emission.g}, ${emission.b}) - emission is visual-only and not fully supported in THREE.js`);
+      }
+    }
+
+    // Warn about unsupported features
+    if (envSettings.adjustments && envSettings.adjustments.enabled) {
+      logger.warn('Color adjustments (brightness, contrast, saturation) are not yet supported - requires post-processing pipeline (see WI-77)');
+    }
+
+    if (envSettings.ssr && envSettings.ssr.enabled) {
+      logger.warn('Screen-space reflections (SSR) are not yet supported - requires post-processing pipeline (see WI-77)');
+    }
   }
 
   // ========== Node Lifecycle Delegation ==========
