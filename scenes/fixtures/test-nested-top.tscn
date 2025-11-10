@@ -22,3 +22,17 @@ surface_material_override/0 = SubResource("Material_1")
 [node name="MiddleInstance" type="Node3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3)
 instance = ExtResource("1_middle")
+
+[node name="Title" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 0)
+text = "Test Nested (Top)"
+pixel_size = 0.008
+billboard = 1
+modulate = Color(1, 1, 0.7, 1)
+
+[node name="Description" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -2, 0)
+text = "Green metallic cylinder + nested middle + leaf"
+pixel_size = 0.006
+billboard = 1
+modulate = Color(1, 1, 1, 1)

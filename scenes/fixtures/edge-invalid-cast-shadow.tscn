@@ -5,3 +5,17 @@
 [node name="TestNode" type="MeshInstance3D"]
 mesh = SubResource("mesh_1")
 cast_shadow = 99
+
+[node name="Title" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
+text = "Edge Case: Invalid cast_shadow"
+pixel_size = 0.008
+billboard = 1
+modulate = Color(1, 1, 0.7, 1)
+
+[node name="Description" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.5, 0)
+text = "Tests invalid cast_shadow value (99 instead of 0-3)"
+pixel_size = 0.006
+billboard = 1
+modulate = Color(1, 1, 1, 1)

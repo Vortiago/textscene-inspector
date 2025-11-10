@@ -7,3 +7,17 @@
 [node name="MissingSceneInstance" type="Node3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
 instance = ExtResource("1_missing")
+
+[node name="Title" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
+text = "Missing External Scene Test"
+pixel_size = 0.008
+billboard = 1
+modulate = Color(1, 1, 0.7, 1)
+
+[node name="Description" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+text = "Tests error handling when external scene file doesn't exist"
+pixel_size = 0.006
+billboard = 1
+modulate = Color(1, 1, 1, 1)
