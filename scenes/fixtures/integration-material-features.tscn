@@ -149,35 +149,35 @@ mesh = SubResource("SphereMesh_1")
 surface_material_override/0 = SubResource("Mat_AlbedoOnly")
 
 [node name="Title" type="Label3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 4, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 5.5, 0)
 text = "Material Feature Showcase"
 pixel_size = 0.01
 billboard = 1
 modulate = Color(1, 1, 0.7, 1)
 
 [node name="LabelRow1" type="Label3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 2, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9, 2, 0)
 text = "Basic Materials (albedo, metallic, roughness)"
 pixel_size = 0.006
 billboard = 1
 modulate = Color(1, 1, 1, 1)
 
 [node name="LabelRow2" type="Label3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9, 0, 0)
 text = "Emission & Normal Maps"
 pixel_size = 0.006
 billboard = 1
 modulate = Color(1, 1, 1, 1)
 
 [node name="LabelRow3" type="Label3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, -2, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9, -2, 0)
 text = "Advanced PBR"
 pixel_size = 0.006
 billboard = 1
 modulate = Color(1, 1, 1, 1)
 
 [node name="LabelRow4" type="Label3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, -4, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9, -4, 0)
 text = "Transparency & Glass"
 pixel_size = 0.006
 billboard = 1
