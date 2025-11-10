@@ -68,6 +68,7 @@ export class StrictTscnParser {
     let currentProperties: Record<string, string> = {};
     let currentLineNumber = 0;
     let currentNodeType: string | undefined;
+    let currentResourceType: string | undefined;
 
     const finalizeSection = () => {
       if (!currentHeading) return;
@@ -91,6 +92,7 @@ export class StrictTscnParser {
       currentHeading = null;
       currentProperties = {};
       currentNodeType = undefined;
+      currentResourceType = undefined;
     };
 
     for (let i = 0; i < lines.length; i++) {
@@ -147,6 +149,13 @@ export class StrictTscnParser {
             // For index= or instance= nodes, skip type-specific validation (type may be unknown)
             currentNodeType = undefined;
           }
+        } else if (currentSection === 'sub_resource') {
+          // Set currentResourceType for type-specific validation of SubResources
+          if (currentHeading.attributes.type) {
+            currentResourceType = currentHeading.attributes.type;
+          } else {
+            currentResourceType = undefined;
+          }
         }
       } else {
         // Parse property
@@ -187,12 +196,25 @@ export class StrictTscnParser {
 
         // Validate property value using registry (skip validation for multi-line strings like shader code)
         const isMultiLineString = property.value.includes('\n');
-        if (currentSection === 'node' && currentNodeType && !isMultiLineString) {
-          const validator = validatorRegistry.findValidator(currentNodeType, property.key);
-          if (validator) {
-            const error = validator(property.key, property.value, currentLineNumber);
-            if (error) {
-              errors.push(error);
+        if (!isMultiLineString) {
+          // Validate node properties
+          if (currentSection === 'node' && currentNodeType) {
+            const validator = validatorRegistry.findValidator(currentNodeType, property.key);
+            if (validator) {
+              const error = validator(property.key, property.value, currentLineNumber);
+              if (error) {
+                errors.push(error);
+              }
+            }
+          }
+          // Validate SubResource properties
+          if (currentSection === 'sub_resource' && currentResourceType) {
+            const validator = validatorRegistry.findValidator(currentResourceType, property.key);
+            if (validator) {
+              const error = validator(property.key, property.value, currentLineNumber);
+              if (error) {
+                errors.push(error);
+              }
             }
           }
         }

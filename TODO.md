@@ -28,12 +28,12 @@
 - ✅ WI-53 (External Materials): Working perfectly
 - ✅ Camera3D (WI-15): Registered and working
 - ✅ PlaneMesh center_offset (WI-58): Complete
-- ❌ WorldEnvironment (WI-57): Not implemented
+- ✅ WorldEnvironment (WI-57): Complete
 
 **Critical Path** (Revised order based on verification):
 1. [x] #WI-15: Camera3D Node → [Details](work_items/WI15.md) ⭐⭐⭐ ✅ Complete
 2. [x] #WI-56: Material Override Support → [Details](work_items/WI-56.md) ⭐⭐⭐ **CRITICAL** (207 instances)
-3. [ ] #WI-57: WorldEnvironment + Environment SubResource → [Details](work_items/WI-57.md) ⭐⭐ (Not implemented)
+3. [x] #WI-57: WorldEnvironment + Environment SubResource → [Details](work_items/WI-57.md) ⭐⭐ ✅ Complete
 4. [x] #WI-58: PlaneMesh center_offset Property → [Details](work_items/WI-58.md) ⭐ ✅ Complete
 5. [x] #WI-59: Normal Map Support (StandardMaterial3D) → [Details](work_items/WI-59.md) ⭐ ✅ Complete
 6. [x] #WI-62: Emission Enable Flag (StandardMaterial3D) → [Details](work_items/WI-62.md) ⭐ ✅ Complete
@@ -70,6 +70,7 @@
 - [ ] #WI-16: ShaderMaterial SubResource → [Details](work_items/WI16.md)
 - [ ] #WI-17: Custom Shader Support → [Details](work_items/WI17.md)
 - [ ] #WI-64: Label3D Node Support → [Details](work_items/WI-64.md) (3D text labels for fixture annotations)
+- [ ] #WI-77: Advanced Environment Features → [Details](work_items/WI-77.md) (Post-processing, Sky, SSAO, SSR) **Deferred from WI-57**
 
 ## Phase 6.5: Material Feature Enable Flags (from WI-63 Research)
 

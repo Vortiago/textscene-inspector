@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>THREE.js Fog Test - WorldEnvironment Debug</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+        #info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 5px;
+            z-index: 100;
+            max-width: 400px;
+        }
+        #info h2 { margin: 0 0 10px 0; }
+        #info p { margin: 5px 0; font-size: 14px; }
+        canvas { display: block; }
+    </style>
+</head>
+<body>
+    <div id="info">
+        <h2>Fog Test (matches fixture)</h2>
+        <p><strong>Expected:</strong> 3 red boxes fading into blue fog</p>
+        <p id="status">Loading...</p>
+        <p id="fogInfo"></p>
+    </div>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // Scene setup
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // OrbitControls
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+
+        // Dark blue background (matches fixture)
+        scene.background = new THREE.Color(0.05, 0.05, 0.15);
+
+        // Blue fog with density 0.05 (matches fixture)
+        const fogColor = new THREE.Color(0.6, 0.7, 0.9);
+        scene.fog = new THREE.FogExp2(fogColor, 0.05);
+
+        console.log('Fog created:', scene.fog);
+        console.log('Fog color:', fogColor);
+        console.log('Fog density:', 0.05);
+
+        // Create 3 red boxes at different distances (matches fixture)
+        const geometry = new THREE.BoxGeometry(2, 2, 2);
+        const material = new THREE.MeshStandardMaterial({
+            color: new THREE.Color(1, 0.3, 0.2),
+            metallic: 0.2,
+            roughness: 0.7,
+            fog: true  // Explicitly ensure fog is enabled
+        });
+
+        const boxNear = new THREE.Mesh(geometry, material);
+        boxNear.position.set(-3, 0, -8);
+        scene.add(boxNear);
+
+        const boxMid = new THREE.Mesh(geometry, material);
+        boxMid.position.set(0, 0, -20);
+        scene.add(boxMid);
+
+        const boxFar = new THREE.Mesh(geometry, material);
+        boxFar.position.set(3, 0, -40);
+        scene.add(boxFar);
+
+        // Add light (matches fixture)
+        const light = new THREE.PointLight(0xffffff, 1, 60);
+        light.position.set(0, 8, 0);
+        scene.add(light);
+
+        // Camera position (matches fixture)
+        camera.position.set(0, 3, 8);
+        camera.lookAt(0, 0, 0);
+
+        // Update info
+        document.getElementById('status').textContent = '✅ Scene loaded';
+        document.getElementById('fogInfo').innerHTML =
+            `Fog: density=${0.05.toFixed(4)}, color=rgb(${(0.6).toFixed(2)}, ${(0.7).toFixed(2)}, ${(0.9).toFixed(2)})<br>` +
+            `Boxes at Z: -8, -20, -40<br>` +
+            `Camera at: (0, 3, 8)<br>` +
+            `<em>If all boxes look the same color, fog is NOT working</em>`;
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+
+        // Debug output
+        setTimeout(() => {
+            console.log('Scene.fog after 1 second:', scene.fog);
+            console.log('Material.fog:', material.fog);
+            console.log('Box positions:', [boxNear.position, boxMid.position, boxFar.position]);
+        }, 1000);
+    </script>
+</body>
+</html>
