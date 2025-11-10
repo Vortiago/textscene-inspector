@@ -8,9 +8,9 @@ import { info } from '../../../logger';
 
 /**
  * Apply UV transform to texture based on uv1_scale property.
- * In Godot, uv1_scale scales UV coordinates (smaller scale = more repetitions).
- * In THREE.js, texture.repeat scales texture (larger repeat = more repetitions).
- * Conversion: THREE.repeat = 1 / Godot.uv1_scale
+ * In Godot: UV = UV * uv1_scale (higher scale = more tiling)
+ * In THREE.js: texture.repeat (higher repeat = more tiling)
+ * Conversion: THREE.repeat = Godot.uv1_scale (direct mapping)
  *
  * Returns a cloned texture with the UV transform applied if uv1_scale is set,
  * otherwise returns the original texture.
@@ -19,7 +19,7 @@ function applyUVTransform(texture: THREE.Texture, properties: StandardMaterial3D
   if (properties.uv1_scale) {
     // Clone the texture to avoid modifying the shared cached instance
     const clonedTexture = texture.clone();
-    clonedTexture.repeat.set(1 / properties.uv1_scale.x, 1 / properties.uv1_scale.y);
+    clonedTexture.repeat.set(properties.uv1_scale.x, properties.uv1_scale.y);
     clonedTexture.wrapS = THREE.RepeatWrapping;
     clonedTexture.wrapT = THREE.RepeatWrapping;
     clonedTexture.needsUpdate = true;

@@ -314,8 +314,8 @@ describe('StandardMaterial3D Renderer', () => {
       // Texture should be cloned, not the same object
       expect(material.map).toBeDefined();
       expect(material.map).not.toBe(albedoTexture);
-      expect(material.map!.repeat.x).toBe(2); // 1 / 0.5 = 2
-      expect(material.map!.repeat.y).toBe(2);
+      expect(material.map!.repeat.x).toBe(0.5); // Direct mapping: uv1_scale = 0.5
+      expect(material.map!.repeat.y).toBe(0.5);
       expect(material.map!.wrapS).toBe(THREE.RepeatWrapping);
       expect(material.map!.wrapT).toBe(THREE.RepeatWrapping);
 
@@ -335,8 +335,8 @@ describe('StandardMaterial3D Renderer', () => {
 
       expect(material.map).toBeDefined();
       expect(material.map).not.toBe(albedoTexture);
-      expect(material.map!.repeat.x).toBeCloseTo(1 / 2.4, 5);
-      expect(material.map!.repeat.y).toBeCloseTo(1 / 2.4, 5);
+      expect(material.map!.repeat.x).toBeCloseTo(2.4, 5);
+      expect(material.map!.repeat.y).toBeCloseTo(2.4, 5);
       expect(material.map!.wrapS).toBe(THREE.RepeatWrapping);
       expect(material.map!.wrapT).toBe(THREE.RepeatWrapping);
 
@@ -357,8 +357,8 @@ describe('StandardMaterial3D Renderer', () => {
 
       expect(material.normalMap).toBeDefined();
       expect(material.normalMap).not.toBe(normalTexture);
-      expect(material.normalMap!.repeat.x).toBe(2);
-      expect(material.normalMap!.repeat.y).toBe(2);
+      expect(material.normalMap!.repeat.x).toBe(0.5);
+      expect(material.normalMap!.repeat.y).toBe(0.5);
       expect(material.normalMap!.wrapS).toBe(THREE.RepeatWrapping);
       expect(material.normalMap!.wrapT).toBe(THREE.RepeatWrapping);
     });
@@ -374,8 +374,8 @@ describe('StandardMaterial3D Renderer', () => {
 
       expect(material.metalnessMap).toBeDefined();
       expect(material.metalnessMap).not.toBe(metallicTexture);
-      expect(material.metalnessMap!.repeat.x).toBe(2);
-      expect(material.metalnessMap!.repeat.y).toBe(2);
+      expect(material.metalnessMap!.repeat.x).toBe(0.5);
+      expect(material.metalnessMap!.repeat.y).toBe(0.5);
     });
 
     it('should apply UV transform to roughness texture', () => {
@@ -389,8 +389,8 @@ describe('StandardMaterial3D Renderer', () => {
 
       expect(material.roughnessMap).toBeDefined();
       expect(material.roughnessMap).not.toBe(roughnessTexture);
-      expect(material.roughnessMap!.repeat.x).toBe(2);
-      expect(material.roughnessMap!.repeat.y).toBe(2);
+      expect(material.roughnessMap!.repeat.x).toBe(0.5);
+      expect(material.roughnessMap!.repeat.y).toBe(0.5);
     });
 
     it('should apply UV transform to AO texture', () => {
@@ -404,8 +404,8 @@ describe('StandardMaterial3D Renderer', () => {
 
       expect(material.aoMap).toBeDefined();
       expect(material.aoMap).not.toBe(aoTexture);
-      expect(material.aoMap!.repeat.x).toBe(2);
-      expect(material.aoMap!.repeat.y).toBe(2);
+      expect(material.aoMap!.repeat.x).toBe(0.5);
+      expect(material.aoMap!.repeat.y).toBe(0.5);
     });
 
     it('should apply UV transform to emission texture', () => {
@@ -420,8 +420,8 @@ describe('StandardMaterial3D Renderer', () => {
 
       expect(material.emissiveMap).toBeDefined();
       expect(material.emissiveMap).not.toBe(emissionTexture);
-      expect(material.emissiveMap!.repeat.x).toBe(2);
-      expect(material.emissiveMap!.repeat.y).toBe(2);
+      expect(material.emissiveMap!.repeat.x).toBe(0.5);
+      expect(material.emissiveMap!.repeat.y).toBe(0.5);
     });
 
     it('should apply UV transform to multiple textures', () => {
@@ -436,10 +436,10 @@ describe('StandardMaterial3D Renderer', () => {
 
       const material = createStandardMaterial(properties);
 
-      expect(material.map!.repeat.x).toBe(2);
-      expect(material.map!.repeat.y).toBe(2);
-      expect(material.normalMap!.repeat.x).toBe(2);
-      expect(material.normalMap!.repeat.y).toBe(2);
+      expect(material.map!.repeat.x).toBe(0.5);
+      expect(material.map!.repeat.y).toBe(0.5);
+      expect(material.normalMap!.repeat.x).toBe(0.5);
+      expect(material.normalMap!.repeat.y).toBe(0.5);
 
       // Original textures should be unmodified
       expect(albedoTexture.repeat.x).toBe(1);
@@ -455,8 +455,8 @@ describe('StandardMaterial3D Renderer', () => {
 
       const material = createStandardMaterial(properties);
 
-      expect(material.map!.repeat.x).toBe(2); // 1 / 0.5
-      expect(material.map!.repeat.y).toBe(0.5); // 1 / 2.0
+      expect(material.map!.repeat.x).toBe(0.5); // Direct: uv1_scale.x
+      expect(material.map!.repeat.y).toBe(2.0); // Direct: uv1_scale.y
 
       // Original texture should be unmodified
       expect(albedoTexture.repeat.x).toBe(1);
@@ -484,7 +484,7 @@ describe('StandardMaterial3D Renderer', () => {
       expect(() => createStandardMaterial(properties)).not.toThrow();
     });
 
-    it('should correctly apply formula: THREE.repeat = 1 / Godot.uv1_scale', () => {
+    it('should correctly apply formula: THREE.repeat = Godot.uv1_scale (direct mapping)', () => {
       const albedoTexture = new THREE.Texture();
       const properties: StandardMaterial3DProperties = {
         albedo_texture: albedoTexture,
@@ -493,13 +493,12 @@ describe('StandardMaterial3D Renderer', () => {
 
       const material = createStandardMaterial(properties);
 
-      // 1 / 4.0 = 0.25
-      expect(material.map!.repeat.x).toBe(0.25);
-      // 1 / 8.0 = 0.125
-      expect(material.map!.repeat.y).toBe(0.125);
+      // Direct mapping: uv1_scale = repeat
+      expect(material.map!.repeat.x).toBe(4.0);
+      expect(material.map!.repeat.y).toBe(8.0);
     });
 
-    it('should handle very large uv1_scale values (very small repeat)', () => {
+    it('should handle very large uv1_scale values (very large repeat)', () => {
       const albedoTexture = new THREE.Texture();
       const properties: StandardMaterial3DProperties = {
         albedo_texture: albedoTexture,
@@ -508,13 +507,13 @@ describe('StandardMaterial3D Renderer', () => {
 
       const material = createStandardMaterial(properties);
 
-      expect(material.map!.repeat.x).toBe(0.001); // 1 / 1000
-      expect(material.map!.repeat.y).toBe(0.001);
+      expect(material.map!.repeat.x).toBe(1000); // Direct mapping
+      expect(material.map!.repeat.y).toBe(1000);
       expect(material.map!.wrapS).toBe(THREE.RepeatWrapping);
       expect(material.map!.wrapT).toBe(THREE.RepeatWrapping);
     });
 
-    it('should handle very small uv1_scale values (very large repeat)', () => {
+    it('should handle very small uv1_scale values (very small repeat)', () => {
       const albedoTexture = new THREE.Texture();
       const properties: StandardMaterial3DProperties = {
         albedo_texture: albedoTexture,
@@ -523,8 +522,8 @@ describe('StandardMaterial3D Renderer', () => {
 
       const material = createStandardMaterial(properties);
 
-      expect(material.map!.repeat.x).toBe(100); // 1 / 0.01
-      expect(material.map!.repeat.y).toBe(100);
+      expect(material.map!.repeat.x).toBe(0.01); // Direct mapping
+      expect(material.map!.repeat.y).toBe(0.01);
       expect(material.map!.wrapS).toBe(THREE.RepeatWrapping);
       expect(material.map!.wrapT).toBe(THREE.RepeatWrapping);
     });
@@ -538,7 +537,7 @@ describe('StandardMaterial3D Renderer', () => {
 
       const material = createStandardMaterial(properties);
 
-      expect(material.map!.repeat.x).toBe(1); // 1 / 1.0 = 1
+      expect(material.map!.repeat.x).toBe(1); // Direct: uv1_scale = 1.0
       expect(material.map!.repeat.y).toBe(1);
       expect(material.map!.wrapS).toBe(THREE.RepeatWrapping);
       expect(material.map!.wrapT).toBe(THREE.RepeatWrapping);
@@ -560,14 +559,14 @@ describe('StandardMaterial3D Renderer', () => {
       const material = createStandardMaterial(properties);
 
       // All textures should have same UV transform applied
-      expect(material.map!.repeat.x).toBe(4); // 1 / 0.25
-      expect(material.map!.repeat.y).toBe(2); // 1 / 0.5
+      expect(material.map!.repeat.x).toBe(0.25); // Direct: uv1_scale.x
+      expect(material.map!.repeat.y).toBe(0.5); // Direct: uv1_scale.y
 
-      expect(material.normalMap!.repeat.x).toBe(4);
-      expect(material.normalMap!.repeat.y).toBe(2);
+      expect(material.normalMap!.repeat.x).toBe(0.25);
+      expect(material.normalMap!.repeat.y).toBe(0.5);
 
-      expect(material.metalnessMap!.repeat.x).toBe(4);
-      expect(material.metalnessMap!.repeat.y).toBe(2);
+      expect(material.metalnessMap!.repeat.x).toBe(0.25);
+      expect(material.metalnessMap!.repeat.y).toBe(0.5);
 
       // All should have RepeatWrapping
       expect(material.map!.wrapS).toBe(THREE.RepeatWrapping);
@@ -585,8 +584,8 @@ describe('StandardMaterial3D Renderer', () => {
       const material = createStandardMaterial(properties);
 
       // Only x and y affect the repeat
-      expect(material.map!.repeat.x).toBe(2);
-      expect(material.map!.repeat.y).toBe(2);
+      expect(material.map!.repeat.x).toBe(0.5);
+      expect(material.map!.repeat.y).toBe(0.5);
     });
 
     it('should apply UV transform even when other material properties are set', () => {
@@ -602,8 +601,8 @@ describe('StandardMaterial3D Renderer', () => {
       const material = createStandardMaterial(properties);
 
       // UV transform should still be applied
-      expect(material.map!.repeat.x).toBe(2);
-      expect(material.map!.repeat.y).toBe(2);
+      expect(material.map!.repeat.x).toBe(0.5);
+      expect(material.map!.repeat.y).toBe(0.5);
 
       // Other properties should also be set
       expect(material.color.r).toBe(1);

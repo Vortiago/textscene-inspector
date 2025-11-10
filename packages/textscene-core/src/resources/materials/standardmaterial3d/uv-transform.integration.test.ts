@@ -58,13 +58,13 @@ describe('UV Transform Integration - Shared Textures', () => {
     expect(material2.map).toBeDefined();
 
     // CRITICAL: Both materials should have DIFFERENT repeat values
-    // material1: uv1_scale=2.0 -> repeat=0.5
-    // material2: uv1_scale=4.0 -> repeat=0.25
-    expect(material1.map!.repeat.x).toBe(0.5);
-    expect(material1.map!.repeat.y).toBe(0.5);
+    // material1: uv1_scale=2.0 -> repeat=2.0
+    // material2: uv1_scale=4.0 -> repeat=4.0
+    expect(material1.map!.repeat.x).toBe(2.0);
+    expect(material1.map!.repeat.y).toBe(2.0);
 
-    expect(material2.map!.repeat.x).toBe(0.25);
-    expect(material2.map!.repeat.y).toBe(0.25);
+    expect(material2.map!.repeat.x).toBe(4.0);
+    expect(material2.map!.repeat.y).toBe(4.0);
 
     // Verify they are NOT the same texture object (they should be cloned)
     expect(material1.map).not.toBe(material2.map);
@@ -89,7 +89,7 @@ describe('UV Transform Integration - Shared Textures', () => {
 
     // Six different UV scales like in the showcase fixture
     const uvScales = [0.25, 0.5, 1.0, 2.0, 4.0, 8.0];
-    const expectedRepeats = [4.0, 2.0, 1.0, 0.5, 0.25, 0.125];
+    const expectedRepeats = [0.25, 0.5, 1.0, 2.0, 4.0, 8.0];
 
     const materials: THREE.MeshStandardMaterial[] = [];
 
