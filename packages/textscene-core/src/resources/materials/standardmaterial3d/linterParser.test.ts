@@ -4,6 +4,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry';
+import { Linter } from '../../../linter/Linter';
 import './linterParser'; // Import to trigger registration
 
 describe('StandardMaterial3D Linter Validators', () => {
@@ -233,6 +234,172 @@ describe('StandardMaterial3D Linter Validators', () => {
 
       expect(result).not.toBeNull();
       expect(result!.severity).toBe('error');
+    });
+
+    it('should reject Vector3 with scientific notation (not supported)', () => {
+      const validator = validatorRegistry.findValidator('StandardMaterial3D', 'uv1_scale');
+      const result = validator!('uv1_scale', 'Vector3(1e-5, 2e3, 1)', 1);
+
+      expect(result).not.toBeNull();
+      expect(result!.severity).toBe('error');
+    });
+
+    it('should reject Vector3 with missing opening parenthesis', () => {
+      const validator = validatorRegistry.findValidator('StandardMaterial3D', 'uv1_scale');
+      const result = validator!('uv1_scale', 'Vector3 1, 2, 3)', 1);
+
+      expect(result).not.toBeNull();
+      expect(result!.severity).toBe('error');
+    });
+
+    it('should reject Vector3 with missing closing parenthesis', () => {
+      const validator = validatorRegistry.findValidator('StandardMaterial3D', 'uv1_scale');
+      const result = validator!('uv1_scale', 'Vector3(1, 2, 3', 1);
+
+      expect(result).not.toBeNull();
+      expect(result!.severity).toBe('error');
+    });
+
+    it('should reject Vector3 with extra commas', () => {
+      const validator = validatorRegistry.findValidator('StandardMaterial3D', 'uv1_scale');
+      const result = validator!('uv1_scale', 'Vector3(1,, 2, 3)', 1);
+
+      expect(result).not.toBeNull();
+      expect(result!.severity).toBe('error');
+    });
+
+    it('should accept very large values', () => {
+      const validator = validatorRegistry.findValidator('StandardMaterial3D', 'uv1_scale');
+      const result = validator!('uv1_scale', 'Vector3(999999, 999999, 999999)', 1);
+
+      expect(result).toBeNull();
+    });
+
+    it('should accept very small decimal values', () => {
+      const validator = validatorRegistry.findValidator('StandardMaterial3D', 'uv1_scale');
+      const result = validator!('uv1_scale', 'Vector3(0.00001, 0.00001, 0.00001)', 1);
+
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('uv1_scale integration with Linter', () => {
+    it('should validate valid uv1_scale in StandardMaterial3D SubResource', () => {
+      const content = `[gd_scene load_steps=2 format=3]
+
+[sub_resource type="StandardMaterial3D" id="Material_1"]
+uv1_scale = Vector3(0.5, 0.5, 0.5)
+
+[node name="Root" type="Node3D"]
+`;
+
+      const linter = new Linter();
+      const diagnostics = linter.lint(content);
+
+      // Should have no errors for valid uv1_scale
+      const uv1ScaleErrors = diagnostics.filter(d =>
+        d.message.includes('uv1_scale')
+      );
+      expect(uv1ScaleErrors).toHaveLength(0);
+    });
+
+    it('should detect invalid uv1_scale format in StandardMaterial3D SubResource', () => {
+      const content = `[gd_scene load_steps=2 format=3]
+
+[sub_resource type="StandardMaterial3D" id="Material_1"]
+uv1_scale = Invalid
+
+[node name="Root" type="Node3D"]
+`;
+
+      const linter = new Linter();
+      const diagnostics = linter.lint(content);
+
+      // Should have error for invalid uv1_scale format
+      const uv1ScaleErrors = diagnostics.filter(d =>
+        d.message.includes('uv1_scale') && d.message.includes('Vector3')
+      );
+      expect(uv1ScaleErrors.length).toBeGreaterThan(0);
+      expect(uv1ScaleErrors[0]!.severity).toBe('error');
+    });
+
+    it('should detect Vector2 used instead of Vector3 for uv1_scale', () => {
+      const content = `[gd_scene load_steps=2 format=3]
+
+[sub_resource type="StandardMaterial3D" id="Material_1"]
+uv1_scale = Vector2(0.5, 0.5)
+
+[node name="Root" type="Node3D"]
+`;
+
+      const linter = new Linter();
+      const diagnostics = linter.lint(content);
+
+      const uv1ScaleErrors = diagnostics.filter(d =>
+        d.message.includes('uv1_scale')
+      );
+      expect(uv1ScaleErrors.length).toBeGreaterThan(0);
+      expect(uv1ScaleErrors[0]!.severity).toBe('error');
+    });
+
+    it('should validate complex material with multiple properties including uv1_scale', () => {
+      const content = `[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Texture2D" path="res://texture.png" id="1"]
+
+[sub_resource type="StandardMaterial3D" id="Material_1"]
+albedo_texture = ExtResource("1")
+normal_enabled = true
+uv1_scale = Vector3(2.0, 2.0, 1.0)
+metallic = 0.5
+roughness = 0.3
+
+[node name="Root" type="Node3D"]
+`;
+
+      const linter = new Linter();
+      const diagnostics = linter.lint(content);
+
+      // Should have no errors - all properties are valid
+      expect(diagnostics.filter(d => d.severity === 'error')).toHaveLength(0);
+    });
+
+    it('should validate uv1_scale with zero components (format valid, semantic warning could be added later)', () => {
+      const content = `[gd_scene load_steps=2 format=3]
+
+[sub_resource type="StandardMaterial3D" id="Material_1"]
+uv1_scale = Vector3(0, 0, 0)
+
+[node name="Root" type="Node3D"]
+`;
+
+      const linter = new Linter();
+      const diagnostics = linter.lint(content);
+
+      // Format is valid, no parse errors
+      const parseErrors = diagnostics.filter(d =>
+        d.message.includes('uv1_scale') && d.severity === 'error'
+      );
+      expect(parseErrors).toHaveLength(0);
+    });
+
+    it('should handle missing commas in Vector3', () => {
+      const content = `[gd_scene load_steps=2 format=3]
+
+[sub_resource type="StandardMaterial3D" id="Material_1"]
+uv1_scale = Vector3(0.5 0.5 0.5)
+
+[node name="Root" type="Node3D"]
+`;
+
+      const linter = new Linter();
+      const diagnostics = linter.lint(content);
+
+      const uv1ScaleErrors = diagnostics.filter(d =>
+        d.message.includes('uv1_scale')
+      );
+      expect(uv1ScaleErrors.length).toBeGreaterThan(0);
+      expect(uv1ScaleErrors[0]!.severity).toBe('error');
     });
   });
 });
