@@ -181,30 +181,25 @@ export class TscnRenderer {
    * Apply WorldEnvironment settings to the THREE.js scene
    * Applies background color and fog if a WorldEnvironment node exists
    */
-  private applyWorldEnvironment(sceneData: TscnScene): void {
-    logger.info(`[WorldEnvironment] Searching for WorldEnvironment node in ${sceneData.nodes.length} root nodes`);
+  private applyWorldEnvironment(_sceneData: TscnScene): void {
+    // Search through all tracked nodes for WorldEnvironment
+    // Note: We can't use node names from sceneData because child nodes are tracked by full path
+    // (e.g., "Root/WorldEnvironment" not "WorldEnvironment")
+    const allPaths = this.nodeTracker.getAllPaths();
+    logger.info(`[WorldEnvironment] Searching ${allPaths.length} tracked nodes for WorldEnvironment`);
 
-    // Find WorldEnvironment node in the scene
-    const findWorldEnvironment = (nodes: typeof sceneData.nodes): THREE.Group | null => {
-      for (const node of nodes) {
-        const obj = this.nodeTracker.getObject(node.name);
-        logger.info(`[WorldEnvironment] Checking node "${node.name}" (type: ${node.type}), obj.userData.nodeType: ${obj?.userData?.nodeType}`);
-        if (obj && obj.userData.nodeType === 'WorldEnvironment') {
-          logger.info(`[WorldEnvironment] ✅ Found WorldEnvironment node: ${node.name}`);
-          return obj as THREE.Group;
-        }
-        // Check children recursively
-        if (node.children && node.children.length > 0) {
-          const found = findWorldEnvironment(node.children);
-          if (found) return found;
-        }
+    let worldEnvGroup: THREE.Group | null = null;
+    for (const path of allPaths) {
+      const obj = this.nodeTracker.getObject(path);
+      if (obj && obj.userData.nodeType === 'WorldEnvironment') {
+        logger.info(`[WorldEnvironment] ✅ Found WorldEnvironment at path: ${path}`);
+        worldEnvGroup = obj as THREE.Group;
+        break;
       }
-      return null;
-    };
+    }
 
-    const worldEnvGroup = findWorldEnvironment(sceneData.nodes);
     if (!worldEnvGroup) {
-      logger.info('[WorldEnvironment] ⚠️ No WorldEnvironment node found in scene');
+      logger.info('[WorldEnvironment] No WorldEnvironment node found in scene');
       // No WorldEnvironment node - use defaults
       return;
     }
