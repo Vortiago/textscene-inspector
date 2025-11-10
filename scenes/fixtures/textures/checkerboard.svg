@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <!-- 4x4 checkerboard pattern (16 squares) -->
+  <!-- Row 1 (y=0-64) -->
+  <rect width="64" height="64" x="0" y="0" fill="#ffffff"/>
+  <rect width="64" height="64" x="64" y="0" fill="#000000"/>
+  <rect width="64" height="64" x="128" y="0" fill="#ffffff"/>
+  <rect width="64" height="64" x="192" y="0" fill="#000000"/>
+  <!-- Row 2 (y=64-128) -->
+  <rect width="64" height="64" x="0" y="64" fill="#000000"/>
+  <rect width="64" height="64" x="64" y="64" fill="#ffffff"/>
+  <rect width="64" height="64" x="128" y="64" fill="#000000"/>
+  <rect width="64" height="64" x="192" y="64" fill="#ffffff"/>
+  <!-- Row 3 (y=128-192) -->
+  <rect width="64" height="64" x="0" y="128" fill="#ffffff"/>
+  <rect width="64" height="64" x="64" y="128" fill="#000000"/>
+  <rect width="64" height="64" x="128" y="128" fill="#ffffff"/>
+  <rect width="64" height="64" x="192" y="128" fill="#000000"/>
+  <!-- Row 4 (y=192-256) -->
+  <rect width="64" height="64" x="0" y="192" fill="#000000"/>
+  <rect width="64" height="64" x="64" y="192" fill="#ffffff"/>
+  <rect width="64" height="64" x="128" y="192" fill="#000000"/>
+  <rect width="64" height="64" x="192" y="192" fill="#ffffff"/>
+</svg>

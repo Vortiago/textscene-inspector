@@ -362,4 +362,85 @@ describe('parseStandardMaterial3D', () => {
 
     expect(result.emission_enabled).toBe(false);
   });
+
+  it('should parse uv1_scale property', async () => {
+    const properties = {
+      uv1_scale: 'Vector3(0.5, 0.5, 0.5)',
+    };
+
+    const result = await parseStandardMaterial3D(properties);
+
+    expect(result.uv1_scale).toEqual({ x: 0.5, y: 0.5, z: 0.5 });
+  });
+
+  it('should parse uv1_scale with different values', async () => {
+    const properties = {
+      uv1_scale: 'Vector3(2.4, 1.5, 1)',
+    };
+
+    const result = await parseStandardMaterial3D(properties);
+
+    expect(result.uv1_scale).toEqual({ x: 2.4, y: 1.5, z: 1 });
+  });
+
+  it('should parse uv1_scale with spaces', async () => {
+    const properties = {
+      uv1_scale: 'Vector3( 1 , 2 , 3 )',
+    };
+
+    const result = await parseStandardMaterial3D(properties);
+
+    expect(result.uv1_scale).toEqual({ x: 1, y: 2, z: 3 });
+  });
+
+  it('should parse uv1_scale with negative values', async () => {
+    const properties = {
+      uv1_scale: 'Vector3(-1, -2, -3)',
+    };
+
+    const result = await parseStandardMaterial3D(properties);
+
+    expect(result.uv1_scale).toEqual({ x: -1, y: -2, z: -3 });
+  });
+
+  it('should handle invalid uv1_scale gracefully', async () => {
+    const properties = {
+      uv1_scale: 'Invalid',
+      metallic: '0.5',
+    };
+
+    const result = await parseStandardMaterial3D(properties);
+
+    expect(result.uv1_scale).toBeUndefined();
+    expect(result.metallic).toBe(0.5);
+    expect(loggerWarnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Failed to parse uv1_scale')
+    );
+  });
+
+  it('should leave uv1_scale undefined when not provided', async () => {
+    const properties = {
+      metallic: '0.5',
+    };
+
+    const result = await parseStandardMaterial3D(properties);
+
+    expect(result.uv1_scale).toBeUndefined();
+  });
+
+  it('should parse material with uv1_scale and other properties', async () => {
+    const properties = {
+      albedo_color: 'Color(1, 1, 1, 1)',
+      uv1_scale: 'Vector3(0.5, 0.5, 0.5)',
+      metallic: '0.8',
+      roughness: '0.2',
+    };
+
+    const result = await parseStandardMaterial3D(properties);
+
+    expect(result.albedo_color).toEqual({ r: 1, g: 1, b: 1, a: 1 });
+    expect(result.uv1_scale).toEqual({ x: 0.5, y: 0.5, z: 0.5 });
+    expect(result.metallic).toBe(0.8);
+    expect(result.roughness).toBe(0.2);
+  });
 });

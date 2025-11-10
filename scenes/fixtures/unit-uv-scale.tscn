@@ -1,0 +1,42 @@
+[gd_scene load_steps=7 format=3 uid="uid://test_uv_scale"]
+
+[ext_resource type="Texture2D" path="res://textures/checkerboard.svg" id="1_checker"]
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_1"]
+size = Vector2(2, 2)
+
+[sub_resource type="StandardMaterial3D" id="Material_Default"]
+albedo_texture = ExtResource("1_checker")
+
+[sub_resource type="StandardMaterial3D" id="Material_Half"]
+albedo_texture = ExtResource("1_checker")
+uv1_scale = Vector3(0.5, 0.5, 0.5)
+
+[sub_resource type="StandardMaterial3D" id="Material_Double"]
+albedo_texture = ExtResource("1_checker")
+uv1_scale = Vector3(2.0, 2.0, 1.0)
+
+[node name="Scene" type="Node3D"]
+
+[node name="LeftPlane" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 0, 0)
+mesh = SubResource("PlaneMesh_1")
+surface_material_override/0 = SubResource("Material_Default")
+
+[node name="CenterPlane" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+mesh = SubResource("PlaneMesh_1")
+surface_material_override/0 = SubResource("Material_Half")
+
+[node name="RightPlane" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0, 0)
+mesh = SubResource("PlaneMesh_1")
+surface_material_override/0 = SubResource("Material_Double")
+
+[node name="Camera" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.866025, 0.5, 0, -0.5, 0.866025, 0, 3, 5)
+fov = 75.0
+
+[node name="DirectionalLight" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866025, -0.25, 0.433013, 0, 0.866025, 0.5, -0.5, -0.433013, 0.75, 0, 5, 0)
+light_energy = 1.0

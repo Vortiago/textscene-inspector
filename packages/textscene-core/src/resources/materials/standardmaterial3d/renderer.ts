@@ -4,6 +4,35 @@
 
 import * as THREE from 'three';
 import type { StandardMaterial3DProperties } from './types';
+import { info } from '../../../logger';
+
+/**
+ * Apply UV transform to texture based on uv1_scale property.
+ * In Godot: UV = UV * uv1_scale (higher scale = more tiling)
+ * In THREE.js: texture.repeat (higher repeat = more tiling)
+ * Conversion: THREE.repeat = Godot.uv1_scale (direct mapping)
+ *
+ * Returns a cloned texture with the UV transform applied if uv1_scale is set,
+ * otherwise returns the original texture.
+ */
+function applyUVTransform(texture: THREE.Texture, properties: StandardMaterial3DProperties): THREE.Texture {
+  if (properties.uv1_scale) {
+    // Clone the texture to avoid modifying the shared cached instance
+    const clonedTexture = texture.clone();
+    clonedTexture.repeat.set(properties.uv1_scale.x, properties.uv1_scale.y);
+    clonedTexture.wrapS = THREE.RepeatWrapping;
+    clonedTexture.wrapT = THREE.RepeatWrapping;
+    clonedTexture.needsUpdate = true;
+
+    info(
+      `[StandardMaterial3D] Applied uv1_scale: (${properties.uv1_scale.x}, ${properties.uv1_scale.y}) -> repeat: (${clonedTexture.repeat.x}, ${clonedTexture.repeat.y})`
+    );
+
+    return clonedTexture;
+  }
+
+  return texture;
+}
 
 /**
  * Create a THREE.MeshStandardMaterial from StandardMaterial3D properties.
@@ -34,29 +63,29 @@ export function createStandardMaterial(properties: StandardMaterial3DProperties)
     materialOptions.roughness = properties.roughness;
   }
 
-  // Map texture properties
+  // Map texture properties and apply UV transforms
   if (properties.albedo_texture) {
-    materialOptions.map = properties.albedo_texture;
+    materialOptions.map = applyUVTransform(properties.albedo_texture, properties);
   }
 
   if (properties.normal_enabled && properties.normal_texture) {
-    materialOptions.normalMap = properties.normal_texture;
+    materialOptions.normalMap = applyUVTransform(properties.normal_texture, properties);
   }
 
   if (properties.metallic_texture) {
-    materialOptions.metalnessMap = properties.metallic_texture;
+    materialOptions.metalnessMap = applyUVTransform(properties.metallic_texture, properties);
   }
 
   if (properties.roughness_texture) {
-    materialOptions.roughnessMap = properties.roughness_texture;
+    materialOptions.roughnessMap = applyUVTransform(properties.roughness_texture, properties);
   }
 
   if (properties.ao_texture) {
-    materialOptions.aoMap = properties.ao_texture;
+    materialOptions.aoMap = applyUVTransform(properties.ao_texture, properties);
   }
 
   if (properties.emission_enabled && properties.emission_texture) {
-    materialOptions.emissiveMap = properties.emission_texture;
+    materialOptions.emissiveMap = applyUVTransform(properties.emission_texture, properties);
   }
 
   return new THREE.MeshStandardMaterial(materialOptions);
