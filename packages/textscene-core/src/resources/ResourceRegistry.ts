@@ -489,6 +489,38 @@ export class ResourceRegistry {
   }
 
   /**
+   * Clear texture cache for specific path or all textures.
+   * @param path - Optional path to clear specific texture, omit to clear all
+   */
+  clearTextureCache(path?: string): void {
+    if (path) {
+      this.textureCache.delete(path);
+      this.textureLoadingPromises.delete(path);
+      logger.info(`Cleared texture cache for: ${path}`);
+    } else {
+      this.textureCache.clear();
+      this.textureLoadingPromises.clear();
+      logger.info('Cleared all texture caches');
+    }
+  }
+
+  /**
+   * Clear material cache for specific path or all materials.
+   * @param path - Optional path to clear specific material, omit to clear all
+   */
+  clearMaterialCache(path?: string): void {
+    if (path) {
+      this.materialCache.delete(path);
+      this.materialLoadingPromises.delete(path);
+      logger.info(`Cleared material cache for: ${path}`);
+    } else {
+      this.materialCache.clear();
+      this.materialLoadingPromises.clear();
+      logger.info('Cleared all material caches');
+    }
+  }
+
+  /**
    * Clear all cached resources and registered metadata.
    */
   clear(): void {

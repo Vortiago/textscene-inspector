@@ -145,7 +145,17 @@ const mockWorkspace: any = {
   /**
    * On did save text document event
    */
-  onDidSaveTextDocument: vi.fn()
+  onDidSaveTextDocument: vi.fn(),
+
+  /**
+   * Create file system watcher
+   */
+  createFileSystemWatcher: vi.fn().mockReturnValue({
+    onDidChange: vi.fn().mockReturnValue({ dispose: vi.fn() }),
+    onDidCreate: vi.fn().mockReturnValue({ dispose: vi.fn() }),
+    onDidDelete: vi.fn().mockReturnValue({ dispose: vi.fn() }),
+    dispose: vi.fn()
+  })
 };
 
 /**

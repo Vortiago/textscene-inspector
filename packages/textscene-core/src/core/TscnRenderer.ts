@@ -96,19 +96,20 @@ export class TscnRenderer {
     if (options.resourceProvider) {
       this.resourceRegistry.setProvider(options.resourceProvider);
     }
-    if (options.onResourceNeeded) {
-      this.resourceRegistry.setOnResourceNeeded(options.onResourceNeeded);
-    }
 
     // Wrap user's onResourceNeeded callback to also track missing resources
     if (options.onResourceNeeded) {
       const userCallback = options.onResourceNeeded;
-      this.sceneManager.setOnResourceNeeded(async (resource) => {
+      const wrappedCallback = async (resource: any) => {
         // Track missing resource in ResourceRecoveryManager
         this.resourceRecovery.recordMissing(resource);
         // Call user's callback
         return await userCallback(resource);
-      });
+      };
+
+      // Set wrapped callback for both ResourceRegistry and SceneManager
+      this.resourceRegistry.setOnResourceNeeded(wrappedCallback);
+      this.sceneManager.setOnResourceNeeded(wrappedCallback);
     }
   }
 

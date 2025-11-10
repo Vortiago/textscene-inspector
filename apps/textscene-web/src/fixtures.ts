@@ -71,6 +71,26 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Test Missing External Scene",
+    "file": "test-missing-external-scene.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Test Missing Material",
+    "file": "test-missing-material.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Test Missing Texture",
+    "file": "test-missing-texture.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Test Multiple Meshes Shared Texture",
+    "file": "test-multiple-meshes-shared-texture.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Test Nested Leaf",
     "file": "test-nested-leaf.tscn",
     "category": "Other"

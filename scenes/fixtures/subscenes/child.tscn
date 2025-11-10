@@ -1,0 +1,9 @@
+[gd_scene load_steps=2 format=3]
+
+[sub_resource type="SphereMesh" id="sphere"]
+
+[node name="Child" type="Node3D"]
+
+[node name="ChildMesh" type="MeshInstance3D" parent="."]
+mesh = SubResource("sphere")
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)

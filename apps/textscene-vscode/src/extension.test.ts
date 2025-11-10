@@ -100,7 +100,7 @@ describe('Extension', () => {
     it('should add disposables to context subscriptions', () => {
       activate(mockContext);
 
-      expect(mockContext.subscriptions.length).toBe(4); // command + symbol provider + definition provider + save listener
+      expect(mockContext.subscriptions.length).toBe(7); // command + symbol provider + definition provider + save listener + resource watcher + 2 watcher handlers
     });
   });
 
