@@ -1,11 +1,4 @@
-/**
- * Camera3D renderer - creates three.js cameras with visualization helpers
- *
- * Architecture: Cameras are no longer wrapped in Groups. Transform is applied directly
- * to the camera, and offsets are applied in the camera's LOCAL coordinate system
- * (matching Godot's implementation). Helpers are stored in userData for scene-level
- * registration.
- */
+/** Creates three.js cameras with visualization helpers for Camera3D nodes */
 
 import * as THREE from 'three';
 import type { Camera3DProperties } from './types';
@@ -24,15 +17,10 @@ export function createCamera3D(name: string, properties: Camera3DProperties): TH
   const camera = createCameraByProjection(properties);
   camera.name = name;
 
-  // Apply transform directly to camera (no group wrapper)
   applyNode3DTransform(camera, properties);
 
-  // CRITICAL FIX: Apply offsets in camera's LOCAL coordinate system
-  // This matches Godot's _get_adjusted_camera_transform() implementation:
-  //   tr.origin += tr.basis.get_column(1) * v_offset;  // Y-axis offset
-  //   tr.origin += tr.basis.get_column(0) * h_offset;  // X-axis offset
+  // Apply h_offset and v_offset in camera's local coordinate system using basis vectors
   if ((properties.h_offset !== 0 || properties.v_offset !== 0) && properties.transform) {
-    // Use basis vectors directly from transform (Godot's basis columns = local axes)
     const localX = new THREE.Vector3(
       properties.transform.basis_x.x,
       properties.transform.basis_x.y,
@@ -44,7 +32,6 @@ export function createCamera3D(name: string, properties: Camera3DProperties): TH
       properties.transform.basis_y.z
     );
 
-    // Apply offsets along camera's local axes (basis columns) to camera's position
     camera.position.addScaledVector(localX, properties.h_offset);
     camera.position.addScaledVector(localY, properties.v_offset);
   }
@@ -69,72 +56,21 @@ export function createCamera3D(name: string, properties: Camera3DProperties): TH
 }
 
 /**
- * Log detailed transform information for debugging
+ * Log camera creation for debugging
  */
 function logCameraTransforms(
   name: string,
   camera: THREE.Camera,
   properties: Camera3DProperties
 ): void {
-  const cameraWorldPos = new THREE.Vector3();
-  const cameraWorldQuat = new THREE.Quaternion();
-  camera.getWorldPosition(cameraWorldPos);
-  camera.getWorldQuaternion(cameraWorldQuat);
+  const projType = properties.projection === 0 ? 'Perspective' : 'Orthogonal';
+  const projDetail = properties.projection === 0 ? `FOV=${properties.fov.toFixed(1)}°` : `Size=${properties.size.toFixed(1)}`;
+  const pos = `(${camera.position.x.toFixed(1)}, ${camera.position.y.toFixed(1)}, ${camera.position.z.toFixed(1)})`;
+  const offsets = properties.h_offset !== 0 || properties.v_offset !== 0
+    ? `, offsets=(${properties.h_offset.toFixed(1)}, ${properties.v_offset.toFixed(1)})`
+    : '';
 
-  info(`\n${'='.repeat(80)}`);
-  info(`[Camera3D] ${name} - Debug Transform Report`);
-  info(`${'='.repeat(80)}`);
-
-  // Log original Godot transform
-  info(`\n[Godot Transform3D from TSCN]:`);
-  if (properties.transform) {
-    const t = properties.transform;
-    info(`  Basis X: (${t.basis_x.x.toFixed(3)}, ${t.basis_x.y.toFixed(3)}, ${t.basis_x.z.toFixed(3)})`);
-    info(`  Basis Y: (${t.basis_y.x.toFixed(3)}, ${t.basis_y.y.toFixed(3)}, ${t.basis_y.z.toFixed(3)})`);
-    info(`  Basis Z: (${t.basis_z.x.toFixed(3)}, ${t.basis_z.y.toFixed(3)}, ${t.basis_z.z.toFixed(3)})`);
-    info(`  Origin: (${t.origin.x.toFixed(2)}, ${t.origin.y.toFixed(2)}, ${t.origin.z.toFixed(2)})`);
-  } else {
-    info(`  <Identity transform - no transform property in TSCN>`);
-  }
-
-  // Log camera offsets
-  info(`\n[Camera Offsets Applied in LOCAL Space]:`);
-  info(`  h_offset: ${properties.h_offset.toFixed(2)} (applied along camera's LOCAL X-axis)`);
-  info(`  v_offset: ${properties.v_offset.toFixed(2)} (applied along camera's LOCAL Y-axis)`);
-  info(`  frustum_offset: (${properties.frustum_offset.x.toFixed(2)}, ${properties.frustum_offset.y.toFixed(2)})`);
-
-  // Log camera properties
-  info(`\n[Camera Properties]:`);
-  info(`  Projection: ${properties.projection === 0 ? 'Perspective' : 'Orthogonal'}`);
-  if (properties.projection === 0) {
-    info(`  FOV: ${properties.fov.toFixed(2)}°`);
-  } else {
-    info(`  Size: ${properties.size.toFixed(2)}`);
-  }
-  info(`  Near: ${properties.near.toFixed(2)}, Far: ${properties.far.toFixed(2)}`);
-
-  // Log Camera transform
-  info(`\n[Camera Transform]:`);
-  info(`  Local Position: (${camera.position.x.toFixed(2)}, ${camera.position.y.toFixed(2)}, ${camera.position.z.toFixed(2)})`);
-  info(`  Local Rotation: (${camera.rotation.x.toFixed(2)}, ${camera.rotation.y.toFixed(2)}, ${camera.rotation.z.toFixed(2)})`);
-  info(`  Local Scale: (${camera.scale.x.toFixed(2)}, ${camera.scale.y.toFixed(2)}, ${camera.scale.z.toFixed(2)})`);
-  info(`  World Position: (${cameraWorldPos.x.toFixed(2)}, ${cameraWorldPos.y.toFixed(2)}, ${cameraWorldPos.z.toFixed(2)})`);
-  info(`  World Quaternion: (${cameraWorldQuat.x.toFixed(3)}, ${cameraWorldQuat.y.toFixed(3)}, ${cameraWorldQuat.z.toFixed(3)}, ${cameraWorldQuat.w.toFixed(3)})`);
-  info(`  matrixAutoUpdate: ${camera.matrixAutoUpdate}`);
-
-  // Log matrix elements
-  info(`\n[Camera Matrix Elements]:`);
-  const cm = camera.matrix.elements;
-  info(`  [${cm[0].toFixed(3)}, ${cm[4].toFixed(3)}, ${cm[8].toFixed(3)}, ${cm[12].toFixed(3)}]`);
-  info(`  [${cm[1].toFixed(3)}, ${cm[5].toFixed(3)}, ${cm[9].toFixed(3)}, ${cm[13].toFixed(3)}]`);
-  info(`  [${cm[2].toFixed(3)}, ${cm[6].toFixed(3)}, ${cm[10].toFixed(3)}, ${cm[14].toFixed(3)}]`);
-  info(`  [${cm[3].toFixed(3)}, ${cm[7].toFixed(3)}, ${cm[11].toFixed(3)}, ${cm[15].toFixed(3)}]`);
-
-  info(`\n[Helper Status]:`);
-  info(`  Stored in camera.userData.helper for scene-level registration`);
-  info(`  Helper will be added to scene root by TscnRenderer`);
-
-  info(`${'='.repeat(80)}\n`);
+  info(`[Camera3D] ${name}: ${projType} ${projDetail}, pos=${pos}${offsets}`);
 }
 
 /**

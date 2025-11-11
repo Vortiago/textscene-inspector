@@ -215,21 +215,7 @@ export class TscnRenderer {
         if (helper) {
           this.helpersContainer.add(helper);
 
-          // CameraHelper doesn't auto-position itself, we need to manually sync it
-          // Get camera's world transform (matrices already updated above)
-          const position = new THREE.Vector3();
-          const quaternion = new THREE.Quaternion();
-          const scale = new THREE.Vector3();
-          obj.matrixWorld.decompose(position, quaternion, scale);
-
-          helper.position.copy(position);
-          helper.quaternion.copy(quaternion);
-          helper.scale.copy(scale);
-
-          // Force matrix world update
-          helper.updateMatrixWorld(true);
-
-          // Update helper geometry to show camera frustum
+          // Update helper geometry to reflect camera's current state
           helper.update();
 
           helperCount++;
@@ -248,22 +234,7 @@ export class TscnRenderer {
     // Update all helpers in the container
     this.helpersContainer.children.forEach((helper) => {
       if (helper instanceof THREE.CameraHelper) {
-        // Sync helper position/rotation/scale with camera's world transform
-        const camera = helper.camera;
-        if (camera) {
-          camera.updateMatrixWorld(true);
-
-          const position = new THREE.Vector3();
-          const quaternion = new THREE.Quaternion();
-          const scale = new THREE.Vector3();
-          camera.matrixWorld.decompose(position, quaternion, scale);
-
-          helper.position.copy(position);
-          helper.quaternion.copy(quaternion);
-          helper.scale.copy(scale);
-        }
-
-        // Update helper geometry
+        // Update helper geometry to reflect current camera state
         helper.update();
       }
     });

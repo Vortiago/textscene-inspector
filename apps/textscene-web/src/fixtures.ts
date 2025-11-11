@@ -33,7 +33,7 @@ export const fixtures: Fixture[] = [
   {
     "name": "Photo Wall",
     "file": "edge-photo-wall.tscn",
-    "category": "Edge Cases"
+    "category": "Integration - Multi-Node"
   },
   {
     "name": "Plane Rotated Scaled",
