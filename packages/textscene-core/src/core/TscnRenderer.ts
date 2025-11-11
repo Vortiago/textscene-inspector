@@ -40,6 +40,7 @@ export class TscnRenderer {
   private camera: THREE.PerspectiveCamera;
   private renderer: THREE.WebGLRenderer;
   private controls: OrbitControls;
+  private helpersContainer: THREE.Group;
 
   // Specialized managers
   private nodeTracker: NodeTracker;
@@ -66,6 +67,11 @@ export class TscnRenderer {
     this.camera = components.camera;
     this.renderer = components.renderer;
     this.controls = components.controls;
+
+    // Setup camera helpers container
+    this.helpersContainer = new THREE.Group();
+    this.helpersContainer.name = '__camera_helpers__';
+    this.scene.add(this.helpersContainer);
 
     // Initialize managers
     this.nodeTracker = new NodeTracker();
@@ -152,10 +158,15 @@ export class TscnRenderer {
       this.sceneManager.setResourceRegistry(sceneData.resourceRegistry);
     }
 
-    // Clear scene (keep lights and grid)
+    // Clear scene (keep lights, grid, and helpers container)
     const objectsToRemove: THREE.Object3D[] = [];
     this.scene.children.forEach((child: THREE.Object3D) => {
-      if (!(child instanceof THREE.Light) && !(child instanceof THREE.GridHelper)) {
+      const isSystemObject =
+        child instanceof THREE.Light ||
+        child instanceof THREE.GridHelper ||
+        child === this.helpersContainer;
+
+      if (!isSystemObject) {
         objectsToRemove.push(child);
       }
     });
@@ -175,7 +186,87 @@ export class TscnRenderer {
     // Apply WorldEnvironment settings to scene (background, fog, etc.)
     this.applyWorldEnvironment(sceneData);
 
+    // Register camera helpers (must be after all nodes are added)
+    this.registerCameraHelpers();
+
     logger.info('Rendering complete');
+  }
+
+  /**
+   * Register all camera helpers after scene build
+   * Finds Camera3D objects and adds their helpers to helpersContainer
+   */
+  private registerCameraHelpers(): void {
+    // Clear existing helpers
+    this.helpersContainer.clear();
+
+    // Ensure scene matrices are up to date
+    this.scene.updateMatrixWorld(true);
+
+    // Find all Camera3D objects
+    const allPaths = this.nodeTracker.getAllPaths();
+    logger.info(`[Camera Helpers] Searching ${allPaths.length} tracked nodes for Camera3D nodes`);
+
+    let helperCount = 0;
+    for (const path of allPaths) {
+      const obj = this.nodeTracker.getObject(path);
+      if (obj && obj.userData.nodeType === 'Camera3D' && obj instanceof THREE.Camera) {
+        const helper = obj.userData.helper as THREE.CameraHelper | undefined;
+        if (helper) {
+          this.helpersContainer.add(helper);
+
+          // CameraHelper doesn't auto-position itself, we need to manually sync it
+          // Get camera's world transform (matrices already updated above)
+          const position = new THREE.Vector3();
+          const quaternion = new THREE.Quaternion();
+          const scale = new THREE.Vector3();
+          obj.matrixWorld.decompose(position, quaternion, scale);
+
+          helper.position.copy(position);
+          helper.quaternion.copy(quaternion);
+          helper.scale.copy(scale);
+
+          // Force matrix world update
+          helper.updateMatrixWorld(true);
+
+          // Update helper geometry to show camera frustum
+          helper.update();
+
+          helperCount++;
+          logger.info(`[Camera Helpers] Registered helper for: ${path}`);
+        }
+      }
+    }
+
+    logger.info(`[Camera Helpers] ✅ Registered ${helperCount} camera helpers`);
+  }
+
+  /**
+   * Update all camera helpers (called in render loop)
+   */
+  private updateCameraHelpers(): void {
+    // Update all helpers in the container
+    this.helpersContainer.children.forEach((helper) => {
+      if (helper instanceof THREE.CameraHelper) {
+        // Sync helper position/rotation/scale with camera's world transform
+        const camera = helper.camera;
+        if (camera) {
+          camera.updateMatrixWorld(true);
+
+          const position = new THREE.Vector3();
+          const quaternion = new THREE.Quaternion();
+          const scale = new THREE.Vector3();
+          camera.matrixWorld.decompose(position, quaternion, scale);
+
+          helper.position.copy(position);
+          helper.quaternion.copy(quaternion);
+          helper.scale.copy(scale);
+        }
+
+        // Update helper geometry
+        helper.update();
+      }
+    });
   }
 
   /**
@@ -422,6 +513,7 @@ export class TscnRenderer {
       requestAnimationFrame(animate);
       this.controls.update();
       this.updateLabels();  // Update billboards before rendering
+      this.updateCameraHelpers();  // Update camera helper positions
       this.renderer.render(this.scene, this.camera);
     };
     animate();

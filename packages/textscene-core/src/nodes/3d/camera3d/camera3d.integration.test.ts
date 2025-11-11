@@ -84,10 +84,11 @@ far = 100.0
       const cameras = renderer.getSceneCameras();
       expect(cameras.length).toBe(1);
 
-      // Verify it's an orthographic camera (check the camera object in the group)
-      const cameraGroup = cameras[0]?.object;
-      expect(cameraGroup).toBeDefined();
-      expect(cameraGroup.userData.nodeType).toBe('Camera3D');
+      // Verify it's an orthographic camera
+      const camera = cameras[0]?.object;
+      expect(camera).toBeDefined();
+      expect(camera).toBeInstanceOf(THREE.OrthographicCamera);
+      expect(camera.userData.nodeType).toBe('Camera3D');
     });
 
     it('should create camera helpers for visualization', async () => {
@@ -227,6 +228,156 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 5, 5)
       expect(meshes.length).toBe(1);
       expect(lights.length).toBeGreaterThan(0);
       expect(cameras.length).toBe(1);
+    });
+  });
+
+  describe('Camera Helper Positioning (edge-photo-wall.tscn)', () => {
+    it('should position camera helper at same world position as camera with identity transform', async () => {
+      // Test FrameIdentity: parent at (0,2,0) with identity rotation, camera at local (0,0,0.5)
+      const tscnContent = `[gd_scene load_steps=1 format=3]
+
+[node name="PhotoWall" type="Node3D"]
+
+[node name="FrameIdentity" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
+
+[node name="Camera3D" type="Camera3D" parent="FrameIdentity"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.5)
+`;
+
+      const parser = new TscnParser();
+      const scene = parser.parse(tscnContent);
+      await renderer.render(scene);
+
+      const threeScene = renderer.getSceneForTesting();
+      const helpers = findCameraHelpersInScene(threeScene);
+      expect(helpers.length).toBe(1);
+
+      const helper = helpers[0]!;
+
+      // Get the camera from helper.camera property (CameraHelper has a reference to its camera)
+      const camera = helper.camera as THREE.Camera;
+      expect(camera).toBeDefined();
+      expect(camera.userData.nodeType).toBe('Camera3D');
+
+      // Helper and camera should be at same world position
+      const helperWorldPos = new THREE.Vector3();
+      const cameraWorldPos = new THREE.Vector3();
+      helper.getWorldPosition(helperWorldPos);
+      camera.getWorldPosition(cameraWorldPos);
+
+      // These should match - helper should visualize camera at camera's actual position
+      expect(helperWorldPos.x).toBeCloseTo(cameraWorldPos.x, 2);
+      expect(helperWorldPos.y).toBeCloseTo(cameraWorldPos.y, 2);
+      expect(helperWorldPos.z).toBeCloseTo(cameraWorldPos.z, 2);
+    });
+
+    it('should position camera helper correctly with 90° Y-rotation parent', async () => {
+      // Test Frame90Y: parent at (3,2,0) with 90° Y-rotation, camera at local (0,0,0.5)
+      const tscnContent = `[gd_scene load_steps=1 format=3]
+
+[node name="PhotoWall" type="Node3D"]
+
+[node name="Frame90Y" type="Node3D" parent="."]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 3, 2, 0)
+
+[node name="Camera3D" type="Camera3D" parent="Frame90Y"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.5)
+`;
+
+      const parser = new TscnParser();
+      const scene = parser.parse(tscnContent);
+      await renderer.render(scene);
+
+      const threeScene = renderer.getSceneForTesting();
+      const helpers = findCameraHelpersInScene(threeScene);
+      expect(helpers.length).toBe(1);
+
+      const helper = helpers[0]!;
+      const camera = helper.camera as THREE.Camera;
+
+      // Helper and camera should be at same world position
+      const helperWorldPos = new THREE.Vector3();
+      const cameraWorldPos = new THREE.Vector3();
+      helper.getWorldPosition(helperWorldPos);
+      camera.getWorldPosition(cameraWorldPos);
+
+      expect(helperWorldPos.x).toBeCloseTo(cameraWorldPos.x, 2);
+      expect(helperWorldPos.y).toBeCloseTo(cameraWorldPos.y, 2);
+      expect(helperWorldPos.z).toBeCloseTo(cameraWorldPos.z, 2);
+    });
+
+    it('should position camera helper correctly with 180° Y-rotation parent', async () => {
+      // Test Frame180Y: parent at (6,2,0) with 180° Y-rotation, camera at local (0,0,0.5)
+      const tscnContent = `[gd_scene load_steps=1 format=3]
+
+[node name="PhotoWall" type="Node3D"]
+
+[node name="Frame180Y" type="Node3D" parent="."]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 6, 2, 0)
+
+[node name="Camera3D" type="Camera3D" parent="Frame180Y"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.5)
+`;
+
+      const parser = new TscnParser();
+      const scene = parser.parse(tscnContent);
+      await renderer.render(scene);
+
+      const threeScene = renderer.getSceneForTesting();
+      const helpers = findCameraHelpersInScene(threeScene);
+      expect(helpers.length).toBe(1);
+
+      const helper = helpers[0]!;
+      const camera = helper.camera as THREE.Camera;
+
+      // Helper and camera should be at same world position
+      const helperWorldPos = new THREE.Vector3();
+      const cameraWorldPos = new THREE.Vector3();
+      helper.getWorldPosition(helperWorldPos);
+      camera.getWorldPosition(cameraWorldPos);
+
+      expect(helperWorldPos.x).toBeCloseTo(cameraWorldPos.x, 2);
+      expect(helperWorldPos.y).toBeCloseTo(cameraWorldPos.y, 2);
+      expect(helperWorldPos.z).toBeCloseTo(cameraWorldPos.z, 2);
+    });
+
+    it('should load full edge-photo-wall.tscn with all three cameras', async () => {
+      // Load the complete edge-photo-wall fixture with all 3 photo frames
+      const fs = await import('fs/promises');
+      const path = await import('path');
+      // From packages/textscene-core/src/nodes/3d/camera3d/ go up to root, then to scenes/fixtures/
+      const fixturePathRaw = path.join(__dirname, '../../../../../../scenes/fixtures/edge-photo-wall.tscn');
+      const fixturePath = fixturePathRaw.replace(/\\/g, '/');
+
+      const tscnContent = await fs.readFile(fixturePath, 'utf-8');
+
+      const parser = new TscnParser();
+      const scene = parser.parse(tscnContent);
+      await renderer.render(scene);
+
+      // Verify all 3 cameras were created
+      const cameras = renderer.getSceneCameras();
+      expect(cameras.length).toBe(3);
+
+      // Verify all 3 helpers exist
+      const threeScene = renderer.getSceneForTesting();
+      const helpers = findCameraHelpersInScene(threeScene);
+      expect(helpers.length).toBe(3);
+
+      // Verify each helper matches its camera's world position
+      for (const helper of helpers) {
+        const camera = helper.camera as THREE.Camera;
+
+        const helperWorldPos = new THREE.Vector3();
+        const cameraWorldPos = new THREE.Vector3();
+        helper.getWorldPosition(helperWorldPos);
+        camera.getWorldPosition(cameraWorldPos);
+
+        expect(helperWorldPos.x).toBeCloseTo(cameraWorldPos.x, 2);
+        expect(helperWorldPos.y).toBeCloseTo(cameraWorldPos.y, 2);
+        expect(helperWorldPos.z).toBeCloseTo(cameraWorldPos.z, 2);
+      }
     });
   });
 

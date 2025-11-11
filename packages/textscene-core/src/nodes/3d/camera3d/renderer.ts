@@ -1,5 +1,10 @@
 /**
  * Camera3D renderer - creates three.js cameras with visualization helpers
+ *
+ * Architecture: Cameras are no longer wrapped in Groups. Transform is applied directly
+ * to the camera, and offsets are applied in the camera's LOCAL coordinate system
+ * (matching Godot's implementation). Helpers are stored in userData for scene-level
+ * registration.
  */
 
 import * as THREE from 'three';
@@ -12,69 +17,124 @@ const DEFAULT_ASPECT = 16 / 9;
 
 /**
  * Create a Camera3D with visualization helper
- * Returns a Group containing the camera and a CameraHelper for visualization
+ * Returns a Camera (not a Group!) with helper stored in userData
  */
-export function createCamera3D(name: string, properties: Camera3DProperties): THREE.Group {
-  const group = new THREE.Group();
-  group.name = name;
-
+export function createCamera3D(name: string, properties: Camera3DProperties): THREE.Camera {
   // Create the appropriate camera type
   const camera = createCameraByProjection(properties);
-  camera.name = `${name}_camera`;
+  camera.name = name;
 
-  // Apply transform to group (not camera) so it inherits parent hierarchy correctly
-  applyNode3DTransform(group, properties);
+  // Apply transform directly to camera (no group wrapper)
+  applyNode3DTransform(camera, properties);
 
-  // Apply offsets to camera (offsets are in camera's local space)
-  if (properties.h_offset !== 0 || properties.v_offset !== 0) {
-    camera.position.x += properties.h_offset;
-    camera.position.y += properties.v_offset;
+  // CRITICAL FIX: Apply offsets in camera's LOCAL coordinate system
+  // This matches Godot's _get_adjusted_camera_transform() implementation:
+  //   tr.origin += tr.basis.get_column(1) * v_offset;  // Y-axis offset
+  //   tr.origin += tr.basis.get_column(0) * h_offset;  // X-axis offset
+  if ((properties.h_offset !== 0 || properties.v_offset !== 0) && properties.transform) {
+    // Use basis vectors directly from transform (Godot's basis columns = local axes)
+    const localX = new THREE.Vector3(
+      properties.transform.basis_x.x,
+      properties.transform.basis_x.y,
+      properties.transform.basis_x.z
+    );
+    const localY = new THREE.Vector3(
+      properties.transform.basis_y.x,
+      properties.transform.basis_y.y,
+      properties.transform.basis_y.z
+    );
+
+    // Apply offsets along camera's local axes (basis columns) to camera's position
+    camera.position.addScaledVector(localX, properties.h_offset);
+    camera.position.addScaledVector(localY, properties.v_offset);
   }
 
-  // Add camera to group
-  group.add(camera);
-
-  // Create helper - it will track the camera automatically
+  // Create helper and store reference in userData (don't add to scene yet)
   const helper = new THREE.CameraHelper(camera);
   helper.name = `${name}_helper`;
   helper.visible = true;
 
-  // CRITICAL: Reset helper's position to origin
-  // CameraHelper calculates geometry based on camera's world matrix,
-  // but we want it positioned at the group's origin, not offset
-  helper.position.set(0, 0, 0);
-  helper.rotation.set(0, 0, 0);
-  helper.scale.set(1, 1, 1);
+  // Store in userData for scene-level registration
+  camera.userData.nodeType = 'Camera3D';
+  camera.userData.cameraProperties = properties;
+  camera.userData.helper = helper;
 
-  // Add helper to group
-  group.add(helper);
+  // Provide custom highlight target for HelperManager
+  camera.userData.getHighlightTarget = () => helper;
 
-  // Log transforms for debugging camera helper positioning
-  const groupWorldPos = new THREE.Vector3();
+  // Log transforms for debugging
+  logCameraTransforms(name, camera, properties);
+
+  return camera;
+}
+
+/**
+ * Log detailed transform information for debugging
+ */
+function logCameraTransforms(
+  name: string,
+  camera: THREE.Camera,
+  properties: Camera3DProperties
+): void {
   const cameraWorldPos = new THREE.Vector3();
-  const helperWorldPos = new THREE.Vector3();
-  group.getWorldPosition(groupWorldPos);
+  const cameraWorldQuat = new THREE.Quaternion();
   camera.getWorldPosition(cameraWorldPos);
-  helper.getWorldPosition(helperWorldPos);
+  camera.getWorldQuaternion(cameraWorldQuat);
 
-  info(`[Camera3D] ${name} transforms:`);
-  info(`  Group local: pos(${group.position.x.toFixed(2)}, ${group.position.y.toFixed(2)}, ${group.position.z.toFixed(2)})`);
-  info(`  Group world: pos(${groupWorldPos.x.toFixed(2)}, ${groupWorldPos.y.toFixed(2)}, ${groupWorldPos.z.toFixed(2)})`);
-  info(`  Camera local: pos(${camera.position.x.toFixed(2)}, ${camera.position.y.toFixed(2)}, ${camera.position.z.toFixed(2)})`);
-  info(`  Camera world: pos(${cameraWorldPos.x.toFixed(2)}, ${cameraWorldPos.y.toFixed(2)}, ${cameraWorldPos.z.toFixed(2)})`);
-  info(`  Helper local: pos(${helper.position.x.toFixed(2)}, ${helper.position.y.toFixed(2)}, ${helper.position.z.toFixed(2)})`);
-  info(`  Helper world: pos(${helperWorldPos.x.toFixed(2)}, ${helperWorldPos.y.toFixed(2)}, ${helperWorldPos.z.toFixed(2)})`);
+  info(`\n${'='.repeat(80)}`);
+  info(`[Camera3D] ${name} - Debug Transform Report`);
+  info(`${'='.repeat(80)}`);
 
-  // Store properties and references in userData (THREE.js idiomatic pattern)
-  group.userData.nodeType = 'Camera3D';
-  group.userData.cameraProperties = properties;
-  group.userData.camera = camera;
-  group.userData.helper = helper;
+  // Log original Godot transform
+  info(`\n[Godot Transform3D from TSCN]:`);
+  if (properties.transform) {
+    const t = properties.transform;
+    info(`  Basis X: (${t.basis_x.x.toFixed(3)}, ${t.basis_x.y.toFixed(3)}, ${t.basis_x.z.toFixed(3)})`);
+    info(`  Basis Y: (${t.basis_y.x.toFixed(3)}, ${t.basis_y.y.toFixed(3)}, ${t.basis_y.z.toFixed(3)})`);
+    info(`  Basis Z: (${t.basis_z.x.toFixed(3)}, ${t.basis_z.y.toFixed(3)}, ${t.basis_z.z.toFixed(3)})`);
+    info(`  Origin: (${t.origin.x.toFixed(2)}, ${t.origin.y.toFixed(2)}, ${t.origin.z.toFixed(2)})`);
+  } else {
+    info(`  <Identity transform - no transform property in TSCN>`);
+  }
 
-  // Provide custom highlight target - highlight the frustum helper instead of the group
-  group.userData.getHighlightTarget = () => helper;
+  // Log camera offsets
+  info(`\n[Camera Offsets Applied in LOCAL Space]:`);
+  info(`  h_offset: ${properties.h_offset.toFixed(2)} (applied along camera's LOCAL X-axis)`);
+  info(`  v_offset: ${properties.v_offset.toFixed(2)} (applied along camera's LOCAL Y-axis)`);
+  info(`  frustum_offset: (${properties.frustum_offset.x.toFixed(2)}, ${properties.frustum_offset.y.toFixed(2)})`);
 
-  return group;
+  // Log camera properties
+  info(`\n[Camera Properties]:`);
+  info(`  Projection: ${properties.projection === 0 ? 'Perspective' : 'Orthogonal'}`);
+  if (properties.projection === 0) {
+    info(`  FOV: ${properties.fov.toFixed(2)}°`);
+  } else {
+    info(`  Size: ${properties.size.toFixed(2)}`);
+  }
+  info(`  Near: ${properties.near.toFixed(2)}, Far: ${properties.far.toFixed(2)}`);
+
+  // Log Camera transform
+  info(`\n[Camera Transform]:`);
+  info(`  Local Position: (${camera.position.x.toFixed(2)}, ${camera.position.y.toFixed(2)}, ${camera.position.z.toFixed(2)})`);
+  info(`  Local Rotation: (${camera.rotation.x.toFixed(2)}, ${camera.rotation.y.toFixed(2)}, ${camera.rotation.z.toFixed(2)})`);
+  info(`  Local Scale: (${camera.scale.x.toFixed(2)}, ${camera.scale.y.toFixed(2)}, ${camera.scale.z.toFixed(2)})`);
+  info(`  World Position: (${cameraWorldPos.x.toFixed(2)}, ${cameraWorldPos.y.toFixed(2)}, ${cameraWorldPos.z.toFixed(2)})`);
+  info(`  World Quaternion: (${cameraWorldQuat.x.toFixed(3)}, ${cameraWorldQuat.y.toFixed(3)}, ${cameraWorldQuat.z.toFixed(3)}, ${cameraWorldQuat.w.toFixed(3)})`);
+  info(`  matrixAutoUpdate: ${camera.matrixAutoUpdate}`);
+
+  // Log matrix elements
+  info(`\n[Camera Matrix Elements]:`);
+  const cm = camera.matrix.elements;
+  info(`  [${cm[0].toFixed(3)}, ${cm[4].toFixed(3)}, ${cm[8].toFixed(3)}, ${cm[12].toFixed(3)}]`);
+  info(`  [${cm[1].toFixed(3)}, ${cm[5].toFixed(3)}, ${cm[9].toFixed(3)}, ${cm[13].toFixed(3)}]`);
+  info(`  [${cm[2].toFixed(3)}, ${cm[6].toFixed(3)}, ${cm[10].toFixed(3)}, ${cm[14].toFixed(3)}]`);
+  info(`  [${cm[3].toFixed(3)}, ${cm[7].toFixed(3)}, ${cm[11].toFixed(3)}, ${cm[15].toFixed(3)}]`);
+
+  info(`\n[Helper Status]:`);
+  info(`  Stored in camera.userData.helper for scene-level registration`);
+  info(`  Helper will be added to scene root by TscnRenderer`);
+
+  info(`${'='.repeat(80)}\n`);
 }
 
 /**
@@ -129,11 +189,9 @@ function createOrthographicCamera(properties: Camera3DProperties): THREE.Orthogr
 /**
  * Update camera aspect ratio (for window resize)
  */
-export function updateCameraAspect(group: THREE.Group, aspect: number): void {
-  const camera = group.userData.camera as THREE.Camera | undefined;
-  const properties = group.userData.cameraProperties as Camera3DProperties | undefined;
-
-  if (!camera || !properties) return;
+export function updateCameraAspect(camera: THREE.Camera, aspect: number): void {
+  const properties = camera.userData.cameraProperties as Camera3DProperties | undefined;
+  if (!properties) return;
 
   if (camera instanceof THREE.PerspectiveCamera) {
     camera.aspect = aspect;
@@ -149,33 +207,9 @@ export function updateCameraAspect(group: THREE.Group, aspect: number): void {
     camera.updateProjectionMatrix();
   }
 
-  // Update helper
-  const helper = group.userData.helper as THREE.CameraHelper | undefined;
+  // Update helper if it exists
+  const helper = camera.userData.helper as THREE.CameraHelper | undefined;
   if (helper) {
     helper.update();
-  }
-}
-
-/**
- * Get the actual camera from a Camera3D group
- */
-export function getCameraFromGroup(group: THREE.Group): THREE.Camera | null {
-  return (group.userData.camera as THREE.Camera) || null;
-}
-
-/**
- * Get the helper from a Camera3D group
- */
-export function getHelperFromGroup(group: THREE.Group): THREE.CameraHelper | null {
-  return (group.userData.helper as THREE.CameraHelper) || null;
-}
-
-/**
- * Show/hide camera helper
- */
-export function setHelperVisibility(group: THREE.Group, visible: boolean): void {
-  const helper = getHelperFromGroup(group);
-  if (helper) {
-    helper.visible = visible;
   }
 }

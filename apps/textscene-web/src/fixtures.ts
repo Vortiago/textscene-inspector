@@ -31,6 +31,11 @@ export const fixtures: Fixture[] = [
     "category": "Edge Cases"
   },
   {
+    "name": "Photo Wall",
+    "file": "edge-photo-wall.tscn",
+    "category": "Edge Cases"
+  },
+  {
     "name": "Plane Rotated Scaled",
     "file": "edge-plane-rotated-scaled.tscn",
     "category": "Edge Cases"
@@ -208,6 +213,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Multi Camera",
     "file": "unit-multi-camera.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Photo Frame Base",
+    "file": "unit-photo-frame-base.tscn",
     "category": "Other"
   },
   {
