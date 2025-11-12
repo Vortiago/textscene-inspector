@@ -273,6 +273,21 @@ nodeRegistry.register({
 
 Then import in TscnParser.ts: `import '../nodes/mynodetype';`
 
+### three.js Resource Cloning Pattern
+
+**CRITICAL**: `THREE.Object3D` can only have ONE parent. When caching three.js resources, clone before returning or only the LAST instance renders.
+
+**When adding new resource types to ResourceRegistry:**
+1. Check if resource has parent/ownership constraints (Object3D, Texture, Material do)
+2. If yes, clone before returning from cache: `cached.clone(true)` for Object3D
+3. Update tests to expect different UUIDs (cloned objects, not same reference)
+
+**Example - loadGLBMesh:**
+```typescript
+const cached = await this.loadWithDeduplication(id, this.glbMeshCache, ...);
+return cached ? cached.clone(true) : null;  // Clone or only last instance visible
+```
+
 ### Two-Parser Architecture
 
 The codebase uses **two different parsers** for different purposes:

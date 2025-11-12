@@ -935,8 +935,12 @@ transparency = 0.5
       const mesh1 = await registry.loadGLBMesh('1_glb');
       const mesh2 = await registry.loadGLBMesh('1_glb');
 
-      expect(mesh1).toBe(mesh2); // Same instance
-      expect(loadCount).toBe(1); // Only loaded once
+      // Meshes should be cloned (different instances) to support multiple parents
+      expect(mesh1).not.toBe(mesh2); // Different instances
+      expect(mesh1?.uuid).not.toBe(mesh2?.uuid); // Different UUIDs
+      expect(mesh1?.type).toBe('Group'); // Both are valid Object3D
+      expect(mesh2?.type).toBe('Group');
+      expect(loadCount).toBe(1); // Only loaded once (deduplication works)
     });
 
     it('should return null for non-GLB/GLTF file extensions', async () => {
@@ -1019,11 +1023,16 @@ transparency = 0.5
         registry.loadGLBMesh('1_glb'),
       ]);
 
-      // All should return the same instance
-      expect(mesh1).toBe(mesh2);
-      expect(mesh2).toBe(mesh3);
+      // All should be cloned (different instances) to support multiple parents
+      expect(mesh1).not.toBe(mesh2); // Different instances
+      expect(mesh2).not.toBe(mesh3);
+      expect(mesh1?.uuid).not.toBe(mesh2?.uuid); // Different UUIDs
+      expect(mesh2?.uuid).not.toBe(mesh3?.uuid);
+      expect(mesh1?.type).toBe('Group'); // All are valid Object3D
+      expect(mesh2?.type).toBe('Group');
+      expect(mesh3?.type).toBe('Group');
 
-      // Only loaded once despite concurrent requests
+      // Only loaded once despite concurrent requests (deduplication works)
       expect(loadCount).toBe(1);
     });
   });

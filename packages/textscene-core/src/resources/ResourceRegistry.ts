@@ -412,6 +412,11 @@ export class ResourceRegistry {
    * Load GLB/GLTF mesh resource and return THREE.js Object3D.
    * Returns cached mesh if already loaded.
    * Returns null if mesh cannot be loaded (and calls onResourceNeeded if set).
+   *
+   * IMPORTANT: Always returns a cloned copy of the cached Object3D.
+   * This is necessary because THREE.Object3D can only have ONE parent at a time.
+   * Without cloning, multiple instances would share the same object, causing
+   * each new instance to remove the object from its previous parent.
    */
   async loadGLBMesh(idOrPath: string): Promise<THREE.Object3D | null> {
     const startTime = performance.now();
@@ -419,7 +424,7 @@ export class ResourceRegistry {
 
     logger.info(`[loadGLBMesh] START: ${idOrPath} (cache: ${cacheStatus})`);
 
-    return await this.loadWithDeduplication(
+    const cachedMesh = await this.loadWithDeduplication(
       idOrPath,
       this.glbMeshCache,
       this.glbMeshLoadingPromises,
@@ -496,6 +501,23 @@ export class ResourceRegistry {
         }
       }
     );
+
+    // Clone the cached mesh for this instance
+    // CRITICAL: THREE.Object3D can only have ONE parent at a time
+    // Without cloning, multiple instances would share the same object reference,
+    // and adding it to a new parent would remove it from the previous parent
+    if (cachedMesh === null) {
+      logger.info(`[loadGLBMesh] Returning null (load failed): ${idOrPath}`);
+      return null;
+    }
+
+    // Clone recursively (true = deep clone including children and geometry)
+    const clonedMesh = cachedMesh.clone(true);
+
+    const elapsed = performance.now() - startTime;
+    logger.info(`[loadGLBMesh] Returning cloned instance: ${idOrPath} (${elapsed.toFixed(2)}ms total)`);
+
+    return clonedMesh;
   }
 
   /**
