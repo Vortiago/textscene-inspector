@@ -36,7 +36,7 @@ export class WebResourceProvider implements ResourceProvider {
     // Check uploaded files first
     const uploadedFile = this.uploadedFiles.get(path);
     if (uploadedFile) {
-      return isBinaryResourceType(type) ? uploadedFile.arrayBuffer() : uploadedFile.text();
+      return isBinaryResourceType(type, path) ? uploadedFile.arrayBuffer() : uploadedFile.text();
     }
 
     // For resources from /fixtures/, try fetching them
@@ -58,7 +58,7 @@ export class WebResourceProvider implements ResourceProvider {
             throw new Error(`Resource not found: ${path}`);
           }
 
-          if (isBinaryResourceType(type)) {
+          if (isBinaryResourceType(type, path)) {
             const content = await response.arrayBuffer();
             info(`[WebResourceProvider] Successfully loaded ${type}: ${path}`);
             return content;

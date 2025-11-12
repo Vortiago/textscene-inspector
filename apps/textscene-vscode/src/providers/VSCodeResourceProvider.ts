@@ -27,8 +27,8 @@ export class VSCodeResourceProvider implements ResourceProvider {
       const fileData = await vscode.workspace.fs.readFile(fsPath);
       info(`[VSCodeResourceProvider] Successfully read ${fileData.byteLength} bytes`);
 
-      // Return as ArrayBuffer for binary files (textures, audio)
-      if (isBinaryResourceType(type)) {
+      // Return as ArrayBuffer for binary files (textures, audio, GLB/GLTF)
+      if (isBinaryResourceType(type, resourcePath)) {
         // Create a new ArrayBuffer from Uint8Array
         const buffer = new ArrayBuffer(fileData.byteLength);
         const view = new Uint8Array(buffer);
@@ -58,7 +58,7 @@ export class VSCodeResourceProvider implements ResourceProvider {
           info(`[VSCodeResourceProvider] Fallback succeeded: ${fileData.byteLength} bytes`);
 
           // Return as ArrayBuffer for binary files
-          if (isBinaryResourceType(type)) {
+          if (isBinaryResourceType(type, resourcePath)) {
             const buffer = new ArrayBuffer(fileData.byteLength);
             const view = new Uint8Array(buffer);
             view.set(fileData);

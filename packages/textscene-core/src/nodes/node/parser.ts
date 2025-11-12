@@ -13,12 +13,14 @@ export function parseNode(
   const name = heading.attributes.name || '';
   const parent = heading.attributes.parent;
   const instance = heading.attributes.instance;
+  const index = heading.attributes.index ? parseInt(heading.attributes.index, 10) : undefined;
   const transform = parseOptionalTransform(properties.transform, name);
 
   return {
     name,
     parent,
     instance,
+    index,
     transform,
   };
 }

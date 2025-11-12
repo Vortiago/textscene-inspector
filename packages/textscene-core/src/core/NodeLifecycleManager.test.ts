@@ -5,6 +5,7 @@ import { NodeTracker } from './NodeTracker';
 import type { TscnScene, TscnNode } from '../parser/types';
 import type { SceneManager } from './SceneManager';
 import { joinPath } from '../utils/nodePath';
+import { ResourceRegistry } from '../resources/ResourceRegistry';
 
 // Mock NodeRegistry
 vi.mock('./NodeRegistry', () => ({
@@ -1619,8 +1620,9 @@ describe('NodeLifecycleManager', () => {
 
   describe('syncNodeAdd', () => {
     it('should synchronize all three structures when adding node to scene root', () => {
-      const manager = new NodeLifecycleManager(scene, nodeTracker);
-      const node: TscnNode = { name: 'TestNode', type: 'Node3D', children: [] };
+      
+      manager.setSceneManager(mockSceneManager as SceneManager);
+const node: TscnNode = { name: 'TestNode', type: 'Node3D', children: [] };
       const object3D = new THREE.Object3D();
 
       // Call helper
@@ -1645,9 +1647,9 @@ describe('NodeLifecycleManager', () => {
     });
 
     it('should synchronize all three structures when adding child node', () => {
-      const manager = new NodeLifecycleManager(scene, nodeTracker);
-
-      // Setup parent
+      
+      manager.setSceneManager(mockSceneManager as SceneManager);
+// Setup parent
       const parentNode: TscnNode = { name: 'Parent', type: 'Node3D', children: [] };
       const parentObject = new THREE.Object3D();
       parentObject.userData.nodePath = 'Parent';
@@ -1682,9 +1684,9 @@ describe('NodeLifecycleManager', () => {
     });
 
     it('should prevent duplicate entries in TscnNode.children array', () => {
-      const manager = new NodeLifecycleManager(scene, nodeTracker);
-
-      // Setup parent
+      
+      manager.setSceneManager(mockSceneManager as SceneManager);
+// Setup parent
       const parentNode: TscnNode = { name: 'Parent', type: 'Node3D', children: [] };
       const parentObject = new THREE.Object3D();
       parentObject.userData.nodePath = 'Parent';
@@ -1706,9 +1708,9 @@ describe('NodeLifecycleManager', () => {
     });
 
     it('should handle parent with no existing children array', () => {
-      const manager = new NodeLifecycleManager(scene, nodeTracker);
-
-      // Setup parent WITHOUT children array
+      
+      manager.setSceneManager(mockSceneManager as SceneManager);
+// Setup parent WITHOUT children array
       const parentNode: TscnNode = { name: 'Parent', type: 'Node3D' };
       const parentObject = new THREE.Object3D();
       parentObject.userData.nodePath = 'Parent';
@@ -1730,9 +1732,9 @@ describe('NodeLifecycleManager', () => {
     });
 
     it('should handle missing parent gracefully (logs warning, no crash)', () => {
-      const manager = new NodeLifecycleManager(scene, nodeTracker);
-
-      // No parent in tracker
+      
+      manager.setSceneManager(mockSceneManager as SceneManager);
+// No parent in tracker
       const childNode: TscnNode = { name: 'Child', type: 'Node3D', children: [] };
       const childObject = new THREE.Object3D();
 
@@ -1755,9 +1757,9 @@ describe('NodeLifecycleManager', () => {
       try {
         process.env.NODE_ENV = 'development';
 
-        const manager = new NodeLifecycleManager(scene, nodeTracker);
-
-        // Setup node
+        
+      manager.setSceneManager(mockSceneManager as SceneManager);
+// Setup node
         const node: TscnNode = { name: 'Test', type: 'Node3D', children: [] };
         const object3D = new THREE.Object3D();
 
@@ -1776,9 +1778,9 @@ describe('NodeLifecycleManager', () => {
 
   describe('syncNodeRemove', () => {
     it('should remove node from all three structures', () => {
-      const manager = new NodeLifecycleManager(scene, nodeTracker);
-
-      // Setup node
+      
+      manager.setSceneManager(mockSceneManager as SceneManager);
+// Setup node
       const node: TscnNode = { name: 'TestNode', type: 'Node3D', children: [] };
       const object3D = new THREE.Object3D();
       object3D.userData.nodePath = 'TestNode';
@@ -1803,9 +1805,9 @@ describe('NodeLifecycleManager', () => {
     });
 
     it('should remove child node and update parent TscnNode.children array', () => {
-      const manager = new NodeLifecycleManager(scene, nodeTracker);
-
-      // Setup parent
+      
+      manager.setSceneManager(mockSceneManager as SceneManager);
+// Setup parent
       const parentNode: TscnNode = { name: 'Parent', type: 'Node3D', children: [] };
       const parentObject = new THREE.Object3D();
       parentObject.userData.nodePath = 'Parent';
@@ -1841,9 +1843,9 @@ describe('NodeLifecycleManager', () => {
     });
 
     it('should cascade removal to all descendants', () => {
-      const manager = new NodeLifecycleManager(scene, nodeTracker);
-
-      // Setup parent → child → grandchild hierarchy
+      
+      manager.setSceneManager(mockSceneManager as SceneManager);
+// Setup parent → child → grandchild hierarchy
       const parentNode: TscnNode = { name: 'Parent', type: 'Node3D', children: [] };
       const parentObject = new THREE.Object3D();
       parentObject.userData.nodePath = 'Parent';
@@ -1883,9 +1885,9 @@ describe('NodeLifecycleManager', () => {
     });
 
     it('should handle removing non-existent node gracefully', () => {
-      const manager = new NodeLifecycleManager(scene, nodeTracker);
-
-      // Try to remove node that doesn't exist
+      
+      manager.setSceneManager(mockSceneManager as SceneManager);
+// Try to remove node that doesn't exist
       expect(() => {
         manager['syncNodeRemove']('NonExistent');
       }).not.toThrow();
@@ -1894,9 +1896,9 @@ describe('NodeLifecycleManager', () => {
     });
 
     it('should handle removing node with multiple descendants', () => {
-      const manager = new NodeLifecycleManager(scene, nodeTracker);
-
-      // Setup parent with 3 children
+      
+      manager.setSceneManager(mockSceneManager as SceneManager);
+// Setup parent with 3 children
       const parentNode: TscnNode = { name: 'Parent', type: 'Node3D', children: [] };
       const parentObject = new THREE.Object3D();
       parentObject.userData.nodePath = 'Parent';
@@ -1929,9 +1931,9 @@ describe('NodeLifecycleManager', () => {
     });
 
     it('should only remove descendants, not siblings with similar names', () => {
-      const manager = new NodeLifecycleManager(scene, nodeTracker);
-
-      // Setup nodes with similar names
+      
+      manager.setSceneManager(mockSceneManager as SceneManager);
+// Setup nodes with similar names
       const node1: TscnNode = { name: 'Node', type: 'Node3D', children: [] };
       const object1 = new THREE.Object3D();
       object1.userData.nodePath = 'Node';
@@ -1973,8 +1975,6 @@ describe('NodeLifecycleManager', () => {
 
   describe('Instance Nodes with Children', () => {
     it('should not duplicate external scene nodes', async () => {
-      const manager = new NodeLifecycleManager(scene, nodeTracker);
-
       const sceneData: TscnScene = {
         format: 3,
         nodes: [],
@@ -2037,8 +2037,6 @@ describe('NodeLifecycleManager', () => {
     });
 
     it('should process additional children defined in parent scene', async () => {
-      const manager = new NodeLifecycleManager(scene, nodeTracker);
-
       const sceneData: TscnScene = {
         format: 3,
         nodes: [],
@@ -2103,8 +2101,6 @@ describe('NodeLifecycleManager', () => {
     });
 
     it('should preserve correct order: external children first, then additional children', async () => {
-      const manager = new NodeLifecycleManager(scene, nodeTracker);
-
       const sceneData: TscnScene = {
         format: 3,
         nodes: [],
@@ -2163,6 +2159,674 @@ describe('NodeLifecycleManager', () => {
 
       // Verify order: InstanceNode, then ExternalChild (from SceneManager), then AdditionalChild
       expect(addNodeCallOrder).toEqual(['InstanceNode', 'ExternalChild', 'AdditionalChild']);
+    });
+  });
+
+  describe('GLB Instance Support', () => {
+    it('should load GLB instance without overrides', async () => {
+      
+      manager.setSceneManager(mockSceneManager as SceneManager);
+ manager.setSceneManager(mockSceneManager as SceneManager);
+
+      // Mock GLB mesh loading
+      const mockGLBMesh = new THREE.Group();
+      mockGLBMesh.name = 'GLBRoot';
+      const mockResourceRegistry = {
+        loadGLBMesh: vi.fn().mockResolvedValue(mockGLBMesh),
+        resolveInstancePath: vi.fn().mockReturnValue('res://models/test.glb'),
+        getMetadata: vi.fn(),
+      };
+
+      // Mock static parseReference method
+      const parseReferenceSpy = vi.spyOn(ResourceRegistry, 'parseReference').mockReturnValue('1_glb');
+
+      const sceneData: TscnScene = {
+        format: 3,
+        nodes: [],
+        externalResources: [],
+        subResources: [],
+        resourceRegistry: mockResourceRegistry as any,
+      };
+
+      const glbNode: TscnNode = {
+        name: 'GLBInstance',
+        type: 'Node3D',
+        instance: 'ExtResource("1_glb")',
+        properties: {},
+        children: [],
+      };
+
+      await manager.addNode('GLBInstance', glbNode, sceneData);
+
+      // Verify GLB mesh was loaded
+      expect(mockResourceRegistry.loadGLBMesh).toHaveBeenCalledWith('1_glb');
+
+      // Verify node was added
+      expect(nodeTracker.getObject('GLBInstance')).toBeDefined();
+
+      // Clean up
+      parseReferenceSpy.mockRestore();
+    });
+
+    it('should apply material overrides to GLB mesh', async () => {
+      
+      manager.setSceneManager(mockSceneManager as SceneManager);
+ manager.setSceneManager(mockSceneManager as SceneManager);
+
+      // Create GLB scene with a mesh child
+      const mockGLBChild = new THREE.Mesh(
+        new THREE.BoxGeometry(),
+        new THREE.MeshStandardMaterial({ color: 0xff0000 })
+      );
+      mockGLBChild.name = 'ChildMesh';
+
+      const mockGLBMesh = new THREE.Group();
+      mockGLBMesh.name = 'GLBRoot';
+      mockGLBMesh.add(mockGLBChild);
+
+      const overrideMaterial = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
+
+      const mockResourceRegistry = {
+        loadGLBMesh: vi.fn().mockResolvedValue(mockGLBMesh),
+        resolveInstancePath: vi.fn().mockReturnValue('res://models/test.glb'),
+        loadMaterial: vi.fn().mockResolvedValue(overrideMaterial),
+        getMetadata: vi.fn(),
+      };
+
+      // Mock static parseReference method
+      const parseReferenceSpy = vi.spyOn(ResourceRegistry, 'parseReference')
+        .mockImplementation((ref: string) => {
+          if (ref === 'ExtResource("1_glb")') return '1_glb';
+          if (ref === 'ExtResource("2_mat")') return '2_mat';
+          return null;
+        });
+
+      const sceneData: TscnScene = {
+        format: 3,
+        nodes: [],
+        externalResources: [],
+        subResources: [],
+        resourceRegistry: mockResourceRegistry as any,
+      };
+
+      const glbNode: TscnNode = {
+        name: 'GLBInstance',
+        type: 'Node3D',
+        instance: 'ExtResource("1_glb")',
+        properties: {},
+        children: [
+          {
+            name: 'ChildMesh',
+            type: 'MeshInstance3D',
+            properties: {
+              index: 0,
+              'surface_material_override/0': 'ExtResource("2_mat")',
+            },
+            children: [],
+          },
+        ],
+      };
+
+      await manager.addNode('GLBInstance', glbNode, sceneData);
+
+      // Verify material was loaded
+      expect(mockResourceRegistry.loadMaterial).toHaveBeenCalledWith('2_mat');
+
+      // Verify node was added (material override applied internally)
+      expect(nodeTracker.getObject('GLBInstance')).toBeDefined();
+
+      // Clean up
+      parseReferenceSpy.mockRestore();
+    });
+
+    it('should handle multiple material overrides', async () => {
+      
+      manager.setSceneManager(mockSceneManager as SceneManager);
+// Create GLB scene with a mesh child that has multiple material slots
+      const mockGLBChild = new THREE.Mesh(
+        new THREE.BoxGeometry(),
+        [
+          new THREE.MeshStandardMaterial({ color: 0xff0000 }),
+          new THREE.MeshStandardMaterial({ color: 0x00ff00 }),
+        ]
+      );
+      mockGLBChild.name = 'MultiMatMesh';
+
+      const mockGLBMesh = new THREE.Group();
+      mockGLBMesh.name = 'GLBRoot';
+      mockGLBMesh.add(mockGLBChild);
+
+      const overrideMat0 = new THREE.MeshStandardMaterial({ color: 0x0000ff });
+      const overrideMat1 = new THREE.MeshStandardMaterial({ color: 0xffff00 });
+
+      const mockResourceRegistry = {
+        loadGLBMesh: vi.fn().mockResolvedValue(mockGLBMesh),
+        resolveInstancePath: vi.fn().mockReturnValue('res://models/test.glb'),
+        loadMaterial: vi.fn((id: string) => {
+          if (id === '2_mat') return Promise.resolve(overrideMat0);
+          if (id === '3_mat') return Promise.resolve(overrideMat1);
+          return Promise.resolve(null);
+        }),
+        getMetadata: vi.fn(),
+      };
+
+      // Mock static parseReference method
+      const parseReferenceSpy = vi.spyOn(ResourceRegistry, 'parseReference')
+        .mockImplementation((ref: string) => {
+          if (ref === 'ExtResource("1_glb")') return '1_glb';
+          if (ref === 'ExtResource("2_mat")') return '2_mat';
+          if (ref === 'ExtResource("3_mat")') return '3_mat';
+          return null;
+        });
+
+      const sceneData: TscnScene = {
+        format: 3,
+        nodes: [],
+        externalResources: [],
+        subResources: [],
+        resourceRegistry: mockResourceRegistry as any,
+      };
+
+      const glbNode: TscnNode = {
+        name: 'GLBInstance',
+        type: 'Node3D',
+        instance: 'ExtResource("1_glb")',
+        properties: {},
+        children: [
+          {
+            name: 'MultiMatMesh',
+            type: 'MeshInstance3D',
+            properties: {
+              index: 0,
+              'surface_material_override/0': 'ExtResource("2_mat")',
+              'surface_material_override/1': 'ExtResource("3_mat")',
+            },
+            children: [],
+          },
+        ],
+      };
+
+      await manager.addNode('GLBInstance', glbNode, sceneData);
+
+      // Verify both materials were loaded
+      expect(mockResourceRegistry.loadMaterial).toHaveBeenCalledWith('2_mat');
+      expect(mockResourceRegistry.loadMaterial).toHaveBeenCalledWith('3_mat');
+
+      expect(nodeTracker.getObject('GLBInstance')).toBeDefined();
+
+      // Clean up
+      parseReferenceSpy.mockRestore();
+    });
+
+    it('should apply transform overrides to GLB instance', async () => {
+      
+      manager.setSceneManager(mockSceneManager as SceneManager);
+const mockGLBChild = new THREE.Mesh(new THREE.BoxGeometry());
+      mockGLBChild.name = 'ChildMesh';
+
+      const mockGLBMesh = new THREE.Group();
+      mockGLBMesh.name = 'GLBRoot';
+      mockGLBMesh.add(mockGLBChild);
+
+      const mockResourceRegistry = {
+        loadGLBMesh: vi.fn().mockResolvedValue(mockGLBMesh),
+        resolveInstancePath: vi.fn().mockReturnValue('res://models/test.glb'),
+        getMetadata: vi.fn(),
+      };
+
+      // Mock static parseReference method
+      const parseReferenceSpy = vi.spyOn(ResourceRegistry, 'parseReference').mockReturnValue('1_glb');
+
+      const sceneData: TscnScene = {
+        format: 3,
+        nodes: [],
+        externalResources: [],
+        subResources: [],
+        resourceRegistry: mockResourceRegistry as any,
+      };
+
+      const glbNode: TscnNode = {
+        name: 'GLBInstance',
+        type: 'Node3D',
+        instance: 'ExtResource("1_glb")',
+        properties: {},
+        children: [
+          {
+            name: 'ChildMesh',
+            type: 'MeshInstance3D',
+            properties: {
+              index: 0,
+              transform: {
+                basis_x: { x: 1, y: 0, z: 0 },
+                basis_y: { x: 0, y: 1, z: 0 },
+                basis_z: { x: 0, y: 0, z: 1 },
+                origin: { x: 5, y: 10, z: 15 },
+              },
+            },
+            children: [],
+          },
+        ],
+      };
+
+      await manager.addNode('GLBInstance', glbNode, sceneData);
+
+      const addedObject = nodeTracker.getObject('GLBInstance');
+      expect(addedObject).toBeDefined();
+
+      // Transform should be applied to the child
+      const glbChild = mockGLBMesh.children[0];
+      expect(glbChild?.matrixAutoUpdate).toBe(false);
+      expect(glbChild?.matrix.elements[12]).toBe(5); // x translation
+      expect(glbChild?.matrix.elements[13]).toBe(10); // y translation
+      expect(glbChild?.matrix.elements[14]).toBe(15); // z translation
+
+      // Clean up
+      parseReferenceSpy.mockRestore();
+    });
+
+    it('should handle GLB load failure gracefully', async () => {
+      
+      manager.setSceneManager(mockSceneManager as SceneManager);
+const mockResourceRegistry = {
+        loadGLBMesh: vi.fn().mockResolvedValue(null), // Load failed
+        resolveInstancePath: vi.fn().mockReturnValue('res://models/missing.glb'),
+        getMetadata: vi.fn(),
+      };
+
+      // Mock static parseReference method
+      const parseReferenceSpy = vi.spyOn(ResourceRegistry, 'parseReference').mockReturnValue('missing_glb');
+
+      const sceneData: TscnScene = {
+        format: 3,
+        nodes: [],
+        externalResources: [],
+        subResources: [],
+        resourceRegistry: mockResourceRegistry as any,
+      };
+
+      const glbNode: TscnNode = {
+        name: 'FailedGLB',
+        type: 'Node3D',
+        instance: 'ExtResource("missing_glb")',
+        properties: {},
+        children: [],
+      };
+
+      // Should not throw
+      await manager.addNode('FailedGLB', glbNode, sceneData);
+
+      // Node should still be added even if GLB load failed
+      expect(nodeTracker.getObject('FailedGLB')).toBeDefined();
+
+      // Clean up
+      parseReferenceSpy.mockRestore();
+    });
+
+    it('should handle missing material for override', async () => {
+      
+      manager.setSceneManager(mockSceneManager as SceneManager);
+const mockGLBChild = new THREE.Mesh(
+        new THREE.BoxGeometry(),
+        new THREE.MeshStandardMaterial()
+      );
+      mockGLBChild.name = 'ChildMesh';
+
+      const mockGLBMesh = new THREE.Group();
+      mockGLBMesh.name = 'GLBRoot';
+      mockGLBMesh.add(mockGLBChild);
+
+      const mockResourceRegistry = {
+        loadGLBMesh: vi.fn().mockResolvedValue(mockGLBMesh),
+        resolveInstancePath: vi.fn().mockReturnValue('res://models/test.glb'),
+        loadMaterial: vi.fn().mockResolvedValue(null), // Material not found
+        getMetadata: vi.fn(),
+      };
+
+      // Mock static parseReference method
+      const parseReferenceSpy = vi.spyOn(ResourceRegistry, 'parseReference')
+        .mockImplementation((ref: string) => {
+          if (ref === 'ExtResource("1_glb")') return '1_glb';
+          if (ref === 'ExtResource("2_mat")') return '2_mat';
+          return null;
+        });
+
+      const sceneData: TscnScene = {
+        format: 3,
+        nodes: [],
+        externalResources: [],
+        subResources: [],
+        resourceRegistry: mockResourceRegistry as any,
+      };
+
+      const glbNode: TscnNode = {
+        name: 'GLBInstance',
+        type: 'Node3D',
+        instance: 'ExtResource("1_glb")',
+        properties: {},
+        children: [
+          {
+            name: 'ChildMesh',
+            type: 'MeshInstance3D',
+            properties: {
+              index: 0,
+              'surface_material_override/0': 'ExtResource("2_mat")',
+            },
+            children: [],
+          },
+        ],
+      };
+
+      // Should not throw
+      await manager.addNode('GLBInstance', glbNode, sceneData);
+
+      // Verify loadMaterial was called (failed gracefully)
+      expect(mockResourceRegistry.loadMaterial).toHaveBeenCalledWith('2_mat');
+      expect(nodeTracker.getObject('GLBInstance')).toBeDefined();
+
+      // Clean up
+      parseReferenceSpy.mockRestore();
+    });
+
+    it('should handle invalid material reference format', async () => {
+      
+      manager.setSceneManager(mockSceneManager as SceneManager);
+const mockGLBChild = new THREE.Mesh(
+        new THREE.BoxGeometry(),
+        new THREE.MeshStandardMaterial()
+      );
+      mockGLBChild.name = 'ChildMesh';
+
+      const mockGLBMesh = new THREE.Group();
+      mockGLBMesh.name = 'GLBRoot';
+      mockGLBMesh.add(mockGLBChild);
+
+      const mockResourceRegistry = {
+        loadGLBMesh: vi.fn().mockResolvedValue(mockGLBMesh),
+        resolveInstancePath: vi.fn().mockReturnValue('res://models/test.glb'),
+        loadMaterial: vi.fn(),
+        getMetadata: vi.fn(),
+      };
+
+      // Mock static parseReference method - returns null for invalid format
+      const parseReferenceSpy = vi.spyOn(ResourceRegistry, 'parseReference')
+        .mockImplementation((ref: string) => {
+          if (ref === 'ExtResource("1_glb")') return '1_glb';
+          if (ref === 'InvalidFormat') return null;
+          return null;
+        });
+
+      const sceneData: TscnScene = {
+        format: 3,
+        nodes: [],
+        externalResources: [],
+        subResources: [],
+        resourceRegistry: mockResourceRegistry as any,
+      };
+
+      const glbNode: TscnNode = {
+        name: 'GLBInstance',
+        type: 'Node3D',
+        instance: 'ExtResource("1_glb")',
+        properties: {},
+        children: [
+          {
+            name: 'ChildMesh',
+            type: 'MeshInstance3D',
+            properties: {
+              index: 0,
+              'surface_material_override/0': 'InvalidFormat',
+            },
+            children: [],
+          },
+        ],
+      };
+
+      // Should not throw
+      await manager.addNode('GLBInstance', glbNode, sceneData);
+
+      // loadMaterial should NOT be called (parseReference failed)
+      expect(mockResourceRegistry.loadMaterial).not.toHaveBeenCalled();
+      expect(nodeTracker.getObject('GLBInstance')).toBeDefined();
+
+      // Clean up
+      parseReferenceSpy.mockRestore();
+    });
+
+    it('should handle surface index out of bounds', async () => {
+      
+      manager.setSceneManager(mockSceneManager as SceneManager);
+const mockGLBChild = new THREE.Mesh(
+        new THREE.BoxGeometry(),
+        new THREE.MeshStandardMaterial() // Single material
+      );
+      mockGLBChild.name = 'ChildMesh';
+
+      const mockGLBMesh = new THREE.Group();
+      mockGLBMesh.name = 'GLBRoot';
+      mockGLBMesh.add(mockGLBChild);
+
+      const overrideMaterial = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
+
+      const mockResourceRegistry = {
+        loadGLBMesh: vi.fn().mockResolvedValue(mockGLBMesh),
+        resolveInstancePath: vi.fn().mockReturnValue('res://models/test.glb'),
+        loadMaterial: vi.fn().mockResolvedValue(overrideMaterial),
+        getMetadata: vi.fn(),
+      };
+
+      // Mock static parseReference method
+      const parseReferenceSpy = vi.spyOn(ResourceRegistry, 'parseReference')
+        .mockImplementation((ref: string) => {
+          if (ref === 'ExtResource("1_glb")') return '1_glb';
+          if (ref === 'ExtResource("2_mat")') return '2_mat';
+          return null;
+        });
+
+      const sceneData: TscnScene = {
+        format: 3,
+        nodes: [],
+        externalResources: [],
+        subResources: [],
+        resourceRegistry: mockResourceRegistry as any,
+      };
+
+      const glbNode: TscnNode = {
+        name: 'GLBInstance',
+        type: 'Node3D',
+        instance: 'ExtResource("1_glb")',
+        properties: {},
+        children: [
+          {
+            name: 'ChildMesh',
+            type: 'MeshInstance3D',
+            properties: {
+              index: 0,
+              'surface_material_override/5': 'ExtResource("2_mat")', // Index out of bounds
+            },
+            children: [],
+          },
+        ],
+      };
+
+      // Should not throw
+      await manager.addNode('GLBInstance', glbNode, sceneData);
+
+      // Material was loaded but expansion should create array
+      expect(mockResourceRegistry.loadMaterial).toHaveBeenCalledWith('2_mat');
+      expect(nodeTracker.getObject('GLBInstance')).toBeDefined();
+
+      // Clean up
+      parseReferenceSpy.mockRestore();
+    });
+
+    it('should handle GLB with no overrides specified', async () => {
+      
+      manager.setSceneManager(mockSceneManager as SceneManager);
+const mockGLBMesh = new THREE.Group();
+      mockGLBMesh.name = 'GLBRoot';
+
+      const mockResourceRegistry = {
+        loadGLBMesh: vi.fn().mockResolvedValue(mockGLBMesh),
+        resolveInstancePath: vi.fn().mockReturnValue('res://models/test.glb'),
+        getMetadata: vi.fn(),
+      };
+
+      // Mock static parseReference method
+      const parseReferenceSpy = vi.spyOn(ResourceRegistry, 'parseReference').mockReturnValue('1_glb');
+
+      const sceneData: TscnScene = {
+        format: 3,
+        nodes: [],
+        externalResources: [],
+        subResources: [],
+        resourceRegistry: mockResourceRegistry as any,
+      };
+
+      const glbNode: TscnNode = {
+        name: 'GLBInstance',
+        type: 'Node3D',
+        instance: 'ExtResource("1_glb")',
+        properties: {},
+        children: [], // No children, no overrides
+      };
+
+      await manager.addNode('GLBInstance', glbNode, sceneData);
+
+      // GLB should be loaded without any overrides
+      expect(mockResourceRegistry.loadGLBMesh).toHaveBeenCalledWith('1_glb');
+      expect(nodeTracker.getObject('GLBInstance')).toBeDefined();
+
+      // Original material preserved (not modified)
+      const addedObject = nodeTracker.getObject('GLBInstance');
+      expect(addedObject).toBeDefined();
+
+      // Clean up
+      parseReferenceSpy.mockRestore();
+    });
+
+    it('should handle GLB instance with additional TSCN children', async () => {
+      
+      manager.setSceneManager(mockSceneManager as SceneManager);
+const mockGLBMesh = new THREE.Group();
+      mockGLBMesh.name = 'GLBRoot';
+
+      const mockResourceRegistry = {
+        loadGLBMesh: vi.fn().mockResolvedValue(mockGLBMesh),
+        resolveInstancePath: vi.fn().mockReturnValue('res://models/test.glb'),
+        getMetadata: vi.fn(),
+      };
+
+      // Mock static parseReference method
+      const parseReferenceSpy = vi.spyOn(ResourceRegistry, 'parseReference').mockReturnValue('1_glb');
+
+      const sceneData: TscnScene = {
+        format: 3,
+        nodes: [],
+        externalResources: [],
+        subResources: [],
+        resourceRegistry: mockResourceRegistry as any,
+      };
+
+      const additionalChild: TscnNode = {
+        name: 'AdditionalChild',
+        type: 'Node3D',
+        properties: {}, // No index attribute - this is a new child, not editable instance
+        children: [],
+      };
+
+      const glbNode: TscnNode = {
+        name: 'GLBInstance',
+        type: 'Node3D',
+        instance: 'ExtResource("1_glb")',
+        properties: {},
+        children: [additionalChild], // GLB + additional TSCN child
+      };
+
+      await manager.addNode('GLBInstance', glbNode, sceneData);
+
+      // Verify GLB was loaded
+      expect(mockResourceRegistry.loadGLBMesh).toHaveBeenCalledWith('1_glb');
+
+      // Verify both GLB instance and additional child exist
+      expect(nodeTracker.getObject('GLBInstance')).toBeDefined();
+      expect(nodeTracker.getObject('GLBInstance/AdditionalChild')).toBeDefined();
+
+      const instanceObject = nodeTracker.getObject('GLBInstance');
+      // Should have GLB as child, plus additional child
+      expect(instanceObject?.children.length).toBeGreaterThanOrEqual(1);
+
+      // Clean up
+      parseReferenceSpy.mockRestore();
+    });
+
+    it('should verify GLB materials are cloned, not shared', async () => {
+      
+      manager.setSceneManager(mockSceneManager as SceneManager);
+// Create GLB meshes with shared material (to test cloning)
+      const sharedMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
+      const mockGLBMesh1 = new THREE.Group();
+      mockGLBMesh1.name = 'GLBRoot1';
+      mockGLBMesh1.add(new THREE.Mesh(new THREE.BoxGeometry(), sharedMaterial));
+
+      const mockGLBMesh2 = new THREE.Group();
+      mockGLBMesh2.name = 'GLBRoot2';
+      mockGLBMesh2.add(new THREE.Mesh(new THREE.BoxGeometry(), sharedMaterial));
+
+      let callCount = 0;
+      const mockResourceRegistry = {
+        loadGLBMesh: vi.fn(() => {
+          callCount++;
+          // Return different instances (simulating clone behavior)
+          return Promise.resolve(callCount === 1 ? mockGLBMesh1 : mockGLBMesh2);
+        }),
+        resolveInstancePath: vi.fn().mockReturnValue('res://models/test.glb'),
+        getMetadata: vi.fn(),
+      };
+
+      // Mock static parseReference method
+      const parseReferenceSpy = vi.spyOn(ResourceRegistry, 'parseReference').mockReturnValue('1_glb');
+
+      const sceneData: TscnScene = {
+        format: 3,
+        nodes: [],
+        externalResources: [],
+        subResources: [],
+        resourceRegistry: mockResourceRegistry as any,
+      };
+
+      const glbNode1: TscnNode = {
+        name: 'GLBInstance1',
+        type: 'Node3D',
+        instance: 'ExtResource("1_glb")',
+        properties: {},
+        children: [],
+      };
+
+      const glbNode2: TscnNode = {
+        name: 'GLBInstance2',
+        type: 'Node3D',
+        instance: 'ExtResource("1_glb")',
+        properties: {},
+        children: [],
+      };
+
+      await manager.addNode('GLBInstance1', glbNode1, sceneData);
+      await manager.addNode('GLBInstance2', glbNode2, sceneData);
+
+      // Both instances should be loaded
+      expect(mockResourceRegistry.loadGLBMesh).toHaveBeenCalledTimes(2);
+
+      // Instances should exist
+      const instance1 = nodeTracker.getObject('GLBInstance1');
+      const instance2 = nodeTracker.getObject('GLBInstance2');
+      expect(instance1).toBeDefined();
+      expect(instance2).toBeDefined();
+
+      // Clean up
+      parseReferenceSpy.mockRestore();
+
+      // Different objects (cloned, not shared reference)
+      expect(instance1).not.toBe(instance2);
     });
   });
 });

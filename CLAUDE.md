@@ -100,7 +100,6 @@ node apps/textscene-linter/dist/cli.js scenes/fixtures/*.tscn scenes/examples/*.
 | `Cannot find module 'X'` | Missing import or wrong path | Check import path, use type-only imports |
 | `Command failed with exit code 2` | Type check failed | Run `pnpm type-check` to see actual error |
 | Linter builds but tests fail | Stale build artifacts | Run `pnpm clean` then `pnpm install && pnpm build` |
-| `Timeout starting forks runner` | Resource contention during vitest worker spawn | Infrastructure issue, not test failure. Tests passing = safe to commit. Config adjusted in vitest.shared.ts (maxWorkers: 4, fileParallelism: false) |
 
 ## Testing Best Practices
 
@@ -272,6 +271,21 @@ nodeRegistry.register({
 ```
 
 Then import in TscnParser.ts: `import '../nodes/mynodetype';`
+
+### three.js Resource Cloning Pattern
+
+**CRITICAL**: `THREE.Object3D` can only have ONE parent. When caching three.js resources, clone before returning or only the LAST instance renders.
+
+**When adding new resource types to ResourceRegistry:**
+1. Check if resource has parent/ownership constraints (Object3D, Texture, Material do)
+2. If yes, clone before returning from cache: `cached.clone(true)` for Object3D
+3. Update tests to expect different UUIDs (cloned objects, not same reference)
+
+**Example - loadGLBMesh:**
+```typescript
+const cached = await this.loadWithDeduplication(id, this.glbMeshCache, ...);
+return cached ? cached.clone(true) : null;  // Clone or only last instance visible
+```
 
 ### Two-Parser Architecture
 

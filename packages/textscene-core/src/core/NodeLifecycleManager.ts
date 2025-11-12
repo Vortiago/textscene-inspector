@@ -32,6 +32,7 @@ import type { TscnScene, TscnNode } from '../parser/types';
 import { renderNodeWithRegistry } from './NodeRegistry';
 import { NodeTracker } from './NodeTracker';
 import type { SceneManager } from './SceneManager';
+import { ResourceRegistry } from '../resources/ResourceRegistry';
 import * as logger from '../logger';
 import { joinPath } from '../utils/nodePath';
 
@@ -306,6 +307,114 @@ export class NodeLifecycleManager {
         return;
       }
 
+      // Check if this is a GLB/GLTF file (binary scene format)
+      // GLB/GLTF files should NOT go through SceneManager (expects text TSCN)
+      const ext = scenePath.split('.').pop()?.toLowerCase();
+      if (ext === 'glb' || ext === 'gltf') {
+        logger.info(`Node ${nodePath} instances GLB/GLTF file: ${scenePath}`);
+
+        // GLB/GLTF instancing via ResourceRegistry
+        let glbScene: THREE.Object3D | null = null;
+        if (sceneData.resourceRegistry) {
+          try {
+            // Parse reference to extract resource ID (e.g., "ExtResource("1_abc")" -> "1_abc")
+            const resourceId = ResourceRegistry.parseReference(node.instance);
+            if (!resourceId) {
+              logger.warn(`Failed to parse GLB instance reference: ${node.instance}`);
+            } else {
+              glbScene = await sceneData.resourceRegistry.loadGLBMesh(resourceId);
+              if (glbScene) {
+                // Add GLB scene graph as child of instance node
+                glbScene.name = `${node.name}_glb`;
+                object3D.add(glbScene);
+                logger.info(`Successfully loaded GLB instance: ${scenePath}`);
+              } else {
+                logger.warn(`Failed to load GLB instance: ${scenePath}`);
+              }
+            }
+          } catch (error) {
+            logger.warn(`Error loading GLB instance ${scenePath}:`, error);
+          }
+        }
+
+        // Process inline children (children defined in parent scene)
+        // These can be either:
+        // 1. New children being added to the GLB instance (no index attribute)
+        // 2. Overrides for existing children inside the GLB (has index attribute)
+        if (node.children && node.children.length > 0) {
+          for (const child of node.children) {
+            // Check if this child has an index attribute (Godot's editable instance feature)
+            const childProps = child.properties as { index?: number; transform?: unknown };
+
+            if (childProps.index !== undefined && glbScene) {
+              // This is an override for an existing child in the GLB scene graph
+              // Find the child at the specified index
+              const glbChild = glbScene.children[childProps.index];
+
+              if (glbChild) {
+                logger.info(`Applying editable instance override for child ${childProps.index} (${child.name})`);
+
+                // Apply transform override if specified
+                if (childProps.transform) {
+                  const transform3D = childProps.transform as {
+                    basis_x: { x: number; y: number; z: number };
+                    basis_y: { x: number; y: number; z: number };
+                    basis_z: { x: number; y: number; z: number };
+                    origin: { x: number; y: number; z: number };
+                  };
+
+                  // Build a three.js Matrix4 from the Godot Transform3D
+                  // Godot uses column-major order, three.js uses row-major in the constructor
+                  glbChild.matrix.set(
+                    transform3D.basis_x.x, transform3D.basis_y.x, transform3D.basis_z.x, transform3D.origin.x,
+                    transform3D.basis_x.y, transform3D.basis_y.y, transform3D.basis_z.y, transform3D.origin.y,
+                    transform3D.basis_x.z, transform3D.basis_y.z, transform3D.basis_z.z, transform3D.origin.z,
+                    0, 0, 0, 1
+                  );
+                  glbChild.matrixAutoUpdate = false;
+
+                  logger.info(`Applied transform override to ${child.name}`);
+                }
+
+                // Parse and apply material overrides (surface_material_override/N)
+                const surfaceMaterialOverrides = new Map<number, string>();
+                for (const [key, value] of Object.entries(child.properties)) {
+                  const match = key.match(/^surface_material_override\/(\d+)$/);
+                  if (match && match[1]) {
+                    const surfaceIndex = parseInt(match[1], 10);
+                    surfaceMaterialOverrides.set(surfaceIndex, value as string);
+                  }
+                }
+
+                if (surfaceMaterialOverrides.size > 0 && sceneData.resourceRegistry) {
+                  // Apply material overrides to all meshes in the GLB child
+                  glbChild.traverse((descendant) => {
+                    if (descendant instanceof THREE.Mesh) {
+                      this.applyMaterialOverridesToMesh(
+                        descendant,
+                        surfaceMaterialOverrides,
+                        sceneData.resourceRegistry!
+                      ).catch(error => {
+                        logger.warn(`Error applying material overrides to ${child.name}:`, error);
+                      });
+                    }
+                  });
+                }
+              } else {
+                logger.warn(`Child index ${childProps.index} out of bounds in GLB (has ${glbScene.children.length} children)`);
+              }
+            } else {
+              // No index attribute - this is a new child being added
+              const childPath = joinPath(nodePath, child.name);
+              await this.addNode(childPath, child, sceneData, nodePath);
+            }
+          }
+        }
+
+        return;
+      }
+
+      // TSCN scene instancing via SceneManager
       // Set instance metadata for UI layer
       node.instanceMetadata = {
         sourcePath: scenePath,
@@ -380,5 +489,61 @@ export class NodeLifecycleManager {
       return;
     }
     object.visible = visible;
+  }
+
+  /**
+   * Apply material overrides to a THREE.Mesh from GLB instance
+   */
+  private async applyMaterialOverridesToMesh(
+    mesh: THREE.Mesh,
+    overrides: Map<number, string>,
+    resourceRegistry: ResourceRegistry
+  ): Promise<void> {
+    // Track original material structure to restore appropriately
+    const wasSingleMaterial = !Array.isArray(mesh.material);
+
+    // Clone material array to avoid mutating cached GLB materials
+    // If single material, wrap in array for indexed access
+    const materials = Array.isArray(mesh.material)
+      ? [...mesh.material]
+      : [mesh.material];
+
+    // Apply each override
+    for (const [surfaceIndex, materialRef] of overrides) {
+      // Validate surface index
+      if (surfaceIndex < 0) {
+        logger.warn(`Invalid surface index: ${surfaceIndex} (must be >= 0)`);
+        continue;
+      }
+
+      // Parse ExtResource reference (e.g., "ExtResource(\"2_a1o0s\")")
+      const resourceId = ResourceRegistry.parseReference(materialRef);
+      if (!resourceId) {
+        logger.warn(`Failed to parse material reference: ${materialRef}`);
+        continue;
+      }
+
+      // Load material from ResourceRegistry
+      const material = await resourceRegistry.loadMaterial(resourceId);
+      if (material) {
+        // Expand materials array if needed (for multi-surface meshes)
+        while (materials.length <= surfaceIndex) {
+          materials.push(new THREE.MeshStandardMaterial());
+        }
+        materials[surfaceIndex] = material;
+        logger.info(`Applied material override at surface ${surfaceIndex}`);
+      } else {
+        logger.warn(`Failed to load material: ${resourceId}`);
+      }
+    }
+
+    // Restore material structure:
+    // - If originally single and still has 1 element, restore as single
+    // - Otherwise keep as array (needed for multi-surface meshes)
+    if (wasSingleMaterial && materials.length === 1) {
+      mesh.material = materials[0]!;
+    } else {
+      mesh.material = materials;
+    }
   }
 }
