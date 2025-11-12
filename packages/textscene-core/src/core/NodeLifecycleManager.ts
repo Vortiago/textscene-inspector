@@ -32,6 +32,7 @@ import type { TscnScene, TscnNode } from '../parser/types';
 import { renderNodeWithRegistry } from './NodeRegistry';
 import { NodeTracker } from './NodeTracker';
 import type { SceneManager } from './SceneManager';
+import { ResourceRegistry } from '../resources/ResourceRegistry';
 import * as logger from '../logger';
 import { joinPath } from '../utils/nodePath';
 
@@ -306,6 +307,47 @@ export class NodeLifecycleManager {
         return;
       }
 
+      // Check if this is a GLB/GLTF file (binary scene format)
+      // GLB/GLTF files should NOT go through SceneManager (expects text TSCN)
+      const ext = scenePath.split('.').pop()?.toLowerCase();
+      if (ext === 'glb' || ext === 'gltf') {
+        logger.info(`Node ${nodePath} instances GLB/GLTF file: ${scenePath}`);
+
+        // GLB/GLTF instancing via ResourceRegistry
+        if (sceneData.resourceRegistry) {
+          try {
+            // Parse reference to extract resource ID (e.g., "ExtResource("1_abc")" -> "1_abc")
+            const resourceId = ResourceRegistry.parseReference(node.instance);
+            if (!resourceId) {
+              logger.warn(`Failed to parse GLB instance reference: ${node.instance}`);
+            } else {
+              const glbScene = await sceneData.resourceRegistry.loadGLBMesh(resourceId);
+              if (glbScene) {
+                // Add GLB scene graph as child of instance node
+                glbScene.name = `${node.name}_glb`;
+                object3D.add(glbScene);
+                logger.info(`Successfully loaded GLB instance: ${scenePath}`);
+              } else {
+                logger.warn(`Failed to load GLB instance: ${scenePath}`);
+              }
+            }
+          } catch (error) {
+            logger.warn(`Error loading GLB instance ${scenePath}:`, error);
+          }
+        }
+
+        // Process inline children (children defined in parent scene)
+        if (node.children && node.children.length > 0) {
+          for (const child of node.children) {
+            const childPath = joinPath(nodePath, child.name);
+            await this.addNode(childPath, child, sceneData, nodePath);
+          }
+        }
+
+        return;
+      }
+
+      // TSCN scene instancing via SceneManager
       // Set instance metadata for UI layer
       node.instanceMetadata = {
         sourcePath: scenePath,

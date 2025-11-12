@@ -57,13 +57,39 @@ async function resolveMeshMaterial(
 
 /**
  * Create a three.js mesh for a MeshInstance3D node.
- * Now async to support async material resolution (texture loading).
+ * Returns Object3D to support both regular meshes (BufferGeometry) and GLB meshes (scene graphs).
+ * Now async to support async material resolution (texture loading) and GLB loading.
  */
 export async function createMeshInstance3D(
   nodeName: string,
   properties: MeshInstance3DProperties,
   scene?: TscnScene
-): Promise<THREE.Mesh> {
+): Promise<THREE.Object3D> {
+  // Check if mesh is an ExtResource pointing to a GLB/GLTF file
+  if (scene && properties.mesh) {
+    const ref = parseResourceReference(properties.mesh);
+    if (ref && ref.type === 'ExtResource' && scene.resourceRegistry) {
+      const metadata = scene.resourceRegistry.getMetadata(ref.id);
+      if (metadata) {
+        const ext = metadata.path.split('.').pop()?.toLowerCase();
+        if (ext === 'glb' || ext === 'gltf') {
+          // Load GLB mesh as Object3D
+          const glbMesh = await scene.resourceRegistry.loadGLBMesh(ref.id);
+          if (glbMesh) {
+            glbMesh.name = nodeName;
+            // GLB meshes come with their own materials and don't support material overrides
+            // (Godot imports GLB materials directly)
+            applyShadowCastingToObject3D(glbMesh, properties.castShadow);
+            return glbMesh;
+          } else {
+            warn(`MeshInstance3D "${nodeName}": Failed to load GLB mesh "${metadata.path}", using placeholder`);
+          }
+        }
+      }
+    }
+  }
+
+  // Regular mesh path (SubResource primitive meshes)
   let geometry: THREE.BufferGeometry;
   let material: THREE.Material | THREE.Material[];
 
@@ -232,4 +258,16 @@ function applyShadowCasting(mesh: THREE.Mesh, castShadowValue?: number): void {
     mesh.castShadow = true;
     mesh.visible = false;
   }
+}
+
+/**
+ * Apply shadow casting settings to an Object3D hierarchy (for GLB meshes).
+ * Recursively applies settings to all meshes in the scene graph.
+ */
+function applyShadowCastingToObject3D(object: THREE.Object3D, castShadowValue?: number): void {
+  object.traverse((child) => {
+    if (child instanceof THREE.Mesh) {
+      applyShadowCasting(child, castShadowValue);
+    }
+  });
 }

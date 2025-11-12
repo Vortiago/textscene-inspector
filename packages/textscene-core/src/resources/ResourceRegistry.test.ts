@@ -25,6 +25,40 @@ vi.mock('three', async () => {
   };
 });
 
+// Mock GLTFLoader
+vi.mock('three/addons/loaders/GLTFLoader.js', async () => {
+  const THREE = await vi.importActual<typeof import('three')>('three');
+
+  class MockGLTFLoader {
+    async parseAsync(_data: ArrayBuffer, _path: string) {
+      // Return mock GLTF with scene containing a simple object
+      const mockScene = new THREE.Group();
+      mockScene.name = 'MockGLTFScene';
+
+      const mockMesh = new THREE.Mesh(
+        new THREE.BoxGeometry(1, 1, 1),
+        new THREE.MeshStandardMaterial()
+      );
+      mockMesh.name = 'MockGLTFMesh';
+      mockScene.add(mockMesh);
+
+      return {
+        scene: mockScene,
+        scenes: [mockScene],
+        animations: [],
+        cameras: [],
+        asset: {},
+        parser: {} as any,
+        userData: {},
+      };
+    }
+  }
+
+  return {
+    GLTFLoader: MockGLTFLoader,
+  };
+});
+
 describe('ResourceRegistry', () => {
   let registry: ResourceRegistry;
 
@@ -838,6 +872,159 @@ transparency = 0.5
 
       expect(cachedResults.every(r => r === null)).toBe(true);
       expect(loadAttempts).toBe(materialCount); // No new attempts
+    });
+  });
+
+  describe('loadGLBMesh', () => {
+    it('should load GLB mesh from .glb file', async () => {
+      const resource: TscnExternalResource = {
+        id: '1_glb',
+        path: 'res://models/door.glb',
+        type: 'PackedScene',
+      };
+      registry.register(resource);
+
+      const mockProvider: ResourceProvider = {
+        loadResource: async () => new ArrayBuffer(100), // Mock GLB data
+      };
+      registry.setProvider(mockProvider);
+
+      const mesh = await registry.loadGLBMesh('1_glb');
+
+      expect(mesh).toBeInstanceOf(THREE.Group);
+      expect(mesh?.name).toBe('MockGLTFScene');
+      expect(mesh?.children.length).toBeGreaterThan(0);
+    });
+
+    it('should load GLTF mesh from .gltf file', async () => {
+      const resource: TscnExternalResource = {
+        id: '1_gltf',
+        path: 'res://models/frame.gltf',
+        type: 'PackedScene',
+      };
+      registry.register(resource);
+
+      const mockProvider: ResourceProvider = {
+        loadResource: async () => new ArrayBuffer(100), // Mock GLTF data
+      };
+      registry.setProvider(mockProvider);
+
+      const mesh = await registry.loadGLBMesh('1_gltf');
+
+      expect(mesh).toBeInstanceOf(THREE.Group);
+      expect(mesh?.name).toBe('MockGLTFScene');
+    });
+
+    it('should cache loaded GLB meshes', async () => {
+      const resource: TscnExternalResource = {
+        id: '1_glb',
+        path: 'res://models/door.glb',
+        type: 'PackedScene',
+      };
+      registry.register(resource);
+
+      let loadCount = 0;
+      const mockProvider: ResourceProvider = {
+        loadResource: async () => {
+          loadCount++;
+          return new ArrayBuffer(100);
+        },
+      };
+      registry.setProvider(mockProvider);
+
+      const mesh1 = await registry.loadGLBMesh('1_glb');
+      const mesh2 = await registry.loadGLBMesh('1_glb');
+
+      expect(mesh1).toBe(mesh2); // Same instance
+      expect(loadCount).toBe(1); // Only loaded once
+    });
+
+    it('should return null for non-GLB/GLTF file extensions', async () => {
+      const resource: TscnExternalResource = {
+        id: '1_tscn',
+        path: 'res://scenes/player.tscn',
+        type: 'PackedScene',
+      };
+      registry.register(resource);
+
+      const mockProvider: ResourceProvider = {
+        loadResource: async () => new ArrayBuffer(100),
+      };
+      registry.setProvider(mockProvider);
+
+      const result = await registry.loadGLBMesh('1_tscn');
+      expect(result).toBeNull();
+    });
+
+    it('should return null if resource data is not ArrayBuffer', async () => {
+      const resource: TscnExternalResource = {
+        id: '1_glb',
+        path: 'res://models/door.glb',
+        type: 'PackedScene',
+      };
+      registry.register(resource);
+
+      // Provider incorrectly returns string instead of ArrayBuffer
+      const mockProvider: ResourceProvider = {
+        loadResource: async () => 'invalid data',
+      };
+      registry.setProvider(mockProvider);
+
+      const result = await registry.loadGLBMesh('1_glb');
+      expect(result).toBeNull();
+    });
+
+    it('should handle GLB parsing errors gracefully', async () => {
+      const resource: TscnExternalResource = {
+        id: '1_glb',
+        path: 'res://models/corrupt.glb',
+        type: 'PackedScene',
+      };
+      registry.register(resource);
+
+      const mockProvider: ResourceProvider = {
+        loadResource: async () => {
+          throw new Error('Corrupt GLB file');
+        },
+      };
+      registry.setProvider(mockProvider);
+
+      const result = await registry.loadGLBMesh('1_glb');
+      expect(result).toBeNull();
+    });
+
+    it('should handle concurrent GLB loads with deduplication', async () => {
+      const resource: TscnExternalResource = {
+        id: '1_glb',
+        path: 'res://models/door.glb',
+        type: 'PackedScene',
+      };
+      registry.register(resource);
+
+      let loadCount = 0;
+      const mockProvider: ResourceProvider = {
+        loadResource: async () => {
+          loadCount++;
+          // Simulate async delay
+          await new Promise(resolve => setTimeout(resolve, 10));
+          return new ArrayBuffer(100);
+        },
+      };
+      registry.setProvider(mockProvider);
+
+      // Start multiple loads concurrently
+      const [mesh1, mesh2, mesh3] = await Promise.all([
+        registry.loadGLBMesh('1_glb'),
+        registry.loadGLBMesh('1_glb'),
+        registry.loadGLBMesh('1_glb'),
+      ]);
+
+      // All should return the same instance
+      expect(mesh1).toBe(mesh2);
+      expect(mesh2).toBe(mesh3);
+
+      // Only loaded once despite concurrent requests
+      expect(loadCount).toBe(1);
     });
   });
 });
