@@ -376,8 +376,30 @@ export class NodeLifecycleManager {
                   logger.info(`Applied transform override to ${child.name}`);
                 }
 
-                // TODO: Apply material overrides (surface_material_override/N)
-                // TODO: Apply other property overrides as needed
+                // Parse and apply material overrides (surface_material_override/N)
+                const surfaceMaterialOverrides = new Map<number, string>();
+                for (const [key, value] of Object.entries(child.properties)) {
+                  const match = key.match(/^surface_material_override\/(\d+)$/);
+                  if (match && match[1]) {
+                    const surfaceIndex = parseInt(match[1], 10);
+                    surfaceMaterialOverrides.set(surfaceIndex, value as string);
+                  }
+                }
+
+                if (surfaceMaterialOverrides.size > 0 && sceneData.resourceRegistry) {
+                  // Apply material overrides to all meshes in the GLB child
+                  glbChild.traverse((descendant) => {
+                    if (descendant instanceof THREE.Mesh) {
+                      this.applyMaterialOverridesToMesh(
+                        descendant,
+                        surfaceMaterialOverrides,
+                        sceneData.resourceRegistry!
+                      ).catch(error => {
+                        logger.warn(`Error applying material overrides to ${child.name}:`, error);
+                      });
+                    }
+                  });
+                }
               } else {
                 logger.warn(`Child index ${childProps.index} out of bounds in GLB (has ${glbScene.children.length} children)`);
               }
@@ -467,5 +489,45 @@ export class NodeLifecycleManager {
       return;
     }
     object.visible = visible;
+  }
+
+  /**
+   * Apply material overrides to a THREE.Mesh from GLB instance
+   */
+  private async applyMaterialOverridesToMesh(
+    mesh: THREE.Mesh,
+    overrides: Map<number, string>,
+    resourceRegistry: ResourceRegistry
+  ): Promise<void> {
+    // Convert material to array for indexed access
+    const materials = Array.isArray(mesh.material)
+      ? [...mesh.material]
+      : [mesh.material];
+
+    // Apply each override
+    for (const [surfaceIndex, materialRef] of overrides) {
+      // Parse ExtResource reference (e.g., "ExtResource(\"2_a1o0s\")")
+      const resourceId = ResourceRegistry.parseReference(materialRef);
+      if (!resourceId) {
+        logger.warn(`Failed to parse material reference: ${materialRef}`);
+        continue;
+      }
+
+      // Load material from ResourceRegistry
+      const material = await resourceRegistry.loadMaterial(resourceId);
+      if (material) {
+        // Expand materials array if needed
+        while (materials.length <= surfaceIndex) {
+          materials.push(new THREE.MeshStandardMaterial());
+        }
+        materials[surfaceIndex] = material;
+        logger.info(`Applied material override at surface ${surfaceIndex}`);
+      } else {
+        logger.warn(`Failed to load material: ${resourceId}`);
+      }
+    }
+
+    // Update mesh material (single or array)
+    mesh.material = materials.length === 1 ? materials[0]! : materials;
   }
 }
