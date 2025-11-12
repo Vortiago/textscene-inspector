@@ -8,6 +8,7 @@ export function parsePlaneMesh(properties: Record<string, string>): PlaneMeshPro
   let subdivideDepth = 0;
   let orientation = 1;
   let centerOffset: Vector3 | undefined = undefined;
+  let flipFaces = false;
 
   if (properties.size) {
     try {
@@ -53,5 +54,15 @@ export function parsePlaneMesh(properties: Record<string, string>): PlaneMeshPro
     }
   }
 
-  return { size, subdivideWidth, subdivideDepth, orientation, centerOffset };
+  if (properties.flip_faces) {
+    if (properties.flip_faces === 'true') {
+      flipFaces = true;
+    } else if (properties.flip_faces === 'false') {
+      flipFaces = false;
+    } else {
+      warn(`Invalid PlaneMesh flip_faces: ${properties.flip_faces}, expected true or false`);
+    }
+  }
+
+  return { size, subdivideWidth, subdivideDepth, orientation, centerOffset, flipFaces };
 }

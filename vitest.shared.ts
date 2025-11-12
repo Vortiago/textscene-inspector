@@ -27,5 +27,9 @@ export default defineConfig({
     },
     include: ['**/*.test.ts', '**/*.spec.ts'],
     exclude: ['node_modules/', 'dist/', 'build/'],
+    // Reduce resource contention to prevent "Timeout starting forks runner" errors
+    // These settings help when running large test suites (3600+ tests) in monorepo
+    maxWorkers: 4,
+    fileParallelism: false,
   },
 });

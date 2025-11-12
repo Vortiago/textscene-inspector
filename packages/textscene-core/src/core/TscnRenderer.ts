@@ -106,7 +106,7 @@ export class TscnRenderer {
     // Wrap user's onResourceNeeded callback to also track missing resources
     if (options.onResourceNeeded) {
       const userCallback = options.onResourceNeeded;
-      const wrappedCallback = async (resource: any) => {
+      const wrappedCallback = async (resource: MissingResource) => {
         // Track missing resource in ResourceRecoveryManager
         this.resourceRecovery.recordMissing(resource);
         // Call user's callback

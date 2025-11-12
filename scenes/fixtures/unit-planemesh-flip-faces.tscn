@@ -1,0 +1,56 @@
+[gd_scene format=3]
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_normal"]
+size = Vector2(2, 2)
+orientation = 2
+flip_faces = false
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_flipped"]
+size = Vector2(2, 2)
+orientation = 2
+flip_faces = true
+
+[sub_resource type="StandardMaterial3D" id="Material_front"]
+albedo_color = Color(0.2, 0.8, 0.2, 1)
+
+[sub_resource type="StandardMaterial3D" id="Material_back"]
+albedo_color = Color(0.8, 0.2, 0.2, 1)
+
+[node name="Root" type="Node3D"]
+
+[node name="NormalPlane" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, 0)
+mesh = SubResource("PlaneMesh_normal")
+surface_material_override/0 = SubResource("Material_front")
+
+[node name="FlippedPlane" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, 0)
+mesh = SubResource("PlaneMesh_flipped")
+surface_material_override/0 = SubResource("Material_back")
+
+[node name="Title" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 0)
+text = "PlaneMesh flip_faces Test"
+pixel_size = 0.008
+billboard = 1
+modulate = Color(1, 1, 0.7, 1)
+
+[node name="NormalLabel" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, -1.5, 0)
+text = "flip_faces = false
+(Green, facing +Z)"
+pixel_size = 0.006
+billboard = 1
+modulate = Color(0.2, 0.8, 0.2, 1)
+
+[node name="FlippedLabel" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, -1.5, 0)
+text = "flip_faces = true
+(Red, facing -Z)"
+pixel_size = 0.006
+billboard = 1
+modulate = Color(0.8, 0.2, 0.2, 1)
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 5)
+fov = 75.0

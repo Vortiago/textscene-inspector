@@ -33,7 +33,7 @@ export const fixtures: Fixture[] = [
   {
     "name": "Photo Wall",
     "file": "edge-photo-wall.tscn",
-    "category": "Integration - Multi-Node"
+    "category": "Edge Cases"
   },
   {
     "name": "Plane Rotated Scaled",
@@ -273,6 +273,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Planemesh Center Offset",
     "file": "unit-planemesh-center-offset.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
+    "name": "Planemesh Flip Faces",
+    "file": "unit-planemesh-flip-faces.tscn",
     "category": "Unit - Primitive Meshes"
   },
   {
