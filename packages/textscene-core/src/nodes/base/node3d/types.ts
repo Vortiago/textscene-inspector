@@ -46,4 +46,6 @@ export interface Node3DProperties {
   transform?: Transform3D;
   /** Whether this is an instanced scene */
   instance?: string;
+  /** Child index for editable instance overrides (e.g., parent="." index="0") */
+  index?: number;
 }

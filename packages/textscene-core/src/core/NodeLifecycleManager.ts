@@ -314,6 +314,7 @@ export class NodeLifecycleManager {
         logger.info(`Node ${nodePath} instances GLB/GLTF file: ${scenePath}`);
 
         // GLB/GLTF instancing via ResourceRegistry
+        let glbScene: THREE.Object3D | null = null;
         if (sceneData.resourceRegistry) {
           try {
             // Parse reference to extract resource ID (e.g., "ExtResource("1_abc")" -> "1_abc")
@@ -321,7 +322,7 @@ export class NodeLifecycleManager {
             if (!resourceId) {
               logger.warn(`Failed to parse GLB instance reference: ${node.instance}`);
             } else {
-              const glbScene = await sceneData.resourceRegistry.loadGLBMesh(resourceId);
+              glbScene = await sceneData.resourceRegistry.loadGLBMesh(resourceId);
               if (glbScene) {
                 // Add GLB scene graph as child of instance node
                 glbScene.name = `${node.name}_glb`;
@@ -337,10 +338,54 @@ export class NodeLifecycleManager {
         }
 
         // Process inline children (children defined in parent scene)
+        // These can be either:
+        // 1. New children being added to the GLB instance (no index attribute)
+        // 2. Overrides for existing children inside the GLB (has index attribute)
         if (node.children && node.children.length > 0) {
           for (const child of node.children) {
-            const childPath = joinPath(nodePath, child.name);
-            await this.addNode(childPath, child, sceneData, nodePath);
+            // Check if this child has an index attribute (Godot's editable instance feature)
+            const childProps = child.properties as { index?: number; transform?: unknown };
+
+            if (childProps.index !== undefined && glbScene) {
+              // This is an override for an existing child in the GLB scene graph
+              // Find the child at the specified index
+              const glbChild = glbScene.children[childProps.index];
+
+              if (glbChild) {
+                logger.info(`Applying editable instance override for child ${childProps.index} (${child.name})`);
+
+                // Apply transform override if specified
+                if (childProps.transform) {
+                  const transform3D = childProps.transform as {
+                    basis_x: { x: number; y: number; z: number };
+                    basis_y: { x: number; y: number; z: number };
+                    basis_z: { x: number; y: number; z: number };
+                    origin: { x: number; y: number; z: number };
+                  };
+
+                  // Build a three.js Matrix4 from the Godot Transform3D
+                  // Godot uses column-major order, three.js uses row-major in the constructor
+                  glbChild.matrix.set(
+                    transform3D.basis_x.x, transform3D.basis_y.x, transform3D.basis_z.x, transform3D.origin.x,
+                    transform3D.basis_x.y, transform3D.basis_y.y, transform3D.basis_z.y, transform3D.origin.y,
+                    transform3D.basis_x.z, transform3D.basis_y.z, transform3D.basis_z.z, transform3D.origin.z,
+                    0, 0, 0, 1
+                  );
+                  glbChild.matrixAutoUpdate = false;
+
+                  logger.info(`Applied transform override to ${child.name}`);
+                }
+
+                // TODO: Apply material overrides (surface_material_override/N)
+                // TODO: Apply other property overrides as needed
+              } else {
+                logger.warn(`Child index ${childProps.index} out of bounds in GLB (has ${glbScene.children.length} children)`);
+              }
+            } else {
+              // No index attribute - this is a new child being added
+              const childPath = joinPath(nodePath, child.name);
+              await this.addNode(childPath, child, sceneData, nodePath);
+            }
           }
         }
 
