@@ -514,6 +514,19 @@ export class ResourceRegistry {
     // Clone recursively (true = deep clone including children and geometry)
     const clonedMesh = cachedMesh.clone(true);
 
+    // Clone materials for all meshes in the hierarchy
+    // CRITICAL: clone(true) clones Object3D hierarchy but NOT materials
+    // Without this, all instances would share material references
+    clonedMesh.traverse((node) => {
+      if (node instanceof THREE.Mesh) {
+        if (Array.isArray(node.material)) {
+          node.material = node.material.map((mat) => mat.clone());
+        } else {
+          node.material = node.material.clone();
+        }
+      }
+    });
+
     const elapsed = performance.now() - startTime;
     logger.info(`[loadGLBMesh] Returning cloned instance: ${idOrPath} (${elapsed.toFixed(2)}ms total)`);
 

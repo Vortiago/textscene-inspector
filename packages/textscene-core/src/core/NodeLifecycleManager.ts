@@ -499,13 +499,23 @@ export class NodeLifecycleManager {
     overrides: Map<number, string>,
     resourceRegistry: ResourceRegistry
   ): Promise<void> {
-    // Convert material to array for indexed access
+    // Track original material structure to restore appropriately
+    const wasSingleMaterial = !Array.isArray(mesh.material);
+
+    // Clone material array to avoid mutating cached GLB materials
+    // If single material, wrap in array for indexed access
     const materials = Array.isArray(mesh.material)
       ? [...mesh.material]
       : [mesh.material];
 
     // Apply each override
     for (const [surfaceIndex, materialRef] of overrides) {
+      // Validate surface index
+      if (surfaceIndex < 0) {
+        logger.warn(`Invalid surface index: ${surfaceIndex} (must be >= 0)`);
+        continue;
+      }
+
       // Parse ExtResource reference (e.g., "ExtResource(\"2_a1o0s\")")
       const resourceId = ResourceRegistry.parseReference(materialRef);
       if (!resourceId) {
@@ -516,7 +526,7 @@ export class NodeLifecycleManager {
       // Load material from ResourceRegistry
       const material = await resourceRegistry.loadMaterial(resourceId);
       if (material) {
-        // Expand materials array if needed
+        // Expand materials array if needed (for multi-surface meshes)
         while (materials.length <= surfaceIndex) {
           materials.push(new THREE.MeshStandardMaterial());
         }
@@ -527,7 +537,13 @@ export class NodeLifecycleManager {
       }
     }
 
-    // Update mesh material (single or array)
-    mesh.material = materials.length === 1 ? materials[0]! : materials;
+    // Restore material structure:
+    // - If originally single and still has 1 element, restore as single
+    // - Otherwise keep as array (needed for multi-surface meshes)
+    if (wasSingleMaterial && materials.length === 1) {
+      mesh.material = materials[0]!;
+    } else {
+      mesh.material = materials;
+    }
   }
 }

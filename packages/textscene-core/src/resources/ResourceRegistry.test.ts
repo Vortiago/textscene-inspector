@@ -1035,5 +1035,104 @@ transparency = 0.5
       // Only loaded once despite concurrent requests (deduplication works)
       expect(loadCount).toBe(1);
     });
+
+    it('should clone materials when cloning GLB meshes', async () => {
+      const resource: TscnExternalResource = {
+        id: '1_glb',
+        path: 'res://models/door.glb',
+        type: 'PackedScene',
+      };
+      registry.register(resource);
+
+      const mockProvider: ResourceProvider = {
+        loadResource: async () => new ArrayBuffer(100),
+      };
+      registry.setProvider(mockProvider);
+
+      // Load the same GLB twice
+      const mesh1 = await registry.loadGLBMesh('1_glb');
+      const mesh2 = await registry.loadGLBMesh('1_glb');
+
+      // Get materials from both meshes
+      const getMaterials = (mesh: THREE.Object3D | null): THREE.Material[] => {
+        const materials: THREE.Material[] = [];
+        mesh?.traverse((child) => {
+          if (child instanceof THREE.Mesh) {
+            if (Array.isArray(child.material)) {
+              materials.push(...child.material);
+            } else {
+              materials.push(child.material);
+            }
+          }
+        });
+        return materials;
+      };
+
+      const materials1 = getMaterials(mesh1);
+      const materials2 = getMaterials(mesh2);
+
+      // Both should have materials
+      expect(materials1.length).toBeGreaterThan(0);
+      expect(materials2.length).toBe(materials1.length);
+
+      // Materials should be cloned (different instances)
+      for (let i = 0; i < materials1.length; i++) {
+        expect(materials1[i]).not.toBe(materials2[i]); // Different object references
+        expect(materials1[i]!.uuid).not.toBe(materials2[i]!.uuid); // Different UUIDs
+      }
+    });
+
+    it('should not share materials between cloned GLB instances', async () => {
+      const resource: TscnExternalResource = {
+        id: '1_glb',
+        path: 'res://models/door.glb',
+        type: 'PackedScene',
+      };
+      registry.register(resource);
+
+      const mockProvider: ResourceProvider = {
+        loadResource: async () => new ArrayBuffer(100),
+      };
+      registry.setProvider(mockProvider);
+
+      // Load the same GLB twice
+      const mesh1 = await registry.loadGLBMesh('1_glb');
+      const mesh2 = await registry.loadGLBMesh('1_glb');
+
+      // Find first mesh with material in each instance
+      let material1: THREE.MeshStandardMaterial | null = null;
+      let material2: THREE.MeshStandardMaterial | null = null;
+
+      mesh1?.traverse((child) => {
+        if (child instanceof THREE.Mesh && !material1) {
+          material1 = Array.isArray(child.material)
+            ? child.material[0] as THREE.MeshStandardMaterial
+            : child.material as THREE.MeshStandardMaterial;
+        }
+      });
+
+      mesh2?.traverse((child) => {
+        if (child instanceof THREE.Mesh && !material2) {
+          material2 = Array.isArray(child.material)
+            ? child.material[0] as THREE.MeshStandardMaterial
+            : child.material as THREE.MeshStandardMaterial;
+        }
+      });
+
+      expect(material1).toBeDefined();
+      expect(material2).toBeDefined();
+
+      // Record original color of material2
+      const originalColor2 = material2!.color.clone();
+
+      // Modify material1
+      material1!.color.setRGB(1, 0, 0);
+
+      // material2 should not be affected (different instance)
+      expect(material2!.color.r).toBe(originalColor2.r);
+      expect(material2!.color.g).toBe(originalColor2.g);
+      expect(material2!.color.b).toBe(originalColor2.b);
+      expect(material2!.color).not.toBe(material1!.color);
+    });
   });
 });

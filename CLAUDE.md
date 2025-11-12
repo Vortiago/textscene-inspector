@@ -100,7 +100,6 @@ node apps/textscene-linter/dist/cli.js scenes/fixtures/*.tscn scenes/examples/*.
 | `Cannot find module 'X'` | Missing import or wrong path | Check import path, use type-only imports |
 | `Command failed with exit code 2` | Type check failed | Run `pnpm type-check` to see actual error |
 | Linter builds but tests fail | Stale build artifacts | Run `pnpm clean` then `pnpm install && pnpm build` |
-| `Timeout starting forks runner` | Resource contention during vitest worker spawn | Infrastructure issue, not test failure. Tests passing = safe to commit. Config adjusted in vitest.shared.ts (maxWorkers: 4, fileParallelism: false) |
 
 ## Testing Best Practices
 
