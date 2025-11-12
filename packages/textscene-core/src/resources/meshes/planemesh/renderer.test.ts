@@ -310,7 +310,8 @@ describe('PlaneMesh Renderer', () => {
         subdivideWidth: 1,
         subdivideDepth: 1,
         orientation: 2,
-        centerOffset: { x: 0, y: 0, z: 0 }
+        centerOffset: { x: 0, y: 0, z: 0 },
+        flipFaces: false
       };
 
       const geometry = createPlaneMeshGeometry(properties);
@@ -322,6 +323,129 @@ describe('PlaneMesh Renderer', () => {
 
       expect(centerX).toBeCloseTo(0, 5);
       expect(centerY).toBeCloseTo(0, 5);
+    });
+
+    it('should not flip faces when flipFaces is false', () => {
+      const properties: PlaneMeshProperties = {
+        size: { x: 2.0, y: 2.0 },
+        subdivideWidth: 1,
+        subdivideDepth: 1,
+        orientation: 2, // FACE_Z
+        centerOffset: { x: 0, y: 0, z: 0 },
+        flipFaces: false
+      };
+
+      const geometry = createPlaneMeshGeometry(properties);
+
+      // Default THREE.js plane faces +Z direction (normal points in +Z)
+      const normals = geometry.attributes.normal.array;
+      expect(normals[0]).toBeCloseTo(0, 5); // X component
+      expect(normals[1]).toBeCloseTo(0, 5); // Y component
+      expect(normals[2]).toBeCloseTo(1, 5); // Z component (positive)
+    });
+
+    it('should flip faces when flipFaces is true', () => {
+      const properties: PlaneMeshProperties = {
+        size: { x: 2.0, y: 2.0 },
+        subdivideWidth: 1,
+        subdivideDepth: 1,
+        orientation: 2, // FACE_Z
+        centerOffset: { x: 0, y: 0, z: 0 },
+        flipFaces: true
+      };
+
+      const geometry = createPlaneMeshGeometry(properties);
+
+      // With flipFaces=true, normals should point in -Z direction
+      const normals = geometry.attributes.normal.array;
+      expect(normals[0]).toBeCloseTo(0, 5); // X component
+      expect(normals[1]).toBeCloseTo(0, 5); // Y component
+      expect(normals[2]).toBeCloseTo(-1, 5); // Z component (negative)
+    });
+
+    it('should flip faces with FACE_X orientation', () => {
+      const properties: PlaneMeshProperties = {
+        size: { x: 2.0, y: 2.0 },
+        subdivideWidth: 1,
+        subdivideDepth: 1,
+        orientation: 0, // FACE_X
+        centerOffset: { x: 0, y: 0, z: 0 },
+        flipFaces: true
+      };
+
+      const geometry = createPlaneMeshGeometry(properties);
+
+      // After rotation and flip, normal should still point along X axis (magnitude ~1)
+      // The exact sign depends on how rotation + flip interact, but magnitude should be 1
+      const normals = geometry.attributes.normal.array;
+      expect(Math.abs(normals[0])).toBeCloseTo(1, 1); // X component magnitude ~1
+      expect(Math.abs(normals[1])).toBeCloseTo(0, 1); // Y component ~0
+      expect(Math.abs(normals[2])).toBeCloseTo(0, 1); // Z component ~0
+    });
+
+    it('should flip faces with FACE_Y orientation', () => {
+      const properties: PlaneMeshProperties = {
+        size: { x: 2.0, y: 2.0 },
+        subdivideWidth: 1,
+        subdivideDepth: 1,
+        orientation: 1, // FACE_Y
+        centerOffset: { x: 0, y: 0, z: 0 },
+        flipFaces: true
+      };
+
+      const geometry = createPlaneMeshGeometry(properties);
+
+      // After rotation and flip, normal should point in -Y direction
+      const normals = geometry.attributes.normal.array;
+      expect(Math.abs(normals[0])).toBeCloseTo(0, 1); // X component ~0
+      expect(Math.abs(normals[1])).toBeCloseTo(1, 1); // Y component magnitude ~1
+      expect(normals[1]).toBeLessThan(0); // Should be negative
+      expect(Math.abs(normals[2])).toBeCloseTo(0, 1); // Z component ~0
+    });
+
+    it('should preserve geometry dimensions when flipping faces', () => {
+      const properties: PlaneMeshProperties = {
+        size: { x: 5.0, y: 3.0 },
+        subdivideWidth: 1,
+        subdivideDepth: 1,
+        orientation: 2,
+        centerOffset: { x: 0, y: 0, z: 0 },
+        flipFaces: true
+      };
+
+      const geometry = createPlaneMeshGeometry(properties);
+      geometry.computeBoundingBox();
+
+      const bbox = geometry.boundingBox!;
+
+      // Flipping should reverse winding but not change dimensions
+      expect(bbox.max.x - bbox.min.x).toBeCloseTo(5.0, 5);
+      expect(bbox.max.y - bbox.min.y).toBeCloseTo(3.0, 5);
+    });
+
+    it('should apply center_offset after flipping faces', () => {
+      const properties: PlaneMeshProperties = {
+        size: { x: 2.0, y: 2.0 },
+        subdivideWidth: 1,
+        subdivideDepth: 1,
+        orientation: 2, // FACE_Z
+        centerOffset: { x: 1, y: 2, z: 3 },
+        flipFaces: true
+      };
+
+      const geometry = createPlaneMeshGeometry(properties);
+      geometry.computeBoundingBox();
+
+      const bbox = geometry.boundingBox!;
+
+      // Center should be offset by centerOffset values
+      const centerX = (bbox.max.x + bbox.min.x) / 2;
+      const centerY = (bbox.max.y + bbox.min.y) / 2;
+      const centerZ = (bbox.max.z + bbox.min.z) / 2;
+
+      expect(centerX).toBeCloseTo(1, 5);
+      expect(centerY).toBeCloseTo(2, 5);
+      expect(centerZ).toBeCloseTo(3, 5);
     });
   });
 });

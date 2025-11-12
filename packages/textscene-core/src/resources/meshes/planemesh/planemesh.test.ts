@@ -37,6 +37,7 @@ describe('PlaneMesh Parser', () => {
       expect(result.subdivideDepth).toBe(0);
       expect(result.orientation).toBe(1); // FACE_Y
       expect(result.centerOffset).toBeUndefined();
+      expect(result.flipFaces).toBe(false);
     });
 
     it('should parse custom PlaneMesh properties', () => {
@@ -121,6 +122,40 @@ describe('PlaneMesh Parser', () => {
       expect(result.size).toEqual({ x: 2, y: 4 });
       expect(result.centerOffset).toEqual({ x: 0, y: 2, z: 0 });
       expect(result.orientation).toBe(0);
+    });
+
+    it('should parse flip_faces = true', () => {
+      const properties = {
+        flip_faces: 'true',
+      };
+      const result = parsePlaneMesh(properties);
+
+      expect(result.flipFaces).toBe(true);
+    });
+
+    it('should parse flip_faces = false', () => {
+      const properties = {
+        flip_faces: 'false',
+      };
+      const result = parsePlaneMesh(properties);
+
+      expect(result.flipFaces).toBe(false);
+    });
+
+    it('should default flip_faces to false when not specified', () => {
+      const properties = {};
+      const result = parsePlaneMesh(properties);
+
+      expect(result.flipFaces).toBe(false);
+    });
+
+    it('should handle invalid flip_faces gracefully', () => {
+      const properties = {
+        flip_faces: 'invalid',
+      };
+      const result = parsePlaneMesh(properties);
+
+      expect(result.flipFaces).toBe(false); // Falls back to default
     });
   });
 });

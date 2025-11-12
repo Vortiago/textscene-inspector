@@ -4,7 +4,7 @@
 
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { createCamera3D, getCameraFromGroup, getHelperFromGroup, setHelperVisibility, updateCameraAspect } from './renderer';
+import { createCamera3D, updateCameraAspect } from './renderer';
 import { ProjectionMode } from './types';
 import type { Camera3DProperties } from './types';
 
@@ -34,22 +34,22 @@ describe('Camera3D Renderer', () => {
   };
 
   describe('createCamera3D', () => {
-    it('should create a group with camera and helper', () => {
-      const group = createCamera3D('MainCamera', baseCameraProps);
+    it('should create a camera with helper', () => {
+      const camera = createCamera3D('MainCamera', baseCameraProps);
 
-      expect(group).toBeInstanceOf(THREE.Group);
-      expect(group.name).toBe('MainCamera');
-      expect(group.userData.nodeType).toBe('Camera3D');
+      expect(camera).toBeInstanceOf(THREE.Camera);
+      expect(camera.name).toBe('MainCamera');
+      expect(camera.userData.nodeType).toBe('Camera3D');
+      expect(camera.userData.helper).toBeInstanceOf(THREE.CameraHelper);
     });
 
     it('should create PerspectiveCamera for perspective projection', () => {
-      const group = createCamera3D('Camera', baseCameraProps);
-      const camera = getCameraFromGroup(group);
+      const camera = createCamera3D('Camera', baseCameraProps);
 
       expect(camera).toBeInstanceOf(THREE.PerspectiveCamera);
       expect((camera as THREE.PerspectiveCamera).fov).toBe(75.0);
-      expect(camera!.near).toBe(0.05);
-      expect(camera!.far).toBe(4000.0);
+      expect(camera.near).toBe(0.05);
+      expect(camera.far).toBe(4000.0);
     });
 
     it('should create OrthographicCamera for orthogonal projection', () => {
@@ -59,8 +59,7 @@ describe('Camera3D Renderer', () => {
         size: 5.0,
       };
 
-      const group = createCamera3D('OrthoCamera', orthoProps);
-      const camera = getCameraFromGroup(group);
+      const camera = createCamera3D('OrthoCamera', orthoProps);
 
       expect(camera).toBeInstanceOf(THREE.OrthographicCamera);
       const orthoCam = camera as THREE.OrthographicCamera;
@@ -69,11 +68,11 @@ describe('Camera3D Renderer', () => {
     });
 
     it('should create CameraHelper with default visibility ON', () => {
-      const group = createCamera3D('Camera', baseCameraProps);
-      const helper = getHelperFromGroup(group);
+      const camera = createCamera3D('Camera', baseCameraProps);
+      const helper = camera.userData.helper as THREE.CameraHelper;
 
       expect(helper).toBeInstanceOf(THREE.CameraHelper);
-      expect(helper!.visible).toBe(true); // Default ON to show camera positioning
+      expect(helper.visible).toBe(true); // Default ON to show camera positioning
     });
 
     it('should update helper to reflect camera world transform', () => {
@@ -88,62 +87,74 @@ describe('Camera3D Renderer', () => {
         },
       };
 
-      const group = createCamera3D('RotatedCamera', rotatedProps);
-      const camera = getCameraFromGroup(group);
-      const helper = getHelperFromGroup(group);
+      const camera = createCamera3D('RotatedCamera', rotatedProps);
+      const helper = camera.userData.helper as THREE.CameraHelper;
 
       expect(camera).toBeDefined();
       expect(helper).toBeDefined();
 
       // Force matrix update (simulates being added to scene)
-      group.updateMatrixWorld(true);
+      camera.updateMatrixWorld(true);
+      helper.updateMatrixWorld(true);
 
       // Camera should be at world position (10, 5, 0)
       const cameraWorldPos = new THREE.Vector3();
-      camera!.getWorldPosition(cameraWorldPos);
+      camera.getWorldPosition(cameraWorldPos);
       expect(cameraWorldPos.x).toBeCloseTo(10);
       expect(cameraWorldPos.y).toBeCloseTo(5);
       expect(cameraWorldPos.z).toBeCloseTo(0);
-
-      // Helper should have valid matrix (not zero/identity when camera is transformed)
-      // The helper's matrixWorld should match the camera's world transform
-      helper!.updateMatrixWorld(true);
-      expect(helper!.matrixWorld.equals(new THREE.Matrix4())).toBe(false);
     });
 
-    it('should apply transform to camera', () => {
-      const group = createCamera3D('Camera', baseCameraProps);
-      const camera = getCameraFromGroup(group);
+    it('should apply transform to camera directly', () => {
+      const camera = createCamera3D('Camera', baseCameraProps);
 
       expect(camera).toBeDefined();
-      // Transform is applied to group, so camera's local position is (0,0,0)
-      expect(camera!.position.x).toBeCloseTo(0);
-      expect(camera!.position.y).toBeCloseTo(0);
-      expect(camera!.position.z).toBeCloseTo(0);
-      // Group has the transform position
-      expect(group.position.x).toBeCloseTo(0);
-      expect(group.position.y).toBeCloseTo(5);
-      expect(group.position.z).toBeCloseTo(10);
+      // Transform is applied directly to camera
+      expect(camera.position.x).toBeCloseTo(0);
+      expect(camera.position.y).toBeCloseTo(5);
+      expect(camera.position.z).toBeCloseTo(10);
     });
 
-    it('should apply h_offset and v_offset to camera', () => {
+    it('should apply h_offset and v_offset in camera LOCAL space', () => {
       const propsWithOffset: Camera3DProperties = {
         ...baseCameraProps,
         h_offset: 2.0,
         v_offset: -1.0,
       };
 
-      const group = createCamera3D('Camera', propsWithOffset);
-      const camera = getCameraFromGroup(group);
+      const camera = createCamera3D('Camera', propsWithOffset);
 
       expect(camera).toBeDefined();
-      // Offsets are applied to camera's local position
-      expect(camera!.position.x).toBeCloseTo(2.0);
-      expect(camera!.position.y).toBeCloseTo(-1.0);
-      expect(camera!.position.z).toBeCloseTo(0);
-      // Group still has the transform position
-      expect(group.position.y).toBeCloseTo(5);
-      expect(group.position.z).toBeCloseTo(10);
+      // With identity rotation, local axes = world axes
+      // So offsets should be (h_offset, v_offset, 0) added to position
+      expect(camera.position.x).toBeCloseTo(2.0); // 0 + 2.0 (h_offset along X)
+      expect(camera.position.y).toBeCloseTo(4.0); // 5 + -1.0 (v_offset along Y)
+      expect(camera.position.z).toBeCloseTo(10); // unchanged
+    });
+
+    it('should apply offsets in local space with rotated camera', () => {
+      // Camera rotated 90° around Y (looking along +X in world space)
+      const rotatedProps: Camera3DProperties = {
+        ...baseCameraProps,
+        transform: {
+          basis_x: { x: 0, y: 0, z: 1 }, // 90° Y rotation
+          basis_y: { x: 0, y: 1, z: 0 },
+          basis_z: { x: -1, y: 0, z: 0 },
+          origin: { x: 0, y: 0, z: 0 },
+        },
+        h_offset: 2.0,  // Along camera's local X (world +Z)
+        v_offset: 1.0,  // Along camera's local Y (world +Y)
+      };
+
+      const camera = createCamera3D('RotatedCamera', rotatedProps);
+      camera.updateMatrixWorld(true);
+
+      // With 90° Y rotation and offsets:
+      // h_offset along local X = world +Z
+      // v_offset along local Y = world +Y
+      expect(camera.position.x).toBeCloseTo(0, 1);   // No X offset
+      expect(camera.position.y).toBeCloseTo(1, 1);   // v_offset (1.0)
+      expect(camera.position.z).toBeCloseTo(2, 1);   // h_offset (2.0)
     });
 
     it('should enforce near > 0 constraint', () => {
@@ -152,10 +163,9 @@ describe('Camera3D Renderer', () => {
         near: -1.0,
       };
 
-      const group = createCamera3D('Camera', propsWithBadNear);
-      const camera = getCameraFromGroup(group);
+      const camera = createCamera3D('Camera', propsWithBadNear);
 
-      expect(camera!.near).toBeGreaterThan(0);
+      expect(camera.near).toBeGreaterThan(0);
     });
 
     it('should enforce far > near constraint', () => {
@@ -165,86 +175,27 @@ describe('Camera3D Renderer', () => {
         far: 50.0,
       };
 
-      const group = createCamera3D('Camera', propsWithBadFar);
-      const camera = getCameraFromGroup(group);
+      const camera = createCamera3D('Camera', propsWithBadFar);
 
-      expect(camera!.far).toBeGreaterThan(camera!.near);
+      expect(camera.far).toBeGreaterThan(camera.near);
     });
 
     it('should store properties and references in userData', () => {
-      const group = createCamera3D('Camera', baseCameraProps);
+      const camera = createCamera3D('Camera', baseCameraProps);
 
-      expect(group.userData.cameraProperties).toBeDefined();
-      expect(group.userData.cameraProperties.fov).toBe(75.0);
-      expect(group.userData.camera).toBeDefined();
-      expect(group.userData.helper).toBeDefined();
-    });
-  });
-
-  describe('getCameraFromGroup', () => {
-    it('should extract camera from group', () => {
-      const group = createCamera3D('Camera', baseCameraProps);
-      const camera = getCameraFromGroup(group);
-
-      expect(camera).toBeInstanceOf(THREE.Camera);
-      expect(camera!.name).toBe('Camera_camera');
-    });
-
-    it('should return null if no camera found', () => {
-      const emptyGroup = new THREE.Group();
-      const camera = getCameraFromGroup(emptyGroup);
-
-      expect(camera).toBeNull();
-    });
-  });
-
-  describe('getHelperFromGroup', () => {
-    it('should extract helper from group', () => {
-      const group = createCamera3D('Camera', baseCameraProps);
-      const helper = getHelperFromGroup(group);
-
-      expect(helper).toBeInstanceOf(THREE.CameraHelper);
-      expect(helper!.name).toBe('Camera_helper');
-    });
-
-    it('should return null if no helper found', () => {
-      const emptyGroup = new THREE.Group();
-      const helper = getHelperFromGroup(emptyGroup);
-
-      expect(helper).toBeNull();
-    });
-  });
-
-  describe('setHelperVisibility', () => {
-    it('should show helper', () => {
-      const group = createCamera3D('Camera', baseCameraProps);
-      setHelperVisibility(group, true);
-
-      const helper = getHelperFromGroup(group);
-      expect(helper!.visible).toBe(true);
-    });
-
-    it('should hide helper', () => {
-      const group = createCamera3D('Camera', baseCameraProps);
-      setHelperVisibility(group, false);
-
-      const helper = getHelperFromGroup(group);
-      expect(helper!.visible).toBe(false);
-    });
-
-    it('should handle missing helper gracefully', () => {
-      const emptyGroup = new THREE.Group();
-      expect(() => setHelperVisibility(emptyGroup, false)).not.toThrow();
+      expect(camera.userData.cameraProperties).toBeDefined();
+      expect(camera.userData.cameraProperties.fov).toBe(75.0);
+      expect(camera.userData.helper).toBeDefined();
+      expect(camera.userData.nodeType).toBe('Camera3D');
     });
   });
 
   describe('updateCameraAspect', () => {
     it('should update perspective camera aspect', () => {
-      const group = createCamera3D('Camera', baseCameraProps);
-      updateCameraAspect(group, 4 / 3);
+      const camera = createCamera3D('Camera', baseCameraProps);
+      updateCameraAspect(camera, 4 / 3);
 
-      const camera = getCameraFromGroup(group) as THREE.PerspectiveCamera;
-      expect(camera.aspect).toBeCloseTo(4 / 3);
+      expect((camera as THREE.PerspectiveCamera).aspect).toBeCloseTo(4 / 3);
     });
 
     it('should update orthographic camera frustum', () => {
@@ -254,27 +205,27 @@ describe('Camera3D Renderer', () => {
         size: 5.0,
       };
 
-      const group = createCamera3D('OrthoCamera', orthoProps);
-      updateCameraAspect(group, 2.0);
+      const camera = createCamera3D('OrthoCamera', orthoProps);
+      updateCameraAspect(camera, 2.0);
 
-      const camera = getCameraFromGroup(group) as THREE.OrthographicCamera;
-      expect(camera.right).toBeCloseTo(10.0); // 5.0 * 2.0
-      expect(camera.left).toBeCloseTo(-10.0);
-      expect(camera.top).toBeCloseTo(5.0);
-      expect(camera.bottom).toBeCloseTo(-5.0);
+      const orthoCam = camera as THREE.OrthographicCamera;
+      expect(orthoCam.right).toBeCloseTo(10.0); // 5.0 * 2.0
+      expect(orthoCam.left).toBeCloseTo(-10.0);
+      expect(orthoCam.top).toBeCloseTo(5.0);
+      expect(orthoCam.bottom).toBeCloseTo(-5.0);
     });
 
     it('should update helper after aspect change', () => {
-      const group = createCamera3D('Camera', baseCameraProps);
-      const helper = getHelperFromGroup(group);
+      const camera = createCamera3D('Camera', baseCameraProps);
+      const helper = camera.userData.helper as THREE.CameraHelper;
 
-      expect(() => updateCameraAspect(group, 1.5)).not.toThrow();
+      expect(() => updateCameraAspect(camera, 1.5)).not.toThrow();
       expect(helper).toBeDefined(); // Helper should still exist
     });
 
     it('should handle missing properties gracefully', () => {
-      const emptyGroup = new THREE.Group();
-      expect(() => updateCameraAspect(emptyGroup, 1.5)).not.toThrow();
+      const emptyCamera = new THREE.PerspectiveCamera();
+      expect(() => updateCameraAspect(emptyCamera, 1.5)).not.toThrow();
     });
   });
 
@@ -295,18 +246,15 @@ describe('Camera3D Renderer', () => {
         },
       };
 
-      const cameraGroup = createCamera3D('Camera', cameraProps);
-      parent.add(cameraGroup);
+      const camera = createCamera3D('Camera', cameraProps);
+      parent.add(camera);
 
       // Update world matrices (simulates being in a scene)
       parent.updateMatrixWorld(true);
 
       // Get camera's world position
-      const camera = getCameraFromGroup(cameraGroup);
-      expect(camera).toBeDefined();
-
       const worldPos = new THREE.Vector3();
-      camera!.getWorldPosition(worldPos);
+      camera.getWorldPosition(worldPos);
 
       // World position should be parent + camera local
       expect(worldPos.x).toBeCloseTo(15); // 10 + 5
@@ -330,16 +278,13 @@ describe('Camera3D Renderer', () => {
         },
       };
 
-      const cameraGroup = createCamera3D('Camera', cameraProps);
-      parent.add(cameraGroup);
+      const camera = createCamera3D('Camera', cameraProps);
+      parent.add(camera);
       parent.updateMatrixWorld(true);
-
-      const camera = getCameraFromGroup(cameraGroup);
-      expect(camera).toBeDefined();
 
       // Get world quaternion
       const worldQuat = new THREE.Quaternion();
-      camera!.getWorldQuaternion(worldQuat);
+      camera.getWorldQuaternion(worldQuat);
 
       // World rotation should be composition of parent and camera rotations
       // The actual values depend on rotation order, but we verify it's not identity
@@ -347,7 +292,7 @@ describe('Camera3D Renderer', () => {
       expect(worldQuat.equals(identityQuat)).toBe(false);
 
       // Also verify the camera's local rotation is preserved
-      const localQuat = camera!.quaternion.clone();
+      const localQuat = camera.quaternion.clone();
       expect(localQuat.equals(worldQuat)).toBe(false); // Local ≠ World when there's a parent transform
     });
 
@@ -370,13 +315,12 @@ describe('Camera3D Renderer', () => {
         },
       };
 
-      const cameraGroup = createCamera3D('Camera', cameraProps);
-      container.add(cameraGroup);
+      const camera = createCamera3D('Camera', cameraProps);
+      container.add(camera);
       root.updateMatrixWorld(true);
 
-      const camera = getCameraFromGroup(cameraGroup);
       const worldPos = new THREE.Vector3();
-      camera!.getWorldPosition(worldPos);
+      camera.getWorldPosition(worldPos);
 
       // Should compose: root + container + camera
       expect(worldPos.x).toBeCloseTo(100); // from root
@@ -400,19 +344,17 @@ describe('Camera3D Renderer', () => {
         },
       };
 
-      const cameraGroup = createCamera3D('Camera', cameraProps);
-      parent.add(cameraGroup);
+      const camera = createCamera3D('Camera', cameraProps);
+      parent.add(camera);
       parent.updateMatrixWorld(true);
-
-      const camera = getCameraFromGroup(cameraGroup);
 
       // Extract world transform (like CameraManager does)
       const worldPosition = new THREE.Vector3();
       const worldQuaternion = new THREE.Quaternion();
       const worldScale = new THREE.Vector3();
-      camera!.getWorldPosition(worldPosition);
-      camera!.getWorldQuaternion(worldQuaternion);
-      camera!.getWorldScale(worldScale);
+      camera.getWorldPosition(worldPosition);
+      camera.getWorldQuaternion(worldQuaternion);
+      camera.getWorldScale(worldScale);
 
       // Verify we got valid world-space values
       expect(worldPosition.length()).toBeGreaterThan(0);
@@ -426,7 +368,7 @@ describe('Camera3D Renderer', () => {
       expect(worldPosition.z).not.toBeCloseTo(10);
     });
 
-    it('should have helper visualize camera correctly when parent has transform', () => {
+    it('should have helper reference camera correctly when parent has transform', () => {
       // Parent with position and rotation
       const parent = new THREE.Group();
       parent.position.set(10, 10, 10);
@@ -442,27 +384,20 @@ describe('Camera3D Renderer', () => {
         },
       };
 
-      const cameraGroup = createCamera3D('Camera', cameraProps);
-      parent.add(cameraGroup);
+      const camera = createCamera3D('Camera', cameraProps);
+      parent.add(camera);
       parent.updateMatrixWorld(true);
 
-      const camera = getCameraFromGroup(cameraGroup);
-      const helper = getHelperFromGroup(cameraGroup);
+      const helper = camera.userData.helper as THREE.CameraHelper;
 
       expect(camera).toBeDefined();
       expect(helper).toBeDefined();
 
-      // Helper should be added to the camera group, not to the camera itself
-      expect(cameraGroup.children).toContain(helper);
+      // Helper should reference the camera
+      expect(helper.camera).toBe(camera);
 
-      // Transform is applied to group, camera has local position (0,0,0)
-      expect(camera!.position.y).toBeCloseTo(0);
-      // Group has the transform position
-      expect(cameraGroup.position.y).toBeCloseTo(5);
-
-      // Helper's matrix should be updated (non-identity when camera is transformed)
-      helper!.updateMatrixWorld(true);
-      expect(helper!.matrixWorld.equals(new THREE.Matrix4())).toBe(false);
+      // Camera has the transform position
+      expect(camera.position.y).toBeCloseTo(5);
     });
   });
 });

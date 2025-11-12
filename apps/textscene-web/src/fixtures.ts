@@ -31,6 +31,11 @@ export const fixtures: Fixture[] = [
     "category": "Edge Cases"
   },
   {
+    "name": "Photo Wall",
+    "file": "edge-photo-wall.tscn",
+    "category": "Edge Cases"
+  },
+  {
     "name": "Plane Rotated Scaled",
     "file": "edge-plane-rotated-scaled.tscn",
     "category": "Edge Cases"
@@ -211,6 +216,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Photo Frame Base",
+    "file": "unit-photo-frame-base.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Surface Material Override",
     "file": "unit-surface-material-override.tscn",
     "category": "Other"
@@ -263,6 +273,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Planemesh Center Offset",
     "file": "unit-planemesh-center-offset.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
+    "name": "Planemesh Flip Faces",
+    "file": "unit-planemesh-flip-faces.tscn",
     "category": "Unit - Primitive Meshes"
   },
   {

@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { PlaneMeshProperties } from './types';
 
 export function createPlaneMeshGeometry(properties: PlaneMeshProperties): THREE.PlaneGeometry {
-  const { size, subdivideWidth, subdivideDepth, orientation, centerOffset } = properties;
+  const { size, subdivideWidth, subdivideDepth, orientation, centerOffset, flipFaces } = properties;
 
   // Size mapping verified against Godot source (scene/resources/3d/primitive_meshes.cpp):
   // FACE_X: Vector3(0.0, z, x) → Y=size.y, Z=size.x
@@ -32,6 +32,14 @@ export function createPlaneMeshGeometry(properties: PlaneMeshProperties): THREE.
       // FACE_Y: rotate to XZ plane with normal pointing in +Y
       geometry.rotateX(-Math.PI / 2);
       break;
+  }
+
+  // Apply flip_faces if enabled (reverses triangle winding order)
+  // Godot docs: "reverses the order of the vertices in each triangle resulting in the backside of the mesh being drawn"
+  if (flipFaces) {
+    geometry.scale(-1, 1, 1);
+    // Recompute normals after scaling to ensure they point in the correct direction
+    geometry.computeVertexNormals();
   }
 
   // Apply center offset if provided

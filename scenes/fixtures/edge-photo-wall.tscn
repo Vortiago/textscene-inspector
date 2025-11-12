@@ -1,0 +1,60 @@
+[gd_scene load_steps=5 format=3]
+
+[sub_resource type="BoxMesh" id="BoxMesh_frame"]
+size = Vector3(1.0, 1.0, 0.1)
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_front"]
+size = Vector2(0.8, 0.8)
+
+[sub_resource type="StandardMaterial3D" id="Material_green"]
+albedo_color = Color(0, 1, 0, 1)
+
+[sub_resource type="StandardMaterial3D" id="Material_red"]
+albedo_color = Color(1, 0, 0, 1)
+
+[sub_resource type="StandardMaterial3D" id="Material_blue"]
+albedo_color = Color(0, 0, 1, 1)
+
+[node name="PhotoWall" type="Node3D"]
+
+[node name="FrameIdentity" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
+
+[node name="FrameBox" type="MeshInstance3D" parent="FrameIdentity"]
+mesh = SubResource("BoxMesh_frame")
+
+[node name="FrontPlane" type="MeshInstance3D" parent="FrameIdentity"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.06)
+mesh = SubResource("PlaneMesh_front")
+surface_material_override/0 = SubResource("Material_green")
+
+[node name="Camera3D" type="Camera3D" parent="FrameIdentity"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.5)
+
+[node name="Frame90Y" type="Node3D" parent="."]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 3, 2, 0)
+
+[node name="FrameBox" type="MeshInstance3D" parent="Frame90Y"]
+mesh = SubResource("BoxMesh_frame")
+
+[node name="FrontPlane" type="MeshInstance3D" parent="Frame90Y"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.06)
+mesh = SubResource("PlaneMesh_front")
+surface_material_override/0 = SubResource("Material_red")
+
+[node name="Camera3D" type="Camera3D" parent="Frame90Y"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.5)
+
+[node name="Frame180Y" type="Node3D" parent="."]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 6, 2, 0)
+
+[node name="FrameBox" type="MeshInstance3D" parent="Frame180Y"]
+mesh = SubResource("BoxMesh_frame")
+
+[node name="FrontPlane" type="MeshInstance3D" parent="Frame180Y"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.06)
+mesh = SubResource("PlaneMesh_front")
+surface_material_override/0 = SubResource("Material_blue")
+
+[node name="Camera3D" type="Camera3D" parent="Frame180Y"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.5)

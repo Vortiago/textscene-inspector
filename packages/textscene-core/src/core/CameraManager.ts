@@ -5,7 +5,6 @@
 import * as THREE from 'three';
 import type { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import type { NodeTracker } from './NodeTracker';
-import { getCameraFromGroup, getHelperFromGroup } from '../nodes/3d/camera3d/renderer';
 import * as logger from '../logger';
 
 // Distance for camera look-at target when switching cameras
@@ -59,20 +58,19 @@ export class CameraManager {
   switchToCamera(nodePath: string): boolean {
     logger.info(`[Camera Switch] Switching to camera: ${nodePath}`);
 
-    const cameraGroup = this.nodeTracker.getObject(nodePath);
-    if (!cameraGroup || cameraGroup.userData.nodeType !== 'Camera3D') {
+    const camera = this.nodeTracker.getObject(nodePath);
+    if (!camera || camera.userData.nodeType !== 'Camera3D') {
       logger.warn(`[Camera Switch] Node not found or not a Camera3D: ${nodePath}`);
       return false;
     }
 
-    // Get camera and helper using utility functions
-    const camera = getCameraFromGroup(cameraGroup as THREE.Group);
-    const helper = getHelperFromGroup(cameraGroup as THREE.Group);
-
-    if (!camera) {
-      logger.warn(`[Camera Switch] Camera object not found in group: ${nodePath}`);
+    if (!(camera instanceof THREE.Camera)) {
+      logger.warn(`[Camera Switch] Object is not a THREE.Camera: ${nodePath}`);
       return false;
     }
+
+    // Get helper from userData
+    const helper = camera.userData.helper as THREE.CameraHelper | undefined;
 
     // Show all camera helpers first
     this.showAllCameraHelpers();
@@ -143,7 +141,7 @@ export class CameraManager {
     for (const path of this.nodeTracker.getAllPaths()) {
       const object = this.nodeTracker.getObject(path);
       if (object && object.userData.nodeType === 'Camera3D') {
-        const helper = getHelperFromGroup(object as THREE.Group);
+        const helper = object.userData.helper as THREE.CameraHelper | undefined;
         if (helper) {
           helper.visible = visible;
         }
@@ -158,7 +156,7 @@ export class CameraManager {
     for (const path of this.nodeTracker.getAllPaths()) {
       const object = this.nodeTracker.getObject(path);
       if (object && object.userData.nodeType === 'Camera3D') {
-        const helper = getHelperFromGroup(object as THREE.Group);
+        const helper = object.userData.helper as THREE.CameraHelper | undefined;
         if (helper) {
           helper.visible = true;
         }
