@@ -148,6 +148,11 @@
 - [ ] #WI-49: Documentation Updates for Claude Config → [Details](work_items/WI49.md)
 - [x] #WI-55: Instance Resolution Encapsulation (Alternative 1 implemented) → [Details](work_items/WI55.md)
 - [x] #WI-61: Standardize Logging Across All Applications → [Details](work_items/WI61.md)
+- [ ] #WI-81: CSS Modernization Implementation → [Details](work_items/WI81.md)
+
+## Phase 14: Web App Mobile & Responsive Design
+
+- [ ] #WI-82: Mobile Phone UI Support & Responsive Design → [Details](work_items/WI82.md)
 
 ## Phase 13.5: Architecture Improvements
 
