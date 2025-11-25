@@ -169,12 +169,13 @@
 >
 > **Scale Target**: Must handle 1,000-5,000+ nodes (real Godot game scenes)
 
-### Stage 1: Event Foundation
-- [ ] #WI-79: Event-Based Resource Loading System → [Details](work_items/WI-79.md) ⭐⭐⭐ **FOUNDATION**
-  - Non-blocking resource loading
-  - Graceful degradation for missing files
-  - 6x faster material loading (parallel textures)
-  - Progressive rendering (meshes appear immediately)
+### Stage 1: Event Foundation ✅
+- [x] #WI-79: Event-Based Resource Loading System → [Details](work_items/WI-79.md) ⭐⭐⭐ **FOUNDATION** ✅ Complete
+  - ✅ ResourceEventBus - Custom event bus for resource loading events
+  - ✅ TextureLoader - Event-based texture loading with deduplication/caching
+  - ✅ MaterialLoader - Event-based material loading with parallel texture loading
+  - ✅ Parallel texture loading in StandardMaterial3D (6x faster)
+  - ✅ Backward-compatible promise API
 
 ### Stage 2-5: Immutable Hierarchies with Reconciliation
 - [ ] #WI-78: Immutable Scene Hierarchies → [Details](work_items/WI-78.md) ⭐⭐⭐ **CORE** (Depends on WI-79)
