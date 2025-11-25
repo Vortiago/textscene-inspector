@@ -27,8 +27,18 @@ export default defineConfig({
     },
     include: ['**/*.test.ts', '**/*.spec.ts'],
     exclude: ['node_modules/', 'dist/', 'build/'],
-    maxWorkers: 16,
-    fileParallelism: true,
-    maxConcurrency: 15,
+    // Use threads pool with limited workers to prevent OOM
+    // Forks pool causes timeout issues on Windows
+    pool: 'threads',
+    poolOptions: {
+      threads: {
+        // Single worker to prevent OOM during pre-commit hooks
+        minThreads: 1,
+        maxThreads: 1,
+      },
+    },
+    // Run tests sequentially to reduce memory pressure
+    fileParallelism: false,
+    maxConcurrency: 1,
   },
 });

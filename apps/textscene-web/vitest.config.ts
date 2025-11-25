@@ -7,9 +7,16 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./src/test-setup.ts'],
     include: ['src/**/*.{test,spec}.ts'],
-    maxWorkers: 16,
-    fileParallelism: true,
-    maxConcurrency: 15,
+    // Use threads pool with single thread to prevent OOM
+    pool: 'threads',
+    poolOptions: {
+      threads: {
+        minThreads: 1,
+        maxThreads: 1,
+      },
+    },
+    fileParallelism: false,
+    maxConcurrency: 1,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],

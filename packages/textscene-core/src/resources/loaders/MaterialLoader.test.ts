@@ -101,8 +101,8 @@ roughness = 0.3
 
       loader.request('mat1');
 
-      // Wait for async operations
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      // Wait for async operations (500ms to handle slow CI environments)
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
       expect(handler).toHaveBeenCalled();
       const [id, material] = handler.mock.calls[0];
@@ -119,7 +119,7 @@ roughness = 0.3
 
       // First load to populate cache
       loader.request('mat1');
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
       // Now request again - should emit immediately
       const handler = vi.fn();
@@ -144,7 +144,7 @@ roughness = 0.3
       loader.request('mat1');
 
       // Should only call provider once
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
       expect(mockProvider.loadResource).toHaveBeenCalledTimes(1);
     });
