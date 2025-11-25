@@ -154,25 +154,50 @@
 
 - [ ] #WI-82: Mobile Phone UI Support & Responsive Design → [Details](work_items/WI82.md)
 
-## Phase 13.5: Architecture Improvements
+## Phase 13.5: Architecture Improvements 🚨 **RELEASE BLOCKER**
 
-### Core Architecture Refactoring (React Pattern, Not MVVM)
+> **Master Document**: [PHASE-13.5-ARCHITECTURE.md](work_items/PHASE-13.5-ARCHITECTURE.md)
+>
+> **WHY THIS BLOCKS RELEASE**: Current architecture has fundamental issues:
+> - Updates not propagating correctly
+> - Missing file requests not showing in UI
+> - Slow loading even on moderate scenes (Hallway)
+> - Multi-panel coordination problems
+>
+> **ROOT CAUSE**: Mutable state with three-way synchronization is inherently fragile.
+> **SOLUTION**: React-style immutable state + reconciliation pattern.
+>
+> **Scale Target**: Must handle 1,000-5,000+ nodes (real Godot game scenes)
 
-- [ ] #WI-76: Event-Based Resource Loading System → [Details](work_items/WI-76.md) ⭐⭐⭐ **ARCHITECTURAL**
-- [ ] #WI-78: Immutable Scene Hierarchies with Reconciliation → [Details](work_items/WI-78.md) ⭐⭐⭐ **ARCHITECTURAL** (Depends on WI-76)
+### Stage 1: Event Foundation
+- [ ] #WI-79: Event-Based Resource Loading System → [Details](work_items/WI-79.md) ⭐⭐⭐ **FOUNDATION**
+  - Non-blocking resource loading
+  - Graceful degradation for missing files
+  - 6x faster material loading (parallel textures)
+  - Progressive rendering (meshes appear immediately)
+
+### Stage 2-5: Immutable Hierarchies with Reconciliation
+- [ ] #WI-78: Immutable Scene Hierarchies → [Details](work_items/WI-78.md) ⭐⭐⭐ **CORE** (Depends on WI-79)
   - [ ] #WI-78.1: Immutable SceneGraph Model → [Details](work_items/WI-78-1.md)
   - [ ] #WI-78.2: Scene Resolution & Flattening → [Details](work_items/WI-78-2.md)
   - [ ] #WI-78.3: Hierarchy Registry → [Details](work_items/WI-78-3.md)
   - [ ] #WI-78.4: Dependency Tracking → [Details](work_items/WI-78-4.md)
-  - [ ] #WI-78.5: Reconciliation Engine → [Details](work_items/WI-78-5.md)
+  - [ ] #WI-78.5: Reconciliation Engine → [Details](work_items/WI-78-5.md) ⭐ **PERFORMANCE CRITICAL**
   - [ ] #WI-78.6: Panel Integration → [Details](work_items/WI-78-6.md)
-- [ ] #WI-77: Multi-Panel Coordination (Revised & Simplified) → [Details](work_items/WI-77-revised.md) ⭐⭐⭐ **ARCHITECTURAL** (Depends on WI-78)
+
+### Stage 6: Multi-Panel Coordination (Simplified by WI-78)
+- [ ] #WI-77: Multi-Panel Coordination (Revised) → [Details](work_items/WI-77-revised.md) ⭐⭐⭐ (Depends on WI-78)
   - [ ] #WI-77.1: Selective Update Strategies → Moderate complexity
   - [ ] #WI-77.2: Property Diffing Utility → Simple
-  - [ ] #WI-77.3: Multi-Panel Event Routing → Already done in WI-78.3!
+  - [ ] #WI-77.3: Multi-Panel Event Routing → ✅ Done in WI-78.3
   - [ ] #WI-77.4: VSCode File Watcher Integration → Simple
 
-**Pattern Note**: Using React's Immutable + Reconciliation pattern, NOT traditional MVVM/MVC. Simpler, proven at scale, easier to maintain.
+**Performance Targets**:
+- Reconciliation (1000 nodes): < 10ms
+- Hot-reload: < 200ms
+- Material loading: 50ms (not 300ms sequential)
+
+**Pattern Note**: React's Immutable + Reconciliation pattern, NOT MVVM/MVC. Proven at scale (React handles thousands of components), simpler to maintain.
 
 ## Testing & Documentation
 
