@@ -7,8 +7,7 @@ import type { MeshInstance3DProperties } from './types';
 import type { TscnScene } from '../../../parser/types';
 import { resolveGeometry, resolveMaterial } from '../../../resources/ResourceManager';
 import { parseResourceReference } from '../../../resources/ResourceManager';
-import { warn } from '../../../logger';
-
+import { warn, info } from '../../../logger';
 /**
  * Threshold for warning about unusually high surface indices.
  * Most meshes have 1-8 surfaces; indices above this may indicate an issue.
@@ -125,6 +124,14 @@ export async function createMeshInstance3D(
 
   applyShadowCasting(mesh, properties.castShadow);
 
+  // Set up event subscriptions for progressive material updates (recovery flow)
+  if (scene) {
+    const cleanup = setupMaterialEventSubscriptions(mesh, properties, scene);
+    if (cleanup) {
+      mesh.userData.cleanupMaterialListeners = cleanup;
+    }
+  }
+
   return mesh;
 }
 
@@ -235,6 +242,82 @@ function createPlaceholderMaterial(): THREE.Material {
     color: 0xff00ff,
     wireframe: true,
   });
+}
+
+/**
+ * Collect material IDs from mesh properties for event subscription.
+ * Returns array of parsed resource IDs that need material:loaded subscriptions.
+ */
+function collectMaterialIds(properties: MeshInstance3DProperties): string[] {
+  const ids: string[] = [];
+
+  // material_override
+  if (properties.materialOverride) {
+    const ref = parseResourceReference(properties.materialOverride);
+    if (ref) {
+      ids.push(ref.id);
+    }
+  }
+
+  // surface_material_override/N
+  const surfaceOverrides = normalizeSurfaceMaterialOverrides(properties.surfaceMaterialOverrides);
+  for (const materialRef of surfaceOverrides.values()) {
+    const ref = parseResourceReference(materialRef);
+    if (ref) {
+      ids.push(ref.id);
+    }
+  }
+
+  return ids;
+}
+
+/**
+ * Set up event subscriptions for progressive material updates.
+ * When materials load (initially or via recovery), the mesh updates automatically.
+ * Returns cleanup function to be stored in mesh.userData.
+ */
+function setupMaterialEventSubscriptions(
+  mesh: THREE.Mesh,
+  properties: MeshInstance3DProperties,
+  scene: TscnScene
+): (() => void) | null {
+  if (!scene.resourceRegistry) {
+    return null;
+  }
+
+  const eventBus = scene.resourceRegistry.getEventBus();
+  const materialIds = collectMaterialIds(properties);
+
+  if (materialIds.length === 0) {
+    return null;
+  }
+
+  // Store handlers for cleanup via off()
+  const handlers: Array<{ handler: (id: string, material?: THREE.Material) => void }> = [];
+
+  for (const materialId of materialIds) {
+    const handler = (id: string, material?: THREE.Material) => {
+      if (id === materialId && material) {
+        info(`[MeshInstance3D] Material loaded via event: ${id}, updating mesh "${mesh.name}"`);
+        // Update the mesh material
+        // For simplicity, we apply to the whole mesh (material_override behavior)
+        // Surface-specific updates would need more complex tracking
+        mesh.material = material;
+      }
+    };
+
+    eventBus.on<THREE.Material>('material', 'loaded', handler);
+    handlers.push({ handler });
+  }
+
+  info(`[MeshInstance3D] Set up ${handlers.length} material event subscriptions for "${mesh.name}"`);
+
+  return () => {
+    for (const { handler } of handlers) {
+      eventBus.off<THREE.Material>('material', 'loaded', handler);
+    }
+    info(`[MeshInstance3D] Cleaned up material event subscriptions for "${mesh.name}"`);
+  };
 }
 
 /**

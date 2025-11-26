@@ -9,8 +9,10 @@ TextScene Inspector is a monorepo for parsing and rendering text-based 3D scene 
 ## Additional Documentation
 
 - **[README.md](./README.md)**: Read for project status, installation steps, and available scripts
-- **[TODO.md](./TODO.md)**: **CRITICAL** - High-level roadmap with work item summaries. Wait for user to specify which work item (#WI) to work on. Focus on ONE work item at a time. Never attempt multiple WIs simultaneously. Mark item as done (change `[ ]` to `[x]`) immediately after completing it. Do NOT automatically start the next item - wait for user instruction
-- **[work_items/](./work_items/)**: Detailed work item documentation. Each `WI{number}.md` file contains implementation details, testing strategies, code examples, and architecture decisions. Read the specific work item file when starting work on that WI
+- **Outline Knowledge Base** (via MCP): **CRITICAL** - All work items and roadmap are stored in Outline. Use the `mcp__outline__*` tools to access:
+  - **Roadmap**: Search for "TextScene Inspector Roadmap" to see phases and work item summaries
+  - **Work Items**: Search for "WI-{number}" to find specific work item details
+  - Wait for user to specify which work item (#WI) to work on. Focus on ONE work item at a time.
 - **[ARCHITECTURE.md](./ARCHITECTURE.md)**: Read for detailed architecture explanation, especially when working on the vertical slicing structure or understanding TSCN format components
 - **[REFERENCES.md](./REFERENCES.md)**: Read when you need to look up documentation links or Context7 library IDs
 
@@ -42,25 +44,27 @@ TextScene Inspector is a monorepo for parsing and rendering text-based 3D scene 
 
 ## Work Item Workflow
 
-**Purpose**: Reduce context window usage by separating high-level roadmap from detailed implementation notes.
+**Purpose**: Centralized documentation in Outline knowledge base, accessible via MCP tools.
 
-**Structure**:
-- `TODO.md` - Compact roadmap with work item summaries and links
-- `work_items/WI{number}.md` - Detailed files with implementation specifics
+**Structure** (in Outline):
+- **TextScene Inspector Roadmap** - Parent document with phases as children
+- **Phase documents** - Each phase contains work items as child documents
+- **Work Item documents** - Full details including implementation steps, testing strategies, code examples
 
 **When working on a work item**:
 1. User specifies which WI to work on (e.g., "work on WI-50")
-2. **Read** `work_items/WI{number}.md` for full details (implementation steps, testing strategy, code examples)
-3. **Implement** following the detailed plan
-4. **Test** according to the testing checklist in the work item file
-5. **Update** `TODO.md` - change `[ ]` to `[x]` immediately after completion
-6. **Do NOT** auto-start next item - wait for user to specify
+2. **Search** Outline using `mcp__outline__search_documents` with query "WI-50" or work item title
+3. **Read** the work item document using `mcp__outline__read_document` for full details
+4. **Implement** following the detailed plan
+5. **Test** according to the testing checklist in the work item
+6. **Update** the work item status in Outline using `mcp__outline__update_document`
+7. **Do NOT** auto-start next item - wait for user to specify
 
 **Benefits**:
-- TODO.md stays small (low context window usage)
-- Full details available when needed (read specific WI file)
-- Completed items don't clutter the roadmap
-- Easy to scan overall progress
+- Single source of truth (Outline knowledge base)
+- No local files to keep in sync
+- Full details available via MCP tools
+- Easy to search and cross-reference
 
 ## Development Workflow
 
@@ -472,7 +476,7 @@ Following KISS principles, keep comments concise and informative:
 - Keep non-obvious business logic explanations
 
 **What to Avoid:**
-- Work item references (#WI...) - these belong in TODO.md, not code
+- Work item references (#WI...) - these belong in Outline, not code
 - Verbose explanations that duplicate type information
 - Comments like "Initialize variable" or "Loop through array"
 - Restating what the code clearly shows
