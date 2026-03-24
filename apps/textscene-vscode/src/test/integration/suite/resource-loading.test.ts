@@ -20,6 +20,20 @@ import * as fs from 'fs';
 suite('Resource Loading Tests', () => {
   const workspaceRoot = path.resolve(__dirname, '../../../../.test-workspace');
 
+  setup(async () => {
+    // Ensure extension is activated before tests that create panels
+    const extension = vscode.extensions.getExtension(
+      'vortiago.textscene-inspector',
+    );
+    await extension?.activate();
+  });
+
+  teardown(async () => {
+    // Close all editors after each test
+    await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  });
+
   test('should track missing texture resource', async function () {
     this.timeout(10000);
 
