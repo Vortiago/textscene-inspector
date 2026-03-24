@@ -88,5 +88,12 @@ export function createStandardMaterial(properties: StandardMaterial3DProperties)
     materialOptions.emissiveMap = applyUVTransform(properties.emission_texture, properties);
   }
 
-  return new THREE.MeshStandardMaterial(materialOptions);
+  const material = new THREE.MeshStandardMaterial(materialOptions);
+
+  // Store texture dependencies for event-based recovery
+  if (properties.textureDependencies && properties.textureDependencies.size > 0) {
+    material.userData.textureDependencies = properties.textureDependencies;
+  }
+
+  return material;
 }

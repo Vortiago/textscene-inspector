@@ -92,7 +92,6 @@ export class TscnRenderer {
 
     // Initialize ResourceRecoveryManager (must be before wrapping onResourceNeeded)
     this.resourceRecovery = new ResourceRecoveryManager(
-      this.nodeTracker,
       this.sceneManager,
       () => this.currentSceneData
     );

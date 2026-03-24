@@ -2,7 +2,8 @@
  * DirectionalLight3D renderer registration - auto-registers DirectionalLight3D parser and renderer with the node registry.
  */
 
-import { createDirectionalLight3D, positionDirectionalLightTarget } from './renderer';
+import { createDirectionalLight3D } from './renderer';
+import { positionLightTarget } from '../../../../utils/lightTargetUtils';
 import type { TscnScene } from '../../../../parser/types';
 import { nodeRegistry } from '../../../../core/NodeRegistry';
 import * as THREE from 'three';
@@ -31,7 +32,7 @@ const directionalLight3DRegistration: NodeTypeRegistration = {
       const { rotation } = decomposeTransform3D(properties.transform);
       const quaternion = new THREE.Quaternion();
       quaternion.setFromEuler(new THREE.Euler(rotation.x, rotation.y, rotation.z));
-      positionDirectionalLightTarget(group, quaternion, 10);
+      positionLightTarget(group, quaternion, 10);
     }
 
     return group;

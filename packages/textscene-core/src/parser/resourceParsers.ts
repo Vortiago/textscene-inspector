@@ -10,20 +10,6 @@ export interface ParsedResource {
   properties: Record<string, unknown>;
 }
 
-export interface ParsedColor {
-  type: 'Color';
-  r: number;
-  g: number;
-  b: number;
-  a: number;
-}
-
-export interface ParsedVector3 {
-  type: 'Vector3';
-  x: number;
-  y: number;
-  z: number;
-}
 
 export function parseExternalResource(heading: ParsedHeading | null): TscnExternalResource | null {
   if (!heading) return null;
@@ -108,61 +94,21 @@ export function parseResourceFile(content: string): ParsedResource {
  * Parse property value (Color, Vector3, numbers, strings, etc.).
  */
 function parsePropertyValue(valueStr: string): unknown {
-  // Color(r, g, b, a)
-  const colorMatch = valueStr.match(/Color\(([^)]+)\)/);
-  if (colorMatch && colorMatch[1]) {
-    const parts = colorMatch[1].split(',').map(s => parseFloat(s.trim()));
-    if (parts.length === 4 && parts[0] !== undefined && parts[1] !== undefined &&
-        parts[2] !== undefined && parts[3] !== undefined) {
-      const color: ParsedColor = {
-        type: 'Color',
-        r: parts[0],
-        g: parts[1],
-        b: parts[2],
-        a: parts[3]
-      };
-      return color;
-    }
-  }
-
-  // Vector3(x, y, z)
-  const vec3Match = valueStr.match(/Vector3\(([^)]+)\)/);
-  if (vec3Match && vec3Match[1]) {
-    const parts = vec3Match[1].split(',').map(s => parseFloat(s.trim()));
-    if (parts.length === 3 && parts[0] !== undefined && parts[1] !== undefined && parts[2] !== undefined) {
-      const vec3: ParsedVector3 = {
-        type: 'Vector3',
-        x: parts[0],
-        y: parts[1],
-        z: parts[2]
-      };
-      return vec3;
-    }
-  }
-
   // Boolean
   if (valueStr === 'true') return true;
   if (valueStr === 'false') return false;
 
-  // Number
-  const num = parseFloat(valueStr);
-  if (!isNaN(num)) return num;
+  // Number (but not Color/Vector3/resource references which start with letters)
+  if (/^[-\d.]/.test(valueStr)) {
+    const num = parseFloat(valueStr);
+    if (!isNaN(num)) return num;
+  }
 
   // String (remove quotes)
   if (valueStr.startsWith('"') && valueStr.endsWith('"')) {
     return valueStr.slice(1, -1);
   }
 
-  // ExtResource reference - keep as string for further processing
-  if (valueStr.startsWith('ExtResource(')) {
-    return valueStr;
-  }
-
-  // SubResource reference - keep as string for further processing
-  if (valueStr.startsWith('SubResource(')) {
-    return valueStr;
-  }
-
-  // Default: return as string
+  // Color, Vector3, ExtResource, SubResource, and other values — keep as string
   return valueStr;
 }

@@ -7,6 +7,7 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
+import { isValidProperties } from '../../../linter/linterUtils.js';
 
 // Thresholds for warnings
 const MIN_NEAR_CLIPPING_WARNING = 0.01;
@@ -17,13 +18,6 @@ const MAX_NORMAL_FOV = 120;
 // Projection mode constants
 const PROJECTION_PERSPECTIVE = 0;
 const PROJECTION_ORTHOGONAL = 1;
-
-/**
- * Check if properties object exists and is valid
- */
-function isValidProperties(props: unknown): props is Record<string, string> {
-  return typeof props === 'object' && props !== null;
-}
 
 /**
  * Validate Camera3D semantic rules

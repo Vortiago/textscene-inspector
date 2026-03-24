@@ -73,8 +73,21 @@ export async function resolveResource<T>(
     const props = await handler.parser(resource.data as Record<string, string>, scene.resourceRegistry);
 
     // Renderer may be async, so await it
-    return await handler.renderer(props);
+    const result = await handler.renderer(props);
+
+    // Emit material:loaded for SubResource materials so event subscriptions work
+    if (resourceCategory === 'material' && result && scene.resourceRegistry) {
+      scene.resourceRegistry.getEventBus().emit('material', 'loaded', ref.id, result);
+    }
+
+    return result;
   } catch (error) {
+    // Emit material:failed for SubResource materials
+    if (resourceCategory === 'material' && scene.resourceRegistry) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      scene.resourceRegistry.getEventBus().emit('material', 'failed', ref.id, err);
+    }
+
     warn(
       `Failed to create ${resourceType}: ${error instanceof Error ? error.message : String(error)}`
     );

@@ -20,12 +20,23 @@ export class TextureLoader {
   private cache = new Map<string, THREE.Texture | null>();
   private inflight = new Set<string>();
   private metadataMap = new Map<string, TextureMetadata>();
+  private failedTextures = new Map<string, TextureMetadata>();
 
   constructor(
     private eventBus: ResourceEventBus,
     private provider: ResourceProvider | null,
     private getMimeType: (path: string) => string
-  ) {}
+  ) {
+    // Listen for resource:provided events to auto-retry failed textures
+    this.eventBus.on<string>('resource', 'provided', (path) => {
+      for (const [id, metadata] of this.failedTextures) {
+        if (metadata.path === path) {
+          logger.info(`[TextureLoader] Auto-retrying texture ${id} after resource provided: ${path}`);
+          this.retryFailed(id);
+        }
+      }
+    });
+  }
 
   /**
    * Register texture metadata for lookup.
@@ -108,20 +119,20 @@ export class TextureLoader {
    * Uses event bus internally.
    */
   async load(id: string): Promise<THREE.Texture | null> {
-    // Check cache first
     if (this.cache.has(id)) {
       return this.cache.get(id)!;
     }
 
-    // Start loading if not already
-    this.request(id);
+    // Set up promise FIRST to ensure handlers are registered before any sync events
+    const resultPromise = this.eventBus
+      .once<THREE.Texture>('texture', 'loaded', id)
+      .catch((error) => {
+        logger.warn(`[TextureLoader] load() failed for: ${id}`, error);
+        return null;
+      });
 
-    // Wait for loaded or failed event
-    try {
-      return await this.eventBus.once<THREE.Texture>('texture', 'loaded', id);
-    } catch {
-      return null;
-    }
+    this.request(id);
+    return resultPromise;
   }
 
   private async loadAsync(id: string): Promise<void> {
@@ -140,6 +151,12 @@ export class TextureLoader {
     } catch (error) {
       this.cache.set(id, null); // Cache failure to prevent retries
       this.inflight.delete(id);
+
+      // Track failed texture for potential retry when resource is provided
+      const metadata = this.metadataMap.get(id);
+      if (metadata) {
+        this.failedTextures.set(id, metadata);
+      }
 
       const elapsed = performance.now() - startTime;
       const err = error instanceof Error ? error : new Error(String(error));
@@ -184,8 +201,9 @@ export class TextureLoader {
             resolve(loadedTexture);
           },
           undefined,
-          () => {
-            reject(new Error(`Failed to decode texture: ${metadata.path}`));
+          (errorEvent: unknown) => {
+            const detail = errorEvent instanceof Error ? `: ${errorEvent.message}` : '';
+            reject(new Error(`Failed to decode texture: ${metadata.path}${detail}`));
           }
         );
       });
@@ -212,7 +230,40 @@ export class TextureLoader {
   clearAllCache(): void {
     this.cache.clear();
     this.inflight.clear();
+    this.failedTextures.clear();
     logger.info('[TextureLoader] Cleared all cache');
+  }
+
+  /**
+   * Retry loading a previously failed texture.
+   * Used when a missing resource is provided by the user.
+   */
+  retryFailed(id: string): void {
+    if (!this.failedTextures.has(id)) {
+      logger.info(`[TextureLoader] No failed texture to retry: ${id}`);
+      return;
+    }
+
+    // Clear failed status and cache entry
+    this.failedTextures.delete(id);
+    this.cache.delete(id);
+
+    logger.info(`[TextureLoader] Retrying failed texture: ${id}`);
+    this.request(id);
+  }
+
+  /**
+   * Get map of failed textures (for debugging/recovery UI).
+   */
+  getFailedTextures(): Map<string, TextureMetadata> {
+    return new Map(this.failedTextures);
+  }
+
+  /**
+   * Check if a texture has failed to load.
+   */
+  hasFailed(id: string): boolean {
+    return this.failedTextures.has(id);
   }
 
   /**

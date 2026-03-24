@@ -334,4 +334,51 @@ describe('ResourceEventBus', () => {
       expect(handler).toHaveBeenCalledWith('tex1', data);
     });
   });
+
+  describe('provided event type', () => {
+    it('emits and receives resource:provided events', () => {
+      const handler = vi.fn();
+      eventBus.on('resource', 'provided', handler);
+
+      eventBus.emit('resource', 'provided', 'res://textures/wall.png', 'res://textures/wall.png');
+
+      expect(handler).toHaveBeenCalledWith('res://textures/wall.png', 'res://textures/wall.png');
+    });
+
+    it('isolates provided events by resource type', () => {
+      const resourceHandler = vi.fn();
+      const textureHandler = vi.fn();
+
+      eventBus.on('resource', 'provided', resourceHandler);
+      eventBus.on('texture', 'provided', textureHandler);
+
+      eventBus.emit('resource', 'provided', 'res://test.png');
+
+      expect(resourceHandler).toHaveBeenCalled();
+      expect(textureHandler).not.toHaveBeenCalled();
+    });
+
+    it('supports multiple handlers for provided events', () => {
+      const handler1 = vi.fn();
+      const handler2 = vi.fn();
+
+      eventBus.on('resource', 'provided', handler1);
+      eventBus.on('resource', 'provided', handler2);
+
+      eventBus.emit('resource', 'provided', 'res://test.tscn');
+
+      expect(handler1).toHaveBeenCalled();
+      expect(handler2).toHaveBeenCalled();
+    });
+
+    it('unsubscribes from provided events correctly', () => {
+      const handler = vi.fn();
+      eventBus.on('resource', 'provided', handler);
+      eventBus.off('resource', 'provided', handler);
+
+      eventBus.emit('resource', 'provided', 'res://test.png');
+
+      expect(handler).not.toHaveBeenCalled();
+    });
+  });
 });

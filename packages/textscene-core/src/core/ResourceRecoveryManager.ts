@@ -3,22 +3,18 @@
  */
 
 import type { MissingResource, TscnScene } from '../parser/types';
-import { NodeTracker } from './NodeTracker';
 import type { SceneManager } from './SceneManager';
 import * as logger from '../logger';
 
 export class ResourceRecoveryManager {
   private missingResources: Map<string, MissingResource> = new Map();
-  private _nodeTracker: NodeTracker;
   private sceneManager: SceneManager;
   private _getCurrentSceneData: () => TscnScene | null;
 
   constructor(
-    nodeTracker: NodeTracker,
     sceneManager: SceneManager,
     getCurrentSceneData: () => TscnScene | null
   ) {
-    this._nodeTracker = nodeTracker;
     this.sceneManager = sceneManager;
     this._getCurrentSceneData = getCurrentSceneData;
   }
@@ -45,10 +41,18 @@ export class ResourceRecoveryManager {
   }
 
   /**
-   * Provide a previously missing resource and re-render affected nodes.
+   * Provide a previously missing resource and trigger automatic recovery.
+   *
+   * For PackedScene: Uses SceneManager to load the scene.
+   * For Texture/Material: Emits resource:provided event which triggers:
+   *   1. TextureLoader/MaterialLoader auto-retry failed resources
+   *   2. Cascade: texture loads → materials retry → meshes update via events
+   *
+   * This is more efficient than the old O(n) approach of manually
+   * clearing caches and re-rendering all MeshInstance3D nodes.
    */
   async provideResource(path: string): Promise<void> {
-    // Get current scene data for re-rendering nodes
+    // Get current scene data for event bus access
     const sceneData = this._getCurrentSceneData();
     if (!sceneData || !sceneData.resourceRegistry) {
       logger.warn(`[Resource Provided] No scene data available for: ${path}`);
@@ -62,63 +66,30 @@ export class ResourceRecoveryManager {
       return;
     }
 
-    logger.info(`[Resource Provided] Re-attempting load of: ${path} (type: ${missingResource.type})`);
+    logger.info(`[Resource Provided] Processing: ${path} (type: ${missingResource.type})`);
 
-    // Remove from missing list (will be re-added if it fails again)
+    // Remove from missing list (will be re-added if retry fails via onResourceNeeded callback)
     this.missingResources.delete(path);
 
     try {
-      // Handle different resource types
       if (missingResource.type === 'PackedScene') {
-        // Provide the external scene using SceneManager (non-destructive)
+        // PackedScene: Still use SceneManager directly (it handles scene hierarchy)
         await this.sceneManager.provideScene(path);
         logger.info(`[Resource Provided] ✅ Successfully loaded PackedScene: ${path}`);
-      } else if (missingResource.type.includes('Texture')) {
-        // Texture2D: Clear texture cache, clear all material caches, re-render meshes
-        logger.info(`[Resource Provided] Clearing caches for Texture: ${path}`);
+      } else if (missingResource.type.includes('Texture') || missingResource.type.includes('Material')) {
+        // Texture/Material: Emit resource:provided event
+        // The loaders will automatically retry failed resources via their event subscriptions
+        // Cascade: texture:loaded → material retry → material:loaded → mesh updates
+        const eventBus = sceneData.resourceRegistry.getEventBus();
+        eventBus.emit<string>('resource', 'provided', path, path);
 
-        sceneData.resourceRegistry.clearTextureCache(path);
-        sceneData.resourceRegistry.clearMaterialCache(); // Clear ALL materials
-
-        // Find all MeshInstance3D nodes and re-render them
-        // IMPORTANT: Convert Set to Array to avoid modifying collection while iterating
-        const meshPaths = Array.from(this._nodeTracker.getNodesByType('MeshInstance3D'));
-        logger.info(`[Resource Provided] Re-rendering ${meshPaths.length} MeshInstance3D nodes`);
-
-        for (const meshPath of meshPaths) {
-          const node = this._nodeTracker.getNode(meshPath);
-          if (node) {
-            await this.sceneManager.getNodeLifecycle().updateNode(meshPath, node, sceneData);
-          }
-        }
-
-        logger.info(`[Resource Provided] ✅ Successfully provided Texture and updated meshes: ${path}`);
-      } else if (missingResource.type.includes('Material')) {
-        // Material: Clear material cache, re-render meshes
-        // NOTE: Clear ALL materials since they're cached by ID, not path
-        logger.info(`[Resource Provided] Clearing all material caches for: ${path}`);
-
-        sceneData.resourceRegistry.clearMaterialCache(); // Clear ALL materials
-
-        // Find all MeshInstance3D nodes and re-render them
-        // IMPORTANT: Convert Set to Array to avoid modifying collection while iterating
-        const meshPaths = Array.from(this._nodeTracker.getNodesByType('MeshInstance3D'));
-        logger.info(`[Resource Provided] Re-rendering ${meshPaths.length} MeshInstance3D nodes`);
-
-        for (const meshPath of meshPaths) {
-          const node = this._nodeTracker.getNode(meshPath);
-          if (node) {
-            await this.sceneManager.getNodeLifecycle().updateNode(meshPath, node, sceneData);
-          }
-        }
-
-        logger.info(`[Resource Provided] ✅ Successfully provided Material and updated meshes: ${path}`);
+        logger.info(`[Resource Provided] ✅ Emitted resource:provided event for: ${path}`);
       } else {
         logger.warn(`[Resource Provided] Unsupported resource type: ${missingResource.type} for ${path}`);
       }
     } catch (error) {
-      logger.error(`[Resource Provided] ❌ Failed to load: ${path}`, error);
-      // Re-add to missing resources if it failed again
+      logger.error(`[Resource Provided] ❌ Failed to process: ${path}`, error);
+      // Re-add to missing resources if it failed
       this.missingResources.set(path, missingResource);
     }
   }

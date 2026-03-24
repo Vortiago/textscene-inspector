@@ -10,10 +10,6 @@
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
     },
-    "./parser": {
-      "import": "./dist/parser/index.js",
-      "types": "./dist/parser/index.d.ts"
-    },
     "./linter": {
       "import": "./dist/linter/index.js",
       "types": "./dist/linter/index.d.ts"

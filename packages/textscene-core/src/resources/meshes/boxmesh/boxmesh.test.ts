@@ -3,7 +3,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { parseVector3, parseBoxMesh } from './parser';
+import { parseBoxMesh } from './parser';
+import { parseVector3 } from '../../../parser/vectors';
 
 describe('BoxMesh Parser', () => {
   describe('parseVector3', () => {

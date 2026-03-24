@@ -117,8 +117,15 @@ export async function parseStandardMaterial3D(
       }
     }
 
-    // Load all textures in parallel
+    // Record texture dependencies for event-based recovery
     if (textureSlots.length > 0) {
+      const dependencies = new Map<string, string>();
+      for (const { slot, ref } of textureSlots) {
+        dependencies.set(slot, ref);
+      }
+      result.textureDependencies = dependencies;
+
+      // Load all textures in parallel
       const loadPromises = textureSlots.map(async ({ slot, ref }) => {
         const texture = await registry.loadTexture(ref);
         return { slot, texture };
@@ -126,7 +133,6 @@ export async function parseStandardMaterial3D(
 
       const loadedTextures = await Promise.all(loadPromises);
 
-      // Apply loaded textures to result
       for (const { slot, texture } of loadedTextures) {
         if (texture) {
           result[slot] = texture;

@@ -7,7 +7,7 @@ import type { DirectionalLight3DProperties } from './types';
 import { parseColorToHex } from '../../../../utils/colorParser';
 import { LIGHT_INTENSITY_SCALE, DEFAULT_SHADOW_BIAS } from '../../../../utils/lightConstants';
 import { configureLightShadow } from '../../../../utils/shadowUtils';
-import { createLightWithTarget, positionLightTarget } from '../../../../utils/lightTargetUtils';
+import { createLightWithTarget } from '../../../../utils/lightTargetUtils';
 
 /**
  * Create a three.js DirectionalLight for a DirectionalLight3D node.
@@ -43,5 +43,3 @@ export function createDirectionalLight3D(
   return createLightWithTarget(light, nodeName);
 }
 
-// Re-export the generic light target positioning function for backward compatibility
-export { positionLightTarget as positionDirectionalLightTarget };

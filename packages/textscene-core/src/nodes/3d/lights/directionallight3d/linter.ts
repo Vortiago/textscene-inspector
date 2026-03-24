@@ -7,18 +7,12 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
+import { isValidProperties } from '../../../../linter/linterUtils.js';
 
 // Thresholds for warnings
 const EXTREME_LIGHT_ENERGY_MIN = 0.01;
 const EXTREME_LIGHT_ENERGY_MAX = 100;
 const LARGE_SHADOW_MAX_DISTANCE = 10000;
-
-/**
- * Check if properties object exists and is valid
- */
-function isValidProperties(props: unknown): props is Record<string, string> {
-  return typeof props === 'object' && props !== null;
-}
 
 /**
  * Validate DirectionalLight3D semantic rules

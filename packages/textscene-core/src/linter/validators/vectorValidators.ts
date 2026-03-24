@@ -14,6 +14,9 @@ export const VECTOR3_REGEX = /^Vector3\(\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*
 /** Rect2 format: Rect2(x, y, width, height) */
 export const RECT2_REGEX = /^Rect2\(\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*\)$/;
 
+/** Color format: Color(r, g, b, a) - four comma-separated numbers */
+export const COLOR_REGEX = /^Color\(\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*\)$/;
+
 /** Transform3D format: Transform3D(12 comma-separated numbers) */
 export const TRANSFORM3D_REGEX = /^Transform3D\(\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*\)$/;
 
@@ -131,6 +134,27 @@ export function createTransform3DValidator(
       return {
         severity: 'error',
         message: `Property '${propertyName}' must be Transform3D with 12 numbers like Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0), got: "${value}"`,
+        line,
+        column: key.length + 3,
+        code: errorCode,
+      };
+    }
+    return null;
+  };
+}
+
+/**
+ * Creates a Color validator for Color(r, g, b, a) format
+ */
+export function createColorValidator(
+  propertyName: string,
+  errorCode: string = 'INVALID_COLOR_FORMAT'
+): (key: string, value: string, line: number) => ParseError | null {
+  return (key, value, line) => {
+    if (!COLOR_REGEX.test(value)) {
+      return {
+        severity: 'error',
+        message: `Property '${propertyName}' must be Color with 4 numbers like Color(1, 0, 0, 1), got: "${value}"`,
         line,
         column: key.length + 3,
         code: errorCode,

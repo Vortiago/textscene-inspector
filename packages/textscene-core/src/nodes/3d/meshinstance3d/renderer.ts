@@ -244,36 +244,72 @@ function createPlaceholderMaterial(): THREE.Material {
   });
 }
 
-/**
- * Collect material IDs from mesh properties for event subscription.
- * Returns array of parsed resource IDs that need material:loaded subscriptions.
- */
-function collectMaterialIds(properties: MeshInstance3DProperties): string[] {
-  const ids: string[] = [];
+interface MaterialSubscription {
+  materialId: string;
+  surfaceIndex: number | null; // null = material_override (all surfaces)
+}
 
-  // material_override
+/** Maps texture slot names to THREE.MeshStandardMaterial property names. */
+const TEXTURE_SLOT_MAP: Record<string, string> = {
+  'albedo_texture': 'map',
+  'normal_texture': 'normalMap',
+  'metallic_texture': 'metalnessMap',
+  'roughness_texture': 'roughnessMap',
+  'ao_texture': 'aoMap',
+  'emission_texture': 'emissiveMap',
+};
+
+/**
+ * Collect material subscriptions from mesh properties with surface index tracking.
+ */
+function collectMaterialSubscriptions(properties: MeshInstance3DProperties): MaterialSubscription[] {
+  const subs: MaterialSubscription[] = [];
+
   if (properties.materialOverride) {
     const ref = parseResourceReference(properties.materialOverride);
     if (ref) {
-      ids.push(ref.id);
+      subs.push({ materialId: ref.id, surfaceIndex: null });
     }
   }
 
-  // surface_material_override/N
   const surfaceOverrides = normalizeSurfaceMaterialOverrides(properties.surfaceMaterialOverrides);
-  for (const materialRef of surfaceOverrides.values()) {
+  for (const [surfaceIndex, materialRef] of surfaceOverrides) {
     const ref = parseResourceReference(materialRef);
     if (ref) {
-      ids.push(ref.id);
+      subs.push({ materialId: ref.id, surfaceIndex });
     }
   }
 
-  return ids;
+  return subs;
 }
 
 /**
- * Set up event subscriptions for progressive material updates.
- * When materials load (initially or via recovery), the mesh updates automatically.
+ * Apply a material update to a mesh, respecting surface index.
+ */
+export function applyMaterialToMesh(
+  mesh: THREE.Mesh,
+  material: THREE.Material,
+  surfaceIndex: number | null
+): void {
+  if (surfaceIndex === null) {
+    mesh.material = material;
+    return;
+  }
+
+  const materials = Array.isArray(mesh.material)
+    ? [...mesh.material]
+    : [mesh.material];
+
+  while (materials.length <= surfaceIndex) {
+    materials.push(createDefaultMaterial());
+  }
+  materials[surfaceIndex] = material;
+  mesh.material = materials.length === 1 ? materials[0]! : materials;
+}
+
+/**
+ * Set up event subscriptions for progressive material and texture updates.
+ * Handles both material:loaded (ExtResource and SubResource) and texture:loaded (recovery).
  * Returns cleanup function to be stored in mesh.userData.
  */
 function setupMaterialEventSubscriptions(
@@ -286,37 +322,60 @@ function setupMaterialEventSubscriptions(
   }
 
   const eventBus = scene.resourceRegistry.getEventBus();
-  const materialIds = collectMaterialIds(properties);
+  const materialSubs = collectMaterialSubscriptions(properties);
+  const cleanupHandlers: Array<() => void> = [];
 
-  if (materialIds.length === 0) {
+  // Material-level subscriptions (for both ExtResource and SubResource materials)
+  for (const sub of materialSubs) {
+    const handler = (id: string, material?: THREE.Material) => {
+      if (id === sub.materialId && material) {
+        info(`[MeshInstance3D] Material loaded via event: ${id}, updating mesh "${mesh.name}"`);
+        applyMaterialToMesh(mesh, material, sub.surfaceIndex);
+      }
+    };
+    eventBus.on<THREE.Material>('material', 'loaded', handler);
+    cleanupHandlers.push(() => eventBus.off<THREE.Material>('material', 'loaded', handler));
+  }
+
+  // Texture-level subscriptions for direct texture patching on materials
+  // This handles SubResource materials whose textures weren't available at parse time
+  const currentMaterial = Array.isArray(mesh.material) ? mesh.material[0] : mesh.material;
+  if (currentMaterial && currentMaterial instanceof THREE.MeshStandardMaterial) {
+    const matStd = currentMaterial as THREE.MeshStandardMaterial & { userData?: Record<string, unknown> };
+    const texDeps = matStd.userData?.textureDependencies as Map<string, string> | undefined;
+    if (texDeps) {
+      for (const [slotName, textureId] of texDeps) {
+        const threeProp = TEXTURE_SLOT_MAP[slotName];
+        if (!threeProp) continue;
+
+        // Only subscribe if the texture slot is currently empty
+        const currentValue = (matStd as unknown as Record<string, unknown>)[threeProp];
+        if (currentValue) continue;
+
+        const handler = (id: string, texture?: THREE.Texture) => {
+          if (id === textureId && texture) {
+            info(`[MeshInstance3D] Texture loaded via event: ${id}, patching slot "${slotName}" on mesh "${mesh.name}"`);
+            (matStd as unknown as Record<string, unknown>)[threeProp] = texture;
+            matStd.needsUpdate = true;
+          }
+        };
+        eventBus.on<THREE.Texture>('texture', 'loaded', handler);
+        cleanupHandlers.push(() => eventBus.off<THREE.Texture>('texture', 'loaded', handler));
+      }
+    }
+  }
+
+  if (cleanupHandlers.length === 0) {
     return null;
   }
 
-  // Store handlers for cleanup via off()
-  const handlers: Array<{ handler: (id: string, material?: THREE.Material) => void }> = [];
-
-  for (const materialId of materialIds) {
-    const handler = (id: string, material?: THREE.Material) => {
-      if (id === materialId && material) {
-        info(`[MeshInstance3D] Material loaded via event: ${id}, updating mesh "${mesh.name}"`);
-        // Update the mesh material
-        // For simplicity, we apply to the whole mesh (material_override behavior)
-        // Surface-specific updates would need more complex tracking
-        mesh.material = material;
-      }
-    };
-
-    eventBus.on<THREE.Material>('material', 'loaded', handler);
-    handlers.push({ handler });
-  }
-
-  info(`[MeshInstance3D] Set up ${handlers.length} material event subscriptions for "${mesh.name}"`);
+  info(`[MeshInstance3D] Set up ${cleanupHandlers.length} event subscriptions for "${mesh.name}"`);
 
   return () => {
-    for (const { handler } of handlers) {
-      eventBus.off<THREE.Material>('material', 'loaded', handler);
+    for (const cleanup of cleanupHandlers) {
+      cleanup();
     }
-    info(`[MeshInstance3D] Cleaned up material event subscriptions for "${mesh.name}"`);
+    info(`[MeshInstance3D] Cleaned up event subscriptions for "${mesh.name}"`);
   };
 }
 

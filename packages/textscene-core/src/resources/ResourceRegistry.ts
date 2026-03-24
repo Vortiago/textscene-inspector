@@ -152,59 +152,6 @@ export class ResourceRegistry {
   }
 
   /**
-   * Generic helper for loading resources with deduplication.
-   * Prevents multiple simultaneous loads of the same resource.
-   *
-   * @param key - Unique identifier for the resource
-   * @param cache - Cache map for successfully loaded resources
-   * @param loadingPromises - Map tracking in-flight loading operations
-   * @param loadFn - Async function that performs the actual loading
-   * @returns Loaded resource or null if loading fails
-   */
-  private async loadWithDeduplication<T>(
-    key: string,
-    cache: Map<string, T | null>,
-    loadingPromises: Map<string, Promise<T | null>>,
-    loadFn: () => Promise<T | null>
-  ): Promise<T | null> {
-    // Check cache first
-    if (cache.has(key)) {
-      logger.info(`[loadWithDeduplication] Cache hit for: ${key}`);
-      return cache.get(key)!;
-    }
-
-    // Check if already loading (deduplication)
-    if (loadingPromises.has(key)) {
-      logger.info(`[loadWithDeduplication] Waiting for in-flight load: ${key}`);
-      return await loadingPromises.get(key)!;
-    }
-
-    // Start loading and track the promise
-    logger.info(`[loadWithDeduplication] Starting new load: ${key}`);
-    const loadingPromise = loadFn()
-      .then((result) => {
-        // Cache ALL results, including null (failed loads), to prevent retries
-        cache.set(key, result);
-        if (result !== null) {
-          logger.info(`[loadWithDeduplication] Cached successful load: ${key}`);
-        } else {
-          logger.info(`[loadWithDeduplication] Cached null result (failed load): ${key}`);
-        }
-        loadingPromises.delete(key);
-        return result;
-      })
-      .catch((error) => {
-        // Don't cache failures, just clean up
-        loadingPromises.delete(key);
-        logger.error(`[loadWithDeduplication] Load failed for ${key}:`, error);
-        throw error;
-      });
-
-    loadingPromises.set(key, loadingPromise);
-    return await loadingPromise;
-  }
-
-  /**
    * Get resource metadata by path.
    */
   getMetadata(path: string): TscnExternalResource | undefined {
@@ -326,103 +273,90 @@ export class ResourceRegistry {
    */
   async loadGLBMesh(idOrPath: string): Promise<THREE.Object3D | null> {
     const startTime = performance.now();
-    const cacheStatus = this.glbMeshCache.has(idOrPath) ? 'HIT' : 'MISS';
 
-    logger.info(`[loadGLBMesh] START: ${idOrPath} (cache: ${cacheStatus})`);
-
-    const cachedMesh = await this.loadWithDeduplication(
-      idOrPath,
-      this.glbMeshCache,
-      this.glbMeshLoadingPromises,
-      async (): Promise<THREE.Object3D | null> => {
-        // CRITICAL: This function must NEVER throw errors - always return null for failures
-        // This ensures failed loads are cached and not retried
-        try {
-          // Get resource metadata
-          const resource = this.getMetadata(idOrPath);
-          if (!resource) {
-            logger.error(`[loadGLBMesh] ERROR: Resource not found: ${idOrPath}`);
-            return null;
-          }
-
-          // Check if it's a GLB/GLTF file
-          const ext = resource.path.split('.').pop()?.toLowerCase();
-          if (ext !== 'glb' && ext !== 'gltf') {
-            logger.error(`[loadGLBMesh] ERROR: Not a GLB/GLTF file: ${resource.path}`);
-            return null;
-          }
-
-          logger.info(`[loadGLBMesh] LOADING: ${resource.path} for mesh ${idOrPath}`);
-
-          // Load raw content via provider (returns ArrayBuffer)
-          const content = await this.loadByPath(resource.path);
-          if (!(content instanceof ArrayBuffer)) {
-            throw new Error(`GLB/GLTF must be binary data: ${resource.path}`);
-          }
-
-          // Parse with GLTFLoader
-          const loader = new GLTFLoader();
-          const gltf = await loader.parseAsync(content, '');
-
-          // Return the scene from the GLTF (which is a THREE.Group)
-          const mesh = gltf.scene;
-
-          const elapsed = performance.now() - startTime;
-          logger.info(`[loadGLBMesh] SUCCESS: ${idOrPath} (${elapsed.toFixed(2)}ms)`);
-
-          return mesh;
-        } catch (error) {
-          // GLB mesh failed to load - call onResourceNeeded callback
-          const elapsed = performance.now() - startTime;
-          const errorMsg = error instanceof Error ? error.message : String(error);
-          const stack = error instanceof Error ? error.stack : 'No stack trace';
-
-          logger.error(`[loadGLBMesh] FAILED: ${idOrPath} (${elapsed.toFixed(2)}ms)`);
-          logger.error(`  Path: ${this.getMetadata(idOrPath)?.path || 'unknown'}`);
-          logger.error(`  Error: ${errorMsg}`);
-          logger.error(`  Stack trace:`, stack);
-
-          if (this.onResourceNeeded) {
-            try {
-              const resource = this.getMetadata(idOrPath);
-              if (resource) {
-                logger.info(`[loadGLBMesh] Calling onResourceNeeded callback for: ${idOrPath}`);
-                await this.onResourceNeeded({
-                  path: resource.path,
-                  type: resource.type,
-                  referencedBy: `Node using GLB mesh ${idOrPath}`,
-                  error: errorMsg
-                });
-                logger.info(`[loadGLBMesh] onResourceNeeded callback completed for: ${idOrPath}`);
-              }
-            } catch (callbackError) {
-              // Log but don't propagate callback errors
-              logger.error(`[loadGLBMesh] onResourceNeeded callback FAILED for ${idOrPath}:`, callbackError);
-            }
-          }
-
-          // Return null to allow rendering to continue without the mesh
-          logger.info(`[loadGLBMesh] RETURNING NULL: ${idOrPath}`);
-          return null;
-        }
-      }
-    );
-
-    // Clone the cached mesh for this instance
-    // CRITICAL: THREE.Object3D can only have ONE parent at a time
-    // Without cloning, multiple instances would share the same object reference,
-    // and adding it to a new parent would remove it from the previous parent
-    if (cachedMesh === null) {
-      logger.info(`[loadGLBMesh] Returning null (load failed): ${idOrPath}`);
-      return null;
+    // Check cache
+    if (this.glbMeshCache.has(idOrPath)) {
+      logger.info(`[loadGLBMesh] Cache hit for: ${idOrPath}`);
+      const cachedMesh = this.glbMeshCache.get(idOrPath)!;
+      return cachedMesh ? this.cloneGLBMesh(cachedMesh, idOrPath, startTime) : null;
     }
 
-    // Clone recursively (true = deep clone including children and geometry)
+    // Deduplicate in-flight requests
+    if (this.glbMeshLoadingPromises.has(idOrPath)) {
+      logger.info(`[loadGLBMesh] Waiting for in-flight load: ${idOrPath}`);
+      const cachedMesh = await this.glbMeshLoadingPromises.get(idOrPath)!;
+      return cachedMesh ? this.cloneGLBMesh(cachedMesh, idOrPath, startTime) : null;
+    }
+
+    // Start loading
+    logger.info(`[loadGLBMesh] START: ${idOrPath}`);
+    const loadingPromise = this.loadGLBMeshFromProvider(idOrPath, startTime);
+    this.glbMeshLoadingPromises.set(idOrPath, loadingPromise);
+
+    try {
+      const cachedMesh = await loadingPromise;
+      this.glbMeshCache.set(idOrPath, cachedMesh);
+      return cachedMesh ? this.cloneGLBMesh(cachedMesh, idOrPath, startTime) : null;
+    } finally {
+      this.glbMeshLoadingPromises.delete(idOrPath);
+    }
+  }
+
+  private async loadGLBMeshFromProvider(idOrPath: string, startTime: number): Promise<THREE.Object3D | null> {
+    try {
+      const resource = this.getMetadata(idOrPath);
+      if (!resource) {
+        logger.error(`[loadGLBMesh] Resource not found: ${idOrPath}`);
+        return null;
+      }
+
+      const ext = resource.path.split('.').pop()?.toLowerCase();
+      if (ext !== 'glb' && ext !== 'gltf') {
+        logger.error(`[loadGLBMesh] Not a GLB/GLTF file: ${resource.path}`);
+        return null;
+      }
+
+      const content = await this.loadByPath(resource.path);
+      if (!(content instanceof ArrayBuffer)) {
+        throw new Error(`GLB/GLTF must be binary data: ${resource.path}`);
+      }
+
+      const loader = new GLTFLoader();
+      const gltf = await loader.parseAsync(content, '');
+
+      const elapsed = performance.now() - startTime;
+      logger.info(`[loadGLBMesh] SUCCESS: ${idOrPath} (${elapsed.toFixed(2)}ms)`);
+      return gltf.scene;
+    } catch (error) {
+      const elapsed = performance.now() - startTime;
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      logger.error(`[loadGLBMesh] FAILED: ${idOrPath} (${elapsed.toFixed(2)}ms) - ${errorMsg}`);
+
+      if (this.onResourceNeeded) {
+        try {
+          const resource = this.getMetadata(idOrPath);
+          if (resource) {
+            await this.onResourceNeeded({
+              path: resource.path,
+              type: resource.type,
+              referencedBy: `Node using GLB mesh ${idOrPath}`,
+              error: errorMsg
+            });
+          }
+        } catch (callbackError) {
+          logger.error(`[loadGLBMesh] onResourceNeeded callback failed for ${idOrPath}:`, callbackError);
+        }
+      }
+
+      return null;
+    }
+  }
+
+  private cloneGLBMesh(cachedMesh: THREE.Object3D, idOrPath: string, startTime: number): THREE.Object3D {
+
     const clonedMesh = cachedMesh.clone(true);
 
-    // Clone materials for all meshes in the hierarchy
-    // CRITICAL: clone(true) clones Object3D hierarchy but NOT materials
-    // Without this, all instances would share material references
+    // clone(true) clones Object3D hierarchy but NOT materials
     clonedMesh.traverse((node) => {
       if (node instanceof THREE.Mesh) {
         if (Array.isArray(node.material)) {
@@ -434,8 +368,7 @@ export class ResourceRegistry {
     });
 
     const elapsed = performance.now() - startTime;
-    logger.info(`[loadGLBMesh] Returning cloned instance: ${idOrPath} (${elapsed.toFixed(2)}ms total)`);
-
+    logger.info(`[loadGLBMesh] Cloned instance: ${idOrPath} (${elapsed.toFixed(2)}ms)`);
     return clonedMesh;
   }
 
@@ -574,7 +507,6 @@ export class ResourceRegistry {
     this.materialLoader.clearAllCache();
     this.glbMeshCache.clear();
     this.glbMeshLoadingPromises.clear();
-    this.eventBus.clear();
     logger.info('ResourceRegistry cleared');
   }
 }

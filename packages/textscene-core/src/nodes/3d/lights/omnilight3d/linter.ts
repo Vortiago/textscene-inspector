@@ -7,6 +7,7 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
+import { isValidProperties } from '../../../../linter/linterUtils.js';
 
 // Thresholds for warnings
 const EXTREME_LIGHT_ENERGY_MIN = 0.01;
@@ -15,13 +16,6 @@ const LARGE_OMNI_RANGE = 1000;
 const SMALL_OMNI_RANGE = 0.1;
 const EXTREME_OMNI_ATTENUATION_MIN = 0.1;
 const EXTREME_OMNI_ATTENUATION_MAX = 5;
-
-/**
- * Check if properties object exists and is valid
- */
-function isValidProperties(props: unknown): props is Record<string, string> {
-  return typeof props === 'object' && props !== null;
-}
 
 /**
  * Validate OmniLight3D semantic rules

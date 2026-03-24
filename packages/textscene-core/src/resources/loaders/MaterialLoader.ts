@@ -191,7 +191,10 @@ export class MaterialLoader {
     // This is critical because loadAsync may emit events synchronously (before first await)
     const resultPromise = this.eventBus
       .once<THREE.Material>('material', 'loaded', id)
-      .catch(() => null);
+      .catch((error) => {
+        logger.warn(`[MaterialLoader] load() failed for: ${id}`, error);
+        return null;
+      });
 
     // Start loading (may emit events synchronously)
     this.request(id);
@@ -281,36 +284,12 @@ export class MaterialLoader {
         const { parseStandardMaterial3D } = await import('../materials/standardmaterial3d/parser');
         const { createStandardMaterial } = await import('../materials/standardmaterial3d/renderer');
 
-        // Convert parsed properties to string format for compatibility with existing parser
+        // Properties are already strings (Color/Vector3 kept as original string format)
         const stringProps: Record<string, string> = {};
         for (const [key, value] of Object.entries(properties)) {
-          if (value && typeof value === 'object' && 'type' in value) {
-            // Handle ParsedColor and ParsedVector3
-            const typedValue = value as { type: string; r?: number; g?: number; b?: number; a?: number; x?: number; y?: number; z?: number };
-            if (
-              typedValue.type === 'Color' &&
-              'r' in typedValue &&
-              'g' in typedValue &&
-              'b' in typedValue &&
-              'a' in typedValue
-            ) {
-              stringProps[key] = `Color(${typedValue.r}, ${typedValue.g}, ${typedValue.b}, ${typedValue.a})`;
-            } else if (
-              typedValue.type === 'Vector3' &&
-              'x' in typedValue &&
-              'y' in typedValue &&
-              'z' in typedValue
-            ) {
-              stringProps[key] = `Vector3(${typedValue.x}, ${typedValue.y}, ${typedValue.z})`;
-            } else {
-              stringProps[key] = String(value);
-            }
-          } else {
-            stringProps[key] = String(value);
-          }
+          stringProps[key] = String(value);
         }
 
-        // Pass the registry for texture loading (uses parallel loading via TextureLoader)
         const matProps = await parseStandardMaterial3D(stringProps, this.registry);
         material = createStandardMaterial(matProps);
         break;
@@ -324,87 +303,6 @@ export class MaterialLoader {
     }
 
     return material;
-  }
-
-  /**
-   * Load material from provider and return both material and raw content.
-   * Content is needed for texture ref extraction on failure.
-   */
-  private async loadMaterialFromProviderWithContent(id: string): Promise<{ material: THREE.Material; content: string }> {
-    const metadata = this.metadataMap.get(id);
-    if (!metadata) {
-      throw new Error(`Material metadata not found: ${id}`);
-    }
-
-    if (!metadata.type.includes('Material')) {
-      throw new Error(`Not a material resource: ${id} (type: ${metadata.type})`);
-    }
-
-    if (!this.provider) {
-      throw new Error('No ResourceProvider set');
-    }
-
-    // Load raw content via provider (returns string for .tres files)
-    const content = await this.provider.loadResource(metadata.path, metadata.type);
-    if (typeof content !== 'string') {
-      throw new Error(`Material must be text content: ${metadata.path}`);
-    }
-
-    // Parse .tres file
-    const { parseResourceFile } = await import('../../parser/resourceParsers');
-    const { type, properties } = parseResourceFile(content);
-
-    // Parse and create material based on type
-    let material: THREE.Material;
-
-    switch (type) {
-      case 'StandardMaterial3D': {
-        const { parseStandardMaterial3D } = await import('../materials/standardmaterial3d/parser');
-        const { createStandardMaterial } = await import('../materials/standardmaterial3d/renderer');
-
-        // Convert parsed properties to string format for compatibility with existing parser
-        const stringProps: Record<string, string> = {};
-        for (const [key, value] of Object.entries(properties)) {
-          if (value && typeof value === 'object' && 'type' in value) {
-            // Handle ParsedColor and ParsedVector3
-            const typedValue = value as { type: string; r?: number; g?: number; b?: number; a?: number; x?: number; y?: number; z?: number };
-            if (
-              typedValue.type === 'Color' &&
-              'r' in typedValue &&
-              'g' in typedValue &&
-              'b' in typedValue &&
-              'a' in typedValue
-            ) {
-              stringProps[key] = `Color(${typedValue.r}, ${typedValue.g}, ${typedValue.b}, ${typedValue.a})`;
-            } else if (
-              typedValue.type === 'Vector3' &&
-              'x' in typedValue &&
-              'y' in typedValue &&
-              'z' in typedValue
-            ) {
-              stringProps[key] = `Vector3(${typedValue.x}, ${typedValue.y}, ${typedValue.z})`;
-            } else {
-              stringProps[key] = String(value);
-            }
-          } else {
-            stringProps[key] = String(value);
-          }
-        }
-
-        // Pass the registry for texture loading (uses parallel loading via TextureLoader)
-        const matProps = await parseStandardMaterial3D(stringProps, this.registry);
-        material = createStandardMaterial(matProps);
-        break;
-      }
-
-      case 'ShaderMaterial':
-        throw new Error('ShaderMaterial not yet supported');
-
-      default:
-        throw new Error(`Unsupported material type: ${type}`);
-    }
-
-    return { material, content };
   }
 
   /**

@@ -159,6 +159,18 @@ export class NodeLifecycleManager {
       return;
     }
 
+    // 0. Clean up event subscriptions (material listeners, etc.)
+    // Traverse all descendants to ensure cleanup
+    object.traverse((child) => {
+      if (child.userData.cleanupMaterialListeners) {
+        try {
+          child.userData.cleanupMaterialListeners();
+        } catch (error) {
+          logger.warn(`Error cleaning up material listeners for ${nodePath}:`, error);
+        }
+      }
+    });
+
     // 1. Remove from parent TscnNode's children array
     if (object.parent && node) {
       const parentPath = object.parent.userData.nodePath as string | undefined;

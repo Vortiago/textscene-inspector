@@ -4,7 +4,8 @@
 
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { createDirectionalLight3D, positionDirectionalLightTarget } from './renderer';
+import { createDirectionalLight3D } from './renderer';
+import { positionLightTarget } from '../../../../utils/lightTargetUtils';
 import type { DirectionalLight3DProperties } from './types';
 
 describe('DirectionalLight3D Renderer', () => {
@@ -209,7 +210,7 @@ describe('DirectionalLight3D Renderer', () => {
     });
   });
 
-  describe('positionDirectionalLightTarget', () => {
+  describe('positionLightTarget', () => {
     it('should position target based on quaternion', () => {
       const properties: DirectionalLight3DProperties = {
         name: 'Sun',
@@ -222,7 +223,7 @@ describe('DirectionalLight3D Renderer', () => {
 
       // Identity rotation (no rotation)
       const quaternion = new THREE.Quaternion();
-      positionDirectionalLightTarget(group, quaternion, 10);
+      positionLightTarget(group, quaternion, 10);
 
       const target = group.children.find((child) => child.name.endsWith('_target'));
       expect(target).toBeDefined();
@@ -246,7 +247,7 @@ describe('DirectionalLight3D Renderer', () => {
       // 90 degrees around Y axis
       const quaternion = new THREE.Quaternion();
       quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
-      positionDirectionalLightTarget(group, quaternion, 10);
+      positionLightTarget(group, quaternion, 10);
 
       const target = group.children.find((child) => child.name.endsWith('_target'));
       expect(target).toBeDefined();
@@ -267,7 +268,7 @@ describe('DirectionalLight3D Renderer', () => {
 
       const group = createDirectionalLight3D('Sun', properties);
       const quaternion = new THREE.Quaternion();
-      positionDirectionalLightTarget(group, quaternion, 50);
+      positionLightTarget(group, quaternion, 50);
 
       const target = group.children.find((child) => child.name.endsWith('_target'));
       expect(target).toBeDefined();

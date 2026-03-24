@@ -9,6 +9,9 @@ catalogs:
     '@types/node':
       specifier: ^22.10.5
       version: 22.18.12
+    '@vitest/coverage-v8':
+      specifier: ^4.0.7
+      version: 4.0.7
     '@vitest/ui':
       specifier: ^4.0.7
       version: 4.0.7
@@ -51,7 +54,7 @@ importers:
         specifier: ^8.20.0
         version: 8.46.2(eslint@9.38.0)(typescript@5.9.3)
       '@vitest/coverage-v8':
-        specifier: ^4.0.7
+        specifier: 'catalog:'
         version: 4.0.7(vitest@4.0.7)
       '@vitest/ui':
         specifier: 'catalog:'
@@ -63,8 +66,8 @@ importers:
         specifier: ^16.4.0
         version: 16.4.0
       happy-dom:
-        specifier: ^20.0.8
-        version: 20.0.8
+        specifier: 'catalog:'
+        version: 20.0.10
       husky:
         specifier: ^9.1.7
         version: 9.1.7
@@ -79,7 +82,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: 'catalog:'
-        version: 4.0.7(@types/node@22.18.12)(@vitest/ui@4.0.7)(happy-dom@20.0.8)(yaml@2.8.1)
+        version: 4.0.7(@types/node@22.18.12)(@vitest/ui@4.0.7)(happy-dom@20.0.10)(yaml@2.8.1)
 
   apps/textscene-linter:
     dependencies:
@@ -1605,10 +1608,6 @@ packages:
 
   happy-dom@20.0.10:
     resolution: {integrity: sha512-6umCCHcjQrhP5oXhrHQQvLB0bwb1UzHAHdsXy+FjtKoYjUhmNZsQL8NivwM1vDvNEChJabVrUYxUnp/ZdYmy2g==}
-    engines: {node: '>=20.0.0'}
-
-  happy-dom@20.0.8:
-    resolution: {integrity: sha512-TlYaNQNtzsZ97rNMBAm8U+e2cUQXNithgfCizkDgc11lgmN4j9CKMhO3FPGKWQYPwwkFcPpoXYF/CqEPLgzfOg==}
     engines: {node: '>=20.0.0'}
 
   has-flag@4.0.0:
@@ -3421,7 +3420,7 @@ snapshots:
       magicast: 0.3.5
       std-env: 3.10.0
       tinyrainbow: 3.0.3
-      vitest: 4.0.7(@types/node@22.18.12)(@vitest/ui@4.0.7)(happy-dom@20.0.8)(yaml@2.8.1)
+      vitest: 4.0.7(@types/node@22.18.12)(@vitest/ui@4.0.7)(happy-dom@20.0.10)(yaml@2.8.1)
     transitivePeerDependencies:
       - supports-color
 
@@ -3476,7 +3475,7 @@ snapshots:
       sirv: 3.0.2
       tinyglobby: 0.2.15
       tinyrainbow: 3.0.3
-      vitest: 4.0.7(@types/node@22.18.12)(@vitest/ui@4.0.7)(happy-dom@20.0.8)(yaml@2.8.1)
+      vitest: 4.0.7(@types/node@22.18.12)(@vitest/ui@4.0.7)(happy-dom@20.0.10)(yaml@2.8.1)
 
   '@vitest/utils@4.0.7':
     dependencies:
@@ -4183,12 +4182,6 @@ snapshots:
   graphemer@1.4.0: {}
 
   happy-dom@20.0.10:
-    dependencies:
-      '@types/node': 20.19.23
-      '@types/whatwg-mimetype': 3.0.2
-      whatwg-mimetype: 3.0.0
-
-  happy-dom@20.0.8:
     dependencies:
       '@types/node': 20.19.23
       '@types/whatwg-mimetype': 3.0.2
@@ -5247,46 +5240,6 @@ snapshots:
       '@types/node': 22.18.12
       '@vitest/ui': 4.0.7(vitest@4.0.7)
       happy-dom: 20.0.10
-    transitivePeerDependencies:
-      - jiti
-      - less
-      - lightningcss
-      - msw
-      - sass
-      - sass-embedded
-      - stylus
-      - sugarss
-      - supports-color
-      - terser
-      - tsx
-      - yaml
-
-  vitest@4.0.7(@types/node@22.18.12)(@vitest/ui@4.0.7)(happy-dom@20.0.8)(yaml@2.8.1):
-    dependencies:
-      '@vitest/expect': 4.0.7
-      '@vitest/mocker': 4.0.7(vite@6.4.1(@types/node@22.18.12)(yaml@2.8.1))
-      '@vitest/pretty-format': 4.0.7
-      '@vitest/runner': 4.0.7
-      '@vitest/snapshot': 4.0.7
-      '@vitest/spy': 4.0.7
-      '@vitest/utils': 4.0.7
-      debug: 4.4.3(supports-color@8.1.1)
-      es-module-lexer: 1.7.0
-      expect-type: 1.2.2
-      magic-string: 0.30.21
-      pathe: 2.0.3
-      picomatch: 4.0.3
-      std-env: 3.10.0
-      tinybench: 2.9.0
-      tinyexec: 0.3.2
-      tinyglobby: 0.2.15
-      tinyrainbow: 3.0.3
-      vite: 6.4.1(@types/node@22.18.12)(yaml@2.8.1)
-      why-is-node-running: 2.3.0
-    optionalDependencies:
-      '@types/node': 22.18.12
-      '@vitest/ui': 4.0.7(vitest@4.0.7)
-      happy-dom: 20.0.8
     transitivePeerDependencies:
       - jiti
       - less

@@ -31,4 +31,8 @@ export interface StandardMaterial3DProperties {
   roughness_texture?: THREE.Texture;
   ao_texture?: THREE.Texture;
   emission_texture?: THREE.Texture;
+
+  // Texture dependency tracking for event-based recovery
+  // Maps slot name (e.g. 'albedo_texture') to ExtResource ID
+  textureDependencies?: Map<string, string>;
 }

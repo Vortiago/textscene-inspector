@@ -4,8 +4,9 @@
  */
 
 import * as THREE from 'three';
+import * as logger from '../logger';
 
-export type ResourceEventType = 'requested' | 'loading' | 'progress' | 'loaded' | 'failed';
+export type ResourceEventType = 'requested' | 'loading' | 'progress' | 'loaded' | 'failed' | 'provided';
 export type ResourceType = 'texture' | 'material' | 'scene' | 'resource';
 
 export interface ProgressData {
@@ -30,8 +31,8 @@ export class ResourceEventBus {
 
   /**
    * Subscribe to resource events.
-   * @param resourceType - Type of resource (texture, material, scene)
-   * @param eventType - Type of event (requested, loading, loaded, failed)
+   * @param resourceType - Type of resource (texture, material, scene, resource)
+   * @param eventType - Type of event (requested, loading, progress, loaded, failed, provided)
    * @param handler - Callback function receiving (id, data)
    */
   on<T = unknown>(
@@ -74,7 +75,7 @@ export class ResourceEventBus {
         try {
           handler(id, data);
         } catch (error) {
-          console.error(`[ResourceEventBus] Handler error for ${key}:`, error);
+          logger.error(`[ResourceEventBus] Handler error for ${key}:`, error);
         }
       }
     }
@@ -139,8 +140,7 @@ export class ResourceEventBus {
   }
 
   /**
-   * Wait for any of the specified IDs to complete (loaded or failed).
-   * Returns when all specified IDs have resolved.
+   * Wait for all specified IDs to complete (loaded or failed).
    */
   async waitForAll<T = unknown>(
     resourceType: ResourceType,
@@ -154,7 +154,8 @@ export class ResourceEventBus {
         try {
           const data = await this.once<T>(resourceType, 'loaded', id, timeoutMs);
           results.set(id, data);
-        } catch {
+        } catch (error) {
+          logger.warn(`[ResourceEventBus] waitForAll: resource ${resourceType}:${id} failed`, error);
           results.set(id, null);
         }
       })

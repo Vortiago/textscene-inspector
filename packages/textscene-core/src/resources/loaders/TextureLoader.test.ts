@@ -274,6 +274,24 @@ describe('TextureLoader', () => {
       expect(elapsed).toBeLessThan(10);
       expect(mockProvider.loadResource).toHaveBeenCalledTimes(1);
     });
+
+    it('returns null for previously-failed texture without hanging', async () => {
+      mockProvider.loadResource = vi.fn().mockRejectedValue(new Error('Network error'));
+
+      loader.registerMetadata('tex1', {
+        id: 'tex1',
+        path: 'res://textures/albedo.png',
+        type: 'Texture2D',
+      });
+
+      // First load fails and caches null
+      const first = await loader.load('tex1');
+      expect(first).toBeNull();
+
+      // Second load must resolve (not hang) even though request() emits failed synchronously
+      const second = await loader.load('tex1');
+      expect(second).toBeNull();
+    });
   });
 
   describe('cache management', () => {
@@ -407,6 +425,139 @@ describe('TextureLoader', () => {
       expect(handler).toHaveBeenCalled();
       const error = handler.mock.calls[0][1] as Error;
       expect(error.message).toContain('Not a texture resource');
+    });
+  });
+
+  describe('failed texture tracking', () => {
+    it('tracks failed textures', async () => {
+      mockProvider.loadResource = vi.fn().mockRejectedValue(new Error('Load failed'));
+
+      loader.registerMetadata('tex1', {
+        id: 'tex1',
+        path: 'res://textures/missing.png',
+        type: 'Texture2D',
+      });
+
+      loader.request('tex1');
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      expect(loader.hasFailed('tex1')).toBe(true);
+      const failed = loader.getFailedTextures();
+      expect(failed.get('tex1')).toBeDefined();
+      expect(failed.get('tex1')?.path).toBe('res://textures/missing.png');
+    });
+
+    it('retryFailed clears failed status and re-requests', async () => {
+      // First request fails
+      mockProvider.loadResource = vi.fn().mockRejectedValue(new Error('Load failed'));
+
+      loader.registerMetadata('tex1', {
+        id: 'tex1',
+        path: 'res://textures/retry.png',
+        type: 'Texture2D',
+      });
+
+      loader.request('tex1');
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      expect(loader.hasFailed('tex1')).toBe(true);
+
+      // Fix provider and retry
+      mockProvider.loadResource = vi.fn().mockResolvedValue(new ArrayBuffer(8));
+
+      const loadedHandler = vi.fn();
+      eventBus.on<THREE.Texture>('texture', 'loaded', loadedHandler);
+
+      loader.retryFailed('tex1');
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(loader.hasFailed('tex1')).toBe(false);
+      expect(loadedHandler).toHaveBeenCalled();
+    });
+
+    it('auto-retries when resource:provided event fires', async () => {
+      // First request fails
+      mockProvider.loadResource = vi.fn().mockRejectedValue(new Error('Load failed'));
+
+      loader.registerMetadata('tex1', {
+        id: 'tex1',
+        path: 'res://textures/wall.png',
+        type: 'Texture2D',
+      });
+
+      loader.request('tex1');
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      expect(loader.hasFailed('tex1')).toBe(true);
+
+      // Fix provider
+      mockProvider.loadResource = vi.fn().mockResolvedValue(new ArrayBuffer(8));
+
+      const loadedHandler = vi.fn();
+      eventBus.on<THREE.Texture>('texture', 'loaded', loadedHandler);
+
+      // Emit resource:provided event
+      eventBus.emit<string>('resource', 'provided', 'res://textures/wall.png', 'res://textures/wall.png');
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(loader.hasFailed('tex1')).toBe(false);
+      expect(loadedHandler).toHaveBeenCalled();
+    });
+
+    it('only retries textures with matching path', async () => {
+      // Setup two failed textures
+      mockProvider.loadResource = vi.fn().mockRejectedValue(new Error('Load failed'));
+
+      loader.registerMetadata('tex1', {
+        id: 'tex1',
+        path: 'res://textures/wall.png',
+        type: 'Texture2D',
+      });
+      loader.registerMetadata('tex2', {
+        id: 'tex2',
+        path: 'res://textures/floor.png',
+        type: 'Texture2D',
+      });
+
+      loader.request('tex1');
+      loader.request('tex2');
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      expect(loader.hasFailed('tex1')).toBe(true);
+      expect(loader.hasFailed('tex2')).toBe(true);
+
+      // Fix provider
+      mockProvider.loadResource = vi.fn().mockResolvedValue(new ArrayBuffer(8));
+
+      // Emit provided event for only wall.png
+      eventBus.emit<string>('resource', 'provided', 'res://textures/wall.png');
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Only tex1 should have been retried
+      expect(loader.hasFailed('tex1')).toBe(false);
+      expect(loader.hasFailed('tex2')).toBe(true);
+    });
+
+    it('clearAllCache also clears failed textures', async () => {
+      mockProvider.loadResource = vi.fn().mockRejectedValue(new Error('Load failed'));
+
+      loader.registerMetadata('tex1', {
+        id: 'tex1',
+        path: 'res://textures/missing.png',
+        type: 'Texture2D',
+      });
+
+      loader.request('tex1');
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      expect(loader.hasFailed('tex1')).toBe(true);
+
+      loader.clearAllCache();
+
+      expect(loader.hasFailed('tex1')).toBe(false);
+      expect(loader.getFailedTextures().size).toBe(0);
     });
   });
 });

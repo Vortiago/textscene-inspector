@@ -4,7 +4,8 @@
 
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { createSpotLight3D, positionSpotLightTarget } from './renderer';
+import { createSpotLight3D } from './renderer';
+import { positionLightTarget } from '../../../../utils/lightTargetUtils';
 import type { SpotLight3DProperties } from './types';
 
 describe('SpotLight3D Renderer', () => {
@@ -202,7 +203,7 @@ describe('SpotLight3D Renderer', () => {
     });
   });
 
-  describe('positionSpotLightTarget', () => {
+  describe('positionLightTarget', () => {
     it('should position target based on quaternion', () => {
       const properties: SpotLight3DProperties = {
         name: 'TestLight',
@@ -217,7 +218,7 @@ describe('SpotLight3D Renderer', () => {
 
       // Identity rotation (no rotation)
       const quaternion = new THREE.Quaternion();
-      positionSpotLightTarget(group, quaternion, 10);
+      positionLightTarget(group, quaternion, 10);
 
       const target = group.children.find((child) => child.name.endsWith('_target'));
       expect(target).toBeDefined();
@@ -243,7 +244,7 @@ describe('SpotLight3D Renderer', () => {
       // 90 degrees around Y axis
       const quaternion = new THREE.Quaternion();
       quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
-      positionSpotLightTarget(group, quaternion, 10);
+      positionLightTarget(group, quaternion, 10);
 
       const target = group.children.find((child) => child.name.endsWith('_target'));
       expect(target).toBeDefined();
@@ -266,7 +267,7 @@ describe('SpotLight3D Renderer', () => {
 
       const group = createSpotLight3D('TestLight', properties);
       const quaternion = new THREE.Quaternion();
-      positionSpotLightTarget(group, quaternion, 20);
+      positionLightTarget(group, quaternion, 20);
 
       const target = group.children.find((child) => child.name.endsWith('_target'));
       expect(target).toBeDefined();

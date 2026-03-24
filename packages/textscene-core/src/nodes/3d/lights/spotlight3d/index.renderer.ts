@@ -2,7 +2,8 @@
  * SpotLight3D renderer registration - auto-registers SpotLight3D parser and renderer with the node registry.
  */
 
-import { createSpotLight3D, positionSpotLightTarget } from './renderer';
+import { createSpotLight3D } from './renderer';
+import { positionLightTarget } from '../../../../utils/lightTargetUtils';
 import type { TscnScene } from '../../../../parser/types';
 import { nodeRegistry } from '../../../../core/NodeRegistry';
 import * as THREE from 'three';
@@ -27,7 +28,7 @@ const spotLight3DRegistration: NodeTypeRegistration = {
       const { rotation } = decomposeTransform3D(properties.transform);
       const quaternion = new THREE.Quaternion();
       quaternion.setFromEuler(new THREE.Euler(rotation.x, rotation.y, rotation.z));
-      positionSpotLightTarget(group, quaternion, properties.spot_range);
+      positionLightTarget(group, quaternion, properties.spot_range);
     }
 
     return group;

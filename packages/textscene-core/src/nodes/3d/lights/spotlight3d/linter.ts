@@ -7,6 +7,7 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
+import { isValidProperties } from '../../../../linter/linterUtils.js';
 
 // Thresholds for warnings
 const EXTREME_LIGHT_ENERGY_MIN = 0.01;
@@ -18,13 +19,6 @@ const EXTREME_SPOT_ATTENUATION_MAX = 5;
 const EXTREME_SPOT_ANGLE_ATTENUATION_MIN = 0.1;
 const EXTREME_SPOT_ANGLE_ATTENUATION_MAX = 5;
 const SMALL_SPOT_ANGLE = 1;
-
-/**
- * Check if properties object exists and is valid
- */
-function isValidProperties(props: unknown): props is Record<string, string> {
-  return typeof props === 'object' && props !== null;
-}
 
 /**
  * Validate SpotLight3D semantic rules

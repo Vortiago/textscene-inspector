@@ -7,7 +7,7 @@ import type { SpotLight3DProperties } from './types';
 import { parseColorToHex } from '../../../../utils/colorParser';
 import { LIGHT_INTENSITY_SCALE, DEFAULT_SHADOW_BIAS } from '../../../../utils/lightConstants';
 import { configureLightShadow } from '../../../../utils/shadowUtils';
-import { createLightWithTarget, positionLightTarget } from '../../../../utils/lightTargetUtils';
+import { createLightWithTarget } from '../../../../utils/lightTargetUtils';
 
 /**
  * Create a three.js SpotLight for a SpotLight3D node.
@@ -41,5 +41,3 @@ export function createSpotLight3D(
   return createLightWithTarget(light, nodeName);
 }
 
-// Re-export the generic light target positioning function for backward compatibility
-export { positionLightTarget as positionSpotLightTarget };

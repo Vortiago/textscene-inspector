@@ -277,13 +277,7 @@ roughness = 0.3
     const { type, properties } = parseResourceFile(content);
 
     expect(type).toBe('StandardMaterial3D');
-    expect(properties.albedo_color).toEqual({
-      type: 'Color',
-      r: 0.8,
-      g: 0.2,
-      b: 0.2,
-      a: 1
-    });
+    expect(properties.albedo_color).toBe('Color(0.8, 0.2, 0.2, 1)');
     expect(properties.metallic).toBe(0.7);
     expect(properties.roughness).toBe(0.3);
   });
@@ -383,18 +377,8 @@ uv1_offset = Vector3(0.5, 0.5, 0)
 
     const { properties } = parseResourceFile(content);
 
-    expect(properties.uv1_scale).toEqual({
-      type: 'Vector3',
-      x: 2,
-      y: 2,
-      z: 2
-    });
-    expect(properties.uv1_offset).toEqual({
-      type: 'Vector3',
-      x: 0.5,
-      y: 0.5,
-      z: 0
-    });
+    expect(properties.uv1_scale).toBe('Vector3(2, 2, 2)');
+    expect(properties.uv1_offset).toBe('Vector3(0.5, 0.5, 0)');
   });
 
   it('should preserve ExtResource references as strings', () => {
@@ -461,29 +445,12 @@ uv1_scale = Vector3(1, 1, 1)
     const { type, properties } = parseResourceFile(content);
 
     expect(type).toBe('StandardMaterial3D');
-    expect(properties.albedo_color).toEqual({
-      type: 'Color',
-      r: 0.7,
-      g: 0.7,
-      b: 0.75,
-      a: 1
-    });
+    expect(properties.albedo_color).toBe('Color(0.7, 0.7, 0.75, 1)');
     expect(properties.metallic).toBe(0.9);
     expect(properties.roughness).toBe(0.2);
     expect(properties.emission_enabled).toBe(true);
-    expect(properties.emission).toEqual({
-      type: 'Color',
-      r: 1,
-      g: 0.5,
-      b: 0,
-      a: 1
-    });
+    expect(properties.emission).toBe('Color(1, 0.5, 0, 1)');
     expect(properties.emission_energy_multiplier).toBe(2.0);
-    expect(properties.uv1_scale).toEqual({
-      type: 'Vector3',
-      x: 1,
-      y: 1,
-      z: 1
-    });
+    expect(properties.uv1_scale).toBe('Vector3(1, 1, 1)');
   });
 });
