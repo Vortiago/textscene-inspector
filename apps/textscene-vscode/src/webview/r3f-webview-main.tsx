@@ -86,10 +86,18 @@ function R3FWebviewApp({ vscode }: { vscode: VsCodeApi }) {
     }
 
     window.addEventListener('message', onMessage);
+
+    // Signal handshake-ready to the extension host. The host caches
+    // any `loadTscn` payload that arrived before this point (the
+    // initial open is a race: the host calls postMessage from its
+    // constructor, but React hooks fire async). The host re-posts
+    // the cached payload on receipt of this message.
+    vscode.postMessage({ type: 'webviewReady' });
+
     return () => {
       window.removeEventListener('message', onMessage);
     };
-  }, []);
+  }, [vscode]);
 
   const panelId = useMemo(
     () => `vscode-${Math.random().toString(36).slice(2, 10)}`,

@@ -38,6 +38,20 @@ export class TscnPreviewPanel {
   private _onDidDispose: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
   public readonly onDidDispose: vscode.Event<void> = this._onDidDispose.event;
 
+  /**
+   * Webview-ready handshake (fixes VSCODE-01 race).
+   *
+   * The HTML mounts the JS bundle asynchronously, which in turn renders
+   * the React tree. React's `useEffect` that installs the `message`
+   * listener does not run synchronously with `createRoot().render(...)`,
+   * so any `postMessage` the extension host sends before the effect
+   * fires is dropped. We work around this by caching the last `loadTscn`
+   * payload here and re-sending it after the webview posts the
+   * `webviewReady` message.
+   */
+  private _webviewReady = false;
+  private _pendingLoadContent: string | undefined;
+
   // Test observability: message history
   private _messageHistory: Array<{ type: string; [key: string]: unknown }> = [];
 
@@ -96,6 +110,14 @@ export class TscnPreviewPanel {
     this._panel.webview.onDidReceiveMessage(
       (message) => {
         switch (message.type) {
+          case 'webviewReady':
+            this._webviewReady = true;
+            if (this._pendingLoadContent !== undefined) {
+              const content = this._pendingLoadContent;
+              this._pendingLoadContent = undefined;
+              this._postMessageToWebview({ type: 'loadTscn', content });
+            }
+            return;
           case 'error':
             vscode.window.showErrorMessage(message.message);
             return;
@@ -165,7 +187,15 @@ export class TscnPreviewPanel {
       // extension host always sends the full text and lets the shell
       // re-parse + reconcile.
       this._previousContent = textContent;
-      this._postMessageToWebview({ type: 'loadTscn', content: textContent });
+
+      // Gate the post on the webview-ready handshake. If the React
+      // tree hasn't installed its `message` listener yet, cache the
+      // payload and let the `webviewReady` handler replay it.
+      if (this._webviewReady) {
+        this._postMessageToWebview({ type: 'loadTscn', content: textContent });
+      } else {
+        this._pendingLoadContent = textContent;
+      }
     } catch (error) {
       vscode.window.showErrorMessage(
         `Failed to load TSCN file: ${error instanceof Error ? error.message : 'Unknown error'}`
