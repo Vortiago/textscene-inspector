@@ -260,8 +260,22 @@ function MaterialSlot({
   // normalScale is a THREE.Vector2; we materialize one matching the
   // parsed scalar so the meshStandardMaterial slot picks it up on render.
   const normalScale = new THREE.Vector2(scalars.normalScale.x, scalars.normalScale.y);
+  // The material's shader needs to be recompiled whenever the set of
+  // active texture maps changes — three.js bakes `USE_MAP` / `USE_NORMALMAP`
+  // / etc. into shader defines at first compile, so adding a texture
+  // after the material has already rendered without one leaves the
+  // sampler unused (renders white). Keying the material on which slots
+  // are populated forces R3F to construct a fresh material when textures
+  // arrive asynchronously via `useResource`, picking up the right defines.
+  const slotKey =
+    `${albedoMap ? 'a' : '-'}` +
+    `${normalMap ? 'n' : '-'}` +
+    `${roughnessMap ? 'r' : '-'}` +
+    `${metalnessMap ? 'm' : '-'}` +
+    `${emissiveMap ? 'e' : '-'}`;
   return (
     <meshStandardMaterial
+      key={slotKey}
       color={scalars.color}
       metalness={scalars.metalness}
       roughness={scalars.roughness}

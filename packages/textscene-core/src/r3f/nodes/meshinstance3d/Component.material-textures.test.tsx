@@ -270,4 +270,105 @@ describe('StandardMaterial3D textures (assertions 32–39)', () => {
     expect(mat.metalnessMap).toBeInstanceOf(THREE.Texture);
     expect(mat.emissiveMap).toBeInstanceOf(THREE.Texture);
   });
+
+  // WI-R3F-11 regression: unit-uv-scale.tscn uses `surface_material_override/0`
+  // (not `material_override`) to attach a textured StandardMaterial3D. The
+  // browser-verifier caught all three planes rendering as solid white because
+  // the chain MeshInstance3D → surface_material_override/0 → SubResource
+  // StandardMaterial3D → ExtResource Texture2D wasn't reaching `material.map`.
+  // This test pins the surface-override chain so that regression can't recur.
+  it('WI-R3F-11 surface_material_override/0 → albedo_texture lands on material.map', async () => {
+    const tex = makeTexture();
+    const { loader, setTextureCached } = makeLoader();
+    setTextureCached(TEXTURE_PATH, tex);
+
+    const surfaceMap = new Map<number, string>([[0, 'SubResource("Mat")']]);
+    const node: TscnNode = {
+      name: 'SurfacePlane',
+      type: 'MeshInstance3D',
+      children: [],
+      properties: {
+        name: 'SurfacePlane',
+        mesh: 'SubResource("Plane_1")',
+        // NOTE: deliberately no `materialOverride` — only the surface slot.
+        surfaceMaterialOverrides: surfaceMap,
+      } as MeshInstance3DProperties,
+    };
+
+    const renderer = await ReactThreeTestRenderer.create(
+      <ResourceLoaderProvider loader={loader}>
+        <SceneResourcesProvider
+          internalResources={[
+            sub('PlaneMesh', 'Plane_1', { size: 'Vector2(2, 2)' }),
+            sub('StandardMaterial3D', 'Mat', {
+              albedo_texture: 'ExtResource("1_tex")',
+            }),
+          ]}
+          externalResources={[extRef('1_tex', TEXTURE_PATH)]}
+        >
+          <MeshInstance3D node={node} />
+        </SceneResourcesProvider>
+      </ResourceLoaderProvider>
+    );
+
+    const mat = renderer.scene.findByType('Mesh').instance.material as THREE.MeshStandardMaterial;
+    expect(mat.map).toBeInstanceOf(THREE.Texture);
+  });
+
+  // WI-R3F-11 regression: when a texture arrives async (via eventBus emit
+  // *after* first render), the material's `map` prop must end up bound to
+  // the loaded texture. The earlier unit tests pre-seeded the cache so the
+  // texture was already present on first render and the bug went unseen;
+  // production loads textures via fetch → blob → THREE.ImageLoader which
+  // is always async, so the empty-cache → emit → re-render path is the
+  // real one.
+  it('WI-R3F-11 async texture load (cache empty on first render) → material.map binds after load event', async () => {
+    const { loader } = makeLoader();
+    // NOTE: NO setTextureCached. The texture isn't in the cache when the
+    // component first renders; it arrives via the bus afterwards, mimicking
+    // the production fetch-then-decode flow.
+
+    const surfaceMap = new Map<number, string>([[0, 'SubResource("Mat")']]);
+    const node: TscnNode = {
+      name: 'AsyncPlane',
+      type: 'MeshInstance3D',
+      children: [],
+      properties: {
+        name: 'AsyncPlane',
+        mesh: 'SubResource("Plane_1")',
+        surfaceMaterialOverrides: surfaceMap,
+      } as MeshInstance3DProperties,
+    };
+
+    const renderer = await ReactThreeTestRenderer.create(
+      <ResourceLoaderProvider loader={loader}>
+        <SceneResourcesProvider
+          internalResources={[
+            sub('PlaneMesh', 'Plane_1', { size: 'Vector2(2, 2)' }),
+            sub('StandardMaterial3D', 'Mat', {
+              albedo_texture: 'ExtResource("1_tex")',
+            }),
+          ]}
+          externalResources={[extRef('1_tex', TEXTURE_PATH)]}
+        >
+          <MeshInstance3D node={node} />
+        </SceneResourcesProvider>
+      </ResourceLoaderProvider>
+    );
+
+    // First render: useResource still pending; material has no map.
+    const matBefore = renderer.scene.findByType('Mesh').instance.material as THREE.MeshStandardMaterial;
+    expect(matBefore.map).toBeNull();
+
+    // Now simulate the file pipeline emitting `loaded` after the fetch
+    // completes — this mirrors what happens in production when a real
+    // SVG/PNG is decoded into a THREE.Texture by createTextureFromBuffer.
+    const tex = makeTexture();
+    await ReactThreeTestRenderer.act(async () => {
+      loader.eventBus.emit<THREE.Texture>('texture', 'loaded', TEXTURE_PATH, tex);
+    });
+
+    const matAfter = renderer.scene.findByType('Mesh').instance.material as THREE.MeshStandardMaterial;
+    expect(matAfter.map).toBeInstanceOf(THREE.Texture);
+  });
 });
