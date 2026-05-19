@@ -1,0 +1,40 @@
+[gd_scene load_steps=2 format=3 uid="uid://test_audio_stream_player"]
+
+[ext_resource type="AudioStream" path="res://audio/test_sound.ogg" id="1_audio"]
+
+[node name="Scene" type="Node3D"]
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.866025, 0.5, 0, -0.5, 0.866025, 0, 3, 6)
+fov = 70.0
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866025, -0.25, 0.433013, 0, 0.866025, 0.5, -0.5, -0.433013, 0.75, 0, 5, 0)
+
+[node name="Speaker_Default" type="AudioStreamPlayer3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 1, 0)
+stream = ExtResource("1_audio")
+bus = &"Master"
+
+[node name="Speaker_WithRange" type="AudioStreamPlayer3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 1, 0)
+stream = ExtResource("1_audio")
+unit_size = 5.0
+max_distance = 12.0
+attenuation_model = 1
+bus = &"SFX"
+
+[node name="Speaker_Cone" type="AudioStreamPlayer3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, -2)
+stream = ExtResource("1_audio")
+unit_size = 8.0
+emission_angle_enabled = true
+emission_angle_degrees = 30.0
+bus = &"Music"
+
+[node name="Title" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 0)
+text = "AudioStreamPlayer3D - speaker gizmo + optional range sphere"
+pixel_size = 0.006
+billboard = 1
+modulate = Color(1, 1, 1, 1)

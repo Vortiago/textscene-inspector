@@ -19,6 +19,7 @@ describe('R3F NodeComponentRegistry self-registration', () => {
     'WorldEnvironment',
     'Label3D',
     'Sprite3D',
+    'AudioStreamPlayer3D',
   ];
 
   it.each(mvsTypes)('registers a component for %s', (typeName) => {
