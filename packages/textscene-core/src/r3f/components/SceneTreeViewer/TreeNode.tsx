@@ -159,30 +159,32 @@ function TreeNodeImpl({
 
         <span className={styles.nodeName}>{node.name}</span>
 
-        {hasTransform(node) && (
-          <span className={styles.transformIcon} title="Has transform">
-            ⌖
-          </span>
-        )}
+        <span className={styles.glyphs}>
+          {hasTransform(node) && (
+            <span className={styles.transformIcon} title="Has transform">
+              ⌖
+            </span>
+          )}
 
-        {node.instance && sourcePath && (
-          <span
-            className={styles.instanceIcon}
-            title={`External scene: ${sourcePath}${isInstanceRoot ? ' (instance root)' : ''}`}
+          {node.instance && sourcePath && (
+            <span
+              className={styles.instanceIcon}
+              title={`External scene: ${sourcePath}${isInstanceRoot ? ' (instance root)' : ''}`}
+            >
+              📦
+            </span>
+          )}
+
+          <button
+            type="button"
+            className={styles.visibilityIcon}
+            onClick={handleToggleVisibility}
+            title={isHidden ? 'Click to show' : 'Click to hide'}
+            aria-label={isHidden ? 'Show node' : 'Hide node'}
           >
-            📦
-          </span>
-        )}
-
-        <button
-          type="button"
-          className={styles.visibilityIcon}
-          onClick={handleToggleVisibility}
-          title={isHidden ? 'Click to show' : 'Click to hide'}
-          aria-label={isHidden ? 'Show node' : 'Hide node'}
-        >
-          {isHidden ? '🙈' : '👁️'}
-        </button>
+            {isHidden ? '🙈' : '👁️'}
+          </button>
+        </span>
       </div>
 
       {hasChildren && isExpanded && (

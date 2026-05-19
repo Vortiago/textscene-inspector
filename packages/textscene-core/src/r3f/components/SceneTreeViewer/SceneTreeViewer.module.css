@@ -62,13 +62,34 @@
 }
 
 .header {
-  display: flex;
+  /*
+   * Grid columns:
+   *   12px            expand toggle / spacer (always present)
+   *   auto            type badge (sizes to shorthand text)
+   *   auto            optional "Not Implemented" badge
+   *   minmax(0, 1fr)  node name — `min-width: 0` is what enables ellipsis
+   *   auto            right-side glyph group (transform/instance/visibility)
+   *
+   * `auto` columns collapse to zero when their child is absent, so optional
+   * elements don't reserve space. The `minmax(0, 1fr)` track replaces the
+   * old `flex: 1` on `.nodeName` and is the actual fix for the horizontal
+   * scrollbar visible in `docs/screenshots/web/strict-integration.png`.
+   */
+  display: grid;
+  grid-template-columns: 12px auto auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 0.375rem;
   padding: var(--tsi-space-1) var(--tsi-space-2);
   cursor: pointer;
   border-radius: var(--tsi-radius-sm);
   transition: background-color 0.15s;
+}
+
+.glyphs {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
 }
 
 .header:hover {
@@ -144,11 +165,12 @@
 }
 
 .nodeName {
-  flex: 1;
+  /* Width comes from the parent grid's `minmax(0, 1fr)` track. */
   color: var(--tsi-fg-default);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  min-width: 0;
 }
 
 .transformIcon {
