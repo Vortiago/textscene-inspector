@@ -15,6 +15,7 @@ import type { SceneGraph } from '../../../core/SceneGraph.js';
 import type { TscnNode } from '../../../parser/types.js';
 import { HierarchyProvider } from '../../contexts/HierarchyContext.js';
 import { SelectionProvider } from '../../contexts/SelectionContext.js';
+import { CameraControlProvider } from '../../contexts/CameraControlContext.js';
 import { TscnCanvas } from '../../TscnCanvas.js';
 import { SceneTreeViewer } from '../SceneTreeViewer/SceneTreeViewer.js';
 import { NodeDetailsPanel } from '../NodeDetailsPanel/NodeDetailsPanel.js';
@@ -86,6 +87,7 @@ export function TscnPreviewShell({
   return (
     <HierarchyProvider value={hierarchyValue}>
       <SelectionProvider>
+        <CameraControlProvider>
         <div className={styles.shell} data-panel-id={panelId}>
           {toolbar}
           {error && (
@@ -111,6 +113,7 @@ export function TscnPreviewShell({
             </aside>
           </div>
         </div>
+        </CameraControlProvider>
       </SelectionProvider>
     </HierarchyProvider>
   );

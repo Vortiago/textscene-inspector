@@ -8,6 +8,7 @@ import { nodeRegistry } from '../../../core/NodeRegistry.js';
 import type { TscnNode } from '../../../parser/types.js';
 import { useHierarchy } from '../../contexts/HierarchyContext.js';
 import { useSelection } from '../../contexts/SelectionContext.js';
+import { useOptionalCameraControl } from '../../contexts/CameraControlContext.js';
 import { PropertySection } from './PropertySection.js';
 import styles from './NodeDetailsPanel.module.css';
 
@@ -19,6 +20,7 @@ interface SelectedNode {
 export function NodeDetailsPanel() {
   const { sceneGraph } = useHierarchy();
   const { selectedNodePath } = useSelection();
+  const cameraControl = useOptionalCameraControl();
 
   const selection = useMemo<SelectedNode | null>(() => {
     if (!sceneGraph || !selectedNodePath) return null;
@@ -73,13 +75,13 @@ export function NodeDetailsPanel() {
     );
   }
 
-  // TODO(WI-R3F-5): camera switching action buttons (Use This Camera /
-  // Return to Free View) for Camera3D nodes. Requires CameraControlContext
-  // and active-camera-path coordination with the canvas.
-
   const sections = registration?.propertyFormatter
     ? registration.propertyFormatter(node.properties)
     : [];
+
+  const showCameraActions = node.type === 'Camera3D' && cameraControl !== null;
+  const isActiveCamera =
+    cameraControl !== null && cameraControl.activeCameraPath === path;
 
   return (
     <div className={styles.root}>
@@ -107,6 +109,29 @@ export function NodeDetailsPanel() {
           </div>
         )}
       </div>
+
+      {showCameraActions && cameraControl !== null && (
+        <div className={styles.section}>
+          <h4 className={styles.sectionTitle}>Camera</h4>
+          {isActiveCamera ? (
+            <button
+              type="button"
+              className={styles.actionButton}
+              onClick={() => cameraControl.returnToFreeView()}
+            >
+              Reset Camera
+            </button>
+          ) : (
+            <button
+              type="button"
+              className={styles.actionButton}
+              onClick={() => cameraControl.switchToCamera(path)}
+            >
+              Use This Camera
+            </button>
+          )}
+        </div>
+      )}
 
       {sections.map((section, idx) => (
         <PropertySection key={`${section.title}-${idx}`} section={section} />

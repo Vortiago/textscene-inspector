@@ -3,18 +3,21 @@
  * Wrapped in a transform group; light points at a target placed at local -Z.
  */
 
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
+import * as THREE from 'three';
 import type { DirectionalLight3DProperties } from '../../../../nodes/3d/lights/directionallight3d/types';
 import type { NodeComponentProps } from '../../../NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../nodeTransform';
 import { parseColorToHex } from '../../../../utils/colorParser';
 import { LIGHT_INTENSITY_SCALE, DEFAULT_SHADOW_BIAS } from '../../../../utils/lightConstants';
 import { LightWithTarget } from '../lightShared';
+import { DirectionalLightGizmo } from '../lightHelpers';
 
 const SHADOW_FRUSTUM_HALF = 20;
 
 export function DirectionalLight3D({ node }: NodeComponentProps) {
   const properties = node.properties as DirectionalLight3DProperties;
+  const lightRef = useRef<THREE.DirectionalLight | null>(null);
   const { position, rotation, scale } = useMemo(
     () => transformFromNode3DProperties(properties),
     [properties]
@@ -33,19 +36,23 @@ export function DirectionalLight3D({ node }: NodeComponentProps) {
       rotation={rotation}
       scale={scale}
       renderLight={(target) => (
-        <directionalLight
-          color={color}
-          intensity={intensity}
-          castShadow={properties.shadow_enabled}
-          shadow-bias={bias}
-          shadow-camera-near={0.1}
-          shadow-camera-far={shadowFar}
-          shadow-camera-left={-SHADOW_FRUSTUM_HALF}
-          shadow-camera-right={SHADOW_FRUSTUM_HALF}
-          shadow-camera-top={SHADOW_FRUSTUM_HALF}
-          shadow-camera-bottom={-SHADOW_FRUSTUM_HALF}
-          target={target}
-        />
+        <>
+          <directionalLight
+            ref={lightRef}
+            color={color}
+            intensity={intensity}
+            castShadow={properties.shadow_enabled}
+            shadow-bias={bias}
+            shadow-camera-near={0.1}
+            shadow-camera-far={shadowFar}
+            shadow-camera-left={-SHADOW_FRUSTUM_HALF}
+            shadow-camera-right={SHADOW_FRUSTUM_HALF}
+            shadow-camera-top={SHADOW_FRUSTUM_HALF}
+            shadow-camera-bottom={-SHADOW_FRUSTUM_HALF}
+            target={target}
+          />
+          <DirectionalLightGizmo lightRef={lightRef} />
+        </>
       )}
     />
   );

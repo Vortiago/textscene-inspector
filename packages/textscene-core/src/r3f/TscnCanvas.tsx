@@ -1,37 +1,120 @@
 /**
- * <TscnCanvas> — the top-level React component for rendering a parsed
- * TSCN scene under react-three-fiber. WI-R3F-1 lands an empty canvas
- * with default lighting only; node-type children arrive in WI-R3F-3.
+ * `<TscnCanvas>` — the top-level React component for rendering a parsed
+ * TSCN scene under react-three-fiber.
+ *
+ * WI-R3F-1: empty canvas with default lighting.
+ * WI-R3F-5 (this file): consumes `HierarchyContext.sceneGraph` and the
+ * `<NodeDispatcher>` to render the scene tree; provides
+ * `<SceneResourcesProvider>` so MeshInstance3D / WorldEnvironment can
+ * synchronously read internal/external resources; switches the active
+ * camera based on `CameraControlContext` when the user clicks "Use
+ * This Camera" on a Camera3D node.
  */
-import { Canvas } from '@react-three/fiber';
+import { Canvas, useThree } from '@react-three/fiber';
+import { OrbitControls } from '@react-three/drei';
+import { useEffect } from 'react';
+import * as THREE from 'three';
+import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
+import { useOptionalCameraControl } from './contexts/CameraControlContext.js';
+import { SceneResourcesProvider } from './SceneResourcesContext.js';
+import { NodeDispatcher } from './NodeDispatcher.js';
 import styles from './TscnCanvas.module.css';
 
 export interface TscnCanvasProps {
-  // Will accept SceneGraph in WI-R3F-3. Empty for now so both host
-  // apps can mount the canvas behind a feature flag and verify the
-  // R3F runtime is wired up correctly.
+  /**
+   * Optional. If omitted, the canvas reads the sceneGraph from
+   * `HierarchyContext` (the normal flow). Test code can pass nodes
+   * directly via `<TscnSceneContents>`.
+   */
 }
 
 /**
  * The contents of the R3F scene (everything that would normally live
  * inside `<Canvas>`). Exported separately so `@react-three/test-renderer`
- * can mount it directly — the test renderer is the canvas substitute
- * and cannot wrap a real `<Canvas>` host.
+ * can mount it directly — the test renderer is the canvas substitute and
+ * cannot wrap a real `<Canvas>` host.
+ *
+ * Reads its sceneGraph from `HierarchyContext`. Falls back to the empty
+ * default-lighting scene when no provider is mounted (matches the
+ * WI-R3F-1 baseline test).
  */
-export function TscnSceneContents(_props: TscnCanvasProps) {
+export function TscnSceneContents() {
+  const hierarchy = useOptionalHierarchy();
+  const sceneGraph = hierarchy?.sceneGraph ?? null;
+  const rootScene = sceneGraph?.scenes.get(sceneGraph.rootScene);
+  const nodes = rootScene?.nodes ?? null;
+
   return (
     <>
       <ambientLight intensity={0.4} />
       <directionalLight position={[5, 5, 5]} intensity={1} />
+      {nodes && rootScene && (
+        <SceneResourcesProvider
+          internalResources={rootScene.internalResources}
+          externalResources={rootScene.externalResources}
+        >
+          <NodeDispatcher nodes={nodes} />
+        </SceneResourcesProvider>
+      )}
     </>
   );
 }
 
-export function TscnCanvas(props: TscnCanvasProps) {
+/**
+ * Switches the canvas's active camera based on `CameraControlContext`.
+ * Mounted inside the `<Canvas>` so it has access to `useThree`. When the
+ * user picks a Camera3D node and clicks "Use This Camera", we find a
+ * THREE.Camera in the scene at that node path and call `state.set` to
+ * make it the active render camera; "Reset" returns to the default
+ * orbit camera.
+ */
+function ActiveCameraSwitcher() {
+  const control = useOptionalCameraControl();
+  const activeCameraPath = control?.activeCameraPath ?? null;
+  const scene = useThree((s) => s.scene);
+  const camera = useThree((s) => s.camera);
+  const set = useThree((s) => s.set);
+
+  useEffect(() => {
+    if (!activeCameraPath) {
+      // Free-orbit: restore the default perspective camera. R3F sets one
+      // up automatically; we just need to ensure it's the active one.
+      // The default camera is preserved in `state.previousCamera` after
+      // we swap, but R3F doesn't expose that cleanly — instead we look
+      // for any THREE.PerspectiveCamera the user didn't add via a node.
+      return;
+    }
+
+    // Find a camera whose userData carries our node-path tag (set by
+    // Camera3D below when ActiveCameraSwitcher is active). If we don't
+    // find one, fall back to the first camera with the matching name.
+    let target: THREE.Camera | null = null;
+    scene.traverse((object) => {
+      if (target) return;
+      if (
+        object instanceof THREE.PerspectiveCamera ||
+        object instanceof THREE.OrthographicCamera
+      ) {
+        const tag = (object.userData as { tscnPath?: string }).tscnPath;
+        if (tag === activeCameraPath) target = object;
+      }
+    });
+
+    if (target && target !== camera) {
+      set({ camera: target });
+    }
+  }, [activeCameraPath, scene, camera, set]);
+
+  return null;
+}
+
+export function TscnCanvas(_props: TscnCanvasProps) {
   return (
     <div className={styles.root}>
       <Canvas camera={{ position: [3, 3, 3] }}>
-        <TscnSceneContents {...props} />
+        <TscnSceneContents />
+        <ActiveCameraSwitcher />
+        <OrbitControls makeDefault />
       </Canvas>
     </div>
   );

@@ -90,3 +90,23 @@
 .warningText strong {
   color: #ffe599;
 }
+
+.actionButton {
+  display: inline-block;
+  padding: 0.375rem 0.75rem;
+  background: #3e3e42;
+  border: 1px solid #555;
+  color: #fff;
+  border-radius: 3px;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.actionButton:hover {
+  background: #555;
+}
+
+.actionButton:focus-visible {
+  outline: 2px solid #6cf;
+  outline-offset: 1px;
+}

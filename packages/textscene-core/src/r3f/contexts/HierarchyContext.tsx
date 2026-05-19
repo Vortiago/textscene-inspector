@@ -36,3 +36,12 @@ export function useHierarchy(): HierarchyContextValue {
   }
   return value;
 }
+
+/**
+ * Optional variant of `useHierarchy` — returns `null` when no provider
+ * is mounted instead of throwing. Used by `<TscnSceneContents>` so the
+ * canvas degrades gracefully in standalone test usage.
+ */
+export function useOptionalHierarchy(): HierarchyContextValue | null {
+  return useContext(HierarchyContext);
+}

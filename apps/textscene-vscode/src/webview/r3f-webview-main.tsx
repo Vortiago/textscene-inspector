@@ -1,17 +1,131 @@
 /**
- * R3F webview entry point. Mounted by webview.ts when the
- * `textscene.useR3F` workspace setting is true. The HTML scaffold gives
- * us a `#r3f-root` div in place of the imperative tree-viewer + canvas
- * layout. Until WI-R3F-3 / WI-R3F-4 land node components and the React
- * panel UI, this renders only the empty <TscnCanvas>.
+ * R3F webview entry point. Mounted by `webview.ts` when the
+ * `textscene.useR3F` workspace setting is true.
+ *
+ * Listens for `loadTscn` messages from the extension host (sent on
+ * panel-open and on file-save hot-reload). When the user double-clicks
+ * a node in the scene-tree, we forward a `jumpToNode` postMessage back
+ * to the host so the editor can jump to the source line.
+ *
+ * Single-panel scope: this React tree owns its own `<TscnPreviewShell>`
+ * which provides Selection / Hierarchy / CameraControl contexts. Two
+ * panels open simultaneously will each instantiate their own webview,
+ * each running this file independently — no shared state.
  */
+import { useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { TscnCanvas } from '@textscene/core';
+import { TscnPreviewShell, setLogAdapter, type LogAdapter } from '@textscene/core';
+import type { TscnNode } from '@textscene/core';
+
+declare const acquireVsCodeApi: () => {
+  postMessage: (message: unknown) => void;
+  getState: () => unknown;
+  setState: (state: unknown) => void;
+};
+
+interface VsCodeApi {
+  postMessage: (message: unknown) => void;
+  getState: () => unknown;
+  setState: (state: unknown) => void;
+}
+
+class WebviewLogAdapter implements LogAdapter {
+  constructor(private readonly vscode: VsCodeApi) {}
+  trace(message: string, ...args: unknown[]): void {
+    this.vscode.postMessage({ type: 'log', level: 'trace', message, args });
+  }
+  debug(message: string, ...args: unknown[]): void {
+    this.vscode.postMessage({ type: 'log', level: 'debug', message, args });
+  }
+  info(message: string, ...args: unknown[]): void {
+    this.vscode.postMessage({ type: 'log', level: 'info', message, args });
+  }
+  warn(message: string, ...args: unknown[]): void {
+    this.vscode.postMessage({ type: 'log', level: 'warn', message, args });
+  }
+  error(message: string, ...args: unknown[]): void {
+    this.vscode.postMessage({ type: 'log', level: 'error', message, args });
+  }
+}
+
+interface IncomingLoadMessage {
+  type: 'loadTscn';
+  content: string;
+}
+
+interface IncomingUpdateMessage {
+  type: 'incrementalUpdate';
+  data: {
+    changes: unknown[];
+    sceneData: { rawText?: string };
+  };
+}
+
+type IncomingMessage = IncomingLoadMessage | IncomingUpdateMessage;
+
+function R3FWebviewApp({ vscode }: { vscode: VsCodeApi }) {
+  const [content, setContent] = useState<string>('');
+
+  useEffect(() => {
+    function onMessage(event: MessageEvent) {
+      const message = event.data as IncomingMessage | undefined;
+      if (!message) return;
+      if (message.type === 'loadTscn') {
+        setContent(message.content);
+      } else if (message.type === 'incrementalUpdate') {
+        // For now, treat incremental updates as a full reload because
+        // React reconciliation makes incremental computation redundant.
+        // The host still ships a `sceneData.rawText` payload when
+        // available; if not, this is a no-op and the next loadTscn
+        // wins.
+        const raw = message.data.sceneData?.rawText;
+        if (typeof raw === 'string' && raw.length > 0) {
+          setContent(raw);
+        }
+      }
+    }
+
+    window.addEventListener('message', onMessage);
+    return () => {
+      window.removeEventListener('message', onMessage);
+    };
+  }, []);
+
+  const panelId = useMemo(
+    () => `vscode-${Math.random().toString(36).slice(2, 10)}`,
+    []
+  );
+
+  const handleNodeReveal = (path: string, node: TscnNode) => {
+    vscode.postMessage({
+      type: 'jumpToNode',
+      nodeName: node.name,
+      path,
+    });
+  };
+
+  return (
+    <TscnPreviewShell
+      panelId={panelId}
+      content={content}
+      onNodeReveal={handleNodeReveal}
+    />
+  );
+}
 
 export function mountR3FWebview(): void {
   const root = document.getElementById('r3f-root');
   if (!root) {
     throw new Error('R3F webview HTML is missing #r3f-root container');
   }
-  createRoot(root).render(<TscnCanvas />);
+  const vscode: VsCodeApi = acquireVsCodeApi();
+  setLogAdapter(new WebviewLogAdapter(vscode));
+
+  // Make the host fill the viewport so the canvas + sidebar layout
+  // works inside the webview's full-bleed body.
+  root.style.width = '100vw';
+  root.style.height = '100vh';
+  root.style.display = 'block';
+
+  createRoot(root).render(<R3FWebviewApp vscode={vscode} />);
 }

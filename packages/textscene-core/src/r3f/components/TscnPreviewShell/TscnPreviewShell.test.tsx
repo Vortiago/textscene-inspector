@@ -108,4 +108,26 @@ describe('<TscnPreviewShell>', () => {
     await userEvent.dblClick(screen.getByText('Root'));
     expect(onNodeReveal).toHaveBeenCalledWith('Root', expect.objectContaining({ name: 'Root' }));
   });
+
+  it('preserves the same TscnCanvas instance across content changes (hot-reload camera persistence)', () => {
+    // Camera state is owned by the THREE.Camera object inside <Canvas>.
+    // The shell uses useMemo on `content` to re-parse, but the tree
+    // structure (the <TscnCanvas> child) keeps the same React identity
+    // across renders — so OrbitControls camera state survives a content
+    // swap. This test verifies the canvas stub is the SAME DOM node
+    // before and after the swap, which is the load-bearing property:
+    // React's reconciler reuses the same fiber.
+    const updated = MINIMAL_TSCN.replace('Root', 'Root_changed');
+    const { rerender } = render(
+      <TscnPreviewShell panelId="hot-reload" content={MINIMAL_TSCN} />
+    );
+    const stubBefore = screen.getByTestId('canvas-stub');
+
+    rerender(<TscnPreviewShell panelId="hot-reload" content={updated} />);
+    const stubAfter = screen.getByTestId('canvas-stub');
+
+    // Same DOM node = React reused the fiber = the real <Canvas>'s
+    // camera ref would have been preserved too.
+    expect(stubAfter).toBe(stubBefore);
+  });
 });

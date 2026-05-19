@@ -1,14 +1,31 @@
 export { TscnCanvas, TscnSceneContents, type TscnCanvasProps } from './TscnCanvas.js';
+export { NodeDispatcher, type NodeDispatcherProps } from './NodeDispatcher.js';
+export { nodeComponentRegistry } from './NodeComponentRegistry.js';
+export type {
+  NodeComponent,
+  NodeComponentProps,
+  NodeComponentRegistration,
+} from './NodeComponentRegistry.js';
+// Ensure all node-type components self-register on first import.
+import './nodes/index.js';
 
 export {
   SelectionProvider,
   useSelection,
   HierarchyProvider,
   useHierarchy,
+  CameraControlProvider,
+  useCameraControl,
+  useOptionalCameraControl,
+  NodePathProvider,
+  useNodePath,
   type SelectionContextValue,
   type SelectionProviderProps,
   type HierarchyContextValue,
   type HierarchyProviderProps,
+  type CameraControlContextValue,
+  type CameraControlProviderProps,
+  type NodePathProviderProps,
 } from './contexts/index.js';
 
 export {

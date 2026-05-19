@@ -1,17 +1,21 @@
 /**
  * <OmniLight3D> — Godot omnidirectional point light. Emits in all directions
- * with attenuation; no target required.
+ * with attenuation; no target required. Wrapped in a transform group so the
+ * helper gizmo (a wireframe sphere) follows the light.
  */
 
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
+import type * as THREE from 'three';
 import type { OmniLight3DProperties } from '../../../../nodes/3d/lights/omnilight3d/types';
 import type { NodeComponentProps } from '../../../NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../nodeTransform';
 import { parseColorToHex } from '../../../../utils/colorParser';
 import { LIGHT_INTENSITY_SCALE, DEFAULT_SHADOW_BIAS } from '../../../../utils/lightConstants';
+import { PointLightGizmo } from '../lightHelpers';
 
 export function OmniLight3D({ node }: NodeComponentProps) {
   const properties = node.properties as OmniLight3DProperties;
+  const lightRef = useRef<THREE.PointLight | null>(null);
   const { position, rotation, scale } = useMemo(
     () => transformFromNode3DProperties(properties),
     [properties]
@@ -23,19 +27,19 @@ export function OmniLight3D({ node }: NodeComponentProps) {
     : DEFAULT_SHADOW_BIAS.OMNI;
 
   return (
-    <pointLight
-      name={node.name}
-      position={position}
-      rotation={rotation}
-      scale={scale}
-      color={color}
-      intensity={intensity}
-      distance={properties.omni_range}
-      decay={properties.omni_attenuation}
-      castShadow={properties.shadow_enabled}
-      shadow-bias={bias}
-      shadow-camera-near={0.5}
-      shadow-camera-far={properties.omni_range}
-    />
+    <group name={node.name} position={position} rotation={rotation} scale={scale}>
+      <pointLight
+        ref={lightRef}
+        color={color}
+        intensity={intensity}
+        distance={properties.omni_range}
+        decay={properties.omni_attenuation}
+        castShadow={properties.shadow_enabled}
+        shadow-bias={bias}
+        shadow-camera-near={0.5}
+        shadow-camera-far={properties.omni_range}
+      />
+      <PointLightGizmo lightRef={lightRef} />
+    </group>
   );
 }

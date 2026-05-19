@@ -13,11 +13,13 @@ import type { Camera3DProperties } from '../../../nodes/3d/camera3d/types';
 import { ProjectionMode } from '../../../nodes/3d/camera3d/types';
 import type { NodeComponentProps } from '../../NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../nodeTransform';
+import { useNodePath } from '../../contexts/NodePathContext';
 
 const DEFAULT_ASPECT = 16 / 9;
 
 export function Camera3D({ node, children }: NodeComponentProps) {
   const properties = node.properties as Camera3DProperties;
+  const tscnPath = useNodePath() ?? node.name;
   const { position, rotation, scale } = useMemo(
     () => transformFromNode3DProperties(properties),
     [properties]
@@ -30,6 +32,7 @@ export function Camera3D({ node, children }: NodeComponentProps) {
     return (
       <OrthographicCamera3D
         name={node.name}
+        tscnPath={tscnPath}
         position={position}
         rotation={rotation}
         scale={scale}
@@ -46,6 +49,7 @@ export function Camera3D({ node, children }: NodeComponentProps) {
   return (
     <PerspectiveCamera3D
       name={node.name}
+      tscnPath={tscnPath}
       position={position}
       rotation={rotation}
       scale={scale}
@@ -60,6 +64,7 @@ export function Camera3D({ node, children }: NodeComponentProps) {
 
 interface PerspectiveCamera3DProps {
   name: string;
+  tscnPath: string;
   position: [number, number, number];
   rotation: [number, number, number];
   scale: [number, number, number];
@@ -69,8 +74,14 @@ interface PerspectiveCamera3DProps {
   children?: React.ReactNode;
 }
 
-function PerspectiveCamera3D({ name, position, rotation, scale, fov, near, far, children }: PerspectiveCamera3DProps) {
+function PerspectiveCamera3D({ name, tscnPath, position, rotation, scale, fov, near, far, children }: PerspectiveCamera3DProps) {
   const cameraRef = useRef<THREE.PerspectiveCamera>(null);
+  useEffect(() => {
+    if (cameraRef.current) {
+      // Tag the camera with its TSCN path so ActiveCameraSwitcher can find it.
+      cameraRef.current.userData.tscnPath = tscnPath;
+    }
+  }, [tscnPath]);
   return (
     <>
       <perspectiveCamera
@@ -93,6 +104,7 @@ function PerspectiveCamera3D({ name, position, rotation, scale, fov, near, far, 
 
 interface OrthographicCamera3DProps {
   name: string;
+  tscnPath: string;
   position: [number, number, number];
   rotation: [number, number, number];
   scale: [number, number, number];
@@ -102,10 +114,15 @@ interface OrthographicCamera3DProps {
   children?: React.ReactNode;
 }
 
-function OrthographicCamera3D({ name, position, rotation, scale, size, near, far, children }: OrthographicCamera3DProps) {
+function OrthographicCamera3D({ name, tscnPath, position, rotation, scale, size, near, far, children }: OrthographicCamera3DProps) {
   const cameraRef = useRef<THREE.OrthographicCamera>(null);
   const halfHeight = size;
   const halfWidth = size * DEFAULT_ASPECT;
+  useEffect(() => {
+    if (cameraRef.current) {
+      cameraRef.current.userData.tscnPath = tscnPath;
+    }
+  }, [tscnPath]);
   return (
     <>
       <orthographicCamera
