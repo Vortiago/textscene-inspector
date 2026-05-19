@@ -51,6 +51,9 @@ temp/
 
 #Claude
 settings.local.json
+.claude/worktrees/
+.claude/*.log
+.claude/*.log.err
 
 # Test fixtures copied to web app during build
 apps/textscene-web/public/fixtures/
