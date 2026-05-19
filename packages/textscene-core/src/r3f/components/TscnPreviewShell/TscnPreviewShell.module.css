@@ -5,45 +5,59 @@
  * selectors get hashed). All sibling component modules consume these
  * vars; this file is the single source of truth.
  *
- * Wave 0 freezes the previously-hardcoded hex values verbatim under the
- * `--tsi-*` names recommended by `docs/UI-IMPROVEMENTS.md` §5.1. Value
- * tweaks (brighter accent etc.) land in later waves as one-line edits.
+ * Wave 0 froze the previously-hardcoded hex values verbatim under the
+ * `--tsi-*` names recommended by `docs/UI-IMPROVEMENTS.md` §5.1.
+ *
+ * UI #5 — VS Code theme integration. Every token whose VS Code analog
+ * carries semantic weight now reads `var(--vscode-X, <our-hex>)`. In a
+ * VS Code webview the host variables resolve (light + dark + high-
+ * contrast themes all honored). In the standalone web app the
+ * `--vscode-*` vars are undefined, so the fallback kicks in and the
+ * appearance is byte-identical to the post-wave-0 baseline.
+ *
+ * Tokens *without* host equivalents — viewport canvas tone, type-badge
+ * palette, instance/value accents, radii, spacing, typography — stay
+ * as raw values. Those are first-party design choices, not theme
+ * surfaces.
  */
 :root {
-  /* Surfaces */
+  /* Surfaces — host backgrounds where applicable. */
   --tsi-bg-canvas:     #181818;
-  --tsi-bg-shell:      #1e1e1e;
-  --tsi-bg-panel:      #1a1a1a;
-  --tsi-bg-elevated:   #242424;
-  --tsi-bg-hover:      #2a2d2e;
-  --tsi-bg-active:     #3e3e42;
+  --tsi-bg-shell:      var(--vscode-editor-background, #1e1e1e);
+  --tsi-bg-panel:      var(--vscode-sideBar-background, #1a1a1a);
+  --tsi-bg-elevated:   var(--vscode-input-background, #242424);
+  --tsi-bg-hover:      var(--vscode-list-hoverBackground, #2a2d2e);
+  --tsi-bg-active:     var(--vscode-list-activeSelectionBackground, #3e3e42);
 
-  /* Foreground (text) */
-  --tsi-fg-strong:     #f0f0f0;
-  --tsi-fg-default:    #ddd;
-  --tsi-fg-on-control: #ccc;   /* labels on buttons/icons */
-  --tsi-fg-muted:      #888;
+  /* Foreground (text) — host editor / description foregrounds. */
+  --tsi-fg-strong:     var(--vscode-foreground, #f0f0f0);
+  --tsi-fg-default:    var(--vscode-foreground, #ddd);
+  --tsi-fg-on-control: var(--vscode-button-foreground, #ccc);
+  --tsi-fg-muted:      var(--vscode-descriptionForeground, #888);
   --tsi-fg-faint:      #555;
 
-  /* Borders */
-  --tsi-border:        #2a2d2e;
-  --tsi-border-strong: #3e3e42;
+  /* Borders — host panel + widget rules. */
+  --tsi-border:        var(--vscode-panel-border, #2a2d2e);
+  --tsi-border-strong: var(--vscode-widget-border, #3e3e42);
 
-  /* Accent / selection */
-  --tsi-accent:        #2a8af6;   /* focus rings, selected-row indicator bar */
-  --tsi-accent-soft:   #173d6b;   /* selected-row background */
-  --tsi-accent-fg:     #e7f1ff;   /* text on selected row */
-  --tsi-focus-ring:    #6cf;
+  /* Accent / selection. The selected-row triplet maps to VS Code's list
+     selection trio so a clicked node in our tree looks like a clicked
+     row anywhere else in the VS Code chrome. */
+  --tsi-accent:        var(--vscode-focusBorder, #2a8af6);
+  --tsi-accent-soft:   var(--vscode-list-activeSelectionBackground, #173d6b);
+  --tsi-accent-fg:     var(--vscode-list-activeSelectionForeground, #e7f1ff);
+  --tsi-focus-ring:    var(--vscode-focusBorder, #6cf);
 
-  /* Semantic */
-  --tsi-danger:        #f04747;
+  /* Semantic — error tone from host; the deep `*-bg` shades have no
+     direct VS Code analog and stay as our values. */
+  --tsi-danger:        var(--vscode-errorForeground, #f04747);
   --tsi-danger-bg:     #5a1d1d;
   --tsi-danger-border: #8a2929;
   --tsi-danger-fg:     #ffd6d6;
   --tsi-warning:       #ffc107;
   --tsi-warning-bg:    #3d3319;
   --tsi-warning-fg:    #ffd966;
-  --tsi-success:       #4ec9b0;
+  --tsi-success:       var(--vscode-terminal-ansiGreen, #4ec9b0);
 
   /* Per-type accent — wired to existing badge palette in wave 0;
      later waves consolidate into the per-type strategy in §5.5. */
