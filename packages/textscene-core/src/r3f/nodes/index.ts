@@ -18,5 +18,6 @@ import './lights/spotlight3d';
 import './worldenvironment';
 import './label3d';
 import './sprite3d';
+import './audio/audiostreamplayer3d';
 
 export { GenericNodeFallback } from './generic-node-fallback';

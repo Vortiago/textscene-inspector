@@ -206,6 +206,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Audio Stream Player",
+    "file": "unit-audio-stream-player.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Label3d",
     "file": "unit-label3d.tscn",
     "category": "Other"
