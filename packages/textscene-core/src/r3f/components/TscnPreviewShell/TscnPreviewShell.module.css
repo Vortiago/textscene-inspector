@@ -30,9 +30,9 @@
   --tsi-border-strong: #3e3e42;
 
   /* Accent / selection */
-  --tsi-accent:        #094771;        /* selected row bg today; brighter in wave 1 */
-  --tsi-accent-hover:  #0d5a8c;
-  --tsi-accent-fg:     #ddd;
+  --tsi-accent:        #2a8af6;   /* focus rings, selected-row indicator bar */
+  --tsi-accent-soft:   #173d6b;   /* selected-row background */
+  --tsi-accent-fg:     #e7f1ff;   /* text on selected row */
   --tsi-focus-ring:    #6cf;
 
   /* Semantic */
