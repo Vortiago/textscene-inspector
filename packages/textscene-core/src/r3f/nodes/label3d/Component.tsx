@@ -9,9 +9,11 @@
  * marker group so the scene continues to function.
  */
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
+import { useFrame } from '@react-three/fiber';
 import type { Label3DProperties } from '../../../nodes/3d/label3d/types';
+import { BillboardMode } from '../../../nodes/3d/label3d/types';
 import type { Color } from '../../../utils/colorParser';
 import type { NodeComponentProps } from '../../NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../nodeTransform';
@@ -48,6 +50,28 @@ export function Label3D({ node }: NodeComponentProps) {
     };
   }, [built]);
 
+  const meshRef = useRef<THREE.Mesh | null>(null);
+
+  // WI-R3F-19 parity-audit fix: the pre-migration imperative renderer
+  // updated each Label3D's rotation per-frame via `TscnRenderer.updateLabels()`.
+  // We restore that behaviour with `useFrame`:
+  //   BILLBOARD_DISABLED — no-op.
+  //   BILLBOARD_ENABLED  — copy camera.quaternion (full look-at).
+  //   BILLBOARD_FIXED_Y  — yaw-only look-at (keep world-up aligned).
+  useFrame(({ camera }) => {
+    const mesh = meshRef.current;
+    if (!mesh) return;
+    const mode = properties.billboard;
+    if (mode === BillboardMode.BILLBOARD_DISABLED) return;
+    if (mode === BillboardMode.BILLBOARD_FIXED_Y) {
+      const cp = camera.position;
+      const mp = mesh.position;
+      mesh.rotation.set(0, Math.atan2(cp.x - mp.x, cp.z - mp.z), 0);
+      return;
+    }
+    mesh.quaternion.copy(camera.quaternion);
+  });
+
   if (!built) {
     return <group name={node.name} position={position} rotation={rotation} scale={scale} />;
   }
@@ -60,11 +84,12 @@ export function Label3D({ node }: NodeComponentProps) {
 
   return (
     <mesh
+      ref={meshRef}
       name={node.name}
       position={position}
       rotation={rotation}
       scale={scale}
-      userData={{ billboardMode: properties.billboard }}
+      userData={{ billboardMode: properties.billboard, isLabel3D: true }}
     >
       <planeGeometry args={[built.width, built.height]} />
       <meshBasicMaterial

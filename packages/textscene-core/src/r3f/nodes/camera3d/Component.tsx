@@ -25,6 +25,25 @@ export function Camera3D({ node, children }: NodeComponentProps) {
     [properties]
   );
 
+  // WI-R3F-19 parity-audit fix: `h_offset` / `v_offset` shift the camera
+  // along its LOCAL right / up vectors after the base transform is
+  // applied. The pre-migration imperative renderer used
+  // `addScaledVector(localX, h)` / `addScaledVector(localY, v)` — equivalent
+  // to mixing the unnormalised basis_x / basis_y columns into the
+  // world-space position.
+  const offsetPosition = useMemo<[number, number, number]>(() => {
+    const t = properties.transform;
+    if (!t) return position;
+    const h = properties.h_offset ?? 0;
+    const v = properties.v_offset ?? 0;
+    if (h === 0 && v === 0) return position;
+    return [
+      position[0] + t.basis_x.x * h + t.basis_y.x * v,
+      position[1] + t.basis_x.y * h + t.basis_y.y * v,
+      position[2] + t.basis_x.z * h + t.basis_y.z * v,
+    ];
+  }, [position, properties.transform, properties.h_offset, properties.v_offset]);
+
   const safeNear = Math.max(0.001, properties.near);
   const safeFar = Math.max(safeNear + 0.1, properties.far);
 
@@ -33,7 +52,7 @@ export function Camera3D({ node, children }: NodeComponentProps) {
       <OrthographicCamera3D
         name={node.name}
         tscnPath={tscnPath}
-        position={position}
+        position={offsetPosition}
         rotation={rotation}
         scale={scale}
         size={properties.size}
@@ -51,7 +70,7 @@ export function Camera3D({ node, children }: NodeComponentProps) {
     <PerspectiveCamera3D
       name={node.name}
       tscnPath={tscnPath}
-      position={position}
+      position={offsetPosition}
       rotation={rotation}
       scale={scale}
       fov={properties.fov}

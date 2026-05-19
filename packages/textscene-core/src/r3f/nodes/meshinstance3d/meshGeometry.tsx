@@ -86,18 +86,7 @@ export function MeshGeometry({ resource }: MeshGeometryProps) {
       );
     }
     case 'PrismMesh':
-      return (
-        <cylinderGeometry
-          args={[
-            parsed.properties.size.x / 2,
-            parsed.properties.size.x / 2,
-            parsed.properties.size.y,
-            3,
-            Math.max(1, parsed.properties.subdivideHeight),
-            false,
-          ]}
-        />
-      );
+      return <PrismMeshGeometry properties={parsed.properties} />;
     default:
       return null;
   }
@@ -146,6 +135,13 @@ function PlaneMeshGeometry({ properties }: { properties: PlaneMeshProperties }) 
         properties.centerOffset.z
       );
     }
+    // WI-R3F-19 parity-audit fix: `flip_faces` reverses winding so the
+    // surface is visible from the opposite side. The pre-migration
+    // imperative renderer used `geometry.scale(-1, 1, 1); computeVertexNormals()`.
+    if (properties.flipFaces) {
+      geom.scale(-1, 1, 1);
+      geom.computeVertexNormals();
+    }
     return geom;
   }, [
     properties.size.x,
@@ -156,7 +152,37 @@ function PlaneMeshGeometry({ properties }: { properties: PlaneMeshProperties }) 
     properties.centerOffset?.x,
     properties.centerOffset?.y,
     properties.centerOffset?.z,
+    properties.flipFaces,
   ]);
+
+  return <primitive object={geometry} attach="geometry" />;
+}
+
+/**
+ * PrismMesh approximates Godot's three-sided prism as a 3-radial-segment
+ * cylinder. Godot orients the triangular face with a vertex at +X
+ * (azimuth 0); three.js's CylinderGeometry's first vertex sits at the
+ * first edge, giving an off-by-30° orientation. The pre-migration
+ * imperative renderer rotated the geometry by `π/6` around Y to align,
+ * and this restores parity (WI-R3F-19).
+ */
+function PrismMeshGeometry({
+  properties,
+}: {
+  properties: ReturnType<typeof parsePrismMesh>;
+}) {
+  const geometry = useMemo(() => {
+    const geom = new THREE.CylinderGeometry(
+      properties.size.x / 2,
+      properties.size.x / 2,
+      properties.size.y,
+      3,
+      Math.max(1, properties.subdivideHeight),
+      false
+    );
+    geom.rotateY(Math.PI / 6);
+    return geom;
+  }, [properties.size.x, properties.size.y, properties.subdivideHeight]);
 
   return <primitive object={geometry} attach="geometry" />;
 }

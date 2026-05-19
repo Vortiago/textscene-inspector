@@ -47,6 +47,7 @@ const TEXTURE_PROPERTIES = [
   'roughness_texture',
   'metallic_texture',
   'emission_texture',
+  'ao_texture',
 ] as const;
 
 export function MeshInstance3D({ node }: NodeComponentProps) {
@@ -63,10 +64,15 @@ export function MeshInstance3D({ node }: NodeComponentProps) {
     [properties.mesh, internalResources]
   );
 
-  const materialSubResource = useMemo(
-    () => resolveMaterialSubResource(properties, internalResources),
+  // WI-R3F-19 parity-audit fix: when multiple `surface_material_override/N`
+  // slots are populated (e.g. a GLB or multi-surface mesh), build an
+  // array of material SubResources so each surface gets its own slot.
+  // Single-surface meshes return a length-1 array.
+  const materialSubResources = useMemo(
+    () => resolveMaterialSubResources(properties, internalResources),
     [properties, internalResources]
   );
+  const materialSubResource = materialSubResources[0] ?? undefined;
 
   const materialScalars = useMemo(
     () =>
@@ -113,6 +119,13 @@ export function MeshInstance3D({ node }: NodeComponentProps) {
     textureRequests.emission_texture ?? '',
     'Texture2D'
   );
+  // WI-R3F-19 parity-audit fix: `ao_texture` now resolves and wires
+  // through to `material.aoMap`. Was silently dropped because the slot
+  // wasn't in `TEXTURE_PROPERTIES` pre-fix.
+  const aoStatus = useResource<THREE.Texture>(
+    textureRequests.ao_texture ?? '',
+    'Texture2D'
+  );
 
   const textureSlots = {
     albedo_texture: textureRequests.albedo_texture ? albedoStatus : null,
@@ -120,6 +133,7 @@ export function MeshInstance3D({ node }: NodeComponentProps) {
     roughness_texture: textureRequests.roughness_texture ? roughnessStatus : null,
     metallic_texture: textureRequests.metallic_texture ? metallicStatus : null,
     emission_texture: textureRequests.emission_texture ? emissionStatus : null,
+    ao_texture: textureRequests.ao_texture ? aoStatus : null,
   };
 
   // Apply the material's UV transform (`uv1_scale` / `uv1_offset`) to
@@ -152,6 +166,10 @@ export function MeshInstance3D({ node }: NodeComponentProps) {
     () => transformedTexture(textureSlots.emission_texture, uvTransform),
     [textureSlots.emission_texture, uvTransform]
   );
+  const aoMap = useMemo(
+    () => transformedTexture(textureSlots.ao_texture, uvTransform),
+    [textureSlots.ao_texture, uvTransform]
+  );
 
   // If any requested slot resolved to `missing`, surface the FIRST
   // missing path as the placeholder label. Listing more than one would
@@ -167,8 +185,12 @@ export function MeshInstance3D({ node }: NodeComponentProps) {
     return null;
   }, [textureSlots, textureRequests]);
 
-  const castShadow = shadowCastingFlag(properties.castShadow);
-  const visible = properties.visible !== false;
+  // WI-R3F-19 parity-audit fix: cast_shadow mode 2 (DOUBLE_SIDED) sets
+  // material.shadowSide = DoubleSide; mode 3 (SHADOWS_ONLY) keeps the
+  // shadow pass on but hides the mesh from the colour buffer.
+  const shadowFlags = shadowCastingFlags(properties.castShadow);
+  const castShadow = shadowFlags.castShadow;
+  const visible = properties.visible !== false && !shadowFlags.shadowsOnly;
 
   // Unresolved mesh (no mesh, external GLB, missing SubResource): magenta
   // wireframe placeholder.
@@ -232,8 +254,73 @@ export function MeshInstance3D({ node }: NodeComponentProps) {
         roughnessMap={roughnessMap}
         metalnessMap={metalnessMap}
         emissiveMap={emissiveMap}
+        aoMap={aoMap}
+        shadowSide={shadowFlags.shadowSide}
+        // Multi-surface meshes (slot N>0 populated): attach the primary
+        // material at `material-0` so R3F builds an array and the
+        // secondary slots can land at `material-N`. Single-surface meshes
+        // omit `attach` to keep `mesh.material` a singular Material.
+        attach={materialSubResources.length > 1 ? 'material-0' : undefined}
       />
+      {materialSubResources.slice(1).map((subRes, i) => (
+        <SecondarySurfaceMaterial
+          key={`mat-${i + 1}`}
+          attach={`material-${i + 1}`}
+          subResource={subRes}
+          shadowSide={shadowFlags.shadowSide}
+        />
+      ))}
     </mesh>
+  );
+}
+
+interface SecondarySurfaceMaterialProps {
+  attach: string;
+  subResource: TscnInternalResource | undefined;
+  shadowSide?: THREE.Side;
+}
+
+/**
+ * Material attached at `material-N` (N > 0) for multi-surface meshes.
+ * Scalar properties only — texture loading for slots N>0 would require
+ * calling `useResource` from a render-time loop, which violates rules
+ * of hooks. The pre-migration imperative renderer also only fully
+ * supported texture-bearing materials on slot 0; secondary slots
+ * default to scalar-only or default placeholder.
+ */
+function SecondarySurfaceMaterial({
+  attach,
+  subResource,
+  shadowSide,
+}: SecondarySurfaceMaterialProps) {
+  if (!subResource) {
+    return (
+      <meshStandardMaterial
+        attach={attach}
+        color={0xcccccc}
+        metalness={0.3}
+        roughness={0.7}
+        shadowSide={shadowSide ?? null}
+      />
+    );
+  }
+  const scalars = parseStandardMaterial3DScalars(
+    subResource.data as Record<string, string>
+  );
+  return (
+    <meshStandardMaterial
+      attach={attach}
+      color={scalars.color}
+      metalness={scalars.metalness}
+      roughness={scalars.roughness}
+      transparent={scalars.transparent}
+      opacity={scalars.opacity}
+      blending={scalars.blending}
+      side={scalars.side}
+      shadowSide={shadowSide ?? null}
+      emissive={scalars.emissive}
+      emissiveIntensity={scalars.emissiveIntensity}
+    />
   );
 }
 
@@ -244,6 +331,11 @@ interface MaterialSlotProps {
   roughnessMap?: THREE.Texture;
   metalnessMap?: THREE.Texture;
   emissiveMap?: THREE.Texture;
+  aoMap?: THREE.Texture;
+  /** Override for shadow-pass side culling (Godot DOUBLE_SIDED cast_shadow). */
+  shadowSide?: THREE.Side;
+  /** R3F attach key — `material-0` for multi-surface meshes. */
+  attach?: string;
 }
 
 function MaterialSlot({
@@ -253,9 +345,20 @@ function MaterialSlot({
   roughnessMap,
   metalnessMap,
   emissiveMap,
+  aoMap,
+  shadowSide,
+  attach,
 }: MaterialSlotProps) {
   if (!scalars) {
-    return <meshStandardMaterial color={0xcccccc} metalness={0.3} roughness={0.7} />;
+    return (
+      <meshStandardMaterial
+        attach={attach}
+        color={0xcccccc}
+        metalness={0.3}
+        roughness={0.7}
+        shadowSide={shadowSide ?? null}
+      />
+    );
   }
   // normalScale is a THREE.Vector2; we materialize one matching the
   // parsed scalar so the meshStandardMaterial slot picks it up on render.
@@ -272,10 +375,12 @@ function MaterialSlot({
     `${normalMap ? 'n' : '-'}` +
     `${roughnessMap ? 'r' : '-'}` +
     `${metalnessMap ? 'm' : '-'}` +
-    `${emissiveMap ? 'e' : '-'}`;
+    `${emissiveMap ? 'e' : '-'}` +
+    `${aoMap ? 'o' : '-'}`;
   return (
     <meshStandardMaterial
       key={slotKey}
+      attach={attach}
       color={scalars.color}
       metalness={scalars.metalness}
       roughness={scalars.roughness}
@@ -283,12 +388,14 @@ function MaterialSlot({
       opacity={scalars.opacity}
       blending={scalars.blending}
       side={scalars.side}
+      shadowSide={shadowSide ?? null}
       map={albedoMap ?? null}
       normalMap={normalMap ?? null}
       normalScale={normalScale}
       roughnessMap={roughnessMap ?? null}
       metalnessMap={metalnessMap ?? null}
       emissiveMap={emissiveMap ?? null}
+      aoMap={aoMap ?? null}
       emissive={scalars.emissive}
       emissiveIntensity={scalars.emissiveIntensity}
     />
@@ -320,47 +427,49 @@ function resolveMeshSubResource(
   return findSubResource(internalResources, parsed.id);
 }
 
-function resolveMaterialSubResource(
+/**
+ * Resolve the material(s) the mesh should render with. Returns an array
+ * indexed by surface — element 0 always corresponds to surface 0.
+ * Single-surface meshes return a length-1 array; multi-surface meshes
+ * return a length-N array with `undefined` for unpopulated slots (the
+ * caller's SecondarySurfaceMaterial renders a default placeholder).
+ * The first element collapses the legacy fallback chain:
+ *   surface_material_override[0] > material_override > mesh-own.
+ */
+function resolveMaterialSubResources(
   properties: MeshInstance3DProperties,
   internalResources: readonly TscnInternalResource[]
-): TscnInternalResource | undefined {
-  // Precedence: surface_material_override[0] > any other surface slot >
-  // material_override > mesh's own material. Multi-surface meshes can
-  // populate slot N without slot 0; we still render with the first
-  // populated slot as a single-material approximation rather than
-  // falling through to mesh-own.
-  const candidate =
-    pickSurfaceMaterial(properties.surfaceMaterialOverrides) ??
+): Array<TscnInternalResource | undefined> {
+  const overrides = properties.surfaceMaterialOverrides;
+  const surfaceSlots =
+    overrides && overrides.size > 0
+      ? Math.max(...Array.from(overrides.keys()), 0) + 1
+      : 1;
+
+  const slot0Ref =
+    overrides?.get(0) ??
     properties.materialOverride ??
     findMeshOwnMaterial(properties.mesh, internalResources);
-  if (!candidate) return undefined;
 
-  const parsed = parseResourceReference(candidate);
-  if (!parsed || parsed.type !== 'SubResource') return undefined;
-
-  const resource = findSubResource(internalResources, parsed.id);
-  if (!resource || resource.type !== 'StandardMaterial3D') return undefined;
-
-  return resource;
+  const result: Array<TscnInternalResource | undefined> = new Array(surfaceSlots);
+  result[0] = resolveStandardMaterial(slot0Ref, internalResources);
+  for (let i = 1; i < surfaceSlots; i++) {
+    const ref = overrides?.get(i);
+    result[i] = resolveStandardMaterial(ref, internalResources);
+  }
+  return result;
 }
 
-/**
- * Pick the lowest-indexed populated surface material override slot. Slot 0
- * wins when present; otherwise return the next-lowest. Returns undefined
- * when the map is empty.
- */
-function pickSurfaceMaterial(
-  overrides: Map<number, string> | undefined
-): string | undefined {
-  if (!overrides || overrides.size === 0) return undefined;
-  const slot0 = overrides.get(0);
-  if (slot0) return slot0;
-  const sortedSlots = Array.from(overrides.keys()).sort((a, b) => a - b);
-  for (const slot of sortedSlots) {
-    const ref = overrides.get(slot);
-    if (ref) return ref;
-  }
-  return undefined;
+function resolveStandardMaterial(
+  ref: string | undefined,
+  internalResources: readonly TscnInternalResource[]
+): TscnInternalResource | undefined {
+  if (!ref) return undefined;
+  const parsed = parseResourceReference(ref);
+  if (!parsed || parsed.type !== 'SubResource') return undefined;
+  const resource = findSubResource(internalResources, parsed.id);
+  if (!resource || resource.type !== 'StandardMaterial3D') return undefined;
+  return resource;
 }
 
 function findMeshOwnMaterial(
@@ -402,10 +511,31 @@ function collectTextureRequests(
   return out;
 }
 
-function shadowCastingFlag(value: number | undefined): boolean {
-  // Godot enum: 0=OFF, 1=ON, 2=DOUBLE_SIDED, 3=SHADOWS_ONLY.
-  if (value === undefined || value === 0) return false;
-  return true;
+interface ShadowFlags {
+  castShadow: boolean;
+  /** Mesh still casts a shadow but isn't drawn into the colour buffer. */
+  shadowsOnly: boolean;
+  /** Override material.shadowSide so both faces participate in the shadow pass. */
+  shadowSide?: THREE.Side;
+}
+
+/**
+ * Decode Godot's `cast_shadow` enum (0=OFF, 1=ON, 2=DOUBLE_SIDED,
+ * 3=SHADOWS_ONLY) into the three flags the renderer needs. WI-R3F-19
+ * parity-audit fix: previously only the boolean was returned and modes
+ * 2 and 3 collapsed silently to castShadow=true.
+ */
+function shadowCastingFlags(value: number | undefined): ShadowFlags {
+  if (value === undefined || value === 0) {
+    return { castShadow: false, shadowsOnly: false };
+  }
+  if (value === 2) {
+    return { castShadow: true, shadowsOnly: false, shadowSide: THREE.DoubleSide };
+  }
+  if (value === 3) {
+    return { castShadow: true, shadowsOnly: true };
+  }
+  return { castShadow: true, shadowsOnly: false };
 }
 
 export { THREE };

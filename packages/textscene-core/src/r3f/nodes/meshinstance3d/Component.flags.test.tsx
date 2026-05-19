@@ -84,7 +84,7 @@ describe('MeshInstance3D flags (assertions 11–17)', () => {
     expect(mat.color.g).toBe(1);
   });
 
-  it('#14 surface_material_override/1 with slot 0 absent → slot 1 still applied', async () => {
+  it('#14 surface_material_override/1 with slot 0 absent → slot 1 lands at material index 1', async () => {
     const surfaceMap = new Map<number, string>([[1, 'SubResource("Surf1")']]);
     const node = makeNode({
       mesh: 'SubResource("Box_1")',
@@ -94,14 +94,18 @@ describe('MeshInstance3D flags (assertions 11–17)', () => {
       sub('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' }),
       sub('StandardMaterial3D', 'Surf1', { albedo_color: 'Color(1, 1, 0, 1)' }),
     ]);
-    // The current component reads surfaceMaterialOverrides.get(0) and falls
-    // through if absent, so this MAY fall back to mesh-own / default. Asserts
-    // that whichever path is taken, the mesh renders with SOME material.
-    // Higher-fidelity multi-surface support would need an array material.
-    const mat = renderer.scene.findByType('Mesh').instance.material as { color: { r: number; g: number } };
-    // Expect slot 1 material applied (R=1, G=1) — discovers if multi-surface unsupported.
-    expect(mat.color.r).toBe(1);
-    expect(mat.color.g).toBe(1);
+    // WI-R3F-19 multi-surface fix: mesh.material is an array — slot 0
+    // defaults to grey placeholder, slot 1 carries the yellow override.
+    // Each surface gets its own material slot in the array, mirroring
+    // the pre-migration imperative renderer's `materials[N]` semantics.
+    const mesh = renderer.scene.findByType('Mesh').instance as {
+      material: Array<{ color: { r: number; g: number; b: number } }>;
+    };
+    expect(Array.isArray(mesh.material)).toBe(true);
+    expect(mesh.material).toHaveLength(2);
+    expect(mesh.material[1]!.color.r).toBe(1);
+    expect(mesh.material[1]!.color.g).toBe(1);
+    expect(mesh.material[1]!.color.b).toBe(0);
   });
 
   it('#15 visible=false propagates to mesh.visible', async () => {
