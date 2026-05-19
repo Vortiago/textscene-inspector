@@ -31,3 +31,15 @@ export { isBinaryResourceType, stripResPrefix } from './resources/resourceProvid
 // Export R3F components (Phase 14 migration, WI-R3F-1)
 export { TscnCanvas, TscnSceneContents } from './r3f/TscnCanvas';
 export type { TscnCanvasProps } from './r3f/TscnCanvas';
+
+// Export the WI-R3F-2 resource hook + its provider/context
+export { useResource, useResourceLoader, resolveResourcePath } from './resources/useResource';
+export type { ResourceResult, ResourceStatus, ResourceType } from './resources/useResource';
+export {
+  ResourceLoaderContext,
+  ResourceLoaderProvider,
+} from './resources/ResourceLoaderContext';
+export type { ResourceLoaderProviderProps } from './resources/ResourceLoaderContext';
+export { ResourceLoader } from './resources/ResourceLoader';
+export { FileEventBus } from './resources/FileEventBus';
+export type { FileData, FileLoadedHandler, FileFailedHandler } from './resources/FileEventBus';
