@@ -200,3 +200,23 @@ the WI-R3F-5 peak; further reductions would need either:
 This is intentionally documented rather than fixed because each option
 above is a follow-up WI in its own right and the user / team should
 decide which trade-off matches the priority.
+
+### Known limitations
+
+**Web app: content-only hot-reload is not implemented.** When the user
+edits a fixture's TSCN content out-of-band (e.g. via the dev server
+filesystem watcher) the web app does not detect the change. The
+workaround is to re-select the fixture from the dropdown, which
+re-fetches and re-mounts the shell. The VS Code extension does NOT
+share this limitation — there the editor's `onDidSaveTextDocument`
+fires `loadTscn` and the React shell reconciles cleanly.
+
+Fixing this on the web side would mean either:
+1. Subscribing to the Vite HMR `import.meta.hot.on('update')` event
+   when in dev mode, then re-fetching the active fixture, or
+2. Polling the fixture URL with `ETag` / `Last-Modified` and
+   re-fetching on change.
+
+Neither is implemented; deferred to a follow-up WI. The current v1
+flow expects users to edit fixtures via the VS Code extension where
+hot-reload works.

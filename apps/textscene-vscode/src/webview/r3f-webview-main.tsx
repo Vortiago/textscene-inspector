@@ -14,8 +14,16 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { TscnPreviewShell, setLogAdapter, type LogAdapter } from '@textscene/core';
+import {
+  FileEventBus,
+  ResourceLoader,
+  ResourceLoaderProvider,
+  TscnPreviewShell,
+  setLogAdapter,
+  type LogAdapter,
+} from '@textscene/core';
 import type { TscnNode } from '@textscene/core';
+import { WebviewResourceProvider } from './WebviewResourceProvider';
 
 declare const acquireVsCodeApi: () => {
   postMessage: (message: unknown) => void;
@@ -66,6 +74,18 @@ type IncomingMessage = IncomingLoadMessage | IncomingUpdateMessage;
 function R3FWebviewApp({ vscode }: { vscode: VsCodeApi }) {
   const [content, setContent] = useState<string>('');
 
+  // Wire the WI-79 resource pipeline. The extension host services the
+  // provider's `loadResource` calls by responding to `loadResource`
+  // postMessages with the file bytes; the FileEventBus + ResourceLoader
+  // sit between that provider and `useResource` in node components.
+  const loader = useMemo(() => {
+    const provider = new WebviewResourceProvider(vscode);
+    const bus = new FileEventBus(provider);
+    const created = new ResourceLoader(bus);
+    created.setProvider(provider);
+    return created;
+  }, [vscode]);
+
   useEffect(() => {
     function onMessage(event: MessageEvent) {
       const message = event.data as IncomingMessage | undefined;
@@ -113,11 +133,13 @@ function R3FWebviewApp({ vscode }: { vscode: VsCodeApi }) {
   };
 
   return (
-    <TscnPreviewShell
-      panelId={panelId}
-      content={content}
-      onNodeReveal={handleNodeReveal}
-    />
+    <ResourceLoaderProvider loader={loader}>
+      <TscnPreviewShell
+        panelId={panelId}
+        content={content}
+        onNodeReveal={handleNodeReveal}
+      />
+    </ResourceLoaderProvider>
   );
 }
 

@@ -48,6 +48,19 @@ function parseContent(content: string, rootScenePath: string): ParseResult {
   try {
     const parser = new TscnParser();
     const tscnScene = parser.parse(content);
+
+    // The lenient `TscnParser` recovers from most malformed input by
+    // returning whatever nodes it could salvage. If the body had any
+    // text at all but the parser produced zero root nodes, the file is
+    // probably broken — surface that as an error rather than letting
+    // the user stare at "No nodes to display" (WI-R3F-7 / WEB-10).
+    if (tscnScene.nodes.length === 0 && content.trim().length > 0) {
+      return {
+        sceneGraph: null,
+        error: 'Parser could not extract any nodes from the content. The file may be malformed.',
+      };
+    }
+
     const parsedScene = tscnSceneToParsedScene(
       rootScenePath,
       tscnScene.nodes,

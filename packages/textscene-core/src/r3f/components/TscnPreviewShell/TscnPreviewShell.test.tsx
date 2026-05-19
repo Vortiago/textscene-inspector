@@ -64,6 +64,18 @@ describe('<TscnPreviewShell>', () => {
     expect(banner !== null || emptyMsg !== null).toBe(true);
   });
 
+  it('surfaces a parse-error banner when the lenient parser extracts no nodes from non-empty content (WI-R3F-7 / WEB-10)', () => {
+    // The lenient parser doesn't throw on this content; it just returns
+    // zero root nodes. Before WI-R3F-7 the user saw the same "No nodes
+    // to display" message they'd see for a legitimately empty scene.
+    // The shell now distinguishes "empty content" from "non-empty
+    // content that produced no nodes" and surfaces a banner.
+    render(<TscnPreviewShell panelId="p1" content={INVALID_TSCN} />);
+    const banner = screen.queryByRole('alert');
+    expect(banner).toBeTruthy();
+    expect(banner!.textContent).toMatch(/Parse error|Parser could not extract/i);
+  });
+
   it('isolates selection state between two shells in the same document', async () => {
     render(
       <>

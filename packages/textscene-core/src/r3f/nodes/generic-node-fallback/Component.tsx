@@ -3,25 +3,22 @@
  * that has no registered component.
  *
  * Renders a small semi-transparent gray cube so unrecognised nodes remain
- * visible in the scene. The node type and name are stored on userData so
- * the inspector panel (WI-R3F-4) can surface them, and so click-to-select
- * (WI-R3F-5) can identify the placeholder by metadata.
- *
- * Per PRD, drei <Text> for the in-scene label is intentionally deferred
- * to WI-R3F-5 integration to avoid bundling a font loader in WI-R3F-3.
+ * visible in the scene, plus a floating drei `<Text>` label showing the
+ * node's type and name so users can identify which placeholder is which
+ * (WI-R3F-7 / WEB-08).
  */
 
 import { useMemo } from 'react';
 import type { NodeComponentProps } from '../../NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../nodeTransform';
 import type { Node3DProperties } from '../../../nodes/base/node3d/types';
+import { InternalTextLabel } from '../../internalTextLabel';
 
 const FALLBACK_COLOR = 0x999999;
 const FALLBACK_SIZE = 0.4;
+const LABEL_OFFSET_Y = 0.4;
 
 export function GenericNodeFallback({ node, children }: NodeComponentProps) {
-  // Some node types extend Node3D and carry a transform. If they don't,
-  // transformFromNode3DProperties returns identity — safe in all cases.
   const { position, rotation, scale } = useMemo(
     () => transformFromNode3DProperties(node.properties as Node3DProperties),
     [node.properties]
@@ -39,6 +36,12 @@ export function GenericNodeFallback({ node, children }: NodeComponentProps) {
         <boxGeometry args={[FALLBACK_SIZE, FALLBACK_SIZE, FALLBACK_SIZE]} />
         <meshStandardMaterial color={FALLBACK_COLOR} transparent opacity={0.6} />
       </mesh>
+      <InternalTextLabel
+        text={`${node.type}: ${node.name}`}
+        position={[0, LABEL_OFFSET_Y, 0]}
+        fontSize={0.1}
+        anchorY="bottom"
+      />
       {children}
     </group>
   );

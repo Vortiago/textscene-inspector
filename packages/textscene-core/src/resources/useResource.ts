@@ -102,6 +102,16 @@ export function useResource<T>(path: string, type: ResourceType): ResourceResult
   currentRef.current = { path, type };
 
   useEffect(() => {
+    // Empty path: short-circuit. Callers use the empty string to signal
+    // "no request" when they need to keep the hook-call count stable
+    // (rules of hooks) but the slot isn't actually populated. Stay in
+    // `pending` with no subscription — nothing will ever resolve it,
+    // which is what the caller wants.
+    if (path === '') {
+      setResult({ value: undefined, status: 'pending' });
+      return;
+    }
+
     if (!loader) {
       setResult({
         value: undefined,
