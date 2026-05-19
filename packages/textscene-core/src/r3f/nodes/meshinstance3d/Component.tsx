@@ -38,6 +38,7 @@ import {
   parseStandardMaterial3DScalars,
   type StandardMaterial3DScalars,
 } from './materialScalars';
+import { applyUVTransform } from './applyUVTransform';
 
 /** Texture slots StandardMaterial3D exposes — checked in this order. */
 const TEXTURE_PROPERTIES = [
@@ -121,6 +122,37 @@ export function MeshInstance3D({ node }: NodeComponentProps) {
     emission_texture: textureRequests.emission_texture ? emissionStatus : null,
   };
 
+  // Apply the material's UV transform (`uv1_scale` / `uv1_offset`) to
+  // every loaded texture. `applyUVTransform` clones the texture before
+  // mutating, so two MeshInstance3D nodes sharing the same path with
+  // different scale don't clobber each other. Identity transforms
+  // (scale = 1,1 and offset = 0,0) skip the clone and return the
+  // original.
+  const uvTransform = materialScalars
+    ? { scale: materialScalars.uv1Scale, offset: materialScalars.uv1Offset }
+    : null;
+
+  const albedoMap = useMemo(
+    () => transformedTexture(textureSlots.albedo_texture, uvTransform),
+    [textureSlots.albedo_texture, uvTransform]
+  );
+  const normalMap = useMemo(
+    () => transformedTexture(textureSlots.normal_texture, uvTransform),
+    [textureSlots.normal_texture, uvTransform]
+  );
+  const roughnessMap = useMemo(
+    () => transformedTexture(textureSlots.roughness_texture, uvTransform),
+    [textureSlots.roughness_texture, uvTransform]
+  );
+  const metalnessMap = useMemo(
+    () => transformedTexture(textureSlots.metallic_texture, uvTransform),
+    [textureSlots.metallic_texture, uvTransform]
+  );
+  const emissiveMap = useMemo(
+    () => transformedTexture(textureSlots.emission_texture, uvTransform),
+    [textureSlots.emission_texture, uvTransform]
+  );
+
   // If any requested slot resolved to `missing`, surface the FIRST
   // missing path as the placeholder label. Listing more than one would
   // bury the user under text.
@@ -184,7 +216,14 @@ export function MeshInstance3D({ node }: NodeComponentProps) {
       receiveShadow
     >
       <MeshGeometry resource={meshResource} />
-      <MaterialSlot scalars={materialScalars} albedoMap={textureSlots.albedo_texture?.value} />
+      <MaterialSlot
+        scalars={materialScalars}
+        albedoMap={albedoMap}
+        normalMap={normalMap}
+        roughnessMap={roughnessMap}
+        metalnessMap={metalnessMap}
+        emissiveMap={emissiveMap}
+      />
     </mesh>
   );
 }
@@ -192,9 +231,20 @@ export function MeshInstance3D({ node }: NodeComponentProps) {
 interface MaterialSlotProps {
   scalars: StandardMaterial3DScalars | null;
   albedoMap?: THREE.Texture;
+  normalMap?: THREE.Texture;
+  roughnessMap?: THREE.Texture;
+  metalnessMap?: THREE.Texture;
+  emissiveMap?: THREE.Texture;
 }
 
-function MaterialSlot({ scalars, albedoMap }: MaterialSlotProps) {
+function MaterialSlot({
+  scalars,
+  albedoMap,
+  normalMap,
+  roughnessMap,
+  metalnessMap,
+  emissiveMap,
+}: MaterialSlotProps) {
   if (!scalars) {
     return <meshStandardMaterial color={0xcccccc} metalness={0.3} roughness={0.7} />;
   }
@@ -207,8 +257,29 @@ function MaterialSlot({ scalars, albedoMap }: MaterialSlotProps) {
       transparent={transparent}
       opacity={scalars.opacity}
       map={albedoMap ?? null}
+      normalMap={normalMap ?? null}
+      roughnessMap={roughnessMap ?? null}
+      metalnessMap={metalnessMap ?? null}
+      emissiveMap={emissiveMap ?? null}
+      emissive={scalars.emissive}
+      emissiveIntensity={scalars.emissiveIntensity}
     />
   );
+}
+
+/**
+ * Clone the loaded texture (if any) with the material's UV transform
+ * applied. Returns `undefined` when nothing is loaded yet, so the
+ * `<meshStandardMaterial>` falls back to `null` for that slot.
+ */
+function transformedTexture(
+  slot: { value: THREE.Texture | undefined } | null,
+  uv: { scale: { x: number; y: number }; offset: { x: number; y: number } } | null
+): THREE.Texture | undefined {
+  const value = slot?.value;
+  if (!value) return undefined;
+  if (!uv) return value;
+  return applyUVTransform(value, uv);
 }
 
 function resolveMeshSubResource(

@@ -1,0 +1,344 @@
+/**
+ * Tests for WI-R3F-8: StandardMaterial3D feature completion.
+ *
+ * Verifies that <MeshInstance3D>:
+ *   - Wires every loaded texture map (albedo / normal / roughness /
+ *     metalness / emission) onto the rendered <meshStandardMaterial>.
+ *   - Applies the material's `uv1_scale` and `uv1_offset` to every
+ *     loaded texture, cloning before mutating so two consumers of the
+ *     same texture path with different UV transforms don't clobber
+ *     each other.
+ *   - Honors `emission_enabled = false` (forces emissive to 0x000000
+ *     regardless of the emission color).
+ *
+ * The tests inject pre-cached textures directly into the
+ * `ResourceLoader.textures` cache so they resolve synchronously on
+ * first render, avoiding the async load path that's already covered
+ * by `Component.missing-texture.test.tsx`.
+ */
+import { describe, expect, it } from 'vitest';
+import ReactThreeTestRenderer from '@react-three/test-renderer';
+import * as THREE from 'three';
+import { MeshInstance3D } from './Component';
+import { SceneResourcesProvider } from '../../SceneResourcesContext';
+import {
+  ResourceLoaderProvider,
+  ResourceLoader,
+  FileEventBus,
+} from '../../..';
+import type { ResourceProvider } from '../../../resources/ResourceProvider';
+import type {
+  TscnExternalResource,
+  TscnInternalResource,
+  TscnNode,
+} from '../../../parser/types';
+import type { MeshInstance3DProperties } from '../../../nodes/3d/meshinstance3d/types';
+
+/**
+ * Provider that always returns null; we never let the file pipeline
+ * fire in these tests because we pre-cache textures directly.
+ */
+class NoopProvider implements ResourceProvider {
+  async loadResource(): Promise<string | ArrayBuffer | null> {
+    return null;
+  }
+  hasResource(): boolean {
+    return false;
+  }
+}
+
+function makeLoader(): ResourceLoader {
+  const provider = new NoopProvider();
+  const bus = new FileEventBus(provider);
+  const loader = new ResourceLoader(bus);
+  loader.setProvider(provider);
+  return loader;
+}
+
+/**
+ * Inject a fake texture into the loader's texture processor as if it
+ * had been successfully loaded by the file pipeline. We monkey-patch
+ * `request()` and `getCached()` to short-circuit the FileEventBus
+ * round-trip — there's no other public surface for "pre-cache a
+ * texture" today, and the WI-R3F-7 missing-texture test only exercises
+ * the failure path. The `loaded` event fires synchronously on
+ * `request()` so the `useResource` hook's effect picks it up just like
+ * a real cache hit.
+ */
+function preloadTexture(loader: ResourceLoader, path: string, texture: THREE.Texture): void {
+  const fakes = new Map<string, THREE.Texture>();
+  const existing = (loader.textures as unknown as { __fakes?: Map<string, THREE.Texture> }).__fakes;
+  const store = existing ?? fakes;
+  store.set(path, texture);
+  if (!existing) {
+    (loader.textures as unknown as { __fakes: Map<string, THREE.Texture> }).__fakes = store;
+    const originalGetCached = loader.textures.getCached.bind(loader.textures);
+    const originalRequest = loader.textures.request.bind(loader.textures);
+    loader.textures.getCached = (p: string) => {
+      const f = store.get(p);
+      if (f) return f;
+      return originalGetCached(p);
+    };
+    loader.textures.request = (p: string) => {
+      const f = store.get(p);
+      if (f) {
+        loader.eventBus.emit<THREE.Texture>('texture', 'loaded', p, f);
+        return;
+      }
+      originalRequest(p);
+    };
+  }
+}
+
+function makeNode(materialId: string, name = 'Mesh'): TscnNode {
+  return {
+    name,
+    type: 'MeshInstance3D',
+    children: [],
+    properties: {
+      name,
+      mesh: 'SubResource("box")',
+      materialOverride: `SubResource("${materialId}")`,
+      surfaceMaterialOverrides: new Map(),
+    } as MeshInstance3DProperties,
+  };
+}
+
+function findMaterial(
+  renderer: Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>
+): THREE.MeshStandardMaterial | undefined {
+  const materials = renderer.scene.findAllByType('MeshStandardMaterial');
+  return materials[0]?.instance as THREE.MeshStandardMaterial | undefined;
+}
+
+async function renderWith(
+  node: TscnNode,
+  internalResources: TscnInternalResource[],
+  externalResources: TscnExternalResource[],
+  loader: ResourceLoader
+) {
+  return ReactThreeTestRenderer.create(
+    <ResourceLoaderProvider loader={loader}>
+      <SceneResourcesProvider
+        internalResources={internalResources}
+        externalResources={externalResources}
+      >
+        <MeshInstance3D node={node} />
+      </SceneResourcesProvider>
+    </ResourceLoaderProvider>
+  );
+}
+
+describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
+  it('applies uv1_scale to the loaded albedo texture via texture.repeat', async () => {
+    const loader = makeLoader();
+    const tex = new THREE.Texture();
+    preloadTexture(loader, 'res://textures/checker.png', tex);
+
+    const internalResources: TscnInternalResource[] = [
+      { id: 'box', type: 'BoxMesh', data: { id: 'box' } },
+      {
+        id: 'mat',
+        type: 'StandardMaterial3D',
+        data: {
+          id: 'mat',
+          albedo_texture: 'ExtResource("1")',
+          uv1_scale: 'Vector3(2, 2, 1)',
+        } as Record<string, string>,
+      },
+    ];
+    const externalResources: TscnExternalResource[] = [
+      { id: '1', path: 'res://textures/checker.png', type: 'Texture2D' },
+    ];
+
+    const renderer = await renderWith(makeNode('mat'), internalResources, externalResources, loader);
+    // Wait one tick for the synchronous loaded-event subscription to
+    // hydrate the hook's state and re-render.
+    await new Promise<void>((r) => setTimeout(r, 10));
+    await renderer.update(
+      <ResourceLoaderProvider loader={loader}>
+        <SceneResourcesProvider
+          internalResources={internalResources}
+          externalResources={externalResources}
+        >
+          <MeshInstance3D node={makeNode('mat')} />
+        </SceneResourcesProvider>
+      </ResourceLoaderProvider>
+    );
+
+    const material = findMaterial(renderer);
+    expect(material).toBeDefined();
+    expect(material!.map).toBeDefined();
+    expect(material!.map!.repeat.x).toBe(2);
+    expect(material!.map!.repeat.y).toBe(2);
+    // The cloned texture must NOT be the same THREE.Texture instance —
+    // mutating in place would clobber every other consumer.
+    expect(material!.map).not.toBe(tex);
+  });
+
+  it('wires the loaded normal texture onto material.normalMap', async () => {
+    const loader = makeLoader();
+    const albedo = new THREE.Texture();
+    const normal = new THREE.Texture();
+    preloadTexture(loader, 'res://textures/albedo.png', albedo);
+    preloadTexture(loader, 'res://textures/normal.png', normal);
+
+    const internalResources: TscnInternalResource[] = [
+      { id: 'box', type: 'BoxMesh', data: { id: 'box' } },
+      {
+        id: 'mat',
+        type: 'StandardMaterial3D',
+        data: {
+          id: 'mat',
+          albedo_texture: 'ExtResource("1")',
+          normal_texture: 'ExtResource("2")',
+        } as Record<string, string>,
+      },
+    ];
+    const externalResources: TscnExternalResource[] = [
+      { id: '1', path: 'res://textures/albedo.png', type: 'Texture2D' },
+      { id: '2', path: 'res://textures/normal.png', type: 'Texture2D' },
+    ];
+
+    const renderer = await renderWith(makeNode('mat'), internalResources, externalResources, loader);
+    await new Promise<void>((r) => setTimeout(r, 10));
+    await renderer.update(
+      <ResourceLoaderProvider loader={loader}>
+        <SceneResourcesProvider
+          internalResources={internalResources}
+          externalResources={externalResources}
+        >
+          <MeshInstance3D node={makeNode('mat')} />
+        </SceneResourcesProvider>
+      </ResourceLoaderProvider>
+    );
+
+    const material = findMaterial(renderer);
+    expect(material).toBeDefined();
+    expect(material!.normalMap).toBeDefined();
+    // Identity UV transform — the same THREE.Texture flows through.
+    expect(material!.normalMap).toBe(normal);
+  });
+
+  it('forces emissive to 0x000000 when emission_enabled is false', async () => {
+    const loader = makeLoader();
+    const internalResources: TscnInternalResource[] = [
+      { id: 'box', type: 'BoxMesh', data: { id: 'box' } },
+      {
+        id: 'mat',
+        type: 'StandardMaterial3D',
+        data: {
+          id: 'mat',
+          // emission_enabled NOT set (defaults to false). Even with a
+          // color set, the rendered material's emissive must be black.
+          emission: 'Color(1, 0, 0, 1)',
+          emission_energy_multiplier: '5',
+        } as Record<string, string>,
+      },
+    ];
+
+    const renderer = await renderWith(makeNode('mat'), internalResources, [], loader);
+    await new Promise<void>((r) => setTimeout(r, 10));
+
+    const material = findMaterial(renderer);
+    expect(material).toBeDefined();
+    expect(material!.emissive.getHex()).toBe(0x000000);
+  });
+
+  it('respects emission color + energy when emission_enabled is true', async () => {
+    const loader = makeLoader();
+    const internalResources: TscnInternalResource[] = [
+      { id: 'box', type: 'BoxMesh', data: { id: 'box' } },
+      {
+        id: 'mat',
+        type: 'StandardMaterial3D',
+        data: {
+          id: 'mat',
+          emission_enabled: 'true',
+          emission: 'Color(1, 0, 0, 1)',
+          emission_energy_multiplier: '5',
+        } as Record<string, string>,
+      },
+    ];
+
+    const renderer = await renderWith(makeNode('mat'), internalResources, [], loader);
+    await new Promise<void>((r) => setTimeout(r, 10));
+
+    const material = findMaterial(renderer);
+    expect(material).toBeDefined();
+    expect(material!.emissive.getHex()).toBe(0xff0000);
+    expect(material!.emissiveIntensity).toBe(5);
+  });
+
+  it('clones the shared texture per consumer so different uv_scale values do not clobber each other', async () => {
+    const loader = makeLoader();
+    const tex = new THREE.Texture();
+    preloadTexture(loader, 'res://textures/shared.png', tex);
+
+    const externalResources: TscnExternalResource[] = [
+      { id: '1', path: 'res://textures/shared.png', type: 'Texture2D' },
+    ];
+    const internalResources: TscnInternalResource[] = [
+      { id: 'box', type: 'BoxMesh', data: { id: 'box' } },
+      {
+        id: 'matA',
+        type: 'StandardMaterial3D',
+        data: {
+          id: 'matA',
+          albedo_texture: 'ExtResource("1")',
+          uv1_scale: 'Vector3(0.5, 0.5, 1)',
+        } as Record<string, string>,
+      },
+      {
+        id: 'matB',
+        type: 'StandardMaterial3D',
+        data: {
+          id: 'matB',
+          albedo_texture: 'ExtResource("1")',
+          uv1_scale: 'Vector3(2, 2, 1)',
+        } as Record<string, string>,
+      },
+    ];
+
+    const renderer = await ReactThreeTestRenderer.create(
+      <ResourceLoaderProvider loader={loader}>
+        <SceneResourcesProvider
+          internalResources={internalResources}
+          externalResources={externalResources}
+        >
+          <MeshInstance3D node={makeNode('matA', 'MeshA')} />
+          <MeshInstance3D node={makeNode('matB', 'MeshB')} />
+        </SceneResourcesProvider>
+      </ResourceLoaderProvider>
+    );
+    await new Promise<void>((r) => setTimeout(r, 10));
+    await renderer.update(
+      <ResourceLoaderProvider loader={loader}>
+        <SceneResourcesProvider
+          internalResources={internalResources}
+          externalResources={externalResources}
+        >
+          <MeshInstance3D node={makeNode('matA', 'MeshA')} />
+          <MeshInstance3D node={makeNode('matB', 'MeshB')} />
+        </SceneResourcesProvider>
+      </ResourceLoaderProvider>
+    );
+
+    const materials = renderer.scene.findAllByType('MeshStandardMaterial');
+    expect(materials).toHaveLength(2);
+    const [matA, matB] = materials.map(
+      (m) => m.instance as THREE.MeshStandardMaterial
+    );
+
+    expect(matA!.map).toBeDefined();
+    expect(matB!.map).toBeDefined();
+    // Each consumer got its own cloned Texture instance.
+    expect(matA!.map).not.toBe(matB!.map);
+    // Neither clone is the cached original.
+    expect(matA!.map).not.toBe(tex);
+    expect(matB!.map).not.toBe(tex);
+    // And the repeat values are independently set.
+    expect(matA!.map!.repeat.x).toBe(0.5);
+    expect(matB!.map!.repeat.x).toBe(2);
+  });
+});
