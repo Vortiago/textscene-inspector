@@ -103,21 +103,21 @@ export function SceneTreeViewer({ onNodeReveal }: SceneTreeViewerProps) {
         />
         <button
           type="button"
-          className={styles.controlBtn}
+          className={`${styles.controlBtn} ${styles.iconBtn}`}
           onClick={handleExpandAll}
           aria-label="Expand all"
           title="Expand all"
         >
-          Expand
+          <span aria-hidden="true">⊞</span>
         </button>
         <button
           type="button"
-          className={styles.controlBtn}
+          className={`${styles.controlBtn} ${styles.iconBtn}`}
           onClick={handleCollapseAll}
           aria-label="Collapse all"
           title="Collapse all"
         >
-          Collapse
+          <span aria-hidden="true">⊟</span>
         </button>
       </div>
 

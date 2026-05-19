@@ -1,0 +1,72 @@
+/*
+ * Web previewer toolbar. Consumes the shared `--tsi-*` design tokens
+ * declared in TscnPreviewShell.module.css's :root block.
+ */
+.toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--tsi-space-3);
+  padding: var(--tsi-space-2) var(--tsi-space-3);
+  background: var(--tsi-bg-shell);
+  border-bottom: 1px solid var(--tsi-border-strong);
+  color: var(--tsi-fg-default);
+  font-size: var(--tsi-font-md);
+}
+
+.title {
+  color: var(--tsi-fg-strong);
+  font-weight: 600;
+}
+
+.uploadGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tsi-space-2);
+  cursor: pointer;
+  color: var(--tsi-fg-default);
+}
+
+.uploadLabel {
+  font-size: var(--tsi-font-md);
+}
+
+.uploadInput {
+  /* Native file inputs are stubbornly themed by the OS. We give the
+   * surrounding block a stable color so the inline "Choose Files" looks
+   * intentional rather than out-of-band. */
+  color: var(--tsi-fg-default);
+  font-size: var(--tsi-font-sm);
+}
+
+.uploadedChips {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--tsi-space-1);
+}
+
+.uploadedChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.125rem var(--tsi-space-2);
+  background: color-mix(in srgb, var(--tsi-success) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--tsi-success) 40%, transparent);
+  border-radius: 999px;
+  color: var(--tsi-success);
+  font-size: var(--tsi-font-sm);
+  font-family: var(--tsi-font-mono);
+  line-height: 1.4;
+}
+
+.uploadedChip::before {
+  /* A simple check-mark glyph leads each chip. */
+  content: "✓";
+  font-family: var(--tsi-font-ui);
+}
+
+.errorMessage {
+  color: var(--tsi-danger);
+  font-size: var(--tsi-font-md);
+}

@@ -101,31 +101,31 @@ export function TscnPreviewShell({
     <HierarchyProvider value={hierarchyValue}>
       <SelectionProvider>
         <CameraControlProvider>
-        <div className={styles.shell} data-panel-id={panelId}>
-          {toolbar}
-          {error && (
-            <div className={styles.errorBanner} role="alert">
-              <strong>Parse error:</strong> {error}
-            </div>
-          )}
-          <div className={styles.body}>
-            <div className={styles.canvas}>
-              <TscnCanvas />
-            </div>
-            <aside className={styles.sidebar} aria-label="Scene details">
-              <div className={styles.treePane}>
-                {sceneGraph === null && !error ? (
-                  <div className={styles.loading}>Loading scene…</div>
-                ) : (
-                  <SceneTreeViewer onNodeReveal={onNodeReveal} />
-                )}
+          <div className={styles.shell} data-panel-id={panelId}>
+            {toolbar}
+            {error && (
+              <div className={styles.errorBanner} role="alert">
+                <strong>Parse error:</strong> {error}
               </div>
-              <div className={styles.detailsPane}>
-                <NodeDetailsPanel />
+            )}
+            <div className={styles.body}>
+              <div className={styles.canvas}>
+                <TscnCanvas />
               </div>
-            </aside>
+              <aside className={styles.sidebar} aria-label="Scene details">
+                <div className={styles.treePane}>
+                  {sceneGraph === null && !error ? (
+                    <div className={styles.loading}>Loading scene…</div>
+                  ) : (
+                    <SceneTreeViewer onNodeReveal={onNodeReveal} />
+                  )}
+                </div>
+                <div className={styles.detailsPane}>
+                  <NodeDetailsPanel />
+                </div>
+              </aside>
+            </div>
           </div>
-        </div>
         </CameraControlProvider>
       </SelectionProvider>
     </HierarchyProvider>

@@ -21,6 +21,7 @@ import {
 } from '@textscene/core';
 import { fixtures } from './fixtures';
 import { WebResourceProvider } from './providers/WebResourceProvider';
+import styles from './r3f-main.module.css';
 
 const STORAGE_KEY = 'tscn-web-r3f-fixture';
 const DEFAULT_FIXTURE =
@@ -137,55 +138,37 @@ function R3FApp() {
           content={content}
           rootScenePath={`res://${fixtureFile || 'empty.tscn'}`}
           toolbar={
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                padding: '0.5rem 0.75rem',
-                borderBottom: '1px solid #3e3e42',
-                background: '#252526',
-                flexWrap: 'wrap',
-              }}
-            >
-              <strong style={{ color: '#fff' }}>TextScene Inspector</strong>
+            <div className={styles.toolbar}>
+              <strong className={styles.title}>TextScene Inspector</strong>
               <ViewportSelector
                 options={options}
                 value={fixtureFile}
                 onChange={setFixtureFile}
                 label="Scene:"
               />
-              <label
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.375rem',
-                  color: '#ddd',
-                  cursor: 'pointer',
-                }}
-              >
-                <span style={{ fontSize: '0.875rem' }}>Upload missing files:</span>
+              <label className={styles.uploadGroup}>
+                <span className={styles.uploadLabel}>Upload missing files:</span>
                 <input
                   ref={fileInputRef}
                   type="file"
                   multiple
                   accept="image/*"
                   onChange={handleFileChange}
-                  style={{ color: '#ddd' }}
+                  className={styles.uploadInput}
                   data-testid="missing-file-upload"
                 />
               </label>
               {uploadedFiles.length > 0 && (
-                <span
-                  style={{ fontSize: '0.75rem', color: '#9c9' }}
-                  aria-label="Uploaded files"
-                >
-                  Uploaded:{' '}
-                  {uploadedFiles.map((u) => u.fileName).join(', ')}
+                <span className={styles.uploadedChips} aria-label="Uploaded files">
+                  {uploadedFiles.map((u) => (
+                    <span key={u.resPath} className={styles.uploadedChip}>
+                      {u.fileName}
+                    </span>
+                  ))}
                 </span>
               )}
               {loadError && (
-                <span role="alert" style={{ color: '#f66' }}>
+                <span role="alert" className={styles.errorMessage}>
                   {loadError}
                 </span>
               )}
