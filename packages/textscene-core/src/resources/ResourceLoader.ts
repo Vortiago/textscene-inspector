@@ -249,6 +249,62 @@ export class ResourceLoader {
   }
 
   /**
+   * Signal that a previously-missing file is now available from the host.
+   * Clears any cached failure entries for this path and re-requests it,
+   * which fires fresh `*:loaded` events for subscribers (the late-arrival
+   * flow used by `useResource` to transition `'missing' → 'loaded'`).
+   *
+   * The host is expected to have made the file resolvable by the
+   * provider (e.g. via `WebResourceProvider.addUploadedFile`) before
+   * calling this.
+   *
+   * Routes through the correct processor based on the registered metadata
+   * type for the path; if the type is unknown we re-request through
+   * texture + material processors (the MVS late-arrival cases) so the
+   * dispatch is robust to paths that were referenced but never registered
+   * as ExtResource.
+   */
+  provideFile(path: string): void {
+    // Drop the FileEventBus cache so the next request hits the provider
+    // fresh rather than replaying a stale-or-null entry.
+    this._fileEventBus?.clearCache(path);
+
+    // Drop any previously-cached failure across all processors so the
+    // processor `request()` path doesn't short-circuit on null.
+    this.clearCache(path);
+
+    // Route to the correct processor based on metadata. If we can't
+    // identify the type, request via the two MVS processors that take a
+    // path directly (texture, material). GLB and scene late-arrival is
+    // less common; callers wanting those should pre-register metadata.
+    const metadata = this.metadata.get(path);
+    const type = metadata?.type;
+
+    logger.info(
+      `[ResourceLoader] provideFile: ${path}` +
+        (type ? ` (type: ${type})` : ' (no metadata; fanning out)')
+    );
+
+    if (type?.includes('Texture')) {
+      this.textures.request(path);
+    } else if (type?.includes('Material')) {
+      this.materials.request(path);
+    } else if (type === 'PackedScene') {
+      this.sceneLoader.request(path);
+    } else if (type === 'GLB' || type === 'GLTF' || type === 'GLBMesh') {
+      this.glbMeshes.request(path);
+    } else {
+      // Unknown type — try the two MVS processors. Only the one that
+      // can process the file's content will produce a non-null result;
+      // the other will fail silently into its cache and won't emit
+      // observable side-effects to subscribers since they branch on
+      // path + their own type.
+      this.textures.request(path);
+      this.materials.request(path);
+    }
+  }
+
+  /**
    * Clear specific resource type caches.
    */
   clearTextureCache(id?: string): void {
