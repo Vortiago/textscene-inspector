@@ -1,45 +1,50 @@
+/*
+ * Design tokens (`--tsi-*`) are defined in TscnPreviewShell.module.css's
+ * `:root` block. Touching colours here means touching the token — keep
+ * this file free of raw hex values.
+ */
 .root {
-  font-size: 0.8125rem;
+  font-size: var(--tsi-font-md);
   user-select: none;
-  color: #ddd;
+  color: var(--tsi-fg-default);
 }
 
 .toolbar {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
-  padding: 0.5rem;
-  border-bottom: 1px solid #2a2d2e;
+  gap: var(--tsi-space-1);
+  padding: var(--tsi-space-2);
+  border-bottom: 1px solid var(--tsi-border);
 }
 
 .search {
   flex: 1;
-  background: #1a1a1a;
-  border: 1px solid #2a2d2e;
-  border-radius: 3px;
-  color: #ddd;
-  padding: 0.25rem 0.5rem;
-  font-size: 0.8125rem;
+  background: var(--tsi-bg-panel);
+  border: 1px solid var(--tsi-border);
+  border-radius: var(--tsi-radius-sm);
+  color: var(--tsi-fg-default);
+  padding: var(--tsi-space-1) var(--tsi-space-2);
+  font-size: var(--tsi-font-md);
   min-width: 0;
 }
 
 .search:focus {
   outline: none;
-  border-color: #094771;
+  border-color: var(--tsi-accent);
 }
 
 .controlBtn {
-  background: #2a2d2e;
-  border: 1px solid #3e3e42;
-  border-radius: 3px;
-  color: #ccc;
-  padding: 0.25rem 0.5rem;
-  font-size: 0.75rem;
+  background: var(--tsi-bg-hover);
+  border: 1px solid var(--tsi-border-strong);
+  border-radius: var(--tsi-radius-sm);
+  color: var(--tsi-fg-on-control);
+  padding: var(--tsi-space-1) var(--tsi-space-2);
+  font-size: var(--tsi-font-sm);
   cursor: pointer;
 }
 
 .controlBtn:hover {
-  background: #3e3e42;
+  background: var(--tsi-bg-active);
 }
 
 .tree {
@@ -47,9 +52,9 @@
 }
 
 .empty {
-  padding: 1rem;
+  padding: var(--tsi-space-4);
   text-align: center;
-  color: #888;
+  color: var(--tsi-fg-muted);
 }
 
 .node {
@@ -60,28 +65,28 @@
   display: flex;
   align-items: center;
   gap: 0.375rem;
-  padding: 0.25rem 0.5rem;
+  padding: var(--tsi-space-1) var(--tsi-space-2);
   cursor: pointer;
-  border-radius: 3px;
+  border-radius: var(--tsi-radius-sm);
   transition: background-color 0.15s;
 }
 
 .header:hover {
-  background: #2a2d2e;
+  background: var(--tsi-bg-hover);
 }
 
 .selected {
-  background: #094771;
+  background: var(--tsi-accent);
 }
 
 .selected:hover {
-  background: #0d5a8c;
+  background: var(--tsi-accent-hover);
 }
 
 .expandIcon {
   width: 12px;
-  font-size: 0.625rem;
-  color: #ccc;
+  font-size: var(--tsi-font-xs);
+  color: var(--tsi-fg-on-control);
   cursor: pointer;
   flex-shrink: 0;
   text-align: center;
@@ -91,15 +96,15 @@
   width: 12px;
   text-align: center;
   font-size: 0.5rem;
-  color: #555;
+  color: var(--tsi-fg-faint);
   flex-shrink: 0;
 }
 
 .typeBadge {
   display: inline-block;
   padding: 0.125rem 0.375rem;
-  border-radius: 3px;
-  font-size: 0.625rem;
+  border-radius: var(--tsi-radius-sm);
+  font-size: var(--tsi-font-xs);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.025em;
@@ -107,41 +112,41 @@
 }
 
 .typeNode3d {
-  background: #3e3e42;
-  color: #ccc;
+  background: var(--tsi-border-strong);
+  color: var(--tsi-fg-on-control);
 }
 
 .typeMesh {
-  background: #1e4d2b;
-  color: #95e3b3;
+  background: var(--tsi-type-mesh-bg);
+  color: var(--tsi-type-mesh-fg);
 }
 
 .typeCamera {
-  background: #3d2e00;
-  color: #ffcc00;
+  background: var(--tsi-type-camera-bg);
+  color: var(--tsi-type-camera-fg);
 }
 
 .typeLight {
-  background: #4d3319;
-  color: #ffcc99;
+  background: var(--tsi-type-light-bg);
+  color: var(--tsi-type-light-fg);
 }
 
 .typeUnknown {
-  background: #2a1a2e;
-  color: #c792ea;
+  background: var(--tsi-type-unknown-bg);
+  color: var(--tsi-type-unknown-fg);
 }
 
 .nodeName {
   flex: 1;
-  color: #ddd;
+  color: var(--tsi-fg-default);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .transformIcon {
-  color: #6c9;
-  font-size: 0.75rem;
+  color: var(--tsi-value-mono);
+  font-size: var(--tsi-font-sm);
   flex-shrink: 0;
 }
 
@@ -151,8 +156,8 @@
 }
 
 .instanceRoot {
-  border-left: 2px solid #66c;
-  padding-left: calc(0.5rem - 2px);
+  border-left: 2px solid var(--tsi-instance-accent);
+  padding-left: calc(var(--tsi-space-2) - 2px);
 }
 
 .instanceRoot .nodeName {
@@ -180,7 +185,7 @@
 }
 
 .hidden .nodeName {
-  color: #777;
+  color: #777; /* TODO(wave-2): tokenize as --tsi-fg-strikethrough */
   text-decoration: line-through;
 }
 
@@ -193,11 +198,11 @@
 }
 
 .notImplementedBadge {
-  background-color: #ffc107;
+  background-color: var(--tsi-warning);
   color: #000;
   padding: 0.125rem 0.375rem;
-  border-radius: 3px;
-  font-size: 0.625rem;
+  border-radius: var(--tsi-radius-sm);
+  font-size: var(--tsi-font-xs);
   font-weight: 600;
   text-transform: uppercase;
 }
