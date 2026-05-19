@@ -1,32 +1,36 @@
+/*
+ * Design tokens (`--tsi-*`) are defined in TscnPreviewShell.module.css's
+ * `:root` block.
+ */
 .root {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem;
-  background: #1a1a1a;
-  border-bottom: 1px solid #2a2d2e;
-  color: #ddd;
-  font-size: 0.8125rem;
+  gap: var(--tsi-space-2);
+  padding: var(--tsi-space-2);
+  background: var(--tsi-bg-panel);
+  border-bottom: 1px solid var(--tsi-border);
+  color: var(--tsi-fg-default);
+  font-size: var(--tsi-font-md);
 }
 
 .label {
-  color: #888;
+  color: var(--tsi-fg-muted);
   flex-shrink: 0;
 }
 
 .select {
   flex: 1;
-  background: #2a2d2e;
-  border: 1px solid #3e3e42;
-  border-radius: 3px;
-  color: #ddd;
-  padding: 0.25rem 0.5rem;
-  font-size: 0.8125rem;
+  background: var(--tsi-bg-hover);
+  border: 1px solid var(--tsi-border-strong);
+  border-radius: var(--tsi-radius-sm);
+  color: var(--tsi-fg-default);
+  padding: var(--tsi-space-1) var(--tsi-space-2);
+  font-size: var(--tsi-font-md);
   min-width: 0;
   cursor: pointer;
 }
 
 .select:focus {
   outline: none;
-  border-color: #094771;
+  border-color: var(--tsi-accent);
 }
