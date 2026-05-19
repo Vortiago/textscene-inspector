@@ -1,11 +1,12 @@
 /**
  * Integration tests for external texture loading pipeline.
- * Tests complete flow: ResourceRegistry → texture loading → THREE.js Texture creation
+ * Tests complete flow: ResourceLoader → texture loading → THREE.js Texture creation
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import * as THREE from 'three';
-import { ResourceRegistry } from '../../ResourceRegistry';
+import { ResourceLoader } from '../../ResourceLoader';
+import type { FileEventBus, FileData } from '../../FileEventBus';
 
 // Mock THREE.TextureLoader to avoid needing real browser environment
 vi.mock('three', async () => {
@@ -37,19 +38,113 @@ vi.mock('three', async () => {
   };
 });
 
+/**
+ * Creates a mock FileEventBus for testing.
+ * Simulates file loading events without actual file system access.
+ */
+function createMockFileEventBus(): {
+  fileEventBus: FileEventBus;
+  simulateFileLoaded: (path: string, data: FileData) => void;
+  simulateFileFailed: (path: string, error: Error) => void;
+  setAutoLoad: (enabled: boolean, getData?: (path: string) => FileData | Promise<FileData>) => void;
+} {
+  const listeners: Map<string, Set<(...args: unknown[]) => void>> = new Map();
+  const cache: Map<string, FileData> = new Map();
+  let autoLoadEnabled = false;
+  let autoLoadGetData: ((path: string) => FileData | Promise<FileData>) | undefined;
+
+  const fileEventBus: FileEventBus = {
+    on: vi.fn((event: string, handler: (...args: unknown[]) => void) => {
+      if (!listeners.has(event)) {
+        listeners.set(event, new Set());
+      }
+      listeners.get(event)!.add(handler);
+    }),
+    off: vi.fn((event: string, handler: (...args: unknown[]) => void) => {
+      listeners.get(event)?.delete(handler);
+    }),
+    request: vi.fn((path: string) => {
+      // If auto-load is enabled, simulate file load
+      if (autoLoadEnabled && autoLoadGetData) {
+        setTimeout(async () => {
+          try {
+            const data = await autoLoadGetData!(path);
+            cache.set(path, data);
+            listeners.get('loaded')?.forEach(handler => handler(path, data));
+          } catch (err) {
+            const error = err instanceof Error ? err : new Error(String(err));
+            listeners.get('failed')?.forEach(handler => handler(path, error));
+          }
+        }, 0);
+      }
+    }),
+    clearCache: vi.fn((path?: string) => {
+      if (path) {
+        cache.delete(path);
+      } else {
+        cache.clear();
+      }
+    }),
+  };
+
+  return {
+    fileEventBus,
+    simulateFileLoaded: (path: string, data: FileData) => {
+      cache.set(path, data);
+      listeners.get('loaded')?.forEach(handler => handler(path, data));
+    },
+    simulateFileFailed: (path: string, error: Error) => {
+      listeners.get('failed')?.forEach(handler => handler(path, error));
+    },
+    setAutoLoad: (enabled: boolean, getData?: (path: string) => FileData | Promise<FileData>) => {
+      autoLoadEnabled = enabled;
+      autoLoadGetData = getData;
+    },
+  };
+}
+
+/**
+ * Helper to load texture using event-based API.
+ */
+async function loadTextureWithEvents(
+  registry: ResourceLoader,
+  idOrPath: string
+): Promise<THREE.Texture | null> {
+  const metadata = registry.getMetadata(idOrPath);
+  if (!metadata) {
+    return null;
+  }
+
+  // Check if it's a texture type
+  const textureTypes = ['Texture2D', 'CompressedTexture2D', 'ImageTexture'];
+  if (!textureTypes.includes(metadata.type)) {
+    return null;
+  }
+
+  const path = metadata.path;
+
+  // Check cache first
+  const cached = registry.textures.getCached(path);
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  // Request and wait for event
+  registry.textures.request(path);
+  try {
+    return await registry.eventBus.once<THREE.Texture>('texture', 'loaded', path);
+  } catch {
+    return null;
+  }
+}
+
 describe('Texture Loading Integration', () => {
-  let registry: ResourceRegistry;
-  let mockLoadResource: ReturnType<typeof vi.fn>;
+  let registry: ResourceLoader;
+  let mockFileEventBus: ReturnType<typeof createMockFileEventBus>;
 
   beforeEach(() => {
-    registry = new ResourceRegistry();
-    mockLoadResource = vi.fn();
-
-    // Create mock provider object with loadResource method
-    const mockProvider = {
-      loadResource: mockLoadResource
-    };
-    registry.setProvider(mockProvider);
+    mockFileEventBus = createMockFileEventBus();
+    registry = new ResourceLoader(mockFileEventBus.fileEventBus);
   });
 
   // Happy path: Load PNG texture
@@ -59,7 +154,7 @@ describe('Texture Loading Integration', () => {
       0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
     ]);
 
-    mockLoadResource.mockResolvedValue(mockPngData.buffer);
+    mockFileEventBus.setAutoLoad(true, () => mockPngData.buffer);
 
     // Register a texture resource
     registry.register({
@@ -68,19 +163,19 @@ describe('Texture Loading Integration', () => {
       path: 'res://textures/albedo.png'
     });
 
-    // Load texture
-    const texture = await registry.loadTexture('1_albedo');
+    // Load texture using event-based API
+    const texture = await loadTextureWithEvents(registry, '1_albedo');
 
     // Verify texture loaded
-    expect(mockLoadResource).toHaveBeenCalledWith('res://textures/albedo.png', 'Texture2D');
+    expect(mockFileEventBus.fileEventBus.request).toHaveBeenCalledWith('res://textures/albedo.png');
     expect(texture).toBeInstanceOf(THREE.Texture);
-    expect(texture.colorSpace).toBe(THREE.SRGBColorSpace);
+    expect(texture!.colorSpace).toBe(THREE.SRGBColorSpace);
   });
 
   // Happy path: Load texture by path
   it('should load texture by path instead of ID', async () => {
     const mockPngData = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
-    mockLoadResource.mockResolvedValue(mockPngData.buffer);
+    mockFileEventBus.setAutoLoad(true, () => mockPngData.buffer);
 
     registry.register({
       id: '1',
@@ -88,7 +183,7 @@ describe('Texture Loading Integration', () => {
       path: 'res://albedo.png'
     });
 
-    const texture = await registry.loadTexture('res://albedo.png');
+    const texture = await loadTextureWithEvents(registry, 'res://albedo.png');
 
     expect(texture).toBeInstanceOf(THREE.Texture);
   });
@@ -96,7 +191,11 @@ describe('Texture Loading Integration', () => {
   // Edge case: Texture caching
   it('should cache textures and reuse for multiple loads', async () => {
     const mockPngData = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
-    mockLoadResource.mockResolvedValue(mockPngData.buffer);
+    let loadCount = 0;
+    mockFileEventBus.setAutoLoad(true, () => {
+      loadCount++;
+      return mockPngData.buffer;
+    });
 
     registry.register({
       id: '1',
@@ -105,11 +204,11 @@ describe('Texture Loading Integration', () => {
     });
 
     // Load texture twice
-    const texture1 = await registry.loadTexture('1');
-    const texture2 = await registry.loadTexture('1');
+    const texture1 = await loadTextureWithEvents(registry, '1');
+    const texture2 = await loadTextureWithEvents(registry, '1');
 
-    // Verify resource provider called only once (texture cached)
-    expect(mockLoadResource).toHaveBeenCalledTimes(1);
+    // Verify FileEventBus request called only once (texture cached)
+    expect(loadCount).toBe(1);
 
     // Both loads should return same instance (cached)
     expect(texture1).toBe(texture2);
@@ -118,7 +217,7 @@ describe('Texture Loading Integration', () => {
   // Integration: SVG textures supported
   it('should load SVG textures', async () => {
     const mockSvgData = new TextEncoder().encode('<svg xmlns="http://www.w3.org/2000/svg"></svg>');
-    mockLoadResource.mockResolvedValue(mockSvgData.buffer);
+    mockFileEventBus.setAutoLoad(true, () => mockSvgData.buffer);
 
     registry.register({
       id: '1',
@@ -126,9 +225,9 @@ describe('Texture Loading Integration', () => {
       path: 'res://icon.svg'
     });
 
-    const texture = await registry.loadTexture('1');
+    const texture = await loadTextureWithEvents(registry, '1');
 
-    expect(mockLoadResource).toHaveBeenCalledWith('res://icon.svg', 'Texture2D');
+    expect(mockFileEventBus.fileEventBus.request).toHaveBeenCalledWith('res://icon.svg');
     expect(texture).toBeInstanceOf(THREE.Texture);
   });
 
@@ -136,7 +235,7 @@ describe('Texture Loading Integration', () => {
   it('should load WebP textures', async () => {
     // WebP magic bytes
     const mockWebPData = new Uint8Array([0x52, 0x49, 0x46, 0x46]);
-    mockLoadResource.mockResolvedValue(mockWebPData.buffer);
+    mockFileEventBus.setAutoLoad(true, () => mockWebPData.buffer);
 
     registry.register({
       id: '1',
@@ -144,15 +243,15 @@ describe('Texture Loading Integration', () => {
       path: 'res://image.webp'
     });
 
-    const texture = await registry.loadTexture('1');
+    const texture = await loadTextureWithEvents(registry, '1');
 
-    expect(mockLoadResource).toHaveBeenCalledWith('res://image.webp', 'Texture2D');
+    expect(mockFileEventBus.fileEventBus.request).toHaveBeenCalledWith('res://image.webp');
     expect(texture).toBeInstanceOf(THREE.Texture);
   });
 
   // Error path: Missing texture returns null
   it('should return null when texture not registered', async () => {
-    const result = await registry.loadTexture('missing_texture');
+    const result = await loadTextureWithEvents(registry, 'missing_texture');
     expect(result).toBeNull();
   });
 
@@ -164,13 +263,15 @@ describe('Texture Loading Integration', () => {
       path: 'res://scene.tscn'
     });
 
-    const result = await registry.loadTexture('1');
+    const result = await loadTextureWithEvents(registry, '1');
     expect(result).toBeNull();
   });
 
   // Error path: Missing texture file returns null
   it('should return null when texture file not found', async () => {
-    mockLoadResource.mockRejectedValue(new Error('File not found'));
+    mockFileEventBus.setAutoLoad(true, () => {
+      throw new Error('File not found');
+    });
 
     registry.register({
       id: '1',
@@ -178,13 +279,15 @@ describe('Texture Loading Integration', () => {
       path: 'res://missing.png'
     });
 
-    const result = await registry.loadTexture('1');
+    const result = await loadTextureWithEvents(registry, '1');
     expect(result).toBeNull();
   });
 
   // Callback: onResourceNeeded called for missing texture
   it('should call onResourceNeeded callback when texture fails to load', async () => {
-    mockLoadResource.mockRejectedValue(new Error('File not found'));
+    mockFileEventBus.setAutoLoad(true, () => {
+      throw new Error('File not found');
+    });
 
     const onResourceNeeded = vi.fn();
     registry.setOnResourceNeeded(onResourceNeeded);
@@ -195,7 +298,7 @@ describe('Texture Loading Integration', () => {
       path: 'res://missing.png'
     });
 
-    const result = await registry.loadTexture('1_albedo');
+    const result = await loadTextureWithEvents(registry, '1_albedo');
 
     expect(result).toBeNull();
     expect(onResourceNeeded).toHaveBeenCalledWith({
@@ -208,9 +311,13 @@ describe('Texture Loading Integration', () => {
 
   // Callback: Still returns null if callback set but throws
   it('should still return null even if onResourceNeeded callback throws', async () => {
-    mockLoadResource.mockRejectedValue(new Error('File not found'));
+    mockFileEventBus.setAutoLoad(true, () => {
+      throw new Error('File not found');
+    });
 
-    const onResourceNeeded = vi.fn().mockRejectedValue(new Error('Callback error'));
+    const onResourceNeeded = vi.fn().mockImplementation(() => {
+      throw new Error('Callback error');
+    });
     registry.setOnResourceNeeded(onResourceNeeded);
 
     registry.register({
@@ -220,13 +327,15 @@ describe('Texture Loading Integration', () => {
     });
 
     // Should not throw, just return null
-    const result = await registry.loadTexture('1');
+    const result = await loadTextureWithEvents(registry, '1');
     expect(result).toBeNull();
   });
 
   // Integration: Missing texture doesn't prevent material creation
   it('should allow material parser to continue when texture is null', async () => {
-    mockLoadResource.mockRejectedValue(new Error('File not found'));
+    mockFileEventBus.setAutoLoad(true, () => {
+      throw new Error('File not found');
+    });
 
     registry.register({
       id: '1_albedo',
@@ -235,7 +344,7 @@ describe('Texture Loading Integration', () => {
     });
 
     // This should complete without throwing
-    const texture = await registry.loadTexture('1_albedo');
+    const texture = await loadTextureWithEvents(registry, '1_albedo');
 
     // Material parser checks if texture is null before assigning
     const material: { albedo_texture?: THREE.Texture } = {};

@@ -5,7 +5,7 @@
 import { describe, it, expect } from 'vitest';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry';
 import { Linter } from '../../../linter/Linter';
-import './linterParser'; // Import to trigger registration
+import './linterValidators'; // Import to trigger registration
 
 describe('PlaneMesh Linter Validators', () => {
   describe('flip_faces validator', () => {

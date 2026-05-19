@@ -4,14 +4,14 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import * as THREE from 'three';
 import { ResourceRecoveryManager } from './ResourceRecoveryManager';
 import { NodeTracker } from './NodeTracker';
 import { SceneManager } from './SceneManager';
 import { NodeLifecycleManager } from './NodeLifecycleManager';
 import { TscnParser } from '../parser/TscnParser';
 import { ResourceRegistry } from '../resources/ResourceRegistry';
-import type { MissingResource } from '../parser/types';
-import type { SceneData } from './types';
+import type { MissingResource, TscnScene } from '../parser/types';
 
 describe('ResourceRecoveryManager', () => {
   let resourceRecovery: ResourceRecoveryManager;
@@ -19,26 +19,28 @@ describe('ResourceRecoveryManager', () => {
   let sceneManager: SceneManager;
   let resourceRegistry: ResourceRegistry;
   let nodeLifecycle: NodeLifecycleManager;
-  let mockSceneData: SceneData;
+  let mockScene: TscnScene;
 
   beforeEach(() => {
     nodeTracker = new NodeTracker();
     const parser = new TscnParser();
     sceneManager = new SceneManager(parser, nodeTracker);
     resourceRegistry = new ResourceRegistry();
-    nodeLifecycle = new NodeLifecycleManager(nodeTracker);
+    nodeLifecycle = new NodeLifecycleManager(new THREE.Scene(), nodeTracker);
+    // NodeLifecycleManager is constructed for parity with production setup; not exercised here.
+    void nodeLifecycle;
 
-    // Create mock scene data
-    mockSceneData = {
-      scene: { nodes: [], externalResources: [], subResources: [] },
+    mockScene = {
+      nodes: [],
+      externalResources: [],
+      internalResources: [],
       resourceRegistry,
-      nodeLifecycle,
     };
 
     resourceRecovery = new ResourceRecoveryManager(
       nodeTracker,
       sceneManager,
-      () => mockSceneData // Return mock scene data
+      () => mockScene
     );
   });
 

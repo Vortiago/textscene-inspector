@@ -82,7 +82,7 @@ describe('TscnRenderer', () => {
           },
         ],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       await renderer.render(scene);
@@ -101,7 +101,7 @@ describe('TscnRenderer', () => {
           { name: 'Root3', type: 'Node3D', properties: {}, children: [] },
         ],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       await renderer.render(scene);
@@ -115,14 +115,14 @@ describe('TscnRenderer', () => {
         format: 3,
         nodes: [{ name: 'Root1', type: 'Node3D', properties: {}, children: [] }],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       const scene2: TscnScene = {
         format: 3,
         nodes: [{ name: 'Root2', type: 'Node3D', properties: {}, children: [] }],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       // Start first render
@@ -142,14 +142,14 @@ describe('TscnRenderer', () => {
         format: 3,
         nodes: [{ name: 'Root1', type: 'Node3D', properties: {}, children: [] }],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       const scene2: TscnScene = {
         format: 3,
         nodes: [{ name: 'Root2', type: 'Node3D', properties: {}, children: [] }],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       await renderer.render(scene1);
@@ -164,7 +164,7 @@ describe('TscnRenderer', () => {
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       await renderer.render(scene);
@@ -177,7 +177,7 @@ describe('TscnRenderer', () => {
         format: 3,
         nodes: [{ name: 'Root', type: 'Node3D', properties: {}, children: [] }],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       await renderer.render(scene);
@@ -202,7 +202,7 @@ describe('TscnRenderer', () => {
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       // This calls NodeLifecycleManager internally
@@ -225,7 +225,7 @@ describe('TscnRenderer', () => {
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       await expect(renderer.updateNode('TestNode', node, scene)).resolves.not.toThrow();
@@ -441,7 +441,7 @@ describe('TscnRenderer', () => {
         format: 3,
         nodes: [{ name: 'Root', type: 'Node3D', properties: {}, children: [] }],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       await testRenderer.render(scene);
@@ -478,7 +478,7 @@ describe('TscnRenderer', () => {
           },
         ],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       // Should not throw even with invalid node type
@@ -497,7 +497,7 @@ describe('TscnRenderer', () => {
           },
         ],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       await expect(renderer.render(scene)).resolves.not.toThrow();
@@ -511,19 +511,19 @@ describe('TscnRenderer', () => {
           format: 3,
           nodes: [{ name: 'Scene1', type: 'Node3D', properties: {}, children: [] }],
           externalResources: [],
-          subResources: [],
+          internalResources: [],
         },
         {
           format: 3,
           nodes: [{ name: 'Scene2', type: 'Node3D', properties: {}, children: [] }],
           externalResources: [],
-          subResources: [],
+          internalResources: [],
         },
         {
           format: 3,
           nodes: [{ name: 'Scene3', type: 'Node3D', properties: {}, children: [] }],
           externalResources: [],
-          subResources: [],
+          internalResources: [],
         },
       ] as TscnScene[];
 
@@ -542,7 +542,7 @@ describe('TscnRenderer', () => {
           format: 3,
           nodes: [{ name: `Root${i}`, type: 'Node3D', properties: {}, children: [] }],
           externalResources: [],
-          subResources: [],
+          internalResources: [],
         };
 
         await renderer.render(scene);

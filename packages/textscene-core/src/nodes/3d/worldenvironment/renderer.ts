@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import type { WorldEnvironmentProperties } from './types.js';
 import type { TscnScene } from '../../../parser/types.js';
 import { applyNode3DTransform } from '../../base/node3d/renderer.js';
-import { parseResourceReference } from '../../../resources/ResourceManager.js';
+import { parseResourceReference } from '../../../resources/SubResourceResolver.js';
 import { parseEnvironment } from '../../../resources/environment/parser.js';
 import { createEnvironmentSettings } from '../../../resources/environment/renderer.js';
 import type { EnvironmentSettings } from '../../../resources/environment/renderer.js';

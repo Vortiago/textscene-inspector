@@ -57,3 +57,16 @@ apps/textscene-web/public/fixtures/
 
 # Test projects
 ld-58/
+
+# Spikes
+.spike/
+
+# Playwright MCP runtime artifacts
+.playwright-mcp/
+
+# Windows shell artifacts
+nul
+
+# Test debug artifacts (verifier screenshots — not check in to repo)
+test-*.png
+tscn-rescue-*.png

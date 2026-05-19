@@ -200,7 +200,8 @@ export class NodeLifecycleManager {
    */
   private verifyInvariants(path: string): void {
     // Skip in production for performance
-    if (process.env.NODE_ENV === 'production') {
+    const proc = (globalThis as { process?: { env?: { NODE_ENV?: string } } }).process;
+    if (proc?.env?.NODE_ENV === 'production') {
       return;
     }
 

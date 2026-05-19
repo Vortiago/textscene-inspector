@@ -2,6 +2,22 @@
 
 > **Work Item Details**: See `work_items/WI{number}.md` for implementation details, testing strategies, and code examples.
 
+## Phase 14: R3F Migration (Active) 🎯
+
+> **PRD**: [work_items/PRD-r3f-migration.md](work_items/PRD-r3f-migration.md) — acceptance criteria, contracts, and execution plan live there. See also [work_items/R3F-contracts.md](work_items/R3F-contracts.md) for shared interface contracts.
+> **GitHub**: issue #44
+
+- [ ] WI-R3F-0: Cherry-pick salvage — reset to `main`, apply salvage list, baseline green
+- [ ] WI-R3F-0.5: Compatibility Spike — validate React 19 + R3F v9 + test-renderer + Vitest 3 stack; trivial Mesh test must pass; red = plan reopens
+- [ ] WI-R3F-1: R3F Infrastructure — React/R3F/drei in catalog, `<TscnCanvas>` shell, CSS Modules CSP gate
+- [ ] WI-R3F-2: Resource Loading Hook — `useResource` wrapping WI-79 event bus; late-arrival hard gate
+- [ ] WI-R3F-3: Node Components Port (MVS) — Node3D, MeshInstance3D primitives, lights, Camera3D, WorldEnvironment, GenericNodeFallback
+- [ ] WI-R3F-4: DOM UI Migration — `<SceneTreeViewer>`, `<NodeDetailsPanel>`, `<TscnPreviewShell>`, SelectionContext
+- [ ] WI-R3F-5: Integration and Multi-Panel — full feature parity in web + VS Code, editor acceptance criteria
+- [ ] WI-R3F-6: Cleanup and Documentation — delete imperative renderers, update ARCHITECTURE.md, bundle-size gate
+
+> **WI-R3F-3.x follow-ups** (2D nodes, physics, audio, animation, particles, paths, Skeleton3D, Sprite3D) are deferred until after WI-R3F-6 ships.
+
 ## Phase 1: Core Visual Rendering ✅
 
 - [x] #WI-1-9: MeshInstance3D, BoxMesh, CylinderMesh, SphereMesh, StandardMaterial3D, Integration Testing
@@ -154,50 +170,25 @@
 
 - [ ] #WI-82: Mobile Phone UI Support & Responsive Design → [Details](work_items/WI82.md)
 
-## Phase 13.5: Architecture Improvements 🚨 **RELEASE BLOCKER**
+## Phase 13.5: Architecture Improvements ~~🚨 **RELEASE BLOCKER**~~ (SUPERSEDED — see [#44](https://github.com/Vortiago/Text-Scene-.tscn-File-Previewer/issues/44) and [PRD-r3f-migration.md](work_items/PRD-r3f-migration.md))
 
-> **Master Document**: [PHASE-13.5-ARCHITECTURE.md](work_items/PHASE-13.5-ARCHITECTURE.md)
->
-> **WHY THIS BLOCKS RELEASE**: Current architecture has fundamental issues:
-> - Updates not propagating correctly
-> - Missing file requests not showing in UI
-> - Slow loading even on moderate scenes (Hallway)
-> - Multi-panel coordination problems
->
-> **ROOT CAUSE**: Mutable state with three-way synchronization is inherently fragile.
-> **SOLUTION**: React-style immutable state + reconciliation pattern.
->
-> **Scale Target**: Must handle 1,000-5,000+ nodes (real Godot game scenes)
+> Phase 13.5 work-in-progress branch was audited and found to have compile errors, unconnected reconciliation, and fundamental sync issues. All outstanding items below are superseded by Phase 14 (R3F Migration). Completed sub-items (WI-79, WI-78.1–78.4) are partially salvaged — see the PRD salvage list.
 
 ### Stage 1: Event Foundation
-- [ ] #WI-79: Event-Based Resource Loading System → [Details](work_items/WI-79.md) ⭐⭐⭐ **FOUNDATION**
-  - Non-blocking resource loading
-  - Graceful degradation for missing files
-  - 6x faster material loading (parallel textures)
-  - Progressive rendering (meshes appear immediately)
+- [x] ~~#WI-79: Event-Based Resource Loading System~~ → [Details](work_items/WI-79.md) ✅ Complete *(SUPERSEDED — salvaged as `useResource` hook internals in WI-R3F-2)*
+- [ ] ~~#WI-83: Event System Unification~~ → [Details](work_items/WI-83.md) *(SUPERSEDED — see #44)*
 
 ### Stage 2-5: Immutable Hierarchies with Reconciliation
-- [ ] #WI-78: Immutable Scene Hierarchies → [Details](work_items/WI-78.md) ⭐⭐⭐ **CORE** (Depends on WI-79)
-  - [ ] #WI-78.1: Immutable SceneGraph Model → [Details](work_items/WI-78-1.md)
-  - [ ] #WI-78.2: Scene Resolution & Flattening → [Details](work_items/WI-78-2.md)
-  - [ ] #WI-78.3: Hierarchy Registry → [Details](work_items/WI-78-3.md)
-  - [ ] #WI-78.4: Dependency Tracking → [Details](work_items/WI-78-4.md)
-  - [ ] #WI-78.5: Reconciliation Engine → [Details](work_items/WI-78-5.md) ⭐ **PERFORMANCE CRITICAL**
-  - [ ] #WI-78.6: Panel Integration → [Details](work_items/WI-78-6.md)
+- [ ] ~~#WI-78: Immutable Scene Hierarchies~~ → [Details](work_items/WI-78.md) *(SUPERSEDED — see #44)*
+  - [x] ~~#WI-78.1: Immutable SceneGraph Model~~ → [Details](work_items/WI-78-1.md) ✅ Complete *(SUPERSEDED — salvaged verbatim as `SceneGraph.ts`)*
+  - [x] ~~#WI-78.2: Scene Resolution & Flattening~~ → [Details](work_items/WI-78-2.md) ✅ Complete *(SUPERSEDED — salvaged verbatim as `SceneGraphBuilder.ts`)*
+  - [x] ~~#WI-78.3: Hierarchy Registry~~ → [Details](work_items/WI-78-3.md) ✅ Complete *(SUPERSEDED — replaced by `HierarchyContext`)*
+  - [x] ~~#WI-78.4: Dependency Tracking~~ → [Details](work_items/WI-78-4.md) ✅ Complete *(SUPERSEDED — salvaged verbatim as `nodeDependsOnPath.ts`)*
+  - [ ] ~~#WI-78.5: Reconciliation Engine~~ *(SUPERSEDED — replaced by React reconciler)*
+  - [ ] ~~#WI-78.6: Panel Integration~~ *(SUPERSEDED — see #44)*
 
-### Stage 6: Multi-Panel Coordination (Simplified by WI-78)
-- [ ] #WI-77: Multi-Panel Coordination (Revised) → [Details](work_items/WI-77-revised.md) ⭐⭐⭐ (Depends on WI-78)
-  - [ ] #WI-77.1: Selective Update Strategies → Moderate complexity
-  - [ ] #WI-77.2: Property Diffing Utility → Simple
-  - [ ] #WI-77.3: Multi-Panel Event Routing → ✅ Done in WI-78.3
-  - [ ] #WI-77.4: VSCode File Watcher Integration → Simple
-
-**Performance Targets**:
-- Reconciliation (1000 nodes): < 10ms
-- Hot-reload: < 200ms
-- Material loading: 50ms (not 300ms sequential)
-
-**Pattern Note**: React's Immutable + Reconciliation pattern, NOT MVVM/MVC. Proven at scale (React handles thousands of components), simpler to maintain.
+### Stage 6: Multi-Panel Coordination
+- [ ] ~~#WI-77: Multi-Panel Coordination (Revised)~~ → [Details](work_items/WI-77-revised.md) *(SUPERSEDED — replaced by `SelectionContext` + React context per panel in WI-R3F-4)*
 
 ## Testing & Documentation
 

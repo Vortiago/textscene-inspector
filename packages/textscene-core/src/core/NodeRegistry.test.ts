@@ -422,7 +422,7 @@ describe('NodeRegistry', () => {
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: []
+        internalResources: []
       };
 
       renderNodeWithRegistry(node, scene);

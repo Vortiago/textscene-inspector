@@ -62,7 +62,7 @@ describe('NodeLifecycleManager', () => {
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       await manager.addNode('TestNode', node, sceneData);
@@ -96,7 +96,7 @@ describe('NodeLifecycleManager', () => {
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       // Add parent first
@@ -126,7 +126,7 @@ describe('NodeLifecycleManager', () => {
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       // Try to add node with non-existent parent
@@ -162,7 +162,7 @@ describe('NodeLifecycleManager', () => {
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       await manager.addNode('Parent', node, sceneData);
@@ -206,7 +206,7 @@ describe('NodeLifecycleManager', () => {
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       await manager.addNode('Root', node, sceneData);
@@ -239,7 +239,7 @@ describe('NodeLifecycleManager', () => {
             type: 'PackedScene',
           },
         ],
-        subResources: [],
+        internalResources: [],
         resourceRegistry: {
           resolveInstancePath: vi.fn().mockReturnValue('res://scenes/enemy.tscn'),
           getMetadata: vi.fn().mockReturnValue({
@@ -277,7 +277,7 @@ describe('NodeLifecycleManager', () => {
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
         resourceRegistry: {
           resolveInstancePath: vi.fn().mockReturnValue(null),
         } as never,
@@ -308,7 +308,7 @@ describe('NodeLifecycleManager', () => {
             type: 'PackedScene',
           },
         ],
-        subResources: [],
+        internalResources: [],
         resourceRegistry: {
           resolveInstancePath: vi.fn().mockReturnValue('res://scenes/enemy.tscn'),
           getMetadata: vi.fn().mockReturnValue({
@@ -340,7 +340,7 @@ describe('NodeLifecycleManager', () => {
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       await manager.addNode('TestNode', node, sceneData);
@@ -387,7 +387,7 @@ describe('NodeLifecycleManager', () => {
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       await manager.addNode('Parent', node, sceneData);
@@ -430,7 +430,7 @@ describe('NodeLifecycleManager', () => {
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       await manager.addNode('Parent', parent, sceneData);
@@ -466,7 +466,7 @@ describe('NodeLifecycleManager', () => {
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       // Add original
@@ -507,7 +507,7 @@ describe('NodeLifecycleManager', () => {
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       await manager.addNode('Parent', parent, sceneData);
@@ -534,7 +534,7 @@ describe('NodeLifecycleManager', () => {
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       await manager.updateNode('NonExistent', node, sceneData);
@@ -566,7 +566,7 @@ describe('NodeLifecycleManager', () => {
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       await manager.addNode('Parent', originalNode, sceneData);
@@ -595,7 +595,7 @@ describe('NodeLifecycleManager', () => {
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       await manager.addNode('TestNode', node, sceneData);
@@ -618,7 +618,7 @@ describe('NodeLifecycleManager', () => {
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       await manager.addNode('TestNode', node, sceneData);
@@ -641,7 +641,7 @@ describe('NodeLifecycleManager', () => {
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       await manager.addNode('TestNode', node, sceneData);
@@ -678,7 +678,7 @@ describe('NodeLifecycleManager', () => {
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       await manager.addNode('Path/To/TestNode', node, sceneData);
@@ -699,7 +699,7 @@ describe('NodeLifecycleManager', () => {
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       await manager.addNode('SomePath', node, sceneData);
@@ -715,7 +715,7 @@ describe('NodeLifecycleManager', () => {
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       // Add root with children
@@ -760,7 +760,7 @@ describe('NodeLifecycleManager', () => {
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       await manager.addNode('Root1', { name: 'Root1', type: 'Node3D', properties: {}, children: [] }, sceneData);
@@ -778,7 +778,7 @@ describe('NodeLifecycleManager', () => {
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       const root: TscnNode = {
@@ -822,7 +822,7 @@ describe('NodeLifecycleManager', () => {
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       await manager.addNode('', node, sceneData);
@@ -842,7 +842,7 @@ describe('NodeLifecycleManager', () => {
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       await manager.addNode('Node-With_Special.Chars@123', node, sceneData);
@@ -862,7 +862,7 @@ describe('NodeLifecycleManager', () => {
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       await manager.addNode('Duplicate', node, sceneData);
@@ -878,7 +878,7 @@ describe('NodeLifecycleManager', () => {
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       // Build a deeply nested structure
@@ -912,7 +912,7 @@ describe('NodeLifecycleManager', () => {
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       const children = Array.from({ length: 50 }, (_, i) => ({
@@ -949,7 +949,7 @@ describe('NodeLifecycleManager', () => {
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       await manager.addNode('EmptyProps', node, sceneData);
@@ -971,7 +971,7 @@ describe('NodeLifecycleManager', () => {
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       await manager.addNode('TestNode', node, sceneData);
@@ -988,7 +988,7 @@ describe('NodeLifecycleManager', () => {
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       // Create tree with many branches
@@ -1031,7 +1031,7 @@ describe('NodeLifecycleManager', () => {
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       const parent: TscnNode = {
@@ -1059,7 +1059,7 @@ describe('NodeLifecycleManager', () => {
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       const original: TscnNode = {
@@ -1087,7 +1087,7 @@ describe('NodeLifecycleManager', () => {
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       const original: TscnNode = {
@@ -1119,7 +1119,7 @@ describe('NodeLifecycleManager', () => {
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       const original: TscnNode = {
@@ -1153,7 +1153,7 @@ describe('NodeLifecycleManager', () => {
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       const parent: TscnNode = {
@@ -1191,7 +1191,7 @@ describe('NodeLifecycleManager', () => {
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       // Add multiple nodes sequentially
@@ -1226,7 +1226,7 @@ describe('NodeLifecycleManager', () => {
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       // Add parent first
@@ -1266,7 +1266,7 @@ describe('NodeLifecycleManager', () => {
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       await manager.addNode('Parent', parentNode, sceneData);
@@ -1302,7 +1302,7 @@ describe('NodeLifecycleManager', () => {
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       await manager.addNode('Parent', parentNode, sceneData);
@@ -1333,7 +1333,7 @@ describe('NodeLifecycleManager', () => {
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       // Add parent
@@ -1378,7 +1378,7 @@ describe('NodeLifecycleManager', () => {
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       // Add root with one static child
@@ -1410,7 +1410,7 @@ describe('NodeLifecycleManager', () => {
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       await manager.addNode('RootNode', { name: 'RootNode', type: 'Node3D', properties: {}, children: [] }, sceneData);
@@ -1424,7 +1424,7 @@ describe('NodeLifecycleManager', () => {
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       const parent: TscnNode = {
@@ -1459,7 +1459,7 @@ describe('NodeLifecycleManager', () => {
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       await manager.addNode('TestNode', node, sceneData);
@@ -1487,7 +1487,7 @@ describe('NodeLifecycleManager', () => {
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       await manager.addNode('Parent', parentNode, sceneData);
@@ -1509,7 +1509,7 @@ describe('NodeLifecycleManager', () => {
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       await manager.addNode('Test', node, sceneData);
@@ -1533,7 +1533,7 @@ describe('NodeLifecycleManager', () => {
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       await manager.addNode('Test', node, sceneData);
@@ -1567,7 +1567,7 @@ describe('NodeLifecycleManager', () => {
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       await manager.addNode('Parent', parentNode, sceneData);
@@ -1599,7 +1599,7 @@ describe('NodeLifecycleManager', () => {
           format: 3,
           nodes: [],
           externalResources: [],
-          subResources: [],
+          internalResources: [],
         };
 
         await manager.addNode('Test', node, sceneData);
@@ -1979,7 +1979,7 @@ const node: TscnNode = { name: 'TestNode', type: 'Node3D', children: [] };
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       // Create mock SceneManager
@@ -2041,7 +2041,7 @@ const node: TscnNode = { name: 'TestNode', type: 'Node3D', children: [] };
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       // Create mock SceneManager
@@ -2105,7 +2105,7 @@ const node: TscnNode = { name: 'TestNode', type: 'Node3D', children: [] };
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
       };
 
       let addNodeCallOrder: string[] = [];
@@ -2184,7 +2184,7 @@ const node: TscnNode = { name: 'TestNode', type: 'Node3D', children: [] };
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
         resourceRegistry: mockResourceRegistry as any,
       };
 
@@ -2245,7 +2245,7 @@ const node: TscnNode = { name: 'TestNode', type: 'Node3D', children: [] };
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
         resourceRegistry: mockResourceRegistry as any,
       };
 
@@ -2323,7 +2323,7 @@ const node: TscnNode = { name: 'TestNode', type: 'Node3D', children: [] };
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
         resourceRegistry: mockResourceRegistry as any,
       };
 
@@ -2381,7 +2381,7 @@ const mockGLBChild = new THREE.Mesh(new THREE.BoxGeometry());
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
         resourceRegistry: mockResourceRegistry as any,
       };
 
@@ -2440,7 +2440,7 @@ const mockResourceRegistry = {
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
         resourceRegistry: mockResourceRegistry as any,
       };
 
@@ -2494,7 +2494,7 @@ const mockGLBChild = new THREE.Mesh(
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
         resourceRegistry: mockResourceRegistry as any,
       };
 
@@ -2559,7 +2559,7 @@ const mockGLBChild = new THREE.Mesh(
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
         resourceRegistry: mockResourceRegistry as any,
       };
 
@@ -2626,7 +2626,7 @@ const mockGLBChild = new THREE.Mesh(
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
         resourceRegistry: mockResourceRegistry as any,
       };
 
@@ -2678,7 +2678,7 @@ const mockGLBMesh = new THREE.Group();
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
         resourceRegistry: mockResourceRegistry as any,
       };
 
@@ -2723,7 +2723,7 @@ const mockGLBMesh = new THREE.Group();
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
         resourceRegistry: mockResourceRegistry as any,
       };
 
@@ -2790,7 +2790,7 @@ const mockGLBMesh = new THREE.Group();
         format: 3,
         nodes: [],
         externalResources: [],
-        subResources: [],
+        internalResources: [],
         resourceRegistry: mockResourceRegistry as any,
       };
 

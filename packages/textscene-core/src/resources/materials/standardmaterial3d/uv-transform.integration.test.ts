@@ -3,33 +3,82 @@
  * Tests that multiple materials can use the same texture with different UV transforms.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as THREE from 'three';
 import { parseStandardMaterial3D } from './parser';
 import { createStandardMaterial } from './renderer';
-import { ResourceRegistry } from '../../ResourceRegistry';
+import { ResourceLoader } from '../../ResourceLoader';
+import type { FileEventBus, FileData } from '../../FileEventBus';
+
+/**
+ * Creates a mock FileEventBus that immediately returns mock texture data.
+ */
+function createMockFileEventBus(): FileEventBus {
+  const listeners: Map<string, Set<(...args: unknown[]) => void>> = new Map();
+
+  return {
+    on: vi.fn((event: string, handler: (...args: unknown[]) => void) => {
+      if (!listeners.has(event)) {
+        listeners.set(event, new Set());
+      }
+      listeners.get(event)!.add(handler);
+    }),
+    off: vi.fn((event: string, handler: (...args: unknown[]) => void) => {
+      listeners.get(event)?.delete(handler);
+    }),
+    request: vi.fn((path: string) => {
+      // Immediately emit loaded event with mock PNG data
+      setTimeout(() => {
+        const mockPngData = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+        listeners.get('loaded')?.forEach(handler => handler(path, mockPngData.buffer as FileData));
+      }, 0);
+    }),
+    clearCache: vi.fn(),
+  };
+}
+
+// Mock THREE.TextureLoader to return controllable textures
+vi.mock('three', async () => {
+  const actual = await vi.importActual<typeof THREE>('three');
+
+  class MockTextureLoader {
+    load(
+      _url: string,
+      onLoad?: (texture: THREE.Texture) => void,
+      _onProgress?: () => void,
+      _onError?: (error: Error) => void
+    ) {
+      const texture = new actual.Texture();
+      texture.colorSpace = actual.SRGBColorSpace;
+      if (onLoad) {
+        setTimeout(() => onLoad(texture), 0);
+      }
+      return texture;
+    }
+  }
+
+  return {
+    ...actual,
+    TextureLoader: MockTextureLoader,
+  };
+});
 
 describe('UV Transform Integration - Shared Textures', () => {
-  it('should apply different UV transforms to materials sharing the same texture', async () => {
-    // Create a shared texture that will be used by multiple materials
-    const sharedTexture = new THREE.Texture();
-    const registry = new ResourceRegistry();
+  let registry: ResourceLoader;
+  let mockFileEventBus: FileEventBus;
 
+  beforeEach(() => {
+    mockFileEventBus = createMockFileEventBus();
+    registry = new ResourceLoader(mockFileEventBus);
+  });
+
+  it('should apply different UV transforms to materials sharing the same texture', async () => {
     // Register the texture as ExtResource("1")
     registry.register({
       id: '1',
       type: 'Texture2D',
       path: 'res://textures/test.png',
     });
-
-    // Mock loadTexture to return the shared texture
-    const originalLoadTexture = registry.loadTexture.bind(registry);
-    registry.loadTexture = async (idOrPath: string) => {
-      if (idOrPath === '1') {
-        return sharedTexture;
-      }
-      return originalLoadTexture(idOrPath);
-    };
 
     // Parse first material with uv1_scale = 2.0
     const properties1 = await parseStandardMaterial3D(
@@ -71,21 +120,11 @@ describe('UV Transform Integration - Shared Textures', () => {
   });
 
   it('should handle six materials with different UV scales (showcase scenario)', async () => {
-    const sharedTexture = new THREE.Texture();
-    const registry = new ResourceRegistry();
-
     registry.register({
       id: '1',
       type: 'Texture2D',
       path: 'res://textures/checkerboard.svg',
     });
-
-    registry.loadTexture = async (idOrPath: string) => {
-      if (idOrPath === '1') {
-        return sharedTexture;
-      }
-      return null;
-    };
 
     // Six different UV scales like in the showcase fixture
     const uvScales = [0.25, 0.5, 1.0, 2.0, 4.0, 8.0];

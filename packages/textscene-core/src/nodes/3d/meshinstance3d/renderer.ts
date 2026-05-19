@@ -5,8 +5,8 @@
 import * as THREE from 'three';
 import type { MeshInstance3DProperties } from './types';
 import type { TscnScene } from '../../../parser/types';
-import { resolveGeometry, resolveMaterial } from '../../../resources/ResourceManager';
-import { parseResourceReference } from '../../../resources/ResourceManager';
+import { resolveGeometry, resolveMaterial } from '../../../resources/SubResourceResolver';
+import { parseResourceReference } from '../../../resources/SubResourceResolver';
 import { warn } from '../../../logger';
 
 /**

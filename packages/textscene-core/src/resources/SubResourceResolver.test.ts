@@ -1,13 +1,13 @@
 /**
- * Tests for ResourceManager
+ * Tests for SubResourceResolver
  */
 
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { parseResourceReference, resolveGeometry } from './ResourceManager';
+import { parseResourceReference, resolveGeometry } from './SubResourceResolver';
 import type { TscnScene } from '../parser/types';
 
-describe('ResourceManager', () => {
+describe('SubResourceResolver', () => {
   describe('parseResourceReference', () => {
     it('should parse SubResource reference', () => {
       const result = parseResourceReference('SubResource("BoxMesh_1")');

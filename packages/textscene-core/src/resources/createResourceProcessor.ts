@@ -1,0 +1,188 @@
+/**
+ * Factory function for creating resource processors.
+ * Handles caching, deduplication, and event emission for any resource type.
+ */
+
+import type { FileEventBus, FileData } from './FileEventBus';
+import type { ResourceEventBus, ResourceType } from './ResourceEventBus';
+import * as logger from '../logger';
+
+export type { ResourceType };
+
+export interface ResourceProcessorConfig<T> {
+  fileEventBus?: FileEventBus;
+  eventBus: ResourceEventBus;
+  resourceType: ResourceType;
+  /** Determine if this processor should handle the given path/data */
+  shouldProcess: (path: string, data: FileData) => boolean;
+  /** Process raw data into final resource */
+  process: (path: string, data: FileData) => Promise<T>;
+  /** Optional cleanup when resource is removed from cache */
+  dispose?: (resource: T) => void;
+}
+
+export interface ResourceProcessor<T> {
+  /** Request a resource to be loaded (non-blocking) */
+  request(path: string): void;
+  /** Get cached resource (may be null if load failed) */
+  getCached(path: string): T | null | undefined;
+  /** Check if resource is cached */
+  isCached(path: string): boolean;
+  /** Check if resource is currently loading */
+  isLoading(path: string): boolean;
+  /** Clear cache for specific path or all */
+  clearCache(path?: string): void;
+  /** Get cache size for debugging */
+  getCacheSize(): number;
+}
+
+/**
+ * Create a resource processor with caching, deduplication, and event emission.
+ *
+ * The processor:
+ * - Subscribes to FileEventBus for raw file loading
+ * - Processes raw data into final resources
+ * - Caches processed resources
+ * - Emits typed events via ResourceEventBus
+ * - Handles deduplication of parallel requests
+ */
+export function createResourceProcessor<T>(
+  config: ResourceProcessorConfig<T>
+): ResourceProcessor<T> {
+  const { fileEventBus, eventBus, resourceType, shouldProcess, process, dispose } = config;
+
+  const cache = new Map<string, T | null>();
+  const inflight = new Set<string>();
+
+  // Bound handler for FileEventBus events (stored once to allow proper unsubscription)
+  const handleFileLoaded = async (path: string, data: FileData): Promise<void> => {
+    // Only process if this processor should handle this path/data
+    if (!shouldProcess(path, data)) return;
+
+    // Only process if we're waiting for this path
+    if (!inflight.has(path)) return;
+
+    // Already cached - skip
+    if (cache.has(path)) {
+      inflight.delete(path);
+      return;
+    }
+
+    const startTime = performance.now();
+    eventBus.emit(resourceType, 'loading', path);
+
+    try {
+      const result = await process(path, data);
+      cache.set(path, result);
+      inflight.delete(path);
+
+      const elapsed = performance.now() - startTime;
+      logger.info(`[${resourceType}Processor] Loaded: ${path} (${elapsed.toFixed(2)}ms)`);
+      eventBus.emit<T>(resourceType, 'loaded', path, result);
+    } catch (error) {
+      cache.set(path, null); // Cache failure to prevent retries
+      inflight.delete(path);
+
+      const elapsed = performance.now() - startTime;
+      const err = error instanceof Error ? error : new Error(String(error));
+      logger.error(`[${resourceType}Processor] Failed: ${path} (${elapsed.toFixed(2)}ms)`, err);
+      eventBus.emit<Error>(resourceType, 'failed', path, err);
+    }
+  };
+
+  const handleFileFailed = (path: string, error: Error): void => {
+    if (!inflight.has(path)) return;
+
+    inflight.delete(path);
+    cache.set(path, null);
+    eventBus.emit<Error>(resourceType, 'failed', path, error);
+  };
+
+  // Subscribe to FileEventBus (if provided)
+  if (fileEventBus) {
+    fileEventBus.on('loaded', handleFileLoaded);
+    fileEventBus.on('failed', handleFileFailed);
+  }
+
+  return {
+    request(path: string): void {
+      // Check cache first
+      if (cache.has(path)) {
+        const cached = cache.get(path);
+        if (cached !== null) {
+          logger.info(`[${resourceType}Processor] Cache hit for: ${path}`);
+          eventBus.emit<T>(resourceType, 'loaded', path, cached);
+        } else {
+          logger.info(`[${resourceType}Processor] Cache hit (failed) for: ${path}`);
+          eventBus.emit<Error>(
+            resourceType,
+            'failed',
+            path,
+            new Error(`${resourceType} ${path} previously failed to load`)
+          );
+        }
+        return;
+      }
+
+      // Deduplicate in-flight requests
+      if (inflight.has(path)) {
+        logger.info(`[${resourceType}Processor] Already loading: ${path}`);
+        return;
+      }
+
+      // Start loading
+      inflight.add(path);
+      eventBus.emit(resourceType, 'requested', path);
+      if (fileEventBus) {
+        fileEventBus.request(path);
+      } else {
+        // No FileEventBus - emit failure
+        inflight.delete(path);
+        eventBus.emit<Error>(
+          resourceType,
+          'failed',
+          path,
+          new Error(`FileEventBus not available for loading ${resourceType}: ${path}`)
+        );
+      }
+    },
+
+    getCached(path: string): T | null | undefined {
+      return cache.get(path);
+    },
+
+    isCached(path: string): boolean {
+      return cache.has(path);
+    },
+
+    isLoading(path: string): boolean {
+      return inflight.has(path);
+    },
+
+    clearCache(path?: string): void {
+      if (path) {
+        const cached = cache.get(path);
+        if (cached && dispose) {
+          dispose(cached);
+        }
+        cache.delete(path);
+        inflight.delete(path);
+        logger.info(`[${resourceType}Processor] Cleared cache for: ${path}`);
+      } else {
+        // Clear all
+        if (dispose) {
+          for (const resource of cache.values()) {
+            if (resource) dispose(resource);
+          }
+        }
+        cache.clear();
+        inflight.clear();
+        logger.info(`[${resourceType}Processor] Cleared all cache`);
+      }
+    },
+
+    getCacheSize(): number {
+      return cache.size;
+    },
+  };
+}

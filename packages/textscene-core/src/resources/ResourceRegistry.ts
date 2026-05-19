@@ -170,6 +170,9 @@ export class ResourceRegistry {
     const loadingPromise = this.provider
       .loadResource(resource.path, resource.type)
       .then((loaded) => {
+        if (loaded === null) {
+          throw new Error(`Resource provider returned null for: ${path}`);
+        }
         this.loadedCache.set(path, loaded);
         this.loadingStack.delete(path);
         this.loadingPromises.delete(path);
@@ -353,7 +356,10 @@ export class ResourceRegistry {
                 }
               }
 
-              const matProps = await parseStandardMaterial3D(stringProps, this);
+              // parseStandardMaterial3D was migrated to use event-based ResourceLoader (WI-79).
+              // The imperative ResourceRegistry path loads textures elsewhere, so skip the
+              // optional loader argument here.
+              const matProps = await parseStandardMaterial3D(stringProps);
               material = createStandardMaterial(matProps);
               break;
             }

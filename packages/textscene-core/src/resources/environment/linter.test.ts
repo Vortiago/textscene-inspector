@@ -4,7 +4,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { validatorRegistry } from '../../linter/ValidatorRegistry';
-import './linterParser'; // Import to trigger registration
+import './linterValidators'; // Import to trigger registration
 
 describe('Environment Linter Validators', () => {
   describe('background_mode validator', () => {

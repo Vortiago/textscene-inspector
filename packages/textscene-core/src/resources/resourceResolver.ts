@@ -2,14 +2,15 @@
  * Generic resource resolution utility - eliminates duplication between mesh and material resolvers.
  */
 
-import type { TscnScene, TscnInternalResource } from '../parser/types';
-import { parseResourceReference } from './ResourceManager';
+import * as THREE from 'three';
+import type { TscnScene, SubResource } from '../parser/types';
+import { parseResourceReference } from './SubResourceResolver';
 import { warn } from '../logger';
-import type { ResourceRegistry } from './ResourceRegistry';
+import type { ResourceLoader } from './ResourceLoader';
 
 export interface ResourceHandler<T> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Generic handler supports any parsed property type
-  parser: (data: Record<string, string>, registry?: ResourceRegistry) => any | Promise<any>;
+  parser: (data: Record<string, string>, registry?: ResourceLoader) => any | Promise<any>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Generic handler accepts any parsed properties
   renderer: (props: any) => T | Promise<T>;
 }
@@ -38,11 +39,23 @@ export async function resolveResource<T>(
     return null;
   }
 
-  // Handle ExtResource for materials (requires ResourceRegistry)
+  // Handle ExtResource for materials (requires ResourceLoader)
   if (ref.type === 'ExtResource') {
-    if (resourceCategory === 'material' && scene.resourceRegistry) {
-      // Use ResourceRegistry to load external material
-      return (await scene.resourceRegistry.loadMaterial(ref.id)) as T | null;
+    if (resourceCategory === 'material' && scene.resourceLoader) {
+      // Use event-based material loading
+      const registry = scene.resourceLoader;
+      const path = registry.resolvePath(ref.id);
+      const cached = registry.materials.getCached(path);
+      if (cached !== undefined) {
+        return cached as T | null;
+      }
+      registry.materials.request(path);
+      try {
+        const material = await registry.eventBus.once<THREE.Material>('material', 'loaded', path);
+        return material as T | null;
+      } catch {
+        return null;
+      }
     } else {
       warn(`External ${resourceCategory} resources not yet supported: ${resourceRef}`);
       return null;
@@ -50,7 +63,7 @@ export async function resolveResource<T>(
   }
 
   // Handle SubResource (internal resources)
-  const resource = scene.internalResources.find((r: TscnInternalResource) => {
+  const resource = scene.internalResources.find((r: SubResource) => {
     const resourceId = r.data.id as string | undefined;
     return resourceId === ref.id || String(r.id) === ref.id;
   });
@@ -70,7 +83,7 @@ export async function resolveResource<T>(
 
   try {
     // Parser may be async (e.g., loading textures), so await it
-    const props = await handler.parser(resource.data as Record<string, string>, scene.resourceRegistry);
+    const props = await handler.parser(resource.data as Record<string, string>, scene.resourceLoader);
 
     // Renderer may be async, so await it
     return await handler.renderer(props);

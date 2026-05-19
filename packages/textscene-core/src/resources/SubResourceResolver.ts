@@ -1,5 +1,6 @@
 /**
- * ResourceManager - resolves and loads TSCN resources.
+ * SubResourceResolver - resolves SubResource references (inline TSCN data).
+ * Handles geometry and material resolution from internal resources.
  */
 
 import * as THREE from 'three';
