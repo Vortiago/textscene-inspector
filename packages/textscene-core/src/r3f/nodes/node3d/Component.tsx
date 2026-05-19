@@ -14,8 +14,15 @@ export function Node3D({ node, children }: NodeComponentProps) {
     () => transformFromNode3DProperties(props),
     [props]
   );
+  const visible = props.visible !== false;
   return (
-    <group name={node.name} position={position} rotation={rotation} scale={scale}>
+    <group
+      name={node.name}
+      position={position}
+      rotation={rotation}
+      scale={scale}
+      visible={visible}
+    >
       {children}
     </group>
   );

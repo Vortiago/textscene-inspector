@@ -8,6 +8,7 @@
  */
 
 import { useMemo } from 'react';
+import * as THREE from 'three';
 import type { TscnInternalResource } from '../../../parser/types';
 import { parseBoxMesh } from '../../../resources/meshes/boxmesh/parser';
 import { parseSphereMesh } from '../../../resources/meshes/spheremesh/parser';
@@ -16,6 +17,7 @@ import { parseCylinderMesh } from '../../../resources/meshes/cylindermesh/parser
 import { parseCapsuleMesh } from '../../../resources/meshes/capsulemesh/parser';
 import { parseTorusMesh } from '../../../resources/meshes/torusmesh/parser';
 import { parsePrismMesh } from '../../../resources/meshes/prismmesh/parser';
+import type { PlaneMeshProperties } from '../../../resources/meshes/planemesh/types';
 
 export interface MeshGeometryProps {
   resource: TscnInternalResource;
@@ -43,16 +45,7 @@ export function MeshGeometry({ resource }: MeshGeometryProps) {
         />
       );
     case 'PlaneMesh':
-      return (
-        <planeGeometry
-          args={[
-            parsed.properties.size.x,
-            parsed.properties.size.y,
-            Math.max(1, parsed.properties.subdivideWidth),
-            Math.max(1, parsed.properties.subdivideDepth),
-          ]}
-        />
-      );
+      return <PlaneMeshGeometry properties={parsed.properties} />;
     case 'CylinderMesh':
       return (
         <cylinderGeometry
@@ -119,6 +112,54 @@ type ParsedMesh =
   | { type: 'TorusMesh'; properties: ReturnType<typeof parseTorusMesh> }
   | { type: 'PrismMesh'; properties: ReturnType<typeof parsePrismMesh> }
   | { type: 'unknown' };
+
+/**
+ * PlaneMesh with `orientation` and `center_offset` baked into the
+ * BufferGeometry. The default declarative `<planeGeometry>` produces an
+ * XY plane (normal +Z); Godot orientation 0/1/2 = FACE_X / FACE_Y / FACE_Z
+ * rotates that into the corresponding world axis. The mesh-local
+ * `center_offset` is applied via `geometry.translate` so it shifts the
+ * verts before the node-level transform stage.
+ */
+function PlaneMeshGeometry({ properties }: { properties: PlaneMeshProperties }) {
+  const geometry = useMemo(() => {
+    const widthSegments = Math.max(1, properties.subdivideWidth);
+    const heightSegments = Math.max(1, properties.subdivideDepth);
+    const geom = new THREE.PlaneGeometry(
+      properties.size.x,
+      properties.size.y,
+      widthSegments,
+      heightSegments
+    );
+    // FACE_X (orientation 0) → plane sits in YZ, normal points +X.
+    // FACE_Y (orientation 1) → plane sits in XZ, normal points +Y.
+    // FACE_Z (orientation 2) → plane sits in XY (default), normal points +Z.
+    if (properties.orientation === 0) {
+      geom.rotateY(Math.PI / 2);
+    } else if (properties.orientation === 1) {
+      geom.rotateX(-Math.PI / 2);
+    }
+    if (properties.centerOffset) {
+      geom.translate(
+        properties.centerOffset.x,
+        properties.centerOffset.y,
+        properties.centerOffset.z
+      );
+    }
+    return geom;
+  }, [
+    properties.size.x,
+    properties.size.y,
+    properties.subdivideWidth,
+    properties.subdivideDepth,
+    properties.orientation,
+    properties.centerOffset?.x,
+    properties.centerOffset?.y,
+    properties.centerOffset?.z,
+  ]);
+
+  return <primitive object={geometry} attach="geometry" />;
+}
 
 function parseByType(resource: TscnInternalResource): ParsedMesh {
   const data = resource.data as Record<string, string>;

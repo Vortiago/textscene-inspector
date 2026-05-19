@@ -16,7 +16,17 @@ import type { Color } from '../../../utils/colorParser';
 import type { NodeComponentProps } from '../../NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../nodeTransform';
 
-const FONT_SIZE = 128;
+const DEFAULT_FONT_SIZE = 128;
+
+/**
+ * Some Godot Label3D properties (font_size, no_depth_test) aren't yet
+ * captured by the parser/typed API; they appear opportunistically on the
+ * properties record when callers add them. This accessor reads them
+ * defensively without forcing the type to grow.
+ */
+function readExtra<T>(properties: Label3DProperties, key: string): T | undefined {
+  return (properties as unknown as Record<string, unknown>)[key] as T | undefined;
+}
 
 export function Label3D({ node }: NodeComponentProps) {
   const properties = node.properties as Label3DProperties;
@@ -25,7 +35,10 @@ export function Label3D({ node }: NodeComponentProps) {
     [properties]
   );
 
-  const built = useMemo(() => buildLabelTexture(properties), [properties]);
+  const fontSize = readExtra<number>(properties, 'font_size') ?? DEFAULT_FONT_SIZE;
+  const noDepthTest = readExtra<boolean>(properties, 'no_depth_test') === true;
+
+  const built = useMemo(() => buildLabelTexture(properties, fontSize), [properties, fontSize]);
 
   // Dispose of the GPU texture and source canvas when the label unmounts
   // or its inputs change.
@@ -36,19 +49,32 @@ export function Label3D({ node }: NodeComponentProps) {
   }, [built]);
 
   if (!built) {
-    // DOM unavailable; render an invisible marker group so the tree stays intact.
     return <group name={node.name} position={position} rotation={rotation} scale={scale} />;
   }
 
+  const tint = new THREE.Color(
+    properties.modulate.r,
+    properties.modulate.g,
+    properties.modulate.b
+  );
+
   return (
-    <mesh name={node.name} position={position} rotation={rotation} scale={scale}>
+    <mesh
+      name={node.name}
+      position={position}
+      rotation={rotation}
+      scale={scale}
+      userData={{ billboardMode: properties.billboard }}
+    >
       <planeGeometry args={[built.width, built.height]} />
       <meshBasicMaterial
         map={built.texture}
+        color={tint}
         transparent
         opacity={properties.modulate.a}
         side={THREE.DoubleSide}
         depthWrite={false}
+        depthTest={!noDepthTest}
       />
     </mesh>
   );
@@ -60,7 +86,10 @@ interface BuiltLabel {
   height: number;
 }
 
-function buildLabelTexture(properties: Label3DProperties): BuiltLabel | null {
+function buildLabelTexture(
+  properties: Label3DProperties,
+  fontSize: number
+): BuiltLabel | null {
   if (typeof document === 'undefined') return null;
   try {
     const text = properties.text || '';
@@ -68,28 +97,35 @@ function buildLabelTexture(properties: Label3DProperties): BuiltLabel | null {
     const context = canvas.getContext('2d');
     if (!context) return null;
 
-    context.font = `${FONT_SIZE}px Arial`;
+    context.font = `${fontSize}px Arial`;
     const metrics = context.measureText(text);
     canvas.width = Math.max(1, Math.ceil(metrics.width) + 20);
-    canvas.height = FONT_SIZE + 20;
+    canvas.height = fontSize + 20;
 
     if (properties.outline_size > 0) {
-      context.font = `${FONT_SIZE}px Arial`;
+      context.font = `${fontSize}px Arial`;
       context.strokeStyle = colorToCss(properties.outline_modulate);
       context.lineWidth = properties.outline_size * 10;
-      context.strokeText(text, 10, FONT_SIZE);
+      context.strokeText(text, 10, fontSize);
     }
 
-    context.fillStyle = colorToCss(properties.modulate);
-    context.font = `${FONT_SIZE}px Arial`;
-    context.fillText(text, 10, FONT_SIZE);
+    // Rasterise the text in white. The material's `color` carries the
+    // modulate tint, so the texture stays font-size-agnostic and can be
+    // re-tinted without rebuilding the canvas.
+    context.fillStyle = '#ffffff';
+    context.font = `${fontSize}px Arial`;
+    context.fillText(text, 10, fontSize);
 
     const texture = new THREE.CanvasTexture(canvas);
     texture.needsUpdate = true;
 
+    // `pixel_size` is world-units-per-pixel. Plane dimensions scale with
+    // `fontSize` so font_size=64 produces a label half the height of
+    // the FONT_SIZE=128 default.
     const aspect = canvas.width / canvas.height;
-    const width = properties.pixel_size * aspect * 100;
-    const height = properties.pixel_size * 100;
+    const fontScale = fontSize / DEFAULT_FONT_SIZE;
+    const height = properties.pixel_size * 100 * fontScale;
+    const width = height * aspect;
     return { texture, width, height };
   } catch {
     return null;

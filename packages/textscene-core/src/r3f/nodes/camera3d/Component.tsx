@@ -10,7 +10,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import type { Camera3DProperties } from '../../../nodes/3d/camera3d/types';
-import { ProjectionMode } from '../../../nodes/3d/camera3d/types';
+import { KeepAspectMode, ProjectionMode } from '../../../nodes/3d/camera3d/types';
 import type { NodeComponentProps } from '../../NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../nodeTransform';
 import { useNodePath } from '../../contexts/NodePathContext';
@@ -37,6 +37,7 @@ export function Camera3D({ node, children }: NodeComponentProps) {
         rotation={rotation}
         scale={scale}
         size={properties.size}
+        keepAspect={properties.keep_aspect}
         near={safeNear}
         far={safeFar}
       >
@@ -109,15 +110,19 @@ interface OrthographicCamera3DProps {
   rotation: [number, number, number];
   scale: [number, number, number];
   size: number;
+  keepAspect: KeepAspectMode;
   near: number;
   far: number;
   children?: React.ReactNode;
 }
 
-function OrthographicCamera3D({ name, tscnPath, position, rotation, scale, size, near, far, children }: OrthographicCamera3DProps) {
+function OrthographicCamera3D({ name, tscnPath, position, rotation, scale, size, keepAspect, near, far, children }: OrthographicCamera3DProps) {
   const cameraRef = useRef<THREE.OrthographicCamera>(null);
-  const halfHeight = size;
-  const halfWidth = size * DEFAULT_ASPECT;
+  // KEEP_HEIGHT (1, default): `size` is vertical, width derived from aspect.
+  // KEEP_WIDTH (0): `size` is horizontal, height derived from aspect.
+  const isKeepWidth = keepAspect === KeepAspectMode.KEEP_WIDTH;
+  const halfHeight = isKeepWidth ? size / DEFAULT_ASPECT : size;
+  const halfWidth = isKeepWidth ? size : size * DEFAULT_ASPECT;
   useEffect(() => {
     if (cameraRef.current) {
       cameraRef.current.userData.tscnPath = tscnPath;

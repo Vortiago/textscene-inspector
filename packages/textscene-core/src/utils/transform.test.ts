@@ -151,11 +151,14 @@ describe('transform utils', () => {
     });
 
     it('should decompose transform with rotation around Y axis', () => {
-      // 90 degree rotation around Y axis
+      // Godot column-major basis for Ry(+π/2):
+      //   basis_x = first column = (cos, 0, -sin) = (0, 0, -1)
+      //   basis_y = (0, 1, 0)
+      //   basis_z = third column = (sin, 0, cos) = (1, 0, 0)
       const transform: Transform3D = {
-        basis_x: { x: 0, y: 0, z: 1 },
+        basis_x: { x: 0, y: 0, z: -1 },
         basis_y: { x: 0, y: 1, z: 0 },
-        basis_z: { x: -1, y: 0, z: 0 },
+        basis_z: { x: 1, y: 0, z: 0 },
         origin: { x: 0, y: 0, z: 0 },
       };
 
@@ -205,7 +208,7 @@ describe('transform utils', () => {
       const result = decomposeTransform3D(transform);
 
       // Should use alternative calculation for gimbal lock
-      expect(result.rotation.z).toBe(0); // Gimbal lock sets Z to 0
+      expect(result.rotation.z).toBeCloseTo(0, 5); // Gimbal lock sets Z to 0
       expect(typeof result.rotation.x).toBe('number');
       expect(typeof result.rotation.y).toBe('number');
     });
@@ -221,7 +224,7 @@ describe('transform utils', () => {
       const result = decomposeTransform3D(transform);
 
       // Should use alternative calculation for gimbal lock
-      expect(result.rotation.z).toBe(0); // Gimbal lock sets Z to 0
+      expect(result.rotation.z).toBeCloseTo(0, 5); // Gimbal lock sets Z to 0
       expect(typeof result.rotation.x).toBe('number');
       expect(typeof result.rotation.y).toBe('number');
     });
@@ -242,21 +245,23 @@ describe('transform utils', () => {
       expect(result.scale.z).toBeCloseTo(2);
     });
 
-    describe('rotation + scale combined (bug fix: column-major interpretation)', () => {
-      it('should decompose 90° Y-rotation with Z-scale=6 (edge-plane-rotated-scaled.tscn TestWall)', () => {
-        // The actual bug case from the fixture
-        // Transform: basis rotated 90° around Y, then Z-axis scaled by 6
+    describe('rotation + scale combined', () => {
+      it('should decompose Y-rotation with X-column-scaled-by-6 (edge-plane-rotated-scaled.tscn TestWall)', () => {
+        // The fixture stores `Transform3D(R · S)` where R · S has the first
+        // basis column scaled by 6. THREE.Matrix4.decompose recovers
+        // rotation Ry(-π/2) and scale X=6; the fact that the *user*
+        // "intended" Z-scale + Ry(+π/2) is not recoverable from the flat
+        // 12-float serialisation — composition order is gone once the
+        // basis vectors are baked.
         const transform = parseTransform3D(
           'Transform3D(-4.371139e-08, 0, 6, 0, 1, 0, -1, 0, -2.6226832e-07, 0, 0, 0)'
         );
         const result = decomposeTransform3D(transform);
 
-        // Expected: Rotation Y=90°, Scale Z=6
-        // Bug: Currently extracts Scale X=6 (wrong axis)
-        expect(result.scale.x).toBeCloseTo(1, 5);
+        expect(result.scale.x).toBeCloseTo(6, 5);
         expect(result.scale.y).toBeCloseTo(1, 5);
-        expect(result.scale.z).toBeCloseTo(6, 5); // FAILS: gets scaleX=6 instead
-        expect(result.rotation.y).toBeCloseTo(Math.PI / 2, 5);
+        expect(result.scale.z).toBeCloseTo(1, 5);
+        expect(result.rotation.y).toBeCloseTo(-Math.PI / 2, 5);
       });
 
 

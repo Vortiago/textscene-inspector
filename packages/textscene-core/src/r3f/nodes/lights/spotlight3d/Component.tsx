@@ -24,7 +24,17 @@ export function SpotLight3D({ node }: NodeComponentProps) {
   const color = parseColorToHex(properties.light_color);
   const intensity = properties.light_energy * LIGHT_INTENSITY_SCALE;
   const angleRadians = (properties.spot_angle * Math.PI) / 180;
-  const penumbra = properties.penumbra ?? 0.1;
+  // Godot's `spot_attenuation` is a curve falloff exponent (default 1, may be
+  // up to ~16). THREE.js `penumbra` is a 0..1 edge-softness factor. We accept
+  // either property as a direct passthrough, clamped to [0, 1], with explicit
+  // `penumbra` taking precedence. Falls back to 0.1 when neither is set.
+  const rawAttenuation = (properties as unknown as { spot_attenuation?: number })
+    .spot_attenuation;
+  const penumbra =
+    properties.penumbra ??
+    (typeof rawAttenuation === 'number'
+      ? Math.max(0, Math.min(1, rawAttenuation))
+      : 0.1);
   const bias = properties.shadow_bias !== undefined
     ? -properties.shadow_bias * 0.01
     : DEFAULT_SHADOW_BIAS.SPOT;

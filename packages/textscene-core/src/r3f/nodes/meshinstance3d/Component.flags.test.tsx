@@ -84,10 +84,7 @@ describe('MeshInstance3D flags (assertions 11–17)', () => {
     expect(mat.color.g).toBe(1);
   });
 
-  // EXPECTED-FAIL (WI-R3F-9 discovery): the component only consults
-  // surfaceMaterialOverrides.get(0). Multi-surface material array
-  // support is unimplemented.
-  it.fails('#14 surface_material_override/1 with slot 0 absent → slot 1 still applied', async () => {
+  it('#14 surface_material_override/1 with slot 0 absent → slot 1 still applied', async () => {
     const surfaceMap = new Map<number, string>([[1, 'SubResource("Surf1")']]);
     const node = makeNode({
       mesh: 'SubResource("Box_1")',
@@ -107,9 +104,7 @@ describe('MeshInstance3D flags (assertions 11–17)', () => {
     expect(mat.color.g).toBe(1);
   });
 
-  // EXPECTED-FAIL (WI-R3F-9 discovery): Node3D's `visible` property is
-  // not consumed by any R3F component. Mesh always renders.
-  it.fails('#15 visible=false propagates to mesh.visible', async () => {
+  it('#15 visible=false propagates to mesh.visible', async () => {
     const node = makeNode({ name: 'invisible', mesh: 'SubResource("Box_1")' });
     // Node3DProperties has no `visible` field today — set on properties record.
     (node.properties as unknown as { visible: boolean }).visible = false;

@@ -148,10 +148,7 @@ describe('Lights — properties (assertions 67–80)', () => {
     );
   });
 
-  // EXPECTED-FAIL (WI-R3F-9 discovery): SpotLight3D maps Godot
-  // `penumbra` to THREE penumbra, but `spot_attenuation` (the curve
-  // exponent) is ignored entirely.
-  it.fails('#79 SpotLight3D.spot_attenuation → SpotLight.penumbra', async () => {
+  it('#79 SpotLight3D.spot_attenuation → SpotLight.penumbra', async () => {
     // Godot's spot_attenuation (curve falloff exponent) maps to THREE's
     // SpotLight.penumbra (0..1 edge softness). The current implementation
     // does not consume `spot_attenuation` — penumbra defaults to 0.1.

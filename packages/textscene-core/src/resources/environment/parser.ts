@@ -17,6 +17,12 @@ export function parseEnvironment(
       : { r: 0, g: 0, b: 0, a: 1 },
     background_energy_multiplier: parseFloat(properties.background_energy_multiplier ?? '1.0'),
 
+    // Ambient lighting
+    ambient_light_color: properties.ambient_light_color
+      ? parseColor(properties.ambient_light_color)
+      : { r: 1, g: 1, b: 1, a: 1 },
+    ambient_light_energy: parseFloat(properties.ambient_light_energy ?? '1.0'),
+
     // Volumetric Fog
     volumetric_fog_enabled: properties.volumetric_fog_enabled === 'true',
     volumetric_fog_density: parseFloat(properties.volumetric_fog_density ?? '0.05'),

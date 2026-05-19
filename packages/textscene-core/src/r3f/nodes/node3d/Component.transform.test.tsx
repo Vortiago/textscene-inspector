@@ -60,10 +60,7 @@ describe('Node3D transform (assertions 1–10)', () => {
     expect(group.position.z).toBe(-3);
   });
 
-  // EXPECTED-FAIL (WI-R3F-9 discovery): rotation decomposition currently
-  // returns the negated angle for pure-axis rotations under the Godot
-  // column-major / Euler XYZ convention. See decomposeTransform3D.
-  it.fails('#4 rotation.x decoded from basis (radians)', async () => {
+  it('#4 rotation.x decoded from basis (radians)', async () => {
     // Pure rotation around X by 90°. Godot column-major basis for Rx(90°):
     //   basis_x = (1, 0, 0)
     //   basis_y = (0, 0, 1)
@@ -81,8 +78,7 @@ describe('Node3D transform (assertions 1–10)', () => {
     expect(group.rotation.x).toBeCloseTo(Math.PI / 2, 4);
   });
 
-  // EXPECTED-FAIL (WI-R3F-9 discovery): see #4. Same sign-error class.
-  it.fails('#5 rotation.y decoded from basis (radians)', async () => {
+  it('#5 rotation.y decoded from basis (radians)', async () => {
     // Ry(90°): basis_x = (0, 0, -1), basis_y = (0, 1, 0), basis_z = (1, 0, 0).
     const group = await renderAt({
       name: 'rot-y',
@@ -96,8 +92,7 @@ describe('Node3D transform (assertions 1–10)', () => {
     expect(group.rotation.y).toBeCloseTo(Math.PI / 2, 4);
   });
 
-  // EXPECTED-FAIL (WI-R3F-9 discovery): see #4. Same sign-error class.
-  it.fails('#6 rotation.z decoded from basis (radians)', async () => {
+  it('#6 rotation.z decoded from basis (radians)', async () => {
     // Rz(90°): basis_x = (0, 1, 0), basis_y = (-1, 0, 0), basis_z = (0, 0, 1).
     const group = await renderAt({
       name: 'rot-z',

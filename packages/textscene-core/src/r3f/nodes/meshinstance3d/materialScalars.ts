@@ -6,11 +6,14 @@
  *   - metallic, roughness
  *   - emission_enabled, emission color, emission_energy_multiplier
  *   - uv1_scale, uv1_offset
+ *   - transparency, blend_mode, cull_mode  (rendering flags)
+ *   - normal_scale
  *
  * External textures (albedo / normal / roughness / metallic / emission)
  * are handled by `useResource` in the parent component.
  */
 
+import * as THREE from 'three';
 import { parseColor } from '../../../utils/colorParser';
 
 export interface StandardMaterial3DScalars {
@@ -25,6 +28,14 @@ export interface StandardMaterial3DScalars {
   uv1Scale: { x: number; y: number };
   /** Per-axis offset for every texture map applied by this material. */
   uv1Offset: { x: number; y: number };
+  /** True when albedo alpha < 1 OR Godot's `transparency` flag is non-zero. */
+  transparent: boolean;
+  /** three.js blending constant; defaults to NormalBlending. */
+  blending: THREE.Blending;
+  /** three.js side constant; defaults to FrontSide. */
+  side: THREE.Side;
+  /** Uniform XY scale applied to the normal map (no-op without normalMap). */
+  normalScale: { x: number; y: number };
 }
 
 const DEFAULT_SCALARS: StandardMaterial3DScalars = {
@@ -36,6 +47,10 @@ const DEFAULT_SCALARS: StandardMaterial3DScalars = {
   emissiveIntensity: 1,
   uv1Scale: { x: 1, y: 1 },
   uv1Offset: { x: 0, y: 0 },
+  transparent: false,
+  blending: THREE.NormalBlending,
+  side: THREE.FrontSide,
+  normalScale: { x: 1, y: 1 },
 };
 
 export function parseStandardMaterial3DScalars(
@@ -59,11 +74,19 @@ export function parseStandardMaterial3DScalars(
   const uv1Scale = parseVec2Components(properties['uv1_scale']) ?? DEFAULT_SCALARS.uv1Scale;
   const uv1Offset = parseVec2Components(properties['uv1_offset']) ?? DEFAULT_SCALARS.uv1Offset;
 
+  const opacity = albedo ? clamp01(albedo.a) : DEFAULT_SCALARS.opacity;
+  const transparencyFlag = parseTransparencyFlag(properties['transparency']);
+  const blending = parseBlendMode(properties['blend_mode']);
+  const side = parseCullMode(properties['cull_mode']);
+
+  const normalScaleScalar = numericOr(properties['normal_scale'], 1);
+  const normalScale = { x: normalScaleScalar, y: normalScaleScalar };
+
   return {
     color: albedo
       ? [clamp01(albedo.r), clamp01(albedo.g), clamp01(albedo.b)]
       : DEFAULT_SCALARS.color,
-    opacity: albedo ? clamp01(albedo.a) : DEFAULT_SCALARS.opacity,
+    opacity,
     metalness: clamp01(metallic),
     roughness: clamp01(roughness),
     emissive:
@@ -73,7 +96,58 @@ export function parseStandardMaterial3DScalars(
     emissiveIntensity: emissionEnabled ? Math.max(0, emissionEnergy) : 0,
     uv1Scale,
     uv1Offset,
+    transparent: opacity < 1 || transparencyFlag,
+    blending,
+    side,
+    normalScale,
   };
+}
+
+/** Godot transparency enum: 0=DISABLED, anything non-zero engages transparency. */
+function parseTransparencyFlag(raw: string | undefined): boolean {
+  if (raw === undefined) return false;
+  const n = parseInt(raw, 10);
+  return Number.isFinite(n) && n !== 0;
+}
+
+/**
+ * Godot BaseMaterial3D blend modes (0..4) → three.js blending constants.
+ * - 0 MIX        → NormalBlending
+ * - 1 ADD        → AdditiveBlending
+ * - 2 SUB        → SubtractiveBlending
+ * - 3 MUL        → MultiplyBlending
+ * - 4 PREMULT_ALPHA → CustomBlending in Godot; we approximate with NormalBlending.
+ */
+function parseBlendMode(raw: string | undefined): THREE.Blending {
+  if (raw === undefined) return THREE.NormalBlending;
+  switch (raw.trim()) {
+    case '1':
+      return THREE.AdditiveBlending;
+    case '2':
+      return THREE.SubtractiveBlending;
+    case '3':
+      return THREE.MultiplyBlending;
+    default:
+      return THREE.NormalBlending;
+  }
+}
+
+/**
+ * Godot cull modes: 0=BACK, 1=FRONT, 2=DISABLED (double-sided).
+ * Maps to three.js FrontSide / BackSide / DoubleSide accordingly.
+ *
+ * Note: Godot's BACK means cull back faces → render FrontSide in three.js.
+ */
+function parseCullMode(raw: string | undefined): THREE.Side {
+  if (raw === undefined) return THREE.FrontSide;
+  switch (raw.trim()) {
+    case '1':
+      return THREE.BackSide;
+    case '2':
+      return THREE.DoubleSide;
+    default:
+      return THREE.FrontSide;
+  }
 }
 
 function safeParseColor(

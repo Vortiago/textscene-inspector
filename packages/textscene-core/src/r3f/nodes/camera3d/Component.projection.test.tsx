@@ -87,9 +87,7 @@ describe('Camera3D projection (assertions 60–66)', () => {
     expect(o.left).toBeCloseTo(-4 * (16 / 9), 5);
   });
 
-  // EXPECTED-FAIL (WI-R3F-9 discovery): keep_aspect is parsed but
-  // unused. Frustum always uses fixed 16:9.
-  it.fails('#66 keep_aspect KEEP_WIDTH vs KEEP_HEIGHT → aspect correction applied', async () => {
+  it('#66 keep_aspect KEEP_WIDTH vs KEEP_HEIGHT → aspect correction applied', async () => {
     // KEEP_WIDTH should change the framing relative to KEEP_HEIGHT. The
     // current implementation uses a fixed 16:9 aspect and does not branch
     // on keep_aspect. This assertion catches that gap by rendering both

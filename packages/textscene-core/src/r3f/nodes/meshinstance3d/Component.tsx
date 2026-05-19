@@ -168,6 +168,7 @@ export function MeshInstance3D({ node }: NodeComponentProps) {
   }, [textureSlots, textureRequests]);
 
   const castShadow = shadowCastingFlag(properties.castShadow);
+  const visible = properties.visible !== false;
 
   // Unresolved mesh (no mesh, external GLB, missing SubResource): magenta
   // wireframe placeholder.
@@ -178,6 +179,7 @@ export function MeshInstance3D({ node }: NodeComponentProps) {
         position={position}
         rotation={rotation}
         scale={scale}
+        visible={visible}
         castShadow={castShadow}
         receiveShadow
       >
@@ -191,7 +193,13 @@ export function MeshInstance3D({ node }: NodeComponentProps) {
   // showing the missing path.
   if (firstMissingPath !== null) {
     return (
-      <group name={node.name} position={position} rotation={rotation} scale={scale}>
+      <group
+        name={node.name}
+        position={position}
+        rotation={rotation}
+        scale={scale}
+        visible={visible}
+      >
         <mesh castShadow={castShadow} receiveShadow>
           <MeshGeometry resource={meshResource} />
           <meshStandardMaterial color="magenta" />
@@ -212,6 +220,7 @@ export function MeshInstance3D({ node }: NodeComponentProps) {
       position={position}
       rotation={rotation}
       scale={scale}
+      visible={visible}
       castShadow={castShadow}
       receiveShadow
     >
@@ -248,16 +257,21 @@ function MaterialSlot({
   if (!scalars) {
     return <meshStandardMaterial color={0xcccccc} metalness={0.3} roughness={0.7} />;
   }
-  const transparent = scalars.opacity < 1;
+  // normalScale is a THREE.Vector2; we materialize one matching the
+  // parsed scalar so the meshStandardMaterial slot picks it up on render.
+  const normalScale = new THREE.Vector2(scalars.normalScale.x, scalars.normalScale.y);
   return (
     <meshStandardMaterial
       color={scalars.color}
       metalness={scalars.metalness}
       roughness={scalars.roughness}
-      transparent={transparent}
+      transparent={scalars.transparent}
       opacity={scalars.opacity}
+      blending={scalars.blending}
+      side={scalars.side}
       map={albedoMap ?? null}
       normalMap={normalMap ?? null}
+      normalScale={normalScale}
       roughnessMap={roughnessMap ?? null}
       metalnessMap={metalnessMap ?? null}
       emissiveMap={emissiveMap ?? null}
@@ -296,10 +310,13 @@ function resolveMaterialSubResource(
   properties: MeshInstance3DProperties,
   internalResources: readonly TscnInternalResource[]
 ): TscnInternalResource | undefined {
-  // Precedence: surface_material_override[0] > material_override > mesh's own material.
-  const surfaceRef = properties.surfaceMaterialOverrides?.get(0);
+  // Precedence: surface_material_override[0] > any other surface slot >
+  // material_override > mesh's own material. Multi-surface meshes can
+  // populate slot N without slot 0; we still render with the first
+  // populated slot as a single-material approximation rather than
+  // falling through to mesh-own.
   const candidate =
-    surfaceRef ??
+    pickSurfaceMaterial(properties.surfaceMaterialOverrides) ??
     properties.materialOverride ??
     findMeshOwnMaterial(properties.mesh, internalResources);
   if (!candidate) return undefined;
@@ -311,6 +328,25 @@ function resolveMaterialSubResource(
   if (!resource || resource.type !== 'StandardMaterial3D') return undefined;
 
   return resource;
+}
+
+/**
+ * Pick the lowest-indexed populated surface material override slot. Slot 0
+ * wins when present; otherwise return the next-lowest. Returns undefined
+ * when the map is empty.
+ */
+function pickSurfaceMaterial(
+  overrides: Map<number, string> | undefined
+): string | undefined {
+  if (!overrides || overrides.size === 0) return undefined;
+  const slot0 = overrides.get(0);
+  if (slot0) return slot0;
+  const sortedSlots = Array.from(overrides.keys()).sort((a, b) => a - b);
+  for (const slot of sortedSlots) {
+    const ref = overrides.get(slot);
+    if (ref) return ref;
+  }
+  return undefined;
 }
 
 function findMeshOwnMaterial(

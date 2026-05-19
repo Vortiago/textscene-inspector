@@ -94,10 +94,7 @@ describe('Mesh primitives (assertions 48–59)', () => {
     expect(geom.parameters.height).toBe(7);
   });
 
-  // EXPECTED-FAIL (WI-R3F-9 discovery): the imperative PlaneMesh
-  // renderer applied geometry.translate(center_offset); the R3F
-  // declarative geometry skips this step.
-  it.fails('#53 PlaneMesh.center_offset → geometry translated', async () => {
+  it('#53 PlaneMesh.center_offset → geometry translated', async () => {
     // The plane's bounding box should be shifted by center_offset.
     // We assert by computing bounding box center after render.
     const geom = await renderGeometry(
@@ -109,10 +106,7 @@ describe('Mesh primitives (assertions 48–59)', () => {
     expect(center.x).toBeCloseTo(1, 3);
   });
 
-  // EXPECTED-FAIL (WI-R3F-9 discovery): orientation rotation (rotateX/
-  // rotateY by ±π/2) baked into geometry by imperative renderer is not
-  // replicated in the R3F declarative `<planeGeometry>`.
-  it.fails('#54 PlaneMesh.orientation FACE_X/FACE_Y/FACE_Z → rotation applied', async () => {
+  it('#54 PlaneMesh.orientation FACE_X/FACE_Y/FACE_Z → rotation applied', async () => {
     // FACE_Y (orientation=1) leaves plane in XZ — normal points up.
     // We assert by checking bounding box dimensions: a (2,2) XY plane
     // rotated to FACE_Y still has 2-unit extents in X and Z (zero in Y).

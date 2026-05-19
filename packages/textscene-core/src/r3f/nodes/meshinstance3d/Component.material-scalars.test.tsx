@@ -133,10 +133,7 @@ describe('StandardMaterial3D scalars (assertions 18–31)', () => {
     expect(mat.emissiveIntensity).toBeCloseTo(3, 4);
   });
 
-  // EXPECTED-FAIL (WI-R3F-9 discovery): Godot's `transparency` flag is
-  // not surfaced by materialScalars; only color-alpha < 1 toggles
-  // material.transparent.
-  it.fails('#29 transparency=1 (ALPHA mode) → material.transparent === true', async () => {
+  it('#29 transparency=1 (ALPHA mode) → material.transparent === true', async () => {
     // Even without alpha < 1 on the color, Godot's `transparency` flag forces transparent.
     const mat = await renderWithMaterial({
       albedo_color: 'Color(1, 1, 1, 1)',
@@ -145,9 +142,7 @@ describe('StandardMaterial3D scalars (assertions 18–31)', () => {
     expect(mat.transparent).toBe(true);
   });
 
-  // EXPECTED-FAIL (WI-R3F-9 discovery): `blend_mode` not captured by
-  // materialScalars; material.blending defaults to NormalBlending.
-  it.fails('#30 blend_mode=ADD → material.blending === THREE.AdditiveBlending', async () => {
+  it('#30 blend_mode=ADD → material.blending === THREE.AdditiveBlending', async () => {
     const mat = await renderWithMaterial({
       albedo_color: 'Color(1, 1, 1, 1)',
       blend_mode: '1', // Godot: 1 = ADD
@@ -155,9 +150,7 @@ describe('StandardMaterial3D scalars (assertions 18–31)', () => {
     expect(mat.blending).toBe(THREE.AdditiveBlending);
   });
 
-  // EXPECTED-FAIL (WI-R3F-9 discovery): `cull_mode` not captured; the
-  // material slot omits any `side` prop so it defaults to FrontSide.
-  it.fails('#31 cull_mode=DISABLED → material.side === THREE.DoubleSide', async () => {
+  it('#31 cull_mode=DISABLED → material.side === THREE.DoubleSide', async () => {
     const mat = await renderWithMaterial({
       albedo_color: 'Color(1, 1, 1, 1)',
       cull_mode: '2', // Godot CULL_DISABLED = 2

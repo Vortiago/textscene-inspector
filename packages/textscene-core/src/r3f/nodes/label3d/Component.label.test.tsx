@@ -56,9 +56,7 @@ describe('Label3D (assertions 90–94)', () => {
     expect(mat.map).not.toBeNull();
   });
 
-  // EXPECTED-FAIL (WI-R3F-9 discovery): Label3D parser does not read
-  // font_size. Rasterisation uses a hard-coded FONT_SIZE=128 constant.
-  it.fails('#91 font_size → scale or size applied (Godot exposes font_size, our parser does not capture it)', async () => {
+  it('#91 font_size → scale or size applied (Godot exposes font_size, our parser does not capture it)', async () => {
     // This catches the gap: font_size is a real Godot property, currently
     // unsupported in our type / parser. The assertion will fail until added.
     const node = makeNode();
@@ -76,10 +74,7 @@ describe('Label3D (assertions 90–94)', () => {
     expect(geom.parameters.height).not.toBeCloseTo(1.0, 2);
   });
 
-  // EXPECTED-FAIL (WI-R3F-9 discovery): modulate is applied to canvas
-  // text fillStyle, not to material.color. The material color stays
-  // its default white.
-  it.fails('#92 modulate color → material color matches (tint applied to rendered text)', async () => {
+  it('#92 modulate color → material color matches (tint applied to rendered text)', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <Label3D node={makeNode({ modulate: { r: 1, g: 0, b: 0, a: 1 } })} />
     );
@@ -94,11 +89,7 @@ describe('Label3D (assertions 90–94)', () => {
     expect(mat.color.b).toBeCloseTo(0, 2);
   });
 
-  // EXPECTED-FAIL (WI-R3F-9 discovery): the imperative renderer set
-  // mesh.userData.billboardMode for the per-frame look-at-camera loop;
-  // the R3F component never persists it, so runtime billboarding has
-  // no input.
-  it.fails('#93 billboard=ENABLED → billboard mode persisted (for runtime billboarding)', async () => {
+  it('#93 billboard=ENABLED → billboard mode persisted (for runtime billboarding)', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <Label3D node={makeNode({ billboard: BillboardMode.BILLBOARD_ENABLED })} />
     );
@@ -111,9 +102,7 @@ describe('Label3D (assertions 90–94)', () => {
     );
   });
 
-  // EXPECTED-FAIL (WI-R3F-9 discovery): no_depth_test is not parsed.
-  // material.depthTest stays at its default true.
-  it.fails('#94 no_depth_test=true → material.depthTest === false', async () => {
+  it('#94 no_depth_test=true → material.depthTest === false', async () => {
     // Godot's "no_depth_test" flag makes Label3D ignore depth — useful for
     // UI-style labels that should always be visible. Our parser does not
     // capture this property; the material defaults depthTest=true.

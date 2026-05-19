@@ -178,9 +178,7 @@ describe('StandardMaterial3D textures (assertions 32–39)', () => {
     expect(mat.normalMap).toBeInstanceOf(THREE.Texture);
   });
 
-  // EXPECTED-FAIL (WI-R3F-9 discovery): `normal_scale` parsed but not
-  // applied. Material's normalScale stays at (1, 1).
-  it.fails('#35 normal_scale=2.0 → material.normalScale.x === 2.0 and .y === 2.0', async () => {
+  it('#35 normal_scale=2.0 → material.normalScale.x === 2.0 and .y === 2.0', async () => {
     const tex = makeTexture();
     const renderer = await renderWithTexture({
       matData: {

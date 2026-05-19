@@ -34,9 +34,7 @@ async function render(node: TscnNode, resources: TscnInternalResource[]) {
 }
 
 describe('WorldEnvironment (assertions 81–89)', () => {
-  // EXPECTED-FAIL (WI-R3F-9 discovery): BG_SKY (mode=2) is unimplemented;
-  // only BG_COLOR / BG_CLEAR_COLOR set scene.background today.
-  it.fails('#81 background_mode SKY → scene background is set (non-null)', async () => {
+  it('#81 background_mode SKY → scene background is set (non-null)', async () => {
     const renderer = await render(makeNode(), [envSub({ background_mode: '2' })]);
     // SKY mode (2) should produce SOME scene.background — historically a
     // CubeTexture or a gradient sky. Our implementation today only handles
@@ -63,10 +61,7 @@ describe('WorldEnvironment (assertions 81–89)', () => {
     expect(bg.b).toBeCloseTo(0.75, 2);
   });
 
-  // EXPECTED-FAIL (WI-R3F-9 discovery): ambient_light_* is not in
-  // EnvironmentProperties; no <ambientLight> is mounted by
-  // WorldEnvironment.
-  it.fails('#84 ambient_light_color → ambient light color matches', async () => {
+  it('#84 ambient_light_color → ambient light color matches', async () => {
     // Environment's ambient_light is a separate optional sub-property of
     // the Godot Environment resource. The current parser/renderer doesn't
     // capture it. This assertion catches the gap.
@@ -85,8 +80,7 @@ describe('WorldEnvironment (assertions 81–89)', () => {
     expect(c.b).toBeCloseTo(0.9, 1);
   });
 
-  // EXPECTED-FAIL (WI-R3F-9 discovery): see #84.
-  it.fails('#85 ambient_light_energy → ambient light intensity matches', async () => {
+  it('#85 ambient_light_energy → ambient light intensity matches', async () => {
     const renderer = await render(makeNode(), [
       envSub({
         background_mode: '1',

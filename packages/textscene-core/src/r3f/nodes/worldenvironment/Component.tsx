@@ -33,6 +33,16 @@ export function WorldEnvironment({ node, children }: NodeComponentProps) {
   return (
     <group name={node.name}>
       {settings && <EnvironmentApplier settings={settings} />}
+      {settings?.ambient && (
+        <ambientLight
+          color={new THREE.Color(
+            settings.ambient.color.r,
+            settings.ambient.color.g,
+            settings.ambient.color.b
+          )}
+          intensity={settings.ambient.energy}
+        />
+      )}
       {children}
     </group>
   );
@@ -45,20 +55,26 @@ interface EnvironmentApplierProps {
 function EnvironmentApplier({ settings }: EnvironmentApplierProps) {
   const scene = useThree((state) => state.scene);
 
+  const mode = settings.background.mode;
   const showBackgroundColor =
-    settings.background.mode === BackgroundMode.BG_COLOR ||
-    settings.background.mode === BackgroundMode.BG_CLEAR_COLOR;
+    mode === BackgroundMode.BG_COLOR || mode === BackgroundMode.BG_CLEAR_COLOR;
 
   useEffect(() => {
     const previousBackground = scene.background;
     if (showBackgroundColor) {
       const c = settings.background.color;
       scene.background = new THREE.Color(c.r, c.g, c.b);
+    } else if (mode === BackgroundMode.BG_SKY) {
+      // Full sky/IBL rendering is out of MVS scope; we fall back to a
+      // mid-blue solid so the scene still has a visible background and
+      // downstream code (and tests) can rely on scene.background being
+      // non-null whenever SKY mode is requested.
+      scene.background = new THREE.Color(0.5, 0.6, 0.75);
     }
     return () => {
       scene.background = previousBackground;
     };
-  }, [scene, showBackgroundColor, settings.background.color]);
+  }, [scene, showBackgroundColor, mode, settings.background.color]);
 
   const fog = settings.fog;
   useEffect(() => {
