@@ -17,5 +17,6 @@ import './lights/omnilight3d';
 import './lights/spotlight3d';
 import './worldenvironment';
 import './label3d';
+import './sprite3d';
 
 export { GenericNodeFallback } from './generic-node-fallback';

@@ -18,6 +18,7 @@ describe('R3F NodeComponentRegistry self-registration', () => {
     'SpotLight3D',
     'WorldEnvironment',
     'Label3D',
+    'Sprite3D',
   ];
 
   it.each(mvsTypes)('registers a component for %s', (typeName) => {

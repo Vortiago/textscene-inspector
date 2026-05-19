@@ -221,6 +221,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Sprite3d",
+    "file": "unit-sprite3d.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Surface Material Override",
     "file": "unit-surface-material-override.tscn",
     "category": "Other"

@@ -13,6 +13,7 @@ import '../nodes/base/node3d/index.js';
 import '../nodes/3d/meshinstance3d/index.js';
 import '../nodes/3d/camera3d/index.js';
 import '../nodes/3d/label3d/index.js';
+import '../nodes/3d/sprite3d/index.js';
 import '../nodes/3d/lights/spotlight3d/index.js';
 import '../nodes/3d/lights/directionallight3d/index.js';
 import '../nodes/3d/lights/omnilight3d/index.js';

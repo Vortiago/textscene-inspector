@@ -130,7 +130,22 @@ Root-cause of the UV/texture gap: verifiers tested "scene loads and renders" rat
 95. Unregistered node type → `<GenericNodeFallback>` renders with `userData.nodeType` and `userData.nodeName`
 96. Fallback is visible (non-zero bounding box or helper present)
 
-**Total: 96 property assertions across 9 test files.**
+#### M. Sprite3D — file: `sprite3d/Component.test.tsx` (WI-R3F-13)
+Sprite3D combines the MeshInstance3D async-texture state machine with the Label3D billboarded-quad pattern. Spritesheet UV math is the load-bearing new logic — assertions 103–105 specifically cover it.
+97. `texture` (ExtResource) loaded → `material.map` is a `THREE.Texture`
+98. `texture` missing → magenta placeholder mesh + `<InternalTextLabel>` naming the path
+99. `billboard` mode persisted to `mesh.userData.billboardMode` (+ `billboardAxis` for runtime per-frame look-at)
+100. `pixel_size` × image dimensions → `<planeGeometry>` width/height in world units
+101. `modulate` RGB → `material.color`; `modulate.a × (1 − transparency)` → `material.opacity` + `material.transparent`
+102. `region_enabled` + `region_rect` → `texture.repeat` and `texture.offset` clamp to sub-rectangle of the image; quad sized to region dimensions
+103. Spritesheet UV (linear `frame`): `frame=0, hframes=4, vframes=2` → `repeat=(0.25, 0.5)`, `offset=(0, 0.5)` (top-left tile)
+104. Spritesheet UV (wrap-around): `frame=5, hframes=4, vframes=2` → second row, second column (`offset=(0.25, 0)`)
+105. `frame_coords` (Vector2i) overrides the linear `frame` index
+106. `alpha_cut = ALPHA_CUT_DISCARD` → non-zero `material.alphaTest` + `depthWrite = true`
+107. `render_priority` → `mesh.renderOrder`
+108. Transform `origin` propagates to `mesh.position`
+
+**Total: 108 property assertions across 10 test files.**
 
 Each assertion has three variants unless noted: default-omitted (parser default), explicit value, and one edge/extreme value.
 
