@@ -32,10 +32,12 @@
 
 .sectionTitle {
   margin: 0 0 var(--tsi-space-2) 0;
-  font-size: var(--tsi-font-sm);
+  padding-bottom: var(--tsi-space-1);
+  border-bottom: 1px solid var(--tsi-border);
+  font-size: var(--tsi-font-xs);
   color: var(--tsi-fg-muted);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
 }
 
 .row {
