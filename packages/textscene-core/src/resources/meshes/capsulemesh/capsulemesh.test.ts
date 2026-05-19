@@ -85,7 +85,7 @@ describe('CapsuleMesh Renderer', () => {
     expect(geometry.parameters.radius).toBe(0.5);
     // three.js length = Godot height - 2 * radius
     // 3.0 - 2 * 0.5 = 2.0
-    expect(geometry.parameters.length).toBeCloseTo(2.0);
+    expect(geometry.parameters.height).toBeCloseTo(2.0);
     expect(geometry.parameters.capSegments).toBe(8);
     expect(geometry.parameters.radialSegments).toBe(32);
   });
@@ -101,7 +101,7 @@ describe('CapsuleMesh Renderer', () => {
     const geometry = createCapsuleMeshGeometry(props);
 
     // Should clamp to minimum 0.01 instead of going negative
-    expect(geometry.parameters.length).toBeGreaterThanOrEqual(0.01);
+    expect(geometry.parameters.height).toBeGreaterThanOrEqual(0.01);
   });
 
   it('should handle default capsule dimensions', () => {
@@ -115,7 +115,7 @@ describe('CapsuleMesh Renderer', () => {
     const geometry = createCapsuleMeshGeometry(props);
 
     expect(geometry.parameters.radius).toBe(0.5);
-    expect(geometry.parameters.length).toBeCloseTo(1.0);
+    expect(geometry.parameters.height).toBeCloseTo(1.0);
   });
 
   it('should convert height correctly for various radii', () => {
@@ -129,6 +129,6 @@ describe('CapsuleMesh Renderer', () => {
     const geometry = createCapsuleMeshGeometry(props);
 
     // 10.0 - 2 * 2.0 = 6.0
-    expect(geometry.parameters.length).toBeCloseTo(6.0);
+    expect(geometry.parameters.height).toBeCloseTo(6.0);
   });
 });

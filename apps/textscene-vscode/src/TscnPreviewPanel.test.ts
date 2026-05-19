@@ -10,8 +10,8 @@ import { createMockUri, createMockFileData, vscode } from './test-setup';
 // Mock external modules
 vi.mock('./webview/webviewHtml', () => ({
   generateNonce: vi.fn(() => 'mock-nonce-12345678901234567890'),
-  generateWebviewHtml: vi.fn((scriptUri: string, nonce: string) =>
-    `<html><script nonce="${nonce}" src="${scriptUri}"></script></html>`
+  generateWebviewHtml: vi.fn((options: { scriptUri: string; nonce: string }) =>
+    `<html><script nonce="${options.nonce}" src="${options.scriptUri}"></script></html>`
   )
 }));
 
@@ -68,7 +68,8 @@ describe('TscnPreviewPanel', () => {
       onDidReceiveMessage: vi.fn((handler: (msg: any) => void) => {
         messageHandler = handler;
         return { dispose: vi.fn() };
-      })
+      }),
+      cspSource: 'vscode-webview://mock-csp-source',
     };
 
     // Setup mock panel
@@ -991,8 +992,10 @@ describe('TscnPreviewPanel', () => {
         })
       );
       expect(generateWebviewHtml).toHaveBeenCalledWith(
-        expect.stringContaining('vscode-webview'),
-        expect.any(String)
+        expect.objectContaining({
+          scriptUri: expect.stringContaining('vscode-webview'),
+          nonce: expect.any(String),
+        })
       );
     });
 
@@ -1001,8 +1004,9 @@ describe('TscnPreviewPanel', () => {
 
       expect(generateNonce).toHaveBeenCalled();
       expect(generateWebviewHtml).toHaveBeenCalledWith(
-        expect.any(String),
-        'mock-nonce-12345678901234567890'
+        expect.objectContaining({
+          nonce: 'mock-nonce-12345678901234567890',
+        })
       );
     });
 

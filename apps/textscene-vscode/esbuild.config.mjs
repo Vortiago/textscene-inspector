@@ -1,7 +1,14 @@
 /**
- * esbuild configuration for bundling the extension and webview
+ * esbuild configuration for bundling the extension and webview.
+ *
+ * The webview build uses esbuild-css-modules-plugin so that `*.module.css`
+ * files imported from `@textscene/core` (the R3F components added in
+ * WI-R3F-1 onward) emit a separate CSS bundle alongside the JS bundle.
+ * The webview HTML links that CSS file with the CSP nonce so it loads
+ * under VS Code's restrictive content-security policy.
  */
 import * as esbuild from 'esbuild';
+import cssModulesPlugin from 'esbuild-css-modules-plugin';
 
 const production = process.argv.includes('--production');
 const watch = process.argv.includes('--watch');
@@ -37,6 +44,17 @@ const webviewOptions = {
   sourcemap: !production,
   minify: production,
   logLevel: 'info',
+  plugins: [
+    cssModulesPlugin({
+      // Emit a separate dist/webview.css that the HTML links with a CSP
+      // nonce instead of injecting <style> tags at runtime (CSP-incompatible).
+      inject: false,
+      emitDeclarationFile: true,
+    }),
+  ],
+  loader: {
+    '.css': 'css',
+  },
 };
 
 /**

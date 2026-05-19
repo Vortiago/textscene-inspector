@@ -18,6 +18,7 @@ export default [
       '**/.vscode-test/',
       '**/.test-workspace/',
       '**/.claude/',
+      '.spike/',
     ],
   },
 
@@ -90,7 +91,7 @@ export default [
 
   // Config files and scripts - Node.js environment
   {
-    files: ['**/*.config.js', '**/*.config.mjs', '**/scripts/**/*.js'],
+    files: ['**/*.config.js', '**/*.config.mjs', '**/scripts/**/*.js', '**/scripts/**/*.mjs'],
     languageOptions: {
       globals: {
         ...globals.node,
@@ -131,7 +132,7 @@ export default [
 
   // Test files
   {
-    files: ['**/*.test.ts', '**/*.spec.ts', '**/test-setup.ts'],
+    files: ['**/*.test.ts', '**/*.spec.ts', '**/*.test.tsx', '**/*.spec.tsx', '**/test-setup.ts'],
     languageOptions: {
       parser: tsparser,
       parserOptions: {

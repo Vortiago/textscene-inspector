@@ -27,3 +27,7 @@ export type { ResourceProvider } from './resources/ResourceProvider';
 
 // Export resource provider utilities
 export { isBinaryResourceType, stripResPrefix } from './resources/resourceProviderUtils';
+
+// Export R3F components (Phase 14 migration, WI-R3F-1)
+export { TscnCanvas, TscnSceneContents } from './r3f/TscnCanvas';
+export type { TscnCanvasProps } from './r3f/TscnCanvas';

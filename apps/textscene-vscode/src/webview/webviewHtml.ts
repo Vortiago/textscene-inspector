@@ -13,15 +13,44 @@ export function generateNonce(): string {
   return text;
 }
 
-export function generateWebviewHtml(scriptUri: string, nonce: string): string {
+export interface WebviewHtmlOptions {
+  scriptUri: string;
+  nonce: string;
+  /**
+   * URI to the bundled CSS file emitted by esbuild-css-modules-plugin.
+   * Optional because the file may not exist on first build before any
+   * `.module.css` is imported; callers should pass it only when the file
+   * is present.
+   */
+  cssUri?: string;
+  /**
+   * WI-R3F-1 feature flag. When true the webview entry mounts the empty
+   * <TscnCanvas> React tree instead of the imperative TscnPreviewUI.
+   * Controlled by the `textscene.useR3F` workspace setting.
+   */
+  useR3F: boolean;
+  /**
+   * The webview's CSP source (`webview.cspSource`). The CSP needs this
+   * to allow loading the stylesheet via `<link>`.
+   */
+  cspSource: string;
+}
+
+export function generateWebviewHtml(options: WebviewHtmlOptions): string {
+  const { scriptUri, nonce, cssUri, useR3F, cspSource } = options;
+  const cssLink = cssUri
+    ? `<link rel="stylesheet" nonce="${nonce}" href="${cssUri}">`
+    : '';
+
   return `
     <!DOCTYPE html>
     <html lang="en">
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}'; img-src blob: data:;">
+      <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}'; img-src ${cspSource} blob: data:;">
       <title>TSCN Preview</title>
+      ${cssLink}
       <style>
         /* Shared UI styles from core library */
         ${sharedStyles}
@@ -109,6 +138,14 @@ export function generateWebviewHtml(scriptUri: string, nonce: string): string {
           display: block;
         }
 
+        /* WI-R3F-1: container for the React-mounted canvas when useR3F=true. */
+        #r3f-root {
+          flex: 1;
+          width: 100%;
+          height: 100%;
+          position: relative;
+        }
+
         .error {
           position: absolute;
           top: 10px;
@@ -179,6 +216,10 @@ export function generateWebviewHtml(scriptUri: string, nonce: string): string {
       </style>
     </head>
     <body>
+      ${
+        useR3F
+          ? `<div id="r3f-root"></div>`
+          : `
       <div id="tree-viewer-panel">
         <div id="tree-viewer-header">
           <h2>Scene Tree</h2>
@@ -206,7 +247,9 @@ export function generateWebviewHtml(scriptUri: string, nonce: string): string {
         </div>
 
         <canvas id="canvas"></canvas>
-      </div>
+      </div>`
+      }
+      <script nonce="${nonce}">window.__TSCN_USE_R3F__ = ${useR3F};</script>
       <script nonce="${nonce}" src="${scriptUri}"></script>
     </body>
     </html>

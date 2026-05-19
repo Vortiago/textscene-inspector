@@ -51,6 +51,16 @@
           "when": "editorLangId == tscn || resourceExtname == .tscn"
         }
       ]
+    },
+    "configuration": {
+      "title": "TextScene",
+      "properties": {
+        "textscene.useR3F": {
+          "type": "boolean",
+          "default": false,
+          "description": "Use the experimental react-three-fiber-based renderer instead of the imperative renderer. Restart the preview after changing this setting."
+        }
+      }
     }
   },
   "scripts": {
@@ -86,15 +96,20 @@
     "url": "https://github.com/vortiago/tscn-file-previewer"
   },
   "dependencies": {
-    "@textscene/core": "workspace:*"
+    "@textscene/core": "workspace:*",
+    "react": "catalog:",
+    "react-dom": "catalog:"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.10",
     "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
     "@types/vscode": "^1.85.0",
     "@vscode/test-electron": "^2.5.2",
     "@vscode/vsce": "^3.2.1",
     "esbuild": "catalog:",
+    "esbuild-css-modules-plugin": "^3.1.5",
     "glob": "^11.0.3",
     "happy-dom": "catalog:",
     "mocha": "^11.7.5",

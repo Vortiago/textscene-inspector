@@ -17,6 +17,23 @@ interface WebviewState {
   selectedNodePath?: string;
 }
 
+// WI-R3F-1: when the `textscene.useR3F` setting is true, webviewHtml.ts
+// injects this global and emits a `#r3f-root` container instead of the
+// imperative tree-viewer layout. Mount the React tree and stop.
+declare global {
+  interface Window {
+    __TSCN_USE_R3F__?: boolean;
+  }
+}
+
+if (window.__TSCN_USE_R3F__) {
+  void import('./r3f-webview-main').then(({ mountR3FWebview }) => mountR3FWebview());
+} else {
+  bootstrapImperativeWebview();
+}
+
+function bootstrapImperativeWebview(): void {
+
 const vscode = acquireVsCodeApi();
 const resourceProvider = new WebviewResourceProvider(vscode);
 
@@ -159,3 +176,5 @@ window.addEventListener('message', (event) => {
       break;
   }
 });
+
+} // end bootstrapImperativeWebview

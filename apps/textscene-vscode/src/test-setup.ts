@@ -155,6 +155,13 @@ const mockWorkspace: any = {
     onDidCreate: vi.fn().mockReturnValue({ dispose: vi.fn() }),
     onDidDelete: vi.fn().mockReturnValue({ dispose: vi.fn() }),
     dispose: vi.fn()
+  }),
+
+  /**
+   * Get configuration namespace
+   */
+  getConfiguration: vi.fn().mockReturnValue({
+    get: vi.fn((_key: string, defaultValue?: unknown) => defaultValue)
   })
 };
 

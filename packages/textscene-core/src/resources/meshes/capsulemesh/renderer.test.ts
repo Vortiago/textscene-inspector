@@ -36,7 +36,7 @@ describe('CapsuleMesh Renderer', () => {
       const geometry = createCapsuleMeshGeometry(properties);
 
       // THREE.js length = height - 2*radius = 3.0 - 2*0.5 = 2.0
-      expect(geometry.parameters.length).toBe(2.0);
+      expect(geometry.parameters.height).toBe(2.0);
     });
 
     it('should handle height exactly equal to 2*radius', () => {
@@ -50,7 +50,7 @@ describe('CapsuleMesh Renderer', () => {
       const geometry = createCapsuleMeshGeometry(properties);
 
       // length = 2.0 - 2*1.0 = 0 → clamped to 0.01
-      expect(geometry.parameters.length).toBe(0.01);
+      expect(geometry.parameters.height).toBe(0.01);
     });
 
     it('should clamp negative length to minimum 0.01', () => {
@@ -64,7 +64,7 @@ describe('CapsuleMesh Renderer', () => {
       const geometry = createCapsuleMeshGeometry(properties);
 
       // length = 1.5 - 2*1.0 = -0.5 → clamped to 0.01
-      expect(geometry.parameters.length).toBe(0.01);
+      expect(geometry.parameters.height).toBe(0.01);
     });
 
     it('should handle very small radius', () => {
@@ -79,7 +79,7 @@ describe('CapsuleMesh Renderer', () => {
 
       expect(geometry.parameters.radius).toBe(0.01);
       // length = 0.1 - 2*0.01 = 0.08
-      expect(geometry.parameters.length).toBe(0.08);
+      expect(geometry.parameters.height).toBe(0.08);
     });
 
     it('should handle large capsule dimensions', () => {
@@ -94,7 +94,7 @@ describe('CapsuleMesh Renderer', () => {
 
       expect(geometry.parameters.radius).toBe(10.0);
       // length = 100.0 - 2*10.0 = 80.0
-      expect(geometry.parameters.length).toBe(80.0);
+      expect(geometry.parameters.height).toBe(80.0);
     });
 
     it('should handle low radial segment count', () => {
@@ -150,7 +150,7 @@ describe('CapsuleMesh Renderer', () => {
       const geometry = createCapsuleMeshGeometry(properties);
 
       // length = 2.05 - 2*1.0 = 0.05
-      expect(geometry.parameters.length).toBeCloseTo(0.05, 5);
+      expect(geometry.parameters.height).toBeCloseTo(0.05, 5);
     });
 
     it('should handle capsule with long cylinder', () => {
@@ -164,7 +164,7 @@ describe('CapsuleMesh Renderer', () => {
       const geometry = createCapsuleMeshGeometry(properties);
 
       // length = 10.0 - 2*0.5 = 9.0
-      expect(geometry.parameters.length).toBe(9.0);
+      expect(geometry.parameters.height).toBe(9.0);
     });
 
     it('should create geometry with valid vertex data', () => {
@@ -287,7 +287,7 @@ describe('CapsuleMesh Renderer', () => {
 
       expect(geometry.parameters.radius).toBe(0.33);
       // length = 2.75 - 2*0.33 = 2.09
-      expect(geometry.parameters.length).toBeCloseTo(2.09, 5);
+      expect(geometry.parameters.height).toBeCloseTo(2.09, 5);
     });
   });
 });

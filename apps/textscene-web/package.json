@@ -26,9 +26,14 @@
   "author": "Vortiago",
   "license": "MIT",
   "dependencies": {
-    "@textscene/core": "workspace:*"
+    "@textscene/core": "workspace:*",
+    "react": "catalog:",
+    "react-dom": "catalog:"
   },
   "devDependencies": {
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
     "happy-dom": "catalog:",
     "rimraf": "catalog:",
     "typescript": "catalog:",

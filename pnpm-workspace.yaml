@@ -20,6 +20,22 @@ catalog:
   vite: ^6.0.7
   esbuild: ^0.24.2
   happy-dom: ^20.0.10
+  jsdom: ^29
 
   # CLI dependencies
   commander: ^12.1.0
+
+  # R3F migration (Phase 14, WI-R3F-1) — spike-validated pins
+  react: ^19.2
+  react-dom: ^19.2
+  '@types/react': ^19.2
+  '@types/react-dom': ^19.2
+  '@react-three/fiber': ^9.6
+  '@react-three/drei': ^10.7
+  '@react-three/test-renderer': ^9.1
+  # NOTE: spike pinned ^6.0 but that requires vite ^8. Workspace is on vite
+  # ^6 (the WI-R3F-0 baseline), and bumping vite is out of scope for
+  # WI-R3F-1. Pin to ^5 which supports vite 4-7. Revisit when vite bumps.
+  '@vitejs/plugin-react': ^5.0
+  three: ^0.184
+  '@types/three': ^0.184

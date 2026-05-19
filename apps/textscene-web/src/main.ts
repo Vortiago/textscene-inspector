@@ -10,6 +10,25 @@ import { WebResourceProvider } from './providers/WebResourceProvider';
 
 initLogger();
 
+// WI-R3F-1: R3F renderer is mountable behind the ?r3f=1 query flag. When
+// the flag is set, the imperative UI is skipped entirely. Node components
+// land in WI-R3F-3 and the surrounding UI panels return as React in
+// WI-R3F-4. Until then this path renders only the empty canvas + default
+// lighting.
+const useR3F = new URLSearchParams(window.location.search).get('r3f') === '1';
+
+if (useR3F) {
+  const appElement = document.getElementById('app');
+  if (!appElement) {
+    throw new Error('Missing #app container for R3F mount');
+  }
+  void import('./r3f-main').then(({ mountR3F }) => mountR3F(appElement));
+} else {
+  void bootstrapImperativeUI();
+}
+
+async function bootstrapImperativeUI(): Promise<void> {
+
 // Inject shared UI styles
 const styleElement = document.createElement('style');
 styleElement.textContent = sharedStyles;
@@ -263,3 +282,4 @@ fixturesHeader.addEventListener('click', () => {
 });
 
 renderFixtureList();
+} // end bootstrapImperativeUI

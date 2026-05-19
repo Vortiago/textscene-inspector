@@ -34,6 +34,7 @@
     "generate:styles": "node scripts/generate-styles.mjs",
     "prebuild": "pnpm generate:styles && rimraf tsconfig.tsbuildinfo",
     "build": "tsc --build",
+    "postbuild": "node scripts/copy-css-modules.mjs",
     "dev": "tsc --watch",
     "test": "vitest",
     "test:watch": "vitest --watch",
@@ -55,10 +56,18 @@
   "author": "Vortiago",
   "license": "MIT",
   "dependencies": {
-    "three": "^0.171.0"
+    "@react-three/drei": "catalog:",
+    "@react-three/fiber": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "three": "catalog:"
   },
   "devDependencies": {
-    "@types/three": "^0.171.0",
+    "@react-three/test-renderer": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@types/three": "catalog:",
+    "jsdom": "catalog:",
     "rimraf": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"

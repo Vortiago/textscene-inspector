@@ -207,9 +207,22 @@ export class TscnPreviewPanel {
     const scriptUri = webview.asWebviewUri(
       vscode.Uri.joinPath(this._extensionUri, 'dist', 'webview.js')
     ).toString();
+    const cssUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(this._extensionUri, 'dist', 'webview.css')
+    ).toString();
 
     const nonce = generateNonce();
-    return generateWebviewHtml(scriptUri, nonce);
+    const useR3F = vscode.workspace
+      .getConfiguration('textscene')
+      .get<boolean>('useR3F', false);
+
+    return generateWebviewHtml({
+      scriptUri,
+      cssUri,
+      nonce,
+      useR3F,
+      cspSource: webview.cspSource,
+    });
   }
 
   private async _jumpToNodeDefinition(nodeName: string): Promise<void> {
