@@ -76,11 +76,18 @@
 }
 
 .selected {
-  background: var(--tsi-accent);
+  background: var(--tsi-accent-soft);
+  box-shadow: inset 2px 0 0 var(--tsi-accent);
+  color: var(--tsi-accent-fg);
+}
+
+.selected .nodeName {
+  font-weight: 600;
+  color: var(--tsi-accent-fg);
 }
 
 .selected:hover {
-  background: var(--tsi-accent-hover);
+  background: color-mix(in srgb, var(--tsi-accent-soft) 80%, white);
 }
 
 .expandIcon {
