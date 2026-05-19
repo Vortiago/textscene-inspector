@@ -51,16 +51,6 @@
           "when": "editorLangId == tscn || resourceExtname == .tscn"
         }
       ]
-    },
-    "configuration": {
-      "title": "TextScene",
-      "properties": {
-        "textscene.useR3F": {
-          "type": "boolean",
-          "default": false,
-          "description": "Use the experimental react-three-fiber-based renderer instead of the imperative renderer. Restart the preview after changing this setting."
-        }
-      }
     }
   },
   "scripts": {

@@ -1,11 +1,22 @@
 /**
- * Central registry for TSCN node types - enables self-registration of node parsers and renderers.
+ * Central registry for TSCN node types.
+ *
+ * Each node type self-registers its parser, type-guard, and optional
+ * property formatter. The parser turns raw snake_case TSCN body
+ * properties into the type's strongly-typed properties shape
+ * (e.g. `material_override` → `materialOverride`). The formatter is
+ * consumed by the R3F `<NodeDetailsPanel>` for the details view.
+ *
+ * Historical note: this used to also carry a `renderer` callback that
+ * returned a `THREE.Object3D` for the imperative renderer pipeline.
+ * WI-R3F-6 removed the imperative path and the `renderer` field with
+ * it; rendering now happens via the parallel `nodeComponentRegistry`
+ * in `r3f/NodeComponentRegistry.ts`.
  */
 
-import * as THREE from 'three';
 import type { ParsedHeading } from '../parser/utils';
-import type { TscnNode, TscnScene } from '../parser/types';
-import { warn, error } from '../logger';
+import type { TscnNode } from '../parser/types';
+import { warn } from '../logger';
 
 export interface PropertyItem {
   label: string;
@@ -30,10 +41,6 @@ export interface NodeTypeRegistration {
   /** Parse heading and properties into node properties object */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Generic registry supports any node property type
   parser: (heading: ParsedHeading, properties: Record<string, string>) => any;
-
-  /** Create THREE.js object from parsed properties (may be async for texture/resource loading) */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Generic registry accepts any parsed properties
-  renderer: (name: string, properties: any, scene?: TscnScene) => THREE.Object3D | Promise<THREE.Object3D>;
 
   /** Optional property formatter for custom details panel display */
   propertyFormatter?: PropertyFormatter;
@@ -137,33 +144,3 @@ export function parseNodeWithRegistry(
   return node;
 }
 
-export async function renderNodeWithRegistry(
-  node: TscnNode,
-  scene?: TscnScene
-): Promise<THREE.Object3D | null> {
-  const registration = nodeRegistry.getRegistration(node.type);
-
-  if (!registration) {
-    // Fall back to Node renderer for unsupported types
-    warn(`[NodeRegistry] No renderer for ${node.type}, using Node fallback`);
-
-    const nodeRegistration = nodeRegistry.getRegistration('Node');
-    if (!nodeRegistration) {
-      error(`[NodeRegistry] Node renderer not found - cannot render ${node.type}`);
-      return null;
-    }
-
-    // Render using Node renderer (empty Object3D container)
-    const object3D = await nodeRegistration.renderer(node.name, node.properties, scene);
-
-    // Mark as unsupported for UI detection
-    if (object3D) {
-      object3D.userData.isUnsupportedType = true;
-    }
-
-    return object3D;
-  }
-
-  // Renderer may be async (e.g., MeshInstance3D loading materials/textures)
-  return await registration.renderer(node.name, node.properties, scene);
-}

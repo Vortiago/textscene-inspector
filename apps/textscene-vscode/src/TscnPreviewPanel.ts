@@ -4,8 +4,7 @@
 
 import * as vscode from 'vscode';
 import { generateWebviewHtml, generateNonce } from './webview/webviewHtml';
-import type { IncrementalUpdateData, MissingResource } from '@textscene/core';
-import { computeIncrementalChanges } from './diffUtils';
+import type { MissingResource } from '@textscene/core';
 import { VSCodeResourceProvider } from './providers/VSCodeResourceProvider';
 import * as logger from './logger';
 
@@ -162,40 +161,11 @@ export class TscnPreviewPanel {
         return;
       }
 
-      // First load always does full load
-      if (!this._previousContent) {
-        this._previousContent = textContent;
-        const message = {
-          type: 'loadTscn',
-          content: textContent,
-        };
-        this._postMessageToWebview(message);
-        return;
-      }
-
-      // Compute incremental changes using hash-based diff
-      const diffResult = computeIncrementalChanges(this._previousContent, textContent);
+      // React reconciliation handles diffing inside the webview, so the
+      // extension host always sends the full text and lets the shell
+      // re-parse + reconcile.
       this._previousContent = textContent;
-
-      if (diffResult.updateType === 'full' || !diffResult.changes || !diffResult.newScene) {
-        // Full reload
-        const message = {
-          type: 'loadTscn',
-          content: textContent,
-        };
-        this._postMessageToWebview(message);
-      } else {
-        // Incremental update
-        const updateData: IncrementalUpdateData = {
-          changes: diffResult.changes,
-          sceneData: diffResult.newScene,
-        };
-        const message = {
-          type: 'incrementalUpdate',
-          data: updateData,
-        };
-        this._postMessageToWebview(message);
-      }
+      this._postMessageToWebview({ type: 'loadTscn', content: textContent });
     } catch (error) {
       vscode.window.showErrorMessage(
         `Failed to load TSCN file: ${error instanceof Error ? error.message : 'Unknown error'}`
@@ -212,15 +182,10 @@ export class TscnPreviewPanel {
     ).toString();
 
     const nonce = generateNonce();
-    const useR3F = vscode.workspace
-      .getConfiguration('textscene')
-      .get<boolean>('useR3F', false);
-
     return generateWebviewHtml({
       scriptUri,
       cssUri,
       nonce,
-      useR3F,
       cspSource: webview.cspSource,
     });
   }

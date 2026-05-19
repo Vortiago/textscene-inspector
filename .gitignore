@@ -63,6 +63,7 @@ ld-58/
 
 # Playwright MCP runtime artifacts
 .playwright-mcp/
+.playwright-cli/
 
 # Windows shell artifacts
 nul

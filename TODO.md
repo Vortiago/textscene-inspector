@@ -2,21 +2,32 @@
 
 > **Work Item Details**: See `work_items/WI{number}.md` for implementation details, testing strategies, and code examples.
 
-## Phase 14: R3F Migration (Active) 🎯
+## Phase 14: R3F Migration ✅
 
 > **PRD**: [work_items/PRD-r3f-migration.md](work_items/PRD-r3f-migration.md) — acceptance criteria, contracts, and execution plan live there. See also [work_items/R3F-contracts.md](work_items/R3F-contracts.md) for shared interface contracts.
 > **GitHub**: issue #44
 
-- [ ] WI-R3F-0: Cherry-pick salvage — reset to `main`, apply salvage list, baseline green
-- [ ] WI-R3F-0.5: Compatibility Spike — validate React 19 + R3F v9 + test-renderer + Vitest 3 stack; trivial Mesh test must pass; red = plan reopens
-- [ ] WI-R3F-1: R3F Infrastructure — React/R3F/drei in catalog, `<TscnCanvas>` shell, CSS Modules CSP gate
-- [ ] WI-R3F-2: Resource Loading Hook — `useResource` wrapping WI-79 event bus; late-arrival hard gate
-- [ ] WI-R3F-3: Node Components Port (MVS) — Node3D, MeshInstance3D primitives, lights, Camera3D, WorldEnvironment, GenericNodeFallback
-- [ ] WI-R3F-4: DOM UI Migration — `<SceneTreeViewer>`, `<NodeDetailsPanel>`, `<TscnPreviewShell>`, SelectionContext
-- [ ] WI-R3F-5: Integration and Multi-Panel — full feature parity in web + VS Code, editor acceptance criteria
-- [ ] WI-R3F-6: Cleanup and Documentation — delete imperative renderers, update ARCHITECTURE.md, bundle-size gate
+- [x] WI-R3F-0: Cherry-pick salvage — reset to `main`, apply salvage list, baseline green
+- [x] WI-R3F-0.5: Compatibility Spike — validated GREEN, see PRD line 251
+- [x] WI-R3F-1: R3F Infrastructure — React/R3F/drei in catalog, `<TscnCanvas>` shell, CSS Modules CSP gate
+- [x] WI-R3F-2: Resource Loading Hook — `useResource` wrapping WI-79 event bus; late-arrival hard gate
+- [x] WI-R3F-3: Node Components Port (MVS) — Node3D, MeshInstance3D primitives, lights, Camera3D, WorldEnvironment, GenericNodeFallback
+- [x] WI-R3F-4: DOM UI Migration — `<SceneTreeViewer>`, `<NodeDetailsPanel>`, `<TscnPreviewShell>`, SelectionContext
+- [x] WI-R3F-5: Integration and Multi-Panel — full feature parity in web + VS Code, editor acceptance criteria
+- [x] WI-R3F-6: Cleanup and Documentation — imperative renderers removed, flags removed, ARCHITECTURE.md rewritten, bundle delta documented (382 KB gz, 182 KB over budget; see ARCHITECTURE.md "Bundle Size Target")
 
-> **WI-R3F-3.x follow-ups** (2D nodes, physics, audio, animation, particles, paths, Skeleton3D, Sprite3D) are deferred until after WI-R3F-6 ships.
+### WI-R3F-3.x follow-ups (2D nodes, physics, audio, animation, particles, paths, Skeleton3D, Sprite3D) — Active
+
+These are unblocked by Phase 14 shipping. Each adds a new node-type folder under `packages/textscene-core/src/r3f/nodes/` with a `Component.tsx` and `index.ts` self-registration. The parser + linter for each type was already salvaged from the broken branch in WI-R3F-0; only the R3F render component is new.
+
+- [ ] WI-R3F-3.1: Node2D / Sprite2D / AnimatedSprite2D / Camera2D
+- [ ] WI-R3F-3.2: Physics bodies (StaticBody3D / RigidBody3D / CharacterBody3D / Area3D / CollisionShape3D)
+- [ ] WI-R3F-3.3: AudioStreamPlayer3D (incl. gizmo placeholder marker)
+- [ ] WI-R3F-3.4: AnimationPlayer / AnimationTree (deferred — non-MVS until #44 follow-up)
+- [ ] WI-R3F-3.5: GPUParticles3D
+- [ ] WI-R3F-3.6: Path3D / PathFollow3D
+- [ ] WI-R3F-3.7: Skeleton3D
+- [ ] WI-R3F-3.8: Sprite3D
 
 ## Phase 1: Core Visual Rendering ✅
 

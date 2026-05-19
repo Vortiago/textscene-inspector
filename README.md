@@ -1,6 +1,6 @@
 # TextScene Inspector
 
-View and navigate text-based 3D scene (.tscn) files in VS Code using three.js rendering.
+View and navigate text-based 3D scene (.tscn) files in VS Code. The rendering layer is react-three-fiber over three.js; see [ARCHITECTURE.md](./ARCHITECTURE.md) for the layout.
 
 ## Status
 
