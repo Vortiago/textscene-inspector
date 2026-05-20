@@ -3,7 +3,7 @@
  * MissingResourcesContext, so the DOM panel can aggregate them.
  */
 import { describe, it, expect, beforeEach } from 'vitest';
-import { renderHook } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import * as THREE from 'three';
 import type { ReactNode } from 'react';
 import { useResource } from './useResource';
@@ -16,7 +16,21 @@ import {
   useMissingResources,
 } from '../r3f/contexts/MissingResourcesContext';
 
-function makeMockLoader(): ResourceLoader {
+interface MockTextureProcessor {
+  cache: Map<string, THREE.Texture | null>;
+  request(_path: string): void;
+  getCached(path: string): THREE.Texture | null | undefined;
+  isCached(path: string): boolean;
+  isLoading(): boolean;
+  clearCache(path?: string): void;
+  getCacheSize(): number;
+  _resolve(path: string, value: THREE.Texture): void;
+}
+
+function makeMockLoader(): {
+  loader: ResourceLoader;
+  textures: MockTextureProcessor;
+} {
   const eventBus = new ResourceEventBus();
   const metadata = new MetadataStore();
   const makeProcessor = <T,>() => {
@@ -48,10 +62,19 @@ function makeMockLoader(): ResourceLoader {
   // synchronously to `missing` instead of staying `pending`.
   textures.cache.set('res://textures/missing.png', null);
 
+  // Test-only convenience: simulate a successful load + bus emit so the
+  // missing → loaded transition can be driven from a test.
+  const texturesWithResolve = Object.assign(textures, {
+    _resolve(path: string, value: THREE.Texture): void {
+      textures.cache.set(path, value);
+      eventBus.emit('texture', 'loaded', path, value);
+    },
+  }) as MockTextureProcessor;
+
   const loader = {
     eventBus,
     metadata,
-    textures,
+    textures: texturesWithResolve,
     materials: makeProcessor<THREE.Material>(),
     glbMeshes: makeProcessor<THREE.Object3D>(),
     getSceneCached: () => undefined,
@@ -59,7 +82,7 @@ function makeMockLoader(): ResourceLoader {
     provideFile(): void {},
     clear(): void {},
   };
-  return loader as unknown as ResourceLoader;
+  return { loader: loader as unknown as ResourceLoader, textures: texturesWithResolve };
 }
 
 function makeWrappers(loader: ResourceLoader) {
@@ -76,9 +99,10 @@ function makeWrappers(loader: ResourceLoader) {
 
 describe('useResource → MissingResourcesContext aggregation', () => {
   let loader: ResourceLoader;
+  let textures: MockTextureProcessor;
 
   beforeEach(() => {
-    loader = makeMockLoader();
+    ({ loader, textures } = makeMockLoader());
   });
 
   it('reports the path to MissingResourcesContext when the resource resolves to missing', () => {
@@ -137,5 +161,60 @@ describe('useResource → MissingResourcesContext aggregation', () => {
     rerender({ path: '' });
 
     expect(result.current.has('res://textures/missing.png')).toBe(false);
+  });
+
+  it('promotes a previously-missing path to uploadedPaths when it transitions to loaded (WI-UX-6)', () => {
+    const Wrapper = makeWrappers(loader);
+
+    const { result } = renderHook(
+      () => {
+        useResource<THREE.Texture>('res://textures/missing.png', 'Texture2D');
+        const { missingPaths, uploadedPaths } = useMissingResources();
+        return { missingPaths, uploadedPaths };
+      },
+      { wrapper: Wrapper }
+    );
+
+    // Initial: resolved synchronously to missing via the seeded null cache.
+    expect(result.current.missingPaths.has('res://textures/missing.png')).toBe(true);
+    expect(result.current.uploadedPaths.has('res://textures/missing.png')).toBe(false);
+
+    // Simulate the host providing the file: clear the failure cache and
+    // emit a `loaded` event for the same path. `useResource` should pick
+    // it up via the bus subscription and transition status to `loaded`,
+    // which (per WI-UX-6) calls `markUploaded(path)`.
+    act(() => {
+      textures.clearCache('res://textures/missing.png');
+      textures._resolve('res://textures/missing.png', new THREE.Texture());
+    });
+
+    expect(result.current.missingPaths.has('res://textures/missing.png')).toBe(false);
+    expect(result.current.uploadedPaths.has('res://textures/missing.png')).toBe(true);
+  });
+
+  it('does NOT add to uploadedPaths when a path loads without ever being missing (WI-UX-6)', () => {
+    // Drop the seeded null; the cache lookup falls through to the
+    // request path and the subscription waits for the loaded event.
+    textures.cache.delete('res://textures/missing.png');
+
+    const Wrapper = makeWrappers(loader);
+
+    const { result } = renderHook(
+      () => {
+        useResource<THREE.Texture>('res://textures/never-missing.png', 'Texture2D');
+        const { missingPaths, uploadedPaths } = useMissingResources();
+        return { missingPaths, uploadedPaths };
+      },
+      { wrapper: Wrapper }
+    );
+
+    // Drive a `loaded` event before any `missing` ever happens.
+    act(() => {
+      textures._resolve('res://textures/never-missing.png', new THREE.Texture());
+    });
+
+    // Normal fixture resource — shouldn't show up in either panel set.
+    expect(result.current.missingPaths.size).toBe(0);
+    expect(result.current.uploadedPaths.size).toBe(0);
   });
 });

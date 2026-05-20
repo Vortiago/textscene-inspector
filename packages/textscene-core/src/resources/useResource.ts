@@ -218,29 +218,48 @@ export function useResource<T>(path: string, type: ResourceType): ResourceResult
     };
   }, [loader, path, type]);
 
-  // Aggregate missing-path reporting (WI-UX-3). Runs on every status
-  // transition for the current path. The context's default value is a
-  // no-op when no provider is mounted, so consumers outside a shell
+  // Aggregate missing-path reporting (WI-UX-3 / WI-UX-6). Runs on every
+  // status transition for the current path. The context's default value
+  // is a no-op when no provider is mounted, so consumers outside a shell
   // (e.g. linter callers, isolated unit tests) pay no cost.
   //
-  // Pull the `report` / `clear` callbacks out of the context object —
-  // they're useCallback'd inside the provider and so are stable across
-  // re-renders. Depending on the whole `missingResources` object would
-  // re-run this effect on every state change inside the provider (the
-  // missingPaths set itself), creating an infinite render loop.
+  // Pull the action callbacks out of the context object — they're
+  // useCallback'd inside the provider and so are stable across re-renders.
+  // Depending on the whole `missingResources` object would re-run this
+  // effect on every state change inside the provider (the missingPaths
+  // set itself), creating an infinite render loop.
   const reportMissing = missingResources.report;
   const clearMissing = missingResources.clear;
+  const markUploaded = missingResources.markUploaded;
+
+  // Track whether THIS hook instance has ever reported its current path
+  // as missing. WI-UX-6: when status flips missing → loaded the user just
+  // uploaded the file, and the panel should keep the row visible (with
+  // the uploaded ✓ state) so they know what they fixed. But paths that
+  // load on first request (normal fixture resources) never went through
+  // `missing`, and should NOT appear as uploaded rows. The ref keeps the
+  // distinction per-(path) inside the hook.
+  const reportedMissingForPathRef = useRef<string | null>(null);
+
   useEffect(() => {
     if (!path) return;
     if (result.status === 'missing') {
       reportMissing(path);
+      reportedMissingForPathRef.current = path;
       return () => clearMissing(path);
     }
     if (result.status === 'loaded') {
-      clearMissing(path);
+      if (reportedMissingForPathRef.current === path) {
+        // User-uploaded path — leave it visible in the panel as
+        // `uploaded ✓` so the Remove affordance stays reachable.
+        markUploaded(path);
+        reportedMissingForPathRef.current = null;
+      } else {
+        clearMissing(path);
+      }
     }
     return undefined;
-  }, [path, result.status, reportMissing, clearMissing]);
+  }, [path, result.status, reportMissing, clearMissing, markUploaded]);
 
   return result;
 }
