@@ -266,4 +266,42 @@ Single-item focused re-verify on `2e065d5` ("fix(WI-UX-7): Reset Camera button d
 |---|---|---|
 | WI-UX-7b Reset Camera disabled state | **PASS** | `.tmp/ux-flow-reset-fix/R1-enabled-valid-scene.png` — on `integration-all-primitives.tscn`: `disabled: false`, `cursor: pointer`, `opacity: 1`. `.tmp/ux-flow-reset-fix/R2-disabled-no-scene.png` — on `edge-malformed-bracket.tscn`: `disabled: true`, `cursor: not-allowed`, `opacity: 0.5` (visible dimmed text), click is a no-op (no crash, no side effect). After switching back to a valid scene, button re-enables (`disabled: false, cursor: pointer, opacity: 1`). All three acceptance criteria met; visible click affordance is gone in the disabled state. |
 
-**PR #48 gate**: The single PARTIAL FAIL from the previous re-verify is now PASS. Combined with the 13 prior PASSes, the full delta (Gaps 1, 2, 3, 6, 7, 8, 12 + WI-UX-5, -6, -7a/b/c, -9, -10) is **14/14 PASS** on `2e065d5`.
+**14-item parity gate**: PASS on `2e065d5` for small/medium fixtures. **NOT a final merge gate** — the scale + interaction sweep below surfaced 2 blockers that compound on large fixtures.
+
+---
+
+## Scale + interaction test on 2e065d5 — full UI reachability
+
+Methodology change: the prior verification rounds proved features work in isolation against small/medium fixtures. The user flagged that "a lot of the UI isn't touchable" on big scenes like Hallway. This sweep stresses scale.
+
+**HALTED early on fixture #1 (`example-hallway.tscn`, 286 nodes).** Two BLOCKER findings make further fixtures redundant — fixing these is a prerequisite for meaningful continued verification.
+
+Dev server pinned to port 3070, viewport 1440×900. Screenshot in `.tmp/ux-flow-scale/`.
+
+| Item | Status | Evidence + observed |
+|---|---|---|
+| Hallway loads + Scene Info card shows count | PASS | `S1-hallway-collapsed.png` shows "Nodes: 286, Root: Hallway" in the top-right of the sidebar. |
+| **Sidebar layout survives long missing-resources list** | **FAIL — BLOCKER** | `S1-hallway-collapsed.png` shows the RESOURCE FILES panel filling the ENTIRE visible sidebar height with 9+ external scene rows (HallwayGeometry.tscn, Evidence/DroppedLedger, Evidence/Handkerchief, Evidence/LetterOpener, PhotoFrame/Boat, PhotoFrame/Books, PhotoFrame/Car, PhotoFrame/Cat, PhotoFrame/Clock, PhotoFrame/Dog, ...). Programmatic probe at 1440×900: `aside.boundingRect.bottom = 900` (sidebar visible region ends at viewport bottom); `treeContainer.boundingRect.y = 1693` (tree mounts 793px BELOW the visible viewport bottom); `treeItemsCount = 1` (only the root is rendered because everything else is off-screen). The user CANNOT see the SceneTreeViewer, CANNOT click any tree row, CANNOT see the NodeDetailsPanel — every interactive sidebar element below the missing-resources panel is unreachable. Root cause: `packages/textscene-core/src/r3f/components/MissingResourcesPanel/MissingResourcesPanel.module.css:1 (.panel)` has no `max-height` constraint, and `packages/textscene-core/src/r3f/components/TscnPreviewShell/TscnPreviewShell.module.css:119 (.sidebar)` has `overflow: hidden`, so the panel grows unboundedly and pushes downstream children out of the clipping region. Proposed fix: cap `.panel` with `max-height: 30vh` and add `overflow-y: auto` so the panel scrolls internally instead of consuming sibling space; OR change `.sidebar` to `overflow: auto` so the user can scroll the entire sidebar (less elegant but a one-line fix). |
+| **Light gizmo visual pollution on multi-light fixtures** | **FAIL — major** | Same screenshot — the viewport shows dense yellow line-clutter (SpotLightHelper cones overlapping) before the user has selected or hovered anything. The hallway contains 18 SpotLight3D nodes (`grep -c type="SpotLight3D" example-hallway.tscn` returns 18). Every spotlight ALWAYS renders its yellow gizmo. Code: `packages/textscene-core/src/r3f/nodes/lights/lightHelpers.tsx:17` defines `HELPER_COLOR = 0xffff00` and all three `*LightGizmo` components mount the helper unconditionally on light mount. Main's behavior per `docs/MAIN-FEATURE-INVENTORY.md` was selection-bound helpers (HelperManager attached on selection); the R3F port mounts them eagerly per-light. Proposed fix: gate gizmo rendering on `selectedNodePath === useNodePath()` (only the selected light shows its gizmo) — matches the green-selection + orange-hover pattern from WI-UX-2 / WI-UX-10. Affects all 3 light types via the shared lightHelpers.tsx. |
+| Reset Camera disabled state (carry from prior re-verify) | PASS | Re-confirmed at `2e065d5` per the prior section's row — no need to re-screenshot. |
+
+**PASS: 2 / FAIL: 2** on fixture #1 of 3. Halted before testing `integration-all-primitives.tscn` and `unit-sprite3d.tscn`.
+
+### Why halt was the right call
+
+The two FAILs are scale-class problems that compound:
+- Sidebar layout BLOCKER is reproducible on **any fixture with more than ~3-4 missing external resources**. The hallway's 9+ missing scenes is the trigger here; a smaller test wouldn't surface it.
+- Light gizmo visual pollution is reproducible on **any fixture with more than ~3-4 lights**. The hallway's 18 spotlights make it severe; even `unit-lights-all-types.tscn` (4 lights) would show it.
+
+Both findings reflect the original mission: "every element on screen and can be interacted with." On the hallway:
+- The user cannot interact with the tree at all (it's outside the viewport).
+- The user cannot interact with the details panel at all.
+- The viewport is visually overwhelmed by light gizmos to the point that the actual scene meshes are partially obscured.
+
+The prior 14/14 PASS verdict on `2e065d5` stands for the small-to-medium fixture cases — every individual feature is functional. But scale exposes layout + visual-density assumptions that didn't get tested. Recommend treating these as PR #48 blockers because the hallway is a flagship example fixture; a user evaluating "is this better than main?" will likely load it first.
+
+### Suggested follow-up WIs
+
+1. **WI-UX-11 (BLOCKER)**: cap MissingResourcesPanel height. `packages/textscene-core/src/r3f/components/MissingResourcesPanel/MissingResourcesPanel.module.css` — `.panel` add `max-height: 30vh; overflow-y: auto;`. Trivial. Add a regression test that loads `example-hallway.tscn` and asserts `treeContainer` is within the viewport.
+2. **WI-UX-12 (major)**: gate light gizmos on selection. `packages/textscene-core/src/r3f/nodes/lights/lightHelpers.tsx` — accept a `path` prop on each gizmo, return null when path !== selectedNodePath. Matches main's HelperManager parity. Add a regression test: mount Hallway, assert `scene.children` contains zero LightHelper objects until a light row is selected, then one helper appears.
+3. **Bonus**: consider a "Show light gizmos" toggle in the toolbar for users who actually do want to see all light positions at once. Out of scope for the immediate fix; tracked here for the future.
