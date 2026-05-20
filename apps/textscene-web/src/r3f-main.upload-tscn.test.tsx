@@ -135,4 +135,26 @@ describe('<R3FApp> Upload TSCN (WI-UX-7)', () => {
     const button = screen.getByTestId('reset-camera-button') as HTMLButtonElement;
     expect(button.disabled).toBe(false);
   });
+
+  it('keeps Reset Camera disabled when content is non-empty but parses to no scene (WI-UX-7c)', async () => {
+    // Malformed fixture: bytes load successfully but the lenient parser
+    // extracts zero nodes, so `TscnPreviewShell` parses to `sceneGraph === null`
+    // with an error banner. The button must stay disabled — gating on raw
+    // `content.length` would incorrectly enable it here.
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      text: () => Promise.resolve('[this is { not valid tscn at all'),
+    } as unknown as Response) as unknown as typeof fetch;
+
+    render(<R3FApp />);
+
+    // Wait for the parse-error banner to appear so we know content was
+    // applied and the shell finished parsing.
+    await waitFor(() => {
+      expect(screen.queryByRole('alert')).toBeTruthy();
+    });
+
+    const button = screen.getByTestId('reset-camera-button') as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+  });
 });
