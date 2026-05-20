@@ -165,3 +165,40 @@
   font-size: var(--tsi-font-md);
   line-height: 1.4;
 }
+
+/*
+ * WI-UX-9: narrow-viewport layout. Below 768px, drop the side-by-side
+ * canvas + sidebar split — there isn't horizontal room — and stack the
+ * sidebar UNDER the canvas. The sidebar is capped at 50vh and scrolls
+ * internally so the canvas keeps a usable half of the viewport. Both
+ * panels remain visible simultaneously; this is intentionally not the
+ * radio-tab switcher main shipped (see docs/MAIN-VS-MIGRATION-DELTA.md
+ * item 13). Stacking is the modern responsive default and avoids the
+ * tab-state bookkeeping main's CSS-only pattern required.
+ *
+ * Breakpoint matches main's `@media (max-width: 767px)` (we use 768 as
+ * the inclusive boundary because `max-width: 768px` is the conventional
+ * mobile cutoff and matches CSS frameworks' `md` breakpoint).
+ */
+@media (max-width: 768px) {
+  .body {
+    flex-direction: column;
+  }
+
+  .canvas {
+    flex: 1 1 auto;
+    /* Without a min height, flex collapse on iOS Safari can crush the
+       canvas to ~0 — pin a baseline that still leaves the sidebar
+       readable below it. */
+    min-height: 50vh;
+  }
+
+  .sidebar {
+    width: 100%;
+    flex-shrink: 0;
+    border-left: none;
+    border-top: 1px solid var(--tsi-border);
+    max-height: 50vh;
+    overflow-y: auto;
+  }
+}
