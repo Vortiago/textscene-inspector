@@ -21,6 +21,7 @@ import { TscnCanvas } from '../../TscnCanvas.js';
 import { SceneTreeViewer } from '../SceneTreeViewer/SceneTreeViewer.js';
 import { NodeDetailsPanel } from '../NodeDetailsPanel/NodeDetailsPanel.js';
 import { MissingResourcesPanel } from '../MissingResourcesPanel/MissingResourcesPanel.js';
+import { SceneInfoCard } from '../SceneInfoCard/SceneInfoCard.js';
 import styles from './TscnPreviewShell.module.css';
 
 const DEFAULT_ROOT_SCENE_PATH = 'res://__inline__.tscn';
@@ -151,6 +152,7 @@ export function TscnPreviewShell({
                   <TscnCanvas />
                 </div>
                 <aside className={styles.sidebar} aria-label="Scene details">
+                  <SceneInfoCard />
                   {onResourceUpload && (
                     <MissingResourcesPanel
                       onUpload={onResourceUpload}

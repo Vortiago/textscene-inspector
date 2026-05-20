@@ -58,6 +58,7 @@ export {
   NodeDetailsPanel,
   MissingResourcesPanel,
   type MissingResourcesPanelProps,
+  SceneInfoCard,
   ViewportSelector,
   type ViewportSelectorProps,
   type ViewportSelectorOption,
