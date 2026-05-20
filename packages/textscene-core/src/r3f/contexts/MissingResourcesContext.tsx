@@ -67,6 +67,14 @@ export function MissingResourcesProvider({ children }: MissingResourcesProviderP
     () => new Set<string>()
   );
 
+  // STABILITY CONTRACT: report / clear / markUploaded / removeUploaded
+  // must be `useCallback`d with empty deps so consumers (notably
+  // `useResource`) can depend on them in effects without re-running on
+  // every provider state change. Naively depending on the whole context
+  // object would create an infinite render loop because each setter
+  // mutates state → new context value object → effect re-runs → reports
+  // again. Pull these callbacks out by name in consumers, not the
+  // context object as a whole.
   const report = useCallback((path: string) => {
     if (!path) return;
     setMissingPaths((prev) => {
