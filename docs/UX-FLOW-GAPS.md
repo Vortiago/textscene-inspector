@@ -219,3 +219,39 @@ Incidental observations during re-run (NOT blockers — flagged for follow-up):
 3. The deferred Gap 11 (oversized Label3D text in `unit-sprite3d.tscn`) is still visible — confirmed not in scope for this re-verify, just noting it persists.
 
 Suggested follow-up: when the queued majors (Gap 4, 5, 11) and polish (Gap 9, 10, 13) are picked up, fold observations #1 + #2 into the WI-UX-2 + WI-UX-3 follow-up.
+
+---
+
+## Final re-verification on a06d950 (all WI-UX-1..10 merged + arch review)
+
+Field re-run against `a06d950` ("feat(WI-UX-7): add Scene Info card (4th main entry point)"). Dev server pinned to port 3050. Screenshots in `.tmp/ux-flow-final/` (gitignored).
+
+**Summary: 13 PASS / 1 PARTIAL FAIL out of 14.**
+
+| Item | Status | Evidence |
+|---|---|---|
+| Gap 1 (show/hide) | **PASS** | `.tmp/ux-flow-final/F01-gap1-hide.png` — Capsule absent from viewport after eye-icon click; tree row has strikethrough + 🙈. |
+| Gap 2 (selection highlight) | **PASS** | `.tmp/ux-flow-final/F02-gap2-selection-plus-hover.png` — green wireframe BoxHelper around Torus when selected. Also shows green + orange helpers coexisting (validates HelperManager parity with main). |
+| Gap 3 (missing-files panel) | **PASS** | `.tmp/ux-flow-final/F05-no-selection-leak.png` — RESOURCE FILES panel shows full path `res://textures/test_texture.png` (no truncation), per-row Choose-File input, ⚠ icon. |
+| Gap 6 (upload widget hidden when no missing) | **PASS** | `.tmp/ux-flow-final/F00-baseline.png` — toolbar on `integration-all-primitives` shows only `Upload TSCN:` (which is a separate WI-UX-7a feature, NOT the missing-files affordance). No "Upload missing files:" label. `fileInputCount=1` is the TSCN upload, accept=".tscn". |
+| Gap 7 (parse-error empty state) | **PASS** | `.tmp/ux-flow-final/F07-F08-malformed.png` — right pane reads "No scene loaded — fix the parse error above to continue." instead of "Loading scene…". |
+| Gap 8 (canvas grid empty state) | **PASS** | Same screenshot — canvas shows gridHelper + curved "Load a scene to begin" text instead of black void. |
+| Gap 12 (in-3D missing labels gone) | **PASS** | `.tmp/ux-flow-final/F05-no-selection-leak.png` — `unit-sprite3d.tscn` viewport renders 3 magenta sprite placeholders with NO overlapping floating `res://...` text labels. The information moved to the DOM-side RESOURCE FILES panel. |
+| WI-UX-5 selection leak fix | **PASS** | `.tmp/ux-flow-final/F05-no-selection-leak.png` — after selecting Prism in `integration-all-primitives.tscn` then switching to `unit-sprite3d.tscn`, NO stale green BoxHelper persists in the new fixture's viewport. Programmatic verification: `selectedAfter` is undefined after the fixture switch (selection state cleared). Confirms the previous re-verify's observation #1 is fixed. |
+| WI-UX-6 path readability | **PASS** | `.tmp/ux-flow-final/F05-no-selection-leak.png` — full path `res://textures/test_texture.png` rendered without ellipsis. Previously truncated to `res://tex…`; now legible at default sidebar width. |
+| WI-UX-7a Upload TSCN | **PASS** | `.tmp/ux-flow-final/F07a-tscn-uploaded.png` — uploaded `my-test-scene.tscn` (a copy of `unit-box-mesh.tscn`); the Scene dropdown changes to "(Uploaded: my-test-scene.tscn)", a blue chip with the filename appears next to the upload input, and the BoxMesh renders correctly with its in-scene Label3D annotations. Scene Info card updates to `Nodes: 4`, `Root: Root`. |
+| WI-UX-7b Reset Camera | **PARTIAL FAIL** | Button functions correctly when a scene is loaded (no crash, camera centers — confirmed click on `integration-all-primitives.tscn`). However, on `edge-malformed-bracket.tscn` (no scene loaded), the button is **NOT disabled** (`disabled: false`, no `aria-disabled` attr, cursor remains `pointer`) — see `.tmp/ux-flow-final/F07-F08-malformed.png` for the visible "Reset Camera" bar at the top of the malformed-fixture view. Acceptance criterion was "Confirm the button is disabled when no scene is loaded". Clicking it no-ops gracefully (no crash, error banner stays), so this is a UX-affordance miss, not a functional break. Recommend single-line fix at the Reset Camera button's `disabled` prop, gating on `!sceneGraph` (similar to how the Scene Info card already hides itself). |
+| WI-UX-7c Scene Info card | **PASS** | `.tmp/ux-flow-final/F00-baseline.png` (Nodes: 8, Root: Root for All Primitives), `.tmp/ux-flow-final/F07a-tscn-uploaded.png` (Nodes: 4, Root: Root for uploaded box-mesh), `.tmp/ux-flow-final/F07-F08-malformed.png` (card hidden — confirmed `sceneInfoVisible: false`). All 3 states correct. |
+| WI-UX-9 mobile responsive | **PASS** | `.tmp/ux-flow-final/F09-mobile.png` at 600×900 viewport — canvas + sidebar stack vertically (viewport on top, Scene Info + tree below, details below). Toolbar wraps cleanly: row 1 has Scene dropdown, row 2 has Upload TSCN + chip. No horizontal scroll, no squeezing. |
+| WI-UX-10 hover highlight | **PASS** | `.tmp/ux-flow-final/F10-hover-torus.png` (orange BoxHelper around Torus on hover, no selection yet) + `.tmp/ux-flow-final/F02-gap2-selection-plus-hover.png` (green helper around selected Torus + orange helper around hovered Prism — both helpers coexist). On mouseleave, the orange helper disappears (no leak across hovers). |
+
+**PASS count: 13/14. Failures: WI-UX-7b Reset Camera disabled-state (UX-polish miss, not a functional break).**
+
+### Recommendation
+
+The single PARTIAL FAIL (WI-UX-7b "Reset Camera not disabled when no scene") is a one-line acceptance miss, not a functional regression. Two paths forward:
+
+1. **Ship-as-is**: the button no-ops gracefully when clicked without a scene; the worst outcome is a non-actionable click. Functionally equivalent to disabled-state in user impact. Acceptable for PR #48 merge if team-lead deems the disabled-state UX nicety lower priority than the merge window.
+2. **Fold-cleanup**: a quick follow-up commit (~3 lines: read `sceneGraph` from `useHierarchy()`, set `disabled={!sceneGraph}` on the button). Trivial effort, satisfies the original acceptance.
+
+All 7 originally-PASS items from `9aed84b` remain PASS on `a06d950`. All 6 of the 7 new items PASS. Zero regressions on previously-fixed gaps.
