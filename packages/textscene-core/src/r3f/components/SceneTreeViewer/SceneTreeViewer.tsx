@@ -35,12 +35,9 @@ function nodeMatchesSearch(node: TscnNode, term: string): boolean {
 
 export function SceneTreeViewer({ onNodeReveal }: SceneTreeViewerProps) {
   const { sceneGraph } = useHierarchy();
-  const { setExpandedNodePaths } = useSelection();
+  const { setExpandedNodePaths, hiddenNodePaths, toggleHidden } = useSelection();
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [hiddenNodePaths, setHiddenNodePaths] = useState<ReadonlySet<string>>(
-    () => new Set<string>()
-  );
 
   const rootNodes = useMemo<readonly TscnNode[]>(() => {
     if (!sceneGraph) return [];
@@ -63,18 +60,6 @@ export function SceneTreeViewer({ onNodeReveal }: SceneTreeViewerProps) {
   const handleCollapseAll = useCallback(() => {
     setExpandedNodePaths(new Set());
   }, [setExpandedNodePaths]);
-
-  const handleToggleVisibility = useCallback((path: string) => {
-    setHiddenNodePaths((prev) => {
-      const next = new Set(prev);
-      if (next.has(path)) {
-        next.delete(path);
-      } else {
-        next.add(path);
-      }
-      return next;
-    });
-  }, []);
 
   const handleSearchChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
@@ -134,7 +119,7 @@ export function SceneTreeViewer({ onNodeReveal }: SceneTreeViewerProps) {
               parentPath=""
               depth={0}
               hiddenNodePaths={hiddenNodePaths}
-              onToggleVisibility={handleToggleVisibility}
+              onToggleVisibility={toggleHidden}
               onNodeReveal={onNodeReveal}
               matches={matches}
             />
