@@ -157,3 +157,11 @@
   color: var(--tsi-fg-muted);
   font-style: italic;
 }
+
+.emptyState {
+  padding: var(--tsi-space-4);
+  text-align: center;
+  color: var(--tsi-fg-muted);
+  font-size: var(--tsi-font-md);
+  line-height: 1.4;
+}

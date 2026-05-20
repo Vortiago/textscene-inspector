@@ -16,9 +16,11 @@ import type { TscnNode } from '../../../parser/types.js';
 import { HierarchyProvider } from '../../contexts/HierarchyContext.js';
 import { SelectionProvider } from '../../contexts/SelectionContext.js';
 import { CameraControlProvider } from '../../contexts/CameraControlContext.js';
+import { MissingResourcesProvider } from '../../contexts/MissingResourcesContext.js';
 import { TscnCanvas } from '../../TscnCanvas.js';
 import { SceneTreeViewer } from '../SceneTreeViewer/SceneTreeViewer.js';
 import { NodeDetailsPanel } from '../NodeDetailsPanel/NodeDetailsPanel.js';
+import { MissingResourcesPanel } from '../MissingResourcesPanel/MissingResourcesPanel.js';
 import styles from './TscnPreviewShell.module.css';
 
 const DEFAULT_ROOT_SCENE_PATH = 'res://__inline__.tscn';
@@ -34,6 +36,20 @@ export interface TscnPreviewShellProps {
   onNodeReveal?: (path: string, node: TscnNode) => void;
   /** Optional content to inject above the canvas (e.g. a fixture dropdown). */
   toolbar?: ReactNode;
+  /**
+   * Fired when the user picks a file for a missing-resource row in the
+   * `<MissingResourcesPanel>`. Host wires this into its ResourceProvider
+   * + ResourceLoader (typically `provider.addUploadedFile` followed by
+   * `loader.provideFile`). When omitted, the panel is suppressed
+   * because the host has no way to consume uploads.
+   */
+  onResourceUpload?: (path: string, file: File) => void;
+  /**
+   * Fired when the user clicks "Remove" on an uploaded row. Host
+   * deletes the file from its provider's cache. When omitted, the
+   * Remove button still renders but is a no-op.
+   */
+  onResourceRemove?: (path: string) => void;
 }
 
 interface ParseResult {
@@ -86,6 +102,8 @@ export function TscnPreviewShell({
   rootScenePath = DEFAULT_ROOT_SCENE_PATH,
   onNodeReveal,
   toolbar,
+  onResourceUpload,
+  onResourceRemove,
 }: TscnPreviewShellProps) {
   const { sceneGraph, error } = useMemo(
     () => parseContent(content, rootScenePath),
@@ -97,35 +115,55 @@ export function TscnPreviewShell({
     [sceneGraph, panelId]
   );
 
+  // When `error` is truthy, mounting `<SceneTreeViewer>` with a null
+  // sceneGraph triggers its own "Loading scene…" empty-state — which
+  // makes the tree pane look stuck (Gap 7). Use a dedicated empty-state
+  // message in the tree pane so the user knows the load failed and the
+  // banner above is the actionable surface.
+  let treeBody: ReactNode;
+  if (error) {
+    treeBody = (
+      <div className={styles.emptyState}>
+        No scene loaded — fix the parse error above to continue.
+      </div>
+    );
+  } else if (sceneGraph === null) {
+    treeBody = <div className={styles.loading}>Loading scene…</div>;
+  } else {
+    treeBody = <SceneTreeViewer onNodeReveal={onNodeReveal} />;
+  }
+
   return (
     <HierarchyProvider value={hierarchyValue}>
       <SelectionProvider>
         <CameraControlProvider>
-          <div className={styles.shell} data-panel-id={panelId}>
-            {toolbar}
-            {error && (
-              <div className={styles.errorBanner} role="alert">
-                <strong>Parse error:</strong> {error}
-              </div>
-            )}
-            <div className={styles.body}>
-              <div className={styles.canvas}>
-                <TscnCanvas />
-              </div>
-              <aside className={styles.sidebar} aria-label="Scene details">
-                <div className={styles.treePane}>
-                  {sceneGraph === null && !error ? (
-                    <div className={styles.loading}>Loading scene…</div>
-                  ) : (
-                    <SceneTreeViewer onNodeReveal={onNodeReveal} />
+          <MissingResourcesProvider>
+            <div className={styles.shell} data-panel-id={panelId}>
+              {toolbar}
+              {error && (
+                <div className={styles.errorBanner} role="alert">
+                  <strong>Parse error:</strong> {error}
+                </div>
+              )}
+              <div className={styles.body}>
+                <div className={styles.canvas}>
+                  <TscnCanvas />
+                </div>
+                <aside className={styles.sidebar} aria-label="Scene details">
+                  {onResourceUpload && (
+                    <MissingResourcesPanel
+                      onUpload={onResourceUpload}
+                      onRemove={onResourceRemove ?? (() => {})}
+                    />
                   )}
-                </div>
-                <div className={styles.detailsPane}>
-                  <NodeDetailsPanel />
-                </div>
-              </aside>
+                  <div className={styles.treePane}>{treeBody}</div>
+                  <div className={styles.detailsPane}>
+                    <NodeDetailsPanel />
+                  </div>
+                </aside>
+              </div>
             </div>
-          </div>
+          </MissingResourcesProvider>
         </CameraControlProvider>
       </SelectionProvider>
     </HierarchyProvider>

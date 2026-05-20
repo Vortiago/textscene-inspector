@@ -19,6 +19,7 @@ import type { TscnScene } from '../parser/types';
 import type { ResourceEventBus, ResourceType as BusResourceType } from './ResourceEventBus';
 import { cloneWithMaterials } from './processing/glbProcessing';
 import { ResourceLoaderContext } from './ResourceLoaderContext';
+import { useMissingResources } from '../r3f/contexts/MissingResourcesContext';
 
 export type ResourceType = 'Texture2D' | 'StandardMaterial3D' | 'GLBMesh' | 'PackedScene';
 export type ResourceStatus = 'pending' | 'loaded' | 'missing' | 'error';
@@ -89,6 +90,7 @@ export function useResourceLoader() {
  */
 export function useResource<T>(path: string, type: ResourceType): ResourceResult<T> {
   const loader = useResourceLoader();
+  const missingResources = useMissingResources();
   const [result, setResult] = useState<ResourceResult<T>>(() => ({
     value: undefined,
     status: 'pending',
@@ -215,6 +217,30 @@ export function useResource<T>(path: string, type: ResourceType): ResourceResult
       eventBus.off<Error>(busType, 'failed', onFailed);
     };
   }, [loader, path, type]);
+
+  // Aggregate missing-path reporting (WI-UX-3). Runs on every status
+  // transition for the current path. The context's default value is a
+  // no-op when no provider is mounted, so consumers outside a shell
+  // (e.g. linter callers, isolated unit tests) pay no cost.
+  //
+  // Pull the `report` / `clear` callbacks out of the context object —
+  // they're useCallback'd inside the provider and so are stable across
+  // re-renders. Depending on the whole `missingResources` object would
+  // re-run this effect on every state change inside the provider (the
+  // missingPaths set itself), creating an infinite render loop.
+  const reportMissing = missingResources.report;
+  const clearMissing = missingResources.clear;
+  useEffect(() => {
+    if (!path) return;
+    if (result.status === 'missing') {
+      reportMissing(path);
+      return () => clearMissing(path);
+    }
+    if (result.status === 'loaded') {
+      clearMissing(path);
+    }
+    return undefined;
+  }, [path, result.status, reportMissing, clearMissing]);
 
   return result;
 }

@@ -3,13 +3,12 @@
  *
  * Mounts `<TscnPreviewShell>` inside `<ResourceLoaderProvider>` so node
  * components can call `useResource()` to load textures and other
- * external resources. The user uploads missing files via a small file
- * input in the toolbar; the handler hands the bytes to
- * `WebResourceProvider.addUploadedFile()` and then calls
- * `loader.provideFile(path)` so any meshes still rendering the magenta
- * placeholder transition to the loaded texture (WI-R3F-7 / WEB-05).
+ * external resources. Missing-resource uploads are driven by the
+ * shell's `<MissingResourcesPanel>` (one row per missing path,
+ * per-row file input) instead of a global filename-guessing input
+ * (see `docs/UX-REGRESSIONS.md` §3 — WI-UX-3).
  */
-import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
   FileEventBus,
@@ -29,13 +28,6 @@ const DEFAULT_FIXTURE =
   fixtures[0]?.file ??
   '';
 
-interface UploadEntry {
-  /** Godot res:// path the file maps to. Inferred from the filename. */
-  resPath: string;
-  /** Original filename for display. */
-  fileName: string;
-}
-
 function R3FApp() {
   const [fixtureFile, setFixtureFile] = useState<string>(() => {
     try {
@@ -46,7 +38,6 @@ function R3FApp() {
   });
   const [content, setContent] = useState<string>('');
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [uploadedFiles, setUploadedFiles] = useState<UploadEntry[]>([]);
 
   // Wire the WI-79 resource pipeline. One provider + bus + loader for
   // the lifetime of the app; React component identity preserves them
@@ -104,30 +95,13 @@ function R3FApp() {
     };
   }, [fixtureFile]);
 
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  function handleResourceUpload(path: string, file: File) {
+    provider.addUploadedFile(path, file);
+    loader.provideFile(path);
+  }
 
-  function handleFileChange(e: ChangeEvent<HTMLInputElement>) {
-    const files = e.target.files;
-    if (!files) return;
-    for (const file of Array.from(files)) {
-      // Map any uploaded file to `res://textures/<filename>` if it looks
-      // like an image, otherwise just `res://<filename>`. This matches
-      // the convention used by every MVS fixture in `scenes/fixtures/`.
-      const isImage = /\.(png|jpe?g|webp|svg|bmp|tga)$/i.test(file.name);
-      const resPath = isImage
-        ? `res://textures/${file.name}`
-        : `res://${file.name}`;
-      provider.addUploadedFile(resPath, file);
-      loader.provideFile(resPath);
-      setUploadedFiles((prev) => {
-        if (prev.some((u) => u.resPath === resPath)) return prev;
-        return [...prev, { resPath, fileName: file.name }];
-      });
-    }
-    // Reset the input so the same filename can be re-uploaded.
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
+  function handleResourceRemove(path: string) {
+    provider.getUploadedFiles().delete(path);
   }
 
   return (
@@ -137,6 +111,8 @@ function R3FApp() {
           panelId={`web-${fixtureFile || 'empty'}`}
           content={content}
           rootScenePath={`res://${fixtureFile || 'empty.tscn'}`}
+          onResourceUpload={handleResourceUpload}
+          onResourceRemove={handleResourceRemove}
           toolbar={
             <div className={styles.toolbar}>
               <strong className={styles.title}>TextScene Inspector</strong>
@@ -146,27 +122,6 @@ function R3FApp() {
                 onChange={setFixtureFile}
                 label="Scene:"
               />
-              <label className={styles.uploadGroup}>
-                <span className={styles.uploadLabel}>Upload missing files:</span>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  className={styles.uploadInput}
-                  data-testid="missing-file-upload"
-                />
-              </label>
-              {uploadedFiles.length > 0 && (
-                <span className={styles.uploadedChips} aria-label="Uploaded files">
-                  {uploadedFiles.map((u) => (
-                    <span key={u.resPath} className={styles.uploadedChip}>
-                      {u.fileName}
-                    </span>
-                  ))}
-                </span>
-              )}
               {loadError && (
                 <span role="alert" className={styles.errorMessage}>
                   {loadError}
