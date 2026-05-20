@@ -28,6 +28,14 @@ export interface SelectionContextValue {
   toggleHidden: (path: string) => void;
   clearHidden: () => void;
   /**
+   * Reset all selection-derived state in one call: selected/hovered
+   * paths, expanded set, hidden set, and the `nodeObjectMap` ref-map.
+   * Used by `<TscnPreviewShell>` on scene-graph swap so stale state
+   * from the previous scene (e.g. a BoxHelper targeting an unmounted
+   * Object3D, see WI-UX-5) does not leak into the new scene.
+   */
+  clearAll: () => void;
+  /**
    * Mutable map from TSCN node path → its wrapping THREE.Object3D as
    * mounted by `NodeDispatcher`. Consumers (e.g. SelectionHighlight)
    * look up the Object3D for `selectedNodePath` to attach a BoxHelper.
@@ -105,6 +113,14 @@ export function SelectionProvider({ children }: SelectionProviderProps) {
     nodeObjectMapRef.current.delete(path);
   }, []);
 
+  const clearAll = useCallback(() => {
+    setSelectedNodePath(null);
+    setHoveredNodePath(null);
+    setExpandedNodePathsState(new Set());
+    setHiddenNodePathsState(new Set());
+    nodeObjectMapRef.current.clear();
+  }, []);
+
   const value = useMemo<SelectionContextValue>(
     () => ({
       selectedNodePath,
@@ -117,6 +133,7 @@ export function SelectionProvider({ children }: SelectionProviderProps) {
       setExpandedNodePaths,
       toggleHidden,
       clearHidden,
+      clearAll,
       nodeObjectMap: nodeObjectMapRef.current,
       registerNodeObject,
       unregisterNodeObject,
@@ -130,6 +147,7 @@ export function SelectionProvider({ children }: SelectionProviderProps) {
       setExpandedNodePaths,
       toggleHidden,
       clearHidden,
+      clearAll,
       registerNodeObject,
       unregisterNodeObject,
     ]
