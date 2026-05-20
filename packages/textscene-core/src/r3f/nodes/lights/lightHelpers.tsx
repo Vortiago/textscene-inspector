@@ -1,31 +1,71 @@
 /**
  * Editor-only gizmo helpers for the three light types. Each helper
  * attaches a `THREE.*LightHelper` to the underlying THREE light object so
- * users can see where lights are placed and how they're aimed even when
- * the scene contains nothing they'd directly illuminate.
+ * users can see where lights are placed and how they're aimed.
  *
  * Pattern: the light component creates a ref, renders its `<*Light>`
  * with that ref, and additionally renders `<*LightGizmo lightRef={ref}>`.
  * The gizmo subscribes to the light object's transform via useFrame so
  * it stays in sync if the light moves.
+ *
+ * WI-UX-14: gizmos are gated on the owning light's TSCN path matching
+ * `SelectionContext.selectedNodePath`. Without this gate, a scene with
+ * many lights (e.g. `example-hallway.tscn`'s 18 spotlights) rendered 18
+ * overlapping yellow cones that obscured the actual scene meshes. Matches
+ * main's `HelperManager.setHelper('highlight', ...)` behavior — only the
+ * selected node carries a visible gizmo. Hover does NOT show the gizmo;
+ * the orange `HoverHighlight` BoxHelper from WI-UX-10 is the hover
+ * affordance.
+ *
+ * Outside a NodeDispatcher (standalone-test usage), `useNodePath()`
+ * returns `null`; the gate then evaluates to `false` and the gizmo is
+ * hidden. None of the existing light-property regression tests assert
+ * gizmo presence, so this is harmless for the test suite.
  */
 
 import { useEffect, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { useNodePath } from '../../contexts/NodePathContext.js';
+import { useOptionalSelection } from '../../contexts/SelectionContext.js';
 
 const HELPER_COLOR = 0xffff00;
 const DIRECTIONAL_HELPER_SIZE = 1.0;
 const POINT_HELPER_SIZE = 0.25;
+
+/**
+ * Returns true when this gizmo's owning TSCN node is the currently
+ * selected node in the panel's SelectionContext. Used by every gizmo
+ * variant below — and by Camera3D / AudioStreamPlayer3D — to suppress
+ * editor decorations unless the user has explicitly picked this node.
+ *
+ * Outside a NodeDispatcher (standalone-test usage where the component
+ * mounts without a NodePathProvider), this returns false so gizmos
+ * stay hidden; no existing test asserts gizmo presence, so it's
+ * harmless. Exported so non-light gizmos can share the exact same
+ * gate without duplicating the body. A future `useTHREEHelper`
+ * consolidation (arch-scout candidate #3) absorbs this hook.
+ */
+export function useGizmoVisible(): boolean {
+  const path = useNodePath();
+  const selection = useOptionalSelection();
+  if (path === null) return false;
+  return selection?.selectedNodePath === path;
+}
 
 interface DirectionalGizmoProps {
   lightRef: React.RefObject<THREE.DirectionalLight | null>;
 }
 
 export function DirectionalLightGizmo({ lightRef }: DirectionalGizmoProps) {
+  const visible = useGizmoVisible();
   const [helper, setHelper] = useState<THREE.DirectionalLightHelper | null>(null);
 
   useEffect(() => {
+    if (!visible) {
+      setHelper(null);
+      return;
+    }
     const light = lightRef.current;
     if (!light) return;
     const created = new THREE.DirectionalLightHelper(light, DIRECTIONAL_HELPER_SIZE, HELPER_COLOR);
@@ -33,13 +73,13 @@ export function DirectionalLightGizmo({ lightRef }: DirectionalGizmoProps) {
     return () => {
       created.dispose?.();
     };
-  }, [lightRef]);
+  }, [lightRef, visible]);
 
   useFrame(() => {
     helper?.update();
   });
 
-  if (!helper) return null;
+  if (!visible || !helper) return null;
   return <primitive object={helper} />;
 }
 
@@ -48,9 +88,14 @@ interface PointGizmoProps {
 }
 
 export function PointLightGizmo({ lightRef }: PointGizmoProps) {
+  const visible = useGizmoVisible();
   const [helper, setHelper] = useState<THREE.PointLightHelper | null>(null);
 
   useEffect(() => {
+    if (!visible) {
+      setHelper(null);
+      return;
+    }
     const light = lightRef.current;
     if (!light) return;
     const created = new THREE.PointLightHelper(light, POINT_HELPER_SIZE, HELPER_COLOR);
@@ -58,13 +103,13 @@ export function PointLightGizmo({ lightRef }: PointGizmoProps) {
     return () => {
       created.dispose?.();
     };
-  }, [lightRef]);
+  }, [lightRef, visible]);
 
   useFrame(() => {
     helper?.update();
   });
 
-  if (!helper) return null;
+  if (!visible || !helper) return null;
   return <primitive object={helper} />;
 }
 
@@ -73,9 +118,14 @@ interface SpotGizmoProps {
 }
 
 export function SpotLightGizmo({ lightRef }: SpotGizmoProps) {
+  const visible = useGizmoVisible();
   const [helper, setHelper] = useState<THREE.SpotLightHelper | null>(null);
 
   useEffect(() => {
+    if (!visible) {
+      setHelper(null);
+      return;
+    }
     const light = lightRef.current;
     if (!light) return;
     const created = new THREE.SpotLightHelper(light, HELPER_COLOR);
@@ -83,13 +133,13 @@ export function SpotLightGizmo({ lightRef }: SpotGizmoProps) {
     return () => {
       created.dispose?.();
     };
-  }, [lightRef]);
+  }, [lightRef, visible]);
 
   useFrame(() => {
     helper?.update();
   });
 
-  if (!helper) return null;
+  if (!visible || !helper) return null;
   return <primitive object={helper} />;
 }
 
