@@ -18,6 +18,7 @@ import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
 import { useOptionalCameraControl } from './contexts/CameraControlContext.js';
 import { SceneResourcesProvider } from './SceneResourcesContext.js';
 import { NodeDispatcher } from './NodeDispatcher.js';
+import { SelectionHighlight } from './components/SelectionHighlight.js';
 import styles from './TscnCanvas.module.css';
 
 export interface TscnCanvasProps {
@@ -56,6 +57,7 @@ export function TscnSceneContents() {
           <NodeDispatcher nodes={nodes} />
         </SceneResourcesProvider>
       )}
+      <SelectionHighlight />
     </>
   );
 }

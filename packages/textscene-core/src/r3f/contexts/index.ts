@@ -1,6 +1,7 @@
 export {
   SelectionProvider,
   useSelection,
+  useOptionalSelection,
   type SelectionContextValue,
   type SelectionProviderProps,
 } from './SelectionContext.js';

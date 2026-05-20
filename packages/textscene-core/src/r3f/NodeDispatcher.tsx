@@ -24,8 +24,9 @@
  * the innermost hit object outward.
  */
 
-import { Fragment } from 'react';
+import { Fragment, useCallback } from 'react';
 import type { ReactNode } from 'react';
+import type * as THREE from 'three';
 import type { TscnNode, TscnScene } from '../parser/types.js';
 import { joinPath } from '../utils/nodePath.js';
 import { nodeComponentRegistry } from './NodeComponentRegistry.js';
@@ -71,8 +72,19 @@ interface DispatchedNodeProps {
 function DispatchedNode({ node, path, withNodePath }: DispatchedNodeProps): ReactNode {
   const Component = nodeComponentRegistry.get(node.type) ?? GenericNodeFallback;
   const handlers = withNodePath(path);
-  const { hiddenNodePaths } = useSelection();
+  const { hiddenNodePaths, registerNodeObject, unregisterNodeObject } = useSelection();
   const isHidden = hiddenNodePaths.has(path);
+
+  const wrapperRef = useCallback(
+    (object: THREE.Object3D | null) => {
+      if (object) {
+        registerNodeObject(path, object);
+      } else {
+        unregisterNodeObject(path);
+      }
+    },
+    [path, registerNodeObject, unregisterNodeObject]
+  );
 
   const inlineChildren = node.children.map((child) => (
     <DispatchedNode
@@ -118,6 +130,7 @@ function DispatchedNode({ node, path, withNodePath }: DispatchedNodeProps): Reac
   return (
     <NodePathProvider path={path}>
       <group
+        ref={wrapperRef}
         visible={!isHidden}
         onPointerDown={handlers.onPointerDown}
         onPointerUp={handlers.onPointerUp}

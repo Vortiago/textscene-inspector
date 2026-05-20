@@ -10,9 +10,11 @@ import {
   useCallback,
   useContext,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
+import type * as THREE from 'three';
 
 export interface SelectionContextValue {
   selectedNodePath: string | null;
@@ -25,6 +27,18 @@ export interface SelectionContextValue {
   setExpandedNodePaths: (paths: ReadonlySet<string>) => void;
   toggleHidden: (path: string) => void;
   clearHidden: () => void;
+  /**
+   * Mutable map from TSCN node path → its wrapping THREE.Object3D as
+   * mounted by `NodeDispatcher`. Consumers (e.g. SelectionHighlight)
+   * look up the Object3D for `selectedNodePath` to attach a BoxHelper.
+   * Mutations happen via `registerNodeObject` / `unregisterNodeObject`
+   * inside ref callbacks; render-phase reads should treat it as a
+   * snapshot since the underlying Map is the same instance across
+   * renders (stored in a useRef).
+   */
+  nodeObjectMap: Map<string, THREE.Object3D>;
+  registerNodeObject: (path: string, object: THREE.Object3D) => void;
+  unregisterNodeObject: (path: string) => void;
 }
 
 const SelectionContext = createContext<SelectionContextValue | null>(null);
@@ -76,6 +90,21 @@ export function SelectionProvider({ children }: SelectionProviderProps) {
     setHiddenNodePathsState(new Set());
   }, []);
 
+  const nodeObjectMapRef = useRef<Map<string, THREE.Object3D>>(
+    new Map<string, THREE.Object3D>()
+  );
+
+  const registerNodeObject = useCallback(
+    (path: string, object: THREE.Object3D) => {
+      nodeObjectMapRef.current.set(path, object);
+    },
+    []
+  );
+
+  const unregisterNodeObject = useCallback((path: string) => {
+    nodeObjectMapRef.current.delete(path);
+  }, []);
+
   const value = useMemo<SelectionContextValue>(
     () => ({
       selectedNodePath,
@@ -88,6 +117,9 @@ export function SelectionProvider({ children }: SelectionProviderProps) {
       setExpandedNodePaths,
       toggleHidden,
       clearHidden,
+      nodeObjectMap: nodeObjectMapRef.current,
+      registerNodeObject,
+      unregisterNodeObject,
     }),
     [
       selectedNodePath,
@@ -98,6 +130,8 @@ export function SelectionProvider({ children }: SelectionProviderProps) {
       setExpandedNodePaths,
       toggleHidden,
       clearHidden,
+      registerNodeObject,
+      unregisterNodeObject,
     ]
   );
 
@@ -113,4 +147,14 @@ export function useSelection(): SelectionContextValue {
     );
   }
   return value;
+}
+
+/**
+ * Same as `useSelection`, but returns `null` when there is no provider
+ * in scope. Use from canvas-internal components that can be mounted
+ * either inside the full `<TscnPreviewShell>` or by standalone tests of
+ * the canvas — `useSelection`'s hard throw breaks those test paths.
+ */
+export function useOptionalSelection(): SelectionContextValue | null {
+  return useContext(SelectionContext);
 }
