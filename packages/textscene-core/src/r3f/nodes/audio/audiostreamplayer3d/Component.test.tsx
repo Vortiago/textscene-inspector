@@ -7,15 +7,46 @@
  * and tree passthrough.
  */
 
+import { useEffect, type ReactNode } from 'react';
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { AudioStreamPlayer3D } from './Component';
+import { NodePathProvider } from '../../../contexts/NodePathContext';
+import {
+  SelectionProvider,
+  useSelection,
+} from '../../../contexts/SelectionContext';
 import type { TscnNode } from '../../../../parser/types';
 import type { AudioStreamPlayer3DProperties } from '../../../../nodes/audio/audiostreamplayer3d/types';
 import {
   AttenuationModel,
   DopplerTracking,
 } from '../../../../nodes/audio/audiostreamplayer3d/types';
+
+/**
+ * WI-UX-14: the speaker + range gizmos are now gated on selection. To
+ * exercise the gizmo content the test scaffolding must (a) place the
+ * component inside a NodePathProvider so it knows its path and (b)
+ * set `selectedNodePath` to that same path through SelectionProvider.
+ * Without this, the gate evaluates to false and the gizmo subtree is
+ * intentionally empty.
+ */
+function SelectSeeder({ path }: { path: string }) {
+  const { setSelectedNodePath } = useSelection();
+  useEffect(() => {
+    setSelectedNodePath(path);
+  }, [path, setSelectedNodePath]);
+  return null;
+}
+
+function withSelectedAudio(path: string, children: ReactNode): ReactNode {
+  return (
+    <SelectionProvider>
+      <SelectSeeder path={path} />
+      <NodePathProvider path={path}>{children}</NodePathProvider>
+    </SelectionProvider>
+  );
+}
 
 function makeNode(overrides: Partial<AudioStreamPlayer3DProperties> = {}): TscnNode {
   const props: AudioStreamPlayer3DProperties = {
@@ -60,11 +91,13 @@ describe('<AudioStreamPlayer3D> (WI-R3F-16 slice B)', () => {
     expect(userData.nodeType).toBe('AudioStreamPlayer3D');
   });
 
-  it('renders the speaker silhouette (at least 2 meshes for the cone + front disk)', async () => {
+  it('renders the speaker silhouette (at least 2 meshes for the cone + front disk) when selected (WI-UX-14)', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <AudioStreamPlayer3D node={makeNode()} />
+      withSelectedAudio('Audio', <AudioStreamPlayer3D node={makeNode()} />)
     );
     // Cone + cylinder front disk = 2 mesh primitives in the gizmo body.
+    // Pre-WI-UX-14 this was unconditional; now requires the audio node
+    // to be the active selection.
     const meshes = renderer.scene.findAllByType('Mesh');
     expect(meshes.length).toBeGreaterThanOrEqual(2);
   });
@@ -81,9 +114,12 @@ describe('<AudioStreamPlayer3D> (WI-R3F-16 slice B)', () => {
     expect(sphere).toBeUndefined();
   });
 
-  it('renders the range sphere when unit_size is overridden', async () => {
+  it('renders the range sphere when unit_size is overridden and the node is selected (WI-UX-14)', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <AudioStreamPlayer3D node={makeNode({ unit_size: 25 })} />
+      withSelectedAudio(
+        'Audio',
+        <AudioStreamPlayer3D node={makeNode({ unit_size: 25 })} />
+      )
     );
     const meshes = renderer.scene.findAllByType('Mesh');
     const sphere = meshes.find((m) => {
@@ -114,9 +150,9 @@ describe('<AudioStreamPlayer3D> (WI-R3F-16 slice B)', () => {
     expect(group.instance.position.z).toBe(-2);
   });
 
-  it('gizmo materials use MeshBasicMaterial (non-shadow-casting)', async () => {
+  it('gizmo materials use MeshBasicMaterial (non-shadow-casting) when selected (WI-UX-14)', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <AudioStreamPlayer3D node={makeNode()} />
+      withSelectedAudio('Audio', <AudioStreamPlayer3D node={makeNode()} />)
     );
     const meshes = renderer.scene.findAllByType('Mesh');
     expect(meshes.length).toBeGreaterThan(0);

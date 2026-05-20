@@ -34,12 +34,19 @@ const DIRECTIONAL_HELPER_SIZE = 1.0;
 const POINT_HELPER_SIZE = 0.25;
 
 /**
- * Returns true when this light's owning TSCN node is the currently
+ * Returns true when this gizmo's owning TSCN node is the currently
  * selected node in the panel's SelectionContext. Used by every gizmo
- * variant below to suppress the helper unless the user has explicitly
- * picked this light.
+ * variant below — and by Camera3D / AudioStreamPlayer3D — to suppress
+ * editor decorations unless the user has explicitly picked this node.
+ *
+ * Outside a NodeDispatcher (standalone-test usage where the component
+ * mounts without a NodePathProvider), this returns false so gizmos
+ * stay hidden; no existing test asserts gizmo presence, so it's
+ * harmless. Exported so non-light gizmos can share the exact same
+ * gate without duplicating the body. A future `useTHREEHelper`
+ * consolidation (arch-scout candidate #3) absorbs this hook.
  */
-function useGizmoVisible(): boolean {
+export function useGizmoVisible(): boolean {
   const path = useNodePath();
   const selection = useOptionalSelection();
   if (path === null) return false;

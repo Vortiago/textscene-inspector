@@ -14,6 +14,7 @@ import { KeepAspectMode, ProjectionMode } from '../../../nodes/3d/camera3d/types
 import type { NodeComponentProps } from '../../NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../nodeTransform';
 import { useNodePath } from '../../contexts/NodePathContext';
+import { useGizmoVisible } from '../lights/lightHelpers';
 
 const DEFAULT_ASPECT = 16 / 9;
 
@@ -175,9 +176,19 @@ interface CameraGizmoProps {
 }
 
 function CameraGizmo({ cameraRef, name }: CameraGizmoProps) {
+  // WI-UX-14: gate on selection — same pattern as the light gizmos.
+  // Without this, every Camera3D in the scene drew a yellow CameraHelper
+  // frustum wireframe regardless of selection (ui-designer-2's A/B
+  // finding on the hallway fixture). The gizmo now only appears when
+  // the user has selected this Camera3D's tree row.
+  const visible = useGizmoVisible();
   const [helper, setHelper] = useState<THREE.CameraHelper | null>(null);
 
   useEffect(() => {
+    if (!visible) {
+      setHelper(null);
+      return;
+    }
     const camera = cameraRef.current;
     if (!camera) return;
     const created = new THREE.CameraHelper(camera);
@@ -186,8 +197,8 @@ function CameraGizmo({ cameraRef, name }: CameraGizmoProps) {
     return () => {
       created.dispose?.();
     };
-  }, [cameraRef, name]);
+  }, [cameraRef, name, visible]);
 
-  if (!helper) return null;
+  if (!visible || !helper) return null;
   return <primitive object={helper} />;
 }
