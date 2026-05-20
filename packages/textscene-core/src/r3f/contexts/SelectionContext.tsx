@@ -18,10 +18,13 @@ export interface SelectionContextValue {
   selectedNodePath: string | null;
   hoveredNodePath: string | null;
   expandedNodePaths: ReadonlySet<string>;
+  hiddenNodePaths: ReadonlySet<string>;
   setSelectedNodePath: (path: string | null) => void;
   setHoveredNodePath: (path: string | null) => void;
   toggleExpandedNodePath: (path: string) => void;
   setExpandedNodePaths: (paths: ReadonlySet<string>) => void;
+  toggleHidden: (path: string) => void;
+  clearHidden: () => void;
 }
 
 const SelectionContext = createContext<SelectionContextValue | null>(null);
@@ -35,6 +38,9 @@ export function SelectionProvider({ children }: SelectionProviderProps) {
   const [selectedNodePath, setSelectedNodePath] = useState<string | null>(null);
   const [hoveredNodePath, setHoveredNodePath] = useState<string | null>(null);
   const [expandedNodePaths, setExpandedNodePathsState] = useState<ReadonlySet<string>>(
+    () => new Set<string>()
+  );
+  const [hiddenNodePaths, setHiddenNodePathsState] = useState<ReadonlySet<string>>(
     () => new Set<string>()
   );
 
@@ -54,22 +60,44 @@ export function SelectionProvider({ children }: SelectionProviderProps) {
     setExpandedNodePathsState(new Set(paths));
   }, []);
 
+  const toggleHidden = useCallback((path: string) => {
+    setHiddenNodePathsState((prev) => {
+      const next = new Set(prev);
+      if (next.has(path)) {
+        next.delete(path);
+      } else {
+        next.add(path);
+      }
+      return next;
+    });
+  }, []);
+
+  const clearHidden = useCallback(() => {
+    setHiddenNodePathsState(new Set());
+  }, []);
+
   const value = useMemo<SelectionContextValue>(
     () => ({
       selectedNodePath,
       hoveredNodePath,
       expandedNodePaths,
+      hiddenNodePaths,
       setSelectedNodePath,
       setHoveredNodePath,
       toggleExpandedNodePath,
       setExpandedNodePaths,
+      toggleHidden,
+      clearHidden,
     }),
     [
       selectedNodePath,
       hoveredNodePath,
       expandedNodePaths,
+      hiddenNodePaths,
       toggleExpandedNodePath,
       setExpandedNodePaths,
+      toggleHidden,
+      clearHidden,
     ]
   );
 

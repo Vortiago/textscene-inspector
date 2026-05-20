@@ -39,6 +39,7 @@ import {
   useSceneResources,
 } from './SceneResourcesContext.js';
 import { InternalTextLabel } from './internalTextLabel.js';
+import { useSelection } from './contexts/SelectionContext.js';
 
 export interface NodeDispatcherProps {
   /** Root nodes from the active scene (typically `scene.scenes.get(rootScene).nodes`). */
@@ -70,6 +71,8 @@ interface DispatchedNodeProps {
 function DispatchedNode({ node, path, withNodePath }: DispatchedNodeProps): ReactNode {
   const Component = nodeComponentRegistry.get(node.type) ?? GenericNodeFallback;
   const handlers = withNodePath(path);
+  const { hiddenNodePaths } = useSelection();
+  const isHidden = hiddenNodePaths.has(path);
 
   const inlineChildren = node.children.map((child) => (
     <DispatchedNode
@@ -115,6 +118,7 @@ function DispatchedNode({ node, path, withNodePath }: DispatchedNodeProps): Reac
   return (
     <NodePathProvider path={path}>
       <group
+        visible={!isHidden}
         onPointerDown={handlers.onPointerDown}
         onPointerUp={handlers.onPointerUp}
         onPointerOver={handlers.onPointerOver}
