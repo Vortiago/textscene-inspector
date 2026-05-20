@@ -70,3 +70,59 @@
   color: var(--tsi-danger);
   font-size: var(--tsi-font-md);
 }
+
+/* WI-UX-7 — Upload TSCN entry. Mirrors the spacing pattern of
+   `.uploadGroup` but for the top-level .tscn file picker. */
+.tscnUploadGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tsi-space-2);
+  cursor: pointer;
+  color: var(--tsi-fg-default);
+}
+
+.tscnUploadLabel {
+  font-size: var(--tsi-font-md);
+}
+
+.tscnUploadInput {
+  color: var(--tsi-fg-default);
+  font-size: var(--tsi-font-sm);
+  max-width: 14rem;
+}
+
+.uploadedTscnLabel {
+  padding: 0.125rem var(--tsi-space-2);
+  background: color-mix(in srgb, var(--tsi-accent) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--tsi-accent) 40%, transparent);
+  border-radius: 999px;
+  color: var(--tsi-accent);
+  font-size: var(--tsi-font-sm);
+  font-family: var(--tsi-font-mono);
+  line-height: 1.4;
+  max-width: 14rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.resetCameraButton {
+  padding: 0.25rem var(--tsi-space-3);
+  background: var(--tsi-bg-elevated);
+  border: 1px solid var(--tsi-border-strong);
+  border-radius: var(--tsi-radius-sm);
+  color: var(--tsi-fg-default);
+  font-size: var(--tsi-font-md);
+  cursor: pointer;
+  line-height: 1.4;
+}
+
+.resetCameraButton:hover:not(:disabled) {
+  background: var(--tsi-bg-hover);
+  border-color: var(--tsi-accent);
+}
+
+.resetCameraButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
