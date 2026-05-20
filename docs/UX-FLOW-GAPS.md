@@ -255,3 +255,15 @@ The single PARTIAL FAIL (WI-UX-7b "Reset Camera not disabled when no scene") is 
 2. **Fold-cleanup**: a quick follow-up commit (~3 lines: read `sceneGraph` from `useHierarchy()`, set `disabled={!sceneGraph}` on the button). Trivial effort, satisfies the original acceptance.
 
 All 7 originally-PASS items from `9aed84b` remain PASS on `a06d950`. All 6 of the 7 new items PASS. Zero regressions on previously-fixed gaps.
+
+---
+
+## Reset Camera fix re-verify on 2e065d5
+
+Single-item focused re-verify on `2e065d5` ("fix(WI-UX-7): Reset Camera button disabled when no scene loaded"). Dev server pinned to port 3060. Screenshots in `.tmp/ux-flow-reset-fix/`.
+
+| Item | Status | Evidence |
+|---|---|---|
+| WI-UX-7b Reset Camera disabled state | **PASS** | `.tmp/ux-flow-reset-fix/R1-enabled-valid-scene.png` — on `integration-all-primitives.tscn`: `disabled: false`, `cursor: pointer`, `opacity: 1`. `.tmp/ux-flow-reset-fix/R2-disabled-no-scene.png` — on `edge-malformed-bracket.tscn`: `disabled: true`, `cursor: not-allowed`, `opacity: 0.5` (visible dimmed text), click is a no-op (no crash, no side effect). After switching back to a valid scene, button re-enables (`disabled: false, cursor: pointer, opacity: 1`). All three acceptance criteria met; visible click affordance is gone in the disabled state. |
+
+**PR #48 gate**: The single PARTIAL FAIL from the previous re-verify is now PASS. Combined with the 13 prior PASSes, the full delta (Gaps 1, 2, 3, 6, 7, 8, 12 + WI-UX-5, -6, -7a/b/c, -9, -10) is **14/14 PASS** on `2e065d5`.
