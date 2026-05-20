@@ -32,7 +32,17 @@ import styles from './r3f-main.module.css';
 const NO_FIXTURE = '';
 
 const STORAGE_KEY = 'tscn-web-r3f-fixture';
+/**
+ * First-visit default. WI-UX-15: pick a fixture with zero `ext_resource`
+ * lines so a new visitor's first paint shows a clean scene, not a wall
+ * of missing-file warnings. `unit-plane-mesh.tscn` is the canonical
+ * "hello world" of the app: single PlaneMesh, no externals, parses
+ * instantly. Falls back to `integration-all-primitives.tscn` (the
+ * previous default) and then `fixtures[0]` so the app never lands on
+ * an undefined fixture.
+ */
 const DEFAULT_FIXTURE =
+  fixtures.find((f) => f.file === 'unit-plane-mesh.tscn')?.file ??
   fixtures.find((f) => f.file === 'integration-all-primitives.tscn')?.file ??
   fixtures[0]?.file ??
   '';
