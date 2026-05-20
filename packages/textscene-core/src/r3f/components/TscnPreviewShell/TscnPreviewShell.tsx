@@ -7,14 +7,14 @@
  *
  * Replaces the imperative `packages/textscene-core/src/ui/TscnPreviewUI.ts`.
  */
-import { useMemo, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { TscnParser } from '../../../parser/TscnParser.js';
 import { SceneGraphBuilder } from '../../../core/SceneGraphBuilder.js';
 import { tscnSceneToParsedScene } from '../../../core/SceneGraph.js';
 import type { SceneGraph } from '../../../core/SceneGraph.js';
 import type { TscnNode } from '../../../parser/types.js';
 import { HierarchyProvider } from '../../contexts/HierarchyContext.js';
-import { SelectionProvider } from '../../contexts/SelectionContext.js';
+import { SelectionProvider, useSelection } from '../../contexts/SelectionContext.js';
 import { CameraControlProvider } from '../../contexts/CameraControlContext.js';
 import { MissingResourcesProvider } from '../../contexts/MissingResourcesContext.js';
 import { TscnCanvas } from '../../TscnCanvas.js';
@@ -138,6 +138,7 @@ export function TscnPreviewShell({
       <SelectionProvider>
         <CameraControlProvider>
           <MissingResourcesProvider>
+            <SceneChangeResetter sceneGraph={sceneGraph} />
             <div className={styles.shell} data-panel-id={panelId}>
               {toolbar}
               {error && (
@@ -168,4 +169,36 @@ export function TscnPreviewShell({
       </SelectionProvider>
     </HierarchyProvider>
   );
+}
+
+/**
+ * Clears all selection-derived state (selection, hover, expanded set,
+ * hidden set, and the path→Object3D ref-map) whenever the active
+ * `sceneGraph` reference changes between two non-null values — i.e.
+ * the user picked a different fixture.
+ *
+ * The initial null → first-scene transition is intentionally NOT a
+ * clear: there is nothing to clear yet, and firing during mount would
+ * just churn React state for no observable effect. Subsequent
+ * non-null → non-null transitions ARE clears: the old scene's
+ * `selectedNodePath` would otherwise hang around and the
+ * `SelectionHighlight` BoxHelper would render against an unmounted
+ * Object3D at the prior fixture's coordinates (WI-UX-5 regression).
+ *
+ * Lives inside `<SelectionProvider>` so it can call `clearAll()`.
+ * Renders no DOM.
+ */
+function SceneChangeResetter({ sceneGraph }: { sceneGraph: SceneGraph | null }) {
+  const { clearAll } = useSelection();
+  const prevSceneGraphRef = useRef<SceneGraph | null>(sceneGraph);
+
+  useEffect(() => {
+    const prev = prevSceneGraphRef.current;
+    if (prev !== null && sceneGraph !== null && prev !== sceneGraph) {
+      clearAll();
+    }
+    prevSceneGraphRef.current = sceneGraph;
+  }, [sceneGraph, clearAll]);
+
+  return null;
 }
