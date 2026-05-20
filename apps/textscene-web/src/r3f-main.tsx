@@ -101,7 +101,13 @@ function R3FApp() {
   }
 
   function handleResourceRemove(path: string) {
-    provider.getUploadedFiles().delete(path);
+    // WI-UX-6: drop the uploaded file AND re-request through the loader
+    // so dependents flip back to `missing`. Without provideFile() the
+    // dispatcher's `useResource` would keep its `loaded` value (cached
+    // texture) and the panel row would never reappear in the missing
+    // list — defeating the "Remove → row reappears" round-trip.
+    provider.removeUploadedFile(path);
+    loader.provideFile(path);
   }
 
   return (

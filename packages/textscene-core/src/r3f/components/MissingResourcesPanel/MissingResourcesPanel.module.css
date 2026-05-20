@@ -23,10 +23,14 @@
 }
 
 .item {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  gap: var(--tsi-space-2);
+  /* WI-UX-6: stack icon/path on top, action below, so the path gets the
+     full sidebar width before deciding whether to truncate. Common
+     `res://textures/<file>.png` paths fit on one line; longer paths
+     ellipsize but the full path is still discoverable via `title=` hover
+     and the row's `data-path` attribute. */
+  display: flex;
+  flex-direction: column;
+  gap: var(--tsi-space-1);
   padding: var(--tsi-space-1) var(--tsi-space-2);
   border-radius: var(--tsi-radius-sm);
   background: var(--tsi-bg-panel);
@@ -38,6 +42,13 @@
   &.missing {
     border-left: 2px solid var(--tsi-warning);
   }
+}
+
+.itemHead {
+  display: flex;
+  align-items: center;
+  gap: var(--tsi-space-2);
+  min-width: 0;
 }
 
 .icon {
@@ -56,6 +67,7 @@
 }
 
 .path {
+  flex: 1 1 auto;
   font-family: var(--tsi-font-mono);
   font-size: var(--tsi-font-sm);
   color: var(--tsi-fg-default);
@@ -63,12 +75,22 @@
   overflow: hidden;
   text-overflow: ellipsis;
   min-width: 0;
+  /* `direction: rtl` keeps the filename visible when the path is too
+     long for the row — ellipsis lands at the start of the string
+     (`…textures/test_texture.png`) instead of clobbering the basename
+     (`res://tex…`). `unicode-bidi: plaintext` keeps the actual
+     characters in their original left-to-right order. */
+  direction: rtl;
+  unicode-bidi: plaintext;
+  text-align: left;
 }
 
 .action {
-  flex-shrink: 0;
   display: flex;
   align-items: center;
+  /* Indent the action row to align with the path text under the icon
+     column, mirroring main's nested layout. */
+  padding-left: calc(1.25em + var(--tsi-space-2));
 }
 
 .remove {
@@ -89,5 +111,5 @@
 .upload {
   font-size: var(--tsi-font-sm);
   color: var(--tsi-fg-default);
-  max-width: 11rem;
+  width: 100%;
 }

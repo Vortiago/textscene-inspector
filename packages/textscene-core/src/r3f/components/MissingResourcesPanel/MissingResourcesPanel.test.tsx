@@ -139,4 +139,76 @@ describe('<MissingResourcesPanel>', () => {
     expect(panel.querySelectorAll('[data-state="missing"]')).toHaveLength(0);
     expect(panel.querySelectorAll('[data-state="uploaded"]')).toHaveLength(1);
   });
+
+  it('renders both uploaded and missing rows simultaneously, uploaded first', async () => {
+    // Mirrors main's `test-multiple-meshes-shared-texture.tscn`
+    // "uploaded one, still missing the other" snapshot in
+    // docs/MAIN-FEATURE-INVENTORY.md.
+    render(
+      <MissingResourcesProvider>
+        <ReportMissingOnMount path="res://textures/different.png" />
+        <MarkUploadedOnMount path="res://textures/shared.png" />
+        <MissingResourcesPanel onUpload={vi.fn()} onRemove={vi.fn()} />
+      </MissingResourcesProvider>
+    );
+
+    const panel = await screen.findByTestId('missing-resources-panel');
+    const rows = Array.from(panel.querySelectorAll('[data-state]')) as HTMLElement[];
+    expect(rows).toHaveLength(2);
+
+    // Uploaded row first, then missing row — matches main's ordering.
+    expect(rows[0]?.getAttribute('data-state')).toBe('uploaded');
+    expect(rows[0]?.getAttribute('data-path')).toBe('res://textures/shared.png');
+    expect(rows[1]?.getAttribute('data-state')).toBe('missing');
+    expect(rows[1]?.getAttribute('data-path')).toBe('res://textures/different.png');
+  });
+
+  it('Remove on an uploaded row clears it from the panel even when the host onRemove is a no-op', async () => {
+    // The panel must drop the uploaded entry from its own state so the
+    // row vanishes immediately. Hosts that delete the file from their
+    // provider afterwards may take longer to fire the re-resolve event,
+    // but the row should not stay frozen in the meantime.
+    const onRemove = vi.fn();
+    render(
+      <MissingResourcesProvider>
+        <MarkUploadedOnMount path="res://textures/shared.png" />
+        <MissingResourcesPanel onUpload={vi.fn()} onRemove={onRemove} />
+      </MissingResourcesProvider>
+    );
+
+    const panel = await screen.findByTestId('missing-resources-panel');
+    expect(panel.querySelectorAll('[data-state="uploaded"]')).toHaveLength(1);
+
+    const removeBtn = panel.querySelector(
+      '[data-state="uploaded"] button'
+    ) as HTMLButtonElement;
+    await act(async () => {
+      fireEvent.click(removeBtn);
+    });
+
+    expect(onRemove).toHaveBeenCalledWith('res://textures/shared.png');
+    // The uploaded entry is gone from context state; panel is empty so
+    // it returns null. With no rows the panel root unmounts.
+    expect(screen.queryByTestId('missing-resources-panel')).toBeNull();
+  });
+
+  it('uploaded row exposes the full path via `title` for hover discoverability', async () => {
+    const longPath = 'res://textures/deeply/nested/subfolder/test_texture.png';
+    render(
+      <MissingResourcesProvider>
+        <MarkUploadedOnMount path={longPath} />
+        <MissingResourcesPanel onUpload={vi.fn()} onRemove={vi.fn()} />
+      </MissingResourcesProvider>
+    );
+
+    const panel = await screen.findByTestId('missing-resources-panel');
+    const pathEl = panel.querySelector(
+      '[data-state="uploaded"] [title]'
+    ) as HTMLElement;
+    expect(pathEl).toBeTruthy();
+    expect(pathEl.getAttribute('title')).toBe(longPath);
+    // Text content is the full path; CSS ellipsis happens at render time
+    // and is not observable through happy-dom's measured layout.
+    expect(pathEl.textContent).toBe(longPath);
+  });
 });

@@ -30,7 +30,7 @@ export interface MissingResourcesPanelProps {
 }
 
 export function MissingResourcesPanel({ onUpload, onRemove }: MissingResourcesPanelProps) {
-  const { missingPaths, uploadedPaths } = useMissingResources();
+  const { missingPaths, uploadedPaths, removeUploaded } = useMissingResources();
 
   // Hidden when nothing's missing AND nothing's been uploaded — matches
   // main's `.visible` class toggle. The panel takes no space at all
@@ -41,6 +41,15 @@ export function MissingResourcesPanel({ onUpload, onRemove }: MissingResourcesPa
 
   const uploaded = Array.from(uploadedPaths).sort();
   const missing = Array.from(missingPaths).sort();
+
+  const handleRemove = (path: string) => {
+    // Drop the uploaded entry from the panel state first so the row
+    // disappears immediately. Then let the host invalidate its
+    // provider + loader; if `useResource` re-resolves as `missing`
+    // the path will reappear as a missing row on the next render.
+    removeUploaded(path);
+    onRemove(path);
+  };
 
   return (
     <div
@@ -58,17 +67,19 @@ export function MissingResourcesPanel({ onUpload, onRemove }: MissingResourcesPa
             data-state="uploaded"
             data-path={path}
           >
-            <div className={`${styles.icon} ${styles.uploaded}`} aria-hidden="true">
-              ✓
-            </div>
-            <div className={styles.path} title={path}>
-              {path}
+            <div className={styles.itemHead}>
+              <div className={`${styles.icon} ${styles.uploaded}`} aria-hidden="true">
+                ✓
+              </div>
+              <div className={styles.path} title={path}>
+                {path}
+              </div>
             </div>
             <div className={styles.action}>
               <button
                 type="button"
                 className={styles.remove}
-                onClick={() => onRemove(path)}
+                onClick={() => handleRemove(path)}
                 aria-label={`Remove uploaded file for ${path}`}
               >
                 Remove
@@ -104,11 +115,13 @@ function MissingRow({ path, onUpload }: MissingRowProps) {
       data-state="missing"
       data-path={path}
     >
-      <div className={`${styles.icon} ${styles.missing}`} aria-hidden="true">
-        ⚠
-      </div>
-      <div className={styles.path} title={path}>
-        {path}
+      <div className={styles.itemHead}>
+        <div className={`${styles.icon} ${styles.missing}`} aria-hidden="true">
+          ⚠
+        </div>
+        <div className={styles.path} title={path}>
+          {path}
+        </div>
       </div>
       <div className={styles.action}>
         <input
