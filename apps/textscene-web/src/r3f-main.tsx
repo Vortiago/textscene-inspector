@@ -6,9 +6,13 @@
  * external resources. Missing-resource uploads are driven by the
  * shell's `<MissingResourcesPanel>` (one row per missing path,
  * per-row file input) instead of a global filename-guessing input
- * (see `docs/UX-REGRESSIONS.md` §3 — WI-UX-3).
+ * (see `docs/UX-REGRESSIONS.md` §3 — WI-UX-3). The toolbar carries
+ * three top-level app-shell entry points: scene-fixture dropdown,
+ * "Upload TSCN File" for user-supplied .tscn content, and
+ * "Reset Camera" to frame the orbit controls back to default
+ * (WI-UX-7).
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
   FileEventBus,
@@ -16,11 +20,15 @@ import {
   ResourceLoaderProvider,
   TscnPreviewShell,
   ViewportSelector,
+  useCameraControl,
   type ViewportSelectorOption,
 } from '@textscene/core';
 import { fixtures } from './fixtures';
 import { WebResourceProvider } from './providers/WebResourceProvider';
 import styles from './r3f-main.module.css';
+
+/** Sentinel value used by `<ViewportSelector>` when no fixture is active (user is on an uploaded .tscn). */
+const NO_FIXTURE = '';
 
 const STORAGE_KEY = 'tscn-web-r3f-fixture';
 const DEFAULT_FIXTURE =
@@ -28,7 +36,7 @@ const DEFAULT_FIXTURE =
   fixtures[0]?.file ??
   '';
 
-function R3FApp() {
+export function R3FApp() {
   const [fixtureFile, setFixtureFile] = useState<string>(() => {
     try {
       return window.localStorage.getItem(STORAGE_KEY) ?? DEFAULT_FIXTURE;
@@ -38,6 +46,11 @@ function R3FApp() {
   });
   const [content, setContent] = useState<string>('');
   const [loadError, setLoadError] = useState<string | null>(null);
+  // When non-null, the user has loaded a TSCN file from their disk via
+  // the toolbar's Upload button. We track the display name so the
+  // toolbar can show what's active when the fixture dropdown is
+  // deselected.
+  const [uploadedTscnName, setUploadedTscnName] = useState<string | null>(null);
 
   // Wire the WI-79 resource pipeline. One provider + bus + loader for
   // the lifetime of the app; React component identity preserves them
@@ -51,19 +64,33 @@ function R3FApp() {
     return { provider, loader };
   }, []);
 
-  const options = useMemo<ViewportSelectorOption[]>(
-    () =>
-      fixtures.map((f) => ({
-        value: f.file,
-        label: f.name,
-        category: f.category,
-      })),
-    []
-  );
+  const options = useMemo<ViewportSelectorOption[]>(() => {
+    const fixtureOptions: ViewportSelectorOption[] = fixtures.map((f) => ({
+      value: f.file,
+      label: f.name,
+      category: f.category,
+    }));
+    // When the user is on an uploaded TSCN the dropdown's `value` is
+    // `''`, but a native `<select>` falls back to the first `<option>`
+    // visually if no option matches. Inject a placeholder so the
+    // dropdown stays in an explicit "(Uploaded file)" state.
+    if (uploadedTscnName) {
+      return [
+        { value: NO_FIXTURE, label: `(Uploaded: ${uploadedTscnName})` },
+        ...fixtureOptions,
+      ];
+    }
+    return fixtureOptions;
+  }, [uploadedTscnName]);
 
   useEffect(() => {
     if (!fixtureFile) {
-      setContent('');
+      // The user is on an uploaded TSCN (`fixtureFile === ''`) — do not
+      // overwrite `content` set by `handleTscnFileChange`. Also skip
+      // when fixture is genuinely cleared with no upload.
+      if (!uploadedTscnName) {
+        setContent('');
+      }
       return;
     }
     let cancelled = false;
@@ -93,7 +120,24 @@ function R3FApp() {
     return () => {
       cancelled = true;
     };
-  }, [fixtureFile]);
+  }, [fixtureFile, uploadedTscnName]);
+
+  function handleFixtureChange(newFixture: string) {
+    // Switching to a fixture replaces any user-loaded TSCN content.
+    setUploadedTscnName(null);
+    setFixtureFile(newFixture);
+  }
+
+  function handleTscnUpload(file: File, text: string) {
+    setLoadError(null);
+    setFixtureFile(NO_FIXTURE);
+    setUploadedTscnName(file.name);
+    setContent(text);
+  }
+
+  function handleTscnUploadError(message: string) {
+    setLoadError(message);
+  }
 
   function handleResourceUpload(path: string, file: File) {
     provider.addUploadedFile(path, file);
@@ -110,34 +154,131 @@ function R3FApp() {
     loader.provideFile(path);
   }
 
+  // Disable Reset Camera until content is loaded — matches main's
+  // `resetButton.disabled` toggle. The shell parses content even when
+  // it's an uploaded TSCN, so any non-empty `content` qualifies.
+  const sceneLoaded = content.length > 0;
+
   return (
     <ResourceLoaderProvider loader={loader}>
       <div style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column' }}>
         <TscnPreviewShell
-          panelId={`web-${fixtureFile || 'empty'}`}
+          panelId={`web-${fixtureFile || uploadedTscnName || 'empty'}`}
           content={content}
-          rootScenePath={`res://${fixtureFile || 'empty.tscn'}`}
+          rootScenePath={`res://${
+            fixtureFile || uploadedTscnName || 'empty.tscn'
+          }`}
           onResourceUpload={handleResourceUpload}
           onResourceRemove={handleResourceRemove}
           toolbar={
-            <div className={styles.toolbar}>
-              <strong className={styles.title}>TextScene Inspector</strong>
-              <ViewportSelector
-                options={options}
-                value={fixtureFile}
-                onChange={setFixtureFile}
-                label="Scene:"
-              />
-              {loadError && (
-                <span role="alert" className={styles.errorMessage}>
-                  {loadError}
-                </span>
-              )}
-            </div>
+            <Toolbar
+              options={options}
+              fixtureFile={fixtureFile}
+              uploadedTscnName={uploadedTscnName}
+              loadError={loadError}
+              sceneLoaded={sceneLoaded}
+              onFixtureChange={handleFixtureChange}
+              onTscnUpload={handleTscnUpload}
+              onTscnUploadError={handleTscnUploadError}
+            />
           }
         />
       </div>
     </ResourceLoaderProvider>
+  );
+}
+
+interface ToolbarProps {
+  options: readonly ViewportSelectorOption[];
+  fixtureFile: string;
+  uploadedTscnName: string | null;
+  loadError: string | null;
+  sceneLoaded: boolean;
+  onFixtureChange: (value: string) => void;
+  onTscnUpload: (file: File, text: string) => void;
+  onTscnUploadError: (message: string) => void;
+}
+
+/**
+ * Toolbar rendered inside `<TscnPreviewShell>` so it has access to the
+ * shell's `CameraControlContext` (for the Reset Camera button).
+ * Three top-level controls: scene-fixture dropdown, upload .tscn,
+ * reset camera. Mirrors main's controls panel
+ * (`git show main:apps/textscene-web/index.html:30-40`).
+ */
+function Toolbar({
+  options,
+  fixtureFile,
+  uploadedTscnName,
+  loadError,
+  sceneLoaded,
+  onFixtureChange,
+  onTscnUpload,
+  onTscnUploadError,
+}: ToolbarProps) {
+  const { resetCamera } = useCameraControl();
+  const tscnInputRef = useRef<HTMLInputElement | null>(null);
+
+  function handleTscnFileChange(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    file
+      .text()
+      .then((text) => onTscnUpload(file, text))
+      .catch((err: unknown) => {
+        const message = err instanceof Error ? err.message : String(err);
+        onTscnUploadError(`Failed to read TSCN file: ${message}`);
+      });
+    // Reset the input so the same filename can be re-uploaded.
+    if (tscnInputRef.current) {
+      tscnInputRef.current.value = '';
+    }
+  }
+
+  return (
+    <div className={styles.toolbar}>
+      <strong className={styles.title}>TextScene Inspector</strong>
+      <ViewportSelector
+        options={options}
+        value={fixtureFile}
+        onChange={onFixtureChange}
+        label="Scene:"
+      />
+      <label className={styles.tscnUploadGroup}>
+        <span className={styles.tscnUploadLabel}>Upload TSCN:</span>
+        <input
+          ref={tscnInputRef}
+          type="file"
+          accept=".tscn"
+          onChange={handleTscnFileChange}
+          className={styles.tscnUploadInput}
+          data-testid="upload-tscn-input"
+        />
+      </label>
+      {uploadedTscnName && (
+        <span
+          className={styles.uploadedTscnLabel}
+          data-testid="uploaded-tscn-label"
+          title={uploadedTscnName}
+        >
+          {uploadedTscnName}
+        </span>
+      )}
+      <button
+        type="button"
+        className={styles.resetCameraButton}
+        onClick={resetCamera}
+        disabled={!sceneLoaded}
+        data-testid="reset-camera-button"
+      >
+        Reset Camera
+      </button>
+      {loadError && (
+        <span role="alert" className={styles.errorMessage}>
+          {loadError}
+        </span>
+      )}
+    </div>
   );
 }
 

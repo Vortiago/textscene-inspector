@@ -9,6 +9,11 @@
  * The action buttons live in `<NodeDetailsPanel>` for Camera3D-selected
  * nodes; the canvas reads `activeCameraPath` and uses `useThree().set`
  * to swap.
+ *
+ * WI-UX-7: also carries a reset handler so the toolbar's "Reset Camera"
+ * button can frame the orbit-controls back to its default. The canvas
+ * registers its `OrbitControls.reset` via `registerResetHandler`; the
+ * toolbar calls `resetCamera()`.
  */
 
 import {
@@ -16,6 +21,7 @@ import {
   useCallback,
   useContext,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
@@ -24,6 +30,22 @@ export interface CameraControlContextValue {
   activeCameraPath: string | null;
   switchToCamera: (path: string) => void;
   returnToFreeView: () => void;
+  /**
+   * Frame the orbit-controls back to its initial state. No-op when no
+   * canvas has registered a reset handler yet (e.g. during the brief
+   * mount window before `<TscnCanvas>`'s effect runs).
+   */
+  resetCamera: () => void;
+  /**
+   * Called from `<TscnCanvas>` so the toolbar's reset button can drive
+   * the canvas's `<OrbitControls>`. Returns an unregister callback so
+   * the canvas can drop the handler on unmount.
+   *
+   * Implementation detail: the handler is stored in a ref so consumers
+   * (the toolbar) don't re-render every time the canvas's
+   * useEffect re-runs.
+   */
+  registerResetHandler: (handler: () => void) => () => void;
 }
 
 const CameraControlContext = createContext<CameraControlContextValue | null>(null);
@@ -35,6 +57,7 @@ export interface CameraControlProviderProps {
 
 export function CameraControlProvider({ children }: CameraControlProviderProps) {
   const [activeCameraPath, setActiveCameraPath] = useState<string | null>(null);
+  const resetHandlerRef = useRef<(() => void) | null>(null);
 
   const switchToCamera = useCallback((path: string) => {
     setActiveCameraPath(path);
@@ -44,9 +67,28 @@ export function CameraControlProvider({ children }: CameraControlProviderProps) 
     setActiveCameraPath(null);
   }, []);
 
+  const registerResetHandler = useCallback((handler: () => void) => {
+    resetHandlerRef.current = handler;
+    return () => {
+      if (resetHandlerRef.current === handler) {
+        resetHandlerRef.current = null;
+      }
+    };
+  }, []);
+
+  const resetCamera = useCallback(() => {
+    resetHandlerRef.current?.();
+  }, []);
+
   const value = useMemo<CameraControlContextValue>(
-    () => ({ activeCameraPath, switchToCamera, returnToFreeView }),
-    [activeCameraPath, switchToCamera, returnToFreeView]
+    () => ({
+      activeCameraPath,
+      switchToCamera,
+      returnToFreeView,
+      resetCamera,
+      registerResetHandler,
+    }),
+    [activeCameraPath, switchToCamera, returnToFreeView, resetCamera, registerResetHandler]
   );
 
   return (
