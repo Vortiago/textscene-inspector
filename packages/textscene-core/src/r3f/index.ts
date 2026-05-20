@@ -41,6 +41,7 @@ export {
   MissingResourcesPanel,
   type MissingResourcesPanelProps,
 } from './components/MissingResourcesPanel/MissingResourcesPanel.js';
+export { SceneInfoCard } from './components/SceneInfoCard/SceneInfoCard.js';
 export {
   ViewportSelector,
   type ViewportSelectorProps,
