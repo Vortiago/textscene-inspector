@@ -6,6 +6,16 @@
   background: var(--tsi-bg-elevated);
   border-bottom: 1px solid var(--tsi-border);
   font-size: var(--tsi-font-sm);
+  /* WI-UX-13: on big fixtures (e.g. `example-hallway.tscn` with 9+
+     missing externals) this panel grew unboundedly, pushed the tree +
+     details panels off the bottom of the sidebar, and made the tree
+     unreachable. Cap at a portion of the viewport and scroll inside.
+     `flex-shrink: 0` keeps the cap honest under the parent flex
+     container — without it, the panel would still try to claim its
+     natural intrinsic height. */
+  flex-shrink: 0;
+  max-height: 30vh;
+  overflow-y: auto;
 }
 
 .title {

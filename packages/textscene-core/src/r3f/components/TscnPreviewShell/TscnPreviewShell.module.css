@@ -123,7 +123,14 @@
   flex-shrink: 0;
   border-left: 1px solid var(--tsi-border);
   background: var(--tsi-bg-panel);
-  overflow: hidden;
+  /* WI-UX-13 defense-in-depth: `overflow: auto` (was `hidden`) so that
+     if any sidebar child ever overflows the available vertical space
+     — `MissingResourcesPanel` already has its own cap (primary fix),
+     but new components added later might not — the user can still
+     scroll the sidebar to reach what's been pushed below. With the
+     primary panel cap in place, this is rarely visible; it's a safety
+     net, not the workhorse. */
+  overflow: auto;
 }
 
 .treePane {
