@@ -21,6 +21,7 @@ import {
   TscnPreviewShell,
   ViewportSelector,
   useCameraControl,
+  useHierarchy,
   type ViewportSelectorOption,
 } from '@textscene/core';
 import { fixtures } from './fixtures';
@@ -154,11 +155,6 @@ export function R3FApp() {
     loader.provideFile(path);
   }
 
-  // Disable Reset Camera until content is loaded — matches main's
-  // `resetButton.disabled` toggle. The shell parses content even when
-  // it's an uploaded TSCN, so any non-empty `content` qualifies.
-  const sceneLoaded = content.length > 0;
-
   return (
     <ResourceLoaderProvider loader={loader}>
       <div style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -176,7 +172,6 @@ export function R3FApp() {
               fixtureFile={fixtureFile}
               uploadedTscnName={uploadedTscnName}
               loadError={loadError}
-              sceneLoaded={sceneLoaded}
               onFixtureChange={handleFixtureChange}
               onTscnUpload={handleTscnUpload}
               onTscnUploadError={handleTscnUploadError}
@@ -193,7 +188,6 @@ interface ToolbarProps {
   fixtureFile: string;
   uploadedTscnName: string | null;
   loadError: string | null;
-  sceneLoaded: boolean;
   onFixtureChange: (value: string) => void;
   onTscnUpload: (file: File, text: string) => void;
   onTscnUploadError: (message: string) => void;
@@ -211,12 +205,18 @@ function Toolbar({
   fixtureFile,
   uploadedTscnName,
   loadError,
-  sceneLoaded,
   onFixtureChange,
   onTscnUpload,
   onTscnUploadError,
 }: ToolbarProps) {
   const { resetCamera } = useCameraControl();
+  // WI-UX-7c: gate Reset Camera on the parsed sceneGraph, not raw
+  // `content.length`. On malformed fixtures (e.g. `edge-malformed-bracket.tscn`)
+  // `content` is non-empty but the parser fails, leaving `sceneGraph === null`.
+  // Matching the same null-check the SceneInfoCard uses keeps the UX
+  // affordances consistent — both hide when there's no usable scene.
+  const { sceneGraph } = useHierarchy();
+  const sceneLoaded = sceneGraph !== null;
   const tscnInputRef = useRef<HTMLInputElement | null>(null);
 
   function handleTscnFileChange(e: ChangeEvent<HTMLInputElement>) {
