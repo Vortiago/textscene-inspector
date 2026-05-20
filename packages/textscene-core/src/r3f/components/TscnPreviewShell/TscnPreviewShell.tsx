@@ -115,6 +115,24 @@ export function TscnPreviewShell({
     [sceneGraph, panelId]
   );
 
+  // When `error` is truthy, mounting `<SceneTreeViewer>` with a null
+  // sceneGraph triggers its own "Loading scene…" empty-state — which
+  // makes the tree pane look stuck (Gap 7). Use a dedicated empty-state
+  // message in the tree pane so the user knows the load failed and the
+  // banner above is the actionable surface.
+  let treeBody: ReactNode;
+  if (error) {
+    treeBody = (
+      <div className={styles.emptyState}>
+        No scene loaded — fix the parse error above to continue.
+      </div>
+    );
+  } else if (sceneGraph === null) {
+    treeBody = <div className={styles.loading}>Loading scene…</div>;
+  } else {
+    treeBody = <SceneTreeViewer onNodeReveal={onNodeReveal} />;
+  }
+
   return (
     <HierarchyProvider value={hierarchyValue}>
       <SelectionProvider>
@@ -138,13 +156,7 @@ export function TscnPreviewShell({
                       onRemove={onResourceRemove ?? (() => {})}
                     />
                   )}
-                  <div className={styles.treePane}>
-                    {sceneGraph === null && !error ? (
-                      <div className={styles.loading}>Loading scene…</div>
-                    ) : (
-                      <SceneTreeViewer onNodeReveal={onNodeReveal} />
-                    )}
-                  </div>
+                  <div className={styles.treePane}>{treeBody}</div>
                   <div className={styles.detailsPane}>
                     <NodeDetailsPanel />
                   </div>

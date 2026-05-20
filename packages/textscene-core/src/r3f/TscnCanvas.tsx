@@ -19,6 +19,7 @@ import { useOptionalCameraControl } from './contexts/CameraControlContext.js';
 import { SceneResourcesProvider } from './SceneResourcesContext.js';
 import { NodeDispatcher } from './NodeDispatcher.js';
 import { SelectionHighlight } from './components/SelectionHighlight.js';
+import { InternalTextLabel } from './internalTextLabel.js';
 import styles from './TscnCanvas.module.css';
 
 export interface TscnCanvasProps {
@@ -44,11 +45,17 @@ export function TscnSceneContents() {
   const sceneGraph = hierarchy?.sceneGraph ?? null;
   const rootScene = sceneGraph?.scenes.get(sceneGraph.rootScene);
   const nodes = rootScene?.nodes ?? null;
+  // Gap 8 (WI-UX-4): show a grid + prompt when nothing has loaded.
+  // Without this the canvas is a black void and indistinguishable from
+  // a renderer crash. The grid also gives the orbit controls a tangible
+  // surface so the initial-camera framing feels intentional.
+  const isEmpty = nodes === null || nodes.length === 0;
 
   return (
     <>
       <ambientLight intensity={0.4} />
       <directionalLight position={[5, 5, 5]} intensity={1} />
+      {isEmpty && <EmptySceneIndicator />}
       {nodes && rootScene && (
         <SceneResourcesProvider
           internalResources={rootScene.internalResources}
@@ -59,6 +66,20 @@ export function TscnSceneContents() {
       )}
       <SelectionHighlight />
     </>
+  );
+}
+
+function EmptySceneIndicator() {
+  return (
+    <group userData={{ tscnEmptyState: true }}>
+      <gridHelper args={[10, 10, 0x444444, 0x222222]} />
+      <InternalTextLabel
+        text="Load a scene to begin"
+        position={[0, 0.4, 0]}
+        fontSize={0.35}
+        color="#888888"
+      />
+    </group>
   );
 }
 
