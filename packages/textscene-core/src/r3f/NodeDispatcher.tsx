@@ -39,7 +39,6 @@ import {
   SceneResourcesProvider,
   useSceneResources,
 } from './SceneResourcesContext.js';
-import { InternalTextLabel } from './internalTextLabel.js';
 import { useSelection } from './contexts/SelectionContext.js';
 
 export interface NodeDispatcherProps {
@@ -227,14 +226,17 @@ function InstancedSceneSubtree({
   );
 }
 
-function InstancePlaceholder({ label }: { label: string }) {
+function InstancePlaceholder({ label: _label }: { label: string }) {
+  // Gap 12 (WI-UX-3): the in-3D text label is redundant once the DOM
+  // `<MissingResourcesPanel>` lists every missing path. Multiple
+  // placeholders in one fixture overlapped into illegible blobs; the
+  // magenta cube alone is enough of a positional anchor.
   return (
     <group>
       <mesh>
         <boxGeometry args={[0.5, 0.5, 0.5]} />
         <meshBasicMaterial color="magenta" wireframe />
       </mesh>
-      <InternalTextLabel text={label} position={[0, 0.7, 0]} fontSize={0.12} outlineWidth={0.01} />
     </group>
   );
 }

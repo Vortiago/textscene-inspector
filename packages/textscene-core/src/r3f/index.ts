@@ -19,6 +19,8 @@ export {
   useOptionalCameraControl,
   NodePathProvider,
   useNodePath,
+  MissingResourcesProvider,
+  useMissingResources,
   type SelectionContextValue,
   type SelectionProviderProps,
   type HierarchyContextValue,
@@ -26,6 +28,8 @@ export {
   type CameraControlContextValue,
   type CameraControlProviderProps,
   type NodePathProviderProps,
+  type MissingResourcesContextValue,
+  type MissingResourcesProviderProps,
 } from './contexts/index.js';
 
 export {
@@ -33,6 +37,10 @@ export {
   type SceneTreeViewerProps,
 } from './components/SceneTreeViewer/SceneTreeViewer.js';
 export { NodeDetailsPanel } from './components/NodeDetailsPanel/NodeDetailsPanel.js';
+export {
+  MissingResourcesPanel,
+  type MissingResourcesPanelProps,
+} from './components/MissingResourcesPanel/MissingResourcesPanel.js';
 export {
   ViewportSelector,
   type ViewportSelectorProps,

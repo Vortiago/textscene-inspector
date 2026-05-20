@@ -32,7 +32,6 @@ import {
 } from '../../SceneResourcesContext';
 import { parseResourceReference } from '../../../resources/SubResourceResolver';
 import { useResource } from '../../../resources/useResource';
-import { InternalTextLabel } from '../../internalTextLabel';
 import { MeshGeometry } from './meshGeometry';
 import {
   parseStandardMaterial3DScalars,
@@ -211,28 +210,24 @@ export function MeshInstance3D({ node }: NodeComponentProps) {
     );
   }
 
-  // Missing texture: magenta placeholder material + floating drei <Text>
-  // showing the missing path.
+  // Missing texture: magenta placeholder material. Gap 12 (WI-UX-3):
+  // the in-3D floating label was redundant once the DOM
+  // `<MissingResourcesPanel>` lists every missing path. `firstMissingPath`
+  // is still used for the placeholder branch trigger.
   if (firstMissingPath !== null) {
     return (
-      <group
+      <mesh
         name={node.name}
         position={position}
         rotation={rotation}
         scale={scale}
         visible={visible}
+        castShadow={castShadow}
+        receiveShadow
       >
-        <mesh castShadow={castShadow} receiveShadow>
-          <MeshGeometry resource={meshResource} />
-          <meshStandardMaterial color="magenta" />
-        </mesh>
-        <InternalTextLabel
-          text={`${firstMissingPath} missing`}
-          position={[0, 1.2, 0]}
-          fontSize={0.18}
-          outlineWidth={0.01}
-        />
-      </group>
+        <MeshGeometry resource={meshResource} />
+        <meshStandardMaterial color="magenta" />
+      </mesh>
     );
   }
 

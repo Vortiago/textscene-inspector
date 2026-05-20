@@ -51,7 +51,6 @@ import { transformFromNode3DProperties } from '../../nodeTransform';
 import { useSceneResources } from '../../SceneResourcesContext';
 import { parseResourceReference } from '../../../resources/SubResourceResolver';
 import { useResource } from '../../../resources/useResource';
-import { InternalTextLabel } from '../../internalTextLabel';
 import {
   AlphaCutMode,
   type Sprite3DProperties,
@@ -182,17 +181,23 @@ interface PlaceholderProps {
   position: [number, number, number];
   rotation: [number, number, number];
   scale: [number, number, number];
+  /**
+   * Retained in the interface so call sites still pass the label string —
+   * it's not rendered in 3D (Gap 12), but it's used by upstream code paths
+   * and may be consumed by future selection UI / tooltips.
+   */
   label: string;
 }
 
-function Placeholder({ name, position, rotation, scale, label }: PlaceholderProps) {
+function Placeholder({ name, position, rotation, scale }: PlaceholderProps) {
+  // Gap 12 (WI-UX-3): the in-3D text label is redundant once the DOM
+  // missing-resources panel surfaces the same info without clipping.
   return (
     <group name={name} position={position} rotation={rotation} scale={scale}>
       <mesh>
         <planeGeometry args={[1, 1]} />
         <meshBasicMaterial color="magenta" transparent opacity={0.6} side={THREE.DoubleSide} />
       </mesh>
-      <InternalTextLabel text={label} position={[0, 0.7, 0]} fontSize={0.14} outlineWidth={0.01} />
     </group>
   );
 }
