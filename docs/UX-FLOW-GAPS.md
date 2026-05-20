@@ -194,3 +194,28 @@ Once Gap 3 lands (DOM-side missing-files panel), the in-3D labels become redunda
 **Proposed fix**:
 `apps/textscene-web/src/r3f-main.module.css:5-15` — add a `min-width` to the title and an explicit `flex: 1 1 auto` distribution. Or restructure so the title is `position: absolute; left: var(--tsi-space-3)` and the controls flex inside a right-aligned group.
 **Effort**: trivial
+
+---
+
+## Re-verification on 9aed84b (PR #53 + PR #54 merged)
+
+Field re-run against `9aed84b` ("feat(ux): WI-UX-3 + WI-UX-4 — missing-files panel + empty states"). Dev server pinned to port 3040. Screenshots in `.tmp/ux-flow-reverify/` (gitignored). All 7 dispatched gaps verified PASS.
+
+| Gap | Severity (was) | Status now | Evidence |
+|---|---|---|---|
+| 1 — show/hide button | blocker | **PASS** | `.tmp/ux-flow-reverify/G1-capsule-hidden.png` — blue capsule mesh absent from viewport after eye-icon click; tree row has strikethrough + 🙈. Compare to original `.tmp/ux-flow/B-capsule-toggled.png` where capsule was still rendered. |
+| 2 — viewport selection helper | blocker | **PASS** | `.tmp/ux-flow-reverify/G2-torus-selected-helper.png` (green BoxHelper around torus) + `.tmp/ux-flow-reverify/G2b-prism-selected-helper.png` (helper moves to Prism on re-click). |
+| 3 — missing-files panel | blocker | **PASS** | `.tmp/ux-flow-reverify/G3-missing-panel-pre-upload.png` shows a "RESOURCE FILES" panel with exactly ONE row for `res://textures/test_texture.png` (deduped from 3 sprite references) + ⚠ icon + per-row Choose-File input. `.tmp/ux-flow-reverify/G3b-post-upload.png` confirms sprites flip from magenta to textured after upload. Caveat: the path is visually truncated (`res://tex…`) — full path lives in DOM but a `title` attribute would help discoverability. Caveat 2: panel hides entirely post-upload rather than staying visible with an `.uploaded` row indicator — not strictly the dispatch acceptance wording but functionally correct (magenta-flip is the real signal). |
+| 6 — toolbar discoverability when no missing | major | **PASS** | `.tmp/ux-flow-reverify/G6-no-upload-affordance.png` — `fileInputCount: 0` and `hasUploadLabel: false` on `integration-all-primitives.tscn`. Toolbar shows only `TextScene Inspector` + `Scene:` dropdown. |
+| 7 — malformed-TSCN tree pane | major | **PASS** | `.tmp/ux-flow-reverify/G7-G8-malformed-empty-state.png` — tree pane reads "No scene loaded — fix the parse error above to continue." instead of "Loading scene…". |
+| 8 — canvas empty-state | major | **PASS** | Same screenshot — canvas now shows ground-grid + curved "Load a scene to begin" floating text instead of the black void from original `.tmp/ux-flow/E-malformed-error.png`. |
+| 12 — overlapping 3D missing-resource labels | polish | **PASS** | `.tmp/ux-flow-reverify/G3-missing-panel-pre-upload.png` — the 3 magenta sprites render WITHOUT the overlapping `res://textures/test_texture.png miss…` floating-text labels that were visible in original `.tmp/ux-flow/D-missing-texture.png`. The information moved to the DOM-side RESOURCE FILES panel (Gap 3). |
+
+**PASS count: 7 / 7. Failures: none.**
+
+Incidental observations during re-run (NOT blockers — flagged for follow-up):
+1. The selection BoxHelper from a previous fixture appears to leak into the next fixture's viewport. After selecting `Prism` in `integration-all-primitives.tscn` and then switching to `unit-sprite3d.tscn`, a green wireframe boxhelper is visible in the bottom-right of the viewport even though `aria-selected` is `false` on all tree rows of the new fixture. Selection state should clear on fixture-switch — the `panelId={web-${fixtureFile}}` remount in `apps/textscene-web/src/r3f-main.tsx:137` should already trigger this, suggesting the helper render is not gated by current `selectedNodePath`. Worth a focused trace in the WI-UX-2 implementation.
+2. Path truncation in the resource-files panel (`res://tex…`) is aggressive; a `title` attribute (already a one-line CSS Modules class addition) plus a wider min-width on `.resource-file-path` would let users read the path without hovering at width ≥1200px.
+3. The deferred Gap 11 (oversized Label3D text in `unit-sprite3d.tscn`) is still visible — confirmed not in scope for this re-verify, just noting it persists.
+
+Suggested follow-up: when the queued majors (Gap 4, 5, 11) and polish (Gap 9, 10, 13) are picked up, fold observations #1 + #2 into the WI-UX-2 + WI-UX-3 follow-up.
