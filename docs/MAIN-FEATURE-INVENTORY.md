@@ -160,6 +160,63 @@ DOM transition observed (one row):
 
 Vite dev server provides standard HMR — editing a `.tscn` fixture file copied into `public/fixtures/` does NOT auto-refresh the canvas; the user must re-click the fixture in the list. Editing `.ts` source code in `apps/textscene-web/src/` or `packages/textscene-core/src/` triggers Vite HMR + WebSocket reload. (Observed: not specifically tested in this session, behavior inherited from `pnpm dev` + `predev` copy step in `package.json`.)
 
+### Mobile responsive layout (CSS-only tab switcher)
+
+**Trigger:** Page width ≤ 767px. The CSS-only mobile-tab nav appears at the top of the page; clicking 📺 Viewport / 🌳 Tree / ⚙️ Controls labels toggles which panel is on-screen.
+**Expected behavior:**
+- Hidden radio inputs `#panel-viewport`, `#panel-tree`, `#panel-controls` are at the top of `<body>` (`apps/textscene-web/index.html:11-13`); `#panel-viewport` is `checked` by default.
+- `<nav class="mobile-tabs">` (lines 21-25) holds three `<label for="panel-…">` buttons.
+- `apps/textscene-web/styles.css` drives the layout via `body:has(#panel-XXX:checked) <selector>` rules (lines 599-666+). Three `@media (max-width: 767px)` and `@media (min-width: 768px)` blocks toggle the nav-bar visibility and which panel pane is shown.
+- On wide (≥768px) viewports `.mobile-tabs { display: none }` and all three panes render side-by-side.
+**Implementation pointer:** Pure HTML + CSS, no JS. `apps/textscene-web/index.html:10-25` (radio inputs + nav), `apps/textscene-web/styles.css:599-768`.
+
+### Error banner
+
+**Trigger:** Parse failure when calling `previewUI.loadTscn(...)`. `showError(msg)` is called either explicitly from the fixture-load handler (`apps/textscene-web/src/main.ts:188, 253`) or from inside the renderer when scene-graph construction throws (`TscnPreviewUI.ts:222, 298`).
+**Expected behavior:** Red error banner appears below the controls column. The DOM is `<div class="error" id="error-display"><strong>Error:</strong><p id="error-message">…</p></div>` (`apps/textscene-web/index.html:49-52`). The `.visible` class is toggled to show/hide; when hidden the slot collapses (no content).
+**Implementation pointer:** `apps/textscene-web/index.html:49-52`; `packages/textscene-core/src/ui/TscnPreviewUI.ts:174-181` (showError + hideError); rendered styles in `apps/textscene-web/styles.css` (`.error` block).
+
+### Hover-helper effect (orange BoxHelper in 3D)
+
+**Trigger:** Mouse over a tree row. `SceneTreeViewer` fires its internal hover bookkeeping; main calls `HelperManager.hoverNode(path)` which adds an **orange** (`0xff8800`) `THREE.BoxHelper` around the corresponding mesh in the viewport. Mouse-leave triggers `HelperManager.clearHover()`. Highlight (selection) clears hover when activated.
+**Expected behavior:** Visual disambiguation between hover and selection — hover is orange, selection is green. The hover helper disappears as soon as the cursor leaves the tree row OR a node is selected.
+**Implementation pointer:**
+- `packages/textscene-core/src/core/HelperManager.ts`
+  - `hoverNode(nodePath)` (line ~133) — `setHelper('hover', nodePath, 0xff8800)`
+  - `clearHover()` (line ~143) — `clearHelper('hover')`
+  - `highlightNode` clears hover internally (line 121) so you never see both colors at once.
+- Tests: `packages/textscene-core/src/core/HelperManager.test.ts` "hoverNode" describe block.
+
+### Auto-expand ancestors on programmatic selection
+
+**Trigger:** `SceneTreeViewer.selectNode(path)` is called (typically from a host that wants to focus a node — clicking in the viewport, search-result navigation, etc.).
+**Expected behavior:** All ancestor paths of the selected node are unconditionally added to `expandedNodes`, so the row is on-screen when the tree re-renders. Without this, programmatic selections inside a collapsed subtree would not be visible.
+**Implementation pointer:** `packages/textscene-core/src/ui/SceneTreeViewer.ts:280-290` (`selectNode` method calls `getAncestorPaths(nodePath).forEach(p => expandedNodes.add(p))`).
+
+### Camera-switch widget (Camera3D nodes)
+
+**Trigger:** Select a `Camera3D` node in the tree. The Node Details panel renders two extra buttons: "📷 Use This Camera" and "🔄 Return to Free View".
+**Expected behavior:** "Use This Camera" switches the active camera in the viewport from the orbit-controls perspective camera to the selected `Camera3D`'s point of view (matching that camera's transform + fov/projection). "Return to Free View" restores the orbit perspective camera.
+**Implementation pointer:** `packages/textscene-core/src/ui/NodeDetailsFormatter.ts:46-69` — hardcoded HTML for `node.type === 'Camera3D'` that emits `<button class="use-camera-btn" data-camera-path="…">` and `<button class="reset-camera-btn">`. Event delegation in `TscnPreviewUI.ts` translates clicks into calls on `SceneManager`.
+
+### Fixture-load abort on rapid switching
+
+**Trigger:** Click fixture A, then before A finishes loading click fixture B.
+**Expected behavior:** Fixture A's fetch is aborted via `AbortController.abort()` and a benign log line is emitted; only fixture B's content lands in the scene. No half-loaded mash-up.
+**Implementation pointer:** `apps/textscene-web/src/main.ts:200, 222-249` — `currentFixtureAbortController: AbortController | null` + per-click `controller.abort()` then `new AbortController()`. The `fetch(...)` is called with `{ signal: controller.signal }`. Catch block silently swallows `err.name === 'AbortError'`.
+
+### Empty-state info paragraph
+
+**Trigger:** First page load (no scene selected).
+**Expected behavior:** Below the Reset Camera button, two paragraphs read "Select a .tscn file to preview it in 3D." and "Use mouse to orbit camera. Scroll to zoom." (the second is muted in `#888`).
+**Implementation pointer:** Static HTML at `apps/textscene-web/index.html:60-65` inside `<div class="info">`.
+
+### Resource provider abstraction (host-pluggable resource resolution)
+
+**Trigger:** Implicit — any code path that needs an external resource (textures, materials, packed scenes).
+**Expected behavior:** Both `apps/textscene-web` and `apps/textscene-vscode` implement their own `ResourceProvider` (`WebResourceProvider`, `VSCodeResourceProvider`) so the same renderer code can resolve `res://…` paths in the browser via uploaded files OR in VS Code via workspace fs. Drives the missing-files panel's lifecycle hook.
+**Implementation pointer:** `apps/textscene-web/src/providers/WebResourceProvider.ts`; equivalent in VS Code extension. `TscnPreviewUI` options accept `resourceProvider`.
+
 ---
 
 ## Environment notes for future verifiers
