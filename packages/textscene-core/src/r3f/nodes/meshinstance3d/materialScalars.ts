@@ -82,16 +82,28 @@ export function parseStandardMaterial3DScalars(
   const normalScaleScalar = numericOr(properties['normal_scale'], 1);
   const normalScale = { x: normalScaleScalar, y: normalScaleScalar };
 
+  // WI-HALL-2: Godot encodes colors in sRGB. three.js's `<meshStandardMaterial color={...}>`
+  // prop treats incoming values as **linear** RGB. Without converting,
+  // mid-tone reds like `Color(0.545, 0.117, 0.117, 1)` (dark red `#8B1E1E`
+  // in Godot) render as bright saturated pink because the renderer's
+  // sRGB output transform re-applies the gamma curve on the already-
+  // sRGB values. Convert at parse time so every downstream consumer
+  // sees linear-space RGB.
+  const linearAlbedo = albedo ? sRGBToLinearRGB(albedo.r, albedo.g, albedo.b) : null;
+  const linearEmission = emissionColor
+    ? sRGBToLinearRGB(emissionColor.r, emissionColor.g, emissionColor.b)
+    : null;
+
   return {
-    color: albedo
-      ? [clamp01(albedo.r), clamp01(albedo.g), clamp01(albedo.b)]
+    color: linearAlbedo
+      ? [clamp01(linearAlbedo[0]), clamp01(linearAlbedo[1]), clamp01(linearAlbedo[2])]
       : DEFAULT_SCALARS.color,
     opacity,
     metalness: clamp01(metallic),
     roughness: clamp01(roughness),
     emissive:
-      emissionEnabled && emissionColor
-        ? rgbToHex(emissionColor.r, emissionColor.g, emissionColor.b)
+      emissionEnabled && linearEmission
+        ? rgbToHex(linearEmission[0], linearEmission[1], linearEmission[2])
         : 0x000000,
     emissiveIntensity: emissionEnabled ? Math.max(0, emissionEnergy) : 0,
     uv1Scale,
@@ -101,6 +113,20 @@ export function parseStandardMaterial3DScalars(
     side,
     normalScale,
   };
+}
+
+/**
+ * Convert a single sRGB channel to its linear-space value.
+ * Standard IEC 61966-2-1 inverse transfer function — same formula
+ * `THREE.Color.convertSRGBToLinear` applies internally.
+ */
+function sRGBChannelToLinear(c: number): number {
+  if (c <= 0.04045) return c / 12.92;
+  return Math.pow((c + 0.055) / 1.055, 2.4);
+}
+
+function sRGBToLinearRGB(r: number, g: number, b: number): [number, number, number] {
+  return [sRGBChannelToLinear(r), sRGBChannelToLinear(g), sRGBChannelToLinear(b)];
 }
 
 /** Godot transparency enum: 0=DISABLED, anything non-zero engages transparency. */
