@@ -53,9 +53,9 @@ interface ProcessorAccess<T> {
 }
 
 /**
- * Return the processor (or scene-loader facade) appropriate for the
- * given resource type. PackedScene routes through SceneLoader, which has
- * a slightly different API surface; we adapt it here.
+ * Return the processor appropriate for the given resource type. Post
+ * WI-ARCH-2 all four resource types are normal `ResourceProcessor<T>`
+ * instances on the loader; PackedScene no longer needs its own adapter.
  */
 function getProcessorAccess<T>(
   loader: NonNullable<ReturnType<typeof useResourceLoader>>,
@@ -69,10 +69,7 @@ function getProcessorAccess<T>(
     case 'GLBMesh':
       return loader.glbMeshes as unknown as ProcessorAccess<T>;
     case 'PackedScene':
-      return {
-        getCached: (path) => loader.getSceneCached(path) as T | null | undefined,
-        request: (path) => loader.requestScene(path),
-      };
+      return loader.scenes as unknown as ProcessorAccess<T>;
   }
 }
 

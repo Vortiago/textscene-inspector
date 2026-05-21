@@ -58,12 +58,14 @@ function makeLoader(): {
     clearCache: () => {},
     getCacheSize: () => cache.size,
   });
+  const sceneCache = new Map<string, unknown | null>();
   const loader = {
     eventBus,
     metadata,
     textures: makeProc<THREE.Texture>(textureCache),
     materials: makeProc<THREE.Material>(materialCache),
     glbMeshes: makeProc<THREE.Object3D>(glbCache),
+    scenes: makeProc<unknown>(sceneCache), // WI-ARCH-2: peer processor
     getSceneCached: () => undefined,
     requestScene: () => {},
     register: () => {},
