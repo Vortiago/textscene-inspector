@@ -308,3 +308,34 @@ For completeness — these should not be regressed when fixing the above:
 The minimum viable fix list before merging the migration is items 1, 2, 3, 4, 5, 6, 7, 9, 11. Of those, items 1 and 4 carry the most user impact — they directly determine whether someone loading a non-trivial scene can navigate it. Items 2/3/5/6 collectively bring the chrome up to main's polish level. Items 7/9/11 close visible parity gaps without much effort.
 
 Items 8, 10, 12, 13, 14, 15 can ship in a follow-up polish pass; they're real but the migration is no worse than main on most of them, or affect mood/breath rather than function.
+
+---
+
+## Post-fix re-check on `44a8ab1`
+
+Three fix PRs landed: `e47df8a` (WI-UX-13 — sidebar overlap), `73e2102` (WI-UX-14 — gizmo gating), `44a8ab1` (WI-UX-15 — Reset Camera color + default fixture). Re-verified on `feat/r3f-migration` @ `44a8ab1` at 1440×900.
+
+### Result table
+
+| # | Item | Result | Evidence |
+|---|------|--------|----------|
+| 1 | Sidebar overlap with long missing-resources list (hallway) | **PASS** | Resource Files panel now scrolls *internally* (own scrollbar visible on the right of the panel). Scene Tree row "N3D Hallway" + details placeholder both visible in the same sidebar at 1440×900. Tree no longer pushed off-screen. |
+| 2 | Camera3D + AudioStreamPlayer3D gizmos render eagerly | **PASS** | Yellow Camera frustums that previously dominated the Hallway viewport are gone. Only remaining overlay primitive is the magenta Sprite3D *missing-texture placeholder* — that is documented UX, not a debug gizmo (see `packages/textscene-core/src/r3f/nodes/sprite3d/Component.tsx:128`), and is the same behavior MeshInstance3D uses for missing textures. |
+| 3 | Reset Camera primary-action color | **PASS** | Computed style: `background: rgb(23, 61, 107)` (= `--tsi-accent-soft` `#173d6b`), `color: rgb(231, 241, 255)` (= `--tsi-accent-fg` `#e7f1ff`), focus border tinted blue. Reads as primary CTA. Screenshot: `.tmp/visual-ab/postfix-default-fixture.png`. |
+| 4 | Default fixture switch | **PASS** | First paint after `localStorage.clear() + reload` lands on `unit-plane-mesh.tscn` ("Plane Mesh" shown in the toolbar select), no parse-error banner, no missing-files panel. Screenshot: `.tmp/visual-ab/postfix-default-fixture.png`. |
+
+### Side-by-side screenshots
+
+| Item | Pre-fix | Post-fix |
+|------|---------|----------|
+| Default fixture (item 4) — first paint | `.tmp/visual-ab/empty-migration.png` (red banner + parse error) | `.tmp/visual-ab/postfix-default-fixture.png` (clean Plane Mesh viewport, blue Reset Camera bar) |
+| Reset Camera color (item 3) | `.tmp/visual-ab/plane-mesh-migration.png` (flat gray Reset Camera bar) | `.tmp/visual-ab/postfix-default-fixture.png` (blue Reset Camera bar) |
+| Hallway sidebar + gizmos (items 1 + 2) | `.tmp/visual-ab/hallway-migration-full.png` (yellow Camera frustums everywhere, tree pushed off-screen) | `.tmp/visual-ab/postfix-hallway-quick.png` (clean Hallway geometry visible, Resource Files panel scrolls internally, Scene Tree reachable above the details placeholder) |
+
+### Outcome
+
+**4 / 4 PASS.** No further code changes needed from this re-check. The 4 HIGH-severity findings from the original visual-AB audit at `2e065d5` are all resolved at `44a8ab1`.
+
+The 11 medium and low findings (items 5-15) remain deferred to a post-merge polish pass per team-lead's decision; this re-check intentionally did not re-scan them.
+
+The "Migration WINS over main" list — parse-error banner, selection-row affordance, `SceneChangeResetter` — is preserved on `44a8ab1`. The parse-error banner is unchanged in `TscnPreviewShell.tsx:147`; selection styles unchanged in `SceneTreeViewer.module.css`. No regression in any of those.
