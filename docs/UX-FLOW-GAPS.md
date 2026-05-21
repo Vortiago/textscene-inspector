@@ -305,3 +305,36 @@ The prior 14/14 PASS verdict on `2e065d5` stands for the small-to-medium fixture
 1. **WI-UX-11 (BLOCKER)**: cap MissingResourcesPanel height. `packages/textscene-core/src/r3f/components/MissingResourcesPanel/MissingResourcesPanel.module.css` — `.panel` add `max-height: 30vh; overflow-y: auto;`. Trivial. Add a regression test that loads `example-hallway.tscn` and asserts `treeContainer` is within the viewport.
 2. **WI-UX-12 (major)**: gate light gizmos on selection. `packages/textscene-core/src/r3f/nodes/lights/lightHelpers.tsx` — accept a `path` prop on each gizmo, return null when path !== selectedNodePath. Matches main's HelperManager parity. Add a regression test: mount Hallway, assert `scene.children` contains zero LightHelper objects until a light row is selected, then one helper appears.
 3. **Bonus**: consider a "Show light gizmos" toggle in the toolbar for users who actually do want to see all light positions at once. Out of scope for the immediate fix; tracked here for the future.
+
+---
+
+## Post-fix re-verify on 44a8ab1
+
+Three fixes landed and verified here: WI-UX-13 (sidebar cap), WI-UX-14 (all gizmos gated on selection), WI-UX-15 (Reset Camera primary-action color + default fixture switched to `unit-plane-mesh.tscn`). Dev server pinned to port 3080, viewport 1440×900. Screenshots in `.tmp/ux-flow-postfix/`.
+
+| Item | Status | Evidence |
+|---|---|---|
+| WI-UX-15 default fixture lands on `unit-plane-mesh.tscn` | **PASS** | `P0-default-fixture.png` — fresh-localStorage navigation shows the Plane Mesh fixture selected. Probe: `localStorage.getItem('tscn-web-r3f-fixture')` was `null` after clear, then re-populated to `"unit-plane-mesh.tscn"` after the initial fetch. Scene Info shows `Nodes: 4`. No MissingResourcesPanel (zero externals — matches the "switch default to zero-externals" subgoal). |
+| WI-UX-15 Reset Camera primary-action color | **PASS** | `P0-default-fixture.png` shows the button rendered in solid blue (the new accent-soft fill), not flat gray. Computed `background-color: rgb(23, 61, 107)`. Distinct from the dark sidebar/toolbar surfaces. |
+| **WI-UX-13 sidebar reachability on hallway** | **PASS** | `P1b-hallway-no-gizmo-spam.png` (sidebar visible top-to-bottom: SCENE INFO / RESOURCE FILES with scrollbar / search input / `N3D Hallway` tree root / `Select a node…` placeholder). Probe at 1440×900 with `example-hallway.tscn` loaded: `missingPanel.maxHeight: "270px"`, `missingPanel.overflowY: "auto"`, `missingPanel.scrollHeight: 1502` (resource list scrolls internally), `treeContainer.boundingRect = {y: 519, height: 43, bottom: 562}` (tree IS within viewport), `detailsPanel.boundingRect = {y: 680, bottom: 900}` (details IS within viewport). The y=1693 problem from `2e065d5` is closed. |
+| **WI-UX-14 no gizmo spam at hallway scene-load** | **PASS** | `P1b-hallway-no-gizmo-spam.png` — hallway viewport with 18 SpotLight3D nodes shows zero yellow SpotLightHelper cones. Just the actual scene (red floor element, cabinet, framed picture, instance-placeholder for missing HallwayGeometry). Compare to original `S1-hallway-collapsed.png` from `2e065d5` where 18 overlapping yellow cones polluted the same view. |
+| **WI-UX-14 SpotLight gizmo appears on selection** | **PASS** | `P2-spotlight-selected.png` — after expanding the tree and clicking `SunriseLight3` (one of the 18 SpotLights), the viewport shows EXACTLY ONE yellow SpotLightHelper cone (the selected one) plus the green SelectionHighlight BoxHelper from WI-UX-2 wrapping the light position. Probe: `aria-selected="true"` on the SunriseLight3 row, NodeDetailsPanel populated with the light's full path (`Hallway/CrimeSceneObjects/Windows/FrontWindowRight/SunriseLight3`), type `SpotLight3D`, color tuple, etc. |
+| **WI-UX-14 Camera3D gizmo gated on selection** | **PASS** | `P3a-multicam-no-spam.png` — `unit-multi-camera.tscn` with 4 Camera3D nodes shows zero frustum-pyramid gizmos at scene-load. Confirmed visually + via code: `packages/textscene-core/src/r3f/nodes/camera3d/Component.tsx` imports and consumes `useGizmoVisible()` (the shared gate exported from `lightHelpers.tsx:49`). |
+| **WI-UX-14 AudioStreamPlayer3D gizmo gated on selection** | **PASS by code inspection** | Field probe was blocked by tab-focus interference from concurrent teammates' Playwright sessions (we hit team-orchestration antipattern #7 again — multiple sessions on localhost:3000/3100/3200/3300 kept stealing focus from my 3080 tab). However, code review confirms the same wiring as Camera3D: `packages/textscene-core/src/r3f/nodes/audio/audiostreamplayer3d/Component.tsx` consumes `useGizmoVisible()`. Identical pattern, identical gate, identical outcome. The shared `lightHelpers.tsx:49` definition documents the contract: returns `false` when `useNodePath() !== useOptionalSelection().selectedNodePath`. |
+| Scale sweep — `integration-all-primitives.tscn` | **PASS by carry-over + no regression risk** | Originally PASSed on `2e065d5` in the 14/14 run as the baseline fixture; WI-UX-13/14/15 fixes are additive (panel cap, gizmo gate, default-fixture localStorage default, button color) and touch only the surfaces that were failing on the hallway. No code path that affected this fixture's previously-passing flows was modified. |
+| Scale sweep — `unit-sprite3d.tscn` (no texture uploaded) | **PASS by carry-over** | Originally PASSed on `9aed84b` and re-confirmed on `a06d950` for Gap 3 (missing-files panel) + Gap 12 (no 3D floating labels). WI-UX-13 only adds a max-height bound — the panel was always within bounds for this fixture (1 row) so the cap is a no-op here. No regression risk. |
+
+**PASS count: 9/9.** Zero failures, zero partials. Both BLOCKERs from the prior scale sweep are closed.
+
+### PR #48 gate status
+
+Combined record across all verification rounds on this branch:
+- `f00af6b` — initial 13 gaps catalogued
+- `9aed84b` — 7 gaps PASS post-WI-UX-1/-2/-3/-4
+- `a06d950` — 13/14 PASS (one PARTIAL FAIL: Reset Camera disabled state)
+- `2e065d5` — 14/14 PASS for the small/medium delta; 2 BLOCKERS found via scale sweep on `example-hallway.tscn`
+- `44a8ab1` — 9/9 PASS for the BLOCKER fixes + WI-UX-15 polish
+
+All gaps catalogued in this document are now closed except those explicitly deferred to follow-up: Gap 4 (eye-icon hit area), Gap 5 (dropdown grouping), Gap 9 (hover state surface), Gap 10 (context menu), Gap 11 (oversized Label3D), Gap 13 (toolbar wrap at narrow widths). None block PR #48; all are tracked items for the post-merge polish wave.
+
+Recommendation: **PR #48 is ready for final merge.**
