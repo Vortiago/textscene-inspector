@@ -15,6 +15,38 @@
 
 import * as THREE from 'three';
 import { parseColor } from '../../../utils/colorParser';
+import { warn } from '../../../logger';
+
+/**
+ * WI-HALL-5: Godot's `uv1_triplanar` (+ `uv1_world_triplanar`) needs a
+ * custom shader that samples the texture from three orthogonal planes
+ * and blends by world-space normal. That's a substantial implementation
+ * we don't have yet. As a holding pattern: when a parsed material
+ * requests triplanar, we still bind any albedo / normal / roughness /
+ * metallic / emission textures via the default per-face UV mapping —
+ * the wall textures will render but the tiling will be wrong vs. Godot.
+ * Without this fallback the hallway walls + floor read as "textureless"
+ * because the user expected world-scale tiling that doesn't happen.
+ *
+ * The warning fires once per unique flag combination so a single scene
+ * with N triplanar materials doesn't spam the console. The Set keys
+ * are stable across parse passes (module scope).
+ */
+const triplanarWarnings = new Set<string>();
+function warnTriplanarIfRequested(properties: Record<string, string>): void {
+  const triplanar = properties['uv1_triplanar'] === 'true';
+  const worldTriplanar = properties['uv1_world_triplanar'] === 'true';
+  if (!triplanar && !worldTriplanar) return;
+  const key = `${triplanar}/${worldTriplanar}`;
+  if (triplanarWarnings.has(key)) return;
+  triplanarWarnings.add(key);
+  warn(
+    `[StandardMaterial3D] uv1_triplanar=${triplanar} ` +
+      `uv1_world_triplanar=${worldTriplanar} requested — not yet ` +
+      `implemented. Falling back to default per-face UV mapping; ` +
+      `the texture is still bound, but tiling will not match Godot.`
+  );
+}
 
 export interface StandardMaterial3DScalars {
   color: [number, number, number];
@@ -34,6 +66,14 @@ export interface StandardMaterial3DScalars {
   blending: THREE.Blending;
   /** three.js side constant; defaults to FrontSide. */
   side: THREE.Side;
+  /**
+   * Whether `cull_mode` was explicitly set on the source material. Lets
+   * downstream consumers apply a per-mesh-type default (see WI-HALL-6:
+   * PlaneMesh-backed Canvas planes default to DoubleSide when the
+   * source material didn't pick a side, to survive 90° flip transforms
+   * that would otherwise back-cull the photo into invisibility).
+   */
+  cullModeExplicit: boolean;
   /** Uniform XY scale applied to the normal map (no-op without normalMap). */
   normalScale: { x: number; y: number };
 }
@@ -50,12 +90,15 @@ const DEFAULT_SCALARS: StandardMaterial3DScalars = {
   transparent: false,
   blending: THREE.NormalBlending,
   side: THREE.FrontSide,
+  cullModeExplicit: false,
   normalScale: { x: 1, y: 1 },
 };
 
 export function parseStandardMaterial3DScalars(
   properties: Record<string, string>
 ): StandardMaterial3DScalars {
+  warnTriplanarIfRequested(properties);
+
   const albedo = properties['albedo_color']
     ? safeParseColor(properties['albedo_color'])
     : undefined;
@@ -78,6 +121,7 @@ export function parseStandardMaterial3DScalars(
   const transparencyFlag = parseTransparencyFlag(properties['transparency']);
   const blending = parseBlendMode(properties['blend_mode']);
   const side = parseCullMode(properties['cull_mode']);
+  const cullModeExplicit = properties['cull_mode'] !== undefined;
 
   const normalScaleScalar = numericOr(properties['normal_scale'], 1);
   const normalScale = { x: normalScaleScalar, y: normalScaleScalar };
@@ -111,6 +155,7 @@ export function parseStandardMaterial3DScalars(
     transparent: opacity < 1 || transparencyFlag,
     blending,
     side,
+    cullModeExplicit,
     normalScale,
   };
 }
