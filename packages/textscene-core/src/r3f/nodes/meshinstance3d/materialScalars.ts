@@ -66,6 +66,14 @@ export interface StandardMaterial3DScalars {
   blending: THREE.Blending;
   /** three.js side constant; defaults to FrontSide. */
   side: THREE.Side;
+  /**
+   * Whether `cull_mode` was explicitly set on the source material. Lets
+   * downstream consumers apply a per-mesh-type default (see WI-HALL-6:
+   * PlaneMesh-backed Canvas planes default to DoubleSide when the
+   * source material didn't pick a side, to survive 90° flip transforms
+   * that would otherwise back-cull the photo into invisibility).
+   */
+  cullModeExplicit: boolean;
   /** Uniform XY scale applied to the normal map (no-op without normalMap). */
   normalScale: { x: number; y: number };
 }
@@ -82,6 +90,7 @@ const DEFAULT_SCALARS: StandardMaterial3DScalars = {
   transparent: false,
   blending: THREE.NormalBlending,
   side: THREE.FrontSide,
+  cullModeExplicit: false,
   normalScale: { x: 1, y: 1 },
 };
 
@@ -112,6 +121,7 @@ export function parseStandardMaterial3DScalars(
   const transparencyFlag = parseTransparencyFlag(properties['transparency']);
   const blending = parseBlendMode(properties['blend_mode']);
   const side = parseCullMode(properties['cull_mode']);
+  const cullModeExplicit = properties['cull_mode'] !== undefined;
 
   const normalScaleScalar = numericOr(properties['normal_scale'], 1);
   const normalScale = { x: normalScaleScalar, y: normalScaleScalar };
@@ -145,6 +155,7 @@ export function parseStandardMaterial3DScalars(
     transparent: opacity < 1 || transparencyFlag,
     blending,
     side,
+    cullModeExplicit,
     normalScale,
   };
 }
