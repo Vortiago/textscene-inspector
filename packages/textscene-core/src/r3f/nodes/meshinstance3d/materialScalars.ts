@@ -15,6 +15,38 @@
 
 import * as THREE from 'three';
 import { parseColor } from '../../../utils/colorParser';
+import { warn } from '../../../logger';
+
+/**
+ * WI-HALL-5: Godot's `uv1_triplanar` (+ `uv1_world_triplanar`) needs a
+ * custom shader that samples the texture from three orthogonal planes
+ * and blends by world-space normal. That's a substantial implementation
+ * we don't have yet. As a holding pattern: when a parsed material
+ * requests triplanar, we still bind any albedo / normal / roughness /
+ * metallic / emission textures via the default per-face UV mapping —
+ * the wall textures will render but the tiling will be wrong vs. Godot.
+ * Without this fallback the hallway walls + floor read as "textureless"
+ * because the user expected world-scale tiling that doesn't happen.
+ *
+ * The warning fires once per unique flag combination so a single scene
+ * with N triplanar materials doesn't spam the console. The Set keys
+ * are stable across parse passes (module scope).
+ */
+const triplanarWarnings = new Set<string>();
+function warnTriplanarIfRequested(properties: Record<string, string>): void {
+  const triplanar = properties['uv1_triplanar'] === 'true';
+  const worldTriplanar = properties['uv1_world_triplanar'] === 'true';
+  if (!triplanar && !worldTriplanar) return;
+  const key = `${triplanar}/${worldTriplanar}`;
+  if (triplanarWarnings.has(key)) return;
+  triplanarWarnings.add(key);
+  warn(
+    `[StandardMaterial3D] uv1_triplanar=${triplanar} ` +
+      `uv1_world_triplanar=${worldTriplanar} requested — not yet ` +
+      `implemented. Falling back to default per-face UV mapping; ` +
+      `the texture is still bound, but tiling will not match Godot.`
+  );
+}
 
 export interface StandardMaterial3DScalars {
   color: [number, number, number];
@@ -56,6 +88,8 @@ const DEFAULT_SCALARS: StandardMaterial3DScalars = {
 export function parseStandardMaterial3DScalars(
   properties: Record<string, string>
 ): StandardMaterial3DScalars {
+  warnTriplanarIfRequested(properties);
+
   const albedo = properties['albedo_color']
     ? safeParseColor(properties['albedo_color'])
     : undefined;
