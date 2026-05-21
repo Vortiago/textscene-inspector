@@ -170,6 +170,26 @@ export const v = {
     return createStringValidator(name, formatCode(name));
   },
 
+  /**
+   * Quoted string `"..."` — value must begin and end with a double quote.
+   * Used for properties like `Label3D.text` that take TSCN string literals.
+   */
+  quotedString(name: string): PropertyValidator {
+    const code = formatCode(name);
+    return (key, value, line) => {
+      if (!value.startsWith('"') || !value.endsWith('"')) {
+        return {
+          severity: 'error',
+          message: `Property '${name}' must be a quoted string, got: ${value}`,
+          line,
+          column: key.length + 3,
+          code,
+        };
+      }
+      return null;
+    };
+  },
+
   /** `Vector2(x, y)` format. */
   vector2(name: string): PropertyValidator {
     return createVector2Validator(name, formatCode(name));
@@ -230,6 +250,44 @@ export const v = {
         return {
           severity: 'error',
           message: `Property '${name}' must be Color with 4 numbers like Color(1, 1, 1, 1), got: "${value}"`,
+          line,
+          column: key.length + 3,
+          code,
+        };
+      }
+      return null;
+    };
+  },
+
+  /** `Quaternion(x, y, z, w)` format. */
+  quaternion(name: string): PropertyValidator {
+    const QUATERNION_REGEX =
+      /^Quaternion\(\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*\)$/;
+    const code = formatCode(name);
+    return (key, value, line) => {
+      if (!QUATERNION_REGEX.test(value)) {
+        return {
+          severity: 'error',
+          message: `Property '${name}' must be Quaternion with 4 numbers like Quaternion(0, 0, 0, 1), got: "${value}"`,
+          line,
+          column: key.length + 3,
+          code,
+        };
+      }
+      return null;
+    };
+  },
+
+  /** `Basis(9 floats)` format. */
+  basis(name: string): PropertyValidator {
+    const BASIS_REGEX =
+      /^Basis\(\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*\)$/;
+    const code = formatCode(name);
+    return (key, value, line) => {
+      if (!BASIS_REGEX.test(value)) {
+        return {
+          severity: 'error',
+          message: `Property '${name}' must be Basis with 9 numbers like Basis(1, 0, 0, 0, 1, 0, 0, 0, 1), got: "${value}"`,
           line,
           column: key.length + 3,
           code,

@@ -88,9 +88,18 @@ export function createNumericRangeValidator(
 
     // Check min constraint
     if (min !== null && num < min) {
-      const defaultMsg = min === 0
-        ? `Property '${propertyName}' must be non-negative (got ${num})`
-        : `Property '${propertyName}' must be >= ${min}, got: ${num}`;
+      // Pick a default message based on whether one bound or two are set.
+      // Two bounds → "must be between X and Y" (matches the wording the
+      // per-node linter tests assert). One bound → "must be >= X" or
+      // "must be non-negative" (the legacy single-bound wording).
+      let defaultMsg: string;
+      if (max !== null) {
+        defaultMsg = `Property '${propertyName}' must be between ${min} and ${max} (got ${num})`;
+      } else if (min === 0) {
+        defaultMsg = `Property '${propertyName}' must be non-negative (got ${num})`;
+      } else {
+        defaultMsg = `Property '${propertyName}' must be >= ${min}, got: ${num}`;
+      }
       return {
         severity: 'error',
         message: customMessage || defaultMsg,
@@ -102,9 +111,13 @@ export function createNumericRangeValidator(
 
     // Check max constraint
     if (max !== null && num > max) {
+      const defaultMsg =
+        min !== null
+          ? `Property '${propertyName}' must be between ${min} and ${max} (got ${num})`
+          : `Property '${propertyName}' must be <= ${max}, got: ${num}`;
       return {
         severity: 'error',
-        message: customMessage || `Property '${propertyName}' must be <= ${max}, got: ${num}`,
+        message: customMessage || defaultMsg,
         line,
         column: key.length + 3,
         code: errorCodeValue,
