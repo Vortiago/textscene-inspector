@@ -259,6 +259,25 @@ export const v = {
     };
   },
 
+  /** `AABB(x, y, z, w, h, d)` format. */
+  aabb(name: string): PropertyValidator {
+    const AABB_REGEX =
+      /^AABB\(\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*\)$/;
+    const code = formatCode(name);
+    return (key, value, line) => {
+      if (!AABB_REGEX.test(value)) {
+        return {
+          severity: 'error',
+          message: `Property '${name}' must be AABB with 6 numbers like AABB(0, 0, 0, 1, 1, 1), got: "${value}"`,
+          line,
+          column: key.length + 3,
+          code,
+        };
+      }
+      return null;
+    };
+  },
+
   /** `Quaternion(x, y, z, w)` format. */
   quaternion(name: string): PropertyValidator {
     const QUATERNION_REGEX =
