@@ -55,6 +55,7 @@ import {
   AlphaCutMode,
   type Sprite3DProperties,
 } from '../../../nodes/3d/sprite3d/types';
+import { MissingResourcePlaceholder } from '../../components/MissingResourcePlaceholder';
 
 const DEFAULT_ALPHA_TEST = 0.5;
 
@@ -115,25 +116,26 @@ export function Sprite3D({ node }: NodeComponentProps) {
   // (Linter would already flag this as `sprite3d-requires-texture`.)
   if (!texturePath) {
     return (
-      <Placeholder
+      <MissingResourcePlaceholder
+        shape="plane"
         name={node.name}
         position={position}
         rotation={rotation}
         scale={scale}
-        label="Sprite3D missing texture"
       />
     );
   }
 
-  // Texture failed to load: magenta-quad placeholder + drei label.
+  // Texture failed to load: magenta-quad placeholder. Gap 12 (WI-UX-3):
+  // the in-3D path label was moved to the DOM `<MissingResourcesPanel>`.
   if (texResult.status === 'missing' || texResult.status === 'error') {
     return (
-      <Placeholder
+      <MissingResourcePlaceholder
+        shape="plane"
         name={node.name}
         position={position}
         rotation={rotation}
         scale={scale}
-        label={`${texturePath} missing`}
       />
     );
   }
@@ -173,32 +175,6 @@ export function Sprite3D({ node }: NodeComponentProps) {
         side={THREE.DoubleSide}
       />
     </mesh>
-  );
-}
-
-interface PlaceholderProps {
-  name: string;
-  position: [number, number, number];
-  rotation: [number, number, number];
-  scale: [number, number, number];
-  /**
-   * Retained in the interface so call sites still pass the label string —
-   * it's not rendered in 3D (Gap 12), but it's used by upstream code paths
-   * and may be consumed by future selection UI / tooltips.
-   */
-  label: string;
-}
-
-function Placeholder({ name, position, rotation, scale }: PlaceholderProps) {
-  // Gap 12 (WI-UX-3): the in-3D text label is redundant once the DOM
-  // missing-resources panel surfaces the same info without clipping.
-  return (
-    <group name={name} position={position} rotation={rotation} scale={scale}>
-      <mesh>
-        <planeGeometry args={[1, 1]} />
-        <meshBasicMaterial color="magenta" transparent opacity={0.6} side={THREE.DoubleSide} />
-      </mesh>
-    </group>
   );
 }
 

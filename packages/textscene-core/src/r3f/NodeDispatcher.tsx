@@ -40,6 +40,7 @@ import {
   useSceneResources,
 } from './SceneResourcesContext.js';
 import { useSelection } from './contexts/SelectionContext.js';
+import { MissingResourcePlaceholder } from './components/MissingResourcePlaceholder.js';
 
 export interface NodeDispatcherProps {
   /** Root nodes from the active scene (typically `scene.scenes.get(rootScene).nodes`). */
@@ -198,11 +199,11 @@ function InstancedSceneSubtree({
 
   if (!scenePath) {
     return (
-      <InstancePlaceholder label={`Unresolved instance ref: ${instanceRef}`} />
+      <MissingResourcePlaceholder shape="box" />
     );
   }
   if (result.status === 'missing' || result.status === 'error') {
-    return <InstancePlaceholder label={`Missing scene: ${scenePath}`} />;
+    return <MissingResourcePlaceholder shape="box" />;
   }
   if (result.status === 'pending' || !result.value) {
     return null;
@@ -226,20 +227,6 @@ function InstancedSceneSubtree({
   );
 }
 
-function InstancePlaceholder({ label: _label }: { label: string }) {
-  // Gap 12 (WI-UX-3): the in-3D text label is redundant once the DOM
-  // `<MissingResourcesPanel>` lists every missing path. Multiple
-  // placeholders in one fixture overlapped into illegible blobs; the
-  // magenta cube alone is enough of a positional anchor.
-  return (
-    <group>
-      <mesh>
-        <boxGeometry args={[0.5, 0.5, 0.5]} />
-        <meshBasicMaterial color="magenta" wireframe />
-      </mesh>
-    </group>
-  );
-}
 
 /**
  * Resolve `ExtResource("id")` or a raw `res://` path against the

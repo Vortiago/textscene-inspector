@@ -19,53 +19,35 @@
  * the hover state, but a fresh hover after a click does NOT clear
  * the highlight).
  *
+ * WI-ARCH-3: lifecycle delegated to `useSceneHelper`.
+ *
  * Renders no DOM. Outside a SelectionProvider (standalone canvas
  * tests) the component is a no-op via `useOptionalSelection`.
  */
-import { useEffect, useRef } from 'react';
-import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useOptionalSelection } from '../contexts/SelectionContext.js';
+import { useSceneHelper } from '../hooks/useTHREEHelper.js';
 
 const HOVER_COLOR = 0xff8800;
 
 export function HoverHighlight() {
   const selection = useOptionalSelection();
-  const scene = useThree((s) => s.scene);
-  const helperRef = useRef<THREE.BoxHelper | null>(null);
-
   const hoveredNodePath = selection?.hoveredNodePath ?? null;
   const nodeObjectMap = selection?.nodeObjectMap ?? null;
 
-  useEffect(() => {
-    const target =
-      hoveredNodePath && nodeObjectMap ? nodeObjectMap.get(hoveredNodePath) ?? null : null;
-
-    if (helperRef.current) {
-      scene.remove(helperRef.current);
-      helperRef.current.dispose();
-      helperRef.current = null;
-    }
-
-    if (target) {
+  useSceneHelper<THREE.BoxHelper>(
+    () => {
+      const target =
+        hoveredNodePath && nodeObjectMap
+          ? nodeObjectMap.get(hoveredNodePath) ?? null
+          : null;
+      if (!target) return null;
       const helper = new THREE.BoxHelper(target, HOVER_COLOR);
       helper.name = 'tscn-hover-highlight';
-      scene.add(helper);
-      helperRef.current = helper;
-    }
-
-    return () => {
-      if (helperRef.current) {
-        scene.remove(helperRef.current);
-        helperRef.current.dispose();
-        helperRef.current = null;
-      }
-    };
-  }, [hoveredNodePath, nodeObjectMap, scene]);
-
-  useFrame(() => {
-    helperRef.current?.update();
-  });
+      return helper;
+    },
+    [hoveredNodePath, nodeObjectMap]
+  );
 
   return null;
 }
