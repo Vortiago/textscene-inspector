@@ -380,4 +380,112 @@ describe('createSceneProcessor (WI-ARCH-2 replacement for SceneLoader)', () => {
       expect(loadedHandler).toHaveBeenCalled();
     });
   });
+
+  /**
+   * WI-HALL-3: PackedScene references can point at .glb / .gltf binary
+   * files (the hallway fixture's PortraitFrame2.glb, doormesh.glb, etc.).
+   * Pre-WI-HALL-3 the processor threw "Scene must be text content" on
+   * ArrayBuffer input; users saw magenta placeholders instead of the
+   * actual models. Post-WI-HALL-3 the processor branches on path
+   * extension and synthesises a single-node `GLBSceneRoot` TscnScene
+   * for binary inputs; the R3F dispatch then routes through the
+   * GLBSceneRoot component which loads via `useResource('GLBMesh', ...)`.
+   */
+  describe('GLB / GLTF PackedScene (WI-HALL-3)', () => {
+    it('accepts ArrayBuffer content for a .glb path and synthesises a single-node scene', async () => {
+      // The provider returns binary for .glb (per
+      // `isBinaryResourceType('PackedScene', '...glb') === true`).
+      const buffer = new ArrayBuffer(8);
+      mockProvider.loadResource = vi.fn().mockResolvedValue(buffer);
+      registerMetadata('frame1', {
+        id: 'frame1',
+        path: 'res://models/PortraitFrame2.glb',
+        type: 'PackedScene',
+      });
+
+      processor.request('frame1');
+      const scene = await eventBus.once<TscnScene>('scene', 'loaded', 'frame1');
+
+      expect(scene).toBeDefined();
+      expect(scene!.nodes).toHaveLength(1);
+      const root = scene!.nodes[0]!;
+      // The synthesised root is the GLBSceneRoot node type — the R3F
+      // dispatcher routes this through the GLBSceneRoot component which
+      // owns the actual GLB load lifecycle.
+      expect(root.type).toBe('GLBSceneRoot');
+      // The basename (no extension) is used so the SceneTreeViewer
+      // shows a meaningful label after WI-HALL-1's inlining lands.
+      expect(root.name).toBe('PortraitFrame2');
+      // The GLB path is carried verbatim on the synthesised node's
+      // properties so the consumer can load it via useResource.
+      expect((root.properties as Record<string, unknown>).glbPath).toBe(
+        'res://models/PortraitFrame2.glb'
+      );
+      // No children / no resource refs on a synthesised scene — the GLB
+      // hierarchy lives inside the THREE.Object3D returned by the
+      // GLBMesh processor.
+      expect(root.children).toHaveLength(0);
+      expect(scene!.externalResources).toHaveLength(0);
+      expect(scene!.internalResources).toHaveLength(0);
+    });
+
+    it('accepts ArrayBuffer content for a .gltf path the same way', async () => {
+      const buffer = new ArrayBuffer(8);
+      mockProvider.loadResource = vi.fn().mockResolvedValue(buffer);
+      registerMetadata('gltf1', {
+        id: 'gltf1',
+        path: 'res://models/asset.gltf',
+        type: 'PackedScene',
+      });
+
+      processor.request('gltf1');
+      const scene = await eventBus.once<TscnScene>('scene', 'loaded', 'gltf1');
+
+      expect(scene!.nodes[0]!.type).toBe('GLBSceneRoot');
+      expect(scene!.nodes[0]!.name).toBe('asset');
+    });
+
+    it('rejects string content for a .glb path with a descriptive error', async () => {
+      // Sanity: a binary path that somehow returned text should fail
+      // loudly so the caller doesn't get a malformed synthesised scene.
+      mockProvider.loadResource = vi.fn().mockResolvedValue('not binary');
+      registerMetadata('frame1', {
+        id: 'frame1',
+        path: 'res://models/x.glb',
+        type: 'PackedScene',
+      });
+
+      const failHandler = vi.fn();
+      eventBus.on<Error>('scene', 'failed', failHandler);
+
+      processor.request('frame1');
+      await new Promise((r) => setTimeout(r, 20));
+
+      expect(failHandler).toHaveBeenCalled();
+      const [, error] = failHandler.mock.calls[0]!;
+      expect(error.message).toMatch(/GLB\/GLTF must be binary/);
+    });
+
+    it('still rejects ArrayBuffer content for a .tscn path (sanity)', async () => {
+      // The branch is path-extension driven, not content-type driven —
+      // a .tscn path that somehow got binary content is still an error.
+      const buffer = new ArrayBuffer(8);
+      mockProvider.loadResource = vi.fn().mockResolvedValue(buffer);
+      registerMetadata('scene1', {
+        id: 'scene1',
+        path: 'res://scenes/room.tscn',
+        type: 'PackedScene',
+      });
+
+      const failHandler = vi.fn();
+      eventBus.on<Error>('scene', 'failed', failHandler);
+
+      processor.request('scene1');
+      await new Promise((r) => setTimeout(r, 20));
+
+      expect(failHandler).toHaveBeenCalled();
+      const [, error] = failHandler.mock.calls[0]!;
+      expect(error.message).toMatch(/TSCN scene must be text content/);
+    });
+  });
 });
