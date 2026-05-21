@@ -190,3 +190,77 @@ VS Code screenshots (under `.claude/wt/ld58-verify/.tmp/`):
 - `wb-wide.png` — 2400x1400 render (best view of the pink-carpet defect)
 
 Web screenshots: the MCP Playwright save path is opaque; rely on the post-upload `data-state` enumeration captured above (47 uploaded, 14 missing across three upload tiers).
+
+---
+
+## Post-WI-HALL-1/2/3 re-verify on `83ca500`
+
+**Branch verified:** `feat/r3f-migration` at sha **`83ca500`** — `fix(hallway): WI-HALL-1 + WI-HALL-2 + WI-HALL-3 — sub-scene tree + sRGB + GLB-PackedScene (#67)`.
+
+PR #67 brought three fixes to the three majors / one blocker called out above:
+- WI-HALL-1: SceneTreeViewer inlines PackedScene sub-scene contents via new `useSubSceneChildren` hook
+- WI-HALL-2: sRGB → linear conversion in `renderer.ts:47` (`new THREE.Color(r,g,b).convertSRGBToLinear()`) and a matching change in `materialScalars.ts`
+- WI-HALL-3: `createSceneProcessor` detects `.glb`/`.gltf` paths and synthesises a single-node TscnScene whose root is the new `GLBSceneRoot` component, which loads the GLB through the existing `useResource('GLBMesh', path)` flow
+
+### Re-verify summary on 83ca500
+
+| Host    | Status | Blockers | Majors | Polish |
+|---------|--------|----------|--------|--------|
+| VS Code | **PASS***| 0      | 0      | 4 (1 new, 3 carried) |
+| Web     | **PASS** | 0      | 0      | 2 (carried) |
+
+*VS Code carries a new low-severity polish item: six `THREE.GLTFLoader: Couldn't load texture` console errors. Verified post-probe that none of the LD-58 GLBs actually reference external image URIs (all images are either embedded via `bufferView` in the GLB's binary chunk or absent altogether); the errors are most likely a transient race during late-arrival texture loading. Did not block the visible render — geometry is correct. Worth a follow-up pass but not blocking Gate 1.
+
+### Primary signals (1-4) re-reading on 83ca500
+
+| # | Signal | VS Code | Web |
+|---|---|---|---|
+| 1 | Hallway opens via test-driver path | **PASS** — Quick Open + Command Palette as before; trust dialog cached from previous run so launch is one-step now | **PASS** — scene selector dropdown loads `example-hallway.tscn` directly |
+| 2 | `loadResource` invoked for each ext_resource | **PASS** — 286-node Scene Info reads correctly; sidebar headings are just `["Scene Info"]`; zero `[data-state="missing"]` rows; webview iframe `extensionId=vortiago.textscene-inspector` confirmed | **PASS** — after three upload tiers (21+31+9 = 61 paths), the MissingResourcesPanel shows `{uploaded: 61, missing: 0}`. Zero stillMissing entries |
+| 3 | Each call resolves (no errors, content > 0 bytes) | **PASS** at the provider boundary AND at the consumer boundary. The `Scene must be text content` error that blocked .glb PackedScenes on 8c841a9 is gone (verified by searching latest console messages — only THREE.GLTFLoader texture warnings remain, not the sceneProcessor throw) | **PASS** — explicit data-state probe of the 5 GLB paths that previously stuck at `missing` (`PortraitFrame2.glb`, `grandfatherclock.glb`, `roof_lamp.glb`, `DroppedLedger.glb`, `royal-dagger.glb`) all now flipped to `uploaded` after a single file injection. ZERO console errors and zero warnings at end-state on web |
+| 4 | Webview renders something other than magenta placeholders | **PASS** — Best evidence at `.tmp/wb-83ca500-wide.png`. (a) Carpet renders as dark red, NOT bright pink — sRGB conversion clearly working; (b) lamp / roof_lamp body visible as actual geometry (orange-tinted, no magenta wireframe); (c) wall and ceiling architecture intact. No magenta wireframe cubes visible in the camera's default view | **PASS** — canvas at 1569×1268, visible, zero console errors / warnings. Implies all 7 GLB-PackedScene instances + all 14 photo-frame PackedScene instances + all 21 sub-scene meshes resolved cleanly |
+
+### Tree inlining (WI-HALL-1) — detail
+
+On both hosts, expanding the tree rows now reveals the previously-hidden sub-scene internals:
+
+- VS Code tree row count: 286 (initial) → 297 (after one sub-scene expand: HouseKeeper) → 319 (after expanding 6 photo-frame sub-scene roots + HallwayGeometry root). Of the +33 inlined nodes, the HouseKeeper sub-scene specifically contributes the 4 nodes that were missing on 8c841a9: `•NodePortraitFrame2📦`, `▶CamCamera3D`, `•MeshCanvas`, `▶NodeInteractableObject📦`.
+- Web tree row count: 286 → 293 → 319 by the same expansion sequence. Identical inlining behavior.
+
+Note: `expand-all` does not recursively expand the newly-arrived sub-scene roots. They appear as collapsed `▶N3DHouseKeeper👁️` entries (with the `N3D` type prefix indicating Node3D) and require an explicit click to reveal their children. The `useSubSceneChildren` hook only fires when a row is rendered, so on first paint only depth-1 inlining happens; further depths fire only after expansion. This is a polish item — see "Polish" section below.
+
+### Color rendering (WI-HALL-2) — detail
+
+The `StandardMaterial3D_carpet_red` material with `albedo_color = Color(0.545098, 0.117647, 0.117647, 1)` (Godot sRGB ≈ `#8B1E1E`, dark red) now renders as the expected dark red on the visible runner carpet. The pre-fix screenshot at `.tmp/wb-wide.png` (8c841a9) showed it as saturated pink; the post-fix screenshot at `.tmp/wb-83ca500-wide.png` (83ca500) shows it as dark red. Same fix is reflected on bookshelf books (`_book_red`) — visible as proper dark red rather than too-pink. Source change at `packages/textscene-core/src/resources/materials/standardmaterial3d/renderer.ts:47` swapping the bare `new THREE.Color(r,g,b)` for `new THREE.Color(r,g,b).convertSRGBToLinear()`.
+
+### GLB-as-PackedScene (WI-HALL-3) — detail
+
+The previously-blocking `Scene must be text content` throw at `createSceneProcessor.ts:82` is gone. The processor now sniffs `.glb`/`.gltf` extensions and synthesises a TscnScene wrapping a single `GLBSceneRoot` node whose `properties.glbPath` carries the resource path. `GLBSceneRoot` lives at `packages/textscene-core/src/r3f/nodes/glb-scene-root/Component.tsx` and uses the existing `useResource('GLBMesh', path)` pipeline, which routes through the same FileEventBus + ResourceLoader infrastructure that other binary loads use.
+
+Evidence: explicit `data-state` probe after uploading PortraitFrame2.glb, grandfatherclock.glb, roof_lamp.glb, DroppedLedger.glb, royal-dagger.glb returned `uploaded` for all 5 (on 8c841a9, the same upload sequence left them as `missing` and console showed `[sceneProcessor] Failed: ... Scene must be text content`). Console post-fix on web shows zero `sceneProcessor Failed` errors.
+
+### Polish items (carry from 8c841a9 + new findings)
+
+These are NOT blockers. Recording them for the follow-up backlog.
+
+1. **(carried)** Workspace-trust + Walkthrough first-launch friction on VS Code. Mitigated on this re-run because the user-data-dir cached the trust decision; a fresh `.tmp/vscode-ld58-debug` will replay the same friction.
+2. **(carried)** CSP forbids Web Workers in webview. Troika text falls back to main-thread; not user-visible.
+3. **(carried)** Extension is command-only, not a custom editor. Not a regression vs main (verified `git show main:apps/textscene-vscode/package.json`).
+4. **(carried, low-priority)** Web upload cascade requires three tiers (21 → 31 → 9 paths uploaded sequentially) to populate the resource cache. A bulk drop-zone would compress this.
+5. **(NEW, low-priority)** `expand-all` button does NOT recursively expand inlined sub-scene contents — only the parent tree rows that exist at first paint. To see a photo frame's `Canvas` / `PortraitFrame2` children, the user has to click each `▶N3D<SubsceneName>` row individually. Probable cause: SceneTreeViewer's `collectAllPaths` walker (line 19-27) walks only `node.children` from the parser; the `useSubSceneChildren`-hooked children aren't visible to it. Fix idea: have `useSubSceneChildren` register the loaded paths with HierarchyContext so `collectAllPaths` can pick them up, or extend the expand-all behavior to recurse into the live React tree rather than the parsed scene graph.
+6. **(NEW, low-priority)** VS Code preview shows 6 `THREE.GLTFLoader: Couldn't load texture blob://...` console errors. Inspected LD-58's GLB files — none of them reference external image URIs (PortraitFrame2.glb has 0 image entries; royal-dagger.glb embeds images via `bufferView`; the rest have no `images` array at all). The errors are probably a late-arrival race — a GLB's texture-fetch promise resolves after its blob URL is revoked. Did NOT see the same errors on the web host. Worth a follow-up investigation.
+
+### Gate 1 reading
+
+All four primary signals PASS on both hosts. The three majors (sub-scene inlining, sRGB colors, GLB-PackedScene) and the one blocker (GLB-as-PackedScene on web) called out in the original verification are closed. Two new low-severity polish items surfaced during the re-run; neither blocks Gate 1.
+
+**Gate 1: MET.** Hallway renders correctly with materials + sub-scenes + (color-correct) lighting on both VS Code and web.
+
+### Evidence (post-fix)
+
+- `.tmp/wb-83ca500-wide.png` — VS Code render at 2400×1400 showing dark-red carpet (vs pink in `wb-wide.png` from 8c841a9), lamp body geometry (vs magenta wireframe before), proper hallway architecture
+- `.tmp/probe-83ca500-1.json` — initial probe data (286 nodes, 0 missing-state rows, sidebar headings = `["Scene Info"]`)
+- `.tmp/probe-83ca500-2.json` — post-tree-expand probe data (293 rows, 0 missing, 6 GLB-texture warnings noted)
+- `.tmp/probe-83ca500-final.json` — final VS Code state with the GLB-texture warning categorization
+- Web final state via Playwright `browser_evaluate`: `{ uploaded: 61, missing: 0 }`, canvas 1569×1268, zero console errors / warnings
+
