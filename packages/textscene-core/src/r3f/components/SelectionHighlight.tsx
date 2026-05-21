@@ -7,63 +7,38 @@
  * `HelperManager.highlightNode` color (`0x00ff00`) so users moving
  * between branches see a consistent affordance.
  *
- * The BoxHelper is recreated when the selection changes (rather than
- * `setFromObject`-mutated) so it picks up the new target's transform
- * tree cleanly. `useFrame` ticks `update()` so the helper follows the
- * target if its parent transform is animated; per-tick `update` is
- * cheap (it only re-reads the cached bounding box).
+ * WI-ARCH-3: lifecycle (build/dispose/tick-update/add-remove) delegated
+ * to `useSceneHelper`. The factory returns null when nothing is
+ * selected; the hook tears down the helper accordingly.
  *
  * Renders no DOM. Mount as a sibling of `<NodeDispatcher>` inside
  * `<Canvas>`. Outside a SelectionProvider (tests that mount the canvas
  * standalone) the component is a no-op.
  */
-import { useEffect, useRef } from 'react';
-import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useOptionalSelection } from '../contexts/SelectionContext.js';
+import { useSceneHelper } from '../hooks/useTHREEHelper.js';
 
 const HIGHLIGHT_COLOR = 0x00ff00;
 
 export function SelectionHighlight() {
   const selection = useOptionalSelection();
-  const scene = useThree((s) => s.scene);
-  const helperRef = useRef<THREE.BoxHelper | null>(null);
-
   const selectedNodePath = selection?.selectedNodePath ?? null;
   const nodeObjectMap = selection?.nodeObjectMap ?? null;
 
-  useEffect(() => {
-    const target =
-      selectedNodePath && nodeObjectMap ? nodeObjectMap.get(selectedNodePath) ?? null : null;
-
-    // Tear down any previous helper before swapping. Both branches —
-    // "selection cleared" and "selection moved to a different node" —
-    // need the old helper removed and disposed.
-    if (helperRef.current) {
-      scene.remove(helperRef.current);
-      helperRef.current.dispose();
-      helperRef.current = null;
-    }
-
-    if (target) {
+  useSceneHelper<THREE.BoxHelper>(
+    () => {
+      const target =
+        selectedNodePath && nodeObjectMap
+          ? nodeObjectMap.get(selectedNodePath) ?? null
+          : null;
+      if (!target) return null;
       const helper = new THREE.BoxHelper(target, HIGHLIGHT_COLOR);
       helper.name = 'tscn-selection-highlight';
-      scene.add(helper);
-      helperRef.current = helper;
-    }
-
-    return () => {
-      if (helperRef.current) {
-        scene.remove(helperRef.current);
-        helperRef.current.dispose();
-        helperRef.current = null;
-      }
-    };
-  }, [selectedNodePath, nodeObjectMap, scene]);
-
-  useFrame(() => {
-    helperRef.current?.update();
-  });
+      return helper;
+    },
+    [selectedNodePath, nodeObjectMap]
+  );
 
   return null;
 }

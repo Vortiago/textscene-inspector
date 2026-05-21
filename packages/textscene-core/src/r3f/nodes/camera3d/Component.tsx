@@ -7,7 +7,7 @@
  * passive scene-tree node, not the camera the user is looking through.
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import type { Camera3DProperties } from '../../../nodes/3d/camera3d/types';
 import { KeepAspectMode, ProjectionMode } from '../../../nodes/3d/camera3d/types';
@@ -15,6 +15,7 @@ import type { NodeComponentProps } from '../../NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../nodeTransform';
 import { useNodePath } from '../../contexts/NodePathContext';
 import { useGizmoVisible } from '../lights/lightHelpers';
+import { usePrimitiveHelper } from '../../hooks/useTHREEHelper';
 
 const DEFAULT_ASPECT = 16 / 9;
 
@@ -181,24 +182,23 @@ function CameraGizmo({ cameraRef, name }: CameraGizmoProps) {
   // frustum wireframe regardless of selection (ui-designer-2's A/B
   // finding on the hallway fixture). The gizmo now only appears when
   // the user has selected this Camera3D's tree row.
+  //
+  // WI-ARCH-3: build + dispose lifecycle delegated to `usePrimitiveHelper`.
+  // CameraHelper's frustum geometry is static (the camera's projection
+  // matrix is fixed by the deps); opt out of per-frame update().
   const visible = useGizmoVisible();
-  const [helper, setHelper] = useState<THREE.CameraHelper | null>(null);
+  const helper = usePrimitiveHelper<THREE.CameraHelper>(
+    () => {
+      if (!visible) return null;
+      const camera = cameraRef.current;
+      if (!camera) return null;
+      const created = new THREE.CameraHelper(camera);
+      created.name = name;
+      return created;
+    },
+    [cameraRef, name, visible],
+    { tickUpdate: false }
+  );
 
-  useEffect(() => {
-    if (!visible) {
-      setHelper(null);
-      return;
-    }
-    const camera = cameraRef.current;
-    if (!camera) return;
-    const created = new THREE.CameraHelper(camera);
-    created.name = name;
-    setHelper(created);
-    return () => {
-      created.dispose?.();
-    };
-  }, [cameraRef, name, visible]);
-
-  if (!visible || !helper) return null;
-  return <primitive object={helper} />;
+  return helper ? <primitive object={helper} /> : null;
 }
