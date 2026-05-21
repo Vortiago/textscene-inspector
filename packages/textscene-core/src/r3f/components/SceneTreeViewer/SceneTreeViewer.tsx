@@ -4,7 +4,7 @@
  * `packages/textscene-core/src/ui/SceneTreeViewer.ts`.
  */
 import { useCallback, useMemo, useState, type ChangeEvent } from 'react';
-import type { TscnNode } from '../../../parser/types.js';
+import type { TscnNode, TscnExternalResource } from '../../../parser/types.js';
 import { joinPath } from '../../../utils/nodePath.js';
 import { useHierarchy } from '../../contexts/HierarchyContext.js';
 import { useSelection } from '../../contexts/SelectionContext.js';
@@ -42,6 +42,16 @@ export function SceneTreeViewer({ onNodeReveal }: SceneTreeViewerProps) {
   const rootNodes = useMemo<readonly TscnNode[]>(() => {
     if (!sceneGraph) return [];
     return sceneGraph.scenes.get(sceneGraph.rootScene)?.nodes ?? [];
+  }, [sceneGraph]);
+
+  // WI-HALL-1: the root scene's externalResources are how
+  // `node.instance = ExtResource("id")` references get resolved to a
+  // `res://` path. Threaded into every TreeNode so each row can
+  // attempt sub-scene resolution on its own without re-reading the
+  // sceneGraph.
+  const externalResources = useMemo<readonly TscnExternalResource[]>(() => {
+    if (!sceneGraph) return [];
+    return sceneGraph.scenes.get(sceneGraph.rootScene)?.externalResources ?? [];
   }, [sceneGraph]);
 
   const term = searchTerm.trim().toLowerCase();
@@ -122,6 +132,7 @@ export function SceneTreeViewer({ onNodeReveal }: SceneTreeViewerProps) {
               onToggleVisibility={toggleHidden}
               onNodeReveal={onNodeReveal}
               matches={matches}
+              externalResources={externalResources}
             />
           ))
         )}

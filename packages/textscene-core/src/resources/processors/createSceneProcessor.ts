@@ -26,11 +26,12 @@
  * the production accessor.
  */
 
-import type { TscnScene } from '../../parser/types';
+import type { TscnScene, TscnNode } from '../../parser/types';
 import type { ResourceEventBus } from '../ResourceEventBus';
 import type { ResourceProvider } from '../ResourceProvider';
 import { TscnParser } from '../../parser/TscnParser';
 import { createResourceProcessor, type ResourceProcessor } from '../createResourceProcessor';
+import { isGLBPath } from '../processing/glbProcessing';
 
 export interface SceneProcessorOptions {
   eventBus: ResourceEventBus;
@@ -79,10 +80,63 @@ export function createSceneProcessor({
         throw new Error('No ResourceProvider set');
       }
       const content = await provider.loadResource(metadata.path, metadata.type);
+
+      // WI-HALL-3: PackedScene references in Godot can point at either
+      // a `.tscn` text file or a `.glb` / `.gltf` binary file (the
+      // hallway fixture references both kinds — see PortraitFrame2.glb
+      // / doormesh.glb / grandfatherclock.glb). The host provider
+      // correctly returns text for one and ArrayBuffer for the other;
+      // branch on the registered path's extension to decide how to
+      // materialise the result as a TscnScene.
+      if (isGLBPath(metadata.path)) {
+        if (!(content instanceof ArrayBuffer)) {
+          throw new Error(
+            `GLB/GLTF must be binary content, got ${typeof content}: ${metadata.path}`
+          );
+        }
+        return synthesiseGLBScene(metadata.path);
+      }
       if (typeof content !== 'string') {
-        throw new Error(`Scene must be text content: ${metadata.path}`);
+        throw new Error(`TSCN scene must be text content: ${metadata.path}`);
       }
       return parser.parse(content);
     },
   });
+}
+
+/**
+ * Build a `TscnScene` whose only root node is a `GLBSceneRoot` —
+ * the dedicated R3F component that does the actual GLB load via
+ * `useResource('GLBMesh', path)` and renders the resulting THREE.Object3D.
+ *
+ * Why synthesise vs. parse the binary here:
+ *   - GLBs aren't TSCN files; they have no externally-visible node
+ *     hierarchy until the GLTFLoader runs. Doing that load at scene-
+ *     processor time would block the scene's `'loaded'` event on a
+ *     second async fetch (the GLB processor itself round-trips through
+ *     FileEventBus), and the synthesised TscnScene then has no path to
+ *     re-trigger the GLB load on a host-side `provideFile` call.
+ *   - The synthesised single-node form lets the existing
+ *     `NodeDispatcher` → `<GLBSceneRoot>` pipeline handle the GLB
+ *     lifecycle uniformly with every other resource type. Late-arrival,
+ *     dispose, and the missing-resource UX all flow through the same
+ *     code paths.
+ *
+ * The synthesised node's name is the file basename (without extension)
+ * so the SceneTreeViewer (after WI-HALL-1's sub-scene inlining lands)
+ * shows a meaningful label rather than a synthetic placeholder.
+ */
+function synthesiseGLBScene(glbPath: string): TscnScene {
+  const basename = (glbPath.split('/').pop() ?? glbPath).replace(/\.(glb|gltf)$/i, '');
+  const root: TscnNode = {
+    name: basename || 'GLBRoot',
+    type: 'GLBSceneRoot',
+    children: [],
+    properties: { glbPath } as Record<string, unknown>,
+  };
+  return {
+    nodes: [root],
+    externalResources: [],
+    internalResources: [],
+  };
 }

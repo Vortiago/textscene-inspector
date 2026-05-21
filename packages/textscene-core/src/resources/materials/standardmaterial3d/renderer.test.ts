@@ -73,7 +73,7 @@ describe('StandardMaterial3D Renderer', () => {
       expect(material.roughness).toBe(0.3);
     });
 
-    it('should create material with all properties', () => {
+    it('should create material with all properties (linear-space color, WI-HALL-2)', () => {
       const properties: StandardMaterial3DProperties = {
         albedo_color: { r: 0.5, g: 0.5, b: 0.5, a: 1 },
         metallic: 0.7,
@@ -82,9 +82,13 @@ describe('StandardMaterial3D Renderer', () => {
 
       const material = createStandardMaterial(properties);
 
-      expect(material.color.r).toBe(0.5);
-      expect(material.color.g).toBe(0.5);
-      expect(material.color.b).toBe(0.5);
+      // WI-HALL-2: Godot's sRGB 0.5 → linear ≈ 0.214. The renderer's
+      // sRGB → linear conversion is the deliberate fix for bright-pink
+      // mid-tone rendering; assert the conversion happened (NOT that
+      // the channel still equals 0.5).
+      expect(material.color.r).toBeCloseTo(0.21404, 4);
+      expect(material.color.g).toBeCloseTo(0.21404, 4);
+      expect(material.color.b).toBeCloseTo(0.21404, 4);
       expect(material.metalness).toBe(0.7);
       expect(material.roughness).toBe(0.2);
     });
@@ -109,27 +113,37 @@ describe('StandardMaterial3D Renderer', () => {
       expect(material).toBeInstanceOf(THREE.MeshStandardMaterial);
     });
 
-    it('should create brown table material from Hallway scene', () => {
+    it('should create brown table material from Hallway scene (sRGB → linear, WI-HALL-2)', () => {
       const properties: StandardMaterial3DProperties = {
         albedo_color: { r: 0.545098, g: 0.270588, b: 0.0745098, a: 1 },
       };
 
       const material = createStandardMaterial(properties);
 
-      expect(material.color.r).toBeCloseTo(0.545098, 5);
-      expect(material.color.g).toBeCloseTo(0.270588, 5);
-      expect(material.color.b).toBeCloseTo(0.0745098, 5);
+      // sRGB → linear: 0.545 → ~0.258, 0.271 → ~0.0595, 0.075 → ~0.00651.
+      // The exact decimals match THREE.Color.convertSRGBToLinear's
+      // standard IEC 61966-2-1 transfer function.
+      expect(material.color.r).toBeCloseTo(0.25818, 3);
+      expect(material.color.g).toBeCloseTo(0.05951, 3);
+      expect(material.color.b).toBeCloseTo(0.00651, 3);
+      // Sanity: the linear values are STRICTLY less than the sRGB
+      // input for mid-tones, which is the load-bearing property —
+      // pre-WI-HALL-2 these would have been EQUAL to the inputs, which
+      // is the bug that caused the bright-pink rendering.
+      expect(material.color.r).toBeLessThan(0.545098);
+      expect(material.color.g).toBeLessThan(0.270588);
     });
 
-    it('should create gold material from Hallway scene', () => {
+    it('should create gold material from Hallway scene (sRGB → linear, WI-HALL-2)', () => {
       const properties: StandardMaterial3DProperties = {
         albedo_color: { r: 1, g: 0.843137, b: 0, a: 1 },
       };
 
       const material = createStandardMaterial(properties);
 
+      // Pure 0 and pure 1 are sRGB → linear fixed points; 0.843 → ≈ 0.680.
       expect(material.color.r).toBe(1);
-      expect(material.color.g).toBeCloseTo(0.843137, 5);
+      expect(material.color.g).toBeCloseTo(0.67954, 4);
       expect(material.color.b).toBe(0);
     });
 
