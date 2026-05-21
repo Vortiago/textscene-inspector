@@ -278,6 +278,103 @@ export const v = {
     };
   },
 
+  /** `Transform2D(6 floats)` format. */
+  transform2d(name: string): PropertyValidator {
+    const TRANSFORM2D_REGEX =
+      /^Transform2D\(\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*\)$/;
+    const code = formatCode(name);
+    return (key, value, line) => {
+      if (!TRANSFORM2D_REGEX.test(value)) {
+        return {
+          severity: 'error',
+          message: `Property '${name}' must be Transform2D with 6 numbers like Transform2D(1, 0, 0, 1, 0, 0), got: "${value}"`,
+          line,
+          column: key.length + 3,
+          code,
+        };
+      }
+      return null;
+    };
+  },
+
+  /**
+   * Lenient integer — `parseInt(value, 10)` accepts trailing decimals
+   * ("10.5" → 10). Used for properties like Camera2D's `limit_*` where
+   * the upstream Godot parser is tolerant. The "must be a number" /
+   * "must be an integer" wording follows the per-node test wording.
+   */
+  lenientInt(name: string): PropertyValidator {
+    const formatErr = formatCode(name);
+    return (key, value, line) => {
+      const parsed = parseInt(value, 10);
+      if (isNaN(parsed)) {
+        return {
+          severity: 'error',
+          message: `Property '${name}' must be an integer, got: "${value}"`,
+          line,
+          column: key.length + 3,
+          code: formatErr,
+        };
+      }
+      return null;
+    };
+  },
+
+  /**
+   * Strict integer — rejects floats that round to an integer (uses
+   * `Number.isInteger(parseFloat(value))` to disambiguate "5.5" from "5").
+   * Use this when the property is a discrete index/count, not a number
+   * that happens to be whole-valued.
+   */
+  strictInt(name: string): PropertyValidator {
+    const formatErr = formatCode(name);
+    return (key, value, line) => {
+      const parsed = parseFloat(value);
+      if (isNaN(parsed) || !Number.isInteger(parsed)) {
+        return {
+          severity: 'error',
+          message: `Property '${name}' must be an integer, got: "${value}"`,
+          line,
+          column: key.length + 3,
+          code: formatErr,
+        };
+      }
+      return null;
+    };
+  },
+
+  /**
+   * Strict non-negative integer: same format check as `strictInt`, plus
+   * `value >= 0`. Used for frame indices and similar count-style
+   * properties where `"5.5"` is a format error and `-1` is a value error.
+   */
+  strictNonNegativeInt(name: string): PropertyValidator {
+    const formatErr = formatCode(name);
+    const valueErr = valueCode(name);
+    return (key, value, line) => {
+      const parsed = parseFloat(value);
+      if (isNaN(parsed) || !Number.isInteger(parsed)) {
+        return {
+          severity: 'error',
+          message: `Property '${name}' must be an integer, got: "${value}"`,
+          line,
+          column: key.length + 3,
+          code: formatErr,
+        };
+      }
+      if (parsed < 0) {
+        return {
+          severity: 'error',
+          message: `Property '${name}' must be non-negative (got ${parsed})`,
+          line,
+          column: key.length + 3,
+          code: valueErr,
+        };
+      }
+      return null;
+    };
+  },
+
   /** `Basis(9 floats)` format. */
   basis(name: string): PropertyValidator {
     const BASIS_REGEX =
