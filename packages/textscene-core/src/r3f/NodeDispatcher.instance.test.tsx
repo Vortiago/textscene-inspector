@@ -60,12 +60,20 @@ function makeLoader(): {
     getCacheSize: () => cache.size,
   });
 
+  // WI-ARCH-2: useResource now reads scenes via `loader.scenes` directly,
+  // so the mock must expose a ResourceProcessor-shaped object for scenes
+  // alongside textures/materials/glbMeshes. The legacy `getSceneCached` /
+  // `requestScene` helpers are retained for back-compat callers (the
+  // helpers below still drive the scene cache through `setSceneCached`).
+  const scenesProc = makeProc<TscnScene>(sceneCache);
+
   const loader = {
     eventBus,
     metadata,
     textures: makeProc<THREE.Texture>(textureCache),
     materials: makeProc<THREE.Material>(materialCache),
     glbMeshes: makeProc<THREE.Object3D>(glbCache),
+    scenes: scenesProc,
     getSceneCached: (p: string) => sceneCache.get(p),
     requestScene: vi.fn(),
     register: vi.fn(),

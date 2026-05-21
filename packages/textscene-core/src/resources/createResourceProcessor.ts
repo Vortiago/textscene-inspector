@@ -1,6 +1,25 @@
 /**
  * Factory function for creating resource processors.
- * Handles caching, deduplication, and event emission for any resource type.
+ *
+ * One generic cache + inflight + event-emission machine, parameterised
+ * by *how* a resource is fetched and processed. WI-ARCH-2: the
+ * standalone `SceneLoader` class that previously reimplemented this
+ * exact loop for PackedScene is now a `createSceneProcessor` factory
+ * built on top of this one (see `processors/createSceneProcessor.ts`).
+ *
+ * Two fetch modes:
+ *
+ *   1. **Via FileEventBus** (textures, materials, GLB). `request(path)`
+ *      delegates to `fileEventBus.request(path)`; when raw bytes arrive
+ *      we run `shouldProcess` + `process` to materialise the resource.
+ *
+ *   2. **Direct** (scenes). `request(path)` invokes `loadDirectly(path)`
+ *      itself — no FileEventBus involvement. Useful when the load step
+ *      can't be decomposed into "fetch bytes then process" (e.g. the
+ *      TSCN parser needs the path + content together).
+ *
+ * Configure exactly one of `fileEventBus` (paired with `shouldProcess`
+ * + `process`) or `loadDirectly`. Mixing both is undefined behaviour.
  */
 
 import type { FileEventBus, FileData } from './FileEventBus';
@@ -14,9 +33,14 @@ export interface ResourceProcessorConfig<T> {
   eventBus: ResourceEventBus;
   resourceType: ResourceType;
   /** Determine if this processor should handle the given path/data */
-  shouldProcess: (path: string, data: FileData) => boolean;
-  /** Process raw data into final resource */
-  process: (path: string, data: FileData) => Promise<T>;
+  shouldProcess?: (path: string, data: FileData) => boolean;
+  /** Process raw data into final resource (file-event-bus mode) */
+  process?: (path: string, data: FileData) => Promise<T>;
+  /**
+   * Direct-load mode: skip FileEventBus and fetch+materialise the
+   * resource in one step. Mutually exclusive with `process` + `shouldProcess`.
+   */
+  loadDirectly?: (path: string) => Promise<T>;
   /** Optional cleanup when resource is removed from cache */
   dispose?: (resource: T) => void;
 }
@@ -49,15 +73,41 @@ export interface ResourceProcessor<T> {
 export function createResourceProcessor<T>(
   config: ResourceProcessorConfig<T>
 ): ResourceProcessor<T> {
-  const { fileEventBus, eventBus, resourceType, shouldProcess, process, dispose } = config;
+  const { fileEventBus, eventBus, resourceType, shouldProcess, process, loadDirectly, dispose } = config;
 
   const cache = new Map<string, T | null>();
   const inflight = new Set<string>();
 
+  /**
+   * Shared finish-lane used by both the FileEventBus arrival handler and
+   * the direct-load path. Centralising it keeps cache/inflight/event
+   * transitions consistent across the two fetch modes.
+   */
+  const finishLoad = async (path: string, work: () => Promise<T>): Promise<void> => {
+    const startTime = performance.now();
+    eventBus.emit(resourceType, 'loading', path);
+
+    try {
+      const result = await work();
+      cache.set(path, result);
+      inflight.delete(path);
+      const elapsed = performance.now() - startTime;
+      logger.info(`[${resourceType}Processor] Loaded: ${path} (${elapsed.toFixed(2)}ms)`);
+      eventBus.emit<T>(resourceType, 'loaded', path, result);
+    } catch (error) {
+      cache.set(path, null); // Cache failure to prevent retries
+      inflight.delete(path);
+      const elapsed = performance.now() - startTime;
+      const err = error instanceof Error ? error : new Error(String(error));
+      logger.error(`[${resourceType}Processor] Failed: ${path} (${elapsed.toFixed(2)}ms)`, err);
+      eventBus.emit<Error>(resourceType, 'failed', path, err);
+    }
+  };
+
   // Bound handler for FileEventBus events (stored once to allow proper unsubscription)
   const handleFileLoaded = async (path: string, data: FileData): Promise<void> => {
     // Only process if this processor should handle this path/data
-    if (!shouldProcess(path, data)) return;
+    if (shouldProcess && !shouldProcess(path, data)) return;
 
     // Only process if we're waiting for this path
     if (!inflight.has(path)) return;
@@ -68,26 +118,21 @@ export function createResourceProcessor<T>(
       return;
     }
 
-    const startTime = performance.now();
-    eventBus.emit(resourceType, 'loading', path);
-
-    try {
-      const result = await process(path, data);
-      cache.set(path, result);
+    if (!process) {
+      // File-event-bus mode requires a `process` function; without it
+      // the processor can't materialise the resource. Treat as failure.
       inflight.delete(path);
-
-      const elapsed = performance.now() - startTime;
-      logger.info(`[${resourceType}Processor] Loaded: ${path} (${elapsed.toFixed(2)}ms)`);
-      eventBus.emit<T>(resourceType, 'loaded', path, result);
-    } catch (error) {
-      cache.set(path, null); // Cache failure to prevent retries
-      inflight.delete(path);
-
-      const elapsed = performance.now() - startTime;
-      const err = error instanceof Error ? error : new Error(String(error));
-      logger.error(`[${resourceType}Processor] Failed: ${path} (${elapsed.toFixed(2)}ms)`, err);
-      eventBus.emit<Error>(resourceType, 'failed', path, err);
+      cache.set(path, null);
+      eventBus.emit<Error>(
+        resourceType,
+        'failed',
+        path,
+        new Error(`${resourceType} processor missing process() handler`)
+      );
+      return;
     }
+
+    await finishLoad(path, () => process(path, data));
   };
 
   const handleFileFailed = (path: string, error: Error): void => {
@@ -133,16 +178,20 @@ export function createResourceProcessor<T>(
       // Start loading
       inflight.add(path);
       eventBus.emit(resourceType, 'requested', path);
-      if (fileEventBus) {
+
+      if (loadDirectly) {
+        // Direct-load mode: no FileEventBus round-trip.
+        void finishLoad(path, () => loadDirectly(path));
+      } else if (fileEventBus) {
         fileEventBus.request(path);
       } else {
-        // No FileEventBus - emit failure
+        // Misconfigured — neither fetch mode available.
         inflight.delete(path);
         eventBus.emit<Error>(
           resourceType,
           'failed',
           path,
-          new Error(`FileEventBus not available for loading ${resourceType}: ${path}`)
+          new Error(`No fetch mode configured for ${resourceType}: ${path}`)
         );
       }
     },

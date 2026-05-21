@@ -77,6 +77,7 @@ function makeMockLoader(): {
     textures: texturesWithResolve,
     materials: makeProcessor<THREE.Material>(),
     glbMeshes: makeProcessor<THREE.Object3D>(),
+    scenes: makeProcessor<unknown>(), // WI-ARCH-2: peer processor
     getSceneCached: () => undefined,
     requestScene: () => {},
     provideFile(): void {},

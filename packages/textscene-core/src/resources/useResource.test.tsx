@@ -68,8 +68,9 @@ function makeMockLoader(): ResourceLoader {
   const textures = makeProcessor<THREE.Texture>('texture');
   const materials = makeProcessor<THREE.Material>('material');
   const glbMeshes = makeProcessor<THREE.Object3D>('glb');
-
-  const scenes = new Map<string, unknown>();
+  // WI-ARCH-2: scenes are now a peer ResourceProcessor — useResource
+  // reads via `loader.scenes` directly. The mock uses the same shape.
+  const scenes = makeProcessor<unknown>('scene');
 
   const loader = {
     eventBus,
@@ -77,25 +78,24 @@ function makeMockLoader(): ResourceLoader {
     textures,
     materials,
     glbMeshes,
-    getSceneCached: (path: string) => scenes.get(path) ?? undefined,
-    requestScene: (path: string) => {
-      // Default: no-op. Tests can override after construction by replacing
-      // the property if they need scene behaviour.
-      void path;
-    },
+    scenes,
+    // Legacy facade methods retained for any caller that still reaches
+    // for them (currently none in production after WI-ARCH-2).
+    getSceneCached: (path: string) => scenes.getCached(path) ?? undefined,
+    requestScene: (path: string) => scenes.request(path),
     provideFile(path: string): void {
       // Match the real ResourceLoader.provideFile semantics: clear caches
       // then re-route. Tests usually drive _resolve directly instead.
       textures.clearCache(path);
       materials.clearCache(path);
       glbMeshes.clearCache(path);
-      scenes.delete(path);
+      scenes.clearCache(path);
     },
     clear(): void {
       textures.clearCache();
       materials.clearCache();
       glbMeshes.clearCache();
-      scenes.clear();
+      scenes.clearCache();
       eventBus.clear();
       metadata.clear();
     },
