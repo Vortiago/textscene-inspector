@@ -1,6 +1,321 @@
-# Architecture improvement candidates — scout report
+# Architecture improvement candidates — scout reports
 
-Scan of `feat/r3f-16-audio-animation` @ `a83a7f8` on 2026-05-20.
+This file accumulates dated scout reports. Newest section is at the top.
+
+---
+
+## 2026-05-21 — Third scan on `feat/r3f-migration` @ `e10d0ca` (post-WI-HALL-1/2/3)
+
+Scout: `arch-scout` (read-only). Worktree `.claude/wt/arch-scout-3`. Tip is
+`e10d0ca`; the load-bearing commit is `83ca500` (`WI-HALL-1 + WI-HALL-2 +
+WI-HALL-3 — sub-scene tree + sRGB + GLB-PackedScene`).
+
+This is a follow-up to the 2026-05-20 happiness scan (which declared gate met
+on `8c841a9`). The user correctly noted that "happy on `8c841a9`" doesn't
+extend to subsequent code surface, so this report rescans the new surface
+that landed since.
+
+### What changed since the prior scan
+
+`83ca500` (+984 / −27 LOC across 15 files):
+
+- **WI-HALL-1** Sub-scene tree inlining
+  - New: `r3f/components/SceneTreeViewer/useSubSceneChildren.ts` (67 LOC).
+  - Modified: `SceneTreeViewer.tsx` (+13), `TreeNode.tsx` (+46).
+- **WI-HALL-2** sRGB → linear conversion for `albedo_color` / emission
+  - Modified: `r3f/nodes/meshinstance3d/materialScalars.ts` (+34, added `sRGBChannelToLinear` + `sRGBToLinearRGB`).
+  - Modified: `resources/materials/standardmaterial3d/renderer.ts` (+10, added `convertSRGBToLinear()` call).
+- **WI-HALL-3** GLB-as-PackedScene synthesis
+  - New: `r3f/nodes/glb-scene-root/Component.tsx` (55 LOC) + `index.ts` (6 LOC).
+  - Modified: `resources/processors/createSceneProcessor.ts` (+58, added `synthesiseGLBScene` + GLB-extension branch).
+  - Modified: `r3f/nodes/index.ts` (+1, register `GLBSceneRoot`).
+
+### Findings
+
+#### NEW-1 (LOW): sRGB conversion is implemented twice with two different APIs
+
+**Where**:
+- `packages/textscene-core/src/r3f/nodes/meshinstance3d/materialScalars.ts:92-130` — handcoded `sRGBChannelToLinear` + `sRGBToLinearRGB` (IEC 61966-2-1 inverse transfer).
+- `packages/textscene-core/src/resources/materials/standardmaterial3d/renderer.ts:53` — uses `new THREE.Color(r, g, b).convertSRGBToLinear()`.
+
+**Smell**: Both paths are LIVE in production. `materialScalars.ts` is the R3F
+synchronous path for **inline `[sub_resource "StandardMaterial3D"]`** declared
+in a `.tscn` file. `renderer.ts:createStandardMaterial` is the path for
+**external `.tres` material files** loaded via `useResource('Material', path)`
+→ `createMaterialProcessor` → `createMaterialFromContent` → `createStandardMaterial`.
+Both routes need the same sRGB conversion because Godot stores `albedo_color`
+in sRGB regardless of where the StandardMaterial3D lives. WI-HALL-2 fixed both
+sites but did so with two different implementations: a hand-rolled IEC
+formula in one, and `THREE.Color.convertSRGBToLinear()` in the other.
+
+`materialScalars.ts`'s docblock at lines 119-122 self-acknowledges the
+duplication: *"Standard IEC 61966-2-1 inverse transfer function — same formula
+`THREE.Color.convertSRGBToLinear` applies internally."*
+
+**Deletion test**: delete `sRGBChannelToLinear` + `sRGBToLinearRGB` from
+`materialScalars.ts`. The 4 call sites at `:92` and `:94` need an alternative.
+Replacing with `THREE.Color(r,g,b).convertSRGBToLinear()` works because
+materialScalars also returns a tuple `[r,g,b]` (`:97-99` already uses
+`linearAlbedo[0]/[1]/[2]`) — a small adapter `srgbToLinearTuple(r,g,b)` that
+just wraps `new THREE.Color().convertSRGBToLinear().toArray()` collapses both
+paths to one implementation. Better still: introduce a small `colorParser` or
+`materials/sharedColor.ts` utility consumed by both, where the single
+function is named after the domain operation (`godotColorToLinear`) rather
+than the IEC formula.
+
+**Why LOW, not MEDIUM**: both code paths produce identical visual output; the
+duplication is not currently causing a bug. The risk is divergence at the
+next code change — e.g. someone adds gamma correction to one path and not the
+other. Catching this before the inevitable second-look refactor is cheaper than
+catching it after.
+
+**Proposed shape**:
+```typescript
+// resources/materials/sharedColor.ts
+export function godotColorToLinear(
+  r: number, g: number, b: number
+): [number, number, number] {
+  const c = new THREE.Color(r, g, b).convertSRGBToLinear();
+  return [c.r, c.g, c.b];
+}
+```
+
+**Effort**: trivial (~10 LOC moved, 2 call sites in each file updated).
+
+**Impact**: locality + drift-prevention. Bundle into the next janitor WI.
+
+---
+
+#### NEW-2 (LOW): `resolveInstancePath` is now literally duplicated in two files
+
+**Where**:
+- `packages/textscene-core/src/r3f/NodeDispatcher.tsx:236-247`
+- `packages/textscene-core/src/r3f/components/SceneTreeViewer/useSubSceneChildren.ts:56-67`
+
+**Smell**: Both files have identical 12-line `resolveInstancePath(instanceRef,
+externalResources)` helpers. The newer copy
+(`useSubSceneChildren.ts`) explicitly comments the duplication:
+*"Mirrors NodeDispatcher's `resolveInstancePath`; kept local to avoid a
+cross-package import (NodeDispatcher's helper isn't exported)."*
+
+This was the third copy of `parseResourceReference` smell in the prior
+report (candidate #8, now LOW-5) — same family. The right move is to merge
+both into `utils/resourceReference.ts` (or extend the existing
+`SubResourceResolver.ts` and rename it).
+
+**Deletion test**: delete `useSubSceneChildren.ts:56-67`. The hook needs to
+resolve an instance ref. Either (a) export `resolveInstancePath` from
+`NodeDispatcher.tsx` and import it, or (b) move it to a shared
+`utils/resourceReference.ts`. Option (b) also subsumes the prior LOW-5
+(SubResourceResolver misnaming).
+
+**Effort**: trivial.
+
+**Impact**: surface-area + drift-prevention. **Combines naturally with
+LOW-5 from the prior scan** into a single janitor WI: "consolidate
+resource-reference parsing into one utils module".
+
+**Why LOW**: 12-line literal duplication, no behavioural risk. Janitor bait.
+
+---
+
+#### NEW-3 (LOW): Expand-all doesn't walk inlined sub-scene children
+
+**Where**: `packages/textscene-core/src/r3f/components/SceneTreeViewer/SceneTreeViewer.tsx:19-27, :64-68`
+
+**Smell**: `collectAllPaths` walks `node.children` from the parsed scene
+graph, but **sub-scene children only exist after `useSubSceneChildren` resolves
+inside each `TreeNode`**. So the expand-all walker can't see them at all —
+the data lives in `ResourceLoader.scenes` cache, not in the parsed
+`sceneGraph`. ld58-verifier flagged this as polish item #5 in
+`docs/HALLWAY-END-TO-END.md:250`.
+
+**Architectural read**: this is not just a UI bug; it's the **shape mismatch
+between "what the tree shows" and "what the data layer carries"**. The tree
+shows two concentric trees stitched together at runtime (inline + sub-scene),
+but every helper that operates *on the tree as data* (expand-all, search,
+collectAllPaths, future export-to-JSON, future tree-statistics) sees only
+the inline tree.
+
+Two ways to fix:
+
+1. **Surface the live tree via HierarchyContext**. After WI-HALL-1's sub-scene
+   inlining lands, `HierarchyContext` could expose a `flattenedNodesWithSubscenes`
+   selector built lazily from `loader.scenes.getCached(path)`. expand-all and
+   search both consume this. (This is the "data layer matches the user's mental
+   model" deepening.)
+
+2. **Push the recursion into a `useExpandAll()` hook** that walks the rendered
+   React tree imperatively (querySelectorAll on the rendered tree). Cheap but
+   couples to the DOM.
+
+**Why LOW**: ld58-verifier classified this as polish; the user can click each
+row manually. The underlying smell (data-vs-view mismatch) is real but small.
+The right time to act is when search-inside-subscenes or export-tree becomes
+a feature — that's the second leg that turns this into a Rule-of-Three trigger.
+
+**Effort** for fix (option 1): moderate. Touches HierarchyContext + SceneTreeViewer.
+
+**Reviewer (architect-2-2) action**: decide-later. Re-classify to MEDIUM only
+if a second feature requests "the live tree as data".
+
+---
+
+#### NEW-4 (LOW): GLBSceneRoot synthesis pattern — single instance today, watch for second
+
+**Where**: `packages/textscene-core/src/resources/processors/createSceneProcessor.ts:91-141`
+
+**Smell**: `synthesiseGLBScene(glbPath)` builds a synthetic `TscnScene` with
+one root `GLBSceneRoot` node whose properties carry `glbPath`. The
+`createSceneProcessor` branches on `isGLBPath(metadata.path)` to dispatch
+between binary (synthesise) and text (parse) flows.
+
+This is structurally clean — the binary path is a single function returning a
+single-node TscnScene, and the rest of the system handles it uniformly. The
+*pattern* (synthesise a synthetic TscnScene to hand-off a non-TSCN resource
+through the existing dispatcher) is worth flagging as something to watch:
+**if a second binary-as-scene case arrives** (e.g. `.scn` Godot binary scenes,
+`.escn` Blender exports, `.fbx` direct import), the right move is to factor
+the "decide which synthesiser to call based on extension" logic into a small
+registry.
+
+For now, `isGLBPath` + `synthesiseGLBScene` is a fine local solution. The
+deepening would be premature.
+
+**Deletion test**: delete `synthesiseGLBScene` + the `isGLBPath` branch. The
+GLB-PackedScene path breaks. The function is load-bearing for exactly one case.
+
+**Why LOW**: clean code, single-use today. **The architectural watch is the
+useful contribution here**, not a refactor.
+
+**When to revisit**: when a second binary-as-scene case appears. At that
+point, refactor to:
+```typescript
+const SCENE_SYNTHESISERS = new Map<string, (path: string) => TscnScene>([
+  ['.glb', synthesiseGLBScene],
+  ['.gltf', synthesiseGLBScene],
+  // ['.scn', synthesiseGodotBinaryScene],
+]);
+```
+
+**Reviewer (architect-2-2) action**: decide-later (watch only).
+
+---
+
+#### NEW-5 (LOW): GLBSceneRoot bypasses the `nodeObjectMap` ref-map
+
+**Where**: `packages/textscene-core/src/r3f/nodes/glb-scene-root/Component.tsx:38-55`
+
+**Smell**: `GLBSceneRoot` renders `<primitive object={result.value} />`
+directly without participating in `SelectionContext.nodeObjectMap` registration
+that `NodeDispatcher` does via the `wrapperRef` ref callback on every other
+node type. The result: a `SelectionHighlight` or `HoverHighlight` BoxHelper
+**cannot attach to a GLBSceneRoot's bounding box** because the ref-map has
+no entry for the synthesised node's path.
+
+**Verification**: `NodeDispatcher.tsx:78-87` `wrapperRef` is set on the
+`<group>` wrapper that the dispatcher creates for every dispatched node.
+`GLBSceneRoot` renders inside that wrapper (via the dispatcher's
+`<NodePathProvider>` → `<group ref={wrapperRef}>`), so the **wrapping group**
+IS registered. The `<primitive object={result.value} />` is rendered as a
+child of that group, so the BoxHelper will attach to the wrapper (which has
+no geometry of its own), not the GLB content.
+
+**Practical impact**: selecting a GLB sub-scene's root row in the tree will
+attach a BoxHelper to an empty group — the BoxHelper computes a zero-size
+bounding box. The user sees no visible highlight outline around the actual
+GLB geometry.
+
+This was NOT flagged by ld58-verifier (their `BoxHelper-on-GLBSceneRoot`
+visual check wasn't part of the strict-checklist for hallway). It might
+already be a latent UX defect, OR `THREE.BoxHelper` may automatically descend
+into children when computing the box (worth verifying — THREE's docs say
+`.update()` recomputes from the target's full bounding box including
+descendants, which would make this a non-issue).
+
+**Why LOW**: speculative. Needs verification before classification. If
+`THREE.BoxHelper` does the right thing (computes box from group + descendants),
+this is a non-issue. If not, it's a small fix: GLBSceneRoot could attach the
+loaded object's bounding box to its own group via a ref-callback at
+`<primitive ref={...}>`.
+
+**Reviewer (architect-2-2) action**: investigate. If real, dispatch as a small
+fix WI. If THREE.BoxHelper handles descendants correctly, drop this finding.
+
+---
+
+### Other prior candidates re-checked
+
+| #         | Status                       | Notes                                                                                                          |
+|-----------|------------------------------|----------------------------------------------------------------------------------------------------------------|
+| LOW-1     | UNCHANGED                    | The 8 compat pass-throughs on `ResourceLoader` are still there with no production callers.                     |
+| LOW-2 (#4) | UNCHANGED                    | MeshInstance3D 6-fold `useResource` calls + 6 `useMemo` wrappers. No change.                                   |
+| LOW-3 (#6) | UNCHANGED                    | `propertyFormatter.ts` files still hand-coded; CAST_SHADOW labels duplicated.                                  |
+| LOW-4 (#7) | UNCHANGED                    | `transformFromNode3DProperties` still hand-wrapped in `useMemo` across 11 node component files.                |
+| LOW-5 (#8) | UNCHANGED + NEW DRIFT        | `SubResourceResolver.ts` misnamed; `linter/resourceChecker.ts:25` re-derives the regex; **NEW-2 above adds a third copy of `resolveInstancePath`**. Treat LOW-5 + NEW-2 as a single janitor WI when bandwidth allows. |
+| #10, #11  | UNCHANGED                    | Still LOW.                                                                                                      |
+
+### Summary
+
+| Verdict                       | Count |
+|-------------------------------|-------|
+| HIGH                          | 0     |
+| MEDIUM                        | 0     |
+| LOW                           | 7     |
+| RESOLVED (since prior scan)   | 0     |
+
+LOW total is 5 (prior scan) + 5 (NEW-1..5 from this scan) − 3 (NEW-2 folds into
+LOW-5; NEW-4 is a watch not a candidate; NEW-5 is provisional pending
+verification) = **7**.
+
+**Gate status: still met.**
+
+The new LOW items are all symptoms of the same shape: WI-HALL was a
+user-facing hallway fix landing fast, so each piece was added in the closest
+local file with a comment acknowledging the duplication. None grew to
+MEDIUM/HIGH because:
+
+- The two sRGB implementations behave identically (NEW-1).
+- The two `resolveInstancePath` copies are a 12-line literal duplication, no
+  behavioural risk (NEW-2).
+- Expand-all-missing-subscenes is a polish item, classified by the ld58
+  verifier as such (NEW-3).
+- GLB-as-scene synthesis is single-use and cleanly bounded (NEW-4 — watch only).
+- The BoxHelper-on-GLBSceneRoot concern needs verification before
+  classification (NEW-5).
+
+The user's stopping condition still holds: **"arch-scout is quite happy with
+the architecture and can only find low value improvements."**
+
+Architect-2-2 should consider:
+
+1. Investigate NEW-5 (is THREE.BoxHelper covering GLBSceneRoot children?). If
+   yes, drop it. If no, dispatch a small fix WI.
+2. Bundle NEW-1, NEW-2, prior LOW-5 (resourceReference utility), and LOW-1
+   (compat pass-throughs) into one janitor WI when bandwidth allows. Estimated
+   simple effort; all four are mechanical.
+3. Leave NEW-3 and NEW-4 as "decide-later" watches. NEW-3 re-evaluates if a
+   second tree-as-data consumer arrives; NEW-4 re-evaluates if a second
+   binary-as-scene format lands.
+
+### Methodological note
+
+This is the **third happiness scan** in three days. The cadence is becoming a
+useful safety net: each post-WI scan catches small duplications introduced by
+user-facing-pressure WIs (WI-HALL-1/2/3 here) before they compound. The pattern
+to watch: any time a WI lands with 2+ files containing a "kept local to avoid
+a cross-package import" or "same formula" comment, that's the smell to scout
+in the next pass.
+
+If the team adopts a regular cadence (one scout pass per merged-PR batch), the
+RESOLVED column stays healthy and the LOW column stays bounded. Skipping a
+scan for several merged batches is when LOW items aggregate into MEDIUM.
+
+---
+
+## 2026-05-20 — Initial scout report
+
+Scan of `feat/r3f-16-audio-animation` @ `a83a7f8`.
 
 Scout: `arch-scout` (read-only). This report is for `architect-2-2` to curate before passing to `team-lead`. No code changes proposed yet; just smell + sketch.
 
