@@ -6,3 +6,4 @@
 export { createTextureProcessor } from './createTextureProcessor';
 export { createMaterialProcessor } from './createMaterialProcessor';
 export { createGLBProcessor } from './createGLBProcessor';
+export { createSceneProcessor } from './createSceneProcessor';

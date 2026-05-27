@@ -12,12 +12,15 @@
  */
 import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
-import { useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import * as THREE from 'three';
 import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
 import { useOptionalCameraControl } from './contexts/CameraControlContext.js';
 import { SceneResourcesProvider } from './SceneResourcesContext.js';
 import { NodeDispatcher } from './NodeDispatcher.js';
+import { SelectionHighlight } from './components/SelectionHighlight.js';
+import { HoverHighlight } from './components/HoverHighlight.js';
+import { InternalTextLabel } from './internalTextLabel.js';
 import styles from './TscnCanvas.module.css';
 
 export interface TscnCanvasProps {
@@ -43,11 +46,17 @@ export function TscnSceneContents() {
   const sceneGraph = hierarchy?.sceneGraph ?? null;
   const rootScene = sceneGraph?.scenes.get(sceneGraph.rootScene);
   const nodes = rootScene?.nodes ?? null;
+  // Gap 8 (WI-UX-4): show a grid + prompt when nothing has loaded.
+  // Without this the canvas is a black void and indistinguishable from
+  // a renderer crash. The grid also gives the orbit controls a tangible
+  // surface so the initial-camera framing feels intentional.
+  const isEmpty = nodes === null || nodes.length === 0;
 
   return (
     <>
       <ambientLight intensity={0.4} />
       <directionalLight position={[5, 5, 5]} intensity={1} />
+      {isEmpty && <EmptySceneIndicator />}
       {nodes && rootScene && (
         <SceneResourcesProvider
           internalResources={rootScene.internalResources}
@@ -56,7 +65,23 @@ export function TscnSceneContents() {
           <NodeDispatcher nodes={nodes} />
         </SceneResourcesProvider>
       )}
+      <SelectionHighlight />
+      <HoverHighlight />
     </>
+  );
+}
+
+function EmptySceneIndicator() {
+  return (
+    <group userData={{ tscnEmptyState: true }}>
+      <gridHelper args={[10, 10, 0x444444, 0x222222]} />
+      <InternalTextLabel
+        text="Load a scene to begin"
+        position={[0, 0.4, 0]}
+        fontSize={0.35}
+        color="#888888"
+      />
+    </group>
   );
 }
 
@@ -108,14 +133,54 @@ function ActiveCameraSwitcher() {
   return null;
 }
 
+/** Structural shape we need from the OrbitControls instance — just `.reset()`. */
+interface ResettableControls {
+  reset: () => void;
+}
+
 export function TscnCanvas(_props: TscnCanvasProps) {
+  // WI-UX-7: capture the OrbitControls instance via a callback ref so
+  // the toolbar's "Reset Camera" button can call its `.reset()`. Drei's
+  // `<OrbitControls>` accepts a ref typed to the upstream three-stdlib
+  // type which isn't exported from this package's deps — a callback ref
+  // sidesteps the type incompatibility cleanly and lets us narrow to
+  // the structural `ResettableControls` shape inside the effect.
+  const [controls, setControls] = useState<ResettableControls | null>(null);
+  const onControlsRef = useCallback((instance: ResettableControls | null) => {
+    setControls(instance);
+  }, []);
+
   return (
     <div className={styles.root}>
       <Canvas camera={{ position: [3, 3, 3] }}>
         <TscnSceneContents />
         <ActiveCameraSwitcher />
-        <OrbitControls makeDefault />
+        <OrbitControls ref={onControlsRef} makeDefault />
+        <OrbitControlsResetBridge controls={controls} />
       </Canvas>
     </div>
   );
+}
+
+/**
+ * Bridges the `<OrbitControls>` instance into `CameraControlContext` so
+ * the toolbar can drive `reset()` from outside the `<Canvas>`. The
+ * controls instance arrives via state set by a callback ref, so this
+ * component re-renders once with a non-null `controls` and its effect
+ * wires up the reset handler.
+ */
+function OrbitControlsResetBridge({
+  controls,
+}: {
+  controls: ResettableControls | null;
+}) {
+  const control = useOptionalCameraControl();
+  const registerResetHandler = control?.registerResetHandler;
+
+  useEffect(() => {
+    if (!registerResetHandler || !controls) return undefined;
+    return registerResetHandler(() => controls.reset());
+  }, [registerResetHandler, controls]);
+
+  return null;
 }

@@ -22,6 +22,7 @@ import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../nodeTransform';
 import type { AudioStreamPlayer3DProperties } from '../../../../nodes/audio/audiostreamplayer3d/types';
+import { useGizmoVisible } from '../../lights/lightHelpers';
 
 /** Editor-only gizmo colour — yellow to match the light helpers. */
 const GIZMO_COLOR = 0xffff00;
@@ -45,6 +46,16 @@ export function AudioStreamPlayer3D({ node, children }: NodeComponentProps) {
   // the user has overridden the default.
   const showRangeSphere = properties.unit_size > 0 && properties.unit_size !== 10;
 
+  // WI-UX-14: gate the editor-only speaker + range gizmo on selection,
+  // same as Camera3D and the light gizmos. Without this, every audio
+  // node in the scene drew a yellow wireframe cone/disk + range sphere
+  // regardless of selection — main's HelperManager rendered nothing for
+  // unselected audio nodes (ui-designer-2's A/B on the hallway fixture).
+  // The `<group>` itself stays mounted so the transform context is
+  // preserved for the node's children; only the visual gizmo content
+  // is conditional.
+  const gizmoVisible = useGizmoVisible();
+
   return (
     <group
       name={node.name}
@@ -53,8 +64,8 @@ export function AudioStreamPlayer3D({ node, children }: NodeComponentProps) {
       scale={scale}
       userData={{ isAudioGizmo: true, nodeType: 'AudioStreamPlayer3D' }}
     >
-      <SpeakerGizmo />
-      {showRangeSphere && <RangeSphere radius={properties.unit_size} />}
+      {gizmoVisible && <SpeakerGizmo />}
+      {gizmoVisible && showRangeSphere && <RangeSphere radius={properties.unit_size} />}
       {children}
     </group>
   );

@@ -1,25 +1,29 @@
+/*
+ * Design tokens (`--tsi-*`) are defined in TscnPreviewShell.module.css's
+ * `:root` block.
+ */
 .root {
-  padding: 0.75rem;
-  font-size: 0.8125rem;
-  color: #ddd;
+  padding: var(--tsi-space-3);
+  font-size: var(--tsi-font-md);
+  color: var(--tsi-fg-default);
   overflow: auto;
 }
 
 .empty {
-  padding: 1rem;
+  padding: var(--tsi-space-4);
   text-align: center;
-  color: #888;
+  color: var(--tsi-fg-muted);
   font-style: italic;
 }
 
 .title {
-  margin: 0 0 0.75rem 0;
-  font-size: 1rem;
-  color: #ddd;
+  margin: 0 0 var(--tsi-space-3) 0;
+  font-size: var(--tsi-font-lg);
+  color: var(--tsi-fg-default);
 }
 
 .section {
-  margin-bottom: 1rem;
+  margin-bottom: var(--tsi-space-4);
 }
 
 .section:last-child {
@@ -27,27 +31,29 @@
 }
 
 .sectionTitle {
-  margin: 0 0 0.5rem 0;
-  font-size: 0.75rem;
-  color: #888;
+  margin: 0 0 var(--tsi-space-2) 0;
+  padding-bottom: var(--tsi-space-1);
+  border-bottom: 1px solid var(--tsi-border);
+  font-size: var(--tsi-font-xs);
+  color: var(--tsi-fg-muted);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
 }
 
 .row {
   display: flex;
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--tsi-space-2);
 }
 
 .label {
-  color: #888;
+  color: var(--tsi-fg-muted);
   min-width: 70px;
   flex-shrink: 0;
 }
 
 .value {
-  color: #ddd;
-  font-family: 'Consolas', 'Monaco', monospace;
+  color: var(--tsi-fg-default);
+  font-family: var(--tsi-font-mono);
   flex: 1;
   word-break: break-word;
   overflow-wrap: break-word;
@@ -56,57 +62,57 @@
 
 .value code {
   background: rgba(255, 255, 255, 0.05);
-  padding: 0 0.25rem;
+  padding: 0 var(--tsi-space-1);
   border-radius: 2px;
 }
 
 .externalInstance .label,
 .externalInstance .value {
-  color: #66c;
+  color: var(--tsi-instance-accent);
 }
 
 .warningSection {
-  border-left: 4px solid #ffc107;
+  border-left: 4px solid var(--tsi-warning);
   padding-left: 12px;
   margin-bottom: 16px;
 }
 
 .warningSection .sectionTitle {
-  color: #ffc107;
+  color: var(--tsi-warning);
 }
 
 .warningText {
-  background-color: #3d3319;
-  border: 1px solid #ffc107;
+  background-color: var(--tsi-warning-bg);
+  border: 1px solid var(--tsi-warning);
   border-radius: 4px;
   padding: 12px;
-  margin: 8px 0;
-  color: #ffd966;
+  margin: var(--tsi-space-2) 0;
+  color: var(--tsi-warning-fg);
   line-height: 1.5;
   word-wrap: break-word;
   overflow-wrap: break-word;
 }
 
 .warningText strong {
-  color: #ffe599;
+  color: #ffe599; /* TODO(wave-2): derive via color-mix from --tsi-warning */
 }
 
 .actionButton {
   display: inline-block;
-  padding: 0.375rem 0.75rem;
-  background: #3e3e42;
-  border: 1px solid #555;
+  padding: 0.375rem var(--tsi-space-3);
+  background: var(--tsi-bg-active);
+  border: 1px solid var(--tsi-fg-faint);
   color: #fff;
-  border-radius: 3px;
-  font-size: 0.8125rem;
+  border-radius: var(--tsi-radius-sm);
+  font-size: var(--tsi-font-md);
   cursor: pointer;
 }
 
 .actionButton:hover {
-  background: #555;
+  background: var(--tsi-fg-faint);
 }
 
 .actionButton:focus-visible {
-  outline: 2px solid #6cf;
+  outline: 2px solid var(--tsi-focus-ring);
   outline-offset: 1px;
 }

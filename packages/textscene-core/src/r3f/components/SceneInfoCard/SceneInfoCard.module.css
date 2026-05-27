@@ -1,0 +1,24 @@
+.card {
+  padding: var(--tsi-space-2) var(--tsi-space-3);
+  background: color-mix(in srgb, var(--tsi-success) 12%, transparent);
+  border-left: 2px solid var(--tsi-success);
+  border-bottom: 1px solid var(--tsi-border);
+  color: var(--tsi-fg-default);
+  font-size: var(--tsi-font-sm);
+
+  & .title {
+    margin: 0 0 var(--tsi-space-1) 0;
+    font-size: var(--tsi-font-sm);
+    font-weight: 600;
+    color: var(--tsi-fg-strong);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  & .row {
+    margin: 0;
+    line-height: 1.5;
+    font-family: var(--tsi-font-mono);
+    color: var(--tsi-fg-strong);
+  }
+}

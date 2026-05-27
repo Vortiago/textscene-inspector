@@ -1,336 +1,105 @@
 /**
- * AnimationTree strict validators for linting
+ * AnimationTree strict validators for linting.
+ * Migrated to the declarative `v` namespace (WI-ARCH-1).
  *
- * Registers property validators that check format and value constraints.
+ * `tree_root`, `anim_player`, `root_motion_track`,
+ * `advance_expression_base_node`, `root_node` keep bespoke validators
+ * because the per-node tests assert a specific message wording ("must
+ * be a SubResource or ExtResource reference", "must be a NodePath
+ * reference") that differs from `v.resourceReference` /
+ * `v.nodePath`'s built-in template.
  */
 
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
+import { v } from '../../../linter/validators/index.js';
+import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 
-// Constants for validation
-const MIN_AUDIO_POLYPHONY = 1;
-const MAX_AUDIO_POLYPHONY = 512;
+const PROCESS_MODE = { 0: 'PHYSICS', 1: 'IDLE', 2: 'MANUAL' };
+const METHOD_CALL_MODE = { 0: 'DEFERRED', 1: 'IMMEDIATE' };
+const DISCRETE_MODE = { 0: 'DOMINANT', 1: 'RECESSIVE', 2: 'FORCE_CONTINUOUS' };
+
+const RESOURCE_REGEX = /^(SubResource|ExtResource)\("([^"]+)"\)$/;
+const NODEPATH_REGEX = /^NodePath\("([^"]*)"\)$/;
+
+function resourceRef(name: string, code: string): PropertyValidator {
+  return (key, value, line) => {
+    if (!RESOURCE_REGEX.test(value.trim())) {
+      return {
+        severity: 'error',
+        message: `Property '${name}' must be a SubResource or ExtResource reference, got: "${value}"`,
+        line,
+        column: key.length + 3,
+        code,
+      };
+    }
+    return null;
+  };
+}
+
+/** Two-bound int with distinct messages on each branch (legacy wording). */
+const audioMaxPolyphony: PropertyValidator = (key, value, line) => {
+  const num = parseInt(value, 10);
+  if (isNaN(num)) {
+    return {
+      severity: 'error',
+      message: `Property 'audio_max_polyphony' must be a number, got: "${value}"`,
+      line,
+      column: key.length + 3,
+      code: 'INVALID_AUDIO_MAX_POLYPHONY_FORMAT',
+    };
+  }
+  if (num < 1) {
+    return {
+      severity: 'error',
+      message: `Property 'audio_max_polyphony' must be >= 1 (got ${num}). Values below 1 cause runtime errors.`,
+      line,
+      column: key.length + 3,
+      code: 'INVALID_AUDIO_MAX_POLYPHONY_TOO_SMALL',
+    };
+  }
+  if (num > 512) {
+    return {
+      severity: 'error',
+      message: `Property 'audio_max_polyphony' is impractically large (${num}). Consider values below 512.`,
+      line,
+      column: key.length + 3,
+      code: 'INVALID_AUDIO_MAX_POLYPHONY_TOO_LARGE',
+    };
+  }
+  return null;
+};
+
+function nodePath(name: string, code: string): PropertyValidator {
+  return (key, value, line) => {
+    if (!NODEPATH_REGEX.test(value.trim())) {
+      return {
+        severity: 'error',
+        message: `Property '${name}' must be a NodePath reference, got: "${value}"`,
+        line,
+        column: key.length + 3,
+        code,
+      };
+    }
+    return null;
+  };
+}
 
 validatorRegistry.registerAll('AnimationTree', {
-  /**
-   * Validate tree_root property
-   * Must be SubResource("id") or ExtResource("id") format
-   */
-  'tree_root': (key, value, line) => {
-    const trimmed = value.trim();
-
-    // Check if it's a valid resource reference format
-    const resourcePattern = /^(SubResource|ExtResource)\("([^"]+)"\)$/;
-    if (!resourcePattern.test(trimmed)) {
-      return {
-        severity: 'error',
-        message: `Property 'tree_root' must be a SubResource or ExtResource reference, got: "${value}"`,
-        line,
-        column: key.length + 3,
-        code: 'INVALID_TREE_ROOT_FORMAT',
-      };
-    }
-
-    return null;
-  },
-
-  /**
-   * Validate anim_player property
-   * Must be NodePath format
-   */
-  'anim_player': (key, value, line) => {
-    const trimmed = value.trim();
-
-    // Check if it's a NodePath format
-    const nodePathPattern = /^NodePath\("([^"]*)"\)$/;
-    if (!nodePathPattern.test(trimmed)) {
-      return {
-        severity: 'error',
-        message: `Property 'anim_player' must be a NodePath reference, got: "${value}"`,
-        line,
-        column: key.length + 3,
-        code: 'INVALID_ANIM_PLAYER_FORMAT',
-      };
-    }
-
-    return null;
-  },
-
-  /**
-   * Validate active property
-   * Must be a boolean (true or false)
-   */
-  'active': (key, value, line) => {
-    if (value !== 'true' && value !== 'false') {
-      return {
-        severity: 'error',
-        message: `Property 'active' must be a boolean (true or false), got: "${value}"`,
-        line,
-        column: key.length + 3,
-        code: 'INVALID_ACTIVE_FORMAT',
-      };
-    }
-    return null;
-  },
-
-  /**
-   * Validate process_callback property
-   * Must be 0-2: PHYSICS=0, IDLE=1, MANUAL=2
-   * Note: Godot 4.x uses AnimationCallbackModeProcess enum (0-2)
-   */
-  'process_callback': (key, value, line) => {
-    const num = parseInt(value, 10);
-    if (isNaN(num)) {
-      return {
-        severity: 'error',
-        message: `Property 'process_callback' must be a number, got: "${value}"`,
-        line,
-        column: key.length + 3,
-        code: 'INVALID_PROCESS_CALLBACK_FORMAT',
-      };
-    }
-    if (num < 0 || num > 2) {
-      return {
-        severity: 'error',
-        message: `Property 'process_callback' must be 0-2 (got ${num}). Valid values: 0=PHYSICS, 1=IDLE, 2=MANUAL`,
-        line,
-        column: key.length + 3,
-        code: 'INVALID_PROCESS_CALLBACK_VALUE',
-      };
-    }
-    return null;
-  },
-
-  /**
-   * Validate callback_mode_process property (AnimationMixer base class)
-   * Must be 0-2: PHYSICS=0, IDLE=1, MANUAL=2
-   */
-  'callback_mode_process': (key, value, line) => {
-    const num = parseInt(value, 10);
-    if (isNaN(num)) {
-      return {
-        severity: 'error',
-        message: `Property 'callback_mode_process' must be a number, got: "${value}"`,
-        line,
-        column: key.length + 3,
-        code: 'INVALID_CALLBACK_MODE_PROCESS_FORMAT',
-      };
-    }
-    if (num < 0 || num > 2) {
-      return {
-        severity: 'error',
-        message: `Property 'callback_mode_process' must be 0-2 (got ${num}). Valid values: 0=PHYSICS, 1=IDLE, 2=MANUAL`,
-        line,
-        column: key.length + 3,
-        code: 'INVALID_CALLBACK_MODE_PROCESS_VALUE',
-      };
-    }
-    return null;
-  },
-
-  /**
-   * Validate callback_mode_method property (AnimationMixer base class)
-   * Must be 0-1: DEFERRED=0, IMMEDIATE=1
-   */
-  'callback_mode_method': (key, value, line) => {
-    const num = parseInt(value, 10);
-    if (isNaN(num)) {
-      return {
-        severity: 'error',
-        message: `Property 'callback_mode_method' must be a number, got: "${value}"`,
-        line,
-        column: key.length + 3,
-        code: 'INVALID_CALLBACK_MODE_METHOD_FORMAT',
-      };
-    }
-    if (num < 0 || num > 1) {
-      return {
-        severity: 'error',
-        message: `Property 'callback_mode_method' must be 0-1 (got ${num}). Valid values: 0=DEFERRED, 1=IMMEDIATE`,
-        line,
-        column: key.length + 3,
-        code: 'INVALID_CALLBACK_MODE_METHOD_VALUE',
-      };
-    }
-    return null;
-  },
-
-  /**
-   * Validate callback_mode_discrete property (AnimationMixer base class)
-   * Must be 0-2: DOMINANT=0, RECESSIVE=1, FORCE_CONTINUOUS=2
-   */
-  'callback_mode_discrete': (key, value, line) => {
-    const num = parseInt(value, 10);
-    if (isNaN(num)) {
-      return {
-        severity: 'error',
-        message: `Property 'callback_mode_discrete' must be a number, got: "${value}"`,
-        line,
-        column: key.length + 3,
-        code: 'INVALID_CALLBACK_MODE_DISCRETE_FORMAT',
-      };
-    }
-    if (num < 0 || num > 2) {
-      return {
-        severity: 'error',
-        message: `Property 'callback_mode_discrete' must be 0-2 (got ${num}). Valid values: 0=DOMINANT, 1=RECESSIVE, 2=FORCE_CONTINUOUS`,
-        line,
-        column: key.length + 3,
-        code: 'INVALID_CALLBACK_MODE_DISCRETE_VALUE',
-      };
-    }
-    return null;
-  },
-
-  /**
-   * Validate root_motion_track property
-   * Must be NodePath format (can be empty)
-   */
-  'root_motion_track': (key, value, line) => {
-    const trimmed = value.trim();
-
-    // Check if it's a NodePath format (empty NodePath is valid)
-    const nodePathPattern = /^NodePath\("([^"]*)"\)$/;
-    if (!nodePathPattern.test(trimmed)) {
-      return {
-        severity: 'error',
-        message: `Property 'root_motion_track' must be a NodePath reference, got: "${value}"`,
-        line,
-        column: key.length + 3,
-        code: 'INVALID_ROOT_MOTION_TRACK_FORMAT',
-      };
-    }
-
-    return null;
-  },
-
-  /**
-   * Validate advance_expression_base_node property
-   * Must be NodePath format
-   */
-  'advance_expression_base_node': (key, value, line) => {
-    const trimmed = value.trim();
-
-    // Check if it's a NodePath format
-    const nodePathPattern = /^NodePath\("([^"]*)"\)$/;
-    if (!nodePathPattern.test(trimmed)) {
-      return {
-        severity: 'error',
-        message: `Property 'advance_expression_base_node' must be a NodePath reference, got: "${value}"`,
-        line,
-        column: key.length + 3,
-        code: 'INVALID_ADVANCE_EXPRESSION_BASE_NODE_FORMAT',
-      };
-    }
-
-    return null;
-  },
-
-  /**
-   * Validate audio_max_polyphony property
-   * Must be integer >= 1 (default is 32)
-   */
-  'audio_max_polyphony': (key, value, line) => {
-    const num = parseInt(value, 10);
-    if (isNaN(num)) {
-      return {
-        severity: 'error',
-        message: `Property 'audio_max_polyphony' must be a number, got: "${value}"`,
-        line,
-        column: key.length + 3,
-        code: 'INVALID_AUDIO_MAX_POLYPHONY_FORMAT',
-      };
-    }
-    if (num < MIN_AUDIO_POLYPHONY) {
-      return {
-        severity: 'error',
-        message: `Property 'audio_max_polyphony' must be >= ${MIN_AUDIO_POLYPHONY} (got ${num}). Values below 1 cause runtime errors.`,
-        line,
-        column: key.length + 3,
-        code: 'INVALID_AUDIO_MAX_POLYPHONY_TOO_SMALL',
-      };
-    }
-    if (num > MAX_AUDIO_POLYPHONY) {
-      return {
-        severity: 'error',
-        message: `Property 'audio_max_polyphony' is impractically large (${num}). Consider values below ${MAX_AUDIO_POLYPHONY}.`,
-        line,
-        column: key.length + 3,
-        code: 'INVALID_AUDIO_MAX_POLYPHONY_TOO_LARGE',
-      };
-    }
-    return null;
-  },
-
-  /**
-   * Validate root_node property (AnimationMixer base class)
-   * Must be NodePath format
-   */
-  'root_node': (key, value, line) => {
-    const trimmed = value.trim();
-
-    // Check if it's a NodePath format
-    const nodePathPattern = /^NodePath\("([^"]*)"\)$/;
-    if (!nodePathPattern.test(trimmed)) {
-      return {
-        severity: 'error',
-        message: `Property 'root_node' must be a NodePath reference, got: "${value}"`,
-        line,
-        column: key.length + 3,
-        code: 'INVALID_ROOT_NODE_FORMAT',
-      };
-    }
-
-    return null;
-  },
-
-  /**
-   * Validate deterministic property (AnimationMixer base class)
-   * Must be a boolean
-   */
-  'deterministic': (key, value, line) => {
-    if (value !== 'true' && value !== 'false') {
-      return {
-        severity: 'error',
-        message: `Property 'deterministic' must be a boolean (true or false), got: "${value}"`,
-        line,
-        column: key.length + 3,
-        code: 'INVALID_DETERMINISTIC_FORMAT',
-      };
-    }
-    return null;
-  },
-
-  /**
-   * Validate reset_on_save property (AnimationMixer base class)
-   * Must be a boolean
-   */
-  'reset_on_save': (key, value, line) => {
-    if (value !== 'true' && value !== 'false') {
-      return {
-        severity: 'error',
-        message: `Property 'reset_on_save' must be a boolean (true or false), got: "${value}"`,
-        line,
-        column: key.length + 3,
-        code: 'INVALID_RESET_ON_SAVE_FORMAT',
-      };
-    }
-    return null;
-  },
-
-  /**
-   * Validate root_motion_local property (AnimationMixer base class)
-   * Must be a boolean
-   */
-  'root_motion_local': (key, value, line) => {
-    if (value !== 'true' && value !== 'false') {
-      return {
-        severity: 'error',
-        message: `Property 'root_motion_local' must be a boolean (true or false), got: "${value}"`,
-        line,
-        column: key.length + 3,
-        code: 'INVALID_ROOT_MOTION_LOCAL_FORMAT',
-      };
-    }
-    return null;
-  },
+  tree_root: resourceRef('tree_root', 'INVALID_TREE_ROOT_FORMAT'),
+  anim_player: nodePath('anim_player', 'INVALID_ANIM_PLAYER_FORMAT'),
+  active: v.boolean('active'),
+  process_callback: v.enumInt('process_callback', 0, 2, PROCESS_MODE),
+  callback_mode_process: v.enumInt('callback_mode_process', 0, 2, PROCESS_MODE),
+  callback_mode_method: v.enumInt('callback_mode_method', 0, 1, METHOD_CALL_MODE),
+  callback_mode_discrete: v.enumInt('callback_mode_discrete', 0, 2, DISCRETE_MODE),
+  root_motion_track: nodePath('root_motion_track', 'INVALID_ROOT_MOTION_TRACK_FORMAT'),
+  advance_expression_base_node: nodePath(
+    'advance_expression_base_node',
+    'INVALID_ADVANCE_EXPRESSION_BASE_NODE_FORMAT'
+  ),
+  audio_max_polyphony: audioMaxPolyphony,
+  root_node: nodePath('root_node', 'INVALID_ROOT_NODE_FORMAT'),
+  deterministic: v.boolean('deterministic'),
+  reset_on_save: v.boolean('reset_on_save'),
+  root_motion_local: v.boolean('root_motion_local'),
 });

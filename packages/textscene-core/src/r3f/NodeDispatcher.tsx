@@ -24,8 +24,9 @@
  * the innermost hit object outward.
  */
 
-import { Fragment } from 'react';
+import { Fragment, useCallback } from 'react';
 import type { ReactNode } from 'react';
+import type * as THREE from 'three';
 import type { TscnNode, TscnScene } from '../parser/types.js';
 import { joinPath } from '../utils/nodePath.js';
 import { nodeComponentRegistry } from './NodeComponentRegistry.js';
@@ -38,7 +39,8 @@ import {
   SceneResourcesProvider,
   useSceneResources,
 } from './SceneResourcesContext.js';
-import { InternalTextLabel } from './internalTextLabel.js';
+import { useSelection } from './contexts/SelectionContext.js';
+import { MissingResourcePlaceholder } from './components/MissingResourcePlaceholder.js';
 
 export interface NodeDispatcherProps {
   /** Root nodes from the active scene (typically `scene.scenes.get(rootScene).nodes`). */
@@ -70,6 +72,19 @@ interface DispatchedNodeProps {
 function DispatchedNode({ node, path, withNodePath }: DispatchedNodeProps): ReactNode {
   const Component = nodeComponentRegistry.get(node.type) ?? GenericNodeFallback;
   const handlers = withNodePath(path);
+  const { hiddenNodePaths, registerNodeObject, unregisterNodeObject } = useSelection();
+  const isHidden = hiddenNodePaths.has(path);
+
+  const wrapperRef = useCallback(
+    (object: THREE.Object3D | null) => {
+      if (object) {
+        registerNodeObject(path, object);
+      } else {
+        unregisterNodeObject(path);
+      }
+    },
+    [path, registerNodeObject, unregisterNodeObject]
+  );
 
   const inlineChildren = node.children.map((child) => (
     <DispatchedNode
@@ -115,6 +130,8 @@ function DispatchedNode({ node, path, withNodePath }: DispatchedNodeProps): Reac
   return (
     <NodePathProvider path={path}>
       <group
+        ref={wrapperRef}
+        visible={!isHidden}
         onPointerDown={handlers.onPointerDown}
         onPointerUp={handlers.onPointerUp}
         onPointerOver={handlers.onPointerOver}
@@ -182,11 +199,11 @@ function InstancedSceneSubtree({
 
   if (!scenePath) {
     return (
-      <InstancePlaceholder label={`Unresolved instance ref: ${instanceRef}`} />
+      <MissingResourcePlaceholder shape="box" />
     );
   }
   if (result.status === 'missing' || result.status === 'error') {
-    return <InstancePlaceholder label={`Missing scene: ${scenePath}`} />;
+    return <MissingResourcePlaceholder shape="box" />;
   }
   if (result.status === 'pending' || !result.value) {
     return null;
@@ -210,17 +227,6 @@ function InstancedSceneSubtree({
   );
 }
 
-function InstancePlaceholder({ label }: { label: string }) {
-  return (
-    <group>
-      <mesh>
-        <boxGeometry args={[0.5, 0.5, 0.5]} />
-        <meshBasicMaterial color="magenta" wireframe />
-      </mesh>
-      <InternalTextLabel text={label} position={[0, 0.7, 0]} fontSize={0.12} outlineWidth={0.01} />
-    </group>
-  );
-}
 
 /**
  * Resolve `ExtResource("id")` or a raw `res://` path against the

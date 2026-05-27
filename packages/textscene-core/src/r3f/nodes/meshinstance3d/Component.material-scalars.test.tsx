@@ -60,11 +60,16 @@ async function renderWithMaterial(
 }
 
 describe('StandardMaterial3D scalars (assertions 18–31)', () => {
-  it('#18 albedo_color RGB → material.color matches', async () => {
+  it('#18 albedo_color RGB → material.color matches (sRGB → linear, WI-HALL-2)', async () => {
     const mat = await renderWithMaterial({ albedo_color: 'Color(0.5, 0.25, 0.75, 1)' });
-    expect(mat.color.r).toBeCloseTo(0.5, 4);
-    expect(mat.color.g).toBeCloseTo(0.25, 4);
-    expect(mat.color.b).toBeCloseTo(0.75, 4);
+    // Godot encodes colors in sRGB; WI-HALL-2 converts to linear so
+    // three.js's sRGB output transform doesn't double-encode and the
+    // user sees the true mid-tone (not bright-pink). Assert the
+    // sRGB → linear conversion happened: 0.5 → ~0.214, 0.25 → ~0.0508,
+    // 0.75 → ~0.523. Strictly different from the original sRGB inputs.
+    expect(mat.color.r).toBeCloseTo(0.21404, 4);
+    expect(mat.color.g).toBeCloseTo(0.05088, 4);
+    expect(mat.color.b).toBeCloseTo(0.52252, 4);
   });
 
   it('#19 albedo_color alpha < 1 → opacity matches AND transparent=true', async () => {

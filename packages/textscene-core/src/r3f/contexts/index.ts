@@ -1,6 +1,7 @@
 export {
   SelectionProvider,
   useSelection,
+  useOptionalSelection,
   type SelectionContextValue,
   type SelectionProviderProps,
 } from './SelectionContext.js';
@@ -22,3 +23,9 @@ export {
   useNodePath,
   type NodePathProviderProps,
 } from './NodePathContext.js';
+export {
+  MissingResourcesProvider,
+  useMissingResources,
+  type MissingResourcesContextValue,
+  type MissingResourcesProviderProps,
+} from './MissingResourcesContext.js';

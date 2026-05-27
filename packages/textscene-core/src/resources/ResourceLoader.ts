@@ -1,21 +1,68 @@
 /**
- * Event-based resource loader using factory-based processors.
- * Provides request methods and event subscriptions for resource loading.
+ * Event-based resource loader.
+ *
+ * **WI-ARCH-2**: there used to be three implementations of the same
+ * cache/inflight/event-emission loop — this file, `loaders/SceneLoader.ts`,
+ * and `createResourceProcessor.ts`. The standalone `SceneLoader` class is
+ * gone; PackedScene now flows through the same `createResourceProcessor`
+ * factory as textures/materials/GLBs (see `processors/createSceneProcessor.ts`).
+ * The owning ResourceLoader keeps a single `processors` map keyed by
+ * resource type — adding a new type means registering one more
+ * processor, not adding fields + methods to this class.
+ *
+ * Public surface:
+ *
+ *   - Named processor accessors: `loader.textures`, `loader.materials`,
+ *     `loader.glbMeshes`, `loader.scenes`. Each implements
+ *     `ResourceProcessor<T>` — `request(path)`, `getCached(path)`,
+ *     `isCached(path)`, `isLoading(path)`, `clearCache(path?)`,
+ *     `getCacheSize()`. Use these when you statically know the type.
+ *
+ *   - Type-generic surface: `request(type, path)`, `getCached(type, path)`,
+ *     `clearCache(path?, type?)`. Use when the type is data-driven
+ *     (e.g. `provideFile` routing).
+ *
+ *   - Per-type pass-through methods (`requestTexture`, `requestScene`,
+ *     `getSceneCached`, `clearTextureCache`, etc.) are 1-line shims
+ *     delegating to the appropriate processor. Retained for
+ *     compatibility with existing call sites (`useResource.ts` and
+ *     the node-component test mocks); the underlying machine is
+ *     unified.
+ *
+ *   - `provideFile(path)`: clear caches for the path and re-route
+ *     through the right processor for the registered metadata type.
+ *     The signature is intentionally **type-agnostic** — see
+ *     `setupFailureCallbacks`.
  */
 
 import * as THREE from 'three';
 import type { ExtResource, TscnScene, ResourceNeededCallback } from '../parser/types';
 import type { FileEventBus } from './FileEventBus';
 import type { ResourceProvider } from './ResourceProvider';
-import { ResourceEventBus } from './ResourceEventBus';
+import { ResourceEventBus, type ResourceType } from './ResourceEventBus';
 import { MetadataStore } from './MetadataStore';
 import { createTextureProcessor } from './processors/createTextureProcessor';
 import { createMaterialProcessor } from './processors/createMaterialProcessor';
 import { createGLBProcessor } from './processors/createGLBProcessor';
+import { createSceneProcessor } from './processors/createSceneProcessor';
 import { parseReference } from './processing/materialProcessing';
 import type { ResourceProcessor } from './createResourceProcessor';
-import { SceneLoader } from './loaders/SceneLoader';
 import * as logger from '../logger';
+
+/**
+ * Returns the canonical ResourceType bus tag for a TSCN resource-type
+ * string. PackedScene → 'scene', StandardMaterial3D → 'material', etc.
+ * Used by `provideFile` to route a re-request through the right
+ * processor.
+ */
+function busTypeFor(resourceType: string | undefined): ResourceType | null {
+  if (!resourceType) return null;
+  if (resourceType.includes('Texture')) return 'texture';
+  if (resourceType.includes('Material')) return 'material';
+  if (resourceType === 'PackedScene') return 'scene';
+  if (resourceType === 'GLB' || resourceType === 'GLTF' || resourceType === 'GLBMesh') return 'glb';
+  return null;
+}
 
 export class ResourceLoader {
   readonly metadata: MetadataStore;
@@ -23,9 +70,15 @@ export class ResourceLoader {
   readonly textures: ResourceProcessor<THREE.Texture>;
   readonly materials: ResourceProcessor<THREE.Material>;
   readonly glbMeshes: ResourceProcessor<THREE.Object3D>;
+  readonly scenes: ResourceProcessor<TscnScene>;
 
-  // Scene loading uses SceneLoader internally (supports provider-based loading)
-  private sceneLoader: SceneLoader;
+  /**
+   * Type → processor table. The four named accessors above are stable
+   * references to entries in this map; iterating the map is how
+   * `clear()` / `provideFile()` / the generic `request(type, path)`
+   * surface route work without per-type switches.
+   */
+  private readonly processors: Map<ResourceType, ResourceProcessor<unknown>>;
 
   private provider: ResourceProvider | null = null;
   private onResourceNeeded: ResourceNeededCallback | null = null;
@@ -37,15 +90,12 @@ export class ResourceLoader {
     this.eventBus = new ResourceEventBus();
     this.metadata = new MetadataStore();
 
-    // Create texture processor first (materials need it)
-    // Note: If no fileEventBus, processors won't receive file events
+    // Texture processor first — materials need it for inline texture refs.
     this.textures = createTextureProcessor(fileEventBus, this.eventBus);
 
-    // Create texture loader function for materials
     const loadTexture = async (id: string): Promise<THREE.Texture | null> => {
       const cached = this.textures.getCached(id);
       if (cached !== undefined) return cached;
-
       this.textures.request(id);
       try {
         return await this.eventBus.once<THREE.Texture>('texture', 'loaded', id);
@@ -54,149 +104,141 @@ export class ResourceLoader {
       }
     };
 
-    // Create other processors
     this.materials = createMaterialProcessor(fileEventBus, this.eventBus, loadTexture);
     this.glbMeshes = createGLBProcessor(fileEventBus, this.eventBus);
 
-    // Create scene loader (uses provider-based loading)
-    this.sceneLoader = new SceneLoader(this.eventBus, null);
+    // PackedScene processor — the former standalone SceneLoader collapsed
+    // into the same machinery via direct-load mode (`createResourceProcessor`'s
+    // `loadDirectly` option). The id↔path translation happens here via the
+    // shared MetadataStore.
+    this.scenes = createSceneProcessor({
+      eventBus: this.eventBus,
+      resolveMetadata: (idOrPath) => {
+        const meta = this.metadata.get(idOrPath);
+        return meta ? { path: meta.path, type: meta.type } : null;
+      },
+      getProvider: () => this.provider,
+    });
 
-    // Wire up onResourceNeeded callbacks for failed events
+    this.processors = new Map<ResourceType, ResourceProcessor<unknown>>([
+      ['texture', this.textures as ResourceProcessor<unknown>],
+      ['material', this.materials as ResourceProcessor<unknown>],
+      ['glb', this.glbMeshes as ResourceProcessor<unknown>],
+      ['scene', this.scenes as ResourceProcessor<unknown>],
+    ]);
+
     this.setupFailureCallbacks();
   }
 
   private setupFailureCallbacks(): void {
-    const resourceTypes: Array<{ type: 'texture' | 'material' | 'scene' | 'glb'; label: string }> = [
-      { type: 'texture', label: 'Material using texture' },
-      { type: 'material', label: 'Node using material' },
-      { type: 'scene', label: 'Node instance of scene' },
-      { type: 'glb', label: 'Node using GLB mesh' },
-    ];
+    const labels: Record<ResourceType, string> = {
+      texture: 'Material using texture',
+      material: 'Node using material',
+      scene: 'Node instance of scene',
+      glb: 'Node using GLB mesh',
+      resource: 'Resource',
+    };
 
-    for (const { type, label } of resourceTypes) {
+    for (const type of this.processors.keys()) {
       this.eventBus.on<Error>(type, 'failed', (pathOrId, error) => {
-        if (this.onResourceNeeded) {
-          const resource = this.metadata.get(pathOrId);
-          if (resource) {
-            // Use the original resource ID for referencedBy, not the path
-            const resourceId = resource.id;
-            const result = this.onResourceNeeded({
-              path: resource.path,
-              type: resource.type,
-              referencedBy: `${label} ${resourceId}`,
-              error: error?.message || 'Unknown error',
-            });
-            if (result && typeof result.catch === 'function') {
-              result.catch((err) => {
-                logger.error(`[ResourceLoader] onResourceNeeded callback failed:`, err);
-              });
-            }
-          }
+        if (!this.onResourceNeeded) return;
+        const resource = this.metadata.get(pathOrId);
+        if (!resource) return;
+        const result = this.onResourceNeeded({
+          path: resource.path,
+          type: resource.type,
+          referencedBy: `${labels[type]} ${resource.id}`,
+          error: error?.message || 'Unknown error',
+        });
+        if (result && typeof result.catch === 'function') {
+          result.catch((err) => {
+            logger.error(`[ResourceLoader] onResourceNeeded callback failed:`, err);
+          });
         }
       });
     }
   }
 
-  /**
-   * Register an external resource from parsed TSCN data.
-   */
+  /** Register an external resource from parsed TSCN data. */
   register(resource: ExtResource): void {
     this.metadata.register(resource);
-    // Register PackedScene resources with SceneLoader for provider-based loading
-    if (resource.type === 'PackedScene') {
-      this.sceneLoader.registerMetadata(resource.id, resource);
-    }
+    // PackedScene resources need their metadata in the MetadataStore so
+    // the scene processor's `resolveMetadata` callback can find them by
+    // id. The MetadataStore already does id+path indexing.
   }
 
-  /**
-   * Set the resource provider (for scene loading via SceneLoader).
-   */
   setProvider(provider: ResourceProvider): void {
     this.provider = provider;
-    this.sceneLoader.setProvider(provider);
   }
 
-  /**
-   * Get the resource provider.
-   */
   getProvider(): ResourceProvider | null {
     return this.provider;
   }
 
-  /**
-   * Get the resource event bus for event-based loading.
-   */
   getEventBus(): ResourceEventBus {
     return this.eventBus;
   }
 
-  /**
-   * Set callback for when a resource is needed but not available.
-   */
   setOnResourceNeeded(callback: ResourceNeededCallback): void {
     this.onResourceNeeded = callback;
   }
 
-  /**
-   * Request a texture to be loaded (non-blocking, event-based).
-   */
+  // ---- Type-generic surface (WI-ARCH-2) ------------------------------------
+
+  /** Request a resource through the appropriate processor for `type`. */
+  request(type: ResourceType, path: string): void {
+    const proc = this.processors.get(type);
+    if (!proc) {
+      logger.warn(`[ResourceLoader] Unknown resource type: ${type}`);
+      return;
+    }
+    proc.request(path);
+  }
+
+  /** Read a cached resource. Returns undefined when never requested. */
+  getCached<T>(type: ResourceType, path: string): T | null | undefined {
+    const proc = this.processors.get(type);
+    if (!proc) return undefined;
+    return proc.getCached(path) as T | null | undefined;
+  }
+
+  // ---- Per-type pass-throughs (compat) -------------------------------------
+
   requestTexture(idOrPath: string): void {
     this.textures.request(idOrPath);
   }
 
-  /**
-   * Request a material to be loaded (non-blocking, event-based).
-   */
   requestMaterial(idOrPath: string): void {
     this.materials.request(idOrPath);
   }
 
-  /**
-   * Request a scene to be loaded (non-blocking, event-based).
-   */
   requestScene(idOrPath: string): void {
-    this.sceneLoader.request(idOrPath);
+    this.scenes.request(idOrPath);
   }
 
-  /**
-   * Get cached scene (may be null if load failed, undefined if not cached).
-   */
   getSceneCached(idOrPath: string): TscnScene | null | undefined {
-    return this.sceneLoader.getCached(idOrPath);
+    return this.scenes.getCached(idOrPath);
   }
 
-  /**
-   * Resolve idOrPath to actual path using metadata.
-   */
+  // ---- Metadata helpers ----------------------------------------------------
+
   resolvePath(idOrPath: string): string {
     const resource = this.metadata.get(idOrPath);
     return resource?.path || idOrPath;
   }
 
-  /**
-   * Get resource metadata by ID or path.
-   */
   getMetadata(idOrPath: string): ExtResource | undefined {
     return this.metadata.get(idOrPath);
   }
 
-  /**
-   * Check if a resource exists in the registry.
-   */
   hasResource(idOrPath: string): boolean {
     return this.metadata.has(idOrPath);
   }
 
-  /**
-   * Parse ExtResource("id") reference and return the ID.
-   */
   static parseReference(value: string): string | null {
     return parseReference(value);
   }
 
-  /**
-   * Resolve instance reference to scene path.
-   */
   resolveInstancePath(instanceRef: string | undefined): string | null {
     if (!instanceRef) return null;
 
@@ -223,28 +265,27 @@ export class ResourceLoader {
     return metadata.path;
   }
 
-  /**
-   * Clear all caches and metadata.
-   */
+  // ---- Cache management ----------------------------------------------------
+
+  /** Clear all caches, metadata, and event subscribers. */
   clear(): void {
     this.metadata.clear();
-    this.textures.clearCache();
-    this.materials.clearCache();
-    this.sceneLoader.clearAllCache();
-    this.glbMeshes.clearCache();
+    for (const proc of this.processors.values()) {
+      proc.clearCache();
+    }
     this.eventBus.clear();
     logger.info('[ResourceLoader] Cleared all caches');
   }
 
   /**
-   * Clear cache for a specific path across all processors.
-   * Used for hot-reload scenarios.
+   * Clear cache for a specific path across all processors (hot-reload).
+   * Drops the FileEventBus cache too so the next request hits the
+   * provider fresh.
    */
   clearCache(path: string): void {
-    this.textures.clearCache(path);
-    this.materials.clearCache(path);
-    this.sceneLoader.clearCache(path);
-    this.glbMeshes.clearCache(path);
+    for (const proc of this.processors.values()) {
+      proc.clearCache(path);
+    }
     logger.info(`[ResourceLoader] Cleared cache for: ${path}`);
   }
 
@@ -254,10 +295,6 @@ export class ResourceLoader {
    * which fires fresh `*:loaded` events for subscribers (the late-arrival
    * flow used by `useResource` to transition `'missing' → 'loaded'`).
    *
-   * The host is expected to have made the file resolvable by the
-   * provider (e.g. via `WebResourceProvider.addUploadedFile`) before
-   * calling this.
-   *
    * Routes through the correct processor based on the registered metadata
    * type for the path; if the type is unknown we re-request through
    * texture + material processors (the MVS late-arrival cases) so the
@@ -265,34 +302,19 @@ export class ResourceLoader {
    * as ExtResource.
    */
   provideFile(path: string): void {
-    // Drop the FileEventBus cache so the next request hits the provider
-    // fresh rather than replaying a stale-or-null entry.
     this._fileEventBus?.clearCache(path);
-
-    // Drop any previously-cached failure across all processors so the
-    // processor `request()` path doesn't short-circuit on null.
     this.clearCache(path);
 
-    // Route to the correct processor based on metadata. If we can't
-    // identify the type, request via the two MVS processors that take a
-    // path directly (texture, material). GLB and scene late-arrival is
-    // less common; callers wanting those should pre-register metadata.
     const metadata = this.metadata.get(path);
-    const type = metadata?.type;
+    const busType = busTypeFor(metadata?.type);
 
     logger.info(
       `[ResourceLoader] provideFile: ${path}` +
-        (type ? ` (type: ${type})` : ' (no metadata; fanning out)')
+        (metadata?.type ? ` (type: ${metadata.type})` : ' (no metadata; fanning out)')
     );
 
-    if (type?.includes('Texture')) {
-      this.textures.request(path);
-    } else if (type?.includes('Material')) {
-      this.materials.request(path);
-    } else if (type === 'PackedScene') {
-      this.sceneLoader.request(path);
-    } else if (type === 'GLB' || type === 'GLTF' || type === 'GLBMesh') {
-      this.glbMeshes.request(path);
+    if (busType) {
+      this.request(busType, path);
     } else {
       // Unknown type — try the two MVS processors. Only the one that
       // can process the file's content will produce a non-null result;
@@ -304,9 +326,8 @@ export class ResourceLoader {
     }
   }
 
-  /**
-   * Clear specific resource type caches.
-   */
+  // ---- Per-type cache helpers (compat) -------------------------------------
+
   clearTextureCache(id?: string): void {
     this.textures.clearCache(id);
   }
@@ -316,29 +337,17 @@ export class ResourceLoader {
   }
 
   clearSceneCache(id?: string): void {
-    if (id) {
-      this.sceneLoader.clearCache(id);
-    } else {
-      this.sceneLoader.clearAllCache();
-    }
+    this.scenes.clearCache(id);
   }
 
   clearGLBMeshCache(id?: string): void {
     this.glbMeshes.clearCache(id);
   }
 
-  /**
-   * Clear texture cache for all textures referencing a specific path.
-   * Note: With path-based caching in processors, this clears the path entry directly.
-   */
   clearTextureCacheByPath(path: string): void {
     this.textures.clearCache(path);
   }
 
-  /**
-   * Clear material cache for all materials referencing a specific path.
-   * Note: With path-based caching in processors, this clears the path entry directly.
-   */
   clearMaterialCacheByPath(path: string): void {
     this.materials.clearCache(path);
   }

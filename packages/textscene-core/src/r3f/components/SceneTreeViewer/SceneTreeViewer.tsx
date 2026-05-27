@@ -4,7 +4,7 @@
  * `packages/textscene-core/src/ui/SceneTreeViewer.ts`.
  */
 import { useCallback, useMemo, useState, type ChangeEvent } from 'react';
-import type { TscnNode } from '../../../parser/types.js';
+import type { TscnNode, TscnExternalResource } from '../../../parser/types.js';
 import { joinPath } from '../../../utils/nodePath.js';
 import { useHierarchy } from '../../contexts/HierarchyContext.js';
 import { useSelection } from '../../contexts/SelectionContext.js';
@@ -35,16 +35,23 @@ function nodeMatchesSearch(node: TscnNode, term: string): boolean {
 
 export function SceneTreeViewer({ onNodeReveal }: SceneTreeViewerProps) {
   const { sceneGraph } = useHierarchy();
-  const { setExpandedNodePaths } = useSelection();
+  const { setExpandedNodePaths, hiddenNodePaths, toggleHidden } = useSelection();
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [hiddenNodePaths, setHiddenNodePaths] = useState<ReadonlySet<string>>(
-    () => new Set<string>()
-  );
 
   const rootNodes = useMemo<readonly TscnNode[]>(() => {
     if (!sceneGraph) return [];
     return sceneGraph.scenes.get(sceneGraph.rootScene)?.nodes ?? [];
+  }, [sceneGraph]);
+
+  // WI-HALL-1: the root scene's externalResources are how
+  // `node.instance = ExtResource("id")` references get resolved to a
+  // `res://` path. Threaded into every TreeNode so each row can
+  // attempt sub-scene resolution on its own without re-reading the
+  // sceneGraph.
+  const externalResources = useMemo<readonly TscnExternalResource[]>(() => {
+    if (!sceneGraph) return [];
+    return sceneGraph.scenes.get(sceneGraph.rootScene)?.externalResources ?? [];
   }, [sceneGraph]);
 
   const term = searchTerm.trim().toLowerCase();
@@ -63,18 +70,6 @@ export function SceneTreeViewer({ onNodeReveal }: SceneTreeViewerProps) {
   const handleCollapseAll = useCallback(() => {
     setExpandedNodePaths(new Set());
   }, [setExpandedNodePaths]);
-
-  const handleToggleVisibility = useCallback((path: string) => {
-    setHiddenNodePaths((prev) => {
-      const next = new Set(prev);
-      if (next.has(path)) {
-        next.delete(path);
-      } else {
-        next.add(path);
-      }
-      return next;
-    });
-  }, []);
 
   const handleSearchChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
@@ -103,21 +98,21 @@ export function SceneTreeViewer({ onNodeReveal }: SceneTreeViewerProps) {
         />
         <button
           type="button"
-          className={styles.controlBtn}
+          className={`${styles.controlBtn} ${styles.iconBtn}`}
           onClick={handleExpandAll}
           aria-label="Expand all"
           title="Expand all"
         >
-          Expand
+          <span aria-hidden="true">⊞</span>
         </button>
         <button
           type="button"
-          className={styles.controlBtn}
+          className={`${styles.controlBtn} ${styles.iconBtn}`}
           onClick={handleCollapseAll}
           aria-label="Collapse all"
           title="Collapse all"
         >
-          Collapse
+          <span aria-hidden="true">⊟</span>
         </button>
       </div>
 
@@ -134,9 +129,10 @@ export function SceneTreeViewer({ onNodeReveal }: SceneTreeViewerProps) {
               parentPath=""
               depth={0}
               hiddenNodePaths={hiddenNodePaths}
-              onToggleVisibility={handleToggleVisibility}
+              onToggleVisibility={toggleHidden}
               onNodeReveal={onNodeReveal}
               matches={matches}
+              externalResources={externalResources}
             />
           ))
         )}

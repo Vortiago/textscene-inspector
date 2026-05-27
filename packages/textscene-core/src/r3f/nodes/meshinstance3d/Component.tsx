@@ -32,7 +32,6 @@ import {
 } from '../../SceneResourcesContext';
 import { parseResourceReference } from '../../../resources/SubResourceResolver';
 import { useResource } from '../../../resources/useResource';
-import { InternalTextLabel } from '../../internalTextLabel';
 import { MeshGeometry } from './meshGeometry';
 import {
   parseStandardMaterial3DScalars,
@@ -211,28 +210,24 @@ export function MeshInstance3D({ node }: NodeComponentProps) {
     );
   }
 
-  // Missing texture: magenta placeholder material + floating drei <Text>
-  // showing the missing path.
+  // Missing texture: magenta placeholder material. Gap 12 (WI-UX-3):
+  // the in-3D floating label was redundant once the DOM
+  // `<MissingResourcesPanel>` lists every missing path. `firstMissingPath`
+  // is still used for the placeholder branch trigger.
   if (firstMissingPath !== null) {
     return (
-      <group
+      <mesh
         name={node.name}
         position={position}
         rotation={rotation}
         scale={scale}
         visible={visible}
+        castShadow={castShadow}
+        receiveShadow
       >
-        <mesh castShadow={castShadow} receiveShadow>
-          <MeshGeometry resource={meshResource} />
-          <meshStandardMaterial color="magenta" />
-        </mesh>
-        <InternalTextLabel
-          text={`${firstMissingPath} missing`}
-          position={[0, 1.2, 0]}
-          fontSize={0.18}
-          outlineWidth={0.01}
-        />
-      </group>
+        <MeshGeometry resource={meshResource} />
+        <meshStandardMaterial color="magenta" />
+      </mesh>
     );
   }
 
@@ -256,6 +251,7 @@ export function MeshInstance3D({ node }: NodeComponentProps) {
         emissiveMap={emissiveMap}
         aoMap={aoMap}
         shadowSide={shadowFlags.shadowSide}
+        meshType={meshResource.type}
         // Multi-surface meshes (slot N>0 populated): attach the primary
         // material at `material-0` so R3F builds an array and the
         // secondary slots can land at `material-N`. Single-surface meshes
@@ -334,6 +330,15 @@ interface MaterialSlotProps {
   aoMap?: THREE.Texture;
   /** Override for shadow-pass side culling (Godot DOUBLE_SIDED cast_shadow). */
   shadowSide?: THREE.Side;
+  /**
+   * The underlying mesh type (PlaneMesh, BoxMesh, etc.). Used by
+   * WI-HALL-6 to default Canvas / poster / wall PlaneMeshes to
+   * `THREE.DoubleSide` when the source material did not explicitly set
+   * `cull_mode`. Godot's PlaneMesh is single-sided by default, but in
+   * the hallway photo-frame fixture a 90° Y rotation flips the plane's
+   * normal away from the camera, so the photo would silently back-cull.
+   */
+  meshType?: string;
   /** R3F attach key — `material-0` for multi-surface meshes. */
   attach?: string;
 }
@@ -347,15 +352,20 @@ function MaterialSlot({
   emissiveMap,
   aoMap,
   shadowSide,
+  meshType,
   attach,
 }: MaterialSlotProps) {
   if (!scalars) {
+    // No material → also apply the PlaneMesh DoubleSide default so a
+    // raw textureless PlaneMesh doesn't disappear under a 90° rotation
+    // (same defensive logic as the with-material branch below).
     return (
       <meshStandardMaterial
         attach={attach}
         color={0xcccccc}
         metalness={0.3}
         roughness={0.7}
+        side={meshType === 'PlaneMesh' ? THREE.DoubleSide : THREE.FrontSide}
         shadowSide={shadowSide ?? null}
       />
     );
@@ -363,6 +373,17 @@ function MaterialSlot({
   // normalScale is a THREE.Vector2; we materialize one matching the
   // parsed scalar so the meshStandardMaterial slot picks it up on render.
   const normalScale = new THREE.Vector2(scalars.normalScale.x, scalars.normalScale.y);
+  // WI-HALL-6: PlaneMesh-backed Canvas planes default to DoubleSide
+  // when the source material did not explicitly set `cull_mode`.
+  // The hallway photo-frame fixture rotates each Canvas plane 90°
+  // around Y so the photo would face away from the camera and back-
+  // cull into invisibility under Godot's default BACK culling. When
+  // the user did pick a `cull_mode` we respect it verbatim — this is
+  // a default-fallback, not an override.
+  const effectiveSide =
+    meshType === 'PlaneMesh' && !scalars.cullModeExplicit
+      ? THREE.DoubleSide
+      : scalars.side;
   // The material's shader needs to be recompiled whenever the set of
   // active texture maps changes — three.js bakes `USE_MAP` / `USE_NORMALMAP`
   // / etc. into shader defines at first compile, so adding a texture
@@ -387,7 +408,7 @@ function MaterialSlot({
       transparent={scalars.transparent}
       opacity={scalars.opacity}
       blending={scalars.blending}
-      side={scalars.side}
+      side={effectiveSide}
       shadowSide={shadowSide ?? null}
       map={albedoMap ?? null}
       normalMap={normalMap ?? null}

@@ -41,10 +41,16 @@ function applyUVTransform(texture: THREE.Texture, properties: StandardMaterial3D
 export function createStandardMaterial(properties: StandardMaterial3DProperties): THREE.MeshStandardMaterial {
   const materialOptions: THREE.MeshStandardMaterialParameters = {};
 
-  // Map albedo_color to THREE.js color
+  // Map albedo_color to THREE.js color. WI-HALL-2: Godot stores colors
+  // in sRGB; three.js treats `new THREE.Color(r,g,b)` arguments as
+  // linear. Without the conversion, mid-tone reds (e.g. Color(0.545,
+  // 0.117, 0.117, 1) — dark red #8B1E1E in Godot) render as bright
+  // saturated pink. Call `convertSRGBToLinear()` to undo the implicit
+  // linearisation that three.js's shader output otherwise re-applies
+  // via the renderer's outputColorSpace = SRGB.
   if (properties.albedo_color) {
     const { r, g, b, a } = properties.albedo_color;
-    materialOptions.color = new THREE.Color(r, g, b);
+    materialOptions.color = new THREE.Color(r, g, b).convertSRGBToLinear();
 
     // Handle transparency
     if (a < 1.0) {

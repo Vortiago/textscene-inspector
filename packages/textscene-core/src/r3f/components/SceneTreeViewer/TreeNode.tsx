@@ -3,10 +3,11 @@
  * `<SceneTreeViewer>` — not exported from the package.
  */
 import { memo, type MouseEvent } from 'react';
-import type { TscnNode } from '../../../parser/types.js';
+import type { TscnNode, TscnExternalResource } from '../../../parser/types.js';
 import { joinPath } from '../../../utils/nodePath.js';
 import { nodeRegistry } from '../../../core/NodeRegistry.js';
 import { useSelection } from '../../contexts/SelectionContext.js';
+import { useSubSceneChildren } from './useSubSceneChildren.js';
 import styles from './SceneTreeViewer.module.css';
 
 const TYPE_BADGE_CLASS: Record<string, string> = {
@@ -49,6 +50,14 @@ export interface TreeNodeProps {
   onToggleVisibility: (path: string) => void;
   onNodeReveal?: (path: string, node: TscnNode) => void;
   matches: (node: TscnNode) => boolean;
+  /**
+   * WI-HALL-1: the host scene's externalResources, used to resolve
+   * `node.instance = ExtResource("id")` references against the
+   * `res://` path of the referenced PackedScene. Threaded down from
+   * `SceneTreeViewer` so every TreeNode can attempt sub-scene
+   * resolution without re-reading HierarchyContext.
+   */
+  externalResources: readonly TscnExternalResource[];
 }
 
 function TreeNodeImpl({
@@ -59,9 +68,20 @@ function TreeNodeImpl({
   onToggleVisibility,
   onNodeReveal,
   matches,
+  externalResources,
 }: TreeNodeProps) {
   const nodePath = joinPath(parentPath, node.name);
-  const hasChildren = node.children.length > 0;
+
+  // WI-HALL-1: dynamically-loaded sub-scene children (when this node
+  // has `instance = ExtResource("...")`). Returns null for non-instance
+  // rows or while the sub-scene is still loading; treated as an empty
+  // list for rendering. The `useResource` hook inside subscribes to the
+  // scene event bus, so the tree re-renders automatically when the
+  // sub-scene arrives.
+  const subSceneChildren = useSubSceneChildren(node, externalResources);
+  const inlineChildren = node.children;
+  const dynamicChildren = subSceneChildren ?? [];
+  const hasChildren = inlineChildren.length > 0 || dynamicChildren.length > 0;
 
   const {
     selectedNodePath,
@@ -159,37 +179,39 @@ function TreeNodeImpl({
 
         <span className={styles.nodeName}>{node.name}</span>
 
-        {hasTransform(node) && (
-          <span className={styles.transformIcon} title="Has transform">
-            ⌖
-          </span>
-        )}
+        <span className={styles.glyphs}>
+          {hasTransform(node) && (
+            <span className={styles.transformIcon} title="Has transform">
+              ⌖
+            </span>
+          )}
 
-        {node.instance && sourcePath && (
-          <span
-            className={styles.instanceIcon}
-            title={`External scene: ${sourcePath}${isInstanceRoot ? ' (instance root)' : ''}`}
+          {node.instance && sourcePath && (
+            <span
+              className={styles.instanceIcon}
+              title={`External scene: ${sourcePath}${isInstanceRoot ? ' (instance root)' : ''}`}
+            >
+              📦
+            </span>
+          )}
+
+          <button
+            type="button"
+            className={styles.visibilityIcon}
+            onClick={handleToggleVisibility}
+            title={isHidden ? 'Click to show' : 'Click to hide'}
+            aria-label={isHidden ? 'Show node' : 'Hide node'}
           >
-            📦
-          </span>
-        )}
-
-        <button
-          type="button"
-          className={styles.visibilityIcon}
-          onClick={handleToggleVisibility}
-          title={isHidden ? 'Click to show' : 'Click to hide'}
-          aria-label={isHidden ? 'Show node' : 'Hide node'}
-        >
-          {isHidden ? '🙈' : '👁️'}
-        </button>
+            {isHidden ? '🙈' : '👁️'}
+          </button>
+        </span>
       </div>
 
       {hasChildren && isExpanded && (
         <div className={styles.children} role="group">
-          {node.children.filter(matches).map((child) => (
+          {inlineChildren.filter(matches).map((child) => (
             <TreeNode
-              key={child.name}
+              key={`inline:${child.name}`}
               node={child}
               parentPath={nodePath}
               depth={depth + 1}
@@ -197,6 +219,24 @@ function TreeNodeImpl({
               onToggleVisibility={onToggleVisibility}
               onNodeReveal={onNodeReveal}
               matches={matches}
+              externalResources={externalResources}
+            />
+          ))}
+          {dynamicChildren.filter(matches).map((child) => (
+            <TreeNode
+              // Different key namespace from inline children so a name
+              // collision (an inline child sharing a name with a sub-scene
+              // root) doesn't trigger React's "two children with the same
+              // key" warning.
+              key={`subscene:${child.name}`}
+              node={child}
+              parentPath={nodePath}
+              depth={depth + 1}
+              hiddenNodePaths={hiddenNodePaths}
+              onToggleVisibility={onToggleVisibility}
+              onNodeReveal={onNodeReveal}
+              matches={matches}
+              externalResources={externalResources}
             />
           ))}
         </div>

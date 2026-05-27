@@ -1,257 +1,113 @@
 /**
- * AnimationPlayer strict validators for linting
+ * AnimationPlayer strict validators for linting.
+ * Migrated to the declarative `v` namespace (WI-ARCH-1).
  *
- * Registers property validators that check format and value constraints.
+ * `speed_scale`, `autoplay`, and `root_node` keep bespoke validators
+ * because they encode multi-branch business rules (zero-prohibition +
+ * magnitude bounds for speed_scale; empty-string rejection for
+ * autoplay/root_node after stripping quote characters).
  */
 
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
+import { v } from '../../../linter/validators/index.js';
+import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 
-// Constants for validation ranges
 const MIN_PLAYBACK_SPEED = 0.0001;
 const MAX_PLAYBACK_SPEED = 1000;
 
+const PROCESS_MODE = { 0: 'PHYSICS', 1: 'IDLE', 2: 'MANUAL' };
+const METHOD_CALL_MODE = { 0: 'DEFERRED', 1: 'IMMEDIATE' };
+
+const speedScaleValidator: PropertyValidator = (key, value, line) => {
+  const num = parseFloat(value);
+  if (isNaN(num)) {
+    return {
+      severity: 'error',
+      message: `Property 'speed_scale' must be a number, got: "${value}"`,
+      line,
+      column: key.length + 3,
+      code: 'INVALID_SPEED_SCALE_FORMAT',
+    };
+  }
+  if (num === 0) {
+    return {
+      severity: 'error',
+      message: `Property 'speed_scale' cannot be 0 (got ${num}). Zero speed will prevent animation from advancing.`,
+      line,
+      column: key.length + 3,
+      code: 'INVALID_SPEED_SCALE_ZERO',
+    };
+  }
+  if (num > 0 && num < MIN_PLAYBACK_SPEED) {
+    return {
+      severity: 'error',
+      message: `Property 'speed_scale' is too small (${num}). Values less than ${MIN_PLAYBACK_SPEED} are impractical.`,
+      line,
+      column: key.length + 3,
+      code: 'INVALID_SPEED_SCALE_TOO_SMALL',
+    };
+  }
+  if (Math.abs(num) > MAX_PLAYBACK_SPEED) {
+    return {
+      severity: 'error',
+      message: `Property 'speed_scale' is too large (${num}). Values above ${MAX_PLAYBACK_SPEED} are impractical.`,
+      line,
+      column: key.length + 3,
+      code: 'INVALID_SPEED_SCALE_TOO_LARGE',
+    };
+  }
+  return null;
+};
+
+/** Bespoke: must be a non-empty string (quote-stripped). */
+function nonEmptyQuotedString(
+  _propertyName: string,
+  emptyMessage: string,
+  code: string
+): PropertyValidator {
+  return (key, value, line) => {
+    const strValue = value.replace(/^["']|["']$/g, '').trim();
+    if (strValue.length === 0) {
+      return {
+        severity: 'error',
+        message: emptyMessage,
+        line,
+        column: key.length + 3,
+        code,
+      };
+    }
+    return null;
+  };
+}
+
 validatorRegistry.registerAll('AnimationPlayer', {
-  /**
-   * Validate speed_scale property
-   * Must be > 0 (negative values are technically allowed in Godot but cause reverse playback)
-   */
-  'speed_scale': (key, value, line) => {
-    const num = parseFloat(value);
-    if (isNaN(num)) {
-      return {
-        severity: 'error',
-        message: `Property 'speed_scale' must be a number, got: "${value}"`,
-        line,
-        column: key.length + 3,
-        code: 'INVALID_SPEED_SCALE_FORMAT',
-      };
-    }
-    if (num === 0) {
-      return {
-        severity: 'error',
-        message: `Property 'speed_scale' cannot be 0 (got ${num}). Zero speed will prevent animation from advancing.`,
-        line,
-        column: key.length + 3,
-        code: 'INVALID_SPEED_SCALE_ZERO',
-      };
-    }
-    if (num > 0 && num < MIN_PLAYBACK_SPEED) {
-      return {
-        severity: 'error',
-        message: `Property 'speed_scale' is too small (${num}). Values less than ${MIN_PLAYBACK_SPEED} are impractical.`,
-        line,
-        column: key.length + 3,
-        code: 'INVALID_SPEED_SCALE_TOO_SMALL',
-      };
-    }
-    if (Math.abs(num) > MAX_PLAYBACK_SPEED) {
-      return {
-        severity: 'error',
-        message: `Property 'speed_scale' is too large (${num}). Values above ${MAX_PLAYBACK_SPEED} are impractical.`,
-        line,
-        column: key.length + 3,
-        code: 'INVALID_SPEED_SCALE_TOO_LARGE',
-      };
-    }
-    return null;
-  },
-
-  /**
-   * Validate playback_default_blend_time property
-   * Must be >= 0 (blend time in seconds)
-   */
-  'playback_default_blend_time': (key, value, line) => {
-    const num = parseFloat(value);
-    if (isNaN(num)) {
-      return {
-        severity: 'error',
-        message: `Property 'playback_default_blend_time' must be a number, got: "${value}"`,
-        line,
-        column: key.length + 3,
-        code: 'INVALID_BLEND_TIME_FORMAT',
-      };
-    }
-    if (num < 0) {
-      return {
-        severity: 'error',
-        message: `Property 'playback_default_blend_time' must be >= 0 (got ${num}). Negative blend times are invalid.`,
-        line,
-        column: key.length + 3,
-        code: 'INVALID_BLEND_TIME_NEGATIVE',
-      };
-    }
-    return null;
-  },
-
-  /**
-   * Validate playback_process_mode property
-   * Must be 0-2: PHYSICS=0, IDLE=1, MANUAL=2
-   */
-  'playback_process_mode': (key, value, line) => {
-    const num = parseInt(value, 10);
-    if (isNaN(num)) {
-      return {
-        severity: 'error',
-        message: `Property 'playback_process_mode' must be a number, got: "${value}"`,
-        line,
-        column: key.length + 3,
-        code: 'INVALID_PROCESS_MODE_FORMAT',
-      };
-    }
-    if (num < 0 || num > 2) {
-      return {
-        severity: 'error',
-        message: `Property 'playback_process_mode' must be 0-2 (got ${num}). Valid values: 0=PHYSICS, 1=IDLE, 2=MANUAL`,
-        line,
-        column: key.length + 3,
-        code: 'INVALID_PROCESS_MODE_VALUE',
-      };
-    }
-    return null;
-  },
-
-  /**
-   * Validate method_call_mode property
-   * Must be 0-1: DEFERRED=0, IMMEDIATE=1
-   */
-  'method_call_mode': (key, value, line) => {
-    const num = parseInt(value, 10);
-    if (isNaN(num)) {
-      return {
-        severity: 'error',
-        message: `Property 'method_call_mode' must be a number, got: "${value}"`,
-        line,
-        column: key.length + 3,
-        code: 'INVALID_METHOD_CALL_MODE_FORMAT',
-      };
-    }
-    if (num < 0 || num > 1) {
-      return {
-        severity: 'error',
-        message: `Property 'method_call_mode' must be 0-1 (got ${num}). Valid values: 0=DEFERRED, 1=IMMEDIATE`,
-        line,
-        column: key.length + 3,
-        code: 'INVALID_METHOD_CALL_MODE_VALUE',
-      };
-    }
-    return null;
-  },
-
-  /**
-   * Validate playback_active property
-   * Must be a boolean (true or false)
-   */
-  'playback_active': (key, value, line) => {
-    if (value !== 'true' && value !== 'false') {
-      return {
-        severity: 'error',
-        message: `Property 'playback_active' must be a boolean (true or false), got: "${value}"`,
-        line,
-        column: key.length + 3,
-        code: 'INVALID_PLAYBACK_ACTIVE_FORMAT',
-      };
-    }
-    return null;
-  },
-
-  /**
-   * Validate autoplay property
-   * Must be a string (animation name) - format check only, semantic check in linter.ts
-   */
-  'autoplay': (key, value, line) => {
-    // String validation - check if it's an empty string literal
-    const strValue = value.replace(/^["']|["']$/g, '').trim();
-    if (strValue.length === 0) {
-      return {
-        severity: 'error',
-        message: `Property 'autoplay' cannot be empty. Specify a valid animation name.`,
-        line,
-        column: key.length + 3,
-        code: 'INVALID_AUTOPLAY_EMPTY',
-      };
-    }
-    return null;
-  },
-
-  /**
-   * Validate current_animation property
-   * Must be a string (animation name) - can be empty to indicate no animation
-   */
-  'current_animation': (_key, _value, _line) => {
-    // String value - no format constraints needed
-    return null;
-  },
-
-  /**
-   * Validate root_node property
-   * Must be a NodePath string - semantic validation in linter.ts
-   */
-  'root_node': (key, value, line) => {
-    // NodePath validation - must be a non-empty string
-    const strValue = value.replace(/^["']|["']$/g, '').trim();
-    if (strValue.length === 0) {
-      return {
-        severity: 'error',
-        message: `Property 'root_node' cannot be empty. Specify a valid NodePath.`,
-        line,
-        column: key.length + 3,
-        code: 'INVALID_ROOT_NODE_EMPTY',
-      };
-    }
-    return null;
-  },
-
-  /**
-   * Validate current_animation_length property
-   * Read-only runtime property, but if present must be >= 0
-   */
-  'current_animation_length': (key, value, line) => {
-    const num = parseFloat(value);
-    if (isNaN(num)) {
-      return {
-        severity: 'error',
-        message: `Property 'current_animation_length' must be a number, got: "${value}"`,
-        line,
-        column: key.length + 3,
-        code: 'INVALID_ANIMATION_LENGTH_FORMAT',
-      };
-    }
-    if (num < 0) {
-      return {
-        severity: 'error',
-        message: `Property 'current_animation_length' must be >= 0 (got ${num})`,
-        line,
-        column: key.length + 3,
-        code: 'INVALID_ANIMATION_LENGTH_NEGATIVE',
-      };
-    }
-    return null;
-  },
-
-  /**
-   * Validate current_animation_position property
-   * Read-only runtime property, but if present must be >= 0
-   */
-  'current_animation_position': (key, value, line) => {
-    const num = parseFloat(value);
-    if (isNaN(num)) {
-      return {
-        severity: 'error',
-        message: `Property 'current_animation_position' must be a number, got: "${value}"`,
-        line,
-        column: key.length + 3,
-        code: 'INVALID_ANIMATION_POSITION_FORMAT',
-      };
-    }
-    if (num < 0) {
-      return {
-        severity: 'error',
-        message: `Property 'current_animation_position' must be >= 0 (got ${num})`,
-        line,
-        column: key.length + 3,
-        code: 'INVALID_ANIMATION_POSITION_NEGATIVE',
-      };
-    }
-    return null;
-  },
+  speed_scale: speedScaleValidator,
+  // Custom message preserves the legacy ">= 0" wording (the per-node test
+  // asserts that exact phrase).
+  playback_default_blend_time: v.float('playback_default_blend_time', {
+    min: 0,
+    message: "Property 'playback_default_blend_time' must be >= 0. Negative blend times are invalid.",
+  }),
+  playback_process_mode: v.enumInt('playback_process_mode', 0, 2, PROCESS_MODE),
+  method_call_mode: v.enumInt('method_call_mode', 0, 1, METHOD_CALL_MODE),
+  playback_active: v.boolean('playback_active'),
+  autoplay: nonEmptyQuotedString(
+    'autoplay',
+    "Property 'autoplay' cannot be empty. Specify a valid animation name.",
+    'INVALID_AUTOPLAY_EMPTY'
+  ),
+  current_animation: () => null,
+  root_node: nonEmptyQuotedString(
+    'root_node',
+    "Property 'root_node' cannot be empty. Specify a valid NodePath.",
+    'INVALID_ROOT_NODE_EMPTY'
+  ),
+  current_animation_length: v.float('current_animation_length', {
+    min: 0,
+    message: "Property 'current_animation_length' must be >= 0",
+  }),
+  current_animation_position: v.float('current_animation_position', {
+    min: 0,
+    message: "Property 'current_animation_position' must be >= 0",
+  }),
 });

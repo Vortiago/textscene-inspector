@@ -19,6 +19,7 @@ import type { TscnScene } from '../parser/types';
 import type { ResourceEventBus, ResourceType as BusResourceType } from './ResourceEventBus';
 import { cloneWithMaterials } from './processing/glbProcessing';
 import { ResourceLoaderContext } from './ResourceLoaderContext';
+import { useMissingResources } from '../r3f/contexts/MissingResourcesContext';
 
 export type ResourceType = 'Texture2D' | 'StandardMaterial3D' | 'GLBMesh' | 'PackedScene';
 export type ResourceStatus = 'pending' | 'loaded' | 'missing' | 'error';
@@ -52,9 +53,9 @@ interface ProcessorAccess<T> {
 }
 
 /**
- * Return the processor (or scene-loader facade) appropriate for the
- * given resource type. PackedScene routes through SceneLoader, which has
- * a slightly different API surface; we adapt it here.
+ * Return the processor appropriate for the given resource type. Post
+ * WI-ARCH-2 all four resource types are normal `ResourceProcessor<T>`
+ * instances on the loader; PackedScene no longer needs its own adapter.
  */
 function getProcessorAccess<T>(
   loader: NonNullable<ReturnType<typeof useResourceLoader>>,
@@ -68,10 +69,7 @@ function getProcessorAccess<T>(
     case 'GLBMesh':
       return loader.glbMeshes as unknown as ProcessorAccess<T>;
     case 'PackedScene':
-      return {
-        getCached: (path) => loader.getSceneCached(path) as T | null | undefined,
-        request: (path) => loader.requestScene(path),
-      };
+      return loader.scenes as unknown as ProcessorAccess<T>;
   }
 }
 
@@ -89,6 +87,7 @@ export function useResourceLoader() {
  */
 export function useResource<T>(path: string, type: ResourceType): ResourceResult<T> {
   const loader = useResourceLoader();
+  const missingResources = useMissingResources();
   const [result, setResult] = useState<ResourceResult<T>>(() => ({
     value: undefined,
     status: 'pending',
@@ -215,6 +214,49 @@ export function useResource<T>(path: string, type: ResourceType): ResourceResult
       eventBus.off<Error>(busType, 'failed', onFailed);
     };
   }, [loader, path, type]);
+
+  // Aggregate missing-path reporting (WI-UX-3 / WI-UX-6). Runs on every
+  // status transition for the current path. The context's default value
+  // is a no-op when no provider is mounted, so consumers outside a shell
+  // (e.g. linter callers, isolated unit tests) pay no cost.
+  //
+  // Pull the action callbacks out of the context object — they're
+  // useCallback'd inside the provider and so are stable across re-renders.
+  // Depending on the whole `missingResources` object would re-run this
+  // effect on every state change inside the provider (the missingPaths
+  // set itself), creating an infinite render loop.
+  const reportMissing = missingResources.report;
+  const clearMissing = missingResources.clear;
+  const markUploaded = missingResources.markUploaded;
+
+  // Track whether THIS hook instance has ever reported its current path
+  // as missing. WI-UX-6: when status flips missing → loaded the user just
+  // uploaded the file, and the panel should keep the row visible (with
+  // the uploaded ✓ state) so they know what they fixed. But paths that
+  // load on first request (normal fixture resources) never went through
+  // `missing`, and should NOT appear as uploaded rows. The ref keeps the
+  // distinction per-(path) inside the hook.
+  const reportedMissingForPathRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!path) return;
+    if (result.status === 'missing') {
+      reportMissing(path);
+      reportedMissingForPathRef.current = path;
+      return () => clearMissing(path);
+    }
+    if (result.status === 'loaded') {
+      if (reportedMissingForPathRef.current === path) {
+        // User-uploaded path — leave it visible in the panel as
+        // `uploaded ✓` so the Remove affordance stays reachable.
+        markUploaded(path);
+        reportedMissingForPathRef.current = null;
+      } else {
+        clearMissing(path);
+      }
+    }
+    return undefined;
+  }, [path, result.status, reportMissing, clearMissing, markUploaded]);
 
   return result;
 }
