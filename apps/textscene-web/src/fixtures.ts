@@ -306,6 +306,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Primitive Meshes"
   },
   {
+    "name": "Animation Player",
+    "file": "unit-animation-player.tscn",
+    "category": "Unit - Basic Nodes"
+  },
+  {
     "name": "Camera Basic",
     "file": "unit-camera-basic.tscn",
     "category": "Unit - Basic Nodes"

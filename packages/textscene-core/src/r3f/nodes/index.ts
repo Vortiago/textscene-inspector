@@ -19,6 +19,8 @@ import './worldenvironment';
 import './label3d';
 import './sprite3d';
 import './audio/audiostreamplayer3d';
+import './animation/animationplayer';
+import './animation/animationtree';
 import './glb-scene-root';
 
 export { GenericNodeFallback } from './generic-node-fallback';

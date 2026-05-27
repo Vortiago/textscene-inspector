@@ -15,6 +15,8 @@ import '../nodes/3d/camera3d/index.js';
 import '../nodes/3d/label3d/index.js';
 import '../nodes/3d/sprite3d/index.js';
 import '../nodes/audio/audiostreamplayer3d/index.js';
+import '../nodes/animation/animationplayer/index.js';
+import '../nodes/animation/animationtree/index.js';
 import '../nodes/3d/lights/spotlight3d/index.js';
 import '../nodes/3d/lights/directionallight3d/index.js';
 import '../nodes/3d/lights/omnilight3d/index.js';
