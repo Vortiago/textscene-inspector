@@ -56,7 +56,8 @@
   "scripts": {
     "vscode:prepublish": "pnpm --filter @textscene/core build && pnpm build -- --skip-tests",
     "prebuild": "pnpm --filter @textscene/core build",
-    "build": "node esbuild.config.mjs",
+    "build": "node esbuild.config.mjs --production --skip-tests",
+    "build:dev": "node esbuild.config.mjs",
     "predev": "pnpm --filter @textscene/core build",
     "dev": "node esbuild.config.mjs --watch",
     "test": "pnpm test:unit && pnpm test:integration",

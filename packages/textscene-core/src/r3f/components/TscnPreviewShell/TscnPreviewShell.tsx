@@ -7,7 +7,7 @@
  *
  * Replaces the imperative `packages/textscene-core/src/ui/TscnPreviewUI.ts`.
  */
-import { useEffect, useMemo, useRef, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { TscnParser } from '../../../parser/TscnParser.js';
 import { SceneGraphBuilder } from '../../../core/SceneGraphBuilder.js';
 import { tscnSceneToParsedScene } from '../../../core/SceneGraph.js';
@@ -18,11 +18,26 @@ import { SelectionProvider, useSelection } from '../../contexts/SelectionContext
 import { CameraControlProvider } from '../../contexts/CameraControlContext.js';
 import { MissingResourcesProvider } from '../../contexts/MissingResourcesContext.js';
 import { TscnCanvas } from '../../TscnCanvas.js';
-import { SceneTreeViewer } from '../SceneTreeViewer/SceneTreeViewer.js';
-import { NodeDetailsPanel } from '../NodeDetailsPanel/NodeDetailsPanel.js';
 import { MissingResourcesPanel } from '../MissingResourcesPanel/MissingResourcesPanel.js';
 import { SceneInfoCard } from '../SceneInfoCard/SceneInfoCard.js';
 import styles from './TscnPreviewShell.module.css';
+
+// WI-R3F-18 bundle reduction: lazy-load the DOM panels so they don't
+// land in the initial canvas-paint bundle. The first frame doesn't
+// need either panel — they hydrate after the canvas is up. Each is a
+// `React.lazy` of the module's default export; the underlying file
+// re-exports the named component as the default to satisfy that
+// contract.
+const SceneTreeViewer = lazy(() =>
+  import('../SceneTreeViewer/SceneTreeViewer.js').then((m) => ({
+    default: m.SceneTreeViewer,
+  }))
+);
+const NodeDetailsPanel = lazy(() =>
+  import('../NodeDetailsPanel/NodeDetailsPanel.js').then((m) => ({
+    default: m.NodeDetailsPanel,
+  }))
+);
 
 const DEFAULT_ROOT_SCENE_PATH = 'res://__inline__.tscn';
 
@@ -131,7 +146,17 @@ export function TscnPreviewShell({
   } else if (sceneGraph === null) {
     treeBody = <div className={styles.loading}>Loading scene…</div>;
   } else {
-    treeBody = <SceneTreeViewer onNodeReveal={onNodeReveal} />;
+    treeBody = (
+      <Suspense
+        fallback={
+          <div className={styles.loading} aria-busy="true">
+            Loading tree…
+          </div>
+        }
+      >
+        <SceneTreeViewer onNodeReveal={onNodeReveal} />
+      </Suspense>
+    );
   }
 
   return (
@@ -161,7 +186,15 @@ export function TscnPreviewShell({
                   )}
                   <div className={styles.treePane}>{treeBody}</div>
                   <div className={styles.detailsPane}>
-                    <NodeDetailsPanel />
+                    <Suspense
+                      fallback={
+                        <div className={styles.loading} aria-busy="true">
+                          Loading details…
+                        </div>
+                      }
+                    >
+                      <NodeDetailsPanel />
+                    </Suspense>
                   </div>
                 </aside>
               </div>

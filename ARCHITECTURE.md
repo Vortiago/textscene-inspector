@@ -173,33 +173,52 @@ Spike-validated stack:
 ### Bundle Size Target
 
 The PRD acceptance for WI-R3F-6 was "VS Code webview bundle no larger
-than `main + 200 KB gzipped`". Measured:
+than `main + 200 KB gzipped`". History:
 
-- `main` baseline:  1,429,646 B raw / 247,543 B gzipped
-- `feat/r3f-migration` after WI-R3F-6:  3,691,702 B raw / 638,980 B gzipped
-- Delta: +2.16 MB raw / **+382 KB gzipped** — **+182 KB over budget**.
+- `main` baseline: 1,429,646 B raw / **247,543 B gzipped**
+- WI-R3F-6 (iife, no code-splitting): 3,691,702 B raw / **638,980 B gzipped** — +382 KB gz, **+182 KB over budget**
+- **WI-R3F-18 (ESM + splitting + React.lazy panels)**: initial-paint static-import closure is **1,357,273 B raw / 390,322 B gzipped** — **+143 KB gz vs main**, **57 KB under the +200 KB budget** ✅
 
-The overshoot is intrinsic to the React + R3F + drei + full three.js
-surface that the migration adds. esbuild bundles everything into one
-IIFE entry for the VS Code webview; code-splitting drei or three would
-require switching the webview build to ESM output, which Code's
-webview shell does support but is invasive to land alongside this PR.
-The cleanup work in this WI reclaimed ~362 KB raw / 61 KB gzipped from
-the WI-R3F-5 peak; further reductions would need either:
+WI-R3F-18 closed the gap with three combined changes:
 
-1. **Subset three.js imports**: only pull in the constructors actually
-   referenced, instead of the full namespace. Three is the largest
-   contributor.
-2. **Lazy-load the R3F panels**: split `<NodeDetailsPanel>` and
-   `<SceneTreeViewer>` into separate chunks that load after the
-   canvas. Modest impact since they're not the largest weight.
-3. **Switch the webview to ESM build**: would let esbuild emit
-   multiple chunks; combine with `await import(...)` in `<TscnCanvas>`
-   to defer drei.
+1. **Webview build flipped from `iife` to `esm` + `splitting`**
+   (`apps/textscene-vscode/esbuild.config.mjs`). iife couldn't
+   code-split — every transitive import landed in one bundle. ESM
+   with splitting emits `dist/webview/webview.js` (entry) plus
+   `dist/webview/chunks/*.js` (shared + lazy chunks).
+2. **DOM panels lazy-loaded via `React.lazy` + `<Suspense>`**
+   (`packages/textscene-core/src/r3f/components/TscnPreviewShell/TscnPreviewShell.tsx`).
+   `<SceneTreeViewer>` and `<NodeDetailsPanel>` are no longer in the
+   initial static-import closure; they load on demand with a
+   `Loading tree…` / `Loading details…` fallback while resolving.
+3. **CSP + html template updated for ESM** — `<script type="module">`
+   and `script-src ${cspSource}` (in addition to the nonce'd entry)
+   so the webview can fetch chunk URIs.
 
-This is intentionally documented rather than fixed because each option
-above is a follow-up WI in its own right and the user / team should
-decide which trade-off matches the priority.
+The initial chunk now contains: React, react-three-fiber, drei
+runtime, three.js, the scene canvas (`<TscnCanvas>`), the node
+component registry (registers all node types on import), the
+resource pipeline, contexts, and selection. The lazy chunks
+contain: the tree viewer, the details panel, and the CSS modules
+they own.
+
+**Bundle-size guard.** `scripts/check-bundle-size.mjs` walks the
+static-import closure starting at `webview.js`, gzips the
+concatenation, and compares against `main + 200 KB`. Wired into
+`pnpm validate` and runs informationally (warn-only) for now. Once
+follow-up WIs land without regressing the figure, flip to
+`--enforce` for hard-fail in CI.
+
+**Status of the budget gate.** As of this commit, the build PASSes
+with 55.9 KB headroom under the budget. The recommendation for
+PR-merge readiness: the gate is already structurally enforceable.
+The reason to keep it warn-only until at least one follow-up WI
+lands is that the headroom is thin (~14% of the budget) and any
+of these would push back over: a drei addition (e.g. effects
+postprocessing), a new top-level component import in
+`<TscnCanvas>`, or a node type that pulls in a new dependency at
+the registry-load step. Flipping to `--enforce` should happen after
+WI-R3F-16 (audio/animation) lands and the budget is re-verified.
 
 ### Known limitations
 
