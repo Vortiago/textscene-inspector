@@ -268,6 +268,31 @@ describe('transform utils', () => {
       });
 
 
+      it('ShortWall with origin: FACE_X vertex (0,0,1) maps to world x≈6 (12-unit wide wall)', () => {
+        // Full ShortWall transform including origin=(0,0,1.75).
+        // Decompose gives scale.z=6, rotation.y=+π/2, position=(0,0,1.75).
+        // Applying that TRS to local (0, 0, 1):
+        //   after scale:    (0, 0, 6)
+        //   after Ry(+π/2): (6, 0, 0)  [Ry maps +Z → +X]
+        //   after translate: (6, 0, 1.75)
+        // world_x=6 confirms the wall is 12 units wide (z∈[-1,1] → x∈[-6,6]).
+        const transform = parseTransform3D(
+          'Transform3D(-4.371139e-08, 0, 6, 0, 1, 0, -1, 0, -2.6226832e-07, 0, 0, 1.75)'
+        );
+        const result = decomposeTransform3D(transform);
+
+        // Manually apply TRS to local (0, 0, 1):
+        //   scaled: (0, 0, scale.z * 1) = (0, 0, 6)
+        //   rotated by Ry(rotation.y): (sin(ry)*z, 0, cos(ry)*z)
+        //     ≈ (sin(π/2)*6, 0, cos(π/2)*6) = (6, 0, ≈0)
+        //   translated: (6 + pos.x, 0 + pos.y, ≈0 + pos.z) = (6, 0, 1.75)
+        const sz = result.scale.z;
+        const ry = result.rotation.y;
+        const worldX = Math.sin(ry) * sz * 1 + result.position.x;
+        expect(worldX).toBeCloseTo(6, 3);
+        expect(result.position.z).toBeCloseTo(1.75, 4);
+      });
+
       it('should match Godot for edge-plane-rotated-scaled.tscn ReferenceWall', () => {
         // This should already work (no rotation, just scale)
         const transformString = 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 6, 0, 0, 5)';
