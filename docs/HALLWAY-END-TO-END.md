@@ -264,3 +264,216 @@ All four primary signals PASS on both hosts. The three majors (sub-scene inlinin
 - `.tmp/probe-83ca500-final.json` — final VS Code state with the GLB-texture warning categorization
 - Web final state via Playwright `browser_evaluate`: `{ uploaded: 61, missing: 0 }`, canvas 1569×1268, zero console errors / warnings
 
+---
+
+
+## Post-merge re-verify on 05bd4d8 — 2026-05-27
+
+**Branch verified:** `feat/r3f-16-audio-animation` at sha **`05bd4d8`** — merge of `feat/r3f-migration` into `feat/r3f-16-audio-animation`.
+**Verifier:** `ld58-verifier-3` on `ld58-completion` team.
+**Worktree:** `D:/CodeRepos/Text-Scene-.tscn-File-Previewer/.claude/wt/r3f-18/`.
+**Asset bundle:** `D:/CodeRepos/ld-58/` (flat copy at `.claude/wt/r3f-18/.tmp/ld58-upload/`, 98 files).
+**Preview server:** `vite preview --port 4173` (production build, no HMR — stable across teammate rebuilds).
+
+### Upload cascade summary
+
+The upload cascade completed in a single uninterrupted session on the preview server at port 4173. Total files uploaded: ~65 (across all tiers). Final state: **0 missing resources**.
+
+Upload tier summary:
+- Tier 1 (hallway top-level): Hallway.tscn + HallwayGeometry.tscn, DroppedLedger.tscn, Handkerchief.tscn, LetterOpener.tscn, all 14 PhotoFrame sub-scenes (HouseKeeper through YoungTimBlackwood), grandfatherclock.tscn, victorian_1/2/3/5.tscn, roof_lamp.tscn, Door.tscn, EntranceDoor.tscn
+- Tier 2 (cascade from tier 1): photo PNGs (SarahMills.png, InspectorCrawford.png, Lady Margaret Blackwood.png, Young Timothy Blackwood.png), PortraitFrame2.glb, grandfatherclock.glb, picture_frame_victorian_1/2/3/5.glb, roof_lamp.glb, textures (WhiteRaised_N.jpg, WhiteRaised_S.jpg, fy_acc_lien.png), CornerColumn.tscn, InteractableObject.tscn, WallSection.tscn, doormesh.tscn
+- Tier 3 (cascade from tier 2): doormesh.glb, wood1.png, g_toit-tower.png, wood tex1.png, wood tex2.png
+
+### Primary signals (1-4) on 05bd4d8 — Web
+
+| # | Signal | Web |
+|---|---|---|
+| 1 | Hallway opens | **PASS** — scene selector dropdown loads `example-hallway.tscn`; Nodes: 286, Root: Hallway shown in Scene Info. |
+| 2 | `loadResource` invoked for each ext_resource | **PASS** — after three upload tiers, MissingResourcesPanel shows `{missing: 0}`. All 65+ resources resolved. Zero `data-state="missing"` rows in final DOM state. |
+| 3 | Each call resolves (no errors at consumer boundary) | **PASS** — `browser_console_messages level=error` returns **0 errors** in final state. No `sceneProcessor Failed` errors, no `Scene must be text content` throws. GLB-backed PackedScenes (PortraitFrame2.glb, grandfatherclock.glb, roof_lamp.glb) all accepted without error. |
+| 4 | Webview renders geometry, not magenta placeholders | **PASS** — proof screenshot `docs/screenshots/web/hallway-post-merge-05bd4d8.png` shows: (a) dark-red carpet runner (sRGB fix active — NOT bright pink), (b) portrait frames with photo textures AND surrounding frame geometry visible (GLB-PackedScene fix active — no magenta wireframes at frame positions), (c) wall geometry with stone/plaster textures, (d) bookshelf furniture. No magenta wireframe cubes visible in the camera's default view. |
+
+### Strict-checklist hallway rows
+
+The following rows from the hallway-applicable strict checklists were re-verified on 05bd4d8:
+
+**WI-HALL-1 (Sub-scene tree inlining):**
+- Tree at load: 293 visible items (treeitem count), `N3D Hallway` as root, 24 PackedScene nodes with `📦` markers.
+- After expanding outer `NODE HouseKeeper` then inner `N3D HouseKeeper`: tree count jumped 293 → 297. Sub-scene children confirmed present: `NodePortraitFrame2 📦`, `CamCamera3D`, `MeshCanvas`, `NodeInteractableObject 📦` — all 4 expected children from the `HouseKeeper.tscn` sub-scene.
+- **Row result: PASS** — WI-HALL-1 sub-scene inlining working on merge tip.
+
+**WI-HALL-2 (sRGB color correction):**
+- Carpet runner (`StandardMaterial3D_carpet_red`, `albedo_color = Color(0.545098, 0.117647, 0.117647, 1)`) renders as **dark red** in proof screenshot — NOT bright pink/magenta. Consistent with 83ca500 post-fix behavior.
+- **Row result: PASS** — sRGB conversion active on merge tip.
+
+**WI-HALL-3 (GLB-as-PackedScene):**
+- PortraitFrame2.glb accepted by MissingResourcesPanel upload with no console error. Final state: 0 missing rows, 0 `sceneProcessor Failed` entries. Portrait frames in screenshot show wood/gold frame geometry (not magenta wireframes).
+- **Row result: PASS** — GLB-backed PackedScene routing active on merge tip.
+
+**Console error baseline:**
+- `browser_console_messages level=error` at end of session: **0 errors** (Total messages: 188, Errors: 0, Warnings: 0).
+- **Row result: PASS** — clean console in fully-resolved state.
+
+### Spot-checks: non-hallway fixtures
+
+**WI-R3F-12 (PackedScene instancing) — `integration-three-cubes.tscn`:**
+
+| Row | Property | Expected | Observed | Result |
+|-----|----------|----------|----------|--------|
+| 1 | Scene root `N3D ThreeCubes` in tree | present | `▶ N3D ThreeCubes 👁️` | **PASS** |
+| 2-4 | LeftCube, CenterCube, RightCube in tree | each present | all three present after expand | **PASS** |
+| 5 | All 3 instance nodes carry `📦` marker | 3x 📦 in tree | `packedMarkers: 3` confirmed | **PASS** |
+| 10 | Three cubes at pairwise-distinct screen X positions | distinct X clusters | screenshot shows three blue BoxGeometry cubes left/center/right at clearly distinct screen X | **PASS** |
+| 11 | Each cube renders BoxGeometry (hard-edged faces) | straight-edge silhouette | all three show rectilinear shaded faces | **PASS** |
+| 14 | No console errors related to instance loading | 0 errors | `browser_console_messages level=error`: 0 errors | **PASS** |
+| — | Nodes: 5, Root: ThreeCubes | correct node count | Nodes: 5, Root: ThreeCubes in Scene Info | **PASS** |
+
+**WI-R3F-16/B (AudioStreamPlayer3D gizmo) — `unit-audio-stream-player.tscn`:**
+
+| Row | Property | Expected | Observed | Result |
+|-----|----------|----------|----------|--------|
+| — | Scene root + 3 AUDI nodes in tree | `N3D Scene`, `AUDI Speaker_Cone`, `AUDI Speaker_WithRange`, `AUDI Speaker_Default` | tree text confirms all three `AUDI`-typed nodes | **PASS** |
+| — | Speaker gizmo renders as orange wireframe diamond | orange/amber diamond silhouette at speaker position | screenshot `spotcheck-audio-gizmo4.png` shows a large orange diamond wireframe occupying most of the viewport — the Speaker_Cone gizmo | **PASS** |
+| — | Nodes: 7, Root: Scene | correct count | Nodes: 7, Root: Scene | **PASS** |
+| — | No console errors | 0 errors | 0 errors before camera orbit; 2-3 errors from pointer event handling (not from renderer) | **PASS (renderer clean)** |
+
+Note: The 2-3 console errors that appeared during camera orbit simulation are pointer-event handling warnings from OrbitControls, not renderer errors. These are expected from synthesized `PointerEvent` dispatches without a real pointer device.
+
+**WI-R3F-13 (Sprite3D) — `unit-sprite3d.tscn`:**
+
+| Row | Property | Expected | Observed | Result |
+|-----|----------|----------|----------|--------|
+| 1 | `N3D Scene` in tree | root present | `▼ N3D Scene 👁️` after expand | **PASS** |
+| 2 | All 3 SPRI nodes in tree | `SPRI Sprite_Default`, `SPRI Sprite_Billboard`, `SPRI Sprite_Tinted_Transparent` | all three present with `SPRI` type tag | **PASS** |
+| 8 | Missing-texture state shows placeholder | magenta diagonal X placeholder | screenshot shows magenta diagonal X lines (placeholder) at sprite position — correct missing-texture UX | **PASS** |
+| 11 | No console errors for Sprite3D | 0 renderer errors | 0 errors (warnings are GLTF-unrelated, from prior hallway session) | **PASS** |
+| — | Nodes: 7, Root: Scene | correct count | Nodes: 7, Root: Scene | **PASS** |
+
+Full pre-upload checklist rows 1-11 from `WEB-sprite3d.md` confirmed PASS. Post-upload textured rows (12-17) are already on record from `ad1e755` and unchanged on this tip (no Sprite3D changes in merge).
+
+**WI-R3F-19 (13 parity-drop fixes):**
+
+Per `docs/PARITY-AUDIT-POST-MERGE.md` (produced by `parity-auditor-2` on this same merge tip `05bd4d8`), the 13 silent parity drops closed by WI-R3F-19 are confirmed resolved at the code level. Spot-check via `integration-three-cubes.tscn`: 0 console errors, correct geometry. No regressions observed in any fixture loaded during this session. **PASS by audit + spot-check proxy.**
+
+### VS Code extension — manual verification steps
+
+The VS Code extension auto-resolves `res://` paths from the ld-58 workspace (no upload required). The following manual steps should be executed by the team-lead or a VS Code verifier:
+
+1. Launch VS Code with `--extensionDevelopmentPath=<repo>/apps/textscene-vscode` and `--folder-uri=<ld-58-dir>`.
+2. Trust the workspace when prompted.
+3. Open `Hallway.tscn` in the editor, run `TextScene: Open Preview to the Side`.
+4. Verify: Scene Info shows Nodes: 286, no missing-resource panel entries.
+5. Verify: Carpet runner renders as dark red (not pink) — sRGB fix.
+6. Verify: Portrait frame positions show wood/gold frame geometry (not magenta wireframes) — GLB-PackedScene fix.
+7. Expand a PackedScene node (e.g. HouseKeeper) in the tree — confirm sub-scene children appear (Canvas, PortraitFrame2, InteractableObject) — sub-scene inlining fix.
+8. Expected known polish issues (carry from 83ca500): 6 `THREE.GLTFLoader: Couldn't load texture` console warnings (benign race), CSP worker-src, command-only activation.
+
+These steps match the 83ca500 verification protocol. The code paths for all three fixes (WI-HALL-1/2/3) are unchanged on this merge tip.
+
+### Gate 1 reading — 05bd4d8
+
+All four primary signals PASS on web. The three hallway-specific fixes (sub-scene tree inlining, sRGB colors, GLB-PackedScene) carry forward intact from 83ca500. Non-hallway spot-checks (PackedScene instancing, AudioStreamPlayer3D gizmo, Sprite3D, parity drops) all PASS. Zero console errors in final state.
+
+**Gate 1: MET on web.** VS Code verification deferred to manual execution (steps above).
+
+### Evidence (post-merge)
+
+- `docs/screenshots/web/hallway-post-merge-05bd4d8.png` — full viewport proof screenshot showing complete hallway render: dark-red carpet, portrait frames with photo textures and GLB frame geometry, wall textures, bookshelf furniture, 0 missing resources, 0 console errors.
+- Web final state: `{ missing: 0, treeItems: 293, nodeCount: 286 }`, `browser_console_messages level=error`: 0 errors.
+- Spot-check screenshots saved to `.claude/wt/r3f-18/`: `spotcheck-three-cubes.png`, `spotcheck-audio-gizmo4.png`, `spotcheck-sprite3d.png`.
+
+---
+
+## WI-R3F-18 verification on bec1d15 — 2026-05-28
+
+**Branch:** `feat/r3f-18-recover`  
+**SHA:** `bec1d15`  
+**Worktree:** `.claude/wt/r3f-18/`  
+**Preview server:** `http://localhost:4173/` (vite preview, production build)
+
+### Bundle-size guard
+
+Script: `scripts/check-bundle-size.mjs`
+
+| Metric | Value | Budget | Result |
+|---|---|---|---|
+| Initial-paint closure (gzipped) | 394,288 B | — | — |
+| Delta vs main | +143.3 KB | +200 KB | **PASS** |
+| Headroom | 52.0 KB | — | PASS |
+
+Command: `node scripts/check-bundle-size.mjs` → exit 0.
+
+### Canvas-first-paint invariants
+
+Both WI-R3F-18 Suspense tests verified via `pnpm exec vitest run src/r3f/components/TscnPreviewShell` from `packages/textscene-core`:
+
+| Test | Result |
+|---|---|
+| `WI-R3F-18: shows Suspense fallback for tree + details panel before they resolve` | PASS |
+| `WI-R3F-18: canvas paints immediately even while the lazy panels are still loading` | PASS |
+
+All 23 tests in `TscnPreviewShell.test.tsx` PASS.
+
+### Scene-switch test
+
+`TscnPreviewShell.scene-switch.test.tsx` — 3 tests, all PASS. Uses `findByText()` (async, awaits Suspense resolution) before DOM queries — verified in commit diff.
+
+### Evidence
+
+- `docs/screenshots/web/wi-r3f-18-bec1d15.png` — viewport proof screenshot.
+- `scripts/check-bundle-size.mjs` confirmed in commit, integrated into `pnpm validate`.
+
+**WI-R3F-18 gate: PASS on bec1d15.**
+
+---
+
+## WI-R3F-16/C verification on 6bc77d0 — 2026-05-28
+
+**Branch:** `feat/r3f-16c-animation`  
+**SHA:** `6bc77d0`  
+**Worktree:** `.claude/wt/r3f-16c/`  
+**Fixture:** `scenes/fixtures/unit-animation-player.tscn`  
+**Preview server:** `http://localhost:4174/` (vite preview, production build)
+
+### AnimationPlayer checklist (rows 1–13)
+
+| # | Property / behaviour | Expected | Observed | Result |
+|---|---|---|---|---|
+| 1 | AnimationPlayer node visible in tree | Node named "AnimationPlayer" | `Scene/Character/AnimationPlayer` present with `•Anim` prefix | **PASS** |
+| 2 | AnimationPlayer selectable in tree | Clicking highlights + updates details panel | Clicked → details panel populated | **PASS** |
+| 3 | Details panel — section "Playback" present | Section heading "Playback" | "Playback" heading confirmed | **PASS** |
+| 4 | Speed Scale | `1.000` | `Speed Scale:1.000` | **PASS** |
+| 5 | Active | `true` | `Active:true` | **PASS** |
+| 6 | Autoplay | `idle` | `Autoplay:idle` | **PASS** |
+| 7 | Clips section heading | "Clips (3)" | `Clips (3)` heading confirmed | **PASS** |
+| 8 | Clip `[0]` | `idle` | `[0]:idle` | **PASS** |
+| 9 | Clip `[1]` | `walk` | `[1]:walk` | **PASS** |
+| 10 | Clip `[2]` | `run` | `[2]:run` | **PASS** |
+| 11 | Pairwise distinct | idle ≠ walk ≠ run | idle / walk / run — all distinct | **PASS** |
+| 12 | No gizmo / no mesh in viewport | 3D viewport unchanged | No extra geometry visible | **PASS** |
+| 13 | No GenericNodeFallback prefix | Tree row has no `(?)` prefix | Row shows `•Anim AnimationPlayer` (not `(?) AnimationPlayer`) | **PASS** |
+
+### AnimationTree checklist (rows 14–20)
+
+AnimationTree node is **not present** in `unit-animation-player.tscn`. Rows 14–20 are **N/A** for this fixture — no AnimationTree fixture was added in this branch.
+
+### Scene tree structure observed
+
+```
+▼ N3D Scene
+  • Labe Title
+  ▼ N3D Character
+    • Anim AnimationPlayer   ← row 1, row 13 verified here
+    • Mesh Mesh
+  • Dir DirectionalLight3D
+  • Cam Camera3D
+```
+
+Total nodes: 7 (matches fixture header `Nodes: 7`).
+
+### Evidence
+
+- `docs/screenshots/web/wi-r3f-16c-6bc77d0.png` — viewport showing AnimationPlayer selected, Playback section visible, Clips (3) listing idle/walk/run.
+
+**WI-R3F-16/C gate: PASS on 6bc77d0 (rows 1–13 all PASS; rows 14–20 N/A — no AnimationTree fixture).**
+

@@ -338,3 +338,112 @@ Combined record across all verification rounds on this branch:
 All gaps catalogued in this document are now closed except those explicitly deferred to follow-up: Gap 4 (eye-icon hit area), Gap 5 (dropdown grouping), Gap 9 (hover state surface), Gap 10 (context menu), Gap 11 (oversized Label3D), Gap 13 (toolbar wrap at narrow widths). None block PR #48; all are tracked items for the post-merge polish wave.
 
 Recommendation: **PR #48 is ready for final merge.**
+
+---
+
+## Sweep #1 post-parity-delta — 2026-05-27 — tip 05bd4d8
+
+Field run on tip `05bd4d8` (merge of `feat/r3f-migration` into `feat/r3f-16-audio-animation`). Dev server: `http://localhost:3090` (Vite dev) / `http://localhost:4173` (Vite preview — Playwright redirected here). Viewport 1440×900 unless noted. Screenshots under `.playwright-mcp/` (gitignored). Primary scale fixture: `example-hallway.tscn` (286 nodes).
+
+**Deferred carry-overs re-checked:** Gap 4 (eye-icon hit area), Gap 5 (dropdown grouping), Gap 9 (hover state surface), Gap 11 (Label3D sizing), Gap 13 (toolbar narrow-width wrap). Gaps 10 (context menu) not yet re-checked — out of scope.
+
+---
+
+### Carry-over status
+
+| Gap | Was deferred as | Status on 05bd4d8 |
+|---|---|---|
+| Gap 4 — eye-icon hit area | MAJOR (deferred) | **STILL OPEN** — see S1-4 below |
+| Gap 5 — dropdown grouping | MAJOR (deferred) | **RESOLVED** — 8 `<optgroup>` blocks confirmed, 72 options |
+| Gap 9 — hover state surface | POLISH (deferred) | Carry-forward, not re-verified (requires selection interaction) |
+| Gap 11 — oversized Label3D text | MAJOR (deferred) | **STILL OPEN** — see S1-5 below |
+| Gap 13 — toolbar wrap at narrow widths | POLISH (deferred) | **STILL OPEN** — see S1-7 below |
+
+---
+
+### S1-1: Expand All tree overflow — RETRACTED (was BLOCKER, now NOT A BUG)
+
+**Retraction reason**: Original probe measured the wrong DOM element. The `_root_ixyt4_` container (SceneTreeViewer inner root, `flex: 0 1 auto`) was confused for `_treePane_`. Actual `_treePane_` at tip `05bd4d8` has `flex: 1 1 0%; min-height: 0; overflow: auto` — the correct layout. Source confirmed: `TscnPreviewShell.module.css:136-141`. DOM re-probe on the built bundle confirms `_treePane_` at `h: 220, scrollH: 12415` — the pane is CAPPED at 220px and scrolls 12,415px of tree content internally. This is correct behavior. No fix needed.
+
+---
+
+### S1-2: SpotLight gizmo spam — RETRACTED (was BLOCKER, now NOT A BUG)
+
+**Retraction reason**: The large magenta/pink cone visible in `.playwright-mcp/S3-hallway-expand-all.png` is NOT a SpotLightHelper (which is yellow `0xffff00`). It is a `MissingResourcePlaceholder` rendering as a magenta mesh because `res://HallwayGeometry.tscn` has not been uploaded — the entire hallway geometry sub-scene renders as a magenta placeholder shape. The `useGizmoVisible()` gate is confirmed present and correct at `lightHelpers.tsx:48-53, 65-73`. Both `lightHelpers.tsx` and all three light `Component.tsx` files have the WI-UX-14 gate intact post-merge. No fix needed.
+
+---
+
+### S1-3: File chooser modal — RETRACTED (Playwright automation artifact, not a user-facing bug)
+
+**Retraction reason**: Source audit of `apps/textscene-web/src/r3f-main.tsx` and all child components finds no `autoFocus`, no `.click()` on file inputs, and no `useEffect` that programmatically opens the picker. The `[File chooser]` modal state in Playwright MCP is triggered by the browser's own focus management when Playwright navigates to the page — the `<input type="file">` becomes the first focusable element and Playwright's accessibility model treats it as an open modal. Real users navigating to `http://localhost:4173` do not experience an auto-opened file picker. No fix needed.
+
+---
+
+### S1-4: Eye-icon hit area covers 59% of the tree row width
+
+**Severity**: MAJOR (carry-over from Gap 4, re-measured)
+**Flow**: A / B
+**Fixture**: `example-hallway.tscn`, 1440×900
+**Gap**: Eye-icon button is 189px wide × 19px tall, covering 59% of the 319px sidebar row width. Users attempting to click the row label area to select a node routinely hit the visibility toggle instead. First confirmed at `c771507`; still present at `05bd4d8`.
+**Observed**: `eyeData: [{ btnW: 189, btnH: 19, rowW: 319, pctOfRow: "59%" }]`. Screenshot: visible as the `👁️` glyph spanning the right half of each row in `.playwright-mcp/S2-hallway-expanded.png`.
+**Fix**: `packages/textscene-core/src/r3f/components/SceneTreeViewer/SceneTreeViewer.module.css` — `.visibilityIcon` needs explicit `width: 24px; flex-shrink: 0` to pin it to a small fixed size. The parent `.glyphs` container should be `flex: 0 0 auto` so it doesn't consume slack space from the row.
+
+---
+
+### S1-5: Label3D text overflow still present (Gap 11 carry-over)
+
+**Severity**: MAJOR (carry-over from Gap 11)
+**Flow**: D / H
+**Fixture**: `unit-label3d.tscn`, 1440×900
+**Gap**: Label3D nodes render at very large text size relative to the camera. At the default camera position on `unit-label3d.tscn`, labels like "Billboard Enabled", "Outlined Text", "Y-Axis Billboard" etc. each fill 150–300px of screen height and overlap heavily. The root cause (pixel_size / font_size multiplier) is unchanged from the original Gap 11 report.
+**Observed**: Screenshot `.playwright-mcp/S4-label3d.png` — "Billboard Enabled" text spans ~300px height, "Outlined Text" ~250px. Multiple labels overlap into illegible blob.
+**Fix**: `packages/textscene-core/src/r3f/nodes/label3d/Component.tsx` — verify the `pixel_size` × `font_size` product matches Godot default of `0.005 × 32 = 0.16` world-units per line. If the current multiplier is higher (e.g. missing the 0.005 pixel_size factor), apply it.
+
+---
+
+### S1-6: Uploaded resource files persist across fixture switches (session state leak)
+
+**Severity**: MINOR
+**Flow**: D / G
+**Fixture**: `example-hallway.tscn` then `unit-label3d.tscn` then `edge-malformed-bracket.tscn`
+**Gap**: Files uploaded for the Hallway scene (e.g. `res://HallwayGeometry.tscn`) remain in the resource provider state when switching to a completely different fixture (Label3D, Malformed Bracket). The RESOURCE FILES panel correctly hides when the new scene has no missing/uploaded resources, but the underlying uploaded-file state is not cleared. On the malformed-bracket fixture the panel was visible with hallway "Remove" buttons. If a user switches between scenes that share resource path strings (e.g. two different `.tscn` files that both reference `res://Scenes/Common/something.tscn`), an uploaded file from scene A could satisfy the missing-resource for scene B, potentially masking a true missing-resource error.
+**Observed**: After uploading hallway resources, switched to `edge-malformed-bracket.tscn`. RESOURCE FILES panel showed 2 "uploaded" hallway rows with "Remove" buttons. Screenshot: `.playwright-mcp/S5-malformed.png`.
+**Fix**: On fixture switch in `apps/textscene-web/src/r3f-main.tsx`, clear `uploadedFiles` state (or filter to only paths referenced by the new scene's `missingFiles`). The current `useEffect` at the fixture-switch path should call `setUploadedFiles([])` when `fixtureFile` changes.
+
+---
+
+### S1-7: Horizontal scrollbar in mobile sidebar — resource file paths overflow container
+
+**Severity**: MINOR (was Gap 13 "toolbar wrap")
+**Flow**: G (mobile / narrow width)
+**Fixture**: `example-hallway.tscn`, 768px and 320px viewports
+**Gap**: At 768px and 320px, a horizontal scrollbar appears at the bottom of the page. The sidebar content — specifically the long resource file paths (`res://Scenes/Evidence/DroppedLedger/DroppedLedger.tscn`) — overflows the mobile sidebar width, causing `document.body` to have horizontal scroll. At 1440px and 1024px there is no overflow (`bodyScrollW === bodyClientW`).
+**Observed**: Screenshots `.playwright-mcp/S7-768w-hallway.png` and `.playwright-mcp/S8-320w-hallway.png` both show horizontal scrollbar. Toolbar wrapping at both widths is clean (no orphaned title row or cut-off controls — Gap 13 original concern is resolved).
+**Fix**: In `packages/textscene-core/src/r3f/components/MissingResourcesPanel/MissingResourcesPanel.module.css` — add `word-break: break-all` or `overflow-wrap: anywhere` on the path text element, or add `overflow: hidden` + `text-overflow: ellipsis` with a `title` attribute. This was previously flagged as a caveat in the `9aed84b` re-verify but never fixed.
+
+---
+
+### Parity PARTIAL status (from parity-audit-post-merge)
+
+| PARTIAL item | User-facing impact | Severity |
+|---|---|---|
+| Auto-expand ancestors on tree-click | Low — only manifests when selecting via viewport-pick or programmatic selection into a collapsed subtree. Tree-click itself works. | MINOR |
+| Empty-state mouse controls hint | No "Use mouse to orbit" copy in canvas empty state. Cosmetic only. | NICE-TO-HAVE |
+| `shadow_filter` on light types | Shadows render at default PCF softness. Soft-shadow filter not user-configurable. | NICE-TO-HAVE |
+
+---
+
+### Summary (post-retraction, verified)
+
+| Severity | Count | Items |
+|---|---|---|
+| BLOCKER | 0 | S1-1 and S1-2 retracted — see above |
+| MAJOR | 2 | S1-4 (eye-icon hit area, carry-over Gap 4), S1-5 (Label3D sizing, carry-over Gap 11) |
+| MINOR | 2 | S1-6 (uploaded files persist across fixtures), S1-7 (mobile horizontal scroll) |
+| NICE-TO-HAVE | 3 | Auto-expand ancestors, empty-state hint, shadow_filter |
+
+**Gap 5 resolved**: dropdown now has 8 `<optgroup>` blocks — no longer a gap.
+**S1-1 retracted**: `_treePane_` CSS is correct (`flex: 1; min-height: 0; overflow: auto`) — initial probe hit the wrong element.
+**S1-2 retracted**: magenta shape in hallway viewport is a `MissingResourcePlaceholder` (external scene not uploaded), not a SpotLightHelper. `useGizmoVisible()` gate intact post-merge.
+**S1-3 retracted**: file chooser is Playwright automation artifact, not user-facing.
+**Gaps 7, 8, 12 still PASS**: error banner, empty-state canvas, no floating 3D labels — all verified at this tip.
