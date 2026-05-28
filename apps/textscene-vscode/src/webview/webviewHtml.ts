@@ -37,13 +37,19 @@ export function generateWebviewHtml(options: WebviewHtmlOptions): string {
     ? `<link rel="stylesheet" nonce="${nonce}" href="${cssUri}">`
     : '';
 
+  // WI-R3F-18: the webview build emits ESM with code-splitting now.
+  // `<script type="module">` is required for dynamic `import()` to load
+  // chunks; the CSP must also allow chunk URIs (the entry script's
+  // module imports), which means `script-src` permits `${cspSource}`
+  // in addition to the nonce'd entry. The nonce still applies to the
+  // entry tag — chunk imports inherit the module context.
   return `
     <!DOCTYPE html>
     <html lang="en">
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}'; img-src ${cspSource} blob: data:;">
+      <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}' ${cspSource}; img-src ${cspSource} blob: data:;">
       <title>TSCN Preview</title>
       ${cssLink}
       <style>
@@ -64,7 +70,7 @@ export function generateWebviewHtml(options: WebviewHtmlOptions): string {
     </head>
     <body>
       <div id="r3f-root"></div>
-      <script nonce="${nonce}" src="${scriptUri}"></script>
+      <script type="module" nonce="${nonce}" src="${scriptUri}"></script>
     </body>
     </html>
   `;

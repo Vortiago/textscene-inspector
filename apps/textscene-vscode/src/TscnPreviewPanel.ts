@@ -204,11 +204,14 @@ export class TscnPreviewPanel {
   }
 
   private _getHtmlForWebview(webview: vscode.Webview): string {
+    // WI-R3F-18: webview build moved to `dist/webview/` (ESM + splitting)
+    // so lazy-loaded chunks live alongside the entry script and import
+    // each other via relative URIs.
     const scriptUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(this._extensionUri, 'dist', 'webview.js')
+      vscode.Uri.joinPath(this._extensionUri, 'dist', 'webview', 'webview.js')
     ).toString();
     const cssUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(this._extensionUri, 'dist', 'webview.css')
+      vscode.Uri.joinPath(this._extensionUri, 'dist', 'webview', 'webview.css')
     ).toString();
 
     const nonce = generateNonce();

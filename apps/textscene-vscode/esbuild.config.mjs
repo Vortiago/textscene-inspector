@@ -36,9 +36,23 @@ const extensionOptions = {
 const webviewOptions = {
   entryPoints: ['src/webview/webview.ts'],
   bundle: true,
-  outfile: 'dist/webview.js',
+  // WI-R3F-18: ESM + splitting. The previous `format: 'iife'` couldn't
+  // code-split, which forced every transitive import of the entry into
+  // the single `webview.js` bundle — including the (large) DOM panels
+  // we'd ideally lazy-load. ESM + splitting moves those panels (and
+  // their drei/three.js dependencies) into separate chunks that load
+  // on demand via dynamic `import()`. The dist layout becomes:
+  //   dist/webview/webview.js                — initial chunk
+  //   dist/webview/chunks/<panel>-<hash>.js  — lazy chunks
+  //   dist/webview/webview.css               — co-located CSS
+  // The HTML uses `<script type="module">` and the CSP allows
+  // chunk URIs via `script-src ${cspSource}` (see webviewHtml.ts).
+  outdir: 'dist/webview',
+  entryNames: '[name]',
+  chunkNames: 'chunks/[name]-[hash]',
   external: ['vscode'],
-  format: 'iife',
+  format: 'esm',
+  splitting: true,
   platform: 'browser',
   target: 'es2020',
   sourcemap: !production,
@@ -46,8 +60,9 @@ const webviewOptions = {
   logLevel: 'info',
   plugins: [
     cssModulesPlugin({
-      // Emit a separate dist/webview.css that the HTML links with a CSP
-      // nonce instead of injecting <style> tags at runtime (CSP-incompatible).
+      // Emit a separate dist/webview/webview.css that the HTML links
+      // with a CSP nonce instead of injecting <style> tags at runtime
+      // (CSP-incompatible).
       inject: false,
       emitDeclarationFile: true,
     }),

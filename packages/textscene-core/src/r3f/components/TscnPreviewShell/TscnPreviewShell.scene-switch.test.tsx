@@ -14,7 +14,7 @@
  * a WebGL context.
  */
 import { describe, expect, it, vi } from 'vitest';
-import { act, render } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 vi.mock('../../TscnCanvas', () => ({
@@ -42,6 +42,8 @@ describe('<TscnPreviewShell> scene-switch (WI-UX-5)', () => {
       <TscnPreviewShell panelId="p1" content={FIXTURE_A} />
     );
 
+    // Wait for lazy SceneTreeViewer to resolve before querying DOM.
+    await screen.findByText('AlphaRoot');
     const alphaRow = container.querySelector(
       '[data-node-path="AlphaRoot"] [class*=header]'
     ) as HTMLElement;
@@ -64,7 +66,7 @@ describe('<TscnPreviewShell> scene-switch (WI-UX-5)', () => {
     expect(anySelected).toBeNull();
   });
 
-  it('does NOT fire clearAll on the initial null → first-scene mount transition', () => {
+  it('does NOT fire clearAll on the initial null → first-scene mount transition', async () => {
     // If clearAll fired on mount, mounting with empty content (sceneGraph
     // null) then transitioning to a real fixture would still be a no-op
     // because there's nothing to clear. But mounting directly with a
@@ -77,6 +79,8 @@ describe('<TscnPreviewShell> scene-switch (WI-UX-5)', () => {
       <TscnPreviewShell panelId="p1" content={FIXTURE_A} />
     );
 
+    // Wait for lazy SceneTreeViewer to resolve before querying DOM.
+    await screen.findByText('AlphaRoot');
     const alphaRow = container.querySelector(
       '[data-node-path="AlphaRoot"] [class*=header]'
     );
@@ -87,6 +91,9 @@ describe('<TscnPreviewShell> scene-switch (WI-UX-5)', () => {
     const { container, rerender } = render(
       <TscnPreviewShell panelId="p1" content={FIXTURE_A} />
     );
+
+    // Wait for lazy SceneTreeViewer to resolve before querying DOM.
+    await screen.findByText('AlphaRoot');
 
     // Expand AlphaRoot (click the chevron) and select it.
     const alphaRow = container.querySelector(
