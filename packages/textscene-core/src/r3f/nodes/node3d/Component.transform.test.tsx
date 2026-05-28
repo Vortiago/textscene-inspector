@@ -61,17 +61,17 @@ describe('Node3D transform (assertions 1–10)', () => {
   });
 
   it('#4 rotation.x decoded from basis (radians)', async () => {
-    // Pure rotation around X by 90°. Godot column-major basis for Rx(90°):
-    //   basis_x = (1, 0, 0)
-    //   basis_y = (0, 0, 1)
-    //   basis_z = (0, -1, 0)
-    // After decompose, Euler XYZ rotation.x should be ~π/2.
+    // Pure rotation around X by 90°. Godot Basis is `Vector3 rows[3]`;
+    // basis_x = row 0. Rx(+90°) matrix:
+    //   | 1  0  0 |
+    //   | 0  0 -1 |
+    //   | 0  1  0 |
     const group = await renderAt({
       name: 'rot-x',
       transform: {
         basis_x: { x: 1, y: 0, z: 0 },
-        basis_y: { x: 0, y: 0, z: 1 },
-        basis_z: { x: 0, y: -1, z: 0 },
+        basis_y: { x: 0, y: 0, z: -1 },
+        basis_z: { x: 0, y: 1, z: 0 },
         origin: { x: 0, y: 0, z: 0 },
       },
     });
@@ -79,13 +79,16 @@ describe('Node3D transform (assertions 1–10)', () => {
   });
 
   it('#5 rotation.y decoded from basis (radians)', async () => {
-    // Ry(90°): basis_x = (0, 0, -1), basis_y = (0, 1, 0), basis_z = (1, 0, 0).
+    // Ry(+90°) matrix:
+    //   |  0  0  1 |
+    //   |  0  1  0 |
+    //   | -1  0  0 |
     const group = await renderAt({
       name: 'rot-y',
       transform: {
-        basis_x: { x: 0, y: 0, z: -1 },
+        basis_x: { x: 0, y: 0, z: 1 },
         basis_y: { x: 0, y: 1, z: 0 },
-        basis_z: { x: 1, y: 0, z: 0 },
+        basis_z: { x: -1, y: 0, z: 0 },
         origin: { x: 0, y: 0, z: 0 },
       },
     });
@@ -93,12 +96,15 @@ describe('Node3D transform (assertions 1–10)', () => {
   });
 
   it('#6 rotation.z decoded from basis (radians)', async () => {
-    // Rz(90°): basis_x = (0, 1, 0), basis_y = (-1, 0, 0), basis_z = (0, 0, 1).
+    // Rz(+90°) matrix:
+    //   | 0 -1  0 |
+    //   | 1  0  0 |
+    //   | 0  0  1 |
     const group = await renderAt({
       name: 'rot-z',
       transform: {
-        basis_x: { x: 0, y: 1, z: 0 },
-        basis_y: { x: -1, y: 0, z: 0 },
+        basis_x: { x: 0, y: -1, z: 0 },
+        basis_y: { x: 1, y: 0, z: 0 },
         basis_z: { x: 0, y: 0, z: 1 },
         origin: { x: 0, y: 0, z: 0 },
       },

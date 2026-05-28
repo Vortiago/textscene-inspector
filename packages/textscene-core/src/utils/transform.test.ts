@@ -152,13 +152,15 @@ describe('transform utils', () => {
 
     it('should decompose transform with rotation around Y axis', () => {
       // Godot column-major basis for Ry(+π/2):
-      //   basis_x = first column = (cos, 0, -sin) = (0, 0, -1)
-      //   basis_y = (0, 1, 0)
-      //   basis_z = third column = (sin, 0, cos) = (1, 0, 0)
+      // Ry(+90°) rotation matrix:
+      //   |  0  0  1 |
+      //   |  0  1  0 |
+      //   | -1  0  0 |
+      // Godot stores Basis as rows (Vector3 rows[3]); basis_x = row 0, etc.
       const transform: Transform3D = {
-        basis_x: { x: 0, y: 0, z: -1 },
+        basis_x: { x: 0, y: 0, z: 1 },
         basis_y: { x: 0, y: 1, z: 0 },
-        basis_z: { x: 1, y: 0, z: 0 },
+        basis_z: { x: -1, y: 0, z: 0 },
         origin: { x: 0, y: 0, z: 0 },
       };
 
@@ -246,22 +248,23 @@ describe('transform utils', () => {
     });
 
     describe('rotation + scale combined', () => {
-      it('should decompose Y-rotation with X-column-scaled-by-6 (edge-plane-rotated-scaled.tscn TestWall)', () => {
-        // The fixture stores `Transform3D(R · S)` where R · S has the first
-        // basis column scaled by 6. THREE.Matrix4.decompose recovers
-        // rotation Ry(-π/2) and scale X=6; the fact that the *user*
-        // "intended" Z-scale + Ry(+π/2) is not recoverable from the flat
-        // 12-float serialisation — composition order is gone once the
-        // basis vectors are baked.
+      it('should decompose 90° Y-rotation with Z-scale=6 (edge-plane-rotated-scaled.tscn TestWall)', () => {
+        // Restored from 401f8f5 (#31 "Fix Transform3D decomposition for
+        // rotated+scaled planes"). The intermediate commit b4ccaab
+        // (WI-R3F-10) wrongly rewrote this test to assert the buggy
+        // (transposed) decomposition output, with a rationalising comment
+        // that the user's intent "isn't recoverable". That was wrong —
+        // Godot's Basis is `Vector3 rows[3]`, so the matrix CAN be
+        // recovered correctly; earlier code was transposing it.
         const transform = parseTransform3D(
           'Transform3D(-4.371139e-08, 0, 6, 0, 1, 0, -1, 0, -2.6226832e-07, 0, 0, 0)'
         );
         const result = decomposeTransform3D(transform);
 
-        expect(result.scale.x).toBeCloseTo(6, 5);
+        expect(result.scale.x).toBeCloseTo(1, 5);
         expect(result.scale.y).toBeCloseTo(1, 5);
-        expect(result.scale.z).toBeCloseTo(1, 5);
-        expect(result.rotation.y).toBeCloseTo(-Math.PI / 2, 5);
+        expect(result.scale.z).toBeCloseTo(6, 5);
+        expect(result.rotation.y).toBeCloseTo(Math.PI / 2, 5);
       });
 
 

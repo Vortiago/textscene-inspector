@@ -47,19 +47,26 @@ export function parseTransform3D(transformString: string): Transform3D {
  *
  * Godot stores the basis column-major: `basis_x`, `basis_y`, `basis_z` are
  * the three columns of the 3×3 rotation+scale matrix. We pack those into a
- * THREE.Matrix4 (whose `.set()` argument order is row-major, so we transpose
- * during construction) and let THREE's well-tested `decompose()` do the work.
- * The resulting THREE.Euler is XYZ order, matching `THREE.Object3D.rotation`
- * defaults so values can be applied directly to `<group rotation={...}>`.
+ * THREE.Matrix4 (whose `.set()` argument order is row-major, matching
+ * Godot's row-vector storage) and let THREE's well-tested `decompose()`
+ * do the work. The resulting THREE.Euler is XYZ order, matching
+ * `THREE.Object3D.rotation` defaults so values can be applied directly
+ * to `<group rotation={...}>`.
+ *
+ * Convention: Godot stores Basis as `Vector3 rows[3]`. The parsed
+ * `basis_x`, `basis_y`, `basis_z` ARE the three rows of the 3×3 matrix
+ * (NOT columns — earlier code mistakenly transposed by treating them
+ * as columns, see commit history around b4ccaab / WI-R3F-10 regression
+ * and 401f8f5 fix that documented the row interpretation).
  */
 export function decomposeTransform3D(
   transform: Transform3D
 ): DecomposedTransform {
   const { basis_x, basis_y, basis_z, origin } = transform;
   const m = new THREE.Matrix4().set(
-    basis_x.x, basis_y.x, basis_z.x, origin.x,
-    basis_x.y, basis_y.y, basis_z.y, origin.y,
-    basis_x.z, basis_y.z, basis_z.z, origin.z,
+    basis_x.x, basis_x.y, basis_x.z, origin.x,
+    basis_y.x, basis_y.y, basis_y.z, origin.y,
+    basis_z.x, basis_z.y, basis_z.z, origin.z,
     0, 0, 0, 1
   );
 
