@@ -19,6 +19,7 @@ export default [
       '**/.test-workspace/',
       '**/.claude/',
       '.spike/',
+      'docs/probes/',
     ],
   },
 

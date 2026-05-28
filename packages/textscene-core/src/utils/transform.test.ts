@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import * as THREE from 'three';
 import {
   parseTransform3D,
   decomposeTransform3D,
@@ -420,6 +421,96 @@ describe('transform utils', () => {
       expect(decomposed.scale.x).toBeCloseTo(2.5);
       expect(decomposed.scale.y).toBeCloseTo(2.5);
       expect(decomposed.scale.z).toBeCloseTo(2.5);
+    });
+  });
+
+  describe('nested-transform composition (HallwayGeometry parent chain)', () => {
+    // Builds a THREE.Matrix4 from a Transform3D using the corrected row-major
+    // interpretation, then recompose from TRS to simulate what R3F does when
+    // updateMatrixWorld walks the hierarchy.
+    function trsMatrixFromTransform3DString(s: string): THREE.Matrix4 {
+      const t = parseTransform3D(s);
+      const { position, rotation, scale } = decomposeTransform3D(t);
+      const pos = new THREE.Vector3(position.x, position.y, position.z);
+      const quat = new THREE.Quaternion().setFromEuler(
+        new THREE.Euler(rotation.x, rotation.y, rotation.z, 'XYZ')
+      );
+      const sc = new THREE.Vector3(scale.x, scale.y, scale.z);
+      return new THREE.Matrix4().compose(pos, quat, sc);
+    }
+
+    it('EndWall world origin ≈ (9.025, 0, 8.75) — ShortCorridor + HallwayGeometry parent chain', () => {
+      // Transform chain from example-hallway.tscn + HallwayGeometry.tscn:
+      //   HallwayGeometry (in example-hallway.tscn): near-identity, tiny offsets
+      //   ShortCorridor   (in HallwayGeometry.tscn): pure translation x=7.775
+      //   EndWall         (in HallwayGeometry.tscn): rotated+scaled wall
+      const mHallwayGeometry = trsMatrixFromTransform3DString(
+        'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0010881424, 0.0035161972, 0.0035357475)'
+      );
+      const mShortCorridor = trsMatrixFromTransform3DString(
+        'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7.775, 0, 0)'
+      );
+      const mEndWall = trsMatrixFromTransform3DString(
+        'Transform3D(-4.371139e-08, 0, 3, 0, 1, 0, -1, 0, -1.3113416e-07, 1.2504363, 0, 8.75)'
+      );
+
+      // World matrix = HallwayGeometry * ShortCorridor * EndWall
+      const worldMatrix = new THREE.Matrix4()
+        .multiplyMatrices(mHallwayGeometry, mShortCorridor)
+        .multiply(mEndWall);
+
+      const worldPos = new THREE.Vector3().setFromMatrixPosition(worldMatrix);
+
+      // ShortCorridor x=7.775 + EndWall origin x=1.2504363 + HallwayGeometry offset ≈ 9.025
+      expect(worldPos.x).toBeCloseTo(9.024, 2);
+      // EndWall origin z=8.75 + HallwayGeometry offset z≈0.0035 ≈ 8.753
+      expect(worldPos.z).toBeCloseTo(8.753, 2);
+      expect(worldPos.y).toBeCloseTo(0.003, 2);
+    });
+
+    it('EndWall FACE_X vertex (0,0,1) maps to world x ≈ 9.025 + 3 = 12.025 (6-unit wide wall)', () => {
+      // EndWall has scale.z≈3 (from basis_z column magnitude) and rotation.y≈π/2.
+      // FACE_X local vertex (0, 0, 1) after TRS:
+      //   scaled:  (0, 0, 3)
+      //   Ry(π/2): (3, 0, ~0)  [sin(π/2)*3 = 3]
+      //   translate: (1.2504363 + 3, 0, 8.75) = (4.2504363, 0, 8.75)
+      // Through ShortCorridor (x+7.775): (12.025, 0, 8.75)
+      // Through HallwayGeometry (tiny offsets): ≈(12.024, 0.003, 8.753)
+      const mHallwayGeometry = trsMatrixFromTransform3DString(
+        'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0010881424, 0.0035161972, 0.0035357475)'
+      );
+      const mShortCorridor = trsMatrixFromTransform3DString(
+        'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7.775, 0, 0)'
+      );
+      const mEndWall = trsMatrixFromTransform3DString(
+        'Transform3D(-4.371139e-08, 0, 3, 0, 1, 0, -1, 0, -1.3113416e-07, 1.2504363, 0, 8.75)'
+      );
+
+      const worldMatrix = new THREE.Matrix4()
+        .multiplyMatrices(mHallwayGeometry, mShortCorridor)
+        .multiply(mEndWall);
+
+      const localVertex = new THREE.Vector3(0, 0, 1);
+      const worldVertex = localVertex.applyMatrix4(worldMatrix);
+
+      // Wall is 6 units wide (z∈[-1,1] → world x ∈ [9.024-3, 9.024+3])
+      expect(worldVertex.x).toBeCloseTo(12.024, 1);
+      expect(worldVertex.z).toBeCloseTo(8.753, 1);
+    });
+
+    it('EndWall local origin without parent chain — confirms leaf decompose is correct', () => {
+      // Isolated unit: just the EndWall transform, no parents.
+      // Verifies the leaf decompose produces correct origin independent of composition.
+      const endWall = parseTransform3D(
+        'Transform3D(-4.371139e-08, 0, 3, 0, 1, 0, -1, 0, -1.3113416e-07, 1.2504363, 0, 8.75)'
+      );
+      const result = decomposeTransform3D(endWall);
+
+      expect(result.position.x).toBeCloseTo(1.2504363, 4);
+      expect(result.position.y).toBeCloseTo(0, 4);
+      expect(result.position.z).toBeCloseTo(8.75, 4);
+      expect(result.scale.z).toBeCloseTo(3, 4);
+      expect(result.rotation.y).toBeCloseTo(Math.PI / 2, 4);
     });
   });
 });
