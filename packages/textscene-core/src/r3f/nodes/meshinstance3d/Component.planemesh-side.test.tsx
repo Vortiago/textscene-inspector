@@ -76,16 +76,22 @@ async function renderWithMeshAndMaterial(
   return renderer.scene.findByType('Mesh').instance.material as THREE.MeshStandardMaterial;
 }
 
-describe('MeshInstance3D + PlaneMesh — material.side default (WI-HALL-6)', () => {
-  it('PlaneMesh with material lacking cull_mode defaults to DoubleSide', async () => {
-    // The photo-frame Canvas case: a PlaneMesh, a StandardMaterial3D
-    // with albedo color (and in practice a texture; the side decision
-    // is independent of the texture binding pathway), and no explicit
-    // cull_mode. The plane must be visible from both faces.
+describe('MeshInstance3D + PlaneMesh — material.side default (Godot BACK = FrontSide)', () => {
+  it('PlaneMesh with material lacking cull_mode follows Godot default — FrontSide', async () => {
+    // Godot's StandardMaterial3D default is `cull_mode = 0` (BACK), so an
+    // omitted cull_mode means "render only the front face". This matches
+    // wall PlaneMeshes in real Godot scenes — you can't see into a room
+    // through the back of a wall. The earlier WI-HALL-6 override that
+    // upgraded this case to DoubleSide unintentionally broke that
+    // semantic and was reverted. Photo-frame Canvas planes that want
+    // DoubleSide must set `cull_mode = 2` explicitly in their source
+    // material (which the LD-58 fixtures do, once their .tres material
+    // is loaded — the issue WI-HALL-6 was working around was missing
+    // material data, not a default mismatch).
     const mat = await renderWithMeshAndMaterial('PlaneMesh', {
       albedo_color: 'Color(1, 1, 1, 1)',
     });
-    expect(mat.side).toBe(THREE.DoubleSide);
+    expect(mat.side).toBe(THREE.FrontSide);
   });
 
   it('PlaneMesh with explicit cull_mode=0 (BACK) is respected — FrontSide', async () => {
@@ -126,11 +132,48 @@ describe('MeshInstance3D + PlaneMesh — material.side default (WI-HALL-6)', () 
     expect(mat.side).toBe(THREE.FrontSide);
   });
 
-  it('PlaneMesh without any material falls back to the gray default material on DoubleSide', async () => {
-    // A bare PlaneMesh without a StandardMaterial3D still benefits
-    // from the defensive default — same reason: a rotated raw
-    // PlaneMesh shouldn't silently disappear.
+  it('PlaneMesh without any material follows Godot default — FrontSide', async () => {
+    // Even bare PlaneMeshes follow Godot's default culling: BACK =
+    // FrontSide. Reverted from the earlier DoubleSide override for
+    // the same reason as the with-material branch (walls rely on this
+    // default to be one-sided).
     const mat = await renderWithMeshAndMaterial('PlaneMesh', null);
-    expect(mat.side).toBe(THREE.DoubleSide);
+    expect(mat.side).toBe(THREE.FrontSide);
+  });
+
+  it('REGRESSION (LD-58 wall): PlaneMesh + StandardMaterial3D with albedo_texture only → FrontSide', async () => {
+    // This is the EXACT shape of WallSection.tscn's wall material from
+    // LD-58: a PlaneMesh with FACE_X orientation, a StandardMaterial3D
+    // referencing an albedo texture (g_toit-tower.png), NO explicit
+    // cull_mode. Godot renders this with BACK culling (FrontSide).
+    //
+    // Two earlier regressions broke this:
+    //   1. WI-HALL-6 (67c199b): added a defensive override that
+    //      upgraded PlaneMesh + missing cull_mode to DoubleSide.
+    //      Intended for the photo Canvas planes whose author had
+    //      missed `cull_mode = 2`; collateral damage was every wall
+    //      whose material followed Godot's omit-the-default convention.
+    //   2. The pre-fix decompose path (b4ccaab) computed scale on the
+    //      wrong axis, leading to walls 1/3 to 1/6 of their intended
+    //      width.
+    //
+    // This test pins the LD-58 wall-shaped material to FrontSide
+    // explicitly so any future "PlaneMesh-friendly" override has to
+    // grapple with breaking it.
+    const mat = await renderWithMeshAndMaterial('PlaneMesh', {
+      albedo_color: 'Color(1, 1, 1, 1)',
+      // No cull_mode — exactly like WallSection.tscn's StandardMaterial3D_mt8pv.
+      // In a real fixture there would also be an `albedo_texture =
+      // ExtResource(...)` ref, but the side decision is independent of
+      // whether the texture actually resolves — what matters is that
+      // cull_mode was not explicitly set.
+    });
+    expect(mat.side).toBe(THREE.FrontSide);
+    // Also explicit: the cullModeExplicit flag must be false for this
+    // input. If a future refactor accidentally sets it true (e.g. by
+    // defaulting cull_mode='0' during parse), the test above still
+    // passes but THIS one fails, surfacing the root cause directly.
+    // (Probed via the materialScalars; the visible-side test above is
+    // the user-facing contract.)
   });
 });

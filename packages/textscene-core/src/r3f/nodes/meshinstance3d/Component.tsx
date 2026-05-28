@@ -352,20 +352,23 @@ function MaterialSlot({
   emissiveMap,
   aoMap,
   shadowSide,
-  meshType,
+  meshType: _meshType,
   attach,
 }: MaterialSlotProps) {
   if (!scalars) {
-    // No material → also apply the PlaneMesh DoubleSide default so a
-    // raw textureless PlaneMesh doesn't disappear under a 90° rotation
-    // (same defensive logic as the with-material branch below).
+    // No material → use Godot's default culling (BACK = FrontSide).
+    // Previous WI-HALL-6 logic applied DoubleSide for PlaneMesh as a
+    // defensive default; that turned wall PlaneMeshes (which use
+    // Godot's default BACK culling and don't explicitly write
+    // cull_mode) double-sided too, breaking the "can't see into the
+    // room from outside" semantic. Reverted to Godot's actual default.
     return (
       <meshStandardMaterial
         attach={attach}
         color={0xcccccc}
         metalness={0.3}
         roughness={0.7}
-        side={meshType === 'PlaneMesh' ? THREE.DoubleSide : THREE.FrontSide}
+        side={THREE.FrontSide}
         shadowSide={shadowSide ?? null}
       />
     );
@@ -373,17 +376,13 @@ function MaterialSlot({
   // normalScale is a THREE.Vector2; we materialize one matching the
   // parsed scalar so the meshStandardMaterial slot picks it up on render.
   const normalScale = new THREE.Vector2(scalars.normalScale.x, scalars.normalScale.y);
-  // WI-HALL-6: PlaneMesh-backed Canvas planes default to DoubleSide
-  // when the source material did not explicitly set `cull_mode`.
-  // The hallway photo-frame fixture rotates each Canvas plane 90°
-  // around Y so the photo would face away from the camera and back-
-  // cull into invisibility under Godot's default BACK culling. When
-  // the user did pick a `cull_mode` we respect it verbatim — this is
-  // a default-fallback, not an override.
-  const effectiveSide =
-    meshType === 'PlaneMesh' && !scalars.cullModeExplicit
-      ? THREE.DoubleSide
-      : scalars.side;
+  // Respect the source material's cull_mode verbatim. Godot's default
+  // when cull_mode is unset is BACK culling → THREE.FrontSide, which is
+  // `scalars.side`'s default from materialScalars.ts. The earlier
+  // WI-HALL-6 override (PlaneMesh + unset cull_mode → DoubleSide)
+  // unintentionally also double-sided every wall PlaneMesh whose
+  // material followed Godot's omit-the-default convention.
+  const effectiveSide = scalars.side;
   // The material's shader needs to be recompiled whenever the set of
   // active texture maps changes — three.js bakes `USE_MAP` / `USE_NORMALMAP`
   // / etc. into shader defines at first compile, so adding a texture
