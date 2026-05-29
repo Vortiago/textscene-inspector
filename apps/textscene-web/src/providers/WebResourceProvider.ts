@@ -32,6 +32,14 @@ export class WebResourceProvider implements ResourceProvider {
     this.uploadedFiles.clear();
   }
 
+  /**
+   * Remove a single uploaded file. After removal, requesting the path
+   * again falls through to the fixtures fetch (or fails).
+   */
+  removeUploadedFile(path: string): boolean {
+    return this.uploadedFiles.delete(path);
+  }
+
   async loadResource(path: string, type: string): Promise<string | ArrayBuffer> {
     // Check uploaded files first
     const uploadedFile = this.uploadedFiles.get(path);

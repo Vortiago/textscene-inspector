@@ -1,0 +1,253 @@
+/*
+ * Design tokens (`--tsi-*`) are defined in TscnPreviewShell.module.css's
+ * `:root` block. Touching colours here means touching the token — keep
+ * this file free of raw hex values.
+ */
+.root {
+  font-size: var(--tsi-font-md);
+  user-select: none;
+  color: var(--tsi-fg-default);
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--tsi-space-1);
+  padding: var(--tsi-space-2);
+  border-bottom: 1px solid var(--tsi-border);
+}
+
+.search {
+  flex: 1;
+  background: var(--tsi-bg-panel);
+  border: 1px solid var(--tsi-border);
+  border-radius: var(--tsi-radius-sm);
+  color: var(--tsi-fg-default);
+  padding: var(--tsi-space-1) var(--tsi-space-2);
+  font-size: var(--tsi-font-md);
+  min-width: 0;
+}
+
+.search:focus {
+  outline: none;
+  border-color: var(--tsi-accent);
+}
+
+.controlBtn {
+  background: var(--tsi-bg-hover);
+  border: 1px solid var(--tsi-border-strong);
+  border-radius: var(--tsi-radius-sm);
+  color: var(--tsi-fg-on-control);
+  padding: var(--tsi-space-1) var(--tsi-space-2);
+  font-size: var(--tsi-font-sm);
+  cursor: pointer;
+}
+
+.controlBtn:hover {
+  background: var(--tsi-bg-active);
+}
+
+.iconBtn {
+  /* Square icon-button variant — used by Expand/Collapse all. */
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-size: var(--tsi-font-md);
+  line-height: 1;
+}
+
+.tree {
+  overflow: auto;
+}
+
+.empty {
+  padding: var(--tsi-space-4);
+  text-align: center;
+  color: var(--tsi-fg-muted);
+}
+
+.node {
+  margin: 0;
+}
+
+.header {
+  /*
+   * Grid columns:
+   *   12px            expand toggle / spacer (always present)
+   *   auto            type badge (sizes to shorthand text)
+   *   auto            optional "Not Implemented" badge
+   *   minmax(0, 1fr)  node name — `min-width: 0` is what enables ellipsis
+   *   auto            right-side glyph group (transform/instance/visibility)
+   *
+   * `auto` columns collapse to zero when their child is absent, so optional
+   * elements don't reserve space. The `minmax(0, 1fr)` track replaces the
+   * old `flex: 1` on `.nodeName` and is the actual fix for the horizontal
+   * scrollbar visible in `docs/screenshots/web/strict-integration.png`.
+   */
+  display: grid;
+  grid-template-columns: 12px auto auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.375rem;
+  padding: var(--tsi-space-1) var(--tsi-space-2);
+  cursor: pointer;
+  border-radius: var(--tsi-radius-sm);
+  transition: background-color 0.15s;
+}
+
+.glyphs {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.header:hover {
+  background: var(--tsi-bg-hover);
+}
+
+.selected {
+  background: var(--tsi-accent-soft);
+  box-shadow: inset 2px 0 0 var(--tsi-accent);
+  color: var(--tsi-accent-fg);
+}
+
+.selected .nodeName {
+  font-weight: 600;
+  color: var(--tsi-accent-fg);
+}
+
+.selected:hover {
+  background: color-mix(in srgb, var(--tsi-accent-soft) 80%, white);
+}
+
+.expandIcon {
+  width: 12px;
+  font-size: var(--tsi-font-xs);
+  color: var(--tsi-fg-on-control);
+  cursor: pointer;
+  flex-shrink: 0;
+  text-align: center;
+}
+
+.expandSpacer {
+  width: 12px;
+  text-align: center;
+  font-size: 0.5rem;
+  color: var(--tsi-fg-faint);
+  flex-shrink: 0;
+}
+
+.typeBadge {
+  display: inline-block;
+  padding: 0.125rem 0.375rem;
+  border-radius: var(--tsi-radius-sm);
+  font-size: var(--tsi-font-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  flex-shrink: 0;
+}
+
+.typeNode3d {
+  background: var(--tsi-border-strong);
+  color: var(--tsi-fg-on-control);
+}
+
+.typeMesh {
+  background: var(--tsi-type-mesh-bg);
+  color: var(--tsi-type-mesh-fg);
+}
+
+.typeCamera {
+  background: var(--tsi-type-camera-bg);
+  color: var(--tsi-type-camera-fg);
+}
+
+.typeLight {
+  background: var(--tsi-type-light-bg);
+  color: var(--tsi-type-light-fg);
+}
+
+.typeUnknown {
+  background: var(--tsi-type-unknown-bg);
+  color: var(--tsi-type-unknown-fg);
+}
+
+.nodeName {
+  /* Width comes from the parent grid's `minmax(0, 1fr)` track. */
+  color: var(--tsi-fg-default);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.transformIcon {
+  color: var(--tsi-value-mono);
+  font-size: var(--tsi-font-sm);
+  flex-shrink: 0;
+}
+
+.instanceIcon {
+  font-size: 0.875rem;
+  flex-shrink: 0;
+}
+
+.instanceRoot {
+  border-left: 2px solid var(--tsi-instance-accent);
+  padding-left: calc(var(--tsi-space-2) - 2px);
+}
+
+.instanceRoot .nodeName {
+  font-weight: 500;
+}
+
+.visibilityIcon {
+  font-size: 0.875rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0 0.125rem;
+  opacity: 0.6;
+  transition: opacity 0.15s;
+  background: none;
+  border: none;
+  color: inherit;
+}
+
+.visibilityIcon:hover {
+  opacity: 1;
+}
+
+.hidden {
+  opacity: 0.5;
+}
+
+.hidden .nodeName {
+  color: #777; /* TODO(wave-2): tokenize as --tsi-fg-strikethrough */
+  text-decoration: line-through;
+}
+
+.hidden .typeBadge {
+  opacity: 0.6;
+}
+
+.unsupported {
+  opacity: 0.7;
+}
+
+.notImplementedBadge {
+  background-color: var(--tsi-warning);
+  color: #000;
+  padding: 0.125rem 0.375rem;
+  border-radius: var(--tsi-radius-sm);
+  font-size: var(--tsi-font-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.children {
+  margin-left: 0;
+}

@@ -1,0 +1,137 @@
+/*
+ * Web previewer toolbar. Consumes the shared `--tsi-*` design tokens
+ * declared in TscnPreviewShell.module.css's :root block.
+ */
+.toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--tsi-space-3);
+  padding: var(--tsi-space-2) var(--tsi-space-3);
+  background: var(--tsi-bg-shell);
+  border-bottom: 1px solid var(--tsi-border-strong);
+  color: var(--tsi-fg-default);
+  font-size: var(--tsi-font-md);
+}
+
+.title {
+  color: var(--tsi-fg-strong);
+  font-weight: 600;
+}
+
+.uploadGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tsi-space-2);
+  cursor: pointer;
+  color: var(--tsi-fg-default);
+}
+
+.uploadLabel {
+  font-size: var(--tsi-font-md);
+}
+
+.uploadInput {
+  /* Native file inputs are stubbornly themed by the OS. We give the
+   * surrounding block a stable color so the inline "Choose Files" looks
+   * intentional rather than out-of-band. */
+  color: var(--tsi-fg-default);
+  font-size: var(--tsi-font-sm);
+}
+
+.uploadedChips {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--tsi-space-1);
+}
+
+.uploadedChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.125rem var(--tsi-space-2);
+  background: color-mix(in srgb, var(--tsi-success) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--tsi-success) 40%, transparent);
+  border-radius: 999px;
+  color: var(--tsi-success);
+  font-size: var(--tsi-font-sm);
+  font-family: var(--tsi-font-mono);
+  line-height: 1.4;
+}
+
+.uploadedChip::before {
+  /* A simple check-mark glyph leads each chip. */
+  content: "✓";
+  font-family: var(--tsi-font-ui);
+}
+
+.errorMessage {
+  color: var(--tsi-danger);
+  font-size: var(--tsi-font-md);
+}
+
+/* WI-UX-7 — Upload TSCN entry. Mirrors the spacing pattern of
+   `.uploadGroup` but for the top-level .tscn file picker. */
+.tscnUploadGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tsi-space-2);
+  cursor: pointer;
+  color: var(--tsi-fg-default);
+}
+
+.tscnUploadLabel {
+  font-size: var(--tsi-font-md);
+}
+
+.tscnUploadInput {
+  color: var(--tsi-fg-default);
+  font-size: var(--tsi-font-sm);
+  max-width: 14rem;
+}
+
+.uploadedTscnLabel {
+  padding: 0.125rem var(--tsi-space-2);
+  background: color-mix(in srgb, var(--tsi-accent) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--tsi-accent) 40%, transparent);
+  border-radius: 999px;
+  color: var(--tsi-accent);
+  font-size: var(--tsi-font-sm);
+  font-family: var(--tsi-font-mono);
+  line-height: 1.4;
+  max-width: 14rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.resetCameraButton {
+  /* WI-UX-15: primary-action affordance. Main's Reset Camera was a
+     saturated blue button (#094771) that anchored the controls
+     column; the migration's flat gray bar read as a divider rather
+     than a button. Use the existing accent-soft / accent-fg token
+     pair (mapped to VS Code's `list.activeSelectionBackground` /
+     `Foreground` in webview contexts, with the standalone web app's
+     own values as fallback) so the visual weight matches main
+     without introducing a new hex value. */
+  padding: 0.25rem var(--tsi-space-3);
+  background: var(--tsi-accent-soft);
+  border: 1px solid color-mix(in srgb, var(--tsi-accent) 50%, transparent);
+  border-radius: var(--tsi-radius-sm);
+  color: var(--tsi-accent-fg);
+  font-size: var(--tsi-font-md);
+  font-weight: 600;
+  cursor: pointer;
+  line-height: 1.4;
+
+  &:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--tsi-accent-soft) 70%, var(--tsi-accent));
+    border-color: var(--tsi-accent);
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+}

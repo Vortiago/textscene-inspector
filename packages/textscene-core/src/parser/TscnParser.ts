@@ -1,38 +1,46 @@
 /**
- * Parses Godot TSCN text files into a structured format for rendering.
+ * Parses Godot TSCN text files into a structured format.
  *
- * Uses TscnParserCore with NodeRegistry-based node creation for three.js rendering.
+ * Uses TscnParserCore + NodeRegistry-based node creation. Each node
+ * type's `index.ts` self-registers its parser + property formatter on
+ * import; this file imports each one for its side effect so the parser
+ * sees the full set of registrations.
  */
 
-// Register node types (triggers side-effect imports for renderers and parsers)
-import '../nodes/node/index.renderer.js';
-import '../nodes/base/node3d/index.renderer.js';
-import '../nodes/3d/meshinstance3d/index.renderer.js';
-import '../nodes/3d/camera3d/index.renderer.js';
-import '../nodes/3d/label3d/index.renderer.js';
-import '../nodes/3d/lights/spotlight3d/index.renderer.js';
-import '../nodes/3d/lights/directionallight3d/index.renderer.js';
-import '../nodes/3d/lights/omnilight3d/index.renderer.js';
-import '../nodes/3d/worldenvironment/index.renderer.js';
+// Side-effect imports: each module registers its parser + formatter on load.
+import '../nodes/node/index.js';
+import '../nodes/base/node3d/index.js';
+import '../nodes/3d/meshinstance3d/index.js';
+import '../nodes/3d/camera3d/index.js';
+import '../nodes/3d/label3d/index.js';
+import '../nodes/3d/sprite3d/index.js';
+import '../nodes/audio/audiostreamplayer3d/index.js';
+import '../nodes/animation/animationplayer/index.js';
+import '../nodes/animation/animationtree/index.js';
+import '../nodes/3d/lights/spotlight3d/index.js';
+import '../nodes/3d/lights/directionallight3d/index.js';
+import '../nodes/3d/lights/omnilight3d/index.js';
+import '../nodes/3d/worldenvironment/index.js';
 
 import type { TscnScene } from './types.js';
 import { TscnParserCore } from './TscnParserCore.js';
 import { parseNodeWithRegistry } from '../core/NodeRegistry.js';
 
 /**
- * TSCN Parser for rendering
- * Uses NodeRegistry to create nodes with three.js rendering capabilities
+ * Lenient TSCN parser used for rendering.
+ *
+ * Strategy: recover from minor errors, log warnings, and keep rendering
+ * whatever it can. For strict validation use `linter/StrictTscnParser`.
  */
 export class TscnParser {
   private core = new TscnParserCore();
 
   /**
-   * Parse TSCN content for rendering
-   * @param content - Raw TSCN file content
-   * @returns Parsed scene with nodes ready for three.js rendering
+   * Parse TSCN content. Returns a scene with nodes whose `.properties`
+   * have been converted from raw snake_case strings to the strongly-typed
+   * shape declared by the relevant node-type module.
    */
   parse(content: string): TscnScene {
-    // Use core parser with NodeRegistry-based node creation
     return this.core.parse(content, parseNodeWithRegistry);
   }
 }

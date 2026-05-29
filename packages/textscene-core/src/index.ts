@@ -1,29 +1,83 @@
 /**
- * TSCN Renderer - Main entry point
+ * TSCN Renderer — public entry point.
  *
- * This library provides parsing and rendering capabilities for Godot TSCN files.
- * It uses three.js for 3D rendering.
+ * The library parses Godot .tscn files and renders them with
+ * react-three-fiber. The imperative renderer was removed in WI-R3F-6;
+ * all visual / UI surface lives under `r3f/`.
  */
 
-// Export core functionality
+// Parser + utilities
 export { TscnParser } from './parser/TscnParser';
-export { TscnRenderer } from './core/TscnRenderer';
-export { TscnPreviewUI } from './ui/TscnPreviewUI';
-export { SceneTreeViewer } from './ui/SceneTreeViewer';
-export { sharedStyles } from './ui/styles';
 export { hashTscnNode, buildNodeHashMap } from './utils/nodeHash';
 
-// Export logging
+// Logging
 export { setLogAdapter, trace, debug, info, warn, error } from './logger';
 export type { LogAdapter, LogLevel } from './logger';
 
-// Export types
+// Types
 export type { TscnScene, TscnNode, MissingResource, ResourceNeededCallback } from './parser/types';
-export type { TscnPreviewElements, TscnPreviewUIOptions } from './ui/TscnPreviewUI';
-export type { SceneTreeViewerOptions } from './ui/SceneTreeViewer';
-export type { CameraState, TscnRendererOptions } from './core/TscnRenderer';
 export type { NodeChange, NodeChangeType, IncrementalUpdateData } from './types/changes';
 export type { ResourceProvider } from './resources/ResourceProvider';
 
-// Export resource provider utilities
+// Resource provider utilities
 export { isBinaryResourceType, stripResPrefix } from './resources/resourceProviderUtils';
+
+// R3F UI (Phase 14)
+export {
+  TscnCanvas,
+  TscnSceneContents,
+  type TscnCanvasProps,
+  NodeDispatcher,
+  type NodeDispatcherProps,
+  nodeComponentRegistry,
+  type NodeComponent,
+  type NodeComponentProps,
+  type NodeComponentRegistration,
+  SelectionProvider,
+  useSelection,
+  HierarchyProvider,
+  useHierarchy,
+  CameraControlProvider,
+  useCameraControl,
+  useOptionalCameraControl,
+  NodePathProvider,
+  useNodePath,
+  MissingResourcesProvider,
+  useMissingResources,
+  type SelectionContextValue,
+  type SelectionProviderProps,
+  type HierarchyContextValue,
+  type HierarchyProviderProps,
+  type CameraControlContextValue,
+  type CameraControlProviderProps,
+  type NodePathProviderProps,
+  type MissingResourcesContextValue,
+  type MissingResourcesProviderProps,
+  SceneTreeViewer,
+  type SceneTreeViewerProps,
+  NodeDetailsPanel,
+  MissingResourcesPanel,
+  type MissingResourcesPanelProps,
+  SceneInfoCard,
+  ViewportSelector,
+  type ViewportSelectorProps,
+  type ViewportSelectorOption,
+  TscnPreviewShell,
+  type TscnPreviewShellProps,
+  useViewportSelection,
+  type UseViewportSelectionOptions,
+  type UseViewportSelectionResult,
+  type NodePathHandlers,
+} from './r3f/index';
+
+// Resource loading (WI-R3F-2)
+export { useResource, useResourceLoader, resolveResourcePath } from './resources/useResource';
+export type { ResourceResult, ResourceStatus, ResourceType } from './resources/useResource';
+export {
+  ResourceLoaderContext,
+  ResourceLoaderProvider,
+} from './resources/ResourceLoaderContext';
+export type { ResourceLoaderProviderProps } from './resources/ResourceLoaderContext';
+export { ResourceLoader } from './resources/ResourceLoader';
+export { FileEventBus } from './resources/FileEventBus';
+export type { FileData, FileLoadedHandler, FileFailedHandler } from './resources/FileEventBus';

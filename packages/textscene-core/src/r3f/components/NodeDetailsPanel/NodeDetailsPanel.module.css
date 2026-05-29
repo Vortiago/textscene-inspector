@@ -1,0 +1,118 @@
+/*
+ * Design tokens (`--tsi-*`) are defined in TscnPreviewShell.module.css's
+ * `:root` block.
+ */
+.root {
+  padding: var(--tsi-space-3);
+  font-size: var(--tsi-font-md);
+  color: var(--tsi-fg-default);
+  overflow: auto;
+}
+
+.empty {
+  padding: var(--tsi-space-4);
+  text-align: center;
+  color: var(--tsi-fg-muted);
+  font-style: italic;
+}
+
+.title {
+  margin: 0 0 var(--tsi-space-3) 0;
+  font-size: var(--tsi-font-lg);
+  color: var(--tsi-fg-default);
+}
+
+.section {
+  margin-bottom: var(--tsi-space-4);
+}
+
+.section:last-child {
+  margin-bottom: 0;
+}
+
+.sectionTitle {
+  margin: 0 0 var(--tsi-space-2) 0;
+  padding-bottom: var(--tsi-space-1);
+  border-bottom: 1px solid var(--tsi-border);
+  font-size: var(--tsi-font-xs);
+  color: var(--tsi-fg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.row {
+  display: flex;
+  margin-bottom: var(--tsi-space-2);
+}
+
+.label {
+  color: var(--tsi-fg-muted);
+  min-width: 70px;
+  flex-shrink: 0;
+}
+
+.value {
+  color: var(--tsi-fg-default);
+  font-family: var(--tsi-font-mono);
+  flex: 1;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  min-width: 0;
+}
+
+.value code {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 0 var(--tsi-space-1);
+  border-radius: 2px;
+}
+
+.externalInstance .label,
+.externalInstance .value {
+  color: var(--tsi-instance-accent);
+}
+
+.warningSection {
+  border-left: 4px solid var(--tsi-warning);
+  padding-left: 12px;
+  margin-bottom: 16px;
+}
+
+.warningSection .sectionTitle {
+  color: var(--tsi-warning);
+}
+
+.warningText {
+  background-color: var(--tsi-warning-bg);
+  border: 1px solid var(--tsi-warning);
+  border-radius: 4px;
+  padding: 12px;
+  margin: var(--tsi-space-2) 0;
+  color: var(--tsi-warning-fg);
+  line-height: 1.5;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.warningText strong {
+  color: #ffe599; /* TODO(wave-2): derive via color-mix from --tsi-warning */
+}
+
+.actionButton {
+  display: inline-block;
+  padding: 0.375rem var(--tsi-space-3);
+  background: var(--tsi-bg-active);
+  border: 1px solid var(--tsi-fg-faint);
+  color: #fff;
+  border-radius: var(--tsi-radius-sm);
+  font-size: var(--tsi-font-md);
+  cursor: pointer;
+}
+
+.actionButton:hover {
+  background: var(--tsi-fg-faint);
+}
+
+.actionButton:focus-visible {
+  outline: 2px solid var(--tsi-focus-ring);
+  outline-offset: 1px;
+}

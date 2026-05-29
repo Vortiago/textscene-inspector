@@ -1,49 +1,67 @@
 /**
- * Area2D strict validators for linting
+ * Area2D strict validators for linting.
+ * Migrated to the declarative `v` namespace (WI-ARCH-1).
  *
- * Registers property validators that check format and value constraints.
+ * Uses the specialized `createSpaceOverride`, `createCollisionLayer`,
+ * `createCollisionMask`, and `createDisableMode` helpers from
+ * `linter/validators/physicsValidators.ts` for the properties they
+ * were purpose-built for; everything else goes through the `v` namespace.
  */
 
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import {
-  createBooleanValidator,
-  createVector2Validator,
-  createNumericRangeValidator,
+  v,
   createSpaceOverrideValidator,
   createCollisionLayerValidator,
   createCollisionMaskValidator,
   createDisableModeValidator,
-  createStringValidator,
 } from '../../../../linter/validators/index.js';
 
 validatorRegistry.registerAll('Area2D', {
-  'monitoring': createBooleanValidator('monitoring', 'INVALID_MONITORING_FORMAT'),
-  'monitorable': createBooleanValidator('monitorable', 'INVALID_MONITORABLE_FORMAT'),
+  monitoring: v.boolean('monitoring'),
+  monitorable: v.boolean('monitorable'),
 
-  'space_override': createSpaceOverrideValidator('space_override', 'INVALID_SPACE_OVERRIDE_FORMAT', 'INVALID_SPACE_OVERRIDE_VALUE'),
-  'gravity_space_override': createSpaceOverrideValidator('gravity_space_override', 'INVALID_GRAVITY_SPACE_OVERRIDE_FORMAT', 'INVALID_GRAVITY_SPACE_OVERRIDE_VALUE'),
-  'gravity_point': createBooleanValidator('gravity_point', 'INVALID_GRAVITY_POINT_FORMAT'),
-  'gravity_point_center': createVector2Validator('gravity_point_center', 'INVALID_GRAVITY_POINT_CENTER_FORMAT'),
-
-  'gravity_point_unit_distance': createNumericRangeValidator(
-    'gravity_point_unit_distance',
-    0.0001,
-    null,
-    false,
-    'Property \'gravity_point_unit_distance\' must be greater than 0. This distance is required for point gravity calculations.',
-    'INVALID_GRAVITY_POINT_UNIT_DISTANCE_FORMAT',
-    'INVALID_GRAVITY_POINT_UNIT_DISTANCE_VALUE'
+  space_override: createSpaceOverrideValidator(
+    'space_override',
+    'INVALID_SPACE_OVERRIDE_FORMAT',
+    'INVALID_SPACE_OVERRIDE_VALUE'
   ),
-  'gravity_direction': createVector2Validator('gravity_direction', 'INVALID_GRAVITY_DIRECTION_FORMAT'),
-  'gravity': createNumericRangeValidator('gravity', null, null, false, undefined, 'INVALID_GRAVITY_FORMAT'),
-  'linear_damp_space_override': createSpaceOverrideValidator('linear_damp_space_override', 'INVALID_LINEAR_DAMP_SPACE_OVERRIDE_FORMAT', 'INVALID_LINEAR_DAMP_SPACE_OVERRIDE_VALUE'),
-  'linear_damp': createNumericRangeValidator('linear_damp', 0, null, false, 'Property \'linear_damp\' must be >= 0. Damping cannot be negative.', 'INVALID_LINEAR_DAMP_FORMAT', 'INVALID_LINEAR_DAMP_VALUE'),
-  'angular_damp_space_override': createSpaceOverrideValidator('angular_damp_space_override', 'INVALID_ANGULAR_DAMP_SPACE_OVERRIDE_FORMAT', 'INVALID_ANGULAR_DAMP_SPACE_OVERRIDE_VALUE'),
-  'angular_damp': createNumericRangeValidator('angular_damp', 0, null, false, 'Property \'angular_damp\' must be >= 0. Damping cannot be negative.', 'INVALID_ANGULAR_DAMP_FORMAT', 'INVALID_ANGULAR_DAMP_VALUE'),
-  'priority': createNumericRangeValidator('priority', null, null, false, undefined, 'INVALID_PRIORITY_FORMAT'),
-  'audio_bus_override': createBooleanValidator('audio_bus_override', 'INVALID_AUDIO_BUS_OVERRIDE_FORMAT'),
-  'audio_bus_name': createStringValidator('audio_bus_name', 'INVALID_AUDIO_BUS_NAME_FORMAT'),
-  'collision_layer': createCollisionLayerValidator(),
-  'collision_mask': createCollisionMaskValidator(),
-  'disable_mode': createDisableModeValidator(),
+  gravity_space_override: createSpaceOverrideValidator(
+    'gravity_space_override',
+    'INVALID_GRAVITY_SPACE_OVERRIDE_FORMAT',
+    'INVALID_GRAVITY_SPACE_OVERRIDE_VALUE'
+  ),
+  gravity_point: v.boolean('gravity_point'),
+  gravity_point_center: v.vector2('gravity_point_center'),
+  gravity_point_unit_distance: v.float('gravity_point_unit_distance', {
+    min: 0.0001,
+    message:
+      "Property 'gravity_point_unit_distance' must be greater than 0. This distance is required for point gravity calculations.",
+  }),
+  gravity_direction: v.vector2('gravity_direction'),
+  gravity: v.float('gravity'),
+  linear_damp_space_override: createSpaceOverrideValidator(
+    'linear_damp_space_override',
+    'INVALID_LINEAR_DAMP_SPACE_OVERRIDE_FORMAT',
+    'INVALID_LINEAR_DAMP_SPACE_OVERRIDE_VALUE'
+  ),
+  linear_damp: v.float('linear_damp', {
+    min: 0,
+    message: "Property 'linear_damp' must be >= 0. Damping cannot be negative.",
+  }),
+  angular_damp_space_override: createSpaceOverrideValidator(
+    'angular_damp_space_override',
+    'INVALID_ANGULAR_DAMP_SPACE_OVERRIDE_FORMAT',
+    'INVALID_ANGULAR_DAMP_SPACE_OVERRIDE_VALUE'
+  ),
+  angular_damp: v.float('angular_damp', {
+    min: 0,
+    message: "Property 'angular_damp' must be >= 0. Damping cannot be negative.",
+  }),
+  priority: v.float('priority'),
+  audio_bus_override: v.boolean('audio_bus_override'),
+  audio_bus_name: v.string('audio_bus_name'),
+  collision_layer: createCollisionLayerValidator(),
+  collision_mask: createCollisionMaskValidator(),
+  disable_mode: createDisableModeValidator(),
 });

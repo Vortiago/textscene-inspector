@@ -2,15 +2,9 @@
  * Transform utilities for decomposing Transform3D matrices.
  */
 
+import * as THREE from 'three';
 import type { Transform3D, DecomposedTransform } from '../nodes/base/node3d/types';
 import { warn } from '../logger';
-
-/**
- * Threshold for detecting gimbal lock singularity in rotation extraction.
- * When a basis vector component approaches ±1, we're near gimbal lock
- * and need alternative rotation extraction to avoid numerical instability.
- */
-const ROTATION_SINGULARITY_THRESHOLD = 0.9999999;
 
 /**
  * Parse Transform3D from string format.
@@ -50,67 +44,44 @@ export function parseTransform3D(transformString: string): Transform3D {
 
 /**
  * Decompose Transform3D matrix into position, rotation, and scale.
+ *
+ * Godot stores the basis column-major: `basis_x`, `basis_y`, `basis_z` are
+ * the three columns of the 3×3 rotation+scale matrix. We pack those into a
+ * THREE.Matrix4 (whose `.set()` argument order is row-major, matching
+ * Godot's row-vector storage) and let THREE's well-tested `decompose()`
+ * do the work. The resulting THREE.Euler is XYZ order, matching
+ * `THREE.Object3D.rotation` defaults so values can be applied directly
+ * to `<group rotation={...}>`.
+ *
+ * Convention: Godot stores Basis as `Vector3 rows[3]`. The parsed
+ * `basis_x`, `basis_y`, `basis_z` ARE the three rows of the 3×3 matrix
+ * (NOT columns — earlier code mistakenly transposed by treating them
+ * as columns, see commit history around b4ccaab / WI-R3F-10 regression
+ * and 401f8f5 fix that documented the row interpretation).
  */
 export function decomposeTransform3D(
   transform: Transform3D
 ): DecomposedTransform {
-  const position = { ...transform.origin };
-
-  // Godot uses column-major matrices, so scale is the magnitude of each column
-  const scaleX = Math.sqrt(
-    transform.basis_x.x ** 2 +
-      transform.basis_y.x ** 2 +  // ← changed from basis_x.y
-      transform.basis_z.x ** 2    // ← changed from basis_x.z
-  );
-  const scaleY = Math.sqrt(
-    transform.basis_x.y ** 2 +    // ← changed from basis_y.x
-      transform.basis_y.y ** 2 +
-      transform.basis_z.y ** 2    // ← changed from basis_y.z
-  );
-  const scaleZ = Math.sqrt(
-    transform.basis_x.z ** 2 +    // ← changed from basis_z.x
-      transform.basis_y.z ** 2 +  // ← changed from basis_z.y
-      transform.basis_z.z ** 2
+  const { basis_x, basis_y, basis_z, origin } = transform;
+  const m = new THREE.Matrix4().set(
+    basis_x.x, basis_x.y, basis_x.z, origin.x,
+    basis_y.x, basis_y.y, basis_y.z, origin.y,
+    basis_z.x, basis_z.y, basis_z.z, origin.z,
+    0, 0, 0, 1
   );
 
-  const scale = { x: scaleX, y: scaleY, z: scaleZ };
+  const pos = new THREE.Vector3();
+  const quat = new THREE.Quaternion();
+  const sc = new THREE.Vector3();
+  m.decompose(pos, quat, sc);
 
-  // Normalize columns (not rows) to extract rotation
-  const basisX = {
-    x: transform.basis_x.x / scaleX,
-    y: transform.basis_y.x / scaleX,  // ← changed from basis_x.y
-    z: transform.basis_z.x / scaleX,  // ← changed from basis_x.z
+  const euler = new THREE.Euler().setFromQuaternion(quat, 'XYZ');
+
+  return {
+    position: { x: pos.x, y: pos.y, z: pos.z },
+    rotation: { x: euler.x, y: euler.y, z: euler.z },
+    scale: { x: sc.x, y: sc.y, z: sc.z },
   };
-  const basisY = {
-    x: transform.basis_x.y / scaleY,  // ← changed from basis_y.x
-    y: transform.basis_y.y / scaleY,
-    z: transform.basis_z.y / scaleY,  // ← changed from basis_y.z
-  };
-  const basisZ = {
-    x: transform.basis_x.z / scaleZ,  // ← changed from basis_z.x
-    y: transform.basis_y.z / scaleZ,  // ← changed from basis_z.y
-    z: transform.basis_z.z / scaleZ,
-  };
-
-  // Extract Euler angles (XYZ order) - based on Godot's Basis::get_euler()
-  const rotation = {
-    x: 0,
-    y: 0,
-    z: 0,
-  };
-
-  rotation.y = Math.asin(basisZ.x);
-
-  if (Math.abs(basisZ.x) < ROTATION_SINGULARITY_THRESHOLD) {
-    rotation.x = Math.atan2(-basisZ.y, basisZ.z);
-    rotation.z = Math.atan2(-basisY.x, basisX.x); 
-  } else {
-    // Gimbal lock - use alternative calculation
-    rotation.x = Math.atan2(basisY.z, basisY.y); 
-    rotation.z = 0;
-  }
-
-  return { position, rotation, scale };
 }
 
 export function identityTransform3D(): Transform3D {

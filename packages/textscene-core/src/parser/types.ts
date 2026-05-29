@@ -3,7 +3,7 @@
  */
 
 import type { Node3DProperties } from '../nodes/base/node3d/types';
-import type { ResourceRegistry } from '../resources/ResourceRegistry';
+import type { ResourceLoader } from '../resources/ResourceLoader';
 
 /**
  * Represents a complete TSCN scene
@@ -15,8 +15,8 @@ export interface TscnScene {
   externalResources: TscnExternalResource[];
   /** Internal resource definitions */
   internalResources: TscnInternalResource[];
-  /** Resource registry for loading external resources */
-  resourceRegistry?: ResourceRegistry;
+  /** Event-based resource loader (WI-79 salvage, used by SceneGraph helpers). */
+  resourceLoader?: ResourceLoader;
 }
 
 /**
@@ -61,6 +61,11 @@ export interface TscnInternalResource {
   type: string;
   data: Record<string, unknown>;
 }
+
+/** Alias used by the immutable SceneGraph and dependency-tracking helpers. */
+export type ExtResource = TscnExternalResource;
+/** Alias used by the immutable SceneGraph and dependency-tracking helpers. */
+export type SubResource = TscnInternalResource;
 
 /**
  * Represents a missing external resource that failed to load

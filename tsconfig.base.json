@@ -29,6 +29,8 @@
     // Language and Environment
     "target": "ES2022",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "jsxImportSource": "react",
 
     // Skip Lib Check
     "skipLibCheck": true

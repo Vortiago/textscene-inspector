@@ -1,7 +1,14 @@
 /**
- * esbuild configuration for bundling the extension and webview
+ * esbuild configuration for bundling the extension and webview.
+ *
+ * The webview build uses esbuild-css-modules-plugin so that `*.module.css`
+ * files imported from `@textscene/core` (the R3F components added in
+ * WI-R3F-1 onward) emit a separate CSS bundle alongside the JS bundle.
+ * The webview HTML links that CSS file with the CSP nonce so it loads
+ * under VS Code's restrictive content-security policy.
  */
 import * as esbuild from 'esbuild';
+import cssModulesPlugin from 'esbuild-css-modules-plugin';
 
 const production = process.argv.includes('--production');
 const watch = process.argv.includes('--watch');
@@ -29,14 +36,40 @@ const extensionOptions = {
 const webviewOptions = {
   entryPoints: ['src/webview/webview.ts'],
   bundle: true,
-  outfile: 'dist/webview.js',
+  // WI-R3F-18: ESM + splitting. The previous `format: 'iife'` couldn't
+  // code-split, which forced every transitive import of the entry into
+  // the single `webview.js` bundle — including the (large) DOM panels
+  // we'd ideally lazy-load. ESM + splitting moves those panels (and
+  // their drei/three.js dependencies) into separate chunks that load
+  // on demand via dynamic `import()`. The dist layout becomes:
+  //   dist/webview/webview.js                — initial chunk
+  //   dist/webview/chunks/<panel>-<hash>.js  — lazy chunks
+  //   dist/webview/webview.css               — co-located CSS
+  // The HTML uses `<script type="module">` and the CSP allows
+  // chunk URIs via `script-src ${cspSource}` (see webviewHtml.ts).
+  outdir: 'dist/webview',
+  entryNames: '[name]',
+  chunkNames: 'chunks/[name]-[hash]',
   external: ['vscode'],
-  format: 'iife',
+  format: 'esm',
+  splitting: true,
   platform: 'browser',
   target: 'es2020',
   sourcemap: !production,
   minify: production,
   logLevel: 'info',
+  plugins: [
+    cssModulesPlugin({
+      // Emit a separate dist/webview/webview.css that the HTML links
+      // with a CSP nonce instead of injecting <style> tags at runtime
+      // (CSP-incompatible).
+      inject: false,
+      emitDeclarationFile: true,
+    }),
+  ],
+  loader: {
+    '.css': 'css',
+  },
 };
 
 /**

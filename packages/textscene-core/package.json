@@ -18,10 +18,6 @@
       "import": "./dist/linter/index.js",
       "types": "./dist/linter/index.d.ts"
     },
-    "./renderer": {
-      "import": "./dist/core/TscnRenderer.js",
-      "types": "./dist/core/TscnRenderer.d.ts"
-    },
     "./logger": {
       "import": "./dist/logger.js",
       "types": "./dist/logger.d.ts"
@@ -31,9 +27,9 @@
     "dist"
   ],
   "scripts": {
-    "generate:styles": "node scripts/generate-styles.mjs",
-    "prebuild": "pnpm generate:styles && rimraf tsconfig.tsbuildinfo",
+    "prebuild": "rimraf tsconfig.tsbuildinfo",
     "build": "tsc --build",
+    "postbuild": "node scripts/copy-css-modules.mjs",
     "dev": "tsc --watch",
     "test": "vitest",
     "test:watch": "vitest --watch",
@@ -55,10 +51,22 @@
   "author": "Vortiago",
   "license": "MIT",
   "dependencies": {
-    "three": "^0.171.0"
+    "@react-three/drei": "catalog:",
+    "@react-three/fiber": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "three": "catalog:"
   },
   "devDependencies": {
-    "@types/three": "^0.171.0",
+    "@react-three/test-renderer": "catalog:",
+    "@testing-library/dom": "catalog:",
+    "@testing-library/react": "catalog:",
+    "@testing-library/user-event": "catalog:",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@types/three": "catalog:",
+    "jsdom": "catalog:",
     "rimraf": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"

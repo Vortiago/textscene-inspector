@@ -11,6 +11,10 @@ export interface EnvironmentSettings {
     color: Color;
     energyMultiplier: number;
   };
+  ambient: {
+    color: Color;
+    energy: number;
+  };
   fog: {
     enabled: boolean;
     density: number;
@@ -36,6 +40,10 @@ export function createEnvironmentSettings(
       mode: properties.background_mode,
       color: properties.background_color,
       energyMultiplier: properties.background_energy_multiplier,
+    },
+    ambient: {
+      color: properties.ambient_light_color,
+      energy: properties.ambient_light_energy,
     },
     fog: properties.volumetric_fog_enabled
       ? {

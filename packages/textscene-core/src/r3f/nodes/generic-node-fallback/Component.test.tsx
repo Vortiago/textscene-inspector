@@ -1,0 +1,58 @@
+import { describe, expect, it } from 'vitest';
+import ReactThreeTestRenderer from '@react-three/test-renderer';
+import { GenericNodeFallback } from './Component';
+import type { TscnNode } from '../../../parser/types';
+
+const baseNode: TscnNode = {
+  name: 'MysteryNode',
+  type: 'SomeUnrecognisedType',
+  children: [],
+  properties: {},
+};
+
+describe('<GenericNodeFallback>', () => {
+  it('renders a placeholder mesh for unrecognised node types', async () => {
+    const renderer = await ReactThreeTestRenderer.create(<GenericNodeFallback node={baseNode} />);
+    expect(renderer.scene.findAllByType('Mesh').length).toBe(1);
+  });
+
+  it('marks the group with placeholder metadata', async () => {
+    const renderer = await ReactThreeTestRenderer.create(<GenericNodeFallback node={baseNode} />);
+    const group = renderer.scene.findByProps({ name: 'MysteryNode' });
+    const userData = group.instance.userData as { isPlaceholder: boolean; nodeType: string; nodeName: string };
+    expect(userData.isPlaceholder).toBe(true);
+    expect(userData.nodeType).toBe('SomeUnrecognisedType');
+    expect(userData.nodeName).toBe('MysteryNode');
+  });
+
+  it('renders children through the placeholder', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <GenericNodeFallback node={baseNode}>
+        <mesh name="passthrough">
+          <boxGeometry />
+          <meshBasicMaterial />
+        </mesh>
+      </GenericNodeFallback>
+    );
+    expect(renderer.scene.findByProps({ name: 'passthrough' })).toBeDefined();
+  });
+
+  it('applies Node3D-style transform when present on properties', async () => {
+    const node: TscnNode = {
+      name: 'PositionedMystery',
+      type: 'Foo',
+      children: [],
+      properties: {
+        transform: {
+          basis_x: { x: 1, y: 0, z: 0 },
+          basis_y: { x: 0, y: 1, z: 0 },
+          basis_z: { x: 0, y: 0, z: 1 },
+          origin: { x: 7, y: 0, z: 0 },
+        },
+      },
+    };
+    const renderer = await ReactThreeTestRenderer.create(<GenericNodeFallback node={node} />);
+    const group = renderer.scene.findByProps({ name: 'PositionedMystery' });
+    expect(group.instance.position.x).toBe(7);
+  });
+});

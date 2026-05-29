@@ -48,4 +48,6 @@ export interface Node3DProperties {
   instance?: string;
   /** Child index for editable instance overrides (e.g., parent="." index="0") */
   index?: number;
+  /** Whether the node and its subtree are rendered. Defaults to true. */
+  visible?: boolean;
 }

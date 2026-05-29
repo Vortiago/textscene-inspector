@@ -51,9 +51,26 @@ temp/
 
 #Claude
 settings.local.json
+.claude/worktrees/
+.claude/*.log
+.claude/*.log.err
 
 # Test fixtures copied to web app during build
 apps/textscene-web/public/fixtures/
 
 # Test projects
 ld-58/
+
+# Spikes
+.spike/
+
+# Playwright MCP runtime artifacts
+.playwright-mcp/
+.playwright-cli/
+
+# Windows shell artifacts
+nul
+
+# Test debug artifacts (verifier screenshots — not check in to repo)
+test-*.png
+tscn-rescue-*.png

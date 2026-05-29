@@ -56,7 +56,8 @@
   "scripts": {
     "vscode:prepublish": "pnpm --filter @textscene/core build && pnpm build -- --skip-tests",
     "prebuild": "pnpm --filter @textscene/core build",
-    "build": "node esbuild.config.mjs",
+    "build": "node esbuild.config.mjs --production --skip-tests",
+    "build:dev": "node esbuild.config.mjs",
     "predev": "pnpm --filter @textscene/core build",
     "dev": "node esbuild.config.mjs --watch",
     "test": "pnpm test:unit && pnpm test:integration",
@@ -86,15 +87,20 @@
     "url": "https://github.com/vortiago/tscn-file-previewer"
   },
   "dependencies": {
-    "@textscene/core": "workspace:*"
+    "@textscene/core": "workspace:*",
+    "react": "catalog:",
+    "react-dom": "catalog:"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.10",
     "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
     "@types/vscode": "^1.85.0",
     "@vscode/test-electron": "^2.5.2",
     "@vscode/vsce": "^3.2.1",
     "esbuild": "catalog:",
+    "esbuild-css-modules-plugin": "^3.1.5",
     "glob": "^11.0.3",
     "happy-dom": "catalog:",
     "mocha": "^11.7.5",

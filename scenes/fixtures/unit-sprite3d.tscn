@@ -1,0 +1,37 @@
+[gd_scene load_steps=2 format=3 uid="uid://test_sprite3d"]
+
+[ext_resource type="Texture2D" path="res://textures/test_texture.png" id="1_sprite_tex"]
+
+[node name="Scene" type="Node3D"]
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.866025, 0.5, 0, -0.5, 0.866025, 0, 2, 5)
+fov = 70.0
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866025, -0.25, 0.433013, 0, 0.866025, 0.5, -0.5, -0.433013, 0.75, 0, 5, 0)
+
+[node name="Sprite_Default" type="Sprite3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 1, 0)
+texture = ExtResource("1_sprite_tex")
+pixel_size = 0.01
+
+[node name="Sprite_Billboard" type="Sprite3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+texture = ExtResource("1_sprite_tex")
+pixel_size = 0.01
+billboard = 1
+modulate = Color(1, 0.7, 0.4, 1)
+
+[node name="Sprite_Tinted_Transparent" type="Sprite3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 1, 0)
+texture = ExtResource("1_sprite_tex")
+pixel_size = 0.01
+modulate = Color(0.4, 0.7, 1, 0.6)
+
+[node name="Title" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 0)
+text = "Sprite3D — default, billboard, tinted+transparent"
+pixel_size = 0.006
+billboard = 1
+modulate = Color(1, 1, 1, 1)

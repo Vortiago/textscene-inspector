@@ -19,6 +19,10 @@ export interface EnvironmentProperties {
   background_color: Color;
   background_energy_multiplier: number;
 
+  // Ambient lighting (scene-wide constant illumination)
+  ambient_light_color: Color;
+  ambient_light_energy: number;
+
   // Volumetric Fog
   volumetric_fog_enabled: boolean;
   volumetric_fog_density: number;

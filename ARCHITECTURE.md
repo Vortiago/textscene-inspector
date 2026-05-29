@@ -2,217 +2,240 @@
 
 ## Technology Stack
 
-- TypeScript (strict mode)
-- pnpm workspaces
-- Vitest 3.2+ (projects feature)
-- three.js
-- Vite (web app)
+- TypeScript 6 (strict mode)
+- pnpm workspaces with catalog dependency versions
+- Vitest 4.1 (with `@react-three/test-renderer` and `@testing-library/react`)
+- React 19 + react-three-fiber 9 + @react-three/drei
+- three.js 0.184
+- Vite 6 (web app) + esbuild (VS Code extension)
 
 ## Project Structure
 
 ```
 /
 ├── packages/
-│   └── tscn-renderer/      # Core library
+│   └── textscene-core/          # Core library: parser, linter, R3F components
 │       └── src/
-│           ├── parser/     # TSCN parsing
-│           ├── nodes/      # Vertical slices per node type
-│           │   ├── node3d/
-│           │   │   ├── parser.ts        # Parse logic
-│           │   │   ├── renderer.ts      # Render logic
-│           │   │   ├── index.ts         # Self-registration
-│           │   │   └── node3d.test.ts   # Co-located tests
-│           │   └── meshinstance3d/
-│           ├── core/       # Core systems
-│           │   ├── NodeRegistry.ts       # Self-registering node types
-│           │   ├── SceneManager.ts       # External scene lifecycle & hot-reload
-│           │   ├── NodeLifecycleManager.ts  # Node add/remove/update
-│           │   ├── SceneSetup.ts         # Three.js initialization
-│           │   └── TscnRenderer.ts       # Main renderer
-│           ├── resources/  # Resource handling
-│           │   ├── resourceResolver.ts  # Generic resolution
-│           │   ├── ResourceManager.ts   # Mesh/material loading
-│           │   ├── meshes/              # Mesh sub-resources
-│           │   └── materials/           # Material sub-resources
-│           └── ui/         # UI components
-│               ├── TscnPreviewUI.ts     # Main UI coordinator
-│               ├── SceneTreeViewer.ts   # Tree hierarchy
-│               └── NodeDetailsFormatter.ts  # Property display
-├── apps/
-│   ├── vscode-extension/   # VS Code extension (shares textscene-renderer)
-│   ├── web-previewer/      # Web dev/debug tool (shares textscene-renderer)
-│   └── powertoys/          # Future
-└── tests/                  # Shared test utilities & fixtures
+│           ├── parser/          # Lenient TSCN parser used for rendering
+│           ├── linter/          # Strict parser + lint rule registry
+│           ├── nodes/           # Per-node-type parser + linter + formatter
+│           │   ├── node/
+│           │   ├── base/node3d/
+│           │   └── 3d/
+│           │       ├── meshinstance3d/
+│           │       ├── camera3d/
+│           │       ├── lights/{directional,omni,spot}light3d/
+│           │       ├── worldenvironment/
+│           │       └── label3d/
+│           ├── core/            # SceneGraph + immutable resolution helpers
+│           │   ├── NodeRegistry.ts        # Parser + formatter registry
+│           │   ├── SceneGraph.ts          # Immutable resolved scene
+│           │   ├── SceneGraphBuilder.ts   # Builder for SceneGraph
+│           │   └── nodeDependsOnPath.ts   # Dependency-walk predicate
+│           ├── r3f/             # react-three-fiber UI surface
+│           │   ├── TscnCanvas.tsx         # <Canvas> + NodeDispatcher
+│           │   ├── NodeDispatcher.tsx     # SceneGraph -> React tree
+│           │   ├── NodeComponentRegistry.ts
+│           │   ├── nodes/{node,node3d,meshinstance3d,...}/Component.tsx
+│           │   ├── contexts/{Selection,Hierarchy,CameraControl,NodePath}Context.tsx
+│           │   ├── components/{TscnPreviewShell,SceneTreeViewer,NodeDetailsPanel,ViewportSelector}/
+│           │   └── hooks/useViewportSelection.tsx
+│           └── resources/       # Async resource loading
+│               ├── FileEventBus.ts        # request(path) -> loaded/failed
+│               ├── ResourceEventBus.ts    # typed processor events
+│               ├── ResourceLoader.ts      # Texture/Material/GLB/Scene
+│               ├── useResource.ts         # React hook over the event bus
+│               ├── ResourceLoaderContext.tsx
+│               ├── meshes/                # Primitive mesh parsers
+│               └── materials/standardmaterial3d/  # Material parser + renderer
+└── apps/
+    ├── textscene-vscode/         # VS Code extension (esbuild)
+    ├── textscene-web/            # Web previewer (Vite)
+    └── textscene-linter/         # CLI linter (Node)
 ```
 
 ## Key Concepts
 
-### Vertical Slicing
+### React-Three-Fiber Rendering
 
-Each TSCN node type (Mesh, Camera, Light, etc.) has its own folder containing:
-- `parser.ts` - Type guards and property parsing
-- `renderer.ts` - Three.js object creation
-- `index.ts` - Self-registration with NodeRegistry
-- `*.test.ts` - Co-located unit tests
+Rendering is owned by `<TscnCanvas>`, which mounts an R3F `<Canvas>`,
+reads the active `SceneGraph` from `HierarchyContext`, and delegates
+the node tree to `<NodeDispatcher>`. The dispatcher walks the scene
+recursively: for each `TscnNode` it looks up the component in
+`nodeComponentRegistry`, renders it with the node's pre-walked children,
+and wraps the subtree in pointer handlers from `useViewportSelection`
+plus a `<NodePathProvider>` so descendants can read their own TSCN path.
 
-Related code stays together for easy iteration. No central files need editing when adding node types.
+Each node type owns a folder under `packages/textscene-core/src/r3f/nodes/`
+with a `Component.tsx` (the R3F render) and an `index.ts` that
+self-registers the component with `nodeComponentRegistry`. Unknown
+types render as `<GenericNodeFallback>` (a labeled placeholder cube).
 
-### Node Registry Pattern
+### Two-Parser Architecture
 
-**Problem**: Adding new node types required editing TscnParser and TscnRenderer (violates Open/Closed Principle)
+Two parsers serve different use cases:
 
-**Solution**: Self-registering node types via NodeRegistry
-- Each node type registers itself on import
-- Parser/renderer use registry lookup instead of conditionals
-- Adding new nodes: create folder + import in TscnParser.ts
+- **`packages/textscene-core/src/parser/TscnParser.ts`** — lenient
+  parser used by the renderer. Recovers from errors, logs warnings,
+  keeps rendering whatever it can.
+- **`packages/textscene-core/src/linter/StrictTscnParser.ts`** — strict
+  parser used by the CLI linter and the language-feature providers.
+  Reports every syntax/format error with line/column information.
 
-**Benefits**:
-- 75% reduction in maintenance overhead
-- No hardcoded switch statements
-- Type-safe registration
-- Automatic parser and renderer wiring
+The lenient parser uses `NodeRegistry` to convert raw TSCN body
+properties (snake_case strings) into the strongly-typed shape declared
+by each node type's `parser.ts`. Each node-type's `index.ts` registers
+its parser + property formatter on module load via side-effect
+imports declared in `parser/TscnParser.ts`.
 
-### Generic Resource Resolution
+### Resource Loading
 
-`resolveResource<T>()` generic function eliminates duplication in resolveGeometry() and resolveMaterial():
-- Type-safe handler registration (parser + renderer per resource type)
-- Single error handling path
-- Eliminates 75 lines of duplicated code
+External resources (textures, materials, GLB meshes, packed scenes)
+flow through a layered event-bus pipeline:
 
-### Shared Light Utilities
+1. **`FileEventBus`** (app layer): hosts implement `ResourceProvider`
+   and the bus turns `request(path)` into a `loaded`/`failed` event.
+2. **`ResourceEventBus`** (core layer): typed `texture:loaded`,
+   `material:loaded`, `glb:loaded`, `scene:loaded` events with their
+   processed payloads.
+3. **`ResourceLoader`**: coordinates per-type processors
+   (`textures`, `materials`, `glbMeshes`, `sceneLoader`). The host
+   calls `provideFile(path)` after the user uploads a previously-missing
+   file, which clears the failed-cache and re-routes through the right
+   processor.
 
-**Location**: `packages/textscene-core/src/nodes/3d/lights/shared/`
+`useResource(path, type)` is the only thing R3F components see. The hook
+subscribes to the bus and returns `{ value, status, error? }` where
+`status` is `'pending' | 'loaded' | 'missing' | 'error'`. Missing files
+do NOT suspend the subtree; components branch on `status` and render
+placeholders for missing resources. Object3D-typed values (`GLBMesh`)
+are cloned per consumer per CLAUDE.md's three.js single-parent rule.
 
-Light nodes (DirectionalLight3D, OmniLight3D, SpotLight3D) share common properties and formatting logic. Shared utilities eliminate ~105 lines of duplication:
+### Linter Bundle Isolation
 
-**Parser Utilities** (`shared/parser.ts`):
-- `parseBaseLightProperties()` - Parses light_color, light_energy, shadow_enabled, shadow_bias, shadow_filter
-- `parseBaseLightWithNormalBias()` - Extends base properties with shadow_normal_bias (for DirectionalLight3D, OmniLight3D)
+The linter package stays React-free. `packages/textscene-core/src/
+linter/index.ts` imports each node type's `linterValidators.ts` and
+`linter.ts` directly, never the `r3f/` tree or `nodes/**/Component.tsx`.
+This keeps the linter CLI bundle small.
 
-**Formatter Utilities** (`shared/propertyFormatter.ts`):
-- `formatBaseLightSection()` - Formats Light section (Color, Energy + optional items)
-- `formatBaseShadowSection()` - Formats Shadow section (Enabled, Bias, Filter + optional items)
-- `formatShadowSectionWithNormalBias()` - Extends base shadow section with Normal Bias
+### Self-Registration Patterns
 
-**Type Definitions** (`shared/types.ts`):
-- `BaseLightProperties` - Common light properties interface
-- `BaseLightWithNormalBias` - Extended interface with shadow_normal_bias
+Two parallel registries:
 
-**Benefits**:
-- Light-specific parsers/formatters reduced to ~10-15 lines
-- New light types easier to implement
-- Consistent property handling across all lights
-- Type-safe property inheritance
+- `nodeRegistry` (`core/NodeRegistry.ts`): node-type parser + formatter.
+  Used by `TscnParser` to convert TSCN body properties.
+- `nodeComponentRegistry` (`r3f/NodeComponentRegistry.ts`): node-type
+  React component. Used by `NodeDispatcher` to render the SceneGraph.
 
-### Scene Management Architecture
+Each node type registers itself in both registries via side-effect
+imports — `parser/TscnParser.ts` and `r3f/index.ts` import every node
+type's `index.ts` / `nodes/index.ts` for the registration.
 
-**Problem**: External scene instances (PackedScene) needed proper lifecycle management, hot-reload support, and instance tracking without code duplication.
+### Multi-Panel State Isolation
 
-**Solution**: Four-layer architecture with clear separation of concerns and DRY principles.
+Each `<TscnPreviewShell>` instance creates its own `HierarchyContext`,
+`SelectionContext`, and `CameraControlContext`. Two panels open in the
+same VS Code window cannot corrupt each other's selection state because
+the React context is scoped per shell. The `panelId` prop is the stable
+key for log correlation and (future) multi-panel coordination.
 
----
+### Camera Switching
 
-**Layer 1: ResourceRegistry** - Generic resource loading (textures, scenes, materials), file caching, circular dependency detection
+`CameraControlContext` exposes `activeCameraPath` plus `switchToCamera`
+/ `returnToFreeView` actions. The `<NodeDetailsPanel>` renders a "Use
+This Camera" / "Reset Camera" button when the selected node is a
+Camera3D. The `<TscnCanvas>` houses an `ActiveCameraSwitcher` that
+swaps the R3F active camera via `useThree(state => state.set)` based on
+the `userData.tscnPath` tag the Camera3D component writes to its
+three.js camera.
 
-**Layer 2: SceneManager** - External scene loading/caching, instance tracking (`Map<scenePath, Set<instancePath>>`), hot-reload via `updateScene()`
+### VS Code Editor Features
 
-**Layer 3: NodeLifecycleManager** - Node add/remove/update operations, delegates instance handling to SceneManager
+- `TscnDefinitionProvider`: Ctrl/Cmd-click on a `res://` path navigates
+  to that resource file (text-layer feature, unaffected by R3F).
+- `TscnDocumentSymbolProvider`: scene tree appears in the VS Code
+  Outline panel.
+- File watcher: when a `.tscn` file changes, the extension host posts
+  a fresh `loadTscn` message to the webview, which re-parses and
+  re-renders. The R3F canvas DOM node is preserved across content
+  changes so OrbitControls camera state survives hot-reload.
 
-**Layer 4: UI Layer** - SceneTreeViewer, SelectionManager, visual indicators for instance nodes
+### Dependency Versions (Phase 14)
 
-**Hot-reload**: `updateScene()` clears caches, reloads scene, removes old children, re-adds updated nodes to all instances
+Spike-validated stack:
 
-**Circular dependency**: Setter-based initialization (`setNodeLifecycleManager()`, `setSceneManager()`) avoids constructor complexity
+- React 19.2, react-dom 19.2, @react-three/fiber 9.6, @react-three/drei 10.7
+- @react-three/test-renderer 9.1, @testing-library/react 16.3
+- three 0.184, @types/three 0.184
+- Vitest 4.1, jsdom 29, @vitejs/plugin-react 5 (workspace is on Vite 6)
+- TypeScript 6.0.3
 
-### GLB/GLTF Instance Pattern
+### Bundle Size Target
 
-**Problem**: GLB/GLTF files are binary mesh formats that need proper instancing support, material cloning, and Godot "editable instance" feature for material overrides.
+The PRD acceptance for WI-R3F-6 was "VS Code webview bundle no larger
+than `main + 200 KB gzipped`". History:
 
-**Solution**: Three-phase architecture in ResourceRegistry, NodeLifecycleManager, and Material cloning.
+- `main` baseline: 1,429,646 B raw / **247,543 B gzipped**
+- WI-R3F-6 (iife, no code-splitting): 3,691,702 B raw / **638,980 B gzipped** — +382 KB gz, **+182 KB over budget**
+- **WI-R3F-18 (ESM + splitting + React.lazy panels)**: initial-paint static-import closure is **1,357,273 B raw / 390,322 B gzipped** — **+143 KB gz vs main**, **57 KB under the +200 KB budget** ✅
 
----
+WI-R3F-18 closed the gap with three combined changes:
 
-**Phase 1: Resource Loading** (ResourceRegistry.loadGLBMesh)
-- Loads binary GLB/GLTF files via GLTFLoader
-- Caches parsed three.js scene graphs
-- **Critical**: Returns cloned instances (not cached reference)
+1. **Webview build flipped from `iife` to `esm` + `splitting`**
+   (`apps/textscene-vscode/esbuild.config.mjs`). iife couldn't
+   code-split — every transitive import landed in one bundle. ESM
+   with splitting emits `dist/webview/webview.js` (entry) plus
+   `dist/webview/chunks/*.js` (shared + lazy chunks).
+2. **DOM panels lazy-loaded via `React.lazy` + `<Suspense>`**
+   (`packages/textscene-core/src/r3f/components/TscnPreviewShell/TscnPreviewShell.tsx`).
+   `<SceneTreeViewer>` and `<NodeDetailsPanel>` are no longer in the
+   initial static-import closure; they load on demand with a
+   `Loading tree…` / `Loading details…` fallback while resolving.
+3. **CSP + html template updated for ESM** — `<script type="module">`
+   and `script-src ${cspSource}` (in addition to the nonce'd entry)
+   so the webview can fetch chunk URIs.
 
-```typescript
-// Each call returns a NEW clone
-const mesh1 = await loadGLBMesh('door_glb');
-const mesh2 = await loadGLBMesh('door_glb');
-// mesh1 !== mesh2 (different instances)
-```
+The initial chunk now contains: React, react-three-fiber, drei
+runtime, three.js, the scene canvas (`<TscnCanvas>`), the node
+component registry (registers all node types on import), the
+resource pipeline, contexts, and selection. The lazy chunks
+contain: the tree viewer, the details panel, and the CSS modules
+they own.
 
-**Phase 2: Material Cloning** (THREE.Object3D.clone(true))
-- `clone(true)` clones geometry AND materials
-- Prevents material sharing between instances
-- Allows independent material overrides per instance
+**Bundle-size guard.** `scripts/check-bundle-size.mjs` walks the
+static-import closure starting at `webview.js`, gzips the
+concatenation, and compares against `main + 200 KB`. Wired into
+`pnpm validate` and runs informationally (warn-only) for now. Once
+follow-up WIs land without regressing the figure, flip to
+`--enforce` for hard-fail in CI.
 
-**Why Material Cloning Is Required**:
-THREE.Object3D can only have ONE parent in the scene graph. When caching GLB meshes:
+**Status of the budget gate.** As of this commit, the build PASSes
+with 55.9 KB headroom under the budget. The recommendation for
+PR-merge readiness: the gate is already structurally enforceable.
+The reason to keep it warn-only until at least one follow-up WI
+lands is that the headroom is thin (~14% of the budget) and any
+of these would push back over: a drei addition (e.g. effects
+postprocessing), a new top-level component import in
+`<TscnCanvas>`, or a node type that pulls in a new dependency at
+the registry-load step. Flipping to `--enforce` should happen after
+WI-R3F-16 (audio/animation) lands and the budget is re-verified.
 
-- ❌ Without cloning: Only last instance renders (previous instances lose parent)
-- ✅ With cloning: Each instance is independent, all render correctly
+### Known limitations
 
-Additionally, materials must be cloned to support per-instance material overrides without affecting other instances.
+**Web app: content-only hot-reload is not implemented.** When the user
+edits a fixture's TSCN content out-of-band (e.g. via the dev server
+filesystem watcher) the web app does not detect the change. The
+workaround is to re-select the fixture from the dropdown, which
+re-fetches and re-mounts the shell. The VS Code extension does NOT
+share this limitation — there the editor's `onDidSaveTextDocument`
+fires `loadTscn` and the React shell reconciles cleanly.
 
-**Phase 3: Editable Instance Support** (NodeLifecycleManager)
-- Godot's "editable instance" feature allows modifying children inside binary meshes
-- Children with `index` attribute refer to GLB children by array index
-- Supports `surface_material_override/N` properties per-child
+Fixing this on the web side would mean either:
+1. Subscribing to the Vite HMR `import.meta.hot.on('update')` event
+   when in dev mode, then re-fetching the active fixture, or
+2. Polling the fixture URL with `ETag` / `Last-Modified` and
+   re-fetching on change.
 
-```typescript
-// Parent node with instance = "door.glb"
-{
-  name: 'DoorInstance',
-  instance: 'ExtResource("door_glb")',
-  children: [
-    {
-      name: 'Handle', // Editable child
-      properties: {
-        index: 2, // Child at index 2 in GLB
-        'surface_material_override/0': 'ExtResource("gold_mat")'
-      }
-    }
-  ]
-}
-```
-
-**Material Override Flow**:
-1. Load GLB mesh from cache (cloned)
-2. Identify editable children (those with `index` attribute)
-3. Find corresponding child in GLB by index
-4. Parse `surface_material_override/N` properties
-5. Apply overrides via `applyMaterialOverridesToMesh()` (traverses mesh hierarchy)
-
-**Implementation Details**:
-- Material array mutation: Converting single Material → array requires cloning to avoid cache corruption
-- Transform overrides: Godot Transform3D applied to GLB children (sets matrix, disables matrixAutoUpdate)
-- Non-indexed children: Added as new children to instance (not editable instance feature)
-
-**Benefits**:
-- Multiple GLB instances render independently
-- Material modifications isolated per-instance
-- Godot scene format compatibility
-- Cache efficiency (load once, clone many)
-
-### UI Composition
-
-- `TscnPreviewUI` - Event wiring, state management
-- `SceneTreeViewer` - DOM manipulation, tree logic
-- `NodeDetailsFormatter` - Pure HTML generation
-- `SceneSetup` - Three.js initialization
-
-Both apps (web-previewer and vscode-extension) share same rendering engine, UI components, and functionality via textscene-renderer package.
-
-### TSCN Format
-
-Heading-based text format: `[type key=value ...]`
-
-Components:
-- Nodes (scene tree)
-- External resources (file references)
-- Internal resources (embedded data)
-
-**Single Root Rule**: Every TSCN file must have exactly one root node. Parser enforces this constraint.
+Neither is implemented; deferred to a follow-up WI. The current v1
+flow expects users to edit fixtures via the VS Code extension where
+hot-reload works.

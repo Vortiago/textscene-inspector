@@ -4,8 +4,7 @@
 
 import * as vscode from 'vscode';
 import { generateWebviewHtml, generateNonce } from './webview/webviewHtml';
-import type { IncrementalUpdateData, MissingResource } from '@textscene/core';
-import { computeIncrementalChanges } from './diffUtils';
+import type { MissingResource } from '@textscene/core';
 import { VSCodeResourceProvider } from './providers/VSCodeResourceProvider';
 import * as logger from './logger';
 
@@ -38,6 +37,20 @@ export class TscnPreviewPanel {
   private _previousContent: string | undefined;
   private _onDidDispose: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
   public readonly onDidDispose: vscode.Event<void> = this._onDidDispose.event;
+
+  /**
+   * Webview-ready handshake (fixes VSCODE-01 race).
+   *
+   * The HTML mounts the JS bundle asynchronously, which in turn renders
+   * the React tree. React's `useEffect` that installs the `message`
+   * listener does not run synchronously with `createRoot().render(...)`,
+   * so any `postMessage` the extension host sends before the effect
+   * fires is dropped. We work around this by caching the last `loadTscn`
+   * payload here and re-sending it after the webview posts the
+   * `webviewReady` message.
+   */
+  private _webviewReady = false;
+  private _pendingLoadContent: string | undefined;
 
   // Test observability: message history
   private _messageHistory: Array<{ type: string; [key: string]: unknown }> = [];
@@ -97,6 +110,14 @@ export class TscnPreviewPanel {
     this._panel.webview.onDidReceiveMessage(
       (message) => {
         switch (message.type) {
+          case 'webviewReady':
+            this._webviewReady = true;
+            if (this._pendingLoadContent !== undefined) {
+              const content = this._pendingLoadContent;
+              this._pendingLoadContent = undefined;
+              this._postMessageToWebview({ type: 'loadTscn', content });
+            }
+            return;
           case 'error':
             vscode.window.showErrorMessage(message.message);
             return;
@@ -162,39 +183,18 @@ export class TscnPreviewPanel {
         return;
       }
 
-      // First load always does full load
-      if (!this._previousContent) {
-        this._previousContent = textContent;
-        const message = {
-          type: 'loadTscn',
-          content: textContent,
-        };
-        this._postMessageToWebview(message);
-        return;
-      }
-
-      // Compute incremental changes using hash-based diff
-      const diffResult = computeIncrementalChanges(this._previousContent, textContent);
+      // React reconciliation handles diffing inside the webview, so the
+      // extension host always sends the full text and lets the shell
+      // re-parse + reconcile.
       this._previousContent = textContent;
 
-      if (diffResult.updateType === 'full' || !diffResult.changes || !diffResult.newScene) {
-        // Full reload
-        const message = {
-          type: 'loadTscn',
-          content: textContent,
-        };
-        this._postMessageToWebview(message);
+      // Gate the post on the webview-ready handshake. If the React
+      // tree hasn't installed its `message` listener yet, cache the
+      // payload and let the `webviewReady` handler replay it.
+      if (this._webviewReady) {
+        this._postMessageToWebview({ type: 'loadTscn', content: textContent });
       } else {
-        // Incremental update
-        const updateData: IncrementalUpdateData = {
-          changes: diffResult.changes,
-          sceneData: diffResult.newScene,
-        };
-        const message = {
-          type: 'incrementalUpdate',
-          data: updateData,
-        };
-        this._postMessageToWebview(message);
+        this._pendingLoadContent = textContent;
       }
     } catch (error) {
       vscode.window.showErrorMessage(
@@ -204,12 +204,23 @@ export class TscnPreviewPanel {
   }
 
   private _getHtmlForWebview(webview: vscode.Webview): string {
+    // WI-R3F-18: webview build moved to `dist/webview/` (ESM + splitting)
+    // so lazy-loaded chunks live alongside the entry script and import
+    // each other via relative URIs.
     const scriptUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(this._extensionUri, 'dist', 'webview.js')
+      vscode.Uri.joinPath(this._extensionUri, 'dist', 'webview', 'webview.js')
+    ).toString();
+    const cssUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(this._extensionUri, 'dist', 'webview', 'webview.css')
     ).toString();
 
     const nonce = generateNonce();
-    return generateWebviewHtml(scriptUri, nonce);
+    return generateWebviewHtml({
+      scriptUri,
+      cssUri,
+      nonce,
+      cspSource: webview.cspSource,
+    });
   }
 
   private async _jumpToNodeDefinition(nodeName: string): Promise<void> {

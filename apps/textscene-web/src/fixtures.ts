@@ -206,6 +206,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Audio Stream Player",
+    "file": "unit-audio-stream-player.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Label3d",
     "file": "unit-label3d.tscn",
     "category": "Other"
@@ -218,6 +223,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Photo Frame Base",
     "file": "unit-photo-frame-base.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Sprite3d",
+    "file": "unit-sprite3d.tscn",
     "category": "Other"
   },
   {
@@ -294,6 +304,11 @@ export const fixtures: Fixture[] = [
     "name": "Torus Mesh",
     "file": "unit-torus-mesh.tscn",
     "category": "Unit - Primitive Meshes"
+  },
+  {
+    "name": "Animation Player",
+    "file": "unit-animation-player.tscn",
+    "category": "Unit - Basic Nodes"
   },
   {
     "name": "Camera Basic",
