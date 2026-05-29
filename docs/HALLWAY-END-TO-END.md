@@ -943,3 +943,28 @@ After clean build + cache wipe, the visual output is identical to pre-fix builds
 4. The gray rectangle may be the WallSection door/entrance node, not a floating artifact
 
 **The unit test geometry is provably correct. The visual discrepancy is a camera/viewport issue or a scene-graph composition issue, not a transform matrix issue.**
+
+---
+
+## 2026-05-29 — Comprehensive positioning hunt (lamps / photo / window frame / lights / rotated meshes)
+
+Follow-up on the handoff open item: *"other elements being positioned wrong — ceiling lamps, a photo or window frame... other maths that are now wrong."* Ran a 5-subsystem TDD-probe sweep against the real `parseTransform3D` + `decomposeTransform3D` pipeline, each verdict cross-checked by an independent from-scratch row-vector re-derivation (guarding against the antipattern-#8 trap of rewriting expectations to match buggy output).
+
+**Verdict: no transform bug. All five subsystems verified correct.**
+
+| Subsystem | Real transform tested | Result |
+|---|---|---|
+| Ceiling lamps | 3-level nested instance (Hallway → HallwayGeometry → roof_lamp → OmniLight3D), identity bases | World positions correct to 1e-5 |
+| Photo Canvas | `Ry(+90°)` PlaneMesh (same family as walls) | Decomposes to `rotation.y=+π/2`; `FrontSide` is Godot-faithful (material has no `cull_mode`) |
+| Window frames | 4 inline bars under a 180°-about-X `Node3D` chain | Coplanar rectangle bordering the glass, correct to 1e-9 |
+| Light nodes | Omni/Spot/Dir direction + `light_energy → intensity` | Directions correct; the ×2 intensity is a deliberate documented cosmetic carry-over (`lightConstants.ts`), not a regression |
+| Rotated meshes | `Rz(180°)` ceiling, `Ry(180°)+scale` wall, `Rz(-90°)` crown molding | Correct axis mapping, no scale leakage |
+
+**Conclusion.** The earlier wrong positioning was almost certainly the same row-vs-column transpose bug as the walls. `99c1479` is a *global* `decomposeTransform3D` fix, so it corrected the photo (`Ry+90`) and the rotated trim at the same moment it fixed the walls. The lamps use identity (pure-translation) transforms and were never affected by the transpose bug either way. If any element still looks visually wrong, it lives at the GLB-asset / full-scene-composition / material layer, which unit probes cannot reach — that requires live verification (dev server + the ~60-file upload cascade).
+
+**Locked in** (new regression suites in `packages/textscene-core/src/utils/`):
+- `ld58-rotation-regression.test.ts` — `Rz(180°)` / `Ry(180°)+scale` / `Rz(-90°)`, the axes the `Ry(+90°)` wall suite never exercised. The asymmetric `Rz(-90°)` crown molding is the decisive row-convention discriminator (a transpose would map local X → +Y instead of −Y).
+- `ld58-lamp-composition-regression.test.ts` — ceiling-lamp nested composition + child-injected-into-a-sub-instance world positions.
+- `ld58-window-frame-regression.test.ts` — window-frame coplanar-rectangle composition through the 180°-flip chain.
+
+The diagnostic probes used during the hunt were removed after promotion.
