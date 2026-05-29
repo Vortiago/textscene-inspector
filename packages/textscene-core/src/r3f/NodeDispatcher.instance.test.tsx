@@ -371,4 +371,108 @@ describe('<NodeDispatcher> PackedScene instancing (WI-R3F-12)', () => {
     expect(inline).toBeDefined();
     expect(instanced).toBeDefined();
   });
+
+  it('REGRESSION (deleted main test port): nested instances compose world positions through 3 levels', async () => {
+    // Restored from main's deleted SceneManager.nested-external.test.ts.
+    // Main asserted middleInstance.position.z=3 and leafInstance.position.x=2
+    // for a 3-level nested PackedScene chain. This was deleted during the
+    // R3F migration and never replaced — leaving nested-transform composition
+    // untested. This is the test that should catch the hallway wall regression.
+    const { loader, setSceneCached } = makeLoader();
+
+    // Level 3 (leaf): a single box mesh, NO transform.
+    const leafScene: TscnScene = {
+      nodes: [
+        makeNode('LeafBox', 'MeshInstance3D', {
+          properties: {
+            name: 'LeafBox',
+            mesh: 'SubResource("Box_1")',
+            surfaceMaterialOverrides: new Map(),
+          } as Record<string, unknown>,
+        }),
+      ],
+      externalResources: [],
+      internalResources: [
+        {
+          id: 'Box_1',
+          type: 'BoxMesh',
+          data: { id: 'Box_1', size: 'Vector3(1, 1, 1)' },
+        },
+      ],
+    };
+
+    // Level 2 (middle): a Node3D wrapper translated z=3 that instances leaf.
+    const middleScene: TscnScene = {
+      nodes: [
+        {
+          name: 'MiddleWrapper',
+          type: 'Node3D',
+          instance: 'ExtResource("leaf_ref")',
+          children: [],
+          properties: {
+            name: 'MiddleWrapper',
+            transform: {
+              basis_x: { x: 1, y: 0, z: 0 },
+              basis_y: { x: 0, y: 1, z: 0 },
+              basis_z: { x: 0, y: 0, z: 1 },
+              origin: { x: 0, y: 0, z: 3 },
+            },
+          } as Record<string, unknown>,
+        },
+      ],
+      externalResources: [
+        { id: 'leaf_ref', path: 'res://leaf.tscn', type: 'PackedScene' },
+      ],
+      internalResources: [],
+    };
+
+    setSceneCached('res://leaf.tscn', leafScene);
+    setSceneCached('res://middle.tscn', middleScene);
+
+    // Level 1 (top): a Node3D translated x=2 that instances middle.
+    const topNodes: TscnNode[] = [
+      {
+        name: 'TopRoot',
+        type: 'Node3D',
+        instance: 'ExtResource("middle_ref")',
+        children: [],
+        properties: {
+          name: 'TopRoot',
+          transform: {
+            basis_x: { x: 1, y: 0, z: 0 },
+            basis_y: { x: 0, y: 1, z: 0 },
+            basis_z: { x: 0, y: 0, z: 1 },
+            origin: { x: 2, y: 0, z: 0 },
+          },
+        } as Record<string, unknown>,
+      },
+    ];
+
+    const renderer = await renderTree(
+      topNodes,
+      loader,
+      [{ id: 'middle_ref', path: 'res://middle.tscn', type: 'PackedScene' }]
+    );
+
+    const meshes = renderer.scene.findAllByType('Mesh');
+    const leaf = meshes.find((m) => m.instance.name === 'LeafBox');
+    expect(leaf).toBeDefined();
+
+    // Force-update the world matrix from the root down. Calling
+    // `leaf.updateMatrixWorld(true)` alone updates only the leaf's
+    // branch, which leaves parent local matrices unrecomputed in the
+    // test renderer. R3F in production does this automatically per
+    // frame; the test must do it manually.
+    let root: THREE.Object3D = leaf!.instance;
+    while (root.parent) root = root.parent;
+    root.updateMatrixWorld(true);
+
+    const worldPos = new THREE.Vector3();
+    worldPos.setFromMatrixPosition(leaf!.instance.matrixWorld);
+
+    // Expected: TopRoot(2, 0, 0) + MiddleWrapper(0, 0, 3) + LeafBox(0, 0, 0) = (2, 0, 3)
+    expect(worldPos.x).toBeCloseTo(2, 4);
+    expect(worldPos.y).toBeCloseTo(0, 4);
+    expect(worldPos.z).toBeCloseTo(3, 4);
+  });
 });

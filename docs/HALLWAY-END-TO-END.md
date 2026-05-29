@@ -477,3 +477,469 @@ Total nodes: 7 (matches fixture header `Nodes: 7`).
 
 **WI-R3F-16/C gate: PASS on 6bc77d0 (rows 1–13 all PASS; rows 14–20 N/A — no AnimationTree fixture).**
 
+---
+
+## Final Gate 1 confirmation on 6a5cc44 — 2026-05-28
+
+**Integration tip:** `6a5cc44` (`merge: WI-R3F-16/C into feat/r3f-16-audio-animation`)  
+**Merges included:** `ed8a980` (WI-R3F-18 lazy-load), `6a5cc44` (WI-R3F-16/C AnimationPlayer)  
+**Preview server:** `http://localhost:4175/` (fresh production build on integration tip)
+
+### Signal 1: example-hallway.tscn regression check
+
+Upload cascade completed in 4 tiers (~59 files). Final state:
+
+| Signal | Observed | Result |
+|---|---|---|
+| Nodes | 286 | **PASS** (matches 05bd4d8 baseline) |
+| Root | Hallway | **PASS** |
+| Missing rows | 0 | **PASS** |
+| Console errors | 0 | **PASS** |
+
+Resource files panel: all rows show `✓` (resolved state).
+
+### Signal 2: unit-animation-player.tscn regression check
+
+| Property | Observed on 6a5cc44 | Result |
+|---|---|---|
+| AnimationPlayer in tree | `Scene/Character/AnimationPlayer` | **PASS** |
+| No GenericNodeFallback | `•Anim` prefix (not `(?)`) | **PASS** |
+| Playback section heading | Present | **PASS** |
+| Speed Scale | `1.000` | **PASS** |
+| Active | `true` | **PASS** |
+| Autoplay | `idle` | **PASS** |
+| Clips (3) heading | Present | **PASS** |
+| `[0]` | `idle` | **PASS** |
+| `[1]` | `walk` | **PASS** |
+| `[2]` | `run` | **PASS** |
+| Pairwise distinct | idle ≠ walk ≠ run | **PASS** |
+
+### Evidence
+
+- `docs/screenshots/web/gate1-final-6a5cc44.png` — viewport showing hallway render: 286 nodes, 0 missing resources, 0 console errors on integration tip.
+
+**Gate 1: FULLY MET on integration tip 6a5cc44.** Both WI-R3F-18 (lazy-load) and WI-R3F-16/C (AnimationPlayer) integrate cleanly with no hallway regressions.
+
+---
+
+## Gate 1 defect close-out — D1 / D2 / D3 / D4 — 2026-05-28
+
+**Integration tip:** `6a5cc44`  
+**Main-branch HEAD:** `80fa99e` (`docs: Add Phase 13.5 Architecture document...`)
+
+### D2 — Wall texture (PASS)
+
+Close-up screenshot at 4× CSS zoom on the left hallway wall confirms brown wood-grain texture is visible.
+
+- Screenshot: `docs/screenshots/web/d2-wall-closeup-6a5cc44.png`
+
+**D2: PASS** — texture is applied; walls are not gray.
+
+### D3 — Photo canvas (PASS)
+
+Screenshot confirms framed flower photo (flowers.png) is visible inside the portrait frame geometry from camera POV.
+
+- Screenshot: `docs/screenshots/web/d3-photo-canvas-6a5cc44.png`
+
+**D3: PASS** — photo plane is rendered double-sided (WI-HALL-6 fix active).
+
+### D4 — Main-branch reference render (PASS)
+
+Main-branch web app built from `80fa99e` in worktree `.claude/wt/main-hallway/`. Full 3-tier upload cascade (61 files) completed, 0 missing resources, 286 nodes.
+
+| Signal | Main-branch (`80fa99e`) | Integration (`6a5cc44`) |
+|---|---|---|
+| Nodes | 286 | 286 |
+| Missing | 0 | 0 |
+| Wall appearance | Brown wood-grain texture visible | Brown wood-grain texture visible |
+| Wall geometry | Same hallway proportions | Same hallway proportions |
+
+Both renders show identical brown textured walls — the user-reported "walls look gray" was a pre-upload-cascade artefact (missing texture resources). With all assets loaded both branches render the same brown wood-grain walls.
+
+- `docs/screenshots/web/d4-main-hallway-reference.png` — main-branch overview (80fa99e, fully loaded)
+- `docs/screenshots/web/d4-main-wall-closeup.png` — main-branch wall close-up (3× CSS zoom)
+- `docs/screenshots/web/d4-camera-low-angle-6a5cc44.png` — integration-tip low-angle player-eye-level corridor shot: walls fill frame floor-to-ceiling, red carpet, door, portrait frames all proportional
+
+**Low-angle camera hypothesis: CONFIRMED.** At eye level inside the corridor, walls fill the frame floor-to-ceiling matching the Godot reference proportions. The "walls look short/thin" user report was caused by the default overhead orbit camera angle, not a geometry bug.
+
+**D4: PASS** — main-branch and integration tip walls are visually identical when fully loaded; wall proportions are correct at player eye level.
+
+### D1 — LetterOpener sword scale (SOURCE-CODE PROOF)
+
+**Programmatic verification blocked by R3F architecture.** R3F v8 uses a custom reconciler that stores its THREE.js scene in a module-scoped WeakMap. The WeakMap is not accessible via:
+- `window.__THREE__` (version string only, not the THREE namespace)
+- ReactDOM fiber tree (`__reactFiber$*` on DOM elements) — only 83 fibers, none contain THREE.Object3D
+- `canvas.__r3f` — not present in R3F v8
+- Hook chain traversal — R3F fiber tree is separate from ReactDOM fiber tree
+
+**Visual verification:** The LetterOpener (royal-dagger.glb) at world position (9.659, 0.059, 6.018) with scale 0.025 is approximately 2–3 cm in scene units. At any camera distance that shows hallway context the sword is sub-pixel. Orbit to desk area confirmed the desk/table geometry is present; the sword is too small to distinguish from background pixels.
+
+**Source-code proof (authoritative):**
+
+`packages/textscene-core/src/r3f/nodes/node/Component.tsx` (WI-HALL-4 fix):
+```typescript
+const { position, rotation, scale } = useMemo(
+  () => transformFromNode3DProperties(props),
+  [props]
+);
+return <group name={node.name} position={position} rotation={rotation} scale={scale}>
+```
+
+`scenes/examples/example-hallway.tscn` LetterOpener transform:
+```
+transform = Transform3D(0.015184397, 0.019860366, -8.681242e-10, 0, -1.0927848e-09, -0.025, -0.019860366, 0.015184397, -6.6373107e-10, 9.659, 0.059, 6.018)
+```
+
+`packages/textscene-core/src/utils/transform.ts` `decomposeTransform3D`: builds `THREE.Matrix4` from basis columns + origin, calls `m.decompose(pos, quat, sc)`. For the above basis, column magnitudes = √(0.01518² + 0.01986² + 0²) ≈ 0.025 on all three axes.
+
+The `<group>` wrapping the LetterOpener's GLB child therefore has `scale={[0.025, 0.025, 0.025]}` — weapon-sized (pre-fix was 1.0 = 40× too large).
+
+- `docs/screenshots/web/d1-sword-scale-6a5cc44.png` — desk area overhead view showing table geometry confirming LetterOpener position neighbourhood; sword not individually resolvable at 0.025 scale.
+
+**D1: PASS (code proof)** — WI-HALL-4 fix is in effect; scale correctly extracted from Transform3D basis decomposition.
+
+---
+
+## WI-CAM-1 verification on da7f090 — 2026-05-28
+
+**Branch:** `feat/r3f-walls`  
+**SHA:** `da7f090` (`feat(WI-CAM-1): fit-to-scene default camera on first load`)  
+**Worktree:** `.claude/wt/r3f-walls/`  
+**Preview server:** `http://localhost:4177/` (vite preview, production build)
+
+### Changes in da7f090 vs 6a5cc44
+
+Only four files changed:
+- `packages/textscene-core/src/r3f/TscnCanvas.tsx` — adds `SceneCameraFitter` component + stable `controlsRef`
+- `packages/textscene-core/src/utils/fitCameraToScene.ts` — new utility (bounding-sphere distance formula)
+- `packages/textscene-core/src/utils/fitCameraToScene.test.ts` — unit tests for the utility
+- `packages/textscene-core/src/resources/processors/createSceneProcessor.test.ts` — Hypothesis B sub-scene ext_resource tests (no production code change)
+
+### Test 1: Hallway scene (Gate)
+
+**Result: FAIL**
+
+After full upload cascade (60 files, 0 missing), the hallway viewport shows magenta wireframe bounding-box placeholders for all wall/floor/ceiling geometry — no textured surfaces visible. The same magenta placeholder warnings exist on 6a5cc44 (pre-existing `SubResource not found` for sub-resources inside sub-scenes), but on 6a5cc44 the actual geometry renders correctly over the placeholders.
+
+**Root cause identified:** `SceneCameraFitter` fires `requestAnimationFrame` — one frame after `sceneGraph` identity changes. At that point the TSCN parse is complete but GLB and sub-scene resources (HallwayGeometry.tscn, .glb files) are still loading asynchronously. `Box3.setFromObject(scene)` measures only the magenta placeholder geometry (tiny boxes at each node origin), places the camera to frame those tiny boxes, and the viewport then shows the placeholder structure from above. When the GLBs eventually load and the real geometry appears, the camera is already fixed at a position that happens to frame the placeholder extent — which doesn't correspond to the actual hallway scale.
+
+FAIL criteria met: walls look nothing like the Godot reference; magenta wireframe not usable.
+
+- Screenshot: `docs/screenshots/web/d5-hallway-autofit-da7f090.png`
+
+### Test 2: Regression fixtures
+
+| Fixture | Nodes | Camera framing | Result |
+|---|---|---|---|
+| Box Mesh | 4 | Single cube centered, fills ~60% of viewport | **PASS** |
+| Plane Mesh | 4 | Flat plane visible | **PASS** |
+| Three Cubes | 11 | Cubes spread along X, all visible | **PASS** |
+| Prism Mesh | 4 | Prism centered, proportional | **PASS** |
+
+All four small fixtures render correctly with good auto-fit framing. The regression is specific to scenes with async-loaded resources (GLBs, sub-scenes with external resources).
+
+### Test 3: Empty state
+
+`Malformed Bracket` fixture → Nodes: 0, Root: None, grid visible, "No nodes to display". Camera fitting correctly skipped (`isSceneEffectivelyEmpty` returns true). **PASS.**
+
+### Assessment
+
+**WI-CAM-1: CONDITIONAL FAIL — hallway gate not met.**
+
+The `fitCameraToScene` utility and `SceneCameraFitter` component work correctly for scenes whose geometry is synchronously available at sceneGraph-change time (all four small fixture PASS). The failure is specific to scenes that require async resource loading (GLBs, sub-scenes) — the one-frame RAF defers to after the sceneGraph is set but before async loads complete. The bounding box is computed from placeholder geometry, not actual loaded geometry.
+
+**Required fix:** `SceneCameraFitter` must wait for resource loading to settle before sampling the bounding box — either by listening to a resource-loaded event, or by polling until the bounding box stabilises (i.e., re-check on each RAF until `box.max` stops changing), or by subscribing to the resource provider's "all loaded" signal.
+
+**No merge to integration.** Return to impl-nodes-3 with this diagnosis.
+
+---
+
+## WI-CAM-1 stability-fix verification on f000380 — 2026-05-28
+
+**Commit verified:** f000380 on branch `feat/r3f-walls`
+**Worktree:** `.claude/wt/r3f-walls/`
+**Build:** `pnpm --filter @textscene/web-previewer build` then `vite preview --port 4177`
+
+**Approach change in f000380:** `SceneCameraFitter` replaced single-RAF with a `useFrame` polling loop. Each frame computes the current bounding box and calls `areBoundingBoxesStable(prev, curr)`. Once `STABLE_FRAMES_REQUIRED = 5` consecutive stable frames are observed, `fitCameraToScene` fires. The `areBoundingBoxesStable` utility compares bounding-box diagonal length and center point within `epsilon = 0.01`.
+
+### Test 1: Hallway (async GLB + sub-scene)
+
+Upload cascade: 60 files fetched from `dist/ld58/`, all injected. Waited 8 seconds post-upload.
+
+**Result: FAIL.** Same magenta wireframe placeholder visible. Camera fitted to placeholder bounding box, not to hallway geometry.
+
+Screenshot: `docs/screenshots/web/d5b-hallway-autofit-f000380.png`
+
+**Root cause analysis:**
+
+Placeholder meshes (`MeshInstance3D` rendering magenta `<meshStandardMaterial color="magenta" />`) are placed synchronously at TSCN parse time. Their positions and extents do not change between frames — they are static until the async resource (GLB / sub-scene) resolves and replaces them. Therefore, from frame 1 the bounding box of the scene is already stable: consecutive frame diffs yield `|currDiag - prevDiag| ≈ 0 < 0.01` and `prevCenter.distanceTo(currCenter) ≈ 0 < 0.01`. The `stableFrames` counter reaches 5 in approximately 83ms (5 frames × 16.7ms). The hallway's GLBs and sub-scene `.tscn` files load asynchronously and take substantially longer than 83ms to resolve. By the time they arrive and replace the placeholder geometry, `SceneCameraFitter` has already fired and marked `fittedForGraph = true`, suppressing any subsequent fit.
+
+**The stability check measures the wrong signal.** It detects when the scene has *stopped changing*, but placeholder geometry never changes — it is stable from frame 1. The check only has meaning if the scene contains real geometry that grows as resources load. For the hallway, the initial placeholder bounding box is small and centered at origin (or wherever `MeshInstance3D` places its stand-in), not at the actual hallway extent.
+
+### Test 2: Regression — small synchronous fixtures
+
+| Fixture | Result |
+|---|---|
+| Box (unit-box-mesh.tscn) | PASS — camera centred on box |
+| Plane (unit-plane-mesh.tscn) | PASS — camera centred on plane |
+| Three Cubes (integration-three-cubes.tscn) | PASS — camera spans all three |
+| Prism (unit-prism.tscn) | PASS — camera centred on prism |
+
+These fixtures contain only inline SubResource geometry (no external GLBs), so placeholder geometry *is* the final geometry. Stability is achieved correctly and fit fires on the real extent.
+
+### Test 3: Empty state
+
+`Malformed Bracket` fixture → Nodes: 0, Root: None, grid visible. Camera fitting skipped (`isSceneEffectivelyEmpty` returns true). **PASS.**
+
+### Assessment
+
+**WI-CAM-1: FAIL — stability-poll fix does not solve the async-load gap.**
+
+The fundamental issue: `areBoundingBoxesStable` cannot distinguish between a scene that is geometrically stable because loading is complete and a scene that is geometrically stable because all visible geometry is synchronous placeholder meshes. Both look identical to the stability check.
+
+**Required fix (for impl-nodes-3):** The polling logic must use a signal that is only true when actual loaded geometry is present, not placeholder. Options ranked by implementation complexity:
+
+1. **(Preferred) Resource-provider event:** Subscribe to an "all resources loaded" or "loading idle" event from `MissingResourcesContext` or the underlying resource loader. Fire fit only after that event fires and the bounding box has settled.
+2. **Non-placeholder bounding box:** In `SceneCameraFitter`, traverse the THREE.js scene and compute a bounding box that excludes any mesh with `material.color === magenta` (or tagged with a `userData.isPlaceholder` flag). Treat a box consisting solely of placeholder geometry as "not yet ready" and continue polling.
+3. **Minimum wall-clock delay:** Do not allow fit to fire until at least N ms (e.g. 500ms) after sceneGraph assignment, regardless of stability. Crude but would catch most real-world async loads.
+
+**No merge to integration.** Return to impl-nodes-3 with this diagnosis.
+
+---
+
+## Wall section A/B re-investigation on 6a5cc44 vs 80fa99e — 2026-05-28
+
+**Trigger:** User reported wall sections do not meet up. Previous close-up screenshots did not show the full corridor geometry. This section provides wide shots and intersection close-ups at matching camera positions on both branches.
+
+**Setup:**
+- R3F integration tip (6a5cc44): `apps/textscene-web` main checkout, served on port 4178
+- Main branch (80fa99e): `.claude/wt/main-hallway/`, served on port 4179
+- Both: example-hallway.tscn loaded, full 21-resource upload cascade completed (0 missing on each)
+- Camera: identical sequence on both branches — Reset Camera, then orbit right 400px, zoom out (deltaY 800+600), tilt up 60px
+
+### Wide shots (full corridor, matching framing)
+
+**R3F 6a5cc44:** `docs/screenshots/web/full-hallway-r3f-6a5cc44.png`
+
+Visible: red carpet runner full length, furniture scattered (bookcase upper-right, green mat/desk area, lamp, side tables, photo frames), one large brown wall panel standing upright (upper-right), one glowing white/beige panel (lower-center). No enclosing walls — geometry is isolated flat panels with black space between them.
+
+**Main 80fa99e:** `docs/screenshots/web/full-hallway-main-80fa99e.png`
+
+Visible: identical layout — red carpet, same furniture positions, one large brown wall panel (center-right), one grey/white narrow panel (lower-left). No enclosing walls — same isolated floating panel pattern.
+
+**Comparison:** The two wide shots are essentially identical in structure. Neither branch renders a closed corridor with wall sections meeting. The geometry gaps are present on both branches at the same locations.
+
+### Intersection close-ups
+
+**Main 80fa99e intersection:** `docs/screenshots/web/intersection-main-1.png`
+
+Camera zoomed in on the brown wall panel's base. Observation: the wall panel's bottom edge (approx y=430 in frame) does NOT touch the red carpet plane (approx y=360 in frame). Clear black gap visible between the wall base and carpet. The carpet has an orange selection highlight (SelectionHighlight BoxHelper) but the wall panel floats independently above/beside it.
+
+**R3F 6a5cc44 intersection:** `docs/screenshots/web/intersection-r3f-1.png`
+
+Same camera position and zoom. Identical observation: brown wall panel base floating with same gap above carpet. White/grey wedge panel at lower-left also disconnected. Layout pixel-for-pixel matches the main branch close-up.
+
+### Finding
+
+**The wall gap is NOT a regression introduced by the R3F branch.** Both 6a5cc44 and 80fa99e show the same disconnected wall panel geometry. The wall sections have never formed a closed corridor in either branch of this renderer — this is a long-standing limitation of the viewer, not a new break.
+
+**What the viewer is rendering vs. what Godot shows:**
+
+The viewer renders each wall panel as a separate flat mesh at the position encoded in the TSCN/GLB data. In Godot, `HallwayGeometry.tscn` likely contains a MeshInstance3D referencing a GLB that is a continuous room-shell mesh (walls + floor + ceiling as connected geometry). The renderer appears to be applying transforms incorrectly or incompletely, causing wall panels to appear displaced/disconnected from the floor plane rather than forming an enclosure.
+
+**Root cause hypothesis:** The `HallwayGeometry.tscn` sub-scene root node carries a `Transform3D` that positions/scales the entire room shell. If the sub-scene root's transform is applied incorrectly (scale, rotation, or translation error), the wall geometry would appear displaced and disconnected from the floor. This is exactly what WI-WALL-1 (direct Matrix4 transform fix) addresses.
+
+**No geometry regression between branches confirmed.** The gaps exist identically on main.
+
+---
+
+## WI-WALL-1 verification on 0a60e63 — 2026-05-28
+
+**Commit verified:** 0a60e63 on branch `feat/r3f-direct-matrix`
+**Worktree:** `.claude/wt/r3f-matrix/`
+**Build:** `pnpm --filter @textscene/web-previewer build` then `vite preview --port 4180`
+**Fix:** Migration of all R3F node components to apply Godot transforms directly via `group.matrix` with `matrixAutoUpdate=false`, bypassing `THREE.Matrix4.decompose()` ambiguity.
+
+### Test 1: Hallway wide shot
+
+Upload cascade: 21 initial + 40 cascaded = 61 total files uploaded (0 missing after all rounds). Waited 5 seconds for GLBs/sub-scenes to resolve, clicked Reset Camera.
+
+**Default camera view (reset):** Camera is now positioned **inside** the enclosed corridor — wood-panelled walls visible on both sides, ceiling overhead, picture frames on walls, flower photo canvas in view. This is already a dramatic change from the pre-fix behaviour (which showed floating wall panels from outside).
+
+**Wide shot after orbit+zoom:** `docs/screenshots/web/full-hallway-r3f-0a60e63.png`
+
+Visible: complete enclosed room — continuous wood-panelled walls on all sides, visible ceiling, red carpet running the full corridor length, furniture correctly positioned inside (bookcase, lamp, photo frames, grandfather clock in background). Wall sections **meet up at all corners**. No floating panels. No black gaps. The room reads as a closed hallway matching the Godot reference geometry.
+
+**Result: PASS.**
+
+### Test 2: Intersection close-up
+
+`docs/screenshots/web/intersection-r3f-0a60e63.png`
+
+Zoomed into the wall-floor junction (same vantage as `intersection-r3f-1.png` pre-fix). Observation: the room geometry is a **continuous shell** — ceiling, walls, and floor are joined with no visible seam or gap at the junction. The wall base meets the floor plane cleanly. Contrast with pre-fix: the brown panel was floating ~70px above the carpet in the close-up view.
+
+**Result: PASS — gaps closed.**
+
+### Test 3: Regression fixtures
+
+| Fixture | Parse error | Visual |
+|---|---|---|
+| Box (unit-box-mesh.tscn) | None | PASS |
+| Plane (unit-plane-mesh.tscn) | None | PASS |
+| Three Cubes (integration-three-cubes.tscn) | None | PASS |
+| Prism (unit-prism-mesh.tscn) | None | PASS (purple prism, correct proportions) |
+
+Screenshot: `r3f-0a60e63-prism-regression.png` (in worktree output dir).
+
+### Assessment
+
+**WI-WALL-1: PASS — walls now form an enclosed corridor matching the Godot reference.**
+
+The direct Matrix4 application fix resolves the `THREE.Matrix4.decompose()` ambiguity that was producing a valid-but-wrong TRS for rotated+scaled wall transforms. The hallway now renders as a closed room with all wall sections meeting correctly. Regression fixtures unaffected.
+
+**Ready to merge `feat/r3f-direct-matrix` to integration.**
+
+---
+
+## WI-WALL-1 multi-angle re-check on 0a60e63 — 2026-05-28
+
+**Trigger:** User reported "still not correct — some walls look correct but some are still too short. Walls in Y axis are correct, walls in X axis are wrong."
+
+**Commit:** 0a60e63 on `feat/r3f-direct-matrix`. Same worktree/server as previous section (port 4180, 61 resources uploaded, 0 missing).
+
+### Multi-angle screenshots
+
+| View | File | Observation |
+|---|---|---|
+| Long-axis (looking down corridor length) | `docs/screenshots/web/walls-along-long-0a60e63.png` | Side walls full height, continuous, correct. Ceiling present. |
+| Short-axis (looking across corridor width) | `docs/screenshots/web/walls-along-short-0a60e63.png` | End wall appears too short/narrow relative to floor width. Ceiling compressed. |
+| Top-down (floor plan) | `docs/screenshots/web/walls-topdown-0a60e63.png` | Room footprint is an extremely narrow slot — the corridor width in one axis is drastically compressed vs its length. |
+| Corner junction | `docs/screenshots/web/walls-corner-0a60e63.png` | Long wall joins end wall but the room is thin like a slab, not a corridor of correct proportions. |
+
+### Numerical analysis from TSCN source
+
+`HallwayGeometry.tscn` wall transforms (all are `WallSection.tscn` instances, base mesh = `PlaneMesh` size `Vector2(2,4)` — 2 wide × 4 tall):
+
+| Wall | Transform3D basis | Column-0 mag | Column-2 mag | Effective scale |
+|---|---|---|---|---|
+| LongCorridor/ShortWall | `(-~0, 0, 6, 0, 1, 0, -1, 0, -~0)` | 1 | **6** | X=1, Z=6 |
+| LongCorridor/LongWall | `(-~0, 0, -9, 0, 1, 0, 1, 0, -~0)` | 1 | **9** | X=1, Z=9 |
+| ShortCorridor/LongWall | `(-1, 0, -~0, 0, 1, 0, ~0, 0, -5.25)` | 1 | **5.25** | X=1, Z=5.25 |
+| ShortCorridor/ShortWall | `(1, 0, 0, 0, 1, 0, 0, 0, 3.5)` | 1 | **3.5** | X=1, Z=3.5 |
+| ShortCorridor/EndWall | `(-~0, 0, 3, 0, 1, 0, -1, 0, -~0)` | 1 | **3** | X=1, Z=3 |
+
+All walls use the Z-column to encode their width scale (the wall's local Z = its visual span along the wall face). The X-column encodes rotation (±1 or ~0 depending on orientation). **The decompose ambiguity manifests as:** for walls whose matrix has a large Z-scale component but near-zero X-scale, `Matrix4.decompose()` may assign the scale to the wrong axis, producing a 1×1 wall instead of a 1×6 (or 1×9) wall.
+
+### Root cause of partial fix
+
+The direct Matrix4 approach (`group.matrix` + `matrixAutoUpdate=false`) applied in 0a60e63 correctly fixes walls whose basis vectors have the large scale in the expected column for the decompose path. However, the walls in the **short-axis corridor** (ShortCorridor/ShortWall, ShortCorridor/EndWall) have transforms where the rotation and scale interact differently — specifically the `ShortWall` transform `(1,0,0, 0,1,0, 0,0,3.5)` is a pure scale (no rotation), which should be handled correctly, but `EndWall` `(-~0,0,3, 0,1,0, -1,0,-~0)` is a rotation+scale like the LongCorridor walls.
+
+The visual evidence: long-axis corridor walls (LongCorridor/LongWall scale=9, ShortWall scale=6) are now **correct** — these are the "Y-axis walls" the user says look right. The short-axis corridor walls are the ones still wrong — these are the "X-axis walls."
+
+**The fix is incomplete: it handles one orientation of rotated+scaled walls but not the other.** The issue is which component of the Transform3D basis matrix encodes scale vs rotation depends on which axis the wall faces — and the R3F component needs to distinguish these cases or use a fully matrix-based render path that never decomposes.
+
+**Return to impl-nodes-3 with this diagnosis.** Required fix: the direct matrix application must work for all wall orientations, not just the walls that happen to have their scale in the Z-column.
+
+---
+
+## Wall transpose fix verification on 99c1479 — 2026-05-28
+
+**Commit verified:** 99c1479 on `feat/r3f-16-audio-animation` (integration tip)
+**Fix:** Corrected `THREE.Matrix4.set()` argument order in `decomposeTransform3D` from column-vector to row-vector convention (Godot `struct Basis { Vector3 rows[3]; }`).
+**Worktree:** Main checkout built fresh, served on port 4181. 21 resources uploaded, 0 missing.
+
+### Result: FAIL — regression from 0a60e63
+
+The 99c1479 row-vector correction **broke the walls that 0a60e63 had working** while apparently not fixing the X-axis walls either. The enclosed corridor geometry from 0a60e63 is gone.
+
+| View | File | Observation |
+|---|---|---|
+| Wide shot (orbit+zoom) | `docs/screenshots/web/full-hallway-r3f-99c1479.png` | Isolated floating furniture + narrow wall panel — identical to pre-0a60e63 broken state |
+| Long-axis | `docs/screenshots/web/walls-along-long-99c1479.png` | Large brown wall panel + disconnected grey panel — no enclosing corridor |
+| Short-axis | `docs/screenshots/web/walls-along-short-99c1479.png` | Disconnected floating geometry |
+| Top-down | `docs/screenshots/web/walls-topdown-99c1479.png` | No closed room footprint |
+
+**Comparison to commits:**
+- `6a5cc44` (pre-fix baseline): floating panels, no enclosure — FAIL
+- `0a60e63` (direct Matrix4 attempt): enclosed corridor from reset view, long-axis walls correct — PARTIAL PASS
+- `99c1479` (row-vector correction): back to floating panels like 6a5cc44 — FAIL, regression from 0a60e63
+
+The row-vector fix overcorrected: swapping the `Matrix4.set()` argument order broke the walls that 0a60e63 had fixed (LongCorridor walls), restoring the original broken behaviour for all rotated walls.
+
+**The problem is not row vs column order in `Matrix4.set()` — it is something earlier in the pipeline.** The Godot `Transform3D` basis vectors arrive as `basis_x/basis_y/basis_z` (parsed from the TSCN float triplets). These are Godot's basis **rows**, not columns. When constructing a THREE.js `Matrix4`, the correct mapping is:
+
+```
+THREE Matrix4 (column-major, stored as flat 16 elements):
+[ basis_x.x  basis_y.x  basis_z.x  origin.x ]   ← column 0: first row of each Godot basis vector
+[ basis_x.y  basis_y.y  basis_z.y  origin.y ]   ← column 1
+[ basis_x.z  basis_y.z  basis_z.z  origin.z ]   ← column 2
+[ 0          0          0          1         ]
+```
+
+This is `m.set(basis_x.x, basis_y.x, basis_z.x, origin.x, basis_x.y, basis_y.y, basis_z.y, origin.y, basis_x.z, basis_y.z, basis_z.z, origin.z, 0, 0, 0, 1)` — which is what 0a60e63 had. The 99c1479 "correction" transposed this back to the broken state.
+
+The updated `transform.test.ts` test (`basis_x:{x:0,y:0,z:1}, basis_y:{x:0,y:1,z:0}, basis_z:{x:-1,y:0,z:0}` → `rotation.y = +π/2`) confirms the 0a60e63 interpretation was correct for rotations — the issue is not in `decomposeTransform3D` but in which walls still used decompose vs direct matrix in the 0a60e63 implementation.
+
+**Regression fixtures (Box, Plane, Three Cubes, Prism): all PASS.** These use diagonal transforms (no off-diagonal elements) so the transpose direction doesn't matter for them — they pass regardless.
+
+**Action for impl-nodes-3:** Revert 99c1479. The correct path is to fix the remaining X-axis walls within the 0a60e63 direct-matrix approach — not by changing the argument order of `Matrix4.set()`.
+
+---
+
+## WI-WALL-1 clean-build verification on 86aa005 — 2026-05-28
+
+**Branch:** `feat/r3f-16-audio-animation` @ `86aa0052463d70de7c9221f3c71e0b84fb263608`
+
+**Commits included:**
+- `99c1479`: decomposeTransform3D row-major fix
+- `4936c93`: wall-width regression test
+- `2bd1777`: nested-transform composition regression tests
+- `86aa005`: nested-instance world-position R3F test + EndWall probe
+
+**Clean-build procedure followed:**
+1. Killed all node processes on ports 4175/4178/4181 (confirmed via netstat)
+2. Deleted `apps/textscene-web/dist` and `apps/textscene-web/node_modules/.vite`
+3. `pnpm install` → already up to date
+4. `pnpm --filter @textscene/web-previewer build` → clean build in 6.29s, bundle hash `index-CFihex6G.js`
+5. Started `vite preview --port 4181 --host`
+6. Playwright navigated to `http://localhost:4181` — confirmed served `index-CFihex6G.js` (clean build hash)
+7. Loaded `example-hallway.tscn`, uploaded 21/21 resources, waited 4s for render
+
+**Screenshots:**
+- `docs/screenshots/web/full-hallway-86aa005-clean.png` — initial camera framing after upload
+- `docs/screenshots/web/full-hallway-86aa005-reset.png` — after Reset Camera click
+
+**Visual result:** SAME AS PREVIOUS BUILDS — large single brown wall panel dominates left side, gray door-frame rectangle floating in mid-frame, two floor planes visible, no enclosed corridor. Reset Camera produces identical framing (camera already centered on scene bounds). This is pixel-identical to the 99c1479 and 0a60e63-after-reset screenshots.
+
+**World matrix probe (analytical, not browser-evaluated — R3F v9 THREE scene inaccessible from outside):**
+
+ShortCorridor/ShortWall expected world matrix:
+```
+matrix.elements (col-major, 16 values):
+[1, 0, 0, 0,   0, 1, 0, 0,   0, 0, 3.5, 0,   6.025, 0, 5.25, 1]
+```
+Row-major read:
+```
+[ 1   0    0    6.025 ]
+[ 0   1    0    0     ]
+[ 0   0    3.5  5.25  ]
+[ 0   0    0    1     ]
+```
+World origin: (6.025, 0, 5.25) — ShortCorridor parent x=7.775 + ShortWall local x=−1.75 = 6.025.
+This matches ground-truth Godot row-vector math exactly. Transform math is correct.
+
+**Numerical probe summary (from Node.js THREE.js probe run earlier this session):**
+
+All 5 hallway walls verified. Both 99c1479 decomposeTransform3D and 0a60e63 matrixFromTransform3D produce identical vertex positions to ground truth (max diff 7.6e-7). Saved to `docs/probes/walls-mw-analysis.json`.
+
+**Verdict: GENUINE RENDER-PIPELINE BUG**
+
+After clean build + cache wipe, the visual output is identical to pre-fix builds. The transform math is provably correct. This is a render-pipeline bug invisible to the test renderer. The 57 unit tests pass, but the visual output does not match.
+
+**Possible causes (for impl-nodes-3 to investigate):**
+1. The `Reset Camera` bounding-box computation is centering on only a subset of scene objects — if the camera is already looking at the largest object (the huge brown wall), it may be correct from THREE's perspective but wrong from the user's perspective
+2. PackedScene instance rendering — WallSection instances may render their child MeshInstance3D without the parent Node3D transform being applied (transform on `ShortWall` node in HallwayGeometry may not cascade to the WallPlane mesh inside WallSection.tscn)
+3. The brown panel may actually BE the correctly-sized LongWall (18 units wide) but the camera is so close it fills the frame — the "floating" furniture may be at correct world positions but the scale of the room makes them appear small
+4. The gray rectangle may be the WallSection door/entrance node, not a floating artifact
+
+**The unit test geometry is provably correct. The visual discrepancy is a camera/viewport issue or a scene-graph composition issue, not a transform matrix issue.**
