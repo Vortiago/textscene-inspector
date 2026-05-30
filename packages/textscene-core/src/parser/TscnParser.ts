@@ -25,6 +25,7 @@ import '../nodes/3d/lights/omnilight3d/index.js';
 import '../nodes/3d/worldenvironment/index.js';
 import '../nodes/physics/3d/staticbody3d/index.js';
 import '../nodes/physics/3d/area3d/index.js';
+import '../nodes/physics/3d/collisionshape3d/index.js';
 import '../nodes/audio/audiostreamplayer/index.js';
 
 import type { TscnScene } from './types.js';

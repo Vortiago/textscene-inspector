@@ -32,7 +32,7 @@ function detectCategory(filename) {
     return 'Unit - Primitive Meshes';
   }
   if (filename.startsWith('unit-csg')) return 'Unit - CSG Primitives';
-  if (filename.startsWith('unit-physics')) return 'Unit - Physics';
+  if (filename.startsWith('unit-physics') || filename.startsWith('unit-collision')) return 'Unit - Physics';
   if (filename.startsWith('unit-material')) return 'Unit - Materials';
   if (filename.startsWith('unit-external')) return 'Unit - External Resources';
   if (filename.startsWith('edge-')) return 'Edge Cases';

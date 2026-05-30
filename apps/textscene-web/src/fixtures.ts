@@ -326,6 +326,16 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Basic Nodes"
   },
   {
+    "name": "Collision Shapes",
+    "file": "unit-collision-shapes.tscn",
+    "category": "Unit - Physics"
+  },
+  {
+    "name": "Physics Bodies",
+    "file": "unit-physics-bodies.tscn",
+    "category": "Unit - Physics"
+  },
+  {
     "name": "Csg Box",
     "file": "unit-csg-box.tscn",
     "category": "Unit - CSG Primitives"
@@ -384,11 +394,6 @@ export const fixtures: Fixture[] = [
     "name": "Material Textured",
     "file": "unit-material-textured.tscn",
     "category": "Unit - Materials"
-  },
-  {
-    "name": "Physics Bodies",
-    "file": "unit-physics-bodies.tscn",
-    "category": "Unit - Physics"
   }
 ];
 

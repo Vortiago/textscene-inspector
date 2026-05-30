@@ -20,6 +20,7 @@ import '../../nodes/3d/lights/spotlight3d/index.r3f';
 import '../../nodes/3d/worldenvironment/index.r3f';
 import '../../nodes/physics/3d/staticbody3d/index.r3f';
 import '../../nodes/physics/3d/area3d/index.r3f';
+import '../../nodes/physics/3d/collisionshape3d/index.r3f';
 import '../../nodes/audio/audiostreamplayer/index.r3f';
 import '../../nodes/3d/label3d/index.r3f';
 import '../../nodes/3d/sprite3d/index.r3f';
