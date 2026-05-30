@@ -151,19 +151,29 @@ function frameSceneBounds(
   camera: THREE.Camera,
   controls: OrbitLike | null
 ): void {
-  const box = new THREE.Box3();
-  let found = false;
+  // Prefer real geometry (meshes); fall back to gizmo lines/points so
+  // light- or camera-only scenes (no mesh to frame) still get framed instead
+  // of leaving the default camera pointed at an empty void.
+  const meshBox = new THREE.Box3();
+  const gizmoBox = new THREE.Box3();
+  let hasMesh = false;
+  let hasGizmo = false;
   scene.traverse((obj) => {
     if (obj.userData?.tscnEmptyState) return;
-    if ((obj as THREE.Mesh).isMesh) {
-      const objBox = new THREE.Box3().setFromObject(obj);
-      if (!objBox.isEmpty() && Number.isFinite(objBox.min.x)) {
-        box.union(objBox);
-        found = true;
-      }
+    const o = obj as THREE.Mesh & { isLine?: boolean; isLineSegments?: boolean; isPoints?: boolean };
+    if (!o.isMesh && !o.isLine && !o.isLineSegments && !o.isPoints) return;
+    const objBox = new THREE.Box3().setFromObject(obj);
+    if (objBox.isEmpty() || !Number.isFinite(objBox.min.x)) return;
+    if (o.isMesh) {
+      meshBox.union(objBox);
+      hasMesh = true;
+    } else {
+      gizmoBox.union(objBox);
+      hasGizmo = true;
     }
   });
-  if (!found || box.isEmpty()) return;
+  const box = hasMesh ? meshBox : hasGizmo ? gizmoBox : null;
+  if (!box) return;
 
   const size = box.getSize(new THREE.Vector3());
   const center = box.getCenter(new THREE.Vector3());
