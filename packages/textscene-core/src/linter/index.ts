@@ -26,6 +26,7 @@ import '../nodes/2d/sprite2d/index.linter.js';
 import '../nodes/2d/animatedsprite2d/index.linter.js';
 import '../nodes/animation/animationplayer/index.linter.js';
 import '../nodes/animation/animationtree/index.linter.js';
+import '../nodes/audio/audiostreamplayer/index.linter.js';
 import '../nodes/audio/audiostreamplayer2d/index.linter.js';
 import '../nodes/audio/audiostreamplayer3d/index.linter.js';
 import '../nodes/physics/2d/area2d/index.linter.js';

@@ -384,6 +384,11 @@ export const fixtures: Fixture[] = [
     "name": "Material Textured",
     "file": "unit-material-textured.tscn",
     "category": "Unit - Materials"
+  },
+  {
+    "name": "Physics Bodies",
+    "file": "unit-physics-bodies.tscn",
+    "category": "Unit - Physics"
   }
 ];
 

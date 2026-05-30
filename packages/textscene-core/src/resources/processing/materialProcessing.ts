@@ -4,6 +4,7 @@
  */
 
 import * as THREE from 'three';
+import { warn } from '../../logger';
 
 /** Function type for loading textures by ID */
 export type TextureLoaderFn = (id: string) => Promise<THREE.Texture | null>;
@@ -151,7 +152,22 @@ export async function createMaterialFromContent(
     }
 
     case 'ShaderMaterial':
-      throw new Error('ShaderMaterial not yet supported');
+      // ADR-0004: we don't compile GLSL. Approximate a ShaderMaterial as a
+      // translucent, slightly-emissive standard material so the lenient render
+      // path keeps going instead of throwing (e.g. ld-58's window-glass shader).
+      warn(
+        '[material] ShaderMaterial is not compiled — rendering a translucent ' +
+          'standard-material fallback.'
+      );
+      return new THREE.MeshStandardMaterial({
+        color: 0xaaccdd,
+        transparent: true,
+        opacity: 0.5,
+        metalness: 0.2,
+        roughness: 0.1,
+        emissive: 0x223344,
+        emissiveIntensity: 0.3,
+      });
 
     default:
       throw new Error(`Unsupported material type: ${type}`);
