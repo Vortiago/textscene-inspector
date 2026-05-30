@@ -399,6 +399,11 @@ export const fixtures: Fixture[] = [
     "name": "Material Textured",
     "file": "unit-material-textured.tscn",
     "category": "Unit - Materials"
+  },
+  {
+    "name": "Hallway Geometry",
+    "file": "hallway-geometry.tscn",
+    "category": "Examples - ld-58 Scenes"
   }
 ];
 

@@ -41,6 +41,31 @@ for (const file of exampleFiles) {
 const totalFiles = fixtureFiles.length + exampleFiles.length;
 console.log(`Copied ${totalFiles} scene files to public/fixtures/ (${fixtureFiles.length} fixtures + ${exampleFiles.length} examples)`);
 
+// Copy the ld-58 closure (scenes/ld58/**) into public/fixtures/ PRESERVING the
+// res:// subpath structure (components/, assets/textures/, …) so a real ld-58
+// scene's `res://...` references resolve to /fixtures/... at fetch time.
+const ld58Source = join(scenesRoot, 'ld58');
+function copyRecursive(src, dest) {
+  for (const entry of readdirSync(src, { withFileTypes: true })) {
+    const s = join(src, entry.name);
+    const d = join(dest, entry.name);
+    if (entry.isDirectory()) {
+      mkdirSync(d, { recursive: true });
+      copyRecursive(s, d);
+    } else {
+      copyFileSync(s, d);
+    }
+  }
+}
+try {
+  if (statSync(ld58Source).isDirectory()) {
+    copyRecursive(ld58Source, fixturesTarget);
+    console.log('Copied ld-58 closure to public/fixtures/ (res:// mirrored)');
+  }
+} catch {
+  // No ld58 directory — skip.
+}
+
 // Copy materials directory from scenes/materials/
 const materialsSource = join(scenesRoot, 'materials');
 const materialsTarget = join(fixturesTarget, 'materials');

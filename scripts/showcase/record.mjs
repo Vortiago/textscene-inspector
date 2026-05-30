@@ -103,7 +103,7 @@ async function poster(page, name) {
   await page.screenshot({ path: join(OUT_DIR, `${name}.png`) });
 }
 
-export async function recordShowcase(name, scenario, opts = {}) {
+export async function recordShowcase(name, file, scenario, opts = {}) {
   const width = opts.width ?? 1280;
   const height = opts.height ?? 800;
   mkdirSync(OUT_DIR, { recursive: true });
@@ -125,9 +125,12 @@ export async function recordShowcase(name, scenario, opts = {}) {
   });
   page.on('pageerror', (e) => errors.push(String(e)));
 
-  await page.goto(BASE_URL, { waitUntil: 'load' });
+  // Open DIRECTLY on the target fixture via the ?fixture= deep-link so the clip
+  // doesn't waste its first half on the white load + the default scene.
+  const url = file ? `${BASE_URL}/?fixture=${encodeURIComponent(file)}` : BASE_URL;
+  await page.goto(url, { waitUntil: 'load' });
   await page.waitForSelector('canvas', { timeout: 30000 });
-  await page.waitForTimeout(800);
+  await page.waitForTimeout(1500); // scene parse/load + CameraFit settle on the target
 
   const helpers = {
     orbit,

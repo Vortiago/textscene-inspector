@@ -68,6 +68,17 @@ const exampleFiles = readdirSync(examplesDir)
   .filter(f => f.endsWith('.tscn'))
   .sort();
 
+// Top-level ld-58 scenes (their res:// deps live in scenes/ld58/<subdirs> and
+// are NOT listed as selectable fixtures). copy-fixtures mirrors the closure
+// under public/fixtures/ so the res:// references resolve.
+const ld58Dir = join(rootDir, 'scenes/ld58');
+let ld58Files = [];
+try {
+  ld58Files = readdirSync(ld58Dir).filter(f => f.endsWith('.tscn')).sort();
+} catch {
+  // No ld58 directory — skip.
+}
+
 const fixtures = [
   ...fixtureFiles.map(file => ({
     name: generateName(file),
@@ -78,6 +89,11 @@ const fixtures = [
     name: generateName(file),
     file,
     category: 'Examples - Complex Scenes',
+  })),
+  ...ld58Files.map(file => ({
+    name: generateName(file),
+    file,
+    category: 'Examples - ld-58 Scenes',
   })),
 ];
 

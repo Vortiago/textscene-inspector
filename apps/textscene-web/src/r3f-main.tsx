@@ -50,6 +50,11 @@ const DEFAULT_FIXTURE =
 export function R3FApp() {
   const [fixtureFile, setFixtureFile] = useState<string>(() => {
     try {
+      // Deep-link: `?fixture=<file>` opens directly on a specific scene
+      // (used by the showcase recorder to skip the default-fixture detour,
+      // and handy for sharing a link to a particular scene).
+      const param = new URLSearchParams(window.location.search).get('fixture');
+      if (param && fixtures.some((f) => f.file === param)) return param;
       return window.localStorage.getItem(STORAGE_KEY) ?? DEFAULT_FIXTURE;
     } catch {
       return DEFAULT_FIXTURE;
