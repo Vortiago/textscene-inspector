@@ -20,9 +20,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { MeshInstance3D } from './meshinstance3d/Component';
-import { Camera3D } from './camera3d/Component';
-import { Label3D } from './label3d/Component';
+import { MeshInstance3D } from '../../nodes/3d/meshinstance3d/Component';
+import { Camera3D } from '../../nodes/3d/camera3d/Component';
+import { Label3D } from '../../nodes/3d/label3d/Component';
 import { SceneResourcesProvider } from '../SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
 import { ResourceEventBus } from '../../resources/ResourceEventBus';

@@ -17,7 +17,7 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { MeshInstance3D } from '../../r3f/nodes/meshinstance3d/Component';
+import { MeshInstance3D } from '../../nodes/3d/meshinstance3d/Component';
 import { SceneResourcesProvider } from '../../r3f/SceneResourcesContext';
 import type { TscnInternalResource, TscnNode } from '../../parser/types';
 import type { MeshInstance3DProperties } from '../../nodes/3d/meshinstance3d/types';

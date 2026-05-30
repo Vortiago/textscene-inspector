@@ -9,6 +9,50 @@
 - three.js 0.184
 - Vite 6 (web app) + esbuild (VS Code extension)
 
+## Domain language & decisions
+
+- **[CONTEXT.md](./CONTEXT.md)** — the shared glossary (Node, SceneGraph, vertical slice, viewport mode, Control overlay, collision gizmo, …). Use these terms exactly.
+- **[docs/adr/](./docs/adr/)** — architecture decision records. The load-bearing ones: [0001 unified slice + React-free linter](./docs/adr/0001-unified-slice-react-free-linter.md), [0002 three registries](./docs/adr/0002-three-separate-registries.md), [0003 2D-UI DOM overlay](./docs/adr/0003-2d-ui-dom-overlay.md), [0004 CSG-as-primitive](./docs/adr/0004-csg-as-primitive.md), [0005 physics = transform-only](./docs/adr/0005-physics-bodies-transform-only.md), [0006 viewport-mode seam](./docs/adr/0006-viewport-mode-seam.md), [0007 ld-58 fixtures](./docs/adr/0007-ld58-fixture-assets.md).
+
+## System Overview
+
+### Render pipeline (lenient parser → R3F)
+
+```mermaid
+flowchart LR
+  TSCN[".tscn text"] --> LP["Lenient parser<br/>TscnParser"]
+  NR["NodeRegistry<br/>(parser + formatter)"] -. side-effect imports .-> LP
+  LP --> SG["SceneGraph<br/>(TscnNode tree)"]
+  SG --> HC["HierarchyContext"]
+  HC --> ND["NodeDispatcher<br/>(recursive walk,<br/>pickable &lt;group&gt; per node)"]
+  ND -->|lookup typeName| NCR["NodeComponentRegistry"]
+  NCR --> COMP["node Component.tsx (R3F)"]
+  NCR -. type absent .-> GNF["GenericNodeFallback"]
+  COMP --> CANVAS["&lt;Canvas&gt; three.js"]
+  COMP -->|useResource path,type| REB["Resource event bus"]
+  REB --> RL["ResourceLoader (host adapter)"]
+  RL --> FILES["textures · GLB · PackedScene"]
+```
+
+### Linter pipeline (strict parser, React/THREE-free bundle)
+
+```mermaid
+flowchart LR
+  TSCN2[".tscn text"] --> SP["Strict parser<br/>StrictTscnParser"]
+  SP --> P1["Phase 1<br/>ParseError[]"]
+  subgraph free["linter bundle — never imports React/THREE"]
+    SP
+    RR["ruleRegistry"]
+    VR["validatorRegistry"]
+  end
+  RR --> P2["Phase 2<br/>Diagnostic[]"]
+  VR --> P2
+  P1 --> OUT["diagnostics"]
+  P2 --> OUT
+```
+
+The render and linter pipelines are **separately bundleable** because the parse, lint, and render domains use three distinct registries keyed by the same `typeName` (see [ADR-0002](./docs/adr/0002-three-separate-registries.md)). The linter never transitively imports a `Component.tsx` (see [ADR-0001](./docs/adr/0001-unified-slice-react-free-linter.md)).
+
 ## Project Structure
 
 ```
@@ -18,25 +62,32 @@
 │       └── src/
 │           ├── parser/          # Lenient TSCN parser used for rendering
 │           ├── linter/          # Strict parser + lint rule registry
-│           ├── nodes/           # Per-node-type parser + linter + formatter
+│           ├── nodes/           # UNIFIED vertical slices — one folder per node type,
+│           │   │                #   each holding parser + linter + formatter + Component
+│           │   │                #   + 3 entry points (index.ts / index.linter.ts / index.r3f.ts)
 │           │   ├── node/
 │           │   ├── base/node3d/
-│           │   └── 3d/
-│           │       ├── meshinstance3d/
-│           │       ├── camera3d/
-│           │       ├── lights/{directional,omni,spot}light3d/
-│           │       ├── worldenvironment/
-│           │       └── label3d/
+│           │   ├── 3d/
+│           │   │   ├── meshinstance3d/      # parser.ts, linter.ts, Component.tsx, index{,.linter,.r3f}.ts
+│           │   │   ├── camera3d/
+│           │   │   ├── lights/{directional,omni,spot}light3d/  (+ lightHelpers, lightShared)
+│           │   │   ├── worldenvironment/
+│           │   │   └── label3d/
+│           │   ├── audio/audiostreamplayer3d/
+│           │   ├── animation/{animationplayer,animationtree}/
+│           │   └── physics/3d/{staticbody3d,area3d,collisionshape3d,...}/  # parser+linter (render WIP)
 │           ├── core/            # SceneGraph + immutable resolution helpers
 │           │   ├── NodeRegistry.ts        # Parser + formatter registry
 │           │   ├── SceneGraph.ts          # Immutable resolved scene
 │           │   ├── SceneGraphBuilder.ts   # Builder for SceneGraph
 │           │   └── nodeDependsOnPath.ts   # Dependency-walk predicate
-│           ├── r3f/             # react-three-fiber UI surface
+│           ├── r3f/             # react-three-fiber UI surface (render infrastructure)
 │           │   ├── TscnCanvas.tsx         # <Canvas> + NodeDispatcher
 │           │   ├── NodeDispatcher.tsx     # SceneGraph -> React tree
 │           │   ├── NodeComponentRegistry.ts
-│           │   ├── nodes/{node,node3d,meshinstance3d,...}/Component.tsx
+│           │   ├── nodeTransform.ts        # Node3D properties -> THREE transform
+│           │   ├── nodes/index.ts          # barrel: imports every slice's index.r3f
+│           │   ├── internal/{generic-node-fallback,glb-scene-root}/  # synthetic render-only types
 │           │   ├── contexts/{Selection,Hierarchy,CameraControl,NodePath}Context.tsx
 │           │   ├── components/{TscnPreviewShell,SceneTreeViewer,NodeDetailsPanel,ViewportSelector}/
 │           │   └── hooks/useViewportSelection.tsx
@@ -66,10 +117,16 @@ recursively: for each `TscnNode` it looks up the component in
 and wraps the subtree in pointer handlers from `useViewportSelection`
 plus a `<NodePathProvider>` so descendants can read their own TSCN path.
 
-Each node type owns a folder under `packages/textscene-core/src/r3f/nodes/`
-with a `Component.tsx` (the R3F render) and an `index.ts` that
-self-registers the component with `nodeComponentRegistry`. Unknown
-types render as `<GenericNodeFallback>` (a labeled placeholder cube).
+Each node type owns one unified vertical slice under
+`packages/textscene-core/src/nodes/<category>/<type>/` containing its
+`parser.ts`, `linterParser.ts`, `linter.ts`, `propertyFormatter.ts`,
+`types.ts`, `Component.tsx`, co-located tests, and three registration
+entry points: `index.ts` (parser/formatter → `NodeRegistry`),
+`index.linter.ts` (validators + rules → linter registries), and
+`index.r3f.ts` (render component → `nodeComponentRegistry`). The
+`r3f/nodes/index.ts` barrel imports each slice's `index.r3f` for its
+side effect. Unknown types render as `<GenericNodeFallback>` (a labeled
+placeholder cube) from `r3f/internal/`. See [ADR-0001](./docs/adr/0001-unified-slice-react-free-linter.md).
 
 ### Two-Parser Architecture
 
@@ -239,3 +296,62 @@ Fixing this on the web side would mean either:
 Neither is implemented; deferred to a follow-up WI. The current v1
 flow expects users to edit fixtures via the VS Code extension where
 hot-reload works.
+
+## Planned Evolution — full ld-58 support
+
+This section is **forward-looking** and is updated phase-by-phase as the work lands. Goal: render all 44 scenes of the ld-58 Godot project in both apps. See [CONTEXT.md](./CONTEXT.md) and [docs/adr/](./docs/adr/).
+
+### Unified vertical slice (P1 — [ADR-0001](./docs/adr/0001-unified-slice-react-free-linter.md))
+
+Each Node type collapses from the current **split slice** (parser/linter in `nodes/`, component in `r3f/nodes/`) into one folder with three registration entry points — one per registry domain — so the linter stays React/THREE-free by construction:
+
+```mermaid
+flowchart TB
+  subgraph slice["nodes/&lt;category&gt;/&lt;type&gt;/ — one folder per Node type"]
+    parser["parser.ts"]
+    lintp["linterParser.ts"]
+    lint["linter.ts"]
+    fmt["propertyFormatter.ts"]
+    comp["Component.tsx"]
+    idx["index.ts"]
+    idxl["index.linter.ts"]
+    idxr["index.r3f.ts"]
+  end
+  idx -->|"parser + formatter (never imports Component)"| parser
+  idxl -->|".ts only"| lint
+  idxr -->|"the only importer of ./Component"| comp
+  B1["parser/TscnParser.ts"] --> idx --> NR2["NodeRegistry"]
+  B2["linter/index.ts"] --> idxl --> RR2["rule / validator registries"]
+  B3["r3f/nodes/index.ts"] --> idxr --> NCR2["NodeComponentRegistry"]
+```
+
+A module-graph guard test (over both `linter/index.ts` and `parser/TscnParser.ts`) plus an ESLint `no-restricted-imports` rule turn the React-free invariant from discipline into a red/green signal. Synthetic render-only types (`GenericNodeFallback`, `GLBSceneRoot`) move to `r3f/internal/` — they are not Node types.
+
+### Viewport mode + 3-column DCC chrome (P3/P4 — [ADR-0003](./docs/adr/0003-2d-ui-dom-overlay.md), [ADR-0006](./docs/adr/0006-viewport-mode-seam.md))
+
+A single `ViewportModeContext` chooses between the 3D canvas and the 2D Control overlay (a sibling DOM layer, never inside `<Canvas>`), and drives the collision gizmo. `TscnPreviewShell` becomes a 3-column grid shared by both apps:
+
+```mermaid
+flowchart TB
+  VM["ViewportModeContext<br/>{ mode: 2D|3D, showCollisions }"]
+  subgraph shell["TscnPreviewShell — 3-column DCC layout"]
+    LEFT["left<br/>SceneTreeViewer +<br/>SceneInfo + MissingResources"]
+    CENTER["center<br/>viewport region"]
+    RIGHT["right<br/>NodeDetailsPanel"]
+  end
+  VM -->|mode = 3D| TC["TscnCanvas → NodeDispatcher → R3F"]
+  VM -->|mode = 2D| CO["ControlOverlay → ControlDispatcher → &lt;div&gt; tree"]
+  TC -. showCollisions .-> GZ["Collision gizmo<br/>(wireframe per collision-shape resource)"]
+  CENTER --- TC
+  CENTER --- CO
+```
+
+The 2D overlay maps `layout_mode = 2` (container-managed, the majority case) to CSS flex/grid, the LayoutPreset 0..15 table to absolute positioning, and StyleBox resources to CSS; system fonts only, images via blob URLs (VS Code webview CSP). Mode is persisted per app behind a `usePersistedMode()` hook (`localStorage` web / webview state API).
+
+### Scope (P2 — [ADR-0004](./docs/adr/0004-csg-as-primitive.md), [ADR-0005](./docs/adr/0005-physics-bodies-transform-only.md))
+
+Scoped to exactly the types ld-58 uses: CSGBox3D/CSGCylinder3D (base primitive, all union), StaticBody3D/Area3D (transform-only groups), CollisionShape3D + BoxShape3D/ConvexPolygonShape3D/ConcavePolygonShape3D (toggleable wireframe gizmos), plain AudioStreamPlayer (zero-geometry node), and a ShaderMaterial→translucent-standard-material fallback.
+
+### Tracked deepening candidates (not yet scheduled)
+
+- **Lenient parser depends on `three` via transform decomposition.** `nodes/node/parser.ts` → `utils/transform.ts` uses `THREE.Matrix4`/`Euler` to decompose a Transform3D at parse time. Acceptable today (the parser ships only alongside the renderer; the linter uses its own three-free strict parser), but moving decomposition to render time would make the lenient parser pure-data. The `reactFree.test.ts` guard documents and deliberately permits this edge while forbidding react/react-three in the parser and any `.tsx`/three in the linter.

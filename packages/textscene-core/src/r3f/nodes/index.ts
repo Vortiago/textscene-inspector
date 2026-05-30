@@ -8,19 +8,19 @@
  * undefined.
  */
 
-import './node';
-import './node3d';
-import './meshinstance3d';
-import './camera3d';
-import './lights/directionallight3d';
-import './lights/omnilight3d';
-import './lights/spotlight3d';
-import './worldenvironment';
-import './label3d';
-import './sprite3d';
-import './audio/audiostreamplayer3d';
-import './animation/animationplayer';
-import './animation/animationtree';
-import './glb-scene-root';
+import '../../nodes/node/index.r3f';
+import '../../nodes/base/node3d/index.r3f';
+import '../../nodes/3d/meshinstance3d/index.r3f';
+import '../../nodes/3d/camera3d/index.r3f';
+import '../../nodes/3d/lights/directionallight3d/index.r3f';
+import '../../nodes/3d/lights/omnilight3d/index.r3f';
+import '../../nodes/3d/lights/spotlight3d/index.r3f';
+import '../../nodes/3d/worldenvironment/index.r3f';
+import '../../nodes/3d/label3d/index.r3f';
+import '../../nodes/3d/sprite3d/index.r3f';
+import '../../nodes/audio/audiostreamplayer3d/index.r3f';
+import '../../nodes/animation/animationplayer/index.r3f';
+import '../../nodes/animation/animationtree/index.r3f';
+import '../internal/glb-scene-root/index';
 
-export { GenericNodeFallback } from './generic-node-fallback';
+export { GenericNodeFallback } from '../internal/generic-node-fallback/index';

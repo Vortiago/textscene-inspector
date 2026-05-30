@@ -13,7 +13,7 @@
 
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { Node3D } from '../../r3f/nodes/node3d/Component';
+import { Node3D } from '../../nodes/base/node3d/Component';
 import type { TscnNode } from '../../parser/types';
 import type { Node3DProperties } from '../../nodes/base/node3d/types';
 

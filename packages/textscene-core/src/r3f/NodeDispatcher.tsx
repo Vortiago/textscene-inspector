@@ -30,7 +30,7 @@ import type * as THREE from 'three';
 import type { TscnNode, TscnScene } from '../parser/types.js';
 import { joinPath } from '../utils/nodePath.js';
 import { nodeComponentRegistry } from './NodeComponentRegistry.js';
-import { GenericNodeFallback } from './nodes/generic-node-fallback/index.js';
+import { GenericNodeFallback } from './internal/generic-node-fallback/index';
 import { useViewportSelection } from './hooks/useViewportSelection.js';
 import { NodePathProvider } from './contexts/NodePathContext.js';
 import { useResource, useResourceLoader } from '../resources/useResource.js';
