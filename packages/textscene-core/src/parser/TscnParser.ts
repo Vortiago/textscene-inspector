@@ -27,6 +27,10 @@ import '../nodes/physics/3d/staticbody3d/index.js';
 import '../nodes/physics/3d/area3d/index.js';
 import '../nodes/physics/3d/collisionshape3d/index.js';
 import '../nodes/audio/audiostreamplayer/index.js';
+import '../nodes/2d/ui/control/index.js';
+import '../nodes/2d/ui/colorrect/index.js';
+import '../nodes/2d/ui/label/index.js';
+import '../nodes/2d/ui/vboxcontainer/index.js';
 
 import type { TscnScene } from './types.js';
 import { TscnParserCore } from './TscnParserCore.js';

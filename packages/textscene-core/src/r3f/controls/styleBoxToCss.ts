@@ -12,6 +12,11 @@ export function colorToCss(value: string): string | undefined {
   // gate on the Color(...) form here to avoid silently emitting white.
   if (!/^Color\s*\(/.test(value.trim())) return undefined;
   const c = parseColor(value);
+  return controlColorToCss(c);
+}
+
+/** Format an already-parsed {r,g,b,a} (0..1) color as a CSS rgba() string. */
+export function controlColorToCss(c: { r: number; g: number; b: number; a: number }): string {
   return `rgba(${Math.round(c.r * 255)}, ${Math.round(c.g * 255)}, ${Math.round(c.b * 255)}, ${c.a})`;
 }
 
