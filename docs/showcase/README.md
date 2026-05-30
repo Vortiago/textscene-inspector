@@ -1,140 +1,150 @@
 # Feature Showcase
 
-This is a living visual record of features implemented in TextScene Inspector. Every clip below is a real screen recording (`.webm`) of the web previewer rendering an actual `.tscn` fixture, with a `.png` poster frame for quick preview. These captures are re-generated as new features land, so this page tracks what the renderer can actually do today.
+A living visual record of what TextScene Inspector renders today. Every clip below is a real `.webm` screen recording of the web previewer driving an actual `.tscn` fixture, paired with a `.png` poster frame. Regenerate the whole set (or any single clip) with the feature-showcase workflow via `scripts/showcase/run.mjs` whenever the renderer changes, so this page always reflects the current state.
 
-## Clips
+## Hallway progress
 
-### Primitive meshes (box/sphere/cylinder/plane/capsule/torus/prism)
+[![Hallway mockup](web/hallway.png)](web/hallway.webm)
 
-![Primitive meshes (box/sphere/cylinder/plane/capsule/torus/prism)](web/all-primitives.png)
+[▶ web/hallway.webm](web/hallway.webm)
+
+The ld-58 hallway mockup: CSG corridor geometry (floor / walls / ceiling), portrait frames, and Label3D name plates — a self-contained scene that tracks 3D-rendering progress toward the full hallway. This is the featured clip: it is captured on every re-run so you can watch the 3D rendering advance toward the full **textured** hallway, which still depends on the P5 asset commit (see Coming soon). For now it stays self-contained — pure CSG geometry plus text, no external textures required.
+
+## Feature clips
+
+One clip per implemented feature. Each poster links to its full `.webm` recording.
+
+### All Primitives
+
+[![all-primitives](web/all-primitives.png)](web/all-primitives.webm)
 
 [▶ web/all-primitives.webm](web/all-primitives.webm)
 
-A large green ground plane holds a cluster of distinct primitive meshes — a magenta triangular prism, an orange torus, and a blue capsule — each shaded with its own material, demonstrating multiple primitive mesh types rendered together in one scene.
+A green ground plane holds a cluster of primitive meshes (prism, torus, capsule), each with its own material, orbited to show them as solid 3D geometry.
 
-### All mesh primitive types together
+### All Meshes
 
-![All mesh primitive types together](web/all-meshes.png)
+[![all-meshes](web/all-meshes.png)](web/all-meshes.webm)
 
 [▶ web/all-meshes.webm](web/all-meshes.webm)
 
-All mesh primitive types are arranged in a diagonal row — a red cube, red sphere, green cylinder, blue capsule, green plane, orange torus, and purple prism — each correctly rendered as solid 3D geometry with distinct materials.
+Every primitive mesh type — cube, sphere, cylinder, capsule, plane, torus, prism — rendered together in a row with distinct materials.
 
-### CSGBox3D rendered as solid geometry with materials
+### CSG Box
 
-![CSGBox3D rendered as solid geometry with materials](web/csg-box.png)
+[![csg-box](web/csg-box.png)](web/csg-box.webm)
 
 [▶ web/csg-box.webm](web/csg-box.webm)
 
-Two CSGBox3D shapes form an L-configuration — an upright light-gray box meeting a flat dark-brown box — rendered as solid lit geometry with materials, confirming CSGBox3D renders as real surfaces rather than placeholders.
+CSGBox3D shapes render as solid lit geometry with materials (not placeholders).
 
-### CSGCylinder3D (incl. cone)
+### CSG Cylinder
 
-![CSGCylinder3D (incl. cone)](web/csg-cylinder.png)
+[![csg-cylinder](web/csg-cylinder.png)](web/csg-cylinder.webm)
 
 [▶ web/csg-cylinder.webm](web/csg-cylinder.webm)
 
-A tall solid CSGCylinder3D, wider at the top and tapering toward the base, is rendered with a dark olive material and smooth directional shading, demonstrating the cylinder/cone (tapered) form of CSGCylinder3D.
+CSGCylinder3D renders as a solid cylinder, including the tapered cone form.
 
-### Metallic PBR StandardMaterial3D
+### Material — Metallic
 
-![Metallic PBR StandardMaterial3D](web/material-metallic.png)
+[![material-metallic](web/material-metallic.png)](web/material-metallic.webm)
 
 [▶ web/material-metallic.webm](web/material-metallic.webm)
 
-A metallic sphere renders dark with a sharp, concentrated specular highlight, demonstrating a high-metallic (metallic=1.0), low-roughness (0.1) PBR StandardMaterial3D reflecting the environment.
+A high-metallic, low-roughness StandardMaterial3D sphere with a tight specular highlight, orbited under the directional light.
 
-### Emissive material
+### Material — Emissive
 
-![Emissive material](web/material-emissive.png)
+[![material-emissive](web/material-emissive.png)](web/material-emissive.webm)
 
 [▶ web/material-emissive.webm](web/material-emissive.webm)
 
-A blue sphere glows uniformly bright across its surface rather than being shaded by light direction, showing the emissive material self-illuminating at energy=2.0.
+An emissive material self-illuminates uniformly regardless of light direction.
 
-### WorldEnvironment background + ambient
+### World Environment
 
-![WorldEnvironment background + ambient](web/world-environment.png)
+[![world-environment](web/world-environment.png)](web/world-environment.webm)
 
 [▶ web/world-environment.webm](web/world-environment.webm)
 
-A solid indigo/purple WorldEnvironment background fills the canvas while three pale primitives (including a cube) are evenly ambient-lit with all faces visible, demonstrating the environment background color plus ambient light.
+WorldEnvironment fills the background with its color and ambient-lights the scene.
 
-### Camera3D nodes (camera gizmos)
+### Label3D
 
-![Camera3D nodes (camera gizmos)](web/multi-camera.png)
-
-[▶ web/multi-camera.webm](web/multi-camera.webm)
-
-The viewport frames a 12-node 'Multi-Camera Test' scene with a red test box and labeled positions for four distinct Camera3D nodes (MainCamera perspective FOV=75, TopCamera looking down FOV=60, SideCamera FOV=70, and OrthoCamera orthographic), demonstrating multiple camera placements in one scene.
-
-### StaticBody3D / Area3D transform groups + AudioStreamPlayer
-
-![StaticBody3D / Area3D transform groups + AudioStreamPlayer](web/physics-bodies.png)
-
-[▶ web/physics-bodies.webm](web/physics-bodies.webm)
-
-The canvas shows a large blue body volume with orange wireframe collision edges under the 'PhysicsRoot' (7 nodes), demonstrating that StaticBody3D/Area3D transform groups are parsed and rendered as positioned geometry in the scene tree.
-
-### Label3D billboarded 3D text
-
-![Label3D billboarded 3D text](web/label3d.png)
+[![label3d](web/label3d.png)](web/label3d.webm)
 
 [▶ web/label3d.webm](web/label3d.webm)
 
-Three Label3D text nodes are rendered as floating 3D text facing the camera: a magenta 'Y-Axis Billboard', a yellow 'Billboard Enabled', and a white 'Outlined Text' on a dark plate, demonstrating billboarded 3D text with color and outline variations.
+Label3D billboarded 3D text nodes with color and outline variations, facing the camera.
 
-### Mixed node hierarchy
+### Mixed Nodes
 
-![Mixed node hierarchy](web/mixed-nodes.png)
+[![mixed-nodes](web/mixed-nodes.png)](web/mixed-nodes.webm)
 
 [▶ web/mixed-nodes.webm](web/mixed-nodes.webm)
 
-The viewport frames two lit, shaded gray box meshes arranged at different positions within an 8-node 'Scene' root, demonstrating a mixed node hierarchy of multiple mesh instances rendered together with correct lighting.
+A mixed node hierarchy of multiple mesh instances rendered together with correct lighting.
+
+### Physics Bodies
+
+[![physics-bodies](web/physics-bodies.png)](web/physics-bodies.webm)
+
+[▶ web/physics-bodies.webm](web/physics-bodies.webm)
+
+StaticBody3D / Area3D render as transform groups positioning their child meshes; AudioStreamPlayer renders nothing visible (no fallback cube).
+
+### Multi-Camera
+
+[![multi-camera](web/multi-camera.png)](web/multi-camera.webm)
+
+[▶ web/multi-camera.webm](web/multi-camera.webm)
+
+Selecting each Camera3D node and clicking "Use This Camera" switches the viewport to that camera's point of view (perspective, top-down, side, orthographic), then resets to free orbit. The video actively switches the active camera between the Camera3D nodes — watch the viewport jump from one camera's framing to the next.
 
 ## Web vs VS Code
 
-Both the web previewer and the VS Code extension render through the same `@textscene/core` library, so every clip above represents the exact 3D rendering you get inside the VS Code extension too. The VS Code edition adds editor-specific features on top of that shared renderer:
+Both editions render through the shared `@textscene/core` library, so every clip on this page represents VS Code's 3D rendering output just as faithfully as the web previewer's — the pixels come from the same renderer.
 
-- A custom `.tscn` editor that opens scene files directly in the 3D preview
-- A scene-tree Outline view synced with the editor
-- Ctrl-click go-to-definition for `res://` resource paths
-- Save hot-reload that re-renders on every file save
-- Multi-panel layout for working alongside the editor
+VS Code adds editor-native capabilities on top of that shared rendering:
 
-Existing VS Code screenshots live in [docs/screenshots/vscode/](../screenshots/vscode/).
+- A custom `.tscn` editor (open a scene file and it renders in-panel)
+- A scene-tree Outline view
+- Ctrl-click go-to-definition for node and resource references
+- Save hot-reload (edit the text, save, the preview updates)
+- Multi-panel layout (text and preview side by side)
+
+VS Code screenshots live in [docs/screenshots/vscode/](../screenshots/vscode/).
 
 ## Coming soon (re-run to capture)
 
-These features exist in `@textscene/core` but are not yet visible in the running app used for these captures, so they are not shown above. Re-run the capture script once they surface in the previewer:
+These features are planned or in flight; re-run the showcase to capture them once they land:
 
-- The 2D-UI DOM overlay plus the Godot-style 2D/3D viewport toggle
-- The collision-shape wireframe toggle
-- The 3-column DCC chrome layout
-- A dedicated lighting demo. Godot SpotLight3D / OmniLight3D / DirectionalLight3D
-  rendering is implemented (the metallic clip's specular highlight and the
-  shaded primitives are lit by it), but the current lights-only fixture has no
-  geometry to illuminate, so a furnished lit-scene fixture is needed to show it well.
+- 2D-UI overlay rendering plus a 2D/3D viewport toggle
+- A collision-shape wireframe toggle
+- Three-column DCC-style chrome (tree / viewport / inspector)
+- A dedicated lit-scene lighting demo
+- The full **textured** hallway, once the ld-58 assets are committed in P5
 
 ## Regenerate
 
-1. Make sure the preview server is running:
+1. Make sure the web previewer is built and running locally:
 
    ```bash
    pnpm --filter @textscene/web-previewer build
    pnpm --filter @textscene/web-previewer preview
    ```
 
-2. Capture each clip by passing the fixture's UI label and the output name:
+2. Capture every clip:
 
    ```bash
-   node scripts/showcase/run.mjs "<Fixture Label>" "<name>"
+   node scripts/showcase/run.mjs all
    ```
 
-   For example:
+   Or capture a single clip by name:
 
    ```bash
-   node scripts/showcase/run.mjs "All Primitives" "all-primitives"
+   node scripts/showcase/run.mjs <name>
    ```
 
-   Or run the whole set via the `feature-showcase` workflow.
+   For example: `node scripts/showcase/run.mjs hallway`

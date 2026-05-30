@@ -1,26 +1,27 @@
 /**
- * Parameterized showcase recorder.
- *   node scripts/showcase/run.mjs "<fixture label>" "<output-name>"
+ * Record a showcase clip by scenario name (see scenarios.mjs):
+ *   node scripts/showcase/run.mjs <scenario-name>
+ *   node scripts/showcase/run.mjs all          # record every scenario
  *
- * Selects the fixture from the scene dropdown, lets the camera auto-fit settle,
- * orbits the camera to show the scene in 3D, and writes docs/showcase/web/<name>.webm.
+ * Requires the preview server running at SHOWCASE_URL (default :4173).
  */
 import { recordShowcase } from './record.mjs';
+import { scenarios } from './scenarios.mjs';
 
-const label = process.argv[2];
-const name = process.argv[3] || (label || 'clip').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-
-if (!label) {
-  console.error('usage: node scripts/showcase/run.mjs "<fixture label>" "<output-name>"');
+const arg = process.argv[2];
+if (!arg) {
+  console.error('usage: node scripts/showcase/run.mjs <name|all>');
+  console.error('available:', Object.keys(scenarios).join(', '));
   process.exit(1);
 }
 
-await recordShowcase(name, async (page, { selectScene, orbit }) => {
-  await selectScene(page, label);
-  await page.waitForTimeout(1000); // let CameraFit settle on the new scene
-  await orbit(page, { dx: 230, dy: 35, steps: 55 });
-  await page.waitForTimeout(300);
-  // Poster frame for quick verification + the showcase index thumbnail.
-  await page.screenshot({ path: `docs/showcase/web/${name}.png` });
-  await page.waitForTimeout(300);
-});
+const names = arg === 'all' ? Object.keys(scenarios) : [arg];
+for (const name of names) {
+  const scenario = scenarios[name];
+  if (!scenario) {
+    console.error(`unknown scenario "${name}". available: ${Object.keys(scenarios).join(', ')}`);
+    process.exitCode = 1;
+    continue;
+  }
+  await recordShowcase(name, scenario.run);
+}

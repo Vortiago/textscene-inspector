@@ -66,6 +66,11 @@ export const fixtures: Fixture[] = [
     "category": "Examples - Complex Scenes"
   },
   {
+    "name": "Hallway Mockup",
+    "file": "example-hallway-mockup.tscn",
+    "category": "Examples - Complex Scenes"
+  },
+  {
     "name": "Hallway",
     "file": "example-hallway.tscn",
     "category": "Examples - Complex Scenes"

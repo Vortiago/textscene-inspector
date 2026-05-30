@@ -2,12 +2,14 @@
  * Reusable Playwright record harness for the web-previewer feature showcase.
  *
  * Records a real .webm screen capture of the web app while a scenario callback
- * drives it. Uses the system Chrome (channel) with SwiftShader so WebGL/three.js
- * renders in headless. Output: docs/showcase/web/<name>.webm.
+ * drives it, using the system Chrome (channel) with SwiftShader so WebGL renders
+ * in headless. Output: docs/showcase/web/<name>.webm (+ a poster <name>.png that
+ * the scenario captures mid-run).
  *
- * Usage from a scenario module:
- *   import { recordShowcase } from './record.mjs';
- *   await recordShowcase('csg-box', async (page, helpers) => { ... });
+ * The scenario receives `(page, helpers)`; `helpers` are reliable interaction
+ * primitives (selectScene, orbit, expandTree, clickNode, useThisCamera,
+ * resetCamera, fillSearch, poster) so scenarios demonstrate ACTUAL feature
+ * behavior — e.g. switching between Camera3D nodes — not just a generic orbit.
  */
 
 import { chromium } from 'playwright';
@@ -18,7 +20,7 @@ const OUT_DIR = process.env.SHOWCASE_OUT || 'docs/showcase/web';
 const BASE_URL = process.env.SHOWCASE_URL || 'http://localhost:4173';
 
 /** Drag across the 3D canvas to orbit the camera (OrbitControls). */
-async function orbit(page, { dx = 160, dy = 40, steps = 40 } = {}) {
+async function orbit(page, { dx = 230, dy = 35, steps = 55 } = {}) {
   const box = await page.locator('canvas').first().boundingBox();
   if (!box) return;
   const cx = box.x + box.width / 2;
@@ -32,11 +34,73 @@ async function orbit(page, { dx = 160, dy = 40, steps = 40 } = {}) {
   await page.mouse.up();
 }
 
-/** Select a fixture from the scene dropdown by its visible label. */
+/** Select a fixture from the scene dropdown by its visible label, then settle. */
 async function selectScene(page, label) {
-  const select = page.locator('select').first();
-  await select.selectOption({ label });
-  await page.waitForTimeout(1200); // allow parse + resource load + first frames
+  await page.locator('select').first().selectOption({ label });
+  await page.waitForTimeout(1300); // parse + resource load + CameraFit settle
+}
+
+/** Expand every collapsed tree row so deep nodes (cameras, etc.) are reachable. */
+async function expandTree(page) {
+  for (let i = 0; i < 60; i++) {
+    const collapsed = page.locator('[aria-label="Expand"]');
+    if ((await collapsed.count()) === 0) break;
+    await collapsed.first().click();
+    await page.waitForTimeout(120);
+  }
+}
+
+/** Click a scene-tree row to select it. Target by node path, or by type badge. */
+async function clickNode(page, { path, type } = {}) {
+  const sel = path
+    ? `[data-node-path="${path}"]`
+    : type
+      ? `[data-node-path]:has(span[title="${type}"])`
+      : '[data-node-path]';
+  const row = page.locator(`${sel} >> [role="treeitem"]`).first();
+  if ((await row.count()) === 0) return false;
+  await row.click();
+  await page.waitForTimeout(400);
+  return true;
+}
+
+/** Return the data-node-path of every Camera3D row in the tree (post-expand). */
+async function cameraNodePaths(page) {
+  return page.locator('[data-node-path]:has(span[title="Camera3D"])').evaluateAll((els) =>
+    els.map((el) => el.getAttribute('data-node-path')).filter(Boolean)
+  );
+}
+
+/** Click the inspector "Use This Camera" button if the selected node is a Camera3D. */
+async function useThisCamera(page) {
+  const btn = page.getByRole('button', { name: 'Use This Camera' });
+  if ((await btn.count()) === 0) return false;
+  await btn.first().click();
+  await page.waitForTimeout(1300); // hold on this camera's POV
+  return true;
+}
+
+/** Return to free-orbit (toolbar Reset Camera). */
+async function resetCamera(page) {
+  const btn = page.getByRole('button', { name: /reset camera/i });
+  if ((await btn.count()) === 0) return false;
+  await btn.first().click();
+  await page.waitForTimeout(700);
+  return true;
+}
+
+/** Type into the tree's node search box. */
+async function fillSearch(page, text) {
+  const input = page.getByPlaceholder(/search nodes/i);
+  if ((await input.count()) === 0) return false;
+  await input.first().fill(text);
+  await page.waitForTimeout(700);
+  return true;
+}
+
+/** Capture the poster frame used for verification + the showcase thumbnail. */
+async function poster(page, name) {
+  await page.screenshot({ path: join(OUT_DIR, `${name}.png`) });
 }
 
 export async function recordShowcase(name, scenario, opts = {}) {
@@ -65,7 +129,18 @@ export async function recordShowcase(name, scenario, opts = {}) {
   await page.waitForSelector('canvas', { timeout: 30000 });
   await page.waitForTimeout(800);
 
-  await scenario(page, { orbit, selectScene });
+  const helpers = {
+    orbit,
+    selectScene,
+    expandTree,
+    clickNode,
+    cameraNodePaths,
+    useThisCamera,
+    resetCamera,
+    fillSearch,
+    poster: (n = name) => poster(page, n),
+  };
+  await scenario(page, helpers);
   await page.waitForTimeout(400);
 
   const video = page.video();
