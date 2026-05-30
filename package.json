@@ -52,6 +52,7 @@
     "happy-dom": "^20.0.8",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.6",
+    "playwright": "^1.60.0",
     "rimraf": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"

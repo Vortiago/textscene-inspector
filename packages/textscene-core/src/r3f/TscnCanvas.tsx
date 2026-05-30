@@ -133,6 +133,89 @@ function ActiveCameraSwitcher() {
   return null;
 }
 
+/** Minimal shape we touch on the OrbitControls instance for framing. */
+interface OrbitLike {
+  target?: THREE.Vector3;
+  update?: () => void;
+}
+
+/**
+ * Frame the camera so the whole scene fits the viewport. Unions the bounding
+ * boxes of every rendered Mesh (skipping the empty-state grid), then pulls the
+ * camera back along an isometric-ish direction far enough that the largest
+ * dimension fits the vertical FOV, and re-points OrbitControls at the centre.
+ * No-op for empty scenes or non-finite bounds.
+ */
+function frameSceneBounds(
+  scene: THREE.Object3D,
+  camera: THREE.Camera,
+  controls: OrbitLike | null
+): void {
+  const box = new THREE.Box3();
+  let found = false;
+  scene.traverse((obj) => {
+    if (obj.userData?.tscnEmptyState) return;
+    if ((obj as THREE.Mesh).isMesh) {
+      const objBox = new THREE.Box3().setFromObject(obj);
+      if (!objBox.isEmpty() && Number.isFinite(objBox.min.x)) {
+        box.union(objBox);
+        found = true;
+      }
+    }
+  });
+  if (!found || box.isEmpty()) return;
+
+  const size = box.getSize(new THREE.Vector3());
+  const center = box.getCenter(new THREE.Vector3());
+  const maxDim = Math.max(size.x, size.y, size.z);
+  if (!Number.isFinite(maxDim) || maxDim <= 0) return;
+
+  const persp = camera as THREE.PerspectiveCamera;
+  const fov = ((persp.isPerspectiveCamera ? persp.fov : 50) * Math.PI) / 180;
+  const distance = ((maxDim / 2 / Math.tan(fov / 2)) || maxDim) * 1.6;
+
+  const dir = new THREE.Vector3(1, 0.7, 1).normalize();
+  camera.position.copy(center.clone().add(dir.multiplyScalar(distance)));
+  if (persp.isPerspectiveCamera) {
+    persp.near = Math.max(0.01, distance / 200);
+    persp.far = distance * 200;
+    persp.updateProjectionMatrix();
+  }
+  camera.lookAt(center);
+  if (controls?.target) {
+    controls.target.copy(center);
+    controls.update?.();
+  }
+}
+
+/**
+ * Auto-frames the scene to the viewport on load / scene change, but ONLY in
+ * free-orbit mode (never when a Camera3D is the active camera) and only during
+ * a short settle window so async-loaded content (GLB, instanced scenes) is
+ * captured without fighting the user's subsequent orbit.
+ */
+function CameraFit() {
+  const hierarchy = useOptionalHierarchy();
+  const control = useOptionalCameraControl();
+  const get = useThree((s) => s.get);
+  const rootKey = hierarchy?.sceneGraph?.rootScene ?? '';
+  const hasScene = !!hierarchy?.sceneGraph;
+  const activeCameraPath = control?.activeCameraPath ?? null;
+
+  useEffect(() => {
+    if (!hasScene || activeCameraPath) return undefined;
+    const timers = [150, 500, 1100].map((delay) =>
+      setTimeout(() => {
+        const state = get();
+        frameSceneBounds(state.scene, state.camera, state.controls as OrbitLike | null);
+      }, delay)
+    );
+    return () => timers.forEach(clearTimeout);
+  }, [rootKey, hasScene, activeCameraPath, get]);
+
+  return null;
+}
+
 /** Structural shape we need from the OrbitControls instance — just `.reset()`. */
 interface ResettableControls {
   reset: () => void;
@@ -155,6 +238,7 @@ export function TscnCanvas(_props: TscnCanvasProps) {
       <Canvas camera={{ position: [3, 3, 3] }}>
         <TscnSceneContents />
         <ActiveCameraSwitcher />
+        <CameraFit />
         <OrbitControls ref={onControlsRef} makeDefault />
         <OrbitControlsResetBridge controls={controls} />
       </Canvas>
