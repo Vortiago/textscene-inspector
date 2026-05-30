@@ -206,6 +206,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Animation Player",
+    "file": "unit-animation-player.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Audio Stream Player",
     "file": "unit-audio-stream-player.tscn",
     "category": "Other"
@@ -306,11 +311,6 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Primitive Meshes"
   },
   {
-    "name": "Animation Player",
-    "file": "unit-animation-player.tscn",
-    "category": "Unit - Basic Nodes"
-  },
-  {
     "name": "Camera Basic",
     "file": "unit-camera-basic.tscn",
     "category": "Unit - Basic Nodes"
@@ -324,6 +324,16 @@ export const fixtures: Fixture[] = [
     "name": "Node3d Basic",
     "file": "unit-node3d-basic.tscn",
     "category": "Unit - Basic Nodes"
+  },
+  {
+    "name": "Csg Box",
+    "file": "unit-csg-box.tscn",
+    "category": "Unit - CSG Primitives"
+  },
+  {
+    "name": "Csg Cylinder",
+    "file": "unit-csg-cylinder.tscn",
+    "category": "Unit - CSG Primitives"
   },
   {
     "name": "External Cube",

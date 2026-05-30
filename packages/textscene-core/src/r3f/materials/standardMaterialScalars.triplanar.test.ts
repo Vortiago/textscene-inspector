@@ -14,8 +14,8 @@
  * No texture is silently dropped.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { parseStandardMaterial3DScalars } from './materialScalars';
-import { setLogAdapter } from '../../../logger';
+import { parseStandardMaterial3DScalars } from './standardMaterialScalars';
+import { setLogAdapter } from '../../logger';
 
 interface CapturedLog {
   level: 'trace' | 'debug' | 'info' | 'warn' | 'error';
@@ -40,7 +40,7 @@ describe('parseStandardMaterial3DScalars — uv1_triplanar fallback (WI-HALL-5)'
   beforeEach(() => {
     logs = [];
     setLogAdapter(makeCaptureAdapter(logs));
-    // Module-scope Set in materialScalars.ts dedups warns by flag
+    // Module-scope Set in standardMaterialScalars.ts dedups warns by flag
     // combination across the session. Reset it by tweaking the module's
     // internal state via a fresh import is overkill — the test instead
     // uses unique flag combinations per case to avoid dedup hits.
@@ -88,7 +88,7 @@ describe('parseStandardMaterial3DScalars — uv1_triplanar fallback (WI-HALL-5)'
 
   it('parses the rest of the material correctly when triplanar is on (texture binding survives)', () => {
     // Load-bearing: the existence of the triplanar flag must NOT
-    // suppress other scalar parsing. The consumer (`<MaterialSlot>`)
+    // suppress other scalar parsing. The consumer (`<StandardMaterialSlot>`)
     // still picks up albedo color + scale + opacity etc. so the
     // texture binding through useResource in the parent component
     // continues to work end-to-end.

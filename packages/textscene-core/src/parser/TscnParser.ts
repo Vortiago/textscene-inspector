@@ -11,6 +11,8 @@
 import '../nodes/node/index.js';
 import '../nodes/base/node3d/index.js';
 import '../nodes/3d/meshinstance3d/index.js';
+import '../nodes/3d/csg/csgbox3d/index.js';
+import '../nodes/3d/csg/csgcylinder3d/index.js';
 import '../nodes/3d/camera3d/index.js';
 import '../nodes/3d/label3d/index.js';
 import '../nodes/3d/sprite3d/index.js';

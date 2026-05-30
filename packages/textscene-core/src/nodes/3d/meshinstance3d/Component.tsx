@@ -33,10 +33,8 @@ import {
 import { parseResourceReference } from '../../../resources/SubResourceResolver';
 import { useResource } from '../../../resources/useResource';
 import { MeshGeometry } from './meshGeometry';
-import {
-  parseStandardMaterial3DScalars,
-  type StandardMaterial3DScalars,
-} from './materialScalars';
+import { parseStandardMaterial3DScalars } from '../../../r3f/materials/standardMaterialScalars';
+import { StandardMaterialSlot } from '../../../r3f/materials/StandardMaterialSlot';
 import { applyUVTransform } from './applyUVTransform';
 
 /** Texture slots StandardMaterial3D exposes — checked in this order. */
@@ -242,7 +240,7 @@ export function MeshInstance3D({ node }: NodeComponentProps) {
       receiveShadow
     >
       <MeshGeometry resource={meshResource} />
-      <MaterialSlot
+      <StandardMaterialSlot
         scalars={materialScalars}
         albedoMap={albedoMap}
         normalMap={normalMap}
@@ -314,108 +312,6 @@ function SecondarySurfaceMaterial({
       blending={scalars.blending}
       side={scalars.side}
       shadowSide={shadowSide ?? null}
-      emissive={scalars.emissive}
-      emissiveIntensity={scalars.emissiveIntensity}
-    />
-  );
-}
-
-interface MaterialSlotProps {
-  scalars: StandardMaterial3DScalars | null;
-  albedoMap?: THREE.Texture;
-  normalMap?: THREE.Texture;
-  roughnessMap?: THREE.Texture;
-  metalnessMap?: THREE.Texture;
-  emissiveMap?: THREE.Texture;
-  aoMap?: THREE.Texture;
-  /** Override for shadow-pass side culling (Godot DOUBLE_SIDED cast_shadow). */
-  shadowSide?: THREE.Side;
-  /**
-   * The underlying mesh type (PlaneMesh, BoxMesh, etc.). Used by
-   * WI-HALL-6 to default Canvas / poster / wall PlaneMeshes to
-   * `THREE.DoubleSide` when the source material did not explicitly set
-   * `cull_mode`. Godot's PlaneMesh is single-sided by default, but in
-   * the hallway photo-frame fixture a 90° Y rotation flips the plane's
-   * normal away from the camera, so the photo would silently back-cull.
-   */
-  meshType?: string;
-  /** R3F attach key — `material-0` for multi-surface meshes. */
-  attach?: string;
-}
-
-function MaterialSlot({
-  scalars,
-  albedoMap,
-  normalMap,
-  roughnessMap,
-  metalnessMap,
-  emissiveMap,
-  aoMap,
-  shadowSide,
-  meshType: _meshType,
-  attach,
-}: MaterialSlotProps) {
-  if (!scalars) {
-    // No material → use Godot's default culling (BACK = FrontSide).
-    // Previous WI-HALL-6 logic applied DoubleSide for PlaneMesh as a
-    // defensive default; that turned wall PlaneMeshes (which use
-    // Godot's default BACK culling and don't explicitly write
-    // cull_mode) double-sided too, breaking the "can't see into the
-    // room from outside" semantic. Reverted to Godot's actual default.
-    return (
-      <meshStandardMaterial
-        attach={attach}
-        color={0xcccccc}
-        metalness={0.3}
-        roughness={0.7}
-        side={THREE.FrontSide}
-        shadowSide={shadowSide ?? null}
-      />
-    );
-  }
-  // normalScale is a THREE.Vector2; we materialize one matching the
-  // parsed scalar so the meshStandardMaterial slot picks it up on render.
-  const normalScale = new THREE.Vector2(scalars.normalScale.x, scalars.normalScale.y);
-  // Respect the source material's cull_mode verbatim. Godot's default
-  // when cull_mode is unset is BACK culling → THREE.FrontSide, which is
-  // `scalars.side`'s default from materialScalars.ts. The earlier
-  // WI-HALL-6 override (PlaneMesh + unset cull_mode → DoubleSide)
-  // unintentionally also double-sided every wall PlaneMesh whose
-  // material followed Godot's omit-the-default convention.
-  const effectiveSide = scalars.side;
-  // The material's shader needs to be recompiled whenever the set of
-  // active texture maps changes — three.js bakes `USE_MAP` / `USE_NORMALMAP`
-  // / etc. into shader defines at first compile, so adding a texture
-  // after the material has already rendered without one leaves the
-  // sampler unused (renders white). Keying the material on which slots
-  // are populated forces R3F to construct a fresh material when textures
-  // arrive asynchronously via `useResource`, picking up the right defines.
-  const slotKey =
-    `${albedoMap ? 'a' : '-'}` +
-    `${normalMap ? 'n' : '-'}` +
-    `${roughnessMap ? 'r' : '-'}` +
-    `${metalnessMap ? 'm' : '-'}` +
-    `${emissiveMap ? 'e' : '-'}` +
-    `${aoMap ? 'o' : '-'}`;
-  return (
-    <meshStandardMaterial
-      key={slotKey}
-      attach={attach}
-      color={scalars.color}
-      metalness={scalars.metalness}
-      roughness={scalars.roughness}
-      transparent={scalars.transparent}
-      opacity={scalars.opacity}
-      blending={scalars.blending}
-      side={effectiveSide}
-      shadowSide={shadowSide ?? null}
-      map={albedoMap ?? null}
-      normalMap={normalMap ?? null}
-      normalScale={normalScale}
-      roughnessMap={roughnessMap ?? null}
-      metalnessMap={metalnessMap ?? null}
-      emissiveMap={emissiveMap ?? null}
-      aoMap={aoMap ?? null}
       emissive={scalars.emissive}
       emissiveIntensity={scalars.emissiveIntensity}
     />

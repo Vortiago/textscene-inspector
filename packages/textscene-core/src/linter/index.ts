@@ -10,6 +10,8 @@
 import '../nodes/base/node3d/index.linter.js';
 import '../nodes/base/node2d/index.linter.js';
 import '../nodes/3d/meshinstance3d/index.linter.js';
+import '../nodes/3d/csg/csgbox3d/index.linter.js';
+import '../nodes/3d/csg/csgcylinder3d/index.linter.js';
 import '../nodes/3d/lights/omnilight3d/index.linter.js';
 import '../nodes/3d/lights/directionallight3d/index.linter.js';
 import '../nodes/3d/lights/spotlight3d/index.linter.js';

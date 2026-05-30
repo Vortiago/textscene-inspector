@@ -1,0 +1,20 @@
+[gd_scene load_steps=2 format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_cyl"]
+albedo_color = Color(0.6, 0.5, 0.2, 1)
+
+[node name="CSGCylinderRoot" type="Node3D"]
+
+[node name="Pillar" type="CSGCylinder3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+radius = 0.5
+height = 2.0
+sides = 16
+material = SubResource("StandardMaterial3D_cyl")
+
+[node name="Cone" type="CSGCylinder3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 0, 0)
+radius = 0.4
+height = 1.0
+cone = true
+material = SubResource("StandardMaterial3D_cyl")

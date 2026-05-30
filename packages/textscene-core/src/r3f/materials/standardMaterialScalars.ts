@@ -10,12 +10,14 @@
  *   - normal_scale
  *
  * External textures (albedo / normal / roughness / metallic / emission)
- * are handled by `useResource` in the parent component.
+ * are handled by `useResource` in the parent component. Shared by every
+ * StandardMaterial3D-bearing node type (MeshInstance3D, CSGBox3D, …) via
+ * `<StandardMaterialSlot>`.
  */
 
 import * as THREE from 'three';
-import { parseColor } from '../../../utils/colorParser';
-import { warn } from '../../../logger';
+import { parseColor } from '../../utils/colorParser';
+import { warn } from '../../logger';
 
 /**
  * WI-HALL-5: Godot's `uv1_triplanar` (+ `uv1_world_triplanar`) needs a
