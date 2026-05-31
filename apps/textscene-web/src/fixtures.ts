@@ -71,11 +71,6 @@ export const fixtures: Fixture[] = [
     "category": "Examples - Complex Scenes"
   },
   {
-    "name": "Hallway",
-    "file": "example-hallway.tscn",
-    "category": "Examples - Complex Scenes"
-  },
-  {
     "name": "Hierarchy Deep",
     "file": "example-hierarchy-deep.tscn",
     "category": "Examples - Complex Scenes"
@@ -643,11 +638,6 @@ export const fixtures: Fixture[] = [
   {
     "name": "WallSection",
     "file": "components/WallSection.tscn",
-    "category": "Examples - ld-58 Scenes"
-  },
-  {
-    "name": "Hallway Geometry",
-    "file": "hallway-geometry.tscn",
     "category": "Examples - ld-58 Scenes"
   }
 ];

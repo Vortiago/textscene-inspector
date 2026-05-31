@@ -67,18 +67,27 @@ export const scenarios = {
   // Full ld-58 hallway GEOMETRY — real textured walls/columns via the res://
   // dependency closure (WallSection / CornerColumn + OpenGameArt textures).
   'hallway-ld58': orbitScene(
-    'Hallway Geometry',
-    "The real ld-58 hallway geometry with its actual wall/wood textures (PlaneMesh walls + instanced WallSection/CornerColumn components). Tracks progress toward the full furnished hallway — triplanar tiling is approximate for now.",
+    'HallwayGeometry',
+    "The unfurnished ld-58 hallway geometry with its actual wall/wood textures (PlaneMesh walls + instanced WallSection/CornerColumn components) — the architectural shell the full scene is furnished into.",
     { dx: 320, dy: 20, steps: 70 }
+  ),
+
+  // The full furnished ld-58 murder scene — geometry + instanced GLB props +
+  // portrait frames + the crime-scene tableau (286 nodes). The marquee clip:
+  // the entire res:// dependency closure rendered end to end.
+  'hallway-full': orbitScene(
+    'Hallway',
+    'The complete ld-58 "Hallway Murder" scene (286 nodes): textured walls and floor, instanced GLB portrait frames carrying their painted portraits, doors, roof lamps, and the full crime-scene tableau — corner table, body, and evidence props. The entire res:// dependency closure rendered end to end.',
+    { dx: 300, dy: 22, steps: 64 }
   ),
 
   // Layout tour: the 3-column DCC chrome + the 2D Control overlay. Opens on the
   // textured hallway (3D), orbits, then switches to a rich ld-58 dialog scene
   // and flips to 2D mode so the overlay renders its Control UI.
   'dcc-layout': {
-    label: 'Hallway Geometry',
+    label: 'Hallway',
     caption:
-      'The 3-column DCC chrome — Scene outliner (left), viewport (center), Inspector (right). Orbits the textured ld-58 hallway, then switches to the EndGameDialog scene and flips to 2D mode, where the Control overlay renders the dialog UI faithfully.',
+      'The 3-column DCC chrome — Scene outliner (left), viewport (center), Inspector (right). Orbits the fully furnished ld-58 murder scene, then switches to the EndGameDialog scene and flips to 2D mode, where the Control overlay renders the dialog UI faithfully.',
     run: async (page, h) => {
       await h.poster();
       await h.orbit(page, { dx: 280, dy: 18, steps: 48 });
