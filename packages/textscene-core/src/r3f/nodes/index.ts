@@ -27,6 +27,8 @@ import '../../nodes/3d/sprite3d/index.r3f';
 import '../../nodes/audio/audiostreamplayer3d/index.r3f';
 import '../../nodes/animation/animationplayer/index.r3f';
 import '../../nodes/animation/animationtree/index.r3f';
+import '../../nodes/base/node2d/index.r3f';
+import '../../nodes/2d/sprite2d/index.r3f';
 import '../internal/glb-scene-root/index';
 
 export { GenericNodeFallback } from '../internal/generic-node-fallback/index';

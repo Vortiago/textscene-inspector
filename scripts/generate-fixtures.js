@@ -55,6 +55,15 @@ function detectCategory(filename) {
   ) {
     return 'Unit - 2D UI Controls';
   }
+  // 2D canvas (non-UI) nodes rendered in the R3F viewport (Node2D/Sprite2D/Camera2D).
+  if (
+    filename.startsWith('unit-node2d') ||
+    filename.startsWith('unit-sprite2d') ||
+    filename.startsWith('unit-camera2d') ||
+    filename.startsWith('unit-2d')
+  ) {
+    return 'Unit - 2D Canvas';
+  }
   if (filename.startsWith('edge-')) return 'Edge Cases';
   if (filename.startsWith('integration-external')) return 'Integration - External Scenes';
   if (filename.startsWith('integration-')) return 'Integration - Multi-Node';

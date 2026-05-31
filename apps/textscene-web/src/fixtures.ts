@@ -451,6 +451,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Materials"
   },
   {
+    "name": "Sprite2d",
+    "file": "unit-sprite2d.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
     "name": "Clue Container",
     "file": "ClueContainer.tscn",
     "category": "Examples - ld-58 Scenes"
