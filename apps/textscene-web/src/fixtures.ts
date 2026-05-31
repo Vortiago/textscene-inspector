@@ -456,6 +456,51 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Materials"
   },
   {
+    "name": "ClueContainer",
+    "file": "ClueContainer.tscn",
+    "category": "Examples - ld-58 Scenes"
+  },
+  {
+    "name": "ClueItem",
+    "file": "ClueItem.tscn",
+    "category": "Examples - ld-58 Scenes"
+  },
+  {
+    "name": "AboutDialog",
+    "file": "Scenes/AboutDialog/AboutDialog.tscn",
+    "category": "Examples - ld-58 Scenes"
+  },
+  {
+    "name": "DialogSystem",
+    "file": "Scenes/DialogSystem/DialogSystem.tscn",
+    "category": "Examples - ld-58 Scenes"
+  },
+  {
+    "name": "EndGameDialog",
+    "file": "Scenes/EndGameDialog/EndGameDialog.tscn",
+    "category": "Examples - ld-58 Scenes"
+  },
+  {
+    "name": "GameUI",
+    "file": "Scenes/GameUI/GameUI.tscn",
+    "category": "Examples - ld-58 Scenes"
+  },
+  {
+    "name": "StartScreen",
+    "file": "Scenes/StartScreen/StartScreen.tscn",
+    "category": "Examples - ld-58 Scenes"
+  },
+  {
+    "name": "CornerColumn",
+    "file": "components/CornerColumn.tscn",
+    "category": "Examples - ld-58 Scenes"
+  },
+  {
+    "name": "WallSection",
+    "file": "components/WallSection.tscn",
+    "category": "Examples - ld-58 Scenes"
+  },
+  {
     "name": "Hallway Geometry",
     "file": "hallway-geometry.tscn",
     "category": "Examples - ld-58 Scenes"

@@ -1,0 +1,146 @@
+[gd_scene load_steps=6 format=3 uid="uid://7piy1a6f04lb"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_clue_button_normal"]
+bg_color = Color(0.902, 0.878, 0.784, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.6, 0.5, 0.4, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_clue_button_hover"]
+bg_color = Color(0.95, 0.93, 0.88, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.478, 0.416, 0.353, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_clue_button_pressed"]
+bg_color = Color(0.82, 0.765, 0.62, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.478, 0.416, 0.353, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_popup_panel"]
+bg_color = Color(0.95, 0.93, 0.88, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.478, 0.416, 0.353, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_1"]
+
+[node name="ClueItem" type="Button"]
+custom_minimum_size = Vector2(90, 90)
+theme_override_styles/normal = SubResource("StyleBoxFlat_clue_button_normal")
+theme_override_styles/hover = SubResource("StyleBoxFlat_clue_button_hover")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_clue_button_pressed")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_1")
+toggle_mode = true
+
+[node name="PortraitIcon" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+offset_left = 5.0
+offset_top = 5.0
+offset_right = -5.0
+offset_bottom = -5.0
+expand_mode = 1
+stretch_mode = 5
+
+[node name="ClueItemTextPanel" type="PanelContainer" parent="."]
+visible = false
+z_index = 10
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -250.0
+offset_top = -220.0
+offset_right = 250.0
+offset_bottom = 220.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_popup_panel")
+
+[node name="MarginContainer" type="MarginContainer" parent="ClueItemTextPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="VBoxContainer" type="VBoxContainer" parent="ClueItemTextPanel/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Header" type="HBoxContainer" parent="ClueItemTextPanel/MarginContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+
+[node name="ClueTextHeader" type="Label" parent="ClueItemTextPanel/MarginContainer/VBoxContainer/Header"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.227, 0.184, 0.122, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.25)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 1
+theme_override_font_sizes/font_size = 28
+text = "Clue Name"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="CloseButton" type="Button" parent="ClueItemTextPanel/MarginContainer/VBoxContainer/Header"]
+custom_minimum_size = Vector2(30, 30)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.227, 0.184, 0.122, 1)
+theme_override_font_sizes/font_size = 18
+theme_override_styles/normal = SubResource("StyleBoxFlat_clue_button_normal")
+theme_override_styles/hover = SubResource("StyleBoxFlat_clue_button_hover")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_clue_button_pressed")
+text = "X"
+
+[node name="Divider" type="ColorRect" parent="ClueItemTextPanel/MarginContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 2)
+layout_mode = 2
+color = Color(0.478, 0.416, 0.353, 1)
+
+[node name="ClueTextBody" type="Label" parent="ClueItemTextPanel/MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(450, 0)
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_colors/font_color = Color(0.227, 0.184, 0.122, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.15)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 1
+theme_override_font_sizes/font_size = 20
+text = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer ultricies mi ac orci volutpat, in molestie nunc vehicula. Sed vulputate semper augue nec aliquet. Etiam odio lectus, hendrerit eget ornare non, accumsan quis nisl. Nam auctor sed arcu a vestibulum. Maecenas iaculis arcu eget orci tristique, eu ornare orci porta. Morbi at dolor vulputate, vehicula nisl ac, iaculis nulla. Sed sollicitudin luctus egestas. Mauris viverra augue erat, sit amet suscipit risus ultricies vitae. Fusce in turpis sit amet odio tincidunt tincidunt. Vestibulum molestie nibh lacus, et iaculis orci congue at. Fusce ac blandit eros. Nam id nunc vitae lacus fringilla accumsan et vel eros. Donec consectetur sollicitudin nibh, faucibus rutrum lacus ornare non. Donec urna elit, maximus semper justo a, auctor suscipit lorem. Mauris tortor lorem, rutrum vitae purus eget, viverra blandit leo. Nulla lectus ante, ornare maximus auctor a, luctus vitae velit."
+autowrap_mode = 3
+vertical_alignment = 1

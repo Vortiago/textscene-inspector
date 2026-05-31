@@ -91,13 +91,30 @@ const exampleFiles = readdirSync(examplesDir)
 // Top-level ld-58 scenes (their res:// deps live in scenes/ld58/<subdirs> and
 // are NOT listed as selectable fixtures). copy-fixtures mirrors the closure
 // under public/fixtures/ so the res:// references resolve.
+// Walk scenes/ld58/ RECURSIVELY: top-level scenes (hallway-geometry) plus
+// nested ones (Scenes/GameUI/GameUI.tscn, components/WallSection.tscn, …) are
+// all selectable. `file` is the res://-relative path (forward slashes) so it
+// matches the mirror copy-fixtures writes under public/fixtures/.
 const ld58Dir = join(rootDir, 'scenes/ld58');
-let ld58Files = [];
-try {
-  ld58Files = readdirSync(ld58Dir).filter(f => f.endsWith('.tscn')).sort();
-} catch {
-  // No ld58 directory — skip.
+function walkTscn(dir, base = '') {
+  const out = [];
+  let entries;
+  try {
+    entries = readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return out; // No ld58 directory — skip.
+  }
+  for (const entry of entries) {
+    const rel = base ? `${base}/${entry.name}` : entry.name;
+    if (entry.isDirectory()) {
+      out.push(...walkTscn(join(dir, entry.name), rel));
+    } else if (entry.name.endsWith('.tscn')) {
+      out.push(rel);
+    }
+  }
+  return out;
 }
+const ld58Files = walkTscn(ld58Dir).sort();
 
 const fixtures = [
   ...fixtureFiles.map(file => ({
@@ -111,7 +128,7 @@ const fixtures = [
     category: 'Examples - Complex Scenes',
   })),
   ...ld58Files.map(file => ({
-    name: generateName(file),
+    name: generateName(file.split('/').pop()),
     file,
     category: 'Examples - ld-58 Scenes',
   })),
