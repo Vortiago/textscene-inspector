@@ -67,7 +67,7 @@ export const scenarios = {
   // Full ld-58 hallway GEOMETRY — real textured walls/columns via the res://
   // dependency closure (WallSection / CornerColumn + OpenGameArt textures).
   'hallway-ld58': orbitScene(
-    'HallwayGeometry',
+    'Hallway Geometry',
     "The unfurnished ld-58 hallway geometry with its actual wall/wood textures (PlaneMesh walls + instanced WallSection/CornerColumn components) — the architectural shell the full scene is furnished into.",
     { dx: 320, dy: 20, steps: 70 }
   ),
@@ -91,7 +91,7 @@ export const scenarios = {
     run: async (page, h) => {
       await h.poster();
       await h.orbit(page, { dx: 280, dy: 18, steps: 48 });
-      await h.selectScene(page, 'EndGameDialog');
+      await h.selectScene(page, 'End Game Dialog');
       const btn2d = page.getByRole('button', { name: '2D' });
       if (await btn2d.count()) await btn2d.first().click();
       await page.waitForSelector('[data-control-overlay="true"]', { timeout: 15000 }).catch(() => {});
@@ -103,7 +103,7 @@ export const scenarios = {
   // the default 3D viewport, the "switch to 2D" hint floats over it, and a
   // click flips to the 2D overlay that renders the dialog.
   'ui-hint': {
-    label: 'EndGameDialog',
+    label: 'End Game Dialog',
     caption:
       'A 2D-UI scene (EndGameDialog) opens in the default 3D viewport; since it carries Control nodes, the shell floats a "switch to 2D" hint. Clicking the hint flips to the 2D overlay, which renders the dialog faithfully.',
     run: async (page, h) => {

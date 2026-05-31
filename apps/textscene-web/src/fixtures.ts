@@ -451,37 +451,37 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Materials"
   },
   {
-    "name": "ClueContainer",
+    "name": "Clue Container",
     "file": "ClueContainer.tscn",
     "category": "Examples - ld-58 Scenes"
   },
   {
-    "name": "ClueItem",
+    "name": "Clue Item",
     "file": "ClueItem.tscn",
     "category": "Examples - ld-58 Scenes"
   },
   {
-    "name": "HallwayGeometry",
+    "name": "Hallway Geometry",
     "file": "HallwayGeometry.tscn",
     "category": "Examples - ld-58 Scenes"
   },
   {
-    "name": "AboutDialog",
+    "name": "About Dialog",
     "file": "Scenes/AboutDialog/AboutDialog.tscn",
     "category": "Examples - ld-58 Scenes"
   },
   {
-    "name": "DialogSystem",
+    "name": "Dialog System",
     "file": "Scenes/DialogSystem/DialogSystem.tscn",
     "category": "Examples - ld-58 Scenes"
   },
   {
-    "name": "EndGameDialog",
+    "name": "End Game Dialog",
     "file": "Scenes/EndGameDialog/EndGameDialog.tscn",
     "category": "Examples - ld-58 Scenes"
   },
   {
-    "name": "DroppedLedger",
+    "name": "Dropped Ledger",
     "file": "Scenes/Evidence/DroppedLedger/DroppedLedger.tscn",
     "category": "Examples - ld-58 Scenes"
   },
@@ -491,17 +491,17 @@ export const fixtures: Fixture[] = [
     "category": "Examples - ld-58 Scenes"
   },
   {
-    "name": "HandkerchiefModel",
+    "name": "Handkerchief Model",
     "file": "Scenes/Evidence/Handkerchief/HandkerchiefModel.tscn",
     "category": "Examples - ld-58 Scenes"
   },
   {
-    "name": "LetterOpener",
+    "name": "Letter Opener",
     "file": "Scenes/Evidence/LetterOpener/LetterOpener.tscn",
     "category": "Examples - ld-58 Scenes"
   },
   {
-    "name": "GameUI",
+    "name": "Game UI",
     "file": "Scenes/GameUI/GameUI.tscn",
     "category": "Examples - ld-58 Scenes"
   },
@@ -541,12 +541,12 @@ export const fixtures: Fixture[] = [
     "category": "Examples - ld-58 Scenes"
   },
   {
-    "name": "DrHenryMorrison",
+    "name": "Dr Henry Morrison",
     "file": "Scenes/PhotoFrame/DrHenryMorrison/DrHenryMorrison.tscn",
     "category": "Examples - ld-58 Scenes"
   },
   {
-    "name": "EleanorHeartwell",
+    "name": "Eleanor Heartwell",
     "file": "Scenes/PhotoFrame/EleanorHartwell/EleanorHeartwell.tscn",
     "category": "Examples - ld-58 Scenes"
   },
@@ -556,27 +556,27 @@ export const fixtures: Fixture[] = [
     "category": "Examples - ld-58 Scenes"
   },
   {
-    "name": "HouseKeeper",
+    "name": "House Keeper",
     "file": "Scenes/PhotoFrame/HouseKeeper/HouseKeeper.tscn",
     "category": "Examples - ld-58 Scenes"
   },
   {
-    "name": "InspectorCrawford",
+    "name": "Inspector Crawford",
     "file": "Scenes/PhotoFrame/InspectorCrawford/InspectorCrawford.tscn",
     "category": "Examples - ld-58 Scenes"
   },
   {
-    "name": "LadyBlackwood",
+    "name": "Lady Blackwood",
     "file": "Scenes/PhotoFrame/LadyBlackwood/LadyBlackwood.tscn",
     "category": "Examples - ld-58 Scenes"
   },
   {
-    "name": "YoungTimBlackwood",
+    "name": "Young Tim Blackwood",
     "file": "Scenes/PhotoFrame/YoungTimBlackwood/YoungTimBlackwood.tscn",
     "category": "Examples - ld-58 Scenes"
   },
   {
-    "name": "StartScreen",
+    "name": "Start Screen",
     "file": "Scenes/StartScreen/StartScreen.tscn",
     "category": "Examples - ld-58 Scenes"
   },
@@ -591,32 +591,32 @@ export const fixtures: Fixture[] = [
     "category": "Examples - ld-58 Scenes"
   },
   {
-    "name": "Victorian_1",
+    "name": "Victorian 1",
     "file": "assets/picture_frames_lib/victorian_1.tscn",
     "category": "Examples - ld-58 Scenes"
   },
   {
-    "name": "Victorian_2",
+    "name": "Victorian 2",
     "file": "assets/picture_frames_lib/victorian_2.tscn",
     "category": "Examples - ld-58 Scenes"
   },
   {
-    "name": "Victorian_3",
+    "name": "Victorian 3",
     "file": "assets/picture_frames_lib/victorian_3.tscn",
     "category": "Examples - ld-58 Scenes"
   },
   {
-    "name": "Victorian_5",
+    "name": "Victorian 5",
     "file": "assets/picture_frames_lib/victorian_5.tscn",
     "category": "Examples - ld-58 Scenes"
   },
   {
-    "name": "Roof_lamp",
+    "name": "Roof Lamp",
     "file": "assets/roof_lamp.tscn",
     "category": "Examples - ld-58 Scenes"
   },
   {
-    "name": "CornerColumn",
+    "name": "Corner Column",
     "file": "components/CornerColumn.tscn",
     "category": "Examples - ld-58 Scenes"
   },
@@ -626,17 +626,17 @@ export const fixtures: Fixture[] = [
     "category": "Examples - ld-58 Scenes"
   },
   {
-    "name": "EntranceDoor",
+    "name": "Entrance Door",
     "file": "components/EntranceDoor.tscn",
     "category": "Examples - ld-58 Scenes"
   },
   {
-    "name": "InteractableObject",
+    "name": "Interactable Object",
     "file": "components/InteractableObject.tscn",
     "category": "Examples - ld-58 Scenes"
   },
   {
-    "name": "WallSection",
+    "name": "Wall Section",
     "file": "components/WallSection.tscn",
     "category": "Examples - ld-58 Scenes"
   }

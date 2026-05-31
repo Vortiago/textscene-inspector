@@ -128,11 +128,34 @@ const fixtures = [
     category: 'Examples - Complex Scenes',
   })),
   ...ld58Files.map(file => ({
-    name: generateName(file.split('/').pop()),
+    // ld-58 scenes keep Godot's CamelCase / snake_case basenames; split those
+    // into words so the selector shows "Inspector Crawford", not "InspectorCrawford".
+    name: generateName(
+      file
+        .split('/')
+        .pop()
+        .replace(/_/g, '-')
+        .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
+    ),
     file,
     category: 'Examples - ld-58 Scenes',
   })),
 ];
+
+// Fixture names must be unique: the showcase recorder and scene selector both
+// resolve a fixture by name (first match), so a duplicate would silently load
+// the wrong scene. Fail the generation instead of producing an ambiguous manifest.
+const seenNames = new Map();
+for (const fixture of fixtures) {
+  const prior = seenNames.get(fixture.name);
+  if (prior) {
+    throw new Error(
+      `Duplicate fixture name "${fixture.name}": "${prior}" and "${fixture.file}". ` +
+        `Rename one of the scenes so every fixture name is unique.`
+    );
+  }
+  seenNames.set(fixture.name, fixture.file);
+}
 
 // Group by category
 const categories = [...new Set(fixtures.map(f => f.category))];
