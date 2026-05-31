@@ -10,12 +10,11 @@
 
 import { useMemo } from 'react';
 import type { CSGBox3DProperties } from './types';
-import type { TscnInternalResource } from '../../../../parser/types';
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../../r3f/nodeTransform';
-import { findSubResource, useSceneResources } from '../../../../r3f/SceneResourcesContext';
-import { parseResourceReference } from '../../../../resources/SubResourceResolver';
+import { useSceneResources } from '../../../../r3f/SceneResourcesContext';
 import { parseStandardMaterial3DScalars } from '../../../../r3f/materials/standardMaterialScalars';
+import { resolveStandardMaterial } from '../../../../r3f/materials/resolveStandardMaterial';
 import { StandardMaterialSlot } from '../../../../r3f/materials/StandardMaterialSlot';
 
 export function CSGBox3D({ node, children }: NodeComponentProps) {
@@ -50,16 +49,4 @@ export function CSGBox3D({ node, children }: NodeComponentProps) {
       {children}
     </group>
   );
-}
-
-function resolveStandardMaterial(
-  ref: string | undefined,
-  internalResources: readonly TscnInternalResource[]
-): TscnInternalResource | undefined {
-  if (!ref) return undefined;
-  const parsed = parseResourceReference(ref);
-  if (!parsed || parsed.type !== 'SubResource') return undefined;
-  const resource = findSubResource(internalResources, parsed.id);
-  if (!resource || resource.type !== 'StandardMaterial3D') return undefined;
-  return resource;
 }

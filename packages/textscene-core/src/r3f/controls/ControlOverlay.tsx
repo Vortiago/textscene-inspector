@@ -8,7 +8,8 @@
  */
 
 import type { CSSProperties } from 'react';
-import type { TscnNode } from '../../parser/types';
+import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../parser/types';
+import { SceneResourcesProvider } from '../SceneResourcesContext';
 import { ControlDispatcher } from './ControlDispatcher';
 import { ControlParentProvider } from './ControlParentContext';
 
@@ -21,14 +22,31 @@ const OVERLAY_STYLE: CSSProperties = {
 
 export interface ControlOverlayProps {
   nodes: readonly TscnNode[];
+  /**
+   * Scene resources, so StyleBox-bearing Controls (Panel, Button, …) can
+   * resolve their `theme_override_styles/*` SubResource refs via
+   * useSceneResources + resolveStyleBoxCss. Default empty for resource-free
+   * subtrees (e.g. plain Label/ColorRect layouts).
+   */
+  internalResources?: readonly TscnInternalResource[];
+  externalResources?: readonly TscnExternalResource[];
 }
 
-export function ControlOverlay({ nodes }: ControlOverlayProps) {
+export function ControlOverlay({
+  nodes,
+  internalResources = [],
+  externalResources = [],
+}: ControlOverlayProps) {
   return (
     <div data-control-overlay="true" style={OVERLAY_STYLE}>
-      <ControlParentProvider kind="free">
-        <ControlDispatcher nodes={nodes} />
-      </ControlParentProvider>
+      <SceneResourcesProvider
+        internalResources={internalResources}
+        externalResources={externalResources}
+      >
+        <ControlParentProvider kind="free">
+          <ControlDispatcher nodes={nodes} />
+        </ControlParentProvider>
+      </SceneResourcesProvider>
     </div>
   );
 }
