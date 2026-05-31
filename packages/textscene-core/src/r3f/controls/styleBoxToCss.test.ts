@@ -35,6 +35,17 @@ describe('styleBoxToCss', () => {
   it('returns transparent ({}) for StyleBoxEmpty', () => {
     expect(styleBoxToCss('StyleBoxEmpty', {})).toEqual({});
   });
+
+  it('omits the fill when draw_center=false (border-only box)', () => {
+    const css = styleBoxToCss('StyleBoxFlat', {
+      bg_color: 'Color(0.2, 0.2, 0.2, 1)',
+      draw_center: 'false',
+      border_width_left: '2',
+      border_color: 'Color(1, 1, 1, 1)',
+    });
+    expect(css.backgroundColor).toBeUndefined();
+    expect(css.borderColor).toBe('rgba(255, 255, 255, 1)'); // border still drawn
+  });
 });
 
 describe('colorToCss', () => {

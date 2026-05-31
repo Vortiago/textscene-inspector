@@ -620,4 +620,20 @@ size = Vector3(1, 2, 3)
       expect(result.scene!.internalResources).toHaveLength(1);
     });
   });
+
+  describe('Multi-line string section-boundary salvage', () => {
+    it('does not swallow the next node heading when a string is left unclosed', () => {
+      const content = `[gd_scene format=3]
+
+[node name="A" type="Label"]
+text = "oops unclosed
+[node name="B" type="Node3D" parent="."]
+`;
+      const result = parser.parse(content);
+      // B must be parsed as its own node, not consumed into A's open string.
+      const root = result.scene!.nodes[0]!;
+      expect(root.name).toBe('A');
+      expect(root.children.some((c) => c.name === 'B')).toBe(true);
+    });
+  });
 });

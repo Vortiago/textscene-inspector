@@ -76,4 +76,14 @@ describe('controlLayoutStyle — container child', () => {
     const s = controlLayoutStyle(ctrl({ sizeFlagsVertical: 4 }), 'row');
     expect(s.alignSelf).toBe('center');
   });
+
+  it('row parent: SHRINK_END cross-axis → align-self flex-end', () => {
+    const s = controlLayoutStyle(ctrl({ sizeFlagsVertical: 8 }), 'row');
+    expect(s.alignSelf).toBe('flex-end');
+  });
+
+  it('column parent: explicit 0 size-flags (SHRINK_BEGIN) → align-self flex-start (shrink to content)', () => {
+    const s = controlLayoutStyle(ctrl({ sizeFlagsHorizontal: 0 }), 'column');
+    expect(s.alignSelf).toBe('flex-start');
+  });
 });

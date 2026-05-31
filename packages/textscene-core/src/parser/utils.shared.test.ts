@@ -51,6 +51,13 @@ describe('unquoteString', () => {
     expect(unquoteString('"a\\\\b"')).toBe('a\\b');
     expect(unquoteString('"say \\"hi\\""')).toBe('say "hi"');
   });
+  it('decodes \\uXXXX / \\UXXXXXX Unicode escapes', () => {
+    expect(unquoteString('"music \\u266a"')).toBe('music ♪'); // ♪
+    expect(unquoteString('"emoji \\U01F600"')).toBe('emoji \u{1F600}'); // 😀
+  });
+  it('treats an escaped backslash before u as literal (\\\\u1234 → \\u1234)', () => {
+    expect(unquoteString('"a\\\\u1234"')).toBe('a\\u1234');
+  });
 });
 
 describe('intOr', () => {

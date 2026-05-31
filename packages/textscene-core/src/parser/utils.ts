@@ -108,15 +108,23 @@ const ESCAPE_MAP: Record<string, string> = {
 
 /**
  * Strip a value's surrounding quotes and decode Godot's string escape sequences
- * (`\n`, `\t`, `\r`, `\\`, `\"`). Non-quoted values pass through unchanged.
- * Used wherever a node parser reads a string property (label/button text, …).
+ * (`\n`, `\t`, `\r`, `\\`, `\"`, plus `\uXXXX` / `\UXXXXXX` Unicode — Godot emits
+ * those for non-ASCII characters). Non-quoted values pass through unchanged.
+ * A single left-to-right pass so an escaped backslash (`\\u1234`) is decoded as
+ * `\` + literal `u1234`, not as a Unicode escape. Used wherever a node parser
+ * reads a string property (label/button text, …).
  */
 export function unquoteString(value: string): string {
   let v = value;
   if (v.length >= 2 && v.startsWith('"') && v.endsWith('"')) {
     v = v.slice(1, -1);
   }
-  return v.replace(/\\(["\\nrt])/g, (_match, ch: string) => ESCAPE_MAP[ch] ?? ch);
+  return v.replace(/\\(u[0-9a-fA-F]{4}|U[0-9a-fA-F]{6}|["\\nrt])/g, (_match, seq: string) => {
+    if (seq[0] === 'u' || seq[0] === 'U') {
+      return String.fromCodePoint(parseInt(seq.slice(1), 16));
+    }
+    return ESCAPE_MAP[seq] ?? seq;
+  });
 }
 
 /**

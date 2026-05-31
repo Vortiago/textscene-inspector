@@ -186,8 +186,13 @@ export class StrictTscnParser {
         if (isUnterminatedString(property.value)) {
           let fullValue = property.value;
 
-          // Keep appending lines until the quote parity balances.
+          // Keep appending lines until the quote parity balances. If an
+          // unclosed string runs into a new section heading, salvage what we
+          // have and leave the heading for the outer loop to process — without
+          // this guard the heading (and the following section) get swallowed as
+          // string content (matches TscnParserCore's behavior).
           while (i + 1 < lines.length) {
+            if (isHeading(lines[i + 1]!)) break;
             i++;
             currentLineNumber = i + 1;
             fullValue += '\n' + lines[i]!;
