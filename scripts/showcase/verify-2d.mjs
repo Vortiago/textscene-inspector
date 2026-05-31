@@ -28,6 +28,7 @@ const TARGETS = [
   ['endgamedialog', 'Scenes/EndGameDialog/EndGameDialog.tscn'],
   ['cluecontainer', 'ClueContainer.tscn'],
   ['clueitem', 'ClueItem.tscn'],
+  ['bbcode', 'unit-rich-text-label.tscn'],
 ];
 
 mkdirSync(OUT, { recursive: true });

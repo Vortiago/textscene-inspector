@@ -180,5 +180,22 @@
       "Clue Name"
     ],
     "errors": []
+  },
+  {
+    "name": "bbcode",
+    "file": "unit-rich-text-label.tscn",
+    "switched": true,
+    "overlay": true,
+    "controls": 2,
+    "fallbacks": 0,
+    "types": [
+      "Control",
+      "RichTextLabel"
+    ],
+    "textSample": [
+      "Bold, italic, underline, and colored BBC",
+      "Bold, italic, underline, and colored BBC"
+    ],
+    "errors": []
   }
 ]

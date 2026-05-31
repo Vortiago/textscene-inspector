@@ -152,9 +152,21 @@ describe('Control components — leaf controls', () => {
     expect(styleOf(find(c, 'Button')).backgroundColor).toBe('rgba(255, 0, 0, 1)');
   });
 
-  it('RichTextLabel: strips BBCode to plain text', () => {
-    const c = renderOverlay([node('R', 'RichTextLabel', { text: '[b]Hello[/b] [color=red]world[/color]' })]);
-    expect(find(c, 'RichTextLabel')?.textContent).toBe('Hello world');
+  it('RichTextLabel: renders a BBCode subset when bbcode is enabled', () => {
+    const c = renderOverlay([
+      node('R', 'RichTextLabel', {
+        text: '[b]Hello[/b] [color=red]world[/color]',
+        bbcodeEnabled: true,
+      }),
+    ]);
+    const rt = find(c, 'RichTextLabel');
+    expect(rt?.textContent).toBe('Hello world');
+    expect([...rt!.querySelectorAll('span')].some((s) => styleOf(s).fontWeight === 'bold')).toBe(true);
+  });
+
+  it('RichTextLabel: shows tags literally when bbcode is disabled', () => {
+    const c = renderOverlay([node('R', 'RichTextLabel', { text: '[b]raw[/b]', bbcodeEnabled: false })]);
+    expect(find(c, 'RichTextLabel')?.textContent).toBe('[b]raw[/b]');
   });
 
   it('TextureRect: falls back to a placeholder outside a ResourceLoader', () => {
