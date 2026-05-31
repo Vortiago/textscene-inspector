@@ -8,6 +8,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import type { TscnNode } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
+import { isValidProperties } from '../../../linter/linterUtils.js';
 
 /**
  * Find the parent node of a given node in the scene tree
@@ -23,13 +24,6 @@ function findParentNode(nodes: TscnNode[], targetNode: TscnNode, parent: TscnNod
     }
   }
   return null;
-}
-
-/**
- * Check if properties object exists and is valid
- */
-function isValidProperties(props: unknown): props is Record<string, string> {
-  return typeof props === 'object' && props !== null;
 }
 
 /**

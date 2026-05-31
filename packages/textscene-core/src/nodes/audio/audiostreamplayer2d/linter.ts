@@ -7,6 +7,7 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
+import { isValidProperties } from '../../../linter/linterUtils.js';
 import { checkResourceExists } from '../../../linter/resourceChecker.js';
 
 // Thresholds for warnings
@@ -18,13 +19,6 @@ const MIN_MAX_DISTANCE_2D = 10;
 const MAX_MAX_DISTANCE_2D = 10000;
 const MIN_ATTENUATION = 0.1;
 const MAX_ATTENUATION = 10;
-
-/**
- * Check if properties object exists and is valid
- */
-function isValidProperties(props: unknown): props is Record<string, string> {
-  return typeof props === 'object' && props !== null;
-}
 
 /**
  * Validate AudioStreamPlayer2D semantic rules

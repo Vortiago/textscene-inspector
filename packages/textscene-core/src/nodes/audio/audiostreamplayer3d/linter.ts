@@ -7,6 +7,7 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
+import { isValidProperties } from '../../../linter/linterUtils.js';
 import { checkResourceExists } from '../../../linter/resourceChecker.js';
 
 // Thresholds for warnings
@@ -14,13 +15,6 @@ const EXTREME_VOLUME_DB_MIN = -40;
 const EXTREME_VOLUME_DB_MAX = 6;
 const TYPICAL_PITCH_SCALE_MIN = 0.5;
 const TYPICAL_PITCH_SCALE_MAX = 2.0;
-
-/**
- * Check if properties object exists and is valid
- */
-function isValidProperties(props: unknown): props is Record<string, string> {
-  return typeof props === 'object' && props !== null;
-}
 
 /**
  * Validate AudioStreamPlayer3D semantic rules
