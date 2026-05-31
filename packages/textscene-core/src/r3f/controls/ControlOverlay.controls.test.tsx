@@ -180,8 +180,20 @@ describe('Control components — CanvasLayer passthrough', () => {
     expect(styleOf(hud).position).toBe('absolute');
   });
 
-  it('hidden CanvasLayer is display:none', () => {
-    const c = renderOverlay([node('Layer', 'CanvasLayer', { visible: false })]);
+  it('a hidden CanvasLayer NESTED under a visible root is display:none', () => {
+    const c = renderOverlay([
+      node('Root', 'Control', { anchorsPreset: 15 }, [
+        node('Layer', 'CanvasLayer', { visible: false }),
+      ]),
+    ]);
+    // Child visibility is respected (only the previewed ROOT is force-shown).
     expect(styleOf(find(c, 'CanvasLayer')).display).toBe('none');
+  });
+
+  it('a visible=false ROOT is shown anyway (preview shows what you opened)', () => {
+    const c = renderOverlay([node('Dialog', 'PanelContainer', { visible: false })]);
+    const root = find(c, 'PanelContainer');
+    expect(root).toBeTruthy();
+    expect(styleOf(root).display).not.toBe('none');
   });
 });

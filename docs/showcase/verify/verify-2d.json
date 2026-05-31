@@ -1,0 +1,184 @@
+[
+  {
+    "name": "startscreen",
+    "file": "Scenes/StartScreen/StartScreen.tscn",
+    "switched": true,
+    "overlay": true,
+    "controls": 11,
+    "fallbacks": 0,
+    "types": [
+      "Button",
+      "CanvasLayer",
+      "CenterContainer",
+      "Control",
+      "Label",
+      "MarginContainer",
+      "Node",
+      "Panel",
+      "PanelContainer",
+      "VBoxContainer"
+    ],
+    "textSample": [
+      "\"Inspector CrawfordStart GameAbout",
+      "\"Inspector CrawfordStart GameAbout",
+      "\"Inspector CrawfordStart GameAbout",
+      "\"Inspector Crawford",
+      "\"Inspector Crawford",
+      "\"Inspector Crawford"
+    ],
+    "errors": [
+      "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    ]
+  },
+  {
+    "name": "gameui",
+    "file": "Scenes/GameUI/GameUI.tscn",
+    "switched": true,
+    "overlay": true,
+    "controls": 4,
+    "fallbacks": 0,
+    "types": [
+      "Button",
+      "CanvasLayer",
+      "HBoxContainer"
+    ],
+    "textSample": [
+      "CluesSolve Mystery",
+      "CluesSolve Mystery",
+      "Clues",
+      "Solve Mystery"
+    ],
+    "errors": []
+  },
+  {
+    "name": "dialogsystem",
+    "file": "Scenes/DialogSystem/DialogSystem.tscn",
+    "switched": true,
+    "overlay": true,
+    "controls": 18,
+    "fallbacks": 1,
+    "types": [
+      "Button",
+      "CanvasLayer",
+      "ColorRect",
+      "Control",
+      "HBoxContainer",
+      "Label",
+      "MarginContainer",
+      "Panel",
+      "RichTextLabel",
+      "TextureRect",
+      "VBoxContainer"
+    ],
+    "textSample": [],
+    "errors": []
+  },
+  {
+    "name": "aboutdialog",
+    "file": "Scenes/AboutDialog/AboutDialog.tscn",
+    "switched": true,
+    "overlay": true,
+    "controls": 9,
+    "fallbacks": 0,
+    "types": [
+      "Button",
+      "ColorRect",
+      "HBoxContainer",
+      "Label",
+      "MarginContainer",
+      "PanelContainer",
+      "RichTextLabel",
+      "ScrollContainer",
+      "VBoxContainer"
+    ],
+    "textSample": [
+      "AboutX",
+      "AboutX",
+      "AboutX",
+      "AboutX",
+      "About",
+      "X"
+    ],
+    "errors": []
+  },
+  {
+    "name": "endgamedialog",
+    "file": "Scenes/EndGameDialog/EndGameDialog.tscn",
+    "switched": true,
+    "overlay": true,
+    "controls": 29,
+    "fallbacks": 0,
+    "types": [
+      "Button",
+      "ColorRect",
+      "HBoxContainer",
+      "Label",
+      "MarginContainer",
+      "PanelContainer",
+      "VBoxContainer"
+    ],
+    "textSample": [
+      "Solve the MysteryXWho committed the murd",
+      "Solve the MysteryXWho committed the murd",
+      "Solve the MysteryXWho committed the murd",
+      "Solve the MysteryX",
+      "Solve the Mystery",
+      "X"
+    ],
+    "errors": []
+  },
+  {
+    "name": "cluecontainer",
+    "file": "ClueContainer.tscn",
+    "switched": true,
+    "overlay": true,
+    "controls": 8,
+    "fallbacks": 0,
+    "types": [
+      "Button",
+      "ColorRect",
+      "GridContainer",
+      "HBoxContainer",
+      "Label",
+      "MarginContainer",
+      "PanelContainer",
+      "VBoxContainer"
+    ],
+    "textSample": [
+      "CluesX",
+      "CluesX",
+      "CluesX",
+      "CluesX",
+      "Clues",
+      "X"
+    ],
+    "errors": []
+  },
+  {
+    "name": "clueitem",
+    "file": "ClueItem.tscn",
+    "switched": true,
+    "overlay": true,
+    "controls": 10,
+    "fallbacks": 1,
+    "types": [
+      "Button",
+      "ColorRect",
+      "HBoxContainer",
+      "Label",
+      "MarginContainer",
+      "PanelContainer",
+      "TextureRect",
+      "VBoxContainer"
+    ],
+    "textSample": [
+      "Clue NameXLorem ipsum dolor sit amet, co",
+      "Clue NameXLorem ipsum dolor sit amet, co",
+      "Clue NameXLorem ipsum dolor sit amet, co",
+      "Clue NameXLorem ipsum dolor sit amet, co",
+      "Clue NameX",
+      "Clue Name"
+    ],
+    "errors": []
+  }
+]

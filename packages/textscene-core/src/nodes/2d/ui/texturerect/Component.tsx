@@ -1,15 +1,18 @@
 /**
- * <TextureRect> — displays a Texture2D image from an ExtResource. The image
- * is loaded host-agnostically via `useResource` (web fetch / VS Code file
- * provider), so the rendered <img> src comes from the loaded THREE.Texture's
- * decoded image rather than a raw URL. Outside a ResourceLoaderProvider the
- * hook degrades to a dashed placeholder.
+ * <TextureRect> — displays a Texture2D image from an ExtResource. The image is
+ * loaded host-agnostically via `useResource` (web fetch / VS Code file provider)
+ * into a THREE.Texture. For the DOM <img> we can't reuse the texture's
+ * `image.src`: the loader typically backs it with a blob URL that is revoked
+ * once decoded, so a fresh <img> pointed at it renders broken. Instead we draw
+ * the already-decoded image element to a canvas and use a self-contained data
+ * URL — the decoded bitmap survives blob revocation. Outside a
+ * ResourceLoaderProvider (or before decode) the hook degrades to a placeholder.
  *
  * `stretch_mode` → CSS object-fit: 0 fill, 4/5 contain, 6 cover, else none;
  * modes 3 and 5 also center the image (Godot's KEEP_CENTERED variants).
  */
 
-import type { CSSProperties } from 'react';
+import { useMemo, type CSSProperties } from 'react';
 import type * as THREE from 'three';
 import type { ControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { useControlParent } from '../../../../r3f/controls/ControlParentContext';
@@ -29,7 +32,7 @@ export function TextureRect({ node }: ControlComponentProps) {
 
   // Always call the hook (rules of hooks); '' short-circuits to pending.
   const tex = useResource<THREE.Texture>(path ?? '', 'Texture2D');
-  const src = (tex.value?.image as { src?: string } | undefined)?.src;
+  const src = useMemo(() => imageToDataUrl(tex.value?.image), [tex.value]);
 
   const layout = controlLayoutStyle(props, parentKind);
 
@@ -68,6 +71,36 @@ export function TextureRect({ node }: ControlComponentProps) {
       title={path ?? 'no texture'}
     />
   );
+}
+
+/**
+ * Draw a decoded texture image (HTMLImageElement / ImageBitmap / canvas) to a
+ * canvas and return a self-contained data URL. The decoded bitmap survives the
+ * loader revoking its source blob URL, so this is stable where reusing
+ * `image.src` is not. Returns undefined when the image isn't decoded yet, no
+ * DOM/canvas is available (jsdom tests), or the draw is cross-origin tainted.
+ */
+function imageToDataUrl(image: unknown): string | undefined {
+  const img = image as
+    | { width?: number; height?: number; naturalWidth?: number; naturalHeight?: number }
+    | undefined;
+  if (!img) return undefined;
+  const w = img.naturalWidth || img.width || 0;
+  const h = img.naturalHeight || img.height || 0;
+  if (!w || !h) return undefined;
+  const doc = globalThis.document;
+  if (!doc) return undefined;
+  try {
+    const canvas = doc.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return undefined;
+    ctx.drawImage(img as CanvasImageSource, 0, 0);
+    return canvas.toDataURL();
+  } catch {
+    return undefined; // tainted canvas / unsupported image source
+  }
 }
 
 /**
