@@ -968,3 +968,39 @@ Follow-up on the handoff open item: *"other elements being positioned wrong — 
 - `ld58-window-frame-regression.test.ts` — window-frame coplanar-rectangle composition through the 180°-flip chain.
 
 The diagnostic probes used during the hunt were removed after promotion.
+
+---
+
+## 2026-05-31 — Full Hallway closure vendored in-repo; renders end-to-end with no upload
+
+**Branch:** `worktree-misty-singing-treehouse`. **Change:** the entire `Hallway.tscn`
+`res://` dependency closure is now committed under `scenes/ld58/` (mirroring res://),
+so the previous **upload cascade** (~60 files across 3 tiers, documented in the entries
+above) is gone for the web app — the scene loads directly from the selector / `?fixture=`
+deep-link, exactly like the VS Code host already did from the workspace.
+
+**What was vendored** (BFS over `ext_resource` refs, zero missing files): 31 `.tscn`
+sub-scenes (17 script-stripped per ADR-0007), 11 GLBs, 3 `.tres` materials, ~25
+downscaled images. The canonical copies live at `scenes/ld58/Scenes/Hallway/Hallway.tscn`
+(286 nodes) and `scenes/ld58/HallwayGeometry.tscn`; two byte-identical prior-session
+duplicates (`scenes/examples/example-hallway.tscn`, `scenes/ld58/hallway-geometry.tscn`)
+were deleted.
+
+### Verification (web, this worktree)
+
+| Signal | Result |
+|---|---|
+| `Hallway` opens from selector / `?fixture=Scenes/Hallway/Hallway.tscn` | **PASS** — Scene Info: Nodes 286, Root Hallway |
+| Renders geometry, not placeholders | **PASS** — textured walls/floor, ceiling beams, instanced GLB portrait frames, doors, roof lamps, crime-scene table + body + evidence props all visible |
+| Console clean | **PASS** — 0 errors; only 3 benign `[NodeRegistry] Unsupported node type: Node` fallbacks (plain `Node` containers) |
+| GLB models + portraits + `.tres` materials (previously upload-only) | **PASS** — verified via the standalone `Inspector Crawford` PhotoFrame: GLB Victorian frame + `albedo_texture` portrait both render |
+
+### Photo-canvas single-sidedness — confirmed by-design (not a gap)
+
+The standalone PhotoFrame shows the portrait culled from the default `+Z` camera and
+visible after orbiting to `−Z`. This is correct: `flip_faces=true` points the visible
+face `−Z`, and the material has no `cull_mode`, so it follows Godot BACK culling
+(`FrontSide`). The WI-HALL-6 blanket `DoubleSide` upgrade was **reverted** because LD-58
+walls are the same `PlaneMesh + StandardMaterial3D + albedo_texture` shape and double-siding
+broke them — see the regression test at `Component.planemesh-side.test.tsx:144`. Photos that
+need both sides must set `cull_mode = 2` in source. No change made.

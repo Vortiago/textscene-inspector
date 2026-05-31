@@ -20,6 +20,17 @@ direct `path="res://…"` the renderer resolves itself. The web app resolves
 `res://x` → `/fixtures/x`, so the closure is committed under `scenes/ld58/`
 mirroring that structure and copied to `public/fixtures/` preserving subpaths.
 
+**Scripts are stripped.** Vendored `.tscn` files have every
+`[ext_resource type="Script" …]` entry and every `script = ExtResource(…)`
+property line removed, and `load_steps` recomputed (`1 + ext_resources +
+sub_resources`). The renderer ignores GDScript anyway, and stripping keeps game
+*code* out of the (eventually public) repo while preserving the scene graph,
+meshes, materials, and transforms verbatim. Harmless editor metadata such as
+`metadata/_custom_type_script` is left as-is (it carries no resource reference
+and is not a load step). The full `Hallway.tscn` closure — 286 nodes across 31
+sub-scenes, 11 GLBs, 3 materials, and ~25 downscaled images — was vendored this
+way and renders end-to-end from the in-repo fixtures (no upload cascade needed).
+
 Recorded because the private-now / strip-before-public lifecycle is a deliberate
 decision a future contributor must know (don't publish ld-58 assets), and the
 `res://`-mirrored fixture layout is non-obvious.
