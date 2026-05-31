@@ -7,10 +7,9 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
+import { checkLightEnergy } from '../shared/linterChecks.js';
 
 // Thresholds for warnings
-const EXTREME_LIGHT_ENERGY_MIN = 0.01;
-const EXTREME_LIGHT_ENERGY_MAX = 100;
 const LARGE_SPOT_RANGE = 1000;
 const SMALL_SPOT_RANGE = 0.1;
 const EXTREME_SPOT_ATTENUATION_MIN = 0.1;
@@ -67,29 +66,7 @@ function checkSpotLight3D(context: RuleContext): Diagnostic[] {
     });
   }
 
-  // Warn if light_energy is extreme
-  if (rawProps.light_energy !== undefined) {
-    const energy = parseFloat(rawProps.light_energy);
-    if (!isNaN(energy)) {
-      if (energy < EXTREME_LIGHT_ENERGY_MIN) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `Light energy is very low (${energy}). Values below ${EXTREME_LIGHT_ENERGY_MIN} may be barely visible.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: 'spotlight3d-extreme-energy',
-        });
-      } else if (energy > EXTREME_LIGHT_ENERGY_MAX) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `Light energy is very high (${energy}). Values above ${EXTREME_LIGHT_ENERGY_MAX} may cause overexposure.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: 'spotlight3d-extreme-energy',
-        });
-      }
-    }
-  }
+  checkLightEnergy(rawProps, node.name, node.type, 'spotlight3d', diagnostics);
 
   // Warn if spot_range is very large (performance concern)
   if (rawProps.spot_range !== undefined) {
