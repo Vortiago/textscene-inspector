@@ -18,6 +18,7 @@ export default [
       '**/.vscode-test/',
       '**/.test-workspace/',
       '**/.claude/',
+      '**/.tmp/',
       '.spike/',
       'docs/probes/',
     ],
