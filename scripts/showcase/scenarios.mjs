@@ -72,6 +72,24 @@ export const scenarios = {
     { dx: 320, dy: 20, steps: 70 }
   ),
 
+  // Layout tour: the 3-column DCC chrome + the 2D Control overlay. Opens on the
+  // textured hallway (3D), orbits, then switches to a rich ld-58 dialog scene
+  // and flips to 2D mode so the overlay renders its Control UI.
+  'dcc-layout': {
+    label: 'Hallway Geometry',
+    caption:
+      'The 3-column DCC chrome — Scene outliner (left), viewport (center), Inspector (right). Orbits the textured ld-58 hallway, then switches to the EndGameDialog scene and flips to 2D mode, where the Control overlay renders the dialog UI faithfully.',
+    run: async (page, h) => {
+      await h.poster();
+      await h.orbit(page, { dx: 280, dy: 18, steps: 48 });
+      await h.selectScene(page, 'EndGameDialog');
+      const btn2d = page.getByRole('button', { name: '2D' });
+      if (await btn2d.count()) await btn2d.first().click();
+      await page.waitForSelector('[data-control-overlay="true"]', { timeout: 15000 }).catch(() => {});
+      await page.waitForTimeout(2200); // hold on the rendered 2D UI
+    },
+  },
+
   // Interactive: actually switch the active render camera between Camera3D nodes.
   'multi-camera': {
     label: 'Multi Camera',

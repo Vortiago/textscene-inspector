@@ -7,7 +7,7 @@
  *
  * Replaces the imperative `packages/textscene-core/src/ui/TscnPreviewUI.ts`.
  */
-import { lazy, Suspense, useEffect, useMemo, useRef, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { TscnParser } from '../../../parser/TscnParser.js';
 import { SceneGraphBuilder } from '../../../core/SceneGraphBuilder.js';
 import { tscnSceneToParsedScene } from '../../../core/SceneGraph.js';
@@ -22,6 +22,7 @@ import { TscnCanvas } from '../../TscnCanvas.js';
 import { MissingResourcesPanel } from '../MissingResourcesPanel/MissingResourcesPanel.js';
 import { SceneInfoCard } from '../SceneInfoCard/SceneInfoCard.js';
 import { ViewportToolbar } from '../ViewportToolbar/ViewportToolbar.js';
+import { Splitter } from '../Splitter/Splitter.js';
 import styles from './TscnPreviewShell.module.css';
 
 // WI-R3F-18 bundle reduction: lazy-load the DOM panels so they don't
@@ -141,6 +142,13 @@ export function TscnPreviewShell({
     [sceneGraph, panelId]
   );
 
+  // 3-column DCC chrome: resizable + collapsible left (Scene) and right
+  // (Inspector) docks flanking the center viewport.
+  const [leftWidth, setLeftWidth] = useState(280);
+  const [rightWidth, setRightWidth] = useState(300);
+  const [leftCollapsed, setLeftCollapsed] = useState(false);
+  const [rightCollapsed, setRightCollapsed] = useState(false);
+
   // When `error` is truthy, mounting `<SceneTreeViewer>` with a null
   // sceneGraph triggers its own "Loading scene…" empty-state — which
   // makes the tree pane look stuck (Gap 7). Use a dedicated empty-state
@@ -177,40 +185,81 @@ export function TscnPreviewShell({
             <ViewportModeProvider>
             <SceneChangeResetter sceneGraph={sceneGraph} />
             <div className={styles.shell} data-panel-id={panelId}>
-              <div className={styles.toolbarRow}>
-                {toolbar}
+              <header className={styles.topBar}>
+                <span className={styles.brand}>TextScene Inspector</span>
+                {toolbar && <div className={styles.topToolbar}>{toolbar}</div>}
                 <ViewportToolbar />
-              </div>
+              </header>
               {error && (
                 <div className={styles.errorBanner} role="alert">
                   <strong>Parse error:</strong> {error}
                 </div>
               )}
-              <div className={styles.body}>
-                <div className={styles.canvas}>
-                  <ViewportArea sceneGraph={sceneGraph} />
-                </div>
-                <aside className={styles.sidebar} aria-label="Scene details">
-                  <SceneInfoCard />
-                  {onResourceUpload && (
-                    <MissingResourcesPanel
-                      onUpload={onResourceUpload}
-                      onRemove={onResourceRemove ?? (() => {})}
-                    />
-                  )}
-                  <div className={styles.treePane}>{treeBody}</div>
-                  <div className={styles.detailsPane}>
-                    <Suspense
-                      fallback={
-                        <div className={styles.loading} aria-busy="true">
-                          Loading details…
-                        </div>
-                      }
+              <div className={styles.columns}>
+                {/* LEFT DOCK — Scene outliner */}
+                {leftCollapsed ? (
+                  <CollapsedDock side="left" title="Scene" onExpand={() => setLeftCollapsed(false)} />
+                ) : (
+                  <>
+                    <section
+                      className={styles.leftDock}
+                      style={{ flexBasis: leftWidth }}
+                      aria-label="Scene"
                     >
-                      <NodeDetailsPanel />
-                    </Suspense>
-                  </div>
-                </aside>
+                      <DockHeader title="Scene" side="left" onCollapse={() => setLeftCollapsed(true)} />
+                      <div className={styles.dockBody}>
+                        <SceneInfoCard />
+                        <div className={styles.treePane}>{treeBody}</div>
+                      </div>
+                    </section>
+                    <Splitter width={leftWidth} setWidth={setLeftWidth} label="Resize the Scene panel" />
+                  </>
+                )}
+
+                {/* CENTER — 3D canvas or 2D overlay */}
+                <main className={styles.center} aria-label="Viewport">
+                  <ViewportArea sceneGraph={sceneGraph} />
+                </main>
+
+                {/* RIGHT DOCK — Inspector */}
+                {rightCollapsed ? (
+                  <CollapsedDock side="right" title="Inspector" onExpand={() => setRightCollapsed(false)} />
+                ) : (
+                  <>
+                    <Splitter
+                      width={rightWidth}
+                      setWidth={setRightWidth}
+                      invert
+                      label="Resize the Inspector panel"
+                    />
+                    <section
+                      className={styles.rightDock}
+                      style={{ flexBasis: rightWidth }}
+                      aria-label="Inspector"
+                    >
+                      <DockHeader title="Inspector" side="right" onCollapse={() => setRightCollapsed(true)} />
+                      <div className={styles.dockBody}>
+                        {onResourceUpload && (
+                          <MissingResourcesPanel
+                            onUpload={onResourceUpload}
+                            onRemove={onResourceRemove ?? (() => {})}
+                          />
+                        )}
+                        <div className={styles.detailsPane}>
+                          <Suspense
+                            fallback={
+                              <div className={styles.loading} aria-busy="true">
+                                Loading details…
+                              </div>
+                            }
+                          >
+                            <NodeDetailsPanel />
+                          </Suspense>
+                        </div>
+                      </div>
+                    </section>
+                  </>
+                )}
               </div>
             </div>
             </ViewportModeProvider>
@@ -253,6 +302,57 @@ function ViewportArea({ sceneGraph }: { sceneGraph: SceneGraph | null }) {
   }
 
   return <TscnCanvas />;
+}
+
+/** Dock title bar with a collapse control. */
+function DockHeader({
+  title,
+  side,
+  onCollapse,
+}: {
+  title: string;
+  side: 'left' | 'right';
+  onCollapse: () => void;
+}) {
+  return (
+    <div className={styles.dockHeader}>
+      <span className={styles.dockTitle}>{title}</span>
+      <button
+        type="button"
+        className={styles.collapseButton}
+        onClick={onCollapse}
+        title={`Collapse ${title} panel`}
+        aria-label={`Collapse ${title} panel`}
+      >
+        {side === 'left' ? '⟨' : '⟩'}
+      </button>
+    </div>
+  );
+}
+
+/** A collapsed dock: a thin vertical strip that expands the dock on click. */
+function CollapsedDock({
+  side,
+  title,
+  onExpand,
+}: {
+  side: 'left' | 'right';
+  title: string;
+  onExpand: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className={styles.collapsedDock}
+      data-side={side}
+      onClick={onExpand}
+      title={`Show ${title} panel`}
+      aria-label={`Show ${title} panel`}
+    >
+      <span className={styles.collapsedChevron}>{side === 'left' ? '⟩' : '⟨'}</span>
+      <span className={styles.collapsedTitle}>{title}</span>
+    </button>
+  );
 }
 
 /**

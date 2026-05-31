@@ -329,13 +329,13 @@ A module-graph guard test (over both `linter/index.ts` and `parser/TscnParser.ts
 
 ### Viewport mode + 3-column DCC chrome (P3/P4 — [ADR-0003](./docs/adr/0003-2d-ui-dom-overlay.md), [ADR-0006](./docs/adr/0006-viewport-mode-seam.md))
 
-**Status:** the 2D-UI Control set and the viewport toggle are **shipped**; the 3-column grid re-layout is the remaining piece.
+**Status:** the 2D-UI Control set, the viewport toggle, and the 3-column DCC chrome are all **shipped**.
 
 - **P3 — Control set (done).** All 15 Control types ld-58 uses are registered DOM components: `Control`, `ColorRect`, `Label`, `VBoxContainer`, `HBoxContainer`, `GridContainer`, `CenterContainer`, `MarginContainer`, `ScrollContainer`, `Panel`, `PanelContainer`, `Button`, `TextureRect`, `RichTextLabel`, and the passthrough `CanvasLayer`. Each is a unified slice whose `index.r3f.ts` registers into `ControlComponentRegistry`; `ControlDispatcher` walks the subtree and `controlLayoutStyle` + `styleBoxToCss` + `resolveStyleBoxCss` map Godot layout/theme to CSS. `TextureRect` loads images host-agnostically via `useResource` (type-only `THREE` import — no runtime three in the slice).
 - **P4 — viewport toggle (done).** `TscnPreviewShell` is wrapped in `<ViewportModeProvider>`; a shared `<ViewportToolbar>` (3D/2D switch + Collisions checkbox) writes through `useViewportMode()`, and `<ViewportArea>` renders `TscnCanvas` (3D) or the lazy-loaded `ControlOverlay` (2D, fed the root scene's nodes + resources). The overlay is a separate lazy chunk, so the 15 components stay out of the initial canvas-paint bundle.
-- **P5 — 3-column DCC grid (pending).** The shell is still a 2-column canvas + sidebar; the target is the left/center/right grid below.
+- **P5 — 3-column DCC chrome (done).** `TscnPreviewShell` is now a full-width top bar (brand + host toolbar + `ViewportToolbar`) over three columns: a left **Scene** dock (SceneInfoCard + tree), the center viewport, and a right **Inspector** dock (NodeDetailsPanel + MissingResources). Both docks are resizable (the `<Splitter>` drag handle) and collapsible; the layout stacks vertically under 768px. The web app's redundant toolbar title was removed in favor of the shell brand.
 
-A single `ViewportModeContext` chooses between the 3D canvas and the 2D Control overlay (a sibling DOM layer, never inside `<Canvas>`), and drives the collision gizmo. The target shell is a 3-column grid shared by both apps:
+A single `ViewportModeContext` chooses between the 3D canvas and the 2D Control overlay (a sibling DOM layer, never inside `<Canvas>`), and drives the collision gizmo. The shell is a 3-column grid shared by both apps:
 
 ```mermaid
 flowchart TB

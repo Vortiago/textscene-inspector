@@ -1,8 +1,10 @@
 /**
- * WI-UX-13 regression: the sidebar's `overflow` mode must be `auto`
- * (not `hidden`) so that if any sidebar child overflows the available
- * height — beyond the per-component caps each one declares — the user
- * can still scroll the sidebar to reach the tree + details below.
+ * WI-UX-13 regression: a dock's scrollable body (`.dockBody`) must use
+ * `overflow: auto` (not `hidden`) so that if any child overflows the
+ * available height — beyond the per-component caps each one declares — the
+ * user can still scroll the dock to reach the tree + details below. (Post
+ * 3-column-DCC redesign this role moved from the old `.sidebar` to
+ * `.dockBody`, the scroll container shared by both docks.)
  *
  * Like `MissingResourcesPanel.scale.test.tsx`, happy-dom does not run
  * layout, so we assert the source CSS rule directly: this is the
@@ -21,14 +23,14 @@ const shellCss = readFileSync(
   'utf-8'
 );
 
-describe('TscnPreviewShell sidebar overflow (WI-UX-13)', () => {
-  it('declares overflow: auto on .sidebar (defense in depth against future unbounded children)', () => {
-    const sidebarRule = extractRule(shellCss, '.sidebar');
-    expect(sidebarRule).toMatch(/overflow\s*:\s*auto/);
+describe('TscnPreviewShell dock overflow (WI-UX-13)', () => {
+  it('declares overflow: auto on .dockBody (defense in depth against future unbounded children)', () => {
+    const dockBodyRule = extractRule(shellCss, '.dockBody');
+    expect(dockBodyRule).toMatch(/overflow\s*:\s*auto/);
     // Negative assertion: the previous `overflow: hidden` was what
     // caused the BLOCKER on `example-hallway.tscn` — children pushed
-    // out of the sidebar's clipping region were unreachable.
-    expect(sidebarRule).not.toMatch(/overflow\s*:\s*hidden/);
+    // out of the clipping region were unreachable.
+    expect(dockBodyRule).not.toMatch(/overflow\s*:\s*hidden/);
   });
 });
 

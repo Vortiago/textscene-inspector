@@ -252,7 +252,7 @@ function Toolbar({
 
   return (
     <div className={styles.toolbar}>
-      <strong className={styles.title}>TextScene Inspector</strong>
+      {/* App brand now lives in the shared TscnPreviewShell top bar. */}
       <ViewportSelector
         options={options}
         value={fixtureFile}

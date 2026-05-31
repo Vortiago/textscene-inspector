@@ -14,9 +14,9 @@
  * assert the CSS source itself contains the expected media block and
  * declarations — that is the load-bearing property: as long as the
  * `@media (max-width: 768px)` block exists with `flex-direction:
- * column` on `.body` and a full-width sidebar with a `max-height`
- * cap, real browsers will apply it. The CSS module file is shipped
- * to the host (Vite / esbuild) verbatim.
+ * column` on `.columns` and full-width, height-capped docks, real
+ * browsers will apply it. The CSS module file is shipped to the host
+ * (Vite / esbuild) verbatim.
  *
  * Sister test: a render-time smoke check that the shell still mounts
  * its body element so the responsive container exists.
@@ -48,32 +48,31 @@ describe('<TscnPreviewShell> mobile responsive layout (WI-UX-9)', () => {
     expect(CSS_SOURCE).toMatch(/@media\s*\(\s*max-width:\s*768px\s*\)/);
   });
 
-  it('switches .body to a vertical stack inside the narrow-viewport block', () => {
+  it('switches .columns to a vertical stack inside the narrow-viewport block', () => {
     const mediaBlock = extractMediaBlock(CSS_SOURCE, 768);
     expect(mediaBlock).not.toBeNull();
-    // .body must drop the row layout for a column inside the media query.
-    expect(mediaBlock!).toMatch(/\.body\s*\{[^}]*flex-direction:\s*column/);
+    // .columns must drop the row layout for a column inside the media query.
+    expect(mediaBlock!).toMatch(/\.columns\s*\{[^}]*flex-direction:\s*column/);
   });
 
-  it('caps the sidebar height and gives it full width inside the narrow block', () => {
+  it('makes the docks full-width and height-capped inside the narrow block', () => {
     const mediaBlock = extractMediaBlock(CSS_SOURCE, 768);
     expect(mediaBlock).not.toBeNull();
-    // Both panels stay visible (sidebar is NOT display:none) — they stack.
-    expect(mediaBlock!).not.toMatch(/\.sidebar\s*\{[^}]*display:\s*none/);
-    // Sidebar fills the width and is height-capped so the canvas keeps
-    // a usable share of the viewport.
-    expect(mediaBlock!).toMatch(/\.sidebar\s*\{[^}]*width:\s*100%/);
-    expect(mediaBlock!).toMatch(/\.sidebar\s*\{[^}]*max-height:\s*50vh/);
+    // Both docks stay visible (NOT display:none) — they stack under the viewport.
+    expect(mediaBlock!).not.toMatch(/\.leftDock[^{]*\{[^}]*display:\s*none/);
+    // Docks fill the width and are height-capped so the viewport keeps
+    // a usable share. (Left + right share one rule.)
+    expect(mediaBlock!).toMatch(/\.leftDock[^{]*\{[^}]*width:\s*100%/);
+    expect(mediaBlock!).toMatch(/\.leftDock[^{]*\{[^}]*max-height:\s*45vh/);
   });
 
   it('preserves the side-by-side desktop layout outside the media query', () => {
-    // The non-media `.body` rule keeps `display: flex` and the default
-    // row direction. We assert the rule exists *outside* the media
-    // block so a future edit that accidentally moves it inside would
-    // be caught.
+    // The non-media `.columns` rule keeps `display: flex` (row by default)
+    // and the docks are flex columns. We assert these exist *outside* the
+    // media block so an edit that accidentally moves them inside is caught.
     const desktopBlock = stripMediaBlocks(CSS_SOURCE);
-    expect(desktopBlock).toMatch(/\.body\s*\{[^}]*display:\s*flex/);
-    expect(desktopBlock).toMatch(/\.sidebar\s*\{[^}]*width:\s*320px/);
+    expect(desktopBlock).toMatch(/\.columns\s*\{[^}]*display:\s*flex/);
+    expect(desktopBlock).toMatch(/\.leftDock[^{]*\{[^}]*flex-direction:\s*column/);
   });
 
   it('still renders the shell body element so the responsive container exists at runtime', () => {

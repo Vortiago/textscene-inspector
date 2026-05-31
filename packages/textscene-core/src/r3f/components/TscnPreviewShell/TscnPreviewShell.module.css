@@ -104,28 +104,151 @@
   color: var(--tsi-fg-default);
 }
 
-/* Top toolbar row: host-supplied content (fixture picker) on the left, the
-   shared viewport-mode controls pushed to the right. */
-.toolbarRow {
+/* ── 3-column DCC chrome ─────────────────────────────────────────────────
+ * Full-width top bar over three columns: left "Scene" dock (outliner) |
+ * splitter | center viewport | splitter | right "Inspector" dock. Both docks
+ * are resizable (Splitter) and collapsible. Mirrors the Godot/Blender editor
+ * layout the project is modelled on.
+ */
+
+/* Full-width top bar: brand, host toolbar (fixture picker), viewport-mode
+   controls pushed to the right. */
+.topBar {
   display: flex;
   align-items: center;
-  gap: var(--tsi-space-2);
-  padding: var(--tsi-space-1) var(--tsi-space-2);
+  gap: var(--tsi-space-3);
+  padding: var(--tsi-space-2) var(--tsi-space-3);
   border-bottom: 1px solid var(--tsi-border);
   background: var(--tsi-bg-panel);
   flex-shrink: 0;
 }
 
-.body {
+.brand {
+  font-weight: 600;
+  font-size: var(--tsi-font-md);
+  color: var(--tsi-fg-strong);
+  white-space: nowrap;
+}
+
+.topToolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--tsi-space-2);
+  min-width: 0;
+}
+
+.columns {
   display: flex;
   flex: 1;
   min-height: 0;
 }
 
-.canvas {
+.leftDock,
+.rightDock {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 0;
+  flex-shrink: 0;
+  min-width: 0;
+  background: var(--tsi-bg-panel);
+  overflow: hidden;
+}
+
+.leftDock {
+  border-right: 1px solid var(--tsi-border);
+}
+
+.rightDock {
+  border-left: 1px solid var(--tsi-border);
+}
+
+.dockHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--tsi-space-1) var(--tsi-space-2);
+  border-bottom: 1px solid var(--tsi-border);
+  background: var(--tsi-bg-elevated);
+  flex-shrink: 0;
+}
+
+.dockTitle {
+  font-size: var(--tsi-font-sm);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--tsi-fg-muted);
+}
+
+.collapseButton {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--tsi-fg-muted);
+  cursor: pointer;
+  font-size: var(--tsi-font-md);
+  line-height: 1;
+  padding: 0 var(--tsi-space-1);
+  border-radius: var(--tsi-radius-sm);
+}
+
+.collapseButton:hover {
+  background: var(--tsi-bg-hover);
+  color: var(--tsi-fg-default);
+}
+
+.dockBody {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+/* Collapsed dock: a thin clickable strip with a vertical label. */
+.collapsedDock {
+  appearance: none;
+  border: none;
+  flex: 0 0 26px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--tsi-space-2);
+  padding: var(--tsi-space-2) 0;
+  background: var(--tsi-bg-elevated);
+  color: var(--tsi-fg-muted);
+  cursor: pointer;
+}
+
+.collapsedDock[data-side='left'] {
+  border-right: 1px solid var(--tsi-border);
+}
+
+.collapsedDock[data-side='right'] {
+  border-left: 1px solid var(--tsi-border);
+}
+
+.collapsedDock:hover {
+  background: var(--tsi-bg-hover);
+  color: var(--tsi-fg-default);
+}
+
+.collapsedChevron {
+  font-size: var(--tsi-font-md);
+}
+
+.collapsedTitle {
+  writing-mode: vertical-rl;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: var(--tsi-font-sm);
+}
+
+.center {
   flex: 1;
   position: relative;
   min-width: 0;
+  background: var(--tsi-bg-canvas);
 }
 
 /* 2D viewport: a neutral backdrop the absolutely-positioned ControlOverlay
@@ -137,28 +260,10 @@
   background: var(--tsi-bg-canvas);
 }
 
-.sidebar {
-  display: flex;
-  flex-direction: column;
-  width: 320px;
-  flex-shrink: 0;
-  border-left: 1px solid var(--tsi-border);
-  background: var(--tsi-bg-panel);
-  /* WI-UX-13 defense-in-depth: `overflow: auto` (was `hidden`) so that
-     if any sidebar child ever overflows the available vertical space
-     — `MissingResourcesPanel` already has its own cap (primary fix),
-     but new components added later might not — the user can still
-     scroll the sidebar to reach what's been pushed below. With the
-     primary panel cap in place, this is rarely visible; it's a safety
-     net, not the workhorse. */
-  overflow: auto;
-}
-
 .treePane {
   flex: 1;
   min-height: 0;
   overflow: auto;
-  border-bottom: 1px solid var(--tsi-border);
 }
 
 .detailsPane {
@@ -195,38 +300,29 @@
 }
 
 /*
- * WI-UX-9: narrow-viewport layout. Below 768px, drop the side-by-side
- * canvas + sidebar split — there isn't horizontal room — and stack the
- * sidebar UNDER the canvas. The sidebar is capped at 50vh and scrolls
- * internally so the canvas keeps a usable half of the viewport. Both
- * panels remain visible simultaneously; this is intentionally not the
- * radio-tab switcher main shipped (see docs/MAIN-VS-MIGRATION-DELTA.md
- * item 13). Stacking is the modern responsive default and avoids the
- * tab-state bookkeeping main's CSS-only pattern required.
- *
- * Breakpoint matches main's `@media (max-width: 767px)` (we use 768 as
- * the inclusive boundary because `max-width: 768px` is the conventional
- * mobile cutoff and matches CSS frameworks' `md` breakpoint).
+ * Narrow-viewport layout (≤768px): there isn't horizontal room for three
+ * columns, so stack them vertically. The center viewport keeps a usable
+ * half-height; the docks go full-width, height-capped, and scroll internally.
+ * Splitters hide themselves (see Splitter.module.css). `!important` overrides
+ * the inline flex-basis the resizers set on the docks.
  */
 @media (max-width: 768px) {
-  .body {
+  .columns {
     flex-direction: column;
   }
 
-  .canvas {
+  .center {
     flex: 1 1 auto;
-    /* Without a min height, flex collapse on iOS Safari can crush the
-       canvas to ~0 — pin a baseline that still leaves the sidebar
-       readable below it. */
     min-height: 50vh;
   }
 
-  .sidebar {
+  .leftDock,
+  .rightDock {
+    flex-basis: auto !important;
     width: 100%;
-    flex-shrink: 0;
+    max-height: 45vh;
     border-left: none;
+    border-right: none;
     border-top: 1px solid var(--tsi-border);
-    max-height: 50vh;
-    overflow-y: auto;
   }
 }
