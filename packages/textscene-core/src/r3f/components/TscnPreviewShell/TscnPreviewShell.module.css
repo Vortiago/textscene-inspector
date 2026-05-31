@@ -260,6 +260,31 @@
   background: var(--tsi-bg-canvas);
 }
 
+/* "Contains 2D UI" discoverability hint, floated over the 3D viewport when a
+   scene carries Control/CanvasLayer nodes (ADR-0006). Clicking it flips to 2D. */
+.viewportHint {
+  position: absolute;
+  top: var(--tsi-space-3);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  appearance: none;
+  border: 1px solid var(--tsi-accent);
+  background: var(--tsi-accent-soft);
+  color: var(--tsi-accent-fg);
+  font: inherit;
+  font-size: var(--tsi-font-sm);
+  padding: var(--tsi-space-1) var(--tsi-space-3);
+  border-radius: 999px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.viewportHint:hover {
+  background: var(--tsi-accent);
+  color: #fff;
+}
+
 .treePane {
   flex: 1;
   min-height: 0;

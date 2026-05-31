@@ -18,6 +18,7 @@ import { SelectionProvider, useSelection } from '../../contexts/SelectionContext
 import { CameraControlProvider } from '../../contexts/CameraControlContext.js';
 import { MissingResourcesProvider } from '../../contexts/MissingResourcesContext.js';
 import { ViewportModeProvider, useViewportMode } from '../../contexts/ViewportModeContext.js';
+import { has2DUIContent } from '../../controls/has2DUIContent.js';
 import { TscnCanvas } from '../../TscnCanvas.js';
 import { MissingResourcesPanel } from '../MissingResourcesPanel/MissingResourcesPanel.js';
 import { SceneInfoCard } from '../SceneInfoCard/SceneInfoCard.js';
@@ -278,10 +279,11 @@ export function TscnPreviewShell({
  * read the mode the toolbar writes.
  */
 function ViewportArea({ sceneGraph }: { sceneGraph: SceneGraph | null }) {
-  const { mode } = useViewportMode();
+  const { mode, setMode } = useViewportMode();
+  const rootScene = sceneGraph?.scenes.get(sceneGraph.rootScene);
+  const has2DUI = useMemo(() => has2DUIContent(rootScene?.nodes ?? []), [rootScene]);
 
   if (mode === '2D') {
-    const rootScene = sceneGraph?.scenes.get(sceneGraph.rootScene);
     return (
       <div className={styles.overlayViewport}>
         <Suspense
@@ -301,7 +303,24 @@ function ViewportArea({ sceneGraph }: { sceneGraph: SceneGraph | null }) {
     );
   }
 
-  return <TscnCanvas />;
+  // 3D mode. Default per ADR-0006 is 3D; when the scene also carries 2D-UI
+  // (Control/CanvasLayer) nodes, surface a hint so the overlay is discoverable
+  // instead of the user staring at a viewport with no visible UI.
+  return (
+    <>
+      <TscnCanvas />
+      {has2DUI && (
+        <button
+          type="button"
+          className={styles.viewportHint}
+          onClick={() => setMode('2D')}
+          title="This scene contains 2D UI — switch to the 2D overlay"
+        >
+          Contains 2D&nbsp;UI — switch to 2D
+        </button>
+      )}
+    </>
+  );
 }
 
 /** Dock title bar with a collapse control. */

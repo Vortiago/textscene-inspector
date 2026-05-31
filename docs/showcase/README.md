@@ -36,6 +36,14 @@ The 3-column DCC chrome — left **Scene** dock (info + node tree), center viewp
 
 The 2D-overlay renders of the seven vendored ld-58 UI scenes (StartScreen, GameUI, EndGameDialog, AboutDialog, DialogSystem, ClueContainer, ClueItem) are captured as stills in [`verify/`](verify/) with per-scene control stats in [`verify/verify-2d.json`](verify/verify-2d.json).
 
+### ui-hint
+
+![ui-hint](web/ui-hint.png)
+
+[▶ web/ui-hint.webm](web/ui-hint.webm)
+
+ADR-0006 discoverability: a Control-only scene (EndGameDialog) opens in the default 3D viewport, so the shell floats a **"Contains 2D UI — switch to 2D"** hint over the canvas. Clicking it flips to the 2D overlay, which renders the dialog.
+
 ## Feature clips
 
 One clip per implemented feature.

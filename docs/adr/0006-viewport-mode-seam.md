@@ -1,9 +1,9 @@
-# 2D/3D selection is a single viewport-mode seam with an auto-default
+# 2D/3D selection is a single viewport-mode seam, 3D-default with a 2D-UI hint
 
-One `ViewportModeContext` holds `{ mode: '2D' | '3D', showCollisions }`. `mode` chooses whether the center viewport mounts the R3F `<Canvas>` (3D) or the Control overlay (2D); `showCollisions` drives the collision gizmo. The default is a heuristic on the scene root type — Control/CanvasLayer roots open in 2D, spatial roots open in 3D — overridable by a toolbar toggle.
+One `ViewportModeContext` holds `{ mode: '2D' | '3D', showCollisions }`. `mode` chooses whether the center viewport mounts the R3F `<Canvas>` (3D) or the Control overlay (2D); `showCollisions` drives the collision gizmo. The viewport **defaults to 3D** (matching Godot's own 3D editor viewport, which doesn't show CanvasLayers), overridable by the `<ViewportToolbar>` 3D/2D toggle.
 
-For a scene mixing a 3D world and CanvasLayer UI (e.g. `main.tscn`), the default is 3D (matching Godot's own 3D editor viewport, which doesn't show CanvasLayers), and the tree surfaces a "contains 2D UI — switch to 2D" hint so the overlay is discoverable. The two modes never composite into one view.
+So the 2D overlay stays discoverable without auto-switching, the shell floats a **"switch to 2D" hint over the 3D viewport whenever the scene carries any Control/CanvasLayer node** (`has2DUIContent` + `ViewportArea` in `TscnPreviewShell`); clicking it flips to 2D. (We considered auto-opening Control-rooted scenes in 2D, but a uniform 3D default + hint was chosen — simpler, and it never surprises the user.) The two modes never composite into one view.
 
-Mode is persisted per app through a `usePersistedMode()` hook: `localStorage` in the web app, the webview state API in VS Code.
+Mode is per-session today (the `ViewportModeProvider` default); per-app persistence through a `usePersistedMode()` hook (`localStorage` web / webview state API) is a tracked follow-up.
 
-Recorded because the no-composite decision and the auto-default heuristic are deliberate product choices a future reader would otherwise question, and both the overlay subsystem and the collision toggle depend on this single seam.
+Recorded because the no-composite decision and the 3D-default-with-hint choice are deliberate product choices a future reader would otherwise question, and both the overlay subsystem and the collision toggle depend on this single seam.

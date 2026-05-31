@@ -90,6 +90,23 @@ export const scenarios = {
     },
   },
 
+  // The 2D-UI discoverability hint (ADR-0006): a Control-only scene opens in
+  // the default 3D viewport, the "switch to 2D" hint floats over it, and a
+  // click flips to the 2D overlay that renders the dialog.
+  'ui-hint': {
+    label: 'EndGameDialog',
+    caption:
+      'A 2D-UI scene (EndGameDialog) opens in the default 3D viewport; since it carries Control nodes, the shell floats a "switch to 2D" hint. Clicking the hint flips to the 2D overlay, which renders the dialog faithfully.',
+    run: async (page, h) => {
+      await page.waitForTimeout(700); // let the hint appear over the empty 3D viewport
+      await h.poster(); // capture the hint
+      const hint = page.getByRole('button', { name: /switch to 2D/i });
+      if (await hint.count()) await hint.first().click();
+      await page.waitForSelector('[data-control-overlay="true"]', { timeout: 15000 }).catch(() => {});
+      await page.waitForTimeout(1800); // hold on the rendered 2D dialog
+    },
+  },
+
   // Interactive: actually switch the active render camera between Camera3D nodes.
   'multi-camera': {
     label: 'Multi Camera',
