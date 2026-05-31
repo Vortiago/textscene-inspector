@@ -104,6 +104,18 @@
   color: var(--tsi-fg-default);
 }
 
+/* Top toolbar row: host-supplied content (fixture picker) on the left, the
+   shared viewport-mode controls pushed to the right. */
+.toolbarRow {
+  display: flex;
+  align-items: center;
+  gap: var(--tsi-space-2);
+  padding: var(--tsi-space-1) var(--tsi-space-2);
+  border-bottom: 1px solid var(--tsi-border);
+  background: var(--tsi-bg-panel);
+  flex-shrink: 0;
+}
+
 .body {
   display: flex;
   flex: 1;
@@ -114,6 +126,15 @@
   flex: 1;
   position: relative;
   min-width: 0;
+}
+
+/* 2D viewport: a neutral backdrop the absolutely-positioned ControlOverlay
+   fills. Scrolls if the laid-out UI exceeds the viewport. */
+.overlayViewport {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  background: var(--tsi-bg-canvas);
 }
 
 .sidebar {

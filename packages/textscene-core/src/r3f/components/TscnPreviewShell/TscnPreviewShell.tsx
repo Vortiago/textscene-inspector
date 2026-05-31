@@ -17,9 +17,11 @@ import { HierarchyProvider } from '../../contexts/HierarchyContext.js';
 import { SelectionProvider, useSelection } from '../../contexts/SelectionContext.js';
 import { CameraControlProvider } from '../../contexts/CameraControlContext.js';
 import { MissingResourcesProvider } from '../../contexts/MissingResourcesContext.js';
+import { ViewportModeProvider, useViewportMode } from '../../contexts/ViewportModeContext.js';
 import { TscnCanvas } from '../../TscnCanvas.js';
 import { MissingResourcesPanel } from '../MissingResourcesPanel/MissingResourcesPanel.js';
 import { SceneInfoCard } from '../SceneInfoCard/SceneInfoCard.js';
+import { ViewportToolbar } from '../ViewportToolbar/ViewportToolbar.js';
 import styles from './TscnPreviewShell.module.css';
 
 // WI-R3F-18 bundle reduction: lazy-load the DOM panels so they don't
@@ -37,6 +39,14 @@ const NodeDetailsPanel = lazy(() =>
   import('../NodeDetailsPanel/NodeDetailsPanel.js').then((m) => ({
     default: m.NodeDetailsPanel,
   }))
+);
+// The 2D-UI overlay (ADR-0003) is only needed in 2D viewport mode, so it's
+// lazy-loaded — keeping the 15 Control components + their registrations out of
+// the initial canvas-paint bundle. Importing the barrel (`controls/index.js`)
+// rather than ControlOverlay.tsx directly is load-bearing: the barrel's
+// side-effect imports are what register the Control DOM components.
+const ControlOverlay = lazy(() =>
+  import('../../controls/index.js').then((m) => ({ default: m.ControlOverlay }))
 );
 
 const DEFAULT_ROOT_SCENE_PATH = 'res://__inline__.tscn';
@@ -164,9 +174,13 @@ export function TscnPreviewShell({
       <SelectionProvider>
         <CameraControlProvider>
           <MissingResourcesProvider>
+            <ViewportModeProvider>
             <SceneChangeResetter sceneGraph={sceneGraph} />
             <div className={styles.shell} data-panel-id={panelId}>
-              {toolbar}
+              <div className={styles.toolbarRow}>
+                {toolbar}
+                <ViewportToolbar />
+              </div>
               {error && (
                 <div className={styles.errorBanner} role="alert">
                   <strong>Parse error:</strong> {error}
@@ -174,7 +188,7 @@ export function TscnPreviewShell({
               )}
               <div className={styles.body}>
                 <div className={styles.canvas}>
-                  <TscnCanvas />
+                  <ViewportArea sceneGraph={sceneGraph} />
                 </div>
                 <aside className={styles.sidebar} aria-label="Scene details">
                   <SceneInfoCard />
@@ -199,11 +213,46 @@ export function TscnPreviewShell({
                 </aside>
               </div>
             </div>
+            </ViewportModeProvider>
           </MissingResourcesProvider>
         </CameraControlProvider>
       </SelectionProvider>
     </HierarchyProvider>
   );
+}
+
+/**
+ * The center viewport. Reads `useViewportMode()` and renders either the R3F
+ * canvas (3D) or the lazy-loaded 2D Control overlay (2D). In 2D mode it feeds
+ * the overlay the root scene's nodes + resources so Control nodes lay out and
+ * StyleBox/Texture refs resolve. Lives below `<ViewportModeProvider>` so it can
+ * read the mode the toolbar writes.
+ */
+function ViewportArea({ sceneGraph }: { sceneGraph: SceneGraph | null }) {
+  const { mode } = useViewportMode();
+
+  if (mode === '2D') {
+    const rootScene = sceneGraph?.scenes.get(sceneGraph.rootScene);
+    return (
+      <div className={styles.overlayViewport}>
+        <Suspense
+          fallback={
+            <div className={styles.loading} aria-busy="true">
+              Loading 2D overlay…
+            </div>
+          }
+        >
+          <ControlOverlay
+            nodes={rootScene?.nodes ?? []}
+            internalResources={rootScene?.internalResources ?? []}
+            externalResources={rootScene?.externalResources ?? []}
+          />
+        </Suspense>
+      </div>
+    );
+  }
+
+  return <TscnCanvas />;
 }
 
 /**

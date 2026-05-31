@@ -1,0 +1,57 @@
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--tsi-space-3);
+  margin-left: auto; /* push to the right of any host toolbar content */
+}
+
+.segment {
+  display: inline-flex;
+  border: 1px solid var(--tsi-border-strong);
+  border-radius: var(--tsi-radius-sm);
+  overflow: hidden;
+}
+
+.segmentButton {
+  appearance: none;
+  border: none;
+  background: var(--tsi-bg-elevated);
+  color: var(--tsi-fg-default);
+  font: inherit;
+  font-size: var(--tsi-font-sm);
+  padding: var(--tsi-space-1) var(--tsi-space-3);
+  cursor: pointer;
+  min-width: 2.25rem;
+}
+
+.segmentButton + .segmentButton {
+  border-left: 1px solid var(--tsi-border-strong);
+}
+
+.segmentButton:hover {
+  background: var(--tsi-bg-hover);
+}
+
+.active {
+  background: var(--tsi-accent-soft);
+  color: var(--tsi-accent-fg);
+}
+
+.active:hover {
+  background: var(--tsi-accent-soft);
+}
+
+.checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tsi-space-1);
+  font-size: var(--tsi-font-sm);
+  color: var(--tsi-fg-muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.checkbox input {
+  cursor: pointer;
+  margin: 0;
+}
