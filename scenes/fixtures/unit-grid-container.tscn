@@ -1,0 +1,26 @@
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="MyGridContainer" type="GridContainer" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+columns = 2
+theme_override_constants/h_separation = 8
+theme_override_constants/v_separation = 12
+
+[node name="Cell0" type="Label" parent="MyGridContainer"]
+text = "Row 0 Col 0"
+
+[node name="Cell1" type="Label" parent="MyGridContainer"]
+text = "Row 0 Col 1"
+
+[node name="Cell2" type="Label" parent="MyGridContainer"]
+text = "Row 1 Col 0"
+
+[node name="Cell3" type="Label" parent="MyGridContainer"]
+text = "Row 1 Col 1"

@@ -1,0 +1,20 @@
+/**
+ * HBoxContainer parser. Adds no fields beyond Control — its horizontal stacking
+ * and `theme_override_constants/separation` are handled by the Component +
+ * the base Control parser's theme-override collection.
+ */
+
+import type { ParsedHeading } from '../../../../parser/utils';
+import type { ControlProperties } from '../control/types';
+import { parseControl } from '../control/parser';
+
+export function parseHBoxContainer(
+  heading: ParsedHeading,
+  properties: Record<string, string>
+): ControlProperties {
+  return parseControl(heading, properties);
+}
+
+export function isHBoxContainer(heading: ParsedHeading): boolean {
+  return heading.type === 'node' && heading.attributes.type === 'HBoxContainer';
+}

@@ -1,0 +1,10 @@
+import type { ControlProperties } from '../control/types';
+
+export interface TextureRectProperties extends ControlProperties {
+  /** Raw `texture` ref (e.g. `ExtResource("id")` or `res://…`). */
+  texture?: string;
+  /** Godot ExpandMode: 0 keep size, 1 ignore size, 2/3 fit to width/height. */
+  expandMode?: number;
+  /** Godot StretchMode: 0 scale, 3 keep centered, 4/5 keep aspect, 6 covered. */
+  stretchMode?: number;
+}

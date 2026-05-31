@@ -35,6 +35,26 @@ function detectCategory(filename) {
   if (filename.startsWith('unit-physics') || filename.startsWith('unit-collision')) return 'Unit - Physics';
   if (filename.startsWith('unit-material')) return 'Unit - Materials';
   if (filename.startsWith('unit-external')) return 'Unit - External Resources';
+  // 2D-UI Control nodes rendered via the DOM overlay (ADR-0003).
+  if (
+    filename.startsWith('unit-control') ||
+    filename.startsWith('unit-label-2d') ||
+    filename.startsWith('unit-colorrect') ||
+    filename.startsWith('unit-color-rect') ||
+    filename.startsWith('unit-vbox') ||
+    filename.startsWith('unit-hbox') ||
+    filename.startsWith('unit-grid-container') ||
+    filename.startsWith('unit-center-container') ||
+    filename.startsWith('unit-margin-container') ||
+    filename.startsWith('unit-scroll-container') ||
+    filename.startsWith('unit-panel') ||
+    filename.startsWith('unit-button') ||
+    filename.startsWith('unit-texture-rect') ||
+    filename.startsWith('unit-rich-text-label') ||
+    filename.startsWith('unit-canvas-layer')
+  ) {
+    return 'Unit - 2D UI Controls';
+  }
   if (filename.startsWith('edge-')) return 'Edge Cases';
   if (filename.startsWith('integration-external')) return 'Integration - External Scenes';
   if (filename.startsWith('integration-')) return 'Integration - Multi-Node';

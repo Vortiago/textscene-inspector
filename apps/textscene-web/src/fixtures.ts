@@ -316,6 +316,61 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Primitive Meshes"
   },
   {
+    "name": "Button",
+    "file": "unit-button.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Canvas Layer",
+    "file": "unit-canvas-layer.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Center Container",
+    "file": "unit-center-container.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Grid Container",
+    "file": "unit-grid-container.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Hbox Container",
+    "file": "unit-hbox-container.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Margin Container",
+    "file": "unit-margin-container.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Panel Container",
+    "file": "unit-panel-container.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Panel",
+    "file": "unit-panel.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Rich Text Label",
+    "file": "unit-rich-text-label.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Scroll Container",
+    "file": "unit-scroll-container.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Texture Rect",
+    "file": "unit-texture-rect.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Camera Basic",
     "file": "unit-camera-basic.tscn",
     "category": "Unit - Basic Nodes"

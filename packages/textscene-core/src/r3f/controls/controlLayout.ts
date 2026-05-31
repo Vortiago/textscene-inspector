@@ -16,7 +16,27 @@
 import type { CSSProperties } from 'react';
 import type { ControlProperties } from '../../nodes/2d/ui/control/types';
 
-export type ParentLayoutKind = 'free' | 'row' | 'column' | 'grid' | 'center' | 'margin';
+/**
+ * The layout regime a container imposes on its direct Control children:
+ *  - 'free'   → children are absolutely positioned from anchors/offsets
+ *               (top-level overlay, plain Control, Panel, CanvasLayer).
+ *  - 'row' / 'column' → flex item; size_flags drive grow + align-self.
+ *  - 'grid'   → CSS grid item (GridContainer).
+ *  - 'center' → centered single child (CenterContainer).
+ *  - 'margin' → padded single child (MarginContainer).
+ *  - 'block'  → in-flow block child at natural size (PanelContainer,
+ *               ScrollContainer) — the container's own CSS does the work.
+ * Every non-'free' kind yields `position: relative` children; only 'row'/
+ * 'column' add flex sizing on top.
+ */
+export type ParentLayoutKind =
+  | 'free'
+  | 'row'
+  | 'column'
+  | 'grid'
+  | 'center'
+  | 'margin'
+  | 'block';
 
 /** Godot Control.LayoutPreset → [anchor_left, anchor_top, anchor_right, anchor_bottom]. */
 const PRESET_ANCHORS: Record<number, [number, number, number, number]> = {
