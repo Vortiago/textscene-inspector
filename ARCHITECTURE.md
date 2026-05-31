@@ -329,7 +329,13 @@ A module-graph guard test (over both `linter/index.ts` and `parser/TscnParser.ts
 
 ### Viewport mode + 3-column DCC chrome (P3/P4 — [ADR-0003](./docs/adr/0003-2d-ui-dom-overlay.md), [ADR-0006](./docs/adr/0006-viewport-mode-seam.md))
 
-A single `ViewportModeContext` chooses between the 3D canvas and the 2D Control overlay (a sibling DOM layer, never inside `<Canvas>`), and drives the collision gizmo. `TscnPreviewShell` becomes a 3-column grid shared by both apps:
+**Status:** the 2D-UI Control set and the viewport toggle are **shipped**; the 3-column grid re-layout is the remaining piece.
+
+- **P3 — Control set (done).** All 15 Control types ld-58 uses are registered DOM components: `Control`, `ColorRect`, `Label`, `VBoxContainer`, `HBoxContainer`, `GridContainer`, `CenterContainer`, `MarginContainer`, `ScrollContainer`, `Panel`, `PanelContainer`, `Button`, `TextureRect`, `RichTextLabel`, and the passthrough `CanvasLayer`. Each is a unified slice whose `index.r3f.ts` registers into `ControlComponentRegistry`; `ControlDispatcher` walks the subtree and `controlLayoutStyle` + `styleBoxToCss` + `resolveStyleBoxCss` map Godot layout/theme to CSS. `TextureRect` loads images host-agnostically via `useResource` (type-only `THREE` import — no runtime three in the slice).
+- **P4 — viewport toggle (done).** `TscnPreviewShell` is wrapped in `<ViewportModeProvider>`; a shared `<ViewportToolbar>` (3D/2D switch + Collisions checkbox) writes through `useViewportMode()`, and `<ViewportArea>` renders `TscnCanvas` (3D) or the lazy-loaded `ControlOverlay` (2D, fed the root scene's nodes + resources). The overlay is a separate lazy chunk, so the 15 components stay out of the initial canvas-paint bundle.
+- **P5 — 3-column DCC grid (pending).** The shell is still a 2-column canvas + sidebar; the target is the left/center/right grid below.
+
+A single `ViewportModeContext` chooses between the 3D canvas and the 2D Control overlay (a sibling DOM layer, never inside `<Canvas>`), and drives the collision gizmo. The target shell is a 3-column grid shared by both apps:
 
 ```mermaid
 flowchart TB
@@ -346,7 +352,7 @@ flowchart TB
   CENTER --- CO
 ```
 
-The 2D overlay maps `layout_mode = 2` (container-managed, the majority case) to CSS flex/grid, the LayoutPreset 0..15 table to absolute positioning, and StyleBox resources to CSS; system fonts only, images via blob URLs (VS Code webview CSP). Mode is persisted per app behind a `usePersistedMode()` hook (`localStorage` web / webview state API).
+The 2D overlay maps `layout_mode = 2` (container-managed, the majority case) to CSS flex/grid, the LayoutPreset 0..15 table to absolute positioning, and StyleBox resources to CSS; system fonts only, images via the host file provider (`useResource`, so VS Code webview CSP is honored). Per-app mode persistence behind a `usePersistedMode()` hook (`localStorage` web / webview state API) is **deferred** — the switch is per-session today.
 
 ### Scope (P2 — [ADR-0004](./docs/adr/0004-csg-as-primitive.md), [ADR-0005](./docs/adr/0005-physics-bodies-transform-only.md))
 
