@@ -56,6 +56,26 @@ describe('VSCodeResourceProvider', () => {
       expect(vscode.workspace.fs.readFile).toHaveBeenCalled();
     });
 
+    it('resolves res:// from the workspace root for a subdir scene when no project.godot exists', async () => {
+      // res:// is ALWAYS project-root-relative in Godot. With no project.godot to
+      // anchor on, the provider must fall back to the workspace root — NOT the
+      // scene's own folder. Regression: a scene in Scenes/Hallway/ used to resolve
+      // res://assets/X.glb to Scenes/Hallway/assets/X.glb, so every GLB 404'd.
+      vscode.workspace.fs.stat.mockRejectedValue(new Error('Not found')); // no project.godot anywhere
+      const subdirDoc = createMockUri('/workspace/Scenes/Hallway/Hallway.tscn');
+      const subdirProvider = new VSCodeResourceProvider(workspaceRoot, subdirDoc);
+
+      let readUri: ReturnType<typeof createMockUri> | undefined;
+      vscode.workspace.fs.readFile.mockImplementation((uri: ReturnType<typeof createMockUri>) => {
+        readUri = uri;
+        return Promise.resolve(createMockFileData('glb-bytes'));
+      });
+
+      await subdirProvider.loadResource('res://assets/PortraitFrame2.glb', 'PackedScene');
+
+      expect(readUri?.fsPath.replace(/\\/g, '/')).toBe('/workspace/assets/PortraitFrame2.glb');
+    });
+
     it('should prevent path traversal attacks', async () => {
       const maliciousPath = 'res://../../../etc/passwd';
 

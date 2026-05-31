@@ -93,7 +93,6 @@ export class VSCodeResourceProvider implements ResourceProvider {
 
     // Start from document's directory
     let currentDir = vscode.Uri.joinPath(this.documentUri, '..');
-    const startDir = currentDir; // Remember where we started for fallback
 
     info(`[VSCodeResourceProvider] Starting search from: ${currentDir.fsPath}`);
 
@@ -121,11 +120,13 @@ export class VSCodeResourceProvider implements ResourceProvider {
       // Check if we've reached or passed workspace root
       if (currentPathNormalized === workspacePathNormalized ||
           !currentPathNormalized.startsWith(workspacePathNormalized)) {
-        // Reached workspace root without finding project.godot
-        // Fall back to document's directory (where the .tscn file is)
-        info(`[VSCodeResourceProvider] Reached workspace root, falling back to: ${startDir.fsPath}`);
-        this.projectRoot = startDir;
-        return startDir;
+        // No project.godot found. res:// is ALWAYS project-root-relative in Godot
+        // (never relative to the current file), so fall back to the WORKSPACE ROOT,
+        // not the scene's own directory — otherwise a scene in a subfolder resolves
+        // every res://… to that subfolder and all shared assets (GLBs, textures) 404.
+        info(`[VSCodeResourceProvider] No project.godot found; resolving res:// from workspace root: ${this.workspaceRoot.fsPath}`);
+        this.projectRoot = this.workspaceRoot;
+        return this.workspaceRoot;
       }
 
       // Move up one directory
