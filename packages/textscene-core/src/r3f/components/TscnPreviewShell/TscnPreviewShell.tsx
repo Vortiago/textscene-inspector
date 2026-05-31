@@ -324,7 +324,7 @@ function DockHeader({
         title={`Collapse ${title} panel`}
         aria-label={`Collapse ${title} panel`}
       >
-        {side === 'left' ? '⟨' : '⟩'}
+        {side === 'left' ? '‹' : '›'}
       </button>
     </div>
   );
@@ -349,7 +349,7 @@ function CollapsedDock({
       title={`Show ${title} panel`}
       aria-label={`Show ${title} panel`}
     >
-      <span className={styles.collapsedChevron}>{side === 'left' ? '⟩' : '⟨'}</span>
+      <span className={styles.collapsedChevron}>{side === 'left' ? '›' : '‹'}</span>
       <span className={styles.collapsedTitle}>{title}</span>
     </button>
   );

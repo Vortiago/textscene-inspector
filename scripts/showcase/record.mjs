@@ -17,7 +17,6 @@ import { mkdirSync, renameSync, statSync, existsSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 
 const OUT_DIR = process.env.SHOWCASE_OUT || 'docs/showcase/web';
-const BASE_URL = process.env.SHOWCASE_URL || 'http://localhost:4173';
 
 /** Drag across the 3D canvas to orbit the camera (OrbitControls). */
 async function orbit(page, { dx = 230, dy = 35, steps = 55 } = {}) {
@@ -104,6 +103,9 @@ async function poster(page, name) {
 }
 
 export async function recordShowcase(name, file, scenario, opts = {}) {
+  // Read at call time (not module load) so an orchestrator that picks a port
+  // after import — regenerate.mjs — can point us at it via SHOWCASE_URL.
+  const BASE_URL = process.env.SHOWCASE_URL || 'http://localhost:4173';
   const width = opts.width ?? 1280;
   const height = opts.height ?? 800;
   mkdirSync(OUT_DIR, { recursive: true });

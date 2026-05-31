@@ -20,8 +20,6 @@ import {
   ResourceLoaderProvider,
   TscnPreviewShell,
   ViewportSelector,
-  useCameraControl,
-  useHierarchy,
   type ViewportSelectorOption,
 } from '@textscene/core';
 import { fixtures } from './fixtures';
@@ -224,14 +222,8 @@ function Toolbar({
   onTscnUpload,
   onTscnUploadError,
 }: ToolbarProps) {
-  const { resetCamera } = useCameraControl();
-  // WI-UX-7c: gate Reset Camera on the parsed sceneGraph, not raw
-  // `content.length`. On malformed fixtures (e.g. `edge-malformed-bracket.tscn`)
-  // `content` is non-empty but the parser fails, leaving `sceneGraph === null`.
-  // Matching the same null-check the SceneInfoCard uses keeps the UX
-  // affordances consistent — both hide when there's no usable scene.
-  const { sceneGraph } = useHierarchy();
-  const sceneLoaded = sceneGraph !== null;
+  // Reset Camera moved to the shared <ViewportToolbar> in the shell top bar
+  // (it's a viewport-mode control, and now both apps get it).
   const tscnInputRef = useRef<HTMLInputElement | null>(null);
 
   function handleTscnFileChange(e: ChangeEvent<HTMLInputElement>) {
@@ -279,15 +271,6 @@ function Toolbar({
           {uploadedTscnName}
         </span>
       )}
-      <button
-        type="button"
-        className={styles.resetCameraButton}
-        onClick={resetCamera}
-        disabled={!sceneLoaded}
-        data-testid="reset-camera-button"
-      >
-        Reset Camera
-      </button>
       {loadError && (
         <span role="alert" className={styles.errorMessage}>
           {loadError}

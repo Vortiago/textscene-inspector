@@ -2,7 +2,7 @@
 
 A living visual record of what TextScene Inspector renders today. Every clip below is a real `.webm` screen recording of the actual renderer — not a mockup — paired with a `.png` poster frame. Each recording opens directly on its own scene, so the feature is framed and lit from the first frame.
 
-Regenerate the whole set, or any single clip, through the feature-showcase workflow: `node scripts/showcase/run.mjs <name|all>`. Re-run it whenever the renderer changes so this page always reflects the current state.
+Regenerate the whole set after any UI change with one command — **`pnpm showcase:regen`** (see [Regenerate](#regenerate)). These clips are how we track progress, so re-run it whenever the renderer or chrome changes and commit the refreshed `.webm`/`.png` alongside the code.
 
 ## Hallway progress
 
@@ -23,6 +23,18 @@ The real ld-58 hallway geometry with its actual wall and wood textures (PlaneMes
 [▶ web/hallway.webm](web/hallway.webm)
 
 The ld-58 hallway mockup: CSG corridor (floor / walls / ceiling), portrait frames, and Label3D name plates — self-contained, tracks 3D-rendering progress.
+
+## 3-column DCC chrome + 2D UI
+
+### dcc-layout
+
+![dcc-layout](web/dcc-layout.png)
+
+[▶ web/dcc-layout.webm](web/dcc-layout.webm)
+
+The 3-column DCC chrome — left **Scene** dock (info + node tree), center viewport, right **Inspector** dock, with the brand, scene picker, and the Reset Camera / 3D-2D / Collisions controls in the top bar. The clip orbits the textured ld-58 hallway, then switches to the EndGameDialog scene and flips to **2D** mode so the Control overlay renders the dialog UI.
+
+The 2D-overlay renders of the seven vendored ld-58 UI scenes (StartScreen, GameUI, EndGameDialog, AboutDialog, DialogSystem, ClueContainer, ClueItem) are captured as stills in [`verify/`](verify/) with per-scene control stats in [`verify/verify-2d.json`](verify/verify-2d.json).
 
 ## Feature clips
 
@@ -138,24 +150,20 @@ Fresh captures against the latest renderer need a desktop session.
 
 Planned or in flight; re-run the showcase to capture them once they land:
 
-- 2D-UI overlay rendering plus the 2D/3D viewport toggle.
-- A collision-shape wireframe toggle.
-- The three-column DCC-style chrome (tree / viewport / inspector).
 - The furnished full hallway — photo frames, props, evidence — once more ld-58 assets are committed.
 - A dedicated lit-scene lighting demo.
+- Multiline-quoted-string titles (two-line labels currently show only the first line).
+
+(Shipped since the last revision: the 2D-UI overlay + 2D/3D toggle, the collision-shape wireframe toggle, and the 3-column DCC chrome — all visible in the `dcc-layout` clip above.)
 
 ## Regenerate
 
-1. Make sure the web previewer is built and running locally:
+Run the whole pipeline with **one command** — do this after any UI change, since these clips are how we track progress:
 
-   ```bash
-   pnpm --filter @textscene/web-previewer build && pnpm --filter @textscene/web-previewer preview
-   ```
+```bash
+pnpm showcase:regen
+```
 
-2. Capture every clip:
+It builds the web previewer, starts a preview server, records every scenario in `scripts/showcase/scenarios.mjs` to `web/*.webm` (+ poster `.png`), captures the 2D-overlay screenshots into `verify/`, then shuts the server down. Add a scenario to `scenarios.mjs` for each new feature so it gets its own clip.
 
-   ```bash
-   node scripts/showcase/run.mjs all
-   ```
-
-   Or capture a single clip by name: `node scripts/showcase/run.mjs <name>`.
+During iteration, with a preview server already running, capture a single clip: `node scripts/showcase/run.mjs <name>`.

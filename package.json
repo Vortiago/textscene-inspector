@@ -22,6 +22,7 @@
     "validate": "pnpm build && pnpm type-check && pnpm lint && pnpm test:unit && pnpm check:bundle-size",
     "check:bundle-size": "node scripts/check-bundle-size.mjs",
     "generate:fixtures": "node scripts/generate-fixtures.js",
+    "showcase:regen": "pnpm --filter @textscene/web-previewer build && node scripts/showcase/regenerate.mjs",
     "clean": "pnpm -r clean && rimraf node_modules",
     "vsc:package": "pnpm --filter textscene-inspector package",
     "vsc:install": "pnpm vsc:package && code --install-extension apps/textscene-vscode/textscene-inspector-0.0.1.vsix --force",

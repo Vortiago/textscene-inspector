@@ -14,11 +14,6 @@
   font-size: var(--tsi-font-md);
 }
 
-.title {
-  color: var(--tsi-fg-strong);
-  font-weight: 600;
-}
-
 .uploadGroup {
   display: inline-flex;
   align-items: center;
@@ -106,32 +101,5 @@
   text-overflow: ellipsis;
 }
 
-.resetCameraButton {
-  /* WI-UX-15: primary-action affordance. Main's Reset Camera was a
-     saturated blue button (#094771) that anchored the controls
-     column; the migration's flat gray bar read as a divider rather
-     than a button. Use the existing accent-soft / accent-fg token
-     pair (mapped to VS Code's `list.activeSelectionBackground` /
-     `Foreground` in webview contexts, with the standalone web app's
-     own values as fallback) so the visual weight matches main
-     without introducing a new hex value. */
-  padding: 0.25rem var(--tsi-space-3);
-  background: var(--tsi-accent-soft);
-  border: 1px solid color-mix(in srgb, var(--tsi-accent) 50%, transparent);
-  border-radius: var(--tsi-radius-sm);
-  color: var(--tsi-accent-fg);
-  font-size: var(--tsi-font-md);
-  font-weight: 600;
-  cursor: pointer;
-  line-height: 1.4;
-
-  &:hover:not(:disabled) {
-    background: color-mix(in srgb, var(--tsi-accent-soft) 70%, var(--tsi-accent));
-    border-color: var(--tsi-accent);
-  }
-
-  &:disabled {
-    opacity: 0.45;
-    cursor: not-allowed;
-  }
-}
+/* Reset Camera moved to the shared <ViewportToolbar> (core); its styling now
+   lives in ViewportToolbar.module.css. */

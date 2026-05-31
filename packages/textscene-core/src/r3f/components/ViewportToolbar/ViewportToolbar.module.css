@@ -5,6 +5,28 @@
   margin-left: auto; /* push to the right of any host toolbar content */
 }
 
+.resetButton {
+  appearance: none;
+  border: 1px solid var(--tsi-border-strong);
+  background: var(--tsi-bg-elevated);
+  color: var(--tsi-fg-default);
+  font: inherit;
+  font-size: var(--tsi-font-sm);
+  padding: var(--tsi-space-1) var(--tsi-space-3);
+  border-radius: var(--tsi-radius-sm);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.resetButton:hover:not(:disabled) {
+  background: var(--tsi-bg-hover);
+}
+
+.resetButton:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 .segment {
   display: inline-flex;
   border: 1px solid var(--tsi-border-strong);
