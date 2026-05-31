@@ -639,6 +639,11 @@ export const fixtures: Fixture[] = [
     "name": "Wall Section",
     "file": "components/WallSection.tscn",
     "category": "Examples - ld-58 Scenes"
+  },
+  {
+    "name": "Main",
+    "file": "main.tscn",
+    "category": "Examples - ld-58 Scenes"
   }
 ];
 
