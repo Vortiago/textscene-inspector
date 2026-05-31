@@ -17,10 +17,13 @@
  * after the synthesised scene loads) sees a normal scene with one
  * dispatched node.
  */
+import { useMemo } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../NodeComponentRegistry';
 import { useResource } from '../../../resources/useResource';
 import { MissingResourcePlaceholder } from '../../components/MissingResourcePlaceholder';
+import { useGlbOverrides } from './GlbOverridesContext';
+import { applyGlbNodeOverrides } from './glbNodeOverrides';
 
 /**
  * Reserved node type the createSceneProcessor synthesises for binary
@@ -42,14 +45,26 @@ export function GLBSceneRoot({ node }: NodeComponentProps) {
   const props = node.properties as unknown as GLBSceneRootProperties;
   const result = useResource<THREE.Object3D>(props.glbPath ?? '', 'GLBMesh');
 
+  // BUG 2: the instancing scene's inline override children (e.g.
+  // roof_lamp.tscn's `plafoniera`) target nodes INSIDE this GLB. Apply
+  // their transforms onto the matching GLB-internal nodes by name, so a
+  // GLB node's large baked translation is overridden as Godot does.
+  const overrides = useGlbOverrides();
+  const object = result.value;
+  useMemo(() => {
+    if (object) applyGlbNodeOverrides(object, overrides);
+    // The clone is per-consumer and stable, so re-applying when the
+    // resolved object or override set changes is sufficient and cheap.
+  }, [object, overrides]);
+
   if (result.status === 'missing' || result.status === 'error') {
     return <MissingResourcePlaceholder shape="box" />;
   }
-  if (result.status === 'pending' || !result.value) {
+  if (result.status === 'pending' || !object) {
     return null;
   }
   // useResource already clones GLB Object3D per consumer to satisfy
   // three.js's "Object3D can only have one parent" invariant, so we
   // mount the returned ref directly via <primitive>.
-  return <primitive object={result.value} />;
+  return <primitive object={object} />;
 }

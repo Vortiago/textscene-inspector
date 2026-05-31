@@ -41,6 +41,7 @@ import {
 } from './SceneResourcesContext.js';
 import { useSelection } from './contexts/SelectionContext.js';
 import { MissingResourcePlaceholder } from './components/MissingResourcePlaceholder.js';
+import { GlbOverridesProvider } from './internal/glb-scene-root/GlbOverridesContext.js';
 
 export interface NodeDispatcherProps {
   /** Root nodes from the active scene (typically `scene.scenes.get(rootScene).nodes`). */
@@ -102,12 +103,19 @@ function DispatchedNode({ node, path, withNodePath }: DispatchedNodeProps): Reac
   // nodes as additional children. The instancing node's component
   // (typically Node3D) already wraps everything in a transform-aware
   // <group>, so the loaded subtree inherits the instance transform.
+  // When an instancing node also declares inline children, those children
+  // are Godot instance-property overrides. If the instance resolves to a
+  // GLB, `GLBSceneRoot` matches them onto the GLB's internal nodes by name
+  // (BUG 2 — see GlbOverridesContext). Publishing `node.children` here is a
+  // no-op for non-GLB instances (no GLBSceneRoot consumes the context).
   const instanceChildren = node.instance ? (
-    <InstancedSceneSubtree
-      instanceRef={node.instance}
-      path={path}
-      withNodePath={withNodePath}
-    />
+    <GlbOverridesProvider overrides={node.children}>
+      <InstancedSceneSubtree
+        instanceRef={node.instance}
+        path={path}
+        withNodePath={withNodePath}
+      />
+    </GlbOverridesProvider>
   ) : null;
 
   const children: ReactNode[] = [];

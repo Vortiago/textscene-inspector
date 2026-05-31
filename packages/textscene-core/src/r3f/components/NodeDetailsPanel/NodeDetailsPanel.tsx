@@ -9,6 +9,8 @@ import type { TscnNode } from '../../../parser/types.js';
 import { useHierarchy } from '../../contexts/HierarchyContext.js';
 import { useSelection } from '../../contexts/SelectionContext.js';
 import { useOptionalCameraControl } from '../../contexts/CameraControlContext.js';
+import { useResourceLoader } from '../../../resources/useResource.js';
+import { resolveNodeByPath } from '../SceneTreeViewer/resolveNodeByPath.js';
 import { PropertySection } from './PropertySection.js';
 import styles from './NodeDetailsPanel.module.css';
 
@@ -21,12 +23,30 @@ export function NodeDetailsPanel() {
   const { sceneGraph } = useHierarchy();
   const { selectedNodePath } = useSelection();
   const cameraControl = useOptionalCameraControl();
+  const loader = useResourceLoader();
 
   const selection = useMemo<SelectedNode | null>(() => {
     if (!sceneGraph || !selectedNodePath) return null;
+
+    // Fast path: inline nodes (and instance ROOTS) live in
+    // flattenedNodes. This covers every fully-inline scene.
     const entry = sceneGraph.flattenedNodes.find((n) => n.path === selectedNodePath);
-    return entry ? { node: entry.data, path: entry.path } : null;
-  }, [sceneGraph, selectedNodePath]);
+    if (entry) return { node: entry.data, path: entry.path };
+
+    // BUG 1: nodes INSIDE an instanced PackedScene are absent from
+    // flattenedNodes (the shell only addScene()s the inline root). Walk
+    // the same live inline + sub-scene tree the SceneTreeViewer renders,
+    // descending into sub-scenes via the loader's scene cache.
+    const rootScene = sceneGraph.scenes.get(sceneGraph.rootScene);
+    if (!rootScene || !loader) return null;
+    const resolved = resolveNodeByPath(
+      selectedNodePath,
+      rootScene.nodes,
+      rootScene.externalResources,
+      loader.scenes
+    );
+    return resolved ? { node: resolved, path: selectedNodePath } : null;
+  }, [sceneGraph, selectedNodePath, loader]);
 
   if (!selection) {
     return (
