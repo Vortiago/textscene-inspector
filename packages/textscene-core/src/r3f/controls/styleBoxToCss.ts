@@ -30,7 +30,9 @@ export function styleBoxToCss(type: string, data: Record<string, string>): CSSPr
   if (type !== 'StyleBoxFlat') return {}; // StyleBoxEmpty / unknown → transparent
   const style: CSSProperties = {};
 
-  if (data.bg_color) {
+  // `draw_center = false` makes Godot paint only the border, leaving the
+  // interior transparent — so skip the fill entirely in that case.
+  if (data.bg_color && data.draw_center !== 'false') {
     const bg = colorToCss(data.bg_color);
     if (bg) style.backgroundColor = bg;
   }

@@ -12,6 +12,8 @@ import { controlColorToCss } from '../../../../r3f/controls/styleBoxToCss';
 import type { LabelProperties } from './types';
 
 const H_ALIGN = ['left', 'center', 'right', 'justify'] as const;
+// Godot VerticalAlignment 0 TOP / 1 CENTER / 2 BOTTOM / 3 FILL → flex main-axis.
+const V_JUSTIFY = ['flex-start', 'center', 'flex-end', 'stretch'] as const;
 
 export function Label({ node }: ControlComponentProps) {
   const props = node.properties as LabelProperties;
@@ -25,7 +27,16 @@ export function Label({ node }: ControlComponentProps) {
   if (props.horizontalAlignment !== undefined) {
     style.textAlign = H_ALIGN[props.horizontalAlignment] ?? 'left';
   }
-  style.whiteSpace = props.autowrapMode ? 'normal' : 'nowrap';
+  // Honor embedded newlines (Godot treats `\n` as a hard break regardless of
+  // autowrap); autowrap additionally soft-wraps long lines.
+  style.whiteSpace = props.autowrapMode ? 'pre-line' : 'pre';
+  // Vertical alignment only bites when the label is taller than its text (a
+  // stretched/min-sized label); apply it via a flex column.
+  if (props.verticalAlignment !== undefined) {
+    style.display = 'flex';
+    style.flexDirection = 'column';
+    style.justifyContent = V_JUSTIFY[props.verticalAlignment] ?? 'flex-start';
+  }
 
   return (
     <div data-control-type="Label" data-node-name={node.name} style={style}>

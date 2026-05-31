@@ -3,14 +3,8 @@
  * so it does not delegate to parseControl — only name, visibility, and layer.
  */
 
-import type { ParsedHeading } from '../../../../parser/utils';
+import { type ParsedHeading, intOr } from '../../../../parser/utils';
 import type { CanvasLayerProperties } from './types';
-
-function intOr(value: string | undefined): number | undefined {
-  if (value === undefined) return undefined;
-  const n = parseInt(value, 10);
-  return Number.isNaN(n) ? undefined : n;
-}
 
 export function parseCanvasLayer(
   heading: ParsedHeading,

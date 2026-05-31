@@ -12,7 +12,14 @@
 
 import type { TscnNode, TscnExternalResource, TscnInternalResource } from '../parser/types.js';
 import type { ParseError, StrictParseResult } from './types.js';
-import { parseHeading, parseProperty, isHeading, isComment, isEmpty } from '../parser/utils.js';
+import {
+  parseHeading,
+  parseProperty,
+  isHeading,
+  isComment,
+  isEmpty,
+  isUnterminatedString,
+} from '../parser/utils.js';
 import type { ParsedHeading } from '../parser/utils.js';
 import { parseExternalResource, parseInternalResource } from '../parser/resourceParsers.js';
 import { buildSceneTree } from '../parser/sceneTreeBuilder.js';
@@ -56,7 +63,7 @@ export class StrictTscnParser {
    * @returns Parse result with errors or parsed scene
    */
   parse(content: string): StrictParseResult {
-    const lines = content.split('\n');
+    const lines = content.split(/\r?\n/);
     const errors: ParseError[] = [];
 
     const nodes: TscnNode[] = [];
@@ -171,22 +178,21 @@ export class StrictTscnParser {
           continue;
         }
 
-        // Handle multi-line string properties (e.g., shader code)
-        // Check if value starts with quote but doesn't end with quote
-        if (property.value.startsWith('"') && !property.value.endsWith('"')) {
+        // Handle multi-line string properties (e.g., shader code, label text).
+        // Uses the SAME unescaped-quote-parity test as the lenient parser
+        // (shared `isUnterminatedString`) so both agree on string termination —
+        // including strings containing escaped quotes (`\"`) or trailing
+        // backslashes (`\\"`).
+        if (isUnterminatedString(property.value)) {
           let fullValue = property.value;
 
-          // Keep reading lines until we find the closing quote
+          // Keep appending lines until the quote parity balances.
           while (i + 1 < lines.length) {
             i++;
             currentLineNumber = i + 1;
-            const continuationLine = lines[i]!;
-            fullValue += '\n' + continuationLine;
-
-            // Check if this line ends with a closing quote
-            const trimmed = continuationLine.trim();
-            if (trimmed === '"' || trimmed.endsWith('"')) {
-              break; // Found closing quote
+            fullValue += '\n' + lines[i]!;
+            if (!isUnterminatedString(fullValue)) {
+              break; // string closed
             }
           }
 

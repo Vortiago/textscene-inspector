@@ -118,6 +118,9 @@ function containerChildStyle(p: ControlProperties, parent: ParentLayoutKind): CS
     if ((crossFlag & SIZE_FLAG_SHRINK_END) !== 0) style.alignSelf = 'flex-end';
     else if ((crossFlag & SIZE_FLAG_SHRINK_CENTER) !== 0) style.alignSelf = 'center';
     else if ((crossFlag & SIZE_FLAG_FILL) !== 0) style.alignSelf = 'stretch';
+    // No FILL/SHRINK bits (explicit 0): Godot shrinks the child to its content
+    // at the begin edge — pin it so CSS flex doesn't stretch it by default.
+    else style.alignSelf = 'flex-start';
   }
   return style;
 }

@@ -6,7 +6,14 @@
  */
 
 import type { TscnScene, TscnNode, TscnExternalResource, TscnInternalResource } from './types.js';
-import { parseHeading, parseProperty, isHeading, isComment, isEmpty } from './utils.js';
+import {
+  parseHeading,
+  parseProperty,
+  isHeading,
+  isComment,
+  isEmpty,
+  isUnterminatedString,
+} from './utils.js';
 import type { ParsedHeading } from './utils.js';
 import { parseExternalResource, parseInternalResource } from './resourceParsers.js';
 import { buildSceneTree } from './sceneTreeBuilder.js';
@@ -38,7 +45,10 @@ export class TscnParserCore {
    */
   parse(content: string, nodeCreator: NodeCreator): TscnScene {
     logger.info('Starting TSCN parsing');
-    const lines = content.split('\n');
+    // Split on CRLF or LF so Windows-authored .tscn files don't leave a
+    // trailing \r on each line (which would otherwise corrupt accumulated
+    // multi-line string values).
+    const lines = content.split(/\r?\n/);
 
     const nodes: TscnNode[] = [];
     const externalResources: TscnExternalResource[] = [];
@@ -47,6 +57,10 @@ export class TscnParserCore {
     let currentSection: SectionType = 'none';
     let currentHeading: ParsedHeading | null = null;
     let currentProperties: Record<string, string> = {};
+    // Accumulator for a string value whose opening quote isn't closed on its
+    // own line (Godot multi-line text). Subsequent raw lines are appended
+    // until the quote balances.
+    let pendingMultiline: { key: string; value: string } | null = null;
 
     const finalizeSection = () => {
       if (!currentHeading) return;
@@ -72,7 +86,28 @@ export class TscnParserCore {
       currentProperties = {};
     };
 
+    const storePending = () => {
+      if (pendingMultiline && currentHeading) {
+        currentProperties[pendingMultiline.key] = pendingMultiline.value;
+      }
+      pendingMultiline = null;
+    };
+
     for (const line of lines) {
+      // Inside an open multi-line string: append raw lines (preserving blank
+      // lines within the string) until the quote balances. A new section
+      // heading means the string was never closed — salvage it and fall
+      // through so the heading is still processed.
+      if (pendingMultiline) {
+        if (isHeading(line)) {
+          storePending();
+        } else {
+          pendingMultiline.value += '\n' + line;
+          if (!isUnterminatedString(pendingMultiline.value)) storePending();
+          continue;
+        }
+      }
+
       if (isEmpty(line) || isComment(line)) {
         continue;
       }
@@ -87,11 +122,16 @@ export class TscnParserCore {
       } else {
         const property = parseProperty(line);
         if (property && currentHeading) {
-          currentProperties[property.key] = property.value;
+          if (isUnterminatedString(property.value)) {
+            pendingMultiline = { key: property.key, value: property.value };
+          } else {
+            currentProperties[property.key] = property.value;
+          }
         }
       }
     }
 
+    storePending(); // flush a string that ran to EOF unclosed
     finalizeSection();
 
     const sceneTree = buildSceneTree(nodes);
