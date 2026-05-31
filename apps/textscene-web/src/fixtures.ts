@@ -466,6 +466,11 @@ export const fixtures: Fixture[] = [
     "category": "Examples - ld-58 Scenes"
   },
   {
+    "name": "HallwayGeometry",
+    "file": "HallwayGeometry.tscn",
+    "category": "Examples - ld-58 Scenes"
+  },
+  {
     "name": "AboutDialog",
     "file": "Scenes/AboutDialog/AboutDialog.tscn",
     "category": "Examples - ld-58 Scenes"
@@ -481,8 +486,98 @@ export const fixtures: Fixture[] = [
     "category": "Examples - ld-58 Scenes"
   },
   {
+    "name": "DroppedLedger",
+    "file": "Scenes/Evidence/DroppedLedger/DroppedLedger.tscn",
+    "category": "Examples - ld-58 Scenes"
+  },
+  {
+    "name": "Handkerchief",
+    "file": "Scenes/Evidence/Handkerchief/Handkerchief.tscn",
+    "category": "Examples - ld-58 Scenes"
+  },
+  {
+    "name": "HandkerchiefModel",
+    "file": "Scenes/Evidence/Handkerchief/HandkerchiefModel.tscn",
+    "category": "Examples - ld-58 Scenes"
+  },
+  {
+    "name": "LetterOpener",
+    "file": "Scenes/Evidence/LetterOpener/LetterOpener.tscn",
+    "category": "Examples - ld-58 Scenes"
+  },
+  {
     "name": "GameUI",
     "file": "Scenes/GameUI/GameUI.tscn",
+    "category": "Examples - ld-58 Scenes"
+  },
+  {
+    "name": "Hallway",
+    "file": "Scenes/Hallway/Hallway.tscn",
+    "category": "Examples - ld-58 Scenes"
+  },
+  {
+    "name": "Boat",
+    "file": "Scenes/PhotoFrame/Boat/Boat.tscn",
+    "category": "Examples - ld-58 Scenes"
+  },
+  {
+    "name": "Books",
+    "file": "Scenes/PhotoFrame/Books/Books.tscn",
+    "category": "Examples - ld-58 Scenes"
+  },
+  {
+    "name": "Car",
+    "file": "Scenes/PhotoFrame/Car/Car.tscn",
+    "category": "Examples - ld-58 Scenes"
+  },
+  {
+    "name": "Cat",
+    "file": "Scenes/PhotoFrame/Cat/Cat.tscn",
+    "category": "Examples - ld-58 Scenes"
+  },
+  {
+    "name": "Clock",
+    "file": "Scenes/PhotoFrame/Clock/Clock.tscn",
+    "category": "Examples - ld-58 Scenes"
+  },
+  {
+    "name": "Dog",
+    "file": "Scenes/PhotoFrame/Dog/Dog.tscn",
+    "category": "Examples - ld-58 Scenes"
+  },
+  {
+    "name": "DrHenryMorrison",
+    "file": "Scenes/PhotoFrame/DrHenryMorrison/DrHenryMorrison.tscn",
+    "category": "Examples - ld-58 Scenes"
+  },
+  {
+    "name": "EleanorHeartwell",
+    "file": "Scenes/PhotoFrame/EleanorHartwell/EleanorHeartwell.tscn",
+    "category": "Examples - ld-58 Scenes"
+  },
+  {
+    "name": "Flowers",
+    "file": "Scenes/PhotoFrame/Flowers/Flowers.tscn",
+    "category": "Examples - ld-58 Scenes"
+  },
+  {
+    "name": "HouseKeeper",
+    "file": "Scenes/PhotoFrame/HouseKeeper/HouseKeeper.tscn",
+    "category": "Examples - ld-58 Scenes"
+  },
+  {
+    "name": "InspectorCrawford",
+    "file": "Scenes/PhotoFrame/InspectorCrawford/InspectorCrawford.tscn",
+    "category": "Examples - ld-58 Scenes"
+  },
+  {
+    "name": "LadyBlackwood",
+    "file": "Scenes/PhotoFrame/LadyBlackwood/LadyBlackwood.tscn",
+    "category": "Examples - ld-58 Scenes"
+  },
+  {
+    "name": "YoungTimBlackwood",
+    "file": "Scenes/PhotoFrame/YoungTimBlackwood/YoungTimBlackwood.tscn",
     "category": "Examples - ld-58 Scenes"
   },
   {
@@ -491,8 +586,58 @@ export const fixtures: Fixture[] = [
     "category": "Examples - ld-58 Scenes"
   },
   {
+    "name": "Doormesh",
+    "file": "assets/doormesh.tscn",
+    "category": "Examples - ld-58 Scenes"
+  },
+  {
+    "name": "Grandfatherclock",
+    "file": "assets/grandfatherclock.tscn",
+    "category": "Examples - ld-58 Scenes"
+  },
+  {
+    "name": "Victorian_1",
+    "file": "assets/picture_frames_lib/victorian_1.tscn",
+    "category": "Examples - ld-58 Scenes"
+  },
+  {
+    "name": "Victorian_2",
+    "file": "assets/picture_frames_lib/victorian_2.tscn",
+    "category": "Examples - ld-58 Scenes"
+  },
+  {
+    "name": "Victorian_3",
+    "file": "assets/picture_frames_lib/victorian_3.tscn",
+    "category": "Examples - ld-58 Scenes"
+  },
+  {
+    "name": "Victorian_5",
+    "file": "assets/picture_frames_lib/victorian_5.tscn",
+    "category": "Examples - ld-58 Scenes"
+  },
+  {
+    "name": "Roof_lamp",
+    "file": "assets/roof_lamp.tscn",
+    "category": "Examples - ld-58 Scenes"
+  },
+  {
     "name": "CornerColumn",
     "file": "components/CornerColumn.tscn",
+    "category": "Examples - ld-58 Scenes"
+  },
+  {
+    "name": "Door",
+    "file": "components/Door.tscn",
+    "category": "Examples - ld-58 Scenes"
+  },
+  {
+    "name": "EntranceDoor",
+    "file": "components/EntranceDoor.tscn",
+    "category": "Examples - ld-58 Scenes"
+  },
+  {
+    "name": "InteractableObject",
+    "file": "components/InteractableObject.tscn",
     "category": "Examples - ld-58 Scenes"
   },
   {

@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://cocghlr3negpx"]
+
+[ext_resource type="Material" uid="uid://dskbvfhxan1mf" path="res://shaders/pixel_perfect_ouline.tres" id="2_dqfc0"]
+
+[node name="InteractableObject" type="Area3D"]
+HighlightMaterial = ExtResource("2_dqfc0")

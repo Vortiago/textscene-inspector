@@ -1,0 +1,1624 @@
+[gd_scene load_steps=77 format=3 uid="uid://d5713qx52vb1"]
+
+[ext_resource type="PackedScene" uid="uid://egcjovpb1kfo" path="res://HallwayGeometry.tscn" id="1_hallwaygeom"]
+[ext_resource type="PackedScene" uid="uid://bw6xmw805w165" path="res://components/Door.tscn" id="2_dqxua"]
+[ext_resource type="PackedScene" path="res://assets/roof_lamp.tscn" id="3_as5ck"]
+[ext_resource type="PackedScene" uid="uid://btlm13sldjwnq" path="res://Scenes/PhotoFrame/HouseKeeper/HouseKeeper.tscn" id="3_cvgsa"]
+[ext_resource type="PackedScene" uid="uid://bv2d2i0odcgfk" path="res://Scenes/PhotoFrame/InspectorCrawford/InspectorCrawford.tscn" id="4_05vpa"]
+[ext_resource type="PackedScene" uid="uid://cg22nmohjn64o" path="res://Scenes/PhotoFrame/LadyBlackwood/LadyBlackwood.tscn" id="4_hifnc"]
+[ext_resource type="PackedScene" uid="uid://b26afuxwuc6tp" path="res://components/EntranceDoor.tscn" id="4_o5p3j"]
+[ext_resource type="PackedScene" uid="uid://c2g6xco1rbfav" path="res://Scenes/PhotoFrame/DrHenryMorrison/DrHenryMorrison.tscn" id="5_ko40w"]
+[ext_resource type="PackedScene" uid="uid://d4kcn0ixh7umi" path="res://Scenes/PhotoFrame/YoungTimBlackwood/YoungTimBlackwood.tscn" id="6_83k6l"]
+[ext_resource type="PackedScene" uid="uid://diwkiu7viyhdu" path="res://assets/grandfatherclock.tscn" id="6_ko40w"]
+[ext_resource type="PackedScene" uid="uid://bdvrsv0d4o25a" path="res://Scenes/PhotoFrame/EleanorHartwell/EleanorHeartwell.tscn" id="7_yixj0"]
+[ext_resource type="PackedScene" path="res://Scenes/PhotoFrame/Dog/Dog.tscn" id="8_dog01"]
+[ext_resource type="PackedScene" path="res://Scenes/PhotoFrame/Cat/Cat.tscn" id="9_cat01"]
+[ext_resource type="PackedScene" path="res://Scenes/PhotoFrame/Car/Car.tscn" id="10_car01"]
+[ext_resource type="PackedScene" path="res://Scenes/PhotoFrame/Boat/Boat.tscn" id="11_boat01"]
+[ext_resource type="PackedScene" uid="uid://bt12yfrmvyp0" path="res://Scenes/Evidence/DroppedLedger/DroppedLedger.tscn" id="11_jbjv5"]
+[ext_resource type="PackedScene" uid="uid://c1at2ighj8ag6" path="res://Scenes/Evidence/Handkerchief/Handkerchief.tscn" id="12_dfkrl"]
+[ext_resource type="PackedScene" path="res://Scenes/PhotoFrame/Flowers/Flowers.tscn" id="12_flow01"]
+[ext_resource type="PackedScene" path="res://Scenes/PhotoFrame/Books/Books.tscn" id="13_book01"]
+[ext_resource type="PackedScene" path="res://Scenes/PhotoFrame/Clock/Clock.tscn" id="14_clck01"]
+[ext_resource type="PackedScene" uid="uid://dte0kjkhp7rr5" path="res://Scenes/Evidence/LetterOpener/LetterOpener.tscn" id="19_i8mxe"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_table"]
+size = Vector3(1.5, 0.1, 0.8)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_table"]
+albedo_color = Color(0.545098, 0.270588, 0.0745098, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_tableleg"]
+size = Vector3(0.1, 0.7, 0.1)
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_item"]
+top_radius = 0.05
+bottom_radius = 0.08
+height = 0.3
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_gold"]
+albedo_color = Color(1, 0.843137, 0, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_blood"]
+albedo_color = Color(0.545098, 0, 0, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_head"]
+size = Vector3(0.3, 0.3, 0.25)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_skin"]
+albedo_color = Color(0.956863, 0.807843, 0.639216, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_torso"]
+size = Vector3(0.6, 0.3, 0.5)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_suit"]
+albedo_color = Color(0.117647, 0.156863, 0.235294, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_arm"]
+size = Vector3(0.6, 0.15, 0.15)
+
+[sub_resource type="BoxMesh" id="BoxMesh_leg"]
+size = Vector3(0.8, 0.2, 0.18)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_pants"]
+albedo_color = Color(0.2, 0.2, 0.2, 1)
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_blood"]
+top_radius = 0.6
+bottom_radius = 0.6
+height = 0.02
+
+[sub_resource type="BoxMesh" id="BoxMesh_chair"]
+size = Vector3(0.5, 0.1, 0.5)
+
+[sub_resource type="BoxMesh" id="BoxMesh_window"]
+size = Vector3(0.7, 1, 0.1)
+
+[sub_resource type="Shader" id="Shader_sunrise"]
+code = "shader_type spatial;
+render_mode blend_mix, depth_draw_opaque, cull_back, diffuse_burley, specular_schlick_ggx;
+
+uniform vec3 bottom_color : source_color = vec3(1.0, 0.6, 0.2);
+uniform vec3 top_color : source_color = vec3(0.6, 0.8, 1.0);
+uniform float transparency : hint_range(0.0, 1.0) = 0.55;
+uniform float emission_strength : hint_range(0.0, 3.0) = 1.2;
+uniform float metallic : hint_range(0.0, 1.0) = 0.1;
+uniform float roughness : hint_range(0.0, 1.0) = 0.1;
+
+void fragment() {
+	vec3 gradient = mix(bottom_color, top_color, UV.y);
+	ALBEDO = gradient;
+	EMISSION = gradient * emission_strength;
+	ALPHA = transparency;
+	METALLIC = metallic;
+	ROUGHNESS = roughness;
+	SPECULAR = 0.8;
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_window_glass"]
+render_priority = 0
+shader = SubResource("Shader_sunrise")
+shader_parameter/bottom_color = Color(1, 0.6, 0.2, 1)
+shader_parameter/top_color = Color(0.6, 0.8, 1, 1)
+shader_parameter/transparency = 0.55
+shader_parameter/emission_strength = 1.2
+shader_parameter/metallic = 0.1
+shader_parameter/roughness = 0.1
+
+[sub_resource type="BoxMesh" id="BoxMesh_frame_horizontal"]
+size = Vector3(0.8, 0.05, 0.1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_window_frame"]
+albedo_color = Color(0.2, 0.1, 0.05, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_frame_vertical"]
+size = Vector3(0.05, 1, 0.1)
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_small_vase"]
+top_radius = 0.05
+bottom_radius = 0.06
+height = 0.15
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_brass"]
+albedo_color = Color(0.803922, 0.521569, 0.247059, 1)
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_candle"]
+top_radius = 0.02
+bottom_radius = 0.025
+height = 0.15
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_candle"]
+albedo_color = Color(0.95, 0.9, 0.75, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_console_table"]
+size = Vector3(1.2, 0.8, 0.4)
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_vase"]
+top_radius = 0.1
+bottom_radius = 0.15
+height = 0.4
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_bust_pedestal"]
+top_radius = 0.08
+bottom_radius = 0.1
+height = 0.25
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_marble"]
+albedo_color = Color(0.9, 0.9, 0.85, 1)
+
+[sub_resource type="SphereMesh" id="SphereMesh_bust_head"]
+radius = 0.12
+height = 0.24
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_plant"]
+top_radius = 0.0
+bottom_radius = 0.2
+height = 0.3
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_plant"]
+albedo_color = Color(0.156863, 0.392157, 0.156863, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_carpet_runner"]
+size = Vector3(6, 0.02, 1.2)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_carpet_red"]
+albedo_color = Color(0.545098, 0.117647, 0.117647, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_bookshelf_back"]
+size = Vector3(0.05, 2.5, 1.5)
+
+[sub_resource type="BoxMesh" id="BoxMesh_bookshelf_side"]
+size = Vector3(0.3, 2.5, 0.05)
+
+[sub_resource type="BoxMesh" id="BoxMesh_shelf"]
+size = Vector3(0.25, 0.05, 1.4)
+
+[sub_resource type="BoxMesh" id="BoxMesh_book"]
+size = Vector3(0.15, 0.25, 0.08)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_book_green"]
+albedo_color = Color(0.196078, 0.294118, 0.196078, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_book_red"]
+albedo_color = Color(0.392157, 0.117647, 0.117647, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_book_brown"]
+albedo_color = Color(0.396078, 0.196078, 0.0980392, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_area_rug"]
+size = Vector3(3, 0.02, 4)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_carpet_green"]
+albedo_color = Color(0.196078, 0.392157, 0.196078, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_shoe_cabinet"]
+size = Vector3(1.2, 0.6, 0.4)
+
+[sub_resource type="BoxMesh" id="BoxMesh_shoe_leg"]
+size = Vector3(0.08, 0.3, 0.08)
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_coat_base"]
+top_radius = 0.25
+bottom_radius = 0.25
+height = 0.05
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_coat_post"]
+top_radius = 0.08
+bottom_radius = 0.08
+height = 1.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_coat_hook"]
+size = Vector3(0.15, 0.08, 0.08)
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_umbrella_stand"]
+top_radius = 0.12
+bottom_radius = 0.15
+height = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_bench_seat"]
+size = Vector3(0.8, 0.08, 0.4)
+
+[sub_resource type="BoxMesh" id="BoxMesh_bench_back"]
+size = Vector3(0.8, 0.5, 0.08)
+
+[sub_resource type="BoxMesh" id="BoxMesh_bench_leg"]
+size = Vector3(0.08, 0.4, 0.08)
+
+[sub_resource type="BoxMesh" id="BoxMesh_mirror_frame"]
+size = Vector3(0.8, 1, 0.05)
+
+[sub_resource type="BoxMesh" id="BoxMesh_mirror_glass"]
+size = Vector3(0.65, 0.85, 0.02)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_mirror"]
+albedo_color = Color(0.8, 0.85, 0.9, 1)
+metallic = 0.8
+roughness = 0.1
+
+[node name="Hallway" type="Node3D"]
+
+[node name="HallwayGeometry" parent="." instance=ExtResource("1_hallwaygeom")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0010881424, 0.0035161972, 0.0035357475)
+
+[node name="roof_lamp" parent="HallwayGeometry" instance=ExtResource("3_as5ck")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.803779, 4, 0)
+
+[node name="roof_lamp3" parent="HallwayGeometry" instance=ExtResource("3_as5ck")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.14916, 4, 0)
+
+[node name="roof_lamp5" parent="HallwayGeometry" instance=ExtResource("3_as5ck")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9, 4, 5.594346)
+
+[node name="Door2" parent="HallwayGeometry" instance=ExtResource("2_dqxua")]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, -6, 0, 0)
+
+[node name="Door3" parent="HallwayGeometry" instance=ExtResource("2_dqxua")]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 6.1, 0.045, 3.25)
+
+[node name="EntranceDoor" parent="HallwayGeometry" instance=ExtResource("4_o5p3j")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9, 0, 8.7)
+
+[node name="PhotoFrames" type="Node3D" parent="."]
+
+[node name="HouseKeeper" parent="PhotoFrames" instance=ExtResource("3_cvgsa")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 2.5, 1.625)
+
+[node name="Camera3D" parent="PhotoFrames/HouseKeeper" index="2"]
+transform = Transform3D(0.99613976, 0.04489005, -0.075435415, 0, 0.8593529, 0.51138306, 0.08778165, -0.509409, 0.8560356, 0, 0, 0)
+
+[node name="InspectorCrawford" parent="PhotoFrames" instance=ExtResource("4_05vpa")]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 12, 2.5, 3.5)
+
+[node name="Camera3D" parent="PhotoFrames/InspectorCrawford" index="0"]
+transform = Transform3D(1, 1.4522103e-08, 2.4828317e-09, -1.4522103e-08, 0.94319946, 0.332227, 2.4828317e-09, -0.332227, 0.94319946, 0, 0, 0)
+
+[node name="LadyBlackwood" parent="PhotoFrames" instance=ExtResource("4_hifnc")]
+transform = Transform3D(-0.003019372, 0, -0.99999547, 0, 1, 0, 0.99999547, 0, -0.003019372, 6.1, 2.25, 5)
+
+[node name="Camera3D" parent="PhotoFrames/LadyBlackwood" index="0"]
+transform = Transform3D(0.9966966, -0.024074245, 0.077566594, 0.00086436694, 0.9581479, 0.2862724, -0.081212066, -0.28525966, 0.95500356, 0, 0, 0)
+
+[node name="YoungTimBlackwood" parent="PhotoFrames" instance=ExtResource("6_83k6l")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 2, 1.625)
+
+[node name="Camera3D" parent="PhotoFrames/YoungTimBlackwood" index="0"]
+transform = Transform3D(1, 0, 0, 0, 0.99879843, 0.049006663, 0, -0.049006663, 0.99879843, 0, 0, 0)
+
+[node name="EleanorHeartwell" parent="PhotoFrames" instance=ExtResource("7_yixj0")]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 0.75, 2, -1.625)
+
+[node name="Camera3D" parent="PhotoFrames/EleanorHeartwell" index="0"]
+transform = Transform3D(1, 8.827032e-09, 4.4677506e-10, -8.827032e-09, 0.9948895, 0.10096948, 4.4677506e-10, -0.10096948, 0.9948895, 0, 0, 0)
+
+[node name="DrHenryMorrison" parent="PhotoFrames" instance=ExtResource("5_ko40w")]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 8.548, 3.008, -1.625)
+
+[node name="Camera3D" parent="PhotoFrames/DrHenryMorrison" index="0"]
+transform = Transform3D(1, 4.474717e-08, 1.2319958e-08, -4.474717e-08, 0.8590761, 0.511848, 1.2319958e-08, -0.511848, 0.8590761, 0, 0, 0)
+
+[node name="Boat" parent="PhotoFrames" instance=ExtResource("11_boat01")]
+transform = Transform3D(-0.99998635, 0, -0.005235955, 0, 1, 0, 0.005235955, 0, -0.99998635, 10.215564, 2.2645006, -1.7164738)
+
+[node name="Dog" parent="PhotoFrames" instance=ExtResource("8_dog01")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.7541747, 1.7373915, 1.7)
+
+[node name="Cat" parent="PhotoFrames" instance=ExtResource("9_cat01")]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -4.4270124, 2.083717, -1.6)
+
+[node name="Car" parent="PhotoFrames" instance=ExtResource("10_car01")]
+transform = Transform3D(1.3113416e-07, 0, 1, 0, 1, 0, -1, 0, 1.3113416e-07, 11.996684, 2.5, 1.6339257)
+
+[node name="Flowers" parent="PhotoFrames" instance=ExtResource("12_flow01")]
+transform = Transform3D(0.99938184, 0.0015291474, -0.035129152, -0.0019912743, 0.99991196, -0.013123741, 0.035106003, 0.013185583, 0.99929667, 2.7166553, 2.0863602, 1.7342572)
+
+[node name="Books" parent="PhotoFrames" instance=ExtResource("13_book01")]
+transform = Transform3D(-0.9999998, 0, -0.00064586103, 0, 1, 0, 0.00064586103, 0, -0.9999998, -1.0481386, 1.9952164, -1.7381669)
+
+[node name="Clock" parent="PhotoFrames" instance=ExtResource("14_clck01")]
+transform = Transform3D(-0.5575261, 0.22966172, 0.7977594, -0.02022883, 0.9569276, -0.28962088, -0.8299128, -0.17760888, -0.5288661, 11.68101, 0.4439324, 3.0193183)
+
+[node name="CrimeSceneObjects" type="Node3D" parent="."]
+
+[node name="CornerTableGroup" type="Node3D" parent="CrimeSceneObjects"]
+transform = Transform3D(0.92132115, 0, -0.38880238, 0, 1, 0, 0.38880238, 0, 0.92132115, 10.791587, 0, -0.57085073)
+
+[node name="TableSurface" type="MeshInstance3D" parent="CrimeSceneObjects/CornerTableGroup"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, 0)
+mesh = SubResource("BoxMesh_table")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="TableLeg1" type="MeshInstance3D" parent="CrimeSceneObjects/CornerTableGroup"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.65, 0.35, -0.35)
+mesh = SubResource("BoxMesh_tableleg")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="TableLeg2" type="MeshInstance3D" parent="CrimeSceneObjects/CornerTableGroup"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.65, 0.35, -0.35)
+mesh = SubResource("BoxMesh_tableleg")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="TableLeg3" type="MeshInstance3D" parent="CrimeSceneObjects/CornerTableGroup"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.65, 0.35, 0.35)
+mesh = SubResource("BoxMesh_tableleg")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="TableLeg4" type="MeshInstance3D" parent="CrimeSceneObjects/CornerTableGroup"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.65, 0.35, 0.35)
+mesh = SubResource("BoxMesh_tableleg")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="Candlestick" type="MeshInstance3D" parent="CrimeSceneObjects/CornerTableGroup"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3, 0.95, 0.1)
+mesh = SubResource("CylinderMesh_item")
+surface_material_override/0 = SubResource("StandardMaterial3D_gold")
+
+[node name="WineGlass" type="MeshInstance3D" parent="CrimeSceneObjects/CornerTableGroup"]
+transform = Transform3D(0.707107, 0, 0.707107, 0.707107, 0, -0.707107, 0, 1, 0, -0.3, 0.7, 0.2)
+mesh = SubResource("CylinderMesh_item")
+surface_material_override/0 = SubResource("StandardMaterial3D_blood")
+
+[node name="BodyAndEvidence" type="Node3D" parent="CrimeSceneObjects"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 0, 0)
+
+[node name="LordBlackwoodBody" type="Node3D" parent="CrimeSceneObjects/BodyAndEvidence"]
+transform = Transform3D(0.6846871, 0, 0.7288372, 0, 1, 0, -0.7288372, 0, 0.6846871, 8.884956, 0.15, 1.6102068)
+
+[node name="Head" type="MeshInstance3D" parent="CrimeSceneObjects/BodyAndEvidence/LordBlackwoodBody"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.6, 0, 0)
+mesh = SubResource("BoxMesh_head")
+surface_material_override/0 = SubResource("StandardMaterial3D_skin")
+
+[node name="Torso" type="MeshInstance3D" parent="CrimeSceneObjects/BodyAndEvidence/LordBlackwoodBody"]
+mesh = SubResource("BoxMesh_torso")
+surface_material_override/0 = SubResource("StandardMaterial3D_suit")
+
+[node name="LeftArm" type="MeshInstance3D" parent="CrimeSceneObjects/BodyAndEvidence/LordBlackwoodBody"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.1, 0, 0.3)
+mesh = SubResource("BoxMesh_arm")
+surface_material_override/0 = SubResource("StandardMaterial3D_suit")
+
+[node name="RightArm" type="MeshInstance3D" parent="CrimeSceneObjects/BodyAndEvidence/LordBlackwoodBody"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.1, 0, -0.3)
+mesh = SubResource("BoxMesh_arm")
+surface_material_override/0 = SubResource("StandardMaterial3D_suit")
+
+[node name="LeftLeg" type="MeshInstance3D" parent="CrimeSceneObjects/BodyAndEvidence/LordBlackwoodBody"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.6, 0, 0.12)
+mesh = SubResource("BoxMesh_leg")
+surface_material_override/0 = SubResource("StandardMaterial3D_pants")
+
+[node name="RightLeg" type="MeshInstance3D" parent="CrimeSceneObjects/BodyAndEvidence/LordBlackwoodBody"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.6, 0, -0.12)
+mesh = SubResource("BoxMesh_leg")
+surface_material_override/0 = SubResource("StandardMaterial3D_pants")
+
+[node name="BloodPool" type="MeshInstance3D" parent="CrimeSceneObjects/BodyAndEvidence"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.3700075, 0.048289545, 1.4408431)
+mesh = SubResource("CylinderMesh_blood")
+surface_material_override/0 = SubResource("StandardMaterial3D_blood")
+
+[node name="DroppedRing" type="MeshInstance3D" parent="CrimeSceneObjects/BodyAndEvidence"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.267146, 0.05, 1.5342667)
+mesh = SubResource("CylinderMesh_item")
+surface_material_override/0 = SubResource("StandardMaterial3D_gold")
+
+[node name="DroppedLedger" parent="CrimeSceneObjects/BodyAndEvidence" instance=ExtResource("11_jbjv5")]
+transform = Transform3D(0.17218038, 0, -0.10175422, 0, 0.2, 0, 0.10175422, 0, 0.17218038, -0.5220938, 0.05646658, 1.1510835)
+
+[node name="Handkerchief" parent="CrimeSceneObjects/BodyAndEvidence" instance=ExtResource("12_dfkrl")]
+transform = Transform3D(0.44438422, -0.40314093, 1.7621849e-08, 0, -2.622683e-08, -0.59999996, 0.40314093, 0.44438422, -1.942465e-08, -4.4443336, 0.024209797, -0.9364557)
+
+[node name="LetterOpener" parent="CrimeSceneObjects/BodyAndEvidence" instance=ExtResource("19_i8mxe")]
+transform = Transform3D(0.015184397, 0.019860366, -8.681242e-10, 0, -1.0927848e-09, -0.025, -0.019860366, 0.015184397, -6.6373107e-10, 9.659, 0.059, 6.018)
+
+[node name="EnvironmentalDetails" type="Node3D" parent="CrimeSceneObjects"]
+
+[node name="KnockedChair" type="Node3D" parent="CrimeSceneObjects/EnvironmentalDetails"]
+transform = Transform3D(0.866025, -0.5, 0, 0.5, 0.866025, 0, 0, 0, 1, 9.3509035, 0, -0.4072922)
+
+[node name="ChairSeat" type="MeshInstance3D" parent="CrimeSceneObjects/EnvironmentalDetails/KnockedChair"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, 0)
+mesh = SubResource("BoxMesh_chair")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="ChairBack" type="MeshInstance3D" parent="CrimeSceneObjects/EnvironmentalDetails/KnockedChair"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.55, -0.2)
+mesh = SubResource("BoxMesh_tableleg")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="Windows" type="Node3D" parent="CrimeSceneObjects"]
+
+[node name="WestInnerWindow" type="Node3D" parent="CrimeSceneObjects/Windows"]
+transform = Transform3D(1, -8.742278e-08, 8.742278e-08, -8.742278e-08, -1, 0, 8.742278e-08, -7.642742e-15, -1, 3.5, 1.602, -1.87)
+
+[node name="GlassPane" type="MeshInstance3D" parent="CrimeSceneObjects/Windows/WestInnerWindow"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.08)
+cast_shadow = 0
+mesh = SubResource("BoxMesh_window")
+surface_material_override/0 = SubResource("ShaderMaterial_window_glass")
+
+[node name="FrameTop" type="MeshInstance3D" parent="CrimeSceneObjects/Windows/WestInnerWindow"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5250001, -0.111694336)
+mesh = SubResource("BoxMesh_frame_horizontal")
+surface_material_override/0 = SubResource("StandardMaterial3D_window_frame")
+
+[node name="FrameBottom" type="MeshInstance3D" parent="CrimeSceneObjects/Windows/WestInnerWindow"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.525, -0.111694336)
+mesh = SubResource("BoxMesh_frame_horizontal")
+surface_material_override/0 = SubResource("StandardMaterial3D_window_frame")
+
+[node name="FrameLeft" type="MeshInstance3D" parent="CrimeSceneObjects/Windows/WestInnerWindow"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.375, 0, -0.111694336)
+mesh = SubResource("BoxMesh_frame_vertical")
+surface_material_override/0 = SubResource("StandardMaterial3D_window_frame")
+
+[node name="FrameRight" type="MeshInstance3D" parent="CrimeSceneObjects/Windows/WestInnerWindow"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.37499952, 0, -0.111694336)
+mesh = SubResource("BoxMesh_frame_vertical")
+surface_material_override/0 = SubResource("StandardMaterial3D_window_frame")
+
+[node name="SunriseLight" type="SpotLight3D" parent="CrimeSceneObjects/Windows/WestInnerWindow"]
+transform = Transform3D(1, -4.3274387e-08, 0.00026169565, 6.15822e-05, 0.9719569, -0.23515917, -0.00025434673, 0.23515919, 0.97195685, -0.041039467, -0.15524876, 0.5037675)
+light_color = Color(1, 0.7, 0.4, 1)
+light_energy = 2.5
+light_volumetric_fog_energy = 15000.0
+shadow_enabled = true
+spot_range = 13.0
+spot_attenuation = 1.5
+spot_angle = 30.0
+
+[node name="WindowSillVase" type="MeshInstance3D" parent="CrimeSceneObjects/Windows/WestInnerWindow"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, -0.525, 0.5)
+mesh = SubResource("CylinderMesh_small_vase")
+surface_material_override/0 = SubResource("StandardMaterial3D_brass")
+
+[node name="WindowSillCandle" type="MeshInstance3D" parent="CrimeSceneObjects/Windows/WestInnerWindow"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, -0.525, 0.5)
+mesh = SubResource("CylinderMesh_candle")
+surface_material_override/0 = SubResource("StandardMaterial3D_candle")
+
+[node name="SunriseLight2" type="SpotLight3D" parent="CrimeSceneObjects/Windows/WestInnerWindow"]
+transform = Transform3D(0.99999994, 2.3848655e-08, 0.0002617066, -0.0001394388, 0.8462861, 0.5327285, -0.00022146598, -0.53272855, 0.8462861, -0.041039467, 0.45421696, 0.5053148)
+light_color = Color(1, 0.7, 0.4, 1)
+light_energy = 2.5
+light_volumetric_fog_energy = 15000.0
+shadow_enabled = true
+spot_range = 13.0
+spot_attenuation = 1.5
+spot_angle = 30.0
+
+[node name="SunriseLight3" type="SpotLight3D" parent="CrimeSceneObjects/Windows/WestInnerWindow"]
+transform = Transform3D(1, -2.0204203e-08, 0.00026169323, -7.483001e-06, 0.9995889, 0.028671723, -0.00026158625, -0.028671725, 0.99958885, -0.041039467, 0.1119529, 0.5673957)
+light_color = Color(1, 0.7, 0.4, 1)
+light_energy = 2.5
+light_volumetric_fog_energy = 15000.0
+shadow_enabled = true
+spot_range = 13.0
+spot_attenuation = 1.5
+spot_angle = 25.78
+
+[node name="WestOuterWindow" type="Node3D" parent="CrimeSceneObjects/Windows"]
+transform = Transform3D(1, -8.742278e-08, 8.742278e-08, -8.742278e-08, -1, 0, 8.742278e-08, -7.642742e-15, -1, -2, 1.602, -1.87)
+
+[node name="GlassPane" type="MeshInstance3D" parent="CrimeSceneObjects/Windows/WestOuterWindow"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.08)
+cast_shadow = 0
+mesh = SubResource("BoxMesh_window")
+surface_material_override/0 = SubResource("ShaderMaterial_window_glass")
+
+[node name="FrameTop" type="MeshInstance3D" parent="CrimeSceneObjects/Windows/WestOuterWindow"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5250001, -0.14858818)
+mesh = SubResource("BoxMesh_frame_horizontal")
+surface_material_override/0 = SubResource("StandardMaterial3D_window_frame")
+
+[node name="FrameBottom" type="MeshInstance3D" parent="CrimeSceneObjects/Windows/WestOuterWindow"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.525, -0.14858818)
+mesh = SubResource("BoxMesh_frame_horizontal")
+surface_material_override/0 = SubResource("StandardMaterial3D_window_frame")
+
+[node name="FrameLeft" type="MeshInstance3D" parent="CrimeSceneObjects/Windows/WestOuterWindow"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.375, 0, -0.14858818)
+mesh = SubResource("BoxMesh_frame_vertical")
+surface_material_override/0 = SubResource("StandardMaterial3D_window_frame")
+
+[node name="FrameRight" type="MeshInstance3D" parent="CrimeSceneObjects/Windows/WestOuterWindow"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.375, 0, -0.14858818)
+mesh = SubResource("BoxMesh_frame_vertical")
+surface_material_override/0 = SubResource("StandardMaterial3D_window_frame")
+
+[node name="SunriseLight" type="SpotLight3D" parent="CrimeSceneObjects/Windows/WestOuterWindow"]
+transform = Transform3D(0.9988874, -3.6497617e-08, 0.04715877, 0.004427417, 0.9955833, -0.093778, -0.04695048, 0.09388245, 0.9944756, 0.07560241, -0.20703852, 0.5)
+light_color = Color(1, 0.7, 0.4, 1)
+light_energy = 2.5
+light_volumetric_fog_energy = 15000.0
+shadow_enabled = true
+spot_range = 13.0
+spot_attenuation = 1.5
+spot_angle = 30.0
+
+[node name="SunriseLight2" type="SpotLight3D" parent="CrimeSceneObjects/Windows/WestOuterWindow"]
+transform = Transform3D(0.9979553, 0.017328916, -0.06152163, -0.0074365847, 0.9874884, 0.15751733, 0.0634815, -0.15673774, 0.9855981, -0.038014412, 0.21824157, 0.39297152)
+light_color = Color(1, 0.7, 0.4, 1)
+light_energy = 2.5
+light_volumetric_fog_energy = 15000.0
+shadow_enabled = true
+spot_range = 13.0
+spot_attenuation = 1.5
+spot_angle = 35.63
+
+[node name="SunriseLight3" type="SpotLight3D" parent="CrimeSceneObjects/Windows/WestOuterWindow"]
+transform = Transform3D(0.99876225, 0.034898117, -0.035442937, -0.020096736, 0.9349352, 0.35424885, 0.04549947, -0.3530981, 0.9344793, 0.024464011, 0.3567009, 0.46450257)
+light_color = Color(1, 0.7, 0.4, 1)
+light_energy = 2.5
+light_volumetric_fog_energy = 15000.0
+shadow_enabled = true
+spot_range = 13.0
+spot_attenuation = 1.5
+spot_angle = 30.0
+
+[node name="EastInnerWindow" type="Node3D" parent="CrimeSceneObjects/Windows"]
+transform = Transform3D(4.371139e-08, -3.821371e-15, 1, -8.742278e-08, -1, 0, 1, -8.742278e-08, -4.371139e-08, 12, 1.602, 0.5)
+
+[node name="GlassPane" type="MeshInstance3D" parent="CrimeSceneObjects/Windows/EastInnerWindow"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.08)
+cast_shadow = 0
+mesh = SubResource("BoxMesh_window")
+surface_material_override/0 = SubResource("ShaderMaterial_window_glass")
+
+[node name="FrameTop" type="MeshInstance3D" parent="CrimeSceneObjects/Windows/EastInnerWindow"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5250001, -0.09917641)
+mesh = SubResource("BoxMesh_frame_horizontal")
+surface_material_override/0 = SubResource("StandardMaterial3D_window_frame")
+
+[node name="FrameBottom" type="MeshInstance3D" parent="CrimeSceneObjects/Windows/EastInnerWindow"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.525, -0.09917641)
+mesh = SubResource("BoxMesh_frame_horizontal")
+surface_material_override/0 = SubResource("StandardMaterial3D_window_frame")
+
+[node name="FrameLeft" type="MeshInstance3D" parent="CrimeSceneObjects/Windows/EastInnerWindow"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.375, 0, -0.09917641)
+mesh = SubResource("BoxMesh_frame_vertical")
+surface_material_override/0 = SubResource("StandardMaterial3D_window_frame")
+
+[node name="FrameRight" type="MeshInstance3D" parent="CrimeSceneObjects/Windows/EastInnerWindow"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.375, 0, -0.09917641)
+mesh = SubResource("BoxMesh_frame_vertical")
+surface_material_override/0 = SubResource("StandardMaterial3D_window_frame")
+
+[node name="SunriseLight" type="SpotLight3D" parent="CrimeSceneObjects/Windows/EastInnerWindow"]
+transform = Transform3D(0.9997796, 1.43604435e-08, 0.02099471, -0.012423545, 0.8061245, 0.5916157, -0.016924342, -0.59174603, 0.8059468, 0, 0.23688579, 0.29817772)
+light_color = Color(1, 0.7, 0.4, 1)
+light_energy = 2.5
+light_volumetric_fog_energy = 15000.0
+shadow_enabled = true
+spot_range = 13.0
+spot_attenuation = 1.5
+spot_angle = 30.0
+
+[node name="WindowSillCandle" type="MeshInstance3D" parent="CrimeSceneObjects/Windows/EastInnerWindow"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.525, 0.5)
+mesh = SubResource("CylinderMesh_candle")
+surface_material_override/0 = SubResource("StandardMaterial3D_candle")
+
+[node name="SunriseLight2" type="SpotLight3D" parent="CrimeSceneObjects/Windows/EastInnerWindow"]
+transform = Transform3D(0.83800703, 0.11619459, -0.53314453, -0.004334928, 0.9784514, 0.20643193, 0.5456423, -0.17068025, 0.8204528, -0.20874405, 0.30055857, 0.40853024)
+light_color = Color(1, 0.7, 0.4, 1)
+light_energy = 2.5
+light_volumetric_fog_energy = 15000.0
+shadow_enabled = true
+spot_range = 13.0
+spot_attenuation = 1.5
+spot_angle = 30.0
+
+[node name="EastOuterWindow" type="Node3D" parent="CrimeSceneObjects/Windows"]
+transform = Transform3D(4.371139e-08, -3.821371e-15, 1, -8.742278e-08, -1, 0, 1, -8.742278e-08, -4.371139e-08, 12, 1.6, 5.8)
+
+[node name="GlassPane" type="MeshInstance3D" parent="CrimeSceneObjects/Windows/EastOuterWindow"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.08)
+cast_shadow = 0
+mesh = SubResource("BoxMesh_window")
+surface_material_override/0 = SubResource("ShaderMaterial_window_glass")
+
+[node name="FrameTop" type="MeshInstance3D" parent="CrimeSceneObjects/Windows/EastOuterWindow"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5250001, -0.0942688)
+mesh = SubResource("BoxMesh_frame_horizontal")
+surface_material_override/0 = SubResource("StandardMaterial3D_window_frame")
+
+[node name="FrameBottom" type="MeshInstance3D" parent="CrimeSceneObjects/Windows/EastOuterWindow"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.525, -0.0942688)
+mesh = SubResource("BoxMesh_frame_horizontal")
+surface_material_override/0 = SubResource("StandardMaterial3D_window_frame")
+
+[node name="FrameLeft" type="MeshInstance3D" parent="CrimeSceneObjects/Windows/EastOuterWindow"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.375, 0, -0.0942688)
+mesh = SubResource("BoxMesh_frame_vertical")
+surface_material_override/0 = SubResource("StandardMaterial3D_window_frame")
+
+[node name="FrameRight" type="MeshInstance3D" parent="CrimeSceneObjects/Windows/EastOuterWindow"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.375, 0, -0.0942688)
+mesh = SubResource("BoxMesh_frame_vertical")
+surface_material_override/0 = SubResource("StandardMaterial3D_window_frame")
+
+[node name="SunriseLight" type="SpotLight3D" parent="CrimeSceneObjects/Windows/EastOuterWindow"]
+transform = Transform3D(0.9250308, 8.0503835e-09, -0.37989208, 0.17676589, 0.88515013, 0.43042204, 0.33626148, -0.46530557, 0.81879115, -0.17676401, 0.12476301, 0.5)
+light_color = Color(1, 0.7, 0.4, 1)
+light_energy = 2.5
+light_volumetric_fog_energy = 15000.0
+shadow_enabled = true
+spot_range = 13.0
+spot_attenuation = 1.5
+spot_angle = 30.0
+
+[node name="WindowSillVase" type="MeshInstance3D" parent="CrimeSceneObjects/Windows/EastOuterWindow"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.525, 0.5)
+mesh = SubResource("CylinderMesh_small_vase")
+surface_material_override/0 = SubResource("StandardMaterial3D_brass")
+
+[node name="WindowSillVase2" type="MeshInstance3D" parent="CrimeSceneObjects/Windows/EastOuterWindow"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.525, 0.5)
+mesh = SubResource("CylinderMesh_small_vase")
+surface_material_override/0 = SubResource("StandardMaterial3D_brass")
+
+[node name="SunriseLight2" type="SpotLight3D" parent="CrimeSceneObjects/Windows/EastOuterWindow"]
+transform = Transform3D(0.8141454, -0.4104396, 0.41073903, 0.25548857, 0.88842106, 0.3813575, -0.5214334, -0.20554131, 0.8281666, 0.3575077, 0.36064374, 0.51123047)
+light_color = Color(1, 0.7, 0.4, 1)
+light_energy = 2.5
+light_volumetric_fog_energy = 15000.0
+shadow_enabled = true
+spot_range = 13.0
+spot_attenuation = 1.5
+spot_angle = 30.0
+
+[node name="Window5" type="Node3D" parent="CrimeSceneObjects/Windows"]
+transform = Transform3D(1, -8.742278e-08, 8.742278e-08, -8.742278e-08, -1, 0, 8.742278e-08, -7.642742e-15, -1, 9, 1.602, -1.87)
+
+[node name="GlassPane" type="MeshInstance3D" parent="CrimeSceneObjects/Windows/Window5"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.08)
+cast_shadow = 0
+mesh = SubResource("BoxMesh_window")
+surface_material_override/0 = SubResource("ShaderMaterial_window_glass")
+
+[node name="FrameTop" type="MeshInstance3D" parent="CrimeSceneObjects/Windows/Window5"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5250001, -0.111694336)
+mesh = SubResource("BoxMesh_frame_horizontal")
+surface_material_override/0 = SubResource("StandardMaterial3D_window_frame")
+
+[node name="FrameBottom" type="MeshInstance3D" parent="CrimeSceneObjects/Windows/Window5"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.525, -0.111694336)
+mesh = SubResource("BoxMesh_frame_horizontal")
+surface_material_override/0 = SubResource("StandardMaterial3D_window_frame")
+
+[node name="FrameLeft" type="MeshInstance3D" parent="CrimeSceneObjects/Windows/Window5"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.375, 0, -0.111694336)
+mesh = SubResource("BoxMesh_frame_vertical")
+surface_material_override/0 = SubResource("StandardMaterial3D_window_frame")
+
+[node name="FrameRight" type="MeshInstance3D" parent="CrimeSceneObjects/Windows/Window5"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.37499952, 0, -0.111694336)
+mesh = SubResource("BoxMesh_frame_vertical")
+surface_material_override/0 = SubResource("StandardMaterial3D_window_frame")
+
+[node name="SunriseLight" type="SpotLight3D" parent="CrimeSceneObjects/Windows/Window5"]
+transform = Transform3D(1, 1.4551917e-11, 0.0002616962, -6.802751e-05, 0.96562254, 0.25994837, -0.00025269974, -0.25994837, 0.9656225, -0.041039467, 0.2186532, 0.5053148)
+light_color = Color(1, 0.7, 0.4, 1)
+light_energy = 2.5
+light_volumetric_fog_energy = 15000.0
+shadow_enabled = true
+spot_range = 13.0
+spot_attenuation = 1.5
+spot_angle = 30.0
+
+[node name="GlassPane2" type="MeshInstance3D" parent="CrimeSceneObjects/Windows/Window5"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.08)
+cast_shadow = 0
+mesh = SubResource("BoxMesh_window")
+surface_material_override/0 = SubResource("ShaderMaterial_window_glass")
+
+[node name="FrameTop2" type="MeshInstance3D" parent="CrimeSceneObjects/Windows/Window5"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5250001, -0.111694336)
+mesh = SubResource("BoxMesh_frame_horizontal")
+surface_material_override/0 = SubResource("StandardMaterial3D_window_frame")
+
+[node name="FrameBottom2" type="MeshInstance3D" parent="CrimeSceneObjects/Windows/Window5"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.525, -0.111694336)
+mesh = SubResource("BoxMesh_frame_horizontal")
+surface_material_override/0 = SubResource("StandardMaterial3D_window_frame")
+
+[node name="FrameLeft2" type="MeshInstance3D" parent="CrimeSceneObjects/Windows/Window5"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.375, 0, -0.111694336)
+mesh = SubResource("BoxMesh_frame_vertical")
+surface_material_override/0 = SubResource("StandardMaterial3D_window_frame")
+
+[node name="FrameRight2" type="MeshInstance3D" parent="CrimeSceneObjects/Windows/Window5"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.37499952, 0, -0.111694336)
+mesh = SubResource("BoxMesh_frame_vertical")
+surface_material_override/0 = SubResource("StandardMaterial3D_window_frame")
+
+[node name="SunriseLight2" type="SpotLight3D" parent="CrimeSceneObjects/Windows/Window5"]
+transform = Transform3D(1, 1.4551917e-11, 0.0002616962, -6.802751e-05, 0.96562254, 0.25994837, -0.00025269974, -0.25994837, 0.9656225, -0.041039467, 0.2186532, 0.5053148)
+light_color = Color(1, 0.7, 0.4, 1)
+light_energy = 2.5
+light_volumetric_fog_energy = 15000.0
+shadow_enabled = true
+spot_range = 13.0
+spot_attenuation = 1.5
+spot_angle = 30.0
+
+[node name="Window6" type="Node3D" parent="CrimeSceneObjects/Windows"]
+transform = Transform3D(1, -8.742278e-08, 8.742278e-08, -8.742278e-08, -1, 0, 8.742278e-08, -7.642742e-15, -1, 9, 1.602, -1.87)
+
+[node name="FrontWindowLeft" type="Node3D" parent="CrimeSceneObjects/Windows"]
+transform = Transform3D(-1, 1.7484555e-07, 0, -8.742278e-08, -2, 0, 0, 0, 1, 10.046323, 1.9020202, 8.843189)
+
+[node name="GlassPane" type="MeshInstance3D" parent="CrimeSceneObjects/Windows/FrontWindowLeft"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.08)
+cast_shadow = 0
+mesh = SubResource("BoxMesh_window")
+surface_material_override/0 = SubResource("ShaderMaterial_window_glass")
+
+[node name="FrameTop" type="MeshInstance3D" parent="CrimeSceneObjects/Windows/FrontWindowLeft"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5250001, -0.0942688)
+mesh = SubResource("BoxMesh_frame_horizontal")
+surface_material_override/0 = SubResource("StandardMaterial3D_window_frame")
+
+[node name="FrameBottom" type="MeshInstance3D" parent="CrimeSceneObjects/Windows/FrontWindowLeft"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.525, -0.0942688)
+mesh = SubResource("BoxMesh_frame_horizontal")
+surface_material_override/0 = SubResource("StandardMaterial3D_window_frame")
+
+[node name="FrameLeft" type="MeshInstance3D" parent="CrimeSceneObjects/Windows/FrontWindowLeft"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.375, 0, -0.0942688)
+mesh = SubResource("BoxMesh_frame_vertical")
+surface_material_override/0 = SubResource("StandardMaterial3D_window_frame")
+
+[node name="FrameRight" type="MeshInstance3D" parent="CrimeSceneObjects/Windows/FrontWindowLeft"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.375, 0, -0.0942688)
+mesh = SubResource("BoxMesh_frame_vertical")
+surface_material_override/0 = SubResource("StandardMaterial3D_window_frame")
+
+[node name="SunriseLight" type="SpotLight3D" parent="CrimeSceneObjects/Windows/FrontWindowLeft"]
+transform = Transform3D(0.91363806, -0.12398335, -0.38716108, 0.090333804, 0.4884877, 0.056741368, 0.3641769, -0.1736296, 0.91500163, -0.23935032, 0.071909666, 0.40067482)
+light_color = Color(1, 0.7, 0.4, 1)
+light_energy = 2.5
+light_volumetric_fog_energy = 15000.0
+shadow_enabled = true
+spot_range = 13.0
+spot_attenuation = 1.5
+spot_angle = 30.0
+
+[node name="WindowSillVase" type="MeshInstance3D" parent="CrimeSceneObjects/Windows/FrontWindowLeft"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.525, 0.5)
+mesh = SubResource("CylinderMesh_small_vase")
+surface_material_override/0 = SubResource("StandardMaterial3D_brass")
+
+[node name="WindowSillVase2" type="MeshInstance3D" parent="CrimeSceneObjects/Windows/FrontWindowLeft"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.525, 0.5)
+mesh = SubResource("CylinderMesh_small_vase")
+surface_material_override/0 = SubResource("StandardMaterial3D_brass")
+
+[node name="SunriseLight2" type="SpotLight3D" parent="CrimeSceneObjects/Windows/FrontWindowLeft"]
+transform = Transform3D(0.8857988, -0.4440568, 0.13481146, 0.2306462, 0.4053966, -0.18015528, 0.0506942, 0.38135022, 0.9230396, 0.09253979, 0.18425035, 0.47810364)
+light_color = Color(1, 0.7, 0.4, 1)
+light_energy = 2.5
+light_volumetric_fog_energy = 15000.0
+shadow_enabled = true
+spot_range = 13.0
+spot_attenuation = 1.5
+spot_angle = 30.0
+
+[node name="SunriseLight3" type="SpotLight3D" parent="CrimeSceneObjects/Windows/FrontWindowLeft"]
+transform = Transform3D(0.9308967, -0.24991365, -0.2664104, 0.17421839, 0.4132222, 0.221123, 0.1096501, -0.5045126, 0.85641336, -0.14853191, -0.15973413, 0.40067482)
+light_color = Color(1, 0.7, 0.4, 1)
+light_energy = 2.5
+light_volumetric_fog_energy = 15000.0
+shadow_enabled = true
+spot_range = 13.0
+spot_attenuation = 1.5
+spot_angle = 30.0
+
+[node name="FrontWindowRight" type="Node3D" parent="CrimeSceneObjects/Windows"]
+transform = Transform3D(-1, 1.7484555e-07, 0, -8.742278e-08, -2, 0, 0, 0, 1, 7.950159, 1.9020202, 8.843189)
+
+[node name="GlassPane" type="MeshInstance3D" parent="CrimeSceneObjects/Windows/FrontWindowRight"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.08)
+cast_shadow = 0
+mesh = SubResource("BoxMesh_window")
+surface_material_override/0 = SubResource("ShaderMaterial_window_glass")
+
+[node name="FrameTop" type="MeshInstance3D" parent="CrimeSceneObjects/Windows/FrontWindowRight"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5250001, -0.0942688)
+mesh = SubResource("BoxMesh_frame_horizontal")
+surface_material_override/0 = SubResource("StandardMaterial3D_window_frame")
+
+[node name="FrameBottom" type="MeshInstance3D" parent="CrimeSceneObjects/Windows/FrontWindowRight"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.525, -0.0942688)
+mesh = SubResource("BoxMesh_frame_horizontal")
+surface_material_override/0 = SubResource("StandardMaterial3D_window_frame")
+
+[node name="FrameLeft" type="MeshInstance3D" parent="CrimeSceneObjects/Windows/FrontWindowRight"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.375, 0, -0.0942688)
+mesh = SubResource("BoxMesh_frame_vertical")
+surface_material_override/0 = SubResource("StandardMaterial3D_window_frame")
+
+[node name="FrameRight" type="MeshInstance3D" parent="CrimeSceneObjects/Windows/FrontWindowRight"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.375, 0, -0.0942688)
+mesh = SubResource("BoxMesh_frame_vertical")
+surface_material_override/0 = SubResource("StandardMaterial3D_window_frame")
+
+[node name="SunriseLight" type="SpotLight3D" parent="CrimeSceneObjects/Windows/FrontWindowRight"]
+transform = Transform3D(0.9437082, -0.20469731, 0.2598345, 0.09033381, 0.4884877, 0.056741368, -0.27708152, -0.0601509, 0.95896184, 0.15492296, 0, 0.5)
+light_color = Color(1, 0.7, 0.4, 1)
+light_energy = 2.5
+light_volumetric_fog_energy = 15000.0
+shadow_enabled = true
+spot_range = 13.0
+spot_attenuation = 1.5
+spot_angle = 30.0
+
+[node name="WindowSillVase" type="MeshInstance3D" parent="CrimeSceneObjects/Windows/FrontWindowRight"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.525, 0.5)
+mesh = SubResource("CylinderMesh_small_vase")
+surface_material_override/0 = SubResource("StandardMaterial3D_brass")
+
+[node name="WindowSillVase2" type="MeshInstance3D" parent="CrimeSceneObjects/Windows/FrontWindowRight"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.525, 0.5)
+mesh = SubResource("CylinderMesh_small_vase")
+surface_material_override/0 = SubResource("StandardMaterial3D_brass")
+
+[node name="SunriseLight2" type="SpotLight3D" parent="CrimeSceneObjects/Windows/FrontWindowRight"]
+transform = Transform3D(0.96045184, -0.27823886, -0.010741752, 0.12935986, 0.43874153, 0.20192054, -0.102938555, -0.39064902, 0.91476613, -0.001613617, -0.15474355, 0.56412125)
+light_color = Color(1, 0.7, 0.4, 1)
+light_energy = 2.5
+light_volumetric_fog_energy = 15000.0
+shadow_enabled = true
+spot_range = 13.0
+spot_attenuation = 1.5
+spot_angle = 30.0
+
+[node name="SunriseLight3" type="SpotLight3D" parent="CrimeSceneObjects/Windows/FrontWindowRight"]
+transform = Transform3D(0.46392882, 0.88586843, 0.0026832952, -0.38234752, 0.20099793, -0.25181383, -0.44722655, 0.2315955, 0.8639166, 0.020168781, 0.14207852, 0.34466267)
+light_color = Color(1, 0.7, 0.4, 1)
+light_energy = 2.5
+light_volumetric_fog_energy = 15000.0
+shadow_enabled = true
+spot_range = 13.0
+spot_attenuation = 1.5
+spot_angle = 30.0
+
+[node name="RandomObjects" type="Node3D" parent="."]
+
+[node name="grandfatherclock" parent="RandomObjects" instance=ExtResource("6_ko40w")]
+transform = Transform3D(1.8, 0, 0, 0, 1.8, 0, 0, 0, 1.8, 6.508112, 0, -1.625)
+
+[node name="LongCorridorFurniture" type="Node3D" parent="."]
+
+[node name="EastConsoleTable" type="Node3D" parent="LongCorridorFurniture"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.5, 0, 1.4)
+
+[node name="TableTop" type="MeshInstance3D" parent="LongCorridorFurniture/EastConsoleTable"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, 0)
+mesh = SubResource("BoxMesh_console_table")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="TableLeg1" type="MeshInstance3D" parent="LongCorridorFurniture/EastConsoleTable"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5, 0.2, -0.15)
+mesh = SubResource("BoxMesh_tableleg")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="TableLeg2" type="MeshInstance3D" parent="LongCorridorFurniture/EastConsoleTable"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 0.2, -0.15)
+mesh = SubResource("BoxMesh_tableleg")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="TableLeg3" type="MeshInstance3D" parent="LongCorridorFurniture/EastConsoleTable"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5, 0.2, 0.15)
+mesh = SubResource("BoxMesh_tableleg")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="TableLeg4" type="MeshInstance3D" parent="LongCorridorFurniture/EastConsoleTable"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 0.2, 0.15)
+mesh = SubResource("BoxMesh_tableleg")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="DecorativeVase" type="MeshInstance3D" parent="LongCorridorFurniture/EastConsoleTable"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+mesh = SubResource("CylinderMesh_vase")
+surface_material_override/0 = SubResource("StandardMaterial3D_brass")
+
+[node name="DecorativeBust" type="Node3D" parent="LongCorridorFurniture/EastConsoleTable"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0.8, 0)
+
+[node name="Pedestal" type="MeshInstance3D" parent="LongCorridorFurniture/EastConsoleTable/DecorativeBust"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.125, 0)
+mesh = SubResource("CylinderMesh_bust_pedestal")
+surface_material_override/0 = SubResource("StandardMaterial3D_marble")
+
+[node name="Head" type="MeshInstance3D" parent="LongCorridorFurniture/EastConsoleTable/DecorativeBust"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.35, 0)
+mesh = SubResource("SphereMesh_bust_head")
+surface_material_override/0 = SubResource("StandardMaterial3D_marble")
+
+[node name="WestSideTable" type="Node3D" parent="LongCorridorFurniture"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.5, 0, -1.4)
+
+[node name="TableTop" type="MeshInstance3D" parent="LongCorridorFurniture/WestSideTable"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, 0)
+mesh = SubResource("BoxMesh_console_table")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="TableLeg1" type="MeshInstance3D" parent="LongCorridorFurniture/WestSideTable"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5, 0.2, -0.15)
+mesh = SubResource("BoxMesh_tableleg")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="TableLeg2" type="MeshInstance3D" parent="LongCorridorFurniture/WestSideTable"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 0.2, -0.15)
+mesh = SubResource("BoxMesh_tableleg")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="TableLeg3" type="MeshInstance3D" parent="LongCorridorFurniture/WestSideTable"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5, 0.2, 0.15)
+mesh = SubResource("BoxMesh_tableleg")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="TableLeg4" type="MeshInstance3D" parent="LongCorridorFurniture/WestSideTable"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 0.2, 0.15)
+mesh = SubResource("BoxMesh_tableleg")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="PottedPlant" type="Node3D" parent="LongCorridorFurniture/WestSideTable"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3, 0.8, 0)
+
+[node name="Pot" type="MeshInstance3D" parent="LongCorridorFurniture/WestSideTable/PottedPlant"]
+mesh = SubResource("CylinderMesh_vase")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="Plant" type="MeshInstance3D" parent="LongCorridorFurniture/WestSideTable/PottedPlant"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.25, 0)
+mesh = SubResource("CylinderMesh_plant")
+surface_material_override/0 = SubResource("StandardMaterial3D_plant")
+
+[node name="Candlestick" type="MeshInstance3D" parent="LongCorridorFurniture/WestSideTable"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.3, 0.95, 0)
+mesh = SubResource("CylinderMesh_item")
+surface_material_override/0 = SubResource("StandardMaterial3D_gold")
+
+[node name="RunnerCarpet" type="MeshInstance3D" parent="LongCorridorFurniture"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.01, 0)
+mesh = SubResource("BoxMesh_carpet_runner")
+surface_material_override/0 = SubResource("StandardMaterial3D_carpet_red")
+
+[node name="ShortCorridorFurniture" type="Node3D" parent="."]
+
+[node name="WestBookshelf" type="Node3D" parent="ShortCorridorFurniture"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6.2, 0, 7.0552964)
+
+[node name="BackPanel" type="MeshInstance3D" parent="ShortCorridorFurniture/WestBookshelf"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, -0.044974327)
+mesh = SubResource("BoxMesh_bookshelf_back")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="LeftSide" type="MeshInstance3D" parent="ShortCorridorFurniture/WestBookshelf"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, -0.725)
+mesh = SubResource("BoxMesh_bookshelf_side")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="RightSide" type="MeshInstance3D" parent="ShortCorridorFurniture/WestBookshelf"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, 0.725)
+mesh = SubResource("BoxMesh_bookshelf_side")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="Shelf1" type="MeshInstance3D" parent="ShortCorridorFurniture/WestBookshelf"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+mesh = SubResource("BoxMesh_shelf")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="Shelf2" type="MeshInstance3D" parent="ShortCorridorFurniture/WestBookshelf"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+mesh = SubResource("BoxMesh_shelf")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="Shelf3" type="MeshInstance3D" parent="ShortCorridorFurniture/WestBookshelf"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
+mesh = SubResource("BoxMesh_shelf")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="Shelf4" type="MeshInstance3D" parent="ShortCorridorFurniture/WestBookshelf"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
+mesh = SubResource("BoxMesh_shelf")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="Shelf5" type="MeshInstance3D" parent="ShortCorridorFurniture/WestBookshelf"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 0)
+mesh = SubResource("BoxMesh_shelf")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="Book1" type="MeshInstance3D" parent="ShortCorridorFurniture/WestBookshelf"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 0.65, -0.5)
+mesh = SubResource("BoxMesh_book")
+surface_material_override/0 = SubResource("StandardMaterial3D_book_green")
+
+[node name="Book2" type="MeshInstance3D" parent="ShortCorridorFurniture/WestBookshelf"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 0.65, -0.35)
+mesh = SubResource("BoxMesh_book")
+surface_material_override/0 = SubResource("StandardMaterial3D_book_red")
+
+[node name="Book3" type="MeshInstance3D" parent="ShortCorridorFurniture/WestBookshelf"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 0.65, -0.2)
+mesh = SubResource("BoxMesh_book")
+surface_material_override/0 = SubResource("StandardMaterial3D_book_brown")
+
+[node name="Book4" type="MeshInstance3D" parent="ShortCorridorFurniture/WestBookshelf"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 0.65, -0.05)
+mesh = SubResource("BoxMesh_book")
+surface_material_override/0 = SubResource("StandardMaterial3D_book_green")
+
+[node name="Book5" type="MeshInstance3D" parent="ShortCorridorFurniture/WestBookshelf"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 0.65, 0.1)
+mesh = SubResource("BoxMesh_book")
+surface_material_override/0 = SubResource("StandardMaterial3D_book_brown")
+
+[node name="Book6" type="MeshInstance3D" parent="ShortCorridorFurniture/WestBookshelf"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 0.65, 0.25)
+mesh = SubResource("BoxMesh_book")
+surface_material_override/0 = SubResource("StandardMaterial3D_book_red")
+
+[node name="Book7" type="MeshInstance3D" parent="ShortCorridorFurniture/WestBookshelf"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 1.15, -0.45)
+mesh = SubResource("BoxMesh_book")
+surface_material_override/0 = SubResource("StandardMaterial3D_book_brown")
+
+[node name="Book8" type="MeshInstance3D" parent="ShortCorridorFurniture/WestBookshelf"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 1.15, -0.3)
+mesh = SubResource("BoxMesh_book")
+surface_material_override/0 = SubResource("StandardMaterial3D_book_green")
+
+[node name="Book9" type="MeshInstance3D" parent="ShortCorridorFurniture/WestBookshelf"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 1.15, -0.15)
+mesh = SubResource("BoxMesh_book")
+surface_material_override/0 = SubResource("StandardMaterial3D_book_red")
+
+[node name="Book10" type="MeshInstance3D" parent="ShortCorridorFurniture/WestBookshelf"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 1.15, 0)
+mesh = SubResource("BoxMesh_book")
+surface_material_override/0 = SubResource("StandardMaterial3D_book_brown")
+
+[node name="Book11" type="MeshInstance3D" parent="ShortCorridorFurniture/WestBookshelf"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 1.15, 0.15)
+mesh = SubResource("BoxMesh_book")
+surface_material_override/0 = SubResource("StandardMaterial3D_book_green")
+
+[node name="Book12" type="MeshInstance3D" parent="ShortCorridorFurniture/WestBookshelf"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 1.65, -0.5)
+mesh = SubResource("BoxMesh_book")
+surface_material_override/0 = SubResource("StandardMaterial3D_book_red")
+
+[node name="Book13" type="MeshInstance3D" parent="ShortCorridorFurniture/WestBookshelf"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 1.65, -0.35)
+mesh = SubResource("BoxMesh_book")
+surface_material_override/0 = SubResource("StandardMaterial3D_book_green")
+
+[node name="Book14" type="MeshInstance3D" parent="ShortCorridorFurniture/WestBookshelf"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 1.65, -0.2)
+mesh = SubResource("BoxMesh_book")
+surface_material_override/0 = SubResource("StandardMaterial3D_book_brown")
+
+[node name="Book15" type="MeshInstance3D" parent="ShortCorridorFurniture/WestBookshelf"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 1.65, -0.05)
+mesh = SubResource("BoxMesh_book")
+surface_material_override/0 = SubResource("StandardMaterial3D_book_red")
+
+[node name="Book16" type="MeshInstance3D" parent="ShortCorridorFurniture/WestBookshelf"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 1.65, 0.1)
+mesh = SubResource("BoxMesh_book")
+surface_material_override/0 = SubResource("StandardMaterial3D_book_green")
+
+[node name="Book17" type="MeshInstance3D" parent="ShortCorridorFurniture/WestBookshelf"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 1.65, 0.25)
+mesh = SubResource("BoxMesh_book")
+surface_material_override/0 = SubResource("StandardMaterial3D_book_brown")
+
+[node name="Book18" type="MeshInstance3D" parent="ShortCorridorFurniture/WestBookshelf"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 2.15, -0.45)
+mesh = SubResource("BoxMesh_book")
+surface_material_override/0 = SubResource("StandardMaterial3D_book_green")
+
+[node name="Book19" type="MeshInstance3D" parent="ShortCorridorFurniture/WestBookshelf"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 2.15, -0.3)
+mesh = SubResource("BoxMesh_book")
+surface_material_override/0 = SubResource("StandardMaterial3D_book_red")
+
+[node name="Book20" type="MeshInstance3D" parent="ShortCorridorFurniture/WestBookshelf"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 2.15, -0.15)
+mesh = SubResource("BoxMesh_book")
+surface_material_override/0 = SubResource("StandardMaterial3D_book_brown")
+
+[node name="Book21" type="MeshInstance3D" parent="ShortCorridorFurniture/WestBookshelf"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 2.15, 0)
+mesh = SubResource("BoxMesh_book")
+surface_material_override/0 = SubResource("StandardMaterial3D_book_green")
+
+[node name="Book22" type="MeshInstance3D" parent="ShortCorridorFurniture/WestBookshelf"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 2.15, 0.15)
+mesh = SubResource("BoxMesh_book")
+surface_material_override/0 = SubResource("StandardMaterial3D_book_red")
+
+[node name="Book23" type="MeshInstance3D" parent="ShortCorridorFurniture/WestBookshelf"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 2.65, -0.4)
+mesh = SubResource("BoxMesh_book")
+surface_material_override/0 = SubResource("StandardMaterial3D_book_brown")
+
+[node name="Book24" type="MeshInstance3D" parent="ShortCorridorFurniture/WestBookshelf"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 2.65, -0.2)
+mesh = SubResource("BoxMesh_book")
+surface_material_override/0 = SubResource("StandardMaterial3D_book_red")
+
+[node name="Book25" type="MeshInstance3D" parent="ShortCorridorFurniture/WestBookshelf"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 2.65, 0)
+mesh = SubResource("BoxMesh_book")
+surface_material_override/0 = SubResource("StandardMaterial3D_book_green")
+
+[node name="Book26" type="MeshInstance3D" parent="ShortCorridorFurniture/WestBookshelf"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 2.65, 0.2)
+mesh = SubResource("BoxMesh_book")
+surface_material_override/0 = SubResource("StandardMaterial3D_book_brown")
+
+[node name="EastBookshelf" type="Node3D" parent="ShortCorridorFurniture"]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 0.176, 0, 1.625)
+
+[node name="BackPanel" type="MeshInstance3D" parent="ShortCorridorFurniture/EastBookshelf"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.09100723, 1.25, 0.008790016)
+mesh = SubResource("BoxMesh_bookshelf_back")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="LeftSide" type="MeshInstance3D" parent="ShortCorridorFurniture/EastBookshelf"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, -0.725)
+mesh = SubResource("BoxMesh_bookshelf_side")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="RightSide" type="MeshInstance3D" parent="ShortCorridorFurniture/EastBookshelf"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, 0.725)
+mesh = SubResource("BoxMesh_bookshelf_side")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="Shelf1" type="MeshInstance3D" parent="ShortCorridorFurniture/EastBookshelf"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+mesh = SubResource("BoxMesh_shelf")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="Shelf2" type="MeshInstance3D" parent="ShortCorridorFurniture/EastBookshelf"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+mesh = SubResource("BoxMesh_shelf")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="Shelf3" type="MeshInstance3D" parent="ShortCorridorFurniture/EastBookshelf"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
+mesh = SubResource("BoxMesh_shelf")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="Shelf4" type="MeshInstance3D" parent="ShortCorridorFurniture/EastBookshelf"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
+mesh = SubResource("BoxMesh_shelf")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="Book1" type="MeshInstance3D" parent="ShortCorridorFurniture/EastBookshelf"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 0.65, -0.5)
+mesh = SubResource("BoxMesh_book")
+surface_material_override/0 = SubResource("StandardMaterial3D_book_brown")
+
+[node name="Book2" type="MeshInstance3D" parent="ShortCorridorFurniture/EastBookshelf"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 0.65, -0.35)
+mesh = SubResource("BoxMesh_book")
+surface_material_override/0 = SubResource("StandardMaterial3D_book_green")
+
+[node name="Book3" type="MeshInstance3D" parent="ShortCorridorFurniture/EastBookshelf"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 0.65, -0.2)
+mesh = SubResource("BoxMesh_book")
+surface_material_override/0 = SubResource("StandardMaterial3D_book_red")
+
+[node name="Book4" type="MeshInstance3D" parent="ShortCorridorFurniture/EastBookshelf"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 0.65, -0.05)
+mesh = SubResource("BoxMesh_book")
+surface_material_override/0 = SubResource("StandardMaterial3D_book_brown")
+
+[node name="Book5" type="MeshInstance3D" parent="ShortCorridorFurniture/EastBookshelf"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 0.65, 0.1)
+mesh = SubResource("BoxMesh_book")
+surface_material_override/0 = SubResource("StandardMaterial3D_book_red")
+
+[node name="Book6" type="MeshInstance3D" parent="ShortCorridorFurniture/EastBookshelf"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 0.65, 0.25)
+mesh = SubResource("BoxMesh_book")
+surface_material_override/0 = SubResource("StandardMaterial3D_book_green")
+
+[node name="Book7" type="MeshInstance3D" parent="ShortCorridorFurniture/EastBookshelf"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 1.15, -0.45)
+mesh = SubResource("BoxMesh_book")
+surface_material_override/0 = SubResource("StandardMaterial3D_book_red")
+
+[node name="Book8" type="MeshInstance3D" parent="ShortCorridorFurniture/EastBookshelf"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 1.15, -0.3)
+mesh = SubResource("BoxMesh_book")
+surface_material_override/0 = SubResource("StandardMaterial3D_book_brown")
+
+[node name="Book9" type="MeshInstance3D" parent="ShortCorridorFurniture/EastBookshelf"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 1.15, -0.15)
+mesh = SubResource("BoxMesh_book")
+surface_material_override/0 = SubResource("StandardMaterial3D_book_green")
+
+[node name="Book10" type="MeshInstance3D" parent="ShortCorridorFurniture/EastBookshelf"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 1.15, 0)
+mesh = SubResource("BoxMesh_book")
+surface_material_override/0 = SubResource("StandardMaterial3D_book_red")
+
+[node name="Book11" type="MeshInstance3D" parent="ShortCorridorFurniture/EastBookshelf"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 1.15, 0.15)
+mesh = SubResource("BoxMesh_book")
+surface_material_override/0 = SubResource("StandardMaterial3D_book_brown")
+
+[node name="Book12" type="MeshInstance3D" parent="ShortCorridorFurniture/EastBookshelf"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 1.65, -0.5)
+mesh = SubResource("BoxMesh_book")
+surface_material_override/0 = SubResource("StandardMaterial3D_book_green")
+
+[node name="Book13" type="MeshInstance3D" parent="ShortCorridorFurniture/EastBookshelf"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 1.65, -0.35)
+mesh = SubResource("BoxMesh_book")
+surface_material_override/0 = SubResource("StandardMaterial3D_book_brown")
+
+[node name="Book14" type="MeshInstance3D" parent="ShortCorridorFurniture/EastBookshelf"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 1.65, -0.2)
+mesh = SubResource("BoxMesh_book")
+surface_material_override/0 = SubResource("StandardMaterial3D_book_red")
+
+[node name="Book15" type="MeshInstance3D" parent="ShortCorridorFurniture/EastBookshelf"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 1.65, -0.05)
+mesh = SubResource("BoxMesh_book")
+surface_material_override/0 = SubResource("StandardMaterial3D_book_green")
+
+[node name="Book16" type="MeshInstance3D" parent="ShortCorridorFurniture/EastBookshelf"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 1.65, 0.1)
+mesh = SubResource("BoxMesh_book")
+surface_material_override/0 = SubResource("StandardMaterial3D_book_brown")
+
+[node name="Book17" type="MeshInstance3D" parent="ShortCorridorFurniture/EastBookshelf"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 1.65, 0.25)
+mesh = SubResource("BoxMesh_book")
+surface_material_override/0 = SubResource("StandardMaterial3D_book_red")
+
+[node name="Book18" type="MeshInstance3D" parent="ShortCorridorFurniture/EastBookshelf"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 2.15, -0.45)
+mesh = SubResource("BoxMesh_book")
+surface_material_override/0 = SubResource("StandardMaterial3D_book_brown")
+
+[node name="Book19" type="MeshInstance3D" parent="ShortCorridorFurniture/EastBookshelf"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 2.15, -0.3)
+mesh = SubResource("BoxMesh_book")
+surface_material_override/0 = SubResource("StandardMaterial3D_book_green")
+
+[node name="Book20" type="MeshInstance3D" parent="ShortCorridorFurniture/EastBookshelf"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 2.15, -0.15)
+mesh = SubResource("BoxMesh_book")
+surface_material_override/0 = SubResource("StandardMaterial3D_book_red")
+
+[node name="Book21" type="MeshInstance3D" parent="ShortCorridorFurniture/EastBookshelf"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 2.15, 0)
+mesh = SubResource("BoxMesh_book")
+surface_material_override/0 = SubResource("StandardMaterial3D_book_brown")
+
+[node name="Book22" type="MeshInstance3D" parent="ShortCorridorFurniture/EastBookshelf"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 2.15, 0.15)
+mesh = SubResource("BoxMesh_book")
+surface_material_override/0 = SubResource("StandardMaterial3D_book_green")
+
+[node name="EastSideTable" type="Node3D" parent="ShortCorridorFurniture"]
+transform = Transform3D(4.371139e-08, 0, 1, 0, 1, 0, -1, 0, 4.371139e-08, 11.716994, 0, 2)
+
+[node name="TableTop" type="MeshInstance3D" parent="ShortCorridorFurniture/EastSideTable"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, 0)
+mesh = SubResource("BoxMesh_console_table")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="TableLeg1" type="MeshInstance3D" parent="ShortCorridorFurniture/EastSideTable"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5, 0.2, -0.15)
+mesh = SubResource("BoxMesh_tableleg")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="TableLeg2" type="MeshInstance3D" parent="ShortCorridorFurniture/EastSideTable"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 0.2, -0.15)
+mesh = SubResource("BoxMesh_tableleg")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="TableLeg3" type="MeshInstance3D" parent="ShortCorridorFurniture/EastSideTable"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5, 0.2, 0.15)
+mesh = SubResource("BoxMesh_tableleg")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="TableLeg4" type="MeshInstance3D" parent="ShortCorridorFurniture/EastSideTable"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 0.2, 0.15)
+mesh = SubResource("BoxMesh_tableleg")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="DecorativeVase" type="MeshInstance3D" parent="ShortCorridorFurniture/EastSideTable"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.3, 1, 0)
+mesh = SubResource("CylinderMesh_vase")
+surface_material_override/0 = SubResource("StandardMaterial3D_brass")
+
+[node name="DecorativeBust" type="Node3D" parent="ShortCorridorFurniture/EastSideTable"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3, 0.8, 0)
+
+[node name="Pedestal" type="MeshInstance3D" parent="ShortCorridorFurniture/EastSideTable/DecorativeBust"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.125, 0)
+mesh = SubResource("CylinderMesh_bust_pedestal")
+surface_material_override/0 = SubResource("StandardMaterial3D_marble")
+
+[node name="Head" type="MeshInstance3D" parent="ShortCorridorFurniture/EastSideTable/DecorativeBust"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.35, 0)
+mesh = SubResource("SphereMesh_bust_head")
+surface_material_override/0 = SubResource("StandardMaterial3D_marble")
+
+[node name="AreaRug" type="MeshInstance3D" parent="ShortCorridorFurniture"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9, 0.01, 4.5)
+mesh = SubResource("BoxMesh_area_rug")
+surface_material_override/0 = SubResource("StandardMaterial3D_carpet_green")
+
+[node name="EntranceFurniture" type="Node3D" parent="ShortCorridorFurniture"]
+
+[node name="ShoeStorage" type="Node3D" parent="ShortCorridorFurniture/EntranceFurniture"]
+transform = Transform3D(0.99996436, 0, -0.008447293, 0, 1, 0, 0.008447293, 0, 0.99996436, 6.9621983, 0, 8.494082)
+
+[node name="CabinetBody" type="MeshInstance3D" parent="ShortCorridorFurniture/EntranceFurniture/ShoeStorage"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
+mesh = SubResource("BoxMesh_shoe_cabinet")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="Leg1" type="MeshInstance3D" parent="ShortCorridorFurniture/EntranceFurniture/ShoeStorage"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.56, 0.15, -0.16)
+mesh = SubResource("BoxMesh_shoe_leg")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="Leg2" type="MeshInstance3D" parent="ShortCorridorFurniture/EntranceFurniture/ShoeStorage"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.56, 0.15, -0.16)
+mesh = SubResource("BoxMesh_shoe_leg")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="Leg3" type="MeshInstance3D" parent="ShortCorridorFurniture/EntranceFurniture/ShoeStorage"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.56, 0.15, 0.16)
+mesh = SubResource("BoxMesh_shoe_leg")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="Leg4" type="MeshInstance3D" parent="ShortCorridorFurniture/EntranceFurniture/ShoeStorage"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.56, 0.15, 0.16)
+mesh = SubResource("BoxMesh_shoe_leg")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="CabinetBody2" type="MeshInstance3D" parent="ShortCorridorFurniture/EntranceFurniture/ShoeStorage"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
+mesh = SubResource("BoxMesh_shoe_cabinet")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="Leg5" type="MeshInstance3D" parent="ShortCorridorFurniture/EntranceFurniture/ShoeStorage"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.56, 0.15, -0.16)
+mesh = SubResource("BoxMesh_shoe_leg")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="Leg6" type="MeshInstance3D" parent="ShortCorridorFurniture/EntranceFurniture/ShoeStorage"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.56, 0.15, -0.16)
+mesh = SubResource("BoxMesh_shoe_leg")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="Leg7" type="MeshInstance3D" parent="ShortCorridorFurniture/EntranceFurniture/ShoeStorage"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.56, 0.15, 0.16)
+mesh = SubResource("BoxMesh_shoe_leg")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="Leg8" type="MeshInstance3D" parent="ShortCorridorFurniture/EntranceFurniture/ShoeStorage"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.56, 0.15, 0.16)
+mesh = SubResource("BoxMesh_shoe_leg")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="CoatRack" type="Node3D" parent="ShortCorridorFurniture/EntranceFurniture"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 11.5, 0, 7.5)
+
+[node name="Base" type="MeshInstance3D" parent="ShortCorridorFurniture/EntranceFurniture/CoatRack"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.025, 0)
+mesh = SubResource("CylinderMesh_coat_base")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="Post" type="MeshInstance3D" parent="ShortCorridorFurniture/EntranceFurniture/CoatRack"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+mesh = SubResource("CylinderMesh_coat_post")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="Hook1" type="MeshInstance3D" parent="ShortCorridorFurniture/EntranceFurniture/CoatRack"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.155, 1.2, 0)
+mesh = SubResource("BoxMesh_coat_hook")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="Hook2" type="MeshInstance3D" parent="ShortCorridorFurniture/EntranceFurniture/CoatRack"]
+transform = Transform3D(-0.5, 0, 0.866, 0, 1, 0, -0.866, 0, -0.5, -0.0775, 1.2, 0.134)
+mesh = SubResource("BoxMesh_coat_hook")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="Hook3" type="MeshInstance3D" parent="ShortCorridorFurniture/EntranceFurniture/CoatRack"]
+transform = Transform3D(-0.5, 0, -0.866, 0, 1, 0, 0.866, 0, -0.5, -0.0775, 1.2, -0.134)
+mesh = SubResource("BoxMesh_coat_hook")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="Hook4" type="MeshInstance3D" parent="ShortCorridorFurniture/EntranceFurniture/CoatRack"]
+transform = Transform3D(0.5, 0, 0.866, 0, 1, 0, -0.866, 0, 0.5, 0.0775, 1.5, 0.134)
+mesh = SubResource("BoxMesh_coat_hook")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="Hook5" type="MeshInstance3D" parent="ShortCorridorFurniture/EntranceFurniture/CoatRack"]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, -0.155, 1.5, 0)
+mesh = SubResource("BoxMesh_coat_hook")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="Hook6" type="MeshInstance3D" parent="ShortCorridorFurniture/EntranceFurniture/CoatRack"]
+transform = Transform3D(0.5, 0, -0.866, 0, 1, 0, 0.866, 0, 0.5, 0.0775, 1.5, -0.134)
+mesh = SubResource("BoxMesh_coat_hook")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="Base2" type="MeshInstance3D" parent="ShortCorridorFurniture/EntranceFurniture/CoatRack"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.025, 0)
+mesh = SubResource("CylinderMesh_coat_base")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="Post2" type="MeshInstance3D" parent="ShortCorridorFurniture/EntranceFurniture/CoatRack"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+mesh = SubResource("CylinderMesh_coat_post")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="Hook7" type="MeshInstance3D" parent="ShortCorridorFurniture/EntranceFurniture/CoatRack"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.155, 1.2, 0)
+mesh = SubResource("BoxMesh_coat_hook")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="Hook8" type="MeshInstance3D" parent="ShortCorridorFurniture/EntranceFurniture/CoatRack"]
+transform = Transform3D(-0.5, 0, 0.866, 0, 1, 0, -0.866, 0, -0.5, -0.0775, 1.2, 0.134)
+mesh = SubResource("BoxMesh_coat_hook")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="Hook9" type="MeshInstance3D" parent="ShortCorridorFurniture/EntranceFurniture/CoatRack"]
+transform = Transform3D(-0.5, 0, -0.866, 0, 1, 0, 0.866, 0, -0.5, -0.0775, 1.2, -0.134)
+mesh = SubResource("BoxMesh_coat_hook")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="Hook10" type="MeshInstance3D" parent="ShortCorridorFurniture/EntranceFurniture/CoatRack"]
+transform = Transform3D(0.5, 0, 0.866, 0, 1, 0, -0.866, 0, 0.5, 0.0775, 1.5, 0.134)
+mesh = SubResource("BoxMesh_coat_hook")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="Hook11" type="MeshInstance3D" parent="ShortCorridorFurniture/EntranceFurniture/CoatRack"]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, -0.155, 1.5, 0)
+mesh = SubResource("BoxMesh_coat_hook")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="Hook12" type="MeshInstance3D" parent="ShortCorridorFurniture/EntranceFurniture/CoatRack"]
+transform = Transform3D(0.5, 0, -0.866, 0, 1, 0, 0.866, 0, 0.5, 0.0775, 1.5, -0.134)
+mesh = SubResource("BoxMesh_coat_hook")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="UmbrellaStand" type="Node3D" parent="ShortCorridorFurniture/EntranceFurniture"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.091413, 0, 8.253898)
+
+[node name="Body2" type="MeshInstance3D" parent="ShortCorridorFurniture/EntranceFurniture/UmbrellaStand"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, 0)
+mesh = SubResource("CylinderMesh_umbrella_stand")
+surface_material_override/0 = SubResource("StandardMaterial3D_brass")
+
+[node name="EntrywayBench" type="Node3D" parent="ShortCorridorFurniture/EntranceFurniture"]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 10.41458, -2.3841858e-07, 8.4826975)
+
+[node name="Seat" type="MeshInstance3D" parent="ShortCorridorFurniture/EntranceFurniture/EntrywayBench"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, 0)
+mesh = SubResource("BoxMesh_bench_seat")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="Back" type="MeshInstance3D" parent="ShortCorridorFurniture/EntranceFurniture/EntrywayBench"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.65, -0.16)
+mesh = SubResource("BoxMesh_bench_back")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="Leg1" type="MeshInstance3D" parent="ShortCorridorFurniture/EntranceFurniture/EntrywayBench"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.32, 0.2, -0.14)
+mesh = SubResource("BoxMesh_bench_leg")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="Leg2" type="MeshInstance3D" parent="ShortCorridorFurniture/EntranceFurniture/EntrywayBench"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.32, 0.2, -0.14)
+mesh = SubResource("BoxMesh_bench_leg")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="Leg3" type="MeshInstance3D" parent="ShortCorridorFurniture/EntranceFurniture/EntrywayBench"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.32, 0.2, 0.14)
+mesh = SubResource("BoxMesh_bench_leg")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="Leg4" type="MeshInstance3D" parent="ShortCorridorFurniture/EntranceFurniture/EntrywayBench"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.32, 0.2, 0.14)
+mesh = SubResource("BoxMesh_bench_leg")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="Seat2" type="MeshInstance3D" parent="ShortCorridorFurniture/EntranceFurniture/EntrywayBench"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, 0)
+mesh = SubResource("BoxMesh_bench_seat")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="Back2" type="MeshInstance3D" parent="ShortCorridorFurniture/EntranceFurniture/EntrywayBench"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.65, -0.16)
+mesh = SubResource("BoxMesh_bench_back")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="Leg5" type="MeshInstance3D" parent="ShortCorridorFurniture/EntranceFurniture/EntrywayBench"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.32, 0.2, -0.14)
+mesh = SubResource("BoxMesh_bench_leg")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="Leg6" type="MeshInstance3D" parent="ShortCorridorFurniture/EntranceFurniture/EntrywayBench"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.32, 0.2, -0.14)
+mesh = SubResource("BoxMesh_bench_leg")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="Leg7" type="MeshInstance3D" parent="ShortCorridorFurniture/EntranceFurniture/EntrywayBench"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.32, 0.2, 0.14)
+mesh = SubResource("BoxMesh_bench_leg")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="Leg8" type="MeshInstance3D" parent="ShortCorridorFurniture/EntranceFurniture/EntrywayBench"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.32, 0.2, 0.14)
+mesh = SubResource("BoxMesh_bench_leg")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="WallMirror" type="Node3D" parent="ShortCorridorFurniture/EntranceFurniture"]
+transform = Transform3D(8.742278e-08, 0, 1, 0, 1, 0, -1, 0, 8.742278e-08, 11.980728, 1.5314279, 7.534152)
+
+[node name="Frame" type="MeshInstance3D" parent="ShortCorridorFurniture/EntranceFurniture/WallMirror"]
+mesh = SubResource("BoxMesh_mirror_frame")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="Glass" type="MeshInstance3D" parent="ShortCorridorFurniture/EntranceFurniture/WallMirror"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.033947468)
+mesh = SubResource("BoxMesh_mirror_glass")
+surface_material_override/0 = SubResource("StandardMaterial3D_mirror")
+
+[node name="Frame2" type="MeshInstance3D" parent="ShortCorridorFurniture/EntranceFurniture/WallMirror"]
+mesh = SubResource("BoxMesh_mirror_frame")
+surface_material_override/0 = SubResource("StandardMaterial3D_table")
+
+[node name="Glass2" type="MeshInstance3D" parent="ShortCorridorFurniture/EntranceFurniture/WallMirror"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.02)
+mesh = SubResource("BoxMesh_mirror_glass")
+surface_material_override/0 = SubResource("StandardMaterial3D_mirror")
+
+[node name="ShoeStorage2" type="Node3D" parent="ShortCorridorFurniture/EntranceFurniture"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6.3, 0, 7.5)
+
+[node name="CoatRack2" type="Node3D" parent="ShortCorridorFurniture/EntranceFurniture"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 11.5, 0, 7.5)
+
+[node name="UmbrellaStand2" type="Node3D" parent="ShortCorridorFurniture/EntranceFurniture"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.3, 0, 8.5)
+
+[node name="EntrywayBench2" type="Node3D" parent="ShortCorridorFurniture/EntranceFurniture"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6.25, 0, 6.5)
+
+[node name="WallMirror2" type="Node3D" parent="ShortCorridorFurniture/EntranceFurniture"]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 6.15, 1.8, 6.5)
+
+[node name="EntranceFurniture2" type="Node3D" parent="ShortCorridorFurniture"]
+
+[editable path="PhotoFrames/HouseKeeper"]
+[editable path="PhotoFrames/HouseKeeper/PortraitFrame2"]
+[editable path="PhotoFrames/InspectorCrawford"]
+[editable path="PhotoFrames/InspectorCrawford/Frame"]
+[editable path="PhotoFrames/LadyBlackwood"]
+[editable path="PhotoFrames/LadyBlackwood/victorian_3"]
+[editable path="PhotoFrames/YoungTimBlackwood"]
+[editable path="PhotoFrames/YoungTimBlackwood/victorian_1"]
+[editable path="PhotoFrames/EleanorHeartwell"]
+[editable path="PhotoFrames/EleanorHeartwell/victorian_2"]
+[editable path="PhotoFrames/DrHenryMorrison"]
+[editable path="PhotoFrames/DrHenryMorrison/victorian_5"]

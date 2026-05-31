@@ -1,0 +1,23 @@
+[gd_scene load_steps=4 format=3 uid="uid://c1at2ighj8ag6"]
+
+[ext_resource type="Material" uid="uid://dskbvfhxan1mf" path="res://shaders/pixel_perfect_ouline.tres" id="2_0615d"]
+[ext_resource type="PackedScene" uid="uid://u72sr77pe2hy" path="res://Scenes/Evidence/Handkerchief/HandkerchiefModel.tscn" id="3_0615d"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_ojufp"]
+size = Vector3(0.5185547, 0.50634766, 0.07098389)
+
+[node name="Handkerchief" type="Node3D"]
+
+[node name="InteractableObject" type="Area3D" parent="." node_paths=PackedStringArray("Model")]
+Model = NodePath("../HandkerchiefModel/Cube")
+HighlightMaterial = ExtResource("2_0615d")
+metadata/_custom_type_script = "uid://d3r4qxofp1pj3"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="InteractableObject"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.24072266, -0.24682617, -0.01876831)
+shape = SubResource("BoxShape3D_ojufp")
+
+[node name="HandkerchiefModel" parent="." instance=ExtResource("3_0615d")]
+transform = Transform3D(0.01, 0, 0, 0, 0.01, 0, 0, 0, 0.01, 0, 0, 0)
+
+[editable path="HandkerchiefModel"]
