@@ -98,6 +98,32 @@ export function isUnterminatedString(value: string): boolean {
   return value.startsWith('"') && countUnescapedQuotes(value) % 2 === 1;
 }
 
+/**
+ * True when a property value isn't complete on this line. Godot writes
+ * multi-line values both as unterminated strings (label text) AND as bracketed
+ * arrays/dicts spanning lines — packed arrays and especially `SpriteFrames`
+ * `animations = [{ … }]`. The line-based parsers must keep accumulating until
+ * BOTH quotes and brackets balance, or the value is truncated to its first
+ * fragment. Single string-aware scan: incomplete if a string is still open, or
+ * `[`/`{` outnumber `]`/`}` outside strings.
+ */
+export function isIncompleteValue(value: string): boolean {
+  let inString = false;
+  let depth = 0;
+  for (let i = 0; i < value.length; i++) {
+    const c = value[i];
+    if (inString) {
+      if (c === '\\') i++; // skip the escaped character
+      else if (c === '"') inString = false;
+      continue;
+    }
+    if (c === '"') inString = true;
+    else if (c === '[' || c === '{') depth++;
+    else if (c === ']' || c === '}') depth--;
+  }
+  return inString || depth > 0;
+}
+
 const ESCAPE_MAP: Record<string, string> = {
   '"': '"',
   '\\': '\\',

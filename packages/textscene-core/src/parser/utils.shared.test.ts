@@ -6,7 +6,13 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { countUnescapedQuotes, isUnterminatedString, unquoteString, intOr } from './utils';
+import {
+  countUnescapedQuotes,
+  isUnterminatedString,
+  isIncompleteValue,
+  unquoteString,
+  intOr,
+} from './utils';
 
 describe('countUnescapedQuotes', () => {
   it('counts plain delimiters', () => {
@@ -35,6 +41,31 @@ describe('isUnterminatedString', () => {
   it('ignores non-string values', () => {
     expect(isUnterminatedString('Vector2(1, 2)')).toBe(false);
     expect(isUnterminatedString('42')).toBe(false);
+  });
+});
+
+describe('isIncompleteValue', () => {
+  it('flags an open string (like isUnterminatedString)', () => {
+    expect(isIncompleteValue('"Inspector Crawford')).toBe(true);
+    expect(isIncompleteValue('"closed"')).toBe(false);
+  });
+  it('flags a value with more open brackets than close (spans more lines)', () => {
+    expect(isIncompleteValue('[{')).toBe(true); // SpriteFrames `animations = [{` first line
+    expect(isIncompleteValue('"frames": [{')).toBe(true);
+    expect(isIncompleteValue('animations = [')).toBe(true);
+  });
+  it('accepts a balanced single-line array/dict', () => {
+    expect(isIncompleteValue('[1, 2, 3]')).toBe(false);
+    expect(isIncompleteValue('Rect2(0, 0, 16, 16)')).toBe(false);
+    expect(isIncompleteValue('[{"a": 1}]')).toBe(false);
+  });
+  it('accepts the full accumulated SpriteFrames value as complete', () => {
+    expect(
+      isIncompleteValue('[{"frames": [{"texture": ExtResource("2")}], "name": &"right"}]')
+    ).toBe(false);
+  });
+  it('ignores brackets inside strings', () => {
+    expect(isIncompleteValue('"a [ b { c"')).toBe(false);
   });
 });
 

@@ -12,7 +12,7 @@ import {
   isHeading,
   isComment,
   isEmpty,
-  isUnterminatedString,
+  isIncompleteValue,
 } from './utils.js';
 import type { ParsedHeading } from './utils.js';
 import { parseExternalResource, parseInternalResource } from './resourceParsers.js';
@@ -103,7 +103,7 @@ export class TscnParserCore {
           storePending();
         } else {
           pendingMultiline.value += '\n' + line;
-          if (!isUnterminatedString(pendingMultiline.value)) storePending();
+          if (!isIncompleteValue(pendingMultiline.value)) storePending();
           continue;
         }
       }
@@ -122,7 +122,7 @@ export class TscnParserCore {
       } else {
         const property = parseProperty(line);
         if (property && currentHeading) {
-          if (isUnterminatedString(property.value)) {
+          if (isIncompleteValue(property.value)) {
             pendingMultiline = { key: property.key, value: property.value };
           } else {
             currentProperties[property.key] = property.value;

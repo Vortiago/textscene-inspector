@@ -37,6 +37,25 @@ describe('<GenericNodeFallback>', () => {
     expect(renderer.scene.findByProps({ name: 'passthrough' })).toBeDefined();
   });
 
+  it('renders NO 3D box for a 2D-typed node (keeps 2D scenes flat)', async () => {
+    const node2d: TscnNode = { name: 'Trail', type: 'GPUParticles2D', children: [], properties: {} };
+    const renderer = await ReactThreeTestRenderer.create(<GenericNodeFallback node={node2d} />);
+    expect(renderer.scene.findAllByType('Mesh').length).toBe(0); // no placeholder box
+  });
+
+  it('still passes children through for a 2D-typed node', async () => {
+    const node2d: TscnNode = { name: 'Particles', type: 'CPUParticles2D', children: [], properties: {} };
+    const renderer = await ReactThreeTestRenderer.create(
+      <GenericNodeFallback node={node2d}>
+        <mesh name="child2d">
+          <boxGeometry />
+          <meshBasicMaterial />
+        </mesh>
+      </GenericNodeFallback>
+    );
+    expect(renderer.scene.findByProps({ name: 'child2d' })).toBeDefined();
+  });
+
   it('applies Node3D-style transform when present on properties', async () => {
     const node: TscnNode = {
       name: 'PositionedMystery',

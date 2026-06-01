@@ -18,7 +18,7 @@ import {
   isHeading,
   isComment,
   isEmpty,
-  isUnterminatedString,
+  isIncompleteValue,
 } from '../parser/utils.js';
 import type { ParsedHeading } from '../parser/utils.js';
 import { parseExternalResource, parseInternalResource } from '../parser/resourceParsers.js';
@@ -178,26 +178,27 @@ export class StrictTscnParser {
           continue;
         }
 
-        // Handle multi-line string properties (e.g., shader code, label text).
-        // Uses the SAME unescaped-quote-parity test as the lenient parser
-        // (shared `isUnterminatedString`) so both agree on string termination —
-        // including strings containing escaped quotes (`\"`) or trailing
-        // backslashes (`\\"`).
-        if (isUnterminatedString(property.value)) {
+        // Handle multi-line property values — both unterminated strings (shader
+        // code, label text) and bracketed arrays/dicts that span lines
+        // (PackedArrays, SpriteFrames `animations = [{ … }]`). Uses the SAME
+        // `isIncompleteValue` test as the lenient parser so both agree on where
+        // a value ends — including strings with escaped quotes and nested
+        // brackets.
+        if (isIncompleteValue(property.value)) {
           let fullValue = property.value;
 
-          // Keep appending lines until the quote parity balances. If an
-          // unclosed string runs into a new section heading, salvage what we
-          // have and leave the heading for the outer loop to process — without
-          // this guard the heading (and the following section) get swallowed as
-          // string content (matches TscnParserCore's behavior).
+          // Keep appending lines until quotes AND brackets balance. If the value
+          // runs into a new section heading, salvage what we have and leave the
+          // heading for the outer loop to process — without this guard the
+          // heading (and the following section) get swallowed (matches
+          // TscnParserCore's behavior).
           while (i + 1 < lines.length) {
             if (isHeading(lines[i + 1]!)) break;
             i++;
             currentLineNumber = i + 1;
             fullValue += '\n' + lines[i]!;
-            if (!isUnterminatedString(fullValue)) {
-              break; // string closed
+            if (!isIncompleteValue(fullValue)) {
+              break; // value complete
             }
           }
 
