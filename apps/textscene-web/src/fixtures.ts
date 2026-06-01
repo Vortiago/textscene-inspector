@@ -91,6 +91,11 @@ export const fixtures: Fixture[] = [
     "category": "Examples - Complex Scenes"
   },
   {
+    "name": "Pong",
+    "file": "example-pong.tscn",
+    "category": "Examples - Complex Scenes"
+  },
+  {
     "name": "All Meshes",
     "file": "integration-all-meshes.tscn",
     "category": "Examples - Complex Scenes"
