@@ -104,11 +104,12 @@
   color: var(--tsi-fg-default);
 }
 
-/* ── 3-column DCC chrome ─────────────────────────────────────────────────
- * Full-width top bar over three columns: left "Scene" dock (outliner) |
- * splitter | center viewport | splitter | right "Inspector" dock. Both docks
- * are resizable (Splitter) and collapsible. Mirrors the Godot/Blender editor
- * layout the project is modelled on.
+/* ── Split Dock chrome (ADR-0007) ────────────────────────────────────────
+ * Full-width top bar over two columns: a large center viewport and a single
+ * right "dock". The dock is a vertical master-detail — Scene tree on top,
+ * Inspector directly below — so a selection's properties appear with no tab
+ * hop. No left rail: the VS Code webview already sits right of VS Code's own
+ * activity bar + Explorer, so a left rail would clash and waste width.
  */
 
 /* Full-width top bar: brand, host toolbar (fixture picker), viewport-mode
@@ -143,41 +144,59 @@
   min-height: 0;
 }
 
-.leftDock,
-.rightDock {
+/* The single right dock. Resizable width (Splitter) + collapsible. Its
+   children stack vertically into the master/detail split. */
+.dock {
   display: flex;
   flex-direction: column;
   flex-grow: 0;
   flex-shrink: 0;
   min-width: 0;
   background: var(--tsi-bg-panel);
+  border-left: 1px solid var(--tsi-border);
   overflow: hidden;
 }
 
-.leftDock {
-  border-right: 1px solid var(--tsi-border);
+/* Master (scene tree) + detail (inspector) sections. flex-basis:0 so the
+   inline flex-grow values set the proportion; each scrolls internally. */
+.masterPane,
+.detailPane {
+  display: flex;
+  flex-direction: column;
+  flex-basis: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 
-.rightDock {
-  border-left: 1px solid var(--tsi-border);
+.masterPane {
+  border-bottom: 1px solid var(--tsi-border);
 }
 
-.dockHeader {
+.dockHeader,
+.detailHeader {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: var(--tsi-space-2);
   padding: var(--tsi-space-1) var(--tsi-space-2);
   border-bottom: 1px solid var(--tsi-border);
   background: var(--tsi-bg-elevated);
   flex-shrink: 0;
-}
-
-.dockTitle {
   font-size: var(--tsi-font-sm);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--tsi-fg-muted);
+  white-space: nowrap;
+}
+
+.dockTitle {
+  flex: 0 0 auto;
+  font-size: var(--tsi-font-sm);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--tsi-fg-muted);
+  white-space: nowrap;
 }
 
 .collapseButton {
@@ -205,6 +224,144 @@
   overflow: auto;
 }
 
+/* Draggable handle between the master (tree) and detail (inspector). */
+.masterDetailHandle {
+  flex: 0 0 6px;
+  cursor: row-resize;
+  background: var(--tsi-bg-elevated);
+  border-top: 1px solid var(--tsi-border);
+  border-bottom: 1px solid var(--tsi-border);
+}
+
+.masterDetailHandle:hover {
+  background: var(--tsi-accent);
+}
+
+/* Top-bar spacer + compact scene stat chips. */
+.topSpacer {
+  flex: 1 1 auto;
+}
+
+.statChips {
+  display: flex;
+  align-items: center;
+  gap: var(--tsi-space-2);
+}
+
+.statChip {
+  font-size: var(--tsi-font-sm);
+  color: var(--tsi-fg-muted);
+  white-space: nowrap;
+  padding: 2px var(--tsi-space-2);
+  border: 1px solid var(--tsi-border);
+  border-radius: var(--tsi-radius-sm);
+  background: var(--tsi-bg-elevated);
+}
+
+.statChip b {
+  color: var(--tsi-fg-strong);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Node-count badge in the Scene Tree dock header. */
+.dockCount {
+  font-size: var(--tsi-font-xs);
+  color: var(--tsi-fg-faint);
+  font-variant-numeric: tabular-nums;
+  margin-left: var(--tsi-space-2);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.dockSpacer {
+  flex: 1 1 auto;
+}
+
+/* On-pane tab strip switching the detail section (ADR-0007). */
+.paneTabs {
+  display: flex;
+  align-items: stretch;
+  flex-shrink: 0;
+  background: var(--tsi-bg-elevated);
+  border-bottom: 1px solid var(--tsi-border);
+}
+
+.paneTab {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--tsi-fg-muted);
+  cursor: pointer;
+  font-family: var(--tsi-font-ui);
+  font-size: var(--tsi-font-sm);
+  padding: var(--tsi-space-2) var(--tsi-space-3);
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+}
+
+.paneTab:hover {
+  color: var(--tsi-fg-default);
+  background: var(--tsi-bg-hover);
+}
+
+.paneTabActive {
+  color: var(--tsi-fg-strong);
+  border-bottom-color: var(--tsi-accent);
+}
+
+/* Cameras detail tab — a flat list of Camera3D nodes with a "use" action. */
+.camList {
+  display: flex;
+  flex-direction: column;
+  padding: var(--tsi-space-1);
+  gap: 2px;
+}
+
+.camRow {
+  appearance: none;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--tsi-fg-default);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--tsi-space-2);
+  padding: var(--tsi-space-1) var(--tsi-space-2);
+  border-radius: var(--tsi-radius-sm);
+  font-size: var(--tsi-font-md);
+  text-align: left;
+}
+
+.camRow:hover {
+  background: var(--tsi-bg-hover);
+}
+
+.camRow[data-active='true'] {
+  background: var(--tsi-accent-soft);
+  color: var(--tsi-accent-fg);
+  border-color: var(--tsi-accent);
+}
+
+.camName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.camTag {
+  font-size: var(--tsi-font-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--tsi-fg-muted);
+  flex-shrink: 0;
+}
+
+.camRow[data-active='true'] .camTag {
+  color: var(--tsi-accent-fg);
+}
+
 /* Collapsed dock: a thin clickable strip with a vertical label. */
 .collapsedDock {
   appearance: none;
@@ -218,10 +375,6 @@
   background: var(--tsi-bg-elevated);
   color: var(--tsi-fg-muted);
   cursor: pointer;
-}
-
-.collapsedDock[data-side='left'] {
-  border-right: 1px solid var(--tsi-border);
 }
 
 .collapsedDock[data-side='right'] {
@@ -251,13 +404,104 @@
   background: var(--tsi-bg-canvas);
 }
 
-/* 2D viewport: a neutral backdrop the absolutely-positioned ControlOverlay
-   fills. Scrolls if the laid-out UI exceeds the viewport. */
-.overlayViewport {
+/* 2D viewport (ADR-0007): a pannable/zoomable stage that frames the live
+   ControlOverlay as a fixed-size canvas, distinct from the flat 3D viewport. */
+.canvasStage {
   position: absolute;
   inset: 0;
-  overflow: auto;
-  background: var(--tsi-bg-canvas);
+  overflow: hidden;
+  background-color: var(--tsi-bg-canvas);
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 32px 32px;
+  cursor: grab;
+  touch-action: none;
+}
+
+.canvasStage:active {
+  cursor: grabbing;
+}
+
+.canvasFrame {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+  background: var(--tsi-bg-elevated);
+  box-shadow: 0 0 0 1px var(--tsi-border-strong), 0 24px 60px rgba(0, 0, 0, 0.5);
+}
+
+.canvasDim {
+  position: absolute;
+  top: -22px;
+  left: 0;
+  font-family: var(--tsi-font-mono);
+  font-size: var(--tsi-font-xs);
+  color: var(--tsi-fg-faint);
+  white-space: nowrap;
+}
+
+.canvas2dHint {
+  position: absolute;
+  top: var(--tsi-space-3);
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: none;
+  font-size: var(--tsi-font-sm);
+  color: var(--tsi-fg-muted);
+  background: var(--tsi-bg-elevated);
+  border: 1px solid var(--tsi-border);
+  border-radius: 999px;
+  padding: var(--tsi-space-1) var(--tsi-space-3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.zoomHud {
+  position: absolute;
+  bottom: var(--tsi-space-3);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: var(--tsi-space-1);
+  background: var(--tsi-bg-elevated);
+  border: 1px solid var(--tsi-border);
+  border-radius: 999px;
+  padding: 3px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+}
+
+.zoomHud button {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--tsi-fg-muted);
+  cursor: pointer;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  font-size: var(--tsi-font-md);
+  line-height: 1;
+}
+
+.zoomHud button:hover {
+  background: var(--tsi-bg-hover);
+  color: var(--tsi-fg-default);
+}
+
+.zoomVal {
+  min-width: 46px;
+  text-align: center;
+  font-family: var(--tsi-font-mono);
+  font-size: var(--tsi-font-sm);
+  color: var(--tsi-fg-default);
+}
+
+.zoomFit {
+  width: auto !important;
+  padding: 0 var(--tsi-space-2);
+  border-radius: var(--tsi-radius-sm) !important;
 }
 
 /* "Contains 2D UI" discoverability hint, floated over the 3D viewport when a
@@ -325,11 +569,11 @@
 }
 
 /*
- * Narrow-viewport layout (≤768px): there isn't horizontal room for three
- * columns, so stack them vertically. The center viewport keeps a usable
- * half-height; the docks go full-width, height-capped, and scroll internally.
- * Splitters hide themselves (see Splitter.module.css). `!important` overrides
- * the inline flex-basis the resizers set on the docks.
+ * Narrow-viewport layout (≤768px): there isn't horizontal room for the
+ * viewport + side dock, so stack them vertically. The center viewport keeps a
+ * usable half-height; the dock goes full-width, height-capped, and scrolls
+ * internally. The Splitter hides itself (see Splitter.module.css). `!important`
+ * overrides the inline flex-basis the resizer sets on the dock.
  */
 @media (max-width: 768px) {
   .columns {
@@ -341,13 +585,11 @@
     min-height: 50vh;
   }
 
-  .leftDock,
-  .rightDock {
+  .dock {
     flex-basis: auto !important;
     width: 100%;
     max-height: 45vh;
     border-left: none;
-    border-right: none;
     border-top: 1px solid var(--tsi-border);
   }
 }

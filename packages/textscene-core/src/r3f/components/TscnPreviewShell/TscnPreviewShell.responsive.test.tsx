@@ -55,24 +55,24 @@ describe('<TscnPreviewShell> mobile responsive layout (WI-UX-9)', () => {
     expect(mediaBlock!).toMatch(/\.columns\s*\{[^}]*flex-direction:\s*column/);
   });
 
-  it('makes the docks full-width and height-capped inside the narrow block', () => {
+  it('makes the dock full-width and height-capped inside the narrow block', () => {
     const mediaBlock = extractMediaBlock(CSS_SOURCE, 768);
     expect(mediaBlock).not.toBeNull();
-    // Both docks stay visible (NOT display:none) — they stack under the viewport.
-    expect(mediaBlock!).not.toMatch(/\.leftDock[^{]*\{[^}]*display:\s*none/);
-    // Docks fill the width and are height-capped so the viewport keeps
-    // a usable share. (Left + right share one rule.)
-    expect(mediaBlock!).toMatch(/\.leftDock[^{]*\{[^}]*width:\s*100%/);
-    expect(mediaBlock!).toMatch(/\.leftDock[^{]*\{[^}]*max-height:\s*45vh/);
+    // The dock stays visible (NOT display:none) — it stacks under the viewport.
+    expect(mediaBlock!).not.toMatch(/\.dock[^{]*\{[^}]*display:\s*none/);
+    // The dock fills the width and is height-capped so the viewport keeps
+    // a usable share. (ADR-0007: a single right Split Dock, not two columns.)
+    expect(mediaBlock!).toMatch(/\.dock[^{]*\{[^}]*width:\s*100%/);
+    expect(mediaBlock!).toMatch(/\.dock[^{]*\{[^}]*max-height:\s*45vh/);
   });
 
   it('preserves the side-by-side desktop layout outside the media query', () => {
     // The non-media `.columns` rule keeps `display: flex` (row by default)
-    // and the docks are flex columns. We assert these exist *outside* the
+    // and the dock is a flex column. We assert these exist *outside* the
     // media block so an edit that accidentally moves them inside is caught.
     const desktopBlock = stripMediaBlocks(CSS_SOURCE);
     expect(desktopBlock).toMatch(/\.columns\s*\{[^}]*display:\s*flex/);
-    expect(desktopBlock).toMatch(/\.leftDock[^{]*\{[^}]*flex-direction:\s*column/);
+    expect(desktopBlock).toMatch(/\.dock[^{]*\{[^}]*flex-direction:\s*column/);
   });
 
   it('still renders the shell body element so the responsive container exists at runtime', () => {

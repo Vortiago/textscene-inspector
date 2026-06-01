@@ -21,6 +21,10 @@ export default [
       '**/.tmp/',
       '.spike/',
       'docs/probes/',
+      // Throwaway UI-prototype gallery (ADR-0007) — self-contained HTML/JS
+      // mockups + a dev static server; not production code, deleted once the
+      // chosen design (J) is fully folded into the real shell.
+      'prototypes/',
     ],
   },
 

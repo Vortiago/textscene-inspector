@@ -151,7 +151,18 @@ try {
     await palette(page, 'TextScene: Open Preview to the Side');
     await sleep(1500);
     await palette(page, 'View: Close Editors in Other Groups'); // drop the raw .tscn source
-    const painted = await waitForCanvas(page);
+    let painted = await waitForCanvas(page);
+    if (!painted) {
+      // Cold-start race: on the FIRST .tscn the extension may still be
+      // activating when the preview command runs, so it no-ops and the editor
+      // stays on the welcome page. Retry once now that activation has completed.
+      console.log('[vscode]   no canvas yet — retrying preview after activation…');
+      await openFile(page, scene.file);
+      await palette(page, 'TextScene: Open Preview to the Side');
+      await sleep(1500);
+      await palette(page, 'View: Close Editors in Other Groups');
+      painted = await waitForCanvas(page);
+    }
     await sleep(9000); // settle: GLBs + textures stream over the webview base64 bridge after first paint
     const path = `${OUT}/${key}.png`;
     await page.screenshot({ path });

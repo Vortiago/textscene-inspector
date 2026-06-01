@@ -2,26 +2,46 @@
  * Composition root for a single TSCN preview panel.
  *
  * Owns the parse pipeline (`TscnParser` + `SceneGraphBuilder`), provides
- * the two per-panel contexts (`<HierarchyProvider>` + `<SelectionProvider>`),
- * and lays out the canvas alongside the tree + details sidebar.
+ * the per-panel contexts, and lays out the canvas alongside a single right
+ * "Split Dock" (ADR-0007): a master scene tree on top and a tabbed detail
+ * (Inspector / Resources / Cameras) directly below, so selecting a node
+ * surfaces its properties with no tab hop. No left rail — the VS Code webview
+ * already sits right of VS Code's own activity bar + Explorer, so a left rail
+ * would clash and waste width.
  *
  * Replaces the imperative `packages/textscene-core/src/ui/TscnPreviewUI.ts`.
  */
-import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from 'react';
 import { TscnParser } from '../../../parser/TscnParser.js';
 import { SceneGraphBuilder } from '../../../core/SceneGraphBuilder.js';
 import { tscnSceneToParsedScene } from '../../../core/SceneGraph.js';
 import type { SceneGraph } from '../../../core/SceneGraph.js';
-import type { TscnNode } from '../../../parser/types.js';
-import { HierarchyProvider } from '../../contexts/HierarchyContext.js';
+import type {
+  TscnNode,
+  TscnExternalResource,
+  TscnInternalResource,
+} from '../../../parser/types.js';
+import { HierarchyProvider, useHierarchy } from '../../contexts/HierarchyContext.js';
 import { SelectionProvider, useSelection } from '../../contexts/SelectionContext.js';
-import { CameraControlProvider } from '../../contexts/CameraControlContext.js';
+import {
+  CameraControlProvider,
+  useOptionalCameraControl,
+} from '../../contexts/CameraControlContext.js';
 import { MissingResourcesProvider } from '../../contexts/MissingResourcesContext.js';
 import { ViewportModeProvider, useViewportMode } from '../../contexts/ViewportModeContext.js';
 import { has2DUIContent } from '../../controls/has2DUIContent.js';
 import { TscnCanvas } from '../../TscnCanvas.js';
 import { MissingResourcesPanel } from '../MissingResourcesPanel/MissingResourcesPanel.js';
-import { SceneInfoCard } from '../SceneInfoCard/SceneInfoCard.js';
 import { ViewportToolbar } from '../ViewportToolbar/ViewportToolbar.js';
 import { Splitter } from '../Splitter/Splitter.js';
 import styles from './TscnPreviewShell.module.css';
@@ -53,6 +73,8 @@ const ControlOverlay = lazy(() =>
 
 const DEFAULT_ROOT_SCENE_PATH = 'res://__inline__.tscn';
 
+type DetailTab = 'inspector' | 'resources' | 'cameras';
+
 export interface TscnPreviewShellProps {
   /** Stable identifier for this panel — used in logs and for context coordination. */
   panelId: string;
@@ -62,7 +84,7 @@ export interface TscnPreviewShellProps {
   rootScenePath?: string;
   /** Fired when a tree row is double-clicked (host can jump to source). */
   onNodeReveal?: (path: string, node: TscnNode) => void;
-  /** Optional content to inject above the canvas (e.g. a fixture dropdown). */
+  /** Optional content to inject in the top bar (e.g. a fixture dropdown). */
   toolbar?: ReactNode;
   /**
    * Fired when the user picks a file for a missing-resource row in the
@@ -143,12 +165,13 @@ export function TscnPreviewShell({
     [sceneGraph, panelId]
   );
 
-  // 3-column DCC chrome: resizable + collapsible left (Scene) and right
-  // (Inspector) docks flanking the center viewport.
-  const [leftWidth, setLeftWidth] = useState(280);
-  const [rightWidth, setRightWidth] = useState(300);
-  const [leftCollapsed, setLeftCollapsed] = useState(false);
-  const [rightCollapsed, setRightCollapsed] = useState(false);
+  // Split Dock (ADR-0007): a single resizable + collapsible RIGHT dock holding
+  // a master (scene tree) over a tabbed detail. `treeShare` is the master's
+  // fraction of the dock height (0..1), dragged via the horizontal handle.
+  const [dockWidth, setDockWidth] = useState(320);
+  const [dockCollapsed, setDockCollapsed] = useState(false);
+  const [treeShare, setTreeShare] = useState(0.46);
+  const [activeTab, setActiveTab] = useState<DetailTab>('inspector');
 
   // When `error` is truthy, mounting `<SceneTreeViewer>` with a null
   // sceneGraph triggers its own "Loading scene…" empty-state — which
@@ -184,85 +207,129 @@ export function TscnPreviewShell({
         <CameraControlProvider>
           <MissingResourcesProvider>
             <ViewportModeProvider>
-            <SceneChangeResetter sceneGraph={sceneGraph} />
-            <div className={styles.shell} data-panel-id={panelId}>
-              <header className={styles.topBar}>
-                <span className={styles.brand}>TextScene Inspector</span>
-                {toolbar && <div className={styles.topToolbar}>{toolbar}</div>}
-                <ViewportToolbar />
-              </header>
-              {error && (
-                <div className={styles.errorBanner} role="alert">
-                  <strong>Parse error:</strong> {error}
-                </div>
-              )}
-              <div className={styles.columns}>
-                {/* LEFT DOCK — Scene outliner */}
-                {leftCollapsed ? (
-                  <CollapsedDock side="left" title="Scene" onExpand={() => setLeftCollapsed(false)} />
-                ) : (
-                  <>
-                    <section
-                      className={styles.leftDock}
-                      style={{ flexBasis: leftWidth }}
-                      aria-label="Scene"
-                    >
-                      <DockHeader title="Scene" side="left" onCollapse={() => setLeftCollapsed(true)} />
-                      <div className={styles.dockBody}>
-                        <SceneInfoCard />
-                        <div className={styles.treePane}>{treeBody}</div>
-                      </div>
-                    </section>
-                    <Splitter width={leftWidth} setWidth={setLeftWidth} label="Resize the Scene panel" />
-                  </>
+              <SceneChangeResetter sceneGraph={sceneGraph} />
+              <div className={styles.shell} data-panel-id={panelId}>
+                <header className={styles.topBar}>
+                  <span className={styles.brand}>TextScene Inspector</span>
+                  {toolbar && <div className={styles.topToolbar}>{toolbar}</div>}
+                  <div className={styles.topSpacer} />
+                  <SceneStats />
+                  <ViewportToolbar />
+                </header>
+                {error && (
+                  <div className={styles.errorBanner} role="alert">
+                    <strong>Parse error:</strong> {error}
+                  </div>
                 )}
+                <div className={styles.columns}>
+                  {/* CENTER — 3D canvas or 2D overlay; takes all width left of the dock. */}
+                  <main className={styles.center} aria-label="Viewport">
+                    <ViewportArea sceneGraph={sceneGraph} />
+                  </main>
 
-                {/* CENTER — 3D canvas or 2D overlay */}
-                <main className={styles.center} aria-label="Viewport">
-                  <ViewportArea sceneGraph={sceneGraph} />
-                </main>
-
-                {/* RIGHT DOCK — Inspector */}
-                {rightCollapsed ? (
-                  <CollapsedDock side="right" title="Inspector" onExpand={() => setRightCollapsed(false)} />
-                ) : (
-                  <>
-                    <Splitter
-                      width={rightWidth}
-                      setWidth={setRightWidth}
-                      invert
-                      label="Resize the Inspector panel"
-                    />
-                    <section
-                      className={styles.rightDock}
-                      style={{ flexBasis: rightWidth }}
-                      aria-label="Inspector"
-                    >
-                      <DockHeader title="Inspector" side="right" onCollapse={() => setRightCollapsed(true)} />
-                      <div className={styles.dockBody}>
-                        {onResourceUpload && (
-                          <MissingResourcesPanel
-                            onUpload={onResourceUpload}
-                            onRemove={onResourceRemove ?? (() => {})}
-                          />
-                        )}
-                        <div className={styles.detailsPane}>
-                          <Suspense
-                            fallback={
-                              <div className={styles.loading} aria-busy="true">
-                                Loading details…
-                              </div>
-                            }
-                          >
-                            <NodeDetailsPanel />
-                          </Suspense>
+                  {/* RIGHT DOCK — Split Dock: scene tree (master) over a tabbed detail. */}
+                  {dockCollapsed ? (
+                    <CollapsedDock onExpand={() => setDockCollapsed(false)} />
+                  ) : (
+                    <>
+                      <Splitter
+                        width={dockWidth}
+                        setWidth={setDockWidth}
+                        invert
+                        label="Resize the side panel"
+                      />
+                      <section
+                        className={styles.dock}
+                        style={{ flexBasis: dockWidth }}
+                        aria-label="Scene and Inspector"
+                      >
+                        {/* MASTER — scene tree */}
+                        <div className={styles.masterPane} style={{ flexGrow: treeShare }}>
+                          <div className={styles.dockHeader}>
+                            <span className={styles.dockTitle}>Scene Tree</span>
+                            <SceneNodeCount />
+                            <span className={styles.dockSpacer} />
+                            <button
+                              type="button"
+                              className={styles.collapseButton}
+                              onClick={() => setDockCollapsed(true)}
+                              title="Collapse the side panel"
+                              aria-label="Collapse the side panel"
+                            >
+                              ›
+                            </button>
+                          </div>
+                          <div className={styles.dockBody}>
+                            <div className={styles.treePane}>{treeBody}</div>
+                          </div>
                         </div>
-                      </div>
-                    </section>
-                  </>
-                )}
+
+                        <MasterDetailHandle value={treeShare} setValue={setTreeShare} />
+
+                        {/* DETAIL — tabbed; Inspector follows selection (no tab hop). */}
+                        <div className={styles.detailPane} style={{ flexGrow: 1 - treeShare }}>
+                          <div className={styles.paneTabs} role="tablist" aria-label="Detail panels">
+                            {(
+                              [
+                                ['inspector', 'Inspector'],
+                                ['resources', 'Resources'],
+                                ['cameras', 'Cameras'],
+                              ] as Array<[DetailTab, string]>
+                            ).map(([id, label]) => (
+                              <button
+                                key={id}
+                                type="button"
+                                role="tab"
+                                aria-selected={activeTab === id}
+                                className={
+                                  activeTab === id
+                                    ? `${styles.paneTab} ${styles.paneTabActive}`
+                                    : styles.paneTab
+                                }
+                                onClick={() => setActiveTab(id)}
+                              >
+                                {label}
+                              </button>
+                            ))}
+                          </div>
+                          <div className={styles.dockBody}>
+                            <div className={styles.detailsPane} hidden={activeTab !== 'inspector'}>
+                              <Suspense
+                                fallback={
+                                  <div className={styles.loading} aria-busy="true">
+                                    Loading details…
+                                  </div>
+                                }
+                              >
+                                <NodeDetailsPanel />
+                              </Suspense>
+                            </div>
+                            {activeTab === 'resources' && (
+                              <div className={styles.detailsPane}>
+                                {onResourceUpload ? (
+                                  <MissingResourcesPanel
+                                    onUpload={onResourceUpload}
+                                    onRemove={onResourceRemove ?? (() => {})}
+                                  />
+                                ) : (
+                                  <div className={styles.emptyState}>
+                                    Resource uploads aren’t available in this host.
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                            {activeTab === 'cameras' && (
+                              <div className={styles.detailsPane}>
+                                <CamerasPanel />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </section>
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
             </ViewportModeProvider>
           </MissingResourcesProvider>
         </CameraControlProvider>
@@ -285,21 +352,11 @@ function ViewportArea({ sceneGraph }: { sceneGraph: SceneGraph | null }) {
 
   if (mode === '2D') {
     return (
-      <div className={styles.overlayViewport}>
-        <Suspense
-          fallback={
-            <div className={styles.loading} aria-busy="true">
-              Loading 2D overlay…
-            </div>
-          }
-        >
-          <ControlOverlay
-            nodes={rootScene?.nodes ?? []}
-            internalResources={rootScene?.internalResources ?? []}
-            externalResources={rootScene?.externalResources ?? []}
-          />
-        </Suspense>
-      </div>
+      <Canvas2DStage
+        nodes={rootScene?.nodes ?? []}
+        internalResources={rootScene?.internalResources ?? []}
+        externalResources={rootScene?.externalResources ?? []}
+      />
     );
   }
 
@@ -323,53 +380,306 @@ function ViewportArea({ sceneGraph }: { sceneGraph: SceneGraph | null }) {
   );
 }
 
-/** Dock title bar with a collapse control. */
-function DockHeader({
-  title,
-  side,
-  onCollapse,
+// Godot's default 2D project viewport. The 2D canvas frame uses it as a stable
+// surface Control nodes anchor to (mirrors how Godot's 2D editor frames a scene),
+// rather than the variable viewport-region size the bare overlay filled before.
+const CANVAS_2D_WIDTH = 1152;
+const CANVAS_2D_HEIGHT = 648;
+const ZOOM_MIN = 0.1;
+const ZOOM_MAX = 4;
+const clampZoom = (z: number) => Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, z));
+
+/**
+ * The 2D viewport (ADR-0007): a pannable/zoomable stage that frames the live
+ * `<ControlOverlay>` as a fixed-size canvas — bounds, zoom %, scroll-to-zoom,
+ * drag-to-pan — so 2D scenes read as a flat canvas editor, not a 3D viewport
+ * showing flat content. The overlay still does the real Control layout; this
+ * only adds the canvas chrome around it.
+ */
+function Canvas2DStage({
+  nodes,
+  internalResources,
+  externalResources,
 }: {
-  title: string;
-  side: 'left' | 'right';
-  onCollapse: () => void;
+  nodes: readonly TscnNode[];
+  internalResources: readonly TscnInternalResource[];
+  externalResources: readonly TscnExternalResource[];
 }) {
+  const stageRef = useRef<HTMLDivElement>(null);
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+
+  // Current values mirrored into refs so the non-passive wheel listener (added
+  // once) reads fresh state without re-subscribing.
+  const zoomRef = useRef(zoom);
+  zoomRef.current = zoom;
+  const panRef = useRef(pan);
+  panRef.current = pan;
+
+  const fit = useCallback(() => {
+    const el = stageRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    if (r.width <= 0 || r.height <= 0) return;
+    const margin = 56;
+    const z = clampZoom(
+      Math.min((r.width - margin) / CANVAS_2D_WIDTH, (r.height - margin) / CANVAS_2D_HEIGHT)
+    );
+    setZoom(z);
+    setPan({
+      x: (r.width - CANVAS_2D_WIDTH * z) / 2,
+      y: (r.height - CANVAS_2D_HEIGHT * z) / 2,
+    });
+  }, []);
+
+  // Fit on mount.
+  useEffect(() => {
+    fit();
+  }, [fit]);
+
+  // Wheel-to-zoom, anchored to the cursor. Added as a non-passive native
+  // listener so preventDefault actually suppresses page scroll.
+  useEffect(() => {
+    const el = stageRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const r = el.getBoundingClientRect();
+      const px = e.clientX - r.left;
+      const py = e.clientY - r.top;
+      const z = zoomRef.current;
+      const p = panRef.current;
+      const nz = clampZoom(z * (e.deltaY < 0 ? 1.1 : 1 / 1.1));
+      const cx = (px - p.x) / z;
+      const cy = (py - p.y) / z;
+      setPan({ x: px - cx * nz, y: py - cy * nz });
+      setZoom(nz);
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, []);
+
+  // Drag-to-pan. Inline handler captures the current pan as the drag origin.
+  function handlePointerDown(e: ReactPointerEvent<HTMLDivElement>) {
+    if (e.button !== 0) return;
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const origin = pan;
+    const move = (ev: PointerEvent) => {
+      setPan({ x: origin.x + (ev.clientX - startX), y: origin.y + (ev.clientY - startY) });
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  }
+
+  function zoomAroundCentre(factor: number) {
+    const el = stageRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const px = r.width / 2;
+    const py = r.height / 2;
+    const z = zoomRef.current;
+    const p = panRef.current;
+    const nz = clampZoom(z * factor);
+    const cx = (px - p.x) / z;
+    const cy = (py - p.y) / z;
+    setPan({ x: px - cx * nz, y: py - cy * nz });
+    setZoom(nz);
+  }
+
   return (
-    <div className={styles.dockHeader}>
-      <span className={styles.dockTitle}>{title}</span>
-      <button
-        type="button"
-        className={styles.collapseButton}
-        onClick={onCollapse}
-        title={`Collapse ${title} panel`}
-        aria-label={`Collapse ${title} panel`}
+    <div
+      ref={stageRef}
+      className={styles.canvasStage}
+      onPointerDown={handlePointerDown}
+      aria-label="2D canvas"
+    >
+      <div
+        className={styles.canvasFrame}
+        style={{
+          width: CANVAS_2D_WIDTH,
+          height: CANVAS_2D_HEIGHT,
+          transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+        }}
       >
-        {side === 'left' ? '‹' : '›'}
-      </button>
+        <span className={styles.canvasDim} aria-hidden>
+          {CANVAS_2D_WIDTH} × {CANVAS_2D_HEIGHT}
+        </span>
+        <Suspense
+          fallback={
+            <div className={styles.loading} aria-busy="true">
+              Loading 2D overlay…
+            </div>
+          }
+        >
+          <ControlOverlay
+            nodes={nodes}
+            internalResources={internalResources}
+            externalResources={externalResources}
+          />
+        </Suspense>
+      </div>
+
+      <div className={styles.canvas2dHint}>scroll = zoom · drag = pan</div>
+
+      <div className={styles.zoomHud} role="group" aria-label="Canvas zoom">
+        <button type="button" onClick={() => zoomAroundCentre(1 / 1.2)} aria-label="Zoom out">
+          −
+        </button>
+        <span className={styles.zoomVal}>{Math.round(zoom * 100)}%</span>
+        <button type="button" onClick={() => zoomAroundCentre(1.2)} aria-label="Zoom in">
+          +
+        </button>
+        <button type="button" className={styles.zoomFit} onClick={fit}>
+          Fit
+        </button>
+      </div>
     </div>
   );
 }
 
-/** A collapsed dock: a thin vertical strip that expands the dock on click. */
-function CollapsedDock({
-  side,
-  title,
-  onExpand,
+/**
+ * Compact scene stat chips for the top bar. Each chip's text is a single node
+ * (e.g. "4 nodes", "2 cameras") so it never collides with the tree's node-name
+ * elements that tests match via `findByText('Root')`.
+ */
+function SceneStats() {
+  const { sceneGraph } = useHierarchy();
+  if (sceneGraph === null) return null;
+  const nodeCount = sceneGraph.flattenedNodes.length;
+  const cameraCount = sceneGraph.flattenedNodes.filter((n) => n.data.type === 'Camera3D').length;
+  return (
+    <div className={styles.statChips} role="group" aria-label="Scene info">
+      <span className={styles.statChip} data-testid="scene-info-nodes">{`${nodeCount} nodes`}</span>
+      {cameraCount > 0 && (
+        <span className={styles.statChip}>{`${cameraCount} ${cameraCount === 1 ? 'camera' : 'cameras'}`}</span>
+      )}
+    </div>
+  );
+}
+
+/** Node-count badge for the Scene Tree dock header. */
+function SceneNodeCount() {
+  const { sceneGraph } = useHierarchy();
+  if (sceneGraph === null) return null;
+  return <span className={styles.dockCount}>{sceneGraph.flattenedNodes.length} nodes</span>;
+}
+
+/**
+ * The "Cameras" detail tab: lists the scene's Camera3D nodes and lets the user
+ * make one the active viewport camera (or return to free orbit), via
+ * `CameraControlContext`. Mirrors the per-node "Use This Camera" action in the
+ * Inspector, surfaced as a flat list so cameras are discoverable without
+ * hunting the tree.
+ */
+function CamerasPanel() {
+  const { sceneGraph } = useHierarchy();
+  const cam = useOptionalCameraControl();
+  const cameras = useMemo(
+    () => (sceneGraph?.flattenedNodes ?? []).filter((n) => n.data.type === 'Camera3D'),
+    [sceneGraph]
+  );
+
+  if (cameras.length === 0) {
+    return <div className={styles.emptyState}>No Camera3D nodes in this scene.</div>;
+  }
+
+  const activePath = cam?.activeCameraPath ?? null;
+  return (
+    <div className={styles.camList}>
+      <button
+        type="button"
+        className={styles.camRow}
+        data-active={activePath === null}
+        onClick={() => cam?.returnToFreeView()}
+      >
+        <span className={styles.camName}>Free orbit</span>
+        <span className={styles.camTag}>{activePath === null ? 'active' : 'use'}</span>
+      </button>
+      {cameras.map((c) => {
+        const active = activePath === c.path;
+        return (
+          <button
+            key={c.path}
+            type="button"
+            className={styles.camRow}
+            data-active={active}
+            onClick={() => cam?.switchToCamera(c.path)}
+          >
+            <span className={styles.camName}>{c.name}</span>
+            <span className={styles.camTag}>{active ? 'active' : 'use'}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
+ * Draggable horizontal handle splitting the dock's master (tree) and detail
+ * sections. Writes `value` = the master's height fraction (0..1), clamped so
+ * neither section disappears.
+ */
+function MasterDetailHandle({
+  value,
+  setValue,
 }: {
-  side: 'left' | 'right';
-  title: string;
-  onExpand: () => void;
+  value: number;
+  setValue: (v: number) => void;
 }) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  const onPointerDown = useCallback(
+    (e: ReactPointerEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      const dock = ref.current?.parentElement;
+      if (!dock) return;
+      const onMove = (ev: PointerEvent) => {
+        const rect = dock.getBoundingClientRect();
+        if (rect.height <= 0) return;
+        const frac = (ev.clientY - rect.top) / rect.height;
+        setValue(Math.min(0.8, Math.max(0.2, frac)));
+      };
+      const onUp = () => {
+        window.removeEventListener('pointermove', onMove);
+        window.removeEventListener('pointerup', onUp);
+      };
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onUp);
+    },
+    [setValue]
+  );
+
+  return (
+    <div
+      ref={ref}
+      className={styles.masterDetailHandle}
+      role="separator"
+      aria-orientation="horizontal"
+      aria-label="Resize the tree and detail sections"
+      aria-valuenow={Math.round(value * 100)}
+      onPointerDown={onPointerDown}
+    />
+  );
+}
+
+/** A collapsed dock: a thin clickable strip that re-opens the dock. */
+function CollapsedDock({ onExpand }: { onExpand: () => void }) {
   return (
     <button
       type="button"
       className={styles.collapsedDock}
-      data-side={side}
+      data-side="right"
       onClick={onExpand}
-      title={`Show ${title} panel`}
-      aria-label={`Show ${title} panel`}
+      title="Show the side panel"
+      aria-label="Show the side panel"
     >
-      <span className={styles.collapsedChevron}>{side === 'left' ? '›' : '‹'}</span>
-      <span className={styles.collapsedTitle}>{title}</span>
+      <span className={styles.collapsedChevron}>‹</span>
+      <span className={styles.collapsedTitle}>Scene</span>
     </button>
   );
 }
