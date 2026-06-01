@@ -7,7 +7,6 @@
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseNode2D } from '../../base/node2d/parser';
 import { parseVector2 } from '../../../parser/vectors';
-import { parseColor } from '../../../utils/colorParser';
 import { warn } from '../../../logger';
 import type { Rect2, Sprite2DProperties } from './types';
 import type { Vector2 } from '../../base/node2d/types';
@@ -32,7 +31,7 @@ export function parseSprite2D(
     hframes: Math.max(1, intOr(properties.hframes, 1)),
     vframes: Math.max(1, intOr(properties.vframes, 1)),
     frame: intOr(properties.frame, 0),
-    modulate: properties.modulate ? parseColor(properties.modulate) : { r: 1, g: 1, b: 1, a: 1 },
+    // `modulate` is parsed by parseNode2D (CanvasItem property) — inherited via ...base.
   };
 
   if (properties.texture) result.texture = properties.texture;

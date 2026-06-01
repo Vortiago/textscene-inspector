@@ -5,6 +5,13 @@ export interface Vector2 {
   y: number;
 }
 
+export interface Color {
+  r: number;
+  g: number;
+  b: number;
+  a: number;
+}
+
 /** The decomposed 2D local transform (pixels, radians; Godot +Y-down space). */
 export interface Node2DLocalTransform {
   position: Vector2;
@@ -31,4 +38,7 @@ export interface Node2DProperties {
   z_index: number;
   /** When true, z_index is relative to the parent (default true). */
   z_as_relative: boolean;
+
+  /** CanvasItem RGBA tint; multiplies onto this node and all descendants. */
+  modulate: Color;
 }

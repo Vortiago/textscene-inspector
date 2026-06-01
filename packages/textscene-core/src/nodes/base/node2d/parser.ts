@@ -10,6 +10,7 @@
 
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseVector2 } from '../../../parser/vectors';
+import { parseColor } from '../../../utils/colorParser';
 import { warn } from '../../../logger';
 import type { Node2DProperties, Vector2 } from './types';
 
@@ -55,6 +56,7 @@ export function parseNode2D(
     skew: floatOr(properties.skew, 0),
     z_index: intOr(properties.z_index, 0),
     z_as_relative: properties.z_as_relative === undefined ? true : properties.z_as_relative !== 'false',
+    modulate: properties.modulate ? parseColor(properties.modulate) : { r: 1, g: 1, b: 1, a: 1 },
   };
 }
 

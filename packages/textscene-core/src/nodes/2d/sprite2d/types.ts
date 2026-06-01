@@ -9,13 +9,6 @@ export interface Rect2 {
   height: number;
 }
 
-export interface Color {
-  r: number;
-  g: number;
-  b: number;
-  a: number;
-}
-
 export interface Sprite2DProperties extends Node2DProperties {
   /** `ExtResource("id")` or `res://…` reference; undefined → placeholder. */
   texture?: string;
@@ -31,6 +24,5 @@ export interface Sprite2DProperties extends Node2DProperties {
   vframes: number;
   frame: number;
   frame_coords?: Vector2;
-  /** CanvasItem RGBA tint. */
-  modulate: Color;
+  // `modulate` (CanvasItem RGBA tint) is inherited from Node2DProperties.
 }

@@ -22,6 +22,7 @@ import * as THREE from 'three';
 import type { TscnExternalResource } from '../../../parser/types';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { node2dGroupProps, Z_INDEX_STEP } from '../../../r3f/node2dTransform';
+import { Modulate2DContext, multiplyModulate, useParentModulate } from '../../../r3f/canvasItemModulate';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { parseResourceReference } from '../../../resources/SubResourceResolver';
 import { useResource } from '../../../resources/useResource';
@@ -52,9 +53,15 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
     [texResult.value, props]
   );
 
+  // Fold the inherited (ancestor) modulate into this sprite's own modulate.
+  const parentModulate = useParentModulate();
+  const modulate = useMemo(
+    () => multiplyModulate(parentModulate, props.modulate),
+    [parentModulate, props.modulate]
+  );
   const color = useMemo(
-    () => new THREE.Color(props.modulate.r, props.modulate.g, props.modulate.b),
-    [props.modulate.r, props.modulate.g, props.modulate.b]
+    () => new THREE.Color(modulate.r, modulate.g, modulate.b),
+    [modulate.r, modulate.g, modulate.b]
   );
 
   const visible = props.visible !== false;
@@ -77,13 +84,13 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
         <QuadMesh
           texture={displayedTexture}
           color={color}
-          opacity={props.modulate.a}
+          opacity={modulate.a}
           width={width}
           height={height}
           props={props}
         />
       ) : null}
-      {children}
+      <Modulate2DContext.Provider value={modulate}>{children}</Modulate2DContext.Provider>
     </group>
   );
 }

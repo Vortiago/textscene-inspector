@@ -53,6 +53,14 @@ describe('parseNode2D', () => {
     expect(p.z_index).toBe(5);
     expect(p.instance).toBe('ExtResource("1_s")');
   });
+
+  it('parses the CanvasItem modulate tint (defaults white opaque)', () => {
+    expect(parseNode2D(heading(), {}).modulate).toEqual({ r: 1, g: 1, b: 1, a: 1 });
+    const cyan = parseNode2D(heading(), { modulate: 'Color(0, 1, 1, 1)' }).modulate;
+    expect(cyan.r).toBeCloseTo(0);
+    expect(cyan.g).toBeCloseTo(1);
+    expect(cyan.b).toBeCloseTo(1);
+  });
 });
 
 describe('decomposeTransform2D', () => {
