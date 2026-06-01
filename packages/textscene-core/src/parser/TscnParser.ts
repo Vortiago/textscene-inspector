@@ -44,6 +44,7 @@ import '../nodes/2d/ui/richtextlabel/index.js';
 import '../nodes/2d/ui/canvaslayer/index.js';
 import '../nodes/base/node2d/index.js';
 import '../nodes/2d/sprite2d/index.js';
+import '../nodes/2d/camera2d/index.js';
 
 import type { TscnScene } from './types.js';
 import { TscnParserCore } from './TscnParserCore.js';

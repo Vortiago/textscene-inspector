@@ -180,11 +180,18 @@ function frameSceneBounds(
   const maxDim = Math.max(size.x, size.y, size.z);
   if (!Number.isFinite(maxDim) || maxDim <= 0) return;
 
+  // 2D-canvas scenes sit on ~one plane (z spread is only z_index draw steps);
+  // view them straight-on (down -Z, +Y up) instead of the 3D isometric angle,
+  // so sprites read flat and upright rather than tilted in perspective.
+  const maxXY = Math.max(size.x, size.y);
+  const isFlat = size.z <= Math.max(maxXY, 1) * 0.02;
+
   const persp = camera as THREE.PerspectiveCamera;
   const fov = ((persp.isPerspectiveCamera ? persp.fov : 50) * Math.PI) / 180;
-  const distance = ((maxDim / 2 / Math.tan(fov / 2)) || maxDim) * 1.6;
+  const fitDim = isFlat ? Math.max(maxXY, 0.001) : maxDim;
+  const distance = ((fitDim / 2 / Math.tan(fov / 2)) || fitDim) * (isFlat ? 1.15 : 1.6);
 
-  const dir = new THREE.Vector3(1, 0.7, 1).normalize();
+  const dir = isFlat ? new THREE.Vector3(0, 0, 1) : new THREE.Vector3(1, 0.7, 1).normalize();
   camera.position.copy(center.clone().add(dir.multiplyScalar(distance)));
   if (persp.isPerspectiveCamera) {
     persp.near = Math.max(0.01, distance / 200);
