@@ -21,10 +21,32 @@ function orbitScene(label, caption, orbitOpts = {}) {
   };
 }
 
+/** 2D-canvas scene: a static front-on poster (no orbit — 2D content is flat). */
+function flatScene(label, caption) {
+  return {
+    label,
+    caption,
+    run: async (page, h) => {
+      await h.poster();
+      await page.waitForTimeout(1500); // hold on the flat 2D render
+    },
+  };
+}
+
 export const scenarios = {
   'all-primitives': orbitScene(
     'All Primitives',
     'A green ground plane holds primitive meshes (prism, torus, capsule), each with its own material, orbited as solid 3D geometry.'
+  ),
+
+  // 2D canvas — real Godot demo scenes, rendered front-on by the flat-2D camera.
+  pong: flatScene(
+    'Pong',
+    'The Godot "Pong" demo rendered from its real .tscn: cyan and magenta paddles, the ball, and the dashed centre separator — Sprite2D quads positioned by their Area2D parents, with hierarchical CanvasItem modulate tinting the paddles.'
+  ),
+  'dodge-player': flatScene(
+    'Dodge Player',
+    'The "Dodge the Creeps" player from its real .tscn: an AnimatedSprite2D draws the current animation frame (resolved from a SpriteFrames resource) as a 2D sprite.'
   ),
   'all-meshes': orbitScene(
     'All Meshes',
