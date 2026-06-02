@@ -107,7 +107,7 @@ describe('<NodeDetailsPanel>', () => {
       propertyFormatter: () => [
         {
           title: 'Stub Section',
-          items: [{ label: 'Stub Label', value: '<code>stub-value</code>' }],
+          items: [{ label: 'Stub Label', value: 'stub-value' }],
         },
       ],
     });
@@ -130,8 +130,8 @@ describe('<NodeDetailsPanel>', () => {
 
     expect(screen.getByText('Stub Section')).toBeTruthy();
     expect(screen.getByText('Stub Label:')).toBeTruthy();
-    // Value is dangerouslySetInnerHTML — assert the inner <code> was honored.
-    expect(screen.getByText('stub-value').tagName).toBe('CODE');
+    // Value renders as a plain text node (formatters emit display strings).
+    expect(screen.getByText('stub-value')).toBeTruthy();
   });
 
   it('renders external scene instance row when node.instance is set', async () => {

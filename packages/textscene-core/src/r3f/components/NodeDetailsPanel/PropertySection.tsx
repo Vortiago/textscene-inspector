@@ -2,10 +2,9 @@
  * One labeled section of `<label, value>` rows. Internal to
  * `<NodeDetailsPanel>` — not exported from the package.
  *
- * `value` is rendered via dangerouslySetInnerHTML because the existing
- * `PropertyFormatter` registry produces HTML strings (e.g. `<code>1.23</code>`).
- * These strings come from internal formatters, not user input — no XSS path.
- * TODO(follow-up): migrate `PropertyItem.value` to `ReactNode` for type safety.
+ * `value` is a plain display string — every `PropertyFormatter` emits
+ * `toFixed` / enum-name / `rgba(...)` text — so it renders as a text node.
+ * No `dangerouslySetInnerHTML`, no XSS surface.
  */
 import type { PropertySection as PropertySectionData } from '../../../core/NodeRegistry.js';
 import styles from './NodeDetailsPanel.module.css';
@@ -21,11 +20,7 @@ export function PropertySection({ section }: PropertySectionProps) {
       {section.items.map((item, idx) => (
         <div className={styles.row} key={`${item.label}-${idx}`}>
           <span className={styles.label}>{item.label}:</span>
-          <span
-            className={styles.value}
-            // eslint-disable-next-line react/no-danger -- value strings are formatter-generated, not user input
-            dangerouslySetInnerHTML={{ __html: item.value }}
-          />
+          <span className={styles.value}>{item.value}</span>
         </div>
       ))}
     </div>
