@@ -703,15 +703,20 @@ function CollapsedDock({ onExpand }: { onExpand: () => void }) {
  */
 function SceneChangeResetter({ sceneGraph }: { sceneGraph: SceneGraph | null }) {
   const { clearAll } = useSelection();
+  const returnToFreeView = useOptionalCameraControl()?.returnToFreeView;
   const prevSceneGraphRef = useRef<SceneGraph | null>(sceneGraph);
 
   useEffect(() => {
     const prev = prevSceneGraphRef.current;
     if (prev !== null && sceneGraph !== null && prev !== sceneGraph) {
       clearAll();
+      // The previous scene's active Camera3D no longer exists; drop back to
+      // free-orbit so CameraFit re-frames the newly loaded scene (CameraFit
+      // is gated on activeCameraPath === null).
+      returnToFreeView?.();
     }
     prevSceneGraphRef.current = sceneGraph;
-  }, [sceneGraph, clearAll]);
+  }, [sceneGraph, clearAll, returnToFreeView]);
 
   return null;
 }
