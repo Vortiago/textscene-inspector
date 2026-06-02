@@ -1,105 +1,244 @@
 /*
- * Web previewer toolbar. Consumes the shared `--tsi-*` design tokens
- * declared in TscnPreviewShell.module.css's :root block.
+ * Web previewer toolbar. Consumes the shared `--tsi-*` design tokens declared
+ * in TscnPreviewShell.module.css's :root block so it matches the Split Dock
+ * (J) chrome. A compact "scene chip" opens a command palette for opening a
+ * .tscn from disk (primary) and switching the built-in dev fixtures.
  */
 .toolbar {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--tsi-space-3);
-  padding: var(--tsi-space-2) var(--tsi-space-3);
-  background: var(--tsi-bg-shell);
-  border-bottom: 1px solid var(--tsi-border-strong);
-  color: var(--tsi-fg-default);
-  font-size: var(--tsi-font-md);
-}
-
-.uploadGroup {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: var(--tsi-space-2);
-  cursor: pointer;
   color: var(--tsi-fg-default);
-}
-
-.uploadLabel {
   font-size: var(--tsi-font-md);
 }
 
-.uploadInput {
-  /* Native file inputs are stubbornly themed by the OS. We give the
-   * surrounding block a stable color so the inline "Choose Files" looks
-   * intentional rather than out-of-band. */
+/* ── Scene chip (the always-visible trigger) ─────────────────────────── */
+.sceneChip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tsi-space-2);
+  max-width: 19rem;
+  padding: 3px var(--tsi-space-2);
+  background: var(--tsi-bg-elevated);
+  border: 1px solid var(--tsi-border);
+  border-radius: var(--tsi-radius-md);
   color: var(--tsi-fg-default);
-  font-size: var(--tsi-font-sm);
+  font: inherit;
+  cursor: pointer;
 }
 
-.uploadedChips {
-  display: inline-flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--tsi-space-1);
+.sceneChip:hover {
+  background: var(--tsi-bg-hover);
+  border-color: var(--tsi-border-strong);
 }
 
-.uploadedChip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 0.125rem var(--tsi-space-2);
-  background: color-mix(in srgb, var(--tsi-success) 18%, transparent);
-  border: 1px solid color-mix(in srgb, var(--tsi-success) 40%, transparent);
-  border-radius: 999px;
-  color: var(--tsi-success);
-  font-size: var(--tsi-font-sm);
+.sceneGlyph {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+  color: var(--tsi-fg-muted);
+}
+
+.sceneName {
+  min-width: 0;
+  max-width: 13rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--tsi-fg-strong);
+  font-weight: 600;
+}
+
+.caret {
+  color: var(--tsi-fg-muted);
+  font-size: var(--tsi-font-xs);
+}
+
+.kbd {
+  margin-left: var(--tsi-space-1);
+  padding: 0 5px;
+  border: 1px solid var(--tsi-border-strong);
+  border-radius: var(--tsi-radius-sm);
+  background: var(--tsi-bg-panel);
+  color: var(--tsi-fg-faint);
   font-family: var(--tsi-font-mono);
-  line-height: 1.4;
-}
-
-.uploadedChip::before {
-  /* A simple check-mark glyph leads each chip. */
-  content: "✓";
-  font-family: var(--tsi-font-ui);
+  font-size: var(--tsi-font-xs);
+  line-height: 1.5;
 }
 
 .errorMessage {
   color: var(--tsi-danger);
   font-size: var(--tsi-font-md);
-}
-
-/* WI-UX-7 — Upload TSCN entry. Mirrors the spacing pattern of
-   `.uploadGroup` but for the top-level .tscn file picker. */
-.tscnUploadGroup {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--tsi-space-2);
-  cursor: pointer;
-  color: var(--tsi-fg-default);
-}
-
-.tscnUploadLabel {
-  font-size: var(--tsi-font-md);
-}
-
-.tscnUploadInput {
-  color: var(--tsi-fg-default);
-  font-size: var(--tsi-font-sm);
-  max-width: 14rem;
-}
-
-.uploadedTscnLabel {
-  padding: 0.125rem var(--tsi-space-2);
-  background: color-mix(in srgb, var(--tsi-accent) 18%, transparent);
-  border: 1px solid color-mix(in srgb, var(--tsi-accent) 40%, transparent);
-  border-radius: 999px;
-  color: var(--tsi-accent);
-  font-size: var(--tsi-font-sm);
-  font-family: var(--tsi-font-mono);
-  line-height: 1.4;
-  max-width: 14rem;
-  white-space: nowrap;
+  max-width: 22rem;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-/* Reset Camera moved to the shared <ViewportToolbar> (core); its styling now
-   lives in ViewportToolbar.module.css. */
+/* Visually-hidden (but reachable) file input. */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ── Command palette ─────────────────────────────────────────────────── */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+}
+
+.palette {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  width: 22rem;
+  max-width: 90vw;
+  max-height: min(62vh, 520px);
+  background: var(--tsi-bg-panel);
+  border: 1px solid var(--tsi-border-strong);
+  border-radius: var(--tsi-radius-md);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+/* Primary action — open the user's own .tscn. */
+.openDisk {
+  display: flex;
+  align-items: center;
+  gap: var(--tsi-space-2);
+  padding: var(--tsi-space-2) var(--tsi-space-3);
+  border: none;
+  border-bottom: 1px solid var(--tsi-border);
+  background: var(--tsi-accent-soft);
+  color: var(--tsi-accent-fg);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.openDisk:hover {
+  background: var(--tsi-accent);
+  color: #fff;
+}
+
+.openDisk code {
+  font-family: var(--tsi-font-mono);
+  font-size: 0.95em;
+}
+
+.openDiskIcon {
+  font-size: var(--tsi-font-lg);
+  line-height: 1;
+}
+
+.search {
+  margin: var(--tsi-space-2);
+  padding: var(--tsi-space-1) var(--tsi-space-2);
+  background: var(--tsi-bg-elevated);
+  border: 1px solid var(--tsi-border);
+  border-radius: var(--tsi-radius-sm);
+  color: var(--tsi-fg-default);
+  font: inherit;
+  font-size: var(--tsi-font-sm);
+}
+
+.search::placeholder {
+  color: var(--tsi-fg-faint);
+}
+
+.search:focus {
+  outline: none;
+  border-color: var(--tsi-accent);
+  box-shadow: 0 0 0 1px var(--tsi-focus-ring);
+}
+
+.list {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding-bottom: var(--tsi-space-1);
+}
+
+.empty {
+  padding: var(--tsi-space-3);
+  text-align: center;
+  color: var(--tsi-fg-muted);
+  font-size: var(--tsi-font-sm);
+}
+
+.group {
+  margin-top: 2px;
+}
+
+.groupHead {
+  position: sticky;
+  top: 0;
+  padding: var(--tsi-space-1) var(--tsi-space-3);
+  background: var(--tsi-bg-panel);
+  color: var(--tsi-fg-muted);
+  font-size: var(--tsi-font-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--tsi-space-2);
+  width: 100%;
+  padding: 4px var(--tsi-space-3) 4px calc(var(--tsi-space-3) + 4px);
+  border: none;
+  border-left: 2px solid transparent;
+  background: transparent;
+  color: var(--tsi-fg-default);
+  font: inherit;
+  font-size: var(--tsi-font-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.itemActive {
+  background: var(--tsi-bg-hover);
+}
+
+.itemCurrent {
+  border-left-color: var(--tsi-accent);
+  color: var(--tsi-accent-fg);
+}
+
+.itemLabel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.currentDot {
+  color: var(--tsi-accent);
+  font-size: 0.6em;
+  flex: 0 0 auto;
+}
+
+.devNote {
+  padding: var(--tsi-space-1) var(--tsi-space-3);
+  border-top: 1px solid var(--tsi-border);
+  background: var(--tsi-bg-elevated);
+  color: var(--tsi-fg-faint);
+  font-size: var(--tsi-font-xs);
+  font-style: italic;
+}

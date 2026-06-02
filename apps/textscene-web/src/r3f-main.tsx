@@ -12,14 +12,20 @@
  * "Reset Camera" to frame the orbit controls back to default
  * (WI-UX-7).
  */
-import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
+} from 'react';
 import { createRoot } from 'react-dom/client';
 import {
   FileEventBus,
   ResourceLoader,
   ResourceLoaderProvider,
   TscnPreviewShell,
-  ViewportSelector,
   type ViewportSelectorOption,
 } from '@textscene/core';
 import { fixtures } from './fixtures';
@@ -206,12 +212,28 @@ interface ToolbarProps {
   onTscnUploadError: (message: string) => void;
 }
 
+/** Small scene/node glyph for the scene chip. */
+function SceneGlyph() {
+  return (
+    <svg className={styles.sceneGlyph} viewBox="0 0 16 16" aria-hidden focusable="false">
+      <path d="M8 1.6 14 5v6L8 14.4 2 11V5z" fill="none" stroke="currentColor" strokeWidth="1.2" />
+      <path d="M2 5l6 3 6-3M8 8v6.4" fill="none" stroke="currentColor" strokeWidth="1.2" />
+    </svg>
+  );
+}
+
 /**
- * Toolbar rendered inside `<TscnPreviewShell>` so it has access to the
- * shell's `CameraControlContext` (for the Reset Camera button).
- * Three top-level controls: scene-fixture dropdown, upload .tscn,
- * reset camera. Mirrors main's controls panel
- * (`git show main:apps/textscene-web/index.html:30-40`).
+ * Web toolbar: a compact "scene chip" in the shell top bar that opens a
+ * command palette (click, or Ctrl/Cmd+K) for opening a `.tscn` and switching
+ * scenes. The palette LEADS with "Open a .tscn from disk…" — the real-world
+ * primary action — and lists the built-in fixtures below under a "dev only"
+ * heading. Those fixtures are development scaffolding slated for removal; when
+ * `options` is empty the palette degrades cleanly to just the open action +
+ * the current-file chip.
+ *
+ * Note on missing files: a scene's missing `res://` dependencies are provided
+ * separately and per-path in the shell's Resources tab — deliberately kept
+ * distinct from "open a scene" so a picked file always maps to a known target.
  */
 function Toolbar({
   options,
@@ -222,9 +244,77 @@ function Toolbar({
   onTscnUpload,
   onTscnUploadError,
 }: ToolbarProps) {
-  // Reset Camera moved to the shared <ViewportToolbar> in the shell top bar
-  // (it's a viewport-mode control, and now both apps get it).
+  // Reset Camera lives in the shared <ViewportToolbar> in the shell top bar.
   const tscnInputRef = useRef<HTMLInputElement | null>(null);
+  const searchRef = useRef<HTMLInputElement | null>(null);
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  // Built-in dev fixtures to switch between (drop the uploaded-placeholder
+  // option, whose value is the empty sentinel).
+  const scenes = useMemo(() => options.filter((o) => o.value !== NO_FIXTURE), [options]);
+
+  const currentLabel =
+    uploadedTscnName ?? scenes.find((o) => o.value === fixtureFile)?.label ?? 'No scene';
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return scenes;
+    return scenes.filter(
+      (o) => o.label.toLowerCase().includes(q) || (o.category ?? '').toLowerCase().includes(q)
+    );
+  }, [scenes, query]);
+
+  // Preserve category order of first appearance.
+  const groups = useMemo(() => {
+    const m = new Map<string, ViewportSelectorOption[]>();
+    for (const o of filtered) {
+      const c = o.category ?? 'Scenes';
+      let arr = m.get(c);
+      if (!arr) {
+        arr = [];
+        m.set(c, arr);
+      }
+      arr.push(o);
+    }
+    return [...m.entries()];
+  }, [filtered]);
+
+  // Flat list (in render order) for keyboard navigation.
+  const flat = useMemo(() => groups.flatMap(([, items]) => items), [groups]);
+
+  useEffect(() => {
+    setActiveIndex(0);
+  }, [query]);
+
+  // Ctrl/Cmd+K toggles the palette; Escape closes it.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setOpen((v) => !v);
+      } else if (e.key === 'Escape') {
+        setOpen(false);
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  // Reset + focus search each time the palette opens.
+  useEffect(() => {
+    if (!open) return;
+    setQuery('');
+    setActiveIndex(0);
+    const id = window.setTimeout(() => searchRef.current?.focus(), 0);
+    return () => window.clearTimeout(id);
+  }, [open]);
+
+  function selectScene(value: string) {
+    onFixtureChange(value);
+    setOpen(false);
+  }
 
   function handleTscnFileChange(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -236,45 +326,145 @@ function Toolbar({
         const message = err instanceof Error ? err.message : String(err);
         onTscnUploadError(`Failed to read TSCN file: ${message}`);
       });
-    // Reset the input so the same filename can be re-uploaded.
-    if (tscnInputRef.current) {
-      tscnInputRef.current.value = '';
+    // Reset so the same filename can be re-opened.
+    if (tscnInputRef.current) tscnInputRef.current.value = '';
+    setOpen(false);
+  }
+
+  function handleSearchKeyDown(e: ReactKeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setActiveIndex((i) => Math.min(i + 1, flat.length - 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActiveIndex((i) => Math.max(i - 1, 0));
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      const o = flat[activeIndex];
+      if (o) selectScene(o.value);
     }
   }
 
   return (
     <div className={styles.toolbar}>
-      {/* App brand now lives in the shared TscnPreviewShell top bar. */}
-      <ViewportSelector
-        options={options}
-        value={fixtureFile}
-        onChange={onFixtureChange}
-        label="Scene:"
-      />
-      <label className={styles.tscnUploadGroup}>
-        <span className={styles.tscnUploadLabel}>Upload TSCN:</span>
-        <input
-          ref={tscnInputRef}
-          type="file"
-          accept=".tscn"
-          onChange={handleTscnFileChange}
-          className={styles.tscnUploadInput}
-          data-testid="upload-tscn-input"
-        />
-      </label>
-      {uploadedTscnName && (
-        <span
-          className={styles.uploadedTscnLabel}
-          data-testid="uploaded-tscn-label"
-          title={uploadedTscnName}
-        >
-          {uploadedTscnName}
+      <button
+        type="button"
+        className={styles.sceneChip}
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        title="Open a .tscn or switch scene (Ctrl+K)"
+      >
+        <SceneGlyph />
+        {uploadedTscnName ? (
+          <span
+            className={styles.sceneName}
+            data-testid="uploaded-tscn-label"
+            title={uploadedTscnName}
+          >
+            {uploadedTscnName}
+          </span>
+        ) : (
+          <span className={styles.sceneName}>{currentLabel}</span>
+        )}
+        <span className={styles.caret} aria-hidden>
+          ▾
         </span>
-      )}
+        <span className={styles.kbd} aria-hidden>
+          ⌘K
+        </span>
+      </button>
+
       {loadError && (
         <span role="alert" className={styles.errorMessage}>
           {loadError}
         </span>
+      )}
+
+      {/* Always rendered (visually hidden) so the open-file action — and the
+          upload tests — can reach it whether or not the palette is open. */}
+      <input
+        ref={tscnInputRef}
+        type="file"
+        accept=".tscn"
+        onChange={handleTscnFileChange}
+        className={styles.srOnly}
+        data-testid="upload-tscn-input"
+        tabIndex={-1}
+        aria-hidden
+      />
+
+      {open && (
+        <>
+          <div className={styles.backdrop} onClick={() => setOpen(false)} aria-hidden />
+          <div className={styles.palette} role="dialog" aria-label="Open or switch scene">
+            {/* Primary action — open the user's own .tscn. */}
+            <button
+              type="button"
+              className={styles.openDisk}
+              onClick={() => tscnInputRef.current?.click()}
+            >
+              <span className={styles.openDiskIcon} aria-hidden>
+                ⤓
+              </span>
+              Open a <code>.tscn</code> from disk…
+            </button>
+
+            {scenes.length > 0 && (
+              <>
+                <input
+                  ref={searchRef}
+                  className={styles.search}
+                  placeholder="Filter built-in scenes…"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  onKeyDown={handleSearchKeyDown}
+                  aria-label="Filter built-in scenes"
+                />
+                <div className={styles.list} role="listbox" aria-label="Built-in scenes">
+                  {flat.length === 0 && (
+                    <div className={styles.empty}>No scenes match “{query}”.</div>
+                  )}
+                  {groups.map(([cat, items]) => (
+                    <div key={cat} className={styles.group}>
+                      <div className={styles.groupHead}>{cat}</div>
+                      {items.map((o) => {
+                        const idx = flat.indexOf(o);
+                        const active = idx === activeIndex;
+                        const current = !uploadedTscnName && o.value === fixtureFile;
+                        return (
+                          <button
+                            key={o.value}
+                            type="button"
+                            role="option"
+                            aria-selected={current}
+                            className={[
+                              styles.item,
+                              active ? styles.itemActive : '',
+                              current ? styles.itemCurrent : '',
+                            ]
+                              .filter(Boolean)
+                              .join(' ')}
+                            onMouseEnter={() => setActiveIndex(idx)}
+                            onClick={() => selectScene(o.value)}
+                          >
+                            <span className={styles.itemLabel}>{o.label}</span>
+                            {current && (
+                              <span className={styles.currentDot} aria-hidden>
+                                ●
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+                <div className={styles.devNote}>Built-in scenes are a development aid.</div>
+              </>
+            )}
+          </div>
+        </>
       )}
     </div>
   );
