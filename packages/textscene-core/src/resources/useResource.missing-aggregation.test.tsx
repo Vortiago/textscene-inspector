@@ -8,82 +8,22 @@ import * as THREE from 'three';
 import type { ReactNode } from 'react';
 import { useResource } from './useResource';
 import { ResourceLoaderProvider } from './ResourceLoaderContext';
-import { ResourceEventBus } from './ResourceEventBus';
-import { MetadataStore } from './MetadataStore';
 import type { ResourceLoader } from './ResourceLoader';
+import { createFakeResourceLoader, type FakeProcessor } from './testing/createFakeResourceLoader';
 import {
   MissingResourcesProvider,
   useMissingResources,
 } from '../r3f/contexts/MissingResourcesContext';
 
-interface MockTextureProcessor {
-  cache: Map<string, THREE.Texture | null>;
-  request(_path: string): void;
-  getCached(path: string): THREE.Texture | null | undefined;
-  isCached(path: string): boolean;
-  isLoading(): boolean;
-  clearCache(path?: string): void;
-  getCacheSize(): number;
-  _resolve(path: string, value: THREE.Texture): void;
-}
-
 function makeMockLoader(): {
   loader: ResourceLoader;
-  textures: MockTextureProcessor;
+  textures: FakeProcessor<THREE.Texture>;
 } {
-  const eventBus = new ResourceEventBus();
-  const metadata = new MetadataStore();
-  const makeProcessor = <T,>() => {
-    const cache = new Map<string, T | null>();
-    return {
-      cache,
-      request(_path: string): void {},
-      getCached(path: string): T | null | undefined {
-        return cache.get(path);
-      },
-      isCached(path: string): boolean {
-        return cache.has(path);
-      },
-      isLoading(): boolean {
-        return false;
-      },
-      clearCache(path?: string): void {
-        if (path === undefined) cache.clear();
-        else cache.delete(path);
-      },
-      getCacheSize(): number {
-        return cache.size;
-      },
-    };
-  };
-
-  const textures = makeProcessor<THREE.Texture>();
-  // Seed the cache with a sentinel `null` so the hook resolves
-  // synchronously to `missing` instead of staying `pending`.
-  textures.cache.set('res://textures/missing.png', null);
-
-  // Test-only convenience: simulate a successful load + bus emit so the
-  // missing → loaded transition can be driven from a test.
-  const texturesWithResolve = Object.assign(textures, {
-    _resolve(path: string, value: THREE.Texture): void {
-      textures.cache.set(path, value);
-      eventBus.emit('texture', 'loaded', path, value);
-    },
-  }) as MockTextureProcessor;
-
-  const loader = {
-    eventBus,
-    metadata,
-    textures: texturesWithResolve,
-    materials: makeProcessor<THREE.Material>(),
-    glbMeshes: makeProcessor<THREE.Object3D>(),
-    scenes: makeProcessor<unknown>(), // WI-ARCH-2: peer processor
-    getSceneCached: () => undefined,
-    requestScene: () => {},
-    provideFile(): void {},
-    clear(): void {},
-  };
-  return { loader: loader as unknown as ResourceLoader, textures: texturesWithResolve };
+  const fake = createFakeResourceLoader();
+  // Seed a sentinel `null` so the hook resolves synchronously to
+  // `missing` instead of staying `pending`.
+  fake.textures.seed('res://textures/missing.png', null);
+  return { loader: fake.loader, textures: fake.textures };
 }
 
 function makeWrappers(loader: ResourceLoader) {
@@ -100,7 +40,7 @@ function makeWrappers(loader: ResourceLoader) {
 
 describe('useResource → MissingResourcesContext aggregation', () => {
   let loader: ResourceLoader;
-  let textures: MockTextureProcessor;
+  let textures: FakeProcessor<THREE.Texture>;
 
   beforeEach(() => {
     ({ loader, textures } = makeMockLoader());

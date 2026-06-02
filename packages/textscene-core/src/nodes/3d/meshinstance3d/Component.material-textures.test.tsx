@@ -9,15 +9,14 @@
  * #47 (UV applies to ALL maps) lives in `Component.material-uv.test.tsx`.
  */
 
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { MeshInstance3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
-import { ResourceEventBus } from '../../../resources/ResourceEventBus';
-import { MetadataStore } from '../../../resources/MetadataStore';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
+import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import type {
   TscnExternalResource,
   TscnInternalResource,
@@ -35,45 +34,11 @@ function makeLoader(): {
   setTextureCached: (path: string, tex: THREE.Texture) => void;
   setTextureMissing: (path: string) => void;
 } {
-  const eventBus = new ResourceEventBus();
-  const metadata = new MetadataStore();
-  const textureCache = new Map<string, THREE.Texture | null>();
-  const materialCache = new Map<string, THREE.Material | null>();
-  const glbCache = new Map<string, THREE.Object3D | null>();
-
-  const makeProc = <T,>(cache: Map<string, T | null>) => ({
-    request: vi.fn(),
-    getCached: (p: string) => cache.get(p),
-    isCached: (p: string) => cache.has(p),
-    isLoading: () => false,
-    clearCache: (p?: string) => (p ? cache.delete(p) : cache.clear()),
-    getCacheSize: () => cache.size,
-  });
-
-  const sceneCache = new Map<string, unknown | null>();
-  const loader = {
-    eventBus,
-    metadata,
-    textures: makeProc<THREE.Texture>(textureCache),
-    materials: makeProc<THREE.Material>(materialCache),
-    glbMeshes: makeProc<THREE.Object3D>(glbCache),
-    scenes: makeProc<unknown>(sceneCache), // WI-ARCH-2: peer processor
-    getSceneCached: () => undefined,
-    requestScene: () => {},
-    provideFile: () => {},
-    clear: () => {
-      textureCache.clear();
-      materialCache.clear();
-      glbCache.clear();
-      eventBus.clear();
-      metadata.clear();
-    },
-  } as unknown as ResourceLoader;
-
+  const fake = createFakeResourceLoader();
   return {
-    loader,
-    setTextureCached: (p, t) => textureCache.set(p, t),
-    setTextureMissing: (p) => textureCache.set(p, null),
+    loader: fake.loader,
+    setTextureCached: (p, t) => fake.textures.seed(p, t),
+    setTextureMissing: (p) => fake.textures.seed(p, null),
   };
 }
 
