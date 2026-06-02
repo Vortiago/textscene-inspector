@@ -6,7 +6,7 @@
 
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseNode2D } from '../../base/node2d/parser';
-import { parseVector2 } from '../../../parser/vectors';
+import { boolOr, intOr, vec2Or } from '../../../parser/valueParsers';
 import { warn } from '../../../logger';
 import type { Rect2, Sprite2DProperties } from './types';
 import type { Vector2 } from '../../base/node2d/types';
@@ -24,7 +24,7 @@ export function parseSprite2D(
   const result: Sprite2DProperties = {
     ...base,
     centered: boolOr(properties.centered, true),
-    offset: vec2Or(properties.offset, { x: 0, y: 0 }),
+    offset: vec2Or(properties.offset, { x: 0, y: 0 }, 'Sprite2D'),
     flip_h: boolOr(properties.flip_h, false),
     flip_v: boolOr(properties.flip_v, false),
     region_enabled: boolOr(properties.region_enabled, false),
@@ -45,30 +45,6 @@ export function parseSprite2D(
   }
 
   return result;
-}
-
-function boolOr(value: string | undefined, fallback: boolean): boolean {
-  if (value === undefined) return fallback;
-  const v = value.toLowerCase();
-  if (v === 'true' || v === '1') return true;
-  if (v === 'false' || v === '0') return false;
-  return fallback;
-}
-
-function intOr(value: string | undefined, fallback: number): number {
-  if (value === undefined) return fallback;
-  const parsed = parseInt(value, 10);
-  return Number.isNaN(parsed) ? fallback : parsed;
-}
-
-function vec2Or(value: string | undefined, fallback: Vector2): Vector2 {
-  if (!value) return fallback;
-  try {
-    return parseVector2(value);
-  } catch {
-    warn(`Sprite2D: invalid Vector2 "${value}"`);
-    return fallback;
-  }
 }
 
 function parseVector2i(value: string): Vector2 | null {

@@ -7,6 +7,7 @@
 
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseNode3D } from '../../base/node3d/parser';
+import { boolOr, enumOr, floatOr } from '../../../parser/valueParsers';
 import {
   AnimationProcessMode,
   type AnimationPlayerProperties,
@@ -60,26 +61,6 @@ function extractClips(properties: Record<string, string>): Array<{ name: string 
     }
   }
   return clips;
-}
-
-function floatOr(raw: string | undefined, fallback: number): number {
-  if (raw === undefined) return fallback;
-  const n = parseFloat(raw);
-  return Number.isNaN(n) ? fallback : n;
-}
-
-function boolOr(raw: string | undefined, fallback: boolean): boolean {
-  if (raw === undefined) return fallback;
-  if (raw === 'true' || raw === '1') return true;
-  if (raw === 'false' || raw === '0') return false;
-  return fallback;
-}
-
-function enumOr<T extends number>(raw: string | undefined, fallback: T, allowed: readonly T[]): T {
-  if (raw === undefined) return fallback;
-  const n = parseInt(raw, 10) as T;
-  if (Number.isNaN(n)) return fallback;
-  return allowed.includes(n) ? n : fallback;
 }
 
 function stripQuotes(raw: string): string {

@@ -11,7 +11,6 @@ import {
   isUnterminatedString,
   isIncompleteValue,
   unquoteString,
-  intOr,
 } from './utils';
 
 describe('countUnescapedQuotes', () => {
@@ -88,15 +87,5 @@ describe('unquoteString', () => {
   });
   it('treats an escaped backslash before u as literal (\\\\u1234 → \\u1234)', () => {
     expect(unquoteString('"a\\\\u1234"')).toBe('a\\u1234');
-  });
-});
-
-describe('intOr', () => {
-  it('parses ints', () => {
-    expect(intOr('3')).toBe(3);
-  });
-  it('returns undefined for absent/invalid', () => {
-    expect(intOr(undefined)).toBeUndefined();
-    expect(intOr('abc')).toBeUndefined();
   });
 });

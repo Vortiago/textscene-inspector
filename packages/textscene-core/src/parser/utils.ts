@@ -152,13 +152,3 @@ export function unquoteString(value: string): string {
     return ESCAPE_MAP[seq] ?? seq;
   });
 }
-
-/**
- * Parse a string property value to an int, or `undefined` when absent/invalid.
- * Shared by node parsers that read enum / count properties.
- */
-export function intOr(value: string | undefined): number | undefined {
-  if (value === undefined) return undefined;
-  const n = parseInt(value, 10);
-  return Number.isNaN(n) ? undefined : n;
-}

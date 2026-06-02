@@ -9,8 +9,8 @@
  */
 
 import type { ParsedHeading } from '../../../parser/utils';
-import { parseVector2 } from '../../../parser/vectors';
 import { parseColor } from '../../../utils/colorParser';
+import { floatOr, intOr, vec2Or } from '../../../parser/valueParsers';
 import { warn } from '../../../logger';
 import type { Node2DProperties, Vector2 } from './types';
 
@@ -37,8 +37,8 @@ export function parseNode2D(
   if (matrix) {
     ({ position, rotation, scale } = matrix);
   } else {
-    if (properties.position) position = parseVector2Or(properties.position, position, name);
-    if (properties.scale) scale = parseVector2Or(properties.scale, scale, name);
+    if (properties.position) position = vec2Or(properties.position, position, name || 'Node2D');
+    if (properties.scale) scale = vec2Or(properties.scale, scale, name || 'Node2D');
     if (properties.rotation !== undefined) rotation = floatOr(properties.rotation, 0);
     else if (properties.rotation_degrees !== undefined)
       rotation = (floatOr(properties.rotation_degrees, 0) * Math.PI) / 180;
@@ -84,27 +84,4 @@ export function decomposeTransform2D(
   const scaleY = Math.hypot(yx, yy) * (det < 0 ? -1 : 1);
 
   return { position: { x: ox, y: oy }, rotation, scale: { x: scaleX, y: scaleY } };
-}
-
-function floatOr(value: string | undefined, fallback: number): number {
-  if (value === undefined) return fallback;
-  const parsed = parseFloat(value);
-  return Number.isNaN(parsed) ? fallback : parsed;
-}
-
-function intOr(value: string | undefined, fallback: number): number {
-  if (value === undefined) return fallback;
-  const parsed = parseInt(value, 10);
-  return Number.isNaN(parsed) ? fallback : parsed;
-}
-
-function parseVector2Or(value: string, fallback: Vector2, nodeName: string): Vector2 {
-  try {
-    return parseVector2(value);
-  } catch (error) {
-    warn(
-      `Node2D${nodeName ? ` "${nodeName}"` : ''}: invalid Vector2 "${value}": ${error instanceof Error ? error.message : String(error)}`
-    );
-    return fallback;
-  }
 }

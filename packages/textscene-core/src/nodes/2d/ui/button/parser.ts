@@ -1,6 +1,7 @@
 /** Button parser — Control + text + disabled/flat flags + alignment. */
 
-import { type ParsedHeading, unquoteString, intOr } from '../../../../parser/utils';
+import { type ParsedHeading, unquoteString } from '../../../../parser/utils';
+import { parseOptionalInt } from '../../../../parser/valueParsers';
 import type { ButtonProperties } from './types';
 import { parseControl } from '../control/parser';
 
@@ -12,7 +13,7 @@ export function parseButton(
   if (properties.text !== undefined) result.text = unquoteString(properties.text);
   result.disabled = properties.disabled === 'true';
   result.flat = properties.flat === 'true';
-  result.alignment = intOr(properties.alignment);
+  result.alignment = parseOptionalInt(properties.alignment);
   return result;
 }
 

@@ -38,6 +38,10 @@ _Avoid_: "the parser" (ambiguous with strict).
 The validating parser used only for linting — reports every syntax/format error as a `ParseError` with line/column.
 _Avoid_: "validator" (reserve for property validators).
 
+**Value decoder** (`parser/valueParsers.ts`):
+The lenient parser's shared primitives for reading a raw property string into a typed scalar/vector — `intOr`/`floatOr`/`boolOr`/`enumOr`/`vec2Or` (take a fallback, always return) and `parseOptionalInt` (returns `undefined` when unset). One contract: fall back **silently when absent**, **warn-then-fall-back when present but unparseable**. Wraps the canonical leaf scanners (`parseVector2`/`parseVector3` in `parser/vectors.ts`, `parseColor` in `utils/colorParser.ts`); one-off structured literals (`Vector2i`, `Rect2`, `frame_coords`) and divergent leaf parsers (the throwing `parseColor` in `standardmaterial3d`, the `undefined`-returning `parseVector2` in `control`) stay in their slice.
+_Avoid_: re-declaring per-node `intOr`/`floatOr` copies (the pattern this replaced); "validator" (that is the strict-linter path).
+
 ### Code organization
 
 **Vertical slice**:

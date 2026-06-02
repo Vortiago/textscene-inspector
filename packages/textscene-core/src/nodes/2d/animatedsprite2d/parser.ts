@@ -7,10 +7,8 @@
 
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseNode2D } from '../../base/node2d/parser';
-import { parseVector2 } from '../../../parser/vectors';
-import { warn } from '../../../logger';
+import { boolOr, intOr, vec2Or } from '../../../parser/valueParsers';
 import type { AnimatedSprite2DProperties } from './types';
-import type { Vector2 } from '../../base/node2d/types';
 
 export function isAnimatedSprite2D(heading: ParsedHeading): boolean {
   return heading.type === 'node' && heading.attributes.type === 'AnimatedSprite2D';
@@ -25,7 +23,7 @@ export function parseAnimatedSprite2D(
     ...base,
     frame: intOr(properties.frame, 0),
     centered: boolOr(properties.centered, true),
-    offset: vec2Or(properties.offset, { x: 0, y: 0 }),
+    offset: vec2Or(properties.offset, { x: 0, y: 0 }, 'AnimatedSprite2D'),
     flip_h: boolOr(properties.flip_h, false),
     flip_v: boolOr(properties.flip_v, false),
   };
@@ -33,28 +31,4 @@ export function parseAnimatedSprite2D(
   // `animation = &"right"` → "right".
   if (properties.animation) result.animation = properties.animation.replace(/^&?"(.*)"$/, '$1');
   return result;
-}
-
-function intOr(value: string | undefined, fallback: number): number {
-  if (value === undefined) return fallback;
-  const parsed = parseInt(value, 10);
-  return Number.isNaN(parsed) ? fallback : parsed;
-}
-
-function boolOr(value: string | undefined, fallback: boolean): boolean {
-  if (value === undefined) return fallback;
-  const v = value.toLowerCase();
-  if (v === 'true' || v === '1') return true;
-  if (v === 'false' || v === '0') return false;
-  return fallback;
-}
-
-function vec2Or(value: string | undefined, fallback: Vector2): Vector2 {
-  if (!value) return fallback;
-  try {
-    return parseVector2(value);
-  } catch {
-    warn(`AnimatedSprite2D: invalid Vector2 "${value}"`);
-    return fallback;
-  }
 }
