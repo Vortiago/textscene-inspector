@@ -26,7 +26,7 @@
  */
 import type { TscnNode, TscnScene, TscnExternalResource } from '../../../parser/types';
 import { useResource } from '../../../resources/useResource';
-import { parseResourceReference } from '../../../resources/SubResourceResolver';
+import { resolveInstancePath } from '../../../resources/SubResourceResolver';
 
 export function useSubSceneChildren(
   node: TscnNode,
@@ -45,23 +45,4 @@ export function useSubSceneChildren(
     return null;
   }
   return result.value.nodes;
-}
-
-/**
- * Resolve `ExtResource("id")` or a raw `res://` path against the host
- * scene's externalResources. Mirrors NodeDispatcher's
- * `resolveInstancePath`; kept local to avoid a cross-package import
- * (NodeDispatcher's helper isn't exported).
- */
-function resolveInstancePath(
-  instanceRef: string,
-  externalResources: readonly TscnExternalResource[]
-): string | null {
-  if (instanceRef.startsWith('res://')) {
-    return instanceRef;
-  }
-  const parsed = parseResourceReference(instanceRef);
-  if (!parsed || parsed.type !== 'ExtResource') return null;
-  const ext = externalResources.find((r) => r.id === parsed.id);
-  return ext?.path ?? null;
 }

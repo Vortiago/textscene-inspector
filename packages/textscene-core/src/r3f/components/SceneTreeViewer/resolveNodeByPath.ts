@@ -17,7 +17,7 @@
  * any row the tree can render becomes resolvable.
  */
 import type { TscnNode, TscnExternalResource } from '../../../parser/types';
-import { parseResourceReference } from '../../../resources/SubResourceResolver';
+import { resolveInstancePath } from '../../../resources/SubResourceResolver';
 
 /**
  * Minimal read surface the resolver needs from the loader's scene cache.
@@ -25,23 +25,6 @@ import { parseResourceReference } from '../../../resources/SubResourceResolver';
  */
 export interface CachedSceneSource {
   getCached: (path: string) => { nodes: readonly TscnNode[] } | null | undefined;
-}
-
-/**
- * Resolve `ExtResource("id")` or a raw `res://` path against a list of
- * external resources. Mirrors `useSubSceneChildren.resolveInstancePath`.
- */
-function resolveInstancePath(
-  instanceRef: string,
-  externalResources: readonly TscnExternalResource[]
-): string | null {
-  if (instanceRef.startsWith('res://')) {
-    return instanceRef;
-  }
-  const parsed = parseResourceReference(instanceRef);
-  if (!parsed || parsed.type !== 'ExtResource') return null;
-  const ext = externalResources.find((r) => r.id === parsed.id);
-  return ext?.path ?? null;
 }
 
 /**

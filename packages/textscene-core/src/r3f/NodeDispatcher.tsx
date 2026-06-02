@@ -34,7 +34,7 @@ import { GenericNodeFallback } from './internal/generic-node-fallback/index';
 import { useViewportSelection } from './hooks/useViewportSelection.js';
 import { NodePathProvider } from './contexts/NodePathContext.js';
 import { useResource, useResourceLoader } from '../resources/useResource.js';
-import { parseResourceReference } from '../resources/SubResourceResolver.js';
+import { parseResourceReference, resolveInstancePath } from '../resources/SubResourceResolver.js';
 import {
   SceneResourcesProvider,
   useSceneResources,
@@ -233,23 +233,4 @@ function InstancedSceneSubtree({
       ))}
     </SceneResourcesProvider>
   );
-}
-
-
-/**
- * Resolve `ExtResource("id")` or a raw `res://` path against the
- * provided external-resources list. Returns null when the reference
- * doesn't match either form or the id isn't registered.
- */
-function resolveInstancePath(
-  instanceRef: string,
-  externalResources: readonly { id: string; path: string; type: string }[]
-): string | null {
-  if (instanceRef.startsWith('res://')) {
-    return instanceRef;
-  }
-  const parsed = parseResourceReference(instanceRef);
-  if (!parsed || parsed.type !== 'ExtResource') return null;
-  const ext = externalResources.find((r) => r.id === parsed.id);
-  return ext?.path ?? null;
 }
