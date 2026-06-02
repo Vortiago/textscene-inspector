@@ -106,6 +106,35 @@ async function fillSearch(page, text) {
   return true;
 }
 
+/** Open one of the detail-dock tabs (Inspector / Resources / Cameras). */
+async function openDetailTab(page, name) {
+  const tab = page.getByRole('tab', { name });
+  if (await tab.count()) {
+    await tab.first().click();
+    await page.waitForTimeout(300);
+    return true;
+  }
+  const byText = page.getByText(name, { exact: true });
+  if (await byText.count()) {
+    await byText.first().click();
+    await page.waitForTimeout(300);
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Upload a local file for a specific missing-resource path via the
+ * Resources-tab panel's per-row `<input type="file">`. Drives the
+ * late-arrival pipeline (provideFile → useResource 'loaded' → re-render).
+ */
+async function uploadResource(page, resPath, diskPath) {
+  const input = page.locator(`div[data-path="${resPath}"] input[type="file"]`);
+  await input.waitFor({ state: 'attached', timeout: 5000 });
+  await input.setInputFiles(diskPath);
+  await page.waitForTimeout(900); // re-resolve + re-render settle
+}
+
 /** Capture the poster frame used for verification + the showcase thumbnail. */
 async function poster(page, name) {
   await page.screenshot({ path: join(OUT_DIR, `${name}.png`) });
@@ -152,6 +181,8 @@ export async function recordShowcase(name, file, scenario, opts = {}) {
     useThisCamera,
     resetCamera,
     fillSearch,
+    openDetailTab,
+    uploadResource,
     poster: (n = name) => poster(page, n),
   };
   await scenario(page, helpers);

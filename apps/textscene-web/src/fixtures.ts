@@ -86,6 +86,11 @@ export const fixtures: Fixture[] = [
     "category": "Examples - Complex Scenes"
   },
   {
+    "name": "Missing Resources",
+    "file": "example-missing-resources.tscn",
+    "category": "Examples - Complex Scenes"
+  },
+  {
     "name": "Perpendicular Walls",
     "file": "example-perpendicular-walls.tscn",
     "category": "Examples - Complex Scenes"

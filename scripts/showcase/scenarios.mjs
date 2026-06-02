@@ -155,4 +155,27 @@ export const scenarios = {
       await h.resetCamera(page);
     },
   },
+
+  // Missing-resource upload round-trip. A small room whose floor, walls, and
+  // crate reference three textures that are NOT bundled (res://demo/missing/*),
+  // so it loads flat-shaded and the Resources tab lists all three as missing.
+  // Uploading a file for each path drives the late-arrival pipeline and the
+  // surfaces gain their textures live — proving request-missing → upload → used.
+  'missing-upload': {
+    label: 'Missing Resources',
+    caption:
+      'A lit room whose floor, walls, and crate reference textures that are not bundled — it loads flat-shaded and the shell’s Resources tab lists all three paths as missing (⚠). Uploading a file for each path drives the late-arrival pipeline (provideFile → useResource → re-render): the rows flip to uploaded (✓) and the surfaces gain their textures live, on camera — proving the request-missing-then-upload-and-use flow end to end.',
+    run: async (page, h) => {
+      await h.poster('missing-upload-before'); // flat-shaded "before"
+      await h.orbit(page, { dx: 120, dy: 14, steps: 26 }); // show the untextured room
+      await h.openDetailTab(page, 'Resources'); // reveal the missing list
+      await page.waitForTimeout(700);
+      await h.uploadResource(page, 'res://demo/missing/floor_albedo.png', 'scenes/ld58/assets/textures/wood1.png');
+      await h.uploadResource(page, 'res://demo/missing/wall_albedo.png', 'scenes/ld58/assets/textures/fy_acc_lien.png');
+      await h.uploadResource(page, 'res://demo/missing/crate_albedo.png', 'scenes/ld58/assets/textures/g_toit-tower.png');
+      await page.waitForTimeout(700);
+      await h.poster(); // textured "after" — the thumbnail
+      await h.orbit(page, { dx: 300, dy: 18, steps: 58 }); // orbit the now-textured room
+    },
+  },
 };

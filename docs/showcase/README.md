@@ -136,6 +136,16 @@ StaticBody3D / Area3D render as transform groups positioning their child meshes;
 
 Selecting each Camera3D node and clicking "Use This Camera" switches the viewport between the cameras' points of view (perspective, top-down, side, orthographic), then resets to free orbit. The video actively switches the active camera between the Camera3D nodes.
 
+### missing-upload
+
+![missing-upload before](web/missing-upload-before.png)
+
+![missing-upload after](web/missing-upload.png)
+
+[▶ web/missing-upload.webm](web/missing-upload.webm)
+
+Request-missing-resources, then upload them and watch them get used — end to end. A small room whose floor, walls, and crate reference textures that are **not** bundled loads flat-shaded in **magenta** (the missing-texture marker), and the shell's **Resources** tab lists all three `res://demo/missing/*` paths as missing (⚠). Uploading a file for each path drives the late-arrival pipeline (`provideFile` → `useResource` `'loaded'` → re-render): the rows flip to uploaded (✓) and the surfaces gain their textures **live, on camera**. The two posters above are the before (missing/magenta) and after (uploaded/textured) frames.
+
 ## VS Code extension
 
 Both editions render through the same `@textscene/core` library, so every clip above is also the VS Code 3D rendering output — the web previewer and the extension share one renderer. On top of that shared rendering, VS Code adds a custom `.tscn` editor and a scene-tree Preview panel. The screenshots below prove the integration runs inside the full VS Code UI: title bar, activity bar, editor tabs, the `.tscn` text editor, the Preview panel, and the status bar.
