@@ -147,26 +147,77 @@ imports declared in `parser/TscnParser.ts`.
 
 ### Resource Loading
 
-External resources (textures, materials, GLB meshes, packed scenes)
-flow through a layered event-bus pipeline:
+External resources (textures, materials, GLB meshes, packed scenes) flow through
+a **two-bus, event-driven pipeline** — *not* promises/Suspense at the component
+boundary. `request(path)` is fire-and-forget (returns `void`); a component learns
+a resource loaded by **receiving an event**, not by awaiting a promise. (Promises
+do the async I/O underneath — see the note below.)
 
-1. **`FileEventBus`** (app layer): hosts implement `ResourceProvider`
-   and the bus turns `request(path)` into a `loaded`/`failed` event.
-2. **`ResourceEventBus`** (core layer): typed `texture:loaded`,
-   `material:loaded`, `glb:loaded`, `scene:loaded` events with their
-   processed payloads.
-3. **`ResourceLoader`**: coordinates per-type processors
-   (`textures`, `materials`, `glbMeshes`, `sceneLoader`). The host
-   calls `provideFile(path)` after the user uploads a previously-missing
-   file, which clears the failed-cache and re-routes through the right
-   processor.
+**The layers, host → component:**
 
-`useResource(path, type)` is the only thing R3F components see. The hook
-subscribes to the bus and returns `{ value, status, error? }` where
-`status` is `'pending' | 'loaded' | 'missing' | 'error'`. Missing files
-do NOT suspend the subtree; components branch on `status` and render
-placeholders for missing resources. Object3D-typed values (`GLBMesh`)
-are cloned per consumer per CLAUDE.md's three.js single-parent rule.
+1. **`ResourceProvider`** (app layer): the host's file access —
+   `WebResourceProvider` (HTTP `fetch`) or `VSCodeResourceProvider` (the
+   extension's `res://` bridge, CSP-honoring). `loadResource(path)` returns
+   `string | ArrayBuffer | null` (async).
+2. **`FileEventBus`** — type-agnostic raw bytes: `request(path) →`
+   `loaded(path, bytes) | failed(path, err)`. Calls the provider, caches bytes,
+   dedupes in-flight requests.
+3. **Per-type processors** (`createResourceProcessor`): one
+   cache + in-flight + emit machine per type. On raw bytes it runs `process()`
+   (async), caches the result (**failures cached as `null`** so they don't
+   retry), and emits on the…
+4. **`ResourceEventBus`** (core layer): typed events namespaced
+   `texture|material|glb|scene` × `requested|loading|loaded|failed`, carrying the
+   processed payload. Scenes load "directly" (the parser needs path + content
+   together) but emit the same events.
+5. **`ResourceLoader`**: owns the `MetadataStore` + the four processors
+   (`textures`, `materials`, `glbMeshes`, `scenes` — WI-ARCH-2 collapsed the old
+   standalone `SceneLoader` into a `createSceneProcessor`). `register()` records
+   `ExtResource` id↔path; `provideFile(path)` drives the late-arrival flow below.
+6. **`useResource(path, type)`** — the only thing R3F components see. It **never
+   suspends**; it returns `{ value, status, error? }` with
+   `status ∈ 'pending' | 'loaded' | 'missing' | 'error'`. On mount it does a
+   synchronous cache check, then **subscribes** to the bus and fires `request()`
+   *after* subscribing (so a synchronous cache-hit emit isn't missed). Object3D
+   values (`GLBMesh`) are cloned per consumer (three.js single-parent rule,
+   CLAUDE.md). Components branch on `status` and render placeholders for missing
+   resources — the subtree never suspends.
+
+**Late arrival — why it's events, not a one-shot promise.** When a load fails the
+hook flips to `missing` and reports the path to `MissingResourcesContext`, which
+lists it in the Inspector's **Resources** tab. **The hook keeps its subscription
+while `missing`.** When the user supplies the file the host calls
+`provider.addUploadedFile(path, file)` + **`loader.provideFile(path)`**, which
+clears the file/processor caches for that path and **re-requests** it. The fresh
+bytes → `process()` → a new `loaded` event → the still-subscribed hook flips
+`missing → loaded` and the component re-renders **with no remount**. A promise
+resolves once; a live subscription lets a node that was missing for minutes wake
+up the instant its file appears.
+
+**Where promises live (supporting role only):** the actual fetch/parse is async
+(`loadResource`, `process()`, the scene `loadDirectly`); `finishLoad` awaits them
+then emits. One deliberate event→promise *adapter*: when a material needs an
+inline texture, `ResourceLoader` does `await eventBus.once('texture','loaded',id)`
+— a linear `await` over a single event. The component contract stays a pure
+`(status, value)` reacting to events.
+
+```mermaid
+flowchart TD
+  COMP["R3F node component"] -->|"useResource(path, type)"| HOOK["useResource()<br/>status: pending·loaded·missing·error<br/>(never suspends)"]
+  HOOK -->|"request(path) — void, fire-and-forget"| PROC["per-type Processor<br/>cache + in-flight dedupe<br/>failures cached as null"]
+  HOOK -->|"subscribe loaded/failed<br/>(kept even while 'missing')"| REB[["ResourceEventBus<br/>type × requested·loading·loaded·failed"]]
+  PROC -->|"request bytes"| FEB[["FileEventBus<br/>request → loaded·failed"]]
+  FEB -->|"loadResource(path) ⟨async⟩"| PROV["ResourceProvider<br/>Web: fetch · VS Code: ext bridge"]
+  PROV -->|"bytes | null"| FEB
+  FEB -->|"loaded(path, bytes)"| PROC
+  PROC -->|"process() ⟨async⟩ → emit"| REB
+  REB -->|"loaded / failed event"| HOOK
+  HOOK -->|"setState → re-render"| COMP
+
+  HOOK -. "status = missing → report(path)" .-> MRC["MissingResourcesContext<br/>Inspector ▸ Resources tab"]
+  MRC -. "user supplies file" .-> UP["provider.addUploadedFile()<br/>loader.provideFile(path)"]
+  UP == "clear caches + re-request" ==> PROC
+```
 
 ### Linter Bundle Isolation
 
@@ -327,26 +378,31 @@ flowchart TB
 
 A module-graph guard test (over both `linter/index.ts` and `parser/TscnParser.ts`) plus an ESLint `no-restricted-imports` rule turn the React-free invariant from discipline into a red/green signal. Synthetic render-only types (`GenericNodeFallback`, `GLBSceneRoot`) move to `r3f/internal/` — they are not Node types.
 
-### Viewport mode + 3-column DCC chrome (P3/P4 — [ADR-0003](./docs/adr/0003-2d-ui-dom-overlay.md), [ADR-0006](./docs/adr/0006-viewport-mode-seam.md))
+### Viewport mode + app chrome (P3/P4/P6 — [ADR-0003](./docs/adr/0003-2d-ui-dom-overlay.md), [ADR-0006](./docs/adr/0006-viewport-mode-seam.md), [ADR-0007](./docs/adr/0007-adopt-split-dock-shell.md))
 
-**Status:** the 2D-UI Control set, the viewport toggle, and the 3-column DCC chrome are all **shipped**.
+**Status:** the 2D-UI Control set, the viewport toggle, and the **Split Dock** chrome (which replaced the 3-column DCC layout — ADR-0007) are all **shipped**.
 
 - **P3 — Control set (done).** All 15 Control types ld-58 uses are registered DOM components: `Control`, `ColorRect`, `Label`, `VBoxContainer`, `HBoxContainer`, `GridContainer`, `CenterContainer`, `MarginContainer`, `ScrollContainer`, `Panel`, `PanelContainer`, `Button`, `TextureRect`, `RichTextLabel`, and the passthrough `CanvasLayer`. Each is a unified slice whose `index.r3f.ts` registers into `ControlComponentRegistry`; `ControlDispatcher` walks the subtree and `controlLayoutStyle` + `styleBoxToCss` + `resolveStyleBoxCss` map Godot layout/theme to CSS. `TextureRect` loads images host-agnostically via `useResource` (type-only `THREE` import — no runtime three in the slice).
 - **P4 — viewport toggle (done).** `TscnPreviewShell` is wrapped in `<ViewportModeProvider>`; a shared `<ViewportToolbar>` (3D/2D switch + Collisions checkbox) writes through `useViewportMode()`, and `<ViewportArea>` renders `TscnCanvas` (3D) or the lazy-loaded `ControlOverlay` (2D, fed the root scene's nodes + resources). The overlay is a separate lazy chunk, so the 15 components stay out of the initial canvas-paint bundle.
-- **P5 — 3-column DCC chrome (done).** `TscnPreviewShell` is now a full-width top bar (brand + host toolbar + `ViewportToolbar`) over three columns: a left **Scene** dock (SceneInfoCard + tree), the center viewport, and a right **Inspector** dock (NodeDetailsPanel + MissingResources). Both docks are resizable (the `<Splitter>` drag handle) and collapsible; the layout stacks vertically under 768px. The web app's redundant toolbar title was removed in favor of the shell brand.
+- **P5 — 3-column DCC chrome (superseded by P6).** The first chrome was a full-width top bar over three columns: a left **Scene** dock (SceneInfoCard + tree), the center viewport, and a right **Inspector** dock. Resizable + collapsible docks, stacked vertically under 768px. Replaced by the Split Dock (P6).
+- **P6 — Split Dock chrome (done, [ADR-0007](./docs/adr/0007-adopt-split-dock-shell.md)).** A prototype exploration (5 fresh-eyes designs → A+B hybrids → "Split Dock") landed the user-chosen layout: a slim top bar (file/brand + host toolbar + scene-stat chips + `ViewportToolbar`) over **two** columns — a large center viewport and a single right dock. **No left rail** (a VS Code webview sits right of VS Code's own activity bar + Explorer, so a left rail clashes + wastes width). The dock is a vertical **master-detail**: `SceneTreeViewer` on top over a tabbed detail (**Inspector / Resources / Cameras**) — selecting a node updates the inspector with no tab hop; the on-pane tab strip switches only the lower section; the Cameras tab lists `Camera3D` nodes with a one-click "use". `SceneInfoCard` is gone (node count moved to the top bar + tree header). Resizable width (`<Splitter>`) + a draggable master/detail handle; collapsible to a full-width viewport; stacks under 768px. In 2D mode the viewport becomes a framed pan/zoom `Canvas2DStage` wrapping the live `ControlOverlay`. The web app's scene picker is a command-palette `SceneSwitcher` ("Open .tscn" primary; the built-in fixtures it lists are dev-only scaffolding). Restyled via the shared `--tsi-*` tokens (VS Code-theme-aware).
 
-A single `ViewportModeContext` chooses between the 3D canvas and the 2D Control overlay (a sibling DOM layer, never inside `<Canvas>`), and drives the collision gizmo. The shell is a 3-column grid shared by both apps:
+A single `ViewportModeContext` chooses between the 3D canvas and the 2D Control overlay (a sibling DOM layer, never inside `<Canvas>`), and drives the collision gizmo. The Split Dock shell is shared by both apps:
 
 ```mermaid
 flowchart TB
   VM["ViewportModeContext<br/>{ mode: 2D|3D, showCollisions }"]
-  subgraph shell["TscnPreviewShell — 3-column DCC layout"]
-    LEFT["left<br/>SceneTreeViewer +<br/>SceneInfo + MissingResources"]
+  subgraph shell["TscnPreviewShell — Split Dock (ADR-0007)"]
+    TOP["top bar<br/>file · scene stats · camera · 3D/2D"]
     CENTER["center<br/>viewport region"]
-    RIGHT["right<br/>NodeDetailsPanel"]
+    subgraph DOCK["right dock — master-detail (no left rail)"]
+      TREE["SceneTreeViewer (master)"]
+      DETAIL["tabs: Inspector · Resources · Cameras"]
+    end
   end
+  TREE --> DETAIL
   VM -->|mode = 3D| TC["TscnCanvas → NodeDispatcher → R3F"]
-  VM -->|mode = 2D| CO["ControlOverlay → ControlDispatcher → &lt;div&gt; tree"]
+  VM -->|mode = 2D| CO["Canvas2DStage → ControlOverlay → &lt;div&gt; tree<br/>(framed 1152×648, zoom/pan)"]
   TC -. showCollisions .-> GZ["Collision gizmo<br/>(wireframe per collision-shape resource)"]
   CENTER --- TC
   CENTER --- CO
