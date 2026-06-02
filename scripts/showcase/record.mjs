@@ -33,9 +33,18 @@ async function orbit(page, { dx = 230, dy = 35, steps = 55 } = {}) {
   await page.mouse.up();
 }
 
-/** Select a fixture from the scene dropdown by its visible label, then settle. */
+/**
+ * Switch scenes through the command-palette scene switcher (the native <select>
+ * dropdown was retired for it): open the scene chip, filter by the fixture's
+ * label, and Enter to pick the top match, then settle.
+ */
 async function selectScene(page, label) {
-  await page.locator('select').first().selectOption({ label });
+  await page.locator('button[aria-haspopup="dialog"]').first().click();
+  const search = page.getByPlaceholder(/filter built-in scenes/i);
+  await search.waitFor({ state: 'visible', timeout: 5000 });
+  await search.fill(label);
+  await page.waitForTimeout(150); // filter settle
+  await search.press('Enter');
   await page.waitForTimeout(1300); // parse + resource load + CameraFit settle
 }
 

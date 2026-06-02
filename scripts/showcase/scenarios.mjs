@@ -103,13 +103,13 @@ export const scenarios = {
     { dx: 300, dy: 22, steps: 64 }
   ),
 
-  // Layout tour: the 3-column DCC chrome + the 2D Control overlay. Opens on the
-  // textured hallway (3D), orbits, then switches to a rich ld-58 dialog scene
-  // and flips to 2D mode so the overlay renders its Control UI.
+  // Layout tour: the Split Dock shell (ADR-0007) + the 2D Control overlay. Opens
+  // on the textured hallway (3D), orbits, switches to a rich ld-58 dialog scene
+  // via the command palette, then flips to 2D mode so the overlay renders its UI.
   'dcc-layout': {
     label: 'Hallway',
     caption:
-      'The 3-column DCC chrome — Scene outliner (left), viewport (center), Inspector (right). Orbits the fully furnished ld-58 murder scene, then switches to the EndGameDialog scene and flips to 2D mode, where the Control overlay renders the dialog UI faithfully.',
+      'The Split Dock shell (ADR-0007): a large viewport beside one right master-detail dock — scene tree on top, a tabbed Inspector / Resources / Cameras pane below that follows the selection. Orbits the fully furnished ld-58 murder scene, switches to the EndGameDialog scene via the ⌘K command palette, then flips to 2D mode, where the Control overlay renders the dialog UI faithfully.',
     run: async (page, h) => {
       await h.poster();
       await h.orbit(page, { dx: 280, dy: 18, steps: 48 });
