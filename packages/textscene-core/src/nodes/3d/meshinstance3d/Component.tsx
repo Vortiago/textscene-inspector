@@ -37,6 +37,7 @@ import { parseStandardMaterial3DScalars } from '../../../r3f/materials/standardM
 import { resolveStandardMaterial } from '../../../r3f/materials/resolveStandardMaterial';
 import { StandardMaterialSlot } from '../../../r3f/materials/StandardMaterialSlot';
 import { applyUVTransform } from './applyUVTransform';
+import { triplanarPlaneScale } from './triplanarScale';
 
 /** Texture slots StandardMaterial3D exposes — checked in this order. */
 const TEXTURE_PROPERTIES = [
@@ -140,9 +141,19 @@ export function MeshInstance3D({ node }: NodeComponentProps) {
   // different scale don't clobber each other. Identity transforms
   // (scale = 1,1 and offset = 0,0) skip the clone and return the
   // original.
-  const uvTransform = materialScalars
-    ? { scale: materialScalars.uv1Scale, offset: materialScalars.uv1Offset }
-    : null;
+  //
+  // WI-HALL-5: a triplanar material tiles per WORLD unit, not across the
+  // mesh's 0..1 UVs. For a PlaneMesh we reproduce that density by folding
+  // the plane's size into the scale (repeat = size × uv1_scale) — otherwise
+  // a 12×3.5 hallway floor stretched one texture copy and read "too big".
+  const uvTransform = useMemo(() => {
+    if (!materialScalars) return null;
+    const scale =
+      materialScalars.triplanar && meshResource
+        ? triplanarPlaneScale(meshResource, materialScalars.uv1Scale)
+        : materialScalars.uv1Scale;
+    return { scale, offset: materialScalars.uv1Offset };
+  }, [materialScalars, meshResource]);
 
   const albedoMap = useMemo(
     () => transformedTexture(textureSlots.albedo_texture, uvTransform),

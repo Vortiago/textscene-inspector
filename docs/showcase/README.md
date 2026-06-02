@@ -14,7 +14,7 @@ The ld-58 hallway is the yardstick for "can it render a full scene". Two views t
 
 [▶ web/hallway-ld58.webm](web/hallway-ld58.webm)
 
-The real ld-58 hallway geometry with its actual wall and wood textures (PlaneMesh walls plus instanced `WallSection` / `CornerColumn` components, resolved through the `res://` dependency closure with OpenGameArt textures). This is the yardstick for supporting the full hallway. Triplanar tiling is still approximate for now, and the furnished hallway — photo frames, props, evidence — arrives as more P5 assets land.
+The real ld-58 hallway geometry with its actual wall and wood textures (PlaneMesh walls plus instanced `WallSection` / `CornerColumn` components, resolved through the `res://` dependency closure with OpenGameArt textures). This is the yardstick for supporting the full hallway. Triplanar (`uv1_world_triplanar`) tiling now matches Godot's world-unit density on planar meshes (floor/walls/ceiling tile `size × uv1_scale` instead of stretching one copy); non-planar triplanar geometry remains approximate. The furnished hallway — photo frames, props, evidence — arrives as more P5 assets land.
 
 ### CSG hallway mockup
 
