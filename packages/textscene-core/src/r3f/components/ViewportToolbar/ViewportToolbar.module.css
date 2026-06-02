@@ -8,8 +8,6 @@
   gap: var(--tsi-space-2);
   margin-left: auto; /* push to the right of any host toolbar content */
   font-family: var(--tsi-font-ui);
-  /* Keep the rhythm compact so the row sits comfortably in a slim bar. */
-  min-height: 1.75rem;
 }
 
 /* Ghost button: transparent by default, muted text, fills with bg-hover.
@@ -53,11 +51,10 @@
    hairline border, fully rounded so it reads as a single control. */
 .segment {
   display: inline-flex;
-  align-items: stretch;
-  background: var(--tsi-bg-elevated);
+  align-items: center;
+  flex-shrink: 0; /* never squeeze the pill (it was clipping the "2D" button) */
   border: 1px solid var(--tsi-border);
   border-radius: var(--tsi-radius-md);
-  overflow: hidden;
   padding: 1px;
   gap: 1px;
 }

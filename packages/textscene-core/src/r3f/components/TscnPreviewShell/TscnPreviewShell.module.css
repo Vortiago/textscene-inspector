@@ -118,7 +118,11 @@
   display: flex;
   align-items: center;
   gap: var(--tsi-space-3);
-  padding: var(--tsi-space-2) var(--tsi-space-3);
+  /* Definite height: children size to content and center, so nested flex
+     toolbars can't drive a circular auto-height (the old bar ballooned to
+     58px because a stretched child set the height, which stretched it…). */
+  height: 2.75rem;
+  padding: 0 var(--tsi-space-3);
   border-bottom: 1px solid var(--tsi-border);
   background: var(--tsi-bg-panel);
   flex-shrink: 0;
