@@ -8,8 +8,10 @@
  * URL — the decoded bitmap survives blob revocation. Outside a
  * ResourceLoaderProvider (or before decode) the hook degrades to a placeholder.
  *
- * `stretch_mode` → CSS object-fit: 0 fill, 4/5 contain, 6 cover, else none;
- * modes 3 and 5 also center the image (Godot's KEEP_CENTERED variants).
+ * `stretch_mode` → CSS object-fit: 0 fill, 6 cover, else contain (fit, don't
+ * overflow); modes 3 and 5 also center. The <img> is absolutely positioned in
+ * a layout-sized wrapper so the texture's intrinsic size can't drive (and
+ * overflow) the flex layout — see `textureRectFit`.
  */
 
 import { useMemo, type CSSProperties } from 'react';
@@ -37,24 +39,17 @@ export function TextureRect({ node }: ControlComponentProps) {
   const layout = controlLayoutStyle(props, parentKind);
 
   if (src) {
-    const style: CSSProperties = {
-      ...layout,
-      objectFit: stretchObjectFit(props.stretchMode),
-      width: '100%',
-      height: '100%',
-      display: 'block',
-    };
-    if (props.stretchMode === 3 || props.stretchMode === 5) {
-      style.objectPosition = 'center';
-    }
+    // The <img> is absolutely positioned inside this layout-sized wrapper so
+    // the texture's intrinsic size never floors the flex layout — a tall
+    // portrait fits its box instead of overflowing it (the DialogSystem bug).
     return (
-      <img
-        src={src}
-        style={style}
-        alt={node.name}
+      <div
         data-control-type="TextureRect"
         data-node-name={node.name}
-      />
+        style={{ ...layout, overflow: 'hidden' }}
+      >
+        <img src={src} alt={node.name} style={textureRectFit(props)} />
+      </div>
     );
   }
 
@@ -120,17 +115,39 @@ function resolveTexturePath(
   return ext?.path ?? null;
 }
 
-/** Godot StretchMode → CSS object-fit. */
+/**
+ * CSS for the <img> inside a TextureRect's layout-sized wrapper. The image is
+ * taken OUT OF FLOW (`position: absolute; inset: 0`) and sized to the wrapper
+ * (`width/height: 100%`), so the texture's intrinsic size never floors the
+ * flex layout — a tall portrait fits its box instead of overflowing it (the
+ * DialogSystem LeftPortrait bug). `object-fit` follows Godot's stretch_mode
+ * (default `contain` — fit + keep aspect, not the intrinsic-size `none`).
+ */
+export function textureRectFit(props: {
+  stretchMode?: number;
+  expandMode?: number;
+}): CSSProperties {
+  const style: CSSProperties = {
+    position: 'absolute',
+    inset: 0,
+    width: '100%',
+    height: '100%',
+    objectFit: stretchObjectFit(props.stretchMode),
+  };
+  if (props.stretchMode === 3 || props.stretchMode === 5) {
+    style.objectPosition = 'center';
+  }
+  return style;
+}
+
+/** Godot StretchMode → CSS object-fit; default `contain` so images fit, not overflow. */
 function stretchObjectFit(mode: number | undefined): CSSProperties['objectFit'] {
   switch (mode) {
     case 0:
       return 'fill';
-    case 4:
-    case 5:
-      return 'contain';
     case 6:
       return 'cover';
     default:
-      return 'none';
+      return 'contain';
   }
 }

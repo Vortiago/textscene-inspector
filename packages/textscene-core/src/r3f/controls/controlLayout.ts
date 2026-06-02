@@ -121,6 +121,17 @@ function containerChildStyle(p: ControlProperties, parent: ParentLayoutKind): CS
     // No FILL/SHRINK bits (explicit 0): Godot shrinks the child to its content
     // at the begin edge — pin it so CSS flex doesn't stretch it by default.
     else style.alignSelf = 'flex-start';
+  } else if (parent === 'margin') {
+    // Godot's MarginContainer stretches its single child to fill the padded
+    // box. The container renders as a flex column, so the child grows to fill
+    // the height and stretches to fill the width; min:0 lets it fit (not
+    // overflow). Without this the child sat at its natural content height and
+    // inner EXPAND rows had no room to grow.
+    style.flexGrow = 1;
+    style.flexShrink = 1;
+    style.minWidth = 0;
+    style.minHeight = 0;
+    style.alignSelf = 'stretch';
   }
   return style;
 }
