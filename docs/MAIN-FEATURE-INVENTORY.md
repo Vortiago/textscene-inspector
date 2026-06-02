@@ -1,5 +1,21 @@
 # Main Feature Inventory — pre-migration baseline (80fa99e)
 
+> **Status as of 2026-06: HISTORICAL BASELINE — DO NOT UPDATE.** This is an
+> intentional snapshot of the pre-R3F vanilla-DOM app shell at commit `80fa99e`,
+> captured for UX-regression triage during the React 19 + react-three-fiber
+> migration. Every "Implementation pointer" below describes files that **no longer
+> exist** on the current branch (`packages/textscene-core/src/ui/*`,
+> `core/HelperManager.ts`, `core/SceneManager.ts`, the old
+> `apps/textscene-web/src/main.ts` / `index.html` line numbers — `main.ts` is now
+> an 18-line `mountR3F(#app)` shim that wipes the legacy DOM). For where each
+> feature lives in the current R3F codebase, see
+> [`PARITY-AUDIT-POST-MERGE.md`](./PARITY-AUDIT-POST-MERGE.md) (Layer B table) and
+> [`MAIN-VS-MIGRATION-DELTA.md`](./MAIN-VS-MIGRATION-DELTA.md). For features added
+> **after** this baseline (3D/2D viewport switch, Camera2D, the Control 2D overlay,
+> the Collisions wireframe toggle, the showLabels/Labels toggle — all in
+> `r3f/components/ViewportToolbar/`), this document is silent by design: it
+> predates them.
+
 Captured by `feature-archaeologist` in worktree `.claude/wt/arch-main` at HEAD `80fa99e`
 (commit: "docs: Add Phase 13.5 Architecture document and mark as release blocker (#42)").
 Vite dev server: `localhost:3000` from `apps/textscene-web`.

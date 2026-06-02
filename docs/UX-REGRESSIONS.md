@@ -2,11 +2,32 @@
 
 Code-archaeology snapshot comparing `main` (HEAD `80fa99e`) with `feat/r3f-migration` (HEAD `ed642ac`). Three regressions the original `PARITY-AUDIT.md` missed because it scanned per-node-type properties, not cross-cutting app-shell features.
 
+> **Status as of 2026-06: ALL THREE regressions below are RESOLVED, and the r3f
+> migration is merged to mainline.** Show/hide (WI-UX-1 — `NodeDispatcher`
+> `<group visible>` + `SelectionContext.hiddenNodePaths`), selection highlight
+> (WI-UX-2 — `SelectionHighlight.tsx` green `BoxHelper` + `nodeObjectMap`), and
+> the missing-files panel (WI-UX-3 / WI-UX-6 — `MissingResourcesContext` +
+> `MissingResourcesPanel`). This doc is retained for (a) the cross-cutting
+> "capability chain" audit methodology in the final section, and (b) as the
+> rationale referenced from the regression tests
+> (`NodeDispatcher.visibility.test.tsx`, `SelectionHighlight.test.tsx`) and
+> `MissingResourcesContext.tsx`. The per-regression **Fix surface area** sections
+> are now an implementation record, not an open to-do list — each one landed
+> verbatim at the file it predicted.
+
 All `main:` references are accessed via `git show main:<path>`.
 
 ---
 
 ## Regression 1: Show/hide button has no effect on the 3D scene
+
+> **✅ RESOLVED (WI-UX-1).** `hiddenNodePaths` + `toggleHidden` now live in
+> `SelectionContext.tsx`; `SceneTreeViewer.tsx` reads them via `useSelection()`
+> (the local `useState` is gone), and `NodeDispatcher.tsx` consumes the context
+> and wraps each subtree in `<group visible={!isHidden}>` — ancestor-hide falls
+> out of THREE for free. Regression test: `NodeDispatcher.visibility.test.tsx`.
+> The 2D Control overlay now honors the same `hiddenNodePaths` via
+> `ControlDispatcher` as well (commit `c5ce11f`).
 
 ### Main behavior (pre-migration)
 
@@ -32,6 +53,13 @@ All `main:` references are accessed via `git show main:<path>`.
 
 ## Regression 2: Selected node has no visual highlight in the 3D scene
 
+> **✅ RESOLVED (WI-UX-2).** `SelectionHighlight.tsx` attaches a green
+> (`0x00ff00`) `THREE.BoxHelper` to the canvas scene via the `SelectionContext`
+> `nodeObjectMap` — `NodeDispatcher.tsx` registers each node's `Object3D`
+> through `registerNodeObject`, and the highlight is mounted in
+> `TscnCanvas.tsx`. A sibling `HoverHighlight.tsx` (orange `0xff8800`) was added
+> too. Regression test: `SelectionHighlight.test.tsx`.
+
 ### Main behavior (pre-migration)
 
 - `main:packages/textscene-core/src/core/HelperManager.ts` — `class HelperManager`, `highlightNode(nodePath)` at L120, `clearHighlight()` at L128, `showHoverEffect()` at L134. Internal `setHelper(key, nodePath, color)` (L34) picks one of two strategies: if the target has a `userData.getHighlightTarget()` returning a mesh with `material.color`, swap the color in place and remember the original via `coloredHelpers: Map<…, ColoredHelperState>`; otherwise wrap target in a `THREE.BoxHelper` parented to the scene.
@@ -54,6 +82,15 @@ All `main:` references are accessed via `git show main:<path>`.
 ---
 
 ## Regression 3: Missing-files-list aggregate panel is gone
+
+> **✅ RESOLVED (WI-UX-3, refined WI-UX-6).** The global filename-guessing input
+> is gone. `MissingResourcesContext.tsx` aggregates missing paths reported by
+> `useResource`; `MissingResourcesPanel.tsx` renders per-row file inputs in the
+> shell's Resources tab; `r3f-main.tsx` wires per-path
+> `handleResourceUpload` / `handleResourceRemove`
+> (`provider.addUploadedFile(path, file)` + `loader.provideFile(path)`) into
+> `TscnPreviewShell`. Regression tests: `MissingResourcesPanel.test.tsx`,
+> `useResource.missing-aggregation.test.tsx`.
 
 ### Main behavior (pre-migration)
 
