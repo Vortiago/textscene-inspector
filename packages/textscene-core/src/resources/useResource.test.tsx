@@ -104,6 +104,24 @@ describe('useResource', () => {
     expect(result.current.error).toBe('File not found');
   });
 
+  it('parse-style failure messages still report missing (no message-sniffing)', () => {
+    loader.textures.setRequestImpl(() => {});
+
+    const { result } = renderHook(
+      () => useResource<THREE.Texture>('res://broken.png', 'Texture2D'),
+      { wrapper: withLoader(loader) }
+    );
+
+    act(() => {
+      loader.textures._fail('res://broken.png', 'failed to parse/decode image');
+    });
+
+    // A message the old heuristic would have classified 'error' now maps to
+    // 'missing' like every other load failure (the regex was removed).
+    expect(result.current.status).toBe('missing');
+    expect(result.current.error).toBe('failed to parse/decode image');
+  });
+
   // -------------------------------------------------------------------
   // THE WI-R3F-2 HARD GATE — `missing → loaded` late-arrival.
   // -------------------------------------------------------------------

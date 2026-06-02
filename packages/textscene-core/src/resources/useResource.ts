@@ -22,6 +22,16 @@ import { ResourceLoaderContext } from './ResourceLoaderContext';
 import { useMissingResources } from '../r3f/contexts/MissingResourcesContext';
 
 export type ResourceType = 'Texture2D' | 'StandardMaterial3D' | 'GLBMesh' | 'PackedScene';
+/**
+ * - `pending` — still loading.
+ * - `loaded`  — value present.
+ * - `missing` — the load failed (resource not resolvable, or previously
+ *   failed); the `error` string carries the detail. The processor bus
+ *   reports every load failure with no machine-readable reason, so all
+ *   load failures map here.
+ * - `error`   — the hook was used outside a `<ResourceLoaderProvider>`: a
+ *   programming error, distinct from a missing resource.
+ */
 export type ResourceStatus = 'pending' | 'loaded' | 'missing' | 'error';
 
 export interface ResourceResult<T> {
@@ -148,18 +158,12 @@ export function useResource<T>(path: string, type: ResourceType): ResourceResult
 
     const applyFailure = (errMessage: string) => {
       if (!isCurrent()) return;
-      // 'missing' covers "host couldn't resolve the path". The contract
-      // distinguishes this from 'error' (host resolved but parsing
-      // failed). The processor surface today reports both as `failed`
-      // events; we infer missing-vs-error from the error message until
-      // the bus carries a richer reason. Practically all current
-      // failures are missing-file, so default to 'missing'.
-      const status: ResourceStatus = /parse|decode|invalid|corrupt|malformed/i.test(
-        errMessage
-      )
-        ? 'error'
-        : 'missing';
-      setResult({ value: undefined, status, error: errMessage });
+      // The processor bus reports every load failure as a single `failed`
+      // event with no machine-readable reason, so a failed load is uniformly
+      // `missing` — the error string carries the human-readable detail.
+      // `error` is reserved for the one failure the hook can itself
+      // distinguish: being used outside a provider (the no-loader branch above).
+      setResult({ value: undefined, status: 'missing', error: errMessage });
     };
 
     // 1. Synchronous fast path: if the resource is already cached we can
