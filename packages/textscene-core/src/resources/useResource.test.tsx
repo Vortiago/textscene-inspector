@@ -85,7 +85,7 @@ describe('useResource', () => {
     expect(result.current.value).toBe(textureA);
   });
 
-  it('pending -> missing: emits failed event and the hook reports missing without value', () => {
+  it('pending -> unavailable: emits failed event and the hook reports unavailable without value', () => {
     loader.textures.setRequestImpl(() => {});
 
     const { result } = renderHook(
@@ -99,12 +99,12 @@ describe('useResource', () => {
       loader.textures._fail('res://gone.png', 'File not found');
     });
 
-    expect(result.current.status).toBe('missing');
+    expect(result.current.status).toBe('unavailable');
     expect(result.current.value).toBeUndefined();
     expect(result.current.error).toBe('File not found');
   });
 
-  it('parse-style failure messages still report missing (no message-sniffing)', () => {
+  it('parse-style failure messages still report unavailable (no message-sniffing)', () => {
     loader.textures.setRequestImpl(() => {});
 
     const { result } = renderHook(
@@ -116,16 +116,16 @@ describe('useResource', () => {
       loader.textures._fail('res://broken.png', 'failed to parse/decode image');
     });
 
-    // A message the old heuristic would have classified 'error' now maps to
-    // 'missing' like every other load failure (the regex was removed).
-    expect(result.current.status).toBe('missing');
+    // Every load failure maps to the single `unavailable` status — the
+    // error string carries the human-readable detail for diagnostics.
+    expect(result.current.status).toBe('unavailable');
     expect(result.current.error).toBe('failed to parse/decode image');
   });
 
   // -------------------------------------------------------------------
   // THE WI-R3F-2 HARD GATE — `missing → loaded` late-arrival.
   // -------------------------------------------------------------------
-  it('missing -> loaded: the late-arrival hard gate fires a loaded event after a previous failure', () => {
+  it('unavailable -> loaded: the late-arrival hard gate fires a loaded event after a previous failure', () => {
     loader.textures.setRequestImpl(() => {});
 
     const { result } = renderHook(
@@ -140,7 +140,7 @@ describe('useResource', () => {
     act(() => {
       loader.textures._fail('res://late.png', 'File not found');
     });
-    expect(result.current.status).toBe('missing');
+    expect(result.current.status).toBe('unavailable');
     expect(result.current.value).toBeUndefined();
 
     // 3. Later, the host provides the file. The real ResourceLoader.provideFile
@@ -270,12 +270,16 @@ describe('useResource', () => {
     expect(renderCount).toBeGreaterThanOrEqual(3);
   });
 
-  it('reports error when no ResourceLoader is provided in context', () => {
+  it('reports unavailable (with a diagnostic error string) when no ResourceLoader is provided', () => {
     const { result } = renderHook(() =>
       useResource<THREE.Texture>('res://t.png', 'Texture2D')
     );
 
-    expect(result.current.status).toBe('error');
+    // The no-provider case is a programming error, but it surfaces through
+    // the same `unavailable` status as a missing resource — callers render
+    // their placeholder either way. The descriptive `error` string is kept
+    // so a developer who forgot the provider can still diagnose it.
+    expect(result.current.status).toBe('unavailable');
     expect(result.current.value).toBeUndefined();
     expect(result.current.error).toMatch(/outside <ResourceLoaderProvider>/);
   });

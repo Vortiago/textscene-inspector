@@ -46,8 +46,7 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
     [modulate.r, modulate.g, modulate.b]
   );
   const visible = props.visible !== false;
-  const showPlaceholder =
-    !texturePath || texResult.status === 'missing' || texResult.status === 'error';
+  const showPlaceholder = !texturePath || texResult.status === 'unavailable';
 
   const tex = texResult.value;
   const image = tex?.image as { width?: number; height?: number } | undefined;

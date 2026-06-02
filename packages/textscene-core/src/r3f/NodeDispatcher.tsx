@@ -210,7 +210,7 @@ function InstancedSceneSubtree({
       <MissingResourcePlaceholder shape="box" />
     );
   }
-  if (result.status === 'missing' || result.status === 'error') {
+  if (result.status === 'unavailable') {
     return <MissingResourcePlaceholder shape="box" />;
   }
   if (result.status === 'pending' || !result.value) {

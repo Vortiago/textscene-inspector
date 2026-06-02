@@ -180,14 +180,14 @@ export function MeshInstance3D({ node }: NodeComponentProps) {
     [textureSlots.ao_texture, uvTransform]
   );
 
-  // If any requested slot resolved to `missing`, surface the FIRST
-  // missing path as the placeholder label. Listing more than one would
+  // If any requested slot resolved to `unavailable`, surface the FIRST
+  // such path as the placeholder label. Listing more than one would
   // bury the user under text.
   const firstMissingPath = useMemo(() => {
     for (const slot of TEXTURE_PROPERTIES) {
       const result = textureSlots[slot];
       const requested = textureRequests[slot];
-      if (result && result.status === 'missing' && requested) {
+      if (result && result.status === 'unavailable' && requested) {
         return requested;
       }
     }

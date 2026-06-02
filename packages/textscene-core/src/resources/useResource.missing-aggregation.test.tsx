@@ -59,7 +59,7 @@ describe('useResource → MissingResourcesContext aggregation', () => {
       { wrapper: Wrapper }
     );
 
-    expect(result.current.res.status).toBe('missing');
+    expect(result.current.res.status).toBe('unavailable');
     expect(result.current.missingPaths.has('res://textures/missing.png')).toBe(true);
   });
 

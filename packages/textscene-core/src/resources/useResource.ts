@@ -2,7 +2,7 @@
  * useResource(path, type) — the single surface API for loading any
  * external resource inside an R3F node component. Wraps the WI-79 event
  * bus internals so callers only see a status machine: pending → loaded
- * | missing → loaded (late-arrival) | error.
+ * | unavailable → loaded (late-arrival).
  *
  * The hook never suspends. Components must branch on `status` directly.
  *
@@ -23,23 +23,23 @@ import { useMissingResources } from '../r3f/contexts/MissingResourcesContext';
 
 export type ResourceType = 'Texture2D' | 'StandardMaterial3D' | 'GLBMesh' | 'PackedScene';
 /**
- * - `pending` — still loading.
- * - `loaded`  — value present.
- * - `missing` — the load failed (resource not resolvable, or previously
- *   failed); the `error` string carries the detail. The processor bus
- *   reports every load failure with no machine-readable reason, so all
- *   load failures map here.
- * - `error`   — the hook was used outside a `<ResourceLoaderProvider>`: a
- *   programming error, distinct from a missing resource.
+ * - `pending`     — still loading.
+ * - `loaded`      — value present.
+ * - `unavailable` — the value can't be shown: the load failed (resource
+ *   not resolvable, or previously failed) OR the hook was used outside a
+ *   `<ResourceLoaderProvider>`. Every consumer renders the same placeholder
+ *   in this state, so the two causes share one status; the `error` string
+ *   carries the human-readable detail (including the programming-error case)
+ *   for diagnostics.
  */
-export type ResourceStatus = 'pending' | 'loaded' | 'missing' | 'error';
+export type ResourceStatus = 'pending' | 'loaded' | 'unavailable';
 
 export interface ResourceResult<T> {
   value: T | undefined;
   status: ResourceStatus;
   /**
-   * Human-readable error message. Present when status is 'missing' or
-   * 'error'. Callers branch on `status`, not on `error` content.
+   * Human-readable error message. Present when status is 'unavailable'.
+   * Callers branch on `status`, not on `error` content.
    */
   error?: string;
 }
@@ -122,9 +122,12 @@ export function useResource<T>(path: string, type: ResourceType): ResourceResult
     }
 
     if (!loader) {
+      // Used outside a provider — a programming error. It surfaces as
+      // `unavailable` (callers render their placeholder) but the error
+      // string spells out the cause so it's diagnosable.
       setResult({
         value: undefined,
-        status: 'error',
+        status: 'unavailable',
         error:
           'useResource called outside <ResourceLoaderProvider>. ' +
           'Mount a ResourceLoader via <TscnPreviewShell> or wrap the tree manually.',
@@ -160,10 +163,8 @@ export function useResource<T>(path: string, type: ResourceType): ResourceResult
       if (!isCurrent()) return;
       // The processor bus reports every load failure as a single `failed`
       // event with no machine-readable reason, so a failed load is uniformly
-      // `missing` — the error string carries the human-readable detail.
-      // `error` is reserved for the one failure the hook can itself
-      // distinguish: being used outside a provider (the no-loader branch above).
-      setResult({ value: undefined, status: 'missing', error: errMessage });
+      // `unavailable` — the error string carries the human-readable detail.
+      setResult({ value: undefined, status: 'unavailable', error: errMessage });
     };
 
     // 1. Synchronous fast path: if the resource is already cached we can
@@ -176,7 +177,7 @@ export function useResource<T>(path: string, type: ResourceType): ResourceResult
     if (cached === null) {
       setResult({
         value: undefined,
-        status: 'missing',
+        status: 'unavailable',
         error: `Resource not available: ${path}`,
       });
       // Still subscribe — the host may later call resourceLoader.provideFile()
@@ -244,7 +245,7 @@ export function useResource<T>(path: string, type: ResourceType): ResourceResult
 
   useEffect(() => {
     if (!path) return;
-    if (result.status === 'missing') {
+    if (result.status === 'unavailable') {
       reportMissing(path);
       reportedMissingForPathRef.current = path;
       return () => clearMissing(path);

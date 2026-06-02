@@ -13,12 +13,12 @@ If any contract must change during implementation, patch this file and notify al
 **Signature**:
 ```typescript
 // Import source: packages/textscene-core/src/resources/useResource.ts (created in WI-R3F-2)
-type ResourceStatus = 'pending' | 'loaded' | 'missing' | 'error';
+type ResourceStatus = 'pending' | 'loaded' | 'unavailable';
 
 interface ResourceResult<T> {
   value: T | undefined;
   status: ResourceStatus;
-  error?: string; // human-readable message; present when status === 'error' or 'missing'
+  error?: string; // human-readable message; present when status === 'unavailable'
 }
 
 function useResource<T>(path: string, type: ResourceType): ResourceResult<T>;
@@ -26,9 +26,9 @@ function useResource<T>(path: string, type: ResourceType): ResourceResult<T>;
 type ResourceType = 'Texture2D' | 'StandardMaterial3D' | 'GLBMesh' | 'PackedScene';
 ```
 
-**Behavioral contract**: `value` is defined only when `status === 'loaded'`. The hook never throws and never causes a React Suspense suspension — components must branch on `status` directly. The `missing → loaded` transition is a valid and supported state change: when the host later provides a file that was missing at initial render, all subscribers re-render with `status: 'loaded'` and the resolved value. Cache is invalidated when the host signals a file change for `path`.
+**Behavioral contract**: `value` is defined only when `status === 'loaded'`. The hook never throws and never causes a React Suspense suspension — components must branch on `status` directly. The `unavailable → loaded` transition is a valid and supported state change: when the host later provides a file that was unavailable at initial render, all subscribers re-render with `status: 'loaded'` and the resolved value. Cache is invalidated when the host signals a file change for `path`.
 
-**Error field**: `error` is a plain human-readable `string`, not a typed union. Implementers must distinguish failure states via `status` (`'missing'` = path unresolvable by host; `'error'` = host found the file but parsing/decoding failed). Do not branch on `error` content — branch on `status`.
+**Error field**: `error` is a plain human-readable `string`, not a typed union. Every state in which the value can't be shown — a load failure (path unresolvable, or parse/decode failure) and the programming-error case of calling the hook outside `<ResourceLoaderProvider>` — collapses to the single `'unavailable'` status, because every consumer renders the same placeholder for all of them. The processor bus reports load failures with no machine-readable reason, so there is no reliable failure-type to branch on; the `error` string carries the human-readable detail (including the no-provider message) for diagnostics. Do not branch on `error` content — branch on `status`.
 
 **Cache and identity semantics by resource type**:
 - `Texture2D`, `StandardMaterial3D`, data buffers: two components calling `useResource` with the same `path` + `type` receive the **same cached reference** (identity equality). These types have no parent/ownership constraint in THREE.js.

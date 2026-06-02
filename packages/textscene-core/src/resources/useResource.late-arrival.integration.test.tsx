@@ -152,7 +152,7 @@ describe('useResource late-arrival integration', () => {
 
     // Step 1: Mount three consumer stubs (one per mesh) with their
     //         respective resource paths. The host has neither file yet,
-    //         so every consumer should land in `'missing'`.
+    //         so every consumer should land in `'unavailable'`.
     const { getByTestId } = render(
       <ResourceLoaderProvider loader={loader}>
         <MeshStub path="Mesh1" resourcePath={sharedPath} />
@@ -169,9 +169,9 @@ describe('useResource late-arrival integration', () => {
       await new Promise<void>((r) => setTimeout(r, 50));
     });
 
-    expect(getByTestId('mesh-Mesh1').dataset.status).toBe('missing');
-    expect(getByTestId('mesh-Mesh2').dataset.status).toBe('missing');
-    expect(getByTestId('mesh-Mesh3').dataset.status).toBe('missing');
+    expect(getByTestId('mesh-Mesh1').dataset.status).toBe('unavailable');
+    expect(getByTestId('mesh-Mesh2').dataset.status).toBe('unavailable');
+    expect(getByTestId('mesh-Mesh3').dataset.status).toBe('unavailable');
 
     // Step 2: The host receives `shared.png` from the user. In production
     //         the flow is: provider.addUploadedFile() → provideFile() →
@@ -199,12 +199,12 @@ describe('useResource late-arrival integration', () => {
     });
 
     // Step 3: Mesh1 and Mesh2 transitioned to `'loaded'` because they
-    //         both depend on `shared.png`. Mesh3 stayed `'missing'`
+    //         both depend on `shared.png`. Mesh3 stayed `'unavailable'`
     //         because it depends on `different.png`, which the host
     //         still hasn't provided.
     expect(getByTestId('mesh-Mesh1').dataset.status).toBe('loaded');
     expect(getByTestId('mesh-Mesh2').dataset.status).toBe('loaded');
-    expect(getByTestId('mesh-Mesh3').dataset.status).toBe('missing');
+    expect(getByTestId('mesh-Mesh3').dataset.status).toBe('unavailable');
 
     // Step 4: Cross-check that the dependency predicate agrees with the
     //         observed re-render fan-out — if `nodeDependsOnPath`

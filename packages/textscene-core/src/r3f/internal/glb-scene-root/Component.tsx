@@ -57,7 +57,7 @@ export function GLBSceneRoot({ node }: NodeComponentProps) {
     // resolved object or override set changes is sufficient and cheap.
   }, [object, overrides]);
 
-  if (result.status === 'missing' || result.status === 'error') {
+  if (result.status === 'unavailable') {
     return <MissingResourcePlaceholder shape="box" />;
   }
   if (result.status === 'pending' || !object) {

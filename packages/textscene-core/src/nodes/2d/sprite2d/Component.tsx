@@ -67,8 +67,7 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
   const visible = props.visible !== false;
 
   // Placeholder when no texture is referenced or it failed to load.
-  const showPlaceholder =
-    !texturePath || texResult.status === 'missing' || texResult.status === 'error';
+  const showPlaceholder = !texturePath || texResult.status === 'unavailable';
 
   return (
     <group

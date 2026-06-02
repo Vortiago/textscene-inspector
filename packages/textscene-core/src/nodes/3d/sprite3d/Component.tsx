@@ -128,7 +128,7 @@ export function Sprite3D({ node }: NodeComponentProps) {
 
   // Texture failed to load: magenta-quad placeholder. Gap 12 (WI-UX-3):
   // the in-3D path label was moved to the DOM `<MissingResourcesPanel>`.
-  if (texResult.status === 'missing' || texResult.status === 'error') {
+  if (texResult.status === 'unavailable') {
     return (
       <MissingResourcePlaceholder
         shape="plane"
