@@ -347,13 +347,27 @@ function Toolbar({
 
   return (
     <div className={styles.toolbar}>
+      {/* Primary action — open your own .tscn from disk. Triggers the same
+          hidden input the ⌘K palette uses; kept visible because the built-in
+          fixtures are dev-only scaffolding, so this is the real entry point. */}
+      <button
+        type="button"
+        className={styles.openButton}
+        onClick={() => tscnInputRef.current?.click()}
+        title="Open a .tscn file from disk"
+      >
+        <span className={styles.openIcon} aria-hidden>
+          ⤓
+        </span>
+        Open <code className={styles.openExt}>.tscn</code>
+      </button>
       <button
         type="button"
         className={styles.sceneChip}
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="dialog"
         aria-expanded={open}
-        title="Open a .tscn or switch scene (Ctrl+K)"
+        title="Current scene — click to switch (Ctrl+K)"
       >
         <SceneGlyph />
         {uploadedTscnName ? (
@@ -369,9 +383,6 @@ function Toolbar({
         )}
         <span className={styles.caret} aria-hidden>
           ▾
-        </span>
-        <span className={styles.kbd} aria-hidden>
-          ⌘K
         </span>
       </button>
 

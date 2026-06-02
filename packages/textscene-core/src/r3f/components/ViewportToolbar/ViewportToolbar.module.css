@@ -88,15 +88,16 @@
   box-shadow: 0 0 0 2px var(--tsi-focus-ring);
 }
 
-/* Active segment: solid accent fill — the one bright touch in this calm bar. */
+/* Active segment: a calm soft-accent fill (not the loud bright accent) with
+   light-accent text — clearly selected without shouting in this slim bar. */
 .active {
-  background: var(--tsi-accent);
-  color: var(--tsi-fg-on-control);
+  background: var(--tsi-accent-soft);
+  color: var(--tsi-accent-fg);
 }
 
 .active:hover {
-  background: var(--tsi-accent);
-  color: var(--tsi-fg-on-control);
+  background: var(--tsi-accent-soft);
+  color: var(--tsi-accent-fg);
 }
 
 /* Compact, quiet checkbox: muted label, accent-tinted input. */

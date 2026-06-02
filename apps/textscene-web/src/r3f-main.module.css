@@ -13,7 +13,45 @@
   font-size: var(--tsi-font-md);
 }
 
-/* ── Scene chip (the always-visible trigger) ─────────────────────────── */
+/* ── Open button (primary: load your own .tscn) ──────────────────────── */
+.openButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tsi-space-1);
+  padding: 3px var(--tsi-space-2);
+  background: var(--tsi-accent-soft);
+  border: 1px solid transparent;
+  border-radius: var(--tsi-radius-md);
+  color: var(--tsi-accent-fg);
+  font: inherit;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.openButton:hover {
+  background: var(--tsi-accent);
+  color: #fff;
+}
+
+.openButton:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--tsi-focus-ring);
+}
+
+.openIcon {
+  font-size: var(--tsi-font-lg);
+  line-height: 1;
+}
+
+.openExt {
+  font-family: var(--tsi-font-mono);
+  font-size: 0.95em;
+  opacity: 0.85;
+}
+
+/* ── Scene chip (current scene + switch built-in scenes) ─────────────── */
 .sceneChip {
   display: inline-flex;
   align-items: center;
@@ -53,18 +91,6 @@
 .caret {
   color: var(--tsi-fg-muted);
   font-size: var(--tsi-font-xs);
-}
-
-.kbd {
-  margin-left: var(--tsi-space-1);
-  padding: 0 5px;
-  border: 1px solid var(--tsi-border-strong);
-  border-radius: var(--tsi-radius-sm);
-  background: var(--tsi-bg-panel);
-  color: var(--tsi-fg-faint);
-  font-family: var(--tsi-font-mono);
-  font-size: var(--tsi-font-xs);
-  line-height: 1.5;
 }
 
 .errorMessage {
