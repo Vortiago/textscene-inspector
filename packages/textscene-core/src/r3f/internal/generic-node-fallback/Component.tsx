@@ -1,29 +1,27 @@
 /**
- * <GenericNodeFallback> — visible placeholder for any TSCN node type
- * that has no registered component.
+ * <GenericNodeFallback> — invisible transform-only group for any TSCN node
+ * type that has no registered render component.
  *
- * Renders a small semi-transparent gray cube so unrecognised nodes remain
- * visible in the scene, plus a floating drei `<Text>` label showing the
- * node's type and name so users can identify which placeholder is which
- * (WI-R3F-7 / WEB-08).
+ * Render intent (ADR-0008): a node either has a visible renderer or renders as
+ * an invisible <group> that positions its children and draws nothing itself.
+ * The fallback is the second kind — it never draws a placeholder. Unsupported
+ * types stay discoverable through the SceneTreeViewer (which lists every node
+ * with its type), not by cluttering the viewport.
  *
- * Exception: 2D-typed nodes (type ends in "2D", e.g. GPUParticles2D, Line2D)
- * render as an invisible transform group + their children — NOT a 3D box, which
- * would clutter a flat 2D scene and break the flat-scene camera framing. Their
- * own transform isn't applied (no parser ran for the unregistered type); the
- * node still appears in the scene tree. This keeps unsupported 2D nodes from
- * breaking otherwise-correct 2D scenes.
+ * The node's Node3D transform is applied when present so children land in the
+ * right place; for a genuinely-unknown type the lenient parser falls back to
+ * the base `Node` parse (no transform), so children sit at the parent origin.
+ * 2D-typed nodes carry no Node3D transform and render as a plain group so a
+ * flat 2D scene's framing isn't disturbed.
+ *
+ * `userData.isPlaceholder` is retained as a marker for tooling (e.g. a future
+ * "not rendered" affordance in the tree) and for tests.
  */
 
 import { useMemo } from 'react';
 import type { NodeComponentProps } from '../../NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../nodeTransform';
 import type { Node3DProperties } from '../../../nodes/base/node3d/types';
-import { InternalTextLabel } from '../../internalTextLabel';
-
-const FALLBACK_COLOR = 0x999999;
-const FALLBACK_SIZE = 0.4;
-const LABEL_OFFSET_Y = 0.4;
 
 export function GenericNodeFallback({ node, children }: NodeComponentProps) {
   const { position, rotation, scale } = useMemo(
@@ -31,35 +29,18 @@ export function GenericNodeFallback({ node, children }: NodeComponentProps) {
     [node.properties]
   );
 
+  const userData = { isPlaceholder: true, nodeType: node.type, nodeName: node.name };
+
   if (node.type.endsWith('2D')) {
     return (
-      <group
-        name={node.name}
-        userData={{ isPlaceholder: true, nodeType: node.type, nodeName: node.name }}
-      >
+      <group name={node.name} userData={userData}>
         {children}
       </group>
     );
   }
 
   return (
-    <group
-      name={node.name}
-      position={position}
-      rotation={rotation}
-      scale={scale}
-      userData={{ isPlaceholder: true, nodeType: node.type, nodeName: node.name }}
-    >
-      <mesh name={`${node.name}__placeholder`}>
-        <boxGeometry args={[FALLBACK_SIZE, FALLBACK_SIZE, FALLBACK_SIZE]} />
-        <meshStandardMaterial color={FALLBACK_COLOR} transparent opacity={0.6} />
-      </mesh>
-      <InternalTextLabel
-        text={`${node.type}: ${node.name}`}
-        position={[0, LABEL_OFFSET_Y, 0]}
-        fontSize={0.1}
-        anchorY="bottom"
-      />
+    <group name={node.name} position={position} rotation={rotation} scale={scale} userData={userData}>
       {children}
     </group>
   );

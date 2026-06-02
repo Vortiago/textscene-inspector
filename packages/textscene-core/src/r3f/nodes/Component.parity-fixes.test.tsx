@@ -23,6 +23,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { MeshInstance3D } from '../../nodes/3d/meshinstance3d/Component';
 import { Camera3D } from '../../nodes/3d/camera3d/Component';
 import { Label3D } from '../../nodes/3d/label3d/Component';
+import { ViewportModeProvider } from '../contexts/ViewportModeContext';
 import { SceneResourcesProvider } from '../SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
 import { ResourceEventBus } from '../../resources/ResourceEventBus';
@@ -444,7 +445,11 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
     };
     const node: TscnNode = { name: 'L', type: 'Label3D', children: [], properties: props };
 
-    const renderer = await ReactThreeTestRenderer.create(<Label3D node={node} />);
+    const renderer = await ReactThreeTestRenderer.create(
+      <ViewportModeProvider initialShowLabels>
+        <Label3D node={node} />
+      </ViewportModeProvider>
+    );
     const meshInstance = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
 
     // The marker is used by old-renderer-era tooling to enumerate labels.
@@ -498,7 +503,11 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
     } as Label3DProperties;
     const node: TscnNode = { name: 'L', type: 'Label3D', children: [], properties: props };
 
-    const renderer = await ReactThreeTestRenderer.create(<Label3D node={node} />);
+    const renderer = await ReactThreeTestRenderer.create(
+      <ViewportModeProvider initialShowLabels>
+        <Label3D node={node} />
+      </ViewportModeProvider>
+    );
     const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
     const qBefore = mesh.quaternion.clone();
 

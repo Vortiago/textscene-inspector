@@ -40,7 +40,7 @@ describe('ViewportToolbar', () => {
 
   it('collision checkbox reflects + toggles showCollisions', () => {
     renderToolbar('3D', false);
-    const checkbox = screen.getByRole('checkbox') as HTMLInputElement;
+    const checkbox = screen.getByRole('checkbox', { name: 'Collisions' }) as HTMLInputElement;
     expect(checkbox.checked).toBe(false);
     fireEvent.click(checkbox);
     expect(checkbox.checked).toBe(true);
@@ -48,7 +48,17 @@ describe('ViewportToolbar', () => {
 
   it('renders a pre-checked collision toggle when initially on', () => {
     renderToolbar('3D', true);
-    expect((screen.getByRole('checkbox') as HTMLInputElement).checked).toBe(true);
+    expect(
+      (screen.getByRole('checkbox', { name: 'Collisions' }) as HTMLInputElement).checked
+    ).toBe(true);
+  });
+
+  it('labels checkbox reflects + toggles showLabels (off by default)', () => {
+    renderToolbar('3D', false);
+    const checkbox = screen.getByRole('checkbox', { name: 'Labels' }) as HTMLInputElement;
+    expect(checkbox.checked).toBe(false);
+    fireEvent.click(checkbox);
+    expect(checkbox.checked).toBe(true);
   });
 });
 

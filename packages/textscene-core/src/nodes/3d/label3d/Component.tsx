@@ -17,6 +17,7 @@ import { BillboardMode } from './types';
 import type { Color } from '../../../utils/colorParser';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
+import { useViewportMode } from '../../../r3f/contexts/ViewportModeContext';
 
 const DEFAULT_FONT_SIZE = 128;
 
@@ -31,6 +32,7 @@ function readExtra<T>(properties: Label3DProperties, key: string): T | undefined
 }
 
 export function Label3D({ node }: NodeComponentProps) {
+  const { showLabels } = useViewportMode();
   const properties = node.properties as Label3DProperties;
   const { position, rotation, scale } = useMemo(
     () => transformFromNode3DProperties(properties),
@@ -72,7 +74,10 @@ export function Label3D({ node }: NodeComponentProps) {
     mesh.quaternion.copy(camera.quaternion);
   });
 
-  if (!built) {
+  // Off by default (ADR-0008): in-viewport text is opt-in via the Labels toggle.
+  // When off (or the canvas couldn't be built), render an invisible marker group
+  // so the node still positions any children and stays selectable.
+  if (!showLabels || !built) {
     return <group name={node.name} position={position} rotation={rotation} scale={scale} />;
   }
 

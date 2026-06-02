@@ -15,7 +15,8 @@ import styles from './ViewportToolbar.module.css';
 const MODES: ViewportMode[] = ['3D', '2D'];
 
 export function ViewportToolbar() {
-  const { mode, setMode, showCollisions, setShowCollisions } = useViewportMode();
+  const { mode, setMode, showCollisions, setShowCollisions, showLabels, setShowLabels } =
+    useViewportMode();
   const camera = useOptionalCameraControl();
   const hierarchy = useOptionalHierarchy();
   const sceneLoaded = Boolean(hierarchy?.sceneGraph);
@@ -55,6 +56,14 @@ export function ViewportToolbar() {
           onChange={(e) => setShowCollisions(e.target.checked)}
         />
         Collisions
+      </label>
+      <label className={styles.checkbox} title="Show Label3D text in the viewport">
+        <input
+          type="checkbox"
+          checked={showLabels}
+          onChange={(e) => setShowLabels(e.target.checked)}
+        />
+        Labels
       </label>
     </div>
   );

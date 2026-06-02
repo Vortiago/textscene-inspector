@@ -4,6 +4,9 @@
  * Label3D but not in our parser/types yet; failures here drive the
  * inventory of missing Label3D feature coverage.
  *
+ * Label3D text is gated behind the `showLabels` toggle (off by default,
+ * ADR-0008), so each render runs inside a provider with labels enabled.
+ *
  * Assertions: 90–94 of `work_items/STRICT-VERIFICATION.md`.
  */
 
@@ -14,6 +17,7 @@ import { Label3D } from './Component';
 import type { TscnNode } from '../../../parser/types';
 import type { Label3DProperties } from './types';
 import { BillboardMode } from './types';
+import { ViewportModeProvider } from '../../../r3f/contexts/ViewportModeContext';
 
 // happy-dom doesn't provide a 2D canvas context; mock it so Label3D's
 // canvas-rasterised path runs.
@@ -47,9 +51,17 @@ function makeNode(overrides: Partial<Label3DProperties> = {}): TscnNode {
   return { name: 'L', type: 'Label3D', children: [], properties: props };
 }
 
+function renderLabel(node: TscnNode) {
+  return ReactThreeTestRenderer.create(
+    <ViewportModeProvider initialShowLabels>
+      <Label3D node={node} />
+    </ViewportModeProvider>
+  );
+}
+
 describe('Label3D (assertions 90–94)', () => {
   it('#90 text → label text content rendered (texture exists, billboard mesh present)', async () => {
-    const renderer = await ReactThreeTestRenderer.create(<Label3D node={makeNode({ text: 'Hi' })} />);
+    const renderer = await renderLabel(makeNode({ text: 'Hi' }));
     const mesh = renderer.scene.findByType('Mesh');
     const mat = mesh.instance.material as THREE.MeshBasicMaterial;
     // Rasterised text is on the texture map — assert texture exists.
@@ -61,7 +73,7 @@ describe('Label3D (assertions 90–94)', () => {
     // unsupported in our type / parser. The assertion will fail until added.
     const node = makeNode();
     (node.properties as unknown as { font_size: number }).font_size = 64;
-    const renderer = await ReactThreeTestRenderer.create(<Label3D node={node} />);
+    const renderer = await renderLabel(node);
     const mesh = renderer.scene.findByType('Mesh');
     // Expect the rendered plane to scale relative to font_size — sentinel:
     // a font_size-aware implementation would produce a different height
@@ -75,9 +87,7 @@ describe('Label3D (assertions 90–94)', () => {
   });
 
   it('#92 modulate color → material color matches (tint applied to rendered text)', async () => {
-    const renderer = await ReactThreeTestRenderer.create(
-      <Label3D node={makeNode({ modulate: { r: 1, g: 0, b: 0, a: 1 } })} />
-    );
+    const renderer = await renderLabel(makeNode({ modulate: { r: 1, g: 0, b: 0, a: 1 } }));
     const mesh = renderer.scene.findByType('Mesh');
     const mat = mesh.instance.material as THREE.MeshBasicMaterial;
     // Today the modulate color is applied via the canvas fillStyle (text
@@ -90,9 +100,7 @@ describe('Label3D (assertions 90–94)', () => {
   });
 
   it('#93 billboard=ENABLED → billboard mode persisted (for runtime billboarding)', async () => {
-    const renderer = await ReactThreeTestRenderer.create(
-      <Label3D node={makeNode({ billboard: BillboardMode.BILLBOARD_ENABLED })} />
-    );
+    const renderer = await renderLabel(makeNode({ billboard: BillboardMode.BILLBOARD_ENABLED }));
     const mesh = renderer.scene.findByType('Mesh');
     // The imperative renderer stored userData.billboardMode; the R3F port
     // does not. This assertion catches the gap so runtime billboarding
@@ -108,7 +116,7 @@ describe('Label3D (assertions 90–94)', () => {
     // capture this property; the material defaults depthTest=true.
     const node = makeNode();
     (node.properties as unknown as { no_depth_test: boolean }).no_depth_test = true;
-    const renderer = await ReactThreeTestRenderer.create(<Label3D node={node} />);
+    const renderer = await renderLabel(node);
     const mesh = renderer.scene.findByType('Mesh');
     const mat = mesh.instance.material as THREE.MeshBasicMaterial;
     expect(mat.depthTest).toBe(false);

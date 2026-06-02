@@ -26,6 +26,13 @@ import '../nodes/3d/worldenvironment/index.js';
 import '../nodes/physics/3d/staticbody3d/index.js';
 import '../nodes/physics/3d/area3d/index.js';
 import '../nodes/physics/3d/collisionshape3d/index.js';
+// Non-visual nodes — transform-only groups, no own geometry (ADR-0008).
+import '../nodes/physics/3d/characterbody3d/index.js';
+import '../nodes/physics/3d/rigidbody3d/index.js';
+import '../nodes/3d/skeleton3d/index.js';
+import '../nodes/3d/particles/gpuparticles3d/index.js';
+import '../nodes/paths/path3d/index.js';
+import '../nodes/paths/pathfollow3d/index.js';
 import '../nodes/audio/audiostreamplayer/index.js';
 import '../nodes/2d/ui/control/index.js';
 import '../nodes/2d/ui/colorrect/index.js';

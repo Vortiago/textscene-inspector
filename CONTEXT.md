@@ -111,8 +111,12 @@ The decision to render `CSGBox3D`/`CSGCylinder3D` as their base three.js geometr
 _Avoid_: "CSG support" (implies real booleans).
 
 **Transform-only group**:
-The decision to render physics bodies (`StaticBody3D`, `Area3D`, and kin) as transform-only `<group>`s that position their children, with no simulation and no own geometry.
-_Avoid_: "physics body" implying simulation; "transform container" (collides with Godot's Container Controls).
+A node rendered as an invisible `<group>` that positions its children but draws nothing itself — the render intent for every non-visual type: physics bodies (`StaticBody3D`, `RigidBody3D`, `CharacterBody3D`, `Area3D`), `Skeleton3D`, `Path3D`/`PathFollow3D`, `GPUParticles3D`, the `Node3D`/`Node2D` bases, and the fallback for unsupported types. No simulation, no own geometry (see ADR-0005, ADR-0008).
+_Avoid_: "physics body" implying simulation; "transform container" (collides with Godot's Container Controls); "placeholder" (the visible gray-box placeholder was retired in ADR-0008).
+
+**Render intent**:
+Which of the two render outcomes a node type takes — a *visible renderer* (draws geometry/text) or a *transform-only group* (invisible, positions children). "Renders nothing" is an explicit intent, not an unregistered accident; in-viewport text and collision shapes are opt-in toggles (`showLabels`, `showCollisions`) on the viewport-mode seam (ADR-0006, ADR-0008).
+_Avoid_: "placeholder", "not implemented" — an invisible node may be fully intended.
 
 **Resource event bus** / `useResource`:
 The async resource pipeline — a render component calls `useResource(path, type)`, the host `ResourceLoader` fetches, and a `loaded`/`missing` event resolves the hook; backs textures, GLB meshes, and PackedScene instancing.

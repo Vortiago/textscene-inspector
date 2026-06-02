@@ -1,8 +1,9 @@
 /**
- * Transform-only bodies (ADR-0005): StaticBody3D and Area3D render via the
- * Node3D transform group; the non-spatial AudioStreamPlayer renders via the
- * base Node (zero geometry). This guards the user-facing guarantee that these
- * types render as their intended group, NOT the gray GenericNodeFallback cube.
+ * Transform-only render intent (ADR-0005, ADR-0008): physics bodies, Skeleton3D,
+ * Path3D / PathFollow3D and GPUParticles3D all render via the Node3D transform
+ * group; the non-spatial AudioStreamPlayer renders via the base Node (zero
+ * geometry). This guards the guarantee that these types render as an invisible
+ * transform group, NOT the retired gray GenericNodeFallback placeholder.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -12,12 +13,17 @@ import { Node3D } from '../../base/node3d/Component';
 import { Node } from '../../node/Component';
 
 describe('transform-only bodies render without a fallback placeholder', () => {
-  it('StaticBody3D reuses the Node3D transform group', () => {
-    expect(nodeComponentRegistry.get('StaticBody3D')).toBe(Node3D);
-  });
-
-  it('Area3D reuses the Node3D transform group', () => {
-    expect(nodeComponentRegistry.get('Area3D')).toBe(Node3D);
+  it.each([
+    'StaticBody3D',
+    'Area3D',
+    'RigidBody3D',
+    'CharacterBody3D',
+    'Skeleton3D',
+    'Path3D',
+    'PathFollow3D',
+    'GPUParticles3D',
+  ])('%s reuses the Node3D transform group', (type) => {
+    expect(nodeComponentRegistry.get(type)).toBe(Node3D);
   });
 
   it('AudioStreamPlayer reuses the base Node (zero geometry)', () => {

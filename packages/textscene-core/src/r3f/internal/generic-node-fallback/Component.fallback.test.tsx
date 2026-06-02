@@ -1,12 +1,13 @@
 /**
- * Strict-verification harness (WI-R3F-9, group K) — 2 assertions covering
- * the unrecognised-node-type fallback.
+ * Strict-verification harness (WI-R3F-9, group K) — fallback assertions.
  *
- * Assertions: 95–96 of `work_items/STRICT-VERIFICATION.md`.
+ * Assertion 95 (userData carries nodeType/nodeName) still holds. Assertion 96
+ * ("fallback is visible — non-zero placeholder mesh") is SUPERSEDED by ADR-0008:
+ * the fallback now renders an invisible transform-only group with no placeholder
+ * mesh, so unsupported types don't clutter the viewport.
  */
 
 import { describe, expect, it } from 'vitest';
-import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { GenericNodeFallback } from './Component';
 import type { TscnNode } from '../../../parser/types';
@@ -18,7 +19,7 @@ const node: TscnNode = {
   properties: {},
 };
 
-describe('GenericNodeFallback (assertions 95–96)', () => {
+describe('GenericNodeFallback (ADR-0008 invisible render intent)', () => {
   it('#95 unregistered node type → userData carries nodeType + nodeName', async () => {
     const renderer = await ReactThreeTestRenderer.create(<GenericNodeFallback node={node} />);
     const group = renderer.scene.findByProps({ name: 'MysteryThing' });
@@ -32,17 +33,9 @@ describe('GenericNodeFallback (assertions 95–96)', () => {
     expect(userData.nodeName).toBe('MysteryThing');
   });
 
-  it('#96 fallback is visible — non-zero bounding box on the placeholder mesh', async () => {
+  it('#96 (superseded by ADR-0008) fallback draws no placeholder mesh — invisible group', async () => {
     const renderer = await ReactThreeTestRenderer.create(<GenericNodeFallback node={node} />);
-    const meshes = renderer.scene.findAllByType('Mesh');
-    expect(meshes.length).toBeGreaterThan(0);
-    const mesh = meshes[0]!.instance as THREE.Mesh;
-    mesh.geometry.computeBoundingBox();
-    const size = new THREE.Vector3();
-    mesh.geometry.boundingBox!.getSize(size);
-    // Placeholder is a (0.4, 0.4, 0.4) cube — non-zero in all axes.
-    expect(size.x).toBeGreaterThan(0);
-    expect(size.y).toBeGreaterThan(0);
-    expect(size.z).toBeGreaterThan(0);
+    expect(renderer.scene.findAllByType('Mesh').length).toBe(0);
+    expect(renderer.scene.findByProps({ name: 'MysteryThing' })).toBeDefined();
   });
 });

@@ -11,9 +11,10 @@ const baseNode: TscnNode = {
 };
 
 describe('<GenericNodeFallback>', () => {
-  it('renders a placeholder mesh for unrecognised node types', async () => {
+  it('renders NO placeholder mesh — an invisible transform-only group (ADR-0008)', async () => {
     const renderer = await ReactThreeTestRenderer.create(<GenericNodeFallback node={baseNode} />);
-    expect(renderer.scene.findAllByType('Mesh').length).toBe(1);
+    expect(renderer.scene.findAllByType('Mesh').length).toBe(0);
+    expect(renderer.scene.findByProps({ name: 'MysteryNode' })).toBeDefined();
   });
 
   it('marks the group with placeholder metadata', async () => {
@@ -25,7 +26,7 @@ describe('<GenericNodeFallback>', () => {
     expect(userData.nodeName).toBe('MysteryNode');
   });
 
-  it('renders children through the placeholder', async () => {
+  it('renders children through the fallback group', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <GenericNodeFallback node={baseNode}>
         <mesh name="passthrough">
@@ -37,10 +38,10 @@ describe('<GenericNodeFallback>', () => {
     expect(renderer.scene.findByProps({ name: 'passthrough' })).toBeDefined();
   });
 
-  it('renders NO 3D box for a 2D-typed node (keeps 2D scenes flat)', async () => {
+  it('renders no box for a 2D-typed node (keeps 2D scenes flat)', async () => {
     const node2d: TscnNode = { name: 'Trail', type: 'GPUParticles2D', children: [], properties: {} };
     const renderer = await ReactThreeTestRenderer.create(<GenericNodeFallback node={node2d} />);
-    expect(renderer.scene.findAllByType('Mesh').length).toBe(0); // no placeholder box
+    expect(renderer.scene.findAllByType('Mesh').length).toBe(0);
   });
 
   it('still passes children through for a 2D-typed node', async () => {
