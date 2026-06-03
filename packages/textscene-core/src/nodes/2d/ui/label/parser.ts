@@ -14,5 +14,6 @@ export function parseLabel(
   result.horizontalAlignment = parseOptionalInt(properties.horizontal_alignment);
   result.verticalAlignment = parseOptionalInt(properties.vertical_alignment);
   result.autowrapMode = parseOptionalInt(properties.autowrap_mode);
+  if (properties.uppercase === 'true') result.uppercase = true;
   return result;
 }

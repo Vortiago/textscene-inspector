@@ -27,8 +27,11 @@ export function Label({ node }: ControlComponentProps) {
     style.textAlign = H_ALIGN[props.horizontalAlignment] ?? 'left';
   }
   // Honor embedded newlines (Godot treats `\n` as a hard break regardless of
-  // autowrap); autowrap additionally soft-wraps long lines.
-  style.whiteSpace = props.autowrapMode ? 'pre-line' : 'pre';
+  // autowrap); autowrap additionally soft-wraps long lines. Godot's modes:
+  // 0 off, 1 ARBITRARY (break anywhere), 2 WORD, 3 WORD_SMART (break a word
+  // that can't fit). `pre`/`pre-wrap` preserve the newlines either way.
+  applyAutowrap(style, props.autowrapMode);
+  if (props.uppercase) style.textTransform = 'uppercase';
   // Vertical alignment only bites when the label is taller than its text (a
   // stretched/min-sized label); apply it via a flex column.
   if (props.verticalAlignment !== undefined) {
@@ -42,4 +45,23 @@ export function Label({ node }: ControlComponentProps) {
       {props.text ?? ''}
     </div>
   );
+}
+
+/** Map Godot's autowrap_mode to white-space + word-break CSS. */
+function applyAutowrap(style: CSSProperties, mode: number | undefined): void {
+  switch (mode) {
+    case 1: // AUTOWRAP_ARBITRARY — break at any character
+      style.whiteSpace = 'pre-wrap';
+      style.wordBreak = 'break-all';
+      break;
+    case 2: // AUTOWRAP_WORD — break only at word boundaries
+      style.whiteSpace = 'pre-wrap';
+      break;
+    case 3: // AUTOWRAP_WORD_SMART — break words that can't fit on one line
+      style.whiteSpace = 'pre-wrap';
+      style.overflowWrap = 'break-word';
+      break;
+    default: // 0 / absent — no soft wrapping (newlines still honored)
+      style.whiteSpace = 'pre';
+  }
 }

@@ -12,7 +12,7 @@ Tracks the 46 confirmed Godot-fidelity divergences from the 2026-06-03 expanded 
 - [x] **B6 Sprite2D/Animated** (3): #6 modulate (CanvasItem, inhe(H), #16 region_enabled + hframes/v(M), #38 self_modulate(L)
 - [x] **B7 StyleBox** (4): #8 content_margin_left/top/ri(H), #41 shadow_size / shadow_color(L), #42 border_color (default fall(L), #43 border_blend(L)
 - [x] **B8 TextureRect/ColorRect** (6): #22 stretch_mode = 1 (STRETCH_(M), #23 stretch_mode = 2 (STRETCH_(M), #24 stretch_mode = 3 (STRETCH_(M), #25 flip_h(M), #26 flip_v(M), #46 stretch_mode = 4 (STRETCH_(L)
-- [ ] **B9 Text controls** (4): #20 autowrap_mode (AUTOWRAP_AR(M), #21 alignment(M), #44 uppercase(L), #45 fit_content(L)
+- [x] **B9 Text controls** (4): #20 autowrap_mode (AUTOWRAP_AR(M), #21 alignment(M), #44 uppercase(L), #45 fit_content(L)
 - [ ] **B10 Control/Containers** (5): #12 size_flags_stretch_ratio(M), #29 size_flags_stretch_ratio(L), #30 GridContainer â€” child SI(L), #31 horizontal_scroll_mode / v(L), #32 GridContainer child size_f(L)
 - [ ] **B11 Node2D/3D transforms** (4): #34 skew(L), #35 z_as_relative(L), #36 show_behind_parent(L), #37 top_level(L)
 
@@ -117,12 +117,12 @@ Deferred gap (not in the 46): Label3D font_size is never carried by parseLabel3D
 - Ours: packages/textscene-core/src/nodes/3d/sprite3d/parser.ts â€” centered is not parsed. packages/textscene-core/src/nodes/3d/sprite3d/Component.tsx:167 â€” `<planeGeometry args={[width, height]} />` always produces a centered plane (three.js planeGeometry is always centered at origin). No corner-origin offset is ever applied.
 - Fix: Parse centered as a bool (default true) in parser.ts and linterParser.ts. In the Component, when centered=false, apply an additional mesh-level position offset of (+width/2, -height/2, 0) in local space (i.e., wrap the planeGeometry in a group or use a geometry translate).
 
-### [#20] Label.autowrap_mode (AUTOWRAP_ARBITRARY = 1)  (MEDIUM / text-controls / wrong-mapping) - [ ]
+### [#20] Label.autowrap_mode (AUTOWRAP_ARBITRARY = 1)  (MEDIUM / text-controls / wrong-mapping) - [x]
 - Godot: TextServer.AUTOWRAP_ARBITRARY (value 1) breaks lines at ANY position, including mid-word, useful when space is very limited. AUTOWRAP_WORD (2) breaks only at word boundaries. AUTOWRAP_WORD_SMART (3) breaks at words but force-breaks a single word that does not fit in one line. Godot 4.4 docs: https://docs.godotengine.org/en/4.4/classes/class_label.html (autowrap_mode property); 
 - Ours: packages/textscene-core/src/nodes/2d/ui/label/Component.tsx:31 â€” `style.whiteSpace = props.autowrapMode ? 'pre-line' : 'pre'`. All non-zero values (ARBITRARY=1, WORD=2, WORD_SMART=3) collapse to `white-space: pre-line`. CSS `pre-line` wraps at word boundaries only, identical to WORD. ARBITRARY is never mapped to `word-break: break-all`; WORD_SMART is never mapped to `overflow
 - Fix: In Label/Component.tsx replace the single boolean branch with a three-way map: mode 0 â†’ `white-space: pre` (no wrap, existing); mode 1 (ARBITRARY) â†’ `white-space: pre-wrap; word-break: break-all`; mode 2 (WORD) â†’ `white-space: pre-wrap`; mode 3 (WORD_SMART) â†’ `white-space: pre-wrap; overflow-wrap: break-word`.
 
-### [#21] Button.alignment  (MEDIUM / text-controls / wrong-mapping) - [ ]
+### [#21] Button.alignment  (MEDIUM / text-controls / wrong-mapping) - [x]
 - Godot: Button.alignment (HorizontalAlignment) controls where the button text sits inside the button box. Default = 1 (CENTER). Values: 0=LEFT, 1=CENTER, 2=RIGHT. Godot 4.4 docs: https://docs.godotengine.org/en/4.4/classes/class_button.html (alignment property, default 1).
 - Ours: packages/textscene-core/src/nodes/2d/ui/button/Component.tsx:37-40 â€” `justifyContent: 'center'` and `textAlign: 'center'` are hardcoded unconditionally in the style object. The parsed `props.alignment` (Button/parser.ts:16 â€” `result.alignment = parseOptionalInt(properties.alignment)`) is never read in Component.tsx.
 - Fix: In Button/Component.tsx, define an alignment map `['flex-start', 'center', 'flex-end']` (matching LEFT/CENTER/RIGHT), then replace the hardcoded `justifyContent: 'center'` and `textAlign: 'center'` with values derived from `props.alignment ?? 1`. Update both `justifyContent` (for the flex container) and `textAlign` (for text nodes).
@@ -237,12 +237,12 @@ Deferred gap (not in the 46): Label3D font_size is never carried by parseLabel3D
 - Ours: packages/textscene-core/src/r3f/controls/styleBoxToCss.ts â€” border_blend key is never read. CSS has no direct equivalent (would require a gradient border via border-image or background-clip tricks).
 - Fix: Approximate with CSS border-image using a radial/linear gradient, or document as a known limitation in PARITY-LIMITATIONS.md. The CSS approximation is complex and border_blend is rarely used.
 
-### [#44] Label.uppercase  (LOW / text-controls / missing) - [ ]
+### [#44] Label.uppercase  (LOW / text-controls / missing) - [x]
 - Godot: Label.uppercase (bool, default false): when true, all text is displayed in UPPERCASE. Godot 4.4 docs: https://docs.godotengine.org/en/4.4/classes/class_label.html (uppercase property). Directly maps to CSS `text-transform: uppercase`.
 - Ours: packages/textscene-core/src/nodes/2d/ui/label/types.ts â€” `uppercase` not declared. packages/textscene-core/src/nodes/2d/ui/label/parser.ts â€” `uppercase` not parsed. packages/textscene-core/src/nodes/2d/ui/label/Component.tsx â€” no `text-transform` CSS applied.
 - Fix: Add `uppercase?: boolean` to LabelProperties (label/types.ts); parse it in label/parser.ts as `result.uppercase = properties.uppercase === 'true'`; in label/Component.tsx apply `if (props.uppercase) style.textTransform = 'uppercase'`.
 
-### [#45] RichTextLabel.fit_content  (LOW / text-controls / wrong-mapping) - [ ]
+### [#45] RichTextLabel.fit_content  (LOW / text-controls / wrong-mapping) - [x]
 - Godot: RichTextLabel.fit_content (bool, default false): when true the control automatically adjusts its height to fit its content. Godot 4.4 docs: https://docs.godotengine.org/en/4.4/classes/class_richtextlabel.html (fit_content property). With fit_content=true the outer box shrinks to content height instead of staying at its anchored/preset height.
 - Ours: packages/textscene-core/src/nodes/2d/ui/richtextlabel/parser.ts:14 â€” `result.fitContent = properties.fit_content === 'true'` (parsed). packages/textscene-core/src/nodes/2d/ui/richtextlabel/Component.tsx â€” `fitContent` is never read; no height-shrink CSS is applied. The control always fills its layout-computed height.
 - Fix: In RichTextLabel/Component.tsx read `props.fitContent` and when true add `style.height = 'fit-content'` (CSS `height: fit-content` makes the block shrink to its content height). Ensure `overflow: 'visible'` is also set so content is not clipped.

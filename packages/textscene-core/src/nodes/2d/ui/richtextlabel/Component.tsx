@@ -25,6 +25,13 @@ export function RichTextLabel({ node }: ControlComponentProps) {
     ...textThemeStyle(props, { sizeKey: 'normal_font_size', colorKey: 'default_color' }),
   };
 
+  // fit_content shrinks the control's height to its content (Godot grows/shrinks
+  // the box to fit) instead of staying at the anchored/preset height.
+  if (props.fitContent) {
+    style.height = 'fit-content';
+    style.overflow = 'visible';
+  }
+
   const text = props.text ?? '';
   const content = props.bbcodeEnabled ? parseBBCode(text) : text;
 

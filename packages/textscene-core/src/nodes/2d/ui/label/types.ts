@@ -8,4 +8,6 @@ export interface LabelProperties extends ControlProperties {
   verticalAlignment?: number;
   /** Godot autowrap mode (0 = off). Non-zero wraps text. */
   autowrapMode?: number;
+  /** When true, text renders in UPPERCASE (default false). */
+  uppercase?: boolean;
 }

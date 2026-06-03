@@ -22,6 +22,10 @@ const DEFAULTS: CSSProperties = {
   color: '#e8e8ea',
 };
 
+// Godot Button.alignment (HorizontalAlignment): 0 LEFT, 1 CENTER, 2 RIGHT.
+const JUSTIFY = ['flex-start', 'center', 'flex-end'] as const;
+const TEXT_ALIGN = ['left', 'center', 'right'] as const;
+
 export function Button({ node, children }: ControlComponentProps) {
   const props = node.properties as ButtonProperties;
   const parentKind = useControlParent();
@@ -30,14 +34,15 @@ export function Button({ node, children }: ControlComponentProps) {
   const styleBoxCss = resolveStyleBoxCss(props.themeOverrideStyles?.normal, internalResources);
   const useDefaults = !props.flat && Object.keys(styleBoxCss).length === 0;
 
+  const alignment = props.alignment ?? 1; // Godot default: CENTER
   const style: CSSProperties = {
     ...controlLayoutStyle(props, parentKind),
     display: 'inline-flex',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: JUSTIFY[alignment] ?? 'center',
     boxSizing: 'border-box',
     cursor: props.disabled ? 'default' : 'pointer',
-    textAlign: 'center',
+    textAlign: TEXT_ALIGN[alignment] ?? 'center',
     ...(useDefaults ? DEFAULTS : {}),
     ...styleBoxCss,
     ...textThemeStyle(props, { sizeKey: 'font_size', colorKey: 'font_color' }),
