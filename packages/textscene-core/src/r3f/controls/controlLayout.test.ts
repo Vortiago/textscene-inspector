@@ -66,6 +66,19 @@ describe('controlLayoutStyle — container child', () => {
     expect(s.flexGrow).toBe(0);
   });
 
+  it('EXPAND child: flex-grow follows size_flags_stretch_ratio (#12/#29)', () => {
+    const s = controlLayoutStyle(
+      ctrl({ sizeFlagsVertical: 3, sizeFlagsStretchRatio: 2 }), // FILL|EXPAND, ratio 2
+      'column'
+    );
+    expect(s.flexGrow).toBe(2);
+  });
+
+  it('EXPAND child without ratio defaults flex-grow to 1', () => {
+    const s = controlLayoutStyle(ctrl({ sizeFlagsVertical: 3 }), 'column');
+    expect(s.flexGrow).toBe(1);
+  });
+
   it('row parent: horizontal EXPAND grows, vertical FILL stretches cross-axis', () => {
     const s = controlLayoutStyle(ctrl({ sizeFlagsHorizontal: 2, sizeFlagsVertical: 1 }), 'row');
     expect(s.flexGrow).toBe(1);

@@ -1,15 +1,19 @@
 /**
- * ScrollContainer parser. Adds no fields beyond Control — its scrolling
- * behaviour (overflow) is handled entirely by the Component.
+ * ScrollContainer parser — Control layout + per-axis scroll modes
+ * (`horizontal_scroll_mode` / `vertical_scroll_mode`, Godot ScrollMode enum).
  */
 
 import type { ParsedHeading } from '../../../../parser/utils';
-import type { ControlProperties } from '../control/types';
+import { parseOptionalInt } from '../../../../parser/valueParsers';
 import { parseControl } from '../control/parser';
+import type { ScrollContainerProperties } from './types';
 
 export function parseScrollContainer(
   heading: ParsedHeading,
   properties: Record<string, string>
-): ControlProperties {
-  return parseControl(heading, properties);
+): ScrollContainerProperties {
+  const result: ScrollContainerProperties = { ...parseControl(heading, properties) };
+  result.horizontalScrollMode = parseOptionalInt(properties.horizontal_scroll_mode);
+  result.verticalScrollMode = parseOptionalInt(properties.vertical_scroll_mode);
+  return result;
 }

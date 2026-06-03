@@ -36,6 +36,8 @@ export interface ControlProperties {
   /** Container child sizing bitmask (1=FILL, 2=EXPAND, 4=SHRINK_CENTER, 8=SHRINK_END). */
   sizeFlagsHorizontal?: number;
   sizeFlagsVertical?: number;
+  /** Proportion of EXPAND space this child claims among its siblings (default 1.0). */
+  sizeFlagsStretchRatio?: number;
   customMinimumSize?: { x: number; y: number };
 
   /** `theme_override_constants/<name>` → number (e.g. separation, margin_left). */

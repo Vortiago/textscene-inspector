@@ -68,14 +68,43 @@ describe('Control components — containers', () => {
     ]);
     const s = styleOf(find(c, 'GridContainer'));
     expect(s.display).toBe('grid');
-    expect(s.gridTemplateColumns).toBe('repeat(3, max-content)');
+    // No EXPAND children → every column is content-sized.
+    expect(s.gridTemplateColumns).toBe('max-content max-content max-content');
     expect(s.columnGap).toBe('8px');
     expect(s.rowGap).toBe('6px');
   });
 
   it('GridContainer: defaults to a single column', () => {
     const c = renderOverlay([node('Grid', 'GridContainer', {})]);
-    expect(styleOf(find(c, 'GridContainer')).gridTemplateColumns).toBe('repeat(1, max-content)');
+    expect(styleOf(find(c, 'GridContainer')).gridTemplateColumns).toBe('max-content');
+  });
+
+  it('GridContainer: a column with an EXPAND child grows (1fr) (#30/#32)', () => {
+    // 2 columns; child 1 (column index 1) has horizontal FILL|EXPAND (3).
+    const c = renderOverlay([
+      node('Grid', 'GridContainer', { columns: 2 }, [
+        node('A', 'Label', { sizeFlagsHorizontal: 1 }),
+        node('B', 'Label', { sizeFlagsHorizontal: 3 }),
+      ]),
+    ]);
+    expect(styleOf(find(c, 'GridContainer')).gridTemplateColumns).toBe('max-content 1fr');
+  });
+
+  it('ScrollContainer: scroll modes map to overflowX/Y (#31)', () => {
+    // horizontal DISABLED (0) → hidden; vertical SHOW_ALWAYS (2) → scroll.
+    const c = renderOverlay([
+      node('Scroll', 'ScrollContainer', { horizontalScrollMode: 0, verticalScrollMode: 2 }),
+    ]);
+    const s = styleOf(find(c, 'ScrollContainer'));
+    expect(s.overflowX).toBe('hidden');
+    expect(s.overflowY).toBe('scroll');
+  });
+
+  it('ScrollContainer: defaults to auto on both axes', () => {
+    const c = renderOverlay([node('Scroll', 'ScrollContainer', {})]);
+    const s = styleOf(find(c, 'ScrollContainer'));
+    expect(s.overflowX).toBe('auto');
+    expect(s.overflowY).toBe('auto');
   });
 
   it('CenterContainer: flex centered on both axes', () => {
@@ -95,10 +124,6 @@ describe('Control components — containers', () => {
     expect(styleOf(find(c, 'MarginContainer')).padding).toBe('8px 12px 16px 4px');
   });
 
-  it('ScrollContainer: overflow auto', () => {
-    const c = renderOverlay([node('S', 'ScrollContainer', {})]);
-    expect(styleOf(find(c, 'ScrollContainer')).overflow).toBe('auto');
-  });
 });
 
 describe('Control components — StyleBox panels', () => {

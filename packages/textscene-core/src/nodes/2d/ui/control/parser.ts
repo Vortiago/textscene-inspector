@@ -90,6 +90,7 @@ export function parseControl(
   result.growVertical = num(properties.grow_vertical);
   result.sizeFlagsHorizontal = num(properties.size_flags_horizontal);
   result.sizeFlagsVertical = num(properties.size_flags_vertical);
+  result.sizeFlagsStretchRatio = num(properties.size_flags_stretch_ratio);
   result.customMinimumSize = parseVector2(properties.custom_minimum_size);
 
   Object.assign(result, parseThemeOverrides(properties));

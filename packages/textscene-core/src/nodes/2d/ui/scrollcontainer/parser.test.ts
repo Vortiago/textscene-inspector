@@ -18,10 +18,25 @@ describe('parseScrollContainer', () => {
     expect(p.anchorRight).toBe(1);
   });
 
-  it('adds no fields beyond Control (custom_minimum_size still flows through)', () => {
+  it('inherits Control layout (custom_minimum_size still flows through)', () => {
     const p = parseScrollContainer(h({ name: 'Scroll', type: 'ScrollContainer' }), {
       custom_minimum_size: 'Vector2(200, 120)',
     });
     expect(p.customMinimumSize).toEqual({ x: 200, y: 120 });
+  });
+
+  it('parses horizontal/vertical_scroll_mode (#31)', () => {
+    const p = parseScrollContainer(h({ name: 'Scroll', type: 'ScrollContainer' }), {
+      horizontal_scroll_mode: '0',
+      vertical_scroll_mode: '2',
+    });
+    expect(p.horizontalScrollMode).toBe(0);
+    expect(p.verticalScrollMode).toBe(2);
+  });
+
+  it('leaves scroll modes undefined when absent', () => {
+    const p = parseScrollContainer(h({ name: 'Scroll', type: 'ScrollContainer' }), {});
+    expect(p.horizontalScrollMode).toBeUndefined();
+    expect(p.verticalScrollMode).toBeUndefined();
   });
 });

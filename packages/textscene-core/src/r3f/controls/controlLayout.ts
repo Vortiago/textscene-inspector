@@ -111,7 +111,11 @@ function containerChildStyle(p: ControlProperties, parent: ParentLayoutKind): CS
 
   if (rowMain || colMain) {
     const mainFlag = rowMain ? p.sizeFlagsHorizontal : p.sizeFlagsVertical;
-    style.flexGrow = mainFlag !== undefined && (mainFlag & SIZE_FLAG_EXPAND) !== 0 ? 1 : 0;
+    // EXPAND children share the free space in proportion to their stretch ratio.
+    style.flexGrow =
+      mainFlag !== undefined && (mainFlag & SIZE_FLAG_EXPAND) !== 0
+        ? (p.sizeFlagsStretchRatio ?? 1)
+        : 0;
     style.flexShrink = 0;
 
     const crossFlag = (rowMain ? p.sizeFlagsVertical : p.sizeFlagsHorizontal) ?? SIZE_FLAG_FILL;
