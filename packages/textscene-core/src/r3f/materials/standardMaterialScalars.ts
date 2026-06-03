@@ -38,6 +38,10 @@ export interface StandardMaterial3DScalars {
   depthWrite: boolean;
   /** Godot `shading_mode`: 'unshaded' (mode 0, unlit) or 'per_pixel' (default). */
   shadingMode: 'unshaded' | 'per_pixel';
+  /** Godot `vertex_color_use_as_albedo` → three.js vertexColors (default false). */
+  useVertexColors: boolean;
+  /** Godot `ao_enabled` — aoMap is only applied when true (default false). */
+  aoEnabled: boolean;
   /** three.js blending constant; defaults to NormalBlending. */
   blending: THREE.Blending;
   /** three.js side constant; defaults to FrontSide. */
@@ -74,6 +78,8 @@ const DEFAULT_SCALARS: StandardMaterial3DScalars = {
   alphaTest: 0,
   depthWrite: true,
   shadingMode: 'per_pixel',
+  useVertexColors: false,
+  aoEnabled: false,
   blending: THREE.NormalBlending,
   side: THREE.FrontSide,
   cullModeExplicit: false,
@@ -132,9 +138,23 @@ export function parseStandardMaterial3DScalars(
   // sRGB values. Convert at parse time so every downstream consumer
   // sees linear-space RGB.
   const linearAlbedo = albedo ? sRGBToLinearRGB(albedo.r, albedo.g, albedo.b) : null;
+  // HDR emission: Godot allows emission channels > 1. three.js's emissive color
+  // is [0,1] with brightness carried by emissiveIntensity, so normalize the
+  // color by its peak channel and fold that peak into the energy — preserving
+  // both hue and total brightness instead of clamping the color to white.
+  const emissionPeak = emissionColor
+    ? Math.max(emissionColor.r, emissionColor.g, emissionColor.b, 1)
+    : 1;
   const linearEmission = emissionColor
-    ? sRGBToLinearRGB(emissionColor.r, emissionColor.g, emissionColor.b)
+    ? sRGBToLinearRGB(
+        emissionColor.r / emissionPeak,
+        emissionColor.g / emissionPeak,
+        emissionColor.b / emissionPeak
+      )
     : null;
+
+  const useVertexColors = properties['vertex_color_use_as_albedo'] === 'true';
+  const aoEnabled = properties['ao_enabled'] === 'true';
 
   return {
     color: linearAlbedo
@@ -147,13 +167,15 @@ export function parseStandardMaterial3DScalars(
       emissionEnabled && linearEmission
         ? rgbToHex(linearEmission[0], linearEmission[1], linearEmission[2])
         : 0x000000,
-    emissiveIntensity: emissionEnabled ? Math.max(0, emissionEnergy) : 0,
+    emissiveIntensity: emissionEnabled ? Math.max(0, emissionEnergy * emissionPeak) : 0,
     uv1Scale,
     uv1Offset,
     transparent,
     alphaTest,
     depthWrite,
     shadingMode,
+    useVertexColors,
+    aoEnabled,
     blending,
     side,
     cullModeExplicit,

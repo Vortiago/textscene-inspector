@@ -183,6 +183,8 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
           internalResources={[
             sub('BoxMesh', 'Mesh_1', { size: 'Vector3(1, 1, 1)' }),
             sub('StandardMaterial3D', 'Mat', {
+              // Godot samples ao_texture only when ao_enabled is set.
+              ao_enabled: 'true',
               ao_texture: 'ExtResource("1_ao")',
             }),
           ]}

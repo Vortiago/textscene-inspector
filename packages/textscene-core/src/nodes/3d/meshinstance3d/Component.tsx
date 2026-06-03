@@ -259,7 +259,7 @@ export function MeshInstance3D({ node }: NodeComponentProps) {
         roughnessMap={roughnessMap}
         metalnessMap={metalnessMap}
         emissiveMap={emissiveMap}
-        aoMap={aoMap}
+        aoMap={materialScalars?.aoEnabled ? aoMap : undefined}
         shadowSide={shadowFlags.shadowSide}
         meshType={meshResource.type}
         // Multi-surface meshes (slot N>0 populated): attach the primary

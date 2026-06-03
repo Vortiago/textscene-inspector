@@ -101,6 +101,7 @@ export function StandardMaterialSlot({
       key={slotKey}
       attach={attach}
       color={scalars.color}
+      vertexColors={scalars.useVertexColors}
       metalness={scalars.metalness}
       roughness={scalars.roughness}
       transparent={scalars.transparent}
