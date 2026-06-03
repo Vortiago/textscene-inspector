@@ -45,13 +45,14 @@ export function StandardMaterialSlot({
   attach,
 }: StandardMaterialSlotProps) {
   if (!scalars) {
-    // No material → use Godot's default culling (BACK = FrontSide).
+    // No material → Godot's default StandardMaterial3D: white, non-metallic,
+    // fully-rough matte, BACK culling (= three.js FrontSide).
     return (
       <meshStandardMaterial
         attach={attach}
-        color={0xcccccc}
-        metalness={0.3}
-        roughness={0.7}
+        color={0xffffff}
+        metalness={0}
+        roughness={1}
         side={THREE.FrontSide}
         shadowSide={shadowSide ?? null}
       />
@@ -75,6 +76,26 @@ export function StandardMaterialSlot({
     `${metalnessMap ? 'm' : '-'}` +
     `${emissiveMap ? 'e' : '-'}` +
     `${aoMap ? 'o' : '-'}`;
+
+  // Godot SHADING_MODE_UNSHADED (0): albedo is output directly, unaffected by
+  // lights/shadows. three.js MeshBasicMaterial is the unlit equivalent — no PBR
+  // slots (metalness/roughness/normal/emissive/ao) apply.
+  if (scalars.shadingMode === 'unshaded') {
+    return (
+      <meshBasicMaterial
+        key={`basic-${albedoMap ? 'a' : '-'}`}
+        attach={attach}
+        color={scalars.color}
+        map={albedoMap ?? null}
+        transparent={scalars.transparent}
+        opacity={scalars.opacity}
+        alphaTest={scalars.alphaTest}
+        depthWrite={scalars.depthWrite}
+        blending={scalars.blending}
+        side={effectiveSide}
+      />
+    );
+  }
   return (
     <meshStandardMaterial
       key={slotKey}
@@ -84,6 +105,8 @@ export function StandardMaterialSlot({
       roughness={scalars.roughness}
       transparent={scalars.transparent}
       opacity={scalars.opacity}
+      alphaTest={scalars.alphaTest}
+      depthWrite={scalars.depthWrite}
       blending={scalars.blending}
       side={effectiveSide}
       shadowSide={shadowSide ?? null}

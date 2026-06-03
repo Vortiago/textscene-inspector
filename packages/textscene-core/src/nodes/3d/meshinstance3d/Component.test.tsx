@@ -203,7 +203,7 @@ describe('<MeshInstance3D>', () => {
       expect(material.transparent).toBe(false);
     });
 
-    it('marks material transparent when albedo alpha < 1', async () => {
+    it('marks material transparent for ALPHA transparency mode (alpha drives opacity)', async () => {
       const node = makeNode({
         mesh: 'SubResource("Box_1")',
         materialOverride: 'SubResource("Mat_glass")',
@@ -211,6 +211,8 @@ describe('<MeshInstance3D>', () => {
       const resources: TscnInternalResource[] = [
         meshSubResource('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' }),
         meshSubResource('StandardMaterial3D', 'Mat_glass', {
+          // Godot: alpha < 1 only renders transparent when transparency != DISABLED.
+          transparency: '1',
           albedo_color: 'Color(0.2, 0.5, 0.9, 0.4)',
         }),
       ];
@@ -223,20 +225,20 @@ describe('<MeshInstance3D>', () => {
       expect(material.opacity).toBeCloseTo(0.4, 5);
     });
 
-    it('falls back to neutral default material when no material reference exists', async () => {
+    it('falls back to Godot default material (white, matte, non-metallic) when no material reference exists', async () => {
       const node = makeNode({ mesh: 'SubResource("Box_1")' });
       const resources: TscnInternalResource[] = [
         meshSubResource('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' }),
       ];
       const renderer = await render(node, resources);
       const material = renderer.scene.findByType('Mesh').instance.material as {
-        color: { getHex(): number };
+        color: { getHexString(): string };
         metalness: number;
         roughness: number;
       };
-      expect(material.color.getHex()).toBe(0xcccccc);
-      expect(material.metalness).toBeCloseTo(0.3, 5);
-      expect(material.roughness).toBeCloseTo(0.7, 5);
+      expect(material.color.getHexString()).toBe('ffffff');
+      expect(material.metalness).toBe(0);
+      expect(material.roughness).toBe(1);
     });
 
     it('prefers surface_material_override[0] over material_override', async () => {

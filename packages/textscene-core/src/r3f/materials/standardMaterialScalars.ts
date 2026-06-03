@@ -30,8 +30,14 @@ export interface StandardMaterial3DScalars {
   uv1Scale: { x: number; y: number };
   /** Per-axis offset for every texture map applied by this material. */
   uv1Offset: { x: number; y: number };
-  /** True when albedo alpha < 1 OR Godot's `transparency` flag is non-zero. */
+  /** True only when Godot's `transparency` is a blending mode (ALPHA / ALPHA_HASH / DEPTH_PRE_PASS). */
   transparent: boolean;
+  /** Alpha-test cutoff for ALPHA_SCISSOR (Godot transparency mode 2); 0 = disabled. */
+  alphaTest: number;
+  /** three.js depthWrite — false only for ALPHA blending so objects behind stay visible. */
+  depthWrite: boolean;
+  /** Godot `shading_mode`: 'unshaded' (mode 0, unlit) or 'per_pixel' (default). */
+  shadingMode: 'unshaded' | 'per_pixel';
   /** three.js blending constant; defaults to NormalBlending. */
   blending: THREE.Blending;
   /** three.js side constant; defaults to FrontSide. */
@@ -65,6 +71,9 @@ const DEFAULT_SCALARS: StandardMaterial3DScalars = {
   uv1Scale: { x: 1, y: 1 },
   uv1Offset: { x: 0, y: 0 },
   transparent: false,
+  alphaTest: 0,
+  depthWrite: true,
+  shadingMode: 'per_pixel',
   blending: THREE.NormalBlending,
   side: THREE.FrontSide,
   cullModeExplicit: false,
@@ -94,7 +103,17 @@ export function parseStandardMaterial3DScalars(
   const uv1Offset = parseVec2Components(properties['uv1_offset']) ?? DEFAULT_SCALARS.uv1Offset;
 
   const opacity = albedo ? clamp01(albedo.a) : DEFAULT_SCALARS.opacity;
-  const transparencyFlag = parseTransparencyFlag(properties['transparency']);
+  // Godot Transparency: 0 DISABLED, 1 ALPHA, 2 ALPHA_SCISSOR, 3 ALPHA_HASH, 4 DEPTH_PRE_PASS.
+  // Only the blended modes use three.js's transparent pipeline; ALPHA_SCISSOR is a hard
+  // cutout (alphaTest) on the OPAQUE pipeline (depth-writing). albedo alpha < 1 alone, with
+  // transparency DISABLED, renders opaque in Godot — so it must NOT force transparency here.
+  const transparencyMode = parseTransparencyMode(properties['transparency']);
+  const transparent =
+    transparencyMode === 1 || transparencyMode === 3 || transparencyMode === 4;
+  const alphaTest =
+    transparencyMode === 2 ? numericOr(properties['alpha_scissor_threshold'], 0.5) : 0;
+  const depthWrite = transparencyMode !== 1; // only ALPHA blending disables depth writes
+  const shadingMode = properties['shading_mode'] === '0' ? 'unshaded' : 'per_pixel';
   const blending = parseBlendMode(properties['blend_mode']);
   const side = parseCullMode(properties['cull_mode']);
   const cullModeExplicit = properties['cull_mode'] !== undefined;
@@ -131,7 +150,10 @@ export function parseStandardMaterial3DScalars(
     emissiveIntensity: emissionEnabled ? Math.max(0, emissionEnergy) : 0,
     uv1Scale,
     uv1Offset,
-    transparent: opacity < 1 || transparencyFlag,
+    transparent,
+    alphaTest,
+    depthWrite,
+    shadingMode,
     blending,
     side,
     cullModeExplicit,
@@ -154,11 +176,11 @@ function sRGBToLinearRGB(r: number, g: number, b: number): [number, number, numb
   return [sRGBChannelToLinear(r), sRGBChannelToLinear(g), sRGBChannelToLinear(b)];
 }
 
-/** Godot transparency enum: 0=DISABLED, anything non-zero engages transparency. */
-function parseTransparencyFlag(raw: string | undefined): boolean {
-  if (raw === undefined) return false;
+/** Godot Transparency enum value: 0 DISABLED, 1 ALPHA, 2 ALPHA_SCISSOR, 3 ALPHA_HASH, 4 DEPTH_PRE_PASS. */
+function parseTransparencyMode(raw: string | undefined): number {
+  if (raw === undefined) return 0;
   const n = parseInt(raw, 10);
-  return Number.isFinite(n) && n !== 0;
+  return Number.isFinite(n) ? n : 0;
 }
 
 /**

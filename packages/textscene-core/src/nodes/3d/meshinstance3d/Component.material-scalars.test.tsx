@@ -72,10 +72,16 @@ describe('StandardMaterial3D scalars (assertions 18–31)', () => {
     expect(mat.color.b).toBeCloseTo(0.52252, 4);
   });
 
-  it('#19 albedo_color alpha < 1 → opacity matches AND transparent=true', async () => {
-    const mat = await renderWithMaterial({ albedo_color: 'Color(1, 1, 1, 0.4)' });
+  it('#19 albedo_color alpha < 1 (ALPHA mode) → opacity matches AND transparent=true', async () => {
+    // Godot: alpha < 1 is only transparent when transparency != DISABLED.
+    const mat = await renderWithMaterial({ transparency: '1', albedo_color: 'Color(1, 1, 1, 0.4)' });
     expect(mat.opacity).toBeCloseTo(0.4, 4);
     expect(mat.transparent).toBe(true);
+  });
+
+  it('#19b albedo_color alpha < 1 with transparency DISABLED → opaque (Godot ignores alpha)', async () => {
+    const mat = await renderWithMaterial({ albedo_color: 'Color(1, 1, 1, 0.4)' });
+    expect(mat.transparent).toBe(false);
   });
 
   it('#20 metallic=0 → material.metalness === 0', async () => {
@@ -103,8 +109,8 @@ describe('StandardMaterial3D scalars (assertions 18–31)', () => {
     expect(mat.roughness).toBe(1);
   });
 
-  it('#25 albedo_color alpha < 1 → opacity matches AND transparent=true (redundant w/#19 by spec but check independently)', async () => {
-    const mat = await renderWithMaterial({ albedo_color: 'Color(1, 1, 1, 0.2)' });
+  it('#25 albedo_color alpha < 1 (ALPHA mode) → opacity matches AND transparent=true', async () => {
+    const mat = await renderWithMaterial({ transparency: '1', albedo_color: 'Color(1, 1, 1, 0.2)' });
     expect(mat.opacity).toBeCloseTo(0.2, 4);
     expect(mat.transparent).toBe(true);
   });
