@@ -38,5 +38,17 @@ export function parseBoxMesh(properties: Record<string, string>): BoxMeshPropert
     }
   }
 
-  return { size };
+  const subdivide = (key: string): number => {
+    const raw = properties[key];
+    if (raw === undefined) return 0; // Godot default
+    const parsed = parseInt(raw, 10);
+    return isNaN(parsed) ? 0 : parsed;
+  };
+
+  return {
+    size,
+    subdivideWidth: subdivide('subdivide_width'),
+    subdivideHeight: subdivide('subdivide_height'),
+    subdivideDepth: subdivide('subdivide_depth'),
+  };
 }

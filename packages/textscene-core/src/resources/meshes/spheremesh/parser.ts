@@ -43,5 +43,7 @@ export function parseSphereMesh(properties: Record<string, string>): SphereMeshP
     }
   }
 
-  return { radius, height, radial_segments, rings };
+  const isHemisphere = properties.is_hemisphere === 'true';
+
+  return { radius, height, radial_segments, rings, isHemisphere };
 }

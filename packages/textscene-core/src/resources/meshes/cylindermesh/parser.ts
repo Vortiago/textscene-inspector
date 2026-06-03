@@ -51,5 +51,9 @@ export function parseCylinderMesh(properties: Record<string, string>): CylinderM
     }
   }
 
-  return { top_radius, bottom_radius, height, radial_segments, rings };
+  // Godot cap_top/cap_bottom default true; only an explicit "false" disables.
+  const capTop = properties.cap_top !== 'false';
+  const capBottom = properties.cap_bottom !== 'false';
+
+  return { top_radius, bottom_radius, height, radial_segments, rings, capTop, capBottom };
 }

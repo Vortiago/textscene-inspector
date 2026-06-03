@@ -31,16 +31,29 @@ export function MeshGeometry({ resource }: MeshGeometryProps) {
     case 'BoxMesh':
       return (
         <boxGeometry
-          args={[parsed.properties.size.x, parsed.properties.size.y, parsed.properties.size.z]}
+          args={[
+            parsed.properties.size.x,
+            parsed.properties.size.y,
+            parsed.properties.size.z,
+            parsed.properties.subdivideWidth + 1,
+            parsed.properties.subdivideHeight + 1,
+            parsed.properties.subdivideDepth + 1,
+          ]}
         />
       );
     case 'SphereMesh':
+      // is_hemisphere → render only the top dome (theta 0..π/2); a full sphere
+      // sweeps theta 0..π. phiStart/phiLength stay at the full-circle defaults.
       return (
         <sphereGeometry
           args={[
             parsed.properties.radius,
             parsed.properties.radial_segments ?? 64,
             parsed.properties.rings ?? 32,
+            0,
+            Math.PI * 2,
+            0,
+            parsed.properties.isHemisphere ? Math.PI / 2 : Math.PI,
           ]}
         />
       );
@@ -55,6 +68,9 @@ export function MeshGeometry({ resource }: MeshGeometryProps) {
             parsed.properties.height,
             parsed.properties.radial_segments ?? 64,
             parsed.properties.rings ?? 4,
+            // three.js can only drop BOTH caps; Godot single-cap removal isn't
+            // representable, so we open the ends only when both caps are off.
+            parsed.properties.capTop === false && parsed.properties.capBottom === false,
           ]}
         />
       );
@@ -112,8 +128,10 @@ type ParsedMesh =
  */
 function PlaneMeshGeometry({ properties }: { properties: PlaneMeshProperties }) {
   const geometry = useMemo(() => {
-    const widthSegments = Math.max(1, properties.subdivideWidth);
-    const heightSegments = Math.max(1, properties.subdivideDepth);
+    // Godot subdivide_* = extra edge loops: N loops → N+1 face segments
+    // (subdivide 0 → 1 segment).
+    const widthSegments = properties.subdivideWidth + 1;
+    const heightSegments = properties.subdivideDepth + 1;
     const geom = new THREE.PlaneGeometry(
       properties.size.x,
       properties.size.y,
