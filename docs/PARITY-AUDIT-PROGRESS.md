@@ -6,7 +6,7 @@ Tracks the 46 confirmed Godot-fidelity divergences from the 2026-06-03 expanded 
 
 - [x] **B1 Environment** (4): #9 ambient_light_color (defau(H), #10 ambient_light_source(H), #11 FogExp2 (wrong fog system (H), #27 background_color / ambient(M)
 - [x] **B2 Camera3D** (2): #1 size (OrthographicCamera f(H), #28 fov with keep_aspect = KEE(L)
-- [ ] **B3 SpotLight3D** (2): #5 spot_attenuation(H), #15 spot_angle_attenuation(M)
+- [x] **B3 SpotLight3D** (2): #5 spot_attenuation(H), #15 spot_angle_attenuation(M)
 - [ ] **B4 Label3D** (6): #2 billboard (default when ab(H), #3 pixel_size (default when a(H), #4 Label3D quad size formula (H), #13 outline_size (default when(M), #14 outline_size canvas lineWi(M), #33 double_sided(L)
 - [ ] **B5 Sprite3D** (6): #7 flip_h(H), #17 offset(M), #18 flip_v(M), #19 centered(M), #39 double_sided(L), #40 transparent(L)
 - [ ] **B6 Sprite2D/Animated** (3): #6 modulate (CanvasItem, inhe(H), #16 region_enabled + hframes/v(M), #38 self_modulate(L)
@@ -40,7 +40,7 @@ Dedup: stretch_ratio #12=#29; grid-expand #30=#32 -> fix once in B10 (~44 distin
 - Ours: packages/textscene-core/src/nodes/3d/label3d/Component.tsx:155-158 â€” `const height = properties.pixel_size * 100 * fontScale` where `fontScale = fontSize / 128`. The magic constant 100 has no relationship to the actual canvas pixel dimensions (`canvas.height = fontSize + 20`).
 - Fix: Replace the height formula: `const height = canvas.height * properties.pixel_size;` and `const width = canvas.width * properties.pixel_size;`. The aspect ratio is implicit since both dimensions use the same pixel_size multiplier.
 
-### [#5] SpotLight3D.spot_attenuation  (HIGH / lights-3d / wrong-mapping) - [ ]
+### [#5] SpotLight3D.spot_attenuation  (HIGH / lights-3d / wrong-mapping) - [x]
 - Godot: spot_attenuation is the distance falloff exponent in Godot's formula (1-(d/range)^4)^2 * d^(-spot_attenuation), identical in role to omni_attenuation. Default = 1.0. Higher values concentrate light near the source. Source: scene_forward_lights_inc.glsl get_omni_attenuation(); Godot 4.4 SpotLight3D docs: 'controls the distance attenuation function'.
 - Ours: packages/textscene-core/src/nodes/3d/lights/spotlight3d/Component.tsx:31-37 â€” spot_attenuation is read via an 'as unknown' cast, clamped to [0,1], and used as SpotLight.penumbra (edge softness). The distance decay prop is hardcoded to 2 (line 57). The property is never stored in SpotLight3DProperties (types.ts) or parsed by parseSpotLight3D (parser.ts).
 - Fix: Parse spot_attenuation in parseSpotLight3D (parser.ts) and add it to SpotLight3DProperties. In Component.tsx: set decay={properties.spot_attenuation ?? 1.0} (mirrors the omni_attenuationâ†’decay mapping). For edge softness, parse spot_angle_attenuation and derive penumbra; the simplest approximation is penumbra = 1 / Math.max(spot_angle_attenuation, 1) clamped to [0,1] (higher Godot exponent = sharper edge = lower penumbra). Remove the existing clamped-attenuation-as-penumbra
@@ -90,7 +90,7 @@ Dedup: stretch_ratio #12=#29; grid-expand #30=#32 -> fix once in B10 (~44 distin
 - Ours: packages/textscene-core/src/nodes/3d/label3d/Component.tsx:138 â€” `context.lineWidth = properties.outline_size * 10`. The factor of 10 is arbitrary; since the canvas is already drawn at fontSize pixels (matching the Godot font_size), the canvas lineWidth should equal outline_size directly (1 canvas px = 1 font px).
 - Fix: Change to `context.lineWidth = properties.outline_size;`. If the internal canvas resolution is intentionally upscaled relative to Godot font_size (e.g. using DEFAULT_FONT_SIZE=128 when Godot font_size=32), then scale proportionally: `context.lineWidth = properties.outline_size * (fontSize / godotFontSize)`, but that requires storing the Godot font_size separately from the canvas render size.
 
-### [#15] SpotLight3D.spot_angle_attenuation  (MEDIUM / lights-3d / missing) - [ ]
+### [#15] SpotLight3D.spot_angle_attenuation  (MEDIUM / lights-3d / missing) - [x]
 - Godot: spot_angle_attenuation controls the angular cone edge falloff via pow(spot_rim, spot_angle_attenuation). Default = 1.0. Large values (e.g. 8) give a very hard cone edge; values near 0 give very gradual falloff across the whole cone. Source: scene_forward_lights_inc.glsl cone attenuation section; Godot 4.4 SpotLight3D docs.
 - Ours: packages/textscene-core/src/nodes/3d/lights/spotlight3d/parser.ts â€” not parsed. packages/textscene-core/src/nodes/3d/lights/spotlight3d/types.ts â€” not in SpotLight3DProperties. packages/textscene-core/src/nodes/3d/lights/spotlight3d/Component.tsx â€” never consumed. The linter (linterParser.ts) validates it but the renderer ignores it entirely.
 - Fix: Parse spot_angle_attenuation in parseSpotLight3D; add to SpotLight3DProperties. Map to penumbra via an inverse relationship: larger Godot exponent = harder edge = smaller penumbra. A reasonable approximation: penumbra = Math.max(0, 1 - (spot_angle_attenuation / 8)) clamped to [0,1] so that the Godot default of 1.0 yields penumbraâ‰ˆ0.875 (very soft) and 8+ yields penumbra=0 (hard edge). This is approximate but captures the direction of the parameter.

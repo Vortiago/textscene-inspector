@@ -19,5 +19,9 @@ export function parseSpotLight3D(
     ...baseLightProps,
     spot_range: properties.spot_range ? parseFloat(properties.spot_range) : 5.0,
     spot_angle: properties.spot_angle ? parseFloat(properties.spot_angle) : 45.0,
+    spot_attenuation: properties.spot_attenuation ? parseFloat(properties.spot_attenuation) : 1.0,
+    spot_angle_attenuation: properties.spot_angle_attenuation
+      ? parseFloat(properties.spot_angle_attenuation)
+      : 1.0,
   };
 }

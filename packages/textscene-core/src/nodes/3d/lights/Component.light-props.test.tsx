@@ -148,11 +148,9 @@ describe('Lights — properties (assertions 67–80)', () => {
     );
   });
 
-  it('#79 SpotLight3D.spot_attenuation → SpotLight.penumbra', async () => {
-    // Godot's spot_attenuation (curve falloff exponent) maps to THREE's
-    // SpotLight.penumbra (0..1 edge softness). The current implementation
-    // does not consume `spot_attenuation` — penumbra defaults to 0.1.
-    // This assertion catches the gap.
+  it('#79 SpotLight3D.spot_attenuation → SpotLight.decay (distance falloff)', async () => {
+    // Godot's spot_attenuation is the DISTANCE falloff exponent → three.js decay
+    // (cone-edge softness comes from spot_angle_attenuation → penumbra instead).
     const r = await ReactThreeTestRenderer.create(
       <SpotLight3D
         node={{
@@ -161,15 +159,12 @@ describe('Lights — properties (assertions 67–80)', () => {
           children: [],
           properties: {
             ...spotNode().properties,
-            // spot_attenuation is not on the SpotLight3DProperties type today,
-            // so we cast through unknown to inject the property the way a
-            // future parser update would.
             ...({ spot_attenuation: 0.5 } as Record<string, unknown>),
           },
         }}
       />
     );
-    expect((r.scene.findByType('SpotLight').instance as { penumbra: number }).penumbra).toBe(0.5);
+    expect((r.scene.findByType('SpotLight').instance as { decay: number }).decay).toBe(0.5);
   });
 
   it('#80 SpotLight3D.shadow_enabled → light.castShadow', async () => {

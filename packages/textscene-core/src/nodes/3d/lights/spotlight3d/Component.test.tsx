@@ -40,10 +40,11 @@ describe('<SpotLight3D>', () => {
     expect((light.instance as { distance: number }).distance).toBe(25);
   });
 
-  it('applies penumbra (defaults to 0.1)', async () => {
+  it('derives penumbra from spot_angle_attenuation (default 1 → 0.5)', async () => {
     const renderer = await ReactThreeTestRenderer.create(<SpotLight3D node={makeNode()} />);
     const light = renderer.scene.findByType('SpotLight');
-    expect((light.instance as { penumbra: number }).penumbra).toBe(0.1);
+    // penumbra = 1/(spot_angle_attenuation + 1); default attenuation 1 → 0.5.
+    expect((light.instance as { penumbra: number }).penumbra).toBeCloseTo(0.5, 5);
   });
 
   it('overrides default penumbra when supplied', async () => {
