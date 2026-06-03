@@ -103,7 +103,36 @@ global transforms are identical). Our renderer nests every node in its parent's
   model can't express cleanly — disproportionate for a zero-impact flag.
 - Site: `nodes/base/node3d/Component.tsx` (child group nesting).
 
+## Lights
+
+### SpotLight3D.spot_angle_attenuation → penumbra  *(audit #15)*
+Godot's cone-edge softness is `pow(spot_rim, spot_angle_attenuation)` — a curve
+with no exact three.js analogue (three.js `SpotLight.penumbra` is a single 0..1
+softness). We approximate with `penumbra = 1 / (spot_angle_attenuation + 1)`,
+which is monotonic (higher exponent → harder edge) and lands the Godot default
+(`spot_angle_attenuation = 1.0`) at `penumbra = 0.5` — a moderately soft edge.
+
+- **Impact:** shipped spotlights render with a soft cone edge by default (vs the
+  old hardcoded near-hard `0.1`). Visually verified acceptable on the ld58
+  hallway; the absolute default (0.5) is pinned by a test.
+- **Why not exact:** the exponent→softness relationship is non-linear and has no
+  closed-form three.js equivalent; the mapping is a deliberate approximation.
+- Site: `nodes/3d/lights/spotlight3d/Component.tsx` (penumbra derivation).
+
 ## Control / Theme (StyleBox)
+
+### TextureRect absent stretch_mode → `contain` (not Godot's STRETCH_SCALE)  *(deliberate)*
+Godot's `TextureRect.stretch_mode` default is `STRETCH_SCALE` (0 → CSS `fill`).
+We instead default an **absent** `stretch_mode` to `object-fit: contain` so a
+texture fits its box rather than stretching to fill it. This deliberately
+deviates from Godot's documented default to fix the DialogSystem portrait
+overflowing its container (a tall portrait with no explicit stretch_mode). An
+explicit `stretch_mode = 0` still maps to `fill`.
+
+- **Impact:** a TextureRect that relied on the implicit STRETCH_SCALE default to
+  stretch-distort its texture will instead letterbox-fit it. No shipped scene
+  depends on the distort behaviour.
+- Site: `nodes/2d/ui/texturerect/Component.tsx` (`stretchObjectFit` default).
 
 ### StyleBoxFlat.border_blend  *(audit #43)*
 With `border_blend = true` Godot fades the border gradually from `border_color`
