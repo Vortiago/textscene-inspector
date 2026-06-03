@@ -23,6 +23,10 @@ function node(raw: Record<string, string> = {}): TscnNode {
   };
 }
 
+function srgbToLinear(c: number): number {
+  return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+}
+
 async function render(raw: Record<string, string> = {}) {
   const fake = createFakeResourceLoader();
   const tex = new THREE.Texture();
@@ -58,6 +62,46 @@ describe('Sprite3D render parity', () => {
     const r = await render({ flip_h: 'true' });
     const map = (r.scene.findByType('Mesh').instance.material as THREE.MeshBasicMaterial).map!;
     expect(map.repeat.x).toBeLessThan(0);
+  });
+
+  it('flip_v mirrors the texture vertically (negative repeat.y) (#18)', async () => {
+    const r = await render({ flip_v: 'true' });
+    const map = (r.scene.findByType('Mesh').instance.material as THREE.MeshBasicMaterial).map!;
+    expect(map.repeat.y).toBeLessThan(0);
+  });
+
+  it('offset displaces the quad (centered, pure offset) (#17)', async () => {
+    // image 100×50, pixel_size 0.01, offset (50, 20) → geometry center at
+    // +offset.x*pixel_size = 0.5, -offset.y*pixel_size = -0.2.
+    const r = await render({ offset: 'Vector2(50, 20)' });
+    const geom = r.scene.findByType('Mesh').instance.geometry as THREE.BufferGeometry;
+    geom.computeBoundingBox();
+    const c = geom.boundingBox!.getCenter(new THREE.Vector3());
+    expect(c.x).toBeCloseTo(0.5, 5);
+    expect(c.y).toBeCloseTo(-0.2, 5);
+  });
+
+  it('modulate is converted sRGB→linear before the material (#6 parity with Sprite2D)', async () => {
+    const r = await render({ modulate: 'Color(0.5, 0.5, 0.5, 1)' });
+    const color = (r.scene.findByType('Mesh').instance.material as THREE.MeshBasicMaterial).color;
+    expect(color.r).toBeCloseTo(srgbToLinear(0.5), 4); // ≈ 0.214, not 0.5
+  });
+
+  it('region_rect + hframes subdivide the region (compose, not exclusive) (#16 parity)', async () => {
+    // image 100×50, region (0,0,40,20), hframes=2 → frame UV width (40/100)/2 = 0.2;
+    // quad width = (40/2) * pixel_size 0.01 = 0.2.
+    const r = await render({
+      region_enabled: 'true',
+      region_rect: 'Rect2(0, 0, 40, 20)',
+      hframes: '2',
+    });
+    const mesh = r.scene.findByType('Mesh').instance as THREE.Mesh;
+    const map = (mesh.material as THREE.MeshBasicMaterial).map!;
+    expect(map.repeat.x).toBeCloseTo(0.2, 5);
+    const geom = mesh.geometry as THREE.BufferGeometry;
+    geom.computeBoundingBox();
+    const size = geom.boundingBox!.getSize(new THREE.Vector3());
+    expect(size.x).toBeCloseTo(0.2, 5);
   });
 
   it('double_sided=false → FrontSide material', async () => {

@@ -90,10 +90,13 @@ export function Label3D({ node }: NodeComponentProps) {
     return <group name={node.name} position={position} rotation={rotation} scale={scale} />;
   }
 
-  const tint = new THREE.Color(
+  // Godot modulate is sRGB → convert to linear before the unlit material tint
+  // (the white canvas text is colorized by this), matching Sprite2D/Sprite3D.
+  const tint = new THREE.Color().setRGB(
     properties.modulate.r,
     properties.modulate.g,
-    properties.modulate.b
+    properties.modulate.b,
+    THREE.SRGBColorSpace
   );
 
   return (

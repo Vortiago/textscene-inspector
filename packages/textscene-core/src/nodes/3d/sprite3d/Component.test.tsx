@@ -165,8 +165,10 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
       cached: [{ path: TEXTURE_PATH, texture: tex }],
     });
     const mat = renderer.scene.findByType('Mesh').instance.material as THREE.MeshBasicMaterial;
+    // Godot modulate is sRGB → converted to the linear working space: 1→1, 0→0,
+    // 0.5→~0.214 (IEC 61966-2-1 inverse transfer).
     expect(mat.color.r).toBeCloseTo(1, 3);
-    expect(mat.color.g).toBeCloseTo(0.5, 3);
+    expect(mat.color.g).toBeCloseTo(0.2140411, 3);
     expect(mat.color.b).toBeCloseTo(0, 3);
   });
 

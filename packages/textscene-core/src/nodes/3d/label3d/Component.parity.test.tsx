@@ -22,8 +22,9 @@ function node(raw: Record<string, string> = {}): TscnNode {
 }
 
 // happy-dom has no 2D canvas context; stub it so Label3D builds its texture.
+let mockContext: { font: string; fillStyle: string; strokeStyle: string; lineWidth: number };
 beforeEach(() => {
-  const mockContext = {
+  mockContext = {
     font: '',
     fillStyle: '',
     strokeStyle: '',
@@ -31,7 +32,7 @@ beforeEach(() => {
     measureText: vi.fn(() => ({ width: 100 })),
     fillText: vi.fn(),
     strokeText: vi.fn(),
-  };
+  } as typeof mockContext;
   HTMLCanvasElement.prototype.getContext = vi.fn((type: string) =>
     type === '2d' ? (mockContext as unknown as CanvasRenderingContext2D) : null
   ) as unknown as typeof HTMLCanvasElement.prototype.getContext;
@@ -62,11 +63,28 @@ describe('Label3D parser parity', () => {
   });
 });
 
+function srgbToLinear(c: number): number {
+  return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+}
+
 describe('Label3D render parity', () => {
   it('double_sided=false → FrontSide material', async () => {
     const r = await renderLabel(node({ double_sided: 'false' }));
     const mat = r.scene.findByType('Mesh').instance.material as THREE.Material;
     expect(mat.side).toBe(THREE.FrontSide);
+  });
+
+  it('modulate tint is converted sRGB→linear before the material (#6 parity)', async () => {
+    const r = await renderLabel(node({ modulate: 'Color(0.5, 0.5, 0.5, 1)' }));
+    const color = (r.scene.findByType('Mesh').instance.material as THREE.MeshBasicMaterial).color;
+    expect(color.r).toBeCloseTo(srgbToLinear(0.5), 4); // ≈ 0.214, not 0.5
+  });
+
+  it('outline_size scales canvas lineWidth by render/Godot font ratio (#14)', async () => {
+    // outline_size 12 default; canvas renders at DEFAULT_FONT_SIZE 128, Godot
+    // font_size 16 → lineWidth = 12 × (128 / 16) = 96.
+    await renderLabel(node({ outline_size: '12' }));
+    expect(mockContext.lineWidth).toBeCloseTo(96, 5);
   });
 
   it('quad height = canvas pixels × pixel_size × worldScale (Godot 16 / render 128)', async () => {

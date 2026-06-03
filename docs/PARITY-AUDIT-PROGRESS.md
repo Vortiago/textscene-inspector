@@ -251,3 +251,27 @@ Deferred gap (not in the 46): Label3D font_size is never carried by parseLabel3D
 - Godot: STRETCH_KEEP_ASPECT scales the texture to fit the bounding rect while preserving aspect ratio, aligned to the top-left. Godot 4.4 docs: 'Scale the texture to fit the node's bounding rectangle, but maintain the texture's aspect ratio.' Confirmed in texture_rect.cpp: offset remains (0,0) â€” unlike KEEP_ASPECT_CENTERED which adds (size-tex)/2.
 - Ours: packages/textscene-core/src/nodes/2d/ui/texturerect/Component.tsx:144-152 â€” default branch returns 'contain'. No objectPosition is set for mode 4 (only modes 3 and 5 get 'center' at line 137). CSS object-fit: contain defaults to object-position: 50% 50% (centered).
 - Fix: Add explicit objectPosition: 'top left' for stretchMode === 4 in textureRectFit. The object-fit: contain mapping itself is correct for this mode.
+
+---
+
+## Post-verification follow-up (B12 — 2026-06-03)
+
+A full E2E re-verification (static gate + linter + visual review of 22 rendered
+scenes + an adversarial multi-agent code sweep) confirmed the 46 fixes render
+correctly, and surfaced consistency gaps the 2D-scoped findings left in the 3D
+siblings. Fixed (TDD red-first, guarding tests added):
+
+- **Sprite3D region+frames compose** — mirrored the Sprite2D #16 fix: region and
+  hframes/vframes now compose (base rect → subdivide) instead of being mutually
+  exclusive; `computeQuadSize` divides the region by the frame grid. Stale
+  "region overrides spritesheet" comments corrected.
+- **Sprite3D + Label3D modulate sRGB→linear** — extended the #6 fix to the 3D
+  sprite/label tints (`setRGB(...,SRGBColorSpace)`), matching Sprite2D /
+  WorldEnvironment. (The audit's #6 noted "the same bug is present in Sprite3D".)
+- **Guarding tests added** for previously-unasserted mappings: Label3D outline
+  lineWidth scaling (#14), Sprite3D flip_v negative repeat.y (#18), Sprite3D pure
+  `offset` quad displacement (#17).
+
+Benign note: the SpotLight3D penumbra formula in code (`1/(x+1)`, default 0.5) is
+self-consistent and tested; it differs from the approximate `max(0,1-x/8)` the
+#15 planning note sketched. The code is the source of truth.

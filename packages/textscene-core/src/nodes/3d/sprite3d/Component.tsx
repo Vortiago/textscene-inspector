@@ -12,15 +12,12 @@
  *     `region_rect` sub-image). Same pattern as Label3D's textured
  *     plane, but the texture comes from the host file provider rather
  *     than a runtime canvas rasteriser.
- *   - Spritesheet UV math (the load-bearing new logic):
- *       repeat = (1/hframes, 1/vframes)
- *       offset = ((frame % hframes) / hframes,
- *                 1 - Math.ceil((frame+1)/hframes) / vframes)
- *     `frame_coords` overrides the linear frame index when present.
- *     `region_enabled + region_rect` overrides the spritesheet math
- *     with an explicit sub-rectangle of the texture (requires the
- *     texture's `image` to expose `width`/`height`; otherwise the
- *     sub-rect is skipped and the full texture is used).
+ *   - UV math: the base rect is `region_rect` (when region_enabled)
+ *     else the full image; hframes/vframes then SUBDIVIDE that base
+ *     rect — the two compose (matching Godot's SpriteBase3D
+ *     base_rect-then-subdivide), not mutually exclusive. `frame_coords`
+ *     overrides the linear `frame` index when present. (Region requires
+ *     the texture's `image` to expose `width`/`height`; else skipped.)
  *
  * Material:
  *   - `meshBasicMaterial` (sprites are unlit in Godot)
@@ -97,9 +94,17 @@ export function Sprite3D({ node }: NodeComponentProps) {
   );
 
   // Modulate RGB and effective opacity. Transparency property is
-  // additive: opacity = modulate.a * (1 - transparency).
+  // additive: opacity = modulate.a * (1 - transparency). Godot stores modulate
+  // in sRGB → convert to the linear working space before the unlit material
+  // (matching Sprite2D / WorldEnvironment).
   const color = useMemo(
-    () => new THREE.Color(properties.modulate.r, properties.modulate.g, properties.modulate.b),
+    () =>
+      new THREE.Color().setRGB(
+        properties.modulate.r,
+        properties.modulate.g,
+        properties.modulate.b,
+        THREE.SRGBColorSpace
+      ),
     [properties.modulate.r, properties.modulate.g, properties.modulate.b]
   );
   const opacity = clamp01(properties.modulate.a * (1 - properties.transparency));
@@ -231,11 +236,13 @@ function composeTexture(
   cloned.wrapS = THREE.RepeatWrapping;
   cloned.wrapT = THREE.RepeatWrapping;
 
-  // region_enabled wins over spritesheet math when both are set — it's
-  // an explicit user-defined sub-rectangle, less likely to be a mistake.
+  // Godot's SpriteBase3D computes base_rect (region when enabled, else the full
+  // texture) THEN subdivides it by hframes/vframes — the two compose, they are
+  // not exclusive (matches Sprite2D).
   if (properties.region_enabled && properties.region_rect) {
     applyRegionRect(cloned, properties.region_rect);
-  } else if (properties.hframes > 1 || properties.vframes > 1) {
+  }
+  if (properties.hframes > 1 || properties.vframes > 1) {
     applySpritesheetUV(cloned, properties);
   }
 
@@ -273,10 +280,19 @@ function applySpritesheetUV(
     row = Math.floor(N / H);
   }
 
-  texture.repeat.set(1 / H, 1 / V);
+  // Compose over the base UV already on the texture: identity (full image) or a
+  // region rect applied above. Multiplying keeps region + frames additive.
+  const baseRepeatX = texture.repeat.x;
+  const baseRepeatY = texture.repeat.y;
+  const baseOffsetX = texture.offset.x;
+  const baseOffsetY = texture.offset.y;
+  texture.repeat.set(baseRepeatX / H, baseRepeatY / V);
   // UV-Y origin is bottom-left in three.js; image-Y origin is top-left.
-  // Flip Y so row 0 sits at the top of the texture (intuitive layout).
-  texture.offset.set(col / H, 1 - (row + 1) / V);
+  // Flip Y so row 0 sits at the top of the (region's) window.
+  texture.offset.set(
+    baseOffsetX + col * (baseRepeatX / H),
+    baseOffsetY + baseRepeatY - (row + 1) * (baseRepeatY / V)
+  );
 }
 
 function applyRegionRect(
@@ -297,11 +313,9 @@ function applyRegionRect(
 }
 
 /**
- * Quad size in world units. Three branches:
- *   1. Region enabled + texture image dims known → use rect dimensions.
- *   2. Spritesheet → use (imgW / hframes, imgH / vframes).
- *   3. Otherwise → use full image dimensions (or a 1×1 default).
- * All multiplied by `pixel_size`.
+ * Quad size in world units. The base rect is the region (when enabled) else the
+ * full image; hframes/vframes then subdivide it (region and frames compose, as
+ * in Godot). All multiplied by `pixel_size`.
  */
 function computeQuadSize(
   texture: THREE.Texture | undefined,
@@ -310,17 +324,17 @@ function computeQuadSize(
   const image = texture?.image as { width?: number; height?: number } | undefined;
   const imgW = image?.width ?? 1;
   const imgH = image?.height ?? 1;
+  const H = Math.max(1, properties.hframes);
+  const V = Math.max(1, properties.vframes);
 
   let pxW = imgW;
   let pxH = imgH;
-
   if (properties.region_enabled && properties.region_rect && image?.width && image?.height) {
     pxW = properties.region_rect.width;
     pxH = properties.region_rect.height;
-  } else if (properties.hframes > 1 || properties.vframes > 1) {
-    pxW = imgW / Math.max(1, properties.hframes);
-    pxH = imgH / Math.max(1, properties.vframes);
   }
+  pxW /= H;
+  pxH /= V;
 
   return {
     width: pxW * properties.pixel_size,
