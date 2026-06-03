@@ -61,3 +61,17 @@ caps (the closest representable result); both-off correctly opens the ends.
 `uv1_triplanar` tiling **density** is reproduced exactly for planar meshes
 (`repeat = size × uv1_scale`). Curved / GLB geometry falls back to the mesh's own
 UVs (approximate) — a true 3-axis triplanar shader is out of scope.
+
+## Control / Theme (StyleBox)
+
+### StyleBoxFlat.border_blend  *(audit #43)*
+With `border_blend = true` Godot fades the border gradually from `border_color`
+into `bg_color` instead of drawing a hard edge. We map `border_width` +
+`border_color` to a solid CSS `border`, which always has a sharp edge.
+
+- **Impact today:** zero — `border_blend` defaults to `false` and no shipped
+  `.tscn` enables it.
+- **Why not fixed:** a faithful blend needs a gradient border (`border-image`
+  with a radial/linear gradient, or `background-clip` layering) that is complex,
+  interacts badly with `border-radius`, and only approximates the Godot result.
+- Site: `r3f/controls/styleBoxToCss.ts` (border block).

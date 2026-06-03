@@ -48,6 +48,54 @@ describe('styleBoxToCss', () => {
   });
 });
 
+describe('styleBoxToCss parity (Godot defaults)', () => {
+  it('content_margin falls back to border_width per side when absent (#8)', () => {
+    // Godot StyleBox::get_margin returns border_width when content_margin < 0.
+    const css = styleBoxToCss('StyleBoxFlat', {
+      border_width_left: '2',
+      border_width_top: '2',
+      border_width_right: '2',
+      border_width_bottom: '2',
+    });
+    expect(css.padding).toBe('2px 2px 2px 2px');
+  });
+
+  it('content_margin overrides border_width only on the sides it sets (#8)', () => {
+    const css = styleBoxToCss('StyleBoxFlat', {
+      border_width_left: '2',
+      border_width_top: '2',
+      border_width_right: '2',
+      border_width_bottom: '2',
+      content_margin_left: '10', // explicit left wins; others fall back to 2
+    });
+    expect(css.padding).toBe('2px 2px 2px 10px');
+  });
+
+  it('border_color defaults to light gray Color(0.8) not black (#42)', () => {
+    const css = styleBoxToCss('StyleBoxFlat', { border_width_left: '1' });
+    expect(css.borderColor).toBe('rgba(204, 204, 204, 1)');
+  });
+
+  it('shadow_size ≥ 1 emits a box-shadow with Godot defaults (#41)', () => {
+    const css = styleBoxToCss('StyleBoxFlat', { bg_color: 'Color(1,1,1,1)', shadow_size: '4' });
+    expect(css.boxShadow).toBe('0px 0px 4px rgba(0, 0, 0, 0.6)');
+  });
+
+  it('shadow honours explicit color and offset (#41)', () => {
+    const css = styleBoxToCss('StyleBoxFlat', {
+      shadow_size: '8',
+      shadow_color: 'Color(1, 0, 0, 0.5)',
+      shadow_offset: 'Vector2(3, -2)',
+    });
+    expect(css.boxShadow).toBe('3px -2px 8px rgba(255, 0, 0, 0.5)');
+  });
+
+  it('no box-shadow when shadow_size is absent or < 1 (#41)', () => {
+    expect(styleBoxToCss('StyleBoxFlat', { bg_color: 'Color(1,1,1,1)' }).boxShadow).toBeUndefined();
+    expect(styleBoxToCss('StyleBoxFlat', { shadow_size: '0' }).boxShadow).toBeUndefined();
+  });
+});
+
 describe('colorToCss', () => {
   it('converts a Godot Color to rgba', () => {
     expect(colorToCss('Color(1, 0, 0, 1)')).toBe('rgba(255, 0, 0, 1)');

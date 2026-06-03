@@ -26,6 +26,13 @@ function n(value: string | undefined, fallback = 0): number {
   return Number.isNaN(x) ? fallback : x;
 }
 
+function parseVec2(value: string | undefined): { x: number; y: number } {
+  if (!value) return { x: 0, y: 0 };
+  const m = value.match(/Vector2\(\s*(-?[\d.eE+-]+)\s*,\s*(-?[\d.eE+-]+)\s*\)/);
+  if (!m) return { x: 0, y: 0 };
+  return { x: parseFloat(m[1]!), y: parseFloat(m[2]!) };
+}
+
 export function styleBoxToCss(type: string, data: Record<string, string>): CSSProperties {
   if (type !== 'StyleBoxFlat') return {}; // StyleBoxEmpty / unknown → transparent
   const style: CSSProperties = {};
@@ -51,16 +58,30 @@ export function styleBoxToCss(type: string, data: Record<string, string>): CSSPr
   const bwB = n(data.border_width_bottom);
   if (bwL || bwT || bwR || bwB) {
     style.borderStyle = 'solid';
-    style.borderColor = (data.border_color && colorToCss(data.border_color)) || 'rgba(0, 0, 0, 1)';
+    // Godot's StyleBoxFlat.border_color default is Color(0.8,0.8,0.8,1) (light
+    // gray), omitted from .tscn when unchanged — fall back to that, not black.
+    style.borderColor = (data.border_color && colorToCss(data.border_color)) || 'rgba(204, 204, 204, 1)';
     style.borderWidth = `${bwT}px ${bwR}px ${bwB}px ${bwL}px`;
   }
 
-  const cl = n(data.content_margin_left, -1);
-  const ct = n(data.content_margin_top, -1);
-  const cr = n(data.content_margin_right, -1);
-  const cb = n(data.content_margin_bottom, -1);
-  if (cl >= 0 || ct >= 0 || cr >= 0 || cb >= 0) {
-    style.padding = `${Math.max(0, ct)}px ${Math.max(0, cr)}px ${Math.max(0, cb)}px ${Math.max(0, cl)}px`;
+  // StyleBox::get_margin() falls back to the side's border_width when
+  // content_margin[side] is negative (the default −1) — so a border-only box
+  // still pads its content by the border thickness.
+  const effL = n(data.content_margin_left, -1) >= 0 ? n(data.content_margin_left) : bwL;
+  const effT = n(data.content_margin_top, -1) >= 0 ? n(data.content_margin_top) : bwT;
+  const effR = n(data.content_margin_right, -1) >= 0 ? n(data.content_margin_right) : bwR;
+  const effB = n(data.content_margin_bottom, -1) >= 0 ? n(data.content_margin_bottom) : bwB;
+  if (effL || effT || effR || effB) {
+    style.padding = `${effT}px ${effR}px ${effB}px ${effL}px`;
+  }
+
+  // Drop shadow (only drawn when shadow_size >= 1). shadow_color default
+  // Color(0,0,0,0.6); shadow_offset default Vector2(0,0).
+  const shadowSize = n(data.shadow_size, 0);
+  if (shadowSize >= 1) {
+    const shadowColor = (data.shadow_color && colorToCss(data.shadow_color)) || 'rgba(0, 0, 0, 0.6)';
+    const off = parseVec2(data.shadow_offset);
+    style.boxShadow = `${off.x}px ${off.y}px ${shadowSize}px ${shadowColor}`;
   }
 
   return style;

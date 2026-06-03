@@ -10,7 +10,7 @@ Tracks the 46 confirmed Godot-fidelity divergences from the 2026-06-03 expanded 
 - [x] **B4 Label3D** (6): #2 billboard (default when ab(H), #3 pixel_size (default when a(H), #4 Label3D quad size formula (H), #13 outline_size (default when(M), #14 outline_size canvas lineWi(M), #33 double_sided(L)
 - [x] **B5 Sprite3D** (6): #7 flip_h(H), #17 offset(M), #18 flip_v(M), #19 centered(M), #39 double_sided(L), #40 transparent(L)
 - [x] **B6 Sprite2D/Animated** (3): #6 modulate (CanvasItem, inhe(H), #16 region_enabled + hframes/v(M), #38 self_modulate(L)
-- [ ] **B7 StyleBox** (4): #8 content_margin_left/top/ri(H), #41 shadow_size / shadow_color(L), #42 border_color (default fall(L), #43 border_blend(L)
+- [x] **B7 StyleBox** (4): #8 content_margin_left/top/ri(H), #41 shadow_size / shadow_color(L), #42 border_color (default fall(L), #43 border_blend(L)
 - [ ] **B8 TextureRect/ColorRect** (6): #22 stretch_mode = 1 (STRETCH_(M), #23 stretch_mode = 2 (STRETCH_(M), #24 stretch_mode = 3 (STRETCH_(M), #25 flip_h(M), #26 flip_v(M), #46 stretch_mode = 4 (STRETCH_(L)
 - [ ] **B9 Text controls** (4): #20 autowrap_mode (AUTOWRAP_AR(M), #21 alignment(M), #44 uppercase(L), #45 fit_content(L)
 - [ ] **B10 Control/Containers** (5): #12 size_flags_stretch_ratio(M), #29 size_flags_stretch_ratio(L), #30 GridContainer â€” child SI(L), #31 horizontal_scroll_mode / v(L), #32 GridContainer child size_f(L)
@@ -57,7 +57,7 @@ Deferred gap (not in the 46): Label3D font_size is never carried by parseLabel3D
 - Ours: packages/textscene-core/src/nodes/3d/sprite3d/parser.ts â€” flip_h is not parsed. packages/textscene-core/src/nodes/3d/sprite3d/Component.tsx â€” flip_h is not applied. packages/textscene-core/src/nodes/3d/sprite3d/linterParser.ts â€” flip_h is not registered as a known property.
 - Fix: Parse flip_h as a bool in parser.ts and linterParser.ts. In composeTexture (Component.tsx), after applying UV offset/repeat, negate texture.repeat.x (set it to -1/H) and adjust texture.offset.x by +1/H to implement a horizontal mirror. Alternatively apply `texture.repeat.set(-1/H, 1/V); texture.offset.x += 1/H` when flip_h is true.
 
-### [#8] StyleBoxFlat.content_margin_left/top/right/bottom (negative â†’ border_width fallback)  (HIGH / stylebox / wrong-mapping) - [ ]
+### [#8] StyleBoxFlat.content_margin_left/top/right/bottom (negative â†’ border_width fallback)  (HIGH / stylebox / wrong-mapping) - [x]
 - Godot: StyleBox::get_margin() (scene/resources/style_box.cpp, Godot 4.4): when content_margin[side] < 0, returns get_style_margin(side). StyleBoxFlat::get_style_margin() (scene/resources/style_box_flat.cpp) returns border_width[side]. So with default content_margin = -1 and border_width = 2, effective content padding = 2px per side. Docs: https://docs.godotengine.org/en/4.4/classes/cl
 - Ours: packages/textscene-core/src/r3f/controls/styleBoxToCss.ts:58-63 â€” reads each content_margin with fallback -1, then applies Math.max(0, value). When all four content_margin keys are absent (the common case when only border_width is set), the condition cl>=0||ct>=0||cr>=0||cb>=0 is false and NO padding is emitted. Even if only some sides are present, the absent sides get 0 inst
 - Fix: In the content_margin block, replace the fallback with the border_width value for each side when the margin is negative: const cl = n(data.content_margin_left, -1); const effectiveL = cl >= 0 ? cl : bwL; (repeat per side). Compute bwL/bwT/bwR/bwB before the margin block and reuse them.
@@ -222,17 +222,17 @@ Deferred gap (not in the 46): Label3D font_size is never carried by parseLabel3D
 - Ours: packages/textscene-core/src/nodes/3d/sprite3d/parser.ts â€” the bool property 'transparent' is not parsed (our 'transparency' float is a separate property). packages/textscene-core/src/nodes/3d/sprite3d/Component.tsx:106 â€” `const transparent = opacity < 1 || properties.alpha_cut !== AlphaCutMode.ALPHA_CUT_DISABLED;` derives the THREE material's transparent flag from opacity/a
 - Fix: Parse 'transparent' as a bool (default true) in parser.ts and linterParser.ts. When false, force `transparent=false` on the THREE material and set `alphaTest=0`, effectively disabling alpha blending.
 
-### [#41] StyleBoxFlat.shadow_size / shadow_color / shadow_offset  (LOW / stylebox / missing) - [ ]
+### [#41] StyleBoxFlat.shadow_size / shadow_color / shadow_offset  (LOW / stylebox / missing) - [x]
 - Godot: StyleBoxFlat draws a drop shadow when shadow_size >= 1. shadow_color (default Color(0,0,0,0.6)) sets its color; shadow_offset (default Vector2(0,0)) shifts it. Docs: https://docs.godotengine.org/en/4.4/classes/class_styleboxflat.html â€” 'The shadow size in pixels. This has no effect if shadow_size is lower than 1.'
 - Ours: packages/textscene-core/src/r3f/controls/styleBoxToCss.ts â€” no shadow_size / shadow_color / shadow_offset keys are read or mapped. No box-shadow CSS property is ever emitted.
 - Fix: Read shadow_size, shadow_color, shadow_offset after the border block. If shadow_size >= 1, emit: style.boxShadow = `${offsetX}px ${offsetY}px ${shadow_size}px ${shadowColorCss}`. Parse shadow_offset as a Vector2 to extract x/y components.
 
-### [#42] StyleBoxFlat.border_color (default fallback)  (LOW / stylebox / wrong-default) - [ ]
+### [#42] StyleBoxFlat.border_color (default fallback)  (LOW / stylebox / wrong-default) - [x]
 - Godot: StyleBoxFlat.border_color default is Color(0.8, 0.8, 0.8, 1) â€” light gray. Docs: https://docs.godotengine.org/en/4.4/classes/class_styleboxflat.html â€” 'Sets the color of the border.' Default: Color(0.8, 0.8, 0.8, 1).
 - Ours: packages/textscene-core/src/r3f/controls/styleBoxToCss.ts:54 â€” fallback when data.border_color is absent: `'rgba(0, 0, 0, 1)'` (opaque black). Triggered whenever border_width > 0 but no border_color key is written in the TSCN (because the author left it at the Godot default and Godot omits default-valued properties from .tscn output).
 - Fix: Change the fallback on line 54 from 'rgba(0, 0, 0, 1)' to 'rgba(204, 204, 204, 1)' (= Color(0.8,0.8,0.8,1) rounded to 8-bit).
 
-### [#43] StyleBoxFlat.border_blend  (LOW / stylebox / missing) - [ ]
+### [#43] StyleBoxFlat.border_blend  (LOW / stylebox / missing) - [x]
 - Godot: When border_blend = true, the border gradually fades from border_color into bg_color rather than having a sharp edge. Default is false. Docs: https://docs.godotengine.org/en/4.4/classes/class_styleboxflat.html â€” 'If true, the border will fade into the background color.'
 - Ours: packages/textscene-core/src/r3f/controls/styleBoxToCss.ts â€” border_blend key is never read. CSS has no direct equivalent (would require a gradient border via border-image or background-clip tricks).
 - Fix: Approximate with CSS border-image using a radial/linear gradient, or document as a known limitation in PARITY-LIMITATIONS.md. The CSS approximation is complex and border_blend is rarely used.
