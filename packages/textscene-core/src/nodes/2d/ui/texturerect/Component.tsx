@@ -8,10 +8,12 @@
  * URL — the decoded bitmap survives blob revocation. Outside a
  * ResourceLoaderProvider (or before decode) the hook degrades to a placeholder.
  *
- * `stretch_mode` → CSS object-fit: 0 fill, 6 cover, else contain (fit, don't
- * overflow); modes 3 and 5 also center. The <img> is absolutely positioned in
- * a layout-sized wrapper so the texture's intrinsic size can't drive (and
- * overflow) the flex layout — see `textureRectFit`.
+ * `stretch_mode` → CSS object-fit: 0 fill, 2/3 none (intrinsic px), 6 cover,
+ * else contain (fit + keep aspect); object-position anchors top-left (2/4) or
+ * center (3/5). Mode 1 (tile) renders a background-repeat <div> instead.
+ * `flip_h`/`flip_v` add a CSS mirror transform. The image layer is absolutely
+ * positioned in a layout-sized wrapper so the texture's intrinsic size can't
+ * drive (and overflow) the flex layout — see `textureRectFit`.
  */
 
 import { useMemo, type CSSProperties } from 'react';
@@ -39,16 +41,22 @@ export function TextureRect({ node }: ControlComponentProps) {
   const layout = controlLayoutStyle(props, parentKind);
 
   if (src) {
-    // The <img> is absolutely positioned inside this layout-sized wrapper so
-    // the texture's intrinsic size never floors the flex layout — a tall
+    // The image layer is absolutely positioned inside this layout-sized wrapper
+    // so the texture's intrinsic size never floors the flex layout — a tall
     // portrait fits its box instead of overflowing it (the DialogSystem bug).
+    // STRETCH_TILE (1) can't tile via <img>, so it renders a background-repeat
+    // <div> instead.
     return (
       <div
         data-control-type="TextureRect"
         data-node-name={node.name}
         style={{ ...layout, overflow: 'hidden' }}
       >
-        <img src={src} alt={node.name} style={textureRectFit(props)} />
+        {props.stretchMode === 1 ? (
+          <div data-texture-tile="true" style={textureRectTileStyle(src, props)} />
+        ) : (
+          <img src={src} alt={node.name} style={textureRectFit(props)} />
+        )}
       </div>
     );
   }
@@ -123,10 +131,14 @@ function resolveTexturePath(
  * DialogSystem LeftPortrait bug). `object-fit` follows Godot's stretch_mode
  * (default `contain` — fit + keep aspect, not the intrinsic-size `none`).
  */
-export function textureRectFit(props: {
+interface TextureRectFitProps {
   stretchMode?: number;
   expandMode?: number;
-}): CSSProperties {
+  flipH?: boolean;
+  flipV?: boolean;
+}
+
+export function textureRectFit(props: TextureRectFitProps): CSSProperties {
   const style: CSSProperties = {
     position: 'absolute',
     inset: 0,
@@ -134,9 +146,27 @@ export function textureRectFit(props: {
     height: '100%',
     objectFit: stretchObjectFit(props.stretchMode),
   };
-  if (props.stretchMode === 3 || props.stretchMode === 5) {
-    style.objectPosition = 'center';
-  }
+  const objectPosition = stretchObjectPosition(props.stretchMode);
+  if (objectPosition) style.objectPosition = objectPosition;
+  const transform = flipTransform(props);
+  if (transform) style.transform = transform;
+  return style;
+}
+
+/**
+ * CSS for STRETCH_TILE (mode 1): a background-repeat layer that tiles the
+ * texture at its natural size across the control's box (an <img> can't tile).
+ */
+export function textureRectTileStyle(src: string, props: TextureRectFitProps): CSSProperties {
+  const style: CSSProperties = {
+    position: 'absolute',
+    inset: 0,
+    backgroundImage: `url(${src})`,
+    backgroundRepeat: 'repeat',
+    backgroundSize: 'auto',
+  };
+  const transform = flipTransform(props);
+  if (transform) style.transform = transform;
   return style;
 }
 
@@ -145,9 +175,32 @@ function stretchObjectFit(mode: number | undefined): CSSProperties['objectFit'] 
   switch (mode) {
     case 0:
       return 'fill';
+    case 2: // STRETCH_KEEP
+    case 3: // STRETCH_KEEP_CENTERED — intrinsic pixel size, not scaled
+      return 'none';
     case 6:
       return 'cover';
-    default:
+    default: // 1 tile (handled by background div), 4/5 keep aspect
       return 'contain';
   }
+}
+
+/** Godot StretchMode → CSS object-position (alignment of the drawn texture). */
+function stretchObjectPosition(mode: number | undefined): string | undefined {
+  switch (mode) {
+    case 2: // STRETCH_KEEP → top-left
+    case 4: // STRETCH_KEEP_ASPECT → top-left
+      return 'top left';
+    case 3: // STRETCH_KEEP_CENTERED
+    case 5: // STRETCH_KEEP_ASPECT_CENTERED
+      return 'center';
+    default:
+      return undefined;
+  }
+}
+
+/** `flip_h`/`flip_v` → a CSS mirror transform; undefined when neither is set. */
+function flipTransform(props: { flipH?: boolean; flipV?: boolean }): string | undefined {
+  if (!props.flipH && !props.flipV) return undefined;
+  return `scale(${props.flipH ? -1 : 1}, ${props.flipV ? -1 : 1})`;
 }

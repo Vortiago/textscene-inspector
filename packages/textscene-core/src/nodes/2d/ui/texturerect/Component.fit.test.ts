@@ -8,7 +8,7 @@
  * size — not the texture's intrinsic size — wins, and the image fits.
  */
 import { describe, it, expect } from 'vitest';
-import { textureRectFit } from './Component';
+import { textureRectFit, textureRectTileStyle } from './Component';
 
 describe('textureRectFit', () => {
   it('takes the image out of flow and fits it to its box', () => {
@@ -27,5 +27,46 @@ describe('textureRectFit', () => {
     expect(textureRectFit({ stretchMode: 0 }).objectFit).toBe('fill');
     expect(textureRectFit({ stretchMode: 6 }).objectFit).toBe('cover');
     expect(textureRectFit({ stretchMode: 5 }).objectPosition).toBe('center');
+  });
+});
+
+describe('textureRectFit parity (Godot stretch modes)', () => {
+  it('KEEP (2) draws at intrinsic size, top-left (#23)', () => {
+    const s = textureRectFit({ stretchMode: 2 });
+    expect(s.objectFit).toBe('none');
+    expect(s.objectPosition).toBe('top left');
+  });
+
+  it('KEEP_CENTERED (3) draws at intrinsic size, centered (#24)', () => {
+    const s = textureRectFit({ stretchMode: 3 });
+    expect(s.objectFit).toBe('none');
+    expect(s.objectPosition).toBe('center');
+  });
+
+  it('KEEP_ASPECT (4) fits + keeps aspect, anchored top-left (#46)', () => {
+    const s = textureRectFit({ stretchMode: 4 });
+    expect(s.objectFit).toBe('contain');
+    expect(s.objectPosition).toBe('top left');
+  });
+
+  it('flip_h / flip_v map to a CSS scale transform (#25, #26)', () => {
+    expect(textureRectFit({ flipH: true }).transform).toBe('scale(-1, 1)');
+    expect(textureRectFit({ flipV: true }).transform).toBe('scale(1, -1)');
+    expect(textureRectFit({ flipH: true, flipV: true }).transform).toBe('scale(-1, -1)');
+    expect(textureRectFit({}).transform).toBeUndefined();
+  });
+});
+
+describe('textureRectTileStyle (STRETCH_TILE)', () => {
+  it('tiles the texture via background-repeat at natural size (#22)', () => {
+    const s = textureRectTileStyle('data:image/png;base64,XYZ', { stretchMode: 1 });
+    expect(s.backgroundImage).toBe('url(data:image/png;base64,XYZ)');
+    expect(s.backgroundRepeat).toBe('repeat');
+    expect(s.backgroundSize).toBe('auto');
+    expect(s.position).toBe('absolute');
+  });
+
+  it('applies flip transform to the tiled layer too', () => {
+    expect(textureRectTileStyle('data:x', { stretchMode: 1, flipH: true }).transform).toBe('scale(-1, 1)');
   });
 });

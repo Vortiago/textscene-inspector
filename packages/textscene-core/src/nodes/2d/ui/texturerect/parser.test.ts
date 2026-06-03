@@ -28,5 +28,16 @@ describe('parseTextureRect', () => {
     expect(p.texture).toBeUndefined();
     expect(p.expandMode).toBeUndefined();
     expect(p.stretchMode).toBeUndefined();
+    expect(p.flipH).toBeUndefined();
+    expect(p.flipV).toBeUndefined();
+  });
+
+  it('parses flip_h / flip_v (#25, #26)', () => {
+    const p = parseTextureRect(h({ name: 'Icon', type: 'TextureRect' }), {
+      flip_h: 'true',
+      flip_v: 'true',
+    });
+    expect(p.flipH).toBe(true);
+    expect(p.flipV).toBe(true);
   });
 });

@@ -95,3 +95,13 @@ export function parseOptionalInt(value: string | undefined): number | undefined 
   const parsed = parseInt(value, 10);
   return Number.isNaN(parsed) ? undefined : parsed;
 }
+
+/**
+ * Optional bool reader: `undefined` for an absent value, else `value === 'true'`.
+ * Distinct from `boolOr`; used where a missing property is meaningful (Control
+ * flags that default off only when present, so absence stays unset).
+ */
+export function parseOptionalBool(value: string | undefined): boolean | undefined {
+  if (value === undefined) return undefined;
+  return value === 'true';
+}

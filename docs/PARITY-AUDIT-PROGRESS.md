@@ -11,7 +11,7 @@ Tracks the 46 confirmed Godot-fidelity divergences from the 2026-06-03 expanded 
 - [x] **B5 Sprite3D** (6): #7 flip_h(H), #17 offset(M), #18 flip_v(M), #19 centered(M), #39 double_sided(L), #40 transparent(L)
 - [x] **B6 Sprite2D/Animated** (3): #6 modulate (CanvasItem, inhe(H), #16 region_enabled + hframes/v(M), #38 self_modulate(L)
 - [x] **B7 StyleBox** (4): #8 content_margin_left/top/ri(H), #41 shadow_size / shadow_color(L), #42 border_color (default fall(L), #43 border_blend(L)
-- [ ] **B8 TextureRect/ColorRect** (6): #22 stretch_mode = 1 (STRETCH_(M), #23 stretch_mode = 2 (STRETCH_(M), #24 stretch_mode = 3 (STRETCH_(M), #25 flip_h(M), #26 flip_v(M), #46 stretch_mode = 4 (STRETCH_(L)
+- [x] **B8 TextureRect/ColorRect** (6): #22 stretch_mode = 1 (STRETCH_(M), #23 stretch_mode = 2 (STRETCH_(M), #24 stretch_mode = 3 (STRETCH_(M), #25 flip_h(M), #26 flip_v(M), #46 stretch_mode = 4 (STRETCH_(L)
 - [ ] **B9 Text controls** (4): #20 autowrap_mode (AUTOWRAP_AR(M), #21 alignment(M), #44 uppercase(L), #45 fit_content(L)
 - [ ] **B10 Control/Containers** (5): #12 size_flags_stretch_ratio(M), #29 size_flags_stretch_ratio(L), #30 GridContainer â€” child SI(L), #31 horizontal_scroll_mode / v(L), #32 GridContainer child size_f(L)
 - [ ] **B11 Node2D/3D transforms** (4): #34 skew(L), #35 z_as_relative(L), #36 show_behind_parent(L), #37 top_level(L)
@@ -127,27 +127,27 @@ Deferred gap (not in the 46): Label3D font_size is never carried by parseLabel3D
 - Ours: packages/textscene-core/src/nodes/2d/ui/button/Component.tsx:37-40 â€” `justifyContent: 'center'` and `textAlign: 'center'` are hardcoded unconditionally in the style object. The parsed `props.alignment` (Button/parser.ts:16 â€” `result.alignment = parseOptionalInt(properties.alignment)`) is never read in Component.tsx.
 - Fix: In Button/Component.tsx, define an alignment map `['flex-start', 'center', 'flex-end']` (matching LEFT/CENTER/RIGHT), then replace the hardcoded `justifyContent: 'center'` and `textAlign: 'center'` with values derived from `props.alignment ?? 1`. Update both `justifyContent` (for the flex container) and `textAlign` (for text nodes).
 
-### [#22] TextureRect.stretch_mode = 1 (STRETCH_TILE)  (MEDIUM / texturerect-colorrect / wrong-mapping) - [ ]
+### [#22] TextureRect.stretch_mode = 1 (STRETCH_TILE)  (MEDIUM / texturerect-colorrect / wrong-mapping) - [x]
 - Godot: STRETCH_TILE repeats the texture as tiles across the full bounding rectangle (like CSS background-repeat: repeat). Godot 4.4 docs: 'Tile inside the node's bounding rectangle.' Source: https://docs.godotengine.org/en/4.4/classes/class_texturerect.html
 - Ours: packages/textscene-core/src/nodes/2d/ui/texturerect/Component.tsx:144-152 â€” stretchObjectFit() default branch returns 'contain', so mode 1 is treated identically to KEEP_ASPECT_CENTERED. The <img> element cannot tile; a tiling rect needs a background-image approach.
 - Fix: Switch the TextureRect component to render a <div> with background-image + background-repeat: repeat (using the data-URL) when stretchMode === 1, instead of an <img> with object-fit.
 
-### [#23] TextureRect.stretch_mode = 2 (STRETCH_KEEP)  (MEDIUM / texturerect-colorrect / wrong-mapping) - [ ]
+### [#23] TextureRect.stretch_mode = 2 (STRETCH_KEEP)  (MEDIUM / texturerect-colorrect / wrong-mapping) - [x]
 - Godot: STRETCH_KEEP draws the texture at its natural pixel size, positioned at the top-left of the control's bounding rect. Portions extending beyond the rect are clipped. Godot 4.4 docs: 'The texture keeps its original size and stays in the bounding rectangle's top-left corner.' Confirmed in texture_rect.cpp: size = texture->get_size(), offset = (0,0).
 - Ours: packages/textscene-core/src/nodes/2d/ui/texturerect/Component.tsx:144-152 â€” default branch returns object-fit: 'contain'. The <img> is also forced to width/height: 100% (line 133-134), so the image scales to fit the container with letter-boxing. No objectPosition is set so it centers (CSS default 50% 50%).
 - Fix: Add case 2 to stretchObjectFit returning 'none', and in textureRectFit add objectPosition: 'top left' for stretchMode === 2. object-fit: none on an img with width/height 100% renders at intrinsic size clipped to the box.
 
-### [#24] TextureRect.stretch_mode = 3 (STRETCH_KEEP_CENTERED)  (MEDIUM / texturerect-colorrect / wrong-mapping) - [ ]
+### [#24] TextureRect.stretch_mode = 3 (STRETCH_KEEP_CENTERED)  (MEDIUM / texturerect-colorrect / wrong-mapping) - [x]
 - Godot: STRETCH_KEEP_CENTERED draws the texture at its natural pixel size, centered within the bounding rect, clipped at the edges. Godot 4.4 docs: 'The texture keeps its original size and stays centered in the node's bounding rectangle.' Confirmed in texture_rect.cpp: offset = (get_size() - texture->get_size()) / 2, no scale applied.
 - Ours: packages/textscene-core/src/nodes/2d/ui/texturerect/Component.tsx:137-139 sets objectPosition: 'center'; Component.tsx:150-151 (default branch) sets objectFit: 'contain'. object-fit: contain SCALES the image to fit â€” it does not preserve natural pixel size.
 - Fix: Add case 3 to stretchObjectFit returning 'none'. The existing objectPosition: 'center' for mode 3 is already correct and should be kept.
 
-### [#25] TextureRect.flip_h  (MEDIUM / texturerect-colorrect / missing) - [ ]
+### [#25] TextureRect.flip_h  (MEDIUM / texturerect-colorrect / missing) - [x]
 - Godot: When true, the texture is flipped horizontally. Godot 4.4 docs: 'If true, texture is flipped horizontally.' Default: false. Source: https://docs.godotengine.org/en/4.4/classes/class_texturerect.html
 - Ours: packages/textscene-core/src/nodes/2d/ui/texturerect/parser.ts:1-19 â€” flip_h is never read from the heading properties. packages/textscene-core/src/nodes/2d/ui/texturerect/types.ts:1-10 â€” TextureRectProperties has no flipH field. Component.tsx â€” no transform applied for flipping.
 - Fix: Add flipH?: boolean and flipV?: boolean to TextureRectProperties (types.ts). Parse them in parser.ts as parseOptionalBool. In Component.tsx apply transform: scaleX(-1) / scaleY(-1) on the <img> style when the flags are set.
 
-### [#26] TextureRect.flip_v  (MEDIUM / texturerect-colorrect / missing) - [ ]
+### [#26] TextureRect.flip_v  (MEDIUM / texturerect-colorrect / missing) - [x]
 - Godot: When true, the texture is flipped vertically. Godot 4.4 docs: 'If true, texture is flipped vertically.' Default: false. Source: https://docs.godotengine.org/en/4.4/classes/class_texturerect.html
 - Ours: packages/textscene-core/src/nodes/2d/ui/texturerect/parser.ts:1-19 â€” flip_v is never read. packages/textscene-core/src/nodes/2d/ui/texturerect/types.ts:1-10 â€” no flipV field. Component.tsx â€” no vertical flip transform.
 - Fix: Same as flip_h â€” add flipV?: boolean to types, parse in parser.ts, apply transform: scaleY(-1) on the <img> style. The two flags combine multiplicatively, so both can be expressed as a single transform: scale(flipH ? -1 : 1, flipV ? -1 : 1).
@@ -247,7 +247,7 @@ Deferred gap (not in the 46): Label3D font_size is never carried by parseLabel3D
 - Ours: packages/textscene-core/src/nodes/2d/ui/richtextlabel/parser.ts:14 â€” `result.fitContent = properties.fit_content === 'true'` (parsed). packages/textscene-core/src/nodes/2d/ui/richtextlabel/Component.tsx â€” `fitContent` is never read; no height-shrink CSS is applied. The control always fills its layout-computed height.
 - Fix: In RichTextLabel/Component.tsx read `props.fitContent` and when true add `style.height = 'fit-content'` (CSS `height: fit-content` makes the block shrink to its content height). Ensure `overflow: 'visible'` is also set so content is not clipped.
 
-### [#46] TextureRect.stretch_mode = 4 (STRETCH_KEEP_ASPECT)  (LOW / texturerect-colorrect / wrong-mapping) - [ ]
+### [#46] TextureRect.stretch_mode = 4 (STRETCH_KEEP_ASPECT)  (LOW / texturerect-colorrect / wrong-mapping) - [x]
 - Godot: STRETCH_KEEP_ASPECT scales the texture to fit the bounding rect while preserving aspect ratio, aligned to the top-left. Godot 4.4 docs: 'Scale the texture to fit the node's bounding rectangle, but maintain the texture's aspect ratio.' Confirmed in texture_rect.cpp: offset remains (0,0) â€” unlike KEEP_ASPECT_CENTERED which adds (size-tex)/2.
 - Ours: packages/textscene-core/src/nodes/2d/ui/texturerect/Component.tsx:144-152 â€” default branch returns 'contain'. No objectPosition is set for mode 4 (only modes 3 and 5 get 'center' at line 137). CSS object-fit: contain defaults to object-position: 50% 50% (centered).
 - Fix: Add explicit objectPosition: 'top left' for stretchMode === 4 in textureRectFit. The object-fit: contain mapping itself is correct for this mode.
