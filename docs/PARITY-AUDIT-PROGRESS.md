@@ -14,7 +14,7 @@ Tracks the 46 confirmed Godot-fidelity divergences from the 2026-06-03 expanded 
 - [x] **B8 TextureRect/ColorRect** (6): #22 stretch_mode = 1 (STRETCH_(M), #23 stretch_mode = 2 (STRETCH_(M), #24 stretch_mode = 3 (STRETCH_(M), #25 flip_h(M), #26 flip_v(M), #46 stretch_mode = 4 (STRETCH_(L)
 - [x] **B9 Text controls** (4): #20 autowrap_mode (AUTOWRAP_AR(M), #21 alignment(M), #44 uppercase(L), #45 fit_content(L)
 - [x] **B10 Control/Containers** (5): #12 size_flags_stretch_ratio(M), #29 size_flags_stretch_ratio(L), #30 GridContainer â€” child SI(L), #31 horizontal_scroll_mode / v(L), #32 GridContainer child size_f(L)
-- [ ] **B11 Node2D/3D transforms** (4): #34 skew(L), #35 z_as_relative(L), #36 show_behind_parent(L), #37 top_level(L)
+- [x] **B11 Node2D/3D transforms** (4): #34 skew(L), #35 z_as_relative(L), #36 show_behind_parent(L), #37 top_level(L)
 
 Dedup: stretch_ratio #12=#29; grid-expand #30=#32 -> fix once in B10 (~44 distinct). Document-only platform limits go to docs/PARITY-LIMITATIONS.md.
 
@@ -187,22 +187,22 @@ Deferred gap (not in the 46): Label3D font_size is never carried by parseLabel3D
 - Ours: packages/textscene-core/src/nodes/3d/label3d/Component.tsx:105 â€” `side={THREE.DoubleSide}` is hardcoded. The property is not in types.ts and not parsed. When a TSCN explicitly sets double_sided = false, the label still renders from both sides.
 - Fix: Add double_sided: boolean (default true) to Label3DProperties, parse it, and map to `side={properties.double_sided ? THREE.DoubleSide : THREE.FrontSide}`.
 
-### [#34] Node2D.skew  (LOW / node2d-transform / wrong-mapping) - [ ]
+### [#34] Node2D.skew  (LOW / node2d-transform / wrong-mapping) - [x]
 - Godot: Godot 4.x docs: Node2D.skew (float, radians, default 0.0) is a shear applied between rotation and scale via Transform2D.set_rotation_scale_and_skew(). The Y-axis column of the local Transform2D is rotated by (rotation + skew) while the X-axis column is rotated by rotation only, producing a visible parallelogram distortion. Ref: https://docs.godotengine.org/en/4.4/classes/class_
 - Ours: packages/textscene-core/src/nodes/base/node2d/parser.ts:52 â€” skew is parsed and stored in Node2DProperties. packages/textscene-core/src/nodes/base/node2d/types.ts:17-20 â€” Node2DLocalTransform interface omits skew entirely. packages/textscene-core/src/r3f/node2dTransform.ts:30 â€” node2dGroupProps() takes Node2DLocalTransform (no skew field) and returns position/rotation/sca
 - Fix: Add skew: number to Node2DLocalTransform (types.ts:16-20). In node2dGroupProps (node2dTransform.ts:30), apply a CSS-style 2D shear to the three.js group. three.js groups do not have a direct shear prop, so skew must be encoded as a Matrix4 skew: group.matrix.set(1, Math.tan(t.skew), 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, x, y_negated, z, 1) with matrixAutoUpdate=false, or alternatively, apply the conjugated shear: because under the F=diag(1,-1,1) conjugation a Godot X-shear by tan(ske
 
-### [#35] Node2D.z_as_relative  (LOW / node2d-transform / wrong-mapping) - [ ]
+### [#35] Node2D.z_as_relative  (LOW / node2d-transform / wrong-mapping) - [x]
 - Godot: Godot 4.x docs: CanvasItem.z_as_relative (bool, default true). When true, effective z = parent_effective_z + z_index. When false, effective z = z_index (absolute, independent of parent). Ref: https://docs.godotengine.org/en/4.4/classes/class_canvasitem.html â€” 'If true, the node's Z index is relative to its parent's Z index.' A node with z_as_relative=false and z_index=5 under
 - Ours: packages/textscene-core/src/nodes/base/node2d/parser.ts:54 â€” z_as_relative is correctly parsed. packages/textscene-core/src/nodes/base/node2d/Component.tsx:17 â€” passes props.z_index * Z_INDEX_STEP as the local-frame Z of the three.js group, which always accumulates additively through nested groups regardless of z_as_relative. z_as_relative is stored in Node2DProperties (typ
 - Fix: Pass z_as_relative into node2dGroupProps (or resolve it beforehand in Component.tsx). When z_as_relative=false, the z argument should be the node's z_index * Z_INDEX_STEP in world space (absolute), not relative to parent. This requires knowing the parent's accumulated Z, which is not currently tracked. A CanvasItemZContext (analogous to Modulate2DContext) carrying the accumulated absolute Z could be threaded through the tree: each Node2D reads the parent's accumulated absolut
 
-### [#36] CanvasItem.show_behind_parent  (LOW / node2d-transform / missing) - [ ]
+### [#36] CanvasItem.show_behind_parent  (LOW / node2d-transform / missing) - [x]
 - Godot: Godot 4.x docs: CanvasItem.show_behind_parent (bool, default false). When true, the item is drawn behind its parent in the 2D rendering order, visually appearing underneath the parent node. Ref: https://docs.godotengine.org/en/4.4/classes/class_canvasitem.html#class-canvasitem-property-show-behind-parent.
 - Ours: Not parsed anywhere in the codebase. Absent from Node2DProperties (packages/textscene-core/src/nodes/base/node2d/types.ts), parser.ts, and Component.tsx. Confirmed by grep returning no matches for 'show_behind_parent' in the entire src tree.
 - Fix: Parse show_behind_parent (bool, default false) in parseNode2D (parser.ts) and store it in Node2DProperties. In Component.tsx, when show_behind_parent=true, use a negative Z offset (e.g. -Z_INDEX_STEP * 0.5) so the child sits just behind its parent's origin in the three.js group, approximating the Godot behind-parent draw order.
 
-### [#37] Node3D.top_level  (LOW / node3d-transform / missing) - [ ]
+### [#37] Node3D.top_level  (LOW / node3d-transform / missing) - [x]
 - Godot: When top_level = true, the Node3D ignores all ancestor transforms and its transform/global_transform are identical â€” the node is positioned in world space regardless of parent. Serialized as 'top_level = true' in TSCN when enabled. Godot docs: https://docs.godotengine.org/en/stable/classes/class_node3d.html#class-node3d-property-top-level
 - Ours: packages/textscene-core/src/nodes/base/node3d/parser.ts:17 â€” parseNode3D() only reads 'transform' and 'visible'; top_level is never parsed or stored. Component.tsx renders every node as a child <group> inside its parent, so the parent transform is always inherited.
 - Fix: Parse top_level in parseNode3D and store in Node3DProperties. In the Node3D Component, when top_level is true, use R3F's <group> with an absolute world-space matrix (via a <group ref> + updateWorldMatrix trick, or by walking the ancestor chain to compute the inverse-parent transform and folding it into the node's position/rotation/scale before passing to <group>).

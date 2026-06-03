@@ -8,13 +8,13 @@
 import { useMemo } from 'react';
 import type { Node2DProperties } from './types';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
-import { node2dGroupProps, Z_INDEX_STEP } from '../../../r3f/node2dTransform';
+import { node2dGroupProps, canvasItemZ } from '../../../r3f/node2dTransform';
 import { Modulate2DContext, multiplyModulate, useParentModulate } from '../../../r3f/canvasItemModulate';
 
 export function Node2D({ node, children }: NodeComponentProps) {
   const props = node.properties as Node2DProperties;
   const { position, rotation, scale } = useMemo(
-    () => node2dGroupProps(props, props.z_index * Z_INDEX_STEP),
+    () => node2dGroupProps(props, canvasItemZ(props)),
     [props]
   );
   const visible = props.visible !== false;

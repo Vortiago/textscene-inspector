@@ -27,6 +27,16 @@ export interface Node2DGroupProps {
 /** Draw-order spacing per z-index step (world units along +Z toward the camera). */
 export const Z_INDEX_STEP = 0.1;
 
+/**
+ * The +Z draw-order offset for a CanvasItem: `z_index` scaled by the step,
+ * nudged half a step BACK when `show_behind_parent` is set so the node sits
+ * just behind its parent's origin (Godot draws it underneath the parent).
+ */
+export function canvasItemZ(props: { z_index: number; show_behind_parent?: boolean }): number {
+  const base = props.z_index * Z_INDEX_STEP;
+  return props.show_behind_parent ? base - Z_INDEX_STEP * 0.5 : base;
+}
+
 export function node2dGroupProps(t: Node2DLocalTransform, z = 0): Node2DGroupProps {
   // `0 - v` (not `-v`) so a zero input stays +0, never -0.
   return {

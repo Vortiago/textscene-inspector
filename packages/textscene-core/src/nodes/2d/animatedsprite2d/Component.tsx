@@ -11,7 +11,7 @@ import { useMemo } from 'react';
 import * as THREE from 'three';
 import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
-import { node2dGroupProps, Z_INDEX_STEP } from '../../../r3f/node2dTransform';
+import { node2dGroupProps, canvasItemZ } from '../../../r3f/node2dTransform';
 import { Modulate2DContext, useCanvasItemTint } from '../../../r3f/canvasItemModulate';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { parseResourceReference } from '../../../resources/SubResourceResolver';
@@ -24,7 +24,7 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
   const props = node.properties as AnimatedSprite2DProperties;
   const { internalResources, externalResources } = useSceneResources();
 
-  const group = useMemo(() => node2dGroupProps(props, props.z_index * Z_INDEX_STEP), [props]);
+  const group = useMemo(() => node2dGroupProps(props, canvasItemZ(props)), [props]);
   const { inherited, color, opacity } = useCanvasItemTint(props);
 
   const frameRef = useMemo(

@@ -62,6 +62,47 @@ caps (the closest representable result); both-off correctly opens the ends.
 (`repeat = size × uv1_scale`). Curved / GLB geometry falls back to the mesh's own
 UVs (approximate) — a true 3-axis triplanar shader is out of scope.
 
+## Transforms (Node2D / Node3D)
+
+### Node2D.skew  *(audit #34)*
+Godot's `skew` shears the local `Transform2D` (the Y basis is rotated by
+`rotation + skew`, the X basis by `rotation` only), producing a parallelogram.
+That is a **non-PRS** matrix; our 2D nodes map to an R3F `<group>`'s
+position/rotation/scale, which can't express a shear. `skew` is parsed but not
+applied.
+
+- **Impact today:** zero — no shipped `.tscn` sets `skew`.
+- **Why not fixed:** applying it needs a raw `Matrix4` on the group
+  (`matrixAutoUpdate = false` + a ref), and the correct shear sign under our
+  `F = diag(1,-1,1)` conjugation can't be confirmed without a visual Godot
+  reference. Shipping an unverified shear for a zero-impact case adds risk.
+- Site: `r3f/node2dTransform.ts` (`node2dGroupProps`).
+
+### Node2D.z_as_relative = false  *(audit #35)*
+`z_as_relative` defaults to **true** — effective Z = parent Z + `z_index` — and
+that case **is** faithful: our 2D groups nest, so three.js accumulates each
+ancestor's Z additively. With `z_as_relative = false` Godot makes `z_index`
+**absolute** (independent of ancestors); we have no absolute-Z channel, so the Z
+still accumulates.
+
+- **Impact today:** zero — no shipped `.tscn` sets `z_as_relative = false`.
+- **Why not fixed:** absolute Z needs a `CanvasItemZContext` threading the
+  accumulated parent Z through the whole 2D subtree so a node can subtract it —
+  invasive for a rare, visually-subtle draw-order flag.
+- Site: `nodes/base/node2d/Component.tsx` (group Z).
+
+### Node3D.top_level  *(audit #37)*
+With `top_level = true` a Node3D ignores all ancestor transforms (its local and
+global transforms are identical). Our renderer nests every node in its parent's
+`<group>`, so the parent transform is always inherited.
+
+- **Impact today:** zero — no shipped `.tscn` sets `top_level`.
+- **Why not fixed:** R3F/three.js inherit `matrixWorld` from the parent; ignoring
+  it requires an imperative `updateMatrixWorld` override (or walking the ancestor
+  chain to fold in the inverse-parent transform) that the declarative `<group>`
+  model can't express cleanly — disproportionate for a zero-impact flag.
+- Site: `nodes/base/node3d/Component.tsx` (child group nesting).
+
 ## Control / Theme (StyleBox)
 
 ### StyleBoxFlat.border_blend  *(audit #43)*

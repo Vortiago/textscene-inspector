@@ -38,6 +38,8 @@ export interface Node2DProperties {
   z_index: number;
   /** When true, z_index is relative to the parent (default true). */
   z_as_relative: boolean;
+  /** When true, the node draws behind its parent (CanvasItem, default false). */
+  show_behind_parent: boolean;
 
   /** CanvasItem RGBA tint; multiplies onto this node and all descendants. */
   modulate: Color;

@@ -52,6 +52,7 @@ export function parseNode2D(
     skew: floatOr(properties.skew, 0),
     z_index: intOr(properties.z_index, 0),
     z_as_relative: properties.z_as_relative === undefined ? true : properties.z_as_relative !== 'false',
+    show_behind_parent: properties.show_behind_parent === 'true',
     modulate: properties.modulate ? parseColor(properties.modulate) : { r: 1, g: 1, b: 1, a: 1 },
     self_modulate: properties.self_modulate
       ? parseColor(properties.self_modulate)

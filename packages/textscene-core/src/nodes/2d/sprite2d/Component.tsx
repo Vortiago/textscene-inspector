@@ -21,7 +21,7 @@ import { useMemo } from 'react';
 import * as THREE from 'three';
 import type { TscnExternalResource } from '../../../parser/types';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
-import { node2dGroupProps, Z_INDEX_STEP } from '../../../r3f/node2dTransform';
+import { node2dGroupProps, canvasItemZ } from '../../../r3f/node2dTransform';
 import { Modulate2DContext, useCanvasItemTint } from '../../../r3f/canvasItemModulate';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { parseResourceReference } from '../../../resources/SubResourceResolver';
@@ -34,7 +34,7 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
   const { externalResources } = useSceneResources();
 
   const group = useMemo(
-    () => node2dGroupProps(props, props.z_index * Z_INDEX_STEP),
+    () => node2dGroupProps(props, canvasItemZ(props)),
     [props]
   );
 
