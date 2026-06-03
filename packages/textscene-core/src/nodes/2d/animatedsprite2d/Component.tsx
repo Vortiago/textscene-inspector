@@ -9,12 +9,12 @@
 
 import { useMemo } from 'react';
 import * as THREE from 'three';
-import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
+import type { TscnInternalResource } from '../../../parser/types';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { node2dGroupProps, canvasItemZ } from '../../../r3f/node2dTransform';
 import { Modulate2DContext, useCanvasItemTint } from '../../../r3f/canvasItemModulate';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
-import { parseResourceReference } from '../../../resources/SubResourceResolver';
+import { parseResourceReference, resolveExtResourcePath } from '../../../resources/SubResourceResolver';
 import { useResource } from '../../../resources/useResource';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import { parseSpriteFramesAnimations } from './spriteFrames';
@@ -32,7 +32,7 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
     [props, internalResources]
   );
   const texturePath = useMemo(
-    () => resolveTexturePath(frameRef, externalResources),
+    () => resolveExtResourcePath(frameRef, externalResources),
     [frameRef, externalResources]
   );
   const texResult = useResource<THREE.Texture>(texturePath ?? '', 'Texture2D');
@@ -96,13 +96,3 @@ function resolveFrameTextureRef(
   return frames[props.frame] ?? frames[0] ?? null;
 }
 
-function resolveTexturePath(
-  ref: string | null,
-  externalResources: readonly TscnExternalResource[]
-): string | null {
-  if (!ref) return null;
-  if (ref.startsWith('res://')) return ref;
-  const parsed = parseResourceReference(ref);
-  if (!parsed || parsed.type !== 'ExtResource') return null;
-  return externalResources.find((r) => r.id === parsed.id)?.path ?? null;
-}

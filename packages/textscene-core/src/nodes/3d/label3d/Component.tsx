@@ -16,6 +16,7 @@ import type { Label3DProperties } from './types';
 import { BillboardMode } from './types';
 import type { Color } from '../../../utils/colorParser';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
+import { godotColorToLinear } from '../../../r3f/godotColor';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { useViewportMode } from '../../../r3f/contexts/ViewportModeContext';
 
@@ -83,21 +84,19 @@ export function Label3D({ node }: NodeComponentProps) {
     mesh.quaternion.copy(camera.quaternion);
   });
 
+  // Godot modulate is sRGB → convert to linear before the unlit material tint
+  // (the white canvas text is colorized by this), matching Sprite2D/Sprite3D.
+  const tint = useMemo(
+    () => godotColorToLinear(properties.modulate),
+    [properties.modulate.r, properties.modulate.g, properties.modulate.b]
+  );
+
   // Off by default (ADR-0008): in-viewport text is opt-in via the Labels toggle.
   // When off (or the canvas couldn't be built), render an invisible marker group
   // so the node still positions any children and stays selectable.
   if (!showLabels || !built) {
     return <group name={node.name} position={position} rotation={rotation} scale={scale} />;
   }
-
-  // Godot modulate is sRGB → convert to linear before the unlit material tint
-  // (the white canvas text is colorized by this), matching Sprite2D/Sprite3D.
-  const tint = new THREE.Color().setRGB(
-    properties.modulate.r,
-    properties.modulate.g,
-    properties.modulate.b,
-    THREE.SRGBColorSpace
-  );
 
   return (
     <mesh

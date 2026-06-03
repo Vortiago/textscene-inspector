@@ -38,15 +38,13 @@
  * component just persists the mode and axis so the consumer can act.
  */
 
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
-import type {
-  TscnExternalResource,
-} from '../../../parser/types';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
+import { godotColorToLinear } from '../../../r3f/godotColor';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
-import { parseResourceReference } from '../../../resources/SubResourceResolver';
+import { resolveExtResourcePath } from '../../../resources/SubResourceResolver';
 import { useResource } from '../../../resources/useResource';
 import {
   AlphaCutMode,
@@ -70,7 +68,7 @@ export function Sprite3D({ node }: NodeComponentProps) {
   // useResource's contract) so we keep the hook-call count stable when
   // texture is absent.
   const texturePath = useMemo(
-    () => resolveTexturePath(properties.texture, externalResources),
+    () => resolveExtResourcePath(properties.texture, externalResources),
     [properties.texture, externalResources]
   );
 
@@ -98,13 +96,7 @@ export function Sprite3D({ node }: NodeComponentProps) {
   // in sRGB → convert to the linear working space before the unlit material
   // (matching Sprite2D / WorldEnvironment).
   const color = useMemo(
-    () =>
-      new THREE.Color().setRGB(
-        properties.modulate.r,
-        properties.modulate.g,
-        properties.modulate.b,
-        THREE.SRGBColorSpace
-      ),
+    () => godotColorToLinear(properties.modulate),
     [properties.modulate.r, properties.modulate.g, properties.modulate.b]
   );
   const opacity = clamp01(properties.modulate.a * (1 - properties.transparency));
@@ -132,6 +124,10 @@ export function Sprite3D({ node }: NodeComponentProps) {
     if (ox !== 0 || oy !== 0) geom.translate(ox, oy, 0);
     return geom;
   }, [width, height, properties.offset.x, properties.offset.y, properties.centered, properties.pixel_size]);
+  // We pass `geometry` via `<primitive>`, which R3F does NOT auto-dispose (only
+  // JSX-declared geometries are managed) — release the GPU buffers ourselves
+  // when a new one replaces it / on unmount.
+  useEffect(() => () => geometry.dispose(), [geometry]);
 
   // No texture path requested at all: render a stub placeholder so users
   // see that the sprite node exists in the scene even without a texture.
@@ -198,24 +194,6 @@ export function Sprite3D({ node }: NodeComponentProps) {
       />
     </mesh>
   );
-}
-
-/**
- * Resolve a Sprite3D `texture` reference. ExtResource ids are looked up
- * in the scene's externalResources table; SubResource refs are NOT
- * supported today (a textures-as-SubResource pattern would require a
- * separate StreamTexture parser).
- */
-function resolveTexturePath(
-  textureRef: string | undefined,
-  externalResources: readonly TscnExternalResource[]
-): string | null {
-  if (!textureRef) return null;
-  if (textureRef.startsWith('res://')) return textureRef;
-  const parsed = parseResourceReference(textureRef);
-  if (!parsed || parsed.type !== 'ExtResource') return null;
-  const ext = externalResources.find((r) => r.id === parsed.id);
-  return ext?.path ?? null;
 }
 
 /**

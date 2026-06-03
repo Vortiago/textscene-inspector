@@ -22,8 +22,7 @@ import type { ControlComponentProps } from '../../../../r3f/controls/ControlComp
 import { useControlParent } from '../../../../r3f/controls/ControlParentContext';
 import { controlLayoutStyle } from '../../../../r3f/controls/controlLayout';
 import { useSceneResources } from '../../../../r3f/SceneResourcesContext';
-import type { TscnExternalResource } from '../../../../parser/types';
-import { parseResourceReference } from '../../../../resources/SubResourceResolver';
+import { resolveExtResourcePath } from '../../../../resources/SubResourceResolver';
 import { useResource } from '../../../../resources/useResource';
 import type { TextureRectProperties } from './types';
 
@@ -32,7 +31,7 @@ export function TextureRect({ node }: ControlComponentProps) {
   const parentKind = useControlParent();
   const { externalResources } = useSceneResources();
 
-  const path = resolveTexturePath(props.texture, externalResources);
+  const path = resolveExtResourcePath(props.texture, externalResources);
 
   // Always call the hook (rules of hooks); '' short-circuits to pending.
   const tex = useResource<THREE.Texture>(path ?? '', 'Texture2D');
@@ -106,22 +105,6 @@ function imageToDataUrl(image: unknown): string | undefined {
   }
 }
 
-/**
- * Resolve a `texture` reference to a loadable path. `res://` paths pass
- * through; ExtResource ids are looked up in the scene's externalResources
- * table. Mirrors Sprite3D's resolveTexturePath.
- */
-function resolveTexturePath(
-  textureRef: string | undefined,
-  externalResources: readonly TscnExternalResource[]
-): string | null {
-  if (!textureRef) return null;
-  if (textureRef.startsWith('res://')) return textureRef;
-  const parsed = parseResourceReference(textureRef);
-  if (!parsed || parsed.type !== 'ExtResource') return null;
-  const ext = externalResources.find((r) => r.id === parsed.id);
-  return ext?.path ?? null;
-}
 
 /**
  * CSS for the <img> inside a TextureRect's layout-sized wrapper. The image is

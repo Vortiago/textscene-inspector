@@ -13,18 +13,23 @@
  * 2D canvas, double-sided, alpha-blended. Missing/pending texture mirrors the
  * Sprite3D UX (placeholder plane / render nothing yet).
  *
- * The UV + size helpers intentionally mirror Sprite3D's (only two consumers —
- * under the Rule of Three; extract to a shared module if a third appears).
+ * The UV + size helpers (composeTexture / applySpritesheetUV / applyRegionRect /
+ * computeQuadSize) intentionally mirror Sprite3D's — two consumers, under the
+ * Rule of Three. NOTE: the region+frames "compose" fix had to be applied to BOTH
+ * copies in lockstep (and Sprite3D was briefly left diverged), so the next edit
+ * that touches this UV math should extract a shared spriteSheet module rather
+ * than hand-syncing a third time. The flip handling legitimately differs (2D
+ * mirrors via mesh scale, 3D via UV negation), so only the region/frames math is
+ * the shared atom.
  */
 
 import { useMemo } from 'react';
 import * as THREE from 'three';
-import type { TscnExternalResource } from '../../../parser/types';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { node2dGroupProps, canvasItemZ } from '../../../r3f/node2dTransform';
 import { Modulate2DContext, useCanvasItemTint } from '../../../r3f/canvasItemModulate';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
-import { parseResourceReference } from '../../../resources/SubResourceResolver';
+import { resolveExtResourcePath } from '../../../resources/SubResourceResolver';
 import { useResource } from '../../../resources/useResource';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import type { Sprite2DProperties } from './types';
@@ -39,7 +44,7 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
   );
 
   const texturePath = useMemo(
-    () => resolveTexturePath(props.texture, externalResources),
+    () => resolveExtResourcePath(props.texture, externalResources),
     [props.texture, externalResources]
   );
   const texResult = useResource<THREE.Texture>(texturePath ?? '', 'Texture2D');
@@ -123,18 +128,6 @@ function QuadMesh({
   );
 }
 
-function resolveTexturePath(
-  textureRef: string | undefined,
-  externalResources: readonly TscnExternalResource[]
-): string | null {
-  if (!textureRef) return null;
-  if (textureRef.startsWith('res://')) return textureRef;
-  const parsed = parseResourceReference(textureRef);
-  if (!parsed || parsed.type !== 'ExtResource') return null;
-  const ext = externalResources.find((r) => r.id === parsed.id);
-  return ext?.path ?? null;
-}
-
 /** Clone + apply region_rect or sprite-sheet UV (clone avoids clobbering shared textures). */
 function composeTexture(
   texture: THREE.Texture | undefined,
@@ -192,22 +185,20 @@ function applyRegionRect(
   texture.offset.set(rect.x / image.width, 1 - (rect.y + rect.height) / image.height);
 }
 
-/** Quad pixel dimensions (1 px = 1 unit): region rect, then sprite-sheet cell, else full image. */
+/** Quad pixel dimensions (1 px = 1 unit): the base rect (region or full image), subdivided by the frame grid. */
 function computeQuadSize(
   texture: THREE.Texture | undefined,
   props: Sprite2DProperties
 ): { width: number; height: number } {
   const image = texture?.image as { width?: number; height?: number } | undefined;
-  const imgW = image?.width ?? 1;
-  const imgH = image?.height ?? 1;
-
   const H = Math.max(1, props.hframes);
   const V = Math.max(1, props.vframes);
+
+  let pxW = image?.width ?? 1;
+  let pxH = image?.height ?? 1;
   if (props.region_enabled && props.region_rect && image?.width && image.height) {
-    return { width: props.region_rect.width / H, height: props.region_rect.height / V };
+    pxW = props.region_rect.width;
+    pxH = props.region_rect.height;
   }
-  if (props.hframes > 1 || props.vframes > 1) {
-    return { width: imgW / H, height: imgH / V };
-  }
-  return { width: imgW, height: imgH };
+  return { width: pxW / H, height: pxH / V };
 }

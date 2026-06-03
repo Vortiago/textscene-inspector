@@ -15,6 +15,7 @@ import { useThree } from '@react-three/fiber';
 import type { WorldEnvironmentProperties } from './types';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { findSubResource, useSceneResources } from '../../../r3f/SceneResourcesContext';
+import { godotColorToLinear } from '../../../r3f/godotColor';
 import { parseResourceReference } from '../../../resources/SubResourceResolver';
 import { parseEnvironment } from '../../../resources/environment/parser';
 import { BackgroundMode } from '../../../resources/environment/types';
@@ -35,12 +36,7 @@ export function WorldEnvironment({ node, children }: NodeComponentProps) {
       {settings && <EnvironmentApplier settings={settings} />}
       {settings?.ambient && (
         <ambientLight
-          color={new THREE.Color().setRGB(
-            settings.ambient.color.r,
-            settings.ambient.color.g,
-            settings.ambient.color.b,
-            THREE.SRGBColorSpace
-          )}
+          color={godotColorToLinear(settings.ambient.color)}
           intensity={settings.ambient.energy}
         />
       )}
@@ -63,15 +59,14 @@ function EnvironmentApplier({ settings }: EnvironmentApplierProps) {
   useEffect(() => {
     const previousBackground = scene.background;
     if (showBackgroundColor) {
-      const c = settings.background.color;
       // Godot Color literals are sRGB; convert to three.js's linear working space.
-      scene.background = new THREE.Color().setRGB(c.r, c.g, c.b, THREE.SRGBColorSpace);
+      scene.background = godotColorToLinear(settings.background.color);
     } else if (mode === BackgroundMode.BG_SKY) {
       // Full sky/IBL rendering is out of MVS scope; we fall back to a
       // mid-blue solid so the scene still has a visible background and
       // downstream code (and tests) can rely on scene.background being
       // non-null whenever SKY mode is requested.
-      scene.background = new THREE.Color().setRGB(0.5, 0.6, 0.75, THREE.SRGBColorSpace);
+      scene.background = godotColorToLinear({ r: 0.5, g: 0.6, b: 0.75 });
     }
     return () => {
       scene.background = previousBackground;
@@ -84,9 +79,7 @@ function EnvironmentApplier({ settings }: EnvironmentApplierProps) {
     if (fog) {
       // Godot screen-space fog → exponential-squared fog (closest THREE match);
       // DEPTH mode (1) is approximated with the same density-based fog.
-      const c = fog.color;
-      const color = new THREE.Color().setRGB(c.r, c.g, c.b, THREE.SRGBColorSpace);
-      scene.fog = new THREE.FogExp2(color.getHex(), fog.density);
+      scene.fog = new THREE.FogExp2(godotColorToLinear(fog.color).getHex(), fog.density);
     }
     return () => {
       scene.fog = previousFog;
