@@ -17,11 +17,12 @@ export function parseLabel3D(
   return {
     ...baseProps,
     text: parseText(properties.text),
-    pixel_size: parseFloat(properties.pixel_size ?? '0.01'),
+    pixel_size: parseFloat(properties.pixel_size ?? '0.005'), // Godot default
     billboard: parseBillboardMode(properties.billboard),
     modulate: parseColor(properties.modulate),
-    outline_size: parseFloat(properties.outline_size ?? '0'),
+    outline_size: parseFloat(properties.outline_size ?? '12'), // Godot default
     outline_modulate: properties.outline_modulate ? parseColor(properties.outline_modulate) : { r: 0, g: 0, b: 0, a: 1 },
+    double_sided: properties.double_sided !== 'false', // Godot default true
   };
 }
 
@@ -33,7 +34,7 @@ function parseText(value: string | undefined): string {
 }
 
 function parseBillboardMode(value: string | undefined): BillboardMode {
-  if (value === undefined) return BillboardMode.BILLBOARD_ENABLED;  // default
+  if (value === undefined) return BillboardMode.BILLBOARD_DISABLED;  // Godot default
   const num = parseInt(value, 10);
 
   if (num === 0) return BillboardMode.BILLBOARD_DISABLED;

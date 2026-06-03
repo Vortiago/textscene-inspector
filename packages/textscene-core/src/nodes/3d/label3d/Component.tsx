@@ -19,7 +19,8 @@ import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { useViewportMode } from '../../../r3f/contexts/ViewportModeContext';
 
-const DEFAULT_FONT_SIZE = 128;
+const DEFAULT_FONT_SIZE = 128; // canvas render resolution (crispness)
+const GODOT_DEFAULT_FONT_SIZE = 16; // Godot Label3D font_size default (world sizing)
 
 /**
  * Some Godot Label3D properties (font_size, no_depth_test) aren't yet
@@ -39,10 +40,18 @@ export function Label3D({ node }: NodeComponentProps) {
     [properties]
   );
 
+  // The canvas is rasterised at DEFAULT_FONT_SIZE for crispness when no
+  // font_size is given, but the WORLD size must follow Godot's actual font_size
+  // (default 16). `godotFontSize` drives the quad dimensions; `fontSize` the
+  // canvas resolution.
+  const godotFontSize = readExtra<number>(properties, 'font_size') ?? GODOT_DEFAULT_FONT_SIZE;
   const fontSize = readExtra<number>(properties, 'font_size') ?? DEFAULT_FONT_SIZE;
   const noDepthTest = readExtra<boolean>(properties, 'no_depth_test') === true;
 
-  const built = useMemo(() => buildLabelTexture(properties, fontSize), [properties, fontSize]);
+  const built = useMemo(
+    () => buildLabelTexture(properties, fontSize, godotFontSize),
+    [properties, fontSize, godotFontSize]
+  );
 
   // Dispose of the GPU texture and source canvas when the label unmounts
   // or its inputs change.
@@ -102,7 +111,7 @@ export function Label3D({ node }: NodeComponentProps) {
         color={tint}
         transparent
         opacity={properties.modulate.a}
-        side={THREE.DoubleSide}
+        side={properties.double_sided === false ? THREE.FrontSide : THREE.DoubleSide}
         depthWrite={false}
         depthTest={!noDepthTest}
       />
@@ -118,7 +127,8 @@ interface BuiltLabel {
 
 function buildLabelTexture(
   properties: Label3DProperties,
-  fontSize: number
+  fontSize: number,
+  godotFontSize: number
 ): BuiltLabel | null {
   if (typeof document === 'undefined') return null;
   try {
@@ -135,7 +145,9 @@ function buildLabelTexture(
     if (properties.outline_size > 0) {
       context.font = `${fontSize}px Arial`;
       context.strokeStyle = colorToCss(properties.outline_modulate);
-      context.lineWidth = properties.outline_size * 10;
+      // outline_size is in Godot font-pixels; scale to the canvas render
+      // resolution (fontSize / godotFontSize).
+      context.lineWidth = properties.outline_size * (fontSize / godotFontSize);
       context.strokeText(text, 10, fontSize);
     }
 
@@ -149,13 +161,13 @@ function buildLabelTexture(
     const texture = new THREE.CanvasTexture(canvas);
     texture.needsUpdate = true;
 
-    // `pixel_size` is world-units-per-pixel. Plane dimensions scale with
-    // `fontSize` so font_size=64 produces a label half the height of
-    // the FONT_SIZE=128 default.
-    const aspect = canvas.width / canvas.height;
-    const fontScale = fontSize / DEFAULT_FONT_SIZE;
-    const height = properties.pixel_size * 100 * fontScale;
-    const width = height * aspect;
+    // Godot world size = glyph-pixels (at the Godot font_size) × pixel_size.
+    // The canvas is rasterised at `fontSize` (render resolution), so convert its
+    // pixel dimensions back to Godot-pixel space via worldScale before scaling
+    // by pixel_size.
+    const worldScale = godotFontSize / fontSize;
+    const height = canvas.height * properties.pixel_size * worldScale;
+    const width = canvas.width * properties.pixel_size * worldScale;
     return { texture, width, height };
   } catch {
     return null;

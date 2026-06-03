@@ -38,4 +38,7 @@ export interface Label3DProperties extends Node3DProperties {
 
   /** Outline color (default: black) */
   outline_modulate: Color;
+
+  /** Visible from behind (Godot default true → THREE.DoubleSide). */
+  double_sided: boolean;
 }

@@ -23,10 +23,10 @@ describe('Label3D Parser', () => {
       });
 
       expect(props.text).toBe('Hello World');
-      expect(props.pixel_size).toBe(0.01);  // default
-      expect(props.billboard).toBe(BillboardMode.BILLBOARD_ENABLED);  // default
+      expect(props.pixel_size).toBe(0.005);  // Godot default
+      expect(props.billboard).toBe(BillboardMode.BILLBOARD_DISABLED);  // Godot default
       expect(props.modulate).toEqual({ r: 1, g: 1, b: 1, a: 1 });  // default white
-      expect(props.outline_size).toBe(0);  // default
+      expect(props.outline_size).toBe(12);  // Godot default
       expect(props.outline_modulate).toEqual({ r: 0, g: 0, b: 0, a: 1 });  // default black
     });
 
@@ -221,7 +221,7 @@ describe('Label3D Parser', () => {
       expect(props.text).toBe('');
     });
 
-    it('should default to billboard enabled when not specified', () => {
+    it('should default to billboard DISABLED when not specified (Godot default)', () => {
       const heading: ParsedHeading = {
         type: 'node',
         attributes: {
@@ -234,7 +234,7 @@ describe('Label3D Parser', () => {
         text: '"Test"',
       });
 
-      expect(props.billboard).toBe(BillboardMode.BILLBOARD_ENABLED);
+      expect(props.billboard).toBe(BillboardMode.BILLBOARD_DISABLED);
     });
   });
 });

@@ -7,7 +7,7 @@ Tracks the 46 confirmed Godot-fidelity divergences from the 2026-06-03 expanded 
 - [x] **B1 Environment** (4): #9 ambient_light_color (defau(H), #10 ambient_light_source(H), #11 FogExp2 (wrong fog system (H), #27 background_color / ambient(M)
 - [x] **B2 Camera3D** (2): #1 size (OrthographicCamera f(H), #28 fov with keep_aspect = KEE(L)
 - [x] **B3 SpotLight3D** (2): #5 spot_attenuation(H), #15 spot_angle_attenuation(M)
-- [ ] **B4 Label3D** (6): #2 billboard (default when ab(H), #3 pixel_size (default when a(H), #4 Label3D quad size formula (H), #13 outline_size (default when(M), #14 outline_size canvas lineWi(M), #33 double_sided(L)
+- [x] **B4 Label3D** (6): #2 billboard (default when ab(H), #3 pixel_size (default when a(H), #4 Label3D quad size formula (H), #13 outline_size (default when(M), #14 outline_size canvas lineWi(M), #33 double_sided(L)
 - [ ] **B5 Sprite3D** (6): #7 flip_h(H), #17 offset(M), #18 flip_v(M), #19 centered(M), #39 double_sided(L), #40 transparent(L)
 - [ ] **B6 Sprite2D/Animated** (3): #6 modulate (CanvasItem, inhe(H), #16 region_enabled + hframes/v(M), #38 self_modulate(L)
 - [ ] **B7 StyleBox** (4): #8 content_margin_left/top/ri(H), #41 shadow_size / shadow_color(L), #42 border_color (default fall(L), #43 border_blend(L)
@@ -18,6 +18,8 @@ Tracks the 46 confirmed Godot-fidelity divergences from the 2026-06-03 expanded 
 
 Dedup: stretch_ratio #12=#29; grid-expand #30=#32 -> fix once in B10 (~44 distinct). Document-only platform limits go to docs/PARITY-LIMITATIONS.md.
 
+Deferred gap (not in the 46): Label3D font_size is never carried by parseLabel3D, so readExtra always returns the default — font_size is effectively unsupported. NOTE font_size-not-carried.
+
 ## Findings detail
 
 ### [#1] Camera3D.size (OrthographicCamera frustum bounds)  (HIGH / camera3d / wrong-mapping) - [x]
@@ -25,17 +27,17 @@ Dedup: stretch_ratio #12=#29; grid-expand #30=#32 -> fix once in B10 (~44 distin
 - Ours: packages/textscene-core/src/nodes/3d/camera3d/Component.tsx:145-146 â€” when KEEP_HEIGHT: halfHeight = size, halfWidth = size * DEFAULT_ASPECT; when KEEP_WIDTH: halfHeight = size / DEFAULT_ASPECT, halfWidth = size. The code uses size directly as the half-dimension (radius), not as the full dimension (diameter).
 - Fix: Divide size by 2 before using it as the half-dimension. In Component.tsx line 145-146 change to: const halfHeight = isKeepWidth ? (size / DEFAULT_ASPECT) / 2 : size / 2; const halfWidth = isKeepWidth ? size / 2 : (size * DEFAULT_ASPECT) / 2; Update test #65 to expect o.top === 2 (not 4) for size=4.
 
-### [#2] Label3D.billboard (default when absent)  (HIGH / label3d / wrong-default) - [ ]
+### [#2] Label3D.billboard (default when absent)  (HIGH / label3d / wrong-default) - [x]
 - Godot: Godot 4.4 Label3D.billboard default is 0 (BILLBOARD_DISABLED). Source: https://github.com/godotengine/godot/blob/master/doc/classes/Label3D.xml â€” `<member name="billboard" ... default="0">`.
 - Ours: packages/textscene-core/src/nodes/3d/label3d/parser.ts:36 â€” when `properties.billboard` is undefined the parser returns `BillboardMode.BILLBOARD_ENABLED` (1).
 - Fix: Change the fallback in parseBillboardMode: `if (value === undefined) return BillboardMode.BILLBOARD_DISABLED;`
 
-### [#3] Label3D.pixel_size (default when absent)  (HIGH / label3d / wrong-default) - [ ]
+### [#3] Label3D.pixel_size (default when absent)  (HIGH / label3d / wrong-default) - [x]
 - Godot: Godot 4.4 Label3D.pixel_size default is 0.005. Source: https://github.com/godotengine/godot/blob/master/doc/classes/Label3D.xml â€” `<member name="pixel_size" ... default="0.005">`. The Godot stable docs also confirm: "pixel_size = 0.005".
 - Ours: packages/textscene-core/src/nodes/3d/label3d/parser.ts:20 â€” `parseFloat(properties.pixel_size ?? '0.01')` â€” fallback is 0.01, twice the Godot default.
 - Fix: Change the fallback to `'0.005'`: `parseFloat(properties.pixel_size ?? '0.005')`.
 
-### [#4] Label3D quad size formula (pixel_size Ã— canvas dimensions)  (HIGH / label3d / wrong-mapping) - [ ]
+### [#4] Label3D quad size formula (pixel_size Ã— canvas dimensions)  (HIGH / label3d / wrong-mapping) - [x]
 - Godot: Godot renders each glyph quad where world size = glyph_texture_pixels Ã— pixel_size. From label_3d.cpp: `gl_sz = TS->font_get_glyph_size(...) * pixel_size`. The entire label plane therefore measures `canvas_width_pixels Ã— pixel_size` by `canvas_height_pixels Ã— pixel_size` in world units.
 - Ours: packages/textscene-core/src/nodes/3d/label3d/Component.tsx:155-158 â€” `const height = properties.pixel_size * 100 * fontScale` where `fontScale = fontSize / 128`. The magic constant 100 has no relationship to the actual canvas pixel dimensions (`canvas.height = fontSize + 20`).
 - Fix: Replace the height formula: `const height = canvas.height * properties.pixel_size;` and `const width = canvas.width * properties.pixel_size;`. The aspect ratio is implicit since both dimensions use the same pixel_size multiplier.
@@ -80,12 +82,12 @@ Dedup: stretch_ratio #12=#29; grid-expand #30=#32 -> fix once in B10 (~44 distin
 - Ours: packages/textscene-core/src/r3f/controls/controlLayout.ts:114 â€” `style.flexGrow = mainFlag !== undefined && (mainFlag & SIZE_FLAG_EXPAND) !== 0 ? 1 : 0`. The value is always 1 for any EXPAND child. size_flags_stretch_ratio is not present in ControlProperties (packages/textscene-core/src/nodes/2d/ui/control/types.ts) and is not parsed in the control parser (packages/textscene-
 - Fix: Add `sizeFlagsStretchRatio?: number` to ControlProperties, parse `size_flags_stretch_ratio` in parseControl(), and change controlLayout.ts line 114 to: `style.flexGrow = mainFlag !== undefined && (mainFlag & SIZE_FLAG_EXPAND) !== 0 ? (props.sizeFlagsStretchRatio ?? 1) : 0`.
 
-### [#13] Label3D.outline_size (default when absent)  (MEDIUM / label3d / wrong-default) - [ ]
+### [#13] Label3D.outline_size (default when absent)  (MEDIUM / label3d / wrong-default) - [x]
 - Godot: Godot 4.4 Label3D.outline_size default is 12. Source: https://github.com/godotengine/godot/blob/master/doc/classes/Label3D.xml â€” `<member name="outline_size" ... default="12">`. The docs also state: "Text outline size." default 12.
 - Ours: packages/textscene-core/src/nodes/3d/label3d/parser.ts:23 â€” `parseFloat(properties.outline_size ?? '0')` â€” fallback is 0, so no outline is drawn unless explicitly set.
 - Fix: Change the fallback to `'12'`: `parseFloat(properties.outline_size ?? '12')`.
 
-### [#14] Label3D.outline_size canvas lineWidth scaling  (MEDIUM / label3d / wrong-mapping) - [ ]
+### [#14] Label3D.outline_size canvas lineWidth scaling  (MEDIUM / label3d / wrong-mapping) - [x]
 - Godot: outline_size is measured in font pixels at the configured font_size resolution. From label_3d.cpp the value is passed directly to the TextServer as a font-pixel measurement alongside font_size: `Vector2i(p_glyph.font_size, p_outline_size)`. A value of 12 means a 12-font-pixel-wide stroke at whatever font_size is active.
 - Ours: packages/textscene-core/src/nodes/3d/label3d/Component.tsx:138 â€” `context.lineWidth = properties.outline_size * 10`. The factor of 10 is arbitrary; since the canvas is already drawn at fontSize pixels (matching the Godot font_size), the canvas lineWidth should equal outline_size directly (1 canvas px = 1 font px).
 - Fix: Change to `context.lineWidth = properties.outline_size;`. If the internal canvas resolution is intentionally upscaled relative to Godot font_size (e.g. using DEFAULT_FONT_SIZE=128 when Godot font_size=32), then scale proportionally: `context.lineWidth = properties.outline_size * (fontSize / godotFontSize)`, but that requires storing the Godot font_size separately from the canvas render size.
@@ -180,7 +182,7 @@ Dedup: stretch_ratio #12=#29; grid-expand #30=#32 -> fix once in B10 (~44 distin
 - Ours: packages/textscene-core/src/nodes/2d/ui/gridcontainer/Component.tsx:18 â€” `gridTemplateColumns: repeat(${props.columns ?? 1}, max-content)`. All columns unconditionally use max-content; no child size_flags are inspected. containerChildStyle() in controlLayout.ts returns only `{ position: 'relative' }` for grid-parented children (lines 107-136 have no 'grid' branch), so size_fl
 - Fix: When building the GridContainer, collect the size_flags_horizontal of each child by column position (child index mod columns). For columns that contain at least one child with SIZE_EXPAND, use '1fr' in the template string instead of 'max-content'. Example: build an array of N column strings and join: `gridTemplateColumns: columnStrings.join(' ')`. No current scene is affected (no EXPAND grid children exist in the shipped .tscn files).
 
-### [#33] Label3D.double_sided  (LOW / label3d / missing) - [ ]
+### [#33] Label3D.double_sided  (LOW / label3d / missing) - [x]
 - Godot: Godot 4.4 Label3D.double_sided (default true) controls back-face culling. When false, the label is invisible when viewed from behind. Source: https://docs.godotengine.org/en/4.4/classes/class_label3d.html â€” "If true, text can be seen from the back as well, if false, it is invisible when looking at it from behind."
 - Ours: packages/textscene-core/src/nodes/3d/label3d/Component.tsx:105 â€” `side={THREE.DoubleSide}` is hardcoded. The property is not in types.ts and not parsed. When a TSCN explicitly sets double_sided = false, the label still renders from both sides.
 - Fix: Add double_sided: boolean (default true) to Label3DProperties, parse it, and map to `side={properties.double_sided ? THREE.DoubleSide : THREE.FrontSide}`.
