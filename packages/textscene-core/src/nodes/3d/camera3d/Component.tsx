@@ -68,6 +68,13 @@ export function Camera3D({ node, children }: NodeComponentProps) {
   }
 
   // PROJECTION_FRUSTUM is not yet supported — fall back to perspective.
+  // With keep_aspect = KEEP_WIDTH the stored fov is the HORIZONTAL fov; three.js
+  // PerspectiveCamera.fov is vertical, so convert (Godot's get_fovy).
+  const perspectiveFov =
+    properties.keep_aspect === KeepAspectMode.KEEP_WIDTH
+      ? (2 * Math.atan(Math.tan((properties.fov * Math.PI) / 180 / 2) / DEFAULT_ASPECT) * 180) /
+        Math.PI
+      : properties.fov;
   return (
     <PerspectiveCamera3D
       name={node.name}
@@ -75,7 +82,7 @@ export function Camera3D({ node, children }: NodeComponentProps) {
       position={offsetPosition}
       rotation={rotation}
       scale={scale}
-      fov={properties.fov}
+      fov={perspectiveFov}
       near={safeNear}
       far={safeFar}
     >
@@ -139,11 +146,13 @@ interface OrthographicCamera3DProps {
 
 function OrthographicCamera3D({ name, tscnPath, position, rotation, scale, size, keepAspect, near, far, children }: OrthographicCamera3DProps) {
   const cameraRef = useRef<THREE.OrthographicCamera>(null);
-  // KEEP_HEIGHT (1, default): `size` is vertical, width derived from aspect.
+  // Godot `size` is the FULL frustum dimension (diameter), so the half-extent
+  // is size/2 (Projection::set_orthogonal divides by 2). KEEP_HEIGHT (1,
+  // default): `size` is the vertical dimension, width derived from aspect.
   // KEEP_WIDTH (0): `size` is horizontal, height derived from aspect.
   const isKeepWidth = keepAspect === KeepAspectMode.KEEP_WIDTH;
-  const halfHeight = isKeepWidth ? size / DEFAULT_ASPECT : size;
-  const halfWidth = isKeepWidth ? size : size * DEFAULT_ASPECT;
+  const halfHeight = (isKeepWidth ? size / DEFAULT_ASPECT : size) / 2;
+  const halfWidth = (isKeepWidth ? size : size * DEFAULT_ASPECT) / 2;
   useEffect(() => {
     if (cameraRef.current) {
       cameraRef.current.userData.tscnPath = tscnPath;

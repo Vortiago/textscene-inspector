@@ -84,10 +84,11 @@ describe('<Camera3D>', () => {
     );
     const cam = renderer.scene.findByType('OrthographicCamera');
     const o = cam.instance as { top: number; bottom: number; left: number; right: number };
-    expect(o.top).toBe(4);
-    expect(o.bottom).toBe(-4);
-    // halfWidth = size * 16/9
-    expect(o.right).toBeCloseTo(4 * (16 / 9), 5);
-    expect(o.left).toBeCloseTo(-4 * (16 / 9), 5);
+    // Godot `size` is the full frustum height → half-extent = size/2.
+    expect(o.top).toBe(2);
+    expect(o.bottom).toBe(-2);
+    // halfWidth = (size/2) * 16/9
+    expect(o.right).toBeCloseTo(2 * (16 / 9), 5);
+    expect(o.left).toBeCloseTo(-2 * (16 / 9), 5);
   });
 });

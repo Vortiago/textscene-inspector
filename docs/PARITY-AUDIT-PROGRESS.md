@@ -5,7 +5,7 @@ Tracks the 46 confirmed Godot-fidelity divergences from the 2026-06-03 expanded 
 ## Batch checklist
 
 - [x] **B1 Environment** (4): #9 ambient_light_color (defau(H), #10 ambient_light_source(H), #11 FogExp2 (wrong fog system (H), #27 background_color / ambient(M)
-- [ ] **B2 Camera3D** (2): #1 size (OrthographicCamera f(H), #28 fov with keep_aspect = KEE(L)
+- [x] **B2 Camera3D** (2): #1 size (OrthographicCamera f(H), #28 fov with keep_aspect = KEE(L)
 - [ ] **B3 SpotLight3D** (2): #5 spot_attenuation(H), #15 spot_angle_attenuation(M)
 - [ ] **B4 Label3D** (6): #2 billboard (default when ab(H), #3 pixel_size (default when a(H), #4 Label3D quad size formula (H), #13 outline_size (default when(M), #14 outline_size canvas lineWi(M), #33 double_sided(L)
 - [ ] **B5 Sprite3D** (6): #7 flip_h(H), #17 offset(M), #18 flip_v(M), #19 centered(M), #39 double_sided(L), #40 transparent(L)
@@ -20,7 +20,7 @@ Dedup: stretch_ratio #12=#29; grid-expand #30=#32 -> fix once in B10 (~44 distin
 
 ## Findings detail
 
-### [#1] Camera3D.size (OrthographicCamera frustum bounds)  (HIGH / camera3d / wrong-mapping) - [ ]
+### [#1] Camera3D.size (OrthographicCamera frustum bounds)  (HIGH / camera3d / wrong-mapping) - [x]
 - Godot: Godot's Projection::set_orthogonal(size, aspect, near, far, flip_fov) divides size by 2 to get the half-dimension. With KEEP_HEIGHT (default, flip_fov=false): p_size is first multiplied by aspect, then left=-p_size/2, right=+p_size/2, bottom=-p_size/aspect/2, top=+p_size/aspect/2 â€” so halfHeight = size/2 and halfWidth = (size*aspect)/2. With KEEP_WIDTH (flip_fov=true): halfWi
 - Ours: packages/textscene-core/src/nodes/3d/camera3d/Component.tsx:145-146 â€” when KEEP_HEIGHT: halfHeight = size, halfWidth = size * DEFAULT_ASPECT; when KEEP_WIDTH: halfHeight = size / DEFAULT_ASPECT, halfWidth = size. The code uses size directly as the half-dimension (radius), not as the full dimension (diameter).
 - Fix: Divide size by 2 before using it as the half-dimension. In Component.tsx line 145-146 change to: const halfHeight = isKeepWidth ? (size / DEFAULT_ASPECT) / 2 : size / 2; const halfWidth = isKeepWidth ? size / 2 : (size * DEFAULT_ASPECT) / 2; Update test #65 to expect o.top === 2 (not 4) for size=4.
@@ -155,7 +155,7 @@ Dedup: stretch_ratio #12=#29; grid-expand #30=#32 -> fix once in B10 (~44 distin
 - Ours: packages/textscene-core/src/nodes/3d/worldenvironment/Component.tsx:66 â€” scene.background = new THREE.Color(c.r, c.g, c.b); packages/textscene-core/src/nodes/3d/worldenvironment/Component.tsx:38-42 â€” color={new THREE.Color(settings.ambient.color.r, settings.ambient.color.g, settings.ambient.color.b)}. Both calls use the three-float constructor, which assumes Linear-sRGB inp
 - Fix: Replace new THREE.Color(c.r, c.g, c.b) with new THREE.Color().setRGB(c.r, c.g, c.b, THREE.SRGBColorSpace) at Component.tsx:66 and Component.tsx:38-42, so three.js performs the correct sRGB-to-linear conversion before the color is passed to the renderer.
 
-### [#28] Camera3D.fov with keep_aspect = KEEP_WIDTH (perspective projection)  (LOW / camera3d / wrong-mapping) - [ ]
+### [#28] Camera3D.fov with keep_aspect = KEEP_WIDTH (perspective projection)  (LOW / camera3d / wrong-mapping) - [x]
 - Godot: When keep_aspect=KEEP_WIDTH (value 0), Godot passes p_flip_fov=true to Projection::set_perspective, which converts the stored fov by calling get_fovy(fov, 1.0/aspect). This means the tscn fov value is interpreted as the HORIZONTAL field of view and the vertical fov is derived from it. Source: Camera3D._get_camera_projection in scene/3d/camera_3d.cpp: 'cm.set_perspective(fov, vi
 - Ours: packages/textscene-core/src/nodes/3d/camera3d/Component.tsx:115 â€” fov={properties.fov} is passed directly to THREE.PerspectiveCamera.fov regardless of keep_aspect mode. No conversion is applied when keep_aspect=KEEP_WIDTH.
 - Fix: When keep_aspect === KeepAspectMode.KEEP_WIDTH, convert the horizontal fov to vertical before passing to THREE.PerspectiveCamera: const effectiveFov = properties.keep_aspect === KeepAspectMode.KEEP_WIDTH ? (2 * Math.atan(Math.tan((properties.fov * Math.PI / 180) / 2) / DEFAULT_ASPECT) * 180 / Math.PI) : properties.fov; then use effectiveFov in the perspectiveCamera element. This mirrors Godot's get_fovy(fov, 1.0/aspect) conversion.

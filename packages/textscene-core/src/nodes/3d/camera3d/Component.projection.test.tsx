@@ -81,10 +81,11 @@ describe('Camera3D projection (assertions 60–66)', () => {
     );
     const cam = renderer.scene.findByType('OrthographicCamera');
     const o = cam.instance as { top: number; bottom: number; left: number; right: number };
-    expect(o.top).toBe(4);
-    expect(o.bottom).toBe(-4);
-    expect(o.right).toBeCloseTo(4 * (16 / 9), 5);
-    expect(o.left).toBeCloseTo(-4 * (16 / 9), 5);
+    // Godot `size` is the full frustum height (diameter) → half-extent = size/2.
+    expect(o.top).toBe(2);
+    expect(o.bottom).toBe(-2);
+    expect(o.right).toBeCloseTo(2 * (16 / 9), 5);
+    expect(o.left).toBeCloseTo(-2 * (16 / 9), 5);
   });
 
   it('#66 keep_aspect KEEP_WIDTH vs KEEP_HEIGHT → aspect correction applied', async () => {
