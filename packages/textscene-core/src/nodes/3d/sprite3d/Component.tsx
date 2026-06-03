@@ -103,13 +103,30 @@ export function Sprite3D({ node }: NodeComponentProps) {
     [properties.modulate.r, properties.modulate.g, properties.modulate.b]
   );
   const opacity = clamp01(properties.modulate.a * (1 - properties.transparency));
-  const transparent = opacity < 1 || properties.alpha_cut !== AlphaCutMode.ALPHA_CUT_DISABLED;
+  // `transparent=false` (Godot) ignores texture alpha entirely → opaque quad.
+  const transparent =
+    properties.transparent === false
+      ? false
+      : opacity < 1 || properties.alpha_cut !== AlphaCutMode.ALPHA_CUT_DISABLED;
 
   // Alpha-cut → material configuration:
   //   DISABLED       → standard alpha blending; depthWrite off.
   //   DISCARD        → alphaTest threshold; depthWrite ON (sharp edges).
   //   OPAQUE_PREPASS → same as DISCARD for now (no separate prepass).
-  const { alphaTest, depthWrite } = alphaCutBehaviour(properties.alpha_cut);
+  const { alphaTest: alphaCutTest, depthWrite } = alphaCutBehaviour(properties.alpha_cut);
+  const alphaTest = properties.transparent === false ? 0 : alphaCutTest;
+
+  // Quad origin: centered (default) puts the plane center at the node origin;
+  // centered=false puts the top-left there. `offset` shifts in sprite pixels
+  // (× pixel_size; Godot screen-Y is down → negated). Baked into the geometry
+  // so it stays correct under the node's rotation/billboard.
+  const geometry = useMemo(() => {
+    const geom = new THREE.PlaneGeometry(width, height);
+    const ox = properties.offset.x * properties.pixel_size + (properties.centered ? 0 : width / 2);
+    const oy = -properties.offset.y * properties.pixel_size - (properties.centered ? 0 : height / 2);
+    if (ox !== 0 || oy !== 0) geom.translate(ox, oy, 0);
+    return geom;
+  }, [width, height, properties.offset.x, properties.offset.y, properties.centered, properties.pixel_size]);
 
   // No texture path requested at all: render a stub placeholder so users
   // see that the sprite node exists in the scene even without a texture.
@@ -164,7 +181,7 @@ export function Sprite3D({ node }: NodeComponentProps) {
       renderOrder={properties.render_priority}
       userData={{ billboardMode: properties.billboard, billboardAxis: properties.axis }}
     >
-      <planeGeometry args={[width, height]} />
+      <primitive object={geometry} attach="geometry" />
       <meshBasicMaterial
         map={displayedTexture}
         color={color}
@@ -172,7 +189,7 @@ export function Sprite3D({ node }: NodeComponentProps) {
         transparent={transparent}
         alphaTest={alphaTest}
         depthWrite={depthWrite}
-        side={THREE.DoubleSide}
+        side={properties.double_sided === false ? THREE.FrontSide : THREE.DoubleSide}
       />
     </mesh>
   );
@@ -220,6 +237,17 @@ function composeTexture(
     applyRegionRect(cloned, properties.region_rect);
   } else if (properties.hframes > 1 || properties.vframes > 1) {
     applySpritesheetUV(cloned, properties);
+  }
+
+  // flip_h / flip_v mirror the (already region/frame-cropped) UV window by
+  // negating the repeat and shifting the offset to the opposite edge.
+  if (properties.flip_h) {
+    cloned.offset.x += cloned.repeat.x;
+    cloned.repeat.x = -cloned.repeat.x;
+  }
+  if (properties.flip_v) {
+    cloned.offset.y += cloned.repeat.y;
+    cloned.repeat.y = -cloned.repeat.y;
   }
 
   cloned.needsUpdate = true;

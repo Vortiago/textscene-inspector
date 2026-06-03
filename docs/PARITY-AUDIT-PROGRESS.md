@@ -8,7 +8,7 @@ Tracks the 46 confirmed Godot-fidelity divergences from the 2026-06-03 expanded 
 - [x] **B2 Camera3D** (2): #1 size (OrthographicCamera f(H), #28 fov with keep_aspect = KEE(L)
 - [x] **B3 SpotLight3D** (2): #5 spot_attenuation(H), #15 spot_angle_attenuation(M)
 - [x] **B4 Label3D** (6): #2 billboard (default when ab(H), #3 pixel_size (default when a(H), #4 Label3D quad size formula (H), #13 outline_size (default when(M), #14 outline_size canvas lineWi(M), #33 double_sided(L)
-- [ ] **B5 Sprite3D** (6): #7 flip_h(H), #17 offset(M), #18 flip_v(M), #19 centered(M), #39 double_sided(L), #40 transparent(L)
+- [x] **B5 Sprite3D** (6): #7 flip_h(H), #17 offset(M), #18 flip_v(M), #19 centered(M), #39 double_sided(L), #40 transparent(L)
 - [ ] **B6 Sprite2D/Animated** (3): #6 modulate (CanvasItem, inhe(H), #16 region_enabled + hframes/v(M), #38 self_modulate(L)
 - [ ] **B7 StyleBox** (4): #8 content_margin_left/top/ri(H), #41 shadow_size / shadow_color(L), #42 border_color (default fall(L), #43 border_blend(L)
 - [ ] **B8 TextureRect/ColorRect** (6): #22 stretch_mode = 1 (STRETCH_(M), #23 stretch_mode = 2 (STRETCH_(M), #24 stretch_mode = 3 (STRETCH_(M), #25 flip_h(M), #26 flip_v(M), #46 stretch_mode = 4 (STRETCH_(L)
@@ -52,7 +52,7 @@ Deferred gap (not in the 46): Label3D font_size is never carried by parseLabel3D
 - Ours: packages/textscene-core/src/nodes/2d/sprite2d/Component.tsx:62-65 â€” `new THREE.Color(modulate.r, modulate.g, modulate.b)` passes the raw parsed floats as the THREE.Color constructor arguments. With three.js ColorManagement enabled (the R3F default), THREE.Color(r,g,b) treats its arguments as already-linear values; no sRGBâ†’linear conversion is applied. The same bug is presen
 - Fix: Before constructing the THREE.Color, convert each channel with the same sRGBChannelToLinear helper used by standardMaterialScalars.ts. Apply the conversion to `multiplyModulate`'s result (or at the point where the per-node modulate is first parsed), so every downstream THREE.Color is in linear space. The alpha channel is not affected (opacity is a linear blend weight in both engines).
 
-### [#7] SpriteBase3D.flip_h  (HIGH / sprite3d / missing) - [ ]
+### [#7] SpriteBase3D.flip_h  (HIGH / sprite3d / missing) - [x]
 - Godot: SpriteBase3D.flip_h (bool, default false) mirrors the texture horizontally. Godot source: `if (is_flipped_h()) { SWAP(uvs[0], uvs[1]); SWAP(uvs[2], uvs[3]); }` â€” swaps left/right UV coordinates on the quad without changing vertex positions.
 - Ours: packages/textscene-core/src/nodes/3d/sprite3d/parser.ts â€” flip_h is not parsed. packages/textscene-core/src/nodes/3d/sprite3d/Component.tsx â€” flip_h is not applied. packages/textscene-core/src/nodes/3d/sprite3d/linterParser.ts â€” flip_h is not registered as a known property.
 - Fix: Parse flip_h as a bool in parser.ts and linterParser.ts. In composeTexture (Component.tsx), after applying UV offset/repeat, negate texture.repeat.x (set it to -1/H) and adjust texture.offset.x by +1/H to implement a horizontal mirror. Alternatively apply `texture.repeat.set(-1/H, 1/V); texture.offset.x += 1/H` when flip_h is true.
@@ -102,17 +102,17 @@ Deferred gap (not in the 46): Label3D font_size is never carried by parseLabel3D
 - Ours: packages/textscene-core/src/nodes/2d/sprite2d/Component.tsx:156-160 â€” `composeTexture` uses an `else if`: if `region_enabled && region_rect` it calls `applyRegionRect` and skips sprite-sheet UV; if `hframes > 1 || vframes > 1` (but NOT region_enabled) it calls `applySpritesheetUV`. Similarly, `computeQuadSize` at lines 200-204 returns `region_rect.size` directly when region_e
 - Fix: Remove the `else if` in `composeTexture`: when `region_enabled` apply `applyRegionRect` first, then always check `hframes > 1 || vframes > 1` and subdivide relative to the already-applied region UV (i.e. repeat and offset compose multiplicatively). In `computeQuadSize`, when region_enabled also divide by hframes/vframes: `{ width: region_rect.width / hframes, height: region_rect.height / vframes }`.
 
-### [#17] SpriteBase3D.offset  (MEDIUM / sprite3d / missing) - [ ]
+### [#17] SpriteBase3D.offset  (MEDIUM / sprite3d / missing) - [x]
 - Godot: SpriteBase3D.offset (Vector2, default (0,0)) is a pixel-space offset applied to the quad position before scaling by pixel_size. Godot source (sprite_3d.cpp get_item_rect): `ofs = get_offset(); if (is_centered()) ofs -= s / 2; return Rect2(ofs, s);` â€” the offset shifts the quad relative to the node origin in pixel space. World displacement = offset * pixel_size.
 - Ours: packages/textscene-core/src/nodes/3d/sprite3d/parser.ts:55 â€” offset is parsed into `properties.offset`. packages/textscene-core/src/nodes/3d/sprite3d/Component.tsx (entire file) â€” `properties.offset` is never read; the mesh `position` only comes from the node transform and no additional displacement is applied to the quad.
 - Fix: In computeQuadSize (or a separate helper), compute world offset as `{ x: properties.offset.x * properties.pixel_size, y: -properties.offset.y * properties.pixel_size }` (Godot screen-Y is down, three.js Y is up). Apply this as an additional position on the `<mesh>` alongside the node transform position, or as a `<group>` child offset.
 
-### [#18] SpriteBase3D.flip_v  (MEDIUM / sprite3d / missing) - [ ]
+### [#18] SpriteBase3D.flip_v  (MEDIUM / sprite3d / missing) - [x]
 - Godot: SpriteBase3D.flip_v (bool, default false) mirrors the texture vertically. Godot source: `if (is_flipped_v()) { SWAP(uvs[0], uvs[3]); SWAP(uvs[1], uvs[2]); }` â€” swaps top/bottom UV coordinates.
 - Ours: packages/textscene-core/src/nodes/3d/sprite3d/parser.ts â€” flip_v is not parsed. packages/textscene-core/src/nodes/3d/sprite3d/Component.tsx â€” flip_v is not applied.
 - Fix: Parse flip_v as a bool in parser.ts and linterParser.ts. In composeTexture, negate texture.repeat.y and adjust texture.offset.y to implement a vertical mirror: `texture.repeat.y = -1/V; texture.offset.y += 1/V` when flip_v is true.
 
-### [#19] SpriteBase3D.centered  (MEDIUM / sprite3d / missing) - [ ]
+### [#19] SpriteBase3D.centered  (MEDIUM / sprite3d / missing) - [x]
 - Godot: SpriteBase3D.centered (bool, default true). When false, the quad origin shifts to the top-left corner of the sprite region instead of the center. Godot source (get_item_rect): `if (is_centered()) ofs -= s / 2;` â€” centering subtracts half the frame size from the offset, so disabling it means the quad's top-left corner sits at the node position.
 - Ours: packages/textscene-core/src/nodes/3d/sprite3d/parser.ts â€” centered is not parsed. packages/textscene-core/src/nodes/3d/sprite3d/Component.tsx:167 â€” `<planeGeometry args={[width, height]} />` always produces a centered plane (three.js planeGeometry is always centered at origin). No corner-origin offset is ever applied.
 - Fix: Parse centered as a bool (default true) in parser.ts and linterParser.ts. In the Component, when centered=false, apply an additional mesh-level position offset of (+width/2, -height/2, 0) in local space (i.e., wrap the planeGeometry in a group or use a geometry translate).
@@ -212,12 +212,12 @@ Deferred gap (not in the 46): Label3D font_size is never carried by parseLabel3D
 - Ours: packages/textscene-core/src/nodes/base/node2d/parser.ts:55 â€” parseNode2D only reads `properties.modulate`; there is no line reading `properties.self_modulate`. The property is silently dropped. packages/textscene-core/src/nodes/base/node2d/types.ts has no `self_modulate` field in Node2DProperties. canvasItemModulate.ts line 7 acknowledges the gap: '(self_modulate, which does 
 - Fix: Parse `self_modulate` in parseNode2D (same path as modulate, with the same sRGBâ†’linear conversion once finding #1 is fixed). Add it to Node2DProperties. In the Sprite2D and AnimatedSprite2D Components, multiply self_modulate onto the material color/opacity AFTER the child-propagating modulate context has been set, so the tint applies to own pixels only and is not passed to Modulate2DContext.Provider.
 
-### [#39] SpriteBase3D.double_sided  (LOW / sprite3d / wrong-default) - [ ]
+### [#39] SpriteBase3D.double_sided  (LOW / sprite3d / wrong-default) - [x]
 - Godot: SpriteBase3D.double_sided (bool, default true). When false, the sprite is only visible from the front face. Docs: 'If true, texture can be seen from the back as well, if false, it is invisible when looking at it from behind.'
 - Ours: packages/textscene-core/src/nodes/3d/sprite3d/Component.tsx:175 â€” `side={THREE.DoubleSide}` is hardcoded regardless of the double_sided property. double_sided is not parsed in parser.ts.
 - Fix: Parse double_sided as a bool (default true) in parser.ts and linterParser.ts. In the Component, set `side={properties.double_sided ? THREE.DoubleSide : THREE.FrontSide}`. Note: since the default matches our current hardcode, this only diverges when explicitly set to false.
 
-### [#40] SpriteBase3D.transparent  (LOW / sprite3d / missing) - [ ]
+### [#40] SpriteBase3D.transparent  (LOW / sprite3d / missing) - [x]
 - Godot: SpriteBase3D.transparent (bool, default true). When false, the sprite's texture alpha is ignored and the quad renders fully opaque. Docs: 'If true, the texture's transparency and the opacity are used to make those parts of the sprite invisible.'
 - Ours: packages/textscene-core/src/nodes/3d/sprite3d/parser.ts â€” the bool property 'transparent' is not parsed (our 'transparency' float is a separate property). packages/textscene-core/src/nodes/3d/sprite3d/Component.tsx:106 â€” `const transparent = opacity < 1 || properties.alpha_cut !== AlphaCutMode.ALPHA_CUT_DISABLED;` derives the THREE material's transparent flag from opacity/a
 - Fix: Parse 'transparent' as a bool (default true) in parser.ts and linterParser.ts. When false, force `transparent=false` on the THREE material and set `alphaTest=0`, effectively disabling alpha blending.
