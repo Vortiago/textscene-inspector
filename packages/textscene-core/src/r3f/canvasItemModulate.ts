@@ -1,13 +1,18 @@
 /**
- * Godot CanvasItem `modulate` is hierarchical: a node's modulate multiplies
- * onto all of its descendants' colors (and its own). We carry the accumulated
- * parent modulate down the 2D subtree via context; each 2D Component multiplies
- * its own modulate in, applies the product to its visible content, and provides
- * the product to its children. (`self_modulate`, which does NOT inherit, is a
- * separate later concern.)
+ * Godot CanvasItem tint, in two flavours:
+ *  - `modulate` is hierarchical: a node's modulate multiplies onto all of its
+ *    descendants' colors (and its own). We carry the accumulated parent modulate
+ *    down the 2D subtree via context.
+ *  - `self_modulate` multiplies onto the node's OWN pixels only and is NOT
+ *    inherited by children.
+ * `useCanvasItemTint` resolves both: it returns the `inherited` product to hand
+ * to the child context, plus the linear-space `color`/`opacity` for this node's
+ * material. TSCN colours are authored in sRGB → converted to the linear working
+ * space before reaching the (unlit) 2D material, matching Godot's canvas.
  */
 
-import { createContext, useContext } from 'react';
+import { createContext, useContext, useMemo } from 'react';
+import * as THREE from 'three';
 
 export interface RGBA {
   r: number;
@@ -27,4 +32,25 @@ export function useParentModulate(): RGBA {
 /** Component-wise RGBA multiply (Godot composes modulate by multiplication). */
 export function multiplyModulate(a: RGBA, b: RGBA): RGBA {
   return { r: a.r * b.r, g: a.g * b.g, b: a.b * b.b, a: a.a * b.a };
+}
+
+export interface CanvasItemTint {
+  /** Ancestor modulate × this node's `modulate` — propagate to the child context. */
+  inherited: RGBA;
+  /** Linear-space own-pixel tint (`inherited` × `self_modulate`). */
+  color: THREE.Color;
+  /** Own-pixel opacity (`inherited.a` × `self_modulate.a`). */
+  opacity: number;
+}
+
+/** Resolve a CanvasItem's modulate/self_modulate into a material tint + child-context value. */
+export function useCanvasItemTint(props: { modulate: RGBA; self_modulate: RGBA }): CanvasItemTint {
+  const parent = useParentModulate();
+  const inherited = useMemo(() => multiplyModulate(parent, props.modulate), [parent, props.modulate]);
+  const own = useMemo(() => multiplyModulate(inherited, props.self_modulate), [inherited, props.self_modulate]);
+  const color = useMemo(
+    () => new THREE.Color().setRGB(own.r, own.g, own.b, THREE.SRGBColorSpace),
+    [own.r, own.g, own.b]
+  );
+  return { inherited, color, opacity: own.a };
 }

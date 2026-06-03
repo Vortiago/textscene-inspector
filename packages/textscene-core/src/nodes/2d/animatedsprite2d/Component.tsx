@@ -12,7 +12,7 @@ import * as THREE from 'three';
 import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { node2dGroupProps, Z_INDEX_STEP } from '../../../r3f/node2dTransform';
-import { Modulate2DContext, multiplyModulate, useParentModulate } from '../../../r3f/canvasItemModulate';
+import { Modulate2DContext, useCanvasItemTint } from '../../../r3f/canvasItemModulate';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { parseResourceReference } from '../../../resources/SubResourceResolver';
 import { useResource } from '../../../resources/useResource';
@@ -25,11 +25,7 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
   const { internalResources, externalResources } = useSceneResources();
 
   const group = useMemo(() => node2dGroupProps(props, props.z_index * Z_INDEX_STEP), [props]);
-  const parentModulate = useParentModulate();
-  const modulate = useMemo(
-    () => multiplyModulate(parentModulate, props.modulate),
-    [parentModulate, props.modulate]
-  );
+  const { inherited, color, opacity } = useCanvasItemTint(props);
 
   const frameRef = useMemo(
     () => resolveFrameTextureRef(props, internalResources),
@@ -41,10 +37,6 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
   );
   const texResult = useResource<THREE.Texture>(texturePath ?? '', 'Texture2D');
 
-  const color = useMemo(
-    () => new THREE.Color(modulate.r, modulate.g, modulate.b),
-    [modulate.r, modulate.g, modulate.b]
-  );
   const visible = props.visible !== false;
   const showPlaceholder = !texturePath || texResult.status === 'unavailable';
 
@@ -72,14 +64,14 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
           <meshBasicMaterial
             map={tex}
             color={color}
-            opacity={modulate.a}
+            opacity={opacity}
             transparent
             depthWrite={false}
             side={THREE.DoubleSide}
           />
         </mesh>
       ) : null}
-      <Modulate2DContext.Provider value={modulate}>{children}</Modulate2DContext.Provider>
+      <Modulate2DContext.Provider value={inherited}>{children}</Modulate2DContext.Provider>
     </group>
   );
 }

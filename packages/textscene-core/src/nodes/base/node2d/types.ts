@@ -41,4 +41,6 @@ export interface Node2DProperties {
 
   /** CanvasItem RGBA tint; multiplies onto this node and all descendants. */
   modulate: Color;
+  /** CanvasItem RGBA tint; multiplies onto this node's own pixels only (not inherited). */
+  self_modulate: Color;
 }

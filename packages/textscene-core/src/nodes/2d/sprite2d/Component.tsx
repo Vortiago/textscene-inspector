@@ -22,7 +22,7 @@ import * as THREE from 'three';
 import type { TscnExternalResource } from '../../../parser/types';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { node2dGroupProps, Z_INDEX_STEP } from '../../../r3f/node2dTransform';
-import { Modulate2DContext, multiplyModulate, useParentModulate } from '../../../r3f/canvasItemModulate';
+import { Modulate2DContext, useCanvasItemTint } from '../../../r3f/canvasItemModulate';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { parseResourceReference } from '../../../resources/SubResourceResolver';
 import { useResource } from '../../../resources/useResource';
@@ -53,16 +53,8 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
     [texResult.value, props]
   );
 
-  // Fold the inherited (ancestor) modulate into this sprite's own modulate.
-  const parentModulate = useParentModulate();
-  const modulate = useMemo(
-    () => multiplyModulate(parentModulate, props.modulate),
-    [parentModulate, props.modulate]
-  );
-  const color = useMemo(
-    () => new THREE.Color(modulate.r, modulate.g, modulate.b),
-    [modulate.r, modulate.g, modulate.b]
-  );
+  // Inherited modulate (propagates to children) + own-pixel tint (× self_modulate).
+  const { inherited, color, opacity } = useCanvasItemTint(props);
 
   const visible = props.visible !== false;
 
@@ -83,13 +75,13 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
         <QuadMesh
           texture={displayedTexture}
           color={color}
-          opacity={modulate.a}
+          opacity={opacity}
           width={width}
           height={height}
           props={props}
         />
       ) : null}
-      <Modulate2DContext.Provider value={modulate}>{children}</Modulate2DContext.Provider>
+      <Modulate2DContext.Provider value={inherited}>{children}</Modulate2DContext.Provider>
     </group>
   );
 }
@@ -153,9 +145,12 @@ function composeTexture(
   cloned.wrapS = THREE.RepeatWrapping;
   cloned.wrapT = THREE.RepeatWrapping;
 
+  // Godot computes base_rect (region when enabled, else full texture) THEN
+  // subdivides it by hframes/vframes — the two compose, they are not exclusive.
   if (props.region_enabled && props.region_rect) {
     applyRegionRect(cloned, props.region_rect);
-  } else if (props.hframes > 1 || props.vframes > 1) {
+  }
+  if (props.hframes > 1 || props.vframes > 1) {
     applySpritesheetUV(cloned, props);
   }
   cloned.needsUpdate = true;
@@ -174,8 +169,17 @@ function applySpritesheetUV(texture: THREE.Texture, props: Sprite2DProperties): 
     col = props.frame % H;
     row = Math.floor(props.frame / H);
   }
-  texture.repeat.set(1 / H, 1 / V);
-  texture.offset.set(col / H, 1 - (row + 1) / V);
+  // Compose over the base UV already on the texture: identity (full image) or the
+  // region rect applied above. Multiplying keeps region + frames additive.
+  const baseRepeatX = texture.repeat.x;
+  const baseRepeatY = texture.repeat.y;
+  const baseOffsetX = texture.offset.x;
+  const baseOffsetY = texture.offset.y;
+  texture.repeat.set(baseRepeatX / H, baseRepeatY / V);
+  texture.offset.set(
+    baseOffsetX + col * (baseRepeatX / H),
+    baseOffsetY + baseRepeatY - (row + 1) * (baseRepeatY / V)
+  );
 }
 
 function applyRegionRect(
@@ -197,11 +201,13 @@ function computeQuadSize(
   const imgW = image?.width ?? 1;
   const imgH = image?.height ?? 1;
 
+  const H = Math.max(1, props.hframes);
+  const V = Math.max(1, props.vframes);
   if (props.region_enabled && props.region_rect && image?.width && image.height) {
-    return { width: props.region_rect.width, height: props.region_rect.height };
+    return { width: props.region_rect.width / H, height: props.region_rect.height / V };
   }
   if (props.hframes > 1 || props.vframes > 1) {
-    return { width: imgW / Math.max(1, props.hframes), height: imgH / Math.max(1, props.vframes) };
+    return { width: imgW / H, height: imgH / V };
   }
   return { width: imgW, height: imgH };
 }
