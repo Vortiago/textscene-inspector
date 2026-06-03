@@ -47,6 +47,9 @@ would shift the texture by a different amount than Godot.
   formula for a zero-impact case adds risk for no benefit.
 - Site: `nodes/3d/meshinstance3d/Component.tsx` (uvTransform).
 
+### WorldEnvironment volumetric fog  *(audit #11)*
+Godot has two fog systems. **Screen-space fog** (`fog_enabled`/`fog_density`/`fog_light_color`/`fog_mode`) maps to `THREE.FogExp2` and is supported. **Volumetric fog** (`volumetric_fog_*`, a froxel-based 3D scattering effect) has no three.js equivalent and is intentionally **not** applied to `scene.fog` — its density scale differs by orders of magnitude, so approximating it with FogExp2 produced wildly over-dense fog. Screen-space `FOG_MODE_DEPTH` (1) is approximated with the same density-based exponential fog (no separate linear depth params).
+
 ## Meshes
 
 ### CylinderMesh single-cap removal  *(parity batch)*

@@ -17,11 +17,20 @@ export function parseEnvironment(
       : { r: 0, g: 0, b: 0, a: 1 },
     background_energy_multiplier: parseFloat(properties.background_energy_multiplier ?? '1.0'),
 
-    // Ambient lighting
+    // Ambient lighting (Godot default ambient_light_color is BLACK / no ambient)
+    ambient_light_source: parseInt(properties.ambient_light_source ?? '0', 10),
     ambient_light_color: properties.ambient_light_color
       ? parseColor(properties.ambient_light_color)
-      : { r: 1, g: 1, b: 1, a: 1 },
+      : { r: 0, g: 0, b: 0, a: 1 },
     ambient_light_energy: parseFloat(properties.ambient_light_energy ?? '1.0'),
+
+    // Screen-space fog (Godot defaults: density 0.01, light_color ~bluish-grey)
+    fog_enabled: properties.fog_enabled === 'true',
+    fog_density: parseFloat(properties.fog_density ?? '0.01'),
+    fog_light_color: properties.fog_light_color
+      ? parseColor(properties.fog_light_color)
+      : { r: 0.518, g: 0.553, b: 0.608, a: 1 },
+    fog_mode: parseInt(properties.fog_mode ?? '0', 10),
 
     // Volumetric Fog
     volumetric_fog_enabled: properties.volumetric_fog_enabled === 'true',

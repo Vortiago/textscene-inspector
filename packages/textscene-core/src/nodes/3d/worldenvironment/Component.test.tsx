@@ -38,20 +38,18 @@ describe('<WorldEnvironment>', () => {
       background_color: 'Color(0.2, 0.4, 0.8, 1)',
     });
     const renderer = await render(node, [resource]);
-    // R3F `<color attach="background">` writes into scene.background.
     const scene = renderer.scene.instance;
-    const bg = scene.background as { r: number; g: number; b: number } | null;
+    const bg = scene.background as { getHexString(): string } | null;
     expect(bg).not.toBeNull();
-    expect(bg!.r).toBeCloseTo(0.2, 1);
-    expect(bg!.g).toBeCloseTo(0.4, 1);
-    expect(bg!.b).toBeCloseTo(0.8, 1);
+    // Godot Color is sRGB; three.js stores linear, so compare via the sRGB hex.
+    expect(bg!.getHexString()).toBe('3366cc'); // (0.2,0.4,0.8) → 8-bit sRGB
   });
 
-  it('attaches fog when volumetric_fog_enabled=true', async () => {
+  it('attaches fog when fog_enabled=true (screen-space fog)', async () => {
     const node = makeNode('SubResource("Env_2")');
     const resource = environmentResource('Env_2', {
-      volumetric_fog_enabled: 'true',
-      volumetric_fog_density: '0.1',
+      fog_enabled: 'true',
+      fog_density: '0.1',
     });
     const renderer = await render(node, [resource]);
     expect(renderer.scene.instance.fog).not.toBeNull();

@@ -51,39 +51,43 @@ describe('WorldEnvironment (assertions 81–89)', () => {
     expect(bg!.isColor).toBe(true);
   });
 
-  it('#83 background_color → scene.background reflects RGB values', async () => {
+  it('#83 background_color → scene.background reflects RGB values (sRGB)', async () => {
+    // Godot Color literals are sRGB; three.js converts to linear, so compare via
+    // the sRGB hex (getHexString) rather than the raw linear channels.
     const renderer = await render(makeNode(), [
       envSub({ background_mode: '1', background_color: 'Color(0.25, 0.5, 0.75, 1)' }),
     ]);
-    const bg = renderer.scene.instance.background as { r: number; g: number; b: number };
-    expect(bg.r).toBeCloseTo(0.25, 2);
-    expect(bg.g).toBeCloseTo(0.5, 2);
-    expect(bg.b).toBeCloseTo(0.75, 2);
+    const bg = renderer.scene.instance.background as { getHexString(): string };
+    expect(bg.getHexString()).toBe('4080bf'); // (0.25,0.5,0.75) → 8-bit sRGB
   });
 
-  it('#84 ambient_light_color → ambient light color matches', async () => {
-    // Environment's ambient_light is a separate optional sub-property of
-    // the Godot Environment resource. The current parser/renderer doesn't
-    // capture it. This assertion catches the gap.
+  it('#84 ambient_light_color (COLOR source) → ambient light color matches', async () => {
     const renderer = await render(makeNode(), [
       envSub({
         background_mode: '1',
+        ambient_light_source: '2', // COLOR — required for a flat ambient
         ambient_light_color: 'Color(0.3, 0.6, 0.9, 1)',
         ambient_light_energy: '1',
       }),
     ]);
     const ambients = renderer.scene.findAllByType('AmbientLight');
     expect(ambients.length).toBeGreaterThan(0);
-    const c = (ambients[0]!.instance as { color: { r: number; g: number; b: number } }).color;
-    expect(c.r).toBeCloseTo(0.3, 1);
-    expect(c.g).toBeCloseTo(0.6, 1);
-    expect(c.b).toBeCloseTo(0.9, 1);
+    const c = (ambients[0]!.instance as { color: { getHexString(): string } }).color;
+    expect(c.getHexString()).toBe('4d99e6'); // (0.3,0.6,0.9) sRGB
+  });
+
+  it('#84b default ambient source (BG) → no flat AmbientLight emitted', async () => {
+    const renderer = await render(makeNode(), [
+      envSub({ background_mode: '1', ambient_light_color: 'Color(0.3, 0.6, 0.9, 1)' }),
+    ]);
+    expect(renderer.scene.findAllByType('AmbientLight').length).toBe(0);
   });
 
   it('#85 ambient_light_energy → ambient light intensity matches', async () => {
     const renderer = await render(makeNode(), [
       envSub({
         background_mode: '1',
+        ambient_light_source: '2',
         ambient_light_color: 'Color(1, 1, 1, 1)',
         ambient_light_energy: '2',
       }),
@@ -95,46 +99,34 @@ describe('WorldEnvironment (assertions 81–89)', () => {
   });
 
   it('#86 fog_enabled=false → scene.fog === null', async () => {
-    const renderer = await render(makeNode(), [
-      envSub({ background_mode: '1', volumetric_fog_enabled: 'false' }),
-    ]);
+    const renderer = await render(makeNode(), [envSub({ background_mode: '1', fog_enabled: 'false' })]);
     expect(renderer.scene.instance.fog).toBeNull();
   });
 
   it('#87 fog_enabled=true → scene.fog is non-null', async () => {
     const renderer = await render(makeNode(), [
-      envSub({
-        background_mode: '1',
-        volumetric_fog_enabled: 'true',
-        volumetric_fog_density: '0.1',
-      }),
+      envSub({ background_mode: '1', fog_enabled: 'true', fog_density: '0.1' }),
     ]);
     expect(renderer.scene.instance.fog).not.toBeNull();
   });
 
-  it('#88 fog_color (volumetric_fog_albedo) → scene.fog.color matches', async () => {
+  it('#88 fog_light_color → scene.fog.color matches (sRGB)', async () => {
     const renderer = await render(makeNode(), [
       envSub({
         background_mode: '1',
-        volumetric_fog_enabled: 'true',
-        volumetric_fog_density: '0.05',
-        volumetric_fog_albedo: 'Color(0.4, 0.5, 0.6, 1)',
+        fog_enabled: 'true',
+        fog_density: '0.05',
+        fog_light_color: 'Color(0.4, 0.5, 0.6, 1)',
       }),
     ]);
-    const fog = renderer.scene.instance.fog as { color: { r: number; g: number; b: number } } | null;
+    const fog = renderer.scene.instance.fog as { color: { getHexString(): string } } | null;
     expect(fog).not.toBeNull();
-    expect(fog!.color.r).toBeCloseTo(0.4, 1);
-    expect(fog!.color.g).toBeCloseTo(0.5, 1);
-    expect(fog!.color.b).toBeCloseTo(0.6, 1);
+    expect(fog!.color.getHexString()).toBe('668099'); // (0.4,0.5,0.6) sRGB
   });
 
   it('#89 fog_density → scene.fog.density matches', async () => {
     const renderer = await render(makeNode(), [
-      envSub({
-        background_mode: '1',
-        volumetric_fog_enabled: 'true',
-        volumetric_fog_density: '0.25',
-      }),
+      envSub({ background_mode: '1', fog_enabled: 'true', fog_density: '0.25' }),
     ]);
     const fog = renderer.scene.instance.fog as { density: number } | null;
     expect(fog).not.toBeNull();
