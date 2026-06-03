@@ -10,7 +10,7 @@
 
 import type { TscnNode } from '../../parser/types';
 
-const TWO_D_UI_TYPES = new Set<string>([
+export const TWO_D_UI_TYPES = new Set<string>([
   'Control',
   'ColorRect',
   'Label',

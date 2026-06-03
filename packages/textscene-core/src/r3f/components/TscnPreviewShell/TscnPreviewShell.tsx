@@ -8,8 +8,6 @@
  * surfaces its properties with no tab hop. No left rail — the VS Code webview
  * already sits right of VS Code's own activity bar + Explorer, so a left rail
  * would clash and waste width.
- *
- * Replaces the imperative `packages/textscene-core/src/ui/TscnPreviewUI.ts`.
  */
 import {
   lazy,

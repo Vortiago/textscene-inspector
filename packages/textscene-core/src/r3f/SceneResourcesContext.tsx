@@ -25,6 +25,7 @@ const EMPTY: SceneResources = {
 };
 
 const SceneResourcesContext = createContext<SceneResources>(EMPTY);
+SceneResourcesContext.displayName = 'SceneResourcesContext';
 
 export function useSceneResources(): SceneResources {
   return useContext(SceneResourcesContext);

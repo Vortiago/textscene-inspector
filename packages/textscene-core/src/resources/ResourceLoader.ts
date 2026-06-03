@@ -39,7 +39,6 @@ import { createTextureProcessor } from './processors/createTextureProcessor';
 import { createMaterialProcessor } from './processors/createMaterialProcessor';
 import { createGLBProcessor } from './processors/createGLBProcessor';
 import { createSceneProcessor } from './processors/createSceneProcessor';
-import { parseReference } from './processing/materialProcessing';
 import type { ResourceProcessor } from './createResourceProcessor';
 import * as logger from '../logger';
 
@@ -209,10 +208,6 @@ export class ResourceLoader {
 
   hasResource(idOrPath: string): boolean {
     return this.metadata.has(idOrPath);
-  }
-
-  static parseReference(value: string): string | null {
-    return parseReference(value);
   }
 
   // ---- Cache management ----------------------------------------------------

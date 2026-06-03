@@ -286,19 +286,6 @@
   flex-shrink: 0;
 }
 
-.instanceRoot {
-  border-left-color: var(--tsi-instance-accent);
-
-  & .nodeName {
-    font-weight: 500;
-  }
-
-  /* When also selected, the accent border wins for clarity. */
-  &.selected {
-    border-left-color: var(--tsi-accent);
-  }
-}
-
 .visibilityIcon {
   font-size: 0.75rem;
   cursor: pointer;

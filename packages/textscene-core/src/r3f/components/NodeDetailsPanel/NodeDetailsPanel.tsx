@@ -1,7 +1,6 @@
 /**
  * Properties pane for the currently-selected scene node. Reads selection
  * from `<SelectionContext>` and the scene graph from `<HierarchyContext>`.
- * Replaces the imperative `packages/textscene-core/src/ui/NodeDetailsFormatter.ts`.
  */
 import { useMemo } from 'react';
 import { nodeRegistry } from '../../../core/NodeRegistry.js';
