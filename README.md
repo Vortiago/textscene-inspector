@@ -1,6 +1,6 @@
 # TextScene Inspector
 
-View and navigate text-based 3D scene (.tscn) files in VS Code. The rendering layer is react-three-fiber over three.js; see [ARCHITECTURE.md](./ARCHITECTURE.md) for the layout.
+Preview **Godot `.tscn` scenes in 3D — inside VS Code or your browser, with no Godot install.** Renders meshes, materials, lights and cameras via react-three-fiber/three.js, plus a scene-tree inspector and a `.tscn` linter. See [ARCHITECTURE.md](./ARCHITECTURE.md) for the layout.
 
 ## Status
 
@@ -8,23 +8,23 @@ View and navigate text-based 3D scene (.tscn) files in VS Code. The rendering la
 
 ## Features
 
-**Implemented:**
-- ✅ TSCN file parsing with full scene tree hierarchy
-- ✅ Node3D and MeshInstance3D node types (self-registering)
-- ✅ BoxMesh, CylinderMesh, SphereMesh primitives
-- ✅ StandardMaterial3D with PBR properties
-- ✅ Three.js rendering with orbit controls
-- ✅ Interactive scene tree viewer
-- ✅ Node property inspector
-- ✅ VS Code extension with webview preview
-- ✅ Web previewer for debugging
+**Why it's different** (what other `.tscn` tools don't do):
+- 🧊 **Real 3D rendering** of the scene — meshes, PBR materials, lights, cameras, environments, and instanced sub-scenes — not just a node tree
+- 🚫 **No Godot install or editor cache** — renders straight from the `.tscn` text
+- 🌐 **Runs in the browser** via the standalone web previewer
+- ✅ **Built-in `.tscn` linter** for catching malformed scenes
 
-**In Progress:**
-- 🔄 Additional light types (SpotLight3D, DirectionalLight3D)
-- 🔄 External resource loading and scene instancing
-- 🔄 Camera3D support
+**Also implemented:**
+- ✅ Full scene-tree hierarchy parsing with an interactive, searchable tree viewer
+- ✅ Node property inspector with click-to-select in the 3D viewport
+- ✅ Self-registering node system: Node3D, MeshInstance3D, Camera3D, lights, WorldEnvironment
+- ✅ Mesh primitives: Box, Sphere, Cylinder, Plane, Capsule, Torus, Prism
+- ✅ StandardMaterial3D PBR with external textures, normal maps, emission, and UV transforms
+- ✅ Spot, Directional, and Omni lights with shadows
+- ✅ External scene instancing (PackedScene) and external textures
+- ✅ VS Code extension (webview preview, outline, jump-to-definition, hot-reload) + web previewer
 
-See [TODO.md](./TODO.md) for complete roadmap.
+See [TODO.md](./TODO.md) for the complete roadmap.
 
 ## Getting Started
 
