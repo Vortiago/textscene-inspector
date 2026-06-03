@@ -39,8 +39,8 @@ export function MeshGeometry({ resource }: MeshGeometryProps) {
         <sphereGeometry
           args={[
             parsed.properties.radius,
-            parsed.properties.radial_segments ?? 32,
-            parsed.properties.rings ?? 16,
+            parsed.properties.radial_segments ?? 64,
+            parsed.properties.rings ?? 32,
           ]}
         />
       );
@@ -53,8 +53,8 @@ export function MeshGeometry({ resource }: MeshGeometryProps) {
             parsed.properties.top_radius,
             parsed.properties.bottom_radius,
             parsed.properties.height,
-            parsed.properties.radial_segments ?? 32,
-            parsed.properties.rings ?? 1,
+            parsed.properties.radial_segments ?? 64,
+            parsed.properties.rings ?? 4,
           ]}
         />
       );

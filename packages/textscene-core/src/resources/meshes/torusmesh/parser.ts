@@ -4,8 +4,8 @@ import { warn } from '../../../logger';
 export function parseTorusMesh(properties: Record<string, string>): TorusMeshProperties {
   let innerRadius = 0.5;
   let outerRadius = 1.0;
-  let rings = 32;
-  let ringSegments = 16;
+  let rings = 64; // Godot default
+  let ringSegments = 32; // Godot default
 
   if (properties.inner_radius) {
     const parsed = parseFloat(properties.inner_radius);
