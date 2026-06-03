@@ -11,7 +11,7 @@ import type { ControlComponentProps } from '../../../../r3f/controls/ControlComp
 import { useControlParent } from '../../../../r3f/controls/ControlParentContext';
 import { useSceneResources } from '../../../../r3f/SceneResourcesContext';
 import { controlLayoutStyle } from '../../../../r3f/controls/controlLayout';
-import { controlColorToCss } from '../../../../r3f/controls/styleBoxToCss';
+import { textThemeStyle } from '../../../../r3f/controls/textThemeStyle';
 import { resolveStyleBoxCss } from '../../../../r3f/controls/resolveStyleBox';
 import type { ButtonProperties } from './types';
 
@@ -40,12 +40,9 @@ export function Button({ node, children }: ControlComponentProps) {
     textAlign: 'center',
     ...(useDefaults ? DEFAULTS : {}),
     ...styleBoxCss,
+    ...textThemeStyle(props, { sizeKey: 'font_size', colorKey: 'font_color' }),
   };
 
-  const fontSize = props.themeOverrideFontSizes?.font_size;
-  if (fontSize) style.fontSize = `${fontSize}px`;
-  const fontColor = props.themeOverrideColors?.font_color;
-  if (fontColor) style.color = controlColorToCss(fontColor);
   if (props.disabled) style.opacity = 0.6;
 
   return (

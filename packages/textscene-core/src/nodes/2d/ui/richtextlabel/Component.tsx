@@ -12,19 +12,18 @@ import type { CSSProperties } from 'react';
 import type { ControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { useControlParent } from '../../../../r3f/controls/ControlParentContext';
 import { controlLayoutStyle } from '../../../../r3f/controls/controlLayout';
-import { controlColorToCss } from '../../../../r3f/controls/styleBoxToCss';
+import { textThemeStyle } from '../../../../r3f/controls/textThemeStyle';
 import { parseBBCode } from './bbcode';
 import type { RichTextLabelProperties } from './types';
 
 export function RichTextLabel({ node }: ControlComponentProps) {
   const props = node.properties as RichTextLabelProperties;
   const parentKind = useControlParent();
-  const style: CSSProperties = { ...controlLayoutStyle(props, parentKind), whiteSpace: 'pre-wrap' };
-
-  const fontSize = props.themeOverrideFontSizes?.normal_font_size;
-  if (fontSize) style.fontSize = `${fontSize}px`;
-  const fontColor = props.themeOverrideColors?.default_color;
-  if (fontColor) style.color = controlColorToCss(fontColor);
+  const style: CSSProperties = {
+    ...controlLayoutStyle(props, parentKind),
+    whiteSpace: 'pre-wrap',
+    ...textThemeStyle(props, { sizeKey: 'normal_font_size', colorKey: 'default_color' }),
+  };
 
   const text = props.text ?? '';
   const content = props.bbcodeEnabled ? parseBBCode(text) : text;

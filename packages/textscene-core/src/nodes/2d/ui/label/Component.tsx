@@ -8,7 +8,7 @@ import type { CSSProperties } from 'react';
 import type { ControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { useControlParent } from '../../../../r3f/controls/ControlParentContext';
 import { controlLayoutStyle } from '../../../../r3f/controls/controlLayout';
-import { controlColorToCss } from '../../../../r3f/controls/styleBoxToCss';
+import { textThemeStyle } from '../../../../r3f/controls/textThemeStyle';
 import type { LabelProperties } from './types';
 
 const H_ALIGN = ['left', 'center', 'right', 'justify'] as const;
@@ -18,12 +18,11 @@ const V_JUSTIFY = ['flex-start', 'center', 'flex-end', 'stretch'] as const;
 export function Label({ node }: ControlComponentProps) {
   const props = node.properties as LabelProperties;
   const parentKind = useControlParent();
-  const style: CSSProperties = { ...controlLayoutStyle(props, parentKind) };
+  const style: CSSProperties = {
+    ...controlLayoutStyle(props, parentKind),
+    ...textThemeStyle(props, { sizeKey: 'font_size', colorKey: 'font_color' }),
+  };
 
-  const fontSize = props.themeOverrideFontSizes?.font_size;
-  if (fontSize) style.fontSize = `${fontSize}px`;
-  const fontColor = props.themeOverrideColors?.font_color;
-  if (fontColor) style.color = controlColorToCss(fontColor);
   if (props.horizontalAlignment !== undefined) {
     style.textAlign = H_ALIGN[props.horizontalAlignment] ?? 'left';
   }
