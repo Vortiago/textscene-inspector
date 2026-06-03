@@ -45,12 +45,12 @@ function createSimpleNode(heading: ParsedHeading, properties: Record<string, str
     node.parent = heading.attributes.parent;
   }
 
-  // Store special attributes if present
-  if (heading.attributes.index) {
-    (node.properties as Record<string, unknown>)['__instance_index'] = heading.attributes.index;
-  }
+  // Carry an instance reference on the dedicated TscnNode field rather than
+  // smuggling a `__instance` key into the property schema. (An `index=`-only
+  // editable-instance child has no consumer here; its index is already
+  // reflected in `type` via the fallback above.)
   if (heading.attributes.instance) {
-    (node.properties as Record<string, unknown>)['__instance'] = heading.attributes.instance;
+    node.instance = heading.attributes.instance;
   }
 
   return node;

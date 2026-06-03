@@ -221,7 +221,7 @@ visible = true
       expect(result.scene).toBeDefined();
     });
 
-    it('should store index attribute in __instance_index property', () => {
+    it('parses an index-only child node without polluting its properties', () => {
       const content = `[gd_scene load_steps=1 format=3]
 
 [node name="Root" type="Node3D"]
@@ -234,10 +234,12 @@ visible = true
       expect(result.errors).toHaveLength(0);
       expect(result.scene).toBeDefined();
       const childNode = result.scene!.nodes[0]!.children[0]!;
-      expect((childNode.properties as Record<string, unknown>)['__instance_index']).toBe('0');
+      expect(childNode.name).toBe('@Child@123');
+      // No `__`-prefixed metadata smuggled into the property schema.
+      expect((childNode.properties as Record<string, unknown>)['__instance_index']).toBeUndefined();
     });
 
-    it('should store instance attribute in __instance property', () => {
+    it('exposes an instance reference on node.instance, not a __instance property', () => {
       const content = `[gd_scene load_steps=2 format=3]
 
 [ext_resource type="PackedScene" path="res://enemy.tscn" id="1_abc"]
@@ -252,7 +254,8 @@ visible = true
       expect(result.errors).toHaveLength(0);
       expect(result.scene).toBeDefined();
       const childNode = result.scene!.nodes[0]!.children[0]!;
-      expect((childNode.properties as Record<string, unknown>)['__instance']).toBe('ExtResource("1_abc")');
+      expect(childNode.instance).toBe('ExtResource("1_abc")');
+      expect((childNode.properties as Record<string, unknown>)['__instance']).toBeUndefined();
     });
   });
 
