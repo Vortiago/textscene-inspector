@@ -15,8 +15,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
-  FileEventBus,
-  ResourceLoader,
+  createResourcePipeline,
   ResourceLoaderProvider,
   TscnPreviewShell,
   setLogAdapter,
@@ -78,13 +77,10 @@ function R3FWebviewApp({ vscode }: { vscode: VsCodeApi }) {
   // provider's `loadResource` calls by responding to `loadResource`
   // postMessages with the file bytes; the FileEventBus + ResourceLoader
   // sit between that provider and `useResource` in node components.
-  const loader = useMemo(() => {
-    const provider = new WebviewResourceProvider(vscode);
-    const bus = new FileEventBus(provider);
-    const created = new ResourceLoader(bus);
-    created.setProvider(provider);
-    return created;
-  }, [vscode]);
+  const loader = useMemo(
+    () => createResourcePipeline(new WebviewResourceProvider(vscode)).loader,
+    [vscode]
+  );
 
   useEffect(() => {
     function onMessage(event: MessageEvent) {

@@ -81,3 +81,5 @@ export type { ResourceLoaderProviderProps } from './resources/ResourceLoaderCont
 export { ResourceLoader } from './resources/ResourceLoader';
 export { FileEventBus } from './resources/FileEventBus';
 export type { FileData, FileLoadedHandler, FileFailedHandler } from './resources/FileEventBus';
+export { createResourcePipeline } from './resources/createResourcePipeline';
+export type { ResourcePipeline } from './resources/createResourcePipeline';

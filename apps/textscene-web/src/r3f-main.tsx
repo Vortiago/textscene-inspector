@@ -22,8 +22,7 @@ import {
 } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
-  FileEventBus,
-  ResourceLoader,
+  createResourcePipeline,
   ResourceLoaderProvider,
   TscnPreviewShell,
   type ViewportSelectorOption,
@@ -76,13 +75,10 @@ export function R3FApp() {
   // the lifetime of the app; React component identity preserves them
   // across fixture switches so an already-uploaded texture survives a
   // fixture reload.
-  const { provider, loader } = useMemo(() => {
-    const provider = new WebResourceProvider();
-    const bus = new FileEventBus(provider);
-    const loader = new ResourceLoader(bus);
-    loader.setProvider(provider);
-    return { provider, loader };
-  }, []);
+  const { provider, loader } = useMemo(
+    () => createResourcePipeline(new WebResourceProvider()),
+    []
+  );
 
   const options = useMemo<ViewportSelectorOption[]>(() => {
     const fixtureOptions: ViewportSelectorOption[] = fixtures.map((f) => ({
