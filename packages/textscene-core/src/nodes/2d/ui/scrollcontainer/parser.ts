@@ -13,7 +13,3 @@ export function parseScrollContainer(
 ): ControlProperties {
   return parseControl(heading, properties);
 }
-
-export function isScrollContainer(heading: ParsedHeading): boolean {
-  return heading.type === 'node' && heading.attributes.type === 'ScrollContainer';
-}

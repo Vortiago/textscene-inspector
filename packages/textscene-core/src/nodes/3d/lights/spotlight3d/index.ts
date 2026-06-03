@@ -3,12 +3,11 @@
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
-import { parseSpotLight3D, isSpotLight3D } from './parser';
+import { parseSpotLight3D } from './parser';
 import { formatSpotLight3DProperties } from './propertyFormatter';
 
 const spotLight3DRegistration: NodeTypeRegistration = {
   typeName: 'SpotLight3D',
-  typeGuard: isSpotLight3D,
   parser: parseSpotLight3D,
   propertyFormatter: formatSpotLight3DProperties,
 };

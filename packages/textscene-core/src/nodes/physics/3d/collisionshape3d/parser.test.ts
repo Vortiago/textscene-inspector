@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseCollisionShape3D, isCollisionShape3D } from './parser';
+import { parseCollisionShape3D } from './parser';
 import type { ParsedHeading } from '../../../../parser/utils';
 
 function heading(attributes: Record<string, string>): ParsedHeading {
@@ -21,15 +21,5 @@ describe('parseCollisionShape3D', () => {
       disabled: 'true',
     });
     expect(props.disabled).toBe(true);
-  });
-});
-
-describe('isCollisionShape3D', () => {
-  it('matches a CollisionShape3D heading', () => {
-    expect(isCollisionShape3D(heading({ type: 'CollisionShape3D' }))).toBe(true);
-  });
-
-  it('rejects other types', () => {
-    expect(isCollisionShape3D(heading({ type: 'StaticBody3D' }))).toBe(false);
   });
 });

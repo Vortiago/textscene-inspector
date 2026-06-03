@@ -9,10 +9,6 @@ import { parseNode2D } from '../../base/node2d/parser';
 import { intOr, vec2Or } from '../../../parser/valueParsers';
 import { Camera2DAnchorMode, type Camera2DProperties } from './types';
 
-export function isCamera2D(heading: ParsedHeading): boolean {
-  return heading.type === 'node' && heading.attributes.type === 'Camera2D';
-}
-
 export function parseCamera2D(
   heading: ParsedHeading,
   properties: Record<string, string>

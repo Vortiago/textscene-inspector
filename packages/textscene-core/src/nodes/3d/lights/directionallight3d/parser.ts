@@ -25,7 +25,3 @@ export function parseDirectionalLight3D(
       : undefined,
   };
 }
-
-export function isDirectionalLight3D(heading: ParsedHeading): boolean {
-  return heading.type === 'node' && heading.attributes.type === 'DirectionalLight3D';
-}

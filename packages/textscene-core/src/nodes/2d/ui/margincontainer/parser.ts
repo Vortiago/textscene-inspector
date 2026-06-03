@@ -14,7 +14,3 @@ export function parseMarginContainer(
 ): ControlProperties {
   return parseControl(heading, properties);
 }
-
-export function isMarginContainer(heading: ParsedHeading): boolean {
-  return heading.type === 'node' && heading.attributes.type === 'MarginContainer';
-}

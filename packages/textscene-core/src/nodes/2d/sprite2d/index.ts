@@ -1,11 +1,10 @@
 /** Sprite2D registration — parser. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';
-import { parseSprite2D, isSprite2D } from './parser';
+import { parseSprite2D } from './parser';
 
 const sprite2DRegistration: NodeTypeRegistration = {
   typeName: 'Sprite2D',
-  typeGuard: isSprite2D,
   parser: parseSprite2D,
 };
 

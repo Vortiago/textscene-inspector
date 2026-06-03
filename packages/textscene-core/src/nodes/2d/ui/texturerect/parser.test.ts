@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ParsedHeading } from '../../../../parser/utils';
-import { parseTextureRect, isTextureRect } from './parser';
+import { parseTextureRect } from './parser';
 
 function h(attributes: Record<string, string>): ParsedHeading {
   return { type: 'node', attributes };
@@ -28,10 +28,5 @@ describe('parseTextureRect', () => {
     expect(p.texture).toBeUndefined();
     expect(p.expandMode).toBeUndefined();
     expect(p.stretchMode).toBeUndefined();
-  });
-
-  it('type guard accepts/rejects', () => {
-    expect(isTextureRect(h({ type: 'TextureRect' }))).toBe(true);
-    expect(isTextureRect(h({ type: 'TextureButton' }))).toBe(false);
   });
 });

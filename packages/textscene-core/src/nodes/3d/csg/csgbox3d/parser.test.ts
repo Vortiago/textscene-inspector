@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseCSGBox3D, isCSGBox3D } from './parser';
+import { parseCSGBox3D } from './parser';
 import type { ParsedHeading } from '../../../../parser/utils';
 
 function heading(attributes: Record<string, string>): ParsedHeading {
@@ -46,15 +46,5 @@ describe('parseCSGBox3D', () => {
       size: 'not-a-vector',
     });
     expect(props.size).toEqual({ x: 2, y: 2, z: 2 });
-  });
-});
-
-describe('isCSGBox3D', () => {
-  it('matches a CSGBox3D node heading', () => {
-    expect(isCSGBox3D(heading({ type: 'CSGBox3D' }))).toBe(true);
-  });
-
-  it('rejects other node types', () => {
-    expect(isCSGBox3D(heading({ type: 'MeshInstance3D' }))).toBe(false);
   });
 });

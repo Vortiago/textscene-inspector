@@ -6,13 +6,10 @@
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
-import type { ParsedHeading } from '../../../../parser/utils';
 import { parseNode3D } from '../../../base/node3d/parser';
 
 const area3DRegistration: NodeTypeRegistration = {
   typeName: 'Area3D',
-  typeGuard: (heading: ParsedHeading) =>
-    heading.type === 'node' && heading.attributes.type === 'Area3D',
   parser: parseNode3D,
 };
 

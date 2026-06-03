@@ -21,7 +21,3 @@ export function parseSpotLight3D(
     spot_angle: properties.spot_angle ? parseFloat(properties.spot_angle) : 45.0,
   };
 }
-
-export function isSpotLight3D(heading: ParsedHeading): boolean {
-  return heading.type === 'node' && heading.attributes.type === 'SpotLight3D';
-}

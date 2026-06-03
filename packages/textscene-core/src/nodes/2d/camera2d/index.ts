@@ -1,11 +1,10 @@
 /** Camera2D registration — parser. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';
-import { parseCamera2D, isCamera2D } from './parser';
+import { parseCamera2D } from './parser';
 
 const camera2DRegistration: NodeTypeRegistration = {
   typeName: 'Camera2D',
-  typeGuard: isCamera2D,
   parser: parseCamera2D,
 };
 

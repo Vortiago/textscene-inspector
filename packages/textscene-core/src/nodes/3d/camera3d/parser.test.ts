@@ -3,35 +3,11 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { isCamera3D, parseCamera3D } from './parser';
+import { parseCamera3D } from './parser';
 import { ProjectionMode, KeepAspectMode } from './types';
 import type { ParsedHeading } from '../../../parser/utils';
 
 describe('Camera3D Parser', () => {
-  describe('isCamera3D', () => {
-    it('should identify Camera3D nodes', () => {
-      const heading: ParsedHeading = {
-        type: 'node',
-        attributes: {
-          name: 'MainCamera',
-          type: 'Camera3D',
-        },
-      };
-      expect(isCamera3D(heading)).toBe(true);
-    });
-
-    it('should reject non-Camera3D nodes', () => {
-      const heading: ParsedHeading = {
-        type: 'node',
-        attributes: {
-          name: 'Root',
-          type: 'Node3D',
-        },
-      };
-      expect(isCamera3D(heading)).toBe(false);
-    });
-  });
-
   describe('parseCamera3D', () => {
     it('should parse perspective camera with defaults', () => {
       const heading: ParsedHeading = {

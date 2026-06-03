@@ -14,7 +14,3 @@ export function parseCenterContainer(
 ): ControlProperties {
   return parseControl(heading, properties);
 }
-
-export function isCenterContainer(heading: ParsedHeading): boolean {
-  return heading.type === 'node' && heading.attributes.type === 'CenterContainer';
-}

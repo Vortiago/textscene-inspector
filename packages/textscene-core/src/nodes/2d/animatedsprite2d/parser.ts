@@ -10,10 +10,6 @@ import { parseNode2D } from '../../base/node2d/parser';
 import { boolOr, intOr, vec2Or } from '../../../parser/valueParsers';
 import type { AnimatedSprite2DProperties } from './types';
 
-export function isAnimatedSprite2D(heading: ParsedHeading): boolean {
-  return heading.type === 'node' && heading.attributes.type === 'AnimatedSprite2D';
-}
-
 export function parseAnimatedSprite2D(
   heading: ParsedHeading,
   properties: Record<string, string>

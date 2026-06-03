@@ -1,11 +1,10 @@
 /** CanvasLayer registration — parser. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
-import { parseCanvasLayer, isCanvasLayer } from './parser';
+import { parseCanvasLayer } from './parser';
 
 const canvasLayerRegistration: NodeTypeRegistration = {
   typeName: 'CanvasLayer',
-  typeGuard: isCanvasLayer,
   parser: parseCanvasLayer,
 };
 

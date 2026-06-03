@@ -1,11 +1,10 @@
 /** Control registration — parser. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
-import { parseControl, isControl } from './parser';
+import { parseControl } from './parser';
 
 const controlRegistration: NodeTypeRegistration = {
   typeName: 'Control',
-  typeGuard: isControl,
   parser: parseControl,
 };
 

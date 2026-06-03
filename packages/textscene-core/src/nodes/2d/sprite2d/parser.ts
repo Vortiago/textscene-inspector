@@ -11,10 +11,6 @@ import { warn } from '../../../logger';
 import type { Rect2, Sprite2DProperties } from './types';
 import type { Vector2 } from '../../base/node2d/types';
 
-export function isSprite2D(heading: ParsedHeading): boolean {
-  return heading.type === 'node' && heading.attributes.type === 'Sprite2D';
-}
-
 export function parseSprite2D(
   heading: ParsedHeading,
   properties: Record<string, string>

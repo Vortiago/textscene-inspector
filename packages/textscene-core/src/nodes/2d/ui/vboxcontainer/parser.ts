@@ -14,7 +14,3 @@ export function parseVBoxContainer(
 ): ControlProperties {
   return parseControl(heading, properties);
 }
-
-export function isVBoxContainer(heading: ParsedHeading): boolean {
-  return heading.type === 'node' && heading.attributes.type === 'VBoxContainer';
-}

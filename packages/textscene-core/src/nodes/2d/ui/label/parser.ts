@@ -16,7 +16,3 @@ export function parseLabel(
   result.autowrapMode = parseOptionalInt(properties.autowrap_mode);
   return result;
 }
-
-export function isLabel(heading: ParsedHeading): boolean {
-  return heading.type === 'node' && heading.attributes.type === 'Label';
-}

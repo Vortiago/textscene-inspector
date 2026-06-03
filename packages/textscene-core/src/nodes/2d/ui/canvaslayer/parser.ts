@@ -17,7 +17,3 @@ export function parseCanvasLayer(
   if (layer !== undefined) result.layer = layer;
   return result;
 }
-
-export function isCanvasLayer(heading: ParsedHeading): boolean {
-  return heading.type === 'node' && heading.attributes.type === 'CanvasLayer';
-}

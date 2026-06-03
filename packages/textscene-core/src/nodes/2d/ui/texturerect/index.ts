@@ -1,11 +1,10 @@
 /** TextureRect registration — parser. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
-import { parseTextureRect, isTextureRect } from './parser';
+import { parseTextureRect } from './parser';
 
 const textureRectRegistration: NodeTypeRegistration = {
   typeName: 'TextureRect',
-  typeGuard: isTextureRect,
   parser: parseTextureRect,
 };
 

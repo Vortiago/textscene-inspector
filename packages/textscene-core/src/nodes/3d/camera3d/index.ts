@@ -3,12 +3,11 @@
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';
-import { parseCamera3D, isCamera3D } from './parser';
+import { parseCamera3D } from './parser';
 import { formatCamera3DProperties } from './propertyFormatter';
 
 const camera3DRegistration: NodeTypeRegistration = {
   typeName: 'Camera3D',
-  typeGuard: isCamera3D,
   parser: parseCamera3D,
   propertyFormatter: formatCamera3DProperties,
 };

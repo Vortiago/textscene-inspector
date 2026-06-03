@@ -96,7 +96,3 @@ export function parseControl(
 
   return result;
 }
-
-export function isControl(heading: ParsedHeading): boolean {
-  return heading.type === 'node' && heading.attributes.type === 'Control';
-}

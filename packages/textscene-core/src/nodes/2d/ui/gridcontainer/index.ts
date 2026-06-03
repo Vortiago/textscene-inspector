@@ -1,11 +1,10 @@
 /** GridContainer registration — parser. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
-import { parseGridContainer, isGridContainer } from './parser';
+import { parseGridContainer } from './parser';
 
 const gridContainerRegistration: NodeTypeRegistration = {
   typeName: 'GridContainer',
-  typeGuard: isGridContainer,
   parser: parseGridContainer,
 };
 

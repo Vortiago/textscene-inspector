@@ -16,7 +16,3 @@ export function parseButton(
   result.alignment = parseOptionalInt(properties.alignment);
   return result;
 }
-
-export function isButton(heading: ParsedHeading): boolean {
-  return heading.type === 'node' && heading.attributes.type === 'Button';
-}

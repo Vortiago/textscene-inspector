@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ParsedHeading } from '../../../../parser/utils';
-import { parseGridContainer, isGridContainer } from './parser';
+import { parseGridContainer } from './parser';
 
 function h(attributes: Record<string, string>): ParsedHeading {
   return { type: 'node', attributes };
@@ -21,10 +21,5 @@ describe('parseGridContainer', () => {
   it('leaves columns undefined when absent', () => {
     const p = parseGridContainer(h({ name: 'G', type: 'GridContainer' }), {});
     expect(p.columns).toBeUndefined();
-  });
-
-  it('type guard accepts/rejects', () => {
-    expect(isGridContainer(h({ type: 'GridContainer' }))).toBe(true);
-    expect(isGridContainer(h({ type: 'VBoxContainer' }))).toBe(false);
   });
 });

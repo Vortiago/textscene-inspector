@@ -7,13 +7,10 @@
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
-import type { ParsedHeading } from '../../../../parser/utils';
 import { parseNode3D } from '../../../base/node3d/parser';
 
 const rigidBody3DRegistration: NodeTypeRegistration = {
   typeName: 'RigidBody3D',
-  typeGuard: (heading: ParsedHeading) =>
-    heading.type === 'node' && heading.attributes.type === 'RigidBody3D',
   parser: parseNode3D,
 };
 

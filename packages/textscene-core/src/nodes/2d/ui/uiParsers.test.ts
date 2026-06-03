@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { ParsedHeading } from '../../../parser/utils';
-import { parseColorRect, isColorRect } from './colorrect/parser';
-import { parseLabel, isLabel } from './label/parser';
-import { parseVBoxContainer, isVBoxContainer } from './vboxcontainer/parser';
+import { parseColorRect } from './colorrect/parser';
+import { parseLabel } from './label/parser';
+import { parseVBoxContainer } from './vboxcontainer/parser';
 
 function h(attributes: Record<string, string>): ParsedHeading {
   return { type: 'node', attributes };
@@ -17,10 +17,6 @@ describe('parseColorRect', () => {
     expect(p.color).toBe('Color(0, 0, 1, 1)');
     expect(p.anchorsPreset).toBe(15);
   });
-  it('type guard', () => {
-    expect(isColorRect(h({ type: 'ColorRect' }))).toBe(true);
-    expect(isColorRect(h({ type: 'Label' }))).toBe(false);
-  });
 });
 
 describe('parseLabel', () => {
@@ -34,9 +30,6 @@ describe('parseLabel', () => {
     expect(p.horizontalAlignment).toBe(1);
     expect(p.themeOverrideFontSizes?.font_size).toBe(18);
   });
-  it('type guard', () => {
-    expect(isLabel(h({ type: 'Label' }))).toBe(true);
-  });
 });
 
 describe('parseVBoxContainer', () => {
@@ -45,9 +38,5 @@ describe('parseVBoxContainer', () => {
       'theme_override_constants/separation': '8',
     });
     expect(p.themeOverrideConstants?.separation).toBe(8);
-  });
-  it('type guard', () => {
-    expect(isVBoxContainer(h({ type: 'VBoxContainer' }))).toBe(true);
-    expect(isVBoxContainer(h({ type: 'HBoxContainer' }))).toBe(false);
   });
 });

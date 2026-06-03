@@ -1,11 +1,10 @@
 /** CSGBox3D registration — parser. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
-import { parseCSGBox3D, isCSGBox3D } from './parser';
+import { parseCSGBox3D } from './parser';
 
 const csgBox3DRegistration: NodeTypeRegistration = {
   typeName: 'CSGBox3D',
-  typeGuard: isCSGBox3D,
   parser: parseCSGBox3D,
 };
 

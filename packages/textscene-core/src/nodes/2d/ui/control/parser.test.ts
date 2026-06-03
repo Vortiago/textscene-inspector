@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseControl, isControl } from './parser';
+import { parseControl } from './parser';
 import type { ParsedHeading } from '../../../../parser/utils';
 
 function heading(attributes: Record<string, string>): ParsedHeading {
@@ -51,14 +51,5 @@ describe('parseControl', () => {
 
   it('captures visibility', () => {
     expect(parseControl(heading({ name: 'C', type: 'Control' }), { visible: 'false' }).visible).toBe(false);
-  });
-});
-
-describe('isControl', () => {
-  it('matches Control', () => {
-    expect(isControl(heading({ type: 'Control' }))).toBe(true);
-  });
-  it('rejects other types', () => {
-    expect(isControl(heading({ type: 'Label' }))).toBe(false);
   });
 });

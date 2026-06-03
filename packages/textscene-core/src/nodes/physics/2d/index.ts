@@ -12,7 +12,6 @@
 
 import { nodeRegistry } from '../../../core/NodeRegistry';
 import { parseNode2D } from '../../base/node2d/parser';
-import type { ParsedHeading } from '../../../parser/utils';
 
 export const TWO_D_PHYSICS_TYPES = [
   'Area2D',
@@ -25,8 +24,6 @@ export const TWO_D_PHYSICS_TYPES = [
 for (const typeName of TWO_D_PHYSICS_TYPES) {
   nodeRegistry.register({
     typeName,
-    typeGuard: (heading: ParsedHeading) =>
-      heading.type === 'node' && heading.attributes.type === typeName,
     parser: parseNode2D,
   });
 }

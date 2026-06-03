@@ -13,7 +13,3 @@ export function parseGridContainer(
   result.columns = parseOptionalInt(properties.columns);
   return result;
 }
-
-export function isGridContainer(heading: ParsedHeading): boolean {
-  return heading.type === 'node' && heading.attributes.type === 'GridContainer';
-}

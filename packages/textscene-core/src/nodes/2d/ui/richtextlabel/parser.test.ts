@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ParsedHeading } from '../../../../parser/utils';
-import { parseRichTextLabel, isRichTextLabel } from './parser';
+import { parseRichTextLabel } from './parser';
 
 function h(attributes: Record<string, string>): ParsedHeading {
   return { type: 'node', attributes };
@@ -25,10 +25,5 @@ describe('parseRichTextLabel', () => {
     expect(p.text).toBeUndefined();
     expect(p.bbcodeEnabled).toBe(false);
     expect(p.fitContent).toBe(false);
-  });
-
-  it('type guard accepts/rejects', () => {
-    expect(isRichTextLabel(h({ type: 'RichTextLabel' }))).toBe(true);
-    expect(isRichTextLabel(h({ type: 'Label' }))).toBe(false);
   });
 });

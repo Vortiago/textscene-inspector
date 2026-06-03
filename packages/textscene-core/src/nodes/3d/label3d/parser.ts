@@ -8,10 +8,6 @@ import { BillboardMode } from './types';
 import { parseNode3D } from '../../base/node3d/parser';
 import { parseColor } from '../../../utils/colorParser';
 
-export function isLabel3D(heading: ParsedHeading): boolean {
-  return heading.type === 'node' && heading.attributes.type === 'Label3D';
-}
-
 export function parseLabel3D(
   heading: ParsedHeading,
   properties: Record<string, string>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ParsedHeading } from '../../../../parser/utils';
-import { parseButton, isButton } from './parser';
+import { parseButton } from './parser';
 
 function h(attributes: Record<string, string>): ParsedHeading {
   return { type: 'node', attributes };
@@ -31,10 +31,5 @@ describe('parseButton', () => {
     expect(p.flat).toBe(false);
     expect(p.alignment).toBeUndefined();
     expect(p.themeOverrideStyles?.normal).toBe('SubResource("StyleBoxFlat_1")');
-  });
-
-  it('type guard accepts/rejects', () => {
-    expect(isButton(h({ type: 'Button' }))).toBe(true);
-    expect(isButton(h({ type: 'Label' }))).toBe(false);
   });
 });

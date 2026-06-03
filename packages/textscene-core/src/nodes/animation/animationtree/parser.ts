@@ -12,10 +12,6 @@ import {
   CallbackModeMethod,
 } from './types';
 
-export function isAnimationTree(heading: ParsedHeading): boolean {
-  return heading.type === 'node' && heading.attributes.type === 'AnimationTree';
-}
-
 export function parseAnimationTree(
   heading: ParsedHeading,
   properties: Record<string, string>

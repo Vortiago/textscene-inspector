@@ -14,7 +14,3 @@ export function parseRichTextLabel(
   result.fitContent = properties.fit_content === 'true';
   return result;
 }
-
-export function isRichTextLabel(heading: ParsedHeading): boolean {
-  return heading.type === 'node' && heading.attributes.type === 'RichTextLabel';
-}

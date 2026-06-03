@@ -8,12 +8,11 @@
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';
-import { parseMeshInstance3D, isMeshInstance3D } from './parser';
+import { parseMeshInstance3D } from './parser';
 import { formatMeshInstance3DProperties } from './propertyFormatter';
 
 const meshInstance3DRegistration: NodeTypeRegistration = {
   typeName: 'MeshInstance3D',
-  typeGuard: isMeshInstance3D,
   parser: parseMeshInstance3D,
   propertyFormatter: formatMeshInstance3DProperties,
 };

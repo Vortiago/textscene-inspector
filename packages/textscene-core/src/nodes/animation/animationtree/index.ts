@@ -3,12 +3,11 @@
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';
-import { isAnimationTree, parseAnimationTree } from './parser';
+import { parseAnimationTree } from './parser';
 import { formatAnimationTreeProperties } from './propertyFormatter';
 
 const animationTreeRegistration: NodeTypeRegistration = {
   typeName: 'AnimationTree',
-  typeGuard: isAnimationTree,
   parser: parseAnimationTree,
   propertyFormatter: formatAnimationTreeProperties,
 };

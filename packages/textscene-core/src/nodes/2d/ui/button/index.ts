@@ -1,11 +1,10 @@
 /** Button registration — parser. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
-import { parseButton, isButton } from './parser';
+import { parseButton } from './parser';
 
 const buttonRegistration: NodeTypeRegistration = {
   typeName: 'Button',
-  typeGuard: isButton,
   parser: parseButton,
 };
 

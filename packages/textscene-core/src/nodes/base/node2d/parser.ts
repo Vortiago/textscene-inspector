@@ -17,10 +17,6 @@ import type { Node2DProperties, Vector2 } from './types';
 const TRANSFORM2D_RE =
   /^Transform2D\(\s*(-?[\d.eE+-]+)\s*,\s*(-?[\d.eE+-]+)\s*,\s*(-?[\d.eE+-]+)\s*,\s*(-?[\d.eE+-]+)\s*,\s*(-?[\d.eE+-]+)\s*,\s*(-?[\d.eE+-]+)\s*\)$/;
 
-export function isNode2D(heading: ParsedHeading): boolean {
-  return heading.type === 'node' && heading.attributes.type === 'Node2D';
-}
-
 export function parseNode2D(
   heading: ParsedHeading,
   properties: Record<string, string>

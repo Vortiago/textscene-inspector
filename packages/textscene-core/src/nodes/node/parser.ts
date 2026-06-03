@@ -24,7 +24,3 @@ export function parseNode(
     transform,
   };
 }
-
-export function isNode(heading: ParsedHeading): boolean {
-  return heading.type === 'node' && heading.attributes.type === 'Node';
-}

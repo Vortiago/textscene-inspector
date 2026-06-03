@@ -17,7 +17,3 @@ export function parseTextureRect(
   result.stretchMode = parseOptionalInt(properties.stretch_mode);
   return result;
 }
-
-export function isTextureRect(heading: ParsedHeading): boolean {
-  return heading.type === 'node' && heading.attributes.type === 'TextureRect';
-}

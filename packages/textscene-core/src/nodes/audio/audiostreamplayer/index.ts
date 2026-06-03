@@ -8,13 +8,10 @@
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';
-import type { ParsedHeading } from '../../../parser/utils';
 import { parseNode } from '../../node/parser';
 
 const audioStreamPlayerRegistration: NodeTypeRegistration = {
   typeName: 'AudioStreamPlayer',
-  typeGuard: (heading: ParsedHeading) =>
-    heading.type === 'node' && heading.attributes.type === 'AudioStreamPlayer',
   parser: parseNode,
 };
 

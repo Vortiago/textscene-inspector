@@ -14,7 +14,3 @@ export function parseHBoxContainer(
 ): ControlProperties {
   return parseControl(heading, properties);
 }
-
-export function isHBoxContainer(heading: ParsedHeading): boolean {
-  return heading.type === 'node' && heading.attributes.type === 'HBoxContainer';
-}

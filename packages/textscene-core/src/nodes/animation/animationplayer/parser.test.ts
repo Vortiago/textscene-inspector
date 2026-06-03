@@ -7,31 +7,13 @@
 
 import { describe, it, expect } from 'vitest';
 import type { ParsedHeading } from '../../../parser/utils';
-import { isAnimationPlayer, parseAnimationPlayer } from './parser';
+import { parseAnimationPlayer } from './parser';
 import { AnimationProcessMode, MethodCallMode } from './types';
 
 const HEADING: ParsedHeading = {
   type: 'node',
   attributes: { name: 'AnimationPlayer', type: 'AnimationPlayer' },
 };
-
-describe('isAnimationPlayer', () => {
-  it('identifies AnimationPlayer headings', () => {
-    expect(isAnimationPlayer(HEADING)).toBe(true);
-  });
-
-  it('rejects non-AnimationPlayer node types', () => {
-    expect(
-      isAnimationPlayer({ type: 'node', attributes: { name: 'X', type: 'AnimationTree' } })
-    ).toBe(false);
-  });
-
-  it('rejects non-node headings', () => {
-    expect(
-      isAnimationPlayer({ type: 'sub_resource', attributes: { type: 'AnimationPlayer' } })
-    ).toBe(false);
-  });
-});
 
 describe('parseAnimationPlayer defaults', () => {
   it('applies Godot defaults when only the heading is supplied', () => {

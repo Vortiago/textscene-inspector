@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ParsedHeading } from '../../../../parser/utils';
-import { parsePanelContainer, isPanelContainer } from './parser';
+import { parsePanelContainer } from './parser';
 
 function h(attributes: Record<string, string>): ParsedHeading {
   return { type: 'node', attributes };
@@ -20,10 +20,5 @@ describe('parsePanelContainer', () => {
     const p = parsePanelContainer(h({ name: 'Bare', type: 'PanelContainer' }), {});
     expect(p.name).toBe('Bare');
     expect(p.themeOverrideStyles).toBeUndefined();
-  });
-
-  it('type guard accepts PanelContainer and rejects others', () => {
-    expect(isPanelContainer(h({ type: 'PanelContainer' }))).toBe(true);
-    expect(isPanelContainer(h({ type: 'Panel' }))).toBe(false);
   });
 });

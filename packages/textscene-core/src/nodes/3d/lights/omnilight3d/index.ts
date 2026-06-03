@@ -3,12 +3,11 @@
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
-import { parseOmniLight3D, isOmniLight3D } from './parser';
+import { parseOmniLight3D } from './parser';
 import { formatOmniLight3DProperties } from './propertyFormatter';
 
 const omniLight3DRegistration: NodeTypeRegistration = {
   typeName: 'OmniLight3D',
-  typeGuard: isOmniLight3D,
   parser: parseOmniLight3D,
   propertyFormatter: formatOmniLight3DProperties,
 };

@@ -9,25 +9,13 @@
 
 import { describe, it, expect } from 'vitest';
 import type { ParsedHeading } from '../../../parser/utils';
-import { isSprite3D, parseSprite3D } from './parser';
+import { parseSprite3D } from './parser';
 import { AlphaCutMode, AxisMode, BillboardMode } from './types';
 
 const HEADING: ParsedHeading = {
   type: 'node',
   attributes: { name: 'Sprite', type: 'Sprite3D' },
 };
-
-describe('isSprite3D', () => {
-  it('identifies Sprite3D nodes', () => {
-    expect(isSprite3D(HEADING)).toBe(true);
-  });
-
-  it('rejects non-Sprite3D nodes', () => {
-    expect(
-      isSprite3D({ type: 'node', attributes: { name: 'X', type: 'Node3D' } })
-    ).toBe(false);
-  });
-});
 
 describe('parseSprite3D defaults', () => {
   it('applies Godot defaults when only the node heading is supplied', () => {

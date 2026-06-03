@@ -12,7 +12,3 @@ export function parseColorRect(
   if (properties.color) result.color = properties.color;
   return result;
 }
-
-export function isColorRect(heading: ParsedHeading): boolean {
-  return heading.type === 'node' && heading.attributes.type === 'ColorRect';
-}

@@ -3,58 +3,10 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { parseDirectionalLight3D, isDirectionalLight3D } from './parser';
-import type { ParsedHeading } from '../../../../parser/utils';
+import { parseDirectionalLight3D } from './parser';
 import { parseHeading } from '../../../../parser/utils';
 
 describe('DirectionalLight3D Parser', () => {
-  describe('isDirectionalLight3D', () => {
-    it('should identify DirectionalLight3D nodes', () => {
-      const heading: ParsedHeading = {
-        type: 'node',
-        attributes: {
-          name: 'MyDirectionalLight',
-          type: 'DirectionalLight3D',
-        },
-      };
-
-      expect(isDirectionalLight3D(heading)).toBe(true);
-    });
-
-    it('should reject Node3D nodes', () => {
-      const heading: ParsedHeading = {
-        type: 'node',
-        attributes: {
-          name: 'MyNode',
-          type: 'Node3D',
-        },
-      };
-
-      expect(isDirectionalLight3D(heading)).toBe(false);
-    });
-
-    it('should reject SpotLight3D nodes', () => {
-      const heading: ParsedHeading = {
-        type: 'node',
-        attributes: {
-          name: 'MyLight',
-          type: 'SpotLight3D',
-        },
-      };
-
-      expect(isDirectionalLight3D(heading)).toBe(false);
-    });
-
-    it('should reject non-node headings', () => {
-      const heading: ParsedHeading = {
-        type: 'ext_resource',
-        attributes: {},
-      };
-
-      expect(isDirectionalLight3D(heading)).toBe(false);
-    });
-  });
-
   describe('parseDirectionalLight3D', () => {
     it('should parse basic DirectionalLight3D with defaults', () => {
       const heading = parseHeading('[node name="DirectionalLight" type="DirectionalLight3D" parent="."]');

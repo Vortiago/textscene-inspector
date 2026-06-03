@@ -14,7 +14,3 @@ export function parsePanelContainer(
 ): ControlProperties {
   return parseControl(heading, properties);
 }
-
-export function isPanelContainer(heading: ParsedHeading): boolean {
-  return heading.type === 'node' && heading.attributes.type === 'PanelContainer';
-}

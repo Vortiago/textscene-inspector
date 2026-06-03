@@ -18,7 +18,3 @@ export function parseCollisionShape3D(
   }
   return result;
 }
-
-export function isCollisionShape3D(heading: ParsedHeading): boolean {
-  return heading.type === 'node' && heading.attributes.type === 'CollisionShape3D';
-}

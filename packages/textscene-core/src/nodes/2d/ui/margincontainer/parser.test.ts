@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ParsedHeading } from '../../../../parser/utils';
-import { parseMarginContainer, isMarginContainer } from './parser';
+import { parseMarginContainer } from './parser';
 
 function h(attributes: Record<string, string>): ParsedHeading {
   return { type: 'node', attributes };
@@ -22,10 +22,5 @@ describe('parseMarginContainer', () => {
     const p = parseMarginContainer(h({ name: 'M', type: 'MarginContainer' }), {});
     expect(p.name).toBe('M');
     expect(p.themeOverrideConstants).toBeUndefined();
-  });
-
-  it('type guard accepts/rejects', () => {
-    expect(isMarginContainer(h({ type: 'MarginContainer' }))).toBe(true);
-    expect(isMarginContainer(h({ type: 'VBoxContainer' }))).toBe(false);
   });
 });

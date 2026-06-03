@@ -1,17 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { parseCamera2D, isCamera2D } from './parser';
+import { parseCamera2D } from './parser';
 import type { ParsedHeading } from '../../../parser/utils';
 
 const heading = (attrs: Record<string, string> = {}): ParsedHeading => ({
   type: 'node',
   attributes: { type: 'Camera2D', name: 'Cam', ...attrs },
-});
-
-describe('isCamera2D', () => {
-  it('matches a Camera2D heading only', () => {
-    expect(isCamera2D(heading())).toBe(true);
-    expect(isCamera2D(heading({ type: 'Node2D' }))).toBe(false);
-  });
 });
 
 describe('parseCamera2D', () => {

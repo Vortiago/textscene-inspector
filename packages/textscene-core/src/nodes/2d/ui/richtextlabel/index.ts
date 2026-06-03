@@ -1,11 +1,10 @@
 /** RichTextLabel registration — parser. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
-import { parseRichTextLabel, isRichTextLabel } from './parser';
+import { parseRichTextLabel } from './parser';
 
 const richTextLabelRegistration: NodeTypeRegistration = {
   typeName: 'RichTextLabel',
-  typeGuard: isRichTextLabel,
   parser: parseRichTextLabel,
 };
 

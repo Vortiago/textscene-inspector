@@ -16,10 +16,6 @@ import {
   DopplerTracking,
 } from './types';
 
-export function isAudioStreamPlayer3D(heading: ParsedHeading): boolean {
-  return heading.type === 'node' && heading.attributes.type === 'AudioStreamPlayer3D';
-}
-
 export function parseAudioStreamPlayer3D(
   heading: ParsedHeading,
   properties: Record<string, string>

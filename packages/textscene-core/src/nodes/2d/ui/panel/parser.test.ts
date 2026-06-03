@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ParsedHeading } from '../../../../parser/utils';
-import { parsePanel, isPanel } from './parser';
+import { parsePanel } from './parser';
 
 function h(attributes: Record<string, string>): ParsedHeading {
   return { type: 'node', attributes };
@@ -24,10 +24,5 @@ describe('parsePanel', () => {
       'theme_override_styles/panel': 'SubResource("StyleBoxFlat_1")',
     });
     expect(p.themeOverrideStyles?.panel).toBe('SubResource("StyleBoxFlat_1")');
-  });
-
-  it('type guard accepts/rejects', () => {
-    expect(isPanel(h({ type: 'Panel' }))).toBe(true);
-    expect(isPanel(h({ type: 'PanelContainer' }))).toBe(false);
   });
 });

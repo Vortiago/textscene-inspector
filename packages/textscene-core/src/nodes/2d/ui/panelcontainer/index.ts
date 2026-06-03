@@ -1,11 +1,10 @@
 /** PanelContainer registration — parser. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
-import { parsePanelContainer, isPanelContainer } from './parser';
+import { parsePanelContainer } from './parser';
 
 const panelContainerRegistration: NodeTypeRegistration = {
   typeName: 'PanelContainer',
-  typeGuard: isPanelContainer,
   parser: parsePanelContainer,
 };
 

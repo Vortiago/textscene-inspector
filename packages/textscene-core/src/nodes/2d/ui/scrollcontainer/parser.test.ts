@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ParsedHeading } from '../../../../parser/utils';
-import { parseScrollContainer, isScrollContainer } from './parser';
+import { parseScrollContainer } from './parser';
 
 function h(attributes: Record<string, string>): ParsedHeading {
   return { type: 'node', attributes };
@@ -23,10 +23,5 @@ describe('parseScrollContainer', () => {
       custom_minimum_size: 'Vector2(200, 120)',
     });
     expect(p.customMinimumSize).toEqual({ x: 200, y: 120 });
-  });
-
-  it('type guard', () => {
-    expect(isScrollContainer(h({ type: 'ScrollContainer' }))).toBe(true);
-    expect(isScrollContainer(h({ type: 'VBoxContainer' }))).toBe(false);
   });
 });

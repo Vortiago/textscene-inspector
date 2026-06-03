@@ -3,35 +3,11 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { isLabel3D, parseLabel3D } from './parser';
+import { parseLabel3D } from './parser';
 import { BillboardMode } from './types';
 import type { ParsedHeading } from '../../../parser/utils';
 
 describe('Label3D Parser', () => {
-  describe('isLabel3D', () => {
-    it('should identify Label3D nodes', () => {
-      const heading: ParsedHeading = {
-        type: 'node',
-        attributes: {
-          name: 'MyLabel',
-          type: 'Label3D',
-        },
-      };
-      expect(isLabel3D(heading)).toBe(true);
-    });
-
-    it('should reject non-Label3D nodes', () => {
-      const heading: ParsedHeading = {
-        type: 'node',
-        attributes: {
-          name: 'Root',
-          type: 'Node3D',
-        },
-      };
-      expect(isLabel3D(heading)).toBe(false);
-    });
-  });
-
   describe('parseLabel3D', () => {
     it('should parse Label3D with minimal properties (just text)', () => {
       const heading: ParsedHeading = {

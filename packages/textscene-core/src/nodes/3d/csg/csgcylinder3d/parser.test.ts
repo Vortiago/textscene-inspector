@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseCSGCylinder3D, isCSGCylinder3D } from './parser';
+import { parseCSGCylinder3D } from './parser';
 import type { ParsedHeading } from '../../../../parser/utils';
 
 function heading(attributes: Record<string, string>): ParsedHeading {
@@ -40,15 +40,5 @@ describe('parseCSGCylinder3D', () => {
     });
     expect(props.material).toBe('SubResource("StandardMaterial3D_frame")');
     expect(props.transform?.origin.x).toBeCloseTo(8.5, 5);
-  });
-});
-
-describe('isCSGCylinder3D', () => {
-  it('matches a CSGCylinder3D node heading', () => {
-    expect(isCSGCylinder3D(heading({ type: 'CSGCylinder3D' }))).toBe(true);
-  });
-
-  it('rejects other node types', () => {
-    expect(isCSGCylinder3D(heading({ type: 'CSGBox3D' }))).toBe(false);
   });
 });

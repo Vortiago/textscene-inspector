@@ -23,10 +23,6 @@ import {
   type Sprite3DProperties,
 } from './types';
 
-export function isSprite3D(heading: ParsedHeading): boolean {
-  return heading.type === 'node' && heading.attributes.type === 'Sprite3D';
-}
-
 export function parseSprite3D(
   heading: ParsedHeading,
   properties: Record<string, string>

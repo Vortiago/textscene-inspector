@@ -26,7 +26,3 @@ export function parseNode3D(
     visible,
   };
 }
-
-export function isNode3D(heading: ParsedHeading): boolean {
-  return heading.type === 'node' && heading.attributes.type === 'Node3D';
-}

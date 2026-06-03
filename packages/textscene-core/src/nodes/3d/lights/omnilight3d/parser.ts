@@ -24,7 +24,3 @@ export function parseOmniLight3D(
       : undefined,
   };
 }
-
-export function isOmniLight3D(heading: ParsedHeading): boolean {
-  return heading.type === 'node' && heading.attributes.type === 'OmniLight3D';
-}

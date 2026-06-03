@@ -14,10 +14,6 @@ import {
   MethodCallMode,
 } from './types';
 
-export function isAnimationPlayer(heading: ParsedHeading): boolean {
-  return heading.type === 'node' && heading.attributes.type === 'AnimationPlayer';
-}
-
 export function parseAnimationPlayer(
   heading: ParsedHeading,
   properties: Record<string, string>

@@ -46,7 +46,3 @@ export function parseCSGCylinder3D(
 
   return result;
 }
-
-export function isCSGCylinder3D(heading: ParsedHeading): boolean {
-  return heading.type === 'node' && heading.attributes.type === 'CSGCylinder3D';
-}

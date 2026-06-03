@@ -48,7 +48,3 @@ export function parseCSGBox3D(
 
   return result;
 }
-
-export function isCSGBox3D(heading: ParsedHeading): boolean {
-  return heading.type === 'node' && heading.attributes.type === 'CSGBox3D';
-}

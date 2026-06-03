@@ -1,17 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { parseAnimatedSprite2D, isAnimatedSprite2D } from './parser';
+import { parseAnimatedSprite2D } from './parser';
 import type { ParsedHeading } from '../../../parser/utils';
 
 const heading = (attrs: Record<string, string> = {}): ParsedHeading => ({
   type: 'node',
   attributes: { type: 'AnimatedSprite2D', name: 'Anim', ...attrs },
-});
-
-describe('isAnimatedSprite2D', () => {
-  it('matches AnimatedSprite2D only', () => {
-    expect(isAnimatedSprite2D(heading())).toBe(true);
-    expect(isAnimatedSprite2D(heading({ type: 'Sprite2D' }))).toBe(false);
-  });
 });
 
 describe('parseAnimatedSprite2D', () => {

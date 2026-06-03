@@ -3,58 +3,10 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { parseOmniLight3D, isOmniLight3D } from './parser';
-import type { ParsedHeading } from '../../../../parser/utils';
+import { parseOmniLight3D } from './parser';
 import { parseHeading } from '../../../../parser/utils';
 
 describe('OmniLight3D Parser', () => {
-  describe('isOmniLight3D', () => {
-    it('should identify OmniLight3D nodes', () => {
-      const heading: ParsedHeading = {
-        type: 'node',
-        attributes: {
-          name: 'MyOmniLight',
-          type: 'OmniLight3D',
-        },
-      };
-
-      expect(isOmniLight3D(heading)).toBe(true);
-    });
-
-    it('should reject Node3D nodes', () => {
-      const heading: ParsedHeading = {
-        type: 'node',
-        attributes: {
-          name: 'MyNode',
-          type: 'Node3D',
-        },
-      };
-
-      expect(isOmniLight3D(heading)).toBe(false);
-    });
-
-    it('should reject SpotLight3D nodes', () => {
-      const heading: ParsedHeading = {
-        type: 'node',
-        attributes: {
-          name: 'MyLight',
-          type: 'SpotLight3D',
-        },
-      };
-
-      expect(isOmniLight3D(heading)).toBe(false);
-    });
-
-    it('should reject non-node headings', () => {
-      const heading: ParsedHeading = {
-        type: 'ext_resource',
-        attributes: {},
-      };
-
-      expect(isOmniLight3D(heading)).toBe(false);
-    });
-  });
-
   describe('parseOmniLight3D', () => {
     it('should parse basic OmniLight3D with defaults', () => {
       const heading = parseHeading('[node name="OmniLight" type="OmniLight3D" parent="."]');
