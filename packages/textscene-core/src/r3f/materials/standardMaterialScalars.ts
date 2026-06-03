@@ -138,6 +138,11 @@ export function parseStandardMaterial3DScalars(
   // sRGB values. Convert at parse time so every downstream consumer
   // sees linear-space RGB.
   const linearAlbedo = albedo ? sRGBToLinearRGB(albedo.r, albedo.g, albedo.b) : null;
+  // PARITY LIMITATION (emission_operator = ADD): with the default ADD operator
+  // AND both a colored `emission` and an `emission_texture`, Godot computes
+  // (emission + tex) * energy, but three.js's emissiveMap is multiply-only
+  // (emissive * intensity * tex), so the additive form can't be reproduced.
+  // The MULTIPLY operator case is faithful — see docs/PARITY-LIMITATIONS.md.
   // HDR emission: Godot allows emission channels > 1. three.js's emissive color
   // is [0,1] with brightness carried by emissiveIntensity, so normalize the
   // color by its peak channel and fold that peak into the energy — preserving
