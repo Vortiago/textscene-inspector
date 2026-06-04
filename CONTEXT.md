@@ -130,6 +130,10 @@ _Avoid_: "asset loader" (reserve `ResourceLoader` for the host implementation).
 A Node with `instance = ExtResource("scene_id")` whose referenced `.tscn`/`.glb` is loaded and injected as children under a nested resources provider.
 _Avoid_: "include", "prefab".
 
+**Sprite-frame composition** (`r3f/spriteFrame.ts`):
+The shared region_rect + hframes/vframes UV math for SpriteBase nodes — Godot computes a base_rect (region when enabled, else the full texture) and then subdivides it by the frame grid; the two compose. `composeFrameTexture` windows a texture clone's UVs to the current frame, `frameSizePx` returns the frame's pixel size. Flip handling and world sizing stay per-slice (Sprite2D mirrors via mesh scale at 1 px = 1 unit; Sprite3D mirrors via UV negation and scales by `pixel_size`).
+_Avoid_: re-inlining region/frames math in a sprite slice (the pre-extraction hand-syncing caused the B12 parity divergence).
+
 **Synthetic render type**:
 A render-only component with no parser and no linter (`GenericNodeFallback`, `GLBSceneRoot`) — not a user-authorable TSCN type; lives in `r3f/internal/`, not a Node slice.
 _Avoid_: "default node".

@@ -12,12 +12,10 @@
  *     `region_rect` sub-image). Same pattern as Label3D's textured
  *     plane, but the texture comes from the host file provider rather
  *     than a runtime canvas rasteriser.
- *   - UV math: the base rect is `region_rect` (when region_enabled)
- *     else the full image; hframes/vframes then SUBDIVIDE that base
- *     rect — the two compose (matching Godot's SpriteBase3D
- *     base_rect-then-subdivide), not mutually exclusive. `frame_coords`
- *     overrides the linear `frame` index when present. (Region requires
- *     the texture's `image` to expose `width`/`height`; else skipped.)
+ *   - UV math: region_rect + hframes/vframes composition lives in the
+ *     shared `r3f/spriteFrame` module (one home for Sprite2D +
+ *     Sprite3D). flip_h/flip_v stay here — 3D mirrors via UV negation
+ *     where 2D mirrors via mesh scale.
  *
  * Material:
  *   - `meshBasicMaterial` (sprites are unlit in Godot)
@@ -43,6 +41,7 @@ import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { godotColorToLinear } from '../../../r3f/godotColor';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
+import { composeFrameTexture, frameSizePx } from '../../../r3f/spriteFrame';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { resolveExtResourcePath } from '../../../resources/SubResourceResolver';
 import { useResource } from '../../../resources/useResource';
@@ -74,22 +73,30 @@ export function Sprite3D({ node }: NodeComponentProps) {
 
   const texResult = useResource<THREE.Texture>(texturePath ?? '', 'Texture2D');
 
-  // Compose the visible texture: apply spritesheet UV (frame / hframes /
-  // vframes / frame_coords) or region_rect to a clone of the loaded
-  // texture so multiple sprites sharing the same path don't fight over
-  // each other's repeat/offset state.
-  const displayedTexture = useMemo(
-    () => composeTexture(texResult.value, properties),
-    [texResult.value, properties]
-  );
+  // Compose the visible texture (shared spriteFrame module clones + windows
+  // the UVs to the region/frame), then mirror via UV negation: flip the
+  // (already cropped) UV window by negating the repeat and shifting the
+  // offset to the opposite edge.
+  const displayedTexture = useMemo(() => {
+    const cloned = composeFrameTexture(texResult.value, properties);
+    if (!cloned) return undefined;
+    if (properties.flip_h) {
+      cloned.offset.x += cloned.repeat.x;
+      cloned.repeat.x = -cloned.repeat.x;
+    }
+    if (properties.flip_v) {
+      cloned.offset.y += cloned.repeat.y;
+      cloned.repeat.y = -cloned.repeat.y;
+    }
+    return cloned;
+  }, [texResult.value, properties]);
 
-  // Quad sizing: pixel_size × the visible image dimensions. Without a
-  // loaded image we fall back to a 1×1 default so the placeholder is
-  // still visible at expected scale.
-  const { width, height } = useMemo(
-    () => computeQuadSize(texResult.value, properties),
-    [texResult.value, properties]
-  );
+  // Quad sizing: pixel_size × the frame's pixel dimensions (1×1 fallback
+  // before the image loads keeps the placeholder at expected scale).
+  const { width, height } = useMemo(() => {
+    const px = frameSizePx(texResult.value, properties);
+    return { width: px.width * properties.pixel_size, height: px.height * properties.pixel_size };
+  }, [texResult.value, properties]);
 
   // Modulate RGB and effective opacity. Transparency property is
   // additive: opacity = modulate.a * (1 - transparency). Godot stores modulate
@@ -194,130 +201,6 @@ export function Sprite3D({ node }: NodeComponentProps) {
       />
     </mesh>
   );
-}
-
-/**
- * Clone the loaded texture and apply spritesheet UV math (and/or
- * region_rect cropping). The clone is essential: `useResource` returns
- * the same THREE.Texture reference to every consumer of a given path,
- * so mutating in place would clobber other sprites' UV settings.
- *
- * Returns undefined when no texture is loaded yet.
- */
-function composeTexture(
-  texture: THREE.Texture | undefined,
-  properties: Sprite3DProperties
-): THREE.Texture | undefined {
-  if (!texture) return undefined;
-
-  const cloned = texture.clone();
-  cloned.wrapS = THREE.RepeatWrapping;
-  cloned.wrapT = THREE.RepeatWrapping;
-
-  // Godot's SpriteBase3D computes base_rect (region when enabled, else the full
-  // texture) THEN subdivides it by hframes/vframes — the two compose, they are
-  // not exclusive (matches Sprite2D).
-  if (properties.region_enabled && properties.region_rect) {
-    applyRegionRect(cloned, properties.region_rect);
-  }
-  if (properties.hframes > 1 || properties.vframes > 1) {
-    applySpritesheetUV(cloned, properties);
-  }
-
-  // flip_h / flip_v mirror the (already region/frame-cropped) UV window by
-  // negating the repeat and shifting the offset to the opposite edge.
-  if (properties.flip_h) {
-    cloned.offset.x += cloned.repeat.x;
-    cloned.repeat.x = -cloned.repeat.x;
-  }
-  if (properties.flip_v) {
-    cloned.offset.y += cloned.repeat.y;
-    cloned.repeat.y = -cloned.repeat.y;
-  }
-
-  cloned.needsUpdate = true;
-  return cloned;
-}
-
-function applySpritesheetUV(
-  texture: THREE.Texture,
-  properties: Sprite3DProperties
-): void {
-  const H = Math.max(1, properties.hframes);
-  const V = Math.max(1, properties.vframes);
-
-  // frame_coords overrides the linear `frame` index when present.
-  let col: number;
-  let row: number;
-  if (properties.frame_coords) {
-    col = properties.frame_coords.x;
-    row = properties.frame_coords.y;
-  } else {
-    const N = properties.frame;
-    col = N % H;
-    row = Math.floor(N / H);
-  }
-
-  // Compose over the base UV already on the texture: identity (full image) or a
-  // region rect applied above. Multiplying keeps region + frames additive.
-  const baseRepeatX = texture.repeat.x;
-  const baseRepeatY = texture.repeat.y;
-  const baseOffsetX = texture.offset.x;
-  const baseOffsetY = texture.offset.y;
-  texture.repeat.set(baseRepeatX / H, baseRepeatY / V);
-  // UV-Y origin is bottom-left in three.js; image-Y origin is top-left.
-  // Flip Y so row 0 sits at the top of the (region's) window.
-  texture.offset.set(
-    baseOffsetX + col * (baseRepeatX / H),
-    baseOffsetY + baseRepeatY - (row + 1) * (baseRepeatY / V)
-  );
-}
-
-function applyRegionRect(
-  texture: THREE.Texture,
-  rect: { x: number; y: number; width: number; height: number }
-): void {
-  const image = texture.image as { width?: number; height?: number } | undefined;
-  if (!image || !image.width || !image.height) {
-    // Without dimensions we can't compute a sensible sub-rectangle. The
-    // caller's sprite will render with the full texture; the linter
-    // already warns when region_rect is set without region_enabled.
-    return;
-  }
-  const imgW = image.width;
-  const imgH = image.height;
-  texture.repeat.set(rect.width / imgW, rect.height / imgH);
-  texture.offset.set(rect.x / imgW, 1 - (rect.y + rect.height) / imgH);
-}
-
-/**
- * Quad size in world units. The base rect is the region (when enabled) else the
- * full image; hframes/vframes then subdivide it (region and frames compose, as
- * in Godot). All multiplied by `pixel_size`.
- */
-function computeQuadSize(
-  texture: THREE.Texture | undefined,
-  properties: Sprite3DProperties
-): { width: number; height: number } {
-  const image = texture?.image as { width?: number; height?: number } | undefined;
-  const imgW = image?.width ?? 1;
-  const imgH = image?.height ?? 1;
-  const H = Math.max(1, properties.hframes);
-  const V = Math.max(1, properties.vframes);
-
-  let pxW = imgW;
-  let pxH = imgH;
-  if (properties.region_enabled && properties.region_rect && image?.width && image?.height) {
-    pxW = properties.region_rect.width;
-    pxH = properties.region_rect.height;
-  }
-  pxW /= H;
-  pxH /= V;
-
-  return {
-    width: pxW * properties.pixel_size,
-    height: pxH * properties.pixel_size,
-  };
 }
 
 function alphaCutBehaviour(mode: AlphaCutMode): { alphaTest: number; depthWrite: boolean } {

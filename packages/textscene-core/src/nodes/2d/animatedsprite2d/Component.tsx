@@ -13,7 +13,7 @@ import type { TscnInternalResource } from '../../../parser/types';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { node2dGroupProps, canvasItemZ } from '../../../r3f/node2dTransform';
 import { Modulate2DContext, useCanvasItemTint } from '../../../r3f/canvasItemModulate';
-import { useSceneResources } from '../../../r3f/SceneResourcesContext';
+import { findSubResource, useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { parseResourceReference, resolveExtResourcePath } from '../../../resources/SubResourceResolver';
 import { useResource } from '../../../resources/useResource';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
@@ -84,7 +84,7 @@ function resolveFrameTextureRef(
   if (!props.sprite_frames) return null;
   const parsed = parseResourceReference(props.sprite_frames);
   if (!parsed || parsed.type !== 'SubResource') return null; // .tres SpriteFrames: later
-  const sf = internalResources.find((r) => r.id === parsed.id);
+  const sf = findSubResource(internalResources, parsed.id);
   const animationsValue = (sf?.data as Record<string, unknown> | undefined)?.animations;
   if (typeof animationsValue !== 'string') return null;
 
