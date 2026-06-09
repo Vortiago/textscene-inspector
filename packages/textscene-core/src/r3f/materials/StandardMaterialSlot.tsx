@@ -86,6 +86,7 @@ export function StandardMaterialSlot({
         key={`basic-${albedoMap ? 'a' : '-'}`}
         attach={attach}
         color={scalars.color}
+        vertexColors={scalars.useVertexColors}
         map={albedoMap ?? null}
         transparent={scalars.transparent}
         opacity={scalars.opacity}

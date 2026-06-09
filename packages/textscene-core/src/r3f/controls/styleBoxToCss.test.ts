@@ -104,4 +104,11 @@ describe('colorToCss', () => {
   it('returns undefined for malformed input', () => {
     expect(colorToCss('not-a-color')).toBeUndefined();
   });
+
+  it('clamps overbright (HDR) channels so CSS stays valid', () => {
+    // Godot allows Color(2, 0, 0, 1); an unclamped rgba(510, …) is rejected by
+    // browsers and silently drops the whole declaration.
+    expect(colorToCss('Color(2, 0, 0, 1)')).toBe('rgba(255, 0, 0, 1)');
+    expect(colorToCss('Color(-1, 0.5, 3, 2)')).toBe('rgba(0, 128, 255, 1)');
+  });
 });

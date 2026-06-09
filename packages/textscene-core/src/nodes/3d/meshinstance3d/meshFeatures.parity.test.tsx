@@ -63,4 +63,14 @@ describe('mesh feature parity — geometry', () => {
     const g = await geomFor({ id: 'C', type: 'CylinderMesh', data: { cap_top: 'false', cap_bottom: 'false' } });
     expect(params(g).openEnded).toBe(true);
   });
+
+  it('PrismMesh subdivide_height=2 → 3 height segments (N+1, matches Box/Plane)', async () => {
+    const g = await geomFor({ id: 'Pr', type: 'PrismMesh', data: { size: 'Vector3(1, 1, 1)', subdivide_height: '2' } });
+    expect(params(g).heightSegments).toBe(3);
+  });
+
+  it('PrismMesh subdivide_height default 0 → 1 height segment', async () => {
+    const g = await geomFor({ id: 'Pr0', type: 'PrismMesh', data: { size: 'Vector3(1, 1, 1)' } });
+    expect(params(g).heightSegments).toBe(1);
+  });
 });

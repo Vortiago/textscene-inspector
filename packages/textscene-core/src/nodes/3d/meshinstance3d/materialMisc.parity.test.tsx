@@ -62,6 +62,21 @@ describe('StandardMaterialSlot vertexColors', () => {
     const m = r.scene.findByType('Mesh').instance.material as THREE.MeshStandardMaterial;
     expect(m.vertexColors).toBe(true);
   });
+
+  it('unshaded (MeshBasicMaterial) also honors vertex_color_use_as_albedo', async () => {
+    const scalars = parseStandardMaterial3DScalars({
+      shading_mode: '0', // unshaded
+      vertex_color_use_as_albedo: 'true',
+    });
+    const r = await ReactThreeTestRenderer.create(
+      <mesh>
+        <StandardMaterialSlot scalars={scalars} />
+      </mesh>
+    );
+    const m = r.scene.findByType('Mesh').instance.material as THREE.MeshBasicMaterial;
+    expect((m as THREE.Material).type).toBe('MeshBasicMaterial');
+    expect(m.vertexColors).toBe(true);
+  });
 });
 
 const AO_TEX = 'res://ao.png';

@@ -17,7 +17,12 @@ export function colorToCss(value: string): string | undefined {
 
 /** Format an already-parsed {r,g,b,a} (0..1) color as a CSS rgba() string. */
 export function controlColorToCss(c: { r: number; g: number; b: number; a: number }): string {
-  return `rgba(${Math.round(c.r * 255)}, ${Math.round(c.g * 255)}, ${Math.round(c.b * 255)}, ${c.a})`;
+  // Godot allows overbright (HDR) Control colors (channels > 1). CSS rejects
+  // out-of-range rgba() values and drops the whole declaration, so clamp to the
+  // displayable range — matching parseColorToHex's 0..1 clamp on the 3D path.
+  const ch = (v: number) => Math.max(0, Math.min(255, Math.round(v * 255)));
+  const alpha = Math.max(0, Math.min(1, c.a));
+  return `rgba(${ch(c.r)}, ${ch(c.g)}, ${ch(c.b)}, ${alpha})`;
 }
 
 function n(value: string | undefined, fallback = 0): number {

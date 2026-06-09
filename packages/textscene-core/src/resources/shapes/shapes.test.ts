@@ -37,6 +37,14 @@ describe('parseConvexPolygonShape3D', () => {
     expect(points.length).toBe(24);
     expect(points.length / 3).toBe(8);
   });
+
+  it('degrades to empty points (no throw) on malformed data', () => {
+    // CollisionGizmo calls this directly in render with no error boundary, so
+    // a hand-edited/corrupt array must not crash the whole scene preview.
+    expect(() => parseConvexPolygonShape3D({ points: 'PackedVector3Array(1, x, 3)' })).not.toThrow();
+    expect(parseConvexPolygonShape3D({ points: 'garbage' }).points.length).toBe(0);
+    expect(parseConvexPolygonShape3D({}).points.length).toBe(0);
+  });
 });
 
 describe('parseConcavePolygonShape3D', () => {
@@ -46,5 +54,11 @@ describe('parseConcavePolygonShape3D', () => {
     }).data;
     expect(data.length).toBe(9);
     expect(data.length % 9).toBe(0); // whole triangles
+  });
+
+  it('degrades to empty data (no throw) on malformed data', () => {
+    expect(() => parseConcavePolygonShape3D({ data: 'PackedVector3Array(0, 0, nope)' })).not.toThrow();
+    expect(parseConcavePolygonShape3D({ data: 'not-an-array' }).data.length).toBe(0);
+    expect(parseConcavePolygonShape3D({}).data.length).toBe(0);
   });
 });

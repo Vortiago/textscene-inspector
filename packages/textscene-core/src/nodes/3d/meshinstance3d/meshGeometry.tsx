@@ -195,7 +195,9 @@ function PrismMeshGeometry({
       properties.size.x / 2,
       properties.size.y,
       3,
-      Math.max(1, properties.subdivideHeight),
+      // Godot subdivide_height = extra edge loops → N+1 height segments
+      // (matches Box/Plane; subdivide 0 → 1 segment).
+      properties.subdivideHeight + 1,
       false
     );
     geom.rotateY(Math.PI / 6);

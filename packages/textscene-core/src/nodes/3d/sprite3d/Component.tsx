@@ -117,8 +117,13 @@ export function Sprite3D({ node }: NodeComponentProps) {
   //   DISABLED       → standard alpha blending; depthWrite off.
   //   DISCARD        → alphaTest threshold; depthWrite ON (sharp edges).
   //   OPAQUE_PREPASS → same as DISCARD for now (no separate prepass).
-  const { alphaTest: alphaCutTest, depthWrite } = alphaCutBehaviour(properties.alpha_cut);
+  const { alphaTest: alphaCutTest, depthWrite: alphaCutDepthWrite } = alphaCutBehaviour(properties.alpha_cut);
   const alphaTest = properties.transparent === false ? 0 : alphaCutTest;
+  // An opaque sprite must write depth so it occludes and sorts correctly
+  // against other opaque geometry; only the blended (transparent) paths skip
+  // depthWrite. Without this an opaque `transparent=false` sprite kept the
+  // DISABLED alpha-cut's depthWrite=false and rendered with wrong ordering.
+  const depthWrite = transparent ? alphaCutDepthWrite : true;
 
   // Quad origin: centered (default) puts the plane center at the node origin;
   // centered=false puts the top-left there. `offset` shifts in sprite pixels

@@ -114,6 +114,18 @@ describe('Sprite3D render parity', () => {
     expect((r.scene.findByType('Mesh').instance.material as THREE.Material).transparent).toBe(false);
   });
 
+  it('opaque sprite (transparent=false, alpha_cut DISABLED) writes depth', async () => {
+    // An opaque quad must write depth so it sorts/occludes correctly against
+    // other opaque geometry — the DISABLED alpha-cut otherwise leaves it false.
+    const r = await render({ transparent: 'false' });
+    expect((r.scene.findByType('Mesh').instance.material as THREE.Material).depthWrite).toBe(true);
+  });
+
+  it('default (transparent) sprite keeps depthWrite=false on the blended path', async () => {
+    const r = await render({ modulate: 'Color(1, 1, 1, 0.5)' }); // opacity < 1 → blended
+    expect((r.scene.findByType('Mesh').instance.material as THREE.Material).depthWrite).toBe(false);
+  });
+
   it('centered=false shifts the quad by half its size (offset origin top-left)', async () => {
     // image 100×50, pixel_size 0.01 → width 1, height 0.5; centered=false bakes a
     // +width/2, -height/2 translate into the geometry so the node origin sits at
