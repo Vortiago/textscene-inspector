@@ -4,7 +4,15 @@ export const meta = {
   phases: [{ title: 'Review posters', detail: 'one vision agent per clip' }],
 };
 
-const WEB = 'D:/CodeRepos/Text-Scene-.tscn-File-Previewer/.claude/worktrees/misty-singing-treehouse/docs/showcase/web';
+// Repo root, passed at invocation (Workflow scripts have no filesystem/process
+// access): Workflow({ name: 'verify-showcase', args: '/abs/path/to/repo' })
+const ROOT = typeof args === 'string' ? args : args?.root;
+if (!ROOT) {
+  throw new Error(
+    "verify-showcase: pass the repo root via args, e.g. Workflow({ name: 'verify-showcase', args: '/abs/path/to/repo' })"
+  );
+}
+const WEB = `${ROOT}/docs/showcase/web`;
 
 const CLIPS = [
   ['all-primitives', 'A green ground plane holds primitive meshes (prism, torus, capsule), each with its own material, as solid 3D geometry.'],

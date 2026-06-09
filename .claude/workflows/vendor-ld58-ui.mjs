@@ -4,8 +4,18 @@ export const meta = {
   phases: [{ title: 'Vendor UI scenes', detail: 'one agent per scene' }],
 };
 
-const SRC = 'D:/CodeRepos/Text-Scene-.tscn-File-Previewer/ld-58';
-const DST = 'D:/CodeRepos/Text-Scene-.tscn-File-Previewer/.claude/worktrees/misty-singing-treehouse/scenes/ld58';
+// Both paths are passed at invocation (Workflow scripts have no filesystem/
+// process access): `src` is the external ld-58 Godot project that lives OUTSIDE
+// this repo; `root` is this repo, under which scenes are vendored to scenes/ld58/.
+//   Workflow({ name: 'vendor-ld58-ui', args: { src: '/abs/path/to/ld-58', root: '/abs/path/to/repo' } })
+const SRC = args?.src;
+const ROOT = args?.root;
+if (!SRC || !ROOT) {
+  throw new Error(
+    "vendor-ld58-ui: pass { src, root } via args, e.g. Workflow({ name: 'vendor-ld58-ui', args: { src: '/abs/ld-58', root: '/abs/repo' } })"
+  );
+}
+const DST = `${ROOT}/scenes/ld58`;
 
 // res:// is rooted at the ld-58 project, mirrored under scenes/ld58/ preserving
 // subpaths so each scene's `res://...` refs resolve to /fixtures/... at runtime.

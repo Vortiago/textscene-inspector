@@ -4,9 +4,16 @@ export const meta = {
   phases: [{ title: 'Build Control slices', detail: 'one agent per Control type' }],
 };
 
-// Absolute worktree root — agents must write only inside this tree.
-const ROOT =
-  'D:/CodeRepos/Text-Scene-.tscn-File-Previewer/.claude/worktrees/misty-singing-treehouse';
+// Absolute repo root — agents must write only inside this tree. Workflow
+// scripts have no filesystem/process access, so the root can't be auto-derived;
+// pass it at invocation:
+//   Workflow({ name: 'build-control-slices', args: '/abs/path/to/repo' })
+const ROOT = typeof args === 'string' ? args : args?.root;
+if (!ROOT) {
+  throw new Error(
+    "build-control-slices: pass the repo root via args, e.g. Workflow({ name: 'build-control-slices', args: '/abs/path/to/repo' })"
+  );
+}
 const UI = `${ROOT}/packages/textscene-core/src/nodes/2d/ui`;
 const FIX = `${ROOT}/scenes/fixtures`;
 
