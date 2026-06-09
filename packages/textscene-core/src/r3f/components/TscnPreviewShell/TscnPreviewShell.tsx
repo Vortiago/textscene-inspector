@@ -457,22 +457,34 @@ function Canvas2DStage({
     return () => el.removeEventListener('wheel', onWheel);
   }, []);
 
-  // Drag-to-pan. Inline handler captures the current pan as the drag origin.
-  function handlePointerDown(e: ReactPointerEvent<HTMLDivElement>) {
+  // Drag-to-pan via pointer capture (like <Splitter>): the drag keeps tracking
+  // off the element with NO window listeners, so an unmount mid-drag can't leak
+  // a listener or call setPan on an unmounted component.
+  const pan2dDrag = useRef({ startX: 0, startY: 0, ox: 0, oy: 0, active: false });
+
+  const onStagePointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
     if (e.button !== 0) return;
-    const startX = e.clientX;
-    const startY = e.clientY;
-    const origin = pan;
-    const move = (ev: PointerEvent) => {
-      setPan({ x: origin.x + (ev.clientX - startX), y: origin.y + (ev.clientY - startY) });
-    };
-    const up = () => {
-      window.removeEventListener('pointermove', move);
-      window.removeEventListener('pointerup', up);
-    };
-    window.addEventListener('pointermove', move);
-    window.addEventListener('pointerup', up);
-  }
+    pan2dDrag.current = { startX: e.clientX, startY: e.clientY, ox: pan.x, oy: pan.y, active: true };
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      /* unsupported (test env) */
+    }
+  };
+  const onStagePointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
+    const d = pan2dDrag.current;
+    if (!d.active) return;
+    setPan({ x: d.ox + (e.clientX - d.startX), y: d.oy + (e.clientY - d.startY) });
+  };
+  const endStageDrag = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (!pan2dDrag.current.active) return;
+    pan2dDrag.current.active = false;
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {
+      /* unsupported (test env) */
+    }
+  };
 
   function zoomAroundCentre(factor: number) {
     const el = stageRef.current;
@@ -493,7 +505,10 @@ function Canvas2DStage({
     <div
       ref={stageRef}
       className={styles.canvasStage}
-      onPointerDown={handlePointerDown}
+      onPointerDown={onStagePointerDown}
+      onPointerMove={onStagePointerMove}
+      onPointerUp={endStageDrag}
+      onPointerCancel={endStageDrag}
       aria-label="2D canvas"
     >
       <div
@@ -630,27 +645,38 @@ function MasterDetailHandle({
   setValue: (v: number) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  // Pointer capture (like <Splitter>) keeps the resize tracking off the thin
+  // handle with NO window listeners — so unmounting mid-drag (e.g. collapsing
+  // the dock) can't leak a listener or setValue on an unmounted component.
+  const dragging = useRef(false);
 
-  const onPointerDown = useCallback(
-    (e: ReactPointerEvent<HTMLDivElement>) => {
-      e.preventDefault();
-      const dock = ref.current?.parentElement;
-      if (!dock) return;
-      const onMove = (ev: PointerEvent) => {
-        const rect = dock.getBoundingClientRect();
-        if (rect.height <= 0) return;
-        const frac = (ev.clientY - rect.top) / rect.height;
-        setValue(Math.min(0.8, Math.max(0.2, frac)));
-      };
-      const onUp = () => {
-        window.removeEventListener('pointermove', onMove);
-        window.removeEventListener('pointerup', onUp);
-      };
-      window.addEventListener('pointermove', onMove);
-      window.addEventListener('pointerup', onUp);
-    },
-    [setValue]
-  );
+  const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    dragging.current = true;
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      /* unsupported (test env) */
+    }
+  };
+  const onPointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (!dragging.current) return;
+    const dock = ref.current?.parentElement;
+    if (!dock) return;
+    const rect = dock.getBoundingClientRect();
+    if (rect.height <= 0) return;
+    const frac = (e.clientY - rect.top) / rect.height;
+    setValue(Math.min(0.8, Math.max(0.2, frac)));
+  };
+  const endDrag = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (!dragging.current) return;
+    dragging.current = false;
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {
+      /* unsupported (test env) */
+    }
+  };
 
   return (
     <div
@@ -661,6 +687,9 @@ function MasterDetailHandle({
       aria-label="Resize the tree and detail sections"
       aria-valuenow={Math.round(value * 100)}
       onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={endDrag}
+      onPointerCancel={endDrag}
     />
   );
 }

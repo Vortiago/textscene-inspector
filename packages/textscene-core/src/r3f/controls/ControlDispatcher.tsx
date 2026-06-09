@@ -43,7 +43,7 @@ export function ControlDispatcher({ nodes, parentPath = '' }: ControlDispatcherP
 function DispatchedControl({ node, path }: { node: TscnNode; path: string }): ReactNode {
   const Component = controlComponentRegistry.get(node.type) ?? GenericControlFallback;
   return (
-    <Component node={node}>
+    <Component node={node} path={path}>
       {node.children.length > 0 ? (
         <ControlDispatcher nodes={node.children} parentPath={path} />
       ) : null}

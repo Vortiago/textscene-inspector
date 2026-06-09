@@ -59,4 +59,34 @@ describe('ControlOverlay — hidden nodes (scene-tree eye toggle)', () => {
     expect(find(container, 'VBoxContainer')).toBeNull();
     expect(find(container, 'Label')).toBeNull();
   });
+
+  it('GridContainer EXPAND column ignores a hidden child (no auto-place drift)', () => {
+    // 2 cols: [A, B(EXPAND)]. B is the EXPAND item in column 1. Hiding A removes
+    // its cell, so B auto-places into column 0 → the stretch column must follow.
+    const grid = node('Grid', 'GridContainer', [
+      node('A', 'Label', [], { sizeFlagsHorizontal: 1 }),
+      node('B', 'Label', [], { sizeFlagsHorizontal: 3 }),
+    ], { columns: 2 });
+
+    let selection!: SelectionContextValue;
+    function Capture() {
+      selection = useSelection();
+      return null;
+    }
+    const { container } = render(
+      <SelectionProvider>
+        <Capture />
+        <ControlOverlay nodes={[grid]} />
+      </SelectionProvider>
+    );
+
+    const style = () => (find(container, 'GridContainer') as HTMLElement).style.gridTemplateColumns;
+    expect(style()).toBe('max-content 1fr'); // A in col0, B(EXPAND) in col1
+
+    act(() => selection.toggleHidden('Grid/A'));
+    // B now auto-places into column 0, so the stretch column moves there too.
+    // (Before the fix the template was computed over the hidden child and stayed
+    // 'max-content 1fr', stretching the wrong column.)
+    expect(style()).toBe('1fr max-content');
+  });
 });

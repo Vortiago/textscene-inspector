@@ -90,6 +90,19 @@ describe('Control components — containers', () => {
     expect(styleOf(find(c, 'GridContainer')).gridTemplateColumns).toBe('max-content 1fr');
   });
 
+  it('GridContainer: non-Control children do not occupy a column slot', () => {
+    // A logic Node renders display:contents (no grid cell), so the EXPAND Label
+    // must still land in column 1 — not be pushed to column 0 by the Node's index.
+    const c = renderOverlay([
+      node('Grid', 'GridContainer', { columns: 2 }, [
+        node('A', 'Label', { sizeFlagsHorizontal: 1 }),
+        node('Logic', 'Node', {}),
+        node('B', 'Label', { sizeFlagsHorizontal: 3 }),
+      ]),
+    ]);
+    expect(styleOf(find(c, 'GridContainer')).gridTemplateColumns).toBe('max-content 1fr');
+  });
+
   it('ScrollContainer: scroll modes map to overflowX/Y (#31)', () => {
     // horizontal DISABLED (0) → hidden; vertical SHOW_ALWAYS (2) → scroll.
     const c = renderOverlay([

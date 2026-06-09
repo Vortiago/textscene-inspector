@@ -11,6 +11,12 @@ import { createTypeRegistry } from '../../core/createTypeRegistry';
 export interface ControlComponentProps {
   node: TscnNode;
   children?: React.ReactNode;
+  /**
+   * Scene-tree path of this node (root = name, child = `parent/child`). Set by
+   * ControlDispatcher; used by containers that must reason about which children
+   * actually render as layout items (e.g. GridContainer excludes hidden ones).
+   */
+  path?: string;
 }
 
 export type ControlComponent = React.ComponentType<ControlComponentProps>;

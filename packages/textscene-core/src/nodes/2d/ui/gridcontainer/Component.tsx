@@ -14,24 +14,39 @@
 
 import type { CSSProperties } from 'react';
 import type { ControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
+import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
 import { useControlParent, ControlParentProvider } from '../../../../r3f/controls/ControlParentContext';
 import { controlLayoutStyle } from '../../../../r3f/controls/controlLayout';
+import { useOptionalSelection } from '../../../../r3f/contexts/SelectionContext';
+import { joinPath } from '../../../../utils/nodePath';
 import type { ControlProperties } from '../control/types';
 import type { TscnNode } from '../../../../parser/types';
 import type { GridContainerProperties } from './types';
 
 const DEFAULT_SEPARATION = 4; // Godot GridContainer default
 const SIZE_FLAG_EXPAND = 2;
+const NO_HIDDEN: ReadonlySet<string> = new Set();
 
-export function GridContainer({ node, children }: ControlComponentProps) {
+export function GridContainer({ node, path, children }: ControlComponentProps) {
   const props = node.properties as GridContainerProperties;
   const parentKind = useControlParent();
   const columns = Math.max(1, props.columns ?? 1);
+  const hiddenNodePaths = useOptionalSelection()?.hiddenNodePaths ?? NO_HIDDEN;
+
+  // CSS grid auto-places only the children that ControlDispatcher actually
+  // renders as grid cells: registered Control types that aren't hidden. Logic
+  // nodes / timers render `display:contents` (no cell) and hidden nodes render
+  // nothing, so counting them would shift the EXPAND column off its real item.
+  const items = node.children.filter((child) => {
+    if (!controlComponentRegistry.has(child.type)) return false;
+    const childPath = path ? joinPath(path, child.name) : child.name;
+    return !hiddenNodePaths.has(childPath);
+  });
 
   const style: CSSProperties = {
     ...controlLayoutStyle(props, parentKind),
     display: 'grid',
-    gridTemplateColumns: gridColumnTemplate(node.children, columns),
+    gridTemplateColumns: gridColumnTemplate(items, columns),
     columnGap: `${props.themeOverrideConstants?.h_separation ?? DEFAULT_SEPARATION}px`,
     rowGap: `${props.themeOverrideConstants?.v_separation ?? DEFAULT_SEPARATION}px`,
   };
@@ -43,13 +58,17 @@ export function GridContainer({ node, children }: ControlComponentProps) {
   );
 }
 
-/** Build `grid-template-columns`: `1fr` for any column with an EXPAND child, else `max-content`. */
-function gridColumnTemplate(children: readonly TscnNode[], columns: number): string {
+/**
+ * Build `grid-template-columns`: `1fr` for any column with an EXPAND grid item,
+ * else `max-content`. `items` must already be the children that become grid
+ * cells, in order, so item `k` lands in column `k % columns` (CSS auto-place).
+ */
+function gridColumnTemplate(items: readonly TscnNode[], columns: number): string {
   const expand = new Array<boolean>(columns).fill(false);
-  children.forEach((child, i) => {
+  items.forEach((child, k) => {
     const flags = (child.properties as ControlProperties | undefined)?.sizeFlagsHorizontal;
     if (flags !== undefined && (flags & SIZE_FLAG_EXPAND) !== 0) {
-      expand[i % columns] = true;
+      expand[k % columns] = true;
     }
   });
   return expand.map((isExpand) => (isExpand ? '1fr' : 'max-content')).join(' ');
