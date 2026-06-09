@@ -8,13 +8,13 @@
 import { useMemo } from 'react';
 import type { Node2DProperties } from './types';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
-import { node2dGroupProps, canvasItemZ } from '../../../r3f/node2dTransform';
+import { node2dGroupProps, node2dGroupSpread, canvasItemZ } from '../../../r3f/node2dTransform';
 import { Modulate2DContext, multiplyModulate, useParentModulate } from '../../../r3f/canvasItemModulate';
 
 export function Node2D({ node, children }: NodeComponentProps) {
   const props = node.properties as Node2DProperties;
-  const { position, rotation, scale } = useMemo(
-    () => node2dGroupProps(props, canvasItemZ(props)),
+  const transform = useMemo(
+    () => node2dGroupSpread(node2dGroupProps(props, canvasItemZ(props))),
     [props]
   );
   const visible = props.visible !== false;
@@ -28,7 +28,7 @@ export function Node2D({ node, children }: NodeComponentProps) {
   );
 
   return (
-    <group name={node.name} position={position} rotation={rotation} scale={scale} visible={visible}>
+    <group name={node.name} {...transform} visible={visible}>
       <Modulate2DContext.Provider value={modulate}>{children}</Modulate2DContext.Provider>
     </group>
   );

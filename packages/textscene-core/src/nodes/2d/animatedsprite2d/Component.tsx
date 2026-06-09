@@ -11,7 +11,7 @@ import { useMemo } from 'react';
 import * as THREE from 'three';
 import type { TscnInternalResource } from '../../../parser/types';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
-import { node2dGroupProps, canvasItemZ } from '../../../r3f/node2dTransform';
+import { node2dGroupProps, node2dGroupSpread, canvasItemZ } from '../../../r3f/node2dTransform';
 import { Modulate2DContext, useCanvasItemTint } from '../../../r3f/canvasItemModulate';
 import { findSubResource, useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { parseResourceReference, resolveExtResourcePath } from '../../../resources/SubResourceResolver';
@@ -24,7 +24,10 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
   const props = node.properties as AnimatedSprite2DProperties;
   const { internalResources, externalResources } = useSceneResources();
 
-  const group = useMemo(() => node2dGroupProps(props, canvasItemZ(props)), [props]);
+  const transform = useMemo(
+    () => node2dGroupSpread(node2dGroupProps(props, canvasItemZ(props))),
+    [props]
+  );
   const { inherited, color, opacity } = useCanvasItemTint(props);
 
   const frameRef = useMemo(
@@ -49,13 +52,7 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
   const meshScale: [number, number, number] = [props.flip_h ? -1 : 1, props.flip_v ? -1 : 1, 1];
 
   return (
-    <group
-      name={node.name}
-      position={group.position}
-      rotation={group.rotation}
-      scale={group.scale}
-      visible={visible}
-    >
+    <group name={node.name} {...transform} visible={visible}>
       {showPlaceholder ? (
         <MissingResourcePlaceholder shape="plane" name={node.name} />
       ) : tex ? (

@@ -17,6 +17,8 @@ export interface Node2DLocalTransform {
   position: Vector2;
   rotation: number;
   scale: Vector2;
+  /** Radians; shear tilting the local Y axis relative to X (Godot T·R·Skew·S). */
+  skew?: number;
 }
 
 export interface Node2DProperties {

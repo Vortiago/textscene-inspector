@@ -28,16 +28,21 @@ export function parseNode2D(
   let position: Vector2 = { x: 0, y: 0 };
   let rotation = 0;
   let scale: Vector2 = { x: 1, y: 1 };
+  // Matrix form wins and carries its own (decomposed) skew; the discrete `skew`
+  // property only applies in the discrete-props path.
+  let skew = 0;
 
   const matrix = properties.transform ? decomposeTransform2D(properties.transform, name) : null;
   if (matrix) {
     ({ position, rotation, scale } = matrix);
+    skew = matrix.skew;
   } else {
     if (properties.position) position = vec2Or(properties.position, position, name || 'Node2D');
     if (properties.scale) scale = vec2Or(properties.scale, scale, name || 'Node2D');
     if (properties.rotation !== undefined) rotation = floatOr(properties.rotation, 0);
     else if (properties.rotation_degrees !== undefined)
       rotation = (floatOr(properties.rotation_degrees, 0) * Math.PI) / 180;
+    skew = floatOr(properties.skew, 0);
   }
 
   return {
@@ -49,7 +54,7 @@ export function parseNode2D(
     position,
     rotation,
     scale,
-    skew: floatOr(properties.skew, 0),
+    skew,
     z_index: intOr(properties.z_index, 0),
     z_as_relative: properties.z_as_relative === undefined ? true : properties.z_as_relative !== 'false',
     show_behind_parent: properties.show_behind_parent === 'true',
@@ -60,11 +65,11 @@ export function parseNode2D(
   };
 }
 
-/** Decompose `Transform2D(xx, xy, yx, yy, ox, oy)` into position/rotation/scale. */
+/** Decompose `Transform2D(xx, xy, yx, yy, ox, oy)` into position/rotation/scale/skew. */
 export function decomposeTransform2D(
   value: string,
   nodeName = ''
-): { position: Vector2; rotation: number; scale: Vector2 } | null {
+): { position: Vector2; rotation: number; scale: Vector2; skew: number } | null {
   const m = TRANSFORM2D_RE.exec(value.trim());
   if (!m) {
     warn(`Node2D${nodeName ? ` "${nodeName}"` : ''}: invalid Transform2D "${value}"`);
@@ -79,9 +84,20 @@ export function decomposeTransform2D(
 
   const rotation = Math.atan2(xy, xx);
   const det = xx * yy - xy * yx;
-  const scaleX = Math.hypot(xx, xy);
+  const lenX = Math.hypot(xx, xy);
+  const lenY = Math.hypot(yx, yy);
+  const scaleX = lenX;
   // Negative determinant ⇒ a flip; Godot folds it into scale.y's sign.
-  const scaleY = Math.hypot(yx, yy) * (det < 0 ? -1 : 1);
+  const sign = det < 0 ? -1 : 1;
+  const scaleY = lenY * sign;
+  // Godot Transform2D::get_skew(): the signed deviation of the (flip-corrected)
+  // Y axis from perpendicular to X. acos(X̂ · sign·Ŷ) − π/2 (0 when the axes are
+  // orthogonal). Guard the degenerate zero-length case → 0.
+  let skew = 0;
+  if (lenX > 0 && lenY > 0) {
+    const dot = Math.max(-1, Math.min(1, (xx * sign * yx + xy * sign * yy) / (lenX * lenY)));
+    skew = Math.acos(dot) - Math.PI / 2;
+  }
 
-  return { position: { x: ox, y: oy }, rotation, scale: { x: scaleX, y: scaleY } };
+  return { position: { x: ox, y: oy }, rotation, scale: { x: scaleX, y: scaleY }, skew };
 }

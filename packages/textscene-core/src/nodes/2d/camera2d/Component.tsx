@@ -8,22 +8,20 @@
 
 import { useMemo } from 'react';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
-import { node2dGroupProps, Z_INDEX_STEP } from '../../../r3f/node2dTransform';
+import { node2dGroupProps, node2dGroupSpread, Z_INDEX_STEP } from '../../../r3f/node2dTransform';
 import type { Camera2DProperties } from './types';
 
 export function Camera2D({ node, children }: NodeComponentProps) {
   const props = node.properties as Camera2DProperties;
-  const { position, rotation, scale } = useMemo(
-    () => node2dGroupProps(props, props.z_index * Z_INDEX_STEP),
+  const transform = useMemo(
+    () => node2dGroupSpread(node2dGroupProps(props, props.z_index * Z_INDEX_STEP)),
     [props]
   );
   const visible = props.visible !== false;
   return (
     <group
       name={node.name}
-      position={position}
-      rotation={rotation}
-      scale={scale}
+      {...transform}
       visible={visible}
       userData={{
         camera2d: {

@@ -21,7 +21,7 @@
 import { useMemo } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
-import { node2dGroupProps, canvasItemZ } from '../../../r3f/node2dTransform';
+import { node2dGroupProps, node2dGroupSpread, canvasItemZ } from '../../../r3f/node2dTransform';
 import { Modulate2DContext, useCanvasItemTint } from '../../../r3f/canvasItemModulate';
 import { composeFrameTexture, frameSizePx } from '../../../r3f/spriteFrame';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
@@ -34,8 +34,8 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
   const props = node.properties as Sprite2DProperties;
   const { externalResources } = useSceneResources();
 
-  const group = useMemo(
-    () => node2dGroupProps(props, canvasItemZ(props)),
+  const transform = useMemo(
+    () => node2dGroupSpread(node2dGroupProps(props, canvasItemZ(props))),
     [props]
   );
 
@@ -64,13 +64,7 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
   const showPlaceholder = !texturePath || texResult.status === 'unavailable';
 
   return (
-    <group
-      name={node.name}
-      position={group.position}
-      rotation={group.rotation}
-      scale={group.scale}
-      visible={visible}
-    >
+    <group name={node.name} {...transform} visible={visible}>
       {showPlaceholder ? (
         <MissingResourcePlaceholder shape="plane" name={node.name} />
       ) : displayedTexture ? (

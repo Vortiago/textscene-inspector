@@ -41,6 +41,18 @@ describe('parseNode2D', () => {
     expect(p.scale.y).toBeCloseTo(3);
   });
 
+  it('reads the discrete skew property (radians, default 0)', () => {
+    expect(parseNode2D(heading(), {}).skew).toBe(0);
+    expect(parseNode2D(heading(), { skew: '0.5' }).skew).toBeCloseTo(0.5);
+  });
+
+  it('takes skew from the transform= matrix when present (not the discrete prop)', () => {
+    // Sheared matrix carries skew=π/6; the discrete skew prop is ignored when
+    // the matrix form wins (consistent with rotation/scale).
+    const p = parseNode2D(heading(), { transform: 'Transform2D(1, 0, -0.5, 0.8660254, 0, 0)', skew: '99' });
+    expect(p.skew).toBeCloseTo(Math.PI / 6, 5);
+  });
+
   it('reads z_index and the instance attribute', () => {
     const p = parseNode2D(heading({ instance: 'ExtResource("1_s")' }), { z_index: '5' });
     expect(p.z_index).toBe(5);
@@ -73,5 +85,18 @@ describe('decomposeTransform2D', () => {
 
   it('returns null on malformed input', () => {
     expect(decomposeTransform2D('not a transform')).toBeNull();
+  });
+
+  it('extracts skew from a sheared matrix (Godot get_skew)', () => {
+    // rot=0, skew=π/6, scale=(1,1): x_axis=(1,0), y_axis=(-sin30°, cos30°).
+    const d = decomposeTransform2D('Transform2D(1, 0, -0.5, 0.8660254, 0, 0)')!;
+    expect(d.rotation).toBeCloseTo(0, 5);
+    expect(d.scale.x).toBeCloseTo(1, 5);
+    expect(d.scale.y).toBeCloseTo(1, 5);
+    expect(d.skew).toBeCloseTo(Math.PI / 6, 5);
+  });
+
+  it('reports zero skew for an orthonormal (rotation-only) matrix', () => {
+    expect(decomposeTransform2D('Transform2D(0, 1, -1, 0, 0, 0)')!.skew).toBeCloseTo(0, 6);
   });
 });
