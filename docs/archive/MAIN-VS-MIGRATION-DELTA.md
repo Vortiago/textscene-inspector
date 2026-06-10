@@ -1,6 +1,6 @@
 # Main vs feat/r3f-migration — completeness delta
 
-Cross-checked against `docs/MAIN-FEATURE-INVENTORY.md` (after this commit's amendments) and `feat/r3f-migration` HEAD `923ba7d` (`docs(ux-flow-analyst): re-verify 7 gaps on 9aed84b — all PASS`) on 2026-05-20.
+Cross-checked against `docs/archive/MAIN-FEATURE-INVENTORY.md` (after this commit's amendments) and `feat/r3f-migration` HEAD `923ba7d` (`docs(ux-flow-analyst): re-verify 7 gaps on 9aed84b — all PASS`) on 2026-05-20.
 
 This is the final completeness gate before PR #48 merge per
 `team-orchestration` antipattern #10: "A feature inventory that documents

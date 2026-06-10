@@ -1,7 +1,7 @@
 # arch-scout curation — post-merge 05bd4d8
 
 Architect: `architect-3`. Date: 2026-05-27.
-Inputs: `docs/PARITY-AUDIT-POST-MERGE.md` + `docs/ARCH-IMPROVEMENT-CANDIDATES-POST-MERGE.md`.
+Inputs: `docs/archive/PARITY-AUDIT-POST-MERGE.md` + `docs/archive/ARCH-IMPROVEMENT-CANDIDATES-POST-MERGE.md`.
 Branch tip: `05bd4d8` (merge of `feat/r3f-migration` into `feat/r3f-16-audio-animation`).
 
 ---

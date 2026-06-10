@@ -4,13 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-TextScene Inspector is a monorepo for parsing and rendering text-based 3D scene (.tscn) files using three.js. It includes a core library, VS Code extension, and web previewer.
+TextScene Inspector is a monorepo for parsing and rendering text-based 3D scene (.tscn) files. The rendering layer is react-three-fiber over three.js. It includes a core library, VS Code extension, and web previewer.
 
 ## Additional Documentation
 
 - **[README.md](./README.md)**: Read for project status, installation steps, and available scripts
 - **[TODO.md](./TODO.md)**: **CRITICAL** - High-level roadmap with work item summaries. Wait for user to specify which work item (#WI) to work on. Focus on ONE work item at a time. Never attempt multiple WIs simultaneously. Mark item as done (change `[ ]` to `[x]`) immediately after completing it. Do NOT automatically start the next item - wait for user instruction
-- **[work_items/](./work_items/)**: Detailed work item documentation. Each `WI{number}.md` file contains implementation details, testing strategies, code examples, and architecture decisions. Read the specific work item file when starting work on that WI
+- **[work_items/](./work_items/)**: Detailed work item documentation. Each `WI-{number}.md` file contains implementation details, testing strategies, code examples, and architecture decisions. Read the specific work item file when starting work on that WI
 - **[ARCHITECTURE.md](./ARCHITECTURE.md)**: Read for detailed architecture explanation, especially when working on the vertical slicing structure or understanding TSCN format components
 - **[REFERENCES.md](./REFERENCES.md)**: Read when you need to look up documentation links or Context7 library IDs
 
@@ -46,11 +46,11 @@ TextScene Inspector is a monorepo for parsing and rendering text-based 3D scene 
 
 **Structure**:
 - `TODO.md` - Compact roadmap with work item summaries and links
-- `work_items/WI{number}.md` - Detailed files with implementation specifics
+- `work_items/WI-{number}.md` - Detailed files with implementation specifics
 
 **When working on a work item**:
 1. User specifies which WI to work on (e.g., "work on WI-50")
-2. **Read** `work_items/WI{number}.md` for full details (implementation steps, testing strategy, code examples)
+2. **Read** `work_items/WI-{number}.md` for full details (implementation steps, testing strategy, code examples)
 3. **Implement** following the detailed plan
 4. **Test** according to the testing checklist in the work item file
 5. **Update** `TODO.md` - change `[ ]` to `[x]` immediately after completion
@@ -69,8 +69,8 @@ TextScene Inspector is a monorepo for parsing and rendering text-based 3D scene 
 **Manual validation** (if you want to run checks before committing):
 ```bash
 # If you created/modified .tscn files, lint them
-pnpm --filter @textscene/linter build
-node apps/textscene-linter/dist/cli.js scenes/fixtures/*.tscn scenes/examples/*.tscn
+pnpm build:linter
+pnpm lint:tscn scenes/fixtures/*.tscn scenes/examples/*.tscn
 ```
 
 ### Development Cycle (Test as You Go)
@@ -123,8 +123,8 @@ node apps/textscene-linter/dist/cli.js scenes/fixtures/*.tscn scenes/examples/*.
 ```
 src/
   core/
-    SceneManager.ts          # Implementation
-    SceneManager.test.ts     # Unit tests co-located
+    SceneGraphBuilder.ts          # Implementation
+    SceneGraphBuilder.test.ts     # Unit tests co-located
 ```
 
 ## Commands
@@ -152,7 +152,7 @@ pnpm lint:fix
 ### Package-Specific Development
 
 ```bash
-# Core library (tscn-renderer)
+# Core library (@textscene/core)
 cd packages/textscene-core
 pnpm dev          # Watch mode for TypeScript
 pnpm test:watch   # Watch mode for tests
@@ -180,13 +180,8 @@ When adding or removing scenes:
    - Fixtures: `unit-<node-type>.tscn`, `edge-<issue>.tscn`
    - Examples: `integration-<feature>.tscn`, `example-<name>.tscn`
 2. Files are automatically copied during `pnpm dev` or `pnpm build`
-3. **Manually update** `apps/textscene-web/src/fixtures.ts` to add the scene to the UI selector
-4. Use appropriate categories (Unit - Basic Nodes, Unit - Primitive Meshes, Edge Cases, Integration - Multi-Node, Examples - Complex Scenes)
-
-Example fixture entry:
-```typescript
-{ name: 'Plane Mesh', file: 'unit-plane-mesh.tscn', category: 'Unit - Primitive Meshes' }
-```
+3. **Run `pnpm generate:fixtures`** to regenerate `apps/textscene-web/src/fixtures.ts` — the file is AUTO-GENERATED, never hand-edit it
+4. Categories derive from the filename prefix in `scripts/generate-fixtures.js` — extend `detectCategory()` there if a new category is needed
 
 The web previewer includes a categorized scene selector for quick loading during development.
 
@@ -206,18 +201,17 @@ When implementing new features (node types, mesh types, materials, etc.):
 2. **Validate with linter before committing**
    ```bash
    # Build linter first
-   pnpm --filter @textscene/linter build
+   pnpm build:linter
 
    # Lint your new fixture
-   node apps/textscene-linter/dist/cli.js scenes/fixtures/your-new-fixture.tscn
+   pnpm lint:tscn scenes/fixtures/your-new-fixture.tscn
    ```
    - Fixture must pass linting with zero errors (unless it's an edge case fixture)
    - Fix any linting errors before committing
 
-3. **Add to fixtures.ts** for web UI visibility
-   - Update `apps/textscene-web/src/fixtures.ts`
-   - Choose appropriate category (create new if needed)
-   - Maintain alphabetical order within categories
+3. **Regenerate fixtures.ts** for web UI visibility
+   - Run `pnpm generate:fixtures` (do not hand-edit `apps/textscene-web/src/fixtures.ts` — it is auto-generated)
+   - Categories come from filename prefixes; extend `detectCategory()` in `scripts/generate-fixtures.js` for new categories
 
 **What to create fixtures for:**
 - ✅ Every mesh type (BoxMesh, SphereMesh, etc.)
@@ -233,59 +227,82 @@ When implementing new features (node types, mesh types, materials, etc.):
 
 ### Monorepo Structure
 
-- **packages/textscene-core**: Core library using three.js
+- **packages/textscene-core**: Core library — parser, linter, react-three-fiber components
 - **apps/textscene-vscode**: VS Code custom editor integration
 - **apps/textscene-web**: Standalone web app for debugging
+- **apps/textscene-linter**: CLI linter (Node, React/THREE-free)
 
 ### Vertical Slicing Pattern
 
-The core library (`packages/textscene-core/src/nodes/`) uses vertical slicing - each TSCN node type (Mesh, Camera, Light, etc.) gets its own folder containing:
+The core library (`packages/textscene-core/src/nodes/`) uses unified vertical slicing - each TSCN node type (Mesh, Camera, Light, etc.) gets its own folder containing:
 - `parser.ts` - Parsing logic for that node type
-- `renderer.ts` - three.js rendering logic
-- `index.ts` - Self-registration with NodeRegistry
-- `*.test.ts` - Co-located tests
+- `linterParser.ts` + `linter.ts` - Strict-parse validators and lint rules
+- `propertyFormatter.ts` - Optional custom Inspector formatting
+- `Component.tsx` - react-three-fiber render component
+- `types.ts` - The node's typed properties shape
+- `*.test.ts` / `*.test.tsx` - Co-located tests
+- Three registration entry points:
+  - `index.ts` → registers parser + formatter with `NodeRegistry`
+  - `index.linter.ts` → registers validators + lint rules (imports only `.ts`, never `Component.tsx`)
+  - `index.r3f.ts` → registers the render component with `nodeComponentRegistry` (the only file allowed to import `./Component`)
 
-This keeps related functionality together for quick iteration.
+Not every slice carries every file: `propertyFormatter.ts` and the linter entry point exist only where needed. This keeps related functionality together for quick iteration while the three entry points keep the linter bundle React/THREE-free. See ARCHITECTURE.md and ADR-0001/0002.
 
 ### Node Registry Pattern
 
-Node types self-register using the `NodeRegistry` (packages/textscene-core/src/core/NodeRegistry.ts):
-- Each node type exports a registration object in its `index.ts`
-- Registration happens on import - no central file to edit
-- Adding new node types requires NO changes to parser/renderer core files
-- Eliminates hardcoded conditionals and switch statements
+Node types self-register across three parallel registries keyed by the same `typeName`:
+- `nodeRegistry` (`packages/textscene-core/src/core/NodeRegistry.ts`) - parser + optional property formatter
+- `nodeComponentRegistry` (`packages/textscene-core/src/r3f/NodeComponentRegistry.ts`) - React render component
+- Linter rule/validator registries (`packages/textscene-core/src/linter/`)
 
-**Example**: To add a new node type, create the folder structure and register:
+Registration happens on import (side effects) - no central file to edit, no hardcoded conditionals or switch statements. There is NO `renderer` field on `NodeTypeRegistration` (removed in WI-R3F-6; rendering goes through `nodeComponentRegistry`).
+
+**Scaffolding**: `pnpm new:node <TypeName> <category-dir> [--base node3d|node2d|node] [--transform-only] [--linter] [--dry-run]` generates the slice files plus a `unit-*.tscn` fixture and inserts the aggregation imports automatically (e.g. `pnpm new:node Marker3D 3d --base node3d --transform-only`). The conformance guard tests (barrelCompleteness, reactFree, ruleCoverage) fail the suite if a slice is mis-wired.
+
+**Example**: To add a new node type, create the slice folder and the entry points:
 ```typescript
 // packages/textscene-core/src/nodes/mynodetype/index.ts
-import { nodeRegistry } from '../../core/NodeRegistry';
-import { isMyNodeType, parseMyNodeType } from './parser';
-import { createMyNodeType } from './renderer';
+import { nodeRegistry, type NodeTypeRegistration } from '../../core/NodeRegistry';
+import { parseMyNodeType } from './parser';
+import { formatMyNodeTypeProperties } from './propertyFormatter';
 
-nodeRegistry.register({
+const myNodeTypeRegistration: NodeTypeRegistration = {
   typeName: 'MyNodeType',
-  typeGuard: isMyNodeType,
   parser: parseMyNodeType,
-  renderer: createMyNodeType,
-});
+  propertyFormatter: formatMyNodeTypeProperties, // optional
+};
+
+nodeRegistry.register(myNodeTypeRegistration);
 ```
 
-Then import in TscnParser.ts: `import '../nodes/mynodetype';`
+```typescript
+// packages/textscene-core/src/nodes/mynodetype/index.r3f.ts
+import { nodeComponentRegistry } from '../../r3f/NodeComponentRegistry';
+import { MyNodeType } from './Component';
+
+nodeComponentRegistry.register({ typeName: 'MyNodeType', Component: MyNodeType });
+```
+
+```typescript
+// packages/textscene-core/src/nodes/mynodetype/index.linter.ts
+import './linterParser.js';
+import './linter.js';
+```
+
+Then wire the side-effect imports where each entry point is collected:
+- `index.ts` → `packages/textscene-core/src/parser/TscnParser.ts`
+- `index.r3f.ts` → `packages/textscene-core/src/r3f/nodes/index.ts`
+- `index.linter.ts` → `packages/textscene-core/src/linter/index.ts`
 
 ### three.js Resource Cloning Pattern
 
-**CRITICAL**: `THREE.Object3D` can only have ONE parent. When caching three.js resources, clone before returning or only the LAST instance renders.
+**CRITICAL**: `THREE.Object3D` can only have ONE parent. When caching three.js resources, clone before handing out or only the LAST instance renders.
 
-**When adding new resource types to ResourceRegistry:**
-1. Check if resource has parent/ownership constraints (Object3D, Texture, Material do)
-2. If yes, clone before returning from cache: `cached.clone(true)` for Object3D
-3. Update tests to expect different UUIDs (cloned objects, not same reference)
+Where this lives today: per-type processors (`packages/textscene-core/src/resources/createResourceProcessor.ts`) cache processed values once per path, and `useResource` (`packages/textscene-core/src/resources/useResource.ts`) decides identity per type:
+- `Texture2D`, `StandardMaterial3D`, `PackedScene` → identity equality (same cached reference returned to every consumer)
+- `GLBMesh` (`THREE.Object3D`) → a fresh clone per consumer via `cloneWithMaterials(template)`, because of the single-parent rule
 
-**Example - loadGLBMesh:**
-```typescript
-const cached = await this.loadWithDeduplication(id, this.glbMeshCache, ...);
-return cached ? cached.clone(true) : null;  // Clone or only last instance visible
-```
+**When adding a new resource type:** check whether the payload has parent/ownership constraints (Object3D does); if yes, clone per consumer in `useResource` and update tests to expect different UUIDs (cloned objects, not same reference).
 
 ### Two-Parser Architecture
 
@@ -311,6 +328,8 @@ The codebase uses **two different parsers** for different purposes:
 - **Rendering needs resilience**: Show what you can, warn about problems, don't crash
 - **Linting needs strictness**: Report every single issue so users can fix them
 - Separation of concerns: Different use cases, different error handling strategies
+
+**One shared scanning loop**: Both parsers run the same loop in `packages/textscene-core/src/parser/TscnParserCore.ts` via the `ParseObserver` seam — the lenient parser passes no observer (bare loop, identical recovery behavior), the strict parser passes an observer that collects every error into diagnostics and runs property validators.
 
 ### Linter Architecture
 
@@ -365,19 +384,19 @@ diagnostics.forEach(d => {
 
 **Bundle Size Optimization (Critical):**
 
-The linter uses **direct imports** instead of node `index.ts` files to prevent bundling THREE.js:
+The linter uses each slice's `index.linter.ts` entry point instead of the slice's `index.ts` to prevent bundling React/THREE.js:
 
 ```typescript
-// ❌ WRONG - pulls in renderer + THREE.js (significantly larger bundle)
+// ❌ WRONG - pulls in the full slice graph (and via index.r3f.ts importers, React + THREE.js)
 import '../nodes/base/node3d/index.js';
 
 // ✅ CORRECT - only linter code (minimal bundle)
-import '../nodes/base/node3d/linterParser.js';
-import '../nodes/base/node3d/linter.js';
+import '../nodes/base/node3d/index.linter.js';
 ```
+
 **Pattern for all nodes:**
-- `linter/index.ts`: ALWAYS imports `linterParser.js` + `linter.js` directly (even for nodes with renderers)
-- Renderer apps (web/VSCode): Import node `index.ts` files (gets renderer + linter, needs THREE.js anyway)
+- `linter/index.ts`: imports each slice's `index.linter.js` — a thin entry point that imports only `linterParser.js` + `linter.js` (`.ts` files only, never `Component.tsx`)
+- Renderer apps (web/VSCode): import `parser/TscnParser.ts` (slice `index.ts` files) and `r3f/nodes/index.ts` (slice `index.r3f.ts` files) — they need React + THREE.js anyway
 - Result: Linter stays minimal, renderer apps get everything they need
 
 This is not technical debt - it's essential architecture for scale.
@@ -392,22 +411,20 @@ To add/update shared dependencies:
 
 ### Core Utilities and Patterns
 
-**Generic Resource Resolution** (`packages/textscene-core/src/resources/resourceResolver.ts`):
-- `resolveResource<T>()` - Generic function for resolving any resource type
-- Eliminates duplication between mesh and material resolution
-- Type-safe handler registration pattern
+**Shared UI shell** (`packages/textscene-core/src/r3f/components/`):
+- `TscnPreviewShell` - Split Dock composition root (top bar, viewport, right dock) shared by both apps
+- `SceneTreeViewer` - Interactive tree hierarchy panel (master)
+- `NodeDetailsPanel` - Inspector detail panel, driven by each node's `propertyFormatter`
 
-**Scene Setup Utilities** (`packages/textscene-core/src/core/SceneSetup.ts`):
-- `setupThreeJsScene()` - One-line three.js initialization
-- Extracts scene, camera, renderer, and controls setup
-- Reusable across applications
+**Resource pipeline** (`packages/textscene-core/src/resources/`):
+- `FileEventBus` - raw bytes: `request(path)` → `loaded`/`failed`, dedupes in-flight requests
+- Per-type processors (`createResourceProcessor`) - cache + process raw bytes into typed payloads
+- `ResourceEventBus` - typed events (`texture`/`material`/`glb`/`scene` × lifecycle)
+- `useResource(path, type)` - the only surface R3F components see; never suspends, returns `{ value, status, error? }`
 
-**UI Composition** (`packages/textscene-core/src/ui/`):
-- `NodeDetailsFormatter` - Generates HTML for node property display
-- `SceneTreeViewer` - Interactive tree hierarchy viewer
-- `TscnPreviewUI` - Coordinates all UI components
+See ARCHITECTURE.md ("Resource Loading") for the full event-driven flow including late-arrival upload recovery.
 
-**Feature Parity**: Both web-previewer and vscode-extension share the same tree viewer, node details, and rendering capabilities through the shared tscn-renderer library.
+**Feature Parity**: Both web-previewer and vscode-extension share the same tree viewer, node details, and rendering capabilities through the shared @textscene/core library.
 
 ### TSCN Format
 

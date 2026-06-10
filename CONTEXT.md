@@ -35,11 +35,15 @@ The recovering parser used for rendering — logs issues but emits whatever it c
 _Avoid_: "the parser" (ambiguous with strict).
 
 **Strict parser** (`StrictTscnParser`):
-The validating parser used only for linting — reports every syntax/format error as a `ParseError` with line/column.
+The validating parser used only for linting — reports every syntax/format error as a `ParseError` with line/column. Since 2026-06 it is a thin adapter over the shared scanning loop via a **ParseObserver**.
 _Avoid_: "validator" (reserve for property validators).
 
+**ParseObserver** (`parser/TscnParserCore.ts`):
+The optional hook seam (`onError` / `onSectionStart` / `onProperty`) on the single shared scanning loop. Lenient parsing passes no observer (byte-identical recovery behavior); strict parsing passes an observer that collects `ParseError`s, runs the heading checks, and dispatches property validators. One loop, two adapters.
+_Avoid_: "callback API", "strict mode flag".
+
 **Value decoder** (`parser/valueParsers.ts`):
-The lenient parser's shared primitives for reading a raw property string into a typed scalar/vector — `intOr`/`floatOr`/`boolOr`/`enumOr`/`vec2Or` (take a fallback, always return) and `parseOptionalInt` (returns `undefined` when unset). One contract: fall back **silently when absent**, **warn-then-fall-back when present but unparseable**. Wraps the canonical leaf scanners (`parseVector2`/`parseVector3` in `parser/vectors.ts`, `parseColor` in `utils/colorParser.ts`); one-off structured literals (`Vector2i`, `Rect2`, `frame_coords`) and divergent leaf parsers (the throwing `parseColor` in `standardmaterial3d`, the `undefined`-returning `parseVector2` in `control`) stay in their slice.
+The lenient parser's shared primitives for reading a raw property string into a typed scalar/vector — `intOr`/`floatOr`/`boolOr`/`enumOr`/`vec2Or` (take a fallback, always return) and `parseOptionalInt` (returns `undefined` when unset). One contract: fall back **silently when absent**, **warn-then-fall-back when present but unparseable**. Wraps the canonical leaf scanners (`parseVector2`/`parseVector3` in `parser/vectors.ts`, `parseColor` in `utils/colorParser.ts`), which share `FLOAT_PATTERN_SOURCE` — the one float regex accepting scientific notation (`1e-05`, which Godot emits) and rejecting malformed components outright; one-off structured literals (`Vector2i`, `Rect2`, `frame_coords`) and divergent leaf parsers (the throwing `parseColor` in `standardmaterial3d`, the `undefined`-returning `parseVector2` in `control`) stay in their slice.
 _Avoid_: re-declaring per-node `intOr`/`floatOr` copies (the pattern this replaced); "validator" (that is the strict-linter path).
 
 ### Code organization
@@ -48,12 +52,12 @@ _Avoid_: re-declaring per-node `intOr`/`floatOr` copies (the pattern this replac
 All code for one Node type co-located in one folder — parser, linter, formatter, render component, and tests — the organizing principle the codebase is being unified toward.
 _Avoid_: "module" (reserve for the architecture sense), "feature folder".
 
-**Split slice** (current, being removed):
-The transitional state where a Node type's parser/linter/formatter live in `nodes/<category>/<type>/` while its render component lives in a parallel `r3f/nodes/<type>/`.
-_Avoid_: "the layout".
+**Split slice** (historical — removed 2026-06):
+The former transitional state where a Node type's parser/linter/formatter lived in `nodes/<category>/<type>/` while its render component lived in a parallel `r3f/nodes/<type>/`. Every slice is now unified; the term survives only so old documents stay readable.
+_Avoid_: using it for current code.
 
 **React-free linter boundary**:
-The hard invariant that the linter bundle never transitively imports React or THREE — preserved because `linter/index.ts` imports only each slice's `linterParser.ts` + `linter.ts`, never its `Component.tsx`.
+The hard invariant that the linter bundle never transitively imports React or THREE — preserved because `linter/index.ts` imports only each slice's `index.linter.ts` entry point (which imports `linterParser.ts` + `linter.ts`), never its `Component.tsx`.
 _Avoid_: "linter isolation" used loosely; this is a specific import-graph constraint guarded by a test.
 
 **Slice entry points**:

@@ -5,7 +5,7 @@ Scan tip: 6a5cc44 — date 2026-05-28
 Scout: `arch-scout-4` (read-only). Main checkout.
 
 Baseline: prior scan at `05bd4d8` (2026-05-27, 0 HIGH / 0 MED / 11 LOW).
-See `docs/ARCH-IMPROVEMENT-CANDIDATES-POST-MERGE.md`.
+See `docs/archive/ARCH-IMPROVEMENT-CANDIDATES-POST-MERGE.md`.
 
 New surface since baseline:
 - `bec1d15` — WI-R3F-18: lazy-load DOM panels + ESM esbuild split

@@ -18,8 +18,10 @@ These complement the deterministic, browser-free guard in
 `packages/textscene-core/src/r3f/controls/ld58-ui-overlay.test.tsx`, which runs
 the same scenes through the parse → SceneGraph → overlay pipeline in JSDOM.
 
-## Known follow-ups (visible here)
+## Resolved since the last capture run
 
-- **Multiline quoted text** (e.g. StartScreen's two-line title) renders only its
-  first line with a stray leading quote — the line-based property parser doesn't
-  yet join quoted values that span lines.
+- **Multiline quoted text** (e.g. StartScreen's two-line title) now renders in
+  full: the parser joins quoted values that span lines
+  (`packages/textscene-core/src/parser/TscnParserCore.ts`, guarded by
+  `multilineStrings.test.ts`). The captures here predate the fix — regenerate
+  them so `startscreen-2d.png` shows both lines.

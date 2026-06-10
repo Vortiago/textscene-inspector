@@ -2,8 +2,8 @@
 
 Known cases where the renderer **cannot reproduce Godot exactly** because of
 three.js platform constraints. Everything else in materials + primitive meshes
-was verified faithful against the Godot 4.4 spec in the parity audit (2026-06-03,
-23 confirmed divergences — 19 fixed, the 4 below recorded here).
+was verified faithful against the Godot 4.4 spec in the parity audit
+(2026-06-03); the 11 divergences that remain unfixed are recorded below.
 
 Each item below is harmless for the scenes shipped today. This catalogue exists
 so divergences are **recorded, not discovered by eye** — if a render ever looks
@@ -11,7 +11,7 @@ wrong in one of these areas, this is the first place to check.
 
 ## StandardMaterial3D
 
-### Metallic / roughness texture channel  *(audit #9, #10)*
+### Metallic / roughness texture channel  *(parity audit)*
 Godot reads the channel named by `metallic_texture_channel` /
 `roughness_texture_channel` (default `RED`). three.js's
 `MeshStandardMaterial.metalnessMap` / `roughnessMap` read **fixed** channels —
@@ -26,7 +26,7 @@ BLUE for metalness, GREEN for roughness.
   for an uncommon case.
 - Site: `nodes/3d/meshinstance3d/Component.tsx` (roughnessMap / metalnessMap).
 
-### Emission operator = ADD  *(audit #11)*
+### Emission operator = ADD  *(parity audit)*
 With `emission_operator = ADD` (Godot default) **and** both a colored `emission`
 and an `emission_texture`, Godot computes `(emission + tex) * energy`. three.js's
 `emissiveMap` is multiply-only (`emissive * intensity * tex`), so the additive
@@ -64,19 +64,10 @@ UVs (approximate) — a true 3-axis triplanar shader is out of scope.
 
 ## Transforms (Node2D / Node3D)
 
-### Node2D.skew  *(audit #34)*
-Godot's `skew` shears the local `Transform2D` (the Y basis is rotated by
-`rotation + skew`, the X basis by `rotation` only), producing a parallelogram.
-That is a **non-PRS** matrix; our 2D nodes map to an R3F `<group>`'s
-position/rotation/scale, which can't express a shear. `skew` is parsed but not
-applied.
-
-- **Impact today:** zero — no shipped `.tscn` sets `skew`.
-- **Why not fixed:** applying it needs a raw `Matrix4` on the group
-  (`matrixAutoUpdate = false` + a ref), and the correct shear sign under our
-  `F = diag(1,-1,1)` conjugation can't be confirmed without a visual Godot
-  reference. Shipping an unverified shear for a zero-impact case adds risk.
-- Site: `r3f/node2dTransform.ts` (`node2dGroupProps`).
+> **Resolved:** `Node2D.skew` (audit #34) was previously listed here as
+> parsed-but-not-applied. Skew is now rendered: a non-zero skew bakes the full
+> sheared `Transform2D` into a `THREE.Matrix4` applied with
+> `matrixAutoUpdate = false` (`r3f/node2dTransform.ts`).
 
 ### Node2D.z_as_relative = false  *(audit #35)*
 `z_as_relative` defaults to **true** — effective Z = parent Z + `z_index` — and

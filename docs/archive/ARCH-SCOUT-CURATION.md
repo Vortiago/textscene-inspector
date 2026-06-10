@@ -1,6 +1,6 @@
 # arch-scout curation — 2026-05-20
 
-architect-2-2's curation of the 11 candidates in `docs/ARCH-IMPROVEMENT-CANDIDATES.md` produced by arch-scout. No rejections; all 11 are valid. Sequenced for sprint dispatch.
+architect-2-2's curation of the 11 candidates in `docs/archive/ARCH-IMPROVEMENT-CANDIDATES.md` produced by arch-scout. No rejections; all 11 are valid. Sequenced for sprint dispatch.
 
 Source: arch-scout report at `71cca76`. Curation by architect-2-2.
 

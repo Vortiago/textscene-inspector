@@ -9,7 +9,9 @@
 
 The 3-column shell put the Scene tree (left) and Inspector (right) on opposite sides of
 the viewport. User feedback during a prototype exploration (5 fresh-eyes designs → A+B
-hybrids → G refinements; see `prototypes/ui-gallery/`) converged on **J / "Split Dock"**:
+hybrids → G refinements) converged on **J / "Split Dock"**. The reference prototypes
+were ephemeral and deleted after implementation; the shipped `TscnPreviewShell` +
+`--tsi-*` tokens are the canonical design record.
 
 - A left vertical rail/dock duplicates VS Code's OWN activity bar + Explorer (the webview
   sits in the editor area, right of that chrome) and wastes width in a narrow split.
@@ -70,6 +72,7 @@ Restructure `TscnPreviewShell` into a **two-column** layout:
 
 - The left-dock API (`leftCollapsed`, left `Splitter`) is removed; the shell exposes a
   single collapsible dock. Host props (`TscnPreviewShellProps`) are unchanged.
-- Reference: `prototypes/ui-gallery/variants/j.html` + `screens/j-*.png`. The prototype
-  used hardcoded VS Code hexes; the real shell uses `--tsi-*`, so exact colors differ
-  slightly by design (theme-aware).
+- Reference: the J prototype was an ephemeral artifact, deleted after implementation
+  (per stage 5). The shipped `TscnPreviewShell` + `--tsi-*` tokens are the canonical
+  design record. The prototype used hardcoded VS Code hexes; the real shell uses
+  `--tsi-*`, so exact colors differ slightly by design (theme-aware).

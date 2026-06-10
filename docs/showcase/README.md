@@ -24,7 +24,7 @@ The real ld-58 hallway geometry with its actual wall and wood textures (PlaneMes
 
 The ld-58 hallway mockup: CSG corridor (floor / walls / ceiling), portrait frames, and Label3D name plates — self-contained, tracks 3D-rendering progress.
 
-## 3-column DCC chrome + 2D UI
+## Split Dock chrome + 2D UI
 
 ### dcc-layout
 
@@ -32,7 +32,11 @@ The ld-58 hallway mockup: CSG corridor (floor / walls / ceiling), portrait frame
 
 [▶ web/dcc-layout.webm](web/dcc-layout.webm)
 
-The 3-column DCC chrome — left **Scene** dock (info + node tree), center viewport, right **Inspector** dock, with the brand, scene picker, and the Reset Camera / 3D-2D / Collisions controls in the top bar. The clip orbits the textured ld-58 hallway, then switches to the EndGameDialog scene and flips to **2D** mode so the Control overlay renders the dialog UI.
+The shipped chrome is a 2-column **Split Dock** (ADR-0007): the viewport alongside a single right dock holding the scene tree on top and the tabbed detail panel (**Inspector** / **Resources** / **Cameras**) directly below — no left rail. The top bar carries the brand, the scene chip + Ctrl/Cmd+K palette, and the Reset Camera / 3D-2D / Collisions controls. The clip orbits the textured ld-58 hallway, then switches to the EndGameDialog scene and flips to **2D** mode so the Control overlay renders the dialog UI — note that it was recorded against the earlier 3-column layout and needs a re-run (`pnpm showcase:regen`) to show the Split Dock. Until then, these stills capture the current UI:
+
+![Current Split Dock chrome — viewport + right dock with scene tree and detail tabs](../screenshots/j-integration/web-3d-split-dock.png)
+
+![Current toolbar with the scene chip's Ctrl/Cmd+K command palette open](../screenshots/j-integration/web-toolbar-palette.png)
 
 The 2D-overlay renders of the seven vendored ld-58 UI scenes (StartScreen, GameUI, EndGameDialog, AboutDialog, DialogSystem, ClueContainer, ClueItem) are captured as stills in [`verify/`](verify/) with per-scene control stats in [`verify/verify-2d.json`](verify/verify-2d.json).
 
@@ -148,11 +152,11 @@ Request-missing-resources, then upload them and watch them get used — end to e
 
 ## VS Code extension
 
-Both editions render through the same `@textscene/core` library, so every clip above is also the VS Code 3D rendering output — the web previewer and the extension share one renderer. On top of that shared rendering, VS Code adds a custom `.tscn` editor and a scene-tree Preview panel. The screenshots below prove the integration runs inside the full VS Code UI: title bar, activity bar, editor tabs, the `.tscn` text editor, the Preview panel, and the status bar.
+Both editions render through the same `@textscene/core` library, so every clip above is also the VS Code 3D rendering output — the web previewer and the extension share one renderer. On top of that shared rendering, VS Code adds a command-opened `.tscn` Preview panel (**TextScene: Open Preview to the Side** from the command palette or the editor-title button) with the scene tree and inspector. The screenshots below prove the integration runs inside the full VS Code UI: title bar, activity bar, editor tabs, the `.tscn` text editor, the Preview panel, and the status bar.
 
 ![VS Code: split .tscn editors beside the live Preview panel](../screenshots/vscode/both-02-a.png)
 
-Several `.tscn` files open as text alongside the custom editor's Preview panel — searchable scene tree (Root → Description / Title / Box) and the node-details inspector — all inside the Extension Development Host window.
+Several `.tscn` files open as text alongside the Preview panel — searchable scene tree (Root → Description / Title / Box) and the node-details inspector — all inside the Extension Development Host window.
 
 ![VS Code: many .tscn fixtures tiled across the editor grid](../screenshots/vscode/both-03-a.png)
 
@@ -160,7 +164,7 @@ A grid of fixture `.tscn` files (box, sphere, plane, cylinder, capsule) open at 
 
 ![VS Code: explorer, raw .tscn source, and Preview panel together](../screenshots/vscode/vscode-05-a.png)
 
-The file explorer, raw `.tscn` source, and the Preview panel with its node tree side by side, showing the custom editor wired into the standard VS Code layout.
+The file explorer, raw `.tscn` source, and the Preview panel with its node tree side by side, showing the preview wired into the standard VS Code layout.
 
 Fresh captures against the latest renderer need a desktop session.
 
@@ -170,9 +174,9 @@ Planned or in flight; re-run the showcase to capture them once they land:
 
 - The furnished full hallway — photo frames, props, evidence — once more ld-58 assets are committed.
 - A dedicated lit-scene lighting demo.
-- Multiline-quoted-string titles (two-line labels currently show only the first line).
+- A re-recorded `dcc-layout` clip showing the 2-column Split Dock chrome (the current clip predates ADR-0007).
 
-(Shipped since the last revision: the 2D-UI overlay + 2D/3D toggle, the collision-shape wireframe toggle, and the 3-column DCC chrome — all visible in the `dcc-layout` clip above.)
+(Shipped since the last revision: multiline-quoted-string joining — two-line labels now render both lines (`parser/TscnParserCore.ts`, guarded by `multilineStrings.test.ts`) — plus the 2D-UI overlay + 2D/3D toggle and the collision-shape wireframe toggle, both visible in the `dcc-layout` clip above.)
 
 ## Regenerate
 

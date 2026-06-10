@@ -29,7 +29,7 @@ Replaces the broken Phase 13.5 imperative reconciler with a React-Three-Fiber re
 
 ## Verification
 
-Strict-protocol end-to-end verification across 11 checklists at `docs/strict-checklists/`. Methodology: `work_items/STRICT-VERIFICATION.md`. Each row in a checklist names the TSCN property, its expected THREE.js value, and the observed value — no row may be marked PASS on visual impression alone.
+Strict-protocol end-to-end verification across 11 checklists at `docs/archive/strict-checklists/`. Methodology: `work_items/STRICT-VERIFICATION.md`. Each row in a checklist names the TSCN property, its expected THREE.js value, and the observed value — no row may be marked PASS on visual impression alone.
 
 - **Web app** (4 checklists, 70 rows): 69 PASS / 1 CANT-VERIFY / 0 FAIL
 - **VS Code extension** (7 checklists, 108 rows): 103 PASS / 5 CANT-VERIFY / 0 FAIL
@@ -41,7 +41,7 @@ First verification pass (pre-WI-R3F-7) discovered 5 user-facing failures and exp
 
 ## Strict-verification artifacts
 
-11 per-flow strict checklists live in `docs/strict-checklists/`. The framework definition — property inventory, snapshot strategy, verifier protocol, and CI integration rules — is at `work_items/STRICT-VERIFICATION.md`. The 96 property regression tests are co-located with each Component (e.g., `meshinstance3d/Component.material-uv.test.tsx`); they run in `pnpm test:unit` and block CI on any regression.
+11 per-flow strict checklists live in `docs/archive/strict-checklists/`. The framework definition — property inventory, snapshot strategy, verifier protocol, and CI integration rules — is at `work_items/STRICT-VERIFICATION.md`. The 96 property regression tests are co-located with each Component (e.g., `meshinstance3d/Component.material-uv.test.tsx`); they run in `pnpm test:unit` and block CI on any regression.
 
 ## Spike result
 

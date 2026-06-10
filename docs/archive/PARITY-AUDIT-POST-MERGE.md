@@ -3,7 +3,7 @@
 **Audit tip: 05bd4d8 — date 2026-05-27**
 
 Produced by `parity-auditor-2` on the `ld58-completion` team.
-Prior audit reference: `docs/MAIN-VS-MIGRATION-DELTA.md` (tip `923ba7d`, 2026-05-20).
+Prior audit reference: `docs/archive/MAIN-VS-MIGRATION-DELTA.md` (tip `923ba7d`, 2026-05-20).
 Parity reference: `main` HEAD `80fa99e`.
 
 This document re-runs the two-layer audit against the post-merge integration tip
@@ -190,8 +190,8 @@ The fallback is more informative than main's empty group.
 
 ## Layer B — App-shell capability pass
 
-Cross-checked against `docs/MAIN-FEATURE-INVENTORY.md` and the prior delta
-(`docs/MAIN-VS-MIGRATION-DELTA.md`). Findings are re-verified at 05bd4d8.
+Cross-checked against `docs/archive/MAIN-FEATURE-INVENTORY.md` and the prior delta
+(`docs/archive/MAIN-VS-MIGRATION-DELTA.md`). Findings are re-verified at 05bd4d8.
 
 | # | Feature | Prior status | Current status | Evidence |
 |---|---|---|---|---|
@@ -274,7 +274,7 @@ The following capabilities exist on the current branch but NOT on main:
 
 ## Antipattern #10 closed-checklist cross-reference
 
-Every row from `docs/MAIN-FEATURE-INVENTORY.md` is classified below:
+Every row from `docs/archive/MAIN-FEATURE-INVENTORY.md` is classified below:
 
 | Inventory section | Classification |
 |---|---|

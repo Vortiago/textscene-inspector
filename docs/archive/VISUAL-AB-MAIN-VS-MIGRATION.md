@@ -277,7 +277,7 @@ For completeness — these should not be regressed when fixing the above:
 - **Parse-error banner**: Migration shows a clear red banner with the parse error message when content can't be parsed. Main silently displays "No nodes to display" with no indication that anything is wrong. This is a genuine UX improvement to keep.
 - **Selection-row affordance in tree**: Migration's selected row has a deep-blue background + a left blue-accent border. Visually crisper than main's selection state.
 - **Type badge fixed-width formatting**: Migration's `MESH` / `OMNI` / `DIR` / `N3D` badges are consistently sized pills. Main's badges look a touch more ad-hoc in width.
-- **Scene change reset**: Migration's `SceneChangeResetter` (TscnPreviewShell.tsx:193) clears selection/hover/expanded state on scene switch — main reportedly didn't (per docs/MAIN-VS-MIGRATION-DELTA.md).
+- **Scene change reset**: Migration's `SceneChangeResetter` (TscnPreviewShell.tsx:193) clears selection/hover/expanded state on scene switch — main reportedly didn't (per docs/archive/MAIN-VS-MIGRATION-DELTA.md).
 - **Missing-resource upload UI**: Migration lets the user upload missing files inline per row. Main's Resource Files panel shows the same info but with separate `Choose File` buttons in a slightly less polished layout.
 - **`SceneInfoCard`** itself: Main has a similar card but the migration's keeps the "Nodes / Root" stat clean and is easier to scan.
 

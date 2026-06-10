@@ -78,7 +78,7 @@ The provider correctly returns binary for `.glb` because `isBinaryResourceType('
 **Observed**:
 In both hosts, the scene-tree sidebar lists all 14 PackedScene instances from `Hallway.tscn` as leaf-like entries with the `📦` marker (HouseKeeper, InspectorCrawford, LadyBlackwood, EleanorHeartwell, DrHenryMorrison, YoungTimBlackwood, Dog, Cat, Car, Boat, Flowers, Books, Clock, plus DroppedLedger, Handkerchief, LetterOpener, grandfatherclock instances). For each PackedScene-instanced node, the displayed sub-tree contains only the children that are **explicitly re-declared in the parent file** as instance-property overrides (e.g., `[node name="Camera3D" parent="PhotoFrames/HouseKeeper" index="2"]` at `Hallway.tscn:267`). The sub-scene’s real internal nodes — `InteractableObject`, `Canvas` (the photo plane MeshInstance3D), `PortraitFrame2` (the frame GLB), `CameraStateMonitor` — are **not** present in the tree, even after expand-all. Grep across all 286 visible rows on the VS Code side returns 0 hits for `PortraitFrame2`, `Canvas`, `InteractableObject`, `CollisionShape`, `CameraStateMonitor`, `PictureFrame_Game`.
 
-**Expected (main behavior)**: per the archaeology inventory of main’s renderer (`.claude/wt/arch-main/docs/MAIN-FEATURE-INVENTORY.md`), main inlined sub-scene contents into the tree so that users could click on a photo-frame’s Canvas mesh to inspect it. The fact that the 3D viewport still renders those sub-scene contents (via `NodeDispatcher.InstancedSceneSubtree`) confirms the loading machinery works — only the **viewer** never sees them.
+**Expected (main behavior)**: per the archaeology inventory of main’s renderer (`.claude/wt/arch-main/docs/archive/MAIN-FEATURE-INVENTORY.md`), main inlined sub-scene contents into the tree so that users could click on a photo-frame’s Canvas mesh to inspect it. The fact that the 3D viewport still renders those sub-scene contents (via `NodeDispatcher.InstancedSceneSubtree`) confirms the loading machinery works — only the **viewer** never sees them.
 
 **Suspected file**: `packages/textscene-core/src/r3f/components/SceneTreeViewer/SceneTreeViewer.tsx:42-45`. The tree reads `sceneGraph.scenes.get(sceneGraph.rootScene)?.nodes ?? []` and recurses purely on `node.children`. It does NOT follow `node.instance` to pull the loaded subtree out of `ResourceLoader`. Counterpart `NodeDispatcher.tsx:171-226` (`InstancedSceneSubtree`) does the right thing for the 3D viewport: `useResource<TscnScene>(scenePath, 'PackedScene')` followed by `.nodes.map(...)` on the loaded scene. The tree viewer needs the same lookup, but it does not have a render-time `useResource` hook — the tree is rendered in a sidebar that should know about already-cached scenes.
 
@@ -353,7 +353,7 @@ Full pre-upload checklist rows 1-11 from `WEB-sprite3d.md` confirmed PASS. Post-
 
 **WI-R3F-19 (13 parity-drop fixes):**
 
-Per `docs/PARITY-AUDIT-POST-MERGE.md` (produced by `parity-auditor-2` on this same merge tip `05bd4d8`), the 13 silent parity drops closed by WI-R3F-19 are confirmed resolved at the code level. Spot-check via `integration-three-cubes.tscn`: 0 console errors, correct geometry. No regressions observed in any fixture loaded during this session. **PASS by audit + spot-check proxy.**
+Per `docs/archive/PARITY-AUDIT-POST-MERGE.md` (produced by `parity-auditor-2` on this same merge tip `05bd4d8`), the 13 silent parity drops closed by WI-R3F-19 are confirmed resolved at the code level. Spot-check via `integration-three-cubes.tscn`: 0 console errors, correct geometry. No regressions observed in any fixture loaded during this session. **PASS by audit + spot-check proxy.**
 
 ### VS Code extension — manual verification steps
 
@@ -980,7 +980,7 @@ above) is gone for the web app — the scene loads directly from the selector / 
 deep-link, exactly like the VS Code host already did from the workspace.
 
 **What was vendored** (BFS over `ext_resource` refs, zero missing files): 31 `.tscn`
-sub-scenes (17 script-stripped per ADR-0007), 11 GLBs, 3 `.tres` materials, ~25
+sub-scenes (17 script-stripped per ADR-0010), 11 GLBs, 3 `.tres` materials, ~25
 downscaled images. The canonical copies live at `scenes/ld58/Scenes/Hallway/Hallway.tscn`
 (286 nodes) and `scenes/ld58/HallwayGeometry.tscn`; two byte-identical prior-session
 duplicates (`scenes/examples/example-hallway.tscn`, `scenes/ld58/hallway-geometry.tscn`)

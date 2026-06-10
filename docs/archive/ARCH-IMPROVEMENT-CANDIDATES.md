@@ -128,7 +128,7 @@ graph, but **sub-scene children only exist after `useSubSceneChildren` resolves
 inside each `TreeNode`**. So the expand-all walker can't see them at all —
 the data lives in `ResourceLoader.scenes` cache, not in the parsed
 `sceneGraph`. ld58-verifier flagged this as polish item #5 in
-`docs/HALLWAY-END-TO-END.md:250`.
+`docs/archive/HALLWAY-END-TO-END.md:250`.
 
 **Architectural read**: this is not just a UI bug; it's the **shape mismatch
 between "what the tree shows" and "what the data layer carries"**. The tree

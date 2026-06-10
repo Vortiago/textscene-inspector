@@ -5,26 +5,26 @@ This document defines the user-visible scenarios that `browser-verifier` and `vs
 ## Conventions
 
 - **Flow ID** uses the prefix `WEB-`, `VSCODE-`, or `BOTH-` to indicate which verifier owns execution. `BOTH-` flows are executed once per environment by the corresponding verifier.
-- **Fixture paths** are relative to the repo root and reference files that exist on `feat/r3f-migration`. Verifiers must not invent fixtures.
+- **Fixture paths** are relative to the repo root and reference files that exist in the repo. Verifiers must not invent fixtures.
 - **PRD US** refers to the User Stories list in `work_items/PRD-r3f-migration.md`.
 - **Screenshot points** mark frames the verifier should capture for the user-guide build. The user guide is assembled by `browser-verifier` (`docs/user-guide-web.md`) and `vscode-verifier` (`docs/user-guide-vscode.md`); this file is the source of truth for what each guide must cover.
-- **Out of scope:** 2D nodes, physics bodies, audio playback, animation players, particles, paths, Skeleton3D, and Sprite3D. These are WI-R3F-3.x follow-ups; do not write flows that exercise them as first-class features (they appear only as Generic-Node-Fallback bait).
-- **Helper gizmos** in MVS scope: DirectionalLight, OmniLight, SpotLight, Camera3D. Audio is non-MVS; AudioStreamPlayer3D gizmo is deferred.
+- **Scope update (post-MVS):** the categories originally listed as out of scope all have registered renderer slices now — 2D nodes (including the Control overlay), physics bodies (transform-only groups per ADR-0005, plus the CollisionShape3D gizmo), audio-player nodes (AudioStreamPlayer3D speaker gizmo), AnimationPlayer/AnimationTree, GPUParticles3D, Path3D/PathFollow3D, Skeleton3D, and Sprite3D. What actually falls through `<GenericNodeFallback>` today is any type with no registration at all — real examples in the shipped scenes are `Timer` (`scenes/fixtures/unit-unsupported-nodes.tscn`) and `GPUParticles2D` (`scenes/examples/example-dodge-player.tscn`). The fallback renders an invisible transform-only group (ADR-0008 — no placeholder gizmo); the scene tree flags such nodes with a "Not Implemented" chip. Audio *playback* and animation *playback* remain unimplemented.
+- **Helper gizmos:** DirectionalLight, OmniLight, SpotLight, Camera3D, and the AudioStreamPlayer3D speaker gizmo.
 - **`res://`** paths in the fixtures resolve relative to `scenes/`. The web app copies `scenes/` into its dev server; the VS Code extension resolves them relative to the workspace folder containing the `.tscn` file.
 
 ---
 
 ## WEB flows (browser-verifier)
 
-The web previewer is single-panel. It exposes a fixture switcher dropdown (`apps/textscene-web/src/fixtures.ts`) that loads scenes by name. The verifier drives the browser via Playwright against `pnpm --filter @textscene/web dev`.
+The web previewer is single-panel. It exposes a scene palette (Ctrl/Cmd+K, opened from the toolbar's scene chip) backed by the auto-generated manifest in `apps/textscene-web/src/fixtures.ts`, which loads scenes by name. The verifier drives the browser via Playwright against `pnpm --filter @textscene/web-previewer dev`.
 
 ### WEB-01 — App boots to a working canvas
 
 - **Target environment:** web
 - **User intent:** A user opens the web previewer for the first time and sees a rendered default scene without configuring anything.
 - **Steps:**
-  1. Start the web dev server: `pnpm --filter @textscene/web dev`.
-  2. Navigate the browser to the dev server URL (default `http://localhost:5173`).
+  1. Start the web dev server: `pnpm --filter @textscene/web-previewer dev`.
+  2. Navigate the browser to the dev server URL (default `http://localhost:3000`).
   3. Wait for the canvas element to be present and have non-zero pixel dimensions.
   4. Read the page's WebGL canvas pixel data via `browser_evaluate` and confirm the canvas is not uniformly the clear color (i.e., something is rendered).
 - **Expected observable outcomes:**
@@ -165,23 +165,23 @@ The web previewer is single-panel. It exposes a fixture switcher dropdown (`apps
   - SCREENSHOT WEB-07-a: orbited camera before edit.
   - SCREENSHOT WEB-07-b: same camera angle after edit, with mesh transform changed.
 
-### WEB-08 — Generic-node fallback renders unsupported types as visible placeholders
+### WEB-08 — Generic-node fallback keeps unsupported types discoverable
 
 - **Target environment:** web
-- **User intent:** A user opens a scene that contains node types not implemented by the renderer (e.g., `Area3D`, `AnimationPlayer`, `Timer`). Those nodes appear as labeled placeholders rather than vanishing silently.
+- **User intent:** A user opens a scene that contains a node type with no registered renderer (e.g., `Timer`). The node stays discoverable in the scene tree rather than vanishing silently.
 - **Steps:**
   1. Select `scenes/fixtures/unit-unsupported-nodes.tscn`.
   2. Wait for the canvas to settle.
   3. Read the scene-tree panel.
-  4. Look at the canvas for placeholder gizmos (axes-helpers, labeled boxes, or PRD-equivalent `<GenericNodeFallback>` visualization) at the positions of `PhysicsArea`, `AnimPlayer`, and `GameTimer`.
+  4. Confirm the registered types render per their registrations and the unregistered type is flagged in the tree.
 - **Expected observable outcomes:**
   - Step 3: The tree contains `PhysicsArea`, `AnimPlayer`, `GameTimer`, `Title`, and `Description` — exactly as parsed.
-  - Step 4: At least one visible placeholder primitive exists per unsupported node (`Area3D`, `AnimationPlayer`, `Timer`). The placeholder is labeled with the node type, the node name, or both.
-  - `Label3D` nodes (`Title`, `Description`) also fall through `<GenericNodeFallback>` in MVS scope — placeholders visible.
+  - Step 4: `Area3D` (PhysicsArea) and `AnimationPlayer` (AnimPlayer) are registered types now — Area3D renders as a transform-only group (ADR-0005/ADR-0008) and AnimationPlayer's node renders (playback not implemented); neither is flagged. `Timer` (GameTimer) has no registration: it renders through `<GenericNodeFallback>` as an invisible transform-only group (ADR-0008 — no placeholder gizmo in the viewport) and the tree tags it with a "Not Implemented" chip.
+  - `Label3D` nodes (`Title`, `Description`) render as billboarded 3D text via their registered component.
   - No uncaught console errors.
 - **Features covered:** PRD US-11.
 - **Screenshot points:**
-  - SCREENSHOT WEB-08-a: scene with multiple labeled fallback placeholders visible.
+  - SCREENSHOT WEB-08-a: scene tree showing the "Not Implemented" chip on the unregistered node.
 
 ### WEB-09 — Helper gizmos visible for lights and cameras
 
@@ -221,15 +221,15 @@ The web previewer is single-panel. It exposes a fixture switcher dropdown (`apps
 
 ## VSCODE flows (vscode-verifier)
 
-The VS Code extension registers a custom editor for `.tscn` files and exposes language features (definition provider, document-symbol provider). The verifier drives the Extension Development Host via the launch skill (the same launch skill referenced in the VS Code repo agents directory). All fixture paths assume the verifier opened this repo's root as the workspace folder.
+The VS Code extension opens a webview Preview panel for `.tscn` files via the **`textscene.openPreviewToSide`** command (command palette entry "TextScene: Open Preview to the Side" plus an editor-title button — there is no `customEditors` contribution) and exposes language features (definition provider, document-symbol provider). The verifier drives the Extension Development Host via the launch skill (the same launch skill referenced in the VS Code repo agents directory). All fixture paths assume the verifier opened this repo's root as the workspace folder.
 
-### VSCODE-01 — Preview opens for a .tscn file via the custom editor
+### VSCODE-01 — Preview opens for a .tscn file via the preview command
 
 - **Target environment:** vscode
-- **User intent:** A user opens a `.tscn` file in VS Code and the rendered preview shows up automatically.
+- **User intent:** A user opens a `.tscn` file in VS Code and opens the rendered preview beside it.
 - **Steps:**
   1. Launch the Extension Development Host with this repo as the workspace.
-  2. Open `scenes/fixtures/unit-box-mesh.tscn` via `vscode.commands.executeCommand('vscode.openWith', uri, 'textscene.preview')` (or the registered editor ID — vscode-verifier should consult `apps/textscene-vscode/package.json` `customEditors` contribution for the exact ID).
+  2. Open `scenes/fixtures/unit-box-mesh.tscn` in a text editor (so it is the active editor), then run `vscode.commands.executeCommand('textscene.openPreviewToSide')` — the same command the editor-title button and the command palette entry "TextScene: Open Preview to the Side" invoke. A webview panel titled `Preview: unit-box-mesh.tscn` opens in the side editor group.
   3. Wait for the webview to load (poll for the webview's canvas to have non-zero dimensions).
 - **Expected observable outcomes:**
   - Step 3: A webview panel is open showing the rendered box. The scene-tree panel inside the webview lists the `Node3D` root and a `MeshInstance3D` child.
@@ -261,8 +261,8 @@ The VS Code extension registers a custom editor for `.tscn` files and exposes la
 - **Target environment:** vscode
 - **User intent:** A user opens two different scenes side-by-side. Editing one does not affect the other, and each panel has its own selection state.
 - **Steps:**
-  1. Open `scenes/fixtures/unit-box-mesh.tscn` in the custom editor, in editor group 1.
-  2. Open `scenes/fixtures/unit-sphere-mesh.tscn` in the custom editor, in editor group 2 (use `viewColumn: vscode.ViewColumn.Beside`).
+  1. Open `scenes/fixtures/unit-box-mesh.tscn` and run `textscene.openPreviewToSide` to open its preview, in editor group 1.
+  2. Open `scenes/fixtures/unit-sphere-mesh.tscn` and run `textscene.openPreviewToSide` again so its preview lands in editor group 2 (the command opens beside the active editor).
   3. Confirm both webviews are mounted.
   4. In webview 1, click a node in the tree (the `MeshInstance3D` child).
   5. In webview 2, click a different node (the `MeshInstance3D` child).
@@ -316,7 +316,7 @@ The VS Code extension registers a custom editor for `.tscn` files and exposes la
 - **Target environment:** vscode
 - **User intent:** Same as WEB-06 but inside the VS Code webview, confirming click-to-select works under the webview's restricted environment.
 - **Steps:**
-  1. Open `scenes/examples/integration-three-cubes.tscn` in the custom editor.
+  1. Open `scenes/examples/integration-three-cubes.tscn` and run `textscene.openPreviewToSide` to open its preview.
   2. Wait for the webview canvas to settle.
   3. Click on the webview canvas at the screen position of the middle cube.
   4. Read the webview's scene-tree panel for the selected entry.
@@ -334,7 +334,7 @@ The VS Code extension registers a custom editor for `.tscn` files and exposes la
 - **Target environment:** vscode
 - **User intent:** Same scenario as WEB-03 but executed inside the VS Code webview. Path resolution uses the webview's `asWebviewUri` plus the workspace-relative `res://` resolution.
 - **Steps:**
-  1. Open `scenes/fixtures/test-missing-texture.tscn` in the custom editor.
+  1. Open `scenes/fixtures/test-missing-texture.tscn` and run `textscene.openPreviewToSide` to open its preview.
   2. Wait for the webview canvas to settle.
   3. Read the canvas pixel data at the rendered mesh's screen position.
   4. Inspect the webview DOM for the missing-file label.
@@ -351,7 +351,7 @@ The VS Code extension registers a custom editor for `.tscn` files and exposes la
 - **Target environment:** vscode
 - **User intent:** Same as WEB-07 but inside the webview, confirming the camera state survives a save in the file-watcher-driven hot reload path.
 - **Steps:**
-  1. Open `scenes/fixtures/unit-box-mesh.tscn` in the custom editor.
+  1. Open `scenes/fixtures/unit-box-mesh.tscn` and run `textscene.openPreviewToSide` to open its preview.
   2. Orbit the webview camera to a non-default angle.
   3. Record the camera state via `webview.postMessage(...)` or by exposing it on `globalThis` for the verifier to read.
   4. Edit the file's content in the text editor (e.g., change the box translation).
@@ -377,13 +377,13 @@ Each `BOTH-` flow is run twice — once by `browser-verifier` against the web ap
 - **Target environment:** both
 - **User intent:** A user opens the canonical integration fixture and sees every MVS primitive, light, and material variation rendered correctly together — the WI-R3F-5 acceptance criterion (1).
 - **Steps:**
-  1. Open `scenes/examples/integration-all-primitives.tscn` (web: fixture switcher; vscode: custom editor).
+  1. Open `scenes/examples/integration-all-primitives.tscn` (web: scene palette; vscode: `textscene.openPreviewToSide` preview).
   2. Wait for the canvas to settle.
   3. Read the scene-tree panel.
   4. Inspect the canvas for visible primitives.
 - **Expected observable outcomes:**
   - Step 3: Tree contains `Root`, `Floor` (PlaneMesh), `Capsule`, `Torus`, `Prism`, `BackWall`, `DirectionalLight`, `FillLight` — matching the fixture's `[node ...]` entries.
-  - Step 4: All five non-floor primitives are visible at their respective transforms. The floor and back wall are also visible. (Torus and Prism are non-MVS mesh types; in MVS scope they may render as primitives or fall through `<GenericNodeFallback>` — either is acceptable as long as a placeholder is visible.)
+  - Step 4: All five non-floor primitives are visible at their respective transforms. The floor and back wall are also visible. (Torus and Prism render as real primitives now — TorusMesh/PrismMesh have registered components.)
   - Lighting is non-flat — shadow side of capsule is darker than lit side (directional light is doing work).
 - **Features covered:** PRD US-1, US-2, US-7 (gizmos for lights), US-11 (fallback for non-MVS Torus/Prism), WI-R3F-5 acceptance (1).
 - **Screenshot points:**
@@ -473,8 +473,8 @@ User stories 12 through 24 and 28 are developer-/maintainer-facing and are not e
 
 ## Notes for verifiers
 
-- **Audio gizmo deferral.** `AudioStreamPlayer3D` is mentioned in the PRD's helper-gizmo list but its underlying node type is in the WI-R3F-3.x follow-up scope. No flow in this document exercises an audio-player gizmo; if you encounter one in a fixture, expect `<GenericNodeFallback>` behavior.
-- **Non-MVS mesh primitives.** `TorusMesh`, `PrismMesh`, `Label3D`, and similar are not in the MVS subset. Fixtures referencing them should either render as registered components (if they make it into MVS) or render via `<GenericNodeFallback>` — either is acceptable for these flows as long as the scene does not crash.
+- **Audio gizmo.** `AudioStreamPlayer3D` is now a registered component with a speaker-cone gizmo (selection-gated); `AudioStreamPlayer` and `AudioStreamPlayer2D` are registered as non-visual nodes. No flow in this document exercises an audio-player gizmo directly — see `scenes/fixtures/unit-audio-stream-player.tscn` if you need one.
+- **Formerly non-MVS mesh primitives.** `TorusMesh`, `PrismMesh`, and `Label3D` all render via registered components now. Only types with no registration at all (e.g. `Timer`, `GPUParticles2D`) fall through `<GenericNodeFallback>`, which renders an invisible transform-only group (ADR-0008).
 - **Fixture-content drift.** If a fixture file's content has changed since this document was written, prefer the file's actual content as ground truth. Flag the drift to `user-flow-director` so the relevant step can be updated.
 - **Step ambiguity.** If two interpretations of a step lead to different observable outcomes, the verifier must record both and flag the step to `user-flow-director` for clarification.
 - **Screenshot naming.** Use the `SCREENSHOT <flow-id>-<letter>` tokens as the file name stem for the captured image, e.g., `web-04-b.png`. The user-guide build script in each verifier resolves these to the matching figure slot.

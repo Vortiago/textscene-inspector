@@ -140,5 +140,5 @@ This bit the team-lead during this incident too — the side fix was correctly i
 
 ## Open follow-up (out of scope for this fix)
 
-- The 25 additional deleted-test files inventoried by `bug-archaeologist-1` should be triaged and ported as a post-goal regression-coverage WI. The five just ported (`archaeology/restored/*`) are the most user-impacting; the rest are graded P2/P3 in `docs/BUG-ARCHAEOLOGY-2026-05-28.md`.
+- The 25 additional deleted-test files inventoried by `bug-archaeologist-1` should be triaged and ported as a post-goal regression-coverage WI. The five just ported (`archaeology/restored/*`) are the most user-impacting; the rest are graded P2/P3 in `docs/archive/BUG-ARCHAEOLOGY-2026-05-28.md`.
 - The "ceiling lamps positioned wrong" and "photo/window frame positioned wrong" items the user mentioned during this incident were not investigated — pending a separate verification cycle to narrow them down.
