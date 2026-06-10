@@ -18,7 +18,7 @@ Current release: **0.9.0** — on the road to v1.0; see [CHANGELOG.md](./CHANGEL
 
 **Implemented:**
 - ✅ TSCN parsing with full scene tree hierarchy (lenient render parser + strict lint parser sharing one scanning loop)
-- ✅ ~45 self-registering node types as unified vertical slices: meshes (Box/Sphere/Cylinder/Plane/Capsule/Torus/Prism), lights (Spot/Directional/Omni with shadows), Camera3D/Camera2D, WorldEnvironment, Label3D, CSG (as primitives), physics bodies + collision gizmos, sprites (2D/3D), and 15 Control types rendered as a DOM overlay
+- ✅ ~47 self-registering node types as unified vertical slices: meshes (Box/Sphere/Cylinder/Plane/Capsule/Torus/Prism), lights (Spot/Directional/Omni with shadows), Camera3D/Camera2D, WorldEnvironment, Label3D, CSG (as primitives), physics bodies + collision gizmos, sprites (2D/3D), and 15 Control types rendered as a DOM overlay
 - ✅ StandardMaterial3D PBR (albedo/metallic/roughness/normal/emission/AO, UV transforms, external textures)
 - ✅ External resources: PackedScene instancing, textures, materials, GLB meshes — event-driven with late-arrival upload recovery
 - ✅ react-three-fiber rendering, Split Dock shell (scene tree, inspector, resources, cameras), 2D/3D viewport modes
@@ -85,6 +85,16 @@ pnpm test
 
 # Watch mode for development
 pnpm test:watch
+```
+
+### Visual Regression
+
+```bash
+# Compare golden scenes against committed baselines (headless chromium + pixelmatch)
+pnpm test:visual
+
+# Rewrite baselines after an intentional visual change — eyeball, then commit
+pnpm test:visual:update
 ```
 
 ### Integration Tests

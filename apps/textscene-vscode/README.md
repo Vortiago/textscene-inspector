@@ -47,7 +47,7 @@ review, not pixel-exact validation.
 
 ## Supported nodes
 
-Around 45 node types render, registered as self-contained slices:
+Around 47 node types render, registered as self-contained slices:
 
 | Category | Nodes |
 | --- | --- |

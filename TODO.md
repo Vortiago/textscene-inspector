@@ -14,6 +14,7 @@
 - [x] `.vscodeignore` hardening (lean extension package)
 - [x] Linter publish prep (`@textscene/linter`)
 - [x] Release workflow added
+- [x] Visual-regression harness: 10 golden scenes, `pnpm test:visual`, CI job (see CLAUDE.md "Visual Regression")
 
 ### Remaining for 1.0
 
@@ -21,7 +22,7 @@
 - [ ] Publish to Open VSX
 - [ ] Decide whether to publish `@textscene/linter` to npm
 - [ ] Enable web previewer deploy (GitHub Pages)
-- [ ] Replace placeholder icon with a final brand asset (if desired)
+- [x] Replace placeholder icon with a final brand asset (`images/icon.png`, via the Marketplace listing PR)
 - [ ] AnimationPlayer playback preview (WI-42) — implement or explicitly descope
 - [ ] Final pass over the open work items below
 
@@ -227,7 +228,7 @@ These are unblocked by Phase 14 shipping. Each adds a node-type folder under `pa
 
 ## Testing & Documentation
 
-- [ ] #WI-19: End-to-End Scene Testing → [Details](work_items/WI-19.md)
+- [ ] #WI-19: End-to-End Scene Testing → [Details](work_items/WI-19.md) (partial: static golden-image harness shipped in `scripts/visual/`; remaining scope is interaction/E2E flows)
 - [ ] #WI-20: Documentation Updates → [Details](work_items/WI-20.md)
 
 ---
