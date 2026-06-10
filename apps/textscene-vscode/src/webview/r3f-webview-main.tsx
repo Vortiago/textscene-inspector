@@ -15,14 +15,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
-  FileEventBus,
-  ResourceLoader,
+  createResourcePipeline,
   ResourceLoaderProvider,
   TscnPreviewShell,
   setLogAdapter,
   type LogAdapter,
 } from '@textscene/core';
 import type { TscnNode } from '@textscene/core';
+import type { HostToWebviewMessage, WebviewToHostMessage } from '../protocol';
 import { WebviewResourceProvider } from './WebviewResourceProvider';
 
 declare const acquireVsCodeApi: () => {
@@ -40,36 +40,21 @@ interface VsCodeApi {
 class WebviewLogAdapter implements LogAdapter {
   constructor(private readonly vscode: VsCodeApi) {}
   trace(message: string, ...args: unknown[]): void {
-    this.vscode.postMessage({ type: 'log', level: 'trace', message, args });
+    this.vscode.postMessage({ type: 'log', level: 'trace', message, args } satisfies WebviewToHostMessage);
   }
   debug(message: string, ...args: unknown[]): void {
-    this.vscode.postMessage({ type: 'log', level: 'debug', message, args });
+    this.vscode.postMessage({ type: 'log', level: 'debug', message, args } satisfies WebviewToHostMessage);
   }
   info(message: string, ...args: unknown[]): void {
-    this.vscode.postMessage({ type: 'log', level: 'info', message, args });
+    this.vscode.postMessage({ type: 'log', level: 'info', message, args } satisfies WebviewToHostMessage);
   }
   warn(message: string, ...args: unknown[]): void {
-    this.vscode.postMessage({ type: 'log', level: 'warn', message, args });
+    this.vscode.postMessage({ type: 'log', level: 'warn', message, args } satisfies WebviewToHostMessage);
   }
   error(message: string, ...args: unknown[]): void {
-    this.vscode.postMessage({ type: 'log', level: 'error', message, args });
+    this.vscode.postMessage({ type: 'log', level: 'error', message, args } satisfies WebviewToHostMessage);
   }
 }
-
-interface IncomingLoadMessage {
-  type: 'loadTscn';
-  content: string;
-}
-
-interface IncomingUpdateMessage {
-  type: 'incrementalUpdate';
-  data: {
-    changes: unknown[];
-    sceneData: { rawText?: string };
-  };
-}
-
-type IncomingMessage = IncomingLoadMessage | IncomingUpdateMessage;
 
 function R3FWebviewApp({ vscode }: { vscode: VsCodeApi }) {
   const [content, setContent] = useState<string>('');
@@ -78,17 +63,14 @@ function R3FWebviewApp({ vscode }: { vscode: VsCodeApi }) {
   // provider's `loadResource` calls by responding to `loadResource`
   // postMessages with the file bytes; the FileEventBus + ResourceLoader
   // sit between that provider and `useResource` in node components.
-  const loader = useMemo(() => {
-    const provider = new WebviewResourceProvider(vscode);
-    const bus = new FileEventBus(provider);
-    const created = new ResourceLoader(bus);
-    created.setProvider(provider);
-    return created;
-  }, [vscode]);
+  const loader = useMemo(
+    () => createResourcePipeline(new WebviewResourceProvider(vscode)).loader,
+    [vscode]
+  );
 
   useEffect(() => {
     function onMessage(event: MessageEvent) {
-      const message = event.data as IncomingMessage | undefined;
+      const message = event.data as HostToWebviewMessage | undefined;
       if (!message) return;
       if (message.type === 'loadTscn') {
         setContent(message.content);
@@ -112,7 +94,7 @@ function R3FWebviewApp({ vscode }: { vscode: VsCodeApi }) {
     // initial open is a race: the host calls postMessage from its
     // constructor, but React hooks fire async). The host re-posts
     // the cached payload on receipt of this message.
-    vscode.postMessage({ type: 'webviewReady' });
+    vscode.postMessage({ type: 'webviewReady' } satisfies WebviewToHostMessage);
 
     return () => {
       window.removeEventListener('message', onMessage);
@@ -129,7 +111,7 @@ function R3FWebviewApp({ vscode }: { vscode: VsCodeApi }) {
       type: 'jumpToNode',
       nodeName: node.name,
       path,
-    });
+    } satisfies WebviewToHostMessage);
   };
 
   return (

@@ -1,0 +1,28 @@
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="ScrollContainer" type="ScrollContainer" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 16.0
+offset_top = 16.0
+offset_right = -16.0
+offset_bottom = -16.0
+
+[node name="Content" type="VBoxContainer" parent="ScrollContainer"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 800)
+theme_override_constants/separation = 8
+
+[node name="Top" type="Label" parent="ScrollContainer/Content"]
+layout_mode = 2
+text = "Scroll down — this content overflows the container."
+
+[node name="Bottom" type="Label" parent="ScrollContainer/Content"]
+layout_mode = 2
+text = "Bottom of the scrollable content."

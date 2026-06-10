@@ -13,6 +13,8 @@
  * R3F WorldEnvironment use it to read raw TSCN property strings.
  */
 
+import type { TscnExternalResource } from '../parser/types.js';
+
 export function parseResourceReference(
   ref: string
 ): { type: 'SubResource' | 'ExtResource'; id: string } | null {
@@ -27,4 +29,37 @@ export function parseResourceReference(
   }
 
   return null;
+}
+
+/**
+ * Resolve an `ExtResource("id")` reference — or a raw `res://` path, which
+ * passes through — to a `res://` path against the scene's external resources.
+ * Returns null when the reference matches neither form or the id isn't
+ * registered. The shared primitive behind both instance-path and texture-path
+ * resolution (Sprite2D/Sprite3D/AnimatedSprite2D/TextureRect all need it).
+ */
+export function resolveExtResourcePath(
+  ref: string | null | undefined,
+  externalResources: readonly TscnExternalResource[]
+): string | null {
+  if (!ref) return null;
+  if (ref.startsWith('res://')) return ref;
+  const parsed = parseResourceReference(ref);
+  if (!parsed || parsed.type !== 'ExtResource') return null;
+  return externalResources.find((r) => r.id === parsed.id)?.path ?? null;
+}
+
+/**
+ * Resolve a Node's `instance` PackedScene reference to a `res://` scene path.
+ * Shared by every R3F caller that turns an instance ref into a path:
+ * NodeDispatcher's `InstancedSceneSubtree`, the scene tree's
+ * `useSubSceneChildren`, and `resolveNodeByPath`. Distinct from the same-named
+ * resolvers on SceneGraphBuilder (resolves against a scenes map) and
+ * ResourceLoader (metadata + logging), which take different inputs.
+ */
+export function resolveInstancePath(
+  instanceRef: string,
+  externalResources: readonly TscnExternalResource[]
+): string | null {
+  return resolveExtResourcePath(instanceRef, externalResources);
 }

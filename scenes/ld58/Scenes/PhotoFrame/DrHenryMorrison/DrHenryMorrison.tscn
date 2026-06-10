@@ -1,0 +1,38 @@
+[gd_scene load_steps=7 format=3 uid="uid://c2g6xco1rbfav"]
+
+[ext_resource type="PackedScene" uid="uid://cocghlr3negpx" path="res://components/InteractableObject.tscn" id="2_b1lv8"]
+[ext_resource type="PackedScene" uid="uid://dd51cffbjc5sn" path="res://assets/picture_frames_lib/victorian_5.tscn" id="3_jdo47"]
+[ext_resource type="Texture2D" uid="uid://b40dadnup04xj" path="res://Scenes/PhotoFrame/DrHenryMorrison/DrHenryMorrison.png" id="4_jdo47"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_1d1hn"]
+size = Vector3(0.6496582, 0.6520996, 0.05041504)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_1d1hn"]
+albedo_texture = ExtResource("4_jdo47")
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_toowd"]
+material = SubResource("StandardMaterial3D_1d1hn")
+flip_faces = true
+size = Vector2(0.5, 0.5)
+orientation = 2
+
+[node name="DrHenryMorrison" type="Node3D"]
+
+[node name="Camera3D" type="Camera3D" parent="."]
+
+[node name="CameraStateMonitor" type="Node" parent="Camera3D"]
+
+[node name="InteractableObject" parent="." node_paths=PackedStringArray("Model") instance=ExtResource("2_b1lv8")]
+Model = NodePath("../victorian_5/picture_frame_victorian_5")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="InteractableObject"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.00012207031, 0.0052490234, -0.023864746)
+shape = SubResource("BoxShape3D_1d1hn")
+
+[node name="Canvas" type="MeshInstance3D" parent="."]
+mesh = SubResource("PlaneMesh_toowd")
+
+[node name="victorian_5" parent="." instance=ExtResource("3_jdo47")]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 0, 0, 0)
+
+[editable path="victorian_5"]

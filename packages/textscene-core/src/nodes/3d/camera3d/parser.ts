@@ -7,10 +7,6 @@ import type { Camera3DProperties } from './types';
 import { ProjectionMode, KeepAspectMode } from './types';
 import { parseNode3D } from '../../base/node3d/parser';
 
-export function isCamera3D(heading: ParsedHeading): boolean {
-  return heading.type === 'node' && heading.attributes.type === 'Camera3D';
-}
-
 export function parseCamera3D(
   heading: ParsedHeading,
   properties: Record<string, string>

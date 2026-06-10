@@ -7,16 +7,10 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
+import { isValidProperties } from '../../../linter/linterUtils.js';
 
 // Thresholds for warnings
 const MAX_NORMAL_PIXEL_SIZE = 1.0;
-
-/**
- * Check if properties object exists and is valid
- */
-function isValidProperties(props: unknown): props is Record<string, string> {
-  return typeof props === 'object' && props !== null;
-}
 
 /**
  * Validate Label3D semantic rules

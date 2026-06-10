@@ -30,17 +30,18 @@ import type * as THREE from 'three';
 import type { TscnNode, TscnScene } from '../parser/types.js';
 import { joinPath } from '../utils/nodePath.js';
 import { nodeComponentRegistry } from './NodeComponentRegistry.js';
-import { GenericNodeFallback } from './nodes/generic-node-fallback/index.js';
+import { GenericNodeFallback } from './internal/generic-node-fallback/index';
 import { useViewportSelection } from './hooks/useViewportSelection.js';
 import { NodePathProvider } from './contexts/NodePathContext.js';
 import { useResource, useResourceLoader } from '../resources/useResource.js';
-import { parseResourceReference } from '../resources/SubResourceResolver.js';
+import { parseResourceReference, resolveInstancePath } from '../resources/SubResourceResolver.js';
 import {
   SceneResourcesProvider,
   useSceneResources,
 } from './SceneResourcesContext.js';
 import { useSelection } from './contexts/SelectionContext.js';
 import { MissingResourcePlaceholder } from './components/MissingResourcePlaceholder.js';
+import { GlbOverridesProvider } from './internal/glb-scene-root/GlbOverridesContext.js';
 
 export interface NodeDispatcherProps {
   /** Root nodes from the active scene (typically `scene.scenes.get(rootScene).nodes`). */
@@ -102,12 +103,19 @@ function DispatchedNode({ node, path, withNodePath }: DispatchedNodeProps): Reac
   // nodes as additional children. The instancing node's component
   // (typically Node3D) already wraps everything in a transform-aware
   // <group>, so the loaded subtree inherits the instance transform.
+  // When an instancing node also declares inline children, those children
+  // are Godot instance-property overrides. If the instance resolves to a
+  // GLB, `GLBSceneRoot` matches them onto the GLB's internal nodes by name
+  // (BUG 2 — see GlbOverridesContext). Publishing `node.children` here is a
+  // no-op for non-GLB instances (no GLBSceneRoot consumes the context).
   const instanceChildren = node.instance ? (
-    <InstancedSceneSubtree
-      instanceRef={node.instance}
-      path={path}
-      withNodePath={withNodePath}
-    />
+    <GlbOverridesProvider overrides={node.children}>
+      <InstancedSceneSubtree
+        instanceRef={node.instance}
+        path={path}
+        withNodePath={withNodePath}
+      />
+    </GlbOverridesProvider>
   ) : null;
 
   const children: ReactNode[] = [];
@@ -202,7 +210,7 @@ function InstancedSceneSubtree({
       <MissingResourcePlaceholder shape="box" />
     );
   }
-  if (result.status === 'missing' || result.status === 'error') {
+  if (result.status === 'unavailable') {
     return <MissingResourcePlaceholder shape="box" />;
   }
   if (result.status === 'pending' || !result.value) {
@@ -225,23 +233,4 @@ function InstancedSceneSubtree({
       ))}
     </SceneResourcesProvider>
   );
-}
-
-
-/**
- * Resolve `ExtResource("id")` or a raw `res://` path against the
- * provided external-resources list. Returns null when the reference
- * doesn't match either form or the id isn't registered.
- */
-function resolveInstancePath(
-  instanceRef: string,
-  externalResources: readonly { id: string; path: string; type: string }[]
-): string | null {
-  if (instanceRef.startsWith('res://')) {
-    return instanceRef;
-  }
-  const parsed = parseResourceReference(instanceRef);
-  if (!parsed || parsed.type !== 'ExtResource') return null;
-  const ext = externalResources.find((r) => r.id === parsed.id);
-  return ext?.path ?? null;
 }

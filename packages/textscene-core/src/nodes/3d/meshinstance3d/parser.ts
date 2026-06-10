@@ -85,7 +85,3 @@ export function parseMeshInstance3D(
 
   return meshInstance3DProps;
 }
-
-export function isMeshInstance3D(heading: ParsedHeading): boolean {
-  return heading.type === 'node' && heading.attributes.type === 'MeshInstance3D';
-}

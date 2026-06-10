@@ -8,13 +8,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import type { TscnScene } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-
-/**
- * Check if properties object exists and is valid
- */
-function isValidProperties(props: unknown): props is Record<string, string> {
-  return typeof props === 'object' && props !== null;
-}
+import { isValidProperties } from '../../../linter/linterUtils.js';
 
 /**
  * Extract resource ID from SubResource("id") or ExtResource("id") format

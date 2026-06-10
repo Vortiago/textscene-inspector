@@ -20,9 +20,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { MeshInstance3D } from './meshinstance3d/Component';
-import { Camera3D } from './camera3d/Component';
-import { Label3D } from './label3d/Component';
+import { MeshInstance3D } from '../../nodes/3d/meshinstance3d/Component';
+import { Camera3D } from '../../nodes/3d/camera3d/Component';
+import { Label3D } from '../../nodes/3d/label3d/Component';
+import { ViewportModeProvider } from '../contexts/ViewportModeContext';
 import { SceneResourcesProvider } from '../SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
 import { ResourceEventBus } from '../../resources/ResourceEventBus';
@@ -182,6 +183,8 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
           internalResources={[
             sub('BoxMesh', 'Mesh_1', { size: 'Vector3(1, 1, 1)' }),
             sub('StandardMaterial3D', 'Mat', {
+              // Godot samples ao_texture only when ao_enabled is set.
+              ao_enabled: 'true',
               ao_texture: 'ExtResource("1_ao")',
             }),
           ]}
@@ -444,7 +447,11 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
     };
     const node: TscnNode = { name: 'L', type: 'Label3D', children: [], properties: props };
 
-    const renderer = await ReactThreeTestRenderer.create(<Label3D node={node} />);
+    const renderer = await ReactThreeTestRenderer.create(
+      <ViewportModeProvider initialShowLabels>
+        <Label3D node={node} />
+      </ViewportModeProvider>
+    );
     const meshInstance = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
 
     // The marker is used by old-renderer-era tooling to enumerate labels.
@@ -498,7 +505,11 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
     } as Label3DProperties;
     const node: TscnNode = { name: 'L', type: 'Label3D', children: [], properties: props };
 
-    const renderer = await ReactThreeTestRenderer.create(<Label3D node={node} />);
+    const renderer = await ReactThreeTestRenderer.create(
+      <ViewportModeProvider initialShowLabels>
+        <Label3D node={node} />
+      </ViewportModeProvider>
+    );
     const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
     const qBefore = mesh.quaternion.clone();
 

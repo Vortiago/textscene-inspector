@@ -1,0 +1,114 @@
+[gd_scene load_steps=7 format=3 uid="uid://bnq5yx3r8m2ld"]
+
+[ext_resource type="PackedScene" uid="uid://b8rqx5ym3n7pk" path="res://Scenes/AboutDialog/AboutDialog.tscn" id="2_aboutdialog"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button_normal"]
+bg_color = Color(0.761, 0.706, 0.545, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button_pressed"]
+bg_color = Color(0.702, 0.655, 0.463, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button_hover"]
+bg_color = Color(0.82, 0.765, 0.62, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_background_gradient"]
+bg_color = Color(0.2, 0.15, 0.12, 1)
+bg_color_end = Color(0.35, 0.28, 0.22, 1)
+fill_from_top = true
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_title_panel"]
+bg_color = Color(0.937, 0.89, 0.847, 1)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.478, 0.416, 0.353, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[node name="StartScreen" type="CanvasLayer" node_paths=PackedStringArray("StartButton", "AboutButton", "AboutDialog")]
+StartButton = NodePath("CenterContainer/VBoxContainer/StartButton")
+AboutButton = NodePath("CenterContainer/VBoxContainer/AboutButton")
+AboutDialog = NodePath("AboutDialog")
+
+[node name="Background" type="Panel" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_background_gradient")
+
+[node name="CenterContainer" type="CenterContainer" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CenterContainer"]
+layout_mode = 2
+
+[node name="TitlePanel" type="PanelContainer" parent="CenterContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_title_panel")
+
+[node name="MarginContainer" type="MarginContainer" parent="CenterContainer/VBoxContainer/TitlePanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 30
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_bottom = 30
+
+[node name="TitleLabel" type="Label" parent="CenterContainer/VBoxContainer/TitlePanel/MarginContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.227, 0.184, 0.122, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.4)
+theme_override_colors/font_outline_color = Color(0.478, 0.416, 0.353, 1)
+theme_override_constants/shadow_offset_x = 2
+theme_override_constants/shadow_offset_y = 2
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 48
+text = "Inspector Crawford
+and the Hallway Murder"
+horizontal_alignment = 1
+
+[node name="Spacer" type="Control" parent="CenterContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+
+[node name="StartButton" type="Button" parent="CenterContainer/VBoxContainer"]
+custom_minimum_size = Vector2(200, 60)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.227, 0.184, 0.122, 1)
+theme_override_font_sizes/font_size = 24
+theme_override_styles/normal = SubResource("StyleBoxFlat_button_normal")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button_pressed")
+theme_override_styles/hover = SubResource("StyleBoxFlat_button_hover")
+text = "Start Game"
+
+[node name="AboutButton" type="Button" parent="CenterContainer/VBoxContainer"]
+custom_minimum_size = Vector2(200, 60)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.227, 0.184, 0.122, 1)
+theme_override_font_sizes/font_size = 24
+theme_override_styles/normal = SubResource("StyleBoxFlat_button_normal")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button_pressed")
+theme_override_styles/hover = SubResource("StyleBoxFlat_button_hover")
+text = "About"
+
+[node name="AboutDialog" parent="." instance=ExtResource("2_aboutdialog")]

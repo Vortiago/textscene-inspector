@@ -6,6 +6,7 @@
 
 import type React from 'react';
 import type { TscnNode } from '../parser/types';
+import { createTypeRegistry } from '../core/createTypeRegistry';
 
 export interface NodeComponentProps {
   node: TscnNode;
@@ -20,22 +21,22 @@ export interface NodeComponentRegistration {
 }
 
 class NodeComponentRegistryImpl {
-  private readonly entries = new Map<string, NodeComponent>();
+  private readonly registry = createTypeRegistry<NodeComponent>();
 
   register(registration: NodeComponentRegistration): void {
-    this.entries.set(registration.typeName, registration.Component);
+    this.registry.register(registration.typeName, registration.Component);
   }
 
   get(typeName: string): NodeComponent | undefined {
-    return this.entries.get(typeName);
+    return this.registry.get(typeName);
   }
 
   getAllTypeNames(): string[] {
-    return Array.from(this.entries.keys());
+    return this.registry.getAllTypeNames();
   }
 
   clear(): void {
-    this.entries.clear();
+    this.registry.clear();
   }
 }
 

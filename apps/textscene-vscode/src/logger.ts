@@ -1,7 +1,7 @@
-/** VSCode LogOutputChannel adapter for textscene-renderer logging. */
+/** VSCode LogOutputChannel adapter for @textscene/core logging. */
 
 import * as vscode from 'vscode';
-import { setLogAdapter, type LogAdapter } from '@textscene/core';
+import { setLogAdapter, type LogAdapter } from '@textscene/core/logger';
 
 class VscodeLogAdapter implements LogAdapter {
   constructor(private channel: vscode.LogOutputChannel) {}

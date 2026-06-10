@@ -1,0 +1,21 @@
+[gd_scene load_steps=4 format=3 uid="uid://mjbenx6we15q"]
+
+[ext_resource type="PackedScene" uid="uid://dlk04feioupn7" path="res://assets/roof_lamp.glb" id="1_35jn2"]
+[ext_resource type="Texture2D" uid="uid://q22jk2go6gsc" path="res://assets/roof_lamp.png" id="2_5b4sy"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_amoxk"]
+albedo_texture = ExtResource("2_5b4sy")
+emission_enabled = true
+emission = Color(1, 1, 1, 1)
+emission_energy_multiplier = 0.5
+emission_operator = 1
+emission_texture = ExtResource("2_5b4sy")
+
+[node name="roof_lamp" instance=ExtResource("1_35jn2")]
+
+[node name="plafoniera" parent="." index="0"]
+transform = Transform3D(0.18924935, 0, 0, 0, 0.18924935, 0, 0, 0, 0.18924935, 0, 0, 0)
+surface_material_override/0 = SubResource("StandardMaterial3D_amoxk")
+
+[node name="OmniLight3D" type="OmniLight3D" parent="." index="1"]
+shadow_enabled = true

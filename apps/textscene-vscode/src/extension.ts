@@ -6,6 +6,7 @@ import * as vscode from 'vscode';
 import { TscnPreviewPanel } from './TscnPreviewPanel';
 import { TscnDocumentSymbolProvider } from './TscnDocumentSymbolProvider';
 import { TscnDefinitionProvider } from './TscnDefinitionProvider';
+import { TscnDiagnostics } from './TscnDiagnostics';
 import { initLogger, dispose as disposeLogger } from './logger';
 
 export function activate(context: vscode.ExtensionContext) {
@@ -61,6 +62,9 @@ export function activate(context: vscode.ExtensionContext) {
       new TscnDefinitionProvider()
     )
   );
+
+  // Surface linter diagnostics for .tscn documents (Problems panel)
+  context.subscriptions.push(new TscnDiagnostics());
 
   context.subscriptions.push(
     vscode.workspace.onDidSaveTextDocument((document) => {

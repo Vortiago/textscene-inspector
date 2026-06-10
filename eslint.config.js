@@ -16,8 +16,11 @@ export default [
       '**/out/',
       '**/build/',
       '**/.vscode-test/',
+      '**/.vscode-test-web/',
       '**/.test-workspace/',
+      '**/.test-workspace-web/',
       '**/.claude/',
+      '**/.tmp/',
       '.spike/',
       'docs/probes/',
     ],
@@ -87,6 +90,44 @@ export default [
       ],
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/no-explicit-any': 'warn',
+    },
+  },
+
+  // Guard: node-type parser/linter registration entry points must stay
+  // React/THREE-free (ADR-0001). `index.ts` registers the parser, `index.linter.ts`
+  // the lint rules — only `index.r3f.ts` may import the render component. The
+  // runtime `linter/reactFree.test.ts` is the comprehensive module-graph check;
+  // this is the fast editor-time guard against the obvious leak.
+  {
+    files: [
+      'packages/textscene-core/src/nodes/**/index.ts',
+      'packages/textscene-core/src/nodes/**/index.linter.ts',
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: [
+                'three',
+                'three/*',
+                'react',
+                'react-dom',
+                '@react-three/*',
+                '*.tsx',
+                '**/*.tsx',
+                '**/Component',
+                '**/Component.js',
+                '**/index.r3f',
+                '**/index.r3f.js',
+              ],
+              message:
+                'Parser/linter slice entry points must stay React/THREE-free (ADR-0001). Register the render component in index.r3f.ts instead.',
+            },
+          ],
+        },
+      ],
     },
   },
 

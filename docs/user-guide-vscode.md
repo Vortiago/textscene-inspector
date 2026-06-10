@@ -1,18 +1,18 @@
 # TextScene Inspector — VS Code Extension User Guide
 
-The TextScene Inspector VS Code extension turns `.tscn` files into a live 3D preview alongside the source text. Open a `.tscn` file in any text editor, run **TextScene: Open Preview to the Side** from the command palette (F1) or the editor-title bar button, and a webview panel renders the scene in a second editor group. The preview shows a scene-tree panel (search box, expand/collapse, per-node visibility toggles) and a node-details panel with type, path, transform, mesh and material information. Edit the source file, save, and the preview hot-reloads in place — the camera angle is preserved across content-only edits.
+The TextScene Inspector VS Code extension turns `.tscn` files into a live 3D preview alongside the source text. Open a `.tscn` file in any text editor, run **TextScene: Open Preview to the Side** from the command palette (F1) or the editor-title bar button, and a webview panel renders the scene in a second editor group. The preview uses the shared Split Dock shell (ADR-0007): a scene-tree panel on top (search box, expand/collapse, per-node visibility toggles) and a tabbed detail panel below with **Inspector** (type, path, transform, mesh and material information), **Resources** (missing/uploaded resource files) and **Cameras** (switch the viewport to a scene camera) tabs. Edit the source file, save, and the preview hot-reloads in place — the camera angle is preserved across content-only edits.
 
-This guide walks through every user-visible feature against the verification scenarios in `docs/user-flows.md`. Each section captures one flow, embeds the screenshot the verifier took, and is honest about what works today and what does not. Each section also links to the corresponding **strict-verification checklist** under `docs/strict-checklists/`, which records the exact observed-vs-expected values for every concrete property.
+This guide walks through every user-visible feature against the verification scenarios in `docs/user-flows.md`. Each section captures one flow, embeds the screenshot the verifier took, and is honest about what works today and what does not. Each section also links to the corresponding **strict-verification checklist** under `docs/archive/strict-checklists/`, which records the exact observed-vs-expected values for every concrete property.
 
-**Source of verification:** the R3F-migration `feat/r3f-migration` branch at commit `4ac6539` (WI-R3F-11 — texture-binding force-remount fix on top of WI-R3F-7 Commit A + B). VS Code stable 1.106.3 launched with `--extensionDevelopmentPath` against this repo as the workspace.
+**Source of verification:** verified against the current code, 2026-06-10. The original screenshot run used VS Code stable 1.106.3 launched with `--extensionDevelopmentPath` against this repo as the workspace; some screenshots predate the Split Dock detail tabs, and the prose describes the current behavior.
 
-**Strict-verification tally:** 103 of 108 rows PASS across the 7 VS Code strict checklists (95.4%). The 5 CANT-VERIFY rows are all rooted in two harness limitations — VS Code Outline view virtualization (4 rows) and cross-origin webview iframe inaccessibility for inside-canvas reads (1 row). No FAIL. See `docs/strict-checklists/VSCODE-*.md` for per-row evidence.
+**Strict-verification tally:** 103 of 108 rows PASS across the 7 VS Code strict checklists (95.4%). The 5 CANT-VERIFY rows are all rooted in two harness limitations — VS Code Outline view virtualization (4 rows) and cross-origin webview iframe inaccessibility for inside-canvas reads (1 row). No FAIL. See `docs/archive/strict-checklists/VSCODE-*.md` for per-row evidence.
 
 ---
 
 ## Opening the preview — VSCODE-01
 
-**Status:** PASS (15/16 rows; 1 CANT-VERIFY). Strict checklist: [`docs/strict-checklists/VSCODE-01-preview-opens.md`](strict-checklists/VSCODE-01-preview-opens.md)
+**Status:** PASS (15/16 rows; 1 CANT-VERIFY). Strict checklist: [`docs/archive/strict-checklists/VSCODE-01-preview-opens.md`](archive/strict-checklists/VSCODE-01-preview-opens.md)
 
 Open a `.tscn` file from the explorer (single-click or Ctrl-P to quick-open by name), then run **TextScene: Open Preview to the Side** from the command palette (F1) or use the editor-title bar's open-preview button. A new tab labeled `Preview: <filename>.tscn` opens in a side editor group. The webview mounts and the scene-tree panel populates with the parsed root node.
 
@@ -26,9 +26,9 @@ The preview panel is only shown when the active editor is a `.tscn` file — the
 
 ## Hot reload on save — VSCODE-02
 
-**Status:** PASS (18/18 rows). Strict checklist: [`docs/strict-checklists/VSCODE-02-hot-reload.md`](strict-checklists/VSCODE-02-hot-reload.md)
+**Status:** PASS (18/18 rows). Strict checklist: [`docs/archive/strict-checklists/VSCODE-02-hot-reload.md`](archive/strict-checklists/VSCODE-02-hot-reload.md)
 
-Edit the source `.tscn` file in the text editor and save (or rely on VS Code's auto-save). The webview detects the file change through the extension host's `onDidChangeWatchedFiles` subscription, re-parses the content, and updates the rendered scene without disposing the preview tab. Update latency is well under one second on a development machine.
+Edit the source `.tscn` file in the text editor and save (or rely on VS Code's auto-save). The extension host listens with `vscode.workspace.onDidSaveTextDocument` and calls `panel.update(...)` on the matching preview when the saved document is the previewed `.tscn`; a separate `createFileSystemWatcher('**/*.{tres,png,jpg,jpeg,svg,tscn}')` updates all panels when a dependent resource (texture, material, external scene) changes on disk. The webview re-parses the content and updates the rendered scene without disposing the preview tab. Update latency is well under one second on a development machine.
 
 ![Before edit — Box at origin](screenshots/vscode/vscode-02-a.png)
 
@@ -40,7 +40,7 @@ The verifier changed the `Box` MeshInstance3D's transform translation from `(0, 
 
 ## Two preview panels — VSCODE-03
 
-**Status:** PASS (14/14 rows). Strict checklist: [`docs/strict-checklists/VSCODE-03-multi-panel-isolation.md`](strict-checklists/VSCODE-03-multi-panel-isolation.md)
+**Status:** PASS (14/14 rows). Strict checklist: [`docs/archive/strict-checklists/VSCODE-03-multi-panel-isolation.md`](archive/strict-checklists/VSCODE-03-multi-panel-isolation.md)
 
 You can open more than one preview panel at once, one per `.tscn` file. Each panel renders its own scene independently and maintains its own selection state. Clicking a node in one panel does not affect the other.
 
@@ -68,7 +68,7 @@ The verification flow asks for Ctrl-clicking a `res://` path in a `.tscn` source
 
 ## Outline panel — VSCODE-05
 
-**Status:** PARTIAL PASS (8/12 rows; 4 CANT-VERIFY due to VS Code Outline view virtualization). Strict checklist: [`docs/strict-checklists/VSCODE-05-outline.md`](strict-checklists/VSCODE-05-outline.md)
+**Status:** PARTIAL PASS (8/12 rows; 4 CANT-VERIFY due to VS Code Outline view virtualization). Strict checklist: [`docs/archive/strict-checklists/VSCODE-05-outline.md`](archive/strict-checklists/VSCODE-05-outline.md)
 
 The Outline view (View → Outline, or the section below the Files Explorer when enabled) lists the scene-tree hierarchy of the currently open `.tscn` file. Clicking an outline entry jumps the editor to the matching `[node name="..."]` declaration in the source.
 
@@ -85,7 +85,7 @@ Names match the source `[node name="..."]` declarations. The `TscnDocumentSymbol
 
 ## Click-to-select in the webview — VSCODE-06
 
-**Status:** PASS (19/19 rows — strict-verified across 3 distinct tree clicks). Strict checklist: [`docs/strict-checklists/VSCODE-06-click-to-select.md`](strict-checklists/VSCODE-06-click-to-select.md)
+**Status:** PASS (19/19 rows — strict-verified across 3 distinct tree clicks). Strict checklist: [`docs/archive/strict-checklists/VSCODE-06-click-to-select.md`](archive/strict-checklists/VSCODE-06-click-to-select.md)
 
 Clicking a node in the webview's scene-tree panel selects it and populates the details panel with the node's type, path, parent and (for MeshInstance3D) its mesh sub-resource, material override, position, rotation and scale.
 
@@ -99,7 +99,7 @@ The screenshot shows `integration-three-cubes.tscn` with the `CenterCube` Node3D
 
 ## Missing-texture meshes — VSCODE-07
 
-**Status:** PASS (15/15 rows — magenta placeholder strict-verified, pairwise-distinct from VSCODE-01's tan box). Strict checklist: [`docs/strict-checklists/VSCODE-07-missing-texture.md`](strict-checklists/VSCODE-07-missing-texture.md)
+**Status:** PASS (15/15 rows — magenta placeholder strict-verified, pairwise-distinct from VSCODE-01's tan box). Strict checklist: [`docs/archive/strict-checklists/VSCODE-07-missing-texture.md`](archive/strict-checklists/VSCODE-07-missing-texture.md)
 
 When you open a scene that references an external texture file the workspace cannot resolve, the affected mesh renders as a clearly magenta placeholder so you immediately know something is missing. The `useResource` hook walks the full SubResource → StandardMaterial3D → ExtResource Texture2D chain, identifies the unresolvable `res://` path, and substitutes a magenta placeholder material on the consuming `MeshInstance3D`.
 
@@ -111,7 +111,7 @@ The fixture references `res://textures/test-upload.png` (intentionally absent). 
 
 ## Camera survives save — VSCODE-08
 
-**Status:** PASS (14/14 rows — panel-identity refs byte-exact before/after edit). Strict checklist: [`docs/strict-checklists/VSCODE-08-camera-survives-save.md`](strict-checklists/VSCODE-08-camera-survives-save.md)
+**Status:** PASS (14/14 rows — panel-identity refs byte-exact before/after edit). Strict checklist: [`docs/archive/strict-checklists/VSCODE-08-camera-survives-save.md`](archive/strict-checklists/VSCODE-08-camera-survives-save.md)
 
 The PRD wants the camera's orbit position to survive a save when only the file's content changed (no path change). This is the VS Code-specific reason `useResource`'s late-arrival contract matters — saves should be content-only updates that React reconciles, not full panel remounts.
 

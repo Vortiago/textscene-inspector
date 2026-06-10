@@ -11,7 +11,7 @@
  * This Camera" on a Camera3D node.
  */
 import { Canvas, useThree } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
+import { OrbitControls } from '@react-three/drei/core/OrbitControls';
 import { useCallback, useEffect, useState } from 'react';
 import * as THREE from 'three';
 import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
@@ -133,6 +133,106 @@ function ActiveCameraSwitcher() {
   return null;
 }
 
+/** Minimal shape we touch on the OrbitControls instance for framing. */
+interface OrbitLike {
+  target?: THREE.Vector3;
+  update?: () => void;
+}
+
+/**
+ * Frame the camera so the whole scene fits the viewport. Unions the bounding
+ * boxes of every rendered Mesh (skipping the empty-state grid), then pulls the
+ * camera back along an isometric-ish direction far enough that the largest
+ * dimension fits the vertical FOV, and re-points OrbitControls at the centre.
+ * No-op for empty scenes or non-finite bounds.
+ */
+function frameSceneBounds(
+  scene: THREE.Object3D,
+  camera: THREE.Camera,
+  controls: OrbitLike | null
+): void {
+  // Prefer real geometry (meshes); fall back to gizmo lines/points so
+  // light- or camera-only scenes (no mesh to frame) still get framed instead
+  // of leaving the default camera pointed at an empty void.
+  const meshBox = new THREE.Box3();
+  const gizmoBox = new THREE.Box3();
+  let hasMesh = false;
+  let hasGizmo = false;
+  scene.traverse((obj) => {
+    if (obj.userData?.tscnEmptyState) return;
+    const o = obj as THREE.Mesh & { isLine?: boolean; isLineSegments?: boolean; isPoints?: boolean };
+    if (!o.isMesh && !o.isLine && !o.isLineSegments && !o.isPoints) return;
+    const objBox = new THREE.Box3().setFromObject(obj);
+    if (objBox.isEmpty() || !Number.isFinite(objBox.min.x)) return;
+    if (o.isMesh) {
+      meshBox.union(objBox);
+      hasMesh = true;
+    } else {
+      gizmoBox.union(objBox);
+      hasGizmo = true;
+    }
+  });
+  const box = hasMesh ? meshBox : hasGizmo ? gizmoBox : null;
+  if (!box) return;
+
+  const size = box.getSize(new THREE.Vector3());
+  const center = box.getCenter(new THREE.Vector3());
+  const maxDim = Math.max(size.x, size.y, size.z);
+  if (!Number.isFinite(maxDim) || maxDim <= 0) return;
+
+  // 2D-canvas scenes sit on ~one plane (z spread is only z_index draw steps);
+  // view them straight-on (down -Z, +Y up) instead of the 3D isometric angle,
+  // so sprites read flat and upright rather than tilted in perspective.
+  const maxXY = Math.max(size.x, size.y);
+  const isFlat = size.z <= Math.max(maxXY, 1) * 0.02;
+
+  const persp = camera as THREE.PerspectiveCamera;
+  const fov = ((persp.isPerspectiveCamera ? persp.fov : 50) * Math.PI) / 180;
+  const fitDim = isFlat ? Math.max(maxXY, 0.001) : maxDim;
+  const distance = ((fitDim / 2 / Math.tan(fov / 2)) || fitDim) * (isFlat ? 1.15 : 1.6);
+
+  const dir = isFlat ? new THREE.Vector3(0, 0, 1) : new THREE.Vector3(1, 0.7, 1).normalize();
+  camera.position.copy(center.clone().add(dir.multiplyScalar(distance)));
+  if (persp.isPerspectiveCamera) {
+    persp.near = Math.max(0.01, distance / 200);
+    persp.far = distance * 200;
+    persp.updateProjectionMatrix();
+  }
+  camera.lookAt(center);
+  if (controls?.target) {
+    controls.target.copy(center);
+    controls.update?.();
+  }
+}
+
+/**
+ * Auto-frames the scene to the viewport on load / scene change, but ONLY in
+ * free-orbit mode (never when a Camera3D is the active camera) and only during
+ * a short settle window so async-loaded content (GLB, instanced scenes) is
+ * captured without fighting the user's subsequent orbit.
+ */
+function CameraFit() {
+  const hierarchy = useOptionalHierarchy();
+  const control = useOptionalCameraControl();
+  const get = useThree((s) => s.get);
+  const rootKey = hierarchy?.sceneGraph?.rootScene ?? '';
+  const hasScene = !!hierarchy?.sceneGraph;
+  const activeCameraPath = control?.activeCameraPath ?? null;
+
+  useEffect(() => {
+    if (!hasScene || activeCameraPath) return undefined;
+    const timers = [150, 500, 1100].map((delay) =>
+      setTimeout(() => {
+        const state = get();
+        frameSceneBounds(state.scene, state.camera, state.controls as OrbitLike | null);
+      }, delay)
+    );
+    return () => timers.forEach(clearTimeout);
+  }, [rootKey, hasScene, activeCameraPath, get]);
+
+  return null;
+}
+
 /** Structural shape we need from the OrbitControls instance — just `.reset()`. */
 interface ResettableControls {
   reset: () => void;
@@ -155,6 +255,7 @@ export function TscnCanvas(_props: TscnCanvasProps) {
       <Canvas camera={{ position: [3, 3, 3] }}>
         <TscnSceneContents />
         <ActiveCameraSwitcher />
+        <CameraFit />
         <OrbitControls ref={onControlsRef} makeDefault />
         <OrbitControlsResetBridge controls={controls} />
       </Canvas>

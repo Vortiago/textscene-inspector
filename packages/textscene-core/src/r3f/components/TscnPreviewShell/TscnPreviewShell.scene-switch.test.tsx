@@ -61,8 +61,11 @@ describe('<TscnPreviewShell> scene-switch (WI-UX-5)', () => {
 
     rerender(<TscnPreviewShell panelId="p1" content={FIXTURE_B} />);
 
-    // Post-condition: nothing in the new tree carries [aria-selected="true"].
-    const anySelected = container.querySelector('[aria-selected="true"]');
+    // Post-condition: no TREE row carries [aria-selected="true"]. Scope to
+    // [data-node-path] rows — the detail pane's tab strip (role="tab", ADR-0007)
+    // legitimately carries aria-selected on the active tab, which is not tree
+    // selection.
+    const anySelected = container.querySelector('[data-node-path] [aria-selected="true"]');
     expect(anySelected).toBeNull();
   });
 
@@ -113,12 +116,14 @@ describe('<TscnPreviewShell> scene-switch (WI-UX-5)', () => {
 
     rerender(<TscnPreviewShell panelId="p1" content={FIXTURE_B} />);
 
-    // After the swap, fixture B has only BetaRoot and no row should
+    // After the swap, fixture B has only BetaRoot and no TREE row should
     // claim either aria-selected or aria-expanded=true. (BetaRoot has
     // no children so aria-expanded is undefined, not "false" — query
     // explicitly for "true" so we don't false-positive on missing.)
-    const stillSelected = container.querySelector('[aria-selected="true"]');
-    const stillExpanded = container.querySelector('[aria-expanded="true"]');
+    // Scope to [data-node-path] rows so the detail tab strip's active
+    // role="tab" (aria-selected, ADR-0007) isn't mistaken for tree selection.
+    const stillSelected = container.querySelector('[data-node-path] [aria-selected="true"]');
+    const stillExpanded = container.querySelector('[data-node-path] [aria-expanded="true"]');
     expect(stillSelected).toBeNull();
     expect(stillExpanded).toBeNull();
   });

@@ -1,0 +1,57 @@
+[gd_scene load_steps=5 format=3 uid="uid://test_material_ao"]
+
+[ext_resource type="Texture2D" path="res://textures/checkerboard.svg" id="1_ao"]
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_shared"]
+size = Vector2(4, 4)
+
+[sub_resource type="StandardMaterial3D" id="Material_ao_enabled"]
+albedo_color = Color(0.8, 0.8, 0.8, 1)
+ao_enabled = true
+ao_light_affect = 1.0
+ao_texture = ExtResource("1_ao")
+metallic = 0.0
+roughness = 0.7
+
+[sub_resource type="StandardMaterial3D" id="Material_ao_disabled"]
+albedo_color = Color(0.8, 0.8, 0.8, 1)
+ao_enabled = false
+metallic = 0.0
+roughness = 0.7
+
+[node name="Scene" type="Node3D"]
+
+[node name="PlaneWithAO" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, 0)
+mesh = SubResource("PlaneMesh_shared")
+surface_material_override/0 = SubResource("Material_ao_enabled")
+
+[node name="PlaneWithoutAO" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, 0)
+mesh = SubResource("PlaneMesh_shared")
+surface_material_override/0 = SubResource("Material_ao_disabled")
+
+[node name="DirectionalLight" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.707, -0.5, 0.5, 0, 0.707, 0.707, -0.707, -0.5, 0.5, 0, 8, 4)
+light_energy = 2.0
+
+[node name="Title" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 0)
+text = "Ambient Occlusion Comparison"
+pixel_size = 0.008
+billboard = 1
+modulate = Color(1, 1, 0.7, 1)
+
+[node name="LabelLeft" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, -2.5, 0)
+text = "ao_enabled=true (checkerboard AO map)"
+pixel_size = 0.006
+billboard = 1
+modulate = Color(1, 1, 1, 1)
+
+[node name="LabelRight" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, -2.5, 0)
+text = "ao_enabled=false"
+pixel_size = 0.006
+billboard = 1
+modulate = Color(1, 1, 1, 1)

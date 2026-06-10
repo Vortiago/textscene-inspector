@@ -7,9 +7,16 @@
 
 // Import linter registration for all nodes via index.linter.ts
 // This pattern is consistent for ALL nodes (with or without renderers)
+//
+// Deliberate exception: the 15 Control slices (nodes/2d/ui/*) are NOT
+// lint-registered — they are render-only 2D overlay types (ADR-0003) with
+// no validators or semantic rules, so they have no index.linter.ts at all.
+// New Control slices should follow suit unless they gain semantic rules.
 import '../nodes/base/node3d/index.linter.js';
 import '../nodes/base/node2d/index.linter.js';
 import '../nodes/3d/meshinstance3d/index.linter.js';
+import '../nodes/3d/csg/csgbox3d/index.linter.js';
+import '../nodes/3d/csg/csgcylinder3d/index.linter.js';
 import '../nodes/3d/lights/omnilight3d/index.linter.js';
 import '../nodes/3d/lights/directionallight3d/index.linter.js';
 import '../nodes/3d/lights/spotlight3d/index.linter.js';
@@ -24,6 +31,7 @@ import '../nodes/2d/sprite2d/index.linter.js';
 import '../nodes/2d/animatedsprite2d/index.linter.js';
 import '../nodes/animation/animationplayer/index.linter.js';
 import '../nodes/animation/animationtree/index.linter.js';
+import '../nodes/audio/audiostreamplayer/index.linter.js';
 import '../nodes/audio/audiostreamplayer2d/index.linter.js';
 import '../nodes/audio/audiostreamplayer3d/index.linter.js';
 import '../nodes/physics/2d/area2d/index.linter.js';

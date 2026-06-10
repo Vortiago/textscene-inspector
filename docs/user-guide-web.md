@@ -1,10 +1,10 @@
 # TextScene Inspector — Web Previewer User Guide
 
-The TextScene Inspector web previewer is a browser-based viewer for Godot `.tscn` scene files. Pick a fixture from the dropdown, the 3D scene renders inline, and a sidebar shows the scene-tree hierarchy and per-node properties. You can orbit the camera (left-drag), zoom (scroll wheel), pan (right-drag or middle-drag), and click a mesh in the viewport to select it.
+The TextScene Inspector web previewer is a browser-based viewer for Godot `.tscn` scene files. Open your own `.tscn` from disk or pick a fixture from the scene palette (Ctrl/Cmd+K), the 3D scene renders inline, and the right-hand Split Dock shows the scene-tree hierarchy and per-node properties. You can orbit the camera (left-drag), zoom (scroll wheel), pan (right-drag or middle-drag), and click a mesh in the viewport to select it.
 
 This guide walks through every user-visible feature against the verification scenarios in `docs/user-flows.md`. Each section captures one flow, embeds the screenshot the verifier took, and is honest about what works today and what does not.
 
-**Source of verification:** the R3F-migration `feat/r3f-migration` branch at commit `17bef1d` (WI-R3F-7b — missing-texture chain, upload UI, fallback labels, and parse-error banner). Dev server runs on `http://localhost:3000/` after `pnpm --filter @textscene/web-previewer dev`.
+**Source of verification:** verified against the current code, 2026-06-10. Dev server runs on `http://localhost:3000/` after `pnpm --filter @textscene/web-previewer dev`. Some screenshots predate the Split Dock shell (ADR-0007) and the scene palette; the prose describes the current behavior.
 
 ---
 
@@ -12,7 +12,7 @@ This guide walks through every user-visible feature against the verification sce
 
 **Status:** PASS
 
-Start the dev server and open the URL the Vite banner prints (typically `http://localhost:3000/`). The page boots directly to a working canvas — no flag, no setup, no waiting for assets beyond the initial bundle. The default scene `integration-all-primitives.tscn` is selected and rendered, showing a blue capsule, a brown torus, a purple prism on a green floor, with directional lighting baked in. The sidebar on the right shows the scene-tree panel and node-details panel.
+Start the dev server and open the URL the Vite banner prints (typically `http://localhost:3000/`). The page boots directly to a working canvas — no flag, no setup, no waiting for assets beyond the initial bundle. On a first visit the default scene is `unit-plane-mesh.tscn` (WI-UX-15: a single PlaneMesh with zero external resources, so the first paint is clean rather than a wall of missing-file warnings). On subsequent visits the app restores the last scene you had open (persisted in `localStorage`), and a `?fixture=<file>` query parameter deep-links straight to a specific scene — handy for sharing a link or scripting captures. The Split Dock on the right shows the scene-tree panel on top and the tabbed detail panel (Inspector / Resources / Cameras) below.
 
 ![App boots to a working canvas](screenshots/web/web-01-a.png)
 
@@ -24,7 +24,7 @@ You will see one harmless console message about a missing `favicon.ico` and a de
 
 **Status:** PASS
 
-The **Scene** dropdown lists 70 fixtures grouped into categories (Edge Cases, Examples — Complex Scenes, Integration — Multi-Node, Unit — Primitive Meshes, and so on). Selecting any entry switches the viewport and tree panel to that scene. The verification cycled through the ten MVS-scope unit fixtures listed below and confirmed each renders cleanly:
+The toolbar shows a compact **scene chip** naming the current scene. Clicking it (or pressing **Ctrl/Cmd+K**) opens a searchable command palette whose primary action is **"Open a `.tscn` from disk…"**; below that it lists the bundled fixtures (132 entries in the auto-generated `apps/textscene-web/src/fixtures.ts` manifest) grouped into categories (Edge Cases, Examples — Complex Scenes, Integration — Multi-Node, Unit — Primitive Meshes, and so on). Type to filter, use the arrow keys + Enter to pick, Escape to close. Selecting any entry switches the viewport and tree panel to that scene. The verification cycled through the ten MVS-scope unit fixtures listed below and confirmed each renders cleanly:
 
 - `unit-empty-scene.tscn` — empty tree, canvas is the default background, no crash
 - `unit-node3d-basic.tscn` — single Node3D root
@@ -55,45 +55,45 @@ A few unit fixtures (Box, Sphere, Cylinder, Capsule) include floating "Test"-lab
 
 ## Missing-texture meshes — WEB-03
 
-**Status:** PASS (fixed in WI-R3F-7b, commit `17bef1d`)
+**Status:** PASS (fixed in WI-R3F-7b)
 
 When you load a scene that references an external texture file the dev server cannot resolve, the affected mesh renders as a magenta-tinted placeholder with a floating label naming the missing path. The label is billboarded toward the camera so it stays readable as you orbit. Other meshes in the scene are unaffected.
 
 ![Test Missing Texture — magenta mesh with floating "res://textures/test-upload.png missing" label](screenshots/web/web-03-a.png)
 
-The fixture above (`scenes/fixtures/test-missing-texture.tscn`) references `res://textures/test-upload.png`, intentionally absent from the repo. The placeholder behaviour applies whether the texture is referenced directly by an ExtResource or indirectly through a SubResource StandardMaterial3D's `albedo_texture`. To clear it, upload the missing file via the toolbar control documented in the next section.
+The fixture above (`scenes/fixtures/test-missing-texture.tscn`) references `res://textures/test-upload.png`, intentionally absent from the repo. The placeholder behaviour applies whether the texture is referenced directly by an ExtResource or indirectly through a SubResource StandardMaterial3D's `albedo_texture`. To clear it, upload the missing file via the **Resources** tab documented in the next section.
 
 ---
 
 ## Uploading a missing file at runtime — WEB-04
 
-**Status:** PASS (fixed in WI-R3F-7b, commit `17bef1d`)
+**Status:** PASS (fixed in WI-R3F-7b; upload flow reworked per-path in WI-UX-3)
 
-Open a scene with a missing texture, then drop the correct file into the page later via the **Upload missing files** toolbar control. The dependent mesh re-renders with the new texture; meshes that depend on a different (still-missing) file stay magenta. No page reload, no fixture re-selection.
+Open a scene with a missing texture, then provide the correct file later via the Split Dock's **Resources** tab. The dependent mesh re-renders with the new texture; meshes that depend on a different (still-missing) file stay magenta. No page reload, no fixture re-selection.
 
 ![Magenta placeholder before upload](screenshots/web/web-04-a.png)
 
-The header shows an "Upload missing files: [Choose Files]" picker. Selecting a PNG (any image renamed to match the missing path's basename — e.g. `test-upload.png` to satisfy `res://textures/test-upload.png`) applies the texture immediately:
+The Resources tab's `MissingResourcesPanel` lists one row per missing `res://` path, each marked with a ⚠ icon and carrying its own file input — there is no global filename-guessing picker. Choosing a file for a row (any image — e.g. a PNG to satisfy `res://textures/test-upload.png`) applies the texture immediately:
 
-![Texture applied after upload — green "Uploaded: test-upload.png" indicator visible in the toolbar](screenshots/web/web-04-b.png)
+![Texture applied after upload](screenshots/web/web-04-b.png)
 
-The toolbar shows a green "Uploaded: &lt;filename&gt;" confirmation listing every late-arrival file you have provided this session. Uploads persist across fixture switches, so the same file applies to any other scene that references it. The dependency-walk uses `nodeDependsOnPath` to limit re-renders to the meshes that actually depend on the new file.
+After the upload, the row flips to a ✓ "uploaded" state with a **Remove** button; clicking Remove reverts the path to missing and the dependent mesh back to the magenta placeholder. Uploads persist across fixture switches, so the same file applies to any other scene that references it, and only the meshes that actually depend on the new file re-render. The showcase clip [`docs/showcase/web/missing-upload.webm`](showcase/web/missing-upload.webm) records this flow end to end against the current UI.
 
 ---
 
 ## Shared-texture late arrival — WEB-05
 
-**Status:** PASS (fixed in WI-R3F-7b, commit `17bef1d`)
+**Status:** PASS (fixed in WI-R3F-7b)
 
-`test-multiple-meshes-shared-texture.tscn` has three meshes: Mesh1 and Mesh2 share a material backed by `res://textures/shared.png`; Mesh3 uses a different material backed by `res://textures/different.png`. Both files are intentionally absent. All three meshes start as magenta placeholders, each with its own "&lt;path&gt; missing" label.
+`test-multiple-meshes-shared-texture.tscn` has three meshes: Mesh1 and Mesh2 share a material backed by `res://textures/shared.png`; Mesh3 uses a different material backed by `res://textures/different.png`. Both files are intentionally absent. All three meshes start as magenta placeholders, each with its own "&lt;path&gt; missing" label, and the Resources tab lists both paths as missing (⚠).
 
 ![Three meshes before upload — all magenta with per-mesh missing-path labels](screenshots/web/web-05-a.png)
 
-Upload a real PNG named `shared.png` via the toolbar. Mesh1 and Mesh2 update in the same animation frame; Mesh3 stays magenta because its texture (`different.png`) is still missing.
+Upload a real PNG on the `res://textures/shared.png` row in the Resources tab. Mesh1 and Mesh2 update in the same animation frame; Mesh3 stays magenta because its texture (`different.png`) is still missing.
 
 ![After shared.png upload — Mesh1 + Mesh2 textured in lockstep, Mesh3 still magenta](screenshots/web/web-05-b.png)
 
-Two meshes pointing at the same texture path receive the new resource simultaneously through a shared cache — no double load, no perceptible lag between them. The "Uploaded:" toolbar indicator accumulates every late-arrival file you provide.
+Two meshes pointing at the same texture path receive the new resource simultaneously through a shared cache — no double load, no perceptible lag between them. The Resources tab keeps every uploaded path listed with a ✓ so you can see (and Remove) the late-arrival files you have provided this session.
 
 ---
 
@@ -107,7 +107,7 @@ Clicking a mesh in the viewport selects it: the matching row in the scene-tree p
 
 ![Tree click switches the selection to the Title Label3D](screenshots/web/web-06-b.png)
 
-**Deviation note:** The spec asked for `integration-three-cubes.tscn`, which instances a child scene three times via `instance = ExtResource("...")`. The current build does not render instanced PackedScene children — the tree shows them, but the viewport is empty, so there are no targets to click. Verification used `unit-box-mesh.tscn` instead, which inlines its mesh and renders normally. Click-to-select itself is fully functional; the gap is in PackedScene instancing, which is a separate scope.
+**Deviation note (resolved):** The spec asked for `integration-three-cubes.tscn`, which instances a child scene three times via `instance = ExtResource("...")`. At the time of the original verification the build did not render instanced PackedScene children, so `unit-box-mesh.tscn` was used instead. PackedScene instancing has since been implemented — `NodeDispatcher` resolves the `instance = ExtResource(...)` reference and mounts the external scene's subtree under the instance transform (see `NodeDispatcher.instance.test.tsx`) — so `integration-three-cubes.tscn` now renders its three cubes and can be used exactly as the spec intended.
 
 ---
 
@@ -115,27 +115,29 @@ Clicking a mesh in the viewport selects it: the matching row in the scene-tree p
 
 **Status:** Architecturally FAIL on web (works in VS Code)
 
-The PRD wants the camera to keep its orbit position when you edit the source `.tscn` file and save. In the web app this is not testable because the web app loads scenes via `fetch('/fixtures/<name>.tscn')` on dropdown change — there is no file-watch subscription. Vite serves `public/fixtures/` as static assets and does not HMR-watch them. The only way to see edited content is to re-select the fixture in the dropdown (or reload the page), and both reset the camera by design.
+The PRD wants the camera to keep its orbit position when you edit the source `.tscn` file and save. In the web app this is not testable because the web app loads scenes via `fetch('/fixtures/<name>.tscn')` on scene selection — there is no file-watch subscription. Vite serves `public/fixtures/` as static assets and does not HMR-watch them. The only way to see edited content is to re-select the scene from the palette (or reload the page), and both reset the camera by design.
 
 ![Orbited camera before edit](screenshots/web/web-07-a.png)
 
-![After edit + dropdown reselect — box moved, camera reset to default](screenshots/web/web-07-b.png)
+![After edit + reselect — box moved, camera reset to default](screenshots/web/web-07-b.png)
 
 The two screenshots above show the box translating from origin to X=3 after the verifier edited the fixture, confirming the parser and renderer handled the new content correctly. The camera angle, however, was reset because re-selecting the fixture counts as a full scene reload.
 
-**Known issue:** PRD US-8 (camera survives content-only hot reload) is meaningful in the VS Code extension, which exposes a `vscode.workspace.onDidChangeWatchedFiles` → `webview.postMessage` flow that updates the existing webview without a full reload. The web app would need a parallel mechanism (a Vite plugin watching `scenes/fixtures/` plus a custom HMR event the app subscribes to, or moving fixtures out of `public/` and into the module graph). Tracked for design decision.
+**Known issue:** PRD US-8 (camera survives content-only hot reload) is meaningful in the VS Code extension, where `vscode.workspace.onDidSaveTextDocument` (for the previewed scene) plus a `FileSystemWatcher` (for dependent resources) drive a `webview.postMessage` flow that updates the existing webview without a full reload. The web app would need a parallel mechanism (a Vite plugin watching `scenes/fixtures/` plus a custom HMR event the app subscribes to, or moving fixtures out of `public/` and into the module graph). Tracked for design decision.
 
 ---
 
 ## Unsupported node types — WEB-08
 
-**Status:** PASS (fixed in WI-R3F-7b, commit `17bef1d`)
+**Status:** PASS (behavior updated since the original verification)
 
-Loading `unit-unsupported-nodes.tscn`, which contains `Area3D` (PhysicsArea), `AnimationPlayer` (AnimPlayer) and `Timer` (GameTimer), shows each unsupported node as a small dark-grey placeholder gizmo with a floating viewport-side label in the format **`<Type>: <Name>`**. The scene tree also tags each unsupported node with a yellow `NOT IMPLEMENTED` indicator next to its type abbreviation.
+`unit-unsupported-nodes.tscn` contains `Area3D` (PhysicsArea), `AnimationPlayer` (AnimPlayer) and `Timer` (GameTimer). Since the original verification, two of those types have gained registered renderer components: **Area3D** renders as a transform-only group (ADR-0008 — physics bodies position their children and draw nothing themselves, per ADR-0005), and **AnimationPlayer** has its own slice whose node renders (animation *playback* is not implemented — that is WI-42's scope). Neither triggers the fallback any more.
 
-![Unsupported nodes with placeholder gizmos and "Area3D: PhysicsArea" / "AnimationPlayer: AnimPlayer" labels in the viewport](screenshots/web/web-08-a.png)
+**Timer** remains unregistered and shows the actual fallback behavior: in the viewport it renders through `<GenericNodeFallback>` as an invisible transform-only group (ADR-0008 — no placeholder gizmo is drawn), and the scene tree tags it with a yellow **`Not Implemented`** chip next to its type abbreviation. Unsupported types stay discoverable through the tree, not by cluttering the viewport.
 
-The labels are billboarded toward the camera so they stay readable as you orbit. You can identify each placeholder without having to consult the tree panel.
+![unit-unsupported-nodes.tscn — screenshot from the original verification, which predates the Area3D/AnimationPlayer registrations and the gizmo-free fallback](screenshots/web/web-08-a.png)
+
+The screenshot above predates the current behavior: it shows the old placeholder-gizmo fallback with floating `<Type>: <Name>` labels, which has been replaced by the invisible-group + tree-chip design.
 
 ---
 
@@ -162,9 +164,9 @@ Tip: the default camera is often inside the gizmo geometry for these single-node
 
 ## Malformed `.tscn` files — WEB-10
 
-**Status:** PASS (fixed in WI-R3F-7b, commit `17bef1d`)
+**Status:** PASS (fixed in WI-R3F-7b)
 
-If you load a fixture with broken syntax (e.g. `edge-malformed-bracket.tscn` with missing closing brackets), a dark-red error banner appears above the viewport area reading "**Parse error:** Parser could not extract any nodes from the content. The file may be malformed." The app stays responsive — dropdown and panels remain interactive. Switching to a well-formed fixture afterwards loads normally, the banner disappears, no leftover state.
+If you load a fixture with broken syntax (e.g. `edge-malformed-bracket.tscn` with missing closing brackets), a dark-red error banner appears above the viewport area reading "**Parse error:** Parser could not extract any nodes from the content. The file may be malformed." The app stays responsive — the scene picker and panels remain interactive. While the banner is up, the tree pane shows a dedicated empty state ("No scene loaded — fix the parse error above to continue.") rather than a stuck loading indicator. Switching to a well-formed fixture afterwards loads normally, the banner disappears, no leftover state.
 
 ![Malformed fixture — red parse-error banner across the top, empty viewport below](screenshots/web/web-10-a.png)
 
@@ -234,10 +236,6 @@ A `WorldEnvironment` node controls the rendered background and ambient atmospher
 
 ## Known limitations (triage list)
 
-After the WI-R3F-7b fixes (commit `17bef1d`), all five missing-resource and fallback-label gaps from the v1 verification now pass. The remaining outstanding items are below.
+After the WI-R3F-7b fixes, all five missing-resource and fallback-label gaps from the v1 verification pass. Two limitations recorded here previously have since been fixed: PackedScene instancing now renders (see WEB-06), and the parse-error tree pane now shows a dedicated empty state instead of "Loading scene…" (see WEB-10). The remaining outstanding item is below.
 
-1. **No content-only hot reload on web.** Editing a scene file in the source tree does not propagate to the open page without a dropdown re-selection or full page reload, both of which reset the camera. PRD US-8 (camera survives content-only hot reload) is unreachable on web. The VS Code extension implements the equivalent via `onDidChangeWatchedFiles`; the web app would need a parallel mechanism (a Vite plugin watching `scenes/fixtures/` plus a custom HMR event the app subscribes to, or moving fixtures out of `public/` and into the module graph). (Flow affected: WEB-07.)
-
-2. **PackedScene instances do not render.** Fixtures using `instance = ExtResource("...")` to mount a child scene (e.g. `integration-three-cubes.tscn`) show the parent Node3D entries in the tree but the inner scene's meshes do not appear in the viewport. The scene-tree details panel correctly shows the `📦 External:` indicator on each parent. This is a separate scope from the MVS port and does not block the BOTH flows, since `integration-all-primitives.tscn` uses inline meshes. (Flow affected: WEB-06 — verifier worked around with `unit-box-mesh.tscn`.)
-
-3. **Sidebar text during a parse error reads "Loading scene…".** When the red parse-error banner is visible at the top, the sidebar still says "Loading scene…" instead of mirroring the error state. The primary error indicator (the red banner) is clear, but this is a small UX polish opportunity. (Flow affected: WEB-10.)
+1. **No content-only hot reload on web.** Editing a scene file in the source tree does not propagate to the open page without a re-selection from the scene palette or a full page reload, both of which reset the camera. PRD US-8 (camera survives content-only hot reload) is unreachable on web. The VS Code extension implements the equivalent via `onDidSaveTextDocument` plus a `FileSystemWatcher` for dependent resources; the web app would need a parallel mechanism (a Vite plugin watching `scenes/fixtures/` plus a custom HMR event the app subscribes to, or moving fixtures out of `public/` and into the module graph). (Flow affected: WEB-07.)

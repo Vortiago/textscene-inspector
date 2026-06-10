@@ -35,13 +35,6 @@ export interface TscnNode {
   properties: Node3DProperties | Record<string, unknown>;
   /** External scene instance reference (e.g., ExtResource("1_abc")) */
   instance?: string;
-  /** Runtime metadata for scene instances (set during rendering) */
-  instanceMetadata?: {
-    /** Source scene path (e.g., res://Enemy.tscn) */
-    sourcePath: string;
-    /** Is this the instance root node itself? */
-    isInstanceRoot: boolean;
-  };
 }
 
 /**

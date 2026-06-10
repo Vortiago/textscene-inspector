@@ -71,3 +71,84 @@ export function isComment(line: string): boolean {
 export function isEmpty(line: string): boolean {
   return line.trim().length === 0;
 }
+
+/**
+ * Count `"` characters that are real string delimiters — i.e. NOT escaped. A
+ * quote is escaped only when preceded by an ODD number of consecutive
+ * backslashes (`\"` is escaped; `\\"` is an escaped backslash followed by a
+ * real quote). Shared by both parsers so they agree on string termination.
+ */
+export function countUnescapedQuotes(s: string): number {
+  let count = 0;
+  for (let i = 0; i < s.length; i++) {
+    if (s[i] !== '"') continue;
+    let backslashes = 0;
+    for (let j = i - 1; j >= 0 && s[j] === '\\'; j--) backslashes++;
+    if (backslashes % 2 === 0) count++;
+  }
+  return count;
+}
+
+/**
+ * True when a value opens a quoted string but hasn't closed it — Godot writes
+ * multi-line strings (label text, descriptions) across several lines, and the
+ * line-based property parser sees only the first fragment (odd quote count).
+ */
+export function isUnterminatedString(value: string): boolean {
+  return value.startsWith('"') && countUnescapedQuotes(value) % 2 === 1;
+}
+
+/**
+ * True when a property value isn't complete on this line. Godot writes
+ * multi-line values both as unterminated strings (label text) AND as bracketed
+ * arrays/dicts spanning lines — packed arrays and especially `SpriteFrames`
+ * `animations = [{ … }]`. The line-based parsers must keep accumulating until
+ * BOTH quotes and brackets balance, or the value is truncated to its first
+ * fragment. Single string-aware scan: incomplete if a string is still open, or
+ * `[`/`{` outnumber `]`/`}` outside strings.
+ */
+export function isIncompleteValue(value: string): boolean {
+  let inString = false;
+  let depth = 0;
+  for (let i = 0; i < value.length; i++) {
+    const c = value[i];
+    if (inString) {
+      if (c === '\\') i++; // skip the escaped character
+      else if (c === '"') inString = false;
+      continue;
+    }
+    if (c === '"') inString = true;
+    else if (c === '[' || c === '{') depth++;
+    else if (c === ']' || c === '}') depth--;
+  }
+  return inString || depth > 0;
+}
+
+const ESCAPE_MAP: Record<string, string> = {
+  '"': '"',
+  '\\': '\\',
+  n: '\n',
+  r: '\r',
+  t: '\t',
+};
+
+/**
+ * Strip a value's surrounding quotes and decode Godot's string escape sequences
+ * (`\n`, `\t`, `\r`, `\\`, `\"`, plus `\uXXXX` / `\UXXXXXX` Unicode — Godot emits
+ * those for non-ASCII characters). Non-quoted values pass through unchanged.
+ * A single left-to-right pass so an escaped backslash (`\\u1234`) is decoded as
+ * `\` + literal `u1234`, not as a Unicode escape. Used wherever a node parser
+ * reads a string property (label/button text, …).
+ */
+export function unquoteString(value: string): string {
+  let v = value;
+  if (v.length >= 2 && v.startsWith('"') && v.endsWith('"')) {
+    v = v.slice(1, -1);
+  }
+  return v.replace(/\\(u[0-9a-fA-F]{4}|U[0-9a-fA-F]{6}|["\\nrt])/g, (_match, seq: string) => {
+    if (seq[0] === 'u' || seq[0] === 'U') {
+      return String.fromCodePoint(parseInt(seq.slice(1), 16));
+    }
+    return ESCAPE_MAP[seq] ?? seq;
+  });
+}

@@ -104,40 +104,341 @@
   color: var(--tsi-fg-default);
 }
 
-.body {
+/* ── Split Dock chrome (ADR-0007) ────────────────────────────────────────
+ * Full-width top bar over two columns: a large center viewport and a single
+ * right "dock". The dock is a vertical master-detail — Scene tree on top,
+ * Inspector directly below — so a selection's properties appear with no tab
+ * hop. No left rail: the VS Code webview already sits right of VS Code's own
+ * activity bar + Explorer, so a left rail would clash and waste width.
+ */
+
+/* Full-width top bar: brand, host toolbar (fixture picker), viewport-mode
+   controls pushed to the right. */
+.topBar {
+  display: flex;
+  align-items: center;
+  gap: var(--tsi-space-3);
+  /* Definite height: children size to content and center, so nested flex
+     toolbars can't drive a circular auto-height (the old bar ballooned to
+     58px because a stretched child set the height, which stretched it…). */
+  height: 2.75rem;
+  padding: 0 var(--tsi-space-3);
+  border-bottom: 1px solid var(--tsi-border);
+  background: var(--tsi-bg-panel);
+  flex-shrink: 0;
+}
+
+.brand {
+  font-weight: 600;
+  font-size: var(--tsi-font-md);
+  color: var(--tsi-fg-strong);
+  white-space: nowrap;
+}
+
+.topToolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--tsi-space-2);
+  min-width: 0;
+}
+
+.columns {
   display: flex;
   flex: 1;
   min-height: 0;
 }
 
-.canvas {
+/* The single right dock. Resizable width (Splitter) + collapsible. Its
+   children stack vertically into the master/detail split. */
+.dock {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 0;
+  flex-shrink: 0;
+  min-width: 0;
+  background: var(--tsi-bg-panel);
+  border-left: 1px solid var(--tsi-border);
+  overflow: hidden;
+}
+
+/* Master (scene tree) + detail (inspector) sections. flex-basis:0 so the
+   inline flex-grow values set the proportion; each scrolls internally. */
+.masterPane,
+.detailPane {
+  display: flex;
+  flex-direction: column;
+  flex-basis: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.masterPane {
+  border-bottom: 1px solid var(--tsi-border);
+}
+
+.dockHeader,
+.detailHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--tsi-space-2);
+  padding: var(--tsi-space-1) var(--tsi-space-2);
+  border-bottom: 1px solid var(--tsi-border);
+  background: var(--tsi-bg-elevated);
+  flex-shrink: 0;
+  font-size: var(--tsi-font-sm);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--tsi-fg-muted);
+  white-space: nowrap;
+}
+
+.dockTitle {
+  flex: 0 0 auto;
+  font-size: var(--tsi-font-sm);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--tsi-fg-muted);
+  white-space: nowrap;
+}
+
+.collapseButton {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--tsi-fg-muted);
+  cursor: pointer;
+  font-size: var(--tsi-font-md);
+  line-height: 1;
+  padding: 0 var(--tsi-space-1);
+  border-radius: var(--tsi-radius-sm);
+}
+
+.collapseButton:hover {
+  background: var(--tsi-bg-hover);
+  color: var(--tsi-fg-default);
+}
+
+.dockBody {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+/* Draggable handle between the master (tree) and detail (inspector). */
+.masterDetailHandle {
+  flex: 0 0 6px;
+  cursor: row-resize;
+  background: var(--tsi-bg-elevated);
+  border-top: 1px solid var(--tsi-border);
+  border-bottom: 1px solid var(--tsi-border);
+}
+
+.masterDetailHandle:hover {
+  background: var(--tsi-accent);
+}
+
+/* Top-bar spacer + compact scene stat chips. */
+.topSpacer {
+  flex: 1 1 auto;
+}
+
+.statChips {
+  display: flex;
+  align-items: center;
+  gap: var(--tsi-space-2);
+}
+
+.statChip {
+  font-size: var(--tsi-font-sm);
+  color: var(--tsi-fg-muted);
+  white-space: nowrap;
+  padding: 2px var(--tsi-space-2);
+  border: 1px solid var(--tsi-border);
+  border-radius: var(--tsi-radius-sm);
+  background: var(--tsi-bg-elevated);
+}
+
+.statChip b {
+  color: var(--tsi-fg-strong);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Node-count badge in the Scene Tree dock header. */
+.dockCount {
+  font-size: var(--tsi-font-xs);
+  color: var(--tsi-fg-faint);
+  font-variant-numeric: tabular-nums;
+  margin-left: var(--tsi-space-2);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.dockSpacer {
+  flex: 1 1 auto;
+}
+
+/* On-pane tab strip switching the detail section (ADR-0007). */
+.paneTabs {
+  display: flex;
+  align-items: stretch;
+  flex-shrink: 0;
+  background: var(--tsi-bg-elevated);
+  border-bottom: 1px solid var(--tsi-border);
+}
+
+.paneTab {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--tsi-fg-muted);
+  cursor: pointer;
+  font-family: var(--tsi-font-ui);
+  font-size: var(--tsi-font-sm);
+  padding: var(--tsi-space-2) var(--tsi-space-3);
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+}
+
+.paneTab:hover {
+  color: var(--tsi-fg-default);
+  background: var(--tsi-bg-hover);
+}
+
+.paneTabActive {
+  color: var(--tsi-fg-strong);
+  border-bottom-color: var(--tsi-accent);
+}
+
+/* Cameras detail tab — a flat list of Camera3D nodes with a "use" action. */
+.camList {
+  display: flex;
+  flex-direction: column;
+  padding: var(--tsi-space-1);
+  gap: 2px;
+}
+
+.camRow {
+  appearance: none;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--tsi-fg-default);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--tsi-space-2);
+  padding: var(--tsi-space-1) var(--tsi-space-2);
+  border-radius: var(--tsi-radius-sm);
+  font-size: var(--tsi-font-md);
+  text-align: left;
+}
+
+.camRow:hover {
+  background: var(--tsi-bg-hover);
+}
+
+.camRow[data-active='true'] {
+  background: var(--tsi-accent-soft);
+  color: var(--tsi-accent-fg);
+  border-color: var(--tsi-accent);
+}
+
+.camName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.camTag {
+  font-size: var(--tsi-font-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--tsi-fg-muted);
+  flex-shrink: 0;
+}
+
+.camRow[data-active='true'] .camTag {
+  color: var(--tsi-accent-fg);
+}
+
+/* Collapsed dock: a thin clickable strip with a vertical label. */
+.collapsedDock {
+  appearance: none;
+  border: none;
+  flex: 0 0 26px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--tsi-space-2);
+  padding: var(--tsi-space-2) 0;
+  background: var(--tsi-bg-elevated);
+  color: var(--tsi-fg-muted);
+  cursor: pointer;
+}
+
+.collapsedDock[data-side='right'] {
+  border-left: 1px solid var(--tsi-border);
+}
+
+.collapsedDock:hover {
+  background: var(--tsi-bg-hover);
+  color: var(--tsi-fg-default);
+}
+
+.collapsedChevron {
+  font-size: var(--tsi-font-md);
+}
+
+.collapsedTitle {
+  writing-mode: vertical-rl;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: var(--tsi-font-sm);
+}
+
+.center {
   flex: 1;
   position: relative;
   min-width: 0;
+  background: var(--tsi-bg-canvas);
 }
 
-.sidebar {
-  display: flex;
-  flex-direction: column;
-  width: 320px;
-  flex-shrink: 0;
-  border-left: 1px solid var(--tsi-border);
-  background: var(--tsi-bg-panel);
-  /* WI-UX-13 defense-in-depth: `overflow: auto` (was `hidden`) so that
-     if any sidebar child ever overflows the available vertical space
-     — `MissingResourcesPanel` already has its own cap (primary fix),
-     but new components added later might not — the user can still
-     scroll the sidebar to reach what's been pushed below. With the
-     primary panel cap in place, this is rarely visible; it's a safety
-     net, not the workhorse. */
-  overflow: auto;
+/* The 2D canvas stage's rules live in Canvas2DStage/Canvas2DStage.module.css. */
+
+/* "Contains 2D UI" discoverability hint, floated over the 3D viewport when a
+   scene carries Control/CanvasLayer nodes (ADR-0006). Clicking it flips to 2D. */
+.viewportHint {
+  position: absolute;
+  top: var(--tsi-space-3);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  appearance: none;
+  border: 1px solid var(--tsi-accent);
+  background: var(--tsi-accent-soft);
+  color: var(--tsi-accent-fg);
+  font: inherit;
+  font-size: var(--tsi-font-sm);
+  padding: var(--tsi-space-1) var(--tsi-space-3);
+  border-radius: 999px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.viewportHint:hover {
+  background: var(--tsi-accent);
+  color: #fff;
 }
 
 .treePane {
   flex: 1;
   min-height: 0;
   overflow: auto;
-  border-bottom: 1px solid var(--tsi-border);
 }
 
 .detailsPane {
@@ -174,38 +475,27 @@
 }
 
 /*
- * WI-UX-9: narrow-viewport layout. Below 768px, drop the side-by-side
- * canvas + sidebar split — there isn't horizontal room — and stack the
- * sidebar UNDER the canvas. The sidebar is capped at 50vh and scrolls
- * internally so the canvas keeps a usable half of the viewport. Both
- * panels remain visible simultaneously; this is intentionally not the
- * radio-tab switcher main shipped (see docs/MAIN-VS-MIGRATION-DELTA.md
- * item 13). Stacking is the modern responsive default and avoids the
- * tab-state bookkeeping main's CSS-only pattern required.
- *
- * Breakpoint matches main's `@media (max-width: 767px)` (we use 768 as
- * the inclusive boundary because `max-width: 768px` is the conventional
- * mobile cutoff and matches CSS frameworks' `md` breakpoint).
+ * Narrow-viewport layout (≤768px): there isn't horizontal room for the
+ * viewport + side dock, so stack them vertically. The center viewport keeps a
+ * usable half-height; the dock goes full-width, height-capped, and scrolls
+ * internally. The Splitter hides itself (see Splitter.module.css). `!important`
+ * overrides the inline flex-basis the resizer sets on the dock.
  */
 @media (max-width: 768px) {
-  .body {
+  .columns {
     flex-direction: column;
   }
 
-  .canvas {
+  .center {
     flex: 1 1 auto;
-    /* Without a min height, flex collapse on iOS Safari can crush the
-       canvas to ~0 — pin a baseline that still leaves the sidebar
-       readable below it. */
     min-height: 50vh;
   }
 
-  .sidebar {
+  .dock {
+    flex-basis: auto !important;
     width: 100%;
-    flex-shrink: 0;
+    max-height: 45vh;
     border-left: none;
     border-top: 1px solid var(--tsi-border);
-    max-height: 50vh;
-    overflow-y: auto;
   }
 }

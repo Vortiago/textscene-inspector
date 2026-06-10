@@ -102,9 +102,6 @@ function TreeNodeImpl({
   if (isSelected) headerClasses.push(styles.selected!);
   if (isHidden) headerClasses.push(styles.hidden!);
   if (isUnsupported) headerClasses.push(styles.unsupported!);
-  if (node.instance && node.instanceMetadata?.isInstanceRoot) {
-    headerClasses.push(styles.instanceRoot!);
-  }
 
   function handleExpand(e: MouseEvent) {
     e.stopPropagation();
@@ -132,8 +129,6 @@ function TreeNodeImpl({
     onToggleVisibility(nodePath);
   }
 
-  const sourcePath = node.instanceMetadata?.sourcePath ?? node.instance;
-  const isInstanceRoot = node.instanceMetadata?.isInstanceRoot === true;
 
   return (
     <div className={styles.node} data-node-path={nodePath} data-depth={depth}>
@@ -186,10 +181,10 @@ function TreeNodeImpl({
             </span>
           )}
 
-          {node.instance && sourcePath && (
+          {node.instance && (
             <span
               className={styles.instanceIcon}
-              title={`External scene: ${sourcePath}${isInstanceRoot ? ' (instance root)' : ''}`}
+              title={`External scene: ${node.instance}`}
             >
               📦
             </span>

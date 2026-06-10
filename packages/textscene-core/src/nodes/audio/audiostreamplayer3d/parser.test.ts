@@ -7,28 +7,13 @@
 
 import { describe, it, expect } from 'vitest';
 import type { ParsedHeading } from '../../../parser/utils';
-import { isAudioStreamPlayer3D, parseAudioStreamPlayer3D } from './parser';
+import { parseAudioStreamPlayer3D } from './parser';
 import { AttenuationModel, DopplerTracking } from './types';
 
 const HEADING: ParsedHeading = {
   type: 'node',
   attributes: { name: 'Audio', type: 'AudioStreamPlayer3D' },
 };
-
-describe('isAudioStreamPlayer3D', () => {
-  it('identifies AudioStreamPlayer3D headings', () => {
-    expect(isAudioStreamPlayer3D(HEADING)).toBe(true);
-  });
-
-  it('rejects other 3D nodes', () => {
-    expect(
-      isAudioStreamPlayer3D({
-        type: 'node',
-        attributes: { name: 'X', type: 'AudioStreamPlayer2D' },
-      })
-    ).toBe(false);
-  });
-});
 
 describe('parseAudioStreamPlayer3D defaults', () => {
   it('applies Godot defaults when only the heading is supplied', () => {

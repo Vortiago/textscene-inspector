@@ -1,56 +1,84 @@
 /*
+ * Variant J — "Split Dock": a calm, dense, VS-Code-native dark outliner.
+ *
  * Design tokens (`--tsi-*`) are defined in TscnPreviewShell.module.css's
  * `:root` block. Touching colours here means touching the token — keep
- * this file free of raw hex values.
+ * this file free of raw hex values (subtle overlays via color-mix only).
  */
 .root {
-  font-size: var(--tsi-font-md);
+  font-size: var(--tsi-font-sm);
+  font-family: var(--tsi-font-ui);
   user-select: none;
   color: var(--tsi-fg-default);
+  background: var(--tsi-bg-panel);
 }
 
+/* ── Search / filter toolbar ─────────────────────────────────────────── */
 .toolbar {
   display: flex;
   align-items: center;
   gap: var(--tsi-space-1);
   padding: var(--tsi-space-2);
+  background: var(--tsi-bg-panel);
   border-bottom: 1px solid var(--tsi-border);
 }
 
 .search {
   flex: 1;
-  background: var(--tsi-bg-panel);
+  min-width: 0;
+  background: var(--tsi-bg-elevated);
   border: 1px solid var(--tsi-border);
   border-radius: var(--tsi-radius-sm);
   color: var(--tsi-fg-default);
   padding: var(--tsi-space-1) var(--tsi-space-2);
-  font-size: var(--tsi-font-md);
-  min-width: 0;
+  font-size: var(--tsi-font-sm);
+  font-family: var(--tsi-font-ui);
+
+  &::placeholder {
+    color: var(--tsi-fg-faint);
+  }
+
+  &:hover {
+    border-color: var(--tsi-border-strong);
+  }
+
+  &:focus {
+    outline: none;
+    border-color: var(--tsi-accent);
+    box-shadow: 0 0 0 1px var(--tsi-focus-ring);
+  }
 }
 
-.search:focus {
-  outline: none;
-  border-color: var(--tsi-accent);
-}
-
+/* Ghost control button — transparent by default, fills only on hover. */
 .controlBtn {
-  background: var(--tsi-bg-hover);
-  border: 1px solid var(--tsi-border-strong);
+  background: transparent;
+  border: 1px solid transparent;
   border-radius: var(--tsi-radius-sm);
-  color: var(--tsi-fg-on-control);
+  color: var(--tsi-fg-muted);
   padding: var(--tsi-space-1) var(--tsi-space-2);
   font-size: var(--tsi-font-sm);
   cursor: pointer;
-}
+  transition: background-color 0.12s, color 0.12s;
 
-.controlBtn:hover {
-  background: var(--tsi-bg-active);
+  &:hover {
+    background: var(--tsi-bg-hover);
+    color: var(--tsi-fg-default);
+  }
+
+  &:active {
+    background: var(--tsi-bg-active);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 1px var(--tsi-focus-ring);
+  }
 }
 
 .iconBtn {
   /* Square icon-button variant — used by Expand/Collapse all. */
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -59,193 +87,256 @@
   line-height: 1;
 }
 
+/* ── Tree body ───────────────────────────────────────────────────────── */
 .tree {
   overflow: auto;
+  padding: var(--tsi-space-1) 0;
 }
 
 .empty {
   padding: var(--tsi-space-4);
   text-align: center;
   color: var(--tsi-fg-muted);
+  font-size: var(--tsi-font-sm);
 }
 
 .node {
   margin: 0;
 }
 
+/*
+ * Compact single-line row. The DOM source order is twisty → typeBadge →
+ * [notImplemented] → nodeName → glyphs, but variant J wants the type label to
+ * read as a quiet *trailing* annotation after the node name. A flex row with
+ * explicit `order` reorders visually (name first) without touching the DOM,
+ * and the node name's `flex: 1` pushes the type label + glyphs to the right —
+ * always one tight line, no wrapping.
+ */
 .header {
-  /*
-   * Grid columns:
-   *   12px            expand toggle / spacer (always present)
-   *   auto            type badge (sizes to shorthand text)
-   *   auto            optional "Not Implemented" badge
-   *   minmax(0, 1fr)  node name — `min-width: 0` is what enables ellipsis
-   *   auto            right-side glyph group (transform/instance/visibility)
-   *
-   * `auto` columns collapse to zero when their child is absent, so optional
-   * elements don't reserve space. The `minmax(0, 1fr)` track replaces the
-   * old `flex: 1` on `.nodeName` and is the actual fix for the horizontal
-   * scrollbar visible in `docs/screenshots/web/strict-integration.png`.
-   */
-  display: grid;
-  grid-template-columns: 12px auto auto minmax(0, 1fr) auto;
+  position: relative;
+  display: flex;
   align-items: center;
-  gap: 0.375rem;
-  padding: var(--tsi-space-1) var(--tsi-space-2);
+  gap: var(--tsi-space-2);
+  padding: 1px var(--tsi-space-2);
+  min-height: 22px;
   cursor: pointer;
-  border-radius: var(--tsi-radius-sm);
-  transition: background-color 0.15s;
+  /* 2px inset accent border placeholder — kept transparent so selected
+     rows never shift layout when the accent appears. */
+  border-left: 2px solid transparent;
+  transition: background-color 0.12s;
+
+  &:hover {
+    background: var(--tsi-bg-hover);
+  }
+
+  /* Visual order via flex `order` (independent of DOM order). */
+  & > .expandIcon,
+  & > .expandSpacer {
+    order: 1;
+  }
+  & > .nodeName {
+    order: 2;
+  }
+  & > .typeBadge {
+    order: 3;
+  }
+  & > .notImplementedBadge {
+    order: 4;
+  }
+  & > .glyphs {
+    order: 5;
+  }
 }
 
 .glyphs {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: 2px;
   flex-shrink: 0;
+  /* Quiet until the row is hovered or selected — keeps the outliner calm. */
+  opacity: 0.55;
+  transition: opacity 0.12s;
+
+  .header:hover & {
+    opacity: 1;
+  }
 }
 
-.header:hover {
-  background: var(--tsi-bg-hover);
-}
-
+/* Selection: accent-soft fill, inset 2px accent left border, accent text. */
 .selected {
   background: var(--tsi-accent-soft);
-  box-shadow: inset 2px 0 0 var(--tsi-accent);
+  border-left-color: var(--tsi-accent);
   color: var(--tsi-accent-fg);
+
+  & .nodeName {
+    font-weight: 600;
+    color: var(--tsi-accent-fg);
+  }
+
+  /* Dim the trailing type label so the highlighted name stays the focus. */
+  & .typeBadge {
+    color: color-mix(in srgb, var(--tsi-accent-fg) 65%, transparent);
+  }
+
+  & .glyphs {
+    opacity: 1;
+  }
+
+  &:hover {
+    background: color-mix(in srgb, var(--tsi-accent-soft) 80%, var(--tsi-bg-hover));
+  }
 }
 
-.selected .nodeName {
-  font-weight: 600;
-  color: var(--tsi-accent-fg);
-}
-
-.selected:hover {
-  background: color-mix(in srgb, var(--tsi-accent-soft) 80%, white);
-}
-
+/* ── Expand twisties ─────────────────────────────────────────────────── */
 .expandIcon {
   width: 12px;
-  font-size: var(--tsi-font-xs);
-  color: var(--tsi-fg-on-control);
+  font-size: 0.625rem;
+  color: var(--tsi-fg-muted);
   cursor: pointer;
   flex-shrink: 0;
   text-align: center;
+  transition: color 0.12s;
+
+  &:hover {
+    color: var(--tsi-fg-default);
+  }
 }
 
 .expandSpacer {
   width: 12px;
   text-align: center;
-  font-size: 0.5rem;
+  font-size: 0.375rem;
   color: var(--tsi-fg-faint);
   flex-shrink: 0;
 }
 
+/*
+ * Quiet trailing type label. The TSX still applies `.typeBadge` plus a
+ * per-type colour class, but variant J renders types as dim, small,
+ * trailing text rather than loud filled badges. The colour classes below
+ * are reduced to a faint left-hand dot so type is still glanceable
+ * without shouting.
+ */
 .typeBadge {
-  display: inline-block;
-  padding: 0.125rem 0.375rem;
-  border-radius: var(--tsi-radius-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
   font-size: var(--tsi-font-xs);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.025em;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  text-transform: lowercase;
+  color: var(--tsi-fg-muted);
   flex-shrink: 0;
+
+  /* faint type dot */
+  &::before {
+    content: '';
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: 0.7;
+    flex-shrink: 0;
+  }
 }
 
+/* Per-type tint applies to the dot + text, low-chroma. */
 .typeNode3d {
-  background: var(--tsi-border-strong);
-  color: var(--tsi-fg-on-control);
+  color: var(--tsi-fg-faint);
 }
 
 .typeMesh {
-  background: var(--tsi-type-mesh-bg);
   color: var(--tsi-type-mesh-fg);
 }
 
 .typeCamera {
-  background: var(--tsi-type-camera-bg);
   color: var(--tsi-type-camera-fg);
 }
 
 .typeLight {
-  background: var(--tsi-type-light-bg);
   color: var(--tsi-type-light-fg);
 }
 
 .typeUnknown {
-  background: var(--tsi-type-unknown-bg);
   color: var(--tsi-type-unknown-fg);
 }
 
 .nodeName {
-  /* Width comes from the parent grid's `minmax(0, 1fr)` track. */
+  /* Grow to fill the row so the trailing type label + glyphs sit at the right;
+     min-width:0 lets the name ellipsize instead of overflowing. */
+  flex: 1 1 auto;
   color: var(--tsi-fg-default);
+  font-size: var(--tsi-font-sm);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   min-width: 0;
 }
 
+/* ── Trailing glyphs ─────────────────────────────────────────────────── */
 .transformIcon {
   color: var(--tsi-value-mono);
-  font-size: var(--tsi-font-sm);
+  font-size: var(--tsi-font-xs);
   flex-shrink: 0;
 }
 
 .instanceIcon {
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   flex-shrink: 0;
-}
-
-.instanceRoot {
-  border-left: 2px solid var(--tsi-instance-accent);
-  padding-left: calc(var(--tsi-space-2) - 2px);
-}
-
-.instanceRoot .nodeName {
-  font-weight: 500;
 }
 
 .visibilityIcon {
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   cursor: pointer;
   flex-shrink: 0;
-  padding: 0 0.125rem;
-  opacity: 0.6;
-  transition: opacity 0.15s;
+  padding: 0 2px;
   background: none;
   border: none;
   color: inherit;
-}
+  opacity: 0.7;
+  transition: opacity 0.12s;
+  border-radius: var(--tsi-radius-sm);
 
-.visibilityIcon:hover {
-  opacity: 1;
+  &:hover {
+    opacity: 1;
+    background: var(--tsi-bg-hover);
+  }
 }
 
 .hidden {
-  opacity: 0.5;
-}
+  & .nodeName {
+    color: var(--tsi-fg-faint);
+    text-decoration: line-through;
+  }
 
-.hidden .nodeName {
-  color: #777; /* TODO(wave-2): tokenize as --tsi-fg-strikethrough */
-  text-decoration: line-through;
-}
+  & .typeBadge {
+    opacity: 0.5;
+  }
 
-.hidden .typeBadge {
-  opacity: 0.6;
+  & .glyphs {
+    opacity: 0.4;
+  }
 }
 
 .unsupported {
-  opacity: 0.7;
+  & .nodeName {
+    color: var(--tsi-fg-muted);
+  }
 }
 
+/* "Not Implemented" stays a real chip — it's a warning, not a type label. */
 .notImplementedBadge {
-  background-color: var(--tsi-warning);
-  color: #000;
-  padding: 0.125rem 0.375rem;
+  background: var(--tsi-warning-bg);
+  color: var(--tsi-warning-fg);
+  padding: 0 var(--tsi-space-1);
   border-radius: var(--tsi-radius-sm);
   font-size: var(--tsi-font-xs);
   font-weight: 600;
   text-transform: uppercase;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .children {

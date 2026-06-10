@@ -1,115 +1,219 @@
 /*
+ * Variant J — "Split Dock": a calm, dense, VS-Code-native dark inspector.
  * Design tokens (`--tsi-*`) are defined in TscnPreviewShell.module.css's
- * `:root` block.
+ * `:root` block — referenced here, never redefined.
  */
 .root {
-  padding: var(--tsi-space-3);
-  font-size: var(--tsi-font-md);
+  padding: var(--tsi-space-2) 0 var(--tsi-space-3) 0;
+  font-family: var(--tsi-font-ui);
+  font-size: var(--tsi-font-sm);
+  line-height: 1.45;
   color: var(--tsi-fg-default);
+  background: var(--tsi-bg-panel);
   overflow: auto;
 }
 
 .empty {
-  padding: var(--tsi-space-4);
+  padding: var(--tsi-space-4) var(--tsi-space-3);
   text-align: center;
   color: var(--tsi-fg-muted);
+  font-size: var(--tsi-font-sm);
   font-style: italic;
 }
 
+/*
+ * Node title: clear, strong heading. The first section directly below
+ * carries the dim "Type" subtitle row, so the title stays quiet and flat.
+ */
 .title {
-  margin: 0 0 var(--tsi-space-3) 0;
+  margin: 0;
+  padding: 0 var(--tsi-space-3) var(--tsi-space-2) var(--tsi-space-3);
   font-size: var(--tsi-font-lg);
-  color: var(--tsi-fg-default);
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--tsi-fg-strong);
+  word-break: break-word;
 }
 
 .section {
-  margin-bottom: var(--tsi-space-4);
+  margin: 0 0 var(--tsi-space-3) 0;
 }
 
 .section:last-child {
   margin-bottom: 0;
 }
 
+/*
+ * Group/section header: uppercase, letter-spaced, dim and small.
+ * Pinned to the top of the scroll container with a panel background so
+ * it stays legible while scrolling dense property lists.
+ */
 .sectionTitle {
-  margin: 0 0 var(--tsi-space-2) 0;
-  padding-bottom: var(--tsi-space-1);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  margin: 0 0 var(--tsi-space-1) 0;
+  padding: var(--tsi-space-1) var(--tsi-space-3);
+  background: var(--tsi-bg-panel);
   border-bottom: 1px solid var(--tsi-border);
   font-size: var(--tsi-font-xs);
-  color: var(--tsi-fg-muted);
+  font-weight: 600;
+  line-height: 1.6;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  color: var(--tsi-fg-muted);
 }
 
+/*
+ * Property row: compact, label-left / value-right. An inset 2px left
+ * border reserved (transparent) so hover/selected variants never shift
+ * layout when they paint it in.
+ */
 .row {
   display: flex;
-  margin-bottom: var(--tsi-space-2);
+  align-items: baseline;
+  gap: var(--tsi-space-3);
+  padding: 2px var(--tsi-space-3) 2px calc(var(--tsi-space-3) - 2px);
+  border-left: 2px solid transparent;
+}
+
+.row:hover {
+  background: var(--tsi-bg-hover);
 }
 
 .label {
-  color: var(--tsi-fg-muted);
-  min-width: 70px;
   flex-shrink: 0;
+  min-width: 84px;
+  color: var(--tsi-fg-muted);
+  font-size: var(--tsi-font-sm);
 }
 
+/*
+ * Values: numeric / vector / path content reads as mono and gets the
+ * dedicated value tint. Right-aligned to pair cleanly with the label.
+ */
 .value {
-  color: var(--tsi-fg-default);
-  font-family: var(--tsi-font-mono);
   flex: 1;
+  min-width: 0;
+  text-align: right;
+  font-family: var(--tsi-font-mono);
+  font-size: var(--tsi-font-sm);
+  color: var(--tsi-value-mono);
   word-break: break-word;
   overflow-wrap: break-word;
-  min-width: 0;
 }
 
+/*
+ * Enum / resource / type tokens arrive wrapped in <code>. Render them as
+ * quiet rounded chips on an elevated surface.
+ */
 .value code {
-  background: rgba(255, 255, 255, 0.05);
-  padding: 0 var(--tsi-space-1);
+  display: inline-block;
+  padding: 1px var(--tsi-space-1);
+  background: var(--tsi-bg-elevated);
+  border-radius: var(--tsi-radius-sm);
+  color: var(--tsi-fg-default);
+  font-family: var(--tsi-font-mono);
+  font-size: var(--tsi-font-sm);
+}
+
+/*
+ * Color values (rgba(...) / Color(...)) get a small leading swatch.
+ * The swatch reads the value text via a CSS variable when supplied; it
+ * falls back to a neutral chip when no per-row color is provided.
+ */
+.value .swatch {
+  display: inline-block;
+  width: 0.75em;
+  height: 0.75em;
+  margin-right: var(--tsi-space-1);
+  vertical-align: -1px;
+  border: 1px solid var(--tsi-border-strong);
   border-radius: 2px;
+  background: var(--swatch-color, var(--tsi-bg-elevated));
 }
 
-.externalInstance .label,
+/*
+ * External-instance row: selection-like treatment. Soft accent fill, a
+ * 2px accent left border (reuses the reserved inset border, no shift),
+ * and accent foreground on both label and value.
+ */
+.externalInstance {
+  background: var(--tsi-accent-soft);
+  border-left-color: var(--tsi-accent);
+  border-radius: 0 var(--tsi-radius-sm) var(--tsi-radius-sm) 0;
+}
+
+.externalInstance:hover {
+  background: var(--tsi-accent-soft);
+}
+
+.externalInstance .label {
+  color: var(--tsi-accent-fg);
+}
+
 .externalInstance .value {
-  color: var(--tsi-instance-accent);
+  color: var(--tsi-accent-fg);
 }
 
+/*
+ * Warning / unsupported-node section: a restrained left rail rather than
+ * a loud fill, in keeping with the calm surface language.
+ */
 .warningSection {
-  border-left: 4px solid var(--tsi-warning);
-  padding-left: 12px;
-  margin-bottom: 16px;
+  border-left: 2px solid var(--tsi-warning);
+  margin-bottom: var(--tsi-space-3);
 }
 
 .warningSection .sectionTitle {
-  color: var(--tsi-warning);
+  color: var(--tsi-warning-fg);
+  border-bottom-color: var(--tsi-warning);
 }
 
 .warningText {
-  background-color: var(--tsi-warning-bg);
+  margin: var(--tsi-space-1) var(--tsi-space-3) var(--tsi-space-2) var(--tsi-space-3);
+  padding: var(--tsi-space-2) var(--tsi-space-3);
+  background: var(--tsi-warning-bg);
   border: 1px solid var(--tsi-warning);
-  border-radius: 4px;
-  padding: 12px;
-  margin: var(--tsi-space-2) 0;
+  border-radius: var(--tsi-radius-sm);
   color: var(--tsi-warning-fg);
+  font-size: var(--tsi-font-sm);
   line-height: 1.5;
   word-wrap: break-word;
   overflow-wrap: break-word;
 }
 
 .warningText strong {
-  color: #ffe599; /* TODO(wave-2): derive via color-mix from --tsi-warning */
+  color: color-mix(in srgb, var(--tsi-warning) 55%, var(--tsi-fg-strong));
+  font-family: var(--tsi-font-mono);
 }
 
+/*
+ * Action controls (e.g. camera switch): ghost by default — transparent
+ * surface, dim text, accent on hover/active. Reads as a quiet pill.
+ */
 .actionButton {
   display: inline-block;
-  padding: 0.375rem var(--tsi-space-3);
-  background: var(--tsi-bg-active);
-  border: 1px solid var(--tsi-fg-faint);
-  color: #fff;
+  margin: 0 var(--tsi-space-3);
+  padding: var(--tsi-space-1) var(--tsi-space-3);
+  background: transparent;
+  border: 1px solid var(--tsi-border);
   border-radius: var(--tsi-radius-sm);
-  font-size: var(--tsi-font-md);
+  color: var(--tsi-fg-muted);
+  font-family: var(--tsi-font-ui);
+  font-size: var(--tsi-font-sm);
   cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
 }
 
 .actionButton:hover {
-  background: var(--tsi-fg-faint);
+  background: var(--tsi-bg-hover);
+  color: var(--tsi-fg-strong);
+  border-color: var(--tsi-border-strong);
+}
+
+.actionButton:active {
+  background: var(--tsi-bg-active);
 }
 
 .actionButton:focus-visible {

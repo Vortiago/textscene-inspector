@@ -8,84 +8,16 @@
       content="Open and preview Godot .tscn scene files in 3D right in your browser — meshes, materials, lights and cameras, no Godot editor or install required."
     />
     <title>TextScene Inspector — Preview Godot .tscn scenes in 3D (no Godot needed)</title>
+    <!-- Inline favicon (a wireframe cube) — avoids a default /favicon.ico 404. -->
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231e2a32'/%3E%3Cpath d='M16 5l9 5v12l-9 5-9-5V10z' fill='none' stroke='%234fd1c5' stroke-width='2' stroke-linejoin='round'/%3E%3Cpath d='M16 16l9-5M16 16v11M16 16l-9-5' stroke='%234fd1c5' stroke-width='1.5'/%3E%3C/svg%3E"
+    />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <!-- Mobile tab switcher - hidden radio inputs -->
-    <input type="radio" name="mobile-panel" id="panel-viewport" checked style="display: none;" />
-    <input type="radio" name="mobile-panel" id="panel-tree" style="display: none;" />
-    <input type="radio" name="mobile-panel" id="panel-controls" style="display: none;" />
-
-    <div id="app">
-      <header>
-        <h1>TextScene Inspector</h1>
-      </header>
-
-      <!-- Mobile tab bar - visible on mobile only -->
-      <nav class="mobile-tabs">
-        <label for="panel-viewport">📺 Viewport</label>
-        <label for="panel-tree">🌳 Tree</label>
-        <label for="panel-controls">⚙️ Controls</label>
-      </nav>
-
-      <main>
-        <div id="controls">
-          <div class="file-input">
-            <label for="file-upload">Upload TSCN File:</label>
-            <input type="file" id="file-upload" accept=".tscn" />
-          </div>
-
-          <div class="fixtures-section">
-            <div class="fixtures-header" id="fixtures-header">
-              <h3>Test Fixtures</h3>
-              <span class="fixtures-toggle">▼</span>
-            </div>
-            <div class="fixtures-list" id="fixtures-list"></div>
-          </div>
-
-          <div class="resource-files" id="resource-files">
-            <h3>📁 Resource Files</h3>
-            <div id="resource-files-list"></div>
-          </div>
-
-          <button id="reset-camera" disabled>Reset Camera</button>
-
-          <div class="error" id="error-display">
-            <strong>Error:</strong>
-            <p id="error-message"></p>
-          </div>
-
-          <div class="scene-info" id="scene-info">
-            <h3>Scene Info</h3>
-            <p id="node-count">Nodes: 0</p>
-            <p id="root-node">Root: None</p>
-          </div>
-
-          <div class="info">
-            <p>Preview a Godot <code>.tscn</code> scene in 3D — right here, no Godot needed.</p>
-            <p style="margin-top: 0.5rem; color: #888;">
-              Use mouse to orbit camera. Scroll to zoom.
-            </p>
-          </div>
-        </div>
-        <div id="tree-viewer-panel">
-          <div id="tree-viewer-header">
-            <h2>Scene Tree</h2>
-            <button class="tree-control-btn" id="expand-all-btn" title="Expand All">⊞</button>
-            <button class="tree-control-btn" id="collapse-all-btn" title="Collapse All">⊟</button>
-          </div>
-          <input type="text" id="tree-search" placeholder="Search nodes..." />
-          <div id="tree-viewer-container"></div>
-          <div id="node-details-panel">
-            <h3 id="details-node-name">No node selected</h3>
-            <div id="details-content"></div>
-          </div>
-        </div>
-        <div id="canvas-container">
-          <canvas id="canvas"></canvas>
-        </div>
-      </main>
-    </div>
+    <!-- The web previewer mounts React here; mountR3F() owns the subtree. -->
+    <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

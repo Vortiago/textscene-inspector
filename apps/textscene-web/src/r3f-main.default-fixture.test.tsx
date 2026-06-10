@@ -1,14 +1,8 @@
-/// <reference types="node" />
 /**
  * WI-UX-15 regression: a first-time visitor (empty localStorage) lands
  * on a fixture with zero `ext_resource` lines, so the first paint shows
- * a clean scene rather than a wall of missing-file warnings. Plus a
- * CSS-source assertion that the Reset Camera button declares the
- * primary-action color tokens instead of the prior gray.
+ * a clean scene rather than a wall of missing-file warnings.
  */
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 
@@ -24,9 +18,6 @@ vi.mock('@textscene/core', async () => {
 });
 
 import { R3FApp } from './r3f-main';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const moduleCss = readFileSync(join(__dirname, 'r3f-main.module.css'), 'utf-8');
 
 // Minimal TSCN body the lenient parser can extract a Root from. The
 // content is irrelevant beyond "produces a sceneGraph"; the test
@@ -86,32 +77,3 @@ describe('<R3FApp> default fixture on first visit (WI-UX-15)', () => {
     expect(fetchedUrls).not.toContain('/fixtures/unit-plane-mesh.tscn');
   });
 });
-
-describe('Reset Camera primary-action color (WI-UX-15)', () => {
-  it('declares accent-soft background and accent-fg color (not the old gray)', () => {
-    // `.resetCameraButton` is the load-bearing class. Asserting its CSS
-    // source guarantees the visual A/B finding #2 ("Reset Camera lost
-    // its blue primary-action color") cannot regress without a test
-    // fail. happy-dom doesn't run layout/style resolution from CSS
-    // Modules, so we read the source file directly.
-    const rule = extractRule(moduleCss, '.resetCameraButton');
-    expect(rule).toMatch(/background\s*:\s*var\(--tsi-accent-soft\)/);
-    expect(rule).toMatch(/color\s*:\s*var\(--tsi-accent-fg\)/);
-    // Negative assertion: the previous gray declaration would defeat
-    // the primary-action affordance. Make sure we didn't regress.
-    expect(rule).not.toMatch(/background\s*:\s*var\(--tsi-bg-elevated\)/);
-    expect(rule).not.toMatch(/color\s*:\s*var\(--tsi-fg-default\)/);
-  });
-});
-
-function extractRule(css: string, selector: string): string {
-  // Match a top-level rule. Handles nested `&:hover` blocks by
-  // matching balanced braces non-greedily up to the OUTER closing
-  // brace at column 0.
-  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const match = css.match(new RegExp(`${escaped}\\s*\\{([\\s\\S]*?)\\n\\}`));
-  if (!match) {
-    throw new Error(`Could not find rule for selector "${selector}" in the CSS file.`);
-  }
-  return match[1] ?? '';
-}

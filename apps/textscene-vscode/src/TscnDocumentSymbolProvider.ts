@@ -3,7 +3,8 @@
  */
 
 import * as vscode from 'vscode';
-import { TscnParser, error, type TscnNode } from '@textscene/core';
+import { TscnParser, type TscnNode } from '@textscene/core/parser';
+import { error } from '@textscene/core/logger';
 
 export class TscnDocumentSymbolProvider implements vscode.DocumentSymbolProvider {
   private readonly nodeTypeToSymbolKind: Record<string, vscode.SymbolKind> = {

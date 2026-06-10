@@ -8,9 +8,9 @@
  *   - `materialOverride`, `materialOverlay` (SubResource or ExtResource)
  *   - `surfaceMaterialOverrides[N]` (SubResource or ExtResource)
  *
- * Inside a SubResource, the following references are followed:
- *   - Mesh SubResource: its `material` field
- *   - Material SubResource: any `*_texture` field
+ * Inside a SubResource, every `data` field except `id` is scanned for
+ * further SubResource/ExtResource references and followed recursively
+ * (cycle-safe), so e.g. mesh → material → albedo_texture chains resolve.
  *
  * This is intentionally tactical; a reverse-dependency index built during
  * scene resolution would be cleaner but is significantly more invasive.

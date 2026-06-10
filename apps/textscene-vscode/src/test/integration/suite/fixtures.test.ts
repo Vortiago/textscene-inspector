@@ -14,7 +14,7 @@ suite('Fixture Loading Tests', () => {
     { name: 'Empty Scene', file: 'unit-empty-scene.tscn', category: 'Unit - Basic' },
     { name: 'Box Mesh', file: 'unit-box-mesh.tscn', category: 'Unit - Primitives' },
     { name: 'External Texture', file: 'unit-external-texture.tscn', category: 'Unit - External' },
-    { name: 'Complex Scene', file: 'example-hallway.tscn', category: 'Examples' },
+    { name: 'Complex Scene', file: 'example-hallway-mockup.tscn', category: 'Examples' },
   ];
 
   representativeFixtures.forEach((fixture) => {

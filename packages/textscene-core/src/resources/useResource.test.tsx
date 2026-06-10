@@ -9,106 +9,24 @@ import * as THREE from 'three';
 import type { ReactNode } from 'react';
 import { useResource } from './useResource';
 import { ResourceLoaderProvider } from './ResourceLoaderContext';
-import { ResourceEventBus } from './ResourceEventBus';
-import { MetadataStore } from './MetadataStore';
 import type { ResourceLoader } from './ResourceLoader';
+import { createFakeResourceLoader, type FakeProcessor } from './testing/createFakeResourceLoader';
 
 /**
- * Build a minimal ResourceLoader stand-in: just enough surface for the
- * hook to compile and exercise its state machine. The processors are
- * hand-rolled here so each test can drive cache state and event emits
- * deterministically without spinning up FileEventBus + a provider.
+ * A fake ResourceLoader whose cache + event emits these hook tests drive
+ * directly. The shared `createFakeResourceLoader` fixture holds the
+ * assembly; `MockLoader` narrows the loader's processor handles back to
+ * their driving API (`_resolve` / `_fail` / `setRequestImpl` / `cache`).
  */
-function makeMockLoader(): ResourceLoader {
-  const eventBus = new ResourceEventBus();
-  const metadata = new MetadataStore();
-
-  /** Build a processor whose cache and request behavior tests can poke. */
-  const makeProcessor = <T,>(busNs: 'texture' | 'material' | 'glb') => {
-    const cache = new Map<string, T | null>();
-    let requestImpl: (path: string) => void = () => {};
-    return {
-      cache,
-      setRequestImpl(impl: (path: string) => void): void {
-        requestImpl = impl;
-      },
-      // Public ResourceProcessor surface used by useResource:
-      request(path: string): void {
-        requestImpl(path);
-      },
-      getCached(path: string): T | null | undefined {
-        return cache.get(path);
-      },
-      isCached(path: string): boolean {
-        return cache.has(path);
-      },
-      isLoading(): boolean {
-        return false;
-      },
-      clearCache(path?: string): void {
-        if (path === undefined) cache.clear();
-        else cache.delete(path);
-      },
-      getCacheSize(): number {
-        return cache.size;
-      },
-      /** Test-only convenience: simulate a successful load + emit. */
-      _resolve(path: string, value: T): void {
-        cache.set(path, value);
-        eventBus.emit(busNs, 'loaded', path, value);
-      },
-      /** Test-only convenience: simulate a failure + emit. */
-      _fail(path: string, message: string): void {
-        cache.set(path, null);
-        eventBus.emit<Error>(busNs, 'failed', path, new Error(message));
-      },
-    };
-  };
-
-  const textures = makeProcessor<THREE.Texture>('texture');
-  const materials = makeProcessor<THREE.Material>('material');
-  const glbMeshes = makeProcessor<THREE.Object3D>('glb');
-  // WI-ARCH-2: scenes are now a peer ResourceProcessor — useResource
-  // reads via `loader.scenes` directly. The mock uses the same shape.
-  const scenes = makeProcessor<unknown>('scene');
-
-  const loader = {
-    eventBus,
-    metadata,
-    textures,
-    materials,
-    glbMeshes,
-    scenes,
-    // Legacy facade methods retained for any caller that still reaches
-    // for them (currently none in production after WI-ARCH-2).
-    getSceneCached: (path: string) => scenes.getCached(path) ?? undefined,
-    requestScene: (path: string) => scenes.request(path),
-    provideFile(path: string): void {
-      // Match the real ResourceLoader.provideFile semantics: clear caches
-      // then re-route. Tests usually drive _resolve directly instead.
-      textures.clearCache(path);
-      materials.clearCache(path);
-      glbMeshes.clearCache(path);
-      scenes.clearCache(path);
-    },
-    clear(): void {
-      textures.clearCache();
-      materials.clearCache();
-      glbMeshes.clearCache();
-      scenes.clearCache();
-      eventBus.clear();
-      metadata.clear();
-    },
-  };
-
-  return loader as unknown as ResourceLoader;
-}
-
-type MockLoader = ReturnType<typeof makeMockLoader> & {
-  textures: { _resolve(p: string, v: THREE.Texture): void; _fail(p: string, m: string): void; setRequestImpl(f: (p: string) => void): void; cache: Map<string, THREE.Texture | null> };
-  materials: { _resolve(p: string, v: THREE.Material): void; _fail(p: string, m: string): void; setRequestImpl(f: (p: string) => void): void };
-  glbMeshes: { _resolve(p: string, v: THREE.Object3D): void; _fail(p: string, m: string): void; setRequestImpl(f: (p: string) => void): void };
+type MockLoader = ResourceLoader & {
+  textures: FakeProcessor<THREE.Texture>;
+  materials: FakeProcessor<THREE.Material>;
+  glbMeshes: FakeProcessor<THREE.Object3D>;
 };
+
+function makeMockLoader(): MockLoader {
+  return createFakeResourceLoader().loader as unknown as MockLoader;
+}
 
 function withLoader(loader: ResourceLoader) {
   return function Wrapper({ children }: { children: ReactNode }) {
@@ -167,7 +85,7 @@ describe('useResource', () => {
     expect(result.current.value).toBe(textureA);
   });
 
-  it('pending -> missing: emits failed event and the hook reports missing without value', () => {
+  it('pending -> unavailable: emits failed event and the hook reports unavailable without value', () => {
     loader.textures.setRequestImpl(() => {});
 
     const { result } = renderHook(
@@ -181,15 +99,33 @@ describe('useResource', () => {
       loader.textures._fail('res://gone.png', 'File not found');
     });
 
-    expect(result.current.status).toBe('missing');
+    expect(result.current.status).toBe('unavailable');
     expect(result.current.value).toBeUndefined();
     expect(result.current.error).toBe('File not found');
+  });
+
+  it('parse-style failure messages still report unavailable (no message-sniffing)', () => {
+    loader.textures.setRequestImpl(() => {});
+
+    const { result } = renderHook(
+      () => useResource<THREE.Texture>('res://broken.png', 'Texture2D'),
+      { wrapper: withLoader(loader) }
+    );
+
+    act(() => {
+      loader.textures._fail('res://broken.png', 'failed to parse/decode image');
+    });
+
+    // Every load failure maps to the single `unavailable` status — the
+    // error string carries the human-readable detail for diagnostics.
+    expect(result.current.status).toBe('unavailable');
+    expect(result.current.error).toBe('failed to parse/decode image');
   });
 
   // -------------------------------------------------------------------
   // THE WI-R3F-2 HARD GATE — `missing → loaded` late-arrival.
   // -------------------------------------------------------------------
-  it('missing -> loaded: the late-arrival hard gate fires a loaded event after a previous failure', () => {
+  it('unavailable -> loaded: the late-arrival hard gate fires a loaded event after a previous failure', () => {
     loader.textures.setRequestImpl(() => {});
 
     const { result } = renderHook(
@@ -204,7 +140,7 @@ describe('useResource', () => {
     act(() => {
       loader.textures._fail('res://late.png', 'File not found');
     });
-    expect(result.current.status).toBe('missing');
+    expect(result.current.status).toBe('unavailable');
     expect(result.current.value).toBeUndefined();
 
     // 3. Later, the host provides the file. The real ResourceLoader.provideFile
@@ -334,12 +270,16 @@ describe('useResource', () => {
     expect(renderCount).toBeGreaterThanOrEqual(3);
   });
 
-  it('reports error when no ResourceLoader is provided in context', () => {
+  it('reports unavailable (with a diagnostic error string) when no ResourceLoader is provided', () => {
     const { result } = renderHook(() =>
       useResource<THREE.Texture>('res://t.png', 'Texture2D')
     );
 
-    expect(result.current.status).toBe('error');
+    // The no-provider case is a programming error, but it surfaces through
+    // the same `unavailable` status as a missing resource — callers render
+    // their placeholder either way. The descriptive `error` string is kept
+    // so a developer who forgot the provider can still diagnose it.
+    expect(result.current.status).toBe('unavailable');
     expect(result.current.value).toBeUndefined();
     expect(result.current.error).toMatch(/outside <ResourceLoaderProvider>/);
   });

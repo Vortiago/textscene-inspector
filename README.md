@@ -6,6 +6,8 @@ Preview **Godot `.tscn` scenes in 3D — inside VS Code or your browser, with no
 
 **Active Development** - Core rendering functionality implemented with self-registering node system.
 
+Current release: **0.9.0** — on the road to v1.0; see [CHANGELOG.md](./CHANGELOG.md).
+
 ## Features
 
 **Why it's different** (what other `.tscn` tools don't do):
@@ -14,17 +16,17 @@ Preview **Godot `.tscn` scenes in 3D — inside VS Code or your browser, with no
 - 🌐 **Runs in the browser** via the standalone web previewer
 - ✅ **Built-in `.tscn` linter** for catching malformed scenes
 
-**Also implemented:**
-- ✅ Full scene-tree hierarchy parsing with an interactive, searchable tree viewer
-- ✅ Node property inspector with click-to-select in the 3D viewport
-- ✅ Self-registering node system: Node3D, MeshInstance3D, Camera3D, lights, WorldEnvironment
-- ✅ Mesh primitives: Box, Sphere, Cylinder, Plane, Capsule, Torus, Prism
-- ✅ StandardMaterial3D PBR with external textures, normal maps, emission, and UV transforms
-- ✅ Spot, Directional, and Omni lights with shadows
-- ✅ External scene instancing (PackedScene) and external textures
-- ✅ VS Code extension (webview preview, outline, jump-to-definition, hot-reload) + web previewer
+**Implemented:**
+- ✅ TSCN parsing with full scene tree hierarchy (lenient render parser + strict lint parser sharing one scanning loop)
+- ✅ ~47 self-registering node types as unified vertical slices: meshes (Box/Sphere/Cylinder/Plane/Capsule/Torus/Prism), lights (Spot/Directional/Omni with shadows), Camera3D/Camera2D, WorldEnvironment, Label3D, CSG (as primitives), physics bodies + collision gizmos, sprites (2D/3D), and 15 Control types rendered as a DOM overlay
+- ✅ StandardMaterial3D PBR (albedo/metallic/roughness/normal/emission/AO, UV transforms, external textures)
+- ✅ External resources: PackedScene instancing, textures, materials, GLB meshes — event-driven with late-arrival upload recovery
+- ✅ react-three-fiber rendering, Split Dock shell (scene tree, inspector, resources, cameras), 2D/3D viewport modes
+- ✅ Linter: CLI (`tscn-lint`) and in-editor diagnostics (VS Code Problems panel), React/THREE-free bundle
+- ✅ VS Code extension — desktop **and** web (vscode.dev) entry points, outline, go-to-definition, hot-reload
+- ✅ Web previewer with fixture browser and an "Open .tscn" file picker (Ctrl/Cmd+K scene palette)
 
-See [TODO.md](./TODO.md) for the complete roadmap.
+See [TODO.md](./TODO.md) for the road to v1.0 — AnimationPlayer playback is the headline remaining renderer item.
 
 ## Getting Started
 
@@ -65,7 +67,12 @@ pnpm dev
 
 # VS Code extension
 cd apps/textscene-vscode
-pnpm build
+pnpm build        # emits dist/extension.js (desktop), dist/extension.web.js (vscode.dev), and the webview bundles
+pnpm test:web     # manual smoke: serves the extension in a headless VS Code for Web instance
+
+# Lint .tscn files from the CLI
+pnpm build:linter
+pnpm lint:tscn scenes/fixtures/*.tscn
 ```
 
 ## Testing
@@ -73,12 +80,21 @@ pnpm build
 ### Unit Tests
 
 ```bash
-# Run all unit tests
-pnpm test:unit
+# Run all unit tests once
+pnpm test
 
 # Watch mode for development
-cd packages/textscene-core
 pnpm test:watch
+```
+
+### Visual Regression
+
+```bash
+# Compare golden scenes against committed baselines (headless chromium + pixelmatch)
+pnpm test:visual
+
+# Rewrite baselines after an intentional visual change — eyeball, then commit
+pnpm test:visual:update
 ```
 
 ### Integration Tests
@@ -86,7 +102,7 @@ pnpm test:watch
 The VS Code extension includes comprehensive integration tests that run in a real VS Code instance:
 
 ```bash
-# Run integration tests (45 tests covering all fixtures)
+# Run integration tests (the bundled fixture suite in a real VS Code instance)
 cd apps/textscene-vscode
 pnpm test:integration
 
@@ -118,14 +134,15 @@ pnpm test:integration:debug
 Integration tests run on all platforms (Ubuntu, macOS, Windows) in GitHub Actions:
 - Uses `xvfb-run` for headless testing on Linux
 - Verifies VSIX installation on all platforms
-- Tests all 42 scene fixtures automatically
+- Runs the bundled scene-fixture suite automatically
 
 ## Scripts
 
 - `pnpm build` - Build all packages
-- `pnpm test` - Run all tests (unit + integration)
-- `pnpm test:unit` - Run unit tests only
+- `pnpm test` - Run all unit tests once (`vitest run`; the VS Code integration suite runs separately via `pnpm --filter textscene-inspector test:integration`)
+- `pnpm test:watch` - Run unit tests in watch mode
 - `pnpm lint` - Lint code
+- `pnpm lint:tscn <files>` - Lint .tscn scene files (build first with `pnpm build:linter`)
 - `pnpm type-check` - Type check
 - `pnpm clean` - Clean artifacts
 
@@ -133,9 +150,9 @@ Integration tests run on all platforms (Ubuntu, macOS, Windows) in GitHub Action
 
 **Node Registry Pattern**: New node types self-register - no need to edit central parser/renderer files.
 
-**Generic Resource Resolution**: Type-safe resource loading eliminates code duplication.
+**Event-Driven Resource Loading**: Textures, materials, GLB meshes, and packed scenes flow through a typed event bus with late-arrival upload recovery.
 
-**Feature Parity**: Web previewer and VS Code extension share the same UI components and rendering engine through the textscene-renderer library.
+**Feature Parity**: Web previewer and VS Code extension share the same UI components and rendering engine through the shared @textscene/core library.
 
 See [ARCHITECTURE.md](./ARCHITECTURE.md) for detailed explanations.
 

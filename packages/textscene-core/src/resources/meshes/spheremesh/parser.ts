@@ -26,25 +26,24 @@ export function parseSphereMesh(properties: Record<string, string>): SphereMeshP
     }
   }
 
-  const result: SphereMeshProperties = {
-    radius,
-    height,
-  };
-
-  // Optional detail parameters
+  // Godot defaults: radial_segments=64, rings=32.
+  let radial_segments = 64;
   if (properties.radial_segments !== undefined) {
     const parsed = parseInt(properties.radial_segments, 10);
     if (!isNaN(parsed)) {
-      result.radial_segments = parsed;
+      radial_segments = parsed;
     }
   }
 
+  let rings = 32;
   if (properties.rings !== undefined) {
     const parsed = parseInt(properties.rings, 10);
     if (!isNaN(parsed)) {
-      result.rings = parsed;
+      rings = parsed;
     }
   }
 
-  return result;
+  const isHemisphere = properties.is_hemisphere === 'true';
+
+  return { radius, height, radial_segments, rings, isHemisphere };
 }

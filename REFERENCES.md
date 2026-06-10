@@ -7,11 +7,15 @@ Quick reference for looking up documentation.
 Use these with the Context7 MCP tool for up-to-date documentation:
 
 - **three.js**: `/mrdoob/three.js`
+- **React**: `/reactjs/react.dev`
+- **react-three-fiber**: `/pmndrs/react-three-fiber`
+- **@react-three/drei**: `/pmndrs/drei`
+- **@testing-library/react**: `/testing-library/react-testing-library`
 - **VS Code Extension API**: `/websites/code_visualstudio_api`
-- **Godot Engine**: `websites/godotengine_en_stable`
-- **TypeScript**: `microsoft/typescript`
-- **ViTest**: `websites/vitest_dev`
-- **PNPM**: `pnpm/pnpm`
+- **Godot Engine**: `/websites/godotengine_en_stable`
+- **TypeScript**: `/microsoft/typescript`
+- **ViTest**: `/websites/vitest_dev`
+- **PNPM**: `/pnpm/pnpm`
 
 ## Core Documentation
 
@@ -20,6 +24,18 @@ Use these with the Context7 MCP tool for up-to-date documentation:
 
 ### three.js
 - https://threejs.org/docs/
+
+### React
+- https://react.dev/reference/react
+
+### react-three-fiber
+- https://r3f.docs.pmnd.rs/
+
+### @react-three/drei
+- https://drei.docs.pmnd.rs/
+
+### Testing Library (React)
+- https://testing-library.com/docs/react-testing-library/intro/
 
 ### TypeScript
 - https://www.typescriptlang.org/docs/

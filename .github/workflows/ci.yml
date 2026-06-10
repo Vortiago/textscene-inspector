@@ -62,6 +62,51 @@ jobs:
           name: tscn-linter-cli
           path: apps/textscene-linter/dist/cli.js
 
+  visual-regression:
+    name: Visual Regression (golden images)
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+
+      # Reuse the dist built by the build job — run.mjs skips its own build
+      # when dist/index.html is present.
+      - uses: actions/download-artifact@v4
+        with:
+          name: web-previewer
+          path: apps/textscene-web/dist/
+
+      - name: Cache Playwright chromium
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - name: Install Playwright chromium
+        run: npx playwright install chromium --with-deps
+
+      - name: Compare golden images
+        run: pnpm test:visual
+
+      - name: Upload diff artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-diffs
+          path: scripts/visual/output/
+          if-no-files-found: ignore
+
   integration-tests:
     name: Integration Tests (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
@@ -83,6 +128,8 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # "textscene-inspector" is the VS Code extension package (apps/textscene-vscode);
+      # the workspace root is named @textscene/monorepo, so this filter is unambiguous.
       - name: Run Integration Tests (Linux)
         if: runner.os == 'Linux'
         run: xvfb-run -a pnpm --filter textscene-inspector test:integration
@@ -129,8 +176,12 @@ jobs:
 
           # VSIX is a zip file - verify it's valid and contains expected files
           unzip -l "$VSIX_FILE" | grep "extension/dist/extension.js" || { echo "Error: extension.js not found in VSIX"; exit 1; }
+          unzip -l "$VSIX_FILE" | grep "extension/dist/extension.web.js" || { echo "Error: extension.web.js (vscode.dev web-extension host) not found in VSIX"; exit 1; }
           unzip -l "$VSIX_FILE" | grep "extension/package.json" || { echo "Error: package.json not found in VSIX"; exit 1; }
           unzip -l "$VSIX_FILE" | grep "extension.vsixmanifest" || { echo "Error: extension.vsixmanifest not found in VSIX"; exit 1; }
+
+          # The manifest must declare the browser (web extension) entry point
+          unzip -p "$VSIX_FILE" extension/package.json | grep '"browser"' || { echo "Error: browser entry missing from packaged package.json"; exit 1; }
 
           echo "✓ VSIX package structure is valid"
 

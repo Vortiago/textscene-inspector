@@ -3,45 +3,10 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { isWorldEnvironment, parseWorldEnvironment } from './parser';
+import { parseWorldEnvironment } from './parser';
 import type { ParsedHeading } from '../../../parser/utils';
 
 describe('WorldEnvironment Parser', () => {
-  describe('isWorldEnvironment', () => {
-    it('should identify WorldEnvironment nodes', () => {
-      const heading: ParsedHeading = {
-        type: 'node',
-        attributes: {
-          name: 'WorldEnvironment',
-          type: 'WorldEnvironment',
-        },
-      };
-      expect(isWorldEnvironment(heading)).toBe(true);
-    });
-
-    it('should reject non-WorldEnvironment nodes', () => {
-      const heading: ParsedHeading = {
-        type: 'node',
-        attributes: {
-          name: 'Root',
-          type: 'Node3D',
-        },
-      };
-      expect(isWorldEnvironment(heading)).toBe(false);
-    });
-
-    it('should reject other node types', () => {
-      const heading: ParsedHeading = {
-        type: 'node',
-        attributes: {
-          name: 'Camera',
-          type: 'Camera3D',
-        },
-      };
-      expect(isWorldEnvironment(heading)).toBe(false);
-    });
-  });
-
   describe('parseWorldEnvironment', () => {
     it('should parse basic WorldEnvironment with environment reference', () => {
       const heading: ParsedHeading = {

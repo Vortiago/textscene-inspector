@@ -4,7 +4,7 @@ import { warn } from '../../../logger';
 
 export function parsePrismMesh(properties: Record<string, string>): PrismMeshProperties {
   let leftToRight = 0.5;
-  let size: Vector3 = { x: 2, y: 2, z: 2 };
+  let size: Vector3 = { x: 1, y: 1, z: 1 }; // Godot default
   let subdivideWidth = 0;
   let subdivideHeight = 0;
   let subdivideDepth = 0;

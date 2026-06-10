@@ -116,8 +116,7 @@ visible = true
   });
 
   describe('Invalid Heading Format', () => {
-    it('should silently skip malformed lines that are neither headings nor properties', () => {
-      // Malformed headings are silently skipped (not reported as errors)
+    it('should report INVALID_HEADING_FORMAT for a heading missing its closing bracket', () => {
       const content = `[gd_scene load_steps=1 format=3]
 
 [node name="Root" type="Node3D"
@@ -125,10 +124,51 @@ visible = true
 
       const result = parser.parse(content);
 
-      // The parser skips invalid lines silently
-      // This test documents current behavior (not ideal, but how it works)
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]!.code).toBe('INVALID_HEADING_FORMAT');
+      expect(result.errors[0]!.line).toBe(3);
+      expect(result.errors[0]!.message).toContain('Invalid heading format');
+      expect(result.scene).toBeUndefined();
+    });
+
+    it('should report every malformed heading (edge-malformed-bracket fixture shape)', () => {
+      // Mirrors scenes/fixtures/edge-malformed-bracket.tscn: both lines open a
+      // bracket but never close it. Previously these were silently swallowed
+      // by the property-parsing fallback and the file linted clean.
+      const content = `[gd_scene format=3
+
+[node name="Root" type="Node3D"
+`;
+
+      const result = parser.parse(content);
+
+      expect(result.errors).toHaveLength(2);
+      expect(result.errors[0]!.code).toBe('INVALID_HEADING_FORMAT');
+      expect(result.errors[0]!.line).toBe(1);
+      expect(result.errors[1]!.code).toBe('INVALID_HEADING_FORMAT');
+      expect(result.errors[1]!.line).toBe(3);
+      expect(result.scene).toBeUndefined();
+    });
+
+    it('does not flag bracket-opening lines inside a multi-line value', () => {
+      // Continuation lines of an accumulated value may legitimately start
+      // with '[' (arrays/dicts spanning lines) — no INVALID_HEADING_FORMAT.
+      const content = `[gd_scene load_steps=2 format=3]
+
+[sub_resource type="SpriteFrames" id="sf_1"]
+animations = [{
+"frames": [],
+"name": &"default"
+}]
+
+[node name="Root" type="Node3D"]
+`;
+
+      const result = parser.parse(content);
+
       expect(result.errors).toHaveLength(0);
       expect(result.scene).toBeDefined();
+      expect(result.scene!.internalResources).toHaveLength(1);
     });
 
     it('should report error for heading without attributes', () => {
@@ -221,7 +261,7 @@ visible = true
       expect(result.scene).toBeDefined();
     });
 
-    it('should store index attribute in __instance_index property', () => {
+    it('parses an index-only child node without polluting its properties', () => {
       const content = `[gd_scene load_steps=1 format=3]
 
 [node name="Root" type="Node3D"]
@@ -234,10 +274,12 @@ visible = true
       expect(result.errors).toHaveLength(0);
       expect(result.scene).toBeDefined();
       const childNode = result.scene!.nodes[0]!.children[0]!;
-      expect((childNode.properties as Record<string, unknown>)['__instance_index']).toBe('0');
+      expect(childNode.name).toBe('@Child@123');
+      // No `__`-prefixed metadata smuggled into the property schema.
+      expect((childNode.properties as Record<string, unknown>)['__instance_index']).toBeUndefined();
     });
 
-    it('should store instance attribute in __instance property', () => {
+    it('exposes an instance reference on node.instance, not a __instance property', () => {
       const content = `[gd_scene load_steps=2 format=3]
 
 [ext_resource type="PackedScene" path="res://enemy.tscn" id="1_abc"]
@@ -252,7 +294,8 @@ visible = true
       expect(result.errors).toHaveLength(0);
       expect(result.scene).toBeDefined();
       const childNode = result.scene!.nodes[0]!.children[0]!;
-      expect((childNode.properties as Record<string, unknown>)['__instance']).toBe('ExtResource("1_abc")');
+      expect(childNode.instance).toBe('ExtResource("1_abc")');
+      expect((childNode.properties as Record<string, unknown>)['__instance']).toBeUndefined();
     });
   });
 
@@ -618,6 +661,22 @@ size = Vector3(1, 2, 3)
       expect(result.errors).toHaveLength(0);
       expect(result.scene).toBeDefined();
       expect(result.scene!.internalResources).toHaveLength(1);
+    });
+  });
+
+  describe('Multi-line string section-boundary salvage', () => {
+    it('does not swallow the next node heading when a string is left unclosed', () => {
+      const content = `[gd_scene format=3]
+
+[node name="A" type="Label"]
+text = "oops unclosed
+[node name="B" type="Node3D" parent="."]
+`;
+      const result = parser.parse(content);
+      // B must be parsed as its own node, not consumed into A's open string.
+      const root = result.scene!.nodes[0]!;
+      expect(root.name).toBe('A');
+      expect(root.children.some((c) => c.name === 'B')).toBe(true);
     });
   });
 });

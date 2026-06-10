@@ -3,12 +3,11 @@
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';
-import { parseLabel3D, isLabel3D } from './parser';
+import { parseLabel3D } from './parser';
 import { formatLabel3DProperties } from './propertyFormatter';
 
 const label3DRegistration: NodeTypeRegistration = {
   typeName: 'Label3D',
-  typeGuard: isLabel3D,
   parser: parseLabel3D,
   propertyFormatter: formatLabel3DProperties,
 };

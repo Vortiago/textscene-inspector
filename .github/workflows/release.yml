@@ -1,0 +1,107 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Validate (build + type-check + lint + unit tests + bundle size)
+        run: pnpm validate
+
+  release:
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Package VS Code Extension
+        run: pnpm vsc:package
+
+      - name: Build Linter CLI
+        run: pnpm --filter @textscene/linter build
+
+      - name: Pack Linter Tarball
+        run: cd apps/textscene-linter && pnpm pack
+
+      - name: Build Web Previewer
+        run: pnpm --filter @textscene/web-previewer build
+
+      - name: Archive Web Previewer Dist
+        run: tar -czf web-dist.tar.gz -C apps/textscene-web dist
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            apps/textscene-vscode/*.vsix
+            apps/textscene-linter/*.tgz
+            web-dist.tar.gz
+
+      # Marketplace publishing is optional: steps are skipped (not failed) when the
+      # corresponding secret is absent. Secrets cannot be used directly in `if:`
+      # conditions, so they are exposed as env vars and surfaced via step outputs.
+      - name: Detect marketplace secrets
+        id: marketplace
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+          OVSX_PAT: ${{ secrets.OVSX_PAT }}
+        run: |
+          if [ -n "$VSCE_PAT" ]; then
+            echo "vsce=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "vsce=false" >> "$GITHUB_OUTPUT"
+            echo "VSCE_PAT not configured - skipping VS Code Marketplace publish"
+          fi
+          if [ -n "$OVSX_PAT" ]; then
+            echo "ovsx=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ovsx=false" >> "$GITHUB_OUTPUT"
+            echo "OVSX_PAT not configured - skipping Open VSX publish"
+          fi
+
+      - name: Publish to VS Code Marketplace
+        if: steps.marketplace.outputs.vsce == 'true'
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        run: |
+          VSIX_FILE=$(ls "$GITHUB_WORKSPACE"/apps/textscene-vscode/*.vsix)
+          pnpm --filter textscene-inspector exec vsce publish --packagePath "$VSIX_FILE"
+
+      - name: Publish to Open VSX
+        if: steps.marketplace.outputs.ovsx == 'true'
+        env:
+          OVSX_PAT: ${{ secrets.OVSX_PAT }}
+        run: |
+          VSIX_FILE=$(ls "$GITHUB_WORKSPACE"/apps/textscene-vscode/*.vsix)
+          pnpm dlx ovsx publish "$VSIX_FILE" -p "$OVSX_PAT"

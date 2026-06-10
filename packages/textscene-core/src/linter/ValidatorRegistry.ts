@@ -67,6 +67,13 @@ export class ValidatorRegistry {
   }
 
   /**
+   * Node types that currently have validators registered
+   */
+  getRegisteredNodeTypes(): string[] {
+    return [...this.validators.keys()];
+  }
+
+  /**
    * Clear all registered validators (useful for testing)
    */
   clear(): void {

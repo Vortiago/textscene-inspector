@@ -9,6 +9,7 @@
 
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
+import { FLOAT_PATTERN_SOURCE } from '../../../parser/vectors.js';
 
 /**
  * Validate boolean properties (normal_enabled, etc.)
@@ -49,7 +50,10 @@ const validateExtResource: PropertyValidator = (key, value, line) => {
  * as property validators can only return errors, not warnings.
  */
 const validateUv1Scale: PropertyValidator = (key, value, line) => {
-  const vector3Pattern = /^Vector3\s*\(\s*([-\d.]+)\s*,\s*([-\d.]+)\s*,\s*([-\d.]+)\s*\)$/;
+  const f = FLOAT_PATTERN_SOURCE;
+  const vector3Pattern = new RegExp(
+    String.raw`^Vector3\s*\(\s*(${f})\s*,\s*(${f})\s*,\s*(${f})\s*\)$`
+  );
   const match = value.match(vector3Pattern);
 
   if (!match) {

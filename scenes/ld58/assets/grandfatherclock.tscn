@@ -1,0 +1,14 @@
+[gd_scene load_steps=3 format=3 uid="uid://diwkiu7viyhdu"]
+
+[ext_resource type="PackedScene" uid="uid://bslcvyu8wjbw" path="res://assets/grandfatherclock.glb" id="1_6kt8h"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_6kt8h"]
+size = Vector3(0.5101929, 1.917923, 0.27960205)
+
+[node name="grandfatherclock" instance=ExtResource("1_6kt8h")]
+
+[node name="StaticBody3D" type="StaticBody3D" parent="Clock_Low" index="0"]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Clock_Low/StaticBody3D" index="0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0022888184, 0.957695, 0.14035034)
+shape = SubResource("BoxShape3D_6kt8h")

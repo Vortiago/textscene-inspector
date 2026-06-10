@@ -1,5 +1,5 @@
 /**
- * TSCN Renderer — public entry point.
+ * @textscene/core — public entry point for TextScene Inspector.
  *
  * The library parses Godot .tscn files and renders them with
  * react-three-fiber. The imperative renderer was removed in WI-R3F-6;
@@ -8,7 +8,6 @@
 
 // Parser + utilities
 export { TscnParser } from './parser/TscnParser';
-export { hashTscnNode, buildNodeHashMap } from './utils/nodeHash';
 
 // Logging
 export { setLogAdapter, trace, debug, info, warn, error } from './logger';
@@ -58,7 +57,6 @@ export {
   NodeDetailsPanel,
   MissingResourcesPanel,
   type MissingResourcesPanelProps,
-  SceneInfoCard,
   ViewportSelector,
   type ViewportSelectorProps,
   type ViewportSelectorOption,
@@ -81,3 +79,5 @@ export type { ResourceLoaderProviderProps } from './resources/ResourceLoaderCont
 export { ResourceLoader } from './resources/ResourceLoader';
 export { FileEventBus } from './resources/FileEventBus';
 export type { FileData, FileLoadedHandler, FileFailedHandler } from './resources/FileEventBus';
+export { createResourcePipeline } from './resources/createResourcePipeline';
+export type { ResourcePipeline } from './resources/createResourcePipeline';

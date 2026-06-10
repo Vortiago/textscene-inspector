@@ -1,25 +1,33 @@
 /**
  * Composition root for a single TSCN preview panel.
  *
- * Owns the parse pipeline (`TscnParser` + `SceneGraphBuilder`), provides
- * the two per-panel contexts (`<HierarchyProvider>` + `<SelectionProvider>`),
- * and lays out the canvas alongside the tree + details sidebar.
+ * Owns the provider stack and the layout: canvas alongside a single right
+ * "Split Dock" (ADR-0007) — a master scene tree on top and a tabbed detail
+ * (Inspector / Resources / Cameras) directly below, so selecting a node
+ * surfaces its properties with no tab hop. No left rail — the VS Code webview
+ * already sits right of VS Code's own activity bar + Explorer, so a left rail
+ * would clash and waste width.
  *
- * Replaces the imperative `packages/textscene-core/src/ui/TscnPreviewUI.ts`.
+ * The pieces live in sibling files: parse pipeline in `useParsedScene`,
+ * viewport switching in `ViewportArea`, the 2D stage in `Canvas2DStage`,
+ * plus `CamerasPanel`, `SceneStats`, `DockChrome`, `SceneChangeResetter`.
  */
-import { lazy, Suspense, useEffect, useMemo, useRef, type ReactNode } from 'react';
-import { TscnParser } from '../../../parser/TscnParser.js';
-import { SceneGraphBuilder } from '../../../core/SceneGraphBuilder.js';
-import { tscnSceneToParsedScene } from '../../../core/SceneGraph.js';
-import type { SceneGraph } from '../../../core/SceneGraph.js';
+import { lazy, Suspense, useMemo, useState, type ReactNode } from 'react';
 import type { TscnNode } from '../../../parser/types.js';
 import { HierarchyProvider } from '../../contexts/HierarchyContext.js';
-import { SelectionProvider, useSelection } from '../../contexts/SelectionContext.js';
+import { SelectionProvider } from '../../contexts/SelectionContext.js';
 import { CameraControlProvider } from '../../contexts/CameraControlContext.js';
 import { MissingResourcesProvider } from '../../contexts/MissingResourcesContext.js';
-import { TscnCanvas } from '../../TscnCanvas.js';
+import { ViewportModeProvider } from '../../contexts/ViewportModeContext.js';
+import { useParsedScene } from '../../hooks/useParsedScene.js';
 import { MissingResourcesPanel } from '../MissingResourcesPanel/MissingResourcesPanel.js';
-import { SceneInfoCard } from '../SceneInfoCard/SceneInfoCard.js';
+import { ViewportToolbar } from '../ViewportToolbar/ViewportToolbar.js';
+import { Splitter } from '../Splitter/Splitter.js';
+import { ViewportArea } from './ViewportArea.js';
+import { CamerasPanel } from './CamerasPanel.js';
+import { SceneChangeResetter } from './SceneChangeResetter.js';
+import { SceneStats, SceneNodeCount } from './SceneStats.js';
+import { MasterDetailHandle, CollapsedDock } from './DockChrome.js';
 import styles from './TscnPreviewShell.module.css';
 
 // WI-R3F-18 bundle reduction: lazy-load the DOM panels so they don't
@@ -41,6 +49,8 @@ const NodeDetailsPanel = lazy(() =>
 
 const DEFAULT_ROOT_SCENE_PATH = 'res://__inline__.tscn';
 
+type DetailTab = 'inspector' | 'resources' | 'cameras';
+
 export interface TscnPreviewShellProps {
   /** Stable identifier for this panel — used in logs and for context coordination. */
   panelId: string;
@@ -50,7 +60,7 @@ export interface TscnPreviewShellProps {
   rootScenePath?: string;
   /** Fired when a tree row is double-clicked (host can jump to source). */
   onNodeReveal?: (path: string, node: TscnNode) => void;
-  /** Optional content to inject above the canvas (e.g. a fixture dropdown). */
+  /** Optional content to inject in the top bar (e.g. a fixture dropdown). */
   toolbar?: ReactNode;
   /**
    * Fired when the user picks a file for a missing-resource row in the
@@ -68,50 +78,6 @@ export interface TscnPreviewShellProps {
   onResourceRemove?: (path: string) => void;
 }
 
-interface ParseResult {
-  sceneGraph: SceneGraph | null;
-  error: string | null;
-}
-
-function parseContent(content: string, rootScenePath: string): ParseResult {
-  if (!content) {
-    return { sceneGraph: null, error: null };
-  }
-  try {
-    const parser = new TscnParser();
-    const tscnScene = parser.parse(content);
-
-    // The lenient `TscnParser` recovers from most malformed input by
-    // returning whatever nodes it could salvage. If the body had any
-    // text at all but the parser produced zero root nodes, the file is
-    // probably broken — surface that as an error rather than letting
-    // the user stare at "No nodes to display" (WI-R3F-7 / WEB-10).
-    if (tscnScene.nodes.length === 0 && content.trim().length > 0) {
-      return {
-        sceneGraph: null,
-        error: 'Parser could not extract any nodes from the content. The file may be malformed.',
-      };
-    }
-
-    const parsedScene = tscnSceneToParsedScene(
-      rootScenePath,
-      tscnScene.nodes,
-      tscnScene.externalResources,
-      tscnScene.internalResources
-    );
-    const sceneGraph = new SceneGraphBuilder()
-      .setRootScene(rootScenePath)
-      .addScene(parsedScene)
-      .build();
-    return { sceneGraph, error: null };
-  } catch (err) {
-    return {
-      sceneGraph: null,
-      error: err instanceof Error ? err.message : String(err),
-    };
-  }
-}
-
 export function TscnPreviewShell({
   panelId,
   content,
@@ -121,15 +87,20 @@ export function TscnPreviewShell({
   onResourceUpload,
   onResourceRemove,
 }: TscnPreviewShellProps) {
-  const { sceneGraph, error } = useMemo(
-    () => parseContent(content, rootScenePath),
-    [content, rootScenePath]
-  );
+  const { sceneGraph, error } = useParsedScene(content, rootScenePath);
 
   const hierarchyValue = useMemo(
     () => ({ sceneGraph, panelId }),
     [sceneGraph, panelId]
   );
+
+  // Split Dock (ADR-0007): a single resizable + collapsible RIGHT dock holding
+  // a master (scene tree) over a tabbed detail. `treeShare` is the master's
+  // fraction of the dock height (0..1), dragged via the horizontal handle.
+  const [dockWidth, setDockWidth] = useState(320);
+  const [dockCollapsed, setDockCollapsed] = useState(false);
+  const [treeShare, setTreeShare] = useState(0.46);
+  const [activeTab, setActiveTab] = useState<DetailTab>('inspector');
 
   // When `error` is truthy, mounting `<SceneTreeViewer>` with a null
   // sceneGraph triggers its own "Loading scene…" empty-state — which
@@ -164,76 +135,134 @@ export function TscnPreviewShell({
       <SelectionProvider>
         <CameraControlProvider>
           <MissingResourcesProvider>
-            <SceneChangeResetter sceneGraph={sceneGraph} />
-            <div className={styles.shell} data-panel-id={panelId}>
-              {toolbar}
-              {error && (
-                <div className={styles.errorBanner} role="alert">
-                  <strong>Parse error:</strong> {error}
-                </div>
-              )}
-              <div className={styles.body}>
-                <div className={styles.canvas}>
-                  <TscnCanvas />
-                </div>
-                <aside className={styles.sidebar} aria-label="Scene details">
-                  <SceneInfoCard />
-                  {onResourceUpload && (
-                    <MissingResourcesPanel
-                      onUpload={onResourceUpload}
-                      onRemove={onResourceRemove ?? (() => {})}
-                    />
-                  )}
-                  <div className={styles.treePane}>{treeBody}</div>
-                  <div className={styles.detailsPane}>
-                    <Suspense
-                      fallback={
-                        <div className={styles.loading} aria-busy="true">
-                          Loading details…
-                        </div>
-                      }
-                    >
-                      <NodeDetailsPanel />
-                    </Suspense>
+            <ViewportModeProvider>
+              <SceneChangeResetter sceneGraph={sceneGraph} />
+              <div className={styles.shell} data-panel-id={panelId}>
+                <header className={styles.topBar}>
+                  <span className={styles.brand}>TextScene Inspector</span>
+                  {toolbar && <div className={styles.topToolbar}>{toolbar}</div>}
+                  <div className={styles.topSpacer} />
+                  <SceneStats />
+                  <ViewportToolbar />
+                </header>
+                {error && (
+                  <div className={styles.errorBanner} role="alert">
+                    <strong>Parse error:</strong> {error}
                   </div>
-                </aside>
+                )}
+                <div className={styles.columns}>
+                  {/* CENTER — 3D canvas or 2D overlay; takes all width left of the dock. */}
+                  <main className={styles.center} aria-label="Viewport">
+                    <ViewportArea sceneGraph={sceneGraph} />
+                  </main>
+
+                  {/* RIGHT DOCK — Split Dock: scene tree (master) over a tabbed detail. */}
+                  {dockCollapsed ? (
+                    <CollapsedDock onExpand={() => setDockCollapsed(false)} />
+                  ) : (
+                    <>
+                      <Splitter
+                        width={dockWidth}
+                        setWidth={setDockWidth}
+                        invert
+                        label="Resize the side panel"
+                      />
+                      <section
+                        className={styles.dock}
+                        style={{ flexBasis: dockWidth }}
+                        aria-label="Scene and Inspector"
+                      >
+                        {/* MASTER — scene tree */}
+                        <div className={styles.masterPane} style={{ flexGrow: treeShare }}>
+                          <div className={styles.dockHeader}>
+                            <span className={styles.dockTitle}>Scene Tree</span>
+                            <SceneNodeCount />
+                            <span className={styles.dockSpacer} />
+                            <button
+                              type="button"
+                              className={styles.collapseButton}
+                              onClick={() => setDockCollapsed(true)}
+                              title="Collapse the side panel"
+                              aria-label="Collapse the side panel"
+                            >
+                              ›
+                            </button>
+                          </div>
+                          <div className={styles.dockBody}>
+                            <div className={styles.treePane}>{treeBody}</div>
+                          </div>
+                        </div>
+
+                        <MasterDetailHandle value={treeShare} setValue={setTreeShare} />
+
+                        {/* DETAIL — tabbed; Inspector follows selection (no tab hop). */}
+                        <div className={styles.detailPane} style={{ flexGrow: 1 - treeShare }}>
+                          <div className={styles.paneTabs} role="tablist" aria-label="Detail panels">
+                            {(
+                              [
+                                ['inspector', 'Inspector'],
+                                ['resources', 'Resources'],
+                                ['cameras', 'Cameras'],
+                              ] as Array<[DetailTab, string]>
+                            ).map(([id, label]) => (
+                              <button
+                                key={id}
+                                type="button"
+                                role="tab"
+                                aria-selected={activeTab === id}
+                                className={
+                                  activeTab === id
+                                    ? `${styles.paneTab} ${styles.paneTabActive}`
+                                    : styles.paneTab
+                                }
+                                onClick={() => setActiveTab(id)}
+                              >
+                                {label}
+                              </button>
+                            ))}
+                          </div>
+                          <div className={styles.dockBody}>
+                            <div className={styles.detailsPane} hidden={activeTab !== 'inspector'}>
+                              <Suspense
+                                fallback={
+                                  <div className={styles.loading} aria-busy="true">
+                                    Loading details…
+                                  </div>
+                                }
+                              >
+                                <NodeDetailsPanel />
+                              </Suspense>
+                            </div>
+                            {activeTab === 'resources' && (
+                              <div className={styles.detailsPane}>
+                                {onResourceUpload ? (
+                                  <MissingResourcesPanel
+                                    onUpload={onResourceUpload}
+                                    onRemove={onResourceRemove ?? (() => {})}
+                                  />
+                                ) : (
+                                  <div className={styles.emptyState}>
+                                    Resource uploads aren’t available in this host.
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                            {activeTab === 'cameras' && (
+                              <div className={styles.detailsPane}>
+                                <CamerasPanel />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </section>
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
+            </ViewportModeProvider>
           </MissingResourcesProvider>
         </CameraControlProvider>
       </SelectionProvider>
     </HierarchyProvider>
   );
-}
-
-/**
- * Clears all selection-derived state (selection, hover, expanded set,
- * hidden set, and the path→Object3D ref-map) whenever the active
- * `sceneGraph` reference changes between two non-null values — i.e.
- * the user picked a different fixture.
- *
- * The initial null → first-scene transition is intentionally NOT a
- * clear: there is nothing to clear yet, and firing during mount would
- * just churn React state for no observable effect. Subsequent
- * non-null → non-null transitions ARE clears: the old scene's
- * `selectedNodePath` would otherwise hang around and the
- * `SelectionHighlight` BoxHelper would render against an unmounted
- * Object3D at the prior fixture's coordinates (WI-UX-5 regression).
- *
- * Lives inside `<SelectionProvider>` so it can call `clearAll()`.
- * Renders no DOM.
- */
-function SceneChangeResetter({ sceneGraph }: { sceneGraph: SceneGraph | null }) {
-  const { clearAll } = useSelection();
-  const prevSceneGraphRef = useRef<SceneGraph | null>(sceneGraph);
-
-  useEffect(() => {
-    const prev = prevSceneGraphRef.current;
-    if (prev !== null && sceneGraph !== null && prev !== sceneGraph) {
-      clearAll();
-    }
-    prevSceneGraphRef.current = sceneGraph;
-  }, [sceneGraph, clearAll]);
-
-  return null;
 }

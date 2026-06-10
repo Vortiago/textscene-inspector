@@ -3,58 +3,11 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { parseNode3D, isNode3D } from './parser';
+import { parseNode3D } from './parser';
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseHeading } from '../../../parser/utils';
 
 describe('Node3D Parser', () => {
-  describe('isNode3D', () => {
-    it('should identify Node3D nodes', () => {
-      const heading: ParsedHeading = {
-        type: 'node',
-        attributes: {
-          name: 'MyNode',
-          type: 'Node3D',
-        },
-      };
-
-      expect(isNode3D(heading)).toBe(true);
-    });
-
-    it('should reject MeshInstance3D nodes', () => {
-      const heading: ParsedHeading = {
-        type: 'node',
-        attributes: {
-          name: 'MyMesh',
-          type: 'MeshInstance3D',
-        },
-      };
-
-      expect(isNode3D(heading)).toBe(false);
-    });
-
-    it('should reject Camera3D nodes', () => {
-      const heading: ParsedHeading = {
-        type: 'node',
-        attributes: {
-          name: 'MyCamera',
-          type: 'Camera3D',
-        },
-      };
-
-      expect(isNode3D(heading)).toBe(false);
-    });
-
-    it('should reject non-node headings', () => {
-      const heading: ParsedHeading = {
-        type: 'ext_resource',
-        attributes: {},
-      };
-
-      expect(isNode3D(heading)).toBe(false);
-    });
-  });
-
   describe('parseNode3D', () => {
     it('should parse basic Node3D with name and parent', () => {
       const heading = parseHeading('[node name="MyNode" type="Node3D" parent="."]');

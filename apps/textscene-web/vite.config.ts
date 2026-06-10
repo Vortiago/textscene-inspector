@@ -10,5 +10,27 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: true,
+    rollupOptions: {
+      output: {
+        // Split the heavyweight three.js vendor into a stable, cacheable
+        // chunk — it changes only on dependency bumps, so returning
+        // visitors skip re-downloading ~785 KB. ONLY three is split:
+        // it is pure self-contained ESM. Splitting the react ecosystem
+        // (react/react-dom/scheduler vs react-reconciler inside
+        // @react-three/fiber) creates a CJS-interop init cycle across
+        // chunks that crashes the app on boot ("Cannot set properties of
+        // undefined (setting 'Activity')") — caught by the visual
+        // regression harness; do not reintroduce it.
+        // Function form: classifies only modules already in the graph
+        // (object form treats ids as extra entry points, which both fails
+        // under pnpm's strict layout and can pull in unused modules).
+        manualChunks(id: string): string | undefined {
+          if (id.includes('/node_modules/') && (id.includes('/three/') || id.includes('/three@'))) {
+            return 'three';
+          }
+          return undefined;
+        },
+      },
+    },
   },
 });

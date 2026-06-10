@@ -9,15 +9,12 @@
 
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseNode3D } from '../../base/node3d/parser';
+import { boolOr, enumOr, floatOr, intOr } from '../../../parser/valueParsers';
 import {
   AttenuationModel,
   type AudioStreamPlayer3DProperties,
   DopplerTracking,
 } from './types';
-
-export function isAudioStreamPlayer3D(heading: ParsedHeading): boolean {
-  return heading.type === 'node' && heading.attributes.type === 'AudioStreamPlayer3D';
-}
 
 export function parseAudioStreamPlayer3D(
   heading: ParsedHeading,
@@ -62,32 +59,6 @@ export function parseAudioStreamPlayer3D(
   }
 
   return result;
-}
-
-function floatOr(raw: string | undefined, fallback: number): number {
-  if (raw === undefined) return fallback;
-  const parsed = parseFloat(raw);
-  return Number.isNaN(parsed) ? fallback : parsed;
-}
-
-function intOr(raw: string | undefined, fallback: number): number {
-  if (raw === undefined) return fallback;
-  const parsed = parseInt(raw, 10);
-  return Number.isNaN(parsed) ? fallback : parsed;
-}
-
-function boolOr(raw: string | undefined, fallback: boolean): boolean {
-  if (raw === undefined) return fallback;
-  if (raw === 'true' || raw === '1') return true;
-  if (raw === 'false' || raw === '0') return false;
-  return fallback;
-}
-
-function enumOr<T extends number>(raw: string | undefined, fallback: T, allowed: readonly T[]): T {
-  if (raw === undefined) return fallback;
-  const parsed = parseInt(raw, 10) as T;
-  if (Number.isNaN(parsed)) return fallback;
-  return allowed.includes(parsed) ? parsed : fallback;
 }
 
 /**

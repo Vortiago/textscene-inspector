@@ -14,7 +14,7 @@
  */
 
 import { Suspense, type ReactNode } from 'react';
-import { Text } from '@react-three/drei';
+import { Text } from '@react-three/drei/core/Text';
 
 const IS_VITEST = (() => {
   const proc = (globalThis as { process?: { env?: { VITEST?: string } } })

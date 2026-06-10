@@ -9,6 +9,9 @@ esbuild.config.mjs
 dist/test/
 out/
 .test-workspace/
+.test-workspace-web/
+.vscode-test/
+.vscode-test-web/
 
 # Test configuration
 tsconfig.test.json

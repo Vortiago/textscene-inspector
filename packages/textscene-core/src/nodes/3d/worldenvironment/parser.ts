@@ -7,13 +7,6 @@ import type { WorldEnvironmentProperties } from './types.js';
 import { parseNode3D } from '../../base/node3d/parser.js';
 
 /**
- * Type guard to check if heading represents a WorldEnvironment node
- */
-export function isWorldEnvironment(heading: ParsedHeading): boolean {
-  return heading.type === 'node' && heading.attributes.type === 'WorldEnvironment';
-}
-
-/**
  * Parse WorldEnvironment properties
  *
  * WorldEnvironment nodes configure global rendering environment via

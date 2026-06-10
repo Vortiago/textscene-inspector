@@ -3,12 +3,11 @@
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';
-import { parseWorldEnvironment, isWorldEnvironment } from './parser';
+import { parseWorldEnvironment } from './parser';
 import { formatWorldEnvironmentProperties } from './propertyFormatter';
 
 const worldEnvironmentRegistration: NodeTypeRegistration = {
   typeName: 'WorldEnvironment',
-  typeGuard: isWorldEnvironment,
   parser: parseWorldEnvironment,
   propertyFormatter: formatWorldEnvironmentProperties,
 };

@@ -34,26 +34,26 @@ export function parseCylinderMesh(properties: Record<string, string>): CylinderM
     }
   }
 
-  const result: CylinderMeshProperties = {
-    top_radius,
-    bottom_radius,
-    height,
-  };
-
-  // Optional detail parameters
+  // Godot defaults: radial_segments=64, rings=4.
+  let radial_segments = 64;
   if (properties.radial_segments !== undefined) {
     const parsed = parseInt(properties.radial_segments, 10);
     if (!isNaN(parsed)) {
-      result.radial_segments = parsed;
+      radial_segments = parsed;
     }
   }
 
+  let rings = 4;
   if (properties.rings !== undefined) {
     const parsed = parseInt(properties.rings, 10);
     if (!isNaN(parsed)) {
-      result.rings = parsed;
+      rings = parsed;
     }
   }
 
-  return result;
+  // Godot cap_top/cap_bottom default true; only an explicit "false" disables.
+  const capTop = properties.cap_top !== 'false';
+  const capBottom = properties.cap_bottom !== 'false';
+
+  return { top_radius, bottom_radius, height, radial_segments, rings, capTop, capBottom };
 }

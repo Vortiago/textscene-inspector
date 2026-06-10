@@ -1,0 +1,22 @@
+.splitter {
+  flex: 0 0 5px;
+  align-self: stretch;
+  cursor: col-resize;
+  background: var(--tsi-border);
+  touch-action: none;
+  user-select: none;
+  transition: background 0.12s ease;
+}
+
+.splitter:hover,
+.splitter:active {
+  background: var(--tsi-accent);
+}
+
+/* Stack mode (narrow viewport): the columns flow vertically, so a vertical
+   col-resize handle is meaningless — hide it. */
+@media (max-width: 768px) {
+  .splitter {
+    display: none;
+  }
+}

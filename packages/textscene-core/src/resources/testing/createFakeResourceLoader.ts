@@ -1,0 +1,147 @@
+/**
+ * Test-only fixture: a fake `ResourceLoader` whose cache state and event
+ * emissions a test can drive deterministically, without spinning up a
+ * FileEventBus + provider.
+ *
+ * Concentrates the assembly that every resource-consuming test used to
+ * hand-roll: a real `ResourceEventBus` + `MetadataStore` plus four
+ * Map-backed processors (texture / material / glb / scene) implementing
+ * the public `ResourceProcessor` surface, wired with `clear()` and
+ * `provideFile()`. Each processor handle adds a small driving API:
+ *
+ *   - `_resolve(path, value)` — cache + emit `<type>:loaded` (event-driven tests)
+ *   - `_fail(path, message)`  — cache null + emit `<type>:failed`
+ *   - `seed(path, value)`     — cache only, no emit (cache-seeding tests; null = sentinel miss)
+ *   - `setRequestImpl(fn)`    — override what `request()` does (e.g. a spy or no-op)
+ *   - `cache`                 — the backing Map, for direct seeding/deletion
+ *
+ * Pure: imports only THREE + the real bus/metadata, never `vitest`, so a
+ * test asserts request behaviour with its own spy via `setRequestImpl`.
+ * Lives under `testing/` (excluded from the package build) so it never
+ * reaches dist or the linter graph.
+ */
+
+import * as THREE from 'three';
+import type { TscnScene } from '../../parser/types';
+import { ResourceEventBus, type ResourceType } from '../ResourceEventBus';
+import { MetadataStore } from '../MetadataStore';
+import type { ResourceLoader } from '../ResourceLoader';
+
+export interface FakeProcessor<T> {
+  /** Backing cache — `undefined` = never requested, `null` = failed/sentinel-miss, value = loaded. */
+  readonly cache: Map<string, T | null>;
+  // Public ResourceProcessor<T> surface consumed by useResource:
+  request(path: string): void;
+  getCached(path: string): T | null | undefined;
+  isCached(path: string): boolean;
+  isLoading(): boolean;
+  clearCache(path?: string): void;
+  getCacheSize(): number;
+  /** Override what `request()` does — pass a spy to assert calls, or a no-op. */
+  setRequestImpl(impl: (path: string) => void): void;
+  /** Seed the cache without emitting. `null` seeds a sentinel miss. */
+  seed(path: string, value: T | null): void;
+  /** Simulate a successful load: cache the value + emit `<type>:loaded`. */
+  _resolve(path: string, value: T): void;
+  /** Simulate a failure: cache `null` + emit `<type>:failed`. */
+  _fail(path: string, message: string): void;
+}
+
+export interface FakeResourceLoader {
+  /** The fake typed as the real `ResourceLoader` — pass to `ResourceLoaderProvider`. */
+  readonly loader: ResourceLoader;
+  readonly eventBus: ResourceEventBus;
+  readonly metadata: MetadataStore;
+  readonly textures: FakeProcessor<THREE.Texture>;
+  readonly materials: FakeProcessor<THREE.Material>;
+  readonly glbMeshes: FakeProcessor<THREE.Object3D>;
+  readonly scenes: FakeProcessor<TscnScene>;
+}
+
+function makeFakeProcessor<T>(eventBus: ResourceEventBus, type: ResourceType): FakeProcessor<T> {
+  const cache = new Map<string, T | null>();
+  let requestImpl: (path: string) => void = () => {};
+  return {
+    cache,
+    request(path: string): void {
+      requestImpl(path);
+    },
+    getCached(path: string): T | null | undefined {
+      return cache.get(path);
+    },
+    isCached(path: string): boolean {
+      return cache.has(path);
+    },
+    isLoading(): boolean {
+      return false;
+    },
+    clearCache(path?: string): void {
+      if (path === undefined) cache.clear();
+      else cache.delete(path);
+    },
+    getCacheSize(): number {
+      return cache.size;
+    },
+    setRequestImpl(impl: (path: string) => void): void {
+      requestImpl = impl;
+    },
+    seed(path: string, value: T | null): void {
+      cache.set(path, value);
+    },
+    _resolve(path: string, value: T): void {
+      cache.set(path, value);
+      eventBus.emit<T>(type, 'loaded', path, value);
+    },
+    _fail(path: string, message: string): void {
+      cache.set(path, null);
+      eventBus.emit<Error>(type, 'failed', path, new Error(message));
+    },
+  };
+}
+
+export function createFakeResourceLoader(): FakeResourceLoader {
+  const eventBus = new ResourceEventBus();
+  const metadata = new MetadataStore();
+  const textures = makeFakeProcessor<THREE.Texture>(eventBus, 'texture');
+  const materials = makeFakeProcessor<THREE.Material>(eventBus, 'material');
+  const glbMeshes = makeFakeProcessor<THREE.Object3D>(eventBus, 'glb');
+  const scenes = makeFakeProcessor<TscnScene>(eventBus, 'scene');
+
+  const loader = {
+    eventBus,
+    metadata,
+    textures,
+    materials,
+    glbMeshes,
+    scenes,
+    // Legacy pass-throughs a few consumers still reach for.
+    getSceneCached: (path: string) => scenes.getCached(path) ?? undefined,
+    requestScene: (path: string) => scenes.request(path),
+    // Mirror the real ResourceLoader.provideFile: clear caches then re-route.
+    // Tests usually drive `_resolve` directly instead of calling this.
+    provideFile(path: string): void {
+      textures.clearCache(path);
+      materials.clearCache(path);
+      glbMeshes.clearCache(path);
+      scenes.clearCache(path);
+    },
+    clear(): void {
+      textures.clearCache();
+      materials.clearCache();
+      glbMeshes.clearCache();
+      scenes.clearCache();
+      eventBus.clear();
+      metadata.clear();
+    },
+  };
+
+  return {
+    loader: loader as unknown as ResourceLoader,
+    eventBus,
+    metadata,
+    textures,
+    materials,
+    glbMeshes,
+    scenes,
+  };
+}

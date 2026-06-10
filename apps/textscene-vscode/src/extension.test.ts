@@ -16,6 +16,13 @@ vi.mock('./TscnPreviewPanel', () => ({
   }
 }));
 
+// Mock TscnDiagnostics (covered by its own unit tests)
+vi.mock('./TscnDiagnostics', () => ({
+  TscnDiagnostics: vi.fn(function (this: { dispose: ReturnType<typeof vi.fn> }) {
+    this.dispose = vi.fn();
+  })
+}));
+
 // Mock logger
 vi.mock('./logger', () => ({
   initLogger: vi.fn(),
@@ -100,7 +107,7 @@ describe('Extension', () => {
     it('should add disposables to context subscriptions', () => {
       activate(mockContext);
 
-      expect(mockContext.subscriptions.length).toBe(7); // command + symbol provider + definition provider + save listener + resource watcher + 2 watcher handlers
+      expect(mockContext.subscriptions.length).toBe(8); // command + symbol provider + definition provider + diagnostics + save listener + resource watcher + 2 watcher handlers
     });
   });
 

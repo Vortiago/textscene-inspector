@@ -3,7 +3,7 @@
  * preview shell so a single DOM panel can list every unresolved path.
  *
  * Replaces the pre-migration `missingResourcesMap` in
- * `apps/textscene-web/src/main.ts` (see `docs/UX-REGRESSIONS.md` §3).
+ * `apps/textscene-web/src/main.ts` (see `docs/archive/UX-REGRESSIONS.md` §3).
  *
  * Why a context, not an event subscription:
  *   `FileEventBus` only emits `loaded` / `failed` for paths the loader

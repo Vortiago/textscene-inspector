@@ -50,7 +50,7 @@ export function generateWebviewHtml(options: WebviewHtmlOptions): string {
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}' ${cspSource}; img-src ${cspSource} blob: data:;">
-      <title>TSCN Preview</title>
+      <title>TextScene Inspector</title>
       ${cssLink}
       <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }

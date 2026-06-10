@@ -19,15 +19,9 @@
  *     `getCacheSize()`. Use these when you statically know the type.
  *
  *   - Type-generic surface: `request(type, path)`, `getCached(type, path)`,
- *     `clearCache(path?, type?)`. Use when the type is data-driven
- *     (e.g. `provideFile` routing).
- *
- *   - Per-type pass-through methods (`requestTexture`, `requestScene`,
- *     `getSceneCached`, `clearTextureCache`, etc.) are 1-line shims
- *     delegating to the appropriate processor. Retained for
- *     compatibility with existing call sites (`useResource.ts` and
- *     the node-component test mocks); the underlying machine is
- *     unified.
+ *     `clearCache(path?)`. Use when the type is data-driven
+ *     (e.g. `provideFile` routing). Callers that statically know the type
+ *     use the named processor accessors directly (`loader.textures.request`).
  *
  *   - `provideFile(path)`: clear caches for the path and re-route
  *     through the right processor for the registered metadata type.
@@ -45,7 +39,6 @@ import { createTextureProcessor } from './processors/createTextureProcessor';
 import { createMaterialProcessor } from './processors/createMaterialProcessor';
 import { createGLBProcessor } from './processors/createGLBProcessor';
 import { createSceneProcessor } from './processors/createSceneProcessor';
-import { parseReference } from './processing/materialProcessing';
 import type { ResourceProcessor } from './createResourceProcessor';
 import * as logger from '../logger';
 
@@ -202,24 +195,6 @@ export class ResourceLoader {
     return proc.getCached(path) as T | null | undefined;
   }
 
-  // ---- Per-type pass-throughs (compat) -------------------------------------
-
-  requestTexture(idOrPath: string): void {
-    this.textures.request(idOrPath);
-  }
-
-  requestMaterial(idOrPath: string): void {
-    this.materials.request(idOrPath);
-  }
-
-  requestScene(idOrPath: string): void {
-    this.scenes.request(idOrPath);
-  }
-
-  getSceneCached(idOrPath: string): TscnScene | null | undefined {
-    return this.scenes.getCached(idOrPath);
-  }
-
   // ---- Metadata helpers ----------------------------------------------------
 
   resolvePath(idOrPath: string): string {
@@ -233,36 +208,6 @@ export class ResourceLoader {
 
   hasResource(idOrPath: string): boolean {
     return this.metadata.has(idOrPath);
-  }
-
-  static parseReference(value: string): string | null {
-    return parseReference(value);
-  }
-
-  resolveInstancePath(instanceRef: string | undefined): string | null {
-    if (!instanceRef) return null;
-
-    const resourceId = parseReference(instanceRef);
-    if (!resourceId) {
-      logger.warn(`[ResourceLoader] Invalid instance reference format: ${instanceRef}`);
-      return null;
-    }
-
-    const metadata = this.metadata.get(resourceId);
-    if (!metadata) {
-      logger.warn(`[ResourceLoader] Instance resource not found: ${resourceId}`);
-      return null;
-    }
-
-    if (metadata.type !== 'PackedScene') {
-      logger.warn(
-        `[ResourceLoader] Instance resource is not a PackedScene: ${resourceId} ` +
-        `(type: ${metadata.type})`
-      );
-      return null;
-    }
-
-    return metadata.path;
   }
 
   // ---- Cache management ----------------------------------------------------
@@ -324,31 +269,5 @@ export class ResourceLoader {
       this.textures.request(path);
       this.materials.request(path);
     }
-  }
-
-  // ---- Per-type cache helpers (compat) -------------------------------------
-
-  clearTextureCache(id?: string): void {
-    this.textures.clearCache(id);
-  }
-
-  clearMaterialCache(id?: string): void {
-    this.materials.clearCache(id);
-  }
-
-  clearSceneCache(id?: string): void {
-    this.scenes.clearCache(id);
-  }
-
-  clearGLBMeshCache(id?: string): void {
-    this.glbMeshes.clearCache(id);
-  }
-
-  clearTextureCacheByPath(path: string): void {
-    this.textures.clearCache(path);
-  }
-
-  clearMaterialCacheByPath(path: string): void {
-    this.materials.clearCache(path);
   }
 }

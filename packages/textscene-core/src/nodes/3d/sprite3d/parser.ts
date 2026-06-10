@@ -13,7 +13,7 @@
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseNode3D } from '../../base/node3d/parser';
 import { parseColor } from '../../../utils/colorParser';
-import { parseVector2 } from '../../../parser/vectors';
+import { boolOr, enumOr, floatOr, intOr, vec2Or } from '../../../parser/valueParsers';
 import { warn } from '../../../logger';
 import {
   AlphaCutMode,
@@ -23,10 +23,6 @@ import {
   type Sprite3DProperties,
 } from './types';
 
-export function isSprite3D(heading: ParsedHeading): boolean {
-  return heading.type === 'node' && heading.attributes.type === 'Sprite3D';
-}
-
 export function parseSprite3D(
   heading: ParsedHeading,
   properties: Record<string, string>
@@ -35,18 +31,18 @@ export function parseSprite3D(
 
   const result: Sprite3DProperties = {
     ...baseProps,
-    billboard: parseEnumOr(properties.billboard, BillboardMode.BILLBOARD_DISABLED, [
+    billboard: enumOr(properties.billboard, BillboardMode.BILLBOARD_DISABLED, [
       BillboardMode.BILLBOARD_DISABLED,
       BillboardMode.BILLBOARD_ENABLED,
       BillboardMode.BILLBOARD_FIXED_Y,
       BillboardMode.BILLBOARD_PARTICLES,
     ]),
-    alpha_cut: parseEnumOr(properties.alpha_cut, AlphaCutMode.ALPHA_CUT_DISABLED, [
+    alpha_cut: enumOr(properties.alpha_cut, AlphaCutMode.ALPHA_CUT_DISABLED, [
       AlphaCutMode.ALPHA_CUT_DISABLED,
       AlphaCutMode.ALPHA_CUT_DISCARD,
       AlphaCutMode.ALPHA_CUT_OPAQUE_PREPASS,
     ]),
-    axis: parseEnumOr(properties.axis, AxisMode.AXIS_Y, [
+    axis: enumOr(properties.axis, AxisMode.AXIS_Y, [
       AxisMode.AXIS_X,
       AxisMode.AXIS_Y,
       AxisMode.AXIS_Z,
@@ -56,8 +52,13 @@ export function parseSprite3D(
     hframes: intOr(properties.hframes, 1),
     vframes: intOr(properties.vframes, 1),
     frame: intOr(properties.frame, 0),
-    offset: parseVector2Or(properties.offset, { x: 0, y: 0 }),
-    region_enabled: parseBoolOr(properties.region_enabled, false),
+    offset: vec2Or(properties.offset, { x: 0, y: 0 }, 'Sprite3D'),
+    centered: boolOr(properties.centered, true),
+    flip_h: boolOr(properties.flip_h, false),
+    flip_v: boolOr(properties.flip_v, false),
+    double_sided: boolOr(properties.double_sided, true),
+    transparent: boolOr(properties.transparent, true),
+    region_enabled: boolOr(properties.region_enabled, false),
     modulate: properties.modulate ? parseColor(properties.modulate) : { r: 1, g: 1, b: 1, a: 1 },
     render_priority: intOr(properties.render_priority, 0),
   };
@@ -77,47 +78,6 @@ export function parseSprite3D(
   }
 
   return result;
-}
-
-function floatOr(value: string | undefined, fallback: number): number {
-  if (value === undefined) return fallback;
-  const parsed = parseFloat(value);
-  return Number.isNaN(parsed) ? fallback : parsed;
-}
-
-function intOr(value: string | undefined, fallback: number): number {
-  if (value === undefined) return fallback;
-  const parsed = parseInt(value, 10);
-  return Number.isNaN(parsed) ? fallback : parsed;
-}
-
-function parseEnumOr<T extends number>(
-  value: string | undefined,
-  fallback: T,
-  allowed: readonly T[]
-): T {
-  if (value === undefined) return fallback;
-  const parsed = parseInt(value, 10) as T;
-  if (Number.isNaN(parsed)) return fallback;
-  return allowed.includes(parsed) ? parsed : fallback;
-}
-
-function parseBoolOr(value: string | undefined, fallback: boolean): boolean {
-  if (value === undefined) return fallback;
-  const v = value.toLowerCase();
-  if (v === 'true' || v === '1') return true;
-  if (v === 'false' || v === '0') return false;
-  return fallback;
-}
-
-function parseVector2Or(value: string | undefined, fallback: { x: number; y: number }): { x: number; y: number } {
-  if (!value) return fallback;
-  try {
-    return parseVector2(value);
-  } catch (error) {
-    warn(`Sprite3D: invalid offset Vector2 "${value}": ${error instanceof Error ? error.message : String(error)}`);
-    return fallback;
-  }
 }
 
 /**

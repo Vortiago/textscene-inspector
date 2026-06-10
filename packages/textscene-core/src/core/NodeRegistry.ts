@@ -35,8 +35,13 @@ export interface NodeTypeRegistration {
   /** Node type name (e.g., 'MeshInstance3D', 'Node3D') */
   typeName: string;
 
-  /** Type guard to check if a heading matches this node type */
-  typeGuard: (heading: ParsedHeading) => boolean;
+  /**
+   * Optional legacy type guard. The registry matches a heading by its
+   * `type` attribute against `typeName` directly, so a guard is no longer
+   * needed; the field is retained only for back-compat and is ignored by
+   * `findRegistration`.
+   */
+  typeGuard?: (heading: ParsedHeading) => boolean;
 
   /** Parse heading and properties into node properties object */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Generic registry supports any node property type
@@ -57,12 +62,14 @@ class NodeRegistry {
   }
 
   findRegistration(heading: ParsedHeading): NodeTypeRegistration | null {
-    for (const registration of this.registrations.values()) {
-      if (registration.typeGuard(heading)) {
-        return registration;
-      }
-    }
-    return null;
+    // Only `[node]` headings resolve to a node registration — a
+    // `[sub_resource type="BoxMesh"]` must never match a node typeName.
+    // The Map is keyed by typeName, so the lookup is O(1) and the match is
+    // exactly what the old per-type guards computed (`attributes.type === typeName`).
+    if (heading.type !== 'node') return null;
+    const type = heading.attributes.type;
+    if (!type) return null;
+    return this.registrations.get(type) ?? null;
   }
 
   getRegistration(typeName: string): NodeTypeRegistration | null {

@@ -1,6 +1,30 @@
-# TSCN Renderer Implementation Plan
+# TextScene Inspector Roadmap
 
-> **Work Item Details**: See `work_items/WI{number}.md` for implementation details, testing strategies, and code examples.
+> **Work Item Details**: See `work_items/WI-{number}.md` for implementation details, testing strategies, and code examples.
+
+## Road to v1.0
+
+### Done in the 0.9.0 pass
+
+- [x] All package versions aligned to 0.9.0
+- [x] Root package renamed to `@textscene/monorepo`
+- [x] Repository URLs fixed to https://github.com/Vortiago/Text-Scene-.tscn-File-Previewer.git
+- [x] CHANGELOGs added for the published packages
+- [x] VS Code extension README, icon, and LICENSE in place
+- [x] `.vscodeignore` hardening (lean extension package)
+- [x] Linter publish prep (`@textscene/linter`)
+- [x] Release workflow added
+- [x] Visual-regression harness: 10 golden scenes, `pnpm test:visual`, CI job (see CLAUDE.md "Visual Regression")
+
+### Remaining for 1.0
+
+- [ ] Decide Marketplace publisher, create PAT, and publish the VS Code extension
+- [ ] Publish to Open VSX
+- [ ] Decide whether to publish `@textscene/linter` to npm
+- [ ] Enable web previewer deploy (GitHub Pages)
+- [x] Replace placeholder icon with a final brand asset (`images/icon.png`, via the Marketplace listing PR)
+- [ ] AnimationPlayer playback preview (WI-42) — implement or explicitly descope
+- [ ] Final pass over the open work items below
 
 ## Phase 14: R3F Migration ✅
 
@@ -18,16 +42,16 @@
 
 ### WI-R3F-3.x follow-ups (2D nodes, physics, audio, animation, particles, paths, Skeleton3D, Sprite3D) — Active
 
-These are unblocked by Phase 14 shipping. Each adds a new node-type folder under `packages/textscene-core/src/r3f/nodes/` with a `Component.tsx` and `index.ts` self-registration. The parser + linter for each type was already salvaged from the broken branch in WI-R3F-0; only the R3F render component is new.
+These are unblocked by Phase 14 shipping. Each adds a node-type folder under `packages/textscene-core/src/nodes/<type>/` with a `Component.tsx` and an `index.r3f.ts` self-registration imported from `src/r3f/nodes/index.ts`. The parser + linter for each type was already salvaged from the broken branch in WI-R3F-0; only the R3F render component is new.
 
-- [ ] WI-R3F-3.1: Node2D / Sprite2D / AnimatedSprite2D / Camera2D
-- [ ] WI-R3F-3.2: Physics bodies (StaticBody3D / RigidBody3D / CharacterBody3D / Area3D / CollisionShape3D)
-- [ ] WI-R3F-3.3: AudioStreamPlayer3D (incl. gizmo placeholder marker)
-- [ ] WI-R3F-3.4: AnimationPlayer / AnimationTree (deferred — non-MVS until #44 follow-up)
-- [ ] WI-R3F-3.5: GPUParticles3D
-- [ ] WI-R3F-3.6: Path3D / PathFollow3D
-- [ ] WI-R3F-3.7: Skeleton3D
-- [ ] WI-R3F-3.8: Sprite3D
+- [x] WI-R3F-3.1: Node2D / Sprite2D / AnimatedSprite2D / Camera2D
+- [x] WI-R3F-3.2: Physics bodies (StaticBody3D / RigidBody3D / CharacterBody3D / Area3D / CollisionShape3D) — bodies render as transform-only groups per ADR-0005; CollisionShape3D renders a toggleable gizmo
+- [x] WI-R3F-3.3: AudioStreamPlayer3D (incl. gizmo placeholder marker)
+- [ ] WI-R3F-3.4: AnimationPlayer / AnimationTree playback — node components + details panel shipped; playback preview remains (see WI-42)
+- [x] WI-R3F-3.5: GPUParticles3D — renders as transform-only group per ADR-0008
+- [x] WI-R3F-3.6: Path3D / PathFollow3D — renders as transform-only group per ADR-0008
+- [x] WI-R3F-3.7: Skeleton3D — renders as transform-only group per ADR-0008
+- [x] WI-R3F-3.8: Sprite3D
 
 ## Phase 1: Core Visual Rendering ✅
 
@@ -35,17 +59,17 @@ These are unblocked by Phase 14 shipping. Each adds a new node-type folder under
 
 ## Phase 2: Lighting ✅
 
-- [x] #WI-10: SpotLight3D → [Details](work_items/WI10.md)
-- [x] #WI-11: DirectionalLight3D → [Details](work_items/WI11.md)
-- [x] #WI-12: OmniLight3D → [Details](work_items/WI12.md)
+- [x] #WI-10: SpotLight3D → [Details](work_items/WI-10.md)
+- [x] #WI-11: DirectionalLight3D → [Details](work_items/WI-11.md)
+- [x] #WI-12: OmniLight3D → [Details](work_items/WI-12.md)
 
 ## Phase 3: Scene Composition ✅
 
-- [x] #WI-13: ExtResource Loading System (PackedScene only) → [Details](work_items/WI13.md)
-- [x] #WI-14: Scene Instancing (Complete) → [Details](work_items/WI14.md)
-- [x] #WI-52: External Texture Loading → [Details](work_items/WI52.md) ⭐
-- [x] #WI-53: External Material Loading → [Details](work_items/WI53.md) ✅ **Verified working**
-- [ ] #WI-54: External Audio Loading → [Details](work_items/WI54.md) (Deferred - not visual)
+- [x] #WI-13: ExtResource Loading System (PackedScene only) → [Details](work_items/WI-13.md)
+- [x] #WI-14: Scene Instancing (Complete) → [Details](work_items/WI-14.md)
+- [x] #WI-52: External Texture Loading → [Details](work_items/WI-52.md) ⭐
+- [x] #WI-53: External Material Loading → [Details](work_items/WI-53.md) ✅ **Verified working**
+- [ ] #WI-54: External Audio Loading → [Details](work_items/WI-54.md) (Deferred - not visual)
 
 ## Phase 4: Version 1 Roadmap (ld-58 Support) 🎯
 
@@ -58,7 +82,7 @@ These are unblocked by Phase 14 shipping. Each adds a new node-type folder under
 - ✅ WorldEnvironment (WI-57): Complete
 
 **Critical Path** (Revised order based on verification):
-1. [x] #WI-15: Camera3D Node → [Details](work_items/WI15.md) ⭐⭐⭐ ✅ Complete
+1. [x] #WI-15: Camera3D Node → [Details](work_items/WI-15.md) ⭐⭐⭐ ✅ Complete
 2. [x] #WI-56: Material Override Support → [Details](work_items/WI-56.md) ⭐⭐⭐ **CRITICAL** (207 instances) ✅ Complete
 3. [x] #WI-57: WorldEnvironment + Environment SubResource → [Details](work_items/WI-57.md) ⭐⭐ ✅ Complete
 4. [x] #WI-58: PlaneMesh center_offset Property → [Details](work_items/WI-58.md) ⭐ ✅ Complete
@@ -89,20 +113,20 @@ These are unblocked by Phase 14 shipping. Each adds a new node-type folder under
 
 ## Phase 5: Additional Mesh Primitives ✅
 
-- [x] #WI-18: PlaneMesh, CapsuleMesh, TorusMesh, PrismMesh → [Details](work_items/WI18.md)
+- [x] #WI-18: PlaneMesh, CapsuleMesh, TorusMesh, PrismMesh → [Details](work_items/WI-18.md)
 
 ## Phase 6: Advanced Features
 
-- [x] #WI-15: Camera3D Node → [Details](work_items/WI15.md)
-- [ ] #WI-16: ShaderMaterial SubResource → [Details](work_items/WI16.md)
-- [ ] #WI-17: Custom Shader Support → [Details](work_items/WI17.md)
+- [x] #WI-15: Camera3D Node → [Details](work_items/WI-15.md)
+- [ ] #WI-16: ShaderMaterial SubResource → [Details](work_items/WI-16.md) (partial — ShaderMaterial is recognized and approximated as a translucent placeholder; GLSL compilation not planned)
+- [ ] #WI-17: Custom Shader Support → [Details](work_items/WI-17.md)
 - [x] #WI-64: Label3D Node Support → [Details](work_items/WI-64.md) (3D text labels for fixture annotations)
 - [ ] #WI-77: Advanced Environment Features → [Details](work_items/WI-77.md) (Post-processing, Sky, SSAO, SSR) **Deferred from WI-57**
 
 ## Phase 6.5: Material Feature Enable Flags (from WI-63 Research)
 
 **High Priority** (Implement Next):
-- [ ] #WI-76: Ambient Occlusion Enable Flag → [Details](work_items/WI-76.md) ⭐⭐⭐ (Common in PBR)
+- [x] #WI-76: Ambient Occlusion Enable Flag → [Details](work_items/WI-76.md) ⭐⭐⭐ (Common in PBR)
 
 **Medium Priority** (Create Work Items):
 - [ ] #WI-65: Height Mapping Enable Flag → [Details](work_items/WI-65.md) ⭐⭐ (Parallax/displacement)
@@ -128,58 +152,58 @@ These are unblocked by Phase 14 shipping. Each adds a new node-type folder under
 ## Phase 7: VS Code Extension UX ✅ (Core Infrastructure)
 
 - [x] #WI-21-24: Multi-Panel Support, Camera State, Incremental Updates
-- [x] #WI-25: Click-to-Select in 3D Viewport → [Details](work_items/WI25.md)
-- [x] #WI-50: VSCode Outline Provider → [Details](work_items/WI50.md) ⭐
-- [x] #WI-51: SubResource/ExtResource Go to Definition → [Details](work_items/WI51.md) ⭐
+- [x] #WI-25: Click-to-Select in 3D Viewport (no detail file)
+- [x] #WI-50: VSCode Outline Provider → [Details](work_items/WI-50.md) ⭐
+- [x] #WI-51: SubResource/ExtResource Go to Definition → [Details](work_items/WI-51.md) ⭐
 
 ## Phase 8: C# Integration
 
-- [ ] #WI-26: GetNode() Path Validation → [Details](work_items/WI26.md)
-- [ ] #WI-27: GetNode() IntelliSense → [Details](work_items/WI27.md)
-- [ ] #WI-28: C# Class → Scene Type Matching → [Details](work_items/WI28.md)
-- [ ] #WI-29: Scene-to-C# Code Generation → [Details](work_items/WI29.md)
+- [ ] #WI-26: GetNode() Path Validation → [Details](work_items/WI-26.md)
+- [ ] #WI-27: GetNode() IntelliSense → [Details](work_items/WI-27.md)
+- [ ] #WI-28: C# Class → Scene Type Matching → [Details](work_items/WI-28.md)
+- [ ] #WI-29: Scene-to-C# Code Generation → [Details](work_items/WI-29.md)
 
 ## Phase 9: Interactive Editing
 
-- [ ] #WI-30: Real-time Property Editing → [Details](work_items/WI30.md)
-- [ ] #WI-31: Node Transformation Gizmos → [Details](work_items/WI31.md) ⭐
-- [ ] #WI-32: Undo/Redo Support → [Details](work_items/WI32.md)
+- [ ] #WI-30: Real-time Property Editing → [Details](work_items/WI-30.md)
+- [ ] #WI-31: Node Transformation Gizmos → [Details](work_items/WI-31.md) ⭐
+- [ ] #WI-32: Undo/Redo Support → [Details](work_items/WI-32.md)
 
 ## Phase 10: Enhanced Visualization
 
-- [ ] #WI-33: Resource Thumbnail Previews → [Details](work_items/WI33.md)
-- [ ] #WI-34: Texture/Material Inspector Panel → [Details](work_items/WI34.md)
-- [ ] #WI-35: Scene Complexity Metrics → [Details](work_items/WI35.md)
-- [ ] #WI-36: Visual Icons for Non-Mesh Nodes → [Details](work_items/WI36.md)
-- [ ] #WI-37: Viewport Cursor Feedback → [Details](work_items/WI37.md)
+- [ ] #WI-33: Resource Thumbnail Previews → [Details](work_items/WI-33.md)
+- [ ] #WI-34: Texture/Material Inspector Panel → [Details](work_items/WI-34.md)
+- [ ] #WI-35: Scene Complexity Metrics → [Details](work_items/WI-35.md)
+- [ ] #WI-36: Visual Icons for Non-Mesh Nodes (no detail file; partially covered by the shipped light/camera/audio gizmos)
+- [ ] #WI-37: Viewport Cursor Feedback (no detail file)
 
 ## Phase 11: Advanced Navigation
 
-- [ ] #WI-38: Signal Connection Visualization → [Details](work_items/WI38.md)
-- [ ] #WI-39: Enhanced Scene Instance Tracking → [Details](work_items/WI39.md)
-- [ ] #WI-40: Node Path Copy/Generation → [Details](work_items/WI40.md)
-- [ ] #WI-41: Cross-Reference Analysis → [Details](work_items/WI41.md)
+- [ ] #WI-38: Signal Connection Visualization → [Details](work_items/WI-38.md)
+- [ ] #WI-39: Enhanced Scene Instance Tracking → [Details](work_items/WI-39.md)
+- [ ] #WI-40: Node Path Copy/Generation → [Details](work_items/WI-40.md)
+- [ ] #WI-41: Cross-Reference Analysis → [Details](work_items/WI-41.md)
 
 ## Phase 12: Animation and Performance
 
-- [ ] #WI-42: Animation Preview Support → [Details](work_items/WI42.md)
-- [ ] #WI-43: Performance Optimization for Large Scenes → [Details](work_items/WI43.md)
-- [ ] #WI-44: Live Godot Editor Synchronization → [Details](work_items/WI44.md)
+- [ ] #WI-42: Animation Preview Support → [Details](work_items/WI-42.md)
+- [ ] #WI-43: Performance Optimization for Large Scenes → [Details](work_items/WI-43.md)
+- [ ] #WI-44: Live Godot Editor Synchronization → [Details](work_items/WI-44.md)
 
 ## Phase 13: Code Quality & Tooling
 
 - [x] #WI-45: Consolidate Claude Skills Configuration
 - [x] #WI-46: Add Codebase Architect Agent
-- [x] #WI-47: Extract Light Base Property Parsing → [Details](work_items/WI47.md)
-- [x] #WI-48: Extract Shadow Property Formatting → [Details](work_items/WI48.md)
-- [ ] #WI-49: Documentation Updates for Claude Config → [Details](work_items/WI49.md)
-- [x] #WI-55: Instance Resolution Encapsulation (Alternative 1 implemented) → [Details](work_items/WI55.md)
-- [x] #WI-61: Standardize Logging Across All Applications → [Details](work_items/WI61.md)
-- [ ] #WI-81: CSS Modernization Implementation → [Details](work_items/WI81.md)
+- [x] #WI-47: Extract Light Base Property Parsing → [Details](work_items/WI-47.md)
+- [x] #WI-48: Extract Shadow Property Formatting → [Details](work_items/WI-48.md)
+- [ ] #WI-49: Documentation Updates for Claude Config → [Details](work_items/WI-49.md)
+- [x] #WI-84: Instance Resolution Encapsulation (Alternative 1 implemented) → [Details](work_items/WI-84.md) *(renumbered from WI-55 to avoid a collision with Generic Node Parsing)*
+- [x] #WI-61: Standardize Logging Across All Applications → [Details](work_items/WI-61.md)
+- [ ] #WI-81: CSS Modernization Implementation → [Details](work_items/WI-81.md) (largely superseded by the R3F migration's CSS Modules adoption)
 
-## Phase 14: Web App Mobile & Responsive Design
+## Phase 15: Web App Mobile & Responsive Design
 
-- [ ] #WI-82: Mobile Phone UI Support & Responsive Design → [Details](work_items/WI82.md)
+- [ ] #WI-82: Mobile Phone UI Support & Responsive Design → [Details](work_items/WI-82.md) (partial — 768px stacked-layout breakpoint shipped; full mobile/touch scope open)
 
 ## Phase 13.5: Architecture Improvements ~~🚨 **RELEASE BLOCKER**~~ (SUPERSEDED — see [#44](https://github.com/Vortiago/Text-Scene-.tscn-File-Previewer/issues/44) and [PRD-r3f-migration.md](work_items/PRD-r3f-migration.md))
 
@@ -187,7 +211,7 @@ These are unblocked by Phase 14 shipping. Each adds a new node-type folder under
 
 ### Stage 1: Event Foundation
 - [x] ~~#WI-79: Event-Based Resource Loading System~~ → [Details](work_items/WI-79.md) ✅ Complete *(SUPERSEDED — salvaged as `useResource` hook internals in WI-R3F-2)*
-- [ ] ~~#WI-83: Event System Unification~~ → [Details](work_items/WI-83.md) *(SUPERSEDED — see #44)*
+- [ ] ~~#WI-83: Event System Unification~~ *(SUPERSEDED — see #44; no detail file)*
 
 ### Stage 2-5: Immutable Hierarchies with Reconciliation
 - [ ] ~~#WI-78: Immutable Scene Hierarchies~~ → [Details](work_items/WI-78.md) *(SUPERSEDED — see #44)*
@@ -199,12 +223,13 @@ These are unblocked by Phase 14 shipping. Each adds a new node-type folder under
   - [ ] ~~#WI-78.6: Panel Integration~~ *(SUPERSEDED — see #44)*
 
 ### Stage 6: Multi-Panel Coordination
-- [ ] ~~#WI-77: Multi-Panel Coordination (Revised)~~ → [Details](work_items/WI-77-revised.md) *(SUPERSEDED — replaced by `SelectionContext` + React context per panel in WI-R3F-4)*
+- [ ] ~~#WI-77: Multi-Panel Coordination (Revised)~~ → [Details](docs/archive/work_items/WI-77-revised.md) *(SUPERSEDED — replaced by `SelectionContext` + React context per panel in WI-R3F-4)*
+- [ ] ~~#WI-80: Multi-Panel Scene Invalidation & Node Update System~~ → [Details](docs/archive/work_items/WI-80.md) *(SUPERSEDED — delivered differently by multi-panel parity in WI-R3F-5)*
 
 ## Testing & Documentation
 
-- [ ] #WI-19: End-to-End Scene Testing → [Details](work_items/WI19.md)
-- [ ] #WI-20: Documentation Updates → [Details](work_items/WI20.md)
+- [ ] #WI-19: End-to-End Scene Testing → [Details](work_items/WI-19.md) (partial: static golden-image harness shipped in `scripts/visual/`; remaining scope is interaction/E2E flows)
+- [ ] #WI-20: Documentation Updates → [Details](work_items/WI-20.md)
 
 ---
 
@@ -226,27 +251,18 @@ Each work item has a corresponding file in `work_items/` containing:
 - Testing strategies and checklists
 - Code examples and API references
 - Architecture decisions and rationale
-- Estimated effort and complexity
+- Complexity assessment
 
 ---
 
 ## Currently Implemented
 
-✅ **Node3D** - Basic scene node with transforms
-✅ **Transform3D** - Position, rotation, scale parsing
-✅ **Parser Infrastructure** - TSCN file parsing, heading extraction
-✅ **Scene Tree Builder** - Hierarchy construction with search/filtering
-✅ **Core Renderer** - THREE.js integration and scene management
-✅ **Interactive Tree Viewer** - Selection, highlighting, expand/collapse
-✅ **Node Details Panel** - Property inspection (read-only)
-✅ **Camera State Preservation** - Persists viewport camera across edits
-✅ **Multi-Panel Support** - One preview panel per .tscn file
-✅ **Jump to Definition** - Double-click node to jump to .tscn definition
-✅ **Hot-Reload** - Automatic preview update on file save
-✅ **Click-to-Select** - Click objects in 3D viewport to select in tree
-✅ **MeshInstance3D** - Box, Sphere, Cylinder, Plane, Capsule, Torus, Prism meshes
-✅ **StandardMaterial3D** - PBR materials with albedo, metallic, roughness, external textures
-✅ **Lighting** - Spot, Directional, and Omni lights with shadows
-✅ **External Scenes** - Load and instantiate PackedScene references
-✅ **External Textures** - Load Texture2D from external files (PNG, SVG, WebP, etc.)
-⚠️ **External Resources** - PackedScene and Texture2D supported (Materials, Audio pending)
+See the [README feature list](README.md#features) for the authoritative summary. In short:
+
+- react-three-fiber rendering layer over three.js (Phase 14 R3F migration complete)
+- ~50 self-registering node slices: meshes, lights, cameras, WorldEnvironment, Label3D, CSG, physics bodies + collision gizmos, sprites (2D/3D), audio gizmos, Control DOM overlay
+- StandardMaterial3D PBR (albedo/metallic/roughness/normal/emission/AO, UV transforms, external textures)
+- External resources: PackedScene instancing, textures, materials, GLB meshes — event-driven with late-arrival recovery
+- Linter: `tscn-lint` CLI + in-editor diagnostics (React/THREE-free bundle); canonical invocation `pnpm lint:tscn`
+- VS Code extension (desktop and web): outline, go-to-definition, hot-reload, multi-panel previews, click-to-select
+- Web previewer with fixture browser and drag-drop scene upload

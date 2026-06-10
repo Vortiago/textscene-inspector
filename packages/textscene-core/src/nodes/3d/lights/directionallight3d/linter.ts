@@ -7,18 +7,11 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
+import { isValidProperties } from '../../../../linter/linterUtils.js';
+import { checkLightEnergy } from '../shared/linterChecks.js';
 
 // Thresholds for warnings
-const EXTREME_LIGHT_ENERGY_MIN = 0.01;
-const EXTREME_LIGHT_ENERGY_MAX = 100;
 const LARGE_SHADOW_MAX_DISTANCE = 10000;
-
-/**
- * Check if properties object exists and is valid
- */
-function isValidProperties(props: unknown): props is Record<string, string> {
-  return typeof props === 'object' && props !== null;
-}
 
 /**
  * Validate DirectionalLight3D semantic rules
@@ -39,29 +32,7 @@ function checkDirectionalLight3D(context: RuleContext): Diagnostic[] {
 
   const rawProps = node.properties as Record<string, string>;
 
-  // Warn if light_energy is extreme
-  if (rawProps.light_energy !== undefined) {
-    const energy = parseFloat(rawProps.light_energy);
-    if (!isNaN(energy)) {
-      if (energy < EXTREME_LIGHT_ENERGY_MIN) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `Light energy is very low (${energy}). Values below ${EXTREME_LIGHT_ENERGY_MIN} may be barely visible.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: 'directionallight3d-extreme-energy',
-        });
-      } else if (energy > EXTREME_LIGHT_ENERGY_MAX) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `Light energy is very high (${energy}). Values above ${EXTREME_LIGHT_ENERGY_MAX} may cause overexposure.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: 'directionallight3d-extreme-energy',
-        });
-      }
-    }
-  }
+  checkLightEnergy(rawProps, node.name, node.type, 'directionallight3d', diagnostics);
 
   // Validate shadow split ordering (split_1 < split_2 < split_3)
   const split1 = rawProps.directional_shadow_split_1 ? parseFloat(rawProps.directional_shadow_split_1) : undefined;

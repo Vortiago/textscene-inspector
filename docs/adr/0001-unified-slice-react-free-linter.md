@@ -1,0 +1,7 @@
+# Unified single-slice layout with a React-free linter sub-path
+
+Each Node type lives in one folder (`nodes/<category>/<type>/`) holding its parser, linter, formatter, render component, and tests, exposed through three thin entry points: `index.ts` (registers the parser/formatter in NodeRegistry; never re-exports the component), `index.linter.ts` (registers validators + lint rules; imports only `.ts` files), and `index.r3f.ts` (registers the render component; the only file allowed to import `./Component`).
+
+We chose this over the prior split-slice (parser/linter in `nodes/`, component in a parallel `r3f/nodes/`) because locality matters more than the apparent safety of physical separation: editing "what a Camera3D is" should touch one directory, not two trees four levels apart. The linter bundle stays React/THREE-free *by construction* — `linter/index.ts` imports only `index.linter.ts`, which imports only `.ts` — and that invariant is now enforced by a module-graph guard test (covering both `linter/index.ts` and `parser/TscnParser.ts`) plus an ESLint `no-restricted-imports` rule banning `*.tsx`/`./Component` from `index.ts` and `index.linter.ts`.
+
+Hard to reverse (touches every Node folder and all three barrels) and surprising (co-locating React with linter code looks like it would break the bundle split — it doesn't, because of the entry-point discipline), so it is recorded here.

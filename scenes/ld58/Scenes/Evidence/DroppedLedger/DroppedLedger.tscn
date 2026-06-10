@@ -1,0 +1,22 @@
+[gd_scene load_steps=4 format=3 uid="uid://bt12yfrmvyp0"]
+
+[ext_resource type="Material" uid="uid://dskbvfhxan1mf" path="res://shaders/pixel_perfect_ouline.tres" id="2_8dq5b"]
+[ext_resource type="PackedScene" uid="uid://cqcn73n5d5c08" path="res://Scenes/Evidence/DroppedLedger/DroppedLedger.glb" id="3_7c6ag"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_43luw"]
+size = Vector3(1.8397217, 0.46472168, 2.0732422)
+
+[node name="DroppedLedger" type="Node3D"]
+
+[node name="InteractableObject" type="Area3D" parent="." node_paths=PackedStringArray("Model")]
+Model = NodePath("../DroppedLedger/book")
+HighlightMaterial = ExtResource("2_8dq5b")
+metadata/_custom_type_script = "uid://d3r4qxofp1pj3"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="InteractableObject"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.04107666, -6.1035156e-05, -0.0024414063)
+shape = SubResource("BoxShape3D_43luw")
+
+[node name="DroppedLedger" parent="." instance=ExtResource("3_7c6ag")]
+
+[editable path="DroppedLedger"]

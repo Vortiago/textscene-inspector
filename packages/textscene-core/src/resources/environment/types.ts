@@ -20,8 +20,17 @@ export interface EnvironmentProperties {
   background_energy_multiplier: number;
 
   // Ambient lighting (scene-wide constant illumination)
+  /** 0 BG (default), 1 DISABLED, 2 COLOR, 3 SKY — only 2/3 emit a flat ambient. */
+  ambient_light_source: number;
   ambient_light_color: Color;
   ambient_light_energy: number;
+
+  // Screen-space fog (maps to THREE.Fog/FogExp2)
+  fog_enabled: boolean;
+  fog_density: number;
+  fog_light_color: Color;
+  /** 0 EXPONENTIAL (default), 1 DEPTH. */
+  fog_mode: number;
 
   // Volumetric Fog
   volumetric_fog_enabled: boolean;

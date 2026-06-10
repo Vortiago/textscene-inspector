@@ -5,11 +5,10 @@
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../core/NodeRegistry';
-import { parseNode, isNode } from './parser';
+import { parseNode } from './parser';
 
 const nodeRegistration: NodeTypeRegistration = {
   typeName: 'Node',
-  typeGuard: isNode,
   parser: parseNode,
 };
 

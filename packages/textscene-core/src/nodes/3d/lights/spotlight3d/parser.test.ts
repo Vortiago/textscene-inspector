@@ -3,58 +3,10 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { parseSpotLight3D, isSpotLight3D } from './parser';
-import type { ParsedHeading } from '../../../../parser/utils';
+import { parseSpotLight3D } from './parser';
 import { parseHeading } from '../../../../parser/utils';
 
 describe('SpotLight3D Parser', () => {
-  describe('isSpotLight3D', () => {
-    it('should identify SpotLight3D nodes', () => {
-      const heading: ParsedHeading = {
-        type: 'node',
-        attributes: {
-          name: 'MySpotLight',
-          type: 'SpotLight3D',
-        },
-      };
-
-      expect(isSpotLight3D(heading)).toBe(true);
-    });
-
-    it('should reject Node3D nodes', () => {
-      const heading: ParsedHeading = {
-        type: 'node',
-        attributes: {
-          name: 'MyNode',
-          type: 'Node3D',
-        },
-      };
-
-      expect(isSpotLight3D(heading)).toBe(false);
-    });
-
-    it('should reject DirectionalLight3D nodes', () => {
-      const heading: ParsedHeading = {
-        type: 'node',
-        attributes: {
-          name: 'MyLight',
-          type: 'DirectionalLight3D',
-        },
-      };
-
-      expect(isSpotLight3D(heading)).toBe(false);
-    });
-
-    it('should reject non-node headings', () => {
-      const heading: ParsedHeading = {
-        type: 'ext_resource',
-        attributes: {},
-      };
-
-      expect(isSpotLight3D(heading)).toBe(false);
-    });
-  });
-
   describe('parseSpotLight3D', () => {
     it('should parse basic SpotLight3D with defaults', () => {
       const heading = parseHeading('[node name="SpotLight" type="SpotLight3D" parent="."]');

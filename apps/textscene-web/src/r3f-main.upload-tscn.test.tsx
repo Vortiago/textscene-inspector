@@ -92,7 +92,11 @@ describe('<R3FApp> Upload TSCN (WI-UX-7)', () => {
     });
   });
 
-  it('deselects the fixture dropdown when a TSCN is uploaded', async () => {
+  it('reflects the uploaded file in the scene switcher (the native dropdown is gone)', async () => {
+    // The old native <select> was replaced by the command-palette scene
+    // switcher (the built-in fixtures are dev-only scaffolding). After an
+    // upload the scene chip shows the uploaded filename — signalling "not on a
+    // fixture" — and there is no longer a combobox in the DOM.
     render(<R3FApp />);
 
     await waitFor(() => {
@@ -107,9 +111,9 @@ describe('<R3FApp> Upload TSCN (WI-UX-7)', () => {
     });
 
     await waitFor(() => {
-      const select = screen.getByRole('combobox') as HTMLSelectElement;
-      expect(select.value).toBe('');
+      expect(screen.getByTestId('uploaded-tscn-label').textContent).toBe('my-scene.tscn');
     });
+    expect(screen.queryByRole('combobox')).toBeNull();
   });
 
   it('renders the Reset Camera button, disabled until a scene is loaded', async () => {

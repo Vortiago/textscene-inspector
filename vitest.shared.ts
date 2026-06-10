@@ -1,3 +1,4 @@
+import { availableParallelism } from 'node:os';
 import { defineConfig } from 'vitest/config';
 
 /**
@@ -29,7 +30,11 @@ export default defineConfig({
     },
     include: ['**/*.test.ts', '**/*.spec.ts', '**/*.test.tsx', '**/*.spec.tsx'],
     exclude: ['node_modules/', 'dist/', 'build/'],
-    maxWorkers: 16,
+    // Cap at 16 on big dev boxes, but never oversubscribe the host: GitHub
+    // runners have 4 vCPUs, and a hardcoded 16 workers there starved the
+    // heavy full-shell mount tests past testing-library's waitFor timeout
+    // (CI failed for a week while local runs stayed green).
+    maxWorkers: Math.min(16, Math.max(1, availableParallelism() - 1)),
     fileParallelism: true,
     maxConcurrency: 15,
   },

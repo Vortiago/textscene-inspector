@@ -1,0 +1,17 @@
+[gd_scene load_steps=5 format=3 uid="uid://b2hvjxu61ixrp"]
+
+[ext_resource type="PackedScene" uid="uid://1pf04fco852k" path="res://assets/picture_frames_lib/picture_frame_victorian_1.glb" id="1_00qsg"]
+[ext_resource type="Texture2D" uid="uid://bupewdp2y2v04" path="res://assets/picture_frames_lib/textures/picture_frames_dif.png" id="2_xb3xf"]
+[ext_resource type="Texture2D" uid="uid://c0riigobgac84" path="res://assets/picture_frames_lib/textures/picture_frames_nor.png" id="3_wka3f"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_hewej"]
+normal_enabled = true
+normal_texture = ExtResource("3_wka3f")
+detail_enabled = true
+detail_albedo = ExtResource("2_xb3xf")
+detail_normal = ExtResource("3_wka3f")
+
+[node name="victorian_1" instance=ExtResource("1_00qsg")]
+
+[node name="picture_frame_victorian_12" parent="." index="0"]
+surface_material_override/0 = SubResource("StandardMaterial3D_hewej")

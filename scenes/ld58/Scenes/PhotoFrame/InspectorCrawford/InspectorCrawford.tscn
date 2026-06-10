@@ -1,0 +1,37 @@
+[gd_scene load_steps=7 format=3 uid="uid://bv2d2i0odcgfk"]
+
+[ext_resource type="Texture2D" uid="uid://cd4accaui6wx6" path="res://Scenes/PhotoFrame/InspectorCrawford/InspectorCrawford.png" id="1_qcfkw"]
+[ext_resource type="PackedScene" uid="uid://cocghlr3negpx" path="res://components/InteractableObject.tscn" id="2_tta4r"]
+[ext_resource type="PackedScene" uid="uid://btvhyc2rfv4w8" path="res://assets/PortraitFrame2.glb" id="3_kd11k"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_pyj3e"]
+albedo_texture = ExtResource("1_qcfkw")
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_beplx"]
+material = SubResource("StandardMaterial3D_pyj3e")
+flip_faces = true
+size = Vector2(0.7, 0.9)
+orientation = 2
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_485df"]
+size = Vector3(0.8391113, 1, 0.033569336)
+
+[node name="InspectorCrawford" type="Node3D"]
+
+[node name="Camera3D" type="Camera3D" parent="."]
+
+[node name="CameraStateMonitor" type="Node" parent="Camera3D"]
+
+[node name="Canvas" type="MeshInstance3D" parent="."]
+mesh = SubResource("PlaneMesh_beplx")
+
+[node name="InteractableObject" parent="." node_paths=PackedStringArray("Model") instance=ExtResource("2_tta4r")]
+Model = NodePath("../Frame/PictureFrame_Game")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="InteractableObject"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0028076172, 0, -0.032165527)
+shape = SubResource("BoxShape3D_485df")
+
+[node name="Frame" parent="." instance=ExtResource("3_kd11k")]
+
+[editable path="Frame"]

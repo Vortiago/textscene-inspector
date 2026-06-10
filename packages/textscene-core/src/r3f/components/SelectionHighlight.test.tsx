@@ -5,8 +5,8 @@
  * `THREE.BoxHelper` attached to the canvas scene. Before WI-UX-2 the
  * tree click updated `selectedNodePath` but nothing rendered in 3D, so
  * the user could not tell which object in the viewport corresponded to
- * the row they were inspecting. See docs/UX-REGRESSIONS.md §2 and
- * docs/UX-FLOW-GAPS.md Gap 2.
+ * the row they were inspecting. See docs/archive/UX-REGRESSIONS.md §2 and
+ * docs/archive/UX-FLOW-GAPS.md Gap 2.
  *
  * Mounts `TscnSceneContents` (the inside-`<Canvas>` half of TscnCanvas)
  * with a SelectionProvider + HierarchyProvider, then drives selection

@@ -93,6 +93,19 @@ export interface Sprite3DProperties extends Node3DProperties {
   /** Pixel offset from sprite center (default: 0, 0). */
   offset: Vector2;
 
+  /** Quad origin centered on the node (default true) vs top-left corner. */
+  centered: boolean;
+
+  /** Mirror the texture horizontally / vertically (default false). */
+  flip_h: boolean;
+  flip_v: boolean;
+
+  /** Visible from behind (Godot default true → THREE.DoubleSide). */
+  double_sided: boolean;
+
+  /** Use the texture's alpha for transparency (Godot default true). */
+  transparent: boolean;
+
   /** If true, the texture's `region_rect` defines a sub-image to display. */
   region_enabled: boolean;
 

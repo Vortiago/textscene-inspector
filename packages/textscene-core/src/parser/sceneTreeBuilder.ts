@@ -23,40 +23,38 @@ export function buildSceneTree(nodes: TscnNode[]): TscnNode[] {
   pathMap.set('', rootNode); // Root is at empty path
 
   // Track remaining nodes to place
-  const remaining = nodes.filter(n => n !== rootNode);
+  let remaining = nodes.filter(n => n !== rootNode);
   let lastRemainingCount = remaining.length + 1;
 
-  // Process nodes iteratively until all are placed
+  // Process nodes iteratively until all are placed. Iterate FORWARD (declaration
+  // order) and rebuild `remaining` with the unplaced nodes each pass — this both
+  // preserves sibling order (so `children` matches the .tscn declaration order,
+  // which is the 2D paint order: earlier siblings draw behind) and avoids the
+  // index-shifting hazards of splicing mid-iteration. Multiple passes place
+  // children whose parent appears later in the file.
   while (remaining.length > 0 && remaining.length < lastRemainingCount) {
     lastRemainingCount = remaining.length;
+    const stillRemaining: TscnNode[] = [];
 
-    for (let i = remaining.length - 1; i >= 0; i--) {
-      const node = remaining[i];
-      if (!node) continue;
-
+    for (const node of remaining) {
       if (!node.parent) {
-        remaining.splice(i, 1);
+        // No parent and not the root → drop it (handled by the orphan warning
+        // only if it never resolves; a parentless non-root is simply skipped).
         continue;
       }
 
-      // Handle "." as direct child of root
-      if (node.parent === '.') {
-        rootNode.children.push(node);
-        pathMap.set(node.name, node);
-        remaining.splice(i, 1);
-        continue;
-      }
-
-      // Look up parent by its path
-      const parentNode = pathMap.get(node.parent);
+      // "." means a direct child of root; otherwise resolve by parent path.
+      const parentNode = node.parent === '.' ? rootNode : pathMap.get(node.parent);
       if (parentNode) {
         parentNode.children.push(node);
-        // Register this node's path (parent path + "/" + name)
-        const nodePath = `${node.parent}/${node.name}`;
+        const nodePath = node.parent === '.' ? node.name : `${node.parent}/${node.name}`;
         pathMap.set(nodePath, node);
-        remaining.splice(i, 1);
+      } else {
+        stillRemaining.push(node);
       }
     }
+
+    remaining = stillRemaining;
   }
 
   // Warn about any orphaned nodes
