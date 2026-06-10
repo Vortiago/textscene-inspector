@@ -33,6 +33,7 @@ Thumbs.db
 *.vsix
 .vscode-test/
 .test-workspace/
+.test-workspace-web/
 
 # Logs
 *.log

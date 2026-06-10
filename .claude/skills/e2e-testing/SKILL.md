@@ -1,6 +1,6 @@
 ---
 name: e2e-testing
-description: Run end-to-end tests for TSCN renderer validation. Use when running tests, validating rendering output, checking build integration, or automating browser testing with Chrome DevTools MCP.
+description: Run end-to-end tests for TextScene Inspector rendering validation. Use when running tests, validating rendering output, checking build integration, or automating browser testing with Chrome DevTools MCP.
 ---
 
 # End-to-End Testing
@@ -25,7 +25,7 @@ Use for browser automation:
 
 ```bash
 # Build and start
-cd packages/textscene-renderer && pnpm build
+cd packages/textscene-core && pnpm build
 cd ../../apps/textscene-web && pnpm build && pnpm preview
 ```
 
@@ -39,7 +39,7 @@ Via Chrome DevTools MCP:
 
 ```bash
 # Build and package
-cd packages/textscene-renderer && pnpm build
+cd packages/textscene-core && pnpm build
 cd ../../apps/textscene-vscode && pnpm build && pnpm package
 
 # Install

@@ -1,4 +1,4 @@
-# TSCN Previewer Skills
+# TextScene Inspector Skills
 
 Skills for the TextScene Inspector monorepo. Checked into the repo so they are
 available in every environment (CLI, desktop, and Claude web).
@@ -9,7 +9,7 @@ available in every environment (CLI, desktop, and Claude web).
 **Full-stack TypeScript development across the entire monorepo.**
 
 Covers all implementation work including:
-- Core library development (tscn-renderer package)
+- Core library development (@textscene/core package)
 - VS Code extension features
 - Web previewer development
 - Feature implementation, debugging, and integration

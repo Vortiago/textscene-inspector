@@ -1,35 +1,39 @@
 ---
 name: textscene-dev
-description: Full-stack development for TextScene Inspector monorepo. Use for all TypeScript implementation work including core library (tscn-renderer), VS Code extension, and web previewer. Covers feature implementation, debugging, testing, and integration across the stack.
+description: Full-stack development for TextScene Inspector monorepo. Use for all TypeScript implementation work including core library (@textscene/core), VS Code extension, and web previewer. Covers feature implementation, debugging, testing, and integration across the stack.
 ---
 
 # TextScene Inspector Development
 
 **Monorepo Stack:**
-- `packages/textscene-renderer` - Core library using three.js
-- `apps/textscene-vscode` - VS Code custom editor extension
+- `packages/textscene-core` - Core library (`@textscene/core`): TSCN parsing, linting, and react-three-fiber rendering
+- `apps/textscene-vscode` - VS Code preview extension
 - `apps/textscene-web` - Vite-based web previewer for debugging
 
 ## Core Library Development
 
 ### Vertical Slicing Pattern
 
-Each TSCN node type gets its own self-contained folder:
+Each TSCN node type gets its own self-contained folder (categories: `2d`, `3d`, `animation`, `audio`, `base`, `node`, `paths`, `physics`):
 
 ```
-packages/textscene-renderer/src/nodes/[nodetype]/
-├── parser.ts           # Parse TSCN properties
-├── renderer.ts         # Create three.js objects
+packages/textscene-core/src/nodes/[category]/[nodetype]/
+├── parser.ts            # Parse TSCN properties (lenient, for rendering)
+├── Component.tsx        # react-three-fiber component that renders the node
+├── linterParser.ts      # Strict parsing for the linter
+├── linter.ts            # Semantic lint rules
 ├── propertyFormatter.ts # Format properties for UI display (optional)
-├── types.ts            # TypeScript type definitions
-├── index.ts            # Self-registration with NodeRegistry
-└── [nodetype].test.ts  # Co-located tests
+├── types.ts             # TypeScript type definitions
+├── index.ts             # Parser/formatter registration with NodeRegistry
+├── index.r3f.ts         # Component registration with nodeComponentRegistry
+├── index.linter.ts      # Linter registration (imports linterParser + linter)
+└── *.test.ts(x)         # Co-located tests
 ```
 
 **Same pattern for resources:**
 ```
-packages/textscene-renderer/src/resources/meshes/[meshtype]/
-packages/textscene-renderer/src/resources/materials/[materialtype]/
+packages/textscene-core/src/resources/meshes/[meshtype]/
+packages/textscene-core/src/resources/materials/[materialtype]/
 ```
 
 ### Adding a New Node Type
@@ -43,42 +47,56 @@ packages/textscene-renderer/src/resources/materials/[materialtype]/
 
 2. **Create Folder Structure**
    ```bash
-   mkdir packages/textscene-renderer/src/nodes/directionallight3d
+   mkdir packages/textscene-core/src/nodes/3d/lights/directionallight3d
    ```
 
 3. **Implement Parser** (`parser.ts`)
    - Parse TSCN heading: `[node type="DirectionalLight3D" ...]`
    - Extract properties with type conversions
-   - Follow naming: `isDirectionalLight3D()`, `parseDirectionalLight3D()`
+   - Follow naming: `parseDirectionalLight3D()`
 
-4. **Implement Renderer** (`renderer.ts`)
-   - Create THREE.js object (e.g., `THREE.DirectionalLight`)
+4. **Implement Component** (`Component.tsx`)
+   - Build a react-three-fiber component (e.g., `<directionalLight>`)
    - Apply properties with conversions
-   - Follow naming: `createDirectionalLight3D()`
+   - Name the component after the node type: `DirectionalLight3D`
 
-5. **Register Node Type** (`index.ts`)
+5. **Register Node Type** (three entry points)
    ```typescript
-   import { nodeRegistry } from '../../core/NodeRegistry';
-   import { isDirectionalLight3D, parseDirectionalLight3D } from './parser';
-   import { createDirectionalLight3D } from './renderer';
+   // index.ts — parser + optional formatter
+   import { nodeRegistry } from '../../../../core/NodeRegistry';
+   import { parseDirectionalLight3D } from './parser';
 
    nodeRegistry.register({
      typeName: 'DirectionalLight3D',
-     typeGuard: isDirectionalLight3D,
      parser: parseDirectionalLight3D,
-     renderer: createDirectionalLight3D,
    });
    ```
-   Then import in `TscnParser.ts`: `import '../nodes/directionallight3d';`
+   ```typescript
+   // index.r3f.ts — R3F component
+   import { nodeComponentRegistry } from '../../../../r3f/NodeComponentRegistry';
+   import { DirectionalLight3D } from './Component';
 
-6. **Write Tests** (`*.test.ts`)
+   nodeComponentRegistry.register({ typeName: 'DirectionalLight3D', Component: DirectionalLight3D });
+   ```
+   ```typescript
+   // index.linter.ts — linter registrations (side-effect imports only)
+   import './linterParser.js';
+   import './linter.js';
+   ```
+   Then wire the side-effect imports:
+   - `parser/TscnParser.ts`: `import '../nodes/3d/lights/directionallight3d/index.js';`
+   - `r3f/nodes/index.ts`: `import '../../nodes/3d/lights/directionallight3d/index.r3f';`
+   - `linter/index.ts`: `import '../nodes/3d/lights/directionallight3d/index.linter.js';`
+     (keeps the linter bundle free of THREE.js — never import a node's `index.ts` there)
+
+6. **Write Tests** (`*.test.ts` / `*.test.tsx`)
    - Test parser with various property combinations
-   - Test renderer creates correct three.js objects
+   - Test the component with `@react-three/test-renderer`
    - Test edge cases and defaults
 
 7. **Validation Workflow**
    ```bash
-   cd packages/textscene-renderer
+   cd packages/textscene-core
    pnpm type-check && pnpm lint:fix && pnpm test && pnpm build
    ```
 
@@ -100,7 +118,7 @@ packages/textscene-renderer/src/resources/materials/[materialtype]/
 - `utils/lightConstants.ts` - Light-related constants
 - `utils/shadowUtils.ts` - Shadow configuration helpers
 - `utils/lightTargetUtils.ts` - Light target positioning
-- `resources/resourceResolver.ts` - Generic resource resolution pattern
+- `utils/nodePath.ts` - Scene-tree node path helpers
 
 ### Troubleshooting
 
@@ -109,8 +127,8 @@ packages/textscene-renderer/src/resources/materials/[materialtype]/
 - Properties may be in `sub_resource` blocks, not node headings
 - Use regex for complex values (Vector3, Color, etc.)
 
-**Renderer Issues:**
-- Verify three.js property names match documentation
+**Component Issues:**
+- Verify three.js property names match documentation (R3F props mirror three.js)
 - Use `tscn-threejs-docs-researcher` agent to confirm mappings
 - Some Godot properties don't have direct three.js equivalents
 - Check coordinate system conversions (both use Y-up but transforms may differ)
@@ -139,18 +157,22 @@ https://docs.godotengine.org/en/4.4/contributing/development/file_formats/tscn.h
 
 ```
 apps/textscene-vscode/src/
-├── extension.ts        # Entry point, register custom editor
-├── editor/
-│   ├── provider.ts     # CustomEditorProvider implementation
-│   └── webview.ts      # Webview setup and messaging
-└── webview/            # Webview UI using tscn-renderer library
+├── extension.ts             # Entry point: commands, language providers, diagnostics
+├── TscnPreviewPanel.ts      # Webview panel lifecycle + messaging
+├── TscnDiagnostics.ts       # Linter-backed diagnostics
+├── protocol.ts              # Extension <-> webview message types
+├── providers/               # VSCodeResourceProvider (resource loading)
+└── webview/                 # Webview UI using @textscene/core
+    ├── r3f-webview-main.tsx # React entry mounted in the webview
+    ├── webviewHtml.ts       # HTML shell + CSP
+    └── WebviewResourceProvider.ts
 ```
 
-### Custom Editor Pattern
+### Preview Panel Pattern
 
-1. Register in `extension.ts`: `vscode.window.registerCustomEditorProvider()`
-2. Implement `CustomReadonlyEditorProvider` in `editor/provider.ts`
-3. Setup webview in `editor/webview.ts` with bidirectional message passing
+1. `extension.ts` registers the `textscene.openPreviewToSide` command
+2. `TscnPreviewPanel.create()` builds one `vscode.WebviewPanel` per .tscn file
+3. Bidirectional message passing (typed in `protocol.ts`) between the extension and the React webview
 
 ### Message Passing
 
@@ -182,7 +204,7 @@ pnpm dev
 pnpm type-check && pnpm lint:fix && pnpm test && pnpm build && pnpm package
 
 # Install for testing
-code --install-extension tscn-previewer-*.vsix
+code --install-extension textscene-inspector-*.vsix
 ```
 
 ---
@@ -191,36 +213,31 @@ code --install-extension tscn-previewer-*.vsix
 
 ### Purpose
 
-Vite-based web app for rapid testing and debugging of the tscn-renderer library.
+Vite-based web app for rapid testing and debugging of the @textscene/core library.
 
 ### Architecture
 
 ```
 apps/textscene-web/src/
-├── main.ts           # Entry point
-├── renderer.ts       # three.js scene setup using tscn-renderer
-├── fileUpload.ts     # File upload UI
-└── ui/               # UI components
+├── main.ts           # Entry point (mounts the React app)
+├── r3f-main.tsx      # App shell: fixture picker, uploads, <TscnPreviewShell>
+├── fixtures.ts       # Generated fixture catalog (pnpm generate:fixtures)
+└── logger.ts         # Log adapter wiring
 ```
 
 ### Implementation Pattern
 
-```typescript
-// File upload handling
-input.addEventListener('change', async (event) => {
-  const file = event.target.files?.[0];
-  const content = await file.text();
-  await loadScene(content);
-});
+```tsx
+// Parsing with @textscene/core
+import { TscnParser, TscnPreviewShell } from '@textscene/core';
 
-// Scene rendering with tscn-renderer library
-import { TscnParser, TscnRenderer } from 'tscn-renderer';
+const parser = new TscnParser();
+const scene = parser.parse(tscnContent); // lenient: recovers from bad input
 
-async function loadScene(tscnContent: string) {
-  const parsed = TscnParser.parse(tscnContent);
-  const scene = TscnRenderer.render(parsed);
-  threeScene.add(scene);
-}
+// Rendering is react-three-fiber components — there is no imperative
+// renderer class. <TscnPreviewShell> parses `content` itself and renders
+// the full viewer (canvas, scene tree, details, missing-resources panel):
+<TscnPreviewShell panelId="my-panel" content={tscnContent} />
 ```
 
 ### Development Workflow
@@ -241,7 +258,7 @@ pnpm preview  # http://localhost:4173
 **IMPORTANT:** Always rebuild the core library first:
 ```bash
 # Rebuild library
-cd packages/textscene-renderer && pnpm build
+cd packages/textscene-core && pnpm build
 
 # Then rebuild web app
 cd ../../apps/textscene-web && pnpm build
@@ -286,13 +303,13 @@ Use the `e2e-testing` skill for browser automation testing:
 - Co-locate tests with implementation files
 
 ### Self-Registering Patterns
-- New node types register themselves via NodeRegistry
-- No central files need editing when adding features
+- New node types register themselves via NodeRegistry (parsing), nodeComponentRegistry (rendering), and the linter registries
+- Only the three side-effect import barrels need a new line when adding a node type
 - Eliminates hardcoded conditionals and switch statements
 
 ### Feature Parity
 - Keep web-previewer and vscode-extension functionality in sync
-- Both use the same tscn-renderer library
+- Both use the same @textscene/core library
 - All features should work in both apps
 
 ---

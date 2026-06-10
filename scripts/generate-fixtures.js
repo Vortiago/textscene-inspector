@@ -35,6 +35,7 @@ function detectCategory(filename) {
   if (filename.startsWith('unit-physics') || filename.startsWith('unit-collision')) return 'Unit - Physics';
   if (filename.startsWith('unit-material')) return 'Unit - Materials';
   if (filename.startsWith('unit-external')) return 'Unit - External Resources';
+  if (filename.startsWith('unit-audio')) return 'Unit - Audio';
   // 2D-UI Control nodes rendered via the DOM overlay (ADR-0003).
   if (
     filename.startsWith('unit-control') ||

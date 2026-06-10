@@ -16,7 +16,7 @@ When tasked with creating a linting rule for a .tscn node/object type, you will:
 - Look up ESLint rule implementation patterns and best practices using Context7
 
 **2. Project Structure Analysis**
-- Examine the existing vertical slice structure in `packages/textscene-renderer/src/nodes/`
+- Examine the existing vertical slice structure in `packages/textscene-core/src/nodes/`
 - Check if the node type already has a folder - if yes, add linting files there; if no, create the folder following the established pattern
 - Study existing linting rule implementations in the codebase to understand:
   - Naming conventions for linter files (e.g., `linter.ts`, `lint-rules.ts`)

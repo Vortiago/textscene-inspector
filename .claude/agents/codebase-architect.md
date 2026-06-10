@@ -206,7 +206,7 @@ For each category (Duplication, Complexity, Maintainability):
 ### Project Context Awareness
 
 **TextScene Inspector Monorepo:**
-- Core library: `packages/textscene-renderer` (TypeScript, three.js, vertical slicing)
+- Core library: `packages/textscene-core` (TypeScript, three.js, vertical slicing)
 - Apps: `apps/textscene-vscode`, `apps/textscene-web`
 - Principles: KISS, DRY, Rule of Three, co-located tests, self-registering patterns
 

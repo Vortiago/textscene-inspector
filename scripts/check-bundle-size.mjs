@@ -19,7 +19,7 @@
  */
 
 import { gzipSync } from 'node:zlib';
-import { existsSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -33,6 +33,14 @@ const ENTRY = 'webview.js';
 const MAIN_BASELINE_GZ = 247_543;
 const BUDGET_OVER_BASELINE_GZ = 200_000;
 const BUDGET_GZ = MAIN_BASELINE_GZ + BUDGET_OVER_BASELINE_GZ; // 447 KB gzipped
+
+// Dead-weight chunks that must never ship in the VSIX. These appear when
+// someone imports from the `@react-three/drei` barrel instead of the
+// per-module subpaths (`@react-three/drei/core/<Module>`): esbuild then
+// bundles drei's unused video/face modules, whose dynamic import('hls.js')
+// / import('@mediapipe/tasks-vision') emit ~656 KB of lazy chunks that no
+// code path ever loads.
+const DEAD_CHUNK_RE = /^(hls|vision_bundle)-/;
 
 /**
  * Find static (non-dynamic) imports in a JS file. Dynamic `import()`
@@ -86,6 +94,20 @@ function main() {
     console.error(`[bundle-size] entry not found: ${join(WEBVIEW_DIR, ENTRY)}`);
     console.error('[bundle-size] run `pnpm --filter textscene-inspector build` first');
     process.exit(enforce ? 1 : 0);
+  }
+
+  const chunksDir = join(WEBVIEW_DIR, 'chunks');
+  const deadChunks = existsSync(chunksDir)
+    ? readdirSync(chunksDir).filter((f) => DEAD_CHUNK_RE.test(f))
+    : [];
+  if (deadChunks.length > 0) {
+    console.error(
+      `[bundle-size] FAIL: dead-weight chunks in dist/webview/chunks: ${deadChunks.join(', ')}`
+    );
+    console.error(
+      '[bundle-size] import drei via @react-three/drei/core/<Module> subpaths, not the barrel.'
+    );
+    process.exit(1);
   }
 
   const closure = staticClosure(WEBVIEW_DIR, ENTRY);
