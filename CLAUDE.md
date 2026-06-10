@@ -167,6 +167,17 @@ pnpm dev          # Watch mode
 pnpm package      # Create .vsix for testing
 ```
 
+### Visual Regression (golden images)
+
+```bash
+pnpm test:visual          # compare golden scenes against committed baselines
+pnpm test:visual:update   # rewrite baselines — eyeball, then commit
+```
+
+Renders ~10 untextured fixture scenes in headless chromium (Playwright's bundled build + SwiftShader — deterministic; runs produce bit-identical pixels) and compares canvas screenshots against `scripts/visual/baselines/` with pixelmatch. Runs as the `visual-regression` CI job (NOT in `validate`/pre-commit). A scene must produce two byte-identical consecutive captures before comparison — unstable scenes fail rather than flake. Failure artifacts (`*.actual.png`, `*.diff.png`) land in `scripts/visual/output/` (gitignored; uploaded as a CI artifact).
+
+**Baseline policy:** update baselines ONLY for intentional visual changes; the PR diff shows the new golden for review. Scene manifest: `scripts/visual/scenes.mjs`.
+
 ### Scenes and Web Previewer
 
 **Scene files** are organized in the `scenes/` directory:
