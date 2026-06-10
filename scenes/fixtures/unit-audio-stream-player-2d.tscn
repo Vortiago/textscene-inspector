@@ -1,0 +1,14 @@
+[gd_scene load_steps=2 format=3 uid="uid://unit_audio_stream_player_2d"]
+
+[sub_resource type="AudioStreamGenerator" id="AudioStreamGenerator_tone"]
+
+[node name="World" type="Node2D"]
+
+[node name="AudioPlayer" type="AudioStreamPlayer2D" parent="."]
+position = Vector2(120, 80)
+stream = SubResource("AudioStreamGenerator_tone")
+volume_db = -6.0
+pitch_scale = 1.2
+
+[node name="ChildMarker" type="Node2D" parent="AudioPlayer"]
+position = Vector2(60, 40)

@@ -173,4 +173,4 @@ surface_material_override/0 = SubResource("Material_1")
 - **Godot TSCN Format**: https://docs.godotengine.org/en/4.4/contributing/development/file_formats/tscn.html
 - **Three.js Geometries**: https://threejs.org/docs/#api/en/geometries
 - **Project Architecture**: See `/ARCHITECTURE.md`
-- **Implementation Details**: See `/work_items/WI18.md`
+- **Implementation Details**: See `/work_items/WI-18.md`
