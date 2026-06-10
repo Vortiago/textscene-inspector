@@ -10,8 +10,8 @@ import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../../r3f/nodeTransform';
 import { parseColorToHex } from '../../../../utils/colorParser';
 import { LIGHT_INTENSITY_SCALE, DEFAULT_SHADOW_BIAS } from '../../../../utils/lightConstants';
-import { LightWithTarget } from '../lightShared';
-import { DirectionalLightGizmo } from '../lightHelpers';
+import { LightWithTarget } from '../shared/lightShared';
+import { DirectionalLightGizmo } from '../shared/lightHelpers';
 
 const SHADOW_FRUSTUM_HALF = 20;
 

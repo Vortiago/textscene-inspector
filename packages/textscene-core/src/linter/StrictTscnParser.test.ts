@@ -116,8 +116,7 @@ visible = true
   });
 
   describe('Invalid Heading Format', () => {
-    it('should silently skip malformed lines that are neither headings nor properties', () => {
-      // Malformed headings are silently skipped (not reported as errors)
+    it('should report INVALID_HEADING_FORMAT for a heading missing its closing bracket', () => {
       const content = `[gd_scene load_steps=1 format=3]
 
 [node name="Root" type="Node3D"
@@ -125,10 +124,51 @@ visible = true
 
       const result = parser.parse(content);
 
-      // The parser skips invalid lines silently
-      // This test documents current behavior (not ideal, but how it works)
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]!.code).toBe('INVALID_HEADING_FORMAT');
+      expect(result.errors[0]!.line).toBe(3);
+      expect(result.errors[0]!.message).toContain('Invalid heading format');
+      expect(result.scene).toBeUndefined();
+    });
+
+    it('should report every malformed heading (edge-malformed-bracket fixture shape)', () => {
+      // Mirrors scenes/fixtures/edge-malformed-bracket.tscn: both lines open a
+      // bracket but never close it. Previously these were silently swallowed
+      // by the property-parsing fallback and the file linted clean.
+      const content = `[gd_scene format=3
+
+[node name="Root" type="Node3D"
+`;
+
+      const result = parser.parse(content);
+
+      expect(result.errors).toHaveLength(2);
+      expect(result.errors[0]!.code).toBe('INVALID_HEADING_FORMAT');
+      expect(result.errors[0]!.line).toBe(1);
+      expect(result.errors[1]!.code).toBe('INVALID_HEADING_FORMAT');
+      expect(result.errors[1]!.line).toBe(3);
+      expect(result.scene).toBeUndefined();
+    });
+
+    it('does not flag bracket-opening lines inside a multi-line value', () => {
+      // Continuation lines of an accumulated value may legitimately start
+      // with '[' (arrays/dicts spanning lines) — no INVALID_HEADING_FORMAT.
+      const content = `[gd_scene load_steps=2 format=3]
+
+[sub_resource type="SpriteFrames" id="sf_1"]
+animations = [{
+"frames": [],
+"name": &"default"
+}]
+
+[node name="Root" type="Node3D"]
+`;
+
+      const result = parser.parse(content);
+
       expect(result.errors).toHaveLength(0);
       expect(result.scene).toBeDefined();
+      expect(result.scene!.internalResources).toHaveLength(1);
     });
 
     it('should report error for heading without attributes', () => {

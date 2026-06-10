@@ -1,11 +1,12 @@
 /**
- * Tests for Node2D linter (strict parser + semantic rules)
+ * Tests for Node2D linter (strict parser validators). Node2D registers no
+ * semantic rule — it is a base class; semantic validation lives in the
+ * subclasses (see index.linter.ts).
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { Linter } from '../../../linter/Linter';
 import './linterParser'; // Import to trigger validator registration
-import './linter'; // Import to trigger rule registration
 
 describe('Node2D Linter', () => {
   let linter: Linter;

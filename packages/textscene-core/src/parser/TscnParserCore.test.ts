@@ -4,7 +4,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { TscnParserCore } from './TscnParserCore.js';
-import type { NodeCreator } from './TscnParserCore.js';
+import type { NodeCreator, ParseObserver } from './TscnParserCore.js';
 
 describe('TscnParserCore', () => {
   const parser = new TscnParserCore();
@@ -236,6 +236,196 @@ cast_shadow = 1
 
       expect(mockCreator).toHaveBeenCalledTimes(1);
       expect(scene.nodes).toHaveLength(1);
+    });
+  });
+
+  describe('observer seam', () => {
+    const simpleCreator: NodeCreator = (heading, properties) => ({
+      name: heading.attributes.name || '',
+      type: heading.attributes.type || '',
+      parent: heading.attributes.parent,
+      properties,
+      children: [],
+    });
+
+    it('produces identical output with and without an observer', () => {
+      const content = `[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Texture2D" path="res://icon.png" id="1"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_1"]
+size = Vector3(1, 2, 3)
+
+[node name="Root" type="Node3D"]
+visible = true
+
+[node name="Label" type="Label" parent="."]
+text = "multi
+line"
+garbage-line-without-equals
+[node name="Broken" type="Node3D"
+`;
+
+      const bare = parser.parse(content, simpleCreator);
+      const observed = parser.parse(content, simpleCreator, {
+        onError: () => {},
+        onSectionStart: () => {},
+        onProperty: () => {},
+      });
+
+      expect(observed).toEqual(bare);
+    });
+
+    it('fires onError with INVALID_HEADING_FORMAT and line number for a malformed heading', () => {
+      const content = `[gd_scene format=3]
+
+[node name="Root" type="Node3D"
+`;
+      const onError = vi.fn<NonNullable<ParseObserver['onError']>>();
+
+      parser.parse(content, simpleCreator, { onError });
+
+      expect(onError).toHaveBeenCalledTimes(1);
+      expect(onError).toHaveBeenCalledWith({
+        message: 'Invalid heading format: "[node name="Root" type="Node3D""',
+        line: 3,
+        column: 1,
+        code: 'INVALID_HEADING_FORMAT',
+      });
+    });
+
+    it('fires onError with INVALID_PROPERTY_FORMAT and line number for a malformed property', () => {
+      const content = `[gd_scene format=3]
+
+[node name="Root" type="Node3D"]
+notaproperty
+`;
+      const onError = vi.fn<NonNullable<ParseObserver['onError']>>();
+
+      parser.parse(content, simpleCreator, { onError });
+
+      expect(onError).toHaveBeenCalledTimes(1);
+      expect(onError).toHaveBeenCalledWith({
+        message: 'Invalid property format: "notaproperty"',
+        line: 4,
+        column: 1,
+        code: 'INVALID_PROPERTY_FORMAT',
+      });
+    });
+
+    it('does not fire onError for bracket lines inside a multi-line accumulation', () => {
+      const content = `[gd_scene format=3]
+
+[sub_resource type="SpriteFrames" id="sf"]
+animations = [{
+"frames": [],
+}]
+
+[node name="Root" type="Node3D"]
+`;
+      const onError = vi.fn<NonNullable<ParseObserver['onError']>>();
+
+      parser.parse(content, simpleCreator, { onError });
+
+      expect(onError).not.toHaveBeenCalled();
+    });
+
+    it('fires onProperty with starting line, ownerType, and isMultiline per section', () => {
+      const content = `[gd_scene format=3]
+
+[sub_resource type="BoxMesh" id="bm"]
+size = Vector3(1, 2, 3)
+
+[node name="Title" type="Label"]
+text = "first
+second"
+visible = true
+`;
+      const onProperty = vi.fn<NonNullable<ParseObserver['onProperty']>>();
+
+      parser.parse(content, simpleCreator, { onProperty });
+
+      expect(onProperty).toHaveBeenCalledTimes(3);
+      // sub_resource property: ownerType from the heading's type attribute
+      expect(onProperty).toHaveBeenNthCalledWith(
+        1,
+        'sub_resource',
+        'BoxMesh',
+        'size',
+        'Vector3(1, 2, 3)',
+        4,
+        false
+      );
+      // accumulated multi-line value: STARTING line, isMultiline=true
+      expect(onProperty).toHaveBeenNthCalledWith(
+        2,
+        'node',
+        'Label',
+        'text',
+        '"first\nsecond"',
+        7,
+        true
+      );
+      // single-line property after the multi-line one: its own line number
+      expect(onProperty).toHaveBeenNthCalledWith(3, 'node', 'Label', 'visible', 'true', 9, false);
+    });
+
+    it('passes ownerType=undefined outside node/sub_resource sections', () => {
+      const content = `[gd_scene format=3]
+config = 1
+
+[node name="Root" index="0"]
+visible = true
+`;
+      const onProperty = vi.fn<NonNullable<ParseObserver['onProperty']>>();
+
+      parser.parse(content, simpleCreator, { onProperty });
+
+      expect(onProperty).toHaveBeenCalledTimes(2);
+      // gd_scene body property: section 'none', no owner type
+      expect(onProperty).toHaveBeenNthCalledWith(1, 'none', undefined, 'config', '1', 2, false);
+      // index= node has no type attribute: ownerType undefined
+      expect(onProperty).toHaveBeenNthCalledWith(2, 'node', undefined, 'visible', 'true', 5, false);
+    });
+
+    it('fires onSectionStart for each section with its kind and line', () => {
+      const content = `[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Texture2D" path="res://icon.png" id="1"]
+
+[sub_resource type="BoxMesh" id="bm"]
+
+[node name="Root" type="Node3D"]
+`;
+      const onSectionStart = vi.fn<NonNullable<ParseObserver['onSectionStart']>>();
+
+      parser.parse(content, simpleCreator, { onSectionStart });
+
+      expect(onSectionStart).toHaveBeenCalledTimes(4);
+      expect(onSectionStart).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({ type: 'gd_scene' }),
+        'none',
+        1
+      );
+      expect(onSectionStart).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({ type: 'ext_resource' }),
+        'ext_resource',
+        3
+      );
+      expect(onSectionStart).toHaveBeenNthCalledWith(
+        3,
+        expect.objectContaining({ type: 'sub_resource' }),
+        'sub_resource',
+        5
+      );
+      expect(onSectionStart).toHaveBeenNthCalledWith(
+        4,
+        expect.objectContaining({ type: 'node' }),
+        'node',
+        7
+      );
     });
   });
 });

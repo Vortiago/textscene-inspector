@@ -674,18 +674,18 @@ editor_draw_drag_margin = 0
 
   describe('Semantic Validation', () => {
     describe('multiple enabled cameras', () => {
-      // Note: Multiple camera detection is implemented in linter.ts but requires
-      // the scene tree to be built with sibling nodes. The StrictTscnParser should
-      // support this, but these tests are skipped for now as they require more
-      // investigation into how the scene tree is structured after parsing.
+      // TSCN allows only one parentless root node; sibling cameras must hang
+      // off the root via parent="." for buildSceneTree to keep them.
 
-      it.skip('should warn when multiple Camera2D nodes are enabled', () => {
+      it('should warn when multiple Camera2D nodes are enabled', () => {
         const content = `[gd_scene format=3]
 
-[node name="Camera1" type="Camera2D"]
+[node name="Root" type="Node2D"]
+
+[node name="Camera1" type="Camera2D" parent="."]
 enabled = true
 
-[node name="Camera2" type="Camera2D"]
+[node name="Camera2" type="Camera2D" parent="."]
 enabled = true
 `;
 
@@ -698,10 +698,12 @@ enabled = true
       it('should not warn when only one camera is enabled', () => {
         const content = `[gd_scene format=3]
 
-[node name="Camera1" type="Camera2D"]
+[node name="Root" type="Node2D"]
+
+[node name="Camera1" type="Camera2D" parent="."]
 enabled = true
 
-[node name="Camera2" type="Camera2D"]
+[node name="Camera2" type="Camera2D" parent="."]
 enabled = false
 `;
 
@@ -710,12 +712,14 @@ enabled = false
         expect(warnings).toHaveLength(0);
       });
 
-      it.skip('should treat cameras without enabled property as enabled by default', () => {
+      it('should treat cameras without enabled property as enabled by default', () => {
         const content = `[gd_scene format=3]
 
-[node name="Camera1" type="Camera2D"]
+[node name="Root" type="Node2D"]
 
-[node name="Camera2" type="Camera2D"]
+[node name="Camera1" type="Camera2D" parent="."]
+
+[node name="Camera2" type="Camera2D" parent="."]
 `;
 
         const diagnostics = linter.lint(content);
@@ -1044,16 +1048,19 @@ drag_bottom_margin = 0.5
       expect(errors).toHaveLength(0);
     });
 
-    it.skip('should validate nested Camera2D nodes', () => {
-      // Skipped: Requires scene tree traversal support
+    it('should validate nested Camera2D nodes', () => {
+      // Cameras two levels deep: Root -> Holder -> Camera1/Camera2.
+      // Parent paths are root-relative ("." = root, "Holder" = root/Holder).
       const content = `[gd_scene format=3]
 
-[node name="Parent" type="Node2D"]
+[node name="Root" type="Node2D"]
 
-[node name="Camera1" type="Camera2D" parent="Parent"]
+[node name="Holder" type="Node2D" parent="."]
+
+[node name="Camera1" type="Camera2D" parent="Holder"]
 enabled = true
 
-[node name="Camera2" type="Camera2D" parent="Parent"]
+[node name="Camera2" type="Camera2D" parent="Holder"]
 enabled = true
 `;
 
@@ -1062,16 +1069,17 @@ enabled = true
       expect(warnings.length).toBeGreaterThan(0);
     });
 
-    it.skip('should handle complex scene with smoothing warnings', () => {
-      // Skipped: Requires multi-node scene support
+    it('should handle complex scene with smoothing warnings', () => {
       const content = `[gd_scene format=3]
 
-[node name="ActiveCamera" type="Camera2D"]
+[node name="Root" type="Node2D"]
+
+[node name="ActiveCamera" type="Camera2D" parent="."]
 enabled = true
 position_smoothing_enabled = true
 position_smoothing_speed = 5.0
 
-[node name="BrokenCamera" type="Camera2D"]
+[node name="BrokenCamera" type="Camera2D" parent="."]
 enabled = false
 position_smoothing_enabled = true
 `;
@@ -1080,6 +1088,9 @@ position_smoothing_enabled = true
       // Should warn about BrokenCamera's missing smoothing speed
       const smoothingWarnings = diagnostics.filter(d => d.message.includes('smoothing_speed') && d.message.includes('not set'));
       expect(smoothingWarnings.length).toBeGreaterThan(0);
+      // Only one camera is enabled, so no multiple-camera warning.
+      const cameraWarnings = diagnostics.filter(d => d.message.includes('Multiple enabled'));
+      expect(cameraWarnings).toHaveLength(0);
     });
   });
 });

@@ -14,9 +14,21 @@ export class MetadataStore {
 
   /**
    * Register a resource for lookup by both ID and path.
+   *
+   * Re-registering a known id under a new path (hot-reload rename) evicts
+   * the stale old-path entry so lookups by the old path miss. The eviction
+   * is skipped when another id still owns the old path entry (aliases).
    */
   register(resource: ExtResource): void {
     if (resource.id) {
+      const previous = this.resources.get(resource.id);
+      if (previous && previous.path !== resource.path) {
+        const oldPathEntry = this.resources.get(previous.path);
+        if (oldPathEntry && oldPathEntry.id === resource.id) {
+          this.resources.delete(previous.path);
+          logger.info(`[MetadataStore] Evicted stale path entry: ${previous.path} (id "${resource.id}" moved to ${resource.path})`);
+        }
+      }
       this.resources.set(resource.id, resource);
     }
     this.resources.set(resource.path, resource);

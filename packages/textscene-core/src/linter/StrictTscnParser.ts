@@ -1,31 +1,19 @@
 /**
  * Strict TSCN parser for linting
  *
- * Unlike the forgiving renderer parser, this parser validates format strictly
- * and reports all syntax/format errors as ParseError[].
- *
- * Note: This parser has its own loop for strict validation. While this creates some
- * duplication with TscnParserCore, it's necessary because strict validation requires
- * line-by-line error collection and immediate validation, which differs from the
- * forgiving parsing approach used for rendering.
+ * A thin adapter over TscnParserCore's single scanning loop: it attaches a
+ * ParseObserver that collects syntax/format errors as ParseError[], performs
+ * strict heading checks (missing node name/identifier), and runs registered
+ * property validators. The lenient renderer path uses the same loop with no
+ * observer — one scanning loop, two adapters.
  */
 
-import type { TscnNode, TscnExternalResource, TscnInternalResource } from '../parser/types.js';
+import type { TscnNode } from '../parser/types.js';
 import type { ParseError, StrictParseResult } from './types.js';
-import {
-  parseHeading,
-  parseProperty,
-  isHeading,
-  isComment,
-  isEmpty,
-  isIncompleteValue,
-} from '../parser/utils.js';
+import { TscnParserCore } from '../parser/TscnParserCore.js';
+import type { ParseObserver } from '../parser/TscnParserCore.js';
 import type { ParsedHeading } from '../parser/utils.js';
-import { parseExternalResource, parseInternalResource } from '../parser/resourceParsers.js';
-import { buildSceneTree } from '../parser/sceneTreeBuilder.js';
 import { validatorRegistry } from './ValidatorRegistry.js';
-
-type SectionType = 'none' | 'node' | 'ext_resource' | 'sub_resource';
 
 /**
  * Creates a simple TscnNode without using NodeRegistry (avoids three.js dependency)
@@ -57,213 +45,78 @@ function createSimpleNode(heading: ParsedHeading, properties: Record<string, str
 }
 
 export class StrictTscnParser {
+  private core = new TscnParserCore();
+
   /**
    * Strictly parse TSCN content
    * @param content - TSCN file content
    * @returns Parse result with errors or parsed scene
    */
   parse(content: string): StrictParseResult {
-    const lines = content.split(/\r?\n/);
     const errors: ParseError[] = [];
 
-    const nodes: TscnNode[] = [];
-    const externalResources: TscnExternalResource[] = [];
-    const internalResources: TscnInternalResource[] = [];
+    const observer: ParseObserver = {
+      onError: (error) => {
+        errors.push({
+          severity: 'error',
+          message: error.message,
+          line: error.line,
+          column: error.column,
+          code: error.code,
+        });
+      },
 
-    let currentSection: SectionType = 'none';
-    let currentHeading: ReturnType<typeof parseHeading> = null;
-    let currentProperties: Record<string, string> = {};
-    let currentLineNumber = 0;
-    let currentNodeType: string | undefined;
-    let currentResourceType: string | undefined;
+      onSectionStart: (heading, section, line) => {
+        if (section !== 'node') return;
 
-    const finalizeSection = () => {
-      if (!currentHeading) return;
-
-      if (currentSection === 'node') {
-        // Create simple node without NodeRegistry (avoids three.js dependency)
-        const node = createSimpleNode(currentHeading, currentProperties);
-        nodes.push(node);
-      } else if (currentSection === 'ext_resource') {
-        const resource = parseExternalResource(currentHeading);
-        if (resource) {
-          externalResources.push(resource);
+        if (!heading.attributes.name) {
+          errors.push({
+            severity: 'error',
+            message: 'Node heading must have "name=" attribute',
+            line,
+            column: 1,
+            code: 'MISSING_NODE_NAME',
+          });
         }
-      } else if (currentSection === 'sub_resource') {
-        const resource = parseInternalResource(currentHeading, currentProperties);
-        if (resource) {
-          internalResources.push(resource);
+        // Nodes must have one of: type= (new nodes), index= (instanced scene child mods), or instance= (PackedScene instantiation)
+        if (
+          !heading.attributes.type &&
+          !heading.attributes.index &&
+          !heading.attributes.instance
+        ) {
+          errors.push({
+            severity: 'error',
+            message: 'Node heading must have "type=", "index=", or "instance=" attribute',
+            line,
+            column: 1,
+            code: 'MISSING_NODE_IDENTIFIER',
+          });
         }
-      }
+      },
 
-      currentHeading = null;
-      currentProperties = {};
-      currentNodeType = undefined;
-      currentResourceType = undefined;
+      onProperty: (_section, ownerType, key, value, line, isMultiline) => {
+        // Skip validation for multi-line values (shader code, label text) and
+        // for properties without a typed owner (index=/instance= nodes,
+        // ext_resource/gd_scene sections).
+        if (isMultiline || !ownerType) return;
+
+        const validator = validatorRegistry.findValidator(ownerType, key);
+        if (!validator) return;
+
+        const error = validator(key, value, line);
+        if (error) {
+          errors.push(error);
+        }
+      },
     };
 
-    for (let i = 0; i < lines.length; i++) {
-      currentLineNumber = i + 1;
-      const line = lines[i]!; // Array access within bounds is safe
+    const scene = this.core.parse(content, createSimpleNode, observer);
 
-      if (isEmpty(line) || isComment(line)) {
-        continue;
-      }
-
-      if (isHeading(line)) {
-        finalizeSection();
-
-        currentHeading = parseHeading(line);
-        if (!currentHeading) {
-          errors.push({
-            severity: 'error',
-            message: `Invalid heading format: "${line.trim()}"`,
-            line: currentLineNumber,
-            column: 1,
-            code: 'INVALID_HEADING_FORMAT',
-          });
-          continue;
-        }
-
-        currentSection = this.identifySection(currentHeading);
-
-        // Strict validation for node headings
-        if (currentSection === 'node') {
-          if (!currentHeading.attributes.name) {
-            errors.push({
-              severity: 'error',
-              message: 'Node heading must have "name=" attribute',
-              line: currentLineNumber,
-              column: 1,
-              code: 'MISSING_NODE_NAME',
-            });
-          }
-          // Nodes must have one of: type= (new nodes), index= (instanced scene child mods), or instance= (PackedScene instantiation)
-          if (!currentHeading.attributes.type && !currentHeading.attributes.index && !currentHeading.attributes.instance) {
-            errors.push({
-              severity: 'error',
-              message: 'Node heading must have "type=", "index=", or "instance=" attribute',
-              line: currentLineNumber,
-              column: 1,
-              code: 'MISSING_NODE_IDENTIFIER',
-            });
-          }
-
-          // Set currentNodeType for type-specific validation (only if type exists)
-          if (currentHeading.attributes.type) {
-            currentNodeType = currentHeading.attributes.type;
-          } else {
-            // For index= or instance= nodes, skip type-specific validation (type may be unknown)
-            currentNodeType = undefined;
-          }
-        } else if (currentSection === 'sub_resource') {
-          // Set currentResourceType for type-specific validation of SubResources
-          if (currentHeading.attributes.type) {
-            currentResourceType = currentHeading.attributes.type;
-          } else {
-            currentResourceType = undefined;
-          }
-        }
-      } else {
-        // Parse property
-        const property = parseProperty(line);
-        if (!property) {
-          errors.push({
-            severity: 'error',
-            message: `Invalid property format: "${line.trim()}"`,
-            line: currentLineNumber,
-            column: 1,
-            code: 'INVALID_PROPERTY_FORMAT',
-          });
-          continue;
-        }
-
-        // Handle multi-line property values — both unterminated strings (shader
-        // code, label text) and bracketed arrays/dicts that span lines
-        // (PackedArrays, SpriteFrames `animations = [{ … }]`). Uses the SAME
-        // `isIncompleteValue` test as the lenient parser so both agree on where
-        // a value ends — including strings with escaped quotes and nested
-        // brackets.
-        if (isIncompleteValue(property.value)) {
-          let fullValue = property.value;
-
-          // Keep appending lines until quotes AND brackets balance. If the value
-          // runs into a new section heading, salvage what we have and leave the
-          // heading for the outer loop to process — without this guard the
-          // heading (and the following section) get swallowed (matches
-          // TscnParserCore's behavior).
-          while (i + 1 < lines.length) {
-            if (isHeading(lines[i + 1]!)) break;
-            i++;
-            currentLineNumber = i + 1;
-            fullValue += '\n' + lines[i]!;
-            if (!isIncompleteValue(fullValue)) {
-              break; // value complete
-            }
-          }
-
-          // Update property value with full multi-line content
-          property.value = fullValue;
-        }
-
-        // Validate property value using registry (skip validation for multi-line strings like shader code)
-        const isMultiLineString = property.value.includes('\n');
-        if (!isMultiLineString) {
-          // Validate node properties
-          if (currentSection === 'node' && currentNodeType) {
-            const validator = validatorRegistry.findValidator(currentNodeType, property.key);
-            if (validator) {
-              const error = validator(property.key, property.value, currentLineNumber);
-              if (error) {
-                errors.push(error);
-              }
-            }
-          }
-          // Validate SubResource properties
-          if (currentSection === 'sub_resource' && currentResourceType) {
-            const validator = validatorRegistry.findValidator(currentResourceType, property.key);
-            if (validator) {
-              const error = validator(property.key, property.value, currentLineNumber);
-              if (error) {
-                errors.push(error);
-              }
-            }
-          }
-        }
-
-        if (currentHeading) {
-          currentProperties[property.key] = property.value;
-        }
-      }
-    }
-
-    finalizeSection();
-
-    // If errors found, return them without building scene tree
+    // If errors found, return them without the scene
     if (errors.length > 0) {
       return { errors };
     }
 
-    // Build scene tree and return
-    const sceneTree = buildSceneTree(nodes);
-
-    return {
-      errors: [],
-      scene: {
-        nodes: sceneTree,
-        externalResources,
-        internalResources,
-      },
-    };
-  }
-
-  private identifySection(heading: ReturnType<typeof parseHeading>): SectionType {
-    if (!heading) return 'none';
-
-    if (heading.type === 'node') return 'node';
-    if (heading.type === 'ext_resource') return 'ext_resource';
-    if (heading.type === 'sub_resource') return 'sub_resource';
-
-    return 'none';
+    return { errors: [], scene };
   }
 }

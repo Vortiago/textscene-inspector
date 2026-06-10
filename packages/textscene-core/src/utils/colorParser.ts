@@ -2,6 +2,13 @@
  * Parses Godot Color format to three.js hex color.
  */
 
+import { FLOAT_PATTERN_SOURCE } from '../parser/vectors';
+
+const F = FLOAT_PATTERN_SOURCE;
+const COLOR_RE = new RegExp(
+  String.raw`^Color\s*\(\s*(${F})\s*,\s*(${F})\s*,\s*(${F})\s*,\s*(${F})\s*\)$`
+);
+
 export interface Color {
   r: number;
   g: number;
@@ -20,8 +27,7 @@ export function parseColor(value: string | undefined): Color {
     return { r: 1, g: 1, b: 1, a: 1 };
   }
 
-  // Updated regex to support negative numbers and decimals
-  const match = value.match(/^Color\s*\(\s*([-\d.]+)\s*,\s*([-\d.]+)\s*,\s*([-\d.]+)\s*,\s*([-\d.]+)\s*\)$/);
+  const match = value.match(COLOR_RE);
 
   if (!match || !match[1] || !match[2] || !match[3] || !match[4]) {
     // Return white as fallback instead of throwing

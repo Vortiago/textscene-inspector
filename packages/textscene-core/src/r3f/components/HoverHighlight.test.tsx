@@ -5,7 +5,7 @@
  * `THREE.BoxHelper` attached to the canvas scene. Before WI-UX-10,
  * `hoveredNodePath` was a dead state slot — `TreeNode.tsx` populated
  * it on mouseenter/mouseleave but no viewport component consumed it
- * (Gap 9 in docs/UX-FLOW-GAPS.md). Now `<HoverHighlight>` mirrors
+ * (Gap 9 in docs/archive/UX-FLOW-GAPS.md). Now `<HoverHighlight>` mirrors
  * `<SelectionHighlight>`'s pattern with an orange (`0xff8800`) helper
  * to match main's `HelperManager.showHoverEffect`.
  *

@@ -11,7 +11,7 @@ import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../../r3f/nodeTransform';
 import { parseColorToHex } from '../../../../utils/colorParser';
 import { LIGHT_INTENSITY_SCALE, DEFAULT_SHADOW_BIAS } from '../../../../utils/lightConstants';
-import { PointLightGizmo } from '../lightHelpers';
+import { PointLightGizmo } from '../shared/lightHelpers';
 
 export function OmniLight3D({ node }: NodeComponentProps) {
   const properties = node.properties as OmniLight3DProperties;

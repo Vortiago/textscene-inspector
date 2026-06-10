@@ -1,0 +1,106 @@
+/* 2D viewport (ADR-0007): a pannable/zoomable stage that frames the live
+   ControlOverlay as a fixed-size canvas, distinct from the flat 3D viewport. */
+.canvasStage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background-color: var(--tsi-bg-canvas);
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 32px 32px;
+  cursor: grab;
+  touch-action: none;
+}
+
+.canvasStage:active {
+  cursor: grabbing;
+}
+
+.canvasFrame {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+  background: var(--tsi-bg-elevated);
+  box-shadow: 0 0 0 1px var(--tsi-border-strong), 0 24px 60px rgba(0, 0, 0, 0.5);
+}
+
+.canvasDim {
+  position: absolute;
+  top: -22px;
+  left: 0;
+  font-family: var(--tsi-font-mono);
+  font-size: var(--tsi-font-xs);
+  color: var(--tsi-fg-faint);
+  white-space: nowrap;
+}
+
+.canvas2dHint {
+  position: absolute;
+  top: var(--tsi-space-3);
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: none;
+  font-size: var(--tsi-font-sm);
+  color: var(--tsi-fg-muted);
+  background: var(--tsi-bg-elevated);
+  border: 1px solid var(--tsi-border);
+  border-radius: 999px;
+  padding: var(--tsi-space-1) var(--tsi-space-3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.zoomHud {
+  position: absolute;
+  bottom: var(--tsi-space-3);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: var(--tsi-space-1);
+  background: var(--tsi-bg-elevated);
+  border: 1px solid var(--tsi-border);
+  border-radius: 999px;
+  padding: 3px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+}
+
+.zoomHud button {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--tsi-fg-muted);
+  cursor: pointer;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  font-size: var(--tsi-font-md);
+  line-height: 1;
+}
+
+.zoomHud button:hover {
+  background: var(--tsi-bg-hover);
+  color: var(--tsi-fg-default);
+}
+
+.zoomVal {
+  min-width: 46px;
+  text-align: center;
+  font-family: var(--tsi-font-mono);
+  font-size: var(--tsi-font-sm);
+  color: var(--tsi-fg-default);
+}
+
+.zoomFit {
+  width: auto !important;
+  padding: 0 var(--tsi-space-2);
+  border-radius: var(--tsi-radius-sm) !important;
+}
+
+.loading {
+  padding: var(--tsi-space-4);
+  text-align: center;
+  color: var(--tsi-fg-muted);
+  font-style: italic;
+}

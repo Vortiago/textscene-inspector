@@ -5,7 +5,7 @@
  * blocks; the canvas + 320px sidebar always rendered side-by-side, so
  * at phone/tablet widths the sidebar squeezed the canvas to an unusable
  * sliver. Main shipped a CSS-only radio-tab pattern at ≤767px (see
- * `docs/MAIN-VS-MIGRATION-DELTA.md` item 13). We ship a simpler
+ * `docs/archive/MAIN-VS-MIGRATION-DELTA.md` item 13). We ship a simpler
  * vertical-stack pattern at ≤768px instead.
  *
  * jsdom / happy-dom does not compute styles inside `@media` queries

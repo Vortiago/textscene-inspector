@@ -5,7 +5,7 @@
  *
  * Mirrors the pre-migration `updateResourceFilesList()` from
  * `apps/textscene-web/src/main.ts` (see
- * `docs/MAIN-FEATURE-INVENTORY.md` "Missing-files-list" section).
+ * `docs/archive/MAIN-FEATURE-INVENTORY.md` "Missing-files-list" section).
  *
  * The component is host-agnostic: it only knows about paths. The host
  * supplies `onUpload(path, file)` and `onRemove(path)` callbacks, which

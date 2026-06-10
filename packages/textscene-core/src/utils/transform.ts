@@ -1,8 +1,7 @@
 /**
- * Transform utilities for decomposing Transform3D matrices.
+ * Transform utilities for parsing and decomposing Transform3D matrices.
  */
 
-import * as THREE from 'three';
 import type { Transform3D, DecomposedTransform } from '../nodes/base/node3d/types';
 import { warn } from '../logger';
 
@@ -45,42 +44,143 @@ export function parseTransform3D(transformString: string): Transform3D {
 /**
  * Decompose Transform3D matrix into position, rotation, and scale.
  *
- * Godot stores the basis column-major: `basis_x`, `basis_y`, `basis_z` are
- * the three columns of the 3×3 rotation+scale matrix. We pack those into a
- * THREE.Matrix4 (whose `.set()` argument order is row-major, matching
- * Godot's row-vector storage) and let THREE's well-tested `decompose()`
- * do the work. The resulting THREE.Euler is XYZ order, matching
- * `THREE.Object3D.rotation` defaults so values can be applied directly
- * to `<group rotation={...}>`.
+ * Dependency-free replication of three.js r184's decomposition path
+ * (`Matrix4.decompose` → `Quaternion.setFromRotationMatrix` →
+ * `Euler.setFromQuaternion(q, 'XYZ')`), op-for-op in the same evaluation
+ * order so results are bit-identical to the previous three.js-backed
+ * implementation — pinned by `transform.threeEquivalence.test.ts`. This
+ * keeps the parser layer free of any `three` value-import (guarded by
+ * reactFree.test.ts and the vscode app's webExtensionSafe.test.ts).
+ *
+ * The Euler order is XYZ, matching `THREE.Object3D.rotation` defaults so
+ * values can be applied directly to `<group rotation={...}>`. Reflections
+ * (negative determinant) fold the sign into `scale.x`, three.js convention.
  *
  * Convention: Godot stores Basis as `Vector3 rows[3]`. The parsed
  * `basis_x`, `basis_y`, `basis_z` ARE the three rows of the 3×3 matrix
  * (NOT columns — earlier code mistakenly transposed by treating them
  * as columns, see commit history around b4ccaab / WI-R3F-10 regression
- * and 401f8f5 fix that documented the row interpretation).
+ * and 401f8f5 fix that documented the row interpretation). Columns —
+ * what per-axis scale is measured along — are therefore
+ * `(basis_x.c, basis_y.c, basis_z.c)`.
  */
 export function decomposeTransform3D(
   transform: Transform3D
 ): DecomposedTransform {
   const { basis_x, basis_y, basis_z, origin } = transform;
-  const m = new THREE.Matrix4().set(
-    basis_x.x, basis_x.y, basis_x.z, origin.x,
-    basis_y.x, basis_y.y, basis_y.z, origin.y,
-    basis_z.x, basis_z.y, basis_z.z, origin.z,
-    0, 0, 0, 1
-  );
 
-  const pos = new THREE.Vector3();
-  const quat = new THREE.Quaternion();
-  const sc = new THREE.Vector3();
-  m.decompose(pos, quat, sc);
+  const position = { x: origin.x, y: origin.y, z: origin.z };
 
-  const euler = new THREE.Euler().setFromQuaternion(quat, 'XYZ');
+  // Basis determinant, cofactor expansion along the first row.
+  const det =
+    basis_x.x * (basis_y.y * basis_z.z - basis_y.z * basis_z.y) -
+    basis_x.y * (basis_y.x * basis_z.z - basis_y.z * basis_z.x) +
+    basis_x.z * (basis_y.x * basis_z.y - basis_y.y * basis_z.x);
+
+  // Degenerate basis: identity rotation and unit scale (three.js behavior).
+  let sx = 1;
+  let sy = 1;
+  let sz = 1;
+  let qx = 0;
+  let qy = 0;
+  let qz = 0;
+  let qw = 1;
+
+  if (det !== 0) {
+    // Per-axis scale = column lengths.
+    sx = Math.sqrt(
+      basis_x.x * basis_x.x + basis_y.x * basis_y.x + basis_z.x * basis_z.x
+    );
+    sy = Math.sqrt(
+      basis_x.y * basis_x.y + basis_y.y * basis_y.y + basis_z.y * basis_z.y
+    );
+    sz = Math.sqrt(
+      basis_x.z * basis_x.z + basis_y.z * basis_y.z + basis_z.z * basis_z.z
+    );
+    if (det < 0) sx = -sx;
+
+    // Normalize columns to a pure rotation matrix (m_rc = row r, column c).
+    const invSX = 1 / sx;
+    const invSY = 1 / sy;
+    const invSZ = 1 / sz;
+    const m11 = basis_x.x * invSX;
+    const m12 = basis_x.y * invSY;
+    const m13 = basis_x.z * invSZ;
+    const m21 = basis_y.x * invSX;
+    const m22 = basis_y.y * invSY;
+    const m23 = basis_y.z * invSZ;
+    const m31 = basis_z.x * invSX;
+    const m32 = basis_z.y * invSY;
+    const m33 = basis_z.z * invSZ;
+
+    // Rotation matrix → quaternion (trace branching, Shepperd's method).
+    const trace = m11 + m22 + m33;
+    if (trace > 0) {
+      const s = 0.5 / Math.sqrt(trace + 1.0);
+      qw = 0.25 / s;
+      qx = (m32 - m23) * s;
+      qy = (m13 - m31) * s;
+      qz = (m21 - m12) * s;
+    } else if (m11 > m22 && m11 > m33) {
+      const s = 2.0 * Math.sqrt(1.0 + m11 - m22 - m33);
+      qw = (m32 - m23) / s;
+      qx = 0.25 * s;
+      qy = (m12 + m21) / s;
+      qz = (m13 + m31) / s;
+    } else if (m22 > m33) {
+      const s = 2.0 * Math.sqrt(1.0 + m22 - m11 - m33);
+      qw = (m13 - m31) / s;
+      qx = (m12 + m21) / s;
+      qy = 0.25 * s;
+      qz = (m23 + m32) / s;
+    } else {
+      const s = 2.0 * Math.sqrt(1.0 + m33 - m11 - m22);
+      qw = (m21 - m12) / s;
+      qx = (m13 + m31) / s;
+      qy = (m23 + m32) / s;
+      qz = 0.25 * s;
+    }
+  }
+
+  // Quaternion → unit rotation matrix (re-orthogonalized — this round-trip
+  // is what makes gimbal handling stable for float32-serialized bases).
+  const x2 = qx + qx;
+  const y2 = qy + qy;
+  const z2 = qz + qz;
+  const xx = qx * x2;
+  const xy = qx * y2;
+  const xz = qx * z2;
+  const yy = qy * y2;
+  const yz = qy * z2;
+  const zz = qz * z2;
+  const wx = qw * x2;
+  const wy = qw * y2;
+  const wz = qw * z2;
+
+  const e11 = 1 - (yy + zz);
+  const e12 = xy - wz;
+  const e13 = xz + wy;
+  const e22 = 1 - (xx + zz);
+  const e23 = yz - wx;
+  const e32 = yz + wx;
+  const e33 = 1 - (xx + yy);
+
+  // Euler extraction, XYZ order, with the gimbal-lock singularity branch.
+  const ry = Math.asin(Math.max(-1, Math.min(1, e13)));
+  let rx: number;
+  let rz: number;
+  if (Math.abs(e13) < 0.9999999) {
+    rx = Math.atan2(-e23, e33);
+    rz = Math.atan2(-e12, e11);
+  } else {
+    rx = Math.atan2(e32, e22);
+    rz = 0;
+  }
 
   return {
-    position: { x: pos.x, y: pos.y, z: pos.z },
-    rotation: { x: euler.x, y: euler.y, z: euler.z },
-    scale: { x: sc.x, y: sc.y, z: sc.z },
+    position,
+    rotation: { x: rx, y: ry, z: rz },
+    scale: { x: sx, y: sy, z: sz },
   };
 }
 

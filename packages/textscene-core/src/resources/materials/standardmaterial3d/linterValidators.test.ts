@@ -236,12 +236,11 @@ describe('StandardMaterial3D Linter Validators', () => {
       expect(result!.severity).toBe('error');
     });
 
-    it('should reject Vector3 with scientific notation (not supported)', () => {
+    it('should accept Vector3 with scientific notation (Godot emits exponents)', () => {
       const validator = validatorRegistry.findValidator('StandardMaterial3D', 'uv1_scale');
       const result = validator!('uv1_scale', 'Vector3(1e-5, 2e3, 1)', 1);
 
-      expect(result).not.toBeNull();
-      expect(result!.severity).toBe('error');
+      expect(result).toBeNull();
     });
 
     it('should reject Vector3 with missing opening parenthesis', () => {

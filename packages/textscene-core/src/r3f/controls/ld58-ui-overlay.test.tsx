@@ -35,7 +35,7 @@ const UI_SCENES = [
   'Scenes/StartScreen/StartScreen.tscn',
 ];
 
-/** Mirror TscnPreviewShell.parseContent → the node tree ViewportArea feeds the overlay. */
+/** Mirror hooks/useParsedScene parseTscnContent → the node tree ViewportArea feeds the overlay. */
 function loadRootScene(rel: string) {
   const content = readFileSync(join(LD58, rel), 'utf8');
   const tscn = new TscnParser().parse(content);

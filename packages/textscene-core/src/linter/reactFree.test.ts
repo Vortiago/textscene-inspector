@@ -6,21 +6,16 @@
  * asserts:
  *
  *   - `linter/index.ts` reaches no `.tsx` and value-imports no react/three.
- *   - `parser/TscnParser.ts` reaches no `.tsx` render component.
+ *   - `parser/TscnParser.ts` reaches no `.tsx` and value-imports no react/three.
  *
  * So a future contributor who imports `./Component` from `index.ts` /
  * `index.linter.ts` (or points a barrel at `index.r3f.js`) gets a red test,
  * not a silently bloated linter bundle.
  *
- * NOTE: the lenient parser is intentionally NOT asserted three-free. It
- * value-imports `three` through `utils/transform.ts`, which uses
- * `THREE.Matrix4`/`Euler` to decompose a Transform3D at parse time (gimbal-safe
- * extraction — see the comments there). That coupling is acceptable: the parser
- * is only ever consumed alongside the renderer, which bundles three regardless,
- * and the linter (which must stay three-free) uses its own strict parser, not
- * this one. Moving transform decomposition to render time to make the parser
- * pure-data is a tracked deepening candidate, out of scope for the slice
- * unification.
+ * The lenient parser earned its three-free assertion when transform
+ * decomposition moved to pure math (`utils/transform.ts`, bit-equivalence
+ * pinned by transform.threeEquivalence.test.ts). The parser layer is
+ * pure-data end to end; `three` enters only through the r3f layer.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -108,13 +103,8 @@ describe('React-free boundary (ADR-0001)', () => {
     expect(tsxFiles(closure)).toEqual([]);
   });
 
-  it('lenient parser barrel value-imports no react/react-three', () => {
-    // The parser legitimately reaches `three` via transform decomposition
-    // (see file header), but must never pull in react or react-three-fiber.
+  it('lenient parser barrel value-imports no react/three', () => {
     const closure = walkClosure(resolve(srcRoot, 'parser/TscnParser.ts'));
-    const reactish = [...closure.bareValueImports].filter((s) =>
-      /^react$|^react-dom(\/.*)?$|^@react-three\//.test(s)
-    );
-    expect(reactish).toEqual([]);
+    expect(forbiddenBare(closure)).toEqual([]);
   });
 });

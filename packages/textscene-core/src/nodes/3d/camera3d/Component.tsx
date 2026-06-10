@@ -14,7 +14,7 @@ import { KeepAspectMode, ProjectionMode } from './types';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
-import { useGizmoVisible } from '../lights/lightHelpers';
+import { useGizmoVisible } from '../lights/shared/lightHelpers';
 import { usePrimitiveHelper } from '../../../r3f/hooks/useTHREEHelper';
 
 const DEFAULT_ASPECT = 16 / 9;
