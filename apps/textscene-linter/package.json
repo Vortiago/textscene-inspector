@@ -1,16 +1,10 @@
 {
   "name": "@textscene/linter",
-  "version": "0.1.0",
+  "version": "0.9.0",
   "description": "CLI linter for .tscn files",
   "type": "module",
   "bin": {
     "tscn-lint": "./bin/tscn-lint.js"
-  },
-  "exports": {
-    ".": {
-      "import": "./dist/cli.js",
-      "types": "./dist/cli.d.ts"
-    }
   },
   "files": [
     "dist",
@@ -20,6 +14,8 @@
     "build": "esbuild src/cli.ts --bundle --platform=node --format=esm --outfile=dist/cli.js --external:commander",
     "dev": "esbuild src/cli.ts --bundle --platform=node --format=esm --outfile=dist/cli.js --external:commander --watch",
     "clean": "rimraf dist",
+    "test": "vitest run",
+    "test:watch": "vitest --watch",
     "pretype-check": "pnpm --filter @textscene/core build",
     "type-check": "tsc --noEmit"
   },
@@ -31,14 +27,27 @@
   ],
   "author": "Vortiago",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Vortiago/Text-Scene-.tscn-File-Previewer.git",
+    "directory": "apps/textscene-linter"
+  },
+  "homepage": "https://github.com/Vortiago/Text-Scene-.tscn-File-Previewer#readme",
+  "bugs": {
+    "url": "https://github.com/Vortiago/Text-Scene-.tscn-File-Previewer/issues"
+  },
+  "engines": {
+    "node": ">=20"
+  },
   "dependencies": {
-    "@textscene/core": "workspace:*",
     "commander": "catalog:"
   },
   "devDependencies": {
+    "@textscene/core": "workspace:*",
     "@types/node": "catalog:",
     "esbuild": "catalog:",
     "rimraf": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }
