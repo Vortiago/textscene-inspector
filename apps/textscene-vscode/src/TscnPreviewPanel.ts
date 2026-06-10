@@ -4,26 +4,29 @@
 
 import * as vscode from 'vscode';
 import { generateWebviewHtml, generateNonce } from './webview/webviewHtml';
-import type { MissingResource } from '@textscene/core';
+import type { MissingResource } from '@textscene/core/parser';
+import type { HostToWebviewMessage, WebviewToHostMessage } from './protocol';
 import { VSCodeResourceProvider } from './providers/VSCodeResourceProvider';
 import * as logger from './logger';
 
 // Test observability hooks (only active when running in test context)
 // Check for mocha test functions in global scope
+// `typeof process` guard: the web extension host (vscode.dev) runs in a
+// web worker where `process` does not exist.
 const IS_TEST_MODE =
-  typeof (global as { it?: unknown }).it === 'function' ||
-  typeof (global as { describe?: unknown }).describe === 'function' ||
-  typeof (global as { suite?: unknown }).suite === 'function' ||
-  process.env.VSCODE_TEST_RUNNER === 'true';
+  typeof (globalThis as { it?: unknown }).it === 'function' ||
+  typeof (globalThis as { describe?: unknown }).describe === 'function' ||
+  typeof (globalThis as { suite?: unknown }).suite === 'function' ||
+  (typeof process !== 'undefined' && process.env.VSCODE_TEST_RUNNER === 'true');
 
 if (IS_TEST_MODE) {
   // Global registry of active panels for testing
-  (global as { _testActivePanels?: Map<string, TscnPreviewPanel> })._testActivePanels =
-    (global as { _testActivePanels?: Map<string, TscnPreviewPanel> })._testActivePanels || new Map();
+  (globalThis as { _testActivePanels?: Map<string, TscnPreviewPanel> })._testActivePanels =
+    (globalThis as { _testActivePanels?: Map<string, TscnPreviewPanel> })._testActivePanels || new Map();
 
   // Global event emitter for panel creation
-  (global as { _testPanelCreated?: vscode.EventEmitter<TscnPreviewPanel> })._testPanelCreated =
-    (global as { _testPanelCreated?: vscode.EventEmitter<TscnPreviewPanel> })._testPanelCreated ||
+  (globalThis as { _testPanelCreated?: vscode.EventEmitter<TscnPreviewPanel> })._testPanelCreated =
+    (globalThis as { _testPanelCreated?: vscode.EventEmitter<TscnPreviewPanel> })._testPanelCreated ||
     new vscode.EventEmitter<TscnPreviewPanel>();
 }
 
@@ -53,7 +56,7 @@ export class TscnPreviewPanel {
   private _pendingLoadContent: string | undefined;
 
   // Test observability: message history
-  private _messageHistory: Array<{ type: string; [key: string]: unknown }> = [];
+  private _messageHistory: HostToWebviewMessage[] = [];
 
   public static create(extensionUri: vscode.Uri, resource: vscode.Uri): TscnPreviewPanel {
     const column = vscode.window.activeTextEditor
@@ -76,12 +79,12 @@ export class TscnPreviewPanel {
 
     // Test observability: register panel and emit creation event
     if (IS_TEST_MODE) {
-      const registry = (global as { _testActivePanels?: Map<string, TscnPreviewPanel> })._testActivePanels;
+      const registry = (globalThis as { _testActivePanels?: Map<string, TscnPreviewPanel> })._testActivePanels;
       if (registry) {
         registry.set(resource.fsPath, instance);
       }
 
-      const emitter = (global as { _testPanelCreated?: vscode.EventEmitter<TscnPreviewPanel> })._testPanelCreated;
+      const emitter = (globalThis as { _testPanelCreated?: vscode.EventEmitter<TscnPreviewPanel> })._testPanelCreated;
       if (emitter) {
         emitter.fire(instance);
       }
@@ -108,7 +111,7 @@ export class TscnPreviewPanel {
     this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
 
     this._panel.webview.onDidReceiveMessage(
-      (message) => {
+      (message: WebviewToHostMessage) => {
         switch (message.type) {
           case 'webviewReady':
             this._webviewReady = true;
@@ -156,7 +159,7 @@ export class TscnPreviewPanel {
 
     // Test observability: remove from registry
     if (IS_TEST_MODE) {
-      const registry = (global as { _testActivePanels?: Map<string, TscnPreviewPanel> })._testActivePanels;
+      const registry = (globalThis as { _testActivePanels?: Map<string, TscnPreviewPanel> })._testActivePanels;
       if (registry) {
         registry.delete(this._currentResource.fsPath);
       }
@@ -315,7 +318,7 @@ export class TscnPreviewPanel {
   /**
    * Post a message to the webview with test observability.
    */
-  private _postMessageToWebview(message: { type: string; [key: string]: unknown }): void {
+  private _postMessageToWebview(message: HostToWebviewMessage): void {
     // Record message in test mode
     if (IS_TEST_MODE) {
       this._messageHistory.push(message);
@@ -328,7 +331,7 @@ export class TscnPreviewPanel {
    * Test hook: Get all messages sent to the webview.
    * Only available in test mode.
    */
-  public _testGetMessages(): Array<{ type: string; [key: string]: unknown }> {
+  public _testGetMessages(): HostToWebviewMessage[] {
     if (!IS_TEST_MODE) {
       throw new Error('Test hooks not available outside test mode');
     }
@@ -338,6 +341,9 @@ export class TscnPreviewPanel {
   /**
    * Test hook: Simulate a message from the webview.
    * Only available in test mode.
+   *
+   * Accepts a loose record (not `WebviewToHostMessage`) so integration
+   * tests can send partial and unknown message shapes.
    */
   public _testTriggerMessage(message: { type: string; [key: string]: unknown }): void {
     if (!IS_TEST_MODE) {

@@ -4,8 +4,9 @@
  */
 
 import * as vscode from 'vscode';
-import { isBinaryResourceType, stripResPrefix, info, error } from '@textscene/core';
-import type { ResourceProvider } from '@textscene/core';
+import { isBinaryResourceType, stripResPrefix } from '@textscene/core/resources/resourceProviderUtils';
+import { info, error } from '@textscene/core/logger';
+import type { ResourceProvider } from '@textscene/core/resources/ResourceProvider';
 
 export class VSCodeResourceProvider implements ResourceProvider {
   private projectRoot: vscode.Uri | null = null;

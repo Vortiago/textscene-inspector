@@ -2,8 +2,13 @@
   "name": "textscene-inspector",
   "displayName": "TextScene Inspector",
   "description": "Inspect and view text-based 3D scene files (.tscn) in VS Code with 3D rendering",
-  "version": "0.0.1",
+  "version": "0.9.0",
   "publisher": "vortiago",
+  "icon": "icon.png",
+  "galleryBanner": {
+    "color": "#1e1e2e",
+    "theme": "dark"
+  },
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -12,9 +17,10 @@
     "Other"
   ],
   "activationEvents": [
-    "onCommand:textscene.openPreviewToSide"
+    "onLanguage:tscn"
   ],
   "main": "./dist/extension.js",
+  "browser": "./dist/extension.web.js",
   "contributes": {
     "languages": [
       {
@@ -23,8 +29,7 @@
           ".tscn"
         ],
         "aliases": [
-          "TSCN",
-          "Text Scene"
+          "TSCN"
         ],
         "configuration": "./language-configuration.json"
       }
@@ -65,11 +70,12 @@
     "pretest:integration": "pnpm build && tsc -p tsconfig.test.json",
     "test:integration": "node ./out/test/integration/runTests.js",
     "test:integration:debug": "node --inspect-brk ./out/test/integration/runTests.js",
+    "test:web": "vscode-test-web --browserType=chromium --headless --extensionDevelopmentPath=. .test-workspace-web",
     "pretype-check": "pnpm --filter @textscene/core build",
     "type-check": "tsc --noEmit",
     "package": "npx @vscode/vsce package --no-dependencies",
     "publish": "npx @vscode/vsce publish --no-dependencies",
-    "clean": "rimraf dist out .test-workspace"
+    "clean": "rimraf dist out .test-workspace .vscode-test-web"
   },
   "keywords": [
     "tscn",
@@ -84,7 +90,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/vortiago/tscn-file-previewer"
+    "url": "https://github.com/Vortiago/Text-Scene-.tscn-File-Previewer.git",
+    "directory": "apps/textscene-vscode"
+  },
+  "homepage": "https://github.com/Vortiago/Text-Scene-.tscn-File-Previewer#readme",
+  "bugs": {
+    "url": "https://github.com/Vortiago/Text-Scene-.tscn-File-Previewer/issues"
   },
   "dependencies": {
     "@textscene/core": "workspace:*",
@@ -98,6 +109,7 @@
     "@types/react-dom": "catalog:",
     "@types/vscode": "^1.85.0",
     "@vscode/test-electron": "^2.5.2",
+    "@vscode/test-web": "^0.0.80",
     "@vscode/vsce": "^3.2.1",
     "esbuild": "catalog:",
     "esbuild-css-modules-plugin": "^3.1.5",

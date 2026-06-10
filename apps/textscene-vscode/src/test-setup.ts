@@ -143,9 +143,29 @@ const mockWorkspace: any = {
   getWorkspaceFolder: vi.fn(),
 
   /**
+   * Currently open text documents
+   */
+  textDocuments: [],
+
+  /**
    * On did save text document event
    */
-  onDidSaveTextDocument: vi.fn(),
+  onDidSaveTextDocument: vi.fn(() => ({ dispose: vi.fn() })),
+
+  /**
+   * On did open text document event
+   */
+  onDidOpenTextDocument: vi.fn(() => ({ dispose: vi.fn() })),
+
+  /**
+   * On did change text document event
+   */
+  onDidChangeTextDocument: vi.fn(() => ({ dispose: vi.fn() })),
+
+  /**
+   * On did close text document event
+   */
+  onDidCloseTextDocument: vi.fn(() => ({ dispose: vi.fn() })),
 
   /**
    * Create file system watcher
@@ -300,11 +320,61 @@ export class MockLocation {
 }
 
 /**
+ * Mock vscode.Diagnostic class
+ */
+export class MockDiagnostic {
+  code?: string | number;
+  source?: string;
+
+  constructor(
+    public range: any,
+    public message: string,
+    public severity?: number
+  ) {}
+}
+
+/**
+ * Mock vscode.DiagnosticSeverity enum
+ */
+export const MockDiagnosticSeverity = {
+  Error: 0,
+  Warning: 1,
+  Information: 2,
+  Hint: 3
+} as const;
+
+/**
+ * Create a mock vscode.DiagnosticCollection
+ */
+export function createMockDiagnosticCollection(name = 'mock'): {
+  name: string;
+  set: ReturnType<typeof vi.fn>;
+  delete: ReturnType<typeof vi.fn>;
+  clear: ReturnType<typeof vi.fn>;
+  get: ReturnType<typeof vi.fn>;
+  has: ReturnType<typeof vi.fn>;
+  forEach: ReturnType<typeof vi.fn>;
+  dispose: ReturnType<typeof vi.fn>;
+} {
+  return {
+    name,
+    set: vi.fn(),
+    delete: vi.fn(),
+    clear: vi.fn(),
+    get: vi.fn(),
+    has: vi.fn(),
+    forEach: vi.fn(),
+    dispose: vi.fn()
+  };
+}
+
+/**
  * Mock vscode.languages namespace
  */
 const mockLanguages: any = {
   registerDocumentSymbolProvider: vi.fn(),
-  registerDefinitionProvider: vi.fn()
+  registerDefinitionProvider: vi.fn(),
+  createDiagnosticCollection: vi.fn((name: string) => createMockDiagnosticCollection(name))
 };
 
 // ============================================================================
@@ -327,8 +397,10 @@ vi.mock('vscode', () => ({
   EventEmitter: MockEventEmitter,
   DocumentSymbol: MockDocumentSymbol,
   Location: MockLocation,
+  Diagnostic: MockDiagnostic,
 
   // Enums
+  DiagnosticSeverity: MockDiagnosticSeverity,
   ViewColumn: {
     One: 1,
     Two: 2,
@@ -403,6 +475,8 @@ export const vscode: {
   EventEmitter: typeof MockEventEmitter;
   DocumentSymbol: typeof MockDocumentSymbol;
   Location: typeof MockLocation;
+  Diagnostic: typeof MockDiagnostic;
+  DiagnosticSeverity: typeof MockDiagnosticSeverity;
   ViewColumn: { One: number; Two: number; Three: number; Active: number; Beside: number };
   TextEditorRevealType: { Default: number; InCenter: number; InCenterIfOutsideViewport: number; AtTop: number };
   SymbolKind: Record<string, number>;
@@ -418,6 +492,8 @@ export const vscode: {
   EventEmitter: MockEventEmitter,
   DocumentSymbol: MockDocumentSymbol,
   Location: MockLocation,
+  Diagnostic: MockDiagnostic,
+  DiagnosticSeverity: MockDiagnosticSeverity,
   ViewColumn: {
     One: 1,
     Two: 2,

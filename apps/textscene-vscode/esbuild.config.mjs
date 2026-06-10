@@ -8,11 +8,18 @@
  * under VS Code's restrictive content-security policy.
  */
 import * as esbuild from 'esbuild';
+import { rm } from 'node:fs/promises';
 import cssModulesPlugin from 'esbuild-css-modules-plugin';
 
 const production = process.argv.includes('--production');
 const watch = process.argv.includes('--watch');
 const skipTests = process.argv.includes('--skip-tests');
+
+// The webview build emits content-hashed chunks (chunks/[name]-[hash].js).
+// esbuild never deletes outputs from previous builds, so stale chunks
+// accumulate in dist/webview/chunks/ and would get packaged into the VSIX.
+// Clear the webview output dir up front so every build starts clean.
+await rm('dist/webview', { recursive: true, force: true });
 
 /**
  * @type {esbuild.BuildOptions}
@@ -28,6 +35,24 @@ const extensionOptions = {
   sourcemap: !production,
   minify: production,
   logLevel: 'info',
+};
+
+/**
+ * Web extension host build (vscode.dev / VS Code for Web).
+ *
+ * Web extension hosts load a single CommonJS-shaped file in a web
+ * worker, so this mirrors the Node extension build except for
+ * `platform: 'browser'`. That platform switch is also the guard: any
+ * Node-builtin import sneaking into the extension-host graph makes
+ * this build fail loudly instead of breaking silently at runtime.
+ *
+ * @type {esbuild.BuildOptions}
+ */
+const extensionWebOptions = {
+  ...extensionOptions,
+  outfile: 'dist/extension.web.js',
+  platform: 'browser',
+  target: 'es2020',
 };
 
 /**
@@ -96,12 +121,18 @@ const testOptions = {
 
 if (watch) {
   const extensionContext = await esbuild.context(extensionOptions);
+  const extensionWebContext = await esbuild.context(extensionWebOptions);
   const webviewContext = await esbuild.context(webviewOptions);
-  await Promise.all([extensionContext.watch(), webviewContext.watch()]);
+  await Promise.all([
+    extensionContext.watch(),
+    extensionWebContext.watch(),
+    webviewContext.watch(),
+  ]);
   console.log('Watching for changes...');
 } else {
   const builds = [
     esbuild.build(extensionOptions),
+    esbuild.build(extensionWebOptions),
     esbuild.build(webviewOptions),
   ];
 
