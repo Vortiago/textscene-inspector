@@ -226,13 +226,13 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
-    "name": "Audio Stream Player",
-    "file": "unit-audio-stream-player.tscn",
+    "name": "Label3d",
+    "file": "unit-label3d.tscn",
     "category": "Other"
   },
   {
-    "name": "Label3d",
-    "file": "unit-label3d.tscn",
+    "name": "Marker 3d",
+    "file": "unit-marker-3d.tscn",
     "category": "Other"
   },
   {
@@ -274,6 +274,16 @@ export const fixtures: Fixture[] = [
     "name": "World Environment No Fog",
     "file": "unit-world-environment-no-fog.tscn",
     "category": "Other"
+  },
+  {
+    "name": "Audio Stream Player 2d",
+    "file": "unit-audio-stream-player-2d.tscn",
+    "category": "Unit - Audio"
+  },
+  {
+    "name": "Audio Stream Player",
+    "file": "unit-audio-stream-player.tscn",
+    "category": "Unit - Audio"
   },
   {
     "name": "Box Mesh",
@@ -439,6 +449,11 @@ export const fixtures: Fixture[] = [
     "name": "External Texture",
     "file": "unit-external-texture.tscn",
     "category": "Unit - External Resources"
+  },
+  {
+    "name": "Material Ao",
+    "file": "unit-material-ao.tscn",
+    "category": "Unit - Materials"
   },
   {
     "name": "Material Emissive",
