@@ -12,6 +12,7 @@ export default mergeConfig(
     test: {
       name: 'textscene-core',
       environment: 'happy-dom',
+      setupFiles: ['./test-setup.ts'],
     },
   })
 );
