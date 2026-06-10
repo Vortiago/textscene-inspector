@@ -1,10 +1,10 @@
 {
   "name": "textscene-inspector",
   "displayName": "TextScene Inspector",
-  "description": "Inspect and view text-based 3D scene files (.tscn) in VS Code with 3D rendering",
+  "description": "Live 3D preview of Godot .tscn scene files in VS Code — no Godot install required. Renders meshes, PBR materials, lights and cameras via three.js, with a scene-tree inspector and a .tscn linter.",
   "version": "0.9.0",
   "publisher": "vortiago",
-  "icon": "icon.png",
+  "icon": "images/icon.png",
   "galleryBanner": {
     "color": "#1e1e2e",
     "theme": "dark"
@@ -14,6 +14,7 @@
   },
   "categories": [
     "Visualization",
+    "Programming Languages",
     "Other"
   ],
   "activationEvents": [
@@ -78,12 +79,18 @@
     "clean": "rimraf dist out .test-workspace .vscode-test-web"
   },
   "keywords": [
+    "godot",
+    "godot tscn",
     "tscn",
+    "tscn viewer",
+    "tscn preview",
+    "scene preview",
+    "godot scene",
+    "3d preview",
+    "three.js",
     "textscene",
-    "text-scene",
     "inspector",
     "viewer",
-    "3d",
     "visualization"
   ],
   "author": "Vortiago",

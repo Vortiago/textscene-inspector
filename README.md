@@ -1,6 +1,6 @@
 # TextScene Inspector
 
-View and navigate text-based 3D scene (.tscn) files in VS Code. The rendering layer is react-three-fiber over three.js; see [ARCHITECTURE.md](./ARCHITECTURE.md) for the layout.
+Preview **Godot `.tscn` scenes in 3D — inside VS Code or your browser, with no Godot install.** Renders meshes, materials, lights and cameras via react-three-fiber/three.js, plus a scene-tree inspector and a `.tscn` linter. See [ARCHITECTURE.md](./ARCHITECTURE.md) for the layout.
 
 ## Status
 
@@ -9,6 +9,12 @@ View and navigate text-based 3D scene (.tscn) files in VS Code. The rendering la
 Current release: **0.9.0** — on the road to v1.0; see [CHANGELOG.md](./CHANGELOG.md).
 
 ## Features
+
+**Why it's different** (what other `.tscn` tools don't do):
+- 🧊 **Real 3D rendering** of the scene — meshes, PBR materials, lights, cameras, environments, and instanced sub-scenes — not just a node tree
+- 🚫 **No Godot install or editor cache** — renders straight from the `.tscn` text
+- 🌐 **Runs in the browser** via the standalone web previewer
+- ✅ **Built-in `.tscn` linter** for catching malformed scenes
 
 **Implemented:**
 - ✅ TSCN parsing with full scene tree hierarchy (lenient render parser + strict lint parser sharing one scanning loop)

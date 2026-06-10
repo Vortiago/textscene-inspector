@@ -1,11 +1,37 @@
-# TextScene Inspector
+# TextScene Inspector — Godot .tscn preview for VS Code
 
-Preview Godot text scene (`.tscn`) files directly in VS Code — as rendered, interactive 3D and 2D scenes, not just text. Works in desktop VS Code and in VS Code for the Web (vscode.dev).
+**See your Godot `.tscn` scenes in 3D without opening the Godot editor.**
+Renders meshes, PBR materials, lights, cameras, environments and instanced
+scenes directly from the text file using three.js — then lets you click,
+orbit, and inspect every node. Works in desktop VS Code and in VS Code for
+the Web (vscode.dev).
+
+## Why it's different
+
+- 🧊 **A real 3D viewport**, not a node tree. The official godot-tools
+  "Scene Preview" is a tree view; this draws the scene.
+- 🚫 **No Godot install, no editor cache.** It renders straight from the
+  `.tscn` text — unlike thumbnail extensions that depend on Godot's cache.
+- 🔎 **Inspect as you go:** scene-tree viewer, node property panel,
+  click-to-select in the viewport, jump-to-definition, hot-reload on save.
+- ✅ **Built-in `.tscn` linter** to catch malformed scenes.
+
+## What it is *not*
+
+A drop-in replacement for the Godot editor. Rendering is a faithful
+*approximation* of Godot's renderer (custom shaders and some advanced
+material/lighting features may differ). Use it for fast inspection and
+review, not pixel-exact validation.
+
+## Usage
+
+1. Open a folder containing `.tscn` files (a Godot project root works best, so `res://` paths resolve).
+2. Open a `.tscn` file.
+3. Run **TextScene: Open Preview to the Side** from the Command Palette, or click the preview icon in the editor title bar.
 
 ## Features
 
 ### Interactive scene preview
-- Run **TextScene: Open Preview to the Side** (or click the preview button in the editor title bar of any `.tscn` file) to render the scene in a side panel.
 - Orbit, pan, and zoom the viewport; the camera position survives edits and reloads.
 - Scene-tree and inspector panels beside the viewport: click an object in the 3D view to select it in the tree, inspect its parsed properties, and double-click a node to jump to its line in the source.
 - 2D/3D viewport toggle for scenes containing Control or Node2D content (UI overlays, sprites).
@@ -18,12 +44,6 @@ Preview Godot text scene (`.tscn`) files directly in VS Code — as rendered, in
 
 ### Resource resolution
 `res://` paths resolve from the workspace root, so project-relative textures, materials, GLB meshes, and instanced sub-scenes (`PackedScene`) load the way they do in Godot.
-
-## Usage
-
-1. Open a folder containing `.tscn` files (a Godot project root works best, so `res://` paths resolve).
-2. Open a `.tscn` file.
-3. Run **TextScene: Open Preview to the Side** from the Command Palette, or click the preview icon in the editor title bar.
 
 ## Supported nodes
 
