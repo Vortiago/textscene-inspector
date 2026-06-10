@@ -75,3 +75,5 @@ nul
 # Test debug artifacts (verifier screenshots — not check in to repo)
 test-*.png
 tscn-rescue-*.png
+# Visual-regression failure artifacts (actual/diff PNGs)
+scripts/visual/output/

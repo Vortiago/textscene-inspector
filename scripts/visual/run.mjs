@@ -1,0 +1,252 @@
+#!/usr/bin/env node
+/**
+ * Visual-regression harness: renders each golden scene in headless chromium
+ * (SwiftShader — deterministic CPU rasterizer) and compares the canvas
+ * screenshot against a committed baseline with pixelmatch.
+ *
+ *   pnpm test:visual                 compare all scenes against baselines
+ *   pnpm test:visual:update          rewrite baselines (eyeball + commit!)
+ *   node scripts/visual/run.mjs --scene label3d [--update]
+ *
+ * Determinism contract (why this does not flake):
+ *   - Playwright's BUNDLED chromium (pinned by the lockfile), never the
+ *     system Chrome — local and CI render the same bits.
+ *   - SwiftShader software GL: no GPU/driver variance.
+ *   - Fixed viewport, deviceScaleFactor 1, fresh browser context.
+ *   - Canvas-element screenshot only — shell DOM/font rendering never
+ *     enters the image.
+ *   - Stabilization gate: a scene must produce two byte-identical
+ *     consecutive captures before it is compared or accepted as a
+ *     baseline. A scene that never settles FAILS as unstable; flakiness
+ *     is rejected here, not absorbed by tolerance.
+ *
+ * On failure, <name>.actual.png and <name>.diff.png land in
+ * scripts/visual/output/ (gitignored; uploaded as a CI artifact).
+ */
+
+import { spawn, spawnSync } from 'node:child_process';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { chromium } from 'playwright';
+import { PNG } from 'pngjs';
+import pixelmatch from 'pixelmatch';
+import { DEFAULT_MAX_DIFF_PCT, GOLDEN_SCENES } from './scenes.mjs';
+
+const here = dirname(fileURLToPath(import.meta.url));
+const REPO_ROOT = join(here, '../..');
+const BASELINE_DIR = join(here, 'baselines');
+const OUTPUT_DIR = join(here, 'output');
+const WEB_DIST_INDEX = join(REPO_ROOT, 'apps/textscene-web/dist/index.html');
+
+// Dedicated uncommon port: never collides with a manually running
+// `pnpm preview` (4173) or the showcase pipeline (4188).
+const PORT = 4317;
+const VIEWPORT = { width: 1280, height: 800 };
+
+const SETTLE_INITIAL_MS = 1200; // covers the last CameraFit reframe at 1100 ms
+const SETTLE_INTERVAL_MS = 350;
+const SETTLE_MAX_ATTEMPTS = 12;
+
+function parseArgs(argv) {
+  const opts = { update: false, scene: null };
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a === '--update') opts.update = true;
+    else if (a === '--scene') opts.scene = argv[++i];
+    else {
+      console.error(`[visual] unknown argument: ${a}`);
+      process.exit(2);
+    }
+  }
+  return opts;
+}
+
+function ensureWebBuilt() {
+  if (existsSync(WEB_DIST_INDEX)) return;
+  console.log('[visual] web previewer dist missing — building…');
+  const r = spawnSync('pnpm', ['--filter', '@textscene/web-previewer', 'build'], {
+    cwd: REPO_ROOT,
+    shell: true,
+    stdio: 'inherit',
+  });
+  if (r.status !== 0) {
+    console.error('[visual] web previewer build failed');
+    process.exit(1);
+  }
+}
+
+function startPreview() {
+  const proc = spawn(
+    'pnpm',
+    ['--filter', '@textscene/web-previewer', 'preview', '--port', String(PORT), '--strictPort'],
+    { cwd: REPO_ROOT, shell: true, stdio: 'ignore' }
+  );
+  return { proc, baseUrl: `http://localhost:${PORT}` };
+}
+
+async function waitForServer(url, timeoutMs = 40000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    try {
+      const res = await fetch(url, { method: 'GET' });
+      if (res.ok) return;
+    } catch {
+      /* not up yet */
+    }
+    await new Promise((r) => setTimeout(r, 500));
+  }
+  throw new Error(`preview server at ${url} not ready in ${timeoutMs}ms`);
+}
+
+/**
+ * Navigate to a scene and capture the canvas once it is provably settled:
+ * two consecutive byte-identical screenshots. Returns the PNG buffer, or
+ * null with a reason when the scene never stabilizes.
+ */
+async function captureScene(page, baseUrl, scene) {
+  await page.goto(`${baseUrl}/?fixture=${encodeURIComponent(scene.file)}`, {
+    waitUntil: 'load',
+  });
+  const canvases = page.locator('canvas');
+  await canvases.first().waitFor({ timeout: 30000 });
+  const count = await canvases.count();
+  if (count !== 1) {
+    return { buffer: null, reason: `expected exactly 1 canvas, found ${count}` };
+  }
+  const canvas = canvases.first();
+
+  await page.waitForTimeout(SETTLE_INITIAL_MS);
+  let prev = await canvas.screenshot();
+  for (let attempt = 0; attempt < SETTLE_MAX_ATTEMPTS; attempt++) {
+    await page.waitForTimeout(SETTLE_INTERVAL_MS);
+    const cur = await canvas.screenshot();
+    if (cur.equals(prev)) {
+      return { buffer: cur, reason: null };
+    }
+    prev = cur;
+  }
+  return {
+    buffer: null,
+    reason: `never settled: ${SETTLE_MAX_ATTEMPTS} captures over ${
+      SETTLE_MAX_ATTEMPTS * SETTLE_INTERVAL_MS
+    }ms all differed`,
+  };
+}
+
+function compareToBaseline(scene, actualBuffer) {
+  const baselinePath = join(BASELINE_DIR, `${scene.name}.png`);
+  if (!existsSync(baselinePath)) {
+    return { status: 'missing-baseline', detail: `no baseline — run pnpm test:visual:update` };
+  }
+  const expected = PNG.sync.read(readFileSync(baselinePath));
+  const actual = PNG.sync.read(actualBuffer);
+  if (expected.width !== actual.width || expected.height !== actual.height) {
+    return {
+      status: 'fail',
+      detail: `size mismatch: baseline ${expected.width}x${expected.height}, actual ${actual.width}x${actual.height}`,
+      actual,
+    };
+  }
+  const { width, height } = expected;
+  const diff = new PNG({ width, height });
+  const diffPixels = pixelmatch(expected.data, actual.data, diff.data, width, height, {
+    threshold: 0.1,
+  });
+  const diffPct = (diffPixels / (width * height)) * 100;
+  const maxDiffPct = scene.maxDiffPct ?? DEFAULT_MAX_DIFF_PCT;
+  if (diffPct > maxDiffPct) {
+    return {
+      status: 'fail',
+      detail: `${diffPixels} px differ (${diffPct.toFixed(3)}% > ${maxDiffPct}%)`,
+      actual,
+      diff,
+    };
+  }
+  return { status: 'pass', detail: `${diffPixels} px differ (${diffPct.toFixed(3)}%)` };
+}
+
+function writeFailureArtifacts(scene, actualBuffer, result) {
+  mkdirSync(OUTPUT_DIR, { recursive: true });
+  writeFileSync(join(OUTPUT_DIR, `${scene.name}.actual.png`), actualBuffer);
+  if (result.diff) {
+    writeFileSync(join(OUTPUT_DIR, `${scene.name}.diff.png`), PNG.sync.write(result.diff));
+  }
+}
+
+async function main() {
+  const opts = parseArgs(process.argv.slice(2));
+  let scenes = GOLDEN_SCENES;
+  if (opts.scene) {
+    scenes = GOLDEN_SCENES.filter((s) => s.name === opts.scene);
+    if (scenes.length === 0) {
+      console.error(
+        `[visual] unknown scene "${opts.scene}". Known: ${GOLDEN_SCENES.map((s) => s.name).join(', ')}`
+      );
+      process.exit(2);
+    }
+  }
+
+  ensureWebBuilt();
+  const { proc, baseUrl } = startPreview();
+  let browser;
+  const results = [];
+  try {
+    await waitForServer(`${baseUrl}/`);
+    console.log(`[visual] preview at ${baseUrl}`);
+
+    browser = await chromium.launch({
+      headless: true,
+      args: ['--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--use-gl=angle'],
+    });
+    const context = await browser.newContext({
+      viewport: VIEWPORT,
+      deviceScaleFactor: 1,
+    });
+    const page = await context.newPage();
+
+    for (const scene of scenes) {
+      const { buffer, reason } = await captureScene(page, baseUrl, scene);
+      if (!buffer) {
+        results.push({ scene, status: 'unstable', detail: reason });
+        continue;
+      }
+      if (opts.update) {
+        mkdirSync(BASELINE_DIR, { recursive: true });
+        writeFileSync(join(BASELINE_DIR, `${scene.name}.png`), buffer);
+        results.push({ scene, status: 'updated', detail: `${buffer.length} bytes` });
+        continue;
+      }
+      const result = compareToBaseline(scene, buffer);
+      if (result.status === 'fail') writeFailureArtifacts(scene, buffer, result);
+      results.push({ scene, status: result.status, detail: result.detail });
+    }
+  } finally {
+    await browser?.close();
+    proc.kill();
+  }
+
+  console.log('\n=== visual regression summary ===');
+  const pad = Math.max(...results.map((r) => r.scene.name.length));
+  let failed = 0;
+  for (const r of results) {
+    const ok = r.status === 'pass' || r.status === 'updated';
+    if (!ok) failed++;
+    const mark = ok ? '✓' : '✗';
+    console.log(`  ${mark} ${r.scene.name.padEnd(pad)}  ${r.status.toUpperCase()}  ${r.detail}`);
+  }
+  if (opts.update) {
+    console.log(
+      `\n[visual] baselines written to scripts/visual/baselines/ — eyeball them, then commit.`
+    );
+  }
+  if (failed > 0) {
+    console.error(
+      `\n[visual] ${failed}/${results.length} scene(s) failed. Diffs in scripts/visual/output/.`
+    );
+    process.exit(1);
+  }
+  console.log(`\n[visual] PASS: ${results.length}/${results.length} scenes.`);
+}
+
+await main();

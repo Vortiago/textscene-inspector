@@ -24,6 +24,8 @@
     "check:bundle-size": "node scripts/check-bundle-size.mjs",
     "generate:fixtures": "node scripts/generate-fixtures.js",
     "new:node": "node scripts/new-node-slice.mjs",
+    "test:visual": "node scripts/visual/run.mjs",
+    "test:visual:update": "node scripts/visual/run.mjs --update",
     "showcase:regen": "pnpm --filter @textscene/web-previewer build && node scripts/showcase/regenerate.mjs",
     "clean": "pnpm -r clean && rimraf node_modules",
     "vsc:package": "pnpm --filter textscene-inspector package",
@@ -63,7 +65,9 @@
     "happy-dom": "^20.0.8",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.6",
+    "pixelmatch": "^7.2.0",
     "playwright": "^1.60.0",
+    "pngjs": "^7.0.0",
     "rimraf": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
