@@ -3,16 +3,15 @@
  * static textured quad (no playback in V1). Resolves `sprite_frames`
  * (SubResource SpriteFrames) → its `animations` map → the texture for
  * `animation`/`frame`, then draws it like a Sprite2D (centered/offset/flip,
- * inherited modulate). ExtResource (.tres) SpriteFrames aren't resolved yet →
- * placeholder.
+ * inherited modulate via CanvasItem2D). ExtResource (.tres) SpriteFrames
+ * aren't resolved yet → placeholder.
  */
 
 import { useMemo } from 'react';
 import * as THREE from 'three';
 import type { TscnInternalResource } from '../../../parser/types';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
-import { node2dGroupProps, node2dGroupSpread, canvasItemZ } from '../../../r3f/node2dTransform';
-import { Modulate2DContext, useCanvasItemTint } from '../../../r3f/canvasItemModulate';
+import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
 import { findSubResource, useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { parseResourceReference, resolveExtResourcePath } from '../../../resources/SubResourceResolver';
 import { useResource } from '../../../resources/useResource';
@@ -24,12 +23,6 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
   const props = node.properties as AnimatedSprite2DProperties;
   const { internalResources, externalResources } = useSceneResources();
 
-  const transform = useMemo(
-    () => node2dGroupSpread(node2dGroupProps(props, canvasItemZ(props))),
-    [props]
-  );
-  const { inherited, color, opacity } = useCanvasItemTint(props);
-
   const frameRef = useMemo(
     () => resolveFrameTextureRef(props, internalResources),
     [props, internalResources]
@@ -40,7 +33,6 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
   );
   const texResult = useResource<THREE.Texture>(texturePath ?? '', 'Texture2D');
 
-  const visible = props.visible !== false;
   const showPlaceholder = !texturePath || texResult.status === 'unavailable';
 
   const tex = texResult.value;
@@ -52,24 +44,29 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
   const meshScale: [number, number, number] = [props.flip_h ? -1 : 1, props.flip_v ? -1 : 1, 1];
 
   return (
-    <group name={node.name} {...transform} visible={visible}>
-      {showPlaceholder ? (
-        <MissingResourcePlaceholder shape="plane" name={node.name} />
-      ) : tex ? (
-        <mesh position={[cgx, -cgy, 0]} scale={meshScale}>
-          <planeGeometry args={[width, height]} />
-          <meshBasicMaterial
-            map={tex}
-            color={color}
-            opacity={opacity}
-            transparent
-            depthWrite={false}
-            side={THREE.DoubleSide}
-          />
-        </mesh>
-      ) : null}
-      <Modulate2DContext.Provider value={inherited}>{children}</Modulate2DContext.Provider>
-    </group>
+    <CanvasItem2D
+      node={node}
+      props={props}
+      body={({ color, opacity }) =>
+        showPlaceholder ? (
+          <MissingResourcePlaceholder shape="plane" name={node.name} />
+        ) : tex ? (
+          <mesh position={[cgx, -cgy, 0]} scale={meshScale}>
+            <planeGeometry args={[width, height]} />
+            <meshBasicMaterial
+              map={tex}
+              color={color}
+              opacity={opacity}
+              transparent
+              depthWrite={false}
+              side={THREE.DoubleSide}
+            />
+          </mesh>
+        ) : null
+      }
+    >
+      {children}
+    </CanvasItem2D>
   );
 }
 
@@ -92,4 +89,3 @@ function resolveFrameTextureRef(
   const frames = map.get(animName) ?? [];
   return frames[props.frame] ?? frames[0] ?? null;
 }
-

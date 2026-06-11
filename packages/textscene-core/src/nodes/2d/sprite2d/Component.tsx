@@ -1,6 +1,6 @@
 /**
- * <Sprite2D> — a textured quad in 2D space. A Node2D (so it carries the 2D
- * transform via node2dGroupProps) whose body is a `planeGeometry` sized to the
+ * <Sprite2D> — a textured quad in 2D space. A CanvasItem2D (which carries the
+ * 2D transform + modulate ritual) whose body is a `planeGeometry` sized to the
  * texture's pixel dimensions (1 px = 1 world unit). Inside the conjugated
  * (diag(1,-1,1)) Node2D group, a Godot-local point p is placed at three-local
  * (p.x, -p.y), so the quad centre is computed in Godot 2D space (+Y down) then
@@ -21,8 +21,7 @@
 import { useMemo } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
-import { node2dGroupProps, node2dGroupSpread, canvasItemZ } from '../../../r3f/node2dTransform';
-import { Modulate2DContext, useCanvasItemTint } from '../../../r3f/canvasItemModulate';
+import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
 import { composeFrameTexture, frameSizePx } from '../../../r3f/spriteFrame';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { resolveExtResourcePath } from '../../../resources/SubResourceResolver';
@@ -33,11 +32,6 @@ import type { Sprite2DProperties } from './types';
 export function Sprite2D({ node, children }: NodeComponentProps) {
   const props = node.properties as Sprite2DProperties;
   const { externalResources } = useSceneResources();
-
-  const transform = useMemo(
-    () => node2dGroupSpread(node2dGroupProps(props, canvasItemZ(props))),
-    [props]
-  );
 
   const texturePath = useMemo(
     () => resolveExtResourcePath(props.texture, externalResources),
@@ -55,30 +49,30 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
     [texResult.value, props]
   );
 
-  // Inherited modulate (propagates to children) + own-pixel tint (× self_modulate).
-  const { inherited, color, opacity } = useCanvasItemTint(props);
-
-  const visible = props.visible !== false;
-
   // Placeholder when no texture is referenced or it failed to load.
   const showPlaceholder = !texturePath || texResult.status === 'unavailable';
 
   return (
-    <group name={node.name} {...transform} visible={visible}>
-      {showPlaceholder ? (
-        <MissingResourcePlaceholder shape="plane" name={node.name} />
-      ) : displayedTexture ? (
-        <QuadMesh
-          texture={displayedTexture}
-          color={color}
-          opacity={opacity}
-          width={width}
-          height={height}
-          props={props}
-        />
-      ) : null}
-      <Modulate2DContext.Provider value={inherited}>{children}</Modulate2DContext.Provider>
-    </group>
+    <CanvasItem2D
+      node={node}
+      props={props}
+      body={({ color, opacity }) =>
+        showPlaceholder ? (
+          <MissingResourcePlaceholder shape="plane" name={node.name} />
+        ) : displayedTexture ? (
+          <QuadMesh
+            texture={displayedTexture}
+            color={color}
+            opacity={opacity}
+            width={width}
+            height={height}
+            props={props}
+          />
+        ) : null
+      }
+    >
+      {children}
+    </CanvasItem2D>
   );
 }
 
