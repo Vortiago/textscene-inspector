@@ -13,6 +13,27 @@ vi.mock('../../controls/index.js', () => ({
   ),
 }));
 
+// The 2D-world R3F canvas needs WebGL — stub it, recording the pan/zoom it
+// receives so the transform-sync contract is assertable in jsdom.
+vi.mock('./World2DCanvas', () => ({
+  World2DCanvas: ({
+    pan,
+    zoom,
+    nodes,
+  }: {
+    pan: { x: number; y: number };
+    zoom: number;
+    nodes: readonly unknown[];
+  }) => (
+    <div
+      data-testid="world-canvas-stub"
+      data-pan={`${pan.x},${pan.y}`}
+      data-zoom={zoom}
+      data-node-count={nodes.length}
+    />
+  ),
+}));
+
 import { Canvas2DStage } from './Canvas2DStage';
 import type { TscnNode } from '../../../parser/types';
 
@@ -48,6 +69,16 @@ describe('<Canvas2DStage>', () => {
     renderStage([makeNode('A'), makeNode('B')]);
     const overlay = await screen.findByTestId('overlay-stub');
     expect(overlay.getAttribute('data-node-count')).toBe('2');
+  });
+
+  it('mounts the 2D world canvas with the stage pan/zoom kept in sync', () => {
+    renderStage([makeNode('A')]);
+    const world = screen.getByTestId('world-canvas-stub');
+    expect(world.getAttribute('data-node-count')).toBe('1');
+    expect(world.getAttribute('data-zoom')).toBe('1');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }));
+    expect(screen.getByTestId('world-canvas-stub').getAttribute('data-zoom')).toBe('1.2');
   });
 
   it('zooms in and out around the centre via the HUD buttons', () => {

@@ -77,3 +77,4 @@ test-*.png
 tscn-rescue-*.png
 # Visual-regression failure artifacts (actual/diff PNGs)
 scripts/visual/output/
+scripts/e2e-screenshots/

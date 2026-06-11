@@ -1,9 +1,13 @@
 /**
- * The 2D viewport (ADR-0007): a pannable/zoomable stage that frames the live
- * `<ControlOverlay>` as a fixed-size canvas — bounds, zoom %, scroll-to-zoom,
- * drag-to-pan — so 2D scenes read as a flat canvas editor, not a 3D viewport
- * showing flat content. The overlay still does the real Control layout; this
- * only adds the canvas chrome around it.
+ * The 2D viewport (ADR-0007 + ADR-0006 Godot-parity amendment): a pannable/
+ * zoomable stage compositing — like Godot's 2D editor — the whole CanvasItem
+ * world in one view:
+ *   1. the canvas frame (Godot's project-viewport rectangle),
+ *   2. the `<World2DCanvas>` (transparent ortho R3F layer: sprites, tilemaps,
+ *      Node2D trees), camera glued to the stage pan/zoom,
+ *   3. the `<ControlOverlay>` (DOM Control layout) on top.
+ * The overlay still does the real Control layout; the stage owns the chrome
+ * (bounds, zoom %, scroll-to-zoom, drag-to-pan).
  */
 import {
   lazy,
@@ -19,6 +23,7 @@ import type {
   TscnExternalResource,
   TscnInternalResource,
 } from '../../../parser/types.js';
+import { World2DCanvas } from './World2DCanvas.js';
 import styles from './Canvas2DStage.module.css';
 
 // The 2D-UI overlay (ADR-0003) is lazy-loaded — keeping the 15 Control
@@ -172,6 +177,26 @@ export function Canvas2DStage({
         <span className={styles.canvasDim} aria-hidden>
           {CANVAS_2D_WIDTH} × {CANVAS_2D_HEIGHT}
         </span>
+      </div>
+
+      {/* The CanvasItem world (sprites/tilemaps), drawn over the frame
+          surface and under the Control overlay — Godot's 2D editor order. */}
+      <World2DCanvas
+        nodes={nodes}
+        internalResources={internalResources}
+        externalResources={externalResources}
+        pan={pan}
+        zoom={zoom}
+      />
+
+      <div
+        className={styles.overlayFrame}
+        style={{
+          width: CANVAS_2D_WIDTH,
+          height: CANVAS_2D_HEIGHT,
+          transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+        }}
+      >
         <Suspense
           fallback={
             <div className={styles.loading} aria-busy="true">

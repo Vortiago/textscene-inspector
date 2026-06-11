@@ -26,6 +26,7 @@ import { Splitter } from '../Splitter/Splitter.js';
 import { ViewportArea } from './ViewportArea.js';
 import { CamerasPanel } from './CamerasPanel.js';
 import { SceneChangeResetter } from './SceneChangeResetter.js';
+import { WorkspaceAutoSelect } from './WorkspaceAutoSelect.js';
 import { SceneStats, SceneNodeCount } from './SceneStats.js';
 import { MasterDetailHandle, CollapsedDock } from './DockChrome.js';
 import styles from './TscnPreviewShell.module.css';
@@ -136,6 +137,7 @@ export function TscnPreviewShell({
         <CameraControlProvider>
           <MissingResourcesProvider>
             <ViewportModeProvider>
+              <WorkspaceAutoSelect sceneGraph={sceneGraph} />
               <SceneChangeResetter sceneGraph={sceneGraph} />
               <div className={styles.shell} data-panel-id={panelId}>
                 <header className={styles.topBar}>

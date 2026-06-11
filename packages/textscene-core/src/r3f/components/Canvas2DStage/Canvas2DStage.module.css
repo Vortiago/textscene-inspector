@@ -26,6 +26,15 @@
   box-shadow: 0 0 0 1px var(--tsi-border-strong), 0 24px 60px rgba(0, 0, 0, 0.5);
 }
 
+/* The Control overlay's frame: same transform as .canvasFrame but transparent
+   and above the 2D world canvas (UI over world, Godot's 2D editor order). */
+.overlayFrame {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+}
+
 .canvasDim {
   position: absolute;
   top: -22px;

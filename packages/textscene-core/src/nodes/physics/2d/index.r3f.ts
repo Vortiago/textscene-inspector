@@ -10,5 +10,5 @@ import { Node2D } from '../../base/node2d/Component';
 import { TWO_D_PHYSICS_TYPES } from './index';
 
 for (const typeName of TWO_D_PHYSICS_TYPES) {
-  nodeComponentRegistry.register({ typeName, Component: Node2D });
+  nodeComponentRegistry.register({ typeName, Component: Node2D, canvasItem: true });
 }
