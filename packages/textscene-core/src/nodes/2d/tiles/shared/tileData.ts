@@ -9,6 +9,8 @@
  * uint16 alternative_tile.
  */
 
+import { warn } from '../../../../logger';
+
 export interface Vec2i {
   x: number;
   y: number;
@@ -27,16 +29,28 @@ export interface PlacedCell {
 }
 
 const CELL_BYTES = 12;
+const HEADER_BYTES = 2;
+const FORMAT_VERSION = 0;
 
 export function decodeTileMapData(value: string): PlacedCell[] | null {
   const m = value.match(/^PackedByteArray\((.*)\)$/s);
   if (!m) return null;
 
-  const bytes = new Uint8Array(m[1]!.split(',').map((s) => parseInt(s.trim(), 10)));
+  const bytes = decodeBytes(m[1]!.trim());
+  if (!bytes) return null;
+  if (bytes.length < HEADER_BYTES || (bytes.length - HEADER_BYTES) % CELL_BYTES !== 0) {
+    warn(`[TileMapLayer] tile_map_data truncated (${bytes.length} bytes) — ignoring tile data`);
+    return null;
+  }
   const view = new DataView(bytes.buffer);
+  const version = view.getUint16(0, true);
+  if (version !== FORMAT_VERSION) {
+    warn(`[TileMapLayer] unknown tile_map_data format version ${version} — ignoring tile data`);
+    return null;
+  }
 
   const cells: PlacedCell[] = [];
-  for (let offset = 2; offset + CELL_BYTES <= bytes.length; offset += CELL_BYTES) {
+  for (let offset = HEADER_BYTES; offset + CELL_BYTES <= bytes.length; offset += CELL_BYTES) {
     cells.push({
       coords: { x: view.getInt16(offset, true), y: view.getInt16(offset + 2, true) },
       sourceId: view.getUint16(offset + 4, true),
@@ -45,4 +59,23 @@ export function decodeTileMapData(value: string): PlacedCell[] | null {
     });
   }
   return cells;
+}
+
+/** Godot ≤4.2 writes comma-separated ints; 4.3+ writes a base64 string. */
+function decodeBytes(body: string): Uint8Array | null {
+  const base64 = /^"([^"]*)"$/.exec(body);
+  if (base64) {
+    try {
+      return Uint8Array.from(atob(base64[1]!), (c) => c.charCodeAt(0));
+    } catch {
+      warn(`[TileMapLayer] tile_map_data is not valid base64 — ignoring tile data`);
+      return null;
+    }
+  }
+  const ints = body.split(',').map((s) => parseInt(s.trim(), 10));
+  if (ints.some(Number.isNaN)) {
+    warn(`[TileMapLayer] tile_map_data has non-numeric bytes — ignoring tile data`);
+    return null;
+  }
+  return new Uint8Array(ints);
 }

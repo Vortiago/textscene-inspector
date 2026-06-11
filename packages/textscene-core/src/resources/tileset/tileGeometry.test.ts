@@ -51,4 +51,20 @@ describe('buildTileGeometryArrays', () => {
     ]);
     expect(Array.from(indices)).toEqual([2, 3, 0, 3, 1, 0]);
   });
+
+  it('windows UVs through margins, separation, and atlas coordinates', () => {
+    const spaced: AtlasSourceModel = {
+      ...source,
+      margins: { x: 4, y: 6 },
+      separation: { x: 2, y: 3 },
+    };
+    // regionPx = (4 + 2·18, 6 + 1·19, 16, 16) = (40, 25, 16, 16) of a 64×64 texture.
+    const { uvs } = buildTileGeometryArrays([cell(0, 0, 2, 1)], spaced, grid, 64, 64);
+    expect(Array.from(uvs)).toEqual([
+      0.625, 0.609375, // TL
+      0.875, 0.609375, // TR
+      0.625, 0.359375, // BL
+      0.875, 0.359375, // BR
+    ]);
+  });
 });
