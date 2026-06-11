@@ -33,6 +33,59 @@ import { fileURLToPath } from 'node:url';
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const CORE_SRC = join(REPO_ROOT, 'packages/textscene-core/src');
 
+const NODE3D_PARSER_TEST_CASES = (typeName) => `  it('parses name, parent, and transform (happy path)', () => {
+    const result = parse${typeName}(
+      heading({ name: 'My${typeName}', type: '${typeName}', parent: '.' }),
+      { transform: 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 3, 4)' }
+    );
+    expect(result.name).toBe('My${typeName}');
+    expect(result.parent).toBe('.');
+    expect(result.transform?.origin).toEqual({ x: 2, y: 3, z: 4 });
+  });
+
+  it('falls back to identity transform on a malformed transform (error path)', () => {
+    const result = parse${typeName}(
+      heading({ name: 'Bad', type: '${typeName}' }),
+      { transform: 'Transform3D(not, valid)' }
+    );
+    expect(result.transform?.basis_x).toEqual({ x: 1, y: 0, z: 0 });
+    expect(result.transform?.origin).toEqual({ x: 0, y: 0, z: 0 });
+  });
+
+  it('handles missing optional attributes (edge case)', () => {
+    const result = parse${typeName}(heading({}), {});
+    expect(result.name).toBe('');
+    expect(result.parent).toBeUndefined();
+    expect(result.transform).toBeUndefined();
+  });`;
+
+const NODE2D_PARSER_TEST_CASES = (typeName) => `  it('parses name, parent, and the 2D transform (happy path)', () => {
+    const result = parse${typeName}(
+      heading({ name: 'My${typeName}', type: '${typeName}', parent: '.' }),
+      { position: 'Vector2(10, 20)', rotation: '0.5' }
+    );
+    expect(result.name).toBe('My${typeName}');
+    expect(result.parent).toBe('.');
+    expect(result.position).toEqual({ x: 10, y: 20 });
+    expect(result.rotation).toBeCloseTo(0.5, 5);
+  });
+
+  it('falls back to the identity transform on a malformed transform (error path)', () => {
+    const result = parse${typeName}(
+      heading({ name: 'Bad', type: '${typeName}' }),
+      { transform: 'Transform2D(not, valid)' }
+    );
+    expect(result.position).toEqual({ x: 0, y: 0 });
+    expect(result.scale).toEqual({ x: 1, y: 1 });
+  });
+
+  it('handles missing optional attributes (edge case)', () => {
+    const result = parse${typeName}(heading({}), {});
+    expect(result.name).toBe('');
+    expect(result.parent).toBeUndefined();
+    expect(result.position).toEqual({ x: 0, y: 0 });
+  });`;
+
 const BASES = {
   node3d: {
     dir: 'base/node3d',
@@ -40,6 +93,9 @@ const BASES = {
     component: 'Node3D',
     propsType: 'Node3DProperties',
     transformValidator: "transform: v.transform3d('transform'),",
+    parserTestCases: NODE3D_PARSER_TEST_CASES,
+    linterTransformValue: 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)',
+    linterBadTransformValue: 'Transform3D(nope)',
   },
   node2d: {
     dir: 'base/node2d',
@@ -48,6 +104,9 @@ const BASES = {
     propsType: 'Node2DProperties',
     transformValidator:
       "transform: v.transform2d('transform'),\n  position: v.vector2('position'),",
+    parserTestCases: NODE2D_PARSER_TEST_CASES,
+    linterTransformValue: 'Transform2D(1, 0, 0, 1, 0, 0)',
+    linterBadTransformValue: 'Transform2D(nope)',
   },
   node: {
     dir: 'node',
@@ -55,6 +114,9 @@ const BASES = {
     component: 'Node',
     propsType: 'NodeProperties',
     transformValidator: "transform: v.transform3d('transform'),",
+    parserTestCases: NODE3D_PARSER_TEST_CASES,
+    linterTransformValue: 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)',
+    linterBadTransformValue: 'Transform3D(nope)',
   },
 };
 
@@ -239,31 +301,7 @@ function heading(attributes: Record<string, string>): ParsedHeading {
 }
 
 describe('parse${typeName}', () => {
-  it('parses name, parent, and transform (happy path)', () => {
-    const result = parse${typeName}(
-      heading({ name: 'My${typeName}', type: '${typeName}', parent: '.' }),
-      { transform: 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 3, 4)' }
-    );
-    expect(result.name).toBe('My${typeName}');
-    expect(result.parent).toBe('.');
-    expect(result.transform?.origin).toEqual({ x: 2, y: 3, z: 4 });
-  });
-
-  it('falls back to identity transform on a malformed transform (error path)', () => {
-    const result = parse${typeName}(
-      heading({ name: 'Bad', type: '${typeName}' }),
-      { transform: 'Transform3D(not, valid)' }
-    );
-    expect(result.transform?.basis_x).toEqual({ x: 1, y: 0, z: 0 });
-    expect(result.transform?.origin).toEqual({ x: 0, y: 0, z: 0 });
-  });
-
-  it('handles missing optional attributes (edge case)', () => {
-    const result = parse${typeName}(heading({}), {});
-    expect(result.name).toBe('');
-    expect(result.parent).toBeUndefined();
-    expect(result.transform).toBeUndefined();
-  });
+${base.parserTestCases(typeName)}
 });
 `
     );
@@ -284,13 +322,17 @@ export function ${typeName}({ node, children }: NodeComponentProps) {
       `import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode } from '${toSrc}parser/types';
+import { parse${typeName} } from './parser';
 import { ${typeName} } from './Component';
 
 const baseNode: TscnNode = {
   name: 'My${typeName}',
   type: '${typeName}',
   children: [],
-  properties: {},
+  properties: parse${typeName}(
+    { type: 'node', attributes: { type: '${typeName}', name: 'My${typeName}' } },
+    {}
+  ),
 };
 
 describe('<${typeName}>', () => {
@@ -391,7 +433,7 @@ describe('${typeName} strict validators', () => {
     const content = \`[gd_scene format=3]
 
 [node name="X" type="${typeName}"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+transform = ${base.linterTransformValue}
 \`;
 
     expect(errorsOf(linter.lint(content))).toEqual([]);
@@ -401,7 +443,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
     const content = \`[gd_scene format=3]
 
 [node name="X" type="${typeName}"]
-transform = Transform3D(nope)
+transform = ${base.linterBadTransformValue}
 \`;
 
     const errors = errorsOf(linter.lint(content));

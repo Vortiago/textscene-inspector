@@ -52,6 +52,7 @@ import '../resources/materials/standardmaterial3d/linterValidators.js';
 import '../resources/environment/linterValidators.js';
 import '../resources/meshes/planemesh/linterValidators.js';
 import '../nodes/2d/tiles/tilemaplayer/index.linter.js';
+import '../nodes/2d/tiles/tilemap/index.linter.js';
 
 // Re-export core linter classes
 export { Linter } from './Linter.js';

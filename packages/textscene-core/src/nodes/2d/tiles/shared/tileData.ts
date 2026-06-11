@@ -49,8 +49,39 @@ export function decodeTileMapData(value: string): PlacedCell[] | null {
     return null;
   }
 
+  return decodeCellRecords(view, HEADER_BYTES);
+}
+
+/**
+ * Legacy TileMap `layer_N/tile_data` (PackedInt32Array). The TSCN `format`
+ * property is the 0-indexed TileMapDataFormat enum: 2 = TILE_MAP_DATA_FORMAT_3,
+ * whose int32 triplets reinterpret as exactly the 12-byte record above (no
+ * header). Formats 0/1 are Godot-3-era encodings that require the original
+ * TileSet's compatibility mapping — out of scope, degrade with a warn.
+ */
+export function decodeLegacyTileData(value: string, format: number): PlacedCell[] | null {
+  if (format !== 2) {
+    warn(`[TileMap] tile data format ${format} is a Godot 3 format — ignoring tile data`);
+    return null;
+  }
+  const m = value.match(/^PackedInt32Array\((.*)\)$/s);
+  if (!m) return null;
+
+  const ints = m[1]!.split(',').map((s) => parseInt(s.trim(), 10));
+  if (ints.some(Number.isNaN)) {
+    warn(`[TileMap] tile_data has non-numeric entries — ignoring tile data`);
+    return null;
+  }
+  if (ints.length % 3 !== 0) {
+    warn(`[TileMap] tile_data length ${ints.length} is not a whole number of cells — ignoring tile data`);
+    return null;
+  }
+  return decodeCellRecords(new DataView(new Int32Array(ints).buffer), 0);
+}
+
+function decodeCellRecords(view: DataView, startOffset: number): PlacedCell[] {
   const cells: PlacedCell[] = [];
-  for (let offset = HEADER_BYTES; offset + CELL_BYTES <= bytes.length; offset += CELL_BYTES) {
+  for (let offset = startOffset; offset + CELL_BYTES <= view.byteLength; offset += CELL_BYTES) {
     cells.push({
       coords: { x: view.getInt16(offset, true), y: view.getInt16(offset + 2, true) },
       sourceId: view.getUint16(offset + 4, true),

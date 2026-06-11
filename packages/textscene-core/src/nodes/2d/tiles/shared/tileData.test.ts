@@ -5,7 +5,7 @@
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as logger from '../../../../logger';
-import { decodeTileMapData } from './tileData';
+import { decodeLegacyTileData, decodeTileMapData } from './tileData';
 
 let warnSpy: ReturnType<typeof vi.spyOn>;
 beforeEach(() => {
@@ -54,5 +54,24 @@ describe('decodeTileMapData', () => {
     // Unknown format version in the header (only version 0 exists today).
     expect(decodeTileMapData('PackedByteArray(7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)')).toBeNull();
     expect(warnSpy.mock.calls.length).toBeGreaterThanOrEqual(4);
+  });
+});
+
+describe('decodeLegacyTileData (TileMap layer_N/tile_data, TSCN format = 2)', () => {
+  it('decodes int32 triplets — same 12-byte record as tile_map_data, no header', () => {
+    // Real cells from the 4.2-era isometric dungeon: -917493 packs (x=11, y=-14).
+    expect(decodeLegacyTileData('PackedInt32Array(-917493, 0, 0, 0, 2, 65536)', 2)).toEqual([
+      { coords: { x: 11, y: -14 }, sourceId: 0, atlasCoords: { x: 0, y: 0 }, alternativeId: 0 },
+      { coords: { x: 0, y: 0 }, sourceId: 2, atlasCoords: { x: 0, y: 0 }, alternativeId: 1 },
+    ]);
+  });
+
+  it('returns null and warns on Godot-3-era formats and corrupt data', () => {
+    // formats 0/1 (TILE_MAP_DATA_FORMAT_1/2) need the Godot-3 compat mapping — out of scope.
+    expect(decodeLegacyTileData('PackedInt32Array(0, 0)', 1)).toBeNull();
+    // Not a whole number of triplets.
+    expect(decodeLegacyTileData('PackedInt32Array(0, 0, 0, 1)', 2)).toBeNull();
+    expect(decodeLegacyTileData('PackedInt32Array(0, nope, 0)', 2)).toBeNull();
+    expect(warnSpy.mock.calls.length).toBeGreaterThanOrEqual(3);
   });
 });

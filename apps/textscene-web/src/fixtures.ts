@@ -496,6 +496,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D Canvas"
   },
   {
+    "name": "Tile Map",
+    "file": "unit-tile-map.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
     "name": "Clue Container",
     "file": "ClueContainer.tscn",
     "category": "Examples - ld-58 Scenes"
