@@ -28,7 +28,7 @@ import {
   type ViewportSelectorOption,
 } from '@textscene/core';
 import { fixtures } from './fixtures';
-import { corpusRootFor } from './corpusRoot';
+import { corpusRootFor, fixtureUrlForRes } from './corpusRoot';
 import { WebResourceProvider } from './providers/WebResourceProvider';
 import styles from './r3f-main.module.css';
 
@@ -93,6 +93,10 @@ export function R3FApp() {
   const lastRootRef = useRef(resourceRoot);
   useEffect(() => {
     provider.setResourceRoot(resourceRoot);
+    // Text .gltf files load their external buffers/images through THREE's
+    // LoadingManager with res://-relative URLs — map those onto the public
+    // fixtures mirror (same scheme as the provider's own fetches).
+    loader.eventBus.getThreeManager().setURLModifier((url) => fixtureUrlForRes(url, resourceRoot));
     if (lastRootRef.current !== resourceRoot) {
       lastRootRef.current = resourceRoot;
       // Two corpora can reference the same res:// path (e.g. art/player.png)

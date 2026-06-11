@@ -124,6 +124,31 @@ coincide with tree order, so the preview reads correctly.
   modulate/material overrides: skipped with a warn (`resolveTileSet.ts`).
 - Animated tiles: the base frame's region renders statically.
 
+## Binary Godot resources
+
+### `.scn` / `.res` (binary serialization) are not previewable  *(by design)*
+The previewer parses Godot's TEXT formats only (`.tscn`/`.tres`). Binary
+scenes (`.scn`), binary resources (`.res`, e.g. `ArrayMesh` mesh data), and
+compressed textures (`.ctex`) cannot load. Concrete case: the
+godot-demo-projects 3D platformer's level is a `GridMap` in `grid_map.scn`
+plus `ArrayMesh` floors in `meshes/*.res` — its geometry cannot render.
+
+- **Degradation:** the scene processor rejects binary/non-TSCN content
+  (instead of the lenient parser silently producing an empty scene), so the
+  standard missing-resource UX kicks in — magenta placeholder + panel row.
+  The linter marks every such reference (`binary-resource-reference`,
+  warning).
+- `GridMap` (the 3D tile grid node) is additionally an unimplemented node
+  type — even a text-serialized one would render as a transform-only group.
+
+### Text `.gltf` with external buffers — web host only
+`.glb` (self-contained binary) loads everywhere. A TEXT `.gltf` referencing
+external `.bin` buffers / image files resolves them through THREE's
+LoadingManager against the glTF's own `res://` directory; the WEB host maps
+those URLs onto its fixtures mirror (`setURLModifier` in `r3f-main`). The
+VS Code webview has no such mapping — there the load fails into the
+missing-resource placeholder UX.
+
 ## Lights
 
 ### SpotLight3D.spot_angle_attenuation → penumbra  *(audit #15)*

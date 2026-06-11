@@ -99,6 +99,19 @@ export function createSceneProcessor({
       if (typeof content !== 'string') {
         throw new Error(`TSCN scene must be text content: ${metadata.path}`);
       }
+      // Binary Godot resources (.scn/.res, RSRC magic) and non-TSCN text
+      // (e.g. an HTML 404 fallback) would "parse" into an empty scene with
+      // the lenient parser — the subtree silently vanishes with no
+      // placeholder and no missing-resources row. Fail instead so the
+      // standard missing-resource UX kicks in.
+      if (content.startsWith('RSRC') || metadata.path.endsWith('.scn')) {
+        throw new Error(
+          `Binary Godot scene (.scn) is not previewable — only text scenes (.tscn) load: ${metadata.path}`
+        );
+      }
+      if (!content.trimStart().startsWith('[gd_scene')) {
+        throw new Error(`Not a text scene (missing [gd_scene header): ${metadata.path}`);
+      }
       return parser.parse(content);
     },
   });

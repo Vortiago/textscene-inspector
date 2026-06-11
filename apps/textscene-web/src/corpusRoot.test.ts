@@ -5,7 +5,7 @@
  * from their demos/<top>/<project>/ prefix.
  */
 import { describe, it, expect } from 'vitest';
-import { corpusRootFor } from './corpusRoot';
+import { corpusRootFor, fixtureUrlForRes } from './corpusRoot';
 import type { Fixture } from './fixtures';
 
 const manifest: Fixture[] = [
@@ -39,5 +39,27 @@ describe('corpusRootFor', () => {
     expect(corpusRootFor('dungeon.tscn', manifest)).toBe('');
     expect(corpusRootFor('', manifest)).toBe('');
     expect(corpusRootFor('demos/2d', manifest)).toBe('');
+  });
+});
+
+describe('fixtureUrlForRes', () => {
+  it('maps res:// URLs onto the fixtures mirror under the active root', () => {
+    expect(fixtureUrlForRes('res://art/player.png', 'demos/2d/platformer')).toBe(
+      '/fixtures/demos/2d/platformer/art/player.png'
+    );
+    expect(fixtureUrlForRes('res://tileset/tiles.png', '')).toBe('/fixtures/tileset/tiles.png');
+  });
+
+  it('decodes URI-encoded glTF dependency paths (textures%2Fgrass.webp)', () => {
+    // glTF URIs are percent-encoded per spec; the mirrored files use real
+    // directory separators.
+    expect(fixtureUrlForRes('res://town/textures%2Fgrass_lossy.webp', 'demos/3d/truck_town')).toBe(
+      '/fixtures/demos/3d/truck_town/town/textures/grass_lossy.webp'
+    );
+  });
+
+  it('passes non-res URLs through untouched', () => {
+    expect(fixtureUrlForRes('blob:abc', 'demos/2d/x')).toBe('blob:abc');
+    expect(fixtureUrlForRes('/already/mapped.png', '')).toBe('/already/mapped.png');
   });
 });

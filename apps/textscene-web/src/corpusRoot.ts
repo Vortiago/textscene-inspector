@@ -14,3 +14,23 @@ export function corpusRootFor(file: string, fixtures: readonly Fixture[]): strin
   const demoMatch = /^(demos\/[^/]+\/[^/]+)\//.exec(file);
   return demoMatch ? demoMatch[1]! : '';
 }
+
+/**
+ * Map a res:// URL onto the public fixtures mirror under the active corpus
+ * root — the THREE LoadingManager URL modifier for text-glTF dependencies
+ * (external .bin buffers, image files). glTF URIs arrive percent-encoded
+ * (`textures%2Fgrass.webp`); the mirrored files use real separators, so
+ * decode before mapping. Non-res URLs (blob:, already-mapped paths) pass
+ * through untouched.
+ */
+export function fixtureUrlForRes(url: string, resourceRoot: string): string {
+  if (!url.startsWith('res://')) return url;
+  const prefix = resourceRoot ? `${resourceRoot}/` : '';
+  let rest = url.slice('res://'.length);
+  try {
+    rest = decodeURIComponent(rest);
+  } catch {
+    // Malformed escape — use the raw path.
+  }
+  return `/fixtures/${prefix}${rest}`;
+}

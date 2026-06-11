@@ -12,6 +12,7 @@
 // lint-registered — they are render-only 2D overlay types (ADR-0003) with
 // no validators or semantic rules, so they have no index.linter.ts at all.
 // New Control slices should follow suit unless they gain semantic rules.
+import '../nodes/node/index.linter.js';
 import '../nodes/base/node3d/index.linter.js';
 import '../nodes/base/node2d/index.linter.js';
 import '../nodes/3d/meshinstance3d/index.linter.js';
