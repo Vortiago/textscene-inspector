@@ -115,13 +115,37 @@ describe('ResourceLoader (loader-level gaps)', () => {
       expect(sceneSpy).not.toHaveBeenCalled();
       expect(glbSpy).not.toHaveBeenCalled();
     });
+
+    it('fans an unregistered .tres out to both .tres processors (material + generic resource)', () => {
+      // A raw `res://…tres` reference (e.g. a tile_set path never declared as
+      // ExtResource) must reach the generic resource processor too, or a
+      // late-arrival upload can never resolve the TileSet.
+      const matSpy = vi.spyOn(loader.materials, 'request');
+      const resSpy = vi.spyOn(loader.resources, 'request');
+      const texSpy = vi.spyOn(loader.textures, 'request');
+
+      loader.provideFile('res://tileset/tiles.tres');
+
+      expect(matSpy).toHaveBeenCalledWith('res://tileset/tiles.tres');
+      expect(resSpy).toHaveBeenCalledWith('res://tileset/tiles.tres');
+      expect(texSpy).not.toHaveBeenCalled();
+    });
+
+    it('routes a registered TileSet .tres through the generic resource processor', () => {
+      loader.register({ id: '1_ts', path: 'res://tiles.tres', type: 'TileSet' });
+      const resSpy = vi.spyOn(loader.resources, 'request');
+
+      loader.provideFile('res://tiles.tres');
+
+      expect(resSpy).toHaveBeenCalledWith('res://tiles.tres');
+    });
   });
 
   describe('type-generic surface guards', () => {
-    it('request() with an unrouted type warns and does not throw', () => {
-      // 'resource' is a valid bus tag but has no processor in the table.
-      expect(() => loader.request('resource', 'res://x')).not.toThrow();
-      expect(loader.getCached('resource', 'res://x')).toBeUndefined();
+    it('request() with the resource type routes to the generic .tres processor', () => {
+      const resSpy = vi.spyOn(loader.resources, 'request');
+      expect(() => loader.request('resource', 'res://x.tres')).not.toThrow();
+      expect(resSpy).toHaveBeenCalledWith('res://x.tres');
     });
   });
 });

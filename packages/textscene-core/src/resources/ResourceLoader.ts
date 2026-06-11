@@ -268,6 +268,13 @@ export class ResourceLoader {
 
     if (busType) {
       this.request(busType, path);
+    } else if (path.endsWith('.tres')) {
+      // Unregistered .tres — a raw `res://…tres` reference (e.g. a
+      // `tile_set` path with no ExtResource declaration). Both .tres
+      // processors get the re-request; subscribers listen on their own
+      // bus slot, so only the relevant one is observed.
+      this.materials.request(path);
+      this.resources.request(path);
     } else {
       // Unknown type — try the two MVS processors. Only the one that
       // can process the file's content will produce a non-null result;

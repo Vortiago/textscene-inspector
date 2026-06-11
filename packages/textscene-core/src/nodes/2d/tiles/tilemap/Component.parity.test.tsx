@@ -74,4 +74,17 @@ describe('TileMap render parity', () => {
     expect(r.scene.findAllByType('Mesh')).toHaveLength(0);
     expect(r.scene.findByProps({ name: 'Map' })).toBeDefined();
   });
+
+  it("applies layer_N/modulate to that layer's pixels (composed in sRGB, like the CanvasItem chain)", async () => {
+    const r = await render(
+      makeNode({
+        'layer_0/tile_data': 'PackedInt32Array(0, 0, 0)',
+        'layer_0/modulate': 'Color(0.5, 0.5, 0.5, 0.5)',
+      })
+    );
+    const material = r.scene.findByType('Mesh').instance.material as THREE.MeshBasicMaterial;
+    const srgbToLinear = (c: number) => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
+    expect(material.color.r).toBeCloseTo(srgbToLinear(0.5), 4);
+    expect(material.opacity).toBeCloseTo(0.5, 5);
+  });
 });

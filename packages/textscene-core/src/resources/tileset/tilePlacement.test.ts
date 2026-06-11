@@ -72,9 +72,11 @@ describe('mapToLocalPx — vertical offset axis', () => {
 });
 
 describe('mapToLocalPx — unsupported shapes', () => {
-  it('falls back to square placement with a warn (hexagon)', () => {
+  it('falls back to square placement silently (the resolver warns once per TileSet)', () => {
     const hex: TileGrid = { shape: 3, layout: 0, offsetAxis: 0, tileSize: { x: 128, y: 64 } };
     expect(mapToLocalPx(hex, { x: 1, y: 1 })).toEqual({ x: 192, y: 96 });
-    expect(warnSpy).toHaveBeenCalled();
+    // Called per cell from the geometry builder — a per-cell warn would flood
+    // the console for any real hex/half-offset map.
+    expect(warnSpy).not.toHaveBeenCalled();
   });
 });

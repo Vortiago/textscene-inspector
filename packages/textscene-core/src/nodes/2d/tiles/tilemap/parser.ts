@@ -9,6 +9,7 @@
 import type { ParsedHeading } from '../../../../parser/utils';
 import { parseNode2D } from '../../../base/node2d/parser';
 import { boolOr, intOr } from '../../../../parser/valueParsers';
+import { parseColor } from '../../../../utils/colorParser';
 import { decodeLegacyTileData } from '../shared/tileData';
 import type { TileMapLayerData, TileMapProperties } from './types';
 
@@ -39,12 +40,14 @@ export function parseTileMap(
     .map(([index, props]): TileMapLayerData => {
       // `layer_0/name = "Ground"` — the raw value keeps its quotes.
       const rawName = props.name?.replace(/^"(.*)"$/, '$1');
-      return {
+      const layer: TileMapLayerData = {
         name: rawName || `Layer ${index}`,
         enabled: boolOr(props.enabled, true),
         zIndex: intOr(props.z_index, 0),
         cells: props.tile_data ? decodeLegacyTileData(props.tile_data, format) : [],
       };
+      if (props.modulate) layer.modulate = parseColor(props.modulate);
+      return layer;
     });
 
   const result: TileMapProperties = { ...baseProperties, layers };

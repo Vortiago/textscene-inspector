@@ -6,7 +6,7 @@
  * recipe shared with Sprite2D.
  */
 
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import { useResource } from '../resources/useResource';
 import { buildTileGeometryArrays, type DrawableCell } from '../resources/tileset/tileGeometry';
@@ -42,6 +42,13 @@ export function TileSourceMesh({ source, cells, grid, z, color, opacity, name }:
     geom.setIndex(new THREE.BufferAttribute(arrays.indices, 1));
     return geom;
   }, [cells, source, grid, texW, texH]);
+  // Passed via the `geometry` prop, which R3F does NOT auto-dispose (only
+  // JSX-declared geometries are managed) — release the GPU buffers ourselves
+  // when a new one replaces it / on unmount.
+  useEffect(() => {
+    if (!geometry) return;
+    return () => geometry.dispose();
+  }, [geometry]);
 
   // No texture reference or a failed load: one placeholder for the whole
   // source (the panel row comes from useResource's missing-path report).

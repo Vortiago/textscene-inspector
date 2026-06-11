@@ -53,8 +53,16 @@ export function resolveTileSetModel(data: TileSetSourceData): TileSetModel {
     sourceOrder.push(sourceId);
   }
 
+  const shape = intEnumOr(data.properties.tile_shape, 0, 'tile_shape');
+  if (shape !== 0 && shape !== 1) {
+    warn(
+      `[TileSet] tile_shape ${shape} (half-offset square / hexagon) is not supported — ` +
+        `cells will place on a square grid`
+    );
+  }
+
   return {
-    shape: intEnumOr(data.properties.tile_shape, 0, 'tile_shape'),
+    shape,
     layout: intEnumOr(data.properties.tile_layout, 0, 'tile_layout') as TileSetModel['layout'],
     offsetAxis: intEnumOr(data.properties.tile_offset_axis, 0, 'tile_offset_axis') as
       | 0

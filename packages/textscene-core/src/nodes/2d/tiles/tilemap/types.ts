@@ -1,6 +1,6 @@
 /** Legacy TileMap (Godot ≤4.2) — a multi-layer tile node with per-layer data. */
 
-import type { Node2DProperties } from '../../../base/node2d/types';
+import type { Color, Node2DProperties } from '../../../base/node2d/types';
 import type { PlacedCell } from '../shared/tileData';
 
 export interface TileMapLayerData {
@@ -10,6 +10,8 @@ export interface TileMapLayerData {
   enabled: boolean;
   /** Godot z_index for the layer (`layer_N/z_index`, default 0). */
   zIndex: number;
+  /** Per-layer tint (`layer_N/modulate`); multiplies onto the layer's pixels. */
+  modulate?: Color;
   /** Cells decoded from `layer_N/tile_data`; null = undecodable (degrade). */
   cells: PlacedCell[] | null;
 }

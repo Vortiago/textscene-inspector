@@ -3,7 +3,7 @@
  * source — geometry attributes from the pure builder, Sprite2D's unlit
  * material recipe, modulate sRGB→linear.
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { parseTileMapLayer } from './parser';
@@ -148,6 +148,32 @@ describe('TileMapLayer render parity', () => {
     expect(r.scene.findAllByType('Mesh')).toHaveLength(0);
   });
 
+  it('keeps the batched geometry stable across re-renders and disposes replaced geometries', async () => {
+    const fake = createFakeResourceLoader();
+    fake.textures.seed(TEX, seededTexture());
+    fake.textures.seed(TEX2, seededTexture());
+    const node = makeNode({});
+    const tree = (n: TscnNode) => (
+      <ResourceLoaderProvider loader={fake.loader}>
+        <SceneResourcesProvider internalResources={internals} externalResources={externals}>
+          <TileMapLayer node={n} />
+        </SceneResourcesProvider>
+      </ResourceLoaderProvider>
+    );
+    const r = await ReactThreeTestRenderer.create(tree(node));
+    const before = (r.scene.findByType('Mesh').instance as THREE.Mesh).geometry;
+
+    // Unrelated re-render (same node object): no geometry rebuild.
+    await r.update(tree(node));
+    expect((r.scene.findByType('Mesh').instance as THREE.Mesh).geometry).toBe(before);
+
+    // Real data change: the replaced geometry's GPU buffers are released.
+    const disposeSpy = vi.fn();
+    before.addEventListener('dispose', disposeSpy);
+    await r.update(tree(makeNode({ tile_map_data: 'PackedByteArray(0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)' })));
+    expect(disposeSpy).toHaveBeenCalled();
+  });
+
   it('honours the TileSet grid: an isometric DIAMOND_DOWN cell lands on its map_to_local center', async () => {
     const isoInternals: TscnInternalResource[] = [
       internals[0]!,
@@ -249,6 +275,43 @@ sources/0 = SubResource("Atlas_a")
     fake.resources.seed(TRES_PATH, null); // sentinel miss → unavailable
     const r = await renderTres(fake);
     expect(r.scene.findAllByType('Mesh')).toHaveLength(0);
+  });
+
+  it('degrades immediately for a binary TileSet (.res) instead of hanging pending forever', async () => {
+    // Godot legally serializes `[ext_resource type="TileSet" path="res://tiles.res"]`;
+    // the text-resource processor can never parse it, so requesting it would
+    // park the load in-flight with no resolution.
+    const fake = createFakeResourceLoader();
+    const requested: string[] = [];
+    fake.resources.setRequestImpl((path) => requested.push(path));
+    fake.textures.seed(TEX, seededTexture());
+    const node: TscnNode = {
+      name: 'Layer0',
+      type: 'TileMapLayer',
+      children: [],
+      properties: parseTileMapLayer(heading, {
+        tile_set: 'ExtResource("ts_bin")',
+        tile_map_data: ONE_CELL,
+      }),
+    };
+    const r = await ReactThreeTestRenderer.create(
+      <ResourceLoaderProvider loader={fake.loader}>
+        <SceneResourcesProvider
+          internalResources={[]}
+          externalResources={[{ id: 'ts_bin', type: 'TileSet', path: 'res://tiles.res' }]}
+        >
+          <TileMapLayer node={node}>
+            <mesh name="scene-child">
+              <planeGeometry />
+              <meshBasicMaterial />
+            </mesh>
+          </TileMapLayer>
+        </SceneResourcesProvider>
+      </ResourceLoaderProvider>
+    );
+    expect(r.scene.findByProps({ name: 'scene-child' })).toBeDefined();
+    expect(r.scene.findAllByType('Mesh')).toHaveLength(1); // only the child
+    expect(requested).not.toContain('res://tiles.res'); // never parked in-flight
   });
 });
 

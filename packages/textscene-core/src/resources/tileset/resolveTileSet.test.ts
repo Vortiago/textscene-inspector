@@ -3,10 +3,19 @@
  * Scene adapter: the TileSet and its atlas sources are SubResources of the
  * scene; texture refs resolve against the scene's external resources.
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import * as logger from '../../logger';
 import { tileSetFromScene, tileSetFromTres } from './resolveTileSet';
 import { parseTresFile } from '../../parser/tresParser';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
+
+let warnSpy: ReturnType<typeof vi.spyOn>;
+beforeEach(() => {
+  warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+});
+afterEach(() => {
+  warnSpy.mockRestore();
+});
 
 const externals: TscnExternalResource[] = [
   { id: '2', type: 'Texture2D', path: 'res://tiles.png' },
@@ -96,6 +105,20 @@ describe('tileSetFromScene', () => {
     expect(model!.layout).toBe(5);
     expect(model!.offsetAxis).toBe(0); // absent → horizontal default
     expect(model!.tileSize).toEqual({ x: 128, y: 64 });
+  });
+
+  it('warns ONCE per TileSet for unsupported tile shapes (hexagon/half-offset)', () => {
+    const hexInternals: TscnInternalResource[] = [
+      internals[0]!,
+      {
+        id: 'ts',
+        type: 'TileSet',
+        data: { id: 'ts', tile_shape: '3', 'sources/0': 'SubResource("atlas1")' },
+      },
+    ];
+    tileSetFromScene('SubResource("ts")', hexInternals, externals);
+    const shapeWarns = warnSpy.mock.calls.filter((c) => String(c[0]).includes('tile_shape'));
+    expect(shapeWarns).toHaveLength(1);
   });
 });
 

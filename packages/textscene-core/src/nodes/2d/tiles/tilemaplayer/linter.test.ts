@@ -58,6 +58,15 @@ describe('TileMapLayer lint rules', () => {
     expect(hit!.severity).toBe('warning');
   });
 
+  it('errors when the tile_set reference cannot be resolved (dangling id)', () => {
+    const diagnostics = linter.lint(
+      scene(`tile_set = SubResource("TileSet_gone")\ntile_map_data = ${VALID_DATA}`)
+    );
+    const hit = diagnostics.find((d) => d.ruleName === 'valid-tilemaplayer-resources');
+    expect(hit).toBeDefined();
+    expect(hit!.severity).toBe('error');
+  });
+
   it('accepts a complete TileMapLayer without tile diagnostics', () => {
     const diagnostics = linter.lint(
       scene(`tile_set = SubResource("TileSet_a")\ntile_map_data = ${VALID_DATA}`, TILESET_RESOURCES)

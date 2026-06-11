@@ -7,11 +7,11 @@
  * remap of the grid coordinates, the overlap ratio (0.5 for isometric) applied
  * to the offset axis, then `(ret + 0.5) * tile_size`. Half-offset-square and
  * hexagon shapes are out of scope (ADR-0008): they fall back to square
- * placement with a warn.
+ * placement silently here — the resolver warns once per TileSet (this runs
+ * once per cell).
  */
 
-import { warn } from '../../logger';
-import { TILE_SHAPE_ISOMETRIC, TILE_SHAPE_SQUARE, type TileGrid, type Vec2i } from './tileSetModel';
+import { TILE_SHAPE_ISOMETRIC, type TileGrid, type Vec2i } from './tileSetModel';
 
 /** Positive modulo (Godot's Math::posmod) — posmod(-1, 2) === 1. */
 function posmod(a: number, b: number): number {
@@ -86,11 +86,6 @@ export function mapToLocalPx(grid: TileGrid, cell: Vec2i): { x: number; y: numbe
       }
       x *= 0.5;
     }
-  } else if (grid.shape !== TILE_SHAPE_SQUARE) {
-    warn(
-      `[TileSet] tile_shape ${grid.shape} (half-offset square / hexagon) is not supported — ` +
-        `placing cells on a square grid`
-    );
   }
 
   return { x: (x + 0.5) * grid.tileSize.x, y: (y + 0.5) * grid.tileSize.y };

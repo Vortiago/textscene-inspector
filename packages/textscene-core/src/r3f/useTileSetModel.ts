@@ -13,6 +13,7 @@
  */
 
 import { useMemo } from 'react';
+import { warn } from '../logger';
 import type { ParsedTresFile } from '../parser/tresParser';
 import { parseResourceReference, resolveExtResourcePath } from '../resources/SubResourceResolver';
 import { tileSetFromScene, tileSetFromTres } from '../resources/tileset/resolveTileSet';
@@ -30,7 +31,10 @@ export function useTileSetModel(tileSetRef: string | undefined): TileSetModelRes
 
   const ref = tileSetRef ? parseResourceReference(tileSetRef) : null;
   const isExternal = !!tileSetRef && (ref?.type === 'ExtResource' || tileSetRef.startsWith('res://'));
-  const tresPath = isExternal ? resolveExtResourcePath(tileSetRef, externalResources) : null;
+  const resolvedPath = isExternal ? resolveExtResourcePath(tileSetRef, externalResources) : null;
+  // Only text resources can ever parse; requesting e.g. a binary `.res`
+  // TileSet would park the load in-flight forever (no processor handles it).
+  const tresPath = resolvedPath?.endsWith('.tres') ? resolvedPath : null;
   const tresResult = useResource<ParsedTresFile>(tresPath ?? '', 'Resource');
 
   return useMemo((): TileSetModelResult => {
@@ -41,6 +45,10 @@ export function useTileSetModel(tileSetRef: string | undefined): TileSetModelRes
       return model ? { model, status: 'loaded' } : { model: null, status: 'unavailable' };
     }
 
+    if (resolvedPath && !tresPath) {
+      warn(`[TileSet] "${resolvedPath}" is not a text resource (.tres) — cannot resolve TileSet`);
+      return { model: null, status: 'unavailable' };
+    }
     if (!tresPath) return { model: null, status: 'unavailable' };
     if (tresResult.status === 'pending') return { model: null, status: 'pending' };
     if (tresResult.status === 'unavailable' || !tresResult.value) {
@@ -48,5 +56,5 @@ export function useTileSetModel(tileSetRef: string | undefined): TileSetModelRes
     }
     const model = tileSetFromTres(tresResult.value);
     return model ? { model, status: 'loaded' } : { model: null, status: 'unavailable' };
-  }, [tileSetRef, ref?.type, internalResources, externalResources, tresPath, tresResult.status, tresResult.value]);
+  }, [tileSetRef, ref?.type, internalResources, externalResources, resolvedPath, tresPath, tresResult.status, tresResult.value]);
 }
