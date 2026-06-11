@@ -74,4 +74,26 @@ describe('tileSetFromScene', () => {
     expect(source.tiles.get('2:1')!.alternatives.get(0)!.textureOrigin).toEqual({ x: 0, y: -16 });
     expect(source.tiles.get('1:3')!.sizeInAtlas).toEqual({ x: 2, y: 2 });
   });
+
+  it('reads the grid surface: tile_shape, tile_layout, tile_offset_axis, tile_size', () => {
+    const isoInternals: TscnInternalResource[] = [
+      internals[0]!,
+      {
+        id: 'ts',
+        type: 'TileSet',
+        data: {
+          id: 'ts',
+          tile_shape: '1',
+          tile_layout: '5',
+          tile_size: 'Vector2i(128, 64)',
+          'sources/0': 'SubResource("atlas1")',
+        },
+      },
+    ];
+    const model = tileSetFromScene('SubResource("ts")', isoInternals, externals);
+    expect(model!.shape).toBe(1);
+    expect(model!.layout).toBe(5);
+    expect(model!.offsetAxis).toBe(0); // absent → horizontal default
+    expect(model!.tileSize).toEqual({ x: 128, y: 64 });
+  });
 });

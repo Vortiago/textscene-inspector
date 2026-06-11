@@ -53,13 +53,25 @@ export function resolveTileSetModel(data: TileSetSourceData): TileSetModel {
   }
 
   return {
-    shape: 0,
-    layout: 0,
-    offsetAxis: 0,
+    shape: intEnumOr(data.properties.tile_shape, 0, 'tile_shape'),
+    layout: intEnumOr(data.properties.tile_layout, 0, 'tile_layout') as TileSetModel['layout'],
+    offsetAxis: intEnumOr(data.properties.tile_offset_axis, 0, 'tile_offset_axis') as
+      | 0
+      | 1,
     tileSize: vec2iOr(data.properties.tile_size, { x: 16, y: 16 }, 'tile_size'),
     sources,
     sourceOrder,
   };
+}
+
+function intEnumOr(value: unknown, fallback: number, label: string): number {
+  if (value === undefined || value === null) return fallback;
+  const n = typeof value === 'string' ? parseInt(value.trim(), 10) : NaN;
+  if (Number.isNaN(n)) {
+    warn(`[TileSet] invalid ${label} "${String(value)}" — using default`);
+    return fallback;
+  }
+  return n;
 }
 
 /** Adapter: a TileSet embedded in the scene as a SubResource. Null = ref unresolvable. */

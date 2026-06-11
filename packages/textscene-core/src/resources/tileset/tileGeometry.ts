@@ -83,12 +83,15 @@ export function buildTileGeometryArrays(
     if (flipH) corners = corners.map((row) => [row[1]!, row[0]!]);
     if (flipV) corners = [corners[1]!, corners[0]!];
 
+    // Quad center = map_to_local − texture_origin (Godot's draw_tile anchor).
+    const cx = center.x - info.textureOrigin.x;
+    const cy = center.y - info.textureOrigin.y;
     // Corner order TL, TR, BL, BR — positions in three-local space (Y negated;
     // `0 - v` so a zero stays +0, never -0).
-    const left = center.x - w / 2;
-    const right = center.x + w / 2;
-    const top = 0 - (center.y - h / 2);
-    const bottom = 0 - (center.y + h / 2);
+    const left = cx - w / 2;
+    const right = cx + w / 2;
+    const top = 0 - (cy - h / 2);
+    const bottom = 0 - (cy + h / 2);
     positions.set([left, top, 0, right, top, 0, left, bottom, 0, right, bottom, 0], i * 12);
     uvs.set(
       [...corners[0]![0]!, ...corners[0]![1]!, ...corners[1]![0]!, ...corners[1]![1]!],

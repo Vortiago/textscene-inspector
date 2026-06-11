@@ -134,4 +134,38 @@ describe('TileMapLayer render parity', () => {
     const r = await render(makeNode({ enabled: 'false' }));
     expect(r.scene.findAllByType('Mesh')).toHaveLength(0);
   });
+
+  it('honours the TileSet grid: an isometric DIAMOND_DOWN cell lands on its map_to_local center', async () => {
+    const isoInternals: TscnInternalResource[] = [
+      internals[0]!,
+      internals[1]!,
+      {
+        id: 'ts',
+        type: 'TileSet',
+        data: {
+          id: 'ts',
+          tile_shape: '1',
+          tile_layout: '5',
+          tile_size: 'Vector2i(128, 64)',
+          'sources/0': 'SubResource("atlas1")',
+        },
+      },
+    ];
+    // header + cell (1,0) → map_to_local (128, 64) → three-local center (128, −64).
+    const oneCell = 'PackedByteArray(0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)';
+    const node = makeNode({ tile_map_data: oneCell });
+    const fake = createFakeResourceLoader();
+    fake.textures.seed(TEX, seededTexture());
+    const r = await ReactThreeTestRenderer.create(
+      <ResourceLoaderProvider loader={fake.loader}>
+        <SceneResourcesProvider internalResources={isoInternals} externalResources={externals}>
+          <TileMapLayer node={node} />
+        </SceneResourcesProvider>
+      </ResourceLoaderProvider>
+    );
+    const mesh = r.scene.findByType('Mesh').instance as THREE.Mesh;
+    const position = mesh.geometry.getAttribute('position');
+    // 16×16 region centered on (128, −64): TL = (120, −56).
+    expect(Array.from(position.array).slice(0, 3)).toEqual([120, -56, 0]);
+  });
 });

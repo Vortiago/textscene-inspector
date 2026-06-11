@@ -97,6 +97,26 @@ describe('buildTileGeometryArrays', () => {
     });
   });
 
+  it('shifts the quad by the tile texture_origin (Godot: dest = map_to_local − size/2 − origin)', () => {
+    const anchored: AtlasSourceModel = {
+      ...source,
+      tiles: new Map([
+        [
+          '0:0',
+          {
+            sizeInAtlas: { x: 1, y: 1 },
+            alternatives: new Map([
+              [0, { flipH: false, flipV: false, transpose: false, textureOrigin: { x: 0, y: -16 } }],
+            ]),
+          },
+        ],
+      ]),
+    };
+    // center (8,8) − origin (0,−16) = (8, 24) → three-local y −16..−32.
+    const { positions } = buildTileGeometryArrays([cell(0, 0)], anchored, grid, 32, 32);
+    expect(Array.from(positions)).toEqual([0, -16, 0, 16, -16, 0, 0, -32, 0, 16, -32, 0]);
+  });
+
   it('windows UVs through margins, separation, and atlas coordinates', () => {
     const spaced: AtlasSourceModel = {
       ...source,
