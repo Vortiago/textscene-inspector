@@ -3,7 +3,7 @@
  * Auto-generate fixtures.ts from filesystem
  */
 
-import { readdirSync, writeFileSync } from 'fs';
+import { readdirSync, readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
@@ -137,6 +137,10 @@ const isometricFiles = walkTscn(isometricDir).sort();
 // each project keeps its own res:// namespace: copy-fixtures mirrors the
 // whole tree under public/fixtures/demos/, and each fixture entry carries a
 // `root` so the web provider resolves res:// against that project's subtree.
+//
+// Only each project's MAIN scene (what Godot itself would run, declared in
+// project.godot) is listed — one tidy entry per demo. Subscenes stay in the
+// mirror for res:// resolution and remain reachable via ?fixture= deep links.
 const demosDir = join(rootDir, 'scenes/demos');
 const DEMO_CATEGORY_LABELS = { '2d': '2D', '3d': '3D', gui: 'GUI', viewport: 'Viewport' };
 function demoProjects() {
@@ -162,18 +166,50 @@ function humanizeProject(name) {
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
 }
+/**
+ * The project's main scene, project-relative. `run/main_scene` is either a
+ * res:// path or (Godot 4.4+) a uid:// reference resolved by scanning the
+ * project's .tscn headers. Falls back to main.tscn / the first scene.
+ * @param {string} projDir
+ * @returns {string | null}
+ */
+function demoMainScene(projDir) {
+  const scenes = walkTscn(projDir).sort();
+  if (scenes.length === 0) return null;
+  let declared = null;
+  try {
+    const projectGodot = readFileSync(join(projDir, 'project.godot'), 'utf8');
+    declared = /run\/main_scene="([^"]+)"/.exec(projectGodot)?.[1] ?? null;
+  } catch {
+    // No project.godot vendored — fall through to the heuristics.
+  }
+  if (declared?.startsWith('res://')) {
+    const rel = declared.slice('res://'.length);
+    if (scenes.includes(rel)) return rel;
+  }
+  if (declared?.startsWith('uid://')) {
+    for (const rel of scenes) {
+      const head = readFileSync(join(projDir, rel), 'utf8').slice(0, 200);
+      if (head.includes(`uid="${declared}"`)) return rel;
+    }
+  }
+  return scenes.find(rel => rel === 'main.tscn') ?? scenes[0];
+}
 const demoFixtures = demoProjects().flatMap(({ top, project }) => {
   const root = `demos/${top}/${project}`;
   const label = DEMO_CATEGORY_LABELS[top];
-  return walkTscn(join(demosDir, top, project))
-    .sort()
-    .map(rel => ({
-      // Globally unique: (project, top) is unique and rel is unique within it.
-      name: `${humanizeProject(project)} (${label}): ${rel.replace(/\.tscn$/, '')}`,
-      file: `${root}/${rel}`,
+  const mainScene = demoMainScene(join(demosDir, top, project));
+  if (!mainScene) return [];
+  return [
+    {
+      // (project, top) is unique; the label disambiguates cross-category
+      // name twins (2d/platformer vs 3d/platformer).
+      name: `${humanizeProject(project)} (${label})`,
+      file: `${root}/${mainScene}`,
       category: `Godot Demos - ${label}`,
       root,
-    }));
+    },
+  ];
 });
 
 const fixtures = [

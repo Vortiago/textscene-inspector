@@ -28,6 +28,7 @@ import {
   type ViewportSelectorOption,
 } from '@textscene/core';
 import { fixtures } from './fixtures';
+import { corpusRootFor } from './corpusRoot';
 import { WebResourceProvider } from './providers/WebResourceProvider';
 import styles from './r3f-main.module.css';
 
@@ -55,9 +56,13 @@ export function R3FApp() {
     try {
       // Deep-link: `?fixture=<file>` opens directly on a specific scene
       // (used by the showcase recorder to skip the default-fixture detour,
-      // and handy for sharing a link to a particular scene).
+      // and handy for sharing a link to a particular scene). Unlisted
+      // demo subscenes are accepted too — the selector only lists each
+      // demo's main scene, but every mirrored scene stays linkable.
       const param = new URLSearchParams(window.location.search).get('fixture');
-      if (param && fixtures.some((f) => f.file === param)) return param;
+      if (param && (fixtures.some((f) => f.file === param) || param.startsWith('demos/'))) {
+        return param;
+      }
       return window.localStorage.getItem(STORAGE_KEY) ?? DEFAULT_FIXTURE;
     } catch {
       return DEFAULT_FIXTURE;
@@ -84,10 +89,7 @@ export function R3FApp() {
   // fixture's `root` scopes the provider's lookups to that subtree. Declared
   // BEFORE the content-fetch effect so the root is in place by the time the
   // newly-mounted scene starts requesting resources.
-  const resourceRoot = useMemo(
-    () => fixtures.find((f) => f.file === fixtureFile)?.root ?? '',
-    [fixtureFile]
-  );
+  const resourceRoot = useMemo(() => corpusRootFor(fixtureFile, fixtures), [fixtureFile]);
   const lastRootRef = useRef(resourceRoot);
   useEffect(() => {
     provider.setResourceRoot(resourceRoot);
