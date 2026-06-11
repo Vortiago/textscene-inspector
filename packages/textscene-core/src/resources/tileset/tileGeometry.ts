@@ -12,7 +12,7 @@
  */
 
 import { mapToLocalPx } from './tilePlacement';
-import type { AtlasSourceModel, TileGrid, Vec2i } from './tileSetModel';
+import { tileDrawInfo, type AtlasSourceModel, type TileGrid, type Vec2i } from './tileSetModel';
 
 /** The slice of a placed cell the builder needs (structurally matches PlacedCell). */
 export interface DrawableCell {
@@ -61,16 +61,27 @@ export function buildTileGeometryArrays(
 
   cells.forEach((cell, i) => {
     const center = mapToLocalPx(grid, cell.coords);
-    const w = source.textureRegionSize.x;
-    const h = source.textureRegionSize.y;
+    const info = tileDrawInfo(source, cell.atlasCoords, cell.alternativeId);
+    const { flipH, flipV, transpose } = info.orientation;
+    // Transposed tiles draw with swapped dimensions (Godot swaps the dest rect).
+    const w = transpose ? info.regionPx.height : info.regionPx.width;
+    const h = transpose ? info.regionPx.width : info.regionPx.height;
+    const uv = pxRectToUv(info.regionPx, texW, texH);
 
-    const regionPx = {
-      x: source.margins.x + cell.atlasCoords.x * (source.textureRegionSize.x + source.separation.x),
-      y: source.margins.y + cell.atlasCoords.y * (source.textureRegionSize.y + source.separation.y),
-      width: w,
-      height: h,
-    };
-    const uv = pxRectToUv(regionPx, texW, texH);
+    // Corner UV grid [[TL,TR],[BL,BR]]; transpose reflects across the main
+    // diagonal, then flips swap columns/rows (Godot composes in that order).
+    let corners: [number, number][][] = [
+      [[uv.u0, uv.vTop], [uv.u1, uv.vTop]],
+      [[uv.u0, uv.vBottom], [uv.u1, uv.vBottom]],
+    ];
+    if (transpose) {
+      corners = [
+        [corners[0]![0]!, corners[1]![0]!],
+        [corners[0]![1]!, corners[1]![1]!],
+      ];
+    }
+    if (flipH) corners = corners.map((row) => [row[1]!, row[0]!]);
+    if (flipV) corners = [corners[1]!, corners[0]!];
 
     // Corner order TL, TR, BL, BR — positions in three-local space (Y negated;
     // `0 - v` so a zero stays +0, never -0).
@@ -79,7 +90,10 @@ export function buildTileGeometryArrays(
     const top = 0 - (center.y - h / 2);
     const bottom = 0 - (center.y + h / 2);
     positions.set([left, top, 0, right, top, 0, left, bottom, 0, right, bottom, 0], i * 12);
-    uvs.set([uv.u0, uv.vTop, uv.u1, uv.vTop, uv.u0, uv.vBottom, uv.u1, uv.vBottom], i * 8);
+    uvs.set(
+      [...corners[0]![0]!, ...corners[0]![1]!, ...corners[1]![0]!, ...corners[1]![1]!],
+      i * 8
+    );
 
     const v = i * 4;
     indices.set([v + 2, v + 3, v, v + 3, v + 1, v], i * 6);

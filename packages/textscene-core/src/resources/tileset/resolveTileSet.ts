@@ -9,7 +9,13 @@
 import { warn } from '../../logger';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
 import { parseResourceReference, resolveExtResourcePath } from '../SubResourceResolver';
-import type { AtlasSourceModel, TileSetModel, Vec2i } from './tileSetModel';
+import type {
+  AlternativeTileModel,
+  AtlasSourceModel,
+  AtlasTileModel,
+  TileSetModel,
+  Vec2i,
+} from './tileSetModel';
 
 /** Context-independent view of a TileSet resource and its surroundings. */
 export interface TileSetSourceData {
@@ -84,8 +90,63 @@ function resolveAtlasSource(
     margins: vec2iOr(props.margins, { x: 0, y: 0 }, 'margins'),
     separation: vec2iOr(props.separation, { x: 0, y: 0 }, 'separation'),
     textureRegionSize: vec2iOr(props.texture_region_size, { x: 16, y: 16 }, 'texture_region_size'),
-    tiles: new Map(),
+    tiles: resolveTiles(props),
   };
+}
+
+/**
+ * Per-tile key grammar in a TileSetAtlasSource:
+ *   `x:y/size_in_atlas` — per-tile (oversized tiles spanning several cells)
+ *   `x:y/<altId>`       — declares an alternative tile (0 = base)
+ *   `x:y/<altId>/prop`  — alternative properties (flip_h/flip_v/transpose/texture_origin)
+ * Everything else (next_alternative_id, physics/custom-data layers, …) is ignored.
+ */
+const TILE_KEY_RE = /^(-?\d+):(-?\d+)\/(.+)$/;
+
+function resolveTiles(props: Record<string, unknown>): Map<string, AtlasTileModel> {
+  const tiles = new Map<string, AtlasTileModel>();
+
+  const tileAt = (x: string, y: string): AtlasTileModel => {
+    const key = `${parseInt(x, 10)}:${parseInt(y, 10)}`;
+    let tile = tiles.get(key);
+    if (!tile) {
+      tile = { sizeInAtlas: { x: 1, y: 1 }, alternatives: new Map() };
+      tiles.set(key, tile);
+    }
+    return tile;
+  };
+  const alternativeAt = (tile: AtlasTileModel, altId: number): AlternativeTileModel => {
+    let alt = tile.alternatives.get(altId);
+    if (!alt) {
+      alt = { flipH: false, flipV: false, transpose: false, textureOrigin: { x: 0, y: 0 } };
+      tile.alternatives.set(altId, alt);
+    }
+    return alt;
+  };
+
+  for (const [key, value] of Object.entries(props)) {
+    const m = TILE_KEY_RE.exec(key);
+    if (!m) continue;
+    const rest = m[3]!;
+
+    if (rest === 'size_in_atlas') {
+      tileAt(m[1]!, m[2]!).sizeInAtlas = vec2iOr(value, { x: 1, y: 1 }, key);
+      continue;
+    }
+
+    const alt = /^(\d+)(?:\/(.+))?$/.exec(rest);
+    if (!alt) continue;
+    const altId = parseInt(alt[1]!, 10);
+    const prop = alt[2];
+    const alternative = alternativeAt(tileAt(m[1]!, m[2]!), altId);
+    if (prop === 'flip_h') alternative.flipH = value === 'true';
+    else if (prop === 'flip_v') alternative.flipV = value === 'true';
+    else if (prop === 'transpose') alternative.transpose = value === 'true';
+    else if (prop === 'texture_origin')
+      alternative.textureOrigin = vec2iOr(value, { x: 0, y: 0 }, key);
+  }
+
+  return tiles;
 }
 
 const VECTOR2I_RE = /^Vector2i\(\s*(-?\d+)\s*,\s*(-?\d+)\s*\)$/;

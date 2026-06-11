@@ -59,3 +59,56 @@ export interface TileOrientation {
 export interface AlternativeTileModel extends TileOrientation {
   textureOrigin: Vec2i;
 }
+
+/**
+ * Godot TileSetAtlasSource alternative-id transform bits: a cell painted with
+ * a flip/rotate carries these bits directly in its alternative_tile value.
+ */
+export const TILE_TRANSFORM_FLIP_H = 0x1000;
+export const TILE_TRANSFORM_FLIP_V = 0x2000;
+export const TILE_TRANSFORM_TRANSPOSE = 0x4000;
+const TILE_TRANSFORM_MASK = TILE_TRANSFORM_FLIP_H | TILE_TRANSFORM_FLIP_V | TILE_TRANSFORM_TRANSPOSE;
+
+export interface TileDrawInfo {
+  /** Pixel rect of the tile's texture region within the atlas (image-Y top-left). */
+  regionPx: { x: number; y: number; width: number; height: number };
+  orientation: TileOrientation;
+  textureOrigin: Vec2i;
+}
+
+/**
+ * The pure lookup from a placed cell's (atlasCoords, alternativeId) to its
+ * draw info. The base alternative id (low bits) selects an authored
+ * alternative tile; the high bits XOR their transforms on top (matching
+ * Godot's draw_tile, where painted transform bits compose with the
+ * alternative's own flip flags).
+ */
+export function tileDrawInfo(
+  source: AtlasSourceModel,
+  atlasCoords: Vec2i,
+  alternativeId: number
+): TileDrawInfo {
+  const baseAlt = alternativeId & ~TILE_TRANSFORM_MASK;
+  const tile = source.tiles.get(`${atlasCoords.x}:${atlasCoords.y}`);
+  const alternative = tile?.alternatives.get(baseAlt) ?? tile?.alternatives.get(0);
+
+  const sizeInAtlas = tile?.sizeInAtlas ?? { x: 1, y: 1 };
+  const stepX = source.textureRegionSize.x + source.separation.x;
+  const stepY = source.textureRegionSize.y + source.separation.y;
+
+  return {
+    regionPx: {
+      x: source.margins.x + atlasCoords.x * stepX,
+      y: source.margins.y + atlasCoords.y * stepY,
+      width: source.textureRegionSize.x * sizeInAtlas.x + source.separation.x * (sizeInAtlas.x - 1),
+      height: source.textureRegionSize.y * sizeInAtlas.y + source.separation.y * (sizeInAtlas.y - 1),
+    },
+    orientation: {
+      flipH: (alternative?.flipH ?? false) !== ((alternativeId & TILE_TRANSFORM_FLIP_H) !== 0),
+      flipV: (alternative?.flipV ?? false) !== ((alternativeId & TILE_TRANSFORM_FLIP_V) !== 0),
+      transpose:
+        (alternative?.transpose ?? false) !== ((alternativeId & TILE_TRANSFORM_TRANSPOSE) !== 0),
+    },
+    textureOrigin: alternative?.textureOrigin ?? { x: 0, y: 0 },
+  };
+}

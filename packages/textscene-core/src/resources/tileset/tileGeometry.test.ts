@@ -52,6 +52,51 @@ describe('buildTileGeometryArrays', () => {
     expect(Array.from(indices)).toEqual([2, 3, 0, 3, 1, 0]);
   });
 
+  describe('orientation (asymmetric 16×8 region of a 32×32 texture)', () => {
+    // Base corner grid: TL(0,1) TR(0.5,1) BL(0,0.75) BR(0.5,0.75).
+    const thin: AtlasSourceModel = { ...source, textureRegionSize: { x: 16, y: 8 } };
+    const FLIP_H = 0x1000;
+    const FLIP_V = 0x2000;
+    const TRANSPOSE = 0x4000;
+
+    function uvsFor(alternativeId: number): number[] {
+      const { uvs } = buildTileGeometryArrays(
+        [{ ...cell(0, 0), alternativeId }],
+        thin,
+        grid,
+        32,
+        32
+      );
+      return Array.from(uvs);
+    }
+
+    it('flip_h mirrors the U axis (swaps grid columns)', () => {
+      expect(uvsFor(FLIP_H)).toEqual([0.5, 1, 0, 1, 0.5, 0.75, 0, 0.75]);
+    });
+
+    it('flip_v mirrors the V axis (swaps grid rows)', () => {
+      expect(uvsFor(FLIP_V)).toEqual([0, 0.75, 0.5, 0.75, 0, 1, 0.5, 1]);
+    });
+
+    it('transpose reflects across the main diagonal and swaps the quad size', () => {
+      const { positions, uvs } = buildTileGeometryArrays(
+        [{ ...cell(0, 0), alternativeId: TRANSPOSE }],
+        thin,
+        grid,
+        32,
+        32
+      );
+      expect(Array.from(uvs)).toEqual([0, 1, 0, 0.75, 0.5, 1, 0.5, 0.75]);
+      // Quad drawn (h, w) = 8×16 around center (8, -8).
+      expect(Array.from(positions)).toEqual([4, 0, 0, 12, 0, 0, 4, -16, 0, 12, -16, 0]);
+    });
+
+    it('composes transpose then flips (90° CW = transpose + flip_h; triple combo)', () => {
+      expect(uvsFor(TRANSPOSE | FLIP_H)).toEqual([0, 0.75, 0, 1, 0.5, 0.75, 0.5, 1]);
+      expect(uvsFor(TRANSPOSE | FLIP_H | FLIP_V)).toEqual([0.5, 0.75, 0.5, 1, 0, 0.75, 0, 1]);
+    });
+  });
+
   it('windows UVs through margins, separation, and atlas coordinates', () => {
     const spaced: AtlasSourceModel = {
       ...source,
