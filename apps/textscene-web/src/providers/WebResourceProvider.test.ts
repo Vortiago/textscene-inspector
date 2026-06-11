@@ -67,6 +67,27 @@ describe('WebResourceProvider', () => {
       expect(content).toBe(tscnContent);
     });
 
+    // Vendored demo corpora live under a per-project subtree; the active
+    // root scopes every res:// lookup to that project's namespace.
+    it('resolves res:// under the active resource root and resets with it', async () => {
+      const tscnContent = '[gd_scene format=3]';
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+        ok: true,
+        headers: {
+          get: (name: string) => (name === 'content-type' ? 'text/plain' : null),
+        },
+        text: async () => tscnContent,
+      } as Response);
+
+      provider.setResourceRoot('demos/2d/platformer');
+      await provider.loadResource('res://scenes/player.tscn', 'PackedScene');
+      expect(global.fetch).toHaveBeenCalledWith('/fixtures/demos/2d/platformer/scenes/player.tscn');
+
+      provider.setResourceRoot('');
+      await provider.loadResource('res://scenes/player.tscn', 'PackedScene');
+      expect(global.fetch).toHaveBeenLastCalledWith('/fixtures/scenes/player.tscn');
+    });
+
     // Edge case: Nested paths
     it('should handle nested paths (res://scenes/Door.tscn → /fixtures/scenes/Door.tscn)', async () => {
       const tscnContent = '[gd_scene format=3]';

@@ -231,6 +231,22 @@ export class ResourceLoader {
   }
 
   /**
+   * Drop every cached resource, raw file byte cache, and metadata entry but
+   * KEEP event subscribers (including the loader's own failure callbacks).
+   * Used when the active scene switches to a different vendored corpus whose
+   * res:// namespace would otherwise alias the previous corpus's cache
+   * entries (two demos both referencing e.g. `res://art/player.png`).
+   */
+  clearCaches(): void {
+    this._fileEventBus?.clearCache();
+    for (const proc of this.processors.values()) {
+      proc.clearCache();
+    }
+    this.metadata.clear();
+    logger.info('[ResourceLoader] Cleared caches (subscribers kept)');
+  }
+
+  /**
    * Clear cache for a specific path across all processors (hot-reload).
    * Drops the FileEventBus cache too so the next request hits the
    * provider fresh.

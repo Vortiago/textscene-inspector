@@ -133,6 +133,49 @@ const ld58Files = walkTscn(ld58Dir).sort();
 const isometricDir = join(rootDir, 'scenes/isometric');
 const isometricFiles = walkTscn(isometricDir).sort();
 
+// Vendored godot-demo-projects corpora (scenes/demos/<top>/<project>/) —
+// each project keeps its own res:// namespace: copy-fixtures mirrors the
+// whole tree under public/fixtures/demos/, and each fixture entry carries a
+// `root` so the web provider resolves res:// against that project's subtree.
+const demosDir = join(rootDir, 'scenes/demos');
+const DEMO_CATEGORY_LABELS = { '2d': '2D', '3d': '3D', gui: 'GUI', viewport: 'Viewport' };
+function demoProjects() {
+  let tops;
+  try {
+    tops = readdirSync(demosDir, { withFileTypes: true });
+  } catch {
+    return []; // No demos vendored — skip.
+  }
+  const out = [];
+  for (const top of tops) {
+    if (!top.isDirectory() || !DEMO_CATEGORY_LABELS[top.name]) continue;
+    for (const project of readdirSync(join(demosDir, top.name), { withFileTypes: true })) {
+      if (!project.isDirectory()) continue;
+      out.push({ top: top.name, project: project.name });
+    }
+  }
+  return out;
+}
+function humanizeProject(name) {
+  return name
+    .split(/[_-]/)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+const demoFixtures = demoProjects().flatMap(({ top, project }) => {
+  const root = `demos/${top}/${project}`;
+  const label = DEMO_CATEGORY_LABELS[top];
+  return walkTscn(join(demosDir, top, project))
+    .sort()
+    .map(rel => ({
+      // Globally unique: (project, top) is unique and rel is unique within it.
+      name: `${humanizeProject(project)} (${label}): ${rel.replace(/\.tscn$/, '')}`,
+      file: `${root}/${rel}`,
+      category: `Godot Demos - ${label}`,
+      root,
+    }));
+});
+
 const fixtures = [
   ...fixtureFiles.map(file => ({
     name: generateName(file),
@@ -162,6 +205,7 @@ const fixtures = [
     file,
     category: 'Examples - Isometric Dungeon',
   })),
+  ...demoFixtures,
 ];
 
 // Fixture names must be unique: the showcase recorder and scene selector both
@@ -196,6 +240,8 @@ export interface Fixture {
   name: string;
   file: string;
   category: string;
+  /** public/fixtures subtree the scene's res:// namespace maps onto ('' = root). */
+  root?: string;
 }
 
 export const fixtures: Fixture[] = ${JSON.stringify(sortedFixtures, null, 2)};

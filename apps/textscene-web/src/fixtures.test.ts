@@ -7,8 +7,9 @@
  * scripts/generate-fixtures.js): scenes/fixtures/*.tscn and scenes/examples/*.tscn
  * are copied FLAT into public/fixtures/ (entry `file` is a basename), while
  * scenes/ld58/** and scenes/isometric/** are mirrored recursively (entry `file`
- * is a res://-relative path). A manifest entry is therefore valid iff its
- * `file` resolves under one of those source roots.
+ * is a res://-relative path) and scenes/demos/** is mirrored under
+ * public/fixtures/demos/ (entry `file` starts with 'demos/'). A manifest entry
+ * is therefore valid iff its `file` resolves under one of those source roots.
  */
 
 import { existsSync } from 'node:fs';
@@ -27,6 +28,8 @@ const sourceRoots = [
 ];
 
 function fixtureExistsOnDisk(file: string): boolean {
+  // demos/<top>/<project>/… entries mirror scenes/demos/ 1:1 (not flattened).
+  if (file.startsWith('demos/')) return existsSync(join(scenesRoot, file));
   return sourceRoots.some((root) => existsSync(join(root, file)));
 }
 

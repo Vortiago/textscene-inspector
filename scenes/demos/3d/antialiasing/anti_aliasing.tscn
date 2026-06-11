@@ -1,0 +1,1106 @@
+[gd_scene format=3 uid="uid://djtl7wpimep6k"]
+
+[ext_resource type="Texture2D" uid="uid://bfgsucq0jx2cb" path="res://textures/paint.png" id="3_2nulf"]
+[ext_resource type="PackedScene" uid="uid://chlh878qnorc7" path="res://thin_lines.tscn" id="3_5ehjl"]
+[ext_resource type="PackedScene" uid="uid://ctqc7ve1t0ajx" path="res://polyhaven/dutch_ship_medium_1k.gltf" id="3_fa2bl"]
+[ext_resource type="Texture2D" uid="uid://bxjrisgsfwb3x" path="res://textures/paint_normal.png" id="4_fdfpv"]
+[ext_resource type="Texture2D" uid="uid://b5ro6ovp010" path="res://textures/checker.png" id="14"]
+[ext_resource type="Script" uid="uid://p5c10p406acq" path="res://anti_aliasing.gd" id="18"]
+
+[sub_resource type="ProceduralSkyMaterial" id="9"]
+
+[sub_resource type="Sky" id="10"]
+sky_material = SubResource("9")
+
+[sub_resource type="Environment" id="11"]
+background_mode = 2
+sky = SubResource("10")
+tonemap_mode = 4
+
+[sub_resource type="Animation" id="Animation_qdnt6"]
+length = 0.001
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Testers/MovingObject/MeshInstance3D:position")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Vector3(0, 0.5, 0)]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Testers/RotatingObject/MeshInstance3D:rotation")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Vector3(0, 0, 0)]
+}
+tracks/2/type = "value"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("Testers/ScalingObject/MeshInstance3D:scale")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Vector3(0, 0, 0)]
+}
+tracks/3/type = "value"
+tracks/3/imported = false
+tracks/3/enabled = true
+tracks/3/path = NodePath("Testers/MovingCPUParticles/CPUParticles3D:position")
+tracks/3/interp = 1
+tracks/3/loop_wrap = true
+tracks/3/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Vector3(0, 0.5, 0)]
+}
+tracks/4/type = "value"
+tracks/4/imported = false
+tracks/4/enabled = true
+tracks/4/path = NodePath("Testers/MovingDecal/Decal:position")
+tracks/4/interp = 1
+tracks/4/loop_wrap = true
+tracks/4/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Vector3(1, 1, 1)]
+}
+tracks/5/type = "value"
+tracks/5/imported = false
+tracks/5/enabled = true
+tracks/5/path = NodePath("Testers/MovingDecal/Decal:rotation")
+tracks/5/interp = 1
+tracks/5/loop_wrap = true
+tracks/5/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Vector3(0.18405, -2.33886, 0.187249)]
+}
+tracks/6/type = "value"
+tracks/6/imported = false
+tracks/6/enabled = true
+tracks/6/path = NodePath("Testers/ScrollingUVAnimation/MeshInstance3D:surface_material_override/0:uv1_offset")
+tracks/6/interp = 1
+tracks/6/loop_wrap = true
+tracks/6/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Vector3(0, 0, 0)]
+}
+tracks/7/type = "value"
+tracks/7/imported = false
+tracks/7/enabled = true
+tracks/7/path = NodePath("Testers/MovingGPUParticles/GPUParticles3D:position")
+tracks/7/interp = 1
+tracks/7/loop_wrap = true
+tracks/7/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Vector3(0, 1.2, 0)]
+}
+
+[sub_resource type="Animation" id="12"]
+resource_name = "move"
+length = 4.0
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Testers/MovingObject/MeshInstance3D:position")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 2),
+"transitions": PackedFloat32Array(-2, -2),
+"update": 0,
+"values": [Vector3(0, 0.5, 0), Vector3(0, 2.5, 0)]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Testers/RotatingObject/MeshInstance3D:rotation")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0, 4),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector3(0, 0, 0), Vector3(0, 18.8496, 0)]
+}
+tracks/2/type = "value"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("Testers/ScalingObject/MeshInstance3D:scale")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = {
+"times": PackedFloat32Array(0, 2),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector3(0, 0, 0), Vector3(1, 1, 3)]
+}
+tracks/3/type = "value"
+tracks/3/imported = false
+tracks/3/enabled = true
+tracks/3/path = NodePath("Testers/MovingCPUParticles/CPUParticles3D:position")
+tracks/3/interp = 1
+tracks/3/loop_wrap = true
+tracks/3/keys = {
+"times": PackedFloat32Array(0, 2),
+"transitions": PackedFloat32Array(-2, -2),
+"update": 0,
+"values": [Vector3(0, 0.2, 0), Vector3(0, 2.2, 0)]
+}
+tracks/4/type = "value"
+tracks/4/imported = false
+tracks/4/enabled = true
+tracks/4/path = NodePath("Testers/MovingDecal/Decal:position")
+tracks/4/interp = 1
+tracks/4/loop_wrap = true
+tracks/4/keys = {
+"times": PackedFloat32Array(0, 2),
+"transitions": PackedFloat32Array(-2, -2),
+"update": 0,
+"values": [Vector3(1, 1, 1), Vector3(-1, 1, -1)]
+}
+tracks/5/type = "value"
+tracks/5/imported = false
+tracks/5/enabled = true
+tracks/5/path = NodePath("Testers/MovingDecal/Decal:rotation")
+tracks/5/interp = 1
+tracks/5/loop_wrap = true
+tracks/5/keys = {
+"times": PackedFloat32Array(0, 2),
+"transitions": PackedFloat32Array(-2, -2),
+"update": 0,
+"values": [Vector3(0, 0, 0), Vector3(0.18405, -2.33886, 0.187249)]
+}
+tracks/6/type = "value"
+tracks/6/imported = false
+tracks/6/enabled = true
+tracks/6/path = NodePath("Testers/ScrollingUVAnimation/MeshInstance3D:surface_material_override/0:uv1_offset")
+tracks/6/interp = 1
+tracks/6/loop_wrap = true
+tracks/6/keys = {
+"times": PackedFloat32Array(0, 4),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector3(0, 0, 0), Vector3(3, 0, 0)]
+}
+tracks/7/type = "value"
+tracks/7/imported = false
+tracks/7/enabled = true
+tracks/7/path = NodePath("Testers/MovingGPUParticles/GPUParticles3D:position")
+tracks/7/interp = 1
+tracks/7/loop_wrap = true
+tracks/7/keys = {
+"times": PackedFloat32Array(0, 2),
+"transitions": PackedFloat32Array(-2, -2),
+"update": 0,
+"values": [Vector3(0, 1.2, 0), Vector3(0, 4.2, 0)]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_ecfcr"]
+_data = {
+&"RESET": SubResource("Animation_qdnt6"),
+&"move": SubResource("12")
+}
+
+[sub_resource type="StandardMaterial3D" id="13"]
+diffuse_mode = 1
+albedo_texture = ExtResource("14")
+uv1_scale = Vector3(32, 32, 1)
+texture_filter = 5
+
+[sub_resource type="PlaneMesh" id="14"]
+material = SubResource("13")
+size = Vector2(128, 128)
+
+[sub_resource type="BoxMesh" id="BoxMesh_gwe28"]
+
+[sub_resource type="Gradient" id="Gradient_jyuoy"]
+offsets = PackedFloat32Array(0.1, 0.768293)
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_kv21n"]
+frequency = 0.02
+fractal_type = 3
+fractal_octaves = 9
+fractal_gain = 0.9
+fractal_ping_pong_strength = -1.2
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture_bgiac"]
+noise = SubResource("FastNoiseLite_kv21n")
+color_ramp = SubResource("Gradient_jyuoy")
+seamless = true
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_x42ya"]
+albedo_color = Color(1.2, 1, 0.7, 1)
+albedo_texture = SubResource("NoiseTexture_bgiac")
+uv1_scale = Vector3(3, 2, 1)
+texture_filter = 5
+
+[sub_resource type="Gradient" id="Gradient_ylwhn"]
+offsets = PackedFloat32Array(0.378049, 0.408537, 0.603659, 1)
+colors = PackedColorArray(0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_fmnt8"]
+gradient = SubResource("Gradient_ylwhn")
+width = 16
+height = 16
+fill = 2
+fill_from = Vector2(0.5, 0.5)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_6yfdy"]
+specular_mode = 2
+albedo_color = Color(0.301961, 1, 0.6, 1)
+albedo_texture = SubResource("GradientTexture2D_fmnt8")
+uv1_scale = Vector3(3, 2, 1)
+texture_filter = 4
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_nllvr"]
+size = Vector2(3.9, 3.9)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_bjmm1"]
+albedo_color = Color(1, 0, 0, 1)
+
+[sub_resource type="Gradient" id="Gradient_e2xbk"]
+offsets = PackedFloat32Array(0.3, 0.5, 0.699, 0.7)
+colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_ufeca"]
+gradient = SubResource("Gradient_e2xbk")
+width = 128
+height = 128
+fill = 2
+fill_from = Vector2(0.5, 0.5)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_qcf1j"]
+transparency = 1
+albedo_texture = SubResource("GradientTexture2D_ufeca")
+uv1_scale = Vector3(12, 8, 1)
+texture_filter = 5
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_xbqpl"]
+transparency = 2
+alpha_scissor_threshold = 0.5
+alpha_antialiasing_mode = 0
+albedo_texture = SubResource("GradientTexture2D_ufeca")
+uv1_scale = Vector3(12, 8, 1)
+texture_filter = 5
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_txrd8"]
+transparency = 2
+alpha_scissor_threshold = 0.5
+alpha_antialiasing_mode = 1
+alpha_antialiasing_edge = 0.3
+albedo_texture = SubResource("GradientTexture2D_ufeca")
+uv1_scale = Vector3(12, 8, 1)
+texture_filter = 5
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_xhqpm"]
+transparency = 2
+alpha_scissor_threshold = 0.5
+alpha_antialiasing_mode = 2
+alpha_antialiasing_edge = 0.3
+albedo_texture = SubResource("GradientTexture2D_ufeca")
+uv1_scale = Vector3(12, 8, 1)
+texture_filter = 5
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_mjkwh"]
+transparency = 3
+alpha_hash_scale = 1.0
+alpha_antialiasing_mode = 0
+albedo_texture = SubResource("GradientTexture2D_ufeca")
+uv1_scale = Vector3(12, 8, 1)
+texture_filter = 5
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_f4l4p"]
+transparency = 4
+albedo_texture = SubResource("GradientTexture2D_ufeca")
+uv1_scale = Vector3(12, 8, 1)
+texture_filter = 5
+
+[sub_resource type="SphereMesh" id="SphereMesh_kfkna"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_rfedc"]
+transparency = 2
+alpha_scissor_threshold = 0.05
+alpha_antialiasing_mode = 0
+use_point_size = true
+point_size = 3.2
+
+[sub_resource type="Gradient" id="Gradient_3dg7h"]
+interpolation_mode = 2
+offsets = PackedFloat32Array(0, 0.94964)
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_42opb"]
+gradient = SubResource("Gradient_3dg7h")
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+fill_to = Vector2(0.49, 0)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_layy4"]
+transparency = 1
+shading_mode = 0
+vertex_color_use_as_albedo = true
+albedo_texture = SubResource("GradientTexture2D_42opb")
+billboard_mode = 3
+billboard_keep_scale = true
+particles_anim_h_frames = 1
+particles_anim_v_frames = 1
+particles_anim_loop = false
+
+[sub_resource type="QuadMesh" id="QuadMesh_imrxg"]
+material = SubResource("StandardMaterial3D_layy4")
+
+[sub_resource type="Curve" id="Curve_v0n7y"]
+_data = [Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(1, 0), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Gradient" id="Gradient_e7gyf"]
+offsets = PackedFloat32Array(0, 0.0946746, 0.5, 0.804734)
+colors = PackedColorArray(0, 0.14902, 1, 0, 0.0627836, 0.243372, 0.995875, 1, 0.568541, 1, 0.962647, 1, 1, 1, 1, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_r4xcu"]
+albedo_color = Color(0.521569, 1, 0.776471, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_88317"]
+material = SubResource("StandardMaterial3D_r4xcu")
+size = Vector3(0.1, 0.1, 0.1)
+
+[sub_resource type="Curve" id="Curve_sutnd"]
+_data = [Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(1, 0), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="ParticleProcessMaterial" id="ParticlesMaterial_ft0gs"]
+emission_shape = 6
+emission_ring_axis = Vector3(0, 1, 0)
+emission_ring_height = 0.0
+emission_ring_radius = 0.25
+emission_ring_inner_radius = 0.25
+emission_ring_cone_angle = 90.0
+radial_accel_min = 2.0
+radial_accel_max = 2.0
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_1dgwn"]
+albedo_color = Color(0.545098, 0.545098, 0.545098, 1)
+
+[sub_resource type="SphereMesh" id="SphereMesh_v4x6x"]
+material = SubResource("StandardMaterial3D_1dgwn")
+radius = 1.0
+height = 2.0
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_5qy8k"]
+height = 1.0
+radial_segments = 6
+rings = 1
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_53dqy"]
+albedo_color = Color(0.946182, 1.18208, 1.2, 1)
+albedo_texture = SubResource("NoiseTexture_bgiac")
+uv1_scale = Vector3(2, 2, 1)
+texture_filter = 5
+
+[sub_resource type="Shader" id="Shader_rejcs"]
+code = "// NOTE: Shader automatically converted from Godot Engine 4.0.alpha's StandardMaterial3D.
+
+shader_type spatial;
+render_mode blend_mix,depth_draw_opaque,cull_back,diffuse_burley,specular_schlick_ggx;
+uniform vec4 albedo : source_color;
+uniform sampler2D texture_albedo : source_color,filter_linear_mipmap_anisotropic,repeat_enable;
+uniform float point_size : hint_range(0,128);
+uniform float roughness : hint_range(0,1);
+uniform sampler2D texture_metallic : hint_default_white,filter_linear_mipmap_anisotropic,repeat_enable;
+uniform vec4 metallic_texture_channel;
+uniform sampler2D texture_roughness : hint_roughness_r,filter_linear_mipmap_anisotropic,repeat_enable;
+uniform float specular;
+uniform float metallic;
+uniform vec3 uv1_scale;
+uniform vec3 uv1_offset;
+uniform vec3 uv2_scale;
+uniform vec3 uv2_offset;
+
+void vertex() {
+	// Scroll the texture over time.
+	UV = UV*uv1_scale.xy+uv1_offset.xy + vec2(mod(TIME, 1.0), 0.0);
+}
+
+void fragment() {
+	vec2 base_uv = UV;
+	vec4 albedo_tex = texture(texture_albedo,base_uv);
+	ALBEDO = albedo.rgb * albedo_tex.rgb;
+	float metallic_tex = dot(texture(texture_metallic,base_uv),metallic_texture_channel);
+	METALLIC = metallic_tex * metallic;
+	vec4 roughness_texture_channel = vec4(1.0,0.0,0.0,0.0);
+	float roughness_tex = dot(texture(texture_roughness,base_uv),roughness_texture_channel);
+	ROUGHNESS = roughness_tex * roughness;
+	SPECULAR = specular;
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_ltvd2"]
+render_priority = 0
+shader = SubResource("Shader_rejcs")
+shader_parameter/albedo = Color(1.2, 0.915333, 0.997134, 1)
+shader_parameter/texture_albedo = SubResource("NoiseTexture_bgiac")
+shader_parameter/point_size = 1.0
+shader_parameter/roughness = 1.0
+shader_parameter/metallic_texture_channel = Vector4(0, 0, 0, 0)
+shader_parameter/specular = 0.5
+shader_parameter/metallic = 0.0
+shader_parameter/uv1_scale = Vector3(2, 2, 1)
+shader_parameter/uv1_offset = Vector3(0, 0, 0)
+shader_parameter/uv2_scale = Vector3(1, 1, 1)
+shader_parameter/uv2_offset = Vector3(0, 0, 0)
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_oopii"]
+height = 1.0
+radial_segments = 18
+rings = 1
+
+[sub_resource type="Shader" id="Shader_ovufm"]
+code = "// NOTE: Shader automatically converted from Godot Engine 4.0.alpha's StandardMaterial3D.
+
+shader_type spatial;
+render_mode blend_mix,depth_draw_opaque,cull_back,diffuse_burley,specular_schlick_ggx;
+uniform vec4 albedo : source_color;
+uniform sampler2D texture_albedo : source_color,filter_linear_mipmap_anisotropic,repeat_enable;
+uniform float point_size : hint_range(0,128);
+uniform float roughness : hint_range(0,1);
+uniform sampler2D texture_metallic : hint_default_white,filter_linear_mipmap_anisotropic,repeat_enable;
+uniform vec4 metallic_texture_channel;
+uniform sampler2D texture_roughness : hint_roughness_r,filter_linear_mipmap_anisotropic,repeat_enable;
+uniform float specular;
+uniform float metallic;
+uniform vec3 uv1_scale;
+uniform vec3 uv1_offset;
+uniform vec3 uv2_scale;
+uniform vec3 uv2_offset;
+
+float rand(vec2 co){
+    return fract(sin(dot(co.xy, vec2(12.9898, 78.233))) * 43758.5453);
+}
+
+void vertex() {
+	// Move vertices randomly over time.
+	VERTEX.y += 0.25 + sin(TIME * 2.0) * rand(vec2(VERTEX.xz)) * 0.5;
+}
+
+void fragment() {
+	vec2 base_uv = UV;
+	vec4 albedo_tex = texture(texture_albedo,base_uv);
+	ALBEDO = albedo.rgb * albedo_tex.rgb;
+	float metallic_tex = dot(texture(texture_metallic,base_uv),metallic_texture_channel);
+	METALLIC = metallic_tex * metallic;
+	vec4 roughness_texture_channel = vec4(1.0,0.0,0.0,0.0);
+	float roughness_tex = dot(texture(texture_roughness,base_uv),roughness_texture_channel);
+	ROUGHNESS = roughness_tex * roughness;
+	SPECULAR = specular;
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_fbaw5"]
+render_priority = 0
+shader = SubResource("Shader_ovufm")
+shader_parameter/albedo = Color(1.2, 1.16365, 0.85123, 1)
+shader_parameter/texture_albedo = SubResource("NoiseTexture_bgiac")
+shader_parameter/point_size = 1.0
+shader_parameter/roughness = 1.0
+shader_parameter/metallic_texture_channel = Vector4(0, 0, 0, 0)
+shader_parameter/specular = 0.5
+shader_parameter/metallic = 0.0
+shader_parameter/uv1_scale = Vector3(2, 2, 1)
+shader_parameter/uv1_offset = Vector3(0, 0, 0)
+shader_parameter/uv2_scale = Vector3(1, 1, 1)
+shader_parameter/uv2_offset = Vector3(0, 0, 0)
+
+[sub_resource type="Gradient" id="Gradient_ehij4"]
+offsets = PackedFloat32Array(0, 0.333, 0.667, 1)
+colors = PackedColorArray(1, 0.17, 0.17, 1, 1, 0.816, 0.08, 1, 0.644, 1, 0.11, 1, 0.14, 0.885333, 1, 1)
+
+[node name="AntiAliasingTestScene" type="WorldEnvironment" unique_id=530522218]
+environment = SubResource("11")
+script = ExtResource("18")
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="." unique_id=95807823]
+libraries/ = SubResource("AnimationLibrary_ecfcr")
+autoplay = &"move"
+
+[node name="Plane" type="MeshInstance3D" parent="." unique_id=2060213786]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -38)
+layers = 2
+mesh = SubResource("14")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=452359052]
+transform = Transform3D(0.909487, -0.23874, 0.340349, 0, 0.818672, 0.574262, -0.415733, -0.522284, 0.744571, 3.9506, 3.39961, 3.54442)
+shadow_enabled = true
+shadow_bias = 0.03
+shadow_normal_bias = 1.5
+shadow_blur = 1.5
+directional_shadow_mode = 0
+directional_shadow_fade_start = 1.0
+directional_shadow_max_distance = 25.0
+
+[node name="CameraHolder" type="Node3D" parent="." unique_id=1393058118]
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 0, 0.125, 0)
+
+[node name="RotationX" type="Node3D" parent="CameraHolder" unique_id=235419452]
+
+[node name="Camera3D" type="Camera3D" parent="CameraHolder/RotationX" unique_id=754425541]
+fov = 70.0
+
+[node name="Testers" type="Node3D" parent="." unique_id=1144675124]
+
+[node name="StaticObject" type="Node3D" parent="Testers" unique_id=1043244404]
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Testers/StaticObject" unique_id=1591387621]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 0.5, 0)
+mesh = SubResource("BoxMesh_gwe28")
+surface_material_override/0 = SubResource("StandardMaterial3D_x42ya")
+
+[node name="MeshInstance3D2" type="MeshInstance3D" parent="Testers/StaticObject" unique_id=1259408294]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5, 0.5, 0)
+mesh = SubResource("BoxMesh_gwe28")
+surface_material_override/0 = SubResource("StandardMaterial3D_6yfdy")
+
+[node name="ThinLines" parent="Testers" unique_id=393135708 instance=ExtResource("3_5ehjl")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -4)
+
+[node name="Plane" type="MeshInstance3D" parent="Testers/ThinLines" unique_id=1895135036]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.002, 0)
+mesh = SubResource("PlaneMesh_nllvr")
+skeleton = NodePath("../../TransparencyAlphaBlend")
+surface_material_override/0 = SubResource("StandardMaterial3D_bjmm1")
+
+[node name="TransparencyAlphaBlend" type="Node3D" parent="Testers" unique_id=89275740]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -8)
+
+[node name="MeshInstance3D3" type="MeshInstance3D" parent="Testers/TransparencyAlphaBlend" unique_id=1872846831]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.501, 0)
+mesh = SubResource("BoxMesh_gwe28")
+surface_material_override/0 = SubResource("StandardMaterial3D_qcf1j")
+
+[node name="Plane" type="MeshInstance3D" parent="Testers/TransparencyAlphaBlend" unique_id=1426789894]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.002, 0)
+mesh = SubResource("PlaneMesh_nllvr")
+surface_material_override/0 = SubResource("StandardMaterial3D_bjmm1")
+
+[node name="TransparencyAlphaScissor" type="Node3D" parent="Testers" unique_id=1462698431]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -12)
+
+[node name="MeshInstance3D3" type="MeshInstance3D" parent="Testers/TransparencyAlphaScissor" unique_id=993192176]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.501, 0)
+mesh = SubResource("BoxMesh_gwe28")
+surface_material_override/0 = SubResource("StandardMaterial3D_xbqpl")
+
+[node name="Plane2" type="MeshInstance3D" parent="Testers/TransparencyAlphaScissor" unique_id=1326712739]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.002, 0)
+mesh = SubResource("PlaneMesh_nllvr")
+skeleton = NodePath("../../TransparencyAlphaBlend")
+surface_material_override/0 = SubResource("StandardMaterial3D_bjmm1")
+
+[node name="TransparencyAlphaScissorAntialiasingBlend" type="Node3D" parent="Testers" unique_id=1711482820]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -16)
+
+[node name="MeshInstance3D3" type="MeshInstance3D" parent="Testers/TransparencyAlphaScissorAntialiasingBlend" unique_id=1946058395]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.501, 0)
+mesh = SubResource("BoxMesh_gwe28")
+surface_material_override/0 = SubResource("StandardMaterial3D_txrd8")
+
+[node name="Plane3" type="MeshInstance3D" parent="Testers/TransparencyAlphaScissorAntialiasingBlend" unique_id=1447523337]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.002, 0)
+mesh = SubResource("PlaneMesh_nllvr")
+skeleton = NodePath("../../TransparencyAlphaBlend")
+surface_material_override/0 = SubResource("StandardMaterial3D_bjmm1")
+
+[node name="TransparencyAlphaScissorAntialiasingClip" type="Node3D" parent="Testers" unique_id=88645719]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -20)
+
+[node name="MeshInstance3D3" type="MeshInstance3D" parent="Testers/TransparencyAlphaScissorAntialiasingClip" unique_id=1956943563]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.501, 0)
+mesh = SubResource("BoxMesh_gwe28")
+surface_material_override/0 = SubResource("StandardMaterial3D_xhqpm")
+
+[node name="Plane4" type="MeshInstance3D" parent="Testers/TransparencyAlphaScissorAntialiasingClip" unique_id=583190729]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.002, 0)
+mesh = SubResource("PlaneMesh_nllvr")
+skeleton = NodePath("../../TransparencyAlphaBlend")
+surface_material_override/0 = SubResource("StandardMaterial3D_bjmm1")
+
+[node name="TransparencyAlphaHash" type="Node3D" parent="Testers" unique_id=725670392]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -24)
+
+[node name="MeshInstance3D3" type="MeshInstance3D" parent="Testers/TransparencyAlphaHash" unique_id=2017646659]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.501, 0)
+mesh = SubResource("BoxMesh_gwe28")
+surface_material_override/0 = SubResource("StandardMaterial3D_mjkwh")
+
+[node name="Plane5" type="MeshInstance3D" parent="Testers/TransparencyAlphaHash" unique_id=253309038]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.002, 0)
+mesh = SubResource("PlaneMesh_nllvr")
+skeleton = NodePath("../../TransparencyAlphaBlend")
+surface_material_override/0 = SubResource("StandardMaterial3D_bjmm1")
+
+[node name="TransparencyDepthPrepass" type="Node3D" parent="Testers" unique_id=1141388027]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -28)
+
+[node name="MeshInstance3D3" type="MeshInstance3D" parent="Testers/TransparencyDepthPrepass" unique_id=481839879]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.501, 0)
+mesh = SubResource("BoxMesh_gwe28")
+surface_material_override/0 = SubResource("StandardMaterial3D_f4l4p")
+
+[node name="Plane6" type="MeshInstance3D" parent="Testers/TransparencyDepthPrepass" unique_id=2095977670]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.002, 0)
+mesh = SubResource("PlaneMesh_nllvr")
+skeleton = NodePath("../../TransparencyAlphaBlend")
+surface_material_override/0 = SubResource("StandardMaterial3D_bjmm1")
+
+[node name="ComplexObject" parent="Testers" unique_id=2138220670 instance=ExtResource("3_fa2bl")]
+transform = Transform3D(0.2, 0, 0, 0, 0.2, 0, 0, 0, 0.2, 0, 0.35, -32)
+
+[node name="PointRendering" type="Node3D" parent="Testers" unique_id=826685807]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -36)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Testers/PointRendering" unique_id=748734400]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+mesh = SubResource("SphereMesh_kfkna")
+surface_material_override/0 = SubResource("StandardMaterial3D_rfedc")
+
+[node name="MovingObject" type="Node3D" parent="Testers" unique_id=1084167816]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -40)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Testers/MovingObject" unique_id=1491356497]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+mesh = SubResource("BoxMesh_gwe28")
+surface_material_override/0 = SubResource("StandardMaterial3D_x42ya")
+
+[node name="RotatingObject" type="Node3D" parent="Testers" unique_id=800998895]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -44)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Testers/RotatingObject" unique_id=847251562]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+mesh = SubResource("BoxMesh_gwe28")
+surface_material_override/0 = SubResource("StandardMaterial3D_x42ya")
+
+[node name="ScalingObject" type="Node3D" parent="Testers" unique_id=1966930741]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -48)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Testers/ScalingObject" unique_id=347514637]
+transform = Transform3D(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.5, 0)
+mesh = SubResource("BoxMesh_gwe28")
+surface_material_override/0 = SubResource("StandardMaterial3D_x42ya")
+
+[node name="StaticCPUParticles" type="Node3D" parent="Testers" unique_id=289527952]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -52)
+
+[node name="CPUParticles3D" type="CPUParticles3D" parent="Testers/StaticCPUParticles" unique_id=841035782]
+amount = 100
+draw_order = 1
+mesh = SubResource("QuadMesh_imrxg")
+direction = Vector3(0, 1, 0)
+spread = 10.0
+initial_velocity_min = 5.0
+initial_velocity_max = 5.0
+scale_amount_min = 0.25
+scale_amount_max = 0.25
+scale_amount_curve = SubResource("Curve_v0n7y")
+color_ramp = SubResource("Gradient_e7gyf")
+
+[node name="CPUParticles3D2" type="CPUParticles3D" parent="Testers/StaticCPUParticles/CPUParticles3D" unique_id=1222133372]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 0.2, 0)
+amount = 20
+mesh = SubResource("BoxMesh_88317")
+spread = 180.0
+gravity = Vector3(0, 0, 0)
+initial_velocity_min = 2.5
+initial_velocity_max = 2.5
+radial_accel_min = -5.0
+radial_accel_max = -5.0
+scale_amount_min = 0.25
+scale_amount_max = 2.5
+scale_amount_curve = SubResource("Curve_sutnd")
+
+[node name="MovingCPUParticles" type="Node3D" parent="Testers" unique_id=150565616]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -56)
+
+[node name="CPUParticles3D" type="CPUParticles3D" parent="Testers/MovingCPUParticles" unique_id=901428783]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+amount = 100
+lifetime = 0.5
+draw_order = 1
+mesh = SubResource("QuadMesh_imrxg")
+direction = Vector3(0, 1, 0)
+spread = 10.0
+initial_velocity_min = 2.0
+initial_velocity_max = 2.0
+tangential_accel_min = 6.0
+tangential_accel_max = 40.0
+scale_amount_min = 0.25
+scale_amount_max = 0.25
+scale_amount_curve = SubResource("Curve_v0n7y")
+color = Color(6, 2, 6, 1)
+color_ramp = SubResource("Gradient_e7gyf")
+
+[node name="CPUParticles3D" type="CPUParticles3D" parent="Testers/MovingCPUParticles/CPUParticles3D" unique_id=135824526]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 0, 0)
+amount = 20
+mesh = SubResource("BoxMesh_88317")
+spread = 180.0
+gravity = Vector3(0, 0, 0)
+initial_velocity_min = 2.5
+initial_velocity_max = 2.5
+scale_amount_curve = SubResource("Curve_sutnd")
+
+[node name="StaticGPUParticles" type="Node3D" parent="Testers" unique_id=1226128821]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -60)
+
+[node name="GPUParticles3D" type="GPUParticles3D" parent="Testers/StaticGPUParticles" unique_id=811339876]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
+amount = 50
+lifetime = 2.0
+fixed_fps = 0
+collision_base_size = 0.05
+visibility_aabb = AABB(-1.63511, -1.25001, -1.31512, 3.0892, 2.15487, 2.91765)
+process_material = SubResource("ParticlesMaterial_ft0gs")
+draw_pass_1 = SubResource("BoxMesh_88317")
+
+[node name="GPUParticlesCollisionBox3D" type="GPUParticlesCollisionBox3D" parent="Testers/StaticGPUParticles" unique_id=1061587751]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1, 0)
+size = Vector3(4, 2, 4)
+
+[node name="MovingGPUParticles" type="Node3D" parent="Testers" unique_id=161886590]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -64)
+
+[node name="GPUParticles3D" type="GPUParticles3D" parent="Testers/MovingGPUParticles" unique_id=2090736243]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
+extra_cull_margin = 3.0
+amount = 50
+lifetime = 2.0
+fixed_fps = 0
+collision_base_size = 0.05
+visibility_aabb = AABB(-1.50087, -1.25001, -1.4745, 3.19423, 2.13905, 3.02308)
+process_material = SubResource("ParticlesMaterial_ft0gs")
+draw_pass_1 = SubResource("BoxMesh_88317")
+
+[node name="GPUParticlesCollisionBox3D2" type="GPUParticlesCollisionBox3D" parent="Testers/MovingGPUParticles" unique_id=211868659]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1, 0)
+size = Vector3(4, 2, 4)
+
+[node name="MovingDecal" type="Node3D" parent="Testers" unique_id=531109991]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -68)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Testers/MovingDecal" unique_id=1105826705]
+mesh = SubResource("SphereMesh_v4x6x")
+
+[node name="Decal" type="Decal" parent="Testers/MovingDecal" unique_id=1186019737]
+transform = Transform3D(-0.70710397, -1.0132786e-06, -0.7071092, 0.18301255, 0.9659255, -0.1830126, 0.68301517, -0.25881884, -0.68300986, 1, 1, 1)
+texture_albedo = ExtResource("3_2nulf")
+texture_normal = ExtResource("4_fdfpv")
+
+[node name="ScrollingUVAnimation" type="Node3D" parent="Testers" unique_id=1997952159]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -72)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Testers/ScrollingUVAnimation" unique_id=1730329080]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+mesh = SubResource("CylinderMesh_5qy8k")
+surface_material_override/0 = SubResource("StandardMaterial3D_53dqy")
+
+[node name="ScrollingUVCustomShader" type="Node3D" parent="Testers" unique_id=782085995]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -76)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Testers/ScrollingUVCustomShader" unique_id=1082748319]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+mesh = SubResource("CylinderMesh_5qy8k")
+surface_material_override/0 = SubResource("ShaderMaterial_ltvd2")
+
+[node name="CustomShaderVertexMovement" type="Node3D" parent="Testers" unique_id=270301858]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -80)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Testers/CustomShaderVertexMovement" unique_id=245013320]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+extra_cull_margin = 1.0
+mesh = SubResource("CylinderMesh_oopii")
+surface_material_override/0 = SubResource("ShaderMaterial_fbaw5")
+
+[node name="TestName" type="Label" parent="." unique_id=379288432]
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -192.0
+offset_top = -58.0
+offset_right = 192.0
+offset_bottom = -24.0
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 5
+theme_override_font_sizes/font_size = 24
+horizontal_alignment = 1
+
+[node name="Previous" type="Button" parent="." unique_id=1733248100]
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 24.0
+offset_top = -55.0
+offset_right = 135.0
+offset_bottom = -24.0
+text = "«  Previous"
+
+[node name="Next" type="Button" parent="." unique_id=1662216547]
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -107.0
+offset_top = -55.0
+offset_right = -24.0
+offset_bottom = -24.0
+text = "Next  »"
+
+[node name="Antialiasing" type="VBoxContainer" parent="." unique_id=1723676447]
+offset_left = 24.0
+offset_top = 24.0
+offset_right = 394.0
+offset_bottom = 340.0
+theme_override_constants/separation = 10
+
+[node name="MultisampleAAContainer" type="HBoxContainer" parent="Antialiasing" unique_id=1955254791]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="Antialiasing/MultisampleAAContainer" unique_id=1640503169]
+custom_minimum_size = Vector2(120, 2.08165e-12)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+text = "Multisample AA"
+vertical_alignment = 1
+
+[node name="MultisampleAA" type="OptionButton" parent="Antialiasing/MultisampleAAContainer" unique_id=528281962]
+custom_minimum_size = Vector2(235, 2.08165e-12)
+layout_mode = 2
+selected = 0
+item_count = 4
+popup/item_0/text = "Disabled (Fastest)"
+popup/item_0/id = 0
+popup/item_1/text = "2× (Average)"
+popup/item_1/id = 1
+popup/item_2/text = "4× (Slow)"
+popup/item_2/id = 2
+popup/item_3/text = "8× (Slower)"
+popup/item_3/id = 3
+
+[node name="ScreenSpaceAAContainer" type="HBoxContainer" parent="Antialiasing" unique_id=150906838]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="Antialiasing/ScreenSpaceAAContainer" unique_id=1527028846]
+custom_minimum_size = Vector2(120, 2.08165e-12)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+text = "Screen-Space AA"
+vertical_alignment = 1
+
+[node name="ScreenSpaceAA" type="OptionButton" parent="Antialiasing/ScreenSpaceAAContainer" unique_id=881299517]
+custom_minimum_size = Vector2(235, 2.08165e-12)
+layout_mode = 2
+selected = 0
+item_count = 3
+popup/item_0/text = "Disabled (Fastest)"
+popup/item_0/id = 0
+popup/item_1/text = "FXAA (Fast)"
+popup/item_1/id = 1
+popup/item_2/text = "SMAA (Average)"
+popup/item_2/id = 2
+
+[node name="TemporalAAContainer" type="HBoxContainer" parent="Antialiasing" unique_id=598248594]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="Antialiasing/TemporalAAContainer" unique_id=579853154]
+custom_minimum_size = Vector2(120, 2.08165e-12)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+text = "Temporal AA"
+vertical_alignment = 1
+
+[node name="TemporalAA" type="OptionButton" parent="Antialiasing/TemporalAAContainer" unique_id=1321745170]
+custom_minimum_size = Vector2(235, 2.08165e-12)
+layout_mode = 2
+selected = 0
+item_count = 2
+popup/item_0/text = "Disabled (Fastest)"
+popup/item_0/id = 0
+popup/item_1/text = "Enabled (Average)"
+popup/item_1/id = 1
+
+[node name="VSyncContainer" type="HBoxContainer" parent="Antialiasing" unique_id=1356581312]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="Antialiasing/VSyncContainer" unique_id=612398323]
+custom_minimum_size = Vector2(120, 2.08165e-12)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+text = "V-Sync"
+vertical_alignment = 1
+
+[node name="VSync" type="OptionButton" parent="Antialiasing/VSyncContainer" unique_id=368682977]
+custom_minimum_size = Vector2(235, 2.08165e-12)
+layout_mode = 2
+selected = 0
+item_count = 3
+popup/item_0/text = "Disabled"
+popup/item_0/id = 0
+popup/item_1/text = "Adaptive"
+popup/item_1/id = 1
+popup/item_2/text = "Enabled"
+popup/item_2/id = 2
+
+[node name="FPSLimitContainer" type="HBoxContainer" parent="Antialiasing" unique_id=1170548973]
+layout_mode = 2
+theme_override_constants/separation = 15
+
+[node name="Label" type="Label" parent="Antialiasing/FPSLimitContainer" unique_id=581454409]
+custom_minimum_size = Vector2(120, 2.08165e-12)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+text = "FPS Limit"
+vertical_alignment = 1
+
+[node name="FPSLimitScale" type="HSlider" parent="Antialiasing/FPSLimitContainer" unique_id=760741085]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+size_flags_stretch_ratio = 3.0
+max_value = 300.0
+step = 10.0
+
+[node name="Value" type="Label" parent="Antialiasing/FPSLimitContainer" unique_id=1148609638]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+text = "∞"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="RenderScaleContainer" type="HBoxContainer" parent="Antialiasing" unique_id=1980197180]
+layout_mode = 2
+theme_override_constants/separation = 15
+
+[node name="Label" type="Label" parent="Antialiasing/RenderScaleContainer" unique_id=1803333355]
+custom_minimum_size = Vector2(120, 2.08165e-12)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+text = "Render Scale"
+vertical_alignment = 1
+
+[node name="RenderScale" type="HSlider" parent="Antialiasing/RenderScaleContainer" unique_id=870425893]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+size_flags_stretch_ratio = 3.0
+min_value = 0.25
+max_value = 2.0
+step = 0.01
+value = 1.0
+
+[node name="Value" type="Label" parent="Antialiasing/RenderScaleContainer" unique_id=489137100]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+text = "100%"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="FidelityFXFSR" type="CheckButton" parent="Antialiasing" unique_id=1630563606]
+visible = false
+layout_mode = 2
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+text = "AMD FidelityFX Super Resolution 1.0"
+
+[node name="FSRSharpness" type="OptionButton" parent="Antialiasing" unique_id=504273231]
+visible = false
+layout_mode = 2
+selected = 3
+item_count = 5
+popup/item_0/text = "No FSR Sharpness"
+popup/item_0/id = 0
+popup/item_1/text = "Low FSR Sharpness"
+popup/item_1/id = 1
+popup/item_2/text = "Medium FSR Sharpness"
+popup/item_2/id = 2
+popup/item_3/text = "High FSR Sharpness"
+popup/item_3/id = 3
+popup/item_4/text = "Highest FSR Sharpness"
+popup/item_4/id = 4
+
+[node name="ViewportResolution" type="Label" parent="." unique_id=1365136605]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -344.0
+offset_top = 16.0
+offset_right = -16.0
+offset_bottom = 42.0
+grow_horizontal = 0
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+text = "Viewport resolution: 1152×648"
+horizontal_alignment = 2
+
+[node name="FPSLabel" type="Label" parent="." unique_id=1924211132]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -344.0
+offset_top = 48.0
+offset_right = -16.0
+offset_bottom = 74.0
+grow_horizontal = 0
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+text = "FPS: 0"
+horizontal_alignment = 2
+metadata/gradient = SubResource("Gradient_ehij4")
+
+[connection signal="pressed" from="Previous" to="." method="_on_previous_pressed"]
+[connection signal="pressed" from="Next" to="." method="_on_next_pressed"]
+[connection signal="item_selected" from="Antialiasing/MultisampleAAContainer/MultisampleAA" to="." method="_on_msaa_item_selected"]
+[connection signal="item_selected" from="Antialiasing/ScreenSpaceAAContainer/ScreenSpaceAA" to="." method="_on_screen_space_aa_item_selected"]
+[connection signal="item_selected" from="Antialiasing/TemporalAAContainer/TemporalAA" to="." method="_on_taa_item_selected"]
+[connection signal="item_selected" from="Antialiasing/VSyncContainer/VSync" to="." method="_on_v_sync_item_selected"]
+[connection signal="value_changed" from="Antialiasing/FPSLimitContainer/FPSLimitScale" to="." method="_on_fps_limit_scale_value_changed"]
+[connection signal="value_changed" from="Antialiasing/RenderScaleContainer/RenderScale" to="." method="_on_render_scale_value_changed"]
+[connection signal="toggled" from="Antialiasing/FidelityFXFSR" to="." method="_on_amd_fidelityfx_fsr1_toggled"]
+[connection signal="item_selected" from="Antialiasing/FSRSharpness" to="." method="_on_fsr_sharpness_item_selected"]

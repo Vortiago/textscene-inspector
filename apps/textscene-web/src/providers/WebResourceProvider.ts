@@ -8,6 +8,17 @@ import type { ResourceProvider } from '@textscene/core';
 
 export class WebResourceProvider implements ResourceProvider {
   private uploadedFiles: Map<string, File> = new Map();
+  /**
+   * Public-fixtures subtree the active scene's res:// namespace maps onto.
+   * '' = the fixtures root (unit fixtures, examples, ld-58, isometric);
+   * vendored demo projects each set their own root (e.g.
+   * 'demos/2d/platformer') so their res:// paths cannot collide.
+   */
+  private resourceRoot = '';
+
+  setResourceRoot(root: string): void {
+    this.resourceRoot = root;
+  }
 
   /**
    * Add a manually uploaded file.
@@ -50,9 +61,10 @@ export class WebResourceProvider implements ResourceProvider {
     // For resources from /fixtures/, try fetching them
     if (path.startsWith('res://')) {
       try {
-        // Convert Godot path to fixture path
+        // Convert Godot path to fixture path under the active corpus root.
         const filename = path.replace('res://', '');
-        const fixtureUrl = `/fixtures/${filename}`;
+        const prefix = this.resourceRoot ? `${this.resourceRoot}/` : '';
+        const fixtureUrl = `/fixtures/${prefix}${filename}`;
 
         info(`[WebResourceProvider] Attempting to fetch ${type}: ${fixtureUrl}`);
         const response = await fetch(fixtureUrl);

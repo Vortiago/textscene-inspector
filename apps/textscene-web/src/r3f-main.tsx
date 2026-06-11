@@ -80,6 +80,25 @@ export function R3FApp() {
     []
   );
 
+  // Each vendored demo project keeps its own res:// namespace; the active
+  // fixture's `root` scopes the provider's lookups to that subtree. Declared
+  // BEFORE the content-fetch effect so the root is in place by the time the
+  // newly-mounted scene starts requesting resources.
+  const resourceRoot = useMemo(
+    () => fixtures.find((f) => f.file === fixtureFile)?.root ?? '',
+    [fixtureFile]
+  );
+  const lastRootRef = useRef(resourceRoot);
+  useEffect(() => {
+    provider.setResourceRoot(resourceRoot);
+    if (lastRootRef.current !== resourceRoot) {
+      lastRootRef.current = resourceRoot;
+      // Two corpora can reference the same res:// path (e.g. art/player.png)
+      // — drop the previous corpus's cached resources, keep subscribers.
+      loader.clearCaches();
+    }
+  }, [resourceRoot, provider, loader]);
+
   const options = useMemo<ViewportSelectorOption[]>(() => {
     const fixtureOptions: ViewportSelectorOption[] = fixtures.map((f) => ({
       value: f.file,
@@ -177,7 +196,12 @@ export function R3FApp() {
           panelId={`web-${fixtureFile || uploadedTscnName || 'empty'}`}
           content={content}
           rootScenePath={`res://${
-            fixtureFile || uploadedTscnName || 'empty.tscn'
+            // The scene's res:// identity is relative to its corpus root.
+            (resourceRoot && fixtureFile.startsWith(`${resourceRoot}/`)
+              ? fixtureFile.slice(resourceRoot.length + 1)
+              : fixtureFile) ||
+            uploadedTscnName ||
+            'empty.tscn'
           }`}
           onResourceUpload={handleResourceUpload}
           onResourceRemove={handleResourceRemove}

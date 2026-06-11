@@ -139,6 +139,15 @@ export function createFakeResourceLoader(): FakeResourceLoader {
       eventBus.clear();
       metadata.clear();
     },
+    // Mirror ResourceLoader.clearCaches: caches + metadata, subscribers kept.
+    clearCaches(): void {
+      textures.clearCache();
+      materials.clearCache();
+      glbMeshes.clearCache();
+      scenes.clearCache();
+      resources.clearCache();
+      metadata.clear();
+    },
   };
 
   return {

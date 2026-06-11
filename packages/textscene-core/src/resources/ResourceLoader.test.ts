@@ -141,6 +141,32 @@ describe('ResourceLoader (loader-level gaps)', () => {
     });
   });
 
+  describe('clearCaches() — corpus switches', () => {
+    it('drops all caches and metadata but keeps event subscribers alive', async () => {
+      loader.register(SCENE_META);
+      provider.files.set(SCENE_PATH, VALID_TSCN);
+      const first = loader.eventBus.once<TscnScene>('scene', 'loaded', SCENE_PATH);
+      loader.request('scene', SCENE_PATH);
+      await first;
+      expect(loader.scenes.isCached(SCENE_PATH)).toBe(true);
+
+      const handler = vi.fn();
+      loader.eventBus.on('scene', 'loaded', handler);
+
+      loader.clearCaches();
+      expect(loader.scenes.isCached(SCENE_PATH)).toBe(false);
+      expect(loader.metadata.getAll()).toHaveLength(0);
+
+      // A subscriber registered before the clear still receives events
+      // (unlike clear(), which wipes the bus and the loader's own callbacks).
+      loader.register(SCENE_META);
+      const second = loader.eventBus.once<TscnScene>('scene', 'loaded', SCENE_PATH);
+      loader.request('scene', SCENE_PATH);
+      await second;
+      expect(handler).toHaveBeenCalled();
+    });
+  });
+
   describe('type-generic surface guards', () => {
     it('request() with the resource type routes to the generic .tres processor', () => {
       const resSpy = vi.spyOn(loader.resources, 'request');

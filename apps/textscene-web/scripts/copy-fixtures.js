@@ -79,6 +79,22 @@ try {
   // No isometric directory — skip.
 }
 
+// Mirror the godot-demo-projects corpora (scenes/demos/**) PRESERVING the
+// demos/<top>/<project>/ structure — unlike ld-58/isometric these are NOT
+// flattened to the root: each project keeps its own res:// namespace, and
+// the web provider resolves res:// against the fixture's `root` subtree.
+const demosSource = join(scenesRoot, 'demos');
+const demosTarget = join(fixturesTarget, 'demos');
+try {
+  if (statSync(demosSource).isDirectory()) {
+    mkdirSync(demosTarget, { recursive: true });
+    copyRecursive(demosSource, demosTarget);
+    console.log('Copied godot-demo-projects corpora to public/fixtures/demos/');
+  }
+} catch {
+  // No demos directory — skip.
+}
+
 // Copy materials directory from scenes/materials/
 const materialsSource = join(scenesRoot, 'materials');
 const materialsTarget = join(fixturesTarget, 'materials');
