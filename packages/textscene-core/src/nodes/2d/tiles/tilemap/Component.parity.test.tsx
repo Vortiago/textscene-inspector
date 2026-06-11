@@ -68,4 +68,10 @@ describe('TileMap render parity', () => {
     expect(layer0!.position.z).toBeCloseTo(0, 8);
     expect(layer1!.position.z).toBeCloseTo(1 * Z_INDEX_STEP + 1 * TILE_LAYER_STEP, 8);
   });
+
+  it('renders an empty group for a TileMap with a tile_set but zero layers', async () => {
+    const r = await render(makeNode({}));
+    expect(r.scene.findAllByType('Mesh')).toHaveLength(0);
+    expect(r.scene.findByProps({ name: 'Map' })).toBeDefined();
+  });
 });

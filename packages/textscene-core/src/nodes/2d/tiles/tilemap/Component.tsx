@@ -57,6 +57,7 @@ export function TileMap({ node, children }: NodeComponentProps) {
                     }
                     color={color}
                     opacity={opacity}
+                    name={node.name}
                   />
                 );
               });

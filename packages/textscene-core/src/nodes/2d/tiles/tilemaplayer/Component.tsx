@@ -46,6 +46,7 @@ export function TileMapLayer({ node, children }: NodeComponentProps) {
                   z={sourceIndex * TILE_SOURCE_STEP}
                   color={color}
                   opacity={opacity}
+                  name={node.name}
                 />
               );
             })

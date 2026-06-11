@@ -11,6 +11,7 @@ import * as THREE from 'three';
 import { useResource } from '../resources/useResource';
 import { buildTileGeometryArrays, type DrawableCell } from '../resources/tileset/tileGeometry';
 import type { AtlasSourceModel, TileGrid } from '../resources/tileset/tileSetModel';
+import { MissingResourcePlaceholder } from './components/MissingResourcePlaceholder';
 
 export interface TileSourceMeshProps {
   source: AtlasSourceModel;
@@ -21,9 +22,11 @@ export interface TileSourceMeshProps {
   /** Own-pixel tint from the node's CanvasItem ritual (linear space). */
   color: THREE.Color;
   opacity: number;
+  /** Group name for the per-source missing-texture placeholder. */
+  name?: string;
 }
 
-export function TileSourceMesh({ source, cells, grid, z, color, opacity }: TileSourceMeshProps) {
+export function TileSourceMesh({ source, cells, grid, z, color, opacity, name }: TileSourceMeshProps) {
   const texResult = useResource<THREE.Texture>(source.texturePath ?? '', 'Texture2D');
   const tex = texResult.value;
   const image = tex?.image as { width?: number; height?: number } | undefined;
@@ -40,7 +43,12 @@ export function TileSourceMesh({ source, cells, grid, z, color, opacity }: TileS
     return geom;
   }, [cells, source, grid, texW, texH]);
 
-  // Pending (or no texture yet): render nothing — no placeholder flash.
+  // No texture reference or a failed load: one placeholder for the whole
+  // source (the panel row comes from useResource's missing-path report).
+  if (!source.texturePath || texResult.status === 'unavailable') {
+    return <MissingResourcePlaceholder shape="plane" name={name} />;
+  }
+  // Pending: render nothing — no placeholder flash.
   if (!tex || !geometry) return null;
 
   return (

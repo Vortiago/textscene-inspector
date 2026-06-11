@@ -65,14 +65,26 @@ function seededTexture(): THREE.Texture {
   return tex;
 }
 
-async function render(node: TscnNode) {
+async function render(
+  node: TscnNode,
+  options: { missingTextures?: string[]; child?: boolean } = {}
+) {
   const fake = createFakeResourceLoader();
-  fake.textures.seed(TEX, seededTexture());
-  fake.textures.seed(TEX2, seededTexture());
+  for (const path of [TEX, TEX2]) {
+    if (options.missingTextures?.includes(path)) fake.textures.seed(path, null);
+    else fake.textures.seed(path, seededTexture());
+  }
   return ReactThreeTestRenderer.create(
     <ResourceLoaderProvider loader={fake.loader}>
       <SceneResourcesProvider internalResources={internals} externalResources={externals}>
-        <TileMapLayer node={node} />
+        <TileMapLayer node={node}>
+          {options.child ? (
+            <mesh name="scene-child">
+              <planeGeometry />
+              <meshBasicMaterial />
+            </mesh>
+          ) : null}
+        </TileMapLayer>
       </SceneResourcesProvider>
     </ResourceLoaderProvider>
   );
@@ -167,5 +179,40 @@ describe('TileMapLayer render parity', () => {
     const position = mesh.geometry.getAttribute('position');
     // 16×16 region centered on (128, −64): TL = (120, −56).
     expect(Array.from(position.array).slice(0, 3)).toEqual([120, -56, 0]);
+  });
+});
+
+describe('TileMapLayer degradation (ADR-0008)', () => {
+  it('undecodable tile data → transform-only group; children render, no tiles, no placeholder', async () => {
+    const r = await render(makeNode({ tile_map_data: 'PackedByteArray(0, 0, 1)' }), {
+      child: true,
+    });
+    expect(r.scene.findByProps({ name: 'scene-child' })).toBeDefined();
+    expect(r.scene.findAllByType('Mesh')).toHaveLength(1); // only the scene child
+  });
+
+  it('unresolvable tile_set reference → same transform-only degradation', async () => {
+    const r = await render(makeNode({ tile_set: 'SubResource("nope")' }), { child: true });
+    expect(r.scene.findByProps({ name: 'scene-child' })).toBeDefined();
+    expect(r.scene.findAllByType('Mesh')).toHaveLength(1);
+  });
+
+  it('a missing texture degrades only its atlas source: placeholder there, other sources render', async () => {
+    // Cells from source 0 (texture missing) and source 1 (texture present).
+    const twoSources =
+      'PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0)';
+    const r = await render(makeNode({ tile_map_data: twoSources }), {
+      missingTextures: [TEX],
+    });
+    const meshes = r.scene.findAllByType('Mesh');
+    expect(meshes).toHaveLength(2);
+    const colors = meshes.map((m) =>
+      (m.instance.material as THREE.MeshBasicMaterial).color.getHexString()
+    );
+    expect(colors).toContain('ff00ff'); // the magenta per-source placeholder
+    const tiled = meshes.find(
+      (m) => (m.instance.material as THREE.MeshBasicMaterial).map !== null
+    );
+    expect(tiled).toBeDefined();
   });
 });
