@@ -94,6 +94,36 @@ global transforms are identical). Our renderer nests every node in its parent's
   model can't express cleanly — disproportionate for a zero-impact flag.
 - Site: `nodes/base/node3d/Component.tsx` (child group nesting).
 
+## TileMap / TileMapLayer
+
+### Cross-source draw order within a layer  *(issue #74, by design)*
+Tiles batch into **one mesh per atlas source** (the PRD's performance
+requirement). Godot draws cells in scan order, interleaving cells of different
+atlas sources within a rendering quadrant; per-source batching cannot reproduce
+that per-cell interleaving. Sources draw in `sources/N` appearance order, each
+nudged `+TILE_SOURCE_STEP` in z (deterministic, but not Godot's exact order
+where overlapping cells come from different sources).
+
+- **Impact today:** none visible — isometric stacking in the vendored dungeon
+  is dominated by `texture_origin` overlap within a single source.
+- Site: `r3f/node2dTransform.ts` (`TILE_SOURCE_STEP`), tile slice Components.
+
+### Y-sort  *(issue #74, out of scope)*
+`y_sort_enabled` / `y_sort_origin` (sorting tiles and sibling nodes by their
+y position) is parsed but not applied; draw order comes from z_index + tree
+order like every other CanvasItem. The dungeon's wall/prop overlaps mostly
+coincide with tree order, so the preview reads correctly.
+
+### Unsupported tile shapes, layouts, and data formats  *(issue #74)*
+- `tile_shape` half-offset-square (2) / hexagon (3): cells place on a square
+  grid + warn (`resources/tileset/tilePlacement.ts`).
+- Legacy `TileMap` with `format` 0/1 (Godot 3 tile-id encodings needing the
+  original TileSet's compatibility mapping): tile data ignored + warn, node
+  degrades to a transform-only group (`nodes/2d/tiles/shared/tileData.ts`).
+- Scene-collection tile sources (`TileSetScenesCollectionSource`) and per-tile
+  modulate/material overrides: skipped with a warn (`resolveTileSet.ts`).
+- Animated tiles: the base frame's region renders statically.
+
 ## Lights
 
 ### SpotLight3D.spot_angle_attenuation → penumbra  *(audit #15)*

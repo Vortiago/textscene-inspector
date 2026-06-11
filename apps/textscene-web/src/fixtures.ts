@@ -699,6 +699,51 @@ export const fixtures: Fixture[] = [
     "name": "Main",
     "file": "main.tscn",
     "category": "Examples - ld-58 Scenes"
+  },
+  {
+    "name": "Bone Pile 1",
+    "file": "decorations/bone_pile_1.tscn",
+    "category": "Examples - Isometric Dungeon"
+  },
+  {
+    "name": "Bone Pile 2",
+    "file": "decorations/bone_pile_2.tscn",
+    "category": "Examples - Isometric Dungeon"
+  },
+  {
+    "name": "Candle",
+    "file": "decorations/candle.tscn",
+    "category": "Examples - Isometric Dungeon"
+  },
+  {
+    "name": "Coin Pile",
+    "file": "decorations/coin_pile.tscn",
+    "category": "Examples - Isometric Dungeon"
+  },
+  {
+    "name": "Internal Shadow",
+    "file": "decorations/internal_shadow.tscn",
+    "category": "Examples - Isometric Dungeon"
+  },
+  {
+    "name": "Vase 1",
+    "file": "decorations/vase_1.tscn",
+    "category": "Examples - Isometric Dungeon"
+  },
+  {
+    "name": "Vase 2",
+    "file": "decorations/vase_2.tscn",
+    "category": "Examples - Isometric Dungeon"
+  },
+  {
+    "name": "Dungeon",
+    "file": "dungeon.tscn",
+    "category": "Examples - Isometric Dungeon"
+  },
+  {
+    "name": "Goblin",
+    "file": "player/goblin.tscn",
+    "category": "Examples - Isometric Dungeon"
   }
 ];
 

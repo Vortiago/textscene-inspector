@@ -127,6 +127,12 @@ function walkTscn(dir, base = '') {
 }
 const ld58Files = walkTscn(ld58Dir).sort();
 
+// The vendored godot-demo-projects isometric dungeon (scenes/isometric/) —
+// same mirroring scheme as ld-58: copy-fixtures lays its closure out at the
+// public/fixtures root so `res://tileset/...` references resolve.
+const isometricDir = join(rootDir, 'scenes/isometric');
+const isometricFiles = walkTscn(isometricDir).sort();
+
 const fixtures = [
   ...fixtureFiles.map(file => ({
     name: generateName(file),
@@ -150,6 +156,11 @@ const fixtures = [
     ),
     file,
     category: 'Examples - ld-58 Scenes',
+  })),
+  ...isometricFiles.map(file => ({
+    name: generateName(file.split('/').pop().replace(/_/g, '-')),
+    file,
+    category: 'Examples - Isometric Dungeon',
   })),
 ];
 

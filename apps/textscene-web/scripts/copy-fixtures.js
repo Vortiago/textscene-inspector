@@ -66,6 +66,19 @@ try {
   // No ld58 directory — skip.
 }
 
+// Copy the vendored isometric-dungeon closure (scenes/isometric/**) the same
+// way — its res:// references (tileset/, decorations/, player/) resolve at
+// the public/fixtures root.
+const isometricSource = join(scenesRoot, 'isometric');
+try {
+  if (statSync(isometricSource).isDirectory()) {
+    copyRecursive(isometricSource, fixturesTarget);
+    console.log('Copied isometric-dungeon closure to public/fixtures/ (res:// mirrored)');
+  }
+} catch {
+  // No isometric directory — skip.
+}
+
 // Copy materials directory from scenes/materials/
 const materialsSource = join(scenesRoot, 'materials');
 const materialsTarget = join(fixturesTarget, 'materials');
