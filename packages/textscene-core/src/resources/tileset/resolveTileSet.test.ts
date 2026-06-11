@@ -4,7 +4,8 @@
  * scene; texture refs resolve against the scene's external resources.
  */
 import { describe, it, expect } from 'vitest';
-import { tileSetFromScene } from './resolveTileSet';
+import { tileSetFromScene, tileSetFromTres } from './resolveTileSet';
+import { parseTresFile } from '../../parser/tresParser';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
 
 const externals: TscnExternalResource[] = [
@@ -95,5 +96,45 @@ describe('tileSetFromScene', () => {
     expect(model!.layout).toBe(5);
     expect(model!.offsetAxis).toBe(0); // absent → horizontal default
     expect(model!.tileSize).toEqual({ x: 128, y: 64 });
+  });
+});
+
+describe('tileSetFromTres', () => {
+  const TILESET_TRES = `[gd_resource type="TileSet" load_steps=3 format=3]
+
+[ext_resource type="Texture2D" path="res://tileset/isotiles.png" id="1"]
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_a"]
+texture = ExtResource("1")
+margins = Vector2i(28, 75)
+texture_region_size = Vector2i(135, 105)
+0:0/0 = 0
+0:0/1 = 1
+0:0/1/flip_h = true
+
+[resource]
+tile_shape = 1
+tile_layout = 5
+tile_size = Vector2i(128, 64)
+sources/0 = SubResource("TileSetAtlasSource_a")
+`;
+
+  it('resolves a TileSet .tres against its own ext/sub resources', () => {
+    const model = tileSetFromTres(parseTresFile(TILESET_TRES));
+    expect(model).not.toBeNull();
+    expect(model!.shape).toBe(1);
+    expect(model!.tileSize).toEqual({ x: 128, y: 64 });
+    const source = model!.sources.get(0)!;
+    expect(source.texturePath).toBe('res://tileset/isotiles.png');
+    expect(source.margins).toEqual({ x: 28, y: 75 });
+    expect(source.textureRegionSize).toEqual({ x: 135, y: 105 });
+    expect(source.tiles.get('0:0')!.alternatives.get(1)!.flipH).toBe(true);
+  });
+
+  it('returns null for a .tres that is not a TileSet', () => {
+    const material = parseTresFile(
+      '[gd_resource type="StandardMaterial3D" format=3]\n\n[resource]\nmetallic = 0.5\n'
+    );
+    expect(tileSetFromTres(material)).toBeNull();
   });
 });

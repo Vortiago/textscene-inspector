@@ -8,6 +8,7 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { parseTileMapLayer } from './parser';
 import { TileMapLayer } from './Component';
+import { parseTresFile } from '../../../../parser/tresParser';
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
@@ -179,6 +180,75 @@ describe('TileMapLayer render parity', () => {
     const position = mesh.geometry.getAttribute('position');
     // 16×16 region centered on (128, −64): TL = (120, −56).
     expect(Array.from(position.array).slice(0, 3)).toEqual([120, -56, 0]);
+  });
+});
+
+describe('TileMapLayer with an ExtResource .tres TileSet', () => {
+  const TRES_PATH = 'res://tileset.tres';
+  const TILESET_TRES = `[gd_resource type="TileSet" format=3]
+
+[ext_resource type="Texture2D" path="${TEX}" id="1"]
+
+[sub_resource type="TileSetAtlasSource" id="Atlas_a"]
+texture = ExtResource("1")
+texture_region_size = Vector2i(16, 16)
+0:0/0 = 0
+
+[resource]
+tile_size = Vector2i(16, 16)
+sources/0 = SubResource("Atlas_a")
+`;
+  const tresExternals: TscnExternalResource[] = [
+    ...externals,
+    { id: 'ts_ext', type: 'TileSet', path: TRES_PATH },
+  ];
+
+  function tresNode(): TscnNode {
+    return {
+      name: 'Layer0',
+      type: 'TileMapLayer',
+      children: [],
+      properties: parseTileMapLayer(heading, {
+        tile_set: 'ExtResource("ts_ext")',
+        tile_map_data: ONE_CELL,
+      }),
+    };
+  }
+
+  function renderTres(fake: ReturnType<typeof createFakeResourceLoader>) {
+    fake.textures.seed(TEX, seededTexture());
+    return ReactThreeTestRenderer.create(
+      <ResourceLoaderProvider loader={fake.loader}>
+        <SceneResourcesProvider internalResources={[]} externalResources={tresExternals}>
+          <TileMapLayer node={tresNode()} />
+        </SceneResourcesProvider>
+      </ResourceLoaderProvider>
+    );
+  }
+
+  it('renders tiles when the .tres is already loaded', async () => {
+    const fake = createFakeResourceLoader();
+    fake.resources.seed(TRES_PATH, parseTresFile(TILESET_TRES));
+    const r = await renderTres(fake);
+    expect(r.scene.findAllByType('Mesh')).toHaveLength(1);
+  });
+
+  it('renders nothing while pending, then tiles on late arrival', async () => {
+    const fake = createFakeResourceLoader();
+    const r = await renderTres(fake);
+    expect(r.scene.findAllByType('Mesh')).toHaveLength(0); // pending — no flash
+
+    await ReactThreeTestRenderer.act(async () => {
+      fake.resources._resolve(TRES_PATH, parseTresFile(TILESET_TRES));
+    });
+    expect(r.scene.findAllByType('Mesh')).toHaveLength(1);
+  });
+
+  it('degrades to the transform-only group when the .tres fails to load', async () => {
+    const fake = createFakeResourceLoader();
+    fake.resources.seed(TRES_PATH, null); // sentinel miss → unavailable
+    const r = await renderTres(fake);
+    expect(r.scene.findAllByType('Mesh')).toHaveLength(0);
   });
 });
 

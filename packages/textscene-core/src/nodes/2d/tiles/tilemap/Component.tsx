@@ -8,7 +8,6 @@
  * with children intact (ADR-0008).
  */
 
-import { useMemo } from 'react';
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../../r3f/components/CanvasItem2D';
 import {
@@ -17,28 +16,19 @@ import {
   Z_INDEX_STEP,
 } from '../../../../r3f/node2dTransform';
 import { TileSourceMesh } from '../../../../r3f/TileSourceMesh';
-import { useSceneResources } from '../../../../r3f/SceneResourcesContext';
-import { tileSetFromScene } from '../../../../resources/tileset/resolveTileSet';
+import { useTileSetModel } from '../../../../r3f/useTileSetModel';
 import type { TileMapProperties } from './types';
 
 export function TileMap({ node, children }: NodeComponentProps) {
   const props = node.properties as TileMapProperties;
-  const { internalResources, externalResources } = useSceneResources();
-
-  const model = useMemo(
-    () =>
-      props.tile_set
-        ? tileSetFromScene(props.tile_set, internalResources, externalResources)
-        : null,
-    [props.tile_set, internalResources, externalResources]
-  );
+  const { model, status } = useTileSetModel(props.tile_set);
 
   return (
     <CanvasItem2D
       node={node}
       props={props}
       body={({ color, opacity }) =>
-        model
+        status === 'loaded' && model
           ? props.layers.flatMap((layer, layerIndex) => {
               if (!layer.enabled || !layer.cells?.length) return [];
               return model.sourceOrder.map((sourceId, sourceIndex) => {

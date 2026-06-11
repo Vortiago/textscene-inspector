@@ -21,7 +21,7 @@ import { cloneWithMaterials } from './processing/glbProcessing';
 import { ResourceLoaderContext } from './ResourceLoaderContext';
 import { useMissingResources } from '../r3f/contexts/MissingResourcesContext';
 
-export type ResourceType = 'Texture2D' | 'StandardMaterial3D' | 'GLBMesh' | 'PackedScene';
+export type ResourceType = 'Texture2D' | 'StandardMaterial3D' | 'GLBMesh' | 'PackedScene' | 'Resource';
 /**
  * - `pending`     — still loading.
  * - `loaded`      — value present.
@@ -53,6 +53,7 @@ const BUS_TYPE: Record<ResourceType, BusResourceType> = {
   StandardMaterial3D: 'material',
   GLBMesh: 'glb',
   PackedScene: 'scene',
+  Resource: 'resource',
 };
 
 interface ProcessorAccess<T> {
@@ -80,6 +81,8 @@ function getProcessorAccess<T>(
       return loader.glbMeshes as unknown as ProcessorAccess<T>;
     case 'PackedScene':
       return loader.scenes as unknown as ProcessorAccess<T>;
+    case 'Resource':
+      return loader.resources as unknown as ProcessorAccess<T>;
   }
 }
 

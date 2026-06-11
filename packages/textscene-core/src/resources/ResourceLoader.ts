@@ -39,6 +39,8 @@ import { createTextureProcessor } from './processors/createTextureProcessor';
 import { createMaterialProcessor } from './processors/createMaterialProcessor';
 import { createGLBProcessor } from './processors/createGLBProcessor';
 import { createSceneProcessor } from './processors/createSceneProcessor';
+import { createTresResourceProcessor } from './processors/createTresResourceProcessor';
+import type { ParsedTresFile } from '../parser/tresParser';
 import type { ResourceProcessor } from './createResourceProcessor';
 import * as logger from '../logger';
 
@@ -54,6 +56,7 @@ function busTypeFor(resourceType: string | undefined): ResourceType | null {
   if (resourceType.includes('Material')) return 'material';
   if (resourceType === 'PackedScene') return 'scene';
   if (resourceType === 'GLB' || resourceType === 'GLTF' || resourceType === 'GLBMesh') return 'glb';
+  if (resourceType === 'TileSet') return 'resource';
   return null;
 }
 
@@ -64,6 +67,8 @@ export class ResourceLoader {
   readonly materials: ResourceProcessor<THREE.Material>;
   readonly glbMeshes: ResourceProcessor<THREE.Object3D>;
   readonly scenes: ResourceProcessor<TscnScene>;
+  /** Generic .tres files (currently TileSet) parsed as ParsedTresFile. */
+  readonly resources: ResourceProcessor<ParsedTresFile>;
 
   /**
    * Type → processor table. The four named accessors above are stable
@@ -113,11 +118,14 @@ export class ResourceLoader {
       getProvider: () => this.provider,
     });
 
+    this.resources = createTresResourceProcessor(fileEventBus, this.eventBus);
+
     this.processors = new Map<ResourceType, ResourceProcessor<unknown>>([
       ['texture', this.textures as ResourceProcessor<unknown>],
       ['material', this.materials as ResourceProcessor<unknown>],
       ['glb', this.glbMeshes as ResourceProcessor<unknown>],
       ['scene', this.scenes as ResourceProcessor<unknown>],
+      ['resource', this.resources as ResourceProcessor<unknown>],
     ]);
 
     this.setupFailureCallbacks();

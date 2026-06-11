@@ -7,6 +7,7 @@
  */
 
 import { warn } from '../../logger';
+import type { ParsedTresFile } from '../../parser/tresParser';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
 import { parseResourceReference, resolveExtResourcePath } from '../SubResourceResolver';
 import type {
@@ -72,6 +73,16 @@ function intEnumOr(value: unknown, fallback: number, label: string): number {
     return fallback;
   }
   return n;
+}
+
+/** Adapter: a TileSet loaded from an external .tres file. Null = not a TileSet. */
+export function tileSetFromTres(parsed: ParsedTresFile): TileSetModel | null {
+  if (parsed.resourceType !== 'TileSet') return null;
+  return resolveTileSetModel({
+    properties: parsed.properties,
+    findSubResource: (id) => parsed.subResources.find((r) => r.id === id),
+    resolveTexturePath: (texRef) => resolveExtResourcePath(texRef, parsed.extResources),
+  });
 }
 
 /** Adapter: a TileSet embedded in the scene as a SubResource. Null = ref unresolvable. */
