@@ -41,6 +41,11 @@ export const fixtures: Fixture[] = [
     "category": "Edge Cases"
   },
   {
+    "name": "Tilemap Bad Tile Data",
+    "file": "edge-tilemap-bad-tile-data.tscn",
+    "category": "Edge Cases"
+  },
+  {
     "name": "Unsupported 2d Audio",
     "file": "edge-unsupported-2d-audio.tscn",
     "category": "Edge Cases"

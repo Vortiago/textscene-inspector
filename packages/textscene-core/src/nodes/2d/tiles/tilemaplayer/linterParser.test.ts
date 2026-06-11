@@ -38,4 +38,16 @@ transform = Transform2D(nope)
     expect(errors.length).toBeGreaterThan(0);
     expect(errors[0]!.message).toContain('transform');
   });
+
+  it('rejects a malformed tile_set reference', () => {
+    const content = `[gd_scene format=3]
+
+[node name="X" type="TileMapLayer"]
+tile_set = NotARef(1)
+`;
+
+    const errors = errorsOf(linter.lint(content));
+    expect(errors.length).toBeGreaterThan(0);
+    expect(errors[0]!.message).toContain('tile_set');
+  });
 });
