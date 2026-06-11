@@ -1,25 +1,46 @@
 /**
- * The "Cameras" detail tab: lists the scene's Camera3D nodes and lets the user
- * make one the active viewport camera (or return to free orbit), via
- * `CameraControlContext`. Mirrors the per-node "Use This Camera" action in the
- * Inspector, surfaced as a flat list so cameras are discoverable without
- * hunting the tree.
+ * The "Cameras" detail tab: lists the scene's camera nodes and lets the user
+ * look through one. Camera3D rows swap the 3D viewport's camera
+ * (`CameraControlContext.switchToCamera`); Camera2D rows frame the 2D stage
+ * on the camera's view — world position composed statically over the scene
+ * graph, anchored per the Camera2D surface — and open the 2D workspace.
+ * Mirrors the per-node "Use This Camera" action in the Inspector, surfaced
+ * as a flat list so cameras are discoverable without hunting the tree.
  */
 import { useMemo } from 'react';
 import { useHierarchy } from '../../contexts/HierarchyContext.js';
 import { useOptionalCameraControl } from '../../contexts/CameraControlContext.js';
+import { useViewportMode } from '../../contexts/ViewportModeContext.js';
+import { node2dWorldPosition } from '../../node2dWorldTransform.js';
+import { camera2DView } from '../../../nodes/2d/camera2d/cameraView.js';
+import type { Camera2DProperties } from '../../../nodes/2d/camera2d/types.js';
 import styles from './TscnPreviewShell.module.css';
+
+/** Godot's default 2D project viewport (mirrors Canvas2DStage's frame). */
+const VIEWPORT_2D = { x: 1152, y: 648 };
 
 export function CamerasPanel() {
   const { sceneGraph } = useHierarchy();
   const cam = useOptionalCameraControl();
-  const cameras = useMemo(
+  const { setMode } = useViewportMode();
+  const cameras3d = useMemo(
     () => (sceneGraph?.flattenedNodes ?? []).filter((n) => n.data.type === 'Camera3D'),
     [sceneGraph]
   );
+  const cameras2d = useMemo(
+    () => (sceneGraph?.flattenedNodes ?? []).filter((n) => n.data.type === 'Camera2D'),
+    [sceneGraph]
+  );
 
-  if (cameras.length === 0) {
-    return <div className={styles.emptyState}>No Camera3D nodes in this scene.</div>;
+  if (cameras3d.length === 0 && cameras2d.length === 0) {
+    return <div className={styles.emptyState}>No camera nodes in this scene.</div>;
+  }
+
+  function lookThrough2D(path: string, properties: Camera2DProperties) {
+    if (!sceneGraph) return;
+    const worldPosition = node2dWorldPosition(sceneGraph, path) ?? { x: 0, y: 0 };
+    cam?.requestFrame2D(camera2DView(properties, worldPosition, VIEWPORT_2D));
+    setMode('2D');
   }
 
   const activePath = cam?.activeCameraPath ?? null;
@@ -34,7 +55,7 @@ export function CamerasPanel() {
         <span className={styles.camName}>Free orbit</span>
         <span className={styles.camTag}>{activePath === null ? 'active' : 'use'}</span>
       </button>
-      {cameras.map((c) => {
+      {cameras3d.map((c) => {
         const active = activePath === c.path;
         return (
           <button
@@ -49,6 +70,17 @@ export function CamerasPanel() {
           </button>
         );
       })}
+      {cameras2d.map((c) => (
+        <button
+          key={c.path}
+          type="button"
+          className={styles.camRow}
+          onClick={() => lookThrough2D(c.path, c.data.properties as Camera2DProperties)}
+        >
+          <span className={styles.camName}>{c.name}</span>
+          <span className={styles.camTag}>2D · view</span>
+        </button>
+      ))}
     </div>
   );
 }

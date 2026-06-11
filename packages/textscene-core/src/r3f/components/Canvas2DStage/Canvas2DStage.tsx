@@ -23,6 +23,7 @@ import type {
   TscnExternalResource,
   TscnInternalResource,
 } from '../../../parser/types.js';
+import { useOptionalCameraControl } from '../../contexts/CameraControlContext.js';
 import { World2DCanvas } from './World2DCanvas.js';
 import styles from './Canvas2DStage.module.css';
 
@@ -89,6 +90,24 @@ export function Canvas2DStage({
   useEffect(() => {
     fit();
   }, [fit]);
+
+  // "View through" a Camera2D (Cameras panel): one-shot framing request —
+  // center the camera's view point at its magnification; the user keeps free
+  // pan/zoom afterwards.
+  const frame2D = useOptionalCameraControl()?.frame2D ?? null;
+  useEffect(() => {
+    if (!frame2D) return;
+    const el = stageRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    if (r.width <= 0 || r.height <= 0) return;
+    const z = clampZoom(frame2D.zoom);
+    setZoom(z);
+    setPan({
+      x: r.width / 2 - frame2D.center.x * z,
+      y: r.height / 2 - frame2D.center.y * z,
+    });
+  }, [frame2D]);
 
   // Wheel-to-zoom, anchored to the cursor. Added as a non-passive native
   // listener so preventDefault actually suppresses page scroll.

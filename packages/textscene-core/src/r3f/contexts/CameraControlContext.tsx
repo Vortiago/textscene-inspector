@@ -26,10 +26,27 @@ import {
   type ReactNode,
 } from 'react';
 
+/** One-shot 2D framing request: frame the Canvas2DStage on a Camera2D's view. */
+export interface Frame2DRequest {
+  /** View center in Godot canvas pixels. */
+  center: { x: number; y: number };
+  /** Stage magnification. */
+  zoom: number;
+  /** Monotonic id so the stage can re-apply identical consecutive requests. */
+  requestId: number;
+}
+
 export interface CameraControlContextValue {
   activeCameraPath: string | null;
   switchToCamera: (path: string) => void;
   returnToFreeView: () => void;
+  /**
+   * Latest 2D framing request (consumed by `<Canvas2DStage>`); null until a
+   * 2D camera is "used". One-shot: the stage applies it once per requestId
+   * and the user keeps free pan/zoom afterwards.
+   */
+  frame2D: Frame2DRequest | null;
+  requestFrame2D: (view: { center: { x: number; y: number }; zoom: number }) => void;
   /**
    * Frame the orbit-controls back to its initial state. No-op when no
    * canvas has registered a reset handler yet (e.g. during the brief
@@ -58,10 +75,20 @@ export interface CameraControlProviderProps {
 export function CameraControlProvider({ children }: CameraControlProviderProps) {
   const [activeCameraPath, setActiveCameraPath] = useState<string | null>(null);
   const resetHandlerRef = useRef<(() => void) | null>(null);
+  const [frame2D, setFrame2D] = useState<Frame2DRequest | null>(null);
+  const frame2DIdRef = useRef(0);
 
   const switchToCamera = useCallback((path: string) => {
     setActiveCameraPath(path);
   }, []);
+
+  const requestFrame2D = useCallback(
+    (view: { center: { x: number; y: number }; zoom: number }) => {
+      frame2DIdRef.current += 1;
+      setFrame2D({ ...view, requestId: frame2DIdRef.current });
+    },
+    []
+  );
 
   const returnToFreeView = useCallback(() => {
     setActiveCameraPath(null);
@@ -85,10 +112,12 @@ export function CameraControlProvider({ children }: CameraControlProviderProps) 
       activeCameraPath,
       switchToCamera,
       returnToFreeView,
+      frame2D,
+      requestFrame2D,
       resetCamera,
       registerResetHandler,
     }),
-    [activeCameraPath, switchToCamera, returnToFreeView, resetCamera, registerResetHandler]
+    [activeCameraPath, switchToCamera, returnToFreeView, frame2D, requestFrame2D, resetCamera, registerResetHandler]
   );
 
   return (

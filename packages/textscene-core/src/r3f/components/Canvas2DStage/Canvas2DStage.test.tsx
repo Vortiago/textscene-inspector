@@ -35,6 +35,10 @@ vi.mock('./World2DCanvas', () => ({
 }));
 
 import { Canvas2DStage } from './Canvas2DStage';
+import {
+  CameraControlProvider,
+  useCameraControl,
+} from '../../contexts/CameraControlContext';
 import type { TscnNode } from '../../../parser/types';
 
 function makeNode(name: string): TscnNode {
@@ -120,6 +124,38 @@ describe('<Canvas2DStage>', () => {
     // After release, further moves no longer pan.
     fireEvent.pointerMove(stage, { clientX: 200, clientY: 200, pointerId: 1 });
     expect(frame.style.transform).toBe('translate(50px, 30px) scale(1)');
+  });
+
+  it('frames a 2D camera view on request: centers the view point at the requested zoom', () => {
+    // Probe button drives the context the Cameras panel uses.
+    function FrameProbe() {
+      const cam = useCameraControl();
+      return (
+        <button
+          type="button"
+          onClick={() => cam.requestFrame2D({ center: { x: 300, y: 200 }, zoom: 2 })}
+        >
+          frame camera
+        </button>
+      );
+    }
+    render(
+      <CameraControlProvider>
+        <FrameProbe />
+        <Canvas2DStage nodes={[]} internalResources={[]} externalResources={[]} />
+      </CameraControlProvider>
+    );
+    const stage = screen.getByLabelText('2D canvas');
+    // jsdom rects are 0×0 — give the stage a real size for the centering math.
+    stage.getBoundingClientRect = () =>
+      ({ width: 800, height: 600, left: 0, top: 0, right: 800, bottom: 600, x: 0, y: 0 }) as DOMRect;
+
+    fireEvent.click(screen.getByRole('button', { name: 'frame camera' }));
+
+    // pan = stage/2 − center·zoom → (400 − 600, 300 − 400) = (−200, −100).
+    const frame = screen.getByText('1152 × 648').parentElement as HTMLElement;
+    expect(frame.style.transform).toBe('translate(-200px, -100px) scale(2)');
+    expect(zoomLabel()).toBe('200%');
   });
 
   it('ignores pointer move when no drag is active, and non-primary buttons', () => {
