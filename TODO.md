@@ -123,6 +123,7 @@ These are unblocked by Phase 14 shipping. Each adds a node-type folder under `pa
 - [ ] #WI-17: Custom Shader Support → [Details](work_items/WI-17.md)
 - [x] #WI-64: Label3D Node Support → [Details](work_items/WI-64.md) (3D text labels for fixture annotations)
 - [ ] #WI-77: Advanced Environment Features → [Details](work_items/WI-77.md) (Post-processing, Sky, SSAO, SSR) **Deferred from WI-57**
+- [ ] #WI-85: Binary Godot formats (.scn/.res) — render the geometry currently behind placeholders (e.g. the 3D platformer's level). **Deferred — multi-step, low priority.** Researched 2026-06-11: no JS parser for the binary `RSRC`/`RSCC` format exists; the viable path is build-time conversion via `godot --headless` + `ResourceSaver.save()` (text out), gated on a Godot binary being on PATH in `scripts/vendor-godot-demos.mjs` (currently absent on the dev box). Conversion is only the prerequisite — drawing the platformer stage still needs two new renderer slices: ArrayMesh → `THREE.BufferGeometry` (easy) and GridMap (MeshLibrary + packed-cell instancing, harder). Until done, binary refs degrade to the magenta placeholder + the `binary-resource-reference` lint warning. See [docs/PARITY-LIMITATIONS.md](docs/PARITY-LIMITATIONS.md) "Binary Godot resources".
 
 ## Phase 6.5: Material Feature Enable Flags (from WI-63 Research)
 
