@@ -7,7 +7,7 @@
  * Label3D text is gated behind the `showLabels` toggle (off by default,
  * ADR-0008), so each render runs inside a provider with labels enabled.
  *
- * Assertions: 90–94 of `work_items/STRICT-VERIFICATION.md`.
+ * Assertions: 90–94 of `docs/archive/STRICT-VERIFICATION.md`.
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';

@@ -81,11 +81,12 @@ For each improvement opportunity, calculate:
 
 **C. Work Item Generation**
 
-Create work items formatted for TODO.md:
+Create work items formatted as GitHub issues (`gh issue create`):
 
 ```markdown
-### [ ] #WI-XX: [Title] - Not Done
-- [Brief description]
+**Title**: [Title]
+
+[Brief description]
 - [Bullet points with implementation steps]
 - **Value**: [Clear benefit statement]
 - **Priority**: [CRITICAL/HIGH/MEDIUM/LOW]
@@ -175,11 +176,11 @@ For each category (Duplication, Complexity, Maintainability):
 - Estimated impact and effort for each
 - Implementation order recommendation
 
-**TODO.md Integration:**
+**GitHub Issues Integration:**
 
-- Generate work items in TODO.md format
-- Group into appropriate phase (e.g., "Phase 12: Code Quality Improvements")
-- Include priority, value, and implementation steps
+- Generate work items as GitHub issues (`gh issue create`)
+- Apply an appropriate label (e.g., `enhancement`, `roadmap`)
+- Include priority, value, and implementation steps in the issue body
 
 ### Quality Standards
 
@@ -237,7 +238,7 @@ For each category (Duplication, Complexity, Maintainability):
 - ✅ YES if: Blocking development, affecting 5+ files, clear ROI
 - ❌ NO if: Cosmetic, affecting 1-2 files, marginal benefit
 
-**Should I add a work item to TODO.md?**
+**Should I open a work-item GitHub issue?**
 - ✅ YES if: Actionable, clear value, estimated LOW/MEDIUM effort
 - ❌ NO if: Vague, unclear benefit, requires extensive research first
 

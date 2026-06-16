@@ -3,7 +3,7 @@
  * StandardMaterial3D UV transforms (uv1_scale, uv1_offset). The bug-catcher
  * here is #47: UV must apply to ALL active texture maps, not just albedo.
  *
- * Assertions: 40–47 of `work_items/STRICT-VERIFICATION.md`.
+ * Assertions: 40–47 of `docs/archive/STRICT-VERIFICATION.md`.
  */
 
 import { describe, expect, it } from 'vitest';
