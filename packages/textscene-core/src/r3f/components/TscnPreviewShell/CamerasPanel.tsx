@@ -14,10 +14,11 @@ import { useViewportMode } from '../../contexts/ViewportModeContext.js';
 import { node2dWorldPosition } from '../../node2dWorldTransform.js';
 import { camera2DView } from '../../../nodes/2d/camera2d/cameraView.js';
 import type { Camera2DProperties } from '../../../nodes/2d/camera2d/types.js';
+import { CANVAS_2D_WIDTH, CANVAS_2D_HEIGHT } from '../Canvas2DStage/viewport2d.js';
 import styles from './TscnPreviewShell.module.css';
 
-/** Godot's default 2D project viewport (mirrors Canvas2DStage's frame). */
-const VIEWPORT_2D = { x: 1152, y: 648 };
+/** Godot's default 2D project viewport — shared with the Canvas2DStage frame. */
+const VIEWPORT_2D = { x: CANVAS_2D_WIDTH, y: CANVAS_2D_HEIGHT };
 
 export function CamerasPanel() {
   const { sceneGraph } = useHierarchy();

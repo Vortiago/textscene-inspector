@@ -168,6 +168,22 @@ describe('<Canvas2DStage>', () => {
     expect(frame.style.transform).toBe('translate(0px, 0px) scale(1)');
   });
 
+  it('draws origin axes at world (0, 0) that track the stage pan', () => {
+    const { stage } = renderStage();
+    const axisX = () => screen.getByTestId('origin-axis-x');
+    const axisY = () => screen.getByTestId('origin-axis-y');
+
+    // Initial pan is (0, 0): the axes cross at the stage's top-left corner.
+    expect(axisX().style.top).toBe('0px');
+    expect(axisY().style.left).toBe('0px');
+
+    // A drag pans the stage; the axes follow so they stay glued to world origin.
+    fireEvent.pointerDown(stage, { button: 0, clientX: 10, clientY: 20, pointerId: 1 });
+    fireEvent.pointerMove(stage, { clientX: 45, clientY: 80, pointerId: 1 });
+    expect(axisX().style.top).toBe('60px'); // pan.y = 80 − 20
+    expect(axisY().style.left).toBe('35px'); // pan.x = 45 − 10
+  });
+
   it('Fit recenters the frame inside the stage bounds with the margin-fitted zoom', () => {
     const { stage, frame } = renderStage();
     // happy-dom reports a zero rect (fit() on mount early-returns); give the

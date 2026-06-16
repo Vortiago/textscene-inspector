@@ -25,6 +25,7 @@ import type {
 } from '../../../parser/types.js';
 import { useOptionalCameraControl } from '../../contexts/CameraControlContext.js';
 import { World2DCanvas } from './World2DCanvas.js';
+import { CANVAS_2D_WIDTH, CANVAS_2D_HEIGHT } from './viewport2d.js';
 import styles from './Canvas2DStage.module.css';
 
 // The 2D-UI overlay (ADR-0003) is lazy-loaded — keeping the 15 Control
@@ -36,11 +37,6 @@ const ControlOverlay = lazy(() =>
   import('../../controls/index.js').then((m) => ({ default: m.ControlOverlay }))
 );
 
-// Godot's default 2D project viewport. The 2D canvas frame uses it as a stable
-// surface Control nodes anchor to (mirrors how Godot's 2D editor frames a scene),
-// rather than the variable viewport-region size the bare overlay filled before.
-const CANVAS_2D_WIDTH = 1152;
-const CANVAS_2D_HEIGHT = 648;
 const ZOOM_MIN = 0.1;
 const ZOOM_MAX = 4;
 const clampZoom = (z: number) => Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, z));
@@ -197,6 +193,21 @@ export function Canvas2DStage({
           {CANVAS_2D_WIDTH} × {CANVAS_2D_HEIGHT}
         </span>
       </div>
+
+      {/* Origin axes through world (0, 0) = the viewport rect's top-left at
+          screen (pan.x, pan.y) — Godot's 2D-editor red X / green Y. */}
+      <div
+        className={`${styles.originAxis} ${styles.originAxisX}`}
+        style={{ top: pan.y }}
+        data-testid="origin-axis-x"
+        aria-hidden
+      />
+      <div
+        className={`${styles.originAxis} ${styles.originAxisY}`}
+        style={{ left: pan.x }}
+        data-testid="origin-axis-y"
+        aria-hidden
+      />
 
       {/* The CanvasItem world (sprites/tilemaps), drawn over the frame
           surface and under the Control overlay — Godot's 2D editor order. */}

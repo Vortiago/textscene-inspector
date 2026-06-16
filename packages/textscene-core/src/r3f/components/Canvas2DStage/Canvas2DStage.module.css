@@ -22,8 +22,29 @@
   top: 0;
   left: 0;
   transform-origin: 0 0;
-  background: var(--tsi-bg-elevated);
-  box-shadow: 0 0 0 1px var(--tsi-border-strong), 0 24px 60px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 0 1px rgba(102, 102, 255, 0.4);
+  pointer-events: none;
+}
+
+/* Origin axes through world (0, 0) — Godot's 2D-editor red X / green Y, glued
+   to the stage pan so they cross at the viewport rect's top-left corner. */
+.originAxis {
+  position: absolute;
+  pointer-events: none;
+}
+
+.originAxisX {
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(245, 51, 82, 0.5);
+}
+
+.originAxisY {
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(135, 214, 3, 0.5);
 }
 
 /* The Control overlay's frame: same transform as .canvasFrame but transparent
