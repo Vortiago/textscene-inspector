@@ -19,21 +19,13 @@ import { TileMapLayer } from './Component';
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
-import type { TscnNode } from '../../../../parser/types';
+import { findByType } from './findByType';
 import type { TileMapLayerProperties } from './types';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const isoRoot = resolve(here, '../../../../../../../scenes/isometric');
 const dungeonContent = readFileSync(resolve(isoRoot, 'dungeon.tscn'), 'utf8');
 const tilesetContent = readFileSync(resolve(isoRoot, 'tileset/tileset.tres'), 'utf8');
-
-function findByType(nodes: readonly TscnNode[], type: string, out: TscnNode[] = []): TscnNode[] {
-  for (const node of nodes) {
-    if (node.type === type) out.push(node);
-    findByType(node.children, type, out);
-  }
-  return out;
-}
 
 describe('isometric dungeon integration', () => {
   const scene = new TscnParser().parse(dungeonContent);

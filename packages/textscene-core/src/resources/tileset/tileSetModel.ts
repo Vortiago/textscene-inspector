@@ -9,13 +9,15 @@ export interface Vec2i {
   y: number;
 }
 
-/** TileSet.tile_shape — only square and isometric render in V1 (ADR-0008 fallback otherwise). */
+/** TileSet.tile_shape — square, isometric, half-offset square, and hexagon all render. */
 export const TILE_SHAPE_SQUARE = 0;
 export const TILE_SHAPE_ISOMETRIC = 1;
+export const TILE_SHAPE_HALF_OFFSET_SQUARE = 2;
+export const TILE_SHAPE_HEXAGON = 3;
 
 /** TileSet.tile_layout (half-offset shapes): STACKED .. DIAMOND_DOWN. */
 export type TileLayout = 0 | 1 | 2 | 3 | 4 | 5;
-/** TileSet.tile_offset_axis: 0 = horizontal (V1), 1 = vertical (fallback). */
+/** TileSet.tile_offset_axis: 0 = horizontal, 1 = vertical. */
 export type TileOffsetAxis = 0 | 1;
 
 /** The grid surface of a TileSet that placement math needs. */

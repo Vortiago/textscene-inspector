@@ -107,16 +107,34 @@ describe('tileSetFromScene', () => {
     expect(model!.tileSize).toEqual({ x: 128, y: 64 });
   });
 
-  it('warns ONCE per TileSet for unsupported tile shapes (hexagon/half-offset)', () => {
-    const hexInternals: TscnInternalResource[] = [
+  it('does not warn for hexagon/half-offset shapes — they place correctly now', () => {
+    for (const shape of ['2', '3']) {
+      warnSpy.mockClear();
+      const hexInternals: TscnInternalResource[] = [
+        internals[0]!,
+        {
+          id: 'ts',
+          type: 'TileSet',
+          data: { id: 'ts', tile_shape: shape, 'sources/0': 'SubResource("atlas1")' },
+        },
+      ];
+      const model = tileSetFromScene('SubResource("ts")', hexInternals, externals);
+      expect(model!.shape).toBe(Number(shape));
+      const shapeWarns = warnSpy.mock.calls.filter((c) => String(c[0]).includes('tile_shape'));
+      expect(shapeWarns).toHaveLength(0);
+    }
+  });
+
+  it('warns ONCE per TileSet for genuinely unknown tile shapes', () => {
+    const oddInternals: TscnInternalResource[] = [
       internals[0]!,
       {
         id: 'ts',
         type: 'TileSet',
-        data: { id: 'ts', tile_shape: '3', 'sources/0': 'SubResource("atlas1")' },
+        data: { id: 'ts', tile_shape: '99', 'sources/0': 'SubResource("atlas1")' },
       },
     ];
-    tileSetFromScene('SubResource("ts")', hexInternals, externals);
+    tileSetFromScene('SubResource("ts")', oddInternals, externals);
     const shapeWarns = warnSpy.mock.calls.filter((c) => String(c[0]).includes('tile_shape'));
     expect(shapeWarns).toHaveLength(1);
   });

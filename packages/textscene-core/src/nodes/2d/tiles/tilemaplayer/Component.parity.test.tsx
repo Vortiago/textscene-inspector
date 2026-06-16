@@ -207,6 +207,41 @@ describe('TileMapLayer render parity', () => {
     // 16×16 region centered on (128, −64): TL = (120, −56).
     expect(Array.from(position.array).slice(0, 3)).toEqual([120, -56, 0]);
   });
+
+  it('honours a HEXAGON grid: a vertical-axis STACKED cell lands on its map_to_local center', async () => {
+    const hexInternals: TscnInternalResource[] = [
+      internals[0]!,
+      {
+        id: 'ts',
+        type: 'TileSet',
+        data: {
+          id: 'ts',
+          tile_shape: '3',
+          tile_offset_axis: '1',
+          tile_layout: '0',
+          tile_size: 'Vector2i(110, 94)',
+          'sources/0': 'SubResource("atlas1")',
+        },
+      },
+    ];
+    // header + cell (1, 0): vertical STACKED, odd column ⇒ y += 0.5, x ×= 0.75
+    // ⇒ map_to_local (137.5, 94) ⇒ three-local center (137.5, −94).
+    const oneCell = 'PackedByteArray(0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)';
+    const node = makeNode({ tile_map_data: oneCell });
+    const fake = createFakeResourceLoader();
+    fake.textures.seed(TEX, seededTexture());
+    const r = await ReactThreeTestRenderer.create(
+      <ResourceLoaderProvider loader={fake.loader}>
+        <SceneResourcesProvider internalResources={hexInternals} externalResources={externals}>
+          <TileMapLayer node={node} />
+        </SceneResourcesProvider>
+      </ResourceLoaderProvider>
+    );
+    const mesh = r.scene.findByType('Mesh').instance as THREE.Mesh;
+    const position = mesh.geometry.getAttribute('position');
+    // 16×16 region centered on (137.5, −94): TL = (129.5, −86).
+    expect(Array.from(position.array).slice(0, 3)).toEqual([129.5, -86, 0]);
+  });
 });
 
 describe('TileMapLayer with an ExtResource .tres TileSet', () => {

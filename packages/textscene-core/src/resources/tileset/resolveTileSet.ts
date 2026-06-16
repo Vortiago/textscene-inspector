@@ -10,6 +10,7 @@ import { warn } from '../../logger';
 import type { ParsedTresFile } from '../../parser/tresParser';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
 import { parseResourceReference, resolveExtResourcePath } from '../SubResourceResolver';
+import { TILE_SHAPE_HEXAGON, TILE_SHAPE_SQUARE } from './tileSetModel';
 import type {
   AlternativeTileModel,
   AtlasSourceModel,
@@ -54,10 +55,9 @@ export function resolveTileSetModel(data: TileSetSourceData): TileSetModel {
   }
 
   const shape = intEnumOr(data.properties.tile_shape, 0, 'tile_shape');
-  if (shape !== 0 && shape !== 1) {
+  if (shape < TILE_SHAPE_SQUARE || shape > TILE_SHAPE_HEXAGON) {
     warn(
-      `[TileSet] tile_shape ${shape} (half-offset square / hexagon) is not supported — ` +
-        `cells will place on a square grid`
+      `[TileSet] unknown tile_shape ${shape} — cells will place on a square grid`
     );
   }
 
