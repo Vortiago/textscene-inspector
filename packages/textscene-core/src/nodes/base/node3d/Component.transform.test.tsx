@@ -3,7 +3,7 @@
  * Node3D's transform decomposition. Each assertion exercises ONE property
  * to ground truth on the resulting THREE.Group instance.
  *
- * Assertions: 1–10 of `work_items/STRICT-VERIFICATION.md`.
+ * Assertions: 1–10 of `docs/archive/STRICT-VERIFICATION.md`.
  */
 
 import { describe, expect, it } from 'vitest';

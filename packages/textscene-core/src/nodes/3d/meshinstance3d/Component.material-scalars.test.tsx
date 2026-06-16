@@ -3,7 +3,7 @@
  * StandardMaterial3D scalar properties (color, metallic, roughness,
  * opacity, emission, transparency, blend_mode, cull_mode).
  *
- * Assertions: 18–31 of `work_items/STRICT-VERIFICATION.md`.
+ * Assertions: 18–31 of `docs/archive/STRICT-VERIFICATION.md`.
  *
  * Several of these test for properties Godot exposes but our R3F port may
  * not have wired up yet. Failures here are the inventory of silent

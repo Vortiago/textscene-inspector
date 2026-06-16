@@ -12,7 +12,7 @@ Replaces the broken Phase 13.5 imperative reconciler with a React-Three-Fiber re
 - **WI-R3F-6**: Deleted all imperative renderer modules (TscnRenderer, NodeLifecycleManager, NodeTracker, SelectionManager, CameraManager, HelperManager, ResourceRecoveryManager, all `nodes/**/renderer.ts`, all `ui/*.ts`, `generate-styles.mjs`); removed CSS-Modules and R3F feature flags; updated `ARCHITECTURE.md`.
 - **WI-R3F-7**: Fixed 5 user-facing failures from first verification pass: webview-ready handshake (extension host caches and replays `loadTscn` until React listener installs), full texture-chain resolution (material_override → SubResource → ExtResource), magenta placeholder + floating label for missing textures, `<GenericNodeFallback>` type:name labels, malformed-file parse-error banner.
 - **WI-R3F-8**: Wired all 5 StandardMaterial3D texture slots (normal, roughness, metallic, emission — albedo was the only one connected); applied UV transform (`uv1_scale`, `uv1_offset`) to every active texture map, not just albedo.
-- **WI-R3F-9**: Implemented 96 property regression tests across 9 co-located test files (see `work_items/STRICT-VERIFICATION.md` Section 1 inventory). Tests assert THREE.js output values directly — not parser output, not that a function was called. These tests are the first-line CI gate for silent property misses.
+- **WI-R3F-9**: Implemented 96 property regression tests across 9 co-located test files (see `docs/archive/STRICT-VERIFICATION.md` Section 1 inventory). Tests assert THREE.js output values directly — not parser output, not that a function was called. These tests are the first-line CI gate for silent property misses.
 - **WI-R3F-10**: Batch-fixed 20 silent feature misses surfaced by strict verification: Node3D rotation Euler conversion, multi-surface material override binding, `visible` flag, transparency/blend/cull modes, `normal_scale`, `PlaneMesh` center_offset and orientation, `Camera3D` keep_aspect, `SpotLight` penumbra, `WorldEnvironment` SKY mode and ambient light, `Label3D` billboard/no_depth_test/modulate/font_size.
 - **WI-R3F-11**: Fixed `surface_material_override` texture binding (textures on indexed surface slots were overriding material correctly but losing texture map references on re-render). Final commit on this branch: `4ac6539`.
 
@@ -29,7 +29,7 @@ Replaces the broken Phase 13.5 imperative reconciler with a React-Three-Fiber re
 
 ## Verification
 
-Strict-protocol end-to-end verification across 11 checklists at `docs/archive/strict-checklists/`. Methodology: `work_items/STRICT-VERIFICATION.md`. Each row in a checklist names the TSCN property, its expected THREE.js value, and the observed value — no row may be marked PASS on visual impression alone.
+Strict-protocol end-to-end verification across 11 checklists at `docs/archive/strict-checklists/`. Methodology: `docs/archive/STRICT-VERIFICATION.md`. Each row in a checklist names the TSCN property, its expected THREE.js value, and the observed value — no row may be marked PASS on visual impression alone.
 
 - **Web app** (4 checklists, 70 rows): 69 PASS / 1 CANT-VERIFY / 0 FAIL
 - **VS Code extension** (7 checklists, 108 rows): 103 PASS / 5 CANT-VERIFY / 0 FAIL
@@ -41,7 +41,7 @@ First verification pass (pre-WI-R3F-7) discovered 5 user-facing failures and exp
 
 ## Strict-verification artifacts
 
-11 per-flow strict checklists live in `docs/archive/strict-checklists/`. The framework definition — property inventory, snapshot strategy, verifier protocol, and CI integration rules — is at `work_items/STRICT-VERIFICATION.md`. The 96 property regression tests are co-located with each Component (e.g., `meshinstance3d/Component.material-uv.test.tsx`); they run in `pnpm test:unit` and block CI on any regression.
+11 per-flow strict checklists live in `docs/archive/strict-checklists/`. The framework definition — property inventory, snapshot strategy, verifier protocol, and CI integration rules — is at `docs/archive/STRICT-VERIFICATION.md`. The 96 property regression tests are co-located with each Component (e.g., `meshinstance3d/Component.material-uv.test.tsx`); they run in `pnpm test:unit` and block CI on any regression.
 
 ## Spike result
 

@@ -169,7 +169,7 @@ When features change:
 
 ## Integration with Project Context
 
-- Reference TODO.md work items in test plans when applicable
+- Reference GitHub issues (work items) in test plans when applicable
 - Align test scenarios with the vertical slicing architecture (test each node type's parser and renderer)
 - Focus tests on the web previewer interface - this is the user-facing surface
 - Consider the three main TSCN components (nodes, external resources, internal resources) when designing tests

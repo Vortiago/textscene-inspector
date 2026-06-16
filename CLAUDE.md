@@ -9,8 +9,7 @@ TextScene Inspector is a monorepo for parsing and rendering text-based 3D scene 
 ## Additional Documentation
 
 - **[README.md](./README.md)**: Read for project status, installation steps, and available scripts
-- **[TODO.md](./TODO.md)**: **CRITICAL** - High-level roadmap with work item summaries. Wait for user to specify which work item (#WI) to work on. Focus on ONE work item at a time. Never attempt multiple WIs simultaneously. Mark item as done (change `[ ]` to `[x]`) immediately after completing it. Do NOT automatically start the next item - wait for user instruction
-- **[work_items/](./work_items/)**: Detailed work item documentation. Each `WI-{number}.md` file contains implementation details, testing strategies, code examples, and architecture decisions. Read the specific work item file when starting work on that WI
+- **[GitHub Issues](https://github.com/Vortiago/Text-Scene-.tscn-File-Previewer/issues)**: **CRITICAL** - The roadmap and all open work items live here (the old `TODO.md` + `work_items/` files were migrated into issues). Wait for the user to specify which issue to work on. Focus on ONE issue at a time. Never attempt multiple simultaneously. Close the issue (or let the merged PR close it) immediately after completing it. Do NOT automatically start the next item - wait for user instruction. Historical WI numbers (e.g. WI-42) are preserved in issue titles for traceability.
 - **[ARCHITECTURE.md](./ARCHITECTURE.md)**: Read for detailed architecture explanation, especially when working on the vertical slicing structure or understanding TSCN format components
 - **[REFERENCES.md](./REFERENCES.md)**: Read when you need to look up documentation links or Context7 library IDs
 
@@ -42,25 +41,15 @@ TextScene Inspector is a monorepo for parsing and rendering text-based 3D scene 
 
 ## Work Item Workflow
 
-**Purpose**: Reduce context window usage by separating high-level roadmap from detailed implementation notes.
+The roadmap and all open work items live as **GitHub issues** (`gh issue list`). The former `TODO.md` roadmap and `work_items/WI-*.md` detail files were migrated into issues — each issue body carries the full implementation notes, testing strategy, and code examples that used to live in its detail file. Historical `WI-{number}` identifiers are kept in issue titles for traceability with the codebase and archive docs.
 
-**Structure**:
-- `TODO.md` - Compact roadmap with work item summaries and links
-- `work_items/WI-{number}.md` - Detailed files with implementation specifics
-
-**When working on a work item**:
-1. User specifies which WI to work on (e.g., "work on WI-50")
-2. **Read** `work_items/WI-{number}.md` for full details (implementation steps, testing strategy, code examples)
-3. **Implement** following the detailed plan
-4. **Test** according to the testing checklist in the work item file
-5. **Update** `TODO.md` - change `[ ]` to `[x]` immediately after completion
-6. **Do NOT** auto-start next item - wait for user to specify
-
-**Benefits**:
-- TODO.md stays small (low context window usage)
-- Full details available when needed (read specific WI file)
-- Completed items don't clutter the roadmap
-- Easy to scan overall progress
+**When working on an issue**:
+1. User specifies which issue to work on (e.g., "work on #100" or "the WI-42 issue")
+2. **Read** the issue body (`gh issue view <number>`) for full details (implementation steps, testing strategy, code examples)
+3. **Implement** following the plan
+4. **Test** according to the testing checklist in the issue
+5. **Close** the issue on completion (or reference it from the PR with `Closes #<number>` so the merge closes it)
+6. **Do NOT** auto-start the next item - wait for the user to specify
 
 ## Development Workflow
 
@@ -500,7 +489,7 @@ Following KISS principles, keep comments concise and informative:
 - Keep non-obvious business logic explanations
 
 **What to Avoid:**
-- Work item references (#WI...) - these belong in TODO.md, not code
+- Work item references (#WI..., issue numbers) - these belong in GitHub issues, not code
 - Verbose explanations that duplicate type information
 - Comments like "Initialize variable" or "Loop through array"
 - Restating what the code clearly shows

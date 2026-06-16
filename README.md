@@ -26,7 +26,7 @@ Current release: **0.9.0** — on the road to v1.0; see [CHANGELOG.md](./CHANGEL
 - ✅ VS Code extension — desktop **and** web (vscode.dev) entry points, outline, go-to-definition, hot-reload
 - ✅ Web previewer with fixture browser and an "Open .tscn" file picker (Ctrl/Cmd+K scene palette)
 
-See [TODO.md](./TODO.md) for the road to v1.0 — AnimationPlayer playback is the headline remaining renderer item.
+See the [GitHub issues](https://github.com/Vortiago/Text-Scene-.tscn-File-Previewer/issues) for the road to v1.0 — AnimationPlayer playback is the headline remaining renderer item.
 
 ## Getting Started
 
@@ -160,7 +160,7 @@ See [ARCHITECTURE.md](./ARCHITECTURE.md) for detailed explanations.
 
 - [CLAUDE.md](./CLAUDE.md) - AI assistant guidelines
 - [ARCHITECTURE.md](./ARCHITECTURE.md) - Project structure and patterns
-- [TODO.md](./TODO.md) - Implementation roadmap
+- [GitHub issues](https://github.com/Vortiago/Text-Scene-.tscn-File-Previewer/issues) - Implementation roadmap and open work items
 - [REFERENCES.md](./REFERENCES.md) - Documentation links
 
 ## License
