@@ -42,5 +42,7 @@ import '../../nodes/2d/camera2d/index.r3f';
 import '../../nodes/2d/animatedsprite2d/index.r3f';
 import '../../nodes/physics/2d/index.r3f';
 import '../internal/glb-scene-root/index';
+import '../../nodes/2d/tiles/tilemaplayer/index.r3f';
+import '../../nodes/2d/tiles/tilemap/index.r3f';
 
 export { GenericNodeFallback } from '../internal/generic-node-fallback/index';

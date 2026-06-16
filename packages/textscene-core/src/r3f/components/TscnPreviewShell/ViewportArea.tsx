@@ -10,7 +10,7 @@
 import { useMemo } from 'react';
 import type { SceneGraph } from '../../../core/SceneGraph.js';
 import { useViewportMode } from '../../contexts/ViewportModeContext.js';
-import { has2DUIContent } from '../../controls/has2DUIContent.js';
+import { hasCanvasContent } from '../../workspaceForScene.js';
 import { TscnCanvas } from '../../TscnCanvas.js';
 import { Canvas2DStage } from '../Canvas2DStage/Canvas2DStage.js';
 import styles from './TscnPreviewShell.module.css';
@@ -18,7 +18,7 @@ import styles from './TscnPreviewShell.module.css';
 export function ViewportArea({ sceneGraph }: { sceneGraph: SceneGraph | null }) {
   const { mode, setMode } = useViewportMode();
   const rootScene = sceneGraph?.scenes.get(sceneGraph.rootScene);
-  const has2DUI = useMemo(() => has2DUIContent(rootScene?.nodes ?? []), [rootScene]);
+  const has2DContent = useMemo(() => hasCanvasContent(rootScene?.nodes ?? []), [rootScene]);
 
   if (mode === '2D') {
     return (
@@ -30,20 +30,20 @@ export function ViewportArea({ sceneGraph }: { sceneGraph: SceneGraph | null }) 
     );
   }
 
-  // 3D mode. Default per ADR-0006 is 3D; when the scene also carries 2D-UI
-  // (Control/CanvasLayer) nodes, surface a hint so the overlay is discoverable
-  // instead of the user staring at a viewport with no visible UI.
+  // 3D workspace (Node3D content only, like Godot's editor). When the scene
+  // ALSO carries CanvasItem content — a HUD, embedded sprites/tilemaps — that
+  // content only renders in the 2D workspace, so surface a hint.
   return (
     <>
       <TscnCanvas />
-      {has2DUI && (
+      {has2DContent && (
         <button
           type="button"
           className={styles.viewportHint}
           onClick={() => setMode('2D')}
-          title="This scene contains 2D UI — switch to the 2D overlay"
+          title="This scene contains 2D content — switch to the 2D view"
         >
-          Contains 2D&nbsp;UI — switch to 2D
+          Has 2D&nbsp;content — switch to 2D
         </button>
       )}
     </>

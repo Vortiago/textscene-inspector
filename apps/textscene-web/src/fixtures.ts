@@ -7,6 +7,8 @@ export interface Fixture {
   name: string;
   file: string;
   category: string;
+  /** public/fixtures subtree the scene's res:// namespace maps onto ('' = root). */
+  root?: string;
 }
 
 export const fixtures: Fixture[] = [
@@ -38,6 +40,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Plane Rotated Scaled",
     "file": "edge-plane-rotated-scaled.tscn",
+    "category": "Edge Cases"
+  },
+  {
+    "name": "Tilemap Bad Tile Data",
+    "file": "edge-tilemap-bad-tile-data.tscn",
     "category": "Edge Cases"
   },
   {
@@ -486,6 +493,21 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D Canvas"
   },
   {
+    "name": "Tile Map Layer Isometric",
+    "file": "unit-tile-map-layer-isometric.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Tile Map Layer",
+    "file": "unit-tile-map-layer.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Tile Map",
+    "file": "unit-tile-map.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
     "name": "Clue Container",
     "file": "ClueContainer.tscn",
     "category": "Examples - ld-58 Scenes"
@@ -679,6 +701,519 @@ export const fixtures: Fixture[] = [
     "name": "Main",
     "file": "main.tscn",
     "category": "Examples - ld-58 Scenes"
+  },
+  {
+    "name": "Bone Pile 1",
+    "file": "decorations/bone_pile_1.tscn",
+    "category": "Examples - Isometric Dungeon"
+  },
+  {
+    "name": "Bone Pile 2",
+    "file": "decorations/bone_pile_2.tscn",
+    "category": "Examples - Isometric Dungeon"
+  },
+  {
+    "name": "Candle",
+    "file": "decorations/candle.tscn",
+    "category": "Examples - Isometric Dungeon"
+  },
+  {
+    "name": "Coin Pile",
+    "file": "decorations/coin_pile.tscn",
+    "category": "Examples - Isometric Dungeon"
+  },
+  {
+    "name": "Internal Shadow",
+    "file": "decorations/internal_shadow.tscn",
+    "category": "Examples - Isometric Dungeon"
+  },
+  {
+    "name": "Vase 1",
+    "file": "decorations/vase_1.tscn",
+    "category": "Examples - Isometric Dungeon"
+  },
+  {
+    "name": "Vase 2",
+    "file": "decorations/vase_2.tscn",
+    "category": "Examples - Isometric Dungeon"
+  },
+  {
+    "name": "Dungeon",
+    "file": "dungeon.tscn",
+    "category": "Examples - Isometric Dungeon"
+  },
+  {
+    "name": "Goblin",
+    "file": "player/goblin.tscn",
+    "category": "Examples - Isometric Dungeon"
+  },
+  {
+    "name": "Bullet Shower (2D)",
+    "file": "demos/2d/bullet_shower/shower.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/bullet_shower"
+  },
+  {
+    "name": "Custom Drawing (2D)",
+    "file": "demos/2d/custom_drawing/custom_drawing.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/custom_drawing"
+  },
+  {
+    "name": "Dodge The Creeps (2D)",
+    "file": "demos/2d/dodge_the_creeps/main.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/dodge_the_creeps"
+  },
+  {
+    "name": "Dynamic Tilemap Layers (2D)",
+    "file": "demos/2d/dynamic_tilemap_layers/world.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/dynamic_tilemap_layers"
+  },
+  {
+    "name": "Finite State Machine (2D)",
+    "file": "demos/2d/finite_state_machine/Demo.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/finite_state_machine"
+  },
+  {
+    "name": "Glow (2D)",
+    "file": "demos/2d/glow/beach_cave.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/glow"
+  },
+  {
+    "name": "Hexagonal Map (2D)",
+    "file": "demos/2d/hexagonal_map/map.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/hexagonal_map"
+  },
+  {
+    "name": "Instancing (2D)",
+    "file": "demos/2d/instancing/scene_instancing.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/instancing"
+  },
+  {
+    "name": "Kinematic Character (2D)",
+    "file": "demos/2d/kinematic_character/world.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/kinematic_character"
+  },
+  {
+    "name": "Light2d As Mask (2D)",
+    "file": "demos/2d/light2d_as_mask/lightmask.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/light2d_as_mask"
+  },
+  {
+    "name": "Lights And Shadows (2D)",
+    "file": "demos/2d/lights_and_shadows/light_shadows.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/lights_and_shadows"
+  },
+  {
+    "name": "Navigation (2D)",
+    "file": "demos/2d/navigation/navigation.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/navigation"
+  },
+  {
+    "name": "Navigation Astar (2D)",
+    "file": "demos/2d/navigation_astar/game.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/navigation_astar"
+  },
+  {
+    "name": "Navigation Mesh Chunks (2D)",
+    "file": "demos/2d/navigation_mesh_chunks/navmesh_chunks_demo_2d.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/navigation_mesh_chunks"
+  },
+  {
+    "name": "Particles (2D)",
+    "file": "demos/2d/particles/particles.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/particles"
+  },
+  {
+    "name": "Physics Platformer (2D)",
+    "file": "demos/2d/physics_platformer/stage.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/physics_platformer"
+  },
+  {
+    "name": "Physics Tests (2D)",
+    "file": "demos/2d/physics_tests/main.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/physics_tests"
+  },
+  {
+    "name": "Platformer (2D)",
+    "file": "demos/2d/platformer/game_singleplayer.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/platformer"
+  },
+  {
+    "name": "Polygons Lines (2D)",
+    "file": "demos/2d/polygons_lines/polygons_lines.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/polygons_lines"
+  },
+  {
+    "name": "Pong (2D)",
+    "file": "demos/2d/pong/pong.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/pong"
+  },
+  {
+    "name": "Role Playing Game (2D)",
+    "file": "demos/2d/role_playing_game/game.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/role_playing_game"
+  },
+  {
+    "name": "Screen Space Shaders (2D)",
+    "file": "demos/2d/screen_space_shaders/screen_shaders.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/screen_space_shaders"
+  },
+  {
+    "name": "Skeleton (2D)",
+    "file": "demos/2d/skeleton/level.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/skeleton"
+  },
+  {
+    "name": "Sprite Shaders (2D)",
+    "file": "demos/2d/sprite_shaders/sprite_shaders.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/sprite_shaders"
+  },
+  {
+    "name": "Tween (2D)",
+    "file": "demos/2d/tween/main.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/tween"
+  },
+  {
+    "name": "Antialiasing (3D)",
+    "file": "demos/3d/antialiasing/anti_aliasing.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/antialiasing"
+  },
+  {
+    "name": "Csg (3D)",
+    "file": "demos/3d/csg/csg.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/csg"
+  },
+  {
+    "name": "Decals (3D)",
+    "file": "demos/3d/decals/test.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/decals"
+  },
+  {
+    "name": "Global Illumination (3D)",
+    "file": "demos/3d/global_illumination/test.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/global_illumination"
+  },
+  {
+    "name": "Graphics Settings (3D)",
+    "file": "demos/3d/graphics_settings/control.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/graphics_settings"
+  },
+  {
+    "name": "Ik (3D)",
+    "file": "demos/3d/ik/look_at_ik.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/ik"
+  },
+  {
+    "name": "Kinematic Character (3D)",
+    "file": "demos/3d/kinematic_character/level.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/kinematic_character"
+  },
+  {
+    "name": "Labels And Texts (3D)",
+    "file": "demos/3d/labels_and_texts/3d_labels_and_texts.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/labels_and_texts"
+  },
+  {
+    "name": "Lights And Shadows (3D)",
+    "file": "demos/3d/lights_and_shadows/test.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/lights_and_shadows"
+  },
+  {
+    "name": "Material Testers (3D)",
+    "file": "demos/3d/material_testers/material_tester.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/material_testers"
+  },
+  {
+    "name": "Navigation (3D)",
+    "file": "demos/3d/navigation/navmesh.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/navigation"
+  },
+  {
+    "name": "Navigation Mesh Chunks (3D)",
+    "file": "demos/3d/navigation_mesh_chunks/navmesh_chhunks_demo_3d.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/navigation_mesh_chunks"
+  },
+  {
+    "name": "Occlusion Culling Mesh Lod (3D)",
+    "file": "demos/3d/occlusion_culling_mesh_lod/node_3d.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/occlusion_culling_mesh_lod"
+  },
+  {
+    "name": "Particles (3D)",
+    "file": "demos/3d/particles/test.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/particles"
+  },
+  {
+    "name": "Physical Light Camera Units (3D)",
+    "file": "demos/3d/physical_light_camera_units/test.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/physical_light_camera_units"
+  },
+  {
+    "name": "Physics Interpolation (3D)",
+    "file": "demos/3d/physics_interpolation/box.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/physics_interpolation"
+  },
+  {
+    "name": "Physics Tests (3D)",
+    "file": "demos/3d/physics_tests/main.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/physics_tests"
+  },
+  {
+    "name": "Platformer (3D)",
+    "file": "demos/3d/platformer/game.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/platformer"
+  },
+  {
+    "name": "Procedural Materials (3D)",
+    "file": "demos/3d/procedural_materials/loading.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/procedural_materials"
+  },
+  {
+    "name": "Ragdoll Physics (3D)",
+    "file": "demos/3d/ragdoll_physics/characters/mannequiny_ragdoll.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/ragdoll_physics"
+  },
+  {
+    "name": "Rigidbody Character (3D)",
+    "file": "demos/3d/rigidbody_character/level.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/rigidbody_character"
+  },
+  {
+    "name": "Sky Shaders (3D)",
+    "file": "demos/3d/sky_shaders/Main.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/sky_shaders"
+  },
+  {
+    "name": "Soft Body Physics (3D)",
+    "file": "demos/3d/soft_body_physics/test.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/soft_body_physics"
+  },
+  {
+    "name": "Sprites (3D)",
+    "file": "demos/3d/sprites/3d_sprites.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/sprites"
+  },
+  {
+    "name": "Squash The Creeps (3D)",
+    "file": "demos/3d/squash_the_creeps/Main.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/squash_the_creeps"
+  },
+  {
+    "name": "Tonemap Color Correction (3D)",
+    "file": "demos/3d/tonemap_color_correction/test.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/tonemap_color_correction"
+  },
+  {
+    "name": "Truck Town (3D)",
+    "file": "demos/3d/truck_town/car_select/car_select.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/truck_town"
+  },
+  {
+    "name": "Variable Rate Shading (3D)",
+    "file": "demos/3d/variable_rate_shading/vrs.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/variable_rate_shading"
+  },
+  {
+    "name": "Visibility Ranges (3D)",
+    "file": "demos/3d/visibility_ranges/test.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/visibility_ranges"
+  },
+  {
+    "name": "Volumetric Fog (3D)",
+    "file": "demos/3d/volumetric_fog/volumetric_fog.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/volumetric_fog"
+  },
+  {
+    "name": "Voxel (3D)",
+    "file": "demos/3d/voxel/menu/main/main_menu.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/voxel"
+  },
+  {
+    "name": "Waypoints (3D)",
+    "file": "demos/3d/waypoints/main.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/waypoints"
+  },
+  {
+    "name": "Accessibility (GUI)",
+    "file": "demos/gui/accessibility/controls.tscn",
+    "category": "Godot Demos - GUI",
+    "root": "demos/gui/accessibility"
+  },
+  {
+    "name": "Bidi And Font Features (GUI)",
+    "file": "demos/gui/bidi_and_font_features/bidi.tscn",
+    "category": "Godot Demos - GUI",
+    "root": "demos/gui/bidi_and_font_features"
+  },
+  {
+    "name": "Control Gallery (GUI)",
+    "file": "demos/gui/control_gallery/control_gallery.tscn",
+    "category": "Godot Demos - GUI",
+    "root": "demos/gui/control_gallery"
+  },
+  {
+    "name": "Drag And Drop (GUI)",
+    "file": "demos/gui/drag_and_drop/drag_and_drop.tscn",
+    "category": "Godot Demos - GUI",
+    "root": "demos/gui/drag_and_drop"
+  },
+  {
+    "name": "Gd Paint (GUI)",
+    "file": "demos/gui/gd_paint/paint_root.tscn",
+    "category": "Godot Demos - GUI",
+    "root": "demos/gui/gd_paint"
+  },
+  {
+    "name": "Input Mapping (GUI)",
+    "file": "demos/gui/input_mapping/InputRemapMenu.tscn",
+    "category": "Godot Demos - GUI",
+    "root": "demos/gui/input_mapping"
+  },
+  {
+    "name": "Msdf Font (GUI)",
+    "file": "demos/gui/msdf_font/sdf_font_demo.tscn",
+    "category": "Godot Demos - GUI",
+    "root": "demos/gui/msdf_font"
+  },
+  {
+    "name": "Multiple Resolutions (GUI)",
+    "file": "demos/gui/multiple_resolutions/main.tscn",
+    "category": "Godot Demos - GUI",
+    "root": "demos/gui/multiple_resolutions"
+  },
+  {
+    "name": "Pseudolocalization (GUI)",
+    "file": "demos/gui/pseudolocalization/Pseudolocalization.tscn",
+    "category": "Godot Demos - GUI",
+    "root": "demos/gui/pseudolocalization"
+  },
+  {
+    "name": "Regex (GUI)",
+    "file": "demos/gui/regex/regex.tscn",
+    "category": "Godot Demos - GUI",
+    "root": "demos/gui/regex"
+  },
+  {
+    "name": "Rich Text Bbcode (GUI)",
+    "file": "demos/gui/rich_text_bbcode/rich_text_bbcode.tscn",
+    "category": "Godot Demos - GUI",
+    "root": "demos/gui/rich_text_bbcode"
+  },
+  {
+    "name": "Theming Override (GUI)",
+    "file": "demos/gui/theming_override/test.tscn",
+    "category": "Godot Demos - GUI",
+    "root": "demos/gui/theming_override"
+  },
+  {
+    "name": "Translation (GUI)",
+    "file": "demos/gui/translation/translation_demo_csv.tscn",
+    "category": "Godot Demos - GUI",
+    "root": "demos/gui/translation"
+  },
+  {
+    "name": "Ui Mirroring (GUI)",
+    "file": "demos/gui/ui_mirroring/ui_mirroring.tscn",
+    "category": "Godot Demos - GUI",
+    "root": "demos/gui/ui_mirroring"
+  },
+  {
+    "name": "2d In 3d (Viewport)",
+    "file": "demos/viewport/2d_in_3d/2d_in_3d.tscn",
+    "category": "Godot Demos - Viewport",
+    "root": "demos/viewport/2d_in_3d"
+  },
+  {
+    "name": "3d In 2d (Viewport)",
+    "file": "demos/viewport/3d_in_2d/3d_in_2d.tscn",
+    "category": "Godot Demos - Viewport",
+    "root": "demos/viewport/3d_in_2d"
+  },
+  {
+    "name": "3d Scaling (Viewport)",
+    "file": "demos/viewport/3d_scaling/hud.tscn",
+    "category": "Godot Demos - Viewport",
+    "root": "demos/viewport/3d_scaling"
+  },
+  {
+    "name": "Dynamic Split Screen (Viewport)",
+    "file": "demos/viewport/dynamic_split_screen/split_screen.tscn",
+    "category": "Godot Demos - Viewport",
+    "root": "demos/viewport/dynamic_split_screen"
+  },
+  {
+    "name": "Gui In 3d (Viewport)",
+    "file": "demos/viewport/gui_in_3d/gui_in_3d.tscn",
+    "category": "Godot Demos - Viewport",
+    "root": "demos/viewport/gui_in_3d"
+  },
+  {
+    "name": "Screen Capture (Viewport)",
+    "file": "demos/viewport/screen_capture/screen_capture.tscn",
+    "category": "Godot Demos - Viewport",
+    "root": "demos/viewport/screen_capture"
+  },
+  {
+    "name": "Split Screen Input (Viewport)",
+    "file": "demos/viewport/split_screen_input/split_screen_demo.tscn",
+    "category": "Godot Demos - Viewport",
+    "root": "demos/viewport/split_screen_input"
   }
 ];
 

@@ -15,11 +15,30 @@ export function isGLBPath(path: string): boolean {
 }
 
 /**
- * Create a THREE.Object3D from GLB/GLTF binary data.
+ * The directory a glTF's relative dependencies (external .bin buffers,
+ * image files) resolve against — `res://stage/model.gltf` → `res://stage/`.
  */
-export async function createGLBMesh(data: ArrayBuffer): Promise<THREE.Object3D> {
-  const loader = new GLTFLoader();
-  const gltf = await loader.parseAsync(data, '');
+export function gltfResourceDir(path: string): string {
+  const slash = path.lastIndexOf('/');
+  return slash === -1 ? '' : path.slice(0, slash + 1);
+}
+
+/**
+ * Create a THREE.Object3D from GLB/GLTF data. Binary .glb is self-contained;
+ * a TEXT .gltf references external buffers/images relative to its own
+ * directory — `resourcePath` carries that res:// directory and `manager`
+ * (the bus's THREE.LoadingManager) lets the HOST map those res:// URLs onto
+ * fetchable ones (the web app points them at its fixtures mirror via
+ * setURLModifier; hosts without a mapping fail the load → standard
+ * missing-resource placeholder UX).
+ */
+export async function createGLBMesh(
+  data: ArrayBuffer,
+  resourcePath = '',
+  manager?: THREE.LoadingManager
+): Promise<THREE.Object3D> {
+  const loader = new GLTFLoader(manager);
+  const gltf = await loader.parseAsync(data, resourcePath);
   return gltf.scene;
 }
 

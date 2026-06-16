@@ -94,6 +94,61 @@ global transforms are identical). Our renderer nests every node in its parent's
   model can't express cleanly — disproportionate for a zero-impact flag.
 - Site: `nodes/base/node3d/Component.tsx` (child group nesting).
 
+## TileMap / TileMapLayer
+
+### Cross-source draw order within a layer  *(issue #74, by design)*
+Tiles batch into **one mesh per atlas source** (the PRD's performance
+requirement). Godot draws cells in scan order, interleaving cells of different
+atlas sources within a rendering quadrant; per-source batching cannot reproduce
+that per-cell interleaving. Sources draw in `sources/N` appearance order, each
+nudged `+TILE_SOURCE_STEP` in z (deterministic, but not Godot's exact order
+where overlapping cells come from different sources).
+
+- **Impact today:** none visible — isometric stacking in the vendored dungeon
+  is dominated by `texture_origin` overlap within a single source.
+- Site: `r3f/node2dTransform.ts` (`TILE_SOURCE_STEP`), tile slice Components.
+
+### Y-sort  *(issue #74, out of scope)*
+`y_sort_enabled` / `y_sort_origin` (sorting tiles and sibling nodes by their
+y position) is parsed but not applied; draw order comes from z_index + tree
+order like every other CanvasItem. The dungeon's wall/prop overlaps mostly
+coincide with tree order, so the preview reads correctly.
+
+### Unsupported tile shapes, layouts, and data formats  *(issue #74)*
+- `tile_shape` half-offset-square (2) / hexagon (3): cells place on a square
+  grid + warn (`resources/tileset/tilePlacement.ts`).
+- Legacy `TileMap` with `format` 0/1 (Godot 3 tile-id encodings needing the
+  original TileSet's compatibility mapping): tile data ignored + warn, node
+  degrades to a transform-only group (`nodes/2d/tiles/shared/tileData.ts`).
+- Scene-collection tile sources (`TileSetScenesCollectionSource`) and per-tile
+  modulate/material overrides: skipped with a warn (`resolveTileSet.ts`).
+- Animated tiles: the base frame's region renders statically.
+
+## Binary Godot resources
+
+### `.scn` / `.res` (binary serialization) are not previewable  *(by design)*
+The previewer parses Godot's TEXT formats only (`.tscn`/`.tres`). Binary
+scenes (`.scn`), binary resources (`.res`, e.g. `ArrayMesh` mesh data), and
+compressed textures (`.ctex`) cannot load. Concrete case: the
+godot-demo-projects 3D platformer's level is a `GridMap` in `grid_map.scn`
+plus `ArrayMesh` floors in `meshes/*.res` — its geometry cannot render.
+
+- **Degradation:** the scene processor rejects binary/non-TSCN content
+  (instead of the lenient parser silently producing an empty scene), so the
+  standard missing-resource UX kicks in — magenta placeholder + panel row.
+  The linter marks every such reference (`binary-resource-reference`,
+  warning).
+- `GridMap` (the 3D tile grid node) is additionally an unimplemented node
+  type — even a text-serialized one would render as a transform-only group.
+
+### Text `.gltf` with external buffers — web host only
+`.glb` (self-contained binary) loads everywhere. A TEXT `.gltf` referencing
+external `.bin` buffers / image files resolves them through THREE's
+LoadingManager against the glTF's own `res://` directory; the WEB host maps
+those URLs onto its fixtures mirror (`setURLModifier` in `r3f-main`). The
+VS Code webview has no such mapping — there the load fails into the
+missing-resource placeholder UX.
+
 ## Lights
 
 ### SpotLight3D.spot_angle_attenuation → penumbra  *(audit #15)*

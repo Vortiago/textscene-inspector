@@ -32,6 +32,7 @@ const EDGE_FIXTURES_WITH_ERRORS = new Set([
   'edge-invalid-transform.tscn',
   'edge-malformed-bracket.tscn',
   'edge-photo-wall.tscn',
+  'edge-tilemap-bad-tile-data.tscn',
 ]);
 
 function tscnFiles(dir: string): string[] {

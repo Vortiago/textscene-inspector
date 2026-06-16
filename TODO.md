@@ -52,6 +52,7 @@ These are unblocked by Phase 14 shipping. Each adds a node-type folder under `pa
 - [x] WI-R3F-3.6: Path3D / PathFollow3D — renders as transform-only group per ADR-0008
 - [x] WI-R3F-3.7: Skeleton3D — renders as transform-only group per ADR-0008
 - [x] WI-R3F-3.8: Sprite3D
+- [x] Issue [#74](https://github.com/Vortiago/Text-Scene-.tscn-File-Previewer/issues/74): TileMap / TileMapLayer best-effort rendering — two tile slices (legacy multi-layer + 4.3+), TileSet resolver (scene SubResource + external `.tres` via the new generic resource processor), batched per-atlas-source quads, square + isometric placement, flip/transpose orientation, linter rules, vendored isometric-dungeon corpus (`scenes/isometric/`)
 
 ## Phase 1: Core Visual Rendering ✅
 
@@ -122,6 +123,7 @@ These are unblocked by Phase 14 shipping. Each adds a node-type folder under `pa
 - [ ] #WI-17: Custom Shader Support → [Details](work_items/WI-17.md)
 - [x] #WI-64: Label3D Node Support → [Details](work_items/WI-64.md) (3D text labels for fixture annotations)
 - [ ] #WI-77: Advanced Environment Features → [Details](work_items/WI-77.md) (Post-processing, Sky, SSAO, SSR) **Deferred from WI-57**
+- [ ] #WI-85: Binary Godot formats (.scn/.res) — render the geometry currently behind placeholders (e.g. the 3D platformer's level). **Deferred — multi-step, low priority.** Researched 2026-06-11: no JS parser for the binary `RSRC`/`RSCC` format exists; the viable path is build-time conversion via `godot --headless` + `ResourceSaver.save()` (text out), gated on a Godot binary being on PATH in `scripts/vendor-godot-demos.mjs` (currently absent on the dev box). Conversion is only the prerequisite — drawing the platformer stage still needs two new renderer slices: ArrayMesh → `THREE.BufferGeometry` (easy) and GridMap (MeshLibrary + packed-cell instancing, harder). Until done, binary refs degrade to the magenta placeholder + the `binary-resource-reference` lint warning. See [docs/PARITY-LIMITATIONS.md](docs/PARITY-LIMITATIONS.md) "Binary Godot resources".
 
 ## Phase 6.5: Material Feature Enable Flags (from WI-63 Research)
 
@@ -260,7 +262,7 @@ Each work item has a corresponding file in `work_items/` containing:
 See the [README feature list](README.md#features) for the authoritative summary. In short:
 
 - react-three-fiber rendering layer over three.js (Phase 14 R3F migration complete)
-- ~50 self-registering node slices: meshes, lights, cameras, WorldEnvironment, Label3D, CSG, physics bodies + collision gizmos, sprites (2D/3D), audio gizmos, Control DOM overlay
+- ~50 self-registering node slices: meshes, lights, cameras, WorldEnvironment, Label3D, CSG, physics bodies + collision gizmos, sprites (2D/3D), TileMap/TileMapLayer, audio gizmos, Control DOM overlay
 - StandardMaterial3D PBR (albedo/metallic/roughness/normal/emission/AO, UV transforms, external textures)
 - External resources: PackedScene instancing, textures, materials, GLB meshes — event-driven with late-arrival recovery
 - Linter: `tscn-lint` CLI + in-editor diagnostics (React/THREE-free bundle); canonical invocation `pnpm lint:tscn`

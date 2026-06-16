@@ -28,6 +28,7 @@ import {
   type ViewportSelectorOption,
 } from '@textscene/core';
 import { fixtures } from './fixtures';
+import { corpusRootFor, fixtureUrlForRes } from './corpusRoot';
 import { WebResourceProvider } from './providers/WebResourceProvider';
 import styles from './r3f-main.module.css';
 
@@ -55,9 +56,13 @@ export function R3FApp() {
     try {
       // Deep-link: `?fixture=<file>` opens directly on a specific scene
       // (used by the showcase recorder to skip the default-fixture detour,
-      // and handy for sharing a link to a particular scene).
+      // and handy for sharing a link to a particular scene). Unlisted
+      // demo subscenes are accepted too — the selector only lists each
+      // demo's main scene, but every mirrored scene stays linkable.
       const param = new URLSearchParams(window.location.search).get('fixture');
-      if (param && fixtures.some((f) => f.file === param)) return param;
+      if (param && (fixtures.some((f) => f.file === param) || param.startsWith('demos/'))) {
+        return param;
+      }
       return window.localStorage.getItem(STORAGE_KEY) ?? DEFAULT_FIXTURE;
     } catch {
       return DEFAULT_FIXTURE;
@@ -79,6 +84,26 @@ export function R3FApp() {
     () => createResourcePipeline(new WebResourceProvider()),
     []
   );
+
+  // Each vendored demo project keeps its own res:// namespace; the active
+  // fixture's `root` scopes the provider's lookups to that subtree. Declared
+  // BEFORE the content-fetch effect so the root is in place by the time the
+  // newly-mounted scene starts requesting resources.
+  const resourceRoot = useMemo(() => corpusRootFor(fixtureFile, fixtures), [fixtureFile]);
+  const lastRootRef = useRef(resourceRoot);
+  useEffect(() => {
+    provider.setResourceRoot(resourceRoot);
+    // Text .gltf files load their external buffers/images through THREE's
+    // LoadingManager with res://-relative URLs — map those onto the public
+    // fixtures mirror (same scheme as the provider's own fetches).
+    loader.eventBus.getThreeManager().setURLModifier((url) => fixtureUrlForRes(url, resourceRoot));
+    if (lastRootRef.current !== resourceRoot) {
+      lastRootRef.current = resourceRoot;
+      // Two corpora can reference the same res:// path (e.g. art/player.png)
+      // — drop the previous corpus's cached resources, keep subscribers.
+      loader.clearCaches();
+    }
+  }, [resourceRoot, provider, loader]);
 
   const options = useMemo<ViewportSelectorOption[]>(() => {
     const fixtureOptions: ViewportSelectorOption[] = fixtures.map((f) => ({
@@ -177,7 +202,12 @@ export function R3FApp() {
           panelId={`web-${fixtureFile || uploadedTscnName || 'empty'}`}
           content={content}
           rootScenePath={`res://${
-            fixtureFile || uploadedTscnName || 'empty.tscn'
+            // The scene's res:// identity is relative to its corpus root.
+            (resourceRoot && fixtureFile.startsWith(`${resourceRoot}/`)
+              ? fixtureFile.slice(resourceRoot.length + 1)
+              : fixtureFile) ||
+            uploadedTscnName ||
+            'empty.tscn'
           }`}
           onResourceUpload={handleResourceUpload}
           onResourceRemove={handleResourceRemove}

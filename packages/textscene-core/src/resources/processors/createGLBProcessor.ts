@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import type { FileEventBus } from '../FileEventBus';
 import type { ResourceEventBus } from '../ResourceEventBus';
 import { createResourceProcessor, type ResourceProcessor } from '../createResourceProcessor';
-import { createGLBMesh, isGLBPath } from '../processing/glbProcessing';
+import { createGLBMesh, gltfResourceDir, isGLBPath } from '../processing/glbProcessing';
 
 /**
  * Dispose of a GLB mesh and all its resources.
@@ -37,8 +37,10 @@ export function createGLBProcessor(
     eventBus,
     resourceType: 'glb',
     shouldProcess: (path, data) => isGLBPath(path) && data instanceof ArrayBuffer,
-    process: async (_path, data) => {
-      return createGLBMesh(data as ArrayBuffer);
+    process: async (path, data) => {
+      // Text .gltf resolves external buffers/images against its own res://
+      // directory through the bus's LoadingManager (host-mapped URLs).
+      return createGLBMesh(data as ArrayBuffer, gltfResourceDir(path), eventBus.getThreeManager());
     },
     dispose: disposeGLBMesh,
   });

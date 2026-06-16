@@ -13,7 +13,32 @@ vi.mock('../../controls/index.js', () => ({
   ),
 }));
 
+// The 2D-world R3F canvas needs WebGL — stub it, recording the pan/zoom it
+// receives so the transform-sync contract is assertable in jsdom.
+vi.mock('./World2DCanvas', () => ({
+  World2DCanvas: ({
+    pan,
+    zoom,
+    nodes,
+  }: {
+    pan: { x: number; y: number };
+    zoom: number;
+    nodes: readonly unknown[];
+  }) => (
+    <div
+      data-testid="world-canvas-stub"
+      data-pan={`${pan.x},${pan.y}`}
+      data-zoom={zoom}
+      data-node-count={nodes.length}
+    />
+  ),
+}));
+
 import { Canvas2DStage } from './Canvas2DStage';
+import {
+  CameraControlProvider,
+  useCameraControl,
+} from '../../contexts/CameraControlContext';
 import type { TscnNode } from '../../../parser/types';
 
 function makeNode(name: string): TscnNode {
@@ -48,6 +73,16 @@ describe('<Canvas2DStage>', () => {
     renderStage([makeNode('A'), makeNode('B')]);
     const overlay = await screen.findByTestId('overlay-stub');
     expect(overlay.getAttribute('data-node-count')).toBe('2');
+  });
+
+  it('mounts the 2D world canvas with the stage pan/zoom kept in sync', () => {
+    renderStage([makeNode('A')]);
+    const world = screen.getByTestId('world-canvas-stub');
+    expect(world.getAttribute('data-node-count')).toBe('1');
+    expect(world.getAttribute('data-zoom')).toBe('1');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }));
+    expect(screen.getByTestId('world-canvas-stub').getAttribute('data-zoom')).toBe('1.2');
   });
 
   it('zooms in and out around the centre via the HUD buttons', () => {
@@ -91,6 +126,38 @@ describe('<Canvas2DStage>', () => {
     expect(frame.style.transform).toBe('translate(50px, 30px) scale(1)');
   });
 
+  it('frames a 2D camera view on request: centers the view point at the requested zoom', () => {
+    // Probe button drives the context the Cameras panel uses.
+    function FrameProbe() {
+      const cam = useCameraControl();
+      return (
+        <button
+          type="button"
+          onClick={() => cam.requestFrame2D({ center: { x: 300, y: 200 }, zoom: 2 })}
+        >
+          frame camera
+        </button>
+      );
+    }
+    render(
+      <CameraControlProvider>
+        <FrameProbe />
+        <Canvas2DStage nodes={[]} internalResources={[]} externalResources={[]} />
+      </CameraControlProvider>
+    );
+    const stage = screen.getByLabelText('2D canvas');
+    // jsdom rects are 0×0 — give the stage a real size for the centering math.
+    stage.getBoundingClientRect = () =>
+      ({ width: 800, height: 600, left: 0, top: 0, right: 800, bottom: 600, x: 0, y: 0 }) as DOMRect;
+
+    fireEvent.click(screen.getByRole('button', { name: 'frame camera' }));
+
+    // pan = stage/2 − center·zoom → (400 − 600, 300 − 400) = (−200, −100).
+    const frame = screen.getByText('1152 × 648').parentElement as HTMLElement;
+    expect(frame.style.transform).toBe('translate(-200px, -100px) scale(2)');
+    expect(zoomLabel()).toBe('200%');
+  });
+
   it('ignores pointer move when no drag is active, and non-primary buttons', () => {
     const { stage, frame } = renderStage();
     fireEvent.pointerMove(stage, { clientX: 100, clientY: 100, pointerId: 1 });
@@ -99,6 +166,22 @@ describe('<Canvas2DStage>', () => {
     fireEvent.pointerDown(stage, { button: 2, clientX: 0, clientY: 0, pointerId: 1 });
     fireEvent.pointerMove(stage, { clientX: 50, clientY: 50, pointerId: 1 });
     expect(frame.style.transform).toBe('translate(0px, 0px) scale(1)');
+  });
+
+  it('draws origin axes at world (0, 0) that track the stage pan', () => {
+    const { stage } = renderStage();
+    const axisX = () => screen.getByTestId('origin-axis-x');
+    const axisY = () => screen.getByTestId('origin-axis-y');
+
+    // Initial pan is (0, 0): the axes cross at the stage's top-left corner.
+    expect(axisX().style.top).toBe('0px');
+    expect(axisY().style.left).toBe('0px');
+
+    // A drag pans the stage; the axes follow so they stay glued to world origin.
+    fireEvent.pointerDown(stage, { button: 0, clientX: 10, clientY: 20, pointerId: 1 });
+    fireEvent.pointerMove(stage, { clientX: 45, clientY: 80, pointerId: 1 });
+    expect(axisX().style.top).toBe('60px'); // pan.y = 80 − 20
+    expect(axisY().style.left).toBe('35px'); // pan.x = 45 − 10
   });
 
   it('Fit recenters the frame inside the stage bounds with the margin-fitted zoom', () => {

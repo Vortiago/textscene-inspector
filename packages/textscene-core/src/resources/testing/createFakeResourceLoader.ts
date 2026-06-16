@@ -22,6 +22,7 @@
  */
 
 import * as THREE from 'three';
+import type { ParsedTresFile } from '../../parser/tresParser';
 import type { TscnScene } from '../../parser/types';
 import { ResourceEventBus, type ResourceType } from '../ResourceEventBus';
 import { MetadataStore } from '../MetadataStore';
@@ -56,6 +57,7 @@ export interface FakeResourceLoader {
   readonly materials: FakeProcessor<THREE.Material>;
   readonly glbMeshes: FakeProcessor<THREE.Object3D>;
   readonly scenes: FakeProcessor<TscnScene>;
+  readonly resources: FakeProcessor<ParsedTresFile>;
 }
 
 function makeFakeProcessor<T>(eventBus: ResourceEventBus, type: ResourceType): FakeProcessor<T> {
@@ -106,6 +108,7 @@ export function createFakeResourceLoader(): FakeResourceLoader {
   const materials = makeFakeProcessor<THREE.Material>(eventBus, 'material');
   const glbMeshes = makeFakeProcessor<THREE.Object3D>(eventBus, 'glb');
   const scenes = makeFakeProcessor<TscnScene>(eventBus, 'scene');
+  const resources = makeFakeProcessor<ParsedTresFile>(eventBus, 'resource');
 
   const loader = {
     eventBus,
@@ -114,6 +117,7 @@ export function createFakeResourceLoader(): FakeResourceLoader {
     materials,
     glbMeshes,
     scenes,
+    resources,
     // Legacy pass-throughs a few consumers still reach for.
     getSceneCached: (path: string) => scenes.getCached(path) ?? undefined,
     requestScene: (path: string) => scenes.request(path),
@@ -124,13 +128,24 @@ export function createFakeResourceLoader(): FakeResourceLoader {
       materials.clearCache(path);
       glbMeshes.clearCache(path);
       scenes.clearCache(path);
+      resources.clearCache(path);
     },
     clear(): void {
       textures.clearCache();
       materials.clearCache();
       glbMeshes.clearCache();
       scenes.clearCache();
+      resources.clearCache();
       eventBus.clear();
+      metadata.clear();
+    },
+    // Mirror ResourceLoader.clearCaches: caches + metadata, subscribers kept.
+    clearCaches(): void {
+      textures.clearCache();
+      materials.clearCache();
+      glbMeshes.clearCache();
+      scenes.clearCache();
+      resources.clearCache();
       metadata.clear();
     },
   };
@@ -143,5 +158,6 @@ export function createFakeResourceLoader(): FakeResourceLoader {
     materials,
     glbMeshes,
     scenes,
+    resources,
   };
 }

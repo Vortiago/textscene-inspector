@@ -1,9 +1,13 @@
 /**
- * The 2D viewport (ADR-0007): a pannable/zoomable stage that frames the live
- * `<ControlOverlay>` as a fixed-size canvas — bounds, zoom %, scroll-to-zoom,
- * drag-to-pan — so 2D scenes read as a flat canvas editor, not a 3D viewport
- * showing flat content. The overlay still does the real Control layout; this
- * only adds the canvas chrome around it.
+ * The 2D viewport (ADR-0007 + ADR-0006 Godot-parity amendment): a pannable/
+ * zoomable stage compositing — like Godot's 2D editor — the whole CanvasItem
+ * world in one view:
+ *   1. the canvas frame (Godot's project-viewport rectangle),
+ *   2. the `<World2DCanvas>` (transparent ortho R3F layer: sprites, tilemaps,
+ *      Node2D trees), camera glued to the stage pan/zoom,
+ *   3. the `<ControlOverlay>` (DOM Control layout) on top.
+ * The overlay still does the real Control layout; the stage owns the chrome
+ * (bounds, zoom %, scroll-to-zoom, drag-to-pan).
  */
 import {
   lazy,
@@ -19,6 +23,9 @@ import type {
   TscnExternalResource,
   TscnInternalResource,
 } from '../../../parser/types.js';
+import { useOptionalCameraControl } from '../../contexts/CameraControlContext.js';
+import { World2DCanvas } from './World2DCanvas.js';
+import { CANVAS_2D_WIDTH, CANVAS_2D_HEIGHT } from './viewport2d.js';
 import styles from './Canvas2DStage.module.css';
 
 // The 2D-UI overlay (ADR-0003) is lazy-loaded — keeping the 15 Control
@@ -30,11 +37,6 @@ const ControlOverlay = lazy(() =>
   import('../../controls/index.js').then((m) => ({ default: m.ControlOverlay }))
 );
 
-// Godot's default 2D project viewport. The 2D canvas frame uses it as a stable
-// surface Control nodes anchor to (mirrors how Godot's 2D editor frames a scene),
-// rather than the variable viewport-region size the bare overlay filled before.
-const CANVAS_2D_WIDTH = 1152;
-const CANVAS_2D_HEIGHT = 648;
 const ZOOM_MIN = 0.1;
 const ZOOM_MAX = 4;
 const clampZoom = (z: number) => Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, z));
@@ -84,6 +86,24 @@ export function Canvas2DStage({
   useEffect(() => {
     fit();
   }, [fit]);
+
+  // "View through" a Camera2D (Cameras panel): one-shot framing request —
+  // center the camera's view point at its magnification; the user keeps free
+  // pan/zoom afterwards.
+  const frame2D = useOptionalCameraControl()?.frame2D ?? null;
+  useEffect(() => {
+    if (!frame2D) return;
+    const el = stageRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    if (r.width <= 0 || r.height <= 0) return;
+    const z = clampZoom(frame2D.zoom);
+    setZoom(z);
+    setPan({
+      x: r.width / 2 - frame2D.center.x * z,
+      y: r.height / 2 - frame2D.center.y * z,
+    });
+  }, [frame2D]);
 
   // Wheel-to-zoom, anchored to the cursor. Added as a non-passive native
   // listener so preventDefault actually suppresses page scroll.
@@ -172,6 +192,41 @@ export function Canvas2DStage({
         <span className={styles.canvasDim} aria-hidden>
           {CANVAS_2D_WIDTH} × {CANVAS_2D_HEIGHT}
         </span>
+      </div>
+
+      {/* Origin axes through world (0, 0) = the viewport rect's top-left at
+          screen (pan.x, pan.y) — Godot's 2D-editor red X / green Y. */}
+      <div
+        className={`${styles.originAxis} ${styles.originAxisX}`}
+        style={{ top: pan.y }}
+        data-testid="origin-axis-x"
+        aria-hidden
+      />
+      <div
+        className={`${styles.originAxis} ${styles.originAxisY}`}
+        style={{ left: pan.x }}
+        data-testid="origin-axis-y"
+        aria-hidden
+      />
+
+      {/* The CanvasItem world (sprites/tilemaps), drawn over the frame
+          surface and under the Control overlay — Godot's 2D editor order. */}
+      <World2DCanvas
+        nodes={nodes}
+        internalResources={internalResources}
+        externalResources={externalResources}
+        pan={pan}
+        zoom={zoom}
+      />
+
+      <div
+        className={styles.overlayFrame}
+        style={{
+          width: CANVAS_2D_WIDTH,
+          height: CANVAS_2D_HEIGHT,
+          transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+        }}
+      >
         <Suspense
           fallback={
             <div className={styles.loading} aria-busy="true">

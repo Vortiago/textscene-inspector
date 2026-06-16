@@ -32,6 +32,8 @@ import { joinPath } from '../utils/nodePath.js';
 import { nodeComponentRegistry } from './NodeComponentRegistry.js';
 import { GenericNodeFallback } from './internal/generic-node-fallback/index';
 import { useViewportSelection } from './hooks/useViewportSelection.js';
+import { useCanvasWorkspace } from './contexts/CanvasWorkspaceContext.js';
+import { TWO_D_UI_TYPES } from './controls/has2DUIContent.js';
 import { NodePathProvider } from './contexts/NodePathContext.js';
 import { useResource, useResourceLoader } from '../resources/useResource.js';
 import { parseResourceReference, resolveInstancePath } from '../resources/SubResourceResolver.js';
@@ -74,6 +76,7 @@ function DispatchedNode({ node, path, withNodePath }: DispatchedNodeProps): Reac
   const Component = nodeComponentRegistry.get(node.type) ?? GenericNodeFallback;
   const handlers = withNodePath(path);
   const { hiddenNodePaths, registerNodeObject, unregisterNodeObject } = useSelection();
+  const workspace = useCanvasWorkspace();
   const isHidden = hiddenNodePaths.has(path);
 
   const wrapperRef = useCallback(
@@ -86,6 +89,24 @@ function DispatchedNode({ node, path, withNodePath }: DispatchedNodeProps): Reac
     },
     [path, registerNodeObject, unregisterNodeObject]
   );
+
+  // Godot editor workspace split (ADR-0006 amendment): the 3D viewport never
+  // draws CanvasItems (Node2D world, Control UI, CanvasLayer subtrees); the
+  // 2D world canvas never draws registered 3D content. Plain/unregistered
+  // containers (e.g. a `Node` root) pass through in both so children of
+  // either kind stay reachable. (After the hooks — the skip is deterministic
+  // per mounted instance, but rules-of-hooks wants the call order static.)
+  const isCanvasItem =
+    nodeComponentRegistry.isCanvasItem(node.type) || TWO_D_UI_TYPES.has(node.type);
+  if (workspace === '3d' && isCanvasItem) return null;
+  if (
+    workspace === '2d' &&
+    !isCanvasItem &&
+    nodeComponentRegistry.get(node.type) &&
+    !nodeComponentRegistry.isContainer(node.type)
+  ) {
+    return null;
+  }
 
   const inlineChildren = node.children.map((child) => (
     <DispatchedNode

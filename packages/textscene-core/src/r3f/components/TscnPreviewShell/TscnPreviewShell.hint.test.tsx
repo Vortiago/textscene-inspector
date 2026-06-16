@@ -1,7 +1,9 @@
 /**
- * ADR-0006: the viewport defaults to 3D, but when a scene also carries 2D-UI
- * (Control/CanvasLayer) nodes the shell floats a "switch to 2D" hint over the
- * canvas so the overlay is discoverable. Pure-3D scenes show no hint.
+ * ADR-0006 (Godot-parity amendment): scenes whose ROOT keeps the viewport in
+ * 3D but which carry CanvasItem content (a HUD, embedded 2D world nodes)
+ * float a "switch to 2D" hint over the canvas — that content only renders in
+ * the 2D workspace, like Godot's editor. Pure-3D scenes show no hint;
+ * CanvasItem-root scenes auto-open in 2D, so no hint either.
  */
 
 import { describe, expect, it, vi } from 'vitest';
@@ -11,32 +13,42 @@ vi.mock('../../TscnCanvas', () => ({
   TscnCanvas: () => <div data-testid="canvas-stub" />,
   TscnSceneContents: () => null,
 }));
+vi.mock('../Canvas2DStage/Canvas2DStage', () => ({
+  Canvas2DStage: () => <div data-testid="canvas-2d" />,
+}));
 
 import { TscnPreviewShell } from './TscnPreviewShell';
 
-const UI_SCENE = `[gd_scene format=3]\n\n[node name="UI" type="Control"]\nanchors_preset = 15\n`;
+const MIXED_HUD_SCENE = `[gd_scene format=3]\n\n[node name="Root" type="Node3D"]\n\n[node name="HUD" type="Control" parent="."]\n`;
+const MIXED_WORLD_SCENE = `[gd_scene format=3]\n\n[node name="Root" type="Node3D"]\n\n[node name="Decal" type="Sprite2D" parent="."]\n`;
 const THREED_SCENE = `[gd_scene format=3]\n\n[node name="Root" type="Node3D"]\n`;
 
-describe('<TscnPreviewShell> 2D-UI discoverability hint (ADR-0006)', () => {
-  it('shows the "switch to 2D" hint in 3D mode when the scene has 2D UI', async () => {
-    render(<TscnPreviewShell panelId="hint-a" content={UI_SCENE} />);
+describe('<TscnPreviewShell> 2D discoverability hint (ADR-0006)', () => {
+  it('shows the hint for a 3D-root scene carrying Control UI', async () => {
+    render(<TscnPreviewShell panelId="hint-a" content={MIXED_HUD_SCENE} />);
+    const hint = await screen.findByRole('button', { name: /switch to 2D/i });
+    expect(hint).toBeTruthy();
+  });
+
+  it('shows the hint for a 3D-root scene carrying 2D world content (invisible in 3D)', async () => {
+    render(<TscnPreviewShell panelId="hint-b" content={MIXED_WORLD_SCENE} />);
     const hint = await screen.findByRole('button', { name: /switch to 2D/i });
     expect(hint).toBeTruthy();
   });
 
   it('does not show the hint for a pure-3D scene', async () => {
-    render(<TscnPreviewShell panelId="hint-b" content={THREED_SCENE} />);
+    render(<TscnPreviewShell panelId="hint-c" content={THREED_SCENE} />);
     await screen.findByTestId('canvas-stub');
     expect(screen.queryByRole('button', { name: /switch to 2D/i })).toBeNull();
   });
 
   it('switches to 2D mode when the hint is clicked (hint then disappears)', async () => {
-    render(<TscnPreviewShell panelId="hint-c" content={UI_SCENE} />);
+    render(<TscnPreviewShell panelId="hint-d" content={MIXED_HUD_SCENE} />);
     const hint = await screen.findByRole('button', { name: /switch to 2D/i });
     fireEvent.click(hint);
-    // The hint is 3D-only; switching to 2D unmounts it (the lazy overlay mounts).
     await waitFor(() =>
       expect(screen.queryByRole('button', { name: /switch to 2D/i })).toBeNull()
     );
+    expect(screen.getByTestId('canvas-2d')).toBeTruthy();
   });
 });

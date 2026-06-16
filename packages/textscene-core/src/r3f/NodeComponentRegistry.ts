@@ -18,17 +18,46 @@ export type NodeComponent = React.ComponentType<NodeComponentProps>;
 export interface NodeComponentRegistration {
   typeName: string;
   Component: NodeComponent;
+  /**
+   * True for CanvasItem types (Node2D world content: sprites, tilemaps,
+   * 2D physics, Camera2D…). The workspace-aware dispatcher renders these
+   * only in the 2D world canvas — never in the 3D viewport — mirroring
+   * Godot's editor split.
+   */
+  canvasItem?: boolean;
+  /**
+   * True for plain-`Node`-derived container types (Node, AnimationPlayer,
+   * AudioStreamPlayer…): neither 2D nor 3D, so they pass through BOTH
+   * workspaces and their children render wherever they belong.
+   */
+  container?: boolean;
 }
 
 class NodeComponentRegistryImpl {
   private readonly registry = createTypeRegistry<NodeComponent>();
+  private readonly canvasItemTypes = new Set<string>();
+  private readonly containerTypes = new Set<string>();
 
   register(registration: NodeComponentRegistration): void {
     this.registry.register(registration.typeName, registration.Component);
+    if (registration.canvasItem) this.canvasItemTypes.add(registration.typeName);
+    else this.canvasItemTypes.delete(registration.typeName);
+    if (registration.container) this.containerTypes.add(registration.typeName);
+    else this.containerTypes.delete(registration.typeName);
   }
 
   get(typeName: string): NodeComponent | undefined {
     return this.registry.get(typeName);
+  }
+
+  /** True when the type registered as CanvasItem (2D-canvas world content). */
+  isCanvasItem(typeName: string): boolean {
+    return this.canvasItemTypes.has(typeName);
+  }
+
+  /** True when the type registered as a workspace-neutral container. */
+  isContainer(typeName: string): boolean {
+    return this.containerTypes.has(typeName);
   }
 
   getAllTypeNames(): string[] {
@@ -37,6 +66,8 @@ class NodeComponentRegistryImpl {
 
   clear(): void {
     this.registry.clear();
+    this.canvasItemTypes.clear();
+    this.containerTypes.clear();
   }
 }
 

@@ -1,0 +1,7 @@
+[gd_resource type="StandardMaterial3D" format=3 uid="uid://cx7jw20db6il4"]
+
+[ext_resource type="Texture2D" uid="uid://b8dtv2psfxvry" path="res://fps/gun_textures.png" id="1"]
+
+[resource]
+albedo_texture = ExtResource("1")
+roughness = 0.0

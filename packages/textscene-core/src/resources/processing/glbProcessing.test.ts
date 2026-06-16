@@ -9,7 +9,18 @@
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { cloneWithMaterials, isGLBPath } from './glbProcessing';
+import { cloneWithMaterials, gltfResourceDir, isGLBPath } from './glbProcessing';
+
+describe('gltfResourceDir', () => {
+  it("yields the glTF's own res:// directory for relative buffer/image resolution", () => {
+    expect(gltfResourceDir('res://stage/model.gltf')).toBe('res://stage/');
+    expect(gltfResourceDir('res://town/lamp/scene.gltf')).toBe('res://town/lamp/');
+  });
+
+  it('yields empty for a bare filename', () => {
+    expect(gltfResourceDir('model.glb')).toBe('');
+  });
+});
 
 describe('isGLBPath', () => {
   it('matches .glb and .gltf extensions', () => {

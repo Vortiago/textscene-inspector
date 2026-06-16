@@ -38,6 +38,12 @@ export function multiplyModulate(a: RGBA, b: RGBA): RGBA {
 export interface CanvasItemTint {
   /** Ancestor modulate × this node's `modulate` — propagate to the child context. */
   inherited: RGBA;
+  /**
+   * The sRGB-space own-pixel product (`inherited` × `self_modulate`) — for
+   * bodies that compose a further tint (e.g. a TileMap layer's modulate)
+   * before the single sRGB→linear conversion.
+   */
+  own: RGBA;
   /** Linear-space own-pixel tint (`inherited` × `self_modulate`). */
   color: THREE.Color;
   /** Own-pixel opacity (`inherited.a` × `self_modulate.a`). */
@@ -50,5 +56,5 @@ export function useCanvasItemTint(props: { modulate: RGBA; self_modulate: RGBA }
   const inherited = useMemo(() => multiplyModulate(parent, props.modulate), [parent, props.modulate]);
   const own = useMemo(() => multiplyModulate(inherited, props.self_modulate), [inherited, props.self_modulate]);
   const color = useMemo(() => godotColorToLinear(own), [own.r, own.g, own.b]);
-  return { inherited, color, opacity: own.a };
+  return { inherited, own, color, opacity: own.a };
 }
