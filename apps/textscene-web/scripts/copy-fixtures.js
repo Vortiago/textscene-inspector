@@ -1,5 +1,5 @@
 import { copyFileSync, mkdirSync, readdirSync, statSync } from 'node:fs';
-import { join, dirname } from 'node:path';
+import { join, dirname, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -7,6 +7,13 @@ const scenesRoot = join(__dirname, '../../../scenes');
 const fixturesSource = join(scenesRoot, 'fixtures');
 const examplesSource = join(scenesRoot, 'examples');
 const fixturesTarget = join(__dirname, '../public/fixtures');
+
+// Cloudflare Pages rejects any deployment containing a file larger than 25 MiB.
+// Some vendored godot-demo assets (e.g. uncompressed .hdr sky backgrounds) blow
+// past it, so we never copy them into the deploy bundle — the previewer falls
+// back to the standard missing-resource placeholder for those few files.
+const MAX_DEPLOY_FILE_BYTES = 25 * 1024 * 1024;
+const skippedLargeFiles = [];
 
 mkdirSync(fixturesTarget, { recursive: true });
 
@@ -52,6 +59,8 @@ function copyRecursive(src, dest) {
     if (entry.isDirectory()) {
       mkdirSync(d, { recursive: true });
       copyRecursive(s, d);
+    } else if (statSync(s).size > MAX_DEPLOY_FILE_BYTES) {
+      skippedLargeFiles.push(relative(scenesRoot, s));
     } else {
       copyFileSync(s, d);
     }
@@ -109,4 +118,11 @@ try {
   }
 } catch {
   // Materials directory doesn't exist yet, skip
+}
+
+if (skippedLargeFiles.length > 0) {
+  console.warn(
+    `Skipped ${skippedLargeFiles.length} file(s) over ${MAX_DEPLOY_FILE_BYTES / 1024 / 1024} MiB ` +
+      `(Cloudflare Pages limit): ${skippedLargeFiles.join(', ')}`
+  );
 }
