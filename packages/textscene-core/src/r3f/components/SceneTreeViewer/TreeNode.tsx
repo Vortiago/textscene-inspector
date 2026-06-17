@@ -7,6 +7,7 @@ import type { TscnNode, TscnExternalResource } from '../../../parser/types.js';
 import { joinPath } from '../../../utils/nodePath.js';
 import { nodeRegistry } from '../../../core/NodeRegistry.js';
 import { useSelection } from '../../contexts/SelectionContext.js';
+import { resolveInstancePath } from '../../../resources/SubResourceResolver.js';
 import { useSubSceneChildren } from './useSubSceneChildren.js';
 import styles from './SceneTreeViewer.module.css';
 
@@ -49,6 +50,11 @@ export interface TreeNodeProps {
   hiddenNodePaths: ReadonlySet<string>;
   onToggleVisibility: (path: string) => void;
   onNodeReveal?: (path: string, node: TscnNode) => void;
+  /**
+   * Open an instanced sub-scene as its own previewed scene (≈ Godot's
+   * "Open in Editor"). Receives the resolved `res://` path of the instance.
+   */
+  onOpenSubScene?: (scenePath: string) => void;
   matches: (node: TscnNode) => boolean;
   /**
    * WI-HALL-1: the host scene's externalResources, used to resolve
@@ -67,10 +73,15 @@ function TreeNodeImpl({
   hiddenNodePaths,
   onToggleVisibility,
   onNodeReveal,
+  onOpenSubScene,
   matches,
   externalResources,
 }: TreeNodeProps) {
   const nodePath = joinPath(parentPath, node.name);
+  const instanceScenePath =
+    node.instance && onOpenSubScene
+      ? resolveInstancePath(node.instance, externalResources)
+      : null;
 
   // WI-HALL-1: dynamically-loaded sub-scene children (when this node
   // has `instance = ExtResource("...")`). Returns null for non-instance
@@ -189,6 +200,20 @@ function TreeNodeImpl({
               📦
             </span>
           )}
+          {instanceScenePath && (
+            <button
+              type="button"
+              className={styles.openSubSceneIcon}
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenSubScene?.(instanceScenePath);
+              }}
+              title="Open this sub-scene on its own"
+              aria-label="Open sub-scene standalone"
+            >
+              ⤢
+            </button>
+          )}
 
           <button
             type="button"
@@ -213,6 +238,7 @@ function TreeNodeImpl({
               hiddenNodePaths={hiddenNodePaths}
               onToggleVisibility={onToggleVisibility}
               onNodeReveal={onNodeReveal}
+              onOpenSubScene={onOpenSubScene}
               matches={matches}
               externalResources={externalResources}
             />
@@ -230,6 +256,7 @@ function TreeNodeImpl({
               hiddenNodePaths={hiddenNodePaths}
               onToggleVisibility={onToggleVisibility}
               onNodeReveal={onNodeReveal}
+              onOpenSubScene={onOpenSubScene}
               matches={matches}
               externalResources={externalResources}
             />

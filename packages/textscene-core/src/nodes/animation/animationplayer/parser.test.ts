@@ -27,7 +27,7 @@ describe('parseAnimationPlayer defaults', () => {
     expect(props.current_animation).toBe('');
     expect(props.current_animation_length).toBe(0.0);
     expect(props.current_animation_position).toBe(0.0);
-    expect(props.clips).toEqual([]);
+    expect(props.libraries).toEqual([]);
   });
 });
 
@@ -77,8 +77,18 @@ describe('parseAnimationPlayer properties', () => {
     expect(props.autoplay).toBe('idle');
   });
 
+  it('strips the Godot 4 StringName prefix from autoplay (&"spin")', () => {
+    const props = parseAnimationPlayer(HEADING, { autoplay: '&"spin"' });
+    expect(props.autoplay).toBe('spin');
+  });
+
   it('strips quotes from current_animation', () => {
     const props = parseAnimationPlayer(HEADING, { current_animation: '"walk"' });
+    expect(props.current_animation).toBe('walk');
+  });
+
+  it('strips a StringName/NodePath prefix from current_animation (^"walk")', () => {
+    const props = parseAnimationPlayer(HEADING, { current_animation: '^"walk"' });
     expect(props.current_animation).toBe('walk');
   });
 
@@ -99,33 +109,31 @@ describe('parseAnimationPlayer properties', () => {
   });
 });
 
-describe('parseAnimationPlayer clip extraction', () => {
-  it('extracts clip names from anims/* keys', () => {
+describe('parseAnimationPlayer library extraction', () => {
+  it('captures the default `libraries/` reference with an empty name', () => {
     const props = parseAnimationPlayer(HEADING, {
-      'anims/idle': 'SubResource("Animation_idle")',
-      'anims/walk': 'SubResource("Animation_walk")',
-      'anims/run': 'SubResource("Animation_run")',
+      'libraries/': 'SubResource("AnimationLibrary_7v453")',
     });
-    expect(props.clips).toHaveLength(3);
-    const names = props.clips.map((c) => c.name);
-    expect(names).toContain('idle');
-    expect(names).toContain('walk');
-    expect(names).toContain('run');
+    expect(props.libraries).toEqual([{ name: '', subResourceId: 'AnimationLibrary_7v453' }]);
   });
 
-  it('returns empty clips array when no anims/* properties exist', () => {
-    const props = parseAnimationPlayer(HEADING, { libraries: 'SubResource("1")' });
-    expect(props.clips).toEqual([]);
+  it('captures multiple named libraries', () => {
+    const props = parseAnimationPlayer(HEADING, {
+      'libraries/': 'SubResource("Lib_default")',
+      'libraries/combat': 'SubResource("Lib_combat")',
+    });
+    expect(props.libraries).toContainEqual({ name: '', subResourceId: 'Lib_default' });
+    expect(props.libraries).toContainEqual({ name: 'combat', subResourceId: 'Lib_combat' });
   });
 
-  it('ignores non-anims/* keys while extracting clips', () => {
-    const props = parseAnimationPlayer(HEADING, {
-      'anims/idle': 'SubResource("Animation_idle")',
-      autoplay: '"idle"',
-      speed_scale: '1.0',
-    });
-    expect(props.clips).toHaveLength(1);
-    expect(props.clips[0]?.name).toBe('idle');
+  it('returns empty libraries array when no `libraries/` properties exist', () => {
+    const props = parseAnimationPlayer(HEADING, { autoplay: '"idle"' });
+    expect(props.libraries).toEqual([]);
+  });
+
+  it('ignores library refs with an unparseable SubResource value', () => {
+    const props = parseAnimationPlayer(HEADING, { 'libraries/': 'null' });
+    expect(props.libraries).toEqual([]);
   });
 
   it('handles NaN gracefully — falls back to numeric defaults', () => {

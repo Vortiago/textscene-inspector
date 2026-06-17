@@ -12,13 +12,18 @@
  * viewport switching in `ViewportArea`, the 2D stage in `Canvas2DStage`,
  * plus `CamerasPanel`, `SceneStats`, `DockChrome`, `SceneChangeResetter`.
  */
-import { lazy, Suspense, useMemo, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { TscnNode } from '../../../parser/types.js';
 import { HierarchyProvider } from '../../contexts/HierarchyContext.js';
 import { SelectionProvider } from '../../contexts/SelectionContext.js';
 import { CameraControlProvider } from '../../contexts/CameraControlContext.js';
 import { MissingResourcesProvider } from '../../contexts/MissingResourcesContext.js';
 import { ViewportModeProvider } from '../../contexts/ViewportModeContext.js';
+import {
+  AnimationTransportProvider,
+  useAnimationTransport,
+} from '../../contexts/AnimationTransportContext.js';
+import { AnimationPanel } from '../AnimationPanel/AnimationPanel.js';
 import { useParsedScene } from '../../hooks/useParsedScene.js';
 import { MissingResourcesPanel } from '../MissingResourcesPanel/MissingResourcesPanel.js';
 import { ViewportToolbar } from '../ViewportToolbar/ViewportToolbar.js';
@@ -50,7 +55,7 @@ const NodeDetailsPanel = lazy(() =>
 
 const DEFAULT_ROOT_SCENE_PATH = 'res://__inline__.tscn';
 
-type DetailTab = 'inspector' | 'resources' | 'cameras';
+type DetailTab = 'inspector' | 'resources' | 'cameras' | 'animation';
 
 export interface TscnPreviewShellProps {
   /** Stable identifier for this panel — used in logs and for context coordination. */
@@ -61,6 +66,7 @@ export interface TscnPreviewShellProps {
   rootScenePath?: string;
   /** Fired when a tree row is double-clicked (host can jump to source). */
   onNodeReveal?: (path: string, node: TscnNode) => void;
+  onOpenSubScene?: (scenePath: string) => void;
   /** Optional content to inject in the top bar (e.g. a fixture dropdown). */
   toolbar?: ReactNode;
   /**
@@ -84,6 +90,7 @@ export function TscnPreviewShell({
   content,
   rootScenePath = DEFAULT_ROOT_SCENE_PATH,
   onNodeReveal,
+  onOpenSubScene,
   toolbar,
   onResourceUpload,
   onResourceRemove,
@@ -102,6 +109,15 @@ export function TscnPreviewShell({
   const [dockCollapsed, setDockCollapsed] = useState(false);
   const [treeShare, setTreeShare] = useState(0.46);
   const [activeTab, setActiveTab] = useState<DetailTab>('inspector');
+
+  // ADR-0012: the Animation tab exists only while an AnimationPlayer is the
+  // selected node. `<AnimationTabWatcher>` (inside SelectionProvider) reports
+  // that up; selecting a player auto-focuses the tab, deselecting falls back.
+  const [animationTabVisible, setAnimationTabVisible] = useState(false);
+  useEffect(() => {
+    if (animationTabVisible) setActiveTab('animation');
+    else setActiveTab((tab) => (tab === 'animation' ? 'inspector' : tab));
+  }, [animationTabVisible]);
 
   // When `error` is truthy, mounting `<SceneTreeViewer>` with a null
   // sceneGraph triggers its own "Loading scene…" empty-state — which
@@ -126,7 +142,7 @@ export function TscnPreviewShell({
           </div>
         }
       >
-        <SceneTreeViewer onNodeReveal={onNodeReveal} />
+        <SceneTreeViewer onNodeReveal={onNodeReveal} onOpenSubScene={onOpenSubScene} />
       </Suspense>
     );
   }
@@ -137,8 +153,10 @@ export function TscnPreviewShell({
         <CameraControlProvider>
           <MissingResourcesProvider>
             <ViewportModeProvider>
+             <AnimationTransportProvider>
               <WorkspaceAutoSelect sceneGraph={sceneGraph} />
               <SceneChangeResetter sceneGraph={sceneGraph} />
+              <AnimationTabWatcher onVisibleChange={setAnimationTabVisible} />
               <div className={styles.shell} data-panel-id={panelId}>
                 <header className={styles.topBar}>
                   <span className={styles.brand}>TextScene Inspector</span>
@@ -205,6 +223,9 @@ export function TscnPreviewShell({
                                 ['inspector', 'Inspector'],
                                 ['resources', 'Resources'],
                                 ['cameras', 'Cameras'],
+                                ...(animationTabVisible
+                                  ? ([['animation', 'Animation']] as Array<[DetailTab, string]>)
+                                  : []),
                               ] as Array<[DetailTab, string]>
                             ).map(([id, label]) => (
                               <button
@@ -254,6 +275,11 @@ export function TscnPreviewShell({
                                 <CamerasPanel />
                               </div>
                             )}
+                            {animationTabVisible && activeTab === 'animation' && (
+                              <div className={styles.detailsPane}>
+                                <AnimationPanel />
+                              </div>
+                            )}
                           </div>
                         </div>
                       </section>
@@ -261,10 +287,26 @@ export function TscnPreviewShell({
                   )}
                 </div>
               </div>
+             </AnimationTransportProvider>
             </ViewportModeProvider>
           </MissingResourcesProvider>
         </CameraControlProvider>
       </SelectionProvider>
     </HierarchyProvider>
   );
+}
+
+/**
+ * Effect-only child (inside AnimationTransportProvider): reports whether an
+ * AnimationPlayer is registered with the transport — the render-time source of
+ * truth for Animation-tab visibility (ADR-0012). Registration follows tree
+ * selection and covers instanced players, which never reach the parse-time
+ * `flattenedNodes`.
+ */
+function AnimationTabWatcher({ onVisibleChange }: { onVisibleChange: (visible: boolean) => void }) {
+  const { hasPlayer } = useAnimationTransport();
+  useEffect(() => {
+    onVisibleChange(hasPlayer);
+  }, [hasPlayer, onVisibleChange]);
+  return null;
 }

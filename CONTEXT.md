@@ -123,8 +123,8 @@ A node rendered as an invisible `<group>` that positions its children but draws 
 _Avoid_: "physics body" implying simulation; "transform container" (collides with Godot's Container Controls); "placeholder" (the visible gray-box placeholder was retired in ADR-0008).
 
 **Render intent**:
-Which of the two render outcomes a node type takes — a *visible renderer* (draws geometry/text) or a *transform-only group* (invisible, positions children). "Renders nothing" is an explicit intent, not an unregistered accident; in-viewport text and collision shapes are opt-in toggles (`showLabels`, `showCollisions`) on the viewport-mode seam (ADR-0006, ADR-0008).
-_Avoid_: "placeholder", "not implemented" — an invisible node may be fully intended.
+Which of the two render outcomes a node type takes — a *visible renderer* (draws geometry/text) or a *transform-only group* (invisible, positions children). "Renders nothing" is an explicit intent, not an unregistered accident; in-viewport text and collision shapes are opt-in toggles (`showLabels`, `showCollisions`) on the viewport-mode seam (ADR-0006, ADR-0008). One invisible type is **not** inert: the **AnimationPlayer** draws nothing itself but *drives* sibling objects — a transform-only group that is also an **animation driver** (ADR-0011).
+_Avoid_: "placeholder", "not implemented" — an invisible node may be fully intended; "inert" for AnimationPlayer.
 
 **Resource event bus** / `useResource`:
 The async resource pipeline — a render component calls `useResource(path, type)`, the host `ResourceLoader` fetches, and a `loaded`/`missing` event resolves the hook; backs textures, GLB meshes, and PackedScene instancing.
@@ -142,6 +142,32 @@ _Avoid_: re-inlining region/frames math in a sprite slice (the pre-extraction ha
 A render-only component with no parser and no linter (`GenericNodeFallback`, `GLBSceneRoot`) — not a user-authorable TSCN type; lives in `r3f/internal/`, not a Node slice.
 _Avoid_: "default node".
 
+### Animation
+
+**GodotAnimation**:
+One named Godot animation — a `[sub_resource type="Animation"]` carrying `length`, `loop_mode`, `step`, and value **Track**s; parsed render-side from the scene's SubResources and built into a `THREE.AnimationClip` for playback.
+_Avoid_: "AnimationClip" for the parsed form (reserve `THREE.AnimationClip` for the three.js runtime object); "clip" bare.
+
+**Animation library**:
+The `[sub_resource type="AnimationLibrary"]` whose `_data` maps clip names → **GodotAnimation**s; referenced from an **AnimationPlayer** via `libraries/<name> = SubResource(...)`, where the empty-name default library is written `libraries/`.
+_Avoid_: "library" bare; the legacy Godot-3 `anims/<name>` inline form (absent from this corpus).
+
+**Track**:
+One channel of a **GodotAnimation** targeting `NodePath("Node:property")` with ordered **Keyframe**s (time + value + transition); slice-1 supports `value` tracks for `position`/`rotation`/`rotation_degrees`/`scale`. Other track types (`bezier`/`method`/`audio`/`animation`) and other properties parse but do not yet drive.
+_Avoid_: "channel".
+
+**Animation transport**:
+The play/pause/scrub state (`AnimationTransportContext`) and its dock-tab UI, bound to the **AnimationPlayer currently selected in the scene tree** — selection-driven, one player at a time, mirroring the Godot editor's Animation panel. Drives that player's `THREE.AnimationMixer`; starts STOPPED (authored pose preserved), play is user-initiated. The tab is shown only while an AnimationPlayer is selected; deselecting (or selecting a different node) stops playback and restores the authored pose.
+_Avoid_: "scene-level transport" (it follows selection, not the whole scene); "timeline" / "player controls" for the whole transport (reserve "timeline"/"scrubber" for the seek widget).
+
+**RESET animation**:
+Godot's conventional rest-pose animation, named exactly `RESET` — one keyframe per animated property at t=0 holding its default value, used by the editor for reset-on-save. Listed in the clip selector like any animation but never the **Animation transport**'s default selection (the `autoplay` clip is). 
+_Avoid_: treating `RESET` as an ordinary playable clip.
+
+**Animation root** (`root_node`):
+The THREE object a clip's **Track** NodePaths resolve against and the **AnimationPlayer**'s mixer is rooted on — default `..` (the player's parent node). `THREE.PropertyBinding` resolves a Track's target by name through the dispatcher's (unnamed) pickable wrappers; the named, transform-bearing object the binding finds is the one the mixer overrides.
+_Avoid_: "target root".
+
 ## Relationships
 
 - A **SceneGraph** holds many **Node**s; the active scene's root Nodes feed the **NodeDispatcher** (3D) or, in 2D **viewport mode**, the **ControlDispatcher**.
@@ -150,6 +176,7 @@ _Avoid_: "default node".
 - The three registries (**NodeRegistry**, **NodeComponentRegistry**, **ControlComponentRegistry**) are keyed by the same `typeName` but kept separate to preserve the **React-free linter boundary**.
 - A unified **vertical slice** exposes its behavior through three **slice entry points**, one per registry domain.
 - **Label3D** (3D, billboarded text in-canvas) is a different subsystem from **Label** / **RichTextLabel** (2D DOM text in the **Control overlay**).
+- An **AnimationPlayer** references one **Animation library** via `libraries/`; the library's **GodotAnimation**s carry **Track**s that the **Animation transport** plays by building a `THREE.AnimationClip` and driving a `THREE.AnimationMixer` rooted at the **Animation root** (ADR-0011).
 
 ## Example dialogue
 
@@ -164,3 +191,4 @@ _Avoid_: "default node".
 - "Transform container" collided with Godot's Container Controls (VBoxContainer, …) — resolved: physics bodies are **transform-only groups**; "Container" is reserved for the 2D layout Controls.
 - "Registry" was used for three distinct singletons — resolved: **NodeRegistry** (parse), **NodeComponentRegistry** (3D render), **ControlComponentRegistry** (2D render); their multiplicity is the mechanism that keeps the linter React-free, not duplication.
 - `uid://` vs the per-scene `id=` both called "id" — resolved: **UID reference** is the global `uid://`, `id=` is the per-file resource handle.
+- "AnimationClip" meant both the parsed Godot animation and the three.js runtime object — resolved: parsed = **GodotAnimation**, runtime = `THREE.AnimationClip` (always qualified).

@@ -75,12 +75,17 @@ function checkAnimationPlayer(context: RuleContext): Diagnostic[] {
   // Note: In TSCN format, animations are typically stored in the anims/ section
   // We can check if there are any properties starting with "anims/"
   const hasAnimations = Object.keys(rawProps).some(key => key.startsWith('anims/'));
-  const hasLibraries = rawProps.libraries !== undefined;
+  // Godot 4 references AnimationLibraries via `libraries/<name>` keys (the
+  // empty-name default library is written `libraries/`); older files used a
+  // single `libraries` dict. Accept either form.
+  const hasLibraries = Object.keys(rawProps).some(
+    key => key === 'libraries' || key.startsWith('libraries/')
+  );
 
   if (!hasAnimations && !hasLibraries) {
     diagnostics.push({
       severity: 'warning',
-      message: `AnimationPlayer has no animations defined. Add animations to the 'anims/' section or 'libraries' property to make this node functional.`,
+      message: `AnimationPlayer has no animations defined. Add animations to the 'libraries/' property (or legacy 'anims/' section) to make this node functional.`,
       nodeName: node.name,
       nodeType: node.type,
       ruleName: 'animationplayer-no-animations',

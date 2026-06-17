@@ -18,7 +18,6 @@ import {
   useRef,
   useState,
   type ChangeEvent,
-  type KeyboardEvent as ReactKeyboardEvent,
 } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
@@ -28,6 +27,7 @@ import {
   type ViewportSelectorOption,
 } from '@textscene/core';
 import { fixtures } from './fixtures';
+import { FixtureTreeView } from './FixtureTree';
 import { corpusRootFor, fixtureUrlForRes } from './corpusRoot';
 import { WebResourceProvider } from './providers/WebResourceProvider';
 import styles from './r3f-main.module.css';
@@ -169,6 +169,13 @@ export function R3FApp() {
     setFixtureFile(newFixture);
   }
 
+  // "Open sub-scene standalone": map an instance's res:// path onto the active
+  // corpus root → fixture file, and load it as its own scene (≈ Open in Editor).
+  function handleOpenSubScene(scenePath: string) {
+    const rest = scenePath.startsWith('res://') ? scenePath.slice('res://'.length) : scenePath;
+    handleFixtureChange(resourceRoot ? `${resourceRoot}/${rest}` : rest);
+  }
+
   function handleTscnUpload(file: File, text: string) {
     setLoadError(null);
     setFixtureFile(NO_FIXTURE);
@@ -211,6 +218,7 @@ export function R3FApp() {
           }`}
           onResourceUpload={handleResourceUpload}
           onResourceRemove={handleResourceRemove}
+          onOpenSubScene={handleOpenSubScene}
           toolbar={
             <Toolbar
               options={options}
@@ -275,7 +283,6 @@ function Toolbar({
   const searchRef = useRef<HTMLInputElement | null>(null);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
-  const [activeIndex, setActiveIndex] = useState(0);
 
   // Built-in dev fixtures to switch between (drop the uploaded-placeholder
   // option, whose value is the empty sentinel).
@@ -283,36 +290,6 @@ function Toolbar({
 
   const currentLabel =
     uploadedTscnName ?? scenes.find((o) => o.value === fixtureFile)?.label ?? 'No scene';
-
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return scenes;
-    return scenes.filter(
-      (o) => o.label.toLowerCase().includes(q) || (o.category ?? '').toLowerCase().includes(q)
-    );
-  }, [scenes, query]);
-
-  // Preserve category order of first appearance.
-  const groups = useMemo(() => {
-    const m = new Map<string, ViewportSelectorOption[]>();
-    for (const o of filtered) {
-      const c = o.category ?? 'Scenes';
-      let arr = m.get(c);
-      if (!arr) {
-        arr = [];
-        m.set(c, arr);
-      }
-      arr.push(o);
-    }
-    return [...m.entries()];
-  }, [filtered]);
-
-  // Flat list (in render order) for keyboard navigation.
-  const flat = useMemo(() => groups.flatMap(([, items]) => items), [groups]);
-
-  useEffect(() => {
-    setActiveIndex(0);
-  }, [query]);
 
   // Ctrl/Cmd+K toggles the palette; Escape closes it.
   useEffect(() => {
@@ -332,7 +309,6 @@ function Toolbar({
   useEffect(() => {
     if (!open) return;
     setQuery('');
-    setActiveIndex(0);
     const id = window.setTimeout(() => searchRef.current?.focus(), 0);
     return () => window.clearTimeout(id);
   }, [open]);
@@ -355,20 +331,6 @@ function Toolbar({
     // Reset so the same filename can be re-opened.
     if (tscnInputRef.current) tscnInputRef.current.value = '';
     setOpen(false);
-  }
-
-  function handleSearchKeyDown(e: ReactKeyboardEvent<HTMLInputElement>) {
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      setActiveIndex((i) => Math.min(i + 1, flat.length - 1));
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      setActiveIndex((i) => Math.max(i - 1, 0));
-    } else if (e.key === 'Enter') {
-      e.preventDefault();
-      const o = flat[activeIndex];
-      if (o) selectScene(o.value);
-    }
   }
 
   return (
@@ -452,50 +414,18 @@ function Toolbar({
                 <input
                   ref={searchRef}
                   className={styles.search}
-                  placeholder="Filter built-in scenes…"
+                  placeholder="Search built-in scenes…"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  onKeyDown={handleSearchKeyDown}
                   aria-label="Filter built-in scenes"
                 />
-                <div className={styles.list} role="listbox" aria-label="Built-in scenes">
-                  {flat.length === 0 && (
-                    <div className={styles.empty}>No scenes match “{query}”.</div>
-                  )}
-                  {groups.map(([cat, items]) => (
-                    <div key={cat} className={styles.group}>
-                      <div className={styles.groupHead}>{cat}</div>
-                      {items.map((o) => {
-                        const idx = flat.indexOf(o);
-                        const active = idx === activeIndex;
-                        const current = !uploadedTscnName && o.value === fixtureFile;
-                        return (
-                          <button
-                            key={o.value}
-                            type="button"
-                            role="option"
-                            aria-selected={current}
-                            className={[
-                              styles.item,
-                              active ? styles.itemActive : '',
-                              current ? styles.itemCurrent : '',
-                            ]
-                              .filter(Boolean)
-                              .join(' ')}
-                            onMouseEnter={() => setActiveIndex(idx)}
-                            onClick={() => selectScene(o.value)}
-                          >
-                            <span className={styles.itemLabel}>{o.label}</span>
-                            {current && (
-                              <span className={styles.currentDot} aria-hidden>
-                                ●
-                              </span>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  ))}
+                <div className={styles.list}>
+                  <FixtureTreeView
+                    fixtures={fixtures}
+                    query={query}
+                    selectedFile={uploadedTscnName ? '' : fixtureFile}
+                    onSelect={selectScene}
+                  />
                 </div>
                 <div className={styles.devNote}>Built-in scenes are a development aid.</div>
               </>

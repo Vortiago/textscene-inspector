@@ -138,9 +138,11 @@ const isometricFiles = walkTscn(isometricDir).sort();
 // whole tree under public/fixtures/demos/, and each fixture entry carries a
 // `root` so the web provider resolves res:// against that project's subtree.
 //
-// Only each project's MAIN scene (what Godot itself would run, declared in
-// project.godot) is listed — one tidy entry per demo. Subscenes stay in the
-// mirror for res:// resolution and remain reachable via ?fixture= deep links.
+// EVERY scene in a project is listed so subscenes (e.g. a platformer's
+// coin.tscn) are browsable in the selector, not just the project's main
+// scene. The main scene keeps the tidy `Project (Label)` name; subscenes are
+// path-qualified (`Project (Label): coin/coin`) to stay globally unique — the
+// generator asserts uniqueness below.
 const demosDir = join(rootDir, 'scenes/demos');
 const DEMO_CATEGORY_LABELS = { '2d': '2D', '3d': '3D', gui: 'GUI', viewport: 'Viewport' };
 function demoProjects() {
@@ -198,18 +200,25 @@ function demoMainScene(projDir) {
 const demoFixtures = demoProjects().flatMap(({ top, project }) => {
   const root = `demos/${top}/${project}`;
   const label = DEMO_CATEGORY_LABELS[top];
-  const mainScene = demoMainScene(join(demosDir, top, project));
-  if (!mainScene) return [];
-  return [
-    {
-      // (project, top) is unique; the label disambiguates cross-category
-      // name twins (2d/platformer vs 3d/platformer).
-      name: `${humanizeProject(project)} (${label})`,
-      file: `${root}/${mainScene}`,
+  const projDir = join(demosDir, top, project);
+  const scenes = walkTscn(projDir).sort();
+  if (scenes.length === 0) return [];
+  const mainScene = demoMainScene(projDir);
+  return scenes.map((rel) => {
+    const isMain = rel === mainScene;
+    const stem = rel.replace(/\.tscn$/, '');
+    return {
+      // (project, top) is unique; the label disambiguates cross-category name
+      // twins (2d/platformer vs 3d/platformer). The main scene keeps the tidy
+      // name; subscenes append their project-relative path to stay unique.
+      name: isMain
+        ? `${humanizeProject(project)} (${label})`
+        : `${humanizeProject(project)} (${label}): ${stem}`,
+      file: `${root}/${rel}`,
       category: `Godot Demos - ${label}`,
       root,
-    },
-  ];
+    };
+  });
 });
 
 const fixtures = [

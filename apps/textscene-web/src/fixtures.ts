@@ -228,6 +228,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Animation Player 2d",
+    "file": "unit-animation-player-2d.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Animation Player",
     "file": "unit-animation-player.tscn",
     "category": "Other"
@@ -760,10 +765,34 @@ export const fixtures: Fixture[] = [
     "root": "demos/2d/custom_drawing"
   },
   {
+    "name": "Dodge The Creeps (2D): hud",
+    "file": "demos/2d/dodge_the_creeps/hud.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/dodge_the_creeps"
+  },
+  {
     "name": "Dodge The Creeps (2D)",
     "file": "demos/2d/dodge_the_creeps/main.tscn",
     "category": "Godot Demos - 2D",
     "root": "demos/2d/dodge_the_creeps"
+  },
+  {
+    "name": "Dodge The Creeps (2D): mob",
+    "file": "demos/2d/dodge_the_creeps/mob.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/dodge_the_creeps"
+  },
+  {
+    "name": "Dodge The Creeps (2D): player",
+    "file": "demos/2d/dodge_the_creeps/player.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/dodge_the_creeps"
+  },
+  {
+    "name": "Dynamic Tilemap Layers (2D): player/player",
+    "file": "demos/2d/dynamic_tilemap_layers/player/player.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/dynamic_tilemap_layers"
   },
   {
     "name": "Dynamic Tilemap Layers (2D)",
@@ -774,6 +803,42 @@ export const fixtures: Fixture[] = [
   {
     "name": "Finite State Machine (2D)",
     "file": "demos/2d/finite_state_machine/Demo.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/finite_state_machine"
+  },
+  {
+    "name": "Finite State Machine (2D): debug/ControlsPanel",
+    "file": "demos/2d/finite_state_machine/debug/ControlsPanel.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/finite_state_machine"
+  },
+  {
+    "name": "Finite State Machine (2D): debug/Explanations",
+    "file": "demos/2d/finite_state_machine/debug/Explanations.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/finite_state_machine"
+  },
+  {
+    "name": "Finite State Machine (2D): debug/StatesStackDiplayer",
+    "file": "demos/2d/finite_state_machine/debug/StatesStackDiplayer.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/finite_state_machine"
+  },
+  {
+    "name": "Finite State Machine (2D): player/Player",
+    "file": "demos/2d/finite_state_machine/player/Player.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/finite_state_machine"
+  },
+  {
+    "name": "Finite State Machine (2D): player/bullet/Bullet",
+    "file": "demos/2d/finite_state_machine/player/bullet/Bullet.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/finite_state_machine"
+  },
+  {
+    "name": "Finite State Machine (2D): player/weapon/Sword",
+    "file": "demos/2d/finite_state_machine/player/weapon/Sword.tscn",
     "category": "Godot Demos - 2D",
     "root": "demos/2d/finite_state_machine"
   },
@@ -790,10 +855,34 @@ export const fixtures: Fixture[] = [
     "root": "demos/2d/hexagonal_map"
   },
   {
+    "name": "Hexagonal Map (2D): tileset_edit",
+    "file": "demos/2d/hexagonal_map/tileset_edit.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/hexagonal_map"
+  },
+  {
+    "name": "Hexagonal Map (2D): troll",
+    "file": "demos/2d/hexagonal_map/troll.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/hexagonal_map"
+  },
+  {
+    "name": "Instancing (2D): ball",
+    "file": "demos/2d/instancing/ball.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/instancing"
+  },
+  {
     "name": "Instancing (2D)",
     "file": "demos/2d/instancing/scene_instancing.tscn",
     "category": "Godot Demos - 2D",
     "root": "demos/2d/instancing"
+  },
+  {
+    "name": "Kinematic Character (2D): player/player",
+    "file": "demos/2d/kinematic_character/player/player.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/kinematic_character"
   },
   {
     "name": "Kinematic Character (2D)",
@@ -812,6 +901,12 @@ export const fixtures: Fixture[] = [
     "file": "demos/2d/lights_and_shadows/light_shadows.tscn",
     "category": "Godot Demos - 2D",
     "root": "demos/2d/lights_and_shadows"
+  },
+  {
+    "name": "Navigation (2D): character",
+    "file": "demos/2d/navigation/character.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/navigation"
   },
   {
     "name": "Navigation (2D)",
@@ -838,8 +933,62 @@ export const fixtures: Fixture[] = [
     "root": "demos/2d/particles"
   },
   {
+    "name": "Physics Platformer (2D): background/parallax_bg",
+    "file": "demos/2d/physics_platformer/background/parallax_bg.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/physics_platformer"
+  },
+  {
+    "name": "Physics Platformer (2D): background/seesaw",
+    "file": "demos/2d/physics_platformer/background/seesaw.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/physics_platformer"
+  },
+  {
+    "name": "Physics Platformer (2D): coin/coin",
+    "file": "demos/2d/physics_platformer/coin/coin.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/physics_platformer"
+  },
+  {
+    "name": "Physics Platformer (2D): enemy/enemy",
+    "file": "demos/2d/physics_platformer/enemy/enemy.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/physics_platformer"
+  },
+  {
+    "name": "Physics Platformer (2D): platform/moving_platform",
+    "file": "demos/2d/physics_platformer/platform/moving_platform.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/physics_platformer"
+  },
+  {
+    "name": "Physics Platformer (2D): platform/one_way_platform",
+    "file": "demos/2d/physics_platformer/platform/one_way_platform.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/physics_platformer"
+  },
+  {
+    "name": "Physics Platformer (2D): player/bullet",
+    "file": "demos/2d/physics_platformer/player/bullet.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/physics_platformer"
+  },
+  {
+    "name": "Physics Platformer (2D): player/player",
+    "file": "demos/2d/physics_platformer/player/player.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/physics_platformer"
+  },
+  {
     "name": "Physics Platformer (2D)",
     "file": "demos/2d/physics_platformer/stage.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/physics_platformer"
+  },
+  {
+    "name": "Physics Platformer (2D): tileset_edit",
+    "file": "demos/2d/physics_platformer/tileset_edit.tscn",
     "category": "Godot Demos - 2D",
     "root": "demos/2d/physics_platformer"
   },
@@ -850,8 +999,188 @@ export const fixtures: Fixture[] = [
     "root": "demos/2d/physics_tests"
   },
   {
+    "name": "Physics Tests (2D): tests/dynamic_box",
+    "file": "demos/2d/physics_tests/tests/dynamic_box.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/physics_tests"
+  },
+  {
+    "name": "Physics Tests (2D): tests/functional/test_character_pixels",
+    "file": "demos/2d/physics_tests/tests/functional/test_character_pixels.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/physics_tests"
+  },
+  {
+    "name": "Physics Tests (2D): tests/functional/test_character_slopes",
+    "file": "demos/2d/physics_tests/tests/functional/test_character_slopes.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/physics_tests"
+  },
+  {
+    "name": "Physics Tests (2D): tests/functional/test_character_tilemap",
+    "file": "demos/2d/physics_tests/tests/functional/test_character_tilemap.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/physics_tests"
+  },
+  {
+    "name": "Physics Tests (2D): tests/functional/test_collision_pairs",
+    "file": "demos/2d/physics_tests/tests/functional/test_collision_pairs.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/physics_tests"
+  },
+  {
+    "name": "Physics Tests (2D): tests/functional/test_joints",
+    "file": "demos/2d/physics_tests/tests/functional/test_joints.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/physics_tests"
+  },
+  {
+    "name": "Physics Tests (2D): tests/functional/test_one_way_collision",
+    "file": "demos/2d/physics_tests/tests/functional/test_one_way_collision.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/physics_tests"
+  },
+  {
+    "name": "Physics Tests (2D): tests/functional/test_pyramid",
+    "file": "demos/2d/physics_tests/tests/functional/test_pyramid.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/physics_tests"
+  },
+  {
+    "name": "Physics Tests (2D): tests/functional/test_raycasting",
+    "file": "demos/2d/physics_tests/tests/functional/test_raycasting.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/physics_tests"
+  },
+  {
+    "name": "Physics Tests (2D): tests/functional/test_shapes",
+    "file": "demos/2d/physics_tests/tests/functional/test_shapes.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/physics_tests"
+  },
+  {
+    "name": "Physics Tests (2D): tests/functional/test_stack",
+    "file": "demos/2d/physics_tests/tests/functional/test_stack.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/physics_tests"
+  },
+  {
+    "name": "Physics Tests (2D): tests/performance/test_perf_broadphase",
+    "file": "demos/2d/physics_tests/tests/performance/test_perf_broadphase.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/physics_tests"
+  },
+  {
+    "name": "Physics Tests (2D): tests/performance/test_perf_contact_islands",
+    "file": "demos/2d/physics_tests/tests/performance/test_perf_contact_islands.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/physics_tests"
+  },
+  {
+    "name": "Physics Tests (2D): tests/performance/test_perf_contacts",
+    "file": "demos/2d/physics_tests/tests/performance/test_perf_contacts.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/physics_tests"
+  },
+  {
+    "name": "Physics Tests (2D): tests/static_scene",
+    "file": "demos/2d/physics_tests/tests/static_scene.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/physics_tests"
+  },
+  {
+    "name": "Physics Tests (2D): tests/static_scene_flat",
+    "file": "demos/2d/physics_tests/tests/static_scene_flat.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/physics_tests"
+  },
+  {
+    "name": "Physics Tests (2D): tests/test_options",
+    "file": "demos/2d/physics_tests/tests/test_options.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/physics_tests"
+  },
+  {
+    "name": "Platformer (2D): enemy/enemy",
+    "file": "demos/2d/platformer/enemy/enemy.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/platformer"
+  },
+  {
     "name": "Platformer (2D)",
     "file": "demos/2d/platformer/game_singleplayer.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/platformer"
+  },
+  {
+    "name": "Platformer (2D): game_splitscreen",
+    "file": "demos/2d/platformer/game_splitscreen.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/platformer"
+  },
+  {
+    "name": "Platformer (2D): gui/coins_counter",
+    "file": "demos/2d/platformer/gui/coins_counter.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/platformer"
+  },
+  {
+    "name": "Platformer (2D): gui/pause_menu",
+    "file": "demos/2d/platformer/gui/pause_menu.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/platformer"
+  },
+  {
+    "name": "Platformer (2D): gui/pause_menu_singleplayer",
+    "file": "demos/2d/platformer/gui/pause_menu_singleplayer.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/platformer"
+  },
+  {
+    "name": "Platformer (2D): gui/pause_menu_splitscreen",
+    "file": "demos/2d/platformer/gui/pause_menu_splitscreen.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/platformer"
+  },
+  {
+    "name": "Platformer (2D): level/background/parallax_background",
+    "file": "demos/2d/platformer/level/background/parallax_background.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/platformer"
+  },
+  {
+    "name": "Platformer (2D): level/coin",
+    "file": "demos/2d/platformer/level/coin.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/platformer"
+  },
+  {
+    "name": "Platformer (2D): level/level",
+    "file": "demos/2d/platformer/level/level.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/platformer"
+  },
+  {
+    "name": "Platformer (2D): level/platforms/platform",
+    "file": "demos/2d/platformer/level/platforms/platform.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/platformer"
+  },
+  {
+    "name": "Platformer (2D): music",
+    "file": "demos/2d/platformer/music.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/platformer"
+  },
+  {
+    "name": "Platformer (2D): player/bullet",
+    "file": "demos/2d/platformer/player/bullet.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/platformer"
+  },
+  {
+    "name": "Platformer (2D): player/player",
+    "file": "demos/2d/platformer/player/player.tscn",
     "category": "Godot Demos - 2D",
     "root": "demos/2d/platformer"
   },
@@ -868,8 +1197,74 @@ export const fixtures: Fixture[] = [
     "root": "demos/2d/pong"
   },
   {
+    "name": "Role Playing Game (2D): combat/combat",
+    "file": "demos/2d/role_playing_game/combat/combat.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/role_playing_game"
+  },
+  {
+    "name": "Role Playing Game (2D): combat/combatants/combatant",
+    "file": "demos/2d/role_playing_game/combat/combatants/combatant.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/role_playing_game"
+  },
+  {
+    "name": "Role Playing Game (2D): combat/combatants/health/health",
+    "file": "demos/2d/role_playing_game/combat/combatants/health/health.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/role_playing_game"
+  },
+  {
+    "name": "Role Playing Game (2D): combat/combatants/opponent",
+    "file": "demos/2d/role_playing_game/combat/combatants/opponent.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/role_playing_game"
+  },
+  {
+    "name": "Role Playing Game (2D): combat/combatants/player",
+    "file": "demos/2d/role_playing_game/combat/combatants/player.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/role_playing_game"
+  },
+  {
+    "name": "Role Playing Game (2D): combat/combatants/sprites/sprite",
+    "file": "demos/2d/role_playing_game/combat/combatants/sprites/sprite.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/role_playing_game"
+  },
+  {
+    "name": "Role Playing Game (2D): combat/interface/info",
+    "file": "demos/2d/role_playing_game/combat/interface/info.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/role_playing_game"
+  },
+  {
+    "name": "Role Playing Game (2D): dialogue/dialogue_player/dialogue_player",
+    "file": "demos/2d/role_playing_game/dialogue/dialogue_player/dialogue_player.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/role_playing_game"
+  },
+  {
+    "name": "Role Playing Game (2D): dialogue/interface/interface",
+    "file": "demos/2d/role_playing_game/dialogue/interface/interface.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/role_playing_game"
+  },
+  {
     "name": "Role Playing Game (2D)",
     "file": "demos/2d/role_playing_game/game.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/role_playing_game"
+  },
+  {
+    "name": "Role Playing Game (2D): grid_movement/exploration",
+    "file": "demos/2d/role_playing_game/grid_movement/exploration.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/role_playing_game"
+  },
+  {
+    "name": "Role Playing Game (2D): grid_movement/pawns/character",
+    "file": "demos/2d/role_playing_game/grid_movement/pawns/character.tscn",
     "category": "Godot Demos - 2D",
     "root": "demos/2d/role_playing_game"
   },
@@ -882,6 +1277,18 @@ export const fixtures: Fixture[] = [
   {
     "name": "Skeleton (2D)",
     "file": "demos/2d/skeleton/level.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/skeleton"
+  },
+  {
+    "name": "Skeleton (2D): level/parallax_background",
+    "file": "demos/2d/skeleton/level/parallax_background.tscn",
+    "category": "Godot Demos - 2D",
+    "root": "demos/2d/skeleton"
+  },
+  {
+    "name": "Skeleton (2D): player/player",
+    "file": "demos/2d/skeleton/player/player.tscn",
     "category": "Godot Demos - 2D",
     "root": "demos/2d/skeleton"
   },
@@ -904,10 +1311,22 @@ export const fixtures: Fixture[] = [
     "root": "demos/3d/antialiasing"
   },
   {
+    "name": "Antialiasing (3D): thin_lines",
+    "file": "demos/3d/antialiasing/thin_lines.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/antialiasing"
+  },
+  {
     "name": "Csg (3D)",
     "file": "demos/3d/csg/csg.tscn",
     "category": "Godot Demos - 3D",
     "root": "demos/3d/csg"
+  },
+  {
+    "name": "Decals (3D): decal",
+    "file": "demos/3d/decals/decal.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/decals"
   },
   {
     "name": "Decals (3D)",
@@ -922,10 +1341,34 @@ export const fixtures: Fixture[] = [
     "root": "demos/3d/global_illumination"
   },
   {
+    "name": "Graphics Settings (3D): 3d_scene",
+    "file": "demos/3d/graphics_settings/3d_scene.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/graphics_settings"
+  },
+  {
     "name": "Graphics Settings (3D)",
     "file": "demos/3d/graphics_settings/control.tscn",
     "category": "Godot Demos - 3D",
     "root": "demos/3d/graphics_settings"
+  },
+  {
+    "name": "Ik (3D): fabrik_ik",
+    "file": "demos/3d/ik/fabrik_ik.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/ik"
+  },
+  {
+    "name": "Ik (3D): fps/fps_example",
+    "file": "demos/3d/ik/fps/fps_example.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/ik"
+  },
+  {
+    "name": "Ik (3D): fps/simple_bullet",
+    "file": "demos/3d/ik/fps/simple_bullet.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/ik"
   },
   {
     "name": "Ik (3D)",
@@ -934,8 +1377,20 @@ export const fixtures: Fixture[] = [
     "root": "demos/3d/ik"
   },
   {
+    "name": "Ik (3D): skeleton_ik",
+    "file": "demos/3d/ik/skeleton_ik.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/ik"
+  },
+  {
     "name": "Kinematic Character (3D)",
     "file": "demos/3d/kinematic_character/level.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/kinematic_character"
+  },
+  {
+    "name": "Kinematic Character (3D): player/cubio",
+    "file": "demos/3d/kinematic_character/player/cubio.tscn",
     "category": "Godot Demos - 3D",
     "root": "demos/3d/kinematic_character"
   },
@@ -958,6 +1413,12 @@ export const fixtures: Fixture[] = [
     "root": "demos/3d/material_testers"
   },
   {
+    "name": "Material Testers (3D): models/test_bed/test_bed",
+    "file": "demos/3d/material_testers/models/test_bed/test_bed.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/material_testers"
+  },
+  {
     "name": "Navigation (3D)",
     "file": "demos/3d/navigation/navmesh.tscn",
     "category": "Godot Demos - 3D",
@@ -968,6 +1429,12 @@ export const fixtures: Fixture[] = [
     "file": "demos/3d/navigation_mesh_chunks/navmesh_chhunks_demo_3d.tscn",
     "category": "Godot Demos - 3D",
     "root": "demos/3d/navigation_mesh_chunks"
+  },
+  {
+    "name": "Occlusion Culling Mesh Lod (3D): door",
+    "file": "demos/3d/occlusion_culling_mesh_lod/door.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/occlusion_culling_mesh_lod"
   },
   {
     "name": "Occlusion Culling Mesh Lod (3D)",
@@ -994,14 +1461,176 @@ export const fixtures: Fixture[] = [
     "root": "demos/3d/physics_interpolation"
   },
   {
+    "name": "Physics Interpolation (3D): bullet",
+    "file": "demos/3d/physics_interpolation/bullet.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/physics_interpolation"
+  },
+  {
+    "name": "Physics Interpolation (3D): root",
+    "file": "demos/3d/physics_interpolation/root.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/physics_interpolation"
+  },
+  {
+    "name": "Physics Interpolation (3D): wall",
+    "file": "demos/3d/physics_interpolation/wall.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/physics_interpolation"
+  },
+  {
     "name": "Physics Tests (3D)",
     "file": "demos/3d/physics_tests/main.tscn",
     "category": "Godot Demos - 3D",
     "root": "demos/3d/physics_tests"
   },
   {
+    "name": "Physics Tests (3D): tests/functional/test_collision_pairs",
+    "file": "demos/3d/physics_tests/tests/functional/test_collision_pairs.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/physics_tests"
+  },
+  {
+    "name": "Physics Tests (3D): tests/functional/test_compound_shapes",
+    "file": "demos/3d/physics_tests/tests/functional/test_compound_shapes.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/physics_tests"
+  },
+  {
+    "name": "Physics Tests (3D): tests/functional/test_friction",
+    "file": "demos/3d/physics_tests/tests/functional/test_friction.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/physics_tests"
+  },
+  {
+    "name": "Physics Tests (3D): tests/functional/test_joints",
+    "file": "demos/3d/physics_tests/tests/functional/test_joints.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/physics_tests"
+  },
+  {
+    "name": "Physics Tests (3D): tests/functional/test_moving_platform",
+    "file": "demos/3d/physics_tests/tests/functional/test_moving_platform.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/physics_tests"
+  },
+  {
+    "name": "Physics Tests (3D): tests/functional/test_pyramid",
+    "file": "demos/3d/physics_tests/tests/functional/test_pyramid.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/physics_tests"
+  },
+  {
+    "name": "Physics Tests (3D): tests/functional/test_raycasting",
+    "file": "demos/3d/physics_tests/tests/functional/test_raycasting.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/physics_tests"
+  },
+  {
+    "name": "Physics Tests (3D): tests/functional/test_rigidbody_ground_check",
+    "file": "demos/3d/physics_tests/tests/functional/test_rigidbody_ground_check.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/physics_tests"
+  },
+  {
+    "name": "Physics Tests (3D): tests/functional/test_rigidbody_impact",
+    "file": "demos/3d/physics_tests/tests/functional/test_rigidbody_impact.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/physics_tests"
+  },
+  {
+    "name": "Physics Tests (3D): tests/functional/test_shapes",
+    "file": "demos/3d/physics_tests/tests/functional/test_shapes.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/physics_tests"
+  },
+  {
+    "name": "Physics Tests (3D): tests/functional/test_stack",
+    "file": "demos/3d/physics_tests/tests/functional/test_stack.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/physics_tests"
+  },
+  {
+    "name": "Physics Tests (3D): tests/performance/test_perf_broadphase",
+    "file": "demos/3d/physics_tests/tests/performance/test_perf_broadphase.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/physics_tests"
+  },
+  {
+    "name": "Physics Tests (3D): tests/performance/test_perf_contact_islands",
+    "file": "demos/3d/physics_tests/tests/performance/test_perf_contact_islands.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/physics_tests"
+  },
+  {
+    "name": "Physics Tests (3D): tests/performance/test_perf_contacts",
+    "file": "demos/3d/physics_tests/tests/performance/test_perf_contacts.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/physics_tests"
+  },
+  {
+    "name": "Physics Tests (3D): tests/static_scene",
+    "file": "demos/3d/physics_tests/tests/static_scene.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/physics_tests"
+  },
+  {
+    "name": "Physics Tests (3D): tests/static_scene_plane",
+    "file": "demos/3d/physics_tests/tests/static_scene_plane.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/physics_tests"
+  },
+  {
+    "name": "Physics Tests (3D): tests/test_options",
+    "file": "demos/3d/physics_tests/tests/test_options.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/physics_tests"
+  },
+  {
+    "name": "Platformer (3D): coin/coin",
+    "file": "demos/3d/platformer/coin/coin.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/platformer"
+  },
+  {
+    "name": "Platformer (3D): enemy/enemy",
+    "file": "demos/3d/platformer/enemy/enemy.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/platformer"
+  },
+  {
     "name": "Platformer (3D)",
     "file": "demos/3d/platformer/game.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/platformer"
+  },
+  {
+    "name": "Platformer (3D): player/bullet/bullet",
+    "file": "demos/3d/platformer/player/bullet/bullet.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/platformer"
+  },
+  {
+    "name": "Platformer (3D): player/player",
+    "file": "demos/3d/platformer/player/player.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/platformer"
+  },
+  {
+    "name": "Platformer (3D): stage/stage",
+    "file": "demos/3d/platformer/stage/stage.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/platformer"
+  },
+  {
+    "name": "Platformer (3D): touch_screen_ui/touch_screen_ui",
+    "file": "demos/3d/platformer/touch_screen_ui/touch_screen_ui.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/platformer"
+  },
+  {
+    "name": "Platformer (3D): touch_screen_ui/virtual_joystick/virtual_joystick_scene",
+    "file": "demos/3d/platformer/touch_screen_ui/virtual_joystick/virtual_joystick_scene.tscn",
     "category": "Godot Demos - 3D",
     "root": "demos/3d/platformer"
   },
@@ -1012,10 +1641,28 @@ export const fixtures: Fixture[] = [
     "root": "demos/3d/procedural_materials"
   },
   {
+    "name": "Procedural Materials (3D): test",
+    "file": "demos/3d/procedural_materials/test.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/procedural_materials"
+  },
+  {
     "name": "Ragdoll Physics (3D)",
     "file": "demos/3d/ragdoll_physics/characters/mannequiny_ragdoll.tscn",
     "category": "Godot Demos - 3D",
     "root": "demos/3d/ragdoll_physics"
+  },
+  {
+    "name": "Ragdoll Physics (3D): ragdoll_physics",
+    "file": "demos/3d/ragdoll_physics/ragdoll_physics.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/ragdoll_physics"
+  },
+  {
+    "name": "Rigidbody Character (3D): cube_rigidbody",
+    "file": "demos/3d/rigidbody_character/cube_rigidbody.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/rigidbody_character"
   },
   {
     "name": "Rigidbody Character (3D)",
@@ -1024,10 +1671,52 @@ export const fixtures: Fixture[] = [
     "root": "demos/3d/rigidbody_character"
   },
   {
+    "name": "Rigidbody Character (3D): player/cubio",
+    "file": "demos/3d/rigidbody_character/player/cubio.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/rigidbody_character"
+  },
+  {
     "name": "Sky Shaders (3D)",
     "file": "demos/3d/sky_shaders/Main.tscn",
     "category": "Godot Demos - 3D",
     "root": "demos/3d/sky_shaders"
+  },
+  {
+    "name": "Soft Body Physics (3D): box",
+    "file": "demos/3d/soft_body_physics/box.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/soft_body_physics"
+  },
+  {
+    "name": "Soft Body Physics (3D): cloth",
+    "file": "demos/3d/soft_body_physics/cloth.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/soft_body_physics"
+  },
+  {
+    "name": "Soft Body Physics (3D): pin",
+    "file": "demos/3d/soft_body_physics/pin.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/soft_body_physics"
+  },
+  {
+    "name": "Soft Body Physics (3D): rigid_box_heavy",
+    "file": "demos/3d/soft_body_physics/rigid_box_heavy.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/soft_body_physics"
+  },
+  {
+    "name": "Soft Body Physics (3D): rigid_box_light",
+    "file": "demos/3d/soft_body_physics/rigid_box_light.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/soft_body_physics"
+  },
+  {
+    "name": "Soft Body Physics (3D): sphere",
+    "file": "demos/3d/soft_body_physics/sphere.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/soft_body_physics"
   },
   {
     "name": "Soft Body Physics (3D)",
@@ -1042,10 +1731,58 @@ export const fixtures: Fixture[] = [
     "root": "demos/3d/sprites"
   },
   {
+    "name": "Sprites (3D): player/player",
+    "file": "demos/3d/sprites/player/player.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/sprites"
+  },
+  {
     "name": "Squash The Creeps (3D)",
     "file": "demos/3d/squash_the_creeps/Main.tscn",
     "category": "Godot Demos - 3D",
     "root": "demos/3d/squash_the_creeps"
+  },
+  {
+    "name": "Squash The Creeps (3D): Mob",
+    "file": "demos/3d/squash_the_creeps/Mob.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/squash_the_creeps"
+  },
+  {
+    "name": "Squash The Creeps (3D): MusicPlayer",
+    "file": "demos/3d/squash_the_creeps/MusicPlayer.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/squash_the_creeps"
+  },
+  {
+    "name": "Squash The Creeps (3D): Player",
+    "file": "demos/3d/squash_the_creeps/Player.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/squash_the_creeps"
+  },
+  {
+    "name": "Tonemap Color Correction (3D): 3d_primitives",
+    "file": "demos/3d/tonemap_color_correction/3d_primitives.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/tonemap_color_correction"
+  },
+  {
+    "name": "Tonemap Color Correction (3D): gradients",
+    "file": "demos/3d/tonemap_color_correction/gradients.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/tonemap_color_correction"
+  },
+  {
+    "name": "Tonemap Color Correction (3D): gradients/gradient_bars",
+    "file": "demos/3d/tonemap_color_correction/gradients/gradient_bars.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/tonemap_color_correction"
+  },
+  {
+    "name": "Tonemap Color Correction (3D): hues",
+    "file": "demos/3d/tonemap_color_correction/hues.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/tonemap_color_correction"
   },
   {
     "name": "Tonemap Color Correction (3D)",
@@ -1056,6 +1793,42 @@ export const fixtures: Fixture[] = [
   {
     "name": "Truck Town (3D)",
     "file": "demos/3d/truck_town/car_select/car_select.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/truck_town"
+  },
+  {
+    "name": "Truck Town (3D): town/lamp/lamp_scene",
+    "file": "demos/3d/truck_town/town/lamp/lamp_scene.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/truck_town"
+  },
+  {
+    "name": "Truck Town (3D): town/model/racetrack_csg",
+    "file": "demos/3d/truck_town/town/model/racetrack_csg.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/truck_town"
+  },
+  {
+    "name": "Truck Town (3D): town/town_scene",
+    "file": "demos/3d/truck_town/town/town_scene.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/truck_town"
+  },
+  {
+    "name": "Truck Town (3D): vehicles/car_base",
+    "file": "demos/3d/truck_town/vehicles/car_base.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/truck_town"
+  },
+  {
+    "name": "Truck Town (3D): vehicles/tow_truck",
+    "file": "demos/3d/truck_town/vehicles/tow_truck.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/truck_town"
+  },
+  {
+    "name": "Truck Town (3D): vehicles/trailer_truck",
+    "file": "demos/3d/truck_town/vehicles/trailer_truck.tscn",
     "category": "Godot Demos - 3D",
     "root": "demos/3d/truck_town"
   },
@@ -1072,10 +1845,28 @@ export const fixtures: Fixture[] = [
     "root": "demos/3d/visibility_ranges"
   },
   {
+    "name": "Visibility Ranges (3D): tree",
+    "file": "demos/3d/visibility_ranges/tree.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/visibility_ranges"
+  },
+  {
+    "name": "Visibility Ranges (3D): tree_cluster",
+    "file": "demos/3d/visibility_ranges/tree_cluster.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/visibility_ranges"
+  },
+  {
     "name": "Volumetric Fog (3D)",
     "file": "demos/3d/volumetric_fog/volumetric_fog.tscn",
     "category": "Godot Demos - 3D",
     "root": "demos/3d/volumetric_fog"
+  },
+  {
+    "name": "Voxel (3D): menu/ingame/pause_menu",
+    "file": "demos/3d/voxel/menu/ingame/pause_menu.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/voxel"
   },
   {
     "name": "Voxel (3D)",
@@ -1084,8 +1875,32 @@ export const fixtures: Fixture[] = [
     "root": "demos/3d/voxel"
   },
   {
+    "name": "Voxel (3D): menu/options/options",
+    "file": "demos/3d/voxel/menu/options/options.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/voxel"
+  },
+  {
+    "name": "Voxel (3D): player/player",
+    "file": "demos/3d/voxel/player/player.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/voxel"
+  },
+  {
+    "name": "Voxel (3D): world/world",
+    "file": "demos/3d/voxel/world/world.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/voxel"
+  },
+  {
     "name": "Waypoints (3D)",
     "file": "demos/3d/waypoints/main.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/waypoints"
+  },
+  {
+    "name": "Waypoints (3D): waypoint",
+    "file": "demos/3d/waypoints/waypoint.tscn",
     "category": "Godot Demos - 3D",
     "root": "demos/3d/waypoints"
   },
@@ -1118,6 +1933,12 @@ export const fixtures: Fixture[] = [
     "file": "demos/gui/gd_paint/paint_root.tscn",
     "category": "Godot Demos - GUI",
     "root": "demos/gui/gd_paint"
+  },
+  {
+    "name": "Input Mapping (GUI): ActionRemapButton",
+    "file": "demos/gui/input_mapping/ActionRemapButton.tscn",
+    "category": "Godot Demos - GUI",
+    "root": "demos/gui/input_mapping"
   },
   {
     "name": "Input Mapping (GUI)",
@@ -1168,6 +1989,12 @@ export const fixtures: Fixture[] = [
     "root": "demos/gui/translation"
   },
   {
+    "name": "Translation (GUI): translation_demo_po",
+    "file": "demos/gui/translation/translation_demo_po.tscn",
+    "category": "Godot Demos - GUI",
+    "root": "demos/gui/translation"
+  },
+  {
     "name": "Ui Mirroring (GUI)",
     "file": "demos/gui/ui_mirroring/ui_mirroring.tscn",
     "category": "Godot Demos - GUI",
@@ -1184,6 +2011,18 @@ export const fixtures: Fixture[] = [
     "file": "demos/viewport/3d_in_2d/3d_in_2d.tscn",
     "category": "Godot Demos - Viewport",
     "root": "demos/viewport/3d_in_2d"
+  },
+  {
+    "name": "3d In 2d (Viewport): robot_3d",
+    "file": "demos/viewport/3d_in_2d/robot_3d.tscn",
+    "category": "Godot Demos - Viewport",
+    "root": "demos/viewport/3d_in_2d"
+  },
+  {
+    "name": "3d Scaling (Viewport): cubes",
+    "file": "demos/viewport/3d_scaling/cubes.tscn",
+    "category": "Godot Demos - Viewport",
+    "root": "demos/viewport/3d_scaling"
   },
   {
     "name": "3d Scaling (Viewport)",
@@ -1204,10 +2043,22 @@ export const fixtures: Fixture[] = [
     "root": "demos/viewport/gui_in_3d"
   },
   {
+    "name": "Gui In 3d (Viewport): gui_panel_3d",
+    "file": "demos/viewport/gui_in_3d/gui_panel_3d.tscn",
+    "category": "Godot Demos - Viewport",
+    "root": "demos/viewport/gui_in_3d"
+  },
+  {
     "name": "Screen Capture (Viewport)",
     "file": "demos/viewport/screen_capture/screen_capture.tscn",
     "category": "Godot Demos - Viewport",
     "root": "demos/viewport/screen_capture"
+  },
+  {
+    "name": "Split Screen Input (Viewport): split_screen",
+    "file": "demos/viewport/split_screen_input/split_screen.tscn",
+    "category": "Godot Demos - Viewport",
+    "root": "demos/viewport/split_screen_input"
   },
   {
     "name": "Split Screen Input (Viewport)",
