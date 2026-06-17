@@ -36,7 +36,7 @@ import { useCanvasWorkspace } from './contexts/CanvasWorkspaceContext.js';
 import { TWO_D_UI_TYPES } from './controls/has2DUIContent.js';
 import { NodePathProvider } from './contexts/NodePathContext.js';
 import { useResource, useResourceLoader } from '../resources/useResource.js';
-import { mergeInstanceRoot } from '../resources/mergeInstanceRoot.js';
+import { collapseLiveNode, singleSceneCache } from './liveSceneTree.js';
 import { parseResourceReference, resolveInstancePath } from '../resources/SubResourceResolver.js';
 import {
   SceneResourcesProvider,
@@ -245,15 +245,26 @@ function InstancedNode({ node, path, withNodePath }: DispatchedNodeProps): React
   }
 
   const loadedScene = result.value;
-  const merged = mergeInstanceRoot(node, loadedScene);
+  // Instance root merge via the shared `collapseLiveNode` — the SAME decision
+  // the tree, inspector, and panels make, so ADR-0013 lives in one place instead
+  // of each walker re-deriving it. The single-entry cache hands it just this
+  // instance's loaded scene, keyed to its path. `effective !== node` means a
+  // single non-GLB root collapsed in: re-dispatch the merged node at the SAME
+  // path under the sub-scene's resource scope. `.glb`/multi-root return `node`
+  // unchanged → the historical nested-injection fallback below.
+  const effective = collapseLiveNode(
+    node,
+    externalResources,
+    singleSceneCache(scenePath, loadedScene)
+  );
 
-  if (merged) {
+  if (effective !== node) {
     return (
       <SceneResourcesProvider
         internalResources={loadedScene.internalResources}
         externalResources={loadedScene.externalResources}
       >
-        <DispatchedNode node={merged} path={path} withNodePath={withNodePath} />
+        <DispatchedNode node={effective} path={path} withNodePath={withNodePath} />
       </SceneResourcesProvider>
     );
   }

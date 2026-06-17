@@ -8,7 +8,7 @@ import { joinPath } from '../../../utils/nodePath.js';
 import { isRenderableNodeType } from '../../nodeSupport.js';
 import { useSelection } from '../../contexts/SelectionContext.js';
 import { resolveInstancePath } from '../../../resources/SubResourceResolver.js';
-import { mergeInstanceRoot } from '../../../resources/mergeInstanceRoot.js';
+import { collapseLiveNode, singleSceneCache } from '../../liveSceneTree.js';
 import { useSubSceneChildren } from './useSubSceneChildren.js';
 import { useGlbChildren } from './useGlbChildren.js';
 import styles from './SceneTreeViewer.module.css';
@@ -80,10 +80,10 @@ function TreeNodeImpl({
   externalResources,
 }: TreeNodeProps) {
   const nodePath = joinPath(parentPath, node.name);
-  const instanceScenePath =
-    node.instance && onOpenSubScene
-      ? resolveInstancePath(node.instance, externalResources)
-      : null;
+  const scenePath = node.instance
+    ? resolveInstancePath(node.instance, externalResources)
+    : null;
+  const instanceScenePath = onOpenSubScene ? scenePath : null;
 
   // WI-HALL-1: dynamically-loaded sub-scene children (when this node
   // has `instance = ExtResource("...")`). Returns null for non-instance
@@ -103,30 +103,33 @@ function TreeNodeImpl({
   // for non-GLB rows; the hook re-renders when the GLB arrives.
   const glbChildren = useGlbChildren(node);
 
-  // Instance root merge (ADR-0013): a single non-GLB root collapses INTO this
-  // row — it adopts the root's type and renders the root's children (plus any
-  // host-added children) directly, dropping the redundant wrapper level. The
-  // 📦 badge + ⤢ open-standalone affordance stay, driven by this node's own
-  // `instance` ref below. `.glb` synthetic roots and multi-root scenes return
-  // null here and keep the historical inline + sub-scene split.
-  // Memoized so the merged node keeps a stable identity across unrelated
+  // Instance root merge (ADR-0013) via the shared `collapseLiveNode` — the SAME
+  // decision the viewport, inspector, and panels make, so the rule lives in ONE
+  // place rather than being re-derived per walker (the recurring source of the
+  // "node inside an instance is wrong/invisible" bug class). `singleSceneCache`
+  // hands it just this row's loaded sub-scene, keyed to its path; it returns a
+  // merged node for a single non-GLB root (adopting the root's type + children),
+  // or `node` itself for `.glb`/multi-root/not-yet-loaded (the historical inline
+  // + sub-scene split below). The 📦 badge + ⤢ open-standalone affordance stay,
+  // driven by this node's own `instance` ref.
+  // Memoized so a collapsed row keeps a stable identity across unrelated
   // re-renders (selection/hover/expand). Without it, each render allocates a
-  // fresh `merged.children` array and hands child rows new-identity `node`
+  // fresh `effective.children` array and hands child rows new-identity `node`
   // props, defeating the `memo` on this component for collapsed subtrees.
-  const merged = useMemo(
+  const effective = useMemo(
     () =>
-      node.instance && subSceneChildren
-        ? mergeInstanceRoot(node, { nodes: subSceneChildren })
-        : null,
-    [node, subSceneChildren]
+      collapseLiveNode(
+        node,
+        externalResources,
+        singleSceneCache(scenePath, subSceneChildren ? { nodes: subSceneChildren } : null)
+      ),
+    [node, scenePath, subSceneChildren, externalResources]
   );
+  const didCollapse = effective !== node;
 
-  // The row's type/properties/children come from the merged node when it
-  // collapses; name, path, and instance affordance always come from `node`.
-  const effective = merged ?? node;
   const inlineChildren = node.children;
   const dynamicChildren = subSceneChildren ?? glbChildren ?? [];
-  const mergedChildren = merged ? merged.children : null;
+  const mergedChildren = didCollapse ? effective.children : null;
   const hasChildren = mergedChildren
     ? mergedChildren.length > 0
     : inlineChildren.length > 0 || dynamicChildren.length > 0;

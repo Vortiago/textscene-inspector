@@ -54,6 +54,26 @@ export interface LiveTreeEntry {
 }
 
 /**
+ * A {@link CachedSceneSource} that answers for exactly ONE path — the way the
+ * React walkers (tree `TreeNode`, viewport `InstancedNode`) hand the core the
+ * single sub-scene they just loaded so the shared `collapseLiveNode` decides the
+ * Instance root merge instead of each re-deriving it. Keying by path keeps every
+ * mount's scope to itself (ADR-0009): a query for any other path (a sibling
+ * instance) returns `undefined`, never leaking this scene. A `null`/`undefined`
+ * scene (still loading / failed) reads as not-cached, so the collapse keeps the
+ * node until the load lands.
+ */
+export function singleSceneCache(
+  path: string | null | undefined,
+  scene:
+    | { nodes: readonly TscnNode[]; externalResources?: readonly TscnExternalResource[] }
+    | null
+    | undefined
+): CachedSceneSource {
+  return { getCached: (p) => (p === path ? scene ?? undefined : undefined) };
+}
+
+/**
  * The node as the tree/viewport render it: a single-root `.tscn` instance
  * COLLAPSES into its sub-scene root (Instance root merge, ADR-0013), adopting
  * the root's type/properties/children. `.glb`/multi-root instances (and
