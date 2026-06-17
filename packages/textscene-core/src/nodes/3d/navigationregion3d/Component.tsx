@@ -7,7 +7,7 @@
  * MeshInstance3D) render normally inside the Node3D transform.
  */
 
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { Node3D } from '../../base/node3d/Component';
@@ -46,6 +46,17 @@ export function NavigationRegion3D({ node, children }: NodeComponentProps) {
       edges: buildNavEdgeGeometry(positions, polygons),
     };
   }, [result.value]);
+
+  // These geometries are built per-component (not cached), and R3F does not
+  // auto-dispose geometry passed via the `geometry`/`primitive` attach. Dispose
+  // them when the overlay is rebuilt (resource reload) or the node unmounts.
+  useEffect(() => {
+    if (!overlay) return;
+    return () => {
+      overlay.faces.dispose();
+      overlay.edges.dispose();
+    };
+  }, [overlay]);
 
   return (
     <Node3D node={node}>

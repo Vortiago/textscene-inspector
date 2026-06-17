@@ -10,7 +10,7 @@
  * to the whole instanced mesh (most library tiles are single-surface).
  */
 
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { Node3D } from '../../base/node3d/Component';
@@ -22,6 +22,17 @@ import type { Transform3D } from '../../base/node3d/types';
 import type { Vector3 } from '../../../parser/vectors';
 import type { GridMapProperties } from './types';
 import { decodeGridMapCells, ORTHO_BASES, type GridMapCell } from './cellData';
+
+/**
+ * Shared fallback material for tiles whose ArrayMesh declares no material (or
+ * whose material is still loading). Module-level so it is never per-instance
+ * allocated and never disposed — one grey material lives for the app's lifetime.
+ */
+const PLACEHOLDER_TILE_MATERIAL = new THREE.MeshStandardMaterial({
+  color: 0xb0b0b0,
+  metalness: 0,
+  roughness: 1,
+});
 
 /** Godot Transform3D (basis rows + origin) → THREE.Matrix4. */
 function transform3DToMatrix4(t: Transform3D): THREE.Matrix4 {
@@ -102,9 +113,10 @@ function GridMapItem({ item, cells, cellSize }: GridMapItemProps) {
   const instanced = useMemo(() => {
     const geometry = meshResult.value?.geometry;
     if (!geometry) return null;
+    // Geometry (cached ArrayMesh) and a resolved material are owned elsewhere;
+    // fall back to the shared placeholder material when none is loaded.
     const material =
-      (materialPath && materialResult.value) ||
-      new THREE.MeshStandardMaterial({ color: 0xb0b0b0, metalness: 0, roughness: 1 });
+      (materialPath && materialResult.value) || PLACEHOLDER_TILE_MATERIAL;
     const mesh = new THREE.InstancedMesh(geometry, material, matrices.length);
     matrices.forEach((m, i) => mesh.setMatrixAt(i, m));
     mesh.instanceMatrix.needsUpdate = true;
@@ -112,6 +124,14 @@ function GridMapItem({ item, cells, cellSize }: GridMapItemProps) {
     mesh.receiveShadow = true;
     return mesh;
   }, [meshResult.value, materialPath, materialResult.value, matrices]);
+
+  // Dispose the InstancedMesh's own GPU buffers (instanceMatrix) when it is
+  // replaced or unmounts. Its geometry/material are shared/cached and owned by
+  // the resource pipeline, so InstancedMesh.dispose() leaves them intact.
+  useEffect(() => {
+    if (!instanced) return;
+    return () => instanced.dispose();
+  }, [instanced]);
 
   if (instanced) {
     return <primitive object={instanced} />;
