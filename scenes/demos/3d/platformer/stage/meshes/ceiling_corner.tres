@@ -1,0 +1,20 @@
+[gd_resource type="ArrayMesh" format=4 uid="uid://b17rir1luuuf6"]
+
+[ext_resource type="Material" path="res://stage/tile_material.tres" id="1_07kmx"]
+
+[resource]
+resource_name = "tiles_ceiling_corner"
+_surfaces = [{
+"aabb": AABB(-1, -1, -1, 2, 1.001358e-05, 2),
+"attribute_data": PackedByteArray("AeDIPgKAGz/8v8I+/18VP/y/wj7/XxU//b/CPvy/wj79v8I++z8PP/2/wj77Pw8/CCDVPgaAHj8IINU+BoAePw9g4T4GgB4/D2DhPgaAHj8GgB4//L/CPgaAHj/8v8I+BoAeP/y/wj4GgB4/BoAePw=="),
+"format": 34359742487,
+"index_count": 18,
+"index_data": PackedByteArray("AwAFAAsACwAIAA0ACgAEAAEAAAALAAIABgALAAAACQAMAAcA"),
+"material": ExtResource("1_07kmx"),
+"name": "tile_material",
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 14,
+"vertex_data": PackedByteArray("+l9mvwAAgL/6X2Y/AACAvwAAgL//HzM/AACAvwAAgL//HzM/AACAvwAAgL8AAIC/AACAvwAAgL/xf/8+AACAvwAAgL/xf/8+/x8zvwAAgL8AAIA//x8zvwAAgL8AAIA/DqD/vgAAgL8AAIA/DqD/vgAAgL8AAIA/AACAPwAAgL8AAIC/AACAPwAAgL8AAIC/AACAPwAAgL8AAIC/AACAPwAAgL8AAIA//38AAJD//z//fwAAvP//P/9/AAD///8//38AAP///z//fwAAvP//P/9/AAD///8//38AACD//z//fwAA////P/9/AAD///8//38AAP///z//fwAAvP//P/9/AACQ//8//38AAP///z//fwAA////Pw==")
+}]
+blend_shape_mode = 0

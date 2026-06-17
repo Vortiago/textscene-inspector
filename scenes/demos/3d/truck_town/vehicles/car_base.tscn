@@ -2,8 +2,8 @@
 
 [ext_resource type="Script" uid="uid://g2bo8a5av2sn" path="res://vehicles/vehicle.gd" id="1_r806m"]
 [ext_resource type="Texture2D" uid="uid://yexl3pkv5tea" path="res://vehicles/particle_smoke.png" id="2_1gkvk"]
-[ext_resource type="ArrayMesh" uid="uid://bqrwin8ccgptt" path="res://vehicles/meshes/wheel.res" id="2_3cqaw"]
-[ext_resource type="ArrayMesh" uid="uid://b2xi556mwp7ue" path="res://vehicles/meshes/minivan.res" id="3_cqia8"]
+[ext_resource type="ArrayMesh" uid="uid://bqrwin8ccgptt" path="res://vehicles/meshes/wheel.tres" id="2_3cqaw"]
+[ext_resource type="ArrayMesh" uid="uid://b2xi556mwp7ue" path="res://vehicles/meshes/minivan.tres" id="3_cqia8"]
 [ext_resource type="Script" uid="uid://bpgd2w0obg3tl" path="res://vehicles/follow_camera.gd" id="4_6igu8"]
 [ext_resource type="AudioStream" uid="uid://2ukhlukq60ge" path="res://vehicles/engine.wav" id="5_m8g7o"]
 [ext_resource type="AudioStream" uid="uid://bwmbj0hptxpp2" path="res://vehicles/impact_1.wav" id="6_kq567"]

@@ -1,6 +1,6 @@
 [gd_resource type="MeshLibrary" format=3 uid="uid://btppuadc3lj80"]
 
-[ext_resource type="ArrayMesh" uid="uid://ba7dqpj07mlsy" path="res://models/cube.mesh" id="1"]
+[ext_resource type="ArrayMesh" uid="uid://ba7dqpj07mlsy" path="res://models/cube.tres" id="1"]
 
 [sub_resource type="Image" id="Image_df2t2"]
 data = {

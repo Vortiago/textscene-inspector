@@ -1,0 +1,20 @@
+[gd_resource type="ArrayMesh" format=4 uid="uid://0fj5kjmlbu2h"]
+
+[ext_resource type="Material" path="res://stage/tile_material.tres" id="1_s5r2m"]
+
+[resource]
+resource_name = "tiles_corner"
+_surfaces = [{
+"aabb": AABB(-1, -1, -1, 2, 2.00001, 2),
+"attribute_data": PackedByteArray("AAAgPQAAAAAAAIA+AAAAAAAAgD4AAHw+AAAgPQAAAAAAACA9AAB8PgAAID0AAHw+AABAPAAAfD4AAEA8AAAAAAAAgD4AAAAAAACAPgAAfD4="),
+"format": 34359742487,
+"index_count": 24,
+"index_data": PackedByteArray("BwAFAAAABwAGAAUABAAIAAkABAADAAgAAwAGAAcAAwAEAAYAAgAAAAUAAgABAAAA"),
+"material": ExtResource("1_s5r2m"),
+"name": "tile_material",
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 10,
+"vertex_data": PackedByteArray("AACAvwAAgD//HzM/AACAvwAAgD8AAIC/AACAvwAAgL8AAIC//x8zvwAAgD8AAIA//x8zvwAAgL8AAIA/AACAvwAAgL//HzM/+l9mvwAAgL/6X2Y/+l9mvwAAgD/6X2Y/AACAPwAAgD8AAIA/AACAPwAAgL8AAIA/AAD/f///AAAAAP9///8AAAAA/3///wAA/3/8f/7//7//f/9/////vwIAAoD+//9//z//f/+//7//P/9//7//v/9//3////+//3//f////78=")
+}]
+blend_shape_mode = 0

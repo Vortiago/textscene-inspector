@@ -1,9 +1,10 @@
 /**
  * binary-resource-reference: any node referencing a BINARY Godot resource
  * (.scn scene, .res resource) gets a warning — the previewer only loads text
- * formats (.tscn/.tres), so that content degrades to placeholders. Surfaced
- * by the 3d/platformer demo, whose level lives in grid_map.scn + floor.res
- * and silently vanished.
+ * formats (.tscn/.tres), so that content degrades to placeholders. Originally
+ * surfaced by the 3d/platformer demo (a level packed as grid_map.scn +
+ * floor.res that silently vanished; the demo's binaries have since been
+ * converted to text).
  */
 import { describe, it, expect, beforeEach } from 'vitest';
 import { Linter } from '../../linter/Linter';

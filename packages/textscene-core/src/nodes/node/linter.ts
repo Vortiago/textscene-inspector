@@ -4,7 +4,7 @@
  * load text formats (.tscn scenes, .tres resources); a binary .scn / .res
  * reference degrades to a missing-resource placeholder in the viewport, so
  * the linter marks it as "not previewable" instead of leaving the gap
- * silent (the 3d/platformer level: grid_map.scn + meshes/*.res).
+ * silent — e.g. a Godot level packed as grid_map.scn + meshes/*.res.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../linter/types.js';

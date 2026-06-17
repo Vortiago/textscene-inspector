@@ -1,0 +1,20 @@
+[gd_resource type="ArrayMesh" format=4 uid="uid://u3txqw7biqh7"]
+
+[ext_resource type="Material" path="res://stage/tile_material.tres" id="1_75x6t"]
+
+[resource]
+resource_name = "tiles_ceiling_wall"
+_surfaces = [{
+"aabb": AABB(-1, -1, -1, 2, 2, 2.00001),
+"attribute_data": PackedByteArray("AAAAAAAAgD4AAMA+AAAfPwAAgD4AAIA+AACAPgAAAAAAAAAAAAAAAAAAHz8AAB8/AAAfPwAAwD4AAMA+AADAPg=="),
+"format": 34359742487,
+"index_count": 12,
+"index_data": PackedByteArray("AwAAAAQAAwACAAAABgABAAcABgAFAAEA"),
+"material": ExtResource("1_75x6t"),
+"name": "tile_material",
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 8,
+"vertex_data": PackedByteArray("AACAvwAAgL8AAIA/AACAPwAAgL8AAIA/AACAPwAAgL8AAIA/AACAPwAAgD8AAIA/AACAvwAAgD8AAIA/AACAvwAAgL8AAIA/AACAvwAAgL8AAIC/AACAPwAAgL8AAIC//3//f////7//fwAAAAD/v/9//3////+//3//f////7//f/9/////v/9/AAAAAP+//38AAAAA/7//fwAAAAD/vw==")
+}]
+blend_shape_mode = 0

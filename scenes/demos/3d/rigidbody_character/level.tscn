@@ -2,7 +2,7 @@
 
 [ext_resource type="MeshLibrary" uid="uid://bctluxekre5wf" path="res://cubelib.tres" id="1"]
 [ext_resource type="PackedScene" uid="uid://0o0d2gt3mul" path="res://player/cubio.tscn" id="2"]
-[ext_resource type="ArrayMesh" uid="uid://h65pkfq5sgmy" path="res://models/cube.mesh" id="3"]
+[ext_resource type="ArrayMesh" uid="uid://h65pkfq5sgmy" path="res://models/cube.tres" id="3"]
 [ext_resource type="PackedScene" uid="uid://ieyca5ld5mq6" path="res://models/mushroom.glb" id="5"]
 [ext_resource type="Script" uid="uid://b0k758e0u133q" path="res://level.gd" id="6"]
 [ext_resource type="Texture2D" uid="uid://dd862j3cyjndh" path="res://models/white_wood.png" id="6_slp5m"]
