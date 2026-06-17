@@ -5,7 +5,8 @@
  * from SceneGraph.flattenedNodes.
  */
 import { describe, expect, it } from 'vitest';
-import { resolveNodeByPath, type CachedSceneSource } from './resolveNodeByPath';
+import * as THREE from 'three';
+import { resolveNodeByPath, type CachedSceneSource, type CachedGlbSource } from './resolveNodeByPath';
 import type { TscnNode, TscnScene, TscnExternalResource } from '../../../parser/types';
 
 function makeNode(name: string, type: string, extras: Partial<TscnNode> = {}): TscnNode {
@@ -29,6 +30,26 @@ describe('resolveNodeByPath', () => {
     ];
     const node = resolveNodeByPath('Hallway/Table', roots, [], cacheOf({}));
     expect(node?.name).toBe('Table');
+  });
+
+  it('descends into a GLBSceneRoot to resolve an internal GLB node', () => {
+    const roots = [
+      makeNode('player', 'GLBSceneRoot', {
+        properties: { glbPath: 'res://player.glb' } as Record<string, unknown>,
+      }),
+    ];
+    const glbRoot = new THREE.Group();
+    const armature = new THREE.Group();
+    armature.name = 'Armature';
+    const hand = new THREE.Mesh();
+    hand.name = 'hand';
+    armature.add(hand);
+    glbRoot.add(armature);
+    const glbCache: CachedGlbSource = { getCached: (p) => (p === 'res://player.glb' ? glbRoot : undefined) };
+
+    const node = resolveNodeByPath('player/Armature/hand', roots, [], cacheOf({}), glbCache);
+    expect(node?.name).toBe('hand');
+    expect(node?.type).toBe('GLBMesh');
   });
 
   it('descends into a collapsed instanced sub-scene interior (BUG 1 + ADR-0013)', () => {

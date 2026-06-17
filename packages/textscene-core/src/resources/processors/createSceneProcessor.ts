@@ -139,7 +139,7 @@ export function createSceneProcessor({
  * so the SceneTreeViewer (after WI-HALL-1's sub-scene inlining lands)
  * shows a meaningful label rather than a synthetic placeholder.
  */
-function synthesiseGLBScene(glbPath: string): TscnScene {
+export function synthesiseGLBScene(glbPath: string): TscnScene {
   const basename = (glbPath.split('/').pop() ?? glbPath).replace(/\.(glb|gltf)$/i, '');
   const root: TscnNode = {
     name: basename || 'GLBRoot',

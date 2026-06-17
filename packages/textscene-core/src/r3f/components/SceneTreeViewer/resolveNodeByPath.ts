@@ -16,9 +16,12 @@
  * loader's scene cache, the same source `useSubSceneChildren` reads). So
  * any row the tree can render becomes resolvable.
  */
+import type * as THREE from 'three';
 import type { TscnNode, TscnExternalResource } from '../../../parser/types';
 import { resolveInstancePath } from '../../../resources/SubResourceResolver';
 import { mergeInstanceRoot } from '../../../resources/mergeInstanceRoot';
+import { GLB_SCENE_ROOT_TYPE } from '../../internal/glb-scene-root/Component';
+import { buildGlbHierarchy, glbHierarchyToTscnNodes } from '../../internal/glb-scene-root/glbHierarchy';
 
 /**
  * Minimal read surface the resolver needs from the loader's scene cache.
@@ -26,6 +29,11 @@ import { mergeInstanceRoot } from '../../../resources/mergeInstanceRoot';
  */
 export interface CachedSceneSource {
   getCached: (path: string) => { nodes: readonly TscnNode[] } | null | undefined;
+}
+
+/** Read surface for the loader's GLB cache — lets the resolver descend into a GLB's internals. */
+export interface CachedGlbSource {
+  getCached: (path: string) => THREE.Object3D | null | undefined;
 }
 
 /**
@@ -59,9 +67,19 @@ function collapsedNode(
 function childrenForNode(
   node: TscnNode,
   externalResources: readonly TscnExternalResource[],
-  sceneCache: CachedSceneSource
+  sceneCache: CachedSceneSource,
+  glbCache?: CachedGlbSource
 ): readonly TscnNode[] {
   const inline = node.children;
+
+  // GLBSceneRoot: its children are the loaded GLB's internal nodes, walked the
+  // same way useGlbChildren does so paths match the tree rows.
+  if (node.type === GLB_SCENE_ROOT_TYPE && glbCache) {
+    const glbPath = (node.properties as Record<string, unknown>).glbPath as string | undefined;
+    const object = glbPath ? glbCache.getCached(glbPath) : undefined;
+    if (object) return glbHierarchyToTscnNodes(buildGlbHierarchy(object));
+  }
+
   if (!node.instance) return inline;
 
   const scenePath = resolveInstancePath(node.instance, externalResources);
@@ -95,7 +113,8 @@ export function resolveNodeByPath(
   path: string,
   roots: readonly TscnNode[],
   externalResources: readonly TscnExternalResource[],
-  sceneCache: CachedSceneSource
+  sceneCache: CachedSceneSource,
+  glbCache?: CachedGlbSource
 ): TscnNode | null {
   const segments = path.split('/').filter((s) => s.length > 0);
   if (segments.length === 0) return null;
@@ -107,7 +126,7 @@ export function resolveNodeByPath(
     const match = candidates.find((n) => n.name === segment);
     if (!match) return null;
     current = match;
-    candidates = childrenForNode(match, externalResources, sceneCache);
+    candidates = childrenForNode(match, externalResources, sceneCache, glbCache);
   }
 
   // Return the node as the tree/viewport render it — a collapsed instance row

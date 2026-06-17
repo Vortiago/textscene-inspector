@@ -17,13 +17,17 @@
  * after the synthesised scene loads) sees a normal scene with one
  * dispatched node.
  */
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../NodeComponentRegistry';
 import { useResource } from '../../../resources/useResource';
 import { MissingResourcePlaceholder } from '../../components/MissingResourcePlaceholder';
 import { useGlbOverrides } from './GlbOverridesContext';
 import { applyGlbNodeOverrides } from './glbNodeOverrides';
+import { flattenGlbObjects } from './glbHierarchy';
+import { useOptionalSelection } from '../../contexts/SelectionContext';
+import { useNodePath } from '../../contexts/NodePathContext';
+import { joinPath } from '../../../utils/nodePath';
 
 /**
  * Reserved node type the createSceneProcessor synthesises for binary
@@ -56,6 +60,34 @@ export function GLBSceneRoot({ node }: NodeComponentProps) {
     // The clone is per-consumer and stable, so re-applying when the
     // resolved object or override set changes is sufficient and cheap.
   }, [object, overrides]);
+
+  // WI-D: tie each internal GLB object to a tree path so the SceneTreeViewer
+  // can select (gizmo) + hide individual nodes. We walk THIS rendered clone
+  // with the same relPath scheme the tree uses, then register each object and
+  // drive its visibility from the hidden-paths set.
+  const selection = useOptionalSelection();
+  const nodePath = useNodePath();
+  const entries = useMemo(() => (object ? flattenGlbObjects(object) : []), [object]);
+
+  const registerNodeObject = selection?.registerNodeObject;
+  const unregisterNodeObject = selection?.unregisterNodeObject;
+  useEffect(() => {
+    if (!registerNodeObject || !unregisterNodeObject || nodePath === null) return;
+    for (const { relPath, object: obj } of entries) {
+      registerNodeObject(joinPath(nodePath, relPath), obj);
+    }
+    return () => {
+      for (const { relPath } of entries) unregisterNodeObject(joinPath(nodePath, relPath));
+    };
+  }, [entries, nodePath, registerNodeObject, unregisterNodeObject]);
+
+  const hiddenNodePaths = selection?.hiddenNodePaths;
+  useEffect(() => {
+    if (nodePath === null) return;
+    for (const { relPath, object: obj } of entries) {
+      obj.visible = !(hiddenNodePaths?.has(joinPath(nodePath, relPath)) ?? false);
+    }
+  }, [entries, nodePath, hiddenNodePaths]);
 
   if (result.status === 'unavailable') {
     return <MissingResourcePlaceholder shape="box" />;

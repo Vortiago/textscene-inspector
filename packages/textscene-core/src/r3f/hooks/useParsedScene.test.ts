@@ -35,6 +35,22 @@ describe('parseTscnContent', () => {
     expect(parseTscnContent('', 'res://x.tscn')).toEqual({ sceneGraph: null, error: null });
   });
 
+  it('synthesises a GLBSceneRoot scene for a .glb root path, ignoring the (binary) content', () => {
+    const { sceneGraph, error } = parseTscnContent('binary-garbage-not-tscn', 'res://models/player.glb');
+    expect(error).toBeNull();
+    expect(sceneGraph).not.toBeNull();
+    expect(sceneGraph!.flattenedNodes).toHaveLength(1);
+    const root = sceneGraph!.flattenedNodes[0]!;
+    expect(root.data.type).toBe('GLBSceneRoot');
+    expect(root.name).toBe('player');
+    expect((root.data.properties as Record<string, unknown>).glbPath).toBe('res://models/player.glb');
+  });
+
+  it('synthesises a GLBSceneRoot for a .gltf root path even with empty content', () => {
+    const { sceneGraph } = parseTscnContent('', 'res://lamp/scene.gltf');
+    expect(sceneGraph!.flattenedNodes[0]!.data.type).toBe('GLBSceneRoot');
+  });
+
   it('reports an error when non-empty content yields zero nodes (WI-R3F-7 / WEB-10)', () => {
     const { sceneGraph, error } = parseTscnContent(MALFORMED_TSCN, 'res://x.tscn');
     expect(sceneGraph).toBeNull();

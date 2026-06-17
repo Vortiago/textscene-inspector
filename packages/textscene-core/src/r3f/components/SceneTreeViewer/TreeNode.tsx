@@ -5,11 +5,12 @@
 import { memo, useMemo, type MouseEvent } from 'react';
 import type { TscnNode, TscnExternalResource } from '../../../parser/types.js';
 import { joinPath } from '../../../utils/nodePath.js';
-import { nodeRegistry } from '../../../core/NodeRegistry.js';
+import { isRenderableNodeType } from '../../nodeSupport.js';
 import { useSelection } from '../../contexts/SelectionContext.js';
 import { resolveInstancePath } from '../../../resources/SubResourceResolver.js';
 import { mergeInstanceRoot } from '../../../resources/mergeInstanceRoot.js';
 import { useSubSceneChildren } from './useSubSceneChildren.js';
+import { useGlbChildren } from './useGlbChildren.js';
 import styles from './SceneTreeViewer.module.css';
 
 const TYPE_BADGE_CLASS: Record<string, string> = {
@@ -92,6 +93,11 @@ function TreeNodeImpl({
   // sub-scene arrives.
   const subSceneChildren = useSubSceneChildren(node, externalResources);
 
+  // GLB internal hierarchy: a `GLBSceneRoot` row's children are the loaded
+  // GLB's THREE.Object3D nodes, walked into synthetic TscnNodes. Returns null
+  // for non-GLB rows; the hook re-renders when the GLB arrives.
+  const glbChildren = useGlbChildren(node);
+
   // Instance root merge (ADR-0013): a single non-GLB root collapses INTO this
   // row — it adopts the root's type and renders the root's children (plus any
   // host-added children) directly, dropping the redundant wrapper level. The
@@ -114,7 +120,7 @@ function TreeNodeImpl({
   // collapses; name, path, and instance affordance always come from `node`.
   const effective = merged ?? node;
   const inlineChildren = node.children;
-  const dynamicChildren = subSceneChildren ?? [];
+  const dynamicChildren = subSceneChildren ?? glbChildren ?? [];
   const mergedChildren = merged ? merged.children : null;
   const hasChildren = mergedChildren
     ? mergedChildren.length > 0
@@ -150,8 +156,7 @@ function TreeNodeImpl({
   const isSelected = selectedNodePath === nodePath;
   const isHidden = hiddenNodePaths.has(nodePath);
 
-  const registration = nodeRegistry.getRegistration(effective.type);
-  const isUnsupported = !registration && effective.type !== 'Node';
+  const isUnsupported = !isRenderableNodeType(effective.type);
 
   const headerClasses = [styles.header];
   if (isSelected) headerClasses.push(styles.selected!);
