@@ -18,6 +18,7 @@
 import * as THREE from 'three';
 import { useOptionalSelection } from '../contexts/SelectionContext.js';
 import { useSceneHelper } from '../hooks/useTHREEHelper.js';
+import { WorldBoxHelper } from './WorldBoxHelper.js';
 
 const HIGHLIGHT_COLOR = 0x00ff00;
 
@@ -33,7 +34,7 @@ export function SelectionHighlight() {
           ? nodeObjectMap.get(selectedNodePath) ?? null
           : null;
       if (!target) return null;
-      const helper = new THREE.BoxHelper(target, HIGHLIGHT_COLOR);
+      const helper = new WorldBoxHelper(target, HIGHLIGHT_COLOR);
       helper.name = 'tscn-selection-highlight';
       return helper;
     },

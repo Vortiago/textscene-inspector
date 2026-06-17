@@ -27,6 +27,7 @@
 import * as THREE from 'three';
 import { useOptionalSelection } from '../contexts/SelectionContext.js';
 import { useSceneHelper } from '../hooks/useTHREEHelper.js';
+import { WorldBoxHelper } from './WorldBoxHelper.js';
 
 const HOVER_COLOR = 0xff8800;
 
@@ -42,7 +43,7 @@ export function HoverHighlight() {
           ? nodeObjectMap.get(hoveredNodePath) ?? null
           : null;
       if (!target) return null;
-      const helper = new THREE.BoxHelper(target, HOVER_COLOR);
+      const helper = new WorldBoxHelper(target, HOVER_COLOR);
       helper.name = 'tscn-hover-highlight';
       return helper;
     },
