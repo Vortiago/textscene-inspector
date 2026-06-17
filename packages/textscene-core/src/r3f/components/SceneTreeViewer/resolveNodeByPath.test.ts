@@ -111,6 +111,40 @@ describe('resolveNodeByPath', () => {
     expect(node?.type).toBe('Area3D');
   });
 
+  it('descends into a nested instance using the SUB-scene externalResources, not the outer scene', () => {
+    // The platformer bug: game.tscn instances player.tscn, which contains an
+    // inner node instancing player.glb via player.tscn's OWN ExtResource id —
+    // an id absent from game.tscn's resources. Descent must resolve that inner
+    // instance against the sub-scene's resource table, not the outer scene's.
+    const subB: TscnScene = {
+      nodes: [makeNode('BRoot', 'Node3D', { children: [makeNode('Leaf', 'MeshInstance3D')] })],
+      externalResources: [],
+      internalResources: [],
+    };
+    const subA: TscnScene = {
+      nodes: [
+        makeNode('ARoot', 'Node3D', {
+          children: [makeNode('Inner', 'Node3D', { instance: 'ExtResource("9_subB")' })],
+        }),
+      ],
+      externalResources: [{ id: '9_subB', path: 'res://subB.tscn', type: 'PackedScene' }],
+      internalResources: [],
+    };
+    const outerExt: TscnExternalResource[] = [
+      { id: '1_subA', path: 'res://subA.tscn', type: 'PackedScene' },
+    ];
+    const roots = [
+      makeNode('Outer', 'Node3D', {
+        children: [makeNode('A', 'Node3D', { instance: 'ExtResource("1_subA")' })],
+      }),
+    ];
+    const cache = cacheOf({ 'res://subA.tscn': subA, 'res://subB.tscn': subB });
+
+    const node = resolveNodeByPath('Outer/A/Inner/Leaf', roots, outerExt, cache);
+    expect(node?.name).toBe('Leaf');
+    expect(node?.type).toBe('MeshInstance3D');
+  });
+
   it('returns null when the sub-scene is not yet cached', () => {
     const roots = [makeNode('roof_lamp', 'Node3D', { instance: 'ExtResource("3_as5ck")' })];
     const node = resolveNodeByPath('roof_lamp/plafoniera', roots, EXT, cacheOf({}));

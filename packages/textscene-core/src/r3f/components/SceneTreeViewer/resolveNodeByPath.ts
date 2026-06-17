@@ -28,7 +28,12 @@ import { glbSceneRootChildren } from '../../internal/glb-scene-root/glbHierarchy
  * `undefined` = never requested, `null` = previously failed, value = loaded.
  */
 export interface CachedSceneSource {
-  getCached: (path: string) => { nodes: readonly TscnNode[] } | null | undefined;
+  getCached: (
+    path: string
+  ) =>
+    | { nodes: readonly TscnNode[]; externalResources?: readonly TscnExternalResource[] }
+    | null
+    | undefined;
 }
 
 /** Read surface for the loader's GLB cache — lets the resolver descend into a GLB's internals. */
@@ -58,44 +63,58 @@ function collapsedNode(
 }
 
 /**
- * Return the children the tree shows for a node. For an instance node this
- * mirrors **Instance root merge** (ADR-0013): a single non-GLB root collapses
- * into the node, so its children are the root's children (followed by any
- * host-added children) — NOT the root itself. `.glb` synthetic roots and
- * multi-root scenes keep the nested form, where the loaded roots are children.
+ * The children the tree shows for a node, paired with the `externalResources`
+ * scope those children resolve their OWN instance refs against. For an instance
+ * node that scope is the LOADED sub-scene's resource table — a nested instance
+ * (e.g. the GLB inside player.tscn) references its parent sub-scene's
+ * ExtResources, which are absent from the outer scene, so descent must switch
+ * scope or the inner instance fails to resolve. Non-instance / GLB children
+ * keep the incoming scope.
  */
+interface ChildScope {
+  children: readonly TscnNode[];
+  externalResources: readonly TscnExternalResource[];
+}
+
 function childrenForNode(
   node: TscnNode,
   externalResources: readonly TscnExternalResource[],
   sceneCache: CachedSceneSource,
   glbCache?: CachedGlbSource
-): readonly TscnNode[] {
+): ChildScope {
   const inline = node.children;
+  const keep = (children: readonly TscnNode[]): ChildScope => ({ children, externalResources });
 
-  // GLBSceneRoot: its children are the loaded GLB's internal nodes, walked the
-  // same way useGlbChildren does so paths match the tree rows.
+  // GLBSceneRoot: its children are the loaded GLB's internal nodes (no instance
+  // refs of their own), walked the same way useGlbChildren does.
   if (node.type === GLB_SCENE_ROOT_TYPE && glbCache) {
     const glbPath = (node.properties as Record<string, unknown>).glbPath as string | undefined;
     const object = glbPath ? glbCache.getCached(glbPath) : undefined;
-    if (object) return glbSceneRootChildren(object);
+    if (object) return keep(glbSceneRootChildren(object));
   }
 
-  if (!node.instance) return inline;
+  if (!node.instance) return keep(inline);
 
   const scenePath = resolveInstancePath(node.instance, externalResources);
-  if (!scenePath) return inline;
+  if (!scenePath) return keep(inline);
 
   const cached = sceneCache.getCached(scenePath);
-  if (!cached) return inline;
+  if (!cached) return keep(inline);
+
+  // Children of the loaded sub-scene resolve against ITS resource table.
+  const subResources = cached.externalResources ?? [];
 
   // Collapsed single-root instance: descend into the merged children (root's
   // children first, then host-added), matching TreeNode's merged child list.
   const merged = mergeInstanceRoot(node, cached);
-  if (merged) return merged.children;
+  if (merged) return { children: merged.children, externalResources: subResources };
 
   // Fallback (GLB / multi-root): inline children render before the loaded
   // roots in TreeNode, so search inline first to match the tree's hierarchy.
-  return inline.length > 0 ? [...inline, ...cached.nodes] : cached.nodes;
+  return {
+    children: inline.length > 0 ? [...inline, ...cached.nodes] : cached.nodes,
+    externalResources: subResources,
+  };
 }
 
 /**
@@ -120,16 +139,23 @@ export function resolveNodeByPath(
   if (segments.length === 0) return null;
 
   let candidates: readonly TscnNode[] = roots;
+  let candidatesResources = externalResources;
   let current: TscnNode | null = null;
+  // The scope `current` itself lives in (its parent's child scope) — used to
+  // resolve `current`'s own instance ref when collapsing it at the end.
+  let currentResources = externalResources;
 
   for (const segment of segments) {
     const match = candidates.find((n) => n.name === segment);
     if (!match) return null;
     current = match;
-    candidates = childrenForNode(match, externalResources, sceneCache, glbCache);
+    currentResources = candidatesResources;
+    const next = childrenForNode(match, candidatesResources, sceneCache, glbCache);
+    candidates = next.children;
+    candidatesResources = next.externalResources;
   }
 
   // Return the node as the tree/viewport render it — a collapsed instance row
   // resolves to its merged (root-typed) identity, not the bare wrapper.
-  return current ? collapsedNode(current, externalResources, sceneCache) : null;
+  return current ? collapsedNode(current, currentResources, sceneCache) : null;
 }

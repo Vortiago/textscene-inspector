@@ -91,7 +91,12 @@ function TreeNodeImpl({
   // list for rendering. The `useResource` hook inside subscribes to the
   // scene event bus, so the tree re-renders automatically when the
   // sub-scene arrives.
-  const subSceneChildren = useSubSceneChildren(node, externalResources);
+  const subScene = useSubSceneChildren(node, externalResources);
+  const subSceneChildren = subScene?.nodes ?? null;
+  // Sub-scene (and merged) children resolve their own instance refs against the
+  // LOADED sub-scene's resource table — not this outer scene's — so a nested
+  // instance (e.g. the GLB inside player.tscn) resolves instead of dead-ending.
+  const childResources = subScene?.externalResources ?? externalResources;
 
   // GLB internal hierarchy: a `GLBSceneRoot` row's children are the loaded
   // GLB's THREE.Object3D nodes, walked into synthetic TscnNodes. Returns null
@@ -128,8 +133,14 @@ function TreeNodeImpl({
 
   // One child row. `keyPrefix` keeps inline vs sub-scene keys in separate
   // namespaces so a name collision (an inline child sharing a name with a
-  // sub-scene root) doesn't trip React's duplicate-key warning.
-  const renderChildRow = (child: TscnNode, keyPrefix: string) => (
+  // sub-scene root) doesn't trip React's duplicate-key warning. `childRes` is
+  // the resource scope the child resolves its OWN instance ref against — the
+  // loaded sub-scene's for merged/sub-scene rows, this scene's for inline rows.
+  const renderChildRow = (
+    child: TscnNode,
+    keyPrefix: string,
+    childRes: readonly TscnExternalResource[]
+  ) => (
     <TreeNode
       key={`${keyPrefix}:${child.name}`}
       node={child}
@@ -140,7 +151,7 @@ function TreeNodeImpl({
       onNodeReveal={onNodeReveal}
       onOpenSubScene={onOpenSubScene}
       matches={matches}
-      externalResources={externalResources}
+      externalResources={childRes}
     />
   );
 
@@ -281,11 +292,13 @@ function TreeNodeImpl({
           {mergedChildren
             ? // Collapsed instance root: one combined child list (the root's
               // own children followed by any host-added children), addressed
-              // directly under this row — no synthetic wrapper segment.
-              mergedChildren.filter(matches).map((child) => renderChildRow(child, 'merged'))
+              // directly under this row — no synthetic wrapper segment. The
+              // merged children come from the loaded sub-scene, so they resolve
+              // against its resources.
+              mergedChildren.filter(matches).map((child) => renderChildRow(child, 'merged', childResources))
             : [
-                ...inlineChildren.filter(matches).map((child) => renderChildRow(child, 'inline')),
-                ...dynamicChildren.filter(matches).map((child) => renderChildRow(child, 'subscene')),
+                ...inlineChildren.filter(matches).map((child) => renderChildRow(child, 'inline', externalResources)),
+                ...dynamicChildren.filter(matches).map((child) => renderChildRow(child, 'subscene', childResources)),
               ]}
         </div>
       )}
