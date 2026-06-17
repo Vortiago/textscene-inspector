@@ -18,6 +18,10 @@ import {
 } from '../../contexts/ViewportModeContext';
 import { SceneGraphBuilder } from '../../../core/SceneGraphBuilder';
 import { TscnParser } from '../../../parser/TscnParser';
+import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
+import { ResourceEventBus } from '../../../resources/ResourceEventBus';
+import type { ResourceLoader } from '../../../resources/ResourceLoader';
+import type { TscnNode, TscnScene } from '../../../parser/types';
 
 const SCENE = `[gd_scene format=3]
 
@@ -77,5 +81,71 @@ describe('<CamerasPanel> with 2D cameras', () => {
     // World position (120, 60), DRAG_CENTER default, zoom 2.
     expect(probe.getAttribute('data-frame')).toBe('120,60@2');
     expect(probe.getAttribute('data-mode')).toBe('2D');
+  });
+});
+
+describe('<CamerasPanel> with cameras inside instanced sub-scenes', () => {
+  function makeNode(name: string, type: string, extras: Partial<TscnNode> = {}): TscnNode {
+    return { name, type, children: [], properties: {}, ...extras };
+  }
+
+  function makeLoader(scenes: Record<string, TscnScene>): ResourceLoader {
+    const proc = <T,>(cache: Record<string, T>) => ({
+      getCached: (p: string) => cache[p],
+      isCached: (p: string) => p in cache,
+      isLoading: () => false,
+      request: () => {},
+      clearCache: () => {},
+      getCacheSize: () => Object.keys(cache).length,
+    });
+    return {
+      eventBus: new ResourceEventBus(),
+      scenes: proc<TscnScene>(scenes),
+      glbMeshes: proc<never>({}),
+      register: () => {},
+    } as unknown as ResourceLoader;
+  }
+
+  it('lists a Camera3D nested inside an instance (absent from flattenedNodes)', () => {
+    // Root scene instances player.tscn; the follow-camera lives inside it.
+    const root = `[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://player.tscn" id="4_ray"]
+
+[node name="Game" type="Node3D"]
+
+[node name="Player" parent="." instance=ExtResource("4_ray")]
+`;
+    const playerScene: TscnScene = {
+      nodes: [
+        makeNode('Player', 'CharacterBody3D', {
+          children: [
+            makeNode('Target', 'Node3D', { children: [makeNode('FollowCam', 'Camera3D')] }),
+          ],
+        }),
+      ],
+      externalResources: [],
+      internalResources: [],
+    };
+    const parsed = new TscnParser().parse(root);
+    const sceneGraph = new SceneGraphBuilder()
+      .setRootScene('res://game.tscn')
+      .addScene({ ...parsed, path: 'res://game.tscn' })
+      .build();
+    const loader = makeLoader({ 'res://player.tscn': playerScene });
+
+    render(
+      <ResourceLoaderProvider loader={loader}>
+        <HierarchyProvider value={{ sceneGraph, panelId: 'cams-nested' }}>
+          <CameraControlProvider>
+            <ViewportModeProvider>
+              <CamerasPanel />
+            </ViewportModeProvider>
+          </CameraControlProvider>
+        </HierarchyProvider>
+      </ResourceLoaderProvider>
+    );
+
+    expect(screen.getByRole('button', { name: /FollowCam/ })).toBeTruthy();
   });
 });

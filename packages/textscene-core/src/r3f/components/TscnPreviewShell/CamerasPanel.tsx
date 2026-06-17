@@ -6,32 +6,38 @@
  * graph, anchored per the Camera2D surface — and open the 2D workspace.
  * Mirrors the per-node "Use This Camera" action in the Inspector, surfaced
  * as a flat list so cameras are discoverable without hunting the tree.
+ *
+ * Cameras are gathered from the **live scene tree** (`collectLiveNodes`), not
+ * `SceneGraph.flattenedNodes` — so cameras INSIDE instanced sub-scenes (e.g. a
+ * player's follow-camera) appear. The list recomputes as sub-scenes / GLBs
+ * stream in (the live tree grows after the parsed SceneGraph is built).
  */
-import { useMemo } from 'react';
 import { useHierarchy } from '../../contexts/HierarchyContext.js';
 import { useOptionalCameraControl } from '../../contexts/CameraControlContext.js';
 import { useViewportMode } from '../../contexts/ViewportModeContext.js';
+import { useLiveSceneNodes } from '../../useLiveSceneTree.js';
 import { node2dWorldPosition } from '../../node2dWorldTransform.js';
 import { camera2DView } from '../../../nodes/2d/camera2d/cameraView.js';
 import type { Camera2DProperties } from '../../../nodes/2d/camera2d/types.js';
+import type { TscnNode } from '../../../parser/types.js';
 import { CANVAS_2D_WIDTH, CANVAS_2D_HEIGHT } from '../Canvas2DStage/viewport2d.js';
 import styles from './TscnPreviewShell.module.css';
 
 /** Godot's default 2D project viewport — shared with the Canvas2DStage frame. */
 const VIEWPORT_2D = { x: CANVAS_2D_WIDTH, y: CANVAS_2D_HEIGHT };
 
+/** Stable predicate so `useLiveSceneNodes`' memo doesn't recompute each render. */
+const isCameraNode = (n: TscnNode): boolean => n.type === 'Camera3D' || n.type === 'Camera2D';
+
 export function CamerasPanel() {
   const { sceneGraph } = useHierarchy();
   const cam = useOptionalCameraControl();
   const { setMode } = useViewportMode();
-  const cameras3d = useMemo(
-    () => (sceneGraph?.flattenedNodes ?? []).filter((n) => n.data.type === 'Camera3D'),
-    [sceneGraph]
-  );
-  const cameras2d = useMemo(
-    () => (sceneGraph?.flattenedNodes ?? []).filter((n) => n.data.type === 'Camera2D'),
-    [sceneGraph]
-  );
+
+  // From the LIVE scene tree, so cameras inside instanced sub-scenes appear.
+  const cameras = useLiveSceneNodes(isCameraNode);
+  const cameras3d = cameras.filter((c) => c.node.type === 'Camera3D');
+  const cameras2d = cameras.filter((c) => c.node.type === 'Camera2D');
 
   if (cameras3d.length === 0 && cameras2d.length === 0) {
     return <div className={styles.emptyState}>No camera nodes in this scene.</div>;
@@ -66,7 +72,7 @@ export function CamerasPanel() {
             data-active={active}
             onClick={() => cam?.switchToCamera(c.path)}
           >
-            <span className={styles.camName}>{c.name}</span>
+            <span className={styles.camName}>{c.node.name}</span>
             <span className={styles.camTag}>{active ? 'active' : 'use'}</span>
           </button>
         );
@@ -76,9 +82,9 @@ export function CamerasPanel() {
           key={c.path}
           type="button"
           className={styles.camRow}
-          onClick={() => lookThrough2D(c.path, c.data.properties as Camera2DProperties)}
+          onClick={() => lookThrough2D(c.path, c.node.properties as Camera2DProperties)}
         >
-          <span className={styles.camName}>{c.name}</span>
+          <span className={styles.camName}>{c.node.name}</span>
           <span className={styles.camTag}>2D · view</span>
         </button>
       ))}

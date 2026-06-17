@@ -18,6 +18,10 @@ _Avoid_: "element", "entity".
 The parsed-and-built tree of Nodes for one or more scenes; produced by the scene-tree builder and read from `HierarchyContext`.
 _Avoid_: "scene tree" for the data structure — reserve "scene tree" for the UI panel (`SceneTreeViewer`).
 
+**Live scene tree** (`r3f/liveSceneTree.ts`):
+The composed, *runtime* tree the user navigates: the **SceneGraph**'s root Nodes with **PackedScene instancing** folded in (**Instance root merge** plus lazily-loaded sub-scenes) and **GLBSceneRoot** internals descended, in one consistent node-path space with per-sub-scene **ExtResource** scope. Unlike **SceneGraph** (static, parse-time, root-scene only) it depends on the **resource event bus** caches, so it is derived on demand from a cache snapshot. `liveSceneTree.ts` defines the single traversal; the viewport (**NodeDispatcher**), the scene tree panel, the inspector resolver, and the cameras/stats panels are its consumers.
+_Avoid_: conflating with **SceneGraph** (the parsed structure) or "scene tree" (the UI panel).
+
 **ExtResource**:
 An external file reference written `ExtResource("id")` and declared by an `[ext_resource]` heading carrying both a `uid=` and a `path="res://…"`.
 _Avoid_: "asset", "import".
