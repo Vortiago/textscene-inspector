@@ -48,6 +48,51 @@ describe('mergeInstanceRoot', () => {
     expect((merged!.properties as Record<string, unknown>).monitoring).toBe(true);
   });
 
+  it('does not let an undefined instance property clobber the root value', () => {
+    // The base Node parser emits a `transform` key for EVERY node, set to
+    // undefined when the .tscn has no transform line. A raw spread would let
+    // that undefined erase the root's real transform — the platformer GridMap
+    // bug (instance=grid_map.tscn with no transform override rendered the
+    // level at the origin instead of (-16,-6,-12)).
+    const instanceNode = node({
+      name: 'GridMap',
+      type: 'Node',
+      instance: 'ExtResource("1_t0f53")',
+      properties: { transform: undefined, visible: undefined },
+    });
+    const root = node({
+      name: 'GridMap',
+      type: 'GridMap',
+      properties: { transform: 'ROOT_XFORM', cells: 'ROOT_CELLS', visible: false },
+    });
+
+    const merged = mergeInstanceRoot(instanceNode, { nodes: [root] });
+
+    expect(merged!.properties.transform).toBe('ROOT_XFORM');
+    expect((merged!.properties as Record<string, unknown>).cells).toBe('ROOT_CELLS');
+    expect((merged!.properties as Record<string, unknown>).visible).toBe(false);
+  });
+
+  it('still lets a DEFINED instance property override the root value', () => {
+    // Guard the fix's boundary: defined values (incl. falsy 0/false/"") win.
+    const instanceNode = node({
+      name: 'Coin1',
+      type: 'Node',
+      instance: 'ExtResource("2_chew2")',
+      properties: { transform: 'INSTANCE_XFORM', visible: false },
+    });
+    const root = node({
+      name: 'Coin',
+      type: 'Area3D',
+      properties: { transform: 'ROOT_XFORM', visible: true },
+    });
+
+    const merged = mergeInstanceRoot(instanceNode, { nodes: [root] });
+
+    expect(merged!.properties.transform).toBe('INSTANCE_XFORM');
+    expect((merged!.properties as Record<string, unknown>).visible).toBe(false);
+  });
+
   it('renders the root children first, then any children the host added under the instance', () => {
     const instanceNode = node({
       name: 'Coin1',

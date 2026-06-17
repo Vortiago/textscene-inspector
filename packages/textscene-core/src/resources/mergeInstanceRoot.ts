@@ -19,6 +19,22 @@ import type { TscnNode } from '../parser/types.js';
 const GLB_SCENE_ROOT_TYPE = 'GLBSceneRoot';
 
 /**
+ * The instance node overrides only the properties it actually specifies. The
+ * base `Node` parser emits a `transform` key (and others) for EVERY node — set
+ * to `undefined` when the `.tscn` has no such line — so a raw spread of the
+ * instance properties would erase the root's real values. Stripping `undefined`
+ * keeps Godot's semantics: an absent instance property falls back to the root's.
+ * (Defined falsy values — `false`, `0`, `""` — still override, as they should.)
+ */
+function definedProperties(props: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const key of Object.keys(props)) {
+    if (props[key] !== undefined) out[key] = props[key];
+  }
+  return out;
+}
+
+/**
  * Fold a single-root `.tscn` sub-scene into its instance Node, returning the
  * merged Node — or `null` when the merge does not apply, signalling the caller
  * to keep today's nested-injection form.
@@ -52,7 +68,10 @@ export function mergeInstanceRoot(
     ...instanceNode,
     type: root.type,
     instance: root.instance,
-    properties: { ...root.properties, ...instanceNode.properties },
+    properties: {
+      ...root.properties,
+      ...definedProperties(instanceNode.properties as Record<string, unknown>),
+    },
     children: [...root.children, ...instanceNode.children],
   };
 }
