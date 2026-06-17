@@ -161,7 +161,7 @@ One channel of a **GodotAnimation** targeting `NodePath("Node:property")` with o
 _Avoid_: "channel".
 
 **Animation transport**:
-The play/pause/scrub state (`AnimationTransportContext`) and its dock-tab UI, bound to the **AnimationPlayer currently selected in the scene tree** — selection-driven, one player at a time, mirroring the Godot editor's Animation panel. Drives that player's `THREE.AnimationMixer`; starts STOPPED (authored pose preserved), play is user-initiated. The tab is shown only while an AnimationPlayer is selected; deselecting (or selecting a different node) stops playback and restores the authored pose.
+The play/pause/scrub state (`AnimationTransportContext`) and its dock-tab UI, bound to the **AnimationPlayer** (or **GLB animation driver**) **currently selected in the scene tree** — selection-driven, one driver at a time, mirroring the Godot editor's Animation panel. Drives that player's `THREE.AnimationMixer`; starts STOPPED (authored pose preserved), play is user-initiated. The tab is shown only while an AnimationPlayer is selected; deselecting (or selecting a different node) stops playback and restores the authored pose.
 _Avoid_: "scene-level transport" (it follows selection, not the whole scene); "timeline" / "player controls" for the whole transport (reserve "timeline"/"scrubber" for the seek widget).
 
 **RESET animation**:
@@ -171,6 +171,14 @@ _Avoid_: treating `RESET` as an ordinary playable clip.
 **Animation root** (`root_node`):
 The THREE object a clip's **Track** NodePaths resolve against and the **AnimationPlayer**'s mixer is rooted on — default `..` (the player's parent node). `THREE.PropertyBinding` resolves a Track's target by name through the dispatcher's (unnamed) pickable wrappers; the named, transform-bearing object the binding finds is the one the mixer overrides.
 _Avoid_: "target root".
+
+**GLB-embedded clip**:
+An animation authored *inside* a `.glb`/`.gltf` and surfaced as a ready-made `THREE.AnimationClip` straight from the glTF loader — never a **GodotAnimation** (no `[sub_resource type="Animation"]` text form, no **Track** parsing of ours). These are the clips a Godot GLB import would carry on the model's own AnimationPlayer node.
+_Avoid_: "GodotAnimation" for these (reserve that for the SubResource form); "imported animation" bare.
+
+**GLB animation driver**:
+A **GLBSceneRoot** acting as an **animation driver** — when its tree row is the selected node it registers its **GLB-embedded clip**s with the **Animation transport** and runs a `THREE.AnimationMixer` rooted on the loaded GLB object itself (no **Animation root**/`root_node`; the clips are already bound to the GLB's own node names). The GLB counterpart to an **AnimationPlayer**: same selection-driven transport, different clip source and mixer rooting (ADR-0014).
+_Avoid_: "GLB AnimationPlayer" (our tree exposes no AnimationPlayer node for a GLB instance — it is collapsed to the single GLBSceneRoot row).
 
 ## Relationships
 

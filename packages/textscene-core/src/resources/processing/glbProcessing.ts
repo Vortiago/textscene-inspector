@@ -5,6 +5,7 @@
 
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { clone as cloneSkeleton } from 'three/addons/utils/SkeletonUtils.js';
 
 /**
  * Check if a path is a GLB/GLTF file.
@@ -39,6 +40,11 @@ export async function createGLBMesh(
 ): Promise<THREE.Object3D> {
   const loader = new GLTFLoader(manager);
   const gltf = await loader.parseAsync(data, resourcePath);
+  // GLTFLoader returns embedded clips on `gltf.animations`, not on the scene
+  // object. Attach them to the scene's conventional `.animations` array so the
+  // GLB animation driver (GLBSceneRoot) can surface and play them — and so the
+  // per-consumer `cloneWithMaterials` carries them onto each instance.
+  gltf.scene.animations = gltf.animations;
   return gltf.scene;
 }
 
@@ -47,14 +53,21 @@ export async function createGLBMesh(
  * CRITICAL: THREE.Object3D can only have ONE parent at a time.
  * Without cloning, multiple instances would share the same object reference,
  * and adding it to a new parent would remove it from the previous parent.
+ *
+ * Uses SkeletonUtils.clone, not Object3D.clone(true): a plain clone leaves a
+ * cloned SkinnedMesh's `.skeleton` bound to the SOURCE bones, so animating one
+ * GLB instance would deform the cached template (and every other instance).
+ * SkeletonUtils rebinds each cloned SkinnedMesh to its cloned bones, which is
+ * load-bearing for GLB-embedded animation playback. It also copies the
+ * convention `.animations` array onto the clone so the GLB-embedded clips ride
+ * along (pinned by tests), but still shares material references — so we clone
+ * materials explicitly below, as the old plain-clone path did.
  */
 export function cloneWithMaterials(mesh: THREE.Object3D): THREE.Object3D {
-  // Clone recursively (true = deep clone including children and geometry)
-  const cloned = mesh.clone(true);
+  const cloned = cloneSkeleton(mesh);
 
-  // Clone materials for all meshes in the hierarchy
-  // CRITICAL: clone(true) clones Object3D hierarchy but NOT materials
-  // Without this, all instances would share material references
+  // SkeletonUtils shares material references between source and clone; clone
+  // them so per-instance material mutations don't bleed across instances.
   cloned.traverse((node) => {
     if (node instanceof THREE.Mesh) {
       if (Array.isArray(node.material)) {
