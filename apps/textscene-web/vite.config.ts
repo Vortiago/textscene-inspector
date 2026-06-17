@@ -4,6 +4,9 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   server: {
+    // Bind on all interfaces so the dev server is reachable from other hosts
+    // (LAN / tailnet), not just localhost.
+    host: '0.0.0.0',
     port: 3000,
     open: true,
     // Allow access over Tailscale (MagicDNS short name + full FQDN, and any
