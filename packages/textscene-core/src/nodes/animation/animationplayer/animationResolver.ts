@@ -1,0 +1,230 @@
+/**
+ * Render-side resolution of an AnimationPlayer's libraries into typed
+ * GodotAnimations. THREE-free and React-free by design: it reads only the
+ * scene's SubResource `data` strings, so it can later feed a linter rule too.
+ *
+ * Pipeline: AnimationLibraryRef[] -> AnimationLibrary `_data` map ->
+ * Animation SubResources -> value Tracks -> Keyframes. Slice-1 understands
+ * `value` tracks only; other track types resolve to zero tracks. Anything
+ * unparseable is skipped rather than thrown (lenient-renderer contract).
+ */
+
+import type { TscnInternalResource } from '../../../parser/types';
+import { parseVector2, parseVector3 } from '../../../parser/vectors';
+import type { AnimationLibraryRef } from './types';
+
+export type GodotKeyframeValue = number[] | number | boolean;
+
+export interface GodotKeyframe {
+  time: number;
+  value: GodotKeyframeValue;
+  transition: number;
+}
+
+export interface GodotTrack {
+  /** Always `'value'` in slice-1 (other types are dropped during resolution). */
+  type: string;
+  /** Node portion of the track's NodePath, relative to the animation root. */
+  targetPath: string;
+  /** Property portion of the track's NodePath (e.g. `position`, `rotation`). */
+  property: string;
+  /** Godot interpolation mode (0 nearest, 1 linear, 2 cubic). */
+  interp: number;
+  keys: GodotKeyframe[];
+}
+
+export interface GodotAnimation {
+  name: string;
+  length: number;
+  loopMode: number;
+  step: number;
+  tracks: GodotTrack[];
+}
+
+export function resolveAnimations(
+  libraries: readonly AnimationLibraryRef[],
+  internalResources: readonly TscnInternalResource[]
+): GodotAnimation[] {
+  const animations: GodotAnimation[] = [];
+  for (const lib of libraries) {
+    const libResource = findById(internalResources, lib.subResourceId);
+    if (!libResource || libResource.type !== 'AnimationLibrary') continue;
+
+    const dataStr = asString(libResource.data['_data']);
+    if (!dataStr) continue;
+
+    for (const [name, animId] of parseLibraryData(dataStr)) {
+      const animResource = findById(internalResources, animId);
+      if (!animResource || animResource.type !== 'Animation') continue;
+      animations.push(parseAnimation(name, animResource));
+    }
+  }
+  return animations;
+}
+
+const SUB_RESOURCE_ENTRY = /"([^"]+)":\s*SubResource\("([^"]+)"\)/g;
+
+function parseLibraryData(dataStr: string): Array<[string, string]> {
+  const entries: Array<[string, string]> = [];
+  for (const match of dataStr.matchAll(SUB_RESOURCE_ENTRY)) {
+    if (match[1] !== undefined && match[2] !== undefined) entries.push([match[1], match[2]]);
+  }
+  return entries;
+}
+
+function parseAnimation(name: string, resource: TscnInternalResource): GodotAnimation {
+  const data = resource.data;
+  return {
+    name,
+    length: numberOr(data['length'], 1.0),
+    loopMode: numberOr(data['loop_mode'], 0),
+    step: numberOr(data['step'], 0.1),
+    tracks: parseTracks(data),
+  };
+}
+
+function parseTracks(data: Record<string, unknown>): GodotTrack[] {
+  const tracks: GodotTrack[] = [];
+  for (let i = 0; data[`tracks/${i}/type`] !== undefined; i++) {
+    const type = stripQuotes(asString(data[`tracks/${i}/type`]) ?? '');
+    if (type !== 'value') continue;
+
+    const target = parseNodePath(asString(data[`tracks/${i}/path`]) ?? '');
+    if (!target || target.property.length === 0) continue;
+
+    const keys = parseKeys(asString(data[`tracks/${i}/keys`]) ?? '');
+    if (keys.length === 0) continue;
+
+    tracks.push({
+      type,
+      targetPath: target.targetPath,
+      property: target.property,
+      interp: numberOr(data[`tracks/${i}/interp`], 1),
+      keys,
+    });
+  }
+  return tracks;
+}
+
+const NODE_PATH_RE = /NodePath\("([^"]*)"\)/;
+
+function parseNodePath(raw: string): { targetPath: string; property: string } | null {
+  const match = NODE_PATH_RE.exec(raw);
+  if (!match || match[1] === undefined) return null;
+  const inner = match[1];
+  const colon = inner.indexOf(':');
+  if (colon === -1) return { targetPath: inner, property: '' };
+  return { targetPath: inner.slice(0, colon), property: inner.slice(colon + 1) };
+}
+
+const PACKED_FLOAT_RE = /"times":\s*PackedFloat32Array\(([^)]*)\)/;
+const PACKED_TRANSITIONS_RE = /"transitions":\s*PackedFloat32Array\(([^)]*)\)/;
+
+function parseKeys(keysStr: string): GodotKeyframe[] {
+  if (keysStr.length === 0) return [];
+
+  const timesMatch = PACKED_FLOAT_RE.exec(keysStr);
+  if (!timesMatch || timesMatch[1] === undefined) return [];
+  const times = parseFloatList(timesMatch[1]);
+  if (times.length === 0) return [];
+
+  const transMatch = PACKED_TRANSITIONS_RE.exec(keysStr);
+  const transitions =
+    transMatch && transMatch[1] !== undefined ? parseFloatList(transMatch[1]) : [];
+
+  const values = parseValueArray(keysStr);
+
+  return times.map((time, i) => ({
+    time,
+    value: values[i] ?? 0,
+    transition: transitions[i] ?? 1.0,
+  }));
+}
+
+function parseFloatList(raw: string): number[] {
+  const trimmed = raw.trim();
+  if (trimmed.length === 0) return [];
+  return trimmed.split(',').map((s) => parseFloat(s.trim()));
+}
+
+/** Extracts and decodes the `"values": [...]` bracketed array (paren-aware). */
+function parseValueArray(keysStr: string): GodotKeyframeValue[] {
+  const start = keysStr.indexOf('"values":');
+  if (start === -1) return [];
+  const open = keysStr.indexOf('[', start);
+  if (open === -1) return [];
+
+  let depth = 0;
+  let end = -1;
+  for (let i = open; i < keysStr.length; i++) {
+    const ch = keysStr[i];
+    if (ch === '[') depth++;
+    else if (ch === ']') {
+      depth--;
+      if (depth === 0) {
+        end = i;
+        break;
+      }
+    }
+  }
+  if (end === -1) return [];
+
+  return splitTopLevel(keysStr.slice(open + 1, end)).map(decodeValue);
+}
+
+/** Splits a comma list while ignoring commas nested in parentheses/brackets. */
+function splitTopLevel(body: string): string[] {
+  const parts: string[] = [];
+  let depth = 0;
+  let current = '';
+  for (const ch of body) {
+    if (ch === '(' || ch === '[') depth++;
+    else if (ch === ')' || ch === ']') depth--;
+    if (ch === ',' && depth === 0) {
+      parts.push(current);
+      current = '';
+    } else {
+      current += ch;
+    }
+  }
+  if (current.trim().length > 0) parts.push(current);
+  return parts.map((p) => p.trim()).filter((p) => p.length > 0);
+}
+
+function decodeValue(raw: string): GodotKeyframeValue {
+  if (raw === 'true') return true;
+  if (raw === 'false') return false;
+  if (raw.startsWith('Vector3')) {
+    const v = parseVector3(raw);
+    return [v.x, v.y, v.z];
+  }
+  if (raw.startsWith('Vector2')) {
+    const v = parseVector2(raw);
+    return [v.x, v.y];
+  }
+  return parseFloat(raw);
+}
+
+function findById(
+  resources: readonly TscnInternalResource[],
+  id: string
+): TscnInternalResource | undefined {
+  return resources.find((r) => {
+    const dataId = (r.data as { id?: string }).id;
+    return r.id === id || dataId === id;
+  });
+}
+
+function asString(value: unknown): string | undefined {
+  return typeof value === 'string' ? value : undefined;
+}
+
+function numberOr(value: unknown, fallback: number): number {
+  if (typeof value !== 'string') return fallback;
+  const n = parseFloat(value);
+  return Number.isNaN(n) ? fallback : n;
+}
+
+function stripQuotes(raw: string): string {
+  return raw.replace(/^["']|["']$/g, '').trim();
+}

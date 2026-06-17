@@ -22,10 +22,18 @@ export enum MethodCallMode {
   IMMEDIATE = 1,
 }
 
-/** Minimal parsed clip descriptor surfaced in the details panel. */
-export interface AnimationClip {
-  /** Animation name as authored in Godot (e.g. "idle", "walk"). */
+/**
+ * Reference to an AnimationLibrary SubResource declared on the node via
+ * `libraries/<name> = SubResource("id")`. The empty-name default library is
+ * written `libraries/` (so `name` is `''`). The animations themselves live in
+ * the referenced AnimationLibrary sub_resource and are resolved render-side
+ * (see animationResolver.ts) — the parser only captures the reference.
+ */
+export interface AnimationLibraryRef {
+  /** Library name; `''` for the default `libraries/` library. */
   name: string;
+  /** SubResource id of the referenced AnimationLibrary. */
+  subResourceId: string;
 }
 
 export interface AnimationPlayerProperties extends Node3DProperties {
@@ -59,6 +67,6 @@ export interface AnimationPlayerProperties extends Node3DProperties {
   /** Node path to the root node whose descendants are animatable. */
   root_node: string;
 
-  /** Parsed clip names extracted from anims/* property keys. */
-  clips: AnimationClip[];
+  /** AnimationLibrary references captured from `libraries/<name>` keys. */
+  libraries: AnimationLibraryRef[];
 }

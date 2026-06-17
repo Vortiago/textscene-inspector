@@ -1,0 +1,42 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  font-size: 0.85rem;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.label {
+  color: var(--ts-text-muted, #888);
+}
+
+.select {
+  flex: 1;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.timecode {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  color: var(--ts-text-muted, #888);
+}
+
+.scrubber {
+  width: 100%;
+}
+
+.empty {
+  padding: 0.75rem;
+  color: var(--ts-text-muted, #888);
+}

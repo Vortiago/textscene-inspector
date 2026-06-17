@@ -15,8 +15,8 @@
  * scene cache has the path, the sub-scene's nodes render as inline
  * children of the instance row.
  */
-import { describe, expect, it } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import * as THREE from 'three';
 import { SceneTreeViewer } from './SceneTreeViewer';
@@ -156,6 +156,33 @@ describe('<SceneTreeViewer> WI-HALL-1 — sub-scene inlining', () => {
     // the expand chevron (▶), not the leaf bullet (•).
     expect(instanceRow!.textContent).toContain('▶');
     expect(instanceRow!.textContent).not.toBe('•');
+  });
+
+  it('offers an "open sub-scene standalone" action that reports the instance res:// path', () => {
+    const { loader } = makeLoader();
+    const graph = createSceneGraphFromTscnScene({
+      nodes: [makeNode('Coin1', 'Node3D', { instance: 'ExtResource("coin")' })],
+      externalResources: [makeExtResource('coin', 'res://coin/coin.tscn')],
+      internalResources: [],
+    });
+    const onOpenSubScene = vi.fn();
+
+    render(<SceneTreeViewer onOpenSubScene={onOpenSubScene} />, { wrapper: wrap(loader, graph) });
+
+    const button = screen.getByRole('button', { name: /open sub-scene standalone/i });
+    act(() => fireEvent.click(button));
+    expect(onOpenSubScene).toHaveBeenCalledWith('res://coin/coin.tscn');
+  });
+
+  it('shows no open-sub-scene action on non-instance rows', () => {
+    const { loader } = makeLoader();
+    const graph = createSceneGraphFromTscnScene({
+      nodes: [makeNode('Plain', 'Node3D')],
+      externalResources: [],
+      internalResources: [],
+    });
+    render(<SceneTreeViewer onOpenSubScene={vi.fn()} />, { wrapper: wrap(loader, graph) });
+    expect(screen.queryByRole('button', { name: /open sub-scene standalone/i })).toBeNull();
   });
 
   it('inline children of an instance node coexist with sub-scene children', () => {

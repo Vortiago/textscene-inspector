@@ -286,6 +286,24 @@
   flex-shrink: 0;
 }
 
+.openSubSceneIcon {
+  font-size: 0.75rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0 2px;
+  background: none;
+  border: none;
+  color: inherit;
+  opacity: 0.7;
+  transition: opacity 0.12s;
+  border-radius: var(--tsi-radius-sm);
+
+  &:hover {
+    opacity: 1;
+    background: var(--tsi-bg-hover);
+  }
+}
+
 .visibilityIcon {
   font-size: 0.75rem;
   cursor: pointer;
