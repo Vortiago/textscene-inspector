@@ -29,6 +29,27 @@ export interface CachedSceneSource {
 }
 
 /**
+ * The node as the tree and viewport render it: a single-root `.tscn` instance
+ * COLLAPSES into its sub-scene root (Instance root merge, ADR-0013), adopting
+ * the root's type/properties/children. Returning the merged node keeps the
+ * Inspector's type + property display consistent with the tree row badge and
+ * the viewport for a selected instance row. `.glb`/multi-root instances (and
+ * non-instances, or not-yet-cached scenes) are returned unchanged.
+ */
+function collapsedNode(
+  node: TscnNode,
+  externalResources: readonly TscnExternalResource[],
+  sceneCache: CachedSceneSource
+): TscnNode {
+  if (!node.instance) return node;
+  const scenePath = resolveInstancePath(node.instance, externalResources);
+  if (!scenePath) return node;
+  const cached = sceneCache.getCached(scenePath);
+  if (!cached) return node;
+  return mergeInstanceRoot(node, cached) ?? node;
+}
+
+/**
  * Return the children the tree shows for a node. For an instance node this
  * mirrors **Instance root merge** (ADR-0013): a single non-GLB root collapses
  * into the node, so its children are the root's children (followed by any
@@ -89,5 +110,7 @@ export function resolveNodeByPath(
     candidates = childrenForNode(match, externalResources, sceneCache);
   }
 
-  return current;
+  // Return the node as the tree/viewport render it — a collapsed instance row
+  // resolves to its merged (root-typed) identity, not the bare wrapper.
+  return current ? collapsedNode(current, externalResources, sceneCache) : null;
 }

@@ -71,7 +71,7 @@ describe('resolveNodeByPath', () => {
     ).toBeNull();
   });
 
-  it('resolves the collapsed instance node itself to the merged (root-typed) node', () => {
+  it('resolves a selected collapsed instance node to the merged (root-typed) node', () => {
     const subScene: TscnScene = {
       nodes: [makeNode('Coin', 'Area3D', { children: [makeNode('Circle', 'MeshInstance3D')] })],
       externalResources: [],
@@ -84,9 +84,10 @@ describe('resolveNodeByPath', () => {
       [{ id: '3_as5ck', path: 'res://roof_lamp.tscn', type: 'PackedScene' }],
       cacheOf({ 'res://roof_lamp.tscn': subScene })
     );
-    // resolveNodeByPath returns the matched node from the live root list; the
-    // instance node keeps its identity, while its CHILDREN come from the merge.
+    // The Inspector must see the SAME identity the tree row + viewport show:
+    // the merged node keeps the instance name but adopts the root's type.
     expect(node?.name).toBe('Coin1');
+    expect(node?.type).toBe('Area3D');
   });
 
   it('returns null when the sub-scene is not yet cached', () => {
