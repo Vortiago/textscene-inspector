@@ -131,8 +131,12 @@ The async resource pipeline — a render component calls `useResource(path, type
 _Avoid_: "asset loader" (reserve `ResourceLoader` for the host implementation).
 
 **PackedScene instancing**:
-A Node with `instance = ExtResource("scene_id")` whose referenced `.tscn`/`.glb` is loaded and injected as children under a nested resources provider.
+A Node with `instance = ExtResource("scene_id")` whose referenced `.tscn`/`.glb` is loaded and composed into the host tree. A single-root `.tscn` is folded in via **Instance root merge**; a `.glb` (or any multi-root scene) is instead injected as children under a nested resources provider.
 _Avoid_: "include", "prefab".
+
+**Instance root merge** (`mergeInstanceRoot`):
+The collapse of the redundant wrapper level for a single-root `.tscn` instance: the instance Node *becomes* the sub-scene's root — adopting the root's `type` and `children`, merging the root's parsed `properties` under the instance's own overrides (instance wins per-key, so the instance `transform` **replaces** the root's, matching Godot — not composed on top), while keeping the instance ref so the row still carries the 📦 badge and ⤢ open-standalone affordance. Applied identically in both resolution paths (tree `useSubSceneChildren`/`TreeNode` and viewport `NodeDispatcher`) so node paths stay consistent. Skipped for `.glb` synthetic-root instances (`GLBSceneRoot`) and any scene with multiple top-level nodes, which fall back to the nested-injection form.
+_Avoid_: "wrapper node", "prefab flattening"; "compose" for the transform (it is a replace).
 
 **Sprite-frame composition** (`r3f/spriteFrame.ts`):
 The shared region_rect + hframes/vframes UV math for SpriteBase nodes — Godot computes a base_rect (region when enabled, else the full texture) and then subdivides it by the frame grid; the two compose. `composeFrameTexture` windows a texture clone's UVs to the current frame, `frameSizePx` returns the frame's pixel size. Flip handling and world sizing stay per-slice (Sprite2D mirrors via mesh scale at 1 px = 1 unit; Sprite3D mirrors via UV negation and scales by `pixel_size`).

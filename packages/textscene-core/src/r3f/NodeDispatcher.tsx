@@ -36,6 +36,7 @@ import { useCanvasWorkspace } from './contexts/CanvasWorkspaceContext.js';
 import { TWO_D_UI_TYPES } from './controls/has2DUIContent.js';
 import { NodePathProvider } from './contexts/NodePathContext.js';
 import { useResource, useResourceLoader } from '../resources/useResource.js';
+import { mergeInstanceRoot } from '../resources/mergeInstanceRoot.js';
 import { parseResourceReference, resolveInstancePath } from '../resources/SubResourceResolver.js';
 import {
   SceneResourcesProvider,
@@ -72,7 +73,37 @@ interface DispatchedNodeProps {
   withNodePath: (path: string) => ReturnType<ReturnType<typeof useViewportSelection>['withNodePath']>;
 }
 
+/**
+ * Thin dispatch: a node with an `instance` ref resolves its sub-scene (and may
+ * collapse via Instance root merge) in `InstancedNode`; every other node — and
+ * every already-merged node — renders directly in `PlainNode`. Holds no hooks
+ * itself so the branch is free of rules-of-hooks concerns.
+ */
 function DispatchedNode({ node, path, withNodePath }: DispatchedNodeProps): ReactNode {
+  if (node.instance) {
+    return <InstancedNode node={node} path={path} withNodePath={withNodePath} />;
+  }
+  return <PlainNode node={node} path={path} withNodePath={withNodePath} />;
+}
+
+interface PlainNodeProps extends DispatchedNodeProps {
+  /** Extra rendered subtree appended after the node's own inline children. */
+  children?: ReactNode;
+}
+
+/**
+ * Renders one non-instance node into its pickable `<group>` + registered
+ * component, dispatching its inline children and any `extraChildren` the
+ * instance fallback supplies. This is the leaf of every dispatch: a merged
+ * instance root (a plain node by the time it reaches here) renders through it
+ * exactly like an authored node.
+ */
+function PlainNode({
+  node,
+  path,
+  withNodePath,
+  children: extraChildren,
+}: PlainNodeProps): ReactNode {
   const Component = nodeComponentRegistry.get(node.type) ?? GenericNodeFallback;
   const handlers = withNodePath(path);
   const { hiddenNodePaths, registerNodeObject, unregisterNodeObject } = useSelection();
@@ -117,34 +148,12 @@ function DispatchedNode({ node, path, withNodePath }: DispatchedNodeProps): Reac
     />
   ));
 
-  // Nodes with `instance = ExtResource("scene_id")` are external-scene
-  // instances. The referenced PackedScene loads asynchronously via
-  // `useResource`; while pending we render only the instancing node's
-  // own subtree, and once loaded we inject the loaded scene's root
-  // nodes as additional children. The instancing node's component
-  // (typically Node3D) already wraps everything in a transform-aware
-  // <group>, so the loaded subtree inherits the instance transform.
-  // When an instancing node also declares inline children, those children
-  // are Godot instance-property overrides. If the instance resolves to a
-  // GLB, `GLBSceneRoot` matches them onto the GLB's internal nodes by name
-  // (BUG 2 — see GlbOverridesContext). Publishing `node.children` here is a
-  // no-op for non-GLB instances (no GLBSceneRoot consumes the context).
-  const instanceChildren = node.instance ? (
-    <GlbOverridesProvider overrides={node.children}>
-      <InstancedSceneSubtree
-        instanceRef={node.instance}
-        path={path}
-        withNodePath={withNodePath}
-      />
-    </GlbOverridesProvider>
-  ) : null;
-
   const children: ReactNode[] = [];
   if (inlineChildren.length > 0) {
     children.push(<Fragment key="__inline">{inlineChildren}</Fragment>);
   }
-  if (instanceChildren) {
-    children.push(<Fragment key="__instance">{instanceChildren}</Fragment>);
+  if (extraChildren) {
+    children.push(<Fragment key="__extra">{extraChildren}</Fragment>);
   }
 
   // The pickable wrapper lives above the rendered component so that any
@@ -174,36 +183,30 @@ function DispatchedNode({ node, path, withNodePath }: DispatchedNodeProps): Reac
   );
 }
 
-interface InstancedSceneSubtreeProps {
-  /** Raw TSCN instance reference, typically `ExtResource("1_cube")`. */
-  instanceRef: string;
-  /** Path of the instancing node (used as the prefix for loaded children). */
-  path: string;
-  withNodePath: DispatchedNodeProps['withNodePath'];
-}
-
 /**
- * Resolves the `ExtResource("id")` form to a `res://` path via the parent
- * scene's `externalResources`, hits `useResource('PackedScene', path)`,
- * and dispatches the loaded scene's root nodes. Missing/error states
- * render a magenta placeholder + drei `<Text>` label naming the path,
- * matching the missing-texture UX from WI-R3F-7.
+ * Resolves a node's `instance = ExtResource("id")` ref to a `res://` path,
+ * loads the PackedScene via `useResource`, and composes it into the tree.
  *
- * The loaded scene's `internalResources` / `externalResources` are
- * scoped to descendants via a nested `<SceneResourcesProvider>` so
- * SubResource lookups inside the instanced subtree (mesh references,
- * material overrides) resolve against the loaded scene's resource
- * pool, not the parent's. Nested instancing falls out naturally:
- * each `<DispatchedNode>` inside an already-instanced subtree runs
- * the same recursion if it carries its own `instance` ref.
+ * Single-root `.tscn` instances collapse via **Instance root merge** (ADR-0013):
+ * the instance node *becomes* the sub-scene root (adopting its type, children,
+ * and merged properties — the instance transform replacing the root's) and is
+ * re-dispatched at the SAME path. Nested-root instances recurse naturally: the
+ * merged node carries the root's own instance ref, so re-dispatch collapses the
+ * next level too, and each authored child instance merges on its own turn.
+ *
+ * `.glb` synthetic roots and multi-root scenes fall back to the historical
+ * nested-injection form — the instancing node's own component renders, the
+ * loaded roots are injected as children, and `GlbOverridesProvider` exposes the
+ * instance's inline children so `GLBSceneRoot` can match GLB internals by name.
+ *
+ * Either way the loaded scene's `internalResources` / `externalResources` are
+ * scoped to descendants via a nested `<SceneResourcesProvider>` so SubResource
+ * lookups inside the instanced subtree resolve against the loaded pool.
  */
-function InstancedSceneSubtree({
-  instanceRef,
-  path,
-  withNodePath,
-}: InstancedSceneSubtreeProps): ReactNode {
+function InstancedNode({ node, path, withNodePath }: DispatchedNodeProps): ReactNode {
   const { externalResources } = useSceneResources();
   const loader = useResourceLoader();
+  const instanceRef = node.instance ?? '';
   const scenePath = resolveInstancePath(instanceRef, externalResources);
 
   // Register the PackedScene with SceneLoader before the `useResource`
@@ -226,32 +229,53 @@ function InstancedSceneSubtree({
 
   const result = useResource<TscnScene>(scenePath ?? '', 'PackedScene');
 
-  if (!scenePath) {
+  // Unresolvable ref or failed load: keep the node visible with a magenta
+  // placeholder child, matching the missing-texture UX (WI-R3F-7).
+  if (!scenePath || result.status === 'unavailable') {
     return (
-      <MissingResourcePlaceholder shape="box" />
+      <PlainNode node={node} path={path} withNodePath={withNodePath}>
+        <MissingResourcePlaceholder shape="box" />
+      </PlainNode>
     );
   }
-  if (result.status === 'unavailable') {
-    return <MissingResourcePlaceholder shape="box" />;
-  }
+  // Still loading: render the instancing node's own subtree; the merged
+  // result swaps in once the sub-scene arrives.
   if (result.status === 'pending' || !result.value) {
-    return null;
+    return <PlainNode node={node} path={path} withNodePath={withNodePath} />;
   }
 
   const loadedScene = result.value;
+  const merged = mergeInstanceRoot(node, loadedScene);
+
+  if (merged) {
+    return (
+      <SceneResourcesProvider
+        internalResources={loadedScene.internalResources}
+        externalResources={loadedScene.externalResources}
+      >
+        <DispatchedNode node={merged} path={path} withNodePath={withNodePath} />
+      </SceneResourcesProvider>
+    );
+  }
+
+  // Fallback (`.glb` synthetic root / multi-root): historical nested form.
   return (
-    <SceneResourcesProvider
-      internalResources={loadedScene.internalResources}
-      externalResources={loadedScene.externalResources}
-    >
-      {loadedScene.nodes.map((child) => (
-        <DispatchedNode
-          key={child.name}
-          node={child}
-          path={joinPath(path, child.name)}
-          withNodePath={withNodePath}
-        />
-      ))}
-    </SceneResourcesProvider>
+    <GlbOverridesProvider overrides={node.children}>
+      <PlainNode node={node} path={path} withNodePath={withNodePath}>
+        <SceneResourcesProvider
+          internalResources={loadedScene.internalResources}
+          externalResources={loadedScene.externalResources}
+        >
+          {loadedScene.nodes.map((child) => (
+            <DispatchedNode
+              key={child.name}
+              node={child}
+              path={joinPath(path, child.name)}
+              withNodePath={withNodePath}
+            />
+          ))}
+        </SceneResourcesProvider>
+      </PlainNode>
+    </GlbOverridesProvider>
   );
 }

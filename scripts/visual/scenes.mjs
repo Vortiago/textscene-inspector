@@ -34,6 +34,11 @@ export const GOLDEN_SCENES = [
   // the stability-gated visual set (same rationale as Label3D above).
   { name: 'mixed-nodes', file: 'integration-mixed-nodes.tscn' },
   { name: 'hallway-mockup', file: 'example-hallway-mockup.tscn' },
+  // Instance root merge (ADR-0013): two instances of unit-instance-child.tscn
+  // collapse into Area3D coins at x=±1.5. Pins the rendered pixels of a
+  // sub-scene-instancing scene so the wrapper-collapse + transform-replace
+  // cannot silently shift them.
+  { name: 'instanced-subscene', file: 'integration-instanced-subscene.tscn' },
   // Thin collision-gizmo lines are the most AA-sensitive content in the set.
   { name: 'physics-bodies', file: 'unit-physics-bodies.tscn', maxDiffPct: 0.3 },
 ];

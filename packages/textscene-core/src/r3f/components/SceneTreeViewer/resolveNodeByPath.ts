@@ -18,6 +18,7 @@
  */
 import type { TscnNode, TscnExternalResource } from '../../../parser/types';
 import { resolveInstancePath } from '../../../resources/SubResourceResolver';
+import { mergeInstanceRoot } from '../../../resources/mergeInstanceRoot';
 
 /**
  * Minimal read surface the resolver needs from the loader's scene cache.
@@ -28,8 +29,32 @@ export interface CachedSceneSource {
 }
 
 /**
- * Return the children the tree shows for a node: its inline children
- * plus, for an instance node, the cached sub-scene's root nodes.
+ * The node as the tree and viewport render it: a single-root `.tscn` instance
+ * COLLAPSES into its sub-scene root (Instance root merge, ADR-0013), adopting
+ * the root's type/properties/children. Returning the merged node keeps the
+ * Inspector's type + property display consistent with the tree row badge and
+ * the viewport for a selected instance row. `.glb`/multi-root instances (and
+ * non-instances, or not-yet-cached scenes) are returned unchanged.
+ */
+function collapsedNode(
+  node: TscnNode,
+  externalResources: readonly TscnExternalResource[],
+  sceneCache: CachedSceneSource
+): TscnNode {
+  if (!node.instance) return node;
+  const scenePath = resolveInstancePath(node.instance, externalResources);
+  if (!scenePath) return node;
+  const cached = sceneCache.getCached(scenePath);
+  if (!cached) return node;
+  return mergeInstanceRoot(node, cached) ?? node;
+}
+
+/**
+ * Return the children the tree shows for a node. For an instance node this
+ * mirrors **Instance root merge** (ADR-0013): a single non-GLB root collapses
+ * into the node, so its children are the root's children (followed by any
+ * host-added children) — NOT the root itself. `.glb` synthetic roots and
+ * multi-root scenes keep the nested form, where the loaded roots are children.
  */
 function childrenForNode(
   node: TscnNode,
@@ -45,9 +70,13 @@ function childrenForNode(
   const cached = sceneCache.getCached(scenePath);
   if (!cached) return inline;
 
-  // Inline children render before sub-scene children in TreeNode, so the
-  // resolver must search inline first to match the tree's view of the
-  // hierarchy.
+  // Collapsed single-root instance: descend into the merged children (root's
+  // children first, then host-added), matching TreeNode's merged child list.
+  const merged = mergeInstanceRoot(node, cached);
+  if (merged) return merged.children;
+
+  // Fallback (GLB / multi-root): inline children render before the loaded
+  // roots in TreeNode, so search inline first to match the tree's hierarchy.
   return inline.length > 0 ? [...inline, ...cached.nodes] : cached.nodes;
 }
 
@@ -56,10 +85,11 @@ function childrenForNode(
  * starting from `roots`, descending into sub-scenes at instance nodes.
  * Returns the matched node, or null when any segment is unresolvable.
  *
- * Note: a sub-scene's root nodes are addressed under the INSTANCE node's
- * path (TreeNode passes `parentPath = nodePath` for both inline and
- * sub-scene children), so the sub-scene root is just the next path
- * segment — there is no extra synthetic segment to skip.
+ * Note: a single-root sub-scene COLLAPSES into its instance node (Instance
+ * root merge, ADR-0013), so the next path segment after an instance node is
+ * the sub-scene root's child — the root's own name is not a segment. This
+ * matches the path the tree and viewport produce (`Coins/Coin1/Animation`,
+ * not `Coins/Coin1/Coin/Animation`), keeping selection binding consistent.
  */
 export function resolveNodeByPath(
   path: string,
@@ -80,5 +110,7 @@ export function resolveNodeByPath(
     candidates = childrenForNode(match, externalResources, sceneCache);
   }
 
-  return current;
+  // Return the node as the tree/viewport render it — a collapsed instance row
+  // resolves to its merged (root-typed) identity, not the bare wrapper.
+  return current ? collapsedNode(current, externalResources, sceneCache) : null;
 }

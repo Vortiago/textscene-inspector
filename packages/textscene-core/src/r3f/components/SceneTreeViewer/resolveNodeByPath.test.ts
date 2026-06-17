@@ -31,10 +31,14 @@ describe('resolveNodeByPath', () => {
     expect(node?.name).toBe('Table');
   });
 
-  it('descends into an instanced sub-scene interior (the BUG 1 path)', () => {
+  it('descends into a collapsed instanced sub-scene interior (BUG 1 + ADR-0013)', () => {
+    // The sub-scene root 'LampBody' collapses INTO the instance node
+    // 'roof_lamp' (Instance root merge), so the interior 'plafoniera' is
+    // addressed directly under the instance node — there is no extra root
+    // segment. The path matches what the tree and viewport produce.
     const subScene: TscnScene = {
       nodes: [
-        makeNode('roof_lamp', 'Node3D', {
+        makeNode('LampBody', 'Node3D', {
           children: [makeNode('plafoniera', 'MeshInstance3D')],
         }),
       ],
@@ -48,13 +52,42 @@ describe('resolveNodeByPath', () => {
     ];
 
     const node = resolveNodeByPath(
-      'HallwayGeometry/roof_lamp/roof_lamp/plafoniera',
+      'HallwayGeometry/roof_lamp/plafoniera',
       roots,
       EXT,
       cacheOf({ 'res://roof_lamp.tscn': subScene })
     );
     expect(node?.name).toBe('plafoniera');
     expect(node?.type).toBe('MeshInstance3D');
+
+    // The collapsed root's own name is NOT a path segment anymore.
+    expect(
+      resolveNodeByPath(
+        'HallwayGeometry/roof_lamp/LampBody/plafoniera',
+        roots,
+        EXT,
+        cacheOf({ 'res://roof_lamp.tscn': subScene })
+      )
+    ).toBeNull();
+  });
+
+  it('resolves a selected collapsed instance node to the merged (root-typed) node', () => {
+    const subScene: TscnScene = {
+      nodes: [makeNode('Coin', 'Area3D', { children: [makeNode('Circle', 'MeshInstance3D')] })],
+      externalResources: [],
+      internalResources: [],
+    };
+    const roots = [makeNode('Coin1', 'Node3D', { instance: 'ExtResource("3_as5ck")' })];
+    const node = resolveNodeByPath(
+      'Coin1',
+      roots,
+      [{ id: '3_as5ck', path: 'res://roof_lamp.tscn', type: 'PackedScene' }],
+      cacheOf({ 'res://roof_lamp.tscn': subScene })
+    );
+    // The Inspector must see the SAME identity the tree row + viewport show:
+    // the merged node keeps the instance name but adopts the root's type.
+    expect(node?.name).toBe('Coin1');
+    expect(node?.type).toBe('Area3D');
   });
 
   it('returns null when the sub-scene is not yet cached', () => {
