@@ -4,7 +4,14 @@
  */
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { buildGlbHierarchy, glbDisplayType, glbHierarchyToTscnNodes } from './glbHierarchy';
+import {
+  buildGlbHierarchy,
+  glbDisplayType,
+  glbHierarchyToTscnNodes,
+  glbSceneRootChildren,
+  GLB_ANIMATION_PLAYER_NAME,
+  GLB_ANIMATION_PLAYER_TYPE,
+} from './glbHierarchy';
 
 function named<T extends THREE.Object3D>(obj: T, name: string): T {
   obj.name = name;
@@ -72,5 +79,30 @@ describe('glbHierarchyToTscnNodes', () => {
     // Names are the relPath segments → the tree's joinPath() reproduces relPath.
     expect(nodes[2]!.children[0]!.name).toBe('hand');
     expect((nodes[2]!.children[0]!.properties as Record<string, unknown>).glbRelPath).toBe('Armature/hand');
+  });
+});
+
+describe('glbSceneRootChildren', () => {
+  it('appends an AnimationPlayer node when the GLB carries clips (Godot parity)', () => {
+    const root = new THREE.Group();
+    root.add(named(new THREE.Mesh(), 'body'));
+    (root as THREE.Object3D & { animations: THREE.AnimationClip[] }).animations = [
+      new THREE.AnimationClip('idle', 1, []),
+      new THREE.AnimationClip('run', 1, []),
+    ];
+
+    const nodes = glbSceneRootChildren(root);
+    expect(nodes.map((n) => n.name)).toEqual(['body', GLB_ANIMATION_PLAYER_NAME]);
+    const ap = nodes.at(-1)!;
+    expect(ap.type).toBe(GLB_ANIMATION_PLAYER_TYPE);
+    expect(ap.children).toEqual([]);
+    expect((ap.properties as Record<string, unknown>).glbClipNames).toEqual(['idle', 'run']);
+  });
+
+  it('omits the AnimationPlayer node when the GLB has no clips', () => {
+    const root = new THREE.Group();
+    root.add(named(new THREE.Mesh(), 'body'));
+    const nodes = glbSceneRootChildren(root);
+    expect(nodes.map((n) => n.name)).toEqual(['body']);
   });
 });

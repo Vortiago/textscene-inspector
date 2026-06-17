@@ -117,3 +117,39 @@ export function glbHierarchyToTscnNodes(nodes: readonly GlbHierarchyNode[]): Tsc
     properties: { glbDisplayType: n.displayType, glbRelPath: n.relPath } as Record<string, unknown>,
   }));
 }
+
+/**
+ * Tree/inspector node name + type for a GLB's animations. Godot's glTF importer
+ * exposes a model's clips on an `AnimationPlayer` node *inside* the imported
+ * hierarchy (a child of the root), not on the root itself — so we surface them
+ * the same way. The type is `GLB`-prefixed so `isRenderableNodeType` treats it
+ * as a supported display type; selecting this row drives the Animation tab.
+ */
+export const GLB_ANIMATION_PLAYER_NAME = 'AnimationPlayer';
+export const GLB_ANIMATION_PLAYER_TYPE = 'GLBAnimationPlayer';
+
+/**
+ * The synthetic tree children of a `GLBSceneRoot`: the GLB's internal hierarchy
+ * (WI-C), plus — when the GLB carries animation clips — an `AnimationPlayer`
+ * node that surfaces those clips in the hierarchy (Godot parity) and activates
+ * the Animation transport when selected. Centralised so the tree
+ * (`useGlbChildren`) and the inspector resolver (`resolveNodeByPath`) produce
+ * the SAME children, keeping row paths and selection in lockstep.
+ */
+export function glbSceneRootChildren(root: THREE.Object3D): TscnNode[] {
+  const nodes = glbHierarchyToTscnNodes(buildGlbHierarchy(root));
+  const clips = root.animations;
+  if (clips.length > 0) {
+    nodes.push({
+      name: GLB_ANIMATION_PLAYER_NAME,
+      type: GLB_ANIMATION_PLAYER_TYPE,
+      children: [],
+      properties: {
+        glbDisplayType: 'AnimationPlayer',
+        glbRelPath: GLB_ANIMATION_PLAYER_NAME,
+        glbClipNames: clips.map((c) => c.name),
+      } as Record<string, unknown>,
+    });
+  }
+  return nodes;
+}

@@ -21,7 +21,7 @@ import type { TscnNode, TscnExternalResource } from '../../../parser/types';
 import { resolveInstancePath } from '../../../resources/SubResourceResolver';
 import { mergeInstanceRoot } from '../../../resources/mergeInstanceRoot';
 import { GLB_SCENE_ROOT_TYPE } from '../../internal/glb-scene-root/Component';
-import { buildGlbHierarchy, glbHierarchyToTscnNodes } from '../../internal/glb-scene-root/glbHierarchy';
+import { glbSceneRootChildren } from '../../internal/glb-scene-root/glbHierarchy';
 
 /**
  * Minimal read surface the resolver needs from the loader's scene cache.
@@ -77,7 +77,7 @@ function childrenForNode(
   if (node.type === GLB_SCENE_ROOT_TYPE && glbCache) {
     const glbPath = (node.properties as Record<string, unknown>).glbPath as string | undefined;
     const object = glbPath ? glbCache.getCached(glbPath) : undefined;
-    if (object) return glbHierarchyToTscnNodes(buildGlbHierarchy(object));
+    if (object) return glbSceneRootChildren(object);
   }
 
   if (!node.instance) return inline;

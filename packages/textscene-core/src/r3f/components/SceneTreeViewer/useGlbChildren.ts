@@ -12,7 +12,7 @@ import type * as THREE from 'three';
 import type { TscnNode } from '../../../parser/types.js';
 import { useResource } from '../../../resources/useResource.js';
 import { GLB_SCENE_ROOT_TYPE } from '../../internal/glb-scene-root/Component.js';
-import { buildGlbHierarchy, glbHierarchyToTscnNodes } from '../../internal/glb-scene-root/glbHierarchy.js';
+import { glbSceneRootChildren } from '../../internal/glb-scene-root/glbHierarchy.js';
 
 export function useGlbChildren(node: TscnNode): readonly TscnNode[] | null {
   const glbPath =
@@ -23,6 +23,6 @@ export function useGlbChildren(node: TscnNode): readonly TscnNode[] | null {
 
   return useMemo(() => {
     if (!glbPath || result.status !== 'loaded' || !result.value) return null;
-    return glbHierarchyToTscnNodes(buildGlbHierarchy(result.value));
+    return glbSceneRootChildren(result.value);
   }, [glbPath, result.status, result.value]);
 }
