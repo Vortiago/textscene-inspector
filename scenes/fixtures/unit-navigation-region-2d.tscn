@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3 uid="uid://unitnavregion2d"]
+
+[ext_resource type="NavigationPolygon" path="res://unit-nav-polygon-2d.tres" id="1_poly"]
+
+[node name="Root" type="Node2D"]
+
+[node name="NavigationRegion2D" type="NavigationRegion2D" parent="."]
+navigation_polygon = ExtResource("1_poly")

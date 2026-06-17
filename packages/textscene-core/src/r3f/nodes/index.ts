@@ -33,6 +33,8 @@ import '../../nodes/audio/audiostreamplayer2d/index.r3f';
 import '../../nodes/3d/label3d/index.r3f';
 import '../../nodes/3d/sprite3d/index.r3f';
 import '../../nodes/3d/marker3d/index.r3f';
+import '../../nodes/3d/gridmap/index.r3f';
+import '../../nodes/3d/navigationregion3d/index.r3f';
 import '../../nodes/audio/audiostreamplayer3d/index.r3f';
 import '../../nodes/animation/animationplayer/index.r3f';
 import '../../nodes/animation/animationtree/index.r3f';
@@ -44,5 +46,6 @@ import '../../nodes/physics/2d/index.r3f';
 import '../internal/glb-scene-root/index';
 import '../../nodes/2d/tiles/tilemaplayer/index.r3f';
 import '../../nodes/2d/tiles/tilemap/index.r3f';
+import '../../nodes/2d/navigationregion2d/index.r3f';
 
 export { GenericNodeFallback } from '../internal/generic-node-fallback/index';

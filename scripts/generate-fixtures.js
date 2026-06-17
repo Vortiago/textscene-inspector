@@ -27,11 +27,13 @@ function detectCategory(filename) {
     filename.startsWith('unit-plane') ||
     filename.startsWith('unit-torus') ||
     filename.startsWith('unit-prism') ||
-    filename.startsWith('unit-mesh')
+    filename.startsWith('unit-mesh') ||
+    filename.startsWith('unit-arraymesh')
   ) {
     return 'Unit - Primitive Meshes';
   }
   if (filename.startsWith('unit-csg')) return 'Unit - CSG Primitives';
+  if (filename.startsWith('unit-navigation') || filename.startsWith('unit-nav-')) return 'Unit - Navigation';
   if (filename.startsWith('unit-physics') || filename.startsWith('unit-collision')) return 'Unit - Physics';
   if (filename.startsWith('unit-material')) return 'Unit - Materials';
   if (filename.startsWith('unit-external')) return 'Unit - External Resources';

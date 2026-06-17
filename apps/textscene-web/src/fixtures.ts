@@ -233,6 +233,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Grid Map",
+    "file": "unit-grid-map.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Label3d",
     "file": "unit-label3d.tscn",
     "category": "Other"
@@ -283,14 +288,9 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
-    "name": "Audio Stream Player 2d",
-    "file": "unit-audio-stream-player-2d.tscn",
-    "category": "Unit - Audio"
-  },
-  {
-    "name": "Audio Stream Player",
-    "file": "unit-audio-stream-player.tscn",
-    "category": "Unit - Audio"
+    "name": "Arraymesh",
+    "file": "unit-arraymesh.tscn",
+    "category": "Unit - Primitive Meshes"
   },
   {
     "name": "Box Mesh",
@@ -341,6 +341,16 @@ export const fixtures: Fixture[] = [
     "name": "Torus Mesh",
     "file": "unit-torus-mesh.tscn",
     "category": "Unit - Primitive Meshes"
+  },
+  {
+    "name": "Audio Stream Player 2d",
+    "file": "unit-audio-stream-player-2d.tscn",
+    "category": "Unit - Audio"
+  },
+  {
+    "name": "Audio Stream Player",
+    "file": "unit-audio-stream-player.tscn",
+    "category": "Unit - Audio"
   },
   {
     "name": "Button",
@@ -486,6 +496,16 @@ export const fixtures: Fixture[] = [
     "name": "Material Textured",
     "file": "unit-material-textured.tscn",
     "category": "Unit - Materials"
+  },
+  {
+    "name": "Navigation Region 2d",
+    "file": "unit-navigation-region-2d.tscn",
+    "category": "Unit - Navigation"
+  },
+  {
+    "name": "Navigation Region 3d",
+    "file": "unit-navigation-region-3d.tscn",
+    "category": "Unit - Navigation"
   },
   {
     "name": "Sprite2d",

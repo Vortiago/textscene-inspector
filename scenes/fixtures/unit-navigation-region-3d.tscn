@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3 uid="uid://unitnavregion3d"]
+
+[ext_resource type="NavigationMesh" path="res://unit-nav-mesh-3d.tres" id="1_nav"]
+
+[node name="Root" type="Node3D"]
+
+[node name="NavigationRegion3D" type="NavigationRegion3D" parent="."]
+navigation_mesh = ExtResource("1_nav")

@@ -31,6 +31,8 @@ export interface ViewportModeValue {
   setShowCollisions: (show: boolean) => void;
   showLabels: boolean;
   setShowLabels: (show: boolean) => void;
+  showNavigation: boolean;
+  setShowNavigation: (show: boolean) => void;
 }
 
 const DEFAULT_VALUE: ViewportModeValue = {
@@ -40,6 +42,8 @@ const DEFAULT_VALUE: ViewportModeValue = {
   setShowCollisions: () => {},
   showLabels: false,
   setShowLabels: () => {},
+  showNavigation: true,
+  setShowNavigation: () => {},
 };
 
 const ViewportModeContext = createContext<ViewportModeValue>(DEFAULT_VALUE);
@@ -50,6 +54,7 @@ export interface ViewportModeProviderProps {
   initialMode?: ViewportMode;
   initialShowCollisions?: boolean;
   initialShowLabels?: boolean;
+  initialShowNavigation?: boolean;
 }
 
 export function ViewportModeProvider({
@@ -57,13 +62,24 @@ export function ViewportModeProvider({
   initialMode = '3D',
   initialShowCollisions = false,
   initialShowLabels = false,
+  initialShowNavigation = true,
 }: ViewportModeProviderProps) {
   const [mode, setMode] = useState<ViewportMode>(initialMode);
   const [showCollisions, setShowCollisions] = useState(initialShowCollisions);
   const [showLabels, setShowLabels] = useState(initialShowLabels);
+  const [showNavigation, setShowNavigation] = useState(initialShowNavigation);
   const value = useMemo<ViewportModeValue>(
-    () => ({ mode, setMode, showCollisions, setShowCollisions, showLabels, setShowLabels }),
-    [mode, showCollisions, showLabels]
+    () => ({
+      mode,
+      setMode,
+      showCollisions,
+      setShowCollisions,
+      showLabels,
+      setShowLabels,
+      showNavigation,
+      setShowNavigation,
+    }),
+    [mode, showCollisions, showLabels, showNavigation]
   );
   return <ViewportModeContext.Provider value={value}>{children}</ViewportModeContext.Provider>;
 }

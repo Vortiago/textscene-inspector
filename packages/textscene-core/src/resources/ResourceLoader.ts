@@ -40,6 +40,7 @@ import { createMaterialProcessor } from './processors/createMaterialProcessor';
 import { createGLBProcessor } from './processors/createGLBProcessor';
 import { createSceneProcessor } from './processors/createSceneProcessor';
 import { createTresResourceProcessor } from './processors/createTresResourceProcessor';
+import { createArrayMeshProcessor, type ArrayMeshResource } from './processors/createArrayMeshProcessor';
 import type { ParsedTresFile } from '../parser/tresParser';
 import type { ResourceProcessor } from './createResourceProcessor';
 import * as logger from '../logger';
@@ -56,7 +57,8 @@ function busTypeFor(resourceType: string | undefined): ResourceType | null {
   if (resourceType.includes('Material')) return 'material';
   if (resourceType === 'PackedScene') return 'scene';
   if (resourceType === 'GLB' || resourceType === 'GLTF' || resourceType === 'GLBMesh') return 'glb';
-  if (resourceType === 'TileSet') return 'resource';
+  if (resourceType === 'ArrayMesh') return 'arraymesh';
+  if (resourceType === 'TileSet' || resourceType === 'MeshLibrary') return 'resource';
   return null;
 }
 
@@ -69,6 +71,8 @@ export class ResourceLoader {
   readonly scenes: ResourceProcessor<TscnScene>;
   /** Generic .tres files (currently TileSet) parsed as ParsedTresFile. */
   readonly resources: ResourceProcessor<ParsedTresFile>;
+  /** ArrayMesh .tres decoded into geometry + per-surface material paths. */
+  readonly arrayMeshes: ResourceProcessor<ArrayMeshResource>;
 
   /**
    * Type → processor table. The four named accessors above are stable
@@ -119,6 +123,7 @@ export class ResourceLoader {
     });
 
     this.resources = createTresResourceProcessor(fileEventBus, this.eventBus);
+    this.arrayMeshes = createArrayMeshProcessor(fileEventBus, this.eventBus);
 
     this.processors = new Map<ResourceType, ResourceProcessor<unknown>>([
       ['texture', this.textures as ResourceProcessor<unknown>],
@@ -126,6 +131,7 @@ export class ResourceLoader {
       ['glb', this.glbMeshes as ResourceProcessor<unknown>],
       ['scene', this.scenes as ResourceProcessor<unknown>],
       ['resource', this.resources as ResourceProcessor<unknown>],
+      ['arraymesh', this.arrayMeshes as ResourceProcessor<unknown>],
     ]);
 
     this.setupFailureCallbacks();
@@ -138,6 +144,7 @@ export class ResourceLoader {
       scene: 'Node instance of scene',
       glb: 'Node using GLB mesh',
       resource: 'Resource',
+      arraymesh: 'Node using ArrayMesh',
     };
 
     for (const type of this.processors.keys()) {

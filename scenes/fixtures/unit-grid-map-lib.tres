@@ -1,0 +1,8 @@
+[gd_resource type="MeshLibrary" format=3 uid="uid://unitgridmaplib"]
+
+[ext_resource type="ArrayMesh" path="res://unit-arraymesh-quad.tres" id="1_quad"]
+
+[resource]
+item/0/name = "Quad"
+item/0/mesh = ExtResource("1_quad")
+item/0/mesh_transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)

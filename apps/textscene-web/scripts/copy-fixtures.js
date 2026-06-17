@@ -17,8 +17,12 @@ const skippedLargeFiles = [];
 
 mkdirSync(fixturesTarget, { recursive: true });
 
-// Copy from scenes/fixtures/
-const fixtureFiles = readdirSync(fixturesSource).filter((file) => file.endsWith('.tscn'));
+// Copy from scenes/fixtures/ — scenes (.tscn) plus any sibling text resources
+// (.tres) a fixture references via `res://<name>.tres` at the fixtures root
+// (e.g. an external ArrayMesh).
+const fixtureFiles = readdirSync(fixturesSource).filter(
+  (file) => file.endsWith('.tscn') || file.endsWith('.tres')
+);
 for (const file of fixtureFiles) {
   copyFileSync(join(fixturesSource, file), join(fixturesTarget, file));
 }

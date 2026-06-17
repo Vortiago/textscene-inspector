@@ -32,6 +32,7 @@ import {
 } from '../../../r3f/SceneResourcesContext';
 import { parseResourceReference } from '../../../resources/SubResourceResolver';
 import { useResource } from '../../../resources/useResource';
+import type { ArrayMeshResource } from '../../../resources/processors/createArrayMeshProcessor';
 import { MeshGeometry } from './meshGeometry';
 import { parseStandardMaterial3DScalars } from '../../../r3f/materials/standardMaterialScalars';
 import { resolveStandardMaterial } from '../../../r3f/materials/resolveStandardMaterial';
@@ -62,6 +63,17 @@ export function MeshInstance3D({ node }: NodeComponentProps) {
     () => resolveMeshSubResource(properties.mesh, internalResources),
     [properties.mesh, internalResources]
   );
+
+  // An ExtResource `mesh` pointing at a `.tres` is an external ArrayMesh:
+  // resolve its path and decode it through the resource pipeline. (.glb
+  // ExtResources fall through to the placeholder, as before.) The hook is
+  // called unconditionally with `''` when the mesh isn't an external
+  // ArrayMesh, matching the texture-slot pattern (rules of hooks).
+  const arrayMeshPath = useMemo(
+    () => resolveExtArrayMeshPath(properties.mesh, externalResources),
+    [properties.mesh, externalResources]
+  );
+  const arrayMeshResult = useResource<ArrayMeshResource>(arrayMeshPath ?? '', 'ArrayMesh');
 
   // WI-R3F-19 parity-audit fix: when multiple `surface_material_override/N`
   // slots are populated (e.g. a GLB or multi-surface mesh), build an
@@ -213,8 +225,9 @@ export function MeshInstance3D({ node }: NodeComponentProps) {
   const visible = properties.visible !== false && !shadowFlags.shadowsOnly;
 
   // Unresolved mesh (no mesh, external GLB, missing SubResource): magenta
-  // wireframe placeholder.
-  if (!meshResource) {
+  // wireframe placeholder. An external ArrayMesh (`arrayMeshPath`) is NOT
+  // unresolved — it loads asynchronously below.
+  if (!meshResource && !arrayMeshPath) {
     return (
       <mesh
         name={node.name}
@@ -231,6 +244,62 @@ export function MeshInstance3D({ node }: NodeComponentProps) {
     );
   }
 
+  // External ArrayMesh: surface its load states. `unavailable` → the .tres
+  // couldn't be loaded, show the magenta placeholder; `pending` → render
+  // nothing until the geometry arrives (the node still lives in the tree view).
+  if (arrayMeshPath) {
+    if (arrayMeshResult.status === 'unavailable') {
+      return (
+        <mesh
+          name={node.name}
+          position={position}
+          rotation={rotation}
+          scale={scale}
+          visible={visible}
+          castShadow={castShadow}
+          receiveShadow
+        >
+          <boxGeometry args={[1, 1, 1]} />
+          <meshBasicMaterial color={0xff00ff} wireframe />
+        </mesh>
+      );
+    }
+    if (!arrayMeshResult.value) return null;
+
+    // Loaded external ArrayMesh: render the decoded geometry with one material
+    // per surface (draw group). Each surface's StandardMaterial3D `.tres` is
+    // resolved through the material pipeline by an <ArrayMeshSurfaceMaterial>
+    // child — that keeps the `useResource` calls one-per-component (rules of
+    // hooks) while still loading textured materials for every surface.
+    const { geometry, materialPaths } = arrayMeshResult.value;
+    const surfacePaths = materialPaths.length > 0 ? materialPaths : [null];
+    const multiSurface = surfacePaths.length > 1;
+    return (
+      <mesh
+        name={node.name}
+        position={position}
+        rotation={rotation}
+        scale={scale}
+        visible={visible}
+        castShadow={castShadow}
+        receiveShadow
+      >
+        <primitive object={geometry} attach="geometry" />
+        {surfacePaths.map((path, i) => (
+          <ArrayMeshSurfaceMaterial
+            key={`surf-${i}`}
+            path={path}
+            attach={multiSurface ? `material-${i}` : 'material'}
+            shadowSide={shadowFlags.shadowSide}
+          />
+        ))}
+      </mesh>
+    );
+  }
+
+  // Primitive SubResource geometry (declarative <MeshGeometry>).
+  const geometryElement = <MeshGeometry resource={meshResource!} />;
+
   // Missing texture: magenta placeholder material. Gap 12 (WI-UX-3):
   // the in-3D floating label was redundant once the DOM
   // `<MissingResourcesPanel>` lists every missing path. `firstMissingPath`
@@ -246,7 +315,7 @@ export function MeshInstance3D({ node }: NodeComponentProps) {
         castShadow={castShadow}
         receiveShadow
       >
-        <MeshGeometry resource={meshResource} />
+        {geometryElement}
         <meshStandardMaterial color="magenta" />
       </mesh>
     );
@@ -262,7 +331,7 @@ export function MeshInstance3D({ node }: NodeComponentProps) {
       castShadow={castShadow}
       receiveShadow
     >
-      <MeshGeometry resource={meshResource} />
+      {geometryElement}
       <StandardMaterialSlot
         scalars={materialScalars}
         albedoMap={albedoMap}
@@ -272,7 +341,7 @@ export function MeshInstance3D({ node }: NodeComponentProps) {
         emissiveMap={emissiveMap}
         aoMap={materialScalars?.aoEnabled ? aoMap : undefined}
         shadowSide={shadowFlags.shadowSide}
-        meshType={meshResource.type}
+        meshType={meshResource?.type}
         // Multi-surface meshes (slot N>0 populated): attach the primary
         // material at `material-0` so R3F builds an array and the
         // secondary slots can land at `material-N`. Single-surface meshes
@@ -342,6 +411,39 @@ function SecondarySurfaceMaterial({
 }
 
 /**
+ * Material for one ArrayMesh surface (draw group). Loads the surface's
+ * StandardMaterial3D `.tres` through the material pipeline (textures and all)
+ * and attaches it at the group's slot. Falls back to Godot's default white
+ * material while pending or when the surface declares no material. One
+ * `useResource` per component instance keeps the rules of hooks satisfied for
+ * an arbitrary surface count.
+ */
+function ArrayMeshSurfaceMaterial({
+  path,
+  attach,
+  shadowSide,
+}: {
+  path: string | null;
+  attach: string;
+  shadowSide?: THREE.Side;
+}) {
+  const result = useResource<THREE.Material>(path ?? '', 'StandardMaterial3D');
+  if (path && result.value) {
+    return <primitive object={result.value} attach={attach} />;
+  }
+  return (
+    <meshStandardMaterial
+      attach={attach}
+      color={0xffffff}
+      metalness={0}
+      roughness={1}
+      side={THREE.FrontSide}
+      shadowSide={shadowSide ?? null}
+    />
+  );
+}
+
+/**
  * Clone the loaded texture (if any) with the material's UV transform
  * applied. Returns `undefined` when nothing is loaded yet, so the
  * `<meshStandardMaterial>` falls back to `null` for that slot.
@@ -364,6 +466,24 @@ function resolveMeshSubResource(
   const parsed = parseResourceReference(meshRef);
   if (!parsed || parsed.type !== 'SubResource') return undefined;
   return findSubResource(internalResources, parsed.id);
+}
+
+/**
+ * Resolve an `ExtResource("id")` `mesh` reference to the `.tres` path of an
+ * external ArrayMesh. Returns null for SubResource refs (handled inline),
+ * non-`.tres` ExtResources (e.g. `.glb`, handled by the placeholder), or
+ * unknown ids.
+ */
+function resolveExtArrayMeshPath(
+  meshRef: string | undefined,
+  externalResources: readonly TscnExternalResource[]
+): string | null {
+  if (!meshRef) return null;
+  const parsed = parseResourceReference(meshRef);
+  if (!parsed || parsed.type !== 'ExtResource') return null;
+  const ext = externalResources.find((r) => r.id === parsed.id);
+  if (!ext?.path || !ext.path.endsWith('.tres')) return null;
+  return ext.path;
 }
 
 /**
