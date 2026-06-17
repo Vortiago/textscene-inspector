@@ -120,6 +120,7 @@ export function parseNodeWithRegistry(
       parent: parsedProps.parent,
       children: [],
       properties: parsedProps,
+      rawProperties: properties,
     };
 
     // Preserve instance attribute for external scene loading
@@ -138,6 +139,7 @@ export function parseNodeWithRegistry(
     parent: parsedProps.parent,
     children: [],
     properties: parsedProps,
+    rawProperties: properties,
   };
 
   // Capture instance property for external scene references

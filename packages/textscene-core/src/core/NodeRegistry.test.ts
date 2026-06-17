@@ -6,7 +6,8 @@
  * can never resolve to a node registration.
  */
 import { describe, it, expect, beforeEach } from 'vitest';
-import { nodeRegistry } from './NodeRegistry';
+import { nodeRegistry, parseNodeWithRegistry } from './NodeRegistry';
+import { parseNode } from '../nodes/node/parser';
 import type { ParsedHeading } from '../parser/utils';
 
 function nodeHeading(type: string): ParsedHeading {
@@ -60,5 +61,34 @@ describe('NodeRegistry.findRegistration', () => {
     });
 
     expect(nodeRegistry.findRegistration(nodeHeading('Legacy3D'))?.typeName).toBe('Legacy3D');
+  });
+});
+
+describe('parseNodeWithRegistry — raw override retention', () => {
+  beforeEach(() => {
+    nodeRegistry.clear();
+    nodeRegistry.register({ typeName: 'Node', parser: parseNode });
+  });
+
+  it('retains the raw override props on a type-less instance node', () => {
+    // An instance node has `instance=` but no `type=`, so it falls back to the
+    // base Node parser, which only extracts name/parent/transform/index. The
+    // type-specific override keys (a GridMap `data`, a light color, a camera
+    // fov, …) must be retained raw so mergeInstanceRoot can re-parse them
+    // against the instanced root's type instead of silently dropping them.
+    const heading: ParsedHeading = {
+      type: 'node',
+      attributes: { name: 'GridMap', parent: '.', instance: 'ExtResource("1_t0f53")' },
+    };
+    const raw = {
+      data: '{ "cells": PackedInt32Array(1, 2, 3) }',
+      transform: 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)',
+    };
+
+    const result = parseNodeWithRegistry(heading, raw);
+
+    expect(result).not.toBeNull();
+    expect(result!.instance).toBe('ExtResource("1_t0f53")');
+    expect(result!.rawProperties).toEqual(raw);
   });
 });
