@@ -1,0 +1,11 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://unit-instance-child.tscn" id="1_coin"]
+
+[node name="InstancedRoot" type="Node3D"]
+
+[node name="CoinA" parent="." instance=ExtResource("1_coin")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.5, 0, 0)
+
+[node name="CoinB" parent="." instance=ExtResource("1_coin")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 0, 0)

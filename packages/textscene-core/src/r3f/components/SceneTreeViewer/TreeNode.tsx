@@ -8,6 +8,7 @@ import { joinPath } from '../../../utils/nodePath.js';
 import { nodeRegistry } from '../../../core/NodeRegistry.js';
 import { useSelection } from '../../contexts/SelectionContext.js';
 import { resolveInstancePath } from '../../../resources/SubResourceResolver.js';
+import { mergeInstanceRoot } from '../../../resources/mergeInstanceRoot.js';
 import { useSubSceneChildren } from './useSubSceneChildren.js';
 import styles from './SceneTreeViewer.module.css';
 
@@ -90,9 +91,27 @@ function TreeNodeImpl({
   // scene event bus, so the tree re-renders automatically when the
   // sub-scene arrives.
   const subSceneChildren = useSubSceneChildren(node, externalResources);
+
+  // Instance root merge (ADR-0013): a single non-GLB root collapses INTO this
+  // row — it adopts the root's type and renders the root's children (plus any
+  // host-added children) directly, dropping the redundant wrapper level. The
+  // 📦 badge + ⤢ open-standalone affordance stay, driven by this node's own
+  // `instance` ref below. `.glb` synthetic roots and multi-root scenes return
+  // null here and keep the historical inline + sub-scene split.
+  const merged =
+    node.instance && subSceneChildren
+      ? mergeInstanceRoot(node, { nodes: subSceneChildren })
+      : null;
+
+  // The row's type/properties/children come from the merged node when it
+  // collapses; name, path, and instance affordance always come from `node`.
+  const effective = merged ?? node;
   const inlineChildren = node.children;
   const dynamicChildren = subSceneChildren ?? [];
-  const hasChildren = inlineChildren.length > 0 || dynamicChildren.length > 0;
+  const mergedChildren = merged ? merged.children : null;
+  const hasChildren = mergedChildren
+    ? mergedChildren.length > 0
+    : inlineChildren.length > 0 || dynamicChildren.length > 0;
 
   const {
     selectedNodePath,
@@ -106,8 +125,8 @@ function TreeNodeImpl({
   const isSelected = selectedNodePath === nodePath;
   const isHidden = hiddenNodePaths.has(nodePath);
 
-  const registration = nodeRegistry.getRegistration(node.type);
-  const isUnsupported = !registration && node.type !== 'Node';
+  const registration = nodeRegistry.getRegistration(effective.type);
+  const isUnsupported = !registration && effective.type !== 'Node';
 
   const headerClasses = [styles.header];
   if (isSelected) headerClasses.push(styles.selected!);
@@ -168,16 +187,16 @@ function TreeNodeImpl({
         )}
 
         <span
-          className={`${styles.typeBadge} ${getTypeBadgeClass(node.type)}`}
-          title={node.type}
+          className={`${styles.typeBadge} ${getTypeBadgeClass(effective.type)}`}
+          title={effective.type}
         >
-          {getTypeShorthand(node.type)}
+          {getTypeShorthand(effective.type)}
         </span>
 
         {isUnsupported && (
           <span
             className={styles.notImplementedBadge}
-            title={`${node.type} is not yet supported by the renderer`}
+            title={`${effective.type} is not yet supported by the renderer`}
           >
             Not Implemented
           </span>
@@ -186,7 +205,7 @@ function TreeNodeImpl({
         <span className={styles.nodeName}>{node.name}</span>
 
         <span className={styles.glyphs}>
-          {hasTransform(node) && (
+          {hasTransform(effective) && (
             <span className={styles.transformIcon} title="Has transform">
               ⌖
             </span>
@@ -229,38 +248,58 @@ function TreeNodeImpl({
 
       {hasChildren && isExpanded && (
         <div className={styles.children} role="group">
-          {inlineChildren.filter(matches).map((child) => (
-            <TreeNode
-              key={`inline:${child.name}`}
-              node={child}
-              parentPath={nodePath}
-              depth={depth + 1}
-              hiddenNodePaths={hiddenNodePaths}
-              onToggleVisibility={onToggleVisibility}
-              onNodeReveal={onNodeReveal}
-              onOpenSubScene={onOpenSubScene}
-              matches={matches}
-              externalResources={externalResources}
-            />
-          ))}
-          {dynamicChildren.filter(matches).map((child) => (
-            <TreeNode
-              // Different key namespace from inline children so a name
-              // collision (an inline child sharing a name with a sub-scene
-              // root) doesn't trigger React's "two children with the same
-              // key" warning.
-              key={`subscene:${child.name}`}
-              node={child}
-              parentPath={nodePath}
-              depth={depth + 1}
-              hiddenNodePaths={hiddenNodePaths}
-              onToggleVisibility={onToggleVisibility}
-              onNodeReveal={onNodeReveal}
-              onOpenSubScene={onOpenSubScene}
-              matches={matches}
-              externalResources={externalResources}
-            />
-          ))}
+          {mergedChildren
+            ? // Collapsed instance root: one combined child list (the root's
+              // own children followed by any host-added children), addressed
+              // directly under this row — no synthetic wrapper segment.
+              mergedChildren.filter(matches).map((child) => (
+                <TreeNode
+                  key={`merged:${child.name}`}
+                  node={child}
+                  parentPath={nodePath}
+                  depth={depth + 1}
+                  hiddenNodePaths={hiddenNodePaths}
+                  onToggleVisibility={onToggleVisibility}
+                  onNodeReveal={onNodeReveal}
+                  onOpenSubScene={onOpenSubScene}
+                  matches={matches}
+                  externalResources={externalResources}
+                />
+              ))
+            : [
+                ...inlineChildren.filter(matches).map((child) => (
+                  <TreeNode
+                    key={`inline:${child.name}`}
+                    node={child}
+                    parentPath={nodePath}
+                    depth={depth + 1}
+                    hiddenNodePaths={hiddenNodePaths}
+                    onToggleVisibility={onToggleVisibility}
+                    onNodeReveal={onNodeReveal}
+                    onOpenSubScene={onOpenSubScene}
+                    matches={matches}
+                    externalResources={externalResources}
+                  />
+                )),
+                ...dynamicChildren.filter(matches).map((child) => (
+                  <TreeNode
+                    // Different key namespace from inline children so a name
+                    // collision (an inline child sharing a name with a sub-scene
+                    // root) doesn't trigger React's "two children with the same
+                    // key" warning.
+                    key={`subscene:${child.name}`}
+                    node={child}
+                    parentPath={nodePath}
+                    depth={depth + 1}
+                    hiddenNodePaths={hiddenNodePaths}
+                    onToggleVisibility={onToggleVisibility}
+                    onNodeReveal={onNodeReveal}
+                    onOpenSubScene={onOpenSubScene}
+                    matches={matches}
+                    externalResources={externalResources}
+                  />
+                )),
+              ]}
         </div>
       )}
     </div>

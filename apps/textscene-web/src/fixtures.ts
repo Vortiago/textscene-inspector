@@ -133,6 +133,11 @@ export const fixtures: Fixture[] = [
     "category": "Examples - Complex Scenes"
   },
   {
+    "name": "Instanced Subscene",
+    "file": "integration-instanced-subscene.tscn",
+    "category": "Examples - Complex Scenes"
+  },
+  {
     "name": "Lights All Types",
     "file": "integration-lights-all-types.tscn",
     "category": "Examples - Complex Scenes"
@@ -235,6 +240,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Animation Player",
     "file": "unit-animation-player.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Instance Child",
+    "file": "unit-instance-child.tscn",
     "category": "Other"
   },
   {
