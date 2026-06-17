@@ -16,14 +16,27 @@
  * standalone .glb mesh — the consumer (NodeDispatcher.InstancedSceneSubtree
  * after the synthesised scene loads) sees a normal scene with one
  * dispatched node.
+ *
+ * Beyond rendering, a GLB carries its own animation clips (a Godot GLB
+ * import would expose them on the model's AnimationPlayer). This component
+ * is the **GLB animation driver**: when its tree row is the selected node it
+ * registers those clips with the selection-driven Animation transport
+ * (ADR-0012) and drives a `THREE.AnimationMixer` rooted on the loaded GLB
+ * object — the GLB counterpart to the AnimationPlayer slice (ADR-0011). The
+ * clips arrive already bound to the GLB's own node names, so the mixer roots
+ * on the object itself rather than on an Animation root / `root_node`.
  */
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../NodeComponentRegistry';
 import { useResource } from '../../../resources/useResource';
 import { MissingResourcePlaceholder } from '../../components/MissingResourcePlaceholder';
 import { useGlbOverrides } from './GlbOverridesContext';
 import { applyGlbNodeOverrides } from './glbNodeOverrides';
+import { useAnimationTransport, type PlayState } from '../../contexts/AnimationTransportContext';
+import { useNodePath } from '../../contexts/NodePathContext';
+import { useOptionalSelection } from '../../contexts/SelectionContext';
+import { usePlaybackLoop } from '../../animation/usePlaybackLoop';
 
 /**
  * Reserved node type the createSceneProcessor synthesises for binary
@@ -36,6 +49,13 @@ interface GLBSceneRootProperties {
   /** `res://` path to the .glb / .gltf file (carried verbatim from the
    *  ExtResource that triggered the synthesis). */
   glbPath: string;
+}
+
+interface Snapshot {
+  object: THREE.Object3D;
+  position: THREE.Vector3;
+  quaternion: THREE.Quaternion;
+  scale: THREE.Vector3;
 }
 
 export function GLBSceneRoot({ node }: NodeComponentProps) {
@@ -57,6 +77,75 @@ export function GLBSceneRoot({ node }: NodeComponentProps) {
     // resolved object or override set changes is sufficient and cheap.
   }, [object, overrides]);
 
+  // --- GLB animation driver (selection-driven, ADR-0012) ---------------
+  const transport = useAnimationTransport();
+  const nodePath = useNodePath();
+  const selectedNodePath = useOptionalSelection()?.selectedNodePath ?? null;
+  const isActive = nodePath !== null && nodePath === selectedNodePath;
+
+  const { clips, durations } = useMemo(() => {
+    const list = object?.animations ?? [];
+    return {
+      clips: list,
+      durations: Object.fromEntries(list.map((c) => [c.name, c.duration])),
+    };
+  }, [object]);
+
+  // Register this driver's clips with the transport while it is selected —
+  // even with zero clips, so the Animation tab still appears (and reads
+  // "no animations"). Registration is the tab's source of truth.
+  const { registerPlayer } = transport;
+  useEffect(() => {
+    if (!isActive || !object) return;
+    return registerPlayer({ clips: clips.map((c) => c.name), durations });
+  }, [isActive, object, clips, durations, registerPlayer]);
+
+  // Build the mixer + actions only while this driver is the selected one
+  // (ADR-0012). Gating on isActive — not just object availability — means a
+  // scene full of GLBs doesn't each build a mixer and snapshot its whole
+  // skeleton when never selected; only the active driver pays that cost. The
+  // clips are bound by name to the GLB's own nodes, so the mixer roots on the
+  // object itself (no Animation root indirection). On teardown (deselect) we
+  // restore the authored pose, since the mixer is gone before usePlaybackLoop
+  // could observe the stop.
+  const mixerRef = useRef<THREE.AnimationMixer | null>(null);
+  const actionsRef = useRef<Map<string, THREE.AnimationAction>>(new Map());
+  const snapshotRef = useRef<Snapshot[]>([]);
+  useEffect(() => {
+    if (!isActive || !object || clips.length === 0) return;
+    const mixer = new THREE.AnimationMixer(object);
+    const actions = new Map<string, THREE.AnimationAction>();
+    for (const clip of clips) actions.set(clip.name, mixer.clipAction(clip));
+    mixerRef.current = mixer;
+    actionsRef.current = actions;
+    snapshotRef.current = snapshotSubtree(object);
+    return () => {
+      mixer.stopAllAction();
+      restoreSnapshot(snapshotRef.current);
+      mixerRef.current = null;
+      actionsRef.current = new Map();
+      snapshotRef.current = [];
+    };
+  }, [isActive, object, clips]);
+
+  // An inactive driver is forced to 'stopped' so it never touches the scene
+  // (and restores the authored pose when it loses selection). Native glTF
+  // clips just loop by default — no Godot loop_mode to honour.
+  const effectiveState: PlayState = isActive ? transport.playState : 'stopped';
+  usePlaybackLoop({
+    playState: effectiveState,
+    selectedClip: isActive ? transport.selectedClip : null,
+    transportTime: transport.time,
+    mixerRef,
+    actionsRef,
+    configureAction: (action) => {
+      action.setLoop(THREE.LoopRepeat, Infinity);
+      action.clampWhenFinished = false;
+    },
+    reportTime: transport.reportTime,
+    restore: () => restoreSnapshot(snapshotRef.current),
+  });
+
   if (result.status === 'unavailable') {
     return <MissingResourcePlaceholder shape="box" />;
   }
@@ -67,4 +156,28 @@ export function GLBSceneRoot({ node }: NodeComponentProps) {
   // three.js's "Object3D can only have one parent" invariant, so we
   // mount the returned ref directly via <primitive>.
   return <primitive object={object} />;
+}
+
+/** Capture every descendant's local transform so stop can restore the
+ *  authored (bind) pose — skeletal clips touch arbitrary bones, so we
+ *  snapshot the whole subtree rather than a track-derived target set. */
+function snapshotSubtree(root: THREE.Object3D): Snapshot[] {
+  const snapshots: Snapshot[] = [];
+  root.traverse((object) => {
+    snapshots.push({
+      object,
+      position: object.position.clone(),
+      quaternion: object.quaternion.clone(),
+      scale: object.scale.clone(),
+    });
+  });
+  return snapshots;
+}
+
+function restoreSnapshot(snapshots: Snapshot[]): void {
+  for (const snap of snapshots) {
+    snap.object.position.copy(snap.position);
+    snap.object.quaternion.copy(snap.quaternion);
+    snap.object.scale.copy(snap.scale);
+  }
 }

@@ -7,9 +7,48 @@
  * references and mutations would bleed between scene instances.
  */
 
+import { existsSync, readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { cloneWithMaterials, gltfResourceDir, isGLBPath } from './glbProcessing';
+import { cloneWithMaterials, createGLBMesh, gltfResourceDir, isGLBPath } from './glbProcessing';
+
+/**
+ * Locate a repo-relative asset by walking up from cwd until it's found —
+ * cwd differs between a `--filter` run (package dir) and a recursive
+ * `pnpm test` run, so a fixed relative path is not portable.
+ */
+function findRepoAsset(relative: string): string {
+  let dir = process.cwd();
+  // Walk up to the filesystem root (where dirname is a fixed point).
+  for (let parent = dirname(dir); parent !== dir; dir = parent, parent = dirname(dir)) {
+    const candidate = resolve(dir, relative);
+    if (existsSync(candidate)) return candidate;
+  }
+  throw new Error(`Asset not found walking up from ${process.cwd()}: ${relative}`);
+}
+
+describe('createGLBMesh', () => {
+  it('surfaces a GLB’s embedded animation clips on the returned object', async () => {
+    // The committed platformer player.glb carries Blender-exported clips; a
+    // Godot GLB import would expose these on the model's AnimationPlayer. The
+    // loader returns them on `gltf.animations`, which we attach to the scene
+    // object so the GLB animation driver can play them.
+    const glbPath = findRepoAsset('scenes/demos/3d/platformer/player/player.glb');
+    const buffer = readFileSync(glbPath);
+    const arrayBuffer = buffer.buffer.slice(
+      buffer.byteOffset,
+      buffer.byteOffset + buffer.byteLength
+    );
+
+    const object = await createGLBMesh(arrayBuffer as ArrayBuffer);
+    const names = object.animations.map((c) => c.name);
+
+    expect(names).toEqual(
+      expect.arrayContaining(['idle', 'run', 'jump', 'walk', 'falling'])
+    );
+  });
+});
 
 describe('gltfResourceDir', () => {
   it("yields the glTF's own res:// directory for relative buffer/image resolution", () => {
@@ -168,5 +207,45 @@ describe('cloneWithMaterials', () => {
 
     expect(root.parent).toBe(parentA);
     expect(cloned.parent).toBe(parentB);
+  });
+
+  it('rebinds a SkinnedMesh to the cloned skeleton (not the source bones)', () => {
+    // A plain Object3D.clone(true) leaves the cloned SkinnedMesh.skeleton
+    // pointing at the SOURCE bones, so animating one instance deforms another
+    // (or the template). A skeleton-aware clone rebinds to the cloned bones.
+    const root = new THREE.Group();
+    root.name = 'armature';
+    const bone = new THREE.Bone();
+    bone.name = 'b0';
+    root.add(bone);
+    const skinned = new THREE.SkinnedMesh(
+      new THREE.BoxGeometry(),
+      new THREE.MeshStandardMaterial()
+    );
+    skinned.name = 'skin';
+    root.add(skinned);
+    skinned.bind(new THREE.Skeleton([bone]));
+
+    const cloned = cloneWithMaterials(root);
+    const clonedSkin = findMesh(cloned, 'skin') as THREE.SkinnedMesh;
+    const clonedBone = cloned.getObjectByName('b0');
+
+    expect(clonedSkin.skeleton.bones[0]).not.toBe(bone);
+    expect(clonedSkin.skeleton.bones[0]).toBe(clonedBone);
+  });
+
+  it('carries GLB-embedded clips onto the clone (so a per-consumer clone stays animatable)', () => {
+    const { root } = makeSource();
+    const clip = new THREE.AnimationClip('idle', 1, [
+      new THREE.VectorKeyframeTrack('single.position', [0, 1], [0, 0, 0, 0, 1, 0]),
+    ]);
+    root.animations = [clip];
+
+    const cloned = cloneWithMaterials(root);
+
+    // Clips are stateless (the mixer holds playback state) and bind by name —
+    // the clone has the same node names, so sharing the same clip reference is
+    // correct and cheap.
+    expect(cloned.animations).toContain(clip);
   });
 });

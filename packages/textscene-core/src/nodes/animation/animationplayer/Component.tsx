@@ -12,7 +12,6 @@
  */
 
 import { useEffect, useMemo, useRef } from 'react';
-import { useFrame } from '@react-three/fiber';
 import {
   AnimationMixer,
   Euler,
@@ -29,6 +28,7 @@ import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useAnimationTransport, type PlayState } from '../../../r3f/contexts/AnimationTransportContext';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useOptionalSelection } from '../../../r3f/contexts/SelectionContext';
+import { usePlaybackLoop } from '../../../r3f/animation/usePlaybackLoop';
 import { resolveAnimations, type GodotAnimation } from './animationResolver';
 import { buildClip, loopSettingsFor } from './clipBuilder';
 
@@ -128,19 +128,18 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
   // An inactive player is forced to the 'stopped' state so it never touches
   // the scene (and restores the authored pose when it loses selection).
   const effectiveState: PlayState = isActive ? transport.playState : 'stopped';
-  usePlaybackLoop(
-    properties.speed_scale,
-    effectiveState,
-    isActive ? transport.selectedClip : null,
-    transport.time,
-    {
-      mixerRef,
-      actionsRef,
-      snapshotRef,
-      loopModesRef,
-      reportTime: transport.reportTime,
-    }
-  );
+  usePlaybackLoop({
+    playState: effectiveState,
+    selectedClip: isActive ? transport.selectedClip : null,
+    transportTime: transport.time,
+    speedScale: properties.speed_scale,
+    mixerRef,
+    actionsRef,
+    configureAction: (action, clipName) =>
+      configureLoop(action, loopModesRef.current.get(clipName) ?? 0),
+    reportTime: transport.reportTime,
+    restore: () => restoreSnapshot(snapshotRef.current),
+  });
 
   return (
     <group
@@ -154,78 +153,6 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
       {children}
     </group>
   );
-}
-
-interface PlaybackRefs {
-  mixerRef: React.MutableRefObject<AnimationMixer | null>;
-  actionsRef: React.MutableRefObject<Map<string, AnimationAction>>;
-  snapshotRef: React.MutableRefObject<Snapshot[]>;
-  loopModesRef: React.MutableRefObject<Map<string, number>>;
-  reportTime: (t: number) => void;
-}
-
-function usePlaybackLoop(
-  speedScale: number,
-  playState: PlayState,
-  selectedClip: string | null,
-  transportTime: number,
-  refs: PlaybackRefs
-) {
-  const prevStateRef = useRef<PlayState>('stopped');
-  const prevClipRef = useRef<string | null>(null);
-  const prevTimeRef = useRef<number>(0);
-
-  useFrame((_, delta) => {
-    const mixer = refs.mixerRef.current;
-    if (!mixer) return;
-    const action = selectedClip ? refs.actionsRef.current.get(selectedClip) ?? null : null;
-
-    // Clip switch: stop the previous action so only one drives at a time.
-    if (selectedClip !== prevClipRef.current) {
-      const prev = prevClipRef.current ? refs.actionsRef.current.get(prevClipRef.current) : null;
-      prev?.stop();
-      prevClipRef.current = selectedClip;
-      if (action) configureLoop(action, refs.loopModesRef.current.get(selectedClip!) ?? 0);
-    }
-
-    switch (playState) {
-      case 'playing': {
-        if (action && !action.isRunning()) {
-          action.paused = false;
-          action.enabled = true;
-          action.play();
-        }
-        mixer.update(delta * speedScale);
-        if (action) refs.reportTime(action.time);
-        break;
-      }
-      case 'paused': {
-        if (action) {
-          // Apply an external seek by sampling the clip at the transport time.
-          if (transportTime !== prevTimeRef.current) {
-            action.enabled = true;
-            action.play();
-            action.paused = true;
-            action.time = transportTime;
-            mixer.update(0);
-          } else {
-            action.paused = true;
-          }
-        }
-        break;
-      }
-      case 'stopped': {
-        if (prevStateRef.current !== 'stopped') {
-          mixer.stopAllAction();
-          restoreSnapshot(refs.snapshotRef.current);
-        }
-        break;
-      }
-    }
-
-    prevStateRef.current = playState;
-    prevTimeRef.current = transportTime;
-  });
 }
 
 function configureLoop(action: AnimationAction, loopMode: number): void {
