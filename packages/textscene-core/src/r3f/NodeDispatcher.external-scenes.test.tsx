@@ -147,10 +147,14 @@ describe('NodeDispatcher — external scene node rendering', () => {
         [{ id: '1_cube', path: 'res://child_cube.tscn', type: 'PackedScene' }]
       );
 
-      // ChildCube from external scene should be rendered as a group
+      // Instance root merge (ADR-0013): the loaded root 'ChildCube' collapses
+      // INTO the instance node 'ChildInstance', so there is no 'ChildCube'
+      // level — the root's child mesh renders under the merged node instead.
       const groups = renderer.scene.findAllByType('Group');
-      const childCubeGroup = groups.find((g) => g.instance.name === 'ChildCube');
-      expect(childCubeGroup).toBeDefined();
+      expect(groups.find((g) => g.instance.name === 'ChildInstance')).toBeDefined();
+      expect(groups.find((g) => g.instance.name === 'ChildCube')).toBeUndefined();
+      const meshes = renderer.scene.findAllByType('Mesh');
+      expect(meshes.find((m) => m.instance.name === 'Cube')).toBeDefined();
     });
 
     it('creates THREE objects for external scene nodes', async () => {
@@ -168,11 +172,11 @@ describe('NodeDispatcher — external scene node rendering', () => {
         [{ id: '1_cube', path: 'res://child_cube.tscn', type: 'PackedScene' }]
       );
 
-      // ChildCube renders as a group, Cube renders as a mesh
+      // The merged ChildInstance renders as a group; its mesh renders as a mesh.
       const groups = renderer.scene.findAllByType('Group');
-      const childCubeGroup = groups.find((g) => g.instance.name === 'ChildCube');
-      expect(childCubeGroup).toBeDefined();
-      expect(childCubeGroup!.instance.isObject3D).toBe(true);
+      const instanceGroup = groups.find((g) => g.instance.name === 'ChildInstance');
+      expect(instanceGroup).toBeDefined();
+      expect(instanceGroup!.instance.isObject3D).toBe(true);
 
       const meshes = renderer.scene.findAllByType('Mesh');
       const cubeMesh = meshes.find((m) => m.instance.name === 'Cube');
@@ -196,15 +200,15 @@ describe('NodeDispatcher — external scene node rendering', () => {
       );
 
       const groups = renderer.scene.findAllByType('Group');
-      const childCubeGroup = groups.find((g) => g.instance.name === 'ChildCube');
-      expect(childCubeGroup).toBeDefined();
-
-      // ChildCube should be a descendant of the instancing node's group
       const instancingGroup = groups.find((g) => g.instance.name === 'ChildInstance');
       expect(instancingGroup).toBeDefined();
 
-      // Verify ChildCube is nested inside ChildInstance (ancestor check)
-      let parent = childCubeGroup!.instance.parent;
+      // The collapsed root's mesh ('Cube') is a descendant of the merged
+      // ChildInstance node.
+      const cubeMesh = renderer.scene.findAllByType('Mesh').find((m) => m.instance.name === 'Cube');
+      expect(cubeMesh).toBeDefined();
+
+      let parent = cubeMesh!.instance.parent;
       let found = false;
       while (parent) {
         if (parent === instancingGroup!.instance) { found = true; break; }
@@ -239,10 +243,12 @@ describe('NodeDispatcher — external scene node rendering', () => {
         [{ id: '1_cube', path: 'res://child_cube.tscn', type: 'PackedScene' }]
       );
 
-      // All 3 instances should produce ChildCube groups
+      // Each instance collapses into its own merged node; the root level
+      // 'ChildCube' is gone, leaving one 'Cube' mesh per instance.
       const groups = renderer.scene.findAllByType('Group');
-      const namedGroups = groups.filter((g) => g.instance.name === 'ChildCube');
-      expect(namedGroups.length).toBe(3);
+      expect(groups.filter((g) => g.instance.name === 'ChildCube').length).toBe(0);
+      const meshes = renderer.scene.findAllByType('Mesh');
+      expect(meshes.filter((m) => m.instance.name === 'Cube').length).toBe(3);
     });
   });
 
@@ -277,7 +283,9 @@ instance = ExtResource("1_cube")
         </ResourceLoaderProvider>
       );
 
-      // The ChildInstance group should have position (5, 10, 15)
+      // The merged ChildInstance node (it adopted the root's Node3D type) holds
+      // the instance transform (5, 10, 15) directly — the root transform, if
+      // any, is replaced by the instance's.
       const groups = renderer.scene.findAllByType('Group');
       const instanceGroup = groups.find((g) => g.instance.name === 'ChildInstance');
       expect(instanceGroup).toBeDefined();
@@ -285,9 +293,9 @@ instance = ExtResource("1_cube")
       expect(instanceGroup!.instance.position.y).toBeCloseTo(10, 5);
       expect(instanceGroup!.instance.position.z).toBeCloseTo(15, 5);
 
-      // External scene nodes should be descendants of ChildInstance
-      const childCubeGroup = groups.find((g) => g.instance.name === 'ChildCube');
-      expect(childCubeGroup).toBeDefined();
+      // The collapsed root's mesh renders under the merged ChildInstance node.
+      const cubeMesh = renderer.scene.findAllByType('Mesh').find((m) => m.instance.name === 'Cube');
+      expect(cubeMesh).toBeDefined();
     });
   });
 });

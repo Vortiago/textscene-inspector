@@ -15,8 +15,8 @@
  * scene cache has the path, the sub-scene's nodes render as inline
  * children of the instance row.
  */
-import { describe, expect, it } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import * as THREE from 'three';
 import { SceneTreeViewer } from './SceneTreeViewer';
@@ -158,6 +158,33 @@ describe('<SceneTreeViewer> WI-HALL-1 — sub-scene inlining', () => {
     expect(instanceRow!.textContent).not.toBe('•');
   });
 
+  it('offers an "open sub-scene standalone" action that reports the instance res:// path', () => {
+    const { loader } = makeLoader();
+    const graph = createSceneGraphFromTscnScene({
+      nodes: [makeNode('Coin1', 'Node3D', { instance: 'ExtResource("coin")' })],
+      externalResources: [makeExtResource('coin', 'res://coin/coin.tscn')],
+      internalResources: [],
+    });
+    const onOpenSubScene = vi.fn();
+
+    render(<SceneTreeViewer onOpenSubScene={onOpenSubScene} />, { wrapper: wrap(loader, graph) });
+
+    const button = screen.getByRole('button', { name: /open sub-scene standalone/i });
+    act(() => fireEvent.click(button));
+    expect(onOpenSubScene).toHaveBeenCalledWith('res://coin/coin.tscn');
+  });
+
+  it('shows no open-sub-scene action on non-instance rows', () => {
+    const { loader } = makeLoader();
+    const graph = createSceneGraphFromTscnScene({
+      nodes: [makeNode('Plain', 'Node3D')],
+      externalResources: [],
+      internalResources: [],
+    });
+    render(<SceneTreeViewer onOpenSubScene={vi.fn()} />, { wrapper: wrap(loader, graph) });
+    expect(screen.queryByRole('button', { name: /open sub-scene standalone/i })).toBeNull();
+  });
+
   it('inline children of an instance node coexist with sub-scene children', () => {
     const { loader, setSceneCached } = makeLoader();
 
@@ -234,4 +261,97 @@ describe('<SceneTreeViewer> WI-HALL-1 — sub-scene inlining', () => {
 
   // Avoid unused-import lint complaints in narrow test wrappers.
   void within;
+});
+
+describe('<SceneTreeViewer> Instance root merge (ADR-0013)', () => {
+  function expandRow(name: string) {
+    const row = screen.getByText(name).closest('[data-node-path]')!;
+    const chevron = within(row as HTMLElement).getAllByRole('button', { name: /expand/i })[0]!;
+    act(() => fireEvent.click(chevron));
+    return row as HTMLElement;
+  }
+
+  it('collapses the wrapper: the instance row adopts the sub-scene root type and shows the root children directly', () => {
+    const { loader, setSceneCached } = makeLoader();
+
+    // Sub-scene root is an Area3D (a different type than the instance node)
+    // holding the coin internals.
+    const subScene: TscnScene = {
+      nodes: [
+        makeNode('Coin', 'Area3D', {
+          children: [makeNode('Circle', 'MeshInstance3D'), makeNode('Animation', 'AnimationPlayer')],
+        }),
+      ],
+      externalResources: [],
+      internalResources: [],
+    };
+    setSceneCached('res://coin/coin.tscn', subScene);
+
+    const graph = createSceneGraphFromTscnScene({
+      nodes: [makeNode('Coin1', 'Node3D', { instance: 'ExtResource("coin")' })],
+      externalResources: [makeExtResource('coin', 'res://coin/coin.tscn')],
+      internalResources: [],
+    });
+
+    const { container } = render(<SceneTreeViewer />, { wrapper: wrap(loader, graph) });
+
+    // The instance row adopts the root's Area3D type (badge shorthand 'Area').
+    const coin1Row = screen.getByText('Coin1').closest('[data-node-path]') as HTMLElement;
+    expect(within(coin1Row).getByTitle('Area3D')).toBeTruthy();
+
+    expandRow('Coin1');
+
+    // The interior nodes are addressed directly under the instance row — no
+    // intermediate 'Coin' wrapper segment.
+    expect(container.querySelector('[data-node-path="Coin1/Circle"]')).not.toBeNull();
+    expect(container.querySelector('[data-node-path="Coin1/Animation"]')).not.toBeNull();
+    expect(container.querySelector('[data-node-path="Coin1/Coin"]')).toBeNull();
+  });
+
+  it('keeps the open-sub-scene affordance on a collapsed (cached, single-root) instance row', () => {
+    const { loader, setSceneCached } = makeLoader();
+    setSceneCached('res://coin/coin.tscn', {
+      nodes: [makeNode('Coin', 'Area3D')],
+      externalResources: [],
+      internalResources: [],
+    });
+    const graph = createSceneGraphFromTscnScene({
+      nodes: [makeNode('Coin1', 'Node3D', { instance: 'ExtResource("coin")' })],
+      externalResources: [makeExtResource('coin', 'res://coin/coin.tscn')],
+      internalResources: [],
+    });
+    const onOpenSubScene = vi.fn();
+
+    render(<SceneTreeViewer onOpenSubScene={onOpenSubScene} />, { wrapper: wrap(loader, graph) });
+
+    const button = screen.getByRole('button', { name: /open sub-scene standalone/i });
+    act(() => fireEvent.click(button));
+    expect(onOpenSubScene).toHaveBeenCalledWith('res://coin/coin.tscn');
+  });
+
+  it('does NOT collapse a multi-root sub-scene: it keeps the nested form', () => {
+    const { loader, setSceneCached } = makeLoader();
+    setSceneCached('res://multi.tscn', {
+      nodes: [makeNode('RootA', 'Node3D'), makeNode('RootB', 'Node3D')],
+      externalResources: [],
+      internalResources: [],
+    });
+    const graph = createSceneGraphFromTscnScene({
+      nodes: [makeNode('MultiHost', 'Node3D', { instance: 'ExtResource("multi")' })],
+      externalResources: [makeExtResource('multi', 'res://multi.tscn')],
+      internalResources: [],
+    });
+
+    const { container } = render(<SceneTreeViewer />, { wrapper: wrap(loader, graph) });
+
+    // Host keeps its own Node3D type (no single-root to adopt).
+    const hostRow = screen.getByText('MultiHost').closest('[data-node-path]') as HTMLElement;
+    expect(within(hostRow).getByTitle('Node3D')).toBeTruthy();
+
+    expandRow('MultiHost');
+
+    // Both loaded roots render as nested child rows under the instance row.
+    expect(container.querySelector('[data-node-path="MultiHost/RootA"]')).not.toBeNull();
+    expect(container.querySelector('[data-node-path="MultiHost/RootB"]')).not.toBeNull();
+  });
 });

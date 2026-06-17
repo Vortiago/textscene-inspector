@@ -1,0 +1,17 @@
+[gd_scene load_steps=3 format=3]
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_coin"]
+top_radius = 0.6
+bottom_radius = 0.6
+height = 0.15
+
+[sub_resource type="StandardMaterial3D" id="Material_coin"]
+albedo_color = Color(0.9, 0.75, 0.2, 1)
+metallic = 0.8
+roughness = 0.35
+
+[node name="CoinBody" type="Area3D"]
+
+[node name="CoinMesh" type="MeshInstance3D" parent="."]
+mesh = SubResource("CylinderMesh_coin")
+material_override = SubResource("Material_coin")

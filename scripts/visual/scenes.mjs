@@ -32,8 +32,18 @@ export const GOLDEN_SCENES = [
   // pixel_size 0.005 → ~0.08 world units tall; the committed showcase
   // poster docs/showcase/web/label3d.png is equally blank). Re-add once
   // that sizing issue is addressed.
+  // NOTE: unit-animation-player*.tscn are deliberately NOT in the set —
+  // AnimationPlayer playback is non-deterministic over time and never reaches
+  // a byte-stable state once playing. The default (stopped) render shows the
+  // authored pose, but the fixtures exist to be played, so they stay out of
+  // the stability-gated visual set (same rationale as Label3D above).
   { name: 'mixed-nodes', file: 'integration-mixed-nodes.tscn' },
   { name: 'hallway-mockup', file: 'example-hallway-mockup.tscn' },
+  // Instance root merge (ADR-0013): two instances of unit-instance-child.tscn
+  // collapse into Area3D coins at x=±1.5. Pins the rendered pixels of a
+  // sub-scene-instancing scene so the wrapper-collapse + transform-replace
+  // cannot silently shift them.
+  { name: 'instanced-subscene', file: 'integration-instanced-subscene.tscn' },
   // Thin collision-gizmo lines are the most AA-sensitive content in the set.
   { name: 'physics-bodies', file: 'unit-physics-bodies.tscn', maxDiffPct: 0.3 },
 ];

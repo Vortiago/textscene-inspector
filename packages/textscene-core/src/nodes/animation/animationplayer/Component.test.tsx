@@ -27,7 +27,7 @@ function makeNode(overrides: Partial<AnimationPlayerProperties> = {}): TscnNode 
     current_animation_length: 0.0,
     current_animation_position: 0.0,
     root_node: 'NodePath("..")',
-    clips: [],
+    libraries: [],
     ...overrides,
   };
   return {

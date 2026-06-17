@@ -1,0 +1,12 @@
+# AnimationPlayer drives sibling objects via a THREE.AnimationMixer rooted at root_node
+
+Every other node component renders only itself (the "each component renders itself" invariant; non-visual types are transform-only groups — ADR-0005/0008). An AnimationPlayer is different: it animates *other* nodes named by `NodePath("Child:property")` tracks. We drive them with a `THREE.AnimationMixer` built on the player's **Animation root** (`root_node`, default `..` = the player's parent), binding `THREE.KeyframeTrack`s by name-path (`"Mesh.position"`); `THREE.PropertyBinding` resolves each target by searching the subtree — finding the named, transform-bearing object through the dispatcher's unnamed pickable wrappers — so the mixer overrides that object's base transform while it plays. The mixer is advanced from `useFrame` and gated by the scene-level **Animation transport** (stopped on load → authored pose; play is user-initiated).
+
+We chose this over a central animation-value context that computes per-frame values and pushes them into every animatable component, because the mixer approach keeps *all* animation logic inside the AnimationPlayer slice and leaves every target component (sprite2d, meshinstance3d, the Node2D/Node3D bases, …) completely untouched — at the cost of depending on three's name-based binding resolving through the dispatcher's wrapper nesting (pinned by a test) and, for now, only single-level NodePaths.
+
+## Consequences
+
+- Slice-1 supports `value` tracks for `position`/`rotation`/`rotation_degrees`/`scale` over single-level NodePaths. Deep relative paths (`../..`), and `bezier`/`method`/`audio`/`animation` track types, are deferred.
+- **Rotation fidelity:** rotation drives per-component `.rotation[x|y|z]` (NumberKeyframeTrack), not a whole-`.rotation` VectorKeyframeTrack — a whole-Euler write bypasses Euler's onChange and leaves `.quaternion` (which builds the matrix) stale, so nothing rotates. Per-component lerp also matches Godot and supports a full >180° turn. Targets are reordered to Godot's `YXZ` Euler order so multi-axis rotations compose identically. `loop_mode` 2 maps to `LoopPingPong`.
+- AnimationPlayer is documented as a *transform-only group that is also an animation driver* — invisible but not inert.
+- Playback is non-deterministic over time, so playback fixtures stay out of the visual-regression manifest (like Label3D); the default (stopped) render stays byte-stable.

@@ -9,6 +9,7 @@ import type { ParsedHeading } from '../../../parser/utils';
 import { parseNode3D } from '../../base/node3d/parser';
 import { boolOr, enumOr, floatOr } from '../../../parser/valueParsers';
 import {
+  type AnimationLibraryRef,
   AnimationProcessMode,
   type AnimationPlayerProperties,
   MethodCallMode,
@@ -20,7 +21,7 @@ export function parseAnimationPlayer(
 ): AnimationPlayerProperties {
   const baseProps = parseNode3D(heading, properties);
 
-  const clips = extractClips(properties);
+  const libraries = extractLibraries(properties);
 
   return {
     ...baseProps,
@@ -42,23 +43,31 @@ export function parseAnimationPlayer(
     current_animation_length: floatOr(properties.current_animation_length, 0.0),
     current_animation_position: floatOr(properties.current_animation_position, 0.0),
     root_node: properties.root_node ?? 'NodePath("..")',
-    clips,
+    libraries,
   };
 }
 
-function extractClips(properties: Record<string, string>): Array<{ name: string }> {
-  const clips: Array<{ name: string }> = [];
+const SUB_RESOURCE_REF = /^SubResource\("([^"]+)"\)$/;
+
+function extractLibraries(properties: Record<string, string>): AnimationLibraryRef[] {
+  const libraries: AnimationLibraryRef[] = [];
   for (const key of Object.keys(properties)) {
-    if (key.startsWith('anims/')) {
-      const name = key.slice('anims/'.length);
-      if (name.length > 0) {
-        clips.push({ name });
-      }
-    }
+    if (!key.startsWith('libraries/')) continue;
+    const raw = properties[key];
+    if (raw === undefined) continue;
+    const match = SUB_RESOURCE_REF.exec(raw.trim());
+    if (!match || match[1] === undefined) continue;
+    libraries.push({ name: key.slice('libraries/'.length), subResourceId: match[1] });
   }
-  return clips;
+  return libraries;
 }
 
 function stripQuotes(raw: string): string {
-  return raw.replace(/^["']|["']$/g, '').trim();
+  // Godot 4 prefixes StringName literals with `&` and NodePath literals with
+  // `^` (e.g. `autoplay = &"spin"`); drop that before unquoting.
+  return raw
+    .trim()
+    .replace(/^[&^]/, '')
+    .replace(/^["']|["']$/g, '')
+    .trim();
 }

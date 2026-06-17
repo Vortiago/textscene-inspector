@@ -143,9 +143,11 @@ describe('<NodeDetailsPanel> BUG 1 — sub-scene interior selection', () => {
       internalResources: [],
     });
 
-    // The interior mesh path the tree builds: instance node's path +
-    // sub-scene root + interior child.
-    const interiorPath = 'HallwayGeometry/roof_lamp/roof_lamp/plafoniera';
+    // The interior mesh path the tree builds. Instance root merge (ADR-0013)
+    // collapses the sub-scene root INTO the instance node, so the interior
+    // child sits directly under the instance node's path — no doubled
+    // 'roof_lamp' wrapper segment.
+    const interiorPath = 'HallwayGeometry/roof_lamp/plafoniera';
 
     render(
       <>

@@ -30,18 +30,18 @@ export function formatAnimationPlayerProperties(
     ],
   });
 
-  if (properties.clips.length > 0) {
+  if (properties.libraries.length > 0) {
     sections.push({
-      title: `Clips (${properties.clips.length})`,
-      items: properties.clips.map((clip, i) => ({
-        label: `[${i}]`,
-        value: clip.name,
+      title: `Animation Libraries (${properties.libraries.length})`,
+      items: properties.libraries.map((lib) => ({
+        label: lib.name.length > 0 ? lib.name : '(default)',
+        value: `SubResource("${lib.subResourceId}")`,
       })),
     });
   } else {
     sections.push({
-      title: 'Clips',
-      items: [{ label: 'Count', value: '0 — no animations defined' }],
+      title: 'Animation Libraries',
+      items: [{ label: 'Count', value: '0 — no libraries defined' }],
     });
   }
 

@@ -14,6 +14,7 @@ import styles from './SceneTreeViewer.module.css';
 export interface SceneTreeViewerProps {
   /** Optional callback fired when a tree row is double-clicked (host can jump to source). */
   onNodeReveal?: (path: string, node: TscnNode) => void;
+  onOpenSubScene?: (scenePath: string) => void;
 }
 
 function collectAllPaths(nodes: readonly TscnNode[], parentPath: string, out: Set<string>): void {
@@ -33,7 +34,7 @@ function nodeMatchesSearch(node: TscnNode, term: string): boolean {
   return node.children.some((child) => nodeMatchesSearch(child, term));
 }
 
-export function SceneTreeViewer({ onNodeReveal }: SceneTreeViewerProps) {
+export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewerProps) {
   const { sceneGraph } = useHierarchy();
   const { setExpandedNodePaths, hiddenNodePaths, toggleHidden } = useSelection();
 
@@ -131,6 +132,7 @@ export function SceneTreeViewer({ onNodeReveal }: SceneTreeViewerProps) {
               hiddenNodePaths={hiddenNodePaths}
               onToggleVisibility={toggleHidden}
               onNodeReveal={onNodeReveal}
+              onOpenSubScene={onOpenSubScene}
               matches={matches}
               externalResources={externalResources}
             />

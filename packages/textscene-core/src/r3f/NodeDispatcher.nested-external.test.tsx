@@ -1,14 +1,15 @@
 /**
  * Multi-level nested external scenes (TopScene → MiddleScene → LeafScene)
  * through the R3F pipeline, using the fake loader pattern from
- * NodeDispatcher.instance.test.tsx. `InstancedSceneSubtree` resolves
- * ExtResource refs recursively, so 3-level nesting must work transparently:
- * named groups exist at every level, instance transforms compose
- * (leafInstance.position.x ≈ 2), and level-3 meshes appear in the tree.
+ * NodeDispatcher.instance.test.tsx. `InstancedNode` resolves ExtResource refs
+ * recursively, and Instance root merge (ADR-0013) collapses each single-root
+ * sub-scene INTO its instance node: the instance node `MiddleInstance` *becomes*
+ * the loaded root `NestedMiddle` (adopting its type + children), so the wrapper
+ * level disappears. Each instance node keeps its own local transform.
  *
- * Error resilience: when the middle scene is absent the loader returns null
- * for that path, InstancedSceneSubtree renders a placeholder, and level-3
- * nodes must not appear in the tree.
+ * Error resilience: when a sub-scene is absent the loader returns null for that
+ * path, `InstancedNode` keeps the instance node visible with a placeholder, and
+ * the deeper level's nodes must not appear in the tree.
  *
  * NOTE: the legacy pipeline's `userData.instanceRoot` tagging was removed
  * with SceneManager; the DELETED_FEATURE test below pins that removal.
@@ -224,16 +225,21 @@ describe('NodeDispatcher — nested external scenes (3+ levels)', () => {
       const groups = renderer.scene.findAllByType('Group');
       const groupNames = groups.map((g) => g.instance.name);
 
-      // Level 1: Top scene nodes
+      // Level 1: Top scene node.
       expect(groupNames).toContain('NestedTop');
-      expect(groupNames).toContain('MiddleInstance');
 
-      // Level 2: Middle scene nodes (loaded from L1 instance)
-      expect(groupNames).toContain('NestedMiddle');
+      // Level 2: the instance node 'MiddleInstance' collapsed INTO the loaded
+      // root 'NestedMiddle' — so 'MiddleInstance' survives and 'NestedMiddle'
+      // does not. Its own child 'LeafInstance' is preserved.
+      expect(groupNames).toContain('MiddleInstance');
+      expect(groupNames).not.toContain('NestedMiddle');
       expect(groupNames).toContain('LeafInstance');
 
-      // Level 3: Leaf scene nodes (loaded from L2 instance) — KEY TEST
-      expect(groupNames).toContain('NestedLeaf');
+      // Level 3: 'LeafInstance' collapsed into 'NestedLeaf'; the leaf content
+      // (LeafSphere mesh) is what proves the deepest level resolved.
+      expect(groupNames).not.toContain('NestedLeaf');
+      const meshNames = renderer.scene.findAllByType('Mesh').map((m) => m.instance.name);
+      expect(meshNames).toContain('LeafSphere');
     });
 
     it('creates THREE.js objects for all nested levels', async () => {
@@ -248,12 +254,12 @@ describe('NodeDispatcher — nested external scenes (3+ levels)', () => {
       const nestedTopGroup = groups.find((g) => g.instance.name === 'NestedTop');
       expect(nestedTopGroup?.instance.isObject3D).toBe(true);
 
-      // Level 2 objects
-      const nestedMiddleGroup = groups.find((g) => g.instance.name === 'NestedMiddle');
+      // Level 2 object: the collapsed instance node carries the level-2 root.
+      const nestedMiddleGroup = groups.find((g) => g.instance.name === 'MiddleInstance');
       expect(nestedMiddleGroup?.instance.isObject3D).toBe(true);
 
-      // Level 3 objects — KEY TEST
-      const nestedLeafGroup = groups.find((g) => g.instance.name === 'NestedLeaf');
+      // Level 3 object: likewise collapsed onto 'LeafInstance' — KEY TEST.
+      const nestedLeafGroup = groups.find((g) => g.instance.name === 'LeafInstance');
       expect(nestedLeafGroup?.instance.isObject3D).toBe(true);
 
       const meshes = renderer.scene.findAllByType('Mesh');
@@ -324,9 +330,11 @@ describe('NodeDispatcher — nested external scenes (3+ levels)', () => {
 
       // Level 1 exists
       expect(groupNames).toContain('NestedTop');
-      // Level 2 exists
-      expect(groupNames).toContain('NestedMiddle');
-      // Level 3 does NOT exist (leaf scene missing)
+      // Level 2 exists — collapsed onto its instance node 'MiddleInstance'.
+      expect(groupNames).toContain('MiddleInstance');
+      expect(groupNames).not.toContain('NestedMiddle');
+      // Level 3 does NOT exist (leaf scene missing); its instance node stays.
+      expect(groupNames).toContain('LeafInstance');
       expect(groupNames).not.toContain('NestedLeaf');
     });
   });

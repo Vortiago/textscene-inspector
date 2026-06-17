@@ -42,9 +42,25 @@ export function SceneResourcesProvider({
   externalResources = [],
   children,
 }: SceneResourcesProviderProps) {
+  // Inherit the ambient (parent-scene) pool, with this scene's own resources
+  // taking precedence — `findSubResource`/`resolveExtResourcePath` use
+  // first-match, so prepending own resources wins on a duplicate id.
+  //
+  // Why inherit: an instanced sub-scene COLLAPSES into its instance node
+  // (Instance root merge, ADR-0013) and re-dispatches under this provider.
+  // Children the HOST added under that instance node (e.g. the Hallway's
+  // `roof_lamp`/`Door` instances parented to a `HallwayGeometry` instance)
+  // carry HOST `ExtResource` ids; without inheritance they'd resolve against
+  // the sub-scene's pool and fail to load. A node only ever references ids
+  // from its own scene, so the fallback is exercised only by such host-scoped
+  // children — sub-scene interior nodes still resolve their own ids first.
+  const parent = useContext(SceneResourcesContext);
   const value = useMemo<SceneResources>(
-    () => ({ internalResources, externalResources }),
-    [internalResources, externalResources]
+    () => ({
+      internalResources: [...internalResources, ...parent.internalResources],
+      externalResources: [...externalResources, ...parent.externalResources],
+    }),
+    [internalResources, externalResources, parent]
   );
   return <SceneResourcesContext.Provider value={value}>{children}</SceneResourcesContext.Provider>;
 }

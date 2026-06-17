@@ -1,0 +1,76 @@
+.root {
+  position: relative;
+  display: inline-block;
+}
+
+.trigger {
+  font: inherit;
+  cursor: pointer;
+  max-width: 22rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.popover {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 50;
+  width: 22rem;
+  max-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--ts-panel-bg, #1e1e1e);
+  border: 1px solid var(--ts-border, #3a3a3a);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.search {
+  font: inherit;
+  margin: 0.5rem;
+  padding: 0.35rem 0.5rem;
+}
+
+.tree {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0.5rem;
+  overflow-y: auto;
+}
+
+.tree ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.branch,
+.scene,
+.sceneActive {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.2rem 0.5rem;
+  color: inherit;
+  white-space: nowrap;
+}
+
+.branch {
+  color: var(--ts-text-muted, #aaa);
+}
+
+.scene:hover,
+.sceneActive:hover,
+.branch:hover {
+  background: var(--ts-hover, rgba(255, 255, 255, 0.07));
+}
+
+.sceneActive {
+  background: var(--ts-selected, rgba(80, 140, 255, 0.25));
+}
