@@ -148,4 +148,52 @@ describe('<CamerasPanel> with cameras inside instanced sub-scenes', () => {
 
     expect(screen.getByRole('button', { name: /FollowCam/ })).toBeTruthy();
   });
+
+  it('frames a Camera2D inside an instanced sub-scene at its world position, not the origin', () => {
+    // game.tscn: Game → Player (instance of player.tscn at 100,50).
+    // player.tscn: PlayerRoot → Cam (Camera2D at 20,10, zoom 2). The camera's
+    // world position is 120,60 — composed over the LIVE tree (the sub-scene Cam
+    // is absent from flattenedNodes, so the old static walk framed at 0,0).
+    const root = `[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://player.tscn" id="p"]
+
+[node name="Game" type="Node2D"]
+
+[node name="Player" parent="." instance=ExtResource("p")]
+position = Vector2(100, 50)
+`;
+    const playerScene = new TscnParser().parse(`[gd_scene format=3]
+
+[node name="PlayerRoot" type="Node2D"]
+
+[node name="Cam" type="Camera2D" parent="."]
+position = Vector2(20, 10)
+zoom = Vector2(2, 2)
+`);
+    const parsed = new TscnParser().parse(root);
+    const sceneGraph = new SceneGraphBuilder()
+      .setRootScene('res://game.tscn')
+      .addScene({ ...parsed, path: 'res://game.tscn' })
+      .build();
+    const loader = makeLoader({ 'res://player.tscn': playerScene as TscnScene });
+
+    render(
+      <ResourceLoaderProvider loader={loader}>
+        <HierarchyProvider value={{ sceneGraph, panelId: 'cams-2d-nested' }}>
+          <CameraControlProvider>
+            <ViewportModeProvider>
+              <Probe />
+              <CamerasPanel />
+            </ViewportModeProvider>
+          </CameraControlProvider>
+        </HierarchyProvider>
+      </ResourceLoaderProvider>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Cam/ }));
+    const probe = screen.getByTestId('probe');
+    expect(probe.getAttribute('data-frame')).toBe('120,60@2');
+    expect(probe.getAttribute('data-mode')).toBe('2D');
+  });
 });

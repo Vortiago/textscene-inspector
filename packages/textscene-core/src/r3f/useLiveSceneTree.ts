@@ -17,6 +17,31 @@ import { useHierarchy } from './contexts/HierarchyContext.js';
 import { useResourceLoader } from '../resources/useResource.js';
 import { collectLiveNodes, type LiveTreeContext, type LiveTreeEntry } from './liveSceneTree.js';
 import type { TscnNode } from '../parser/types.js';
+import type { SceneGraph } from '../core/SceneGraph.js';
+import type { ResourceLoader } from '../resources/ResourceLoader.js';
+
+/**
+ * Build the live-tree roots + context from the parsed SceneGraph and the loader
+ * cache snapshots — the shared bridge both the reactive `useLiveSceneNodes` hook
+ * and one-shot callers (e.g. the Cameras panel's 2D framing) use, so the
+ * SceneGraph/loader → LiveTreeContext mapping lives in one place. Returns `null`
+ * when the root scene isn't available yet.
+ */
+export function liveTreeContext(
+  sceneGraph: SceneGraph | null | undefined,
+  loader: ResourceLoader | null | undefined
+): { roots: readonly TscnNode[]; ctx: LiveTreeContext } | null {
+  const root = sceneGraph?.scenes.get(sceneGraph.rootScene);
+  if (!root) return null;
+  return {
+    roots: root.nodes,
+    ctx: {
+      externalResources: root.externalResources,
+      sceneCache: loader?.scenes ?? { getCached: () => undefined },
+      glbCache: loader?.glbMeshes,
+    },
+  };
+}
 
 export function useLiveSceneNodes(predicate: (node: TscnNode) => boolean): LiveTreeEntry[] {
   const { sceneGraph } = useHierarchy();
@@ -39,13 +64,8 @@ export function useLiveSceneNodes(predicate: (node: TscnNode) => boolean): LiveT
   }, [loader]);
 
   return useMemo(() => {
-    const root = sceneGraph?.scenes.get(sceneGraph.rootScene);
-    if (!root) return [];
-    const ctx: LiveTreeContext = {
-      externalResources: root.externalResources,
-      sceneCache: loader?.scenes ?? { getCached: () => undefined },
-      glbCache: loader?.glbMeshes,
-    };
-    return collectLiveNodes(root.nodes, ctx, predicate);
+    const lt = liveTreeContext(sceneGraph, loader);
+    if (!lt) return [];
+    return collectLiveNodes(lt.roots, lt.ctx, predicate);
   }, [sceneGraph, loader, version, predicate]);
 }

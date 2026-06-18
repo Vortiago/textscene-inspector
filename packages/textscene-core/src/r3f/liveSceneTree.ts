@@ -146,37 +146,51 @@ export function liveChildren(
 }
 
 /**
- * Resolve a slash-joined path against the live tree, descending into sub-scenes
- * and GLB internals. Returns the effective (collapsed) node, or null if any
+ * Resolve a slash-joined path to the chain of EFFECTIVE (collapsed) nodes from
+ * the root down to the target — descending into sub-scenes (Instance root merge,
+ * ADR-0013) and GLB internals, switching resource scope per sub-scene. Returns
+ * `null` if any segment is unresolvable. Each element is the COLLAPSED node at
+ * that level, so an ancestor-transform walk (e.g. `node2dWorldPosition`) sees an
+ * instance node's merged properties rather than the redundant wrapper root.
+ */
+export function liveNodeChain(
+  path: string,
+  roots: readonly TscnNode[],
+  ctx: LiveTreeContext
+): TscnNode[] | null {
+  const segments = path.split('/').filter((s) => s.length > 0);
+  if (segments.length === 0) return null;
+
+  const chain: TscnNode[] = [];
+  let candidates: readonly TscnNode[] = roots;
+  let candidatesResources = ctx.externalResources;
+
+  for (const segment of segments) {
+    const match = candidates.find((n) => n.name === segment);
+    if (!match) return null;
+    // The collapsed node uses the scope it lives in (its parent's child scope).
+    chain.push(collapseLiveNode(match, candidatesResources, ctx.sceneCache));
+    const next = liveChildren(match, candidatesResources, ctx.sceneCache, ctx.glbCache);
+    candidates = next.children;
+    candidatesResources = next.externalResources;
+  }
+
+  return chain;
+}
+
+/**
+ * The effective (collapsed) node at a slash-joined path, or `null` if any
  * segment is unresolvable. A single-root sub-scene collapses into its instance
- * node (ADR-0013), so the root's own name is NOT a path segment.
+ * node (ADR-0013), so the root's own name is NOT a path segment. Thin wrapper
+ * over {@link liveNodeChain} — the last link of the same walk.
  */
 export function resolveLiveNode(
   path: string,
   roots: readonly TscnNode[],
   ctx: LiveTreeContext
 ): TscnNode | null {
-  const segments = path.split('/').filter((s) => s.length > 0);
-  if (segments.length === 0) return null;
-
-  let candidates: readonly TscnNode[] = roots;
-  let candidatesResources = ctx.externalResources;
-  let current: TscnNode | null = null;
-  // The scope `current` itself lives in (its parent's child scope) — used to
-  // collapse `current`'s own instance ref at the end.
-  let currentResources = ctx.externalResources;
-
-  for (const segment of segments) {
-    const match = candidates.find((n) => n.name === segment);
-    if (!match) return null;
-    current = match;
-    currentResources = candidatesResources;
-    const next = liveChildren(match, candidatesResources, ctx.sceneCache, ctx.glbCache);
-    candidates = next.children;
-    candidatesResources = next.externalResources;
-  }
-
-  return current ? collapseLiveNode(current, currentResources, ctx.sceneCache) : null;
+  const chain = liveNodeChain(path, roots, ctx);
+  return chain && chain.length > 0 ? chain[chain.length - 1]! : null;
 }
 
 /**

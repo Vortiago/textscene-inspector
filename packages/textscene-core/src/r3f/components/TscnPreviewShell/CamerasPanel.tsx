@@ -15,7 +15,8 @@
 import { useHierarchy } from '../../contexts/HierarchyContext.js';
 import { useOptionalCameraControl } from '../../contexts/CameraControlContext.js';
 import { useViewportMode } from '../../contexts/ViewportModeContext.js';
-import { useLiveSceneNodes } from '../../useLiveSceneTree.js';
+import { useLiveSceneNodes, liveTreeContext } from '../../useLiveSceneTree.js';
+import { useResourceLoader } from '../../../resources/useResource.js';
 import { node2dWorldPosition } from '../../node2dWorldTransform.js';
 import { camera2DView } from '../../../nodes/2d/camera2d/cameraView.js';
 import type { Camera2DProperties } from '../../../nodes/2d/camera2d/types.js';
@@ -33,6 +34,7 @@ export function CamerasPanel() {
   const { sceneGraph } = useHierarchy();
   const cam = useOptionalCameraControl();
   const { setMode } = useViewportMode();
+  const loader = useResourceLoader();
 
   // From the LIVE scene tree, so cameras inside instanced sub-scenes appear.
   const cameras = useLiveSceneNodes(isCameraNode);
@@ -44,8 +46,12 @@ export function CamerasPanel() {
   }
 
   function lookThrough2D(path: string, properties: Camera2DProperties) {
-    if (!sceneGraph) return;
-    const worldPosition = node2dWorldPosition(sceneGraph, path) ?? { x: 0, y: 0 };
+    // World position over the LIVE tree, so a Camera2D inside an instanced
+    // sub-scene composes against the instance transform instead of framing at
+    // the origin (the sub-scene node is absent from the static SceneGraph).
+    const lt = liveTreeContext(sceneGraph, loader);
+    if (!lt) return;
+    const worldPosition = node2dWorldPosition(lt.roots, lt.ctx, path) ?? { x: 0, y: 0 };
     cam?.requestFrame2D(camera2DView(properties, worldPosition, VIEWPORT_2D));
     setMode('2D');
   }

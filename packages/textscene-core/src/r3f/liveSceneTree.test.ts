@@ -11,6 +11,8 @@ import {
   collectLiveNodes,
   collapseLiveNode,
   liveChildren,
+  liveNodeChain,
+  resolveLiveNode,
   singleSceneCache,
   type LiveTreeContext,
   type CachedSceneSource,
@@ -162,6 +164,57 @@ describe('collapseLiveNode — identity contract', () => {
     expect(merged).not.toBe(node);
     expect(merged.type).toBe('CharacterBody3D');
     expect(merged.name).toBe('Player');
+  });
+});
+
+describe('liveNodeChain — the root→target chain of EFFECTIVE nodes (for ancestor-composed transforms)', () => {
+  it('returns the collapsed-node chain descending into an instanced sub-scene', () => {
+    // game.tscn instances player.tscn; the chain to the sub-scene camera must
+    // include the COLLAPSED Player (type adopted from the sub-scene root) so an
+    // ancestor-transform walk sees the instance node's merged properties.
+    const playerScene: TscnScene = {
+      nodes: [
+        makeNode('PlayerRoot', 'CharacterBody2D', {
+          children: [makeNode('Target', 'Node2D', { children: [makeNode('Cam', 'Camera2D')] })],
+        }),
+      ],
+      externalResources: [],
+      internalResources: [],
+    };
+    const roots = [
+      makeNode('Game', 'Node2D', {
+        children: [makeNode('Player', 'Node2D', { instance: 'ExtResource("4_ray")' })],
+      }),
+    ];
+    const ctx: LiveTreeContext = {
+      externalResources: [ext('4_ray', 'res://player.tscn')],
+      sceneCache: cacheOf({ 'res://player.tscn': playerScene }),
+    };
+
+    const chain = liveNodeChain('Game/Player/Target/Cam', roots, ctx);
+    expect(chain?.map((n) => n.name)).toEqual(['Game', 'Player', 'Target', 'Cam']);
+    // The Player element is the collapsed instance (ADR-0013: adopts the root type).
+    expect(chain?.[1]!.type).toBe('CharacterBody2D');
+    expect(chain?.[chain.length - 1]!.type).toBe('Camera2D');
+  });
+
+  it('returns null for an unresolvable path', () => {
+    const ctx: LiveTreeContext = { externalResources: [], sceneCache: cacheOf({}) };
+    expect(liveNodeChain('Nope/Missing', [makeNode('Root', 'Node2D')], ctx)).toBeNull();
+  });
+
+  it('returns null for an empty path', () => {
+    const ctx: LiveTreeContext = { externalResources: [], sceneCache: cacheOf({}) };
+    expect(liveNodeChain('', [makeNode('Root', 'Node2D')], ctx)).toBeNull();
+  });
+
+  it('agrees with resolveLiveNode on the last element', () => {
+    const roots = [
+      makeNode('A', 'Node2D', { children: [makeNode('B', 'Node2D')] }),
+    ];
+    const ctx: LiveTreeContext = { externalResources: [], sceneCache: cacheOf({}) };
+    const chain = liveNodeChain('A/B', roots, ctx);
+    expect(chain?.[chain.length - 1]).toBe(resolveLiveNode('A/B', roots, ctx));
   });
 });
 
