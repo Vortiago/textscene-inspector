@@ -15,8 +15,16 @@ import styles from './ViewportToolbar.module.css';
 const MODES: ViewportMode[] = ['3D', '2D'];
 
 export function ViewportToolbar() {
-  const { mode, setMode, showCollisions, setShowCollisions, showLabels, setShowLabels } =
-    useViewportMode();
+  const {
+    mode,
+    setMode,
+    showCollisions,
+    setShowCollisions,
+    showLabels,
+    setShowLabels,
+    showNavigation,
+    setShowNavigation,
+  } = useViewportMode();
   const camera = useOptionalCameraControl();
   const hierarchy = useOptionalHierarchy();
   const sceneLoaded = Boolean(hierarchy?.sceneGraph);
@@ -64,6 +72,14 @@ export function ViewportToolbar() {
           onChange={(e) => setShowLabels(e.target.checked)}
         />
         Labels
+      </label>
+      <label className={styles.checkbox} title="Show NavigationRegion overlays">
+        <input
+          type="checkbox"
+          checked={showNavigation}
+          onChange={(e) => setShowNavigation(e.target.checked)}
+        />
+        Navigation
       </label>
     </div>
   );

@@ -9,10 +9,12 @@
  *
  * Transform3D(basis_x.x, basis_x.y, basis_x.z, basis_y.x, basis_y.y, basis_y.z, basis_z.x, basis_z.y, basis_z.z, origin.x, origin.y, origin.z)
  *
- * Matrix structure:
- * [ basis_x.x  basis_y.x  basis_z.x  origin.x ]
- * [ basis_x.y  basis_y.y  basis_z.y  origin.y ]
- * [ basis_x.z  basis_y.z  basis_z.z  origin.z ]
+ * Godot stores Basis as `Vector3 rows[3]`: basis_x / basis_y / basis_z are the
+ * ROWS of the 3×3 matrix (not columns — see utils/transform.ts for the full
+ * convention note). So the matrix is:
+ * [ basis_x.x  basis_x.y  basis_x.z  origin.x ]
+ * [ basis_y.x  basis_y.y  basis_y.z  origin.y ]
+ * [ basis_z.x  basis_z.y  basis_z.z  origin.z ]
  */
 export interface Transform3D {
   /** Basis X vector (right) */

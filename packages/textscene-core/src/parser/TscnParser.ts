@@ -32,6 +32,8 @@ import '../nodes/physics/3d/rigidbody3d/index.js';
 import '../nodes/3d/skeleton3d/index.js';
 import '../nodes/3d/particles/gpuparticles3d/index.js';
 import '../nodes/3d/marker3d/index.js';
+import '../nodes/3d/gridmap/index.js';
+import '../nodes/3d/navigationregion3d/index.js';
 import '../nodes/paths/path3d/index.js';
 import '../nodes/paths/pathfollow3d/index.js';
 import '../nodes/audio/audiostreamplayer/index.js';
@@ -58,6 +60,7 @@ import '../nodes/2d/animatedsprite2d/index.js';
 import '../nodes/physics/2d/index.js';
 import '../nodes/2d/tiles/tilemaplayer/index.js';
 import '../nodes/2d/tiles/tilemap/index.js';
+import '../nodes/2d/navigationregion2d/index.js';
 
 import type { TscnScene } from './types.js';
 import { TscnParserCore } from './TscnParserCore.js';

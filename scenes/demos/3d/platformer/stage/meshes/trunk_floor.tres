@@ -1,0 +1,20 @@
+[gd_resource type="ArrayMesh" format=4 uid="uid://dhkvpx5r0pkp6"]
+
+[ext_resource type="Material" path="res://stage/tile_material.tres" id="1_5skhy"]
+
+[resource]
+resource_name = "tiles_trunk_floor"
+_surfaces = [{
+"aabb": AABB(-0.999512, -1, -1, 1.999512, 2, 2),
+"attribute_data": PackedByteArray("AACgPQAAMD8AACA9AABCPwAAoD0AAG0/AAAgPQAAfz8AACA9AAB/PwAAID0AADA/AAAgPQAAMD8AAKA9AABMPwAAID0AAG0/AACgPQAAfz8AAKA9AABCPwAAoD0AAG0/AAAgPQAATD8AACA9AABtPwAAoD0AAH8/AACgPQAAMD8AAEE/AAB8PgAAgD8AAHw+AACAPwAAAAAAAEE/AAAAAA=="),
+"format": 34359742487,
+"index_count": 30,
+"index_data": PackedByteArray("EgAQABMAEgARABAABwAEAAkABwAMAAQAAgAGAAgAAgAAAAYABQALAA8ABQANAAsADgABAAMADgAKAAEA"),
+"material": ExtResource("1_5skhy"),
+"name": "tile_material",
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 20,
+"vertex_data": PackedByteArray("CoCZvgAAgL8KgJk+CoCZvgAAgL8KgJk+CoCZvgAAgD8KgJk+CoCZvgAAgD8KgJk+CoCZPgAAgD8KgJm+CoCZPgAAgD8KgJm+CoCZvgAAgL8KgJm+CoCZvgAAgL8KgJm+CoCZvgAAgD8KgJm+CoCZvgAAgD8KgJm+CoCZPgAAgL8KgJk+CoCZPgAAgL8KgJk+CoCZPgAAgL8KgJm+CoCZPgAAgL8KgJm+CoCZPgAAgD8KgJk+CoCZPgAAgD8KgJk+BeB/vwAAgL8AAIA/AACAPwAAgL8AAIA/AACAPwAAgL8AAIC/BeB/vwAAgL8AAIC/AAD/f/9//z//f/9/////PwAA/3//f/8//3//f////z//////AAD/P////3//f/8/AAD/f/9//z//////AAD/PwAA/3//f/8//////wAA/z//f/9/////P////3//f/8//////wAA/z////9//3//P/9//3////8/////f/9//z//f///////v/9///////+//3///////7//f///////vw==")
+}]
+blend_shape_mode = 0

@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://xyu1nofmqxa2"]
 
 [ext_resource type="Script" uid="uid://djamw5jkpwagi" path="res://player/cubio.gd" id="1"]
-[ext_resource type="ArrayMesh" uid="uid://ba7dqpj07mlsy" path="res://models/cube.mesh" id="2"]
+[ext_resource type="ArrayMesh" uid="uid://ba7dqpj07mlsy" path="res://models/cube.tres" id="2"]
 [ext_resource type="Script" uid="uid://c34pvm3p8cwk5" path="res://player/follow_camera.gd" id="3"]
 [ext_resource type="Material" uid="uid://dmyd46k7flepi" path="res://models/white_cube_material.tres" id="4"]
 

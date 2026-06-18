@@ -8,6 +8,8 @@
  * consistent — load-bearing for the selection-driven Animation tab (ADR-0012).
  */
 import type { TscnNode } from '../parser/types.js';
+import { nodeRegistry } from '../core/NodeRegistry.js';
+import type { ParsedHeading } from '../parser/utils.js';
 
 /**
  * Synthetic render-only type the scene processor emits for `.glb`/`.gltf`
@@ -19,14 +21,36 @@ import type { TscnNode } from '../parser/types.js';
 const GLB_SCENE_ROOT_TYPE = 'GLBSceneRoot';
 
 /**
+ * The instance node overrides only the properties it actually specifies. The
+ * base `Node` parser emits a `transform` key (and others) for EVERY node — set
+ * to `undefined` when the `.tscn` has no such line — so a raw spread of the
+ * instance properties would erase the root's real values. Stripping `undefined`
+ * keeps Godot's semantics: an absent instance property falls back to the root's.
+ * (Defined falsy values — `false`, `0`, `""` — still override, as they should.)
+ */
+function definedProperties(props: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const key of Object.keys(props)) {
+    if (props[key] !== undefined) out[key] = props[key];
+  }
+  return out;
+}
+
+/**
  * Fold a single-root `.tscn` sub-scene into its instance Node, returning the
  * merged Node — or `null` when the merge does not apply, signalling the caller
  * to keep today's nested-injection form.
  *
- * The merged Node adopts the root's `type` and `children`, merges the root's
- * parsed `properties` under the instance's own overrides (instance wins
- * per-key, so the instance `transform` *replaces* the root's), and appends any
- * children the host added under the instance.
+ * The merged Node adopts the root's `type` and `children`, and computes its
+ * `properties` by merging at the RAW level: `{ ...root.rawProperties,
+ * ...instanceNode.rawProperties }` re-parsed ONCE with the root type's
+ * registered parser, so a type-specific instance override (a GridMap `data`, a
+ * Camera3D `fov`, …) layers onto the root and is parsed with the correct type
+ * (the instance wins per-key, so its `transform` *replaces* the root's). When
+ * raw props or a registered root parser are unavailable — e.g.
+ * hand-built nodes in tests, or an unregistered root type — it falls back to
+ * spreading the already-parsed properties (instance wins per-key; an undefined
+ * instance value does not clobber the root). Host-added children are appended.
  *
  * The merged Node's `instance` ref is the ROOT's own instance ref (not the
  * instance node's, which is consumed by this merge step). For the common case
@@ -48,11 +72,45 @@ export function mergeInstanceRoot(
   const root = loadedScene.nodes[0]!;
   if (root.type === GLB_SCENE_ROOT_TYPE) return null;
 
+  const registration = nodeRegistry.getRegistration(root.type);
+  // Layer the instance's raw overrides onto the root's raw props whenever both
+  // are available, so a type-specific override survives the merge. Carried on
+  // the merged node too, so a nested-root re-dispatch keeps merging raw-first.
+  const mergedRaw =
+    root.rawProperties && instanceNode.rawProperties
+      ? { ...root.rawProperties, ...instanceNode.rawProperties }
+      : undefined;
+
+  let mergedProperties: TscnNode['properties'];
+  if (mergedRaw && registration) {
+    // Re-parse the merged raw map ONCE with the root type's parser.
+    const instanceIndex = (instanceNode.properties as { index?: number }).index;
+    const heading: ParsedHeading = {
+      type: 'node',
+      attributes: {
+        type: root.type,
+        name: instanceNode.name,
+        ...(instanceNode.parent !== undefined ? { parent: instanceNode.parent } : {}),
+        ...(instanceNode.instance ? { instance: instanceNode.instance } : {}),
+        ...(instanceIndex !== undefined ? { index: String(instanceIndex) } : {}),
+      },
+    };
+    mergedProperties = registration.parser(heading, mergedRaw);
+  } else {
+    // Fallback: nodes without raw props (hand-built/test) or an unregistered
+    // root type — spread the already-parsed properties as before.
+    mergedProperties = {
+      ...root.properties,
+      ...definedProperties(instanceNode.properties as Record<string, unknown>),
+    };
+  }
+
   return {
     ...instanceNode,
     type: root.type,
     instance: root.instance,
-    properties: { ...root.properties, ...instanceNode.properties },
+    properties: mergedProperties,
+    rawProperties: mergedRaw,
     children: [...root.children, ...instanceNode.children],
   };
 }

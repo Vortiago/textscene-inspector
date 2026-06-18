@@ -6,7 +6,7 @@
 import * as THREE from 'three';
 
 export type ResourceEventType = 'requested' | 'loading' | 'progress' | 'loaded' | 'failed';
-export type ResourceType = 'texture' | 'material' | 'scene' | 'glb' | 'resource';
+export type ResourceType = 'texture' | 'material' | 'scene' | 'glb' | 'resource' | 'arraymesh';
 
 export interface ProgressData {
   loaded: number;

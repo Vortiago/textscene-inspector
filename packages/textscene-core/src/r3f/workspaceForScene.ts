@@ -15,31 +15,28 @@ import { nodeComponentRegistry } from './NodeComponentRegistry.js';
 import { TWO_D_UI_TYPES } from './controls/has2DUIContent.js';
 
 /**
+ * A node Godot's CanvasItemEditor would claim — 2D world content (Node2D,
+ * sprites, tilemaps…) or Control/CanvasLayer UI. The shared predicate behind
+ * both the root-workspace rule and the "scene has 2D content" hint, so the
+ * classification lives in one place. Callers that must see content inside
+ * instanced sub-scenes feed effective nodes from the **live scene tree**
+ * (`useLiveSceneNodes(isCanvasItemNode)`) rather than a static walk.
+ */
+export function isCanvasItemNode(node: TscnNode): boolean {
+  return TWO_D_UI_TYPES.has(node.type) || nodeComponentRegistry.isCanvasItem(node.type);
+}
+
+/**
  * The workspace the scene's root node claims, or null when no workspace
  * claims it (plain Node / unknown types — keep the current workspace).
  */
 export function workspaceForRoot(root: TscnNode | undefined): ViewportMode | null {
   if (!root) return null;
-  if (nodeComponentRegistry.isCanvasItem(root.type) || TWO_D_UI_TYPES.has(root.type)) {
+  if (isCanvasItemNode(root)) {
     return '2D';
   }
   if (nodeComponentRegistry.get(root.type) && !nodeComponentRegistry.isContainer(root.type)) {
     return '3D';
   }
   return null;
-}
-
-/**
- * True when any node in the subtree is CanvasItem content — Control/
- * CanvasLayer UI or 2D world nodes (sprites, tilemaps…). Drives the
- * "switch to 2D" hint: in the 3D workspace that content is invisible.
- */
-export function hasCanvasContent(nodes: readonly TscnNode[]): boolean {
-  for (const node of nodes) {
-    if (TWO_D_UI_TYPES.has(node.type) || nodeComponentRegistry.isCanvasItem(node.type)) {
-      return true;
-    }
-    if (hasCanvasContent(node.children)) return true;
-  }
-  return false;
 }

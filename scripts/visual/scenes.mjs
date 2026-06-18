@@ -19,6 +19,11 @@ export const GOLDEN_SCENES = [
   { name: 'plane-rotated-scaled', file: 'edge-plane-rotated-scaled.tscn' },
   { name: 'all-meshes', file: 'integration-all-meshes.tscn' },
   { name: 'all-primitives', file: 'integration-all-primitives.tscn' },
+  // External ArrayMesh .tres: decoded quad with Godot's packed normals. Loads
+  // a local resource (deterministic), gated by the two-identical-frames settle.
+  { name: 'arraymesh', file: 'unit-arraymesh.tscn' },
+  { name: 'grid-map', file: 'unit-grid-map.tscn' },
+  { name: 'navigation-region-3d', file: 'unit-navigation-region-3d.tscn' },
   { name: 'material-metallic', file: 'unit-material-metallic.tscn' },
   { name: 'material-emissive', file: 'unit-material-emissive.tscn' },
   { name: 'world-environment', file: 'unit-world-environment-basic.tscn' },

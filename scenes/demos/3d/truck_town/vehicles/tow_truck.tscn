@@ -1,10 +1,10 @@
 [gd_scene format=3 uid="uid://nhd55tk7kx8n"]
 
 [ext_resource type="Script" uid="uid://g2bo8a5av2sn" path="res://vehicles/vehicle.gd" id="1_qhfnb"]
-[ext_resource type="ArrayMesh" uid="uid://bqrwin8ccgptt" path="res://vehicles/meshes/wheel.res" id="2_uwuq1"]
-[ext_resource type="ArrayMesh" uid="uid://cbpqxxd14g8un" path="res://vehicles/meshes/tow_truck.res" id="3_tv0o3"]
+[ext_resource type="ArrayMesh" uid="uid://bqrwin8ccgptt" path="res://vehicles/meshes/wheel.tres" id="2_uwuq1"]
+[ext_resource type="ArrayMesh" uid="uid://cbpqxxd14g8un" path="res://vehicles/meshes/tow_truck.tres" id="3_tv0o3"]
 [ext_resource type="Script" uid="uid://bpgd2w0obg3tl" path="res://vehicles/follow_camera.gd" id="4_wddne"]
-[ext_resource type="ArrayMesh" uid="uid://ctglc27jx8xe2" path="res://vehicles/meshes/truck_cab.res" id="5_04cnp"]
+[ext_resource type="ArrayMesh" uid="uid://ctglc27jx8xe2" path="res://vehicles/meshes/truck_cab.tres" id="5_04cnp"]
 [ext_resource type="AudioStream" uid="uid://2ukhlukq60ge" path="res://vehicles/engine.wav" id="5_fwfew"]
 [ext_resource type="AudioStream" uid="uid://u3wks6g4rp2h" path="res://vehicles/honk_1.wav" id="5_uafkt"]
 [ext_resource type="AudioStream" uid="uid://bwmbj0hptxpp2" path="res://vehicles/impact_1.wav" id="6_i7k5m"]

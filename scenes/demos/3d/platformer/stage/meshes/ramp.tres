@@ -1,0 +1,20 @@
+[gd_resource type="ArrayMesh" format=4 uid="uid://bfs00vuvcjkew"]
+
+[ext_resource type="Material" path="res://stage/tile_material.tres" id="1_8vf57"]
+
+[resource]
+resource_name = "tiles_ramp"
+_surfaces = [{
+"aabb": AABB(-1, -1, -1, 4, 2.00001, 2.00001),
+"attribute_data": PackedByteArray("AABBPwAAfD4AAE0/AAB8PgAATT8AAIA7AABBPwAAgDsAAGA/AAB8PgAAYD8AAIA7AABgPwAAdD4AAHQ/AAB0PgAAdD8AAAA8AABgPwAAADwAAIA/AAB0PgAAgD8AAAA8AABDPwAAdD4AAH8/AAB8PgAAQz8AAAA8AAB/PwAAgDs="),
+"format": 34359742487,
+"index_count": 36,
+"index_data": PackedByteArray("CwAHAAgACwAKAAcACQAMAA4ACQAGAAwABQABAAIABQAEAAEADwAEAAUADwANAAQACAAGAAkACAAHAAYAAgAAAAMAAgABAAAA"),
+"material": ExtResource("1_8vf57"),
+"name": "tile_material",
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 16,
+"vertex_data": PackedByteArray("AACAvwAAgD8AAIA/BeAfvwAAgD8AAIA/BeAfvwAAgD8AAIC/AACAvwAAgD8AAIC/QZ/IvPsfVD8AAIA/QZ/IvPsfVD8F4H+/A2D4P/sfTL8F4H8/AcAnQAAAgL8AAIA/AcAnQAAAgL8AAIC/A2D4P/sfTL8AAIC/AABAQAAAgL8AAIA/AABAQAAAgL8AAIC/A0B1P0sAfjwAAIA/A0B1P0sAfjwAAIA/A0B1P0sAfjwAAIC/A0B1P0sAfjwAAIC//3///////7//f/7//P//vwCA/v/w//6//3///////78WsefO6M5zpxax6M7mznSnhrB3z3bPvKf+f/7/8v//vwCA/v/8//6/hrB4z3nPu6f/f///////v/9///////+/9LkJxgzGA6P0uQnGCcYEo/S5CcYJxgSj9LkJxgzGA6M=")
+}]
+blend_shape_mode = 0

@@ -243,6 +243,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Grid Map",
+    "file": "unit-grid-map.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Instance Child",
     "file": "unit-instance-child.tscn",
     "category": "Other"
@@ -298,14 +303,9 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
-    "name": "Audio Stream Player 2d",
-    "file": "unit-audio-stream-player-2d.tscn",
-    "category": "Unit - Audio"
-  },
-  {
-    "name": "Audio Stream Player",
-    "file": "unit-audio-stream-player.tscn",
-    "category": "Unit - Audio"
+    "name": "Arraymesh",
+    "file": "unit-arraymesh.tscn",
+    "category": "Unit - Primitive Meshes"
   },
   {
     "name": "Box Mesh",
@@ -356,6 +356,16 @@ export const fixtures: Fixture[] = [
     "name": "Torus Mesh",
     "file": "unit-torus-mesh.tscn",
     "category": "Unit - Primitive Meshes"
+  },
+  {
+    "name": "Audio Stream Player 2d",
+    "file": "unit-audio-stream-player-2d.tscn",
+    "category": "Unit - Audio"
+  },
+  {
+    "name": "Audio Stream Player",
+    "file": "unit-audio-stream-player.tscn",
+    "category": "Unit - Audio"
   },
   {
     "name": "Button",
@@ -501,6 +511,16 @@ export const fixtures: Fixture[] = [
     "name": "Material Textured",
     "file": "unit-material-textured.tscn",
     "category": "Unit - Materials"
+  },
+  {
+    "name": "Navigation Region 2d",
+    "file": "unit-navigation-region-2d.tscn",
+    "category": "Unit - Navigation"
+  },
+  {
+    "name": "Navigation Region 3d",
+    "file": "unit-navigation-region-3d.tscn",
+    "category": "Unit - Navigation"
   },
   {
     "name": "Sprite2d",
@@ -1623,6 +1643,12 @@ export const fixtures: Fixture[] = [
   {
     "name": "Platformer (3D): player/player",
     "file": "demos/3d/platformer/player/player.tscn",
+    "category": "Godot Demos - 3D",
+    "root": "demos/3d/platformer"
+  },
+  {
+    "name": "Platformer (3D): stage/grid_map",
+    "file": "demos/3d/platformer/stage/grid_map.tscn",
     "category": "Godot Demos - 3D",
     "root": "demos/3d/platformer"
   },

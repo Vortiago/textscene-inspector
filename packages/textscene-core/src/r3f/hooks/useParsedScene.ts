@@ -10,6 +10,9 @@ import { TscnParser } from '../../parser/TscnParser.js';
 import { SceneGraphBuilder } from '../../core/SceneGraphBuilder.js';
 import { tscnSceneToParsedScene } from '../../core/SceneGraph.js';
 import type { SceneGraph } from '../../core/SceneGraph.js';
+import type { TscnScene } from '../../parser/types.js';
+import { isGLBPath } from '../../resources/processing/glbProcessing.js';
+import { synthesiseGLBScene } from '../../resources/processors/createSceneProcessor.js';
 
 export interface ParseResult {
   sceneGraph: SceneGraph | null;
@@ -17,6 +20,13 @@ export interface ParseResult {
 }
 
 export function parseTscnContent(content: string, rootScenePath: string): ParseResult {
+  // A .glb/.gltf opened as the top-level scene isn't TSCN text — the fetched
+  // bytes are irrelevant. Synthesise the same single GLBSceneRoot the instanced
+  // path uses, so it loads + renders standalone (the node re-fetches the bytes
+  // via useResource('GLBMesh')). Matches createSceneProcessor's instanced path.
+  if (isGLBPath(rootScenePath)) {
+    return buildSceneGraph(rootScenePath, synthesiseGLBScene(rootScenePath));
+  }
   if (!content) {
     return { sceneGraph: null, error: null };
   }
@@ -36,23 +46,28 @@ export function parseTscnContent(content: string, rootScenePath: string): ParseR
       };
     }
 
-    const parsedScene = tscnSceneToParsedScene(
-      rootScenePath,
-      tscnScene.nodes,
-      tscnScene.externalResources,
-      tscnScene.internalResources
-    );
-    const sceneGraph = new SceneGraphBuilder()
-      .setRootScene(rootScenePath)
-      .addScene(parsedScene)
-      .build();
-    return { sceneGraph, error: null };
+    return buildSceneGraph(rootScenePath, tscnScene);
   } catch (err) {
     return {
       sceneGraph: null,
       error: err instanceof Error ? err.message : String(err),
     };
   }
+}
+
+/** Assemble a single-scene SceneGraph from a parsed/synthesised TscnScene. */
+function buildSceneGraph(rootScenePath: string, tscnScene: TscnScene): ParseResult {
+  const parsedScene = tscnSceneToParsedScene(
+    rootScenePath,
+    tscnScene.nodes,
+    tscnScene.externalResources,
+    tscnScene.internalResources
+  );
+  const sceneGraph = new SceneGraphBuilder()
+    .setRootScene(rootScenePath)
+    .addScene(parsedScene)
+    .build();
+  return { sceneGraph, error: null };
 }
 
 /** Re-parses only when `content` or `rootScenePath` changes. */

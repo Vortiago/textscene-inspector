@@ -1,0 +1,20 @@
+[gd_resource type="ArrayMesh" format=4 uid="uid://bwbx464v32kcx"]
+
+[ext_resource type="Material" path="res://stage/tile_material.tres" id="1_10lia"]
+
+[resource]
+resource_name = "tiles_corner_floor"
+_surfaces = [{
+"aabb": AABB(-1, -1, -1, 2, 2.00001, 2),
+"attribute_data": PackedByteArray("AABHPwAAwD4AAIA/AADAPgAAgD8AACA/AABHPwAAID8GoGU/6J9QPgQARz8E4L8+A0BJPzCgvj0EAEc/+b8fPwAAQD8AACA/+x9cPwwABT4AAEA/AADAPgAAgD8AAMA+AACAPwAAID8GoGU/MKC+PQ=="),
+"format": 34359742487,
+"index_count": 30,
+"index_data": PackedByteArray("CgADAAAACgAIAAMABwALAAwABwAFAAsABQAIAAoABQAHAAgADQAEAAkABgANAAkAAgAAAAMAAgABAAAA"),
+"material": ExtResource("1_10lia"),
+"name": "tile_material",
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 14,
+"vertex_data": PackedByteArray("AACAvwAAgD//HzM/AACAvwAAgD8AAIC/AACAvwAAgL8AAIC/AACAvwAAgL//HzM/AACAvwAAgL//HzM//x8zvwAAgD8AAIA//x8zvwAAgL8AAIA//x8zvwAAgL8AAIA/+l9mvwAAgL/6X2Y/+l9mvwAAgL/6X2Y/+l9mvwAAgD/6X2Y/AACAPwAAgD8AAIA/AACAPwAAgL8AAIA/AACAvwAAgL8AAIA/AAD/f///AAAAAP9///8AAAAA/3///wAAAgACgP7//3//f///SAD/v/9//H9V/6q//3///wAA/7//f/9/uv3cvv8//39zvnO+/3///yQA/7//P/9/lb+Vv/9//3+m/yvA/3//f2n/SsD/f///JAD/vw==")
+}]
+blend_shape_mode = 0

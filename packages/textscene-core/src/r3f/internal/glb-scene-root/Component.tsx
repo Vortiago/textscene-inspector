@@ -17,14 +17,16 @@
  * after the synthesised scene loads) sees a normal scene with one
  * dispatched node.
  *
- * Beyond rendering, a GLB carries its own animation clips (a Godot GLB
- * import would expose them on the model's AnimationPlayer). This component
- * is the **GLB animation driver**: when its tree row is the selected node it
- * registers those clips with the selection-driven Animation transport
- * (ADR-0012) and drives a `THREE.AnimationMixer` rooted on the loaded GLB
- * object — the GLB counterpart to the AnimationPlayer slice (ADR-0011). The
- * clips arrive already bound to the GLB's own node names, so the mixer roots
- * on the object itself rather than on an Animation root / `root_node`.
+ * Beyond rendering, a GLB carries its own animation clips. Godot's glTF import
+ * exposes them on an `AnimationPlayer` node inside the imported hierarchy (a
+ * child of the root), so the tree synthesises that node (`glbSceneRootChildren`)
+ * when the GLB has clips. This component is the **GLB animation driver**: when
+ * that AnimationPlayer child row is the selected node it registers the clips
+ * with the selection-driven Animation transport (ADR-0012) and drives a
+ * `THREE.AnimationMixer` rooted on the loaded GLB object — the GLB counterpart
+ * to the AnimationPlayer slice (ADR-0011). The clips arrive already bound to the
+ * GLB's own node names, so the mixer roots on the object itself rather than on
+ * an Animation root / `root_node`.
  */
 import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
@@ -33,10 +35,12 @@ import { useResource } from '../../../resources/useResource';
 import { MissingResourcePlaceholder } from '../../components/MissingResourcePlaceholder';
 import { useGlbOverrides } from './GlbOverridesContext';
 import { applyGlbNodeOverrides } from './glbNodeOverrides';
+import { flattenGlbObjects, GLB_ANIMATION_PLAYER_NAME } from './glbHierarchy';
 import { useAnimationTransport, type PlayState } from '../../contexts/AnimationTransportContext';
 import { useNodePath } from '../../contexts/NodePathContext';
 import { useOptionalSelection } from '../../contexts/SelectionContext';
 import { usePlaybackLoop } from '../../animation/usePlaybackLoop';
+import { joinPath } from '../../../utils/nodePath';
 
 /**
  * Reserved node type the createSceneProcessor synthesises for binary
@@ -77,11 +81,44 @@ export function GLBSceneRoot({ node }: NodeComponentProps) {
     // resolved object or override set changes is sufficient and cheap.
   }, [object, overrides]);
 
-  // --- GLB animation driver (selection-driven, ADR-0012) ---------------
-  const transport = useAnimationTransport();
+  // WI-D: tie each internal GLB object to a tree path so the SceneTreeViewer
+  // can select (gizmo) + hide individual nodes. We walk THIS rendered clone
+  // with the same relPath scheme the tree uses, then register each object and
+  // drive its visibility from the hidden-paths set.
+  const selection = useOptionalSelection();
   const nodePath = useNodePath();
-  const selectedNodePath = useOptionalSelection()?.selectedNodePath ?? null;
-  const isActive = nodePath !== null && nodePath === selectedNodePath;
+  const entries = useMemo(() => (object ? flattenGlbObjects(object) : []), [object]);
+
+  const registerNodeObject = selection?.registerNodeObject;
+  const unregisterNodeObject = selection?.unregisterNodeObject;
+  useEffect(() => {
+    if (!registerNodeObject || !unregisterNodeObject || nodePath === null) return;
+    for (const { relPath, object: obj } of entries) {
+      registerNodeObject(joinPath(nodePath, relPath), obj);
+    }
+    return () => {
+      for (const { relPath } of entries) unregisterNodeObject(joinPath(nodePath, relPath));
+    };
+  }, [entries, nodePath, registerNodeObject, unregisterNodeObject]);
+
+  const hiddenNodePaths = selection?.hiddenNodePaths;
+  useEffect(() => {
+    if (nodePath === null) return;
+    for (const { relPath, object: obj } of entries) {
+      obj.visible = !(hiddenNodePaths?.has(joinPath(nodePath, relPath)) ?? false);
+    }
+  }, [entries, nodePath, hiddenNodePaths]);
+
+  // --- GLB animation driver (selection-driven, ADR-0012) ---------------
+  // Godot parity: a GLB's clips live on an `AnimationPlayer` node in the
+  // hierarchy (a child of the imported root), not on the root itself. The tree
+  // synthesises that node (glbSceneRootChildren) when the GLB carries clips, so
+  // the driver activates when THAT child path — not the GLB root — is selected.
+  const transport = useAnimationTransport();
+  const selectedNodePath = selection?.selectedNodePath ?? null;
+  const animationPlayerPath =
+    nodePath !== null ? joinPath(nodePath, GLB_ANIMATION_PLAYER_NAME) : null;
+  const isActive = animationPlayerPath !== null && animationPlayerPath === selectedNodePath;
 
   const { clips, durations } = useMemo(() => {
     const list = object?.animations ?? [];

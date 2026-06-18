@@ -7,10 +7,10 @@
  * Must live below `<ViewportModeProvider>` so it can read the mode the
  * toolbar writes.
  */
-import { useMemo } from 'react';
 import type { SceneGraph } from '../../../core/SceneGraph.js';
 import { useViewportMode } from '../../contexts/ViewportModeContext.js';
-import { hasCanvasContent } from '../../workspaceForScene.js';
+import { isCanvasItemNode } from '../../workspaceForScene.js';
+import { useLiveSceneNodes } from '../../useLiveSceneTree.js';
 import { TscnCanvas } from '../../TscnCanvas.js';
 import { Canvas2DStage } from '../Canvas2DStage/Canvas2DStage.js';
 import styles from './TscnPreviewShell.module.css';
@@ -18,7 +18,10 @@ import styles from './TscnPreviewShell.module.css';
 export function ViewportArea({ sceneGraph }: { sceneGraph: SceneGraph | null }) {
   const { mode, setMode } = useViewportMode();
   const rootScene = sceneGraph?.scenes.get(sceneGraph.rootScene);
-  const has2DContent = useMemo(() => hasCanvasContent(rootScene?.nodes ?? []), [rootScene]);
+  // From the LIVE scene tree, so 2D content INSIDE an instanced sub-scene (a
+  // HUD, embedded sprites) is detected too — not just inline CanvasItems. Grows
+  // when a sub-scene loads, so the hint appears once the instance resolves.
+  const has2DContent = useLiveSceneNodes(isCanvasItemNode).length > 0;
 
   if (mode === '2D') {
     return (

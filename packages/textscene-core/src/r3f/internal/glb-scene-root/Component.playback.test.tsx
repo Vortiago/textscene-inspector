@@ -27,6 +27,9 @@ import { NodePathProvider } from '../../contexts/NodePathContext';
 
 const GLB_PATH = 'res://player.glb';
 const GLB_NODE_PATH = 'Root/player';
+// Godot parity: clips surface on an AnimationPlayer node in the hierarchy, so
+// the driver activates when this child path — not the GLB root — is selected.
+const GLB_ANIM_PATH = 'Root/player/AnimationPlayer';
 
 /** A GLB-like object: a Scene group with a movable child, carrying clips. */
 function makeAnimatedGlb(): THREE.Object3D {
@@ -86,7 +89,7 @@ async function setSelection(path: string | null) {
   await ReactThreeTestRenderer.act(async () => selection?.setSelectedNodePath(path));
 }
 
-async function mountScene({ select = GLB_NODE_PATH }: { select?: string | null } = {}) {
+async function mountScene({ select = GLB_ANIM_PATH }: { select?: string | null } = {}) {
   const renderer = await ReactThreeTestRenderer.create(
     <ResourceLoaderProvider loader={makeLoader(makeAnimatedGlb())}>
       <SelectionProvider>
@@ -115,12 +118,15 @@ function moverX(renderer: Awaited<ReturnType<typeof mountScene>>): number {
 }
 
 describe('GLBSceneRoot animation driver — transport registration', () => {
-  it('registers its GLB-embedded clips only when it is the selected node', async () => {
+  it('registers its GLB-embedded clips only when its AnimationPlayer node is selected', async () => {
     const renderer = await mountScene({ select: null });
     expect(transport.clips).toEqual([]); // not selected -> not registered
 
     await setSelection(GLB_NODE_PATH);
-    expect(transport.clips).toEqual(['idle', 'slide']); // selected -> registered
+    expect(transport.clips).toEqual([]); // the GLB ROOT no longer drives the tab
+
+    await setSelection(GLB_ANIM_PATH);
+    expect(transport.clips).toEqual(['idle', 'slide']); // the AnimationPlayer node does
 
     await renderer.unmount();
   });

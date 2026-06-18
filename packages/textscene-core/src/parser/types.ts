@@ -33,6 +33,8 @@ export interface TscnNode {
   children: TscnNode[];
   /** Type-specific properties (e.g., Node3DProperties for Node3D nodes) */
   properties: Node3DProperties | Record<string, unknown>;
+  /** Raw body properties as strings, retained so a type-less instance node's overrides can be re-parsed against the instanced root's type. */
+  rawProperties?: Record<string, string>;
   /** External scene instance reference (e.g., ExtResource("1_abc")) */
   instance?: string;
 }

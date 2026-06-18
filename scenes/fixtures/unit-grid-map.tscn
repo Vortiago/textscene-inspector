@@ -1,0 +1,12 @@
+[gd_scene load_steps=2 format=3 uid="uid://unitgridmapscene"]
+
+[ext_resource type="MeshLibrary" path="res://unit-grid-map-lib.tres" id="1_lib"]
+
+[node name="Root" type="Node3D"]
+
+[node name="GridMap" type="GridMap" parent="."]
+mesh_library = ExtResource("1_lib")
+cell_size = Vector3(2, 2, 2)
+data = {
+"cells": PackedInt32Array(0, 0, 0, 1, 0, 0, 2, 0, 0, 0, 1, 0, 1, 1, 0, 2, 1, 0, 0, 2, 0, 1, 2, 0, 2, 2, 0)
+}

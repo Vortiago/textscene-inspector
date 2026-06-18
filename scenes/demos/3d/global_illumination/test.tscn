@@ -2,7 +2,7 @@
 
 [ext_resource type="PackedScene" uid="uid://bchlrstw5vflj" path="res://zdm2.glb" id="1"]
 [ext_resource type="PackedScene" uid="uid://cw16occp7kj1w" path="res://cube.glb" id="3"]
-[ext_resource type="VoxelGIData" uid="uid://duykbpl6evu0r" path="res://test_VoxelGIData.res" id="3_1netx"]
+[ext_resource type="VoxelGIData" uid="uid://duykbpl6evu0r" path="res://test_VoxelGIData.tres" id="3_1netx"]
 [ext_resource type="LightmapGIData" uid="uid://c7ltminhf5o56" path="res://zdm2_all.lmbake" id="4_7vqwx"]
 [ext_resource type="Script" uid="uid://d0vtx6du7ef8k" path="res://test.gd" id="5"]
 [ext_resource type="LightmapGIData" uid="uid://xmpb2se1j30h" path="res://zdm2_indirect.lmbake" id="5_14bmd"]

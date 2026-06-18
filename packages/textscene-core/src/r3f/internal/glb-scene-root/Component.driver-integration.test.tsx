@@ -100,7 +100,7 @@ function Capture() {
 }
 
 describe('GLB driver — selection path through the real dispatcher', () => {
-  it('populates the transport when the GLB row path (Player/player) is selected', async () => {
+  it('populates the transport when the GLB AnimationPlayer row (Player/player/AnimationPlayer) is selected', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <ResourceLoaderProvider loader={makeLoader()}>
         <SceneResourcesProvider
@@ -120,9 +120,16 @@ describe('GLB driver — selection path through the real dispatcher', () => {
     // Nothing selected → no driver registered.
     expect(transport.clips).toEqual([]);
 
-    // Select the GLB row at its dispatcher-composed path.
+    // Selecting the GLB ROOT row no longer drives the tab (Godot parity: the
+    // clips live on the AnimationPlayer child).
     await ReactThreeTestRenderer.act(async () =>
       selection?.setSelectedNodePath('Player/player')
+    );
+    expect(transport.hasPlayer).toBe(false);
+
+    // Select the synthesised AnimationPlayer row at its dispatcher-composed path.
+    await ReactThreeTestRenderer.act(async () =>
+      selection?.setSelectedNodePath('Player/player/AnimationPlayer')
     );
 
     expect(transport.hasPlayer).toBe(true);

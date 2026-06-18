@@ -1,14 +1,16 @@
 /**
- * Static 2D world-transform composition over a SceneGraph — walks a node's
- * ancestor chain and composes each ancestor's Node2D transform (Godot
- * +Y-down pixel space, T·R·Skew·S per node, the same semantics the parser
- * decodes and node2dTransform conjugates for rendering). Non-2D ancestors
- * (plain Node containers, Node3D…) contribute identity. Pure module — used
- * by the Cameras panel to frame the 2D stage on a Camera2D's world position
- * without touching live THREE objects.
+ * 2D world-transform composition over the LIVE scene tree — resolves a node's
+ * root→target chain of effective nodes (descending into instanced sub-scenes,
+ * so a Camera2D inside an instance composes correctly instead of framing at the
+ * origin) and multiplies each Node2D local transform (Godot +Y-down pixel space,
+ * T·R·Skew·S per node, the same semantics the parser decodes and node2dTransform
+ * conjugates for rendering). Non-2D ancestors (plain Node containers, Node3D…)
+ * contribute identity. Pure module — used by the Cameras panel to frame the 2D
+ * stage on a Camera2D's world position without touching live THREE objects.
  */
 
-import type { SceneGraph, SceneNode } from '../core/SceneGraph';
+import type { TscnNode } from '../parser/types';
+import { liveNodeChain, type LiveTreeContext } from './liveSceneTree';
 
 interface Affine2D {
   // Column-major 2×2 linear part + origin (Godot Transform2D layout).
@@ -22,8 +24,8 @@ interface Affine2D {
 
 const IDENTITY: Affine2D = { ax: 1, ay: 0, bx: 0, by: 1, ox: 0, oy: 0 };
 
-function localAffine(node: SceneNode): Affine2D {
-  const props = node.data.properties as Record<string, unknown> | undefined;
+function localAffine(node: TscnNode): Affine2D {
+  const props = node.properties as Record<string, unknown> | undefined;
   const position = props?.position as { x: number; y: number } | undefined;
   if (!position || typeof position.x !== 'number') return IDENTITY;
 
@@ -54,21 +56,19 @@ function multiply(parent: Affine2D, child: Affine2D): Affine2D {
   };
 }
 
-/** The node's world position in Godot pixel space, or null for unknown paths. */
+/**
+ * The node's world position in Godot pixel space, or null for unknown paths.
+ * Walks the live tree (so a Camera2D inside an instanced sub-scene resolves and
+ * composes against the instance node's merged transform), composing each
+ * effective ancestor's Node2D local transform.
+ */
 export function node2dWorldPosition(
-  graph: SceneGraph,
+  roots: readonly TscnNode[],
+  ctx: LiveTreeContext,
   path: string
 ): { x: number; y: number } | null {
-  const byPath = new Map(graph.flattenedNodes.map((n) => [n.path, n]));
-  const target = byPath.get(path);
-  if (!target) return null;
-
-  // Root → target chain.
-  const chain: SceneNode[] = [];
-  for (let node: SceneNode | undefined = target; node; ) {
-    chain.unshift(node);
-    node = node.parent === null ? undefined : byPath.get(node.parent);
-  }
+  const chain = liveNodeChain(path, roots, ctx);
+  if (!chain) return null;
 
   let world = IDENTITY;
   for (const node of chain) world = multiply(world, localAffine(node));

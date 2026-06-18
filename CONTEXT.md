@@ -18,6 +18,10 @@ _Avoid_: "element", "entity".
 The parsed-and-built tree of Nodes for one or more scenes; produced by the scene-tree builder and read from `HierarchyContext`.
 _Avoid_: "scene tree" for the data structure — reserve "scene tree" for the UI panel (`SceneTreeViewer`).
 
+**Live scene tree** (`r3f/liveSceneTree.ts`):
+The composed, *runtime* tree the user navigates: the **SceneGraph**'s root Nodes with **PackedScene instancing** folded in (**Instance root merge** plus lazily-loaded sub-scenes) and **GLBSceneRoot** internals descended, in one consistent node-path space with per-sub-scene **ExtResource** scope. Unlike **SceneGraph** (static, parse-time, root-scene only) it depends on the **resource event bus** caches, so it is derived on demand from a cache snapshot. `liveSceneTree.ts` defines the single traversal; the viewport (**NodeDispatcher**), the scene tree panel, the inspector resolver, and the cameras/stats panels are its consumers.
+_Avoid_: conflating with **SceneGraph** (the parsed structure) or "scene tree" (the UI panel).
+
 **ExtResource**:
 An external file reference written `ExtResource("id")` and declared by an `[ext_resource]` heading carrying both a `uid=` and a `path="res://…"`.
 _Avoid_: "asset", "import".
@@ -134,9 +138,9 @@ _Avoid_: "asset loader" (reserve `ResourceLoader` for the host implementation).
 A Node with `instance = ExtResource("scene_id")` whose referenced `.tscn`/`.glb` is loaded and composed into the host tree. A single-root `.tscn` is folded in via **Instance root merge**; a `.glb` (or any multi-root scene) is instead injected as children under a nested resources provider.
 _Avoid_: "include", "prefab".
 
-**Instance root merge** (`mergeInstanceRoot`):
-The collapse of the redundant wrapper level for a single-root `.tscn` instance: the instance Node *becomes* the sub-scene's root — adopting the root's `type` and `children`, merging the root's parsed `properties` under the instance's own overrides (instance wins per-key, so the instance `transform` **replaces** the root's, matching Godot — not composed on top), while keeping the instance ref so the row still carries the 📦 badge and ⤢ open-standalone affordance. Applied identically in both resolution paths (tree `useSubSceneChildren`/`TreeNode` and viewport `NodeDispatcher`) so node paths stay consistent. Skipped for `.glb` synthetic-root instances (`GLBSceneRoot`) and any scene with multiple top-level nodes, which fall back to the nested-injection form.
-_Avoid_: "wrapper node", "prefab flattening"; "compose" for the transform (it is a replace).
+**Instance root merge** (`mergeInstanceRoot`, applied via `collapseLiveNode`):
+The collapse of the redundant wrapper level for a single-root `.tscn` instance: the instance Node *becomes* the sub-scene's root — adopting the root's `type` and `children`, merging the root's parsed `properties` under the instance's own overrides (instance wins per-key, so the instance `transform` **replaces** the root's, matching Godot — not composed on top), while keeping the instance ref so the row still carries the 📦 badge and ⤢ open-standalone affordance. The collapse *decision* is the shared `collapseLiveNode` (in the **Live scene tree** module, wrapping `mergeInstanceRoot` over a `singleSceneCache` of the just-loaded sub-scene): the tree (`TreeNode`), viewport (`NodeDispatcher`), inspector resolver, and panels all call it rather than each re-deriving the resolve-instance→merge-or-keep sequence, so node paths stay consistent across every consumer (`collapseLiveNode(node) !== node` ⟺ a merge happened). Skipped for `.glb` synthetic-root instances (`GLBSceneRoot`) and any scene with multiple top-level nodes, which fall back to the nested-injection form.
+_Avoid_: "wrapper node", "prefab flattening"; "compose" for the transform (it is a replace); re-deriving the merge decision in a consumer instead of calling `collapseLiveNode`.
 
 **Sprite-frame composition** (`r3f/spriteFrame.ts`):
 The shared region_rect + hframes/vframes UV math for SpriteBase nodes — Godot computes a base_rect (region when enabled, else the full texture) and then subdivides it by the frame grid; the two compose. `composeFrameTexture` windows a texture clone's UVs to the current frame, `frameSizePx` returns the frame's pixel size. Flip handling and world sizing stay per-slice (Sprite2D mirrors via mesh scale at 1 px = 1 unit; Sprite3D mirrors via UV negation and scales by `pixel_size`).

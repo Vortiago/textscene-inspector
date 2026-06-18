@@ -158,6 +158,49 @@ describe('<SceneTreeViewer> WI-HALL-1 — sub-scene inlining', () => {
     expect(instanceRow!.textContent).not.toBe('•');
   });
 
+  it('resolves a NESTED instance using the sub-scene resources, not the outer scene (chevron on the inner row)', () => {
+    // Reproduces the platformer Player bug: game.tscn instances player.tscn,
+    // which instances player.glb via player.tscn's OWN ExtResource id (absent
+    // from game.tscn). The inner instance must resolve against the sub-scene's
+    // resource table or it dead-ends as a leaf.
+    const { loader, setSceneCached } = makeLoader();
+    const subB: TscnScene = {
+      nodes: [makeNode('BRoot', 'Node3D', { children: [makeNode('Leaf', 'MeshInstance3D')] })],
+      externalResources: [],
+      internalResources: [],
+    };
+    const subA: TscnScene = {
+      nodes: [
+        makeNode('ARoot', 'Node3D', {
+          children: [makeNode('Inner', 'Node3D', { instance: 'ExtResource("9_subB")' })],
+        }),
+      ],
+      // subA's OWN resource table — the only place "9_subB" is defined.
+      externalResources: [makeExtResource('9_subB', 'res://subB.tscn')],
+      internalResources: [],
+    };
+    setSceneCached('res://subA.tscn', subA);
+    setSceneCached('res://subB.tscn', subB);
+
+    // Outer scene knows only subA ("1_subA"); it has NO "9_subB".
+    const graph = createSceneGraphFromTscnScene({
+      nodes: [makeNode('A', 'Node3D', { instance: 'ExtResource("1_subA")' })],
+      externalResources: [makeExtResource('1_subA', 'res://subA.tscn')],
+      internalResources: [],
+    });
+
+    render(<SceneTreeViewer />, { wrapper: wrap(loader, graph) });
+
+    // A collapses subA (ARoot merges in), so its child row is "Inner". Expand A.
+    const aRow = screen.getByText('A').closest('[data-node-path]');
+    act(() => fireEvent.click(within(aRow!).getByRole('button', { name: 'Expand' })));
+
+    // Inner's nested subB resolved against subA's resources → it has a chevron.
+    const innerRow = screen.getByText('Inner').closest('[data-node-path]');
+    expect(innerRow).not.toBeNull();
+    expect(innerRow!.textContent).toContain('▶');
+  });
+
   it('offers an "open sub-scene standalone" action that reports the instance res:// path', () => {
     const { loader } = makeLoader();
     const graph = createSceneGraphFromTscnScene({
@@ -353,5 +396,39 @@ describe('<SceneTreeViewer> Instance root merge (ADR-0013)', () => {
     // Both loaded roots render as nested child rows under the instance row.
     expect(container.querySelector('[data-node-path="MultiHost/RootA"]')).not.toBeNull();
     expect(container.querySelector('[data-node-path="MultiHost/RootB"]')).not.toBeNull();
+  });
+
+  it('search reaches a node inside an instanced sub-scene, keeping the instance row visible', () => {
+    const { loader, setSceneCached } = makeLoader();
+    setSceneCached('res://frame.tscn', {
+      nodes: [makeNode('FrameRoot', 'Node3D', { children: [makeNode('SpecialMesh', 'MeshInstance3D')] })],
+      externalResources: [],
+      internalResources: [],
+    });
+    const graph = createSceneGraphFromTscnScene({
+      nodes: [
+        makeNode('Frame', 'Node3D', { instance: 'ExtResource("f")' }),
+        makeNode('Other', 'Node3D'),
+      ],
+      externalResources: [makeExtResource('f', 'res://frame.tscn')],
+      internalResources: [],
+    });
+
+    render(<SceneTreeViewer />, { wrapper: wrap(loader, graph) });
+
+    // Expand the instance so its sub-scene rows render.
+    expandRow('Frame');
+    expect(screen.getByText('SpecialMesh')).toBeTruthy();
+
+    // Search for the sub-scene node: the old static walk hid the whole instance
+    // row (its raw children are empty), so the match was unreachable. The live
+    // walk keeps the instance row (an ancestor of the match) and the match,
+    // hiding only the unrelated sibling.
+    act(() =>
+      fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'special' } })
+    );
+    expect(screen.getByText('Frame')).toBeTruthy();
+    expect(screen.getByText('SpecialMesh')).toBeTruthy();
+    expect(screen.queryByText('Other')).toBeNull();
   });
 });

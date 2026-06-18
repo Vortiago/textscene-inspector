@@ -4,6 +4,7 @@
  */
 import { useMemo } from 'react';
 import { nodeRegistry } from '../../../core/NodeRegistry.js';
+import { isRenderableNodeType } from '../../nodeSupport.js';
 import type { TscnNode } from '../../../parser/types.js';
 import { useHierarchy } from '../../contexts/HierarchyContext.js';
 import { useSelection } from '../../contexts/SelectionContext.js';
@@ -42,7 +43,8 @@ export function NodeDetailsPanel() {
       selectedNodePath,
       rootScene.nodes,
       rootScene.externalResources,
-      loader.scenes
+      loader.scenes,
+      loader.glbMeshes
     );
     return resolved ? { node: resolved, path: selectedNodePath } : null;
   }, [sceneGraph, selectedNodePath, loader]);
@@ -57,7 +59,7 @@ export function NodeDetailsPanel() {
 
   const { node, path } = selection;
   const registration = nodeRegistry.getRegistration(node.type);
-  const isUnsupported = !registration && node.type !== 'Node';
+  const isUnsupported = !isRenderableNodeType(node.type);
 
   if (isUnsupported) {
     return (

@@ -1,0 +1,20 @@
+[gd_resource type="ArrayMesh" format=4 uid="uid://b2k7um4dg8yfv"]
+
+[ext_resource type="Material" path="res://stage/tile_material.tres" id="1_jh7bv"]
+
+[resource]
+resource_name = "tiles_floor_edge"
+_surfaces = [{
+"aabb": AABB(-1, -1.299805, -1, 2, 0.29981506, 2.099609),
+"attribute_data": PackedByteArray("AABBPwAAiD4AAIA/AACIPgAAgD8AAAAAAABBPwAAAAAAAEE/AACUPgAAgD8AAJQ+AABBPwAAoD4AAEE/AACqPgAAgD8AAKo+AACAPwAAoD4="),
+"format": 34359742487,
+"index_count": 24,
+"index_data": PackedByteArray("BQAAAAEABQAEAAAACQAEAAUACQAGAAQACAAGAAkACAAHAAYAAgAAAAMAAgABAAAA"),
+"material": ExtResource("1_jh7bv"),
+"name": "tile_material",
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 10,
+"vertex_data": PackedByteArray("AACAvwAAgL8AAIA/AACAPwAAgL8AAIA/AACAPwAAgL8AAIC/AACAvwAAgL8AAIC/AACAv/2/jL/9v4w/AACAP/2/jL/9v4w/AACAvwKAmb/9v4w/AACAvwNgpr8AAIA/AACAPwNgpr8AAIA/AACAPwKAmb/9v4w//n///////78AgP//////v/9///////+//3///////78AgKqq/v/+v/9/qqr///+//394Vf///7//f09A////v/9/T0D///+//394Vf///78=")
+}]
+blend_shape_mode = 0
