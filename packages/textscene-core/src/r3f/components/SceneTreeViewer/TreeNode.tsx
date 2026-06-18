@@ -57,7 +57,13 @@ export interface TreeNodeProps {
    * "Open in Editor"). Receives the resolved `res://` path of the instance.
    */
   onOpenSubScene?: (scenePath: string) => void;
-  matches: (node: TscnNode) => boolean;
+  /**
+   * Whether a row at the given full node-path should be visible under the
+   * current search — path-based (resolved over the live tree by
+   * `SceneTreeViewer`) so a match inside an instanced sub-scene keeps its
+   * ancestor rows visible.
+   */
+  matches: (path: string) => boolean;
   /**
    * WI-HALL-1: the host scene's externalResources, used to resolve
    * `node.instance = ExtResource("id")` references against the
@@ -298,10 +304,16 @@ function TreeNodeImpl({
               // directly under this row — no synthetic wrapper segment. The
               // merged children come from the loaded sub-scene, so they resolve
               // against its resources.
-              mergedChildren.filter(matches).map((child) => renderChildRow(child, 'merged', childResources))
+              mergedChildren
+                .filter((child) => matches(joinPath(nodePath, child.name)))
+                .map((child) => renderChildRow(child, 'merged', childResources))
             : [
-                ...inlineChildren.filter(matches).map((child) => renderChildRow(child, 'inline', externalResources)),
-                ...dynamicChildren.filter(matches).map((child) => renderChildRow(child, 'subscene', childResources)),
+                ...inlineChildren
+                  .filter((child) => matches(joinPath(nodePath, child.name)))
+                  .map((child) => renderChildRow(child, 'inline', externalResources)),
+                ...dynamicChildren
+                  .filter((child) => matches(joinPath(nodePath, child.name)))
+                  .map((child) => renderChildRow(child, 'subscene', childResources)),
               ]}
         </div>
       )}

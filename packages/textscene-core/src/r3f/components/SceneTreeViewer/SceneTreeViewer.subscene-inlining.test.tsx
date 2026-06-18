@@ -397,4 +397,38 @@ describe('<SceneTreeViewer> Instance root merge (ADR-0013)', () => {
     expect(container.querySelector('[data-node-path="MultiHost/RootA"]')).not.toBeNull();
     expect(container.querySelector('[data-node-path="MultiHost/RootB"]')).not.toBeNull();
   });
+
+  it('search reaches a node inside an instanced sub-scene, keeping the instance row visible', () => {
+    const { loader, setSceneCached } = makeLoader();
+    setSceneCached('res://frame.tscn', {
+      nodes: [makeNode('FrameRoot', 'Node3D', { children: [makeNode('SpecialMesh', 'MeshInstance3D')] })],
+      externalResources: [],
+      internalResources: [],
+    });
+    const graph = createSceneGraphFromTscnScene({
+      nodes: [
+        makeNode('Frame', 'Node3D', { instance: 'ExtResource("f")' }),
+        makeNode('Other', 'Node3D'),
+      ],
+      externalResources: [makeExtResource('f', 'res://frame.tscn')],
+      internalResources: [],
+    });
+
+    render(<SceneTreeViewer />, { wrapper: wrap(loader, graph) });
+
+    // Expand the instance so its sub-scene rows render.
+    expandRow('Frame');
+    expect(screen.getByText('SpecialMesh')).toBeTruthy();
+
+    // Search for the sub-scene node: the old static walk hid the whole instance
+    // row (its raw children are empty), so the match was unreachable. The live
+    // walk keeps the instance row (an ancestor of the match) and the match,
+    // hiding only the unrelated sibling.
+    act(() =>
+      fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'special' } })
+    );
+    expect(screen.getByText('Frame')).toBeTruthy();
+    expect(screen.getByText('SpecialMesh')).toBeTruthy();
+    expect(screen.queryByText('Other')).toBeNull();
+  });
 });

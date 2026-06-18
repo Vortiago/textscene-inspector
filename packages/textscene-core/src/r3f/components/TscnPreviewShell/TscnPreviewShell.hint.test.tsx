@@ -18,6 +18,28 @@ vi.mock('../Canvas2DStage/Canvas2DStage', () => ({
 }));
 
 import { TscnPreviewShell } from './TscnPreviewShell';
+import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
+import { ResourceEventBus } from '../../../resources/ResourceEventBus';
+import { TscnParser } from '../../../parser/TscnParser';
+import type { ResourceLoader } from '../../../resources/ResourceLoader';
+import type { TscnScene } from '../../../parser/types';
+
+function makeLoader(scenes: Record<string, TscnScene>): ResourceLoader {
+  const proc = <T,>(cache: Record<string, T>) => ({
+    getCached: (p: string) => cache[p],
+    isCached: (p: string) => p in cache,
+    isLoading: () => false,
+    request: () => {},
+    clearCache: () => {},
+    getCacheSize: () => Object.keys(cache).length,
+  });
+  return {
+    eventBus: new ResourceEventBus(),
+    scenes: proc<TscnScene>(scenes),
+    glbMeshes: proc<never>({}),
+    register: () => {},
+  } as unknown as ResourceLoader;
+}
 
 const MIXED_HUD_SCENE = `[gd_scene format=3]\n\n[node name="Root" type="Node3D"]\n\n[node name="HUD" type="Control" parent="."]\n`;
 const MIXED_WORLD_SCENE = `[gd_scene format=3]\n\n[node name="Root" type="Node3D"]\n\n[node name="Decal" type="Sprite2D" parent="."]\n`;
@@ -50,5 +72,21 @@ describe('<TscnPreviewShell> 2D discoverability hint (ADR-0006)', () => {
       expect(screen.queryByRole('button', { name: /switch to 2D/i })).toBeNull()
     );
     expect(screen.getByTestId('canvas-2d')).toBeTruthy();
+  });
+
+  it('shows the hint when the 2D content lives inside an instanced sub-scene', async () => {
+    // 3D-root level instances a HUD sub-scene (Control). The static walk over
+    // the root scene's nodes never saw it (the instance is a leaf there); the
+    // live tree descends into the loaded sub-scene and finds the Control.
+    const hud = new TscnParser().parse(`[gd_scene format=3]\n\n[node name="Hud" type="Control"]\n`);
+    const loader = makeLoader({ 'res://hud.tscn': hud as TscnScene });
+    const content = `[gd_scene format=3]\n\n[ext_resource type="PackedScene" path="res://hud.tscn" id="h"]\n\n[node name="Root" type="Node3D"]\n\n[node name="Hud" parent="." instance=ExtResource("h")]\n`;
+    render(
+      <ResourceLoaderProvider loader={loader}>
+        <TscnPreviewShell panelId="hint-sub" content={content} />
+      </ResourceLoaderProvider>
+    );
+    const hint = await screen.findByRole('button', { name: /switch to 2D/i });
+    expect(hint).toBeTruthy();
   });
 });

@@ -17,6 +17,28 @@ vi.mock('../Canvas2DStage/Canvas2DStage', () => ({
 }));
 
 import { TscnPreviewShell } from './TscnPreviewShell';
+import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
+import { ResourceEventBus } from '../../../resources/ResourceEventBus';
+import { TscnParser } from '../../../parser/TscnParser';
+import type { ResourceLoader } from '../../../resources/ResourceLoader';
+import type { TscnScene } from '../../../parser/types';
+
+function makeLoader(scenes: Record<string, TscnScene>): ResourceLoader {
+  const proc = <T,>(cache: Record<string, T>) => ({
+    getCached: (p: string) => cache[p],
+    isCached: (p: string) => p in cache,
+    isLoading: () => false,
+    request: () => {},
+    clearCache: () => {},
+    getCacheSize: () => Object.keys(cache).length,
+  });
+  return {
+    eventBus: new ResourceEventBus(),
+    scenes: proc<TscnScene>(scenes),
+    glbMeshes: proc<never>({}),
+    register: () => {},
+  } as unknown as ResourceLoader;
+}
 
 const SPRITE_SCENE = `[gd_scene format=3]\n\n[node name="World" type="Sprite2D"]\n`;
 const CONTROL_SCENE = `[gd_scene format=3]\n\n[node name="UI" type="Control"]\n`;
@@ -51,6 +73,21 @@ describe('<TscnPreviewShell> workspace auto-select (Godot parity)', () => {
     expect(await screen.findByTestId('canvas-3d')).toBeTruthy();
 
     rerender(<TscnPreviewShell panelId="auto-e" content={SPRITE_SCENE} />);
+    expect(await screen.findByTestId('canvas-2d')).toBeTruthy();
+  });
+
+  it('opens a scene whose ROOT is itself an instance in the sub-scene workspace', async () => {
+    // Root node is an instance with no own type; only the collapsed sub-scene
+    // root (a Control) reveals the 2D workspace. The static walk read the raw
+    // instance node's (absent) type and stayed in the default 3D workspace.
+    const menu = new TscnParser().parse(`[gd_scene format=3]\n\n[node name="Menu" type="Control"]\n`);
+    const loader = makeLoader({ 'res://menu.tscn': menu as TscnScene });
+    const content = `[gd_scene format=3]\n\n[ext_resource type="PackedScene" path="res://menu.tscn" id="m"]\n\n[node name="Menu" instance=ExtResource("m")]\n`;
+    render(
+      <ResourceLoaderProvider loader={loader}>
+        <TscnPreviewShell panelId="auto-rootinst" content={content} />
+      </ResourceLoaderProvider>
+    );
     expect(await screen.findByTestId('canvas-2d')).toBeTruthy();
   });
 });

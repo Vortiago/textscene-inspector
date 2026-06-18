@@ -5,9 +5,11 @@
  */
 import { useCallback, useMemo, useState, type ChangeEvent } from 'react';
 import type { TscnNode, TscnExternalResource } from '../../../parser/types.js';
-import { joinPath } from '../../../utils/nodePath.js';
 import { useHierarchy } from '../../contexts/HierarchyContext.js';
 import { useSelection } from '../../contexts/SelectionContext.js';
+import { useResourceLoader } from '../../../resources/useResource.js';
+import { liveTreeContext, useLiveTreeVersion } from '../../useLiveSceneTree.js';
+import { walkLiveTree } from '../../liveSceneTree.js';
 import { TreeNode } from './TreeNode.js';
 import styles from './SceneTreeViewer.module.css';
 
@@ -17,26 +19,11 @@ export interface SceneTreeViewerProps {
   onOpenSubScene?: (scenePath: string) => void;
 }
 
-function collectAllPaths(nodes: readonly TscnNode[], parentPath: string, out: Set<string>): void {
-  for (const node of nodes) {
-    const nodePath = joinPath(parentPath, node.name);
-    if (node.children.length > 0) {
-      out.add(nodePath);
-      collectAllPaths(node.children, nodePath, out);
-    }
-  }
-}
-
-function nodeMatchesSearch(node: TscnNode, term: string): boolean {
-  if (!term) return true;
-  if (node.name.toLowerCase().includes(term)) return true;
-  if (node.type.toLowerCase().includes(term)) return true;
-  return node.children.some((child) => nodeMatchesSearch(child, term));
-}
-
 export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewerProps) {
   const { sceneGraph } = useHierarchy();
   const { setExpandedNodePaths, hiddenNodePaths, toggleHidden } = useSelection();
+  const loader = useResourceLoader();
+  const version = useLiveTreeVersion(loader);
 
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -57,16 +44,42 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
 
   const term = searchTerm.trim().toLowerCase();
 
+  // Search + expand resolve over the LIVE tree (collapsed instances, loaded
+  // sub-scenes, GLB internals) — the same rows the tree renders — so a node
+  // inside an instance is reachable, not just root-scene nodes. `matchingPaths`
+  // is the set of paths to keep visible: every match plus its ancestors (so the
+  // path to a match shows). null = no search (show everything). Recomputed as
+  // sub-scenes/GLBs stream in (the live-tree version tick).
+  const matchingPaths = useMemo<ReadonlySet<string> | null>(() => {
+    if (!term) return null;
+    const lt = liveTreeContext(sceneGraph, loader);
+    if (!lt) return new Set<string>();
+    const found = new Set<string>();
+    walkLiveTree(lt.roots, lt.ctx, ({ node, path }) => {
+      if (node.name.toLowerCase().includes(term) || node.type.toLowerCase().includes(term)) {
+        found.add(path);
+        for (let slash = path.lastIndexOf('/'); slash > 0; slash = path.lastIndexOf('/', slash - 1)) {
+          found.add(path.slice(0, slash));
+        }
+      }
+    });
+    return found;
+    // `version` re-runs the search once a sub-scene/GLB finishes loading.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [term, sceneGraph, loader, version]);
+
   const matches = useCallback(
-    (node: TscnNode): boolean => nodeMatchesSearch(node, term),
-    [term]
+    (path: string): boolean => matchingPaths === null || matchingPaths.has(path),
+    [matchingPaths]
   );
 
   const handleExpandAll = useCallback(() => {
+    const lt = liveTreeContext(sceneGraph, loader);
+    if (!lt) return;
     const all = new Set<string>();
-    collectAllPaths(rootNodes, '', all);
+    walkLiveTree(lt.roots, lt.ctx, ({ path }) => all.add(path));
     setExpandedNodePaths(all);
-  }, [rootNodes, setExpandedNodePaths]);
+  }, [sceneGraph, loader, setExpandedNodePaths]);
 
   const handleCollapseAll = useCallback(() => {
     setExpandedNodePaths(new Set());
@@ -84,7 +97,7 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
     );
   }
 
-  const visibleRoots = rootNodes.filter(matches);
+  const visibleRoots = rootNodes.filter((node) => matches(node.name));
 
   return (
     <div className={styles.root}>
