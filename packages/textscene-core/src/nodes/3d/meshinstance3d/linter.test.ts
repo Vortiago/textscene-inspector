@@ -600,6 +600,66 @@ skeleton = NodePath("")
       const diagnostics = linter.lint(content);
       expect(diagnostics).toHaveLength(0);
     });
+
+    it('should not error on a relative (..) skeleton path that escapes the authored scope', () => {
+      // Mirrors scenes/demos/3d/graphics_settings/3d_scene.tscn: a MeshInstance3D
+      // whose skeleton resolves up the tree via "../.." — a relative path the
+      // static linter cannot resolve, so it must not assert not-found.
+      const content = `[gd_scene format=3]
+
+[node name="Root" type="Node3D"]
+
+[node name="SpotLight3D" type="SpotLight3D" parent="."]
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="SpotLight3D"]
+skeleton = NodePath("../..")
+`;
+
+      const diagnostics = linter.lint(content);
+      const skeletonError = diagnostics.find(d => d.ruleName === 'valid-meshinstance3d-skeleton');
+      expect(skeletonError).toBeUndefined();
+    });
+
+    it('should not error when the MeshInstance3D is parented under an instanced sub-scene', () => {
+      // Mirrors the fabrik_ik GLB case: a mesh living inside an instanced
+      // sub-scene references a Skeleton3D that exists only in that sub-scene's
+      // internals, which the static linter cannot see.
+      const content = `[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://character.tscn" id="1_char"]
+
+[node name="Root" type="Node3D"]
+
+[node name="Character" parent="." instance=ExtResource("1_char")]
+
+[node name="BodyMesh" type="MeshInstance3D" parent="Character"]
+skeleton = NodePath("Armature/Skeleton3D")
+`;
+
+      const diagnostics = linter.lint(content);
+      const skeletonError = diagnostics.find(d => d.ruleName === 'valid-meshinstance3d-skeleton');
+      expect(skeletonError).toBeUndefined();
+    });
+
+    it('should still error on a missing local skeleton when nested under a non-instance parent', () => {
+      // Boundary: a non-relative path under an ordinary (non-instanced) parent is
+      // fully authored, so a genuinely missing Skeleton3D must still be reported.
+      const content = `[gd_scene format=3]
+
+[node name="Root" type="Node3D"]
+
+[node name="Holder" type="Node3D" parent="."]
+
+[node name="MyMesh" type="MeshInstance3D" parent="Holder"]
+skeleton = NodePath("NonexistentSkeleton")
+`;
+
+      const diagnostics = linter.lint(content);
+      const skeletonError = diagnostics.find(d => d.ruleName === 'valid-meshinstance3d-skeleton');
+      expect(skeletonError).toBeDefined();
+      expect(skeletonError?.severity).toBe('error');
+      expect(skeletonError?.message).toContain('Skeleton node not found');
+    });
   });
 
   describe('Semantic Validation (Surface Index Range)', () => {
