@@ -165,7 +165,7 @@ One channel of a **GodotAnimation** targeting `NodePath("Node:property")` with o
 _Avoid_: "channel".
 
 **Animation transport**:
-The play/pause/scrub state (`AnimationTransportContext`) and its dock-tab UI, bound to the **AnimationPlayer** (or **GLB animation driver**) **currently selected in the scene tree** — selection-driven, one driver at a time, mirroring the Godot editor's Animation panel. Drives that player's `THREE.AnimationMixer`; starts STOPPED (authored pose preserved), play is user-initiated. The tab is shown only while an AnimationPlayer is selected; deselecting (or selecting a different node) stops playback and restores the authored pose.
+The play/pause/scrub state (`AnimationTransportContext`) and its dock-tab UI, bound to the **AnimationPlayer**, **GLB animation driver**, or **AnimatedSprite2D** **currently selected in the scene tree** — selection-driven, one driver at a time, mirroring the Godot editor's Animation panel. Drives the selected node's `THREE.AnimationMixer` (or, for **AnimatedSprite2D**, advances its displayed frame via `frameAtTime` — no mixer; ADR-0015); starts STOPPED (authored pose/frame preserved), play is user-initiated. The tab is shown only while a driver is selected; deselecting (or selecting a different node) stops playback and restores the authored pose.
 _Avoid_: "scene-level transport" (it follows selection, not the whole scene); "timeline" / "player controls" for the whole transport (reserve "timeline"/"scrubber" for the seek widget).
 
 **RESET animation**:

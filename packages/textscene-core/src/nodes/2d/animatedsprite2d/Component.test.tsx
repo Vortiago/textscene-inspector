@@ -13,6 +13,17 @@ import { AnimatedSprite2D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
+import {
+  AnimationTransportProvider,
+  useAnimationTransport,
+  type AnimationTransport,
+} from '../../../r3f/contexts/AnimationTransportContext';
+import {
+  SelectionProvider,
+  useOptionalSelection,
+  type SelectionContextValue,
+} from '../../../r3f/contexts/SelectionContext';
+import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
 import type { TscnNode } from '../../../parser/types';
 
 const heading = { type: 'node', attributes: { type: 'AnimatedSprite2D', name: 'A' } };
@@ -82,13 +93,21 @@ describe('AnimatedSprite2D render', () => {
   });
 });
 
-describe('AnimatedSprite2D playback', () => {
-  // Two-frame "right" animation at 5 fps (0.2s/frame), looping.
+describe('AnimatedSprite2D playback (transport-driven)', () => {
+  // Two-frame "right" at 5 fps (0.2s/frame, 0.4s loop); distinct widths per frame.
   const FRAMES_2 =
     '[{"frames": [{"duration": 1.0, "texture": ExtResource("2")}, {"duration": 1.0, "texture": ExtResource("3")}], "loop": true, "name": &"right", "speed": 5.0}]';
+  const SPRITE_PATH = 'Root/A';
 
-  // Distinct widths per frame so the displayed frame is identifiable.
-  async function renderPlaying(frame = '0') {
+  let transport: AnimationTransport;
+  let selection: SelectionContextValue | null;
+  function Capture() {
+    transport = useAnimationTransport();
+    selection = useOptionalSelection();
+    return null;
+  }
+
+  async function mount(frame = '0') {
     const fake = createFakeResourceLoader();
     const tex0 = new THREE.Texture();
     (tex0 as unknown as { image: { width: number; height: number } }).image = { width: 32, height: 16 };
@@ -115,41 +134,85 @@ describe('AnimatedSprite2D playback', () => {
             { id: '3', type: 'Texture2D', path: 'res://f1.png' },
           ]}
         >
-          <AnimatedSprite2D node={node} />
+          <SelectionProvider>
+            <AnimationTransportProvider>
+              <Capture />
+              <NodePathProvider path={SPRITE_PATH}>
+                <AnimatedSprite2D node={node} />
+              </NodePathProvider>
+            </AnimationTransportProvider>
+          </SelectionProvider>
         </SceneResourcesProvider>
       </ResourceLoaderProvider>
     );
   }
 
-  function frameWidth(r: Awaited<ReturnType<typeof renderPlaying>>): number {
+  function frameWidth(r: Awaited<ReturnType<typeof mount>>): number {
     const mesh = r.scene.findByType('Mesh').instance as THREE.Mesh;
     return (mesh.geometry as THREE.PlaneGeometry).parameters.width;
   }
+  const settle = () => ReactThreeTestRenderer.act(async () => {});
+  const select = (path: string | null) =>
+    ReactThreeTestRenderer.act(async () => selection?.setSelectedNodePath(path));
 
-  // Advance one canvas tick, then drain the trailing useResource effect +
-  // its re-render (frame change → new path → cache read → setResult).
-  async function tick(r: Awaited<ReturnType<typeof renderPlaying>>, delta: number) {
-    await r.advanceFrames(1, delta);
-    await ReactThreeTestRenderer.act(async () => {});
-  }
-
-  it('starts on the authored frame before the canvas ticks', async () => {
-    const r = await renderPlaying('0');
-    expect(frameWidth(r)).toBe(32); // frame 0
+  it('registers its clips with the transport only while selected', async () => {
+    const r = await mount('0');
+    expect(transport.clips).toEqual([]); // unselected → no Animation tab
+    await select(SPRITE_PATH);
+    expect(transport.hasPlayer).toBe(true);
+    expect(transport.clips).toEqual(['right']);
+    await r.unmount();
   });
 
-  it('advances to the next frame as canvas time elapses', async () => {
-    const r = await renderPlaying('0');
-    await tick(r, 0.3); // past the 0.2s frame-0 window
-    expect(frameWidth(r)).toBe(64); // frame 1
-  });
-
-  it('loops back to the first frame after the final frame', async () => {
-    const r = await renderPlaying('0');
-    await tick(r, 0.3); // elapsed 0.3 → frame 1
+  it('shows the authored frame while stopped — does not autoplay on select', async () => {
+    const r = await mount('1'); // authored frame 1
     expect(frameWidth(r)).toBe(64);
-    await tick(r, 0.15); // elapsed 0.45 → 0.45 % 0.4 = 0.05 → wrapped to frame 0
-    expect(frameWidth(r)).toBe(32);
+    await select(SPRITE_PATH);
+    expect(frameWidth(r)).toBe(64); // selecting alone keeps the static authored frame
+  });
+
+  it('advances the frame while playing', async () => {
+    const r = await mount('0');
+    await select(SPRITE_PATH);
+    await ReactThreeTestRenderer.act(async () => transport.play());
+    await r.advanceFrames(1, 0.3); // playhead 0.3s → frame 1
+    await settle();
+    expect(frameWidth(r)).toBe(64);
+  });
+
+  it('samples the seeked frame while paused', async () => {
+    const r = await mount('0');
+    await select(SPRITE_PATH);
+    await ReactThreeTestRenderer.act(async () => transport.play());
+    await ReactThreeTestRenderer.act(async () => transport.pause());
+    await ReactThreeTestRenderer.act(async () => transport.seek(0.3)); // into frame 1's window
+    await r.advanceFrames(1, 0);
+    await settle();
+    expect(frameWidth(r)).toBe(64);
+  });
+
+  it('returns to the authored frame on stop', async () => {
+    const r = await mount('0');
+    await select(SPRITE_PATH);
+    await ReactThreeTestRenderer.act(async () => transport.play());
+    await r.advanceFrames(1, 0.3);
+    await settle();
+    expect(frameWidth(r)).toBe(64); // playing → frame 1
+    await ReactThreeTestRenderer.act(async () => transport.stop());
+    await settle();
+    expect(frameWidth(r)).toBe(32); // authored frame 0
+  });
+
+  it('stops driving when another node is selected', async () => {
+    const r = await mount('0');
+    await select(SPRITE_PATH);
+    await ReactThreeTestRenderer.act(async () => transport.play());
+    await r.advanceFrames(1, 0.3);
+    await settle();
+    expect(frameWidth(r)).toBe(64);
+    await select('Root/Other'); // deselect the sprite
+    await settle();
+    expect(frameWidth(r)).toBe(32); // back to the authored frame
   });
 });
 

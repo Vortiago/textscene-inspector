@@ -66,9 +66,9 @@ export function frameAtTime(animation: SpriteFramesAnimation, elapsed: number): 
   const n = animation.frames.length;
   if (n <= 1 || animation.fps <= 0 || elapsed <= 0) return 0;
 
-  const frameTimes = animation.durations.map((d) => d / animation.fps);
-  const total = frameTimes.reduce((sum, t) => sum + t, 0);
+  const total = clipDuration(animation);
   if (!(total > 0)) return 0; // also catches NaN (a malformed duration)
+  const frameTimes = animation.durations.map((d) => d / animation.fps);
 
   let t = elapsed;
   if (animation.loop) t = elapsed % total;
@@ -80,6 +80,12 @@ export function frameAtTime(animation: SpriteFramesAnimation, elapsed: number): 
     if (t < acc) return i;
   }
   return n - 1;
+}
+
+/** One loop's total play time in seconds (sum of per-frame display times). */
+export function clipDuration(animation: SpriteFramesAnimation): number {
+  if (animation.fps <= 0) return 0;
+  return animation.durations.reduce((sum, d) => sum + d, 0) / animation.fps;
 }
 
 /** The substrings of each `{…}` opened at array-depth 1 (the animation dicts). */
