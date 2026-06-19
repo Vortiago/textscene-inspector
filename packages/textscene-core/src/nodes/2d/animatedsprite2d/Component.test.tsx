@@ -81,3 +81,132 @@ describe('AnimatedSprite2D render', () => {
     expect(material.color.getHexString()).toBe('ff00ff');
   });
 });
+
+describe('AnimatedSprite2D playback', () => {
+  // Two-frame "right" animation at 5 fps (0.2s/frame), looping.
+  const FRAMES_2 =
+    '[{"frames": [{"duration": 1.0, "texture": ExtResource("2")}, {"duration": 1.0, "texture": ExtResource("3")}], "loop": true, "name": &"right", "speed": 5.0}]';
+
+  // Distinct widths per frame so the displayed frame is identifiable.
+  async function renderPlaying(frame = '0') {
+    const fake = createFakeResourceLoader();
+    const tex0 = new THREE.Texture();
+    (tex0 as unknown as { image: { width: number; height: number } }).image = { width: 32, height: 16 };
+    const tex1 = new THREE.Texture();
+    (tex1 as unknown as { image: { width: number; height: number } }).image = { width: 64, height: 16 };
+    fake.textures.seed('res://f0.png', tex0);
+    fake.textures.seed('res://f1.png', tex1);
+    const node: TscnNode = {
+      name: 'A',
+      type: 'AnimatedSprite2D',
+      children: [],
+      properties: parseAnimatedSprite2D(heading, {
+        sprite_frames: 'SubResource("sf")',
+        animation: '&"right"',
+        frame,
+      }),
+    };
+    return ReactThreeTestRenderer.create(
+      <ResourceLoaderProvider loader={fake.loader}>
+        <SceneResourcesProvider
+          internalResources={[{ id: 'sf', type: 'SpriteFrames', data: { animations: FRAMES_2, id: 'sf' } }]}
+          externalResources={[
+            { id: '2', type: 'Texture2D', path: 'res://f0.png' },
+            { id: '3', type: 'Texture2D', path: 'res://f1.png' },
+          ]}
+        >
+          <AnimatedSprite2D node={node} />
+        </SceneResourcesProvider>
+      </ResourceLoaderProvider>
+    );
+  }
+
+  function frameWidth(r: Awaited<ReturnType<typeof renderPlaying>>): number {
+    const mesh = r.scene.findByType('Mesh').instance as THREE.Mesh;
+    return (mesh.geometry as THREE.PlaneGeometry).parameters.width;
+  }
+
+  // Advance one canvas tick, then drain the trailing useResource effect +
+  // its re-render (frame change → new path → cache read → setResult).
+  async function tick(r: Awaited<ReturnType<typeof renderPlaying>>, delta: number) {
+    await r.advanceFrames(1, delta);
+    await ReactThreeTestRenderer.act(async () => {});
+  }
+
+  it('starts on the authored frame before the canvas ticks', async () => {
+    const r = await renderPlaying('0');
+    expect(frameWidth(r)).toBe(32); // frame 0
+  });
+
+  it('advances to the next frame as canvas time elapses', async () => {
+    const r = await renderPlaying('0');
+    await tick(r, 0.3); // past the 0.2s frame-0 window
+    expect(frameWidth(r)).toBe(64); // frame 1
+  });
+
+  it('loops back to the first frame after the final frame', async () => {
+    const r = await renderPlaying('0');
+    await tick(r, 0.3); // elapsed 0.3 → frame 1
+    expect(frameWidth(r)).toBe(64);
+    await tick(r, 0.15); // elapsed 0.45 → 0.45 % 0.4 = 0.05 → wrapped to frame 0
+    expect(frameWidth(r)).toBe(32);
+  });
+});
+
+describe('AnimatedSprite2D authored-frame reactivity', () => {
+  // speed 0 → not playing, so the displayed frame is the authored `props.frame`
+  // and must stay reactive to live .tscn edits (the fiber is reused across an
+  // edit because NodeDispatcher keys nodes by node.name).
+  const STATIC_2 =
+    '[{"frames": [{"duration": 1.0, "texture": ExtResource("2")}, {"duration": 1.0, "texture": ExtResource("3")}], "loop": true, "name": &"pose", "speed": 0.0}]';
+
+  function makeFake() {
+    const fake = createFakeResourceLoader();
+    const tex0 = new THREE.Texture();
+    (tex0 as unknown as { image: { width: number; height: number } }).image = { width: 32, height: 16 };
+    const tex1 = new THREE.Texture();
+    (tex1 as unknown as { image: { width: number; height: number } }).image = { width: 64, height: 16 };
+    fake.textures.seed('res://f0.png', tex0);
+    fake.textures.seed('res://f1.png', tex1);
+    return fake;
+  }
+
+  function tree(fake: ReturnType<typeof createFakeResourceLoader>, frame: string) {
+    const node: TscnNode = {
+      name: 'A',
+      type: 'AnimatedSprite2D',
+      children: [],
+      properties: parseAnimatedSprite2D(heading, {
+        sprite_frames: 'SubResource("sf")',
+        animation: '&"pose"',
+        frame,
+      }),
+    };
+    return (
+      <ResourceLoaderProvider loader={fake.loader}>
+        <SceneResourcesProvider
+          internalResources={[{ id: 'sf', type: 'SpriteFrames', data: { animations: STATIC_2, id: 'sf' } }]}
+          externalResources={[
+            { id: '2', type: 'Texture2D', path: 'res://f0.png' },
+            { id: '3', type: 'Texture2D', path: 'res://f1.png' },
+          ]}
+        >
+          <AnimatedSprite2D node={node} />
+        </SceneResourcesProvider>
+      </ResourceLoaderProvider>
+    );
+  }
+
+  it('reflects a changed authored frame on a reused fiber when not playing', async () => {
+    const fake = makeFake();
+    const r = await ReactThreeTestRenderer.create(tree(fake, '0'));
+    const width = () => ((r.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.PlaneGeometry).parameters.width;
+    expect(width()).toBe(32); // authored frame 0
+
+    await ReactThreeTestRenderer.act(async () => {
+      await r.update(tree(fake, '1')); // edit frame 0 → 1 on the same fiber
+    });
+    await ReactThreeTestRenderer.act(async () => {}); // settle the texture swap
+    expect(width()).toBe(64); // frame 1 — reactive, not frozen at 0
+  });
+});
