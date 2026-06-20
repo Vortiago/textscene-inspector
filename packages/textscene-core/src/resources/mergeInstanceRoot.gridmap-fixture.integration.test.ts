@@ -22,10 +22,14 @@ import { resolveInstancePath } from './SubResourceResolver';
 import { resolveNodeByPath } from '../r3f/components/SceneTreeViewer/resolveNodeByPath';
 import { decodeGridMapCells, type GridMapCell } from '../nodes/3d/gridmap/cellData';
 import type { GridMapProperties } from '../nodes/3d/gridmap/types';
-import type { TscnNode } from '../parser/types';
+import type { TscnNode, TscnScene } from '../parser/types';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const stageDir = resolve(here, '../../../../scenes/demos/3d/platformer/stage');
+const platformerDir = resolve(here, '../../../../scenes/demos/3d/platformer');
+
+/** Parse a committed platformer fixture by its path relative to the platformer dir. */
+const parseFixture = (relPath: string): TscnScene =>
+  new TscnParser().parse(readFileSync(resolve(platformerDir, relPath), 'utf8'));
 
 function findByName(nodes: readonly TscnNode[], name: string): TscnNode | null {
   for (const n of nodes) {
@@ -36,6 +40,9 @@ function findByName(nodes: readonly TscnNode[], name: string): TscnNode | null {
   return null;
 }
 
+const gridMapCells = (node: TscnNode | null): GridMapCell[] =>
+  decodeGridMapCells((node!.properties as GridMapProperties).cells);
+
 const bbox = (cells: GridMapCell[]) => ({
   minX: Math.min(...cells.map((c) => c.x)),
   maxX: Math.max(...cells.map((c) => c.x)),
@@ -45,14 +52,13 @@ const bbox = (cells: GridMapCell[]) => ({
 
 describe('mergeInstanceRoot — platformer GridMap fixture (instance data override)', () => {
   it('renders the stage override layout (2921 cells), not the base grid_map.tscn layout (2616)', () => {
-    const parser = new TscnParser();
-    const base = parser.parse(readFileSync(resolve(stageDir, 'grid_map.tscn'), 'utf8'));
-    const stage = parser.parse(readFileSync(resolve(stageDir, 'stage.tscn'), 'utf8'));
+    const base = parseFixture('stage/grid_map.tscn');
+    const stage = parseFixture('stage/stage.tscn');
 
     // The instanced sub-scene is a single GridMap root carrying the base layout.
     expect(base.nodes).toHaveLength(1);
     expect(base.nodes[0]!.type).toBe('GridMap');
-    const baseCells = decodeGridMapCells((base.nodes[0]!.properties as GridMapProperties).cells);
+    const baseCells = gridMapCells(base.nodes[0]!);
     expect(baseCells).toHaveLength(2616);
 
     // The stage's GridMap is a type-less instance with a `data` override.
@@ -65,7 +71,7 @@ describe('mergeInstanceRoot — platformer GridMap fixture (instance data overri
     expect(merged).not.toBeNull();
     expect(merged!.type).toBe('GridMap');
 
-    const mergedCells = decodeGridMapCells((merged!.properties as GridMapProperties).cells);
+    const mergedCells = gridMapCells(merged);
     // The OVERRIDE layout wins, end-to-end — the fix's headline effect.
     expect(mergedCells).toHaveLength(2921);
 
@@ -87,9 +93,8 @@ describe('mergeInstanceRoot — platformer GridMap fixture (instance data overri
     // resources, reads the sub-scene from the loader cache (exactly what the real
     // ResourceLoader's getCached returns — a TscnParser-parsed scene with raw props),
     // and merges. This proves the fix isn't isolated to a direct mergeInstanceRoot call.
-    const parser = new TscnParser();
-    const stage = parser.parse(readFileSync(resolve(stageDir, 'stage.tscn'), 'utf8'));
-    const gridMapScene = parser.parse(readFileSync(resolve(stageDir, 'grid_map.tscn'), 'utf8'));
+    const stage = parseFixture('stage/stage.tscn');
+    const gridMapScene = parseFixture('stage/grid_map.tscn');
 
     const instanceNode = findByName(stage.nodes, 'GridMap');
     const scenePath = resolveInstancePath(instanceNode!.instance!, stage.externalResources);
@@ -100,7 +105,34 @@ describe('mergeInstanceRoot — platformer GridMap fixture (instance data overri
     const resolved = resolveNodeByPath('Stage/GridMap', stage.nodes, stage.externalResources, sceneCache);
     expect(resolved).not.toBeNull();
     expect(resolved!.type).toBe('GridMap');
-    const cells = decodeGridMapCells((resolved!.properties as GridMapProperties).cells);
-    expect(cells).toHaveLength(2921);
+    expect(gridMapCells(resolved)).toHaveLength(2921);
+  });
+
+  it('delivers the override two instance levels deep (game.tscn → Stage → GridMap)', () => {
+    // The real acceptance scenario: game.tscn instances stage.tscn
+    // (node "Stage"), which itself instances grid_map.tscn (node "GridMap") with
+    // the `data` override. The override must survive BOTH collapse levels —
+    // resolveNodeByPath descends into Stage (switching to stage.tscn's resource
+    // scope) and then collapses the nested GridMap instance. A regression here
+    // would re-render the base 2616-cell layout, putting the far coins outside it.
+    const game = parseFixture('game.tscn');
+    const stage = parseFixture('stage/stage.tscn');
+    const gridMapScene = parseFixture('stage/grid_map.tscn');
+
+    const sceneByPath: Record<string, TscnScene> = {
+      'res://stage/stage.tscn': stage,
+      'res://stage/grid_map.tscn': gridMapScene,
+    };
+    const sceneCache = { getCached: (p: string) => sceneByPath[p] };
+
+    const resolved = resolveNodeByPath(
+      'Game/Stage/GridMap',
+      game.nodes,
+      game.externalResources,
+      sceneCache
+    );
+    expect(resolved).not.toBeNull();
+    expect(resolved!.type).toBe('GridMap');
+    expect(gridMapCells(resolved)).toHaveLength(2921);
   });
 });
