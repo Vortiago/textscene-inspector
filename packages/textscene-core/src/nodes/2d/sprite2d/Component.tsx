@@ -46,7 +46,6 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
     frameRegistry.register(nodePath, setAnimatedFrame);
     return () => frameRegistry.unregister(nodePath, setAnimatedFrame);
   }, [nodePath, frameRegistry]);
-  const frame = animatedFrame ?? props.frame;
 
   const texturePath = useMemo(
     () => resolveExtResourcePath(props.texture, externalResources),
@@ -54,10 +53,13 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
   );
   const texResult = useResource<THREE.Texture>(texturePath ?? '', 'Texture2D');
 
-  const displayedTexture = useMemo(
-    () => composeFrameTexture(texResult.value, { ...props, frame }),
-    [texResult.value, props, frame]
-  );
+  // A driven `frame` overrides the authored `frame` AND any authored
+  // `frame_coords` (in Godot the two are the same value), so the animation wins.
+  const displayedTexture = useMemo(() => {
+    const frameProps =
+      animatedFrame !== null ? { ...props, frame: animatedFrame, frame_coords: undefined } : props;
+    return composeFrameTexture(texResult.value, frameProps);
+  }, [texResult.value, props, animatedFrame]);
   // composeFrameTexture clones the texture per frame; dispose the prior clone
   // when the frame advances (and on unmount) so playback doesn't leak GPU
   // textures (~one per keyframe otherwise).
