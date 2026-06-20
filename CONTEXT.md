@@ -161,7 +161,7 @@ The `[sub_resource type="AnimationLibrary"]` whose `_data` maps clip names → *
 _Avoid_: "library" bare; the legacy Godot-3 `anims/<name>` inline form (absent from this corpus).
 
 **Track**:
-One channel of a **GodotAnimation** targeting `NodePath("Node:property")` with ordered **Keyframe**s (time + value + transition); slice-1 supports `value` tracks for `position`/`rotation`/`rotation_degrees`/`scale`. Other track types (`bezier`/`method`/`audio`/`animation`) and other properties parse but do not yet drive.
+One channel of a **GodotAnimation** targeting `NodePath("Node:property")` with ordered **Keyframe**s (time + value + transition). `value` tracks drive two ways: transform properties (`position`/`rotation`/`rotation_degrees`/`scale`) through the `THREE.AnimationMixer`, and `Sprite2D:frame` (sprite-sheet flipbook) through the **AnimatedFrame** push registry — the mixer binds transforms only, so a discrete `frame` is sampled and pushed to the target sprite (ADR-0016). Other track types (`bezier`/`method`/`audio`/`animation`) and other properties parse but do not yet drive.
 _Avoid_: "channel".
 
 **Animation transport**:
