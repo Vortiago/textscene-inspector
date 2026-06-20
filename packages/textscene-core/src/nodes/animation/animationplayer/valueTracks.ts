@@ -6,7 +6,7 @@
  * the scoped "value-push" path ADR-0011 deferred.
  */
 
-import type { GodotKeyframe } from './animationResolver';
+import { extractNodePathInner, type GodotKeyframe } from './animationResolver';
 
 /**
  * The value held at `time` by a stepped (discrete) value track: the last
@@ -40,15 +40,9 @@ export function resolveTargetNodePath(
   rootNodeRaw: string,
   relativeTarget: string
 ): string {
-  const rootRelative = rootNodeRaw ? nodePathInner(rootNodeRaw) : '..';
+  const rootRelative = rootNodeRaw ? (extractNodePathInner(rootNodeRaw) ?? rootNodeRaw) : '..';
   const rootAbsolute = applyRelativePath(playerNodePath, rootRelative);
   return applyRelativePath(rootAbsolute, relativeTarget);
-}
-
-/** Extract the inner path of a `NodePath("…")` literal (or pass through a bare path). */
-function nodePathInner(raw: string): string {
-  const match = raw.match(/NodePath\(\s*"([^"]*)"\s*\)/);
-  return match ? match[1]! : raw;
 }
 
 /** Apply a relative node path (`..`/`.`/names) onto an absolute base path. */
