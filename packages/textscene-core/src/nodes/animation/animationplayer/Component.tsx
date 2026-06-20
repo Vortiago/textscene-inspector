@@ -11,7 +11,8 @@
  * transforms captured at mount are restored.
  */
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useFrame } from '@react-three/fiber';
 import {
   AnimationMixer,
   Euler,
@@ -29,8 +30,10 @@ import { useAnimationTransport, type PlayState } from '../../../r3f/contexts/Ani
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useOptionalSelection } from '../../../r3f/contexts/SelectionContext';
 import { usePlaybackLoop } from '../../../r3f/animation/usePlaybackLoop';
+import { useAnimatedFrameRegistry } from '../../../r3f/contexts/AnimatedFrameContext';
 import { resolveAnimations, type GodotAnimation } from './animationResolver';
 import { buildClip, loopSettingsFor } from './clipBuilder';
+import { sampleSteppedValue, resolveTargetNodePath } from './valueTracks';
 
 /** Godot composes Euler rotations in YXZ order; THREE objects default to XYZ. */
 const GODOT_EULER_ORDER: EulerOrder = 'YXZ';
@@ -140,6 +143,66 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
     reportTime: transport.reportTime,
     restore: () => restoreSnapshot(snapshotRef.current),
   });
+
+  // ADR-0016: `frame` tracks can't go through the THREE mixer (it drives
+  // transforms only). Sample the selected clip's frame tracks each frame and
+  // push the value to the target sprite via the AnimatedFrame registry; release
+  // the targets (null) whenever this player isn't driving.
+  const frameRegistry = useAnimatedFrameRegistry();
+  // The selected clip's frame tracks with their target paths resolved once
+  // (the player path / root_node / track target are constant for the clip).
+  const frameTargets = useMemo(() => {
+    if (!isActive || nodePath === null) return null;
+    const clip = animations.find((a) => a.name === transport.selectedClip);
+    if (!clip) return null;
+    const targets = clip.tracks
+      .filter((t) => t.property === 'frame')
+      .map((t) => ({
+        path: resolveTargetNodePath(nodePath, properties.root_node, t.targetPath),
+        keys: t.keys,
+      }));
+    return targets.length > 0 ? { clipName: clip.name, targets } : null;
+  }, [isActive, nodePath, animations, transport.selectedClip, properties.root_node]);
+
+  const ownedFrameTargets = useRef<Set<string>>(new Set());
+  const releaseOwnedFrames = useCallback(() => {
+    const owned = ownedFrameTargets.current;
+    if (owned.size === 0) return;
+    owned.forEach((path) => frameRegistry.set(path, null));
+    owned.clear();
+  }, [frameRegistry]);
+
+  useFrame(() => {
+    const action = frameTargets ? actionsRef.current.get(frameTargets.clipName) : undefined;
+    const playing = transport.playState === 'playing' || transport.playState === 'paused';
+    if (!frameTargets || !playing || !action) {
+      releaseOwnedFrames(); // clip switched away / stopped while the loop runs
+      return;
+    }
+    // Read the LIVE mixer playhead (advanced by usePlaybackLoop earlier this
+    // frame), not the React-state transport.time which lags the useFrame closure.
+    const owned = ownedFrameTargets.current;
+    const next = new Set<string>();
+    for (const { path, keys } of frameTargets.targets) {
+      frameRegistry.set(path, sampleSteppedValue(keys, action.time));
+      next.add(path);
+    }
+    owned.forEach((path) => {
+      if (!next.has(path)) frameRegistry.set(path, null);
+    });
+    owned.clear();
+    next.forEach((path) => owned.add(path));
+  });
+
+  // Release the moment this player stops driving — stop, deselect, or a clip
+  // switch to one with no frame tracks — via an effect (not a frame tick) so the
+  // authored frame returns immediately even when state changes don't tick the loop.
+  useEffect(() => {
+    const driving =
+      !!frameTargets && (transport.playState === 'playing' || transport.playState === 'paused');
+    if (!driving) releaseOwnedFrames();
+  }, [frameTargets, transport.playState, releaseOwnedFrames]);
+  useEffect(() => releaseOwnedFrames, [releaseOwnedFrames]); // release on unmount
 
   return (
     <group

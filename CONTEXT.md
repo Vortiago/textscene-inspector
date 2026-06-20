@@ -47,7 +47,7 @@ The optional hook seam (`onError` / `onSectionStart` / `onProperty`) on the sing
 _Avoid_: "callback API", "strict mode flag".
 
 **Value decoder** (`parser/valueParsers.ts`):
-The lenient parser's shared primitives for reading a raw property string into a typed scalar/vector — `intOr`/`floatOr`/`boolOr`/`enumOr`/`vec2Or` (take a fallback, always return) and `parseOptionalInt` (returns `undefined` when unset). One contract: fall back **silently when absent**, **warn-then-fall-back when present but unparseable**. Wraps the canonical leaf scanners (`parseVector2`/`parseVector3` in `parser/vectors.ts`, `parseColor` in `utils/colorParser.ts`), which share `FLOAT_PATTERN_SOURCE` — the one float regex accepting scientific notation (`1e-05`, which Godot emits) and rejecting malformed components outright; one-off structured literals (`Vector2i`, `Rect2`, `frame_coords`) and divergent leaf parsers (the throwing `parseColor` in `standardmaterial3d`, the `undefined`-returning `parseVector2` in `control`) stay in their slice.
+The lenient parser's shared primitives for reading a raw property string into a typed scalar/vector — `intOr`/`floatOr`/`boolOr`/`enumOr`/`vec2Or` (take a fallback, always return) and `parseOptionalInt` (returns `undefined` when unset). One contract: fall back **silently when absent**, **warn-then-fall-back when present but unparseable**. Wraps only the canonical `parseVector2` leaf scanner (via `vec2Or`); `parseVector2`/`parseVector3` (`parser/vectors.ts`) and the canonical `parseColor` (`utils/colorParser.ts`), which the slices call directly, share `FLOAT_PATTERN_SOURCE` — the one float regex accepting scientific notation (`1e-05`, which Godot emits) and rejecting malformed components outright; one-off structured literals (`Vector2i`, `Rect2`, `frame_coords`) and divergent leaf parsers (the throwing `parseColor` in `standardmaterial3d`, the `undefined`-returning `parseVector2` in `control`) stay in their slice.
 _Avoid_: re-declaring per-node `intOr`/`floatOr` copies (the pattern this replaced); "validator" (that is the strict-linter path).
 
 ### Code organization
@@ -66,7 +66,7 @@ _Avoid_: "linter isolation" used loosely; this is a specific import-graph constr
 
 **Slice entry points**:
 The three thin registration files per unified slice — `index.ts` (registers the parser/formatter, never re-exports the component), `index.linter.ts` (registers validators + lint rules, imports only `.ts`), `index.r3f.ts` (registers the render component, the only file allowed to import `./Component`).
-_Avoid_: "barrel" for these (reserve "barrel" for the three aggregating files below).
+_Avoid_: "barrel" for these (reserve "barrel" for the three aggregating files that collect them: `parser/TscnParser.ts`, `r3f/nodes/index.ts`, `linter/index.ts`).
 
 **NodeRegistry**:
 The parser-domain singleton mapping `typeName → {typeGuard, parser, propertyFormatter}`, populated by side-effect imports in `TscnParser.ts`.
@@ -99,12 +99,12 @@ The HTML/CSS DOM rendering of a Godot Control/CanvasLayer subtree, layered as a 
 _Avoid_: "HUD", "UI canvas".
 
 **layout_mode**:
-The Control property deciding how a node is positioned — `0` free position, `1` anchors, `2` container-managed (parent lays out the child; anchors ignored); in this corpus `2` is the majority and takes precedence.
-_Avoid_: treating anchors as the primary path.
+The Godot Control property recording how a node is positioned — `0` free position, `1` anchors, `2` container-managed (the parent lays out the child; anchors ignored); in this corpus `2` is the majority. The renderer does **not** branch on this field, though: it is parsed into `ControlProperties.layoutMode` but left unread, and the free-vs-container decision is made structurally from the **parent container's** imposed `ParentLayoutKind` (`controlLayout.ts`) — a Control is container-managed iff its parent is a layout container.
+_Avoid_: treating anchors as the primary path; saying the renderer branches on `layout_mode` (it branches on the parent's `ParentLayoutKind`).
 
 **Anchor / offset**:
-Godot Control layout properties (`anchors_preset`, `anchor_*`, `offset_*`, `grow_*`) decoded via the full LayoutPreset 0..15 table to CSS absolute positioning; used only when `layout_mode` is not `2`.
-_Avoid_: "margin" (reserve for `MarginContainer` → CSS padding).
+Godot Control layout properties (`anchors_preset`, `anchor_*`, `offset_*`, `grow_*`) decoded via the full LayoutPreset 0..15 table (`PRESET_ANCHORS`) to CSS absolute positioning; applied when the **parent imposes the `'free'` layout kind** (a top-level overlay, or a child of a plain Control/Panel/CanvasLayer rather than a layout container).
+_Avoid_: "margin" (reserve for `MarginContainer` → CSS padding); gating this on the child's `layout_mode` value (the gate is the parent's `ParentLayoutKind`).
 
 **StyleBox**:
 A Godot Control theme resource (`StyleBoxFlat` / `StyleBoxEmpty`) defining background/border/corner-radius, mapped to CSS `background`/`border`/`border-radius` on the Control overlay.
@@ -161,15 +161,15 @@ The `[sub_resource type="AnimationLibrary"]` whose `_data` maps clip names → *
 _Avoid_: "library" bare; the legacy Godot-3 `anims/<name>` inline form (absent from this corpus).
 
 **Track**:
-One channel of a **GodotAnimation** targeting `NodePath("Node:property")` with ordered **Keyframe**s (time + value + transition); slice-1 supports `value` tracks for `position`/`rotation`/`rotation_degrees`/`scale`. Other track types (`bezier`/`method`/`audio`/`animation`) and other properties parse but do not yet drive.
+One channel of a **GodotAnimation** targeting `NodePath("Node:property")` with ordered **Keyframe**s (time + value + transition). `value` tracks drive two ways: transform properties (`position`/`rotation`/`rotation_degrees`/`scale`) through the `THREE.AnimationMixer`, and `Sprite2D:frame` (sprite-sheet flipbook) through the **AnimatedFrame** push registry — the mixer binds transforms only, so a discrete `frame` is sampled and pushed to the target sprite (ADR-0016). Other track types (`bezier`/`method`/`audio`/`animation`) and other properties parse but do not yet drive.
 _Avoid_: "channel".
 
 **Animation transport**:
-The play/pause/scrub state (`AnimationTransportContext`) and its dock-tab UI, bound to the **AnimationPlayer** (or **GLB animation driver**) **currently selected in the scene tree** — selection-driven, one driver at a time, mirroring the Godot editor's Animation panel. Drives that player's `THREE.AnimationMixer`; starts STOPPED (authored pose preserved), play is user-initiated. The tab is shown only while an AnimationPlayer is selected; deselecting (or selecting a different node) stops playback and restores the authored pose.
+The play/pause/scrub state (`AnimationTransportContext`) and its dock-tab UI, bound to the **AnimationPlayer**, **GLB animation driver**, or **AnimatedSprite2D** **currently selected in the scene tree** — selection-driven, one driver at a time, mirroring the Godot editor's Animation panel. Drives the selected node's `THREE.AnimationMixer` (or, for **AnimatedSprite2D**, advances its displayed frame via `frameAtTime` — no mixer; ADR-0015); starts STOPPED (authored pose/frame preserved), play is user-initiated. The tab is shown only while a driver is selected; deselecting (or selecting a different node) stops playback and restores the authored pose.
 _Avoid_: "scene-level transport" (it follows selection, not the whole scene); "timeline" / "player controls" for the whole transport (reserve "timeline"/"scrubber" for the seek widget).
 
 **RESET animation**:
-Godot's conventional rest-pose animation, named exactly `RESET` — one keyframe per animated property at t=0 holding its default value, used by the editor for reset-on-save. Listed in the clip selector like any animation but never the **Animation transport**'s default selection (the `autoplay` clip is). 
+Godot's conventional rest-pose animation, named exactly `RESET` — one keyframe per animated property at t=0 holding its default value, used by the editor for reset-on-save. Listed in the clip selector like any animation but skipped when the **Animation transport** picks its default selection — which prefers the `autoplay` clip, else the first non-`RESET` clip (`defaultClip`); `RESET` becomes the default only when it is the sole clip. 
 _Avoid_: treating `RESET` as an ordinary playable clip.
 
 **Animation root** (`root_node`):
@@ -181,8 +181,8 @@ An animation authored *inside* a `.glb`/`.gltf` and surfaced as a ready-made `TH
 _Avoid_: "GodotAnimation" for these (reserve that for the SubResource form); "imported animation" bare.
 
 **GLB animation driver**:
-A **GLBSceneRoot** acting as an **animation driver** — when its tree row is the selected node it registers its **GLB-embedded clip**s with the **Animation transport** and runs a `THREE.AnimationMixer` rooted on the loaded GLB object itself (no **Animation root**/`root_node`; the clips are already bound to the GLB's own node names). The GLB counterpart to an **AnimationPlayer**: same selection-driven transport, different clip source and mixer rooting (ADR-0014).
-_Avoid_: "GLB AnimationPlayer" (our tree exposes no AnimationPlayer node for a GLB instance — it is collapsed to the single GLBSceneRoot row).
+A **GLBSceneRoot** acting as an **animation driver**. Godot's glTF importer exposes a model's clips on an AnimationPlayer node *inside* the imported hierarchy, so the tree synthesises a tree-only `GLBAnimationPlayer` row (a selectable node with no parser and no render component); when **that row** is the selected node, the GLBSceneRoot component registers the GLB's **GLB-embedded clip**s with the **Animation transport** and runs a `THREE.AnimationMixer` rooted on the loaded GLB object itself (no **Animation root**/`root_node`; the clips are already bound to the GLB's own node names). The GLB counterpart to an **AnimationPlayer**: same selection-driven transport and shared `usePlaybackLoop`, different clip source and mixer rooting (ADR-0014).
+_Avoid_: "GodotAnimation" for these clips (they are ready-made glTF clips — see **GLB-embedded clip**); treating the synthesised `GLBAnimationPlayer` row as a real **AnimationPlayer** Node, or as the thing that renders (it is a tree-only selection target — the GLBSceneRoot component does both the driving and the rendering); saying the GLB *root* row activates the transport (its synthesised `GLBAnimationPlayer` child does).
 
 ## Relationships
 
@@ -208,3 +208,4 @@ _Avoid_: "GLB AnimationPlayer" (our tree exposes no AnimationPlayer node for a G
 - "Registry" was used for three distinct singletons — resolved: **NodeRegistry** (parse), **NodeComponentRegistry** (3D render), **ControlComponentRegistry** (2D render); their multiplicity is the mechanism that keeps the linter React-free, not duplication.
 - `uid://` vs the per-scene `id=` both called "id" — resolved: **UID reference** is the global `uid://`, `id=` is the per-file resource handle.
 - "AnimationClip" meant both the parsed Godot animation and the three.js runtime object — resolved: parsed = **GodotAnimation**, runtime = `THREE.AnimationClip` (always qualified).
+- "GLB AnimationPlayer" was an *avoided* coinage when a GLB instance exposed no AnimationPlayer node (the **GLB animation driver** bound to the GLBSceneRoot root row) — resolved: GLB hierarchy parity now synthesises a tree-only `GLBAnimationPlayer` row (Godot exposes glTF clips on an in-hierarchy AnimationPlayer), and *that* row — not the GLB root — activates the **Animation transport** (ADR-0014).

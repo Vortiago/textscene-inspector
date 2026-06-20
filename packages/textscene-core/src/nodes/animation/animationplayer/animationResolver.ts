@@ -106,12 +106,15 @@ function parseTracks(data: Record<string, unknown>): GodotTrack[] {
   return tracks;
 }
 
-const NODE_PATH_RE = /NodePath\("([^"]*)"\)/;
+/** Extract the inner string of a `NodePath("…")` literal, or null if it isn't one. */
+export function extractNodePathInner(raw: string): string | null {
+  const match = /NodePath\(\s*"([^"]*)"\s*\)/.exec(raw);
+  return match?.[1] ?? null;
+}
 
 function parseNodePath(raw: string): { targetPath: string; property: string } | null {
-  const match = NODE_PATH_RE.exec(raw);
-  if (!match || match[1] === undefined) return null;
-  const inner = match[1];
+  const inner = extractNodePathInner(raw);
+  if (inner === null) return null;
   const colon = inner.indexOf(':');
   if (colon === -1) return { targetPath: inner, property: '' };
   return { targetPath: inner.slice(0, colon), property: inner.slice(colon + 1) };

@@ -233,8 +233,18 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Animatedsprite2d",
+    "file": "unit-animatedsprite2d.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Animation Player 2d",
     "file": "unit-animation-player-2d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Animation Player Sprite Frame",
+    "file": "unit-animation-player-sprite-frame.tscn",
     "category": "Other"
   },
   {

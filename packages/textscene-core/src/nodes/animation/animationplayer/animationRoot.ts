@@ -13,8 +13,7 @@
  */
 
 import type { Object3D } from 'three';
-
-const NODE_PATH_RE = /NodePath\("([^"]*)"\)/;
+import { extractNodePathInner } from './animationResolver';
 
 export function resolveAnimationRoot(
   playerObject: Object3D,
@@ -35,8 +34,7 @@ export function resolveAnimationRoot(
 }
 
 function extractPath(rootNode: string): string {
-  const match = NODE_PATH_RE.exec(rootNode);
-  return (match?.[1] ?? rootNode).trim();
+  return (extractNodePathInner(rootNode) ?? rootNode).trim();
 }
 
 function nearestNamedAncestor(object: Object3D): Object3D | null {

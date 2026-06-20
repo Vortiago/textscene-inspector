@@ -13,3 +13,15 @@ When a Node instances a single-root `.tscn`, we collapse the redundant wrapper l
 - **Fallbacks keep the nested form.** `.glb` instances (synthetic `GLBSceneRoot`) and any scene with multiple top-level nodes are *not* merged — they stay injected as children under a nested resources provider, preserving the GLB property-override-by-name channel.
 - The merged row keeps the instance ref so it still shows the 📦 badge and ⤢ open-standalone affordance; recursion is naturally bounded because the rendered children are the root's plain children, which carry no instance ref of their own (nested instances merge on their own turn).
 - **`SceneResourcesProvider` now inherits the ambient pool** (own resources first, parent as fallback). Collapsing re-dispatches the merged node under the sub-scene's resource pool, so children the HOST added under the instance node (e.g. the Hallway's `roof_lamp`/`Door` instances parented to a `HallwayGeometry` instance) would otherwise lose access to their host `ExtResource` ids and silently fail to load. Inheritance restores host-scoped resolution while a node's own-scene ids still win on any (vanishingly rare) collision.
+
+## Amendment (2026-06-19): merge logic consolidated into one shared function
+
+The "Considered options" note framed the merge as necessarily applied across **two independent
+resolution paths** (tree vs viewport) that resolve instances separately and must agree on node paths.
+That duplication has since been removed: `collapseLiveNode` (`r3f/liveSceneTree.ts`) is now the single
+definition, called by the viewport (`NodeDispatcher`'s `InstancedNode`), the tree (`TreeNode` /
+`useSubSceneChildren`), and the inspector resolver (`resolveNodeByPath`, a thin adapter over the shared
+`resolveLiveNode`). The decision is unchanged — collapse the single-root wrapper, **replace** (not
+compose) the transform, inherit the resource pool — but the "two paths that must agree" risk is gone:
+there is now one path. (The viewport merge site is `InstancedNode`; the `InstancedSceneSubtree` named in
+the original draft was never the rendered component.)

@@ -49,3 +49,13 @@ providers at the right boundaries beat one ambient mount with an implicit depend
   This is accepted; it is two lines, and each lives next to the viewport it serves.
 - Future architecture passes should treat the two-mount layout as intentional, not as accidental
   duplication to be unified.
+
+## Amendment (2026-06-19): a third explicit mount
+
+The 2D-workspace work (ADR-0006, 2026-06-11 amendment) added a **third** explicit top-level mount:
+`World2DCanvas` (the 2D R3F world layer inside `Canvas2DStage`) wraps its CanvasItem content in its
+own `SceneResourcesProvider`, fed explicit props by `ViewportArea` — alongside the 3D
+`TscnSceneContents` mount and the 2D-DOM `ControlOverlay` mount. The decision is unchanged: still
+explicit providers at each viewport boundary, **not** one ambient shell-level mount; there are now
+three, not two. (The nested `SceneResourcesProvider` in `NodeDispatcher` for PackedScene-instanced
+subtrees remains separate and load-bearing, as before.)

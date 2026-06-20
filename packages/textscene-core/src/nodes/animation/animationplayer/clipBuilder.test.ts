@@ -3,7 +3,9 @@
  *
  * Verifies KeyframeTrack names (name-path binding targets), times, and the
  * value mapping (incl. rotation_degrees -> radians, and 2D Vector2/scalar
- * decomposition into per-component tracks).
+ * decomposition into per-component tracks). 2D tracks are conjugated by
+ * diag(1,-1,1) to match node2dTransform's static render: position Y and
+ * rotation negated, scale kept.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -92,13 +94,15 @@ describe('buildClip — rotation (C2/C3)', () => {
     expect(findTrack(clip, 'Target.rotation')).toBeUndefined();
   });
 
-  it('maps a scalar 2D rotation track to <path>.rotation[z]', () => {
+  it('maps a scalar 2D rotation track to a negated <path>.rotation[z] (diag(1,-1,1) conjugation)', () => {
     const clip = buildClip(
       anim('a', 1, [track('rotation', [{ time: 0, value: 0, transition: 1 }, { time: 1, value: 1.5708, transition: 1 }])])
     );
     const t = findTrack(clip, 'Target.rotation[z]');
     expect(t).toBeDefined();
-    expectValuesCloseTo(t!.values, [0, 1.5708]);
+    // Godot 2D rotation is clockwise (+Y down); node2dTransform renders it as
+    // `0 - rotation`, so the animated track negates to agree.
+    expectValuesCloseTo(t!.values, [0, -1.5708]);
   });
 });
 
@@ -134,7 +138,7 @@ describe('buildClip — scale (C4) and 2D decomposition', () => {
     expect(findTrack(clip, 'Target.scale')).toBeDefined();
   });
 
-  it('decomposes a Vector2 position track into <path>.position[x] and [y]', () => {
+  it('decomposes a Vector2 position track into <path>.position[x] and a Y-negated [y]', () => {
     const clip = buildClip(
       anim('a', 1, [
         track('position', [
@@ -145,8 +149,44 @@ describe('buildClip — scale (C4) and 2D decomposition', () => {
     );
     const x = findTrack(clip, 'Target.position[x]');
     const y = findTrack(clip, 'Target.position[y]');
+    // X passes through; Y is negated to match node2dTransform's diag(1,-1,1)
+    // conjugation of the static render (Godot 2D +Y is down).
     expect(Array.from(x!.values)).toEqual([0, 10]);
-    expect(Array.from(y!.values)).toEqual([0, -5]);
+    expect(Array.from(y!.values)).toEqual([0, 5]);
+  });
+
+  it('keeps a 2D Vector2 scale track un-negated (scale is not conjugated)', () => {
+    const clip = buildClip(
+      anim('a', 1, [
+        track('scale', [
+          { time: 0, value: [1, 1], transition: 1 },
+          { time: 1, value: [3, -4], transition: 1 },
+        ]),
+      ])
+    );
+    expect(Array.from(findTrack(clip, 'Target.scale[x]')!.values)).toEqual([1, 3]);
+    expect(Array.from(findTrack(clip, 'Target.scale[y]')!.values)).toEqual([1, -4]);
+  });
+
+  it('drives a 2D position track to the Y-conjugated location through a mixer', () => {
+    const child = new Object3D();
+    child.name = 'Target';
+    const root = new Object3D();
+    root.add(child);
+    const clip = buildClip(
+      anim('move', 2, [
+        track('position', [
+          { time: 0, value: [0, 0], transition: 1 },
+          { time: 2, value: [10, 100], transition: 1 }, // Godot (10,100): 100px DOWN
+        ]),
+      ])
+    );
+    const mixer = new AnimationMixer(root);
+    mixer.clipAction(clip).play();
+    mixer.update(1); // mid-clip: lerp half-way to Godot (10,100)
+    expect(child.position.x).toBeCloseTo(5, 5);
+    // three.js +Y is up; Godot's +Y-down must render down → negative three Y.
+    expect(child.position.y).toBeCloseTo(-50, 5);
   });
 });
 

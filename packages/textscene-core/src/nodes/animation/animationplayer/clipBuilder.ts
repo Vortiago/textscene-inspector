@@ -58,8 +58,12 @@ function buildTracks(track: GodotTrack): KeyframeTrack[] {
 
   switch (track.property) {
     case 'position':
+      // 2D position is conjugated by diag(1,-1,1) — negate Y (node2dTransform).
+      return vectorOrComponents(`${prefix}.position`, times, track.keys, true);
+
     case 'scale':
-      return vectorOrComponents(`${prefix}.${track.property}`, times, track.keys, (v) => v);
+      // Scale is NOT conjugated (node2dGroupProps keeps scale.y as-is).
+      return vectorOrComponents(`${prefix}.scale`, times, track.keys, false);
 
     case 'rotation':
       return rotationTracks(prefix, times, track.keys, (v) => v);
@@ -89,8 +93,9 @@ function rotationTracks(
   const first = keys[0]?.value;
 
   if (typeof first === 'number') {
-    // 2D scalar rotation about Z.
-    return [new NumberKeyframeTrack(`${prefix}.rotation[z]`, times, keys.map((k) => map(k.value as number)))];
+    // 2D scalar rotation about Z, negated to match node2dTransform's
+    // diag(1,-1,1) conjugation (Godot 2D rotation is clockwise / +Y-down).
+    return [new NumberKeyframeTrack(`${prefix}.rotation[z]`, times, keys.map((k) => 0 - map(k.value as number)))];
   }
 
   if (Array.isArray(first) && first.length === 3) {
@@ -108,26 +113,33 @@ function rotationTracks(
 }
 
 /**
- * Vector3 keys -> one VectorKeyframeTrack on `vectorName` (`.position`/`.scale`
- * write straight to the matrix, so the whole-vector binding is fine here).
+ * Vector3 keys -> one VectorKeyframeTrack on `vectorName` (3D transforms aren't
+ * conjugated; `.position`/`.scale` write straight to the matrix, so the
+ * whole-vector binding is fine here).
  * Vector2 keys -> per-component NumberKeyframeTracks (`name[x]`, `name[y]`).
+ * `negateY` applies the diag(1,-1,1) conjugation that node2dTransform bakes into
+ * the static 2D render (position negates Y, scale does not), so an animated 2D
+ * transform agrees with its authored pose.
  */
 function vectorOrComponents(
   vectorName: string,
   times: number[],
   keys: GodotKeyframe[],
-  map: (component: number) => number
+  negateY: boolean
 ): KeyframeTrack[] {
   const first = keys[0]?.value;
 
   if (Array.isArray(first) && first.length === 3) {
-    const values = keys.flatMap((k) => (k.value as number[]).map(map));
+    const values = keys.flatMap((k) => k.value as number[]);
     return [new VectorKeyframeTrack(vectorName, times, values)];
   }
 
   if (Array.isArray(first) && first.length === 2) {
-    const x = keys.map((k) => map((k.value as number[])[0] ?? 0));
-    const y = keys.map((k) => map((k.value as number[])[1] ?? 0));
+    const x = keys.map((k) => (k.value as number[])[0] ?? 0);
+    const y = keys.map((k) => {
+      const yv = (k.value as number[])[1] ?? 0;
+      return negateY ? 0 - yv : yv;
+    });
     return [
       new NumberKeyframeTrack(`${vectorName}[x]`, times, x),
       new NumberKeyframeTrack(`${vectorName}[y]`, times, y),
