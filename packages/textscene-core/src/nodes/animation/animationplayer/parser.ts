@@ -48,9 +48,15 @@ export function parseAnimationPlayer(
 }
 
 const SUB_RESOURCE_REF = /^SubResource\("([^"]+)"\)$/;
+// Entries of the dictionary form `libraries = { "<name>": SubResource("id"), … }`.
+// Only inline SubResource libraries are captured; ExtResource entries point to
+// external (often binary .res) libraries the previewer can't resolve.
+const DICT_LIBRARY_ENTRY = /"([^"]*)"\s*:\s*SubResource\("([^"]+)"\)/g;
 
 function extractLibraries(properties: Record<string, string>): AnimationLibraryRef[] {
   const libraries: AnimationLibraryRef[] = [];
+
+  // Expanded slash form: `libraries/<name> = SubResource("id")`.
   for (const key of Object.keys(properties)) {
     if (!key.startsWith('libraries/')) continue;
     const raw = properties[key];
@@ -59,6 +65,16 @@ function extractLibraries(properties: Record<string, string>): AnimationLibraryR
     if (!match || match[1] === undefined) continue;
     libraries.push({ name: key.slice('libraries/'.length), subResourceId: match[1] });
   }
+
+  // Dictionary form (Godot 4's actual serialization), possibly multi-line:
+  //   libraries = { "": SubResource("AnimationLibrary_x"), "combat": SubResource("…") }
+  const dict = properties.libraries;
+  if (dict !== undefined) {
+    for (const match of dict.matchAll(DICT_LIBRARY_ENTRY)) {
+      libraries.push({ name: match[1]!, subResourceId: match[2]! });
+    }
+  }
+
   return libraries;
 }
 

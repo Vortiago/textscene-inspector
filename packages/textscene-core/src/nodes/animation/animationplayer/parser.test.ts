@@ -136,6 +136,34 @@ describe('parseAnimationPlayer library extraction', () => {
     expect(props.libraries).toEqual([]);
   });
 
+  // Godot 4 actually serializes libraries as a single Dictionary property:
+  //   libraries = { "": SubResource("AnimationLibrary_x") }
+  // (multi-line). This is the common real-world form (e.g. every inline-library
+  // AnimationPlayer in the GDQuest Open RPG corpus).
+  it('captures the default library from the Godot 4 dictionary form', () => {
+    const props = parseAnimationPlayer(HEADING, {
+      libraries: '{\n"": SubResource("AnimationLibrary_fggt1")\n}',
+    });
+    expect(props.libraries).toEqual([{ name: '', subResourceId: 'AnimationLibrary_fggt1' }]);
+  });
+
+  it('captures multiple named libraries from the dictionary form', () => {
+    const props = parseAnimationPlayer(HEADING, {
+      libraries: '{\n"": SubResource("Lib_default"),\n"combat": SubResource("Lib_combat")\n}',
+    });
+    expect(props.libraries).toContainEqual({ name: '', subResourceId: 'Lib_default' });
+    expect(props.libraries).toContainEqual({ name: 'combat', subResourceId: 'Lib_combat' });
+  });
+
+  it('ignores ExtResource (external/binary) entries in the dictionary form', () => {
+    // External .res libraries can't be resolved (binary); only inline
+    // SubResource libraries are captured.
+    const props = parseAnimationPlayer(HEADING, {
+      libraries: '{\n"": ExtResource("4_eruca")\n}',
+    });
+    expect(props.libraries).toEqual([]);
+  });
+
   it('handles NaN gracefully — falls back to numeric defaults', () => {
     const props = parseAnimationPlayer(HEADING, {
       speed_scale: 'not-a-number',
