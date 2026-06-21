@@ -6,7 +6,8 @@
 import { describe, it, expect } from 'vitest';
 import type { TscnInternalResource } from '../../../parser/types';
 import { resolveAnimations } from './animationResolver';
-import type { AnimationLibraryRef } from './types';
+import type { AnimationLibraryRef, AnimationPlayerProperties } from './types';
+import { TscnParser } from '../../../parser/TscnParser';
 
 function res(id: string, type: string, data: Record<string, string>): TscnInternalResource {
   return { id, type, data };
@@ -143,5 +144,44 @@ describe('resolveAnimations — graceful degradation (B5)', () => {
     ];
     const [anim] = resolveAnimations(DEFAULT_LIB, internal);
     expect(anim.tracks).toEqual([]);
+  });
+});
+
+describe('resolveAnimations — end-to-end from a parsed dict-form scene', () => {
+  // Regression for the symptom "AnimationPlayer shows no animations": a scene
+  // using Godot 4's dictionary-form `libraries = { "": SubResource(...) }` must
+  // resolve its animations through the full parse → resolve chain.
+  it('resolves animations declared via the dictionary-form libraries property', () => {
+    const scene = new TscnParser().parse(`[gd_scene format=3]
+
+[sub_resource type="Animation" id="Animation_spin"]
+resource_name = "spin"
+length = 1.0
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_1"]
+_data = {
+"spin": SubResource("Animation_spin")
+}
+
+[node name="AnimationPlayer" type="AnimationPlayer"]
+libraries = {
+"": SubResource("AnimationLibrary_1")
+}
+`);
+
+    const findAp = (nodes: typeof scene.nodes): (typeof scene.nodes)[number] | undefined => {
+      for (const n of nodes) {
+        if (n.type === 'AnimationPlayer') return n;
+        const hit = findAp(n.children);
+        if (hit) return hit;
+      }
+      return undefined;
+    };
+    const ap = findAp(scene.nodes);
+    const libraries = (ap?.properties as AnimationPlayerProperties).libraries;
+
+    expect(libraries).toEqual([{ name: '', subResourceId: 'AnimationLibrary_1' }]);
+    const anims = resolveAnimations(libraries, scene.internalResources);
+    expect(anims.map((a) => a.name)).toEqual(['spin']);
   });
 });
