@@ -12,6 +12,42 @@ describe('StrictTscnParser', () => {
     parser = new StrictTscnParser();
   });
 
+  describe('multi-line values with heading-looking content', () => {
+    // A multi-line value's continuation lines can look like headings — BBCode
+    // tags (`[u]…[/u]`, `[center]`) and bracketed array/dict elements — but are
+    // CONTENT, not a new section. They must not be flagged as malformed.
+    const expectNoFormatError = (content: string) => {
+      const codes = parser.parse(content).errors.map((e) => e.code);
+      expect(codes).not.toContain('INVALID_PROPERTY_FORMAT');
+      expect(codes).not.toContain('INVALID_HEADING_FORMAT');
+    };
+
+    it('does not flag BBCode tag lines inside a multi-line string', () => {
+      expectNoFormatError(`[gd_scene format=3]
+
+[node name="Title" type="RichTextLabel"]
+bbcode_enabled = true
+text = "[center][u]CONTRIBUTORS:[/u]
+- Alice
+
+[u]ASSETS:[/u]
+- 3D Kit by Kenney.nl"
+fit_content = true
+`);
+    });
+
+    it('does not flag bracketed array element lines inside a multi-line value', () => {
+      expectNoFormatError(`[gd_scene format=3]
+
+[node name="N" type="Node"]
+meta = [
+[0, 0],
+[1, 1]
+]
+`);
+    });
+  });
+
   describe('Valid TSCN Parsing', () => {
     it('should parse a minimal valid TSCN file', () => {
       const content = `[gd_scene load_steps=1 format=3]

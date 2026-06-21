@@ -64,6 +64,21 @@ export function isHeading(line: string): boolean {
   return trimmed.startsWith('[') && trimmed.endsWith(']');
 }
 
+/**
+ * The TSCN section keywords that open a real `[…]` heading. A line is only a
+ * genuine section heading if its first token is one of these — unlike
+ * {@link isHeading}, which also matches BBCode tags (`[center]`, `[u]…[/u]`)
+ * and bracketed array/dict content that legitimately appear ON THEIR OWN LINE
+ * inside a multi-line value. Used to decide when an unterminated multi-line
+ * value should be salvaged because a new section has actually begun.
+ */
+const SECTION_HEADING_RE =
+  /^\[(gd_scene|gd_resource|ext_resource|sub_resource|node|resource|connection|editable)\b/;
+
+export function isSectionHeading(line: string): boolean {
+  return SECTION_HEADING_RE.test(line.trim());
+}
+
 export function isComment(line: string): boolean {
   return line.trim().startsWith(';');
 }
