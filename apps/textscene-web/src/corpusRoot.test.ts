@@ -35,10 +35,22 @@ describe('corpusRootFor', () => {
     );
   });
 
+  it('derives the game root for unlisted game subscenes (addons/, deep links)', () => {
+    // games/<dir>/ is a 2-segment root (vs demos' 3-segment); addon editor
+    // scenes are kept on disk but not listed, so they resolve via the prefix.
+    expect(
+      corpusRootFor('games/godot-open-rpg/addons/dialogic/Editor/editor.tscn', manifest)
+    ).toBe('games/godot-open-rpg');
+    expect(corpusRootFor('games/kenney-platformer/objects/player.tscn', manifest)).toBe(
+      'games/kenney-platformer'
+    );
+  });
+
   it('falls back to the fixtures root for everything else', () => {
     expect(corpusRootFor('dungeon.tscn', manifest)).toBe('');
     expect(corpusRootFor('', manifest)).toBe('');
     expect(corpusRootFor('demos/2d', manifest)).toBe('');
+    expect(corpusRootFor('games/kenney-platformer', manifest)).toBe('');
   });
 });
 

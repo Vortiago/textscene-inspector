@@ -26,7 +26,7 @@ import {
   TscnPreviewShell,
   type ViewportSelectorOption,
 } from '@textscene/core';
-import { fixtures } from './fixtures';
+import { fixtures } from './fixturesAll';
 import { FixtureTreeView } from './FixtureTree';
 import { corpusRootFor, fixtureUrlForRes } from './corpusRoot';
 import { WebResourceProvider } from './providers/WebResourceProvider';
@@ -58,9 +58,15 @@ export function R3FApp() {
       // (used by the showcase recorder to skip the default-fixture detour,
       // and handy for sharing a link to a particular scene). Unlisted
       // demo subscenes are accepted too — the selector only lists each
-      // demo's main scene, but every mirrored scene stays linkable.
+      // demo's main scene, but every mirrored scene stays linkable. Games
+      // (on-demand corpus) get the same allowance for their unlisted subscenes.
       const param = new URLSearchParams(window.location.search).get('fixture');
-      if (param && (fixtures.some((f) => f.file === param) || param.startsWith('demos/'))) {
+      if (
+        param &&
+        (fixtures.some((f) => f.file === param) ||
+          param.startsWith('demos/') ||
+          param.startsWith('games/'))
+      ) {
         return param;
       }
       return window.localStorage.getItem(STORAGE_KEY) ?? DEFAULT_FIXTURE;

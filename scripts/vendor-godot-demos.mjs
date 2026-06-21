@@ -18,21 +18,14 @@
 
 import { cpSync, existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { execSync } from 'node:child_process';
-import { join, dirname, basename } from 'node:path';
+import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { isPruned } from './vendor-prune.mjs';
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const TARGET = join(REPO_ROOT, 'scenes/demos');
 const TOPS = ['2d', '3d', 'gui', 'viewport'];
 const SKIP_PROJECTS = new Set(['2d/isometric']);
-
-/** Editor/source artifacts the previewer never reads. */
-function isPruned(path) {
-  const name = basename(path);
-  if (name === '.godot' || name === 'screenshots' || name === '.git') return true;
-  if (name === '.gitignore' || name === '.gitattributes' || name === '.gdignore') return true;
-  return /\.(import|psd|xcf|blend|blend1|svg\.import)$/.test(name);
-}
 
 const source = process.argv[2];
 if (!source || !existsSync(source)) {

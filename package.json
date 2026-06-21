@@ -23,6 +23,7 @@
     "validate": "pnpm build && pnpm type-check && pnpm lint && pnpm test:unit && pnpm check:bundle-size",
     "check:bundle-size": "node scripts/check-bundle-size.mjs",
     "generate:fixtures": "node scripts/generate-fixtures.js",
+    "vendor:games": "node scripts/vendor-godot-games.mjs && node scripts/generate-fixtures.js",
     "new:node": "node scripts/new-node-slice.mjs",
     "test:visual": "node scripts/visual/run.mjs",
     "test:visual:update": "node scripts/visual/run.mjs --update",

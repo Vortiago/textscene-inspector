@@ -2,6 +2,24 @@
 
 This directory contains scene files organized into fixtures (minimal unit-level scenes) and examples (integration and complex demo scenes).
 
+## Open-source games corpus (on-demand)
+
+Real community games (Kenney 3D Platformer, GDQuest Open RPG, lampe-games Open
+RTS) can be vendored into `scenes/games/` to exercise the previewer against
+full, real-world scene graphs. They are **fetched on demand, not committed**
+(to keep the repo lean):
+
+```bash
+pnpm vendor:games   # shallow-fetch each game at a pinned commit + regenerate the manifest
+```
+
+This populates `scenes/games/` (gitignored) and writes
+`apps/textscene-web/src/fixtures.games.ts` (gitignored), which the web
+previewer merges automatically — the games then appear in the scene selector
+under the **Games – …** categories. A fresh clone / CI has no games until you
+run the command. The pinned sources, commits, and licenses are listed in
+`scripts/vendor-godot-games.mjs`.
+
 ## Quick Start - Testing New Mesh Primitives
 
 ### Option 1: Web Previewer (Fastest)
