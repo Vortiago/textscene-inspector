@@ -13,6 +13,7 @@ import {
   parseHeading,
   parseProperty,
   isHeading,
+  isSectionHeading,
   isComment,
   isEmpty,
   isIncompleteValue,
@@ -143,12 +144,15 @@ export class TscnParserCore {
       const lineNumber = i + 1;
 
       // Inside an open multi-line string: append raw lines (preserving blank
-      // lines within the string) until the quote balances. A new section
-      // heading means the string was never closed — salvage it and fall
-      // through so the heading is still processed. Lines here may legitimately
-      // start with '[' (array/dict content), so no malformed-heading check.
+      // lines within the string) until the quote balances. Only a REAL section
+      // heading (`[node …]`, `[ext_resource …]`, …) means the string was never
+      // closed — salvage it and fall through so the heading is still processed.
+      // Lines that merely look like headings — BBCode tags (`[u]…[/u]`,
+      // `[center]`) and bracketed array/dict content — are string CONTENT and
+      // must keep accumulating; `isSectionHeading` (not `isHeading`) draws that
+      // line.
       if (pendingMultiline) {
-        if (isHeading(line)) {
+        if (isSectionHeading(line)) {
           storePending();
         } else {
           pendingMultiline.value += '\n' + line;

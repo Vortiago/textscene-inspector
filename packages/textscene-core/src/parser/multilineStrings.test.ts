@@ -73,4 +73,34 @@ horizontal_alignment = 1
     );
     expect(find(scene.nodes, 'B')?.properties.text).toBe('fine');
   });
+
+  // A RichTextLabel's BBCode `text` puts tags like `[u]…[/u]` / `[center]` on
+  // their own lines — these look like section headings (start with `[`, end with
+  // `]`) but are string CONTENT, not a new section. The salvage trigger must
+  // recognise only real section headings, or the value truncates at the first
+  // such line and the next property is dropped (the Credits.tscn bug).
+  describe('BBCode tag lines inside a multi-line string', () => {
+    const BBCODE = `[gd_scene format=3]
+
+[node name="Title" type="Label"]
+text = "[center]Line A
+[b]bold[/b]
+
+[u]Section[/u]
+- item"
+horizontal_alignment = 1
+`;
+
+    it('keeps the full value past BBCode-tag lines and a blank line', () => {
+      const scene = new TscnParser().parse(BBCODE);
+      expect(find(scene.nodes, 'Title')?.properties.text).toBe(
+        '[center]Line A\n[b]bold[/b]\n\n[u]Section[/u]\n- item'
+      );
+    });
+
+    it('still parses the property after the BBCode multi-line string', () => {
+      const scene = new TscnParser().parse(BBCODE);
+      expect(find(scene.nodes, 'Title')?.properties.horizontalAlignment).toBe(1);
+    });
+  });
 });

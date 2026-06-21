@@ -108,6 +108,21 @@ try {
   // No demos directory — skip.
 }
 
+// Mirror the vendored open-source games (scenes/games/**) the same way as the
+// demos corpora — each game keeps its own res:// namespace under
+// public/fixtures/games/<dir>/, resolved against the fixture's `root`.
+const gamesSource = join(scenesRoot, 'games');
+const gamesTarget = join(fixturesTarget, 'games');
+try {
+  if (statSync(gamesSource).isDirectory()) {
+    mkdirSync(gamesTarget, { recursive: true });
+    copyRecursive(gamesSource, gamesTarget);
+    console.log('Copied vendored Godot games to public/fixtures/games/');
+  }
+} catch {
+  // No games directory — skip.
+}
+
 // Copy materials directory from scenes/materials/
 const materialsSource = join(scenesRoot, 'materials');
 const materialsTarget = join(fixturesTarget, 'materials');

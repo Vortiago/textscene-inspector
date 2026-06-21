@@ -1,9 +1,9 @@
 /**
  * Which public/fixtures subtree a fixture file's res:// namespace maps onto
  * ('' = the fixtures root). Listed fixtures carry it in the manifest;
- * unlisted godot-demo subscenes (reachable via ?fixture= deep links — the
- * selector lists only each demo's main scene) derive it from their
- * demos/<top>/<project>/ path prefix.
+ * unlisted subscenes (reachable via ?fixture= deep links — the selector lists
+ * only each demo's main scene, and skips games' addons/ editor scenes) derive
+ * it from their corpus path prefix: demos/<top>/<project>/ or games/<dir>/.
  */
 import type { Fixture } from './fixtures';
 
@@ -12,7 +12,10 @@ export function corpusRootFor(file: string, fixtures: readonly Fixture[]): strin
   if (listed) return listed.root ?? '';
 
   const demoMatch = /^(demos\/[^/]+\/[^/]+)\//.exec(file);
-  return demoMatch ? demoMatch[1]! : '';
+  if (demoMatch) return demoMatch[1]!;
+
+  const gameMatch = /^(games\/[^/]+)\//.exec(file);
+  return gameMatch ? gameMatch[1]! : '';
 }
 
 /**

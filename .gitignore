@@ -59,6 +59,12 @@ settings.local.json
 # Test fixtures copied to web app during build
 apps/textscene-web/public/fixtures/
 
+# On-demand open-source games corpus — fetched locally with `pnpm vendor:games`,
+# never committed (keeps the repo lean). The generated games manifest is written
+# alongside the base manifest and merged at runtime by fixturesAll.ts.
+/scenes/games/
+apps/textscene-web/src/fixtures.games.ts
+
 # Test projects
 ld-58/
 
