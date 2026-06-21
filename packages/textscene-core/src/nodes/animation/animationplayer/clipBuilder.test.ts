@@ -130,6 +130,53 @@ describe('buildClip — rotation actually drives the quaternion (regression)', (
   });
 });
 
+describe('buildClip — quaternion (rotation_3d)', () => {
+  function quatTrack(keys: GodotTrack['keys'], targetPath = 'Target'): GodotTrack {
+    return { type: 'rotation_3d', targetPath, property: 'quaternion', interp: 1, keys };
+  }
+
+  it('maps a length-4 quaternion track to a QuaternionKeyframeTrack on <path>.quaternion', () => {
+    const clip = buildClip(
+      anim('a', 1, [
+        quatTrack([
+          { time: 0, value: [0, 0, 0, 1], transition: 1 },
+          { time: 1, value: [0.707107, 0, 0, 0.707107], transition: 1 },
+        ]),
+      ])
+    );
+    const t = findTrack(clip, 'Target.quaternion');
+    expect(t).toBeDefined();
+    expect(Array.from(t!.times)).toEqual([0, 1]);
+    expectValuesCloseTo(t!.values, [0, 0, 0, 1, 0.707107, 0, 0, 0.707107]);
+  });
+
+  it('drives the target quaternion through a mixer (regression: 3D rotation moves)', () => {
+    const child = new Object3D();
+    child.name = 'Target';
+    const root = new Object3D();
+    root.add(child);
+
+    const clip = buildClip(
+      anim('spin', 2, [
+        quatTrack([
+          { time: 0, value: [0, 0, 0, 1], transition: 1 },
+          { time: 2, value: [0, 0.707107, 0, 0.707107], transition: 1 }, // 90° about Y
+        ]),
+      ])
+    );
+    const mixer = new AnimationMixer(root);
+    mixer.clipAction(clip).play();
+    mixer.update(1); // half-way: slerp ~45° about Y
+
+    expect(Math.abs(child.quaternion.y)).toBeGreaterThan(0.1);
+  });
+
+  it('drops a quaternion track whose first value is not a 4-tuple', () => {
+    const clip = buildClip(anim('a', 1, [quatTrack([{ time: 0, value: [0, 0, 0], transition: 1 }])]));
+    expect(clip.tracks).toEqual([]);
+  });
+});
+
 describe('buildClip — scale (C4) and 2D decomposition', () => {
   it('maps a Vector3 scale track to <path>.scale', () => {
     const clip = buildClip(

@@ -4,9 +4,13 @@
  * scene's SubResource `data` strings, so it can later feed a linter rule too.
  *
  * Pipeline: AnimationLibraryRef[] -> AnimationLibrary `_data` map ->
- * Animation SubResources -> value Tracks -> Keyframes. Slice-1 understands
- * `value` tracks only; other track types resolve to zero tracks. Anything
- * unparseable is skipped rather than thrown (lenient-renderer contract).
+ * Animation SubResources -> Tracks -> Keyframes. Understands `value` tracks
+ * (dict-form `{ "times": …, "values": … }` keys) and Godot 4's dedicated 3D
+ * transform tracks `position_3d`/`rotation_3d`/`scale_3d` (flat
+ * `PackedFloat32Array(time, transition, comps…)` keys); other track types
+ * resolve to zero tracks. Skeletal bone sub-paths (`Node:bone`) are skipped
+ * pending Skeleton3D bone rendering. Anything unparseable is skipped rather
+ * than thrown (lenient-renderer contract).
  */
 
 import type { TscnInternalResource } from '../../../parser/types';
@@ -22,11 +26,15 @@ export interface GodotKeyframe {
 }
 
 export interface GodotTrack {
-  /** Always `'value'` in slice-1 (other types are dropped during resolution). */
+  /** `'value'` or a 3D transform track type (`position_3d`/`rotation_3d`/`scale_3d`). */
   type: string;
   /** Node portion of the track's NodePath, relative to the animation root. */
   targetPath: string;
-  /** Property portion of the track's NodePath (e.g. `position`, `rotation`). */
+  /**
+   * The animated transform property. For `value` tracks this is the NodePath's
+   * property part (`position`, `rotation`, …). For 3D transform tracks it is
+   * derived from the track type: `position`, `scale`, or `quaternion`.
+   */
   property: string;
   /** Godot interpolation mode (0 nearest, 1 linear, 2 cubic). */
   interp: number;
@@ -83,25 +91,51 @@ function parseAnimation(name: string, resource: TscnInternalResource): GodotAnim
   };
 }
 
+/**
+ * Godot 4's dedicated 3D transform track types and how they map onto a THREE
+ * transform: the animated property is implied by the type (not a NodePath
+ * suffix), and keys are a flat `PackedFloat32Array(time, transition, comps…)`.
+ * `rotation_3d` is a quaternion (4 comps); position/scale are Vector3 (3 comps).
+ */
+const TRANSFORM_3D_TRACKS: Record<string, { property: string; components: number }> = {
+  position_3d: { property: 'position', components: 3 },
+  scale_3d: { property: 'scale', components: 3 },
+  rotation_3d: { property: 'quaternion', components: 4 },
+};
+
 function parseTracks(data: Record<string, unknown>): GodotTrack[] {
   const tracks: GodotTrack[] = [];
   for (let i = 0; data[`tracks/${i}/type`] !== undefined; i++) {
     const type = stripQuotes(asString(data[`tracks/${i}/type`]) ?? '');
+    const rawPath = asString(data[`tracks/${i}/path`]) ?? '';
+    const rawKeys = asString(data[`tracks/${i}/keys`]) ?? '';
+    const interp = numberOr(data[`tracks/${i}/interp`], 1);
+
+    const transform3d = TRANSFORM_3D_TRACKS[type];
+    if (transform3d) {
+      const inner = extractNodePathInner(rawPath);
+      if (inner === null) continue;
+      // A `:` segment is a skeleton bone sub-path (e.g. `Skeleton3D:body`);
+      // binding those needs Skeleton3D bone rendering, which is deferred — skip
+      // so we don't mis-bind the whole transform onto the skeleton node.
+      if (inner.includes(':')) continue;
+
+      const keys = parseFlatTransformKeys(rawKeys, transform3d.components);
+      if (keys.length === 0) continue;
+
+      tracks.push({ type, targetPath: inner, property: transform3d.property, interp, keys });
+      continue;
+    }
+
     if (type !== 'value') continue;
 
-    const target = parseNodePath(asString(data[`tracks/${i}/path`]) ?? '');
+    const target = parseNodePath(rawPath);
     if (!target || target.property.length === 0) continue;
 
-    const keys = parseKeys(asString(data[`tracks/${i}/keys`]) ?? '');
+    const keys = parseKeys(rawKeys);
     if (keys.length === 0) continue;
 
-    tracks.push({
-      type,
-      targetPath: target.targetPath,
-      property: target.property,
-      interp: numberOr(data[`tracks/${i}/interp`], 1),
-      keys,
-    });
+    tracks.push({ type, targetPath: target.targetPath, property: target.property, interp, keys });
   }
   return tracks;
 }
@@ -142,6 +176,34 @@ function parseKeys(keysStr: string): GodotKeyframe[] {
     value: values[i] ?? 0,
     transition: transitions[i] ?? 1.0,
   }));
+}
+
+const PACKED_FLOAT_ARRAY_RE = /PackedFloat32Array\(([^)]*)\)/;
+
+/**
+ * Decode a 3D transform track's flat key array. Godot serializes these as a
+ * single `PackedFloat32Array(time, transition, c0, c1, …, time, transition, …)`
+ * with a fixed stride of `2 + components` per keyframe (5 for Vector3
+ * position/scale, 6 for the quaternion rotation). Distinct from the `value`
+ * track's `{ "times": …, "values": … }` dict form decoded by `parseKeys`.
+ */
+function parseFlatTransformKeys(keysStr: string, components: number): GodotKeyframe[] {
+  const match = PACKED_FLOAT_ARRAY_RE.exec(keysStr);
+  if (!match || match[1] === undefined) return [];
+
+  const nums = parseFloatList(match[1]);
+  const stride = 2 + components;
+  if (nums.length < stride) return [];
+
+  const keys: GodotKeyframe[] = [];
+  for (let i = 0; i + stride <= nums.length; i += stride) {
+    keys.push({
+      time: nums[i]!,
+      transition: nums[i + 1]!,
+      value: nums.slice(i + 2, i + 2 + components),
+    });
+  }
+  return keys;
 }
 
 function parseFloatList(raw: string): number[] {
