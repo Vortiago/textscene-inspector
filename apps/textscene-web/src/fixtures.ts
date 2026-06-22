@@ -233,6 +233,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Animatedsprite2d Atlas",
+    "file": "unit-animatedsprite2d-atlas.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Animatedsprite2d Tres",
+    "file": "unit-animatedsprite2d-tres.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Animatedsprite2d",
     "file": "unit-animatedsprite2d.tscn",
     "category": "Other"

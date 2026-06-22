@@ -7,41 +7,36 @@
  * its SpriteFrames clips; play/pause/scrub then advances the displayed frame from
  * the transport playhead (`frameAtTime` maps time → frame — no THREE mixer). It
  * draws the current frame like a Sprite2D (centered/offset/flip, inherited
- * modulate via CanvasItem2D). ExtResource (.tres) SpriteFrames aren't resolved
- * yet → placeholder.
+ * modulate via CanvasItem2D). The SpriteFrames may be embedded (SubResource) or
+ * an external `.tres` (ExtResource); frames may be standalone textures
+ * (ExtResource) or AtlasTexture cells (SubResource atlas + region) — see
+ * `useSpriteFrames` / `resolveFrameTexture`.
  */
 
 import { useEffect, useMemo, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import type { TscnInternalResource } from '../../../parser/types';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
-import { findSubResource, useSceneResources } from '../../../r3f/SceneResourcesContext';
-import { parseResourceReference, resolveExtResourcePath } from '../../../resources/SubResourceResolver';
+import { composeFrameTexture, frameSizePx, type SpriteFrameProps } from '../../../r3f/spriteFrame';
 import { useResource } from '../../../resources/useResource';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import { useAnimationTransport } from '../../../r3f/contexts/AnimationTransportContext';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useOptionalSelection } from '../../../r3f/contexts/SelectionContext';
-import {
-  parseSpriteFramesAnimations,
-  frameAtTime,
-  clipDuration,
-  type SpriteFramesAnimation,
-} from './spriteFrames';
+import { resolveFrameTexture, type FrameTextureRegion } from './frameTexture';
+import { useSpriteFrames } from './useSpriteFrames';
+import { frameAtTime, clipDuration, type SpriteFramesAnimation } from './spriteFrames';
 import type { AnimatedSprite2DProperties } from './types';
 
 export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
   const props = node.properties as AnimatedSprite2DProperties;
-  const { internalResources, externalResources } = useSceneResources();
 
   // All animations the SpriteFrames declares — the transport lets the user pick
-  // any clip, so we resolve the whole map (not just the authored one).
-  const spriteFrames = useMemo(
-    () => resolveSpriteFrames(props, internalResources),
-    [props, internalResources]
-  );
+  // any clip, so we resolve the whole map (not just the authored one). The
+  // SpriteFrames itself may be embedded (SubResource) or an external `.tres`.
+  const { spriteFrames: resolved, status: spriteFramesStatus } = useSpriteFrames(props.sprite_frames);
+  const spriteFrames = resolved?.animations ?? null;
   const clipNames = useMemo(() => (spriteFrames ? [...spriteFrames.keys()] : []), [spriteFrames]);
   const durations = useMemo(
     () =>
@@ -96,18 +91,37 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
   // Godot clamps an out-of-range frame to the last rather than blanking.
   const frame = frameCount > 0 ? Math.min(Math.max(rawFrame, 0), frameCount - 1) : 0;
   const frameRef = currentAnim?.frames[frame] ?? null;
-  const texturePath = useMemo(
-    () => resolveExtResourcePath(frameRef, externalResources),
-    [frameRef, externalResources]
+
+  // Resolve the current frame's source image + optional atlas region against
+  // the SpriteFrames' own resource pools (the scene's, or the .tres's).
+  const frameTex = useMemo(
+    () =>
+      resolved ? resolveFrameTexture(frameRef, resolved.subResources, resolved.externalResources) : { path: null },
+    [frameRef, resolved]
   );
+  const texturePath = frameTex.path;
   const texResult = useResource<THREE.Texture>(texturePath ?? '', 'Texture2D');
 
-  const showPlaceholder = !texturePath || texResult.status === 'unavailable';
+  // Window the loaded image to the frame (full image, or an AtlasTexture cell).
+  // composeFrameTexture clones per frame; dispose the prior clone on advance
+  // (and unmount) so playback doesn't leak one GPU texture per keyframe.
+  const frameProps = useMemo(() => regionFrameProps(frameTex.region), [frameTex]);
+  const displayedTexture = useMemo(
+    () => composeFrameTexture(texResult.value, frameProps),
+    [texResult.value, frameProps]
+  );
+  useEffect(() => () => displayedTexture?.dispose(), [displayedTexture]);
+  const { width, height } = useMemo(
+    () => frameSizePx(texResult.value, frameProps),
+    [texResult.value, frameProps]
+  );
 
-  const tex = texResult.value;
-  const image = tex?.image as { width?: number; height?: number } | undefined;
-  const width = image?.width ?? 1;
-  const height = image?.height ?? 1;
+  // While an external `.tres` SpriteFrames is still loading, render nothing
+  // rather than the missing-resource placeholder (matches Sprite2D's pending
+  // UX); the placeholder is for genuinely-absent/failed resources.
+  const showPlaceholder =
+    spriteFramesStatus !== 'pending' && (!texturePath || texResult.status === 'unavailable');
+
   const cgx = props.offset.x + (props.centered ? 0 : width / 2);
   const cgy = props.offset.y + (props.centered ? 0 : height / 2);
   const meshScale: [number, number, number] = [props.flip_h ? -1 : 1, props.flip_v ? -1 : 1, 1];
@@ -119,11 +133,11 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
       body={({ color, opacity }) =>
         showPlaceholder ? (
           <MissingResourcePlaceholder shape="plane" name={node.name} />
-        ) : tex ? (
+        ) : displayedTexture ? (
           <mesh position={[cgx, -cgy, 0]} scale={meshScale}>
             <planeGeometry args={[width, height]} />
             <meshBasicMaterial
-              map={tex}
+              map={displayedTexture}
               color={color}
               opacity={opacity}
               transparent
@@ -139,19 +153,15 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
   );
 }
 
-/** Resolve the SpriteFrames SubResource into its full name → animation map. */
-function resolveSpriteFrames(
-  props: AnimatedSprite2DProperties,
-  internalResources: readonly TscnInternalResource[]
-): Map<string, SpriteFramesAnimation> | null {
-  if (!props.sprite_frames) return null;
-  const parsed = parseResourceReference(props.sprite_frames);
-  if (!parsed || parsed.type !== 'SubResource') return null; // .tres SpriteFrames: later
-  const sf = findSubResource(internalResources, parsed.id);
-  const animationsValue = (sf?.data as Record<string, unknown> | undefined)?.animations;
-  if (typeof animationsValue !== 'string') return null;
-  const map = parseSpriteFramesAnimations(animationsValue);
-  return map.size > 0 ? map : null;
+/**
+ * A frame's window as SpriteFrameProps for the shared composeFrameTexture /
+ * frameSizePx: an AtlasTexture cell maps to a region_rect; a whole-image frame
+ * uses the full texture (no region, single frame).
+ */
+function regionFrameProps(region?: FrameTextureRegion): SpriteFrameProps {
+  return region
+    ? { region_enabled: true, region_rect: region, hframes: 1, vframes: 1, frame: 0 }
+    : { region_enabled: false, hframes: 1, vframes: 1, frame: 0 };
 }
 
 /** Pick the named animation, falling back to the first declared one. */

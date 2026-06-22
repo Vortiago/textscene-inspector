@@ -1,0 +1,45 @@
+[gd_scene load_steps=7 format=3 uid="uid://unit_animatedsprite2d_atlas"]
+
+[ext_resource type="Texture2D" path="res://textures/sprite2d-marker.png" id="1_sheet"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_tl"]
+atlas = ExtResource("1_sheet")
+region = Rect2(0, 0, 48, 48)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_tr"]
+atlas = ExtResource("1_sheet")
+region = Rect2(48, 0, 48, 48)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_bl"]
+atlas = ExtResource("1_sheet")
+region = Rect2(0, 48, 48, 48)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_br"]
+atlas = ExtResource("1_sheet")
+region = Rect2(48, 48, 48, 48)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_quads"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_tl")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_tr")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_bl")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_br")
+}],
+"loop": true,
+"name": &"quads",
+"speed": 4.0
+}]
+
+[node name="AtlasFramesDemo" type="Node2D"]
+
+[node name="Sheet" type="AnimatedSprite2D" parent="."]
+sprite_frames = SubResource("SpriteFrames_quads")
+animation = &"quads"

@@ -14,6 +14,10 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import type { TscnExternalResource, TscnInternalResource } from '../parser/types';
 
+// `findSubResource` lives in the pure resources layer (next to its ExtResource
+// twin, `resolveExtResourcePath`); re-exported here for its many R3F importers.
+export { findSubResource } from '../resources/SubResourceResolver';
+
 export interface SceneResources {
   internalResources: readonly TscnInternalResource[];
   externalResources: readonly TscnExternalResource[];
@@ -63,18 +67,4 @@ export function SceneResourcesProvider({
     [internalResources, externalResources, parent]
   );
   return <SceneResourcesContext.Provider value={value}>{children}</SceneResourcesContext.Provider>;
-}
-
-/**
- * Find a SubResource by id. Matches both the `data.id` runtime key and
- * the parser's structural `id` field for cross-pipeline compatibility.
- */
-export function findSubResource(
-  internalResources: readonly TscnInternalResource[],
-  id: string
-): TscnInternalResource | undefined {
-  return internalResources.find((r) => {
-    const dataId = (r.data as { id?: string }).id;
-    return dataId === id || String(r.id) === id;
-  });
 }
