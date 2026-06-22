@@ -36,6 +36,7 @@ describe('MeshGeometry dispatch (parseByType)', () => {
     ['BoxMesh', 'BoxGeometry'],
     ['SphereMesh', 'SphereGeometry'],
     ['PlaneMesh', 'PlaneGeometry'],
+    ['QuadMesh', 'PlaneGeometry'],
     ['CylinderMesh', 'CylinderGeometry'],
     ['CapsuleMesh', 'CapsuleGeometry'],
     ['TorusMesh', 'TorusGeometry'],
@@ -66,6 +67,27 @@ describe('BoxMesh subdivisions', () => {
     expect(p.widthSegments).toBe(3);
     expect(p.heightSegments).toBe(4);
     expect(p.depthSegments).toBe(5);
+  });
+});
+
+describe('QuadMesh (PlaneMesh subclass)', () => {
+  it('maps the witnessed size = Vector2(200, 200) to a 200×200 plane', async () => {
+    const p = params<{ width: number; height: number }>(
+      await renderGeometry(sub('QuadMesh', { size: 'Vector2(200, 200)' }))
+    );
+    expect(p.width).toBe(200);
+    expect(p.height).toBe(200);
+  });
+
+  it('defaults to a 1×1 quad facing +Z (no rotation applied)', async () => {
+    const geometry = await renderGeometry(sub('QuadMesh'));
+    const p = params<{ width: number; height: number }>(geometry);
+    expect(p.width).toBe(1);
+    expect(p.height).toBe(1);
+    // FACE_Z (orientation 2) keeps the default XY plane: +Z normal, untouched.
+    geometry.computeBoundingBox();
+    expect(geometry.boundingBox!.min.z).toBe(0);
+    expect(geometry.boundingBox!.max.z).toBe(0);
   });
 });
 

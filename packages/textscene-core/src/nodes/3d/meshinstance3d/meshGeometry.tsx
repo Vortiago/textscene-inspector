@@ -1,7 +1,7 @@
 /**
  * Renders the geometry JSX for a MeshInstance3D's `mesh` SubResource.
  * Switches on Godot mesh primitive type: BoxMesh / SphereMesh / PlaneMesh /
- * CylinderMesh / CapsuleMesh / TorusMesh / PrismMesh.
+ * QuadMesh / CylinderMesh / CapsuleMesh / TorusMesh / PrismMesh.
  *
  * Returns null for unknown / external (GLB) / unresolvable mesh references —
  * the caller renders a placeholder geometry instead.
@@ -17,6 +17,7 @@ import { parseCylinderMesh } from '../../../resources/meshes/cylindermesh/parser
 import { parseCapsuleMesh } from '../../../resources/meshes/capsulemesh/parser';
 import { parseTorusMesh } from '../../../resources/meshes/torusmesh/parser';
 import { parsePrismMesh } from '../../../resources/meshes/prismmesh/parser';
+import { parseQuadMesh } from '../../../resources/meshes/quadmesh/parser';
 import type { PlaneMeshProperties } from '../../../resources/meshes/planemesh/types';
 
 export interface MeshGeometryProps {
@@ -216,6 +217,10 @@ function parseByType(resource: TscnInternalResource): ParsedMesh {
       return { type: 'SphereMesh', properties: parseSphereMesh(data) };
     case 'PlaneMesh':
       return { type: 'PlaneMesh', properties: parsePlaneMesh(data) };
+    // QuadMesh is a PlaneMesh subclass (faces +Z, 1×1 default); render through
+    // the same PlaneMesh path with QuadMesh's parsed defaults.
+    case 'QuadMesh':
+      return { type: 'PlaneMesh', properties: parseQuadMesh(data) };
     case 'CylinderMesh':
       return { type: 'CylinderMesh', properties: parseCylinderMesh(data) };
     case 'CapsuleMesh':

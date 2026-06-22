@@ -2,11 +2,26 @@ import type { PlaneMeshProperties } from './types';
 import { parseVector2, parseVector3, type Vector2, type Vector3 } from '../../../parser/vectors';
 import { warn } from '../../../logger';
 
-export function parsePlaneMesh(properties: Record<string, string>): PlaneMeshProperties {
-  let size: Vector2 = { x: 2, y: 2 };
+/**
+ * Defaults that differ between PlaneMesh (FACE_Y, 2×2) and its QuadMesh subclass
+ * (FACE_Z, 1×1). Everything else is shared, so QuadMesh reuses this parser by
+ * passing its own defaults rather than duplicating the field-by-field reading.
+ */
+export interface PlaneMeshDefaults {
+  size: Vector2;
+  orientation: number;
+}
+
+const PLANE_MESH_DEFAULTS: PlaneMeshDefaults = { size: { x: 2, y: 2 }, orientation: 1 };
+
+export function parsePlaneMesh(
+  properties: Record<string, string>,
+  defaults: PlaneMeshDefaults = PLANE_MESH_DEFAULTS
+): PlaneMeshProperties {
+  let size: Vector2 = { ...defaults.size };
   let subdivideWidth = 0;
   let subdivideDepth = 0;
-  let orientation = 1;
+  let orientation = defaults.orientation;
   let centerOffset: Vector3 | undefined = undefined;
   let flipFaces = false;
 
@@ -40,7 +55,7 @@ export function parsePlaneMesh(properties: Record<string, string>): PlaneMeshPro
     orientation = parseInt(properties.orientation, 10);
     if (isNaN(orientation) || orientation < 0 || orientation > 2) {
       warn(`Invalid PlaneMesh orientation: ${properties.orientation}`);
-      orientation = 1;
+      orientation = defaults.orientation;
     }
   }
 

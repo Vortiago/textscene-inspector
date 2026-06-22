@@ -378,6 +378,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Primitive Meshes"
   },
   {
+    "name": "Quadmesh",
+    "file": "unit-quadmesh.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
     "name": "Sphere Mesh",
     "file": "unit-sphere-mesh.tscn",
     "category": "Unit - Primitive Meshes"
@@ -488,6 +493,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - CSG Primitives"
   },
   {
+    "name": "Csg Sphere",
+    "file": "unit-csg-sphere.tscn",
+    "category": "Unit - CSG Primitives"
+  },
+  {
     "name": "External Cube",
     "file": "unit-external-cube.tscn",
     "category": "Unit - External Resources"
@@ -551,6 +561,11 @@ export const fixtures: Fixture[] = [
     "name": "Navigation Region 3d",
     "file": "unit-navigation-region-3d.tscn",
     "category": "Unit - Navigation"
+  },
+  {
+    "name": "Polygon2d",
+    "file": "unit-polygon2d.tscn",
+    "category": "Unit - 2D Canvas"
   },
   {
     "name": "Sprite2d",
