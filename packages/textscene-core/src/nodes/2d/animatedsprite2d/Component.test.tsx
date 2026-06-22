@@ -277,8 +277,8 @@ describe('AnimatedSprite2D authored-frame reactivity', () => {
 
 describe('AnimatedSprite2D AtlasTexture frames (sprite-sheet packing)', () => {
   // Each frame is a SubResource AtlasTexture sampling a region of one sheet —
-  // the coins_counter.tscn form (issue #144). Frame 0 = a 16×16 cell at (0,0);
-  // frame 1 = a 16×32 cell at (16,0). Both share the 64×64 atlas.
+  // the coins_counter.tscn form. Frame 0 = a 16×16 cell at (0,0); frame 1 = a
+  // 16×32 cell at (16,0). Both share the 64×64 atlas.
   const ATLAS_ANIM =
     '[{"frames": [{"duration": 1.0, "texture": SubResource("Atlas_a")}, {"duration": 1.0, "texture": SubResource("Atlas_b")}], "loop": true, "name": &"spin", "speed": 5.0}]';
 
@@ -337,8 +337,8 @@ describe('AnimatedSprite2D AtlasTexture frames (sprite-sheet packing)', () => {
 
 describe('AnimatedSprite2D external .tres SpriteFrames', () => {
   // sprite_frames = ExtResource(".tres") — the character.tscn / anim_player.tres
-  // form (issue #144). The frame ExtResource ids are scoped to the .tres file,
-  // not the scene, so they must resolve against the file's own ext section.
+  // form. The frame ExtResource ids are scoped to the .tres file, not the scene,
+  // so they must resolve against the file's own ext section.
   const TRES = `[gd_resource type="SpriteFrames" format=3]
 
 [ext_resource type="Texture2D" path="res://bump.png" id="1_bump"]

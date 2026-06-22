@@ -13,8 +13,11 @@
  */
 
 import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
-import { findSubResource } from '../../../r3f/SceneResourcesContext';
-import { parseResourceReference, resolveExtResourcePath } from '../../../resources/SubResourceResolver';
+import {
+  findSubResource,
+  parseResourceReference,
+  resolveExtResourcePath,
+} from '../../../resources/SubResourceResolver';
 
 /** An AtlasTexture sub-region, in atlas pixels (top-left origin, like Godot). */
 export interface FrameTextureRegion {

@@ -13,7 +13,7 @@
  * R3F WorldEnvironment use it to read raw TSCN property strings.
  */
 
-import type { TscnExternalResource } from '../parser/types.js';
+import type { TscnExternalResource, TscnInternalResource } from '../parser/types.js';
 
 export function parseResourceReference(
   ref: string
@@ -47,6 +47,22 @@ export function resolveExtResourcePath(
   const parsed = parseResourceReference(ref);
   if (!parsed || parsed.type !== 'ExtResource') return null;
   return externalResources.find((r) => r.id === parsed.id)?.path ?? null;
+}
+
+/**
+ * Find a SubResource by id — the `SubResource("id")` counterpart to
+ * `resolveExtResourcePath`. Matches both the parser's structural `id` field and
+ * the runtime `data.id` key for cross-pipeline compatibility. Pure (React-free)
+ * so callers in either the resource layer or R3F components can share it.
+ */
+export function findSubResource(
+  internalResources: readonly TscnInternalResource[],
+  id: string
+): TscnInternalResource | undefined {
+  return internalResources.find((r) => {
+    const dataId = (r.data as { id?: string }).id;
+    return dataId === id || String(r.id) === id;
+  });
 }
 
 /**

@@ -18,8 +18,12 @@
 import { useMemo } from 'react';
 import type { ParsedTresFile } from '../../../parser/tresParser';
 import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
-import { findSubResource, useSceneResources } from '../../../r3f/SceneResourcesContext';
-import { parseResourceReference, resolveExtResourcePath } from '../../../resources/SubResourceResolver';
+import { useSceneResources } from '../../../r3f/SceneResourcesContext';
+import {
+  findSubResource,
+  parseResourceReference,
+  resolveExtResourcePath,
+} from '../../../resources/SubResourceResolver';
 import { useResource } from '../../../resources/useResource';
 import { parseSpriteFramesAnimations, type SpriteFramesAnimation } from './spriteFrames';
 
@@ -64,8 +68,8 @@ export function useSpriteFrames(spriteFramesRef: string | undefined): SpriteFram
     }
 
     // External `.tres` SpriteFrames — async; resolve frames against the FILE's
-    // own ext/sub sections (its frame ids are scoped to the .tres).
-    if (resolvedPath && !tresPath) return EMPTY; // not a text resource — unresolvable
+    // own ext/sub sections (its frame ids are scoped to the .tres). A non-`.tres`
+    // external (e.g. a binary `.res`) leaves tresPath null → unresolvable.
     if (!tresPath) return EMPTY;
     if (tresResult.status === 'pending') return { spriteFrames: null, status: 'pending' };
     if (tresResult.status === 'unavailable' || !tresResult.value) return EMPTY;

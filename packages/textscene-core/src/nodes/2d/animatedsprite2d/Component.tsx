@@ -105,14 +105,15 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
   // Window the loaded image to the frame (full image, or an AtlasTexture cell).
   // composeFrameTexture clones per frame; dispose the prior clone on advance
   // (and unmount) so playback doesn't leak one GPU texture per keyframe.
+  const frameProps = useMemo(() => regionFrameProps(frameTex.region), [frameTex]);
   const displayedTexture = useMemo(
-    () => composeFrameTexture(texResult.value, regionFrameProps(frameTex.region)),
-    [texResult.value, frameTex]
+    () => composeFrameTexture(texResult.value, frameProps),
+    [texResult.value, frameProps]
   );
   useEffect(() => () => displayedTexture?.dispose(), [displayedTexture]);
   const { width, height } = useMemo(
-    () => frameSizePx(texResult.value, regionFrameProps(frameTex.region)),
-    [texResult.value, frameTex]
+    () => frameSizePx(texResult.value, frameProps),
+    [texResult.value, frameProps]
   );
 
   // While an external `.tres` SpriteFrames is still loading, render nothing
