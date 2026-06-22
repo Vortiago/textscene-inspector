@@ -229,6 +229,19 @@ describe('resolveAnimations — 3D transform tracks (position_3d/rotation_3d/sca
     expect(anim.tracks.map((t) => t.targetPath)).toEqual(['Mesh']);
   });
 
+  it('does not treat an Object.prototype key (e.g. "constructor") as a transform track type', () => {
+    const internal = [
+      res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
+      res('A', 'Animation', {
+        'tracks/0/type': '"constructor"',
+        'tracks/0/path': 'NodePath("Mesh")',
+        'tracks/0/keys': 'PackedFloat32Array(0, 1, 1, 2, 3)',
+      }),
+    ];
+    const [anim] = resolveAnimations(DEFAULT_LIB, internal);
+    expect(anim.tracks).toEqual([]);
+  });
+
   it('skips a 3D transform track whose flat array is shorter than one stride', () => {
     const internal = [
       res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),

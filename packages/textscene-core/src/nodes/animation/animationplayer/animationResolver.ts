@@ -111,7 +111,11 @@ function parseTracks(data: Record<string, unknown>): GodotTrack[] {
     const rawKeys = asString(data[`tracks/${i}/keys`]) ?? '';
     const interp = numberOr(data[`tracks/${i}/interp`], 1);
 
-    const transform3d = TRANSFORM_3D_TRACKS[type];
+    // `hasOwn` so a track type that collides with an Object.prototype key
+    // (e.g. "constructor", "toString") doesn't resolve to an inherited member.
+    const transform3d = Object.hasOwn(TRANSFORM_3D_TRACKS, type)
+      ? TRANSFORM_3D_TRACKS[type]
+      : undefined;
     if (transform3d) {
       const inner = extractNodePathInner(rawPath);
       if (inner === null) continue;
