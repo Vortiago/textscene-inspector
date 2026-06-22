@@ -177,6 +177,34 @@ describe('buildClip — quaternion (rotation_3d)', () => {
   });
 });
 
+describe('buildClip — root-targeting track (NodePath ".")', () => {
+  it('binds a "." targetPath to the mixer root (track name has no node prefix)', () => {
+    const clip = buildClip(
+      anim('a', 1, [track('position', [{ time: 0, value: [1, 2, 3], transition: 1 }], '.')])
+    );
+    // Empty node name → THREE.PropertyBinding resolves to the mixer root.
+    expect(findTrack(clip, '.position')).toBeDefined();
+    expect(findTrack(clip, '..position')).toBeUndefined();
+  });
+
+  it('drives the root through a mixer when the track targets "."', () => {
+    const root = new Object3D();
+    root.name = 'Root';
+    const clip = buildClip(
+      anim('move', 2, [
+        track('position', [
+          { time: 0, value: [0, 0, 0], transition: 1 },
+          { time: 2, value: [0, 4, 0], transition: 1 },
+        ], '.'),
+      ])
+    );
+    const mixer = new AnimationMixer(root);
+    mixer.clipAction(clip).play();
+    mixer.update(1); // mid-clip → halfway to y=4
+    expect(root.position.y).toBeCloseTo(2, 5);
+  });
+});
+
 describe('buildClip — scale (C4) and 2D decomposition', () => {
   it('maps a Vector3 scale track to <path>.scale', () => {
     const clip = buildClip(

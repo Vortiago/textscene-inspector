@@ -56,7 +56,10 @@ export function buildClip(animation: GodotAnimation): AnimationClip {
 
 function buildTracks(track: GodotTrack): KeyframeTrack[] {
   const times = track.keys.map((k) => k.time);
-  const prefix = track.targetPath;
+  // A track targeting the animation root itself (Godot `NodePath(".")`) binds
+  // to the root via an empty node name — THREE.PropertyBinding resolves the
+  // empty/`.` node to the mixer root. A named target stays a descendant lookup.
+  const prefix = track.targetPath === '.' ? '' : track.targetPath;
 
   switch (track.property) {
     case 'position':

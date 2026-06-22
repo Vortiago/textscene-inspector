@@ -9,7 +9,8 @@
 
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { AnimationPlayer } from './Component';
+import { Object3D } from 'three';
+import { AnimationPlayer, resolveTrackTarget } from './Component';
 import type { TscnNode } from '../../../parser/types';
 import type { AnimationPlayerProperties } from './types';
 import { AnimationProcessMode, MethodCallMode } from './types';
@@ -37,6 +38,26 @@ function makeNode(overrides: Partial<AnimationPlayerProperties> = {}): TscnNode 
     properties: props,
   };
 }
+
+describe('resolveTrackTarget — root-targeting (NodePath ".")', () => {
+  it('maps a "." targetPath to the root itself (not a child lookup)', () => {
+    const root = new Object3D();
+    root.name = 'Root';
+    expect(resolveTrackTarget(root, '.')).toBe(root);
+  });
+
+  it('resolves a named targetPath to the matching descendant', () => {
+    const root = new Object3D();
+    const child = new Object3D();
+    child.name = 'Mesh';
+    root.add(child);
+    expect(resolveTrackTarget(root, 'Mesh')).toBe(child);
+  });
+
+  it('returns undefined for a missing target', () => {
+    expect(resolveTrackTarget(new Object3D(), 'Ghost')).toBeUndefined();
+  });
+});
 
 describe('<AnimationPlayer>', () => {
   it('renders without crashing with default props', async () => {
