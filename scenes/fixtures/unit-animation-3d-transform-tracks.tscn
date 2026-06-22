@@ -1,0 +1,71 @@
+[gd_scene load_steps=4 format=3 uid="uid://unit_animation_3d_transform_tracks"]
+
+; AnimationPlayer driving a plain Node3D (MeshInstance3D) via Godot 4's dedicated
+; 3D transform tracks: position_3d, rotation_3d (quaternion) and scale_3d. Unlike
+; value tracks (`{ "times": …, "values": … }`), these serialize keys as a flat
+; PackedFloat32Array(time, transition, comps…) — stride 5 for position/scale,
+; stride 6 for the rotation quaternion. Exercises the flat-keys decoder and the
+; QuaternionKeyframeTrack path. Skeletal bone sub-paths (Node:bone) are a separate
+; deferred case; this fixture animates a plain node so it renders end-to-end.
+
+[sub_resource type="BoxMesh" id="BoxMesh_box"]
+
+[sub_resource type="Animation" id="Animation_move"]
+resource_name = "move"
+length = 1.0
+loop_mode = 1
+step = 0.1
+tracks/0/type = "position_3d"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Mesh")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = PackedFloat32Array(0, 1, 0, 0.5, 0, 1, 1, 0, 1.5, 0)
+tracks/1/type = "rotation_3d"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Mesh")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = PackedFloat32Array(0, 1, 0, 0, 0, 1, 1, 1, 0, 0.707107, 0, 0.707107)
+tracks/2/type = "scale_3d"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("Mesh")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = PackedFloat32Array(0, 1, 1, 1, 1, 1, 1, 1.5, 1.5, 1.5)
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_default"]
+_data = {
+"move": SubResource("Animation_move")
+}
+
+[node name="Scene" type="Node3D"]
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.866025, 0.5, 0, -0.5, 0.866025, 0, 3, 6)
+fov = 70.0
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866025, -0.25, 0.433013, 0, 0.866025, 0.5, -0.5, -0.433013, 0.75, 0, 5, 0)
+
+[node name="Mesh" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+mesh = SubResource("BoxMesh_box")
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+libraries = {
+"": SubResource("AnimationLibrary_default")
+}
+autoplay = &"move"
+speed_scale = 1.0
+playback_active = true
+
+[node name="Title" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 0)
+text = "AnimationPlayer 3D transform tracks (position_3d/rotation_3d/scale_3d) — autoplay: move"
+pixel_size = 0.006
+billboard = 1
+modulate = Color(1, 1, 1, 1)

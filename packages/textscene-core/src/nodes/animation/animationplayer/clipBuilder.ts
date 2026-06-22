@@ -3,10 +3,11 @@
  *
  * KeyframeTrack names are THREE name-paths (`Target.position`) that
  * THREE.PropertyBinding resolves against the animation root (ADR-0011).
- * Slice-1 supports the transform value tracks only — position, scale,
- * rotation and rotation_degrees — over both 3D (Vector3) and 2D
- * (Vector2 position/scale, scalar rotation) targets. Degrees are converted
- * to radians; everything else is dropped.
+ * Supports the transform tracks — position, scale, rotation and
+ * rotation_degrees — over both 3D (Vector3) and 2D (Vector2 position/scale,
+ * scalar rotation) targets, plus the `quaternion` property emitted by Godot's
+ * dedicated `rotation_3d` tracks (driven through a QuaternionKeyframeTrack).
+ * Degrees are converted to radians; everything else is dropped.
  */
 
 import {
@@ -15,6 +16,7 @@ import {
   LoopPingPong,
   LoopRepeat,
   NumberKeyframeTrack,
+  QuaternionKeyframeTrack,
   VectorKeyframeTrack,
   type AnimationActionLoopStyles,
   type KeyframeTrack,
@@ -54,7 +56,10 @@ export function buildClip(animation: GodotAnimation): AnimationClip {
 
 function buildTracks(track: GodotTrack): KeyframeTrack[] {
   const times = track.keys.map((k) => k.time);
-  const prefix = track.targetPath;
+  // A track targeting the animation root itself (Godot `NodePath(".")`) binds
+  // to the root via an empty node name — THREE.PropertyBinding resolves the
+  // empty/`.` node to the mixer root. A named target stays a descendant lookup.
+  const prefix = track.targetPath === '.' ? '' : track.targetPath;
 
   switch (track.property) {
     case 'position':
@@ -71,9 +76,25 @@ function buildTracks(track: GodotTrack): KeyframeTrack[] {
     case 'rotation_degrees':
       return rotationTracks(prefix, times, track.keys, (v) => v * DEG2RAD);
 
+    case 'quaternion':
+      return quaternionTracks(prefix, times, track.keys);
+
     default:
       return [];
   }
+}
+
+/**
+ * Godot `rotation_3d` keys are quaternions `(x, y, z, w)`, the same component
+ * order THREE.Quaternion uses, so they flatten straight into a
+ * QuaternionKeyframeTrack on `.quaternion` (THREE slerps between them). 3D
+ * transforms aren't conjugated (Godot and THREE are both Y-up right-handed).
+ */
+function quaternionTracks(prefix: string, times: number[], keys: GodotKeyframe[]): KeyframeTrack[] {
+  const first = keys[0]?.value;
+  if (!Array.isArray(first) || first.length !== 4) return [];
+  const values = keys.flatMap((k) => k.value as number[]);
+  return [new QuaternionKeyframeTrack(`${prefix}.quaternion`, times, values)];
 }
 
 /**

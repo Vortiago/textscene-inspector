@@ -147,6 +147,115 @@ describe('resolveAnimations — graceful degradation (B5)', () => {
   });
 });
 
+describe('resolveAnimations — 3D transform tracks (position_3d/rotation_3d/scale_3d)', () => {
+  // Godot 4's dedicated 3D transform tracks store keys as a flat
+  // PackedFloat32Array(time, transition, comps…) — NOT the value-track dict —
+  // and the property is implied by the track type, not a NodePath `:suffix`.
+  it('decodes a position_3d flat key array to Vector3 values on the position property', () => {
+    const internal = [
+      res('Lib', 'AnimationLibrary', { _data: '{\n"move": SubResource("A")\n}' }),
+      res('A', 'Animation', {
+        length: '1.0',
+        'tracks/0/type': '"position_3d"',
+        'tracks/0/path': 'NodePath("Mesh")',
+        'tracks/0/interp': '1',
+        // two keys: (time, transition, x, y, z)
+        'tracks/0/keys': 'PackedFloat32Array(0, 1, 0, 0, 0, 0.5, 1, 1, 2, 3)',
+      }),
+    ];
+    const [anim] = resolveAnimations(DEFAULT_LIB, internal);
+    expect(anim.tracks).toHaveLength(1);
+    const t = anim.tracks[0];
+    expect(t).toMatchObject({ type: 'position_3d', targetPath: 'Mesh', property: 'position', interp: 1 });
+    expect(t.keys.map((k) => k.time)).toEqual([0, 0.5]);
+    expect(t.keys.map((k) => k.value)).toEqual([[0, 0, 0], [1, 2, 3]]);
+  });
+
+  it('decodes a scale_3d flat key array to Vector3 values on the scale property', () => {
+    const internal = [
+      res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
+      res('A', 'Animation', {
+        'tracks/0/type': '"scale_3d"',
+        'tracks/0/path': 'NodePath("Mesh")',
+        'tracks/0/keys': 'PackedFloat32Array(0, 1, 2, 2, 2)',
+      }),
+    ];
+    const [anim] = resolveAnimations(DEFAULT_LIB, internal);
+    expect(anim.tracks[0]).toMatchObject({ type: 'scale_3d', property: 'scale' });
+    expect(anim.tracks[0].keys[0].value).toEqual([2, 2, 2]);
+  });
+
+  it('decodes a rotation_3d flat key array to quaternion (4-component) values', () => {
+    const internal = [
+      res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
+      res('A', 'Animation', {
+        'tracks/0/type': '"rotation_3d"',
+        'tracks/0/path': 'NodePath("Mesh")',
+        // (time, transition, qx, qy, qz, qw)
+        'tracks/0/keys': 'PackedFloat32Array(0, 1, 0.707107, 0, 0, 0.707107)',
+      }),
+    ];
+    const [anim] = resolveAnimations(DEFAULT_LIB, internal);
+    expect(anim.tracks[0]).toMatchObject({ type: 'rotation_3d', property: 'quaternion' });
+    expect(anim.tracks[0].keys[0].value).toEqual([0.707107, 0, 0, 0.707107]);
+  });
+
+  it('reads the per-key transition from the flat array (second component)', () => {
+    const internal = [
+      res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
+      res('A', 'Animation', {
+        'tracks/0/type': '"position_3d"',
+        'tracks/0/path': 'NodePath("Mesh")',
+        'tracks/0/keys': 'PackedFloat32Array(0, 0.25, 1, 1, 1)',
+      }),
+    ];
+    const [anim] = resolveAnimations(DEFAULT_LIB, internal);
+    expect(anim.tracks[0].keys[0].transition).toBe(0.25);
+  });
+
+  it('skips skeletal bone sub-path tracks (Node:bone) but keeps plain-node tracks', () => {
+    const internal = [
+      res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
+      res('A', 'Animation', {
+        'tracks/0/type': '"position_3d"',
+        'tracks/0/path': 'NodePath("Skeleton/Skeleton3D:body")',
+        'tracks/0/keys': 'PackedFloat32Array(0, 1, 0, 0.66, 0)',
+        'tracks/1/type': '"position_3d"',
+        'tracks/1/path': 'NodePath("Mesh")',
+        'tracks/1/keys': 'PackedFloat32Array(0, 1, 1, 2, 3)',
+      }),
+    ];
+    const [anim] = resolveAnimations(DEFAULT_LIB, internal);
+    expect(anim.tracks.map((t) => t.targetPath)).toEqual(['Mesh']);
+  });
+
+  it('does not treat an Object.prototype key (e.g. "constructor") as a transform track type', () => {
+    const internal = [
+      res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
+      res('A', 'Animation', {
+        'tracks/0/type': '"constructor"',
+        'tracks/0/path': 'NodePath("Mesh")',
+        'tracks/0/keys': 'PackedFloat32Array(0, 1, 1, 2, 3)',
+      }),
+    ];
+    const [anim] = resolveAnimations(DEFAULT_LIB, internal);
+    expect(anim.tracks).toEqual([]);
+  });
+
+  it('skips a 3D transform track whose flat array is shorter than one stride', () => {
+    const internal = [
+      res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
+      res('A', 'Animation', {
+        'tracks/0/type': '"position_3d"',
+        'tracks/0/path': 'NodePath("Mesh")',
+        'tracks/0/keys': 'PackedFloat32Array(0, 1)', // missing the 3 components
+      }),
+    ];
+    const [anim] = resolveAnimations(DEFAULT_LIB, internal);
+    expect(anim.tracks).toEqual([]);
+  });
+});
+
 describe('resolveAnimations — end-to-end from a parsed dict-form scene', () => {
   // Regression for the symptom "AnimationPlayer shows no animations": a scene
   // using Godot 4's dictionary-form `libraries = { "": SubResource(...) }` must
@@ -183,5 +292,38 @@ libraries = {
     expect(libraries).toEqual([{ name: '', subResourceId: 'AnimationLibrary_1' }]);
     const anims = resolveAnimations(libraries, scene.internalResources);
     expect(anims.map((a) => a.name)).toEqual(['spin']);
+  });
+
+  // Regression for the symptom "3D animations don't move": a Godot-4
+  // position_3d track (flat PackedFloat32Array keys) must resolve to a
+  // position track through the full parse → resolve chain.
+  it('resolves a position_3d transform track from a parsed scene', () => {
+    const scene = new TscnParser().parse(`[gd_scene format=3]
+
+[sub_resource type="Animation" id="Animation_move"]
+resource_name = "move"
+length = 1.0
+tracks/0/type = "position_3d"
+tracks/0/path = NodePath("Mesh")
+tracks/0/keys = PackedFloat32Array(0, 1, 0, 0, 0, 1, 1, 0, 2, 0)
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_1"]
+_data = {
+"move": SubResource("Animation_move")
+}
+
+[node name="AnimationPlayer" type="AnimationPlayer"]
+libraries = {
+"": SubResource("AnimationLibrary_1")
+}
+`);
+    const ap = scene.nodes.find((n) => n.type === 'AnimationPlayer');
+    const libraries = (ap?.properties as AnimationPlayerProperties).libraries;
+    const anims = resolveAnimations(libraries, scene.internalResources);
+
+    expect(anims).toHaveLength(1);
+    const t = anims[0]!.tracks[0]!;
+    expect(t).toMatchObject({ targetPath: 'Mesh', property: 'position' });
+    expect(t.keys.map((k) => k.value)).toEqual([[0, 0, 0], [0, 2, 0]]);
   });
 });

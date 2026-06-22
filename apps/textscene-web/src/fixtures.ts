@@ -238,6 +238,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Animation 3d Transform Tracks",
+    "file": "unit-animation-3d-transform-tracks.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Animation Player 2d",
     "file": "unit-animation-player-2d.tscn",
     "category": "Other"

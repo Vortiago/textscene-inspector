@@ -225,6 +225,15 @@ function configureLoop(action: AnimationAction, loopMode: number): void {
 }
 
 /**
+ * Resolve a track's target node against the animation root. A `.` targetPath
+ * (Godot `NodePath(".")`) is the root itself — `getObjectByName(".")` would miss
+ * it (no child is named `.`), so map it to the root directly.
+ */
+export function resolveTrackTarget(root: Object3D, targetPath: string): Object3D | undefined {
+  return targetPath === '.' ? root : root.getObjectByName(targetPath);
+}
+
+/**
  * Reorder every rotation-track target to Godot's YXZ Euler order, preserving
  * the current orientation (`Euler.reorder`). Single-axis tracks are unaffected;
  * multi-axis Euler rotations now match Godot's composition.
@@ -236,7 +245,7 @@ function applyGodotEulerOrder(root: Object3D, animations: GodotAnimation[]): voi
       if (track.property !== 'rotation' && track.property !== 'rotation_degrees') continue;
       if (seen.has(track.targetPath)) continue;
       seen.add(track.targetPath);
-      const object = root.getObjectByName(track.targetPath);
+      const object = resolveTrackTarget(root, track.targetPath);
       if (object) object.rotation.reorder(GODOT_EULER_ORDER);
     }
   }
@@ -249,7 +258,7 @@ function snapshotTargets(root: Object3D, animations: GodotAnimation[]): Snapshot
     for (const track of animation.tracks) {
       if (seen.has(track.targetPath)) continue;
       seen.add(track.targetPath);
-      const object = root.getObjectByName(track.targetPath);
+      const object = resolveTrackTarget(root, track.targetPath);
       if (!object) continue;
       snapshots.push({
         object,
