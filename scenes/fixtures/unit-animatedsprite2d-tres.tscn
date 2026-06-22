@@ -1,0 +1,9 @@
+[gd_scene load_steps=2 format=3 uid="uid://unit_animatedsprite2d_tres"]
+
+[ext_resource type="SpriteFrames" path="res://unit-animatedsprite2d-frames.tres" id="1_frames"]
+
+[node name="TresFramesDemo" type="Node2D"]
+
+[node name="Walker" type="AnimatedSprite2D" parent="."]
+sprite_frames = ExtResource("1_frames")
+animation = &"walk"

@@ -10,6 +10,7 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { parseAnimatedSprite2D } from './parser';
 import { AnimatedSprite2D } from './Component';
+import { parseTresFile } from '../../../parser/tresParser';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
@@ -271,5 +272,164 @@ describe('AnimatedSprite2D authored-frame reactivity', () => {
     });
     await ReactThreeTestRenderer.act(async () => {}); // settle the texture swap
     expect(width()).toBe(64); // frame 1 — reactive, not frozen at 0
+  });
+});
+
+describe('AnimatedSprite2D AtlasTexture frames (sprite-sheet packing)', () => {
+  // Each frame is a SubResource AtlasTexture sampling a region of one sheet —
+  // the coins_counter.tscn form (issue #144). Frame 0 = a 16×16 cell at (0,0);
+  // frame 1 = a 16×32 cell at (16,0). Both share the 64×64 atlas.
+  const ATLAS_ANIM =
+    '[{"frames": [{"duration": 1.0, "texture": SubResource("Atlas_a")}, {"duration": 1.0, "texture": SubResource("Atlas_b")}], "loop": true, "name": &"spin", "speed": 5.0}]';
+
+  async function render(frame: string) {
+    const fake = createFakeResourceLoader();
+    const atlas = new THREE.Texture();
+    (atlas as unknown as { image: { width: number; height: number } }).image = { width: 64, height: 64 };
+    fake.textures.seed('res://atlas.png', atlas);
+    const node: TscnNode = {
+      name: 'A',
+      type: 'AnimatedSprite2D',
+      children: [],
+      properties: parseAnimatedSprite2D(heading, {
+        sprite_frames: 'SubResource("sf")',
+        animation: '&"spin"',
+        frame,
+      }),
+    };
+    return ReactThreeTestRenderer.create(
+      <ResourceLoaderProvider loader={fake.loader}>
+        <SceneResourcesProvider
+          internalResources={[
+            { id: 'sf', type: 'SpriteFrames', data: { animations: ATLAS_ANIM, id: 'sf' } },
+            { id: 'Atlas_a', type: 'AtlasTexture', data: { atlas: 'ExtResource("2")', region: 'Rect2(0, 0, 16, 16)', id: 'Atlas_a' } },
+            { id: 'Atlas_b', type: 'AtlasTexture', data: { atlas: 'ExtResource("2")', region: 'Rect2(16, 0, 16, 32)', id: 'Atlas_b' } },
+          ]}
+          externalResources={[{ id: '2', type: 'Texture2D', path: 'res://atlas.png' }]}
+        >
+          <AnimatedSprite2D node={node} />
+        </SceneResourcesProvider>
+      </ResourceLoaderProvider>
+    );
+  }
+
+  it('windows the atlas to the frame-0 cell (size + UV repeat/offset)', async () => {
+    const r = await render('0');
+    const mesh = r.scene.findByType('Mesh').instance as THREE.Mesh;
+    const geom = mesh.geometry as THREE.PlaneGeometry;
+    expect(geom.parameters.width).toBe(16);
+    expect(geom.parameters.height).toBe(16);
+    const map = (mesh.material as THREE.MeshBasicMaterial).map!;
+    expect(map).toBeTruthy();
+    expect(map.repeat.x).toBeCloseTo(16 / 64, 5);
+    expect(map.repeat.y).toBeCloseTo(16 / 64, 5);
+    expect(map.offset.x).toBeCloseTo(0, 5);
+    expect(map.offset.y).toBeCloseTo(1 - 16 / 64, 5); // top-left origin → flipped Y
+  });
+
+  it('sizes a differently-shaped cell (frame 1 = 16×32)', async () => {
+    const r = await render('1');
+    const geom = (r.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.PlaneGeometry;
+    expect(geom.parameters.width).toBe(16);
+    expect(geom.parameters.height).toBe(32);
+  });
+});
+
+describe('AnimatedSprite2D external .tres SpriteFrames', () => {
+  // sprite_frames = ExtResource(".tres") — the character.tscn / anim_player.tres
+  // form (issue #144). The frame ExtResource ids are scoped to the .tres file,
+  // not the scene, so they must resolve against the file's own ext section.
+  const TRES = `[gd_resource type="SpriteFrames" format=3]
+
+[ext_resource type="Texture2D" path="res://bump.png" id="1_bump"]
+[ext_resource type="Texture2D" path="res://idle.png" id="2_idle"]
+
+[resource]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("1_bump")
+}],
+"loop": false,
+"name": &"bump",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("2_idle")
+}],
+"loop": false,
+"name": &"idle",
+"speed": 5.0
+}]
+`;
+
+  async function render(animation: string) {
+    const fake = createFakeResourceLoader();
+    const bump = new THREE.Texture();
+    (bump as unknown as { image: { width: number; height: number } }).image = { width: 24, height: 24 };
+    const idle = new THREE.Texture();
+    (idle as unknown as { image: { width: number; height: number } }).image = { width: 48, height: 24 };
+    fake.textures.seed('res://bump.png', bump);
+    fake.textures.seed('res://idle.png', idle);
+    fake.resources.seed('res://anim_player.tres', parseTresFile(TRES));
+    const node: TscnNode = {
+      name: 'A',
+      type: 'AnimatedSprite2D',
+      children: [],
+      properties: parseAnimatedSprite2D(heading, {
+        sprite_frames: 'ExtResource("4_sf")',
+        animation,
+      }),
+    };
+    return ReactThreeTestRenderer.create(
+      <ResourceLoaderProvider loader={fake.loader}>
+        <SceneResourcesProvider
+          internalResources={[]}
+          externalResources={[{ id: '4_sf', type: 'SpriteFrames', path: 'res://anim_player.tres' }]}
+        >
+          <AnimatedSprite2D node={node} />
+        </SceneResourcesProvider>
+      </ResourceLoaderProvider>
+    );
+  }
+
+  it('renders a frame from the .tres, resolved against the file’s own ext ids', async () => {
+    const r = await render('&"idle"');
+    const mesh = r.scene.findByType('Mesh').instance as THREE.Mesh;
+    expect((mesh.material as THREE.MeshBasicMaterial).map).toBeTruthy();
+    expect((mesh.geometry as THREE.PlaneGeometry).parameters.width).toBe(48); // idle.png
+  });
+
+  it('selects another clip from the same .tres', async () => {
+    const r = await render('&"bump"');
+    const geom = (r.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.PlaneGeometry;
+    expect(geom.parameters.width).toBe(24); // bump.png
+  });
+
+  it('renders nothing (not the missing placeholder) while the .tres is still loading', async () => {
+    // No resource seeded → useResource('Resource') stays pending; a valid,
+    // loading .tres must NOT flash the magenta missing-resource placeholder.
+    const fake = createFakeResourceLoader();
+    const node: TscnNode = {
+      name: 'A',
+      type: 'AnimatedSprite2D',
+      children: [],
+      properties: parseAnimatedSprite2D(heading, {
+        sprite_frames: 'ExtResource("4_sf")',
+        animation: '&"walk"',
+      }),
+    };
+    const r = await ReactThreeTestRenderer.create(
+      <ResourceLoaderProvider loader={fake.loader}>
+        <SceneResourcesProvider
+          internalResources={[]}
+          externalResources={[{ id: '4_sf', type: 'SpriteFrames', path: 'res://anim_player.tres' }]}
+        >
+          <AnimatedSprite2D node={node} />
+        </SceneResourcesProvider>
+      </ResourceLoaderProvider>
+    );
+    expect(r.scene.findAllByType('Mesh')).toHaveLength(0);
   });
 });
