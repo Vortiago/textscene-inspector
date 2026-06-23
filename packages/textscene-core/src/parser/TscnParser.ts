@@ -35,6 +35,7 @@ import '../nodes/3d/particles/gpuparticles3d/index.js';
 import '../nodes/3d/marker3d/index.js';
 import '../nodes/3d/gridmap/index.js';
 import '../nodes/3d/navigationregion3d/index.js';
+import '../nodes/3d/decal/index.js';
 import '../nodes/paths/path3d/index.js';
 import '../nodes/paths/pathfollow3d/index.js';
 import '../nodes/audio/audiostreamplayer/index.js';

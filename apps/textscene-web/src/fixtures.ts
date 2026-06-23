@@ -273,6 +273,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Decal",
+    "file": "unit-decal.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Grid Map",
     "file": "unit-grid-map.tscn",
     "category": "Other"
