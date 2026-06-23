@@ -1,0 +1,9 @@
+[gd_scene format=3]
+
+[node name="Polygon2DRoot" type="Node2D"]
+
+[node name="FilledPolygon" type="Polygon2D" parent="."]
+position = Vector2(112, 72)
+color = Color(1, 0.329412, 0.611765, 0.501961)
+antialiased = true
+polygon = PackedVector2Array(0, 0, 128, 0, 128, 96, 64, 160, 0, 96)

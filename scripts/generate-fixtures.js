@@ -27,6 +27,7 @@ function detectCategory(filename) {
     filename.startsWith('unit-plane') ||
     filename.startsWith('unit-torus') ||
     filename.startsWith('unit-prism') ||
+    filename.startsWith('unit-quad') ||
     filename.startsWith('unit-mesh') ||
     filename.startsWith('unit-arraymesh')
   ) {
@@ -62,6 +63,7 @@ function detectCategory(filename) {
   if (
     filename.startsWith('unit-node2d') ||
     filename.startsWith('unit-sprite2d') ||
+    filename.startsWith('unit-polygon2d') ||
     filename.startsWith('unit-camera2d') ||
     filename.startsWith('unit-tile') ||
     filename.startsWith('unit-2d')

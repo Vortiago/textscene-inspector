@@ -1,9 +1,15 @@
 # CSG nodes render as their base primitive; boolean operations ignored
 
-`CSGBox3D` and `CSGCylinder3D` render the corresponding three.js geometry from their own inline `size`/`radius`/`height` properties; the `operation` (union/subtraction/intersection) is parsed but not applied. We do not perform real constructive solid geometry.
+`CSGBox3D`, `CSGCylinder3D`, and `CSGSphere3D` render the corresponding three.js geometry from their own inline `size`/`radius`/`radial_segments`/`rings`/`height` properties; the `operation` (union/subtraction/intersection) is parsed but not applied. We do not perform real constructive solid geometry.
 
 For the ld-58 corpus this is exact: every CSG node uses the default `operation = 0` (union/additive), so no scene renders wrong. For the general case, a subtraction or intersection node rendered as a solid primitive is visually wrong (a hole shows as a solid block); when `operation != 0` the parser logs a warning and the node renders its base primitive rather than failing silently.
 
-Scope is deliberately limited to the two CSG types ld-58 uses; CSGSphere3D/CSGTorus3D/CSGMesh3D are deferred until a fixture demands them (per the repo's "no fixtures for unimplemented features" rule).
+Scope covers the three trivial CSG primitives that appear in the real Godot demo corpus (`CSGBox3D`, `CSGCylinder3D`, `CSGSphere3D`). The remaining CSG types are explicitly deferred — they have no fixture demanding them (per the repo's "no fixtures for unimplemented features" rule) and each needs more than a primitive mapping:
+
+- **`CSGPolygon3D`** (18 corpus occurrences) — an extruded/swept 2D polygon (modes: depth / spin / path-follow); no single three.js primitive matches it.
+- **`CSGCombiner3D`** (1) — a pure boolean-grouping container with no geometry of its own; meaningful only once real CSG is performed.
+- **`CSGTorus3D`** (1), **`CSGMesh3D`** — deferred for the same "no fixture yet" reason; `CSGTorus3D` would map to `TorusGeometry` when one is added.
+
+Until then these fall through to `GenericNodeFallback` (an empty container) rather than a wrong primitive.
 
 Recorded because rendering CSG as a plain primitive is a surprising deviation a future reader would otherwise try to "fix" with a boolean-mesh library.

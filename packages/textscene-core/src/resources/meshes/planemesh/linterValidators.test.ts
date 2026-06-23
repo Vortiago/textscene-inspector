@@ -165,6 +165,20 @@ flip_faces = true
       expect(diagnostics.filter(d => d.severity === 'error')).toHaveLength(0);
     });
 
+    it('should detect a malformed size vector (parity with QuadMesh)', () => {
+      const content = `[gd_scene load_steps=2 format=3]
+
+[sub_resource type="PlaneMesh" id="Mesh_1"]
+size = Vector2(10)
+
+[node name="Root" type="Node3D"]
+`;
+
+      const linter = new Linter();
+      const errors = linter.lint(content).filter((d) => d.severity === 'error');
+      expect(errors.some((d) => d.message.includes('size'))).toBe(true);
+    });
+
     it('should detect wrong capitalization in flip_faces value', () => {
       const content = `[gd_scene load_steps=2 format=3]
 
