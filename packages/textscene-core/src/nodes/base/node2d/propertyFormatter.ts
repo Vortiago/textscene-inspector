@@ -6,13 +6,11 @@
 
 import type { PropertySection } from '../../../core/NodeRegistry';
 import type { Color, Node2DProperties } from './types';
+import { formatColorRgba } from '../../../utils/colorParser';
+
+export { formatColorRgba };
 
 const radToDeg = (rad: number) => ((rad * 180) / Math.PI).toFixed(2);
-
-/** `rgba(r, g, b, a)` with 0–255 channels, matching the 3D sprite formatter. */
-export function formatColorRgba(color: Color): string {
-  return `rgba(${(color.r * 255).toFixed(0)}, ${(color.g * 255).toFixed(0)}, ${(color.b * 255).toFixed(0)}, ${color.a.toFixed(2)})`;
-}
 
 function isWhite(color: Color): boolean {
   return color.r === 1 && color.g === 1 && color.b === 1 && color.a === 1;

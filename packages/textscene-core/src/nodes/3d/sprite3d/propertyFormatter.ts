@@ -10,6 +10,7 @@ import {
   BillboardMode,
   type Sprite3DProperties,
 } from './types';
+import { formatColorRgba } from '../../../utils/colorParser';
 import { formatNode3DProperties } from '../../base/node3d/propertyFormatter';
 
 export function formatSprite3DProperties(properties: Sprite3DProperties): PropertySection[] {
@@ -57,10 +58,7 @@ export function formatSprite3DProperties(properties: Sprite3DProperties): Proper
   sections.push({
     title: 'Appearance',
     items: [
-      {
-        label: 'Modulate',
-        value: `rgba(${(properties.modulate.r * 255).toFixed(0)}, ${(properties.modulate.g * 255).toFixed(0)}, ${(properties.modulate.b * 255).toFixed(0)}, ${properties.modulate.a.toFixed(2)})`,
-      },
+      { label: 'Modulate', value: formatColorRgba(properties.modulate) },
       { label: 'Transparency', value: properties.transparency.toFixed(2) },
       { label: 'Alpha Cut', value: alphaCutName(properties.alpha_cut) },
       { label: 'Offset', value: `(${properties.offset.x}, ${properties.offset.y})` },

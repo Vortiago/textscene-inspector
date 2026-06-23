@@ -3,6 +3,7 @@
  */
 
 import type { PropertySection } from '../../../core/NodeRegistry';
+import { formatColorRgba } from '../../../utils/colorParser';
 import { formatNode3DProperties } from '../../base/node3d/propertyFormatter';
 import type { DecalProperties } from './types';
 
@@ -30,10 +31,7 @@ export function formatDecalProperties(properties: DecalProperties): PropertySect
         label: 'Size',
         value: `(${properties.size.x}, ${properties.size.y}, ${properties.size.z})`,
       },
-      {
-        label: 'Modulate',
-        value: `rgba(${(properties.modulate.r * 255).toFixed(0)}, ${(properties.modulate.g * 255).toFixed(0)}, ${(properties.modulate.b * 255).toFixed(0)}, ${properties.modulate.a.toFixed(2)})`,
-      },
+      { label: 'Modulate', value: formatColorRgba(properties.modulate) },
       { label: 'Albedo Mix', value: properties.albedo_mix.toFixed(2) },
       { label: 'Normal Fade', value: properties.normal_fade.toFixed(2) },
       { label: 'Upper Fade', value: properties.upper_fade.toFixed(2) },

@@ -9,6 +9,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
+import type { ReactNode } from 'react';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { Decal } from './Component';
@@ -43,6 +44,7 @@ async function render(opts: {
   node: TscnNode;
   externals?: TscnExternalResource[];
   cached?: Array<{ path: string; texture: THREE.Texture | 'missing' }>;
+  children?: ReactNode;
 }) {
   const fake = createFakeResourceLoader();
   for (const { path, texture } of opts.cached ?? []) {
@@ -51,7 +53,7 @@ async function render(opts: {
   return ReactThreeTestRenderer.create(
     <ResourceLoaderProvider loader={fake.loader}>
       <SceneResourcesProvider externalResources={opts.externals ?? []}>
-        <Decal node={opts.node} />
+        <Decal node={opts.node}>{opts.children}</Decal>
       </SceneResourcesProvider>
     </ResourceLoaderProvider>
   );
@@ -138,18 +140,15 @@ describe('<Decal>', () => {
   });
 
   it('renders children passed to the component', async () => {
-    const renderer = await ReactThreeTestRenderer.create(
-      <ResourceLoaderProvider loader={createFakeResourceLoader().loader}>
-        <SceneResourcesProvider externalResources={[]}>
-          <Decal node={makeNode()}>
-            <mesh name="child">
-              <boxGeometry />
-              <meshBasicMaterial />
-            </mesh>
-          </Decal>
-        </SceneResourcesProvider>
-      </ResourceLoaderProvider>
-    );
+    const renderer = await render({
+      node: makeNode(),
+      children: (
+        <mesh name="child">
+          <boxGeometry />
+          <meshBasicMaterial />
+        </mesh>
+      ),
+    });
     expect(renderer.scene.findByProps({ name: 'child' })).toBeDefined();
   });
 });

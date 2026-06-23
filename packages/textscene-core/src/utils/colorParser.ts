@@ -59,3 +59,13 @@ export function parseColorToHex(value: string | undefined): number {
 
   return (r << 16) | (g << 8) | b;
 }
+
+/**
+ * Format a Color for Inspector display as `rgba(r, g, b, a)` with 0–255
+ * integer channels and a 2-decimal alpha. Shared by the node property
+ * formatters (Node2D, Sprite3D, Label3D, Decal, …) so the modulate display
+ * stays consistent across slices.
+ */
+export function formatColorRgba(color: Color): string {
+  return `rgba(${(color.r * 255).toFixed(0)}, ${(color.g * 255).toFixed(0)}, ${(color.b * 255).toFixed(0)}, ${color.a.toFixed(2)})`;
+}
