@@ -146,7 +146,7 @@ interface OrbitLike {
  * dimension fits the vertical FOV, and re-points OrbitControls at the centre.
  * No-op for empty scenes or non-finite bounds.
  */
-function frameSceneBounds(
+export function frameSceneBounds(
   scene: THREE.Object3D,
   camera: THREE.Camera,
   controls: OrbitLike | null
@@ -194,7 +194,11 @@ function frameSceneBounds(
   const dir = isFlat ? new THREE.Vector3(0, 0, 1) : new THREE.Vector3(1, 0.7, 1).normalize();
   camera.position.copy(center.clone().add(dir.multiplyScalar(distance)));
   if (persp.isPerspectiveCamera) {
-    persp.near = Math.max(0.01, distance / 200);
+    // Keep the near plane below the framing distance so microscopic scenes
+    // (e.g. a Decal authored at size 0.001) aren't clipped entirely: the 0.01
+    // floor must never exceed `distance`, or the content sits inside the near
+    // plane and the viewport renders black.
+    persp.near = Math.min(Math.max(0.01, distance / 200), distance / 10);
     persp.far = distance * 200;
     persp.updateProjectionMatrix();
   }
