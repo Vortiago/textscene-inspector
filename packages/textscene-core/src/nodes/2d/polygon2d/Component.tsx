@@ -59,15 +59,17 @@ function FilledPolygon({
 }) {
   // Godot multiplies fill × modulate × self_modulate in one space, then converts
   // once: compose with the tint's sRGB `own` product before sRGB→linear.
-  const composed = useMemo(() => multiplyModulate(tint.own, color), [tint.own, color]);
-  const linear = useMemo(() => godotColorToLinear(composed), [composed]);
+  const { fill, opacity } = useMemo(() => {
+    const composed = multiplyModulate(tint.own, color);
+    return { fill: godotColorToLinear(composed), opacity: composed.a };
+  }, [tint.own, color]);
 
   return (
     <mesh>
       <primitive object={geometry} attach="geometry" />
       <meshBasicMaterial
-        color={linear}
-        opacity={composed.a}
+        color={fill}
+        opacity={opacity}
         transparent
         depthWrite={false}
         side={THREE.DoubleSide}

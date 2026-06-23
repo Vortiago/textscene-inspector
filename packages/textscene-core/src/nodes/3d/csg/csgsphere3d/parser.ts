@@ -3,16 +3,11 @@
 import type { ParsedHeading } from '../../../../parser/utils';
 import type { CSGSphere3DProperties } from './types';
 import { parseNode3D } from '../../../base/node3d/parser';
+import { floatOr, intOr } from '../../../../parser/valueParsers';
 import { warn } from '../../../../logger';
 
 /** Godot CSGSphere3D defaults. */
 const DEFAULTS = { radius: 0.5, radialSegments: 12, rings: 6 } as const;
-
-function numericOr(raw: string | undefined, fallback: number): number {
-  if (raw === undefined) return fallback;
-  const parsed = parseFloat(raw);
-  return Number.isNaN(parsed) ? fallback : parsed;
-}
 
 export function parseCSGSphere3D(
   heading: ParsedHeading,
@@ -22,9 +17,9 @@ export function parseCSGSphere3D(
 
   const result: CSGSphere3DProperties = {
     ...node3d,
-    radius: numericOr(properties.radius, DEFAULTS.radius),
-    radialSegments: Math.round(numericOr(properties.radial_segments, DEFAULTS.radialSegments)),
-    rings: Math.round(numericOr(properties.rings, DEFAULTS.rings)),
+    radius: floatOr(properties.radius, DEFAULTS.radius, 'CSGSphere3D'),
+    radialSegments: intOr(properties.radial_segments, DEFAULTS.radialSegments, 'CSGSphere3D'),
+    rings: intOr(properties.rings, DEFAULTS.rings, 'CSGSphere3D'),
   };
 
   if (properties.material) {
