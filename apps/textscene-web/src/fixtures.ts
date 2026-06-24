@@ -258,6 +258,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Animation Player Decal",
+    "file": "unit-animation-player-decal.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Animation Player Libraries",
     "file": "unit-animation-player-libraries.tscn",
     "category": "Other"

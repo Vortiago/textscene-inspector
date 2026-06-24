@@ -20,14 +20,17 @@
  * the base component (same composition as NavigationRegion3D).
  */
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { Node3D } from '../../base/node3d/Component';
 import { godotColorToLinear } from '../../../r3f/godotColor';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
+import { useNodePath } from '../../../r3f/contexts/NodePathContext';
+import { useAnimatedValueRegistry, type ValueSetter } from '../../../r3f/contexts/AnimatedValueContext';
 import { resolveExtResourcePath } from '../../../resources/SubResourceResolver';
 import { useResource } from '../../../resources/useResource';
+import type { Color } from '../../../utils/colorParser';
 import type { DecalProperties } from './types';
 
 /** Wireframe colour for the projection-box gizmo. */
@@ -58,16 +61,36 @@ export function Decal({ node, children }: NodeComponentProps) {
   );
   const texResult = useResource<THREE.Texture>(texturePath ?? '', 'Texture2D');
 
+  // An active AnimationPlayer can drive `modulate` (ADR-0017): register a setter
+  // keyed by node path + `modulate` so the player can push the interpolated
+  // colour; `null` releases it and the authored modulate shows again.
+  const nodePath = useNodePath();
+  const valueRegistry = useAnimatedValueRegistry();
+  const [animatedModulate, setAnimatedModulate] = useState<Color | null>(null);
+  useEffect(() => {
+    if (nodePath === null) return;
+    const setter: ValueSetter = (v) =>
+      setAnimatedModulate(
+        v === null ? null : { r: v[0] ?? 1, g: v[1] ?? 1, b: v[2] ?? 1, a: v[3] ?? 1 }
+      );
+    valueRegistry.register(nodePath, 'modulate', setter);
+    return () => valueRegistry.unregister(nodePath, 'modulate', setter);
+  }, [nodePath, valueRegistry]);
+
+  // A driven modulate overrides the authored one; the rest of the pipeline
+  // (sRGB→linear, opacity = albedo_mix × a) is identical either way.
+  const modulate = animatedModulate ?? properties.modulate;
+
   // Godot stores modulate in sRGB → convert to the linear working space before
   // the unlit material (same as Sprite3D / Sprite2D).
   const color = useMemo(
-    () => godotColorToLinear(properties.modulate),
-    [properties.modulate.r, properties.modulate.g, properties.modulate.b]
+    () => godotColorToLinear(modulate),
+    [modulate.r, modulate.g, modulate.b]
   );
 
   // albedo_mix scales how strongly the projected albedo replaces the surface;
   // fold it together with modulate alpha into the preview quad's opacity.
-  const opacity = clamp01(properties.albedo_mix * properties.modulate.a);
+  const opacity = clamp01(properties.albedo_mix * modulate.a);
 
   // Only the 'loaded' state yields a texture; pending/unavailable fall back to
   // the wireframe box alone (a Decal without a visible albedo is still valid).
