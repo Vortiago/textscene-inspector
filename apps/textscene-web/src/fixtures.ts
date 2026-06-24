@@ -13,174 +13,9 @@ export interface Fixture {
 
 export const fixtures: Fixture[] = [
   {
-    "name": "Invalid Cast Shadow",
-    "file": "edge-invalid-cast-shadow.tscn",
-    "category": "Edge Cases"
-  },
-  {
-    "name": "Invalid Transform",
-    "file": "edge-invalid-transform.tscn",
-    "category": "Edge Cases"
-  },
-  {
-    "name": "Malformed Bracket",
-    "file": "edge-malformed-bracket.tscn",
-    "category": "Edge Cases"
-  },
-  {
-    "name": "Missing Parent",
-    "file": "edge-missing-parent.tscn",
-    "category": "Edge Cases"
-  },
-  {
-    "name": "Photo Wall",
-    "file": "edge-photo-wall.tscn",
-    "category": "Edge Cases"
-  },
-  {
-    "name": "Plane Rotated Scaled",
-    "file": "edge-plane-rotated-scaled.tscn",
-    "category": "Edge Cases"
-  },
-  {
-    "name": "Tilemap Bad Tile Data",
-    "file": "edge-tilemap-bad-tile-data.tscn",
-    "category": "Edge Cases"
-  },
-  {
-    "name": "Unsupported 2d Audio",
-    "file": "edge-unsupported-2d-audio.tscn",
-    "category": "Edge Cases"
-  },
-  {
-    "name": "World Environment Unsupported",
-    "file": "edge-world-environment-unsupported.tscn",
-    "category": "Edge Cases"
-  },
-  {
-    "name": "Uv Scale Showcase",
-    "file": "example-uv-scale-showcase.tscn",
-    "category": "Examples - Complex Scenes"
-  },
-  {
-    "name": "Child_cube",
-    "file": "child_cube.tscn",
-    "category": "Examples - Complex Scenes"
-  },
-  {
-    "name": "Child_sphere",
-    "file": "child_sphere.tscn",
-    "category": "Examples - Complex Scenes"
-  },
-  {
-    "name": "Dodge Player",
-    "file": "example-dodge-player.tscn",
-    "category": "Examples - Complex Scenes"
-  },
-  {
-    "name": "Hallway Mockup",
-    "file": "example-hallway-mockup.tscn",
-    "category": "Examples - Complex Scenes"
-  },
-  {
-    "name": "Hierarchy Deep",
-    "file": "example-hierarchy-deep.tscn",
-    "category": "Examples - Complex Scenes"
-  },
-  {
-    "name": "Hierarchy Wide",
-    "file": "example-hierarchy-wide.tscn",
-    "category": "Examples - Complex Scenes"
-  },
-  {
-    "name": "Missing Resources",
-    "file": "example-missing-resources.tscn",
-    "category": "Examples - Complex Scenes"
-  },
-  {
-    "name": "Perpendicular Walls",
-    "file": "example-perpendicular-walls.tscn",
-    "category": "Examples - Complex Scenes"
-  },
-  {
-    "name": "Plane Center Offset",
-    "file": "example-plane-center-offset.tscn",
-    "category": "Examples - Complex Scenes"
-  },
-  {
-    "name": "Pong",
-    "file": "example-pong.tscn",
-    "category": "Examples - Complex Scenes"
-  },
-  {
-    "name": "All Meshes",
-    "file": "integration-all-meshes.tscn",
-    "category": "Examples - Complex Scenes"
-  },
-  {
-    "name": "All Primitives",
-    "file": "integration-all-primitives.tscn",
-    "category": "Examples - Complex Scenes"
-  },
-  {
-    "name": "External Only",
-    "file": "integration-external-only.tscn",
-    "category": "Examples - Complex Scenes"
-  },
-  {
-    "name": "External Separation",
-    "file": "integration-external-separation.tscn",
-    "category": "Examples - Complex Scenes"
-  },
-  {
-    "name": "Instanced Subscene",
-    "file": "integration-instanced-subscene.tscn",
-    "category": "Examples - Complex Scenes"
-  },
-  {
-    "name": "Lights All Types",
-    "file": "integration-lights-all-types.tscn",
-    "category": "Examples - Complex Scenes"
-  },
-  {
-    "name": "Material Reuse",
-    "file": "integration-material-reuse.tscn",
-    "category": "Examples - Complex Scenes"
-  },
-  {
-    "name": "Mixed Nodes",
-    "file": "integration-mixed-nodes.tscn",
-    "category": "Examples - Complex Scenes"
-  },
-  {
-    "name": "Multiple Externals",
-    "file": "integration-multiple-externals.tscn",
-    "category": "Examples - Complex Scenes"
-  },
-  {
-    "name": "Parent Child Scene",
-    "file": "integration-parent-child-scene.tscn",
-    "category": "Examples - Complex Scenes"
-  },
-  {
-    "name": "Three Cubes",
-    "file": "integration-three-cubes.tscn",
-    "category": "Examples - Complex Scenes"
-  },
-  {
-    "name": "Unsupported Hierarchy",
-    "file": "integration-unsupported-hierarchy.tscn",
-    "category": "Examples - Complex Scenes"
-  },
-  {
-    "name": "Material Features",
-    "file": "integration-material-features.tscn",
-    "category": "Integration - Multi-Node"
-  },
-  {
-    "name": "Plane Orientations",
-    "file": "integration-plane-orientations.tscn",
-    "category": "Integration - Multi-Node"
+    "name": "Child_animated_player",
+    "file": "child_animated_player.tscn",
+    "category": "Other"
   },
   {
     "name": "Nested Leaf Orange Sphere",
@@ -351,6 +186,176 @@ export const fixtures: Fixture[] = [
     "name": "World Environment No Fog",
     "file": "unit-world-environment-no-fog.tscn",
     "category": "Other"
+  },
+  {
+    "name": "Invalid Cast Shadow",
+    "file": "edge-invalid-cast-shadow.tscn",
+    "category": "Edge Cases"
+  },
+  {
+    "name": "Invalid Transform",
+    "file": "edge-invalid-transform.tscn",
+    "category": "Edge Cases"
+  },
+  {
+    "name": "Malformed Bracket",
+    "file": "edge-malformed-bracket.tscn",
+    "category": "Edge Cases"
+  },
+  {
+    "name": "Missing Parent",
+    "file": "edge-missing-parent.tscn",
+    "category": "Edge Cases"
+  },
+  {
+    "name": "Photo Wall",
+    "file": "edge-photo-wall.tscn",
+    "category": "Edge Cases"
+  },
+  {
+    "name": "Plane Rotated Scaled",
+    "file": "edge-plane-rotated-scaled.tscn",
+    "category": "Edge Cases"
+  },
+  {
+    "name": "Tilemap Bad Tile Data",
+    "file": "edge-tilemap-bad-tile-data.tscn",
+    "category": "Edge Cases"
+  },
+  {
+    "name": "Unsupported 2d Audio",
+    "file": "edge-unsupported-2d-audio.tscn",
+    "category": "Edge Cases"
+  },
+  {
+    "name": "World Environment Unsupported",
+    "file": "edge-world-environment-unsupported.tscn",
+    "category": "Edge Cases"
+  },
+  {
+    "name": "Uv Scale Showcase",
+    "file": "example-uv-scale-showcase.tscn",
+    "category": "Examples - Complex Scenes"
+  },
+  {
+    "name": "Child_cube",
+    "file": "child_cube.tscn",
+    "category": "Examples - Complex Scenes"
+  },
+  {
+    "name": "Child_sphere",
+    "file": "child_sphere.tscn",
+    "category": "Examples - Complex Scenes"
+  },
+  {
+    "name": "Dodge Player",
+    "file": "example-dodge-player.tscn",
+    "category": "Examples - Complex Scenes"
+  },
+  {
+    "name": "Hallway Mockup",
+    "file": "example-hallway-mockup.tscn",
+    "category": "Examples - Complex Scenes"
+  },
+  {
+    "name": "Hierarchy Deep",
+    "file": "example-hierarchy-deep.tscn",
+    "category": "Examples - Complex Scenes"
+  },
+  {
+    "name": "Hierarchy Wide",
+    "file": "example-hierarchy-wide.tscn",
+    "category": "Examples - Complex Scenes"
+  },
+  {
+    "name": "Missing Resources",
+    "file": "example-missing-resources.tscn",
+    "category": "Examples - Complex Scenes"
+  },
+  {
+    "name": "Perpendicular Walls",
+    "file": "example-perpendicular-walls.tscn",
+    "category": "Examples - Complex Scenes"
+  },
+  {
+    "name": "Plane Center Offset",
+    "file": "example-plane-center-offset.tscn",
+    "category": "Examples - Complex Scenes"
+  },
+  {
+    "name": "Pong",
+    "file": "example-pong.tscn",
+    "category": "Examples - Complex Scenes"
+  },
+  {
+    "name": "All Meshes",
+    "file": "integration-all-meshes.tscn",
+    "category": "Examples - Complex Scenes"
+  },
+  {
+    "name": "All Primitives",
+    "file": "integration-all-primitives.tscn",
+    "category": "Examples - Complex Scenes"
+  },
+  {
+    "name": "External Only",
+    "file": "integration-external-only.tscn",
+    "category": "Examples - Complex Scenes"
+  },
+  {
+    "name": "External Separation",
+    "file": "integration-external-separation.tscn",
+    "category": "Examples - Complex Scenes"
+  },
+  {
+    "name": "Instanced Subscene",
+    "file": "integration-instanced-subscene.tscn",
+    "category": "Examples - Complex Scenes"
+  },
+  {
+    "name": "Lights All Types",
+    "file": "integration-lights-all-types.tscn",
+    "category": "Examples - Complex Scenes"
+  },
+  {
+    "name": "Material Reuse",
+    "file": "integration-material-reuse.tscn",
+    "category": "Examples - Complex Scenes"
+  },
+  {
+    "name": "Mixed Nodes",
+    "file": "integration-mixed-nodes.tscn",
+    "category": "Examples - Complex Scenes"
+  },
+  {
+    "name": "Multiple Externals",
+    "file": "integration-multiple-externals.tscn",
+    "category": "Examples - Complex Scenes"
+  },
+  {
+    "name": "Parent Child Scene",
+    "file": "integration-parent-child-scene.tscn",
+    "category": "Examples - Complex Scenes"
+  },
+  {
+    "name": "Three Cubes",
+    "file": "integration-three-cubes.tscn",
+    "category": "Examples - Complex Scenes"
+  },
+  {
+    "name": "Unsupported Hierarchy",
+    "file": "integration-unsupported-hierarchy.tscn",
+    "category": "Examples - Complex Scenes"
+  },
+  {
+    "name": "Material Features",
+    "file": "integration-material-features.tscn",
+    "category": "Integration - Multi-Node"
+  },
+  {
+    "name": "Plane Orientations",
+    "file": "integration-plane-orientations.tscn",
+    "category": "Integration - Multi-Node"
   },
   {
     "name": "Arraymesh",

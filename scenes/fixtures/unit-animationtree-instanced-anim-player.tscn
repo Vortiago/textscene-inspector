@@ -8,7 +8,7 @@
 ; false-flagged it as the wrong type; the resolver now suppresses checks that
 ; escape the authored scope.
 
-[ext_resource type="PackedScene" path="res://subscenes/animated-player.tscn" id="1_char"]
+[ext_resource type="PackedScene" path="res://child_animated_player.tscn" id="1_char"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_body"]
 
