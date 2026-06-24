@@ -692,6 +692,39 @@ anim_player = NodePath("NotAPlayer")
         expect(wrongType).toBeDefined();
         expect(wrongType?.message).toContain('Label3D');
       });
+
+      it('should stay silent when the final path segment is ambiguous (duplicate node names)', () => {
+        // Godot lets node names repeat across different parents. The static
+        // linter resolves only the final segment by name, so when more than one
+        // node matches it cannot tell which the path means — it must NOT guess
+        // (the old code grabbed the first match in tree order and could cite the
+        // wrong node). Here two "Player" nodes exist; one is a valid
+        // AnimationPlayer, so the path is plausibly correct and must not warn.
+        const content = `[gd_scene format=3]
+
+[sub_resource type="AnimationNodeStateMachine" id="StateMachine_root"]
+
+[node name="Root" type="Node3D"]
+
+[node name="GroupA" type="Node3D" parent="."]
+
+[node name="Player" type="Label3D" parent="GroupA"]
+
+[node name="GroupB" type="Node3D" parent="."]
+
+[node name="Player" type="AnimationPlayer" parent="GroupB"]
+
+[node name="AnimTree" type="AnimationTree" parent="."]
+tree_root = SubResource("StateMachine_root")
+anim_player = NodePath("Player")
+`;
+
+        const diagnostics = linter.lint(content);
+        const wrongType = diagnostics.find(d => d.ruleName === 'animationtree-anim-player-wrong-type');
+        const notFound = diagnostics.find(d => d.ruleName === 'animationtree-anim-player-not-found');
+        expect(wrongType).toBeUndefined();
+        expect(notFound).toBeUndefined();
+      });
     });
 
     describe('active property warnings', () => {

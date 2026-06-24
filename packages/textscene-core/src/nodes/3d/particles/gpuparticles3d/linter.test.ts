@@ -787,6 +787,46 @@ sub_emitter = NodePath("")
       const diagnostics = linter.lint(content);
       expect(diagnostics).toHaveLength(0);
     });
+
+    it('should not error on a relative (..) sub_emitter path that escapes the authored scope', () => {
+      // A "../" segment can resolve into an instanced sibling sub-scene the
+      // static linter never sees, so a not-found assertion would be a false
+      // positive (same static-scope heuristic as the skeleton/anim_player rules).
+      const content = `[gd_scene format=3]
+
+[sub_resource type="ParticleProcessMaterial" id="process_1"]
+
+[node name="World" type="Node3D"]
+
+[node name="Particles" type="GPUParticles3D" parent="."]
+process_material = SubResource("process_1")
+sub_emitter = NodePath("../Other/Emitter")
+`;
+
+      const diagnostics = linter.lint(content);
+      const subEmitterError = diagnostics.find(d => d.ruleName === 'valid-gpuparticles3d-sub-emitter');
+      expect(subEmitterError).toBeUndefined();
+    });
+
+    it('should not error when the GPUParticles3D sits under an instanced sub-scene', () => {
+      const content = `[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://rig.tscn" id="1_rig"]
+[sub_resource type="ParticleProcessMaterial" id="process_1"]
+
+[node name="World" type="Node3D"]
+
+[node name="Rig" parent="." instance=ExtResource("1_rig")]
+
+[node name="Particles" type="GPUParticles3D" parent="Rig"]
+process_material = SubResource("process_1")
+sub_emitter = NodePath("Emitter")
+`;
+
+      const diagnostics = linter.lint(content);
+      const subEmitterError = diagnostics.find(d => d.ruleName === 'valid-gpuparticles3d-sub-emitter');
+      expect(subEmitterError).toBeUndefined();
+    });
   });
 
   describe('Performance Warnings', () => {

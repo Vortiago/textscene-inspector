@@ -8,7 +8,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import type { TscnScene } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { isValidProperties, extractNodePath, findNodeByName, nodePathEscapesAuthoredScope } from '../../../linter/linterUtils.js';
+import { isValidProperties, extractNodePath, resolveNodePathTarget } from '../../../linter/linterUtils.js';
 
 /**
  * Extract resource ID from SubResource("id") or ExtResource("id") format
@@ -105,40 +105,34 @@ function checkAnimationTree(context: RuleContext): Diagnostic[] {
   }
 
   // WARNING: anim_player NodePath references a non-existent node or wrong type.
-  // Resolve the path's FINAL segment against the static tree — matching a node
-  // whose name the path merely ends with (the old `endsWith`) false-flagged
-  // `../Player/AnimationPlayer` against a sibling "Player". A relative ("..")
-  // segment or an instance ancestor means the real AnimationPlayer may live
-  // inside an instanced sub-scene the linter cannot see, so suppress the
-  // assertions there (same heuristic as the MeshInstance3D skeleton /
-  // GPUParticles3D sub-emitter rules).
+  // resolveNodePathTarget diagnoses only when the path resolves CONFIDENTLY
+  // against the authored tree, and stays silent when it escapes scope (a "../"
+  // segment or an instance ancestor — the AnimationPlayer may live in an
+  // instanced sub-scene the linter cannot see) or is ambiguous (duplicate node
+  // names). Shared with the MeshInstance3D skeleton / GPUParticles3D sub-emitter
+  // rules.
   if (rawProps.anim_player) {
     const path = extractNodePath(rawProps.anim_player);
-    // "." (self) is not resolvable to a concrete node here; ".." is handled by
-    // nodePathEscapesAuthoredScope below (a "../" segment escapes the scope).
+    // "." (self) is not resolvable to a concrete node here.
     if (path && path !== '.' && scene.nodes && scene.nodes.length > 0) {
-      const pathParts = path.split('/');
-      if (!nodePathEscapesAuthoredScope(scene.nodes, node, pathParts)) {
-        const nodeName = pathParts[pathParts.length - 1];
-        const target = nodeName ? findNodeByName(scene.nodes, nodeName) : null;
+      const target = resolveNodePathTarget(scene.nodes, node, path);
 
-        if (!target) {
-          diagnostics.push({
-            severity: 'warning',
-            message: `AnimationTree 'anim_player' references path "${path}" which may not exist in the scene. Ensure the AnimationPlayer node is properly defined.`,
-            nodeName: node.name,
-            nodeType: node.type,
-            ruleName: 'animationtree-anim-player-not-found',
-          });
-        } else if (target.type !== 'AnimationPlayer') {
-          diagnostics.push({
-            severity: 'warning',
-            message: `AnimationTree 'anim_player' references node "${path}" which is of type "${target.type}", not AnimationPlayer. AnimationTree requires an AnimationPlayer node.`,
-            nodeName: node.name,
-            nodeType: node.type,
-            ruleName: 'animationtree-anim-player-wrong-type',
-          });
-        }
+      if (target.status === 'missing') {
+        diagnostics.push({
+          severity: 'warning',
+          message: `AnimationTree 'anim_player' references path "${path}" which may not exist in the scene. Ensure the AnimationPlayer node is properly defined.`,
+          nodeName: node.name,
+          nodeType: node.type,
+          ruleName: 'animationtree-anim-player-not-found',
+        });
+      } else if (target.status === 'found' && target.node.type !== 'AnimationPlayer') {
+        diagnostics.push({
+          severity: 'warning',
+          message: `AnimationTree 'anim_player' references node "${path}" which is of type "${target.node.type}", not AnimationPlayer. AnimationTree requires an AnimationPlayer node.`,
+          nodeName: node.name,
+          nodeType: node.type,
+          ruleName: 'animationtree-anim-player-wrong-type',
+        });
       }
     }
   }
