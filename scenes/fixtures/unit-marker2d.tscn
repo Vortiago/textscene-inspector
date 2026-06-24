@@ -1,0 +1,15 @@
+[gd_scene format=3]
+
+[node name="Marker2DRoot" type="Node2D"]
+
+[node name="DefaultMarker" type="Marker2D" parent="."]
+position = Vector2(120, 80)
+
+[node name="BigMarker" type="Marker2D" parent="."]
+position = Vector2(-140, -60)
+gizmo_extents = 40.0
+
+[node name="RotatedMarker" type="Marker2D" parent="."]
+position = Vector2(0, 160)
+rotation = 0.6
+gizmo_extents = 24.0

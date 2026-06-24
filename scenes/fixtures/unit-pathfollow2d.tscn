@@ -1,0 +1,20 @@
+[gd_scene format=3]
+
+[sub_resource type="Curve2D" id="Curve2D_loop"]
+_data = {
+"points": PackedVector2Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 240, 0, 0, 0, 0, 0, 240, 160, 0, 0, 0, 0, 0, 160)
+}
+point_count = 4
+
+[node name="PathFollow2DRoot" type="Node2D"]
+
+[node name="TrackPath" type="Path2D" parent="."]
+position = Vector2(440, 240)
+curve = SubResource("Curve2D_loop")
+
+[node name="Follower" type="PathFollow2D" parent="TrackPath"]
+progress_ratio = 0.5
+
+[node name="Marker" type="Polygon2D" parent="TrackPath/Follower"]
+color = Color(0.3, 0.8, 1, 1)
+polygon = PackedVector2Array(-10, -10, 10, -10, 10, 10, -10, 10)

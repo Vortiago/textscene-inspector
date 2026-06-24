@@ -54,4 +54,10 @@ export const GOLDEN_SCENES = [
   // by the two-identical-frames settle); the box edges are AA-sensitive like
   // physics-bodies, hence the relaxed threshold.
   { name: 'decal', file: 'unit-decal.tscn', maxDiffPct: 0.3 },
+  // PathFollow2D follow-offset (issue #129): a Polygon2D follower placed at
+  // progress_ratio 0.5 along the parent Path2D's Curve2D. The Marker2D cross
+  // and Path2D curve gizmos are selection-gated (ADR-0018) and the harness
+  // drives no selection, so this scene pins the one visible, non-gated piece —
+  // the follower's curve placement.
+  { name: 'pathfollow2d-follow', file: 'unit-pathfollow2d.tscn', maxDiffPct: 0.3 },
 ];

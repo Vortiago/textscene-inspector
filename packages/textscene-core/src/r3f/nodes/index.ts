@@ -50,5 +50,8 @@ import '../internal/glb-scene-root/index';
 import '../../nodes/2d/tiles/tilemaplayer/index.r3f';
 import '../../nodes/2d/tiles/tilemap/index.r3f';
 import '../../nodes/2d/navigationregion2d/index.r3f';
+import '../../nodes/2d/marker2d/index.r3f';
+import '../../nodes/2d/path2d/index.r3f';
+import '../../nodes/2d/pathfollow2d/index.r3f';
 
 export { GenericNodeFallback } from '../internal/generic-node-fallback/index';

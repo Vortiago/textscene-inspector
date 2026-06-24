@@ -533,6 +533,46 @@ export const fixtures: Fixture[] = [
     "category": "Unit - External Resources"
   },
   {
+    "name": "Marker2d",
+    "file": "unit-marker2d.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Path2d",
+    "file": "unit-path2d.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Pathfollow2d",
+    "file": "unit-pathfollow2d.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Polygon2d",
+    "file": "unit-polygon2d.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Sprite2d",
+    "file": "unit-sprite2d.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Tile Map Layer Isometric",
+    "file": "unit-tile-map-layer-isometric.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Tile Map Layer",
+    "file": "unit-tile-map-layer.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Tile Map",
+    "file": "unit-tile-map.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
     "name": "Material Ao",
     "file": "unit-material-ao.tscn",
     "category": "Unit - Materials"
@@ -571,31 +611,6 @@ export const fixtures: Fixture[] = [
     "name": "Navigation Region 3d",
     "file": "unit-navigation-region-3d.tscn",
     "category": "Unit - Navigation"
-  },
-  {
-    "name": "Polygon2d",
-    "file": "unit-polygon2d.tscn",
-    "category": "Unit - 2D Canvas"
-  },
-  {
-    "name": "Sprite2d",
-    "file": "unit-sprite2d.tscn",
-    "category": "Unit - 2D Canvas"
-  },
-  {
-    "name": "Tile Map Layer Isometric",
-    "file": "unit-tile-map-layer-isometric.tscn",
-    "category": "Unit - 2D Canvas"
-  },
-  {
-    "name": "Tile Map Layer",
-    "file": "unit-tile-map-layer.tscn",
-    "category": "Unit - 2D Canvas"
-  },
-  {
-    "name": "Tile Map",
-    "file": "unit-tile-map.tscn",
-    "category": "Unit - 2D Canvas"
   },
   {
     "name": "Clue Container",

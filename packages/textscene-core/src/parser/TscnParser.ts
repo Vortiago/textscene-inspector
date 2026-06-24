@@ -64,6 +64,9 @@ import '../nodes/physics/2d/index.js';
 import '../nodes/2d/tiles/tilemaplayer/index.js';
 import '../nodes/2d/tiles/tilemap/index.js';
 import '../nodes/2d/navigationregion2d/index.js';
+import '../nodes/2d/marker2d/index.js';
+import '../nodes/2d/path2d/index.js';
+import '../nodes/2d/pathfollow2d/index.js';
 
 import type { TscnScene } from './types.js';
 import { TscnParserCore } from './TscnParserCore.js';
