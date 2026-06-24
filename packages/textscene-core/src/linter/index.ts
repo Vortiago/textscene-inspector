@@ -28,6 +28,7 @@ import '../nodes/3d/particles/gpuparticles3d/index.linter.js';
 import '../nodes/3d/sprite3d/index.linter.js';
 import '../nodes/3d/worldenvironment/index.linter.js';
 import '../nodes/3d/skeleton3d/index.linter.js';
+import '../nodes/3d/decal/index.linter.js';
 import '../nodes/2d/camera2d/index.linter.js';
 import '../nodes/2d/sprite2d/index.linter.js';
 import '../nodes/2d/polygon2d/index.linter.js';

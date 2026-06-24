@@ -5,6 +5,7 @@
 import type { PropertySection } from '../../../core/NodeRegistry';
 import type { Label3DProperties } from './types';
 import { BillboardMode } from './types';
+import { formatColorRgba } from '../../../utils/colorParser';
 import { formatNode3DProperties } from '../../base/node3d/propertyFormatter';
 
 export function formatLabel3DProperties(properties: Label3DProperties): PropertySection[] {
@@ -26,7 +27,7 @@ export function formatLabel3DProperties(properties: Label3DProperties): Property
   const colorItems: PropertySection['items'] = [
     {
       label: 'Modulate',
-      value: `rgba(${(properties.modulate.r * 255).toFixed(0)}, ${(properties.modulate.g * 255).toFixed(0)}, ${(properties.modulate.b * 255).toFixed(0)}, ${properties.modulate.a.toFixed(2)})`
+      value: formatColorRgba(properties.modulate)
     },
   ];
 
@@ -41,7 +42,7 @@ export function formatLabel3DProperties(properties: Label3DProperties): Property
       { label: 'Outline Size', value: properties.outline_size.toFixed(0) },
       {
         label: 'Outline Color',
-        value: `rgba(${(properties.outline_modulate.r * 255).toFixed(0)}, ${(properties.outline_modulate.g * 255).toFixed(0)}, ${(properties.outline_modulate.b * 255).toFixed(0)}, ${properties.outline_modulate.a.toFixed(2)})`
+        value: formatColorRgba(properties.outline_modulate)
       },
     ];
 

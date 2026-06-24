@@ -36,6 +36,7 @@ import '../../nodes/3d/sprite3d/index.r3f';
 import '../../nodes/3d/marker3d/index.r3f';
 import '../../nodes/3d/gridmap/index.r3f';
 import '../../nodes/3d/navigationregion3d/index.r3f';
+import '../../nodes/3d/decal/index.r3f';
 import '../../nodes/audio/audiostreamplayer3d/index.r3f';
 import '../../nodes/animation/animationplayer/index.r3f';
 import '../../nodes/animation/animationtree/index.r3f';

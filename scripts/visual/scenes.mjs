@@ -1,12 +1,15 @@
 /**
  * Golden-scene manifest for the visual-regression harness.
  *
- * v1 policy: untextured, WebGL-canvas-rendered scenes only — no external
- * texture loads and no 2D DOM overlays, so the captured image depends on
- * nothing but the renderer. `file` is the bare fixture filename exactly as
- * it appears in apps/textscene-web/src/fixtures.ts (the `?fixture=` deep
- * link). `maxDiffPct` overrides the default failure threshold for scenes
- * with antialiasing-sensitive content (thin gizmo lines).
+ * Policy: WebGL-canvas-rendered scenes only — no 2D DOM overlays, so the
+ * captured image depends on nothing but the renderer. Resource/texture loads
+ * are allowed only when they resolve from local fixtures and settle
+ * deterministically (the two-identical-frames gate rejects anything that
+ * doesn't), e.g. `arraymesh` (.tres geometry) and `decal` (a local SVG
+ * texture). `file` is the bare fixture filename exactly as it appears in
+ * apps/textscene-web/src/fixtures.ts (the `?fixture=` deep link). `maxDiffPct`
+ * overrides the default failure threshold for scenes with antialiasing-
+ * sensitive content (thin gizmo lines).
  */
 
 export const DEFAULT_MAX_DIFF_PCT = 0.1;
@@ -46,4 +49,9 @@ export const GOLDEN_SCENES = [
   { name: 'instanced-subscene', file: 'integration-instanced-subscene.tscn' },
   // Thin collision-gizmo lines are the most AA-sensitive content in the set.
   { name: 'physics-bodies', file: 'unit-physics-bodies.tscn', maxDiffPct: 0.3 },
+  // Decal projects a local checkerboard texture onto a quad and draws a thin
+  // wireframe projection box. Loads a texture (deterministic local SVG, gated
+  // by the two-identical-frames settle); the box edges are AA-sensitive like
+  // physics-bodies, hence the relaxed threshold.
+  { name: 'decal', file: 'unit-decal.tscn', maxDiffPct: 0.3 },
 ];
