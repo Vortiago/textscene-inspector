@@ -103,6 +103,12 @@ async function waitForServer(url, timeoutMs = 40000) {
  * Navigate to a scene and capture the canvas once it is provably settled:
  * two consecutive byte-identical screenshots. Returns the PNG buffer, or
  * null with a reason when the scene never stabilizes.
+ *
+ * When `scene.select` is set, the harness drives a real tree selection first
+ * (expand the tree, click that node's row) so a selection-gated gizmo
+ * (Marker/Path/PathFollow, ADR-0018) renders — exercising the full
+ * tree-click → SelectionContext → NodeDispatcher → useGizmoVisible path in the
+ * browser, not just the component's gating logic in isolation.
  */
 async function captureScene(page, baseUrl, scene) {
   await page.goto(`${baseUrl}/?fixture=${encodeURIComponent(scene.file)}`, {
@@ -115,6 +121,18 @@ async function captureScene(page, baseUrl, scene) {
     return { buffer: null, reason: `expected exactly 1 canvas, found ${count}` };
   }
   const canvas = canvases.first();
+
+  if (scene.select) {
+    // Expand the whole tree so nested nodes are reachable, then click the row.
+    await page.locator('[aria-label="Expand all"]').click();
+    const row = page.locator(`[data-node-path="${scene.select}"] [role="treeitem"]`).first();
+    try {
+      await row.waitFor({ timeout: 10000 });
+    } catch {
+      return { buffer: null, reason: `select target not found in tree: ${scene.select}` };
+    }
+    await row.click();
+  }
 
   await page.waitForTimeout(SETTLE_INITIAL_MS);
   let prev = await canvas.screenshot();

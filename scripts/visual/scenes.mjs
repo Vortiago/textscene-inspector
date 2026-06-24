@@ -10,6 +10,13 @@
  * apps/textscene-web/src/fixtures.ts (the `?fixture=` deep link). `maxDiffPct`
  * overrides the default failure threshold for scenes with antialiasing-
  * sensitive content (thin gizmo lines).
+ *
+ * `select` (optional) is a node path the harness selects in the scene tree
+ * before capturing, so a selection-gated gizmo (Marker/Path/PathFollow, ADR-0018)
+ * renders. These `*-selected` scenes are the real-browser regression guard for
+ * the gizmos — the un-selected fixtures never show them. Their thin AA lines and
+ * the selection-highlight box make them AA-sensitive, hence the relaxed
+ * `maxDiffPct`.
  */
 
 export const DEFAULT_MAX_DIFF_PCT = 0.1;
@@ -65,4 +72,14 @@ export const GOLDEN_SCENES = [
   // the Path3D curve gizmo is selection-gated and hidden here, so this pins the
   // follower box's curve placement (the non-gated, real scene-state behaviour).
   { name: 'pathfollow3d-follow', file: 'unit-pathfollow-3d.tscn' },
+
+  // --- Selection-gated gizmos (ADR-0018): select the node, capture the gizmo. ---
+  // These pin that the real tree-click → selection → gizmo path works for every
+  // gizmo node type. Relaxed threshold: thin AA gizmo lines + selection box.
+  { name: 'marker2d-selected', file: 'unit-marker2d.tscn', select: 'Marker2DRoot/DefaultMarker', maxDiffPct: 0.5 },
+  { name: 'path2d-selected', file: 'unit-path2d.tscn', select: 'Path2DRoot/ArcPath', maxDiffPct: 0.5 },
+  { name: 'pathfollow2d-selected', file: 'unit-pathfollow2d.tscn', select: 'PathFollow2DRoot/TrackPath/Follower', maxDiffPct: 0.5 },
+  { name: 'marker3d-selected', file: 'unit-marker-3d.tscn', select: 'Root/MyMarker3D', maxDiffPct: 0.5 },
+  { name: 'path3d-selected', file: 'unit-pathfollow-3d.tscn', select: 'PathFollow3DRoot/TrackPath', maxDiffPct: 0.5 },
+  { name: 'pathfollow3d-selected', file: 'unit-pathfollow-3d.tscn', select: 'PathFollow3DRoot/TrackPath/Follower', maxDiffPct: 0.5 },
 ];
