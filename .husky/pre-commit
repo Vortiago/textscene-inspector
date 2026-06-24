@@ -1,2 +1,4 @@
 #!/usr/bin/env sh
-pnpm validate
+# Fast pre-commit: lint + type-aware tests on the STAGED files only.
+# The full `pnpm validate` gate runs on pre-push (and in CI).
+pnpm exec lint-staged

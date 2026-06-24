@@ -36,7 +36,6 @@
     "dist"
   ],
   "scripts": {
-    "prebuild": "rimraf tsconfig.tsbuildinfo",
     "build": "tsc --build",
     "postbuild": "node scripts/copy-css-modules.mjs",
     "dev": "tsc --watch",

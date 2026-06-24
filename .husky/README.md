@@ -2,23 +2,36 @@
 
 This directory contains Git hooks managed by [Husky](https://typicode.github.io/husky/).
 
-## Pre-commit Hook
+## Hooks at a glance
 
-The `pre-commit` hook runs automatically before every commit and executes:
+| Hook | Runs | Scope | Typical time |
+|------|------|-------|--------------|
+| `pre-commit` | `lint-staged` | **Staged files only** — `eslint --fix` + `vitest related --run` (`.ts/.tsx/.js/.jsx`), `build:linter` + `tscn-lint` (`.tscn`) | seconds |
+| `pre-push` | `pnpm validate` | **Whole repo** — build + type-check + lint + all tests + bundle-size | ~3 min |
 
-```bash
-pnpm validate
-```
+This split keeps the commit loop fast while guaranteeing that **nothing reaches a
+shared branch unvalidated**: the full gate runs on every push (and again in CI).
 
-This runs all validation checks in order:
+## Pre-commit Hook (fast, staged files only)
+
+The `pre-commit` hook runs `pnpm exec lint-staged`, which validates **only the
+files you staged** — see [`lint-staged.config.mjs`](../lint-staged.config.mjs):
+- **`*.{ts,tsx,js,jsx}`** → `eslint --fix` (auto-fixes + re-stages) then `vitest related --run` (only tests reachable from the changed files)
+- **`*.tscn`** → builds the linter, then lints the changed scene files
+
+## Pre-push Hook (full gate)
+
+The `pre-push` hook runs `pnpm validate` — the complete pipeline:
 1. **Build** - Compiles all packages (core + apps) and verifies TypeScript compilation
 2. **Type Check** - Explicit TypeScript type validation across all packages
 3. **ESLint** - Code style and quality checks
-4. **All Tests** - Runs all unit and integration tests (2500+ tests)
+4. **All Tests** - Runs all unit and integration tests
+5. **Bundle Size** - Verifies the VS Code webview bundle stays under budget
 
 ## What happens if checks fail?
 
-If any check fails, the commit will be **blocked**. You must fix the errors before you can commit.
+If a `pre-commit` check fails, the commit is **blocked**; if a `pre-push` check
+fails, the push is **blocked**. Fix the errors before retrying.
 
 ## Skipping hooks (not recommended)
 
@@ -54,17 +67,16 @@ pnpm prepare
 Run the checks manually to debug:
 
 ```bash
-pnpm lint-staged      # Run lint-staged checks
-pnpm type-check       # Run type checking
-pnpm build            # Run build
+pnpm exec lint-staged   # Run the pre-commit checks (staged files)
+pnpm validate           # Run the full pre-push gate
 ```
 
 ### Performance issues
 
-If the pre-commit hook is too slow:
+The pre-commit hook is already scoped to staged files. If it is still too slow:
 
-- Consider reducing the scope of `vitest related` (edit `package.json` lint-staged config)
-- Use `git commit --no-verify` sparingly for WIP commits, then run `pnpm validate` before pushing
+- Reduce the scope of `vitest related` (edit `lint-staged.config.mjs`)
+- Use `git commit --no-verify` sparingly for WIP commits — the `pre-push` hook still runs `pnpm validate` before the code leaves your machine
 
 ## Claude Code Web Integration
 
@@ -72,11 +84,12 @@ This repository also has validation hooks for **Claude Code Web** (`.claude/hook
 
 | Scenario | What Validates |
 |----------|----------------|
-| Local git commit | Husky (this hook) |
-| Claude Code CLI | Husky (this hook) |
-| Claude Code Web | `.claude/hooks/validate-commit.sh` |
+| Local git commit | Husky `pre-commit` (`lint-staged`, staged files) |
+| Local git push | Husky `pre-push` (`pnpm validate`, full) |
+| Claude Code CLI | Husky hooks (as above) |
+| Claude Code Web | `.claude/hooks/validate-commit.sh` (`pnpm validate`) |
 
-Both systems run the same validation (`pnpm validate`), ensuring consistency across all environments.
+Pre-push and CI both run the full `pnpm validate`, ensuring consistency across all environments.
 
 See `.claude/hooks/README.md` for Claude Code Web hook documentation.
 
