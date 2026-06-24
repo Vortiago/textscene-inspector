@@ -31,6 +31,7 @@ import { useAnimatedValueRegistry, type ValueSetter } from '../../../r3f/context
 import { resolveExtResourcePath } from '../../../resources/SubResourceResolver';
 import { useResource } from '../../../resources/useResource';
 import type { Color } from '../../../utils/colorParser';
+import type { Vector3 } from '../../../parser/vectors';
 import type { DecalProperties } from './types';
 
 /** Wireframe colour for the projection-box gizmo. */
@@ -40,16 +41,16 @@ export function Decal({ node, children }: NodeComponentProps) {
   const properties = node.properties as DecalProperties;
   const { externalResources } = useSceneResources();
 
-  const { x: sizeX, y: sizeY, z: sizeZ } = properties.size;
-
-  // Projection-volume wireframe — built per-component and handed to R3F via
-  // `primitive`, which it does NOT auto-dispose; release on size change/unmount.
+  // Unit-cube projection-volume wireframe — `size` is applied as a scale on the
+  // inner group (below), so animating `size` (ADR-0017) is a cheap scale write
+  // rather than a per-frame geometry rebuild. Handed to R3F via `primitive`,
+  // which it does NOT auto-dispose; release on unmount.
   const boxEdges = useMemo(() => {
-    const box = new THREE.BoxGeometry(sizeX, sizeY, sizeZ);
+    const box = new THREE.BoxGeometry(1, 1, 1);
     const edges = new THREE.EdgesGeometry(box);
     box.dispose();
     return edges;
-  }, [sizeX, sizeY, sizeZ]);
+  }, []);
   useEffect(() => () => boxEdges.dispose(), [boxEdges]);
 
   // Resolve `texture_albedo = ExtResource("id")` → res:// path. Empty string
@@ -77,9 +78,21 @@ export function Decal({ node, children }: NodeComponentProps) {
     return () => valueRegistry.unregister(nodePath, 'modulate', setter);
   }, [nodePath, valueRegistry]);
 
-  // A driven modulate overrides the authored one; the rest of the pipeline
-  // (sRGB→linear, opacity = albedo_mix × a) is identical either way.
+  // An active AnimationPlayer can likewise drive `size` (ADR-0017): the pushed
+  // Vector3 overrides the authored box size, applied as the inner-group scale.
+  const [animatedSize, setAnimatedSize] = useState<Vector3 | null>(null);
+  useEffect(() => {
+    if (nodePath === null) return;
+    const setter: ValueSetter = (v) =>
+      setAnimatedSize(v === null ? null : { x: v[0] ?? 0, y: v[1] ?? 0, z: v[2] ?? 0 });
+    valueRegistry.register(nodePath, 'size', setter);
+    return () => valueRegistry.unregister(nodePath, 'size', setter);
+  }, [nodePath, valueRegistry]);
+
+  // Driven values override the authored ones; the rest of the pipeline
+  // (sRGB→linear modulate, opacity = albedo_mix × a, size-as-scale) is identical.
   const modulate = animatedModulate ?? properties.modulate;
+  const size = animatedSize ?? properties.size;
 
   // Godot stores modulate in sRGB → convert to the linear working space before
   // the unlit material (same as Sprite3D / Sprite2D).
@@ -98,23 +111,27 @@ export function Decal({ node, children }: NodeComponentProps) {
 
   return (
     <Node3D node={node}>
-      <lineSegments renderOrder={2} userData={{ cullMask: properties.cull_mask }}>
-        <primitive object={boxEdges} attach="geometry" />
-        <lineBasicMaterial color={BOX_COLOR} transparent opacity={0.9} depthWrite={false} />
-      </lineSegments>
-      {albedo && (
-        <mesh rotation={[-Math.PI / 2, 0, 0]} renderOrder={3}>
-          <planeGeometry args={[sizeX, sizeZ]} />
-          <meshBasicMaterial
-            map={albedo}
-            color={color}
-            transparent
-            opacity={opacity}
-            side={THREE.DoubleSide}
-            depthWrite={false}
-          />
-        </mesh>
-      )}
+      {/* `size` scales the unit box-edges + quad; the quad lies in the X-Z plane
+          so x/z map to the projection footprint and y to the box depth. */}
+      <group scale={[size.x, size.y, size.z]}>
+        <lineSegments renderOrder={2} userData={{ cullMask: properties.cull_mask }}>
+          <primitive object={boxEdges} attach="geometry" />
+          <lineBasicMaterial color={BOX_COLOR} transparent opacity={0.9} depthWrite={false} />
+        </lineSegments>
+        {albedo && (
+          <mesh rotation={[-Math.PI / 2, 0, 0]} renderOrder={3}>
+            <planeGeometry args={[1, 1]} />
+            <meshBasicMaterial
+              map={albedo}
+              color={color}
+              transparent
+              opacity={opacity}
+              side={THREE.DoubleSide}
+              depthWrite={false}
+            />
+          </mesh>
+        )}
+      </group>
       {children}
     </Node3D>
   );
