@@ -19,7 +19,6 @@ import * as THREE from 'three';
 
 import { TscnParser } from '../parser/TscnParser';
 import type { TscnScene } from '../parser/types';
-import { nodeDependsOnPath } from '../core/nodeDependsOnPath';
 import { ResourceLoader } from './ResourceLoader';
 import { FileEventBus } from './FileEventBus';
 import type { ResourceProvider } from './ResourceProvider';
@@ -106,44 +105,10 @@ describe('useResource late-arrival integration', () => {
     fileEventBus = new FileEventBus(provider);
     loader = new ResourceLoader(fileEventBus);
     loader.setProvider(provider);
-    // Wire metadata so nodeDependsOnPath can resolve ExtResource("id") → path.
+    // Register the scene's external resources with the loader (production wiring).
     for (const ext of scene.externalResources) {
       loader.register(ext);
     }
-    // Make the scene itself aware of the loader so nodeDependsOnPath's
-    // `scene.resourceLoader?.getMetadata(id)` lookup works (this is the
-    // post-WI-R3F-0 wiring contract; see parser/types.ts).
-    scene.resourceLoader = loader;
-  });
-
-  /**
-   * Verifies the fixture is shaped the way the WI brief describes: three
-   * MeshInstance3D nodes where Mesh1 + Mesh2 depend on shared.png and
-   * Mesh3 depends on different.png.
-   */
-  it('fixture sanity: nodeDependsOnPath correctly identifies which meshes share shared.png', () => {
-    const world = scene.nodes[0]!;
-    expect(world.name).toBe('World');
-    const meshes = world.children.filter((n) => n.type === 'MeshInstance3D');
-    expect(meshes).toHaveLength(3);
-
-    // Look up by name rather than by position — TscnParser doesn't
-    // guarantee child ordering matches the declaration order in the
-    // .tscn file (verified empirically: parsing this fixture yields
-    // children in reverse-declaration order).
-    const m1 = meshes.find((n) => n.name === 'Mesh1');
-    const m2 = meshes.find((n) => n.name === 'Mesh2');
-    const m3 = meshes.find((n) => n.name === 'Mesh3');
-    expect(m1).toBeDefined();
-    expect(m2).toBeDefined();
-    expect(m3).toBeDefined();
-
-    expect(nodeDependsOnPath(m1!, 'res://textures/shared.png', scene)).toBe(true);
-    expect(nodeDependsOnPath(m2!, 'res://textures/shared.png', scene)).toBe(true);
-    expect(nodeDependsOnPath(m3!, 'res://textures/shared.png', scene)).toBe(false);
-    // And the inverse for different.png:
-    expect(nodeDependsOnPath(m1!, 'res://textures/different.png', scene)).toBe(false);
-    expect(nodeDependsOnPath(m3!, 'res://textures/different.png', scene)).toBe(true);
   });
 
   it('HARD GATE: missing -> loaded transitions only the meshes that depend on the late-arriving file', async () => {
@@ -205,17 +170,5 @@ describe('useResource late-arrival integration', () => {
     expect(getByTestId('mesh-Mesh1').dataset.status).toBe('loaded');
     expect(getByTestId('mesh-Mesh2').dataset.status).toBe('loaded');
     expect(getByTestId('mesh-Mesh3').dataset.status).toBe('unavailable');
-
-    // Step 4: Cross-check that the dependency predicate agrees with the
-    //         observed re-render fan-out — if `nodeDependsOnPath`
-    //         disagreed with our hook subscription model, the test would
-    //         pass for the wrong reason. This wires the contract.
-    const meshes = scene.nodes[0]!.children.filter(
-      (n) => n.type === 'MeshInstance3D'
-    );
-    const dependents = meshes.filter((m) =>
-      nodeDependsOnPath(m, sharedPath, scene)
-    );
-    expect(dependents.map((m) => m.name).sort()).toEqual(['Mesh1', 'Mesh2']);
   });
 });

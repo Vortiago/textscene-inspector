@@ -16,7 +16,7 @@ export interface SceneGraph {
   readonly scenes: ReadonlyMap<string, ParsedScene>;
   /** All nodes flattened into single array with full paths */
   readonly flattenedNodes: ReadonlyArray<SceneNode>;
-  /** Incrementing version number (for debugging/tracking) */
+  /** Schema version (constant 1; graphs are rebuilt, not versioned) */
   readonly version: number;
   /** Creation timestamp */
   readonly timestamp: number;

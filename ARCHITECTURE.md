@@ -86,8 +86,7 @@ The render and linter pipelines are **separately bundleable** because the parse,
 │           ├── core/            # SceneGraph + immutable resolution helpers
 │           │   ├── NodeRegistry.ts        # Parser + formatter registry
 │           │   ├── SceneGraph.ts          # Immutable resolved scene
-│           │   ├── SceneGraphBuilder.ts   # Builder for SceneGraph
-│           │   └── nodeDependsOnPath.ts   # Dependency-walk predicate
+│           │   └── SceneGraphBuilder.ts   # Builder for SceneGraph
 │           ├── r3f/             # react-three-fiber UI surface (render infrastructure)
 │           │   ├── TscnCanvas.tsx         # <Canvas> + NodeDispatcher
 │           │   ├── NodeDispatcher.tsx     # SceneGraph -> React tree
