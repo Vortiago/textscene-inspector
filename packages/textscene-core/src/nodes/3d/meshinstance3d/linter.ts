@@ -147,11 +147,9 @@ function checkMeshInstance3D(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // Check if skeleton NodePath references an existing node. An empty or
-  // non-NodePath value means "no skeleton" — nothing to validate.
-  // resolveNodePathTarget stays silent when the path escapes scope (a "../"
-  // segment or an instanced/GLB subtree the static linter never sees) or is
-  // ambiguous (duplicate node names); it only diagnoses confident resolutions.
+  // skeleton must reference an existing Skeleton3D node; empty/non-NodePath
+  // means "no skeleton". resolveNodePathTarget suppresses escapes/ambiguous
+  // paths (see its JSDoc).
   if (rawProps.skeleton) {
     const skeletonPath = extractNodePath(rawProps.skeleton);
     if (skeletonPath) {

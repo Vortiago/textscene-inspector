@@ -79,11 +79,9 @@ function checkGPUParticles3D(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // Check if sub_emitter NodePath references an existing node. An empty or
-  // non-NodePath value means "no sub-emitter" — nothing to validate.
-  // resolveNodePathTarget stays silent when the path escapes scope (a "../"
-  // segment or an instanced subtree the static linter never sees) or is
-  // ambiguous (duplicate node names); it only diagnoses confident resolutions.
+  // sub_emitter must reference an existing GPUParticles3D node; empty/non-NodePath
+  // means "no sub-emitter". resolveNodePathTarget suppresses escapes/ambiguous
+  // paths (see its JSDoc).
   if (rawProps.sub_emitter) {
     const subEmitterPath = extractNodePath(rawProps.sub_emitter);
     if (subEmitterPath) {

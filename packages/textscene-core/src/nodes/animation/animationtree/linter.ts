@@ -104,17 +104,12 @@ function checkAnimationTree(context: RuleContext): Diagnostic[] {
     });
   }
 
-  // WARNING: anim_player NodePath references a non-existent node or wrong type.
-  // resolveNodePathTarget diagnoses only when the path resolves CONFIDENTLY
-  // against the authored tree, and stays silent when it escapes scope (a "../"
-  // segment or an instance ancestor — the AnimationPlayer may live in an
-  // instanced sub-scene the linter cannot see) or is ambiguous (duplicate node
-  // names). Shared with the MeshInstance3D skeleton / GPUParticles3D sub-emitter
-  // rules.
+  // WARNING: anim_player must reference an existing AnimationPlayer node.
+  // resolveNodePathTarget suppresses escapes/ambiguous paths (see its JSDoc).
   if (rawProps.anim_player) {
     const path = extractNodePath(rawProps.anim_player);
     // "." (self) is not resolvable to a concrete node here.
-    if (path && path !== '.' && scene.nodes && scene.nodes.length > 0) {
+    if (path && path !== '.') {
       const target = resolveNodePathTarget(scene.nodes, node, path);
 
       if (target.status === 'missing') {
