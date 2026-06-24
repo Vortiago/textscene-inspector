@@ -1,23 +1,23 @@
 /**
- * Marker3D registration smoke tests (transform-only slice, ADR-0008).
+ * Marker3D registration smoke tests — full slice (selection-gated cross, ADR-0018).
  */
 
 import { describe, expect, it } from 'vitest';
 import { nodeRegistry } from '../../../core/NodeRegistry';
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
-import { parseNode3D } from '../../base/node3d/parser';
-import { Node3D } from '../../base/node3d/Component';
+import { parseMarker3D } from './parser';
+import { Marker3D } from './Component';
 import './index';
 import './index.r3f';
 
 describe('Marker3D registration', () => {
-  it('registers the Node3D base parser', () => {
+  it('registers the Marker3D parser', () => {
     const registration = nodeRegistry.getRegistration('Marker3D');
     expect(registration).not.toBeNull();
-    expect(registration!.parser).toBe(parseNode3D);
+    expect(registration!.parser).toBe(parseMarker3D);
   });
 
-  it('registers the Node3D render component (transform-only group)', () => {
-    expect(nodeComponentRegistry.get('Marker3D')).toBe(Node3D);
+  it('registers the Marker3D render component (axis-cross gizmo)', () => {
+    expect(nodeComponentRegistry.get('Marker3D')).toBe(Marker3D);
   });
 });

@@ -23,14 +23,14 @@ import { SelectionProvider } from '../contexts/SelectionContext';
 import './index';
 
 // The transform-only set from r3f/nodes/index.ts ("Non-visual nodes" block).
+// Path3D / PathFollow3D were removed by ADR-0018 (they now have their own
+// components with selection-gated gizmos + curve following).
 const TRANSFORM_ONLY_3D_TYPES = [
   'StaticBody3D',
   'RigidBody3D',
   'CharacterBody3D',
   'Area3D',
   'Skeleton3D',
-  'Path3D',
-  'PathFollow3D',
   'GPUParticles3D',
 ] as const;
 

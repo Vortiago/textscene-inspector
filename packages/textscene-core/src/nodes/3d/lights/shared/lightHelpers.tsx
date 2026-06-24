@@ -27,30 +27,19 @@
 
 import { useRef } from 'react';
 import * as THREE from 'three';
-import { useNodePath } from '../../../../r3f/contexts/NodePathContext';
-import { useOptionalSelection } from '../../../../r3f/contexts/SelectionContext';
 import { usePrimitiveHelper } from '../../../../r3f/hooks/useTHREEHelper';
+
+// `useGizmoVisible` was promoted to a shared hook (r3f/hooks) so 2D
+// marker/path slices can reuse the selection gate without importing from a
+// lights slice. Imported for local use by the light gizmos below and
+// re-exported for the existing light/camera/audio importers.
+import { useGizmoVisible } from '../../../../r3f/hooks/useGizmoVisible';
+
+export { useGizmoVisible };
 
 const HELPER_COLOR = 0xffff00;
 const DIRECTIONAL_HELPER_SIZE = 1.0;
 const POINT_HELPER_SIZE = 0.25;
-
-/**
- * Returns true when this gizmo's owning TSCN node is the currently
- * selected node in the panel's SelectionContext. Used by every gizmo
- * variant below — and by Camera3D / AudioStreamPlayer3D — to suppress
- * editor decorations unless the user has explicitly picked this node.
- *
- * Outside a NodeDispatcher (standalone-test usage where the component
- * mounts without a NodePathProvider), this returns false so gizmos
- * stay hidden.
- */
-export function useGizmoVisible(): boolean {
-  const path = useNodePath();
-  const selection = useOptionalSelection();
-  if (path === null) return false;
-  return selection?.selectedNodePath === path;
-}
 
 /**
  * Generic `<primitive>`-renderer for any THREE light helper. The

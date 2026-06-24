@@ -10,6 +10,13 @@
  * apps/textscene-web/src/fixtures.ts (the `?fixture=` deep link). `maxDiffPct`
  * overrides the default failure threshold for scenes with antialiasing-
  * sensitive content (thin gizmo lines).
+ *
+ * `select` (optional) is a node path the harness selects in the scene tree
+ * before capturing, so a selection-gated gizmo (Marker/Path/PathFollow, ADR-0018)
+ * renders. These `*-selected` scenes are the real-browser regression guard for
+ * the gizmos — the un-selected fixtures never show them. Their thin AA lines and
+ * the selection-highlight box make them AA-sensitive, hence the relaxed
+ * `maxDiffPct`.
  */
 
 export const DEFAULT_MAX_DIFF_PCT = 0.1;
@@ -54,4 +61,25 @@ export const GOLDEN_SCENES = [
   // by the two-identical-frames settle); the box edges are AA-sensitive like
   // physics-bodies, hence the relaxed threshold.
   { name: 'decal', file: 'unit-decal.tscn', maxDiffPct: 0.3 },
+  // PathFollow2D follow-offset (issue #129): a Polygon2D follower placed at
+  // progress_ratio 0.5 along the parent Path2D's Curve2D. The Marker2D cross
+  // and Path2D curve gizmos are selection-gated (ADR-0018) and the harness
+  // drives no selection, so this scene pins the one visible, non-gated piece —
+  // the follower's curve placement.
+  { name: 'pathfollow2d-follow', file: 'unit-pathfollow2d.tscn', maxDiffPct: 0.3 },
+  // PathFollow3D follow-offset (ADR-0018): a BoxMesh follower placed at
+  // progress_ratio 0.5 along the parent Path3D's Curve3D. Same as the 2D case —
+  // the Path3D curve gizmo is selection-gated and hidden here, so this pins the
+  // follower box's curve placement (the non-gated, real scene-state behaviour).
+  { name: 'pathfollow3d-follow', file: 'unit-pathfollow-3d.tscn' },
+
+  // --- Selection-gated gizmos (ADR-0018): select the node, capture the gizmo. ---
+  // These pin that the real tree-click → selection → gizmo path works for every
+  // gizmo node type. Relaxed threshold: thin AA gizmo lines + selection box.
+  { name: 'marker2d-selected', file: 'unit-marker2d.tscn', select: 'Marker2DRoot/DefaultMarker', maxDiffPct: 0.5 },
+  { name: 'path2d-selected', file: 'unit-path2d.tscn', select: 'Path2DRoot/ArcPath', maxDiffPct: 0.5 },
+  { name: 'pathfollow2d-selected', file: 'unit-pathfollow2d.tscn', select: 'PathFollow2DRoot/TrackPath/Follower', maxDiffPct: 0.5 },
+  { name: 'marker3d-selected', file: 'unit-marker-3d.tscn', select: 'Root/MyMarker3D', maxDiffPct: 0.5 },
+  { name: 'path3d-selected', file: 'unit-pathfollow-3d.tscn', select: 'PathFollow3DRoot/TrackPath', maxDiffPct: 0.5 },
+  { name: 'pathfollow3d-selected', file: 'unit-pathfollow-3d.tscn', select: 'PathFollow3DRoot/TrackPath/Follower', maxDiffPct: 0.5 },
 ];

@@ -33,6 +33,9 @@ import '../nodes/2d/camera2d/index.linter.js';
 import '../nodes/2d/sprite2d/index.linter.js';
 import '../nodes/2d/polygon2d/index.linter.js';
 import '../nodes/2d/animatedsprite2d/index.linter.js';
+import '../nodes/2d/marker2d/index.linter.js';
+import '../nodes/2d/path2d/index.linter.js';
+import '../nodes/2d/pathfollow2d/index.linter.js';
 import '../nodes/animation/animationplayer/index.linter.js';
 import '../nodes/animation/animationtree/index.linter.js';
 import '../nodes/audio/audiostreamplayer/index.linter.js';
@@ -48,6 +51,7 @@ import '../nodes/physics/3d/characterbody3d/index.linter.js';
 import '../nodes/physics/3d/collisionshape3d/index.linter.js';
 import '../nodes/physics/3d/rigidbody3d/index.linter.js';
 import '../nodes/physics/3d/staticbody3d/index.linter.js';
+import '../nodes/3d/marker3d/index.linter.js';
 import '../nodes/paths/path3d/index.linter.js';
 import '../nodes/paths/pathfollow3d/index.linter.js';
 

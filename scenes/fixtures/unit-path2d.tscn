@@ -1,0 +1,16 @@
+[gd_scene format=3]
+
+[sub_resource type="Curve2D" id="Curve2D_arc"]
+_data = {
+"points": PackedVector2Array(0, 0, 50, 0, 0, 0, -50, 0, 50, 0, 150, 100, -50, 0, 0, 0, 300, 0)
+}
+point_count = 3
+
+[node name="Path2DRoot" type="Node2D"]
+
+[node name="ArcPath" type="Path2D" parent="."]
+position = Vector2(420, 280)
+curve = SubResource("Curve2D_arc")
+
+[node name="Follower" type="PathFollow2D" parent="ArcPath"]
+progress_ratio = 0.5
