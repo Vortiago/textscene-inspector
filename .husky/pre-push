@@ -1,0 +1,5 @@
+#!/usr/bin/env sh
+# Full validation gate before code leaves the machine: build + type-check +
+# lint + all tests + bundle-size. Mirrors CI, so nothing reaches a shared
+# branch unvalidated. Fast per-file checks already ran on pre-commit.
+pnpm validate

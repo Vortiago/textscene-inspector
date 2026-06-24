@@ -77,15 +77,5 @@
   "engines": {
     "node": ">=20.0.0",
     "pnpm": ">=9.0.0"
-  },
-  "lint-staged": {
-    "*.{ts,tsx,js,jsx}": [
-      "eslint --fix",
-      "vitest related --run"
-    ],
-    "*.tscn": [
-      "pnpm build:linter",
-      "node apps/textscene-linter/dist/cli.js"
-    ]
   }
 }
