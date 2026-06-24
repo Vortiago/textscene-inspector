@@ -1,9 +1,16 @@
 # Non-visual nodes render as invisible transform-only groups; no viewport placeholder
 
-- Status: Accepted (2026-06-02)
+- Status: Accepted (2026-06-02); **partially amended by ADR-0018 (2026-06-24)**.
 - Generalizes ADR-0005 (physics bodies as transform-only groups).
 - Related: ADR-0006 (viewport-mode seam; `showCollisions` toggle).
 - Supersedes the WI-R3F-7 "visible gray-box placeholder" behaviour of `GenericNodeFallback`.
+
+> **Amendment (ADR-0018):** `Marker3D`, `Path3D`, and `PathFollow3D` are no longer fully invisible.
+> They now draw a **selection-gated** gizmo (marker cross / curve polyline / follow handle) and
+> PathFollow3D follows the parent curve — visible only while the node is selected, so the clutter this
+> ADR fought does not return. They still position their children identically (the transform-only
+> guarantee below still holds). The rest of the transform-only set — physics bodies, `Skeleton3D`,
+> `GPUParticles3D`, and genuinely-unsupported types — is unchanged by that amendment.
 
 ## Context
 

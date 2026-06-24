@@ -308,6 +308,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Pathfollow 3d",
+    "file": "unit-pathfollow-3d.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Photo Frame Base",
     "file": "unit-photo-frame-base.tscn",
     "category": "Other"

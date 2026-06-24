@@ -1,6 +1,8 @@
-/** PathFollow3D renders as a transform-only group — reuse the Node3D component (ADR-0008). */
+/** PathFollow3D follows the parent Path3D's curve, drawing a selection-gated handle (ADR-0018). */
 
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
-import { Node3D } from '../../base/node3d/Component';
+import { PathFollow3D } from './Component';
 
-nodeComponentRegistry.register({ typeName: 'PathFollow3D', Component: Node3D });
+nodeComponentRegistry.register({ typeName: 'PathFollow3D', Component: PathFollow3D });
+
+export { PathFollow3D };

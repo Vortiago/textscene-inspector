@@ -60,4 +60,9 @@ export const GOLDEN_SCENES = [
   // drives no selection, so this scene pins the one visible, non-gated piece —
   // the follower's curve placement.
   { name: 'pathfollow2d-follow', file: 'unit-pathfollow2d.tscn', maxDiffPct: 0.3 },
+  // PathFollow3D follow-offset (ADR-0018): a BoxMesh follower placed at
+  // progress_ratio 0.5 along the parent Path3D's Curve3D. Same as the 2D case —
+  // the Path3D curve gizmo is selection-gated and hidden here, so this pins the
+  // follower box's curve placement (the non-gated, real scene-state behaviour).
+  { name: 'pathfollow3d-follow', file: 'unit-pathfollow-3d.tscn' },
 ];

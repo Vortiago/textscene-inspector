@@ -1,19 +1,20 @@
 /**
  * PathFollow3D registration — parser.
  *
- * Non-visual node: renders as a transform-only group (ADR-0008), reusing the
- * Node3D transform parse; the render component (index.r3f.ts) reuses Node3D.
- * Children sit at the node's authored transform (no curve evaluation).
+ * Positions its children along the parent Path3D's curve and draws a
+ * selection-gated handle (ADR-0018). Previously transform-only (ADR-0008).
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';
-import { parseNode3D } from '../../base/node3d/parser';
+import { parsePathFollow3D } from './parser';
 
 const pathFollow3DRegistration: NodeTypeRegistration = {
   typeName: 'PathFollow3D',
-  parser: parseNode3D,
+  parser: parsePathFollow3D,
 };
 
 nodeRegistry.register(pathFollow3DRegistration);
 
 export { pathFollow3DRegistration };
+export * from './parser';
+export * from './types';

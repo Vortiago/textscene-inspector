@@ -30,3 +30,4 @@ export {
   type MissingResourcesProviderProps,
 } from './MissingResourcesContext.js';
 export { Path2DCurveProvider, useParentPath2DCurve } from './Path2DCurveContext.js';
+export { Path3DCurveProvider, useParentPath3DCurve } from './Path3DCurveContext.js';

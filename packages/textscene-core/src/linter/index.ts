@@ -51,6 +51,7 @@ import '../nodes/physics/3d/characterbody3d/index.linter.js';
 import '../nodes/physics/3d/collisionshape3d/index.linter.js';
 import '../nodes/physics/3d/rigidbody3d/index.linter.js';
 import '../nodes/physics/3d/staticbody3d/index.linter.js';
+import '../nodes/3d/marker3d/index.linter.js';
 import '../nodes/paths/path3d/index.linter.js';
 import '../nodes/paths/pathfollow3d/index.linter.js';
 

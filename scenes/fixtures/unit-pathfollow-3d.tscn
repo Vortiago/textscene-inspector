@@ -1,0 +1,28 @@
+[gd_scene format=3]
+
+[sub_resource type="Curve3D" id="Curve3D_track"]
+_data = {
+"points": PackedVector3Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 3),
+"tilts": PackedFloat32Array(0, 0, 0)
+}
+point_count = 3
+
+[sub_resource type="BoxMesh" id="BoxMesh_follower"]
+size = Vector3(0.6, 0.6, 0.6)
+
+[sub_resource type="BoxMesh" id="BoxMesh_origin"]
+size = Vector3(0.3, 0.3, 0.3)
+
+[node name="PathFollow3DRoot" type="Node3D"]
+
+[node name="TrackPath" type="Path3D" parent="."]
+curve = SubResource("Curve3D_track")
+
+[node name="Follower" type="PathFollow3D" parent="TrackPath"]
+progress_ratio = 0.5
+
+[node name="Box" type="MeshInstance3D" parent="TrackPath/Follower"]
+mesh = SubResource("BoxMesh_follower")
+
+[node name="OriginRef" type="MeshInstance3D" parent="TrackPath"]
+mesh = SubResource("BoxMesh_origin")
