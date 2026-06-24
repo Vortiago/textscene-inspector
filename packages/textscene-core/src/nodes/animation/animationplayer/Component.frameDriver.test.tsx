@@ -1,7 +1,7 @@
 /**
  * Frame-track driving (ADR-0016): an AnimationPlayer `value` track targeting
  * `Sprite2D:frame` advances a sibling sprite's sheet frame through the
- * AnimatedFrame registry — the THREE mixer drives transforms only, so `frame`
+ * AnimatedValue registry — the THREE mixer drives transforms only, so `frame`
  * is sampled and pushed. Observable: the Sprite2D's `map.offset.x = frame /
  * hframes` (composeFrameTexture).
  */
@@ -14,7 +14,7 @@ import { parseSprite2D } from '../../2d/sprite2d/parser';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
-import { AnimatedFrameProvider } from '../../../r3f/contexts/AnimatedFrameContext';
+import { AnimatedValueProvider } from '../../../r3f/contexts/AnimatedValueContext';
 import {
   AnimationTransportProvider,
   useAnimationTransport,
@@ -105,7 +105,7 @@ async function mount() {
         internalResources={INTERNAL}
         externalResources={[{ id: '1', type: 'Texture2D', path: TEX }]}
       >
-        <AnimatedFrameProvider>
+        <AnimatedValueProvider>
           <SelectionProvider>
             <AnimationTransportProvider>
               <Capture />
@@ -120,7 +120,7 @@ async function mount() {
               </group>
             </AnimationTransportProvider>
           </SelectionProvider>
-        </AnimatedFrameProvider>
+        </AnimatedValueProvider>
       </SceneResourcesProvider>
     </ResourceLoaderProvider>
   );

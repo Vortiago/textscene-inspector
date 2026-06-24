@@ -2,7 +2,7 @@
  * Non-transform value-track support for AnimationPlayer — currently `frame`
  * (sprite-sheet flipbook). THREE's AnimationMixer drives transforms only
  * (ADR-0011), so discrete property values like `frame` are sampled here and
- * pushed to the target component through the AnimatedFrame registry (ADR-0016),
+ * pushed to the target component through the AnimatedValue registry (ADR-0016),
  * the scoped "value-push" path ADR-0011 deferred.
  */
 

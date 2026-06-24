@@ -30,7 +30,7 @@ import { useAnimationTransport, type PlayState } from '../../../r3f/contexts/Ani
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useOptionalSelection } from '../../../r3f/contexts/SelectionContext';
 import { usePlaybackLoop } from '../../../r3f/animation/usePlaybackLoop';
-import { useAnimatedFrameRegistry } from '../../../r3f/contexts/AnimatedFrameContext';
+import { useAnimatedValueRegistry } from '../../../r3f/contexts/AnimatedValueContext';
 import { resolveAnimations, type GodotAnimation } from './animationResolver';
 import { buildClip, loopSettingsFor } from './clipBuilder';
 import { sampleSteppedValue, resolveTargetNodePath } from './valueTracks';
@@ -146,9 +146,9 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
 
   // ADR-0016: `frame` tracks can't go through the THREE mixer (it drives
   // transforms only). Sample the selected clip's frame tracks each frame and
-  // push the value to the target sprite via the AnimatedFrame registry; release
+  // push the value to the target sprite via the AnimatedValue registry; release
   // the targets (null) whenever this player isn't driving.
-  const frameRegistry = useAnimatedFrameRegistry();
+  const valueRegistry = useAnimatedValueRegistry();
   // The selected clip's frame tracks with their target paths resolved once
   // (the player path / root_node / track target are constant for the clip).
   const frameTargets = useMemo(() => {
@@ -168,9 +168,9 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
   const releaseOwnedFrames = useCallback(() => {
     const owned = ownedFrameTargets.current;
     if (owned.size === 0) return;
-    owned.forEach((path) => frameRegistry.set(path, null));
+    owned.forEach((path) => valueRegistry.set(path, 'frame', null));
     owned.clear();
-  }, [frameRegistry]);
+  }, [valueRegistry]);
 
   useFrame(() => {
     const action = frameTargets ? actionsRef.current.get(frameTargets.clipName) : undefined;
@@ -184,11 +184,11 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
     const owned = ownedFrameTargets.current;
     const next = new Set<string>();
     for (const { path, keys } of frameTargets.targets) {
-      frameRegistry.set(path, sampleSteppedValue(keys, action.time));
+      valueRegistry.set(path, 'frame', [sampleSteppedValue(keys, action.time)]);
       next.add(path);
     }
     owned.forEach((path) => {
-      if (!next.has(path)) frameRegistry.set(path, null);
+      if (!next.has(path)) valueRegistry.set(path, 'frame', null);
     });
     owned.clear();
     next.forEach((path) => owned.add(path));
