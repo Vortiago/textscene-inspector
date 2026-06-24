@@ -47,8 +47,6 @@ export class SceneGraphBuilder {
       rootScene: this.rootScene,
       scenes: Object.freeze(new Map(this.scenes)) as ReadonlyMap<string, ParsedScene>,
       flattenedNodes: Object.freeze(this.flattenNodes()) as ReadonlyArray<SceneNode>,
-      version: 1,
-      timestamp: Date.now(),
     };
 
     return Object.freeze(graph);

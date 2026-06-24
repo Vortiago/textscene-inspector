@@ -49,7 +49,7 @@ describe('SceneGraphBuilder', () => {
 
       // Strict-mode mutation attempts throw on frozen objects.
       expect(() => {
-        (graph as unknown as { version: number }).version = 999;
+        (graph as unknown as { rootScene: string }).rootScene = 'res://mutated.tscn';
       }).toThrow(TypeError);
       expect(() => {
         (graph.flattenedNodes as SceneNode[]).push({

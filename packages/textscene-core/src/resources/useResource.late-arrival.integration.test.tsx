@@ -115,6 +115,13 @@ describe('useResource late-arrival integration', () => {
     const sharedPath = 'res://textures/shared.png';
     const differentPath = 'res://textures/different.png';
 
+    // Fixture guard: the stubs request these textures by path, so the fixture
+    // must declare both as external resources. Fail loudly if the fixture drifts
+    // rather than passing green against a scenario it no longer matches.
+    const declaredPaths = new Set(scene.externalResources.map((r) => r.path));
+    expect(declaredPaths.has(sharedPath)).toBe(true);
+    expect(declaredPaths.has(differentPath)).toBe(true);
+
     // Step 1: Mount three consumer stubs (one per mesh) with their
     //         respective resource paths. The host has neither file yet,
     //         so every consumer should land in `'unavailable'`.
