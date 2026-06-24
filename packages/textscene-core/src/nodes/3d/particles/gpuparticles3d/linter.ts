@@ -7,25 +7,9 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
-import type { TscnNode } from '../../../../parser/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { checkResourceExists } from '../../../../linter/resourceChecker.js';
-
-/**
- * Recursively find a node by name in the scene tree
- */
-function findNodeByName(nodes: TscnNode[], name: string): TscnNode | null {
-  for (const node of nodes) {
-    if (node.name === name) {
-      return node;
-    }
-    const found = findNodeByName(node.children, name);
-    if (found) {
-      return found;
-    }
-  }
-  return null;
-}
+import { extractNodePath, findNodeByName } from '../../../../linter/linterUtils.js';
 
 /**
  * Validate GPUParticles3D semantic rules (resource references, trail config, etc.)
@@ -95,39 +79,34 @@ function checkGPUParticles3D(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // Check if sub_emitter NodePath references an existing node
+  // Check if sub_emitter NodePath references an existing node. An empty or
+  // non-NodePath value means "no sub-emitter" — nothing to validate.
   if (rawProps.sub_emitter) {
-    // Extract NodePath value
-    const nodePathMatch = rawProps.sub_emitter.match(/^NodePath\("([^"]*)"\)$/);
-    if (nodePathMatch && nodePathMatch[1]) {
-      const subEmitterPath = nodePathMatch[1];
+    const subEmitterPath = extractNodePath(rawProps.sub_emitter);
+    if (subEmitterPath) {
+      // Extract the node name from the path (could be "NodeName" or "Parent/NodeName")
+      const pathParts = subEmitterPath.split('/');
+      const nodeName = pathParts[pathParts.length - 1];
 
-      // Empty path is valid (means no sub-emitter)
-      if (subEmitterPath !== '') {
-        // Extract the node name from the path (could be "NodeName" or "Parent/NodeName")
-        const pathParts = subEmitterPath.split('/');
-        const nodeName = pathParts[pathParts.length - 1];
+      // Find the sub-emitter node in the scene tree
+      const subEmitterNode = nodeName ? findNodeByName(scene.nodes, nodeName) : null;
 
-        // Find the sub-emitter node in the scene tree
-        const subEmitterNode = nodeName ? findNodeByName(scene.nodes, nodeName) : null;
-
-        if (!subEmitterNode) {
-          diagnostics.push({
-            severity: 'error',
-            message: `Sub-emitter node not found: NodePath("${subEmitterPath}")`,
-            nodeName: node.name,
-            nodeType: node.type,
-            ruleName: 'valid-gpuparticles3d-sub-emitter',
-          });
-        } else if (subEmitterNode.type !== 'GPUParticles3D') {
-          diagnostics.push({
-            severity: 'error',
-            message: `Sub-emitter property points to a ${subEmitterNode.type} node, but must point to a GPUParticles3D node`,
-            nodeName: node.name,
-            nodeType: node.type,
-            ruleName: 'valid-gpuparticles3d-sub-emitter',
-          });
-        }
+      if (!subEmitterNode) {
+        diagnostics.push({
+          severity: 'error',
+          message: `Sub-emitter node not found: NodePath("${subEmitterPath}")`,
+          nodeName: node.name,
+          nodeType: node.type,
+          ruleName: 'valid-gpuparticles3d-sub-emitter',
+        });
+      } else if (subEmitterNode.type !== 'GPUParticles3D') {
+        diagnostics.push({
+          severity: 'error',
+          message: `Sub-emitter property points to a ${subEmitterNode.type} node, but must point to a GPUParticles3D node`,
+          nodeName: node.name,
+          nodeType: node.type,
+          ruleName: 'valid-gpuparticles3d-sub-emitter',
+        });
       }
     }
   }

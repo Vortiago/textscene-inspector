@@ -278,6 +278,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Animationtree Instanced Anim Player",
+    "file": "unit-animationtree-instanced-anim-player.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Decal",
     "file": "unit-decal.tscn",
     "category": "Other"

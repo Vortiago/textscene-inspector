@@ -8,21 +8,13 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import type { TscnScene } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { isValidProperties } from '../../../linter/linterUtils.js';
+import { isValidProperties, extractNodePath, findNodeByName, nodePathEscapesAuthoredScope } from '../../../linter/linterUtils.js';
 
 /**
  * Extract resource ID from SubResource("id") or ExtResource("id") format
  */
 function extractResourceId(value: string): string | null {
   const match = value.match(/^(?:SubResource|ExtResource)\("([^"]+)"\)$/);
-  return (match && match[1]) ? match[1] : null;
-}
-
-/**
- * Extract NodePath value from NodePath("...") format
- */
-function extractNodePath(value: string): string | null {
-  const match = value.match(/^NodePath\("([^"]*)"\)$/);
   return (match && match[1]) ? match[1] : null;
 }
 
@@ -50,25 +42,6 @@ function resourceExists(scene: TscnScene, resourceRef: string): boolean {
     for (const resource of scene.externalResources) {
       if (resource.id === resourceId) {
         return true;
-      }
-    }
-  }
-
-  return false;
-}
-
-/**
- * Check if a NodePath points to an AnimationPlayer node
- */
-function isAnimationPlayerNode(scene: TscnScene, nodePath: string): boolean {
-  const path = extractNodePath(nodePath);
-  if (!path) return false;
-
-  // Try to find the node
-  if (scene.nodes) {
-    for (const node of scene.nodes) {
-      if (node.name === path || path.endsWith(node.name)) {
-        return node.type === 'AnimationPlayer';
       }
     }
   }
@@ -131,42 +104,40 @@ function checkAnimationTree(context: RuleContext): Diagnostic[] {
     });
   }
 
-  // WARNING: anim_player NodePath may reference non-existent or wrong node type
+  // WARNING: anim_player NodePath references a non-existent node or wrong type.
+  // Resolve the path's FINAL segment against the static tree — matching a node
+  // whose name the path merely ends with (the old `endsWith`) false-flagged
+  // `../Player/AnimationPlayer` against a sibling "Player". A relative ("..")
+  // segment or an instance ancestor means the real AnimationPlayer may live
+  // inside an instanced sub-scene the linter cannot see, so suppress the
+  // assertions there (same heuristic as the MeshInstance3D skeleton /
+  // GPUParticles3D sub-emitter rules).
   if (rawProps.anim_player) {
     const path = extractNodePath(rawProps.anim_player);
-    if (path && path !== '..' && path !== '.') {
-      // Try to validate if it's an AnimationPlayer node
-      if (scene.nodes && scene.nodes.length > 0) {
-        const isValidPlayer = isAnimationPlayerNode(scene, rawProps.anim_player);
-        if (!isValidPlayer) {
-          // Only warn if we can determine it's not an AnimationPlayer
-          let found = false;
-          for (const sceneNode of scene.nodes) {
-            if (sceneNode.name === path || path.endsWith(sceneNode.name)) {
-              found = true;
-              if (sceneNode.type !== 'AnimationPlayer') {
-                diagnostics.push({
-                  severity: 'warning',
-                  message: `AnimationTree 'anim_player' references node "${path}" which is of type "${sceneNode.type}", not AnimationPlayer. AnimationTree requires an AnimationPlayer node.`,
-                  nodeName: node.name,
-                  nodeType: node.type,
-                  ruleName: 'animationtree-anim-player-wrong-type',
-                });
-              }
-              break;
-            }
-          }
+    // "." (self) is not resolvable to a concrete node here; ".." is handled by
+    // nodePathEscapesAuthoredScope below (a "../" segment escapes the scope).
+    if (path && path !== '.' && scene.nodes && scene.nodes.length > 0) {
+      const pathParts = path.split('/');
+      if (!nodePathEscapesAuthoredScope(scene.nodes, node, pathParts)) {
+        const nodeName = pathParts[pathParts.length - 1];
+        const target = nodeName ? findNodeByName(scene.nodes, nodeName) : null;
 
-          // If path is not ".." or ".", warn about potentially missing node
-          if (!found && path !== '' && !path.startsWith('..')) {
-            diagnostics.push({
-              severity: 'warning',
-              message: `AnimationTree 'anim_player' references path "${path}" which may not exist in the scene. Ensure the AnimationPlayer node is properly defined.`,
-              nodeName: node.name,
-              nodeType: node.type,
-              ruleName: 'animationtree-anim-player-not-found',
-            });
-          }
+        if (!target) {
+          diagnostics.push({
+            severity: 'warning',
+            message: `AnimationTree 'anim_player' references path "${path}" which may not exist in the scene. Ensure the AnimationPlayer node is properly defined.`,
+            nodeName: node.name,
+            nodeType: node.type,
+            ruleName: 'animationtree-anim-player-not-found',
+          });
+        } else if (target.type !== 'AnimationPlayer') {
+          diagnostics.push({
+            severity: 'warning',
+            message: `AnimationTree 'anim_player' references node "${path}" which is of type "${target.type}", not AnimationPlayer. AnimationTree requires an AnimationPlayer node.`,
+            nodeName: node.name,
+            nodeType: node.type,
+            ruleName: 'animationtree-anim-player-wrong-type',
+          });
         }
       }
     }
