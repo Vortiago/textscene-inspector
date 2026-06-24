@@ -8,7 +8,7 @@ Three things change versus the `frame`-only path:
 - **Sampling interpolates.** `frame` is sampled *stepped* (hold-until-next-key). Continuous values are sampled by **component-wise linear interpolation** between the two bracketing keyframes, honouring the track's `interp` mode (0 = nearest/stepped, 1 = linear). We re-implement this small interpolation rather than borrow THREE's `KeyframeTrack` interpolants, because the value never reaches a THREE object — it is pushed into React state.
 - **`size` is carried as a scale, not geometry.** The Decal renders **unit** box-edges + quad inside an inner group scaled by `size`, for both the static and animated paths. Animating `size` is then a cheap scale write instead of rebuilding (and disposing) `EdgesGeometry`/`PlaneGeometry` ~60×/sec per decal.
 
-The legacy `Decal:extents` track (Godot 3 half-size) resolves onto `size` with a ×2 conversion (`size = 2 × extents`), kept as its own slice so the core feature does not depend on version-compat.
+We drive the Godot 4 `Decal:size` property only — **not** the legacy Godot 3 `Decal:extents` (half-size) name. `extents` was hard-removed in Godot 4.0, so it appears in no live Godot 4 scene; the one vendored demo that still authored it (`scenes/demos/3d/decals/decal.tscn`, itself a Godot 4.6 project that pre-dated the rename) is corrected in the corpus — both tracks retargeted to `size` with the keyframe values doubled (`size = 2 × extents`) — rather than carrying a permanent version-compat alias in our resolver. The local corpus patch is documented in `scenes/demos/README.md` so a re-vendor reapplies it.
 
 ## Considered options
 

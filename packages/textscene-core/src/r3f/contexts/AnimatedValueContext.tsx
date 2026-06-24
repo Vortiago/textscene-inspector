@@ -20,7 +20,16 @@
  * functional bail) re-renders, and only when its value actually changes.
  */
 
-import { createContext, useContext, useMemo, useRef, type ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
+import { useNodePath } from './NodePathContext';
 
 /** Receives the animated value tuple, or `null` when the driver releases it. */
 export type ValueSetter = (value: number[] | null) => void;
@@ -49,6 +58,28 @@ const AnimatedValueContext = createContext<AnimatedValueRegistry>(NOOP);
 
 export function useAnimatedValueRegistry(): AnimatedValueRegistry {
   return useContext(AnimatedValueContext);
+}
+
+/**
+ * Subscribe this node's `property` to AnimationPlayer-pushed values: returns the
+ * decoded animated value while a driver is pushing one, or `null` when none is
+ * (the authored value should show). `decode` maps the pushed numeric tuple to
+ * the consumer's shape (a `frame` index, a `Color`, a `Vector3`); it is read
+ * through a ref so an inline lambda doesn't re-subscribe every render.
+ */
+export function useAnimatedValue<T>(property: string, decode: (tuple: number[]) => T): T | null {
+  const nodePath = useNodePath();
+  const registry = useAnimatedValueRegistry();
+  const [value, setValue] = useState<T | null>(null);
+  const decodeRef = useRef(decode);
+  decodeRef.current = decode;
+  useEffect(() => {
+    if (nodePath === null) return;
+    const setter: ValueSetter = (v) => setValue(v === null ? null : decodeRef.current(v));
+    registry.register(nodePath, property, setter);
+    return () => registry.unregister(nodePath, property, setter);
+  }, [nodePath, registry, property]);
+  return value;
 }
 
 export function AnimatedValueProvider({ children }: { children: ReactNode }) {

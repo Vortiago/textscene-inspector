@@ -193,7 +193,7 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
     const owned = ownedValues.current;
     const next = new Map<string, { path: string; property: string }>();
     for (const { path, property, keys, interp } of valueTargets.targets) {
-      const value = VALUE_PUSH_PROPERTIES[property]!.interpolated
+      const value = VALUE_PUSH_PROPERTIES[property]
         ? sampleInterpolatedValue(keys, action.time, interp)
         : [sampleSteppedValue(keys, action.time)];
       valueRegistry.set(path, property, value);

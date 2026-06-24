@@ -75,14 +75,14 @@ function tupleValue(value: unknown): number[] {
 
 /**
  * The non-transform properties the AnimationPlayer pushes through the
- * AnimatedValue registry (ADR-0016, ADR-0017), and how each is sampled: `frame`
- * is stepped (a discrete sprite-sheet flipbook); continuous properties
- * (`modulate`, `size`) interpolate. A property absent here is not value-pushed.
+ * AnimatedValue registry (ADR-0016, ADR-0017), mapped to whether they
+ * interpolate: `frame` is stepped (a discrete sprite-sheet flipbook), the
+ * continuous `modulate`/`size` lerp. A property absent here is not value-pushed.
  */
-export const VALUE_PUSH_PROPERTIES: Record<string, { interpolated: boolean }> = {
-  frame: { interpolated: false },
-  modulate: { interpolated: true },
-  size: { interpolated: true },
+export const VALUE_PUSH_PROPERTIES: Record<string, boolean> = {
+  frame: false,
+  modulate: true,
+  size: true,
 };
 
 /**
