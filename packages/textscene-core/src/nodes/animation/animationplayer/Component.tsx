@@ -30,10 +30,15 @@ import { useAnimationTransport, type PlayState } from '../../../r3f/contexts/Ani
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useOptionalSelection } from '../../../r3f/contexts/SelectionContext';
 import { usePlaybackLoop } from '../../../r3f/animation/usePlaybackLoop';
-import { useAnimatedFrameRegistry } from '../../../r3f/contexts/AnimatedFrameContext';
+import { useAnimatedValueRegistry } from '../../../r3f/contexts/AnimatedValueContext';
 import { resolveAnimations, type GodotAnimation } from './animationResolver';
 import { buildClip, loopSettingsFor } from './clipBuilder';
-import { sampleSteppedValue, resolveTargetNodePath } from './valueTracks';
+import {
+  sampleSteppedValue,
+  sampleInterpolatedValue,
+  resolveTargetNodePath,
+  VALUE_PUSH_PROPERTIES,
+} from './valueTracks';
 
 /** Godot composes Euler rotations in YXZ order; THREE objects default to XYZ. */
 const GODOT_EULER_ORDER: EulerOrder = 'YXZ';
@@ -144,65 +149,71 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
     restore: () => restoreSnapshot(snapshotRef.current),
   });
 
-  // ADR-0016: `frame` tracks can't go through the THREE mixer (it drives
-  // transforms only). Sample the selected clip's frame tracks each frame and
-  // push the value to the target sprite via the AnimatedFrame registry; release
-  // the targets (null) whenever this player isn't driving.
-  const frameRegistry = useAnimatedFrameRegistry();
-  // The selected clip's frame tracks with their target paths resolved once
+  // ADR-0016/0017: non-transform value tracks can't go through the THREE mixer
+  // (it drives transforms only). Sample the selected clip's value-push tracks
+  // each frame at the live playhead — `frame` stepped, `modulate`/`size`
+  // interpolated — and push to the target via the AnimatedValue registry;
+  // release the targets (null) whenever this player isn't driving.
+  const valueRegistry = useAnimatedValueRegistry();
+  // The selected clip's value-push tracks with target paths resolved once
   // (the player path / root_node / track target are constant for the clip).
-  const frameTargets = useMemo(() => {
+  const valueTargets = useMemo(() => {
     if (!isActive || nodePath === null) return null;
     const clip = animations.find((a) => a.name === transport.selectedClip);
     if (!clip) return null;
     const targets = clip.tracks
-      .filter((t) => t.property === 'frame')
+      .filter((t) => t.type === 'value' && t.property in VALUE_PUSH_PROPERTIES)
       .map((t) => ({
         path: resolveTargetNodePath(nodePath, properties.root_node, t.targetPath),
+        property: t.property,
         keys: t.keys,
+        interp: t.interp,
       }));
     return targets.length > 0 ? { clipName: clip.name, targets } : null;
   }, [isActive, nodePath, animations, transport.selectedClip, properties.root_node]);
 
-  const ownedFrameTargets = useRef<Set<string>>(new Set());
-  const releaseOwnedFrames = useCallback(() => {
-    const owned = ownedFrameTargets.current;
+  // Owned (path, property) pairs currently driven, keyed by `${path}:${property}`.
+  const ownedValues = useRef<Map<string, { path: string; property: string }>>(new Map());
+  const releaseOwnedValues = useCallback(() => {
+    const owned = ownedValues.current;
     if (owned.size === 0) return;
-    owned.forEach((path) => frameRegistry.set(path, null));
+    owned.forEach(({ path, property }) => valueRegistry.set(path, property, null));
     owned.clear();
-  }, [frameRegistry]);
+  }, [valueRegistry]);
 
   useFrame(() => {
-    const action = frameTargets ? actionsRef.current.get(frameTargets.clipName) : undefined;
+    const action = valueTargets ? actionsRef.current.get(valueTargets.clipName) : undefined;
     const playing = transport.playState === 'playing' || transport.playState === 'paused';
-    if (!frameTargets || !playing || !action) {
-      releaseOwnedFrames(); // clip switched away / stopped while the loop runs
+    if (!valueTargets || !playing || !action) {
+      releaseOwnedValues(); // clip switched away / stopped while the loop runs
       return;
     }
     // Read the LIVE mixer playhead (advanced by usePlaybackLoop earlier this
     // frame), not the React-state transport.time which lags the useFrame closure.
-    const owned = ownedFrameTargets.current;
-    const next = new Set<string>();
-    for (const { path, keys } of frameTargets.targets) {
-      frameRegistry.set(path, sampleSteppedValue(keys, action.time));
-      next.add(path);
+    const owned = ownedValues.current;
+    const next = new Map<string, { path: string; property: string }>();
+    for (const { path, property, keys, interp } of valueTargets.targets) {
+      const value = VALUE_PUSH_PROPERTIES[property]
+        ? sampleInterpolatedValue(keys, action.time, interp)
+        : [sampleSteppedValue(keys, action.time)];
+      valueRegistry.set(path, property, value);
+      next.set(`${path}:${property}`, { path, property });
     }
-    owned.forEach((path) => {
-      if (!next.has(path)) frameRegistry.set(path, null);
+    owned.forEach((entry, key) => {
+      if (!next.has(key)) valueRegistry.set(entry.path, entry.property, null);
     });
-    owned.clear();
-    next.forEach((path) => owned.add(path));
+    ownedValues.current = next;
   });
 
   // Release the moment this player stops driving — stop, deselect, or a clip
-  // switch to one with no frame tracks — via an effect (not a frame tick) so the
-  // authored frame returns immediately even when state changes don't tick the loop.
+  // switch to one with no value tracks — via an effect (not a frame tick) so the
+  // authored values return immediately even when state changes don't tick the loop.
   useEffect(() => {
     const driving =
-      !!frameTargets && (transport.playState === 'playing' || transport.playState === 'paused');
-    if (!driving) releaseOwnedFrames();
-  }, [frameTargets, transport.playState, releaseOwnedFrames]);
-  useEffect(() => releaseOwnedFrames, [releaseOwnedFrames]); // release on unmount
+      !!valueTargets && (transport.playState === 'playing' || transport.playState === 'paused');
+    if (!driving) releaseOwnedValues();
+  }, [valueTargets, transport.playState, releaseOwnedValues]);
+  useEffect(() => releaseOwnedValues, [releaseOwnedValues]); // release on unmount
 
   return (
     <group

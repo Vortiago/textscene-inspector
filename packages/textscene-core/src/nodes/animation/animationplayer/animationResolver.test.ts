@@ -113,6 +113,23 @@ describe('resolveAnimations — keyframe values (B4)', () => {
     expect(anim.tracks[0].keys[0].value).toEqual([7, -8]);
     expect(anim.tracks[1].keys[0].value).toBe(1.5708);
   });
+
+  it('decodes Color keyframe values to RGBA quadruples (modulate fade — ADR-0017)', () => {
+    const internal = [
+      res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
+      res('A', 'Animation', {
+        'tracks/0/type': '"value"',
+        'tracks/0/path': 'NodePath("Decal:modulate")',
+        'tracks/0/keys':
+          '{\n"times": PackedFloat32Array(0, 1),\n"values": [Color(1, 1, 1, 1), Color(1, 0.5, 0.25, 0)]\n}',
+      }),
+    ];
+    const [anim] = resolveAnimations(DEFAULT_LIB, internal);
+    expect(anim.tracks[0].keys.map((k) => k.value)).toEqual([
+      [1, 1, 1, 1],
+      [1, 0.5, 0.25, 0],
+    ]);
+  });
 });
 
 describe('resolveAnimations — graceful degradation (B5)', () => {

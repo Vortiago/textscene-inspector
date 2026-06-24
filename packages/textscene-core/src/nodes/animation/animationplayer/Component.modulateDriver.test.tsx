@@ -1,16 +1,16 @@
 /**
- * Frame-track driving (ADR-0016): an AnimationPlayer `value` track targeting
- * `Sprite2D:frame` advances a sibling sprite's sheet frame through the
- * AnimatedValue registry — the THREE mixer drives transforms only, so `frame`
- * is sampled and pushed. Observable: the Sprite2D's `map.offset.x = frame /
- * hframes` (composeFrameTexture).
+ * Value-track driving for continuous properties (ADR-0017): an AnimationPlayer
+ * `value` track targeting `Decal:modulate` fades a sibling decal's colour/alpha
+ * through the AnimatedValue registry — the THREE mixer drives transforms only,
+ * so `modulate` is sampled (linearly interpolated) and pushed. Observable: the
+ * decal quad's `material.opacity = albedo_mix × modulate.a`.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { AnimationPlayer } from './Component';
-import { Sprite2D } from '../../2d/sprite2d/Component';
-import { parseSprite2D } from '../../2d/sprite2d/parser';
+import { Decal } from '../../3d/decal/Component';
+import { parseDecal } from '../../3d/decal/parser';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
@@ -30,33 +30,30 @@ import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { AnimationPlayerProperties } from './types';
 import { AnimationProcessMode, MethodCallMode } from './types';
 
-const SPRITE_PATH = 'Coin/Sprite2D';
-const AP_PATH = 'Coin/AnimationPlayer';
-const TEX = 'res://coin.png';
+const DECAL_PATH = 'Holder/Decal';
+const AP_PATH = 'Holder/AnimationPlayer';
+const TEX = 'res://decal.png';
 
-// "spin": Sprite2D:frame stepping 0 → 1 → 2 → 3 over 0.4s (no transform tracks).
-// "still": a clip with no frame tracks (to test release on clip switch).
+// "fade": Decal:modulate alpha 1 → 0 over 1s, linear (interp=1). No transform tracks.
 const INTERNAL: TscnInternalResource[] = [
   {
     id: 'Lib',
     type: 'AnimationLibrary',
-    data: { _data: '{\n"spin": SubResource("A"),\n"still": SubResource("B")\n}' },
+    data: { _data: '{\n"fade": SubResource("A")\n}' },
   },
   {
     id: 'A',
     type: 'Animation',
     data: {
-      length: '0.4',
+      length: '1.0',
       'tracks/0/type': '"value"',
-      'tracks/0/path': 'NodePath("Sprite2D:frame")',
+      'tracks/0/path': 'NodePath("Decal:modulate")',
+      'tracks/0/interp': '1',
       'tracks/0/keys':
-        '{\n"times": PackedFloat32Array(0, 0.1, 0.2, 0.3),\n"values": [0, 1, 2, 3]\n}',
+        '{\n"times": PackedFloat32Array(0, 1),\n"values": [Color(1, 1, 1, 1), Color(1, 1, 1, 0)]\n}',
     },
   },
-  { id: 'B', type: 'Animation', data: { length: '0.4' } },
 ];
-
-const spriteHeading = { type: 'node', attributes: { type: 'Sprite2D', name: 'Sprite2D' } };
 
 function makeAP(): TscnNode {
   const props: AnimationPlayerProperties = {
@@ -66,7 +63,7 @@ function makeAP(): TscnNode {
     playback_process_mode: AnimationProcessMode.IDLE,
     method_call_mode: MethodCallMode.DEFERRED,
     playback_active: true,
-    autoplay: 'spin',
+    autoplay: 'fade',
     current_animation: '',
     current_animation_length: 0.0,
     current_animation_position: 0.0,
@@ -89,15 +86,14 @@ async function mount() {
   const tex = new THREE.Texture();
   (tex as unknown as { image: { width: number; height: number } }).image = { width: 16, height: 16 };
   fake.textures.seed(TEX, tex);
-  const sprite: TscnNode = {
-    name: 'Sprite2D',
-    type: 'Sprite2D',
+  const decal: TscnNode = {
+    name: 'Decal',
+    type: 'Decal',
     children: [],
-    properties: parseSprite2D(spriteHeading, {
-      texture: 'ExtResource("1")',
-      hframes: '4',
-      frame: '0',
-    }),
+    properties: parseDecal(
+      { type: 'node', attributes: { type: 'Decal', name: 'Decal' } },
+      { texture_albedo: 'ExtResource("1")', albedo_mix: '1.0' }
+    ),
   };
   return ReactThreeTestRenderer.create(
     <ResourceLoaderProvider loader={fake.loader}>
@@ -110,9 +106,9 @@ async function mount() {
             <AnimationTransportProvider>
               <Capture />
               {/* A named ancestor so the player's root_node (`..`) resolves. */}
-              <group name="Coin">
-                <NodePathProvider path={SPRITE_PATH}>
-                  <Sprite2D node={sprite} />
+              <group name="Holder">
+                <NodePathProvider path={DECAL_PATH}>
+                  <Decal node={decal} />
                 </NodePathProvider>
                 <NodePathProvider path={AP_PATH}>
                   <AnimationPlayer node={makeAP()} />
@@ -126,55 +122,42 @@ async function mount() {
   );
 }
 
-function spriteFrameOffsetX(r: Awaited<ReturnType<typeof mount>>): number {
+function decalQuadOpacity(r: Awaited<ReturnType<typeof mount>>): number {
   const mesh = r.scene.findByType('Mesh').instance as THREE.Mesh;
-  const map = (mesh.material as THREE.MeshBasicMaterial).map;
-  return map?.offset.x ?? -1;
+  return (mesh.material as THREE.MeshBasicMaterial).opacity;
 }
 
 const settle = () => ReactThreeTestRenderer.act(async () => {});
 const select = (path: string | null) =>
   ReactThreeTestRenderer.act(async () => selection?.setSelectedNodePath(path));
 
-describe('AnimationPlayer drives Sprite2D:frame (ADR-0016)', () => {
-  it('shows the authored frame while the player is not driving', async () => {
+describe('AnimationPlayer drives Decal:modulate (ADR-0017)', () => {
+  it('shows the authored modulate while the player is not driving', async () => {
     const r = await mount();
-    expect(spriteFrameOffsetX(r)).toBeCloseTo(0, 5); // frame 0 of 4 hframes
+    expect(decalQuadOpacity(r)).toBeCloseTo(1, 5); // authored modulate.a = 1 × albedo_mix 1
   });
 
-  it('advances the sprite sheet frame while the player plays', async () => {
+  it('fades the decal opacity as the modulate alpha interpolates', async () => {
     const r = await mount();
     await select(AP_PATH);
     await ReactThreeTestRenderer.act(async () => transport.play());
-    await r.advanceFrames(1, 0.25); // mixer playhead → 0.25s
-    await r.advanceFrames(1, 0); // let the frame sampler read the updated playhead
+    await r.advanceFrames(1, 0.5); // mixer playhead → 0.5s
+    await r.advanceFrames(1, 0); // let the value sampler read the updated playhead
     await settle();
-    expect(spriteFrameOffsetX(r)).toBeCloseTo(0.5, 5); // stepped frame 2 / 4
+    // alpha lerps 1 → 0 over 1s, so at 0.5s → 0.5; opacity = albedo_mix(1) × 0.5
+    expect(decalQuadOpacity(r)).toBeCloseTo(0.5, 2);
   });
 
-  it('releases the sprite to its authored frame on stop', async () => {
+  it('releases the decal to its authored modulate on stop', async () => {
     const r = await mount();
     await select(AP_PATH);
     await ReactThreeTestRenderer.act(async () => transport.play());
-    await r.advanceFrames(1, 0.25);
+    await r.advanceFrames(1, 0.5);
     await r.advanceFrames(1, 0);
     await settle();
-    expect(spriteFrameOffsetX(r)).toBeCloseTo(0.5, 5);
+    expect(decalQuadOpacity(r)).toBeCloseTo(0.5, 2);
     await ReactThreeTestRenderer.act(async () => transport.stop());
     await settle();
-    expect(spriteFrameOffsetX(r)).toBeCloseTo(0, 5); // back to authored frame 0
-  });
-
-  it('releases the sprite when switched to a clip with no frame tracks', async () => {
-    const r = await mount();
-    await select(AP_PATH);
-    await ReactThreeTestRenderer.act(async () => transport.play());
-    await r.advanceFrames(1, 0.25);
-    await r.advanceFrames(1, 0);
-    await settle();
-    expect(spriteFrameOffsetX(r)).toBeCloseTo(0.5, 5); // playing spin → frame 2
-    await ReactThreeTestRenderer.act(async () => transport.selectClip('still'));
-    await settle();
-    expect(spriteFrameOffsetX(r)).toBeCloseTo(0, 5); // no frame tracks → authored frame 0
+    expect(decalQuadOpacity(r)).toBeCloseTo(1, 5); // back to authored modulate.a = 1
   });
 });

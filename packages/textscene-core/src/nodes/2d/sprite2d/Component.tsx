@@ -18,14 +18,13 @@
  * legitimately differs: 2D mirrors via mesh scale, 3D via UV negation.
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
 import { composeFrameTexture, frameSizePx } from '../../../r3f/spriteFrame';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
-import { useNodePath } from '../../../r3f/contexts/NodePathContext';
-import { useAnimatedFrameRegistry } from '../../../r3f/contexts/AnimatedFrameContext';
+import { useAnimatedValue } from '../../../r3f/contexts/AnimatedValueContext';
 import { resolveExtResourcePath } from '../../../resources/SubResourceResolver';
 import { useResource } from '../../../resources/useResource';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
@@ -35,17 +34,10 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
   const props = node.properties as Sprite2DProperties;
   const { externalResources } = useSceneResources();
 
-  // An active AnimationPlayer can drive this sprite's sheet `frame` (ADR-0016):
-  // register a setter keyed by node path so the player can push the sampled
-  // frame; `null` releases it and the authored `frame` shows again.
-  const nodePath = useNodePath();
-  const frameRegistry = useAnimatedFrameRegistry();
-  const [animatedFrame, setAnimatedFrame] = useState<number | null>(null);
-  useEffect(() => {
-    if (nodePath === null) return;
-    frameRegistry.register(nodePath, setAnimatedFrame);
-    return () => frameRegistry.unregister(nodePath, setAnimatedFrame);
-  }, [nodePath, frameRegistry]);
+  // An active AnimationPlayer can drive this sprite's sheet `frame` (ADR-0016);
+  // `null` means none is, so the authored `frame` shows. The registry carries a
+  // numeric tuple (ADR-0017) — `frame` is a 1-tuple.
+  const animatedFrame = useAnimatedValue('frame', (v) => v[0] ?? null);
 
   const texturePath = useMemo(
     () => resolveExtResourcePath(props.texture, externalResources),

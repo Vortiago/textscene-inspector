@@ -16,6 +16,12 @@ import { Decal } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
+import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
+import {
+  AnimatedValueProvider,
+  useAnimatedValueRegistry,
+  type AnimatedValueRegistry,
+} from '../../../r3f/contexts/AnimatedValueContext';
 import type { TscnExternalResource, TscnNode } from '../../../parser/types';
 import { parseDecal } from './parser';
 
@@ -77,18 +83,25 @@ describe('<Decal>', () => {
     expect(mat.map).toBeInstanceOf(THREE.Texture);
   });
 
-  it('sizes the projected quad to the box footprint (size.x × size.z)', async () => {
+  it('renders a unit quad scaled by size via the inner group (size.x × size.z footprint)', async () => {
     const tex = makeTexture();
     const renderer = await render({
       node: makeNode({ texture_albedo: 'ExtResource("1_tex")', size: 'Vector3(3, 2, 4)' }),
       externals: [extRef('1_tex', TEXTURE_PATH)],
       cached: [{ path: TEXTURE_PATH, texture: tex }],
     });
+    // Geometry is unit; `size` rides the inner group's scale (so it animates cheaply).
     const geom = renderer.scene.findByType('Mesh').instance.geometry as unknown as {
       parameters: { width: number; height: number };
     };
-    expect(geom.parameters.width).toBeCloseTo(3, 5);
-    expect(geom.parameters.height).toBeCloseTo(4, 5);
+    expect(geom.parameters.width).toBeCloseTo(1, 5);
+    expect(geom.parameters.height).toBeCloseTo(1, 5);
+    const sizingGroup = renderer.scene
+      .findAllByType('Group')
+      .find((g) => (g.instance as THREE.Group).scale.x === 3);
+    expect(sizingGroup).toBeDefined();
+    const s = (sizingGroup!.instance as THREE.Group).scale;
+    expect([s.x, s.y, s.z]).toEqual([3, 2, 4]);
   });
 
   it('folds albedo_mix × modulate.a into the quad opacity and tints with modulate', async () => {
@@ -150,5 +163,37 @@ describe('<Decal>', () => {
       ),
     });
     expect(renderer.scene.findByProps({ name: 'child' })).toBeDefined();
+  });
+
+  it('overrides authored size with an AnimationPlayer-pushed value, reverting on release (ADR-0017)', async () => {
+    let registry: AnimatedValueRegistry | null = null;
+    function Capture() {
+      registry = useAnimatedValueRegistry();
+      return null;
+    }
+    const renderer = await ReactThreeTestRenderer.create(
+      <ResourceLoaderProvider loader={createFakeResourceLoader().loader}>
+        <SceneResourcesProvider externalResources={[]}>
+          <AnimatedValueProvider>
+            <Capture />
+            <NodePathProvider path="D">
+              <Decal node={makeNode({ size: 'Vector3(2, 2, 2)' }, 'D')} />
+            </NodePathProvider>
+          </AnimatedValueProvider>
+        </SceneResourcesProvider>
+      </ResourceLoaderProvider>
+    );
+    // The box-edge LineSegments lives inside the inner sizing group, whose scale
+    // IS the decal's `size`.
+    const sizingScale = () => {
+      const ls = renderer.scene.findByType('LineSegments').instance as THREE.Object3D;
+      const s = ls.parent!.scale;
+      return [s.x, s.y, s.z];
+    };
+    expect(sizingScale()).toEqual([2, 2, 2]); // authored size
+    await ReactThreeTestRenderer.act(async () => registry!.set('D', 'size', [6, 5, 4]));
+    expect(sizingScale()).toEqual([6, 5, 4]); // driven size
+    await ReactThreeTestRenderer.act(async () => registry!.set('D', 'size', null));
+    expect(sizingScale()).toEqual([2, 2, 2]); // released → authored size
   });
 });

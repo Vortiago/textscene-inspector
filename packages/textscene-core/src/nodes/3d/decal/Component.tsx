@@ -26,8 +26,11 @@ import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { Node3D } from '../../base/node3d/Component';
 import { godotColorToLinear } from '../../../r3f/godotColor';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
+import { useAnimatedValue } from '../../../r3f/contexts/AnimatedValueContext';
 import { resolveExtResourcePath } from '../../../resources/SubResourceResolver';
 import { useResource } from '../../../resources/useResource';
+import type { Color } from '../../../utils/colorParser';
+import type { Vector3 } from '../../../parser/vectors';
 import type { DecalProperties } from './types';
 
 /** Wireframe colour for the projection-box gizmo. */
@@ -37,16 +40,16 @@ export function Decal({ node, children }: NodeComponentProps) {
   const properties = node.properties as DecalProperties;
   const { externalResources } = useSceneResources();
 
-  const { x: sizeX, y: sizeY, z: sizeZ } = properties.size;
-
-  // Projection-volume wireframe — built per-component and handed to R3F via
-  // `primitive`, which it does NOT auto-dispose; release on size change/unmount.
+  // Unit-cube projection-volume wireframe — `size` is applied as a scale on the
+  // inner group (below), so animating `size` (ADR-0017) is a cheap scale write
+  // rather than a per-frame geometry rebuild. Handed to R3F via `primitive`,
+  // which it does NOT auto-dispose; release on unmount.
   const boxEdges = useMemo(() => {
-    const box = new THREE.BoxGeometry(sizeX, sizeY, sizeZ);
+    const box = new THREE.BoxGeometry(1, 1, 1);
     const edges = new THREE.EdgesGeometry(box);
     box.dispose();
     return edges;
-  }, [sizeX, sizeY, sizeZ]);
+  }, []);
   useEffect(() => () => boxEdges.dispose(), [boxEdges]);
 
   // Resolve `texture_albedo = ExtResource("id")` → res:// path. Empty string
@@ -58,16 +61,34 @@ export function Decal({ node, children }: NodeComponentProps) {
   );
   const texResult = useResource<THREE.Texture>(texturePath ?? '', 'Texture2D');
 
+  // An active AnimationPlayer can drive `modulate` (interpolated colour) and
+  // `size` (the box Vector3) — ADR-0017. `null` means none is, so the authored
+  // value shows; the rest of the pipeline (sRGB→linear modulate, opacity =
+  // albedo_mix × a, size-as-scale) is identical for driven and authored values.
+  const animatedModulate = useAnimatedValue<Color>('modulate', (v) => ({
+    r: v[0] ?? 1,
+    g: v[1] ?? 1,
+    b: v[2] ?? 1,
+    a: v[3] ?? 1,
+  }));
+  const animatedSize = useAnimatedValue<Vector3>('size', (v) => ({
+    x: v[0] ?? 0,
+    y: v[1] ?? 0,
+    z: v[2] ?? 0,
+  }));
+  const modulate = animatedModulate ?? properties.modulate;
+  const size = animatedSize ?? properties.size;
+
   // Godot stores modulate in sRGB → convert to the linear working space before
   // the unlit material (same as Sprite3D / Sprite2D).
   const color = useMemo(
-    () => godotColorToLinear(properties.modulate),
-    [properties.modulate.r, properties.modulate.g, properties.modulate.b]
+    () => godotColorToLinear(modulate),
+    [modulate.r, modulate.g, modulate.b]
   );
 
   // albedo_mix scales how strongly the projected albedo replaces the surface;
   // fold it together with modulate alpha into the preview quad's opacity.
-  const opacity = clamp01(properties.albedo_mix * properties.modulate.a);
+  const opacity = clamp01(properties.albedo_mix * modulate.a);
 
   // Only the 'loaded' state yields a texture; pending/unavailable fall back to
   // the wireframe box alone (a Decal without a visible albedo is still valid).
@@ -75,23 +96,27 @@ export function Decal({ node, children }: NodeComponentProps) {
 
   return (
     <Node3D node={node}>
-      <lineSegments renderOrder={2} userData={{ cullMask: properties.cull_mask }}>
-        <primitive object={boxEdges} attach="geometry" />
-        <lineBasicMaterial color={BOX_COLOR} transparent opacity={0.9} depthWrite={false} />
-      </lineSegments>
-      {albedo && (
-        <mesh rotation={[-Math.PI / 2, 0, 0]} renderOrder={3}>
-          <planeGeometry args={[sizeX, sizeZ]} />
-          <meshBasicMaterial
-            map={albedo}
-            color={color}
-            transparent
-            opacity={opacity}
-            side={THREE.DoubleSide}
-            depthWrite={false}
-          />
-        </mesh>
-      )}
+      {/* `size` scales the unit box-edges + quad; the quad lies in the X-Z plane
+          so x/z map to the projection footprint and y to the box depth. */}
+      <group scale={[size.x, size.y, size.z]}>
+        <lineSegments renderOrder={2} userData={{ cullMask: properties.cull_mask }}>
+          <primitive object={boxEdges} attach="geometry" />
+          <lineBasicMaterial color={BOX_COLOR} transparent opacity={0.9} depthWrite={false} />
+        </lineSegments>
+        {albedo && (
+          <mesh rotation={[-Math.PI / 2, 0, 0]} renderOrder={3}>
+            <planeGeometry args={[1, 1]} />
+            <meshBasicMaterial
+              map={albedo}
+              color={color}
+              transparent
+              opacity={opacity}
+              side={THREE.DoubleSide}
+              depthWrite={false}
+            />
+          </mesh>
+        )}
+      </group>
       {children}
     </Node3D>
   );

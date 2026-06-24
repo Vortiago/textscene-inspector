@@ -15,6 +15,7 @@
 
 import type { TscnInternalResource } from '../../../parser/types';
 import { parseVector2, parseVector3 } from '../../../parser/vectors';
+import { parseColor } from '../../../utils/colorParser';
 import type { AnimationLibraryRef } from './types';
 
 export type GodotKeyframeValue = number[] | number | boolean;
@@ -270,6 +271,10 @@ function decodeValue(raw: string): GodotKeyframeValue {
   if (raw.startsWith('Vector2')) {
     const v = parseVector2(raw);
     return [v.x, v.y];
+  }
+  if (raw.startsWith('Color')) {
+    const c = parseColor(raw);
+    return [c.r, c.g, c.b, c.a];
   }
   return parseFloat(raw);
 }
