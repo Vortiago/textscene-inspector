@@ -7,9 +7,9 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
-import type { TscnNode } from '../../../../parser/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { checkResourceExists } from '../../../../linter/resourceChecker.js';
+import { findParentNode } from '../../../../linter/linterUtils.js';
 
 /**
  * Valid parent types for CollisionShape2D
@@ -22,22 +22,6 @@ const VALID_PARENT_TYPES = [
   'Area2D',
   'AnimatableBody2D', // 2D version of physics body that can be animated
 ];
-
-/**
- * Find the parent node of a given node in the scene tree
- */
-function findParentNode(nodes: TscnNode[], targetNode: TscnNode, parent: TscnNode | null = null): TscnNode | null {
-  for (const node of nodes) {
-    if (node === targetNode) {
-      return parent;
-    }
-    const foundParent = findParentNode(node.children, targetNode, node);
-    if (foundParent !== null) {
-      return foundParent;
-    }
-  }
-  return null;
-}
 
 /**
  * Validate CollisionShape2D semantic rules

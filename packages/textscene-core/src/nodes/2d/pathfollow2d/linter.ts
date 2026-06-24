@@ -7,22 +7,8 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
-import type { TscnNode } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { isValidProperties } from '../../../linter/linterUtils.js';
-
-function findParentNode(
-  nodes: TscnNode[],
-  targetNode: TscnNode,
-  parent: TscnNode | null = null
-): TscnNode | null {
-  for (const node of nodes) {
-    if (node === targetNode) return parent;
-    const found = findParentNode(node.children, targetNode, node);
-    if (found !== null) return found;
-  }
-  return null;
-}
+import { isValidProperties, findParentNode } from '../../../linter/linterUtils.js';
 
 function checkPathFollow2D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];

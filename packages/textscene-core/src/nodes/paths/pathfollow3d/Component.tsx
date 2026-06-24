@@ -17,10 +17,11 @@
  * curve's per-point tilt (roll) is not applied — sufficient for a static preview.
  */
 
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { Node3D } from '../../base/node3d/Component';
+import { GizmoLine } from '../../../r3f/components/GizmoLine';
 import { useGizmoVisible } from '../../../r3f/hooks/useGizmoVisible';
 import { useParentPath3DCurve } from '../../../r3f/contexts/Path3DCurveContext';
 import { transformFromNode3DProperties, type Vec3Tuple } from '../../../r3f/nodeTransform';
@@ -29,6 +30,13 @@ import { RotationMode, type PathFollow3DProperties } from './types';
 
 /** Godot editor path-follow handle color (orange). */
 const FOLLOW_COLOR = 0xffa733;
+
+// A small 3-axis cross (extent 0.25) at the follow point.
+const FOLLOW_CROSS_POSITIONS = new Float32Array([
+  -0.25, 0, 0, 0.25, 0, 0,
+  0, -0.25, 0, 0, 0.25, 0,
+  0, 0, -0.25, 0, 0, 0.25,
+]);
 
 interface FollowTransform {
   position: Vec3Tuple;
@@ -110,23 +118,5 @@ function computeFollowTransform(
 }
 
 function FollowCross() {
-  const geometry = useMemo(() => {
-    const e = 0.25;
-    const positions = new Float32Array([
-      -e, 0, 0, e, 0, 0,
-      0, -e, 0, 0, e, 0,
-      0, 0, -e, 0, 0, e,
-    ]);
-    const g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    return g;
-  }, []);
-  useEffect(() => () => geometry.dispose(), [geometry]);
-
-  return (
-    <lineSegments renderOrder={10}>
-      <primitive object={geometry} attach="geometry" />
-      <lineBasicMaterial color={FOLLOW_COLOR} depthWrite={false} transparent />
-    </lineSegments>
-  );
+  return <GizmoLine positions={FOLLOW_CROSS_POSITIONS} color={FOLLOW_COLOR} />;
 }

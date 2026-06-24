@@ -6,12 +6,8 @@
 
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseNode2D } from '../../base/node2d/parser';
-import { floatOr } from '../../../parser/valueParsers';
+import { floatOr, boolOr } from '../../../parser/valueParsers';
 import type { PathFollow2DProperties } from './types';
-
-function boolOrTrue(value: string | undefined): boolean {
-  return value === undefined ? true : value !== 'false';
-}
 
 export function parsePathFollow2D(
   heading: ParsedHeading,
@@ -22,9 +18,9 @@ export function parsePathFollow2D(
     ...base,
     h_offset: floatOr(properties.h_offset, 0),
     v_offset: floatOr(properties.v_offset, 0),
-    rotates: boolOrTrue(properties.rotates),
-    cubic_interp: boolOrTrue(properties.cubic_interp),
-    loop: boolOrTrue(properties.loop),
+    rotates: boolOr(properties.rotates, true),
+    cubic_interp: boolOr(properties.cubic_interp, true),
+    loop: boolOr(properties.loop, true),
   };
   if (properties.progress !== undefined) result.progress = floatOr(properties.progress, 0);
   if (properties.progress_ratio !== undefined) {

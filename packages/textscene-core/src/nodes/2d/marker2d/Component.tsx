@@ -9,10 +9,10 @@
  * group's diag(1,-1,1) conjugation leaves it unchanged.
  */
 
-import { useEffect, useMemo } from 'react';
-import * as THREE from 'three';
+import { useMemo } from 'react';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { Node2D } from '../../base/node2d/Component';
+import { GizmoLine } from '../../../r3f/components/GizmoLine';
 import { useGizmoVisible } from '../../../r3f/hooks/useGizmoVisible';
 import type { Marker2DProperties } from './types';
 
@@ -31,21 +31,10 @@ export function Marker2D({ node, children }: NodeComponentProps) {
 }
 
 function MarkerCross({ extents }: { extents: number }) {
-  const geometry = useMemo(() => {
+  // Two segments: horizontal (−e,0)→(e,0) and vertical (0,−e)→(0,e).
+  const positions = useMemo(() => {
     const e = extents > 0 ? extents : 10;
-    // Two segments: horizontal (−e,0)→(e,0) and vertical (0,−e)→(0,e).
-    const positions = new Float32Array([-e, 0, 0, e, 0, 0, 0, -e, 0, 0, e, 0]);
-    const g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    return g;
+    return new Float32Array([-e, 0, 0, e, 0, 0, 0, -e, 0, 0, e, 0]);
   }, [extents]);
-  // R3F won't auto-dispose a geometry passed via `attach`; release on rebuild.
-  useEffect(() => () => geometry.dispose(), [geometry]);
-
-  return (
-    <lineSegments renderOrder={10}>
-      <primitive object={geometry} attach="geometry" />
-      <lineBasicMaterial color={MARKER_COLOR} depthWrite={false} transparent />
-    </lineSegments>
-  );
+  return <GizmoLine positions={positions} color={MARKER_COLOR} />;
 }

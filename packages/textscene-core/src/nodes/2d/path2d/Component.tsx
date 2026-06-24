@@ -15,10 +15,10 @@
  * via script (e.g. godot-open-rpg's gamepiece.tscn), so absence is normal.
  */
 
-import { useEffect, useMemo } from 'react';
-import * as THREE from 'three';
+import { useMemo } from 'react';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { Node2D } from '../../base/node2d/Component';
+import { GizmoLine } from '../../../r3f/components/GizmoLine';
 import { useGizmoVisible } from '../../../r3f/hooks/useGizmoVisible';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { findSubResource, parseResourceReference } from '../../../resources/SubResourceResolver';
@@ -61,23 +61,15 @@ export function Path2D({ node, children }: NodeComponentProps) {
 }
 
 function PathCurveGizmo({ sampler }: { sampler: Curve2DSampler }) {
-  const geometry = useMemo(() => buildPolylineSegments(sampler.points), [sampler]);
-  // R3F won't auto-dispose a geometry passed via `attach`; release on rebuild.
-  useEffect(() => () => geometry.dispose(), [geometry]);
-
-  return (
-    <lineSegments renderOrder={10}>
-      <primitive object={geometry} attach="geometry" />
-      <lineBasicMaterial color={PATH_COLOR} depthWrite={false} transparent />
-    </lineSegments>
-  );
+  const positions = useMemo(() => buildPolylineSegments(sampler.points), [sampler]);
+  return <GizmoLine positions={positions} color={PATH_COLOR} />;
 }
 
 /**
  * Turn the flat Godot-space polyline `[x0,y0,x1,y1,…]` into LineSegments
- * position pairs `(v0,v1),(v1,v2),…`, applying the +Y-down → three Y-negation.
+ * vertex positions `(v0,v1),(v1,v2),…`, applying the +Y-down → three Y-negation.
  */
-function buildPolylineSegments(points: number[]): THREE.BufferGeometry {
+function buildPolylineSegments(points: number[]): Float32Array {
   const vertexCount = Math.floor(points.length / 2);
   const segCount = Math.max(0, vertexCount - 1);
   const positions = new Float32Array(segCount * 2 * 3);
@@ -90,7 +82,5 @@ function buildPolylineSegments(points: number[]): THREE.BufferGeometry {
     positions[o++] = -points[(i + 1) * 2 + 1]!;
     positions[o++] = 0;
   }
-  const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-  return g;
+  return positions;
 }

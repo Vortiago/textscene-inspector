@@ -7,9 +7,9 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
-import type { TscnNode } from '../../../../parser/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { checkResourceExists } from '../../../../linter/resourceChecker.js';
+import { findParentNode } from '../../../../linter/linterUtils.js';
 
 /**
  * Valid parent types for CollisionShape3D
@@ -23,22 +23,6 @@ const VALID_PARENT_TYPES = [
   'AnimatableBody3D', // Physics body that can be animated
   'VehicleBody3D', // Specialized rigid body for vehicles
 ];
-
-/**
- * Find the parent node of a given node in the scene tree
- */
-function findParentNode(nodes: TscnNode[], targetNode: TscnNode, parent: TscnNode | null = null): TscnNode | null {
-  for (const node of nodes) {
-    if (node === targetNode) {
-      return parent;
-    }
-    const foundParent = findParentNode(node.children, targetNode, node);
-    if (foundParent !== null) {
-      return foundParent;
-    }
-  }
-  return null;
-}
 
 /**
  * Validate CollisionShape3D semantic rules

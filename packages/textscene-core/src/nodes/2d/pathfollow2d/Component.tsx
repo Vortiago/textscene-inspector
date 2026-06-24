@@ -14,10 +14,11 @@
  * the follow point (ADR-0018).
  */
 
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { Node2D } from '../../base/node2d/Component';
+import { GizmoLine } from '../../../r3f/components/GizmoLine';
 import { useGizmoVisible } from '../../../r3f/hooks/useGizmoVisible';
 import { useParentPath2DCurve } from '../../../r3f/contexts/Path2DCurveContext';
 import { node2dGroupProps, node2dGroupSpread, canvasItemZ } from '../../../r3f/node2dTransform';
@@ -31,6 +32,14 @@ import type { PathFollow2DProperties } from './types';
 
 /** Godot editor path-follow handle color (orange). */
 const FOLLOW_COLOR = 0xffa733;
+
+// A small diamond marker (radius 6 px) at the follow point.
+const FOLLOW_DOT_POSITIONS = new Float32Array([
+  -6, 0, 0, 0, -6, 0,
+  0, -6, 0, 6, 0, 0,
+  6, 0, 0, 0, 6, 0,
+  0, 6, 0, -6, 0, 0,
+]);
 
 export function PathFollow2D({ node, children }: NodeComponentProps) {
   const props = node.properties as PathFollow2DProperties;
@@ -111,24 +120,5 @@ function computeFollowTransform(
 }
 
 function FollowDot() {
-  const geometry = useMemo(() => {
-    const r = 6; // small diamond marker
-    const positions = new Float32Array([
-      -r, 0, 0, 0, -r, 0,
-      0, -r, 0, r, 0, 0,
-      r, 0, 0, 0, r, 0,
-      0, r, 0, -r, 0, 0,
-    ]);
-    const g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    return g;
-  }, []);
-  useEffect(() => () => geometry.dispose(), [geometry]);
-
-  return (
-    <lineSegments renderOrder={10}>
-      <primitive object={geometry} attach="geometry" />
-      <lineBasicMaterial color={FOLLOW_COLOR} depthWrite={false} transparent />
-    </lineSegments>
-  );
+  return <GizmoLine positions={FOLLOW_DOT_POSITIONS} color={FOLLOW_COLOR} />;
 }

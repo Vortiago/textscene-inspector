@@ -6,12 +6,8 @@
 
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseNode3D } from '../../base/node3d/parser';
-import { floatOr, intOr } from '../../../parser/valueParsers';
+import { floatOr, intOr, boolOr } from '../../../parser/valueParsers';
 import { RotationMode, type PathFollow3DProperties } from './types';
-
-function boolOrTrue(value: string | undefined): boolean {
-  return value === undefined ? true : value !== 'false';
-}
 
 export function parsePathFollow3D(
   heading: ParsedHeading,
@@ -23,9 +19,9 @@ export function parsePathFollow3D(
     h_offset: floatOr(properties.h_offset, 0),
     v_offset: floatOr(properties.v_offset, 0),
     rotation_mode: intOr(properties.rotation_mode, RotationMode.XYZ),
-    cubic_interp: boolOrTrue(properties.cubic_interp),
-    loop: boolOrTrue(properties.loop),
-    tilt_enabled: boolOrTrue(properties.tilt_enabled),
+    cubic_interp: boolOr(properties.cubic_interp, true),
+    loop: boolOr(properties.loop, true),
+    tilt_enabled: boolOr(properties.tilt_enabled, true),
     use_model_front: properties.use_model_front === 'true',
   };
   if (properties.progress !== undefined) result.progress = floatOr(properties.progress, 0);
