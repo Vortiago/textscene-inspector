@@ -13,6 +13,181 @@ export interface Fixture {
 
 export const fixtures: Fixture[] = [
   {
+    "name": "Child_animated_player",
+    "file": "child_animated_player.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Nested Leaf Orange Sphere",
+    "file": "nested-leaf-orange-sphere.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Nested Middle Blue Box",
+    "file": "nested-middle-blue-box.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Nested Top Green Cylinder",
+    "file": "nested-top-green-cylinder.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Test Missing External Scene",
+    "file": "test-missing-external-scene.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Test Missing Material",
+    "file": "test-missing-material.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Test Missing Texture",
+    "file": "test-missing-texture.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Test Multiple Meshes Shared Texture",
+    "file": "test-multiple-meshes-shared-texture.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Test Nested Leaf",
+    "file": "test-nested-leaf.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Test Nested Middle",
+    "file": "test-nested-middle.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Test Nested Top",
+    "file": "test-nested-top.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Animatedsprite2d Atlas",
+    "file": "unit-animatedsprite2d-atlas.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Animatedsprite2d Tres",
+    "file": "unit-animatedsprite2d-tres.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Animatedsprite2d",
+    "file": "unit-animatedsprite2d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Animation 3d Transform Tracks",
+    "file": "unit-animation-3d-transform-tracks.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Animation Player 2d",
+    "file": "unit-animation-player-2d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Animation Player Decal",
+    "file": "unit-animation-player-decal.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Animation Player Libraries",
+    "file": "unit-animation-player-libraries.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Animation Player Sprite Frame",
+    "file": "unit-animation-player-sprite-frame.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Animation Player",
+    "file": "unit-animation-player.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Animationtree Instanced Anim Player",
+    "file": "unit-animationtree-instanced-anim-player.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Decal",
+    "file": "unit-decal.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Grid Map",
+    "file": "unit-grid-map.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Instance Child",
+    "file": "unit-instance-child.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Label3d",
+    "file": "unit-label3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Marker 3d",
+    "file": "unit-marker-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Multi Camera",
+    "file": "unit-multi-camera.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Pathfollow 3d",
+    "file": "unit-pathfollow-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Photo Frame Base",
+    "file": "unit-photo-frame-base.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Sprite3d",
+    "file": "unit-sprite3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Surface Material Override",
+    "file": "unit-surface-material-override.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Unsupported Nodes",
+    "file": "unit-unsupported-nodes.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Uv Scale",
+    "file": "unit-uv-scale.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "World Environment Basic",
+    "file": "unit-world-environment-basic.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "World Environment No Fog",
+    "file": "unit-world-environment-no-fog.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Invalid Cast Shadow",
     "file": "edge-invalid-cast-shadow.tscn",
     "category": "Edge Cases"
@@ -181,171 +356,6 @@ export const fixtures: Fixture[] = [
     "name": "Plane Orientations",
     "file": "integration-plane-orientations.tscn",
     "category": "Integration - Multi-Node"
-  },
-  {
-    "name": "Nested Leaf Orange Sphere",
-    "file": "nested-leaf-orange-sphere.tscn",
-    "category": "Other"
-  },
-  {
-    "name": "Nested Middle Blue Box",
-    "file": "nested-middle-blue-box.tscn",
-    "category": "Other"
-  },
-  {
-    "name": "Nested Top Green Cylinder",
-    "file": "nested-top-green-cylinder.tscn",
-    "category": "Other"
-  },
-  {
-    "name": "Test Missing External Scene",
-    "file": "test-missing-external-scene.tscn",
-    "category": "Other"
-  },
-  {
-    "name": "Test Missing Material",
-    "file": "test-missing-material.tscn",
-    "category": "Other"
-  },
-  {
-    "name": "Test Missing Texture",
-    "file": "test-missing-texture.tscn",
-    "category": "Other"
-  },
-  {
-    "name": "Test Multiple Meshes Shared Texture",
-    "file": "test-multiple-meshes-shared-texture.tscn",
-    "category": "Other"
-  },
-  {
-    "name": "Test Nested Leaf",
-    "file": "test-nested-leaf.tscn",
-    "category": "Other"
-  },
-  {
-    "name": "Test Nested Middle",
-    "file": "test-nested-middle.tscn",
-    "category": "Other"
-  },
-  {
-    "name": "Test Nested Top",
-    "file": "test-nested-top.tscn",
-    "category": "Other"
-  },
-  {
-    "name": "Animatedsprite2d Atlas",
-    "file": "unit-animatedsprite2d-atlas.tscn",
-    "category": "Other"
-  },
-  {
-    "name": "Animatedsprite2d Tres",
-    "file": "unit-animatedsprite2d-tres.tscn",
-    "category": "Other"
-  },
-  {
-    "name": "Animatedsprite2d",
-    "file": "unit-animatedsprite2d.tscn",
-    "category": "Other"
-  },
-  {
-    "name": "Animation 3d Transform Tracks",
-    "file": "unit-animation-3d-transform-tracks.tscn",
-    "category": "Other"
-  },
-  {
-    "name": "Animation Player 2d",
-    "file": "unit-animation-player-2d.tscn",
-    "category": "Other"
-  },
-  {
-    "name": "Animation Player Decal",
-    "file": "unit-animation-player-decal.tscn",
-    "category": "Other"
-  },
-  {
-    "name": "Animation Player Libraries",
-    "file": "unit-animation-player-libraries.tscn",
-    "category": "Other"
-  },
-  {
-    "name": "Animation Player Sprite Frame",
-    "file": "unit-animation-player-sprite-frame.tscn",
-    "category": "Other"
-  },
-  {
-    "name": "Animation Player",
-    "file": "unit-animation-player.tscn",
-    "category": "Other"
-  },
-  {
-    "name": "Decal",
-    "file": "unit-decal.tscn",
-    "category": "Other"
-  },
-  {
-    "name": "Grid Map",
-    "file": "unit-grid-map.tscn",
-    "category": "Other"
-  },
-  {
-    "name": "Instance Child",
-    "file": "unit-instance-child.tscn",
-    "category": "Other"
-  },
-  {
-    "name": "Label3d",
-    "file": "unit-label3d.tscn",
-    "category": "Other"
-  },
-  {
-    "name": "Marker 3d",
-    "file": "unit-marker-3d.tscn",
-    "category": "Other"
-  },
-  {
-    "name": "Multi Camera",
-    "file": "unit-multi-camera.tscn",
-    "category": "Other"
-  },
-  {
-    "name": "Pathfollow 3d",
-    "file": "unit-pathfollow-3d.tscn",
-    "category": "Other"
-  },
-  {
-    "name": "Photo Frame Base",
-    "file": "unit-photo-frame-base.tscn",
-    "category": "Other"
-  },
-  {
-    "name": "Sprite3d",
-    "file": "unit-sprite3d.tscn",
-    "category": "Other"
-  },
-  {
-    "name": "Surface Material Override",
-    "file": "unit-surface-material-override.tscn",
-    "category": "Other"
-  },
-  {
-    "name": "Unsupported Nodes",
-    "file": "unit-unsupported-nodes.tscn",
-    "category": "Other"
-  },
-  {
-    "name": "Uv Scale",
-    "file": "unit-uv-scale.tscn",
-    "category": "Other"
-  },
-  {
-    "name": "World Environment Basic",
-    "file": "unit-world-environment-basic.tscn",
-    "category": "Other"
-  },
-  {
-    "name": "World Environment No Fog",
-    "file": "unit-world-environment-no-fog.tscn",
-    "category": "Other"
   },
   {
     "name": "Arraymesh",

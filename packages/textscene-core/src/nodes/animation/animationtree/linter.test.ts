@@ -613,6 +613,120 @@ anim_player = NodePath("NonExistentPlayer")
       });
     });
 
+    // Regression: the anim_player validator matched `path.endsWith(node.name)`,
+    // so `../Player/AnimationPlayer` grabbed the FIRST node named "Player"
+    // (a sibling CharacterBody3D) and reported its type. The real AnimationPlayer
+    // lives inside an instanced sub-scene the linter cannot see. A relative ("..")
+    // segment or an instance ancestor means the target may resolve into sub-scene
+    // internals, so wrong-type / not-found assertions must be suppressed.
+    describe('anim_player instanced sub-scene resolution', () => {
+      it('should not false-flag wrong-type when anim_player traverses ".." into an instanced sibling', () => {
+        // Witnessed form: scenes/demos/3d/platformer/player/player.tscn — a root
+        // "Player" (CharacterBody3D) alongside an instanced child also named
+        // "Player" whose AnimationPlayer the static linter never sees.
+        const content = `[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://character.tscn" id="1_char"]
+
+[sub_resource type="AnimationNodeStateMachine" id="StateMachine_root"]
+
+[node name="Player" type="CharacterBody3D"]
+
+[node name="Player" parent="." instance=ExtResource("1_char")]
+
+[node name="AnimationTree" type="AnimationTree" parent="."]
+tree_root = SubResource("StateMachine_root")
+anim_player = NodePath("../Player/AnimationPlayer")
+active = true
+`;
+
+        const diagnostics = linter.lint(content);
+        const wrongType = diagnostics.find(d => d.ruleName === 'animationtree-anim-player-wrong-type');
+        const notFound = diagnostics.find(d => d.ruleName === 'animationtree-anim-player-not-found');
+        expect(wrongType).toBeUndefined();
+        expect(notFound).toBeUndefined();
+      });
+
+      it('should suppress anim_player checks when the AnimationTree itself lives under an instanced subtree', () => {
+        const content = `[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://rig.tscn" id="1_rig"]
+
+[sub_resource type="AnimationNodeStateMachine" id="StateMachine_root"]
+
+[node name="World" type="Node3D"]
+
+[node name="Rig" parent="." instance=ExtResource("1_rig")]
+
+[node name="AnimationTree" type="AnimationTree" parent="Rig"]
+tree_root = SubResource("StateMachine_root")
+anim_player = NodePath("AnimationPlayer")
+active = true
+`;
+
+        const diagnostics = linter.lint(content);
+        const wrongType = diagnostics.find(d => d.ruleName === 'animationtree-anim-player-wrong-type');
+        const notFound = diagnostics.find(d => d.ruleName === 'animationtree-anim-player-not-found');
+        expect(wrongType).toBeUndefined();
+        expect(notFound).toBeUndefined();
+      });
+
+      it('should still flag a purely-local anim_player path that resolves to a non-AnimationPlayer node', () => {
+        // Guard against over-suppression: a local, non-relative path under
+        // authored root nodes must still be validated by node type.
+        const content = `[gd_scene format=3]
+
+[sub_resource type="AnimationNodeStateMachine" id="StateMachine_root"]
+
+[node name="Root" type="Node3D"]
+
+[node name="NotAPlayer" type="Label3D" parent="."]
+
+[node name="AnimTree" type="AnimationTree" parent="."]
+tree_root = SubResource("StateMachine_root")
+anim_player = NodePath("NotAPlayer")
+`;
+
+        const diagnostics = linter.lint(content);
+        const wrongType = diagnostics.find(d => d.ruleName === 'animationtree-anim-player-wrong-type');
+        expect(wrongType).toBeDefined();
+        expect(wrongType?.message).toContain('Label3D');
+      });
+
+      it('should stay silent when the final path segment is ambiguous (duplicate node names)', () => {
+        // Godot lets node names repeat across different parents. The static
+        // linter resolves only the final segment by name, so when more than one
+        // node matches it cannot tell which the path means — it must NOT guess
+        // (the old code grabbed the first match in tree order and could cite the
+        // wrong node). Here two "Player" nodes exist; one is a valid
+        // AnimationPlayer, so the path is plausibly correct and must not warn.
+        const content = `[gd_scene format=3]
+
+[sub_resource type="AnimationNodeStateMachine" id="StateMachine_root"]
+
+[node name="Root" type="Node3D"]
+
+[node name="GroupA" type="Node3D" parent="."]
+
+[node name="Player" type="Label3D" parent="GroupA"]
+
+[node name="GroupB" type="Node3D" parent="."]
+
+[node name="Player" type="AnimationPlayer" parent="GroupB"]
+
+[node name="AnimTree" type="AnimationTree" parent="."]
+tree_root = SubResource("StateMachine_root")
+anim_player = NodePath("Player")
+`;
+
+        const diagnostics = linter.lint(content);
+        const wrongType = diagnostics.find(d => d.ruleName === 'animationtree-anim-player-wrong-type');
+        const notFound = diagnostics.find(d => d.ruleName === 'animationtree-anim-player-not-found');
+        expect(wrongType).toBeUndefined();
+        expect(notFound).toBeUndefined();
+      });
+    });
+
     describe('active property warnings', () => {
       it('should warn when active but tree_root not set', () => {
         const content = `[gd_scene format=3]

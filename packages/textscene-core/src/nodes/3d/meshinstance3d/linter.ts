@@ -8,9 +8,9 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import type { MeshInstance3DProperties } from './types.js';
-import type { TscnNode } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { checkResourceExists } from '../../../linter/resourceChecker.js';
+import { extractNodePath, resolveNodePathTarget } from '../../../linter/linterUtils.js';
 
 /**
  * Threshold for warning about unusually high surface indices.
@@ -23,41 +23,6 @@ const SURFACE_INDEX_WARNING_THRESHOLD = 32;
  */
 function isMeshInstance3DProperties(props: unknown): props is MeshInstance3DProperties {
   return typeof props === 'object' && props !== null;
-}
-
-/**
- * Recursively find a node by name in the scene tree
- */
-function findNodeByName(nodes: TscnNode[], name: string): TscnNode | null {
-  for (const node of nodes) {
-    if (node.name === name) {
-      return node;
-    }
-    const found = findNodeByName(node.children, name);
-    if (found) {
-      return found;
-    }
-  }
-  return null;
-}
-
-/**
- * True when `target` has an ancestor that is an instanced sub-scene (`instance=`).
- * Such a node's NodePath references can resolve into sub-scene internals the
- * static linter never sees, so not-found assertions are unsafe. The
- * "an ancestor was an instance" flag is carried down the walk, so the answer is
- * found without materializing any ancestor arrays.
- */
-function isUnderInstance(roots: TscnNode[], target: TscnNode, ancestorIsInstance = false): boolean {
-  for (const node of roots) {
-    if (node === target) {
-      return ancestorIsInstance;
-    }
-    if (isUnderInstance(node.children, target, ancestorIsInstance || Boolean(node.instance))) {
-      return true;
-    }
-  }
-  return false;
 }
 
 /**
@@ -182,51 +147,30 @@ function checkMeshInstance3D(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // Check if skeleton NodePath references an existing node
+  // skeleton must reference an existing Skeleton3D node; empty/non-NodePath
+  // means "no skeleton". resolveNodePathTarget suppresses escapes/ambiguous
+  // paths (see its JSDoc).
   if (rawProps.skeleton) {
-    // Extract NodePath value
-    const nodePathMatch = rawProps.skeleton.match(/^NodePath\("([^"]*)"\)$/);
-    if (nodePathMatch && nodePathMatch[1]) {
-      const skeletonPath = nodePathMatch[1];
+    const skeletonPath = extractNodePath(rawProps.skeleton);
+    if (skeletonPath) {
+      const target = resolveNodePathTarget(scene.nodes, node, skeletonPath);
 
-      // Empty path is valid (means no skeleton)
-      if (skeletonPath !== '') {
-        // The skeleton ref can resolve into instanced sub-scene/GLB internals the
-        // static linter never sees, producing false-positive not-found errors:
-        //   (a) any relative ("..") segment escapes the authored root scope, and
-        //   (b) a MeshInstance3D parented under an instance subtree references
-        //       nodes that live inside that sub-scene.
-        // In either case we cannot assert not-found, so we keep strict checking
-        // only for purely-local, non-relative paths under authored root nodes.
-        const pathParts = skeletonPath.split('/');
-        const escapesScope =
-          pathParts.some(part => part === '..') || isUnderInstance(scene.nodes, node);
-
-        if (!escapesScope) {
-          // Extract the node name from the path ("NodeName" or "Parent/NodeName")
-          const nodeName = pathParts[pathParts.length - 1];
-
-          // Find the skeleton node in the scene tree
-          const skeletonNode = nodeName ? findNodeByName(scene.nodes, nodeName) : null;
-
-          if (!skeletonNode) {
-            diagnostics.push({
-              severity: 'error',
-              message: `Skeleton node not found: NodePath("${skeletonPath}")`,
-              nodeName: node.name,
-              nodeType: node.type,
-              ruleName: 'valid-meshinstance3d-skeleton',
-            });
-          } else if (skeletonNode.type !== 'Skeleton3D') {
-            diagnostics.push({
-              severity: 'error',
-              message: `Skeleton property points to a ${skeletonNode.type} node, but must point to a Skeleton3D node`,
-              nodeName: node.name,
-              nodeType: node.type,
-              ruleName: 'valid-meshinstance3d-skeleton',
-            });
-          }
-        }
+      if (target.status === 'missing') {
+        diagnostics.push({
+          severity: 'error',
+          message: `Skeleton node not found: NodePath("${skeletonPath}")`,
+          nodeName: node.name,
+          nodeType: node.type,
+          ruleName: 'valid-meshinstance3d-skeleton',
+        });
+      } else if (target.status === 'found' && target.node.type !== 'Skeleton3D') {
+        diagnostics.push({
+          severity: 'error',
+          message: `Skeleton property points to a ${target.node.type} node, but must point to a Skeleton3D node`,
+          nodeName: node.name,
+          nodeType: node.type,
+          ruleName: 'valid-meshinstance3d-skeleton',
+        });
       }
     }
   }
