@@ -21,7 +21,7 @@ export function parseHeading(line: string): ParsedHeading | null {
   const attributesStr = content.slice(spaceIndex + 1);
 
   const attributes: Record<string, string> = {};
-  const attrRegex = /(\w+)=("(?:[^"\\]|\\.)*"|[^\s]+)/g;
+  const attrRegex = /(\w+)=("(?:[^"\\]|\\.)*"|PackedStringArray\([^)]*\)|\[[^\]]*\]|[^\s]+)/g;
   let match: RegExpExecArray | null;
 
   while ((match = attrRegex.exec(attributesStr)) !== null) {
