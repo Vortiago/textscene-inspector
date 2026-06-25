@@ -169,7 +169,7 @@ The ref-backed registry through which the active **AnimationPlayer** pushes samp
 _Avoid_: "AnimatedFrame registry" (the generalised name is **AnimatedValue**); "mixer"/"central value context" for this path (it is a narrow per-target push, not a tree-wide per-frame recompute — ADR-0011).
 
 **Animation transport**:
-The play/pause/scrub state (`AnimationTransportContext`) and its dock-tab UI, bound to the **AnimationPlayer**, **GLB animation driver**, or **AnimatedSprite2D** **currently selected in the scene tree** — selection-driven, one driver at a time, mirroring the Godot editor's Animation panel. Drives the selected node's `THREE.AnimationMixer` (or, for **AnimatedSprite2D**, advances its displayed frame via `frameAtTime` — no mixer; ADR-0015); starts STOPPED (authored pose/frame preserved), play is user-initiated. The tab is shown only while a driver is selected; deselecting (or selecting a different node) stops playback and restores the authored pose.
+The play/pause/scrub state (`AnimationTransportContext`) and its dock-tab UI, bound to the **AnimationPlayer**, **GLB animation driver**, **AnimatedSprite2D**, or **AnimationTree driver** **currently selected in the scene tree** — selection-driven, one driver at a time, mirroring the Godot editor's Animation panel. Drives the selected node's `THREE.AnimationMixer` (or, for **AnimatedSprite2D**, advances its displayed frame via `frameAtTime` — no mixer; ADR-0015); starts STOPPED (authored pose/frame preserved), play is user-initiated. The tab is shown only while a driver is selected; deselecting (or selecting a different node) stops playback and restores the authored pose.
 _Avoid_: "scene-level transport" (it follows selection, not the whole scene); "timeline" / "player controls" for the whole transport (reserve "timeline"/"scrubber" for the seek widget).
 
 **RESET animation**:
@@ -188,6 +188,14 @@ _Avoid_: "GodotAnimation" for these (reserve that for the SubResource form); "im
 A **GLBSceneRoot** acting as an **animation driver**. Godot's glTF importer exposes a model's clips on an AnimationPlayer node *inside* the imported hierarchy, so the tree synthesises a tree-only `GLBAnimationPlayer` row (a selectable node with no parser and no render component); when **that row** is the selected node, the GLBSceneRoot component registers the GLB's **GLB-embedded clip**s with the **Animation transport** and runs a `THREE.AnimationMixer` rooted on the loaded GLB object itself (no **Animation root**/`root_node`; the clips are already bound to the GLB's own node names). The GLB counterpart to an **AnimationPlayer**: same selection-driven transport and shared `usePlaybackLoop`, different clip source and mixer rooting (ADR-0014).
 _Avoid_: "GodotAnimation" for these clips (they are ready-made glTF clips — see **GLB-embedded clip**); treating the synthesised `GLBAnimationPlayer` row as a real **AnimationPlayer** Node, or as the thing that renders (it is a tree-only selection target — the GLBSceneRoot component does both the driving and the rendering); saying the GLB *root* row activates the transport (its synthesised `GLBAnimationPlayer` child does).
 
+**AnimationTree driver**:
+An **AnimationTree** acting as a transport driver (ADR-0019). It owns no clips — it resolves its `tree_root` into an `AnimNode` graph, evaluates that graph at the *authored* `parameters/*` state into a **blend program** (`{clip, weight, timeScale}[]`), resolves its `anim_player` `NodePath` to a driver in the **AnimationDriverRegistry**, and drives that driver's object with weighted actions. Processes only when `active = true` (Godot parity — its game script flips `active` at runtime; a static previewer evaluates the saved state) AND it is the selected node. Has **no clip picker** (Godot plays it from parameter state), so it registers a single read-only transport entry (the dominant clip). The full runtime blend is approximated: per-bone Blend2 `filter`s aren't modelled and a StateMachine's current state is the authored `current_state` else the `Start`-transition target.
+_Avoid_: calling it an **AnimationPlayer** (it drives one, via `anim_player`); implying it has a selectable clip list.
+
+**AnimationDriverRegistry**:
+The `nodePath → { object, clips }` lookup (`AnimationDriverContext`) that an **AnimationPlayer** or **GLB animation driver** publishes into whenever its clips are loaded — *availability*, decoupled from the selection-driven transport. The **AnimationTree driver** consumes it to find the object to root its blended mixer on and the clips to play, unifying the two clip sources behind one path lookup. Two contexts: a STABLE register function (so a publishing driver's effect doesn't re-fire) and a REACTIVE drivers map (so a consumer re-renders when an async-loaded driver appears).
+_Avoid_: conflating it with the **Animation transport** (the registry is about which driver owns which clips; the transport is about play/pause for the selected one).
+
 ## Relationships
 
 - A **SceneGraph** holds many **Node**s; the active scene's root Nodes feed the **NodeDispatcher** (3D) or, in 2D **viewport mode**, the **ControlDispatcher**.
@@ -197,6 +205,7 @@ _Avoid_: "GodotAnimation" for these clips (they are ready-made glTF clips — se
 - A unified **vertical slice** exposes its behavior through three **slice entry points**, one per registry domain.
 - **Label3D** (3D, billboarded text in-canvas) is a different subsystem from **Label** / **RichTextLabel** (2D DOM text in the **Control overlay**).
 - An **AnimationPlayer** references one **Animation library** via `libraries/`; the library's **GodotAnimation**s carry **Track**s that the **Animation transport** plays by building a `THREE.AnimationClip` and driving a `THREE.AnimationMixer` rooted at the **Animation root** (ADR-0011).
+- An **AnimationTree driver** owns no clips: it evaluates its `tree_root` at the authored `parameters/*` into a **blend program** and drives the **AnimationPlayer** or **GLB animation driver** its `anim_player` resolves to, found via the **AnimationDriverRegistry** (ADR-0019).
 
 ## Example dialogue
 

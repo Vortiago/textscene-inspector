@@ -97,6 +97,25 @@ describe('parseAnimationTree properties', () => {
     expect(props.root_motion_local).toBe(true);
   });
 
+  it('collects parameters/* into a parameters map keyed without the prefix', () => {
+    const props = parseAnimationTree(HEADING, {
+      'parameters/gun/blend_amount': '0.0',
+      'parameters/scale/scale': '1.5',
+      'parameters/state/current': '&"walk"',
+      active: 'true',
+    });
+    expect(props.parameters).toEqual({
+      'gun/blend_amount': '0.0',
+      'scale/scale': '1.5',
+      'state/current': '&"walk"',
+    });
+  });
+
+  it('defaults parameters to an empty map when none are authored', () => {
+    const props = parseAnimationTree(HEADING, {});
+    expect(props.parameters).toEqual({});
+  });
+
   it('inherits Node3D transform from base parser', () => {
     const props = parseAnimationTree(HEADING, {
       transform: 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 0, 0)',

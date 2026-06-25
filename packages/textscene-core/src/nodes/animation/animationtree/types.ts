@@ -32,6 +32,13 @@ export interface AnimationTreeProperties extends Node3DProperties {
   /** SubResource/ExtResource reference to the animation tree root node. */
   tree_root?: string;
 
+  /**
+   * Authored blend-tree / state-machine state, keyed WITHOUT the `parameters/`
+   * prefix (e.g. `gun/blend_amount` → `0.0`). A static previewer has no game
+   * script driving these, so the tree evaluates against this saved state.
+   */
+  parameters: Record<string, string>;
+
   /** NodePath to the AnimationPlayer that provides animations. */
   anim_player: string;
 

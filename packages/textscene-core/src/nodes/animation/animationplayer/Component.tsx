@@ -21,12 +21,14 @@ import {
   Quaternion,
   Vector3,
   type AnimationAction,
+  type AnimationClip,
   type EulerOrder,
 } from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useAnimationTransport, type PlayState } from '../../../r3f/contexts/AnimationTransportContext';
+import { useRegisterDriver } from '../../../r3f/contexts/AnimationDriverContext';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useOptionalSelection } from '../../../r3f/contexts/SelectionContext';
 import { usePlaybackLoop } from '../../../r3f/animation/usePlaybackLoop';
@@ -100,6 +102,7 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
   const snapshotRef = useRef<Snapshot[]>([]);
   const loopModesRef = useRef<Map<string, number>>(new Map());
 
+  const registerDriver = useRegisterDriver();
   useEffect(() => {
     const group = groupRef.current;
     if (!group || animations.length === 0) return;
@@ -109,11 +112,20 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
     const mixer = new AnimationMixer(root);
     const actions = new Map<string, AnimationAction>();
     const loopModes = new Map<string, number>();
+    const clips: AnimationClip[] = [];
     for (const animation of animations) {
-      const action = mixer.clipAction(buildClip(animation));
+      const clip = buildClip(animation);
+      clips.push(clip);
+      const action = mixer.clipAction(clip);
       actions.set(animation.name, action);
       loopModes.set(animation.name, animation.loopMode);
     }
+
+    // Publish into the AnimationDriverRegistry (keyed by this player's node
+    // path) so an AnimationTree whose `anim_player` resolves here can root a
+    // blended mixer on the same animation root and play these clips (ADR-0019).
+    const unregister =
+      nodePath !== null ? registerDriver(nodePath, { object: root, clips }) : undefined;
 
     // Godot composes Euler rotations in YXZ order. Reorder each rotation
     // target (orientation-preserving) so per-component `.rotation[x|y|z]`
@@ -127,11 +139,12 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
     snapshotRef.current = snapshotTargets(root, animations);
 
     return () => {
+      unregister?.();
       mixer.stopAllAction();
       mixerRef.current = null;
       actionsRef.current = new Map();
     };
-  }, [animations, properties.root_node]);
+  }, [animations, properties.root_node, nodePath, registerDriver]);
 
   // An inactive player is forced to the 'stopped' state so it never touches
   // the scene (and restores the authored pose when it loses selection).

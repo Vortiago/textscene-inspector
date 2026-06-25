@@ -37,9 +37,11 @@ import { useGlbOverrides } from './GlbOverridesContext';
 import { applyGlbNodeOverrides } from './glbNodeOverrides';
 import { flattenGlbObjects, GLB_ANIMATION_PLAYER_NAME } from './glbHierarchy';
 import { useAnimationTransport, type PlayState } from '../../contexts/AnimationTransportContext';
+import { useRegisterDriver } from '../../contexts/AnimationDriverContext';
 import { useNodePath } from '../../contexts/NodePathContext';
 import { useOptionalSelection } from '../../contexts/SelectionContext';
 import { usePlaybackLoop } from '../../animation/usePlaybackLoop';
+import { snapshotSubtree, restoreSnapshot } from '../../animation/poseSnapshot';
 import { joinPath } from '../../../utils/nodePath';
 
 /**
@@ -55,12 +57,6 @@ interface GLBSceneRootProperties {
   glbPath: string;
 }
 
-interface Snapshot {
-  object: THREE.Object3D;
-  position: THREE.Vector3;
-  quaternion: THREE.Quaternion;
-  scale: THREE.Vector3;
-}
 
 export function GLBSceneRoot({ node }: NodeComponentProps) {
   // The synthesised node's `properties` slot is a Record<string, unknown>
@@ -128,6 +124,16 @@ export function GLBSceneRoot({ node }: NodeComponentProps) {
     };
   }, [object]);
 
+  // Publish this GLB's clips into the AnimationDriverRegistry (keyed by the
+  // synthesised AnimationPlayer node path) whenever they're loaded — regardless
+  // of selection — so an AnimationTree whose `anim_player` resolves here can
+  // root a blended mixer on the GLB object and play its clips (ADR-0019).
+  const registerDriver = useRegisterDriver();
+  useEffect(() => {
+    if (!object || clips.length === 0 || animationPlayerPath === null) return;
+    return registerDriver(animationPlayerPath, { object, clips });
+  }, [object, clips, animationPlayerPath, registerDriver]);
+
   // Register this driver's clips with the transport while it is selected —
   // even with zero clips, so the Animation tab still appears (and reads
   // "no animations"). Registration is the tab's source of truth.
@@ -147,7 +153,7 @@ export function GLBSceneRoot({ node }: NodeComponentProps) {
   // could observe the stop.
   const mixerRef = useRef<THREE.AnimationMixer | null>(null);
   const actionsRef = useRef<Map<string, THREE.AnimationAction>>(new Map());
-  const snapshotRef = useRef<Snapshot[]>([]);
+  const snapshotRef = useRef<ReturnType<typeof snapshotSubtree>>([]);
   useEffect(() => {
     if (!isActive || !object || clips.length === 0) return;
     const mixer = new THREE.AnimationMixer(object);
@@ -193,28 +199,4 @@ export function GLBSceneRoot({ node }: NodeComponentProps) {
   // three.js's "Object3D can only have one parent" invariant, so we
   // mount the returned ref directly via <primitive>.
   return <primitive object={object} />;
-}
-
-/** Capture every descendant's local transform so stop can restore the
- *  authored (bind) pose — skeletal clips touch arbitrary bones, so we
- *  snapshot the whole subtree rather than a track-derived target set. */
-function snapshotSubtree(root: THREE.Object3D): Snapshot[] {
-  const snapshots: Snapshot[] = [];
-  root.traverse((object) => {
-    snapshots.push({
-      object,
-      position: object.position.clone(),
-      quaternion: object.quaternion.clone(),
-      scale: object.scale.clone(),
-    });
-  });
-  return snapshots;
-}
-
-function restoreSnapshot(snapshots: Snapshot[]): void {
-  for (const snap of snapshots) {
-    snap.object.position.copy(snap.position);
-    snap.object.quaternion.copy(snap.quaternion);
-    snap.object.scale.copy(snap.scale);
-  }
 }

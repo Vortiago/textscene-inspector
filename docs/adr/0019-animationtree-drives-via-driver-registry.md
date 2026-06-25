@@ -1,0 +1,27 @@
+# AnimationTree drives a resolved driver, evaluated from its authored parameter state
+
+A Godot **AnimationTree** does not own clips — it processes a `tree_root` (an `AnimationNodeBlendTree` / `AnimationNodeStateMachine` graph of `AnimationNode*` sub-resources) and drives the clips of the **AnimationPlayer** named by its `anim_player` `NodePath`. It only processes when `active = true`; at runtime a game script sets `active` and writes the `parameters/*` that pick blend amounts and current states.
+
+A static previewer has neither runtime nor script. So the AnimationTree slice:
+
+1. **resolves** `tree_root` into a typed `AnimNode` graph (`treeResources.ts`) — THREE-free / React-free, like the AnimationPlayer's `resolveAnimations`;
+2. **evaluates** that graph at the *authored* `parameters/*` saved in the `.tscn` (`evaluateTree.ts`) into a **blend program** — a `{clip, weight, timeScale}[]` — exactly what the Godot editor's Animation panel shows for the saved state;
+3. **resolves** `anim_player` to a node path (`resolveAnimPlayer.ts`) and looks that path up in a new **AnimationDriverRegistry** to find the object to root a `THREE.AnimationMixer` on and the clips to play, then drives it with **weighted actions**.
+
+The registry is the key seam: a **GLB animation driver** (ADR-0014) and an **AnimationPlayer** (ADR-0011) each publish `{ object, clips }` keyed by their node path whenever their clips are available — independent of selection. The AnimationTree consumes that lookup, so the two clip sources (ready-made glTF clips vs. clips built from text Animation **Track**s) are unified behind one path → driver indirection, and the AnimationTree need not know which kind it drives.
+
+The AnimationTree is a **transport driver** like the others: selection-driven (ADR-0012), it registers with the **Animation transport** while selected so the tab appears, starts STOPPED, and restores the authored pose on stop/deselect. But it gates additionally on `active` (Godot parity) and, because Godot has **no clip picker** for an AnimationTree, registers a single read-only entry (the dominant clip) rather than a selectable list — playback comes from the parameter state, not a dropdown choice.
+
+## Considered options
+
+- **Honour `active` strictly, even though the motivating platformer authors `active = false`.** Chosen. The platformer's tree is inert in the previewer (correct — its script flips `active` at runtime); a dedicated `unit-animationtree-blend.tscn` fixture authored `active = true` demonstrates playback. Rejected the alternative "treat a selected AnimationTree as active": it would animate the platformer out-of-the-box but diverge from Godot's runtime gating and mislead about what `active` means.
+- **Resolve the driver object by walking the THREE scene graph (as the AnimationPlayer resolves its Animation root).** Rejected: a GLB's clips live on the loaded object's `.animations` (no THREE object named `AnimationPlayer` exists for the synthesised row), while a text player's clips are built from Track data and bound to a resolved root — the two can't be found by one traversal. A registry each driver publishes into resolves both uniformly and reactively (the consumer re-renders when an async-loaded GLB registers).
+- **Extend the single-clip `usePlaybackLoop` to weighted multi-action playback.** Rejected for this slice: the blend program plays several actions at once with per-action weight + time scale, a different state machine than the single selected-clip loop. The AnimationTree owns its own frame loop; sharing can come later if a second weighted driver appears (rule of three).
+- **Full per-bone Blend2 `filter`s, `AnimationNodeTransition` input selection, and runtime StateMachine `travel`.** Out of scope (the chosen slice is BlendTree + StateMachine). Filters are recorded but not modelled per-bone (weights are applied per clip); a StateMachine's current state is the authored, node-name-scoped `parameters/<name>/current_state` else the `Start`-transition target; `AnimationNodeTransition` (and other unmodelled multi-input nodes) degrade to a passthrough of input 0 rather than honouring its selected input — fine for the platformer (no Transition) and harmless for the skeleton demo (its Transition selects index 0), but a known gap for a Transition authored to a non-zero input. This is the static-preview approximation, not the full runtime blend.
+
+## Consequences
+
+- **One mixer at a time, still.** Only the selected node drives; when the AnimationTree is selected the target driver is not, so the target's own mixer is idle and the tree's mixer (built on the same object) is the sole driver — no double-driving. Pose restoration snapshots the whole driven subtree (blends touch arbitrary bones), as the GLB driver does.
+- **Drivers publish availability, not playback.** Registration into the AnimationDriverRegistry is decoupled from the transport: a driver registers its `{object, clips}` whenever loaded so an AnimationTree can find it even while the driver itself is unselected. The register function is stable and the drivers map is reactive (two contexts) so a publishing driver's effect never re-fires on map changes.
+- **No new linter surface.** `parameters/*` and the `AnimationNode*` sub-resources are read at render time; the AnimationTree's existing strict validators are unchanged.
+- Playback is non-deterministic over time, so the fixture stays out of the visual-regression manifest; the default stopped render stays byte-stable.

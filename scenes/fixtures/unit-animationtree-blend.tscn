@@ -1,0 +1,97 @@
+[gd_scene load_steps=9 format=3 uid="uid://unit_animationtree_blend"]
+
+; AnimationTree playback fixture: an `active = true` tree whose
+; `tree_root` is an AnimationNodeBlendTree blending two AnimationPlayer clips
+; (spin + bob) at a 50/50 `blend_amount`. Selecting the AnimationTree row and
+; pressing play drives the Mesh from the blended program — Godot parity for an
+; AnimationTree honouring `active` and playing from its authored parameter
+; state (no clip picker). The platformer's own tree is authored `active = false`
+; (its game script flips it at runtime), so this fixture demonstrates playback.
+
+[sub_resource type="BoxMesh" id="BoxMesh_box"]
+
+[sub_resource type="Animation" id="Animation_spin"]
+resource_name = "spin"
+length = 2.0
+loop_mode = 1
+step = 0.1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Mesh:rotation")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 1, 2),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [Vector3(0, 0, 0), Vector3(0, 3.14159, 0), Vector3(0, 6.28318, 0)]
+}
+
+[sub_resource type="Animation" id="Animation_bob"]
+resource_name = "bob"
+length = 1.0
+loop_mode = 1
+step = 0.1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Mesh:position")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.5, 1),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [Vector3(0, 0.5, 0), Vector3(0, 1.5, 0), Vector3(0, 0.5, 0)]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_default"]
+_data = {
+"bob": SubResource("Animation_bob"),
+"spin": SubResource("Animation_spin")
+}
+
+[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_spin"]
+animation = &"spin"
+
+[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_bob"]
+animation = &"bob"
+
+[sub_resource type="AnimationNodeBlend2" id="AnimationNodeBlend2_mix"]
+
+[sub_resource type="AnimationNodeBlendTree" id="AnimationNodeBlendTree_root"]
+nodes/spin/node = SubResource("AnimationNodeAnimation_spin")
+nodes/bob/node = SubResource("AnimationNodeAnimation_bob")
+nodes/blend/node = SubResource("AnimationNodeBlend2_mix")
+node_connections = [&"output", 0, &"blend", &"blend", 0, &"spin", &"blend", 1, &"bob"]
+
+[node name="Scene" type="Node3D"]
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.866025, 0.5, 0, -0.5, 0.866025, 0, 3, 6)
+fov = 70.0
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866025, -0.25, 0.433013, 0, 0.866025, 0.5, -0.5, -0.433013, 0.75, 0, 5, 0)
+
+[node name="Mesh" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+mesh = SubResource("BoxMesh_box")
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+libraries/ = SubResource("AnimationLibrary_default")
+speed_scale = 1.0
+
+[node name="AnimationTree" type="AnimationTree" parent="."]
+tree_root = SubResource("AnimationNodeBlendTree_root")
+anim_player = NodePath("../AnimationPlayer")
+active = true
+parameters/blend/blend_amount = 0.5
+
+[node name="Title" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 0)
+text = "AnimationTree — blends spin + bob 50/50 (select the AnimationTree row, then play)"
+pixel_size = 0.006
+billboard = 1
+modulate = Color(1, 1, 1, 1)
