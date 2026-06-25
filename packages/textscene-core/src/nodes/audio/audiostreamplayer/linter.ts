@@ -29,16 +29,14 @@ function checkAudioStreamPlayer(context: RuleContext): Diagnostic[] {
   const rawProps = node.properties as Record<string, string>;
 
   // ERROR: stream is set but does not resolve
-  if (rawProps.stream !== undefined) {
-    if (!checkResourceExists(scene, rawProps.stream)) {
-      diagnostics.push({
-        severity: 'error',
-        message: `Stream resource "${rawProps.stream}" does not exist in scene. AudioStreamPlayer will not play audio.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'audiostreamplayer-missing-stream-resource',
-      });
-    }
+  if (rawProps.stream !== undefined && !checkResourceExists(scene, rawProps.stream)) {
+    diagnostics.push({
+      severity: 'error',
+      message: `Stream resource "${rawProps.stream}" does not exist in scene. AudioStreamPlayer will not play audio.`,
+      nodeName: node.name,
+      nodeType: node.type,
+      ruleName: 'audiostreamplayer-missing-stream-resource',
+    });
   }
 
   // WARNING: autoplay is on but no stream is set
