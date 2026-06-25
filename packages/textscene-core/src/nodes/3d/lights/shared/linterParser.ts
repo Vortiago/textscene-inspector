@@ -11,7 +11,7 @@ import { v } from '../../../../linter/validators/index.js';
 const LIGHT_BAKE_MODE = { 0: 'DISABLED', 1: 'STATIC', 2: 'DYNAMIC' };
 
 export const SHARED_LIGHT_VALIDATORS = {
-  light_energy: v.positiveFloat('light_energy'),
+  light_energy: v.nonNegativeFloat('light_energy'),
   light_color: v.color('light_color'),
   light_indirect_energy: v.nonNegativeFloat('light_indirect_energy'),
   light_volumetric_fog_energy: v.nonNegativeFloat('light_volumetric_fog_energy'),
