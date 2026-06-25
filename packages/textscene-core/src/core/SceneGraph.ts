@@ -1,25 +1,21 @@
 /**
  * Immutable scene graph data structures.
- * Once created, never modified. Updates create new instances.
+ * Once created, never modified; SceneGraphBuilder assembles a fresh graph per parse.
  */
 
 import type { TscnNode, ExtResource, SubResource } from '../parser/types.js';
 
 /**
- * Immutable scene graph representing resolved scene hierarchy.
- * Once created, never modified. Updates create new instances via SceneGraphBuilder.
+ * Immutable scene graph for one authored root scene.
+ * Once created, never modified; SceneGraphBuilder assembles a fresh graph per parse.
  */
 export interface SceneGraph {
   /** Root scene path (e.g., "res://main.tscn") */
   readonly rootScene: string;
-  /** All scenes in hierarchy, keyed by path */
+  /** The authored root scene, keyed by path — a single entry. PackedScene instances are composed by liveSceneTree (ADR-0013), not folded in here. */
   readonly scenes: ReadonlyMap<string, ParsedScene>;
   /** All nodes flattened into single array with full paths */
   readonly flattenedNodes: ReadonlyArray<SceneNode>;
-  /** Incrementing version number (for debugging/tracking) */
-  readonly version: number;
-  /** Creation timestamp */
-  readonly timestamp: number;
 }
 
 /**
@@ -136,7 +132,5 @@ export function createSceneGraphFromTscnScene(
     rootScene: scenePath,
     scenes: new Map([[scenePath, parsedScene]]),
     flattenedNodes,
-    version: 1,
-    timestamp: Date.now(),
   };
 }
