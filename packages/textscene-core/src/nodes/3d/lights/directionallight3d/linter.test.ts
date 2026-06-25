@@ -41,7 +41,7 @@ light_energy = 1.5
         expect(diagnostics).toHaveLength(0);
       });
 
-      it('should reject zero light_energy', () => {
+      it('should accept zero light_energy', () => {
         const content = `[gd_scene format=3]
 
 [node name="Sun" type="DirectionalLight3D"]
