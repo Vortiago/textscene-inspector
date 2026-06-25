@@ -685,7 +685,7 @@ far = 100.0
         expect(error?.message).toContain('field of view');
       });
 
-      it('should error when size is missing for ORTHOGONAL projection', () => {
+      it('should NOT error when size is missing for ORTHOGONAL projection (Godot defaults to 1.0)', () => {
         const content = `[gd_scene format=3]
 
 [node name="Camera" type="Camera3D"]
@@ -695,11 +695,8 @@ far = 100.0
 `;
 
         const diagnostics = linter.lint(content);
-        expect(diagnostics.length).toBeGreaterThan(0);
-        const error = diagnostics.find(d => d.severity === 'error' && d.message.includes('size'));
-        expect(error).toBeDefined();
-        expect(error?.message).toContain('requires');
-        expect(error?.message).toContain('viewport size');
+        const sizeError = diagnostics.find(d => d.severity === 'error' && d.message.includes('size'));
+        expect(sizeError).toBeUndefined();
       });
 
       it('should not error when fov is present for default (PERSPECTIVE) projection', () => {

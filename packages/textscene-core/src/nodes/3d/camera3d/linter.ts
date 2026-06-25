@@ -17,7 +17,6 @@ const MAX_NORMAL_FOV = 120;
 
 // Projection mode constants
 const PROJECTION_PERSPECTIVE = 0;
-const PROJECTION_ORTHOGONAL = 1;
 
 /**
  * Validate Camera3D semantic rules
@@ -41,25 +40,14 @@ function checkCamera3D(context: RuleContext): Diagnostic[] {
   // Get projection mode (default to PERSPECTIVE if not specified)
   const projection = rawProps.projection !== undefined ? parseInt(rawProps.projection, 10) : PROJECTION_PERSPECTIVE;
 
-  // ERROR: fov is required for PERSPECTIVE projection
-  if (projection === PROJECTION_PERSPECTIVE && rawProps.fov === undefined) {
+  // ERROR: fov is required for PERSPECTIVE projection (unless attributes overrides it)
+  if (projection === PROJECTION_PERSPECTIVE && rawProps.fov === undefined && rawProps.attributes === undefined) {
     diagnostics.push({
       severity: 'error',
       message: `Camera3D with PERSPECTIVE projection (projection=0) requires 'fov' property. This defines the field of view in degrees.`,
       nodeName: node.name,
       nodeType: node.type,
       ruleName: 'camera3d-missing-fov',
-    });
-  }
-
-  // ERROR: size is required for ORTHOGONAL projection
-  if (projection === PROJECTION_ORTHOGONAL && rawProps.size === undefined) {
-    diagnostics.push({
-      severity: 'error',
-      message: `Camera3D with ORTHOGONAL projection (projection=1) requires 'size' property. This defines the viewport size.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'camera3d-missing-size',
     });
   }
 
