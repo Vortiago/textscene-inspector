@@ -11,6 +11,7 @@ function makeProps(overrides: Partial<AnimationTreeProperties> = {}): AnimationT
   return {
     name: 'AnimationTree',
     active: false,
+    parameters: {},
     anim_player: 'NodePath("..")',
     process_callback: AnimationTreeProcessMode.IDLE,
     callback_mode_process: AnimationTreeProcessMode.IDLE,

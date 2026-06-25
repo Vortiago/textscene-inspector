@@ -20,6 +20,7 @@ export function parseAnimationTree(
 
   const result: AnimationTreeProperties = {
     ...baseProps,
+    parameters: collectParameters(properties),
     anim_player: properties.anim_player ?? 'NodePath("..")',
     active: boolOr(properties.active, false),
     process_callback: enumOr(
@@ -56,4 +57,15 @@ export function parseAnimationTree(
   }
 
   return result;
+}
+
+/** Collect `parameters/<path> = value` body lines, dropping the `parameters/` prefix. */
+function collectParameters(properties: Record<string, string>): Record<string, string> {
+  const parameters: Record<string, string> = {};
+  for (const [key, value] of Object.entries(properties)) {
+    if (key.startsWith('parameters/')) {
+      parameters[key.slice('parameters/'.length)] = value;
+    }
+  }
+  return parameters;
 }

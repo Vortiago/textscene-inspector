@@ -20,6 +20,7 @@ import { CameraControlProvider } from '../../contexts/CameraControlContext.js';
 import { MissingResourcesProvider } from '../../contexts/MissingResourcesContext.js';
 import { ViewportModeProvider } from '../../contexts/ViewportModeContext.js';
 import { AnimatedValueProvider } from '../../contexts/AnimatedValueContext.js';
+import { AnimationDriverProvider } from '../../contexts/AnimationDriverContext.js';
 import {
   AnimationTransportProvider,
   useAnimationTransport,
@@ -155,6 +156,7 @@ export function TscnPreviewShell({
           <MissingResourcesProvider>
             <ViewportModeProvider>
              <AnimationTransportProvider>
+              <AnimationDriverProvider>
               <AnimatedValueProvider>
               <WorkspaceAutoSelect sceneGraph={sceneGraph} />
               <SceneChangeResetter sceneGraph={sceneGraph} />
@@ -290,6 +292,7 @@ export function TscnPreviewShell({
                 </div>
               </div>
               </AnimatedValueProvider>
+              </AnimationDriverProvider>
              </AnimationTransportProvider>
             </ViewportModeProvider>
           </MissingResourcesProvider>

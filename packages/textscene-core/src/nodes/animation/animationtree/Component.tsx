@@ -1,24 +1,199 @@
 /**
- * <AnimationTree> — non-rendered node that drives blended animation playback.
+ * <AnimationTree> — an invisible node that DRIVES another driver's clips
+ * through a blend tree / state machine (ADR-0019).
  *
- * AnimationTree has no 3D representation in the viewport. The component
- * renders an empty group so the node appears correctly in the scene tree
- * and its children (if any) receive their transforms. The details panel
- * surfaces tree configuration via the registered propertyFormatter.
+ * It renders an empty group (no geometry) so it appears in the scene tree and
+ * its children keep their transforms. When it is the selected node AND
+ * `active = true` (Godot only processes an active tree), it:
+ *   1. resolves `tree_root` into an `AnimNode` graph,
+ *   2. evaluates that graph at the authored `parameters/*` state into a blend
+ *      program — a static previewer has no game script driving the params,
+ *   3. resolves `anim_player` to a registered driver (a GLB animation driver or
+ *      AnimationPlayer) and drives its object with weighted actions.
+ *
+ * Godot's Animation panel has no clip picker for an AnimationTree — it plays
+ * from the parameter state — so the transport registers a single read-only
+ * entry (the dominant clip) rather than a selectable list. Loads STOPPED;
+ * play is user-initiated; stop / deselect restores the authored pose.
  */
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
+import { useFrame } from '@react-three/fiber';
+import { AnimationMixer, type AnimationAction } from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
+import { useSceneResources } from '../../../r3f/SceneResourcesContext';
+import {
+  useAnimationTransport,
+  type PlayState,
+} from '../../../r3f/contexts/AnimationTransportContext';
+import { useNodePath } from '../../../r3f/contexts/NodePathContext';
+import { useOptionalSelection } from '../../../r3f/contexts/SelectionContext';
+import { useAnimationDriver } from '../../../r3f/contexts/AnimationDriverContext';
+import { snapshotSubtree, restoreSnapshot } from '../../../r3f/animation/poseSnapshot';
+import { resolveTreeRoot } from './treeResources';
+import { evaluateTree } from './evaluateTree';
+import { resolveAnimPlayerPath } from './resolveAnimPlayer';
 import type { AnimationTreeProperties } from './types';
 
 export function AnimationTree({ node, children }: NodeComponentProps) {
   const properties = node.properties as AnimationTreeProperties;
+  const { internalResources } = useSceneResources();
+  const transport = useAnimationTransport();
+  const nodePath = useNodePath();
+  const selectedNodePath = useOptionalSelection()?.selectedNodePath ?? null;
 
   const { position, rotation, scale } = useMemo(
     () => transformFromNode3DProperties(properties),
     [properties]
   );
+
+  // Resolve the tree and evaluate it at the authored parameter state. Both are
+  // pure and depend only on stable inputs, so the blend program is stable
+  // across renders unless the scene/parameters change.
+  const program = useMemo(() => {
+    const root = resolveTreeRoot(properties.tree_root, internalResources);
+    return evaluateTree(root, properties.parameters);
+  }, [properties.tree_root, properties.parameters, internalResources]);
+
+  // Resolve `anim_player` to a node path and look up the driver there.
+  const targetPath = useMemo(
+    () => (nodePath === null ? null : resolveAnimPlayerPath(nodePath, properties.anim_player)),
+    [nodePath, properties.anim_player]
+  );
+  const driver = useAnimationDriver(targetPath);
+
+  // Honour `active` (Godot only processes an active tree) AND selection-driven
+  // transport (ADR-0012): drive only while this is the selected, active node.
+  const isActive =
+    properties.active && nodePath !== null && nodePath === selectedNodePath;
+
+  // No clip picker (Godot parity): surface the dominant clip as the single
+  // transport entry so the Animation tab + scrubber appear while selected.
+  const dominant = useMemo(
+    () => program.reduce<(typeof program)[number] | null>(
+      (best, c) => (best === null || c.weight > best.weight ? c : best),
+      null
+    ),
+    [program]
+  );
+  // Scrubber length = the LONGEST active clip (a blend can mix clips of
+  // different lengths; clamping to the dominant's would cut seeks short).
+  // Memoised: the transport re-renders this component every frame while playing
+  // (reportTime → setTime), so avoid re-scanning the clip list then.
+  const scrubberDuration = useMemo(() => {
+    if (!driver) return 0;
+    let max = 0;
+    for (const { clip } of program) {
+      const duration = driver.clips.find((c) => c.name === clip)?.duration ?? 0;
+      if (duration > max) max = duration;
+    }
+    return max;
+  }, [program, driver]);
+
+  const { registerPlayer } = transport;
+  useEffect(() => {
+    if (!isActive) return;
+    return registerPlayer({
+      clips: dominant ? [dominant.clip] : [],
+      durations: dominant ? { [dominant.clip]: scrubberDuration } : {},
+    });
+  }, [isActive, dominant, scrubberDuration, registerPlayer]);
+
+  // Build a mixer rooted on the driver's object with one weighted action per
+  // program clip — only while active (so a deselected tree never builds a mixer
+  // or touches the scene). Snapshot the subtree so stop / deselect restores it.
+  const mixerRef = useRef<AnimationMixer | null>(null);
+  const actionsRef = useRef<Map<string, AnimationAction>>(new Map());
+  const snapshotRef = useRef<ReturnType<typeof snapshotSubtree>>([]);
+  useEffect(() => {
+    if (!isActive || !driver || program.length === 0) return;
+    const { object, clips } = driver;
+    const mixer = new AnimationMixer(object);
+    const actions = new Map<string, AnimationAction>();
+    for (const { clip } of program) {
+      const found = clips.find((c) => c.name === clip);
+      if (!found) continue;
+      actions.set(clip, mixer.clipAction(found));
+    }
+    mixerRef.current = mixer;
+    actionsRef.current = actions;
+    snapshotRef.current = snapshotSubtree(object);
+    return () => {
+      mixer.stopAllAction();
+      restoreSnapshot(snapshotRef.current);
+      mixerRef.current = null;
+      actionsRef.current = new Map();
+      snapshotRef.current = [];
+    };
+  }, [isActive, driver, program]);
+
+  // Deliberately mirrors usePlaybackLoop's play/paused/stopped state machine,
+  // but drives N weighted actions (the blend program) at once instead of one
+  // selected clip — the single-clip shared loop doesn't model weights. Kept
+  // separate until a second weighted driver justifies generalising it.
+  const prevStateRef = useRef<PlayState>('stopped');
+  const prevTimeRef = useRef(0);
+  useFrame((_, delta) => {
+    const mixer = mixerRef.current;
+    const state: PlayState = isActive ? transport.playState : 'stopped';
+    if (!mixer) {
+      prevStateRef.current = state;
+      return;
+    }
+    const actions = actionsRef.current;
+
+    switch (state) {
+      case 'playing': {
+        for (const { clip, weight, timeScale } of program) {
+          const action = actions.get(clip);
+          if (!action) continue;
+          if (!action.isRunning()) {
+            // Weights/time scales are static (authored parameter state), so set
+            // them once when the action starts rather than every frame.
+            action.paused = false;
+            action.enabled = true;
+            action.setEffectiveWeight(weight);
+            action.setEffectiveTimeScale(timeScale);
+            action.play();
+          }
+        }
+        mixer.update(delta);
+        if (dominant) transport.reportTime(actions.get(dominant.clip)?.time ?? 0);
+        break;
+      }
+      case 'paused': {
+        if (transport.time !== prevTimeRef.current) {
+          // Re-apply each clip's blend weight on seek — a freshly play()-ed
+          // action defaults to weight 1, which would over-blend the pose.
+          for (const { clip, weight, timeScale } of program) {
+            const action = actions.get(clip);
+            if (!action) continue;
+            action.enabled = true;
+            action.setEffectiveWeight(weight);
+            action.setEffectiveTimeScale(timeScale);
+            action.play();
+            action.paused = true;
+            action.time = transport.time;
+          }
+          mixer.update(0);
+        } else {
+          for (const action of actions.values()) action.paused = true;
+        }
+        break;
+      }
+      case 'stopped': {
+        if (prevStateRef.current !== 'stopped') {
+          mixer.stopAllAction();
+          restoreSnapshot(snapshotRef.current);
+        }
+        break;
+      }
+    }
+
+    prevStateRef.current = state;
+    prevTimeRef.current = transport.time;
+  });
 
   return (
     <group

@@ -22,6 +22,7 @@ function makeNode(overrides: Partial<AnimationTreeProperties> = {}): TscnNode {
   const props: AnimationTreeProperties = {
     name: overrides.name ?? 'AnimationTree',
     active: false,
+    parameters: {},
     anim_player: 'NodePath("..")',
     process_callback: AnimationTreeProcessMode.IDLE,
     callback_mode_process: AnimationTreeProcessMode.IDLE,
