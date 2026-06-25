@@ -46,7 +46,7 @@ spot_angle = 45.0
         expect(diagnostics).toHaveLength(0);
       });
 
-      it('should reject zero light_energy', () => {
+      it('should accept zero light_energy', () => {
         const content = `[gd_scene format=3]
 
 [node name="Spotlight" type="SpotLight3D"]
@@ -56,9 +56,8 @@ spot_angle = 45.0
 `;
 
         const diagnostics = linter.lint(content);
-        expect(diagnostics.length).toBeGreaterThan(0);
-        expect(diagnostics[0].message).toContain('light_energy');
-        expect(diagnostics[0].message).toContain('greater than 0');
+        const errors = diagnostics.filter(d => d.severity === 'error');
+        expect(errors).toHaveLength(0);
       });
 
       it('should reject negative light_energy', () => {
@@ -73,7 +72,7 @@ spot_angle = 45.0
         const diagnostics = linter.lint(content);
         expect(diagnostics.length).toBeGreaterThan(0);
         expect(diagnostics[0].message).toContain('light_energy');
-        expect(diagnostics[0].message).toContain('greater than 0');
+        expect(diagnostics[0].message).toContain('non-negative');
       });
 
       it('should reject invalid light_energy format', () => {
@@ -800,7 +799,7 @@ spot_angle = 45.0
 
   describe('Semantic Validation', () => {
     describe('missing required properties errors', () => {
-      it('should error when spot_range is missing', () => {
+      it('should not error when spot_range is missing', () => {
         const content = `[gd_scene format=3]
 
 [node name="Spotlight" type="SpotLight3D"]
@@ -809,14 +808,11 @@ spot_angle = 45.0
 `;
 
         const diagnostics = linter.lint(content);
-        expect(diagnostics.length).toBeGreaterThan(0);
-        const error = diagnostics.find(d => d.severity === 'error' && d.message.includes('spot_range'));
-        expect(error).toBeDefined();
-        expect(error?.message).toContain('requires');
-        expect(error?.message).toContain('maximum distance');
+        const rangeError = diagnostics.find(d => d.severity === 'error' && d.message.includes('spot_range'));
+        expect(rangeError).toBeUndefined();
       });
 
-      it('should error when spot_angle is missing', () => {
+      it('should not error when spot_angle is missing', () => {
         const content = `[gd_scene format=3]
 
 [node name="Spotlight" type="SpotLight3D"]
@@ -825,14 +821,11 @@ spot_range = 5.0
 `;
 
         const diagnostics = linter.lint(content);
-        expect(diagnostics.length).toBeGreaterThan(0);
-        const error = diagnostics.find(d => d.severity === 'error' && d.message.includes('spot_angle'));
-        expect(error).toBeDefined();
-        expect(error?.message).toContain('requires');
-        expect(error?.message).toContain('cone angle');
+        const angleError = diagnostics.find(d => d.severity === 'error' && d.message.includes('spot_angle'));
+        expect(angleError).toBeUndefined();
       });
 
-      it('should error when both spot_range and spot_angle are missing', () => {
+      it('should not error when both spot_range and spot_angle are missing', () => {
         const content = `[gd_scene format=3]
 
 [node name="Spotlight" type="SpotLight3D"]
@@ -840,11 +833,10 @@ light_energy = 1.0
 `;
 
         const diagnostics = linter.lint(content);
-        expect(diagnostics.length).toBeGreaterThan(0);
         const rangeError = diagnostics.find(d => d.severity === 'error' && d.message.includes('spot_range'));
         const angleError = diagnostics.find(d => d.severity === 'error' && d.message.includes('spot_angle'));
-        expect(rangeError).toBeDefined();
-        expect(angleError).toBeDefined();
+        expect(rangeError).toBeUndefined();
+        expect(angleError).toBeUndefined();
       });
 
       it('should not error when both spot_range and spot_angle are present', () => {
@@ -1101,20 +1093,15 @@ spot_range = 5.0
   });
 
   describe('Edge Cases', () => {
-    it('should handle node with no properties', () => {
-      const content = `[gd_scene format=3]
+      it('should handle node with no properties', () => {
+        const content = `[gd_scene format=3]
 
 [node name="Spotlight" type="SpotLight3D"]
 `;
 
-      const diagnostics = linter.lint(content);
-      // Should have missing spot_range and spot_angle errors
-      expect(diagnostics.length).toBeGreaterThan(1);
-      const rangeError = diagnostics.find(d => d.message.includes('spot_range'));
-      const angleError = diagnostics.find(d => d.message.includes('spot_angle'));
-      expect(rangeError).toBeDefined();
-      expect(angleError).toBeDefined();
-    });
+        const diagnostics = linter.lint(content);
+        expect(diagnostics).toHaveLength(0);
+      });
 
     it('should handle all properties together', () => {
       const content = `[gd_scene format=3]
@@ -1155,13 +1142,11 @@ shadow_opacity = 2.0
 `;
 
       const diagnostics = linter.lint(content);
-      expect(diagnostics.length).toBeGreaterThan(2);
-      // Should have errors for: light_energy, spot_angle, shadow_opacity, missing spot_range
-      const hasEnergyError = diagnostics.some(d => d.message.includes('light_energy'));
+      expect(diagnostics).toHaveLength(2);
+      // light_energy=0 is valid; spot_angle=100 and shadow_opacity=2.0 are errors
       const hasAngleError = diagnostics.some(d => d.message.includes('spot_angle'));
       const hasOpacityError = diagnostics.some(d => d.message.includes('shadow_opacity'));
-      const hasRangeError = diagnostics.some(d => d.message.includes('spot_range'));
-      expect(hasEnergyError || hasAngleError || hasOpacityError || hasRangeError).toBe(true);
+      expect(hasAngleError && hasOpacityError).toBe(true);
     });
 
     it('should handle scientific notation in numeric values', () => {

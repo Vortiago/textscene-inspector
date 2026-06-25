@@ -44,7 +44,7 @@ omni_range = 5.0
         expect(diagnostics).toHaveLength(0);
       });
 
-      it('should reject zero light_energy', () => {
+      it('should accept zero light_energy', () => {
         const content = `[gd_scene format=3]
 
 [node name="PointLight" type="OmniLight3D"]
@@ -53,9 +53,8 @@ omni_range = 5.0
 `;
 
         const diagnostics = linter.lint(content);
-        expect(diagnostics.length).toBeGreaterThan(0);
-        expect(diagnostics[0].message).toContain('light_energy');
-        expect(diagnostics[0].message).toContain('greater than 0');
+        const errors = diagnostics.filter(d => d.severity === 'error');
+        expect(errors).toHaveLength(0);
       });
 
       it('should reject negative light_energy', () => {
@@ -69,7 +68,7 @@ omni_range = 5.0
         const diagnostics = linter.lint(content);
         expect(diagnostics.length).toBeGreaterThan(0);
         expect(diagnostics[0].message).toContain('light_energy');
-        expect(diagnostics[0].message).toContain('greater than 0');
+        expect(diagnostics[0].message).toContain('non-negative');
       });
 
       it('should reject invalid light_energy format', () => {
@@ -683,7 +682,7 @@ omni_range = 5.0
 
   describe('Semantic Validation', () => {
     describe('missing omni_range error', () => {
-      it('should error when omni_range is missing', () => {
+      it('should not error when omni_range is missing', () => {
         const content = `[gd_scene format=3]
 
 [node name="PointLight" type="OmniLight3D"]
@@ -692,11 +691,8 @@ light_color = Color(1, 1, 1, 1)
 `;
 
         const diagnostics = linter.lint(content);
-        expect(diagnostics.length).toBeGreaterThan(0);
-        const error = diagnostics.find(d => d.severity === 'error' && d.message.includes('omni_range'));
-        expect(error).toBeDefined();
-        expect(error?.message).toContain('requires');
-        expect(error?.message).toContain('radius');
+        const rangeError = diagnostics.find(d => d.severity === 'error' && d.message.includes('omni_range'));
+        expect(rangeError).toBeUndefined();
       });
 
       it('should not error when omni_range is present', () => {
@@ -856,18 +852,15 @@ omni_range = 5.0
   });
 
   describe('Edge Cases', () => {
-    it('should handle node with no properties', () => {
-      const content = `[gd_scene format=3]
+      it('should handle node with no properties', () => {
+        const content = `[gd_scene format=3]
 
 [node name="PointLight" type="OmniLight3D"]
 `;
 
-      const diagnostics = linter.lint(content);
-      // Should only have the missing omni_range error
-      expect(diagnostics.length).toBeGreaterThan(0);
-      const rangeError = diagnostics.find(d => d.message.includes('omni_range'));
-      expect(rangeError).toBeDefined();
-    });
+        const diagnostics = linter.lint(content);
+        expect(diagnostics).toHaveLength(0);
+      });
 
     it('should handle all properties together', () => {
       const content = `[gd_scene format=3]
@@ -897,8 +890,8 @@ omni_shadow_mode = 1
       expect(diagnostics).toHaveLength(0);
     });
 
-    it('should handle multiple validation errors', () => {
-      const content = `[gd_scene format=3]
+      it('should handle multiple validation errors', () => {
+        const content = `[gd_scene format=3]
 
 [node name="PointLight" type="OmniLight3D"]
 light_energy = 0
@@ -906,15 +899,13 @@ omni_shadow_mode = 10
 shadow_opacity = 2.0
 `;
 
-      const diagnostics = linter.lint(content);
-      expect(diagnostics.length).toBeGreaterThan(2);
-      // Should have errors for: light_energy, omni_shadow_mode, shadow_opacity, missing omni_range
-      const hasEnergyError = diagnostics.some(d => d.message.includes('light_energy'));
-      const hasModeError = diagnostics.some(d => d.message.includes('omni_shadow_mode'));
-      const hasOpacityError = diagnostics.some(d => d.message.includes('shadow_opacity'));
-      const hasRangeError = diagnostics.some(d => d.message.includes('omni_range'));
-      expect(hasEnergyError || hasModeError || hasOpacityError || hasRangeError).toBe(true);
-    });
+        const diagnostics = linter.lint(content);
+        expect(diagnostics.length).toBeGreaterThan(1);
+        // Should have errors for: omni_shadow_mode, shadow_opacity; light_energy=0 is now valid
+        const hasModeError = diagnostics.some(d => d.message.includes('omni_shadow_mode'));
+        const hasOpacityError = diagnostics.some(d => d.message.includes('shadow_opacity'));
+        expect(hasModeError && hasOpacityError).toBe(true);
+      });
 
     it('should handle scientific notation in numeric values', () => {
       const content = `[gd_scene format=3]

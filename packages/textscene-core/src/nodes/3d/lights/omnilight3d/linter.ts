@@ -35,17 +35,6 @@ function checkOmniLight3D(context: RuleContext): Diagnostic[] {
 
   const rawProps = node.properties as Record<string, string>;
 
-  // ERROR: omni_range is missing (required for OmniLight3D to function)
-  if (rawProps.omni_range === undefined) {
-    diagnostics.push({
-      severity: 'error',
-      message: `OmniLight3D requires 'omni_range' property to function. This defines the light's radius.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'omnilight3d-missing-range',
-    });
-  }
-
   checkLightEnergy(rawProps, node.name, node.type, 'omnilight3d', diagnostics);
 
   // Warn if omni_range is very large (performance concern)

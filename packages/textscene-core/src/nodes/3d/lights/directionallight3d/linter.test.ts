@@ -49,9 +49,8 @@ light_energy = 0
 `;
 
         const diagnostics = linter.lint(content);
-        expect(diagnostics.length).toBeGreaterThan(0);
-        expect(diagnostics[0].message).toContain('light_energy');
-        expect(diagnostics[0].message).toContain('greater than 0');
+        const errors = diagnostics.filter(d => d.severity === 'error');
+        expect(errors).toHaveLength(0);
       });
 
       it('should reject negative light_energy', () => {
@@ -64,7 +63,7 @@ light_energy = -1.0
         const diagnostics = linter.lint(content);
         expect(diagnostics.length).toBeGreaterThan(0);
         expect(diagnostics[0].message).toContain('light_energy');
-        expect(diagnostics[0].message).toContain('greater than 0');
+        expect(diagnostics[0].message).toContain('non-negative');
       });
 
       it('should reject invalid light_energy format', () => {
@@ -1014,13 +1013,12 @@ directional_shadow_split_2 = 0.3
 shadow_opacity = 2.0
 `;
 
-      const diagnostics = linter.lint(content);
-      expect(diagnostics.length).toBeGreaterThan(2);
-      // Should have errors for: light_energy, shadow_mode, split ordering, shadow_opacity
-      const hasEnergyError = diagnostics.some(d => d.message.includes('light_energy'));
-      const hasModeError = diagnostics.some(d => d.message.includes('directional_shadow_mode'));
-      const hasOpacityError = diagnostics.some(d => d.message.includes('shadow_opacity'));
-      expect(hasEnergyError || hasModeError || hasOpacityError).toBe(true);
+       const diagnostics = linter.lint(content);
+       expect(diagnostics).toHaveLength(2);
+       // Should have errors for: shadow_mode, shadow_opacity; light_energy=0 is valid; splits ignored because mode defaults to ORTHOGONAL
+       const hasModeError = diagnostics.some(d => d.message.includes('directional_shadow_mode'));
+       const hasOpacityError = diagnostics.some(d => d.message.includes('shadow_opacity'));
+       expect(hasModeError && hasOpacityError).toBe(true);
     });
 
     it('should handle scientific notation in numeric values', () => {

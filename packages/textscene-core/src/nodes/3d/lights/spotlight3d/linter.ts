@@ -38,28 +38,6 @@ function checkSpotLight3D(context: RuleContext): Diagnostic[] {
 
   const rawProps = node.properties as Record<string, string>;
 
-  // ERROR: spot_range is missing (required for SpotLight3D to function)
-  if (rawProps.spot_range === undefined) {
-    diagnostics.push({
-      severity: 'error',
-      message: `SpotLight3D requires 'spot_range' property to function. This defines the light's maximum distance.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'spotlight3d-missing-range',
-    });
-  }
-
-  // ERROR: spot_angle is missing (required for SpotLight3D to function)
-  if (rawProps.spot_angle === undefined) {
-    diagnostics.push({
-      severity: 'error',
-      message: `SpotLight3D requires 'spot_angle' property to function. This defines the cone angle in degrees.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'spotlight3d-missing-angle',
-    });
-  }
-
   checkLightEnergy(rawProps, node.name, node.type, 'spotlight3d', diagnostics);
 
   // Warn if spot_range is very large (performance concern)
