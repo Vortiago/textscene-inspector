@@ -17,7 +17,6 @@ const MAX_NORMAL_FOV = 120;
 
 // Projection mode constants
 const PROJECTION_PERSPECTIVE = 0;
-const PROJECTION_ORTHOGONAL = 1;
 
 /**
  * Validate Camera3D semantic rules
