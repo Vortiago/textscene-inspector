@@ -852,15 +852,15 @@ omni_range = 5.0
   });
 
   describe('Edge Cases', () => {
-      it('should handle node with no properties', () => {
-        const content = `[gd_scene format=3]
+    it('should handle node with no properties', () => {
+      const content = `[gd_scene format=3]
 
 [node name="PointLight" type="OmniLight3D"]
 `;
 
-        const diagnostics = linter.lint(content);
-        expect(diagnostics).toHaveLength(0);
-      });
+      const diagnostics = linter.lint(content);
+      expect(diagnostics).toHaveLength(0);
+    });
 
     it('should handle all properties together', () => {
       const content = `[gd_scene format=3]
@@ -890,8 +890,8 @@ omni_shadow_mode = 1
       expect(diagnostics).toHaveLength(0);
     });
 
-      it('should handle multiple validation errors', () => {
-        const content = `[gd_scene format=3]
+    it('should handle multiple validation errors', () => {
+      const content = `[gd_scene format=3]
 
 [node name="PointLight" type="OmniLight3D"]
 light_energy = 0
@@ -899,13 +899,13 @@ omni_shadow_mode = 10
 shadow_opacity = 2.0
 `;
 
-        const diagnostics = linter.lint(content);
-        expect(diagnostics.length).toBeGreaterThan(1);
-        // Should have errors for: omni_shadow_mode, shadow_opacity; light_energy=0 is now valid
-        const hasModeError = diagnostics.some(d => d.message.includes('omni_shadow_mode'));
-        const hasOpacityError = diagnostics.some(d => d.message.includes('shadow_opacity'));
-        expect(hasModeError && hasOpacityError).toBe(true);
-      });
+      const diagnostics = linter.lint(content);
+      expect(diagnostics).toHaveLength(2);
+      // Should have errors for: omni_shadow_mode, shadow_opacity; light_energy=0 is now valid
+      const hasModeError = diagnostics.some(d => d.message.includes('omni_shadow_mode'));
+      const hasOpacityError = diagnostics.some(d => d.message.includes('shadow_opacity'));
+      expect(hasModeError && hasOpacityError).toBe(true);
+    });
 
     it('should handle scientific notation in numeric values', () => {
       const content = `[gd_scene format=3]

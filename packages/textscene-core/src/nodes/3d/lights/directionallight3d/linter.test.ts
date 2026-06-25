@@ -1013,12 +1013,12 @@ directional_shadow_split_2 = 0.3
 shadow_opacity = 2.0
 `;
 
-       const diagnostics = linter.lint(content);
-       expect(diagnostics).toHaveLength(2);
-       // Should have errors for: shadow_mode, shadow_opacity; light_energy=0 is valid; splits ignored because mode defaults to ORTHOGONAL
-       const hasModeError = diagnostics.some(d => d.message.includes('directional_shadow_mode'));
-       const hasOpacityError = diagnostics.some(d => d.message.includes('shadow_opacity'));
-       expect(hasModeError && hasOpacityError).toBe(true);
+      const diagnostics = linter.lint(content);
+      expect(diagnostics).toHaveLength(2);
+      // Should have errors for: shadow_mode, shadow_opacity; light_energy=0 is valid; splits ignored because mode defaults to ORTHOGONAL
+      const hasModeError = diagnostics.some(d => d.message.includes('directional_shadow_mode'));
+      const hasOpacityError = diagnostics.some(d => d.message.includes('shadow_opacity'));
+      expect(hasModeError && hasOpacityError).toBe(true);
     });
 
     it('should handle scientific notation in numeric values', () => {

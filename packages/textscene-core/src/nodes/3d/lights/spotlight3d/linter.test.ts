@@ -1093,15 +1093,15 @@ spot_range = 5.0
   });
 
   describe('Edge Cases', () => {
-      it('should handle node with no properties', () => {
-        const content = `[gd_scene format=3]
+    it('should handle node with no properties', () => {
+      const content = `[gd_scene format=3]
 
 [node name="Spotlight" type="SpotLight3D"]
 `;
 
-        const diagnostics = linter.lint(content);
-        expect(diagnostics).toHaveLength(0);
-      });
+      const diagnostics = linter.lint(content);
+      expect(diagnostics).toHaveLength(0);
+    });
 
     it('should handle all properties together', () => {
       const content = `[gd_scene format=3]
