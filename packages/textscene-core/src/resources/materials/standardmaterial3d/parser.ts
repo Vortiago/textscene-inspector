@@ -7,14 +7,14 @@ import type { Color, StandardMaterial3DProperties } from './types';
 import type { ResourceLoader } from '../../ResourceLoader';
 import { parseReference } from '../../processing/materialProcessing';
 import { warn } from '../../../logger';
-import { parseVector3 } from '../../../parser/vectors';
+import { COLOR_RE, parseVector3 } from '../../../parser/vectors';
 
 /**
  * Parse Color from Godot format: Color(r, g, b, a)
  * Values are in range 0-1
  */
 export function parseColor(value: string): Color {
-  const match = value.match(/^Color\s*\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*\)$/);
+  const match = value.match(COLOR_RE);
 
   if (!match || !match[1] || !match[2] || !match[3] || !match[4]) {
     throw new Error(`Invalid Color format: ${value}`);

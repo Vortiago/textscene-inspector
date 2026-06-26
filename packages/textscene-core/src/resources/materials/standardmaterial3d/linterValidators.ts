@@ -9,7 +9,7 @@
 
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
-import { FLOAT_PATTERN_SOURCE } from '../../../parser/vectors.js';
+import { COLOR_RE, FLOAT_PATTERN_SOURCE } from '../../../parser/vectors.js';
 
 /**
  * Validate boolean properties (normal_enabled, etc.)
@@ -39,6 +39,22 @@ const validateExtResource: PropertyValidator = (key, value, line) => {
       line,
       column: 0,
       code: 'INVALID_EXTRESOURCE',
+    };
+  }
+  return null;
+};
+
+/**
+ * Validate Color format: Color(r, g, b, a)
+ */
+const validateAlbedoColor: PropertyValidator = (key, value, line) => {
+  if (!COLOR_RE.test(value)) {
+    return {
+      severity: 'error',
+      message: `Property "${key}" must be a Color in format Color(r, g, b, a), got: ${value}`,
+      line,
+      column: 0,
+      code: 'INVALID_COLOR_FORMAT',
     };
   }
   return null;
@@ -80,4 +96,5 @@ validatorRegistry.registerAll('StandardMaterial3D', {
   ao_texture: validateExtResource,
   emission_texture: validateExtResource,
   uv1_scale: validateUv1Scale,
+  albedo_color: validateAlbedoColor,
 });

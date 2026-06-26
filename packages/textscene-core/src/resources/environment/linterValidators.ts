@@ -4,6 +4,7 @@
 
 import { validatorRegistry } from '../../linter/ValidatorRegistry';
 import type { PropertyValidator } from '../../linter/ValidatorRegistry';
+import { COLOR_RE } from '../../parser/vectors.js';
 
 /**
  * Validate boolean properties
@@ -25,8 +26,7 @@ const validateBoolean: PropertyValidator = (key, value, line) => {
  * Validate Color format: Color(r, g, b, a)
  */
 const validateColor: PropertyValidator = (key, value, line) => {
-  const colorPattern = /^Color\s*\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*\)$/;
-  if (!colorPattern.test(value)) {
+  if (!COLOR_RE.test(value)) {
     return {
       severity: 'error',
       message: `Property "${key}" must be a Color in format Color(r, g, b, a), got: ${value}`,

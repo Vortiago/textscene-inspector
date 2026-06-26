@@ -388,6 +388,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Primitive Meshes"
   },
   {
+    "name": "Mesh Instance Scinotation Color",
+    "file": "unit-mesh-instance-scinotation-color.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
     "name": "Plane Mesh",
     "file": "unit-plane-mesh.tscn",
     "category": "Unit - Primitive Meshes"
