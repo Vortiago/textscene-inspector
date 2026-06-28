@@ -53,7 +53,7 @@ const SUB_RESOURCE_REF = /^SubResource\("([^"]+)"\)$/;
 // external (often binary .res) libraries the previewer can't resolve.
 const DICT_LIBRARY_ENTRY = /"([^"]*)"\s*:\s*SubResource\("([^"]+)"\)/g;
 
-function extractLibraries(properties: Record<string, string>): AnimationLibraryRef[] {
+export function extractLibraries(properties: Record<string, string>): AnimationLibraryRef[] {
   const libraries: AnimationLibraryRef[] = [];
 
   // Expanded slash form: `libraries/<name> = SubResource("id")`.
@@ -78,7 +78,7 @@ function extractLibraries(properties: Record<string, string>): AnimationLibraryR
   return libraries;
 }
 
-function stripQuotes(raw: string): string {
+export function stripQuotes(raw: string): string {
   // Godot 4 prefixes StringName literals with `&` and NodePath literals with
   // `^` (e.g. `autoplay = &"spin"`); drop that before unquoting.
   return raw

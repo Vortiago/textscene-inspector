@@ -8,6 +8,8 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
+import { extractLibraries, stripQuotes } from './parser.js';
+import { resolveAnimations } from './animationResolver.js';
 
 // Thresholds for warnings
 const EXTREME_SLOW_SPEED = 0.1;
@@ -92,17 +94,31 @@ function checkAnimationPlayer(context: RuleContext): Diagnostic[] {
     });
   }
 
-  // WARNING: autoplay references animation that may not exist
-  // We can only check this if we have animation data
-  if (rawProps.autoplay !== undefined && rawProps.autoplay.trim().length > 0) {
-    const autoplayName = rawProps.autoplay.trim().replace(/^"|"$/g, '');
+  // Build set of all known clip names from both library and legacy sources.
+  const internalResources = context.scene?.internalResources ?? [];
+  const libraryRefs = extractLibraries(rawProps);
+  const libraryClips = new Set(
+    resolveAnimations(libraryRefs, internalResources as any).map((a: { name: unknown }) => String(a.name))
+  );
 
-    // Check if the autoplay animation exists in anims/
-    const animPath = `anims/${autoplayName}`;
-    if (hasAnimations && !rawProps[animPath]) {
+  // Legacy anims/ clips (pre-4.0): `anims/<clipname> = SubResource(...)`
+  const legacyClips = new Set<string>();
+  for (const key of Object.keys(rawProps)) {
+    if (key.startsWith('anims/')) {
+      legacyClips.add(key.slice('anims/'.length));
+    }
+  }
+
+  // Merge: a clip is known if it appears in either source.
+  const knownClips = new Set<string>([...libraryClips, ...legacyClips]);
+
+  // WARNING: autoplay references animation that may not exist
+  if (rawProps.autoplay !== undefined && rawProps.autoplay.trim().length > 0) {
+    const autoplayName = stripQuotes(rawProps.autoplay);
+    if (!knownClips.has(autoplayName)) {
       diagnostics.push({
         severity: 'warning',
-        message: `AnimationPlayer 'autoplay' references animation "${autoplayName}" which may not exist. Ensure this animation is defined in the anims/ section.`,
+        message: `AnimationPlayer 'autoplay' references animation "${autoplayName}" which may not exist. Ensure this animation is defined in the AnimationLibrary or anims/ section.`,
         nodeName: node.name,
         nodeType: node.type,
         ruleName: 'animationplayer-autoplay-missing',
@@ -112,21 +128,15 @@ function checkAnimationPlayer(context: RuleContext): Diagnostic[] {
 
   // WARNING: current_animation references animation that may not exist
   if (rawProps.current_animation !== undefined) {
-    const currentName = rawProps.current_animation.trim().replace(/^"|"$/g, '');
-
-    // Empty current_animation is valid (means no animation playing)
-    if (currentName.length > 0) {
-      // Check if the current_animation exists in anims/
-      const animPath = `anims/${currentName}`;
-      if (hasAnimations && !rawProps[animPath]) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `AnimationPlayer 'current_animation' references animation "${currentName}" which may not exist. Ensure this animation is defined in the anims/ section.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: 'animationplayer-current-animation-missing',
-        });
-      }
+    const currentName = stripQuotes(rawProps.current_animation);
+    if (currentName.length > 0 && !knownClips.has(currentName)) {
+      diagnostics.push({
+        severity: 'warning',
+        message: `AnimationPlayer 'current_animation' references animation "${currentName}" which may not exist. Ensure this animation is defined in the AnimationLibrary or anims/ section.`,
+        nodeName: node.name,
+        nodeType: node.type,
+        ruleName: 'animationplayer-current-animation-missing',
+      });
     }
   }
 
