@@ -20,7 +20,7 @@ const EXTREME_FAST_SPEED = 10;
  */
 function checkAnimationPlayer(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
-  const { node, scene: _scene } = context;
+  const { node, scene } = context;
 
   // Only run for AnimationPlayer nodes
   if (node.type !== 'AnimationPlayer') {
@@ -94,28 +94,40 @@ function checkAnimationPlayer(context: RuleContext): Diagnostic[] {
     });
   }
 
-  // Build set of all known clip names from both library and legacy sources.
-  const internalResources = context.scene?.internalResources ?? [];
-  const libraryRefs = extractLibraries(rawProps);
-  const libraryClips = new Set(
-    resolveAnimations(libraryRefs, internalResources as any).map((a: { name: unknown }) => String(a.name))
-  );
-
-  // Legacy anims/ clips (pre-4.0): `anims/<clipname> = SubResource(...)`
-  const legacyClips = new Set<string>();
-  for (const key of Object.keys(rawProps)) {
-    if (key.startsWith('anims/')) {
-      legacyClips.add(key.slice('anims/'.length));
+  // Build the set of known clip names. Godot references a clip in the default
+  // (empty-name) library bare ("walk") but a clip in a NAMED library prefixed
+  // ("combat/walk"), so resolve each library separately and prefix accordingly
+  // (resolveAnimations flattens the library name away, hence the per-ref loop).
+  const knownClips = new Set<string>();
+  for (const ref of extractLibraries(rawProps)) {
+    const prefix = ref.name ? `${ref.name}/` : '';
+    for (const anim of resolveAnimations([ref], scene.internalResources)) {
+      knownClips.add(prefix + anim.name);
     }
   }
+  // Legacy anims/ clips (pre-4.0): `anims/<clipname> = SubResource(...)`.
+  for (const key of Object.keys(rawProps)) {
+    if (key.startsWith('anims/')) knownClips.add(key.slice('anims/'.length));
+  }
 
-  // Merge: a clip is known if it appears in either source.
-  const knownClips = new Set<string>([...libraryClips, ...legacyClips]);
+  // Only assert a clip is MISSING when the clip set is FULLY enumerable. An
+  // ExtResource-backed library is external (often binary .res) and unresolvable
+  // here, so its clips are invisible — flagging then would false-positive (the
+  // renderer is deliberately lenient about external libraries). And with no
+  // resolvable clip source at all, the no-animations warning above already
+  // covers it; existence-checking would only duplicate that noise.
+  const hasUnresolvableLibrary = Object.entries(rawProps).some(
+    ([key, value]) => (key === 'libraries' || key.startsWith('libraries/')) && value.includes('ExtResource(')
+  );
+  // A resolvable-but-empty library is still enumerable (a missing clip IS caught); only an
+  // unresolvable ExtResource library, or no clip source at all, suppresses the check.
+  const canCheckExistence = (hasAnimations || hasLibraries) && !hasUnresolvableLibrary;
 
-  // WARNING: autoplay references animation that may not exist
-  if (rawProps.autoplay !== undefined && rawProps.autoplay.trim().length > 0) {
+  // WARNING: autoplay references animation that may not exist (an empty StringName `&""` means
+  // "no autoplay" — guard on the STRIPPED name, like current_animation below, not the raw value).
+  if (canCheckExistence && rawProps.autoplay !== undefined) {
     const autoplayName = stripQuotes(rawProps.autoplay);
-    if (!knownClips.has(autoplayName)) {
+    if (autoplayName.length > 0 && !knownClips.has(autoplayName)) {
       diagnostics.push({
         severity: 'warning',
         message: `AnimationPlayer 'autoplay' references animation "${autoplayName}" which may not exist. Ensure this animation is defined in the AnimationLibrary or anims/ section.`,
@@ -127,7 +139,7 @@ function checkAnimationPlayer(context: RuleContext): Diagnostic[] {
   }
 
   // WARNING: current_animation references animation that may not exist
-  if (rawProps.current_animation !== undefined) {
+  if (canCheckExistence && rawProps.current_animation !== undefined) {
     const currentName = stripQuotes(rawProps.current_animation);
     if (currentName.length > 0 && !knownClips.has(currentName)) {
       diagnostics.push({

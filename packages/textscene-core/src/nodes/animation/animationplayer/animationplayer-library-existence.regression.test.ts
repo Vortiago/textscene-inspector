@@ -91,3 +91,138 @@ autoplay = "walk"
     expect(rules(linter.lint(content))).not.toContain('animationplayer-autoplay-missing');
   });
 });
+
+/**
+ * Contract hardening (#148 follow-up): the original RED contract only pinned the empty-name default
+ * library with inline SubResource clips. Reviving the existence checks for that one form let two
+ * false-positive regressions through — the check is only meaningful when the clip set is FULLY
+ * resolvable, and named libraries reference clips as `<lib>/<clip>`. These pin both, plus the
+ * dict form, the no-source case, and special-char clip names (linter ↔ renderer agreement).
+ */
+describe('#148 hardening: existence checks only fire on a fully-resolvable clip set', () => {
+  let linter: Linter;
+  beforeEach(() => {
+    linter = new Linter();
+  });
+
+  // An ExtResource-backed library points at an external (often binary .res) file the previewer
+  // deliberately cannot resolve — so its clips are invisible and NOTHING can be asserted missing.
+  const extLibScene = (autoplay = ''): string =>
+    `[gd_scene format=3]
+
+[ext_resource type="AnimationLibrary" path="res://anims.res" id="1_lib"]
+
+[node name="AnimPlayer" type="AnimationPlayer"]
+libraries/ = ExtResource("1_lib")
+${autoplay ? `autoplay = ${autoplay}\n` : ''}`;
+
+  it('does NOT flag autoplay against an UNRESOLVABLE ExtResource library (incomplete clip picture)', () => {
+    expect(rules(linter.lint(extLibScene('&"walk"')))).not.toContain('animationplayer-autoplay-missing');
+  });
+
+  // A clip in a NAMED library is referenced `<libname>/<clip>` (Godot keys named-library clips by
+  // their library), so resolution must carry the prefix — bare-name matching false-positives.
+  const namedLibScene = (autoplay = ''): string =>
+    `[gd_scene format=3]
+
+[sub_resource type="Animation" id="Animation_walk"]
+length = 1.0
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_combat"]
+_data = {
+&"walk": SubResource("Animation_walk")
+}
+
+[node name="AnimPlayer" type="AnimationPlayer"]
+libraries/combat = SubResource("AnimationLibrary_combat")
+${autoplay ? `autoplay = ${autoplay}\n` : ''}`;
+
+  it('does NOT flag a valid named-library clip referenced as <lib>/<clip>', () => {
+    expect(rules(linter.lint(namedLibScene('&"combat/walk"')))).not.toContain('animationplayer-autoplay-missing');
+  });
+
+  it('STILL flags a typo in a named-library clip', () => {
+    expect(rules(linter.lint(namedLibScene('&"combat/wlak"')))).toContain('animationplayer-autoplay-missing');
+  });
+
+  // Godot 4's actual serialization is the single `libraries` dict, default library keyed "".
+  const dictLibScene = (autoplay = ''): string =>
+    `[gd_scene format=3]
+
+[sub_resource type="Animation" id="Animation_walk"]
+length = 1.0
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_1"]
+_data = {
+&"walk": SubResource("Animation_walk")
+}
+
+[node name="AnimPlayer" type="AnimationPlayer"]
+libraries = {
+"": SubResource("AnimationLibrary_1")
+}
+${autoplay ? `autoplay = ${autoplay}\n` : ''}`;
+
+  it('resolves the dict `libraries = { "": … }` form: valid clip not flagged', () => {
+    expect(rules(linter.lint(dictLibScene('&"walk"')))).not.toContain('animationplayer-autoplay-missing');
+  });
+
+  it('resolves the dict form: a typo IS flagged', () => {
+    expect(rules(linter.lint(dictLibScene('&"wlak"')))).toContain('animationplayer-autoplay-missing');
+  });
+
+  it('does NOT flag autoplay when NO clip source exists at all (the no-animations warning covers it)', () => {
+    const content = `[gd_scene format=3]
+
+[node name="AnimPlayer" type="AnimationPlayer"]
+autoplay = &"walk"
+`;
+    const found = rules(linter.lint(content));
+    expect(found).not.toContain('animationplayer-autoplay-missing');
+    expect(found).toContain('animationplayer-no-animations'); // pinned: the no-source signal stays the no-animations warning
+  });
+
+  // A clip name with a special char (e.g. `:`) must resolve identically in the linter and the render
+  // resolver (both key off the `"<name>": SubResource(...)` form) — no false positive, typo still caught.
+  const specialClipScene = (autoplay = ''): string =>
+    `[gd_scene format=3]
+
+[sub_resource type="Animation" id="Animation_x"]
+length = 1.0
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_1"]
+_data = {
+&"ui:open": SubResource("Animation_x")
+}
+
+[node name="AnimPlayer" type="AnimationPlayer"]
+libraries/ = SubResource("AnimationLibrary_1")
+${autoplay ? `autoplay = ${autoplay}\n` : ''}`;
+
+  it('resolves a special-char clip name (linter ↔ renderer agree): valid not flagged, typo flagged', () => {
+    expect(rules(linter.lint(specialClipScene('&"ui:open"')))).not.toContain('animationplayer-autoplay-missing');
+    expect(rules(linter.lint(specialClipScene('&"ui:shut"')))).toContain('animationplayer-autoplay-missing');
+  });
+
+  it('does NOT flag an empty StringName autoplay/current_animation (`&""` = Godot 4 "no clip")', () => {
+    // `&""` strips to "" — that's "nothing playing", not a missing clip. Guard on the STRIPPED name.
+    expect(rules(linter.lint(libScene('&""')))).not.toContain('animationplayer-autoplay-missing');
+    expect(rules(linter.lint(libScene('', '&""')))).not.toContain('animationplayer-current-animation-missing');
+  });
+
+  // A library that RESOLVES but is empty (`_data = {}`) is still fully enumerable, so a missing clip
+  // IS caught — it must not fall into the unresolvable/no-source suppression.
+  const emptyLibScene = (autoplay = ''): string =>
+    `[gd_scene format=3]
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_empty"]
+_data = {}
+
+[node name="AnimPlayer" type="AnimationPlayer"]
+libraries/ = SubResource("AnimationLibrary_empty")
+${autoplay ? `autoplay = ${autoplay}\n` : ''}`;
+
+  it('flags a missing autoplay against a resolvable-but-EMPTY library (enumerable → truly absent)', () => {
+    expect(rules(linter.lint(emptyLibScene('&"walk"')))).toContain('animationplayer-autoplay-missing');
+  });
+});
