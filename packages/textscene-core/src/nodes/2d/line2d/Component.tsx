@@ -64,7 +64,7 @@ function LineMesh({
       <meshBasicMaterial
         color={fill}
         opacity={opacity}
-        transparent={opacity < 1}
+        transparent
         depthWrite={false}
         side={THREE.DoubleSide}
       />
@@ -85,19 +85,20 @@ export function buildLineGeometry(
   // One quad per segment + optional closing quad.
   const totalQuads = closed ? segs + 1 : segs;
   const positions = new Float32Array(totalQuads * 4 * 3);
-  let offset = 0;
+  // Two triangles per quad (0,1,2 + 0,2,3). Without an index a 4-vertex quad
+  // renders as a SINGLE triangle (half the ribbon), so the stroke MUST be indexed.
+  const indices = new Uint32Array(totalQuads * 6);
 
-  for (let s = 0; s < segs; s++) {
-    appendQuad(positions, points, s * 2, width, false, offset);
-    offset += 12; // one quad × 3 verts × 3 coords/vert
-  }
-
-  if (closed) {
-    appendQuad(positions, points, (n - 1) * 2, width, true, offset);
+  for (let q = 0; q < totalQuads; q++) {
+    const closing = closed && q === segs; // the wrap-around segment: last point → first
+    appendQuad(positions, points, closing ? (n - 1) * 2 : q * 2, width, closing, q * 12);
+    const b = q * 4;
+    indices.set([b, b + 1, b + 2, b, b + 2, b + 3], q * 6);
   }
 
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geo.setIndex(new THREE.BufferAttribute(indices, 1));
   return geo;
 }
 
@@ -127,13 +128,11 @@ function appendQuad(
     y1 = points[pairStart + 3]!;
   }
 
-  // Convert to three-space: negate Godot's downward Y.
-  const gx0 = x0, gy0 = y0;
-  const gx1 = x1, gy1 = y1;
-  const gt_x0 = gx0;
-  const gt_y0 = -gy0;  // three Y+ goes up
-  const gt_x1 = gx1;
-  const gt_y1 = -gy1;
+  // Convert to three-space: negate Godot's downward Y (three Y+ goes up).
+  const gt_x0 = x0;
+  const gt_y0 = -y0;
+  const gt_x1 = x1;
+  const gt_y1 = -y1;
 
   // Segment direction in three-space.
   const dx = gt_x1 - gt_x0;
@@ -170,9 +169,4 @@ function appendQuad(
   positions[offset + 9]   = gt_x1 - ohx;
   positions[offset + 10]  = gt_y1 - ohy;
   positions[offset + 11]  = 0;
-}
-
-// Helper to convert a vertex index → its flat-pair start index.
-function segmentPairIndex(i: number): number {
-  return i * 2;
 }

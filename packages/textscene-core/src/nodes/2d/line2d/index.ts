@@ -3,7 +3,6 @@
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';
 import { parseLine2D } from './parser';
 import { formatLine2DProperties } from './propertyFormatter';
-import type { Line2DProperties } from './types';
 
 const line2DRegistration: NodeTypeRegistration = {
   typeName: 'Line2D',

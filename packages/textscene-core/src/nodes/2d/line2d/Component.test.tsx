@@ -41,6 +41,21 @@ describe('<Line2D>', () => {
     expect(drawn(renderer).length).toBeGreaterThan(0);
   });
 
+  it('strokes each segment as a FULL quad (two triangles), not a half-ribbon', async () => {
+    // 3 points → 2 segments. A width-respecting stroke makes each segment a
+    // 4-vertex quad = 2 triangles. A non-indexed 4-vertex quad would draw only
+    // ONE triangle (a diagonal half-ribbon) — the exact defect this pins: the
+    // bbox/colour assertions alone are satisfied by broken triangle topology.
+    const renderer = await render(
+      node({ points: 'PackedVector2Array(0, 0, 100, 0, 100, 100)', width: '20.0' })
+    );
+    const geom = (drawn(renderer)[0]!.instance as THREE.Mesh).geometry as THREE.BufferGeometry;
+    const triangles = geom.index
+      ? geom.index.count / 3
+      : geom.attributes.position!.count / 3;
+    expect(triangles).toBeGreaterThanOrEqual(4); // 2 segments × 2 triangles
+  });
+
   it('colours the line by default_color', async () => {
     const renderer = await render(
       node({ points: 'PackedVector2Array(0, 0, 100, 0)', default_color: 'Color(1, 0, 0, 1)' })
