@@ -4,8 +4,9 @@
  *
  * See ADR-0013 and the "Instance root merge" glossary entry. Applied
  * identically in both render paths (tree `useSubSceneChildren`/`TreeNode` and
- * viewport `NodeDispatcher`) plus `resolveNodeByPath`, so node paths stay
- * consistent — load-bearing for the selection-driven Animation tab (ADR-0012).
+ * viewport `NodeDispatcher`) plus the live-tree `resolveLiveNode` (which the
+ * inspector reads via `useLiveNode`), so node paths stay consistent —
+ * load-bearing for the selection-driven Animation tab (ADR-0012).
  */
 import type { TscnNode } from '../parser/types.js';
 import { nodeRegistry } from '../core/NodeRegistry.js';

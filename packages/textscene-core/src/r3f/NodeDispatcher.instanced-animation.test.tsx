@@ -6,7 +6,7 @@
  * Instance root merge drops the sub-scene wrapper level, so the player that
  * Godot shows at `Coins/Coin1/Animation` must be dispatched at exactly that
  * path (not `Coins/Coin1/Coin/Animation`). Because the tree, the dispatcher,
- * and `resolveNodeByPath` all run the same merge, `selectedNodePath` matches
+ * and `resolveLiveNode` all run the same merge, `selectedNodePath` matches
  * the player's `useNodePath()` and the tab activates. This test pins that the
  * collapsed path activates the transport and the old wrapper path does not.
  */
