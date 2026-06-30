@@ -133,7 +133,7 @@ export const GLB_ANIMATION_PLAYER_TYPE = 'GLBAnimationPlayer';
  * (WI-C), plus — when the GLB carries animation clips — an `AnimationPlayer`
  * node that surfaces those clips in the hierarchy (Godot parity) and activates
  * the Animation transport when selected. Centralised so the tree
- * (`useGlbChildren`) and the inspector resolver (`resolveNodeByPath`) produce
+ * (`useGlbChildren`) and the inspector resolver (`resolveLiveNode`) produce
  * the SAME children, keeping row paths and selection in lockstep.
  */
 export function glbSceneRootChildren(root: THREE.Object3D): TscnNode[] {

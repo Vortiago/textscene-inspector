@@ -1,55 +1,28 @@
 /**
- * Properties pane for the currently-selected scene node. Reads selection
- * from `<SelectionContext>` and the scene graph from `<HierarchyContext>`.
+ * Properties pane for the currently-selected scene node. Reads selection from
+ * `<SelectionContext>` and resolves the node through `useLiveNode` over the
+ * shared live scene tree (Instance root merge + sub-scene/GLB descent), so the
+ * inspector shows the same effective identity as the tree and viewport.
  */
-import { useMemo } from 'react';
 import { nodeRegistry } from '../../../core/NodeRegistry.js';
 import { isRenderableNodeType } from '../../nodeSupport.js';
-import type { TscnNode } from '../../../parser/types.js';
-import { useHierarchy } from '../../contexts/HierarchyContext.js';
 import { useSelection } from '../../contexts/SelectionContext.js';
 import { useOptionalCameraControl } from '../../contexts/CameraControlContext.js';
-import { useResourceLoader } from '../../../resources/useResource.js';
-import { resolveNodeByPath } from '../SceneTreeViewer/resolveNodeByPath.js';
+import { useLiveNode } from '../../useLiveSceneTree.js';
 import { PropertySection } from './PropertySection.js';
 import styles from './NodeDetailsPanel.module.css';
 
-interface SelectedNode {
-  node: TscnNode;
-  path: string;
-}
-
 export function NodeDetailsPanel() {
-  const { sceneGraph } = useHierarchy();
   const { selectedNodePath } = useSelection();
   const cameraControl = useOptionalCameraControl();
-  const loader = useResourceLoader();
 
-  const selection = useMemo<SelectedNode | null>(() => {
-    if (!sceneGraph || !selectedNodePath) return null;
+  // The EFFECTIVE (collapsed) node at the selected path plus its originating
+  // instance ref, resolved over the same live tree the SceneTreeViewer and
+  // viewport render — so the inspector agrees with them for instance roots and
+  // sub-scene interiors, and re-derives when a lazily-loaded sub-scene lands.
+  const entry = useLiveNode(selectedNodePath);
 
-    // Fast path: inline nodes (and instance ROOTS) live in
-    // flattenedNodes. This covers every fully-inline scene.
-    const entry = sceneGraph.flattenedNodes.find((n) => n.path === selectedNodePath);
-    if (entry) return { node: entry.data, path: entry.path };
-
-    // BUG 1: nodes INSIDE an instanced PackedScene are absent from
-    // flattenedNodes (the shell only addScene()s the inline root). Walk
-    // the same live inline + sub-scene tree the SceneTreeViewer renders,
-    // descending into sub-scenes via the loader's scene cache.
-    const rootScene = sceneGraph.scenes.get(sceneGraph.rootScene);
-    if (!rootScene || !loader) return null;
-    const resolved = resolveNodeByPath(
-      selectedNodePath,
-      rootScene.nodes,
-      rootScene.externalResources,
-      loader.scenes,
-      loader.glbMeshes
-    );
-    return resolved ? { node: resolved, path: selectedNodePath } : null;
-  }, [sceneGraph, selectedNodePath, loader]);
-
-  if (!selection) {
+  if (!entry || !selectedNodePath) {
     return (
       <div className={styles.root}>
         <div className={styles.empty}>Select a node to see its properties.</div>
@@ -57,7 +30,8 @@ export function NodeDetailsPanel() {
     );
   }
 
-  const { node, path } = selection;
+  const { node, instanceRef } = entry;
+  const path = selectedNodePath;
   const registration = nodeRegistry.getRegistration(node.type);
   const isUnsupported = !isRenderableNodeType(node.type);
 
@@ -123,10 +97,10 @@ export function NodeDetailsPanel() {
             <span className={styles.value}>{node.parent}</span>
           </div>
         )}
-        {node.instance && (
+        {instanceRef && (
           <div className={`${styles.row} ${styles.externalInstance}`}>
             <span className={styles.label}>📦 External:</span>
-            <span className={styles.value}>{node.instance}</span>
+            <span className={styles.value}>{instanceRef}</span>
           </div>
         )}
       </div>

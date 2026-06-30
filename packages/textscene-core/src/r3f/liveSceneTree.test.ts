@@ -13,6 +13,7 @@ import {
   liveChildren,
   liveNodeChain,
   resolveLiveNode,
+  resolveLiveEntry,
   singleSceneCache,
   type LiveTreeContext,
   type CachedSceneSource,
@@ -215,6 +216,207 @@ describe('liveNodeChain — the root→target chain of EFFECTIVE nodes (for ance
     const ctx: LiveTreeContext = { externalResources: [], sceneCache: cacheOf({}) };
     const chain = liveNodeChain('A/B', roots, ctx);
     expect(chain?.[chain.length - 1]).toBe(resolveLiveNode('A/B', roots, ctx));
+  });
+});
+
+describe('resolveLiveNode — single-node path resolution (the inspector adapter)', () => {
+  // Rehomed from the former SceneTreeViewer/resolveNodeByPath forwarder: these
+  // exercise the public single-node entry point the NodeDetailsPanel reads via
+  // `useLiveNode`, so the inspector resolves any tree row.
+  const EXT: TscnExternalResource[] = [ext('3_as5ck', 'res://roof_lamp.tscn')];
+
+  it('resolves an inline node by path', () => {
+    const roots = [
+      makeNode('Hallway', 'Node3D', { children: [makeNode('Table', 'Node3D')] }),
+    ];
+    const node = resolveLiveNode('Hallway/Table', roots, {
+      externalResources: [],
+      sceneCache: cacheOf({}),
+    });
+    expect(node?.name).toBe('Table');
+  });
+
+  it('descends into a GLBSceneRoot to resolve an internal GLB node', () => {
+    const roots = [
+      makeNode('player', 'GLBSceneRoot', {
+        properties: { glbPath: 'res://player.glb' } as Record<string, unknown>,
+      }),
+    ];
+    const glbRoot = new THREE.Group();
+    const armature = new THREE.Group();
+    armature.name = 'Armature';
+    const hand = new THREE.Mesh();
+    hand.name = 'hand';
+    armature.add(hand);
+    glbRoot.add(armature);
+    const glbCache: CachedGlbSource = {
+      getCached: (p) => (p === 'res://player.glb' ? glbRoot : undefined),
+    };
+
+    const node = resolveLiveNode('player/Armature/hand', roots, {
+      externalResources: [],
+      sceneCache: cacheOf({}),
+      glbCache,
+    });
+    expect(node?.name).toBe('hand');
+    expect(node?.type).toBe('GLBMesh');
+  });
+
+  it('descends into a collapsed instanced sub-scene interior (ADR-0013: no doubled root segment)', () => {
+    const subScene: TscnScene = {
+      nodes: [
+        makeNode('LampBody', 'Node3D', { children: [makeNode('plafoniera', 'MeshInstance3D')] }),
+      ],
+      externalResources: [],
+      internalResources: [],
+    };
+    const roots = [
+      makeNode('HallwayGeometry', 'Node3D', {
+        children: [makeNode('roof_lamp', 'Node3D', { instance: 'ExtResource("3_as5ck")' })],
+      }),
+    ];
+    const ctx: LiveTreeContext = {
+      externalResources: EXT,
+      sceneCache: cacheOf({ 'res://roof_lamp.tscn': subScene }),
+    };
+
+    const node = resolveLiveNode('HallwayGeometry/roof_lamp/plafoniera', roots, ctx);
+    expect(node?.name).toBe('plafoniera');
+    expect(node?.type).toBe('MeshInstance3D');
+
+    // The collapsed root's own name is NOT a path segment.
+    expect(resolveLiveNode('HallwayGeometry/roof_lamp/LampBody/plafoniera', roots, ctx)).toBeNull();
+  });
+
+  it('resolves a selected collapsed instance ROOT to the merged (root-typed) node', () => {
+    const subScene: TscnScene = {
+      nodes: [makeNode('Coin', 'Area3D', { children: [makeNode('Circle', 'MeshInstance3D')] })],
+      externalResources: [],
+      internalResources: [],
+    };
+    const roots = [makeNode('Coin1', 'Node3D', { instance: 'ExtResource("3_as5ck")' })];
+    const node = resolveLiveNode('Coin1', roots, {
+      externalResources: EXT,
+      sceneCache: cacheOf({ 'res://roof_lamp.tscn': subScene }),
+    });
+    // The inspector must see the SAME identity the tree row + viewport show:
+    // the merged node keeps the instance name but adopts the root's type.
+    expect(node?.name).toBe('Coin1');
+    expect(node?.type).toBe('Area3D');
+  });
+
+  it('descends into a nested instance using the SUB-scene externalResources, not the outer scene', () => {
+    // The platformer bug: game.tscn instances player.tscn, which instances
+    // player.glb via player.tscn's OWN ExtResource id — absent from game.tscn's
+    // resources. Descent must resolve the inner instance against the sub-scene's
+    // resource table.
+    const subB: TscnScene = {
+      nodes: [makeNode('BRoot', 'Node3D', { children: [makeNode('Leaf', 'MeshInstance3D')] })],
+      externalResources: [],
+      internalResources: [],
+    };
+    const subA: TscnScene = {
+      nodes: [
+        makeNode('ARoot', 'Node3D', {
+          children: [makeNode('Inner', 'Node3D', { instance: 'ExtResource("9_subB")' })],
+        }),
+      ],
+      externalResources: [ext('9_subB', 'res://subB.tscn')],
+      internalResources: [],
+    };
+    const roots = [
+      makeNode('Outer', 'Node3D', {
+        children: [makeNode('A', 'Node3D', { instance: 'ExtResource("1_subA")' })],
+      }),
+    ];
+    const node = resolveLiveNode('Outer/A/Inner/Leaf', roots, {
+      externalResources: [ext('1_subA', 'res://subA.tscn')],
+      sceneCache: cacheOf({ 'res://subA.tscn': subA, 'res://subB.tscn': subB }),
+    });
+    expect(node?.name).toBe('Leaf');
+    expect(node?.type).toBe('MeshInstance3D');
+  });
+
+  it('returns null when the sub-scene is not yet cached', () => {
+    const roots = [makeNode('roof_lamp', 'Node3D', { instance: 'ExtResource("3_as5ck")' })];
+    expect(
+      resolveLiveNode('roof_lamp/plafoniera', roots, { externalResources: EXT, sceneCache: cacheOf({}) })
+    ).toBeNull();
+  });
+
+  it('returns null for an unknown segment', () => {
+    const roots = [makeNode('Hallway', 'Node3D')];
+    expect(
+      resolveLiveNode('Hallway/Nope', roots, { externalResources: [], sceneCache: cacheOf({}) })
+    ).toBeNull();
+  });
+
+  it('returns null for an empty path', () => {
+    expect(
+      resolveLiveNode('', [makeNode('A', 'Node3D')], { externalResources: [], sceneCache: cacheOf({}) })
+    ).toBeNull();
+  });
+});
+
+describe('resolveLiveEntry — effective node + ORIGINATING instance ref (for the inspector 📦 indicator)', () => {
+  const EXT: TscnExternalResource[] = [ext('3_as5ck', 'res://roof_lamp.tscn')];
+
+  it('returns the collapsed type AND the originating instance ref for an instance ROOT', () => {
+    // The merged node adopts the sub-scene root's type and DROPS its own
+    // instance ref (it becomes the plain root's, undefined here). The tree's 📦
+    // badge keys off the ORIGINATING ref, so resolveLiveEntry surfaces it.
+    const subScene: TscnScene = {
+      nodes: [makeNode('Coin', 'Area3D', { children: [makeNode('Circle', 'MeshInstance3D')] })],
+      externalResources: [],
+      internalResources: [],
+    };
+    const roots = [makeNode('Coin1', 'Node3D', { instance: 'ExtResource("3_as5ck")' })];
+    const entry = resolveLiveEntry('Coin1', roots, {
+      externalResources: EXT,
+      sceneCache: cacheOf({ 'res://roof_lamp.tscn': subScene }),
+    });
+    expect(entry?.node.type).toBe('Area3D');
+    // The merged node's own instance ref is gone (plain root)...
+    expect(entry?.node.instance).toBeUndefined();
+    // ...but the originating ref the tree badge uses is preserved.
+    expect(entry?.instanceRef).toBe('ExtResource("3_as5ck")');
+  });
+
+  it('returns instanceRef undefined for a plain (non-instance) node', () => {
+    const roots = [makeNode('Hallway', 'Node3D', { children: [makeNode('Table', 'Node3D')] })];
+    const entry = resolveLiveEntry('Hallway/Table', roots, {
+      externalResources: [],
+      sceneCache: cacheOf({}),
+    });
+    expect(entry?.node.name).toBe('Table');
+    expect(entry?.instanceRef).toBeUndefined();
+  });
+
+  it('returns instanceRef undefined for a collapsed sub-scene INTERIOR (the interior is not itself an instance)', () => {
+    const subScene: TscnScene = {
+      nodes: [makeNode('LampBody', 'Node3D', { children: [makeNode('plafoniera', 'MeshInstance3D')] })],
+      externalResources: [],
+      internalResources: [],
+    };
+    const roots = [
+      makeNode('HallwayGeometry', 'Node3D', {
+        children: [makeNode('roof_lamp', 'Node3D', { instance: 'ExtResource("3_as5ck")' })],
+      }),
+    ];
+    const entry = resolveLiveEntry('HallwayGeometry/roof_lamp/plafoniera', roots, {
+      externalResources: EXT,
+      sceneCache: cacheOf({ 'res://roof_lamp.tscn': subScene }),
+    });
+    expect(entry?.node.name).toBe('plafoniera');
+    expect(entry?.instanceRef).toBeUndefined();
+  });
+
+  it('agrees with resolveLiveNode on the node, and returns null for an unresolvable path', () => {
+    const roots = [makeNode('A', 'Node3D', { children: [makeNode('B', 'Node3D')] })];
+    const ctx: LiveTreeContext = { externalResources: [], sceneCache: cacheOf({}) };
+    expect(resolveLiveEntry('A/B', roots, ctx)?.node).toBe(resolveLiveNode('A/B', roots, ctx));
+    expect(resolveLiveEntry('A/Nope', roots, ctx)).toBeNull();
+    expect(resolveLiveEntry('', roots, ctx)).toBeNull();
   });
 });
 

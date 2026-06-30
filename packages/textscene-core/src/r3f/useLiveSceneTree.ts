@@ -15,7 +15,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useHierarchy } from './contexts/HierarchyContext.js';
 import { useResourceLoader } from '../resources/useResource.js';
-import { collectLiveNodes, type LiveTreeContext, type LiveTreeEntry } from './liveSceneTree.js';
+import {
+  collectLiveNodes,
+  resolveLiveEntry,
+  type LiveTreeContext,
+  type LiveTreeEntry,
+  type ResolvedLiveNode,
+} from './liveSceneTree.js';
 import type { TscnNode } from '../parser/types.js';
 import type { SceneGraph } from '../core/SceneGraph.js';
 import type { ResourceLoader } from '../resources/ResourceLoader.js';
@@ -77,4 +83,26 @@ export function useLiveSceneNodes(predicate: (node: TscnNode) => boolean): LiveT
     if (!lt) return [];
     return collectLiveNodes(lt.roots, lt.ctx, predicate);
   }, [sceneGraph, loader, version, predicate]);
+}
+
+/**
+ * The single live-tree node at `path` — its EFFECTIVE (collapsed) identity
+ * (Instance root merge, ADR-0013) plus its originating `instanceRef`, descending
+ * into instanced sub-scenes and GLB internals via the loader's cache snapshots.
+ * The single-node sibling of `useLiveSceneNodes`, for the inspector. Re-derives
+ * on the version tick, so a node selected inside a not-yet-loaded sub-scene
+ * resolves the moment that sub-scene lands instead of sticking on the
+ * placeholder. Returns `null` for a null/empty path or any unresolvable segment.
+ */
+export function useLiveNode(path: string | null | undefined): ResolvedLiveNode | null {
+  const { sceneGraph } = useHierarchy();
+  const loader = useResourceLoader();
+  const version = useLiveTreeVersion(loader);
+
+  return useMemo(() => {
+    if (!path) return null;
+    const lt = liveTreeContext(sceneGraph, loader);
+    if (!lt) return null;
+    return resolveLiveEntry(path, lt.roots, lt.ctx);
+  }, [sceneGraph, loader, version, path]);
 }

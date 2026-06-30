@@ -69,7 +69,7 @@ export function findSubResource(
  * Resolve a Node's `instance` PackedScene reference to a `res://` scene path.
  * Shared by every R3F caller that turns an instance ref into a path:
  * NodeDispatcher's `InstancedSceneSubtree`, the scene tree's
- * `useSubSceneChildren`, and `resolveNodeByPath`. Distinct from the same-named
+ * `useSubSceneChildren`, and the live-tree `resolveLiveNode`. Distinct from the same-named
  * resolvers on SceneGraphBuilder (resolves against a scenes map) and
  * ResourceLoader (metadata + logging), which take different inputs.
  */

@@ -3,7 +3,7 @@
  * (raw `SubResource("id")` / `ExtResource("id")` parsing) and
  * `resolveInstancePath` (a Node's instance ref → `res://` path), the
  * single resolver shared by NodeDispatcher, useSubSceneChildren, and
- * resolveNodeByPath.
+ * the live-tree resolver (`resolveLiveNode`).
  */
 import { describe, it, expect } from 'vitest';
 import { parseResourceReference, resolveInstancePath } from './SubResourceResolver';

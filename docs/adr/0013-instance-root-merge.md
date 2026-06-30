@@ -25,3 +25,18 @@ definition, called by the viewport (`NodeDispatcher`'s `InstancedNode`), the tre
 compose) the transform, inherit the resource pool — but the "two paths that must agree" risk is gone:
 there is now one path. (The viewport merge site is `InstancedNode`; the `InstancedSceneSubtree` named in
 the original draft was never the rendered component.)
+
+## Amendment (2026-06-30): inspector reads `resolveLiveNode` directly; the forwarder is gone
+
+The 2026-06-19 amendment claimed "there is now one path", but the `NodeDetailsPanel` still kept a
+second one: it resolved selections via a `SceneGraph.flattenedNodes.find` fast-path (falling back to a
+`SceneTreeViewer/resolveNodeByPath` forwarder), so an instance **root** showed the *uncollapsed* wrapper
+type, and a selection inside a not-yet-loaded sub-scene stuck on the placeholder forever (the panel's
+memo carried no live-tree version tick). That panel is now routed through a `useLiveNode(path)` hook
+(beside `useLiveSceneNodes`) which resolves through `resolveLiveEntry` (the `resolveLiveNode` walk plus
+the selected node's ORIGINATING `instanceRef`) and subscribes to `useLiveTreeVersion`. The originating
+ref matters because the merged node's own `instance` is the sub-scene root's (cleared for a plain root),
+so the inspector's 📦 external-scene indicator — like the tree's badge — keys off the originating ref,
+not the collapsed node. The `resolveNodeByPath` forwarder is removed; its tests are rehomed onto
+`resolveLiveNode`. The inspector now genuinely shares the single collapse/resolve path with the tree and
+viewport (issue #176).
