@@ -7,66 +7,51 @@
  * absent reference must NOT be flagged.
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
-import { Linter } from '../../../linter/Linter';
+import { describe, it } from 'vitest';
+import {
+  node,
+  scene,
+  expectClean,
+  expectDiagnostic,
+  expectNoDiagnostic,
+} from '../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
 
 describe('NavigationRegion3D semantic rules', () => {
-  let linter: Linter;
-
-  beforeEach(() => {
-    linter = new Linter();
-  });
-
   it('passes when the navigation_mesh reference resolves', () => {
-    const content = `[gd_scene format=3]
-
-[ext_resource type="NavigationMesh" path="res://nav.tres" id="1_nav"]
-
-[node name="Region" type="NavigationRegion3D"]
-navigation_mesh = ExtResource("1_nav")
-`;
-
-    expect(linter.lint(content)).toHaveLength(0);
+    expectClean(
+      scene(
+        '[ext_resource type="NavigationMesh" path="res://nav.tres" id="1_nav"]',
+        node('NavigationRegion3D', { navigation_mesh: 'ExtResource("1_nav")' }, { name: 'Region' })
+      )
+    );
   });
 
   it('errors when a navigation_mesh ExtResource reference is dangling', () => {
-    const content = `[gd_scene format=3]
-
-[node name="Region" type="NavigationRegion3D"]
-navigation_mesh = ExtResource("9_missing")
-`;
-
-    const diagnostics = linter.lint(content);
-    const error = diagnostics.find((d) => d.ruleName === 'valid-navigationregion3d-resources');
-    expect(error).toBeDefined();
-    expect(error!.severity).toBe('error');
-    expect(error!.nodeType).toBe('NavigationRegion3D');
+    expectDiagnostic(
+      scene(node('NavigationRegion3D', { navigation_mesh: 'ExtResource("9_missing")' }, { name: 'Region' })),
+      {
+        ruleName: 'valid-navigationregion3d-resources',
+        severity: 'error',
+        nodeType: 'NavigationRegion3D',
+      }
+    );
   });
 
   it('errors when a navigation_mesh SubResource reference is dangling', () => {
-    const content = `[gd_scene format=3]
-
-[node name="Region" type="NavigationRegion3D"]
-navigation_mesh = SubResource("NavMesh_absent")
-`;
-
-    const diagnostics = linter.lint(content);
-    const error = diagnostics.find((d) => d.ruleName === 'valid-navigationregion3d-resources');
-    expect(error).toBeDefined();
-    expect(error!.severity).toBe('error');
+    expectDiagnostic(
+      scene(node('NavigationRegion3D', { navigation_mesh: 'SubResource("NavMesh_absent")' }, { name: 'Region' })),
+      {
+        ruleName: 'valid-navigationregion3d-resources',
+        severity: 'error',
+      }
+    );
   });
 
   it('does not flag a region that omits navigation_mesh entirely', () => {
-    const content = `[gd_scene format=3]
-
-[node name="Region" type="NavigationRegion3D"]
-`;
-
-    const diagnostics = linter.lint(content);
-    expect(
-      diagnostics.find((d) => d.ruleName === 'valid-navigationregion3d-resources')
-    ).toBeUndefined();
+    expectNoDiagnostic(scene(node('NavigationRegion3D', {}, { name: 'Region' })), {
+      ruleName: 'valid-navigationregion3d-resources',
+    });
   });
 });

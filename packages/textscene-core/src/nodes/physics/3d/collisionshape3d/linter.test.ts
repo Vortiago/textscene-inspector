@@ -2,21 +2,15 @@
  * Tests for CollisionShape3D linter (strict parser + semantic rules)
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
-import { Linter } from '../../../../linter/Linter';
+import { describe, it, expect } from 'vitest';
+import { node, scene, lint, expectClean, expectDiagnostic } from '../../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
 
 describe('CollisionShape3D Linter', () => {
-  let linter: Linter;
-
-  beforeEach(() => {
-    linter = new Linter();
-  });
-
   describe('Strict Parser Validation (Format)', () => {
     it('should pass validation for valid CollisionShape3D properties', () => {
-      const content = `[gd_scene format=3]
+      expectClean(`[gd_scene format=3]
 
 [sub_resource type="BoxShape3D" id="shape_1"]
 
@@ -25,15 +19,12 @@ describe('CollisionShape3D Linter', () => {
 [node name="CollisionShape" type="CollisionShape3D" parent="."]
 shape = SubResource("shape_1")
 disabled = false
-`;
-
-      const diagnostics = linter.lint(content);
-      expect(diagnostics).toHaveLength(0);
+`);
     });
 
     describe('shape property validation', () => {
       it('should accept valid SubResource reference', () => {
-        const content = `[gd_scene format=3]
+        expectClean(`[gd_scene format=3]
 
 [sub_resource type="BoxShape3D" id="box_shape"]
 
@@ -41,14 +32,11 @@ disabled = false
 
 [node name="Collision" type="CollisionShape3D" parent="."]
 shape = SubResource("box_shape")
-`;
-
-        const diagnostics = linter.lint(content);
-        expect(diagnostics).toHaveLength(0);
+`);
       });
 
       it('should accept valid ExtResource reference', () => {
-        const content = `[gd_scene format=3]
+        expectClean(`[gd_scene format=3]
 
 [ext_resource type="Shape3D" path="res://shapes/box.tres" id="ext_shape"]
 
@@ -56,47 +44,29 @@ shape = SubResource("box_shape")
 
 [node name="Collision" type="CollisionShape3D" parent="."]
 shape = ExtResource("ext_shape")
-`;
-
-        const diagnostics = linter.lint(content);
-        expect(diagnostics).toHaveLength(0);
+`);
       });
 
       it('should reject invalid shape reference format', () => {
-        const content = `[gd_scene format=3]
-
-[node name="StaticBody" type="StaticBody3D"]
-
-[node name="InvalidShape" type="CollisionShape3D" parent="."]
-shape = "invalid_format"
-`;
-
-        const diagnostics = linter.lint(content);
-        expect(diagnostics.length).toBeGreaterThan(0);
-        const shapeError = diagnostics.find(d => d.message.includes('shape'));
-        expect(shapeError).toBeDefined();
-        expect(shapeError?.message).toContain('resource reference');
-        expect(shapeError?.ruleName).toBe('strict-parser');
+        const content = scene(
+          node('StaticBody3D', {}, { name: 'StaticBody' }),
+          node('CollisionShape3D', { shape: '"invalid_format"' }, { name: 'InvalidShape', parent: '.' })
+        );
+        expectDiagnostic(content, { ruleName: 'strict-parser', contains: ['resource reference'] });
       });
 
       it('should reject shape with invalid characters', () => {
-        const content = `[gd_scene format=3]
-
-[node name="StaticBody" type="StaticBody3D"]
-
-[node name="BadShape" type="CollisionShape3D" parent="."]
-shape = SubResource(box shape)
-`;
-
-        const diagnostics = linter.lint(content);
-        expect(diagnostics.length).toBeGreaterThan(0);
-        expect(diagnostics[0].message).toContain('shape');
+        const content = scene(
+          node('StaticBody3D', {}, { name: 'StaticBody' }),
+          node('CollisionShape3D', { shape: 'SubResource(box shape)' }, { name: 'BadShape', parent: '.' })
+        );
+        expectDiagnostic(content, { contains: ['shape'] });
       });
     });
 
     describe('disabled property validation', () => {
       it('should accept disabled = true', () => {
-        const content = `[gd_scene format=3]
+        expectClean(`[gd_scene format=3]
 
 [sub_resource type="BoxShape3D" id="shape_1"]
 
@@ -105,14 +75,11 @@ shape = SubResource(box shape)
 [node name="DisabledCollision" type="CollisionShape3D" parent="."]
 shape = SubResource("shape_1")
 disabled = true
-`;
-
-        const diagnostics = linter.lint(content);
-        expect(diagnostics).toHaveLength(0);
+`);
       });
 
       it('should accept disabled = false', () => {
-        const content = `[gd_scene format=3]
+        expectClean(`[gd_scene format=3]
 
 [sub_resource type="BoxShape3D" id="shape_1"]
 
@@ -121,10 +88,7 @@ disabled = true
 [node name="EnabledCollision" type="CollisionShape3D" parent="."]
 shape = SubResource("shape_1")
 disabled = false
-`;
-
-        const diagnostics = linter.lint(content);
-        expect(diagnostics).toHaveLength(0);
+`);
       });
 
       it('should reject non-boolean disabled value', () => {
@@ -138,13 +102,7 @@ disabled = false
 shape = SubResource("shape_1")
 disabled = 1
 `;
-
-        const diagnostics = linter.lint(content);
-        expect(diagnostics.length).toBeGreaterThan(0);
-        const disabledError = diagnostics.find(d => d.message.includes('disabled'));
-        expect(disabledError).toBeDefined();
-        expect(disabledError?.message).toContain('boolean');
-        expect(disabledError?.ruleName).toBe('strict-parser');
+        expectDiagnostic(content, { ruleName: 'strict-parser', contains: ['boolean'] });
       });
 
       it('should reject string non-boolean disabled value', () => {
@@ -158,42 +116,28 @@ disabled = 1
 shape = SubResource("shape_1")
 disabled = "yes"
 `;
-
-        const diagnostics = linter.lint(content);
-        expect(diagnostics.length).toBeGreaterThan(0);
-        const disabledError = diagnostics.find(d => d.message.includes('disabled'));
-        expect(disabledError).toBeDefined();
-        expect(disabledError?.message).toContain('boolean');
+        expectDiagnostic(content, { prop: 'disabled', contains: ['boolean'] });
       });
     });
   });
 
   describe('Semantic Validation (Required Properties)', () => {
     it('should detect missing shape property (REQUIRED)', () => {
-      const content = `[gd_scene format=3]
-
-[node name="StaticBody" type="StaticBody3D"]
-
-[node name="NoShape" type="CollisionShape3D" parent="."]
-disabled = false
-`;
-
-      const diagnostics = linter.lint(content);
-      expect(diagnostics.length).toBeGreaterThan(0);
-      const shapeError = diagnostics.find(d => d.message.includes('missing required property'));
-      expect(shapeError).toBeDefined();
-      expect(shapeError).toMatchObject({
-        severity: 'error',
-        nodeName: 'NoShape',
-        nodeType: 'CollisionShape3D',
+      const content = scene(
+        node('StaticBody3D', {}, { name: 'StaticBody' }),
+        node('CollisionShape3D', { disabled: false }, { name: 'NoShape', parent: '.' })
+      );
+      const shapeError = expectDiagnostic(content, {
         ruleName: 'collisionshape3d-requires-shape',
+        severity: 'error',
+        nodeType: 'CollisionShape3D',
+        contains: ['missing required property', 'shape'],
       });
-      expect(shapeError?.message).toContain('missing required property');
-      expect(shapeError?.message).toContain('shape');
+      expect(shapeError.nodeName).toBe('NoShape');
     });
 
     it('should pass when shape property is present', () => {
-      const content = `[gd_scene format=3]
+      expectClean(`[gd_scene format=3]
 
 [sub_resource type="BoxShape3D" id="shape_1"]
 
@@ -201,38 +145,27 @@ disabled = false
 
 [node name="ValidShape" type="CollisionShape3D" parent="."]
 shape = SubResource("shape_1")
-`;
-
-      const diagnostics = linter.lint(content);
-      expect(diagnostics).toHaveLength(0);
+`);
     });
   });
 
   describe('Semantic Validation (Resource References)', () => {
     it('should detect non-existent shape resource', () => {
-      const content = `[gd_scene format=3]
-
-[node name="StaticBody" type="StaticBody3D"]
-
-[node name="MissingResource" type="CollisionShape3D" parent="."]
-shape = SubResource("nonexistent")
-`;
-
-      const diagnostics = linter.lint(content);
-      expect(diagnostics.length).toBeGreaterThan(0);
-      const resourceError = diagnostics.find(d => d.message.includes('Shape resource not found'));
-      expect(resourceError).toBeDefined();
-      expect(resourceError).toMatchObject({
-        severity: 'error',
-        nodeName: 'MissingResource',
-        nodeType: 'CollisionShape3D',
+      const content = scene(
+        node('StaticBody3D', {}, { name: 'StaticBody' }),
+        node('CollisionShape3D', { shape: 'SubResource("nonexistent")' }, { name: 'MissingResource', parent: '.' })
+      );
+      const resourceError = expectDiagnostic(content, {
         ruleName: 'valid-collisionshape3d-resources',
+        severity: 'error',
+        nodeType: 'CollisionShape3D',
+        contains: ['Shape resource not found'],
       });
-      expect(resourceError?.message).toContain('Shape resource not found');
+      expect(resourceError.nodeName).toBe('MissingResource');
     });
 
     it('should pass when shape resource exists', () => {
-      const content = `[gd_scene format=3]
+      expectClean(`[gd_scene format=3]
 
 [sub_resource type="SphereShape3D" id="sphere_1"]
 
@@ -240,14 +173,11 @@ shape = SubResource("nonexistent")
 
 [node name="ValidResource" type="CollisionShape3D" parent="."]
 shape = SubResource("sphere_1")
-`;
-
-      const diagnostics = linter.lint(content);
-      expect(diagnostics).toHaveLength(0);
+`);
     });
 
     it('should validate multiple shape resources', () => {
-      const content = `[gd_scene format=3]
+      expectClean(`[gd_scene format=3]
 
 [sub_resource type="BoxShape3D" id="box_shape"]
 [sub_resource type="SphereShape3D" id="sphere_shape"]
@@ -263,16 +193,13 @@ shape = SubResource("sphere_shape")
 
 [node name="CapsuleCollision" type="CollisionShape3D" parent="."]
 shape = SubResource("capsule_shape")
-`;
-
-      const diagnostics = linter.lint(content);
-      expect(diagnostics).toHaveLength(0);
+`);
     });
   });
 
   describe('Semantic Validation (Parent Types)', () => {
     it('should pass with StaticBody3D parent', () => {
-      const content = `[gd_scene format=3]
+      expectClean(`[gd_scene format=3]
 
 [sub_resource type="BoxShape3D" id="shape_1"]
 
@@ -280,14 +207,11 @@ shape = SubResource("capsule_shape")
 
 [node name="Collision" type="CollisionShape3D" parent="."]
 shape = SubResource("shape_1")
-`;
-
-      const diagnostics = linter.lint(content);
-      expect(diagnostics).toHaveLength(0);
+`);
     });
 
     it('should pass with RigidBody3D parent', () => {
-      const content = `[gd_scene format=3]
+      expectClean(`[gd_scene format=3]
 
 [sub_resource type="SphereShape3D" id="shape_1"]
 
@@ -295,14 +219,11 @@ shape = SubResource("shape_1")
 
 [node name="Collision" type="CollisionShape3D" parent="."]
 shape = SubResource("shape_1")
-`;
-
-      const diagnostics = linter.lint(content);
-      expect(diagnostics).toHaveLength(0);
+`);
     });
 
     it('should pass with CharacterBody3D parent', () => {
-      const content = `[gd_scene format=3]
+      expectClean(`[gd_scene format=3]
 
 [sub_resource type="CapsuleShape3D" id="shape_1"]
 
@@ -310,14 +231,11 @@ shape = SubResource("shape_1")
 
 [node name="Collision" type="CollisionShape3D" parent="."]
 shape = SubResource("shape_1")
-`;
-
-      const diagnostics = linter.lint(content);
-      expect(diagnostics).toHaveLength(0);
+`);
     });
 
     it('should pass with Area3D parent', () => {
-      const content = `[gd_scene format=3]
+      expectClean(`[gd_scene format=3]
 
 [sub_resource type="BoxShape3D" id="shape_1"]
 
@@ -325,10 +243,7 @@ shape = SubResource("shape_1")
 
 [node name="Collision" type="CollisionShape3D" parent="."]
 shape = SubResource("shape_1")
-`;
-
-      const diagnostics = linter.lint(content);
-      expect(diagnostics).toHaveLength(0);
+`);
     });
 
     it('should warn when parent is invalid type (Node3D)', () => {
@@ -341,19 +256,13 @@ shape = SubResource("shape_1")
 [node name="Collision" type="CollisionShape3D" parent="."]
 shape = SubResource("shape_1")
 `;
-
-      const diagnostics = linter.lint(content);
-      expect(diagnostics.length).toBeGreaterThan(0);
-      const parentError = diagnostics.find(d => d.ruleName === 'collisionshape3d-invalid-parent');
-      expect(parentError).toBeDefined();
-      expect(parentError).toMatchObject({
-        severity: 'warning',
-        nodeName: 'Collision',
-        nodeType: 'CollisionShape3D',
+      const parentError = expectDiagnostic(content, {
         ruleName: 'collisionshape3d-invalid-parent',
+        severity: 'warning',
+        nodeType: 'CollisionShape3D',
+        contains: ['Node3D', 'should be a child of'],
       });
-      expect(parentError?.message).toContain('Node3D');
-      expect(parentError?.message).toContain('should be a child of');
+      expect(parentError.nodeName).toBe('Collision');
     });
 
     it('should warn when parent is invalid type (MeshInstance3D)', () => {
@@ -368,12 +277,10 @@ mesh = SubResource("mesh_1")
 [node name="Collision" type="CollisionShape3D" parent="."]
 shape = SubResource("shape_1")
 `;
-
-      const diagnostics = linter.lint(content);
-      expect(diagnostics.length).toBeGreaterThan(0);
-      const parentError = diagnostics.find(d => d.ruleName === 'collisionshape3d-invalid-parent');
-      expect(parentError).toBeDefined();
-      expect(parentError?.message).toContain('MeshInstance3D');
+      expectDiagnostic(content, {
+        ruleName: 'collisionshape3d-invalid-parent',
+        contains: ['MeshInstance3D'],
+      });
     });
 
     it('should warn when CollisionShape3D has no parent (root level)', () => {
@@ -384,22 +291,17 @@ shape = SubResource("shape_1")
 [node name="RootCollision" type="CollisionShape3D"]
 shape = SubResource("shape_1")
 `;
-
-      const diagnostics = linter.lint(content);
-      expect(diagnostics.length).toBeGreaterThan(0);
-      const noParentError = diagnostics.find(d => d.ruleName === 'collisionshape3d-no-parent');
-      expect(noParentError).toBeDefined();
-      expect(noParentError).toMatchObject({
-        severity: 'warning',
-        nodeName: 'RootCollision',
-        nodeType: 'CollisionShape3D',
+      const noParentError = expectDiagnostic(content, {
         ruleName: 'collisionshape3d-no-parent',
+        severity: 'warning',
+        nodeType: 'CollisionShape3D',
+        contains: ['no parent node'],
       });
-      expect(noParentError?.message).toContain('no parent node');
+      expect(noParentError.nodeName).toBe('RootCollision');
     });
 
     it('should pass with AnimatableBody3D parent', () => {
-      const content = `[gd_scene format=3]
+      expectClean(`[gd_scene format=3]
 
 [sub_resource type="BoxShape3D" id="shape_1"]
 
@@ -407,14 +309,11 @@ shape = SubResource("shape_1")
 
 [node name="Collision" type="CollisionShape3D" parent="."]
 shape = SubResource("shape_1")
-`;
-
-      const diagnostics = linter.lint(content);
-      expect(diagnostics).toHaveLength(0);
+`);
     });
 
     it('should pass with VehicleBody3D parent', () => {
-      const content = `[gd_scene format=3]
+      expectClean(`[gd_scene format=3]
 
 [sub_resource type="BoxShape3D" id="shape_1"]
 
@@ -422,24 +321,18 @@ shape = SubResource("shape_1")
 
 [node name="Collision" type="CollisionShape3D" parent="."]
 shape = SubResource("shape_1")
-`;
-
-      const diagnostics = linter.lint(content);
-      expect(diagnostics).toHaveLength(0);
+`);
     });
   });
 
   describe('Edge Cases', () => {
     it('should handle multiple validation errors', () => {
-      const content = `[gd_scene format=3]
+      const content = scene(
+        node('Node3D', {}, { name: 'InvalidParent' }),
+        node('CollisionShape3D', { disabled: 'not_a_boolean' }, { name: 'MultipleErrors', parent: '.' })
+      );
 
-[node name="InvalidParent" type="Node3D"]
-
-[node name="MultipleErrors" type="CollisionShape3D" parent="."]
-disabled = not_a_boolean
-`;
-
-      const diagnostics = linter.lint(content);
+      const diagnostics = lint(content);
       // Expect: missing shape (error), invalid parent (warning), invalid disabled format (error)
       // However, strict parser errors may stop semantic validation
       expect(diagnostics.length).toBeGreaterThanOrEqual(1);
@@ -451,7 +344,7 @@ disabled = not_a_boolean
     });
 
     it('should detect CollisionShape3D with deeply nested parent structure', () => {
-      const content = `[gd_scene format=3]
+      expectClean(`[gd_scene format=3]
 
 [sub_resource type="BoxShape3D" id="shape_1"]
 
@@ -461,15 +354,11 @@ disabled = not_a_boolean
 
 [node name="NestedCollision" type="CollisionShape3D" parent="StaticBody"]
 shape = SubResource("shape_1")
-`;
-
-      const diagnostics = linter.lint(content);
-      // This should pass - StaticBody3D is the immediate parent
-      expect(diagnostics).toHaveLength(0);
+`);
     });
 
     it('should handle CollisionShape3D with only shape property', () => {
-      const content = `[gd_scene format=3]
+      expectClean(`[gd_scene format=3]
 
 [sub_resource type="CylinderShape3D" id="cylinder"]
 
@@ -477,14 +366,11 @@ shape = SubResource("shape_1")
 
 [node name="MinimalCollision" type="CollisionShape3D" parent="."]
 shape = SubResource("cylinder")
-`;
-
-      const diagnostics = linter.lint(content);
-      expect(diagnostics).toHaveLength(0);
+`);
     });
 
     it('should handle all common shape types', () => {
-      const content = `[gd_scene format=3]
+      expectClean(`[gd_scene format=3]
 
 [sub_resource type="BoxShape3D" id="box"]
 [sub_resource type="SphereShape3D" id="sphere"]
@@ -512,14 +398,11 @@ shape = SubResource("convex")
 
 [node name="ConcaveCollision" type="CollisionShape3D" parent="."]
 shape = SubResource("concave")
-`;
-
-      const diagnostics = linter.lint(content);
-      expect(diagnostics).toHaveLength(0);
+`);
     });
 
     it('should handle disabled collision shape', () => {
-      const content = `[gd_scene format=3]
+      expectClean(`[gd_scene format=3]
 
 [sub_resource type="BoxShape3D" id="shape_1"]
 
@@ -528,31 +411,22 @@ shape = SubResource("concave")
 [node name="DisabledCollision" type="CollisionShape3D" parent="."]
 shape = SubResource("shape_1")
 disabled = true
-`;
-
-      const diagnostics = linter.lint(content);
-      expect(diagnostics).toHaveLength(0);
+`);
     });
 
     it('should handle node with no properties at all', () => {
-      const content = `[gd_scene format=3]
-
-[node name="StaticBody" type="StaticBody3D"]
-
-[node name="EmptyCollision" type="CollisionShape3D" parent="."]
-`;
-
-      const diagnostics = linter.lint(content);
+      const content = scene(
+        node('StaticBody3D', {}, { name: 'StaticBody' }),
+        node('CollisionShape3D', {}, { name: 'EmptyCollision', parent: '.' })
+      );
       // Should have error for missing shape
-      expect(diagnostics.length).toBeGreaterThan(0);
-      const shapeError = diagnostics.find(d => d.message.includes('missing required property'));
-      expect(shapeError).toBeDefined();
+      expectDiagnostic(content, { prop: 'missing required property' });
     });
   });
 
   describe('Integration Tests', () => {
     it('should validate complete physics scene with multiple bodies', () => {
-      const content = `[gd_scene format=3]
+      expectClean(`[gd_scene format=3]
 
 [sub_resource type="BoxShape3D" id="ground_shape"]
 [sub_resource type="SphereShape3D" id="ball_shape"]
@@ -581,10 +455,7 @@ shape = SubResource("player_shape")
 [node name="TriggerCollision" type="CollisionShape3D" parent="Trigger"]
 shape = SubResource("trigger_shape")
 disabled = false
-`;
-
-      const diagnostics = linter.lint(content);
-      expect(diagnostics).toHaveLength(0);
+`);
     });
   });
 });

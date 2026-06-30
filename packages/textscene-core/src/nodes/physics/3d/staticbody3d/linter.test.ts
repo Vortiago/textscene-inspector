@@ -2,21 +2,24 @@
  * Tests for StaticBody3D linter (strict parser + semantic rules)
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
-import { Linter } from '../../../../linter/Linter';
+import { describe, it, expect } from 'vitest';
+import {
+  node,
+  scene,
+  lint,
+  collisionShape3d,
+  expectClean,
+  expectDiagnostic,
+  expectNoErrors,
+  runPropertyValidation,
+} from '../../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
 
 describe('StaticBody3D Linter', () => {
-  let linter: Linter;
-
-  beforeEach(() => {
-    linter = new Linter();
-  });
-
   describe('Strict Parser Validation (Format)', () => {
     it('should pass validation for valid StaticBody3D properties', () => {
-      const content = `[gd_scene format=3]
+      expectClean(`[gd_scene format=3]
 
 [sub_resource type="PhysicsMaterial" id="physics_mat_1"]
 
@@ -32,15 +35,12 @@ input_ray_pickable = true
 input_capture_on_drag = false
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
-`;
-
-      const diagnostics = linter.lint(content);
-      expect(diagnostics).toHaveLength(0);
+`);
     });
 
     describe('physics_material_override validation', () => {
       it('should accept valid physics_material_override format', () => {
-        const content = `[gd_scene format=3]
+        expectClean(`[gd_scene format=3]
 
 [sub_resource type="PhysicsMaterial" id="mat_1"]
 
@@ -48,433 +48,120 @@ input_capture_on_drag = false
 physics_material_override = SubResource("mat_1")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
-`;
-
-        const diagnostics = linter.lint(content);
-        expect(diagnostics).toHaveLength(0);
+`);
       });
 
       it('should reject invalid physics_material_override format', () => {
-        const content = `[gd_scene format=3]
-
-[node name="InvalidMaterial" type="StaticBody3D"]
-physics_material_override = "invalid_format"
-`;
-
-        const diagnostics = linter.lint(content);
-        expect(diagnostics.length).toBeGreaterThan(0);
-        const error = diagnostics.find(d => d.message.includes('physics_material_override'));
-        expect(error).toBeDefined();
-        expect(error?.message).toContain('resource reference');
+        expectDiagnostic(
+          scene(node('StaticBody3D', { physics_material_override: '"invalid_format"' })),
+          { prop: 'physics_material_override', contains: ['resource reference'] }
+        );
       });
     });
 
     describe('constant_linear_velocity validation', () => {
       it('should accept valid constant_linear_velocity format', () => {
-        const content = `[gd_scene format=3]
-
-[node name="ValidVelocity" type="StaticBody3D"]
-constant_linear_velocity = Vector3(1.0, 0.0, 0.5)
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
-`;
-
-        const diagnostics = linter.lint(content);
         // Should have warning about non-zero velocity, but no format errors
-        const errors = diagnostics.filter(d => d.severity === 'error');
-        expect(errors).toHaveLength(0);
+        expectNoErrors(
+          scene(node('StaticBody3D', { constant_linear_velocity: 'Vector3(1.0, 0.0, 0.5)' }), collisionShape3d)
+        );
       });
 
       it('should accept zero constant_linear_velocity', () => {
-        const content = `[gd_scene format=3]
-
-[node name="ZeroVelocity" type="StaticBody3D"]
-constant_linear_velocity = Vector3(0, 0, 0)
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
-`;
-
-        const diagnostics = linter.lint(content);
-        expect(diagnostics).toHaveLength(0);
+        expectClean(scene(node('StaticBody3D', { constant_linear_velocity: 'Vector3(0, 0, 0)' }), collisionShape3d));
       });
 
       it('should reject invalid constant_linear_velocity format', () => {
-        const content = `[gd_scene format=3]
-
-[node name="InvalidVelocity" type="StaticBody3D"]
-constant_linear_velocity = Vector3(1, 2)
-`;
-
-        const diagnostics = linter.lint(content);
-        expect(diagnostics.length).toBeGreaterThan(0);
-        const error = diagnostics.find(d => d.message.includes('constant_linear_velocity'));
-        expect(error).toBeDefined();
-        expect(error?.message).toContain('Vector3 with 3 numbers');
+        expectDiagnostic(
+          scene(node('StaticBody3D', { constant_linear_velocity: 'Vector3(1, 2)' })),
+          { prop: 'constant_linear_velocity', contains: ['Vector3 with 3 numbers'] }
+        );
       });
 
       it('should reject non-Vector3 constant_linear_velocity', () => {
-        const content = `[gd_scene format=3]
-
-[node name="InvalidFormat" type="StaticBody3D"]
-constant_linear_velocity = 1.0
-`;
-
-        const diagnostics = linter.lint(content);
-        expect(diagnostics.length).toBeGreaterThan(0);
-        const error = diagnostics.find(d => d.message.includes('constant_linear_velocity'));
-        expect(error).toBeDefined();
+        expectDiagnostic(
+          scene(node('StaticBody3D', { constant_linear_velocity: 1.0 })),
+          { prop: 'constant_linear_velocity' }
+        );
       });
     });
 
     describe('constant_angular_velocity validation', () => {
       it('should accept valid constant_angular_velocity format', () => {
-        const content = `[gd_scene format=3]
-
-[node name="ValidAngular" type="StaticBody3D"]
-constant_angular_velocity = Vector3(0.0, 1.57, 0.0)
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
-`;
-
-        const diagnostics = linter.lint(content);
         // Should have warning about non-zero velocity, but no format errors
-        const errors = diagnostics.filter(d => d.severity === 'error');
-        expect(errors).toHaveLength(0);
+        expectNoErrors(
+          scene(node('StaticBody3D', { constant_angular_velocity: 'Vector3(0.0, 1.57, 0.0)' }), collisionShape3d)
+        );
       });
 
       it('should accept zero constant_angular_velocity', () => {
-        const content = `[gd_scene format=3]
-
-[node name="ZeroAngular" type="StaticBody3D"]
-constant_angular_velocity = Vector3(0, 0, 0)
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
-`;
-
-        const diagnostics = linter.lint(content);
-        expect(diagnostics).toHaveLength(0);
+        expectClean(scene(node('StaticBody3D', { constant_angular_velocity: 'Vector3(0, 0, 0)' }), collisionShape3d));
       });
 
       it('should reject invalid constant_angular_velocity format', () => {
-        const content = `[gd_scene format=3]
-
-[node name="InvalidAngular" type="StaticBody3D"]
-constant_angular_velocity = Vector3(1)
-`;
-
-        const diagnostics = linter.lint(content);
-        expect(diagnostics.length).toBeGreaterThan(0);
-        const error = diagnostics.find(d => d.message.includes('constant_angular_velocity'));
-        expect(error).toBeDefined();
-        expect(error?.message).toContain('Vector3 with 3 numbers');
+        expectDiagnostic(
+          scene(node('StaticBody3D', { constant_angular_velocity: 'Vector3(1)' })),
+          { prop: 'constant_angular_velocity', contains: ['Vector3 with 3 numbers'] }
+        );
       });
     });
 
-    describe('collision_layer validation', () => {
-      it('should accept valid collision_layer values', () => {
-        const validValues = [1, 100, 1048575]; // Non-zero values to avoid warning
-
-        for (const value of validValues) {
-          const content = `[gd_scene format=3]
-
-[node name="ValidLayer${value}" type="StaticBody3D"]
-collision_layer = ${value}
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
-`;
-
-          const diagnostics = linter.lint(content);
-          expect(diagnostics).toHaveLength(0);
-        }
-      });
-
-      it('should accept maximum collision_layer value', () => {
-        const content = `[gd_scene format=3]
-
-[node name="MaxLayer" type="StaticBody3D"]
-collision_layer = 1048575
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
-`;
-
-        const diagnostics = linter.lint(content);
-        expect(diagnostics).toHaveLength(0);
-      });
-
-      it('should reject negative collision_layer', () => {
-        const content = `[gd_scene format=3]
-
-[node name="NegativeLayer" type="StaticBody3D"]
-collision_layer = -1
-`;
-
-        const diagnostics = linter.lint(content);
-        expect(diagnostics.length).toBeGreaterThan(0);
-        const error = diagnostics.find(d => d.message.includes('collision_layer'));
-        expect(error).toBeDefined();
-        expect(error?.message).toContain('between 0 and 1048575');
-      });
-
-      it('should reject collision_layer exceeding maximum', () => {
-        const content = `[gd_scene format=3]
-
-[node name="ExcessiveLayer" type="StaticBody3D"]
-collision_layer = 2000000
-`;
-
-        const diagnostics = linter.lint(content);
-        expect(diagnostics.length).toBeGreaterThan(0);
-        const error = diagnostics.find(d => d.message.includes('collision_layer'));
-        expect(error).toBeDefined();
-        expect(error?.message).toContain('between 0 and 1048575');
-      });
-
-      it('should reject non-numeric collision_layer', () => {
-        const content = `[gd_scene format=3]
-
-[node name="InvalidLayer" type="StaticBody3D"]
-collision_layer = "invalid"
-`;
-
-        const diagnostics = linter.lint(content);
-        expect(diagnostics.length).toBeGreaterThan(0);
-        const error = diagnostics.find(d => d.message.includes('collision_layer'));
-        expect(error).toBeDefined();
-      });
-    });
-
-    describe('collision_mask validation', () => {
-      it('should accept valid collision_mask values', () => {
-        const validValues = [1, 255, 1048575]; // Non-zero values to avoid warning
-
-        for (const value of validValues) {
-          const content = `[gd_scene format=3]
-
-[node name="ValidMask${value}" type="StaticBody3D"]
-collision_mask = ${value}
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
-`;
-
-          const diagnostics = linter.lint(content);
-          expect(diagnostics).toHaveLength(0);
-        }
-      });
-
-      it('should reject negative collision_mask', () => {
-        const content = `[gd_scene format=3]
-
-[node name="NegativeMask" type="StaticBody3D"]
-collision_mask = -5
-`;
-
-        const diagnostics = linter.lint(content);
-        expect(diagnostics.length).toBeGreaterThan(0);
-        const error = diagnostics.find(d => d.message.includes('collision_mask'));
-        expect(error).toBeDefined();
-        expect(error?.message).toContain('between 0 and 1048575');
-      });
-
-      it('should reject collision_mask exceeding maximum', () => {
-        const content = `[gd_scene format=3]
-
-[node name="ExcessiveMask" type="StaticBody3D"]
-collision_mask = 5000000
-`;
-
-        const diagnostics = linter.lint(content);
-        expect(diagnostics.length).toBeGreaterThan(0);
-        const error = diagnostics.find(d => d.message.includes('collision_mask'));
-        expect(error).toBeDefined();
-        expect(error?.message).toContain('between 0 and 1048575');
-      });
-    });
-
-    describe('collision_priority validation', () => {
-      it('should accept valid collision_priority values', () => {
-        const validValues = [0.0, 0.5, 1.0, -1.0, 100.5];
-
-        for (const value of validValues) {
-          const content = `[gd_scene format=3]
-
-[node name="ValidPriority${value}" type="StaticBody3D"]
-collision_priority = ${value}
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
-`;
-
-          const diagnostics = linter.lint(content);
-          expect(diagnostics).toHaveLength(0);
-        }
-      });
-
-      it('should reject non-numeric collision_priority', () => {
-        const content = `[gd_scene format=3]
-
-[node name="InvalidPriority" type="StaticBody3D"]
-collision_priority = "high"
-`;
-
-        const diagnostics = linter.lint(content);
-        expect(diagnostics.length).toBeGreaterThan(0);
-        const error = diagnostics.find(d => d.message.includes('collision_priority'));
-        expect(error).toBeDefined();
-      });
-    });
-
-    describe('disable_mode validation', () => {
-      it('should accept all valid disable_mode values', () => {
-        const validValues = [0, 1, 2]; // REMOVE, MAKE_STATIC, KEEP_ACTIVE
-
-        for (const value of validValues) {
-          const content = `[gd_scene format=3]
-
-[node name="ValidMode${value}" type="StaticBody3D"]
-disable_mode = ${value}
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
-`;
-
-          const diagnostics = linter.lint(content);
-          expect(diagnostics).toHaveLength(0);
-        }
-      });
-
-      it('should reject invalid disable_mode value', () => {
-        const content = `[gd_scene format=3]
-
-[node name="InvalidMode" type="StaticBody3D"]
-disable_mode = 5
-`;
-
-        const diagnostics = linter.lint(content);
-        expect(diagnostics.length).toBeGreaterThan(0);
-        const error = diagnostics.find(d => d.message.includes('disable_mode'));
-        expect(error).toBeDefined();
-        expect(error?.message).toContain('0-2');
-        expect(error?.message).toContain('REMOVE');
-      });
-
-      it('should reject negative disable_mode', () => {
-        const content = `[gd_scene format=3]
-
-[node name="NegativeMode" type="StaticBody3D"]
-disable_mode = -1
-`;
-
-        const diagnostics = linter.lint(content);
-        expect(diagnostics.length).toBeGreaterThan(0);
-        const error = diagnostics.find(d => d.message.includes('disable_mode'));
-        expect(error).toBeDefined();
-      });
-    });
-
-    describe('input_ray_pickable validation', () => {
-      it('should accept true value', () => {
-        const content = `[gd_scene format=3]
-
-[node name="PickableTrue" type="StaticBody3D"]
-input_ray_pickable = true
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
-`;
-
-        const diagnostics = linter.lint(content);
-        expect(diagnostics).toHaveLength(0);
-      });
-
-      it('should accept false value', () => {
-        const content = `[gd_scene format=3]
-
-[node name="PickableFalse" type="StaticBody3D"]
-input_ray_pickable = false
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
-`;
-
-        const diagnostics = linter.lint(content);
-        expect(diagnostics).toHaveLength(0);
-      });
-
-      it('should reject non-boolean input_ray_pickable', () => {
-        const content = `[gd_scene format=3]
-
-[node name="InvalidPickable" type="StaticBody3D"]
-input_ray_pickable = 1
-`;
-
-        const diagnostics = linter.lint(content);
-        expect(diagnostics.length).toBeGreaterThan(0);
-        const error = diagnostics.find(d => d.message.includes('input_ray_pickable'));
-        expect(error).toBeDefined();
-        expect(error?.message).toContain('boolean');
-      });
-    });
-
-    describe('input_capture_on_drag validation', () => {
-      it('should accept true value', () => {
-        const content = `[gd_scene format=3]
-
-[node name="CaptureTrue" type="StaticBody3D"]
-input_capture_on_drag = true
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
-`;
-
-        const diagnostics = linter.lint(content);
-        expect(diagnostics).toHaveLength(0);
-      });
-
-      it('should accept false value', () => {
-        const content = `[gd_scene format=3]
-
-[node name="CaptureFalse" type="StaticBody3D"]
-input_capture_on_drag = false
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
-`;
-
-        const diagnostics = linter.lint(content);
-        expect(diagnostics).toHaveLength(0);
-      });
-
-      it('should reject non-boolean input_capture_on_drag', () => {
-        const content = `[gd_scene format=3]
-
-[node name="InvalidCapture" type="StaticBody3D"]
-input_capture_on_drag = "yes"
-`;
-
-        const diagnostics = linter.lint(content);
-        expect(diagnostics.length).toBeGreaterThan(0);
-        const error = diagnostics.find(d => d.message.includes('input_capture_on_drag'));
-        expect(error).toBeDefined();
-        expect(error?.message).toContain('boolean');
-      });
-    });
+    runPropertyValidation({ nodeType: 'StaticBody3D', acceptChild: collisionShape3d }, [
+      {
+        prop: 'collision_layer',
+        valid: [1, 100, 1048575],
+        invalid: [
+          { value: -1, contains: ['between 0 and 1048575'] },
+          { value: 2000000, contains: ['between 0 and 1048575'] },
+          { value: '"invalid"' },
+        ],
+      },
+      {
+        prop: 'collision_mask',
+        valid: [1, 255, 1048575],
+        invalid: [
+          { value: -5, contains: ['between 0 and 1048575'] },
+          { value: 5000000, contains: ['between 0 and 1048575'] },
+        ],
+      },
+      {
+        prop: 'collision_priority',
+        valid: [0.0, 0.5, 1.0, -1.0, 100.5],
+        invalid: [{ value: '"high"' }],
+      },
+      {
+        prop: 'disable_mode',
+        valid: [0, 1, 2],
+        invalid: [{ value: 5, contains: ['0-2', 'REMOVE'] }, { value: -1 }],
+      },
+      {
+        prop: 'input_ray_pickable',
+        valid: [true, false],
+        invalid: [{ value: 1, contains: ['boolean'] }],
+      },
+      {
+        prop: 'input_capture_on_drag',
+        valid: [true, false],
+        invalid: [{ value: '"yes"', contains: ['boolean'] }],
+      },
+    ]);
   });
 
   describe('Semantic Validation (Resource References)', () => {
     it('should detect missing physics_material_override resource', () => {
-      const content = `[gd_scene format=3]
-
-[node name="MissingMaterial" type="StaticBody3D"]
-physics_material_override = SubResource("nonexistent")
-`;
-
-      const diagnostics = linter.lint(content);
-      expect(diagnostics.length).toBeGreaterThan(0);
-      const error = diagnostics.find(d => d.message.includes('Physics material resource not found'));
-      expect(error).toBeDefined();
-      expect(error).toMatchObject({
-        severity: 'error',
-        nodeType: 'StaticBody3D',
-        ruleName: 'valid-staticbody3d-resources',
-      });
+      expectDiagnostic(
+        scene(node('StaticBody3D', { physics_material_override: 'SubResource("nonexistent")' })),
+        {
+          ruleName: 'valid-staticbody3d-resources',
+          severity: 'error',
+          nodeType: 'StaticBody3D',
+          contains: ['Physics material resource not found'],
+        }
+      );
     });
 
     it('should pass when physics_material_override resource exists', () => {
-      const content = `[gd_scene format=3]
+      expectClean(`[gd_scene format=3]
 
 [sub_resource type="PhysicsMaterial" id="mat_1"]
 
@@ -482,14 +169,11 @@ physics_material_override = SubResource("nonexistent")
 physics_material_override = SubResource("mat_1")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
-`;
-
-      const diagnostics = linter.lint(content);
-      expect(diagnostics).toHaveLength(0);
+`);
     });
 
     it('should accept ExtResource references', () => {
-      const content = `[gd_scene format=3]
+      expectClean(`[gd_scene format=3]
 
 [ext_resource type="PhysicsMaterial" path="res://materials/physics.tres" id="ext_mat_1"]
 
@@ -497,237 +181,130 @@ physics_material_override = SubResource("mat_1")
 physics_material_override = ExtResource("ext_mat_1")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
-`;
-
-      const diagnostics = linter.lint(content);
-      expect(diagnostics).toHaveLength(0);
+`);
     });
   });
 
   describe('Semantic Validation (CollisionShape3D Children)', () => {
     it('should warn when StaticBody3D has no CollisionShape3D children', () => {
-      const content = `[gd_scene format=3]
-
-[node name="NoCollisionShape" type="StaticBody3D"]
-`;
-
-      const diagnostics = linter.lint(content);
-      expect(diagnostics.length).toBeGreaterThan(0);
-      const warning = diagnostics.find(d => d.ruleName === 'staticbody3d-needs-collision-shape');
-      expect(warning).toBeDefined();
-      expect(warning).toMatchObject({
+      expectDiagnostic(scene(node('StaticBody3D')), {
+        ruleName: 'staticbody3d-needs-collision-shape',
         severity: 'warning',
         nodeType: 'StaticBody3D',
+        contains: ['no CollisionShape3D children'],
       });
-      expect(warning?.message).toContain('no CollisionShape3D children');
     });
 
     it('should pass when StaticBody3D has CollisionShape3D child', () => {
-      const content = `[gd_scene format=3]
-
-[node name="WithCollisionShape" type="StaticBody3D"]
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
-`;
-
-      const diagnostics = linter.lint(content);
-      expect(diagnostics).toHaveLength(0);
+      expectClean(scene(node('StaticBody3D'), collisionShape3d));
     });
 
     it('should pass when StaticBody3D has nested CollisionShape3D', () => {
-      const content = `[gd_scene format=3]
-
-[node name="WithNestedShape" type="StaticBody3D"]
-
-[node name="Container" type="Node3D" parent="."]
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Container"]
-`;
-
-      const diagnostics = linter.lint(content);
-      expect(diagnostics).toHaveLength(0);
+      expectClean(
+        scene(
+          node('StaticBody3D'),
+          node('Node3D', {}, { name: 'Container', parent: '.' }),
+          node('CollisionShape3D', {}, { parent: 'Container' })
+        )
+      );
     });
 
     it('should pass when StaticBody3D has multiple CollisionShape3D children', () => {
-      const content = `[gd_scene format=3]
-
-[node name="MultipleShapes" type="StaticBody3D"]
-
-[node name="Shape1" type="CollisionShape3D" parent="."]
-
-[node name="Shape2" type="CollisionShape3D" parent="."]
-`;
-
-      const diagnostics = linter.lint(content);
-      expect(diagnostics).toHaveLength(0);
+      expectClean(
+        scene(
+          node('StaticBody3D'),
+          node('CollisionShape3D', {}, { name: 'Shape1', parent: '.' }),
+          node('CollisionShape3D', {}, { name: 'Shape2', parent: '.' })
+        )
+      );
     });
   });
 
   describe('Semantic Validation (Constant Velocities)', () => {
     it('should warn when constant_linear_velocity is non-zero', () => {
-      const content = `[gd_scene format=3]
-
-[node name="MovingStatic" type="StaticBody3D"]
-constant_linear_velocity = Vector3(1.0, 0.0, 0.0)
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
-`;
-
-      const diagnostics = linter.lint(content);
-      expect(diagnostics.length).toBeGreaterThan(0);
-      const warning = diagnostics.find(d => d.ruleName === 'staticbody3d-constant-velocity-warning');
-      expect(warning).toBeDefined();
-      expect(warning).toMatchObject({
-        severity: 'warning',
-        nodeType: 'StaticBody3D',
-      });
-      expect(warning?.message).toContain('constant_linear_velocity');
-      expect(warning?.message).toContain('confusing');
+      expectDiagnostic(
+        scene(node('StaticBody3D', { constant_linear_velocity: 'Vector3(1.0, 0.0, 0.0)' }), collisionShape3d),
+        {
+          ruleName: 'staticbody3d-constant-velocity-warning',
+          severity: 'warning',
+          nodeType: 'StaticBody3D',
+          contains: ['constant_linear_velocity', 'confusing'],
+        }
+      );
     });
 
     it('should not warn when constant_linear_velocity is zero', () => {
-      const content = `[gd_scene format=3]
-
-[node name="StaticStatic" type="StaticBody3D"]
-constant_linear_velocity = Vector3(0, 0, 0)
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
-`;
-
-      const diagnostics = linter.lint(content);
-      expect(diagnostics).toHaveLength(0);
+      expectClean(scene(node('StaticBody3D', { constant_linear_velocity: 'Vector3(0, 0, 0)' }), collisionShape3d));
     });
 
     it('should warn when constant_angular_velocity is non-zero', () => {
-      const content = `[gd_scene format=3]
-
-[node name="RotatingStatic" type="StaticBody3D"]
-constant_angular_velocity = Vector3(0.0, 1.57, 0.0)
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
-`;
-
-      const diagnostics = linter.lint(content);
-      expect(diagnostics.length).toBeGreaterThan(0);
-      const warning = diagnostics.find(d => d.ruleName === 'staticbody3d-constant-velocity-warning');
-      expect(warning).toBeDefined();
-      expect(warning).toMatchObject({
-        severity: 'warning',
-        nodeType: 'StaticBody3D',
-      });
-      expect(warning?.message).toContain('constant_angular_velocity');
-      expect(warning?.message).toContain('confusing');
+      expectDiagnostic(
+        scene(node('StaticBody3D', { constant_angular_velocity: 'Vector3(0.0, 1.57, 0.0)' }), collisionShape3d),
+        {
+          ruleName: 'staticbody3d-constant-velocity-warning',
+          severity: 'warning',
+          nodeType: 'StaticBody3D',
+          contains: ['constant_angular_velocity', 'confusing'],
+        }
+      );
     });
 
     it('should not warn when constant_angular_velocity is zero', () => {
-      const content = `[gd_scene format=3]
-
-[node name="StaticStatic" type="StaticBody3D"]
-constant_angular_velocity = Vector3(0, 0, 0)
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
-`;
-
-      const diagnostics = linter.lint(content);
-      expect(diagnostics).toHaveLength(0);
+      expectClean(scene(node('StaticBody3D', { constant_angular_velocity: 'Vector3(0, 0, 0)' }), collisionShape3d));
     });
 
     it('should warn when both velocities are non-zero', () => {
-      const content = `[gd_scene format=3]
-
-[node name="DoubleVelocity" type="StaticBody3D"]
-constant_linear_velocity = Vector3(1.0, 0.0, 0.0)
-constant_angular_velocity = Vector3(0.0, 1.0, 0.0)
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
-`;
-
-      const diagnostics = linter.lint(content);
-      const warnings = diagnostics.filter(d => d.ruleName === 'staticbody3d-constant-velocity-warning');
+      const warnings = lint(
+        scene(
+          node('StaticBody3D', {
+            constant_linear_velocity: 'Vector3(1.0, 0.0, 0.0)',
+            constant_angular_velocity: 'Vector3(0.0, 1.0, 0.0)',
+          }),
+          collisionShape3d
+        )
+      ).filter(d => d.ruleName === 'staticbody3d-constant-velocity-warning');
       expect(warnings.length).toBe(2); // One for linear, one for angular
     });
   });
 
   describe('Semantic Validation (Collision Layers)', () => {
     it('should warn when collision_layer is 0', () => {
-      const content = `[gd_scene format=3]
-
-[node name="NoLayer" type="StaticBody3D"]
-collision_layer = 0
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
-`;
-
-      const diagnostics = linter.lint(content);
-      expect(diagnostics.length).toBeGreaterThan(0);
-      const warning = diagnostics.find(d => d.ruleName === 'staticbody3d-zero-collision-layer');
-      expect(warning).toBeDefined();
-      expect(warning).toMatchObject({
+      expectDiagnostic(scene(node('StaticBody3D', { collision_layer: 0 }), collisionShape3d), {
+        ruleName: 'staticbody3d-zero-collision-layer',
         severity: 'warning',
         nodeType: 'StaticBody3D',
+        contains: ['collision_layer set to 0'],
       });
-      expect(warning?.message).toContain('collision_layer set to 0');
     });
 
     it('should not warn when collision_layer is non-zero', () => {
-      const content = `[gd_scene format=3]
-
-[node name="WithLayer" type="StaticBody3D"]
-collision_layer = 1
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
-`;
-
-      const diagnostics = linter.lint(content);
-      expect(diagnostics).toHaveLength(0);
+      expectClean(scene(node('StaticBody3D', { collision_layer: 1 }), collisionShape3d));
     });
 
     it('should warn when collision_mask is 0', () => {
-      const content = `[gd_scene format=3]
-
-[node name="NoMask" type="StaticBody3D"]
-collision_mask = 0
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
-`;
-
-      const diagnostics = linter.lint(content);
-      expect(diagnostics.length).toBeGreaterThan(0);
-      const warning = diagnostics.find(d => d.ruleName === 'staticbody3d-zero-collision-mask');
-      expect(warning).toBeDefined();
-      expect(warning).toMatchObject({
+      expectDiagnostic(scene(node('StaticBody3D', { collision_mask: 0 }), collisionShape3d), {
+        ruleName: 'staticbody3d-zero-collision-mask',
         severity: 'warning',
         nodeType: 'StaticBody3D',
+        contains: ['collision_mask set to 0'],
       });
-      expect(warning?.message).toContain('collision_mask set to 0');
     });
 
     it('should not warn when collision_mask is non-zero', () => {
-      const content = `[gd_scene format=3]
-
-[node name="WithMask" type="StaticBody3D"]
-collision_mask = 1
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
-`;
-
-      const diagnostics = linter.lint(content);
-      expect(diagnostics).toHaveLength(0);
+      expectClean(scene(node('StaticBody3D', { collision_mask: 1 }), collisionShape3d));
     });
   });
 
   describe('Edge Cases', () => {
     it('should handle multiple validation errors', () => {
-      const content = `[gd_scene format=3]
+      const diagnostics = lint(`[gd_scene format=3]
 
 [node name="MultipleErrors" type="StaticBody3D"]
 disable_mode = 10
 collision_layer = -5
 physics_material_override = SubResource("nonexistent")
 constant_linear_velocity = Vector3(1, 0, 0)
-`;
-
-      const diagnostics = linter.lint(content);
+`);
       // Should have multiple errors: disable_mode, collision_layer format errors,
       // plus potentially resource not found and velocity warnings
       expect(diagnostics.length).toBeGreaterThanOrEqual(2);
@@ -737,7 +314,7 @@ constant_linear_velocity = Vector3(1, 0, 0)
     });
 
     it('should handle all properties together', () => {
-      const content = `[gd_scene format=3]
+      expectClean(`[gd_scene format=3]
 
 [sub_resource type="PhysicsMaterial" id="mat_1"]
 
@@ -753,51 +330,26 @@ input_ray_pickable = true
 input_capture_on_drag = false
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
-`;
-
-      const diagnostics = linter.lint(content);
-      expect(diagnostics).toHaveLength(0);
+`);
     });
 
     it('should handle node with no properties', () => {
-      const content = `[gd_scene format=3]
-
-[node name="EmptyStatic" type="StaticBody3D"]
-`;
-
-      const diagnostics = linter.lint(content);
+      const diagnostics = lint(scene(node('StaticBody3D')));
       // Should only have warning about missing CollisionShape3D
       expect(diagnostics.length).toBe(1);
       expect(diagnostics[0].ruleName).toBe('staticbody3d-needs-collision-shape');
     });
 
     it('should handle scientific notation in velocities', () => {
-      const content = `[gd_scene format=3]
-
-[node name="ScientificNotation" type="StaticBody3D"]
-constant_linear_velocity = Vector3(1e-5, 2.5e3, -3.14e2)
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
-`;
-
-      const diagnostics = linter.lint(content);
       // Should have warning about non-zero velocity
-      const warning = diagnostics.find(d => d.ruleName === 'staticbody3d-constant-velocity-warning');
-      expect(warning).toBeDefined();
+      expectDiagnostic(
+        scene(node('StaticBody3D', { constant_linear_velocity: 'Vector3(1e-5, 2.5e3, -3.14e2)' }), collisionShape3d),
+        { ruleName: 'staticbody3d-constant-velocity-warning' }
+      );
     });
 
     it('should handle bitmask boundaries', () => {
-      const content = `[gd_scene format=3]
-
-[node name="BitmaskBoundary" type="StaticBody3D"]
-collision_layer = 1048575
-collision_mask = 1048575
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
-`;
-
-      const diagnostics = linter.lint(content);
-      expect(diagnostics).toHaveLength(0);
+      expectClean(scene(node('StaticBody3D', { collision_layer: 1048575, collision_mask: 1048575 }), collisionShape3d));
     });
   });
 });
