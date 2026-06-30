@@ -458,6 +458,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Checkbox",
+    "file": "unit-checkbox.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Grid Container",
     "file": "unit-grid-container.tscn",
     "category": "Unit - 2D UI Controls"
@@ -470,6 +475,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Margin Container",
     "file": "unit-margin-container.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Optionbutton",
+    "file": "unit-optionbutton.tscn",
     "category": "Unit - 2D UI Controls"
   },
   {

@@ -52,6 +52,8 @@ import '../nodes/2d/ui/scrollcontainer/index.js';
 import '../nodes/2d/ui/panel/index.js';
 import '../nodes/2d/ui/panelcontainer/index.js';
 import '../nodes/2d/ui/button/index.js';
+import '../nodes/2d/ui/checkbox/index.js';
+import '../nodes/2d/ui/optionbutton/index.js';
 import '../nodes/2d/ui/texturerect/index.js';
 import '../nodes/2d/ui/richtextlabel/index.js';
 import '../nodes/2d/ui/canvaslayer/index.js';
