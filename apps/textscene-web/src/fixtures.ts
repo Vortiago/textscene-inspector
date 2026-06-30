@@ -558,6 +558,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - External Resources"
   },
   {
+    "name": "Line2d",
+    "file": "unit-line2d.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
     "name": "Marker2d",
     "file": "unit-marker2d.tscn",
     "category": "Unit - 2D Canvas"

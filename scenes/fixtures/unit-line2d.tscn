@@ -1,0 +1,16 @@
+[gd_scene format=3]
+
+[node name="Line2DRoot" type="Node2D"]
+
+[node name="StraightLine" type="Line2D" parent="."]
+position = Vector2(100, 100)
+points = PackedVector2Array(0, 0, 100, 100)
+width = 16.0
+default_color = Color(1, 1, 1, 1)
+
+[node name="ClosedLine" type="Line2D" parent="."]
+position = Vector2(350, 100)
+points = PackedVector2Array(0, 0, 64, 0, 32, 96)
+width = 8.0
+default_color = Color(0.5, 0.5, 1, 1)
+closed = true

@@ -69,6 +69,7 @@ function detectCategory(filename) {
     filename.startsWith('unit-marker2d') ||
     filename.startsWith('unit-path2d') ||
     filename.startsWith('unit-pathfollow2d') ||
+    filename.startsWith('unit-line2d') ||
     filename.startsWith('unit-2d')
   ) {
     return 'Unit - 2D Canvas';
