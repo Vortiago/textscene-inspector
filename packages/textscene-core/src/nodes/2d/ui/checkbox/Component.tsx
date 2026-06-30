@@ -24,7 +24,7 @@ export function CheckBox({ node }: ControlComponentProps) {
   if (props.disabled) style.opacity = 0.6;
 
   return (
-    <div data-control-type="CheckBox" data-checked={props.buttonPressed ? "true" : "false"} style={style}>
+    <div data-control-type="CheckBox" data-node-name={node.name} data-checked={props.buttonPressed ? 'true' : 'false'} style={style}>
       {props.text ?? ''}
     </div>
   );

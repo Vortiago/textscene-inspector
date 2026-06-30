@@ -35,10 +35,14 @@ export function OptionButton({ node }: ControlComponentProps) {
 
   if (props.disabled) style.opacity = 0.6;
 
-  const selectedItem = props.selected !== undefined && props.items ? props.items[props.selected] as { text?: string } | undefined : undefined;
+  // Resolve the selected item by its Godot index, bounds-guarded — an out-of-range or
+  // absent `selected` falls back to empty text (a decision, not an accident).
+  const items = props.items ?? [];
+  const selectedIndex = props.selected ?? -1;
+  const selectedItem = selectedIndex >= 0 && selectedIndex < items.length ? items[selectedIndex] : undefined;
 
   return (
-    <div data-control-type="OptionButton" style={style}>
+    <div data-control-type="OptionButton" data-node-name={node.name} style={style}>
       {selectedItem?.text ?? ''}
     </div>
   );

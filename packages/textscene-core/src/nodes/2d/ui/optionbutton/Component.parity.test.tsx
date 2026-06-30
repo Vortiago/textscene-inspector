@@ -36,4 +36,9 @@ describe('OptionButton render contract', () => {
     expect(container.textContent).toContain('Easy');
     expect(container.textContent).not.toContain('Hard');
   });
+
+  it('renders empty when selected is out of range (a pinned fallback, not a crash)', () => {
+    const { container } = render(<OptionButton node={node({ ...ITEMS, selected: '5' })} />);
+    expect(container.textContent).toBe('');
+  });
 });
