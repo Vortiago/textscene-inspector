@@ -55,7 +55,9 @@ function detectCategory(filename) {
     filename.startsWith('unit-button') ||
     filename.startsWith('unit-texture-rect') ||
     filename.startsWith('unit-rich-text-label') ||
-    filename.startsWith('unit-canvas-layer')
+    filename.startsWith('unit-canvas-layer') ||
+    filename.startsWith('unit-checkbox') ||
+    filename.startsWith('unit-optionbutton')
   ) {
     return 'Unit - 2D UI Controls';
   }

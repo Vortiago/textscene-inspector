@@ -23,6 +23,8 @@ export const TWO_D_UI_TYPES = new Set<string>([
   'Panel',
   'PanelContainer',
   'Button',
+  'CheckBox',
+  'OptionButton',
   'TextureRect',
   'RichTextLabel',
   'CanvasLayer',
