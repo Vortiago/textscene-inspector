@@ -1,0 +1,10 @@
+[gd_scene format=3]
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_s01mb"]
+
+[node name="Root" type="Node3D"]
+
+[node name="GPUParticles3D" type="GPUParticles3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 5)
+amount = 200
+process_material = SubResource("ParticleProcessMaterial_s01mb")
