@@ -1,0 +1,25 @@
+/**
+ * CheckBox registration contract: the parser self-registers in the NodeRegistry
+ * and the DOM-overlay component self-registers in the ControlComponentRegistry
+ * (Controls render via the 2D-UI overlay, ADR-0003 — NOT the 3D NodeComponentRegistry,
+ * and they carry no linter slice).
+ */
+import { describe, it, expect } from 'vitest';
+import './index'; // parser registration side effect
+import './index.r3f'; // DOM-overlay component registration side effect
+import { nodeRegistry } from '../../../../core/NodeRegistry';
+import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
+import { parseCheckBox } from './parser';
+import { CheckBox } from './Component';
+
+describe('CheckBox registration', () => {
+  it('registers the parser under its type name', () => {
+    const reg = nodeRegistry.getRegistration('CheckBox');
+    expect(reg).not.toBeNull();
+    expect(reg!.parser).toBe(parseCheckBox);
+  });
+
+  it('registers the DOM-overlay component in the control registry', () => {
+    expect(controlComponentRegistry.get('CheckBox')).toBe(CheckBox);
+  });
+});
