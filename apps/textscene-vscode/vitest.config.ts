@@ -1,7 +1,11 @@
 import { availableParallelism } from 'node:os';
 import { defineConfig } from 'vitest/config';
+import { sourceResolve } from '../../vitest.shared';
 
 export default defineConfig({
+  // Resolve @textscene/core to its TS source so a fresh checkout tests without
+  // building core's dist first. See vitest.shared.ts (sourceResolve).
+  ...sourceResolve,
   test: {
     name: 'textscene-inspector',
     environment: 'node',

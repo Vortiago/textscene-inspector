@@ -20,8 +20,9 @@
     "lint:tscn": "node apps/textscene-linter/bin/tscn-lint.js",
     "type-check": "pnpm -r type-check",
     "type-check:all": "pnpm --filter @textscene/core build && pnpm -r type-check",
-    "validate": "pnpm build && pnpm type-check && pnpm lint && pnpm test:unit && pnpm check:bundle-size",
+    "validate": "pnpm build && pnpm type-check && pnpm lint && pnpm test:unit && pnpm check:bundle-size && pnpm check:package",
     "check:bundle-size": "node scripts/check-bundle-size.mjs",
+    "check:package": "publint packages/textscene-core",
     "generate:fixtures": "node scripts/generate-fixtures.js",
     "vendor:games": "node scripts/vendor-godot-games.mjs && node scripts/generate-fixtures.js",
     "new:node": "node scripts/new-node-slice.mjs",
@@ -69,6 +70,7 @@
     "pixelmatch": "^7.2.0",
     "playwright": "^1.60.0",
     "pngjs": "^7.0.0",
+    "publint": "^0.3.21",
     "rimraf": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
