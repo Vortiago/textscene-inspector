@@ -2,15 +2,7 @@
 
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
-import { propertyError } from '../../../linter/validators/index.js';
-import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
-
-const busValidator: PropertyValidator = (key, value, line) => {
-  if (!value.startsWith('"') && !value.startsWith('&"')) {
-    return propertyError(key, line, `Property 'bus' must be a string, got: "${value}"`, 'INVALID_BUS_FORMAT');
-  }
-  return null;
-};
+import { busValidator } from '../busValidator.js';
 
 validatorRegistry.registerAll('AudioStreamPlayer', {
   stream: v.resourceReference('stream'),

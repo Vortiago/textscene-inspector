@@ -2,16 +2,16 @@
  * AudioStreamPlayer3D strict validators for linting.
  * Migrated to the declarative `v` namespace (WI-ARCH-1).
  *
- * `stream` and `bus` keep bespoke validators: `stream` uses
- * "ExtResource or SubResource" wording (per-node test asserts this);
- * `bus` accepts both plain `"..."` strings and Godot's StringName
- * literal form `&"..."`.
+ * `stream` and `bus` use the shared audio validators: `streamValidator`
+ * enforces the "ExtResource or SubResource" wording (per-node test asserts
+ * this); `busValidator` accepts both plain `"..."` strings and Godot's
+ * StringName literal form `&"..."`.
  */
 
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
-import { propertyError } from '../../../linter/validators/index.js';
-import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
+import { busValidator } from '../busValidator.js';
+import { streamValidator } from '../streamValidator.js';
 
 const ATTENUATION_MODEL = {
   0: 'INVERSE_DISTANCE',
@@ -20,20 +20,6 @@ const ATTENUATION_MODEL = {
   3: 'DISABLED',
 };
 const DOPPLER_TRACKING = { 0: 'DISABLED', 1: 'IDLE_STEP', 2: 'PHYSICS_STEP' };
-
-const streamValidator: PropertyValidator = (key, value, line) => {
-  if (!value.startsWith('ExtResource(') && !value.startsWith('SubResource(')) {
-    return propertyError(key, line, `Property 'stream' must be a resource reference (ExtResource or SubResource), got: "${value}"`, 'INVALID_STREAM_FORMAT');
-  }
-  return null;
-};
-
-const busValidator: PropertyValidator = (key, value, line) => {
-  if (!value.startsWith('"') && !value.startsWith('&"')) {
-    return propertyError(key, line, `Property 'bus' must be a string, got: "${value}"`, 'INVALID_BUS_FORMAT');
-  }
-  return null;
-};
 
 validatorRegistry.registerAll('AudioStreamPlayer3D', {
   stream: streamValidator,

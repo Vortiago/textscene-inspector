@@ -10,6 +10,7 @@
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseNode3D } from '../../base/node3d/parser';
 import { boolOr, enumOr, floatOr, intOr } from '../../../parser/valueParsers';
+import { parseAudioBase } from '../parseAudioBase';
 import {
   AttenuationModel,
   type AudioStreamPlayer3DProperties,
@@ -22,13 +23,9 @@ export function parseAudioStreamPlayer3D(
 ): AudioStreamPlayer3DProperties {
   const baseProps = parseNode3D(heading, properties);
 
-  const result: AudioStreamPlayer3DProperties = {
+  return {
     ...baseProps,
-    volume_db: floatOr(properties.volume_db, 0),
-    pitch_scale: floatOr(properties.pitch_scale, 1),
-    playing: boolOr(properties.playing, false),
-    autoplay: boolOr(properties.autoplay, false),
-    stream_paused: boolOr(properties.stream_paused, false),
+    ...parseAudioBase(properties),
     attenuation_model: enumOr(properties.attenuation_model, AttenuationModel.ATTENUATION_INVERSE_DISTANCE, [
       AttenuationModel.ATTENUATION_INVERSE_DISTANCE,
       AttenuationModel.ATTENUATION_INVERSE_SQUARE_DISTANCE,
@@ -50,28 +47,5 @@ export function parseAudioStreamPlayer3D(
     emission_angle_enabled: boolOr(properties.emission_angle_enabled, false),
     emission_angle_degrees: floatOr(properties.emission_angle_degrees, 45),
     emission_angle_filter_attenuation_db: floatOr(properties.emission_angle_filter_attenuation_db, -12),
-    bus: parseBus(properties.bus),
-    max_polyphony: intOr(properties.max_polyphony, 1),
   };
-
-  if (properties.stream) {
-    result.stream = properties.stream;
-  }
-
-  return result;
-}
-
-/**
- * Audio bus accepts both regular string literal ("Master") and Godot's
- * StringName syntax (&"Master"). Strip the wrapper and return the inner
- * value. Default: "Master" (Godot's default bus).
- */
-function parseBus(raw: string | undefined): string {
-  if (!raw) return 'Master';
-  const trimmed = raw.startsWith('&') ? raw.slice(1) : raw;
-  const stringMatch = trimmed.match(/^"(.*)"$/);
-  if (stringMatch && stringMatch[1] !== undefined) {
-    return stringMatch[1];
-  }
-  return trimmed;
 }

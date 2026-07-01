@@ -123,6 +123,9 @@ describe('#147 AudioStreamPlayer / AudioStreamPlayer2D audio properties — beha
     const p = firstOfType(TWO_D_WITNESS, 'AudioStreamPlayer2D').properties as Record<string, unknown>;
     expect(p.volume_db).toBe(-3.0);
     expect(p.stream).toBe('ExtResource("5")');
+    // Godot AudioStreamPlayer2D.max_distance defaults to 2000 (a finite pixel
+    // distance), NOT the 3D sibling's 0/"unlimited" — guard the 3D-copied bug.
+    expect(p.max_distance).toBe(2000);
   });
 
   // Criterion 1 / 4 — the valid witnessed forms lint clean (no false positive on the audio surface).
@@ -162,6 +165,25 @@ describe('#147 AudioStreamPlayer / AudioStreamPlayer2D audio properties — beha
     expect(
       /volume|bus|autoplay|stream/.test(JSON.stringify(sections).toLowerCase()),
       'the formatter should surface the audio properties',
+    ).toBe(true);
+
+    // The 2D formatter's OUTPUT (not just its presence) must surface the audio
+    // surface and render the 2D-specific spatial semantics correctly.
+    const props2 = firstOfType(TWO_D_WITNESS, 'AudioStreamPlayer2D').properties;
+    const sections2 = reg2!.propertyFormatter!(props2);
+    const json2 = JSON.stringify(sections2).toLowerCase();
+    expect(sections2.length, 'the 2D formatter should emit at least one inspector section').toBeGreaterThan(0);
+    expect(
+      /volume|bus|autoplay|stream/.test(json2),
+      'the 2D formatter should surface the audio properties',
+    ).toBe(true);
+    expect(
+      json2.includes('unlimited'),
+      'AudioStreamPlayer2D max_distance is a finite pixel distance, never the 3D-only "Unlimited"',
+    ).toBe(false);
+    expect(
+      json2.includes('2000.00'),
+      'the witnessed AudioStreamPlayer2D (max_distance omitted) should render its 2000 default',
     ).toBe(true);
   });
 

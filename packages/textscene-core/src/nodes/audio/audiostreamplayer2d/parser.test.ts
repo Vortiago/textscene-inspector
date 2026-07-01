@@ -24,11 +24,11 @@ describe('parseAudioStreamPlayer2D defaults', () => {
     expect(props.stream_paused).toBe(false);
     expect(props.bus).toBe('Master');
     expect(props.max_polyphony).toBe(1);
-    expect(props.max_distance).toBe(0);
+    expect(props.max_distance).toBe(2000);
     expect(props.attenuation).toBe(1);
     expect(props.panning_strength).toBe(1);
     expect(props.area_mask).toBe(1);
-    expect(props.playback_type).toBe(PlaybackType.STREAM);
+    expect(props.playback_type).toBe(PlaybackType.DEFAULT);
     expect(props.stream).toBeUndefined();
   });
 });
@@ -66,13 +66,16 @@ describe('parseAudioStreamPlayer2D properties', () => {
   });
 
   it('parses playback_type enum (and rejects out-of-range)', () => {
+    // Godot AudioServer.PlaybackType: DEFAULT=0, STREAM=1, SAMPLE=2.
     expect(parseAudioStreamPlayer2D(HEADING, { playback_type: '1' }).playback_type)
-      .toBe(PlaybackType.SAMPLE);
-    expect(parseAudioStreamPlayer2D(HEADING, { playback_type: '2' }).playback_type)
-      .toBe(PlaybackType.MAX);
-    // Out of range → fallback to default.
-    expect(parseAudioStreamPlayer2D(HEADING, { playback_type: '9' }).playback_type)
       .toBe(PlaybackType.STREAM);
+    expect(parseAudioStreamPlayer2D(HEADING, { playback_type: '2' }).playback_type)
+      .toBe(PlaybackType.SAMPLE);
+    // Out of range (incl. the MAX=3 sentinel) → fallback to default.
+    expect(parseAudioStreamPlayer2D(HEADING, { playback_type: '3' }).playback_type)
+      .toBe(PlaybackType.DEFAULT);
+    expect(parseAudioStreamPlayer2D(HEADING, { playback_type: '9' }).playback_type)
+      .toBe(PlaybackType.DEFAULT);
   });
 
   it('parses bus from plain string ("Music")', () => {

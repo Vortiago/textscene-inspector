@@ -255,4 +255,69 @@ max_polyphony = many
       expect(diagnostics[0].message).toContain('must be a number');
     });
   });
+
+  describe('playing validation', () => {
+    it('should accept valid playing boolean values', () => {
+      for (const value of ['true', 'false']) {
+        const content = `[gd_scene format=3]
+
+[node name="Player" type="AudioStreamPlayer"]
+playing = ${value}
+`;
+
+        const diagnostics = linter.lint(content);
+        expect(diagnostics).toHaveLength(0);
+      }
+    });
+
+    it('should reject non-boolean playing', () => {
+      const content = `[gd_scene format=3]
+
+[node name="Player" type="AudioStreamPlayer"]
+playing = yes
+`;
+
+      const diagnostics = linter.lint(content);
+      expect(diagnostics.length).toBeGreaterThan(0);
+      expect(diagnostics[0].message).toContain('playing');
+      expect(diagnostics[0].message).toContain('boolean');
+    });
+  });
+
+  describe('bus validation', () => {
+    it('should accept a plain quoted bus string', () => {
+      const content = `[gd_scene format=3]
+
+[node name="Player" type="AudioStreamPlayer"]
+bus = "Music"
+`;
+
+      const diagnostics = linter.lint(content);
+      expect(diagnostics).toHaveLength(0);
+    });
+
+    it('should accept a StringName bus literal', () => {
+      const content = `[gd_scene format=3]
+
+[node name="Player" type="AudioStreamPlayer"]
+bus = &"SFX"
+`;
+
+      const diagnostics = linter.lint(content);
+      expect(diagnostics).toHaveLength(0);
+    });
+
+    it('should reject an unquoted bus value', () => {
+      const content = `[gd_scene format=3]
+
+[node name="Player" type="AudioStreamPlayer"]
+bus = Master
+`;
+
+      const diagnostics = linter.lint(content);
+      expect(diagnostics.length).toBeGreaterThan(0);
+      expect(diagnostics[0].message).toContain('bus');
+      expect(diagnostics[0].message).toContain('must be a string');
+    });
+  });
 });

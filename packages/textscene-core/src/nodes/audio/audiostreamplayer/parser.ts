@@ -9,8 +9,7 @@
 
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseNode } from '../../node/parser';
-import { boolOr, floatOr, intOr } from '../../../parser/valueParsers';
-import { parseBus } from '../parseBus';
+import { parseAudioBase } from '../parseAudioBase';
 import type { AudioStreamPlayerProperties } from './types';
 
 export function parseAudioStreamPlayer(
@@ -19,20 +18,8 @@ export function parseAudioStreamPlayer(
 ): AudioStreamPlayerProperties {
   const baseProps = parseNode(heading, properties);
 
-  const result: AudioStreamPlayerProperties = {
+  return {
     ...baseProps,
-    volume_db: floatOr(properties.volume_db, 0),
-    pitch_scale: floatOr(properties.pitch_scale, 1),
-    playing: boolOr(properties.playing, false),
-    autoplay: boolOr(properties.autoplay, false),
-    stream_paused: boolOr(properties.stream_paused, false),
-    bus: parseBus(properties.bus),
-    max_polyphony: intOr(properties.max_polyphony, 1),
+    ...parseAudioBase(properties, 'AudioStreamPlayer'),
   };
-
-  if (properties.stream) {
-    result.stream = properties.stream;
-  }
-
-  return result;
 }
