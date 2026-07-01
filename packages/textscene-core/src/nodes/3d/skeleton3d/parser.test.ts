@@ -1,14 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import type { Node3DProperties } from '../../base/node3d/types';
 import { parseNode3D } from '../../base/node3d/parser';
-import type { TscnNode } from '../../../parser/types';
 
 function heading(attributes: Record<string, string> = {}) {
   return { type: 'node' as const, attributes: { name: 'Skeleton3D', type: 'Skeleton3D', ...attributes } };
-}
-
-function makeNode(properties: Node3DProperties): TscnNode {
-  return { name: properties.name ?? 'Skeleton3D', type: 'Skeleton3D', children: [], properties };
 }
 
 describe('parseNode3D (skeleton3d)', () => {
@@ -35,7 +29,3 @@ describe('parseNode3D (skeleton3d)', () => {
     expect(result.transform).toBeUndefined();
   });
 });
-
-function skeletonNode(): TscnNode {
-  return makeNode({ name: 'MySkeleton', type: 'Skeleton3D' as const });
-}

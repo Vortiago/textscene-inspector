@@ -22,15 +22,17 @@ function makeBody(raw: Record<string, string> = {}): TscnNode {
 }
 
 describe('<Node2D> (area2d physics body)', () => {
-  it('renders Area2D as a named group', async () => {
+  it('renders Area2D as a named, visible group', async () => {
     const renderer = await ReactThreeTestRenderer.create(<Node2D node={makeBody()} />);
-    expect(renderer.scene.findByProps({ name: 'Area2D' })).toBeDefined();
+    const group = renderer.scene.findByProps({ name: 'Area2D' });
+    expect(group.instance.visible).toBe(true);
   });
 
   it('hides the group when visible is false', async () => {
     const body = makeBody({ name: 'CharacterBody2D', visible: 'false' });
     const renderer = await ReactThreeTestRenderer.create(<Node2D node={body} />);
-    expect(renderer.scene.findByProps({ name: 'CharacterBody2D' })).toBeDefined();
+    const group = renderer.scene.findByProps({ name: 'CharacterBody2D' });
+    expect(group.instance.visible).toBe(false);
   });
 
   it('renders children inside the transform group', async () => {
