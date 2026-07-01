@@ -150,6 +150,12 @@ _Avoid_: re-inlining region/frames math in a sprite slice (the pre-extraction ha
 A render-only component with no parser and no linter (`GenericNodeFallback`, `GLBSceneRoot`) — not a user-authorable TSCN type; lives in `r3f/internal/`, not a Node slice.
 _Avoid_: "default node".
 
+### Shell & editing
+
+**Source pane**:
+The web previewer's editable `.tscn` text view — a left sibling of the preview shell, never inside it. Holds the single editable buffer, fed three ways (fixture-select, file upload, or direct paste/type), that is the source of truth for both the **Linter** (surfaced in the browser as gutter markers with a hover popover) and — gated on a clean **Lenient parser** result — the shell's rendered scene, so the viewport holds its last valid render instead of blanking while a mid-edit file is transiently broken. Edits are ephemeral: they reset on scene switch or reload and leave the browser only via a "Download .tscn" export; nothing is written back to disk (ADR-0020).
+_Avoid_: "code editor" / "Monaco" / "CodeMirror" — it is a bare `<textarea>`, no editor library; conflating it with the **SceneTreeViewer** ("scene tree" UI panel) or with the VS Code extension's own real text editor.
+
 ### Animation
 
 **GodotAnimation**:
