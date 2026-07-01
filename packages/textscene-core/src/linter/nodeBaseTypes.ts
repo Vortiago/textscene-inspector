@@ -37,6 +37,7 @@ const NODE3D_LEAVES = [
   'RigidBody3D',
   'CharacterBody3D',
   'CollisionShape3D',
+  'AreaLight3D',
 ] as const;
 
 /** Base for every canvas (2D) node — Node2D carries the transform/skew set. */

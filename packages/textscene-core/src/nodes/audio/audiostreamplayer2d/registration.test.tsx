@@ -1,7 +1,8 @@
 /**
- * AudioStreamPlayer2D registration contract: the parser reuses `parseNode2D`
- * (transform only) and the render component reuses the Node2D transform group
- * (ADR-0008 — invisible group that positions children, not a placeholder cube).
+ * AudioStreamPlayer2D registration contract: the parser is `parseAudioStreamPlayer2D`
+ * (audio properties parsed + Node2D transform) and the render component reuses the
+ * Node2D transform group (ADR-0008 — invisible group that positions children, not a
+ * placeholder cube).
  */
 
 import { describe, it, expect } from 'vitest';
@@ -13,6 +14,7 @@ import { nodeRegistry } from '../../../core/NodeRegistry';
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
 import { Node2D } from '../../base/node2d/Component';
 import { parseNode2D } from '../../base/node2d/parser';
+import { parseAudioStreamPlayer2D } from './parser';
 import type { TscnNode } from '../../../parser/types';
 
 const heading = {
@@ -30,13 +32,13 @@ function audioNode(raw: Record<string, string> = {}): TscnNode {
 }
 
 describe('AudioStreamPlayer2D parser registration', () => {
-  it('registers in the NodeRegistry with the Node2D parser', () => {
+  it('registers in the NodeRegistry with the dedicated parser', () => {
     const registration = nodeRegistry.getRegistration('AudioStreamPlayer2D');
     expect(registration).not.toBeNull();
-    expect(registration!.parser).toBe(parseNode2D);
+    expect(registration!.parser).toBe(parseAudioStreamPlayer2D);
   });
 
-  it('parses the 2D transform; audio-only properties stay unparsed', () => {
+  it('parses the 2D transform and audio-only properties', () => {
     const registration = nodeRegistry.getRegistration('AudioStreamPlayer2D')!;
     const props = registration.parser(heading, {
       position: 'Vector2(100, 50)',
@@ -44,7 +46,8 @@ describe('AudioStreamPlayer2D parser registration', () => {
     });
     expect(props.position).toEqual({ x: 100, y: 50 });
     expect(props.name).toBe('Music');
-    expect('stream' in props).toBe(false);
+    expect('stream' in props).toBe(true);
+    expect(props.stream).toBe('ExtResource("1_abc")');
   });
 
   it('matches only [node] headings of its own type', () => {
