@@ -7,8 +7,7 @@
  */
 import { useMemo } from 'react';
 import { TscnParser } from '../../parser/TscnParser.js';
-import { SceneGraphBuilder } from '../../core/SceneGraphBuilder.js';
-import { tscnSceneToParsedScene } from '../../core/SceneGraph.js';
+import { tscnSceneToParsedScene, buildSceneGraph } from '../../core/SceneGraph.js';
 import type { SceneGraph } from '../../core/SceneGraph.js';
 import type { TscnScene } from '../../parser/types.js';
 import { isGLBPath } from '../../resources/processing/glbProcessing.js';
@@ -25,7 +24,7 @@ export function parseTscnContent(content: string, rootScenePath: string): ParseR
   // path uses, so it loads + renders standalone (the node re-fetches the bytes
   // via useResource('GLBMesh')). Matches createSceneProcessor's instanced path.
   if (isGLBPath(rootScenePath)) {
-    return buildSceneGraph(rootScenePath, synthesiseGLBScene(rootScenePath));
+    return toParseResult(rootScenePath, synthesiseGLBScene(rootScenePath));
   }
   if (!content) {
     return { sceneGraph: null, error: null };
@@ -46,7 +45,7 @@ export function parseTscnContent(content: string, rootScenePath: string): ParseR
       };
     }
 
-    return buildSceneGraph(rootScenePath, tscnScene);
+    return toParseResult(rootScenePath, tscnScene);
   } catch (err) {
     return {
       sceneGraph: null,
@@ -55,19 +54,15 @@ export function parseTscnContent(content: string, rootScenePath: string): ParseR
   }
 }
 
-/** Assemble a single-scene SceneGraph from a parsed/synthesised TscnScene. */
-function buildSceneGraph(rootScenePath: string, tscnScene: TscnScene): ParseResult {
+/** Wrap a parsed/synthesised TscnScene into a single-scene SceneGraph result. */
+function toParseResult(rootScenePath: string, tscnScene: TscnScene): ParseResult {
   const parsedScene = tscnSceneToParsedScene(
     rootScenePath,
     tscnScene.nodes,
     tscnScene.externalResources,
     tscnScene.internalResources
   );
-  const sceneGraph = new SceneGraphBuilder()
-    .setRootScene(rootScenePath)
-    .addScene(parsedScene)
-    .build();
-  return { sceneGraph, error: null };
+  return { sceneGraph: buildSceneGraph(parsedScene), error: null };
 }
 
 /** Re-parses only when `content` or `rootScenePath` changes. */

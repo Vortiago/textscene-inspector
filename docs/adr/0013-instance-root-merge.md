@@ -4,7 +4,7 @@ When a Node instances a single-root `.tscn`, we collapse the redundant wrapper l
 
 ## Considered options
 
-- **Merge at parse/build time in the SceneGraphBuilder (single place).** Rejected: instanced sub-scenes load lazily through the resource event bus (`useResource`), so at build time the builder has no sub-scene to merge. The merge must therefore happen at render time, applied **identically in both independent resolution paths** — the tree (`useSubSceneChildren` / `TreeNode`, and the sibling `resolveNodeByPath`) and the viewport (`NodeDispatcher` / `InstancedSceneSubtree`). They resolve instances separately and must agree on node paths.
+- **Merge at parse/build time in `buildSceneGraph()` (single place).** Rejected: instanced sub-scenes load lazily through the resource event bus (`useResource`), so at build time `buildSceneGraph()` has no sub-scene to merge. The merge must therefore happen at render time, applied **identically in both independent resolution paths** — the tree (`useSubSceneChildren` / `TreeNode`, and the sibling `resolveNodeByPath`) and the viewport (`NodeDispatcher` / `InstancedSceneSubtree`). They resolve instances separately and must agree on node paths.
 
 ## Consequences
 
