@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { parseNode } from './parser';
 import type { ParsedHeading } from '../../parser/utils';
-import { parseHeading } from '../../parser/utils';
 
 // Helper: build a minimal ParsedHeading for Node with the given attributes.
 function nodeHeading(attrs: Record<string, string> = {}): ParsedHeading {
@@ -9,15 +8,6 @@ function nodeHeading(attrs: Record<string, string> = {}): ParsedHeading {
     type: 'node',
     attributes: { type: 'Node', name: '', ...attrs },
   };
-}
-
-// Helper: build from an inline heading (allows overwriting type/name).
-function inlineHeading(rawAttrs: Record<string, unknown>): ParsedHeading {
-  const attrs: Record<string, string> = {};
-  for (const [k, v] of Object.entries(rawAttrs)) {
-    if (v !== undefined) attrs[k] = String(v);
-  }
-  return { type: 'node', attributes: attrs };
 }
 
 describe('parseNode', () => {
@@ -44,14 +34,14 @@ describe('parseNode', () => {
   });
 
   it('parses index attribute', () => {
-    const heading = inlineHeading({ type: 'Node', name: 'Child', index: '5' });
+    const heading = nodeHeading({ name: 'Child', index: '5' });
     const p = parseNode(heading, {});
     expect(p.index).toBe(5);
     expect(p.name).toBe('Child');
   });
 
   it('handles missing name (defaults to empty string)', () => {
-    const heading = inlineHeading({ type: 'Node' });
+    const heading = nodeHeading({});
     const p = parseNode(heading, {});
     expect(p.name).toBe('');
   });
@@ -71,10 +61,14 @@ describe('parseNode', () => {
   it('returns identity transform for malformed transform', () => {
     const heading = nodeHeading({ name: 'N' });
     const p = parseNode(heading, { transform: 'not-a-transform' });
-    // Identity basis + zero origin (parseOptionalTransform returns identity on failure)
-    expect(p.transform).toBeDefined();
-    expect(p.transform!.basis_x.x).toBe(1);
-    expect(p.transform!.origin.x).toBe(0);
+    // Full identity basis + zero origin — asserting the whole 3x3 (not just
+    // basis_x.x) so this distinguishes true identity from a partially-wrong basis.
+    expect(p.transform).toEqual({
+      basis_x: { x: 1, y: 0, z: 0 },
+      basis_y: { x: 0, y: 1, z: 0 },
+      basis_z: { x: 0, y: 0, z: 1 },
+      origin: { x: 0, y: 0, z: 0 },
+    });
   });
 
   it('returns undefined transform when no transform property', () => {

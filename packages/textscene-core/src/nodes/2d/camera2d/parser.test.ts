@@ -67,4 +67,28 @@ describe('parseCamera2D', () => {
     const p = parseCamera2D(heading(), { position: 'Vector2(-10000, -8000)' });
     expect(p.position).toEqual({ x: -10000, y: -8000 });
   });
+
+  it('explicit non-default anchor_mode FIXED_TOP_LEFT (0)', () => {
+    const p = parseCamera2D(heading(), { anchor_mode: '0' });
+    expect(p.anchor_mode).toBe(0);
+  });
+
+  it('malformed anchor_mode falls back to DRAG_CENTER (1)', () => {
+    // intOr warn-then-fallback: a present-but-unparseable value must not
+    // silently become NaN — it falls back to the Godot default (1).
+    const p = parseCamera2D(heading(), { anchor_mode: 'garbage' });
+    expect(p.anchor_mode).toBe(1);
+  });
+
+  it('malformed zoom falls back to default (1, 1)', () => {
+    // vec2Or warn-then-fallback: a present-but-unparseable Vector2 must fall
+    // back to the default, not throw or yield NaN components.
+    const p = parseCamera2D(heading(), { zoom: 'not-a-vector' });
+    expect(p.zoom).toEqual({ x: 1, y: 1 });
+  });
+
+  it('malformed offset falls back to default (0, 0)', () => {
+    const p = parseCamera2D(heading(), { offset: 'Vector2(oops)' });
+    expect(p.offset).toEqual({ x: 0, y: 0 });
+  });
 });

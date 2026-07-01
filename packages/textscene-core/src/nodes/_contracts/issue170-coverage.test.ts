@@ -8,7 +8,10 @@
  *      complex parent path / malformed instance / optional transform valid+malformed.
  *   6. Camera2D parser edge cases — EXPAND the existing 3-case `camera2d/parser.test.ts`
  *      with zoom (fractional / zero / negative / scientific), offset (zero / large /
- *      mixed-sign), position (large / negative) and the anchor_mode default.
+ *      mixed-sign), position (large / negative) and the anchor_mode default. The
+ *      `mentions` include `DRAG_CENTER` + `fall`(back) so the anchor_mode / decoder
+ *      coverage must add a REAL malformed-value → default case (the intOr/vec2Or
+ *      warn-then-fallback branch), not lean on the pre-existing happy-path case.
  *
  * The behaviour under test already ships (parseNode / parseCamera2D are implemented),
  * so a behavioural witness would be green on day one — the only honest RED lever for a
@@ -43,7 +46,14 @@ const REQUIRED: ReadonlyArray<{ path: string; minCases: number; mentions: string
   // NEW file — must cover the Node-specific `index` attribute (Node3D's parser omits it).
   { path: `${CORE}/node/parser.test.ts`, minCases: 7, mentions: ['parseNode', 'index'] },
   // EXPAND from 3 cases — the jump to 8 forces the zoom/offset/position/anchor_mode edges.
-  { path: `${CORE}/2d/camera2d/parser.test.ts`, minCases: 8, mentions: ['parseCamera2D', 'anchor_mode', 'zoom', 'offset'] },
+  // `DRAG_CENTER` and `fall` (fallback) force a REAL malformed-value → default
+  // case for the intOr/vec2Or decoders, so the anchor_mode string-match can no
+  // longer be paid purely by the pre-existing happy-path case (legacy coverage).
+  {
+    path: `${CORE}/2d/camera2d/parser.test.ts`,
+    minCases: 8,
+    mentions: ['parseCamera2D', 'anchor_mode', 'zoom', 'offset', 'DRAG_CENTER', 'fall'],
+  },
 ];
 
 function countCases(src: string): number {
