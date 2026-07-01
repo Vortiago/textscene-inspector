@@ -1,0 +1,20 @@
+[gd_scene format=3]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_1"]
+radius = 0.5
+
+[node name="Root" type="Node2D"]
+
+[node name="RigidBody2D" type="RigidBody2D" parent="."]
+position = Vector2(0, 0)
+mass = 1
+gravity_scale = 1
+collision_layer = 8
+collision_mask = 16
+
+[node name="Shape" type="CollisionShape2D" parent="RigidBody2D"]
+shape = SubResource("CircleShape2D_1")
+
+[node name="Visual" type="ColorRect" parent="RigidBody2D"]
+layout_mode = 2
+color = Color(0.4, 1, 0.4, 1)

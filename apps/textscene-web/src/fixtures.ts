@@ -128,8 +128,23 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Area2d",
+    "file": "unit-area2d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Characterbody2d",
+    "file": "unit-characterbody2d.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Decal",
     "file": "unit-decal.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Gpuparticles3d",
+    "file": "unit-gpuparticles3d.tscn",
     "category": "Other"
   },
   {
@@ -168,8 +183,23 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Rigidbody2d",
+    "file": "unit-rigidbody2d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Skeleton3d",
+    "file": "unit-skeleton3d.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Sprite3d",
     "file": "unit-sprite3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Staticbody2d",
+    "file": "unit-staticbody2d.tscn",
     "category": "Other"
   },
   {
