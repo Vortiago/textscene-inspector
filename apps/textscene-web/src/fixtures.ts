@@ -498,6 +498,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Control Anchors Theme",
+    "file": "unit-control-anchors-theme.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Grid Container",
     "file": "unit-grid-container.tscn",
     "category": "Unit - 2D UI Controls"

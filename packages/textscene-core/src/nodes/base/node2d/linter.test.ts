@@ -134,20 +134,16 @@ describe('Node2D Linter', () => {
       });
     });
 
-    it('should detect extreme scale value - too large', () => {
-      expectDiagnostic(scene(node('Node2D', { scale: 'Vector2(10000, 1)' })), {
-        ruleName: 'strict-parser',
-        severity: 'error',
-        contains: ['scale', 'extreme', 'precision'],
-      });
+    // Extreme-but-nonzero scales are valid Godot (the renderer draws them; real
+    // scenes use near-zero "hide" scales), so they must lint clean — erroring
+    // would re-introduce parser/linter divergence now that every Node2D subclass
+    // inherits this validator via the base-walk (#143).
+    it('tolerates a very large (but finite) scale', () => {
+      expectClean(scene(node('Node2D', { scale: 'Vector2(10000, 1)' })));
     });
 
-    it('should detect extreme scale value - too small', () => {
-      expectDiagnostic(scene(node('Node2D', { scale: 'Vector2(0.0001, 1)' })), {
-        ruleName: 'strict-parser',
-        severity: 'error',
-        contains: ['scale', 'extreme'],
-      });
+    it('tolerates a near-zero (but nonzero) scale', () => {
+      expectClean(scene(node('Node2D', { scale: 'Vector2(0.00001, 0.00001)' })));
     });
 
     it('should detect invalid scale format', () => {
@@ -363,25 +359,21 @@ describe('Node2D Linter', () => {
     });
   });
 
-  describe('Scale Boundary Testing', () => {
-    it('should pass for scale exactly at lower threshold', () => {
-      expectClean(scene(node('Node2D', { scale: 'Vector2(0.001, 0.001)' })));
-    });
-
-    it('should pass for scale exactly at upper threshold', () => {
-      expectClean(scene(node('Node2D', { scale: 'Vector2(1000, 1000)' })));
-    });
-
-    it('should fail for scale just below lower threshold', () => {
-      expectDiagnostic(scene(node('Node2D', { scale: 'Vector2(0.0009, 1)' })), {
-        contains: ['extreme'],
-      });
-    });
-
-    it('should fail for scale just above upper threshold', () => {
-      expectDiagnostic(scene(node('Node2D', { scale: 'Vector2(1001, 1)' })), {
-        contains: ['extreme'],
-      });
+  describe('Scale magnitude tolerance', () => {
+    // Any nonzero magnitude is valid Godot and lints clean — only a zero axis
+    // (a collapsed transform) errors. There is no extreme-magnitude threshold,
+    // and negative components are valid mirrors/flips (matching Node3D).
+    it('tolerates tiny, huge, and negative (mirror) nonzero scales', () => {
+      for (const s of [
+        'Vector2(0.001, 0.001)',
+        'Vector2(1000, 1000)',
+        'Vector2(0.0009, 1)',
+        'Vector2(1001, 1)',
+        'Vector2(-1, 1)',
+        'Vector2(-2, -2)',
+      ]) {
+        expectClean(scene(node('Node2D', { scale: s })));
+      }
     });
   });
 });

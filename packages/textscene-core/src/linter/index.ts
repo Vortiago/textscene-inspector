@@ -8,11 +8,14 @@
 // Import linter registration for all nodes via index.linter.ts
 // This pattern is consistent for ALL nodes (with or without renderers)
 //
-// Deliberate exception: the 15 Control slices (nodes/2d/ui/*) are NOT
-// lint-registered — they are render-only 2D overlay types (ADR-0003) with
-// no validators or semantic rules, so they have no index.linter.ts at all.
-// New Control slices should follow suit unless they gain semantic rules.
+// The base Control slice (nodes/2d/ui/control) registers the layout/anchor/
+// offset + theme-override validators shared by the whole 2D UI family; every
+// Control subclass inherits them through the ValidatorRegistry base-walk (#143,
+// see linter/nodeBaseTypes.ts). The individual Control subclass slices remain
+// render-only (ADR-0003) — they carry no index.linter.ts of their own unless
+// they gain type-specific validators or semantic rules.
 import '../nodes/node/index.linter.js';
+import '../nodes/2d/ui/control/index.linter.js';
 import '../nodes/base/node3d/index.linter.js';
 import '../nodes/base/node2d/index.linter.js';
 import '../nodes/3d/meshinstance3d/index.linter.js';

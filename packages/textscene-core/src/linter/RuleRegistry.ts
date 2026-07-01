@@ -28,18 +28,30 @@ export class RuleRegistry {
   }
 
   /**
-   * Get rules applicable to a specific node type
+   * Get rules applicable to a specific node type.
+   *
+   * Applicability is exact-match by design (a rule for 'Node3D' does NOT run for
+   * MeshInstance3D) — unlike ValidatorRegistry, which walks the base-type chain.
+   * The two registries intentionally differ: format validators inherit naturally
+   * down the class hierarchy, whereas a semantic rule opts into a family via its
+   * own `applicableNodeTypeMatcher` predicate (see valid-node3d-visibility).
+   *
    * @param nodeType - The node type to filter by
    * @returns Array of rules applicable to the node type
    */
   getRulesForNodeType(nodeType: string): LintRule[] {
     return this.getRules().filter(rule => {
+      const { applicableNodeTypes, applicableNodeTypeMatcher } = rule.meta;
+      // A predicate matcher decides applicability on its own (takes precedence).
+      if (applicableNodeTypeMatcher) {
+        return applicableNodeTypeMatcher(nodeType);
+      }
       // If no applicableNodeTypes specified, rule applies to all nodes
-      if (!rule.meta.applicableNodeTypes || rule.meta.applicableNodeTypes.length === 0) {
+      if (!applicableNodeTypes || applicableNodeTypes.length === 0) {
         return true;
       }
       // Otherwise, check if this node type is in the applicable list
-      return rule.meta.applicableNodeTypes.includes(nodeType);
+      return applicableNodeTypes.includes(nodeType);
     });
   }
 

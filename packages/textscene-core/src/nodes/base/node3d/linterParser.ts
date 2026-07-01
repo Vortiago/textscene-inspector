@@ -2,9 +2,12 @@
  * Node3D strict validators for linting.
  * Migrated to the declarative `v` namespace (WI-ARCH-1).
  *
- * `scale` keeps a bespoke validator because it folds a vector-format
- * check together with extreme-magnitude detection (Godot's editor
- * produces a precision warning above 1000× or below 0.001×).
+ * `scale` keeps a bespoke validator because it folds a vector-format check with
+ * a per-component non-zero check (a zero axis collapses the node — a genuine
+ * rendering breaker). A negative component is a valid mirror/flip (the renderer
+ * draws it, matching Node2D), and extreme-but-finite magnitudes are fine too;
+ * flagging either would re-introduce the parser/linter divergence this base
+ * validator (inherited by every Node3D subclass via the base-walk, #143) removes.
  */
 
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
@@ -12,9 +15,6 @@ import { v } from '../../../linter/validators/index.js';
 import { propertyError } from '../../../linter/validators/index.js';
 import { VECTOR3_REGEX } from '../../../linter/validators/vectorValidators.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
-
-const EXTREME_SCALE_MAX = 1000;
-const EXTREME_SCALE_MIN = 0.001;
 
 const ROTATION_ORDER = {
   0: 'XYZ',
@@ -25,11 +25,7 @@ const ROTATION_ORDER = {
   5: 'ZYX',
 };
 
-/**
- * Bespoke `scale` validator: Vector3 format + each component must be
- * positive and within [EXTREME_SCALE_MIN, EXTREME_SCALE_MAX] for
- * numerical precision.
- */
+/** Bespoke `scale` validator: Vector3 format + each component must be non-zero. */
 const scaleValidator: PropertyValidator = (key, value, line) => {
   const match = VECTOR3_REGEX.exec(value);
   if (!match) {
@@ -40,16 +36,8 @@ const scaleValidator: PropertyValidator = (key, value, line) => {
   const y = parseFloat(match[2] || '0');
   const z = parseFloat(match[3] || '0');
 
-  if (x <= 0 || y <= 0 || z <= 0) {
-    return propertyError(key, line, `Property 'scale' must have positive values, got: Vector3(${x}, ${y}, ${z}). Zero or negative scale can cause rendering issues.`, 'INVALID_SCALE_VALUE');
-  }
-
-  if (x > EXTREME_SCALE_MAX || y > EXTREME_SCALE_MAX || z > EXTREME_SCALE_MAX) {
-    return propertyError(key, line, `Property 'scale' has extreme values (>${EXTREME_SCALE_MAX}): Vector3(${x}, ${y}, ${z}). This may cause precision issues.`, 'EXTREME_SCALE_VALUE');
-  }
-
-  if (x < EXTREME_SCALE_MIN || y < EXTREME_SCALE_MIN || z < EXTREME_SCALE_MIN) {
-    return propertyError(key, line, `Property 'scale' has extreme values (<${EXTREME_SCALE_MIN}): Vector3(${x}, ${y}, ${z}). This may cause precision issues.`, 'EXTREME_SCALE_VALUE');
+  if (x === 0 || y === 0 || z === 0) {
+    return propertyError(key, line, `Property 'scale' must have non-zero values, got: Vector3(${x}, ${y}, ${z}). Zero scale collapses the node and causes rendering issues.`, 'INVALID_SCALE_VALUE');
   }
 
   return null;
