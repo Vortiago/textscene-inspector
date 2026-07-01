@@ -10,83 +10,68 @@
  * / max_polyphony types already lives in linterParser.ts.)
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
-import { Linter } from '../../../linter/Linter';
+import { describe, it } from 'vitest';
+import {
+  node,
+  scene,
+  audioStream,
+  expectClean,
+  expectDiagnostic,
+  expectNoErrors,
+} from '../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
 
 describe('AudioStreamPlayer semantic rules', () => {
-  let linter: Linter;
-
-  beforeEach(() => {
-    linter = new Linter();
-  });
-
   it('passes a player whose stream resolves and values are normal', () => {
-    const content = `[gd_scene format=3]
-
-[ext_resource type="AudioStream" path="res://sound.ogg" id="1_a"]
-
-[node name="Player" type="AudioStreamPlayer"]
-stream = ExtResource("1_a")
-volume_db = 0.0
-pitch_scale = 1.0
-`;
-
-    expect(linter.lint(content)).toHaveLength(0);
+    expectClean(
+      scene(
+        audioStream,
+        node(
+          'AudioStreamPlayer',
+          { stream: 'ExtResource("1_abc")', volume_db: '0.0', pitch_scale: '1.0' },
+          { name: 'Player' }
+        )
+      )
+    );
   });
 
   it('does NOT error on a streamless player (stream may be set at runtime)', () => {
-    const content = `[gd_scene format=3]
-
-[node name="Player" type="AudioStreamPlayer"]
-volume_db = 0.0
-`;
-
-    const diagnostics = linter.lint(content);
-    expect(diagnostics.filter((d) => d.severity === 'error')).toHaveLength(0);
+    expectNoErrors(scene(node('AudioStreamPlayer', { volume_db: '0.0' }, { name: 'Player' })));
   });
 
   it('errors when the stream reference does not resolve', () => {
-    const content = `[gd_scene format=3]
-
-[node name="Player" type="AudioStreamPlayer"]
-stream = ExtResource("9_missing")
-`;
-
-    const diagnostics = linter.lint(content);
-    const err = diagnostics.find((d) => d.ruleName === 'audiostreamplayer-missing-stream-resource');
-    expect(err).toBeDefined();
-    expect(err!.severity).toBe('error');
-    expect(err!.nodeType).toBe('AudioStreamPlayer');
+    expectDiagnostic(
+      scene(node('AudioStreamPlayer', { stream: 'ExtResource("9_missing")' }, { name: 'Player' })),
+      {
+        ruleName: 'audiostreamplayer-missing-stream-resource',
+        severity: 'error',
+        nodeType: 'AudioStreamPlayer',
+      }
+    );
   });
 
   it('warns when autoplay is on but no stream is set', () => {
-    const content = `[gd_scene format=3]
-
-[node name="Player" type="AudioStreamPlayer"]
-autoplay = true
-`;
-
-    const diagnostics = linter.lint(content);
-    const warn = diagnostics.find((d) => d.ruleName === 'audiostreamplayer-autoplay-without-stream');
-    expect(warn).toBeDefined();
-    expect(warn!.severity).toBe('warning');
+    expectDiagnostic(scene(node('AudioStreamPlayer', { autoplay: true }, { name: 'Player' })), {
+      ruleName: 'audiostreamplayer-autoplay-without-stream',
+      severity: 'warning',
+    });
   });
 
   it('warns on an extreme volume_db (stream present)', () => {
-    const content = `[gd_scene format=3]
-
-[ext_resource type="AudioStream" path="res://sound.ogg" id="1_a"]
-
-[node name="Player" type="AudioStreamPlayer"]
-stream = ExtResource("1_a")
-volume_db = -100.0
-`;
-
-    const diagnostics = linter.lint(content);
-    const warn = diagnostics.find((d) => d.ruleName === 'audiostreamplayer-extreme-volume');
-    expect(warn).toBeDefined();
-    expect(warn!.severity).toBe('warning');
+    expectDiagnostic(
+      scene(
+        audioStream,
+        node(
+          'AudioStreamPlayer',
+          { stream: 'ExtResource("1_abc")', volume_db: '-100.0' },
+          { name: 'Player' }
+        )
+      ),
+      {
+        ruleName: 'audiostreamplayer-extreme-volume',
+        severity: 'warning',
+      }
+    );
   });
 });

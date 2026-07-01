@@ -2,45 +2,44 @@
  * Tests for MeshInstance3D linter (strict parser + semantic rules)
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
-import { Linter } from '../../../linter/Linter';
+import { describe, it, expect } from 'vitest';
+import {
+  node,
+  scene,
+  lint,
+  expectClean,
+  expectDiagnostic,
+  expectNoDiagnostic,
+  runPropertyValidation,
+} from '../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
 
 describe('MeshInstance3D Linter', () => {
-  let linter: Linter;
-
-  beforeEach(() => {
-    linter = new Linter();
-  });
-
   describe('Strict Parser Validation (Format)', () => {
     it('should pass validation for valid MeshInstance3D properties', () => {
-      const content = `[gd_scene format=3]
-
-[sub_resource type="BoxMesh" id="mesh_1"]
-
-[sub_resource type="StandardMaterial3D" id="mat_1"]
-
-[node name="ValidMesh" type="MeshInstance3D"]
-cast_shadow = 1
-mesh = SubResource("mesh_1")
-surface_material_override/0 = SubResource("mat_1")
-`;
-
-      const diagnostics = linter.lint(content);
-      expect(diagnostics).toHaveLength(0);
+      expectClean(
+        scene(
+          '[sub_resource type="BoxMesh" id="mesh_1"]',
+          '[sub_resource type="StandardMaterial3D" id="mat_1"]',
+          node(
+            'MeshInstance3D',
+            {
+              cast_shadow: 1,
+              mesh: 'SubResource("mesh_1")',
+              'surface_material_override/0': 'SubResource("mat_1")',
+            },
+            { name: 'ValidMesh' }
+          )
+        )
+      );
     });
 
     describe('cast_shadow validation', () => {
       it('should detect invalid cast_shadow value', () => {
-        const content = `[gd_scene format=3]
-
-[node name="InvalidShadow" type="MeshInstance3D"]
-cast_shadow = 99
-`;
-
-        const diagnostics = linter.lint(content);
+        const diagnostics = lint(
+          scene(node('MeshInstance3D', { cast_shadow: 99 }, { name: 'InvalidShadow' }))
+        );
         expect(diagnostics).toHaveLength(1);
         expect(diagnostics[0]).toMatchObject({
           severity: 'error',
@@ -51,333 +50,95 @@ cast_shadow = 99
       });
 
       it('should validate all valid cast_shadow values', () => {
-        const validValues = [0, 1, 2, 3]; // OFF, ON, DOUBLE_SIDED, SHADOWS_ONLY
-
-        for (const value of validValues) {
-          const content = `[gd_scene format=3]
-
-[node name="ValidShadow${value}" type="MeshInstance3D"]
-cast_shadow = ${value}
-`;
-
-          const diagnostics = linter.lint(content);
-          expect(diagnostics).toHaveLength(0);
+        for (const value of [0, 1, 2, 3]) {
+          expectClean(scene(node('MeshInstance3D', { cast_shadow: value })));
         }
       });
 
       it('should reject negative cast_shadow value', () => {
-        const content = `[gd_scene format=3]
-
-[node name="NegativeShadow" type="MeshInstance3D"]
-cast_shadow = -1
-`;
-
-        const diagnostics = linter.lint(content);
-        expect(diagnostics.length).toBeGreaterThan(0);
-        expect(diagnostics[0].message).toContain('cast_shadow');
+        expectDiagnostic(
+          scene(node('MeshInstance3D', { cast_shadow: -1 }, { name: 'NegativeShadow' })),
+          { prop: 'cast_shadow', contains: ['cast_shadow'] }
+        );
       });
     });
 
-    describe('gi_mode validation', () => {
-      it('should validate all valid gi_mode values', () => {
-        const validValues = [0, 1, 2]; // DISABLED, STATIC, DYNAMIC
-
-        for (const value of validValues) {
-          const content = `[gd_scene format=3]
-
-[node name="ValidGI${value}" type="MeshInstance3D"]
-gi_mode = ${value}
-`;
-
-          const diagnostics = linter.lint(content);
-          expect(diagnostics).toHaveLength(0);
-        }
-      });
-
-      it('should reject invalid gi_mode value', () => {
-        const content = `[gd_scene format=3]
-
-[node name="InvalidGI" type="MeshInstance3D"]
-gi_mode = 5
-`;
-
-        const diagnostics = linter.lint(content);
-        expect(diagnostics.length).toBeGreaterThan(0);
-        expect(diagnostics[0].message).toContain('gi_mode');
-        expect(diagnostics[0].message).toContain('0-2');
-      });
-    });
-
-    describe('gi_lightmap_scale validation', () => {
-      it('should validate all valid gi_lightmap_scale values', () => {
-        const validValues = [0, 1, 2, 3]; // 1x, 2x, 4x, 8x
-
-        for (const value of validValues) {
-          const content = `[gd_scene format=3]
-
-[node name="ValidLightmap${value}" type="MeshInstance3D"]
-gi_lightmap_scale = ${value}
-`;
-
-          const diagnostics = linter.lint(content);
-          expect(diagnostics).toHaveLength(0);
-        }
-      });
-
-      it('should reject invalid gi_lightmap_scale value', () => {
-        const content = `[gd_scene format=3]
-
-[node name="InvalidLightmap" type="MeshInstance3D"]
-gi_lightmap_scale = 10
-`;
-
-        const diagnostics = linter.lint(content);
-        expect(diagnostics.length).toBeGreaterThan(0);
-        expect(diagnostics[0].message).toContain('gi_lightmap_scale');
-        expect(diagnostics[0].message).toContain('0-3');
-      });
-    });
-
-    describe('visibility_range properties validation', () => {
-      it('should accept valid visibility_range_begin', () => {
-        const content = `[gd_scene format=3]
-
-[node name="ValidRange" type="MeshInstance3D"]
-visibility_range_begin = 10.5
-`;
-
-        const diagnostics = linter.lint(content);
-        expect(diagnostics).toHaveLength(0);
-      });
-
-      it('should reject negative visibility_range_begin', () => {
-        const content = `[gd_scene format=3]
-
-[node name="NegativeRange" type="MeshInstance3D"]
-visibility_range_begin = -5.0
-`;
-
-        const diagnostics = linter.lint(content);
-        expect(diagnostics.length).toBeGreaterThan(0);
-        expect(diagnostics[0].message).toContain('visibility_range_begin');
-        expect(diagnostics[0].message).toContain('non-negative');
-      });
-
-      it('should accept valid visibility_range_end', () => {
-        const content = `[gd_scene format=3]
-
-[node name="ValidRange" type="MeshInstance3D"]
-visibility_range_end = 100.0
-`;
-
-        const diagnostics = linter.lint(content);
-        expect(diagnostics).toHaveLength(0);
-      });
-
-      it('should reject negative visibility_range_end', () => {
-        const content = `[gd_scene format=3]
-
-[node name="NegativeRange" type="MeshInstance3D"]
-visibility_range_end = -10.0
-`;
-
-        const diagnostics = linter.lint(content);
-        expect(diagnostics.length).toBeGreaterThan(0);
-        expect(diagnostics[0].message).toContain('visibility_range_end');
-        expect(diagnostics[0].message).toContain('non-negative');
-      });
-
-      it('should accept valid visibility_range_begin_margin', () => {
-        const content = `[gd_scene format=3]
-
-[node name="ValidMargin" type="MeshInstance3D"]
-visibility_range_begin_margin = 2.5
-`;
-
-        const diagnostics = linter.lint(content);
-        expect(diagnostics).toHaveLength(0);
-      });
-
-      it('should reject negative visibility_range_begin_margin', () => {
-        const content = `[gd_scene format=3]
-
-[node name="NegativeMargin" type="MeshInstance3D"]
-visibility_range_begin_margin = -1.0
-`;
-
-        const diagnostics = linter.lint(content);
-        expect(diagnostics.length).toBeGreaterThan(0);
-        expect(diagnostics[0].message).toContain('visibility_range_begin_margin');
-        expect(diagnostics[0].message).toContain('non-negative');
-      });
-
-      it('should accept valid visibility_range_end_margin', () => {
-        const content = `[gd_scene format=3]
-
-[node name="ValidMargin" type="MeshInstance3D"]
-visibility_range_end_margin = 5.0
-`;
-
-        const diagnostics = linter.lint(content);
-        expect(diagnostics).toHaveLength(0);
-      });
-
-      it('should reject negative visibility_range_end_margin', () => {
-        const content = `[gd_scene format=3]
-
-[node name="NegativeMargin" type="MeshInstance3D"]
-visibility_range_end_margin = -3.0
-`;
-
-        const diagnostics = linter.lint(content);
-        expect(diagnostics.length).toBeGreaterThan(0);
-        expect(diagnostics[0].message).toContain('visibility_range_end_margin');
-        expect(diagnostics[0].message).toContain('non-negative');
-      });
-    });
-
-    describe('visibility_range_fade_mode validation', () => {
-      it('should validate all valid visibility_range_fade_mode values', () => {
-        const validValues = [0, 1, 2]; // DISABLED, SELF, DEPENDENCIES
-
-        for (const value of validValues) {
-          const content = `[gd_scene format=3]
-
-[node name="ValidFade${value}" type="MeshInstance3D"]
-visibility_range_fade_mode = ${value}
-`;
-
-          const diagnostics = linter.lint(content);
-          expect(diagnostics).toHaveLength(0);
-        }
-      });
-
-      it('should reject invalid visibility_range_fade_mode value', () => {
-        const content = `[gd_scene format=3]
-
-[node name="InvalidFade" type="MeshInstance3D"]
-visibility_range_fade_mode = 5
-`;
-
-        const diagnostics = linter.lint(content);
-        expect(diagnostics.length).toBeGreaterThan(0);
-        expect(diagnostics[0].message).toContain('visibility_range_fade_mode');
-        expect(diagnostics[0].message).toContain('0-2');
-      });
-    });
-
-    describe('layers validation', () => {
-      it('should accept valid layers value', () => {
-        const content = `[gd_scene format=3]
-
-[node name="ValidLayers" type="MeshInstance3D"]
-layers = 1
-`;
-
-        const diagnostics = linter.lint(content);
-        expect(diagnostics).toHaveLength(0);
-      });
-
-      it('should accept maximum valid layers value', () => {
-        const content = `[gd_scene format=3]
-
-[node name="MaxLayers" type="MeshInstance3D"]
-layers = 1048575
-`;
-
-        const diagnostics = linter.lint(content);
-        expect(diagnostics).toHaveLength(0);
-      });
-
-      it('should reject layers value of 0', () => {
-        const content = `[gd_scene format=3]
-
-[node name="ZeroLayers" type="MeshInstance3D"]
-layers = 0
-`;
-
-        const diagnostics = linter.lint(content);
-        expect(diagnostics.length).toBeGreaterThan(0);
-        expect(diagnostics[0].message).toContain('layers');
-        expect(diagnostics[0].message).toContain('1 and 1048575');
-      });
-
-      it('should reject layers value exceeding maximum', () => {
-        const content = `[gd_scene format=3]
-
-[node name="ExcessiveLayers" type="MeshInstance3D"]
-layers = 2000000
-`;
-
-        const diagnostics = linter.lint(content);
-        expect(diagnostics.length).toBeGreaterThan(0);
-        expect(diagnostics[0].message).toContain('layers');
-        expect(diagnostics[0].message).toContain('1 and 1048575');
-      });
-    });
+    runPropertyValidation({ nodeType: 'MeshInstance3D' }, [
+      { prop: 'gi_mode', valid: [0, 1, 2], invalid: [{ value: 5, contains: ['0-2'] }] },
+      { prop: 'gi_lightmap_scale', valid: [0, 1, 2, 3], invalid: [{ value: 10, contains: ['0-3'] }] },
+      {
+        prop: 'visibility_range_begin',
+        valid: ['10.5'],
+        invalid: [{ value: '-5.0', contains: ['non-negative'] }],
+      },
+      {
+        prop: 'visibility_range_end',
+        valid: ['100.0'],
+        invalid: [{ value: '-10.0', contains: ['non-negative'] }],
+      },
+      {
+        prop: 'visibility_range_begin_margin',
+        valid: ['2.5'],
+        invalid: [{ value: '-1.0', contains: ['non-negative'] }],
+      },
+      {
+        prop: 'visibility_range_end_margin',
+        valid: ['5.0'],
+        invalid: [{ value: '-3.0', contains: ['non-negative'] }],
+      },
+      {
+        prop: 'visibility_range_fade_mode',
+        valid: [0, 1, 2],
+        invalid: [{ value: 5, contains: ['0-2'] }],
+      },
+      {
+        prop: 'layers',
+        valid: [1, 1048575],
+        invalid: [
+          { value: 0, contains: ['1 and 1048575'] },
+          { value: 2000000, contains: ['1 and 1048575'] },
+        ],
+      },
+    ]);
 
     describe('material resource reference validation', () => {
       it('should accept valid material_override format', () => {
-        const content = `[gd_scene format=3]
-
-[sub_resource type="StandardMaterial3D" id="mat_1"]
-
-[node name="ValidMaterial" type="MeshInstance3D"]
-material_override = SubResource("mat_1")
-`;
-
-        const diagnostics = linter.lint(content);
-        expect(diagnostics).toHaveLength(0);
+        expectClean(
+          scene(
+            '[sub_resource type="StandardMaterial3D" id="mat_1"]',
+            node('MeshInstance3D', { material_override: 'SubResource("mat_1")' }, { name: 'ValidMaterial' })
+          )
+        );
       });
 
       it('should reject invalid material_override format', () => {
-        const content = `[gd_scene format=3]
-
-[node name="InvalidMaterial" type="MeshInstance3D"]
-material_override = "invalid_format"
-`;
-
-        const diagnostics = linter.lint(content);
-        expect(diagnostics.length).toBeGreaterThan(0);
-        expect(diagnostics[0].message).toContain('material_override');
-        expect(diagnostics[0].message).toContain('resource reference');
+        expectDiagnostic(
+          scene(node('MeshInstance3D', { material_override: '"invalid_format"' }, { name: 'InvalidMaterial' })),
+          { prop: 'material_override', contains: ['resource reference'] }
+        );
       });
 
       it('should accept valid material_overlay format', () => {
-        const content = `[gd_scene format=3]
-
-[sub_resource type="StandardMaterial3D" id="mat_overlay"]
-
-[node name="ValidOverlay" type="MeshInstance3D"]
-material_overlay = SubResource("mat_overlay")
-`;
-
-        const diagnostics = linter.lint(content);
-        expect(diagnostics).toHaveLength(0);
+        expectClean(
+          scene(
+            '[sub_resource type="StandardMaterial3D" id="mat_overlay"]',
+            node('MeshInstance3D', { material_overlay: 'SubResource("mat_overlay")' }, { name: 'ValidOverlay' })
+          )
+        );
       });
 
       it('should reject invalid material_overlay format', () => {
-        const content = `[gd_scene format=3]
-
-[node name="InvalidOverlay" type="MeshInstance3D"]
-material_overlay = invalid
-`;
-
-        const diagnostics = linter.lint(content);
-        expect(diagnostics.length).toBeGreaterThan(0);
-        expect(diagnostics[0].message).toContain('material_overlay');
-        expect(diagnostics[0].message).toContain('resource reference');
+        expectDiagnostic(
+          scene(node('MeshInstance3D', { material_overlay: 'invalid' }, { name: 'InvalidOverlay' })),
+          { prop: 'material_overlay', contains: ['resource reference'] }
+        );
       });
     });
 
     it('should detect invalid transform format', () => {
-      const content = `[gd_scene format=3]
-
-[node name="InvalidTransform" type="MeshInstance3D"]
-transform = Transform3D(1, 0, 0)
-`;
-
-      const diagnostics = linter.lint(content);
+      const diagnostics = lint(
+        scene(node('MeshInstance3D', { transform: 'Transform3D(1, 0, 0)' }, { name: 'InvalidTransform' }))
+      );
       expect(diagnostics).toHaveLength(1);
       expect(diagnostics[0]).toMatchObject({
         severity: 'error',
@@ -389,13 +150,9 @@ transform = Transform3D(1, 0, 0)
 
   describe('Semantic Validation (Resource References)', () => {
     it('should detect missing mesh resource', () => {
-      const content = `[gd_scene format=3]
-
-[node name="MissingMesh" type="MeshInstance3D"]
-mesh = SubResource("nonexistent")
-`;
-
-      const diagnostics = linter.lint(content);
+      const diagnostics = lint(
+        scene(node('MeshInstance3D', { mesh: 'SubResource("nonexistent")' }, { name: 'MissingMesh' }))
+      );
       expect(diagnostics).toHaveLength(1);
       expect(diagnostics[0]).toMatchObject({
         severity: 'error',
@@ -407,150 +164,117 @@ mesh = SubResource("nonexistent")
     });
 
     it('should pass when all resources exist', () => {
-      const content = `[gd_scene format=3]
-
-[sub_resource type="BoxMesh" id="mesh_1"]
-
-[node name="ValidMesh" type="MeshInstance3D"]
-mesh = SubResource("mesh_1")
-`;
-
-      const diagnostics = linter.lint(content);
-      expect(diagnostics).toHaveLength(0);
+      expectClean(
+        scene(
+          '[sub_resource type="BoxMesh" id="mesh_1"]',
+          node('MeshInstance3D', { mesh: 'SubResource("mesh_1")' }, { name: 'ValidMesh' })
+        )
+      );
     });
 
     it('should detect missing material_override resource', () => {
-      const content = `[gd_scene format=3]
-
-[node name="MissingMaterial" type="MeshInstance3D"]
-material_override = SubResource("nonexistent_material")
-`;
-
-      const diagnostics = linter.lint(content);
-      expect(diagnostics.length).toBeGreaterThan(0);
-      const materialError = diagnostics.find(d => d.message.includes('Material override resource not found'));
-      expect(materialError).toBeDefined();
-      expect(materialError?.message).toContain('Material override resource not found');
+      expectDiagnostic(
+        scene(
+          node('MeshInstance3D', { material_override: 'SubResource("nonexistent_material")' }, { name: 'MissingMaterial' })
+        ),
+        { prop: 'Material override resource not found', contains: ['Material override resource not found'] }
+      );
     });
 
     it('should detect missing material_overlay resource', () => {
-      const content = `[gd_scene format=3]
-
-[node name="MissingOverlay" type="MeshInstance3D"]
-material_overlay = SubResource("nonexistent_overlay")
-`;
-
-      const diagnostics = linter.lint(content);
-      expect(diagnostics.length).toBeGreaterThan(0);
-      const overlayError = diagnostics.find(d => d.message.includes('Material overlay resource not found'));
-      expect(overlayError).toBeDefined();
-      expect(overlayError?.message).toContain('Material overlay resource not found');
+      expectDiagnostic(
+        scene(
+          node('MeshInstance3D', { material_overlay: 'SubResource("nonexistent_overlay")' }, { name: 'MissingOverlay' })
+        ),
+        { prop: 'Material overlay resource not found', contains: ['Material overlay resource not found'] }
+      );
     });
 
     it('should detect missing skin resource', () => {
-      const content = `[gd_scene format=3]
-
-[node name="MissingSkin" type="MeshInstance3D"]
-skin = SubResource("nonexistent_skin")
-`;
-
-      const diagnostics = linter.lint(content);
+      const diagnostics = lint(
+        scene(node('MeshInstance3D', { skin: 'SubResource("nonexistent_skin")' }, { name: 'MissingSkin' }))
+      );
       expect(diagnostics).toHaveLength(1);
       expect(diagnostics[0].message).toContain('Skin resource not found');
     });
 
     it('should detect missing surface material override resource', () => {
-      const content = `[gd_scene format=3]
-
-[node name="MissingSurfaceMat" type="MeshInstance3D"]
-surface_material_override/0 = SubResource("nonexistent_surface")
-`;
-
-      const diagnostics = linter.lint(content);
-      expect(diagnostics.length).toBeGreaterThan(0);
-      const surfaceError = diagnostics.find(d => d.message.includes('Surface material override resource not found'));
-      expect(surfaceError).toBeDefined();
-      expect(surfaceError?.message).toContain('Surface material override resource not found');
+      expectDiagnostic(
+        scene(
+          node(
+            'MeshInstance3D',
+            { 'surface_material_override/0': 'SubResource("nonexistent_surface")' },
+            { name: 'MissingSurfaceMat' }
+          )
+        ),
+        {
+          prop: 'Surface material override resource not found',
+          contains: ['Surface material override resource not found'],
+        }
+      );
     });
   });
 
   describe('Semantic Validation (Visibility Range)', () => {
     it('should detect invalid visibility range (begin > end)', () => {
-      const content = `[gd_scene format=3]
-
-[node name="InvalidRange" type="MeshInstance3D"]
-visibility_range_begin = 100.0
-visibility_range_end = 50.0
-`;
-
-      const diagnostics = linter.lint(content);
-      expect(diagnostics.length).toBeGreaterThan(0);
-      const rangeError = diagnostics.find(d => d.ruleName === 'valid-meshinstance3d-visibility-range');
-      expect(rangeError).toBeDefined();
-      expect(rangeError).toMatchObject({
-        severity: 'error',
-        ruleName: 'valid-meshinstance3d-visibility-range',
-      });
-      expect(rangeError?.message).toContain('begin');
-      expect(rangeError?.message).toContain('end');
+      expectDiagnostic(
+        scene(
+          node(
+            'MeshInstance3D',
+            { visibility_range_begin: '100.0', visibility_range_end: '50.0' },
+            { name: 'InvalidRange' }
+          )
+        ),
+        {
+          ruleName: 'valid-meshinstance3d-visibility-range',
+          severity: 'error',
+          contains: ['begin', 'end'],
+        }
+      );
     });
 
     it('should accept valid visibility range (begin < end)', () => {
-      const content = `[gd_scene format=3]
-
-[node name="ValidRange" type="MeshInstance3D"]
-visibility_range_begin = 10.0
-visibility_range_end = 100.0
-`;
-
-      const diagnostics = linter.lint(content);
-      expect(diagnostics).toHaveLength(0);
+      expectClean(
+        scene(
+          node(
+            'MeshInstance3D',
+            { visibility_range_begin: '10.0', visibility_range_end: '100.0' },
+            { name: 'ValidRange' }
+          )
+        )
+      );
     });
 
     it('should accept valid visibility range (begin = end)', () => {
-      const content = `[gd_scene format=3]
-
-[node name="EqualRange" type="MeshInstance3D"]
-visibility_range_begin = 50.0
-visibility_range_end = 50.0
-`;
-
-      const diagnostics = linter.lint(content);
-      expect(diagnostics).toHaveLength(0);
+      expectClean(
+        scene(
+          node(
+            'MeshInstance3D',
+            { visibility_range_begin: '50.0', visibility_range_end: '50.0' },
+            { name: 'EqualRange' }
+          )
+        )
+      );
     });
 
     it('should not validate range when only begin is specified', () => {
-      const content = `[gd_scene format=3]
-
-[node name="OnlyBegin" type="MeshInstance3D"]
-visibility_range_begin = 100.0
-`;
-
-      const diagnostics = linter.lint(content);
-      expect(diagnostics).toHaveLength(0);
+      expectClean(
+        scene(node('MeshInstance3D', { visibility_range_begin: '100.0' }, { name: 'OnlyBegin' }))
+      );
     });
 
     it('should not validate range when only end is specified', () => {
-      const content = `[gd_scene format=3]
-
-[node name="OnlyEnd" type="MeshInstance3D"]
-visibility_range_end = 50.0
-`;
-
-      const diagnostics = linter.lint(content);
-      expect(diagnostics).toHaveLength(0);
+      expectClean(
+        scene(node('MeshInstance3D', { visibility_range_end: '50.0' }, { name: 'OnlyEnd' }))
+      );
     });
   });
 
   describe('Semantic Validation (Skeleton)', () => {
     it('should detect missing skeleton node', () => {
-      const content = `[gd_scene format=3]
-
-[node name="MissingSkeleton" type="MeshInstance3D"]
-skeleton = NodePath("NonexistentSkeleton")
-`;
-
-      const diagnostics = linter.lint(content);
+      const diagnostics = lint(
+        scene(node('MeshInstance3D', { skeleton: 'NodePath("NonexistentSkeleton")' }, { name: 'MissingSkeleton' }))
+      );
       expect(diagnostics).toHaveLength(1);
       expect(diagnostics[0]).toMatchObject({
         severity: 'error',
@@ -560,64 +284,43 @@ skeleton = NodePath("NonexistentSkeleton")
     });
 
     it('should pass when skeleton node exists', () => {
-      const content = `[gd_scene format=3]
-
-[node name="MySkeleton" type="Skeleton3D"]
-
-[node name="MyMesh" type="MeshInstance3D"]
-skeleton = NodePath("MySkeleton")
-`;
-
-      const diagnostics = linter.lint(content);
-      expect(diagnostics).toHaveLength(0);
+      expectClean(
+        scene(
+          node('Skeleton3D', {}, { name: 'MySkeleton' }),
+          node('MeshInstance3D', { skeleton: 'NodePath("MySkeleton")' }, { name: 'MyMesh' })
+        )
+      );
     });
 
     it('should detect skeleton pointing to wrong node type', () => {
-      const content = `[gd_scene format=3]
-
-[node name="Root" type="Node3D"]
-
-[node name="NotASkeleton" type="Node3D" parent="."]
-
-[node name="MyMesh" type="MeshInstance3D" parent="."]
-skeleton = NodePath("NotASkeleton")
-`;
-
-      const diagnostics = linter.lint(content);
-      expect(diagnostics.length).toBeGreaterThan(0);
-      const skeletonError = diagnostics.find(d => d.message.includes('must point to a Skeleton3D node'));
-      expect(skeletonError).toBeDefined();
-      expect(skeletonError?.message).toContain('must point to a Skeleton3D node');
+      expectDiagnostic(
+        scene(
+          node('Node3D', {}, { name: 'Root' }),
+          node('Node3D', {}, { name: 'NotASkeleton', parent: '.' }),
+          node('MeshInstance3D', { skeleton: 'NodePath("NotASkeleton")' }, { name: 'MyMesh', parent: '.' })
+        ),
+        { prop: 'must point to a Skeleton3D node', contains: ['must point to a Skeleton3D node'] }
+      );
     });
 
     it('should accept empty skeleton path', () => {
-      const content = `[gd_scene format=3]
-
-[node name="MyMesh" type="MeshInstance3D"]
-skeleton = NodePath("")
-`;
-
-      const diagnostics = linter.lint(content);
-      expect(diagnostics).toHaveLength(0);
+      expectClean(
+        scene(node('MeshInstance3D', { skeleton: 'NodePath("")' }, { name: 'MyMesh' }))
+      );
     });
 
     it('should not error on a relative (..) skeleton path that escapes the authored scope', () => {
       // Mirrors scenes/demos/3d/graphics_settings/3d_scene.tscn: a MeshInstance3D
       // whose skeleton resolves up the tree via "../.." — a relative path the
       // static linter cannot resolve, so it must not assert not-found.
-      const content = `[gd_scene format=3]
-
-[node name="Root" type="Node3D"]
-
-[node name="SpotLight3D" type="SpotLight3D" parent="."]
-
-[node name="MeshInstance3D" type="MeshInstance3D" parent="SpotLight3D"]
-skeleton = NodePath("../..")
-`;
-
-      const diagnostics = linter.lint(content);
-      const skeletonError = diagnostics.find(d => d.ruleName === 'valid-meshinstance3d-skeleton');
-      expect(skeletonError).toBeUndefined();
+      expectNoDiagnostic(
+        scene(
+          node('Node3D', {}, { name: 'Root' }),
+          node('SpotLight3D', {}, { name: 'SpotLight3D', parent: '.' }),
+          node('MeshInstance3D', { skeleton: 'NodePath("../..")' }, { name: 'MeshInstance3D', parent: 'SpotLight3D' })
+        ),
+        { ruleName: 'valid-meshinstance3d-skeleton' }
+      );
     });
 
     it('should not error when the MeshInstance3D is parented under an instanced sub-scene', () => {
@@ -636,85 +339,62 @@ skeleton = NodePath("../..")
 skeleton = NodePath("Armature/Skeleton3D")
 `;
 
-      const diagnostics = linter.lint(content);
-      const skeletonError = diagnostics.find(d => d.ruleName === 'valid-meshinstance3d-skeleton');
-      expect(skeletonError).toBeUndefined();
+      expectNoDiagnostic(content, { ruleName: 'valid-meshinstance3d-skeleton' });
     });
 
     it('should still error on a missing local skeleton when nested under a non-instance parent', () => {
       // Boundary: a non-relative path under an ordinary (non-instanced) parent is
       // fully authored, so a genuinely missing Skeleton3D must still be reported.
-      const content = `[gd_scene format=3]
-
-[node name="Root" type="Node3D"]
-
-[node name="Holder" type="Node3D" parent="."]
-
-[node name="MyMesh" type="MeshInstance3D" parent="Holder"]
-skeleton = NodePath("NonexistentSkeleton")
-`;
-
-      const diagnostics = linter.lint(content);
-      const skeletonError = diagnostics.find(d => d.ruleName === 'valid-meshinstance3d-skeleton');
-      expect(skeletonError).toBeDefined();
-      expect(skeletonError?.severity).toBe('error');
-      expect(skeletonError?.message).toContain('Skeleton node not found');
+      expectDiagnostic(
+        scene(
+          node('Node3D', {}, { name: 'Root' }),
+          node('Node3D', {}, { name: 'Holder', parent: '.' }),
+          node('MeshInstance3D', { skeleton: 'NodePath("NonexistentSkeleton")' }, { name: 'MyMesh', parent: 'Holder' })
+        ),
+        { ruleName: 'valid-meshinstance3d-skeleton', severity: 'error', contains: ['Skeleton node not found'] }
+      );
     });
   });
 
   describe('Semantic Validation (Surface Index Range)', () => {
     it('should warn about unusually high surface index but accept it', () => {
-      const content = `[gd_scene format=3]
-
-[sub_resource type="StandardMaterial3D" id="mat_1"]
-
-[node name="ExcessiveIndex" type="MeshInstance3D"]
-surface_material_override/256 = SubResource("mat_1")
-`;
-
-      const diagnostics = linter.lint(content);
-      expect(diagnostics.length).toBeGreaterThan(0);
-      const indexError = diagnostics.find(d => d.ruleName === 'valid-meshinstance3d-surface-index');
-      expect(indexError).toBeDefined();
-      expect(indexError?.severity).toBe('warning');
-      expect(indexError?.message).toContain('unusually high');
-      
+      expectDiagnostic(
+        scene(
+          '[sub_resource type="StandardMaterial3D" id="mat_1"]',
+          node('MeshInstance3D', { 'surface_material_override/256': 'SubResource("mat_1")' }, { name: 'ExcessiveIndex' })
+        ),
+        { ruleName: 'valid-meshinstance3d-surface-index', severity: 'warning', contains: ['unusually high'] }
+      );
     });
 
     it('should accept surface index 0 (lower boundary)', () => {
-      const content = `[gd_scene format=3]
-
-[sub_resource type="StandardMaterial3D" id="mat_1"]
-
-[node name="ValidIndex0" type="MeshInstance3D"]
-surface_material_override/0 = SubResource("mat_1")
-`;
-
-      const diagnostics = linter.lint(content);
-      expect(diagnostics).toHaveLength(0);
+      expectClean(
+        scene(
+          '[sub_resource type="StandardMaterial3D" id="mat_1"]',
+          node('MeshInstance3D', { 'surface_material_override/0': 'SubResource("mat_1")' }, { name: 'ValidIndex0' })
+        )
+      );
     });
 
     it('should accept surface index within threshold (no warnings)', () => {
-      const content = `[gd_scene format=3]
-
-[sub_resource type="StandardMaterial3D" id="mat_1"]
-
-[node name="ValidIndex31" type="MeshInstance3D"]
-surface_material_override/31 = SubResource("mat_1")
-`;
-
-      const diagnostics = linter.lint(content);
-      expect(diagnostics).toHaveLength(0);
+      expectClean(
+        scene(
+          '[sub_resource type="StandardMaterial3D" id="mat_1"]',
+          node('MeshInstance3D', { 'surface_material_override/31': 'SubResource("mat_1")' }, { name: 'ValidIndex31' })
+        )
+      );
     });
 
     it('should warn about high index and check resource existence', () => {
-      const content = `[gd_scene format=3]
-
-[node name="HighIndexMissingResource" type="MeshInstance3D"]
-surface_material_override/999 = SubResource("nonexistent")
-`;
-
-      const diagnostics = linter.lint(content);
+      const diagnostics = lint(
+        scene(
+          node(
+            'MeshInstance3D',
+            { 'surface_material_override/999': 'SubResource("nonexistent")' },
+            { name: 'HighIndexMissingResource' }
+          )
+        )
+      );
       expect(diagnostics.length).toBeGreaterThan(0);
       // Should warn about high index
       const indexWarning = diagnostics.find(d => d.ruleName === 'valid-meshinstance3d-surface-index');
@@ -727,22 +407,25 @@ surface_material_override/999 = SubResource("nonexistent")
       expect(resourceError).toBeDefined();
       expect(resourceError?.severity).toBe('error');
     });
-
   });
 
   describe('Edge Cases', () => {
     it('should handle multiple validation errors', () => {
-      const content = `[gd_scene format=3]
-
-[node name="MultipleErrors" type="MeshInstance3D"]
-cast_shadow = 10
-gi_mode = 5
-mesh = SubResource("nonexistent")
-visibility_range_begin = 100.0
-visibility_range_end = 50.0
-`;
-
-      const diagnostics = linter.lint(content);
+      const diagnostics = lint(
+        scene(
+          node(
+            'MeshInstance3D',
+            {
+              cast_shadow: 10,
+              gi_mode: 5,
+              mesh: 'SubResource("nonexistent")',
+              visibility_range_begin: '100.0',
+              visibility_range_end: '50.0',
+            },
+            { name: 'MultipleErrors' }
+          )
+        )
+      );
       // We expect multiple errors: cast_shadow, gi_mode format errors
       // plus potentially mesh resource not found and visibility range error
       expect(diagnostics.length).toBeGreaterThan(1);
@@ -780,18 +463,11 @@ visibility_range_fade_mode = 1
 layers = 1023
 `;
 
-      const diagnostics = linter.lint(content);
-      expect(diagnostics).toHaveLength(0);
+      expectClean(content);
     });
 
     it('should handle node with no properties', () => {
-      const content = `[gd_scene format=3]
-
-[node name="EmptyMesh" type="MeshInstance3D"]
-`;
-
-      const diagnostics = linter.lint(content);
-      expect(diagnostics).toHaveLength(0);
+      expectClean(scene(node('MeshInstance3D', {}, { name: 'EmptyMesh' })));
     });
   });
 });

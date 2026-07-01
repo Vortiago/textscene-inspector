@@ -9,18 +9,12 @@
  * lives in linterParser.ts.)
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
-import { Linter } from '../../../linter/Linter';
+import { describe, it } from 'vitest';
+import { node, scene, expectClean, expectDiagnostic, expectNoErrors } from '../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
 
 describe('GridMap semantic rules', () => {
-  let linter: Linter;
-
-  beforeEach(() => {
-    linter = new Linter();
-  });
-
   it('passes a gridmap whose mesh_library resolves', () => {
     const content = `[gd_scene load_steps=2 format=3]
 
@@ -31,35 +25,19 @@ mesh_library = ExtResource("1_mesh")
 cell_size = Vector3(1, 1, 1)
 `;
 
-    expect(linter.lint(content)).toHaveLength(0);
+    expectClean(content);
   });
 
   it('errors when the mesh_library reference does not resolve', () => {
-    const content = `[gd_scene format=3]
-
-[node name="GridMap" type="GridMap"]
-mesh_library = ExtResource("9_missing")
-cell_size = Vector3(1, 1, 1)
-`;
-
-    const diagnostics = linter.lint(content);
-    const err = diagnostics.find((d) => d.ruleName === 'valid-gridmap-resources');
-    expect(err).toBeDefined();
-    expect(err!.severity).toBe('error');
-    expect(err!.nodeType).toBe('GridMap');
+    expectDiagnostic(
+      scene(node('GridMap', { mesh_library: 'ExtResource("9_missing")', cell_size: 'Vector3(1, 1, 1)' })),
+      { ruleName: 'valid-gridmap-resources', severity: 'error', nodeType: 'GridMap' }
+    );
   });
 
   it('warns (not errors) when a gridmap has no mesh_library', () => {
-    const content = `[gd_scene format=3]
-
-[node name="GridMap" type="GridMap"]
-cell_size = Vector3(1, 1, 1)
-`;
-
-    const diagnostics = linter.lint(content);
-    expect(diagnostics.filter((d) => d.severity === 'error')).toHaveLength(0);
-    const warn = diagnostics.find((d) => d.ruleName === 'gridmap-requires-mesh-library');
-    expect(warn).toBeDefined();
-    expect(warn!.severity).toBe('warning');
+    const content = scene(node('GridMap', { cell_size: 'Vector3(1, 1, 1)' }));
+    expectNoErrors(content);
+    expectDiagnostic(content, { ruleName: 'gridmap-requires-mesh-library', severity: 'warning' });
   });
 });
