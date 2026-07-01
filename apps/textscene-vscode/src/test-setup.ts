@@ -49,13 +49,6 @@ export function createMockFileData(content: string): Uint8Array {
   return new TextEncoder().encode(content);
 }
 
-/**
- * Create mock Uint8Array from binary data
- */
-export function createMockBinaryData(bytes: number[]): Uint8Array {
-  return new Uint8Array(bytes);
-}
-
 // ============================================================================
 // VSCode API Mocks
 // ============================================================================
