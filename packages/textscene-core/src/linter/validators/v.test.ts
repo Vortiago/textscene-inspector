@@ -223,3 +223,55 @@ describe('column offset on every code path', () => {
     expect(err!.column).toBe('fov'.length + 3);
   });
 });
+
+describe('float-tuple validators accept the renderer float grammar (#190 drift fix)', () => {
+  // The canonical FLOAT_PATTERN_SOURCE (parser/vectors.ts) — the grammar the
+  // renderer parses — accepts leading-dot (.5), trailing-dot (5.), an explicit
+  // plus sign (+5) and scientific notation. The linter must not be STRICTER
+  // than the renderer, so these must all lint clean.
+  it('v.vector2 accepts .5 / 5. / +5 / scientific', () => {
+    expect(v.vector2('offset')('offset', 'Vector2(.5, 5.)', 1)).toBeNull();
+    expect(v.vector2('offset')('offset', 'Vector2(+1, -2.5e-2)', 1)).toBeNull();
+  });
+
+  it('v.vector3 accepts .5 / 5. / +5 / scientific', () => {
+    expect(v.vector3('position')('position', 'Vector3(.5, 5., +5)', 1)).toBeNull();
+    expect(v.vector3('position')('position', 'Vector3(1e3, -2.5e-2, +0)', 1)).toBeNull();
+  });
+
+  it('v.rect2 accepts the lenient grammar', () => {
+    expect(v.rect2('region')('region', 'Rect2(.5, 5., +1, 2)', 1)).toBeNull();
+  });
+
+  it('v.transform3d accepts the lenient grammar', () => {
+    expect(
+      v.transform3d('t')('t', 'Transform3D(1., .5, +0, 0, 1, 0, 0, 0, 1, 0, 0, 0)', 1)
+    ).toBeNull();
+  });
+
+  it('v.color accepts the lenient grammar', () => {
+    expect(v.color('albedo_color')('albedo_color', 'Color(.5, 1., +0, 1)', 1)).toBeNull();
+  });
+
+  it('v.aabb accepts the lenient grammar', () => {
+    expect(v.aabb('aabb')('aabb', 'AABB(.5, 5., +1, 1, 1, 1)', 1)).toBeNull();
+  });
+
+  it('v.quaternion accepts the lenient grammar', () => {
+    expect(v.quaternion('q')('q', 'Quaternion(.5, 5., +0, 1)', 1)).toBeNull();
+  });
+
+  it('v.transform2d accepts the lenient grammar', () => {
+    expect(v.transform2d('t')('t', 'Transform2D(1., .5, +0, 1, 0, 0)', 1)).toBeNull();
+  });
+
+  it('v.basis accepts the lenient grammar', () => {
+    expect(v.basis('b')('b', 'Basis(1., .5, +0, 0, 1, 0, 0, 0, 1)', 1)).toBeNull();
+  });
+
+  it('still rejects non-numeric and wrong-arity tuples', () => {
+    expect(v.vector3('position')('position', 'Vector3(a, b, c)', 1)).not.toBeNull();
+    expect(v.vector3('position')('position', 'Vector3(1, 2)', 1)).not.toBeNull();
+    expect(v.color('c')('c', 'Color(1, 1, 1)', 1)).not.toBeNull();
+  });
+});

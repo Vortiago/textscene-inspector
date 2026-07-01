@@ -21,6 +21,7 @@
 
 import type { PropertyValidator } from '../ValidatorRegistry.js';
 import { propertyError } from './propertyError.js';
+import { floatTupleValidator } from './floatTupleValidator.js';
 import {
   createBooleanValidator,
   createEnumValidator,
@@ -237,54 +238,22 @@ export const v = {
    * directionallight3d/omnilight3d/spotlight3d's hand-rolled version.
    */
   color(name: string): PropertyValidator {
-    const COLOR_REGEX =
-      /^Color\(\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*\)$/;
-    const code = formatCode(name);
-    return (key, value, line) => {
-      if (!COLOR_REGEX.test(value)) {
-        return propertyError(key, line, `Property '${name}' must be Color with 4 numbers like Color(1, 1, 1, 1), got: "${value}"`, code);
-      }
-      return null;
-    };
+    return floatTupleValidator(name, 'Color', 4, 'Color with 4 numbers like Color(1, 1, 1, 1)', formatCode(name));
   },
 
   /** `AABB(x, y, z, w, h, d)` format. */
   aabb(name: string): PropertyValidator {
-    const AABB_REGEX =
-      /^AABB\(\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*\)$/;
-    const code = formatCode(name);
-    return (key, value, line) => {
-      if (!AABB_REGEX.test(value)) {
-        return propertyError(key, line, `Property '${name}' must be AABB with 6 numbers like AABB(0, 0, 0, 1, 1, 1), got: "${value}"`, code);
-      }
-      return null;
-    };
+    return floatTupleValidator(name, 'AABB', 6, 'AABB with 6 numbers like AABB(0, 0, 0, 1, 1, 1)', formatCode(name));
   },
 
   /** `Quaternion(x, y, z, w)` format. */
   quaternion(name: string): PropertyValidator {
-    const QUATERNION_REGEX =
-      /^Quaternion\(\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*\)$/;
-    const code = formatCode(name);
-    return (key, value, line) => {
-      if (!QUATERNION_REGEX.test(value)) {
-        return propertyError(key, line, `Property '${name}' must be Quaternion with 4 numbers like Quaternion(0, 0, 0, 1), got: "${value}"`, code);
-      }
-      return null;
-    };
+    return floatTupleValidator(name, 'Quaternion', 4, 'Quaternion with 4 numbers like Quaternion(0, 0, 0, 1)', formatCode(name));
   },
 
   /** `Transform2D(6 floats)` format. */
   transform2d(name: string): PropertyValidator {
-    const TRANSFORM2D_REGEX =
-      /^Transform2D\(\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*\)$/;
-    const code = formatCode(name);
-    return (key, value, line) => {
-      if (!TRANSFORM2D_REGEX.test(value)) {
-        return propertyError(key, line, `Property '${name}' must be Transform2D with 6 numbers like Transform2D(1, 0, 0, 1, 0, 0), got: "${value}"`, code);
-      }
-      return null;
-    };
+    return floatTupleValidator(name, 'Transform2D', 6, 'Transform2D with 6 numbers like Transform2D(1, 0, 0, 1, 0, 0)', formatCode(name));
   },
 
   /**
@@ -343,14 +312,6 @@ export const v = {
 
   /** `Basis(9 floats)` format. */
   basis(name: string): PropertyValidator {
-    const BASIS_REGEX =
-      /^Basis\(\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*\)$/;
-    const code = formatCode(name);
-    return (key, value, line) => {
-      if (!BASIS_REGEX.test(value)) {
-        return propertyError(key, line, `Property '${name}' must be Basis with 9 numbers like Basis(1, 0, 0, 0, 1, 0, 0, 0, 1), got: "${value}"`, code);
-      }
-      return null;
-    };
+    return floatTupleValidator(name, 'Basis', 9, 'Basis with 9 numbers like Basis(1, 0, 0, 0, 1, 0, 0, 0, 1)', formatCode(name));
   },
 };
