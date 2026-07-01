@@ -40,12 +40,29 @@ function walk(dir: string, fileName: string): string[] {
 const RULE_NAME_RE = /^\s*name:\s*'([^']+)'/gm;
 const REGISTER_ALL_RE = /registerAll\(\s*'([^']+)'/g;
 
+// A slice may also declare its rule via a shared dim-parameterized factory
+// (e.g. `makeAreaLinterRule('2D')`) instead of an inline `name: '...'` literal.
+// The factory names the rule `valid-<family><dim>` (family = the factory's
+// middle segment, lowercased), so credit that as a declaration here.
+const FACTORY_RULE_RE = /make(\w+?)LinterRule\(\s*'(2D|3D)'\s*\)/g;
+
 function extractAll(file: string, re: RegExp): string[] {
   const src = readFileSync(file, 'utf8');
   const out: string[] = [];
   const matcher = new RegExp(re.source, re.flags);
   let m: RegExpExecArray | null;
   while ((m = matcher.exec(src)) !== null) out.push(m[1]!);
+  return out;
+}
+
+function extractFactoryRuleNames(file: string): string[] {
+  const src = readFileSync(file, 'utf8');
+  const out: string[] = [];
+  const matcher = new RegExp(FACTORY_RULE_RE.source, FACTORY_RULE_RE.flags);
+  let m: RegExpExecArray | null;
+  while ((m = matcher.exec(src)) !== null) {
+    out.push(`valid-${m[1]!.toLowerCase()}${m[2]!.toLowerCase()}`);
+  }
   return out;
 }
 
@@ -60,7 +77,9 @@ describe('lint rule coverage meta-guard', () => {
   });
 
   it('declared rule names match the live ruleRegistry exactly', () => {
-    const declared = new Set(ruleFiles.flatMap((f) => extractAll(f, RULE_NAME_RE)));
+    const declared = new Set(
+      ruleFiles.flatMap((f) => [...extractAll(f, RULE_NAME_RE), ...extractFactoryRuleNames(f)])
+    );
     const registered = new Set(ruleRegistry.getRules().map((r) => r.meta.name));
 
     const declaredButNotRegistered = [...declared].filter((n) => !registered.has(n)).sort();
