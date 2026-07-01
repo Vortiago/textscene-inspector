@@ -94,4 +94,35 @@ describe('Control Linter', () => {
       );
     });
   });
+
+  // Every registered property must actually be wired under its exact key — a
+  // typo in a registration key (e.g. `anchor_lft`) would silently disable that
+  // validator. Feed each one a malformed value and assert it is rejected. Covers
+  // the axis variants and props the accept/reject table above only spot-checks.
+  describe('every registered Control property is validated', () => {
+    const MALFORMED: ReadonlyArray<readonly [string, string]> = [
+      ['self_modulate', 'Color(1, 1, 1)'],
+      ['layout_mode', 'x'],
+      ['anchor_left', 'x'],
+      ['anchor_top', 'x'],
+      ['anchor_bottom', 'x'],
+      ['offset_left', 'abc'],
+      ['offset_top', 'abc'],
+      ['offset_bottom', 'abc'],
+      ['grow_vertical', '9'],
+      ['rotation', 'spin'],
+      ['scale', 'Vector2(1)'],
+      ['pivot_offset', 'Vector2(1)'],
+      ['size_flags_vertical', 'fill'],
+      ['size_flags_stretch_ratio', 'half'],
+      ['custom_minimum_size', 'Vector2(1)'],
+      ['theme_override_font_sizes/font_size', 'big'],
+      ['theme_override_fonts/font', 'notaref'],
+    ];
+    for (const [prop, value] of MALFORMED) {
+      it(`rejects a malformed ${prop}`, () => {
+        expectDiagnostic(scene(node('Control', { [prop]: value })), { prop: prop.split('/')[0]! });
+      });
+    }
+  });
 });
