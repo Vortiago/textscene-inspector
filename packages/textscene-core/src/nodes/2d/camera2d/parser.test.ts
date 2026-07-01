@@ -32,4 +32,39 @@ describe('parseCamera2D', () => {
     const p = parseCamera2D(heading(), { position: 'Vector2(320, 180)' });
     expect(p.position).toEqual({ x: 320, y: 180 });
   });
+
+  it('zoom accepts fractional values', () => {
+    const p = parseCamera2D(heading(), { zoom: 'Vector2(0.5, 0.75)' });
+    expect(p.zoom).toEqual({ x: 0.5, y: 0.75 });
+  });
+
+  it('zoom accepts zero values', () => {
+    const p = parseCamera2D(heading(), { zoom: 'Vector2(0, 0)' });
+    expect(p.zoom).toEqual({ x: 0, y: 0 });
+  });
+
+  it('zoom accepts negative values', () => {
+    const p = parseCamera2D(heading(), { zoom: 'Vector2(-1, -2)' });
+    expect(p.zoom).toEqual({ x: -1, y: -2 });
+  });
+
+  it('zoom with scientific notation', () => {
+    const p = parseCamera2D(heading(), { zoom: 'Vector2(1e-3, 2.5e2)' });
+    expect(p.zoom).toEqual({ x: 0.001, y: 250 });
+  });
+
+  it('offset at explicit zero vector', () => {
+    const p = parseCamera2D(heading(), { offset: 'Vector2(0, 0)' });
+    expect(p.offset).toEqual({ x: 0, y: 0 });
+  });
+
+  it('offset with large mixed-sign values', () => {
+    const p = parseCamera2D(heading(), { offset: 'Vector2(-5000, 3000)' });
+    expect(p.offset).toEqual({ x: -5000, y: 3000 });
+  });
+
+  it('position with large negative coordinates (inherited Node2D)', () => {
+    const p = parseCamera2D(heading(), { position: 'Vector2(-10000, -8000)' });
+    expect(p.position).toEqual({ x: -10000, y: -8000 });
+  });
 });
