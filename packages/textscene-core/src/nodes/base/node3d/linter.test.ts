@@ -64,13 +64,15 @@ describe('Node3D Linter', () => {
   describe('Strict Parser Validation - Scale Properties', () => {
     runPropertyValidation({ nodeType: 'Node3D' }, [
       {
+        // Extreme-but-positive magnitudes are valid Godot and lint clean; only
+        // zero/negative (a collapsed/inverted transform) and malformed values
+        // error. See linterParser.ts — the base-walk (#143) inherits this to
+        // every Node3D subclass, so it must match what the renderer accepts.
         prop: 'scale',
-        valid: ['Vector3(1, 1, 1)', 'Vector3(2, 0.5, 1.5)'],
+        valid: ['Vector3(1, 1, 1)', 'Vector3(2, 0.5, 1.5)', 'Vector3(10000, 1, 1)', 'Vector3(0.0001, 1, 1)'],
         invalid: [
           { value: 'Vector3(0, 1, 1)', contains: ['scale', 'positive'] },
           { value: 'Vector3(1, -1, 1)', contains: ['scale', 'positive'] },
-          { value: 'Vector3(10000, 1, 1)', contains: ['scale', 'extreme', 'precision'] },
-          { value: 'Vector3(0.0001, 1, 1)', contains: ['scale', 'extreme'] },
           { value: 'Vector3(1, 1)', contains: ['scale', '3 numbers'] },
         ],
       },

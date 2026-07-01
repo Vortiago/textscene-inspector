@@ -1,0 +1,16 @@
+[gd_scene format=3]
+
+; Reproduces the real-Godot Control witness from the parser/linter divergence
+; audit (custom_drawing.tscn:15/41/43): a Control carrying anchors_preset, an
+; explicit offset, and a theme_override_colors entry. Before #143 these lint
+; holes were silent on the Control family; this fixture must now lint clean.
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Panel" type="Control" parent="."]
+anchors_preset = 15
+offset_right = 172.0
+theme_override_colors/font_color = Color(0.9, 0.9, 0.9, 1)

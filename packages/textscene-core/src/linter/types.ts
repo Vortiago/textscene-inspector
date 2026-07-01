@@ -82,6 +82,13 @@ export interface RuleMeta {
   category: 'validation' | 'performance' | 'best-practice';
   /** Node types this rule applies to (empty = all nodes) */
   applicableNodeTypes?: string[];
+  /**
+   * Predicate applicability — when present it decides applicability on its own
+   * (taking precedence over `applicableNodeTypes`), so a rule can reach a whole
+   * family (e.g. every `*3D` subclass) without enumerating each type. Rules
+   * without a matcher keep exact `applicableNodeTypes` matching.
+   */
+  applicableNodeTypeMatcher?: (nodeType: string) => boolean;
 }
 
 /**

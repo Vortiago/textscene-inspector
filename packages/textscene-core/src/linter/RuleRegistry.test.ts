@@ -172,6 +172,48 @@ describe('RuleRegistry', () => {
     });
   });
 
+  describe('getRulesForNodeType with applicableNodeTypeMatcher', () => {
+    const matcherRule = (name: string, matcher: (t: string) => boolean): LintRule => ({
+      meta: { name, description: `Test rule: ${name}`, category: 'validation', applicableNodeTypeMatcher: matcher },
+      check: () => [],
+    });
+
+    it('applies a matcher-based rule to every type the predicate accepts', () => {
+      const rule = matcherRule('spatial-rule', (t) => t === 'Node3D' || t.endsWith('3D'));
+      registry.register(rule);
+
+      expect(registry.getRulesForNodeType('Node3D')).toContain(rule);
+      expect(registry.getRulesForNodeType('MeshInstance3D')).toContain(rule);
+      expect(registry.getRulesForNodeType('Camera3D')).toContain(rule);
+      expect(registry.getRulesForNodeType('Sprite2D')).not.toContain(rule);
+      expect(registry.getRulesForNodeType('Label')).not.toContain(rule);
+    });
+
+    it('lets the matcher take precedence over applicableNodeTypes', () => {
+      const rule: LintRule = {
+        meta: {
+          name: 'matcher-wins',
+          description: 'x',
+          category: 'validation',
+          applicableNodeTypes: ['Node3D'],
+          applicableNodeTypeMatcher: (t) => t.endsWith('3D'),
+        },
+        check: () => [],
+      };
+      registry.register(rule);
+
+      expect(registry.getRulesForNodeType('MeshInstance3D')).toContain(rule);
+    });
+
+    it('leaves exact-match (matcher-less) rules unchanged', () => {
+      const rule = createMockRule('exact', ['MeshInstance3D']);
+      registry.register(rule);
+
+      expect(registry.getRulesForNodeType('MeshInstance3D')).toContain(rule);
+      expect(registry.getRulesForNodeType('Camera3D')).not.toContain(rule);
+    });
+  });
+
   describe('getRule', () => {
     it('should get rule by name', () => {
       const rule = createMockRule('test-rule');

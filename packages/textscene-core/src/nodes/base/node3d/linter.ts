@@ -91,11 +91,8 @@ function checkNode3D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node, scene } = context;
 
-  // Only run for Node3D nodes and its subclasses
-  // Note: All 3D nodes inherit from Node3D, so this applies broadly
-  if (node.type !== 'Node3D' && !node.type.endsWith('3D')) {
-    return diagnostics;
-  }
+  // Applicability is enforced by the rule's applicableNodeTypeMatcher (every
+  // *3D subclass), so no per-type guard is needed here.
 
   // Type guard for properties
   if (!hasNode3DProperties(node.properties)) {
@@ -160,7 +157,10 @@ const node3DValidationRule: LintRule = {
     name: 'valid-node3d-visibility',
     description: 'Validates Node3D visibility_parent references exist in scene tree',
     category: 'validation',
-    applicableNodeTypes: ['Node3D'], // Also applies to all Node3D subclasses
+    // Applies to Node3D and every spatial subclass (MeshInstance3D, Camera3D, …).
+    // A predicate is required because getRulesForNodeType matches exact type
+    // names, so a literal ['Node3D'] would never reach the subclasses.
+    applicableNodeTypeMatcher: (nodeType) => nodeType === 'Node3D' || nodeType.endsWith('3D'),
   },
   check: checkNode3D,
 };
