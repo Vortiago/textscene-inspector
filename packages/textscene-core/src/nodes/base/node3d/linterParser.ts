@@ -9,6 +9,7 @@
 
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
+import { propertyError } from '../../../linter/validators/index.js';
 import { VECTOR3_REGEX } from '../../../linter/validators/vectorValidators.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 
@@ -32,13 +33,7 @@ const ROTATION_ORDER = {
 const scaleValidator: PropertyValidator = (key, value, line) => {
   const match = VECTOR3_REGEX.exec(value);
   if (!match) {
-    return {
-      severity: 'error',
-      message: `Property 'scale' must be Vector3 with 3 numbers like Vector3(1, 1, 1), got: "${value}"`,
-      line,
-      column: key.length + 3,
-      code: 'INVALID_SCALE_FORMAT',
-    };
+    return propertyError(key, line, `Property 'scale' must be Vector3 with 3 numbers like Vector3(1, 1, 1), got: "${value}"`, 'INVALID_SCALE_FORMAT');
   }
 
   const x = parseFloat(match[1] || '0');
@@ -46,33 +41,15 @@ const scaleValidator: PropertyValidator = (key, value, line) => {
   const z = parseFloat(match[3] || '0');
 
   if (x <= 0 || y <= 0 || z <= 0) {
-    return {
-      severity: 'error',
-      message: `Property 'scale' must have positive values, got: Vector3(${x}, ${y}, ${z}). Zero or negative scale can cause rendering issues.`,
-      line,
-      column: key.length + 3,
-      code: 'INVALID_SCALE_VALUE',
-    };
+    return propertyError(key, line, `Property 'scale' must have positive values, got: Vector3(${x}, ${y}, ${z}). Zero or negative scale can cause rendering issues.`, 'INVALID_SCALE_VALUE');
   }
 
   if (x > EXTREME_SCALE_MAX || y > EXTREME_SCALE_MAX || z > EXTREME_SCALE_MAX) {
-    return {
-      severity: 'error',
-      message: `Property 'scale' has extreme values (>${EXTREME_SCALE_MAX}): Vector3(${x}, ${y}, ${z}). This may cause precision issues.`,
-      line,
-      column: key.length + 3,
-      code: 'EXTREME_SCALE_VALUE',
-    };
+    return propertyError(key, line, `Property 'scale' has extreme values (>${EXTREME_SCALE_MAX}): Vector3(${x}, ${y}, ${z}). This may cause precision issues.`, 'EXTREME_SCALE_VALUE');
   }
 
   if (x < EXTREME_SCALE_MIN || y < EXTREME_SCALE_MIN || z < EXTREME_SCALE_MIN) {
-    return {
-      severity: 'error',
-      message: `Property 'scale' has extreme values (<${EXTREME_SCALE_MIN}): Vector3(${x}, ${y}, ${z}). This may cause precision issues.`,
-      line,
-      column: key.length + 3,
-      code: 'EXTREME_SCALE_VALUE',
-    };
+    return propertyError(key, line, `Property 'scale' has extreme values (<${EXTREME_SCALE_MIN}): Vector3(${x}, ${y}, ${z}). This may cause precision issues.`, 'EXTREME_SCALE_VALUE');
   }
 
   return null;

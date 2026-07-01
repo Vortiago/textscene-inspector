@@ -12,6 +12,7 @@ import {
   v,
   VECTOR3_REGEX,
 } from '../../../../linter/validators/index.js';
+import { propertyError } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 
 const CENTER_OF_MASS_MODE = { 0: 'AUTO', 1: 'CUSTOM' };
@@ -22,25 +23,13 @@ const DISABLE_MODE = { 0: 'REMOVE', 1: 'KEEP_ACTIVE' };
 const inertia3d: PropertyValidator = (key, value, line) => {
   const match = VECTOR3_REGEX.exec(value);
   if (!match) {
-    return {
-      severity: 'error',
-      message: `Property 'inertia' must be Vector3 with 3 numbers like Vector3(0, 0, 0), got: "${value}"`,
-      line,
-      column: key.length + 3,
-      code: 'INVALID_INERTIA_FORMAT',
-    };
+    return propertyError(key, line, `Property 'inertia' must be Vector3 with 3 numbers like Vector3(0, 0, 0), got: "${value}"`, 'INVALID_INERTIA_FORMAT');
   }
   const x = parseFloat(match[1] || '0');
   const y = parseFloat(match[2] || '0');
   const z = parseFloat(match[3] || '0');
   if (x < 0 || y < 0 || z < 0) {
-    return {
-      severity: 'error',
-      message: `Property 'inertia' components must be >= 0, got: Vector3(${x}, ${y}, ${z}). Use Vector3(0, 0, 0) for automatic calculation.`,
-      line,
-      column: key.length + 3,
-      code: 'INVALID_INERTIA_VALUE',
-    };
+    return propertyError(key, line, `Property 'inertia' components must be >= 0, got: Vector3(${x}, ${y}, ${z}). Use Vector3(0, 0, 0) for automatic calculation.`, 'INVALID_INERTIA_VALUE');
   }
   return null;
 };

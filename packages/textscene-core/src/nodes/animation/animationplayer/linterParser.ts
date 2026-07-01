@@ -10,6 +10,7 @@
 
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
+import { propertyError } from '../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 
 const MIN_PLAYBACK_SPEED = 0.0001;
@@ -21,40 +22,16 @@ const METHOD_CALL_MODE = { 0: 'DEFERRED', 1: 'IMMEDIATE' };
 const speedScaleValidator: PropertyValidator = (key, value, line) => {
   const num = parseFloat(value);
   if (isNaN(num)) {
-    return {
-      severity: 'error',
-      message: `Property 'speed_scale' must be a number, got: "${value}"`,
-      line,
-      column: key.length + 3,
-      code: 'INVALID_SPEED_SCALE_FORMAT',
-    };
+    return propertyError(key, line, `Property 'speed_scale' must be a number, got: "${value}"`, 'INVALID_SPEED_SCALE_FORMAT');
   }
   if (num === 0) {
-    return {
-      severity: 'error',
-      message: `Property 'speed_scale' cannot be 0 (got ${num}). Zero speed will prevent animation from advancing.`,
-      line,
-      column: key.length + 3,
-      code: 'INVALID_SPEED_SCALE_ZERO',
-    };
+    return propertyError(key, line, `Property 'speed_scale' cannot be 0 (got ${num}). Zero speed will prevent animation from advancing.`, 'INVALID_SPEED_SCALE_ZERO');
   }
   if (num > 0 && num < MIN_PLAYBACK_SPEED) {
-    return {
-      severity: 'error',
-      message: `Property 'speed_scale' is too small (${num}). Values less than ${MIN_PLAYBACK_SPEED} are impractical.`,
-      line,
-      column: key.length + 3,
-      code: 'INVALID_SPEED_SCALE_TOO_SMALL',
-    };
+    return propertyError(key, line, `Property 'speed_scale' is too small (${num}). Values less than ${MIN_PLAYBACK_SPEED} are impractical.`, 'INVALID_SPEED_SCALE_TOO_SMALL');
   }
   if (Math.abs(num) > MAX_PLAYBACK_SPEED) {
-    return {
-      severity: 'error',
-      message: `Property 'speed_scale' is too large (${num}). Values above ${MAX_PLAYBACK_SPEED} are impractical.`,
-      line,
-      column: key.length + 3,
-      code: 'INVALID_SPEED_SCALE_TOO_LARGE',
-    };
+    return propertyError(key, line, `Property 'speed_scale' is too large (${num}). Values above ${MAX_PLAYBACK_SPEED} are impractical.`, 'INVALID_SPEED_SCALE_TOO_LARGE');
   }
   return null;
 };
@@ -68,13 +45,7 @@ function nonEmptyQuotedString(
   return (key, value, line) => {
     const strValue = value.replace(/^["']|["']$/g, '').trim();
     if (strValue.length === 0) {
-      return {
-        severity: 'error',
-        message: emptyMessage,
-        line,
-        column: key.length + 3,
-        code,
-      };
+      return propertyError(key, line, emptyMessage, code);
     }
     return null;
   };

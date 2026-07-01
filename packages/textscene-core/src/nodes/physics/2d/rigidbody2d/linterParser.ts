@@ -5,6 +5,7 @@
 
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
+import { propertyError } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 
 const CENTER_OF_MASS_MODE = { 0: 'AUTO', 1: 'CUSTOM' };
@@ -14,22 +15,10 @@ const DAMP_MODE = { 0: 'COMBINE', 1: 'REPLACE' };
 const inertia2d: PropertyValidator = (key, value, line) => {
   const num = parseFloat(value);
   if (isNaN(num)) {
-    return {
-      severity: 'error',
-      message: `Property 'inertia' must be a number, got: "${value}". In 2D, inertia is a scalar value.`,
-      line,
-      column: key.length + 3,
-      code: 'INVALID_INERTIA_FORMAT',
-    };
+    return propertyError(key, line, `Property 'inertia' must be a number, got: "${value}". In 2D, inertia is a scalar value.`, 'INVALID_INERTIA_FORMAT');
   }
   if (num < 0) {
-    return {
-      severity: 'error',
-      message: `Property 'inertia' must be >= 0, got: ${num}. Use 0 for automatic calculation.`,
-      line,
-      column: key.length + 3,
-      code: 'INVALID_INERTIA_VALUE',
-    };
+    return propertyError(key, line, `Property 'inertia' must be >= 0, got: ${num}. Use 0 for automatic calculation.`, 'INVALID_INERTIA_VALUE');
   }
   return null;
 };

@@ -9,6 +9,7 @@
 
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
+import { propertyError } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 
 const DRAW_ORDER = { 0: 'INDEX', 1: 'LIFETIME', 2: 'VIEW_DEPTH' };
@@ -20,44 +21,20 @@ const AABB_REGEX =
 const amountValidator: PropertyValidator = (key, value, line) => {
   const num = parseInt(value, 10);
   if (isNaN(num)) {
-    return {
-      severity: 'error',
-      message: `Property 'amount' must be an integer, got: "${value}"`,
-      line,
-      column: key.length + 3,
-      code: 'INVALID_AMOUNT_FORMAT',
-    };
+    return propertyError(key, line, `Property 'amount' must be an integer, got: "${value}"`, 'INVALID_AMOUNT_FORMAT');
   }
   if (num <= 0) {
-    return {
-      severity: 'error',
-      message: `Property 'amount' must be greater than 0 (got ${num}). Particles need a positive amount to render`,
-      line,
-      column: key.length + 3,
-      code: 'INVALID_AMOUNT_VALUE',
-    };
+    return propertyError(key, line, `Property 'amount' must be greater than 0 (got ${num}). Particles need a positive amount to render`, 'INVALID_AMOUNT_VALUE');
   }
   if (num > MAX_RECOMMENDED_PARTICLES) {
-    return {
-      severity: 'error',
-      message: `Property 'amount' is ${num}, which exceeds recommended maximum of ${MAX_RECOMMENDED_PARTICLES}. This may cause severe performance issues`,
-      line,
-      column: key.length + 3,
-      code: 'EXCESSIVE_AMOUNT_VALUE',
-    };
+    return propertyError(key, line, `Property 'amount' is ${num}, which exceeds recommended maximum of ${MAX_RECOMMENDED_PARTICLES}. This may cause severe performance issues`, 'EXCESSIVE_AMOUNT_VALUE');
   }
   return null;
 };
 
 const visibilityAabbValidator: PropertyValidator = (key, value, line) => {
   if (!AABB_REGEX.test(value)) {
-    return {
-      severity: 'error',
-      message: `Property 'visibility_aabb' must be AABB with 6 numbers like AABB(0, 0, 0, 1, 1, 1), got: "${value}"`,
-      line,
-      column: key.length + 3,
-      code: 'INVALID_VISIBILITY_AABB_FORMAT',
-    };
+    return propertyError(key, line, `Property 'visibility_aabb' must be AABB with 6 numbers like AABB(0, 0, 0, 1, 1, 1), got: "${value}"`, 'INVALID_VISIBILITY_AABB_FORMAT');
   }
 
   const match = value.match(AABB_REGEX);
@@ -67,13 +44,7 @@ const visibilityAabbValidator: PropertyValidator = (key, value, line) => {
     const depth = parseFloat(match[6]);
 
     if (width <= 0 || height <= 0 || depth <= 0) {
-      return {
-        severity: 'error',
-        message: `Property 'visibility_aabb' size components must be positive (width=${width}, height=${height}, depth=${depth})`,
-        line,
-        column: key.length + 3,
-        code: 'INVALID_VISIBILITY_AABB_SIZE',
-      };
+      return propertyError(key, line, `Property 'visibility_aabb' size components must be positive (width=${width}, height=${height}, depth=${depth})`, 'INVALID_VISIBILITY_AABB_SIZE');
     }
   }
 

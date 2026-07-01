@@ -12,6 +12,7 @@
 
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
+import { propertyError } from '../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 
 const PROCESS_MODE = { 0: 'PHYSICS', 1: 'IDLE', 2: 'MANUAL' };
@@ -24,13 +25,7 @@ const NODEPATH_REGEX = /^NodePath\("([^"]*)"\)$/;
 function resourceRef(name: string, code: string): PropertyValidator {
   return (key, value, line) => {
     if (!RESOURCE_REGEX.test(value.trim())) {
-      return {
-        severity: 'error',
-        message: `Property '${name}' must be a SubResource or ExtResource reference, got: "${value}"`,
-        line,
-        column: key.length + 3,
-        code,
-      };
+      return propertyError(key, line, `Property '${name}' must be a SubResource or ExtResource reference, got: "${value}"`, code);
     }
     return null;
   };
@@ -40,31 +35,13 @@ function resourceRef(name: string, code: string): PropertyValidator {
 const audioMaxPolyphony: PropertyValidator = (key, value, line) => {
   const num = parseInt(value, 10);
   if (isNaN(num)) {
-    return {
-      severity: 'error',
-      message: `Property 'audio_max_polyphony' must be a number, got: "${value}"`,
-      line,
-      column: key.length + 3,
-      code: 'INVALID_AUDIO_MAX_POLYPHONY_FORMAT',
-    };
+    return propertyError(key, line, `Property 'audio_max_polyphony' must be a number, got: "${value}"`, 'INVALID_AUDIO_MAX_POLYPHONY_FORMAT');
   }
   if (num < 1) {
-    return {
-      severity: 'error',
-      message: `Property 'audio_max_polyphony' must be >= 1 (got ${num}). Values below 1 cause runtime errors.`,
-      line,
-      column: key.length + 3,
-      code: 'INVALID_AUDIO_MAX_POLYPHONY_TOO_SMALL',
-    };
+    return propertyError(key, line, `Property 'audio_max_polyphony' must be >= 1 (got ${num}). Values below 1 cause runtime errors.`, 'INVALID_AUDIO_MAX_POLYPHONY_TOO_SMALL');
   }
   if (num > 512) {
-    return {
-      severity: 'error',
-      message: `Property 'audio_max_polyphony' is impractically large (${num}). Consider values below 512.`,
-      line,
-      column: key.length + 3,
-      code: 'INVALID_AUDIO_MAX_POLYPHONY_TOO_LARGE',
-    };
+    return propertyError(key, line, `Property 'audio_max_polyphony' is impractically large (${num}). Consider values below 512.`, 'INVALID_AUDIO_MAX_POLYPHONY_TOO_LARGE');
   }
   return null;
 };
@@ -72,13 +49,7 @@ const audioMaxPolyphony: PropertyValidator = (key, value, line) => {
 function nodePath(name: string, code: string): PropertyValidator {
   return (key, value, line) => {
     if (!NODEPATH_REGEX.test(value.trim())) {
-      return {
-        severity: 'error',
-        message: `Property '${name}' must be a NodePath reference, got: "${value}"`,
-        line,
-        column: key.length + 3,
-        code,
-      };
+      return propertyError(key, line, `Property '${name}' must be a NodePath reference, got: "${value}"`, code);
     }
     return null;
   };

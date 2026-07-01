@@ -20,6 +20,7 @@
  */
 
 import type { PropertyValidator } from '../ValidatorRegistry.js';
+import { propertyError } from './propertyError.js';
 import {
   createBooleanValidator,
   createEnumValidator,
@@ -178,13 +179,7 @@ export const v = {
     const code = formatCode(name);
     return (key, value, line) => {
       if (!value.startsWith('"') || !value.endsWith('"')) {
-        return {
-          severity: 'error',
-          message: `Property '${name}' must be a quoted string, got: ${value}`,
-          line,
-          column: key.length + 3,
-          code,
-        };
+        return propertyError(key, line, `Property '${name}' must be a quoted string, got: ${value}`, code);
       }
       return null;
     };
@@ -247,13 +242,7 @@ export const v = {
     const code = formatCode(name);
     return (key, value, line) => {
       if (!COLOR_REGEX.test(value)) {
-        return {
-          severity: 'error',
-          message: `Property '${name}' must be Color with 4 numbers like Color(1, 1, 1, 1), got: "${value}"`,
-          line,
-          column: key.length + 3,
-          code,
-        };
+        return propertyError(key, line, `Property '${name}' must be Color with 4 numbers like Color(1, 1, 1, 1), got: "${value}"`, code);
       }
       return null;
     };
@@ -266,13 +255,7 @@ export const v = {
     const code = formatCode(name);
     return (key, value, line) => {
       if (!AABB_REGEX.test(value)) {
-        return {
-          severity: 'error',
-          message: `Property '${name}' must be AABB with 6 numbers like AABB(0, 0, 0, 1, 1, 1), got: "${value}"`,
-          line,
-          column: key.length + 3,
-          code,
-        };
+        return propertyError(key, line, `Property '${name}' must be AABB with 6 numbers like AABB(0, 0, 0, 1, 1, 1), got: "${value}"`, code);
       }
       return null;
     };
@@ -285,13 +268,7 @@ export const v = {
     const code = formatCode(name);
     return (key, value, line) => {
       if (!QUATERNION_REGEX.test(value)) {
-        return {
-          severity: 'error',
-          message: `Property '${name}' must be Quaternion with 4 numbers like Quaternion(0, 0, 0, 1), got: "${value}"`,
-          line,
-          column: key.length + 3,
-          code,
-        };
+        return propertyError(key, line, `Property '${name}' must be Quaternion with 4 numbers like Quaternion(0, 0, 0, 1), got: "${value}"`, code);
       }
       return null;
     };
@@ -304,13 +281,7 @@ export const v = {
     const code = formatCode(name);
     return (key, value, line) => {
       if (!TRANSFORM2D_REGEX.test(value)) {
-        return {
-          severity: 'error',
-          message: `Property '${name}' must be Transform2D with 6 numbers like Transform2D(1, 0, 0, 1, 0, 0), got: "${value}"`,
-          line,
-          column: key.length + 3,
-          code,
-        };
+        return propertyError(key, line, `Property '${name}' must be Transform2D with 6 numbers like Transform2D(1, 0, 0, 1, 0, 0), got: "${value}"`, code);
       }
       return null;
     };
@@ -327,13 +298,7 @@ export const v = {
     return (key, value, line) => {
       const parsed = parseInt(value, 10);
       if (isNaN(parsed)) {
-        return {
-          severity: 'error',
-          message: `Property '${name}' must be an integer, got: "${value}"`,
-          line,
-          column: key.length + 3,
-          code: formatErr,
-        };
+        return propertyError(key, line, `Property '${name}' must be an integer, got: "${value}"`, formatErr);
       }
       return null;
     };
@@ -350,13 +315,7 @@ export const v = {
     return (key, value, line) => {
       const parsed = parseFloat(value);
       if (isNaN(parsed) || !Number.isInteger(parsed)) {
-        return {
-          severity: 'error',
-          message: `Property '${name}' must be an integer, got: "${value}"`,
-          line,
-          column: key.length + 3,
-          code: formatErr,
-        };
+        return propertyError(key, line, `Property '${name}' must be an integer, got: "${value}"`, formatErr);
       }
       return null;
     };
@@ -373,22 +332,10 @@ export const v = {
     return (key, value, line) => {
       const parsed = parseFloat(value);
       if (isNaN(parsed) || !Number.isInteger(parsed)) {
-        return {
-          severity: 'error',
-          message: `Property '${name}' must be an integer, got: "${value}"`,
-          line,
-          column: key.length + 3,
-          code: formatErr,
-        };
+        return propertyError(key, line, `Property '${name}' must be an integer, got: "${value}"`, formatErr);
       }
       if (parsed < 0) {
-        return {
-          severity: 'error',
-          message: `Property '${name}' must be non-negative (got ${parsed})`,
-          line,
-          column: key.length + 3,
-          code: valueErr,
-        };
+        return propertyError(key, line, `Property '${name}' must be non-negative (got ${parsed})`, valueErr);
       }
       return null;
     };
@@ -401,13 +348,7 @@ export const v = {
     const code = formatCode(name);
     return (key, value, line) => {
       if (!BASIS_REGEX.test(value)) {
-        return {
-          severity: 'error',
-          message: `Property '${name}' must be Basis with 9 numbers like Basis(1, 0, 0, 0, 1, 0, 0, 0, 1), got: "${value}"`,
-          line,
-          column: key.length + 3,
-          code,
-        };
+        return propertyError(key, line, `Property '${name}' must be Basis with 9 numbers like Basis(1, 0, 0, 0, 1, 0, 0, 0, 1), got: "${value}"`, code);
       }
       return null;
     };

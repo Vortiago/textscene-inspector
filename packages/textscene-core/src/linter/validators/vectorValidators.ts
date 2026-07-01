@@ -1,6 +1,7 @@
 /** Shared validator utilities for Vector types */
 
 import type { ParseError } from '../../linter/types.js';
+import { propertyError } from './propertyError.js';
 
 /** Vector2 format: Vector2(x, y) - two comma-separated numbers */
 export const VECTOR2_REGEX = /^Vector2\(\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*\)$/;
@@ -26,13 +27,7 @@ export function createVector2Validator(
 ): (key: string, value: string, line: number) => ParseError | null {
   return (key, value, line) => {
     if (!VECTOR2_REGEX.test(value)) {
-      return {
-        severity: 'error',
-        message: `Property '${propertyName}' must be Vector2 with 2 numbers like Vector2(0, 0), got: "${value}"`,
-        line,
-        column: key.length + 3,
-        code: errorCode,
-      };
+      return propertyError(key, line, `Property '${propertyName}' must be Vector2 with 2 numbers like Vector2(0, 0), got: "${value}"`, errorCode);
     }
     return null;
   };
@@ -50,26 +45,14 @@ export function createVector2iValidator(
   return (key, value, line) => {
     const match = VECTOR2I_REGEX.exec(value);
     if (!match) {
-      return {
-        severity: 'error',
-        message: `Property '${propertyName}' must be Vector2i format like Vector2i(0, 0), got: "${value}"`,
-        line,
-        column: key.length + 3,
-        code: errorCodeFormat,
-      };
+      return propertyError(key, line, `Property '${propertyName}' must be Vector2i format like Vector2i(0, 0), got: "${value}"`, errorCodeFormat);
     }
 
     if (requireNonNegative) {
       const x = parseInt(match[1] || '0', 10);
       const y = parseInt(match[2] || '0', 10);
       if (x < 0 || y < 0) {
-        return {
-          severity: 'error',
-          message: `Property '${propertyName}' must have non-negative values, got: Vector2i(${x}, ${y})`,
-          line,
-          column: key.length + 3,
-          code: errorCodeValue,
-        };
+        return propertyError(key, line, `Property '${propertyName}' must have non-negative values, got: Vector2i(${x}, ${y})`, errorCodeValue);
       }
     }
 
@@ -86,13 +69,7 @@ export function createVector3Validator(
 ): (key: string, value: string, line: number) => ParseError | null {
   return (key, value, line) => {
     if (!VECTOR3_REGEX.test(value)) {
-      return {
-        severity: 'error',
-        message: `Property '${propertyName}' must be Vector3 with 3 numbers like Vector3(0, 0, 0), got: "${value}"`,
-        line,
-        column: key.length + 3,
-        code: errorCode,
-      };
+      return propertyError(key, line, `Property '${propertyName}' must be Vector3 with 3 numbers like Vector3(0, 0, 0), got: "${value}"`, errorCode);
     }
     return null;
   };
@@ -107,13 +84,7 @@ export function createRect2Validator(
 ): (key: string, value: string, line: number) => ParseError | null {
   return (key, value, line) => {
     if (!RECT2_REGEX.test(value)) {
-      return {
-        severity: 'error',
-        message: `Property '${propertyName}' must be Rect2 format like Rect2(0, 0, 100, 100), got: "${value}"`,
-        line,
-        column: key.length + 3,
-        code: errorCode,
-      };
+      return propertyError(key, line, `Property '${propertyName}' must be Rect2 format like Rect2(0, 0, 100, 100), got: "${value}"`, errorCode);
     }
     return null;
   };
@@ -128,13 +99,7 @@ export function createTransform3DValidator(
 ): (key: string, value: string, line: number) => ParseError | null {
   return (key, value, line) => {
     if (!TRANSFORM3D_REGEX.test(value)) {
-      return {
-        severity: 'error',
-        message: `Property '${propertyName}' must be Transform3D with 12 numbers like Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0), got: "${value}"`,
-        line,
-        column: key.length + 3,
-        code: errorCode,
-      };
+      return propertyError(key, line, `Property '${propertyName}' must be Transform3D with 12 numbers like Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0), got: "${value}"`, errorCode);
     }
     return null;
   };
