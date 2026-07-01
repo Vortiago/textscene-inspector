@@ -5,5 +5,4 @@
 
 export * from './textureProcessing';
 export * from './materialProcessing';
-export * from './sceneProcessing';
 export * from './glbProcessing';
