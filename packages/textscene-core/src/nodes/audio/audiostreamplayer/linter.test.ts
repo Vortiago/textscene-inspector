@@ -11,23 +11,29 @@
  */
 
 import { describe, it } from 'vitest';
-import { node, scene, expectClean, expectDiagnostic, expectNoErrors } from '../../../linter/testing/testkit';
+import {
+  node,
+  scene,
+  audioStream,
+  expectClean,
+  expectDiagnostic,
+  expectNoErrors,
+} from '../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
 
 describe('AudioStreamPlayer semantic rules', () => {
   it('passes a player whose stream resolves and values are normal', () => {
-    const content = `[gd_scene format=3]
-
-[ext_resource type="AudioStream" path="res://sound.ogg" id="1_a"]
-
-[node name="Player" type="AudioStreamPlayer"]
-stream = ExtResource("1_a")
-volume_db = 0.0
-pitch_scale = 1.0
-`;
-
-    expectClean(content);
+    expectClean(
+      scene(
+        audioStream,
+        node(
+          'AudioStreamPlayer',
+          { stream: 'ExtResource("1_abc")', volume_db: '0.0', pitch_scale: '1.0' },
+          { name: 'Player' }
+        )
+      )
+    );
   });
 
   it('does NOT error on a streamless player (stream may be set at runtime)', () => {
@@ -53,18 +59,19 @@ pitch_scale = 1.0
   });
 
   it('warns on an extreme volume_db (stream present)', () => {
-    const content = `[gd_scene format=3]
-
-[ext_resource type="AudioStream" path="res://sound.ogg" id="1_a"]
-
-[node name="Player" type="AudioStreamPlayer"]
-stream = ExtResource("1_a")
-volume_db = -100.0
-`;
-
-    expectDiagnostic(content, {
-      ruleName: 'audiostreamplayer-extreme-volume',
-      severity: 'warning',
-    });
+    expectDiagnostic(
+      scene(
+        audioStream,
+        node(
+          'AudioStreamPlayer',
+          { stream: 'ExtResource("1_abc")', volume_db: '-100.0' },
+          { name: 'Player' }
+        )
+      ),
+      {
+        ruleName: 'audiostreamplayer-extreme-volume',
+        severity: 'warning',
+      }
+    );
   });
 });

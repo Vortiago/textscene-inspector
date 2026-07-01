@@ -7,6 +7,7 @@ import {
   node,
   scene,
   lint,
+  audioStream,
   expectClean,
   expectDiagnostic,
   expectNoErrors,
@@ -15,13 +16,10 @@ import {
 import './linterParser';
 import './linter';
 
-/** A valid `AudioStream` ext_resource the node can reference (the kit can't emit headings). */
-const extStream = '[ext_resource type="AudioStream" path="res://sound.ogg" id="1_abc"]';
-
 /** Scene with the player node plus the `1_abc` AudioStream resource it references. */
 function withStream(props: Record<string, PropValue> = {}): string {
   return scene(
-    extStream,
+    audioStream,
     node('AudioStreamPlayer2D', { stream: 'ExtResource("1_abc")', ...props }, { name: 'AudioPlayer' })
   );
 }

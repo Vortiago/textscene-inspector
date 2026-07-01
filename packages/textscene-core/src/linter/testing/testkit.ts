@@ -52,6 +52,9 @@ export function node(
 export const collisionShape2d = node('CollisionShape2D', {}, { parent: '.' });
 export const collisionShape3d = node('CollisionShape3D', {}, { parent: '.' });
 
+/** A resolvable `AudioStream` ext_resource block (id `1_abc`) for AudioStreamPlayer scenes. */
+export const audioStream = '[ext_resource type="AudioStream" path="res://sound.ogg" id="1_abc"]';
+
 /** Compose node blocks into a full scene with the `[gd_scene format=3]` header. */
 export function scene(...blocks: string[]): string {
   return `[gd_scene format=3]\n\n${blocks.join('\n\n')}\n`;

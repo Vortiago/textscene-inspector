@@ -7,6 +7,7 @@ import {
   node,
   scene,
   lint,
+  audioStream,
   expectClean,
   expectDiagnostic,
   expectNoErrors,
@@ -15,13 +16,10 @@ import {
 import './linterParser';
 import './linter';
 
-/** ext_resource heading exposing an AudioStream under id `1_abc`. */
-const EXT_STREAM = '[ext_resource type="AudioStream" path="res://sound.ogg" id="1_abc"]';
-
 /** Scene with the ext_resource + an AudioStreamPlayer3D whose `stream` is pre-wired. */
 const withStream = (props: Record<string, PropValue> = {}): string =>
   scene(
-    EXT_STREAM,
+    audioStream,
     node('AudioStreamPlayer3D', { stream: 'ExtResource("1_abc")', ...props }, { name: 'AudioPlayer' })
   );
 

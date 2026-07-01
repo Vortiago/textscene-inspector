@@ -263,7 +263,7 @@ describe('AnimationTree Linter', () => {
       });
 
       it('should not warn when anim_player references AnimationPlayer', () => {
-        const animPlayerWarning = lint(
+        expectNoDiagnostic(
           scene(
             blendTree,
             node('AnimationPlayer', {}, { name: 'Player' }),
@@ -271,9 +271,9 @@ describe('AnimationTree Linter', () => {
               tree_root: 'SubResource("BlendTree_1")',
               anim_player: 'NodePath("Player")',
             })
-          )
-        ).find(d => d.message.includes('anim_player') && d.message.includes('wrong type'));
-        expect(animPlayerWarning).toBeUndefined();
+          ),
+          { ruleName: 'animationtree-anim-player-wrong-type' }
+        );
       });
 
       it('should warn when anim_player path may not exist', () => {
@@ -413,7 +413,7 @@ describe('AnimationTree Linter', () => {
       });
 
       it('should not warn when active is true and all required properties set', () => {
-        const activeWarning = lint(
+        expectNoDiagnostic(
           scene(
             blendTree,
             node('AnimationTree', {
@@ -421,9 +421,9 @@ describe('AnimationTree Linter', () => {
               anim_player: 'NodePath("../AnimationPlayer")',
               active: true,
             })
-          )
-        ).find(d => d.severity === 'warning' && d.message.includes('active'));
-        expect(activeWarning).toBeUndefined();
+          ),
+          { prop: 'active' }
+        );
       });
     });
 
@@ -443,7 +443,7 @@ describe('AnimationTree Linter', () => {
       });
 
       it('should not provide info when root_motion_track is empty', () => {
-        const info = lint(
+        expectNoDiagnostic(
           scene(
             blendTree,
             node('AnimationTree', {
@@ -451,9 +451,9 @@ describe('AnimationTree Linter', () => {
               anim_player: 'NodePath("../AnimationPlayer")',
               root_motion_track: 'NodePath("")',
             })
-          )
-        ).find(d => d.severity === 'info' && d.message.includes('root_motion_track'));
-        expect(info).toBeUndefined();
+          ),
+          { prop: 'root_motion_track' }
+        );
       });
     });
 
@@ -476,10 +476,9 @@ describe('AnimationTree Linter', () => {
 
       it('should not warn for normal audio_max_polyphony values', () => {
         for (const value of [8, 16, 32, 64, 128]) {
-          const warning = lint(scene(node('AnimationTree', { audio_max_polyphony: value }))).find(
-            d => d.severity === 'warning' && d.message.includes('audio_max_polyphony')
-          );
-          expect(warning).toBeUndefined();
+          expectNoDiagnostic(scene(node('AnimationTree', { audio_max_polyphony: value })), {
+            prop: 'audio_max_polyphony',
+          });
         }
       });
     });

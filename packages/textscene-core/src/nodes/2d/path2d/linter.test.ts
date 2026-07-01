@@ -15,15 +15,11 @@ import './linter';
 
 describe('Path2D Linter', () => {
   it('passes a Path2D with a valid Curve2D SubResource and a PathFollow2D child', () => {
-    const content = `[gd_scene format=3]
-
-[sub_resource type="Curve2D" id="curve_1"]
-
-[node name="Path2D" type="Path2D"]
-curve = SubResource("curve_1")
-
-[node name="PathFollow2D" type="PathFollow2D" parent="."]
-`;
+    const content = scene(
+      '[sub_resource type="Curve2D" id="curve_1"]',
+      node('Path2D', { curve: 'SubResource("curve_1")' }),
+      node('PathFollow2D', {}, { parent: '.' })
+    );
     const diagnostics = lint(content);
     expect(diagnostics.filter((d) => d.nodeType === 'Path2D')).toHaveLength(0);
   });
@@ -59,13 +55,12 @@ script = ExtResource("1")
   });
 
   it('warns when a Path2D has no PathFollow2D child', () => {
-    const content = `[gd_scene format=3]
-
-[sub_resource type="Curve2D" id="curve_1"]
-
-[node name="Path2D" type="Path2D"]
-curve = SubResource("curve_1")
-`;
-    expectDiagnostic(content, { ruleName: 'path2d-unused' });
+    expectDiagnostic(
+      scene(
+        '[sub_resource type="Curve2D" id="curve_1"]',
+        node('Path2D', { curve: 'SubResource("curve_1")' })
+      ),
+      { ruleName: 'path2d-unused' }
+    );
   });
 });

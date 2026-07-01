@@ -8,6 +8,8 @@ import {
   scene,
   lint,
   expectClean,
+  expectDiagnostic,
+  expectNoDiagnostic,
   expectNoErrors,
   runPropertyValidation,
 } from '../../../../linter/testing/testkit';
@@ -158,101 +160,71 @@ describe('OmniLight3D Linter', () => {
 
     describe('light energy warnings', () => {
       it('should warn on very low light_energy', () => {
-        const diagnostics = lint(scene(node('OmniLight3D', { light_energy: 0.005, omni_range: 5.0 })));
-        expect(diagnostics.length).toBeGreaterThan(0);
-        const warning = diagnostics.find(
-          d => d.severity === 'warning' && d.message.includes('Light energy')
-        );
-        expect(warning).toBeDefined();
-        expect(warning?.message).toContain('very low');
-        expect(warning?.message).toContain('0.005');
+        expectDiagnostic(scene(node('OmniLight3D', { light_energy: 0.005, omni_range: 5.0 })), {
+          prop: 'Light energy',
+          severity: 'warning',
+          contains: ['very low', '0.005'],
+        });
       });
 
       it('should warn on very high light_energy', () => {
-        const diagnostics = lint(scene(node('OmniLight3D', { light_energy: 150, omni_range: 5.0 })));
-        expect(diagnostics.length).toBeGreaterThan(0);
-        const warning = diagnostics.find(
-          d => d.severity === 'warning' && d.message.includes('Light energy')
-        );
-        expect(warning).toBeDefined();
-        expect(warning?.message).toContain('very high');
-        expect(warning?.message).toContain('150');
+        expectDiagnostic(scene(node('OmniLight3D', { light_energy: 150, omni_range: 5.0 })), {
+          prop: 'Light energy',
+          severity: 'warning',
+          contains: ['very high', '150'],
+        });
       });
 
       it('should not warn on normal light_energy values', () => {
-        const diagnostics = lint(scene(node('OmniLight3D', { light_energy: 1.5, omni_range: 5.0 })));
-        const energyWarning = diagnostics.find(d => d.message.includes('Light energy'));
-        expect(energyWarning).toBeUndefined();
+        expectNoDiagnostic(scene(node('OmniLight3D', { light_energy: 1.5, omni_range: 5.0 })), {
+          prop: 'Light energy',
+        });
       });
     });
 
     describe('omni_range warnings', () => {
       it('should warn on very large omni_range', () => {
-        const diagnostics = lint(scene(node('OmniLight3D', { omni_range: 1500 })));
-        expect(diagnostics.length).toBeGreaterThan(0);
-        const warning = diagnostics.find(
-          d => d.severity === 'warning' && d.message.includes('Light range')
-        );
-        expect(warning).toBeDefined();
-        expect(warning?.message).toContain('very large');
-        expect(warning?.message).toContain('1500');
-        expect(warning?.message).toContain('performance');
+        expectDiagnostic(scene(node('OmniLight3D', { omni_range: 1500 })), {
+          prop: 'Light range',
+          severity: 'warning',
+          contains: ['very large', '1500', 'performance'],
+        });
       });
 
       it('should warn on very small omni_range', () => {
-        const diagnostics = lint(scene(node('OmniLight3D', { omni_range: 0.05 })));
-        expect(diagnostics.length).toBeGreaterThan(0);
-        const warning = diagnostics.find(
-          d => d.severity === 'warning' && d.message.includes('Light range')
-        );
-        expect(warning).toBeDefined();
-        expect(warning?.message).toContain('very small');
-        expect(warning?.message).toContain('0.05');
-        expect(warning?.message).toContain('might not be visible');
+        expectDiagnostic(scene(node('OmniLight3D', { omni_range: 0.05 })), {
+          prop: 'Light range',
+          severity: 'warning',
+          contains: ['very small', '0.05', 'might not be visible'],
+        });
       });
 
       it('should not warn on normal omni_range values', () => {
-        const diagnostics = lint(scene(node('OmniLight3D', { omni_range: 10.0 })));
-        const rangeWarning = diagnostics.find(d => d.message.includes('Light range'));
-        expect(rangeWarning).toBeUndefined();
+        expectNoDiagnostic(scene(node('OmniLight3D', { omni_range: 10.0 })), { prop: 'Light range' });
       });
     });
 
     describe('omni_attenuation warnings', () => {
       it('should warn on very low omni_attenuation', () => {
-        const diagnostics = lint(
-          scene(node('OmniLight3D', { omni_attenuation: 0.05, omni_range: 5.0 }))
-        );
-        expect(diagnostics.length).toBeGreaterThan(0);
-        const warning = diagnostics.find(
-          d => d.severity === 'warning' && d.message.includes('attenuation')
-        );
-        expect(warning).toBeDefined();
-        expect(warning?.message).toContain('very low');
-        expect(warning?.message).toContain('0.05');
-        expect(warning?.message).toContain('slow falloff');
+        expectDiagnostic(scene(node('OmniLight3D', { omni_attenuation: 0.05, omni_range: 5.0 })), {
+          prop: 'attenuation',
+          severity: 'warning',
+          contains: ['very low', '0.05', 'slow falloff'],
+        });
       });
 
       it('should warn on very high omni_attenuation', () => {
-        const diagnostics = lint(
-          scene(node('OmniLight3D', { omni_attenuation: 7.0, omni_range: 5.0 }))
-        );
-        expect(diagnostics.length).toBeGreaterThan(0);
-        const warning = diagnostics.find(
-          d => d.severity === 'warning' && d.message.includes('attenuation')
-        );
-        expect(warning).toBeDefined();
-        expect(warning?.message).toContain('very high');
-        expect(warning?.message).toContain('7');
-        expect(warning?.message).toContain('performance');
+        expectDiagnostic(scene(node('OmniLight3D', { omni_attenuation: 7.0, omni_range: 5.0 })), {
+          prop: 'attenuation',
+          severity: 'warning',
+          contains: ['very high', '7', 'performance'],
+        });
       });
 
       it('should not warn on normal omni_attenuation values', () => {
-        const diagnostics = lint(
-          scene(node('OmniLight3D', { omni_attenuation: 1.5, omni_range: 5.0 }))
-        );
-        const attenuationWarning = diagnostics.find(d => d.message.includes('attenuation'));
-        expect(attenuationWarning).toBeUndefined();
+        expectNoDiagnostic(scene(node('OmniLight3D', { omni_attenuation: 1.5, omni_range: 5.0 })), {
+          prop: 'attenuation',
+        });
       });
     });
   });
