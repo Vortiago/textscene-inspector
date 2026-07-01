@@ -3,11 +3,11 @@
  * Migrated to the declarative `v` namespace (WI-ARCH-1).
  *
  * `scale` keeps a bespoke validator because it folds a vector-format check with
- * a per-component positivity check (zero or negative scale collapses/inverts the
- * node — a genuine rendering breaker). Extreme-but-positive magnitudes are NOT
- * flagged: the renderer draws them and real Godot scenes use them, so erroring
- * would re-introduce the parser/linter divergence this base validator (inherited
- * by every Node3D subclass via the base-walk, #143) exists to remove.
+ * a per-component non-zero check (a zero axis collapses the node — a genuine
+ * rendering breaker). A negative component is a valid mirror/flip (the renderer
+ * draws it, matching Node2D), and extreme-but-finite magnitudes are fine too;
+ * flagging either would re-introduce the parser/linter divergence this base
+ * validator (inherited by every Node3D subclass via the base-walk, #143) removes.
  */
 
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
@@ -25,7 +25,7 @@ const ROTATION_ORDER = {
   5: 'ZYX',
 };
 
-/** Bespoke `scale` validator: Vector3 format + each component must be positive. */
+/** Bespoke `scale` validator: Vector3 format + each component must be non-zero. */
 const scaleValidator: PropertyValidator = (key, value, line) => {
   const match = VECTOR3_REGEX.exec(value);
   if (!match) {
@@ -36,8 +36,8 @@ const scaleValidator: PropertyValidator = (key, value, line) => {
   const y = parseFloat(match[2] || '0');
   const z = parseFloat(match[3] || '0');
 
-  if (x <= 0 || y <= 0 || z <= 0) {
-    return propertyError(key, line, `Property 'scale' must have positive values, got: Vector3(${x}, ${y}, ${z}). Zero or negative scale can cause rendering issues.`, 'INVALID_SCALE_VALUE');
+  if (x === 0 || y === 0 || z === 0) {
+    return propertyError(key, line, `Property 'scale' must have non-zero values, got: Vector3(${x}, ${y}, ${z}). Zero scale collapses the node and causes rendering issues.`, 'INVALID_SCALE_VALUE');
   }
 
   return null;

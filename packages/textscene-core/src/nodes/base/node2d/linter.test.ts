@@ -361,9 +361,17 @@ describe('Node2D Linter', () => {
 
   describe('Scale magnitude tolerance', () => {
     // Any nonzero magnitude is valid Godot and lints clean — only a zero axis
-    // (a collapsed transform) errors. There is no extreme-magnitude threshold.
-    it('tolerates tiny and huge nonzero scales across the range', () => {
-      for (const s of ['Vector2(0.001, 0.001)', 'Vector2(1000, 1000)', 'Vector2(0.0009, 1)', 'Vector2(1001, 1)']) {
+    // (a collapsed transform) errors. There is no extreme-magnitude threshold,
+    // and negative components are valid mirrors/flips (matching Node3D).
+    it('tolerates tiny, huge, and negative (mirror) nonzero scales', () => {
+      for (const s of [
+        'Vector2(0.001, 0.001)',
+        'Vector2(1000, 1000)',
+        'Vector2(0.0009, 1)',
+        'Vector2(1001, 1)',
+        'Vector2(-1, 1)',
+        'Vector2(-2, -2)',
+      ]) {
         expectClean(scene(node('Node2D', { scale: s })));
       }
     });
