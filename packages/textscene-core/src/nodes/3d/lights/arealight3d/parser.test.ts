@@ -19,7 +19,7 @@ describe('AreaLight3D Parser', () => {
       expect(result.light_color).toBe('Color(1, 1, 1, 1)');
       expect(result.light_energy).toBe(1.0);
       expect(result.area_range).toBe(1.0);
-      expect(result.area_size).toBe('Vector2(1, 1)');
+      expect(result.area_size).toEqual({ x: 1, y: 1 });
       expect(result.shadow_enabled).toBe(false);
     });
 
@@ -43,10 +43,23 @@ describe('AreaLight3D Parser', () => {
       expect(result.light_color).toBe('Color(0.5, 0.6, 0.7, 1)');
       expect(result.light_energy).toBe(4.0);
       expect(result.area_range).toBe(2.0);
-      expect(result.area_size).toBe('Vector2(2, 1)');
+      expect(result.area_size).toEqual({ x: 2, y: 1 });
       expect(result.shadow_enabled).toBe(true);
       expect(result.shadow_bias).toBe(0.05);
       expect(result.shadow_normal_bias).toBe(0.02);
+    });
+
+    it('should reject malformed area_size and fall back to 1×1', () => {
+      const heading = parseHeading('[node name="Area" type="AreaLight3D" parent="."]');
+      expect(heading).not.toBeNull();
+
+      // Junk the loose hand-rolled regex used to silently coerce (e.g.
+      // "Vector2(4abc, 3)" -> [4, 3]) is now rejected by the strict shared
+      // parseVector2 and falls back to the 1×1 default — render/lint agree.
+      for (const bad of ['Vector2(4abc, 3)', 'Vector2(4 5, 3)', 'not a vector']) {
+        const result = parseAreaLight3D(heading!, { area_size: bad });
+        expect(result.area_size).toEqual({ x: 1, y: 1 });
+      }
     });
 
     it('should parse shadow_enabled as false when not "true"', () => {

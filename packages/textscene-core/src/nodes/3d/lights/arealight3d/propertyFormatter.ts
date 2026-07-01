@@ -10,18 +10,12 @@ import {
   formatShadowSectionWithNormalBias,
 } from '../shared/propertyFormatter';
 
-function parseAreaSize(raw: string | undefined | null): [number, number] {
-  if (!raw) return [1, 1];
-  const m = raw.match(/Vector2\(\s*([^,]+)\s*,\s*([^)]+)\s*\)/);
-  if (!m || !m[1] || !m[2]) return [1, 1];
-  const w = parseFloat(m[1]);
-  const h = parseFloat(m[2]);
-  return [isFinite(w) ? w : 1, isFinite(h) ? h : 1];
-}
-
 export function formatAreaLight3DProperties(properties: AreaLight3DProperties): PropertySection[] {
   const sections: PropertySection[] = [];
-  const [w, h] = parseAreaSize(properties.area_size);
+  // area_size is already parsed to {x, y} in the parser (via the canonical
+  // parseVector2), so the inspector reads the numbers directly — same source
+  // of truth as the render path, no per-consumer re-parse.
+  const { x: w, y: h } = properties.area_size ?? { x: 1, y: 1 };
 
   const areaLightItems: PropertySection['items'] = [
     { label: 'Size', value: `${w} × ${h}` },
@@ -29,8 +23,10 @@ export function formatAreaLight3DProperties(properties: AreaLight3DProperties): 
 
   sections.push(formatBaseLightSection(properties, areaLightItems));
 
-  const shadowItems: PropertySection['items'] = [];
-  sections.push(formatShadowSectionWithNormalBias(properties, shadowItems));
+  // No area-light-specific shadow rows: RectAreaLight has no shadow support,
+  // so shadow_* is intentionally lossy at render (see Component.tsx). The
+  // shared Shadows section is still shown for parity with sibling lights.
+  sections.push(formatShadowSectionWithNormalBias(properties));
 
   sections.push(...formatNode3DProperties(properties));
 

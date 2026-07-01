@@ -24,7 +24,7 @@ describe('<AreaLight3D>', () => {
 
   it('maps area_size width to RectAreaLight width', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <AreaLight3D node={makeNode({ area_size: 'Vector2(4, 1)' })} />
+      <AreaLight3D node={makeNode({ area_size: { x: 4, y: 1 } })} />
     );
     const light = renderer.scene.findByType('RectAreaLight');
     expect((light.instance as { width: number }).width).toBe(4);
@@ -32,7 +32,7 @@ describe('<AreaLight3D>', () => {
 
   it('maps area_size height to RectAreaLight height', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <AreaLight3D node={makeNode({ area_size: 'Vector2(2, 3)' })} />
+      <AreaLight3D node={makeNode({ area_size: { x: 2, y: 3 } })} />
     );
     const light = renderer.scene.findByType('RectAreaLight');
     expect((light.instance as { height: number }).height).toBe(3);
@@ -51,6 +51,27 @@ describe('<AreaLight3D>', () => {
     );
     const light = renderer.scene.findByType('RectAreaLight');
     expect((light.instance as { intensity: number }).intensity).toBe(2.0 * LIGHT_INTENSITY_SCALE);
+  });
+
+  it('does not cast shadows even when shadow_enabled is true (RectAreaLight has no shadow support)', async () => {
+    // Pins the intentional lossy mapping: shadow_* is parsed + lint-validated
+    // but silently dropped at render (see Component.tsx header) — so a future
+    // edit can't quietly start wiring castShadow onto a light that can't cast.
+    const renderer = await ReactThreeTestRenderer.create(
+      <AreaLight3D node={makeNode({ shadow_enabled: true })} />
+    );
+    const light = renderer.scene.findByType('RectAreaLight');
+    expect((light.instance as { castShadow: boolean }).castShadow).toBe(false);
+  });
+
+  it('does not leak area_range onto the RectAreaLight', async () => {
+    // area_range is carried on the parsed node but intentionally not applied
+    // (three.js RectAreaLight has no range/penumbra control).
+    const renderer = await ReactThreeTestRenderer.create(
+      <AreaLight3D node={makeNode({ area_range: 2.0 } as Partial<AreaLight3DProperties>)} />
+    );
+    const light = renderer.scene.findByType('RectAreaLight');
+    expect((light.instance as Record<string, unknown>).area_range).toBeUndefined();
   });
 
   it('places light at the transform origin', async () => {
