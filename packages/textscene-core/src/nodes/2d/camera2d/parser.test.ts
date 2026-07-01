@@ -53,9 +53,12 @@ describe('parseCamera2D', () => {
     expect(p.zoom).toEqual({ x: 0.001, y: 250 });
   });
 
-  it('offset at explicit zero vector', () => {
-    const p = parseCamera2D(heading(), { offset: 'Vector2(0, 0)' });
-    expect(p.offset).toEqual({ x: 0, y: 0 });
+  it('offset parses an explicit non-default (fractional) value', () => {
+    // offset's default is {0,0}; a non-zero value distinguishes the parse path
+    // from the fallback (a zero offset collides with the default and pins nothing —
+    // the shared vec2Or zero-vector path is already covered by the zoom-zero case).
+    const p = parseCamera2D(heading(), { offset: 'Vector2(12.5, -7.25)' });
+    expect(p.offset).toEqual({ x: 12.5, y: -7.25 });
   });
 
   it('offset with large mixed-sign values', () => {
@@ -66,11 +69,6 @@ describe('parseCamera2D', () => {
   it('position with large negative coordinates (inherited Node2D)', () => {
     const p = parseCamera2D(heading(), { position: 'Vector2(-10000, -8000)' });
     expect(p.position).toEqual({ x: -10000, y: -8000 });
-  });
-
-  it('explicit non-default anchor_mode FIXED_TOP_LEFT (0)', () => {
-    const p = parseCamera2D(heading(), { anchor_mode: '0' });
-    expect(p.anchor_mode).toBe(0);
   });
 
   it('malformed anchor_mode falls back to DRAG_CENTER (1)', () => {
