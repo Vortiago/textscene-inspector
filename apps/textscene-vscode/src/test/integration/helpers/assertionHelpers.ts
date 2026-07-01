@@ -72,22 +72,6 @@ export function assertMessageSent(
 }
 
 /**
- * Assert that an incremental update message was sent.
- * @param panel The panel to check
- * @param message Optional message for assertion failure
- */
-export function assertIncrementalUpdateSent(
-  panel: TscnPreviewPanel,
-  message?: string,
-): void {
-  assertMessageSent(
-    panel,
-    'incrementalUpdate',
-    message || 'Incremental update should have been sent',
-  );
-}
-
-/**
  * Assert that a full reload message was sent.
  * @param panel The panel to check
  * @param message Optional message for assertion failure
@@ -125,26 +109,5 @@ export function assertPanelCount(
     panels.size,
     expectedCount,
     message || `Should have ${expectedCount} active panel(s)`,
-  );
-}
-
-/**
- * Assert that message count matches expectations.
- * @param panel The panel to check
- * @param expectedCount Expected message count
- * @param message Optional message for assertion failure
- */
-export function assertMessageCount(
-  panel: TscnPreviewPanel,
-  expectedCount: number,
-  message?: string,
-): void {
-  const messages = (panel as unknown as { _testGetMessages?: () => unknown[] })._testGetMessages?.();
-
-  assert.ok(messages, 'Message history not available');
-  assert.strictEqual(
-    messages.length,
-    expectedCount,
-    message || `Should have sent ${expectedCount} message(s)`,
   );
 }

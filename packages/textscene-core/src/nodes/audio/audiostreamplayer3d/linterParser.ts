@@ -10,6 +10,7 @@
 
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
+import { propertyError } from '../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 
 const ATTENUATION_MODEL = {
@@ -22,26 +23,14 @@ const DOPPLER_TRACKING = { 0: 'DISABLED', 1: 'IDLE_STEP', 2: 'PHYSICS_STEP' };
 
 const streamValidator: PropertyValidator = (key, value, line) => {
   if (!value.startsWith('ExtResource(') && !value.startsWith('SubResource(')) {
-    return {
-      severity: 'error',
-      message: `Property 'stream' must be a resource reference (ExtResource or SubResource), got: "${value}"`,
-      line,
-      column: key.length + 3,
-      code: 'INVALID_STREAM_FORMAT',
-    };
+    return propertyError(key, line, `Property 'stream' must be a resource reference (ExtResource or SubResource), got: "${value}"`, 'INVALID_STREAM_FORMAT');
   }
   return null;
 };
 
 const busValidator: PropertyValidator = (key, value, line) => {
   if (!value.startsWith('"') && !value.startsWith('&"')) {
-    return {
-      severity: 'error',
-      message: `Property 'bus' must be a string, got: "${value}"`,
-      line,
-      column: key.length + 3,
-      code: 'INVALID_BUS_FORMAT',
-    };
+    return propertyError(key, line, `Property 'bus' must be a string, got: "${value}"`, 'INVALID_BUS_FORMAT');
   }
   return null;
 };

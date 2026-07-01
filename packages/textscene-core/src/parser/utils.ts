@@ -88,32 +88,6 @@ export function isEmpty(line: string): boolean {
 }
 
 /**
- * Count `"` characters that are real string delimiters — i.e. NOT escaped. A
- * quote is escaped only when preceded by an ODD number of consecutive
- * backslashes (`\"` is escaped; `\\"` is an escaped backslash followed by a
- * real quote). Shared by both parsers so they agree on string termination.
- */
-export function countUnescapedQuotes(s: string): number {
-  let count = 0;
-  for (let i = 0; i < s.length; i++) {
-    if (s[i] !== '"') continue;
-    let backslashes = 0;
-    for (let j = i - 1; j >= 0 && s[j] === '\\'; j--) backslashes++;
-    if (backslashes % 2 === 0) count++;
-  }
-  return count;
-}
-
-/**
- * True when a value opens a quoted string but hasn't closed it — Godot writes
- * multi-line strings (label text, descriptions) across several lines, and the
- * line-based property parser sees only the first fragment (odd quote count).
- */
-export function isUnterminatedString(value: string): boolean {
-  return value.startsWith('"') && countUnescapedQuotes(value) % 2 === 1;
-}
-
-/**
  * True when a property value isn't complete on this line. Godot writes
  * multi-line values both as unterminated strings (label text) AND as bracketed
  * arrays/dicts spanning lines — packed arrays and especially `SpriteFrames`

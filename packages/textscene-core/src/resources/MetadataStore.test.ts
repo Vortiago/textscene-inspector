@@ -21,9 +21,9 @@ describe('MetadataStore', () => {
 
     expect(store.get('1_tex')).toBe(TEX);
     expect(store.get('res://textures/wall.png')).toBe(TEX);
-    expect(store.getPath('1_tex')).toBe('res://textures/wall.png');
-    expect(store.getPath('res://textures/wall.png')).toBe('res://textures/wall.png');
-    expect(store.getType('1_tex')).toBe('Texture2D');
+    expect(store.get('1_tex')?.path).toBe('res://textures/wall.png');
+    expect(store.get('res://textures/wall.png')?.path).toBe('res://textures/wall.png');
+    expect(store.get('1_tex')?.type).toBe('Texture2D');
     expect(store.has('1_tex')).toBe(true);
     expect(store.has('res://textures/wall.png')).toBe(true);
   });
@@ -32,8 +32,8 @@ describe('MetadataStore', () => {
     store.register(TEX);
 
     expect(store.get('nope')).toBeUndefined();
-    expect(store.getPath('nope')).toBeUndefined();
-    expect(store.getType('nope')).toBeUndefined();
+    expect(store.get('nope')?.path).toBeUndefined();
+    expect(store.get('nope')?.type).toBeUndefined();
     expect(store.has('nope')).toBe(false);
   });
 
@@ -54,7 +54,7 @@ describe('MetadataStore', () => {
     store.register(moved);
 
     // The id now resolves to the new path...
-    expect(store.getPath('1_tex')).toBe('res://textures/floor.png');
+    expect(store.get('1_tex')?.path).toBe('res://textures/floor.png');
     expect(store.get('res://textures/floor.png')).toBe(moved);
     // ...and the old path key is evicted (no stale entries).
     expect(store.get('res://textures/wall.png')).toBeUndefined();
@@ -69,10 +69,10 @@ describe('MetadataStore', () => {
     store.register(renamed);
 
     expect(store.has('res://levels/pathA.tscn')).toBe(false);
-    expect(store.getPath('res://levels/pathA.tscn')).toBeUndefined();
+    expect(store.get('res://levels/pathA.tscn')?.path).toBeUndefined();
     expect(store.get('res://levels/pathB.tscn')).toBe(renamed);
     expect(store.get('3_lvl')).toBe(renamed);
-    expect(store.getPath('3_lvl')).toBe('res://levels/pathB.tscn');
+    expect(store.get('3_lvl')?.path).toBe('res://levels/pathB.tscn');
     expect(store.size).toBe(1);
   });
 
@@ -85,9 +85,9 @@ describe('MetadataStore', () => {
     store.register(moved);
 
     // 1_tex remapped, but wall.png still resolves for the alias.
-    expect(store.getPath('1_tex')).toBe('res://textures/floor.png');
+    expect(store.get('1_tex')?.path).toBe('res://textures/floor.png');
     expect(store.get('res://textures/wall.png')).toBe(alias);
-    expect(store.getPath('9_alias')).toBe('res://textures/wall.png');
+    expect(store.get('9_alias')?.path).toBe('res://textures/wall.png');
   });
 
   it('a resource with an empty id is only registered under its path', () => {

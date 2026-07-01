@@ -1,6 +1,7 @@
 /** Shared validator utilities for common property types */
 
 import type { ParseError } from '../../linter/types.js';
+import { propertyError } from './propertyError.js';
 
 /**
  * Creates a boolean validator function
@@ -12,13 +13,7 @@ export function createBooleanValidator(
 ): (key: string, value: string, line: number) => ParseError | null {
   return (key, value, line) => {
     if (value !== 'true' && value !== 'false') {
-      return {
-        severity: 'error',
-        message: `Property '${propertyName}' must be a boolean (true or false), got: "${value}"`,
-        line,
-        column: key.length + 3,
-        code: errorCode,
-      };
+      return propertyError(key, line, `Property '${propertyName}' must be a boolean (true or false), got: "${value}"`, errorCode);
     }
     return null;
   };
@@ -38,25 +33,13 @@ export function createEnumValidator(
   return (key, value, line) => {
     const num = parseInt(value, 10);
     if (isNaN(num)) {
-      return {
-        severity: 'error',
-        message: `Property '${propertyName}' must be a number, got: "${value}"`,
-        line,
-        column: key.length + 3,
-        code: errorCodeFormat,
-      };
+      return propertyError(key, line, `Property '${propertyName}' must be a number, got: "${value}"`, errorCodeFormat);
     }
     if (num < min || num > max) {
       const validValuesStr = Object.entries(enumValues)
         .map(([val, name]) => `${val}=${name}`)
         .join(', ');
-      return {
-        severity: 'error',
-        message: `Property '${propertyName}' must be ${min}-${max} (got ${num}). Valid values: ${validValuesStr}`,
-        line,
-        column: key.length + 3,
-        code: errorCodeValue,
-      };
+      return propertyError(key, line, `Property '${propertyName}' must be ${min}-${max} (got ${num}). Valid values: ${validValuesStr}`, errorCodeValue);
     }
     return null;
   };
@@ -77,13 +60,7 @@ export function createNumericRangeValidator(
   return (key, value, line) => {
     const num = parseAsInt ? parseInt(value, 10) : parseFloat(value);
     if (isNaN(num)) {
-      return {
-        severity: 'error',
-        message: `Property '${propertyName}' must be a number, got: "${value}"`,
-        line,
-        column: key.length + 3,
-        code: errorCodeFormat,
-      };
+      return propertyError(key, line, `Property '${propertyName}' must be a number, got: "${value}"`, errorCodeFormat);
     }
 
     // Check min constraint
@@ -100,13 +77,7 @@ export function createNumericRangeValidator(
       } else {
         defaultMsg = `Property '${propertyName}' must be >= ${min}, got: ${num}`;
       }
-      return {
-        severity: 'error',
-        message: customMessage || defaultMsg,
-        line,
-        column: key.length + 3,
-        code: errorCodeValue,
-      };
+      return propertyError(key, line, customMessage || defaultMsg, errorCodeValue);
     }
 
     // Check max constraint
@@ -115,13 +86,7 @@ export function createNumericRangeValidator(
         min !== null
           ? `Property '${propertyName}' must be between ${min} and ${max} (got ${num})`
           : `Property '${propertyName}' must be <= ${max}, got: ${num}`;
-      return {
-        severity: 'error',
-        message: customMessage || defaultMsg,
-        line,
-        column: key.length + 3,
-        code: errorCodeValue,
-      };
+      return propertyError(key, line, customMessage || defaultMsg, errorCodeValue);
     }
 
     return null;
@@ -141,23 +106,11 @@ export function createPositiveIntegerValidator(
   return (key, value, line) => {
     const num = parseInt(value, 10);
     if (isNaN(num)) {
-      return {
-        severity: 'error',
-        message: `Property '${propertyName}' must be a number, got: "${value}"`,
-        line,
-        column: key.length + 3,
-        code: errorCodeFormat,
-      };
+      return propertyError(key, line, `Property '${propertyName}' must be a number, got: "${value}"`, errorCodeFormat);
     }
     if (num <= 0) {
       const defaultMsg = `Property '${propertyName}' must be greater than 0 (got ${num}). Zero or negative values cause division by zero.`;
-      return {
-        severity: 'error',
-        message: errorMessage || defaultMsg,
-        line,
-        column: key.length + 3,
-        code: errorCodeValue,
-      };
+      return propertyError(key, line, errorMessage || defaultMsg, errorCodeValue);
     }
     return null;
   };

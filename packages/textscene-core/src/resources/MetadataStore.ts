@@ -43,20 +43,6 @@ export class MetadataStore {
   }
 
   /**
-   * Get the path for a resource ID.
-   */
-  getPath(idOrPath: string): string | undefined {
-    return this.resources.get(idOrPath)?.path;
-  }
-
-  /**
-   * Get the type for a resource.
-   */
-  getType(idOrPath: string): string | undefined {
-    return this.resources.get(idOrPath)?.type;
-  }
-
-  /**
    * Check if a resource exists.
    */
   has(idOrPath: string): boolean {

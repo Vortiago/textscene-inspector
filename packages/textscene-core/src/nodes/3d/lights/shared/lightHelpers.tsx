@@ -25,7 +25,6 @@
  * gizmo presence, so this is harmless for the test suite.
  */
 
-import { useRef } from 'react';
 import * as THREE from 'three';
 import { usePrimitiveHelper } from '../../../../r3f/hooks/useTHREEHelper';
 
@@ -102,10 +101,4 @@ export function SpotLightGizmo({ lightRef }: SpotGizmoProps) {
       make={(light) => new THREE.SpotLightHelper(light, HELPER_COLOR)}
     />
   );
-}
-
-// Re-use the unused-ref pattern to keep useRef out of the call site;
-// caller defines its own ref and we attach the helper to it.
-export function useLightRef<T extends THREE.Light>(): React.RefObject<T | null> {
-  return useRef<T | null>(null);
 }

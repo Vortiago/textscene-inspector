@@ -7,44 +7,12 @@
 
 import { describe, expect, it } from 'vitest';
 import {
-  countUnescapedQuotes,
-  isUnterminatedString,
   isIncompleteValue,
   unquoteString,
 } from './utils';
 
-describe('countUnescapedQuotes', () => {
-  it('counts plain delimiters', () => {
-    expect(countUnescapedQuotes('"abc"')).toBe(2);
-    expect(countUnescapedQuotes('"abc')).toBe(1);
-  });
-  it('skips escaped quotes (\\")', () => {
-    expect(countUnescapedQuotes('"say \\"hi\\""')).toBe(2); // inner quotes escaped
-  });
-  it('treats \\\\" as escaped-backslash + real quote', () => {
-    // Raw value "path\\" → backslash is escaped, the final " is a real delimiter.
-    expect(countUnescapedQuotes('"path\\\\"')).toBe(2);
-  });
-});
-
-describe('isUnterminatedString', () => {
-  it('flags an open string', () => {
-    expect(isUnterminatedString('"Inspector Crawford')).toBe(true);
-  });
-  it('accepts a closed string', () => {
-    expect(isUnterminatedString('"closed"')).toBe(false);
-  });
-  it('accepts a string ending in an escaped backslash (\\\\") as closed', () => {
-    expect(isUnterminatedString('"path\\\\"')).toBe(false);
-  });
-  it('ignores non-string values', () => {
-    expect(isUnterminatedString('Vector2(1, 2)')).toBe(false);
-    expect(isUnterminatedString('42')).toBe(false);
-  });
-});
-
 describe('isIncompleteValue', () => {
-  it('flags an open string (like isUnterminatedString)', () => {
+  it('flags an open string', () => {
     expect(isIncompleteValue('"Inspector Crawford')).toBe(true);
     expect(isIncompleteValue('"closed"')).toBe(false);
   });

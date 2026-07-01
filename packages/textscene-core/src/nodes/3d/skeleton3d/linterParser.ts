@@ -12,25 +12,22 @@ import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import {
   v,
   VECTOR3_REGEX,
+  makeFloatTupleRegex,
 } from '../../../linter/validators/index.js';
+import { propertyError } from '../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 
 const MODIFIER_CALLBACK_MODE = { 0: 'PHYSICS', 1: 'IDLE', 2: 'MANUAL' };
 
-const QUATERNION_REGEX =
-  /^Quaternion\(\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*\)$/;
+// Shared canonical float grammar (accepts .5 / 5. / +5 / scientific), matching
+// v.quaternion and the renderer.
+const QUATERNION_REGEX = makeFloatTupleRegex('Quaternion', 4);
 
 /** Custom boolean validator with the legacy "true or false" message wording. */
 function legacyBoolean(name: string): PropertyValidator {
   return (key, value, line) => {
     if (value !== 'true' && value !== 'false') {
-      return {
-        severity: 'error',
-        message: `Property '${name}' must be true or false, got: "${value}"`,
-        line,
-        column: key.length + 3,
-        code: `INVALID_${name.toUpperCase()}_FORMAT`,
-      };
+      return propertyError(key, line, `Property '${name}' must be true or false, got: "${value}"`, `INVALID_${name.toUpperCase()}_FORMAT`);
     }
     return null;
   };
@@ -62,23 +59,11 @@ const bonesValidator: PropertyValidator = (key, value, line) => {
 
   if (propertyName === 'position' || propertyName === 'scale') {
     if (!VECTOR3_REGEX.test(value)) {
-      return {
-        severity: 'error',
-        message: `Property '${key}' must be Vector3 format like Vector3(0, 0, 0), got: "${value}"`,
-        line,
-        column: key.length + 3,
-        code: 'INVALID_BONE_VECTOR3_FORMAT',
-      };
+      return propertyError(key, line, `Property '${key}' must be Vector3 format like Vector3(0, 0, 0), got: "${value}"`, 'INVALID_BONE_VECTOR3_FORMAT');
     }
   } else if (propertyName === 'rotation') {
     if (!QUATERNION_REGEX.test(value)) {
-      return {
-        severity: 'error',
-        message: `Property '${key}' must be Quaternion format like Quaternion(0, 0, 0, 1), got: "${value}"`,
-        line,
-        column: key.length + 3,
-        code: 'INVALID_BONE_QUATERNION_FORMAT',
-      };
+      return propertyError(key, line, `Property '${key}' must be Quaternion format like Quaternion(0, 0, 0, 1), got: "${value}"`, 'INVALID_BONE_QUATERNION_FORMAT');
     }
   }
 

@@ -18,8 +18,7 @@ import { dirname, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { render } from '@testing-library/react';
 import { TscnParser } from '../../parser/TscnParser';
-import { SceneGraphBuilder } from '../../core/SceneGraphBuilder';
-import { tscnSceneToParsedScene } from '../../core/SceneGraph';
+import { tscnSceneToParsedScene, buildSceneGraph } from '../../core/SceneGraph';
 import { ControlOverlay, controlComponentRegistry } from './index';
 
 const LD58 = join(dirname(fileURLToPath(import.meta.url)), '../../../../../scenes/ld58');
@@ -45,7 +44,7 @@ function loadRootScene(rel: string) {
     tscn.externalResources,
     tscn.internalResources
   );
-  const graph = new SceneGraphBuilder().setRootScene('res://__test__.tscn').addScene(parsed).build();
+  const graph = buildSceneGraph(parsed);
   return graph.scenes.get(graph.rootScene)!;
 }
 

@@ -592,3 +592,9 @@ describe('Camera2D Linter', () => {
     });
   });
 });
+
+describe('Camera2D Linter — lenient float grammar (#190 #7 follow-up)', () => {
+  it('accepts zoom with leading-dot / trailing-dot floats', () => {
+    expectClean(scene(node('Camera2D', { zoom: 'Vector2(.5, 2.)' })));
+  });
+});

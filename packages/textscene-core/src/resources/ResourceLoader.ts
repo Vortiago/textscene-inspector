@@ -183,10 +183,6 @@ export class ResourceLoader {
     return this.provider;
   }
 
-  getEventBus(): ResourceEventBus {
-    return this.eventBus;
-  }
-
   setOnResourceNeeded(callback: ResourceNeededCallback): void {
     this.onResourceNeeded = callback;
   }

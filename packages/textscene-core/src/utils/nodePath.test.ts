@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { joinPath, getParentPath, getAncestorPaths, isAncestor, getNodeName } from './nodePath';
+import { joinPath, getAncestorPaths } from './nodePath';
 
 describe('nodePath utilities', () => {
   describe('joinPath', () => {
@@ -13,24 +13,6 @@ describe('nodePath utilities', () => {
 
     it('should handle deeply nested paths', () => {
       expect(joinPath('A/B/C', 'D')).toBe('A/B/C/D');
-    });
-  });
-
-  describe('getParentPath', () => {
-    it('should extract parent path from node path', () => {
-      expect(getParentPath('Root/Player/Mesh')).toBe('Root/Player');
-    });
-
-    it('should return empty string for root node', () => {
-      expect(getParentPath('Root')).toBe('');
-    });
-
-    it('should handle deeply nested paths', () => {
-      expect(getParentPath('A/B/C/D')).toBe('A/B/C');
-    });
-
-    it('should handle two-level paths', () => {
-      expect(getParentPath('Root/Child')).toBe('Root');
     });
   });
 
@@ -52,39 +34,4 @@ describe('nodePath utilities', () => {
     });
   });
 
-  describe('isAncestor', () => {
-    it('should return true when first path is ancestor', () => {
-      expect(isAncestor('Root/Player', 'Root/Player/Mesh')).toBe(true);
-    });
-
-    it('should return false when first path is not ancestor', () => {
-      expect(isAncestor('Root/Enemy', 'Root/Player/Mesh')).toBe(false);
-    });
-
-    it('should return false when paths are equal', () => {
-      expect(isAncestor('Root/Player', 'Root/Player')).toBe(false);
-    });
-
-    it('should return true for deep nesting', () => {
-      expect(isAncestor('A', 'A/B/C/D')).toBe(true);
-    });
-
-    it('should return false for sibling paths', () => {
-      expect(isAncestor('A/B', 'A/C')).toBe(false);
-    });
-  });
-
-  describe('getNodeName', () => {
-    it('should extract node name from path', () => {
-      expect(getNodeName('Root/Player/Mesh')).toBe('Mesh');
-    });
-
-    it('should return full name for root node', () => {
-      expect(getNodeName('Root')).toBe('Root');
-    });
-
-    it('should handle two-level path', () => {
-      expect(getNodeName('Root/Child')).toBe('Child');
-    });
-  });
 });

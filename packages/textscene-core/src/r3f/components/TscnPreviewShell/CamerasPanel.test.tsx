@@ -16,7 +16,7 @@ import {
   ViewportModeProvider,
   useViewportMode,
 } from '../../contexts/ViewportModeContext';
-import { SceneGraphBuilder } from '../../../core/SceneGraphBuilder';
+import { buildSceneGraph } from '../../../core/SceneGraph';
 import { TscnParser } from '../../../parser/TscnParser';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { ResourceEventBus } from '../../../resources/ResourceEventBus';
@@ -51,10 +51,7 @@ function Probe() {
 
 function renderPanel() {
   const parsed = new TscnParser().parse(SCENE);
-  const sceneGraph = new SceneGraphBuilder()
-    .setRootScene('res://test.tscn')
-    .addScene({ ...parsed, path: 'res://test.tscn' })
-    .build();
+  const sceneGraph = buildSceneGraph({ ...parsed, path: 'res://test.tscn' });
   return render(
     <HierarchyProvider value={{ sceneGraph, panelId: 'cams-test' }}>
       <CameraControlProvider>
@@ -128,10 +125,7 @@ describe('<CamerasPanel> with cameras inside instanced sub-scenes', () => {
       internalResources: [],
     };
     const parsed = new TscnParser().parse(root);
-    const sceneGraph = new SceneGraphBuilder()
-      .setRootScene('res://game.tscn')
-      .addScene({ ...parsed, path: 'res://game.tscn' })
-      .build();
+    const sceneGraph = buildSceneGraph({ ...parsed, path: 'res://game.tscn' });
     const loader = makeLoader({ 'res://player.tscn': playerScene });
 
     render(
@@ -172,10 +166,7 @@ position = Vector2(20, 10)
 zoom = Vector2(2, 2)
 `);
     const parsed = new TscnParser().parse(root);
-    const sceneGraph = new SceneGraphBuilder()
-      .setRootScene('res://game.tscn')
-      .addScene({ ...parsed, path: 'res://game.tscn' })
-      .build();
+    const sceneGraph = buildSceneGraph({ ...parsed, path: 'res://game.tscn' });
     const loader = makeLoader({ 'res://player.tscn': playerScene as TscnScene });
 
     render(

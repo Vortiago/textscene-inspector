@@ -1,6 +1,7 @@
 /** Shared validator utilities for physics-related properties */
 
 import type { ParseError } from '../../linter/types.js';
+import { propertyError } from './propertyError.js';
 
 /** Collision layer/mask bitmask maximum (20 bits: 2^20 - 1 = 1048575) */
 export const MAX_COLLISION_BITMASK = 1048575;
@@ -32,22 +33,10 @@ export function createCollisionLayerValidator(
   return (key, value, line) => {
     const num = parseInt(value, 10);
     if (isNaN(num)) {
-      return {
-        severity: 'error',
-        message: `Property 'collision_layer' must be a number, got: "${value}"`,
-        line,
-        column: key.length + 3,
-        code: errorCodeFormat,
-      };
+      return propertyError(key, line, `Property 'collision_layer' must be a number, got: "${value}"`, errorCodeFormat);
     }
     if (num < 0 || num > MAX_COLLISION_BITMASK) {
-      return {
-        severity: 'error',
-        message: `Property 'collision_layer' must be between 0 and ${MAX_COLLISION_BITMASK} (got ${num}). Valid range: 20-bit bitmask`,
-        line,
-        column: key.length + 3,
-        code: errorCodeValue,
-      };
+      return propertyError(key, line, `Property 'collision_layer' must be between 0 and ${MAX_COLLISION_BITMASK} (got ${num}). Valid range: 20-bit bitmask`, errorCodeValue);
     }
     return null;
   };
@@ -64,22 +53,10 @@ export function createCollisionMaskValidator(
   return (key, value, line) => {
     const num = parseInt(value, 10);
     if (isNaN(num)) {
-      return {
-        severity: 'error',
-        message: `Property 'collision_mask' must be a number, got: "${value}"`,
-        line,
-        column: key.length + 3,
-        code: errorCodeFormat,
-      };
+      return propertyError(key, line, `Property 'collision_mask' must be a number, got: "${value}"`, errorCodeFormat);
     }
     if (num < 0 || num > MAX_COLLISION_BITMASK) {
-      return {
-        severity: 'error',
-        message: `Property 'collision_mask' must be between 0 and ${MAX_COLLISION_BITMASK} (got ${num}). Valid range: 20-bit bitmask`,
-        line,
-        column: key.length + 3,
-        code: errorCodeValue,
-      };
+      return propertyError(key, line, `Property 'collision_mask' must be between 0 and ${MAX_COLLISION_BITMASK} (got ${num}). Valid range: 20-bit bitmask`, errorCodeValue);
     }
     return null;
   };
@@ -97,25 +74,13 @@ export function createSpaceOverrideValidator(
   return (key, value, line) => {
     const num = parseInt(value, 10);
     if (isNaN(num)) {
-      return {
-        severity: 'error',
-        message: `Property '${propertyName}' must be a number, got: "${value}"`,
-        line,
-        column: key.length + 3,
-        code: errorCodeFormat,
-      };
+      return propertyError(key, line, `Property '${propertyName}' must be a number, got: "${value}"`, errorCodeFormat);
     }
     if (num < 0 || num > 4) {
       const validValuesStr = Object.entries(SPACE_OVERRIDE_VALUES)
         .map(([val, name]) => `${val}=${name}`)
         .join(', ');
-      return {
-        severity: 'error',
-        message: `Property '${propertyName}' must be 0-4 (got ${num}). Valid values: ${validValuesStr}`,
-        line,
-        column: key.length + 3,
-        code: errorCodeValue,
-      };
+      return propertyError(key, line, `Property '${propertyName}' must be 0-4 (got ${num}). Valid values: ${validValuesStr}`, errorCodeValue);
     }
     return null;
   };
@@ -131,25 +96,13 @@ export function createDisableModeValidator(
   return (key, value, line) => {
     const num = parseInt(value, 10);
     if (isNaN(num)) {
-      return {
-        severity: 'error',
-        message: `Property 'disable_mode' must be a number, got: "${value}"`,
-        line,
-        column: key.length + 3,
-        code: errorCodeFormat,
-      };
+      return propertyError(key, line, `Property 'disable_mode' must be a number, got: "${value}"`, errorCodeFormat);
     }
     if (num < 0 || num > 2) {
       const validValuesStr = Object.entries(DISABLE_MODE_VALUES)
         .map(([val, name]) => `${val}=${name}`)
         .join(', ');
-      return {
-        severity: 'error',
-        message: `Property 'disable_mode' must be 0-2 (got ${num}). Valid values: ${validValuesStr}`,
-        line,
-        column: key.length + 3,
-        code: errorCodeValue,
-      };
+      return propertyError(key, line, `Property 'disable_mode' must be 0-2 (got ${num}). Valid values: ${validValuesStr}`, errorCodeValue);
     }
     return null;
   };

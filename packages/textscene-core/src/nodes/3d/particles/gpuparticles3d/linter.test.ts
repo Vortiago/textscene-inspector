@@ -10,6 +10,7 @@ import {
   expectClean,
   expectDiagnostic,
   expectNoDiagnostic,
+  expectNoErrors,
   runPropertyValidation,
 } from '../../../../linter/testing/testkit';
 import './linterParser';
@@ -557,5 +558,16 @@ interp_to_end = 0.3
         { prop: 'process_material' }
       );
     });
+  });
+});
+
+describe('GPUParticles3D Linter — lenient float grammar (#190 #7 follow-up)', () => {
+  it('accepts visibility_aabb with leading-dot / trailing-dot floats', () => {
+    // Isolate the strict-parser format check (a bare node also trips the
+    // unrelated process_material semantic requirement).
+    expectNoErrors(
+      scene(node('GPUParticles3D', { visibility_aabb: 'AABB(.5, 0, 0, 10., 10, 10)' })),
+      { ruleName: 'strict-parser' }
+    );
   });
 });

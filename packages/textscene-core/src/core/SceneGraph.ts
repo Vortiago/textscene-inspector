@@ -1,13 +1,13 @@
 /**
  * Immutable scene graph data structures.
- * Once created, never modified; SceneGraphBuilder assembles a fresh graph per parse.
+ * Once created, never modified; buildSceneGraph assembles a fresh graph per parse.
  */
 
 import type { TscnNode, ExtResource, SubResource } from '../parser/types.js';
 
 /**
  * Immutable scene graph for one authored root scene.
- * Once created, never modified; SceneGraphBuilder assembles a fresh graph per parse.
+ * Once created, never modified; buildSceneGraph assembles a fresh graph per parse.
  */
 export interface SceneGraph {
   /** Root scene path (e.g., "res://main.tscn") */
@@ -89,8 +89,45 @@ export function tscnSceneToParsedScene(
 }
 
 /**
+ * Assemble the immutable single-scene SceneGraph the renderer consumes: flatten
+ * the root scene's inline nodes (full paths like "Main/Hallway/Door" + parent
+ * links) and freeze the graph, its scenes map, and its flattened nodes.
+ *
+ * Only the authored root scene is composed here. PackedScene instance
+ * composition (folding sub-scenes into the tree) is owned by the live scene tree
+ * (`r3f/liveSceneTree.ts`), not this function — see ADR-0013.
+ */
+export function buildSceneGraph(rootScene: ParsedScene): SceneGraph {
+  const flattenedNodes: SceneNode[] = [];
+  function flattenNode(node: TscnNode, parentPath: string | null): void {
+    const nodePath = parentPath ? `${parentPath}/${node.name}` : node.name;
+    flattenedNodes.push({
+      path: nodePath,
+      name: node.name,
+      data: node,
+      source: rootScene.path,
+      parent: parentPath,
+    });
+    for (const child of node.children) {
+      flattenNode(child, nodePath);
+    }
+  }
+
+  for (const node of rootScene.nodes) {
+    flattenNode(node, null);
+  }
+
+  return Object.freeze({
+    rootScene: rootScene.path,
+    scenes: Object.freeze(new Map([[rootScene.path, rootScene]])) as ReadonlyMap<string, ParsedScene>,
+    flattenedNodes: Object.freeze(flattenedNodes) as ReadonlyArray<SceneNode>,
+  });
+}
+
+/**
  * Create a SceneGraph from a TscnScene (for tests and simple use cases).
- * Flattens nodes recursively and wraps in immutable SceneGraph.
+ * Thin adapter that wraps the loose TscnScene shape in a ParsedScene and
+ * delegates to {@link buildSceneGraph}.
  */
 export function createSceneGraphFromTscnScene(
   tscnScene: {
@@ -100,37 +137,11 @@ export function createSceneGraphFromTscnScene(
   },
   scenePath: string = 'res://test.tscn'
 ): SceneGraph {
-  const parsedScene: ParsedScene = {
+  return buildSceneGraph({
     path: scenePath,
     nodes: tscnScene.nodes,
     externalScenes: [],
     internalResources: tscnScene.internalResources || [],
     externalResources: tscnScene.externalResources || [],
-  };
-
-  // Flatten nodes recursively
-  const flattenedNodes: SceneNode[] = [];
-  function flattenNode(node: TscnNode, parentPath: string | null): void {
-    const nodePath = parentPath ? `${parentPath}/${node.name}` : node.name;
-    flattenedNodes.push({
-      path: nodePath,
-      name: node.name,
-      data: node,
-      source: scenePath,
-      parent: parentPath,
-    });
-    for (const child of node.children) {
-      flattenNode(child, nodePath);
-    }
-  }
-
-  for (const node of tscnScene.nodes) {
-    flattenNode(node, null);
-  }
-
-  return {
-    rootScene: scenePath,
-    scenes: new Map([[scenePath, parsedScene]]),
-    flattenedNodes,
-  };
+  });
 }

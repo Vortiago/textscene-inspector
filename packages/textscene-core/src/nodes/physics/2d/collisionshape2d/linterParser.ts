@@ -9,6 +9,7 @@
 
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
+import { propertyError } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 
 const COLOR_3_OR_4_REGEX =
@@ -16,13 +17,7 @@ const COLOR_3_OR_4_REGEX =
 
 const debugColor: PropertyValidator = (key, value, line) => {
   if (!COLOR_3_OR_4_REGEX.test(value)) {
-    return {
-      severity: 'error',
-      message: `Property 'debug_color' must be in Color(r, g, b) or Color(r, g, b, a) format, got: "${value}"`,
-      line,
-      column: key.length + 3,
-      code: 'INVALID_DEBUG_COLOR_FORMAT',
-    };
+    return propertyError(key, line, `Property 'debug_color' must be in Color(r, g, b) or Color(r, g, b, a) format, got: "${value}"`, 'INVALID_DEBUG_COLOR_FORMAT');
   }
   return null;
 };

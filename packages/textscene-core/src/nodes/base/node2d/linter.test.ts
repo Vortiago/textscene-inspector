@@ -385,3 +385,10 @@ describe('Node2D Linter', () => {
     });
   });
 });
+
+describe('Node2D Linter — lenient float grammar (#190 #7 follow-up)', () => {
+  it('accepts scale with leading-dot / trailing-dot / explicit-plus floats', () => {
+    expectClean(scene(node('Node2D', { scale: 'Vector2(.5, 2.)' })));
+    expectClean(scene(node('Node2D', { scale: 'Vector2(+1, 1)' })));
+  });
+});

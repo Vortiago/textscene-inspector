@@ -4,38 +4,28 @@
  */
 
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
-import { v } from '../../../linter/validators/index.js';
+import { v, makeFloatTupleRegex } from '../../../linter/validators/index.js';
+import { propertyError } from '../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 
 const ANCHOR_MODE = { 0: 'FIXED_TOP_LEFT', 1: 'DRAG_CENTER' };
 const PROCESS_CALLBACK = { 0: 'PHYSICS', 1: 'IDLE' };
 
-const VECTOR2_REGEX =
-  /^Vector2\(\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*\)$/;
+// Shared canonical float grammar (accepts .5 / 5. / +5 / scientific), matching
+// v.vector2 and the renderer.
+const VECTOR2_REGEX = makeFloatTupleRegex('Vector2', 2);
 
 const zoomValidator: PropertyValidator = (key, value, line) => {
   const match = value.match(VECTOR2_REGEX);
   if (!match || !match[1] || !match[2]) {
-    return {
-      severity: 'error',
-      message: `Property 'zoom' must be Vector2 with 2 numbers like Vector2(1, 1), got: "${value}"`,
-      line,
-      column: key.length + 3,
-      code: 'INVALID_ZOOM_FORMAT',
-    };
+    return propertyError(key, line, `Property 'zoom' must be Vector2 with 2 numbers like Vector2(1, 1), got: "${value}"`, 'INVALID_ZOOM_FORMAT');
   }
 
   const x = parseFloat(match[1]);
   const y = parseFloat(match[2]);
 
   if (x <= 0 || y <= 0) {
-    return {
-      severity: 'error',
-      message: `Property 'zoom' components must be greater than 0 (got Vector2(${x}, ${y})). Zero or negative zoom is invalid.`,
-      line,
-      column: key.length + 3,
-      code: 'INVALID_ZOOM_VALUE',
-    };
+    return propertyError(key, line, `Property 'zoom' components must be greater than 0 (got Vector2(${x}, ${y})). Zero or negative zoom is invalid.`, 'INVALID_ZOOM_VALUE');
   }
   return null;
 };
