@@ -9,6 +9,11 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import type { TscnScene } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
+import { makeFloatTupleRegex } from '../../../linter/validators/index.js';
+
+// Shared canonical float grammar (accepts .5 / 5. / +5 / scientific), matching
+// the Camera2D linterParser and the renderer.
+const VECTOR2_REGEX = makeFloatTupleRegex('Vector2', 2);
 
 /**
  * Count enabled Camera2D nodes in the scene
@@ -78,7 +83,7 @@ function checkCamera2D(context: RuleContext): Diagnostic[] {
 
   // Validate zoom components (parsed value check for semantic validation)
   if (rawProps.zoom !== undefined) {
-    const match = rawProps.zoom.match(/^Vector2\(\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*\)$/);
+    const match = rawProps.zoom.match(VECTOR2_REGEX);
     if (match && match[1] && match[2]) {
       const x = parseFloat(match[1]);
       const y = parseFloat(match[2]);

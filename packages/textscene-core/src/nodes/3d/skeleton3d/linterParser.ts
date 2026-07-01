@@ -12,14 +12,16 @@ import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import {
   v,
   VECTOR3_REGEX,
+  makeFloatTupleRegex,
 } from '../../../linter/validators/index.js';
 import { propertyError } from '../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 
 const MODIFIER_CALLBACK_MODE = { 0: 'PHYSICS', 1: 'IDLE', 2: 'MANUAL' };
 
-const QUATERNION_REGEX =
-  /^Quaternion\(\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*\)$/;
+// Shared canonical float grammar (accepts .5 / 5. / +5 / scientific), matching
+// v.quaternion and the renderer.
+const QUATERNION_REGEX = makeFloatTupleRegex('Quaternion', 4);
 
 /** Custom boolean validator with the legacy "true or false" message wording. */
 function legacyBoolean(name: string): PropertyValidator {

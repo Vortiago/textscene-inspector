@@ -7,12 +7,13 @@
  */
 
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
-import { v } from '../../../linter/validators/index.js';
+import { v, makeFloatTupleRegex } from '../../../linter/validators/index.js';
 import { propertyError } from '../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 
-const VECTOR2_REGEX =
-  /^Vector2\(\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*\)$/;
+// Shared canonical float grammar (accepts .5 / 5. / +5 / scientific) so the
+// bespoke `scale` validator stays as lenient as the renderer and v.vector2.
+const VECTOR2_REGEX = makeFloatTupleRegex('Vector2', 2);
 const EXTREME_SCALE_MAX = 1000;
 const EXTREME_SCALE_MIN = 0.001;
 

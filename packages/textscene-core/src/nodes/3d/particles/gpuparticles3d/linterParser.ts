@@ -8,15 +8,16 @@
  */
 
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
-import { v } from '../../../../linter/validators/index.js';
+import { v, makeFloatTupleRegex } from '../../../../linter/validators/index.js';
 import { propertyError } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 
 const DRAW_ORDER = { 0: 'INDEX', 1: 'LIFETIME', 2: 'VIEW_DEPTH' };
 const MAX_RECOMMENDED_PARTICLES = 100000;
 
-const AABB_REGEX =
-  /^AABB\(\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*\)$/;
+// Shared canonical float grammar (accepts .5 / 5. / +5 / scientific), matching
+// v.aabb and the renderer.
+const AABB_REGEX = makeFloatTupleRegex('AABB', 6);
 
 const amountValidator: PropertyValidator = (key, value, line) => {
   const num = parseInt(value, 10);

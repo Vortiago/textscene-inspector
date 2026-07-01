@@ -4,15 +4,16 @@
  */
 
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
-import { v } from '../../../linter/validators/index.js';
+import { v, makeFloatTupleRegex } from '../../../linter/validators/index.js';
 import { propertyError } from '../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 
 const ANCHOR_MODE = { 0: 'FIXED_TOP_LEFT', 1: 'DRAG_CENTER' };
 const PROCESS_CALLBACK = { 0: 'PHYSICS', 1: 'IDLE' };
 
-const VECTOR2_REGEX =
-  /^Vector2\(\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*,\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*\)$/;
+// Shared canonical float grammar (accepts .5 / 5. / +5 / scientific), matching
+// v.vector2 and the renderer.
+const VECTOR2_REGEX = makeFloatTupleRegex('Vector2', 2);
 
 const zoomValidator: PropertyValidator = (key, value, line) => {
   const match = value.match(VECTOR2_REGEX);
