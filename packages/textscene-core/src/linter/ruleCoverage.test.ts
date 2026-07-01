@@ -44,6 +44,8 @@ const REGISTER_ALL_RE = /registerAll\(\s*'([^']+)'/g;
 // (e.g. `makeAreaLinterRule('2D')`) instead of an inline `name: '...'` literal.
 // The factory names the rule `valid-<family><dim>` (family = the factory's
 // middle segment, lowercased), so credit that as a declaration here.
+// NavigationRegion is the one irregular family: its rule carries a `-resources`
+// suffix (`valid-navigationregion2d-resources`).
 const FACTORY_RULE_RE = /make(\w+?)LinterRule\(\s*'(2D|3D)'\s*\)/g;
 
 function extractAll(file: string, re: RegExp): string[] {
@@ -61,7 +63,8 @@ function extractFactoryRuleNames(file: string): string[] {
   const matcher = new RegExp(FACTORY_RULE_RE.source, FACTORY_RULE_RE.flags);
   let m: RegExpExecArray | null;
   while ((m = matcher.exec(src)) !== null) {
-    out.push(`valid-${m[1]!.toLowerCase()}${m[2]!.toLowerCase()}`);
+    const suffix = m[1] === 'NavigationRegion' ? '-resources' : '';
+    out.push(`valid-${m[1]!.toLowerCase()}${m[2]!.toLowerCase()}${suffix}`);
   }
   return out;
 }
