@@ -398,6 +398,11 @@ export const fixtures: Fixture[] = [
     "category": "Integration - Multi-Node"
   },
   {
+    "name": "Area Light3d",
+    "file": "unit-area-light3d.tscn",
+    "category": "Unit - Lights"
+  },
+  {
     "name": "Arraymesh",
     "file": "unit-arraymesh.tscn",
     "category": "Unit - Primitive Meshes"

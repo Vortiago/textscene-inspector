@@ -18,6 +18,7 @@ import '../../nodes/3d/camera3d/index.r3f';
 import '../../nodes/3d/lights/directionallight3d/index.r3f';
 import '../../nodes/3d/lights/omnilight3d/index.r3f';
 import '../../nodes/3d/lights/spotlight3d/index.r3f';
+import '../../nodes/3d/lights/arealight3d/index.r3f';
 import '../../nodes/3d/worldenvironment/index.r3f';
 import '../../nodes/physics/3d/staticbody3d/index.r3f';
 import '../../nodes/physics/3d/area3d/index.r3f';

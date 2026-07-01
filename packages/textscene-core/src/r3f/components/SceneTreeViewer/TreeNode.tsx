@@ -21,6 +21,7 @@ const TYPE_BADGE_CLASS: Record<string, string> = {
   SpotLight3D: styles.typeLight!,
   DirectionalLight3D: styles.typeLight!,
   OmniLight3D: styles.typeLight!,
+  AreaLight3D: styles.typeLight!,
 };
 
 const TYPE_SHORTHAND: Record<string, string> = {
@@ -31,6 +32,7 @@ const TYPE_SHORTHAND: Record<string, string> = {
   SpotLight3D: 'Spot',
   DirectionalLight3D: 'Dir',
   OmniLight3D: 'Omni',
+  AreaLight3D: 'Area',
 };
 
 function getTypeBadgeClass(type: string): string {
