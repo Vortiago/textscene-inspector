@@ -1,5 +1,5 @@
 /**
- * Issue #200 — Source pane slice 1: skeleton (toggle, splitter, persistence, read-only display).
+ * Issue #200 — Source pane skeleton (toggle, splitter, persistence, source display).
  *
  * RED contract. Behavioral `<R3FApp>` tests (the pattern the issue prescribes:
  * reuse `r3f-main.*.test.tsx` with `TscnCanvas`/`TscnSceneContents` mocked — happy-dom has no WebGL).
@@ -10,7 +10,7 @@
  *   - data-testid="source-pane"          the pane container. PRESENT when shown, ABSENT when hidden.
  *   - data-testid="source-pane-toggle"   the show/hide button, injected through the shell's `toolbar` slot.
  *   - data-testid="source-pane-splitter" the draggable resize handle between the pane and the viewport.
- * The pane's text lives in a read-only, forced-monospace <textarea> (role "textbox") inside the pane.
+ * The pane's text lives in an editable, forced-monospace <textarea> (role "textbox") inside the pane.
  *
  * ADR-0007 / ADR-0020: the pane is a WEB-APP sibling that wraps <TscnPreviewShell>; the toggle rides
  * the shell's EXISTING `toolbar` slot (no shell API change) — hence "the toggle is inside the shell
@@ -68,7 +68,7 @@ async function waitForScene(rootName = 'StubRoot') {
   });
 }
 
-/** The pane's read-only source <textarea>. */
+/** The pane's source <textarea>. */
 function paneTextarea() {
   return within(screen.getByTestId('source-pane')).getByRole('textbox') as HTMLTextAreaElement;
 }
@@ -110,8 +110,8 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe('#200 source pane — read-only display of the loaded .tscn (criteria 1 + 6)', () => {
-  it('renders the pane showing the loaded scene source in a read-only monospace textarea', async () => {
+describe('#200 source pane — display of the loaded .tscn (criteria 1 + 6)', () => {
+  it('renders the pane showing the loaded scene source in an editable monospace textarea', async () => {
     render(<R3FApp />);
     await waitForScene();
 
@@ -121,13 +121,13 @@ describe('#200 source pane — read-only display of the loaded .tscn (criteria 1
     const ta = paneTextarea();
     // The pane shows the SAME source text feeding the shell.
     expect(ta.value).toContain('StubRoot');
-    // Slice 2: the pane is now editable (buffer drives the render).
+    // The pane is editable — the buffer drives the render.
     expect(ta.readOnly).toBe(false);
     // Forced monospace.
     expect(isMonospace(ta)).toBe(true);
     // Code-editor feel: long lines scroll horizontally, they do NOT word-wrap.
     expect(ta.getAttribute('wrap')).toBe('off');
-    // The read-only source field is labelled for assistive tech.
+    // The source field is labelled for assistive tech.
     expect(ta.getAttribute('aria-label')).toBe('Scene source');
   });
 

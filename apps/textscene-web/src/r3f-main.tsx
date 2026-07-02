@@ -41,6 +41,9 @@ const NO_FIXTURE = '';
 const STORAGE_KEY = 'tscn-web-r3f-fixture';
 const SOURCE_PANE_STORAGE_KEY = 'tscn-web-source-pane';
 
+/** Pane edits reach the renderer only after this pause — never on the keystroke itself (ADR-0020). */
+const DEBOUNCE_MS = 250;
+
 function getInitialSourcePaneState(): { visible: boolean; width: number } {
   try {
     const raw = window.localStorage.getItem(SOURCE_PANE_STORAGE_KEY);
@@ -148,6 +151,9 @@ export function R3FApp() {
   const [buffer, setBuffer] = useState<string>('');
   const [forwardedContent, setForwardedContent] = useState<string>('');
   const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  // Flips true when the user edits the pane after the current fixture load
+  // started — a resolving load must never stomp newer keystrokes.
+  const editedSinceLoadRef = useRef(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   // When non-null, the user has loaded a TSCN file from their disk via
   // the toolbar's Upload button. We track the display name so the
@@ -203,18 +209,36 @@ export function R3FApp() {
     return fixtureOptions;
   }, [uploadedTscnName]);
 
+  // Authoritative source replacement (fixture clear, fetch resolve, upload):
+  // buffer and forwardedContent move together, superseding any pending
+  // debounced edit forward. The timer cancel matters on paths that do NOT
+  // re-run the fetch effect (e.g. re-uploading a same-named file — the
+  // effect's deps are unchanged); at the effect-driven sites it is a no-op
+  // because the effect cleanup has already cleared the timer.
+  function replaceSource(text: string) {
+    clearTimeout(timerRef.current);
+    setBuffer(text);
+    setForwardedContent(text);
+  }
+
   useEffect(() => {
+    let cancelled = false;
+    // A source change supersedes any pending edit forward — cancel the
+    // debounce timer whenever the load changes (and on unmount).
+    const cleanup = () => {
+      cancelled = true;
+      clearTimeout(timerRef.current);
+    };
     if (!fixtureFile) {
       // The user is on an uploaded TSCN (`fixtureFile === ''`) — do not
-      // overwrite `content` set by `handleTscnFileChange`. Also skip
+      // overwrite the buffer set by `handleTscnUpload`. Also skip
       // when fixture is genuinely cleared with no upload.
       if (!uploadedTscnName) {
-        setBuffer('');
-        setForwardedContent('');
+        replaceSource('');
       }
-      return;
+      return cleanup;
     }
-    let cancelled = false;
+    editedSinceLoadRef.current = false;
     setLoadError(null);
     fetch(`/fixtures/${fixtureFile}`)
       .then((r) => {
@@ -224,11 +248,11 @@ export function R3FApp() {
         return r.text();
       })
       .then((text) => {
-        if (cancelled) return;
-        const resolved = resolveForwardedContent(text, '');
-        setBuffer(text);
-        setForwardedContent(resolved);
-        if (timerRef.current) clearTimeout(timerRef.current);
+        if (cancelled || editedSinceLoadRef.current) return;
+        // Forward fetched text ungated (like upload): a zero-node fixture
+        // must surface the shell's parse-error banner, not silently hold the
+        // previous render — hold-last-valid applies to the edit loop only.
+        replaceSource(text);
         try {
           window.localStorage.setItem(STORAGE_KEY, fixtureFile);
         } catch {
@@ -236,22 +260,14 @@ export function R3FApp() {
         }
       })
       .catch((err: unknown) => {
-        if (cancelled) return;
+        if (cancelled || editedSinceLoadRef.current) return;
         const message = err instanceof Error ? err.message : String(err);
         setLoadError(message);
         setBuffer('');
         // forwardedContent unchanged — hold last valid render on fetch failure
       });
-    return () => {
-      cancelled = true;
-    };
+    return cleanup;
   }, [fixtureFile, uploadedTscnName]);
-
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, []);
 
   function handleFixtureChange(newFixture: string) {
     // Switching to a fixture replaces any user-loaded TSCN content.
@@ -270,9 +286,7 @@ export function R3FApp() {
     setLoadError(null);
     setFixtureFile(NO_FIXTURE);
     setUploadedTscnName(file.name);
-    setBuffer(text);
-    setForwardedContent(text);
-    if (timerRef.current) clearTimeout(timerRef.current);
+    replaceSource(text);
   }
 
   function handleTscnUploadError(message: string) {
@@ -287,11 +301,15 @@ export function R3FApp() {
   function handleBufferChange(e: ChangeEvent<HTMLTextAreaElement>) {
     const newValue = e.target.value;
     setBuffer(newValue);
+    editedSinceLoadRef.current = true;
+    // The user has taken over from the load — a fetch error no longer
+    // describes what the pane holds.
+    setLoadError(null);
 
     clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
       setForwardedContent((prev) => resolveForwardedContent(newValue, prev));
-    }, 250);
+    }, DEBOUNCE_MS);
   }
 
   function handleResourceRemove(path: string) {

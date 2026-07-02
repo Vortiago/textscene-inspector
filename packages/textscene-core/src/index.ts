@@ -66,6 +66,8 @@ export {
   type UseViewportSelectionOptions,
   type UseViewportSelectionResult,
   type NodePathHandlers,
+  parseTscnContent,
+  type ParseResult,
 } from './r3f/index';
 
 // Resource loading (WI-R3F-2)

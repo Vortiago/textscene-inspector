@@ -27,7 +27,7 @@ const FULL_TSCN = `[gd_scene load_steps=2 format=3]
 size = Vector2( 1, 1 )
 
 [node name="PlaneRoot" type="Node3D"]
-sub_resource =  sub_resource(1)
+mesh = SubResource("Plane_1")
 `;
 
 const VALID_LAST_GOOD = 'last good content';
