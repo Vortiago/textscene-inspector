@@ -11,7 +11,8 @@
  *
  * Fidelity contract: property values are rendered VERBATIM when given as strings,
  * so an author keeps full control of the literal form (`Vector2(0, 1)`, `"Master"`,
- * `1e-5`). Rejections assert the diagnostic found *by property name* plus every
+ * `1e-5`). Rejections assert the diagnostic found *by property name* (or, when an
+ * `InvalidCase` sets `ruleName`, by rule name AND property name) plus every
  * required message substring — never a bare count — so coverage matches the
  * longhand tests they replace.
  */
@@ -84,7 +85,13 @@ export interface DiagnosticExpectation {
 }
 
 function locate(diagnostics: Diagnostic[], where: DiagnosticExpectation): Diagnostic | undefined {
-  if (where.ruleName !== undefined) return diagnostics.find(d => d.ruleName === where.ruleName);
+  if (where.ruleName !== undefined) {
+    return diagnostics.find(
+      d =>
+        d.ruleName === where.ruleName &&
+        (where.prop === undefined || d.message.includes(where.prop))
+    );
+  }
   if (where.prop !== undefined) return diagnostics.find(d => d.message.includes(where.prop!));
   return diagnostics[0];
 }
@@ -135,10 +142,8 @@ export function expectSeverity(content: string, severity: Severity): void {
 export interface InvalidCase {
   value: PropValue;
   contains?: string[];
-  /** Locate the diagnostic by rule (e.g. `'strict-parser'`) instead of by property name, and assert it. */
+  /** Also require the located diagnostic to carry this rule (e.g. `'strict-parser'`). */
   ruleName?: string;
-  /** Assert the located diagnostic's severity. */
-  severity?: Severity;
 }
 
 /**
@@ -174,6 +179,9 @@ export interface PropertyValidationOptions {
   /**
    * Blocks placed before the node under test in EVERY scene (accept and reject) —
    * e.g. a `[sub_resource]` shape plus the parent body a CollisionShape must hang off.
+   * Resource blocks belong here (TSCN order), not in `acceptChild`. Don't combine a
+   * parentless `prefix` node with `acceptChild`: the child's `parent="."` would bind
+   * to the prefix node, not the node under test.
    */
   prefix?: string[];
   /** Heading options for the node under test — e.g. `{ parent: '.' }` to child it under a `prefix` body. */
@@ -218,7 +226,6 @@ export function runPropertyValidation(
           expectDiagnostic(scene(...prefix, underTest), {
             prop: propCase.prop,
             ruleName: invalid.ruleName,
-            severity: invalid.severity,
             contains: invalid.contains,
           });
         });

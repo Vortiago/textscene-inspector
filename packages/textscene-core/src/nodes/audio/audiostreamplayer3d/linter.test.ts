@@ -56,7 +56,7 @@ describe('AudioStreamPlayer3D Linter', () => {
     runPropertyValidation(
       {
         nodeType: 'AudioStreamPlayer3D',
-        acceptChild: audioStream,
+        prefix: [audioStream],
         baseProps: { stream: 'ExtResource("1_abc")' },
       },
       [

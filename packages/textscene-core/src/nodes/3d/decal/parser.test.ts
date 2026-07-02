@@ -1,24 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import type { ParsedHeading } from '../../../parser/utils';
+import { heading } from '../../../parser/testing/parserKit';
 import { parseDecal } from './parser';
-
-function heading(attributes: Record<string, string>): ParsedHeading {
-  return { type: 'node', attributes };
-}
 
 describe('parseDecal', () => {
   it('parses name, parent, and transform (happy path)', () => {
-    const result = parseDecal(
-      heading({ name: 'MyDecal', type: 'Decal', parent: '.' }),
-      { transform: 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 3, 4)' }
-    );
+    const result = parseDecal(heading('Decal', { name: 'MyDecal', parent: '.' }), {
+      transform: 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 3, 4)',
+    });
     expect(result.name).toBe('MyDecal');
     expect(result.parent).toBe('.');
     expect(result.transform?.origin).toEqual({ x: 2, y: 3, z: 4 });
   });
 
   it('parses albedo, size, modulate, albedo_mix, and cull_mask', () => {
-    const result = parseDecal(heading({ name: 'D', type: 'Decal' }), {
+    const result = parseDecal(heading('Decal', { name: 'D' }), {
       texture_albedo: 'ExtResource("1_tex")',
       size: 'Vector3(3, 2, 4)',
       modulate: 'Color(1, 0.5, 0.25, 0.8)',
@@ -33,7 +28,7 @@ describe('parseDecal', () => {
   });
 
   it('parses the optional normal/orm/emission texture references', () => {
-    const result = parseDecal(heading({ name: 'D', type: 'Decal' }), {
+    const result = parseDecal(heading('Decal', { name: 'D' }), {
       texture_normal: 'ExtResource("2_n")',
       texture_orm: 'ExtResource("3_orm")',
       texture_emission: 'ExtResource("4_e")',
@@ -44,7 +39,7 @@ describe('parseDecal', () => {
   });
 
   it('applies Godot defaults when properties are omitted (edge case)', () => {
-    const result = parseDecal(heading({ name: 'D', type: 'Decal' }), {});
+    const result = parseDecal(heading('Decal', { name: 'D' }), {});
     expect(result.texture_albedo).toBeUndefined();
     expect(result.size).toEqual({ x: 2, y: 2, z: 2 });
     expect(result.modulate).toEqual({ r: 1, g: 1, b: 1, a: 1 });
@@ -57,23 +52,22 @@ describe('parseDecal', () => {
   });
 
   it('falls back to the default size on a malformed size (error path)', () => {
-    const result = parseDecal(heading({ name: 'Bad', type: 'Decal' }), {
+    const result = parseDecal(heading('Decal', { name: 'Bad' }), {
       size: 'Vector3(not, valid)',
     });
     expect(result.size).toEqual({ x: 2, y: 2, z: 2 });
   });
 
   it('falls back to identity transform on a malformed transform (error path)', () => {
-    const result = parseDecal(
-      heading({ name: 'Bad', type: 'Decal' }),
-      { transform: 'Transform3D(not, valid)' }
-    );
+    const result = parseDecal(heading('Decal', { name: 'Bad' }), {
+      transform: 'Transform3D(not, valid)',
+    });
     expect(result.transform?.basis_x).toEqual({ x: 1, y: 0, z: 0 });
     expect(result.transform?.origin).toEqual({ x: 0, y: 0, z: 0 });
   });
 
   it('handles missing optional attributes (edge case)', () => {
-    const result = parseDecal(heading({}), {});
+    const result = parseDecal({ type: 'node', attributes: {} }, {});
     expect(result.name).toBe('');
     expect(result.parent).toBeUndefined();
     expect(result.transform).toBeUndefined();

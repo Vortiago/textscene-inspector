@@ -6,6 +6,7 @@
  */
 
 import { warn } from '../../../logger';
+import { parseOptionalInt } from '../../../parser/valueParsers';
 
 /**
  * Copy `material` and `operation` onto a CSG parse result. `primitiveNoun`
@@ -22,16 +23,14 @@ export function finishCsgParse(
     result.material = properties.material;
   }
 
-  if (properties.operation !== undefined) {
-    const operation = parseInt(properties.operation, 10);
-    if (!Number.isNaN(operation)) {
-      result.operation = operation;
-      if (operation !== 0) {
-        warn(
-          `[${nodeType}] operation=${operation} (non-union) is ignored — ` +
-            `rendering the base ${primitiveNoun} primitive (ADR-0004).`
-        );
-      }
+  const operation = parseOptionalInt(properties.operation);
+  if (operation !== undefined) {
+    result.operation = operation;
+    if (operation !== 0) {
+      warn(
+        `[${nodeType}] operation=${operation} (non-union) is ignored — ` +
+          `rendering the base ${primitiveNoun} primitive (ADR-0004).`
+      );
     }
   }
 }
