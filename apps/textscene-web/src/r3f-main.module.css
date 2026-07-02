@@ -276,6 +276,9 @@
   border-right: 1px solid var(--tsi-border);
   display: flex;
   flex-direction: column;
+  /* Hold the set/dragged width: don't let the flex row squeeze the pane so its
+     rendered width matches the inline width driven by paneWidth. */
+  flex-shrink: 0;
 }
 
 .sourceTextarea {
@@ -287,6 +290,13 @@
   outline: none;
   background: var(--tsi-bg-panel);
   color: var(--tsi-fg-default);
+}
+
+/* outline:none above drops the native ring; restore a visible focus indicator
+   for keyboard users (the pane's overflow:hidden clips an outer ring, so inset).
+   Matches the .openButton / .search focus-ring convention in this file. */
+.sourceTextarea:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--tsi-focus-ring);
 }
 
 .sourceSplitter {

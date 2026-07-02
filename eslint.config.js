@@ -143,7 +143,11 @@ export default [
 
   // TypeScript files - Browser environment (web previewer, webview)
   {
-    files: ['apps/textscene-web/src/**/*.ts', 'apps/textscene-vscode/src/webview/**/*.ts'],
+    files: [
+      'apps/textscene-web/src/**/*.ts',
+      'apps/textscene-web/src/**/*.tsx',
+      'apps/textscene-vscode/src/webview/**/*.ts',
+    ],
     languageOptions: {
       parser: tsparser,
       parserOptions: {

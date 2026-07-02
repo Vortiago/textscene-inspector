@@ -13,6 +13,7 @@
  * (WI-UX-7).
  */
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -39,12 +40,19 @@ const NO_FIXTURE = '';
 const STORAGE_KEY = 'tscn-web-r3f-fixture';
 const SOURCE_PANE_STORAGE_KEY = 'tscn-web-source-pane';
 
-function getInitialSourcePaneState() {
+function getInitialSourcePaneState(): { visible: boolean; width: number } {
   try {
     const raw = window.localStorage.getItem(SOURCE_PANE_STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      return { visible: parsed.visible ?? true, width: parsed.width ?? 320 };
+      // Tolerate partial/corrupt blobs: only accept a real boolean and a
+      // positive finite width, otherwise fall back to the shown-at-320 default.
+      const visible = typeof parsed.visible === 'boolean' ? parsed.visible : true;
+      const width =
+        typeof parsed.width === 'number' && Number.isFinite(parsed.width) && parsed.width > 0
+          ? parsed.width
+          : 320;
+      return { visible, width };
     }
   } catch {
     /* ignore */
@@ -75,32 +83,44 @@ const DEFAULT_FIXTURE =
   '';
 
 export function R3FApp() {
-  const { visible: paneVisible, width: initialPaneWidth } = getInitialSourcePaneState();
-  const [paneVisibleState, setPaneVisibleState] = useState(paneVisible);
-  const [paneWidthState, setPaneWidthState] = useState(initialPaneWidth);
+  // Read (and JSON.parse) the persisted blob once on mount, then seed both
+  // pane-state slices from it instead of re-reading localStorage twice.
+  const [initialPane] = useState(getInitialSourcePaneState);
+  const [paneVisible, setPaneVisible] = useState(initialPane.visible);
+  const [paneWidth, setPaneWidth] = useState(initialPane.width);
   useEffect(() => {
-    persistSourcePaneState(paneVisibleState, paneWidthState);
-  }, [paneVisibleState, paneWidthState]);
+    persistSourcePaneState(paneVisible, paneWidth);
+  }, [paneVisible, paneWidth]);
 
   const splitterStartRef = useRef<number>(0);
 
-  function onSplitterMouseDown(e: ReactMouseEvent) {
-    e.preventDefault();
-    splitterStartRef.current = e.clientX;
-    document.addEventListener('mousemove', onSplitterMove);
-    document.addEventListener('mouseup', onSplitterUp);
-  }
-
-  function onSplitterMove(e: MouseEvent) {
+  const onSplitterMove = useCallback((e: MouseEvent) => {
     const dx = e.clientX - splitterStartRef.current;
-    setPaneWidthState((prev: number) => Math.max(180, Math.min(800, prev + dx)));
+    setPaneWidth((prev) => Math.max(180, Math.min(800, prev + dx)));
     splitterStartRef.current = e.clientX;
-  }
+  }, []);
 
-  function onSplitterUp() {
+  // The mouse-up handler ends the drag by detaching both document listeners.
+  // Kept as one callback so the exact detach sequence lives in a single place —
+  // the unmount cleanup below reuses it (self-removing as the 'mouseup' handler).
+  const detachDragListeners = useCallback(() => {
     document.removeEventListener('mousemove', onSplitterMove);
-    document.removeEventListener('mouseup', onSplitterUp);
-  }
+    document.removeEventListener('mouseup', detachDragListeners);
+  }, [onSplitterMove]);
+
+  const onSplitterMouseDown = useCallback(
+    (e: ReactMouseEvent) => {
+      e.preventDefault();
+      splitterStartRef.current = e.clientX;
+      document.addEventListener('mousemove', onSplitterMove);
+      document.addEventListener('mouseup', detachDragListeners);
+    },
+    [onSplitterMove, detachDragListeners]
+  );
+
+  // Detach any in-flight drag listeners if the app unmounts mid-drag, so we
+  // don't leak document listeners or setState on an unmounted component.
+  useEffect(() => detachDragListeners, [detachDragListeners]);
 
   const [fixtureFile, setFixtureFile] = useState<string>(() => {
     try {
@@ -260,56 +280,63 @@ export function R3FApp() {
 
   return (
     <ResourceLoaderProvider loader={loader}>
-      <div style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: paneVisibleState ? 'row' : 'column' }}>
-        {paneVisibleState && (
-          <div
-            data-testid="source-pane"
-            className={styles.sourcePane}
-            style={{ width: paneWidthState, minWidth: 0, display: 'flex', flexDirection: 'column' }}
-          >
-            <textarea
-              className={styles.sourceTextarea}
-              value={content}
-              readOnly
-              style={{ fontFamily: 'monospace' }}
-              role="textbox"
+      <div style={{ width: '100vw', height: '100vh', display: 'flex' }}>
+        {paneVisible && (
+          <>
+            {/* flex-shrink:0 (in .sourcePane) keeps the pane at its set/dragged
+                width; the shell wrapper below takes flex:1 to fill the rest. */}
+            <div
+              data-testid="source-pane"
+              className={styles.sourcePane}
+              style={{ width: paneWidth, minWidth: 0 }}
+            >
+              <textarea
+                className={styles.sourceTextarea}
+                value={content}
+                readOnly
+                style={{ fontFamily: 'monospace' }}
+              />
+            </div>
+            <div
+              className={styles.sourceSplitter}
+              data-testid="source-pane-splitter"
+              role="separator"
+              aria-orientation="vertical"
+              aria-label="Resize source pane"
+              onMouseDown={onSplitterMouseDown}
             />
-          </div>
+          </>
         )}
-        {paneVisibleState && (
-          <div
-            className={styles.sourceSplitter}
-            data-testid="source-pane-splitter"
-            onMouseDown={onSplitterMouseDown}
+        <div style={{ flex: 1, minWidth: 0, height: '100%' }}>
+          <TscnPreviewShell
+            panelId={`web-${fixtureFile || uploadedTscnName || 'empty'}`}
+            content={content}
+            rootScenePath={`res://${
+              // The scene's res:// identity is relative to its corpus root.
+              (resourceRoot && fixtureFile.startsWith(`${resourceRoot}/`)
+                ? fixtureFile.slice(resourceRoot.length + 1)
+                : fixtureFile) ||
+              uploadedTscnName ||
+              'empty.tscn'
+            }`}
+            onResourceUpload={handleResourceUpload}
+            onResourceRemove={handleResourceRemove}
+            onOpenSubScene={handleOpenSubScene}
+            toolbar={
+              <Toolbar
+                options={options}
+                fixtureFile={fixtureFile}
+                uploadedTscnName={uploadedTscnName}
+                loadError={loadError}
+                onFixtureChange={handleFixtureChange}
+                onTscnUpload={handleTscnUpload}
+                onTscnUploadError={handleTscnUploadError}
+                paneVisible={paneVisible}
+                onTogglePane={() => setPaneVisible((v) => !v)}
+              />
+            }
           />
-        )}
-        <TscnPreviewShell
-          panelId={`web-${fixtureFile || uploadedTscnName || 'empty'}`}
-          content={content}
-          rootScenePath={`res://${
-            (resourceRoot && fixtureFile.startsWith(`${resourceRoot}/`)
-              ? fixtureFile.slice(resourceRoot.length + 1)
-              : fixtureFile) ||
-            uploadedTscnName ||
-            'empty.tscn'
-          }`}
-          onResourceUpload={handleResourceUpload}
-          onResourceRemove={handleResourceRemove}
-          onOpenSubScene={handleOpenSubScene}
-          toolbar={
-            <Toolbar
-              options={options}
-              fixtureFile={fixtureFile}
-              uploadedTscnName={uploadedTscnName}
-              loadError={loadError}
-              onFixtureChange={handleFixtureChange}
-              onTscnUpload={handleTscnUpload}
-              onTscnUploadError={handleTscnUploadError}
-              paneVisible={paneVisibleState}
-              onTogglePane={() => setPaneVisibleState((v: boolean) => !v)}
-            />
-          }
-        />
+        </div>
       </div>
     </ResourceLoaderProvider>
   );
@@ -420,12 +447,16 @@ function Toolbar({
     <div className={styles.toolbar}>
       <button
         type="button"
+        className={styles.openButton}
         data-testid="source-pane-toggle"
         onClick={onTogglePane}
         title="Toggle the source pane"
       >
         {paneVisible ? 'Hide' : 'Show'} Source
       </button>
+      {/* Primary action — open your own .tscn from disk. Triggers the same
+          hidden input the ⌘K palette uses; kept visible because the built-in
+          fixtures are dev-only scaffolding, so this is the real entry point. */}
       <button
         type="button"
         className={styles.openButton}

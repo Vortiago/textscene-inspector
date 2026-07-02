@@ -29,6 +29,7 @@ vi.mock('@textscene/core', async () => {
 import { R3FApp } from './r3f-main';
 
 const FIXTURE_KEY = 'tscn-web-r3f-fixture';
+const SOURCE_PANE_KEY = 'tscn-web-source-pane';
 
 const STUB_TSCN = `[gd_scene load_steps=1 format=3]
 
@@ -233,5 +234,48 @@ describe('#200 source pane — state persists across reloads (criterion 5)', () 
     render(<R3FApp />); // "reload"
     await waitForScene();
     expect(Math.abs(paneWidth() - persisted)).toBeLessThan(1);
+  });
+
+  it('falls back to the shown-at-320 default when the persisted blob is corrupt', async () => {
+    globalThis.localStorage.setItem(SOURCE_PANE_KEY, 'not-json{{');
+    render(<R3FApp />);
+    await waitForScene();
+    // A garbage blob must not hide the pane or zero its width.
+    expect(screen.getByTestId('source-pane')).toBeTruthy();
+    expect(paneWidth()).toBe(320);
+  });
+
+  it('fills only the missing field of a partial blob (visible kept, width defaulted)', async () => {
+    globalThis.localStorage.setItem(SOURCE_PANE_KEY, JSON.stringify({ visible: true }));
+    render(<R3FApp />);
+    await waitForScene();
+    expect(screen.getByTestId('source-pane')).toBeTruthy();
+    expect(paneWidth()).toBe(320);
+  });
+
+  it('rejects a non-positive persisted width and falls back to 320', async () => {
+    globalThis.localStorage.setItem(SOURCE_PANE_KEY, JSON.stringify({ visible: true, width: 0 }));
+    render(<R3FApp />);
+    await waitForScene();
+    // width:0 would collapse the pane — it must fall back, not be honored.
+    expect(paneWidth()).toBe(320);
+  });
+});
+
+describe('#200 source pane — splitter clamps the width to [180, 800] (criterion 4 bounds)', () => {
+  it('floors the width at 180 when dragged far past the left bound', async () => {
+    render(<R3FApp />);
+    await waitForScene();
+    // From the 320 default, mousedown is at x=600, so x=100 means dx=-500 → 320-500=-180.
+    dragSplitterTo(100);
+    await waitFor(() => expect(paneWidth()).toBe(180));
+  });
+
+  it('caps the width at 800 when dragged far past the right bound', async () => {
+    render(<R3FApp />);
+    await waitForScene();
+    // dx = 2000-600 = +1400 → 320+1400 = 1720, clamped to the 800 max.
+    dragSplitterTo(2000);
+    await waitFor(() => expect(paneWidth()).toBe(800));
   });
 });
