@@ -9,6 +9,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { checkResourceExists } from '../../../linter/resourceChecker.js';
+import { checkExtremeVolume } from '../sharedLinterChecks.js';
 
 // Thresholds for extreme-volume warning (same as AudioStreamPlayer2D)
 const EXTREME_VOLUME_DB_MIN = -60;
@@ -50,29 +51,15 @@ function checkAudioStreamPlayer(context: RuleContext): Diagnostic[] {
     });
   }
 
-  // WARNING: extreme volume_db values
-  if (rawProps.volume_db !== undefined) {
-    const volumeDb = parseFloat(rawProps.volume_db);
-    if (!isNaN(volumeDb)) {
-      if (volumeDb < EXTREME_VOLUME_DB_MIN) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `Volume is very low (${volumeDb} dB). Values below ${EXTREME_VOLUME_DB_MIN} dB are rarely intentional.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: 'audiostreamplayer-extreme-volume',
-        });
-      } else if (volumeDb > EXTREME_VOLUME_DB_MAX) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `Volume is very high (${volumeDb} dB). Values above ${EXTREME_VOLUME_DB_MAX} dB can cause distortion.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: 'audiostreamplayer-extreme-volume',
-        });
-      }
-    }
-  }
+  checkExtremeVolume(
+    rawProps,
+    node.name,
+    node.type,
+    'audiostreamplayer',
+    EXTREME_VOLUME_DB_MIN,
+    EXTREME_VOLUME_DB_MAX,
+    diagnostics
+  );
 
   return diagnostics;
 }
