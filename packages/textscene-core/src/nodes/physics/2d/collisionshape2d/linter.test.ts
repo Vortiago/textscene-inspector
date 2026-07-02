@@ -10,6 +10,7 @@ import {
   expectClean,
   expectDiagnostic,
   expectNoDiagnostic,
+  runPropertyValidation,
 } from '../../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
@@ -42,212 +43,85 @@ describe('CollisionShape2D Linter', () => {
       );
     });
 
-    describe('shape property validation', () => {
-      it('should accept valid SubResource reference', () => {
-        expectClean(
-          scene(
-            sub('CircleShape2D', 'circle_shape'),
-            staticBody,
-            node('CollisionShape2D', { shape: 'SubResource("circle_shape")' }, { name: 'Collision', parent: '.' })
-          )
-        );
-      });
-
-      it('should accept valid ExtResource reference', () => {
-        expectClean(
-          scene(
-            '[ext_resource type="Shape2D" path="res://shapes/rectangle.tres" id="ext_shape"]',
-            staticBody,
-            node('CollisionShape2D', { shape: 'ExtResource("ext_shape")' }, { name: 'Collision', parent: '.' })
-          )
-        );
-      });
-
-      it('should reject invalid shape reference format', () => {
-        const content = scene(
+    it('should accept a SubResource shape of another type', () => {
+      expectClean(
+        scene(
+          sub('CircleShape2D', 'circle_shape'),
           staticBody,
-          node('CollisionShape2D', { shape: '"invalid_format"' }, { name: 'InvalidShape', parent: '.' })
-        );
-        const shapeError = expectDiagnostic(content, { prop: 'shape', contains: ['resource reference'] });
-        expect(shapeError.ruleName).toBe('strict-parser');
-      });
-
-      it('should reject shape with invalid characters', () => {
-        const diagnostics = lint(
-          scene(
-            staticBody,
-            node('CollisionShape2D', { shape: 'SubResource(rect shape)' }, { name: 'BadShape', parent: '.' })
-          )
-        );
-        expect(diagnostics.length).toBeGreaterThan(0);
-        expect(diagnostics[0].message).toContain('shape');
-      });
+          node('CollisionShape2D', { shape: 'SubResource("circle_shape")' }, { name: 'Collision', parent: '.' })
+        )
+      );
     });
 
-    describe('disabled property validation', () => {
-      it('should accept disabled = true', () => {
-        expectClean(
-          scene(
-            rectShape,
-            staticBody,
-            node('CollisionShape2D', { shape: 'SubResource("shape_1")', disabled: true }, { name: 'DisabledCollision', parent: '.' })
-          )
-        );
-      });
-
-      it('should accept disabled = false', () => {
-        expectClean(
-          scene(
-            rectShape,
-            staticBody,
-            node('CollisionShape2D', { shape: 'SubResource("shape_1")', disabled: false }, { name: 'EnabledCollision', parent: '.' })
-          )
-        );
-      });
-
-      it('should reject non-boolean disabled value', () => {
-        const content = scene(
-          rectShape,
+    it('should accept a valid ExtResource shape reference', () => {
+      expectClean(
+        scene(
+          '[ext_resource type="Shape2D" path="res://shapes/rectangle.tres" id="ext_shape"]',
           staticBody,
-          node('CollisionShape2D', { shape: 'SubResource("shape_1")', disabled: 1 }, { name: 'InvalidDisabled', parent: '.' })
-        );
-        const disabledError = expectDiagnostic(content, { prop: 'disabled', contains: ['boolean'] });
-        expect(disabledError.ruleName).toBe('strict-parser');
-      });
-
-      it('should reject string non-boolean disabled value', () => {
-        const content = scene(
-          rectShape,
-          staticBody,
-          node('CollisionShape2D', { shape: 'SubResource("shape_1")', disabled: '"yes"' }, { name: 'InvalidDisabled', parent: '.' })
-        );
-        expectDiagnostic(content, { prop: 'disabled', contains: ['boolean'] });
-      });
+          node('CollisionShape2D', { shape: 'ExtResource("ext_shape")' }, { name: 'Collision', parent: '.' })
+        )
+      );
     });
 
-    describe('one_way_collision property validation', () => {
-      it('should accept one_way_collision = true', () => {
-        expectClean(
-          scene(
-            rectShape,
-            staticBody,
-            node('CollisionShape2D', { shape: 'SubResource("shape_1")', one_way_collision: true }, { name: 'OneWayCollision', parent: '.' })
-          )
-        );
-      });
-
-      it('should accept one_way_collision = false', () => {
-        expectClean(
-          scene(
-            rectShape,
-            staticBody,
-            node('CollisionShape2D', { shape: 'SubResource("shape_1")', one_way_collision: false }, { name: 'TwoWayCollision', parent: '.' })
-          )
-        );
-      });
-
-      it('should reject non-boolean one_way_collision value', () => {
-        const content = scene(
-          rectShape,
-          staticBody,
-          node('CollisionShape2D', { shape: 'SubResource("shape_1")', one_way_collision: 1 }, { name: 'InvalidOneWay', parent: '.' })
-        );
-        const oneWayError = expectDiagnostic(content, { prop: 'one_way_collision', contains: ['boolean'] });
-        expect(oneWayError.ruleName).toBe('strict-parser');
-      });
-    });
-
-    describe('one_way_collision_margin property validation', () => {
-      it('should accept valid non-negative margin', () => {
-        expectClean(
-          scene(
-            rectShape,
-            staticBody,
-            node('CollisionShape2D', { shape: 'SubResource("shape_1")', one_way_collision: true, one_way_collision_margin: 1.5 }, { name: 'OneWayWithMargin', parent: '.' })
-          )
-        );
-      });
-
-      it('should accept zero margin', () => {
-        expectClean(
-          scene(
-            rectShape,
-            staticBody,
-            node('CollisionShape2D', { shape: 'SubResource("shape_1")', one_way_collision: true, one_way_collision_margin: 0.0 }, { name: 'ZeroMargin', parent: '.' })
-          )
-        );
-      });
-
-      it('should reject negative margin', () => {
-        const content = scene(
-          rectShape,
-          staticBody,
-          node('CollisionShape2D', { shape: 'SubResource("shape_1")', one_way_collision: true, one_way_collision_margin: -1.0 }, { name: 'NegativeMargin', parent: '.' })
-        );
-        const marginError = expectDiagnostic(content, { prop: 'one_way_collision_margin', contains: ['non-negative'] });
-        expect(marginError.ruleName).toBe('strict-parser');
-      });
-
-      it('should reject non-numeric margin', () => {
-        const content = scene(
-          rectShape,
-          staticBody,
-          node('CollisionShape2D', { shape: 'SubResource("shape_1")', one_way_collision: true, one_way_collision_margin: '"invalid"' }, { name: 'InvalidMargin', parent: '.' })
-        );
-        expectDiagnostic(content, { prop: 'one_way_collision_margin', contains: ['number'] });
-      });
-    });
-
-    describe('debug_color property validation', () => {
-      it('should accept Color with RGB values', () => {
-        expectClean(
-          scene(
-            rectShape,
-            staticBody,
-            node('CollisionShape2D', { shape: 'SubResource("shape_1")', debug_color: 'Color(1, 0, 0)' }, { name: 'ColoredCollision', parent: '.' })
-          )
-        );
-      });
-
-      it('should accept Color with RGBA values', () => {
-        expectClean(
-          scene(
-            rectShape,
-            staticBody,
-            node('CollisionShape2D', { shape: 'SubResource("shape_1")', debug_color: 'Color(0, 0.6, 0.7, 0.42)' }, { name: 'TransparentCollision', parent: '.' })
-          )
-        );
-      });
-
-      it('should accept Color with spaces', () => {
-        expectClean(
-          scene(
-            rectShape,
-            staticBody,
-            node('CollisionShape2D', { shape: 'SubResource("shape_1")', debug_color: 'Color( 0.5 , 0.5 , 0.5 , 1.0 )' }, { name: 'SpacedColor', parent: '.' })
-          )
-        );
-      });
-
-      it('should reject invalid color format', () => {
-        const content = scene(
-          rectShape,
-          staticBody,
-          node('CollisionShape2D', { shape: 'SubResource("shape_1")', debug_color: '"red"' }, { name: 'InvalidColor', parent: '.' })
-        );
-        const colorError = expectDiagnostic(content, { prop: 'debug_color', contains: ['Color'] });
-        expect(colorError.ruleName).toBe('strict-parser');
-      });
-
-      it('should reject color with too few components', () => {
-        const content = scene(
-          rectShape,
-          staticBody,
-          node('CollisionShape2D', { shape: 'SubResource("shape_1")', debug_color: 'Color(1, 0)' }, { name: 'TwoComponents', parent: '.' })
-        );
-        expectDiagnostic(content, { prop: 'debug_color' });
-      });
-    });
+    runPropertyValidation(
+      {
+        nodeType: 'CollisionShape2D',
+        prefix: [rectShape, staticBody],
+        nodeOptions: { name: 'Collision', parent: '.' },
+        baseProps: { shape: 'SubResource("shape_1")' },
+      },
+      [
+        {
+          prop: 'shape',
+          valid: ['SubResource("shape_1")'],
+          invalid: [
+            {
+              value: '"invalid_format"',
+              ruleName: 'strict-parser',
+              contains: ['shape', 'resource reference'],
+            },
+            { value: 'SubResource(rect shape)', contains: ['shape'] },
+          ],
+        },
+        {
+          prop: 'disabled',
+          valid: [true, false],
+          invalid: [
+            { value: 1, ruleName: 'strict-parser', contains: ['disabled', 'boolean'] },
+            { value: '"yes"', contains: ['disabled', 'boolean'] },
+          ],
+        },
+        {
+          prop: 'one_way_collision',
+          valid: [true, false],
+          invalid: [
+            { value: 1, ruleName: 'strict-parser', contains: ['one_way_collision', 'boolean'] },
+          ],
+        },
+        {
+          // Margin without one_way_collision legitimately warns — accepts pair it via `with`.
+          prop: 'one_way_collision_margin',
+          valid: [1.5, 0.0],
+          with: { one_way_collision: true },
+          invalid: [
+            {
+              value: -1.0,
+              ruleName: 'strict-parser',
+              contains: ['one_way_collision_margin', 'non-negative'],
+            },
+            { value: '"invalid"', contains: ['one_way_collision_margin', 'number'] },
+          ],
+        },
+        {
+          prop: 'debug_color',
+          valid: ['Color(1, 0, 0)', 'Color(0, 0.6, 0.7, 0.42)', 'Color( 0.5 , 0.5 , 0.5 , 1.0 )'],
+          invalid: [
+            { value: '"red"', ruleName: 'strict-parser', contains: ['debug_color', 'Color'] },
+            { value: 'Color(1, 0)', contains: ['debug_color'] },
+          ],
+        },
+      ]
+    );
   });
 
   describe('Semantic Validation (Required Properties)', () => {

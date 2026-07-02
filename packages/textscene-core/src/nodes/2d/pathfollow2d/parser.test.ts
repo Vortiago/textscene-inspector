@@ -1,14 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { parsePathFollow2D } from './parser';
-import type { ParsedHeading } from '../../../parser/utils';
-
-function heading(name = 'Follow'): ParsedHeading {
-  return { type: 'node', attributes: { type: 'PathFollow2D', name } };
-}
+import { heading } from '../../../parser/testing/parserKit';
 
 describe('parsePathFollow2D', () => {
   it('defaults rotates/cubic_interp/loop to true and offsets to 0', () => {
-    const props = parsePathFollow2D(heading(), {});
+    const props = parsePathFollow2D(heading('PathFollow2D', { name: 'Follow' }), {});
     expect(props.rotates).toBe(true);
     expect(props.cubic_interp).toBe(true);
     expect(props.loop).toBe(true);
@@ -19,7 +15,7 @@ describe('parsePathFollow2D', () => {
   });
 
   it('reads explicit follow controls', () => {
-    const props = parsePathFollow2D(heading(), {
+    const props = parsePathFollow2D(heading('PathFollow2D', { name: 'Follow' }), {
       progress_ratio: '0.25',
       h_offset: '4',
       v_offset: '-3',
@@ -34,7 +30,9 @@ describe('parsePathFollow2D', () => {
   });
 
   it('keeps progress when only progress is set (edge)', () => {
-    const props = parsePathFollow2D(heading(), { progress: '120' });
+    const props = parsePathFollow2D(heading('PathFollow2D', { name: 'Follow' }), {
+      progress: '120',
+    });
     expect(props.progress).toBe(120);
     expect(props.progress_ratio).toBeUndefined();
   });

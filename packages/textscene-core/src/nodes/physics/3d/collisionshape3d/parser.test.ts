@@ -1,14 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { parseCollisionShape3D } from './parser';
-import type { ParsedHeading } from '../../../../parser/utils';
-
-function heading(attributes: Record<string, string>): ParsedHeading {
-  return { type: 'node', attributes };
-}
+import { heading } from '../../../../parser/testing/parserKit';
 
 describe('parseCollisionShape3D', () => {
   it('captures the shape reference and transform', () => {
-    const props = parseCollisionShape3D(heading({ name: 'Col', type: 'CollisionShape3D' }), {
+    const props = parseCollisionShape3D(heading('CollisionShape3D', { name: 'Col' }), {
       transform: 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)',
       shape: 'SubResource("BoxShape3D_1")',
     });
@@ -17,7 +13,7 @@ describe('parseCollisionShape3D', () => {
   });
 
   it('parses the disabled flag', () => {
-    const props = parseCollisionShape3D(heading({ name: 'Col', type: 'CollisionShape3D' }), {
+    const props = parseCollisionShape3D(heading('CollisionShape3D', { name: 'Col' }), {
       disabled: 'true',
     });
     expect(props.disabled).toBe(true);

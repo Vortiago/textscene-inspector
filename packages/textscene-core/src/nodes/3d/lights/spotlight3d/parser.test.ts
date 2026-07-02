@@ -4,15 +4,14 @@
 
 import { describe, it, expect } from 'vitest';
 import { parseSpotLight3D } from './parser';
-import { parseHeading } from '../../../../parser/utils';
+import { heading } from '../../../../parser/testing/parserKit';
 
 describe('SpotLight3D Parser', () => {
   describe('parseSpotLight3D', () => {
     it('should parse basic SpotLight3D with defaults', () => {
-      const heading = parseHeading('[node name="SpotLight" type="SpotLight3D" parent="."]');
-      expect(heading).not.toBeNull();
+      const h = heading('SpotLight3D', { name: 'SpotLight', parent: '.' });
 
-      const result = parseSpotLight3D(heading!, {});
+      const result = parseSpotLight3D(h, {});
 
       expect(result.name).toBe('SpotLight');
       expect(result.parent).toBe('.');
@@ -26,8 +25,7 @@ describe('SpotLight3D Parser', () => {
     });
 
     it('should parse SpotLight3D with all properties', () => {
-      const heading = parseHeading('[node name="SpotLight" type="SpotLight3D" parent="."]');
-      expect(heading).not.toBeNull();
+      const h = heading('SpotLight3D', { name: 'SpotLight', parent: '.' });
 
       const properties = {
         light_color: 'Color(1, 0.8, 0.6, 1)',
@@ -39,7 +37,7 @@ describe('SpotLight3D Parser', () => {
         shadow_filter: '2',
       };
 
-      const result = parseSpotLight3D(heading!, properties);
+      const result = parseSpotLight3D(h, properties);
 
       expect(result.name).toBe('SpotLight');
       expect(result.light_color).toBe('Color(1, 0.8, 0.6, 1)');
@@ -52,22 +50,20 @@ describe('SpotLight3D Parser', () => {
     });
 
     it('should parse shadow_enabled as false when not "true"', () => {
-      const heading = parseHeading('[node name="SpotLight" type="SpotLight3D" parent="."]');
-      expect(heading).not.toBeNull();
+      const h = heading('SpotLight3D', { name: 'SpotLight', parent: '.' });
 
-      const result1 = parseSpotLight3D(heading!, { shadow_enabled: 'false' });
+      const result1 = parseSpotLight3D(h, { shadow_enabled: 'false' });
       expect(result1.shadow_enabled).toBe(false);
 
-      const result2 = parseSpotLight3D(heading!, { shadow_enabled: '0' });
+      const result2 = parseSpotLight3D(h, { shadow_enabled: '0' });
       expect(result2.shadow_enabled).toBe(false);
 
-      const result3 = parseSpotLight3D(heading!, {});
+      const result3 = parseSpotLight3D(h, {});
       expect(result3.shadow_enabled).toBe(false);
     });
 
     it('should handle fractional values', () => {
-      const heading = parseHeading('[node name="SpotLight" type="SpotLight3D" parent="."]');
-      expect(heading).not.toBeNull();
+      const h = heading('SpotLight3D', { name: 'SpotLight', parent: '.' });
 
       const properties = {
         light_energy: '0.75',
@@ -76,7 +72,7 @@ describe('SpotLight3D Parser', () => {
         shadow_bias: '0.001',
       };
 
-      const result = parseSpotLight3D(heading!, properties);
+      const result = parseSpotLight3D(h, properties);
 
       expect(result.light_energy).toBe(0.75);
       expect(result.spot_range).toBe(12.5);
@@ -85,15 +81,14 @@ describe('SpotLight3D Parser', () => {
     });
 
     it('should parse transform property from Node3D', () => {
-      const heading = parseHeading('[node name="SpotLight" type="SpotLight3D" parent="."]');
-      expect(heading).not.toBeNull();
+      const h = heading('SpotLight3D', { name: 'SpotLight', parent: '.' });
 
       const properties = {
         transform: 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5, 0)',
         light_energy: '2.0',
       };
 
-      const result = parseSpotLight3D(heading!, properties);
+      const result = parseSpotLight3D(h, properties);
 
       expect(result.transform).toBeDefined();
       expect(result.transform?.origin.x).toBe(0);
@@ -103,10 +98,9 @@ describe('SpotLight3D Parser', () => {
     });
 
     it('should parse light with parent hierarchy', () => {
-      const heading = parseHeading('[node name="SpotLight" type="SpotLight3D" parent="Room"]');
-      expect(heading).not.toBeNull();
+      const h = heading('SpotLight3D', { name: 'SpotLight', parent: 'Room' });
 
-      const result = parseSpotLight3D(heading!, { light_energy: '1.2' });
+      const result = parseSpotLight3D(h, { light_energy: '1.2' });
 
       expect(result.name).toBe('SpotLight');
       expect(result.parent).toBe('Room');

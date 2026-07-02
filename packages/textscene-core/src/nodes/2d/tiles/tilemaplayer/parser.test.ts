@@ -1,15 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import type { ParsedHeading } from '../../../../parser/utils';
+import { heading } from '../../../../parser/testing/parserKit';
 import { parseTileMapLayer } from './parser';
-
-function heading(attributes: Record<string, string>): ParsedHeading {
-  return { type: 'node', attributes };
-}
 
 describe('parseTileMapLayer', () => {
   it('parses the Node2D base plus tile_set ref and enabled (happy path)', () => {
     const result = parseTileMapLayer(
-      heading({ name: 'Layer0', type: 'TileMapLayer', parent: '.' }),
+      heading('TileMapLayer', { name: 'Layer0', parent: '.' }),
       { position: 'Vector2(10, 20)', tile_set: 'ExtResource("1")', enabled: 'false' }
     );
     expect(result.name).toBe('Layer0');
@@ -20,7 +16,7 @@ describe('parseTileMapLayer', () => {
   });
 
   it('decodes tile_map_data into placed cells at parse time', () => {
-    const result = parseTileMapLayer(heading({ name: 'L', type: 'TileMapLayer' }), {
+    const result = parseTileMapLayer(heading('TileMapLayer', { name: 'L' }), {
       tile_map_data: 'PackedByteArray(0, 0, 9, 0, 11, 0, 2, 0, 1, 0, 0, 0, 5, 0)',
     });
     expect(result.cells).toEqual([

@@ -1,15 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { parseSprite2D } from './parser';
-import type { ParsedHeading } from '../../../parser/utils';
-
-const heading = (attrs: Record<string, string> = {}): ParsedHeading => ({
-  type: 'node',
-  attributes: { type: 'Sprite2D', name: 'S', ...attrs },
-});
+import { heading } from '../../../parser/testing/parserKit';
 
 describe('parseSprite2D', () => {
   it('parses texture, flags, offset, and sprite-sheet frames', () => {
-    const p = parseSprite2D(heading(), {
+    const p = parseSprite2D(heading('Sprite2D', { name: 'S' }), {
       texture: 'ExtResource("1_t")',
       centered: 'false',
       offset: 'Vector2(5, -3)',
@@ -29,7 +24,7 @@ describe('parseSprite2D', () => {
   });
 
   it('applies Godot defaults (centered true, frames 1, modulate white opaque)', () => {
-    const p = parseSprite2D(heading(), {});
+    const p = parseSprite2D(heading('Sprite2D', { name: 'S' }), {});
     expect(p.centered).toBe(true);
     expect(p.hframes).toBe(1);
     expect(p.vframes).toBe(1);
@@ -38,19 +33,27 @@ describe('parseSprite2D', () => {
   });
 
   it('inherits the Node2D transform', () => {
-    const p = parseSprite2D(heading(), { position: 'Vector2(10, 20)', z_index: '2' });
+    const p = parseSprite2D(heading('Sprite2D', { name: 'S' }), {
+      position: 'Vector2(10, 20)',
+      z_index: '2',
+    });
     expect(p.position).toEqual({ x: 10, y: 20 });
     expect(p.z_index).toBe(2);
   });
 
   it('parses region_enabled + region_rect', () => {
-    const p = parseSprite2D(heading(), { region_enabled: 'true', region_rect: 'Rect2(0, 0, 16, 24)' });
+    const p = parseSprite2D(heading('Sprite2D', { name: 'S' }), {
+      region_enabled: 'true',
+      region_rect: 'Rect2(0, 0, 16, 24)',
+    });
     expect(p.region_enabled).toBe(true);
     expect(p.region_rect).toEqual({ x: 0, y: 0, width: 16, height: 24 });
   });
 
   it('parses a modulate Color tint', () => {
-    const p = parseSprite2D(heading(), { modulate: 'Color(1, 0, 0, 0.5)' });
+    const p = parseSprite2D(heading('Sprite2D', { name: 'S' }), {
+      modulate: 'Color(1, 0, 0, 0.5)',
+    });
     expect(p.modulate.r).toBeCloseTo(1);
     expect(p.modulate.g).toBeCloseTo(0);
     expect(p.modulate.a).toBeCloseTo(0.5);

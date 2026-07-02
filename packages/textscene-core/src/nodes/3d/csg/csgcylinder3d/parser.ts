@@ -3,7 +3,7 @@
 import type { ParsedHeading } from '../../../../parser/utils';
 import type { CSGCylinder3DProperties } from './types';
 import { parseNode3D } from '../../../base/node3d/parser';
-import { warn } from '../../../../logger';
+import { finishCsgParse } from '../sharedParser';
 
 const DEFAULTS = { radius: 1, height: 1, sides: 8, cone: false } as const;
 
@@ -27,22 +27,7 @@ export function parseCSGCylinder3D(
     cone: properties.cone === undefined ? DEFAULTS.cone : properties.cone === 'true',
   };
 
-  if (properties.material) {
-    result.material = properties.material;
-  }
-
-  if (properties.operation !== undefined) {
-    const operation = parseInt(properties.operation, 10);
-    if (!Number.isNaN(operation)) {
-      result.operation = operation;
-      if (operation !== 0) {
-        warn(
-          `[CSGCylinder3D] operation=${operation} (non-union) is ignored — ` +
-            `rendering the base cylinder primitive (ADR-0004).`
-        );
-      }
-    }
-  }
+  finishCsgParse(result, properties, 'CSGCylinder3D', 'cylinder');
 
   return result;
 }

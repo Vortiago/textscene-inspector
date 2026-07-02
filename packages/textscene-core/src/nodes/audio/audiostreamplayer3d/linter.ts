@@ -9,12 +9,15 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { checkResourceExists } from '../../../linter/resourceChecker.js';
+import {
+  checkExtremeVolume,
+  checkUnusualPitch,
+  checkInvalidMaxPolyphony,
+} from '../sharedLinterChecks.js';
 
-// Thresholds for warnings
+// 3D tolerates a narrower volume range than the 2D/base players
 const EXTREME_VOLUME_DB_MIN = -40;
 const EXTREME_VOLUME_DB_MAX = 6;
-const TYPICAL_PITCH_SCALE_MIN = 0.5;
-const TYPICAL_PITCH_SCALE_MAX = 2.0;
 
 /**
  * Validate AudioStreamPlayer3D semantic rules
@@ -121,67 +124,17 @@ function checkAudioStreamPlayer3D(context: RuleContext): Diagnostic[] {
     });
   }
 
-  // WARNING: Extreme volume_db values
-  if (rawProps.volume_db !== undefined) {
-    const volumeDb = parseFloat(rawProps.volume_db);
-    if (!isNaN(volumeDb)) {
-      if (volumeDb < EXTREME_VOLUME_DB_MIN) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `Volume is very low (${volumeDb} dB). Values below ${EXTREME_VOLUME_DB_MIN} dB are rarely intentional.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: 'audiostreamplayer3d-extreme-volume',
-        });
-      } else if (volumeDb > EXTREME_VOLUME_DB_MAX) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `Volume is very high (${volumeDb} dB). Values above ${EXTREME_VOLUME_DB_MAX} dB can cause distortion.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: 'audiostreamplayer3d-extreme-volume',
-        });
-      }
-    }
-  }
-
-  // WARNING: Unusual pitch_scale values
-  if (rawProps.pitch_scale !== undefined) {
-    const pitchScale = parseFloat(rawProps.pitch_scale);
-    if (!isNaN(pitchScale) && pitchScale > 0) {
-      if (pitchScale < TYPICAL_PITCH_SCALE_MIN) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `Pitch scale is very low (${pitchScale}). Values below ${TYPICAL_PITCH_SCALE_MIN} sound very slow/deep.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: 'audiostreamplayer3d-unusual-pitch',
-        });
-      } else if (pitchScale > TYPICAL_PITCH_SCALE_MAX) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `Pitch scale is very high (${pitchScale}). Values above ${TYPICAL_PITCH_SCALE_MAX} sound very fast/high-pitched.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: 'audiostreamplayer3d-unusual-pitch',
-        });
-      }
-    }
-  }
-
-  // ERROR: max_polyphony < 1
-  if (rawProps.max_polyphony !== undefined) {
-    const maxPolyphony = parseInt(rawProps.max_polyphony, 10);
-    if (!isNaN(maxPolyphony) && maxPolyphony < 1) {
-      diagnostics.push({
-        severity: 'error',
-        message: `Property 'max_polyphony' must be at least 1 (got ${maxPolyphony}). Values below 1 cause runtime errors.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'audiostreamplayer3d-invalid-max-polyphony',
-      });
-    }
-  }
+  checkExtremeVolume(
+    rawProps,
+    node.name,
+    node.type,
+    'audiostreamplayer3d',
+    EXTREME_VOLUME_DB_MIN,
+    EXTREME_VOLUME_DB_MAX,
+    diagnostics
+  );
+  checkUnusualPitch(rawProps, node.name, node.type, 'audiostreamplayer3d', diagnostics);
+  checkInvalidMaxPolyphony(rawProps, node.name, node.type, 'audiostreamplayer3d', diagnostics);
 
   return diagnostics;
 }

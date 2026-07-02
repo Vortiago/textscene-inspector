@@ -1,14 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import type { ParsedHeading } from '../../../../parser/utils';
+import { heading } from '../../../../parser/testing/parserKit';
 import { parseTileMap } from './parser';
-
-function heading(attributes: Record<string, string>): ParsedHeading {
-  return { type: 'node', attributes };
-}
 
 describe('parseTileMap', () => {
   it('collects layers in index order with per-layer surface and decoded cells', () => {
-    const result = parseTileMap(heading({ name: 'Map', type: 'TileMap', parent: '.' }), {
+    const result = parseTileMap(heading('TileMap', { name: 'Map', parent: '.' }), {
       position: 'Vector2(-64, -32)',
       tile_set: 'ExtResource("1")',
       format: '2',
@@ -34,7 +30,7 @@ describe('parseTileMap', () => {
   });
 
   it('handles a TileMap without layers or tile_set (edge case)', () => {
-    const result = parseTileMap(heading({}), {});
+    const result = parseTileMap({ type: 'node', attributes: {} }, {});
     expect(result.name).toBe('');
     expect(result.layers).toEqual([]);
     expect(result.tile_set).toBeUndefined();

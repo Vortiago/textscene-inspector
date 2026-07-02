@@ -35,7 +35,7 @@ const CORE_SRC = join(REPO_ROOT, 'packages/textscene-core/src');
 
 const NODE3D_PARSER_TEST_CASES = (typeName) => `  it('parses name, parent, and transform (happy path)', () => {
     const result = parse${typeName}(
-      heading({ name: 'My${typeName}', type: '${typeName}', parent: '.' }),
+      heading('${typeName}', { name: 'My${typeName}', parent: '.' }),
       { transform: 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 3, 4)' }
     );
     expect(result.name).toBe('My${typeName}');
@@ -45,7 +45,7 @@ const NODE3D_PARSER_TEST_CASES = (typeName) => `  it('parses name, parent, and t
 
   it('falls back to identity transform on a malformed transform (error path)', () => {
     const result = parse${typeName}(
-      heading({ name: 'Bad', type: '${typeName}' }),
+      heading('${typeName}', { name: 'Bad' }),
       { transform: 'Transform3D(not, valid)' }
     );
     expect(result.transform?.basis_x).toEqual({ x: 1, y: 0, z: 0 });
@@ -53,7 +53,7 @@ const NODE3D_PARSER_TEST_CASES = (typeName) => `  it('parses name, parent, and t
   });
 
   it('handles missing optional attributes (edge case)', () => {
-    const result = parse${typeName}(heading({}), {});
+    const result = parse${typeName}({ type: 'node', attributes: {} }, {});
     expect(result.name).toBe('');
     expect(result.parent).toBeUndefined();
     expect(result.transform).toBeUndefined();
@@ -61,7 +61,7 @@ const NODE3D_PARSER_TEST_CASES = (typeName) => `  it('parses name, parent, and t
 
 const NODE2D_PARSER_TEST_CASES = (typeName) => `  it('parses name, parent, and the 2D transform (happy path)', () => {
     const result = parse${typeName}(
-      heading({ name: 'My${typeName}', type: '${typeName}', parent: '.' }),
+      heading('${typeName}', { name: 'My${typeName}', parent: '.' }),
       { position: 'Vector2(10, 20)', rotation: '0.5' }
     );
     expect(result.name).toBe('My${typeName}');
@@ -72,7 +72,7 @@ const NODE2D_PARSER_TEST_CASES = (typeName) => `  it('parses name, parent, and t
 
   it('falls back to the identity transform on a malformed transform (error path)', () => {
     const result = parse${typeName}(
-      heading({ name: 'Bad', type: '${typeName}' }),
+      heading('${typeName}', { name: 'Bad' }),
       { transform: 'Transform2D(not, valid)' }
     );
     expect(result.position).toEqual({ x: 0, y: 0 });
@@ -80,7 +80,7 @@ const NODE2D_PARSER_TEST_CASES = (typeName) => `  it('parses name, parent, and t
   });
 
   it('handles missing optional attributes (edge case)', () => {
-    const result = parse${typeName}(heading({}), {});
+    const result = parse${typeName}({ type: 'node', attributes: {} }, {});
     expect(result.name).toBe('');
     expect(result.parent).toBeUndefined();
     expect(result.position).toEqual({ x: 0, y: 0 });
@@ -293,12 +293,8 @@ export function parse${typeName}(
     files.set(
       'parser.test.ts',
       `import { describe, expect, it } from 'vitest';
-import type { ParsedHeading } from '${toSrc}parser/utils';
+import { heading } from '${toSrc}parser/testing/parserKit';
 import { parse${typeName} } from './parser';
-
-function heading(attributes: Record<string, string>): ParsedHeading {
-  return { type: 'node', attributes };
-}
 
 describe('parse${typeName}', () => {
 ${base.parserTestCases(typeName)}

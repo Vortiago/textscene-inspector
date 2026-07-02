@@ -84,198 +84,111 @@ describe('Camera2D Linter', () => {
         valid: [true, false],
         invalid: [{ value: 1, contains: ['limit_smoothed', 'boolean'] }],
       },
+      {
+        prop: 'limit_left',
+        valid: [-1000],
+        invalid: [{ value: 'invalid', contains: ['limit_left', 'integer'] }],
+      },
+      {
+        // parseInt parses "10.5" as 10, so a fractional limit passes format validation.
+        prop: 'limit_top',
+        valid: [-500, 10.5],
+      },
+      {
+        prop: 'limit_right',
+        valid: [1000],
+        invalid: [{ value: 'abc', contains: ['limit_right', 'integer'] }],
+      },
+      {
+        prop: 'limit_bottom',
+        valid: [500],
+        invalid: [{ value: 'xyz', contains: ['limit_bottom', 'integer'] }],
+      },
+      {
+        prop: 'position_smoothing_enabled',
+        valid: [true],
+        with: { position_smoothing_speed: 5.0 },
+      },
+      {
+        prop: 'position_smoothing_speed',
+        valid: [10.5],
+        invalid: [
+          { value: 0, contains: ['position_smoothing_speed', 'greater than 0'] },
+          { value: '-5.0', contains: ['position_smoothing_speed', 'greater than 0'] },
+          { value: 'fast', contains: ['position_smoothing_speed', 'must be a number'] },
+        ],
+      },
+      {
+        prop: 'rotation_smoothing_enabled',
+        valid: [true],
+        with: { rotation_smoothing_speed: 5.0 },
+      },
+      {
+        prop: 'rotation_smoothing_speed',
+        valid: [10.5],
+        invalid: [
+          { value: 0, contains: ['rotation_smoothing_speed', 'greater than 0'] },
+          { value: '-5.0', contains: ['rotation_smoothing_speed', 'greater than 0'] },
+        ],
+      },
+      {
+        prop: 'drag_horizontal_enabled',
+        valid: [true],
+        with: { drag_vertical_enabled: false },
+      },
+      // Drag offsets/margins without drag_*_enabled legitimately warn — assert no errors only.
+      {
+        prop: 'drag_horizontal_offset',
+        acceptMode: 'no-error',
+        valid: [-1, -0.5, 0, 0.5, 1],
+        invalid: [{ value: 1.5, contains: ['drag_horizontal_offset', 'between -1 and 1'] }],
+      },
+      {
+        prop: 'drag_vertical_offset',
+        acceptMode: 'no-error',
+        valid: [-1, -0.5, 0, 0.5, 1],
+        invalid: [{ value: '-2.0', contains: ['drag_vertical_offset', 'between -1 and 1'] }],
+      },
+      {
+        prop: 'drag_left_margin',
+        acceptMode: 'no-error',
+        valid: [0, 0.2, 0.5, 0.8, 1],
+        invalid: [{ value: 1.5, contains: ['drag_left_margin', 'between 0 and 1'] }],
+      },
+      {
+        prop: 'drag_top_margin',
+        acceptMode: 'no-error',
+        valid: [0, 0.2, 0.5, 0.8, 1],
+        invalid: [{ value: -0.1, contains: ['drag_top_margin', 'between 0 and 1'] }],
+      },
+      {
+        prop: 'drag_right_margin',
+        acceptMode: 'no-error',
+        valid: [0, 0.2, 0.5, 0.8, 1],
+        invalid: [{ value: '2.0', contains: ['drag_right_margin', 'between 0 and 1'] }],
+      },
+      {
+        prop: 'drag_bottom_margin',
+        acceptMode: 'no-error',
+        valid: [0, 0.2, 0.5, 0.8, 1],
+        invalid: [{ value: -0.5, contains: ['drag_bottom_margin', 'between 0 and 1'] }],
+      },
+      {
+        prop: 'editor_draw_screen',
+        valid: [true],
+        invalid: [{ value: 1, contains: ['editor_draw_screen', 'boolean'] }],
+      },
+      {
+        prop: 'editor_draw_limits',
+        valid: [false],
+        invalid: [{ value: 'yes', contains: ['editor_draw_limits', 'boolean'] }],
+      },
+      {
+        prop: 'editor_draw_drag_margin',
+        valid: [true],
+        invalid: [{ value: 0, contains: ['editor_draw_drag_margin', 'boolean'] }],
+      },
     ]);
-
-    describe('limit properties validation', () => {
-      it('should accept valid limit values', () => {
-        expectClean(
-          scene(node('Camera2D', { limit_left: -1000, limit_top: -500, limit_right: 1000, limit_bottom: 500 }))
-        );
-      });
-
-      it('should reject invalid limit_left format', () => {
-        expectDiagnostic(scene(node('Camera2D', { limit_left: 'invalid' })), {
-          prop: 'limit_left',
-          contains: ['limit_left', 'integer'],
-        });
-      });
-
-      it('should reject invalid limit_top format', () => {
-        // parseInt parses "10.5" as 10, so this passes format validation.
-        expectClean(scene(node('Camera2D', { limit_top: 10.5 })));
-      });
-
-      it('should reject invalid limit_right format', () => {
-        expectDiagnostic(scene(node('Camera2D', { limit_right: 'abc' })), {
-          prop: 'limit_right',
-          contains: ['limit_right', 'integer'],
-        });
-      });
-
-      it('should reject invalid limit_bottom format', () => {
-        expectDiagnostic(scene(node('Camera2D', { limit_bottom: 'xyz' })), {
-          prop: 'limit_bottom',
-          contains: ['limit_bottom', 'integer'],
-        });
-      });
-    });
-
-    describe('position_smoothing validation', () => {
-      it('should accept valid position_smoothing_enabled', () => {
-        expectClean(scene(node('Camera2D', { position_smoothing_enabled: true, position_smoothing_speed: 5.0 })));
-      });
-
-      it('should accept valid position_smoothing_speed', () => {
-        expectClean(scene(node('Camera2D', { position_smoothing_speed: 10.5 })));
-      });
-
-      it('should reject zero position_smoothing_speed', () => {
-        expectDiagnostic(scene(node('Camera2D', { position_smoothing_speed: 0 })), {
-          prop: 'position_smoothing_speed',
-          contains: ['position_smoothing_speed', 'greater than 0'],
-        });
-      });
-
-      it('should reject negative position_smoothing_speed', () => {
-        expectDiagnostic(scene(node('Camera2D', { position_smoothing_speed: '-5.0' })), {
-          prop: 'position_smoothing_speed',
-          contains: ['position_smoothing_speed', 'greater than 0'],
-        });
-      });
-
-      it('should reject invalid position_smoothing_speed format', () => {
-        expectDiagnostic(scene(node('Camera2D', { position_smoothing_speed: 'fast' })), {
-          prop: 'position_smoothing_speed',
-          contains: ['position_smoothing_speed', 'must be a number'],
-        });
-      });
-    });
-
-    describe('rotation_smoothing validation', () => {
-      it('should accept valid rotation_smoothing_enabled', () => {
-        expectClean(scene(node('Camera2D', { rotation_smoothing_enabled: true, rotation_smoothing_speed: 5.0 })));
-      });
-
-      it('should accept valid rotation_smoothing_speed', () => {
-        expectClean(scene(node('Camera2D', { rotation_smoothing_speed: 10.5 })));
-      });
-
-      it('should reject zero rotation_smoothing_speed', () => {
-        expectDiagnostic(scene(node('Camera2D', { rotation_smoothing_speed: 0 })), {
-          prop: 'rotation_smoothing_speed',
-          contains: ['rotation_smoothing_speed', 'greater than 0'],
-        });
-      });
-
-      it('should reject negative rotation_smoothing_speed', () => {
-        expectDiagnostic(scene(node('Camera2D', { rotation_smoothing_speed: '-5.0' })), {
-          prop: 'rotation_smoothing_speed',
-          contains: ['rotation_smoothing_speed', 'greater than 0'],
-        });
-      });
-    });
-
-    describe('drag properties validation', () => {
-      it('should accept valid drag enabled values', () => {
-        expectClean(scene(node('Camera2D', { drag_horizontal_enabled: true, drag_vertical_enabled: false })));
-      });
-
-      it('should accept valid drag offsets in range -1 to 1', () => {
-        for (const offset of [-1, -0.5, 0, 0.5, 1]) {
-          expectNoErrors(
-            scene(node('Camera2D', { drag_horizontal_offset: offset, drag_vertical_offset: offset })),
-            { prop: 'offset' }
-          );
-        }
-      });
-
-      it('should reject drag_horizontal_offset out of range', () => {
-        expectDiagnostic(scene(node('Camera2D', { drag_horizontal_offset: 1.5 })), {
-          prop: 'drag_horizontal_offset',
-          contains: ['drag_horizontal_offset', 'between -1 and 1'],
-        });
-      });
-
-      it('should reject drag_vertical_offset out of range', () => {
-        expectDiagnostic(scene(node('Camera2D', { drag_vertical_offset: '-2.0' })), {
-          prop: 'drag_vertical_offset',
-          contains: ['drag_vertical_offset', 'between -1 and 1'],
-        });
-      });
-
-      it('should accept valid drag margins in range 0 to 1', () => {
-        for (const margin of [0, 0.2, 0.5, 0.8, 1]) {
-          expectNoErrors(
-            scene(
-              node('Camera2D', {
-                drag_left_margin: margin,
-                drag_top_margin: margin,
-                drag_right_margin: margin,
-                drag_bottom_margin: margin,
-              })
-            ),
-            { prop: 'margin' }
-          );
-        }
-      });
-
-      it('should reject drag_left_margin out of range', () => {
-        expectDiagnostic(scene(node('Camera2D', { drag_left_margin: 1.5 })), {
-          prop: 'drag_left_margin',
-          contains: ['drag_left_margin', 'between 0 and 1'],
-        });
-      });
-
-      it('should reject drag_top_margin out of range', () => {
-        expectDiagnostic(scene(node('Camera2D', { drag_top_margin: -0.1 })), {
-          prop: 'drag_top_margin',
-          contains: ['drag_top_margin', 'between 0 and 1'],
-        });
-      });
-
-      it('should reject drag_right_margin out of range', () => {
-        expectDiagnostic(scene(node('Camera2D', { drag_right_margin: '2.0' })), {
-          prop: 'drag_right_margin',
-          contains: ['drag_right_margin', 'between 0 and 1'],
-        });
-      });
-
-      it('should reject drag_bottom_margin out of range', () => {
-        expectDiagnostic(scene(node('Camera2D', { drag_bottom_margin: -0.5 })), {
-          prop: 'drag_bottom_margin',
-          contains: ['drag_bottom_margin', 'between 0 and 1'],
-        });
-      });
-    });
-
-    describe('editor properties validation', () => {
-      it('should accept valid editor_draw properties', () => {
-        expectClean(
-          scene(node('Camera2D', { editor_draw_screen: true, editor_draw_limits: false, editor_draw_drag_margin: true }))
-        );
-      });
-
-      it('should reject invalid editor_draw_screen value', () => {
-        expectDiagnostic(scene(node('Camera2D', { editor_draw_screen: 1 })), {
-          prop: 'editor_draw_screen',
-          contains: ['editor_draw_screen', 'boolean'],
-        });
-      });
-
-      it('should reject invalid editor_draw_limits value', () => {
-        expectDiagnostic(scene(node('Camera2D', { editor_draw_limits: 'yes' })), {
-          prop: 'editor_draw_limits',
-          contains: ['editor_draw_limits', 'boolean'],
-        });
-      });
-
-      it('should reject invalid editor_draw_drag_margin value', () => {
-        expectDiagnostic(scene(node('Camera2D', { editor_draw_drag_margin: 0 })), {
-          prop: 'editor_draw_drag_margin',
-          contains: ['editor_draw_drag_margin', 'boolean'],
-        });
-      });
-    });
   });
 
   describe('Semantic Validation', () => {

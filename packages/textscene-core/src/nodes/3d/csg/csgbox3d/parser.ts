@@ -3,6 +3,7 @@
 import type { ParsedHeading } from '../../../../parser/utils';
 import type { CSGBox3DProperties } from './types';
 import { parseNode3D } from '../../../base/node3d/parser';
+import { finishCsgParse } from '../sharedParser';
 import { parseVector3 } from '../../../../parser/vectors';
 import { warn } from '../../../../logger';
 
@@ -26,25 +27,7 @@ export function parseCSGBox3D(
 
   const result: CSGBox3DProperties = { ...node3d, size };
 
-  if (properties.material) {
-    result.material = properties.material;
-  }
-
-  if (properties.operation !== undefined) {
-    const operation = parseInt(properties.operation, 10);
-    if (!Number.isNaN(operation)) {
-      result.operation = operation;
-      if (operation !== 0) {
-        // ADR-0004: boolean ops are not applied; the node renders as its
-        // solid base primitive. Warn so a subtraction/intersection that
-        // renders "wrong" (a hole shows as a solid block) isn't silent.
-        warn(
-          `[CSGBox3D] operation=${operation} (non-union) is ignored — ` +
-            `rendering the base box primitive (ADR-0004).`
-        );
-      }
-    }
-  }
+  finishCsgParse(result, properties, 'CSGBox3D', 'box');
 
   return result;
 }

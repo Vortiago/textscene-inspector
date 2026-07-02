@@ -11,6 +11,7 @@ import {
   expectClean,
   expectDiagnostic,
   expectNoErrors,
+  runPropertyValidation,
   type PropValue,
 } from '../../../linter/testing/testkit';
 import './linterParser';
@@ -43,381 +44,167 @@ describe('AudioStreamPlayer3D Linter', () => {
       );
     });
 
-    describe('stream validation', () => {
-      it('should accept valid ExtResource stream', () => {
-        expectClean(withStream());
-      });
+    it('should accept a valid SubResource stream', () => {
+      expectClean(
+        scene(
+          '[sub_resource type="AudioStreamGenerator" id="1"]',
+          node('AudioStreamPlayer3D', { stream: 'SubResource("1")' }, { name: 'AudioPlayer' })
+        )
+      );
+    });
 
-      it('should accept valid SubResource stream', () => {
-        expectClean(
-          scene(
-            '[sub_resource type="AudioStreamGenerator" id="1"]',
-            node('AudioStreamPlayer3D', { stream: 'SubResource("1")' }, { name: 'AudioPlayer' })
-          )
-        );
-      });
-
-      it('should reject invalid stream format', () => {
-        expectDiagnostic(bare({ stream: 'invalid_value' }), {
+    runPropertyValidation(
+      {
+        nodeType: 'AudioStreamPlayer3D',
+        prefix: [audioStream],
+        baseProps: { stream: 'ExtResource("1_abc")' },
+      },
+      [
+        {
           prop: 'stream',
-          contains: ['stream', 'resource reference'],
-        });
-      });
-    });
-
-    describe('volume_db validation', () => {
-      it('should accept valid volume_db values', () => {
-        expectClean(withStream({ volume_db: -6.0 }));
-      });
-
-      it('should accept negative volume_db', () => {
-        // May have warning but no errors
-        expectNoErrors(withStream({ volume_db: -80.0 }));
-      });
-
-      it('should reject invalid volume_db format', () => {
-        expectDiagnostic(bare({ volume_db: 'invalid' }), {
+          valid: ['ExtResource("1_abc")'],
+          invalid: [{ value: 'invalid_value', contains: ['stream', 'resource reference'] }],
+        },
+        {
           prop: 'volume_db',
-          contains: ['volume_db', 'must be a number'],
-        });
-      });
-    });
-
-    describe('pitch_scale validation', () => {
-      it('should accept valid pitch_scale values', () => {
-        for (const value of [0.5, 1.0, 1.5, 2.0]) {
-          expectNoErrors(withStream({ pitch_scale: value }));
-        }
-      });
-
-      it('should reject zero pitch_scale', () => {
-        expectDiagnostic(bare({ pitch_scale: 0 }), {
+          valid: [-6.0],
+          invalid: [{ value: 'invalid', contains: ['volume_db', 'must be a number'] }],
+        },
+        {
+          // Extreme-but-valid volume legitimately warns — assert no errors only.
+          prop: 'volume_db',
+          acceptMode: 'no-error',
+          valid: [-80.0],
+        },
+        {
+          // 0.5/2.0 sit at the unusual-pitch warning edge — assert no errors only.
           prop: 'pitch_scale',
-          contains: ['pitch_scale', 'greater than 0'],
-        });
-      });
-
-      it('should reject negative pitch_scale', () => {
-        expectDiagnostic(bare({ pitch_scale: -1.0 }), {
-          prop: 'pitch_scale',
-          contains: ['pitch_scale', 'greater than 0'],
-        });
-      });
-
-      it('should reject invalid pitch_scale format', () => {
-        expectDiagnostic(bare({ pitch_scale: 'invalid' }), {
-          prop: 'pitch_scale',
-          contains: ['pitch_scale', 'must be a number'],
-        });
-      });
-    });
-
-    describe('boolean property validation', () => {
-      it('should accept valid playing boolean', () => {
-        for (const value of [true, false]) {
-          expectNoErrors(bare({ playing: value }), { prop: 'playing' });
-        }
-      });
-
-      it('should reject invalid playing value', () => {
-        expectDiagnostic(bare({ playing: 'yes' }), {
+          acceptMode: 'no-error',
+          valid: [0.5, 1.0, 1.5, 2.0],
+          invalid: [
+            { value: 0, contains: ['pitch_scale', 'greater than 0'] },
+            { value: -1.0, contains: ['pitch_scale', 'greater than 0'] },
+            { value: 'invalid', contains: ['pitch_scale', 'must be a number'] },
+          ],
+        },
+        {
           prop: 'playing',
-          contains: ['playing', 'boolean'],
-        });
-      });
-
-      it('should accept valid autoplay boolean', () => {
-        expectClean(withStream({ autoplay: true }));
-      });
-
-      it('should accept valid stream_paused boolean', () => {
-        expectNoErrors(bare({ stream_paused: false }), { prop: 'stream_paused' });
-      });
-
-      it('should accept valid emission_angle_enabled boolean', () => {
-        expectClean(withStream({ emission_angle_enabled: true, emission_angle_degrees: 45.0 }));
-      });
-    });
-
-    describe('attenuation_model validation', () => {
-      it('should accept all valid attenuation models', () => {
-        // INVERSE, INVERSE_SQUARE, LOGARITHMIC, DISABLED
-        for (const mode of [0, 1, 2, 3]) {
-          expectClean(withStream({ attenuation_model: mode }));
-        }
-      });
-
-      it('should reject invalid attenuation_model value', () => {
-        expectDiagnostic(bare({ attenuation_model: 5 }), {
+          valid: [true, false],
+          invalid: [{ value: 'yes', contains: ['playing', 'boolean'] }],
+        },
+        { prop: 'autoplay', valid: [true] },
+        { prop: 'stream_paused', valid: [false] },
+        {
+          prop: 'emission_angle_enabled',
+          valid: [true],
+          with: { emission_angle_degrees: 45.0 },
+        },
+        {
+          // INVERSE, INVERSE_SQUARE, LOGARITHMIC, DISABLED
           prop: 'attenuation_model',
-          contains: ['attenuation_model', '0-3'],
-        });
-      });
-
-      it('should reject negative attenuation_model', () => {
-        expectDiagnostic(bare({ attenuation_model: -1 }), {
-          prop: 'attenuation_model',
-          contains: ['attenuation_model'],
-        });
-      });
-    });
-
-    describe('unit_size validation', () => {
-      it('should accept valid unit_size values', () => {
-        expectClean(withStream({ unit_size: 10.0 }));
-      });
-
-      it('should reject zero unit_size', () => {
-        expectDiagnostic(bare({ unit_size: 0 }), {
+          valid: [0, 1, 2, 3],
+          invalid: [
+            { value: 5, contains: ['attenuation_model', '0-3'] },
+            { value: -1, contains: ['attenuation_model'] },
+          ],
+        },
+        {
           prop: 'unit_size',
-          contains: ['unit_size', 'greater than 0'],
-        });
-      });
-
-      it('should reject negative unit_size', () => {
-        expectDiagnostic(bare({ unit_size: -5.0 }), {
-          prop: 'unit_size',
-          contains: ['unit_size', 'greater than 0'],
-        });
-      });
-
-      it('should reject invalid unit_size format', () => {
-        expectDiagnostic(bare({ unit_size: 'invalid' }), {
-          prop: 'unit_size',
-          contains: ['unit_size', 'must be a number'],
-        });
-      });
-    });
-
-    describe('max_distance validation', () => {
-      it('should accept valid max_distance values', () => {
-        for (const value of [0, 50, 100, 1000]) {
-          expectClean(withStream({ max_distance: value }));
-        }
-      });
-
-      it('should accept zero max_distance (unlimited)', () => {
-        expectClean(withStream({ max_distance: 0 }));
-      });
-
-      it('should reject negative max_distance', () => {
-        expectDiagnostic(bare({ max_distance: -10.0 }), {
+          valid: [10.0],
+          invalid: [
+            { value: 0, contains: ['unit_size', 'greater than 0'] },
+            { value: -5.0, contains: ['unit_size', 'greater than 0'] },
+            { value: 'invalid', contains: ['unit_size', 'must be a number'] },
+          ],
+        },
+        {
+          // 0 = unlimited
           prop: 'max_distance',
-          contains: ['max_distance', 'non-negative'],
-        });
-      });
-
-      it('should reject invalid max_distance format', () => {
-        expectDiagnostic(bare({ max_distance: 'invalid' }), {
-          prop: 'max_distance',
-          contains: ['max_distance', 'must be a number'],
-        });
-      });
-    });
-
-    describe('max_db validation', () => {
-      it('should accept valid max_db values', () => {
-        for (const value of [-24, 0, 3, 6]) {
-          expectClean(withStream({ max_db: value }));
-        }
-      });
-
-      it('should reject invalid max_db format', () => {
-        expectDiagnostic(bare({ max_db: 'invalid' }), {
+          valid: [0, 50, 100, 1000],
+          invalid: [
+            { value: -10.0, contains: ['max_distance', 'non-negative'] },
+            { value: 'invalid', contains: ['max_distance', 'must be a number'] },
+          ],
+        },
+        {
           prop: 'max_db',
-          contains: ['max_db', 'must be a number'],
-        });
-      });
-    });
-
-    describe('attenuation_filter_cutoff_hz validation', () => {
-      it('should accept valid cutoff frequencies', () => {
-        for (const value of [1, 5000, 10000, 20500]) {
-          expectClean(withStream({ attenuation_filter_cutoff_hz: value }));
-        }
-      });
-
-      it('should reject cutoff below 1 Hz', () => {
-        expectDiagnostic(bare({ attenuation_filter_cutoff_hz: 0.5 }), {
+          valid: [-24, 0, 3, 6],
+          invalid: [{ value: 'invalid', contains: ['max_db', 'must be a number'] }],
+        },
+        {
           prop: 'attenuation_filter_cutoff_hz',
-          contains: ['attenuation_filter_cutoff_hz', 'at least 1 Hz'],
-        });
-      });
-
-      it('should reject invalid cutoff format', () => {
-        expectDiagnostic(bare({ attenuation_filter_cutoff_hz: 'invalid' }), {
-          prop: 'attenuation_filter_cutoff_hz',
-          contains: ['attenuation_filter_cutoff_hz', 'must be a number'],
-        });
-      });
-    });
-
-    describe('attenuation_filter_db validation', () => {
-      it('should accept valid filter dB values', () => {
-        for (const value of [-80, -24, 0, 6]) {
-          expectClean(withStream({ attenuation_filter_db: value }));
-        }
-      });
-
-      it('should reject invalid filter dB format', () => {
-        expectDiagnostic(bare({ attenuation_filter_db: 'invalid' }), {
+          valid: [1, 5000, 10000, 20500],
+          invalid: [
+            { value: 0.5, contains: ['attenuation_filter_cutoff_hz', 'at least 1 Hz'] },
+            { value: 'invalid', contains: ['attenuation_filter_cutoff_hz', 'must be a number'] },
+          ],
+        },
+        {
           prop: 'attenuation_filter_db',
-          contains: ['attenuation_filter_db', 'must be a number'],
-        });
-      });
-    });
-
-    describe('doppler_tracking validation', () => {
-      it('should accept all valid doppler tracking modes', () => {
-        // DISABLED, IDLE_STEP, PHYSICS_STEP
-        for (const mode of [0, 1, 2]) {
-          expectClean(withStream({ doppler_tracking: mode }));
-        }
-      });
-
-      it('should reject invalid doppler_tracking value', () => {
-        expectDiagnostic(bare({ doppler_tracking: 5 }), {
+          valid: [-80, -24, 0, 6],
+          invalid: [{ value: 'invalid', contains: ['attenuation_filter_db', 'must be a number'] }],
+        },
+        {
+          // DISABLED, IDLE_STEP, PHYSICS_STEP
           prop: 'doppler_tracking',
-          contains: ['doppler_tracking', '0-2'],
-        });
-      });
-
-      it('should reject negative doppler_tracking', () => {
-        expectDiagnostic(bare({ doppler_tracking: -1 }), {
-          prop: 'doppler_tracking',
-          contains: ['doppler_tracking'],
-        });
-      });
-    });
-
-    describe('panning_strength validation', () => {
-      it('should accept valid panning_strength values', () => {
-        for (const value of [0, 0.5, 1]) {
-          expectClean(withStream({ panning_strength: value }));
-        }
-      });
-
-      it('should reject panning_strength below 0', () => {
-        expectDiagnostic(bare({ panning_strength: -0.1 }), {
+          valid: [0, 1, 2],
+          invalid: [
+            { value: 5, contains: ['doppler_tracking', '0-2'] },
+            { value: -1, contains: ['doppler_tracking'] },
+          ],
+        },
+        {
           prop: 'panning_strength',
-          contains: ['panning_strength', 'between 0 and 1'],
-        });
-      });
-
-      it('should reject panning_strength above 1', () => {
-        expectDiagnostic(bare({ panning_strength: 1.5 }), {
-          prop: 'panning_strength',
-          contains: ['panning_strength', 'between 0 and 1'],
-        });
-      });
-    });
-
-    describe('area_mask validation', () => {
-      it('should accept valid area_mask values', () => {
-        for (const value of [0, 1, 100, 1048575]) {
-          expectClean(withStream({ area_mask: value }));
-        }
-      });
-
-      it('should reject area_mask below 0', () => {
-        expectDiagnostic(bare({ area_mask: -1 }), {
+          valid: [0, 0.5, 1],
+          invalid: [
+            { value: -0.1, contains: ['panning_strength', 'between 0 and 1'] },
+            { value: 1.5, contains: ['panning_strength', 'between 0 and 1'] },
+          ],
+        },
+        {
           prop: 'area_mask',
-          contains: ['area_mask', 'between 0 and 1048575'],
-        });
-      });
-
-      it('should reject area_mask exceeding maximum', () => {
-        expectDiagnostic(bare({ area_mask: 2000000 }), {
-          prop: 'area_mask',
-          contains: ['area_mask', 'between 0 and 1048575'],
-        });
-      });
-    });
-
-    describe('emission_angle_degrees validation', () => {
-      it('should accept valid emission angle values', () => {
-        for (const value of [0, 45, 60, 90]) {
-          expectClean(withStream({ emission_angle_enabled: true, emission_angle_degrees: value }));
-        }
-      });
-
-      it('should reject emission_angle_degrees below 0', () => {
-        expectDiagnostic(bare({ emission_angle_degrees: -10 }), {
+          valid: [0, 1, 100, 1048575],
+          invalid: [
+            { value: -1, contains: ['area_mask', 'between 0 and 1048575'] },
+            { value: 2000000, contains: ['area_mask', 'between 0 and 1048575'] },
+          ],
+        },
+        {
           prop: 'emission_angle_degrees',
-          contains: ['emission_angle_degrees', 'between 0 and 90'],
-        });
-      });
-
-      it('should reject emission_angle_degrees above 90', () => {
-        expectDiagnostic(bare({ emission_angle_degrees: 120 }), {
-          prop: 'emission_angle_degrees',
-          contains: ['emission_angle_degrees', 'between 0 and 90'],
-        });
-      });
-    });
-
-    describe('emission_angle_filter_attenuation_db validation', () => {
-      it('should accept valid filter attenuation values', () => {
-        for (const value of [-24, -12, 0, 6]) {
-          expectClean(
-            withStream({ emission_angle_enabled: true, emission_angle_filter_attenuation_db: value })
-          );
-        }
-      });
-
-      it('should reject invalid filter attenuation format', () => {
-        expectDiagnostic(bare({ emission_angle_filter_attenuation_db: 'invalid' }), {
+          valid: [0, 45, 60, 90],
+          with: { emission_angle_enabled: true },
+          invalid: [
+            { value: -10, contains: ['emission_angle_degrees', 'between 0 and 90'] },
+            { value: 120, contains: ['emission_angle_degrees', 'between 0 and 90'] },
+          ],
+        },
+        {
           prop: 'emission_angle_filter_attenuation_db',
-          contains: ['emission_angle_filter_attenuation_db', 'must be a number'],
-        });
-      });
-    });
-
-    describe('bus validation', () => {
-      it('should accept valid bus string', () => {
-        expectClean(withStream({ bus: '"Master"' }));
-      });
-
-      it('should accept StringName format for bus', () => {
-        expectClean(withStream({ bus: '&"Master"' }));
-      });
-
-      it('should reject invalid bus format', () => {
-        expectDiagnostic(bare({ bus: 'InvalidValue' }), {
+          valid: [-24, -12, 0, 6],
+          with: { emission_angle_enabled: true },
+          invalid: [
+            {
+              value: 'invalid',
+              contains: ['emission_angle_filter_attenuation_db', 'must be a number'],
+            },
+          ],
+        },
+        {
           prop: 'bus',
-          contains: ['bus', 'must be a string'],
-        });
-      });
-    });
-
-    describe('max_polyphony validation', () => {
-      it('should accept valid max_polyphony values', () => {
-        for (const value of [1, 4, 16, 32]) {
-          expectClean(withStream({ max_polyphony: value }));
-        }
-      });
-
-      it('should reject zero max_polyphony', () => {
-        expectDiagnostic(bare({ max_polyphony: 0 }), {
+          valid: ['"Master"', '&"Master"'],
+          invalid: [{ value: 'InvalidValue', contains: ['bus', 'must be a string'] }],
+        },
+        {
           prop: 'max_polyphony',
-          contains: ['max_polyphony', 'at least 1'],
-        });
-      });
-
-      it('should reject negative max_polyphony', () => {
-        expectDiagnostic(bare({ max_polyphony: -1 }), {
-          prop: 'max_polyphony',
-          contains: ['max_polyphony', 'at least 1'],
-        });
-      });
-
-      it('should reject invalid max_polyphony format', () => {
-        expectDiagnostic(bare({ max_polyphony: 'invalid' }), {
-          prop: 'max_polyphony',
-          contains: ['max_polyphony', 'must be a number'],
-        });
-      });
-    });
+          valid: [1, 4, 16, 32],
+          invalid: [
+            { value: 0, contains: ['max_polyphony', 'at least 1'] },
+            { value: -1, contains: ['max_polyphony', 'at least 1'] },
+            { value: 'invalid', contains: ['max_polyphony', 'must be a number'] },
+          ],
+        },
+      ]
+    );
   });
 
   describe('Semantic Validation', () => {

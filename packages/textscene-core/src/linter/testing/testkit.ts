@@ -11,7 +11,8 @@
  *
  * Fidelity contract: property values are rendered VERBATIM when given as strings,
  * so an author keeps full control of the literal form (`Vector2(0, 1)`, `"Master"`,
- * `1e-5`). Rejections assert the diagnostic found *by property name* plus every
+ * `1e-5`). Rejections assert the diagnostic found *by property name* (or, when an
+ * `InvalidCase` sets `ruleName`, by rule name AND property name) plus every
  * required message substring — never a bare count — so coverage matches the
  * longhand tests they replace.
  */
@@ -84,7 +85,13 @@ export interface DiagnosticExpectation {
 }
 
 function locate(diagnostics: Diagnostic[], where: DiagnosticExpectation): Diagnostic | undefined {
-  if (where.ruleName !== undefined) return diagnostics.find(d => d.ruleName === where.ruleName);
+  if (where.ruleName !== undefined) {
+    return diagnostics.find(
+      d =>
+        d.ruleName === where.ruleName &&
+        (where.prop === undefined || d.message.includes(where.prop))
+    );
+  }
   if (where.prop !== undefined) return diagnostics.find(d => d.message.includes(where.prop!));
   return diagnostics[0];
 }
@@ -135,6 +142,8 @@ export function expectSeverity(content: string, severity: Severity): void {
 export interface InvalidCase {
   value: PropValue;
   contains?: string[];
+  /** Also require the located diagnostic to carry this rule (e.g. `'strict-parser'`). */
+  ruleName?: string;
 }
 
 /**
@@ -167,6 +176,16 @@ export interface PropertyValidationOptions {
    * semantic rules stay quiet — e.g. `collisionShape2d`.
    */
   acceptChild?: string;
+  /**
+   * Blocks placed before the node under test in EVERY scene (accept and reject) —
+   * e.g. a `[sub_resource]` shape plus the parent body a CollisionShape must hang off.
+   * Resource blocks belong here (TSCN order), not in `acceptChild`. Don't combine a
+   * parentless `prefix` node with `acceptChild`: the child's `parent="."` would bind
+   * to the prefix node, not the node under test.
+   */
+  prefix?: string[];
+  /** Heading options for the node under test — e.g. `{ parent: '.' }` to child it under a `prefix` body. */
+  nodeOptions?: NodeOptions;
   /** Properties merged into every accept-case node so it is otherwise valid (per-case `with` overrides). */
   baseProps?: Record<string, PropValue>;
   /** Default accept mode for all cases (default `'clean'`; per-case `acceptMode` overrides). */
@@ -185,22 +204,28 @@ export function runPropertyValidation(
   options: PropertyValidationOptions,
   cases: PropertyCase[]
 ): void {
-  const { nodeType, acceptChild, baseProps } = options;
+  const { nodeType, acceptChild, prefix = [], nodeOptions = {}, baseProps } = options;
   for (const propCase of cases) {
     const mode = propCase.acceptMode ?? options.acceptMode ?? 'clean';
     describe(`${propCase.prop} validation`, () => {
       for (const value of propCase.valid ?? []) {
         it(`accepts ${renderValue(value)}`, () => {
-          const underTest = node(nodeType, { ...baseProps, [propCase.prop]: value, ...propCase.with });
-          const content = acceptChild ? scene(underTest, acceptChild) : scene(underTest);
+          const underTest = node(
+            nodeType,
+            { ...baseProps, [propCase.prop]: value, ...propCase.with },
+            nodeOptions
+          );
+          const content = scene(...prefix, underTest, ...(acceptChild ? [acceptChild] : []));
           if (mode === 'no-error') expectNoErrors(content);
           else expectClean(content);
         });
       }
       for (const invalid of propCase.invalid ?? []) {
         it(`rejects ${renderValue(invalid.value)}`, () => {
-          expectDiagnostic(scene(node(nodeType, { [propCase.prop]: invalid.value })), {
+          const underTest = node(nodeType, { [propCase.prop]: invalid.value }, nodeOptions);
+          expectDiagnostic(scene(...prefix, underTest), {
             prop: propCase.prop,
+            ruleName: invalid.ruleName,
             contains: invalid.contains,
           });
         });

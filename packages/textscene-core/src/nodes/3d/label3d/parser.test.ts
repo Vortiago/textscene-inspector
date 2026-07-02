@@ -5,20 +5,12 @@
 import { describe, it, expect } from 'vitest';
 import { parseLabel3D } from './parser';
 import { BillboardMode } from './types';
-import type { ParsedHeading } from '../../../parser/utils';
+import { heading } from '../../../parser/testing/parserKit';
 
 describe('Label3D Parser', () => {
   describe('parseLabel3D', () => {
     it('should parse Label3D with minimal properties (just text)', () => {
-      const heading: ParsedHeading = {
-        type: 'node',
-        attributes: {
-          name: 'Label',
-          type: 'Label3D',
-        },
-      };
-
-      const props = parseLabel3D(heading, {
+      const props = parseLabel3D(heading('Label3D', { name: 'Label' }), {
         text: '"Hello World"',
       });
 
@@ -31,15 +23,7 @@ describe('Label3D Parser', () => {
     });
 
     it('should parse text property with quotes removed', () => {
-      const heading: ParsedHeading = {
-        type: 'node',
-        attributes: {
-          name: 'Label',
-          type: 'Label3D',
-        },
-      };
-
-      const props = parseLabel3D(heading, {
+      const props = parseLabel3D(heading('Label3D', { name: 'Label' }), {
         text: '"Hello World"',
       });
 
@@ -47,15 +31,7 @@ describe('Label3D Parser', () => {
     });
 
     it('should parse empty text', () => {
-      const heading: ParsedHeading = {
-        type: 'node',
-        attributes: {
-          name: 'Label',
-          type: 'Label3D',
-        },
-      };
-
-      const props = parseLabel3D(heading, {
+      const props = parseLabel3D(heading('Label3D', { name: 'Label' }), {
         text: '""',
       });
 
@@ -63,15 +39,7 @@ describe('Label3D Parser', () => {
     });
 
     it('should parse pixel_size property', () => {
-      const heading: ParsedHeading = {
-        type: 'node',
-        attributes: {
-          name: 'Label',
-          type: 'Label3D',
-        },
-      };
-
-      const props = parseLabel3D(heading, {
+      const props = parseLabel3D(heading('Label3D', { name: 'Label' }), {
         text: '"Test"',
         pixel_size: '0.02',
       });
@@ -80,15 +48,7 @@ describe('Label3D Parser', () => {
     });
 
     it('should parse billboard mode 0 (disabled)', () => {
-      const heading: ParsedHeading = {
-        type: 'node',
-        attributes: {
-          name: 'Label',
-          type: 'Label3D',
-        },
-      };
-
-      const props = parseLabel3D(heading, {
+      const props = parseLabel3D(heading('Label3D', { name: 'Label' }), {
         text: '"Test"',
         billboard: '0',
       });
@@ -97,15 +57,7 @@ describe('Label3D Parser', () => {
     });
 
     it('should parse billboard mode 1 (enabled)', () => {
-      const heading: ParsedHeading = {
-        type: 'node',
-        attributes: {
-          name: 'Label',
-          type: 'Label3D',
-        },
-      };
-
-      const props = parseLabel3D(heading, {
+      const props = parseLabel3D(heading('Label3D', { name: 'Label' }), {
         text: '"Test"',
         billboard: '1',
       });
@@ -114,15 +66,7 @@ describe('Label3D Parser', () => {
     });
 
     it('should parse billboard mode 2 (Y-axis only)', () => {
-      const heading: ParsedHeading = {
-        type: 'node',
-        attributes: {
-          name: 'Label',
-          type: 'Label3D',
-        },
-      };
-
-      const props = parseLabel3D(heading, {
+      const props = parseLabel3D(heading('Label3D', { name: 'Label' }), {
         text: '"Test"',
         billboard: '2',
       });
@@ -131,15 +75,7 @@ describe('Label3D Parser', () => {
     });
 
     it('should parse modulate color', () => {
-      const heading: ParsedHeading = {
-        type: 'node',
-        attributes: {
-          name: 'Label',
-          type: 'Label3D',
-        },
-      };
-
-      const props = parseLabel3D(heading, {
+      const props = parseLabel3D(heading('Label3D', { name: 'Label' }), {
         text: '"Test"',
         modulate: 'Color(1, 0.5, 0, 1)',
       });
@@ -148,15 +84,7 @@ describe('Label3D Parser', () => {
     });
 
     it('should parse outline_size', () => {
-      const heading: ParsedHeading = {
-        type: 'node',
-        attributes: {
-          name: 'Label',
-          type: 'Label3D',
-        },
-      };
-
-      const props = parseLabel3D(heading, {
+      const props = parseLabel3D(heading('Label3D', { name: 'Label' }), {
         text: '"Test"',
         outline_size: '8',
       });
@@ -165,15 +93,7 @@ describe('Label3D Parser', () => {
     });
 
     it('should parse outline_modulate color', () => {
-      const heading: ParsedHeading = {
-        type: 'node',
-        attributes: {
-          name: 'Label',
-          type: 'Label3D',
-        },
-      };
-
-      const props = parseLabel3D(heading, {
+      const props = parseLabel3D(heading('Label3D', { name: 'Label' }), {
         text: '"Test"',
         outline_modulate: 'Color(0.2, 0.2, 0.2, 1)',
       });
@@ -182,15 +102,7 @@ describe('Label3D Parser', () => {
     });
 
     it('should parse all properties together', () => {
-      const heading: ParsedHeading = {
-        type: 'node',
-        attributes: {
-          name: 'Label',
-          type: 'Label3D',
-        },
-      };
-
-      const props = parseLabel3D(heading, {
+      const props = parseLabel3D(heading('Label3D', { name: 'Label' }), {
         text: '"Full Test"',
         pixel_size: '0.015',
         billboard: '1',
@@ -208,29 +120,13 @@ describe('Label3D Parser', () => {
     });
 
     it('should handle missing text with empty string default', () => {
-      const heading: ParsedHeading = {
-        type: 'node',
-        attributes: {
-          name: 'Label',
-          type: 'Label3D',
-        },
-      };
-
-      const props = parseLabel3D(heading, {});
+      const props = parseLabel3D(heading('Label3D', { name: 'Label' }), {});
 
       expect(props.text).toBe('');
     });
 
     it('should default to billboard DISABLED when not specified (Godot default)', () => {
-      const heading: ParsedHeading = {
-        type: 'node',
-        attributes: {
-          name: 'Label',
-          type: 'Label3D',
-        },
-      };
-
-      const props = parseLabel3D(heading, {
+      const props = parseLabel3D(heading('Label3D', { name: 'Label' }), {
         text: '"Test"',
       });
 
