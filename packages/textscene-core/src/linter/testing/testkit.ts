@@ -135,6 +135,10 @@ export function expectSeverity(content: string, severity: Severity): void {
 export interface InvalidCase {
   value: PropValue;
   contains?: string[];
+  /** Locate the diagnostic by rule (e.g. `'strict-parser'`) instead of by property name, and assert it. */
+  ruleName?: string;
+  /** Assert the located diagnostic's severity. */
+  severity?: Severity;
 }
 
 /**
@@ -167,6 +171,13 @@ export interface PropertyValidationOptions {
    * semantic rules stay quiet — e.g. `collisionShape2d`.
    */
   acceptChild?: string;
+  /**
+   * Blocks placed before the node under test in EVERY scene (accept and reject) —
+   * e.g. a `[sub_resource]` shape plus the parent body a CollisionShape must hang off.
+   */
+  prefix?: string[];
+  /** Heading options for the node under test — e.g. `{ parent: '.' }` to child it under a `prefix` body. */
+  nodeOptions?: NodeOptions;
   /** Properties merged into every accept-case node so it is otherwise valid (per-case `with` overrides). */
   baseProps?: Record<string, PropValue>;
   /** Default accept mode for all cases (default `'clean'`; per-case `acceptMode` overrides). */
@@ -185,22 +196,29 @@ export function runPropertyValidation(
   options: PropertyValidationOptions,
   cases: PropertyCase[]
 ): void {
-  const { nodeType, acceptChild, baseProps } = options;
+  const { nodeType, acceptChild, prefix = [], nodeOptions = {}, baseProps } = options;
   for (const propCase of cases) {
     const mode = propCase.acceptMode ?? options.acceptMode ?? 'clean';
     describe(`${propCase.prop} validation`, () => {
       for (const value of propCase.valid ?? []) {
         it(`accepts ${renderValue(value)}`, () => {
-          const underTest = node(nodeType, { ...baseProps, [propCase.prop]: value, ...propCase.with });
-          const content = acceptChild ? scene(underTest, acceptChild) : scene(underTest);
+          const underTest = node(
+            nodeType,
+            { ...baseProps, [propCase.prop]: value, ...propCase.with },
+            nodeOptions
+          );
+          const content = scene(...prefix, underTest, ...(acceptChild ? [acceptChild] : []));
           if (mode === 'no-error') expectNoErrors(content);
           else expectClean(content);
         });
       }
       for (const invalid of propCase.invalid ?? []) {
         it(`rejects ${renderValue(invalid.value)}`, () => {
-          expectDiagnostic(scene(node(nodeType, { [propCase.prop]: invalid.value })), {
+          const underTest = node(nodeType, { [propCase.prop]: invalid.value }, nodeOptions);
+          expectDiagnostic(scene(...prefix, underTest), {
             prop: propCase.prop,
+            ruleName: invalid.ruleName,
+            severity: invalid.severity,
             contains: invalid.contains,
           });
         });
