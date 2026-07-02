@@ -32,6 +32,7 @@ import { fixtures } from './fixturesAll';
 import { FixtureTreeView } from './FixtureTree';
 import { corpusRootFor, fixtureUrlForRes } from './corpusRoot';
 import { WebResourceProvider } from './providers/WebResourceProvider';
+import { resolveForwardedContent } from './sourceGate';
 import styles from './r3f-main.module.css';
 
 /** Sentinel value used by `<ViewportSelector>` when no fixture is active (user is on an uploaded .tscn). */
@@ -144,7 +145,9 @@ export function R3FApp() {
       return DEFAULT_FIXTURE;
     }
   });
-  const [content, setContent] = useState<string>('');
+  const [buffer, setBuffer] = useState<string>('');
+  const [forwardedContent, setForwardedContent] = useState<string>('');
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const [loadError, setLoadError] = useState<string | null>(null);
   // When non-null, the user has loaded a TSCN file from their disk via
   // the toolbar's Upload button. We track the display name so the
@@ -206,7 +209,8 @@ export function R3FApp() {
       // overwrite `content` set by `handleTscnFileChange`. Also skip
       // when fixture is genuinely cleared with no upload.
       if (!uploadedTscnName) {
-        setContent('');
+        setBuffer('');
+        setForwardedContent('');
       }
       return;
     }
@@ -221,7 +225,10 @@ export function R3FApp() {
       })
       .then((text) => {
         if (cancelled) return;
-        setContent(text);
+        const resolved = resolveForwardedContent(text, '');
+        setBuffer(text);
+        setForwardedContent(resolved);
+        if (timerRef.current) clearTimeout(timerRef.current);
         try {
           window.localStorage.setItem(STORAGE_KEY, fixtureFile);
         } catch {
@@ -232,12 +239,19 @@ export function R3FApp() {
         if (cancelled) return;
         const message = err instanceof Error ? err.message : String(err);
         setLoadError(message);
-        setContent('');
+        setBuffer('');
+        // forwardedContent unchanged — hold last valid render on fetch failure
       });
     return () => {
       cancelled = true;
     };
   }, [fixtureFile, uploadedTscnName]);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
 
   function handleFixtureChange(newFixture: string) {
     // Switching to a fixture replaces any user-loaded TSCN content.
@@ -256,7 +270,9 @@ export function R3FApp() {
     setLoadError(null);
     setFixtureFile(NO_FIXTURE);
     setUploadedTscnName(file.name);
-    setContent(text);
+    setBuffer(text);
+    setForwardedContent(text);
+    if (timerRef.current) clearTimeout(timerRef.current);
   }
 
   function handleTscnUploadError(message: string) {
@@ -266,6 +282,16 @@ export function R3FApp() {
   function handleResourceUpload(path: string, file: File) {
     provider.addUploadedFile(path, file);
     loader.provideFile(path);
+  }
+
+  function handleBufferChange(e: ChangeEvent<HTMLTextAreaElement>) {
+    const newValue = e.target.value;
+    setBuffer(newValue);
+
+    clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      setForwardedContent((prev) => resolveForwardedContent(newValue, prev));
+    }, 250);
   }
 
   function handleResourceRemove(path: string) {
@@ -292,8 +318,8 @@ export function R3FApp() {
             >
               <textarea
                 className={styles.sourceTextarea}
-                value={content}
-                readOnly
+                value={buffer}
+                onChange={handleBufferChange}
                 wrap="off"
                 aria-label="Scene source"
                 style={{ fontFamily: 'monospace' }}
@@ -312,7 +338,7 @@ export function R3FApp() {
         <div style={{ flex: 1, minWidth: 0, height: '100%' }}>
           <TscnPreviewShell
             panelId={`web-${fixtureFile || uploadedTscnName || 'empty'}`}
-            content={content}
+            content={forwardedContent}
             rootScenePath={`res://${
               // The scene's res:// identity is relative to its corpus root.
               (resourceRoot && fixtureFile.startsWith(`${resourceRoot}/`)

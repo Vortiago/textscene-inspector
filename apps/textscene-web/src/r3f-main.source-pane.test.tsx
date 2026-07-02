@@ -121,8 +121,8 @@ describe('#200 source pane — read-only display of the loaded .tscn (criteria 1
     const ta = paneTextarea();
     // The pane shows the SAME source text feeding the shell.
     expect(ta.value).toContain('StubRoot');
-    // Slice 1 is read-only ("not yet editable-driving").
-    expect(ta.readOnly).toBe(true);
+    // Slice 2: the pane is now editable (buffer drives the render).
+    expect(ta.readOnly).toBe(false);
     // Forced monospace.
     expect(isMonospace(ta)).toBe(true);
     // Code-editor feel: long lines scroll horizontally, they do NOT word-wrap.
