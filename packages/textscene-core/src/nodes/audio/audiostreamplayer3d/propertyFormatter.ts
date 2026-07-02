@@ -11,22 +11,12 @@ import {
   DopplerTracking,
 } from './types';
 import { formatNode3DProperties } from '../../base/node3d/propertyFormatter';
+import { audioStreamSection } from '../audioStreamSection';
 
 export function formatAudioStreamPlayer3DProperties(
   properties: AudioStreamPlayer3DProperties
 ): PropertySection[] {
-  const sections: PropertySection[] = [];
-
-  sections.push({
-    title: 'Stream',
-    items: [
-      { label: 'Stream', value: properties.stream ?? '(none)' },
-      { label: 'Bus', value: properties.bus },
-      { label: 'Autoplay', value: yesNo(properties.autoplay) },
-      { label: 'Playing', value: yesNo(properties.playing) },
-      { label: 'Status', value: 'Audio is not played in preview' },
-    ],
-  });
+  const sections: PropertySection[] = [audioStreamSection(properties)];
 
   sections.push({
     title: 'Mixing',
@@ -80,10 +70,6 @@ export function formatAudioStreamPlayer3DProperties(
   sections.push(...formatNode3DProperties(properties));
 
   return sections;
-}
-
-function yesNo(value: boolean): string {
-  return value ? 'true' : 'false';
 }
 
 function attenuationName(mode: AttenuationModel): string {

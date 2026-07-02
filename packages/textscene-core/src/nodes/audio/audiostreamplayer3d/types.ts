@@ -8,6 +8,7 @@
  */
 
 import type { Node3DProperties } from '../../base/node3d/types';
+import type { AudioStreamBaseProperties } from '../types';
 
 /**
  * Attenuation models (Godot Server3D::AttenuationModel).
@@ -28,25 +29,9 @@ export enum DopplerTracking {
   DOPPLER_TRACKING_PHYSICS_STEP = 2,
 }
 
-export interface AudioStreamPlayer3DProperties extends Node3DProperties {
-  /** Stream resource reference (ExtResource or SubResource). */
-  stream?: string;
-
-  /** Volume in decibels (default: 0). */
-  volume_db: number;
-
-  /** Pitch scale (default: 1.0). */
-  pitch_scale: number;
-
-  /** Currently playing (default: false). */
-  playing: boolean;
-
-  /** Start playing automatically (default: false). */
-  autoplay: boolean;
-
-  /** Stream playback paused (default: false). */
-  stream_paused: boolean;
-
+export interface AudioStreamPlayer3DProperties
+  extends Node3DProperties,
+    AudioStreamBaseProperties {
   /** Attenuation model (default: INVERSE_DISTANCE). */
   attenuation_model: AttenuationModel;
 
@@ -86,10 +71,4 @@ export interface AudioStreamPlayer3DProperties extends Node3DProperties {
 
   /** Attenuation outside the emission cone in dB (default: -12.0). */
   emission_angle_filter_attenuation_db: number;
-
-  /** Audio bus name (StringName or string). */
-  bus: string;
-
-  /** Maximum simultaneous voices (default: 1). */
-  max_polyphony: number;
 }

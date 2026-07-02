@@ -5,24 +5,10 @@
 
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
-import { propertyError } from '../../../linter/validators/index.js';
-import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
+import { busValidator } from '../busValidator.js';
+import { streamValidator } from '../streamValidator.js';
 
-const PLAYBACK_TYPE = { 0: 'STREAM', 1: 'SAMPLE', 2: 'MAX' };
-
-const streamValidator: PropertyValidator = (key, value, line) => {
-  if (!value.startsWith('ExtResource(') && !value.startsWith('SubResource(')) {
-    return propertyError(key, line, `Property 'stream' must be a resource reference (ExtResource or SubResource), got: "${value}"`, 'INVALID_STREAM_FORMAT');
-  }
-  return null;
-};
-
-const busValidator: PropertyValidator = (key, value, line) => {
-  if (!value.startsWith('"') && !value.startsWith('&"')) {
-    return propertyError(key, line, `Property 'bus' must be a string, got: "${value}"`, 'INVALID_BUS_FORMAT');
-  }
-  return null;
-};
+const PLAYBACK_TYPE = { 0: 'DEFAULT', 1: 'STREAM', 2: 'SAMPLE' };
 
 validatorRegistry.registerAll('AudioStreamPlayer2D', {
   stream: streamValidator,
