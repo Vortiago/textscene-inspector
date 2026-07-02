@@ -290,6 +290,10 @@
   outline: none;
   background: var(--tsi-bg-panel);
   color: var(--tsi-fg-default);
+  /* Code-editor feel: don't word-wrap (textarea wrap="off"); long lines
+     scroll horizontally instead. */
+  white-space: pre;
+  overflow: auto;
 }
 
 /* outline:none above drops the native ring; restore a visible focus indicator

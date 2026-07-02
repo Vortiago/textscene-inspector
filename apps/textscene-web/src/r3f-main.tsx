@@ -294,6 +294,7 @@ export function R3FApp() {
                 className={styles.sourceTextarea}
                 value={content}
                 readOnly
+                wrap="off"
                 style={{ fontFamily: 'monospace' }}
               />
             </div>

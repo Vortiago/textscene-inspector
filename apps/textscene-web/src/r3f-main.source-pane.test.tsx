@@ -125,6 +125,8 @@ describe('#200 source pane — read-only display of the loaded .tscn (criteria 1
     expect(ta.readOnly).toBe(true);
     // Forced monospace.
     expect(isMonospace(ta)).toBe(true);
+    // Code-editor feel: long lines scroll horizontally, they do NOT word-wrap.
+    expect(ta.getAttribute('wrap')).toBe('off');
   });
 
   it('sits to the LEFT of the viewport (pane precedes the shell in document order)', async () => {
