@@ -127,6 +127,8 @@ describe('#200 source pane — read-only display of the loaded .tscn (criteria 1
     expect(isMonospace(ta)).toBe(true);
     // Code-editor feel: long lines scroll horizontally, they do NOT word-wrap.
     expect(ta.getAttribute('wrap')).toBe('off');
+    // The read-only source field is labelled for assistive tech.
+    expect(ta.getAttribute('aria-label')).toBe('Scene source');
   });
 
   it('sits to the LEFT of the viewport (pane precedes the shell in document order)', async () => {
@@ -174,17 +176,22 @@ describe('#200 source pane — toggle in the toolbar slot (criterion 2)', () => 
   it('hides the pane on toggle and shows it again on a second toggle', async () => {
     render(<R3FApp />);
     await waitForScene();
+    const toggle = screen.getByTestId('source-pane-toggle');
     expect(screen.queryByTestId('source-pane')).toBeTruthy();
+    // The toggle reports its disclosure state to assistive tech.
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
 
-    fireEvent.click(screen.getByTestId('source-pane-toggle'));
+    fireEvent.click(toggle);
     await waitFor(() => {
       expect(screen.queryByTestId('source-pane')).toBeNull();
     });
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
 
-    fireEvent.click(screen.getByTestId('source-pane-toggle'));
+    fireEvent.click(toggle);
     await waitFor(() => {
       expect(screen.queryByTestId('source-pane')).toBeTruthy();
     });
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
   });
 });
 

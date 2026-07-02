@@ -295,6 +295,7 @@ export function R3FApp() {
                 value={content}
                 readOnly
                 wrap="off"
+                aria-label="Scene source"
                 style={{ fontFamily: 'monospace' }}
               />
             </div>
@@ -451,6 +452,7 @@ function Toolbar({
         className={styles.openButton}
         data-testid="source-pane-toggle"
         onClick={onTogglePane}
+        aria-expanded={paneVisible}
         title="Toggle the source pane"
       >
         {paneVisible ? 'Hide' : 'Show'} Source
