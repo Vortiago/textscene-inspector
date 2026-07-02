@@ -16,6 +16,12 @@ export function parseEnvironment(
       ? parseColor(properties.background_color)
       : { r: 0, g: 0, b: 0, a: 1 },
     background_energy_multiplier: parseFloat(properties.background_energy_multiplier ?? '1.0'),
+    sky: properties.sky,
+
+    // Tonemapping (parsed so it isn't silently dropped; rendering deferred)
+    tonemap_mode: parseInt(properties.tonemap_mode ?? '0', 10),
+    tonemap_white: parseFloat(properties.tonemap_white ?? '1.0'),
+    tonemap_exposure: parseFloat(properties.tonemap_exposure ?? '1.0'),
 
     // Ambient lighting (Godot default ambient_light_color is BLACK / no ambient)
     ambient_light_source: parseInt(properties.ambient_light_source ?? '0', 10),

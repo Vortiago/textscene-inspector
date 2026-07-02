@@ -19,6 +19,19 @@ export interface EnvironmentProperties {
   background_color: Color;
   background_energy_multiplier: number;
 
+  /**
+   * Sky SubResource reference (e.g. `SubResource("Sky_1")`). Present when
+   * background_mode is BG_SKY. Parsed for inspection/validation; full sky/IBL
+   * rendering is deferred (BG_SKY falls back to a flat background).
+   */
+  sky?: string;
+
+  // Tonemapping (parsed for validation; tonemap rendering deferred like adjustments/SSR)
+  /** 0 LINEAR, 1 REINHARDT, 2 FILMIC, 3 ACES, 4 AGX. */
+  tonemap_mode: number;
+  tonemap_white: number;
+  tonemap_exposure: number;
+
   // Ambient lighting (scene-wide constant illumination)
   /** 0 BG (default), 1 DISABLED, 2 COLOR, 3 SKY — only 2/3 emit a flat ambient. */
   ambient_light_source: number;

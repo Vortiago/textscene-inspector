@@ -16,9 +16,17 @@ export function parseBaseLightProperties(
   return {
     light_color: properties.light_color || 'Color(1, 1, 1, 1)',
     light_energy: properties.light_energy ? parseFloat(properties.light_energy) : 1.0,
+    light_negative:
+      properties.light_negative !== undefined ? properties.light_negative === 'true' : undefined,
+    light_specular: properties.light_specular
+      ? parseFloat(properties.light_specular)
+      : undefined,
+    light_volumetric_fog_energy: properties.light_volumetric_fog_energy
+      ? parseFloat(properties.light_volumetric_fog_energy)
+      : undefined,
     shadow_enabled: properties.shadow_enabled === 'true',
     shadow_bias: properties.shadow_bias ? parseFloat(properties.shadow_bias) : undefined,
-    shadow_filter: properties.shadow_filter ? parseInt(properties.shadow_filter, 10) : undefined,
+    shadow_blur: properties.shadow_blur ? parseFloat(properties.shadow_blur) : undefined,
   };
 }
 

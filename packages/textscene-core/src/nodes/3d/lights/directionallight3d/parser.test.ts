@@ -20,7 +20,7 @@ describe('DirectionalLight3D Parser', () => {
       expect(result.shadow_enabled).toBe(false);
       expect(result.shadow_bias).toBeUndefined();
       expect(result.shadow_normal_bias).toBeUndefined();
-      expect(result.shadow_filter).toBeUndefined();
+      expect(result.shadow_blur).toBeUndefined();
       expect(result.directional_shadow_mode).toBeUndefined();
       expect(result.directional_shadow_max_distance).toBeUndefined();
     });
@@ -34,7 +34,7 @@ describe('DirectionalLight3D Parser', () => {
         shadow_enabled: 'true',
         shadow_bias: '0.05',
         shadow_normal_bias: '0.02',
-        shadow_filter: '2',
+        shadow_blur: '2',
         directional_shadow_mode: '2',
         directional_shadow_max_distance: '100.0',
       };
@@ -47,7 +47,7 @@ describe('DirectionalLight3D Parser', () => {
       expect(result.shadow_enabled).toBe(true);
       expect(result.shadow_bias).toBe(0.05);
       expect(result.shadow_normal_bias).toBe(0.02);
-      expect(result.shadow_filter).toBe(2);
+      expect(result.shadow_blur).toBe(2);
       expect(result.directional_shadow_mode).toBe(2);
       expect(result.directional_shadow_max_distance).toBe(100.0);
     });
@@ -155,11 +155,11 @@ describe('DirectionalLight3D Parser', () => {
       expect(result.directional_shadow_max_distance).toBeNaN();
     });
 
-    it('should return NaN for invalid shadow_filter', () => {
+    it('should return NaN for invalid shadow_blur', () => {
       const h = heading('DirectionalLight3D', { name: 'Light', parent: '.' });
 
-      const result = parseDirectionalLight3D(h, { shadow_filter: 'invalid' });
-      expect(result.shadow_filter).toBeNaN();
+      const result = parseDirectionalLight3D(h, { shadow_blur: 'invalid' });
+      expect(result.shadow_blur).toBeNaN();
     });
 
     it('should return NaN for invalid directional_shadow_mode', () => {

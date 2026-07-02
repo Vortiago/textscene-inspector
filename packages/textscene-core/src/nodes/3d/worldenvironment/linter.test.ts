@@ -179,6 +179,58 @@ environment = SubResource("env_1")
       });
     });
 
+    describe('sky resource existence (inside the Environment subresource)', () => {
+      it('should detect a non-existent sky resource', () => {
+        expectDiagnostic(
+          `[gd_scene format=3]
+
+[sub_resource type="Environment" id="env_1"]
+background_mode = 2
+sky = SubResource("Sky_missing")
+
+[node name="WorldEnvironment" type="WorldEnvironment"]
+environment = SubResource("env_1")
+`,
+          {
+            ruleName: 'valid-worldenvironment-resources',
+            severity: 'error',
+            contains: ['Sky resource not found'],
+          }
+        );
+      });
+
+      it('should pass when the sky resource exists', () => {
+        expectClean(`[gd_scene format=3]
+
+[sub_resource type="ProceduralSkyMaterial" id="Sky_mat"]
+
+[sub_resource type="Sky" id="Sky_1"]
+sky_material = SubResource("Sky_mat")
+
+[sub_resource type="Environment" id="env_1"]
+background_mode = 2
+sky = SubResource("Sky_1")
+
+[node name="WorldEnvironment" type="WorldEnvironment"]
+environment = SubResource("env_1")
+`);
+      });
+
+      it('should pass when the Environment has no sky property', () => {
+        expectNoDiagnostic(
+          `[gd_scene format=3]
+
+[sub_resource type="Environment" id="env_1"]
+background_mode = 1
+
+[node name="WorldEnvironment" type="WorldEnvironment"]
+environment = SubResource("env_1")
+`,
+          { prop: 'Sky resource not found' }
+        );
+      });
+    });
+
     describe('camera_attributes resource existence', () => {
       it('should warn about non-existent camera_attributes resource', () => {
         expectDiagnostic(

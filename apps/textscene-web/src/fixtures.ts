@@ -143,6 +143,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Environment Sky Tonemap",
+    "file": "unit-environment-sky-tonemap.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Gpuparticles3d",
     "file": "unit-gpuparticles3d.tscn",
     "category": "Other"
@@ -160,6 +165,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Label3d",
     "file": "unit-label3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Light Base Properties",
+    "file": "unit-light-base-properties.tscn",
     "category": "Other"
   },
   {

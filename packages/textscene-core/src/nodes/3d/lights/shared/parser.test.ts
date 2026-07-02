@@ -14,7 +14,10 @@ describe('Base Light Parser', () => {
       expect(result.light_energy).toBe(1.0);
       expect(result.shadow_enabled).toBe(false);
       expect(result.shadow_bias).toBeUndefined();
-      expect(result.shadow_filter).toBeUndefined();
+      expect(result.shadow_blur).toBeUndefined();
+      expect(result.light_negative).toBeUndefined();
+      expect(result.light_specular).toBeUndefined();
+      expect(result.light_volumetric_fog_energy).toBeUndefined();
     });
 
     it('should parse all base light properties', () => {
@@ -23,7 +26,7 @@ describe('Base Light Parser', () => {
         light_energy: '2.5',
         shadow_enabled: 'true',
         shadow_bias: '0.05',
-        shadow_filter: '2',
+        shadow_blur: '3.0',
       };
 
       const result = parseBaseLightProperties(properties);
@@ -32,7 +35,26 @@ describe('Base Light Parser', () => {
       expect(result.light_energy).toBe(2.5);
       expect(result.shadow_enabled).toBe(true);
       expect(result.shadow_bias).toBe(0.05);
-      expect(result.shadow_filter).toBe(2);
+      expect(result.shadow_blur).toBe(3.0);
+    });
+
+    it('should parse the witnessed Light3D base properties (previously dropped)', () => {
+      const result = parseBaseLightProperties({
+        light_negative: 'true',
+        light_specular: '0.0',
+        light_volumetric_fog_energy: '500.0',
+        shadow_blur: '1.5',
+      });
+
+      expect(result.light_negative).toBe(true);
+      expect(result.light_specular).toBe(0.0);
+      expect(result.light_volumetric_fog_energy).toBe(500.0);
+      expect(result.shadow_blur).toBe(1.5);
+    });
+
+    it('should default light_negative to false when the key is present as false', () => {
+      const result = parseBaseLightProperties({ light_negative: 'false' });
+      expect(result.light_negative).toBe(false);
     });
 
     it('should handle shadow_enabled false', () => {
@@ -56,21 +78,21 @@ describe('Base Light Parser', () => {
       expect(result.shadow_bias).toBeNaN();
     });
 
-    it('should return NaN for invalid shadow_filter', () => {
-      const result = parseBaseLightProperties({ shadow_filter: 'invalid' });
-      expect(result.shadow_filter).toBeNaN();
+    it('should return NaN for invalid shadow_blur', () => {
+      const result = parseBaseLightProperties({ shadow_blur: 'invalid' });
+      expect(result.shadow_blur).toBeNaN();
     });
 
     it('should handle empty strings as falsy and return defaults', () => {
       const result = parseBaseLightProperties({
         light_energy: '',
         shadow_bias: '',
-        shadow_filter: '',
+        shadow_blur: '',
       });
 
       expect(result.light_energy).toBe(1.0);
       expect(result.shadow_bias).toBeUndefined();
-      expect(result.shadow_filter).toBeUndefined();
+      expect(result.shadow_blur).toBeUndefined();
     });
 
     it('should handle negative values', () => {
@@ -129,7 +151,7 @@ describe('Base Light Parser', () => {
         light_energy: '1.5',
         shadow_enabled: 'true',
         shadow_bias: '0.05',
-        shadow_filter: '2',
+        shadow_blur: '2',
         shadow_normal_bias: '0.03',
       };
 
@@ -139,7 +161,7 @@ describe('Base Light Parser', () => {
       expect(result.light_energy).toBe(1.5);
       expect(result.shadow_enabled).toBe(true);
       expect(result.shadow_bias).toBe(0.05);
-      expect(result.shadow_filter).toBe(2);
+      expect(result.shadow_blur).toBe(2);
       expect(result.shadow_normal_bias).toBe(0.03);
     });
 

@@ -250,4 +250,149 @@ describe('Environment Linter Validators', () => {
       expect(result!.severity).toBe('error');
     });
   });
+
+  describe('ambient_light_source validator', () => {
+    it('should accept sources 0-3', () => {
+      const validator = validatorRegistry.findValidator('Environment', 'ambient_light_source');
+      expect(validator).not.toBeNull();
+      for (let s = 0; s <= 3; s++) {
+        expect(validator!('ambient_light_source', String(s), 1)).toBeNull();
+      }
+    });
+
+    it('should reject source 4', () => {
+      const validator = validatorRegistry.findValidator('Environment', 'ambient_light_source');
+      const result = validator!('ambient_light_source', '4', 1);
+      expect(result).not.toBeNull();
+      expect(result!.severity).toBe('error');
+    });
+  });
+
+  describe('ambient_light_color validator', () => {
+    it('should accept valid Color', () => {
+      const validator = validatorRegistry.findValidator('Environment', 'ambient_light_color');
+      expect(validator!('ambient_light_color', 'Color(0.3, 0.3, 0.3, 1)', 1)).toBeNull();
+    });
+
+    it('should reject garbage', () => {
+      const validator = validatorRegistry.findValidator('Environment', 'ambient_light_color');
+      expect(validator!('ambient_light_color', 'nope', 1)).not.toBeNull();
+    });
+  });
+
+  describe('ambient_light_energy validator', () => {
+    it('should accept non-negative', () => {
+      const validator = validatorRegistry.findValidator('Environment', 'ambient_light_energy');
+      expect(validator!('ambient_light_energy', '2.0', 1)).toBeNull();
+    });
+
+    it('should reject negative', () => {
+      const validator = validatorRegistry.findValidator('Environment', 'ambient_light_energy');
+      expect(validator!('ambient_light_energy', '-1', 1)).not.toBeNull();
+    });
+  });
+
+  describe('fog_enabled validator', () => {
+    it('should accept boolean', () => {
+      const validator = validatorRegistry.findValidator('Environment', 'fog_enabled');
+      expect(validator!('fog_enabled', 'true', 1)).toBeNull();
+    });
+
+    it('should reject non-boolean', () => {
+      const validator = validatorRegistry.findValidator('Environment', 'fog_enabled');
+      expect(validator!('fog_enabled', '1', 1)).not.toBeNull();
+    });
+  });
+
+  describe('fog_density validator', () => {
+    it('should accept non-negative density', () => {
+      const validator = validatorRegistry.findValidator('Environment', 'fog_density');
+      expect(validator!('fog_density', '0.02', 1)).toBeNull();
+    });
+
+    it('should reject negative density (the witnessed fog_density = -5)', () => {
+      const validator = validatorRegistry.findValidator('Environment', 'fog_density');
+      const result = validator!('fog_density', '-5', 1);
+      expect(result).not.toBeNull();
+      expect(result!.severity).toBe('error');
+    });
+  });
+
+  describe('fog_light_color validator', () => {
+    it('should accept valid Color', () => {
+      const validator = validatorRegistry.findValidator('Environment', 'fog_light_color');
+      expect(validator!('fog_light_color', 'Color(0.5, 0.6, 0.7, 1)', 1)).toBeNull();
+    });
+
+    it('should reject malformed Color (the witnessed Color(oops))', () => {
+      const validator = validatorRegistry.findValidator('Environment', 'fog_light_color');
+      const result = validator!('fog_light_color', 'Color(oops)', 1);
+      expect(result).not.toBeNull();
+      expect(result!.severity).toBe('error');
+    });
+  });
+
+  describe('fog_mode validator', () => {
+    it('should accept 0 (EXPONENTIAL) and 1 (DEPTH)', () => {
+      const validator = validatorRegistry.findValidator('Environment', 'fog_mode');
+      expect(validator!('fog_mode', '0', 1)).toBeNull();
+      expect(validator!('fog_mode', '1', 1)).toBeNull();
+    });
+
+    it('should reject 2', () => {
+      const validator = validatorRegistry.findValidator('Environment', 'fog_mode');
+      expect(validator!('fog_mode', '2', 1)).not.toBeNull();
+    });
+  });
+
+  describe('tonemap_mode validator', () => {
+    it('should accept modes 0-4', () => {
+      const validator = validatorRegistry.findValidator('Environment', 'tonemap_mode');
+      expect(validator).not.toBeNull();
+      for (let m = 0; m <= 4; m++) {
+        expect(validator!('tonemap_mode', String(m), 1)).toBeNull();
+      }
+    });
+
+    it('should reject mode 5', () => {
+      const validator = validatorRegistry.findValidator('Environment', 'tonemap_mode');
+      const result = validator!('tonemap_mode', '5', 1);
+      expect(result).not.toBeNull();
+      expect(result!.severity).toBe('error');
+    });
+
+    it('should reject non-numeric mode', () => {
+      const validator = validatorRegistry.findValidator('Environment', 'tonemap_mode');
+      expect(validator!('tonemap_mode', 'filmic', 1)).not.toBeNull();
+    });
+  });
+
+  describe('tonemap_white / tonemap_exposure validators', () => {
+    it('should accept non-negative values (witnessed white = 6.0)', () => {
+      const white = validatorRegistry.findValidator('Environment', 'tonemap_white');
+      const exposure = validatorRegistry.findValidator('Environment', 'tonemap_exposure');
+      expect(white!('tonemap_white', '6.0', 1)).toBeNull();
+      expect(exposure!('tonemap_exposure', '1.3', 1)).toBeNull();
+    });
+
+    it('should reject negative values', () => {
+      const white = validatorRegistry.findValidator('Environment', 'tonemap_white');
+      expect(white!('tonemap_white', '-1', 1)).not.toBeNull();
+    });
+  });
+
+  describe('sky validator', () => {
+    it('should accept a SubResource reference', () => {
+      const validator = validatorRegistry.findValidator('Environment', 'sky');
+      expect(validator).not.toBeNull();
+      expect(validator!('sky', 'SubResource("Sky_lexvt")', 1)).toBeNull();
+    });
+
+    it('should reject a non-reference value', () => {
+      const validator = validatorRegistry.findValidator('Environment', 'sky');
+      const result = validator!('sky', 'blue', 1);
+      expect(result).not.toBeNull();
+      expect(result!.severity).toBe('error');
+    });
+  });
 });

@@ -97,4 +97,29 @@ describe('parseEnvironment', () => {
       expect(result.background_mode).toBe(mode);
     }
   });
+
+  it('should default tonemap and sky when absent', () => {
+    const result = parseEnvironment({});
+
+    expect(result.tonemap_mode).toBe(0);
+    expect(result.tonemap_white).toBe(1.0);
+    expect(result.tonemap_exposure).toBe(1.0);
+    expect(result.sky).toBeUndefined();
+  });
+
+  it('should parse the witnessed BG_SKY + tonemap form (no silent drop)', () => {
+    const result = parseEnvironment({
+      background_mode: '2',
+      sky: 'SubResource("Sky_lexvt")',
+      tonemap_mode: '2',
+      tonemap_white: '6.0',
+      tonemap_exposure: '1.3',
+    });
+
+    expect(result.background_mode).toBe(BackgroundMode.BG_SKY);
+    expect(result.sky).toBe('SubResource("Sky_lexvt")');
+    expect(result.tonemap_mode).toBe(2);
+    expect(result.tonemap_white).toBe(6.0);
+    expect(result.tonemap_exposure).toBe(1.3);
+  });
 });

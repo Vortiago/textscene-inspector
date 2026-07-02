@@ -22,7 +22,7 @@ describe('OmniLight3D Parser', () => {
       expect(result.shadow_enabled).toBe(false);
       expect(result.shadow_bias).toBeUndefined();
       expect(result.shadow_normal_bias).toBeUndefined();
-      expect(result.shadow_filter).toBeUndefined();
+      expect(result.shadow_blur).toBeUndefined();
       expect(result.omni_shadow_mode).toBeUndefined();
     });
 
@@ -37,7 +37,7 @@ describe('OmniLight3D Parser', () => {
         shadow_enabled: 'true',
         shadow_bias: '0.05',
         shadow_normal_bias: '0.02',
-        shadow_filter: '2',
+        shadow_blur: '2',
         omni_shadow_mode: '1',
       };
 
@@ -51,7 +51,7 @@ describe('OmniLight3D Parser', () => {
       expect(result.shadow_enabled).toBe(true);
       expect(result.shadow_bias).toBe(0.05);
       expect(result.shadow_normal_bias).toBe(0.02);
-      expect(result.shadow_filter).toBe(2);
+      expect(result.shadow_blur).toBe(2);
       expect(result.omni_shadow_mode).toBe(1);
     });
 
