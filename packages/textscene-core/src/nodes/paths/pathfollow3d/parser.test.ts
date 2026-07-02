@@ -1,15 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { parsePathFollow3D } from './parser';
 import { RotationMode } from './types';
-import type { ParsedHeading } from '../../../parser/utils';
-
-function heading(name = 'Follow'): ParsedHeading {
-  return { type: 'node', attributes: { type: 'PathFollow3D', name } };
-}
+import { heading } from '../../../parser/testing/parserKit';
 
 describe('parsePathFollow3D', () => {
   it('defaults rotation_mode to XYZ, booleans to Godot defaults, offsets to 0', () => {
-    const props = parsePathFollow3D(heading(), {});
+    const props = parsePathFollow3D(heading('PathFollow3D', { name: 'Follow' }), {});
     expect(props.rotation_mode).toBe(RotationMode.XYZ);
     expect(props.cubic_interp).toBe(true);
     expect(props.loop).toBe(true);
@@ -22,7 +18,7 @@ describe('parsePathFollow3D', () => {
   });
 
   it('reads explicit follow controls', () => {
-    const props = parsePathFollow3D(heading(), {
+    const props = parsePathFollow3D(heading('PathFollow3D', { name: 'Follow' }), {
       progress_ratio: '0.25',
       h_offset: '2',
       v_offset: '-1',
@@ -39,7 +35,9 @@ describe('parsePathFollow3D', () => {
   });
 
   it('keeps progress when only progress is set (edge)', () => {
-    const props = parsePathFollow3D(heading(), { progress: '4.5' });
+    const props = parsePathFollow3D(heading('PathFollow3D', { name: 'Follow' }), {
+      progress: '4.5',
+    });
     expect(props.progress).toBeCloseTo(4.5, 5);
     expect(props.progress_ratio).toBeUndefined();
   });

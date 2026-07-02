@@ -1,14 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { parseControl } from './parser';
-import type { ParsedHeading } from '../../../../parser/utils';
-
-function heading(attributes: Record<string, string>): ParsedHeading {
-  return { type: 'node', attributes };
-}
+import { heading } from '../../../../parser/testing/parserKit';
 
 describe('parseControl', () => {
   it('parses anchors_preset and layout_mode', () => {
-    const p = parseControl(heading({ name: 'Bg', type: 'Control' }), {
+    const p = parseControl(heading('Control', { name: 'Bg' }), {
       anchors_preset: '15',
       layout_mode: '1',
     });
@@ -17,7 +13,7 @@ describe('parseControl', () => {
   });
 
   it('parses explicit anchors and offsets', () => {
-    const p = parseControl(heading({ name: 'P', type: 'Control' }), {
+    const p = parseControl(heading('Control', { name: 'P' }), {
       anchor_left: '1.0',
       offset_left: '-220',
       offset_top: '10',
@@ -28,7 +24,7 @@ describe('parseControl', () => {
   });
 
   it('collects theme overrides into typed maps', () => {
-    const p = parseControl(heading({ name: 'L', type: 'Control' }), {
+    const p = parseControl(heading('Control', { name: 'L' }), {
       'theme_override_constants/separation': '6',
       'theme_override_font_sizes/font_size': '18',
       'theme_override_colors/font_color': 'Color(0.2, 0.18, 0.12, 1)',
@@ -41,7 +37,7 @@ describe('parseControl', () => {
   });
 
   it('parses custom_minimum_size and size flags', () => {
-    const p = parseControl(heading({ name: 'B', type: 'Control' }), {
+    const p = parseControl(heading('Control', { name: 'B' }), {
       custom_minimum_size: 'Vector2(120, 40)',
       size_flags_horizontal: '3',
     });
@@ -50,6 +46,7 @@ describe('parseControl', () => {
   });
 
   it('captures visibility', () => {
-    expect(parseControl(heading({ name: 'C', type: 'Control' }), { visible: 'false' }).visible).toBe(false);
+    const p = parseControl(heading('Control', { name: 'C' }), { visible: 'false' });
+    expect(p.visible).toBe(false);
   });
 });

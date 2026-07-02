@@ -4,15 +4,14 @@
 
 import { describe, it, expect } from 'vitest';
 import { parseAreaLight3D } from './parser';
-import { parseHeading } from '../../../../parser/utils';
+import { heading } from '../../../../parser/testing/parserKit';
 
 describe('AreaLight3D Parser', () => {
   describe('parseAreaLight3D', () => {
     it('should parse basic AreaLight3D with defaults', () => {
-      const heading = parseHeading('[node name="Area" type="AreaLight3D" parent="."]');
-      expect(heading).not.toBeNull();
+      const h = heading('AreaLight3D', { name: 'Area', parent: '.' });
 
-      const result = parseAreaLight3D(heading!, {});
+      const result = parseAreaLight3D(h, {});
 
       expect(result.name).toBe('Area');
       expect(result.parent).toBe('.');
@@ -24,8 +23,7 @@ describe('AreaLight3D Parser', () => {
     });
 
     it('should parse AreaLight3D with all properties', () => {
-      const heading = parseHeading('[node name="RectLight" type="AreaLight3D" parent="."]');
-      expect(heading).not.toBeNull();
+      const h = heading('AreaLight3D', { name: 'RectLight', parent: '.' });
 
       const properties = {
         light_color: 'Color(0.5, 0.6, 0.7, 1)',
@@ -37,7 +35,7 @@ describe('AreaLight3D Parser', () => {
         shadow_normal_bias: '0.02',
       };
 
-      const result = parseAreaLight3D(heading!, properties);
+      const result = parseAreaLight3D(h, properties);
 
       expect(result.name).toBe('RectLight');
       expect(result.light_color).toBe('Color(0.5, 0.6, 0.7, 1)');
@@ -50,50 +48,46 @@ describe('AreaLight3D Parser', () => {
     });
 
     it('should reject malformed area_size and fall back to 1×1', () => {
-      const heading = parseHeading('[node name="Area" type="AreaLight3D" parent="."]');
-      expect(heading).not.toBeNull();
+      const h = heading('AreaLight3D', { name: 'Area', parent: '.' });
 
       // Junk the loose hand-rolled regex used to silently coerce (e.g.
       // "Vector2(4abc, 3)" -> [4, 3]) is now rejected by the strict shared
       // parseVector2 and falls back to the 1×1 default — render/lint agree.
       for (const bad of ['Vector2(4abc, 3)', 'Vector2(4 5, 3)', 'not a vector']) {
-        const result = parseAreaLight3D(heading!, { area_size: bad });
+        const result = parseAreaLight3D(h, { area_size: bad });
         expect(result.area_size).toEqual({ x: 1, y: 1 });
       }
     });
 
     it('should parse shadow_enabled as false when not "true"', () => {
-      const heading = parseHeading('[node name="Area" type="AreaLight3D" parent="."]');
-      expect(heading).not.toBeNull();
+      const h = heading('AreaLight3D', { name: 'Area', parent: '.' });
 
-      const result1 = parseAreaLight3D(heading!, { shadow_enabled: 'false' });
+      const result1 = parseAreaLight3D(h, { shadow_enabled: 'false' });
       expect(result1.shadow_enabled).toBe(false);
 
-      const result2 = parseAreaLight3D(heading!, { shadow_enabled: '0' });
+      const result2 = parseAreaLight3D(h, { shadow_enabled: '0' });
       expect(result2.shadow_enabled).toBe(false);
 
-      const result3 = parseAreaLight3D(heading!, {});
+      const result3 = parseAreaLight3D(h, {});
       expect(result3.shadow_enabled).toBe(false);
     });
 
     it('should handle fractional area_range values', () => {
-      const heading = parseHeading('[node name="Area" type="AreaLight3D" parent="."]');
-      expect(heading).not.toBeNull();
+      const h = heading('AreaLight3D', { name: 'Area', parent: '.' });
 
-      const result = parseAreaLight3D(heading!, { area_range: '0.5' });
+      const result = parseAreaLight3D(h, { area_range: '0.5' });
       expect(result.area_range).toBe(0.5);
     });
 
     it('should parse transform property from Node3D', () => {
-      const heading = parseHeading('[node name="Area" type="AreaLight3D" parent="."]');
-      expect(heading).not.toBeNull();
+      const h = heading('AreaLight3D', { name: 'Area', parent: '.' });
 
       const properties = {
         transform: 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 2, 0)',
         light_energy: '1.5',
       };
 
-      const result = parseAreaLight3D(heading!, properties);
+      const result = parseAreaLight3D(h, properties);
 
       expect(result.transform).toBeDefined();
       expect(result.transform?.origin.x).toBe(3);
@@ -103,10 +97,9 @@ describe('AreaLight3D Parser', () => {
     });
 
     it('should parse AreaLight3D with parent hierarchy', () => {
-      const heading = parseHeading('[node name="Area" type="AreaLight3D" parent="Room"]');
-      expect(heading).not.toBeNull();
+      const h = heading('AreaLight3D', { name: 'Area', parent: 'Room' });
 
-      const result = parseAreaLight3D(heading!, { light_energy: '3.0' });
+      const result = parseAreaLight3D(h, { light_energy: '3.0' });
 
       expect(result.name).toBe('Area');
       expect(result.parent).toBe('Room');

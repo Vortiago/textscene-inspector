@@ -9,15 +9,11 @@
 
 import { describe, expect, it } from 'vitest';
 import { parseLine2D } from './parser';
-import type { ParsedHeading } from '../../../parser/utils';
-
-function heading(attributes: Record<string, string>): ParsedHeading {
-  return { type: 'node', attributes };
-}
+import { heading } from '../../../parser/testing/parserKit';
 
 describe('parseLine2D', () => {
   it('parses the witnessed points/width/default_color/position form', () => {
-    const props = parseLine2D(heading({ name: 'Line2DSharpNone', type: 'Line2D' }), {
+    const props = parseLine2D(heading('Line2D', { name: 'Line2DSharpNone' }), {
       position: 'Vector2(8, 40)',
       points: 'PackedVector2Array(411.081, 529.648, 500.884, 379.034, 568.766, 526.113)',
       width: '30.0',
@@ -34,7 +30,7 @@ describe('parseLine2D', () => {
   });
 
   it('parses the closed flag', () => {
-    const props = parseLine2D(heading({ name: 'L', type: 'Line2D' }), {
+    const props = parseLine2D(heading('Line2D', { name: 'L' }), {
       points: 'PackedVector2Array(0, 0, 10, 0, 10, 10)',
       closed: 'true',
     });
@@ -42,7 +38,7 @@ describe('parseLine2D', () => {
   });
 
   it('defaults width=10, default_color=white, closed=false when absent (Godot defaults)', () => {
-    const props = parseLine2D(heading({ name: 'L', type: 'Line2D' }), {
+    const props = parseLine2D(heading('Line2D', { name: 'L' }), {
       points: 'PackedVector2Array(0, 0, 1, 0)',
     });
     expect(props.width).toBe(10);
@@ -51,19 +47,19 @@ describe('parseLine2D', () => {
   });
 
   it('tolerates missing points (empty array, no throw)', () => {
-    const props = parseLine2D(heading({ name: 'Empty', type: 'Line2D' }), {});
+    const props = parseLine2D(heading('Line2D', { name: 'Empty' }), {});
     expect(props.points.length).toBe(0);
   });
 
   it('tolerates a single point (one vertex pair, no throw)', () => {
-    const props = parseLine2D(heading({ name: 'One', type: 'Line2D' }), {
+    const props = parseLine2D(heading('Line2D', { name: 'One' }), {
       points: 'PackedVector2Array(5, 5)',
     });
     expect(props.points.length).toBe(2);
   });
 
   it('tolerates a malformed points array by falling back to empty', () => {
-    const props = parseLine2D(heading({ name: 'Bad', type: 'Line2D' }), {
+    const props = parseLine2D(heading('Line2D', { name: 'Bad' }), {
       points: 'PackedVector2Array(0, nope, 1)',
     });
     expect(props.points.length).toBe(0);
