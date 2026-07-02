@@ -16,6 +16,9 @@ three.js). pnpm monorepo: `packages/textscene-core` (parser, linter, r3f compone
 - Per-package forms: `pnpm --filter @textscene/web-previewer type-check` / `test`, etc.
 - CI also runs `eslint .` — lint the files you changed (`npx eslint <files>`). Unused
   imports/vars pass vitest + tsc but fail CI.
+- Created or modified `.tscn` fixtures? `pnpm build:linter && pnpm lint:tscn <files>`.
+- Rendering changed? `pnpm test:visual` compares golden images against committed
+  baselines (`pnpm test:visual:update` rewrites them — eyeball, then commit).
 
 ## The vertical-slice pattern (most node work lands here)
 
@@ -36,6 +39,9 @@ the suite when a slice is mis-wired.
 
 ## Conventions that bite
 
+- **Two parsers, one scanning loop:** the lenient `TscnParser` (rendering — recover and
+  render what you can) vs `StrictTscnParser` (linting — report every issue); both run
+  `TscnParserCore` via the `ParseObserver` seam. Pick by purpose; depth in ARCHITECTURE.md.
 - **Linter severity:** advisory conditions are WARNINGS, not errors — an error rule on
   a condition an existing positive fixture carries breaks the fixtureLint suite.
 - **Web tests run under happy-dom:** no CSS cascade, no layout — never assert rendered
@@ -44,7 +50,16 @@ the suite when a slice is mis-wired.
 - **THREE.Object3D has ONE parent:** cached Object3D resources are cloned per consumer
   (`src/resources/useResource.ts`); identity-equality is only for textures/materials.
 - **Tests:** happy path + error path + edge case per public method, co-located with
-  the implementation.
+  the implementation. TypeScript strict: prefix intentionally-unused params with `_`.
+- **Self-registration:** new features register themselves on import — never edit central
+  files beyond the documented aggregation imports. Keep the web previewer and the VS Code
+  extension at feature parity through the shared core.
+- **Shared dependencies** are pnpm catalog entries (`pnpm-workspace.yaml`); reference
+  them as `"catalog:"` in package.json.
+- **Logging:** verbose `logger.info` with `[Category]` prefixes is welcome in core code —
+  host apps filter levels; keep `error`/`warn` for real problems.
+- **Comments:** only non-obvious information (constraints, tricky algorithms, security
+  notes); no issue/WI references in code; let types and names do the documenting.
 - **Implement completely:** no placeholder comments, stubs, or TODOs. Do every
   numbered item in the task, including doc-only edits no test will catch.
 - **Commits:** conventional-commit style, technical, no AI-attribution lines.
