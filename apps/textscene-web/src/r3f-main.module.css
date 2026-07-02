@@ -268,3 +268,34 @@
   font-size: var(--tsi-font-xs);
   font-style: italic;
 }
+
+/* ── Source pane ─────────────────────────────────────────────────────────── */
+.sourcePane {
+  overflow: hidden;
+  background: var(--tsi-bg-panel);
+  border-right: 1px solid var(--tsi-border);
+  display: flex;
+  flex-direction: column;
+}
+
+.sourceTextarea {
+  flex: 1;
+  width: 100%;
+  padding: 8px;
+  resize: none;
+  border: none;
+  outline: none;
+  background: var(--tsi-bg-panel);
+  color: var(--tsi-fg-default);
+}
+
+.sourceSplitter {
+  width: 4px;
+  cursor: col-resize;
+  flex-shrink: 0;
+  background: var(--tsi-border);
+}
+
+.sourceSplitter:hover {
+  background: var(--tsi-accent);
+}
