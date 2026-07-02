@@ -3,8 +3,8 @@
 import type { ParsedHeading } from '../../../../parser/utils';
 import type { CSGSphere3DProperties } from './types';
 import { parseNode3D } from '../../../base/node3d/parser';
+import { finishCsgParse } from '../sharedParser';
 import { floatOr, intOr } from '../../../../parser/valueParsers';
-import { warn } from '../../../../logger';
 
 /** Godot CSGSphere3D defaults. */
 const DEFAULTS = { radius: 0.5, radialSegments: 12, rings: 6 } as const;
@@ -22,25 +22,7 @@ export function parseCSGSphere3D(
     rings: intOr(properties.rings, DEFAULTS.rings, 'CSGSphere3D'),
   };
 
-  if (properties.material) {
-    result.material = properties.material;
-  }
-
-  if (properties.operation !== undefined) {
-    const operation = parseInt(properties.operation, 10);
-    if (!Number.isNaN(operation)) {
-      result.operation = operation;
-      if (operation !== 0) {
-        // ADR-0004: boolean ops are not applied; the node renders as its
-        // solid base primitive. Warn so a subtraction/intersection that
-        // renders "wrong" (a hole shows as a solid sphere) isn't silent.
-        warn(
-          `[CSGSphere3D] operation=${operation} (non-union) is ignored — ` +
-            `rendering the base sphere primitive (ADR-0004).`
-        );
-      }
-    }
-  }
+  finishCsgParse(result, properties, 'CSGSphere3D', 'sphere');
 
   return result;
 }
