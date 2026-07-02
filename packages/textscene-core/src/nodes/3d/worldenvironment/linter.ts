@@ -10,6 +10,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import type { TscnNode, TscnScene } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { checkResourceExists } from '../../../linter/resourceChecker.js';
+import { parseResourceReference, findSubResource } from '../../../resources/SubResourceResolver.js';
 
 /**
  * Resolve the `sky` reference stored inside the Environment SubResource that a
@@ -21,10 +22,9 @@ function getEnvironmentSkyReference(
   scene: TscnScene,
   environmentRef: string
 ): string | undefined {
-  const match = environmentRef.match(/^SubResource\("([\w-]+)"\)$/);
-  if (!match) return undefined;
-  const envId = match[1];
-  const env = scene.internalResources?.find((r) => r.data?.id === envId);
+  const parsed = parseResourceReference(environmentRef);
+  if (!parsed || parsed.type !== 'SubResource') return undefined;
+  const env = findSubResource(scene.internalResources ?? [], parsed.id);
   const sky = env?.data?.sky;
   return typeof sky === 'string' ? sky : undefined;
 }
@@ -67,30 +67,26 @@ function checkWorldEnvironment(context: RuleContext): Diagnostic[] {
       nodeType: node.type,
       ruleName: 'worldenvironment-requires-environment',
     });
+  } else if (!checkResourceExists(scene, rawProps.environment)) {
+    diagnostics.push({
+      severity: 'error',
+      message: `Environment resource not found: ${rawProps.environment}`,
+      nodeName: node.name,
+      nodeType: node.type,
+      ruleName: 'valid-worldenvironment-resources',
+    });
   } else {
-    // Check if environment resource exists
-    const resourceExists = checkResourceExists(scene, rawProps.environment);
-    if (!resourceExists) {
+    // The Environment subresource may reference a Sky subresource; existence-check
+    // it like the environment reference itself (the render parser reads sky too).
+    const skyRef = getEnvironmentSkyReference(scene, rawProps.environment);
+    if (skyRef && !checkResourceExists(scene, skyRef)) {
       diagnostics.push({
         severity: 'error',
-        message: `Environment resource not found: ${rawProps.environment}`,
+        message: `Sky resource not found: ${skyRef}`,
         nodeName: node.name,
         nodeType: node.type,
         ruleName: 'valid-worldenvironment-resources',
       });
-    } else {
-      // The Environment subresource may reference a Sky subresource; existence-check
-      // it like the environment reference itself (the render parser reads sky too).
-      const skyRef = getEnvironmentSkyReference(scene, rawProps.environment);
-      if (skyRef && !checkResourceExists(scene, skyRef)) {
-        diagnostics.push({
-          severity: 'error',
-          message: `Sky resource not found: ${skyRef}`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: 'valid-worldenvironment-resources',
-        });
-      }
     }
   }
 
