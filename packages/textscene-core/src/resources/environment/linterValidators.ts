@@ -5,6 +5,7 @@
 import { validatorRegistry } from '../../linter/ValidatorRegistry';
 import type { PropertyValidator } from '../../linter/ValidatorRegistry';
 import { COLOR_RE } from '../../parser/vectors.js';
+import { v } from '../../linter/validators/index.js';
 
 /**
  * Validate boolean properties
@@ -58,27 +59,47 @@ const validateNonNegativeNumber = (): PropertyValidator => {
 };
 
 /**
- * Validate background_mode enum (0-5)
+ * Validate an integer enum in [min, max]. Message/code follow the existing
+ * background_mode wording so the whole file stays self-consistent.
  */
-const validateBackgroundMode: PropertyValidator = (_key, value, line) => {
-  const mode = parseInt(value, 10);
-  if (isNaN(mode) || mode < 0 || mode > 5) {
-    return {
-      severity: 'error',
-      message: `Property 'background_mode' must be an integer 0-5, got: "${value}"`,
-      line,
-      column: 0,
-      code: 'INVALID_BACKGROUND_MODE',
-    };
-  }
-  return null;
+const validateEnumInt = (name: string, min: number, max: number): PropertyValidator => {
+  return (_key, value, line) => {
+    const mode = parseInt(value, 10);
+    if (isNaN(mode) || mode < min || mode > max) {
+      return {
+        severity: 'error',
+        message: `Property '${name}' must be an integer ${min}-${max}, got: "${value}"`,
+        line,
+        column: 0,
+        code: `INVALID_${name.toUpperCase()}`,
+      };
+    }
+    return null;
+  };
 };
 
 // Register validators for Environment properties
 validatorRegistry.registerAll('Environment', {
-  background_mode: validateBackgroundMode,
+  background_mode: validateEnumInt('background_mode', 0, 5),
   background_color: validateColor,
   background_energy_multiplier: validateNonNegativeNumber(),
+  sky: v.resourceReference('sky'),
+
+  // Ambient lighting — read by the render parser, so lint it too (parity).
+  ambient_light_source: validateEnumInt('ambient_light_source', 0, 3),
+  ambient_light_color: validateColor,
+  ambient_light_energy: validateNonNegativeNumber(),
+
+  // Screen-space fog — read by the render parser (feeds the scene fog), so lint it.
+  fog_enabled: validateBoolean,
+  fog_density: validateNonNegativeNumber(),
+  fog_light_color: validateColor,
+  fog_mode: validateEnumInt('fog_mode', 0, 1),
+
+  // Tonemapping — parsed but not yet rendered; validate so it isn't silently ignored.
+  tonemap_mode: validateEnumInt('tonemap_mode', 0, 4),
+  tonemap_white: validateNonNegativeNumber(),
+  tonemap_exposure: validateNonNegativeNumber(),
 
   volumetric_fog_enabled: validateBoolean,
   volumetric_fog_density: validateNonNegativeNumber(),

@@ -1,0 +1,38 @@
+[gd_scene format=3]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_1"]
+sky_top_color = Color(0.1, 0.15, 0.3, 1)
+sky_horizon_color = Color(0.5, 0.6, 0.7, 1)
+
+[sub_resource type="Sky" id="Sky_1"]
+sky_material = SubResource("ProceduralSkyMaterial_1")
+
+[sub_resource type="Environment" id="Environment_1"]
+background_mode = 2
+sky = SubResource("Sky_1")
+tonemap_mode = 2
+tonemap_white = 6.0
+tonemap_exposure = 1.0
+ambient_light_source = 3
+ambient_light_color = Color(0.4, 0.4, 0.5, 1)
+ambient_light_energy = 1.0
+fog_enabled = true
+fog_density = 0.02
+fog_light_color = Color(0.5, 0.6, 0.7, 1)
+fog_mode = 0
+
+[sub_resource type="BoxMesh" id="BoxMesh_1"]
+size = Vector3(2, 2, 2)
+
+[node name="Root" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_1")
+
+[node name="Box" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -6)
+mesh = SubResource("BoxMesh_1")
+
+[node name="Camera" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 6)
+fov = 75.0

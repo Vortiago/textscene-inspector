@@ -21,6 +21,21 @@ export function formatBaseLightSection(
     { label: 'Energy', value: properties.light_energy.toFixed(2) },
   ];
 
+  if (properties.light_negative !== undefined) {
+    items.push({ label: 'Negative', value: properties.light_negative ? 'Yes' : 'No' });
+  }
+
+  if (properties.light_specular !== undefined) {
+    items.push({ label: 'Specular', value: properties.light_specular.toFixed(2) });
+  }
+
+  if (properties.light_volumetric_fog_energy !== undefined) {
+    items.push({
+      label: 'Volumetric Fog Energy',
+      value: properties.light_volumetric_fog_energy.toFixed(2),
+    });
+  }
+
   if (additionalItems) {
     items.push(...additionalItems);
   }
@@ -50,8 +65,8 @@ export function formatBaseShadowSection(
     items.push({ label: 'Bias', value: properties.shadow_bias.toFixed(3) });
   }
 
-  if (properties.shadow_filter !== undefined) {
-    items.push({ label: 'Filter', value: properties.shadow_filter.toString() });
+  if (properties.shadow_blur !== undefined) {
+    items.push({ label: 'Blur', value: properties.shadow_blur.toFixed(2) });
   }
 
   if (additionalItems) {
@@ -92,8 +107,8 @@ export function formatShadowSectionWithNormalBias(
     });
   }
 
-  if (properties.shadow_filter !== undefined) {
-    items.push({ label: 'Filter', value: properties.shadow_filter.toString() });
+  if (properties.shadow_blur !== undefined) {
+    items.push({ label: 'Blur', value: properties.shadow_blur.toFixed(2) });
   }
 
   if (additionalItems) {

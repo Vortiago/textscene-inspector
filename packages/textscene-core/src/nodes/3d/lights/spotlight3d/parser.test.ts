@@ -21,7 +21,7 @@ describe('SpotLight3D Parser', () => {
       expect(result.spot_angle).toBe(45.0);
       expect(result.shadow_enabled).toBe(false);
       expect(result.shadow_bias).toBeUndefined();
-      expect(result.shadow_filter).toBeUndefined();
+      expect(result.shadow_blur).toBeUndefined();
     });
 
     it('should parse SpotLight3D with all properties', () => {
@@ -34,7 +34,7 @@ describe('SpotLight3D Parser', () => {
         spot_angle: '60.0',
         shadow_enabled: 'true',
         shadow_bias: '0.05',
-        shadow_filter: '2',
+        shadow_blur: '2',
       };
 
       const result = parseSpotLight3D(h, properties);
@@ -46,7 +46,7 @@ describe('SpotLight3D Parser', () => {
       expect(result.spot_angle).toBe(60.0);
       expect(result.shadow_enabled).toBe(true);
       expect(result.shadow_bias).toBe(0.05);
-      expect(result.shadow_filter).toBe(2);
+      expect(result.shadow_blur).toBe(2);
     });
 
     it('should parse shadow_enabled as false when not "true"', () => {

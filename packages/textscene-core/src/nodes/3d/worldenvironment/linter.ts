@@ -7,9 +7,27 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
-import type { TscnNode } from '../../../parser/types.js';
+import type { TscnNode, TscnScene } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { checkResourceExists } from '../../../linter/resourceChecker.js';
+
+/**
+ * Resolve the `sky` reference stored inside the Environment SubResource that a
+ * WorldEnvironment references. Only SubResource environment references can be
+ * inspected (ExtResource environments live in another file); returns undefined
+ * when the environment isn't a local SubResource or carries no sky property.
+ */
+function getEnvironmentSkyReference(
+  scene: TscnScene,
+  environmentRef: string
+): string | undefined {
+  const match = environmentRef.match(/^SubResource\("([\w-]+)"\)$/);
+  if (!match) return undefined;
+  const envId = match[1];
+  const env = scene.internalResources?.find((r) => r.data?.id === envId);
+  const sky = env?.data?.sky;
+  return typeof sky === 'string' ? sky : undefined;
+}
 
 /**
  * Count WorldEnvironment nodes in the scene tree
@@ -60,6 +78,19 @@ function checkWorldEnvironment(context: RuleContext): Diagnostic[] {
         nodeType: node.type,
         ruleName: 'valid-worldenvironment-resources',
       });
+    } else {
+      // The Environment subresource may reference a Sky subresource; existence-check
+      // it like the environment reference itself (the render parser reads sky too).
+      const skyRef = getEnvironmentSkyReference(scene, rawProps.environment);
+      if (skyRef && !checkResourceExists(scene, skyRef)) {
+        diagnostics.push({
+          severity: 'error',
+          message: `Sky resource not found: ${skyRef}`,
+          nodeName: node.name,
+          nodeType: node.type,
+          ruleName: 'valid-worldenvironment-resources',
+        });
+      }
     }
   }
 

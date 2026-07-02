@@ -81,6 +81,39 @@ describe('Base Light Property Formatter', () => {
 
       expect(section.items[1]).toEqual({ label: 'Energy', value: '100.50' });
     });
+
+    it('should surface light_negative, light_specular and volumetric fog energy when present', () => {
+      const properties = {
+        light_color: 'Color(1, 1, 1, 1)',
+        light_energy: 1.0,
+        shadow_enabled: false,
+        light_negative: true,
+        light_specular: 0.0,
+        light_volumetric_fog_energy: 500.0,
+      };
+
+      const section = formatBaseLightSection(properties);
+      const byLabel = Object.fromEntries(section.items.map((i) => [i.label, i.value]));
+
+      expect(byLabel['Negative']).toBe('Yes');
+      expect(byLabel['Specular']).toBe('0.00');
+      expect(byLabel['Volumetric Fog Energy']).toBe('500.00');
+    });
+
+    it('should omit the optional light items when absent', () => {
+      const properties = {
+        light_color: 'Color(1, 1, 1, 1)',
+        light_energy: 1.0,
+        shadow_enabled: false,
+      };
+
+      const section = formatBaseLightSection(properties);
+      const labels = section.items.map((i) => i.label);
+
+      expect(labels).not.toContain('Negative');
+      expect(labels).not.toContain('Specular');
+      expect(labels).not.toContain('Volumetric Fog Energy');
+    });
   });
 
   describe('formatBaseShadowSection', () => {
@@ -124,27 +157,27 @@ describe('Base Light Property Formatter', () => {
       expect(section.items[1]).toEqual({ label: 'Bias', value: '0.050' });
     });
 
-    it('should include shadow_filter when present', () => {
+    it('should include shadow_blur when present', () => {
       const properties = {
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 1.0,
         shadow_enabled: true,
-        shadow_filter: 2,
+        shadow_blur: 3.0,
       };
 
       const section = formatBaseShadowSection(properties);
 
       expect(section.items).toHaveLength(2);
-      expect(section.items[1]).toEqual({ label: 'Filter', value: '2' });
+      expect(section.items[1]).toEqual({ label: 'Blur', value: '3.00' });
     });
 
-    it('should include both bias and filter when present', () => {
+    it('should include both bias and blur when present', () => {
       const properties = {
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 1.0,
         shadow_enabled: true,
         shadow_bias: 0.05,
-        shadow_filter: 2,
+        shadow_blur: 2.0,
       };
 
       const section = formatBaseShadowSection(properties);
@@ -152,7 +185,7 @@ describe('Base Light Property Formatter', () => {
       expect(section.items).toHaveLength(3);
       expect(section.items[0]).toEqual({ label: 'Enabled', value: 'Yes' });
       expect(section.items[1]).toEqual({ label: 'Bias', value: '0.050' });
-      expect(section.items[2]).toEqual({ label: 'Filter', value: '2' });
+      expect(section.items[2]).toEqual({ label: 'Blur', value: '2.00' });
     });
 
     it('should include additional items after base items', () => {
@@ -222,7 +255,7 @@ describe('Base Light Property Formatter', () => {
         shadow_enabled: true,
         shadow_bias: 0.05,
         shadow_normal_bias: 0.02,
-        shadow_filter: 2,
+        shadow_blur: 2.0,
       };
 
       const section = formatShadowSectionWithNormalBias(properties);
@@ -231,7 +264,7 @@ describe('Base Light Property Formatter', () => {
       expect(section.items[0].label).toBe('Enabled');
       expect(section.items[1].label).toBe('Bias');
       expect(section.items[2].label).toBe('Normal Bias');
-      expect(section.items[3].label).toBe('Filter');
+      expect(section.items[3].label).toBe('Blur');
     });
 
     it('should not include normal bias when undefined', () => {

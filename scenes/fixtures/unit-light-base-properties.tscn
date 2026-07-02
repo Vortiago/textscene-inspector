@@ -1,0 +1,14 @@
+[gd_scene format=3]
+
+[node name="Root" type="Node3D"]
+
+[node name="OmniLight" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 0)
+light_color = Color(1, 0.9, 0.8, 1)
+light_energy = 2.0
+light_negative = false
+light_specular = 0.0
+light_volumetric_fog_energy = 25.0
+shadow_enabled = true
+shadow_blur = 1.5
+omni_range = 10.0
