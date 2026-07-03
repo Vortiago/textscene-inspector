@@ -5,6 +5,7 @@
 import * as vscode from 'vscode';
 import { TscnParser, type TscnNode } from '@textscene/core/parser';
 import { error } from '@textscene/core/logger';
+import { findNodeHeadingLine } from './nodeHeadingResolver';
 
 export class TscnDocumentSymbolProvider implements vscode.DocumentSymbolProvider {
   private readonly nodeTypeToSymbolKind: Record<string, vscode.SymbolKind> = {
@@ -31,7 +32,7 @@ export class TscnDocumentSymbolProvider implements vscode.DocumentSymbolProvider
 
       // Convert each root node to DocumentSymbol
       return parsed.nodes.map(node =>
-        this.convertNodeToSymbol(node, document, '')
+        this.convertNodeToSymbol(node, document)
       );
     } catch (err) {
       error('Error providing document symbols:', err);
@@ -41,13 +42,12 @@ export class TscnDocumentSymbolProvider implements vscode.DocumentSymbolProvider
 
   private convertNodeToSymbol(
     node: TscnNode,
-    document: vscode.TextDocument,
-    parentName: string
+    document: vscode.TextDocument
   ): vscode.DocumentSymbol {
     const { range, selectionRange } = this.findNodeRange(
       document,
       node.name,
-      parentName
+      node.parent
     );
 
     const symbolKind = this.getSymbolKind(node.type);
@@ -63,7 +63,7 @@ export class TscnDocumentSymbolProvider implements vscode.DocumentSymbolProvider
     // Recursively add children
     if (node.children && node.children.length > 0) {
       symbol.children = node.children.map(child =>
-        this.convertNodeToSymbol(child, document, node.name)
+        this.convertNodeToSymbol(child, document)
       );
     }
 
@@ -77,7 +77,7 @@ export class TscnDocumentSymbolProvider implements vscode.DocumentSymbolProvider
   private findNodeRange(
     document: vscode.TextDocument,
     nodeName: string,
-    parentName: string
+    nodeParent: string | undefined
   ): {
     range: vscode.Range;
     selectionRange: vscode.Range;
@@ -85,43 +85,10 @@ export class TscnDocumentSymbolProvider implements vscode.DocumentSymbolProvider
     const text = document.getText();
     const lines = text.split('\n');
 
-    // Build search pattern for node heading
-    // Root nodes: [node name="NodeName" type="..."
-    // Child nodes: [node name="NodeName" parent="..." type="..."
-    let startLine = -1;
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i]!;
-
-      // Check if this is a node heading
-      if (!line.startsWith('[node ')) {
-        continue;
-      }
-
-      // Extract name from heading
-      const nameMatch = line.match(/name="([^"]+)"/);
-      if (!nameMatch || nameMatch[1] !== nodeName) {
-        continue;
-      }
-
-      // For child nodes, verify parent matches
-      if (parentName) {
-        const parentMatch = line.match(/parent="([^"]+)"/);
-        if (!parentMatch) {
-          continue;
-        }
-
-        // Parent "." means direct child of previous node
-        // Parent "path" means specific parent
-        const parentValue = parentMatch[1];
-        if (!parentValue || (parentValue !== '.' && !parentValue.includes(parentName))) {
-          continue;
-        }
-      }
-
-      startLine = i;
-      break;
-    }
+    // Match by name and the exact Godot `parent=` value (root's heading omits
+    // `parent`; compare it as an empty string) — disambiguates duplicate
+    // sibling names, including nested ones sharing an immediate parent name.
+    const startLine = findNodeHeadingLine(lines, nodeName, nodeParent ?? '');
 
     // Fallback if not found
     if (startLine === -1) {

@@ -68,6 +68,87 @@ describe('TscnPreviewPanel dependency hot-reload', () => {
     });
     // fs.stat resolves by default, so findProjectRoot treats /workspace as the root.
 
+    // Establish relevance: the webview must have requested this resource at
+    // least once before a disk change to it is considered worth invalidating.
+    panel._testTriggerMessage({
+      type: 'loadResource',
+      path: 'res://textures/wood.png',
+      resourceType: 'Texture2D',
+      requestId: 'r1',
+    });
+    await new Promise<void>((r) => setTimeout(r, 10));
+
+    await panel.handleDependencyChange(createMockUri('/workspace/textures/wood.png'));
+
+    expect(resourceChangedCalls(webview)).toEqual([
+      { type: 'resourceChanged', path: 'res://textures/wood.png' },
+    ]);
+  });
+
+  it('does not post resourceChanged for a file the scene never requested (relevance gate)', async () => {
+    const { webview, triggerMessage } = setupMockPanel();
+    const panel = await createReadyPanel(triggerMessage);
+    (vscode.workspace.getWorkspaceFolder as Mock).mockReturnValue({
+      uri: createMockUri('/workspace'),
+    });
+
+    // No loadResource message was ever sent for this path.
+    await panel.handleDependencyChange(createMockUri('/workspace/unrelated.png'));
+
+    expect(resourceChangedCalls(webview)).toHaveLength(0);
+  });
+
+  it('caches project-root resolution across repeated loadResource calls on the same panel', async () => {
+    const { triggerMessage } = setupMockPanel();
+    const panel = await createReadyPanel(triggerMessage);
+    (vscode.workspace.getWorkspaceFolder as Mock).mockReturnValue({
+      uri: createMockUri('/workspace'),
+    });
+    const stat = vscode.workspace.fs.stat as Mock;
+    stat.mockClear();
+
+    panel._testTriggerMessage({
+      type: 'loadResource',
+      path: 'res://a.png',
+      resourceType: 'Texture2D',
+      requestId: 'r1',
+    });
+    await new Promise<void>((r) => setTimeout(r, 10));
+    const callsAfterFirst = stat.mock.calls.length;
+    expect(callsAfterFirst).toBeGreaterThan(0);
+
+    panel._testTriggerMessage({
+      type: 'loadResource',
+      path: 'res://b.png',
+      resourceType: 'Texture2D',
+      requestId: 'r2',
+    });
+    await new Promise<void>((r) => setTimeout(r, 10));
+
+    // The second resource request reuses the panel's cached provider/project
+    // root instead of re-walking the filesystem for it.
+    expect(stat).toHaveBeenCalledTimes(callsAfterFirst);
+  });
+
+  it('recovers a resource whose initial load failed once it is created on disk (missing -> loaded)', async () => {
+    const { webview, triggerMessage } = setupMockPanel();
+    const panel = await createReadyPanel(triggerMessage);
+    (vscode.workspace.getWorkspaceFolder as Mock).mockReturnValue({
+      uri: createMockUri('/workspace'),
+    });
+
+    // Initial load fails — the texture is referenced but doesn't exist on disk yet.
+    (vscode.workspace.fs.readFile as Mock).mockRejectedValue(new Error('ENOENT'));
+    panel._testTriggerMessage({
+      type: 'loadResource',
+      path: 'res://textures/wood.png',
+      resourceType: 'Texture2D',
+      requestId: 'r1',
+    });
+    await new Promise<void>((r) => setTimeout(r, 10));
+
+    // The file is created; the watcher fires onDidCreate -> handleDependencyChange.
+    (vscode.workspace.fs.readFile as Mock).mockResolvedValue(createMockFileData('now exists'));
     await panel.handleDependencyChange(createMockUri('/workspace/textures/wood.png'));
 
     expect(resourceChangedCalls(webview)).toEqual([
