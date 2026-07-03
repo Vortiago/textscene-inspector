@@ -37,12 +37,23 @@ export function parseColorOrUndefined(value: string | undefined): Color | undefi
 }
 
 /**
+ * Parse a Color, falling back to `fallback` when the value is absent or the
+ * grammar does not match. The color member of the `floatOr` / `intOr` /
+ * `boolOr` / `enumOr` / `vec2Or` decoder family: a warn-free
+ * `parseColorOrUndefined(value) ?? fallback` so every typed field carrying a
+ * per-field default reads uniformly instead of open-coding the `?? default`.
+ */
+export function colorOr(value: string | undefined, fallback: Color): Color {
+  return parseColorOrUndefined(value) ?? fallback;
+}
+
+/**
  * Parse Color from Godot format: Color(r, g, b, a)
  * Values are in range 0-1, but negative values and values > 1 are accepted
  * Returns white color { r: 1, g: 1, b: 1, a: 1 } if parsing fails
  */
 export function parseColor(value: string | undefined): Color {
-  return parseColorOrUndefined(value) ?? { r: 1, g: 1, b: 1, a: 1 };
+  return colorOr(value, { r: 1, g: 1, b: 1, a: 1 });
 }
 
 /**

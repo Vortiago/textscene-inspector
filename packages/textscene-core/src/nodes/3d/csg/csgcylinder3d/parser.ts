@@ -16,9 +16,9 @@ export function parseCSGCylinder3D(
 
   const result: CSGCylinder3DProperties = {
     ...node3d,
-    radius: floatOr(properties.radius, DEFAULTS.radius, 'CSGCylinder3D'),
-    height: floatOr(properties.height, DEFAULTS.height, 'CSGCylinder3D'),
-    sides: intOr(properties.sides, DEFAULTS.sides, 'CSGCylinder3D'),
+    radius: floatOr(properties.radius, DEFAULTS.radius, 'CSGCylinder3D radius'),
+    height: floatOr(properties.height, DEFAULTS.height, 'CSGCylinder3D height'),
+    sides: intOr(properties.sides, DEFAULTS.sides, 'CSGCylinder3D sides'),
     cone: properties.cone === undefined ? DEFAULTS.cone : properties.cone === 'true',
   };
 

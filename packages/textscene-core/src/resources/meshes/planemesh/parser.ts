@@ -1,7 +1,7 @@
 import type { PlaneMeshProperties } from './types';
-import { parseVector2, parseVector3, type Vector2, type Vector3 } from '../../../parser/vectors';
+import { parseVector3, type Vector2, type Vector3 } from '../../../parser/vectors';
 import { warn } from '../../../logger';
-import { intOr } from '../../../parser/valueParsers';
+import { boolOr, enumOr, intOr, vec2Or } from '../../../parser/valueParsers';
 
 /**
  * Defaults that differ between PlaneMesh (FACE_Y, 2×2) and its QuadMesh subclass
@@ -19,37 +19,7 @@ export function parsePlaneMesh(
   properties: Record<string, string>,
   defaults: PlaneMeshDefaults = PLANE_MESH_DEFAULTS
 ): PlaneMeshProperties {
-  let size: Vector2 = { ...defaults.size };
-  let subdivideWidth = 0;
-  let subdivideDepth = 0;
-  let orientation = defaults.orientation;
   let centerOffset: Vector3 | undefined = undefined;
-  let flipFaces = false;
-
-  if (properties.size) {
-    try {
-      size = parseVector2(properties.size);
-    } catch (error) {
-      warn(
-        `Failed to parse PlaneMesh size: ${error instanceof Error ? error.message : String(error)}`
-      );
-    }
-  }
-
-  if (properties.subdivide_width !== undefined) {
-    subdivideWidth = intOr(properties.subdivide_width, 0, 'PlaneMesh subdivideWidth');
-  }
-  if (properties.subdivide_depth !== undefined) {
-    subdivideDepth = intOr(properties.subdivide_depth, 0, 'PlaneMesh subdivideDepth');
-  }
-  // orientation — intOr handles NaN, range check is specific to PlaneMesh
-  if (properties.orientation !== undefined) {
-    orientation = intOr(properties.orientation, defaults.orientation, 'PlaneMesh orientation');
-    if (orientation < 0 || orientation > 2) {
-      warn(`Invalid PlaneMesh orientation: ${properties.orientation}`);
-      orientation = defaults.orientation;
-    }
-  }
 
   if (properties.center_offset) {
     try {
@@ -61,15 +31,12 @@ export function parsePlaneMesh(
     }
   }
 
-  if (properties.flip_faces) {
-    if (properties.flip_faces === 'true') {
-      flipFaces = true;
-    } else if (properties.flip_faces === 'false') {
-      flipFaces = false;
-    } else {
-      warn(`Invalid PlaneMesh flip_faces: ${properties.flip_faces}, expected true or false`);
-    }
-  }
-
-  return { size, subdivideWidth, subdivideDepth, orientation, centerOffset, flipFaces };
+  return {
+    size: vec2Or(properties.size, defaults.size, 'PlaneMesh size'),
+    subdivideWidth: intOr(properties.subdivide_width, 0, 'PlaneMesh subdivideWidth'),
+    subdivideDepth: intOr(properties.subdivide_depth, 0, 'PlaneMesh subdivideDepth'),
+    orientation: enumOr(properties.orientation, defaults.orientation, [0, 1, 2], 'PlaneMesh orientation'),
+    centerOffset,
+    flipFaces: boolOr(properties.flip_faces, false, 'PlaneMesh flip_faces'),
+  };
 }
