@@ -23,37 +23,7 @@
  * for them, so this reproduces the prior box exactly while fixing skinned ones.
  */
 import * as THREE from 'three';
-
-const _box = /*@__PURE__*/ new THREE.Box3();
-
-/** Object3D shape that may carry a geometry (Mesh, SkinnedMesh, Line, Points). */
-interface GeometryBearing extends THREE.Object3D {
-  geometry?: THREE.BufferGeometry;
-}
-
-/**
- * Union of every descendant's `geometry.boundingBox` transformed by its
- * `matrixWorld`. Refreshes world matrices first so the box reflects the current
- * transform chain. Deliberately ignores `SkinnedMesh.boundingBox` (the posed
- * box) — see the file header. Returns an empty box when no descendant has
- * geometry.
- */
-export function computeWorldBoundingBox(
-  object: THREE.Object3D,
-  target: THREE.Box3 = new THREE.Box3()
-): THREE.Box3 {
-  target.makeEmpty();
-  object.updateWorldMatrix(true, true);
-  object.traverse((child) => {
-    const geometry = (child as GeometryBearing).geometry;
-    if (!geometry) return;
-    if (geometry.boundingBox === null) geometry.computeBoundingBox();
-    if (!geometry.boundingBox) return;
-    _box.copy(geometry.boundingBox).applyMatrix4(child.matrixWorld);
-    target.union(_box);
-  });
-  return target;
-}
+import { computeWorldBoundingBox } from '../bounds.js';
 
 const _helperBox = /*@__PURE__*/ new THREE.Box3();
 

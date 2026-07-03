@@ -58,6 +58,8 @@ export {
   type NodePathHandlers,
 } from './hooks/useViewportSelection.js';
 
+export { computeWorldBoundingBox } from './bounds.js';
+
 // The shell's own parse pipeline, exposed so hosts can make the SAME
 // renderability decision the shell will make (e.g. the web app's
 // hold-last-valid source gate) instead of re-deriving the rule.

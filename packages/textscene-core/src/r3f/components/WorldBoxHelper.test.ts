@@ -10,7 +10,7 @@
  */
 import * as THREE from 'three';
 import { describe, it, expect } from 'vitest';
-import { computeWorldBoundingBox } from './WorldBoxHelper';
+import { computeWorldBoundingBox } from '../bounds.js';
 
 function unitBoxGeometry(): THREE.BufferGeometry {
   const geo = new THREE.BoxGeometry(2, 2, 2); // local AABB: (-1,-1,-1)..(1,1,1)
