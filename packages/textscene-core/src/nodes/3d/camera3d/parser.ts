@@ -6,6 +6,7 @@ import type { ParsedHeading } from '../../../parser/utils';
 import type { Camera3DProperties } from './types';
 import { ProjectionMode, KeepAspectMode } from './types';
 import { parseNode3D } from '../../base/node3d/parser';
+import { floatOr, intOr, vec2Or } from '../../../parser/valueParsers';
 
 export function parseCamera3D(
   heading: ParsedHeading,
@@ -16,17 +17,17 @@ export function parseCamera3D(
   return {
     ...baseProps,
     projection: parseProjectionMode(properties.projection),
-    fov: parseFloat(properties.fov ?? '75.0'),
-    size: parseFloat(properties.size ?? '1.0'),
-    near: parseFloat(properties.near ?? '0.05'),
-    far: parseFloat(properties.far ?? '4000.0'),
+    fov: floatOr(properties.fov, 75.0, 'fov'),
+    size: floatOr(properties.size, 1.0, 'size'),
+    near: floatOr(properties.near, 0.05, 'near'),
+    far: floatOr(properties.far, 4000.0, 'far'),
     keep_aspect: parseKeepAspectMode(properties.keep_aspect),
-    h_offset: parseFloat(properties.h_offset ?? '0.0'),
-    v_offset: parseFloat(properties.v_offset ?? '0.0'),
-    frustum_offset: parseFrustumOffset(properties.frustum_offset),
+    h_offset: floatOr(properties.h_offset, 0.0, 'h_offset'),
+    v_offset: floatOr(properties.v_offset, 0.0, 'v_offset'),
+    frustum_offset: vec2Or(properties.frustum_offset, { x: 0, y: 0 }, 'frustum_offset'),
     current: properties.current === 'true',
-    cull_mask: parseInt(properties.cull_mask ?? '1048575', 10),
-    doppler_tracking: parseInt(properties.doppler_tracking ?? '0', 10),
+    cull_mask: intOr(properties.cull_mask, 1048575, 'cull_mask'),
+    doppler_tracking: intOr(properties.doppler_tracking, 0, 'doppler_tracking'),
   };
 }
 
@@ -44,19 +45,4 @@ function parseKeepAspectMode(value: string | undefined): KeepAspectMode {
   if (num === 0) return KeepAspectMode.KEEP_WIDTH;
   if (num === 2) return KeepAspectMode.KEEP_ASPECT_DISABLED;
   return KeepAspectMode.KEEP_HEIGHT;
-}
-
-function parseFrustumOffset(value: string | undefined): { x: number; y: number } {
-  if (!value) return { x: 0, y: 0 };
-
-  // Parse Vector2(x, y) format
-  const match = value.match(/Vector2\(\s*([-\d.eE+]+)\s*,\s*([-\d.eE+]+)\s*\)/);
-  if (match && match[1] && match[2]) {
-    return {
-      x: parseFloat(match[1]),
-      y: parseFloat(match[2]),
-    };
-  }
-
-  return { x: 0, y: 0 };
 }

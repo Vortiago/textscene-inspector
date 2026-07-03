@@ -5,6 +5,7 @@
 import type { ParsedHeading } from '../../../parser/utils';
 import type { MeshInstance3DProperties } from './types';
 import { parseNode3D } from '../../base/node3d/parser';
+import { parseOptionalFloat, parseOptionalInt } from '../../../parser/valueParsers';
 
 export function parseMeshInstance3D(
   heading: ParsedHeading,
@@ -40,39 +41,48 @@ export function parseMeshInstance3D(
   }
 
   if (properties.cast_shadow) {
-    meshInstance3DProps.castShadow = parseInt(properties.cast_shadow, 10);
+    const val = parseOptionalInt(properties.cast_shadow);
+    if (val !== undefined) meshInstance3DProps.castShadow = val;
   }
 
   if (properties.gi_mode) {
-    meshInstance3DProps.giMode = parseInt(properties.gi_mode, 10);
+    const val = parseOptionalInt(properties.gi_mode);
+    if (val !== undefined) meshInstance3DProps.giMode = val;
   }
 
   if (properties.gi_lightmap_scale) {
-    meshInstance3DProps.giLightmapScale = parseInt(properties.gi_lightmap_scale, 10);
+    const val = parseOptionalInt(properties.gi_lightmap_scale);
+    if (val !== undefined) meshInstance3DProps.giLightmapScale = val;
   }
 
   if (properties.visibility_range_begin) {
-    meshInstance3DProps.visibilityRangeBegin = parseFloat(properties.visibility_range_begin);
+    const val = parseOptionalFloat(properties.visibility_range_begin);
+    if (val !== undefined) meshInstance3DProps.visibilityRangeBegin = val;
   }
 
   if (properties.visibility_range_begin_margin) {
-    meshInstance3DProps.visibilityRangeBeginMargin = parseFloat(properties.visibility_range_begin_margin);
+    const val = parseOptionalFloat(properties.visibility_range_begin_margin);
+    if (val !== undefined) meshInstance3DProps.visibilityRangeBeginMargin = val;
   }
 
   if (properties.visibility_range_end) {
-    meshInstance3DProps.visibilityRangeEnd = parseFloat(properties.visibility_range_end);
+    const val = parseOptionalFloat(properties.visibility_range_end);
+    if (val !== undefined) meshInstance3DProps.visibilityRangeEnd = val;
   }
 
   if (properties.visibility_range_end_margin) {
-    meshInstance3DProps.visibilityRangeEndMargin = parseFloat(properties.visibility_range_end_margin);
+    const val = parseOptionalFloat(properties.visibility_range_end_margin);
+    if (val !== undefined) meshInstance3DProps.visibilityRangeEndMargin = val;
   }
 
   if (properties.visibility_range_fade_mode) {
-    meshInstance3DProps.visibilityRangeFadeMode = parseInt(properties.visibility_range_fade_mode, 10);
+    const val = parseOptionalInt(properties.visibility_range_fade_mode);
+    if (val !== undefined) meshInstance3DProps.visibilityRangeFadeMode = val;
   }
 
   if (properties.layers) {
-    meshInstance3DProps.layers = parseInt(properties.layers, 10);
+    const val = parseOptionalInt(properties.layers);
+    if (val !== undefined) meshInstance3DProps.layers = val;
   }
 
   if (properties.skeleton) {

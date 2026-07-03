@@ -236,32 +236,26 @@ describe('MeshInstance3D Parser', () => {
       expect(result.parent).toBe('.');
     });
 
-    it('should return NaN for invalid cast_shadow', () => {
+    it('should be undefined for invalid cast_shadow', () => {
       const h = heading('MeshInstance3D', { name: 'Cube', parent: '.' });
-
       const result = parseMeshInstance3D(h, { cast_shadow: 'invalid' });
-
-      expect(result.castShadow).toBeNaN();
+      expect(result.castShadow).toBeUndefined();
     });
 
-    it('should return NaN for invalid gi_mode', () => {
+    it('should be undefined for invalid gi_mode', () => {
       const h = heading('MeshInstance3D', { name: 'Cube', parent: '.' });
-
       const result = parseMeshInstance3D(h, { gi_mode: 'invalid' });
-
-      expect(result.giMode).toBeNaN();
+      expect(result.giMode).toBeUndefined();
     });
 
-    it('should return NaN for invalid visibility range values', () => {
+    it('should be undefined for invalid visibility range values', () => {
       const h = heading('MeshInstance3D', { name: 'Cube', parent: '.' });
-
       const result = parseMeshInstance3D(h, {
         visibility_range_begin: 'invalid',
         visibility_range_end: 'bad',
       });
-
-      expect(result.visibilityRangeBegin).toBeNaN();
-      expect(result.visibilityRangeEnd).toBeNaN();
+      expect(result.visibilityRangeBegin).toBeUndefined();
+      expect(result.visibilityRangeEnd).toBeUndefined();
     });
 
     it('should handle empty surface material override map', () => {

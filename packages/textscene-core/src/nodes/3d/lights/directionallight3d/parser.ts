@@ -6,6 +6,7 @@ import type { ParsedHeading } from '../../../../parser/utils';
 import type { DirectionalLight3DProperties } from './types';
 import { parseNode3D } from '../../../base/node3d/parser';
 import { parseBaseLightWithNormalBias } from '../shared/parser';
+import { parseOptionalFloat, parseOptionalInt } from '../../../../parser/valueParsers';
 
 export function parseDirectionalLight3D(
   heading: ParsedHeading,
@@ -17,11 +18,7 @@ export function parseDirectionalLight3D(
   return {
     ...node3dProps,
     ...baseLightProps,
-    directional_shadow_mode: properties.directional_shadow_mode
-      ? parseInt(properties.directional_shadow_mode, 10)
-      : undefined,
-    directional_shadow_max_distance: properties.directional_shadow_max_distance
-      ? parseFloat(properties.directional_shadow_max_distance)
-      : undefined,
+    directional_shadow_mode: parseOptionalInt(properties.directional_shadow_mode),
+    directional_shadow_max_distance: parseOptionalFloat(properties.directional_shadow_max_distance),
   };
 }

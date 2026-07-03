@@ -105,3 +105,29 @@ export function parseOptionalBool(value: string | undefined): boolean | undefine
   if (value === undefined) return undefined;
   return value === 'true';
 }
+
+/**
+ * Optional float reader: returns `undefined` for an absent or unparseable
+ * value — no fallback, no warning. Mirrors `parseOptionalInt` for floats;
+ * used where a missing numeric property is itself meaningful.
+ */
+export function parseOptionalFloat(value: string | undefined): number | undefined {
+  if (value === undefined) return undefined;
+  const parsed = parseFloat(value);
+  return Number.isNaN(parsed) ? undefined : parsed;
+}
+
+/**
+ * Optional Vector2 reader: returns `undefined` for an absent or unparseable
+ * value — no fallback, no warning. Wraps the canonical (throwing) `parseVector2`
+ * so its float grammar (`FLOAT_PATTERN_SOURCE`) is shared. Used for Control
+ * `custom_minimum_size` and StyleBox `shadow_offset`.
+ */
+export function parseOptionalVector2(value: string | undefined): Vector2 | undefined {
+  if (!value) return undefined;
+  try {
+    return parseVector2(value);
+  } catch {
+    return undefined;
+  }
+}
