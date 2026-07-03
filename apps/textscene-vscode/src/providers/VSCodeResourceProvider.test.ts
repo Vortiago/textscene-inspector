@@ -180,4 +180,74 @@ describe('VSCodeResourceProvider', () => {
       expect(result).toBe(content);
     });
   });
+
+  // ============================================================================
+  // Served Resource Tracking (fsPath -> res:// round-trip for hot-reload)
+  // ============================================================================
+
+  describe('Served Resource Tracking', () => {
+    it('returns null for a file that was never loaded through this provider', () => {
+      const resPath = provider.getServedResPath(createMockUri('/workspace/textures/wood.png'));
+
+      expect(resPath).toBeNull();
+    });
+
+    it('records the exact res:// string served for a resource resolved via the project-root branch', async () => {
+      vscode.workspace.fs.readFile.mockResolvedValueOnce(createMockFileData('texture data'));
+
+      await provider.loadResource('res://textures/wood.png', 'Texture2D');
+
+      const resPath = provider.getServedResPath(createMockUri('/workspace/textures/wood.png'));
+      expect(resPath).toBe('res://textures/wood.png');
+    });
+
+    it('matches a served resource regardless of fsPath casing (case-insensitive filesystem)', async () => {
+      vscode.workspace.fs.readFile.mockResolvedValueOnce(createMockFileData('texture data'));
+
+      // Requested with mixed case; the watcher later reports the on-disk path lowercased.
+      await provider.loadResource('res://Textures/Wood.png', 'Texture2D');
+
+      const resPath = provider.getServedResPath(createMockUri('/workspace/textures/wood.png'));
+      // The original served string, not a re-derivation from the lowercase watcher path.
+      expect(resPath).toBe('res://Textures/Wood.png');
+    });
+
+    it('records the fallback-resolved fsPath (document-dir relative) so it round-trips on later invalidation', async () => {
+      // Primary (project-root-relative) resolution fails; only the document-dir
+      // fallback succeeds. documentUri is /workspace/scenes/test.tscn, so the
+      // fallback path is /workspace/scenes/icon.png.
+      vscode.workspace.fs.readFile.mockImplementation((uri: ReturnType<typeof createMockUri>) => {
+        if (uri.fsPath.replace(/\\/g, '/') === '/workspace/scenes/icon.png') {
+          return Promise.resolve(createMockFileData('icon-bytes'));
+        }
+        return Promise.reject(new Error('Not found'));
+      });
+
+      await provider.loadResource('res://icon.png', 'Texture2D');
+
+      const resPath = provider.getServedResPath(createMockUri('/workspace/scenes/icon.png'));
+      expect(resPath).toBe('res://icon.png');
+    });
+
+    it('records a resolved candidate even when the read fails, so a later on-disk creation can still be matched', async () => {
+      vscode.workspace.fs.readFile.mockRejectedValue(new Error('ENOENT'));
+
+      await expect(provider.loadResource('res://textures/missing.png', 'Texture2D')).rejects.toThrow();
+
+      const resPath = provider.getServedResPath(createMockUri('/workspace/textures/missing.png'));
+      expect(resPath).toBe('res://textures/missing.png');
+    });
+
+    it('matches a served resource looked up with Windows-style backslash separators', async () => {
+      vscode.workspace.fs.readFile.mockResolvedValueOnce(createMockFileData('texture data'));
+
+      await provider.loadResource('res://textures/wood.png', 'Texture2D');
+
+      // The watcher (or a caller building a raw OS path) may report the same
+      // file with backslash separators instead of the forward slashes the
+      // provider's own Uri.joinPath resolution produced internally.
+      const resPath = provider.getServedResPath(createMockUri('/workspace\\textures\\wood.png'));
+      expect(resPath).toBe('res://textures/wood.png');
+    });
+  });
 });

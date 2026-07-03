@@ -215,6 +215,78 @@ visible = true
   });
 
   // ============================================================================
+  // Duplicate Sibling Resolution
+  // ============================================================================
+
+  describe('Duplicate Sibling Resolution', () => {
+    it('resolves a duplicate child name using the exact parent, not a substring match', () => {
+      // "Leaf" appears under both "AB" and "B". A loose `parentValue.includes(parentName)`
+      // match wrongly treats "AB" as matching parent "B" (since "AB".includes("B")).
+      //   0 [gd_scene ...]
+      //   1 [node name="Root" ...]
+      //   2 [node name="AB" ... parent="."]
+      //   3 [node name="B" ... parent="."]
+      //   4 [node name="Leaf" ... parent="AB"]   <- under AB
+      //   5 [node name="Leaf" ... parent="B"]    <- under B
+      const tscnContent = [
+        '[gd_scene format=3]',
+        '[node name="Root" type="Node3D"]',
+        '[node name="AB" type="Node3D" parent="."]',
+        '[node name="B" type="Node3D" parent="."]',
+        '[node name="Leaf" type="Node3D" parent="AB"]',
+        '[node name="Leaf" type="Node3D" parent="B"]',
+      ].join('\n');
+
+      const document = createMockDocument(tscnContent);
+      const provider = new TscnDocumentSymbolProvider();
+      const symbols = provider.provideDocumentSymbols(document, mockCancellationToken);
+
+      const ab = symbols![0].children.find(c => c.name === 'AB')!;
+      const b = symbols![0].children.find(c => c.name === 'B')!;
+
+      expect(ab.children[0]!.selectionRange.start).toBe(4);
+      expect(b.children[0]!.selectionRange.start).toBe(5);
+    });
+
+    it('resolves a nested duplicate name using the full ancestor path, not just the immediate parent', () => {
+      // "Target" appears once under "Foo/X" and once under "Bar/X". The immediate
+      // parent name alone ("X") is identical for both, so a resolver that only
+      // tracks the immediate parent (not the full Godot parent= path) can't tell
+      // them apart.
+      //   0 [gd_scene ...]
+      //   1 [node name="Root" ...]
+      //   2 [node name="Foo" ... parent="."]
+      //   3 [node name="Bar" ... parent="."]
+      //   4 [node name="X" ... parent="Foo"]
+      //   5 [node name="X" ... parent="Bar"]
+      //   6 [node name="Target" ... parent="Foo/X"]   <- under Foo/X
+      //   7 [node name="Target" ... parent="Bar/X"]   <- under Bar/X
+      const tscnContent = [
+        '[gd_scene format=3]',
+        '[node name="Root" type="Node3D"]',
+        '[node name="Foo" type="Node3D" parent="."]',
+        '[node name="Bar" type="Node3D" parent="."]',
+        '[node name="X" type="Node3D" parent="Foo"]',
+        '[node name="X" type="Node3D" parent="Bar"]',
+        '[node name="Target" type="Node3D" parent="Foo/X"]',
+        '[node name="Target" type="Node3D" parent="Bar/X"]',
+      ].join('\n');
+
+      const document = createMockDocument(tscnContent);
+      const provider = new TscnDocumentSymbolProvider();
+      const symbols = provider.provideDocumentSymbols(document, mockCancellationToken);
+
+      const foo = symbols![0].children.find(c => c.name === 'Foo')!;
+      const bar = symbols![0].children.find(c => c.name === 'Bar')!;
+      const targetUnderFoo = foo.children[0]!.children[0]!;
+      const targetUnderBar = bar.children[0]!.children[0]!;
+
+      expect(targetUnderFoo.selectionRange.start).toBe(6);
+      expect(targetUnderBar.selectionRange.start).toBe(7);
+    });
+  });
+
+  // ============================================================================
   // Light Node Types
   // ============================================================================
 

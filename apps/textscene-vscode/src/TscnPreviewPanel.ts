@@ -5,9 +5,9 @@
 import * as vscode from 'vscode';
 import { generateWebviewHtml, generateNonce } from './webview/webviewHtml';
 import type { MissingResource } from '@textscene/core/parser';
-import { parseHeading } from '@textscene/core/parser';
 import type { HostToWebviewMessage, WebviewToHostMessage } from './protocol';
 import { VSCodeResourceProvider } from './providers/VSCodeResourceProvider';
+import { findNodeHeadingLine } from './nodeHeadingResolver';
 import * as logger from './logger';
 
 // Test observability hooks (only active when running in test context)
@@ -55,6 +55,15 @@ export class TscnPreviewPanel {
    */
   private _webviewReady = false;
   private _pendingLoadContent: string | undefined;
+
+  /**
+   * Cached per-panel so `findProjectRoot`'s directory walk and the served
+   * `fsPath -> res://` map (see `VSCodeResourceProvider.getServedResPath`)
+   * survive across the many `loadResource` requests and dependency-change
+   * events a single panel handles. Discarded in `update()` only when the
+   * panel's underlying document actually changes.
+   */
+  private _resourceProvider: VSCodeResourceProvider | null = null;
 
   // Test observability: message history
   private _messageHistory: HostToWebviewMessage[] = [];
@@ -172,30 +181,59 @@ export class TscnPreviewPanel {
   }
 
   public update(resource: vscode.Uri) {
+    // Only a genuine document-identity change invalidates the cached provider
+    // — its project-root cache and served-resources map (see
+    // `_getResourceProvider`) stay valid across a same-document refresh (an
+    // in-editor save, an external edit), and deliberately aren't cleared then:
+    // resources whose path didn't change won't be re-requested by the
+    // webview's own client-side cache, so clearing here would silently drop
+    // still-relevant entries and reopen the relevance gate this cache closes.
+    if (resource.toString() !== this._currentResource.toString()) {
+      this._resourceProvider = null;
+    }
     this._currentResource = resource;
     this._panel.title = `Preview: ${resource.fsPath.split(/[\\/]/).pop()}`;
     this._loadTscnContent(resource);
   }
 
   /**
-   * A watched dependency (texture, `.tres`, sub-scene) changed on disk. The main
-   * scene text is unchanged, so `_loadTscnContent`'s content-diff guard would
-   * no-op; instead tell the webview to re-fetch just this resource. Resolves the
-   * file's `res://` path so the webview's `provideFile` matches its registration;
-   * a file outside the project (unresolvable) is ignored.
+   * Lazily create (and reuse) this panel's `VSCodeResourceProvider`, so its
+   * `findProjectRoot` result and served-resources map persist across the many
+   * `loadResource` requests and dependency-change events a panel handles,
+   * instead of re-walking the project-root search and re-resolving every path
+   * from scratch on each call.
    */
-  public async handleDependencyChange(fileUri: vscode.Uri): Promise<void> {
-    // A not-yet-ready webview loads everything fresh on mount — skip the
-    // project-root resolution IO entirely in that window.
-    if (!this._webviewReady) {
-      return;
+  private _getResourceProvider(): VSCodeResourceProvider | null {
+    if (this._resourceProvider) {
+      return this._resourceProvider;
     }
     const workspaceFolder = vscode.workspace.getWorkspaceFolder(this._currentResource);
     if (!workspaceFolder) {
+      return null;
+    }
+    this._resourceProvider = new VSCodeResourceProvider(workspaceFolder.uri, this._currentResource);
+    return this._resourceProvider;
+  }
+
+  /**
+   * A watched dependency (texture, `.tres`, sub-scene) changed on disk. The main
+   * scene text is unchanged, so `_loadTscnContent`'s content-diff guard would
+   * no-op; instead tell the webview to re-fetch just this resource. Looks up
+   * the file's `res://` path in the provider's served-resources map — a miss
+   * means the current scene never requested this file (irrelevant, or not yet
+   * loaded), so there is nothing to invalidate.
+   */
+  public async handleDependencyChange(fileUri: vscode.Uri): Promise<void> {
+    // A not-yet-ready webview loads everything fresh on mount — skip the
+    // lookup entirely in that window.
+    if (!this._webviewReady) {
       return;
     }
-    const provider = new VSCodeResourceProvider(workspaceFolder.uri, this._currentResource);
-    const resPath = await provider.resolveResPath(fileUri);
+    const provider = this._getResourceProvider();
+    if (!provider) {
+      return;
+    }
+    const resPath = provider.getServedResPath(fileUri);
     if (resPath) {
       this.invalidateResource(resPath);
     }
@@ -300,15 +338,10 @@ export class TscnPreviewPanel {
     requestId: string
   ): Promise<void> {
     try {
-      const workspaceFolder = vscode.workspace.getWorkspaceFolder(this._currentResource);
-      if (!workspaceFolder) {
+      const provider = this._getResourceProvider();
+      if (!provider) {
         throw new Error('No workspace folder found');
       }
-
-      const provider = new VSCodeResourceProvider(
-        workspaceFolder.uri,
-        this._currentResource
-      );
 
       const content = await provider.loadResource(resourcePath, resourceType);
 
@@ -464,33 +497,4 @@ export class TscnPreviewPanel {
         channel.info(fullMessage);
     }
   }
-}
-
-/**
- * Locate a node's `[node …]` heading line by name and Godot `parent=`.
- *
- * `expectedParent` is the raw Godot parent value carried on the jump message
- * (`undefined` for the root, `"."` for a direct child, else the ancestor path).
- * Matching on it disambiguates duplicate sibling names. When it is absent (the
- * unique root, or a legacy message without a parent), the first name match wins.
- *
- * @returns the 0-based line index, or -1 if the node is not found.
- */
-function findNodeHeadingLine(lines: string[], nodeName: string, expectedParent?: string): number {
-  let firstNameMatch = -1;
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]!;
-    if (!line.trimStart().startsWith('[node')) continue;
-
-    const heading = parseHeading(line);
-    if (heading?.type !== 'node' || heading.attributes.name !== nodeName) continue;
-
-    if (firstNameMatch === -1) firstNameMatch = i;
-    // Root's heading omits `parent`; compare it as an empty string.
-    if (expectedParent === undefined || (heading.attributes.parent ?? '') === expectedParent) {
-      return i;
-    }
-  }
-
-  return firstNameMatch;
 }
