@@ -11,7 +11,7 @@ import { createMaterialFromContent, isMaterialPath, type TextureLoaderFn } from 
 
 /**
  * Create a material processor that handles loading and caching materials.
- * @param loadTexture - Function to load textures by ID (for materials with texture references)
+ * @param loadTexture - Function to load textures by resolved res:// path (for materials with texture references)
  */
 export function createMaterialProcessor(
   fileEventBus: FileEventBus | undefined,

@@ -6,8 +6,8 @@
 import * as THREE from 'three';
 import { warn } from '../../logger';
 
-/** Function type for loading textures by ID */
-export type TextureLoaderFn = (id: string) => Promise<THREE.Texture | null>;
+/** Function type for loading a texture by its resolved res:// path */
+export type TextureLoaderFn = (path: string) => Promise<THREE.Texture | null>;
 
 /**
  * Check if a path is a material file (.tres).
@@ -17,18 +17,9 @@ export function isMaterialPath(path: string): boolean {
 }
 
 /**
- * Parse ExtResource("id") reference and return the path.
- * Returns null if not a valid ExtResource reference.
- */
-export function parseReference(value: string): string | null {
-  const match = value.match(/ExtResource\("([^"]+)"\)/);
-  return match?.[1] ?? null;
-}
-
-/**
  * Create a THREE.Material from .tres file content.
  * @param content - The .tres file content
- * @param loadTexture - Function to load textures by ID (optional for materials without textures)
+ * @param loadTexture - Function to load textures by resolved res:// path (optional for materials without textures)
  */
 export async function createMaterialFromContent(
   content: string,
@@ -36,7 +27,12 @@ export async function createMaterialFromContent(
 ): Promise<THREE.Material> {
   // Parse .tres file
   const { parseResourceFile } = await import('../../parser/resourceParsers');
+  const { parseTresFile } = await import('../../parser/tresParser');
+  const { resolveExtResourcePath } = await import('../SubResourceResolver');
   const { type, properties } = parseResourceFile(content);
+  // A .tres file's own ExtResource ids are local to it — resolve them against
+  // its own [ext_resource] headers, not the host scene's.
+  const { extResources } = parseTresFile(content);
 
   // Parse and create material based on type
   switch (type) {
@@ -129,10 +125,10 @@ export async function createMaterialFromContent(
         for (const slot of textureSlots) {
           const propValue = properties[slot];
           if (typeof propValue === 'string') {
-            const texRef = parseReference(propValue);
-            if (texRef) {
+            const texPath = resolveExtResourcePath(propValue, extResources);
+            if (texPath) {
               texturePromises.push(
-                loadTexture(texRef).then((texture) => ({ slot, texture }))
+                loadTexture(texPath).then((texture) => ({ slot, texture }))
               );
             }
           }
