@@ -77,9 +77,10 @@ export function activate(context: vscode.ExtensionContext) {
     })
   );
 
-  // Watch for external resource file changes (textures, materials, external scenes)
+  // Watch for external resource file changes: materials (.tres), textures
+  // (png/jpg/webp/svg), GLB/glTF meshes, and instanced sub-scenes (.tscn).
   const resourceWatcher = vscode.workspace.createFileSystemWatcher(
-    '**/*.{tres,png,jpg,jpeg,svg,tscn}',
+    '**/*.{tres,png,jpg,jpeg,webp,svg,glb,gltf,tscn}',
     false, // Don't ignore creates
     false, // Don't ignore changes
     false  // Don't ignore deletes
@@ -87,20 +88,22 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(resourceWatcher);
 
-  // When a resource file changes, update all panels (they will do incremental updates if possible)
-  const handleResourceChange = async (uri: vscode.Uri) => {
-    // Skip .tscn files that are main scene files (already handled by onDidSaveTextDocument)
-    for (const panelUri of panels.keys()) {
-      if (panelUri === uri.toString()) {
-        continue; // This is a main scene file, already handled
-      }
-    }
-
-    // Update all panels - they will only reload if they reference this resource
-    // The incremental update system will minimize the cost of checking
-    for (const panel of panels.values()) {
-      panel.update(panel.resource);
-    }
+  // When a watched file changes, refresh each panel appropriately: the panel
+  // whose OWN main scene changed re-reads it (catching external edits — git
+  // pull, branch switch — that fire no save event; the content-diff guard in
+  // update() dedups the in-editor save already handled by onDidSaveTextDocument),
+  // while every other panel re-fetches it as a dependency or instanced sub-scene.
+  const handleResourceChange = async (uri: vscode.Uri): Promise<void> => {
+    const changedKey = uri.toString();
+    await Promise.all(
+      [...panels].map(([panelKey, panel]) => {
+        if (panelKey === changedKey) {
+          panel.update(uri);
+          return Promise.resolve();
+        }
+        return panel.handleDependencyChange(uri);
+      })
+    );
   };
 
   context.subscriptions.push(

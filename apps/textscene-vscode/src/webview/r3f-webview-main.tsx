@@ -84,6 +84,11 @@ function R3FWebviewApp({ vscode }: { vscode: VsCodeApi }) {
         if (typeof raw === 'string' && raw.length > 0) {
           setContent(raw);
         }
+      } else if (message.type === 'resourceChanged') {
+        // A dependency (texture, .tres, sub-scene) changed on disk. Drop its
+        // cache and re-fetch — nodes subscribed via useResource transition
+        // missing/loaded → loaded and re-render with no remount.
+        loader.provideFile(message.path);
       }
     }
 
@@ -99,7 +104,7 @@ function R3FWebviewApp({ vscode }: { vscode: VsCodeApi }) {
     return () => {
       window.removeEventListener('message', onMessage);
     };
-  }, [vscode]);
+  }, [vscode, loader]);
 
   const panelId = useMemo(
     () => `vscode-${Math.random().toString(36).slice(2, 10)}`,
@@ -111,6 +116,7 @@ function R3FWebviewApp({ vscode }: { vscode: VsCodeApi }) {
       type: 'jumpToNode',
       nodeName: node.name,
       path,
+      parent: node.parent,
     } satisfies WebviewToHostMessage);
   };
 

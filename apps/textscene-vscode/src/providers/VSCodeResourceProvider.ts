@@ -8,6 +8,31 @@ import { isBinaryResourceType, stripResPrefix } from '@textscene/core/resources/
 import { info, error } from '@textscene/core/logger';
 import type { ResourceProvider } from '@textscene/core/resources/ResourceProvider';
 
+/**
+ * Inverse of {@link VSCodeResourceProvider.resolveGodotPath}: turn an absolute
+ * filesystem path back into the `res://` path it was resolved from, so a watched
+ * file change can be matched to the resource the webview registered.
+ *
+ * Returns `null` when the file is not under the project root (nothing to invalidate).
+ * Comparison mirrors the provider's bounds checks: forward slashes, case-insensitive.
+ *
+ * Note: this inverts only the primary (project-root-relative) resolution branch —
+ * the standard Godot layout. A resource that resolved via the document-dir fallback
+ * won't round-trip to the same `res://`, so its hot-reload degrades to no auto-refresh
+ * rather than misbehaving.
+ */
+export function toResPath(fileFsPath: string, projectRootFsPath: string): string | null {
+  const file = fileFsPath.replace(/\\/g, '/');
+  let root = projectRootFsPath.replace(/\\/g, '/');
+  if (!root.endsWith('/')) root += '/';
+
+  if (!file.toLowerCase().startsWith(root.toLowerCase())) {
+    return null;
+  }
+
+  return `res://${file.slice(root.length)}`;
+}
+
 export class VSCodeResourceProvider implements ResourceProvider {
   private projectRoot: vscode.Uri | null = null;
 
@@ -77,6 +102,17 @@ export class VSCodeResourceProvider implements ResourceProvider {
       error(`[VSCodeResourceProvider] ${errorMsg}`);
       throw new Error(errorMsg);
     }
+  }
+
+  /**
+   * Resolve an absolute file Uri back to its Godot `res://` path (the inverse of
+   * `resolveGodotPath`), or `null` if it lies outside the project root. Uses the
+   * same project-root detection as forward resolution, so the result matches the
+   * exact `res://` string the webview registered for that file.
+   */
+  async resolveResPath(fileUri: vscode.Uri): Promise<string | null> {
+    const projectRoot = await this.findProjectRoot();
+    return toResPath(fileUri.fsPath, projectRoot.fsPath);
   }
 
   /**

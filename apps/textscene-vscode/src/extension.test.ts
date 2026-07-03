@@ -34,12 +34,14 @@ describe('Extension', () => {
   let mockPanel: any;
   let commandHandlers: Map<string, (...args: unknown[]) => unknown>;
   let saveDocumentHandlers: Array<(...args: unknown[]) => unknown>;
+  let resourceChangeHandlers: Array<(uri: unknown) => unknown>;
 
   beforeEach(() => {
     vi.clearAllMocks();
 
     commandHandlers = new Map();
     saveDocumentHandlers = [];
+    resourceChangeHandlers = [];
 
     // Mock context
     mockContext = {
@@ -57,6 +59,7 @@ describe('Extension', () => {
         mockPanel._disposeCallback = callback;
         return { dispose: vi.fn() };
       }),
+      handleDependencyChange: vi.fn().mockResolvedValue(undefined),
       resource: createMockUri('/workspace/test.tscn')
     };
 
@@ -74,7 +77,28 @@ describe('Extension', () => {
       saveDocumentHandlers.push(handler);
       return { dispose: vi.fn() };
     });
+
+    // Mock the file-system watcher so we can capture the change handler.
+    (vscode.workspace.createFileSystemWatcher as Mock) = vi.fn(() => ({
+      onDidChange: vi.fn((handler: (uri: unknown) => unknown) => {
+        resourceChangeHandlers.push(handler);
+        return { dispose: vi.fn() };
+      }),
+      onDidCreate: vi.fn((handler: (uri: unknown) => unknown) => {
+        resourceChangeHandlers.push(handler);
+        return { dispose: vi.fn() };
+      }),
+      onDidDelete: vi.fn().mockReturnValue({ dispose: vi.fn() }),
+      dispose: vi.fn(),
+    }));
   });
+
+  function openPanelFor(fsPath: string): void {
+    (vscode.window.activeTextEditor as any) = {
+      document: { uri: createMockUri(fsPath), fileName: fsPath },
+    };
+    commandHandlers.get('textscene.openPreviewToSide')?.();
+  }
 
   // ============================================================================
   // Activation Tests
@@ -341,6 +365,35 @@ describe('Extension', () => {
 
       // Should not throw or crash
       expect(mockPanel.update).not.toHaveBeenCalled();
+    });
+  });
+
+  // ============================================================================
+  // Resource Watcher (dependency hot-reload)
+  // ============================================================================
+
+  describe('Resource Watcher', () => {
+    it('routes a changed dependency to the panel for re-fetch', async () => {
+      activate(mockContext);
+      openPanelFor('/workspace/scene.tscn');
+
+      const depUri = createMockUri('/workspace/textures/wood.png');
+      await Promise.all(resourceChangeHandlers.map((handler) => handler(depUri)));
+
+      expect(mockPanel.handleDependencyChange).toHaveBeenCalledWith(depUri);
+    });
+
+    it('re-reads a panel\'s own main scene (external change) instead of treating it as a dependency', async () => {
+      activate(mockContext);
+      openPanelFor('/workspace/scene.tscn');
+
+      const mainUri = createMockUri('/workspace/scene.tscn');
+      await Promise.all(resourceChangeHandlers.map((handler) => handler(mainUri)));
+
+      // An external edit to the main scene fires no save event, so the watcher
+      // must refresh it via update(); it must NOT be re-fetched as a dependency.
+      expect(mockPanel.update).toHaveBeenCalledWith(mainUri);
+      expect(mockPanel.handleDependencyChange).not.toHaveBeenCalled();
     });
   });
 

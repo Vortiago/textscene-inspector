@@ -53,11 +53,23 @@ export type ResourceLoadErrorMessage = {
   error: string;
 };
 
+/**
+ * A watched dependency (texture, `.tres`, sub-scene) changed on disk. The
+ * webview drops its cache for `path` and re-fetches it — used for hot-reload
+ * of resources, since the main-scene `loadTscn` path is unchanged.
+ */
+export type ResourceChangedMessage = {
+  type: 'resourceChanged';
+  /** The Godot `res://` path of the changed resource. */
+  path: string;
+};
+
 export type HostToWebviewMessage =
   | LoadTscnMessage
   | IncrementalUpdateMessage
   | ResourceLoadedMessage
-  | ResourceLoadErrorMessage;
+  | ResourceLoadErrorMessage
+  | ResourceChangedMessage;
 
 // ============================================================================
 // Webview -> Host
@@ -78,7 +90,14 @@ export type ErrorMessage = {
 export type JumpToNodeMessage = {
   type: 'jumpToNode';
   nodeName: string;
+  /** Full tree path from the root, e.g. "Root/B/Leaf" (breadcrumb identifier). */
   path: string;
+  /**
+   * Raw Godot `parent=` value of the node (`undefined` for root, `"."` for a
+   * direct child, else the `/`-joined ancestor path minus the root). Used to
+   * disambiguate duplicate sibling names when locating the `[node]` heading.
+   */
+  parent?: string;
 };
 
 /** Ask the host to read a resource file from the workspace. */

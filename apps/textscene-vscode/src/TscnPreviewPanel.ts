@@ -5,6 +5,7 @@
 import * as vscode from 'vscode';
 import { generateWebviewHtml, generateNonce } from './webview/webviewHtml';
 import type { MissingResource } from '@textscene/core/parser';
+import { parseHeading } from '@textscene/core/parser';
 import type { HostToWebviewMessage, WebviewToHostMessage } from './protocol';
 import { VSCodeResourceProvider } from './providers/VSCodeResourceProvider';
 import * as logger from './logger';
@@ -125,7 +126,7 @@ export class TscnPreviewPanel {
             vscode.window.showErrorMessage(message.message);
             return;
           case 'jumpToNode':
-            this._jumpToNodeDefinition(message.nodeName);
+            this._jumpToNodeDefinition(message.nodeName, message.parent);
             return;
           case 'loadResource':
             this._handleLoadResource(message.path, message.resourceType, message.requestId);
@@ -174,6 +175,42 @@ export class TscnPreviewPanel {
     this._currentResource = resource;
     this._panel.title = `Preview: ${resource.fsPath.split(/[\\/]/).pop()}`;
     this._loadTscnContent(resource);
+  }
+
+  /**
+   * A watched dependency (texture, `.tres`, sub-scene) changed on disk. The main
+   * scene text is unchanged, so `_loadTscnContent`'s content-diff guard would
+   * no-op; instead tell the webview to re-fetch just this resource. Resolves the
+   * file's `res://` path so the webview's `provideFile` matches its registration;
+   * a file outside the project (unresolvable) is ignored.
+   */
+  public async handleDependencyChange(fileUri: vscode.Uri): Promise<void> {
+    // A not-yet-ready webview loads everything fresh on mount — skip the
+    // project-root resolution IO entirely in that window.
+    if (!this._webviewReady) {
+      return;
+    }
+    const workspaceFolder = vscode.workspace.getWorkspaceFolder(this._currentResource);
+    if (!workspaceFolder) {
+      return;
+    }
+    const provider = new VSCodeResourceProvider(workspaceFolder.uri, this._currentResource);
+    const resPath = await provider.resolveResPath(fileUri);
+    if (resPath) {
+      this.invalidateResource(resPath);
+    }
+  }
+
+  /**
+   * Ask the webview to drop its cache for a resource and re-fetch it. No-op until
+   * the webview handshake completes — a not-yet-ready webview loads everything
+   * fresh once it mounts, so there is nothing to invalidate.
+   */
+  public invalidateResource(resPath: string): void {
+    if (!this._webviewReady) {
+      return;
+    }
+    this._postMessageToWebview({ type: 'resourceChanged', path: resPath });
   }
 
   private async _loadTscnContent(resource: vscode.Uri) {
@@ -226,22 +263,13 @@ export class TscnPreviewPanel {
     });
   }
 
-  private async _jumpToNodeDefinition(nodeName: string): Promise<void> {
+  private async _jumpToNodeDefinition(nodeName: string, expectedParent?: string): Promise<void> {
     try {
       const document = await vscode.workspace.openTextDocument(this._currentResource);
       const text = document.getText();
       const lines = text.split('\n');
 
-      // Search for the node definition: [node name="NodeName"
-      const pattern = `[node name="${nodeName}"`;
-      let targetLine = -1;
-
-      for (let i = 0; i < lines.length; i++) {
-        if (lines[i]!.includes(pattern)) {
-          targetLine = i;
-          break;
-        }
-      }
+      const targetLine = findNodeHeadingLine(lines, nodeName, expectedParent);
 
       if (targetLine === -1) {
         vscode.window.showWarningMessage(`Could not find node "${nodeName}" in file`);
@@ -357,7 +385,10 @@ export class TscnPreviewPanel {
         vscode.window.showErrorMessage((message.message as string) || 'Unknown error');
         return;
       case 'jumpToNode':
-        void this._jumpToNodeDefinition(message.nodeName as string);
+        void this._jumpToNodeDefinition(
+          message.nodeName as string,
+          message.parent as string | undefined,
+        );
         return;
       case 'loadResource':
         void this._handleLoadResource(
@@ -433,4 +464,33 @@ export class TscnPreviewPanel {
         channel.info(fullMessage);
     }
   }
+}
+
+/**
+ * Locate a node's `[node …]` heading line by name and Godot `parent=`.
+ *
+ * `expectedParent` is the raw Godot parent value carried on the jump message
+ * (`undefined` for the root, `"."` for a direct child, else the ancestor path).
+ * Matching on it disambiguates duplicate sibling names. When it is absent (the
+ * unique root, or a legacy message without a parent), the first name match wins.
+ *
+ * @returns the 0-based line index, or -1 if the node is not found.
+ */
+function findNodeHeadingLine(lines: string[], nodeName: string, expectedParent?: string): number {
+  let firstNameMatch = -1;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]!;
+    if (!line.trimStart().startsWith('[node')) continue;
+
+    const heading = parseHeading(line);
+    if (heading?.type !== 'node' || heading.attributes.name !== nodeName) continue;
+
+    if (firstNameMatch === -1) firstNameMatch = i;
+    // Root's heading omits `parent`; compare it as an empty string.
+    if (expectedParent === undefined || (heading.attributes.parent ?? '') === expectedParent) {
+      return i;
+    }
+  }
+
+  return firstNameMatch;
 }
