@@ -1,17 +1,14 @@
 /**
- * Unit tests for material processing helpers: path detection, reference
- * parsing, and the .tres → THREE.Material pipeline including its value
- * coercion edges (Color/Vector3 objects, boolean strings, numeric strings)
- * and texture-slot loading via the injected loader function.
+ * Unit tests for material processing helpers: path detection and the .tres →
+ * THREE.Material pipeline, including its value coercion edges (Color/Vector3
+ * objects, boolean strings, numeric strings) and texture-slot loading via the
+ * injected loader function, resolved against the file's own [ext_resource]
+ * headers.
  */
 
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
-import {
-  createMaterialFromContent,
-  isMaterialPath,
-  parseReference,
-} from './materialProcessing';
+import { createMaterialFromContent, isMaterialPath } from './materialProcessing';
 
 describe('isMaterialPath', () => {
   it('accepts .tres paths', () => {
@@ -31,35 +28,9 @@ describe('isMaterialPath', () => {
   });
 });
 
-describe('parseReference', () => {
-  it('extracts the id from an ExtResource reference', () => {
-    expect(parseReference('ExtResource("1_abc")')).toBe('1_abc');
-    expect(parseReference('ExtResource("3")')).toBe('3');
-  });
-
-  it('matches an ExtResource embedded in a longer string (regex is unanchored)', () => {
-    expect(parseReference('albedo_texture = ExtResource("2_tex")')).toBe('2_tex');
-  });
-
-  it('returns null for SubResource references', () => {
-    expect(parseReference('SubResource("Mat_1")')).toBeNull();
-  });
-
-  it('returns null for garbage input', () => {
-    expect(parseReference('not a reference')).toBeNull();
-    expect(parseReference('')).toBeNull();
-    expect(parseReference('ExtResource(1_abc)')).toBeNull();
-    expect(parseReference("ExtResource('1_abc')")).toBeNull();
-  });
-
-  it('returns null for an empty id (capture group requires 1+ chars)', () => {
-    expect(parseReference('ExtResource("")')).toBeNull();
-  });
-});
-
 describe('createMaterialFromContent', () => {
-  function tres(type: string, body: string): string {
-    return `[gd_resource type="${type}" format=3]\n\n[resource]\n${body}\n`;
+  function tres(type: string, body: string, extResourceLines = ''): string {
+    return `[gd_resource type="${type}" format=3]\n\n${extResourceLines}[resource]\n${body}\n`;
   }
 
   it('creates a MeshStandardMaterial from StandardMaterial3D content', async () => {
@@ -89,23 +60,43 @@ describe('createMaterialFromContent', () => {
     expect(material.roughness).toBe(0.25);
   });
 
-  it('loads referenced textures through the injected loader', async () => {
+  it('loads referenced textures through the injected loader, resolved to a res:// path', async () => {
     const texture = new THREE.Texture();
     const loadTexture = vi.fn().mockResolvedValue(texture);
 
     const material = (await createMaterialFromContent(
-      tres('StandardMaterial3D', 'albedo_texture = ExtResource("1_tex")'),
+      tres(
+        'StandardMaterial3D',
+        'albedo_texture = ExtResource("1_tex")',
+        '[ext_resource type="Texture2D" path="res://textures/albedo.png" id="1_tex"]\n'
+      ),
       loadTexture
     )) as THREE.MeshStandardMaterial;
 
-    expect(loadTexture).toHaveBeenCalledWith('1_tex');
+    expect(loadTexture).toHaveBeenCalledWith('res://textures/albedo.png');
     expect(material.map).toBe(texture);
+  });
+
+  it('skips loading a texture whose ExtResource id has no matching ext_resource header', async () => {
+    const loadTexture = vi.fn().mockResolvedValue(new THREE.Texture());
+
+    const material = (await createMaterialFromContent(
+      tres('StandardMaterial3D', 'albedo_texture = ExtResource("dangling")'),
+      loadTexture
+    )) as THREE.MeshStandardMaterial;
+
+    expect(loadTexture).not.toHaveBeenCalled();
+    expect(material.map).toBeNull();
   });
 
   it('leaves the texture slot empty when the loader returns null', async () => {
     const loadTexture = vi.fn().mockResolvedValue(null);
     const material = (await createMaterialFromContent(
-      tres('StandardMaterial3D', 'albedo_texture = ExtResource("1_tex")'),
+      tres(
+        'StandardMaterial3D',
+        'albedo_texture = ExtResource("1_tex")',
+        '[ext_resource type="Texture2D" path="res://textures/albedo.png" id="1_tex"]\n'
+      ),
       loadTexture
     )) as THREE.MeshStandardMaterial;
     expect(material.map).toBeNull();
@@ -113,7 +104,11 @@ describe('createMaterialFromContent', () => {
 
   it('ignores texture references entirely when no loader is provided', async () => {
     const material = (await createMaterialFromContent(
-      tres('StandardMaterial3D', 'albedo_texture = ExtResource("1_tex")')
+      tres(
+        'StandardMaterial3D',
+        'albedo_texture = ExtResource("1_tex")',
+        '[ext_resource type="Texture2D" path="res://textures/albedo.png" id="1_tex"]\n'
+      )
     )) as THREE.MeshStandardMaterial;
     expect(material.map).toBeNull();
   });
@@ -130,6 +125,11 @@ describe('createMaterialFromContent', () => {
           'emission_texture = ExtResource("1_em")',
           'normal_enabled = true',
           'normal_texture = ExtResource("2_n")',
+        ].join('\n'),
+        [
+          '[ext_resource type="Texture2D" path="res://textures/emission.png" id="1_em"]',
+          '[ext_resource type="Texture2D" path="res://textures/normal.png" id="2_n"]',
+          '',
         ].join('\n')
       ),
       loadTexture
@@ -144,7 +144,8 @@ describe('createMaterialFromContent', () => {
     const material = (await createMaterialFromContent(
       tres(
         'StandardMaterial3D',
-        'normal_enabled = false\nnormal_texture = ExtResource("2_n")'
+        'normal_enabled = false\nnormal_texture = ExtResource("2_n")',
+        '[ext_resource type="Texture2D" path="res://textures/normal.png" id="2_n"]\n'
       ),
       loadTexture
     )) as THREE.MeshStandardMaterial;
@@ -158,7 +159,8 @@ describe('createMaterialFromContent', () => {
     const material = (await createMaterialFromContent(
       tres(
         'StandardMaterial3D',
-        'albedo_texture = ExtResource("1_tex")\nuv1_scale = Vector3(2, 3, 1)'
+        'albedo_texture = ExtResource("1_tex")\nuv1_scale = Vector3(2, 3, 1)',
+        '[ext_resource type="Texture2D" path="res://textures/albedo.png" id="1_tex"]\n'
       ),
       loadTexture
     )) as THREE.MeshStandardMaterial;

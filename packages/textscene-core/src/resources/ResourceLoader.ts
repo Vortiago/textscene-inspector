@@ -95,12 +95,12 @@ export class ResourceLoader {
     // Texture processor first — materials need it for inline texture refs.
     this.textures = createTextureProcessor(fileEventBus, this.eventBus);
 
-    const loadTexture = async (id: string): Promise<THREE.Texture | null> => {
-      const cached = this.textures.getCached(id);
+    const loadTexture = async (path: string): Promise<THREE.Texture | null> => {
+      const cached = this.textures.getCached(path);
       if (cached !== undefined) return cached;
-      this.textures.request(id);
+      this.textures.request(path);
       try {
-        return await this.eventBus.once<THREE.Texture>('texture', 'loaded', id);
+        return await this.eventBus.once<THREE.Texture>('texture', 'loaded', path);
       } catch {
         return null;
       }
