@@ -1,26 +1,8 @@
 /**
- * `WorldBoxHelper` — a `THREE.BoxHelper` whose box is computed from each
- * descendant's **geometry** bounding box (the stable bind-pose AABB) times its
- * world matrix, instead of `THREE.Box3.setFromObject`.
- *
- * Why: `setFromObject` prefers a mesh's own `object.boundingBox` over
- * `geometry.boundingBox` when one is defined. `THREE.SkinnedMesh` defines
- * `boundingBox` and computes it lazily from POSED vertices
- * (`getVertexPosition` → `applyBoneTransform`, then `bindMatrixInverse`). For
- * skinned meshes loaded via `GLTFLoader` and cloned per-consumer (our GLB
- * pipeline), that posed/cached box lands in a corrupted frame — its raw
- * extents sit far from the origin and, once multiplied by the mesh's
- * `matrixWorld`, collapse the selection box onto the world origin even though
- * the model renders at its instance transform. The result: clicking a GLB
- * node (e.g. the platformer Player) drew the selection box nowhere near the
- * visible model.
- *
- * `geometry.boundingBox` is the bind-pose AABB in the mesh's local space and is
- * stable; `geometry.boundingBox × mesh.matrixWorld` is the correct world-space
- * box for the rendered (rest-pose) model — matching Godot's editor, which
- * selects by the mesh AABB rather than the live animated pose. Non-skinned
- * meshes are unaffected: `setFromObject` already used `geometry.boundingBox`
- * for them, so this reproduces the prior box exactly while fixing skinned ones.
+ * `WorldBoxHelper` — a `THREE.BoxHelper` whose box is sourced from
+ * {@link computeWorldBoundingBox} instead of `THREE.Box3.setFromObject`, so
+ * skinned GLB nodes get a selection box at the rendered model rather than the
+ * world origin. See `bounds.ts` for why `setFromObject` misbehaves here.
  */
 import * as THREE from 'three';
 import { computeWorldBoundingBox } from '../bounds.js';

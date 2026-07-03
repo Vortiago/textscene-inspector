@@ -82,6 +82,31 @@ describe('frameSceneBounds — routes subtree bounds through the sanctioned util
     expect(centre.z).toBeCloseTo(3.93, 1);
   });
 
+  it('frames a MIXED scene (corrupt skinned + plain meshes) at the geometry union, never dragged toward the posed box', () => {
+    // The real GLB-platformer symptom: a corrupt-posed skinned mesh SHARING the
+    // scene with plain geometry. The framed centre must track the union of the
+    // geometry (bind) boxes; the posed box near (101,101,101) must never pull it.
+    const skinned = new THREE.SkinnedMesh(unitBoxGeometry(), new THREE.MeshBasicMaterial());
+    skinned.boundingBox = new THREE.Box3(
+      new THREE.Vector3(100, 100, 100),
+      new THREE.Vector3(102, 102, 102)
+    );
+    const plainA = new THREE.Mesh(unitBoxGeometry(), new THREE.MeshBasicMaterial());
+    plainA.position.set(10, 0, 0);
+    const plainB = new THREE.Mesh(unitBoxGeometry(), new THREE.MeshBasicMaterial());
+    plainB.position.set(-10, 0, 0);
+    const model = new THREE.Group(); // skinned sits at the model origin
+    model.add(skinned, plainA, plainB);
+
+    const centre = framedCentre(model);
+    // Geometry union: unit box at origin ∪ unit boxes at ±10 → x −11..11, y/z −1..1
+    // → centre (0,0,0). Raw `setFromObject` would union the posed box and pull +100.
+    expect(centre.x).toBeCloseTo(0, 4);
+    expect(centre.y).toBeCloseTo(0, 4);
+    expect(centre.z).toBeCloseTo(0, 4);
+    expect(centre.distanceTo(new THREE.Vector3(101, 101, 101))).toBeGreaterThan(50);
+  });
+
   it('frames a plain-mesh scene at the mesh (non-skinned path unchanged)', () => {
     const mesh = new THREE.Mesh(unitBoxGeometry(), new THREE.MeshBasicMaterial());
     const model = new THREE.Group();
@@ -148,5 +173,17 @@ describe('bounds guard — no production source calls Box3.setFromObject directl
     // Subtree bounds must go through `computeWorldBoundingBox`; raw `setFromObject`
     // re-introduces the SkinnedMesh trap. Route the offender(s) through the util.
     expect(offenders).toEqual([]);
+  });
+
+  it('defines `computeWorldBoundingBox` in exactly ONE module (single source of truth)', () => {
+    // The guard above only forbids raw `setFromObject`; nothing stops a future
+    // edit from re-pasting a divergent copy of the util back into WorldBoxHelper.
+    // Pin the definition to the one `bounds.ts` both call sites import from.
+    const definers = productionSourceFiles(srcRoot)
+      .filter((f) =>
+        /function\s+computeWorldBoundingBox\b/.test(stripComments(readFileSync(f, 'utf8')))
+      )
+      .map((f) => relative(srcRoot, f).split('\\').join('/'));
+    expect(definers).toEqual(['r3f/bounds.ts']);
   });
 });
