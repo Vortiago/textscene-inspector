@@ -3,6 +3,7 @@
  */
 
 import type { BaseLightProperties, BaseLightWithNormalBias } from './types';
+import { floatOr, parseOptionalFloat } from '../../../../parser/valueParsers';
 
 /**
  * Parses common light properties shared across all light types.
@@ -15,18 +16,14 @@ export function parseBaseLightProperties(
 ): BaseLightProperties {
   return {
     light_color: properties.light_color || 'Color(1, 1, 1, 1)',
-    light_energy: properties.light_energy ? parseFloat(properties.light_energy) : 1.0,
+    light_energy: floatOr(properties.light_energy, 1.0, 'light_energy'),
     light_negative:
       properties.light_negative !== undefined ? properties.light_negative === 'true' : undefined,
-    light_specular: properties.light_specular
-      ? parseFloat(properties.light_specular)
-      : undefined,
-    light_volumetric_fog_energy: properties.light_volumetric_fog_energy
-      ? parseFloat(properties.light_volumetric_fog_energy)
-      : undefined,
+    light_specular: parseOptionalFloat(properties.light_specular),
+    light_volumetric_fog_energy: parseOptionalFloat(properties.light_volumetric_fog_energy),
     shadow_enabled: properties.shadow_enabled === 'true',
-    shadow_bias: properties.shadow_bias ? parseFloat(properties.shadow_bias) : undefined,
-    shadow_blur: properties.shadow_blur ? parseFloat(properties.shadow_blur) : undefined,
+    shadow_bias: parseOptionalFloat(properties.shadow_bias),
+    shadow_blur: parseOptionalFloat(properties.shadow_blur),
   };
 }
 
@@ -41,8 +38,6 @@ export function parseBaseLightWithNormalBias(
 ): BaseLightWithNormalBias {
   return {
     ...parseBaseLightProperties(properties),
-    shadow_normal_bias: properties.shadow_normal_bias
-      ? parseFloat(properties.shadow_normal_bias)
-      : undefined,
+    shadow_normal_bias: parseOptionalFloat(properties.shadow_normal_bias),
   };
 }

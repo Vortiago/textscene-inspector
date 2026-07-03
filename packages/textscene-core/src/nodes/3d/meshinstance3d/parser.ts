@@ -5,6 +5,12 @@
 import type { ParsedHeading } from '../../../parser/utils';
 import type { MeshInstance3DProperties } from './types';
 import { parseNode3D } from '../../base/node3d/parser';
+import { parseOptionalFloat, parseOptionalInt } from '../../../parser/valueParsers';
+
+/** Assign only when the decoded value is present (the optional readers already drop absent/garbage). */
+function assignIfDefined<T, K extends keyof T>(target: T, key: K, value: T[K] | undefined): void {
+  if (value !== undefined) target[key] = value;
+}
 
 export function parseMeshInstance3D(
   heading: ParsedHeading,
@@ -39,41 +45,39 @@ export function parseMeshInstance3D(
     meshInstance3DProps.materialOverlay = properties.material_overlay;
   }
 
-  if (properties.cast_shadow) {
-    meshInstance3DProps.castShadow = parseInt(properties.cast_shadow, 10);
-  }
-
-  if (properties.gi_mode) {
-    meshInstance3DProps.giMode = parseInt(properties.gi_mode, 10);
-  }
-
-  if (properties.gi_lightmap_scale) {
-    meshInstance3DProps.giLightmapScale = parseInt(properties.gi_lightmap_scale, 10);
-  }
-
-  if (properties.visibility_range_begin) {
-    meshInstance3DProps.visibilityRangeBegin = parseFloat(properties.visibility_range_begin);
-  }
-
-  if (properties.visibility_range_begin_margin) {
-    meshInstance3DProps.visibilityRangeBeginMargin = parseFloat(properties.visibility_range_begin_margin);
-  }
-
-  if (properties.visibility_range_end) {
-    meshInstance3DProps.visibilityRangeEnd = parseFloat(properties.visibility_range_end);
-  }
-
-  if (properties.visibility_range_end_margin) {
-    meshInstance3DProps.visibilityRangeEndMargin = parseFloat(properties.visibility_range_end_margin);
-  }
-
-  if (properties.visibility_range_fade_mode) {
-    meshInstance3DProps.visibilityRangeFadeMode = parseInt(properties.visibility_range_fade_mode, 10);
-  }
-
-  if (properties.layers) {
-    meshInstance3DProps.layers = parseInt(properties.layers, 10);
-  }
+  assignIfDefined(meshInstance3DProps, 'castShadow', parseOptionalInt(properties.cast_shadow));
+  assignIfDefined(meshInstance3DProps, 'giMode', parseOptionalInt(properties.gi_mode));
+  assignIfDefined(
+    meshInstance3DProps,
+    'giLightmapScale',
+    parseOptionalInt(properties.gi_lightmap_scale)
+  );
+  assignIfDefined(
+    meshInstance3DProps,
+    'visibilityRangeBegin',
+    parseOptionalFloat(properties.visibility_range_begin)
+  );
+  assignIfDefined(
+    meshInstance3DProps,
+    'visibilityRangeBeginMargin',
+    parseOptionalFloat(properties.visibility_range_begin_margin)
+  );
+  assignIfDefined(
+    meshInstance3DProps,
+    'visibilityRangeEnd',
+    parseOptionalFloat(properties.visibility_range_end)
+  );
+  assignIfDefined(
+    meshInstance3DProps,
+    'visibilityRangeEndMargin',
+    parseOptionalFloat(properties.visibility_range_end_margin)
+  );
+  assignIfDefined(
+    meshInstance3DProps,
+    'visibilityRangeFadeMode',
+    parseOptionalInt(properties.visibility_range_fade_mode)
+  );
+  assignIfDefined(meshInstance3DProps, 'layers', parseOptionalInt(properties.layers));
 
   if (properties.skeleton) {
     meshInstance3DProps.skeleton = properties.skeleton;

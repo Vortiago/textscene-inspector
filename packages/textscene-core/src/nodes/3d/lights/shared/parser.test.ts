@@ -68,19 +68,19 @@ describe('Base Light Parser', () => {
       expect(result3.shadow_enabled).toBe(false);
     });
 
-    it('should return NaN for invalid light_energy', () => {
+    it('should fall back to default 1.0 for invalid light_energy', () => {
       const result = parseBaseLightProperties({ light_energy: 'invalid' });
-      expect(result.light_energy).toBeNaN();
+      expect(result.light_energy).toBe(1.0);
     });
 
-    it('should return NaN for invalid shadow_bias', () => {
+    it('should be undefined for invalid shadow_bias', () => {
       const result = parseBaseLightProperties({ shadow_bias: 'not-a-number' });
-      expect(result.shadow_bias).toBeNaN();
+      expect(result.shadow_bias).toBeUndefined();
     });
 
-    it('should return NaN for invalid shadow_blur', () => {
+    it('should be undefined for invalid shadow_blur', () => {
       const result = parseBaseLightProperties({ shadow_blur: 'invalid' });
-      expect(result.shadow_blur).toBeNaN();
+      expect(result.shadow_blur).toBeUndefined();
     });
 
     it('should handle empty strings as falsy and return defaults', () => {
@@ -170,9 +170,9 @@ describe('Base Light Parser', () => {
       expect(result.shadow_normal_bias).toBeUndefined();
     });
 
-    it('should return NaN for invalid shadow_normal_bias', () => {
+    it('should return undefined for invalid shadow_normal_bias', () => {
       const result = parseBaseLightWithNormalBias({ shadow_normal_bias: 'abc' });
-      expect(result.shadow_normal_bias).toBeNaN();
+      expect(result.shadow_normal_bias).toBeUndefined();
     });
 
     it('should handle negative shadow_normal_bias', () => {

@@ -6,6 +6,7 @@
 
 import type { CSSProperties } from 'react';
 import { parseColor } from '../../utils/colorParser';
+import { vec2Or } from '../../parser/valueParsers';
 
 export function colorToCss(value: string): string | undefined {
   // parseColor() falls back to white on bad input rather than throwing, so we
@@ -29,13 +30,6 @@ function n(value: string | undefined, fallback = 0): number {
   if (value === undefined) return fallback;
   const x = parseFloat(value);
   return Number.isNaN(x) ? fallback : x;
-}
-
-function parseVec2(value: string | undefined): { x: number; y: number } {
-  if (!value) return { x: 0, y: 0 };
-  const m = value.match(/Vector2\(\s*(-?[\d.eE+-]+)\s*,\s*(-?[\d.eE+-]+)\s*\)/);
-  if (!m) return { x: 0, y: 0 };
-  return { x: parseFloat(m[1]!), y: parseFloat(m[2]!) };
 }
 
 export function styleBoxToCss(type: string, data: Record<string, string>): CSSProperties {
@@ -85,7 +79,7 @@ export function styleBoxToCss(type: string, data: Record<string, string>): CSSPr
   const shadowSize = n(data.shadow_size, 0);
   if (shadowSize >= 1) {
     const shadowColor = (data.shadow_color && colorToCss(data.shadow_color)) || 'rgba(0, 0, 0, 0.6)';
-    const off = parseVec2(data.shadow_offset);
+    const off = vec2Or(data.shadow_offset, { x: 0, y: 0 }, 'shadow_offset');
     style.boxShadow = `${off.x}px ${off.y}px ${shadowSize}px ${shadowColor}`;
   }
 

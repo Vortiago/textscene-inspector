@@ -8,17 +8,18 @@
  * validates separately and is unaffected.
  *
  * `intOr` / `floatOr` / `boolOr` / `enumOr` / `vec2Or` take a fallback and
- * always return a value. `parseOptionalInt` is the distinct optional reader:
- * it returns `undefined` for an absent/invalid value (no fallback, no warn),
- * for Control properties where "unset" is meaningful. Pass `context`
- * (a node type or name) to label the warning.
+ * always return a value. The `parseOptional*` family (`parseOptionalInt` /
+ * `parseOptionalFloat` / `parseOptionalBool` / `parseOptionalVector2`) are the
+ * distinct optional readers: each returns `undefined` for an absent/invalid
+ * value (no fallback, no warn), for properties where "unset" is meaningful
+ * (Control layout props, optional light scalars). Pass `context` (a node type
+ * or name) to label the warning.
  *
  * Pure `.ts` — importable by `linterParser` slices; never pulls in THREE.
  * These wrap the canonical leaf scanners (`parseVector2` in `parser/vectors.ts`);
  * one-off structured literals (`Vector2i`, `Rect2`, `frame_coords`) stay inline
- * in their node slice, and divergent leaf parsers (the throwing `parseColor`
- * in `standardmaterial3d`, the undefined-returning `parseVector2` in `control`)
- * keep their own contract.
+ * in their node slice, and the throwing `parseColor` in `standardmaterial3d`
+ * keeps its own contract.
  */
 
 import { warn } from '../logger';
@@ -104,4 +105,31 @@ export function parseOptionalInt(value: string | undefined): number | undefined 
 export function parseOptionalBool(value: string | undefined): boolean | undefined {
   if (value === undefined) return undefined;
   return value === 'true';
+}
+
+/**
+ * Optional float reader: returns `undefined` for an absent or unparseable
+ * value — no fallback, no warning. Mirrors `parseOptionalInt` for floats;
+ * used where a missing numeric property is itself meaningful.
+ */
+export function parseOptionalFloat(value: string | undefined): number | undefined {
+  if (value === undefined) return undefined;
+  const parsed = parseFloat(value);
+  return Number.isNaN(parsed) ? undefined : parsed;
+}
+
+/**
+ * Optional Vector2 reader: returns `undefined` for an absent or unparseable
+ * value — no fallback, no warning. Wraps the canonical (throwing) `parseVector2`
+ * so its float grammar (`FLOAT_PATTERN_SOURCE`) is shared. Used for Control
+ * `custom_minimum_size` (StyleBox `shadow_offset` uses the `{0,0}`-fallback
+ * `vec2Or` instead, since its render always needs a concrete offset).
+ */
+export function parseOptionalVector2(value: string | undefined): Vector2 | undefined {
+  if (!value) return undefined;
+  try {
+    return parseVector2(value);
+  } catch {
+    return undefined;
+  }
 }
