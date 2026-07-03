@@ -2,15 +2,8 @@
 
 import type { ParsedHeading } from '../../../../parser/utils';
 import type { ControlProperties, ControlColor } from './types';
-import { parseColor } from '../../../../utils/colorParser';
-import { parseOptionalVector2 } from '../../../../parser/valueParsers';
-import { COLOR_RE } from '../../../../parser/vectors';
-
-function num(raw: string | undefined): number | undefined {
-  if (raw === undefined) return undefined;
-  const n = parseFloat(raw);
-  return Number.isNaN(n) ? undefined : n;
-}
+import { parseColorOrUndefined } from '../../../../utils/colorParser';
+import { parseOptionalFloat, parseOptionalVector2 } from '../../../../parser/valueParsers';
 
 /** Collect `theme_override_<category>/<name> = value` into the four typed maps. */
 function parseThemeOverrides(properties: Record<string, string>): Partial<ControlProperties> {
@@ -25,18 +18,18 @@ function parseThemeOverrides(properties: Record<string, string>): Partial<Contro
     const [, category, name] = m;
     switch (category) {
       case 'constants': {
-        const n = parseFloat(value);
-        if (!Number.isNaN(n)) constants[name!] = n;
+        const n = parseOptionalFloat(value);
+        if (n !== undefined) constants[name!] = n;
         break;
       }
-      case 'colors':
-        if (COLOR_RE.test(value)) {
-          colors[name!] = parseColor(value);
-        }
+      case 'colors': {
+        const color = parseColorOrUndefined(value);
+        if (color) colors[name!] = color;
         break;
+      }
       case 'font_sizes': {
-        const n = parseFloat(value);
-        if (!Number.isNaN(n)) fontSizes[name!] = n;
+        const n = parseOptionalFloat(value);
+        if (n !== undefined) fontSizes[name!] = n;
         break;
       }
       case 'styles':
@@ -69,21 +62,21 @@ export function parseControl(
   }
   if (properties.visible !== undefined) result.visible = properties.visible !== 'false';
 
-  result.layoutMode = num(properties.layout_mode);
-  result.anchorsPreset = num(properties.anchors_preset);
-  result.anchorLeft = num(properties.anchor_left);
-  result.anchorTop = num(properties.anchor_top);
-  result.anchorRight = num(properties.anchor_right);
-  result.anchorBottom = num(properties.anchor_bottom);
-  result.offsetLeft = num(properties.offset_left);
-  result.offsetTop = num(properties.offset_top);
-  result.offsetRight = num(properties.offset_right);
-  result.offsetBottom = num(properties.offset_bottom);
-  result.growHorizontal = num(properties.grow_horizontal);
-  result.growVertical = num(properties.grow_vertical);
-  result.sizeFlagsHorizontal = num(properties.size_flags_horizontal);
-  result.sizeFlagsVertical = num(properties.size_flags_vertical);
-  result.sizeFlagsStretchRatio = num(properties.size_flags_stretch_ratio);
+  result.layoutMode = parseOptionalFloat(properties.layout_mode);
+  result.anchorsPreset = parseOptionalFloat(properties.anchors_preset);
+  result.anchorLeft = parseOptionalFloat(properties.anchor_left);
+  result.anchorTop = parseOptionalFloat(properties.anchor_top);
+  result.anchorRight = parseOptionalFloat(properties.anchor_right);
+  result.anchorBottom = parseOptionalFloat(properties.anchor_bottom);
+  result.offsetLeft = parseOptionalFloat(properties.offset_left);
+  result.offsetTop = parseOptionalFloat(properties.offset_top);
+  result.offsetRight = parseOptionalFloat(properties.offset_right);
+  result.offsetBottom = parseOptionalFloat(properties.offset_bottom);
+  result.growHorizontal = parseOptionalFloat(properties.grow_horizontal);
+  result.growVertical = parseOptionalFloat(properties.grow_vertical);
+  result.sizeFlagsHorizontal = parseOptionalFloat(properties.size_flags_horizontal);
+  result.sizeFlagsVertical = parseOptionalFloat(properties.size_flags_vertical);
+  result.sizeFlagsStretchRatio = parseOptionalFloat(properties.size_flags_stretch_ratio);
   result.customMinimumSize = parseOptionalVector2(properties.custom_minimum_size);
 
   Object.assign(result, parseThemeOverrides(properties));

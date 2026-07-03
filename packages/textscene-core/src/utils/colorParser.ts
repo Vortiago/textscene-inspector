@@ -2,12 +2,7 @@
  * Parses Godot Color format to three.js hex color.
  */
 
-import { FLOAT_PATTERN_SOURCE } from '../parser/vectors';
-
-const F = FLOAT_PATTERN_SOURCE;
-const COLOR_RE = new RegExp(
-  String.raw`^Color\s*\(\s*(${F})\s*,\s*(${F})\s*,\s*(${F})\s*,\s*(${F})\s*\)$`
-);
+import { COLOR_RE } from '../parser/vectors';
 
 export interface Color {
   r: number;
@@ -17,21 +12,20 @@ export interface Color {
 }
 
 /**
- * Parse Color from Godot format: Color(r, g, b, a)
- * Values are in range 0-1, but negative values and values > 1 are accepted
- * Returns white color { r: 1, g: 1, b: 1, a: 1 } if parsing fails
+ * Parse Color from Godot format: `Color(r, g, b, a)`. Values are 0-1, but
+ * negatives and values > 1 are accepted. Returns `undefined` when absent or
+ * when the grammar does not match — the optional reader that callers who want
+ * to SKIP a malformed color (rather than substitute white) build on.
+ * Matches against the single shared `COLOR_RE` so the parse and every guard
+ * run one grammar.
  */
-export function parseColor(value: string | undefined): Color {
-  // Handle undefined/null/empty input - return white as fallback
-  if (!value) {
-    return { r: 1, g: 1, b: 1, a: 1 };
-  }
+export function parseColorOrUndefined(value: string | undefined): Color | undefined {
+  if (!value) return undefined;
 
   const match = value.match(COLOR_RE);
 
   if (!match || !match[1] || !match[2] || !match[3] || !match[4]) {
-    // Return white as fallback instead of throwing
-    return { r: 1, g: 1, b: 1, a: 1 };
+    return undefined;
   }
 
   return {
@@ -40,6 +34,15 @@ export function parseColor(value: string | undefined): Color {
     b: parseFloat(match[3]),
     a: parseFloat(match[4]),
   };
+}
+
+/**
+ * Parse Color from Godot format: Color(r, g, b, a)
+ * Values are in range 0-1, but negative values and values > 1 are accepted
+ * Returns white color { r: 1, g: 1, b: 1, a: 1 } if parsing fails
+ */
+export function parseColor(value: string | undefined): Color {
+  return parseColorOrUndefined(value) ?? { r: 1, g: 1, b: 1, a: 1 };
 }
 
 /**

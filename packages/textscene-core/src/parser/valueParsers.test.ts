@@ -6,7 +6,15 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as logger from '../logger';
-import { floatOr, intOr, boolOr, enumOr, vec2Or, parseOptionalInt } from './valueParsers';
+import {
+  floatOr,
+  intOr,
+  boolOr,
+  enumOr,
+  vec2Or,
+  parseOptionalInt,
+  parseOptionalFloat,
+} from './valueParsers';
 
 let warnSpy: ReturnType<typeof vi.spyOn>;
 
@@ -109,5 +117,26 @@ describe('parseOptionalInt', () => {
   it('returns undefined for an invalid value, without warning', () => {
     expect(parseOptionalInt('nope')).toBeUndefined();
     expect(warnSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe('parseOptionalFloat', () => {
+  it('parses a valid float, including scientific notation', () => {
+    expect(parseOptionalFloat('1.5')).toBe(1.5);
+    expect(parseOptionalFloat('-2')).toBe(-2);
+    expect(parseOptionalFloat('1e-05')).toBe(1e-5);
+  });
+  it('returns undefined for an absent value, without warning', () => {
+    expect(parseOptionalFloat(undefined)).toBeUndefined();
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+  it('returns undefined (never NaN) for an invalid value, without warning', () => {
+    const result = parseOptionalFloat('nope');
+    expect(result).toBeUndefined();
+    expect(Number.isNaN(result)).toBe(false);
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+  it('returns undefined for an empty string (parseFloat("") is NaN)', () => {
+    expect(parseOptionalFloat('')).toBeUndefined();
   });
 });

@@ -7,6 +7,11 @@ import type { MeshInstance3DProperties } from './types';
 import { parseNode3D } from '../../base/node3d/parser';
 import { parseOptionalFloat, parseOptionalInt } from '../../../parser/valueParsers';
 
+/** Assign only when the decoded value is present (the optional readers already drop absent/garbage). */
+function assignIfDefined<T, K extends keyof T>(target: T, key: K, value: T[K] | undefined): void {
+  if (value !== undefined) target[key] = value;
+}
+
 export function parseMeshInstance3D(
   heading: ParsedHeading,
   properties: Record<string, string>
@@ -40,50 +45,39 @@ export function parseMeshInstance3D(
     meshInstance3DProps.materialOverlay = properties.material_overlay;
   }
 
-  if (properties.cast_shadow) {
-    const val = parseOptionalInt(properties.cast_shadow);
-    if (val !== undefined) meshInstance3DProps.castShadow = val;
-  }
-
-  if (properties.gi_mode) {
-    const val = parseOptionalInt(properties.gi_mode);
-    if (val !== undefined) meshInstance3DProps.giMode = val;
-  }
-
-  if (properties.gi_lightmap_scale) {
-    const val = parseOptionalInt(properties.gi_lightmap_scale);
-    if (val !== undefined) meshInstance3DProps.giLightmapScale = val;
-  }
-
-  if (properties.visibility_range_begin) {
-    const val = parseOptionalFloat(properties.visibility_range_begin);
-    if (val !== undefined) meshInstance3DProps.visibilityRangeBegin = val;
-  }
-
-  if (properties.visibility_range_begin_margin) {
-    const val = parseOptionalFloat(properties.visibility_range_begin_margin);
-    if (val !== undefined) meshInstance3DProps.visibilityRangeBeginMargin = val;
-  }
-
-  if (properties.visibility_range_end) {
-    const val = parseOptionalFloat(properties.visibility_range_end);
-    if (val !== undefined) meshInstance3DProps.visibilityRangeEnd = val;
-  }
-
-  if (properties.visibility_range_end_margin) {
-    const val = parseOptionalFloat(properties.visibility_range_end_margin);
-    if (val !== undefined) meshInstance3DProps.visibilityRangeEndMargin = val;
-  }
-
-  if (properties.visibility_range_fade_mode) {
-    const val = parseOptionalInt(properties.visibility_range_fade_mode);
-    if (val !== undefined) meshInstance3DProps.visibilityRangeFadeMode = val;
-  }
-
-  if (properties.layers) {
-    const val = parseOptionalInt(properties.layers);
-    if (val !== undefined) meshInstance3DProps.layers = val;
-  }
+  assignIfDefined(meshInstance3DProps, 'castShadow', parseOptionalInt(properties.cast_shadow));
+  assignIfDefined(meshInstance3DProps, 'giMode', parseOptionalInt(properties.gi_mode));
+  assignIfDefined(
+    meshInstance3DProps,
+    'giLightmapScale',
+    parseOptionalInt(properties.gi_lightmap_scale)
+  );
+  assignIfDefined(
+    meshInstance3DProps,
+    'visibilityRangeBegin',
+    parseOptionalFloat(properties.visibility_range_begin)
+  );
+  assignIfDefined(
+    meshInstance3DProps,
+    'visibilityRangeBeginMargin',
+    parseOptionalFloat(properties.visibility_range_begin_margin)
+  );
+  assignIfDefined(
+    meshInstance3DProps,
+    'visibilityRangeEnd',
+    parseOptionalFloat(properties.visibility_range_end)
+  );
+  assignIfDefined(
+    meshInstance3DProps,
+    'visibilityRangeEndMargin',
+    parseOptionalFloat(properties.visibility_range_end_margin)
+  );
+  assignIfDefined(
+    meshInstance3DProps,
+    'visibilityRangeFadeMode',
+    parseOptionalInt(properties.visibility_range_fade_mode)
+  );
+  assignIfDefined(meshInstance3DProps, 'layers', parseOptionalInt(properties.layers));
 
   if (properties.skeleton) {
     meshInstance3DProps.skeleton = properties.skeleton;

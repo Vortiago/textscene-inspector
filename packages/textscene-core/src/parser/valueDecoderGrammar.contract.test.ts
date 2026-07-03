@@ -225,6 +225,33 @@ describe('#175 optional scalars — fall to undefined on garbage, never NaN', ()
     const result = parseMeshInstance3D(h, { visibility_range_begin: 'garbage' });
     expect(result.visibilityRangeBegin).toBeUndefined();
   });
+
+  it('meshinstance converted int/float fields: garbage stays undefined, never NaN', () => {
+    // The remaining slice-converted optional reads (giLightmapScale/layers/fade_mode via
+    // parseOptionalInt; the range margins via parseOptionalFloat) must drop truthy garbage
+    // to undefined rather than leak NaN — same contract as visibility_range_begin above.
+    const h = heading('MeshInstance3D', { name: 'Mesh', parent: '.' });
+    const result = parseMeshInstance3D(h, {
+      gi_lightmap_scale: 'garbage',
+      visibility_range_begin_margin: 'garbage',
+      visibility_range_end_margin: 'garbage',
+      visibility_range_fade_mode: 'garbage',
+      layers: 'garbage',
+    });
+    expect(result.giLightmapScale).toBeUndefined();
+    expect(result.visibilityRangeBeginMargin).toBeUndefined();
+    expect(result.visibilityRangeEndMargin).toBeUndefined();
+    expect(result.visibilityRangeFadeMode).toBeUndefined();
+    expect(result.layers).toBeUndefined();
+  });
+
+  it('camera3d frustum_offset: garbage falls back to {0,0} — never NaN (vec2Or path)', () => {
+    const h = heading('Camera3D', { name: 'Cam', parent: '.' });
+    const result = parseCamera3D(h, { frustum_offset: 'Vector2(--1, 2)' });
+    expect(result.frustum_offset).toEqual({ x: 0, y: 0 });
+    expect(Number.isNaN(result.frustum_offset.x)).toBe(false);
+    expect(Number.isNaN(result.frustum_offset.y)).toBe(false);
+  });
 });
 
 // ---------------------------------------------------------------------------------------------

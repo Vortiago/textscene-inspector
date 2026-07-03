@@ -3,7 +3,12 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { formatColorRgba, parseColor, parseColorToHex } from './colorParser';
+import {
+  formatColorRgba,
+  parseColor,
+  parseColorOrUndefined,
+  parseColorToHex,
+} from './colorParser';
 
 describe('colorParser', () => {
   describe('parseColor', () => {
@@ -46,6 +51,39 @@ describe('colorParser', () => {
     it('should parse color values above 1', () => {
       const result = parseColor('Color(2.0, 1.5, 0.5, 1)');
       expect(result).toEqual({ r: 2.0, g: 1.5, b: 0.5, a: 1 });
+    });
+  });
+
+  describe('parseColorOrUndefined', () => {
+    it('parses a valid Color, including the scientific notation Godot emits', () => {
+      expect(parseColorOrUndefined('Color(0.2, 0.4, 0.6, 0.8)')).toEqual({
+        r: 0.2,
+        g: 0.4,
+        b: 0.6,
+        a: 0.8,
+      });
+      expect(parseColorOrUndefined('Color(1e-05, 1, 1, 1)')).toEqual({
+        r: 1e-5,
+        g: 1,
+        b: 1,
+        a: 1,
+      });
+    });
+
+    it('returns undefined for an absent value (never a white fallback)', () => {
+      expect(parseColorOrUndefined(undefined)).toBeUndefined();
+      expect(parseColorOrUndefined('')).toBeUndefined();
+    });
+
+    it('returns undefined for a malformed color instead of whitening it', () => {
+      expect(parseColorOrUndefined('notacolor')).toBeUndefined();
+      expect(parseColorOrUndefined('Color(1, 1, 1)')).toBeUndefined(); // wrong arity
+      expect(parseColorOrUndefined('Color(1.2.3, 0, 0, 1)')).toBeUndefined(); // malformed float
+    });
+
+    it('shares one grammar with parseColor — parseColor is its white-fallback wrapper', () => {
+      expect(parseColor('notacolor')).toEqual({ r: 1, g: 1, b: 1, a: 1 });
+      expect(parseColorOrUndefined('notacolor')).toBeUndefined();
     });
   });
 
