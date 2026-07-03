@@ -5,6 +5,7 @@
 import type { BoxMeshProperties, Vector3 } from './types';
 import { warn } from '../../../logger';
 import { parseVector3 } from '../../../parser/vectors';
+import { intOr } from '../../../parser/valueParsers';
 
 export { parseVector3 };
 
@@ -24,17 +25,10 @@ export function parseBoxMesh(properties: Record<string, string>): BoxMeshPropert
     }
   }
 
-  const subdivide = (key: string): number => {
-    const raw = properties[key];
-    if (raw === undefined) return 0; // Godot default
-    const parsed = parseInt(raw, 10);
-    return isNaN(parsed) ? 0 : parsed;
-  };
-
   return {
     size,
-    subdivideWidth: subdivide('subdivide_width'),
-    subdivideHeight: subdivide('subdivide_height'),
-    subdivideDepth: subdivide('subdivide_depth'),
+    subdivideWidth: intOr(properties.subdivide_width, 0, 'BoxMesh subdivideWidth'),
+    subdivideHeight: intOr(properties.subdivide_height, 0, 'BoxMesh subdivideHeight'),
+    subdivideDepth: intOr(properties.subdivide_depth, 0, 'BoxMesh subdivideDepth'),
   };
 }

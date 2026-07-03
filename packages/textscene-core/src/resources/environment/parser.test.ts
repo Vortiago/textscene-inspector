@@ -2,9 +2,18 @@
  * Environment parser tests
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import * as logger from '../../logger';
 import { parseEnvironment } from './parser';
 import { BackgroundMode } from './types';
+
+let warnSpy: ReturnType<typeof vi.spyOn>;
+beforeEach(() => {
+  warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+});
+afterEach(() => {
+  warnSpy.mockRestore();
+});
 
 describe('parseEnvironment', () => {
   it('should parse default environment with all defaults', () => {
@@ -121,5 +130,64 @@ describe('parseEnvironment', () => {
     expect(result.tonemap_mode).toBe(2);
     expect(result.tonemap_white).toBe(6.0);
     expect(result.tonemap_exposure).toBe(1.3);
+  });
+
+  it('honours authored values for scalars', () => {
+    const r = parseEnvironment({
+      background_energy_multiplier: '2.5',
+      tonemap_white: '3',
+      fog_density: '0.2',
+      background_mode: '2',
+      tonemap_mode: '3',
+    });
+    expect(r.background_energy_multiplier).toBe(2.5);
+    expect(r.tonemap_white).toBe(3);
+    expect(r.fog_density).toBe(0.2);
+    expect(r.background_mode).toBe(2);
+    expect(r.tonemap_mode).toBe(3);
+  });
+
+  it('float scalars fall back to their default on garbage (never NaN) and warn', () => {
+    const r = parseEnvironment({
+      background_energy_multiplier: 'garbage',
+      fog_density: 'garbage',
+      ambient_light_energy: 'garbage',
+      adjustment_saturation: 'garbage',
+    });
+    expect(r.background_energy_multiplier).toBe(1.0);
+    expect(r.fog_density).toBe(0.01);
+    expect(r.ambient_light_energy).toBe(1.0);
+    expect(r.adjustment_saturation).toBe(1.0);
+    expect(Number.isNaN(r.background_energy_multiplier)).toBe(false);
+    expect(warnSpy).toHaveBeenCalled();
+  });
+
+  it('int scalars fall back to their default on garbage (never NaN)', () => {
+    const r = parseEnvironment({
+      background_mode: 'garbage',
+      tonemap_mode: 'garbage',
+      fog_mode: 'garbage',
+    });
+    expect(r.background_mode).toBe(0);
+    expect(r.tonemap_mode).toBe(0);
+    expect(r.fog_mode).toBe(0);
+    expect(Number.isNaN(r.tonemap_mode)).toBe(false);
+  });
+
+  it('honours a valid color', () => {
+    const r = parseEnvironment({ background_color: 'Color(1, 0, 0, 1)' });
+    expect(r.background_color).toEqual({ r: 1, g: 0, b: 0, a: 1 });
+  });
+
+  it('a present-but-malformed color falls back to field default (no throw)', () => {
+    expect(() => parseEnvironment({ background_color: 'Color(oops)' })).not.toThrow();
+    const r = parseEnvironment({ background_color: 'Color(oops)', ambient_light_color: 'nope' });
+    expect(r.background_color).toEqual({ r: 0, g: 0, b: 0, a: 1 });
+    expect(r.ambient_light_color).toEqual({ r: 0, g: 0, b: 0, a: 1 });
+  });
+
+  it('preserves each color field its own (non-black) default when malformed', () => {
+    const r = parseEnvironment({ fog_light_color: 'garbage' });
+    expect(r.fog_light_color).toEqual({ r: 0.518, g: 0.553, b: 0.608, a: 1 });
   });
 });

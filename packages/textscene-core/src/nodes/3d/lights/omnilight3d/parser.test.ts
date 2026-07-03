@@ -2,9 +2,18 @@
  * Tests for OmniLight3D parser
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import * as logger from '../../../../logger';
 import { parseOmniLight3D } from './parser';
 import { heading } from '../../../../parser/testing/parserKit';
+
+let warnSpy: ReturnType<typeof vi.spyOn>;
+beforeEach(() => {
+  warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+});
+afterEach(() => {
+  warnSpy.mockRestore();
+});
 
 describe('OmniLight3D Parser', () => {
   describe('parseOmniLight3D', () => {
@@ -135,6 +144,21 @@ describe('OmniLight3D Parser', () => {
       const result = parseOmniLight3D(h, { omni_attenuation: '2.0' });
 
       expect(result.omni_attenuation).toBe(2.0); // Physically accurate quadratic falloff
+    });
+
+    it('concrete scalars fall back to defaults on garbage (never NaN)', () => {
+      const h = heading('OmniLight3D', { name: 'Lamp', parent: '.' });
+      const result = parseOmniLight3D(h, { omni_range: 'garbage', omni_attenuation: 'garbage' });
+      expect(result.omni_range).toBe(5.0);
+      expect(result.omni_attenuation).toBe(1.0);
+      expect(Number.isNaN(result.omni_range)).toBe(false);
+      expect(warnSpy).toHaveBeenCalled();
+    });
+
+    it('the OPTIONAL omni_shadow_mode falls to undefined on garbage, never NaN', () => {
+      const h = heading('OmniLight3D', { name: 'Lamp', parent: '.' });
+      const result = parseOmniLight3D(h, { omni_shadow_mode: 'garbage' });
+      expect(result.omni_shadow_mode).toBeUndefined();
     });
   });
 });

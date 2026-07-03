@@ -2,9 +2,18 @@
  * Tests for SpotLight3D parser
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+import * as logger from '../../../../logger';
 import { parseSpotLight3D } from './parser';
 import { heading } from '../../../../parser/testing/parserKit';
+
+let warnSpy: ReturnType<typeof vi.spyOn>;
+beforeEach(() => {
+  warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+});
+afterEach(() => {
+  warnSpy.mockRestore();
+});
 
 describe('SpotLight3D Parser', () => {
   describe('parseSpotLight3D', () => {
@@ -105,6 +114,22 @@ describe('SpotLight3D Parser', () => {
       expect(result.name).toBe('SpotLight');
       expect(result.parent).toBe('Room');
       expect(result.light_energy).toBe(1.2);
+    });
+
+    it('falls back to defaults on garbage input (never NaN) and warns', () => {
+      const h = heading('SpotLight3D', { name: 'SpotLight', parent: '.' });
+      const result = parseSpotLight3D(h, {
+        spot_range: 'garbage',
+        spot_angle: 'garbage',
+        spot_attenuation: 'garbage',
+        spot_angle_attenuation: 'garbage',
+      });
+      expect(result.spot_range).toBe(5.0);
+      expect(result.spot_angle).toBe(45.0);
+      expect(result.spot_attenuation).toBe(1.0);
+      expect(result.spot_angle_attenuation).toBe(1.0);
+      expect(Number.isNaN(result.spot_range)).toBe(false);
+      expect(warnSpy).toHaveBeenCalled();
     });
   });
 });

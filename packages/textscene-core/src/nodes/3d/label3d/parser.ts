@@ -6,7 +6,8 @@ import type { ParsedHeading } from '../../../parser/utils';
 import type { Label3DProperties } from './types';
 import { BillboardMode } from './types';
 import { parseNode3D } from '../../base/node3d/parser';
-import { parseColor } from '../../../utils/colorParser';
+import { parseColor, colorOr } from '../../../utils/colorParser';
+import { floatOr } from '../../../parser/valueParsers';
 
 export function parseLabel3D(
   heading: ParsedHeading,
@@ -17,11 +18,11 @@ export function parseLabel3D(
   return {
     ...baseProps,
     text: parseText(properties.text),
-    pixel_size: parseFloat(properties.pixel_size ?? '0.005'), // Godot default
+    pixel_size: floatOr(properties.pixel_size, 0.005, 'pixel_size'),
     billboard: parseBillboardMode(properties.billboard),
     modulate: parseColor(properties.modulate),
-    outline_size: parseFloat(properties.outline_size ?? '12'), // Godot default
-    outline_modulate: properties.outline_modulate ? parseColor(properties.outline_modulate) : { r: 0, g: 0, b: 0, a: 1 },
+    outline_size: floatOr(properties.outline_size, 12, 'outline_size'),
+    outline_modulate: colorOr(properties.outline_modulate, { r: 0, g: 0, b: 0, a: 1 }),
     double_sided: properties.double_sided !== 'false', // Godot default true
   };
 }

@@ -6,6 +6,7 @@ import type { ParsedHeading } from '../../../../parser/utils';
 import type { SpotLight3DProperties } from './types';
 import { parseNode3D } from '../../../base/node3d/parser';
 import { parseBaseLightProperties } from '../shared/parser';
+import { floatOr } from '../../../../parser/valueParsers';
 
 export function parseSpotLight3D(
   heading: ParsedHeading,
@@ -17,11 +18,9 @@ export function parseSpotLight3D(
   return {
     ...node3dProps,
     ...baseLightProps,
-    spot_range: properties.spot_range ? parseFloat(properties.spot_range) : 5.0,
-    spot_angle: properties.spot_angle ? parseFloat(properties.spot_angle) : 45.0,
-    spot_attenuation: properties.spot_attenuation ? parseFloat(properties.spot_attenuation) : 1.0,
-    spot_angle_attenuation: properties.spot_angle_attenuation
-      ? parseFloat(properties.spot_angle_attenuation)
-      : 1.0,
+    spot_range: floatOr(properties.spot_range, 5.0, 'spot_range'),
+    spot_angle: floatOr(properties.spot_angle, 45.0, 'spot_angle'),
+    spot_attenuation: floatOr(properties.spot_attenuation, 1.0, 'spot_attenuation'),
+    spot_angle_attenuation: floatOr(properties.spot_angle_attenuation, 1.0, 'spot_angle_attenuation'),
   };
 }

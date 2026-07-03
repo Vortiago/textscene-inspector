@@ -1,6 +1,15 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import * as logger from '../../../../logger';
 import { parseCSGCylinder3D } from './parser';
 import { heading } from '../../../../parser/testing/parserKit';
+
+let warnSpy: ReturnType<typeof vi.spyOn>;
+beforeEach(() => {
+  warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+});
+afterEach(() => {
+  warnSpy.mockRestore();
+});
 
 describe('parseCSGCylinder3D', () => {
   it('parses radius and height', () => {
@@ -36,5 +45,18 @@ describe('parseCSGCylinder3D', () => {
     });
     expect(props.material).toBe('SubResource("StandardMaterial3D_frame")');
     expect(props.transform?.origin.x).toBeCloseTo(8.5, 5);
+  });
+
+  it('falls back to defaults on garbage (never NaN) and warns', () => {
+    const props = parseCSGCylinder3D(heading('CSGCylinder3D', { name: 'Cyl' }), {
+      radius: 'garbage',
+      height: 'garbage',
+      sides: 'garbage',
+    });
+    expect(props.radius).toBe(1);
+    expect(props.height).toBe(1);
+    expect(props.sides).toBe(8);
+    expect(Number.isNaN(props.radius)).toBe(false);
+    expect(warnSpy).toHaveBeenCalled();
   });
 });

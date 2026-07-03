@@ -1,22 +1,10 @@
 import type { PrismMeshProperties } from './types';
 import { parseVector3, type Vector3 } from '../../../parser/vectors';
 import { warn } from '../../../logger';
+import { floatOr, intOr } from '../../../parser/valueParsers';
 
 export function parsePrismMesh(properties: Record<string, string>): PrismMeshProperties {
-  let leftToRight = 0.5;
   let size: Vector3 = { x: 1, y: 1, z: 1 }; // Godot default
-  let subdivideWidth = 0;
-  let subdivideHeight = 0;
-  let subdivideDepth = 0;
-
-  if (properties.left_to_right) {
-    const parsed = parseFloat(properties.left_to_right);
-    if (isNaN(parsed)) {
-      warn(`Invalid PrismMesh left_to_right: ${properties.left_to_right}`);
-    } else {
-      leftToRight = parsed;
-    }
-  }
 
   if (properties.size) {
     try {
@@ -28,32 +16,11 @@ export function parsePrismMesh(properties: Record<string, string>): PrismMeshPro
     }
   }
 
-  if (properties.subdivide_width) {
-    const parsed = parseInt(properties.subdivide_width, 10);
-    if (isNaN(parsed)) {
-      warn(`Invalid PrismMesh subdivide_width: ${properties.subdivide_width}`);
-    } else {
-      subdivideWidth = parsed;
-    }
-  }
-
-  if (properties.subdivide_height) {
-    const parsed = parseInt(properties.subdivide_height, 10);
-    if (isNaN(parsed)) {
-      warn(`Invalid PrismMesh subdivide_height: ${properties.subdivide_height}`);
-    } else {
-      subdivideHeight = parsed;
-    }
-  }
-
-  if (properties.subdivide_depth) {
-    const parsed = parseInt(properties.subdivide_depth, 10);
-    if (isNaN(parsed)) {
-      warn(`Invalid PrismMesh subdivide_depth: ${properties.subdivide_depth}`);
-    } else {
-      subdivideDepth = parsed;
-    }
-  }
-
-  return { leftToRight, size, subdivideWidth, subdivideHeight, subdivideDepth };
+  return {
+    leftToRight: floatOr(properties.left_to_right, 0.5, 'PrismMesh leftToRight'),
+    size,
+    subdivideWidth: intOr(properties.subdivide_width, 0, 'PrismMesh subdivideWidth'),
+    subdivideHeight: intOr(properties.subdivide_height, 0, 'PrismMesh subdivideHeight'),
+    subdivideDepth: intOr(properties.subdivide_depth, 0, 'PrismMesh subdivideDepth'),
+  };
 }
