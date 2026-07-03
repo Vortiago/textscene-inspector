@@ -5,4 +5,6 @@
  */
 
 export { TscnParser } from './TscnParser.js';
+export { parseHeading } from './utils.js';
+export type { ParsedHeading } from './utils.js';
 export type * from './types.js';

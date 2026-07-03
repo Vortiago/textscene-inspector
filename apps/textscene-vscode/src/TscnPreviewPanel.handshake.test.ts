@@ -11,71 +11,12 @@
  * posts `webviewReady`, then replays it. This test exercises that
  * path against the panel's message handler.
  */
-import { describe, expect, it, vi, type Mock } from 'vitest';
+import { describe, expect, it, type Mock } from 'vitest';
 import * as vscode from 'vscode';
 import { TscnPreviewPanel } from './TscnPreviewPanel';
-import { createMockUri, createMockFileData } from './test-setup';
+import { createMockUri, createMockFileData, setupMockPanel } from './test-setup';
 
 const MINIMAL_TSCN = '[gd_scene format=3]\n[node name="Root" type="Node3D"]';
-
-interface MockWebview {
-  html: string;
-  postMessage: Mock;
-  asWebviewUri: Mock;
-  onDidReceiveMessage: Mock;
-  cspSource: string;
-}
-
-interface MockPanel {
-  webview: MockWebview;
-  title: string;
-  reveal: Mock;
-  dispose: Mock;
-  onDidDispose: Mock;
-}
-
-function setupMockPanel(): {
-  panel: MockPanel;
-  webview: MockWebview;
-  triggerMessage: (msg: { type: string; [key: string]: unknown }) => void;
-} {
-  let messageHandler:
-    | ((message: { type: string; [key: string]: unknown }) => void)
-    | null = null;
-
-  const webview: MockWebview = {
-    html: '',
-    postMessage: vi.fn(),
-    asWebviewUri: vi.fn((uri: vscode.Uri) => ({
-      ...uri,
-      toString: () => `vscode-webview://mock/${(uri as { fsPath: string }).fsPath}`,
-    })),
-    onDidReceiveMessage: vi.fn((handler: (msg: { type: string; [key: string]: unknown }) => void) => {
-      messageHandler = handler;
-      return { dispose: vi.fn() };
-    }),
-    cspSource: 'vscode-webview://mock-csp-source',
-  };
-
-  const panel: MockPanel = {
-    webview,
-    title: '',
-    reveal: vi.fn(),
-    dispose: vi.fn(),
-    onDidDispose: vi.fn(() => ({ dispose: vi.fn() })),
-  };
-
-  (vscode.window.createWebviewPanel as Mock).mockReturnValue(panel);
-
-  function triggerMessage(msg: { type: string; [key: string]: unknown }): void {
-    if (!messageHandler) {
-      throw new Error('Panel never registered a message handler');
-    }
-    messageHandler(msg);
-  }
-
-  return { panel, webview, triggerMessage };
-}
 
 describe('TscnPreviewPanel webview-ready handshake (VSCODE-01)', () => {
   it('caches the initial loadTscn payload until the webview signals ready', async () => {
