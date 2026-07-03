@@ -1,16 +1,11 @@
 /** BoxShape3D collision-shape resource parser. */
 
 import { warn } from '../../../logger';
+import { parseVector3 } from '../../../parser/vectors';
 
 export interface BoxShape3DProperties {
   /** Box extents. Godot default is Vector3(1, 1, 1). */
   size: { x: number; y: number; z: number };
-}
-
-function parseVector3(value: string): { x: number; y: number; z: number } {
-  const match = value.match(/^Vector3\s*\(\s*([-\d.eE+]+)\s*,\s*([-\d.eE+]+)\s*,\s*([-\d.eE+]+)\s*\)$/);
-  if (!match) throw new Error(`Invalid Vector3 format: ${value}`);
-  return { x: parseFloat(match[1]!), y: parseFloat(match[2]!), z: parseFloat(match[3]!) };
 }
 
 export function parseBoxShape3D(properties: Record<string, string>): BoxShape3DProperties {

@@ -1,6 +1,7 @@
 import type { PrismMeshProperties } from './types';
 import { parseVector3, type Vector3 } from '../../../parser/vectors';
 import { warn } from '../../../logger';
+import { floatOr, intOr } from '../../../parser/valueParsers';
 
 export function parsePrismMesh(properties: Record<string, string>): PrismMeshProperties {
   let leftToRight = 0.5;
@@ -29,30 +30,15 @@ export function parsePrismMesh(properties: Record<string, string>): PrismMeshPro
   }
 
   if (properties.subdivide_width) {
-    const parsed = parseInt(properties.subdivide_width, 10);
-    if (isNaN(parsed)) {
-      warn(`Invalid PrismMesh subdivide_width: ${properties.subdivide_width}`);
-    } else {
-      subdivideWidth = parsed;
-    }
+    subdivideWidth = intOr(properties.subdivide_width, 0, 'PrismMesh subdivideWidth');
   }
 
   if (properties.subdivide_height) {
-    const parsed = parseInt(properties.subdivide_height, 10);
-    if (isNaN(parsed)) {
-      warn(`Invalid PrismMesh subdivide_height: ${properties.subdivide_height}`);
-    } else {
-      subdivideHeight = parsed;
-    }
+    subdivideHeight = intOr(properties.subdivide_height, 0, 'PrismMesh subdivideHeight');
   }
 
   if (properties.subdivide_depth) {
-    const parsed = parseInt(properties.subdivide_depth, 10);
-    if (isNaN(parsed)) {
-      warn(`Invalid PrismMesh subdivide_depth: ${properties.subdivide_depth}`);
-    } else {
-      subdivideDepth = parsed;
-    }
+    subdivideDepth = intOr(properties.subdivide_depth, 0, 'PrismMesh subdivideDepth');
   }
 
   return { leftToRight, size, subdivideWidth, subdivideHeight, subdivideDepth };

@@ -2,10 +2,19 @@
  * Label3D parser tests
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import * as logger from '../../../logger';
 import { parseLabel3D } from './parser';
 import { BillboardMode } from './types';
 import { heading } from '../../../parser/testing/parserKit';
+
+let warnSpy: ReturnType<typeof vi.spyOn>;
+beforeEach(() => {
+  warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+});
+afterEach(() => {
+  warnSpy.mockRestore();
+});
 
 describe('Label3D Parser', () => {
   describe('parseLabel3D', () => {
@@ -131,6 +140,17 @@ describe('Label3D Parser', () => {
       });
 
       expect(props.billboard).toBe(BillboardMode.BILLBOARD_DISABLED);
+    });
+
+    it('falls back to the Godot default on garbage (never NaN) and warns', () => {
+      const props = parseLabel3D(heading('Label3D', { name: 'Label' }), {
+        pixel_size: 'garbage',
+        outline_size: 'garbage',
+      });
+      expect(props.pixel_size).toBe(0.005);
+      expect(props.outline_size).toBe(12);
+      expect(Number.isNaN(props.pixel_size)).toBe(false);
+      expect(warnSpy).toHaveBeenCalled();
     });
   });
 });

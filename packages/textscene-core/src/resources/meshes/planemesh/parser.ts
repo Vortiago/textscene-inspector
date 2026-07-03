@@ -1,6 +1,7 @@
 import type { PlaneMeshProperties } from './types';
 import { parseVector2, parseVector3, type Vector2, type Vector3 } from '../../../parser/vectors';
 import { warn } from '../../../logger';
+import { intOr } from '../../../parser/valueParsers';
 
 /**
  * Defaults that differ between PlaneMesh (FACE_Y, 2×2) and its QuadMesh subclass
@@ -35,25 +36,16 @@ export function parsePlaneMesh(
     }
   }
 
-  if (properties.subdivide_width) {
-    subdivideWidth = parseInt(properties.subdivide_width, 10);
-    if (isNaN(subdivideWidth)) {
-      warn(`Invalid PlaneMesh subdivide_width: ${properties.subdivide_width}`);
-      subdivideWidth = 0;
-    }
+  if (properties.subdivide_width !== undefined) {
+    subdivideWidth = intOr(properties.subdivide_width, 0, 'PlaneMesh subdivideWidth');
   }
-
-  if (properties.subdivide_depth) {
-    subdivideDepth = parseInt(properties.subdivide_depth, 10);
-    if (isNaN(subdivideDepth)) {
-      warn(`Invalid PlaneMesh subdivide_depth: ${properties.subdivide_depth}`);
-      subdivideDepth = 0;
-    }
+  if (properties.subdivide_depth !== undefined) {
+    subdivideDepth = intOr(properties.subdivide_depth, 0, 'PlaneMesh subdivideDepth');
   }
-
-  if (properties.orientation) {
-    orientation = parseInt(properties.orientation, 10);
-    if (isNaN(orientation) || orientation < 0 || orientation > 2) {
+  // orientation — intOr handles NaN, range check is specific to PlaneMesh
+  if (properties.orientation !== undefined) {
+    orientation = intOr(properties.orientation, defaults.orientation, 'PlaneMesh orientation');
+    if (orientation < 0 || orientation > 2) {
       warn(`Invalid PlaneMesh orientation: ${properties.orientation}`);
       orientation = defaults.orientation;
     }
