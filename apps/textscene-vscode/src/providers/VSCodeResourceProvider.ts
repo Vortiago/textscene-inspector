@@ -45,7 +45,7 @@ export class VSCodeResourceProvider implements ResourceProvider {
       const fsPath = await this.resolveGodotPath(resourcePath);
       info(`[VSCodeResourceProvider] Resolved to: ${fsPath.fsPath}`);
       this.servedResources.set(normalizeFsPath(fsPath.fsPath), resourcePath);
-      return await this.readContent(fsPath, resourcePath, type, 'Successfully read');
+      return await this.readContent(fsPath, resourcePath, type);
     } catch (primaryError) {
       info(`[VSCodeResourceProvider] Primary resolution failed:`, primaryError);
 
@@ -62,7 +62,7 @@ export class VSCodeResourceProvider implements ResourceProvider {
 
         if (fallbackPathNormalized.startsWith(this.workspaceRootNormalized)) {
           this.servedResources.set(normalizeFsPath(fallbackPath.fsPath), resourcePath);
-          return await this.readContent(fallbackPath, resourcePath, type, 'Fallback succeeded');
+          return await this.readContent(fallbackPath, resourcePath, type);
         }
       } catch (fallbackError) {
         info(`[VSCodeResourceProvider] Fallback also failed:`, fallbackError);
@@ -85,11 +85,10 @@ export class VSCodeResourceProvider implements ResourceProvider {
   private async readContent(
     fsPath: vscode.Uri,
     resourcePath: string,
-    type: string,
-    logLabel: string
+    type: string
   ): Promise<string | ArrayBuffer> {
     const fileData = await vscode.workspace.fs.readFile(fsPath);
-    info(`[VSCodeResourceProvider] ${logLabel}: ${fileData.byteLength} bytes`);
+    info(`[VSCodeResourceProvider] Read ${fileData.byteLength} bytes`);
 
     // Return as ArrayBuffer for binary files (textures, audio, GLB/GLTF)
     if (isBinaryResourceType(type, resourcePath)) {

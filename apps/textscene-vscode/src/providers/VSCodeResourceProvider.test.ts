@@ -237,5 +237,17 @@ describe('VSCodeResourceProvider', () => {
       const resPath = provider.getServedResPath(createMockUri('/workspace/textures/missing.png'));
       expect(resPath).toBe('res://textures/missing.png');
     });
+
+    it('matches a served resource looked up with Windows-style backslash separators', async () => {
+      vscode.workspace.fs.readFile.mockResolvedValueOnce(createMockFileData('texture data'));
+
+      await provider.loadResource('res://textures/wood.png', 'Texture2D');
+
+      // The watcher (or a caller building a raw OS path) may report the same
+      // file with backslash separators instead of the forward slashes the
+      // provider's own Uri.joinPath resolution produced internally.
+      const resPath = provider.getServedResPath(createMockUri('/workspace\\textures\\wood.png'));
+      expect(resPath).toBe('res://textures/wood.png');
+    });
   });
 });

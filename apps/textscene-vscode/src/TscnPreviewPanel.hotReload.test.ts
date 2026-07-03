@@ -130,6 +130,41 @@ describe('TscnPreviewPanel dependency hot-reload', () => {
     expect(stat).toHaveBeenCalledTimes(callsAfterFirst);
   });
 
+  it('clears the cached resource provider when update() receives a different document', async () => {
+    const { triggerMessage } = setupMockPanel();
+    const panel = await createReadyPanel(triggerMessage); // main scene: /workspace/scene.tscn
+    (vscode.workspace.getWorkspaceFolder as Mock).mockReturnValue({
+      uri: createMockUri('/workspace'),
+    });
+    const stat = vscode.workspace.fs.stat as Mock;
+    stat.mockClear();
+
+    panel._testTriggerMessage({
+      type: 'loadResource',
+      path: 'res://a.png',
+      resourceType: 'Texture2D',
+      requestId: 'r1',
+    });
+    await new Promise<void>((r) => setTimeout(r, 10));
+    const callsAfterFirst = stat.mock.calls.length;
+    expect(callsAfterFirst).toBeGreaterThan(0);
+
+    // A genuine document-identity change must drop the cached provider.
+    panel.update(createMockUri('/workspace/other.tscn'));
+    await new Promise<void>((r) => setTimeout(r, 10));
+
+    panel._testTriggerMessage({
+      type: 'loadResource',
+      path: 'res://b.png',
+      resourceType: 'Texture2D',
+      requestId: 'r2',
+    });
+    await new Promise<void>((r) => setTimeout(r, 10));
+
+    // A fresh provider re-walks the filesystem for project-root discovery.
+    expect(stat.mock.calls.length).toBeGreaterThan(callsAfterFirst);
+  });
+
   it('recovers a resource whose initial load failed once it is created on disk (missing -> loaded)', async () => {
     const { webview, triggerMessage } = setupMockPanel();
     const panel = await createReadyPanel(triggerMessage);
