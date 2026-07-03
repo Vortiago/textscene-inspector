@@ -20,6 +20,7 @@ import { SceneResourcesProvider } from './SceneResourcesContext.js';
 import { NodeDispatcher } from './NodeDispatcher.js';
 import { SelectionHighlight } from './components/SelectionHighlight.js';
 import { HoverHighlight } from './components/HoverHighlight.js';
+import { computeWorldBoundingBox } from './bounds.js';
 import { InternalTextLabel } from './internalTextLabel.js';
 import styles from './TscnCanvas.module.css';
 
@@ -162,7 +163,7 @@ export function frameSceneBounds(
     if (obj.userData?.tscnEmptyState) return;
     const o = obj as THREE.Mesh & { isLine?: boolean; isLineSegments?: boolean; isPoints?: boolean };
     if (!o.isMesh && !o.isLine && !o.isLineSegments && !o.isPoints) return;
-    const objBox = new THREE.Box3().setFromObject(obj);
+    const objBox = computeWorldBoundingBox(obj, new THREE.Box3());
     if (objBox.isEmpty() || !Number.isFinite(objBox.min.x)) return;
     if (o.isMesh) {
       meshBox.union(objBox);

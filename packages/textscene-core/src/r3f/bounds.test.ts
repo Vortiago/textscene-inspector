@@ -10,7 +10,7 @@
  */
 import * as THREE from 'three';
 import { describe, it, expect } from 'vitest';
-import { computeWorldBoundingBox } from './WorldBoxHelper';
+import { computeWorldBoundingBox } from './bounds.js';
 
 function unitBoxGeometry(): THREE.BufferGeometry {
   const geo = new THREE.BoxGeometry(2, 2, 2); // local AABB: (-1,-1,-1)..(1,1,1)
@@ -65,6 +65,20 @@ describe('computeWorldBoundingBox', () => {
     parent.add(a, b);
 
     const box = computeWorldBoundingBox(parent);
+    expect(box.min.x).toBeCloseTo(-6, 5); // -5 - 1
+    expect(box.max.x).toBeCloseTo(6, 5); //  5 + 1
+  });
+
+  it('unions every instance of an InstancedMesh (a Godot GridMap frames the whole grid, not one base tile)', () => {
+    // InstancedMesh.boundingBox starts null; the util must fall back to its
+    // object-level box (union over instanceMatrix), not geometry.boundingBox ×
+    // matrixWorld alone — which would collapse the grid to one tile at 0.
+    const mesh = new THREE.InstancedMesh(unitBoxGeometry(), new THREE.MeshBasicMaterial(), 2);
+    mesh.setMatrixAt(0, new THREE.Matrix4().makeTranslation(-5, 0, 0));
+    mesh.setMatrixAt(1, new THREE.Matrix4().makeTranslation(5, 0, 0));
+    mesh.instanceMatrix.needsUpdate = true;
+
+    const box = computeWorldBoundingBox(mesh);
     expect(box.min.x).toBeCloseTo(-6, 5); // -5 - 1
     expect(box.max.x).toBeCloseTo(6, 5); //  5 + 1
   });
