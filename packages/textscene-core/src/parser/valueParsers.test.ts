@@ -14,6 +14,7 @@ import {
   vec2Or,
   parseOptionalInt,
   parseOptionalFloat,
+  parseNodePathLiteral,
 } from './valueParsers';
 
 let warnSpy: ReturnType<typeof vi.spyOn>;
@@ -138,5 +139,22 @@ describe('parseOptionalFloat', () => {
   });
   it('returns undefined for an empty string (parseFloat("") is NaN)', () => {
     expect(parseOptionalFloat('')).toBeUndefined();
+  });
+});
+
+describe('parseNodePathLiteral', () => {
+  it('extracts the inner path from a NodePath("...") literal (happy path)', () => {
+    expect(parseNodePathLiteral('NodePath("../Camera2D")')).toBe('../Camera2D');
+  });
+  it('returns an empty string for an empty NodePath("") literal (edge case)', () => {
+    expect(parseNodePathLiteral('NodePath("")')).toBe('');
+  });
+  it('returns null for a value that is not a NodePath literal (error path)', () => {
+    expect(parseNodePathLiteral('"../Camera2D"')).toBeNull();
+    expect(parseNodePathLiteral('../Camera2D')).toBeNull();
+  });
+  it('returns null for an absent value, without warning', () => {
+    expect(parseNodePathLiteral(undefined)).toBeNull();
+    expect(warnSpy).not.toHaveBeenCalled();
   });
 });

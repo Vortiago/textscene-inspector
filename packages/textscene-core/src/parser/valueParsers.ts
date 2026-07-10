@@ -133,3 +133,17 @@ export function parseOptionalVector2(value: string | undefined): Vector2 | undef
     return undefined;
   }
 }
+
+/**
+ * Extract the inner path of a `NodePath("...")` literal — `NodePath("../a")`
+ * → `"../a"` (an empty literal yields `""`). Returns `null` for an absent
+ * value or anything that is not a NodePath literal, so callers choose their
+ * own fallback (`?? raw`, `?? '(none)'`). The canonical NodePath decoder for
+ * display formatters; the linter keeps its stricter variant
+ * (`linterUtils.extractNodePath`) which also rejects empty paths.
+ */
+export function parseNodePathLiteral(value: string | undefined): string | null {
+  if (value === undefined) return null;
+  const match = value.match(/^NodePath\("([^"]*)"\)$/);
+  return match ? match[1]! : null;
+}

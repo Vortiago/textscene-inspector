@@ -5,8 +5,9 @@ import { v } from '../../../linter/validators/index.js';
 
 const PROCESS_CALLBACK_VALUES = { 0: 'PHYSICS', 1: 'IDLE' };
 
+// Timer is a plain Node (see nodeBaseTypes.ts) — no spatial validators;
+// only the type-specific property surface is registered here.
 validatorRegistry.registerAll('Timer', {
-  transform: v.transform3d('transform'),
   wait_time: v.positiveFloat(
     'wait_time',
     "Property 'wait_time' must be greater than 0. A Timer needs a positive interval to fire."

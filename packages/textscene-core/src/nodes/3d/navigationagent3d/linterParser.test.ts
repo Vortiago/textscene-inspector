@@ -1,85 +1,45 @@
 /**
- * Tests for NavigationAgent3D strict validators (format validation).
+ * NavigationAgent3D strict validator coverage — the avoidance/path property
+ * surface. NavigationAgent3D is a plain Node (see nodeBaseTypes.ts), so there
+ * are no spatial validators to exercise here.
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
-import { Linter } from '../../../linter/Linter';
+import { describe, it } from 'vitest';
 import './linterParser';
-
-function errorsOf(diagnostics: ReturnType<Linter['lint']>) {
-  return diagnostics.filter((d) => d.severity === 'error');
-}
+import { expectDiagnostic, expectNoErrors, node, scene } from '../../../linter/testing/testkit';
 
 describe('NavigationAgent3D strict validators', () => {
-  let linter: Linter;
-
-  beforeEach(() => {
-    linter = new Linter();
-  });
-
-  it('passes a valid NavigationAgent3D with a transform', () => {
-    const content = `[gd_scene format=3]
-
-[node name="X" type="NavigationAgent3D"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
-`;
-
-    expect(errorsOf(linter.lint(content))).toEqual([]);
-  });
-
-  it('rejects a malformed transform', () => {
-    const content = `[gd_scene format=3]
-
-[node name="X" type="NavigationAgent3D"]
-transform = Transform3D(nope)
-`;
-
-    const errors = errorsOf(linter.lint(content));
-    expect(errors.length).toBeGreaterThan(0);
-    expect(errors[0]!.message).toContain('transform');
-  });
-
   it('passes a valid NavigationAgent3D with avoidance/path properties', () => {
-    const content = `[gd_scene format=3]
-
-[node name="X" type="NavigationAgent3D"]
-radius = 0.75
-height = 1.8
-avoidance_enabled = true
-avoidance_layers = 2
-avoidance_mask = 3
-max_neighbors = 1
-max_speed = 5.0
-navigation_layers = 4
-target_desired_distance = 1.5
-path_desired_distance = 0.5
-target_position = Vector3(1, 2, 3)
-`;
-
-    expect(errorsOf(linter.lint(content))).toEqual([]);
+    expectNoErrors(
+      scene(
+        node('NavigationAgent3D', {
+          radius: 0.75,
+          height: 1.8,
+          avoidance_enabled: true,
+          avoidance_layers: 2,
+          avoidance_mask: 3,
+          max_neighbors: 1,
+          max_speed: '5.0',
+          navigation_layers: 4,
+          target_desired_distance: 1.5,
+          path_desired_distance: 0.5,
+          target_position: 'Vector3(1, 2, 3)',
+        })
+      )
+    );
   });
 
   it('rejects a negative radius', () => {
-    const content = `[gd_scene format=3]
-
-[node name="X" type="NavigationAgent3D"]
-radius = -1
-`;
-
-    const errors = errorsOf(linter.lint(content));
-    expect(errors.length).toBeGreaterThan(0);
-    expect(errors[0]!.message).toContain('radius');
+    expectDiagnostic(scene(node('NavigationAgent3D', { radius: -1 })), {
+      prop: 'radius',
+      severity: 'error',
+    });
   });
 
   it('rejects a negative max_neighbors', () => {
-    const content = `[gd_scene format=3]
-
-[node name="X" type="NavigationAgent3D"]
-max_neighbors = -1
-`;
-
-    const errors = errorsOf(linter.lint(content));
-    expect(errors.length).toBeGreaterThan(0);
-    expect(errors[0]!.message).toContain('max_neighbors');
+    expectDiagnostic(scene(node('NavigationAgent3D', { max_neighbors: -1 })), {
+      prop: 'max_neighbors',
+      severity: 'error',
+    });
   });
 });

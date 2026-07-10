@@ -1,67 +1,41 @@
 /**
- * Tests for RemoteTransform2D strict validators (format validation).
+ * RemoteTransform2D strict validator coverage — the remote_path/update-flag
+ * property surface, plus one probe that the spatial set arrives via the
+ * Node2D base-chain walk (the slice registers no transform validator of its
+ * own).
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
-import { Linter } from '../../../linter/Linter';
+import { describe, it } from 'vitest';
 import './linterParser';
-
-function errorsOf(diagnostics: ReturnType<Linter['lint']>) {
-  return diagnostics.filter((d) => d.severity === 'error');
-}
+import '../../base/node2d/linterParser';
+import { expectDiagnostic, expectNoErrors, node, scene } from '../../../linter/testing/testkit';
 
 describe('RemoteTransform2D strict validators', () => {
-  let linter: Linter;
-
-  beforeEach(() => {
-    linter = new Linter();
-  });
-
-  it('passes a valid RemoteTransform2D with a transform', () => {
-    const content = `[gd_scene format=3]
-
-[node name="X" type="RemoteTransform2D"]
-transform = Transform2D(1, 0, 0, 1, 0, 0)
-`;
-
-    expect(errorsOf(linter.lint(content))).toEqual([]);
-  });
-
-  it('rejects a malformed transform', () => {
-    const content = `[gd_scene format=3]
-
-[node name="X" type="RemoteTransform2D"]
-transform = Transform2D(nope)
-`;
-
-    const errors = errorsOf(linter.lint(content));
-    expect(errors.length).toBeGreaterThan(0);
-    expect(errors[0]!.message).toContain('transform');
-  });
-
   it('passes a valid RemoteTransform2D with remote_path and update flags', () => {
-    const content = `[gd_scene format=3]
+    expectNoErrors(
+      scene(
+        node('RemoteTransform2D', {
+          remote_path: 'NodePath("../../Camera2D")',
+          update_position: true,
+          update_rotation: false,
+          update_scale: true,
+          use_global_coordinates: false,
+        })
+      )
+    );
+  });
 
-[node name="X" type="RemoteTransform2D"]
-remote_path = NodePath("../../Camera2D")
-update_position = true
-update_rotation = false
-update_scale = true
-use_global_coordinates = false
-`;
-
-    expect(errorsOf(linter.lint(content))).toEqual([]);
+  it('rejects a malformed transform (inherited from the Node2D validator set)', () => {
+    expectDiagnostic(scene(node('RemoteTransform2D', { transform: 'Transform2D(nope)' })), {
+      prop: 'transform',
+      severity: 'error',
+    });
   });
 
   it('rejects a malformed remote_path', () => {
-    const content = `[gd_scene format=3]
-
-[node name="X" type="RemoteTransform2D"]
-remote_path = "../../Camera2D"
-`;
-
-    const errors = errorsOf(linter.lint(content));
-    expect(errors.length).toBeGreaterThan(0);
-    expect(errors[0]!.message).toContain('remote_path');
+    expectDiagnostic(scene(node('RemoteTransform2D', { remote_path: '"../../Camera2D"' })), {
+      prop: 'remote_path',
+      severity: 'error',
+    });
   });
 });

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ParsedHeading } from '../../../parser/utils';
-import type { PropertySection } from '../../../core/NodeRegistry';
+import { valueOf } from '../../../parser/testing/parserKit';
 import { parseRemoteTransform2D } from './parser';
 import { formatRemoteTransform2DProperties } from './propertyFormatter';
 
@@ -8,14 +8,6 @@ const HEADING: ParsedHeading = {
   type: 'node',
   attributes: { name: 'CameraAnchor', type: 'RemoteTransform2D' },
 };
-
-function valueOf(sections: PropertySection[], label: string): string | undefined {
-  for (const section of sections) {
-    const item = section.items.find((i) => i.label === label);
-    if (item) return item.value;
-  }
-  return undefined;
-}
 
 describe('formatRemoteTransform2DProperties', () => {
   it('renders the Godot defaults when properties are absent (happy path)', () => {

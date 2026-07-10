@@ -6,8 +6,9 @@ import { v } from '../../../linter/validators/index.js';
 const LAYER_MSG = (name: string) =>
   `Property '${name}' must be between 0 and 1048575 (got a value out of range). Valid range: 20-bit bitmask`;
 
+// NavigationAgent3D is a plain Node (see nodeBaseTypes.ts) — no spatial
+// validators; only the type-specific property surface is registered here.
 validatorRegistry.registerAll('NavigationAgent3D', {
-  transform: v.transform3d('transform'),
   radius: v.float('radius', { min: 0, message: "Property 'radius' must be >= 0." }),
   height: v.float('height', { min: 0, message: "Property 'height' must be >= 0." }),
   avoidance_enabled: v.boolean('avoidance_enabled'),

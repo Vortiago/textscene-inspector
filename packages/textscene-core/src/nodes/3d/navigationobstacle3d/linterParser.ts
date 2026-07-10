@@ -3,8 +3,9 @@
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
 
+// Spatial validators (transform/position/...) are inherited from Node3D via
+// the nodeBaseTypes chain — only the type-specific surface is registered here.
 validatorRegistry.registerAll('NavigationObstacle3D', {
-  transform: v.transform3d('transform'),
   radius: v.float('radius', { min: 0, message: "Property 'radius' must be >= 0." }),
   height: v.float('height', { min: 0, message: "Property 'height' must be >= 0." }),
   avoidance_enabled: v.boolean('avoidance_enabled'),
