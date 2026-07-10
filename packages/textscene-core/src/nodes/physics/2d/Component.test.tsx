@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { Node2D } from '../../base/node2d/Component';
 import { parseNode2D } from '../../base/node2d/parser';
+import { useParentModulate } from '../../../r3f/canvasItemModulate';
 import type { TscnNode } from '../../../parser/types';
 
 const areaHeading = (attributes: Record<string, string> = {}) => ({
@@ -46,5 +47,20 @@ describe('<Node2D> (area2d physics body)', () => {
       </Node2D>
     );
     expect(renderer.scene.findByProps({ name: 'kid' })).toBeDefined();
+  });
+
+  it("cascades a StaticBody2D's modulate down to a nested child (Modulate2DContext)", async () => {
+    function ModulateReader() {
+      const modulate = useParentModulate();
+      return <mesh name="modulate-reader" userData={{ modulate }} />;
+    }
+    const body = makeBody({ name: 'TintedStaticBody2D', modulate: 'Color(0.5, 0.25, 1, 0.8)' });
+    const renderer = await ReactThreeTestRenderer.create(
+      <Node2D node={body}>
+        <ModulateReader />
+      </Node2D>
+    );
+    const reader = renderer.scene.findByProps({ name: 'modulate-reader' });
+    expect(reader.instance.userData.modulate).toEqual({ r: 0.5, g: 0.25, b: 1, a: 0.8 });
   });
 });
