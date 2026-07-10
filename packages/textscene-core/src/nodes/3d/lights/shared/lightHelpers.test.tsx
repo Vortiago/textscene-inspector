@@ -526,6 +526,67 @@ describe('Camera3D gizmo — selection gating (WI-UX-14 scope expansion)', () =>
 
     expect(findHelpersOfType(scene, THREE.CameraHelper)).toHaveLength(1);
   });
+
+  it("CameraHelper sits at the camera's own world transform, not squared through a transformed ancestor", async () => {
+    // THREE.CameraHelper's constructor hardcodes `matrix = camera.matrixWorld`
+    // + `matrixAutoUpdate = false`, the exact aliasing pattern
+    // `correctHelperForParentGroup` fixes for the light helpers. Unlike a
+    // light (whose OWN internal transform group is enough to trigger the
+    // bug — see the DirectionalLightHelper test above), Camera3D applies its
+    // transform directly to the `<perspectiveCamera>` primitive with no
+    // wrapping group of its own, so reproducing the double-transform
+    // requires an ANCESTOR node with a real transform: a parent Node3D's
+    // `<group position=…>` is what the camera's pickable wrapper — and the
+    // helper mounted as its sibling — both sit under.
+    const parentNode: TscnNode = {
+      name: 'Rig',
+      type: 'Node3D',
+      children: [cameraNode('RigCam')],
+      properties: {
+        name: 'Rig',
+        transform: {
+          basis_x: { x: 1, y: 0, z: 0 },
+          basis_y: { x: 0, y: 1, z: 0 },
+          basis_z: { x: 0, y: 0, z: 1 },
+          origin: { x: 10, y: 5, z: -3 },
+        },
+      },
+    };
+    const graph = createSceneGraphFromTscnScene({ nodes: [parentNode] });
+    const rootNodes = graph.scenes.get(graph.rootScene)?.nodes ?? [];
+
+    const renderer = await ReactThreeTestRenderer.create(
+      <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
+        <SelectionProvider>
+          <SelectSeeder path="Rig/RigCam" />
+          <NodeDispatcher nodes={rootNodes} />
+        </SelectionProvider>
+      </HierarchyProvider>,
+    );
+
+    // Same reasoning as the DirectionalLightHelper test: the correction runs
+    // inside the helper's wrapped `update()`, invoked via `useFrame` — advance
+    // one frame so it fires before reading any matrixWorld.
+    await renderer.advanceFrames(1, 16);
+
+    const scene = renderer.scene.instance as unknown as THREE.Scene;
+    scene.updateMatrixWorld(true);
+    const [helper] = findHelpersOfType(scene, THREE.CameraHelper);
+    expect(helper).toBeDefined();
+
+    const [cameraNode3] = renderer.scene.findAllByType('PerspectiveCamera');
+    expect(cameraNode3).toBeDefined();
+    const camera = cameraNode3!.instance as unknown as THREE.PerspectiveCamera;
+
+    const helperWorldPos = new THREE.Vector3().setFromMatrixPosition(helper!.matrixWorld);
+    const cameraWorldPos = new THREE.Vector3().setFromMatrixPosition(camera.matrixWorld);
+    expect(cameraWorldPos.x).toBeCloseTo(10, 5);
+    expect(cameraWorldPos.y).toBeCloseTo(5, 5);
+    expect(cameraWorldPos.z).toBeCloseTo(-3, 5);
+    expect(helperWorldPos.x).toBeCloseTo(cameraWorldPos.x, 5);
+    expect(helperWorldPos.y).toBeCloseTo(cameraWorldPos.y, 5);
+    expect(helperWorldPos.z).toBeCloseTo(cameraWorldPos.z, 5);
+  });
 });
 
 /**
