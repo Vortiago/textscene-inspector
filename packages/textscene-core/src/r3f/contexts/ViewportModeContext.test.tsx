@@ -20,6 +20,17 @@ describe('ViewportModeContext', () => {
     expect(result.current.showCollisions).toBe(false);
   });
 
+  it('defaults showGrid to false (#224 — must not invalidate visual baselines)', () => {
+    const { result } = renderHook(() => useViewportMode(), { wrapper: wrapper() });
+    expect(result.current.showGrid).toBe(false);
+  });
+
+  it('toggles showGrid', () => {
+    const { result } = renderHook(() => useViewportMode(), { wrapper: wrapper() });
+    act(() => result.current.setShowGrid(true));
+    expect(result.current.showGrid).toBe(true);
+  });
+
   it('honors initial values from the provider', () => {
     const { result } = renderHook(() => useViewportMode(), {
       wrapper: wrapper({ initialMode: '2D', initialShowCollisions: true }),

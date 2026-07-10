@@ -167,3 +167,82 @@ describe('CameraControlContext', () => {
     consoleErrorSpy.mockRestore();
   });
 });
+
+describe('CameraControlContext — screenshot (#224)', () => {
+  it('takeScreenshot() returns the registered handler\'s result', () => {
+    const handler = vi.fn(() => 'data:image/png;base64,AAA');
+
+    function ScreenshotHandlerRegistrar() {
+      const { registerScreenshotHandler } = useCameraControl();
+      useEffect(() => registerScreenshotHandler(handler), [registerScreenshotHandler]);
+      return null;
+    }
+
+    const { result } = renderHook(() => useCameraControl(), {
+      wrapper: ({ children }) => (
+        <CameraControlProvider>
+          <ScreenshotHandlerRegistrar />
+          {children}
+        </CameraControlProvider>
+      ),
+    });
+
+    let captured: string | null = null;
+    act(() => {
+      captured = result.current.takeScreenshot();
+    });
+
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect(captured).toBe('data:image/png;base64,AAA');
+  });
+
+  it('takeScreenshot() returns null when no handler is registered (no canvas mounted yet)', () => {
+    const { result } = renderHook(() => useCameraControl(), { wrapper });
+    let captured: string | null = 'not-null';
+    expect(() => {
+      act(() => {
+        captured = result.current.takeScreenshot();
+      });
+    }).not.toThrow();
+    expect(captured).toBeNull();
+  });
+
+  it('drops the registered screenshot handler when the registrar unmounts', () => {
+    const handler = vi.fn(() => 'data:image/png;base64,AAA');
+
+    function ScreenshotHandlerRegistrar() {
+      const { registerScreenshotHandler } = useCameraControl();
+      useEffect(() => registerScreenshotHandler(handler), [registerScreenshotHandler]);
+      return null;
+    }
+
+    function App({ showRegistrar }: { showRegistrar: boolean }) {
+      return (
+        <CameraControlProvider>
+          {showRegistrar && <ScreenshotHandlerRegistrar />}
+          <TriggerScreenshot />
+        </CameraControlProvider>
+      );
+    }
+    function TriggerScreenshot() {
+      const { takeScreenshot } = useCameraControl();
+      return (
+        <button data-testid="trigger" onClick={() => takeScreenshot()}>
+          screenshot
+        </button>
+      );
+    }
+
+    const { rerender, getByTestId } = render(<App showRegistrar={true} />);
+    act(() => {
+      getByTestId('trigger').click();
+    });
+    expect(handler).toHaveBeenCalledTimes(1);
+
+    rerender(<App showRegistrar={false} />);
+    act(() => {
+      getByTestId('trigger').click();
+    });
+    expect(handler).toHaveBeenCalledTimes(1);
+  });
+});

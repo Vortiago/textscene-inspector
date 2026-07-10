@@ -16,12 +16,14 @@ import { useCallback, useEffect, useState } from 'react';
 import * as THREE from 'three';
 import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
 import { useOptionalCameraControl } from './contexts/CameraControlContext.js';
+import { useViewportMode } from './contexts/ViewportModeContext.js';
 import { SceneResourcesProvider } from './SceneResourcesContext.js';
 import { NodeDispatcher } from './NodeDispatcher.js';
 import { SelectionHighlight } from './components/SelectionHighlight.js';
 import { HoverHighlight } from './components/HoverHighlight.js';
 import { computeWorldBoundingBox } from './bounds.js';
 import { InternalTextLabel } from './internalTextLabel.js';
+import { FrameSelectedShortcut } from './FrameSelectedShortcut.js';
 import styles from './TscnCanvas.module.css';
 
 export interface TscnCanvasProps {
@@ -52,12 +54,18 @@ export function TscnSceneContents() {
   // a renderer crash. The grid also gives the orbit controls a tangible
   // surface so the initial-camera framing feels intentional.
   const isEmpty = nodes === null || nodes.length === 0;
+  // #224: an OPT-IN ground-plane grid for a non-empty scene, off by default
+  // (see ViewportModeContext's doc comment for why). The empty-scene
+  // indicator already draws its own grid unconditionally, so this one only
+  // adds a SECOND grid when there's actual content to reference it against.
+  const { showGrid } = useViewportMode();
 
   return (
     <>
       <ambientLight intensity={0.4} />
       <directionalLight position={[5, 5, 5]} intensity={1} />
       {isEmpty && <EmptySceneIndicator />}
+      {!isEmpty && showGrid && <gridHelper args={[10, 10, 0x444444, 0x222222]} />}
       {nodes && rootScene && (
         <SceneResourcesProvider
           internalResources={rootScene.internalResources}
@@ -135,7 +143,7 @@ function ActiveCameraSwitcher() {
 }
 
 /** Minimal shape we touch on the OrbitControls instance for framing. */
-interface OrbitLike {
+export interface OrbitLike {
   target?: THREE.Vector3;
   update?: () => void;
 }
@@ -257,12 +265,20 @@ export function TscnCanvas(_props: TscnCanvasProps) {
 
   return (
     <div className={styles.root}>
-      <Canvas camera={{ position: [3, 3, 3] }}>
+      {/* preserveDrawingBuffer (#224): WebGL clears its drawing buffer after
+          each frame by default, so gl.domElement.toDataURL() reads back a
+          blank/black image unless this is set — the screenshot handler
+          below also forces an explicit render right before capture, but
+          that alone isn't enough once the browser has already swapped
+          buffers past the point of readback. */}
+      <Canvas camera={{ position: [3, 3, 3] }} gl={{ preserveDrawingBuffer: true }}>
         <TscnSceneContents />
         <ActiveCameraSwitcher />
         <CameraFit />
-        <OrbitControls ref={onControlsRef} makeDefault />
+        <FrameSelectedShortcut />
+        <OrbitControls ref={onControlsRef} makeDefault enableDamping dampingFactor={0.1} />
         <OrbitControlsResetBridge controls={controls} />
+        <ScreenshotBridge />
       </Canvas>
     </div>
   );
@@ -287,6 +303,33 @@ function OrbitControlsResetBridge({
     if (!registerResetHandler || !controls) return undefined;
     return registerResetHandler(() => controls.reset());
   }, [registerResetHandler, controls]);
+
+  return null;
+}
+
+/**
+ * Bridges the WebGLRenderer into `CameraControlContext` so the toolbar's
+ * screenshot button can capture a frame from outside the `<Canvas>` (#224).
+ * Forces an explicit render right before reading the buffer back — R3F's own
+ * render loop can be idle (`frameloop="demand"`-style optimizations, or just
+ * the gap between frames) at the moment the user clicks the button, and an
+ * explicit render guarantees the buffer reflects the CURRENT camera/scene
+ * state rather than whatever the last scheduled frame happened to be.
+ */
+function ScreenshotBridge() {
+  const control = useOptionalCameraControl();
+  const registerScreenshotHandler = control?.registerScreenshotHandler;
+  const gl = useThree((s) => s.gl);
+  const scene = useThree((s) => s.scene);
+  const camera = useThree((s) => s.camera);
+
+  useEffect(() => {
+    if (!registerScreenshotHandler) return undefined;
+    return registerScreenshotHandler(() => {
+      gl.render(scene, camera);
+      return gl.domElement.toDataURL('image/png');
+    });
+  }, [registerScreenshotHandler, gl, scene, camera]);
 
   return null;
 }

@@ -63,6 +63,17 @@ export interface CameraControlContextValue {
    * useEffect re-runs.
    */
   registerResetHandler: (handler: () => void) => () => void;
+  /**
+   * Capture the current 3D viewport as a PNG data URL (#224). Returns
+   * `null` when no canvas has registered a handler yet (e.g. in 2D mode,
+   * or during the brief mount window before `<TscnCanvas>`'s effect runs).
+   */
+  takeScreenshot: () => string | null;
+  /**
+   * Called from `<TscnCanvas>` so the toolbar's screenshot button can pull
+   * a frame from the canvas's WebGLRenderer. Mirrors `registerResetHandler`.
+   */
+  registerScreenshotHandler: (handler: () => string | null) => () => void;
 }
 
 const CameraControlContext = createContext<CameraControlContextValue | null>(null);
@@ -107,6 +118,21 @@ export function CameraControlProvider({ children }: CameraControlProviderProps) 
     resetHandlerRef.current?.();
   }, []);
 
+  const screenshotHandlerRef = useRef<(() => string | null) | null>(null);
+
+  const registerScreenshotHandler = useCallback((handler: () => string | null) => {
+    screenshotHandlerRef.current = handler;
+    return () => {
+      if (screenshotHandlerRef.current === handler) {
+        screenshotHandlerRef.current = null;
+      }
+    };
+  }, []);
+
+  const takeScreenshot = useCallback(() => {
+    return screenshotHandlerRef.current?.() ?? null;
+  }, []);
+
   const value = useMemo<CameraControlContextValue>(
     () => ({
       activeCameraPath,
@@ -116,8 +142,20 @@ export function CameraControlProvider({ children }: CameraControlProviderProps) 
       requestFrame2D,
       resetCamera,
       registerResetHandler,
+      takeScreenshot,
+      registerScreenshotHandler,
     }),
-    [activeCameraPath, switchToCamera, returnToFreeView, frame2D, requestFrame2D, resetCamera, registerResetHandler]
+    [
+      activeCameraPath,
+      switchToCamera,
+      returnToFreeView,
+      frame2D,
+      requestFrame2D,
+      resetCamera,
+      registerResetHandler,
+      takeScreenshot,
+      registerScreenshotHandler,
+    ]
   );
 
   return (
