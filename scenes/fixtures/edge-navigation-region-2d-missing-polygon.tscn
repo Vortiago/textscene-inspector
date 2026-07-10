@@ -1,0 +1,10 @@
+[gd_scene format=3 uid="uid://edge_navigation_region_2d_missing_polygon"]
+
+; `navigation_polygon` omitted entirely. The linter rule's own doc comment
+; states the reference is OPTIONAL — "an absent reference must not be
+; flagged (Godot bakes one at runtime)" — so this is a deliberately-supported
+; state, not a gap: zero diagnostics, renders with no baked navmesh geometry.
+
+[node name="Root" type="Node2D"]
+
+[node name="UnbakedRegion" type="NavigationRegion2D" parent="."]

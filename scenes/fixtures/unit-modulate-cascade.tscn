@@ -1,0 +1,30 @@
+[gd_scene load_steps=2 format=3 uid="uid://unit_modulate_cascade"]
+
+; Three-level CanvasItem `modulate` cascade: GrandParent -> Parent -> Child,
+; each with its own tint, so the rendered Child sprite shows the PRODUCT of
+; all three (see r3f/canvasItemModulate.ts + Component.modulate-inheritance.test.tsx).
+; SelfModulateOnly demonstrates `self_modulate` isolation: it tints only its
+; own pixels and does NOT propagate to further descendants.
+
+[ext_resource type="Texture2D" path="res://textures/sprite2d-marker.png" id="1_marker"]
+
+[node name="GrandParent" type="Node2D"]
+modulate = Color(0.8, 0.8, 1, 1)
+
+[node name="Parent" type="Node2D" parent="."]
+position = Vector2(-100, 0)
+modulate = Color(1, 0.8, 0.8, 1)
+
+[node name="Child" type="Sprite2D" parent="Parent"]
+position = Vector2(0, 100)
+modulate = Color(0.8, 1, 0.8, 1)
+texture = ExtResource("1_marker")
+
+[node name="SelfModulateOnly" type="Sprite2D" parent="."]
+position = Vector2(100, 0)
+self_modulate = Color(1, 0.3, 0.3, 1)
+texture = ExtResource("1_marker")
+
+[node name="SelfModulateChild" type="Sprite2D" parent="SelfModulateOnly"]
+position = Vector2(0, 100)
+texture = ExtResource("1_marker")

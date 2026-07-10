@@ -108,6 +108,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Animation Player Method Track",
+    "file": "unit-animation-player-method-track.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Animation Player Sprite Frame",
     "file": "unit-animation-player-sprite-frame.tscn",
     "category": "Other"
@@ -115,6 +120,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Animation Player",
     "file": "unit-animation-player.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Animation Tree State Machine",
+    "file": "unit-animation-tree-state-machine.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Animation Tree Stateless",
+    "file": "unit-animation-tree-stateless.tscn",
     "category": "Other"
   },
   {
@@ -178,6 +193,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Modulate Cascade",
+    "file": "unit-modulate-cascade.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Multi Camera",
     "file": "unit-multi-camera.tscn",
     "category": "Other"
@@ -238,6 +258,66 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Animation Empty Library",
+    "file": "edge-animation-empty-library.tscn",
+    "category": "Edge Cases"
+  },
+  {
+    "name": "Animation Library Missing Subresource",
+    "file": "edge-animation-library-missing-subresource.tscn",
+    "category": "Edge Cases"
+  },
+  {
+    "name": "Animation Track Missing Target",
+    "file": "edge-animation-track-missing-target.tscn",
+    "category": "Edge Cases"
+  },
+  {
+    "name": "Area2d Gravity Point Incomplete",
+    "file": "edge-area2d-gravity-point-incomplete.tscn",
+    "category": "Edge Cases"
+  },
+  {
+    "name": "Area2d Inactive",
+    "file": "edge-area2d-inactive.tscn",
+    "category": "Edge Cases"
+  },
+  {
+    "name": "Area2d No Collision Shape",
+    "file": "edge-area2d-no-collision-shape.tscn",
+    "category": "Edge Cases"
+  },
+  {
+    "name": "Area3d Bad Gravity Point",
+    "file": "edge-area3d-bad-gravity-point.tscn",
+    "category": "Edge Cases"
+  },
+  {
+    "name": "Area3d Inactive",
+    "file": "edge-area3d-inactive.tscn",
+    "category": "Edge Cases"
+  },
+  {
+    "name": "Collision Shape Disabled",
+    "file": "edge-collision-shape-disabled.tscn",
+    "category": "Edge Cases"
+  },
+  {
+    "name": "Csg Invalid Operation",
+    "file": "edge-csg-invalid-operation.tscn",
+    "category": "Edge Cases"
+  },
+  {
+    "name": "Csg Invalid Size",
+    "file": "edge-csg-invalid-size.tscn",
+    "category": "Edge Cases"
+  },
+  {
+    "name": "Csg Out Of Range",
+    "file": "edge-csg-out-of-range.tscn",
+    "category": "Edge Cases"
+  },
+  {
     "name": "Invalid Cast Shadow",
     "file": "edge-invalid-cast-shadow.tscn",
     "category": "Edge Cases"
@@ -248,8 +328,28 @@ export const fixtures: Fixture[] = [
     "category": "Edge Cases"
   },
   {
+    "name": "Label3d Malformed Text",
+    "file": "edge-label3d-malformed-text.tscn",
+    "category": "Edge Cases"
+  },
+  {
+    "name": "Light Bad Shadow Splits",
+    "file": "edge-light-bad-shadow-splits.tscn",
+    "category": "Edge Cases"
+  },
+  {
+    "name": "Light Invalid Color",
+    "file": "edge-light-invalid-color.tscn",
+    "category": "Edge Cases"
+  },
+  {
     "name": "Malformed Bracket",
     "file": "edge-malformed-bracket.tscn",
+    "category": "Edge Cases"
+  },
+  {
+    "name": "Meshinstance3d Missing Subresource",
+    "file": "edge-meshinstance3d-missing-subresource.tscn",
     "category": "Edge Cases"
   },
   {
@@ -258,13 +358,48 @@ export const fixtures: Fixture[] = [
     "category": "Edge Cases"
   },
   {
+    "name": "Mixed Resource Missing",
+    "file": "edge-mixed-resource-missing.tscn",
+    "category": "Edge Cases"
+  },
+  {
+    "name": "Navigation Region 2d Missing Polygon",
+    "file": "edge-navigation-region-2d-missing-polygon.tscn",
+    "category": "Edge Cases"
+  },
+  {
+    "name": "Navigation Region 3d Missing Mesh",
+    "file": "edge-navigation-region-3d-missing-mesh.tscn",
+    "category": "Edge Cases"
+  },
+  {
+    "name": "Negative Scale",
+    "file": "edge-negative-scale.tscn",
+    "category": "Edge Cases"
+  },
+  {
+    "name": "Omni Light No Range",
+    "file": "edge-omni-light-no-range.tscn",
+    "category": "Edge Cases"
+  },
+  {
     "name": "Photo Wall",
     "file": "edge-photo-wall.tscn",
     "category": "Edge Cases"
   },
   {
+    "name": "Physics Missing Collision",
+    "file": "edge-physics-missing-collision.tscn",
+    "category": "Edge Cases"
+  },
+  {
     "name": "Plane Rotated Scaled",
     "file": "edge-plane-rotated-scaled.tscn",
+    "category": "Edge Cases"
+  },
+  {
+    "name": "Spot Light No Range",
+    "file": "edge-spot-light-no-range.tscn",
     "category": "Edge Cases"
   },
   {
@@ -508,6 +643,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Color Rect",
+    "file": "unit-color-rect.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Control Anchors Theme",
     "file": "unit-control-anchors-theme.tscn",
     "category": "Unit - 2D UI Controls"
@@ -520,6 +660,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Hbox Container",
     "file": "unit-hbox-container.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Label 2d",
+    "file": "unit-label-2d.tscn",
     "category": "Unit - 2D UI Controls"
   },
   {
@@ -555,6 +700,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Texture Rect",
     "file": "unit-texture-rect.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Vbox Container",
+    "file": "unit-vbox-container.tscn",
     "category": "Unit - 2D UI Controls"
   },
   {

@@ -1,0 +1,20 @@
+[gd_scene load_steps=2 format=3 uid="uid://edge_area2d_gravity_point_incomplete"]
+
+; Same pivot as edge-area3d-bad-gravity-point.tscn: `gravity_point=true` with
+; a missing/non-positive `gravity_point_unit_distance` is an ERROR
+; (area2d-point-gravity-missing-distance/-invalid-distance) and would break
+; the fixtureLint gate. This keeps a valid `gravity_point_unit_distance` but
+; omits `gravity_point_center` — Area2D falls back to its default center.
+; Lints clean.
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_1"]
+radius = 30.0
+
+[node name="Root" type="Node2D"]
+
+[node name="GravityWell" type="Area2D" parent="."]
+gravity_point = true
+gravity_point_unit_distance = 1.0
+
+[node name="Shape" type="CollisionShape2D" parent="GravityWell"]
+shape = SubResource("CircleShape2D_1")

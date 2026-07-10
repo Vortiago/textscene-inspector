@@ -1,0 +1,9 @@
+[gd_scene format=3 uid="uid://edge_area2d_no_collision_shape"]
+
+; Area2D with NO CollisionShape2D children. Warning-level
+; (area2d-needs-collision-shape) — mounts and renders fine, just can't
+; detect anything.
+
+[node name="Root" type="Node2D"]
+
+[node name="EmptyArea" type="Area2D" parent="."]

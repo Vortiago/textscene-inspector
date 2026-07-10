@@ -1,0 +1,17 @@
+[gd_scene format=3 uid="uid://edge_animation_library_missing_subresource"]
+
+; `libraries/` references SubResource("AnimationLibrary_ghost"), which is
+; NEVER declared as a [sub_resource] in this file (dangling id). Render side:
+; resolveAnimations can't find the resource, so it silently contributes zero
+; animations (graceful — no crash). Linter side: `autoplay` still points at a
+; clip name, and since the `libraries/` key exists (hasLibraries=true) the
+; library is treated as a fully-resolvable-but-empty clip set, so
+; 'animationplayer-autoplay-missing' DOES fire — the same diagnostic an
+; empty-but-present AnimationLibrary produces (a dangling reference and a
+; present-but-empty library are indistinguishable to the linter/resolver).
+
+[node name="Scene" type="Node3D"]
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+libraries/ = SubResource("AnimationLibrary_ghost")
+autoplay = "idle"

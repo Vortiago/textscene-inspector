@@ -1,0 +1,37 @@
+[gd_scene format=3]
+
+; The 2D UI Control Label (Godot `Label`) — distinct from unit-label3d.tscn,
+; which is the world-space Label3D node.
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Centered" type="Label" parent="."]
+anchors_preset = 0
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 260.0
+offset_bottom = 60.0
+text = "Centered label"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Uppercase" type="Label" parent="."]
+anchors_preset = 0
+offset_left = 20.0
+offset_top = 80.0
+offset_right = 260.0
+offset_bottom = 120.0
+text = "shouts when rendered"
+uppercase = true
+
+[node name="Autowrap" type="Label" parent="."]
+anchors_preset = 0
+offset_left = 20.0
+offset_top = 140.0
+offset_right = 260.0
+offset_bottom = 220.0
+text = "This label wraps across multiple lines once it runs out of horizontal space."
+autowrap_mode = 3

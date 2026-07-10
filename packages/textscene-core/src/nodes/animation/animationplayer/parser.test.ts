@@ -164,6 +164,16 @@ describe('parseAnimationPlayer library extraction', () => {
     expect(props.libraries).toEqual([]);
   });
 
+  it('ignores ExtResource (external/binary) entries in the slash form', () => {
+    // The slash-form regex only matches `SubResource("id")`; an
+    // ExtResource-valued `libraries/` key is silently dropped, same as the
+    // dictionary form above.
+    const props = parseAnimationPlayer(HEADING, {
+      'libraries/': 'ExtResource("1_lib")',
+    });
+    expect(props.libraries).toEqual([]);
+  });
+
   it('handles NaN gracefully — falls back to numeric defaults', () => {
     const props = parseAnimationPlayer(HEADING, {
       speed_scale: 'not-a-number',
