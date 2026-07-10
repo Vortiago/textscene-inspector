@@ -457,3 +457,16 @@
 .unrenderableNotice strong {
   color: var(--tsi-fg-strong);
 }
+
+/* ── Fixture fetch-in-flight indicator (#221) ─────────────────────────── */
+.fixtureLoading {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--tsi-bg-canvas);
+  color: var(--tsi-fg-muted);
+  font-size: var(--tsi-font-md);
+}

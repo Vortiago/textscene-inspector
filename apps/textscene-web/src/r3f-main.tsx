@@ -166,6 +166,10 @@ export function R3FApp() {
   // started — a resolving load must never stomp newer keystrokes.
   const editedSinceLoadRef = useRef(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  // #221: true only while a fixture's `fetch()` is in flight — the fetch
+  // effect below had no pending state at all, so a slow load looked
+  // identical to a stuck app.
+  const [isFetchingFixture, setIsFetchingFixture] = useState(false);
   // When non-null, the user has loaded a TSCN file from their disk via
   // the toolbar's Upload button. We track the display name so the
   // toolbar can show what's active when the fixture dropdown is
@@ -269,6 +273,7 @@ export function R3FApp() {
     }
     editedSinceLoadRef.current = false;
     setLoadError(null);
+    setIsFetchingFixture(true);
     fetch(`/fixtures/${fixtureFile}`)
       .then((r) => {
         if (!r.ok) {
@@ -294,6 +299,10 @@ export function R3FApp() {
         setLoadError(message);
         setBuffer('');
         // forwardedContent unchanged — hold last valid render on fetch failure
+      })
+      .finally(() => {
+        if (cancelled) return;
+        setIsFetchingFixture(false);
       });
     return cleanup;
   }, [fixtureFile, uploadedTscnName]);
@@ -464,16 +473,27 @@ export function R3FApp() {
               />
             }
           />
-          {showUnrenderableNotice && (
+          {isFetchingFixture ? (
             <div
-              data-testid="unrenderable-buffer-notice"
-              role="alert"
-              className={styles.unrenderableNotice}
+              data-testid="fixture-loading"
+              role="status"
+              aria-live="polite"
+              className={styles.fixtureLoading}
             >
-              <strong>Nothing has rendered yet.</strong> The pasted/typed content doesn’t parse
-              as a valid .tscn scene — fix the errors marked in the Source pane’s gutter to see
-              a preview.
+              Loading scene…
             </div>
+          ) : (
+            showUnrenderableNotice && (
+              <div
+                data-testid="unrenderable-buffer-notice"
+                role="alert"
+                className={styles.unrenderableNotice}
+              >
+                <strong>Nothing has rendered yet.</strong> The pasted/typed content doesn’t parse
+                as a valid .tscn scene — fix the errors marked in the Source pane’s gutter to see
+                a preview.
+              </div>
+            )
           )}
         </div>
       </div>
