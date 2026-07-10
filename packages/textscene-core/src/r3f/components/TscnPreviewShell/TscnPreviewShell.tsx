@@ -31,6 +31,7 @@ import { MissingResourcesPanel } from '../MissingResourcesPanel/MissingResources
 import { ViewportToolbar } from '../ViewportToolbar/ViewportToolbar.js';
 import { Splitter } from '../Splitter/Splitter.js';
 import { ViewportArea } from './ViewportArea.js';
+import { PreviewErrorBoundary } from './PreviewErrorBoundary.js';
 import { CamerasPanel } from './CamerasPanel.js';
 import { SceneChangeResetter } from './SceneChangeResetter.js';
 import { WorkspaceAutoSelect } from './WorkspaceAutoSelect.js';
@@ -177,7 +178,9 @@ export function TscnPreviewShell({
                 <div className={styles.columns}>
                   {/* CENTER — 3D canvas or 2D overlay; takes all width left of the dock. */}
                   <main className={styles.center} aria-label="Viewport">
-                    <ViewportArea sceneGraph={sceneGraph} />
+                    <PreviewErrorBoundary sceneGraph={sceneGraph}>
+                      <ViewportArea sceneGraph={sceneGraph} />
+                    </PreviewErrorBoundary>
                   </main>
 
                   {/* RIGHT DOCK — Split Dock: scene tree (master) over a tabbed detail. */}

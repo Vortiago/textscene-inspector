@@ -474,6 +474,27 @@
   line-height: 1.4;
 }
 
+.viewportCrashed {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--tsi-space-2);
+  height: 100%;
+  padding: var(--tsi-space-4);
+  text-align: center;
+  color: var(--tsi-danger-fg);
+  background: var(--tsi-bg-canvas);
+}
+
+.viewportCrashedDetail {
+  color: var(--tsi-fg-muted);
+  font-size: var(--tsi-font-md);
+  font-family: var(--tsi-font-mono, monospace);
+  max-width: 40ch;
+  overflow-wrap: break-word;
+}
+
 /*
  * Narrow-viewport layout (≤768px): there isn't horizontal room for the
  * viewport + side dock, so stack them vertically. The center viewport keeps a

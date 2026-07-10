@@ -49,6 +49,9 @@ import {
 } from './SceneResourcesContext.js';
 import { useSelection } from './contexts/SelectionContext.js';
 import { MissingResourcePlaceholder } from './components/MissingResourcePlaceholder.js';
+import { ErrorBoundary } from './components/ErrorBoundary.js';
+import { transformFromNode3DProperties } from './nodeTransform.js';
+import type { Node3DProperties } from '../nodes/base/node3d/types.js';
 import { GlbOverridesProvider } from './internal/glb-scene-root/GlbOverridesContext.js';
 
 export interface NodeDispatcherProps {
@@ -164,12 +167,31 @@ function PlainNode({
   // `NodePathProvider` makes the path available to descendant components
   // (e.g. Camera3D tags its THREE.Camera with this so the canvas can
   // later swap to it on "Use This Camera").
+  //
+  // `<ErrorBoundary>` (#216) isolates a thrown render exception (NaN into a
+  // BufferGeometry, an unexpected GLB structure) to just THIS node instead
+  // of unwinding the WHOLE R3F scene tree — `<Canvas>` mounts its own
+  // react-reconciler root, so an uncaught error here would otherwise blank
+  // the entire viewport, not just the offending node. `resetKeys={[node]}`
+  // clears the caught error the moment a fresh parse hands this path a new
+  // `node` object (e.g. the user fixed the authored data that crashed it).
   return (
     <NodePathProvider path={path}>
       <group ref={wrapperRef} visible={!isHidden}>
-        <Component node={node}>
-          {children.length > 0 ? <>{children}</> : null}
-        </Component>
+        <ErrorBoundary
+          resetKeys={[node]}
+          fallback={() => (
+            <MissingResourcePlaceholder
+              shape="box"
+              name={node.name}
+              {...transformFromNode3DProperties(node.properties as Node3DProperties)}
+            />
+          )}
+        >
+          <Component node={node}>
+            {children.length > 0 ? <>{children}</> : null}
+          </Component>
+        </ErrorBoundary>
       </group>
     </NodePathProvider>
   );
