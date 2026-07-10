@@ -40,6 +40,7 @@ import { SceneChangeResetter } from './SceneChangeResetter.js';
 import { WorkspaceAutoSelect } from './WorkspaceAutoSelect.js';
 import { SceneStats, SceneNodeCount } from './SceneStats.js';
 import { MasterDetailHandle, CollapsedDock } from './DockChrome.js';
+import { HelpLink } from './HelpLink.js';
 import styles from './TscnPreviewShell.module.css';
 
 // WI-R3F-18 bundle reduction: lazy-load the DOM panels so they don't
@@ -219,6 +220,7 @@ export function TscnPreviewShell({
           <div className={styles.topSpacer} />
           <SceneStats />
           <ViewportToolbar />
+          <HelpLink />
         </header>
         {error && (
           <div className={styles.errorBanner} role="alert">

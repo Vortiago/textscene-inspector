@@ -252,6 +252,28 @@
   gap: var(--tsi-space-2);
 }
 
+/* Help affordance (#224): a small circular "?" badge at the far right of
+   the top bar, matching .collapseButton's minimal icon-button treatment. */
+.helpLink {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.375rem;
+  height: 1.375rem;
+  border-radius: 50%;
+  border: 1px solid var(--tsi-border);
+  color: var(--tsi-fg-muted);
+  text-decoration: none;
+  font-size: var(--tsi-font-sm);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.helpLink:hover {
+  background: var(--tsi-bg-hover);
+  color: var(--tsi-fg-default);
+}
+
 .statChip {
   font-size: var(--tsi-font-sm);
   color: var(--tsi-fg-muted);

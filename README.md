@@ -159,6 +159,8 @@ See [ARCHITECTURE.md](./ARCHITECTURE.md) for detailed explanations.
 
 ## Documentation
 
+- [docs/user-guide-web.md](./docs/user-guide-web.md) - Web previewer user guide (viewport controls, scene tree, inspector)
+- [docs/user-guide-vscode.md](./docs/user-guide-vscode.md) - VS Code extension user guide
 - [CLAUDE.md](./CLAUDE.md) - AI assistant guidelines
 - [ARCHITECTURE.md](./ARCHITECTURE.md) - Project structure and patterns
 - [GitHub issues](https://github.com/Vortiago/Text-Scene-.tscn-File-Previewer/issues) - Implementation roadmap and open work items
