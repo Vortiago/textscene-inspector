@@ -1,0 +1,29 @@
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Solid" type="ColorRect" parent="."]
+anchors_preset = 0
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 140.0
+offset_bottom = 100.0
+color = Color(0.85, 0.2, 0.2, 1)
+
+[node name="Translucent" type="ColorRect" parent="."]
+anchors_preset = 0
+offset_left = 160.0
+offset_top = 20.0
+offset_right = 280.0
+offset_bottom = 100.0
+color = Color(0.2, 0.4, 0.85, 0.5)
+
+[node name="NoColor" type="ColorRect" parent="."]
+anchors_preset = 0
+offset_left = 300.0
+offset_top = 20.0
+offset_right = 420.0
+offset_bottom = 100.0

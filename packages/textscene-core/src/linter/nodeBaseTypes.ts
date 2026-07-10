@@ -38,6 +38,8 @@ const NODE3D_LEAVES = [
   'CharacterBody3D',
   'CollisionShape3D',
   'AreaLight3D',
+  'RemoteTransform3D',
+  'NavigationObstacle3D',
 ] as const;
 
 /** Base for every canvas (2D) node — Node2D carries the transform/skew set. */
@@ -59,6 +61,7 @@ const NODE2D_LEAVES = [
   'RigidBody2D',
   'CharacterBody2D',
   'CollisionShape2D',
+  'RemoteTransform2D',
 ] as const;
 
 /**
@@ -97,4 +100,6 @@ export const NODE_BASE_TYPES: Readonly<Record<string, string>> = Object.freeze({
   AnimationPlayer: 'Node',
   AnimationTree: 'Node',
   AudioStreamPlayer: 'Node',
+  Timer: 'Node',
+  NavigationAgent3D: 'Node',
 });

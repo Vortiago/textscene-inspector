@@ -1,0 +1,22 @@
+[gd_scene format=3]
+
+[sub_resource type="Curve2D" id="Curve2D_loop"]
+_data = {
+"points": PackedVector2Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 240, 0, 0, 0, 0, 0, 240, 160, 0, 0, 0, 0, 0, 160)
+}
+point_count = 4
+
+[node name="Root" type="Node2D"]
+
+[node name="TrackPath" type="Path2D" parent="."]
+curve = SubResource("Curve2D_loop")
+
+[node name="PathFollow2D" type="PathFollow2D" parent="TrackPath"]
+progress_ratio = 0.5
+
+[node name="CameraAnchor" type="RemoteTransform2D" parent="TrackPath/PathFollow2D"]
+remote_path = NodePath("../../../Camera2D")
+update_rotation = false
+update_scale = false
+
+[node name="Camera2D" type="Camera2D" parent="."]

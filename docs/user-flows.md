@@ -176,7 +176,7 @@ The web previewer is single-panel. It exposes a scene palette (Ctrl/Cmd+K, opene
   4. Confirm the registered types render per their registrations and the unregistered type is flagged in the tree.
 - **Expected observable outcomes:**
   - Step 3: The tree contains `PhysicsArea`, `AnimPlayer`, `GameTimer`, `Title`, and `Description` — exactly as parsed.
-  - Step 4: `Area3D` (PhysicsArea) and `AnimationPlayer` (AnimPlayer) are registered types now — Area3D renders as a transform-only group (ADR-0005/ADR-0008) and AnimationPlayer's node renders (playback not implemented); neither is flagged. `Timer` (GameTimer) has no registration: it renders through `<GenericNodeFallback>` as an invisible transform-only group (ADR-0008 — no placeholder gizmo in the viewport) and the tree tags it with a "Not Implemented" chip.
+  - Step 4: `Area3D` (PhysicsArea) and `AnimationPlayer` (AnimPlayer) are registered types now — Area3D renders as a transform-only group (ADR-0005/ADR-0008) and AnimationPlayer's node renders and drives its clips through the Animation transport (ADR-0011/0012); neither is flagged. `Timer` (GameTimer) has no registration: it renders through `<GenericNodeFallback>` as an invisible transform-only group (ADR-0008 — no placeholder gizmo in the viewport) and the tree tags it with a "Not Implemented" chip.
   - `Label3D` nodes (`Title`, `Description`) render as billboarded 3D text via their registered component.
   - No uncaught console errors.
 - **Features covered:** PRD US-11.

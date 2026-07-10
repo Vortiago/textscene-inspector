@@ -187,6 +187,22 @@ describe('AnimationPlayer Linter', () => {
           { prop: 'no animations' }
         );
       });
+
+      it('should not warn when the default library is an ExtResource in the slash form', () => {
+        // `hasLibraries` only checks that a `libraries/`-prefixed key exists —
+        // it doesn't care whether the value is a Sub- or ExtResource — so an
+        // external (often binary) library still suppresses this warning even
+        // though the render-side parser can't capture its clips at all.
+        expectNoDiagnostic(
+          scene(
+            node('AnimationPlayer', {
+              speed_scale: 1.0,
+              'libraries/': 'ExtResource("1_lib")',
+            })
+          ),
+          { prop: 'no animations' }
+        );
+      });
     });
 
     describe('autoplay animation existence', () => {

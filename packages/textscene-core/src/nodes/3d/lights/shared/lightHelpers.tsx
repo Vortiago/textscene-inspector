@@ -26,7 +26,7 @@
  */
 
 import * as THREE from 'three';
-import { usePrimitiveHelper } from '../../../../r3f/hooks/useTHREEHelper';
+import { usePrimitiveHelper, correctHelperForParentGroup } from '../../../../r3f/hooks/useTHREEHelper';
 
 // `useGizmoVisible` was promoted to a shared hook (r3f/hooks) so 2D
 // marker/path slices can reuse the selection gate without importing from a
@@ -70,9 +70,10 @@ export function DirectionalLightGizmo({ lightRef }: DirectionalGizmoProps) {
   return (
     <LightGizmoCommon
       lightRef={lightRef}
-      make={(light) =>
-        new THREE.DirectionalLightHelper(light, DIRECTIONAL_HELPER_SIZE, HELPER_COLOR)
-      }
+      make={(light) => {
+        const helper = new THREE.DirectionalLightHelper(light, DIRECTIONAL_HELPER_SIZE, HELPER_COLOR);
+        return correctHelperForParentGroup(helper, light);
+      }}
     />
   );
 }
@@ -85,7 +86,14 @@ export function PointLightGizmo({ lightRef }: PointGizmoProps) {
   return (
     <LightGizmoCommon
       lightRef={lightRef}
-      make={(light) => new THREE.PointLightHelper(light, POINT_HELPER_SIZE, HELPER_COLOR)}
+      make={(light) => {
+        // THREE.PointLightHelper shares DirectionalLightHelper's
+        // `matrix = light.matrixWorld` + `matrixAutoUpdate = false`
+        // constructor pattern — same fix (see `correctHelperForParentGroup`'s
+        // doc comment in `r3f/hooks/useTHREEHelper.ts`).
+        const helper = new THREE.PointLightHelper(light, POINT_HELPER_SIZE, HELPER_COLOR);
+        return correctHelperForParentGroup(helper, light);
+      }}
     />
   );
 }

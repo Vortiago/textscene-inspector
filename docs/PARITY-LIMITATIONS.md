@@ -138,8 +138,10 @@ plus `ArrayMesh` floors in `meshes/*.res` — its geometry cannot render.
   standard missing-resource UX kicks in — magenta placeholder + panel row.
   The linter marks every such reference (`binary-resource-reference`,
   warning).
-- `GridMap` (the 3D tile grid node) is additionally an unimplemented node
-  type — even a text-serialized one would render as a transform-only group.
+- `GridMap` (the 3D tile grid node) is now a registered renderer — it
+  instances each populated cell's `MeshLibrary` item mesh, so a
+  text-serialized `GridMap` renders correctly. This scene's blocker is
+  purely the binary `.scn`/`.res` format, not GridMap support.
 
 ### Text `.gltf` with external buffers — web host only
 `.glb` (self-contained binary) loads everywhere. A TEXT `.gltf` referencing

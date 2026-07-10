@@ -1,0 +1,12 @@
+[gd_scene format=3 uid="uid://edge_spot_light_no_range"]
+
+; `spot_range` (and `spot_angle`) omitted entirely — same current-behavior
+; gap as edge-omni-light-no-range.tscn (cross-ref #146/#149): the
+; large/small-range warnings only fire when the property IS present, so an
+; omitted range/angle produces ZERO diagnostics today. Renders with Godot's
+; defaults (range 5.0, angle 45°).
+
+[node name="Scene" type="Node3D"]
+
+[node name="DefaultRangeSpot" type="SpotLight3D" parent="."]
+light_energy = 1.0

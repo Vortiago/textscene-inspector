@@ -82,4 +82,79 @@ export const GOLDEN_SCENES = [
   { name: 'marker3d-selected', file: 'unit-marker-3d.tscn', select: 'Root/MyMarker3D', maxDiffPct: 0.5 },
   { name: 'path3d-selected', file: 'unit-pathfollow-3d.tscn', select: 'PathFollow3DRoot/TrackPath', maxDiffPct: 0.5 },
   { name: 'pathfollow3d-selected', file: 'unit-pathfollow-3d.tscn', select: 'PathFollow3DRoot/TrackPath/Follower', maxDiffPct: 0.5 },
+
+  // --- Lights / Camera3D / AudioStreamPlayer3D gizmo E2E coverage (#159) ---
+  // Unselected: pins the non-gizmo render (ground + shading only — no helper).
+  { name: 'directional-light-3d', file: 'unit-directional-light-3d.tscn' },
+  { name: 'omni-light-3d', file: 'unit-omni-light-3d.tscn' },
+  { name: 'spot-light-3d', file: 'unit-spot-light-3d.tscn' },
+  { name: 'camera-basic', file: 'unit-camera-basic.tscn' },
+  { name: 'audio-stream-player-3d', file: 'unit-audio-stream-player.tscn' },
+  // Selected: the core deliverable — real tree-click → selection → gizmo
+  // render for each gate. Relaxed threshold: thin AA helper wireframes.
+  {
+    name: 'directional-light-3d-selected',
+    file: 'unit-directional-light-3d.tscn',
+    select: 'Root/DirectionalLight3D',
+    maxDiffPct: 0.5,
+  },
+  {
+    name: 'omni-light-3d-selected',
+    file: 'unit-omni-light-3d.tscn',
+    select: 'Root/OmniLight3D',
+    maxDiffPct: 0.5,
+  },
+  {
+    name: 'spot-light-3d-selected',
+    file: 'unit-spot-light-3d.tscn',
+    select: 'Root/SpotLight3D',
+    maxDiffPct: 0.5,
+  },
+  // unit-multi-camera.tscn (not unit-camera-basic.tscn): a red box sits
+  // in-frustum for depth reference alongside the selected CameraHelper.
+  {
+    name: 'camera3d-selected',
+    file: 'unit-multi-camera.tscn',
+    select: 'Root/MainCamera',
+    maxDiffPct: 0.5,
+  },
+  {
+    name: 'audio-stream-player-3d-selected',
+    file: 'unit-audio-stream-player.tscn',
+    select: 'Scene/Speaker_Default',
+    maxDiffPct: 0.5,
+  },
+
+  // --- Mesh primitives + StandardMaterial3D features (#160) ---
+  { name: 'box-mesh', file: 'unit-box-mesh.tscn' },
+  { name: 'capsule-mesh', file: 'unit-capsule-mesh.tscn' },
+  { name: 'cylinder-mesh', file: 'unit-cylinder-mesh.tscn' },
+  { name: 'prism-mesh', file: 'unit-prism-mesh.tscn' },
+  { name: 'quadmesh', file: 'unit-quadmesh.tscn' },
+  { name: 'torus-mesh', file: 'unit-torus-mesh.tscn' },
+  { name: 'material-ao', file: 'unit-material-ao.tscn' },
+  { name: 'material-normal-map', file: 'unit-material-normal-map.tscn' },
+  { name: 'material-textured', file: 'unit-material-textured.tscn' },
+  { name: 'material-override', file: 'unit-material-override.tscn' },
+  { name: 'surface-material-override', file: 'unit-surface-material-override.tscn' },
+  // Multi-property showcase guard (12 spheres across 4 rows: basic PBR,
+  // emission/normal, advanced PBR, transparency/glass).
+  { name: 'material-features', file: 'integration-material-features.tscn' },
+
+  // --- Sprite2D/Sprite3D + 3D physics-body roundout (#162) ---
+  { name: 'sprite2d', file: 'unit-sprite2d.tscn' },
+  { name: 'sprite3d', file: 'unit-sprite3d.tscn' },
+  // Transform-only bodies (ADR-0005/ADR-0008): reuse the Node3D component, so
+  // the baseline's real content is the child mesh — pins that these render
+  // the actual box/capsule geometry, not a gray fallback placeholder.
+  { name: 'rigidbody3d', file: 'unit-rigidbody3d.tscn' },
+  { name: 'characterbody3d', file: 'unit-characterbody3d.tscn' },
+
+  // --- TileMap / TileMapLayer batched-geometry coverage (#164) ---
+  { name: 'tile-map', file: 'unit-tile-map.tscn' },
+  { name: 'tile-map-layer', file: 'unit-tile-map-layer.tscn' },
+  { name: 'tile-map-layer-isometric', file: 'unit-tile-map-layer-isometric.tscn' },
+  // Hexagon grid (shape=3, vertical offset axis): odd columns stagger by
+  // half a tile — the half-offset placement math had no visual guard before.
+  { name: 'tile-map-layer-hexagon', file: 'unit-tile-map-layer-hexagon.tscn' },
 ];

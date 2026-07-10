@@ -88,19 +88,32 @@ export function isEmpty(line: string): boolean {
 }
 
 /**
- * True when a property value isn't complete on this line. Godot writes
- * multi-line values both as unterminated strings (label text) AND as bracketed
- * arrays/dicts spanning lines — packed arrays and especially `SpriteFrames`
- * `animations = [{ … }]`. The line-based parsers must keep accumulating until
- * BOTH quotes and brackets balance, or the value is truncated to its first
- * fragment. Single string-aware scan: incomplete if a string is still open, or
- * `[`/`{` outnumber `]`/`}` outside strings.
+ * Running state of the string/bracket-balance scan, carried forward across
+ * chunks so a growing multi-line value can be scanned incrementally (each new
+ * chunk visited exactly once) instead of rescanned from the start every time
+ * a line is appended. `depth` counts `[`/`{` outstanding over `]`/`}`.
  */
-export function isIncompleteValue(value: string): boolean {
-  let inString = false;
-  let depth = 0;
-  for (let i = 0; i < value.length; i++) {
-    const c = value[i];
+export interface ValueScanState {
+  inString: boolean;
+  depth: number;
+}
+
+/** The scan state before any characters have been seen. */
+export const INITIAL_SCAN_STATE: ValueScanState = { inString: false, depth: 0 };
+
+/**
+ * Advance a string/bracket-balance scan by one chunk, given the state left
+ * off by the previous chunk. Scans ONLY `chunk` — O(chunk length), not the
+ * length of whatever came before — so a caller accumulating a multi-line
+ * value line-by-line can call this once per new line and stay O(total length)
+ * overall instead of O(length^2). A `\n` line separator has no effect on
+ * either `inString` or `depth`, so it is safe to scan each raw line on its own
+ * without the joining newline present.
+ */
+export function scanValueChunk(chunk: string, state: ValueScanState): ValueScanState {
+  let { inString, depth } = state;
+  for (let i = 0; i < chunk.length; i++) {
+    const c = chunk[i];
     if (inString) {
       if (c === '\\') i++; // skip the escaped character
       else if (c === '"') inString = false;
@@ -110,7 +123,32 @@ export function isIncompleteValue(value: string): boolean {
     else if (c === '[' || c === '{') depth++;
     else if (c === ']' || c === '}') depth--;
   }
-  return inString || depth > 0;
+  return { inString, depth };
+}
+
+/** True when a scan state reflects an unterminated string or unbalanced brackets. */
+export function isIncompleteState(state: ValueScanState): boolean {
+  return state.inString || state.depth > 0;
+}
+
+/**
+ * True when a property value isn't complete on this line. Godot writes
+ * multi-line values both as unterminated strings (label text) AND as bracketed
+ * arrays/dicts spanning lines — packed arrays and especially `SpriteFrames`
+ * `animations = [{ … }]`. The line-based parsers must keep accumulating until
+ * BOTH quotes and brackets balance, or the value is truncated to its first
+ * fragment. Single string-aware scan: incomplete if a string is still open, or
+ * `[`/`{` outnumber `]`/`}` outside strings.
+ *
+ * A thin wrapper over {@link scanValueChunk} — full-string callers (tests,
+ * and the single-line check on a property's first line) don't need to carry
+ * scan state across calls, so this scans `value` from {@link INITIAL_SCAN_STATE}
+ * in one shot. The multi-line accumulation hot path in `TscnParserCore`
+ * carries the state forward itself instead of calling this repeatedly on a
+ * growing string (that would reintroduce the O(length^2) rescan).
+ */
+export function isIncompleteValue(value: string): boolean {
+  return isIncompleteState(scanValueChunk(value, INITIAL_SCAN_STATE));
 }
 
 const ESCAPE_MAP: Record<string, string> = {

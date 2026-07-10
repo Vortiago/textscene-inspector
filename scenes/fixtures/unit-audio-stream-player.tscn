@@ -1,6 +1,12 @@
-[gd_scene load_steps=2 format=3 uid="uid://test_audio_stream_player"]
+[gd_scene load_steps=4 format=3 uid="uid://test_audio_stream_player"]
 
 [ext_resource type="AudioStream" path="res://audio/test_sound.ogg" id="1_audio"]
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
+size = Vector2(8, 6)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ground"]
+albedo_color = Color(0.75, 0.75, 0.75, 1)
 
 [node name="Scene" type="Node3D"]
 
@@ -10,6 +16,11 @@ fov = 70.0
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
 transform = Transform3D(0.866025, -0.25, 0.433013, 0, 0.866025, 0.5, -0.5, -0.433013, 0.75, 0, 5, 0)
+
+[node name="Ground" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1, 0)
+mesh = SubResource("PlaneMesh_ground")
+surface_material_override/0 = SubResource("StandardMaterial3D_ground")
 
 [node name="Speaker_Default" type="AudioStreamPlayer3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 1, 0)

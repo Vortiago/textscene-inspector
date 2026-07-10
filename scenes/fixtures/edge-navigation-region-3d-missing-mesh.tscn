@@ -1,0 +1,10 @@
+[gd_scene format=3 uid="uid://edge_navigation_region_3d_missing_mesh"]
+
+; `navigation_mesh` omitted entirely — same deliberately-supported optional
+; state as edge-navigation-region-2d-missing-polygon.tscn (Godot bakes one at
+; runtime; the linter rule's own comment says an absent reference must not be
+; flagged). Zero diagnostics, renders with no baked navmesh geometry.
+
+[node name="Root" type="Node3D"]
+
+[node name="UnbakedRegion" type="NavigationRegion3D" parent="."]

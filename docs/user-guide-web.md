@@ -131,7 +131,7 @@ The two screenshots above show the box translating from origin to X=3 after the 
 
 **Status:** PASS (behavior updated since the original verification)
 
-`unit-unsupported-nodes.tscn` contains `Area3D` (PhysicsArea), `AnimationPlayer` (AnimPlayer) and `Timer` (GameTimer). Since the original verification, two of those types have gained registered renderer components: **Area3D** renders as a transform-only group (ADR-0008 — physics bodies position their children and draw nothing themselves, per ADR-0005), and **AnimationPlayer** has its own slice whose node renders (animation *playback* is not implemented — that is WI-42's scope). Neither triggers the fallback any more.
+`unit-unsupported-nodes.tscn` contains `Area3D` (PhysicsArea), `AnimationPlayer` (AnimPlayer) and `Timer` (GameTimer). Since the original verification, two of those types have gained registered renderer components: **Area3D** renders as a transform-only group (ADR-0008 — physics bodies position their children and draw nothing themselves, per ADR-0005), and **AnimationPlayer** has its own slice whose node renders and — since WI-42 (#100) — drives playback of its clips through the selection-driven Animation transport (ADR-0011/0012). Neither triggers the fallback any more.
 
 **Timer** remains unregistered and shows the actual fallback behavior: in the viewport it renders through `<GenericNodeFallback>` as an invisible transform-only group (ADR-0008 — no placeholder gizmo is drawn), and the scene tree tags it with a yellow **`Not Implemented`** chip next to its type abbreviation. Unsupported types stay discoverable through the tree, not by cluttering the viewport.
 

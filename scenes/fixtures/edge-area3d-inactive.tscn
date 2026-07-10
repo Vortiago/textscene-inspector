@@ -1,0 +1,17 @@
+[gd_scene load_steps=2 format=3 uid="uid://edge_area3d_inactive"]
+
+; Area3D with both `monitoring` and `monitorable` false — it can neither
+; detect nor be detected. Warning-level (area3d-inactive); still mounts and
+; renders its collision shape normally.
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_1"]
+size = Vector3(2, 2, 2)
+
+[node name="Scene" type="Node3D"]
+
+[node name="InactiveArea" type="Area3D" parent="."]
+monitoring = false
+monitorable = false
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="InactiveArea"]
+shape = SubResource("BoxShape3D_1")

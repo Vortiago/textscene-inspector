@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3 uid="uid://test_sprite3d"]
 
-[ext_resource type="Texture2D" path="res://textures/test_texture.png" id="1_sprite_tex"]
+[ext_resource type="Texture2D" path="res://textures/sprite2d-marker.png" id="1_sprite_tex"]
 
 [node name="Scene" type="Node3D"]
 

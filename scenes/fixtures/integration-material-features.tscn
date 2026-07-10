@@ -144,7 +144,7 @@ mesh = SubResource("SphereMesh_1")
 surface_material_override/0 = SubResource("Mat_Glass")
 
 [node name="BackgroundPlane" type="MeshInstance3D" parent="."]
-transform = Transform3D(20, 0, 0, 0, 20, 0, 0, 0, 1, -4, 0, -3)
+transform = Transform3D(6, 0, 0, 0, 6, 0, 0, 0, 1, -4, 0, -3)
 mesh = SubResource("SphereMesh_1")
 surface_material_override/0 = SubResource("Mat_AlbedoOnly")
 

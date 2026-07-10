@@ -1,0 +1,21 @@
+[gd_scene format=3 uid="uid://edge_csg_invalid_operation"]
+
+; The issue asked for `operation=5` — out of the enumInt(0,2) range, a hard
+; format error that would break the fixtureLint gate. This instead pins the
+; ADR-0004 limitation with a valid-but-surprising operation value:
+; `operation=2` (SUBTRACTION) is schema-valid, but CSG boolean operations are
+; parsed and NOT applied by this renderer — a SUBTRACTION box next to a UNION
+; box renders IDENTICALLY (both solid), which is the actual degradation this
+; corpus documents. Lints completely clean.
+
+[node name="Scene" type="Node3D"]
+
+[node name="UnionBox" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.5, 0, 0)
+size = Vector3(1, 1, 1)
+operation = 0
+
+[node name="SubtractionBox" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 0, 0)
+size = Vector3(1, 1, 1)
+operation = 2

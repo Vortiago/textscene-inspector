@@ -162,6 +162,28 @@ describe('resolveAnimations — graceful degradation (B5)', () => {
     const [anim] = resolveAnimations(DEFAULT_LIB, internal);
     expect(anim.tracks).toEqual([]);
   });
+
+  it('a method track contributes nothing (not even a placeholder) alongside a resolving value track', () => {
+    // A mixed clip (method call + transform track) keeps only what the
+    // parser understands — the method track is filtered out entirely
+    // during resolution, never becoming a GodotTrack of any type.
+    const internal = [
+      res('Lib', 'AnimationLibrary', { _data: '{\n"mixed": SubResource("A")\n}' }),
+      res('A', 'Animation', {
+        length: '1.0',
+        'tracks/0/type': '"method"',
+        'tracks/0/path': 'NodePath("Mesh")',
+        'tracks/0/keys': '{\n"times": PackedFloat32Array(0),\n"values": [{"method": &"set_modulate"}]\n}',
+        'tracks/1/type': '"value"',
+        'tracks/1/path': 'NodePath("Mesh:position")',
+        'tracks/1/keys':
+          '{\n"times": PackedFloat32Array(0, 1),\n"values": [Vector3(0, 0, 0), Vector3(0, 2, 0)]\n}',
+      }),
+    ];
+    const [anim] = resolveAnimations(DEFAULT_LIB, internal);
+    expect(anim.tracks).toHaveLength(1);
+    expect(anim.tracks[0]).toMatchObject({ type: 'value', targetPath: 'Mesh', property: 'position' });
+  });
 });
 
 describe('resolveAnimations — 3D transform tracks (position_3d/rotation_3d/scale_3d)', () => {

@@ -5,6 +5,19 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 0.9.0 is the first tracked release.
 
+## [Unreleased]
+
+### Added
+- `--format json`: a single pretty-printed JSON array of findings (one object
+  per diagnostic, plus a synthetic `file-read-error` finding per unreadable
+  file) for machine consumption in CI.
+- `--format github`: GitHub Actions workflow-command annotations
+  (`::error`/`::warning`/`::notice`) so CI surfaces lint results inline on
+  the diff. Auto-detected when `$GITHUB_ACTIONS=true` and `--format` is not
+  passed explicitly.
+- Directory arguments (e.g. `tscn-lint scenes/`) now recurse into every
+  `.tscn` file underneath instead of throwing `EISDIR`.
+
 ## [0.9.0] - 2026-06-10
 
 ### Added

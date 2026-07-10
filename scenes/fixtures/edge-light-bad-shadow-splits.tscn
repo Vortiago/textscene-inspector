@@ -1,0 +1,17 @@
+[gd_scene format=3 uid="uid://edge_light_bad_shadow_splits"]
+
+; `directional_shadow_mode=1` (PARALLEL_2_SPLITS) but split_2/split_3 are
+; ALSO set, even though only split_1 is used in 2-split mode. Splits stay
+; correctly ORDERED (0.1 < 0.4 < 0.7) so the split-order rule (an ERROR)
+; does NOT fire — this pins the "unused splits" WARNING
+; (directionallight3d-unused-splits) instead, which is the actual current
+; behavior worth documenting.
+
+[node name="Scene" type="Node3D"]
+
+[node name="BadSplitsLight" type="DirectionalLight3D" parent="."]
+shadow_enabled = true
+directional_shadow_mode = 1
+directional_shadow_split_1 = 0.1
+directional_shadow_split_2 = 0.4
+directional_shadow_split_3 = 0.7

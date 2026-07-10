@@ -15,7 +15,7 @@ import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useGizmoVisible } from '../lights/shared/lightHelpers';
-import { usePrimitiveHelper } from '../../../r3f/hooks/useTHREEHelper';
+import { usePrimitiveHelper, correctHelperForParentGroup } from '../../../r3f/hooks/useTHREEHelper';
 
 const DEFAULT_ASPECT = 16 / 9;
 
@@ -193,21 +193,26 @@ function CameraGizmo({ cameraRef, name }: CameraGizmoProps) {
   // the user has selected this Camera3D's tree row.
   //
   // WI-ARCH-3: build + dispose lifecycle delegated to `usePrimitiveHelper`.
-  // CameraHelper's frustum geometry is static (the camera's projection
-  // matrix is fixed by the deps); opt out of per-frame update().
+  // `THREE.CameraHelper` shares `DirectionalLightHelper`/`PointLightHelper`'s
+  // `this.matrix = camera.matrixWorld` + `matrixAutoUpdate = false`
+  // constructor aliasing — mounted as a `<primitive>` SIBLING of the camera
+  // inside the node's own transform group (not `scene.add()`'d at the root,
+  // as the constructor's doc example assumes), a transformed ancestor would
+  // otherwise double-transform the frustum. `correctHelperForParentGroup`
+  // fixes it (see its doc comment in `r3f/hooks/useTHREEHelper.ts`); its
+  // wrapped `update()` is what applies the correction, so `tickUpdate` must
+  // stay at its default (true) even though the frustum geometry itself is
+  // static — the per-frame cost is negligible (one Matrix4 invert) and only
+  // paid while this Camera3D is the selected node.
   const visible = useGizmoVisible();
-  const helper = usePrimitiveHelper<THREE.CameraHelper>(
-    () => {
-      if (!visible) return null;
-      const camera = cameraRef.current;
-      if (!camera) return null;
-      const created = new THREE.CameraHelper(camera);
-      created.name = name;
-      return created;
-    },
-    [cameraRef, name, visible],
-    { tickUpdate: false }
-  );
+  const helper = usePrimitiveHelper<THREE.CameraHelper>(() => {
+    if (!visible) return null;
+    const camera = cameraRef.current;
+    if (!camera) return null;
+    const created = new THREE.CameraHelper(camera);
+    created.name = name;
+    return correctHelperForParentGroup(created, camera);
+  }, [cameraRef, name, visible]);
 
   return helper ? <primitive object={helper} /> : null;
 }

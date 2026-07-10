@@ -7,6 +7,16 @@ import * as logger from '../logger';
 
 export class RuleRegistry {
   private rules: Map<string, LintRule> = new Map();
+  /**
+   * Memoized `getRulesForNodeType` results, keyed by node type. `Linter`
+   * calls that lookup once per node in the scene tree, and re-materializing
+   * + filtering the full rule array on every call cost O(rule count) per
+   * node — O(nodes * rules) overall. Invalidated on `register`/`clear`
+   * (registration always happens once at module-load time via
+   * self-registering imports, well before any linting starts, so the
+   * invalidation cost is never paid mid-lint).
+   */
+  private rulesForNodeTypeCache: Map<string, LintRule[]> = new Map();
 
   /**
    * Register a lint rule
@@ -17,6 +27,7 @@ export class RuleRegistry {
       logger.warn(`Rule "${rule.meta.name}" is already registered. Overwriting.`);
     }
     this.rules.set(rule.meta.name, rule);
+    this.rulesForNodeTypeCache.clear();
   }
 
   /**
@@ -37,10 +48,15 @@ export class RuleRegistry {
    * own `applicableNodeTypeMatcher` predicate (see valid-node3d-visibility).
    *
    * @param nodeType - The node type to filter by
-   * @returns Array of rules applicable to the node type
+   * @returns Read-only array of rules applicable to the node type — the
+   *   cached array itself (frozen), NOT a per-call copy, since this runs once
+   *   per node in the lint hot path.
    */
-  getRulesForNodeType(nodeType: string): LintRule[] {
-    return this.getRules().filter(rule => {
+  getRulesForNodeType(nodeType: string): readonly LintRule[] {
+    const cached = this.rulesForNodeTypeCache.get(nodeType);
+    if (cached) return cached;
+
+    const matched = this.getRules().filter(rule => {
       const { applicableNodeTypes, applicableNodeTypeMatcher } = rule.meta;
       // A predicate matcher decides applicability on its own (takes precedence).
       if (applicableNodeTypeMatcher) {
@@ -53,6 +69,9 @@ export class RuleRegistry {
       // Otherwise, check if this node type is in the applicable list
       return applicableNodeTypes.includes(nodeType);
     });
+    Object.freeze(matched);
+    this.rulesForNodeTypeCache.set(nodeType, matched);
+    return matched;
   }
 
   /**
@@ -69,6 +88,7 @@ export class RuleRegistry {
    */
   clear(): void {
     this.rules.clear();
+    this.rulesForNodeTypeCache.clear();
   }
 }
 

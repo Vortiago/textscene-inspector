@@ -1,6 +1,24 @@
 /** Pure output formatting for the TSCN linter CLI (no I/O). */
 
-import type { Diagnostic } from '@textscene/core/linter';
+import type { Diagnostic, Severity } from '@textscene/core/linter';
+import type { FileDiagnostics } from './lint';
+
+/**
+ * One machine-readable finding, flattened out of a per-file lint outcome:
+ * one object per diagnostic (or, for an unreadable file, one synthetic
+ * `file-read-error` finding). This is the `--format json` output shape and
+ * the source data for `--format github` annotations.
+ */
+export interface JsonFinding {
+  file: string;
+  line: number | null;
+  column: number | null;
+  severity: Severity;
+  rule: string;
+  message: string;
+  nodeType: string;
+  nodeName: string;
+}
 
 /**
  * Format lint results for one file as stdout lines.
@@ -29,6 +47,105 @@ export function formatDiagnostics(
 
   lines.push('');
   return lines;
+}
+
+/**
+ * Flattens per-file lint outcomes into one finding per diagnostic, in file
+ * order. A file that failed to read contributes a single synthetic
+ * `file-read-error` finding instead of per-diagnostic ones.
+ */
+export function toJsonFindings(files: FileDiagnostics[]): JsonFinding[] {
+  const findings: JsonFinding[] = [];
+
+  for (const file of files) {
+    if (file.readError !== undefined) {
+      findings.push({
+        file: file.filePath,
+        line: null,
+        column: null,
+        severity: 'error',
+        rule: 'file-read-error',
+        message: file.readError,
+        nodeType: '',
+        nodeName: '',
+      });
+      continue;
+    }
+
+    for (const diagnostic of file.diagnostics) {
+      findings.push({
+        file: file.filePath,
+        line: diagnostic.location?.line ?? null,
+        column: diagnostic.location?.column ?? null,
+        severity: diagnostic.severity,
+        rule: diagnostic.ruleName,
+        message: diagnostic.message,
+        nodeType: diagnostic.nodeType,
+        nodeName: diagnostic.nodeName,
+      });
+    }
+  }
+
+  return findings;
+}
+
+/**
+ * Format lint results for a whole run as a single pretty-printed JSON array
+ * of findings (`--format json`), suitable for CI tooling to parse.
+ */
+export function formatJson(files: FileDiagnostics[]): string {
+  return JSON.stringify(toJsonFindings(files), null, 2);
+}
+
+/**
+ * GitHub Actions workflow-command annotation level per diagnostic severity.
+ * Total over the closed `Severity` union, so adding a severity fails tsc here
+ * instead of silently falling through.
+ */
+const GITHUB_COMMAND_BY_SEVERITY: Record<Severity, 'error' | 'warning' | 'notice'> = {
+  error: 'error',
+  warning: 'warning',
+  info: 'notice',
+};
+
+/**
+ * Escapes workflow-command *data* (the `::command ...::<data>` payload) per
+ * the GitHub Actions toolkit's escaping rules.
+ */
+function escapeGithubData(value: string): string {
+  return value.replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A');
+}
+
+/**
+ * Escapes workflow-command *property values* (the `key=<value>` parts),
+ * which additionally escape `:` and `,` since those delimit properties.
+ */
+function escapeGithubProperty(value: string): string {
+  return escapeGithubData(value).replace(/:/g, '%3A').replace(/,/g, '%2C');
+}
+
+/** Formats a single finding as a GitHub Actions workflow-command annotation. */
+export function formatGithubAnnotation(finding: JsonFinding): string {
+  const command = GITHUB_COMMAND_BY_SEVERITY[finding.severity];
+  const params = [`file=${escapeGithubProperty(finding.file)}`];
+  if (finding.line !== null) {
+    params.push(`line=${finding.line}`);
+  }
+  if (finding.column !== null) {
+    params.push(`col=${finding.column}`);
+  }
+  const message = escapeGithubData(`${finding.message} (${finding.rule})`);
+
+  return `::${command} ${params.join(',')}::${message}`;
+}
+
+/**
+ * Format a whole run as GitHub Actions workflow-command annotations
+ * (`--format github`), one line per finding, so CI surfaces lint results
+ * inline on the diff.
+ */
+export function formatGithubAnnotations(files: FileDiagnostics[]): string[] {
+  return toJsonFindings(files).map(formatGithubAnnotation);
 }
 
 /**

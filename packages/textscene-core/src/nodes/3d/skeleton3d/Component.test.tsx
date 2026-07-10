@@ -33,4 +33,12 @@ describe('<Node3D> (skeleton3d component)', () => {
     expect(group.instance.position.y).toBe(3);
     expect(group.instance.position.z).toBe(4);
   });
+
+  it('hides the group when visible is false, without crashing', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <Node3D node={makeNode({ name: 'HiddenSkeleton', visible: false })} />
+    );
+    const group = renderer.scene.findByProps({ name: 'HiddenSkeleton' });
+    expect(group.instance.visible).toBe(false);
+  });
 });

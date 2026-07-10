@@ -1,0 +1,12 @@
+[gd_scene format=3]
+
+[node name="Root" type="Node3D"]
+
+[node name="DetachTransform" type="Node3D" parent="."]
+
+[node name="Geometry" type="Node3D" parent="DetachTransform"]
+
+[node name="PositionSynchronizer" type="RemoteTransform3D" parent="."]
+remote_path = NodePath("../DetachTransform/Geometry")
+update_rotation = false
+update_scale = false

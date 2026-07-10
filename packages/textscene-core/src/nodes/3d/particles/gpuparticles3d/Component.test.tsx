@@ -33,4 +33,12 @@ describe('<Node3D> (gpuparticles3d component)', () => {
     expect(group.instance.position.y).toBe(2);
     expect(group.instance.position.z).toBe(3);
   });
+
+  it('hides the group when visible is false, without crashing', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <Node3D node={makeNode({ name: 'HiddenParticles', visible: false })} />
+    );
+    const group = renderer.scene.findByProps({ name: 'HiddenParticles' });
+    expect(group.instance.visible).toBe(false);
+  });
 });

@@ -61,6 +61,9 @@ import '../nodes/physics/3d/collisionshape3d/index.linter.js';
 import '../nodes/physics/3d/rigidbody3d/index.linter.js';
 import '../nodes/physics/3d/staticbody3d/index.linter.js';
 import '../nodes/3d/marker3d/index.linter.js';
+import '../nodes/3d/remotetransform3d/index.linter.js';
+import '../nodes/3d/navigationagent3d/index.linter.js';
+import '../nodes/3d/navigationobstacle3d/index.linter.js';
 import '../nodes/paths/path3d/index.linter.js';
 import '../nodes/paths/pathfollow3d/index.linter.js';
 
@@ -71,6 +74,8 @@ import '../resources/meshes/planemesh/linterValidators.js';
 import '../resources/meshes/quadmesh/linterValidators.js';
 import '../nodes/2d/tiles/tilemaplayer/index.linter.js';
 import '../nodes/2d/tiles/tilemap/index.linter.js';
+import '../nodes/2d/remotetransform2d/index.linter.js';
+import '../nodes/timers/timer/index.linter.js';
 
 // Re-export core linter classes
 export { Linter } from './Linter.js';

@@ -8,7 +8,7 @@
  *   - `DirectionalLightGizmo`         DirectionalLightHelper, <primitive>, per-frame update
  *   - `PointLightGizmo`               PointLightHelper, <primitive>, per-frame update
  *   - `SpotLightGizmo`                SpotLightHelper, <primitive>, per-frame update
- *   - `CameraGizmo` (camera3d)        CameraHelper, <primitive>, NO per-frame update
+ *   - `CameraGizmo` (camera3d)        CameraHelper, <primitive>, per-frame update
  *
  * All six follow the same pattern: build a THREE helper bound to a target,
  * tear it down when the target / deps change or when the component
@@ -26,10 +26,14 @@
  *     helpers (gizmos parented under their owning node's group). Returns
  *     the helper instance for the caller to render; handles dispose.
  *
- * Both opt into a per-frame `update()` call by default. The CameraHelper
- * doesn't need per-tick update (frustum is static unless the camera's own
- * projection mutates, which the dispatcher's transform handling already
- * triggers via deps); pass `{ tickUpdate: false }` to opt out.
+ * Both opt into a per-frame `update()` call by default. `CameraGizmo` used
+ * to opt out via `{ tickUpdate: false }` (the frustum geometry itself is
+ * static unless the camera's own projection mutates), but `CameraHelper`
+ * needs the SAME parent-group correction as the light helpers
+ * (`correctHelperForParentGroup`, below) whose wrapped `update()` runs only
+ * on the per-frame tick — so it now takes the default, paying one Matrix4
+ * invert per frame while selected (negligible, and bounded to at most one
+ * live gizmo by the selection gate).
  *
  * The `factory` callback is invoked inside `useEffect` to defer
  * construction past mount (so refs that resolve on the first render are
@@ -40,7 +44,7 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import type * as THREE from 'three';
+import * as THREE from 'three';
 
 interface HelperLike extends THREE.Object3D {
   /** Optional — most THREE helpers (BoxHelper, *LightHelper) expose this. */
@@ -161,4 +165,84 @@ export function usePrimitiveHelper<H extends HelperLike>(
     () => undefined, // R3F handles the parenting when caller renders <primitive>
     options.tickUpdate ?? true
   );
+}
+
+/**
+ * Makes a THREE helper whose constructor aliases `this.matrix = target.matrixWorld`
+ * (`matrixAutoUpdate = false`) behave correctly when mounted as a `<primitive>`
+ * SIBLING of its target inside the target's own transform group — the pattern
+ * every `usePrimitiveHelper` consumer in this codebase uses — instead of
+ * `scene.add(helper)`'d directly at the root the way the affected THREE
+ * helpers' own doc-comment examples assume. `DirectionalLightHelper`,
+ * `PointLightHelper`, and `CameraHelper` all share this constructor pattern
+ * (`SpotLightHelper` does not — its own `update()` is already parent-aware).
+ *
+ * Both hardcode `this.matrix = target.matrixWorld` (an ALIAS — the same
+ * Matrix4 object, not a copy) plus `matrixAutoUpdate = false`. That is fine
+ * at the scene root (parent.matrixWorld is identity, so
+ * `helper.matrixWorld === target.matrixWorld` automatically) but breaks two
+ * ways once nested under a non-identity parent group:
+ *
+ * 1. Double-transform: `helper.matrixWorld = parent.matrixWorld *
+ *    helper.matrix`, and `helper.matrix` already IS a world matrix
+ *    (`target.matrixWorld`) — the parent group's transform applies a SECOND
+ *    time on top, squaring it. The helper renders far from its target.
+ * 2. Shared-object corruption: naively re-enabling `matrixAutoUpdate` so the
+ *    parent chain composes the helper's OWN (identity) local
+ *    position/quaternion/scale instead is not a fix — three.js's generic
+ *    per-frame `updateMatrix()` does `this.matrix.compose(...)`, which
+ *    mutates whatever object `this.matrix` currently IS. Since that object
+ *    is still `target.matrixWorld` (the alias was never broken), this
+ *    silently clobbers the target's own world matrix to identity right
+ *    before the renderer reads it — corrupting the target's actual
+ *    behavior (light shading, camera projection) the instant its gizmo
+ *    mounts.
+ *
+ * The fix mirrors `THREE.SpotLightHelper`'s own `update()` method (already
+ * correct, unmodified): break the alias with a fresh, private Matrix4, then
+ * every frame recompute the helper's LOCAL matrix as `parent.matrixWorld⁻¹ ·
+ * target.matrixWorld` so the normal parent-chain multiply reproduces
+ * `target.matrixWorld` exactly, and copy `target.matrixWorld` into the
+ * helper's `matrixWorld` directly so it's correct even before that next
+ * traversal runs. `matrixAutoUpdate` stays at its native `false` — the
+ * generic compose()-based recompute must never touch this helper.
+ *
+ * Also explicitly refreshes `target.updateWorldMatrix(true, false)` before
+ * reading it: `DirectionalLightHelper`/`PointLightHelper`'s own `update()`
+ * (called first, via `nativeUpdate`) happens to do this internally for
+ * their light, but `CameraHelper.update()` does NOT touch the camera's
+ * matrixWorld at all — relying on that as a side effect left the camera
+ * case reading a stale (pre-render) `target.matrixWorld` and computing a
+ * wrong correction. Refreshing `target` here directly makes this function
+ * correct for any target, independent of what the wrapped helper's own
+ * `update()` happens to do.
+ *
+ * Deliberately does NOT run the wrapped `update()` eagerly here: this is
+ * typically called inside a `usePrimitiveHelper` factory, which executes
+ * inside its mount effect, before React has committed the `<primitive
+ * object={helper}>` that actually parents it under the node's group —
+ * `helper.parent` is always `null` at this point, so any correction
+ * computed now would be wrong the instant a parent exists. The consuming
+ * hook's per-frame `update()` call (via `useFrame`) is what actually
+ * applies the correction — callers MUST pass `{ tickUpdate: true }` (the
+ * default) to `usePrimitiveHelper`/`useSceneHelper`, or this correction
+ * never runs.
+ */
+export function correctHelperForParentGroup<H extends THREE.Object3D & { update: () => void }>(
+  helper: H,
+  target: THREE.Object3D
+): H {
+  helper.matrix = new THREE.Matrix4();
+  const nativeUpdate = helper.update.bind(helper);
+  helper.update = () => {
+    nativeUpdate();
+    const parent = helper.parent;
+    if (parent) {
+      parent.updateWorldMatrix(true, false);
+      target.updateWorldMatrix(true, false);
+      helper.matrix.copy(parent.matrixWorld).invert().multiply(target.matrixWorld);
+      helper.matrixWorld.copy(target.matrixWorld);
+    }
+  };
+  return helper;
 }
