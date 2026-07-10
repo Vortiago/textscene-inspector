@@ -5,8 +5,6 @@
  */
 
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
-import { Timer } from './Component';
+import { Node } from '../../node/Component';
 
-nodeComponentRegistry.register({ typeName: 'Timer', Component: Timer, container: true });
-
-export { Timer };
+nodeComponentRegistry.register({ typeName: 'Timer', Component: Node, container: true });

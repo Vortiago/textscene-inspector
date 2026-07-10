@@ -5,12 +5,6 @@
  */
 
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
-import { NavigationAgent3D } from './Component';
+import { Node } from '../../node/Component';
 
-nodeComponentRegistry.register({
-  typeName: 'NavigationAgent3D',
-  Component: NavigationAgent3D,
-  container: true,
-});
-
-export { NavigationAgent3D };
+nodeComponentRegistry.register({ typeName: 'NavigationAgent3D', Component: Node, container: true });

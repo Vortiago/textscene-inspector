@@ -6,8 +6,6 @@
  */
 
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
-import { NavigationObstacle3D } from './Component';
+import { Node3D } from '../../base/node3d/Component';
 
-nodeComponentRegistry.register({ typeName: 'NavigationObstacle3D', Component: NavigationObstacle3D });
-
-export { NavigationObstacle3D };
+nodeComponentRegistry.register({ typeName: 'NavigationObstacle3D', Component: Node3D });

@@ -5,12 +5,6 @@
  */
 
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
-import { RemoteTransform2D } from './Component';
+import { Node2D } from '../../base/node2d/Component';
 
-nodeComponentRegistry.register({
-  typeName: 'RemoteTransform2D',
-  Component: RemoteTransform2D,
-  canvasItem: true,
-});
-
-export { RemoteTransform2D };
+nodeComponentRegistry.register({ typeName: 'RemoteTransform2D', Component: Node2D, canvasItem: true });

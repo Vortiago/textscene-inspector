@@ -6,8 +6,6 @@
  */
 
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
-import { RemoteTransform3D } from './Component';
+import { Node3D } from '../../base/node3d/Component';
 
-nodeComponentRegistry.register({ typeName: 'RemoteTransform3D', Component: RemoteTransform3D });
-
-export { RemoteTransform3D };
+nodeComponentRegistry.register({ typeName: 'RemoteTransform3D', Component: Node3D });
