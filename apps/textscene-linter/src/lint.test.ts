@@ -1,10 +1,18 @@
 /** Unit tests for lintFile/runLint exit-code logic and error handling. */
 
-import { mkdtempSync, rmSync, writeFileSync } from 'fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { lintFile, printFileResult, runLint, type FileLintResult } from './lint';
+import {
+  collectFileDiagnostics,
+  expandTscnPaths,
+  lintFile,
+  lintFileDiagnostics,
+  printFileResult,
+  runLint,
+  type FileLintResult,
+} from './lint';
 
 const CLEAN_TSCN = `[gd_scene format=3]
 
@@ -140,6 +148,118 @@ describe('runLint', () => {
     runLint([cleanPath, errorPath], false, (result) => seen.push(result.filePath));
 
     expect(seen).toEqual([cleanPath, errorPath]);
+  });
+});
+
+describe('lintFileDiagnostics', () => {
+  it('returns an empty diagnostics array and no readError for a clean file', () => {
+    const result = lintFileDiagnostics(cleanPath);
+
+    expect(result).toEqual({ filePath: cleanPath, diagnostics: [] });
+  });
+
+  it('returns raw error-severity diagnostics for an invalid file (no formatting)', () => {
+    const result = lintFileDiagnostics(errorPath);
+
+    expect(result.readError).toBeUndefined();
+    expect(result.diagnostics.some((d) => d.severity === 'error' && d.ruleName === 'strict-parser')).toBe(true);
+  });
+
+  it('returns raw warning-severity diagnostics for a warnings-only file', () => {
+    const result = lintFileDiagnostics(warningPath);
+
+    expect(result.readError).toBeUndefined();
+    expect(result.diagnostics.some((d) => d.severity === 'warning' && d.ruleName === 'valid-node3d-visibility')).toBe(true);
+  });
+
+  it('sets readError (and an empty diagnostics array) for a missing file', () => {
+    const result = lintFileDiagnostics(missingPath);
+
+    expect(result.diagnostics).toEqual([]);
+    expect(result.readError).toContain('ENOENT');
+  });
+});
+
+describe('collectFileDiagnostics', () => {
+  it('returns exit code 0 and per-file diagnostics for clean files', () => {
+    const { exitCode, files } = collectFileDiagnostics([cleanPath]);
+
+    expect(exitCode).toBe(0);
+    expect(files).toEqual([{ filePath: cleanPath, diagnostics: [] }]);
+  });
+
+  it('returns exit code 1 when a file has error diagnostics', () => {
+    expect(collectFileDiagnostics([errorPath]).exitCode).toBe(1);
+  });
+
+  it('returns exit code 0 for warnings-only files (matches runLint contract)', () => {
+    expect(collectFileDiagnostics([warningPath]).exitCode).toBe(0);
+  });
+
+  it('returns exit code 1 when a file is missing, and records its readError', () => {
+    const { exitCode, files } = collectFileDiagnostics([missingPath]);
+
+    expect(exitCode).toBe(1);
+    expect(files[0]?.readError).toContain('ENOENT');
+  });
+
+  it('collects every file even when an early file fails, preserving order', () => {
+    const { exitCode, files } = collectFileDiagnostics([missingPath, cleanPath, errorPath]);
+
+    expect(exitCode).toBe(1);
+    expect(files.map((f) => f.filePath)).toEqual([missingPath, cleanPath, errorPath]);
+  });
+
+  it('returns exit code 0 and no files for an empty file list', () => {
+    expect(collectFileDiagnostics([])).toEqual({ exitCode: 0, files: [] });
+  });
+});
+
+describe('expandTscnPaths', () => {
+  let dirRoot: string;
+  let nestedDir: string;
+  let topTscn: string;
+  let nestedTscn: string;
+  let nestedTxt: string;
+
+  beforeAll(() => {
+    dirRoot = mkdtempSync(join(tmpdir(), 'tscn-lint-expand-'));
+    nestedDir = join(dirRoot, 'nested');
+    mkdirSync(nestedDir);
+    topTscn = join(dirRoot, 'top.tscn');
+    nestedTscn = join(nestedDir, 'nested.tscn');
+    nestedTxt = join(nestedDir, 'ignore-me.txt');
+    writeFileSync(topTscn, CLEAN_TSCN);
+    writeFileSync(nestedTscn, CLEAN_TSCN);
+    writeFileSync(nestedTxt, 'not a scene');
+  });
+
+  afterAll(() => {
+    rmSync(dirRoot, { recursive: true, force: true });
+  });
+
+  it('passes a plain file path through unchanged', () => {
+    expect(expandTscnPaths([cleanPath])).toEqual([cleanPath]);
+  });
+
+  it('passes a missing path through unchanged (lets lintFile report the read error)', () => {
+    expect(expandTscnPaths([missingPath])).toEqual([missingPath]);
+  });
+
+  it('recursively expands a directory to its .tscn files, ignoring other extensions', () => {
+    const result = expandTscnPaths([dirRoot]);
+
+    expect(result.sort()).toEqual([nestedTscn, topTscn].sort());
+    expect(result).not.toContain(nestedTxt);
+  });
+
+  it('mixes directory expansion with explicit files in one call', () => {
+    const result = expandTscnPaths([dirRoot, cleanPath]);
+
+    expect(result).toContain(cleanPath);
+    expect(result).toContain(topTscn);
+    expect(result).toContain(nestedTscn);
+    expect(result).toHaveLength(3);
   });
 });
 
