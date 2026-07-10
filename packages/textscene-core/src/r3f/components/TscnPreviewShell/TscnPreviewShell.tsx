@@ -18,7 +18,7 @@ import { HierarchyProvider } from '../../contexts/HierarchyContext.js';
 import { SelectionProvider } from '../../contexts/SelectionContext.js';
 import { CameraControlProvider } from '../../contexts/CameraControlContext.js';
 import { MissingResourcesProvider } from '../../contexts/MissingResourcesContext.js';
-import { ViewportModeProvider } from '../../contexts/ViewportModeContext.js';
+import { ViewportModeProvider, type ViewportMode } from '../../contexts/ViewportModeContext.js';
 import { AnimatedValueProvider } from '../../contexts/AnimatedValueContext.js';
 import { AnimationDriverProvider } from '../../contexts/AnimationDriverContext.js';
 import {
@@ -85,6 +85,16 @@ export interface TscnPreviewShellProps {
    * Remove button still renders but is a no-op.
    */
   onResourceRemove?: (path: string) => void;
+  /**
+   * Host-provided viewport-mode override (VS Code's `textscene.defaultViewportMode`
+   * setting). Omitted (the default) preserves Godot-editor parity: `WorkspaceAutoSelect`
+   * (ADR-0006) picks 2D/3D from the scene root's node type. An explicit mode both seeds
+   * the initial viewport AND suppresses that auto-select for this panel — otherwise a
+   * typed root's own claim would immediately override the host's forced choice, making
+   * the setting silently useless for the vast majority of real scenes. A manual toolbar
+   * toggle still works afterward in either case.
+   */
+  initialViewportMode?: ViewportMode;
 }
 
 export function TscnPreviewShell({
@@ -96,6 +106,7 @@ export function TscnPreviewShell({
   toolbar,
   onResourceUpload,
   onResourceRemove,
+  initialViewportMode,
 }: TscnPreviewShellProps) {
   const { sceneGraph, error } = useParsedScene(content, rootScenePath);
 
@@ -154,11 +165,16 @@ export function TscnPreviewShell({
       <SelectionProvider>
         <CameraControlProvider>
           <MissingResourcesProvider>
-            <ViewportModeProvider>
+            <ViewportModeProvider initialMode={initialViewportMode}>
              <AnimationTransportProvider>
               <AnimationDriverProvider>
               <AnimatedValueProvider>
-              <WorkspaceAutoSelect sceneGraph={sceneGraph} />
+              {/* A host-forced initial mode opts this panel out of Godot-parity
+                  auto-select entirely — otherwise the scene root's own claim
+                  would immediately clobber the host's choice on first parse. */}
+              {initialViewportMode === undefined && (
+                <WorkspaceAutoSelect sceneGraph={sceneGraph} />
+              )}
               <SceneChangeResetter sceneGraph={sceneGraph} />
               <AnimationTabWatcher onVisibleChange={setAnimationTabVisible} />
               <div className={styles.shell} data-panel-id={panelId}>
