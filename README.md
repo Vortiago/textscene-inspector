@@ -18,15 +18,16 @@ Current release: **0.9.0** — on the road to v1.0; see [CHANGELOG.md](./CHANGEL
 
 **Implemented:**
 - ✅ TSCN parsing with full scene tree hierarchy (lenient render parser + strict lint parser sharing one scanning loop)
-- ✅ ~47 self-registering node types as unified vertical slices: meshes (Box/Sphere/Cylinder/Plane/Capsule/Torus/Prism), lights (Spot/Directional/Omni with shadows), Camera3D/Camera2D, WorldEnvironment, Label3D, CSG (as primitives), physics bodies + collision gizmos, sprites (2D/3D), and 15 Control types rendered as a DOM overlay
+- ✅ ~66 self-registering node types as unified vertical slices: meshes (Box/Sphere/Cylinder/Plane/Capsule/Torus/Prism/Quad), CSG primitives (Box/Cylinder/Sphere), lights (Spot/Directional/Omni/Area with shadows), Camera3D/Camera2D, WorldEnvironment, Label3D, physics bodies + collision gizmos, sprites (2D/3D), GridMap, TileMap/TileMapLayer, NavigationRegion2D/3D, Decal, Polygon2D, Line2D, Marker2D/3D, Path2D/PathFollow2D/Path3D/PathFollow3D, and 17 Control types rendered as a DOM overlay
 - ✅ StandardMaterial3D PBR (albedo/metallic/roughness/normal/emission/AO, UV transforms, external textures)
 - ✅ External resources: PackedScene instancing, textures, materials, GLB meshes — event-driven with late-arrival upload recovery
 - ✅ react-three-fiber rendering, Split Dock shell (scene tree, inspector, resources, cameras), 2D/3D viewport modes
+- ✅ Animation playback — AnimationPlayer (transform tracks via `THREE.AnimationMixer`, plus non-transform value tracks like sprite frames and Decal modulate/size via the AnimatedValue push registry) and AnimationTree (blend-tree/state-machine) drivers, GLB-embedded clips, AnimatedSprite2D frame playback, all behind one selection-driven play/pause/scrub transport
 - ✅ Linter: CLI (`tscn-lint`) and in-editor diagnostics (VS Code Problems panel), React/THREE-free bundle
 - ✅ VS Code extension — desktop **and** web (vscode.dev) entry points, outline, go-to-definition, hot-reload
-- ✅ Web previewer with fixture browser and an "Open .tscn" file picker (Ctrl/Cmd+K scene palette)
+- ✅ Web previewer with fixture browser, an "Open .tscn" file picker (Ctrl/Cmd+K scene palette), and an editable Source pane (paste/upload/type `.tscn` text and see it render live)
 
-See the [GitHub issues](https://github.com/Vortiago/Text-Scene-.tscn-File-Previewer/issues) for the road to v1.0 — AnimationPlayer playback is the headline remaining renderer item.
+See the [GitHub issues](https://github.com/Vortiago/Text-Scene-.tscn-File-Previewer/issues) for the road to v1.0.
 
 ## Getting Started
 

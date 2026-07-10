@@ -68,14 +68,17 @@ The render and linter pipelines are **separately bundleable** because the parse,
 │           │   ├── node/
 │           │   ├── base/{node2d,node3d}/
 │           │   ├── 2d/
-│           │   │   ├── ui/                  # 15 Control slices (control, label, button, containers, ...) — DOM overlay (ADR-0003)
-│           │   │   └── {sprite2d,camera2d,animatedsprite2d}/
+│           │   │   ├── ui/                  # 17 Control slices (control, label, button, containers, ...) — DOM overlay (ADR-0003)
+│           │   │   ├── tiles/{tilemap,tilemaplayer}/    # + shared/ — TileSet/atlas decoding
+│           │   │   └── {sprite2d,camera2d,animatedsprite2d,polygon2d,line2d,
+│           │   │        marker2d,path2d,pathfollow2d,navigationregion2d}/
 │           │   ├── 3d/
 │           │   │   ├── meshinstance3d/      # parser.ts, linter.ts, Component.tsx, index{,.linter,.r3f}.ts
 │           │   │   ├── camera3d/
-│           │   │   ├── csg/{csgbox3d,csgcylinder3d}/   # CSG-as-primitive (ADR-0004)
-│           │   │   ├── lights/{directional,omni,spot}light3d/  (+ shared/ — parser, formatter, lint checks, lightShared/lightHelpers render code)
-│           │   │   ├── {sprite3d,skeleton3d,particles/gpuparticles3d}/
+│           │   │   ├── csg/{csgbox3d,csgcylinder3d,csgsphere3d}/   # CSG-as-primitive (ADR-0004)
+│           │   │   ├── lights/{directional,omni,spot,area}light3d/  (+ shared/ — parser, formatter, lint checks, lightShared/lightHelpers render code)
+│           │   │   ├── {sprite3d,skeleton3d,particles/gpuparticles3d,marker3d,
+│           │   │   │     gridmap,navigationregion3d,decal}/
 │           │   │   ├── worldenvironment/
 │           │   │   └── label3d/
 │           │   ├── audio/audiostreamplayer{,2d,3d}/
@@ -85,8 +88,8 @@ The render and linter pipelines are **separately bundleable** because the parse,
 │           │   └── physics/3d/{staticbody3d,area3d,collisionshape3d,...}/  # transform-only render + collision gizmo (ADR-0005/0008)
 │           ├── core/            # SceneGraph + immutable resolution helpers
 │           │   ├── NodeRegistry.ts        # Parser + formatter registry
-│           │   ├── SceneGraph.ts          # Immutable resolved scene
-│           │   └── SceneGraphBuilder.ts   # Builder for SceneGraph
+│           │   ├── SceneGraph.ts          # Immutable resolved scene + buildSceneGraph()
+│           │   └── createTypeRegistry.ts  # Shared Map-backed registry factory (ADR-0002)
 │           ├── r3f/             # react-three-fiber UI surface (render infrastructure)
 │           │   ├── TscnCanvas.tsx         # <Canvas> + NodeDispatcher
 │           │   ├── NodeDispatcher.tsx     # SceneGraph -> React tree
@@ -94,7 +97,8 @@ The render and linter pipelines are **separately bundleable** because the parse,
 │           │   ├── nodeTransform.ts        # Node3D properties -> THREE transform
 │           │   ├── nodes/index.ts          # barrel: imports every slice's index.r3f
 │           │   ├── internal/{generic-node-fallback,glb-scene-root}/  # synthetic render-only types
-│           │   ├── contexts/{Selection,Hierarchy,CameraControl,NodePath}Context.tsx
+│           │   ├── contexts/{Selection,Hierarchy,CameraControl,NodePath}Context.tsx,
+│           │   │             {AnimationTransport,AnimationDriver,AnimatedValue}Context.tsx
 │           │   ├── controls/               # 2D Control overlay subsystem (ADR-0003):
 │           │   │                           #   ControlComponentRegistry, ControlDispatcher,
 │           │   │                           #   ControlOverlay, layout/StyleBox→CSS mapping
@@ -114,7 +118,7 @@ The render and linter pipelines are **separately bundleable** because the parse,
 │               └── materials/standardmaterial3d/  # Material parser + renderer
 └── apps/
     ├── textscene-vscode/         # VS Code extension (esbuild)
-    ├── textscene-web/            # Web previewer (Vite)
+    ├── textscene-web/            # Web previewer (Vite) — owns the Source pane (ADR-0020)
     └── textscene-linter/         # CLI linter (Node)
 ```
 
@@ -295,16 +299,99 @@ swaps the R3F active camera via `useThree(state => state.set)` based on
 the `userData.tscnPath` tag the Camera3D component writes to its
 three.js camera.
 
+### Animation
+
+Godot's animation system drives *other* nodes' properties, deliberately
+breaking the "each component renders itself" invariant (ADR-0011): an
+`AnimationPlayer` renders as an invisible transform-only group but is also an
+**animation driver**. Each `[sub_resource type="Animation"]` (a
+**GodotAnimation** — `length`/`loop_mode`/`step` plus **Track**s targeting
+`NodePath("Node:property")`) is parsed render-side and built into a
+`THREE.AnimationClip`. Two paths carry values, split by what a
+`THREE.AnimationMixer` can bind:
+
+- **Transform tracks** (`position`/`rotation`/`rotation_degrees`/`scale`) drive
+  a mixer rooted at the player's **Animation root** (`root_node`, default
+  `..`); `THREE.PropertyBinding` resolves each target by name through the
+  dispatcher's unnamed pickable wrappers (ADR-0011).
+- **Non-transform tracks** (a discrete `Sprite2D:frame`, continuous
+  `Decal:modulate`/`Decal:size`) can't go through the mixer, so the player
+  samples the live mixer playhead and pushes values through the
+  **AnimatedValue push registry** (`r3f/contexts/AnimatedValueContext.tsx`) —
+  a ref-backed registry keyed by `${nodePath}:${property}` that the target
+  component subscribes to, overriding its authored value while a value is
+  pushed (ADR-0016, ADR-0017).
+
+Playback is owned by one **Animation transport** (`AnimationTransportContext`)
+that follows the **currently selected node** — one driver plays at a time,
+mirroring the Godot editor's Animation panel. Three node types can act as a
+driver, unified behind the same transport and `usePlaybackLoop`:
+
+- **`AnimationPlayer`** — the GodotAnimation path above.
+- **`GLBSceneRoot`** acting as a **GLB animation driver** (ADR-0014): a GLB's
+  own **GLB-embedded clip**s (ready-made `THREE.AnimationClip`s straight from
+  the glTF loader — never parsed as a GodotAnimation) surface on a
+  synthesized, tree-only `GLBAnimationPlayer` row; selecting that row runs a
+  mixer rooted on the GLB object itself (no `root_node`).
+- **`AnimatedSprite2D`** (ADR-0015) — no mixer; the transport advances a
+  displayed frame directly via `frameAtTime`.
+- **`AnimationTree`** (ADR-0019) owns no clips itself: it resolves its
+  `tree_root` `AnimNode` graph at the authored `parameters/*` state into a
+  **blend program** (`{clip, weight, timeScale}[]`), looks up the driver its
+  `anim_player` NodePath names in the **AnimationDriverRegistry**
+  (`AnimationDriverContext` — the `nodePath → {object, clips}` map every
+  AnimationPlayer/GLB driver publishes on load), and drives that object with
+  weighted actions. It evaluates only while `active = true` (Godot parity) AND
+  selected, and exposes a single read-only transport entry (no clip picker).
+
+Playback starts **stopped** (authored pose/frame preserved); play is
+user-initiated. `RESET` (Godot's conventional rest-pose animation) lists like
+any clip but is skipped by the transport's default-clip heuristic (prefers the
+`autoplay` clip, else the first non-`RESET` clip) unless it is the only clip.
+Because playback is non-deterministic over time, playback fixtures are
+excluded from the visual-regression manifest; the default (stopped) render
+stays byte-stable.
+
 ### VS Code Editor Features
 
-- `TscnDefinitionProvider`: Ctrl/Cmd-click on a `res://` path navigates
-  to that resource file (text-layer feature, unaffected by R3F).
+- `TscnDefinitionProvider`: Ctrl/Cmd-click (Go to Definition) on a
+  `SubResource("id")` / `ExtResource("id")` reference jumps to that id's
+  `[sub_resource]` / `[ext_resource]` heading **within the same file**
+  (text-layer feature, unaffected by R3F). It does **not** resolve an
+  `ExtResource`'s `res://` path to the external file it points at — see
+  `docs/user-guide-vscode.md` (VSCODE-04) for that gap.
 - `TscnDocumentSymbolProvider`: scene tree appears in the VS Code
   Outline panel.
 - File watcher: when a `.tscn` file changes, the extension host posts
   a fresh `loadTscn` message to the webview, which re-parses and
   re-renders. The R3F canvas DOM node is preserved across content
   changes so OrbitControls camera state survives hot-reload.
+
+### Web Source Pane
+
+The web app — only the web app; VS Code has its own real text editor — mounts
+an editable **Source pane** (ADR-0020): a left sibling of
+`<TscnPreviewShell>`, wired entirely through the shell's existing `toolbar`
+slot and `content` prop so the shared shell's API and VS Code parity stay
+untouched. A bare, forced-monospace `<textarea>` (`apps/textscene-web/src/r3f-main.tsx`)
+holds the buffer — no Monaco/CodeMirror — fed by fixture selection, file
+upload, or direct paste/type.
+
+Edits reach the shell only through a debounced (~250 ms) gate
+(`apps/textscene-web/src/sourceGate.ts` → `resolveForwardedContent`): the
+buffer is forwarded when it still parses under the **Lenient parser** (the
+same `parseTscnContent` the shell renders with, so gate and render can never
+drift apart); otherwise the shell keeps its last-good content, so a mid-edit
+file that transiently breaks holds the viewport on its last valid render
+instead of blanking. Pane visibility and width persist in `localStorage`
+(mirroring the existing active-fixture persistence); a draggable splitter
+resizes it. Edits are ephemeral — switching scene or reloading resets the
+buffer to the file's content, and nothing is written back to disk.
+
+ADR-0020 also scoped a linter gutter (error/warning dots plus a hover
+popover — the web app would become the first browser consumer of
+`@textscene/core/linter`) and a "Download .tscn" export; **neither has
+shipped yet** — today's pane is view/edit/re-render only.
 
 ### Dependency Versions (Phase 14)
 
@@ -313,7 +400,11 @@ Spike-validated stack:
 - React 19.2, react-dom 19.2, @react-three/fiber 9.6, @react-three/drei 10.7
 - @react-three/test-renderer 9.1, @testing-library/react 16.3
 - three 0.184, @types/three 0.184
-- Vitest 4.1, jsdom 29, @vitejs/plugin-react 5 (workspace is on Vite 6)
+- Vitest 4.1, happy-dom 20, @vitejs/plugin-react 5 (workspace is on Vite 6);
+  `jsdom` also sits in the catalog as a devDependency but no vitest config
+  actually selects it as a test `environment` — every DOM-needing project uses
+  happy-dom, and node-only projects (CLI linter, VS Code extension host) use
+  `environment: 'node'`.
 - TypeScript 6.0.3
 
 ### Bundle Size Target
@@ -378,23 +469,31 @@ WI-R3F-16 (audio/animation) lands and the budget is re-verified.
 
 ### Known limitations
 
-**Web app: content-only hot-reload is not implemented.** When the user
-edits a fixture's TSCN content out-of-band (e.g. via the dev server
-filesystem watcher) the web app does not detect the change. The
-workaround is to re-select the fixture from the dropdown, which
-re-fetches and re-mounts the shell. The VS Code extension does NOT
-share this limitation — there the editor's `onDidSaveTextDocument`
-fires `loadTscn` and the React shell reconciles cleanly.
+**Web app: content-only hot-reload from disk is not implemented.** When a
+fixture's TSCN content changes out-of-band on disk (e.g. via the dev server
+filesystem, or an external editor touching the file the browser fetched it
+from) the web app does not detect the change — it only re-fetches a fixture
+on an explicit dropdown re-selection. The **Source pane** (ADR-0020,
+above) does not close this gap: it holds an in-memory buffer, not a
+filesystem watch, so it re-renders on every keystroke made *inside the pane*
+but is blind to edits made anywhere else. What the pane does change is the
+workaround available to a user: rather than re-selecting the fixture, they
+can paste the updated `.tscn` text straight into the pane and see it render
+immediately (gated on the lenient parser, same as any other pane edit). The
+VS Code extension does NOT share the disk-level limitation — there the
+editor's `onDidSaveTextDocument` fires `loadTscn` and the React shell
+reconciles cleanly on save, from any editor or external tool.
 
-Fixing this on the web side would mean either:
+Actually watching disk from the browser would mean either:
 1. Subscribing to the Vite HMR `import.meta.hot.on('update')` event
    when in dev mode, then re-fetching the active fixture, or
 2. Polling the fixture URL with `ETag` / `Last-Modified` and
    re-fetching on change.
 
-Neither is implemented; deferred to a follow-up WI. The current v1
-flow expects users to edit fixtures via the VS Code extension where
-hot-reload works.
+Neither is implemented; deferred to a follow-up WI. The v1 flow expects
+users who need true filesystem hot-reload to use the VS Code extension;
+the web app's Source pane covers the "I have new text, show me the result"
+case without it.
 
 ## Planned Evolution — full ld-58 support
 
@@ -430,8 +529,8 @@ A module-graph guard test (over both `linter/index.ts` and `parser/TscnParser.ts
 
 **Status:** the 2D-UI Control set, the viewport toggle, and the **Split Dock** chrome (which replaced the 3-column DCC layout — ADR-0007) are all **shipped**.
 
-- **P3 — Control set (done).** All 15 Control types ld-58 uses are registered DOM components: `Control`, `ColorRect`, `Label`, `VBoxContainer`, `HBoxContainer`, `GridContainer`, `CenterContainer`, `MarginContainer`, `ScrollContainer`, `Panel`, `PanelContainer`, `Button`, `TextureRect`, `RichTextLabel`, and the passthrough `CanvasLayer`. Each is a unified slice whose `index.r3f.ts` registers into `ControlComponentRegistry`; `ControlDispatcher` walks the subtree and `controlLayoutStyle` + `styleBoxToCss` + `resolveStyleBoxCss` map Godot layout/theme to CSS. `TextureRect` loads images host-agnostically via `useResource` (type-only `THREE` import — no runtime three in the slice).
-- **P4 — viewport toggle (done).** `TscnPreviewShell` is wrapped in `<ViewportModeProvider>`; a shared `<ViewportToolbar>` (3D/2D switch + Collisions checkbox) writes through `useViewportMode()`, and `<ViewportArea>` renders `TscnCanvas` (3D) or the lazy-loaded `ControlOverlay` (2D, fed the root scene's nodes + resources). The overlay is a separate lazy chunk, so the 15 components stay out of the initial canvas-paint bundle.
+- **P3 — Control set (done).** All 15 Control types ld-58 uses are registered DOM components: `Control`, `ColorRect`, `Label`, `VBoxContainer`, `HBoxContainer`, `GridContainer`, `CenterContainer`, `MarginContainer`, `ScrollContainer`, `Panel`, `PanelContainer`, `Button`, `TextureRect`, `RichTextLabel`, and the passthrough `CanvasLayer`. Each is a unified slice whose `index.r3f.ts` registers into `ControlComponentRegistry`; `ControlDispatcher` walks the subtree and `controlLayoutStyle` + `styleBoxToCss` + `resolveStyleBoxCss` map Godot layout/theme to CSS. `TextureRect` loads images host-agnostically via `useResource` (type-only `THREE` import — no runtime three in the slice). `CheckBox` and `OptionButton` were added later, beyond ld-58's original scope, bringing the current total to 17 (see Project Structure above).
+- **P4 — viewport toggle (done).** `TscnPreviewShell` is wrapped in `<ViewportModeProvider>`; a shared `<ViewportToolbar>` (3D/2D switch + Collisions checkbox) writes through `useViewportMode()`, and `<ViewportArea>` renders `TscnCanvas` (3D) or the lazy-loaded `ControlOverlay` (2D, fed the root scene's nodes + resources). The overlay is a separate lazy chunk, so the (now 17) Control components stay out of the initial canvas-paint bundle.
 - **P5 — 3-column DCC chrome (superseded by P6).** The first chrome was a full-width top bar over three columns: a left **Scene** dock (SceneInfoCard + tree), the center viewport, and a right **Inspector** dock. Resizable + collapsible docks, stacked vertically under 768px. Replaced by the Split Dock (P6).
 - **P6 — Split Dock chrome (done, [ADR-0007](./docs/adr/0007-adopt-split-dock-shell.md)).** A prototype exploration (5 fresh-eyes designs → A+B hybrids → "Split Dock") landed the user-chosen layout: a slim top bar (file/brand + host toolbar + scene-stat chips + `ViewportToolbar`) over **two** columns — a large center viewport and a single right dock. **No left rail** (a VS Code webview sits right of VS Code's own activity bar + Explorer, so a left rail clashes + wastes width). The dock is a vertical **master-detail**: `SceneTreeViewer` on top over a tabbed detail (**Inspector / Resources / Cameras**) — selecting a node updates the inspector with no tab hop; the on-pane tab strip switches only the lower section; the Cameras tab lists `Camera3D` nodes with a one-click "use". `SceneInfoCard` was removed (node count moved to the top bar + tree header). Resizable width (`<Splitter>`) + a draggable master/detail handle; collapsible to a full-width viewport; stacks under 768px. In 2D mode the viewport becomes a framed pan/zoom `Canvas2DStage` wrapping the live `ControlOverlay`. The web app's scene picker is a Ctrl/Cmd+K command palette in the web toolbar (`apps/textscene-web/src/r3f-main.tsx`; "Open .tscn" primary — the built-in fixtures it lists are dev-only scaffolding). Restyled via the shared `--tsi-*` tokens (VS Code-theme-aware).
 
