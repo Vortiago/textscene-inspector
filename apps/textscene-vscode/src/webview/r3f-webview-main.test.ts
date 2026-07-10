@@ -196,22 +196,21 @@ describe('mountR3FWebview', () => {
 describe('loadTscn handling', () => {
   it('applies the full scene text to the shell content prop', async () => {
     await mountFresh();
+    const expected = '[gd_scene format=3]\n[node name="Root" type="Node3D"]';
 
-    dispatch({ type: 'loadTscn', content: '[gd_scene format=3]\n[node name="Root" type="Node3D"]' });
-    await flush();
+    dispatch({ type: 'loadTscn', content: expected });
+    await waitFor(() => captured.shellProps?.content === expected);
 
-    expect(captured.shellProps?.content).toBe(
-      '[gd_scene format=3]\n[node name="Root" type="Node3D"]'
-    );
+    expect(captured.shellProps?.content).toBe(expected);
   });
 
   it('replaces previously-loaded content on a subsequent loadTscn (hot-reload)', async () => {
     await mountFresh();
 
     dispatch({ type: 'loadTscn', content: 'first content' });
-    await flush();
+    await waitFor(() => captured.shellProps?.content === 'first content');
     dispatch({ type: 'loadTscn', content: 'second content' });
-    await flush();
+    await waitFor(() => captured.shellProps?.content === 'second content');
 
     expect(captured.shellProps?.content).toBe('second content');
   });
@@ -221,13 +220,13 @@ describe('incrementalUpdate handling', () => {
   it('treats an incrementalUpdate carrying rawText as a full content replacement', async () => {
     await mountFresh();
     dispatch({ type: 'loadTscn', content: 'original' });
-    await flush();
+    await waitFor(() => captured.shellProps?.content === 'original');
 
     dispatch({
       type: 'incrementalUpdate',
       data: { changes: [], sceneData: { rawText: 'incrementally updated' } },
     });
-    await flush();
+    await waitFor(() => captured.shellProps?.content === 'incrementally updated');
 
     expect(captured.shellProps?.content).toBe('incrementally updated');
   });
@@ -235,9 +234,12 @@ describe('incrementalUpdate handling', () => {
   it('is a no-op when the incrementalUpdate payload carries no rawText', async () => {
     await mountFresh();
     dispatch({ type: 'loadTscn', content: 'original' });
-    await flush();
+    await waitFor(() => captured.shellProps?.content === 'original');
 
     dispatch({ type: 'incrementalUpdate', data: { changes: [], sceneData: {} } });
+    // A fixed beat, not a `waitFor` — this proves the update did NOT change
+    // content, so a condition-based wait on "still 'original'" would pass
+    // instantly without giving a (would-be) unwanted update any chance to land.
     await flush();
 
     expect(captured.shellProps?.content).toBe('original');
