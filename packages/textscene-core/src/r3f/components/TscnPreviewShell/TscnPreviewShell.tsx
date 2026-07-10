@@ -18,7 +18,8 @@ import { HierarchyProvider } from '../../contexts/HierarchyContext.js';
 import { SelectionProvider } from '../../contexts/SelectionContext.js';
 import { CameraControlProvider } from '../../contexts/CameraControlContext.js';
 import { MissingResourcesProvider } from '../../contexts/MissingResourcesContext.js';
-import { ViewportModeProvider } from '../../contexts/ViewportModeContext.js';
+import { ViewportModeProvider, useViewportMode, type ViewportMode } from '../../contexts/ViewportModeContext.js';
+import { usePersistedState } from '../../hooks/usePersistedState.js';
 import { AnimatedValueProvider } from '../../contexts/AnimatedValueContext.js';
 import { AnimationDriverProvider } from '../../contexts/AnimationDriverContext.js';
 import {
@@ -32,6 +33,7 @@ import { ViewportToolbar } from '../ViewportToolbar/ViewportToolbar.js';
 import { Splitter } from '../Splitter/Splitter.js';
 import { ViewportArea } from './ViewportArea.js';
 import { PreviewErrorBoundary } from './PreviewErrorBoundary.js';
+import { EscapeDeselect } from './EscapeDeselect.js';
 import { composeProviders } from '../../composeProviders.js';
 import { CamerasPanel } from './CamerasPanel.js';
 import { SceneChangeResetter } from './SceneChangeResetter.js';
@@ -60,6 +62,19 @@ const NodeDetailsPanel = lazy(() =>
 const DEFAULT_ROOT_SCENE_PATH = 'res://__inline__.tscn';
 
 type DetailTab = 'inspector' | 'resources' | 'cameras' | 'animation';
+
+// #224 usePersistedState validators — reject a corrupt/unexpected persisted
+// shape (a stale schema, a hand-edited localStorage entry) in favor of the
+// hook's own default rather than propagating garbage into layout state.
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+function isBoolean(value: unknown): value is boolean {
+  return typeof value === 'boolean';
+}
+function isViewportMode(value: unknown): value is ViewportMode {
+  return value === '2D' || value === '3D';
+}
 
 export interface TscnPreviewShellProps {
   /** Stable identifier for this panel — used in logs and for context coordination. */
@@ -109,9 +124,12 @@ export function TscnPreviewShell({
   // Split Dock (ADR-0007): a single resizable + collapsible RIGHT dock holding
   // a master (scene tree) over a tabbed detail. `treeShare` is the master's
   // fraction of the dock height (0..1), dragged via the horizontal handle.
-  const [dockWidth, setDockWidth] = useState(320);
-  const [dockCollapsed, setDockCollapsed] = useState(false);
-  const [treeShare, setTreeShare] = useState(0.46);
+  // #224: persisted across sessions (host-agnostic — VS Code webviews are a
+  // browser context too) so a resized/collapsed dock survives a reload; a
+  // fresh session with no persisted value keeps the pre-#224 defaults below.
+  const [dockWidth, setDockWidth] = usePersistedState('tsi.dockWidth', 320, isFiniteNumber);
+  const [dockCollapsed, setDockCollapsed] = usePersistedState('tsi.dockCollapsed', false, isBoolean);
+  const [treeShare, setTreeShare] = usePersistedState('tsi.treeShare', 0.46, isFiniteNumber);
   const [activeTab, setActiveTab] = useState<DetailTab>('inspector');
 
   // ADR-0012: the Animation tab exists only while an AnimationPlayer is the
@@ -151,6 +169,22 @@ export function TscnPreviewShell({
     );
   }
 
+  // #224: seed ViewportModeProvider's initial mode/grid from whatever was
+  // persisted last session (defaults match the pre-#224 baseline — 3D,
+  // grid off — for a fresh session with nothing in localStorage yet).
+  // ViewportModeProvider stays uncontrolled internally; <ViewportModeSync>
+  // (mounted inside it, below) writes changes back out.
+  const [persistedMode, setPersistedMode] = usePersistedState<ViewportMode>(
+    'tsi.viewportMode',
+    '3D',
+    isViewportMode
+  );
+  const [persistedShowGrid, setPersistedShowGrid] = usePersistedState(
+    'tsi.showGrid',
+    false,
+    isBoolean
+  );
+
   // #217: flattens what was an 8-level hand-nested provider pyramid into one
   // call. Each entry still mounts its own INDEPENDENT provider, in the SAME
   // order as before — composeProviders only removes the JSX-nesting
@@ -161,7 +195,11 @@ export function TscnPreviewShell({
     (children) => <SelectionProvider>{children}</SelectionProvider>,
     (children) => <CameraControlProvider>{children}</CameraControlProvider>,
     (children) => <MissingResourcesProvider>{children}</MissingResourcesProvider>,
-    (children) => <ViewportModeProvider>{children}</ViewportModeProvider>,
+    (children) => (
+      <ViewportModeProvider initialMode={persistedMode} initialShowGrid={persistedShowGrid}>
+        {children}
+      </ViewportModeProvider>
+    ),
     (children) => <AnimationTransportProvider>{children}</AnimationTransportProvider>,
     (children) => <AnimationDriverProvider>{children}</AnimationDriverProvider>,
     (children) => <AnimatedValueProvider>{children}</AnimatedValueProvider>
@@ -169,9 +207,11 @@ export function TscnPreviewShell({
 
   return withProviders(
     <>
+      <ViewportModeSync onModeChange={setPersistedMode} onShowGridChange={setPersistedShowGrid} />
       <WorkspaceAutoSelect sceneGraph={sceneGraph} />
       <SceneChangeResetter sceneGraph={sceneGraph} />
       <AnimationTabWatcher onVisibleChange={setAnimationTabVisible} />
+      <EscapeDeselect />
       <div className={styles.shell} data-panel-id={panelId}>
         <header className={styles.topBar}>
           <span className={styles.brand}>TextScene Inspector</span>
@@ -320,5 +360,28 @@ function AnimationTabWatcher({ onVisibleChange }: { onVisibleChange: (visible: b
   useEffect(() => {
     onVisibleChange(hasPlayer);
   }, [hasPlayer, onVisibleChange]);
+  return null;
+}
+
+/**
+ * Effect-only child (inside ViewportModeProvider): writes mode/grid changes
+ * back to localStorage (#224) via the setters `<TscnPreviewShell>` got from
+ * `usePersistedState`. `ViewportModeProvider` itself stays uncontrolled —
+ * this is purely a one-way sync FROM the live context TO storage.
+ */
+function ViewportModeSync({
+  onModeChange,
+  onShowGridChange,
+}: {
+  onModeChange: (mode: ViewportMode) => void;
+  onShowGridChange: (show: boolean) => void;
+}) {
+  const { mode, showGrid } = useViewportMode();
+  useEffect(() => {
+    onModeChange(mode);
+  }, [mode, onModeChange]);
+  useEffect(() => {
+    onShowGridChange(showGrid);
+  }, [showGrid, onShowGridChange]);
   return null;
 }
