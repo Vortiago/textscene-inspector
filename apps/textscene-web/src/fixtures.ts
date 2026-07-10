@@ -178,6 +178,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Modulate Cascade",
+    "file": "unit-modulate-cascade.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Multi Camera",
     "file": "unit-multi-camera.tscn",
     "category": "Other"
@@ -255,6 +260,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Missing Parent",
     "file": "edge-missing-parent.tscn",
+    "category": "Edge Cases"
+  },
+  {
+    "name": "Negative Scale",
+    "file": "edge-negative-scale.tscn",
     "category": "Edge Cases"
   },
   {
