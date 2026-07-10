@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { act, render, renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
+import * as THREE from 'three';
 import { SelectionProvider, useHoveredNodePath, useSelection } from './SelectionContext';
 import { HierarchyProvider } from './HierarchyContext';
 
@@ -173,5 +174,37 @@ describe('SelectionContext — hover (WI-213: ref-based external store)', () => 
     act(() => selectionRef!.hoverStore.set(null));
 
     expect(renderCount).toBe(countAfterMount);
+  });
+});
+
+describe('SelectionContext — objectPathMap (WI-213: event-delegated picking)', () => {
+  it('registerNodeObject populates both the forward and reverse maps', () => {
+    const { result } = renderHook(() => useSelection(), { wrapper: wrap });
+    const object = new THREE.Object3D();
+    act(() => result.current.registerNodeObject('Root/Cube', object));
+
+    expect(result.current.nodeObjectMap.get('Root/Cube')).toBe(object);
+    expect(result.current.objectPathMap.get(object)).toBe('Root/Cube');
+  });
+
+  it('unregisterNodeObject removes the object from the reverse map too', () => {
+    const { result } = renderHook(() => useSelection(), { wrapper: wrap });
+    const object = new THREE.Object3D();
+    act(() => result.current.registerNodeObject('Root/Cube', object));
+    act(() => result.current.unregisterNodeObject('Root/Cube'));
+
+    expect(result.current.nodeObjectMap.has('Root/Cube')).toBe(false);
+    expect(result.current.objectPathMap.get(object)).toBeUndefined();
+  });
+
+  it('re-registering a path with a NEW object does not leave the old object resolvable', () => {
+    const { result } = renderHook(() => useSelection(), { wrapper: wrap });
+    const first = new THREE.Object3D();
+    const second = new THREE.Object3D();
+    act(() => result.current.registerNodeObject('Root/Cube', first));
+    act(() => result.current.registerNodeObject('Root/Cube', second));
+
+    expect(result.current.objectPathMap.get(second)).toBe('Root/Cube');
+    expect(result.current.objectPathMap.get(first)).toBeUndefined();
   });
 });

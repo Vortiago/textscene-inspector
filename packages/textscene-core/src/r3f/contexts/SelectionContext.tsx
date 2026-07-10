@@ -60,6 +60,16 @@ export interface SelectionContextValue {
    * renders (stored in a useRef).
    */
   nodeObjectMap: Map<string, THREE.Object3D>;
+  /**
+   * The reverse of `nodeObjectMap` (WI-213): wrapping THREE.Object3D → its
+   * TSCN node path. Populated by the SAME `registerNodeObject` calls. Lets
+   * the viewport's ONE delegated pointer handler recover "which node did
+   * this raycasted mesh belong to" (`resolvePathFromObject`) by walking the
+   * hit object's OWN THREE parent chain, instead of every node needing its
+   * own pointer-event handlers (the O(meshes × depth) picking cost the
+   * delegation replaces).
+   */
+  objectPathMap: WeakMap<THREE.Object3D, string>;
   registerNodeObject: (path: string, object: THREE.Object3D) => void;
   unregisterNodeObject: (path: string) => void;
 }
@@ -124,15 +134,29 @@ export function SelectionProvider({ children }: SelectionProviderProps) {
   const nodeObjectMapRef = useRef<Map<string, THREE.Object3D>>(
     new Map<string, THREE.Object3D>()
   );
+  const objectPathMapRef = useRef<WeakMap<THREE.Object3D, string>>(
+    new WeakMap<THREE.Object3D, string>()
+  );
 
   const registerNodeObject = useCallback(
     (path: string, object: THREE.Object3D) => {
+      // A duplicate-named sibling (or any other same-path re-registration
+      // without an intervening unmount) must not leave the PREVIOUS
+      // object's reverse-map entry stale — that entry would otherwise keep
+      // resolving to a path the object no longer owns.
+      const previous = nodeObjectMapRef.current.get(path);
+      if (previous && previous !== object) {
+        objectPathMapRef.current.delete(previous);
+      }
       nodeObjectMapRef.current.set(path, object);
+      objectPathMapRef.current.set(object, path);
     },
     []
   );
 
   const unregisterNodeObject = useCallback((path: string) => {
+    const object = nodeObjectMapRef.current.get(path);
+    if (object) objectPathMapRef.current.delete(object);
     nodeObjectMapRef.current.delete(path);
   }, []);
 
@@ -142,6 +166,13 @@ export function SelectionProvider({ children }: SelectionProviderProps) {
     setExpandedNodePathsState(new Set());
     setHiddenNodePathsState(new Set());
     nodeObjectMapRef.current.clear();
+    // objectPathMapRef is intentionally NOT reset here: unlike nodeObjectMap
+    // (keyed by path string, so a stale entry could wrongly satisfy a NEW
+    // scene's lookup for the same path), objectPathMap is keyed by the
+    // Object3D instance itself. The old scene's objects are unmounted and
+    // dereferenced on a scene swap, so their entries become unreachable and
+    // get garbage-collected — WeakMap has no `.clear()` because it's never
+    // needed for correctness, only (moot here) for forcing early GC.
   }, [hoverStore]);
 
   const value = useMemo<SelectionContextValue>(
@@ -157,6 +188,7 @@ export function SelectionProvider({ children }: SelectionProviderProps) {
       clearHidden,
       clearAll,
       nodeObjectMap: nodeObjectMapRef.current,
+      objectPathMap: objectPathMapRef.current,
       registerNodeObject,
       unregisterNodeObject,
     }),

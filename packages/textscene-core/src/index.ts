@@ -65,7 +65,7 @@ export {
   useViewportSelection,
   type UseViewportSelectionOptions,
   type UseViewportSelectionResult,
-  type NodePathHandlers,
+  type DelegatedPointerHandlers,
   parseTscnContent,
   type ParseResult,
 } from './r3f/index';

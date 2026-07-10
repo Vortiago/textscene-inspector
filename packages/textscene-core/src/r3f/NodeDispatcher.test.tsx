@@ -8,6 +8,7 @@
 import type React from 'react';
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
+import type * as THREE from 'three';
 import type { TscnNode } from '../parser/types';
 import { NodeDispatcher } from './NodeDispatcher';
 import { nodeComponentRegistry, type NodeComponentProps } from './NodeComponentRegistry';
@@ -76,5 +77,28 @@ describe('<NodeDispatcher>', () => {
     await renderWithProviders(<NodeDispatcher nodes={nodes} />);
 
     expect(capturedPath).toBe('Outer/Inner');
+  });
+
+  it('PERF (WI-213): attaches pointer handlers to exactly ONE delegated root, not one per node', async () => {
+    // Before event delegation, every node's wrapper group carried its own
+    // copy of the four pointer handlers — R3F treats every object with a
+    // registered handler as its own interactive raycast root, so a mesh at
+    // depth d was triangle-tested once per ancestor on every pointer move.
+    // `object.__r3f.eventCount` is R3F's own per-object handler count.
+    const nodes: TscnNode[] = [
+      makeNode('Root', 'Node3D', [
+        makeNode('Child', 'Node3D', [makeNode('Grandchild', 'Node3D')]),
+      ]),
+    ];
+    const renderer = await renderWithProviders(<NodeDispatcher nodes={nodes} />);
+
+    const scene = renderer.scene.instance as unknown as THREE.Object3D;
+    let interactiveCount = 0;
+    scene.traverse((object) => {
+      const r3f = (object as unknown as { __r3f?: { eventCount?: number } }).__r3f;
+      if (r3f?.eventCount) interactiveCount++;
+    });
+
+    expect(interactiveCount).toBe(1);
   });
 });

@@ -17,11 +17,16 @@
  * or any context providers — those are owned by `<TscnCanvas>` and
  * `<TscnPreviewShell>` respectively.
  *
- * Each rendered subtree is wrapped in `<PickableGroup>`, which attaches
- * the viewport selection handlers from `useViewportSelection` to the
- * subtree's pointer events. Click bubbles UP from the leaf mesh; the
- * handler at the leaf wins because R3F propagates pointer events from
- * the innermost hit object outward.
+ * WI-213 (event delegation): the WHOLE dispatched tree is wrapped in ONE
+ * root `<group>` carrying `useViewportSelection`'s pointer handlers, instead
+ * of every node's own wrapper group carrying a copy. R3F treats every
+ * object with a registered pointer handler as its own interactive raycast
+ * root, so N per-node handlers meant a mesh at depth d was triangle-tested
+ * once per ancestor on every pointer move; one delegated root raycasts the
+ * subtree exactly once. `resolvePathFromObject` recovers which node owns
+ * the hit mesh from the event's `object` by walking ITS OWN THREE parent
+ * chain against the reverse `objectPathMap` `<SelectionContext>` builds —
+ * see `useViewportSelection`'s doc comment.
  */
 
 import { Fragment, useCallback, useEffect, useMemo } from 'react';
@@ -52,25 +57,24 @@ export interface NodeDispatcherProps {
 }
 
 export function NodeDispatcher({ nodes }: NodeDispatcherProps) {
-  const { withNodePath } = useViewportSelection();
+  const { handlers } = useViewportSelection();
   return (
-    <>
+    <group
+      onPointerDown={handlers.onPointerDown}
+      onPointerUp={handlers.onPointerUp}
+      onPointerMove={handlers.onPointerMove}
+      onPointerOut={handlers.onPointerOut}
+    >
       {nodes.map((node) => (
-        <DispatchedNode
-          key={node.name}
-          node={node}
-          path={node.name}
-          withNodePath={withNodePath}
-        />
+        <DispatchedNode key={node.name} node={node} path={node.name} />
       ))}
-    </>
+    </group>
   );
 }
 
 interface DispatchedNodeProps {
   node: TscnNode;
   path: string;
-  withNodePath: (path: string) => ReturnType<ReturnType<typeof useViewportSelection>['withNodePath']>;
 }
 
 /**
@@ -79,11 +83,11 @@ interface DispatchedNodeProps {
  * every already-merged node — renders directly in `PlainNode`. Holds no hooks
  * itself so the branch is free of rules-of-hooks concerns.
  */
-function DispatchedNode({ node, path, withNodePath }: DispatchedNodeProps): ReactNode {
+function DispatchedNode({ node, path }: DispatchedNodeProps): ReactNode {
   if (node.instance) {
-    return <InstancedNode node={node} path={path} withNodePath={withNodePath} />;
+    return <InstancedNode node={node} path={path} />;
   }
-  return <PlainNode node={node} path={path} withNodePath={withNodePath} />;
+  return <PlainNode node={node} path={path} />;
 }
 
 interface PlainNodeProps extends DispatchedNodeProps {
@@ -92,7 +96,7 @@ interface PlainNodeProps extends DispatchedNodeProps {
 }
 
 /**
- * Renders one non-instance node into its pickable `<group>` + registered
+ * Renders one non-instance node into its wrapper `<group>` + registered
  * component, dispatching its inline children and any `extraChildren` the
  * instance fallback supplies. This is the leaf of every dispatch: a merged
  * instance root (a plain node by the time it reaches here) renders through it
@@ -101,11 +105,9 @@ interface PlainNodeProps extends DispatchedNodeProps {
 function PlainNode({
   node,
   path,
-  withNodePath,
   children: extraChildren,
 }: PlainNodeProps): ReactNode {
   const Component = nodeComponentRegistry.get(node.type) ?? GenericNodeFallback;
-  const handlers = withNodePath(path);
   const { hiddenNodePaths, registerNodeObject, unregisterNodeObject } = useSelection();
   const workspace = useCanvasWorkspace();
   const isHidden = hiddenNodePaths.has(path);
@@ -140,12 +142,7 @@ function PlainNode({
   }
 
   const inlineChildren = node.children.map((child) => (
-    <DispatchedNode
-      key={child.name}
-      node={child}
-      path={joinPath(path, child.name)}
-      withNodePath={withNodePath}
-    />
+    <DispatchedNode key={child.name} node={child} path={joinPath(path, child.name)} />
   ));
 
   const children: ReactNode[] = [];
@@ -156,25 +153,20 @@ function PlainNode({
     children.push(<Fragment key="__extra">{extraChildren}</Fragment>);
   }
 
-  // The pickable wrapper lives above the rendered component so that any
-  // mesh / light / camera inside the subtree dispatches its pointer
-  // events to the same node-path handler. Picking selects whichever node
-  // OWNS the clicked geometry; if a child mesh is clicked, the child's
-  // wrapper wins because R3F walks the hit-tree from inner to outer.
+  // The wrapper is registered (path <-> Object3D, both directions) so the
+  // viewport's ONE delegated pointer-handler root (WI-213) can resolve which
+  // node owns a raycasted mesh, and so SelectionHighlight/HoverHighlight can
+  // find the Object3D for a path. Picking selects whichever node OWNS the
+  // clicked geometry; if a child mesh is clicked, the child's wrapper wins
+  // because `resolvePathFromObject` walks from the hit mesh UP, returning
+  // the FIRST (nearest / innermost) registered ancestor.
   //
   // `NodePathProvider` makes the path available to descendant components
   // (e.g. Camera3D tags its THREE.Camera with this so the canvas can
   // later swap to it on "Use This Camera").
   return (
     <NodePathProvider path={path}>
-      <group
-        ref={wrapperRef}
-        visible={!isHidden}
-        onPointerDown={handlers.onPointerDown}
-        onPointerUp={handlers.onPointerUp}
-        onPointerOver={handlers.onPointerOver}
-        onPointerOut={handlers.onPointerOut}
-      >
+      <group ref={wrapperRef} visible={!isHidden}>
         <Component node={node}>
           {children.length > 0 ? <>{children}</> : null}
         </Component>
@@ -203,7 +195,7 @@ function PlainNode({
  * scoped to descendants via a nested `<SceneResourcesProvider>` so SubResource
  * lookups inside the instanced subtree resolve against the loaded pool.
  */
-function InstancedNode({ node, path, withNodePath }: DispatchedNodeProps): ReactNode {
+function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
   const { externalResources } = useSceneResources();
   const loader = useResourceLoader();
   const instanceRef = node.instance ?? '';
@@ -260,7 +252,7 @@ function InstancedNode({ node, path, withNodePath }: DispatchedNodeProps): React
   // placeholder child, matching the missing-texture UX (WI-R3F-7).
   if (!scenePath || result.status === 'unavailable') {
     return (
-      <PlainNode node={node} path={path} withNodePath={withNodePath}>
+      <PlainNode node={node} path={path}>
         <MissingResourcePlaceholder shape="box" />
       </PlainNode>
     );
@@ -268,7 +260,7 @@ function InstancedNode({ node, path, withNodePath }: DispatchedNodeProps): React
   // Still loading: render the instancing node's own subtree; the merged
   // result swaps in once the sub-scene arrives.
   if (result.status === 'pending' || !loadedScene) {
-    return <PlainNode node={node} path={path} withNodePath={withNodePath} />;
+    return <PlainNode node={node} path={path} />;
   }
 
   if (effective !== node) {
@@ -277,7 +269,7 @@ function InstancedNode({ node, path, withNodePath }: DispatchedNodeProps): React
         internalResources={loadedScene.internalResources}
         externalResources={loadedScene.externalResources}
       >
-        <DispatchedNode node={effective} path={path} withNodePath={withNodePath} />
+        <DispatchedNode node={effective} path={path} />
       </SceneResourcesProvider>
     );
   }
@@ -285,18 +277,13 @@ function InstancedNode({ node, path, withNodePath }: DispatchedNodeProps): React
   // Fallback (`.glb` synthetic root / multi-root): historical nested form.
   return (
     <GlbOverridesProvider overrides={node.children}>
-      <PlainNode node={node} path={path} withNodePath={withNodePath}>
+      <PlainNode node={node} path={path}>
         <SceneResourcesProvider
           internalResources={loadedScene.internalResources}
           externalResources={loadedScene.externalResources}
         >
           {loadedScene.nodes.map((child) => (
-            <DispatchedNode
-              key={child.name}
-              node={child}
-              path={joinPath(path, child.name)}
-              withNodePath={withNodePath}
-            />
+            <DispatchedNode key={child.name} node={child} path={joinPath(path, child.name)} />
           ))}
         </SceneResourcesProvider>
       </PlainNode>
