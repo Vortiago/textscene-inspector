@@ -27,7 +27,7 @@ export interface ControlComponentRegistration {
 }
 
 class ControlComponentRegistryImpl {
-  private readonly registry = createTypeRegistry<ControlComponent>();
+  private readonly registry = createTypeRegistry<ControlComponent>('ControlComponentRegistry');
 
   register(registration: ControlComponentRegistration): void {
     this.registry.register(registration.typeName, registration.Component);

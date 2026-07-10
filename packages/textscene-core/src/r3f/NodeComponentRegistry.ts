@@ -34,7 +34,7 @@ export interface NodeComponentRegistration {
 }
 
 class NodeComponentRegistryImpl {
-  private readonly registry = createTypeRegistry<NodeComponent>();
+  private readonly registry = createTypeRegistry<NodeComponent>('NodeComponentRegistry');
   private readonly canvasItemTypes = new Set<string>();
   private readonly containerTypes = new Set<string>();
 
