@@ -25,7 +25,8 @@ Current release: **0.9.0** — on the road to v1.0; see [CHANGELOG.md](./CHANGEL
 - ✅ Animation playback — AnimationPlayer (transform tracks via `THREE.AnimationMixer`, plus non-transform value tracks like sprite frames and Decal modulate/size via the AnimatedValue push registry) and AnimationTree (blend-tree/state-machine) drivers, GLB-embedded clips, AnimatedSprite2D frame playback, all behind one selection-driven play/pause/scrub transport
 - ✅ Linter: CLI (`tscn-lint`) and in-editor diagnostics (VS Code Problems panel), React/THREE-free bundle
 - ✅ VS Code extension — desktop **and** web (vscode.dev) entry points, outline, go-to-definition, hot-reload
-- ✅ Web previewer with fixture browser, an "Open .tscn" file picker (Ctrl/Cmd+K scene palette), and an editable Source pane (paste/upload/type `.tscn` text and see it render live)
+- ✅ Web previewer with fixture browser, an "Open .tscn" file picker (Ctrl/Cmd+K scene palette), drag-and-drop and multi-file upload (a scene + its textures in one gesture), and shareable `?fixture=` deep links
+- ✅ Editable Source pane (paste/upload/type `.tscn` text and see it render live) with an in-browser linter gutter (error/warning dots, hover popover, toggle problem-count badge) and a "Download .tscn" export
 
 See the [GitHub issues](https://github.com/Vortiago/Text-Scene-.tscn-File-Previewer/issues) for the road to v1.0.
 

@@ -388,10 +388,39 @@ instead of blanking. Pane visibility and width persist in `localStorage`
 resizes it. Edits are ephemeral — switching scene or reloading resets the
 buffer to the file's content, and nothing is written back to disk.
 
-ADR-0020 also scoped a linter gutter (error/warning dots plus a hover
-popover — the web app would become the first browser consumer of
-`@textscene/core/linter`) and a "Download .tscn" export; **neither has
-shipped yet** — today's pane is view/edit/re-render only.
+The web app is the first browser consumer of `@textscene/core/linter`
+(`apps/textscene-web/src/r3f-main.tsx`): the buffer is linted continuously,
+debounced independently of the render-forward gate above (a buffer that
+fails to render can still be linted — the gutter is what explains why). A
+pure helper (`lineDiagnostics.ts`) groups `Diagnostic[]` by line — highest
+severity per line, every message kept — feeding a `<SourceGutter>` column
+(`SourceGutter.tsx`) that renders an error/warning/info dot per offending
+line, scroll-synced with the textarea, with a hover/focus popover listing
+that line's message(s). The pane's toggle carries a compact problem-count
+badge (`✖ 1 / ⚠ 2`) so a collapsed pane still nudges. A "Download .tscn"
+button (Blob + anchor, no write-back to disk) sits in a small pane header;
+the textarea carries a native placeholder for the empty state. When a
+from-scratch paste/type never produces a valid render (`forwardedContent`
+never leaves `''`), the web app shows its own "nothing has rendered yet"
+notice layered over the viewport — the shared shell has no such state to
+expose, so this lives entirely in the web app's own layer, never touching
+`TscnPreviewShell`.
+
+The web app also surfaces a missing-resource count badge in the toolbar:
+`<Toolbar>` is rendered through the shell's `toolbar` prop, i.e. as a
+descendant of the shell's own `<MissingResourcesProvider>`, so calling
+`useMissingResources()` directly inside it reads the exact same live
+`missingPaths` set the Resources tab's `<MissingResourcesPanel>`
+aggregates — no new plumbing. A loading overlay covers the viewport while
+a fixture's `fetch()` is in flight. `?fixture=` is now written back to the
+URL via `history.replaceState` on every scene switch (never `pushState`),
+so reloading or sharing the URL reopens the same scene. The app root
+accepts a dropped `.tscn` (with a drop-zone hint while dragging), and the
+toolbar's file input accepts multiple files at once; a shared
+`handleFilesUpload` (backed by the pure, unit-tested
+`multiFileUpload.ts`) picks the first `.tscn` as the scene and matches
+every other file to one of its external-resource `res://` paths by
+basename, so a scene and its textures can open in one gesture.
 
 ### Dependency Versions (Phase 14)
 
