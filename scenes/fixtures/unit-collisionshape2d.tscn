@@ -1,0 +1,32 @@
+[gd_scene load_steps=4 format=3]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_1"]
+size = Vector2(40, 60)
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_1"]
+radius = 15.0
+
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_1"]
+radius = 10.0
+height = 30.0
+
+[node name="Root" type="Node2D"]
+
+[node name="RectangleBody" type="StaticBody2D" parent="."]
+position = Vector2(-80, 0)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="RectangleBody"]
+shape = SubResource("RectangleShape2D_1")
+
+[node name="CircleBody" type="StaticBody2D" parent="."]
+position = Vector2(0, 0)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="CircleBody"]
+shape = SubResource("CircleShape2D_1")
+
+[node name="CapsuleBody" type="StaticBody2D" parent="."]
+position = Vector2(80, 0)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="CapsuleBody"]
+shape = SubResource("CapsuleShape2D_1")
+disabled = false

@@ -578,6 +578,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Physics"
   },
   {
+    "name": "Collisionshape2d",
+    "file": "unit-collisionshape2d.tscn",
+    "category": "Unit - Physics"
+  },
+  {
     "name": "Physics Bodies",
     "file": "unit-physics-bodies.tscn",
     "category": "Unit - Physics"
