@@ -1,7 +1,7 @@
 /** File linting and exit-code logic for the TSCN linter CLI. */
 
-import { readFileSync } from 'fs';
-import { resolve } from 'path';
+import { readdirSync, readFileSync, statSync } from 'fs';
+import { extname, join, resolve } from 'path';
 import { Linter, type Diagnostic } from '@textscene/core/linter';
 import { formatDiagnostics, formatError } from './format';
 
@@ -23,35 +23,116 @@ export interface LintRunResult {
 }
 
 /**
- * Lint a single TSCN file. Read failures (missing file, permissions) are
- * reported as stderr lines rather than thrown, and count as errors.
+ * Raw lint outcome for a single file: unformatted diagnostics, with no
+ * presentation baked in. This is the shared seam that every output format
+ * (text, json, github) builds on, so read/lint logic lives in exactly one
+ * place.
  */
-export function lintFile(filePath: string, hasColor: boolean): FileLintResult {
+export interface FileDiagnostics {
+  filePath: string;
+  diagnostics: Diagnostic[];
+  /** Set instead of `diagnostics` when the file could not be read. */
+  readError?: string;
+}
+
+export interface CollectDiagnosticsResult {
+  /** 0 when every file is clean or warning/info-only; 1 otherwise. */
+  exitCode: number;
+  files: FileDiagnostics[];
+}
+
+/**
+ * Expands directory arguments into the `.tscn` files they contain
+ * (recursively, sorted for deterministic output); plain file paths -
+ * including ones the shell already expanded from a glob - pass through
+ * unchanged. A path that does not exist on disk is also passed through
+ * unchanged so the existing per-file read-error handling in `lintFile`
+ * reports it consistently, rather than throwing here.
+ */
+export function expandTscnPaths(inputPaths: string[]): string[] {
+  const expanded: string[] = [];
+
+  for (const inputPath of inputPaths) {
+    let stats;
+    try {
+      stats = statSync(inputPath);
+    } catch {
+      expanded.push(inputPath);
+      continue;
+    }
+
+    if (!stats.isDirectory()) {
+      expanded.push(inputPath);
+      continue;
+    }
+
+    const tscnFiles = (readdirSync(inputPath, { recursive: true }) as string[])
+      .filter((entry) => extname(entry) === '.tscn')
+      .map((entry) => join(inputPath, entry))
+      .filter((fullPath) => statSync(fullPath).isFile())
+      .sort();
+    expanded.push(...tscnFiles);
+  }
+
+  return expanded;
+}
+
+/**
+ * Reads and lints a single TSCN file, returning raw diagnostics with no
+ * presentation applied. Read failures (missing file, permissions) are
+ * captured as `readError` rather than thrown.
+ */
+export function lintFileDiagnostics(filePath: string): FileDiagnostics {
   try {
     const absolutePath = resolve(filePath);
     const content = readFileSync(absolutePath, 'utf-8');
 
     // Lint the TSCN file content (two-phase: strict parsing + semantic rules)
     const linter = new Linter();
-    const diagnostics = linter.lint(content);
-
+    return { filePath, diagnostics: linter.lint(content) };
+  } catch (error) {
     return {
       filePath,
-      stdoutLines: formatDiagnostics(filePath, diagnostics, hasColor),
-      stderrLines: [],
-      hasErrors: diagnostics.some((d: Diagnostic) => d.severity === 'error'),
+      diagnostics: [],
+      readError: error instanceof Error ? error.message : String(error),
     };
-  } catch (error) {
+  }
+}
+
+/**
+ * True when a file's raw lint outcome should fail the run: an error-severity
+ * diagnostic, or a read failure. Warning/info-only diagnostics do not count.
+ */
+function hasErrorSeverity(result: FileDiagnostics): boolean {
+  return result.readError !== undefined || result.diagnostics.some((d: Diagnostic) => d.severity === 'error');
+}
+
+/**
+ * Lint a single TSCN file for the default (ANSI/plain text) CLI output.
+ * Read failures are reported as stderr lines rather than thrown, and count
+ * as errors.
+ */
+export function lintFile(filePath: string, hasColor: boolean): FileLintResult {
+  const result = lintFileDiagnostics(filePath);
+
+  if (result.readError !== undefined) {
     return {
       filePath,
       stdoutLines: [],
       stderrLines: [
         formatError(`Failed to lint ${filePath}:`, hasColor),
-        formatError(`  ${error instanceof Error ? error.message : String(error)}`, hasColor),
+        formatError(`  ${result.readError}`, hasColor),
       ],
       hasErrors: true,
     };
   }
+
+  return {
+    filePath,
+    stdoutLines: formatDiagnostics(filePath, result.diagnostics, hasColor),
+    stderrLines: [],
+    hasErrors: hasErrorSeverity(result),
+  };
 }
 
 /** Print one file's lint result to the console, preserving stream targets. */
@@ -90,4 +171,17 @@ export function runLint(
   }
 
   return { exitCode: hasErrors ? 1 : 0, results };
+}
+
+/**
+ * Lint files in order and return raw per-file diagnostics with no
+ * presentation applied - the shared data source for the `json` and `github`
+ * output formats. Uses the same exit-code contract as `runLint`: error
+ * diagnostics or read failures fail the run, warning/info-only ones do not.
+ */
+export function collectFileDiagnostics(filePaths: string[]): CollectDiagnosticsResult {
+  const files = filePaths.map(lintFileDiagnostics);
+  const exitCode = files.some(hasErrorSeverity) ? 1 : 0;
+
+  return { exitCode, files };
 }

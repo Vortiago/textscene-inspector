@@ -1,7 +1,7 @@
 /** End-to-end tests: build the CLI bundle, spawn it, and verify the bundle stays lean. */
 
 import { execSync, spawnSync } from 'child_process';
-import { mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { dirname, join, resolve } from 'path';
 import { fileURLToPath } from 'url';
@@ -18,11 +18,43 @@ const BAD_TSCN = `[gd_scene format=3]
 transform = Transform3D(invalid, values, here)
 `;
 
+const CLEAN_TSCN = `[gd_scene format=3]
+
+[node name="Root" type="Node3D"]
+`;
+
+// Relative visibility_parent paths trigger a warning-severity diagnostic
+// and nothing of error severity - mirrors lint.test.ts's WARNING_TSCN.
+const WARNING_TSCN = `[gd_scene format=3]
+
+[node name="Root" type="Node3D"]
+
+[node name="Child" type="Node3D" parent="."]
+visibility_parent = NodePath("../Other")
+
+[node name="Other" type="Node3D" parent="."]
+`;
+
 let tempDir: string;
 let badPath: string;
+let warningPath: string;
+let scenesDir: string;
+let nestedCleanPath: string;
+let nestedBadPath: string;
 
-function runCli(args: string[]) {
-  return spawnSync(process.execPath, [cliPath, ...args], { encoding: 'utf-8' });
+/**
+ * Spawns the built CLI. Forces GITHUB_ACTIONS off by default: CI (and this
+ * suite's own `pnpm test:unit` run) sets GITHUB_ACTIONS=true in the parent
+ * process, and spawnSync inherits process.env by default, which would flip
+ * every test below to the auto-detected `github` annotation format. The
+ * isolation has to live in the default *value* (evaluated fresh whenever a
+ * caller omits `env`) - stripping GITHUB_ACTIONS inside the function body
+ * instead would just read it back off `process.env` and pass it straight
+ * through, defeating the isolation in CI. Tests that specifically exercise
+ * auto-detection pass their own explicit `env` override.
+ */
+function runCli(args: string[], env: typeof process.env = { ...process.env, GITHUB_ACTIONS: '' }) {
+  return spawnSync(process.execPath, [cliPath, ...args], { encoding: 'utf-8', env });
 }
 
 beforeAll(() => {
@@ -32,6 +64,16 @@ beforeAll(() => {
   tempDir = mkdtempSync(join(tmpdir(), 'tscn-lint-e2e-'));
   badPath = join(tempDir, 'broken.tscn');
   writeFileSync(badPath, BAD_TSCN);
+  warningPath = join(tempDir, 'warning.tscn');
+  writeFileSync(warningPath, WARNING_TSCN);
+
+  scenesDir = join(tempDir, 'scenes');
+  const nestedDir = join(scenesDir, 'nested');
+  mkdirSync(nestedDir, { recursive: true });
+  nestedCleanPath = join(scenesDir, 'clean.tscn');
+  nestedBadPath = join(nestedDir, 'broken.tscn');
+  writeFileSync(nestedCleanPath, CLEAN_TSCN);
+  writeFileSync(nestedBadPath, BAD_TSCN);
 }, 120_000);
 
 afterAll(() => {
@@ -84,11 +126,111 @@ describe('CLI end-to-end', () => {
     expect(result.stdout).toContain('(strict-parser)');
   });
 
+  it('recurses into a directory argument and lints every nested .tscn file', () => {
+    const result = runCli(['--no-color', scenesDir]);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain(nestedCleanPath);
+    expect(result.stdout).toContain(nestedBadPath);
+    expect(result.stdout).toContain('(strict-parser)');
+  });
+
   it('emits ANSI colors by default', () => {
     const result = runCli([cleanFixture]);
 
     expect(result.status).toBe(0);
     expect(result.stdout).toContain('\x1b[32m'); // Green success line
+  });
+});
+
+describe('CLI --format output modes', () => {
+  it('--format json prints a parseable array of findings and exits 1 on errors', () => {
+    const result = runCli(['--format', 'json', cleanFixture, badPath]);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toBe('');
+
+    const findings = JSON.parse(result.stdout) as Array<Record<string, unknown>>;
+    expect(Array.isArray(findings)).toBe(true);
+    const badFinding = findings.find((f) => f.file === badPath);
+    expect(badFinding).toMatchObject({
+      file: badPath,
+      severity: 'error',
+      rule: 'strict-parser',
+    });
+    expect(typeof badFinding?.line).toBe('number');
+    // The clean fixture contributes no findings at all.
+    expect(findings.some((f) => f.file === cleanFixture)).toBe(false);
+  });
+
+  it('--format json exits 0 for warnings-only input, listing the warning finding', () => {
+    const result = runCli(['--format', 'json', warningPath]);
+
+    expect(result.status).toBe(0);
+    const findings = JSON.parse(result.stdout) as Array<Record<string, unknown>>;
+    expect(findings).toContainEqual(expect.objectContaining({ file: warningPath, severity: 'warning' }));
+  });
+
+  it('--format json reports an unreadable file as a file-read-error finding and exits 1', () => {
+    const missing = join(tempDir, 'nope-json.tscn');
+    const result = runCli(['--format', 'json', missing]);
+
+    expect(result.status).toBe(1);
+    const findings = JSON.parse(result.stdout) as Array<Record<string, unknown>>;
+    expect(findings).toEqual([
+      expect.objectContaining({ file: missing, rule: 'file-read-error', severity: 'error' }),
+    ]);
+  });
+
+  it('--format github prints ::error/::warning workflow-command annotations', () => {
+    const result = runCli(['--format', 'github', badPath, warningPath]);
+
+    expect(result.status).toBe(1);
+    const lines = result.stdout.trim().split('\n');
+    expect(lines.some((l) => l.startsWith('::error file=') && l.includes(badPath))).toBe(true);
+    expect(lines.some((l) => l.startsWith('::warning file=') && l.includes(warningPath))).toBe(true);
+  });
+
+  it('rejects an unknown --format value with a non-zero, non-1 exit code and no partial output', () => {
+    const result = runCli(['--format', 'bogus', cleanFixture]);
+
+    expect(result.status).not.toBe(0);
+    expect(result.status).not.toBe(1);
+    expect(result.stderr.toLowerCase()).toContain('format');
+    expect(result.stdout).toBe('');
+  });
+
+  it("runCli's default env isolation holds even when the *ambient* process.env already has GITHUB_ACTIONS=true (pins against the isolation living in the wrong place)", () => {
+    const previous = process.env.GITHUB_ACTIONS;
+    process.env.GITHUB_ACTIONS = 'true';
+    try {
+      const result = runCli(['--no-color', badPath]); // no explicit env override
+      expect(result.status).toBe(1);
+      expect(result.stdout).toContain('(strict-parser)');
+      expect(result.stdout).not.toContain('::error');
+    } finally {
+      if (previous === undefined) {
+        delete process.env.GITHUB_ACTIONS;
+      } else {
+        process.env.GITHUB_ACTIONS = previous;
+      }
+    }
+  });
+
+  it('auto-detects github format from GITHUB_ACTIONS=true when --format is not passed', () => {
+    const result = runCli(['--no-color', badPath], { ...process.env, GITHUB_ACTIONS: 'true' });
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain('::error file=');
+    expect(result.stdout).not.toContain('✖'); // not the text formatter's icon
+  });
+
+  it('an explicit --format text overrides GITHUB_ACTIONS auto-detection', () => {
+    const result = runCli(['--no-color', '--format', 'text', badPath], { ...process.env, GITHUB_ACTIONS: 'true' });
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain('(strict-parser)');
+    expect(result.stdout).not.toContain('::error');
   });
 });
 
