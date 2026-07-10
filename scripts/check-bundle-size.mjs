@@ -1,6 +1,13 @@
 #!/usr/bin/env node
 /**
- * Bundle-size guard for the VS Code webview's initial paint chunk.
+ * Bundle-size guards for the VS Code extension:
+ *
+ * 1. The webview's initial-paint chunk (soft budget, see `main()` below).
+ * 2. The extension HOST bundles (`dist/extension.js` / `extension.web.js`),
+ *    which must never bundle `react`/`three` (hard invariant — see
+ *    `checkHostBundles()`).
+ *
+ * ## Webview budget
  *
  * Walks the static import closure starting from `dist/webview/webview.js`,
  * gzips the concatenation, and compares against the main baseline + the
@@ -13,20 +20,84 @@
  * the entire bundle was the initial chunk (4.1 MB raw / 717 KB gzipped
  * unminified, or 1.4 MB raw / ~620 KB gzipped minified).
  *
+ * ## Host bundle guard
+ *
+ * The extension HOST (`src/extension.ts`, bundled as `dist/extension.js`
+ * for desktop VS Code and `dist/extension.web.js` for vscode.dev) must
+ * import only React-free `@textscene/core` subpaths (`/parser`, `/linter`,
+ * `/logger`, targeted resource utils) — never the root barrel, whose
+ * React/CSS side effects defeat tree-shaking and balloon the host bundle
+ * ~4x (see ARCHITECTURE.md, "Bundle Size Target"). This guard scans the
+ * built host bundles for a bare `react` or `three` token (word-boundaried,
+ * so it doesn't trip on unrelated words like "reactive" or "threefold")
+ * and fails unconditionally — this is a binary invariant, not a soft
+ * budget, so it is NOT gated behind `--enforce`.
+ *
  * Run modes:
- *   node scripts/check-bundle-size.mjs            # informational; never exits non-zero
- *   node scripts/check-bundle-size.mjs --enforce  # exits 1 if over budget (CI hard-fail)
+ *   node scripts/check-bundle-size.mjs            # webview budget informational; host guard always hard-fails
+ *   node scripts/check-bundle-size.mjs --enforce  # webview budget also exits 1 if over budget (CI hard-fail)
  */
 
 import { gzipSync } from 'node:zlib';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { dirname, join, relative } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const REPO_ROOT = join(dirname(__filename), '..');
 const WEBVIEW_DIR = join(REPO_ROOT, 'apps/textscene-vscode/dist/webview');
 const ENTRY = 'webview.js';
+
+const HOST_BUNDLE_PATHS = [
+  join(REPO_ROOT, 'apps/textscene-vscode/dist/extension.js'),
+  join(REPO_ROOT, 'apps/textscene-vscode/dist/extension.web.js'),
+];
+const HOST_FORBIDDEN_WORDS = ['react', 'three'];
+
+/**
+ * Scans host-bundle content for whole-word `react` / `three` tokens.
+ * Word-boundaried (`\bWORD\b`) so it matches `require("react")`,
+ * `"react-dom"`, `from"three"`, `three/examples/...` etc., but not
+ * unrelated words that merely contain the substring, like "reactive",
+ * "reaction", "overreacted", "threefold", or "threescore".
+ *
+ * Exported for unit testing; also used by `checkHostBundles()` below.
+ */
+export function findHostBundleViolations(content) {
+  return HOST_FORBIDDEN_WORDS.filter((word) => new RegExp(`\\b${word}\\b`, 'i').test(content));
+}
+
+/**
+ * Asserts every path in `HOST_BUNDLE_PATHS` is free of `react`/`three`.
+ * Returns `false` (never throws) so `main()` can report every finding
+ * before deciding the process exit code.
+ */
+function checkHostBundles() {
+  console.log('\n=== VS Code extension HOST bundles (must stay React/THREE-free) ===');
+  let ok = true;
+  for (const bundlePath of HOST_BUNDLE_PATHS) {
+    const rel = relative(REPO_ROOT, bundlePath);
+    if (!existsSync(bundlePath)) {
+      console.warn(`[bundle-size] SKIP: ${rel} not found — build the extension first.`);
+      continue;
+    }
+    const content = readFileSync(bundlePath, 'utf8');
+    const violations = findHostBundleViolations(content);
+    if (violations.length > 0) {
+      console.error(
+        `[bundle-size] FAIL: ${rel} contains forbidden token(s): ${violations.join(', ')}`
+      );
+      console.error(
+        '[bundle-size] the extension host must import only React-free @textscene/core ' +
+          'subpaths (parser/linter/logger) — see ARCHITECTURE.md "Bundle Size Target".'
+      );
+      ok = false;
+    } else {
+      console.log(`[bundle-size] PASS: ${rel} is React/THREE-free (${formatKb(statSync(bundlePath).size)}).`);
+    }
+  }
+  return ok;
+}
 
 // Baseline + budget from PR #44's pre-merge measurement and the agreed
 // +200 KB gzipped acceptance criterion. See ARCHITECTURE.md.
@@ -90,10 +161,15 @@ function formatKb(bytes) {
 function main() {
   const enforce = process.argv.includes('--enforce');
 
+  // The host-bundle guard is a binary invariant (never gated behind
+  // --enforce) and independent of the webview build, so it runs first and
+  // unconditionally regardless of whether the webview has been built.
+  const hostOk = checkHostBundles();
+
   if (!existsSync(join(WEBVIEW_DIR, ENTRY))) {
-    console.error(`[bundle-size] entry not found: ${join(WEBVIEW_DIR, ENTRY)}`);
+    console.error(`\n[bundle-size] entry not found: ${join(WEBVIEW_DIR, ENTRY)}`);
     console.error('[bundle-size] run `pnpm --filter textscene-inspector build` first');
-    process.exit(enforce ? 1 : 0);
+    process.exit(!hostOk || enforce ? 1 : 0);
   }
 
   const chunksDir = join(WEBVIEW_DIR, 'chunks');
@@ -123,7 +199,7 @@ function main() {
   const totalGz = gzipSync(Buffer.concat(buffers)).length;
   const overBaseline = totalGz - MAIN_BASELINE_GZ;
 
-  console.log('=== VS Code webview initial-paint bundle ===');
+  console.log('\n=== VS Code webview initial-paint bundle ===');
   console.log(`Files (static-import closure): ${closure.size}`);
   for (const f of [...closure].sort()) {
     const fp = join(WEBVIEW_DIR, f);
@@ -139,16 +215,31 @@ function main() {
   console.log(`Budget absolute:  ${formatKb(BUDGET_GZ)}  (${BUDGET_GZ} B)`);
 
   const overBudget = totalGz - BUDGET_GZ;
+  let webviewOverBudget = false;
   if (overBudget > 0) {
+    webviewOverBudget = true;
     const msg = `[bundle-size] FAIL: initial chunk is ${formatKb(overBudget)} OVER the budget (gzipped ${totalGz} > ${BUDGET_GZ}).`;
     if (enforce) {
       console.error(msg);
-      process.exit(1);
+    } else {
+      console.warn(`[bundle-size] WARN: ${msg} (informational; pass --enforce to fail)`);
     }
-    console.warn(`[bundle-size] WARN: ${msg} (informational; pass --enforce to fail)`);
   } else {
     console.log(`[bundle-size] PASS: ${formatKb(-overBudget)} headroom under budget.`);
   }
+
+  // The host-bundle guard always hard-fails; the webview budget only
+  // hard-fails in --enforce mode.
+  if (!hostOk || (webviewOverBudget && enforce)) {
+    process.exit(1);
+  }
 }
 
-main();
+// Only run when executed directly (`node scripts/check-bundle-size.mjs`),
+// not when imported by `check-bundle-size.test.mjs` for its pure functions.
+// `pathToFileURL` (rather than a manual `file://` template) is required for
+// this comparison to hold on Windows, where `process.argv[1]` is a
+// `C:\...`-style path, not a POSIX one.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main();
+}
