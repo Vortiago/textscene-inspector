@@ -6,6 +6,7 @@ import * as vscode from 'vscode';
 import { TscnPreviewPanel } from './TscnPreviewPanel';
 import { TscnDocumentSymbolProvider } from './TscnDocumentSymbolProvider';
 import { TscnDefinitionProvider } from './TscnDefinitionProvider';
+import { TscnDocumentLinkProvider } from './TscnDocumentLinkProvider';
 import { TscnDiagnostics } from './TscnDiagnostics';
 import { initLogger, dispose as disposeLogger } from './logger';
 
@@ -60,6 +61,14 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.languages.registerDefinitionProvider(
       { language: 'tscn' },
       new TscnDefinitionProvider()
+    )
+  );
+
+  // Turn `res://` references into clickable links that open the target file.
+  context.subscriptions.push(
+    vscode.languages.registerDocumentLinkProvider(
+      { language: 'tscn' },
+      new TscnDocumentLinkProvider()
     )
   );
 

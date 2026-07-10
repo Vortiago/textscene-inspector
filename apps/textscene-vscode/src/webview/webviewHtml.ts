@@ -15,6 +15,23 @@ export function generateNonce(): string {
   return text;
 }
 
+/**
+ * Extension-host settings the webview reads once at mount, before
+ * `r3f-webview-main.tsx` renders `<TscnPreviewShell>`. Embedded as a global
+ * (see `generateWebviewHtml`) rather than posted, since the shell needs the
+ * value on its very first render — before any `postMessage` round-trip could
+ * land.
+ */
+export interface WebviewInitialConfig {
+  /**
+   * `textscene.defaultViewportMode`. `'auto'` leaves Godot-parity auto-select
+   * (ADR-0006) in control; an explicit `'2D'`/`'3D'` seeds the viewport and
+   * suppresses auto-select for this panel (see `TscnPreviewShell`'s
+   * `initialViewportMode` prop).
+   */
+  viewportMode: 'auto' | '2D' | '3D';
+}
+
 export interface WebviewHtmlOptions {
   scriptUri: string;
   nonce: string;
@@ -29,12 +46,21 @@ export interface WebviewHtmlOptions {
    * to allow loading the stylesheet via `<link>`.
    */
   cspSource: string;
+  /** Settings to expose to the webview at mount. Omit to skip the config script entirely. */
+  initialConfig?: WebviewInitialConfig;
 }
 
 export function generateWebviewHtml(options: WebviewHtmlOptions): string {
-  const { scriptUri, nonce, cssUri, cspSource } = options;
+  const { scriptUri, nonce, cssUri, cspSource, initialConfig } = options;
   const cssLink = cssUri
     ? `<link rel="stylesheet" nonce="${nonce}" href="${cssUri}">`
+    : '';
+
+  // `<` is escaped so a config value can never close this script tag early
+  // (or open a new one) — defense in depth even though today's only field
+  // (`viewportMode`) is a closed enum that can't carry it.
+  const configScript = initialConfig
+    ? `<script nonce="${nonce}">window.__TEXTSCENE_CONFIG__ = ${JSON.stringify(initialConfig).replace(/</g, '\\u003c')};</script>`
     : '';
 
   // WI-R3F-18: the webview build emits ESM with code-splitting now.
@@ -70,6 +96,7 @@ export function generateWebviewHtml(options: WebviewHtmlOptions): string {
     </head>
     <body>
       <div id="r3f-root"></div>
+      ${configScript}
       <script type="module" nonce="${nonce}" src="${scriptUri}"></script>
     </body>
     </html>

@@ -1,0 +1,132 @@
+{
+  "name": "TSCN",
+  "scopeName": "source.tscn",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#heading" },
+    { "include": "#property" },
+    { "include": "#value" }
+  ],
+  "repository": {
+    "comments": {
+      "match": "^\\s*(;.*)$",
+      "name": "comment.line.semicolon.tscn"
+    },
+    "heading": {
+      "begin": "^\\s*(\\[)",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.heading.begin.tscn" }
+      },
+      "end": "(\\])",
+      "endCaptures": {
+        "1": { "name": "punctuation.definition.heading.end.tscn" }
+      },
+      "name": "meta.heading.tscn",
+      "patterns": [
+        {
+          "match": "\\b(gd_scene|gd_resource|ext_resource|sub_resource|node|resource|connection|editable)\\b",
+          "name": "entity.name.tag.section.tscn"
+        },
+        { "include": "#attributeName" },
+        { "include": "#value" }
+      ]
+    },
+    "attributeName": {
+      "match": "\\b([A-Za-z_][A-Za-z0-9_]*)\\s*(=)(?!=)",
+      "captures": {
+        "1": { "name": "entity.other.attribute-name.tscn" },
+        "2": { "name": "keyword.operator.assignment.tscn" }
+      }
+    },
+    "property": {
+      "match": "^\\s*([A-Za-z_][A-Za-z0-9_./:]*)\\s*(=)(?!=)",
+      "captures": {
+        "1": { "name": "variable.other.property.tscn" },
+        "2": { "name": "keyword.operator.assignment.tscn" }
+      }
+    },
+    "value": {
+      "patterns": [
+        { "include": "#string" },
+        { "include": "#numeric" },
+        { "include": "#constant" },
+        { "include": "#resourceCall" },
+        { "include": "#array" },
+        { "include": "#dict" }
+      ]
+    },
+    "string": {
+      "begin": "\"",
+      "beginCaptures": {
+        "0": { "name": "punctuation.definition.string.begin.tscn" }
+      },
+      "end": "\"",
+      "endCaptures": {
+        "0": { "name": "punctuation.definition.string.end.tscn" }
+      },
+      "name": "string.quoted.double.tscn",
+      "patterns": [
+        { "match": "\\\\.", "name": "constant.character.escape.tscn" }
+      ]
+    },
+    "numeric": {
+      "match": "-?\\b\\d+\\.\\d+(?:[eE][+-]?\\d+)?\\b|-?\\.\\d+(?:[eE][+-]?\\d+)?\\b|-?\\b\\d+(?:[eE][+-]?\\d+)?\\b",
+      "name": "constant.numeric.tscn"
+    },
+    "constant": {
+      "match": "\\b(true|false|null)\\b",
+      "name": "constant.language.tscn"
+    },
+    "resourceCall": {
+      "begin": "\\b([A-Za-z_][A-Za-z0-9_]*)\\s*(\\()",
+      "beginCaptures": {
+        "1": { "name": "support.function.constructor.tscn" },
+        "2": { "name": "punctuation.section.arguments.begin.tscn" }
+      },
+      "end": "(\\))",
+      "endCaptures": {
+        "1": { "name": "punctuation.section.arguments.end.tscn" }
+      },
+      "patterns": [
+        { "include": "#value" },
+        { "match": ",", "name": "punctuation.separator.comma.tscn" }
+      ]
+    },
+    "array": {
+      "begin": "\\[",
+      "beginCaptures": {
+        "0": { "name": "punctuation.section.array.begin.tscn" }
+      },
+      "end": "\\]",
+      "endCaptures": {
+        "0": { "name": "punctuation.section.array.end.tscn" }
+      },
+      "name": "meta.array.tscn",
+      "patterns": [
+        { "include": "#value" },
+        { "match": ",", "name": "punctuation.separator.comma.tscn" }
+      ]
+    },
+    "dict": {
+      "begin": "\\{",
+      "beginCaptures": {
+        "0": { "name": "punctuation.section.dictionary.begin.tscn" }
+      },
+      "end": "\\}",
+      "endCaptures": {
+        "0": { "name": "punctuation.section.dictionary.end.tscn" }
+      },
+      "name": "meta.dictionary.tscn",
+      "patterns": [
+        { "include": "#dictKey" },
+        { "match": ":", "name": "punctuation.separator.key-value.tscn" },
+        { "include": "#value" },
+        { "match": ",", "name": "punctuation.separator.comma.tscn" }
+      ]
+    },
+    "dictKey": {
+      "match": "\"(?:[^\"\\\\]|\\\\.)*\"(?=\\s*:)",
+      "name": "support.type.property-name.tscn"
+    }
+  }
+}

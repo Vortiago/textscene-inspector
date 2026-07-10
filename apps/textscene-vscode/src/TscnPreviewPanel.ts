@@ -3,7 +3,7 @@
  */
 
 import * as vscode from 'vscode';
-import { generateWebviewHtml, generateNonce } from './webview/webviewHtml';
+import { generateWebviewHtml, generateNonce, type WebviewInitialConfig } from './webview/webviewHtml';
 import type { MissingResource } from '@textscene/core/parser';
 import type { HostToWebviewMessage, WebviewToHostMessage } from './protocol';
 import { VSCodeResourceProvider } from './providers/VSCodeResourceProvider';
@@ -298,7 +298,21 @@ export class TscnPreviewPanel {
       cssUri,
       nonce,
       cspSource: webview.cspSource,
+      initialConfig: this._getInitialConfig(),
     });
+  }
+
+  /**
+   * Read the settings the webview needs at mount. Read once per panel
+   * creation (baked into the HTML, not reactive) — like `nonce`, this is
+   * fixed for the panel's lifetime; a setting change takes effect on the
+   * next preview opened, not the current one.
+   */
+  private _getInitialConfig(): WebviewInitialConfig {
+    const viewportMode = vscode.workspace
+      .getConfiguration('textscene')
+      .get<'auto' | '2D' | '3D'>('defaultViewportMode', 'auto');
+    return { viewportMode };
   }
 
   private async _jumpToNodeDefinition(nodeName: string, expectedParent?: string): Promise<void> {
