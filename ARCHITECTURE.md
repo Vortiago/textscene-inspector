@@ -413,20 +413,27 @@ Spike-validated stack:
 extension-host import graph uses only React-free core subpaths
 (`@textscene/core/parser`, `/linter`, `/logger`, plus targeted resource
 utils) — never the root barrel, whose React/CSS side effects defeat
-tree-shaking. That keeps `dist/extension.js` ≈ 434 KB and
-`dist/extension.web.js` (the vscode.dev worker host) ≈ 435 KB with zero
+tree-shaking. That keeps `dist/extension.js` ≈ 204 KB and
+`dist/extension.web.js` (the vscode.dev worker host) ≈ 204 KB with zero
 `react`/`three` occurrences. If a host file imports the root
 `@textscene/core` barrel again, the host bundle balloons ~4× — check
-sizes after touching host imports.
+sizes after touching host imports. This is no longer just a documented
+claim: `scripts/check-bundle-size.mjs`'s host-bundle guard scans both
+built files for a word-boundaried `react`/`three` token and hard-fails
+unconditionally (never gated behind `--enforce`, unlike the webview
+budget below) — wired into `pnpm check:bundle-size`, `pnpm validate`,
+and CI (issue #215).
 
 The PRD acceptance for WI-R3F-6 was "VS Code webview bundle no larger
 than `main + 200 KB gzipped`". History:
 
 - `main` baseline: 1,429,646 B raw / **247,543 B gzipped**
 - WI-R3F-6 (iife, no code-splitting): 3,691,702 B raw / **638,980 B gzipped** — +382 KB gz, **+182 KB over budget**
-- **WI-R3F-18 (ESM + splitting + React.lazy panels)**: initial-paint static-import closure is **1,357,273 B raw / 390,322 B gzipped** — **+143 KB gz vs main**, **57 KB under the +200 KB budget** ✅
+- WI-R3F-18 (ESM + splitting + React.lazy panels): initial-paint static-import closure is 1,357,273 B raw / 390,322 B gzipped — +143 KB gz vs main, 57 KB under the +200 KB budget ✅
+- Post-WI-R3F-18 feature growth (GLB support — GLTFLoader/KTX2Loader/DRACOLoader/MeshoptDecoder — plus further node/animation coverage) pushed the closure back over budget: **536,997 B gzipped, 87.4 KB OVER budget**. Part of that regrowth was drei's `<Text>` (troika-three-text + bidi-js + its sdf-generator worker, statically imported by `InternalTextLabel` for the empty-state placeholder label) baked directly into `webview.js`.
+- **Issue #215: `InternalTextLabel`'s drei `<Text>` converted to `React.lazy`.** It no longer sits in `webview.js`; it resolves in its own on-demand chunk the first time it actually renders. Result: **492,801 B gzipped — still 44.2 KB OVER budget**, a ~44 KB gz reduction from the troika split alone.
 
-WI-R3F-18 closed the gap with three combined changes:
+WI-R3F-18 closed the gap (at the time) with three combined changes:
 
 1. **Webview build flipped from `iife` to `esm` + `splitting`**
    (`apps/textscene-vscode/esbuild.config.mjs`). iife couldn't
@@ -442,30 +449,38 @@ WI-R3F-18 closed the gap with three combined changes:
    and `script-src ${cspSource}` (in addition to the nonce'd entry)
    so the webview can fetch chunk URIs.
 
-The initial chunk now contains: React, react-three-fiber, drei
-runtime, three.js, the scene canvas (`<TscnCanvas>`), the node
-component registry (registers all node types on import), the
-resource pipeline, contexts, and selection. The lazy chunks
-contain: the tree viewer, the details panel, and the CSS modules
-they own.
+The initial chunk now contains: React, react-dom/react-reconciler
+(react-three-fiber's runtime), drei's non-`Text` runtime, three.js, the
+GLTF/KTX2/DRACO/Meshopt loaders (GLB support), the scene canvas
+(`<TscnCanvas>`), the node component registry (registers all node types
+on import), the resource pipeline, contexts, and selection. The lazy
+chunks contain: the tree viewer, the details panel, drei's `<Text>`
+(troika-three-text + bidi-js + its sdf-generator worker), and the CSS
+modules the DOM panels own.
 
 **Bundle-size guard.** `scripts/check-bundle-size.mjs` walks the
 static-import closure starting at `webview.js`, gzips the
-concatenation, and compares against `main + 200 KB`. Wired into
-`pnpm validate` and runs informationally (warn-only) for now. Once
-follow-up WIs land without regressing the figure, flip to
-`--enforce` for hard-fail in CI.
+concatenation, and compares against `main + 200 KB`; it also runs the
+host-bundle react/three guard described above. Wired into `pnpm
+validate` and CI (`.github/workflows/ci.yml`, issue #215); the webview
+budget still runs informationally (warn-only) — see "Status of the
+budget gate" for why `--enforce` isn't flipped yet.
 
-**Status of the budget gate.** As of this commit, the build PASSes
-with 55.9 KB headroom under the budget. The recommendation for
-PR-merge readiness: the gate is already structurally enforceable.
-The reason to keep it warn-only until at least one follow-up WI
-lands is that the headroom is thin (~14% of the budget) and any
-of these would push back over: a drei addition (e.g. effects
-postprocessing), a new top-level component import in
-`<TscnCanvas>`, or a node type that pulls in a new dependency at
-the registry-load step. Flipping to `--enforce` should happen after
-WI-R3F-16 (audio/animation) lands and the budget is re-verified.
+**Status of the budget gate.** As of this commit the webview closure is
+**44.2 KB gzipped OVER budget**, even after lazy-loading troika —
+flipping `check:bundle-size`'s `--enforce` now would hard-fail `pnpm
+validate` / pre-push / CI immediately, so it stays informational. The
+remaining overage is legitimate feature cost, not misconfiguration: GLB
+support (GLTFLoader + KTX2Loader + DRACOLoader + MeshoptDecoder, ~209 KB
+raw combined) landed after the 390 KB gz measurement above and has no
+`React.lazy` seam as clean as troika's — any node can reference a GLB
+mesh at parse time, so the loader chain can't be deferred behind a
+single, edge-case call site the way `InternalTextLabel` could. Closing
+the remaining gap is tracked as its own follow-up (issue #241:
+candidates are lazy-loading the GLB/KTX2/DRACO loader chain behind the
+first actual GLB reference in a loaded scene, revisiting whether
+Draco/Meshopt/KTX2 are all needed given the vendored fixture set, or
+renegotiating the budget) before `--enforce` can flip safely.
 
 ### Known limitations
 
@@ -563,4 +578,4 @@ Scoped to exactly the types ld-58 uses: CSGBox3D/CSGCylinder3D (base primitive, 
 
 ### Tracked deepening candidates (not yet scheduled)
 
-- **Lenient parser depends on `three` via transform decomposition.** `nodes/node/parser.ts` → `utils/transform.ts` uses `THREE.Matrix4`/`Euler` to decompose a Transform3D at parse time. Acceptable today (the parser ships only alongside the renderer; the linter uses its own three-free strict parser), but moving decomposition to render time would make the lenient parser pure-data. The `reactFree.test.ts` guard documents and deliberately permits this edge while forbidding react/react-three in the parser and any `.tsx`/three in the linter.
+None currently tracked. (The lenient parser's transform decomposition — `nodes/node/parser.ts` → `utils/transform.ts` — used to depend on `THREE.Matrix4`/`Euler`; it was rewritten as pure math, so `parser/TscnParser.ts` value-imports no `three`/`react` end to end. `three` now enters the picture only through the `r3f/` render layer, pinned by `reactFree.test.ts`; `transform.threeEquivalence.test.ts` keeps a THREE-based cross-check purely as a test-only bit-equivalence oracle.)
