@@ -518,6 +518,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Color Rect",
+    "file": "unit-color-rect.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Control Anchors Theme",
     "file": "unit-control-anchors-theme.tscn",
     "category": "Unit - 2D UI Controls"
@@ -530,6 +535,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Hbox Container",
     "file": "unit-hbox-container.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Label 2d",
+    "file": "unit-label-2d.tscn",
     "category": "Unit - 2D UI Controls"
   },
   {
@@ -565,6 +575,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Texture Rect",
     "file": "unit-texture-rect.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Vbox Container",
+    "file": "unit-vbox-container.tscn",
     "category": "Unit - 2D UI Controls"
   },
   {
