@@ -47,6 +47,7 @@ export function SpotLight3D({ node }: NodeComponentProps) {
         <>
           <spotLight
             ref={lightRef}
+            position={[0, 0, 0]}
             color={color}
             intensity={intensity}
             distance={properties.spot_range}

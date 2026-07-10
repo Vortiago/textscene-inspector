@@ -24,13 +24,12 @@ import { computeWorldBoundingBox } from './bounds.js';
 import { InternalTextLabel } from './internalTextLabel.js';
 import styles from './TscnCanvas.module.css';
 
-export interface TscnCanvasProps {
-  /**
-   * Optional. If omitted, the canvas reads the sceneGraph from
-   * `HierarchyContext` (the normal flow). Test code can pass nodes
-   * directly via `<TscnSceneContents>`.
-   */
-}
+/**
+ * Takes no props today — the canvas reads its sceneGraph from
+ * `HierarchyContext` (the normal flow). Test code passes nodes directly
+ * to `<TscnSceneContents>` instead.
+ */
+export type TscnCanvasProps = Record<string, never>;
 
 /**
  * The contents of the R3F scene (everything that would normally live
