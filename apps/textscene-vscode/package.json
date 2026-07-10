@@ -35,6 +35,13 @@
         "configuration": "./language-configuration.json"
       }
     ],
+    "grammars": [
+      {
+        "language": "tscn",
+        "scopeName": "source.tscn",
+        "path": "./syntaxes/tscn.tmLanguage.json"
+      }
+    ],
     "commands": [
       {
         "command": "textscene.openPreviewToSide",
@@ -51,12 +58,65 @@
           "group": "navigation"
         }
       ],
+      "editor/context": [
+        {
+          "command": "textscene.openPreviewToSide",
+          "when": "resourceExtname == .tscn",
+          "group": "navigation"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "textscene.openPreviewToSide",
+          "when": "resourceExtname == .tscn",
+          "group": "navigation"
+        }
+      ],
       "commandPalette": [
         {
           "command": "textscene.openPreviewToSide",
           "when": "editorLangId == tscn || resourceExtname == .tscn"
         }
       ]
+    },
+    "keybindings": [
+      {
+        "command": "textscene.openPreviewToSide",
+        "key": "ctrl+k v",
+        "mac": "cmd+k v",
+        "when": "editorLangId == tscn"
+      }
+    ],
+    "configuration": {
+      "title": "TextScene Inspector",
+      "properties": {
+        "textscene.defaultViewportMode": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "2D",
+            "3D"
+          ],
+          "enumDescriptions": [
+            "Match the Godot editor: pick 2D or 3D from the scene root's node type.",
+            "Always open new previews in the 2D viewport.",
+            "Always open new previews in the 3D viewport."
+          ],
+          "default": "auto",
+          "description": "Viewport mode a newly-opened preview starts in. \"auto\" mirrors the Godot editor (a CanvasItem root opens 2D, a Node3D root opens 3D); an explicit mode overrides that for every newly-opened preview, though the viewport toolbar's 2D/3D toggle still works per-panel afterward. Already-open preview panels are unaffected until reopened."
+        },
+        "textscene.diagnostics.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Lint open .tscn files and report syntax and semantic issues in the Problems panel."
+        },
+        "textscene.diagnostics.lintDebounceMs": {
+          "type": "number",
+          "default": 300,
+          "minimum": 0,
+          "description": "Milliseconds to wait after the last edit before re-linting a .tscn document."
+        }
+      }
     }
   },
   "scripts": {
