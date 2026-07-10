@@ -8,6 +8,7 @@
  */
 
 import { useEffect, useMemo, useRef } from 'react';
+import type { ReactNode, RefObject } from 'react';
 import * as THREE from 'three';
 import type { Camera3DProperties } from './types';
 import { KeepAspectMode, ProjectionMode } from './types';
@@ -100,7 +101,7 @@ interface PerspectiveCamera3DProps {
   fov: number;
   near: number;
   far: number;
-  children?: React.ReactNode;
+  children?: ReactNode;
 }
 
 function PerspectiveCamera3D({ name, tscnPath, position, rotation, scale, fov, near, far, children }: PerspectiveCamera3DProps) {
@@ -141,7 +142,7 @@ interface OrthographicCamera3DProps {
   keepAspect: KeepAspectMode;
   near: number;
   far: number;
-  children?: React.ReactNode;
+  children?: ReactNode;
 }
 
 function OrthographicCamera3D({ name, tscnPath, position, rotation, scale, size, keepAspect, near, far, children }: OrthographicCamera3DProps) {
@@ -181,7 +182,7 @@ function OrthographicCamera3D({ name, tscnPath, position, rotation, scale, size,
 }
 
 interface CameraGizmoProps {
-  cameraRef: React.RefObject<THREE.Camera | null>;
+  cameraRef: RefObject<THREE.Camera | null>;
   name: string;
 }
 
