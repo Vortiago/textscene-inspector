@@ -24,7 +24,7 @@
  * the innermost hit object outward.
  */
 
-import { Fragment, useCallback } from 'react';
+import { Fragment, useCallback, useEffect, useMemo } from 'react';
 import type { ReactNode } from 'react';
 import type * as THREE from 'three';
 import type { TscnNode, TscnScene } from '../parser/types.js';
@@ -213,11 +213,16 @@ function InstancedNode({ node, path, withNodePath }: DispatchedNodeProps): React
   // request kicks in. SceneLoader's `loadSceneFromProvider` looks up
   // metadata to learn the resource's type/path; without registration
   // it throws "Scene metadata not found". Registration is idempotent
-  // (MetadataStore overwrites on duplicate id), so calling it on every
-  // render of an instancing subtree is safe — the alternative (effect
-  // in SceneResourcesProvider) ran AFTER the dispatcher's useResource
-  // effect because React runs child effects before parent effects.
-  if (loader && scenePath) {
+  // (MetadataStore overwrites on duplicate id), so re-registering on every
+  // relevant-input change is safe — the alternative (effect in
+  // SceneResourcesProvider) ran AFTER the dispatcher's useResource effect
+  // because React runs child effects before parent effects.
+  //
+  // Lives in an effect (not the render body) so this instancing subtree's
+  // render stays a pure computation — the loader mutation only happens once
+  // per commit for a given instance ref, not on every re-render (WI-213).
+  useEffect(() => {
+    if (!loader || !scenePath) return;
     const parsed = parseResourceReference(instanceRef);
     if (parsed && parsed.type === 'ExtResource') {
       const ext = externalResources.find((r) => r.id === parsed.id);
@@ -225,9 +230,31 @@ function InstancedNode({ node, path, withNodePath }: DispatchedNodeProps): React
         loader.register({ id: ext.id, path: ext.path, type: ext.type });
       }
     }
-  }
+  }, [loader, scenePath, instanceRef, externalResources]);
 
   const result = useResource<TscnScene>(scenePath ?? '', 'PackedScene');
+  const loadedScene = result.status === 'loaded' ? result.value ?? null : null;
+
+  // Instance root merge via the shared `collapseLiveNode` — the SAME decision
+  // the tree, inspector, and panels make, so ADR-0013 lives in one place instead
+  // of each walker re-deriving it. The single-entry cache hands it just this
+  // instance's loaded scene, keyed to its path. `effective !== node` means a
+  // single non-GLB root collapsed in: re-dispatch the merged node at the SAME
+  // path under the sub-scene's resource scope. `.glb`/multi-root return `node`
+  // unchanged → the historical nested-injection fallback below.
+  //
+  // Memoized (and called unconditionally, ahead of the early returns below,
+  // to satisfy rules-of-hooks) so an unrelated re-render (selection/hover
+  // elsewhere in the tree) doesn't re-merge + re-parse this instance's
+  // subtree every frame — the same fix TreeNode.tsx already applies to its
+  // own collapseLiveNode call (WI-213).
+  const effective = useMemo(
+    () =>
+      loadedScene
+        ? collapseLiveNode(node, externalResources, singleSceneCache(scenePath, loadedScene))
+        : node,
+    [node, externalResources, scenePath, loadedScene]
+  );
 
   // Unresolvable ref or failed load: keep the node visible with a magenta
   // placeholder child, matching the missing-texture UX (WI-R3F-7).
@@ -240,23 +267,9 @@ function InstancedNode({ node, path, withNodePath }: DispatchedNodeProps): React
   }
   // Still loading: render the instancing node's own subtree; the merged
   // result swaps in once the sub-scene arrives.
-  if (result.status === 'pending' || !result.value) {
+  if (result.status === 'pending' || !loadedScene) {
     return <PlainNode node={node} path={path} withNodePath={withNodePath} />;
   }
-
-  const loadedScene = result.value;
-  // Instance root merge via the shared `collapseLiveNode` — the SAME decision
-  // the tree, inspector, and panels make, so ADR-0013 lives in one place instead
-  // of each walker re-deriving it. The single-entry cache hands it just this
-  // instance's loaded scene, keyed to its path. `effective !== node` means a
-  // single non-GLB root collapsed in: re-dispatch the merged node at the SAME
-  // path under the sub-scene's resource scope. `.glb`/multi-root return `node`
-  // unchanged → the historical nested-injection fallback below.
-  const effective = collapseLiveNode(
-    node,
-    externalResources,
-    singleSceneCache(scenePath, loadedScene)
-  );
 
   if (effective !== node) {
     return (
