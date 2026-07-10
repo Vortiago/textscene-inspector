@@ -5,27 +5,27 @@ import { parseNode2D } from '../../base/node2d/parser';
 import { useParentModulate } from '../../../r3f/canvasItemModulate';
 import type { TscnNode } from '../../../parser/types';
 
-const areaHeading = (attributes: Record<string, string> = {}) => ({
+const bodyHeading = (attributes: Record<string, string> = {}) => ({
   type: 'node' as const,
-  attributes: { name: 'Area2D', type: 'Area2D', ...attributes },
+  attributes: { name: 'StaticBody2D', type: 'StaticBody2D', ...attributes },
 });
 
 function makeBody(raw: Record<string, string> = {}): TscnNode {
   return {
-    name: raw.name || 'Area2D',
-    type: 'Area2D',
+    name: raw.name || 'StaticBody2D',
+    type: 'StaticBody2D',
     children: [],
-    properties: parseNode2D(areaHeading(raw), {
+    properties: parseNode2D(bodyHeading(raw), {
       position: 'Vector2(0, 0)',
       ...raw,
     }),
   };
 }
 
-describe('<Node2D> (area2d physics body)', () => {
-  it('renders Area2D as a named, visible group', async () => {
+describe('<Node2D> (2D physics body)', () => {
+  it('renders StaticBody2D as a named, visible group', async () => {
     const renderer = await ReactThreeTestRenderer.create(<Node2D node={makeBody()} />);
-    const group = renderer.scene.findByProps({ name: 'Area2D' });
+    const group = renderer.scene.findByProps({ name: 'StaticBody2D' });
     expect(group.instance.visible).toBe(true);
   });
 
@@ -37,7 +37,7 @@ describe('<Node2D> (area2d physics body)', () => {
   });
 
   it('renders children inside the transform group', async () => {
-    const body = makeBody({ name: 'Area2DRender' });
+    const body = makeBody({ name: 'RigidBody2DRender' });
     const renderer = await ReactThreeTestRenderer.create(
       <Node2D node={body}>
         <mesh name="kid">

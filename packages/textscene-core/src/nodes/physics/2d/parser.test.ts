@@ -3,14 +3,14 @@ import { heading } from '../../../parser/testing/parserKit';
 import { parseNode2D } from '../../base/node2d/parser';
 
 describe('parseNode2D (physics bodies)', () => {
-  it('parses Area2D with discrete transform properties', () => {
+  it('parses CharacterBody2D with discrete transform properties', () => {
     const result = parseNode2D(
-      heading('Area2D', { parent: '.' }),
+      heading('CharacterBody2D', { parent: '.' }),
       { position: 'Vector2(10, 20)', rotation: '0.5' }
     );
     expect(result.position).toEqual({ x: 10, y: 20 });
     expect(result.rotation).toBeCloseTo(0.5, 5);
-    expect(result.name).toBe('Area2D');
+    expect(result.name).toBe('CharacterBody2D');
     expect(result.parent).toBe('.');
   });
 

@@ -10,8 +10,12 @@ describe('2D physics body render registration', () => {
     }
   });
 
-  it('covers the types a 2D game like pong needs (Area2D, CollisionShape2D)', () => {
-    expect(TWO_D_PHYSICS_TYPES).toContain('Area2D');
-    expect(TWO_D_PHYSICS_TYPES).toContain('CollisionShape2D');
+  it('covers the remaining transform-only bodies (StaticBody2D, RigidBody2D, CharacterBody2D)', () => {
+    expect(TWO_D_PHYSICS_TYPES).toEqual(['StaticBody2D', 'RigidBody2D', 'CharacterBody2D']);
+  });
+
+  it('no longer covers Area2D/CollisionShape2D — they moved to their own slices', () => {
+    expect(TWO_D_PHYSICS_TYPES).not.toContain('Area2D');
+    expect(TWO_D_PHYSICS_TYPES).not.toContain('CollisionShape2D');
   });
 });
