@@ -351,6 +351,36 @@ export function R3FApp() {
     loader.provideFile(path);
   }
 
+  // #203: Download .tscn — a Blob + anchor export, no write-back to disk
+  // (ADR-0020). Named after whatever is active so a batch of downloads
+  // doesn't collide on a generic "scene.tscn".
+  function downloadFilename(): string {
+    const base = uploadedTscnName || fixtureFile.split('/').pop() || 'scene.tscn';
+    return base.endsWith('.tscn') ? base : `${base}.tscn`;
+  }
+
+  function handleDownloadTscn() {
+    const blob = new Blob([buffer], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    try {
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = downloadFilename();
+      anchor.click();
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }
+
+  // #203: nothing has EVER rendered (forwardedContent stays '' once a valid
+  // render has occurred — hold-last-valid never reverts it) AND the current
+  // buffer isn't blank either — so the user pasted/typed something that
+  // simply doesn't parse. The shell's own content==='' state ("Loading
+  // scene…") would otherwise look identical to a genuinely empty pane, so
+  // this notice — outside the (unmodified) shared shell — fills that gap.
+  const showUnrenderableNotice =
+    forwardedContent.trim().length === 0 && buffer.trim().length > 0;
+
   return (
     <ResourceLoaderProvider loader={loader}>
       <div style={{ width: '100vw', height: '100vh', display: 'flex' }}>
@@ -363,6 +393,19 @@ export function R3FApp() {
               className={styles.sourcePane}
               style={{ width: paneWidth, minWidth: 0 }}
             >
+              <div className={styles.sourcePaneHeader}>
+                <span className={styles.sourcePaneTitle}>Source</span>
+                <button
+                  type="button"
+                  className={styles.downloadButton}
+                  data-testid="download-tscn-button"
+                  onClick={handleDownloadTscn}
+                  disabled={buffer.trim().length === 0}
+                  title="Download the current buffer as a .tscn file"
+                >
+                  ⭳ Download .tscn
+                </button>
+              </div>
               <div className={styles.sourceBody}>
                 <SourceGutter
                   lineCount={buffer.split('\n').length}
@@ -376,6 +419,7 @@ export function R3FApp() {
                   onScroll={(e) => setGutterScrollTop(e.currentTarget.scrollTop)}
                   wrap="off"
                   aria-label="Scene source"
+                  placeholder="Paste or type your .tscn here…"
                   style={{ fontFamily: 'monospace' }}
                 />
               </div>
@@ -390,7 +434,7 @@ export function R3FApp() {
             />
           </>
         )}
-        <div style={{ flex: 1, minWidth: 0, height: '100%' }}>
+        <div style={{ flex: 1, minWidth: 0, height: '100%', position: 'relative' }}>
           <TscnPreviewShell
             panelId={`web-${fixtureFile || uploadedTscnName || 'empty'}`}
             content={forwardedContent}
@@ -420,6 +464,17 @@ export function R3FApp() {
               />
             }
           />
+          {showUnrenderableNotice && (
+            <div
+              data-testid="unrenderable-buffer-notice"
+              role="alert"
+              className={styles.unrenderableNotice}
+            >
+              <strong>Nothing has rendered yet.</strong> The pasted/typed content doesn’t parse
+              as a valid .tscn scene — fix the errors marked in the Source pane’s gutter to see
+              a preview.
+            </div>
+          )}
         </div>
       </div>
     </ResourceLoaderProvider>

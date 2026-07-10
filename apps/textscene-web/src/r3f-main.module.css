@@ -281,6 +281,46 @@
   flex-shrink: 0;
 }
 
+.sourcePaneHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--tsi-space-2);
+  padding: 4px var(--tsi-space-2);
+  border-bottom: 1px solid var(--tsi-border);
+  background: var(--tsi-bg-elevated);
+  flex-shrink: 0;
+}
+
+.sourcePaneTitle {
+  color: var(--tsi-fg-muted);
+  font-size: var(--tsi-font-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.downloadButton {
+  padding: 2px var(--tsi-space-2);
+  background: transparent;
+  border: 1px solid var(--tsi-border);
+  border-radius: var(--tsi-radius-sm);
+  color: var(--tsi-fg-default);
+  font: inherit;
+  font-size: var(--tsi-font-xs);
+  cursor: pointer;
+}
+
+.downloadButton:hover:not(:disabled) {
+  background: var(--tsi-bg-hover);
+  border-color: var(--tsi-border-strong);
+}
+
+.downloadButton:disabled {
+  color: var(--tsi-fg-faint);
+  cursor: not-allowed;
+}
+
 .sourceBody {
   display: flex;
   flex: 1;
@@ -396,4 +436,24 @@
 
 .sourceSplitter:hover {
   background: var(--tsi-accent);
+}
+
+/* ── "Nothing has rendered yet" notice (#203) ─────────────────────────── */
+.unrenderableNotice {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--tsi-space-4);
+  background: var(--tsi-bg-canvas);
+  color: var(--tsi-fg-muted);
+  text-align: center;
+  font-size: var(--tsi-font-md);
+  line-height: 1.5;
+}
+
+.unrenderableNotice strong {
+  color: var(--tsi-fg-strong);
 }
