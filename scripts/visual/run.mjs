@@ -173,6 +173,14 @@ async function captureScene(page, baseUrl, scene) {
       return { buffer: null, reason: `select target not found in tree: ${scene.select}` };
     }
     await row.click();
+    // `.click()` moves the mouse over the row first, which fires a real
+    // `mouseenter` and leaves that row's hover-highlight engaged (since the
+    // mouse never moves away afterward) — an accidental artifact of driving
+    // a real click, not something these `-selected` scenes intend to capture
+    // (this harness exercises the selection path, per the doc comment above;
+    // hover is a separate, untested-here affordance). Move the pointer off
+    // the tree entirely so only true selection state renders.
+    await page.mouse.move(0, 0);
   }
 
   await page.waitForTimeout(SETTLE_INITIAL_MS);
