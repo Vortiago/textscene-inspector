@@ -1,0 +1,14 @@
+[gd_scene format=3]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_1"]
+size = Vector3(1, 1, 1)
+
+[node name="Root" type="StaticBody3D"]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("BoxShape3D_1")
+
+[node name="MovementObstacle" type="NavigationObstacle3D" parent="."]
+radius = 1.5
+height = 2.0
+avoidance_enabled = true

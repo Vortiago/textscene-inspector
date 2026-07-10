@@ -38,6 +38,9 @@ import '../../nodes/3d/marker3d/index.r3f';
 import '../../nodes/3d/gridmap/index.r3f';
 import '../../nodes/3d/navigationregion3d/index.r3f';
 import '../../nodes/3d/decal/index.r3f';
+import '../../nodes/3d/remotetransform3d/index.r3f';
+import '../../nodes/3d/navigationagent3d/index.r3f';
+import '../../nodes/3d/navigationobstacle3d/index.r3f';
 import '../../nodes/audio/audiostreamplayer3d/index.r3f';
 import '../../nodes/animation/animationplayer/index.r3f';
 import '../../nodes/animation/animationtree/index.r3f';
@@ -57,5 +60,7 @@ import '../../nodes/2d/marker2d/index.r3f';
 import '../../nodes/2d/path2d/index.r3f';
 import '../../nodes/2d/pathfollow2d/index.r3f';
 import '../../nodes/2d/line2d/index.r3f';
+import '../../nodes/2d/remotetransform2d/index.r3f';
+import '../../nodes/timers/timer/index.r3f';
 
 export { GenericNodeFallback } from '../internal/generic-node-fallback/index';

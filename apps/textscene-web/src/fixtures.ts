@@ -193,6 +193,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Remote Transform 2d",
+    "file": "unit-remote-transform-2d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Remote Transform 3d",
+    "file": "unit-remote-transform-3d.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Rigidbody2d",
     "file": "unit-rigidbody2d.tscn",
     "category": "Other"
@@ -215,6 +225,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Surface Material Override",
     "file": "unit-surface-material-override.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Timer",
+    "file": "unit-timer.tscn",
     "category": "Other"
   },
   {
@@ -701,6 +716,16 @@ export const fixtures: Fixture[] = [
     "name": "Material Textured",
     "file": "unit-material-textured.tscn",
     "category": "Unit - Materials"
+  },
+  {
+    "name": "Navigation Agent 3d",
+    "file": "unit-navigation-agent-3d.tscn",
+    "category": "Unit - Navigation"
+  },
+  {
+    "name": "Navigation Obstacle 3d",
+    "file": "unit-navigation-obstacle-3d.tscn",
+    "category": "Unit - Navigation"
   },
   {
     "name": "Navigation Region 2d",

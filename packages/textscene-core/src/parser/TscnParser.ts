@@ -37,6 +37,9 @@ import '../nodes/3d/marker3d/index.js';
 import '../nodes/3d/gridmap/index.js';
 import '../nodes/3d/navigationregion3d/index.js';
 import '../nodes/3d/decal/index.js';
+import '../nodes/3d/remotetransform3d/index.js';
+import '../nodes/3d/navigationagent3d/index.js';
+import '../nodes/3d/navigationobstacle3d/index.js';
 import '../nodes/paths/path3d/index.js';
 import '../nodes/paths/pathfollow3d/index.js';
 import '../nodes/audio/audiostreamplayer/index.js';
@@ -73,6 +76,8 @@ import '../nodes/2d/marker2d/index.js';
 import '../nodes/2d/path2d/index.js';
 import '../nodes/2d/pathfollow2d/index.js';
 import '../nodes/2d/line2d/index.js';
+import '../nodes/2d/remotetransform2d/index.js';
+import '../nodes/timers/timer/index.js';
 
 import type { TscnScene } from './types.js';
 import { TscnParserCore } from './TscnParserCore.js';
