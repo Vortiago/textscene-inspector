@@ -1,18 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { ParsedHeading } from '../../../parser/utils';
-import type { PropertySection } from '../../../core/NodeRegistry';
+import { valueOf } from '../../../parser/testing/parserKit';
 import { parseNavigationAgent3D } from './parser';
 import { formatNavigationAgent3DProperties } from './propertyFormatter';
 
 const HEADING: ParsedHeading = { type: 'node', attributes: { name: 'Movement', type: 'NavigationAgent3D' } };
-
-function valueOf(sections: PropertySection[], label: string): string | undefined {
-  for (const section of sections) {
-    const item = section.items.find((i) => i.label === label);
-    if (item) return item.value;
-  }
-  return undefined;
-}
 
 describe('formatNavigationAgent3DProperties', () => {
   it('renders the Godot defaults when properties are absent (happy path)', () => {

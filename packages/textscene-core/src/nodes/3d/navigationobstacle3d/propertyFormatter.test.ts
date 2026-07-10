@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ParsedHeading } from '../../../parser/utils';
-import type { PropertySection } from '../../../core/NodeRegistry';
+import { valueOf } from '../../../parser/testing/parserKit';
 import { parseNavigationObstacle3D } from './parser';
 import { formatNavigationObstacle3DProperties } from './propertyFormatter';
 
@@ -8,14 +8,6 @@ const HEADING: ParsedHeading = {
   type: 'node',
   attributes: { name: 'MovementObstacle', type: 'NavigationObstacle3D' },
 };
-
-function valueOf(sections: PropertySection[], label: string): string | undefined {
-  for (const section of sections) {
-    const item = section.items.find((i) => i.label === label);
-    if (item) return item.value;
-  }
-  return undefined;
-}
 
 describe('formatNavigationObstacle3DProperties', () => {
   it('renders the Godot defaults when properties are absent (happy path)', () => {

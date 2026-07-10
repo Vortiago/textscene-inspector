@@ -2,11 +2,18 @@
  * Shared test-kit for parser slice tests.
  *
  * Collapses the local `heading()` factory that ~37 parser.test.ts files
- * re-declared to build a node ParsedHeading. Build-excluded via the
- * `src/**\/testing/**` tsconfig rule, like the linter test-kit.
+ * re-declared to build a node ParsedHeading, the `valueOf()` PropertySection
+ * lookup that propertyFormatter tests re-declared, and the walk-up-to-
+ * pnpm-workspace.yaml repo-root resolver that fixture tests re-declared.
+ * Build-excluded via the `src/**\/testing/**` tsconfig rule, like the linter
+ * test-kit.
  */
 
+import { existsSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { ParsedHeading } from '../utils';
+import type { PropertySection } from '../../core/NodeRegistry';
 
 /**
  * Build a `[node ...]` ParsedHeading for the given node type. `name` defaults
@@ -15,4 +22,35 @@ import type { ParsedHeading } from '../utils';
  */
 export function heading(type: string, attributes: Record<string, string> = {}): ParsedHeading {
   return { type: 'node', attributes: { name: type, type, ...attributes } };
+}
+
+/**
+ * Find the first item labelled `label` across a formatter's sections and
+ * return its value, or undefined when no section carries it.
+ */
+export function valueOf(sections: PropertySection[], label: string): string | undefined {
+  for (const section of sections) {
+    const item = section.items.find((i) => i.label === label);
+    if (item) return item.value;
+  }
+  return undefined;
+}
+
+/**
+ * Resolve the monorepo root by walking up to pnpm-workspace.yaml — stable
+ * regardless of whether vitest runs from the repo root or the package dir
+ * (never `process.cwd()`, per AGENTS.md).
+ */
+export function repoRoot(): string {
+  let dir = dirname(fileURLToPath(import.meta.url));
+  for (let i = 0; i < 12; i += 1) {
+    if (existsSync(resolve(dir, 'pnpm-workspace.yaml'))) return dir;
+    dir = dirname(dir);
+  }
+  throw new Error('repo root (pnpm-workspace.yaml) not found above parserKit');
+}
+
+/** Absolute path to the shared `scenes/fixtures` corpus at the repo root. */
+export function fixturesDir(): string {
+  return resolve(repoRoot(), 'scenes/fixtures');
 }

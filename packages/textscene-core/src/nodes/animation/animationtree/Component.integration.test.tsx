@@ -10,11 +10,11 @@
  * would move.
  */
 import { describe, expect, it } from 'vitest';
-import { fileURLToPath } from 'node:url';
-import { dirname, resolve } from 'node:path';
+import { resolve } from 'node:path';
 import { existsSync, readFileSync } from 'node:fs';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { TscnParser } from '../../../parser/TscnParser';
+import { fixturesDir } from '../../../parser/testing/parserKit';
 import type { TscnNode, TscnScene } from '../../../parser/types';
 import { AnimationPlayer } from '../animationplayer/Component';
 import { AnimationTree } from './Component';
@@ -32,19 +32,8 @@ import {
 import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
 import { AnimationDriverProvider } from '../../../r3f/contexts/AnimationDriverContext';
 
-function repoRoot(): string {
-  let dir = dirname(fileURLToPath(import.meta.url));
-  for (let i = 0; i < 12; i += 1) {
-    if (existsSync(resolve(dir, 'pnpm-workspace.yaml'))) return dir;
-    dir = dirname(dir);
-  }
-  throw new Error('repo root (pnpm-workspace.yaml) not found above this test');
-}
-
-const fixturesDir = resolve(repoRoot(), 'scenes/fixtures');
-
 function parseFixture(file: string): TscnScene {
-  const f = resolve(fixturesDir, file);
+  const f = resolve(fixturesDir(), file);
   if (!existsSync(f)) throw new Error(`fixture missing: scenes/fixtures/${file}`);
   return new TscnParser().parse(readFileSync(f, 'utf8'));
 }

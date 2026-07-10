@@ -1,18 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { ParsedHeading } from '../../../parser/utils';
-import type { PropertySection } from '../../../core/NodeRegistry';
+import { valueOf } from '../../../parser/testing/parserKit';
 import { parseTimer } from './parser';
 import { formatTimerProperties } from './propertyFormatter';
 
 const HEADING: ParsedHeading = { type: 'node', attributes: { name: 'WaitTimer', type: 'Timer' } };
-
-function valueOf(sections: PropertySection[], label: string): string | undefined {
-  for (const section of sections) {
-    const item = section.items.find((i) => i.label === label);
-    if (item) return item.value;
-  }
-  return undefined;
-}
 
 describe('formatTimerProperties', () => {
   it('renders the Godot defaults when properties are absent (happy path)', () => {

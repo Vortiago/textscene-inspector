@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ParsedHeading } from '../../../../parser/utils';
-import type { PropertySection } from '../../../../core/NodeRegistry';
+import { valueOf } from '../../../../parser/testing/parserKit';
 import { parseArea2D } from './parser';
 import { formatArea2DProperties } from './propertyFormatter';
 
@@ -8,14 +8,6 @@ const HEADING: ParsedHeading = {
   type: 'node',
   attributes: { name: 'Trigger', type: 'Area2D' },
 };
-
-function valueOf(sections: PropertySection[], label: string): string | undefined {
-  for (const section of sections) {
-    const item = section.items.find((i) => i.label === label);
-    if (item) return item.value;
-  }
-  return undefined;
-}
 
 describe('formatArea2DProperties', () => {
   it('shows monitoring/monitorable/layer/mask when explicitly set (happy path)', () => {

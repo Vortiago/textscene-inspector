@@ -1,42 +1,25 @@
 /**
  * #166 fixtures contract: the slice ships unit-*.tscn fixtures for ColorRect,
  * the 2D UI Label, and VBoxContainer under scenes/fixtures (named `unit-*` so
- * generate:fixtures categorizes them as "Unit - 2D UI Controls"). Resolves the
- * repo root by walking up to pnpm-workspace.yaml — same pattern as
- * controls131-fixtures.test.ts.
+ * generate:fixtures categorizes them as "Unit - 2D UI Controls").
  */
 import { describe, it, expect } from 'vitest';
-import { fileURLToPath } from 'node:url';
-import { dirname, resolve } from 'node:path';
+import { resolve } from 'node:path';
 import { existsSync, readFileSync } from 'node:fs';
+import { fixturesDir } from '../../../parser/testing/parserKit';
 
-function repoRoot(): string {
-  let dir = dirname(fileURLToPath(import.meta.url));
-  for (let i = 0; i < 12; i += 1) {
-    if (existsSync(resolve(dir, 'pnpm-workspace.yaml'))) return dir;
-    dir = dirname(dir);
-  }
-  throw new Error('repo root (pnpm-workspace.yaml) not found above this test');
-}
+const fixtures = fixturesDir();
 
-const fixtures = resolve(repoRoot(), 'scenes/fixtures');
+const CASES: Array<{ file: string; nodeType: string }> = [
+  { file: 'unit-color-rect.tscn', nodeType: 'ColorRect' },
+  { file: 'unit-label-2d.tscn', nodeType: 'Label' },
+  { file: 'unit-vbox-container.tscn', nodeType: 'VBoxContainer' },
+];
 
 describe('#166 control fixtures', () => {
-  it('ships unit-color-rect.tscn containing a ColorRect node', () => {
-    const f = resolve(fixtures, 'unit-color-rect.tscn');
+  it.each(CASES)('ships $file containing a $nodeType node', ({ file, nodeType }) => {
+    const f = resolve(fixtures, file);
     expect(existsSync(f)).toBe(true);
-    expect(readFileSync(f, 'utf8')).toContain('type="ColorRect"');
-  });
-
-  it('ships unit-label-2d.tscn containing a (2D UI) Label node', () => {
-    const f = resolve(fixtures, 'unit-label-2d.tscn');
-    expect(existsSync(f)).toBe(true);
-    expect(readFileSync(f, 'utf8')).toContain('type="Label"');
-  });
-
-  it('ships unit-vbox-container.tscn containing a VBoxContainer node', () => {
-    const f = resolve(fixtures, 'unit-vbox-container.tscn');
-    expect(existsSync(f)).toBe(true);
-    expect(readFileSync(f, 'utf8')).toContain('type="VBoxContainer"');
+    expect(readFileSync(f, 'utf8')).toContain(`type="${nodeType}"`);
   });
 });
