@@ -4,11 +4,12 @@
  * so a click round-trips through context back into the button's pressed state.
  */
 
-import { describe, expect, it } from 'vitest';
+import { useEffect } from 'react';
+import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { ViewportModeProvider } from '../../contexts/ViewportModeContext';
 import { HierarchyProvider } from '../../contexts/HierarchyContext';
-import { CameraControlProvider } from '../../contexts/CameraControlContext';
+import { CameraControlProvider, useCameraControl } from '../../contexts/CameraControlContext';
 import { ViewportToolbar } from './ViewportToolbar';
 
 function renderToolbar(initialMode?: '2D' | '3D', initialShowCollisions?: boolean) {
@@ -60,6 +61,19 @@ describe('ViewportToolbar', () => {
     fireEvent.click(checkbox);
     expect(checkbox.checked).toBe(true);
   });
+
+  it('grid checkbox is unchecked by default and toggles showGrid (#224)', () => {
+    renderToolbar('3D', false);
+    const checkbox = screen.getByRole('checkbox', { name: 'Grid' }) as HTMLInputElement;
+    expect(checkbox.checked).toBe(false);
+    fireEvent.click(checkbox);
+    expect(checkbox.checked).toBe(true);
+  });
+
+  it('hides the grid checkbox in 2D mode (a 3D-only affordance)', () => {
+    renderToolbar('2D');
+    expect(screen.queryByRole('checkbox', { name: 'Grid' })).toBeNull();
+  });
 });
 
 /** Mount with the camera + hierarchy contexts the Reset Camera button needs. */
@@ -93,5 +107,78 @@ describe('ViewportToolbar — Reset Camera', () => {
   it('hides Reset Camera entirely in 2D overlay mode', () => {
     renderWithChrome({ mode: '2D', sceneGraph: {} });
     expect(screen.queryByTestId('reset-camera-button')).toBeNull();
+  });
+});
+
+describe('ViewportToolbar — Screenshot (#224)', () => {
+  it('shows an enabled Screenshot button in 3D when a scene is loaded', () => {
+    renderWithChrome({ mode: '3D', sceneGraph: {} });
+    const btn = screen.getByTestId('screenshot-button') as HTMLButtonElement;
+    expect(btn.disabled).toBe(false);
+  });
+
+  it('disables Screenshot when no scene is loaded', () => {
+    renderWithChrome({ mode: '3D', sceneGraph: null });
+    expect((screen.getByTestId('screenshot-button') as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('hides Screenshot entirely in 2D overlay mode', () => {
+    renderWithChrome({ mode: '2D', sceneGraph: {} });
+    expect(screen.queryByTestId('screenshot-button')).toBeNull();
+  });
+
+  it('clicking Screenshot pulls a frame from the registered handler and triggers a download', () => {
+    const DATA_URL = 'data:image/png;base64,AAAA';
+
+    function ScreenshotHandlerRegistrar() {
+      const { registerScreenshotHandler } = useCameraControl();
+      useEffect(() => registerScreenshotHandler(() => DATA_URL), [registerScreenshotHandler]);
+      return null;
+    }
+
+    const clickSpy = vi
+      .spyOn(HTMLAnchorElement.prototype, 'click')
+      .mockImplementation(() => {});
+
+    // Mount FIRST, with the real appendChild — testing-library's own render()
+    // attaches its container via document.body.appendChild too, so mocking it
+    // beforehand would break the mount itself. Only wrap it afterwards, still
+    // calling through to the original so the DOM keeps working normally.
+    render(
+      <HierarchyProvider value={{ sceneGraph: {} as never, panelId: 'p' }}>
+        <CameraControlProvider>
+          <ScreenshotHandlerRegistrar />
+          <ViewportModeProvider initialMode="3D">
+            <ViewportToolbar />
+          </ViewportModeProvider>
+        </CameraControlProvider>
+      </HierarchyProvider>
+    );
+
+    let capturedAnchor: HTMLAnchorElement | null = null;
+    const originalAppendChild = globalThis.document.body.appendChild.bind(
+      globalThis.document.body
+    );
+    const appendSpy = vi
+      .spyOn(globalThis.document.body, 'appendChild')
+      .mockImplementation((node) => {
+        if (node instanceof HTMLAnchorElement) capturedAnchor = node;
+        return originalAppendChild(node);
+      });
+
+    fireEvent.click(screen.getByTestId('screenshot-button'));
+
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+    expect(capturedAnchor).not.toBeNull();
+    expect((capturedAnchor as unknown as HTMLAnchorElement).getAttribute('href')).toBe(DATA_URL);
+    expect((capturedAnchor as unknown as HTMLAnchorElement).download).toMatch(/\.png$/);
+
+    clickSpy.mockRestore();
+    appendSpy.mockRestore();
+  });
+
+  it('does nothing (no throw) when the handler returns null (no canvas mounted)', () => {
+    renderWithChrome({ mode: '3D', sceneGraph: {} });
+    expect(() => fireEvent.click(screen.getByTestId('screenshot-button'))).not.toThrow();
   });
 });

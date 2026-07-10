@@ -25,16 +25,23 @@
  * tests) the component is a no-op via `useOptionalSelection`.
  */
 import * as THREE from 'three';
-import { useOptionalSelection } from '../contexts/SelectionContext.js';
+import { useHoveredNodePath, useOptionalSelection } from '../contexts/SelectionContext.js';
+import { useAnimationTransport } from '../contexts/AnimationTransportContext.js';
 import { useSceneHelper } from '../hooks/useTHREEHelper.js';
 import { WorldBoxHelper } from './WorldBoxHelper.js';
 
 const HOVER_COLOR = 0xff8800;
 
 export function HoverHighlight() {
+  // WI-213: hover lives in a ref-based external store, not SelectionContext's
+  // React state — this is the ONE component that reads it.
+  const hoveredNodePath = useHoveredNodePath();
   const selection = useOptionalSelection();
-  const hoveredNodePath = selection?.hoveredNodePath ?? null;
   const nodeObjectMap = selection?.nodeObjectMap ?? null;
+  // PERF (WI-213): see SelectionHighlight — only recompute every frame
+  // while something could actually be moving the hovered target.
+  const { playState } = useAnimationTransport();
+  const tickUpdate = playState !== 'stopped';
 
   useSceneHelper<THREE.BoxHelper>(
     () => {
@@ -47,7 +54,8 @@ export function HoverHighlight() {
       helper.name = 'tscn-hover-highlight';
       return helper;
     },
-    [hoveredNodePath, nodeObjectMap]
+    [hoveredNodePath, nodeObjectMap],
+    { tickUpdate }
   );
 
   return null;

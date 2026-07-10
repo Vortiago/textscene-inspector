@@ -143,6 +143,14 @@ export function AnimationTree({ node, children }: NodeComponentProps) {
     }
     const actions = actionsRef.current;
 
+    // WI-213: the transport throttles reportTime(); neither the 'paused' nor
+    // 'stopped' case below reports again on its own, so flush the dominant
+    // action's exact current time once, right on the playing → non-playing
+    // edge, so the paused/stopped readout is never left throttle-stale.
+    if (prevStateRef.current === 'playing' && state !== 'playing' && dominant) {
+      transport.reportTime(actions.get(dominant.clip)?.time ?? 0, { immediate: true });
+    }
+
     switch (state) {
       case 'playing': {
         for (const { clip, weight, timeScale } of program) {
@@ -158,7 +166,12 @@ export function AnimationTree({ node, children }: NodeComponentProps) {
             action.play();
           }
         }
-        mixer.update(delta);
+        // #224: the preview speed multiplier applies here too (it's a global
+        // playback-rate control). The loop OVERRIDE does not: a blend program
+        // drives N weighted actions at once with per-action timeScale/weight,
+        // and Godot itself has no single "loop mode" for a state-machine/blend
+        // tree preview to override — there's no one loop setting to force.
+        mixer.update(delta * transport.playbackSpeed);
         if (dominant) transport.reportTime(actions.get(dominant.clip)?.time ?? 0);
         break;
       }

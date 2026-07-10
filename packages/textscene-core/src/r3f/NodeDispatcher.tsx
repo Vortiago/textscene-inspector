@@ -17,14 +17,19 @@
  * or any context providers — those are owned by `<TscnCanvas>` and
  * `<TscnPreviewShell>` respectively.
  *
- * Each rendered subtree is wrapped in `<PickableGroup>`, which attaches
- * the viewport selection handlers from `useViewportSelection` to the
- * subtree's pointer events. Click bubbles UP from the leaf mesh; the
- * handler at the leaf wins because R3F propagates pointer events from
- * the innermost hit object outward.
+ * WI-213 (event delegation): the WHOLE dispatched tree is wrapped in ONE
+ * root `<group>` carrying `useViewportSelection`'s pointer handlers, instead
+ * of every node's own wrapper group carrying a copy. R3F treats every
+ * object with a registered pointer handler as its own interactive raycast
+ * root, so N per-node handlers meant a mesh at depth d was triangle-tested
+ * once per ancestor on every pointer move; one delegated root raycasts the
+ * subtree exactly once. `resolvePathFromObject` recovers which node owns
+ * the hit mesh from the event's `object` by walking ITS OWN THREE parent
+ * chain against the reverse `objectPathMap` `<SelectionContext>` builds —
+ * see `useViewportSelection`'s doc comment.
  */
 
-import { Fragment, useCallback } from 'react';
+import { Fragment, useCallback, useEffect, useMemo } from 'react';
 import type { ReactNode } from 'react';
 import type * as THREE from 'three';
 import type { TscnNode, TscnScene } from '../parser/types.js';
@@ -44,6 +49,9 @@ import {
 } from './SceneResourcesContext.js';
 import { useSelection } from './contexts/SelectionContext.js';
 import { MissingResourcePlaceholder } from './components/MissingResourcePlaceholder.js';
+import { ErrorBoundary } from './components/ErrorBoundary.js';
+import { transformFromNode3DProperties } from './nodeTransform.js';
+import type { Node3DProperties } from '../nodes/base/node3d/types.js';
 import { GlbOverridesProvider } from './internal/glb-scene-root/GlbOverridesContext.js';
 
 export interface NodeDispatcherProps {
@@ -52,25 +60,24 @@ export interface NodeDispatcherProps {
 }
 
 export function NodeDispatcher({ nodes }: NodeDispatcherProps) {
-  const { withNodePath } = useViewportSelection();
+  const { handlers } = useViewportSelection();
   return (
-    <>
+    <group
+      onPointerDown={handlers.onPointerDown}
+      onPointerUp={handlers.onPointerUp}
+      onPointerMove={handlers.onPointerMove}
+      onPointerOut={handlers.onPointerOut}
+    >
       {nodes.map((node) => (
-        <DispatchedNode
-          key={node.name}
-          node={node}
-          path={node.name}
-          withNodePath={withNodePath}
-        />
+        <DispatchedNode key={node.name} node={node} path={node.name} />
       ))}
-    </>
+    </group>
   );
 }
 
 interface DispatchedNodeProps {
   node: TscnNode;
   path: string;
-  withNodePath: (path: string) => ReturnType<ReturnType<typeof useViewportSelection>['withNodePath']>;
 }
 
 /**
@@ -79,11 +86,11 @@ interface DispatchedNodeProps {
  * every already-merged node — renders directly in `PlainNode`. Holds no hooks
  * itself so the branch is free of rules-of-hooks concerns.
  */
-function DispatchedNode({ node, path, withNodePath }: DispatchedNodeProps): ReactNode {
+function DispatchedNode({ node, path }: DispatchedNodeProps): ReactNode {
   if (node.instance) {
-    return <InstancedNode node={node} path={path} withNodePath={withNodePath} />;
+    return <InstancedNode node={node} path={path} />;
   }
-  return <PlainNode node={node} path={path} withNodePath={withNodePath} />;
+  return <PlainNode node={node} path={path} />;
 }
 
 interface PlainNodeProps extends DispatchedNodeProps {
@@ -92,7 +99,7 @@ interface PlainNodeProps extends DispatchedNodeProps {
 }
 
 /**
- * Renders one non-instance node into its pickable `<group>` + registered
+ * Renders one non-instance node into its wrapper `<group>` + registered
  * component, dispatching its inline children and any `extraChildren` the
  * instance fallback supplies. This is the leaf of every dispatch: a merged
  * instance root (a plain node by the time it reaches here) renders through it
@@ -101,11 +108,9 @@ interface PlainNodeProps extends DispatchedNodeProps {
 function PlainNode({
   node,
   path,
-  withNodePath,
   children: extraChildren,
 }: PlainNodeProps): ReactNode {
   const Component = nodeComponentRegistry.get(node.type) ?? GenericNodeFallback;
-  const handlers = withNodePath(path);
   const { hiddenNodePaths, registerNodeObject, unregisterNodeObject } = useSelection();
   const workspace = useCanvasWorkspace();
   const isHidden = hiddenNodePaths.has(path);
@@ -140,12 +145,7 @@ function PlainNode({
   }
 
   const inlineChildren = node.children.map((child) => (
-    <DispatchedNode
-      key={child.name}
-      node={child}
-      path={joinPath(path, child.name)}
-      withNodePath={withNodePath}
-    />
+    <DispatchedNode key={child.name} node={child} path={joinPath(path, child.name)} />
   ));
 
   const children: ReactNode[] = [];
@@ -156,28 +156,42 @@ function PlainNode({
     children.push(<Fragment key="__extra">{extraChildren}</Fragment>);
   }
 
-  // The pickable wrapper lives above the rendered component so that any
-  // mesh / light / camera inside the subtree dispatches its pointer
-  // events to the same node-path handler. Picking selects whichever node
-  // OWNS the clicked geometry; if a child mesh is clicked, the child's
-  // wrapper wins because R3F walks the hit-tree from inner to outer.
+  // The wrapper is registered (path <-> Object3D, both directions) so the
+  // viewport's ONE delegated pointer-handler root (WI-213) can resolve which
+  // node owns a raycasted mesh, and so SelectionHighlight/HoverHighlight can
+  // find the Object3D for a path. Picking selects whichever node OWNS the
+  // clicked geometry; if a child mesh is clicked, the child's wrapper wins
+  // because `resolvePathFromObject` walks from the hit mesh UP, returning
+  // the FIRST (nearest / innermost) registered ancestor.
   //
   // `NodePathProvider` makes the path available to descendant components
   // (e.g. Camera3D tags its THREE.Camera with this so the canvas can
   // later swap to it on "Use This Camera").
+  //
+  // `<ErrorBoundary>` (#216) isolates a thrown render exception (NaN into a
+  // BufferGeometry, an unexpected GLB structure) to just THIS node instead
+  // of unwinding the WHOLE R3F scene tree — `<Canvas>` mounts its own
+  // react-reconciler root, so an uncaught error here would otherwise blank
+  // the entire viewport, not just the offending node. `resetKeys={[node]}`
+  // clears the caught error the moment a fresh parse hands this path a new
+  // `node` object (e.g. the user fixed the authored data that crashed it).
   return (
     <NodePathProvider path={path}>
-      <group
-        ref={wrapperRef}
-        visible={!isHidden}
-        onPointerDown={handlers.onPointerDown}
-        onPointerUp={handlers.onPointerUp}
-        onPointerOver={handlers.onPointerOver}
-        onPointerOut={handlers.onPointerOut}
-      >
-        <Component node={node}>
-          {children.length > 0 ? <>{children}</> : null}
-        </Component>
+      <group ref={wrapperRef} visible={!isHidden}>
+        <ErrorBoundary
+          resetKeys={[node]}
+          fallback={() => (
+            <MissingResourcePlaceholder
+              shape="box"
+              name={node.name}
+              {...transformFromNode3DProperties(node.properties as Node3DProperties)}
+            />
+          )}
+        >
+          <Component node={node}>
+            {children.length > 0 ? <>{children}</> : null}
+          </Component>
+        </ErrorBoundary>
       </group>
     </NodePathProvider>
   );
@@ -203,7 +217,7 @@ function PlainNode({
  * scoped to descendants via a nested `<SceneResourcesProvider>` so SubResource
  * lookups inside the instanced subtree resolve against the loaded pool.
  */
-function InstancedNode({ node, path, withNodePath }: DispatchedNodeProps): ReactNode {
+function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
   const { externalResources } = useSceneResources();
   const loader = useResourceLoader();
   const instanceRef = node.instance ?? '';
@@ -213,11 +227,16 @@ function InstancedNode({ node, path, withNodePath }: DispatchedNodeProps): React
   // request kicks in. SceneLoader's `loadSceneFromProvider` looks up
   // metadata to learn the resource's type/path; without registration
   // it throws "Scene metadata not found". Registration is idempotent
-  // (MetadataStore overwrites on duplicate id), so calling it on every
-  // render of an instancing subtree is safe — the alternative (effect
-  // in SceneResourcesProvider) ran AFTER the dispatcher's useResource
-  // effect because React runs child effects before parent effects.
-  if (loader && scenePath) {
+  // (MetadataStore overwrites on duplicate id), so re-registering on every
+  // relevant-input change is safe — the alternative (effect in
+  // SceneResourcesProvider) ran AFTER the dispatcher's useResource effect
+  // because React runs child effects before parent effects.
+  //
+  // Lives in an effect (not the render body) so this instancing subtree's
+  // render stays a pure computation — the loader mutation only happens once
+  // per commit for a given instance ref, not on every re-render (WI-213).
+  useEffect(() => {
+    if (!loader || !scenePath) return;
     const parsed = parseResourceReference(instanceRef);
     if (parsed && parsed.type === 'ExtResource') {
       const ext = externalResources.find((r) => r.id === parsed.id);
@@ -225,26 +244,11 @@ function InstancedNode({ node, path, withNodePath }: DispatchedNodeProps): React
         loader.register({ id: ext.id, path: ext.path, type: ext.type });
       }
     }
-  }
+  }, [loader, scenePath, instanceRef, externalResources]);
 
   const result = useResource<TscnScene>(scenePath ?? '', 'PackedScene');
+  const loadedScene = result.status === 'loaded' ? result.value ?? null : null;
 
-  // Unresolvable ref or failed load: keep the node visible with a magenta
-  // placeholder child, matching the missing-texture UX (WI-R3F-7).
-  if (!scenePath || result.status === 'unavailable') {
-    return (
-      <PlainNode node={node} path={path} withNodePath={withNodePath}>
-        <MissingResourcePlaceholder shape="box" />
-      </PlainNode>
-    );
-  }
-  // Still loading: render the instancing node's own subtree; the merged
-  // result swaps in once the sub-scene arrives.
-  if (result.status === 'pending' || !result.value) {
-    return <PlainNode node={node} path={path} withNodePath={withNodePath} />;
-  }
-
-  const loadedScene = result.value;
   // Instance root merge via the shared `collapseLiveNode` — the SAME decision
   // the tree, inspector, and panels make, so ADR-0013 lives in one place instead
   // of each walker re-deriving it. The single-entry cache hands it just this
@@ -252,11 +256,34 @@ function InstancedNode({ node, path, withNodePath }: DispatchedNodeProps): React
   // single non-GLB root collapsed in: re-dispatch the merged node at the SAME
   // path under the sub-scene's resource scope. `.glb`/multi-root return `node`
   // unchanged → the historical nested-injection fallback below.
-  const effective = collapseLiveNode(
-    node,
-    externalResources,
-    singleSceneCache(scenePath, loadedScene)
+  //
+  // Memoized (and called unconditionally, ahead of the early returns below,
+  // to satisfy rules-of-hooks) so an unrelated re-render (selection/hover
+  // elsewhere in the tree) doesn't re-merge + re-parse this instance's
+  // subtree every frame — the same fix TreeNode.tsx already applies to its
+  // own collapseLiveNode call (WI-213).
+  const effective = useMemo(
+    () =>
+      loadedScene
+        ? collapseLiveNode(node, externalResources, singleSceneCache(scenePath, loadedScene))
+        : node,
+    [node, externalResources, scenePath, loadedScene]
   );
+
+  // Unresolvable ref or failed load: keep the node visible with a magenta
+  // placeholder child, matching the missing-texture UX (WI-R3F-7).
+  if (!scenePath || result.status === 'unavailable') {
+    return (
+      <PlainNode node={node} path={path}>
+        <MissingResourcePlaceholder shape="box" />
+      </PlainNode>
+    );
+  }
+  // Still loading: render the instancing node's own subtree; the merged
+  // result swaps in once the sub-scene arrives.
+  if (result.status === 'pending' || !loadedScene) {
+    return <PlainNode node={node} path={path} />;
+  }
 
   if (effective !== node) {
     return (
@@ -264,7 +291,7 @@ function InstancedNode({ node, path, withNodePath }: DispatchedNodeProps): React
         internalResources={loadedScene.internalResources}
         externalResources={loadedScene.externalResources}
       >
-        <DispatchedNode node={effective} path={path} withNodePath={withNodePath} />
+        <DispatchedNode node={effective} path={path} />
       </SceneResourcesProvider>
     );
   }
@@ -272,18 +299,13 @@ function InstancedNode({ node, path, withNodePath }: DispatchedNodeProps): React
   // Fallback (`.glb` synthetic root / multi-root): historical nested form.
   return (
     <GlbOverridesProvider overrides={node.children}>
-      <PlainNode node={node} path={path} withNodePath={withNodePath}>
+      <PlainNode node={node} path={path}>
         <SceneResourcesProvider
           internalResources={loadedScene.internalResources}
           externalResources={loadedScene.externalResources}
         >
           {loadedScene.nodes.map((child) => (
-            <DispatchedNode
-              key={child.name}
-              node={child}
-              path={joinPath(path, child.name)}
-              withNodePath={withNodePath}
-            />
+            <DispatchedNode key={child.name} node={child} path={joinPath(path, child.name)} />
           ))}
         </SceneResourcesProvider>
       </PlainNode>

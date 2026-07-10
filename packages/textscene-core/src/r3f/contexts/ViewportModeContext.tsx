@@ -7,11 +7,18 @@
  *   default, like Godot's "Visible Collision Shapes").
  * - `showLabels` — drives in-viewport text (Label3D); off by default so text
  *   doesn't clutter the 3D view (ADR-0008), toggled on like the collision gizmo.
+ * - `showGrid` (#224) — a ground-plane grid helper in the 3D viewport. Off by
+ *   default: a sibling hardening bucket regenerates ALL visual-regression
+ *   baselines in this same round, so a toggle that's visible out of the box
+ *   would invalidate that work. A user who turns it on gets it persisted
+ *   (host-layered, like the mode itself) — only a FRESH session with no
+ *   persisted preference sees it off.
  *
- * The context has a safe default (3D, collisions off, labels off) so components
- * that read it render correctly even when no provider is mounted (test
- * scaffolding, and the off-by-default toggles). The toolbar toggle (P4) writes
- * through the provider; persistence is layered on top via a host-specific hook.
+ * The context has a safe default (3D, collisions off, labels off, grid off)
+ * so components that read it render correctly even when no provider is
+ * mounted (test scaffolding, and the off-by-default toggles). The toolbar
+ * toggle (P4) writes through the provider; persistence is layered on top via
+ * a host-specific hook.
  */
 
 import {
@@ -33,6 +40,8 @@ export interface ViewportModeValue {
   setShowLabels: (show: boolean) => void;
   showNavigation: boolean;
   setShowNavigation: (show: boolean) => void;
+  showGrid: boolean;
+  setShowGrid: (show: boolean) => void;
 }
 
 const DEFAULT_VALUE: ViewportModeValue = {
@@ -44,6 +53,8 @@ const DEFAULT_VALUE: ViewportModeValue = {
   setShowLabels: () => {},
   showNavigation: true,
   setShowNavigation: () => {},
+  showGrid: false,
+  setShowGrid: () => {},
 };
 
 const ViewportModeContext = createContext<ViewportModeValue>(DEFAULT_VALUE);
@@ -55,6 +66,7 @@ export interface ViewportModeProviderProps {
   initialShowCollisions?: boolean;
   initialShowLabels?: boolean;
   initialShowNavigation?: boolean;
+  initialShowGrid?: boolean;
 }
 
 export function ViewportModeProvider({
@@ -63,11 +75,13 @@ export function ViewportModeProvider({
   initialShowCollisions = false,
   initialShowLabels = false,
   initialShowNavigation = true,
+  initialShowGrid = false,
 }: ViewportModeProviderProps) {
   const [mode, setMode] = useState<ViewportMode>(initialMode);
   const [showCollisions, setShowCollisions] = useState(initialShowCollisions);
   const [showLabels, setShowLabels] = useState(initialShowLabels);
   const [showNavigation, setShowNavigation] = useState(initialShowNavigation);
+  const [showGrid, setShowGrid] = useState(initialShowGrid);
   const value = useMemo<ViewportModeValue>(
     () => ({
       mode,
@@ -78,13 +92,15 @@ export function ViewportModeProvider({
       setShowLabels,
       showNavigation,
       setShowNavigation,
+      showGrid,
+      setShowGrid,
     }),
-    [mode, showCollisions, showLabels, showNavigation]
+    [mode, showCollisions, showLabels, showNavigation, showGrid]
   );
   return <ViewportModeContext.Provider value={value}>{children}</ViewportModeContext.Provider>;
 }
 
-/** Read the viewport mode + collision/label visibility state. Safe without a provider. */
+/** Read the viewport mode + collision/label/grid visibility state. Safe without a provider. */
 export function useViewportMode(): ViewportModeValue {
   return useContext(ViewportModeContext);
 }

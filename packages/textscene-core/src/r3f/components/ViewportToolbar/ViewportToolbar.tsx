@@ -5,6 +5,11 @@
  * between the R3F canvas and the 2D Control overlay, and CollisionShape3D
  * gizmos show/hide. Shared by both apps via TscnPreviewShell, so feature parity
  * is automatic — including Reset Camera, which the web app previously owned.
+ *
+ * #224 additions: a ground-plane Grid toggle (3D-only, off by default — see
+ * ViewportModeContext's doc comment for why) and a Screenshot button that
+ * downloads the current 3D frame as a PNG via `CameraControlContext`'s
+ * registered handler (`<TscnCanvas>`'s `ScreenshotBridge`).
  */
 
 import { useViewportMode, type ViewportMode } from '../../contexts/ViewportModeContext.js';
@@ -13,6 +18,16 @@ import { useOptionalHierarchy } from '../../contexts/HierarchyContext.js';
 import styles from './ViewportToolbar.module.css';
 
 const MODES: ViewportMode[] = ['3D', '2D'];
+
+/** Triggers a browser download of a data URL via a throwaway anchor element. */
+function downloadDataUrl(dataUrl: string, filename: string): void {
+  const link = document.createElement('a');
+  link.href = dataUrl;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+}
 
 export function ViewportToolbar() {
   const {
@@ -24,10 +39,18 @@ export function ViewportToolbar() {
     setShowLabels,
     showNavigation,
     setShowNavigation,
+    showGrid,
+    setShowGrid,
   } = useViewportMode();
   const camera = useOptionalCameraControl();
   const hierarchy = useOptionalHierarchy();
   const sceneLoaded = Boolean(hierarchy?.sceneGraph);
+
+  function handleScreenshot() {
+    const dataUrl = camera?.takeScreenshot();
+    if (!dataUrl) return;
+    downloadDataUrl(dataUrl, `tscn-preview-${Date.now()}.png`);
+  }
 
   return (
     <div className={styles.toolbar} role="toolbar" aria-label="Viewport controls">
@@ -42,6 +65,18 @@ export function ViewportToolbar() {
           title="Frame the orbit camera back to the default view"
         >
           Reset Camera
+        </button>
+      )}
+      {mode === '3D' && camera && (
+        <button
+          type="button"
+          className={styles.resetButton}
+          onClick={handleScreenshot}
+          disabled={!sceneLoaded}
+          data-testid="screenshot-button"
+          title="Save the current 3D view as a PNG"
+        >
+          Screenshot
         </button>
       )}
       <div className={styles.segment} role="group" aria-label="Viewport dimension">
@@ -81,6 +116,16 @@ export function ViewportToolbar() {
         />
         Navigation
       </label>
+      {mode === '3D' && (
+        <label className={styles.checkbox} title="Show a ground-plane reference grid">
+          <input
+            type="checkbox"
+            checked={showGrid}
+            onChange={(e) => setShowGrid(e.target.checked)}
+          />
+          Grid
+        </label>
+      )}
     </div>
   );
 }

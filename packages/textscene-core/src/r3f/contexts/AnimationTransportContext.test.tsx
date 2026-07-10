@@ -3,7 +3,7 @@
  * that the AnimationPlayer Component reads and the Animation dock tab drives.
  */
 
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import {
@@ -149,5 +149,128 @@ describe('AnimationTransportContext — controls (F2/F3)', () => {
     const { result } = setup();
     act(() => result.current.reportTime(0.25));
     expect(result.current.time).toBeCloseTo(0.25);
+  });
+});
+
+describe('AnimationTransportContext — reportTime throttling (WI-213)', () => {
+  function setup() {
+    const hook = renderHook(() => useAnimationTransport(), { wrapper: wrap });
+    act(() => void hook.result.current.registerPlayer(REG));
+    return hook;
+  }
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('commits the first reportTime call immediately (no artificial initial delay)', () => {
+    const { result } = setup();
+    act(() => result.current.reportTime(0.1));
+    expect(result.current.time).toBeCloseTo(0.1);
+  });
+
+  it('coalesces rapid reportTime calls within the throttle window into one commit', () => {
+    const { result } = setup();
+    act(() => result.current.reportTime(0.1));
+    expect(result.current.time).toBeCloseTo(0.1);
+
+    // Same tick (60fps ~= 16ms apart) — well inside a ~100ms/10Hz window.
+    act(() => {
+      vi.advanceTimersByTime(16);
+      result.current.reportTime(0.11);
+    });
+    expect(result.current.time).toBeCloseTo(0.1); // still the throttled value
+
+    act(() => {
+      vi.advanceTimersByTime(16);
+      result.current.reportTime(0.12);
+    });
+    expect(result.current.time).toBeCloseTo(0.1);
+  });
+
+  it('commits again once the throttle window elapses', () => {
+    const { result } = setup();
+    act(() => result.current.reportTime(0.1));
+
+    act(() => {
+      vi.advanceTimersByTime(16);
+      result.current.reportTime(0.11); // still throttled
+    });
+    expect(result.current.time).toBeCloseTo(0.1);
+
+    act(() => {
+      vi.advanceTimersByTime(200); // well past the throttle window
+      result.current.reportTime(0.5);
+    });
+    expect(result.current.time).toBeCloseTo(0.5);
+  });
+
+  it('an immediate reportTime call bypasses the throttle window', () => {
+    const { result } = setup();
+    act(() => result.current.reportTime(0.1));
+
+    act(() => {
+      vi.advanceTimersByTime(16); // well inside the throttle window
+      result.current.reportTime(0.33, { immediate: true });
+    });
+    expect(result.current.time).toBeCloseTo(0.33);
+  });
+});
+
+describe('AnimationTransportContext — playback speed (#224)', () => {
+  it('starts at 1x (no change from the authored speed)', () => {
+    const { result } = renderHook(() => useAnimationTransport(), { wrapper: wrap });
+    expect(result.current.playbackSpeed).toBe(1);
+  });
+
+  it('setPlaybackSpeed updates the multiplier', () => {
+    const { result } = renderHook(() => useAnimationTransport(), { wrapper: wrap });
+    act(() => result.current.setPlaybackSpeed(2));
+    expect(result.current.playbackSpeed).toBe(2);
+  });
+
+  it('ignores a non-positive or non-finite speed (would silently freeze/reverse playback)', () => {
+    const { result } = renderHook(() => useAnimationTransport(), { wrapper: wrap });
+    act(() => result.current.setPlaybackSpeed(0));
+    expect(result.current.playbackSpeed).toBe(1);
+    act(() => result.current.setPlaybackSpeed(2));
+    act(() => result.current.setPlaybackSpeed(-1));
+    expect(result.current.playbackSpeed).toBe(1);
+    act(() => result.current.setPlaybackSpeed(2));
+    act(() => result.current.setPlaybackSpeed(NaN));
+    expect(result.current.playbackSpeed).toBe(1);
+  });
+
+  it('resets to 1x when a new player registers — a fresh selection starts neutral', () => {
+    const { result } = renderHook(() => useAnimationTransport(), { wrapper: wrap });
+    act(() => void result.current.registerPlayer(REG));
+    act(() => result.current.setPlaybackSpeed(2));
+    act(() => void result.current.registerPlayer({ clips: ['a'], durations: { a: 1 } }));
+    expect(result.current.playbackSpeed).toBe(1);
+  });
+});
+
+describe('AnimationTransportContext — loop override (#224)', () => {
+  it('starts on "auto" (respects each clip\'s authored loop behavior)', () => {
+    const { result } = renderHook(() => useAnimationTransport(), { wrapper: wrap });
+    expect(result.current.loopOverride).toBe('auto');
+  });
+
+  it('setLoopOverride updates the mode', () => {
+    const { result } = renderHook(() => useAnimationTransport(), { wrapper: wrap });
+    act(() => result.current.setLoopOverride('once'));
+    expect(result.current.loopOverride).toBe('once');
+  });
+
+  it('resets to "auto" when a new player registers', () => {
+    const { result } = renderHook(() => useAnimationTransport(), { wrapper: wrap });
+    act(() => void result.current.registerPlayer(REG));
+    act(() => result.current.setLoopOverride('loop'));
+    act(() => void result.current.registerPlayer({ clips: ['a'], durations: { a: 1 } }));
+    expect(result.current.loopOverride).toBe('auto');
   });
 });

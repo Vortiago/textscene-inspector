@@ -20,6 +20,7 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode, TscnScene, TscnInternalResource } from '../parser/types';
 import { NodeDispatcher } from './NodeDispatcher';
+import * as mergeInstanceRootModule from '../resources/mergeInstanceRoot';
 import { SelectionProvider } from './contexts/SelectionContext';
 import { SceneResourcesProvider } from './SceneResourcesContext';
 import { ResourceLoaderProvider } from '../resources/ResourceLoaderContext';
@@ -618,5 +619,94 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
     expect(worldPos.x).toBeCloseTo(2, 4);
     expect(worldPos.y).toBeCloseTo(0, 4);
     expect(worldPos.z).toBeCloseTo(0, 4);
+  });
+
+  it('PERF (WI-213): does not re-merge an instance subtree on an unrelated re-render', async () => {
+    // collapseLiveNode/mergeInstanceRoot must be memoized per instance so an
+    // unrelated re-render elsewhere in the tree (selection, hover, an
+    // unrelated sibling's state) doesn't re-walk this instance's merge every
+    // render — the same fix TreeNode.tsx already applies on the tree side.
+    const { loader, setSceneCached } = makeLoader();
+    setSceneCached('res://child_cube.tscn', makeBoxScene('TheBox'));
+
+    const instancingNode: TscnNode = {
+      name: 'LeftCube',
+      type: 'Node3D',
+      instance: 'ExtResource("1_cube")',
+      children: [],
+      properties: { name: 'LeftCube' } as Record<string, unknown>,
+    };
+
+    const mergeSpy = vi.spyOn(mergeInstanceRootModule, 'mergeInstanceRoot');
+
+    // Hoisted OUTSIDE the component so the reference stays stable across
+    // re-renders — mirroring production, where these come from a
+    // once-per-parse SceneGraph, not a fresh literal per render (a fresh
+    // array/node every render would defeat ANY memoization strategy, not
+    // just this one).
+    const internalResources: TscnScene['internalResources'] = [];
+    const externalResources: TscnScene['externalResources'] = [
+      { id: '1_cube', path: 'res://child_cube.tscn', type: 'PackedScene' },
+    ];
+
+    function Harness({ tick }: { tick: number }) {
+      return (
+        <ResourceLoaderProvider loader={loader}>
+          <SceneResourcesProvider
+            internalResources={internalResources}
+            externalResources={externalResources}
+          >
+            <SelectionProvider>
+              {/* An unrelated state value forced into the tree so the whole
+                  subtree re-renders without any of the instance's own inputs
+                  (node/scenePath/loadedScene/externalResources) changing. */}
+              <group userData={{ tick }} />
+              <NodeDispatcher nodes={[instancingNode]} />
+            </SelectionProvider>
+          </SceneResourcesProvider>
+        </ResourceLoaderProvider>
+      );
+    }
+
+    const renderer = await ReactThreeTestRenderer.create(<Harness tick={0} />);
+    const callsAfterFirstRender = mergeSpy.mock.calls.length;
+    expect(callsAfterFirstRender).toBeGreaterThan(0);
+
+    // Re-render with a prop change that does NOT touch this instance's own
+    // memo deps.
+    await renderer.update(<Harness tick={1} />);
+    await renderer.update(<Harness tick={2} />);
+
+    expect(mergeSpy.mock.calls.length).toBe(callsAfterFirstRender);
+    mergeSpy.mockRestore();
+  });
+
+  it('PERF (WI-213): registers the instanced ExtResource from an effect, not the render body', async () => {
+    const { loader, setSceneCached } = makeLoader();
+    setSceneCached('res://child_cube.tscn', makeBoxScene('TheBox'));
+    const registerSpy = loader.register as unknown as ReturnType<typeof vi.fn>;
+
+    const instancingNode: TscnNode = {
+      name: 'LeftCube',
+      type: 'Node3D',
+      instance: 'ExtResource("1_cube")',
+      children: [],
+      properties: { name: 'LeftCube' } as Record<string, unknown>,
+    };
+
+    await renderTree(
+      [instancingNode],
+      loader,
+      [{ id: '1_cube', path: 'res://child_cube.tscn', type: 'PackedScene' }]
+    );
+
+    // Behavior is preserved (registration still happens, so the resource
+    // pipeline can resolve the instanced scene) even though the call now
+    // lives inside a useEffect instead of the render body.
+    expect(registerSpy).toHaveBeenCalledWith({
+      id: '1_cube',
+      path: 'res://child_cube.tscn',
+      type: 'PackedScene',
+    });
   });
 });

@@ -17,6 +17,7 @@
  */
 import * as THREE from 'three';
 import { useOptionalSelection } from '../contexts/SelectionContext.js';
+import { useAnimationTransport } from '../contexts/AnimationTransportContext.js';
 import { useSceneHelper } from '../hooks/useTHREEHelper.js';
 import { WorldBoxHelper } from './WorldBoxHelper.js';
 
@@ -26,6 +27,13 @@ export function SelectionHighlight() {
   const selection = useOptionalSelection();
   const selectedNodePath = selection?.selectedNodePath ?? null;
   const nodeObjectMap = selection?.nodeObjectMap ?? null;
+  // PERF (WI-213): a static scene never needs the box recomputed after its
+  // initial placement (the helper's constructor already runs `update()`
+  // once); only an active playback driver can move the target between
+  // renders. `paused` still counts — a scrub seeks the mixer without
+  // flipping `playState` back to `playing`.
+  const { playState } = useAnimationTransport();
+  const tickUpdate = playState !== 'stopped';
 
   useSceneHelper<THREE.BoxHelper>(
     () => {
@@ -38,7 +46,8 @@ export function SelectionHighlight() {
       helper.name = 'tscn-selection-highlight';
       return helper;
     },
-    [selectedNodePath, nodeObjectMap]
+    [selectedNodePath, nodeObjectMap],
+    { tickUpdate }
   );
 
   return null;

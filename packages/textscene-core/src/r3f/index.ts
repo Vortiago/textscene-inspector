@@ -55,7 +55,7 @@ export {
   useViewportSelection,
   type UseViewportSelectionOptions,
   type UseViewportSelectionResult,
-  type NodePathHandlers,
+  type DelegatedPointerHandlers,
 } from './hooks/useViewportSelection.js';
 
 // The shell's own parse pipeline, exposed so hosts can make the SAME
