@@ -66,6 +66,23 @@ export function findSubResource(
 }
 
 /**
+ * Resolve a raw `SubResource("id")` property string straight to the internal
+ * resource it names — `parseResourceReference` + `findSubResource` in one
+ * step. Returns undefined for an absent value, a non-SubResource reference
+ * (ExtResource / malformed), or an unknown id. Shared by the R3F components
+ * that read a sub-resource-valued property (CollisionShape2D/3D `shape`).
+ */
+export function resolveSubResourceRef(
+  ref: string | undefined,
+  internalResources: readonly TscnInternalResource[]
+): TscnInternalResource | undefined {
+  if (!ref) return undefined;
+  const parsed = parseResourceReference(ref);
+  if (!parsed || parsed.type !== 'SubResource') return undefined;
+  return findSubResource(internalResources, parsed.id);
+}
+
+/**
  * Resolve a Node's `instance` PackedScene reference to a `res://` scene path.
  * Shared by every R3F caller that turns an instance ref into a path:
  * NodeDispatcher's `InstancedSceneSubtree`, the scene tree's

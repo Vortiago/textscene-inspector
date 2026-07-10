@@ -1,13 +1,15 @@
 /**
  * Tests for the resource-reference helpers: `parseResourceReference`
- * (raw `SubResource("id")` / `ExtResource("id")` parsing) and
- * `resolveInstancePath` (a Node's instance ref → `res://` path), the
- * single resolver shared by NodeDispatcher, useSubSceneChildren, and
- * the live-tree resolver (`resolveLiveNode`).
+ * (raw `SubResource("id")` / `ExtResource("id")` parsing), `resolveInstancePath`
+ * (a Node's instance ref → `res://` path, the single resolver shared by
+ * NodeDispatcher, useSubSceneChildren, and the live-tree resolver
+ * `resolveLiveNode`), and `resolveSubResourceRef` (a raw `SubResource("id")`
+ * property string → its internal resource, shared by the CollisionShape2D/3D
+ * R3F components).
  */
 import { describe, it, expect } from 'vitest';
-import { parseResourceReference, resolveInstancePath } from './SubResourceResolver';
-import type { TscnExternalResource } from '../parser/types';
+import { parseResourceReference, resolveInstancePath, resolveSubResourceRef } from './SubResourceResolver';
+import type { TscnExternalResource, TscnInternalResource } from '../parser/types';
 
 const externalResources: readonly TscnExternalResource[] = [
   { id: '1_cube', path: 'res://child_cube.tscn', type: 'PackedScene' },
@@ -70,5 +72,35 @@ describe('resolveInstancePath', () => {
     expect(resolveInstancePath('SubResource("BoxMesh_abc")', externalResources)).toBeNull();
     expect(resolveInstancePath('not a reference', externalResources)).toBeNull();
     expect(resolveInstancePath('', externalResources)).toBeNull();
+  });
+});
+
+describe('resolveSubResourceRef', () => {
+  const internalResources: readonly TscnInternalResource[] = [
+    { id: 'RectangleShape2D_1', type: 'RectangleShape2D', data: { size: 'Vector2(40, 60)' } },
+    { id: 'CircleShape2D_1', type: 'CircleShape2D', data: { radius: '15' } },
+  ];
+
+  it('resolves a SubResource reference to its internal resource (happy path)', () => {
+    expect(resolveSubResourceRef('SubResource("RectangleShape2D_1")', internalResources)).toEqual(
+      internalResources[0]
+    );
+  });
+
+  it('returns undefined for an absent ref (edge case)', () => {
+    expect(resolveSubResourceRef(undefined, internalResources)).toBeUndefined();
+  });
+
+  it('returns undefined for an ExtResource reference (error path — wrong reference kind)', () => {
+    expect(resolveSubResourceRef('ExtResource("1_cube")', internalResources)).toBeUndefined();
+  });
+
+  it('returns undefined for a malformed reference (error path)', () => {
+    expect(resolveSubResourceRef('not a reference', internalResources)).toBeUndefined();
+  });
+
+  it('returns undefined when the SubResource id is not registered (error path)', () => {
+    expect(resolveSubResourceRef('SubResource("Missing_1")', internalResources)).toBeUndefined();
+    expect(resolveSubResourceRef('SubResource("RectangleShape2D_1")', [])).toBeUndefined();
   });
 });
