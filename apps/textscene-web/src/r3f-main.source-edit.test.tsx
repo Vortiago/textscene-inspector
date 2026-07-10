@@ -83,6 +83,10 @@ function resetPersistence() {
   } catch {
     // happy-dom may throw in edge cases; ignore.
   }
+  // #221: a fixture switch now writes `?fixture=` back to the URL
+  // (history.replaceState) — reset it so one test's switch doesn't leak
+  // into the next test's initial mount as a stale deep link.
+  window.history.replaceState(null, '', '/');
 }
 
 /** Fixture fetches return the stub scene; the palette's switch target returns its own root. */

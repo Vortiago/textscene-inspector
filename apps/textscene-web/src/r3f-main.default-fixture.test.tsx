@@ -36,6 +36,11 @@ beforeEach(() => {
   } catch {
     // happy-dom may throw in some edge cases; ignore.
   }
+  // #221: a fixture switch/load now writes `?fixture=` back to the URL
+  // (history.replaceState) — reset it so one test's load doesn't leak into
+  // the next test's initial mount as a stale deep link (which would
+  // otherwise outrank the localStorage choice these tests exercise).
+  window.history.replaceState(null, '', '/');
   fetchSpy = vi.fn().mockResolvedValue({
     ok: true,
     text: () => Promise.resolve(STUB_TSCN),

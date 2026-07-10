@@ -160,6 +160,26 @@ export function R3FApp() {
       return DEFAULT_FIXTURE;
     }
   });
+
+  // #221: write `?fixture=` back on every scene switch — read-once at mount
+  // was the only direction before, so reloading or sharing the URL reopened
+  // whatever localStorage remembered, not the scene actually on screen.
+  // `replaceState` (never `pushState`): switching scenes is not a navigation
+  // the user expects Back to step through.
+  useEffect(() => {
+    try {
+      const url = new URL(window.location.href);
+      if (fixtureFile) {
+        url.searchParams.set('fixture', fixtureFile);
+      } else {
+        url.searchParams.delete('fixture');
+      }
+      window.history.replaceState(null, '', url);
+    } catch {
+      // Best-effort — an unsupported History API must never break the app.
+    }
+  }, [fixtureFile]);
+
   const [buffer, setBuffer] = useState<string>('');
   const [forwardedContent, setForwardedContent] = useState<string>('');
   const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
