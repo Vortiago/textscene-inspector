@@ -108,6 +108,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Animation Player Method Track",
+    "file": "unit-animation-player-method-track.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Animation Player Sprite Frame",
     "file": "unit-animation-player-sprite-frame.tscn",
     "category": "Other"
@@ -241,6 +246,21 @@ export const fixtures: Fixture[] = [
     "name": "World Environment No Fog",
     "file": "unit-world-environment-no-fog.tscn",
     "category": "Other"
+  },
+  {
+    "name": "Animation Empty Library",
+    "file": "edge-animation-empty-library.tscn",
+    "category": "Edge Cases"
+  },
+  {
+    "name": "Animation Library Missing Subresource",
+    "file": "edge-animation-library-missing-subresource.tscn",
+    "category": "Edge Cases"
+  },
+  {
+    "name": "Animation Track Missing Target",
+    "file": "edge-animation-track-missing-target.tscn",
+    "category": "Edge Cases"
   },
   {
     "name": "Invalid Cast Shadow",

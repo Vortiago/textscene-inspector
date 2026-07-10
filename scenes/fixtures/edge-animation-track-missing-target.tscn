@@ -1,0 +1,39 @@
+[gd_scene load_steps=3 format=3 uid="uid://edge_animation_track_missing_target"]
+
+; A value track targets NodePath("Ghost:position") — "Ghost" does not exist
+; anywhere in this scene. CURRENT behavior: the render-side parser
+; (animationResolver.ts) is THREE-free and doesn't verify targets exist, so
+; the track parses normally into a GodotTrack; at mount, three.js's own
+; PropertyBinding silently no-ops a track whose target can't be found (no
+; crash, no visible effect) — see Component.degraded-path.test.tsx. NO
+; linter rule currently inspects individual Animation track target NodePaths
+; (only root_node/autoplay/current_animation existence are checked), so this
+; fixture lints completely clean today — that absence of a diagnostic is the
+; corpus-pinned CURRENT state, not an asserted correctness claim.
+
+[sub_resource type="BoxMesh" id="BoxMesh_box"]
+
+[sub_resource type="Animation" id="Animation_ghost"]
+resource_name = "ghost_move"
+length = 1.0
+tracks/0/type = "value"
+tracks/0/path = NodePath("Ghost:position")
+tracks/0/interp = 1
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 1),
+"transitions": PackedFloat32Array(1, 1),
+"values": [Vector3(0, 0, 0), Vector3(2, 0, 0)]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_default"]
+_data = {
+"ghost_move": SubResource("Animation_ghost")
+}
+
+[node name="Scene" type="Node3D"]
+
+[node name="Mesh" type="MeshInstance3D" parent="."]
+mesh = SubResource("BoxMesh_box")
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+libraries/ = SubResource("AnimationLibrary_default")
