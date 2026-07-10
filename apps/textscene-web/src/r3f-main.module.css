@@ -102,6 +102,17 @@
   white-space: nowrap;
 }
 
+/* ── Missing-resource badge (#221) ─────────────────────────────────────── */
+.missingResourcesBadge {
+  padding: 2px var(--tsi-space-2);
+  background: var(--tsi-warning-bg, rgba(217, 164, 65, 0.18));
+  border: 1px solid var(--tsi-warning, #d9a441);
+  border-radius: var(--tsi-radius-sm);
+  color: var(--tsi-warning-fg, #d9a441);
+  font-size: var(--tsi-font-sm);
+  white-space: nowrap;
+}
+
 /* Visually-hidden (but reachable) file input. */
 .srOnly {
   position: absolute;

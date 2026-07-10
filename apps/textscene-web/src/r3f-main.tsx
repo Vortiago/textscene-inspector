@@ -26,6 +26,7 @@ import {
   createResourcePipeline,
   ResourceLoaderProvider,
   TscnPreviewShell,
+  useMissingResources,
   type ViewportSelectorOption,
 } from '@textscene/core';
 import { Linter, type Diagnostic } from '@textscene/core/linter';
@@ -536,7 +537,9 @@ function SceneGlyph() {
  *
  * Note on missing files: a scene's missing `res://` dependencies are provided
  * separately and per-path in the shell's Resources tab — deliberately kept
- * distinct from "open a scene" so a picked file always maps to a known target.
+ * distinct from "open a scene" so a picked file always maps to a known
+ * target. A compact badge (#221) nudges the user toward that tab without
+ * requiring it be open first.
  */
 function Toolbar({
   options,
@@ -555,6 +558,14 @@ function Toolbar({
   const searchRef = useRef<HTMLInputElement | null>(null);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
+
+  // #221: `<Toolbar>` is rendered THROUGH the shell's `toolbar` slot, i.e. as
+  // a descendant of the shell's own `<MissingResourcesProvider>` — so this
+  // reads the SAME live missing-paths set the shell's own
+  // `<MissingResourcesPanel>` (in the Resources tab) aggregates, without any
+  // new plumbing. Surfacing it here means a missing texture/scene is visible
+  // without opening that tab first.
+  const { missingPaths } = useMissingResources();
 
   // Built-in dev fixtures to switch between (drop the uploaded-placeholder
   // option, whose value is the empty sentinel).
@@ -660,6 +671,16 @@ function Toolbar({
           ▾
         </span>
       </button>
+
+      {missingPaths.size > 0 && (
+        <span
+          className={styles.missingResourcesBadge}
+          data-testid="missing-resources-badge"
+          title="Resources referenced by this scene are missing — see the Resources tab"
+        >
+          ⚠ {missingPaths.size} missing
+        </span>
+      )}
 
       {loadError && (
         <span role="alert" className={styles.errorMessage}>
