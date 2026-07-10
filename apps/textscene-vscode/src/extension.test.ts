@@ -131,7 +131,16 @@ describe('Extension', () => {
     it('should add disposables to context subscriptions', () => {
       activate(mockContext);
 
-      expect(mockContext.subscriptions.length).toBe(8); // command + symbol provider + definition provider + diagnostics + save listener + resource watcher + 2 watcher handlers
+      expect(mockContext.subscriptions.length).toBe(9); // command + symbol provider + definition provider + document link provider + diagnostics + save listener + resource watcher + 2 watcher handlers
+    });
+
+    it('should register a document link provider for res:// references', () => {
+      activate(mockContext);
+
+      expect(vscode.languages.registerDocumentLinkProvider).toHaveBeenCalledWith(
+        { language: 'tscn' },
+        expect.any(Object)
+      );
     });
   });
 
