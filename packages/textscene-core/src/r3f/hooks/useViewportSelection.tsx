@@ -46,7 +46,7 @@ export function useViewportSelection(
   const { dragThresholdPx = DEFAULT_DRAG_THRESHOLD_PX, autoExpandAncestors = true } = options;
   const {
     setSelectedNodePath,
-    setHoveredNodePath,
+    hoverStore,
     expandedNodePaths,
     setExpandedNodePaths,
   } = useSelection();
@@ -93,13 +93,13 @@ export function useViewportSelection(
       },
       onPointerOver(e) {
         e.stopPropagation();
-        setHoveredNodePath(nodePath);
+        hoverStore.set(nodePath);
       },
       onPointerOut() {
-        setHoveredNodePath(null);
+        hoverStore.set(null);
       },
     }),
-    [dragThresholdPx, select, setHoveredNodePath]
+    [dragThresholdPx, select, hoverStore]
   );
 
   return useMemo<UseViewportSelectionResult>(() => ({ withNodePath }), [withNodePath]);

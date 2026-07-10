@@ -170,7 +170,7 @@ function TreeNodeImpl({
     selectedNodePath,
     expandedNodePaths,
     setSelectedNodePath,
-    setHoveredNodePath,
+    hoverStore,
     toggleExpandedNodePath,
   } = useSelection();
 
@@ -199,11 +199,11 @@ function TreeNodeImpl({
   }
 
   function handleMouseEnter() {
-    setHoveredNodePath(nodePath);
+    hoverStore.set(nodePath);
   }
 
   function handleMouseLeave() {
-    setHoveredNodePath(null);
+    hoverStore.set(null);
   }
 
   function handleToggleVisibility(e: MouseEvent) {

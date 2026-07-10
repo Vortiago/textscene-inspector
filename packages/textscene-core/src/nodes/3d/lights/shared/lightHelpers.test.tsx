@@ -259,10 +259,10 @@ describe('Light gizmos — selection gating (WI-UX-14)', () => {
     });
 
     function HoverSeeder() {
-      const { setHoveredNodePath } = useSelection();
+      const { hoverStore } = useSelection();
       useEffect(() => {
-        setHoveredNodePath('Torch');
-      }, [setHoveredNodePath]);
+        hoverStore.set('Torch');
+      }, [hoverStore]);
       return null;
     }
 

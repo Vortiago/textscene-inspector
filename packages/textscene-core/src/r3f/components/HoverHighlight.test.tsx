@@ -47,11 +47,11 @@ function StateSeeder({
   hoverPath?: string | null;
   selectPath?: string | null;
 }) {
-  const { setHoveredNodePath, setSelectedNodePath } = useSelection();
+  const { hoverStore, setSelectedNodePath } = useSelection();
   useEffect(() => {
-    if (hoverPath !== undefined) setHoveredNodePath(hoverPath);
+    if (hoverPath !== undefined) hoverStore.set(hoverPath);
     if (selectPath !== undefined) setSelectedNodePath(selectPath);
-  }, [hoverPath, selectPath, setHoveredNodePath, setSelectedNodePath]);
+  }, [hoverPath, selectPath, hoverStore, setSelectedNodePath]);
   return null;
 }
 
