@@ -16,9 +16,11 @@ import {
   isSectionHeading,
   isComment,
   isEmpty,
-  isIncompleteValue,
+  scanValueChunk,
+  isIncompleteState,
+  INITIAL_SCAN_STATE,
 } from './utils.js';
-import type { ParsedHeading } from './utils.js';
+import type { ParsedHeading, ValueScanState } from './utils.js';
 import { parseExternalResource, parseInternalResource } from './resourceParsers.js';
 import { buildSceneTree } from './sceneTreeBuilder.js';
 import * as logger from '../logger.js';
@@ -91,7 +93,16 @@ export class TscnParserCore {
     // Accumulator for a string value whose opening quote isn't closed on its
     // own line (Godot multi-line text). Subsequent raw lines are appended
     // until the quote balances. Tracks the starting line for the observer.
-    let pendingMultiline: { key: string; value: string; startLine: number } | null = null;
+    // Lines accumulate in an array (joined only once, when the value closes)
+    // and `scanState` carries the string/bracket-balance scan forward one
+    // chunk at a time — both O(total length) overall, not O(length^2) (a
+    // naive `+=` re-copy plus a full rescan from index 0 on every new line).
+    let pendingMultiline: {
+      key: string;
+      lines: string[];
+      startLine: number;
+      scanState: ValueScanState;
+    } | null = null;
 
     const finalizeSection = () => {
       if (!currentHeading) return;
@@ -126,14 +137,17 @@ export class TscnParserCore {
 
     const storePending = () => {
       if (pendingMultiline && currentHeading) {
-        currentProperties[pendingMultiline.key] = pendingMultiline.value;
+        // Join happens exactly once per value, here — O(total length), not
+        // per appended line.
+        const value = pendingMultiline.lines.join('\n');
+        currentProperties[pendingMultiline.key] = value;
         observer?.onProperty?.(
           currentSection,
           currentOwnerType(),
           pendingMultiline.key,
-          pendingMultiline.value,
+          value,
           pendingMultiline.startLine,
-          pendingMultiline.value.includes('\n')
+          pendingMultiline.lines.length > 1
         );
       }
       pendingMultiline = null;
@@ -155,8 +169,14 @@ export class TscnParserCore {
         if (isSectionHeading(line)) {
           storePending();
         } else {
-          pendingMultiline.value += '\n' + line;
-          if (!isIncompleteValue(pendingMultiline.value)) storePending();
+          // Append the line (not a re-concatenated string) and advance the
+          // scan by just this chunk — a `\n` line separator affects neither
+          // `inString` nor `depth`, so scanning `line` alone (without joining
+          // it in first) yields the identical state as scanning the joined
+          // string would.
+          pendingMultiline.lines.push(line);
+          pendingMultiline.scanState = scanValueChunk(line, pendingMultiline.scanState);
+          if (!isIncompleteState(pendingMultiline.scanState)) storePending();
           continue;
         }
       }
@@ -208,8 +228,14 @@ export class TscnParserCore {
         }
 
         if (currentHeading) {
-          if (isIncompleteValue(property.value)) {
-            pendingMultiline = { key: property.key, value: property.value, startLine: lineNumber };
+          const scanState = scanValueChunk(property.value, INITIAL_SCAN_STATE);
+          if (isIncompleteState(scanState)) {
+            pendingMultiline = {
+              key: property.key,
+              lines: [property.value],
+              startLine: lineNumber,
+              scanState,
+            };
           } else {
             currentProperties[property.key] = property.value;
             observer?.onProperty?.(
