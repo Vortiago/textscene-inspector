@@ -232,6 +232,68 @@ describe('useResource', () => {
     expect(matA.uuid).not.toBe(matB.uuid);
   });
 
+  // -------------------------------------------------------------------
+  // Per-consumer GLB clone disposal (materials only; geometry is shared
+  // with the cached template and every other consumer's clone via
+  // `cloneWithMaterials`, so disposing it here would corrupt them).
+  // -------------------------------------------------------------------
+  it('disposes the cloned material on unmount, but never the shared geometry', () => {
+    loader.glbMeshes.setRequestImpl(() => {});
+
+    const template = new THREE.Object3D();
+    const geometry = new THREE.BoxGeometry();
+    const mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ color: 0xff0000 }));
+    template.add(mesh);
+
+    const { result, unmount } = renderHook(
+      () => useResource<THREE.Object3D>('res://glb.glb', 'GLBMesh'),
+      { wrapper: withLoader(loader) }
+    );
+
+    act(() => {
+      loader.glbMeshes._resolve('res://glb.glb', template);
+    });
+
+    const clone = result.current.value!;
+    const clonedMesh = clone.children[0] as THREE.Mesh;
+    const materialDisposeSpy = vi.spyOn(clonedMesh.material as THREE.Material, 'dispose');
+    const geometryDisposeSpy = vi.spyOn(geometry, 'dispose');
+
+    unmount();
+
+    expect(materialDisposeSpy).toHaveBeenCalledTimes(1);
+    // Geometry is shared (never cloned) — disposing it here would break
+    // the cached template and any other live consumer.
+    expect(geometryDisposeSpy).not.toHaveBeenCalled();
+  });
+
+  it('disposes the previous clone materials when the path changes (no leak across path-swap)', () => {
+    loader.glbMeshes.setRequestImpl(() => {});
+
+    const templateA = new THREE.Object3D();
+    const meshA = new THREE.Mesh(new THREE.BoxGeometry(), new THREE.MeshBasicMaterial());
+    templateA.add(meshA);
+    loader.glbMeshes.cache.set('res://a.glb', templateA);
+
+    const templateB = new THREE.Object3D();
+    const meshB = new THREE.Mesh(new THREE.BoxGeometry(), new THREE.MeshBasicMaterial());
+    templateB.add(meshB);
+    loader.glbMeshes.cache.set('res://b.glb', templateB);
+
+    const { result, rerender } = renderHook(
+      ({ path }: { path: string }) => useResource<THREE.Object3D>(path, 'GLBMesh'),
+      { wrapper: withLoader(loader), initialProps: { path: 'res://a.glb' } }
+    );
+
+    const cloneA = result.current.value!;
+    const materialASpy = vi.spyOn((cloneA.children[0] as THREE.Mesh).material as THREE.Material, 'dispose');
+
+    rerender({ path: 'res://b.glb' });
+
+    expect(materialASpy).toHaveBeenCalledTimes(1);
+    expect(result.current.value).not.toBe(cloneA);
+  });
+
   it('cache hit: re-rendering with the same path does not refire the loader request', () => {
     const requestSpy = vi.fn(() => {});
     loader.textures.setRequestImpl(requestSpy);
@@ -317,5 +379,94 @@ describe('useResource', () => {
 
     expect(result.current.status).toBe('loaded');
     expect(result.current.value).toBe(material);
+  });
+
+  // -------------------------------------------------------------------
+  // Unmount / path-swap races.
+  // -------------------------------------------------------------------
+  describe('unmount and path-swap races', () => {
+    it('removes its loaded/failed bus listeners on unmount (no leaked subscriptions)', () => {
+      loader.textures.setRequestImpl(() => {});
+      const before = loader.eventBus.getHandlerCount('texture', 'loaded');
+      const beforeFailed = loader.eventBus.getHandlerCount('texture', 'failed');
+
+      const { unmount } = renderHook(
+        () => useResource<THREE.Texture>('res://t.png', 'Texture2D'),
+        { wrapper: withLoader(loader) }
+      );
+
+      expect(loader.eventBus.getHandlerCount('texture', 'loaded')).toBe(before + 1);
+      expect(loader.eventBus.getHandlerCount('texture', 'failed')).toBe(beforeFailed + 1);
+
+      unmount();
+
+      expect(loader.eventBus.getHandlerCount('texture', 'loaded')).toBe(before);
+      expect(loader.eventBus.getHandlerCount('texture', 'failed')).toBe(beforeFailed);
+    });
+
+    it('swapping path unsubscribes the old path listener and subscribes a fresh one (no net growth)', () => {
+      loader.textures.setRequestImpl(() => {});
+      const before = loader.eventBus.getHandlerCount('texture', 'loaded');
+
+      const { rerender } = renderHook(
+        ({ path }: { path: string }) => useResource<THREE.Texture>(path, 'Texture2D'),
+        { wrapper: withLoader(loader), initialProps: { path: 'res://a.png' } }
+      );
+
+      expect(loader.eventBus.getHandlerCount('texture', 'loaded')).toBe(before + 1);
+
+      rerender({ path: 'res://b.png' });
+
+      // One old handler removed, one new handler added — net count unchanged,
+      // not accumulating a handler per path visited.
+      expect(loader.eventBus.getHandlerCount('texture', 'loaded')).toBe(before + 1);
+    });
+
+    it('a stale resolve for the path the consumer swapped AWAY FROM does not affect the current state', () => {
+      loader.textures.setRequestImpl(() => {});
+
+      const { result, rerender } = renderHook(
+        ({ path }: { path: string }) => useResource<THREE.Texture>(path, 'Texture2D'),
+        { wrapper: withLoader(loader), initialProps: { path: 'res://a.png' } }
+      );
+
+      expect(result.current.status).toBe('pending');
+
+      rerender({ path: 'res://b.png' });
+      expect(result.current.status).toBe('pending');
+
+      // The late arrival belongs to the path this consumer left behind.
+      act(() => {
+        loader.textures._resolve('res://a.png', textureA);
+      });
+
+      // Must still reflect 'res://b.png' — a stale event for the
+      // abandoned path must never resurrect it into the current result.
+      expect(result.current.status).toBe('pending');
+      expect(result.current.value).toBeUndefined();
+
+      // The CURRENT path resolving still works normally afterwards.
+      act(() => {
+        loader.textures._resolve('res://b.png', textureB);
+      });
+      expect(result.current.status).toBe('loaded');
+      expect(result.current.value).toBe(textureB);
+    });
+
+    it('path === "": stays pending forever, never subscribes, and never requests', () => {
+      const requestSpy = vi.fn();
+      loader.textures.setRequestImpl(requestSpy);
+      const before = loader.eventBus.getHandlerCount('texture', 'loaded');
+
+      const { result } = renderHook(
+        () => useResource<THREE.Texture>('', 'Texture2D'),
+        { wrapper: withLoader(loader) }
+      );
+
+      expect(result.current.status).toBe('pending');
+      expect(result.current.value).toBeUndefined();
+      expect(requestSpy).not.toHaveBeenCalled();
+      expect(loader.eventBus.getHandlerCount('texture', 'loaded')).toBe(before);
+    });
   });
 });

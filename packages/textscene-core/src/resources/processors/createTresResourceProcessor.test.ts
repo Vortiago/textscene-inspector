@@ -21,6 +21,10 @@ function mockFileBus() {
     on: (event: 'loaded' | 'failed', h: never) => handlers[event].add(h),
     off: (event: 'loaded' | 'failed', h: never) => handlers[event].delete(h),
     request,
+    // createResourceProcessor drops the raw-bytes cache entry once
+    // processing settles (success or failure), so a stand-in FileEventBus
+    // must implement clearCache() too.
+    clearCache: vi.fn(),
   } as unknown as FileEventBus;
   return {
     bus,
