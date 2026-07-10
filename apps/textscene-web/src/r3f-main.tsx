@@ -470,8 +470,11 @@ export function R3FApp() {
   // simply doesn't parse. The shell's own content==='' state ("Loading
   // scene…") would otherwise look identical to a genuinely empty pane, so
   // this notice — outside the (unmodified) shared shell — fills that gap.
+  // `!loadError` keeps this mutually exclusive with the toolbar's own
+  // role="alert" banner by construction, not by relying on every call site
+  // that sets one to also clear the other.
   const showUnrenderableNotice =
-    forwardedContent.trim().length === 0 && buffer.trim().length > 0;
+    !loadError && forwardedContent.trim().length === 0 && buffer.trim().length > 0;
 
   return (
     <ResourceLoaderProvider loader={loader}>
