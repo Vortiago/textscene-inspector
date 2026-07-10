@@ -279,6 +279,95 @@ describe('Light gizmos — selection gating (WI-UX-14)', () => {
     // No selection, only hover ⇒ no SpotLightHelper.
     expect(findHelpersOfType(scene, THREE.SpotLightHelper)).toHaveLength(0);
   });
+
+  it("DirectionalLightHelper sits at the light's own world position, not squared through its parent group", async () => {
+    // THREE.DirectionalLightHelper's constructor hardcodes
+    // `matrix = light.matrixWorld` + `matrixAutoUpdate = false` (its official
+    // usage adds the helper directly to the scene root). This codebase
+    // instead renders the helper as a <primitive> SIBLING of the light
+    // inside the light's own transform group, so without a fix the parent
+    // group's matrixWorld composes on top of the already-world
+    // `light.matrixWorld`, DOUBLING the translation. A light at local Y=5
+    // would then show its helper at world Y=10.
+    const node: TscnNode = {
+      name: 'Sun',
+      type: 'DirectionalLight3D',
+      children: [],
+      properties: {
+        name: 'Sun',
+        light_color: 'Color(1, 1, 1, 1)',
+        light_energy: 1,
+        shadow_enabled: false,
+        transform: {
+          basis_x: { x: 1, y: 0, z: 0 },
+          basis_y: { x: 0, y: 1, z: 0 },
+          basis_z: { x: 0, y: 0, z: 1 },
+          origin: { x: 0, y: 5, z: 0 },
+        },
+      } as DirectionalLight3DProperties,
+    };
+    const graph = createSceneGraphFromTscnScene({ nodes: [node] });
+    const rootNodes = graph.scenes.get(graph.rootScene)?.nodes ?? [];
+
+    const renderer = await ReactThreeTestRenderer.create(
+      <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
+        <SelectionProvider>
+          <SelectSeeder path="Sun" />
+          <NodeDispatcher nodes={rootNodes} />
+        </SelectionProvider>
+      </HierarchyProvider>,
+    );
+
+    const scene = renderer.scene.instance as unknown as THREE.Scene;
+    scene.updateMatrixWorld(true);
+    const [helper] = findHelpersOfType(scene, THREE.DirectionalLightHelper);
+    expect(helper).toBeDefined();
+    const worldPos = new THREE.Vector3().setFromMatrixPosition(helper!.matrixWorld);
+    expect(worldPos.y).toBeCloseTo(5, 5);
+  });
+
+  it("PointLightHelper sits at the light's own world position, not squared through its parent group", async () => {
+    // THREE.PointLightHelper shares DirectionalLightHelper's
+    // `matrix = light.matrixWorld` + `matrixAutoUpdate = false` constructor
+    // pattern — same double-transform bug, same fix (see the previous test).
+    const node: TscnNode = {
+      name: 'Lamp',
+      type: 'OmniLight3D',
+      children: [],
+      properties: {
+        name: 'Lamp',
+        light_color: 'Color(1, 1, 1, 1)',
+        light_energy: 1,
+        shadow_enabled: false,
+        omni_range: 5,
+        omni_attenuation: 1,
+        transform: {
+          basis_x: { x: 1, y: 0, z: 0 },
+          basis_y: { x: 0, y: 1, z: 0 },
+          basis_z: { x: 0, y: 0, z: 1 },
+          origin: { x: 0, y: 5, z: 0 },
+        },
+      } as OmniLight3DProperties,
+    };
+    const graph = createSceneGraphFromTscnScene({ nodes: [node] });
+    const rootNodes = graph.scenes.get(graph.rootScene)?.nodes ?? [];
+
+    const renderer = await ReactThreeTestRenderer.create(
+      <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
+        <SelectionProvider>
+          <SelectSeeder path="Lamp" />
+          <NodeDispatcher nodes={rootNodes} />
+        </SelectionProvider>
+      </HierarchyProvider>,
+    );
+
+    const scene = renderer.scene.instance as unknown as THREE.Scene;
+    scene.updateMatrixWorld(true);
+    const [helper] = findHelpersOfType(scene, THREE.PointLightHelper);
+    expect(helper).toBeDefined();
+    const worldPos = new THREE.Vector3().setFromMatrixPosition(helper!.matrixWorld);
+    expect(worldPos.y).toBeCloseTo(5, 5);
+  });
 });
 
 /**

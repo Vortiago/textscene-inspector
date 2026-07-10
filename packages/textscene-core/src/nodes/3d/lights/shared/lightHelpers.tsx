@@ -70,9 +70,22 @@ export function DirectionalLightGizmo({ lightRef }: DirectionalGizmoProps) {
   return (
     <LightGizmoCommon
       lightRef={lightRef}
-      make={(light) =>
-        new THREE.DirectionalLightHelper(light, DIRECTIONAL_HELPER_SIZE, HELPER_COLOR)
-      }
+      make={(light) => {
+        const helper = new THREE.DirectionalLightHelper(light, DIRECTIONAL_HELPER_SIZE, HELPER_COLOR);
+        // THREE.DirectionalLightHelper hardcodes `matrix = light.matrixWorld` +
+        // `matrixAutoUpdate = false`, matching its official usage (`scene.add`
+        // directly). We render it as a <primitive> SIBLING of the light inside
+        // the node's own transform group (WI-ARCH-3's shared pattern), so the
+        // parent group's matrixWorld would apply on top of the already-world
+        // `light.matrixWorld`, squaring the transform and placing the helper
+        // far from the light. Since the light itself carries no additional
+        // local offset within that group, resetting matrixAutoUpdate lets the
+        // helper's default identity local transform compose correctly through
+        // the normal parent chain instead (unlike SpotLightHelper, which
+        // already parent-corrects its matrix internally).
+        helper.matrixAutoUpdate = true;
+        return helper;
+      }}
     />
   );
 }
@@ -85,7 +98,16 @@ export function PointLightGizmo({ lightRef }: PointGizmoProps) {
   return (
     <LightGizmoCommon
       lightRef={lightRef}
-      make={(light) => new THREE.PointLightHelper(light, POINT_HELPER_SIZE, HELPER_COLOR)}
+      make={(light) => {
+        // THREE.PointLightHelper shares DirectionalLightHelper's
+        // `matrix = light.matrixWorld` + `matrixAutoUpdate = false` pattern
+        // (see the DirectionalLightGizmo comment above) — same double-
+        // transform bug when nested as a <primitive> sibling of the light
+        // inside the node's own transform group. Same fix.
+        const helper = new THREE.PointLightHelper(light, POINT_HELPER_SIZE, HELPER_COLOR);
+        helper.matrixAutoUpdate = true;
+        return helper;
+      }}
     />
   );
 }
