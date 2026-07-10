@@ -26,13 +26,14 @@ import { InternalTextLabel } from './internalTextLabel.js';
 import { FrameSelectedShortcut } from './FrameSelectedShortcut.js';
 import styles from './TscnCanvas.module.css';
 
-export interface TscnCanvasProps {
-  /**
-   * Optional. If omitted, the canvas reads the sceneGraph from
-   * `HierarchyContext` (the normal flow). Test code can pass nodes
-   * directly via `<TscnSceneContents>`.
-   */
-}
+/**
+ * `<TscnCanvas>` takes no props — it reads everything it needs from context
+ * (`HierarchyContext`, `CameraControlContext`, `ViewportModeContext`). Test
+ * code that wants to pass nodes directly uses `<TscnSceneContents>` instead.
+ * Kept as a named export (rather than inlining `{}` at the call site) so
+ * `ComponentProps<typeof TscnCanvas>` stays available to callers.
+ */
+export type TscnCanvasProps = Record<string, never>;
 
 /**
  * The contents of the R3F scene (everything that would normally live
