@@ -171,7 +171,7 @@ One channel of a **GodotAnimation** targeting `NodePath("Node:property")` with o
 _Avoid_: "channel".
 
 **AnimatedValue push registry**:
-The ref-backed registry through which the active **AnimationPlayer** pushes sampled non-transform **Track** values to their target component — the value-push lane for everything the `THREE.AnimationMixer` can't bind (it drives transforms only). Keyed by `${nodePath}:${property}` (one node animates several properties at once); the target overrides its authored value while a value is pushed and reverts on release. Discrete `frame` is sampled stepped; continuous `modulate`/`size` are linearly interpolated (ADR-0016, ADR-0017). Generalises the `frame`-only **AnimatedFrame** form (`AnimatedFrameContext` today; renamed when the Decal value-track feature lands).
+The ref-backed registry through which the active **AnimationPlayer** pushes sampled non-transform **Track** values to their target component — the value-push lane for everything the `THREE.AnimationMixer` can't bind (it drives transforms only). Keyed by `${nodePath}:${property}` (one node animates several properties at once); the target overrides its authored value while a value is pushed and reverts on release. Discrete `frame` is sampled stepped; continuous `modulate`/`size` are linearly interpolated (ADR-0016, ADR-0017). Generalises the `frame`-only **AnimatedFrame** form: `AnimatedFrameContext` was renamed to `AnimatedValueContext` (`r3f/contexts/AnimatedValueContext.tsx`) when the Decal value-track feature landed (ADR-0017).
 _Avoid_: "AnimatedFrame registry" (the generalised name is **AnimatedValue**); "mixer"/"central value context" for this path (it is a narrow per-target push, not a tree-wide per-frame recompute — ADR-0011).
 
 **Animation transport**:
