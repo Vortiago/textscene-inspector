@@ -138,8 +138,18 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Characterbody3d",
+    "file": "unit-characterbody3d.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Decal",
     "file": "unit-decal.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Directional Light 3d",
+    "file": "unit-directional-light-3d.tscn",
     "category": "Other"
   },
   {
@@ -183,6 +193,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Omni Light 3d",
+    "file": "unit-omni-light-3d.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Pathfollow 3d",
     "file": "unit-pathfollow-3d.tscn",
     "category": "Other"
@@ -198,8 +213,18 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Rigidbody3d",
+    "file": "unit-rigidbody3d.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Skeleton3d",
     "file": "unit-skeleton3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Spot Light 3d",
+    "file": "unit-spot-light-3d.tscn",
     "category": "Other"
   },
   {
@@ -650,6 +675,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Sprite2d",
     "file": "unit-sprite2d.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Tile Map Layer Hexagon",
+    "file": "unit-tile-map-layer-hexagon.tscn",
     "category": "Unit - 2D Canvas"
   },
   {

@@ -1,4 +1,10 @@
-[gd_scene format=3]
+[gd_scene load_steps=3 format=3]
+
+[sub_resource type="BoxMesh" id="BoxMesh_reference"]
+size = Vector3(1, 1, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_reference"]
+albedo_color = Color(0.3, 0.6, 0.9, 1)
 
 [node name="Root" type="Node3D"]
 
@@ -7,6 +13,10 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 5, 5)
 fov = 75.0
 near = 0.1
 far = 1000.0
+
+[node name="ReferenceBox" type="MeshInstance3D" parent="."]
+mesh = SubResource("BoxMesh_reference")
+surface_material_override/0 = SubResource("StandardMaterial3D_reference")
 
 [node name="Title" type="Label3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 1, -5)
