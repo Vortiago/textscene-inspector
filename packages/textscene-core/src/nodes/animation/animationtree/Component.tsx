@@ -166,7 +166,12 @@ export function AnimationTree({ node, children }: NodeComponentProps) {
             action.play();
           }
         }
-        mixer.update(delta);
+        // #224: the preview speed multiplier applies here too (it's a global
+        // playback-rate control). The loop OVERRIDE does not: a blend program
+        // drives N weighted actions at once with per-action timeScale/weight,
+        // and Godot itself has no single "loop mode" for a state-machine/blend
+        // tree preview to override — there's no one loop setting to force.
+        mixer.update(delta * transport.playbackSpeed);
         if (dominant) transport.reportTime(actions.get(dominant.clip)?.time ?? 0);
         break;
       }

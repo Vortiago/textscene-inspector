@@ -4,8 +4,21 @@
  * play/pause/stop, and a timeline scrubber with an m:ss.cc readout.
  */
 
-import { useAnimationTransport } from '../../contexts/AnimationTransportContext';
+import {
+  useAnimationTransport,
+  type LoopOverride,
+} from '../../contexts/AnimationTransportContext';
 import styles from './AnimationPanel.module.css';
+
+/** Discrete preview speed multipliers (#224) — enough range to spot subtle
+ * timing without cluttering the dock with a free-form input. */
+const SPEED_OPTIONS = [0.25, 0.5, 1, 1.5, 2] as const;
+
+const LOOP_OPTIONS: { value: LoopOverride; label: string }[] = [
+  { value: 'auto', label: 'Auto' },
+  { value: 'loop', label: 'Loop' },
+  { value: 'once', label: 'Once' },
+];
 
 /** Formats a duration in seconds as `m:ss.cc` (minutes:seconds.centiseconds). */
 export function formatTimecode(seconds: number): string {
@@ -50,6 +63,37 @@ export function AnimationPanel() {
           ))}
         </select>
       </label>
+
+      <div className={styles.subrow}>
+        <label className={styles.row}>
+          <span className={styles.label}>Speed</span>
+          <select
+            className={styles.select}
+            value={transport.playbackSpeed}
+            onChange={(e) => transport.setPlaybackSpeed(parseFloat(e.target.value))}
+          >
+            {SPEED_OPTIONS.map((speed) => (
+              <option key={speed} value={speed}>
+                {speed}x
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className={styles.row}>
+          <span className={styles.label}>Loop</span>
+          <select
+            className={styles.select}
+            value={transport.loopOverride}
+            onChange={(e) => transport.setLoopOverride(e.target.value as LoopOverride)}
+          >
+            {LOOP_OPTIONS.map(({ value, label }) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
 
       <div className={styles.controls}>
         {playing ? (

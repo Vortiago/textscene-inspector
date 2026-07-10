@@ -220,3 +220,57 @@ describe('AnimationTransportContext — reportTime throttling (WI-213)', () => {
     expect(result.current.time).toBeCloseTo(0.33);
   });
 });
+
+describe('AnimationTransportContext — playback speed (#224)', () => {
+  it('starts at 1x (no change from the authored speed)', () => {
+    const { result } = renderHook(() => useAnimationTransport(), { wrapper: wrap });
+    expect(result.current.playbackSpeed).toBe(1);
+  });
+
+  it('setPlaybackSpeed updates the multiplier', () => {
+    const { result } = renderHook(() => useAnimationTransport(), { wrapper: wrap });
+    act(() => result.current.setPlaybackSpeed(2));
+    expect(result.current.playbackSpeed).toBe(2);
+  });
+
+  it('ignores a non-positive or non-finite speed (would silently freeze/reverse playback)', () => {
+    const { result } = renderHook(() => useAnimationTransport(), { wrapper: wrap });
+    act(() => result.current.setPlaybackSpeed(0));
+    expect(result.current.playbackSpeed).toBe(1);
+    act(() => result.current.setPlaybackSpeed(2));
+    act(() => result.current.setPlaybackSpeed(-1));
+    expect(result.current.playbackSpeed).toBe(1);
+    act(() => result.current.setPlaybackSpeed(2));
+    act(() => result.current.setPlaybackSpeed(NaN));
+    expect(result.current.playbackSpeed).toBe(1);
+  });
+
+  it('resets to 1x when a new player registers — a fresh selection starts neutral', () => {
+    const { result } = renderHook(() => useAnimationTransport(), { wrapper: wrap });
+    act(() => void result.current.registerPlayer(REG));
+    act(() => result.current.setPlaybackSpeed(2));
+    act(() => void result.current.registerPlayer({ clips: ['a'], durations: { a: 1 } }));
+    expect(result.current.playbackSpeed).toBe(1);
+  });
+});
+
+describe('AnimationTransportContext — loop override (#224)', () => {
+  it('starts on "auto" (respects each clip\'s authored loop behavior)', () => {
+    const { result } = renderHook(() => useAnimationTransport(), { wrapper: wrap });
+    expect(result.current.loopOverride).toBe('auto');
+  });
+
+  it('setLoopOverride updates the mode', () => {
+    const { result } = renderHook(() => useAnimationTransport(), { wrapper: wrap });
+    act(() => result.current.setLoopOverride('once'));
+    expect(result.current.loopOverride).toBe('once');
+  });
+
+  it('resets to "auto" when a new player registers', () => {
+    const { result } = renderHook(() => useAnimationTransport(), { wrapper: wrap });
+    act(() => void result.current.registerPlayer(REG));
+    act(() => result.current.setLoopOverride('loop'));
+    act(() => void result.current.registerPlayer({ clips: ['a'], durations: { a: 1 } }));
+    expect(result.current.loopOverride).toBe('auto');
+  });
+});

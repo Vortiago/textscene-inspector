@@ -238,6 +238,16 @@ describe('AnimationTree — weighted blend playback', () => {
     expect(moverX(driver.object)).toBeCloseTo(5, 0);
     await renderer.unmount();
   });
+
+  it('scales the advance rate by the preview playbackSpeed multiplier (#224)', async () => {
+    const driver = makeDriver();
+    const renderer = await mountTree(driver, makeTreeNode());
+    await ReactThreeTestRenderer.act(async () => transport.setPlaybackSpeed(2));
+    await ReactThreeTestRenderer.act(async () => transport.play());
+    await renderer.advanceFrames(1, 0.25); // 0.25 * 2 = 0.5 -> left x=-5 (full-left blend)
+    expect(moverX(driver.object)).toBeCloseTo(-5, 0);
+    await renderer.unmount();
+  });
 });
 
 describe('AnimationTree — gating and restore', () => {

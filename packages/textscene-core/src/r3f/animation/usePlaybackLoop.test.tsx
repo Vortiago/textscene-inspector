@@ -32,11 +32,15 @@ function Harness({
   transportTime,
   reportTime,
   mixerBox,
+  configureAction,
+  reconfigureKey,
 }: {
   playState: PlayState;
   transportTime: number;
   reportTime: PlaybackLoopParams['reportTime'];
   mixerBox: { mixer: THREE.AnimationMixer; actions: Map<string, THREE.AnimationAction> };
+  configureAction?: PlaybackLoopParams['configureAction'];
+  reconfigureKey?: unknown;
 }) {
   const mixerRef = useRef(mixerBox.mixer);
   const actionsRef = useRef(mixerBox.actions);
@@ -46,7 +50,8 @@ function Harness({
     transportTime,
     mixerRef,
     actionsRef,
-    configureAction: () => {},
+    configureAction: configureAction ?? (() => {}),
+    reconfigureKey,
     reportTime,
     restore: () => {},
   });
@@ -125,5 +130,62 @@ describe('usePlaybackLoop — reportTime flush on the playing → non-playing ed
     reportTime.mockClear();
     await renderer.advanceFrames(3, 0.1); // still paused, no seek
     expect(reportTime).not.toHaveBeenCalled();
+  });
+});
+
+describe('usePlaybackLoop — reconfigureKey (#224 live loop-override)', () => {
+  it('calls configureAction once on mount, but not again on unrelated re-renders', async () => {
+    const configureAction = vi.fn();
+    const mixerBox = makeMixer();
+    const renderer = await ReactThreeTestRenderer.create(
+      <Harness
+        playState="playing"
+        transportTime={0}
+        reportTime={() => {}}
+        mixerBox={mixerBox}
+        configureAction={configureAction}
+        reconfigureKey="auto"
+      />
+    );
+    await renderer.advanceFrames(1, 0.1);
+    configureAction.mockClear();
+
+    // Same reconfigureKey, same clip — no reason to reconfigure again.
+    await renderer.advanceFrames(3, 0.1);
+    expect(configureAction).not.toHaveBeenCalled();
+  });
+
+  it('reconfigures the ACTIVE action when reconfigureKey changes mid-clip, without restarting it', async () => {
+    const configureAction = vi.fn();
+    const mixerBox = makeMixer();
+    const renderer = await ReactThreeTestRenderer.create(
+      <Harness
+        playState="playing"
+        transportTime={0}
+        reportTime={() => {}}
+        mixerBox={mixerBox}
+        configureAction={configureAction}
+        reconfigureKey="auto"
+      />
+    );
+    await renderer.advanceFrames(2, 0.1); // action.time is now ~0.2
+    configureAction.mockClear();
+
+    await renderer.update(
+      <Harness
+        playState="playing"
+        transportTime={0}
+        reportTime={() => {}}
+        mixerBox={mixerBox}
+        configureAction={configureAction}
+        reconfigureKey="once" // the override flipped — must re-apply now
+      />
+    );
+    await renderer.advanceFrames(1, 0.1);
+
+    expect(configureAction).toHaveBeenCalledTimes(1);
+    expect(configureAction).toHaveBeenCalledWith(mixerBox.actions.get('clip'), 'clip');
+    // The clip kept playing through the reconfigure — it was not restarted.
+    expect(mixerBox.actions.get('clip')!.time).toBeGreaterThan(0.2);
   });
 });
