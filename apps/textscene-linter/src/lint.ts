@@ -66,15 +66,41 @@ export function expandTscnPaths(inputPaths: string[]): string[] {
       continue;
     }
 
-    const tscnFiles = (readdirSync(inputPath, { recursive: true }) as string[])
-      .filter((entry) => extname(entry) === '.tscn')
-      .map((entry) => join(inputPath, entry))
-      .filter((fullPath) => statSync(fullPath).isFile())
-      .sort();
-    expanded.push(...tscnFiles);
+    expanded.push(...collectTscnFiles(inputPath).sort());
   }
 
   return expanded;
+}
+
+/**
+ * Recursively collect the `.tscn` FILES under `dir`, appending into `found`
+ * (threaded through the recursion so nested results are never re-copied at
+ * each ancestor level). Dirent-based so the file/directory distinction comes
+ * for free from each readdir for ordinary entries (no extra `statSync`
+ * call). A symlinked directory is left alone — not recursed into — matching
+ * the previous `readdirSync(recursive)` behavior, which never follows
+ * directory symlinks either. A symlinked FILE, though, is resolved with one
+ * `statSync` (mirroring the previous implementation's `statSync(fullPath)
+ * .isFile()` check, which follows symlinks) so a `.tscn` symlinked in from
+ * elsewhere is still linted rather than silently dropped.
+ */
+function collectTscnFiles(dir: string, found: string[] = []): string[] {
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const fullPath = join(dir, entry.name);
+    if (entry.isSymbolicLink()) {
+      let stats;
+      try {
+        stats = statSync(fullPath);
+      } catch {
+        continue; // broken symlink — skip rather than throw
+      }
+      if (stats.isFile() && extname(entry.name) === '.tscn') found.push(fullPath);
+      continue;
+    }
+    if (entry.isDirectory()) collectTscnFiles(fullPath, found);
+    else if (entry.isFile() && extname(entry.name) === '.tscn') found.push(fullPath);
+  }
+  return found;
 }
 
 /**

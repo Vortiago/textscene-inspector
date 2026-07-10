@@ -1,6 +1,6 @@
 /** Unit tests for lintFile/runLint exit-code logic and error handling. */
 
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
@@ -251,6 +251,22 @@ describe('expandTscnPaths', () => {
 
     expect(result.sort()).toEqual([nestedTscn, topTscn].sort());
     expect(result).not.toContain(nestedTxt);
+  });
+
+  it('follows a symlinked .tscn file (matching a plain-file argument passed through statSync)', () => {
+    const linkedDir = mkdtempSync(join(tmpdir(), 'tscn-lint-expand-symlink-'));
+    const realTarget = join(linkedDir, 'shared.tscn');
+    writeFileSync(realTarget, CLEAN_TSCN);
+    const linkPath = join(dirRoot, 'linked.tscn');
+    symlinkSync(realTarget, linkPath);
+
+    try {
+      const result = expandTscnPaths([dirRoot]);
+      expect(result).toContain(linkPath);
+    } finally {
+      rmSync(linkPath, { force: true });
+      rmSync(linkedDir, { recursive: true, force: true });
+    }
   });
 
   it('mixes directory expansion with explicit files in one call', () => {
