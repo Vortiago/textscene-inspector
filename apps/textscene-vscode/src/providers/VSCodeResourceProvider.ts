@@ -7,6 +7,7 @@ import * as vscode from 'vscode';
 import { isBinaryResourceType, stripResPrefix } from '@textscene/core/resources/resourceProviderUtils';
 import { info, error } from '@textscene/core/logger';
 import type { ResourceProvider } from '@textscene/core/resources/ResourceProvider';
+import { findGodotProjectRoot } from '../findGodotProjectRoot';
 
 /** Normalize an fsPath for use as a served-resources map key: forward slashes, lowercased. */
 function normalizeFsPath(fsPath: string): string {
@@ -119,7 +120,10 @@ export class VSCodeResourceProvider implements ResourceProvider {
   /**
    * Find the Godot project root by searching for project.godot file.
    * Searches upward from the document location toward workspace root.
-   * Falls back to document's directory if no project.godot is found.
+   * Falls back to the workspace root if no project.godot is found.
+   * Delegates to the shared `findGodotProjectRoot` (also used by
+   * `TscnDocumentLinkProvider`) and caches the result for this provider's
+   * lifetime.
    */
   private async findProjectRoot(): Promise<vscode.Uri> {
     if (this.projectRoot) {
@@ -128,45 +132,9 @@ export class VSCodeResourceProvider implements ResourceProvider {
     }
 
     info(`[VSCodeResourceProvider] Searching for project.godot...`);
-
-    // Start from document's directory
-    let currentDir = vscode.Uri.joinPath(this.documentUri, '..');
-
-    info(`[VSCodeResourceProvider] Starting search from: ${currentDir.fsPath}`);
-
-    // Search upward until we find project.godot or reach workspace root
-    while (true) {
-      const currentPathNormalized = normalizeFsPath(currentDir.fsPath);
-
-      // Try to find project.godot in current directory
-      const projectFile = vscode.Uri.joinPath(currentDir, 'project.godot');
-      info(`[VSCodeResourceProvider] Checking: ${projectFile.fsPath}`);
-
-      try {
-        await vscode.workspace.fs.stat(projectFile);
-        // Found it!
-        info(`[VSCodeResourceProvider] Found project.godot at: ${currentDir.fsPath}`);
-        this.projectRoot = currentDir;
-        return currentDir;
-      } catch {
-        // Not found, continue searching
-      }
-
-      // Check if we've reached or passed workspace root
-      if (currentPathNormalized === this.workspaceRootNormalized ||
-          !currentPathNormalized.startsWith(this.workspaceRootNormalized)) {
-        // No project.godot found. res:// is ALWAYS project-root-relative in Godot
-        // (never relative to the current file), so fall back to the WORKSPACE ROOT,
-        // not the scene's own directory — otherwise a scene in a subfolder resolves
-        // every res://… to that subfolder and all shared assets (GLBs, textures) 404.
-        info(`[VSCodeResourceProvider] No project.godot found; resolving res:// from workspace root: ${this.workspaceRoot.fsPath}`);
-        this.projectRoot = this.workspaceRoot;
-        return this.workspaceRoot;
-      }
-
-      // Move up one directory
-      currentDir = vscode.Uri.joinPath(currentDir, '..');
-    }
+    this.projectRoot = await findGodotProjectRoot(this.workspaceRoot, this.documentUri);
+    info(`[VSCodeResourceProvider] Project root resolved to: ${this.projectRoot.fsPath}`);
+    return this.projectRoot;
   }
 
   /**
