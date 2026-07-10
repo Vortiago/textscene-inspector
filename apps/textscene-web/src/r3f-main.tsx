@@ -28,11 +28,14 @@ import {
   TscnPreviewShell,
   type ViewportSelectorOption,
 } from '@textscene/core';
+import { Linter, type Diagnostic } from '@textscene/core/linter';
 import { fixtures } from './fixturesAll';
 import { FixtureTreeView } from './FixtureTree';
 import { corpusRootFor, fixtureUrlForRes } from './corpusRoot';
 import { WebResourceProvider } from './providers/WebResourceProvider';
 import { resolveForwardedContent } from './sourceGate';
+import { groupDiagnosticsByLine, summarizeDiagnostics, formatProblemBadge } from './lineDiagnostics';
+import { SourceGutter } from './SourceGutter';
 import styles from './r3f-main.module.css';
 
 /** Sentinel value used by `<ViewportSelector>` when no fixture is active (user is on an uploaded .tscn). */
@@ -43,6 +46,14 @@ const SOURCE_PANE_STORAGE_KEY = 'tscn-web-source-pane';
 
 /** Pane edits reach the renderer only after this pause — never on the keystroke itself (ADR-0020). */
 const DEBOUNCE_MS = 250;
+
+/**
+ * #202: the web app is the first browser consumer of `@textscene/core/linter`.
+ * One instance for the app's lifetime — `Linter` carries no per-call state,
+ * and the rule/validator registries it reads from are populated once at
+ * import time (self-registration side effects in `linter/index.ts`).
+ */
+const linter = new Linter();
 
 function getInitialSourcePaneState(): { visible: boolean; width: number } {
   try {
@@ -160,6 +171,24 @@ export function R3FApp() {
   // toolbar can show what's active when the fixture dropdown is
   // deselected.
   const [uploadedTscnName, setUploadedTscnName] = useState<string | null>(null);
+
+  // #202: lint the buffer continuously, debounced — independent of the
+  // render-forward gate above (a buffer that fails to RENDER can still be
+  // LINTED; the gutter is what tells the user why). Re-runs whenever the
+  // buffer changes for any reason (typing, fixture load, upload).
+  const [diagnostics, setDiagnostics] = useState<Diagnostic[]>([]);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDiagnostics(linter.lint(buffer));
+    }, DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [buffer]);
+  const diagnosticsByLine = useMemo(() => groupDiagnosticsByLine(diagnostics), [diagnostics]);
+  const problemBadge = useMemo(
+    () => formatProblemBadge(summarizeDiagnostics(diagnostics)),
+    [diagnostics]
+  );
+  const [gutterScrollTop, setGutterScrollTop] = useState(0);
 
   // Wire the WI-79 resource pipeline. One provider + bus + loader for
   // the lifetime of the app; React component identity preserves them
@@ -334,14 +363,22 @@ export function R3FApp() {
               className={styles.sourcePane}
               style={{ width: paneWidth, minWidth: 0 }}
             >
-              <textarea
-                className={styles.sourceTextarea}
-                value={buffer}
-                onChange={handleBufferChange}
-                wrap="off"
-                aria-label="Scene source"
-                style={{ fontFamily: 'monospace' }}
-              />
+              <div className={styles.sourceBody}>
+                <SourceGutter
+                  lineCount={buffer.split('\n').length}
+                  byLine={diagnosticsByLine}
+                  scrollTop={gutterScrollTop}
+                />
+                <textarea
+                  className={styles.sourceTextarea}
+                  value={buffer}
+                  onChange={handleBufferChange}
+                  onScroll={(e) => setGutterScrollTop(e.currentTarget.scrollTop)}
+                  wrap="off"
+                  aria-label="Scene source"
+                  style={{ fontFamily: 'monospace' }}
+                />
+              </div>
             </div>
             <div
               className={styles.sourceSplitter}
@@ -379,6 +416,7 @@ export function R3FApp() {
                 onTscnUploadError={handleTscnUploadError}
                 paneVisible={paneVisible}
                 onTogglePane={() => setPaneVisible((v) => !v)}
+                problemBadge={problemBadge}
               />
             }
           />
@@ -398,6 +436,8 @@ interface ToolbarProps {
   onTscnUploadError: (message: string) => void;
   paneVisible: boolean;
   onTogglePane: () => void;
+  /** #202: compact problem-count text (e.g. "✖ 1 / ⚠ 2"), or `null` when the buffer is clean. */
+  problemBadge: string | null;
 }
 
 /** Small scene/node glyph for the scene chip. */
@@ -433,6 +473,7 @@ function Toolbar({
   onTscnUploadError,
   paneVisible,
   onTogglePane,
+  problemBadge,
 }: ToolbarProps) {
   // Reset Camera lives in the shared <ViewportToolbar> in the shell top bar.
   const tscnInputRef = useRef<HTMLInputElement | null>(null);
@@ -500,6 +541,11 @@ function Toolbar({
         title="Toggle the source pane"
       >
         {paneVisible ? 'Hide' : 'Show'} Source
+        {problemBadge && (
+          <span className={styles.problemBadge} data-testid="problem-badge">
+            {problemBadge}
+          </span>
+        )}
       </button>
       {/* Primary action — open your own .tscn from disk. Triggers the same
           hidden input the ⌘K palette uses; kept visible because the built-in
