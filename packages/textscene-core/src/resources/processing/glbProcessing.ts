@@ -80,3 +80,26 @@ export function cloneWithMaterials(mesh: THREE.Object3D): THREE.Object3D {
 
   return cloned;
 }
+
+/**
+ * Dispose the per-consumer materials created by `cloneWithMaterials`.
+ *
+ * CRITICAL: geometry is deliberately NOT disposed here. `cloneWithMaterials`
+ * clones materials but shares geometry by reference with the source template
+ * (and therefore with every other consumer's clone) — disposing geometry
+ * would break the cached template and any sibling consumer still mounted.
+ * Only the cloned materials are exclusively owned by this one consumer, so
+ * only they are safe (and necessary) to release when the consumer unmounts
+ * or swaps to a different resource.
+ */
+export function disposeClonedMaterials(object: THREE.Object3D): void {
+  object.traverse((node) => {
+    if (node instanceof THREE.Mesh) {
+      if (Array.isArray(node.material)) {
+        node.material.forEach((mat) => mat.dispose());
+      } else {
+        node.material?.dispose();
+      }
+    }
+  });
+}

@@ -9,9 +9,15 @@
 
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
-import { cloneWithMaterials, createGLBMesh, gltfResourceDir, isGLBPath } from './glbProcessing';
+import {
+  cloneWithMaterials,
+  createGLBMesh,
+  disposeClonedMaterials,
+  gltfResourceDir,
+  isGLBPath,
+} from './glbProcessing';
 
 /**
  * Locate a repo-relative asset by walking up from cwd until it's found —
@@ -247,5 +253,62 @@ describe('cloneWithMaterials', () => {
     // the clone has the same node names, so sharing the same clip reference is
     // correct and cheap.
     expect(cloned.animations).toContain(clip);
+  });
+});
+
+describe('disposeClonedMaterials', () => {
+  function findMesh(root: THREE.Object3D, name: string): THREE.Mesh {
+    const found = root.getObjectByName(name);
+    if (!(found instanceof THREE.Mesh)) {
+      throw new Error(`Expected Mesh named ${name}`);
+    }
+    return found;
+  }
+
+  it('disposes a single-material mesh clone without touching its (shared) geometry', () => {
+    const source = new THREE.Mesh(
+      new THREE.BoxGeometry(),
+      new THREE.MeshStandardMaterial()
+    );
+    source.name = 'single';
+    const clone = cloneWithMaterials(source);
+    const clonedMesh = findMesh(clone, 'single');
+    const materialSpy = vi.spyOn(clonedMesh.material as THREE.Material, 'dispose');
+    const geometrySpy = vi.spyOn(clonedMesh.geometry, 'dispose');
+
+    disposeClonedMaterials(clone);
+
+    expect(materialSpy).toHaveBeenCalledTimes(1);
+    expect(geometrySpy).not.toHaveBeenCalled();
+  });
+
+  it('disposes every material in a material-array mesh clone', () => {
+    const source = new THREE.Mesh(new THREE.BoxGeometry(), [
+      new THREE.MeshBasicMaterial(),
+      new THREE.MeshBasicMaterial(),
+    ]);
+    source.name = 'array';
+    const clone = cloneWithMaterials(source);
+    const clonedMesh = findMesh(clone, 'array');
+    const mats = clonedMesh.material as THREE.Material[];
+    const spies = mats.map((m) => vi.spyOn(m, 'dispose'));
+
+    disposeClonedMaterials(clone);
+
+    spies.forEach((spy) => expect(spy).toHaveBeenCalledTimes(1));
+  });
+
+  it('does not dispose the SOURCE material (only the clone owns the disposed instance)', () => {
+    const source = new THREE.Mesh(
+      new THREE.BoxGeometry(),
+      new THREE.MeshStandardMaterial()
+    );
+    source.name = 'single';
+    const clone = cloneWithMaterials(source);
+    const sourceMaterialSpy = vi.spyOn(source.material as THREE.Material, 'dispose');
+
+    disposeClonedMaterials(clone);
+
+    expect(sourceMaterialSpy).not.toHaveBeenCalled();
   });
 });

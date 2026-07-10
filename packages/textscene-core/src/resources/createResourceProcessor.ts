@@ -24,9 +24,24 @@
 
 import type { FileEventBus, FileData } from './FileEventBus';
 import type { ResourceEventBus, ResourceType } from './ResourceEventBus';
+import { LRUCache } from './LRUCache';
 import * as logger from '../logger';
 
 export type { ResourceType };
+
+/**
+ * Default per-type cache bound. Grounded against the corpus: the largest
+ * vendored fixture (`scenes/demos/2d/role_playing_game/grid_movement/exploration.tscn`)
+ * declares 28 external resources TOTAL across every resource type combined —
+ * so 200 distinct entries in a single processor's cache is >7x any single
+ * scene's entire working set. Eviction can therefore only ever reclaim
+ * resources from PREVIOUSLY-viewed fixtures in a long browsing session
+ * (unbounded corpus-browsing growth), never a live scene's mounted
+ * consumers — which matters because eviction disposes the resource
+ * (`dispose` callback), and a GLB's cached template's geometry is shared
+ * by every per-consumer clone (`cloneWithMaterials` clones materials only).
+ */
+const DEFAULT_MAX_ENTRIES = 200;
 
 export interface ResourceProcessorConfig<T> {
   fileEventBus?: FileEventBus;
@@ -43,6 +58,13 @@ export interface ResourceProcessorConfig<T> {
   loadDirectly?: (path: string) => Promise<T>;
   /** Optional cleanup when resource is removed from cache */
   dispose?: (resource: T) => void;
+  /**
+   * Bound on the number of distinct paths this processor caches.
+   * Least-recently-used entries are evicted (and `dispose`d) once
+   * exceeded. Defaults to `DEFAULT_MAX_ENTRIES`; override in tests that
+   * want to observe eviction without inserting 200 entries.
+   */
+  maxEntries?: number;
 }
 
 export interface ResourceProcessor<T> {
@@ -75,7 +97,12 @@ export function createResourceProcessor<T>(
 ): ResourceProcessor<T> {
   const { fileEventBus, eventBus, resourceType, shouldProcess, process, loadDirectly, dispose } = config;
 
-  const cache = new Map<string, T | null>();
+  // Bounded LRU: capacity eviction disposes the resource just like an
+  // explicit clearCache() would, but skips `null` failure sentinels (no
+  // real resource to dispose).
+  const cache = new LRUCache<T | null>(config.maxEntries ?? DEFAULT_MAX_ENTRIES, (_path, value) => {
+    if (value && dispose) dispose(value);
+  });
   const inflight = new Set<string>();
 
   /**
@@ -101,6 +128,14 @@ export function createResourceProcessor<T>(
       const err = error instanceof Error ? error : new Error(String(error));
       logger.error(`[${resourceType}Processor] Failed: ${path} (${elapsed.toFixed(2)}ms)`, err);
       eventBus.emit<Error>(resourceType, 'failed', path, err);
+    } finally {
+      // Raw bytes have now been materialised into `result` (or the attempt
+      // failed and is cached as a permanent `null` sentinel) — FileEventBus's
+      // copy is redundant from here on. Dropping it now prevents a large GLB
+      // (etc.) from being retained twice: once as raw bytes, once as the
+      // decoded resource. `loadDirectly` mode has no `fileEventBus` (scenes
+      // fetch text directly), so this is a no-op there.
+      fileEventBus?.clearCache(path);
     }
   };
 
