@@ -30,6 +30,7 @@ import {
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useOptionalSelection } from '../../../r3f/contexts/SelectionContext';
 import { useAnimationDriver } from '../../../r3f/contexts/AnimationDriverContext';
+import { flushTimeOnPauseEdge } from '../../../r3f/animation/usePlaybackLoop';
 import { snapshotSubtree, restoreSnapshot } from '../../../r3f/animation/poseSnapshot';
 import { resolveTreeRoot } from './treeResources';
 import { evaluateTree } from './evaluateTree';
@@ -143,13 +144,12 @@ export function AnimationTree({ node, children }: NodeComponentProps) {
     }
     const actions = actionsRef.current;
 
-    // WI-213: the transport throttles reportTime(); neither the 'paused' nor
-    // 'stopped' case below reports again on its own, so flush the dominant
-    // action's exact current time once, right on the playing → non-playing
-    // edge, so the paused/stopped readout is never left throttle-stale.
-    if (prevStateRef.current === 'playing' && state !== 'playing' && dominant) {
-      transport.reportTime(actions.get(dominant.clip)?.time ?? 0, { immediate: true });
-    }
+    flushTimeOnPauseEdge(
+      prevStateRef.current,
+      state,
+      () => (dominant ? actions.get(dominant.clip)?.time ?? 0 : null),
+      transport.reportTime
+    );
 
     switch (state) {
       case 'playing': {

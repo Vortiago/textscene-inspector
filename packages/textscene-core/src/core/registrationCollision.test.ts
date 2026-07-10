@@ -4,10 +4,9 @@
  * ADR-0002's three type registries — `nodeRegistry` (parser domain),
  * `nodeComponentRegistry` (3D render domain), `controlComponentRegistry` (2D
  * render domain) — all silently OVERWRITE a duplicate `typeName` registration
- * (HMR-friendly), now backed by a `logger.warn` on every one of them
- * (`NodeRegistry`'s own bespoke Map already warned; `createTypeRegistry` —
- * shared by the two render registries — gained the same warn in this
- * change). A genuine collision between two DIFFERENT slices registering the
+ * (HMR-friendly), each backed by the shared `createTypeRegistry`, whose
+ * `logger.warn` reports every duplicate. A genuine collision between two
+ * DIFFERENT slices registering the
  * SAME typeName would previously ship silently; this test fails the moment
  * production's real self-registration barrels produce even one such warning,
  * so a future copy-paste-a-slice mistake (or a merge that leaves two slices
@@ -39,6 +38,7 @@ vi.mock('../logger.js', async (importOriginal) => {
 // controlComponentRegistry (2D, via the Control slices' own index.r3f.ts).
 import '../parser/TscnParser.js';
 import '../r3f/nodes/index.js';
+import { nodeComponentRegistry } from '../r3f/NodeComponentRegistry.js';
 
 function duplicateRegistrationWarnings(): string[] {
   return warnCalls
@@ -51,10 +51,16 @@ describe('registration-collision guard (#217)', () => {
     expect(duplicateRegistrationWarnings()).toEqual([]);
   });
 
-  it('sanity: the warn spy actually intercepted calls (the barrels did register something)', () => {
-    // Not a claim about collisions — just proof the mock wiring itself
-    // works, so an empty `duplicateRegistrationWarnings()` above can't be
-    // hiding a spy that silently never fired at all.
-    expect(warnCalls.length).toBeGreaterThanOrEqual(0);
+  it('sanity: a DELIBERATE duplicate registration is captured by the spy', () => {
+    // Positive control for the mock wiring: prove that when a collision DOES
+    // happen through a production registry, the spy records it — so the empty
+    // result above can't be hiding a spy that silently never intercepted.
+    // (Runs after the zero-collision assertion, so the probe entries below
+    // can't contaminate it.)
+    const before = duplicateRegistrationWarnings().length;
+    const Probe = () => null;
+    nodeComponentRegistry.register({ typeName: '__CollisionProbe__', Component: Probe });
+    nodeComponentRegistry.register({ typeName: '__CollisionProbe__', Component: Probe });
+    expect(duplicateRegistrationWarnings().length).toBe(before + 1);
   });
 });

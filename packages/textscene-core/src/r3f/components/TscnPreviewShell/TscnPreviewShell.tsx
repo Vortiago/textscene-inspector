@@ -18,8 +18,13 @@ import { HierarchyProvider } from '../../contexts/HierarchyContext.js';
 import { SelectionProvider } from '../../contexts/SelectionContext.js';
 import { CameraControlProvider } from '../../contexts/CameraControlContext.js';
 import { MissingResourcesProvider } from '../../contexts/MissingResourcesContext.js';
-import { ViewportModeProvider, useViewportMode, type ViewportMode } from '../../contexts/ViewportModeContext.js';
-import { usePersistedState } from '../../hooks/usePersistedState.js';
+import {
+  ViewportModeProvider,
+  SHOW_GRID_STORAGE_KEY,
+  VIEWPORT_MODE_STORAGE_KEY,
+  type ViewportMode,
+} from '../../contexts/ViewportModeContext.js';
+import { readPersisted, usePersistedState } from '../../hooks/usePersistedState.js';
 import { AnimatedValueProvider } from '../../contexts/AnimatedValueContext.js';
 import { AnimationDriverProvider } from '../../contexts/AnimationDriverContext.js';
 import {
@@ -173,18 +178,14 @@ export function TscnPreviewShell({
   // #224: seed ViewportModeProvider's initial mode/grid from whatever was
   // persisted last session (defaults match the pre-#224 baseline — 3D,
   // grid off — for a fresh session with nothing in localStorage yet).
-  // ViewportModeProvider stays uncontrolled internally; <ViewportModeSync>
-  // (mounted inside it, below) writes changes back out.
-  const [persistedMode, setPersistedMode] = usePersistedState<ViewportMode>(
-    'tsi.viewportMode',
-    '3D',
-    isViewportMode
-  );
-  const [persistedShowGrid, setPersistedShowGrid] = usePersistedState(
-    'tsi.showGrid',
-    false,
-    isBoolean
-  );
+  // Read ONCE (never-set state): the live value lives in the provider; the
+  // toolbar writes an explicit user choice back to storage at its own click
+  // handlers — no second React copy of the mode for the shell to re-render
+  // over, and no blanket sync that would persist programmatic mode changes.
+  const [initialViewport] = useState(() => ({
+    mode: readPersisted<ViewportMode>(VIEWPORT_MODE_STORAGE_KEY, '3D', isViewportMode),
+    showGrid: readPersisted(SHOW_GRID_STORAGE_KEY, false, isBoolean),
+  }));
 
   // #217: flattens what was an 8-level hand-nested provider pyramid into one
   // call. Each entry still mounts its own INDEPENDENT provider, in the SAME
@@ -197,7 +198,10 @@ export function TscnPreviewShell({
     (children) => <CameraControlProvider>{children}</CameraControlProvider>,
     (children) => <MissingResourcesProvider>{children}</MissingResourcesProvider>,
     (children) => (
-      <ViewportModeProvider initialMode={persistedMode} initialShowGrid={persistedShowGrid}>
+      <ViewportModeProvider
+        initialMode={initialViewport.mode}
+        initialShowGrid={initialViewport.showGrid}
+      >
         {children}
       </ViewportModeProvider>
     ),
@@ -208,7 +212,6 @@ export function TscnPreviewShell({
 
   return withProviders(
     <>
-      <ViewportModeSync onModeChange={setPersistedMode} onShowGridChange={setPersistedShowGrid} />
       <WorkspaceAutoSelect sceneGraph={sceneGraph} />
       <SceneChangeResetter sceneGraph={sceneGraph} />
       <AnimationTabWatcher onVisibleChange={setAnimationTabVisible} />
@@ -362,28 +365,5 @@ function AnimationTabWatcher({ onVisibleChange }: { onVisibleChange: (visible: b
   useEffect(() => {
     onVisibleChange(hasPlayer);
   }, [hasPlayer, onVisibleChange]);
-  return null;
-}
-
-/**
- * Effect-only child (inside ViewportModeProvider): writes mode/grid changes
- * back to localStorage (#224) via the setters `<TscnPreviewShell>` got from
- * `usePersistedState`. `ViewportModeProvider` itself stays uncontrolled —
- * this is purely a one-way sync FROM the live context TO storage.
- */
-function ViewportModeSync({
-  onModeChange,
-  onShowGridChange,
-}: {
-  onModeChange: (mode: ViewportMode) => void;
-  onShowGridChange: (show: boolean) => void;
-}) {
-  const { mode, showGrid } = useViewportMode();
-  useEffect(() => {
-    onModeChange(mode);
-  }, [mode, onModeChange]);
-  useEffect(() => {
-    onShowGridChange(showGrid);
-  }, [showGrid, onShowGridChange]);
   return null;
 }

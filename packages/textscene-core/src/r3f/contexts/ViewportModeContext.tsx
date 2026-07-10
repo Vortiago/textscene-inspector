@@ -31,6 +31,17 @@ import {
 
 export type ViewportMode = '2D' | '3D';
 
+/**
+ * localStorage keys for the two persisted viewport preferences (#224).
+ * `<TscnPreviewShell>` reads them once to seed this provider;
+ * `<ViewportToolbar>` writes them on an EXPLICIT user choice. Programmatic
+ * mode changes (WorkspaceAutoSelect's typed-root pick, the Cameras panel's
+ * 2D framing) deliberately do NOT persist — they are per-scene derivations,
+ * not the user's preference, and writing them would clobber it.
+ */
+export const VIEWPORT_MODE_STORAGE_KEY = 'tsi.viewportMode';
+export const SHOW_GRID_STORAGE_KEY = 'tsi.showGrid';
+
 export interface ViewportModeValue {
   mode: ViewportMode;
   setMode: (mode: ViewportMode) => void;

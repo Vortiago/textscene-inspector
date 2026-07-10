@@ -29,13 +29,13 @@ import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import {
   useAnimationTransport,
-  type LoopOverride,
   type PlayState,
 } from '../../../r3f/contexts/AnimationTransportContext';
 import { useRegisterDriver } from '../../../r3f/contexts/AnimationDriverContext';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useOptionalSelection } from '../../../r3f/contexts/SelectionContext';
 import { usePlaybackLoop } from '../../../r3f/animation/usePlaybackLoop';
+import { applyLoopOverride } from '../../../r3f/animation/loopOverride';
 import { useAnimatedValueRegistry } from '../../../r3f/contexts/AnimatedValueContext';
 import { resolveAnimations, type GodotAnimation } from './animationResolver';
 import { buildClip, loopSettingsFor } from './clipBuilder';
@@ -163,8 +163,9 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
     mixerRef,
     actionsRef,
     configureAction: (action, clipName) => {
+      // 'auto' keeps the clip's authored Godot loop_mode (via loopSettingsFor).
       const authoredMode = loopModesRef.current.get(clipName) ?? 0;
-      configureLoop(action, effectiveLoopMode(transport.loopOverride, authoredMode));
+      applyLoopOverride(action, transport.loopOverride, loopSettingsFor(authoredMode));
     },
     reconfigureKey: transport.loopOverride,
     reportTime: transport.reportTime,
@@ -249,29 +250,6 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
       {children}
     </group>
   );
-}
-
-function configureLoop(action: AnimationAction, loopMode: number): void {
-  const { loop, repetitions, clampWhenFinished } = loopSettingsFor(loopMode);
-  action.setLoop(loop, repetitions);
-  action.clampWhenFinished = clampWhenFinished;
-}
-
-/**
- * Maps the preview loop override (#224) onto Godot's numeric `loop_mode`
- * encoding so it can reuse `loopSettingsFor` unchanged: 'once' -> 0 (no
- * loop, clamped), 'loop' -> 1 (linear repeat), 'auto' -> whatever the clip
- * itself was authored with.
- */
-function effectiveLoopMode(override: LoopOverride, authoredMode: number): number {
-  switch (override) {
-    case 'once':
-      return 0;
-    case 'loop':
-      return 1;
-    default:
-      return authoredMode;
-  }
 }
 
 /**

@@ -95,11 +95,20 @@ export function cloneWithMaterials(mesh: THREE.Object3D): THREE.Object3D {
 export function disposeClonedMaterials(object: THREE.Object3D): void {
   object.traverse((node) => {
     if (node instanceof THREE.Mesh) {
-      if (Array.isArray(node.material)) {
-        node.material.forEach((mat) => mat.dispose());
-      } else {
-        node.material?.dispose();
-      }
+      disposeMeshMaterials(node);
     }
   });
+}
+
+/**
+ * Dispose one mesh's material slot — the ONE place that owns the
+ * array-vs-single material branch, shared by the per-consumer clone
+ * disposal above and the template disposal in `createGLBProcessor`.
+ */
+export function disposeMeshMaterials(mesh: THREE.Mesh): void {
+  if (Array.isArray(mesh.material)) {
+    mesh.material.forEach((mat) => mat.dispose());
+  } else {
+    mesh.material?.dispose();
+  }
 }

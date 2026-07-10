@@ -3,9 +3,8 @@
  *
  * Property surface matches the linter's strict validators (15 fields)
  * plus inherited Node3D transform. Defaults follow Godot's:
- *   - billboard = 0 (DISABLED) — same default this codebase's Label3D
- *     parser uses (see label3d/types.ts); an earlier Label3D default of
- *     ENABLED made labels wrongly track the camera and was corrected.
+ *   - billboard = 0 (DISABLED) — matching Label3D (see label3d/types.ts
+ *     for the rationale).
  *   - hframes = vframes = 1, frame = 0.
  *   - pixel_size = 0.01.
  *   - modulate = white opaque.

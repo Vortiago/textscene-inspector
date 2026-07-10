@@ -7,20 +7,23 @@ import * as THREE from 'three';
 import type { FileEventBus } from '../FileEventBus';
 import type { ResourceEventBus } from '../ResourceEventBus';
 import { createResourceProcessor, type ResourceProcessor } from '../createResourceProcessor';
-import { createGLBMesh, gltfResourceDir, isGLBPath } from '../processing/glbProcessing';
+import {
+  createGLBMesh,
+  disposeMeshMaterials,
+  gltfResourceDir,
+  isGLBPath,
+} from '../processing/glbProcessing';
 
 /**
- * Dispose of a GLB mesh and all its resources.
+ * Dispose of a GLB mesh and all its resources. Unlike a per-consumer clone
+ * (whose geometry is shared with this template — see
+ * `disposeClonedMaterials`), the TEMPLATE owns its geometry too.
  */
 function disposeGLBMesh(mesh: THREE.Object3D): void {
   mesh.traverse((node) => {
     if (node instanceof THREE.Mesh) {
       node.geometry?.dispose();
-      if (Array.isArray(node.material)) {
-        node.material.forEach((mat) => mat.dispose());
-      } else {
-        node.material?.dispose();
-      }
+      disposeMeshMaterials(node);
     }
   });
 }

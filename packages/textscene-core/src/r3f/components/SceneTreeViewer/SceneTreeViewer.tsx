@@ -5,6 +5,7 @@
  */
 import { useCallback, useMemo, useState, type ChangeEvent, type KeyboardEvent } from 'react';
 import type { TscnNode, TscnExternalResource } from '../../../parser/types.js';
+import { getAncestorPaths } from '../../../utils/nodePath.js';
 import { useHierarchy } from '../../contexts/HierarchyContext.js';
 import { useSelection } from '../../contexts/SelectionContext.js';
 import { useResourceLoader } from '../../../resources/useResource.js';
@@ -12,20 +13,6 @@ import { liveTreeContext, useLiveTreeVersion } from '../../useLiveSceneTree.js';
 import { walkLiveTree } from '../../liveSceneTree.js';
 import { TreeNode } from './TreeNode.js';
 import styles from './SceneTreeViewer.module.css';
-
-/**
- * The ancestor treeitem row of `row`, or `null` at the root. Walks the DOM
- * shape `TreeNode` renders: `.node[data-node-path] > (treeitem, .children
- * role="group" > .node...)`. Queried by `role`/structure, never by CSS
- * module class name, so it survives class-name hashing.
- */
-function findParentTreeItem(row: HTMLElement): HTMLElement | null {
-  const nodeDiv = row.parentElement;
-  const group = nodeDiv?.parentElement;
-  if (!group || group.getAttribute('role') !== 'group') return null;
-  const parentNodeDiv = group.parentElement;
-  return parentNodeDiv?.querySelector(':scope > [role="treeitem"]') ?? null;
-}
 
 /**
  * The node path for a treeitem row. `data-node-path` lives on the OUTER
@@ -46,6 +33,8 @@ export interface SceneTreeViewerProps {
 export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewerProps) {
   const { sceneGraph } = useHierarchy();
   const {
+    selectedNodePath,
+    expandedNodePaths,
     setExpandedNodePaths,
     hiddenNodePaths,
     toggleHidden,
@@ -164,11 +153,18 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
         case 'ArrowLeft': {
           e.preventDefault();
           const expanded = currentRow.getAttribute('aria-expanded');
+          const path = nodePathFor(currentRow);
           if (expanded === 'true') {
-            const path = nodePathFor(currentRow);
             if (path) toggleExpandedNodePath(path);
-          } else {
-            focusAndSelect(findParentTreeItem(currentRow));
+          } else if (path) {
+            // Move to the parent row via the slash-joined path model the
+            // whole handler already leans on (rather than walking TreeNode's
+            // private DOM nesting): the nearest ancestor path is the parent;
+            // a root row has none.
+            const parentPath = getAncestorPaths(path).pop();
+            if (parentPath) {
+              focusAndSelect(allRows.find((row) => nodePathFor(row) === parentPath));
+            }
           }
           break;
         }
@@ -186,6 +182,17 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
     },
     [setSelectedNodePath, toggleExpandedNodePath]
   );
+
+  // #224 roving tabIndex: the selected row is normally the tree's one tab
+  // stop, but only while it is actually RENDERED — collapsing an ancestor or
+  // filtering it out via search unmounts it, and without a fallback every
+  // remaining row would be tabIndex -1 (Tab would skip the tree entirely).
+  // A row renders iff it survives the search filter and every ancestor is
+  // expanded — the same conditions TreeNode's recursion applies.
+  const selectedRowRendered =
+    selectedNodePath !== null &&
+    matches(selectedNodePath) &&
+    getAncestorPaths(selectedNodePath).every((p) => expandedNodePaths.has(p));
 
   if (sceneGraph === null) {
     return (
@@ -251,7 +258,7 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
               onOpenSubScene={onOpenSubScene}
               matches={matches}
               externalResources={externalResources}
-              isDefaultFocusable={index === 0}
+              isDefaultFocusable={index === 0 && !selectedRowRendered}
             />
           ))
         )}

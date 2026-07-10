@@ -79,9 +79,9 @@ export interface AnimationTransport {
    * re-renders every AnimationTransport consumer (the mixer-owning
    * Component included) for a value only the scrubber/timecode actually
    * need at high frequency. Pass `{ immediate: true }` to bypass the
-   * throttle and flush the exact value now — used when playback stops
-   * being 'playing' so the paused/stopped readout isn't stale by up to
-   * the throttle window.
+   * throttle and flush the exact value now — used on the playing → paused
+   * edge so the paused readout isn't stale by up to the throttle window
+   * (the stopped edge instead relies on `stop()`'s own reset to 0).
    */
   reportTime(time: number, options?: { immediate?: boolean }): void;
 }
@@ -142,22 +142,24 @@ export function AnimationTransportProvider({ children }: { children: ReactNode }
     (selectedClip ? registration?.durations[selectedClip] : undefined) ?? 0;
 
   const registerPlayer = useCallback((reg: PlayerRegistration) => {
-    setRegistration(reg);
-    setSelectedClip(defaultClip(reg));
-    setPlayState('stopped');
-    setTime(0);
     // #224: a freshly (re)selected player starts neutral — a 2x speed or
     // "once" override left over from a PREVIOUS player would otherwise
-    // silently apply to a clip the user never chose that setting for.
-    setPlaybackSpeedState(1);
-    setLoopOverride('auto');
-    return () => {
-      setRegistration(null);
-      setSelectedClip(null);
+    // silently apply to a clip the user never chose that setting for. ONE
+    // shared reset for registration and unregistration, so a future
+    // per-player preference can't be reset on one edge and leak on the other.
+    const resetPlayback = () => {
       setPlayState('stopped');
       setTime(0);
       setPlaybackSpeedState(1);
       setLoopOverride('auto');
+    };
+    setRegistration(reg);
+    setSelectedClip(defaultClip(reg));
+    resetPlayback();
+    return () => {
+      setRegistration(null);
+      setSelectedClip(null);
+      resetPlayback();
     };
   }, []);
 

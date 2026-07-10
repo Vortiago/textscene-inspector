@@ -83,15 +83,9 @@ export interface SelectionProviderProps {
 
 export function SelectionProvider({ children }: SelectionProviderProps) {
   const [selectedNodePath, setSelectedNodePath] = useState<string | null>(null);
-  // Lazy-init idiom for a value that must stay a STABLE reference for the
-  // lifetime of this provider instance (see the module doc comment) — a
-  // plain `useRef(createExternalStore(null))` would still call the factory
-  // on every render even though only the first result is ever kept.
-  const hoverStoreRef = useRef<ExternalStore<string | null> | null>(null);
-  if (hoverStoreRef.current === null) {
-    hoverStoreRef.current = createExternalStore<string | null>(null);
-  }
-  const hoverStore = hoverStoreRef.current;
+  // Lazily-created, never-set state: a stable per-provider store reference
+  // whose factory runs exactly once (see the module doc comment).
+  const [hoverStore] = useState(() => createExternalStore<string | null>(null));
   const [expandedNodePaths, setExpandedNodePathsState] = useState<ReadonlySet<string>>(
     () => new Set<string>()
   );

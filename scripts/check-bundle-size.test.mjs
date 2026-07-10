@@ -14,7 +14,7 @@
  * substring (but not as a whole word) must NOT trip the guard.
  */
 import { describe, expect, it } from 'vitest';
-import { findHostBundleViolations } from './check-bundle-size.mjs';
+import { findForbiddenHostInputs, findHostBundleViolations } from './check-bundle-size.mjs';
 
 describe('findHostBundleViolations (host-bundle react/three guard)', () => {
   it('returns no violations for clean Node/host bundle content', () => {
@@ -45,5 +45,50 @@ describe('findHostBundleViolations (host-bundle react/three guard)', () => {
       '// in reaction to a file change, overreacted and rebuilt\n' +
       'const threefold = 3, threescore = 60;';
     expect(findHostBundleViolations(content)).toEqual([]);
+  });
+});
+
+describe('findForbiddenHostInputs (metafile-based host-bundle guard — the primary, exact check)', () => {
+  it('returns nothing for a host bundle built only from source + React-free deps', () => {
+    const metafile = {
+      inputs: {
+        'apps/textscene-vscode/src/extension.ts': { bytes: 100 },
+        'packages/textscene-core/src/parser/TscnParserCore.ts': { bytes: 100 },
+        'node_modules/.pnpm/some-lib@1.0.0/node_modules/some-lib/index.js': { bytes: 100 },
+      },
+    };
+    expect(findForbiddenHostInputs(metafile)).toEqual([]);
+  });
+
+  it('flags bundled react/three modules, including pnpm-nested layouts', () => {
+    const metafile = {
+      inputs: {
+        'apps/textscene-vscode/src/extension.ts': { bytes: 100 },
+        'node_modules/.pnpm/react@18.3.1/node_modules/react/index.js': { bytes: 100 },
+        'node_modules/three/build/three.module.js': { bytes: 100 },
+        'node_modules/.pnpm/@react-three+fiber@8.0.0/node_modules/@react-three/fiber/dist/index.js': {
+          bytes: 100,
+        },
+      },
+    };
+    expect(findForbiddenHostInputs(metafile)).toEqual([
+      'node_modules/.pnpm/react@18.3.1/node_modules/react/index.js',
+      'node_modules/three/build/three.module.js',
+      'node_modules/.pnpm/@react-three+fiber@8.0.0/node_modules/@react-three/fiber/dist/index.js',
+    ]);
+  });
+
+  it('is immune to the token scan\'s false-positive class: source files whose STRINGS contain "three"', () => {
+    // A linter message like "expected three arguments" lives in a SOURCE
+    // input — its path is not a node_modules react/three module, so the
+    // metafile check passes where the raw token scan would hard-fail CI.
+    const metafile = {
+      inputs: { 'packages/textscene-core/src/linter/someRule.ts': { bytes: 100 } },
+    };
+    expect(findForbiddenHostInputs(metafile)).toEqual([]);
+  });
+
+  it('tolerates a metafile with no inputs map', () => {
+    expect(findForbiddenHostInputs({})).toEqual([]);
   });
 });

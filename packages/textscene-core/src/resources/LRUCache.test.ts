@@ -95,13 +95,12 @@ describe('LRUCache', () => {
     expect(onEvict).not.toHaveBeenCalled();
   });
 
-  it('values() and keys() iterate every live entry in insertion/recency order', () => {
+  it('values() iterates every live entry in insertion/recency order', () => {
     const cache = new LRUCache<string>(3);
     cache.set('a', 'A');
     cache.set('b', 'B');
     cache.set('c', 'C');
 
-    expect(Array.from(cache.keys())).toEqual(['a', 'b', 'c']);
     expect(Array.from(cache.values())).toEqual(['A', 'B', 'C']);
   });
 

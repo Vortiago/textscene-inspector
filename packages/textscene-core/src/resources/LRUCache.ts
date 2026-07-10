@@ -52,10 +52,6 @@ export class LRUCache<V> {
     return this.map.values();
   }
 
-  keys(): IterableIterator<string> {
-    return this.map.keys();
-  }
-
   private evictOverflow(): void {
     while (this.map.size > this.maxEntries) {
       const oldestKey = this.map.keys().next().value;

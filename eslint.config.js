@@ -29,9 +29,9 @@ export default [
   // Base recommended config
   eslint.configs.recommended,
 
-  // TypeScript files - Node.js environment (extension main code)
+  // TypeScript files - Node.js environment (extension main code + linter CLI)
   {
-    files: ['apps/textscene-vscode/src/**/*.ts'],
+    files: ['apps/textscene-vscode/src/**/*.ts', 'apps/textscene-linter/src/**/*.ts'],
     ignores: ['apps/textscene-vscode/src/webview/**/*.ts'],
     languageOptions: {
       parser: tsparser,
@@ -73,37 +73,6 @@ export default [
       },
       globals: {
         ...globals.browser,
-        ...globals.node,
-      },
-    },
-    plugins: {
-      '@typescript-eslint': tseslint,
-    },
-    rules: {
-      ...tseslint.configs.recommended.rules,
-      '@typescript-eslint/no-unused-vars': [
-        'error',
-        {
-          argsIgnorePattern: '^_',
-          varsIgnorePattern: '^_',
-        },
-      ],
-      '@typescript-eslint/explicit-function-return-type': 'off',
-      '@typescript-eslint/no-explicit-any': 'warn',
-    },
-  },
-
-  // TypeScript files - Node.js environment (linter CLI)
-  {
-    files: ['apps/textscene-linter/src/**/*.ts'],
-    languageOptions: {
-      parser: tsparser,
-      parserOptions: {
-        ecmaVersion: 'latest',
-        sourceType: 'module',
-        project: './tsconfig.base.json',
-      },
-      globals: {
         ...globals.node,
       },
     },

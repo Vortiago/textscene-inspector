@@ -5,7 +5,7 @@ import { NodeDetailsPanel } from './NodeDetailsPanel';
 import { HierarchyProvider } from '../../contexts/HierarchyContext';
 import { SelectionProvider, useSelection } from '../../contexts/SelectionContext';
 import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph';
-import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';
+import { nodeRegistry } from '../../../core/NodeRegistry';
 import type { TscnNode } from '../../../parser/types';
 
 function makeNode(name: string, type: string, extras: Partial<TscnNode> = {}): TscnNode {
@@ -35,10 +35,7 @@ const FAKE_TYPE = '___PanelTestType___';
 
 afterEach(() => {
   // Cleanup any registrations the tests added so they don't leak.
-  const registrationsAny = (nodeRegistry as unknown as {
-    registrations: Map<string, NodeTypeRegistration>;
-  }).registrations;
-  registrationsAny.delete(FAKE_TYPE);
+  nodeRegistry.unregister(FAKE_TYPE);
 });
 
 describe('<NodeDetailsPanel>', () => {

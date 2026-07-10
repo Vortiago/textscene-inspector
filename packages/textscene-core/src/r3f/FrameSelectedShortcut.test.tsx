@@ -14,6 +14,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { SelectionProvider, useSelection } from './contexts/SelectionContext';
+import { CameraControlProvider, useCameraControl } from './contexts/CameraControlContext';
 import { FrameSelectedShortcut } from './FrameSelectedShortcut';
 
 let camera: THREE.Camera;
@@ -119,6 +120,37 @@ describe('<FrameSelectedShortcut> (#224)', () => {
 
     expect(camera.position.equals(before)).toBe(true);
     globalThis.document.body.removeChild(input);
+  });
+
+  it('does nothing while an authored Camera3D is the active camera (never mutates it)', async () => {
+    // Same guard as CameraFit: with "Use This Camera" active, state.camera IS
+    // the authored Camera3D node's camera — framing would overwrite its
+    // position/near/far and corrupt the authored preview.
+    function ActivateAuthoredCamera() {
+      const { switchToCamera } = useCameraControl();
+      useEffect(() => {
+        switchToCamera('Root/Camera3D');
+      }, [switchToCamera]);
+      return null;
+    }
+    const renderer = await ReactThreeTestRenderer.create(
+      <SelectionProvider>
+        <CameraControlProvider>
+          <CameraCapture />
+          <RegisteredMesh path="Far" position={[80, 0, 0]} />
+          <Seeder selectedPath="Far" />
+          <ActivateAuthoredCamera />
+          <FrameSelectedShortcut />
+        </CameraControlProvider>
+      </SelectionProvider>
+    );
+    await renderer.advanceFrames(1, 0);
+    const before = camera.position.clone();
+
+    fireF();
+    await renderer.advanceFrames(1, 0);
+
+    expect(camera.position.equals(before)).toBe(true);
   });
 
   it('ignores keys other than "f"', async () => {

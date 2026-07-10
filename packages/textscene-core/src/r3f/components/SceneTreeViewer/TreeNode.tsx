@@ -76,9 +76,10 @@ export interface TreeNodeProps {
   externalResources: readonly TscnExternalResource[];
   /**
    * #224 (roving tabIndex, WAI-ARIA APG Tree View pattern): true ONLY for
-   * the first root-level row `<SceneTreeViewer>` renders. It's the tree's
-   * ONE tab stop when nothing is selected yet — every other row (including
-   * every recursively-rendered child) defaults to false and never sets this.
+   * the first root-level row, and only while no SELECTED row is rendered
+   * (nothing selected, or the selection collapsed/filtered out of view) —
+   * `<SceneTreeViewer>` computes that condition; every recursively-rendered
+   * child defaults to false and never sets this.
    */
   isDefaultFocusable?: boolean;
 }
@@ -189,9 +190,9 @@ function TreeNodeImpl({
   const isUnsupported = !isRenderableNodeType(effective.type);
 
   // #224 roving tabIndex: this row is the tree's ONE tab stop when it's
-  // selected, or — with nothing selected yet — when it's the designated
-  // default-focusable row (only ever true for the first root row).
-  const isRovingTabStop = isSelected || (selectedNodePath === null && isDefaultFocusable);
+  // selected, or when it's the designated fallback row (the first root row,
+  // set by SceneTreeViewer only while no selected row is rendered).
+  const isRovingTabStop = isSelected || isDefaultFocusable;
 
   const headerClasses = [styles.header];
   if (isSelected) headerClasses.push(styles.selected!);

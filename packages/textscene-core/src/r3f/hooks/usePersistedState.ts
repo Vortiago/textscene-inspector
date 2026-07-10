@@ -13,10 +13,23 @@
  * surface. This is also the load-bearing contract behind the round-2
  * "no new default-visible render toggle" constraint: a FRESH session with
  * no localStorage entry always reads back `defaultValue`.
+ *
+ * Writes are DEBOUNCED (trailing edge, flushed on unmount): the dock
+ * splitters call the setter once per pointermove (60–1000 Hz with high-rate
+ * mice), and a synchronous `localStorage.setItem` per move would put
+ * main-thread I/O inside the exact interaction where frame budget matters.
+ * One write lands per settled change instead of hundreds per drag.
  */
-import { useCallback, useState, type Dispatch, type SetStateAction } from 'react';
+import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 
-function readPersisted<T>(key: string, defaultValue: T, isValid?: (value: unknown) => value is T): T {
+const WRITE_DEBOUNCE_MS = 200;
+
+/** One-shot read of a persisted value; falls back to `defaultValue` on any failure. */
+export function readPersisted<T>(
+  key: string,
+  defaultValue: T,
+  isValid?: (value: unknown) => value is T
+): T {
   try {
     if (typeof window === 'undefined') return defaultValue;
     const raw = window.localStorage.getItem(key);
@@ -29,6 +42,17 @@ function readPersisted<T>(key: string, defaultValue: T, isValid?: (value: unknow
   }
 }
 
+/** One-shot write of a persisted value; failures (private mode/quota) are swallowed. */
+export function writePersisted<T>(key: string, value: T): void {
+  try {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(key, JSON.stringify(value));
+    }
+  } catch {
+    /* private mode / quota exceeded — the in-memory state still updates. */
+  }
+}
+
 export function usePersistedState<T>(
   key: string,
   defaultValue: T,
@@ -36,22 +60,40 @@ export function usePersistedState<T>(
 ): [T, Dispatch<SetStateAction<T>>] {
   const [state, setState] = useState<T>(() => readPersisted(key, defaultValue, isValid));
 
-  const setPersistedState = useCallback<Dispatch<SetStateAction<T>>>(
-    (update) => {
-      setState((prev) => {
-        const next = update instanceof Function ? update(prev) : update;
-        try {
-          if (typeof window !== 'undefined') {
-            window.localStorage.setItem(key, JSON.stringify(next));
-          }
-        } catch {
-          /* private mode / quota exceeded — the in-memory state still updates. */
-        }
-        return next;
-      });
-    },
-    [key]
-  );
+  // Trailing-debounce persistence (see module doc): each change re-arms the
+  // timer; `pendingRef` remembers a not-yet-written value so unmount AND
+  // `pagehide` can flush it — React unmount effects never run on a tab
+  // close/reload or a VS Code webview disposal, so without the pagehide
+  // flush a change made within the debounce window would be silently lost.
+  const pendingRef = useRef<{ key: string; value: T } | null>(null);
+  const isFirstRunRef = useRef(true);
+  useEffect(() => {
+    if (isFirstRunRef.current) {
+      // Never write on mount: a fresh session must not materialize the
+      // default into storage just by rendering.
+      isFirstRunRef.current = false;
+      return;
+    }
+    pendingRef.current = { key, value: state };
+    const timer = setTimeout(() => {
+      writePersisted(key, state);
+      pendingRef.current = null;
+    }, WRITE_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [key, state]);
+  useEffect(() => {
+    const flushPending = () => {
+      if (pendingRef.current !== null) {
+        writePersisted(pendingRef.current.key, pendingRef.current.value);
+        pendingRef.current = null;
+      }
+    };
+    window.addEventListener('pagehide', flushPending);
+    return () => {
+      window.removeEventListener('pagehide', flushPending);
+      flushPending(); // unmount flush
+    };
+  }, []);
 
-  return [state, setPersistedState];
+  return [state, setState];
 }

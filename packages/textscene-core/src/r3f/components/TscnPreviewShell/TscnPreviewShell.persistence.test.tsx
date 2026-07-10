@@ -83,4 +83,22 @@ describe('<TscnPreviewShell> persisted dock layout + viewport mode (#224)', () =
     render(<TscnPreviewShell panelId="p1" content={MINIMAL_TSCN} />);
     expect(screen.getByRole('button', { name: '3D' }).getAttribute('aria-pressed')).toBe('true');
   });
+
+  it("WorkspaceAutoSelect's programmatic mode pick does NOT overwrite the persisted user preference", () => {
+    // Persist an explicit 2D choice, then visit a typed Node3D scene: the
+    // auto-select shows 3D for THAT scene (previous test) but must not write
+    // 3D into storage — only the toolbar's explicit click persists. A later
+    // plain-Node scene (where auto-select has no opinion) restores the 2D
+    // preference the user actually made.
+    const first = render(<TscnPreviewShell panelId="p1" content={PLAIN_ROOT_TSCN} />);
+    fireEvent.click(screen.getByRole('button', { name: '2D' }));
+    first.unmount();
+
+    const typed = render(<TscnPreviewShell panelId="p1" content={MINIMAL_TSCN} />);
+    expect(screen.getByRole('button', { name: '3D' }).getAttribute('aria-pressed')).toBe('true');
+    typed.unmount();
+
+    render(<TscnPreviewShell panelId="p1" content={PLAIN_ROOT_TSCN} />);
+    expect(screen.getByRole('button', { name: '2D' }).getAttribute('aria-pressed')).toBe('true');
+  });
 });

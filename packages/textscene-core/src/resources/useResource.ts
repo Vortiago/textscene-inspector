@@ -191,9 +191,11 @@ export function useResource<T>(path: string, type: ResourceType): ResourceResult
     };
 
     /**
-     * Apply a successfully-loaded value to the hook state. For Object3D
-     * resources (GLBMesh) this clones the cached template so each
-     * consumer gets its own attachable instance.
+     * Apply a successfully-loaded value to the hook state (via
+     * `toConsumerValue`, which owns the per-consumer GLB cloning). The ONE
+     * loaded-state writer — both the synchronous cache hit below and the
+     * async `loaded` event land here, so the clone/dispose lifecycle can't
+     * drift between the two paths.
      */
     const applyValue = (rawValue: unknown) => {
       if (!isCurrent()) return;
@@ -225,8 +227,7 @@ export function useResource<T>(path: string, type: ResourceType): ResourceResult
       // Still subscribe — the host may later call resourceLoader.provideFile()
       // and we want to react.
     } else if (cached !== undefined) {
-      const value = toConsumerValue(cached) as T;
-      setResult({ value, status: 'loaded' });
+      applyValue(cached); // isCurrent() is trivially true this synchronously
       // Still subscribe — the host may invalidate (clearCache) and
       // re-load.
     } else {

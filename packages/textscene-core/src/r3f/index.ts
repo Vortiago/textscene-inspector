@@ -1,4 +1,4 @@
-export { TscnCanvas, TscnSceneContents, type TscnCanvasProps } from './TscnCanvas.js';
+export { TscnCanvas, TscnSceneContents } from './TscnCanvas.js';
 export { NodeDispatcher, type NodeDispatcherProps } from './NodeDispatcher.js';
 export { nodeComponentRegistry } from './NodeComponentRegistry.js';
 export type {

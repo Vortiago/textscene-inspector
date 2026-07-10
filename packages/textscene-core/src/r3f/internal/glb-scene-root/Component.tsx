@@ -41,6 +41,7 @@ import { useRegisterDriver } from '../../contexts/AnimationDriverContext';
 import { useNodePath } from '../../contexts/NodePathContext';
 import { useOptionalSelection } from '../../contexts/SelectionContext';
 import { usePlaybackLoop } from '../../animation/usePlaybackLoop';
+import { applyLoopOverride, LOOP_REPEAT_SETTINGS } from '../../animation/loopOverride';
 import { snapshotSubtree, restoreSnapshot } from '../../animation/poseSnapshot';
 import { joinPath } from '../../../utils/nodePath';
 
@@ -183,15 +184,10 @@ export function GLBSceneRoot({ node }: NodeComponentProps) {
     speedScale: transport.playbackSpeed,
     mixerRef,
     actionsRef,
-    configureAction: (action) => {
-      if (transport.loopOverride === 'once') {
-        action.setLoop(THREE.LoopOnce, 1);
-        action.clampWhenFinished = true;
-      } else {
-        action.setLoop(THREE.LoopRepeat, Infinity);
-        action.clampWhenFinished = false;
-      }
-    },
+    // Native glTF clips have no Godot loop_mode — their authored default is
+    // an infinite repeat, so that's what 'auto' (and 'loop') resolve to.
+    configureAction: (action) =>
+      applyLoopOverride(action, transport.loopOverride, LOOP_REPEAT_SETTINGS),
     reconfigureKey: transport.loopOverride,
     reportTime: transport.reportTime,
     restore: () => restoreSnapshot(snapshotRef.current),

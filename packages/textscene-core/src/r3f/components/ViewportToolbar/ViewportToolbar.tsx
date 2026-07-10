@@ -12,9 +12,15 @@
  * registered handler (`<TscnCanvas>`'s `ScreenshotBridge`).
  */
 
-import { useViewportMode, type ViewportMode } from '../../contexts/ViewportModeContext.js';
+import {
+  useViewportMode,
+  SHOW_GRID_STORAGE_KEY,
+  VIEWPORT_MODE_STORAGE_KEY,
+  type ViewportMode,
+} from '../../contexts/ViewportModeContext.js';
 import { useOptionalCameraControl } from '../../contexts/CameraControlContext.js';
 import { useOptionalHierarchy } from '../../contexts/HierarchyContext.js';
+import { writePersisted } from '../../hooks/usePersistedState.js';
 import styles from './ViewportToolbar.module.css';
 
 const MODES: ViewportMode[] = ['3D', '2D'];
@@ -52,6 +58,19 @@ export function ViewportToolbar() {
     downloadDataUrl(dataUrl, `tscn-preview-${Date.now()}.png`);
   }
 
+  // #224: persistence happens HERE, at the explicit user choice, never via a
+  // blanket context→storage sync — programmatic writers (WorkspaceAutoSelect's
+  // typed-root pick, the Cameras panel's 2D framing) must not overwrite the
+  // user's stored preference. See VIEWPORT_MODE_STORAGE_KEY's doc.
+  function handleModeClick(m: ViewportMode) {
+    setMode(m);
+    writePersisted(VIEWPORT_MODE_STORAGE_KEY, m);
+  }
+  function handleGridChange(show: boolean) {
+    setShowGrid(show);
+    writePersisted(SHOW_GRID_STORAGE_KEY, show);
+  }
+
   return (
     <div className={styles.toolbar} role="toolbar" aria-label="Viewport controls">
       {/* Reset Camera is a 3D-orbit affordance; hide it in 2D overlay mode. */}
@@ -86,7 +105,7 @@ export function ViewportToolbar() {
             type="button"
             className={m === mode ? `${styles.segmentButton} ${styles.active}` : styles.segmentButton}
             aria-pressed={m === mode}
-            onClick={() => setMode(m)}
+            onClick={() => handleModeClick(m)}
           >
             {m}
           </button>
@@ -121,7 +140,7 @@ export function ViewportToolbar() {
           <input
             type="checkbox"
             checked={showGrid}
-            onChange={(e) => setShowGrid(e.target.checked)}
+            onChange={(e) => handleGridChange(e.target.checked)}
           />
           Grid
         </label>

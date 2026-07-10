@@ -17,8 +17,9 @@
  */
 import * as THREE from 'three';
 import { useOptionalSelection } from '../contexts/SelectionContext.js';
-import { useAnimationTransport } from '../contexts/AnimationTransportContext.js';
-import { useSceneHelper } from '../hooks/useTHREEHelper.js';
+import { useHelperTickUpdate, useSceneHelper } from '../hooks/useTHREEHelper.js';
+import { useResourceLoader } from '../../resources/useResource.js';
+import { useLiveTreeVersion } from '../useLiveSceneTree.js';
 import { WorldBoxHelper } from './WorldBoxHelper.js';
 
 const HIGHLIGHT_COLOR = 0x00ff00;
@@ -27,13 +28,12 @@ export function SelectionHighlight() {
   const selection = useOptionalSelection();
   const selectedNodePath = selection?.selectedNodePath ?? null;
   const nodeObjectMap = selection?.nodeObjectMap ?? null;
-  // PERF (WI-213): a static scene never needs the box recomputed after its
-  // initial placement (the helper's constructor already runs `update()`
-  // once); only an active playback driver can move the target between
-  // renders. `paused` still counts — a scrub seeks the mixer without
-  // flipping `playState` back to `playing`.
-  const { playState } = useAnimationTransport();
-  const tickUpdate = playState !== 'stopped';
+  const tickUpdate = useHelperTickUpdate();
+  // With the tick gate closed (static scene), bounds can still change when an
+  // async resource lands INSIDE the selected wrapper (a GLB / instanced
+  // sub-scene replacing its placeholder). Recreate the helper on those loads
+  // so the box tracks the real geometry instead of the placeholder's bounds.
+  const resourceVersion = useLiveTreeVersion(useResourceLoader());
 
   useSceneHelper<THREE.BoxHelper>(
     () => {
@@ -46,7 +46,7 @@ export function SelectionHighlight() {
       helper.name = 'tscn-selection-highlight';
       return helper;
     },
-    [selectedNodePath, nodeObjectMap],
+    [selectedNodePath, nodeObjectMap, resourceVersion],
     { tickUpdate }
   );
 

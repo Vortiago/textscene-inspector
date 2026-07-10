@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { TscnSceneContents, frameSceneBounds } from './TscnCanvas';
+import { TscnSceneContents } from './TscnCanvas';
+import { frameSceneBounds } from './frameSceneBounds';
 
 describe('<TscnSceneContents> (default lighting)', () => {
   it('mounts ambient and directional lights', async () => {

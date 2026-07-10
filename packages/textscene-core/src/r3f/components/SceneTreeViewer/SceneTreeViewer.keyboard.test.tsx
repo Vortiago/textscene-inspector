@@ -178,6 +178,27 @@ describe('<SceneTreeViewer> keyboard operability (#224)', () => {
     expect(globalThis.document.activeElement).toBe(rowFor('Alpha'));
   });
 
+  it('keeps a tab stop on the first root row when the SELECTED row is collapsed out of view', () => {
+    // Regression: `isSelected || (selectedNodePath === null && isDefaultFocusable)`
+    // left the whole tree without any tabIndex=0 row once a selection existed
+    // but its row was unmounted (parent collapsed, or filtered out by search)
+    // — Tab skipped the tree entirely.
+    const graph = createSceneGraphFromTscnScene({
+      nodes: [makeNode('Root', 'Node3D', [makeNode('Child', 'MeshInstance3D')])],
+    });
+    render(<SceneTreeViewer />, { wrapper: withPanel(graph) });
+
+    rowFor('Root').focus();
+    fireEvent.keyDown(rowFor('Root'), { key: 'ArrowRight' }); // expand
+    fireEvent.click(rowFor('Child')); // select the child
+    expect(rowFor('Child').tabIndex).toBe(0);
+
+    fireEvent.keyDown(rowFor('Root'), { key: 'ArrowLeft' }); // collapse — Child unmounts
+    expect(screen.queryByText('Child')).toBeNull();
+    // The tree must still have exactly one tab stop: the first root row.
+    expect(rowFor('Root').tabIndex).toBe(0);
+  });
+
   it('all treeitems stay reachable in one flat DOM query regardless of nesting depth', () => {
     const graph = createSceneGraphFromTscnScene({
       nodes: [

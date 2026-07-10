@@ -39,12 +39,40 @@ export interface PlaybackLoopParams {
    * Report the live playhead to the transport (for the scrubber). The
    * transport throttles this internally (WI-213); pass `{ immediate: true }`
    * to force an unthrottled flush — this loop does so once on the
-   * playing → non-playing edge so the paused/stopped readout is never left
-   * showing a throttle-stale time.
+   * playing → paused edge (`flushTimeOnPauseEdge`) so the paused readout is
+   * never left showing a throttle-stale time.
    */
   reportTime: (t: number, options?: { immediate?: boolean }) => void;
   /** Restore the authored pose when playback stops. */
   restore: () => void;
+}
+
+/**
+ * WI-213 edge-flush, shared by every transport driver's frame loop
+ * (`usePlaybackLoop`, AnimationTree's weighted loop, AnimatedSprite2D's
+ * frame stepper): `reportTime()` is throttled by the transport, so the LAST
+ * report before playback leaves 'playing' can be up to the throttle window
+ * stale — and the paused state doesn't report again on its own. Call this
+ * once per frame BEFORE acting on `state`; on the playing → PAUSED edge it
+ * flushes the driver's exact current time unthrottled so the paused readout
+ * is never left stale. `getTime` returning `null` means the driver has no
+ * live playhead to flush (e.g. no action selected).
+ *
+ * Deliberately does NOT fire on the playing → stopped edge: every stopped
+ * transition (transport `stop()`, deselection's `registerPlayer` cleanup)
+ * already resets the transport time to 0, and flushing the pre-stop
+ * playhead here would overwrite that reset — leaving the scrubber/timecode
+ * stuck at the old time while the pose shows the authored rest state.
+ */
+export function flushTimeOnPauseEdge(
+  prevState: PlayState,
+  state: PlayState,
+  getTime: () => number | null,
+  reportTime: (t: number, options?: { immediate?: boolean }) => void
+): void {
+  if (prevState !== 'playing' || state !== 'paused') return;
+  const time = getTime();
+  if (time !== null) reportTime(time, { immediate: true });
 }
 
 export function usePlaybackLoop(params: PlaybackLoopParams): void {
@@ -76,15 +104,7 @@ export function usePlaybackLoop(params: PlaybackLoopParams): void {
     }
     prevReconfigureKeyRef.current = params.reconfigureKey;
 
-    // WI-213: reportTime() is throttled by the transport, so the LAST report
-    // before playback stops 'playing' can be up to the throttle window
-    // stale. Neither the 'paused' nor 'stopped' branch below reports again
-    // on its own, so flush the mixer's exact current time once, right on
-    // the edge, before switching behavior.
-    const wasPlaying = prevStateRef.current === 'playing';
-    if (wasPlaying && playState !== 'playing' && action) {
-      params.reportTime(action.time, { immediate: true });
-    }
+    flushTimeOnPauseEdge(prevStateRef.current, playState, () => action?.time ?? null, params.reportTime);
 
     switch (playState) {
       case 'playing': {

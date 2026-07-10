@@ -21,19 +21,10 @@ import { SceneResourcesProvider } from './SceneResourcesContext.js';
 import { NodeDispatcher } from './NodeDispatcher.js';
 import { SelectionHighlight } from './components/SelectionHighlight.js';
 import { HoverHighlight } from './components/HoverHighlight.js';
-import { computeWorldBoundingBox } from './bounds.js';
 import { InternalTextLabel } from './internalTextLabel.js';
 import { FrameSelectedShortcut } from './FrameSelectedShortcut.js';
+import { frameSceneBounds, type OrbitLike } from './frameSceneBounds.js';
 import styles from './TscnCanvas.module.css';
-
-/**
- * `<TscnCanvas>` takes no props — it reads everything it needs from context
- * (`HierarchyContext`, `CameraControlContext`, `ViewportModeContext`). Test
- * code that wants to pass nodes directly uses `<TscnSceneContents>` instead.
- * Kept as a named export (rather than inlining `{}` at the call site) so
- * `ComponentProps<typeof TscnCanvas>` stays available to callers.
- */
-export type TscnCanvasProps = Record<string, never>;
 
 /**
  * The contents of the R3F scene (everything that would normally live
@@ -55,18 +46,13 @@ export function TscnSceneContents() {
   // a renderer crash. The grid also gives the orbit controls a tangible
   // surface so the initial-camera framing feels intentional.
   const isEmpty = nodes === null || nodes.length === 0;
-  // #224: an OPT-IN ground-plane grid for a non-empty scene, off by default
-  // (see ViewportModeContext's doc comment for why). The empty-scene
-  // indicator already draws its own grid unconditionally, so this one only
-  // adds a SECOND grid when there's actual content to reference it against.
-  const { showGrid } = useViewportMode();
 
   return (
     <>
       <ambientLight intensity={0.4} />
       <directionalLight position={[5, 5, 5]} intensity={1} />
       {isEmpty && <EmptySceneIndicator />}
-      {!isEmpty && showGrid && <gridHelper args={[10, 10, 0x444444, 0x222222]} />}
+      {!isEmpty && <ContentGroundGrid />}
       {nodes && rootScene && (
         <SceneResourcesProvider
           internalResources={rootScene.internalResources}
@@ -81,10 +67,29 @@ export function TscnSceneContents() {
   );
 }
 
+/** The one ground-plane grid styling, shared by the empty-scene indicator
+ *  and the opt-in content grid so the two can never drift apart. */
+function GroundGrid() {
+  return <gridHelper args={[10, 10, 0x444444, 0x222222]} />;
+}
+
+/**
+ * #224: an OPT-IN ground-plane grid for a non-empty scene, off by default
+ * (see ViewportModeContext's doc comment for why). The empty-scene indicator
+ * already draws its own grid unconditionally, so this one only adds a SECOND
+ * grid when there's actual content to reference it against. A child
+ * component (not a read in `TscnSceneContents`) so a toolbar toggle of ANY
+ * viewport flag re-renders just this, never the whole dispatched node tree.
+ */
+function ContentGroundGrid() {
+  const { showGrid } = useViewportMode();
+  return showGrid ? <GroundGrid /> : null;
+}
+
 function EmptySceneIndicator() {
   return (
     <group userData={{ tscnEmptyState: true }}>
-      <gridHelper args={[10, 10, 0x444444, 0x222222]} />
+      <GroundGrid />
       <InternalTextLabel
         text="Load a scene to begin"
         position={[0, 0.4, 0]}
@@ -143,82 +148,6 @@ function ActiveCameraSwitcher() {
   return null;
 }
 
-/** Minimal shape we touch on the OrbitControls instance for framing. */
-export interface OrbitLike {
-  target?: THREE.Vector3;
-  update?: () => void;
-}
-
-/**
- * Frame the camera so the whole scene fits the viewport. Unions the bounding
- * boxes of every rendered Mesh (skipping the empty-state grid), then pulls the
- * camera back along an isometric-ish direction far enough that the largest
- * dimension fits the vertical FOV, and re-points OrbitControls at the centre.
- * No-op for empty scenes or non-finite bounds.
- */
-export function frameSceneBounds(
-  scene: THREE.Object3D,
-  camera: THREE.Camera,
-  controls: OrbitLike | null
-): void {
-  // Prefer real geometry (meshes); fall back to gizmo lines/points so
-  // light- or camera-only scenes (no mesh to frame) still get framed instead
-  // of leaving the default camera pointed at an empty void.
-  const meshBox = new THREE.Box3();
-  const gizmoBox = new THREE.Box3();
-  let hasMesh = false;
-  let hasGizmo = false;
-  scene.traverse((obj) => {
-    if (obj.userData?.tscnEmptyState) return;
-    const o = obj as THREE.Mesh & { isLine?: boolean; isLineSegments?: boolean; isPoints?: boolean };
-    if (!o.isMesh && !o.isLine && !o.isLineSegments && !o.isPoints) return;
-    const objBox = computeWorldBoundingBox(obj, new THREE.Box3());
-    if (objBox.isEmpty() || !Number.isFinite(objBox.min.x)) return;
-    if (o.isMesh) {
-      meshBox.union(objBox);
-      hasMesh = true;
-    } else {
-      gizmoBox.union(objBox);
-      hasGizmo = true;
-    }
-  });
-  const box = hasMesh ? meshBox : hasGizmo ? gizmoBox : null;
-  if (!box) return;
-
-  const size = box.getSize(new THREE.Vector3());
-  const center = box.getCenter(new THREE.Vector3());
-  const maxDim = Math.max(size.x, size.y, size.z);
-  if (!Number.isFinite(maxDim) || maxDim <= 0) return;
-
-  // 2D-canvas scenes sit on ~one plane (z spread is only z_index draw steps);
-  // view them straight-on (down -Z, +Y up) instead of the 3D isometric angle,
-  // so sprites read flat and upright rather than tilted in perspective.
-  const maxXY = Math.max(size.x, size.y);
-  const isFlat = size.z <= Math.max(maxXY, 1) * 0.02;
-
-  const persp = camera as THREE.PerspectiveCamera;
-  const fov = ((persp.isPerspectiveCamera ? persp.fov : 50) * Math.PI) / 180;
-  const fitDim = isFlat ? Math.max(maxXY, 0.001) : maxDim;
-  const distance = ((fitDim / 2 / Math.tan(fov / 2)) || fitDim) * (isFlat ? 1.15 : 1.6);
-
-  const dir = isFlat ? new THREE.Vector3(0, 0, 1) : new THREE.Vector3(1, 0.7, 1).normalize();
-  camera.position.copy(center.clone().add(dir.multiplyScalar(distance)));
-  if (persp.isPerspectiveCamera) {
-    // Keep the near plane below the framing distance so microscopic scenes
-    // (e.g. a Decal authored at size 0.001) aren't clipped entirely: the 0.01
-    // floor must never exceed `distance`, or the content sits inside the near
-    // plane and the viewport renders black.
-    persp.near = Math.min(Math.max(0.01, distance / 200), distance / 10);
-    persp.far = distance * 200;
-    persp.updateProjectionMatrix();
-  }
-  camera.lookAt(center);
-  if (controls?.target) {
-    controls.target.copy(center);
-    controls.update?.();
-  }
-}
-
 /**
  * Auto-frames the scene to the viewport on load / scene change, but ONLY in
  * free-orbit mode (never when a Camera3D is the active camera) and only during
@@ -252,7 +181,12 @@ interface ResettableControls {
   reset: () => void;
 }
 
-export function TscnCanvas(_props: TscnCanvasProps) {
+/**
+ * `<TscnCanvas>` takes no props — it reads everything it needs from context
+ * (`HierarchyContext`, `CameraControlContext`, `ViewportModeContext`). Test
+ * code that wants to pass nodes directly uses `<TscnSceneContents>` instead.
+ */
+export function TscnCanvas() {
   // WI-UX-7: capture the OrbitControls instance via a callback ref so
   // the toolbar's "Reset Camera" button can call its `.reset()`. Drei's
   // `<OrbitControls>` accepts a ref typed to the upstream three-stdlib
@@ -266,13 +200,7 @@ export function TscnCanvas(_props: TscnCanvasProps) {
 
   return (
     <div className={styles.root}>
-      {/* preserveDrawingBuffer (#224): WebGL clears its drawing buffer after
-          each frame by default, so gl.domElement.toDataURL() reads back a
-          blank/black image unless this is set — the screenshot handler
-          below also forces an explicit render right before capture, but
-          that alone isn't enough once the browser has already swapped
-          buffers past the point of readback. */}
-      <Canvas camera={{ position: [3, 3, 3] }} gl={{ preserveDrawingBuffer: true }}>
+      <Canvas camera={{ position: [3, 3, 3] }}>
         <TscnSceneContents />
         <ActiveCameraSwitcher />
         <CameraFit />
@@ -311,11 +239,14 @@ function OrbitControlsResetBridge({
 /**
  * Bridges the WebGLRenderer into `CameraControlContext` so the toolbar's
  * screenshot button can capture a frame from outside the `<Canvas>` (#224).
- * Forces an explicit render right before reading the buffer back — R3F's own
- * render loop can be idle (`frameloop="demand"`-style optimizations, or just
- * the gap between frames) at the moment the user clicks the button, and an
- * explicit render guarantees the buffer reflects the CURRENT camera/scene
- * state rather than whatever the last scheduled frame happened to be.
+ * Forces an explicit render right before reading the buffer back: WebGL only
+ * clears the drawing buffer when the browser COMPOSITES (i.e. after the
+ * current task returns to the event loop), so a same-task render + toDataURL
+ * reliably reads the fresh frame — without needing `preserveDrawingBuffer`,
+ * which would tax every rendered frame with a buffer copy just to serve this
+ * occasional button. The render also guarantees the buffer reflects the
+ * CURRENT camera/scene state rather than whatever the last scheduled frame
+ * happened to be.
  */
 function ScreenshotBridge() {
   const control = useOptionalCameraControl();
