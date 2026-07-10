@@ -26,6 +26,7 @@
  */
 import * as THREE from 'three';
 import { useOptionalSelection } from '../contexts/SelectionContext.js';
+import { useAnimationTransport } from '../contexts/AnimationTransportContext.js';
 import { useSceneHelper } from '../hooks/useTHREEHelper.js';
 import { WorldBoxHelper } from './WorldBoxHelper.js';
 
@@ -35,6 +36,10 @@ export function HoverHighlight() {
   const selection = useOptionalSelection();
   const hoveredNodePath = selection?.hoveredNodePath ?? null;
   const nodeObjectMap = selection?.nodeObjectMap ?? null;
+  // PERF (WI-213): see SelectionHighlight — only recompute every frame
+  // while something could actually be moving the hovered target.
+  const { playState } = useAnimationTransport();
+  const tickUpdate = playState !== 'stopped';
 
   useSceneHelper<THREE.BoxHelper>(
     () => {
@@ -47,7 +52,8 @@ export function HoverHighlight() {
       helper.name = 'tscn-hover-highlight';
       return helper;
     },
-    [hoveredNodePath, nodeObjectMap]
+    [hoveredNodePath, nodeObjectMap],
+    { tickUpdate }
   );
 
   return null;
