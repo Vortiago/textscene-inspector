@@ -71,8 +71,12 @@ function circlePoints(radius: number): Point2D[] {
   return points;
 }
 
-/** Vertical capsule: two semicircle caps joined by straight sides. */
-function capsulePoints(radius: number, height: number): Point2D[] {
+/**
+ * Vertical capsule: two semicircle caps joined by straight sides. Exported
+ * for direct unit testing of the point sequence (the shape a rendered
+ * `<lineSegments>` buffer doesn't expose without re-deriving it).
+ */
+export function capsulePoints(radius: number, height: number): Point2D[] {
   const halfHeight = Math.max(0, height / 2 - radius);
   const points: Point2D[] = [];
 
@@ -80,9 +84,10 @@ function capsulePoints(radius: number, height: number): Point2D[] {
   points.push({ x: radius, y: -halfHeight });
   points.push({ x: radius, y: halfHeight });
 
-  // Top cap: -90°..90° around (0, halfHeight).
+  // Top cap: 0°..180° around (0, halfHeight) — right connection point, over
+  // the top, to the left connection point.
   for (let i = 1; i < CAPSULE_CAP_SEGMENTS; i++) {
-    const t = -Math.PI / 2 + (i / CAPSULE_CAP_SEGMENTS) * Math.PI;
+    const t = (i / CAPSULE_CAP_SEGMENTS) * Math.PI;
     points.push({ x: radius * Math.cos(t), y: halfHeight + radius * Math.sin(t) });
   }
 
@@ -90,9 +95,10 @@ function capsulePoints(radius: number, height: number): Point2D[] {
   points.push({ x: -radius, y: halfHeight });
   points.push({ x: -radius, y: -halfHeight });
 
-  // Bottom cap: 90°..270° around (0, -halfHeight).
+  // Bottom cap: 180°..360° around (0, -halfHeight) — left connection point,
+  // under the bottom, back to the right connection point (closing the loop).
   for (let i = 1; i < CAPSULE_CAP_SEGMENTS; i++) {
-    const t = Math.PI / 2 + (i / CAPSULE_CAP_SEGMENTS) * Math.PI;
+    const t = Math.PI + (i / CAPSULE_CAP_SEGMENTS) * Math.PI;
     points.push({ x: radius * Math.cos(t), y: -halfHeight + radius * Math.sin(t) });
   }
 
