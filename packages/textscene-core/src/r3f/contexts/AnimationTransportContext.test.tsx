@@ -3,7 +3,7 @@
  * that the AnimationPlayer Component reads and the Animation dock tab drives.
  */
 
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import {
@@ -149,5 +149,74 @@ describe('AnimationTransportContext — controls (F2/F3)', () => {
     const { result } = setup();
     act(() => result.current.reportTime(0.25));
     expect(result.current.time).toBeCloseTo(0.25);
+  });
+});
+
+describe('AnimationTransportContext — reportTime throttling (WI-213)', () => {
+  function setup() {
+    const hook = renderHook(() => useAnimationTransport(), { wrapper: wrap });
+    act(() => void hook.result.current.registerPlayer(REG));
+    return hook;
+  }
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('commits the first reportTime call immediately (no artificial initial delay)', () => {
+    const { result } = setup();
+    act(() => result.current.reportTime(0.1));
+    expect(result.current.time).toBeCloseTo(0.1);
+  });
+
+  it('coalesces rapid reportTime calls within the throttle window into one commit', () => {
+    const { result } = setup();
+    act(() => result.current.reportTime(0.1));
+    expect(result.current.time).toBeCloseTo(0.1);
+
+    // Same tick (60fps ~= 16ms apart) — well inside a ~100ms/10Hz window.
+    act(() => {
+      vi.advanceTimersByTime(16);
+      result.current.reportTime(0.11);
+    });
+    expect(result.current.time).toBeCloseTo(0.1); // still the throttled value
+
+    act(() => {
+      vi.advanceTimersByTime(16);
+      result.current.reportTime(0.12);
+    });
+    expect(result.current.time).toBeCloseTo(0.1);
+  });
+
+  it('commits again once the throttle window elapses', () => {
+    const { result } = setup();
+    act(() => result.current.reportTime(0.1));
+
+    act(() => {
+      vi.advanceTimersByTime(16);
+      result.current.reportTime(0.11); // still throttled
+    });
+    expect(result.current.time).toBeCloseTo(0.1);
+
+    act(() => {
+      vi.advanceTimersByTime(200); // well past the throttle window
+      result.current.reportTime(0.5);
+    });
+    expect(result.current.time).toBeCloseTo(0.5);
+  });
+
+  it('an immediate reportTime call bypasses the throttle window', () => {
+    const { result } = setup();
+    act(() => result.current.reportTime(0.1));
+
+    act(() => {
+      vi.advanceTimersByTime(16); // well inside the throttle window
+      result.current.reportTime(0.33, { immediate: true });
+    });
+    expect(result.current.time).toBeCloseTo(0.33);
   });
 });

@@ -13,7 +13,7 @@
  * `useSpriteFrames` / `resolveFrameTexture`.
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
@@ -70,13 +70,23 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
   // playing/paused; when stopped the authored `props.frame` is shown directly.
   const [playbackFrame, setPlaybackFrame] = useState(0);
   const { time: transportTime, reportTime } = transport;
+  // WI-213: reportTime() is throttled by the transport; only the 'playing'
+  // branch below reports, so capture the last value it computed and flush it
+  // unthrottled once, right on the playing → non-playing edge, so a
+  // paused/deselected sprite is never left showing a throttle-stale frame.
+  const prevStateRef = useRef(effectiveState);
+  const lastPlayingTimeRef = useRef(0);
   useFrame((_, delta) => {
     if (!currentAnim) return;
+    if (prevStateRef.current === 'playing' && effectiveState !== 'playing') {
+      reportTime(lastPlayingTimeRef.current, { immediate: true });
+    }
     if (effectiveState === 'playing') {
       const dur = clipDuration(currentAnim);
       // Wrap a looping clip past its end; hold a one-shot at its last frame.
       const t = dur > 0 && currentAnim.loop ? (transportTime + delta) % dur : Math.min(transportTime + delta, dur);
       reportTime(t);
+      lastPlayingTimeRef.current = t;
       const next = frameAtTime(currentAnim, t);
       setPlaybackFrame((prev) => (prev === next ? prev : next));
     } else if (effectiveState === 'paused') {
@@ -84,6 +94,7 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
       setPlaybackFrame((prev) => (prev === next ? prev : next));
     }
     // stopped: the authored frame is shown below — nothing to drive here.
+    prevStateRef.current = effectiveState;
   });
 
   const frameCount = currentAnim?.frames.length ?? 0;

@@ -13,6 +13,7 @@ import {
   useCallback,
   useContext,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
@@ -51,9 +52,23 @@ export interface AnimationTransport {
   stop(): void;
   seek(time: number): void;
   selectClip(name: string): void;
-  /** Component → transport: report the live playhead for the scrubber. */
-  reportTime(time: number): void;
+  /**
+   * Component → transport: report the live playhead for the scrubber.
+   * Throttled to REPORT_THROTTLE_MS (WI-213) — the driver's useFrame loop
+   * calls this every rendered frame, and committing React state that often
+   * re-renders every AnimationTransport consumer (the mixer-owning
+   * Component included) for a value only the scrubber/timecode actually
+   * need at high frequency. Pass `{ immediate: true }` to bypass the
+   * throttle and flush the exact value now — used when playback stops
+   * being 'playing' so the paused/stopped readout isn't stale by up to
+   * the throttle window.
+   */
+  reportTime(time: number, options?: { immediate?: boolean }): void;
 }
+
+/** ~10 Hz — a scrubber/timecode redraw rate that reads as smooth without
+ * re-rendering every transport consumer on every rendered animation frame. */
+const REPORT_THROTTLE_MS = 100;
 
 const RESET_CLIP = 'RESET';
 
@@ -139,7 +154,21 @@ export function AnimationTransportProvider({ children }: { children: ReactNode }
     setTime(0);
   }, []);
 
-  const reportTime = useCallback((t: number) => setTime(clampTime(t)), [clampTime]);
+  // WI-213: reportTime is called every rendered animation frame (via
+  // usePlaybackLoop's useFrame) while playing. Throttling the React-state
+  // commit to REPORT_THROTTLE_MS keeps every OTHER AnimationTransport
+  // consumer (the mixer-owning Component in particular) from re-rendering
+  // 60x/sec for a value it doesn't need at that frequency.
+  const lastCommitRef = useRef(0);
+  const reportTime = useCallback(
+    (t: number, options?: { immediate?: boolean }) => {
+      const now = Date.now();
+      if (!options?.immediate && now - lastCommitRef.current < REPORT_THROTTLE_MS) return;
+      lastCommitRef.current = now;
+      setTime(clampTime(t));
+    },
+    [clampTime]
+  );
 
   const value = useMemo<AnimationTransport>(
     () => ({

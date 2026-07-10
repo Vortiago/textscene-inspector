@@ -26,8 +26,14 @@ export interface PlaybackLoopParams {
   actionsRef: MutableRefObject<Map<string, AnimationAction>>;
   /** Apply loop settings when a clip first becomes the selected action. */
   configureAction: (action: AnimationAction, clipName: string) => void;
-  /** Report the live playhead to the transport (for the scrubber). */
-  reportTime: (t: number) => void;
+  /**
+   * Report the live playhead to the transport (for the scrubber). The
+   * transport throttles this internally (WI-213); pass `{ immediate: true }`
+   * to force an unthrottled flush — this loop does so once on the
+   * playing → non-playing edge so the paused/stopped readout is never left
+   * showing a throttle-stale time.
+   */
+  reportTime: (t: number, options?: { immediate?: boolean }) => void;
   /** Restore the authored pose when playback stops. */
   restore: () => void;
 }
@@ -50,6 +56,16 @@ export function usePlaybackLoop(params: PlaybackLoopParams): void {
       prev?.stop();
       prevClipRef.current = selectedClip;
       if (action && selectedClip) params.configureAction(action, selectedClip);
+    }
+
+    // WI-213: reportTime() is throttled by the transport, so the LAST report
+    // before playback stops 'playing' can be up to the throttle window
+    // stale. Neither the 'paused' nor 'stopped' branch below reports again
+    // on its own, so flush the mixer's exact current time once, right on
+    // the edge, before switching behavior.
+    const wasPlaying = prevStateRef.current === 'playing';
+    if (wasPlaying && playState !== 'playing' && action) {
+      params.reportTime(action.time, { immediate: true });
     }
 
     switch (playState) {
