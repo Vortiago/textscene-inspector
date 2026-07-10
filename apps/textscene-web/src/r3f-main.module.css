@@ -481,3 +481,21 @@
   color: var(--tsi-fg-muted);
   font-size: var(--tsi-font-md);
 }
+
+/* ── Drag-and-drop hint (#221) ─────────────────────────────────────────── */
+.dropZoneHint {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--tsi-space-4);
+  background: rgba(42, 138, 246, 0.16);
+  border: 3px dashed var(--tsi-accent);
+  color: var(--tsi-fg-strong);
+  font-size: var(--tsi-font-lg);
+  font-weight: 600;
+  text-align: center;
+  pointer-events: none;
+}

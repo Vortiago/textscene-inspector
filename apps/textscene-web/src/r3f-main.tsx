@@ -19,6 +19,7 @@ import {
   useRef,
   useState,
   type ChangeEvent,
+  type DragEvent as ReactDragEvent,
   type MouseEvent as ReactMouseEvent,
 } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -37,6 +38,7 @@ import { WebResourceProvider } from './providers/WebResourceProvider';
 import { resolveForwardedContent } from './sourceGate';
 import { groupDiagnosticsByLine, summarizeDiagnostics, formatProblemBadge } from './lineDiagnostics';
 import { SourceGutter } from './SourceGutter';
+import { pickTscnFile, matchResourceFiles } from './multiFileUpload';
 import styles from './r3f-main.module.css';
 
 /** Sentinel value used by `<ViewportSelector>` when no fixture is active (user is on an uploaded .tscn). */
@@ -196,6 +198,13 @@ export function R3FApp() {
   // toolbar can show what's active when the fixture dropdown is
   // deselected.
   const [uploadedTscnName, setUploadedTscnName] = useState<string | null>(null);
+
+  // #221: drag-and-drop a .tscn (+ resource files) onto the page. A counter,
+  // not a boolean, because dragenter/dragleave bubble from every descendant
+  // as the cursor crosses child element boundaries during one continuous
+  // drag over the app root — only net-zero really means "left the window".
+  const dragCounterRef = useRef(0);
+  const [dragActive, setDragActive] = useState(false);
 
   // #202: lint the buffer continuously, debounced — independent of the
   // render-forward gate above (a buffer that fails to RENDER can still be
@@ -357,6 +366,59 @@ export function R3FApp() {
     loader.provideFile(path);
   }
 
+  // #221: shared entry point for BOTH drag-and-drop and the toolbar's
+  // (now multi-select) file input. The first `.tscn` among `files` becomes
+  // the active scene; every OTHER file is matched to one of ITS external-
+  // resource `res://` paths by basename, so a scene + its textures open in
+  // one gesture instead of requiring a per-path Resources-tab upload.
+  async function handleFilesUpload(files: readonly File[]) {
+    const tscnFile = pickTscnFile(files);
+    if (!tscnFile) {
+      setLoadError('No .tscn file found among the dropped/selected files.');
+      return;
+    }
+    let text: string;
+    try {
+      text = await tscnFile.text();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      handleTscnUploadError(`Failed to read TSCN file: ${message}`);
+      return;
+    }
+    handleTscnUpload(tscnFile, text);
+
+    const others = files.filter((f) => f !== tscnFile);
+    for (const { path, file } of matchResourceFiles(text, others)) {
+      handleResourceUpload(path, file);
+    }
+  }
+
+  function handleDragEnter(e: ReactDragEvent) {
+    e.preventDefault();
+    if (!e.dataTransfer.types.includes('Files')) return;
+    dragCounterRef.current += 1;
+    setDragActive(true);
+  }
+
+  // Required so the browser's default "reject the drop" behavior doesn't
+  // win — without this, `onDrop` never fires.
+  function handleDragOver(e: ReactDragEvent) {
+    e.preventDefault();
+  }
+
+  function handleDragLeave(e: ReactDragEvent) {
+    e.preventDefault();
+    dragCounterRef.current = Math.max(0, dragCounterRef.current - 1);
+    if (dragCounterRef.current === 0) setDragActive(false);
+  }
+
+  function handleDrop(e: ReactDragEvent) {
+    e.preventDefault();
+    dragCounterRef.current = 0;
+    setDragActive(false);
+    void handleFilesUpload(Array.from(e.dataTransfer.files));
+  }
+
   function handleBufferChange(e: ChangeEvent<HTMLTextAreaElement>) {
     const newValue = e.target.value;
     setBuffer(newValue);
@@ -413,7 +475,19 @@ export function R3FApp() {
 
   return (
     <ResourceLoaderProvider loader={loader}>
-      <div style={{ width: '100vw', height: '100vh', display: 'flex' }}>
+      <div
+        data-testid="app-root"
+        style={{ width: '100vw', height: '100vh', display: 'flex', position: 'relative' }}
+        onDragEnter={handleDragEnter}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
+        {dragActive && (
+          <div data-testid="drop-zone-hint" className={styles.dropZoneHint}>
+            Drop a .tscn file (and its resources) to open it
+          </div>
+        )}
         {paneVisible && (
           <>
             {/* flex-shrink:0 (in .sourcePane) keeps the pane at its set/dragged
@@ -486,8 +560,7 @@ export function R3FApp() {
                 uploadedTscnName={uploadedTscnName}
                 loadError={loadError}
                 onFixtureChange={handleFixtureChange}
-                onTscnUpload={handleTscnUpload}
-                onTscnUploadError={handleTscnUploadError}
+                onFilesSelected={handleFilesUpload}
                 paneVisible={paneVisible}
                 onTogglePane={() => setPaneVisible((v) => !v)}
                 problemBadge={problemBadge}
@@ -528,8 +601,8 @@ interface ToolbarProps {
   uploadedTscnName: string | null;
   loadError: string | null;
   onFixtureChange: (value: string) => void;
-  onTscnUpload: (file: File, text: string) => void;
-  onTscnUploadError: (message: string) => void;
+  /** #221: one or more files picked via the file input — a scene plus, optionally, its resources. */
+  onFilesSelected: (files: File[]) => void;
   paneVisible: boolean;
   onTogglePane: () => void;
   /** #202: compact problem-count text (e.g. "✖ 1 / ⚠ 2"), or `null` when the buffer is clean. */
@@ -567,8 +640,7 @@ function Toolbar({
   uploadedTscnName,
   loadError,
   onFixtureChange,
-  onTscnUpload,
-  onTscnUploadError,
+  onFilesSelected,
   paneVisible,
   onTogglePane,
   problemBadge,
@@ -622,16 +694,10 @@ function Toolbar({
   }
 
   function handleTscnFileChange(e: ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    file
-      .text()
-      .then((text) => onTscnUpload(file, text))
-      .catch((err: unknown) => {
-        const message = err instanceof Error ? err.message : String(err);
-        onTscnUploadError(`Failed to read TSCN file: ${message}`);
-      });
-    // Reset so the same filename can be re-opened.
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    onFilesSelected(Array.from(files));
+    // Reset so the same filename(s) can be re-opened.
     if (tscnInputRef.current) tscnInputRef.current.value = '';
     setOpen(false);
   }
@@ -713,7 +779,13 @@ function Toolbar({
       <input
         ref={tscnInputRef}
         type="file"
-        accept=".tscn"
+        // #221: multi-select — a .tscn plus its resource files can be picked
+        // in one gesture. `accept` covers the file kinds handleFilesUpload's
+        // basename-matching can actually resolve (mirrors the binary
+        // resource-extension list resourceProviderUtils.isBinaryResourceType
+        // uses to tell text vs. binary resources apart).
+        accept=".tscn,.glb,.gltf,.png,.jpg,.jpeg,.webp,.svg,.wav,.ogg,.mp3"
+        multiple
         onChange={handleTscnFileChange}
         className={styles.srOnly}
         data-testid="upload-tscn-input"
