@@ -123,6 +123,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Animation Tree State Machine",
+    "file": "unit-animation-tree-state-machine.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Animation Tree Stateless",
+    "file": "unit-animation-tree-stateless.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Animationtree Blend",
     "file": "unit-animationtree-blend.tscn",
     "category": "Other"
