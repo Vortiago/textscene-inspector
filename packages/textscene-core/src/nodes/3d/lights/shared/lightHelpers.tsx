@@ -41,6 +41,75 @@ const DIRECTIONAL_HELPER_SIZE = 1.0;
 const POINT_HELPER_SIZE = 0.25;
 
 /**
+ * Makes a `THREE.DirectionalLightHelper` / `THREE.PointLightHelper` behave
+ * correctly when mounted as a `<primitive>` SIBLING of its light inside the
+ * node's own transform group (WI-ARCH-3's shared pattern), instead of
+ * `scene.add(helper)`'d directly at the root the way both classes'
+ * doc-comment examples assume.
+ *
+ * Both constructors hardcode `this.matrix = light.matrixWorld` (an ALIAS —
+ * the same Matrix4 object, not a copy) plus `matrixAutoUpdate = false`. That
+ * is fine at the scene root (parent.matrixWorld is identity, so
+ * `helper.matrixWorld === light.matrixWorld` automatically) but breaks two
+ * ways once nested under a non-identity parent group, both found by
+ * comparing this bucket's new selection-gated light baselines against
+ * their unselected counterparts:
+ *
+ * 1. Double-transform: `helper.matrixWorld = parent.matrixWorld *
+ *    helper.matrix`, and `helper.matrix` already IS a world matrix
+ *    (`light.matrixWorld`) — the parent group's transform applies a SECOND
+ *    time on top, squaring it. The helper renders far from the light.
+ * 2. Shared-object corruption: naively re-enabling `matrixAutoUpdate` so
+ *    the parent chain composes the helper's OWN (identity) local
+ *    position/quaternion/scale instead is not a fix — three.js's generic
+ *    per-frame `updateMatrix()` does `this.matrix.compose(...)`, which
+ *    mutates whatever object `this.matrix` currently IS. Since that object
+ *    is still `light.matrixWorld` (the alias was never broken), this
+ *    silently clobbers the light's own world matrix to identity right
+ *    before the renderer reads it for shading — corrupting the light's
+ *    actual illumination the instant its gizmo is selected.
+ *
+ * The fix mirrors `THREE.SpotLightHelper`'s own `update()` method (already
+ * correct, unmodified, proven by this same nested-parent scheme's
+ * `spot-light-3d-selected` baseline): break the alias with a fresh, private
+ * Matrix4, then every frame recompute the helper's LOCAL matrix as
+ * `parent.matrixWorld⁻¹ · light.matrixWorld` so the normal parent-chain
+ * multiply reproduces `light.matrixWorld` exactly, and copy
+ * `light.matrixWorld` into the helper's `matrixWorld` directly so it's
+ * correct even before that next traversal runs. `matrixAutoUpdate` stays at
+ * its native `false` — the generic compose()-based recompute must never
+ * touch this helper.
+ *
+ * Deliberately does NOT run the wrapped `update()` eagerly here: this
+ * factory executes inside `usePrimitiveHelper`'s mount effect, before
+ * React has committed the `<primitive object={helper}>` that actually
+ * parents it under the node's group — `helper.parent` is always `null` at
+ * this point, so any correction computed now would be wrong the instant a
+ * parent exists. `usePrimitiveHelper`'s per-frame `update()` call (via
+ * `useFrame`) is what actually applies the correction, and — same as
+ * every other gizmo sharing that hook — always runs at least once before
+ * the FIRST real `gl.render()` reaches the screen, since R3F never renders
+ * synchronously mid-commit.
+ */
+function correctForParentGroup<H extends THREE.Object3D & { update: () => void }>(
+  helper: H,
+  light: THREE.Light
+): H {
+  helper.matrix = new THREE.Matrix4();
+  const nativeUpdate = helper.update.bind(helper);
+  helper.update = () => {
+    nativeUpdate();
+    const parent = helper.parent;
+    if (parent) {
+      parent.updateWorldMatrix(true, false);
+      helper.matrix.copy(parent.matrixWorld).invert().multiply(light.matrixWorld);
+      helper.matrixWorld.copy(light.matrixWorld);
+    }
+  };
+  return helper;
+}
+
+/**
  * Generic `<primitive>`-renderer for any THREE light helper. The
  * `make` callback constructs the right `*LightHelper` once the light's
  * ref resolves; the hook handles construction, per-frame update, and
@@ -72,19 +141,7 @@ export function DirectionalLightGizmo({ lightRef }: DirectionalGizmoProps) {
       lightRef={lightRef}
       make={(light) => {
         const helper = new THREE.DirectionalLightHelper(light, DIRECTIONAL_HELPER_SIZE, HELPER_COLOR);
-        // THREE.DirectionalLightHelper hardcodes `matrix = light.matrixWorld` +
-        // `matrixAutoUpdate = false`, matching its official usage (`scene.add`
-        // directly). We render it as a <primitive> SIBLING of the light inside
-        // the node's own transform group (WI-ARCH-3's shared pattern), so the
-        // parent group's matrixWorld would apply on top of the already-world
-        // `light.matrixWorld`, squaring the transform and placing the helper
-        // far from the light. Since the light itself carries no additional
-        // local offset within that group, resetting matrixAutoUpdate lets the
-        // helper's default identity local transform compose correctly through
-        // the normal parent chain instead (unlike SpotLightHelper, which
-        // already parent-corrects its matrix internally).
-        helper.matrixAutoUpdate = true;
-        return helper;
+        return correctForParentGroup(helper, light);
       }}
     />
   );
@@ -100,13 +157,11 @@ export function PointLightGizmo({ lightRef }: PointGizmoProps) {
       lightRef={lightRef}
       make={(light) => {
         // THREE.PointLightHelper shares DirectionalLightHelper's
-        // `matrix = light.matrixWorld` + `matrixAutoUpdate = false` pattern
-        // (see the DirectionalLightGizmo comment above) — same double-
-        // transform bug when nested as a <primitive> sibling of the light
-        // inside the node's own transform group. Same fix.
+        // `matrix = light.matrixWorld` + `matrixAutoUpdate = false`
+        // constructor pattern — same fix (see `correctForParentGroup`'s doc
+        // comment above).
         const helper = new THREE.PointLightHelper(light, POINT_HELPER_SIZE, HELPER_COLOR);
-        helper.matrixAutoUpdate = true;
-        return helper;
+        return correctForParentGroup(helper, light);
       }}
     />
   );

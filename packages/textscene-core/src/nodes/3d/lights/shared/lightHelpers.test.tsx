@@ -285,10 +285,13 @@ describe('Light gizmos — selection gating (WI-UX-14)', () => {
     // `matrix = light.matrixWorld` + `matrixAutoUpdate = false` (its official
     // usage adds the helper directly to the scene root). This codebase
     // instead renders the helper as a <primitive> SIBLING of the light
-    // inside the light's own transform group, so without a fix the parent
-    // group's matrixWorld composes on top of the already-world
-    // `light.matrixWorld`, DOUBLING the translation. A light at local Y=5
-    // would then show its helper at world Y=10.
+    // inside the light's own transform group, so without the parent
+    // correction in `correctForParentGroup` the group's matrixWorld composes
+    // on top of the already-world `light.matrixWorld`, DOUBLING the
+    // translation (verified below against the light's own current position,
+    // not a hardcoded constant, since a naive fix can get the helper's
+    // absolute position "coincidentally right" while still corrupting the
+    // light itself — see that function's doc comment).
     const node: TscnNode = {
       name: 'Sun',
       type: 'DirectionalLight3D',
@@ -318,12 +321,52 @@ describe('Light gizmos — selection gating (WI-UX-14)', () => {
       </HierarchyProvider>,
     );
 
+    // The parent-correction lives in the helper's wrapped `update()`, which
+    // `usePrimitiveHelper` invokes via `useFrame` — i.e. only once the
+    // gizmo has actually been committed into the scene graph with a real
+    // parent (never true yet at the point `.create()`'s promise resolves,
+    // since mounting the `<primitive>` and running the first tick are two
+    // separate steps). Advance one frame so that tick fires before we read
+    // any matrixWorld, matching what always happens before a real paint.
+    await renderer.advanceFrames(1, 16);
+
     const scene = renderer.scene.instance as unknown as THREE.Scene;
     scene.updateMatrixWorld(true);
     const [helper] = findHelpersOfType(scene, THREE.DirectionalLightHelper);
     expect(helper).toBeDefined();
-    const worldPos = new THREE.Vector3().setFromMatrixPosition(helper!.matrixWorld);
-    expect(worldPos.y).toBeCloseTo(5, 5);
+
+    // The light primitive lives inside an r3f-managed group that the raw
+    // `scene.traverse` in `findHelpersOfType` doesn't cross in this test
+    // renderer (see `countAudioGizmoParts`'s comment below), so we look it
+    // up via the test renderer's own tree API instead, same as the
+    // 18-spotlight test does for `'SpotLight'`.
+    const [lightNode] = renderer.scene.findAllByType('DirectionalLight');
+    expect(lightNode).toBeDefined();
+    const light = lightNode!.instance as unknown as THREE.DirectionalLight;
+
+    // The helper must track the light's TRUE world position exactly — not
+    // squared through the parent group (the original double-transform bug:
+    // `helper.matrix` already held a WORLD matrix, so re-applying the
+    // parent's transform on top doubled it) — and the light's OWN
+    // matrixWorld must be exactly what it always was, unperturbed by the
+    // helper's mere presence (the corruption bug: naively flipping
+    // matrixAutoUpdate on without also breaking the constructor's aliasing
+    // of `helper.matrix` to `light.matrixWorld` let the generic per-frame
+    // compose() clobber that SHARED object to identity, corrupting the
+    // light's actual illumination the instant its gizmo was selected).
+    //
+    // Comparing the helper directly against the light's own current
+    // matrixWorld — rather than asserting a hardcoded expected Y — is what
+    // catches a subtly-wrong "fix" here: THREE.DirectionalLight's
+    // constructor defaults its OWN local position to `Object3D.DEFAULT_UP`
+    // (0, 1, 0), so this fixture's true world Y is 6 (5 from the group's
+    // authored transform + 1 from that three.js default), not 5.
+    const helperWorldPos = new THREE.Vector3().setFromMatrixPosition(helper!.matrixWorld);
+    const lightWorldPos = new THREE.Vector3().setFromMatrixPosition(light.matrixWorld);
+    expect(lightWorldPos.y).toBeCloseTo(6, 5);
+    expect(helperWorldPos.x).toBeCloseTo(lightWorldPos.x, 5);
+    expect(helperWorldPos.y).toBeCloseTo(lightWorldPos.y, 5);
+    expect(helperWorldPos.z).toBeCloseTo(lightWorldPos.z, 5);
   });
 
   it("PointLightHelper sits at the light's own world position, not squared through its parent group", async () => {
@@ -361,12 +404,31 @@ describe('Light gizmos — selection gating (WI-UX-14)', () => {
       </HierarchyProvider>,
     );
 
+    // See the DirectionalLight test above: the parent-correction only
+    // applies once the gizmo's wrapped `update()` has fired via a real
+    // `useFrame` tick, which requires advancing at least one frame.
+    await renderer.advanceFrames(1, 16);
+
     const scene = renderer.scene.instance as unknown as THREE.Scene;
     scene.updateMatrixWorld(true);
     const [helper] = findHelpersOfType(scene, THREE.PointLightHelper);
     expect(helper).toBeDefined();
-    const worldPos = new THREE.Vector3().setFromMatrixPosition(helper!.matrixWorld);
-    expect(worldPos.y).toBeCloseTo(5, 5);
+
+    const [lightNode] = renderer.scene.findAllByType('PointLight');
+    expect(lightNode).toBeDefined();
+    const light = lightNode!.instance as unknown as THREE.PointLight;
+
+    // Same invariant as the DirectionalLight case above: the helper must
+    // track the light's own current matrixWorld exactly, and that
+    // matrixWorld must be unperturbed by the helper's presence.
+    // THREE.PointLight has no `DEFAULT_UP` local-position quirk, so its
+    // true world Y here is exactly the group's authored 5.
+    const helperWorldPos = new THREE.Vector3().setFromMatrixPosition(helper!.matrixWorld);
+    const lightWorldPos = new THREE.Vector3().setFromMatrixPosition(light.matrixWorld);
+    expect(lightWorldPos.y).toBeCloseTo(5, 5);
+    expect(helperWorldPos.x).toBeCloseTo(lightWorldPos.x, 5);
+    expect(helperWorldPos.y).toBeCloseTo(lightWorldPos.y, 5);
+    expect(helperWorldPos.z).toBeCloseTo(lightWorldPos.z, 5);
   });
 });
 
