@@ -39,6 +39,7 @@ export function DirectionalLight3D({ node }: NodeComponentProps) {
         <>
           <directionalLight
             ref={lightRef}
+            position={[0, 0, 0]}
             color={color}
             intensity={intensity}
             castShadow={properties.shadow_enabled}

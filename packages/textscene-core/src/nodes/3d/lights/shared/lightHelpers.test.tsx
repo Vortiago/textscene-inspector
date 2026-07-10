@@ -356,14 +356,17 @@ describe('Light gizmos — selection gating (WI-UX-14)', () => {
     // light's actual illumination the instant its gizmo was selected).
     //
     // Comparing the helper directly against the light's own current
-    // matrixWorld — rather than asserting a hardcoded expected Y — is what
-    // catches a subtly-wrong "fix" here: THREE.DirectionalLight's
+    // matrixWorld — rather than only asserting a hardcoded expected Y — is
+    // what catches a subtly-wrong "fix" here. THREE.DirectionalLight's
     // constructor defaults its OWN local position to `Object3D.DEFAULT_UP`
-    // (0, 1, 0), so this fixture's true world Y is 6 (5 from the group's
-    // authored transform + 1 from that three.js default), not 5.
+    // (0, 1, 0), which used to leak into the effective shading direction
+    // (see #237) — `<directionalLight>` now sets an explicit
+    // `position={[0, 0, 0]}` so only the shared parent group's authored
+    // transform determines world position, giving this fixture's true
+    // world Y of 5 (the group's origin.y), not 6.
     const helperWorldPos = new THREE.Vector3().setFromMatrixPosition(helper!.matrixWorld);
     const lightWorldPos = new THREE.Vector3().setFromMatrixPosition(light.matrixWorld);
-    expect(lightWorldPos.y).toBeCloseTo(6, 5);
+    expect(lightWorldPos.y).toBeCloseTo(5, 5);
     expect(helperWorldPos.x).toBeCloseTo(lightWorldPos.x, 5);
     expect(helperWorldPos.y).toBeCloseTo(lightWorldPos.y, 5);
     expect(helperWorldPos.z).toBeCloseTo(lightWorldPos.z, 5);
