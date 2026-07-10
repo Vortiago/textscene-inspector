@@ -1,0 +1,14 @@
+[gd_scene format=3 uid="uid://edge_csg_invalid_size"]
+
+; The issue that filed this corpus asked for a Vector3 "missing z" component —
+; that's a hard format error (v.vector3 requires exactly 3 numbers) and would
+; break the fixtureLint gate, so this pins the nearest SCHEMA-VALID edge case
+; instead: a zero-volume CSGBox3D size. `Vector3(0, 0, 0)` passes format
+; validation (no min/max on size's components) but produces a degenerate
+; BoxGeometry — renders without crashing (a zero-size mesh, effectively
+; invisible), lints completely clean.
+
+[node name="Scene" type="Node3D"]
+
+[node name="ZeroSizeBox" type="CSGBox3D" parent="."]
+size = Vector3(0, 0, 0)

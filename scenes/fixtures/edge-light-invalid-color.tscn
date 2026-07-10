@@ -1,0 +1,13 @@
+[gd_scene format=3 uid="uid://edge_light_invalid_color"]
+
+; `light_color` with out-of-gamut components (negative + >1) — the format
+; validator (v.color) only checks the Color(r,g,b,a) 4-number shape, not the
+; component range, so this lints completely clean. Renders without crashing:
+; THREE.Color.setRGB accepts any float, clamping happens only at the final
+; framebuffer, matching Godot's own HDR-ish light color handling.
+
+[node name="Scene" type="Node3D"]
+
+[node name="OddColorLight" type="OmniLight3D" parent="."]
+light_color = Color(-1, 2, 5, 1)
+omni_range = 10.0

@@ -1,0 +1,14 @@
+[gd_scene format=3 uid="uid://edge_meshinstance3d_missing_subresource"]
+
+; The issue asked for `mesh = SubResource("...")` pointing at an undeclared
+; id — but MeshInstance3D's linter DOES check `mesh` resource existence
+; (valid-meshinstance3d-resources), so a dangling reference is a hard ERROR
+; and would break the fixtureLint gate. This pins the render-equivalent,
+; lint-safe case instead: `mesh` OMITTED entirely. Component.tsx's placeholder
+; condition is `!meshResource && !arrayMeshPath` — true for BOTH a dangling
+; reference and an absent property — so this renders the identical magenta
+; wireframe placeholder while linting completely clean.
+
+[node name="Scene" type="Node3D"]
+
+[node name="NoMesh" type="MeshInstance3D" parent="."]
