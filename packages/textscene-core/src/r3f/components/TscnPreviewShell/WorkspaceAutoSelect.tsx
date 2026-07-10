@@ -33,7 +33,6 @@ export function WorkspaceAutoSelect({ sceneGraph }: { sceneGraph: SceneGraph | n
     if (!lt || !root) return null;
     return workspaceForRoot(collapseLiveNode(root, lt.ctx.externalResources, lt.ctx.sceneCache));
     // `version` re-derives the claim once a root instance's sub-scene loads.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sceneGraph, loader, version]);
 
   // Auto-select ONCE per scene, the moment the workspace becomes known (at parse
