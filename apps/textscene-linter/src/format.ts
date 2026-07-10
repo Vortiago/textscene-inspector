@@ -97,15 +97,16 @@ export function formatJson(files: FileDiagnostics[]): string {
   return JSON.stringify(toJsonFindings(files), null, 2);
 }
 
-/** GitHub Actions workflow-command annotation level for a diagnostic severity. */
-function githubCommandForSeverity(severity: Severity): 'error' | 'warning' | 'notice' {
-  switch (severity) {
-    case 'error': return 'error';
-    case 'warning': return 'warning';
-    case 'info': return 'notice';
-    default: return 'notice';
-  }
-}
+/**
+ * GitHub Actions workflow-command annotation level per diagnostic severity.
+ * Total over the closed `Severity` union, so adding a severity fails tsc here
+ * instead of silently falling through.
+ */
+const GITHUB_COMMAND_BY_SEVERITY: Record<Severity, 'error' | 'warning' | 'notice'> = {
+  error: 'error',
+  warning: 'warning',
+  info: 'notice',
+};
 
 /**
  * Escapes workflow-command *data* (the `::command ...::<data>` payload) per
@@ -125,7 +126,7 @@ function escapeGithubProperty(value: string): string {
 
 /** Formats a single finding as a GitHub Actions workflow-command annotation. */
 export function formatGithubAnnotation(finding: JsonFinding): string {
-  const command = githubCommandForSeverity(finding.severity);
+  const command = GITHUB_COMMAND_BY_SEVERITY[finding.severity];
   const params = [`file=${escapeGithubProperty(finding.file)}`];
   if (finding.line !== null) {
     params.push(`line=${finding.line}`);
