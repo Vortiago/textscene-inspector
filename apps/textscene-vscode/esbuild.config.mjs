@@ -57,6 +57,12 @@ const extensionWebOptions = {
 
 /**
  * @type {esbuild.BuildOptions}
+ *
+ * The webview initial-paint budget gate (main + 200 KB gzipped) is NOT
+ * enforced here — this file only produces `dist/webview/`. The gate itself
+ * lives in `scripts/check-bundle-size.mjs`, invoked via the root
+ * `check:bundle-size` npm script (see ARCHITECTURE.md, "Bundle Size
+ * Target", for current numbers and why it's still informational).
  */
 const webviewOptions = {
   entryPoints: ['src/webview/webview.ts'],

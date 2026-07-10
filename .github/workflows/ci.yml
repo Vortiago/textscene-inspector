@@ -47,6 +47,19 @@ jobs:
       - name: Package VS Code Extension
         run: pnpm vsc:package
 
+      # Needs the webview + extension host bundles from the packaging step
+      # above: the webview budget is informational (warn-only) until the
+      # remaining gap is closed (see ARCHITECTURE.md, "Bundle Size Target"),
+      # but the host-bundle react/three guard inside this script always
+      # hard-fails regardless of that flag.
+      - name: Check bundle size
+        run: pnpm check:bundle-size
+
+      # Needs @textscene/core built, which the Build Web Previewer step
+      # above already triggered via its prebuild hook.
+      - name: Check package (publint)
+        run: pnpm check:package
+
       - uses: actions/upload-artifact@v4
         with:
           name: web-previewer

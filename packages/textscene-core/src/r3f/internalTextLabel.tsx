@@ -11,10 +11,23 @@
  * it entirely under vitest (detected via `import.meta.vitest` /
  * `process.env.VITEST`). In production both web and VS Code load
  * drei's font resources from the CDN; the label appears as expected.
+ *
+ * `Text` is `React.lazy`-loaded rather than statically imported: it
+ * transitively pulls in troika-three-text + bidi-js + its sdf-generator
+ * worker (~312KB raw). `InternalTextLabel` is reachable only one way today
+ * (`TscnCanvas.tsx` -> `EmptySceneIndicator`), so a static import would sit
+ * in `TscnCanvas.tsx`'s own chunk — esbuild can only split a dynamic
+ * `import()` into its own chunk. The `IS_VITEST` early return below runs
+ * before `<Text>` is ever referenced, so the dynamic import is never
+ * triggered under vitest either — same test behavior as before, one fewer
+ * eager module in the initial webview/web bundle.
  */
 
-import { Suspense, type ReactNode } from 'react';
-import { Text } from '@react-three/drei/core/Text';
+import { lazy, Suspense, type ReactNode } from 'react';
+
+const Text = lazy(() =>
+  import('@react-three/drei/core/Text').then((m) => ({ default: m.Text }))
+);
 
 const IS_VITEST = (() => {
   const proc = (globalThis as { process?: { env?: { VITEST?: string } } })

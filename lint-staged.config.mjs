@@ -13,7 +13,7 @@
 
 /** @type {import('lint-staged').Configuration} */
 export default {
-  '*.{ts,tsx,js,jsx}': ['eslint --fix', 'vitest related --run'],
+  '*.{ts,tsx,js,jsx,mjs}': ['eslint --fix', 'vitest related --run'],
   '*.tscn': (files) => [
     'pnpm build:linter',
     `node apps/textscene-linter/dist/cli.js ${files.map((f) => JSON.stringify(f)).join(' ')}`,
