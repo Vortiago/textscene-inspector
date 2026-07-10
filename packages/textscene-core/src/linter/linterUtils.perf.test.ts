@@ -107,7 +107,12 @@ describe('NodePath helper lookup performance', () => {
     // index) so measured timings reflect steady-state cost, not one-time
     // compilation/build. The unfixed implementation has no such warm state
     // to benefit from — every call costs the same O(N) walk regardless.
-    runLookupsForEveryNode(buildWideTree(200), collectLeaves(buildWideTree(200)));
+    // Built ONCE (not once per argument): `roots` and `leaves` must come
+    // from the SAME tree, or every lookup misses the scene index (the
+    // leaves aren't part of the tree the index was built from) and the
+    // warmup never exercises the cache-hit path it's meant to warm.
+    const warmupTree = buildWideTree(200);
+    runLookupsForEveryNode(warmupTree, collectLeaves(warmupTree));
     runLookupsForEveryNode(smallTree, smallLeaves);
     runLookupsForEveryNode(bigTree, bigLeaves);
 

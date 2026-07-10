@@ -48,11 +48,13 @@ export class RuleRegistry {
    * own `applicableNodeTypeMatcher` predicate (see valid-node3d-visibility).
    *
    * @param nodeType - The node type to filter by
-   * @returns Array of rules applicable to the node type
+   * @returns Read-only array of rules applicable to the node type — the
+   *   cached array itself (frozen), NOT a per-call copy, since this runs once
+   *   per node in the lint hot path.
    */
-  getRulesForNodeType(nodeType: string): LintRule[] {
+  getRulesForNodeType(nodeType: string): readonly LintRule[] {
     const cached = this.rulesForNodeTypeCache.get(nodeType);
-    if (cached) return [...cached];
+    if (cached) return cached;
 
     const matched = this.getRules().filter(rule => {
       const { applicableNodeTypes, applicableNodeTypeMatcher } = rule.meta;
@@ -67,8 +69,9 @@ export class RuleRegistry {
       // Otherwise, check if this node type is in the applicable list
       return applicableNodeTypes.includes(nodeType);
     });
+    Object.freeze(matched);
     this.rulesForNodeTypeCache.set(nodeType, matched);
-    return [...matched];
+    return matched;
   }
 
   /**
