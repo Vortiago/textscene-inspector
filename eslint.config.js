@@ -29,9 +29,14 @@ export default [
   // Base recommended config
   eslint.configs.recommended,
 
-  // TypeScript files - Node.js environment (extension main code)
+  // TypeScript files - Node.js environment (extension main code, linter CLI, TS config files)
   {
-    files: ['apps/textscene-vscode/src/**/*.ts'],
+    files: [
+      'apps/textscene-vscode/src/**/*.ts',
+      'apps/textscene-linter/src/**/*.ts',
+      '**/*.config.ts',
+      'vitest.shared.ts',
+    ],
     ignores: ['apps/textscene-vscode/src/webview/**/*.ts'],
     languageOptions: {
       parser: tsparser,
@@ -63,7 +68,7 @@ export default [
 
   // TypeScript files - Browser + Node.js environment (core package - runs in both)
   {
-    files: ['packages/textscene-core/src/**/*.ts', 'packages/textscene-core/src/**/*.tsx'],
+    files: ['packages/textscene-core/src/**/*.{ts,tsx}'],
     languageOptions: {
       parser: tsparser,
       parserOptions: {
@@ -73,37 +78,6 @@ export default [
       },
       globals: {
         ...globals.browser,
-        ...globals.node,
-      },
-    },
-    plugins: {
-      '@typescript-eslint': tseslint,
-    },
-    rules: {
-      ...tseslint.configs.recommended.rules,
-      '@typescript-eslint/no-unused-vars': [
-        'error',
-        {
-          argsIgnorePattern: '^_',
-          varsIgnorePattern: '^_',
-        },
-      ],
-      '@typescript-eslint/explicit-function-return-type': 'off',
-      '@typescript-eslint/no-explicit-any': 'warn',
-    },
-  },
-
-  // TypeScript files - Node.js environment (linter CLI)
-  {
-    files: ['apps/textscene-linter/src/**/*.ts'],
-    languageOptions: {
-      parser: tsparser,
-      parserOptions: {
-        ecmaVersion: 'latest',
-        sourceType: 'module',
-        project: './tsconfig.base.json',
-      },
-      globals: {
         ...globals.node,
       },
     },
@@ -172,43 +146,11 @@ export default [
     },
   },
 
-  // Config files (TypeScript) - Node.js environment
-  {
-    files: ['**/*.config.ts', 'vitest.shared.ts'],
-    languageOptions: {
-      parser: tsparser,
-      parserOptions: {
-        ecmaVersion: 'latest',
-        sourceType: 'module',
-        project: './tsconfig.base.json',
-      },
-      globals: {
-        ...globals.node,
-      },
-    },
-    plugins: {
-      '@typescript-eslint': tseslint,
-    },
-    rules: {
-      ...tseslint.configs.recommended.rules,
-      '@typescript-eslint/no-unused-vars': [
-        'error',
-        {
-          argsIgnorePattern: '^_',
-          varsIgnorePattern: '^_',
-        },
-      ],
-      '@typescript-eslint/explicit-function-return-type': 'off',
-      '@typescript-eslint/no-explicit-any': 'warn',
-    },
-  },
-
   // TypeScript files - Browser environment (web previewer, webview)
   {
     files: [
-      'apps/textscene-web/src/**/*.ts',
-      'apps/textscene-web/src/**/*.tsx',
-      'apps/textscene-vscode/src/webview/**/*.ts',
+      'apps/textscene-web/src/**/*.{ts,tsx}',
+      'apps/textscene-vscode/src/webview/**/*.{ts,tsx}',
     ],
     languageOptions: {
       parser: tsparser,
