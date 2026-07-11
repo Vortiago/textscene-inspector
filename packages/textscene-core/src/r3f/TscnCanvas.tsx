@@ -25,13 +25,6 @@ import { InternalTextLabel } from './internalTextLabel.js';
 import styles from './TscnCanvas.module.css';
 
 /**
- * Takes no props today — the canvas reads its sceneGraph from
- * `HierarchyContext` (the normal flow). Test code passes nodes directly
- * to `<TscnSceneContents>` instead.
- */
-export type TscnCanvasProps = Record<string, never>;
-
-/**
  * The contents of the R3F scene (everything that would normally live
  * inside `<Canvas>`). Exported separately so `@react-three/test-renderer`
  * can mount it directly — the test renderer is the canvas substitute and
@@ -242,7 +235,12 @@ interface ResettableControls {
   reset: () => void;
 }
 
-export function TscnCanvas(_props: TscnCanvasProps) {
+/**
+ * Takes no props — the canvas reads its sceneGraph from `HierarchyContext`
+ * (the normal flow). Test code mounts `<TscnSceneContents>` directly under
+ * a `HierarchyContext` provider instead.
+ */
+export function TscnCanvas() {
   // WI-UX-7: capture the OrbitControls instance via a callback ref so
   // the toolbar's "Reset Camera" button can call its `.reset()`. Drei's
   // `<OrbitControls>` accepts a ref typed to the upstream three-stdlib
