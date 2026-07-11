@@ -28,6 +28,7 @@ import {
   ResourceLoaderProvider,
   TscnPreviewShell,
   useMissingResources,
+  usePersistedState,
   type ViewportSelectorOption,
 } from '@textscene/core';
 import { Linter, type Diagnostic } from '@textscene/core/linter';
@@ -36,7 +37,12 @@ import { FixtureTreeView } from './FixtureTree';
 import { corpusRootFor, fixtureUrlForRes } from './corpusRoot';
 import { WebResourceProvider } from './providers/WebResourceProvider';
 import { resolveForwardedContent } from './sourceGate';
-import { groupDiagnosticsByLine, summarizeDiagnostics, formatProblemBadge } from './lineDiagnostics';
+import {
+  groupDiagnosticsByLine,
+  summarizeDiagnostics,
+  formatProblemBadge,
+  countLines,
+} from './lineDiagnostics';
 import { SourceGutter } from './SourceGutter';
 import { pickTscnFile, matchResourceFiles } from './multiFileUpload';
 import styles from './r3f-main.module.css';
@@ -58,32 +64,24 @@ const DEBOUNCE_MS = 250;
  */
 const linter = new Linter();
 
-function getInitialSourcePaneState(): { visible: boolean; width: number } {
-  try {
-    const raw = window.localStorage.getItem(SOURCE_PANE_STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      // Tolerate partial/corrupt blobs: only accept a real boolean and a
-      // positive finite width, otherwise fall back to the shown-at-320 default.
-      const visible = typeof parsed.visible === 'boolean' ? parsed.visible : true;
-      const width =
-        typeof parsed.width === 'number' && Number.isFinite(parsed.width) && parsed.width > 0
-          ? parsed.width
-          : 320;
-      return { visible, width };
-    }
-  } catch {
-    /* ignore */
-  }
-  return { visible: true, width: 320 };
+/** The Source pane's persisted shape: shown/hidden + its dragged width. */
+interface SourcePaneState {
+  visible: boolean;
+  width: number;
 }
 
-function persistSourcePaneState(visible: boolean, width: number) {
-  try {
-    window.localStorage.setItem(SOURCE_PANE_STORAGE_KEY, JSON.stringify({ visible, width }));
-  } catch {
-    /* ignore */
-  }
+const DEFAULT_SOURCE_PANE_STATE: SourcePaneState = { visible: true, width: 320 };
+
+/** Reject a corrupt/unexpected persisted shape (any missing/invalid field) in favor of the default. */
+function isSourcePaneState(value: unknown): value is SourcePaneState {
+  if (typeof value !== 'object' || value === null) return false;
+  const v = value as Record<string, unknown>;
+  return (
+    typeof v.visible === 'boolean' &&
+    typeof v.width === 'number' &&
+    Number.isFinite(v.width) &&
+    v.width > 0
+  );
 }
 /**
  * First-visit default. WI-UX-15: pick a fixture with zero `ext_resource`
@@ -101,22 +99,31 @@ const DEFAULT_FIXTURE =
   '';
 
 export function R3FApp() {
-  // Read (and JSON.parse) the persisted blob once on mount, then seed both
-  // pane-state slices from it instead of re-reading localStorage twice.
-  const [initialPane] = useState(getInitialSourcePaneState);
-  const [paneVisible, setPaneVisible] = useState(initialPane.visible);
-  const [paneWidth, setPaneWidth] = useState(initialPane.width);
-  useEffect(() => {
-    persistSourcePaneState(paneVisible, paneWidth);
-  }, [paneVisible, paneWidth]);
+  // The same debounced-write persistence `<TscnPreviewShell>` uses for dock
+  // layout — a plain `useEffect` writing on every state change (the previous
+  // approach here) fires a synchronous `localStorage.setItem` on EVERY
+  // splitter `mousemove`, putting main-thread I/O inside the exact drag
+  // interaction where frame budget matters; `usePersistedState` debounces the
+  // write (trailing edge, flushed on unmount/pagehide) instead.
+  const [sourcePane, setSourcePane] = usePersistedState(
+    SOURCE_PANE_STORAGE_KEY,
+    DEFAULT_SOURCE_PANE_STATE,
+    isSourcePaneState
+  );
 
   const splitterStartRef = useRef<number>(0);
 
-  const onSplitterMove = useCallback((e: MouseEvent) => {
-    const dx = e.clientX - splitterStartRef.current;
-    setPaneWidth((prev) => Math.max(180, Math.min(800, prev + dx)));
-    splitterStartRef.current = e.clientX;
-  }, []);
+  const onSplitterMove = useCallback(
+    (e: MouseEvent) => {
+      const dx = e.clientX - splitterStartRef.current;
+      setSourcePane((prev) => ({
+        ...prev,
+        width: Math.max(180, Math.min(800, prev.width + dx)),
+      }));
+      splitterStartRef.current = e.clientX;
+    },
+    [setSourcePane]
+  );
 
   // The mouse-up handler ends the drag by detaching both document listeners.
   // Kept as one callback so the exact detach sequence lives in a single place —
@@ -222,6 +229,10 @@ export function R3FApp() {
     () => formatProblemBadge(summarizeDiagnostics(diagnostics)),
     [diagnostics]
   );
+  // Counts newlines directly instead of `buffer.split('\n').length`, which
+  // would materialize a full array of every source line on every render
+  // (this recomputes on each keystroke, since `buffer` is R3FApp state).
+  const lineCount = useMemo(() => countLines(buffer), [buffer]);
   const [gutterScrollTop, setGutterScrollTop] = useState(0);
 
   // Wire the WI-79 resource pipeline. One provider + bus + loader for
@@ -491,14 +502,14 @@ export function R3FApp() {
             Drop a .tscn file (and its resources) to open it
           </div>
         )}
-        {paneVisible && (
+        {sourcePane.visible && (
           <>
             {/* flex-shrink:0 (in .sourcePane) keeps the pane at its set/dragged
                 width; the shell wrapper below takes flex:1 to fill the rest. */}
             <div
               data-testid="source-pane"
               className={styles.sourcePane}
-              style={{ width: paneWidth, minWidth: 0 }}
+              style={{ width: sourcePane.width, minWidth: 0 }}
             >
               <div className={styles.sourcePaneHeader}>
                 <span className={styles.sourcePaneTitle}>Source</span>
@@ -515,7 +526,7 @@ export function R3FApp() {
               </div>
               <div className={styles.sourceBody}>
                 <SourceGutter
-                  lineCount={buffer.split('\n').length}
+                  lineCount={lineCount}
                   byLine={diagnosticsByLine}
                   scrollTop={gutterScrollTop}
                 />
@@ -564,8 +575,10 @@ export function R3FApp() {
                 loadError={loadError}
                 onFixtureChange={handleFixtureChange}
                 onFilesSelected={handleFilesUpload}
-                paneVisible={paneVisible}
-                onTogglePane={() => setPaneVisible((v) => !v)}
+                paneVisible={sourcePane.visible}
+                onTogglePane={() =>
+                  setSourcePane((prev) => ({ ...prev, visible: !prev.visible }))
+                }
                 problemBadge={problemBadge}
               />
             }

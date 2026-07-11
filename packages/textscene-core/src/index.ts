@@ -67,6 +67,9 @@ export {
   type DelegatedPointerHandlers,
   parseTscnContent,
   type ParseResult,
+  usePersistedState,
+  readPersisted,
+  writePersisted,
 } from './r3f/index';
 
 // Resource loading (WI-R3F-2)

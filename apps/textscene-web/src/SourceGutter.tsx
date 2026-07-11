@@ -5,7 +5,7 @@
  * line's message(s). Scroll-synced with the textarea via the `scrollTop`
  * prop so the dots track the visible lines as the pane scrolls.
  */
-import { useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import type { Severity } from '@textscene/core/linter';
 import type { LineDiagnostics } from './lineDiagnostics';
 import styles from './r3f-main.module.css';
@@ -24,9 +24,22 @@ const SEVERITY_CLASS: Record<Severity, string> = {
   info: styles.severityInfo ?? '',
 };
 
-export function SourceGutter({ lineCount, byLine, scrollTop }: SourceGutterProps) {
+/**
+ * `React.memo`'d: `byLine` is already memoized upstream (`groupDiagnosticsByLine`)
+ * and `lineCount` is a stable number, so without this the gutter would rebuild
+ * its full N-row list on every unrelated `R3FApp` render (every keystroke,
+ * every scroll) even when none of its own props changed.
+ */
+export const SourceGutter = memo(function SourceGutter({
+  lineCount,
+  byLine,
+  scrollTop,
+}: SourceGutterProps) {
   const [hoverLine, setHoverLine] = useState<number | null>(null);
-  const lines = Array.from({ length: Math.max(lineCount, 1) }, (_, i) => i + 1);
+  const lines = useMemo(
+    () => Array.from({ length: Math.max(lineCount, 1) }, (_, i) => i + 1),
+    [lineCount]
+  );
 
   function leave(line: number) {
     setHoverLine((current) => (current === line ? null : current));
@@ -40,28 +53,30 @@ export function SourceGutter({ lineCount, byLine, scrollTop }: SourceGutterProps
           return (
             <div key={line} className={styles.gutterRow}>
               {entry && (
-                <button
-                  type="button"
-                  tabIndex={-1}
-                  className={`${styles.gutterDot} ${SEVERITY_CLASS[entry.severity]}`}
-                  data-testid={`gutter-dot-${line}`}
-                  aria-label={`Line ${line}: ${entry.messages.join('; ')}`}
-                  onMouseEnter={() => setHoverLine(line)}
-                  onMouseLeave={() => leave(line)}
-                  onFocus={() => setHoverLine(line)}
-                  onBlur={() => leave(line)}
-                />
-              )}
-              {entry && hoverLine === line && (
-                <div
-                  role="tooltip"
-                  className={styles.gutterPopover}
-                  data-testid={`gutter-popover-${line}`}
-                >
-                  {entry.messages.map((message, i) => (
-                    <div key={i}>{message}</div>
-                  ))}
-                </div>
+                <>
+                  <button
+                    type="button"
+                    tabIndex={-1}
+                    className={`${styles.gutterDot} ${SEVERITY_CLASS[entry.severity]}`}
+                    data-testid={`gutter-dot-${line}`}
+                    aria-label={`Line ${line}: ${entry.messages.join('; ')}`}
+                    onMouseEnter={() => setHoverLine(line)}
+                    onMouseLeave={() => leave(line)}
+                    onFocus={() => setHoverLine(line)}
+                    onBlur={() => leave(line)}
+                  />
+                  {hoverLine === line && (
+                    <div
+                      role="tooltip"
+                      className={styles.gutterPopover}
+                      data-testid={`gutter-popover-${line}`}
+                    >
+                      {entry.messages.map((message, i) => (
+                        <div key={i}>{message}</div>
+                      ))}
+                    </div>
+                  )}
+                </>
               )}
             </div>
           );
@@ -69,4 +84,4 @@ export function SourceGutter({ lineCount, byLine, scrollTop }: SourceGutterProps
       </div>
     </div>
   );
-}
+});
