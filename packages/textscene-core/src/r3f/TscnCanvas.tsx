@@ -67,10 +67,24 @@ export function TscnSceneContents() {
   );
 }
 
-/** The one ground-plane grid styling, shared by the empty-scene indicator
- *  and the opt-in content grid so the two can never drift apart. */
+/**
+ * The one ground-plane grid styling, shared by the empty-scene indicator
+ * and the opt-in content grid so the two can never drift apart.
+ *
+ * Self-tagged `tscnEmptyState` — the SAME sentinel `frameSceneBounds` already
+ * skips — directly on the `<gridHelper>` rather than relying on a wrapping
+ * `<group>`'s tag: `THREE.Object3D.traverse()` always recurses into every
+ * descendant regardless of what the visitor callback does with an ancestor,
+ * so a tag on a wrapping group does NOT exclude the group's children from
+ * `frameSceneBounds`'s traversal. Tagging the grid itself instead is correct
+ * for both call sites and needs no ancestor walk: without it, the fixed
+ * 10-unit grid — reachable via `ContentGroundGrid` in any non-empty,
+ * mesh-free scene (e.g. a lone Path3D) with the Grid toggle on — would
+ * dominate `frameSceneBounds`'s gizmo-fallback bounding box and zoom the
+ * camera out to frame the grid instead of the actual (possibly tiny) content.
+ */
 function GroundGrid() {
-  return <gridHelper args={[10, 10, 0x444444, 0x222222]} />;
+  return <gridHelper args={[10, 10, 0x444444, 0x222222]} userData={{ tscnEmptyState: true }} />;
 }
 
 /**

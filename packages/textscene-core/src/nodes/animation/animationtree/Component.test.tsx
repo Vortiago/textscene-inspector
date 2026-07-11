@@ -9,7 +9,8 @@
 
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { AnimationTree } from './Component';
+import * as THREE from 'three';
+import { AnimationTree, dominantActionTime } from './Component';
 import type { TscnNode } from '../../../parser/types';
 import type { AnimationTreeProperties } from './types';
 import {
@@ -99,5 +100,36 @@ describe('<AnimationTree>', () => {
     );
     const meshes = renderer.scene.findAllByType('Mesh');
     expect(meshes).toHaveLength(0);
+  });
+});
+
+describe('dominantActionTime', () => {
+  function makeAction(time: number): THREE.AnimationAction {
+    return { time } as THREE.AnimationAction;
+  }
+
+  it('returns null when there is no dominant clip', () => {
+    expect(dominantActionTime(null, new Map())).toBeNull();
+  });
+
+  it("returns the dominant clip's action time when resolved", () => {
+    const actions = new Map([['left', makeAction(0.42)]]);
+    expect(dominantActionTime({ clip: 'left' }, actions)).toBe(0.42);
+  });
+
+  it('returns null (never a fabricated 0) when the dominant clip has no resolved action', () => {
+    // A blend program can name a clip the resolved driver's clips don't
+    // carry — the mount effect's `clips.find` skips building an action for
+    // it, so `dominant` is set but `actions` has no entry for its name.
+    const actions = new Map([['left', makeAction(0.1)]]);
+    expect(dominantActionTime({ clip: 'right' }, actions)).toBeNull();
+  });
+
+  it('returns null even when the resolved action time is genuinely 0', () => {
+    // Distinguishes "an action exists, currently at time 0" (real, should
+    // flush as 0) from "no action" (should skip) — both cases must NOT be
+    // conflated by a `?? 0` fallback. This one has a real action.
+    const actions = new Map([['left', makeAction(0)]]);
+    expect(dominantActionTime({ clip: 'left' }, actions)).toBe(0);
   });
 });

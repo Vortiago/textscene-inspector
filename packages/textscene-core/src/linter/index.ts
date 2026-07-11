@@ -82,6 +82,7 @@ export { Linter } from './Linter.js';
 export { StrictTscnParser } from './StrictTscnParser.js';
 export { validatorRegistry } from './ValidatorRegistry.js';
 export { ruleRegistry } from './RuleRegistry.js';
+export { SEVERITY_ORDER } from './types.js';
 
 // Re-export types
 export type {

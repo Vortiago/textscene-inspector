@@ -11,6 +11,20 @@
  * document outside any workspace folder has no project root to resolve
  * against, so its links stay unresolved (VS Code just won't offer to open
  * them) rather than guessing.
+ *
+ * The provider is registered once for the extension's lifetime (a single
+ * instance in `extension.ts`), so the resolved root is cached on the
+ * instance, keyed by the document's OWN DIRECTORY — otherwise every
+ * `res://` link in a document (and every re-hover/re-click) repeats the
+ * same upward filesystem walk. Keyed per-directory rather than per-
+ * workspace-folder: `findGodotProjectRoot` walks upward from the
+ * DOCUMENT's directory, and a single workspace folder can contain more
+ * than one Godot project (e.g. sibling `game1/`/`game2/` subdirectories
+ * each with their own `project.godot`) — caching by workspace folder alone
+ * would return the first-resolved project's root for every OTHER project
+ * in the same folder. `VSCodeResourceProvider.findProjectRoot` caches
+ * per-panel instance instead (one document per instance), so it doesn't
+ * need this per-directory granularity.
  */
 
 import * as vscode from 'vscode';
@@ -33,6 +47,28 @@ export class TscnResourceDocumentLink extends vscode.DocumentLink {
 export class TscnDocumentLinkProvider
   implements vscode.DocumentLinkProvider<TscnResourceDocumentLink>
 {
+  /**
+   * `findGodotProjectRoot` result, keyed by the document's own directory —
+   * every document in the SAME directory shares one walk, but two documents
+   * in different directories (even under the same workspace folder) always
+   * resolve independently, so a nested/sibling Godot project never reuses
+   * another project's cached root.
+   */
+  private readonly _projectRootCache = new Map<string, vscode.Uri>();
+
+  private async _resolveProjectRoot(
+    workspaceFolder: vscode.WorkspaceFolder,
+    documentUri: vscode.Uri
+  ): Promise<vscode.Uri> {
+    const key = vscode.Uri.joinPath(documentUri, '..').toString();
+    const cached = this._projectRootCache.get(key);
+    if (cached) return cached;
+
+    const root = await findGodotProjectRoot(workspaceFolder.uri, documentUri);
+    this._projectRootCache.set(key, root);
+    return root;
+  }
+
   provideDocumentLinks(
     document: vscode.TextDocument,
     _token: vscode.CancellationToken
@@ -67,7 +103,7 @@ export class TscnDocumentLinkProvider
       return undefined;
     }
 
-    const projectRoot = await findGodotProjectRoot(workspaceFolder.uri, link.documentUri);
+    const projectRoot = await this._resolveProjectRoot(workspaceFolder, link.documentUri);
     const relativePath = stripResPrefix(link.resourcePath);
     link.target = vscode.Uri.joinPath(projectRoot, relativePath);
     return link;

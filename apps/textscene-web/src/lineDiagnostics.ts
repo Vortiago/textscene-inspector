@@ -3,7 +3,7 @@
  * badge formatting. No React, no WebGL: the unit-testable seam the linter
  * gutter (`r3f-main.tsx`) builds on.
  */
-import type { Diagnostic, Severity } from '@textscene/core/linter';
+import { SEVERITY_ORDER, type Diagnostic, type Severity } from '@textscene/core/linter';
 
 /** One gutter row's worth of diagnostics: the line's highest severity, and every message on it, in encounter order. */
 export interface LineDiagnostics {
@@ -12,12 +12,22 @@ export interface LineDiagnostics {
   messages: string[];
 }
 
-/** error > warning > info — matches `Linter`'s own `sortDiagnostics` ordering. */
-const SEVERITY_RANK: Record<Severity, number> = { error: 0, warning: 1, info: 2 };
+/**
+ * Number of lines in `text` (at least 1, even for an empty buffer) — counts
+ * `\n` occurrences directly instead of `text.split('\n').length`, which
+ * would materialize a full array of every line just to read its count.
+ */
+export function countLines(text: string): number {
+  let count = 1;
+  for (let i = 0; i < text.length; i++) {
+    if (text.charCodeAt(i) === 10 /* '\n' */) count++;
+  }
+  return count;
+}
 
 /** True when `a` is at least as severe as `b` (lower rank = more severe). */
 function atLeastAsSevere(a: Severity, b: Severity): boolean {
-  return SEVERITY_RANK[a] <= SEVERITY_RANK[b];
+  return SEVERITY_ORDER[a] <= SEVERITY_ORDER[b];
 }
 
 /**
