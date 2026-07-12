@@ -202,6 +202,14 @@ _Avoid_: calling it an **AnimationPlayer** (it drives one, via `anim_player`); i
 The `nodePath → { object, clips }` lookup (`AnimationDriverContext`) that an **AnimationPlayer** or **GLB animation driver** publishes into whenever its clips are loaded — *availability*, decoupled from the selection-driven transport. The **AnimationTree driver** consumes it to find the object to root its blended mixer on and the clips to play, unifying the two clip sources behind one path lookup. Two contexts: a STABLE register function (so a publishing driver's effect doesn't re-fire) and a REACTIVE drivers map (so a consumer re-renders when an async-loaded driver appears).
 _Avoid_: conflating it with the **Animation transport** (the registry is about which driver owns which clips; the transport is about play/pause for the selected one).
 
+**Playback step** (`r3f/animation/`):
+The pure per-frame transport-actuation decision shared by every **Animation transport** driver — from the previous/current play state, the transport playhead, and whether the clip changed, it decides which transition fired this frame (ensure-playing / seek / hold-paused / stop-and-restore / none), whether the driver is freshly (re)entering playback (a local clock re-seeds), and whether the pause-edge time flush must fire. Each driver's frame loop is a thin adapter that actuates the decision — single-action mixer, weighted blend program, or sprite frame sampling — so the decision is written once and tested as data, without a mount.
+_Avoid_: re-deriving play/pause/seek/stop edges inside a driver's `useFrame` (the hand-synced triplication this replaced); "state machine" for the adapters (the machine is the step; adapters only actuate).
+
+**Driver mount** (`r3f/animation/`):
+The shared lifecycle by which a clip-owning transport driver (**AnimationPlayer**, **GLB animation driver**) comes online: register clips with the **Animation transport** while selected, publish `{object, clips}` availability into the **AnimationDriverRegistry**, and build the `THREE.AnimationMixer` + actions. Clip construction, mixer rooting, and pose snapshot/restore stay per-driver.
+_Avoid_: mounting the **AnimationTree driver** this way (it owns no clips — it is a registry consumer, not a publisher).
+
 ## Relationships
 
 - A **SceneGraph** holds many **Node**s; the active scene's root Nodes feed the **NodeDispatcher** (3D) or, in 2D **viewport mode**, the **ControlDispatcher**.
