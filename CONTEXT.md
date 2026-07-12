@@ -191,16 +191,16 @@ The **Source pane**'s edit gate: the viewport keeps rendering the last cleanly-p
 _Avoid_: "debounce" for the gate (the debounce is timing; the gate is parse cleanliness); gating the linter (it must see the broken text).
 
 **Preview panel** (VS Code):
-The per-document webview the extension opens beside the editor — one per `.tscn` document (re-invoking reveals the existing panel), pinned to its document (it does not retarget when a different `.tscn` gains editor focus), keeping its scene state while hidden. The VS Code **Host**'s counterpart of the web shell.
-_Avoid_: "preview tab"; bare "webview" (the mechanism, not the user-facing thing).
+The per-document webview the extension opens beside the editor — one per `.tscn` document (re-invoking reveals the existing panel), pinned to its document (it does not retarget when a different `.tscn` gains editor focus — big scenes are expensive to render, ADR-0023), keeping its scene state while hidden. The VS Code **Host**'s counterpart of the web shell.
+_Avoid_: "preview tab"; bare "webview" (the mechanism, not the user-facing thing); Markdown-preview-style follow mode (rejected, ADR-0023).
 
 **Save-driven refresh** (VS Code):
 The **Preview panel**'s update contract: it mirrors the file **on disk**, refreshing on save and on external disk changes (git pull, branch switch) — never on unsaved keystrokes (ADR-0021; keystroke-live preview is the web **Source pane**'s job). A refresh is in-place — re-parse and reconcile, so camera, selection, and tree expansion survive by node path; a path the refresh removed clears its selection gracefully (inspector empties, any active **Animation transport** stops) rather than erroring.
 _Avoid_: expecting Source-pane-style live typing in the **Preview panel** (deliberate asymmetry); "reload" for what is an in-place refresh.
 
 **Dependency hot-reload** (VS Code):
-A disk change to a dependency (texture, `.tres` material, GLB/glTF, instanced sub-scene) refreshes just that resource in every open **Preview panel** that actually served it — relevance-gated, no full scene refresh. Distinct from **Save-driven refresh**, which covers the panel's own main scene.
-_Avoid_: "HMR"; conflating with the main scene's **Save-driven refresh**.
+A disk change to a dependency (texture, `.tres` material, GLB/glTF, instanced sub-scene) refreshes just that resource in every open **Preview panel** that ever resolved it — transitively, at any dependency depth, because every resource a panel renders passes through its own provider. Relevance-gated, no full scene refresh; a resource that failed to load still counts as relevant (creating a **Missing resource**'s file heals it), and hidden panels refresh in the background rather than on re-focus. Distinct from **Save-driven refresh**, which covers the panel's own main scene.
+_Avoid_: "HMR"; conflating with the main scene's **Save-driven refresh**; "direct dependencies" (the closure is transitive).
 
 **Progressive fill-in**:
 How both **Host**s' screens update after a parse: the scene renders immediately from the parsed text, then textures, materials, GLB meshes, and sub-scenes pop in per-resource as their **resource event bus** loads land; a failed load flips only its consumers to the magenta missing placeholder. The screen never blocks on, or wholesale-reloads for, resource completion.
