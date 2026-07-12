@@ -3,7 +3,7 @@
  */
 
 import type { TscnScene, TscnNode } from '../parser/types.js';
-import type { Diagnostic, RuleContext, ParseError } from './types.js';
+import { SEVERITY_ORDER, type Diagnostic, type RuleContext, type ParseError } from './types.js';
 import { ruleRegistry } from './RuleRegistry.js';
 import { StrictTscnParser } from './StrictTscnParser.js';
 
@@ -102,7 +102,6 @@ export class Linter {
    * Sort diagnostics by severity
    */
   private sortDiagnostics(diagnostics: Diagnostic[]): Diagnostic[] {
-    const severityOrder = { error: 0, warning: 1, info: 2 };
-    return diagnostics.sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity]);
+    return diagnostics.sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]);
   }
 }

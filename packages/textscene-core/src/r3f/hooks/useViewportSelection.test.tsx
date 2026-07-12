@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import * as THREE from 'three';
@@ -36,6 +36,29 @@ function mockPointerEvent(
     clientY: y,
     object,
     stopPropagation: () => {},
+  };
+}
+
+/**
+ * Same shape as `mockPointerEvent`, but with a spy-able `stopPropagation` —
+ * for tests asserting on WHETHER it was called (real R3F only advances past
+ * the nearest hit to a farther one when it wasn't).
+ */
+function mockPointerEventWithSpy(
+  x: number,
+  y: number,
+  object: THREE.Object3D | null = null
+): {
+  clientX: number;
+  clientY: number;
+  object: THREE.Object3D | null;
+  stopPropagation: ReturnType<typeof vi.fn>;
+} {
+  return {
+    clientX: x,
+    clientY: y,
+    object,
+    stopPropagation: vi.fn(),
   };
 }
 
@@ -151,6 +174,37 @@ describe('useViewportSelection (WI-213: event-delegated)', () => {
       result.current.vp.handlers.onPointerMove(mockPointerEvent(0, 0, unregistered) as never);
     });
     expect(result.current.sel.hoverStore.get()).toBeNull();
+  });
+
+  it('stops propagation on a resolved pointer-move hit, so a farther-intersected mesh cannot overwrite it', () => {
+    // R3F dispatches onPointerMove once PER intersected mesh along the ray,
+    // nearest-to-farthest, and only stops calling it further out if
+    // stopPropagation() was called on a nearer hit. Without that call, the
+    // FARTHEST (likely-occluded) mesh would win instead of the nearest —
+    // this pins the actual mechanism real R3F relies on to prevent that.
+    const { result } = setup();
+    const mesh = registerObjectAt(result.current.sel, 'Root/Near');
+    const event = mockPointerEventWithSpy(0, 0, mesh);
+
+    act(() => {
+      result.current.vp.handlers.onPointerMove(event as never);
+    });
+
+    expect(result.current.sel.hoverStore.get()).toBe('Root/Near');
+    expect(event.stopPropagation).toHaveBeenCalledTimes(1);
+  });
+
+  it('does NOT stop propagation when the hit resolves to no registered path, so a farther registered hit can still be reached', () => {
+    const { result } = setup();
+    const unregistered = new THREE.Object3D();
+    const event = mockPointerEventWithSpy(0, 0, unregistered);
+
+    act(() => {
+      result.current.vp.handlers.onPointerMove(event as never);
+    });
+
+    expect(result.current.sel.hoverStore.get()).toBeNull();
+    expect(event.stopPropagation).not.toHaveBeenCalled();
   });
 
   it('respects autoExpandAncestors=false', () => {

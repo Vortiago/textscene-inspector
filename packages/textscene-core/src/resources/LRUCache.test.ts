@@ -66,6 +66,38 @@ describe('LRUCache', () => {
     expect(cache.has('c')).toBe(true);
   });
 
+  it('re-setting an existing key with a different value disposes the value it replaces', () => {
+    const onEvict = vi.fn();
+    const cache = new LRUCache<string>(3, onEvict);
+    cache.set('a', 'A');
+
+    cache.set('a', 'A2'); // replaces 'A' — the old reference is dropped here, not via capacity eviction
+
+    expect(cache.get('a')).toBe('A2');
+    expect(onEvict).toHaveBeenCalledTimes(1);
+    expect(onEvict).toHaveBeenCalledWith('a', 'A');
+  });
+
+  it('re-setting an existing key with the SAME value (Object.is) does not invoke onEvict', () => {
+    const onEvict = vi.fn();
+    const shared = { label: 'shared' };
+    const cache = new LRUCache<typeof shared>(3, onEvict);
+    cache.set('a', shared);
+
+    cache.set('a', shared); // identical reference — nothing was actually replaced
+
+    expect(onEvict).not.toHaveBeenCalled();
+  });
+
+  it('the FIRST set() of a brand-new key never invokes onEvict (nothing to replace)', () => {
+    const onEvict = vi.fn();
+    const cache = new LRUCache<string>(3, onEvict);
+
+    cache.set('a', 'A');
+
+    expect(onEvict).not.toHaveBeenCalled();
+  });
+
   it('delete() removes a single entry without invoking onEvict', () => {
     const onEvict = vi.fn();
     const cache = new LRUCache<string>(3, onEvict);

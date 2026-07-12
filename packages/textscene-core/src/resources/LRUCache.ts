@@ -9,6 +9,10 @@
  * iteration order, so `keys().next()` is always the least-recently-used
  * entry. `delete` and `clear` never invoke `onEvict` — those are explicit
  * caller-driven removals (hot-reload, corpus switch), not capacity eviction.
+ * `set` DOES invoke `onEvict` for the value it replaces at an existing key
+ * (distinct from `Object.is`-identical re-sets) — the reference to that old
+ * value is dropped exactly as it would be on capacity eviction, so it gets
+ * the same disposal guarantee rather than silently leaking.
  */
 export class LRUCache<V> {
   private readonly map = new Map<string, V>();
@@ -31,8 +35,16 @@ export class LRUCache<V> {
   }
 
   set(key: string, value: V): void {
+    const existing = this.map.get(key);
     this.map.delete(key);
     this.map.set(key, value);
+    // A real replacement — not a no-op re-set of the identical value — drops
+    // the old reference exactly like capacity eviction does, so it gets the
+    // same `onEvict` disposal instead of silently leaking whatever the old
+    // value owned (a THREE texture/material/geometry).
+    if (existing !== undefined && !Object.is(existing, value)) {
+      this.onEvict?.(key, existing);
+    }
     this.evictOverflow();
   }
 

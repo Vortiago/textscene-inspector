@@ -175,7 +175,12 @@ const mockWorkspace: any = {
    */
   getConfiguration: vi.fn().mockReturnValue({
     get: vi.fn((_key: string, defaultValue?: unknown) => defaultValue)
-  })
+  }),
+
+  /**
+   * On did change configuration event
+   */
+  onDidChangeConfiguration: vi.fn(() => ({ dispose: vi.fn() }))
 };
 
 /**
@@ -313,6 +318,21 @@ export class MockLocation {
 }
 
 /**
+ * Mock vscode.DocumentLink class
+ */
+export class MockDocumentLink {
+  target?: unknown;
+  tooltip?: string;
+
+  constructor(
+    public range: any,
+    target?: unknown
+  ) {
+    this.target = target;
+  }
+}
+
+/**
  * Mock vscode.Diagnostic class
  */
 export class MockDiagnostic {
@@ -367,6 +387,7 @@ export function createMockDiagnosticCollection(name = 'mock'): {
 const mockLanguages: any = {
   registerDocumentSymbolProvider: vi.fn(),
   registerDefinitionProvider: vi.fn(),
+  registerDocumentLinkProvider: vi.fn(),
   createDiagnosticCollection: vi.fn((name: string) => createMockDiagnosticCollection(name))
 };
 
@@ -389,6 +410,7 @@ vi.mock('vscode', () => ({
   Selection: MockSelection,
   EventEmitter: MockEventEmitter,
   DocumentSymbol: MockDocumentSymbol,
+  DocumentLink: MockDocumentLink,
   Location: MockLocation,
   Diagnostic: MockDiagnostic,
 
@@ -537,6 +559,7 @@ export const vscode: {
   Selection: typeof MockSelection;
   EventEmitter: typeof MockEventEmitter;
   DocumentSymbol: typeof MockDocumentSymbol;
+  DocumentLink: typeof MockDocumentLink;
   Location: typeof MockLocation;
   Diagnostic: typeof MockDiagnostic;
   DiagnosticSeverity: typeof MockDiagnosticSeverity;
@@ -554,6 +577,7 @@ export const vscode: {
   Selection: MockSelection,
   EventEmitter: MockEventEmitter,
   DocumentSymbol: MockDocumentSymbol,
+  DocumentLink: MockDocumentLink,
   Location: MockLocation,
   Diagnostic: MockDiagnostic,
   DiagnosticSeverity: MockDiagnosticSeverity,

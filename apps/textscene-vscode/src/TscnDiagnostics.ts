@@ -13,7 +13,22 @@
 import * as vscode from 'vscode';
 import { Linter, type Diagnostic as TscnLintDiagnostic } from '@textscene/core/linter';
 
-const LINT_DEBOUNCE_MS = 300;
+/** Fallback when `textscene.diagnostics.lintDebounceMs` is unset. */
+export const DEFAULT_LINT_DEBOUNCE_MS = 300;
+
+interface DiagnosticsConfig {
+  enabled: boolean;
+  debounceMs: number;
+}
+
+/** Read the `textscene.diagnostics.*` settings, defaulting to today's fixed behavior. */
+function readDiagnosticsConfig(): DiagnosticsConfig {
+  const config = vscode.workspace.getConfiguration('textscene');
+  return {
+    enabled: config.get<boolean>('diagnostics.enabled', true),
+    debounceMs: config.get<number>('diagnostics.lintDebounceMs', DEFAULT_LINT_DEBOUNCE_MS),
+  };
+}
 
 const SEVERITY_MAP: Record<TscnLintDiagnostic['severity'], vscode.DiagnosticSeverity> = {
   error: vscode.DiagnosticSeverity.Error,
@@ -84,28 +99,38 @@ export class TscnDiagnostics implements vscode.Disposable {
   private readonly _linter = new Linter();
   private readonly _disposables: vscode.Disposable[] = [];
   private readonly _debounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  private _enabled: boolean;
+  private _debounceMs: number;
 
   constructor(
     collection: vscode.DiagnosticCollection = vscode.languages.createDiagnosticCollection('tscn')
   ) {
     this._collection = collection;
 
+    const config = readDiagnosticsConfig();
+    this._enabled = config.enabled;
+    this._debounceMs = config.debounceMs;
+
     this._disposables.push(
       vscode.workspace.onDidOpenTextDocument((document) => this.lintDocument(document)),
       vscode.workspace.onDidSaveTextDocument((document) => this.lintDocument(document)),
       vscode.workspace.onDidChangeTextDocument((event) => this._scheduleLint(event.document)),
-      vscode.workspace.onDidCloseTextDocument((document) => this._clearDocument(document))
+      vscode.workspace.onDidCloseTextDocument((document) => this._clearDocument(document)),
+      vscode.workspace.onDidChangeConfiguration((event) => this._onConfigurationChanged(event))
     );
 
-    // Lint everything already open at activation.
-    for (const document of vscode.workspace.textDocuments) {
-      this.lintDocument(document);
+    // Lint everything already open at activation — unless the user turned
+    // diagnostics off, in which case there is nothing to publish.
+    if (this._enabled) {
+      for (const document of vscode.workspace.textDocuments) {
+        this.lintDocument(document);
+      }
     }
   }
 
-  /** Lint a document immediately and publish its diagnostics. */
+  /** Lint a document immediately and publish its diagnostics. No-op while diagnostics are disabled. */
   public lintDocument(document: vscode.TextDocument): void {
-    if (!isTscnDocument(document)) {
+    if (!isTscnDocument(document) || !this._enabled) {
       return;
     }
 
@@ -117,7 +142,7 @@ export class TscnDiagnostics implements vscode.Disposable {
   }
 
   private _scheduleLint(document: vscode.TextDocument): void {
-    if (!isTscnDocument(document)) {
+    if (!isTscnDocument(document) || !this._enabled) {
       return;
     }
 
@@ -132,8 +157,42 @@ export class TscnDiagnostics implements vscode.Disposable {
       setTimeout(() => {
         this._debounceTimers.delete(key);
         this.lintDocument(document);
-      }, LINT_DEBOUNCE_MS)
+      }, this._debounceMs)
     );
+  }
+
+  /**
+   * React to `textscene.diagnostics.*` setting changes. Disabling clears every
+   * published diagnostic and cancels pending debounced lints immediately —
+   * waiting for the next edit/save would leave stale Problems-panel entries
+   * around. Re-enabling re-lints every currently-open document, matching
+   * construction-time behavior. A debounce-only change just takes effect on
+   * the next scheduled lint; nothing to do here for that case.
+   */
+  private _onConfigurationChanged(event: vscode.ConfigurationChangeEvent): void {
+    if (!event.affectsConfiguration('textscene.diagnostics')) {
+      return;
+    }
+
+    const wasEnabled = this._enabled;
+    const config = readDiagnosticsConfig();
+    this._enabled = config.enabled;
+    this._debounceMs = config.debounceMs;
+
+    if (!this._enabled) {
+      for (const timer of this._debounceTimers.values()) {
+        clearTimeout(timer);
+      }
+      this._debounceTimers.clear();
+      this._collection.clear();
+      return;
+    }
+
+    if (!wasEnabled) {
+      for (const document of vscode.workspace.textDocuments) {
+        this.lintDocument(document);
+      }
+    }
   }
 
   private _clearDocument(document: vscode.TextDocument): void {

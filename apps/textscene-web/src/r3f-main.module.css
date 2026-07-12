@@ -102,6 +102,17 @@
   white-space: nowrap;
 }
 
+/* ── Missing-resource badge (#221) ─────────────────────────────────────── */
+.missingResourcesBadge {
+  padding: 2px var(--tsi-space-2);
+  background: var(--tsi-warning-bg, rgba(217, 164, 65, 0.18));
+  border: 1px solid var(--tsi-warning, #d9a441);
+  border-radius: var(--tsi-radius-sm);
+  color: var(--tsi-warning-fg, #d9a441);
+  font-size: var(--tsi-font-sm);
+  white-space: nowrap;
+}
+
 /* Visually-hidden (but reachable) file input. */
 .srOnly {
   position: absolute;
@@ -281,10 +292,57 @@
   flex-shrink: 0;
 }
 
+.sourcePaneHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--tsi-space-2);
+  padding: 4px var(--tsi-space-2);
+  border-bottom: 1px solid var(--tsi-border);
+  background: var(--tsi-bg-elevated);
+  flex-shrink: 0;
+}
+
+.sourcePaneTitle {
+  color: var(--tsi-fg-muted);
+  font-size: var(--tsi-font-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.downloadButton {
+  padding: 2px var(--tsi-space-2);
+  background: transparent;
+  border: 1px solid var(--tsi-border);
+  border-radius: var(--tsi-radius-sm);
+  color: var(--tsi-fg-default);
+  font: inherit;
+  font-size: var(--tsi-font-xs);
+  cursor: pointer;
+}
+
+.downloadButton:hover:not(:disabled) {
+  background: var(--tsi-bg-hover);
+  border-color: var(--tsi-border-strong);
+}
+
+.downloadButton:disabled {
+  color: var(--tsi-fg-faint);
+  cursor: not-allowed;
+}
+
+.sourceBody {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
 .sourceTextarea {
   flex: 1;
   width: 100%;
   padding: 8px;
+  line-height: 18px;
   resize: none;
   border: none;
   outline: none;
@@ -303,6 +361,83 @@
   box-shadow: inset 0 0 0 2px var(--tsi-focus-ring);
 }
 
+/* ── Linter gutter (#202) ─────────────────────────────────────────────── */
+.gutter {
+  flex: 0 0 auto;
+  width: 20px;
+  overflow: hidden;
+  background: var(--tsi-bg-elevated);
+  border-right: 1px solid var(--tsi-border);
+  /* Match the textarea's own top padding so line 1 lines up with row 1. */
+  padding-top: 8px;
+}
+
+.gutterInner {
+  position: relative;
+}
+
+.gutterRow {
+  position: relative;
+  height: 18px;
+  line-height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gutterDot {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  border: none;
+  padding: 0;
+  cursor: default;
+  background: var(--tsi-fg-muted);
+}
+
+.severityError {
+  background: var(--tsi-danger);
+}
+
+.severityWarning {
+  background: #d9a441;
+}
+
+.severityInfo {
+  background: var(--tsi-accent);
+}
+
+.gutterPopover {
+  position: absolute;
+  top: 0;
+  left: 100%;
+  z-index: 60;
+  min-width: 12rem;
+  max-width: 22rem;
+  margin-left: 4px;
+  padding: var(--tsi-space-2);
+  background: var(--tsi-bg-panel);
+  border: 1px solid var(--tsi-border-strong);
+  border-radius: var(--tsi-radius-md);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  color: var(--tsi-fg-default);
+  font-size: var(--tsi-font-sm);
+  line-height: 1.4;
+  white-space: normal;
+}
+
+/* ── Problem-count badge on the source-pane toggle (#202) ─────────────── */
+.problemBadge {
+  margin-left: var(--tsi-space-1);
+  padding: 1px 5px;
+  background: rgba(0, 0, 0, 0.18);
+  border-radius: var(--tsi-radius-sm);
+  font-size: var(--tsi-font-xs);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 .sourceSplitter {
   width: 4px;
   cursor: col-resize;
@@ -312,4 +447,55 @@
 
 .sourceSplitter:hover {
   background: var(--tsi-accent);
+}
+
+/* ── "Nothing has rendered yet" notice (#203) ─────────────────────────── */
+.unrenderableNotice {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--tsi-space-4);
+  background: var(--tsi-bg-canvas);
+  color: var(--tsi-fg-muted);
+  text-align: center;
+  font-size: var(--tsi-font-md);
+  line-height: 1.5;
+}
+
+.unrenderableNotice strong {
+  color: var(--tsi-fg-strong);
+}
+
+/* ── Fixture fetch-in-flight indicator (#221) ─────────────────────────── */
+.fixtureLoading {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--tsi-bg-canvas);
+  color: var(--tsi-fg-muted);
+  font-size: var(--tsi-font-md);
+}
+
+/* ── Drag-and-drop hint (#221) ─────────────────────────────────────────── */
+.dropZoneHint {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--tsi-space-4);
+  background: rgba(42, 138, 246, 0.16);
+  border: 3px dashed var(--tsi-accent);
+  color: var(--tsi-fg-strong);
+  font-size: var(--tsi-font-lg);
+  font-weight: 600;
+  text-align: center;
+  pointer-events: none;
 }

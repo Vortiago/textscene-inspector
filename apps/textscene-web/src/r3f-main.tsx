@@ -19,6 +19,7 @@ import {
   useRef,
   useState,
   type ChangeEvent,
+  type DragEvent as ReactDragEvent,
   type MouseEvent as ReactMouseEvent,
 } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -26,13 +27,24 @@ import {
   createResourcePipeline,
   ResourceLoaderProvider,
   TscnPreviewShell,
+  useMissingResources,
+  usePersistedState,
   type ViewportSelectorOption,
 } from '@textscene/core';
+import { Linter, type Diagnostic } from '@textscene/core/linter';
 import { fixtures } from './fixturesAll';
 import { FixtureTreeView } from './FixtureTree';
 import { corpusRootFor, fixtureUrlForRes } from './corpusRoot';
 import { WebResourceProvider } from './providers/WebResourceProvider';
 import { resolveForwardedContent } from './sourceGate';
+import {
+  groupDiagnosticsByLine,
+  summarizeDiagnostics,
+  formatProblemBadge,
+  countLines,
+} from './lineDiagnostics';
+import { SourceGutter } from './SourceGutter';
+import { pickTscnFile, matchResourceFiles } from './multiFileUpload';
 import styles from './r3f-main.module.css';
 
 /** Sentinel value used by `<ViewportSelector>` when no fixture is active (user is on an uploaded .tscn). */
@@ -44,32 +56,32 @@ const SOURCE_PANE_STORAGE_KEY = 'tscn-web-source-pane';
 /** Pane edits reach the renderer only after this pause — never on the keystroke itself (ADR-0020). */
 const DEBOUNCE_MS = 250;
 
-function getInitialSourcePaneState(): { visible: boolean; width: number } {
-  try {
-    const raw = window.localStorage.getItem(SOURCE_PANE_STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      // Tolerate partial/corrupt blobs: only accept a real boolean and a
-      // positive finite width, otherwise fall back to the shown-at-320 default.
-      const visible = typeof parsed.visible === 'boolean' ? parsed.visible : true;
-      const width =
-        typeof parsed.width === 'number' && Number.isFinite(parsed.width) && parsed.width > 0
-          ? parsed.width
-          : 320;
-      return { visible, width };
-    }
-  } catch {
-    /* ignore */
-  }
-  return { visible: true, width: 320 };
+/**
+ * #202: the web app is the first browser consumer of `@textscene/core/linter`.
+ * One instance for the app's lifetime — `Linter` carries no per-call state,
+ * and the rule/validator registries it reads from are populated once at
+ * import time (self-registration side effects in `linter/index.ts`).
+ */
+const linter = new Linter();
+
+/** The Source pane's persisted shape: shown/hidden + its dragged width. */
+interface SourcePaneState {
+  visible: boolean;
+  width: number;
 }
 
-function persistSourcePaneState(visible: boolean, width: number) {
-  try {
-    window.localStorage.setItem(SOURCE_PANE_STORAGE_KEY, JSON.stringify({ visible, width }));
-  } catch {
-    /* ignore */
-  }
+const DEFAULT_SOURCE_PANE_STATE: SourcePaneState = { visible: true, width: 320 };
+
+/** Reject a corrupt/unexpected persisted shape (any missing/invalid field) in favor of the default. */
+function isSourcePaneState(value: unknown): value is SourcePaneState {
+  if (typeof value !== 'object' || value === null) return false;
+  const v = value as Record<string, unknown>;
+  return (
+    typeof v.visible === 'boolean' &&
+    typeof v.width === 'number' &&
+    Number.isFinite(v.width) &&
+    v.width > 0
+  );
 }
 /**
  * First-visit default. WI-UX-15: pick a fixture with zero `ext_resource`
@@ -87,22 +99,31 @@ const DEFAULT_FIXTURE =
   '';
 
 export function R3FApp() {
-  // Read (and JSON.parse) the persisted blob once on mount, then seed both
-  // pane-state slices from it instead of re-reading localStorage twice.
-  const [initialPane] = useState(getInitialSourcePaneState);
-  const [paneVisible, setPaneVisible] = useState(initialPane.visible);
-  const [paneWidth, setPaneWidth] = useState(initialPane.width);
-  useEffect(() => {
-    persistSourcePaneState(paneVisible, paneWidth);
-  }, [paneVisible, paneWidth]);
+  // The same debounced-write persistence `<TscnPreviewShell>` uses for dock
+  // layout — a plain `useEffect` writing on every state change (the previous
+  // approach here) fires a synchronous `localStorage.setItem` on EVERY
+  // splitter `mousemove`, putting main-thread I/O inside the exact drag
+  // interaction where frame budget matters; `usePersistedState` debounces the
+  // write (trailing edge, flushed on unmount/pagehide) instead.
+  const [sourcePane, setSourcePane] = usePersistedState(
+    SOURCE_PANE_STORAGE_KEY,
+    DEFAULT_SOURCE_PANE_STATE,
+    isSourcePaneState
+  );
 
   const splitterStartRef = useRef<number>(0);
 
-  const onSplitterMove = useCallback((e: MouseEvent) => {
-    const dx = e.clientX - splitterStartRef.current;
-    setPaneWidth((prev) => Math.max(180, Math.min(800, prev + dx)));
-    splitterStartRef.current = e.clientX;
-  }, []);
+  const onSplitterMove = useCallback(
+    (e: MouseEvent) => {
+      const dx = e.clientX - splitterStartRef.current;
+      setSourcePane((prev) => ({
+        ...prev,
+        width: Math.max(180, Math.min(800, prev.width + dx)),
+      }));
+      splitterStartRef.current = e.clientX;
+    },
+    [setSourcePane]
+  );
 
   // The mouse-up handler ends the drag by detaching both document listeners.
   // Kept as one callback so the exact detach sequence lives in a single place —
@@ -148,6 +169,26 @@ export function R3FApp() {
       return DEFAULT_FIXTURE;
     }
   });
+
+  // #221: write `?fixture=` back on every scene switch — read-once at mount
+  // was the only direction before, so reloading or sharing the URL reopened
+  // whatever localStorage remembered, not the scene actually on screen.
+  // `replaceState` (never `pushState`): switching scenes is not a navigation
+  // the user expects Back to step through.
+  useEffect(() => {
+    try {
+      const url = new URL(window.location.href);
+      if (fixtureFile) {
+        url.searchParams.set('fixture', fixtureFile);
+      } else {
+        url.searchParams.delete('fixture');
+      }
+      window.history.replaceState(null, '', url);
+    } catch {
+      // Best-effort — an unsupported History API must never break the app.
+    }
+  }, [fixtureFile]);
+
   const [buffer, setBuffer] = useState<string>('');
   const [forwardedContent, setForwardedContent] = useState<string>('');
   const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -155,11 +196,44 @@ export function R3FApp() {
   // started — a resolving load must never stomp newer keystrokes.
   const editedSinceLoadRef = useRef(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  // #221: true only while a fixture's `fetch()` is in flight — the fetch
+  // effect below had no pending state at all, so a slow load looked
+  // identical to a stuck app.
+  const [isFetchingFixture, setIsFetchingFixture] = useState(false);
   // When non-null, the user has loaded a TSCN file from their disk via
   // the toolbar's Upload button. We track the display name so the
   // toolbar can show what's active when the fixture dropdown is
   // deselected.
   const [uploadedTscnName, setUploadedTscnName] = useState<string | null>(null);
+
+  // #221: drag-and-drop a .tscn (+ resource files) onto the page. A counter,
+  // not a boolean, because dragenter/dragleave bubble from every descendant
+  // as the cursor crosses child element boundaries during one continuous
+  // drag over the app root — only net-zero really means "left the window".
+  const dragCounterRef = useRef(0);
+  const [dragActive, setDragActive] = useState(false);
+
+  // #202: lint the buffer continuously, debounced — independent of the
+  // render-forward gate above (a buffer that fails to RENDER can still be
+  // LINTED; the gutter is what tells the user why). Re-runs whenever the
+  // buffer changes for any reason (typing, fixture load, upload).
+  const [diagnostics, setDiagnostics] = useState<Diagnostic[]>([]);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDiagnostics(linter.lint(buffer));
+    }, DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [buffer]);
+  const diagnosticsByLine = useMemo(() => groupDiagnosticsByLine(diagnostics), [diagnostics]);
+  const problemBadge = useMemo(
+    () => formatProblemBadge(summarizeDiagnostics(diagnostics)),
+    [diagnostics]
+  );
+  // Counts newlines directly instead of `buffer.split('\n').length`, which
+  // would materialize a full array of every source line on every render
+  // (this recomputes on each keystroke, since `buffer` is R3FApp state).
+  const lineCount = useMemo(() => countLines(buffer), [buffer]);
+  const [gutterScrollTop, setGutterScrollTop] = useState(0);
 
   // Wire the WI-79 resource pipeline. One provider + bus + loader for
   // the lifetime of the app; React component identity preserves them
@@ -240,6 +314,7 @@ export function R3FApp() {
     }
     editedSinceLoadRef.current = false;
     setLoadError(null);
+    setIsFetchingFixture(true);
     fetch(`/fixtures/${fixtureFile}`)
       .then((r) => {
         if (!r.ok) {
@@ -265,6 +340,10 @@ export function R3FApp() {
         setLoadError(message);
         setBuffer('');
         // forwardedContent unchanged — hold last valid render on fetch failure
+      })
+      .finally(() => {
+        if (cancelled) return;
+        setIsFetchingFixture(false);
       });
     return cleanup;
   }, [fixtureFile, uploadedTscnName]);
@@ -298,6 +377,59 @@ export function R3FApp() {
     loader.provideFile(path);
   }
 
+  // #221: shared entry point for BOTH drag-and-drop and the toolbar's
+  // (now multi-select) file input. The first `.tscn` among `files` becomes
+  // the active scene; every OTHER file is matched to one of ITS external-
+  // resource `res://` paths by basename, so a scene + its textures open in
+  // one gesture instead of requiring a per-path Resources-tab upload.
+  async function handleFilesUpload(files: readonly File[]) {
+    const tscnFile = pickTscnFile(files);
+    if (!tscnFile) {
+      setLoadError('No .tscn file found among the dropped/selected files.');
+      return;
+    }
+    let text: string;
+    try {
+      text = await tscnFile.text();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      handleTscnUploadError(`Failed to read TSCN file: ${message}`);
+      return;
+    }
+    handleTscnUpload(tscnFile, text);
+
+    const others = files.filter((f) => f !== tscnFile);
+    for (const { path, file } of matchResourceFiles(text, others)) {
+      handleResourceUpload(path, file);
+    }
+  }
+
+  function handleDragEnter(e: ReactDragEvent) {
+    e.preventDefault();
+    if (!e.dataTransfer.types.includes('Files')) return;
+    dragCounterRef.current += 1;
+    setDragActive(true);
+  }
+
+  // Required so the browser's default "reject the drop" behavior doesn't
+  // win — without this, `onDrop` never fires.
+  function handleDragOver(e: ReactDragEvent) {
+    e.preventDefault();
+  }
+
+  function handleDragLeave(e: ReactDragEvent) {
+    e.preventDefault();
+    dragCounterRef.current = Math.max(0, dragCounterRef.current - 1);
+    if (dragCounterRef.current === 0) setDragActive(false);
+  }
+
+  function handleDrop(e: ReactDragEvent) {
+    e.preventDefault();
+    dragCounterRef.current = 0;
+    setDragActive(false);
+    void handleFilesUpload(Array.from(e.dataTransfer.files));
+  }
+
   function handleBufferChange(e: ChangeEvent<HTMLTextAreaElement>) {
     const newValue = e.target.value;
     setBuffer(newValue);
@@ -322,26 +454,93 @@ export function R3FApp() {
     loader.provideFile(path);
   }
 
+  // #203: Download .tscn — a Blob + anchor export, no write-back to disk
+  // (ADR-0020). Named after whatever is active so a batch of downloads
+  // doesn't collide on a generic "scene.tscn".
+  function downloadFilename(): string {
+    const base = uploadedTscnName || fixtureFile.split('/').pop() || 'scene.tscn';
+    return base.endsWith('.tscn') ? base : `${base}.tscn`;
+  }
+
+  function handleDownloadTscn() {
+    const blob = new Blob([buffer], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    try {
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = downloadFilename();
+      anchor.click();
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }
+
+  // #203: nothing has EVER rendered (forwardedContent stays '' once a valid
+  // render has occurred — hold-last-valid never reverts it) AND the current
+  // buffer isn't blank either — so the user pasted/typed something that
+  // simply doesn't parse. The shell's own content==='' state ("Loading
+  // scene…") would otherwise look identical to a genuinely empty pane, so
+  // this notice — outside the (unmodified) shared shell — fills that gap.
+  // `!loadError` keeps this mutually exclusive with the toolbar's own
+  // role="alert" banner by construction, not by relying on every call site
+  // that sets one to also clear the other.
+  const showUnrenderableNotice =
+    !loadError && forwardedContent.trim().length === 0 && buffer.trim().length > 0;
+
   return (
     <ResourceLoaderProvider loader={loader}>
-      <div style={{ width: '100vw', height: '100vh', display: 'flex' }}>
-        {paneVisible && (
+      <div
+        data-testid="app-root"
+        style={{ width: '100vw', height: '100vh', display: 'flex', position: 'relative' }}
+        onDragEnter={handleDragEnter}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
+        {dragActive && (
+          <div data-testid="drop-zone-hint" className={styles.dropZoneHint}>
+            Drop a .tscn file (and its resources) to open it
+          </div>
+        )}
+        {sourcePane.visible && (
           <>
             {/* flex-shrink:0 (in .sourcePane) keeps the pane at its set/dragged
                 width; the shell wrapper below takes flex:1 to fill the rest. */}
             <div
               data-testid="source-pane"
               className={styles.sourcePane}
-              style={{ width: paneWidth, minWidth: 0 }}
+              style={{ width: sourcePane.width, minWidth: 0 }}
             >
-              <textarea
-                className={styles.sourceTextarea}
-                value={buffer}
-                onChange={handleBufferChange}
-                wrap="off"
-                aria-label="Scene source"
-                style={{ fontFamily: 'monospace' }}
-              />
+              <div className={styles.sourcePaneHeader}>
+                <span className={styles.sourcePaneTitle}>Source</span>
+                <button
+                  type="button"
+                  className={styles.downloadButton}
+                  data-testid="download-tscn-button"
+                  onClick={handleDownloadTscn}
+                  disabled={buffer.trim().length === 0}
+                  title="Download the current buffer as a .tscn file"
+                >
+                  ⭳ Download .tscn
+                </button>
+              </div>
+              <div className={styles.sourceBody}>
+                <SourceGutter
+                  lineCount={lineCount}
+                  byLine={diagnosticsByLine}
+                  scrollTop={gutterScrollTop}
+                />
+                <textarea
+                  className={styles.sourceTextarea}
+                  value={buffer}
+                  onChange={handleBufferChange}
+                  onScroll={(e) => setGutterScrollTop(e.currentTarget.scrollTop)}
+                  wrap="off"
+                  aria-label="Scene source"
+                  placeholder="Paste or type your .tscn here…"
+                  style={{ fontFamily: 'monospace' }}
+                />
+              </div>
             </div>
             <div
               className={styles.sourceSplitter}
@@ -353,7 +552,7 @@ export function R3FApp() {
             />
           </>
         )}
-        <div style={{ flex: 1, minWidth: 0, height: '100%' }}>
+        <div style={{ flex: 1, minWidth: 0, height: '100%', position: 'relative' }}>
           <TscnPreviewShell
             panelId={`web-${fixtureFile || uploadedTscnName || 'empty'}`}
             content={forwardedContent}
@@ -375,13 +574,37 @@ export function R3FApp() {
                 uploadedTscnName={uploadedTscnName}
                 loadError={loadError}
                 onFixtureChange={handleFixtureChange}
-                onTscnUpload={handleTscnUpload}
-                onTscnUploadError={handleTscnUploadError}
-                paneVisible={paneVisible}
-                onTogglePane={() => setPaneVisible((v) => !v)}
+                onFilesSelected={handleFilesUpload}
+                paneVisible={sourcePane.visible}
+                onTogglePane={() =>
+                  setSourcePane((prev) => ({ ...prev, visible: !prev.visible }))
+                }
+                problemBadge={problemBadge}
               />
             }
           />
+          {isFetchingFixture ? (
+            <div
+              data-testid="fixture-loading"
+              role="status"
+              aria-live="polite"
+              className={styles.fixtureLoading}
+            >
+              Loading scene…
+            </div>
+          ) : (
+            showUnrenderableNotice && (
+              <div
+                data-testid="unrenderable-buffer-notice"
+                role="alert"
+                className={styles.unrenderableNotice}
+              >
+                <strong>Nothing has rendered yet.</strong> The pasted/typed content doesn’t parse
+                as a valid .tscn scene — fix the errors marked in the Source pane’s gutter to see
+                a preview.
+              </div>
+            )
+          )}
         </div>
       </div>
     </ResourceLoaderProvider>
@@ -394,10 +617,12 @@ interface ToolbarProps {
   uploadedTscnName: string | null;
   loadError: string | null;
   onFixtureChange: (value: string) => void;
-  onTscnUpload: (file: File, text: string) => void;
-  onTscnUploadError: (message: string) => void;
+  /** #221: one or more files picked via the file input — a scene plus, optionally, its resources. */
+  onFilesSelected: (files: File[]) => void;
   paneVisible: boolean;
   onTogglePane: () => void;
+  /** #202: compact problem-count text (e.g. "✖ 1 / ⚠ 2"), or `null` when the buffer is clean. */
+  problemBadge: string | null;
 }
 
 /** Small scene/node glyph for the scene chip. */
@@ -421,7 +646,9 @@ function SceneGlyph() {
  *
  * Note on missing files: a scene's missing `res://` dependencies are provided
  * separately and per-path in the shell's Resources tab — deliberately kept
- * distinct from "open a scene" so a picked file always maps to a known target.
+ * distinct from "open a scene" so a picked file always maps to a known
+ * target. A compact badge (#221) nudges the user toward that tab without
+ * requiring it be open first.
  */
 function Toolbar({
   options,
@@ -429,16 +656,24 @@ function Toolbar({
   uploadedTscnName,
   loadError,
   onFixtureChange,
-  onTscnUpload,
-  onTscnUploadError,
+  onFilesSelected,
   paneVisible,
   onTogglePane,
+  problemBadge,
 }: ToolbarProps) {
   // Reset Camera lives in the shared <ViewportToolbar> in the shell top bar.
   const tscnInputRef = useRef<HTMLInputElement | null>(null);
   const searchRef = useRef<HTMLInputElement | null>(null);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
+
+  // #221: `<Toolbar>` is rendered THROUGH the shell's `toolbar` slot, i.e. as
+  // a descendant of the shell's own `<MissingResourcesProvider>` — so this
+  // reads the SAME live missing-paths set the shell's own
+  // `<MissingResourcesPanel>` (in the Resources tab) aggregates, without any
+  // new plumbing. Surfacing it here means a missing texture/scene is visible
+  // without opening that tab first.
+  const { missingPaths } = useMissingResources();
 
   // Built-in dev fixtures to switch between (drop the uploaded-placeholder
   // option, whose value is the empty sentinel).
@@ -475,16 +710,10 @@ function Toolbar({
   }
 
   function handleTscnFileChange(e: ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    file
-      .text()
-      .then((text) => onTscnUpload(file, text))
-      .catch((err: unknown) => {
-        const message = err instanceof Error ? err.message : String(err);
-        onTscnUploadError(`Failed to read TSCN file: ${message}`);
-      });
-    // Reset so the same filename can be re-opened.
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    onFilesSelected(Array.from(files));
+    // Reset so the same filename(s) can be re-opened.
     if (tscnInputRef.current) tscnInputRef.current.value = '';
     setOpen(false);
   }
@@ -500,6 +729,11 @@ function Toolbar({
         title="Toggle the source pane"
       >
         {paneVisible ? 'Hide' : 'Show'} Source
+        {problemBadge && (
+          <span className={styles.problemBadge} data-testid="problem-badge">
+            {problemBadge}
+          </span>
+        )}
       </button>
       {/* Primary action — open your own .tscn from disk. Triggers the same
           hidden input the ⌘K palette uses; kept visible because the built-in
@@ -540,6 +774,16 @@ function Toolbar({
         </span>
       </button>
 
+      {missingPaths.size > 0 && (
+        <span
+          className={styles.missingResourcesBadge}
+          data-testid="missing-resources-badge"
+          title="Resources referenced by this scene are missing — see the Resources tab"
+        >
+          ⚠ {missingPaths.size} missing
+        </span>
+      )}
+
       {loadError && (
         <span role="alert" className={styles.errorMessage}>
           {loadError}
@@ -551,7 +795,13 @@ function Toolbar({
       <input
         ref={tscnInputRef}
         type="file"
-        accept=".tscn"
+        // #221: multi-select — a .tscn plus its resource files can be picked
+        // in one gesture. `accept` covers the file kinds handleFilesUpload's
+        // basename-matching can actually resolve (mirrors the binary
+        // resource-extension list resourceProviderUtils.isBinaryResourceType
+        // uses to tell text vs. binary resources apart).
+        accept=".tscn,.glb,.gltf,.png,.jpg,.jpeg,.webp,.svg,.wav,.ogg,.mp3"
+        multiple
         onChange={handleTscnFileChange}
         className={styles.srOnly}
         data-testid="upload-tscn-input"

@@ -108,6 +108,16 @@ export interface TscnPreviewShellProps {
    * Remove button still renders but is a no-op.
    */
   onResourceRemove?: (path: string) => void;
+  /**
+   * Host-provided viewport-mode override (VS Code's `textscene.defaultViewportMode`
+   * setting). Omitted (the default) preserves Godot-editor parity: `WorkspaceAutoSelect`
+   * (ADR-0006) picks 2D/3D from the scene root's node type. An explicit mode both seeds
+   * the initial viewport AND suppresses that auto-select for this panel — otherwise a
+   * typed root's own claim would immediately override the host's forced choice, making
+   * the setting silently useless for the vast majority of real scenes. A manual toolbar
+   * toggle still works afterward in either case.
+   */
+  initialViewportMode?: ViewportMode;
 }
 
 export function TscnPreviewShell({
@@ -119,6 +129,7 @@ export function TscnPreviewShell({
   toolbar,
   onResourceUpload,
   onResourceRemove,
+  initialViewportMode,
 }: TscnPreviewShellProps) {
   const { sceneGraph, error } = useParsedScene(content, rootScenePath);
 
@@ -198,8 +209,11 @@ export function TscnPreviewShell({
     (children) => <CameraControlProvider>{children}</CameraControlProvider>,
     (children) => <MissingResourcesProvider>{children}</MissingResourcesProvider>,
     (children) => (
+      // #222: a host-forced `initialViewportMode` (e.g. the VS Code extension's
+      // `textscene.defaultViewportMode` setting) wins over whatever was
+      // persisted from a prior session.
       <ViewportModeProvider
-        initialMode={initialViewport.mode}
+        initialMode={initialViewportMode ?? initialViewport.mode}
         initialShowGrid={initialViewport.showGrid}
       >
         {children}
@@ -212,7 +226,12 @@ export function TscnPreviewShell({
 
   return withProviders(
     <>
-      <WorkspaceAutoSelect sceneGraph={sceneGraph} />
+      {/* A host-forced initial mode opts this panel out of Godot-parity
+          auto-select entirely — otherwise the scene root's own claim would
+          immediately clobber the host's choice on first parse. */}
+      {initialViewportMode === undefined && (
+        <WorkspaceAutoSelect sceneGraph={sceneGraph} />
+      )}
       <SceneChangeResetter sceneGraph={sceneGraph} />
       <AnimationTabWatcher onVisibleChange={setAnimationTabVisible} />
       <EscapeDeselect />

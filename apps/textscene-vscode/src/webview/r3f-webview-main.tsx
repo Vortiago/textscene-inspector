@@ -24,6 +24,14 @@ import {
 import type { TscnNode } from '@textscene/core';
 import type { HostToWebviewMessage, WebviewToHostMessage } from '../protocol';
 import { WebviewResourceProvider } from './WebviewResourceProvider';
+import { readInitialConfig, resolveInitialViewportMode } from './initialConfig';
+
+// Read once at module load: `webviewHtml.ts` embeds `window.__TEXTSCENE_CONFIG__`
+// in a script tag placed BEFORE this module's own `<script type="module">`
+// entry, so the global is guaranteed to be set by the time this line runs.
+// `undefined` (the "auto" case, or no host config at all) leaves Godot-parity
+// auto-select in control, exactly like today.
+const INITIAL_VIEWPORT_MODE = resolveInitialViewportMode(readInitialConfig());
 
 declare const acquireVsCodeApi: () => {
   postMessage: (message: unknown) => void;
@@ -126,6 +134,7 @@ function R3FWebviewApp({ vscode }: { vscode: VsCodeApi }) {
         panelId={panelId}
         content={content}
         onNodeReveal={handleNodeReveal}
+        initialViewportMode={INITIAL_VIEWPORT_MODE}
       />
     </ResourceLoaderProvider>
   );

@@ -27,19 +27,21 @@ review, not pixel-exact validation.
 
 1. Open a folder containing `.tscn` files (a Godot project root works best, so `res://` paths resolve).
 2. Open a `.tscn` file.
-3. Run **TextScene: Open Preview to the Side** from the Command Palette, or click the preview icon in the editor title bar.
+3. Run **TextScene: Open Preview to the Side** from the Command Palette, the editor title bar, the editor/Explorer context menu, or the `ctrl+k v` (`cmd+k v` on macOS) keybinding.
 
 ## Features
 
 ### Interactive scene preview
 - Orbit, pan, and zoom the viewport; the camera position survives edits and reloads.
 - Scene-tree and inspector panels beside the viewport: click an object in the 3D view to select it in the tree, inspect its parsed properties, and double-click a node to jump to its line in the source.
-- 2D/3D viewport toggle for scenes containing Control or Node2D content (UI overlays, sprites).
+- 2D/3D viewport toggle for scenes containing Control or Node2D content (UI overlays, sprites). The `textscene.defaultViewportMode` setting controls which mode a *new* preview starts in — `auto` (default) matches the Godot editor's own rule, or force every new preview to `2D`/`3D`.
 
 ### Editor integration
+- **Syntax highlighting** for `.tscn` files: section headings, property keys, strings, numbers, and Godot's typed-literal constructors (`SubResource(...)`, `Color(...)`, `Vector3(...)`, etc.) are colored instead of plain text.
 - **Outline view**: document symbols for nodes and resources in `.tscn` files.
 - **Go to Definition** on `SubResource(...)` and `ExtResource(...)` references.
-- **Problems panel diagnostics**: open `.tscn` files are linted live, reporting both syntax errors and semantic rule violations.
+- **`res://` document links**: `res://relative/path` references are clickable, opening the referenced file.
+- **Problems panel diagnostics**: open `.tscn` files are linted live, reporting both syntax errors and semantic rule violations. Toggle with `textscene.diagnostics.enabled`, or tune re-lint timing with `textscene.diagnostics.lintDebounceMs`.
 - **Hot reload**: the preview refreshes when you save the scene — or any sub-scene, texture, or material it references.
 
 ### Resource resolution

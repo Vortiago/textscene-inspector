@@ -37,6 +37,24 @@ import { evaluateTree } from './evaluateTree';
 import { resolveAnimPlayerPath } from './resolveAnimPlayer';
 import type { AnimationTreeProperties } from './types';
 
+/**
+ * The dominant clip's live playhead, for `flushTimeOnPauseEdge`'s `getTime`
+ * contract: `null` means "no live playhead to flush," never a fabricated
+ * `0`. An authored blend program can name a clip absent from the resolved
+ * driver's clips — the mount effect's `clips.find` skips it, so `dominant`
+ * is set (from `program`, independent of the driver) but `actions` never
+ * gained an entry for it. Falling back to `0` there would force the paused
+ * readout to snap to zero on the very next playing→paused edge instead of
+ * skipping the flush, as if the playhead had actually reached the start.
+ */
+export function dominantActionTime(
+  dominant: { clip: string } | null,
+  actions: ReadonlyMap<string, AnimationAction>
+): number | null {
+  if (!dominant) return null;
+  return actions.get(dominant.clip)?.time ?? null;
+}
+
 export function AnimationTree({ node, children }: NodeComponentProps) {
   const properties = node.properties as AnimationTreeProperties;
   const { internalResources } = useSceneResources();
@@ -147,7 +165,7 @@ export function AnimationTree({ node, children }: NodeComponentProps) {
     flushTimeOnPauseEdge(
       prevStateRef.current,
       state,
-      () => (dominant ? actions.get(dominant.clip)?.time ?? 0 : null),
+      () => dominantActionTime(dominant, actions),
       transport.reportTime
     );
 

@@ -111,9 +111,21 @@ export function useViewportSelection(
       // as it moves across the (single, delegated) interactive root —
       // onPointerOver/onPointerOut fire once for the WHOLE root, not per
       // descendant, so onPointerMove is what carries the per-mesh `e.object`.
+      //
+      // R3F dispatches onPointerMove once PER INTERSECTED MESH along the ray,
+      // nearest-to-farthest, and keeps going to the next one unless
+      // `stopPropagation()` is called — exactly like `onPointerUp` above.
+      // Without it, every intersected mesh's handler call would overwrite
+      // the previous one, so the LAST (farthest, most likely occluded) mesh
+      // would win instead of the nearest — the opposite of "hover tracks
+      // whichever registered node is nearest". Stopping only when a path
+      // resolves (mirroring onPointerUp) still lets an unregistered nearest
+      // hit (e.g. the empty-state grid) fall through to a registered mesh
+      // behind it.
       onPointerMove(e) {
         const path = resolvePathFromObject(e.object, objectPathMap);
         hoverStore.set(path);
+        if (path) e.stopPropagation();
       },
       onPointerOut() {
         hoverStore.set(null);

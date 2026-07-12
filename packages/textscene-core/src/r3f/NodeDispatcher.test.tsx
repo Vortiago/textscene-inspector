@@ -14,6 +14,7 @@ import { NodeDispatcher } from './NodeDispatcher';
 import { nodeComponentRegistry, type NodeComponentProps } from './NodeComponentRegistry';
 import { SelectionProvider } from './contexts/SelectionContext';
 import { useNodePath } from './contexts/NodePathContext';
+import { CanvasWorkspaceProvider } from './contexts/CanvasWorkspaceContext';
 
 // All node-type components self-register on import. Pull in the barrel.
 import './nodes/index';
@@ -141,6 +142,56 @@ describe('<NodeDispatcher> per-node error boundary (#216)', () => {
 
     const nodes: TscnNode[] = [makeNode('OnlyBad', 'Bomb')];
     await expect(renderWithProviders(<NodeDispatcher nodes={nodes} />)).resolves.toBeDefined();
+
+    consoleSpy.mockRestore();
+  });
+
+  it('positions the placeholder near a crashing CanvasItem (2D) node\'s authored position, not the 3D-transform origin', async () => {
+    // A CanvasItem-registered type's properties are Node2DProperties-shaped
+    // (position/rotation/scale), not Node3DProperties (a combined
+    // `transform`) — reading `.transform` off them is always undefined, so
+    // the FALLBACK must route through the 2D transform math (node2dGroupProps)
+    // instead of silently collapsing to the origin.
+    function Bomb2D(_: NodeComponentProps) {
+      throw new Error('2D node render exploded');
+    }
+    nodeComponentRegistry.register({ typeName: 'Bomb2D', Component: Bomb2D, canvasItem: true });
+
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const node: TscnNode = {
+      name: 'BadNode2D',
+      type: 'Bomb2D',
+      children: [],
+      properties: {
+        name: 'BadNode2D',
+        position: { x: 3, y: 4 },
+        rotation: 0,
+        scale: { x: 1, y: 1 },
+        skew: 0,
+        z_index: 0,
+        z_as_relative: true,
+        show_behind_parent: false,
+        modulate: { r: 1, g: 1, b: 1, a: 1 },
+        self_modulate: { r: 1, g: 1, b: 1, a: 1 },
+      },
+    };
+    const renderer = await renderWithProviders(
+      <CanvasWorkspaceProvider workspace="2d">
+        <NodeDispatcher nodes={[node]} />
+      </CanvasWorkspaceProvider>
+    );
+
+    const meshes = renderer.scene.findAllByType('Mesh');
+    const placeholder = meshes.find((m) => {
+      const mat = m.instance.material as { color?: THREE.Color };
+      return mat.color && mat.color.r > 0.9 && mat.color.g < 0.1 && mat.color.b > 0.9;
+    });
+    expect(placeholder).toBeDefined();
+    // node2dGroupProps: x unchanged, y negated (Godot +Y-down -> three.js +Y-up).
+    const wrapperGroup = placeholder!.parent!;
+    expect(wrapperGroup.instance.position.x).toBe(3);
+    expect(wrapperGroup.instance.position.y).toBe(-4);
 
     consoleSpy.mockRestore();
   });

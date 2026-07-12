@@ -54,7 +54,9 @@ describe('<R3FApp> Upload TSCN (WI-UX-7)', () => {
 
     const uploadInput = screen.getByTestId('upload-tscn-input') as HTMLInputElement;
     expect(uploadInput).toBeTruthy();
-    expect(uploadInput.accept).toBe('.tscn');
+    // #221: multi-file upload broadened `accept` to the resource kinds
+    // handleFilesUpload's basename-matching can resolve, not just `.tscn`.
+    expect(uploadInput.accept).toContain('.tscn');
 
     const file = new File([UPLOADED_TSCN], 'my-scene.tscn', { type: 'text/plain' });
     await act(async () => {

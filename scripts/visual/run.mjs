@@ -98,6 +98,12 @@ function ensureWebBuilt() {
  * leftover from a previous run, or a concurrent worktree on the same host
  * also running this harness against the shared default port) would answer
  * instead, and every capture would silently reflect a foreign build.
+ *
+ * (This is also why `startPreview` below kills the whole process GROUP, not
+ * just its direct child — a `shell: true` spawn's immediate child is the
+ * shell, not the `pnpm`→`vite preview` grandchild that actually holds the
+ * port; killing only the shell can leave that grandchild running as an
+ * orphan, which is exactly the kind of leftover this check guards against.)
  */
 async function assertPortFree(port) {
   const free = await new Promise((resolve) => {
@@ -121,9 +127,29 @@ function startPreview() {
   const proc = spawn(
     'pnpm',
     ['--filter', '@textscene/web-previewer', 'preview', '--port', String(PORT), '--strictPort'],
-    { cwd: REPO_ROOT, shell: true, stdio: 'ignore' }
+    { cwd: REPO_ROOT, shell: true, stdio: 'ignore', detached: true }
   );
   return { proc, baseUrl: `http://localhost:${PORT}` };
+}
+
+/**
+ * Kill the whole `proc` process GROUP (negative pid), not just `proc` itself.
+ * `proc` is a `shell: true` spawn's immediate child — the shell — not the
+ * `pnpm`→`vite preview` grandchild that actually binds the port. `detached:
+ * true` above makes `proc` its own process-group leader, so its descendants
+ * share its pgid and `-proc.pid` reaches all of them in one signal. Killing
+ * only `proc.pid` reliably kills the shell but can leave the grandchild
+ * running as an orphaned server — which then holds this script's event loop
+ * open indefinitely even after all real work (captures + the results table)
+ * is done, since nothing else is scheduled to keep it alive except that
+ * leftover handle. Swallow ESRCH: the group may already be gone.
+ */
+function killPreviewGroup(proc) {
+  try {
+    process.kill(-proc.pid, 'SIGTERM');
+  } catch {
+    /* already exited */
+  }
 }
 
 async function waitForServer(url, timeoutMs = 40000) {
@@ -296,7 +322,7 @@ async function main() {
     }
   } finally {
     await browser?.close();
-    proc.kill();
+    killPreviewGroup(proc);
   }
 
   console.log('\n=== visual regression summary ===');
@@ -320,6 +346,12 @@ async function main() {
     process.exit(1);
   }
   console.log(`\n[visual] PASS: ${results.length}/${results.length} scenes.`);
+  // Unlike the failure path above, nothing here calls process.exit — so if
+  // any handle from the killed-but-not-necessarily-reaped preview process
+  // (or its process group) is still lingering, Node's event loop never
+  // empties and the script hangs indefinitely despite having finished all
+  // real work. Exit explicitly so success is never silently open-ended.
+  process.exit(0);
 }
 
 await main();

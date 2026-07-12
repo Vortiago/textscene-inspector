@@ -6,8 +6,26 @@
 import { describe, it, expect, beforeEach, vi, type Mock } from 'vitest';
 import * as vscode from 'vscode';
 import type { Diagnostic as TscnLintDiagnostic } from '@textscene/core/linter';
-import { TscnDiagnostics, toVsCodeDiagnostic, type DocumentLineSource } from './TscnDiagnostics';
+import {
+  TscnDiagnostics,
+  toVsCodeDiagnostic,
+  DEFAULT_LINT_DEBOUNCE_MS,
+  type DocumentLineSource,
+} from './TscnDiagnostics';
 import { createMockDiagnosticCollection, createMockUri } from './test-setup';
+
+/** Configure the mocked `textscene` configuration section for one test. */
+function mockDiagnosticsConfig(overrides: { enabled?: boolean; lintDebounceMs?: number } = {}): void {
+  const enabled = overrides.enabled ?? true;
+  const lintDebounceMs = overrides.lintDebounceMs ?? DEFAULT_LINT_DEBOUNCE_MS;
+  (vscode.workspace.getConfiguration as Mock).mockReturnValue({
+    get: vi.fn((key: string, defaultValue?: unknown) => {
+      if (key === 'diagnostics.enabled') return enabled;
+      if (key === 'diagnostics.lintDebounceMs') return lintDebounceMs;
+      return defaultValue;
+    }),
+  });
+}
 
 // ============================================================================
 // Helpers
@@ -346,5 +364,150 @@ describe('TscnDiagnostics', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  describe('textscene.diagnostics.* configuration', () => {
+    // Earlier tests in this file override `onDidOpenTextDocument` et al. via
+    // `.mockImplementation` to capture a handler; `vi.clearAllMocks()` (the
+    // shared `afterEach` in test-setup.ts) clears CALLS but not those
+    // implementations, so a later test would otherwise inherit a stale one.
+    // Reset all five to a plain pass-through disposable before each test
+    // here; individual tests still override whichever handler they need to
+    // capture afterward.
+    beforeEach(() => {
+      (vscode.workspace.onDidOpenTextDocument as Mock).mockImplementation(() => ({ dispose: vi.fn() }));
+      (vscode.workspace.onDidSaveTextDocument as Mock).mockImplementation(() => ({ dispose: vi.fn() }));
+      (vscode.workspace.onDidChangeTextDocument as Mock).mockImplementation(() => ({ dispose: vi.fn() }));
+      (vscode.workspace.onDidCloseTextDocument as Mock).mockImplementation(() => ({ dispose: vi.fn() }));
+      (vscode.workspace.onDidChangeConfiguration as Mock).mockImplementation(() => ({ dispose: vi.fn() }));
+    });
+
+    it('does not lint already-open documents on construction when diagnostics.enabled is false', () => {
+      mockDiagnosticsConfig({ enabled: false });
+      const document = makeTscnDocument(VALID_TSCN);
+      (vscode.workspace as unknown as { textDocuments: vscode.TextDocument[] }).textDocuments = [
+        document,
+      ];
+
+      const diagnostics = new TscnDiagnostics(collection as unknown as vscode.DiagnosticCollection);
+
+      expect(collection.set).not.toHaveBeenCalled();
+      diagnostics.dispose();
+    });
+
+    it('ignores open/save/change requests while disabled', () => {
+      mockDiagnosticsConfig({ enabled: false });
+      let openHandler: ((document: vscode.TextDocument) => void) | undefined;
+      (vscode.workspace.onDidOpenTextDocument as Mock).mockImplementation((handler) => {
+        openHandler = handler;
+        return { dispose: vi.fn() };
+      });
+
+      const diagnostics = new TscnDiagnostics(collection as unknown as vscode.DiagnosticCollection);
+      openHandler!(makeTscnDocument(VALID_TSCN));
+
+      expect(collection.set).not.toHaveBeenCalled();
+      diagnostics.dispose();
+    });
+
+    it('uses the configured lintDebounceMs instead of the 300ms default', () => {
+      mockDiagnosticsConfig({ lintDebounceMs: 1000 });
+      vi.useFakeTimers();
+      try {
+        let changeHandler: ((event: { document: vscode.TextDocument }) => void) | undefined;
+        (vscode.workspace.onDidChangeTextDocument as Mock).mockImplementation((handler) => {
+          changeHandler = handler;
+          return { dispose: vi.fn() };
+        });
+
+        const diagnostics = new TscnDiagnostics(
+          collection as unknown as vscode.DiagnosticCollection
+        );
+        const document = makeTscnDocument(VALID_TSCN);
+
+        changeHandler!({ document });
+
+        vi.advanceTimersByTime(300);
+        expect(collection.set).not.toHaveBeenCalled();
+
+        vi.advanceTimersByTime(700);
+        expect(collection.set).toHaveBeenCalledTimes(1);
+        diagnostics.dispose();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('clears all diagnostics and cancels pending lints when disabled mid-session', () => {
+      mockDiagnosticsConfig({ enabled: true });
+      vi.useFakeTimers();
+      try {
+        let configHandler: ((event: vscode.ConfigurationChangeEvent) => void) | undefined;
+        let changeHandler: ((event: { document: vscode.TextDocument }) => void) | undefined;
+        (vscode.workspace.onDidChangeConfiguration as Mock).mockImplementation((handler) => {
+          configHandler = handler;
+          return { dispose: vi.fn() };
+        });
+        (vscode.workspace.onDidChangeTextDocument as Mock).mockImplementation((handler) => {
+          changeHandler = handler;
+          return { dispose: vi.fn() };
+        });
+
+        const diagnostics = new TscnDiagnostics(
+          collection as unknown as vscode.DiagnosticCollection
+        );
+        const document = makeTscnDocument(VALID_TSCN);
+        changeHandler!({ document });
+
+        mockDiagnosticsConfig({ enabled: false });
+        configHandler!({ affectsConfiguration: (section: string) => section === 'textscene.diagnostics' });
+
+        expect(collection.clear).toHaveBeenCalledTimes(1);
+
+        // The pending debounced lint from before the toggle must not fire.
+        vi.advanceTimersByTime(1000);
+        expect(collection.set).not.toHaveBeenCalled();
+        diagnostics.dispose();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('re-lints open documents when re-enabled mid-session', () => {
+      mockDiagnosticsConfig({ enabled: false });
+      let configHandler: ((event: vscode.ConfigurationChangeEvent) => void) | undefined;
+      (vscode.workspace.onDidChangeConfiguration as Mock).mockImplementation((handler) => {
+        configHandler = handler;
+        return { dispose: vi.fn() };
+      });
+      const document = makeTscnDocument(VALID_TSCN);
+      (vscode.workspace as unknown as { textDocuments: vscode.TextDocument[] }).textDocuments = [
+        document,
+      ];
+
+      const diagnostics = new TscnDiagnostics(collection as unknown as vscode.DiagnosticCollection);
+      expect(collection.set).not.toHaveBeenCalled();
+
+      mockDiagnosticsConfig({ enabled: true });
+      configHandler!({ affectsConfiguration: (section: string) => section === 'textscene.diagnostics' });
+
+      expect(collection.set).toHaveBeenCalledWith(document.uri, []);
+      diagnostics.dispose();
+    });
+
+    it('ignores configuration changes unrelated to textscene.diagnostics', () => {
+      mockDiagnosticsConfig({ enabled: true });
+      let configHandler: ((event: vscode.ConfigurationChangeEvent) => void) | undefined;
+      (vscode.workspace.onDidChangeConfiguration as Mock).mockImplementation((handler) => {
+        configHandler = handler;
+        return { dispose: vi.fn() };
+      });
+
+      const diagnostics = new TscnDiagnostics(collection as unknown as vscode.DiagnosticCollection);
+      configHandler!({ affectsConfiguration: () => false });
+
+      expect(collection.clear).not.toHaveBeenCalled();
+      diagnostics.dispose();
+    });
   });
 });
