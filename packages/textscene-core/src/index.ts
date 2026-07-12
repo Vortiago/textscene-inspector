@@ -25,7 +25,6 @@ export { isBinaryResourceType, stripResPrefix } from './resources/resourceProvid
 export {
   TscnCanvas,
   TscnSceneContents,
-  type TscnCanvasProps,
   NodeDispatcher,
   type NodeDispatcherProps,
   nodeComponentRegistry,

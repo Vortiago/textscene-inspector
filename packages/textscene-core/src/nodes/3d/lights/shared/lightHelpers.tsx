@@ -25,6 +25,7 @@
  * gizmo presence, so this is harmless for the test suite.
  */
 
+import type { RefObject } from 'react';
 import * as THREE from 'three';
 import { usePrimitiveHelper, correctHelperForParentGroup } from '../../../../r3f/hooks/useTHREEHelper';
 
@@ -48,7 +49,7 @@ const POINT_HELPER_SIZE = 0.25;
  * gate closed) tears down whatever was previously mounted.
  */
 function LightGizmoCommon<L extends THREE.Light, H extends THREE.Object3D & { update?: () => void; dispose?: () => void }>(
-  props: { lightRef: React.RefObject<L | null>; make: (light: L) => H }
+  props: { lightRef: RefObject<L | null>; make: (light: L) => H }
 ) {
   const visible = useGizmoVisible();
   const helper = usePrimitiveHelper<H>(
@@ -63,7 +64,7 @@ function LightGizmoCommon<L extends THREE.Light, H extends THREE.Object3D & { up
 }
 
 interface DirectionalGizmoProps {
-  lightRef: React.RefObject<THREE.DirectionalLight | null>;
+  lightRef: RefObject<THREE.DirectionalLight | null>;
 }
 
 export function DirectionalLightGizmo({ lightRef }: DirectionalGizmoProps) {
@@ -79,7 +80,7 @@ export function DirectionalLightGizmo({ lightRef }: DirectionalGizmoProps) {
 }
 
 interface PointGizmoProps {
-  lightRef: React.RefObject<THREE.PointLight | null>;
+  lightRef: RefObject<THREE.PointLight | null>;
 }
 
 export function PointLightGizmo({ lightRef }: PointGizmoProps) {
@@ -99,7 +100,7 @@ export function PointLightGizmo({ lightRef }: PointGizmoProps) {
 }
 
 interface SpotGizmoProps {
-  lightRef: React.RefObject<THREE.SpotLight | null>;
+  lightRef: RefObject<THREE.SpotLight | null>;
 }
 
 export function SpotLightGizmo({ lightRef }: SpotGizmoProps) {
