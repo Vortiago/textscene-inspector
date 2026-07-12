@@ -225,8 +225,8 @@ A user's `.tscn` opened as the active scene (the selector shows it as "(Uploaded
 _Avoid_: "imported scene"; treating an upload as a **Fixture** (fixtures are backend-served; uploads must never be).
 
 **Resource upload**:
-A user file fulfilling one `res://` reference — added per-path from a **Missing resource** row, or matched during **Multi-file matching**. Frontend-only like the **Uploaded scene**; removing one flips its consumers back to missing.
-_Avoid_: conflating with **Uploaded scene** (one replaces the active scene, the other fulfills a reference the scene made).
+A user file fulfilling one `res://` reference — added per-path from a **Missing resource** row, or matched during **Multi-file matching**. Frontend-only like the **Uploaded scene**, and scoped to the corpus active when it was added: a fixture corpus and the user's own files are separate worlds, so an upload never bleeds into another corpus's same-named path. Removing one flips its consumers back to missing.
+_Avoid_: conflating with **Uploaded scene** (one replaces the active scene, the other fulfills a reference the scene made); global uploads that shadow every corpus.
 
 **Multi-file matching**:
 The one-gesture drop/select contract: the root-most `.tscn` in the batch becomes the **Uploaded scene** (the one no other dropped scene references), and every other file fulfills a `res://` reference by case-insensitive basename — matched against the scene's ExtResources **and** the current **Missing resource** list, so a sub-scene's own dependencies arrive by repeated drops, and a batch with no `.tscn` fulfills missing rows directly. Files matching nothing are ignored.
