@@ -16,6 +16,7 @@ import { useCallback, useEffect, useState } from 'react';
 import * as THREE from 'three';
 import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
 import { useOptionalCameraControl } from './contexts/CameraControlContext.js';
+import { useOptionalSelection } from './contexts/SelectionContext.js';
 import { useViewportMode } from './contexts/ViewportModeContext.js';
 import { SceneResourcesProvider } from './SceneResourcesContext.js';
 import { NodeDispatcher } from './NodeDispatcher.js';
@@ -167,14 +168,27 @@ function ActiveCameraSwitcher() {
  * free-orbit mode (never when a Camera3D is the active camera) and only during
  * a short settle window so async-loaded content (GLB, instanced scenes) is
  * captured without fighting the user's subsequent orbit.
+ *
+ * A second effect re-runs a single delayed fit whenever the active selection
+ * changes: selection-gated gizmos (e.g. PointLightHelper for OmniLight3D) only
+ * mount AFTER the selection is applied, so they are invisible to the load-time
+ * timers if the user selects a node after those timers have already fired.
+ * This closes the race that produced nondeterministic framing in the visual
+ * regression harness (#243) and also improves the live-app UX: the camera
+ * widens to include a large gizmo even after the initial settle is done.
+ *
+ * Exported for unit testing — it is an internal canvas component that must
+ * remain mounted inside `<Canvas>` (needs `useThree`).
  */
-function CameraFit() {
+export function CameraFit() {
   const hierarchy = useOptionalHierarchy();
   const control = useOptionalCameraControl();
+  const selection = useOptionalSelection();
   const get = useThree((s) => s.get);
   const rootKey = hierarchy?.sceneGraph?.rootScene ?? '';
   const hasScene = !!hierarchy?.sceneGraph;
   const activeCameraPath = control?.activeCameraPath ?? null;
+  const selectedNodePath = selection?.selectedNodePath ?? null;
 
   useEffect(() => {
     if (!hasScene || activeCameraPath) return undefined;
@@ -186,6 +200,15 @@ function CameraFit() {
     );
     return () => timers.forEach(clearTimeout);
   }, [rootKey, hasScene, activeCameraPath, get]);
+
+  useEffect(() => {
+    if (!hasScene || activeCameraPath) return undefined;
+    const timer = setTimeout(() => {
+      const state = get();
+      frameSceneBounds(state.scene, state.camera, state.controls as OrbitLike | null);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [selectedNodePath, hasScene, activeCameraPath, get]);
 
   return null;
 }
