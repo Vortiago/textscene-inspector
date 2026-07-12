@@ -115,7 +115,7 @@ packages/textscene-core/src/resources/materials/[materialtype]/
 #### Utilities Available
 - `utils/colorParser.ts` - Parse Godot Color format
 - `utils/transform.ts` - Transform matrix conversions
-- `utils/lightConstants.ts` - Light-related constants
+- `r3f/lightConstants.ts` - Light-related constants (render-side only)
 - `utils/shadowUtils.ts` - Shadow configuration helpers
 - `utils/lightTargetUtils.ts` - Light target positioning
 - `utils/nodePath.ts` - Scene-tree node path helpers

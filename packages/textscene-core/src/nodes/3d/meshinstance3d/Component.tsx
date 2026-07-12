@@ -18,7 +18,7 @@
  */
 
 import * as THREE from 'three';
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import type { MeshInstance3DProperties } from './types';
 import type {
   TscnExternalResource,
@@ -229,18 +229,10 @@ export function MeshInstance3D({ node }: NodeComponentProps) {
   // unresolved — it loads asynchronously below.
   if (!meshResource && !arrayMeshPath) {
     return (
-      <mesh
-        name={node.name}
-        position={position}
-        rotation={rotation}
-        scale={scale}
-        visible={visible}
-        castShadow={castShadow}
-        receiveShadow
-      >
+      <MeshShell name={node.name} position={position} rotation={rotation} scale={scale} visible={visible} castShadow={castShadow}>
         <boxGeometry args={[1, 1, 1]} />
         <meshBasicMaterial color={0xff00ff} wireframe />
-      </mesh>
+      </MeshShell>
     );
   }
 
@@ -250,18 +242,10 @@ export function MeshInstance3D({ node }: NodeComponentProps) {
   if (arrayMeshPath) {
     if (arrayMeshResult.status === 'unavailable') {
       return (
-        <mesh
-          name={node.name}
-          position={position}
-          rotation={rotation}
-          scale={scale}
-          visible={visible}
-          castShadow={castShadow}
-          receiveShadow
-        >
+        <MeshShell name={node.name} position={position} rotation={rotation} scale={scale} visible={visible} castShadow={castShadow}>
           <boxGeometry args={[1, 1, 1]} />
           <meshBasicMaterial color={0xff00ff} wireframe />
-        </mesh>
+        </MeshShell>
       );
     }
     if (!arrayMeshResult.value) return null;
@@ -275,15 +259,7 @@ export function MeshInstance3D({ node }: NodeComponentProps) {
     const surfacePaths = materialPaths.length > 0 ? materialPaths : [null];
     const multiSurface = surfacePaths.length > 1;
     return (
-      <mesh
-        name={node.name}
-        position={position}
-        rotation={rotation}
-        scale={scale}
-        visible={visible}
-        castShadow={castShadow}
-        receiveShadow
-      >
+      <MeshShell name={node.name} position={position} rotation={rotation} scale={scale} visible={visible} castShadow={castShadow}>
         <primitive object={geometry} attach="geometry" />
         {surfacePaths.map((path, i) => (
           <ArrayMeshSurfaceMaterial
@@ -293,7 +269,7 @@ export function MeshInstance3D({ node }: NodeComponentProps) {
             shadowSide={shadowFlags.shadowSide}
           />
         ))}
-      </mesh>
+      </MeshShell>
     );
   }
 
@@ -306,31 +282,15 @@ export function MeshInstance3D({ node }: NodeComponentProps) {
   // is still used for the placeholder branch trigger.
   if (firstMissingPath !== null) {
     return (
-      <mesh
-        name={node.name}
-        position={position}
-        rotation={rotation}
-        scale={scale}
-        visible={visible}
-        castShadow={castShadow}
-        receiveShadow
-      >
+      <MeshShell name={node.name} position={position} rotation={rotation} scale={scale} visible={visible} castShadow={castShadow}>
         {geometryElement}
         <meshStandardMaterial color="magenta" />
-      </mesh>
+      </MeshShell>
     );
   }
 
   return (
-    <mesh
-      name={node.name}
-      position={position}
-      rotation={rotation}
-      scale={scale}
-      visible={visible}
-      castShadow={castShadow}
-      receiveShadow
-    >
+    <MeshShell name={node.name} position={position} rotation={rotation} scale={scale} visible={visible} castShadow={castShadow}>
       {geometryElement}
       <StandardMaterialSlot
         scalars={materialScalars}
@@ -356,6 +316,39 @@ export function MeshInstance3D({ node }: NodeComponentProps) {
           shadowSide={shadowFlags.shadowSide}
         />
       ))}
+    </MeshShell>
+  );
+}
+
+interface MeshShellProps {
+  name: string;
+  position: [number, number, number];
+  rotation: [number, number, number];
+  scale: [number, number, number];
+  visible: boolean;
+  castShadow: boolean;
+  children: ReactNode;
+}
+
+/**
+ * Shared attribute shell for every `<mesh>` branch in MeshInstance3D.
+ * All five branches (placeholder, unavailable ArrayMesh, loading ArrayMesh,
+ * missing-texture and fully-resolved) set the same six positional/visibility
+ * props; this helper keeps them in one place so a future prop rename or
+ * addition only changes one definition.
+ */
+function MeshShell({ name, position, rotation, scale, visible, castShadow, children }: MeshShellProps) {
+  return (
+    <mesh
+      name={name}
+      position={position}
+      rotation={rotation}
+      scale={scale}
+      visible={visible}
+      castShadow={castShadow}
+      receiveShadow
+    >
+      {children}
     </mesh>
   );
 }
