@@ -50,6 +50,32 @@ _Avoid_: "callback API", "strict mode flag".
 The lenient parser's shared primitives for reading a raw property string into a typed scalar/vector — `intOr`/`floatOr`/`boolOr`/`enumOr`/`vec2Or` (take a fallback, always return) and `parseOptionalInt` (returns `undefined` when unset). One contract: fall back **silently when absent**, **warn-then-fall-back when present but unparseable**. Wraps only the canonical `parseVector2` leaf scanner (via `vec2Or`); `parseVector2`/`parseVector3` (`parser/vectors.ts`) and the canonical `parseColor` (`utils/colorParser.ts`), which the slices call directly, share `FLOAT_PATTERN_SOURCE` — the one float regex accepting scientific notation (`1e-05`, which Godot emits) and rejecting malformed components outright; one-off structured literals (`Vector2i`, `Rect2`, `frame_coords`) and the throwing `parseColor` in `standardmaterial3d` stay in their slice, while Control's `custom_minimum_size` now reads through the shared `parseOptionalVector2`. The grammar (`FLOAT_PATTERN_SOURCE`) is shared; the absent/error contract may **fork** per slice — `floatOr`/`intOr` warn-then-fallback for concrete-default scalars, `parseOptionalFloat`/`parseOptionalVector2` return `undefined` for optional properties, and `vec2Or`/`parseColor` keep their slice-specific fallbacks.
 _Avoid_: re-declaring per-node `intOr`/`floatOr` copies (the pattern this replaced); "validator" (that is the strict-linter path).
 
+### Linting
+
+**Diagnostic**:
+One linter finding: a **Severity**, a message, the node it concerns, the name of the check that produced it, and (usually) a line/column. Parse-phase findings currently share the `strict-parser` name; per-property identity arrives with the property-descriptor work.
+_Avoid_: "error" for a diagnostic of unknown severity; "issue" (ambiguous with the tracker).
+
+**Validator** (format check):
+A per-property format/range check that runs during strict parsing (dispatched by the **ParseObserver**) and inherits down the node base-type chain. A validator failure is **always an error** — a format violation is objectively invalid; that is the sorting principle for where a new check goes.
+_Avoid_: advisory/warning conditions as validators (they belong in a **Lint rule**); "validator" for the parser-side **Value decoder**s.
+
+**Lint rule** (semantic check):
+A per-node-type check that runs on the parsed scene, matches its node type exactly (no base-type inheritance), and chooses its own **Severity** — the only home for advisory conditions.
+_Avoid_: bare "rule" for a **Validator**; expecting base-class inheritance from rules (that is the validators' walk).
+
+**Severity**:
+Two levels. **error** — the file is objectively invalid per the TSCN format; fails the CLI and CI, and no committed fixture may carry one. **warning** — legal but suspicious; advisory, so healthy scenes and positive fixtures may carry them and nothing fails. (`info` is retired.)
+_Avoid_: advisory conditions as errors (breaks fixtureLint); severity as presentation (surfaces map it, never redefine it).
+
+**Live lint, settled render**:
+The cross-host contract: every lint surface describes the text **as currently typed** (the web gutter reads the raw buffer; VS Code's Problems panel re-lints keystroke-debounced), while the rendered scene follows **committed** text (**Hold-last-valid** in the web, **Save-driven refresh** in VS Code). Diagnostics may be transiently red mid-edit; the viewport never is.
+_Avoid_: gating lint on a clean parse (lint must see the broken text); rendering the raw mid-edit buffer.
+
+**Instance-opaque linting**:
+Existence checks (node names, NodePath targets) never assume visibility into an instanced sub-scene's internals: a reference that crosses an `instance=` boundary stays silent rather than false-positive. The linter reads the static text of one file — never the composed **Live scene tree**.
+_Avoid_: "fixing" the silence by resolving instance internals (the linter must stay file-local and React-free).
+
 ### Code organization
 
 **Vertical slice**:
