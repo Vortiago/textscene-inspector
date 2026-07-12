@@ -9,12 +9,15 @@
  * IMMEDIATELY on the playing → paused edge — and does NOT flush on the
  * playing → stopped edge, where transport stop()/deselection already reset
  * the playhead to 0 and a flush would overwrite that reset.
+ *
+ * The edge-flush contract is unit-tested at the pure reducer level in
+ * stepPlayback.test.ts; these tests verify the mounted adapter behavior.
  */
 import { useRef } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
-import { flushTimeOnPauseEdge, usePlaybackLoop, type PlaybackLoopParams } from './usePlaybackLoop';
+import { usePlaybackLoop, type PlaybackLoopParams } from './usePlaybackLoop';
 import type { PlayState } from '../contexts/AnimationTransportContext';
 
 /** A mixer + single 1s clip on a movable object, matching the driver shape. */
@@ -194,28 +197,3 @@ describe('usePlaybackLoop — reconfigureKey (#224 live loop-override)', () => {
   });
 });
 
-describe('flushTimeOnPauseEdge (the shared WI-213 edge-flush contract)', () => {
-  it('flushes the exact time, unthrottled, on the playing → paused edge', () => {
-    const reportTime = vi.fn();
-    flushTimeOnPauseEdge('playing', 'paused', () => 0.42, reportTime);
-    expect(reportTime).toHaveBeenCalledTimes(1);
-    expect(reportTime).toHaveBeenCalledWith(0.42, { immediate: true });
-  });
-
-  it('does nothing when playback stays playing, was not playing before, or STOPS', () => {
-    const reportTime = vi.fn();
-    flushTimeOnPauseEdge('playing', 'playing', () => 0.42, reportTime);
-    // stopped: stop()/deselection reset the playhead to 0 — a flush here
-    // would overwrite that reset (the stuck-scrubber bug).
-    flushTimeOnPauseEdge('playing', 'stopped', () => 0.42, reportTime);
-    flushTimeOnPauseEdge('paused', 'stopped', () => 0.42, reportTime);
-    flushTimeOnPauseEdge('stopped', 'stopped', () => 0.42, reportTime);
-    expect(reportTime).not.toHaveBeenCalled();
-  });
-
-  it('does nothing when the driver has no live playhead (getTime → null)', () => {
-    const reportTime = vi.fn();
-    flushTimeOnPauseEdge('playing', 'paused', () => null, reportTime);
-    expect(reportTime).not.toHaveBeenCalled();
-  });
-});

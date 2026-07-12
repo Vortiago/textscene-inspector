@@ -15,6 +15,10 @@
  * from the parameter state — so the transport registers a single read-only
  * entry (the dominant clip) rather than a selectable list. Loads STOPPED;
  * play is user-initiated; stop / deselect restores the authored pose.
+ *
+ * The per-frame transport-actuation decision is delegated to the pure
+ * `stepPlayback` reducer; this component is a thin adapter that actuates the
+ * returned command on N weighted actions (the blend program) at once.
  */
 
 import { useEffect, useMemo, useRef } from 'react';
@@ -30,7 +34,8 @@ import {
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useOptionalSelection } from '../../../r3f/contexts/SelectionContext';
 import { useAnimationDriver } from '../../../r3f/contexts/AnimationDriverContext';
-import { flushTimeOnPauseEdge } from '../../../r3f/animation/usePlaybackLoop';
+import { stepPlayback } from '../../../r3f/animation/stepPlayback';
+import { startAction, seekAction } from '../../../r3f/animation/actionHelpers';
 import { snapshotSubtree, restoreSnapshot } from '../../../r3f/animation/poseSnapshot';
 import { resolveTreeRoot } from './treeResources';
 import { evaluateTree } from './evaluateTree';
@@ -38,14 +43,15 @@ import { resolveAnimPlayerPath } from './resolveAnimPlayer';
 import type { AnimationTreeProperties } from './types';
 
 /**
- * The dominant clip's live playhead, for `flushTimeOnPauseEdge`'s `getTime`
- * contract: `null` means "no live playhead to flush," never a fabricated
- * `0`. An authored blend program can name a clip absent from the resolved
- * driver's clips — the mount effect's `clips.find` skips it, so `dominant`
- * is set (from `program`, independent of the driver) but `actions` never
- * gained an entry for it. Falling back to `0` there would force the paused
- * readout to snap to zero on the very next playing→paused edge instead of
- * skipping the flush, as if the playhead had actually reached the start.
+ * The dominant clip's live playhead, used by the adapter to provide the
+ * `liveTime` for `stepPlayback`: `null` means "no live playhead to flush,"
+ * never a fabricated `0`. An authored blend program can name a clip absent
+ * from the resolved driver's clips — the mount effect's `clips.find` skips
+ * it, so `dominant` is set (from `program`, independent of the driver) but
+ * `actions` never gained an entry for it. Falling back to `0` there would
+ * force the paused readout to snap to zero on the very next playing→paused
+ * edge instead of skipping the flush, as if the playhead had actually reached
+ * the start.
  */
 export function dominantActionTime(
   dominant: { clip: string } | null,
@@ -147,10 +153,11 @@ export function AnimationTree({ node, children }: NodeComponentProps) {
     };
   }, [isActive, driver, program]);
 
-  // Deliberately mirrors usePlaybackLoop's play/paused/stopped state machine,
-  // but drives N weighted actions (the blend program) at once instead of one
-  // selected clip — the single-clip shared loop doesn't model weights. Kept
-  // separate until a second weighted driver justifies generalising it.
+  // Thin adapter: build stepPlayback input from refs, call the reducer, then
+  // actuate the returned command on N weighted actions (the blend program).
+  // Blend weighting stays here — this does NOT merge into usePlaybackLoop
+  // (its "kept separate until a second weighted driver" stance stands,
+  // per ADR-0011/0014/0015/0019).
   const prevStateRef = useRef<PlayState>('stopped');
   const prevTimeRef = useRef(0);
   useFrame((_, delta) => {
@@ -162,26 +169,29 @@ export function AnimationTree({ node, children }: NodeComponentProps) {
     }
     const actions = actionsRef.current;
 
-    flushTimeOnPauseEdge(
-      prevStateRef.current,
+    const liveTime = dominantActionTime(dominant, actions);
+    const step = stepPlayback({
+      prevState: prevStateRef.current,
       state,
-      () => dominantActionTime(dominant, actions),
-      transport.reportTime
-    );
+      prevTime: prevTimeRef.current,
+      transportTime: transport.time,
+      liveTime,
+      clipChanged: false,
+    });
 
-    switch (state) {
-      case 'playing': {
+    if (step.flushTime && liveTime !== null) {
+      transport.reportTime(liveTime, { immediate: true });
+    }
+
+    switch (step.command) {
+      case 'ensure-playing': {
         for (const { clip, weight, timeScale } of program) {
           const action = actions.get(clip);
           if (!action) continue;
           if (!action.isRunning()) {
             // Weights/time scales are static (authored parameter state), so set
             // them once when the action starts rather than every frame.
-            action.paused = false;
-            action.enabled = true;
-            action.setEffectiveWeight(weight);
-            action.setEffectiveTimeScale(timeScale);
-            action.play();
+            startAction(action, { weight, timeScale });
           }
         }
         // #224: the preview speed multiplier applies here too (it's a global
@@ -193,31 +203,27 @@ export function AnimationTree({ node, children }: NodeComponentProps) {
         if (dominant) transport.reportTime(actions.get(dominant.clip)?.time ?? 0);
         break;
       }
-      case 'paused': {
-        if (transport.time !== prevTimeRef.current) {
-          // Re-apply each clip's blend weight on seek — a freshly play()-ed
-          // action defaults to weight 1, which would over-blend the pose.
-          for (const { clip, weight, timeScale } of program) {
-            const action = actions.get(clip);
-            if (!action) continue;
-            action.enabled = true;
-            action.setEffectiveWeight(weight);
-            action.setEffectiveTimeScale(timeScale);
-            action.play();
-            action.paused = true;
-            action.time = transport.time;
-          }
-          mixer.update(0);
-        } else {
-          for (const action of actions.values()) action.paused = true;
+      case 'seek': {
+        // Re-apply each clip's blend weight on seek — a freshly play()-ed
+        // action defaults to weight 1, which would over-blend the pose.
+        for (const { clip, weight, timeScale } of program) {
+          const action = actions.get(clip);
+          if (!action) continue;
+          seekAction(action, transport.time, { weight, timeScale });
         }
+        mixer.update(0);
         break;
       }
-      case 'stopped': {
-        if (prevStateRef.current !== 'stopped') {
-          mixer.stopAllAction();
-          restoreSnapshot(snapshotRef.current);
-        }
+      case 'hold-paused': {
+        for (const action of actions.values()) action.paused = true;
+        break;
+      }
+      case 'stop-and-restore': {
+        mixer.stopAllAction();
+        restoreSnapshot(snapshotRef.current);
+        break;
+      }
+      case 'none': {
         break;
       }
     }

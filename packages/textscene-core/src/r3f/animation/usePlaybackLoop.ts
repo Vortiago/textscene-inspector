@@ -11,11 +11,18 @@
  *                         `loop_mode` vs a GLB's default looping).
  *   - `restore`         — each driver snapshots and restores its own pose
  *                         (value-track targets vs the whole GLB subtree).
+ *
+ * The per-frame decision (which transport edge fired, whether to flush time,
+ * whether this is a fresh play entry) is delegated to the pure `stepPlayback`
+ * reducer; this hook is a thin adapter that builds the input, calls it, and
+ * actuates the result on the mixer.
  */
 import { useRef, type MutableRefObject } from 'react';
 import { useFrame } from '@react-three/fiber';
 import type { AnimationAction, AnimationMixer } from 'three';
 import type { PlayState } from '../contexts/AnimationTransportContext';
+import { stepPlayback } from './stepPlayback';
+import { startAction, seekAction } from './actionHelpers';
 
 export interface PlaybackLoopParams {
   playState: PlayState;
@@ -39,40 +46,12 @@ export interface PlaybackLoopParams {
    * Report the live playhead to the transport (for the scrubber). The
    * transport throttles this internally (WI-213); pass `{ immediate: true }`
    * to force an unthrottled flush — this loop does so once on the
-   * playing → paused edge (`flushTimeOnPauseEdge`) so the paused readout is
-   * never left showing a throttle-stale time.
+   * playing → paused edge so the paused readout is never left showing a
+   * throttle-stale time.
    */
   reportTime: (t: number, options?: { immediate?: boolean }) => void;
   /** Restore the authored pose when playback stops. */
   restore: () => void;
-}
-
-/**
- * WI-213 edge-flush, shared by every transport driver's frame loop
- * (`usePlaybackLoop`, AnimationTree's weighted loop, AnimatedSprite2D's
- * frame stepper): `reportTime()` is throttled by the transport, so the LAST
- * report before playback leaves 'playing' can be up to the throttle window
- * stale — and the paused state doesn't report again on its own. Call this
- * once per frame BEFORE acting on `state`; on the playing → PAUSED edge it
- * flushes the driver's exact current time unthrottled so the paused readout
- * is never left stale. `getTime` returning `null` means the driver has no
- * live playhead to flush (e.g. no action selected).
- *
- * Deliberately does NOT fire on the playing → stopped edge: every stopped
- * transition (transport `stop()`, deselection's `registerPlayer` cleanup)
- * already resets the transport time to 0, and flushing the pre-stop
- * playhead here would overwrite that reset — leaving the scrubber/timecode
- * stuck at the old time while the pose shows the authored rest state.
- */
-export function flushTimeOnPauseEdge(
-  prevState: PlayState,
-  state: PlayState,
-  getTime: () => number | null,
-  reportTime: (t: number, options?: { immediate?: boolean }) => void
-): void {
-  if (prevState !== 'playing' || state !== 'paused') return;
-  const time = getTime();
-  if (time !== null) reportTime(time, { immediate: true });
 }
 
 export function usePlaybackLoop(params: PlaybackLoopParams): void {
@@ -104,39 +83,47 @@ export function usePlaybackLoop(params: PlaybackLoopParams): void {
     }
     prevReconfigureKeyRef.current = params.reconfigureKey;
 
-    flushTimeOnPauseEdge(prevStateRef.current, playState, () => action?.time ?? null, params.reportTime);
+    const step = stepPlayback({
+      prevState: prevStateRef.current,
+      state: playState,
+      prevTime: prevTimeRef.current,
+      transportTime,
+      liveTime: action?.time ?? null,
+      clipChanged,
+    });
 
-    switch (playState) {
-      case 'playing': {
+    if (step.flushTime && action !== null) {
+      params.reportTime(action.time, { immediate: true });
+    }
+
+    switch (step.command) {
+      case 'ensure-playing': {
         if (action && !action.isRunning()) {
-          action.paused = false;
-          action.enabled = true;
-          action.play();
+          startAction(action);
         }
         mixer.update(delta * speedScale);
         if (action) params.reportTime(action.time);
         break;
       }
-      case 'paused': {
+      case 'seek': {
         if (action) {
-          // Apply an external seek by sampling the clip at the transport time.
-          if (transportTime !== prevTimeRef.current) {
-            action.enabled = true;
-            action.play();
-            action.paused = true;
-            action.time = transportTime;
-            mixer.update(0);
-          } else {
-            action.paused = true;
-          }
+          seekAction(action, transportTime);
+          mixer.update(0);
         }
         break;
       }
-      case 'stopped': {
-        if (prevStateRef.current !== 'stopped') {
-          mixer.stopAllAction();
-          params.restore();
+      case 'hold-paused': {
+        if (action) {
+          action.paused = true;
         }
+        break;
+      }
+      case 'stop-and-restore': {
+        mixer.stopAllAction();
+        params.restore();
+        break;
+      }
+      case 'none': {
         break;
       }
     }
