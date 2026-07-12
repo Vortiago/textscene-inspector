@@ -100,11 +100,10 @@ describe('CharacterBody3D Linter', () => {
     ]);
 
     describe('up_direction validation', () => {
-      it('should accept custom up_direction', () => {
-        // Should have info diagnostic about non-standard up direction
+      it('should warn about non-standard up_direction', () => {
         expectDiagnostic(scene(node('CharacterBody3D', { up_direction: 'Vector3(0, 0, 1)' }), collisionShape3d), {
           ruleName: 'characterbody3d-non-standard-up-direction',
-          severity: 'info',
+          severity: 'warning',
         });
       });
     });

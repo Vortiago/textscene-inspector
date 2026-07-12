@@ -65,7 +65,7 @@ function checkPathFollow2D(context: RuleContext): Diagnostic[] {
 
   if (rawProps.progress !== undefined && rawProps.progress_ratio !== undefined) {
     diagnostics.push({
-      severity: 'info',
+      severity: 'warning',
       message: `PathFollow2D has both 'progress' and 'progress_ratio' set. Note that 'progress_ratio' takes precedence and 'progress' will be ignored.`,
       nodeName: node.name,
       nodeType: node.type,

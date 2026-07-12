@@ -5,18 +5,20 @@
 import type { TscnScene, TscnNode } from '../parser/types';
 
 /**
- * Diagnostic severity levels
+ * Diagnostic severity levels.
+ * `error` — objectively invalid per the TSCN format; fails CLI/CI.
+ * `warning` — legal but suspicious; advisory only.
  */
-export type Severity = 'error' | 'warning' | 'info';
+export type Severity = 'error' | 'warning';
 
 /**
- * Canonical severity ranking (lower = more severe): error, then warning,
- * then info. The single source of truth for every severity comparison —
+ * Canonical severity ranking (lower = more severe): error, then warning.
+ * The single source of truth for every severity comparison —
  * `Linter`'s own diagnostic sort, and any host (e.g. the web app's Source
- * pane gutter) that groups/ranks diagnostics by severity — so a future 4th
+ * pane gutter) that groups/ranks diagnostics by severity — so a future
  * severity level or reordering only needs updating here.
  */
-export const SEVERITY_ORDER: Record<Severity, number> = { error: 0, warning: 1, info: 2 };
+export const SEVERITY_ORDER: Record<Severity, number> = { error: 0, warning: 1 };
 
 /**
  * A diagnostic message reporting an issue

@@ -192,15 +192,15 @@ describe('Skeleton3D Linter', () => {
     });
 
     describe('debug mode detection', () => {
-      it('should provide info when show_rest_only is enabled', () => {
+      it('should warn when show_rest_only is enabled', () => {
         expectDiagnostic(scene(node('Skeleton3D', { show_rest_only: true })), {
           ruleName: 'skeleton3d-debug-mode',
-          severity: 'info',
+          severity: 'warning',
           contains: ['debugging mode', 'rest pose'],
         });
       });
 
-      it('should not provide info when show_rest_only is false', () => {
+      it('should not warn when show_rest_only is false', () => {
         expectNoDiagnostic(scene(node('Skeleton3D', { show_rest_only: false })), {
           ruleName: 'skeleton3d-debug-mode',
         });
@@ -208,10 +208,10 @@ describe('Skeleton3D Linter', () => {
     });
 
     describe('deprecated feature detection', () => {
-      it('should provide info about deprecated animate_physical_bones', () => {
+      it('should warn about deprecated animate_physical_bones', () => {
         expectDiagnostic(scene(node('Skeleton3D', { animate_physical_bones: true })), {
           ruleName: 'skeleton3d-deprecated-feature',
-          severity: 'info',
+          severity: 'warning',
           contains: ['deprecated', 'SkeletonModifier3D'],
         });
       });
@@ -223,24 +223,20 @@ describe('Skeleton3D Linter', () => {
       });
     });
 
-    describe('modifier mode info', () => {
-      it('should provide info when modifier_callback_mode_process is PHYSICS', () => {
-        expectDiagnostic(scene(node('Skeleton3D', { modifier_callback_mode_process: 0 })), {
+    describe('modifier_callback_mode_process (no diagnostic)', () => {
+      it('should not produce a diagnostic for PHYSICS mode', () => {
+        expectNoDiagnostic(scene(node('Skeleton3D', { modifier_callback_mode_process: 0 })), {
           ruleName: 'skeleton3d-modifier-mode',
-          severity: 'info',
-          contains: ['PHYSICS', 'physics processing'],
         });
       });
 
-      it('should provide info when modifier_callback_mode_process is MANUAL', () => {
-        expectDiagnostic(scene(node('Skeleton3D', { modifier_callback_mode_process: 2 })), {
+      it('should not produce a diagnostic for MANUAL mode', () => {
+        expectNoDiagnostic(scene(node('Skeleton3D', { modifier_callback_mode_process: 2 })), {
           ruleName: 'skeleton3d-modifier-mode',
-          severity: 'info',
-          contains: ['MANUAL', 'manually call'],
         });
       });
 
-      it('should not provide info for default IDLE mode', () => {
+      it('should not produce a diagnostic for default IDLE mode', () => {
         expectNoDiagnostic(scene(node('Skeleton3D', { modifier_callback_mode_process: 1 })), {
           ruleName: 'skeleton3d-modifier-mode',
         });
@@ -328,10 +324,10 @@ describe('Skeleton3D Linter', () => {
           })
         )
       );
-      // Should have multiple info messages
-      expect(diagnostics.length).toBeGreaterThan(1);
-      const infoMessages = diagnostics.filter(d => d.severity === 'info');
-      expect(infoMessages.length).toBeGreaterThan(0);
+      // Should have multiple warning messages (show_rest_only + animate_physical_bones)
+      expect(diagnostics.length).toBeGreaterThanOrEqual(2);
+      const warnings = diagnostics.filter(d => d.severity === 'warning');
+      expect(warnings.length).toBeGreaterThan(0);
     });
 
     it('should handle skeleton with all properties correctly set', () => {

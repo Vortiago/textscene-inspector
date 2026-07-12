@@ -518,23 +518,7 @@ visible = true
         }],
       };
 
-      const infoRule: LintRule = {
-        meta: {
-          name: 'test-info-rule',
-          description: 'Generate info',
-          category: 'validation',
-        },
-        check: () => [{
-          severity: 'info',
-          message: 'Info',
-          nodeName: 'Root',
-          nodeType: 'Node3D',
-          ruleName: 'test-info-rule',
-        }],
-      };
-
-      // Register in reverse order
-      ruleRegistry.register(infoRule);
+      // Register in reverse order to verify sorting overrides registration order
       ruleRegistry.register(warningRule);
       ruleRegistry.register(errorRule);
 
@@ -548,10 +532,8 @@ visible = true
       const severities = diagnostics.map(d => d.severity);
       const errorIndex = severities.indexOf('error');
       const warningIndex = severities.indexOf('warning');
-      const infoIndex = severities.indexOf('info');
 
       expect(errorIndex).toBeLessThan(warningIndex);
-      expect(warningIndex).toBeLessThan(infoIndex);
     });
 
     it('should preserve order within same severity level', () => {
@@ -741,7 +723,7 @@ invalidproperty
         check: (context) => {
           if (context.node.name === 'Root') {
             return [{
-              severity: 'info',
+              severity: 'warning',
               message: 'Found root node',
               nodeName: context.node.name,
               nodeType: context.node.type,
@@ -764,7 +746,7 @@ visible = true
 
       expect(diagnostics).toHaveLength(1);
       expect(diagnostics[0]!.ruleName).toBe('test-integration-rule');
-      expect(diagnostics[0]!.severity).toBe('info');
+      expect(diagnostics[0]!.severity).toBe('warning');
       expect(diagnostics[0]!.message).toBe('Found root node');
 
       // Cleanup

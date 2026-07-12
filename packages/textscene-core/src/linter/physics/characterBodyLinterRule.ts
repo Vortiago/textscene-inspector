@@ -104,7 +104,7 @@ export function makeCharacterBodyLinterRule(dim: PhysicsDim): LintRule {
 
     pushZeroCollisionLayerMaskWarnings(diagnostics, node, rawProps, type, prefix);
 
-    // Info: Unusual up_direction (not the standard value for this dimension)
+    // Warning: Unusual up_direction (not the standard value for this dimension)
     if (rawProps.up_direction !== undefined) {
       const match = upDirRegex.exec(rawProps.up_direction);
       if (match) {
@@ -114,7 +114,7 @@ export function makeCharacterBodyLinterRule(dim: PhysicsDim): LintRule {
           dim === '2D' ? x === 0 && y === -1 : x === 0 && y === 1 && parseFloat(match[3] || '0') === 0;
         if (!isStandard) {
           diagnostics.push({
-            severity: 'info',
+            severity: 'warning',
             message: `${type} '${node.name}' has non-standard up_direction: ${rawProps.up_direction}. Standard is ${upStandard}. Ensure this is intentional for your game's orientation.`,
             nodeName: node.name,
             nodeType: node.type,

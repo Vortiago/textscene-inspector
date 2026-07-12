@@ -80,10 +80,10 @@ function checkPathFollow3D(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // INFO: Both progress and progress_ratio set (progress_ratio takes precedence)
+  // Warning: Both progress and progress_ratio set (progress_ratio takes precedence)
   if (rawProps.progress !== undefined && rawProps.progress_ratio !== undefined) {
     diagnostics.push({
-      severity: 'info',
+      severity: 'warning',
       message: `PathFollow3D has both 'progress' and 'progress_ratio' set. Note that 'progress_ratio' takes precedence and 'progress' will be ignored.`,
       nodeName: node.name,
       nodeType: node.type,

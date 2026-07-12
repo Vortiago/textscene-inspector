@@ -231,12 +231,8 @@ describe('AnimatedSprite2D Linter', () => {
       });
     });
 
-    it('should provide info when speed_scale is negative', () => {
-      expectDiagnostic(scene(spriteFrames, node('AnimatedSprite2D', { ...withFrames, speed_scale: -1.0 })), {
-        ruleName: 'animatedsprite2d-speed-scale-negative',
-        severity: 'info',
-        contains: ['speed_scale', 'negative', 'reverse'],
-      });
+    it('should not flag negative speed_scale (reverse playback is valid)', () => {
+      expectClean(scene(spriteFrames, node('AnimatedSprite2D', { ...withFrames, speed_scale: -1.0 })));
     });
 
     it('should pass with positive speed_scale', () => {
@@ -285,10 +281,10 @@ describe('AnimatedSprite2D Linter', () => {
   });
 
   describe('Semantic Validation (Deprecated Playing Property)', () => {
-    it('should provide info when playing property is used', () => {
+    it('should warn when playing property is used (deprecated)', () => {
       expectDiagnostic(scene(spriteFrames, node('AnimatedSprite2D', { ...withFrames, playing: true })), {
         ruleName: 'animatedsprite2d-playing-deprecated',
-        severity: 'info',
+        severity: 'warning',
         contains: ['playing', 'deprecated', 'Godot 4.0+'],
       });
     });
@@ -403,11 +399,8 @@ describe('AnimatedSprite2D Linter', () => {
       expect(diagnostics.some(d => d.message.includes('playing') && d.message.includes('deprecated'))).toBe(true);
     });
 
-    it('should validate reverse playback configuration', () => {
-      expectDiagnostic(
-        scene(spriteFrames, node('AnimatedSprite2D', { ...withFrames, animation: '"rewind"', speed_scale: -2.0 })),
-        { ruleName: 'animatedsprite2d-speed-scale-negative', severity: 'info' }
-      );
+    it('should not flag reverse playback configuration (negative speed_scale is valid)', () => {
+      expectClean(scene(spriteFrames, node('AnimatedSprite2D', { ...withFrames, animation: '"rewind"', speed_scale: -2.0 })));
     });
 
     it('should validate minimal valid configuration', () => {

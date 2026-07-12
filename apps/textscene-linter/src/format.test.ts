@@ -79,7 +79,7 @@ describe('formatDiagnostics', () => {
   it('formats one line per diagnostic with a single trailing blank line', () => {
     const lines = formatDiagnostics(
       'multi.tscn',
-      [makeDiagnostic(), makeDiagnostic({ severity: 'warning' }), makeDiagnostic({ severity: 'info' })],
+      [makeDiagnostic(), makeDiagnostic({ severity: 'warning' }), makeDiagnostic({ severity: 'warning' })],
       false
     );
 
@@ -92,7 +92,6 @@ describe('getSeverityIcon', () => {
   it('maps each known severity to its icon', () => {
     expect(getSeverityIcon('error')).toBe('✖');
     expect(getSeverityIcon('warning')).toBe('⚠');
-    expect(getSeverityIcon('info')).toBe('ℹ');
   });
 
   it('falls back to a bullet for unknown severities', () => {
@@ -109,7 +108,6 @@ describe('formatSeverity', () => {
   it('wraps severities in ANSI color codes when color is on', () => {
     expect(formatSeverity('error', true)).toBe('\x1b[31merror\x1b[0m');
     expect(formatSeverity('warning', true)).toBe('\x1b[33mwarning\x1b[0m');
-    expect(formatSeverity('info', true)).toBe('\x1b[36minfo\x1b[0m');
   });
 
   it('leaves unknown severities unstyled even when color is on', () => {
@@ -235,10 +233,10 @@ describe('formatGithubAnnotations', () => {
     expect(formatGithubAnnotations([file])[0]).toMatch(/^::warning /);
   });
 
-  it('formats an info-severity diagnostic as a ::notice workflow command', () => {
-    const file: FileDiagnostics = { filePath: 'info.tscn', diagnostics: [makeDiagnostic({ severity: 'info' })] };
+  it('formats a warning-severity diagnostic as a ::warning workflow command', () => {
+    const file: FileDiagnostics = { filePath: 'warn2.tscn', diagnostics: [makeDiagnostic({ severity: 'warning' })] };
 
-    expect(formatGithubAnnotations([file])[0]).toMatch(/^::notice /);
+    expect(formatGithubAnnotations([file])[0]).toMatch(/^::warning /);
   });
 
   it('omits line and col params when the diagnostic has no location', () => {

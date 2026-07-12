@@ -83,16 +83,7 @@ function checkAnimatedSprite2D(context: RuleContext): Diagnostic[] {
           ruleName: 'animatedsprite2d-speed-scale-zero',
         });
       }
-      // Info if speed_scale is negative (reverse playback)
-      else if (speedScale < 0) {
-        diagnostics.push({
-          severity: 'info',
-          message: `Property 'speed_scale' is negative (${speedScale}). Animation will play in reverse. This is uncommon but valid for backward playback.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: 'animatedsprite2d-speed-scale-negative',
-        });
-      }
+      // Negative speed_scale is valid for reverse playback — no diagnostic
     }
   }
 
@@ -112,10 +103,10 @@ function checkAnimatedSprite2D(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // Info for deprecated 'playing' property (Godot 4.0+)
+  // Warning: deprecated 'playing' property (Godot 4.0+)
   if (rawProps.playing !== undefined) {
     diagnostics.push({
-      severity: 'info',
+      severity: 'warning',
       message: `Property 'playing' is deprecated in Godot 4.0+. Use play() and stop() methods in code instead of setting this property in scene files.`,
       nodeName: node.name,
       nodeType: node.type,

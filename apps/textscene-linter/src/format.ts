@@ -102,10 +102,9 @@ export function formatJson(files: FileDiagnostics[]): string {
  * Total over the closed `Severity` union, so adding a severity fails tsc here
  * instead of silently falling through.
  */
-const GITHUB_COMMAND_BY_SEVERITY: Record<Severity, 'error' | 'warning' | 'notice'> = {
+const GITHUB_COMMAND_BY_SEVERITY: Record<Severity, 'error' | 'warning'> = {
   error: 'error',
   warning: 'warning',
-  info: 'notice',
 };
 
 /**
@@ -155,7 +154,6 @@ export function getSeverityIcon(severity: string): string {
   switch (severity) {
     case 'error': return '✖';
     case 'warning': return '⚠';
-    case 'info': return 'ℹ';
     default: return '•';
   }
 }
@@ -169,7 +167,6 @@ export function formatSeverity(severity: string, hasColor: boolean): string {
   switch (severity) {
     case 'error': return `\x1b[31m${severity}\x1b[0m`; // Red
     case 'warning': return `\x1b[33m${severity}\x1b[0m`; // Yellow
-    case 'info': return `\x1b[36m${severity}\x1b[0m`; // Cyan
     default: return severity;
   }
 }

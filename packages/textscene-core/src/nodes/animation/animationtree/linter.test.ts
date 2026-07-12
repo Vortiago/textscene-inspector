@@ -398,7 +398,7 @@ describe('AnimationTree Linter', () => {
         });
       });
 
-      it('should provide info when active is false', () => {
+      it('should warn when active is false', () => {
         expectDiagnostic(
           scene(
             blendTree,
@@ -408,7 +408,7 @@ describe('AnimationTree Linter', () => {
               active: false,
             })
           ),
-          { prop: 'active', severity: 'info', contains: ['false', 'will not process'] }
+          { prop: 'active', severity: 'warning', contains: ['false', 'will not process'] }
         );
       });
 
@@ -427,9 +427,9 @@ describe('AnimationTree Linter', () => {
       });
     });
 
-    describe('root_motion_track info', () => {
-      it('should provide info when root_motion_track is set', () => {
-        expectDiagnostic(
+    describe('root_motion_track (no diagnostic)', () => {
+      it('should not produce a diagnostic when root_motion_track is set', () => {
+        expectNoDiagnostic(
           scene(
             blendTree,
             node('AnimationTree', {
@@ -438,11 +438,11 @@ describe('AnimationTree Linter', () => {
               root_motion_track: 'NodePath("Skeleton3D:Root")',
             })
           ),
-          { prop: 'root_motion_track', severity: 'info', contains: ['Skeleton3D:Root'] }
+          { prop: 'root_motion_track' }
         );
       });
 
-      it('should not provide info when root_motion_track is empty', () => {
+      it('should not produce a diagnostic when root_motion_track is empty', () => {
         expectNoDiagnostic(
           scene(
             blendTree,
@@ -483,9 +483,9 @@ describe('AnimationTree Linter', () => {
       });
     });
 
-    describe('advance_expression_base_node info', () => {
-      it('should provide info when advance_expression_base_node is set', () => {
-        expectDiagnostic(
+    describe('advance_expression_base_node (no diagnostic)', () => {
+      it('should not produce a diagnostic when advance_expression_base_node is set', () => {
+        expectNoDiagnostic(
           scene(
             blendTree,
             node('AnimationTree', {
@@ -494,22 +494,7 @@ describe('AnimationTree Linter', () => {
               advance_expression_base_node: 'NodePath("..")',
             })
           ),
-          { prop: 'advance_expression_base_node', severity: 'info', contains: ['advanced feature'] }
-        );
-      });
-
-      it('should not provide info when advance_expression_base_node is relative parent', () => {
-        // The implementation shows info for ".."; this case is left as a spec note
-        // (info NOT expected for "..", ".", or empty paths) with no assertion.
-        lint(
-          scene(
-            blendTree,
-            node('AnimationTree', {
-              tree_root: 'SubResource("BlendTree_1")',
-              anim_player: 'NodePath("../AnimationPlayer")',
-              advance_expression_base_node: 'NodePath("..")',
-            })
-          )
+          { prop: 'advance_expression_base_node' }
         );
       });
     });
