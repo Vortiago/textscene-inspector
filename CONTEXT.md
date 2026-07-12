@@ -184,6 +184,32 @@ _Avoid_: loading-screen framing; treating a missing resource as a scene error.
 The active fixture's `res://` namespace — each vendored demo project keeps its own, resource lookups are scoped to it, and switching corpora must never serve the other corpus's bytes for a same-named `res://` path.
 _Avoid_: "fixture folder" (the root scopes resolution, not just storage); sharing one resource cache across corpora.
 
+### Content intake (web)
+
+**Fixture**:
+A built-in scene the previewer serves from its backend — the demo/test/showcase corpus: vendored Godot demos and games, examples, edge cases, and the unit fixtures the test suites also exercise. Fixtures exist to feed the tests and to show what the previewer can do, and they are the **only** content that ever comes from the backend.
+_Avoid_: "sample"/"template"; calling anything user-provided a fixture.
+
+**Fixture catalog**:
+The browsable, categorized manifest of every **Fixture** (generated; the optional vendored games corpus appends when present). All kinds stay browsable — unit and edge-case fixtures double as a node-coverage showcase. Deep links may reach unlisted sub-scenes, whose **Corpus root** derives from the path.
+_Avoid_: "scene library"; curating unit fixtures out of the public catalog.
+
+**Uploaded scene**:
+A user's `.tscn` opened as the active scene (the selector shows it as "(Uploaded: …)"). User uploads live in the frontend only — never sent to or stored on the backend; they reset on scene switch and leave the browser only via the Download export.
+_Avoid_: "imported scene"; treating an upload as a **Fixture** (fixtures are backend-served; uploads must never be).
+
+**Resource upload**:
+A user file fulfilling one `res://` reference — added per-path from a **Missing resource** row, or matched during **Multi-file matching**. Frontend-only like the **Uploaded scene**; removing one flips its consumers back to missing.
+_Avoid_: conflating with **Uploaded scene** (one replaces the active scene, the other fulfills a reference the scene made).
+
+**Multi-file matching**:
+The one-gesture drop/select contract: the root-most `.tscn` in the batch becomes the **Uploaded scene** (the one no other dropped scene references), and every other file fulfills a `res://` reference by case-insensitive basename — matched against the scene's ExtResources **and** the current **Missing resource** list, so a sub-scene's own dependencies arrive by repeated drops, and a batch with no `.tscn` fulfills missing rows directly. Files matching nothing are ignored.
+_Avoid_: "import wizard"; per-file prompts (the gesture is match-by-name, not a dialog flow).
+
+**Missing resource**:
+A `res://` reference whose load failed: its consumers show the magenta placeholder (**Progressive fill-in**) and it gains a row (path, type, referenced-by) in the missing-resources panel; a **Resource upload** fulfills the row, and removing that upload returns it to missing. Per-reference and recoverable — never a scene error.
+_Avoid_: "broken scene"/"load error" for a single missing reference.
+
 ### Animation
 
 **GodotAnimation**:
