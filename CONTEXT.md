@@ -153,8 +153,36 @@ _Avoid_: "default node".
 ### Shell & editing
 
 **Source pane**:
-The web previewer's editable `.tscn` text view — a left sibling of the preview shell, never inside it. Holds the single editable buffer, fed three ways (fixture-select, file upload, or direct paste/type), that is the source of truth for both the **Linter** (surfaced in the browser as gutter markers with a hover popover) and — gated on a clean **Lenient parser** result — the shell's rendered scene, so the viewport holds its last valid render instead of blanking while a mid-edit file is transiently broken. Edits are ephemeral: they reset on scene switch or reload and leave the browser only via a "Download .tscn" export; nothing is written back to disk (ADR-0020).
+The web previewer's editable `.tscn` text view — a left sibling of the preview shell, never inside it. Holds the single editable buffer, fed three ways (fixture-select, file upload, or direct paste/type), that is the source of truth for both the **Linter** (surfaced in the browser as gutter markers with a hover popover) and — gated on a clean **Lenient parser** result (**Hold-last-valid**) — the shell's rendered scene. Edits are ephemeral: they reset on scene switch or reload and leave the browser only via a "Download .tscn" export; nothing is written back to disk (ADR-0020).
 _Avoid_: "code editor" / "Monaco" / "CodeMirror" — it is a bare `<textarea>`, no editor library; conflating it with the **SceneTreeViewer** ("scene tree" UI panel) or with the VS Code extension's own real text editor.
+
+**Host (app)**:
+An embedding application that mounts the shared preview shell over its own `ResourceLoader`/provider and source-text feed — the web previewer, or the VS Code extension. Always distinct from VS Code's own "extension host" process (qualify that one).
+_Avoid_: bare "host" for VS Code's extension-host process; "frontend"/"app" bare.
+
+**Hold-last-valid** (web):
+The **Source pane**'s edit gate: the viewport keeps rendering the last cleanly-parsed buffer while mid-edit text is transiently broken — brokenness shows as gutter markers (the **Linter** reads the raw buffer, ungated), never as a blanked scene. Applies to the edit loop only; fixture loads and uploads forward ungated so a genuinely broken file surfaces its parse-error banner.
+_Avoid_: "debounce" for the gate (the debounce is timing; the gate is parse cleanliness); gating the linter (it must see the broken text).
+
+**Preview panel** (VS Code):
+The per-document webview the extension opens beside the editor — one per `.tscn` document (re-invoking reveals the existing panel), keeping its scene state while hidden. The VS Code **Host**'s counterpart of the web shell.
+_Avoid_: "preview tab"; bare "webview" (the mechanism, not the user-facing thing).
+
+**Save-driven refresh** (VS Code):
+The **Preview panel**'s update contract: it mirrors the file **on disk**, refreshing on save and on external disk changes (git pull, branch switch) — never on unsaved keystrokes (ADR-0021; keystroke-live preview is the web **Source pane**'s job). A refresh is in-place — re-parse and reconcile, so camera, selection, and tree expansion survive.
+_Avoid_: expecting Source-pane-style live typing in the **Preview panel** (deliberate asymmetry); "reload" for what is an in-place refresh.
+
+**Dependency hot-reload** (VS Code):
+A disk change to a dependency (texture, `.tres` material, GLB/glTF, instanced sub-scene) refreshes just that resource in every open **Preview panel** that actually served it — relevance-gated, no full scene refresh. Distinct from **Save-driven refresh**, which covers the panel's own main scene.
+_Avoid_: "HMR"; conflating with the main scene's **Save-driven refresh**.
+
+**Progressive fill-in**:
+How both **Host**s' screens update after a parse: the scene renders immediately from the parsed text, then textures, materials, GLB meshes, and sub-scenes pop in per-resource as their **resource event bus** loads land; a failed load flips only its consumers to the magenta missing placeholder. The screen never blocks on, or wholesale-reloads for, resource completion.
+_Avoid_: loading-screen framing; treating a missing resource as a scene error.
+
+**Corpus root** (web):
+The active fixture's `res://` namespace — each vendored demo project keeps its own, resource lookups are scoped to it, and switching corpora must never serve the other corpus's bytes for a same-named `res://` path.
+_Avoid_: "fixture folder" (the root scopes resolution, not just storage); sharing one resource cache across corpora.
 
 ### Animation
 
@@ -220,6 +248,7 @@ _Avoid_: mounting the **AnimationTree driver** this way (it owns no clips — it
 - **Label3D** (3D, billboarded text in-canvas) is a different subsystem from **Label** / **RichTextLabel** (2D DOM text in the **Control overlay**).
 - An **AnimationPlayer** references one **Animation library** via `libraries/`; the library's **GodotAnimation**s carry **Track**s that the **Animation transport** plays by building a `THREE.AnimationClip` and driving a `THREE.AnimationMixer` rooted at the **Animation root** (ADR-0011).
 - An **AnimationTree driver** owns no clips: it evaluates its `tree_root` at the authored `parameters/*` into a **blend program** and drives the **AnimationPlayer** or **GLB animation driver** its `anim_player` resolves to, found via the **AnimationDriverRegistry** (ADR-0019).
+- Both **Host (app)**s mount the same preview shell; what differs is the resource-loading adapter and how source text arrives — **Save-driven refresh** from disk (VS Code) vs the live-typed **Source pane** buffer under **Hold-last-valid** (web). **Progressive fill-in** is shared.
 
 ## Example dialogue
 
@@ -237,3 +266,4 @@ _Avoid_: mounting the **AnimationTree driver** this way (it owns no clips — it
 - "AnimationClip" meant both the parsed Godot animation and the three.js runtime object — resolved: parsed = **GodotAnimation**, runtime = `THREE.AnimationClip` (always qualified).
 - "GLB AnimationPlayer" was an *avoided* coinage when a GLB instance exposed no AnimationPlayer node (the **GLB animation driver** bound to the GLBSceneRoot root row) — resolved: GLB hierarchy parity now synthesises a tree-only `GLBAnimationPlayer` row (Godot exposes glTF clips on an in-hierarchy AnimationPlayer), and *that* row — not the GLB root — activates the **Animation transport** (ADR-0014).
 - "AnimatedFrame" push registry named only the `frame` lane it first carried — resolved: the value-push path is the **AnimatedValue push registry**, keyed by `${nodePath}:${property}`, carrying any non-transform value (stepped `frame`, interpolated `modulate`/`size`); "AnimatedFrame" is retired to the historical `frame`-only form (ADR-0016, ADR-0017).
+- "Host" meant both the embedding app and VS Code's extension-host process — resolved: **Host (app)** is the embedding application (web previewer / VS Code extension); VS Code's process is always written qualified as "extension host".
