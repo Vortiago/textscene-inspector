@@ -165,11 +165,11 @@ The **Source pane**'s edit gate: the viewport keeps rendering the last cleanly-p
 _Avoid_: "debounce" for the gate (the debounce is timing; the gate is parse cleanliness); gating the linter (it must see the broken text).
 
 **Preview panel** (VS Code):
-The per-document webview the extension opens beside the editor — one per `.tscn` document (re-invoking reveals the existing panel), keeping its scene state while hidden. The VS Code **Host**'s counterpart of the web shell.
+The per-document webview the extension opens beside the editor — one per `.tscn` document (re-invoking reveals the existing panel), pinned to its document (it does not retarget when a different `.tscn` gains editor focus), keeping its scene state while hidden. The VS Code **Host**'s counterpart of the web shell.
 _Avoid_: "preview tab"; bare "webview" (the mechanism, not the user-facing thing).
 
 **Save-driven refresh** (VS Code):
-The **Preview panel**'s update contract: it mirrors the file **on disk**, refreshing on save and on external disk changes (git pull, branch switch) — never on unsaved keystrokes (ADR-0021; keystroke-live preview is the web **Source pane**'s job). A refresh is in-place — re-parse and reconcile, so camera, selection, and tree expansion survive.
+The **Preview panel**'s update contract: it mirrors the file **on disk**, refreshing on save and on external disk changes (git pull, branch switch) — never on unsaved keystrokes (ADR-0021; keystroke-live preview is the web **Source pane**'s job). A refresh is in-place — re-parse and reconcile, so camera, selection, and tree expansion survive by node path; a path the refresh removed clears its selection gracefully (inspector empties, any active **Animation transport** stops) rather than erroring.
 _Avoid_: expecting Source-pane-style live typing in the **Preview panel** (deliberate asymmetry); "reload" for what is an in-place refresh.
 
 **Dependency hot-reload** (VS Code):
