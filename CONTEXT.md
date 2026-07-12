@@ -50,6 +50,32 @@ _Avoid_: "callback API", "strict mode flag".
 The lenient parser's shared primitives for reading a raw property string into a typed scalar/vector — `intOr`/`floatOr`/`boolOr`/`enumOr`/`vec2Or` (take a fallback, always return) and `parseOptionalInt` (returns `undefined` when unset). One contract: fall back **silently when absent**, **warn-then-fall-back when present but unparseable**. Wraps only the canonical `parseVector2` leaf scanner (via `vec2Or`); `parseVector2`/`parseVector3` (`parser/vectors.ts`) and the canonical `parseColor` (`utils/colorParser.ts`), which the slices call directly, share `FLOAT_PATTERN_SOURCE` — the one float regex accepting scientific notation (`1e-05`, which Godot emits) and rejecting malformed components outright; one-off structured literals (`Vector2i`, `Rect2`, `frame_coords`) and the throwing `parseColor` in `standardmaterial3d` stay in their slice, while Control's `custom_minimum_size` now reads through the shared `parseOptionalVector2`. The grammar (`FLOAT_PATTERN_SOURCE`) is shared; the absent/error contract may **fork** per slice — `floatOr`/`intOr` warn-then-fallback for concrete-default scalars, `parseOptionalFloat`/`parseOptionalVector2` return `undefined` for optional properties, and `vec2Or`/`parseColor` keep their slice-specific fallbacks.
 _Avoid_: re-declaring per-node `intOr`/`floatOr` copies (the pattern this replaced); "validator" (that is the strict-linter path).
 
+### Linting
+
+**Diagnostic**:
+One linter finding: a **Severity**, a message, the node it concerns, the name of the check that produced it, and (usually) a line/column. Parse-phase findings currently share the `strict-parser` name; per-property identity arrives with the property-descriptor work.
+_Avoid_: "error" for a diagnostic of unknown severity; "issue" (ambiguous with the tracker).
+
+**Validator** (format check):
+A per-property format/range check that runs during strict parsing (dispatched by the **ParseObserver**) and inherits down the node base-type chain. A validator failure is **always an error** — a format violation is objectively invalid; that is the sorting principle for where a new check goes.
+_Avoid_: advisory/warning conditions as validators (they belong in a **Lint rule**); "validator" for the parser-side **Value decoder**s.
+
+**Lint rule** (semantic check):
+A per-node-type check that runs on the parsed scene, matches its node type exactly (no base-type inheritance), and chooses its own **Severity** — the only home for advisory conditions.
+_Avoid_: bare "rule" for a **Validator**; expecting base-class inheritance from rules (that is the validators' walk).
+
+**Severity**:
+Two levels. **error** — the file is objectively invalid per the TSCN format; fails the CLI and CI, and no committed fixture may carry one. **warning** — legal but suspicious; advisory, so healthy scenes and positive fixtures may carry them and nothing fails. (`info` is retired.)
+_Avoid_: advisory conditions as errors (breaks fixtureLint); severity as presentation (surfaces map it, never redefine it).
+
+**Live lint, settled render**:
+The cross-host contract: every lint surface describes the text **as currently typed** (the web gutter reads the raw buffer; VS Code's Problems panel re-lints keystroke-debounced), while the rendered scene follows **committed** text (**Hold-last-valid** in the web, **Save-driven refresh** in VS Code). Diagnostics may be transiently red mid-edit; the viewport never is.
+_Avoid_: gating lint on a clean parse (lint must see the broken text); rendering the raw mid-edit buffer.
+
+**Instance-opaque linting**:
+Existence checks (node names, NodePath targets) never assume visibility into an instanced sub-scene's internals: a reference that crosses an `instance=` boundary stays silent rather than false-positive. The linter reads the static text of one file — never the composed **Live scene tree**.
+_Avoid_: "fixing" the silence by resolving instance internals (the linter must stay file-local and React-free).
+
 ### Code organization
 
 **Vertical slice**:
@@ -153,8 +179,62 @@ _Avoid_: "default node".
 ### Shell & editing
 
 **Source pane**:
-The web previewer's editable `.tscn` text view — a left sibling of the preview shell, never inside it. Holds the single editable buffer, fed three ways (fixture-select, file upload, or direct paste/type), that is the source of truth for both the **Linter** (surfaced in the browser as gutter markers with a hover popover) and — gated on a clean **Lenient parser** result — the shell's rendered scene, so the viewport holds its last valid render instead of blanking while a mid-edit file is transiently broken. Edits are ephemeral: they reset on scene switch or reload and leave the browser only via a "Download .tscn" export; nothing is written back to disk (ADR-0020).
+The web previewer's editable `.tscn` text view — a left sibling of the preview shell, never inside it. Holds the single editable buffer, fed three ways (fixture-select, file upload, or direct paste/type), that is the source of truth for both the **Linter** (surfaced in the browser as gutter markers with a hover popover) and — gated on a clean **Lenient parser** result (**Hold-last-valid**) — the shell's rendered scene. Edits are ephemeral: they reset on scene switch or reload and leave the browser only via a "Download .tscn" export; nothing is written back to disk (ADR-0020).
 _Avoid_: "code editor" / "Monaco" / "CodeMirror" — it is a bare `<textarea>`, no editor library; conflating it with the **SceneTreeViewer** ("scene tree" UI panel) or with the VS Code extension's own real text editor.
+
+**Host (app)**:
+An embedding application that mounts the shared preview shell over its own `ResourceLoader`/provider and source-text feed — the web previewer, or the VS Code extension. Always distinct from VS Code's own "extension host" process (qualify that one).
+_Avoid_: bare "host" for VS Code's extension-host process; "frontend"/"app" bare.
+
+**Hold-last-valid** (web):
+The **Source pane**'s edit gate: the viewport keeps rendering the last cleanly-parsed buffer while mid-edit text is transiently broken — brokenness shows as gutter markers (the **Linter** reads the raw buffer, ungated), never as a blanked scene. Applies to the edit loop only; fixture loads and uploads forward ungated so a genuinely broken file surfaces its parse-error banner.
+_Avoid_: "debounce" for the gate (the debounce is timing; the gate is parse cleanliness); gating the linter (it must see the broken text).
+
+**Preview panel** (VS Code):
+The per-document webview the extension opens beside the editor — one per `.tscn` document (re-invoking reveals the existing panel), pinned to its document (it does not retarget when a different `.tscn` gains editor focus — big scenes are expensive to render, ADR-0023), keeping its scene state while hidden. The VS Code **Host**'s counterpart of the web shell.
+_Avoid_: "preview tab"; bare "webview" (the mechanism, not the user-facing thing); Markdown-preview-style follow mode (rejected, ADR-0023).
+
+**Save-driven refresh** (VS Code):
+The **Preview panel**'s update contract: it mirrors the file **on disk**, refreshing on save and on external disk changes (git pull, branch switch) — never on unsaved keystrokes (ADR-0021; keystroke-live preview is the web **Source pane**'s job). A refresh is in-place — re-parse and reconcile, so camera, selection, and tree expansion survive by node path; a path the refresh removed clears its selection gracefully (inspector empties, any active **Animation transport** stops) rather than erroring.
+_Avoid_: expecting Source-pane-style live typing in the **Preview panel** (deliberate asymmetry); "reload" for what is an in-place refresh.
+
+**Dependency hot-reload** (VS Code):
+A disk change to a dependency (texture, `.tres` material, GLB/glTF, instanced sub-scene) refreshes just that resource in every open **Preview panel** that ever resolved it — transitively, at any dependency depth, because every resource a panel renders passes through its own provider. Relevance-gated, no full scene refresh; a resource that failed to load still counts as relevant (creating a **Missing resource**'s file heals it), and hidden panels refresh in the background rather than on re-focus. Distinct from **Save-driven refresh**, which covers the panel's own main scene.
+_Avoid_: "HMR"; conflating with the main scene's **Save-driven refresh**; "direct dependencies" (the closure is transitive).
+
+**Progressive fill-in**:
+How both **Host**s' screens update after a parse: the scene renders immediately from the parsed text, then textures, materials, GLB meshes, and sub-scenes pop in per-resource as their **resource event bus** loads land; a failed load flips only its consumers to the magenta missing placeholder. The screen never blocks on, or wholesale-reloads for, resource completion.
+_Avoid_: loading-screen framing; treating a missing resource as a scene error.
+
+**Corpus root** (web):
+The active fixture's `res://` namespace — each vendored demo project keeps its own, resource lookups are scoped to it, and switching corpora must never serve the other corpus's bytes for a same-named `res://` path.
+_Avoid_: "fixture folder" (the root scopes resolution, not just storage); sharing one resource cache across corpora.
+
+### Content intake (web)
+
+**Fixture**:
+A built-in scene the previewer serves from its backend — the demo/test/showcase corpus: vendored Godot demos and games, examples, edge cases, and the unit fixtures the test suites also exercise. Fixtures exist to feed the tests and to show what the previewer can do, and they are the **only** content that ever comes from the backend.
+_Avoid_: "sample"/"template"; calling anything user-provided a fixture.
+
+**Fixture catalog**:
+The browsable, categorized manifest of every **Fixture** (generated; the optional vendored games corpus appends when present). All kinds stay browsable — unit and edge-case fixtures double as a node-coverage showcase. Deep links may reach unlisted sub-scenes, whose **Corpus root** derives from the path.
+_Avoid_: "scene library"; curating unit fixtures out of the public catalog.
+
+**Uploaded scene**:
+A user's `.tscn` opened as the active scene (the selector shows it as "(Uploaded: …)"). User uploads live in the frontend only — never sent to or stored on the backend; they reset on scene switch and leave the browser only via the Download export.
+_Avoid_: "imported scene"; treating an upload as a **Fixture** (fixtures are backend-served; uploads must never be).
+
+**Resource upload**:
+A user file fulfilling one `res://` reference — added per-path from a **Missing resource** row, or matched during **Multi-file matching**. Frontend-only like the **Uploaded scene**, and scoped to the corpus active when it was added: a fixture corpus and the user's own files are separate worlds, so an upload never bleeds into another corpus's same-named path. Removing one flips its consumers back to missing.
+_Avoid_: conflating with **Uploaded scene** (one replaces the active scene, the other fulfills a reference the scene made); global uploads that shadow every corpus.
+
+**Multi-file matching**:
+The one-gesture drop/select contract: the root-most `.tscn` in the batch becomes the **Uploaded scene** (the one no other dropped scene references), and every other file fulfills a `res://` reference by case-insensitive basename — matched against the scene's ExtResources **and** the current **Missing resource** list, so a sub-scene's own dependencies arrive by repeated drops, and a batch with no `.tscn` fulfills missing rows directly. Files matching nothing are ignored.
+_Avoid_: "import wizard"; per-file prompts (the gesture is match-by-name, not a dialog flow).
+
+**Missing resource**:
+A `res://` reference whose load failed: its consumers show the magenta placeholder (**Progressive fill-in**) and it gains a row (path, type, referenced-by) in the missing-resources panel; a **Resource upload** fulfills the row, and removing that upload returns it to missing. Per-reference and recoverable — never a scene error.
+_Avoid_: "broken scene"/"load error" for a single missing reference.
 
 ### Animation
 
@@ -202,6 +282,14 @@ _Avoid_: calling it an **AnimationPlayer** (it drives one, via `anim_player`); i
 The `nodePath → { object, clips }` lookup (`AnimationDriverContext`) that an **AnimationPlayer** or **GLB animation driver** publishes into whenever its clips are loaded — *availability*, decoupled from the selection-driven transport. The **AnimationTree driver** consumes it to find the object to root its blended mixer on and the clips to play, unifying the two clip sources behind one path lookup. Two contexts: a STABLE register function (so a publishing driver's effect doesn't re-fire) and a REACTIVE drivers map (so a consumer re-renders when an async-loaded driver appears).
 _Avoid_: conflating it with the **Animation transport** (the registry is about which driver owns which clips; the transport is about play/pause for the selected one).
 
+**Playback step** (`r3f/animation/`):
+The pure per-frame transport-actuation decision shared by every **Animation transport** driver — from the previous/current play state, the transport playhead, and whether the clip changed, it decides which transition fired this frame (ensure-playing / seek / hold-paused / stop-and-restore / none), whether the driver is freshly (re)entering playback (a local clock re-seeds), and whether the pause-edge time flush must fire. Each driver's frame loop is a thin adapter that actuates the decision — single-action mixer, weighted blend program, or sprite frame sampling — so the decision is written once and tested as data, without a mount.
+_Avoid_: re-deriving play/pause/seek/stop edges inside a driver's `useFrame` (the hand-synced triplication this replaced); "state machine" for the adapters (the machine is the step; adapters only actuate).
+
+**Driver mount** (`r3f/animation/`):
+The shared lifecycle by which a clip-owning transport driver (**AnimationPlayer**, **GLB animation driver**) comes online: register clips with the **Animation transport** while selected, publish `{object, clips}` availability into the **AnimationDriverRegistry**, and build the `THREE.AnimationMixer` + actions. Clip construction, mixer rooting, and pose snapshot/restore stay per-driver.
+_Avoid_: mounting the **AnimationTree driver** this way (it owns no clips — it is a registry consumer, not a publisher).
+
 ## Relationships
 
 - A **SceneGraph** holds many **Node**s; the active scene's root Nodes feed the **NodeDispatcher** (3D) or, in 2D **viewport mode**, the **ControlDispatcher**.
@@ -212,6 +300,7 @@ _Avoid_: conflating it with the **Animation transport** (the registry is about w
 - **Label3D** (3D, billboarded text in-canvas) is a different subsystem from **Label** / **RichTextLabel** (2D DOM text in the **Control overlay**).
 - An **AnimationPlayer** references one **Animation library** via `libraries/`; the library's **GodotAnimation**s carry **Track**s that the **Animation transport** plays by building a `THREE.AnimationClip` and driving a `THREE.AnimationMixer` rooted at the **Animation root** (ADR-0011).
 - An **AnimationTree driver** owns no clips: it evaluates its `tree_root` at the authored `parameters/*` into a **blend program** and drives the **AnimationPlayer** or **GLB animation driver** its `anim_player` resolves to, found via the **AnimationDriverRegistry** (ADR-0019).
+- Both **Host (app)**s mount the same preview shell; what differs is the resource-loading adapter and how source text arrives — **Save-driven refresh** from disk (VS Code) vs the live-typed **Source pane** buffer under **Hold-last-valid** (web). **Progressive fill-in** is shared.
 
 ## Example dialogue
 
@@ -229,3 +318,4 @@ _Avoid_: conflating it with the **Animation transport** (the registry is about w
 - "AnimationClip" meant both the parsed Godot animation and the three.js runtime object — resolved: parsed = **GodotAnimation**, runtime = `THREE.AnimationClip` (always qualified).
 - "GLB AnimationPlayer" was an *avoided* coinage when a GLB instance exposed no AnimationPlayer node (the **GLB animation driver** bound to the GLBSceneRoot root row) — resolved: GLB hierarchy parity now synthesises a tree-only `GLBAnimationPlayer` row (Godot exposes glTF clips on an in-hierarchy AnimationPlayer), and *that* row — not the GLB root — activates the **Animation transport** (ADR-0014).
 - "AnimatedFrame" push registry named only the `frame` lane it first carried — resolved: the value-push path is the **AnimatedValue push registry**, keyed by `${nodePath}:${property}`, carrying any non-transform value (stepped `frame`, interpolated `modulate`/`size`); "AnimatedFrame" is retired to the historical `frame`-only form (ADR-0016, ADR-0017).
+- "Host" meant both the embedding app and VS Code's extension-host process — resolved: **Host (app)** is the embedding application (web previewer / VS Code extension); VS Code's process is always written qualified as "extension host".
