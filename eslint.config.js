@@ -29,9 +29,14 @@ export default [
   // Base recommended config
   eslint.configs.recommended,
 
-  // TypeScript files - Node.js environment (extension main code + linter CLI)
+  // TypeScript files - Node.js environment (extension main code, linter CLI, TS config files)
   {
-    files: ['apps/textscene-vscode/src/**/*.ts', 'apps/textscene-linter/src/**/*.ts'],
+    files: [
+      'apps/textscene-vscode/src/**/*.ts',
+      'apps/textscene-linter/src/**/*.ts',
+      '**/*.config.ts',
+      'vitest.shared.ts',
+    ],
     ignores: ['apps/textscene-vscode/src/webview/**/*.ts'],
     languageOptions: {
       parser: tsparser,
@@ -63,7 +68,7 @@ export default [
 
   // TypeScript files - Browser + Node.js environment (core package - runs in both)
   {
-    files: ['packages/textscene-core/src/**/*.ts', 'packages/textscene-core/src/**/*.tsx'],
+    files: ['packages/textscene-core/src/**/*.{ts,tsx}'],
     languageOptions: {
       parser: tsparser,
       parserOptions: {
@@ -144,9 +149,8 @@ export default [
   // TypeScript files - Browser environment (web previewer, webview)
   {
     files: [
-      'apps/textscene-web/src/**/*.ts',
-      'apps/textscene-web/src/**/*.tsx',
-      'apps/textscene-vscode/src/webview/**/*.ts',
+      'apps/textscene-web/src/**/*.{ts,tsx}',
+      'apps/textscene-vscode/src/webview/**/*.{ts,tsx}',
     ],
     languageOptions: {
       parser: tsparser,

@@ -184,7 +184,8 @@ interface ResettableControls {
 /**
  * `<TscnCanvas>` takes no props — it reads everything it needs from context
  * (`HierarchyContext`, `CameraControlContext`, `ViewportModeContext`). Test
- * code that wants to pass nodes directly uses `<TscnSceneContents>` instead.
+ * code that wants to pass nodes directly mounts `<TscnSceneContents>`
+ * directly under a `HierarchyContext` provider instead.
  */
 export function TscnCanvas() {
   // WI-UX-7: capture the OrbitControls instance via a callback ref so
