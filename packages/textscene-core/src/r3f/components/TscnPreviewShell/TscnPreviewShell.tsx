@@ -18,7 +18,13 @@ import { HierarchyProvider } from '../../contexts/HierarchyContext.js';
 import { SelectionProvider } from '../../contexts/SelectionContext.js';
 import { CameraControlProvider } from '../../contexts/CameraControlContext.js';
 import { MissingResourcesProvider } from '../../contexts/MissingResourcesContext.js';
-import { ViewportModeProvider } from '../../contexts/ViewportModeContext.js';
+import {
+  ViewportModeProvider,
+  SHOW_GRID_STORAGE_KEY,
+  VIEWPORT_MODE_STORAGE_KEY,
+  type ViewportMode,
+} from '../../contexts/ViewportModeContext.js';
+import { readPersisted, usePersistedState } from '../../hooks/usePersistedState.js';
 import { AnimatedValueProvider } from '../../contexts/AnimatedValueContext.js';
 import { AnimationDriverProvider } from '../../contexts/AnimationDriverContext.js';
 import {
@@ -31,11 +37,15 @@ import { MissingResourcesPanel } from '../MissingResourcesPanel/MissingResources
 import { ViewportToolbar } from '../ViewportToolbar/ViewportToolbar.js';
 import { Splitter } from '../Splitter/Splitter.js';
 import { ViewportArea } from './ViewportArea.js';
+import { PreviewErrorBoundary } from './PreviewErrorBoundary.js';
+import { EscapeDeselect } from './EscapeDeselect.js';
+import { composeProviders } from '../../composeProviders.js';
 import { CamerasPanel } from './CamerasPanel.js';
 import { SceneChangeResetter } from './SceneChangeResetter.js';
 import { WorkspaceAutoSelect } from './WorkspaceAutoSelect.js';
 import { SceneStats, SceneNodeCount } from './SceneStats.js';
 import { MasterDetailHandle, CollapsedDock } from './DockChrome.js';
+import { HelpLink } from './HelpLink.js';
 import styles from './TscnPreviewShell.module.css';
 
 // WI-R3F-18 bundle reduction: lazy-load the DOM panels so they don't
@@ -58,6 +68,19 @@ const NodeDetailsPanel = lazy(() =>
 const DEFAULT_ROOT_SCENE_PATH = 'res://__inline__.tscn';
 
 type DetailTab = 'inspector' | 'resources' | 'cameras' | 'animation';
+
+// #224 usePersistedState validators — reject a corrupt/unexpected persisted
+// shape (a stale schema, a hand-edited localStorage entry) in favor of the
+// hook's own default rather than propagating garbage into layout state.
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+function isBoolean(value: unknown): value is boolean {
+  return typeof value === 'boolean';
+}
+function isViewportMode(value: unknown): value is ViewportMode {
+  return value === '2D' || value === '3D';
+}
 
 export interface TscnPreviewShellProps {
   /** Stable identifier for this panel — used in logs and for context coordination. */
@@ -107,9 +130,12 @@ export function TscnPreviewShell({
   // Split Dock (ADR-0007): a single resizable + collapsible RIGHT dock holding
   // a master (scene tree) over a tabbed detail. `treeShare` is the master's
   // fraction of the dock height (0..1), dragged via the horizontal handle.
-  const [dockWidth, setDockWidth] = useState(320);
-  const [dockCollapsed, setDockCollapsed] = useState(false);
-  const [treeShare, setTreeShare] = useState(0.46);
+  // #224: persisted across sessions (host-agnostic — VS Code webviews are a
+  // browser context too) so a resized/collapsed dock survives a reload; a
+  // fresh session with no persisted value keeps the pre-#224 defaults below.
+  const [dockWidth, setDockWidth] = usePersistedState('tsi.dockWidth', 320, isFiniteNumber);
+  const [dockCollapsed, setDockCollapsed] = usePersistedState('tsi.dockCollapsed', false, isBoolean);
+  const [treeShare, setTreeShare] = usePersistedState('tsi.treeShare', 0.46, isFiniteNumber);
   const [activeTab, setActiveTab] = useState<DetailTab>('inspector');
 
   // ADR-0012: the Animation tab exists only while an AnimationPlayer is the
@@ -149,156 +175,181 @@ export function TscnPreviewShell({
     );
   }
 
-  return (
-    <HierarchyProvider value={hierarchyValue}>
-      <SelectionProvider>
-        <CameraControlProvider>
-          <MissingResourcesProvider>
-            <ViewportModeProvider>
-             <AnimationTransportProvider>
-              <AnimationDriverProvider>
-              <AnimatedValueProvider>
-              <WorkspaceAutoSelect sceneGraph={sceneGraph} />
-              <SceneChangeResetter sceneGraph={sceneGraph} />
-              <AnimationTabWatcher onVisibleChange={setAnimationTabVisible} />
-              <div className={styles.shell} data-panel-id={panelId}>
-                <header className={styles.topBar}>
-                  <span className={styles.brand}>TextScene Inspector</span>
-                  {toolbar && <div className={styles.topToolbar}>{toolbar}</div>}
-                  <div className={styles.topSpacer} />
-                  <SceneStats />
-                  <ViewportToolbar />
-                </header>
-                {error && (
-                  <div className={styles.errorBanner} role="alert">
-                    <strong>Parse error:</strong> {error}
+  // #224: seed ViewportModeProvider's initial mode/grid from whatever was
+  // persisted last session (defaults match the pre-#224 baseline — 3D,
+  // grid off — for a fresh session with nothing in localStorage yet).
+  // Read ONCE (never-set state): the live value lives in the provider; the
+  // toolbar writes an explicit user choice back to storage at its own click
+  // handlers — no second React copy of the mode for the shell to re-render
+  // over, and no blanket sync that would persist programmatic mode changes.
+  const [initialViewport] = useState(() => ({
+    mode: readPersisted<ViewportMode>(VIEWPORT_MODE_STORAGE_KEY, '3D', isViewportMode),
+    showGrid: readPersisted(SHOW_GRID_STORAGE_KEY, false, isBoolean),
+  }));
+
+  // #217: flattens what was an 8-level hand-nested provider pyramid into one
+  // call. Each entry still mounts its own INDEPENDENT provider, in the SAME
+  // order as before — composeProviders only removes the JSX-nesting
+  // boilerplate; ADR-0002 (and its per-domain-UI-state analogues here) keeps
+  // these contexts separate on purpose, so this is not a merge.
+  const withProviders = composeProviders(
+    (children) => <HierarchyProvider value={hierarchyValue}>{children}</HierarchyProvider>,
+    (children) => <SelectionProvider>{children}</SelectionProvider>,
+    (children) => <CameraControlProvider>{children}</CameraControlProvider>,
+    (children) => <MissingResourcesProvider>{children}</MissingResourcesProvider>,
+    (children) => (
+      <ViewportModeProvider
+        initialMode={initialViewport.mode}
+        initialShowGrid={initialViewport.showGrid}
+      >
+        {children}
+      </ViewportModeProvider>
+    ),
+    (children) => <AnimationTransportProvider>{children}</AnimationTransportProvider>,
+    (children) => <AnimationDriverProvider>{children}</AnimationDriverProvider>,
+    (children) => <AnimatedValueProvider>{children}</AnimatedValueProvider>
+  );
+
+  return withProviders(
+    <>
+      <WorkspaceAutoSelect sceneGraph={sceneGraph} />
+      <SceneChangeResetter sceneGraph={sceneGraph} />
+      <AnimationTabWatcher onVisibleChange={setAnimationTabVisible} />
+      <EscapeDeselect />
+      <div className={styles.shell} data-panel-id={panelId}>
+        <header className={styles.topBar}>
+          <span className={styles.brand}>TextScene Inspector</span>
+          {toolbar && <div className={styles.topToolbar}>{toolbar}</div>}
+          <div className={styles.topSpacer} />
+          <SceneStats />
+          <ViewportToolbar />
+          <HelpLink />
+        </header>
+        {error && (
+          <div className={styles.errorBanner} role="alert">
+            <strong>Parse error:</strong> {error}
+          </div>
+        )}
+        <div className={styles.columns}>
+          {/* CENTER — 3D canvas or 2D overlay; takes all width left of the dock. */}
+          <main className={styles.center} aria-label="Viewport">
+            <PreviewErrorBoundary sceneGraph={sceneGraph}>
+              <ViewportArea sceneGraph={sceneGraph} />
+            </PreviewErrorBoundary>
+          </main>
+
+          {/* RIGHT DOCK — Split Dock: scene tree (master) over a tabbed detail. */}
+          {dockCollapsed ? (
+            <CollapsedDock onExpand={() => setDockCollapsed(false)} />
+          ) : (
+            <>
+              <Splitter
+                width={dockWidth}
+                setWidth={setDockWidth}
+                invert
+                label="Resize the side panel"
+              />
+              <section
+                className={styles.dock}
+                style={{ flexBasis: dockWidth }}
+                aria-label="Scene and Inspector"
+              >
+                {/* MASTER — scene tree */}
+                <div className={styles.masterPane} style={{ flexGrow: treeShare }}>
+                  <div className={styles.dockHeader}>
+                    <span className={styles.dockTitle}>Scene Tree</span>
+                    <SceneNodeCount />
+                    <span className={styles.dockSpacer} />
+                    <button
+                      type="button"
+                      className={styles.collapseButton}
+                      onClick={() => setDockCollapsed(true)}
+                      title="Collapse the side panel"
+                      aria-label="Collapse the side panel"
+                    >
+                      ›
+                    </button>
                   </div>
-                )}
-                <div className={styles.columns}>
-                  {/* CENTER — 3D canvas or 2D overlay; takes all width left of the dock. */}
-                  <main className={styles.center} aria-label="Viewport">
-                    <ViewportArea sceneGraph={sceneGraph} />
-                  </main>
-
-                  {/* RIGHT DOCK — Split Dock: scene tree (master) over a tabbed detail. */}
-                  {dockCollapsed ? (
-                    <CollapsedDock onExpand={() => setDockCollapsed(false)} />
-                  ) : (
-                    <>
-                      <Splitter
-                        width={dockWidth}
-                        setWidth={setDockWidth}
-                        invert
-                        label="Resize the side panel"
-                      />
-                      <section
-                        className={styles.dock}
-                        style={{ flexBasis: dockWidth }}
-                        aria-label="Scene and Inspector"
-                      >
-                        {/* MASTER — scene tree */}
-                        <div className={styles.masterPane} style={{ flexGrow: treeShare }}>
-                          <div className={styles.dockHeader}>
-                            <span className={styles.dockTitle}>Scene Tree</span>
-                            <SceneNodeCount />
-                            <span className={styles.dockSpacer} />
-                            <button
-                              type="button"
-                              className={styles.collapseButton}
-                              onClick={() => setDockCollapsed(true)}
-                              title="Collapse the side panel"
-                              aria-label="Collapse the side panel"
-                            >
-                              ›
-                            </button>
-                          </div>
-                          <div className={styles.dockBody}>
-                            <div className={styles.treePane}>{treeBody}</div>
-                          </div>
-                        </div>
-
-                        <MasterDetailHandle value={treeShare} setValue={setTreeShare} />
-
-                        {/* DETAIL — tabbed; Inspector follows selection (no tab hop). */}
-                        <div className={styles.detailPane} style={{ flexGrow: 1 - treeShare }}>
-                          <div className={styles.paneTabs} role="tablist" aria-label="Detail panels">
-                            {(
-                              [
-                                ['inspector', 'Inspector'],
-                                ['resources', 'Resources'],
-                                ['cameras', 'Cameras'],
-                                ...(animationTabVisible
-                                  ? ([['animation', 'Animation']] as Array<[DetailTab, string]>)
-                                  : []),
-                              ] as Array<[DetailTab, string]>
-                            ).map(([id, label]) => (
-                              <button
-                                key={id}
-                                type="button"
-                                role="tab"
-                                aria-selected={activeTab === id}
-                                className={
-                                  activeTab === id
-                                    ? `${styles.paneTab} ${styles.paneTabActive}`
-                                    : styles.paneTab
-                                }
-                                onClick={() => setActiveTab(id)}
-                              >
-                                {label}
-                              </button>
-                            ))}
-                          </div>
-                          <div className={styles.dockBody}>
-                            <div className={styles.detailsPane} hidden={activeTab !== 'inspector'}>
-                              <Suspense
-                                fallback={
-                                  <div className={styles.loading} aria-busy="true">
-                                    Loading details…
-                                  </div>
-                                }
-                              >
-                                <NodeDetailsPanel />
-                              </Suspense>
-                            </div>
-                            {activeTab === 'resources' && (
-                              <div className={styles.detailsPane}>
-                                {onResourceUpload ? (
-                                  <MissingResourcesPanel
-                                    onUpload={onResourceUpload}
-                                    onRemove={onResourceRemove ?? (() => {})}
-                                  />
-                                ) : (
-                                  <div className={styles.emptyState}>
-                                    Resource uploads aren’t available in this host.
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                            {activeTab === 'cameras' && (
-                              <div className={styles.detailsPane}>
-                                <CamerasPanel />
-                              </div>
-                            )}
-                            {animationTabVisible && activeTab === 'animation' && (
-                              <div className={styles.detailsPane}>
-                                <AnimationPanel />
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </section>
-                    </>
-                  )}
+                  <div className={styles.dockBody}>
+                    <div className={styles.treePane}>{treeBody}</div>
+                  </div>
                 </div>
-              </div>
-              </AnimatedValueProvider>
-              </AnimationDriverProvider>
-             </AnimationTransportProvider>
-            </ViewportModeProvider>
-          </MissingResourcesProvider>
-        </CameraControlProvider>
-      </SelectionProvider>
-    </HierarchyProvider>
+
+                <MasterDetailHandle value={treeShare} setValue={setTreeShare} />
+
+                {/* DETAIL — tabbed; Inspector follows selection (no tab hop). */}
+                <div className={styles.detailPane} style={{ flexGrow: 1 - treeShare }}>
+                  <div className={styles.paneTabs} role="tablist" aria-label="Detail panels">
+                    {(
+                      [
+                        ['inspector', 'Inspector'],
+                        ['resources', 'Resources'],
+                        ['cameras', 'Cameras'],
+                        ...(animationTabVisible
+                          ? ([['animation', 'Animation']] as Array<[DetailTab, string]>)
+                          : []),
+                      ] as Array<[DetailTab, string]>
+                    ).map(([id, label]) => (
+                      <button
+                        key={id}
+                        type="button"
+                        role="tab"
+                        aria-selected={activeTab === id}
+                        className={
+                          activeTab === id
+                            ? `${styles.paneTab} ${styles.paneTabActive}`
+                            : styles.paneTab
+                        }
+                        onClick={() => setActiveTab(id)}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className={styles.dockBody}>
+                    <div className={styles.detailsPane} hidden={activeTab !== 'inspector'}>
+                      <Suspense
+                        fallback={
+                          <div className={styles.loading} aria-busy="true">
+                            Loading details…
+                          </div>
+                        }
+                      >
+                        <NodeDetailsPanel />
+                      </Suspense>
+                    </div>
+                    {activeTab === 'resources' && (
+                      <div className={styles.detailsPane}>
+                        {onResourceUpload ? (
+                          <MissingResourcesPanel
+                            onUpload={onResourceUpload}
+                            onRemove={onResourceRemove ?? (() => {})}
+                          />
+                        ) : (
+                          <div className={styles.emptyState}>
+                            Resource uploads aren’t available in this host.
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {activeTab === 'cameras' && (
+                      <div className={styles.detailsPane}>
+                        <CamerasPanel />
+                      </div>
+                    )}
+                    {animationTabVisible && activeTab === 'animation' && (
+                      <div className={styles.detailsPane}>
+                        <AnimationPanel />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </section>
+            </>
+          )}
+        </div>
+      </div>
+    </>
   );
 }
 

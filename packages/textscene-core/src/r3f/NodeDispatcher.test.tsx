@@ -6,8 +6,9 @@
  *     their own TSCN path.
  */
 import type React from 'react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
+import type * as THREE from 'three';
 import type { TscnNode } from '../parser/types';
 import { NodeDispatcher } from './NodeDispatcher';
 import { nodeComponentRegistry, type NodeComponentProps } from './NodeComponentRegistry';
@@ -76,5 +77,71 @@ describe('<NodeDispatcher>', () => {
     await renderWithProviders(<NodeDispatcher nodes={nodes} />);
 
     expect(capturedPath).toBe('Outer/Inner');
+  });
+
+  it('PERF (WI-213): attaches pointer handlers to exactly ONE delegated root, not one per node', async () => {
+    // Before event delegation, every node's wrapper group carried its own
+    // copy of the four pointer handlers — R3F treats every object with a
+    // registered handler as its own interactive raycast root, so a mesh at
+    // depth d was triangle-tested once per ancestor on every pointer move.
+    // `object.__r3f.eventCount` is R3F's own per-object handler count.
+    const nodes: TscnNode[] = [
+      makeNode('Root', 'Node3D', [
+        makeNode('Child', 'Node3D', [makeNode('Grandchild', 'Node3D')]),
+      ]),
+    ];
+    const renderer = await renderWithProviders(<NodeDispatcher nodes={nodes} />);
+
+    const scene = renderer.scene.instance as unknown as THREE.Object3D;
+    let interactiveCount = 0;
+    scene.traverse((object) => {
+      const r3f = (object as unknown as { __r3f?: { eventCount?: number } }).__r3f;
+      if (r3f?.eventCount) interactiveCount++;
+    });
+
+    expect(interactiveCount).toBe(1);
+  });
+});
+
+describe('<NodeDispatcher> per-node error boundary (#216)', () => {
+  function Bomb(_: NodeComponentProps) {
+    throw new Error('node render exploded');
+  }
+  nodeComponentRegistry.register({ typeName: 'Bomb', Component: Bomb });
+
+  it('a crashing node falls back to a placeholder instead of blanking the whole viewport', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const nodes: TscnNode[] = [
+      makeNode('Root', 'Node3D', [
+        makeNode('GoodSibling', 'Node3D'),
+        makeNode('BadNode', 'Bomb'),
+      ]),
+    ];
+    const renderer = await renderWithProviders(<NodeDispatcher nodes={nodes} />);
+
+    // The good sibling still rendered — the crash didn't blank the tree.
+    const groups = renderer.scene.findAllByType('Group');
+    expect(groups.some((g) => g.instance.name === 'GoodSibling')).toBe(true);
+
+    // The crashed node's wrapper shows a magenta placeholder (the SAME
+    // visual language as a missing resource) instead of vanishing outright.
+    const meshes = renderer.scene.findAllByType('Mesh');
+    const placeholder = meshes.find((m) => {
+      const mat = m.instance.material as { color?: THREE.Color };
+      return mat.color && mat.color.r > 0.9 && mat.color.g < 0.1 && mat.color.b > 0.9;
+    });
+    expect(placeholder).toBeDefined();
+
+    consoleSpy.mockRestore();
+  });
+
+  it('does not throw past NodeDispatcher — the render commits successfully', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const nodes: TscnNode[] = [makeNode('OnlyBad', 'Bomb')];
+    await expect(renderWithProviders(<NodeDispatcher nodes={nodes} />)).resolves.toBeDefined();
+
+    consoleSpy.mockRestore();
   });
 });

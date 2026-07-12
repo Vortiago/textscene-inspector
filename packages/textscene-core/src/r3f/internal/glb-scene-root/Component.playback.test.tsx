@@ -177,3 +177,31 @@ describe('GLBSceneRoot animation driver — playback', () => {
     expect(moverX(renderer)).toBeCloseTo(0);
   });
 });
+
+describe('GLBSceneRoot animation driver — preview speed + loop override (#224)', () => {
+  it('scales the advance rate by the preview playbackSpeed multiplier', async () => {
+    const renderer = await mountScene();
+    await ReactThreeTestRenderer.act(async () => transport.selectClip('slide'));
+    await ReactThreeTestRenderer.act(async () => transport.setPlaybackSpeed(2));
+    await ReactThreeTestRenderer.act(async () => transport.play());
+    await renderer.advanceFrames(1, 0.25); // 0.25 * 2 = 0.5 -> x=5
+    expect(moverX(renderer)).toBeCloseTo(5, 1);
+  });
+
+  it('defaults to looping forever ("auto"), wrapping around past the clip length', async () => {
+    const renderer = await mountScene();
+    await ReactThreeTestRenderer.act(async () => transport.selectClip('slide'));
+    await ReactThreeTestRenderer.act(async () => transport.play());
+    await renderer.advanceFrames(1, 1.5); // 1.5 mod 1.0 = 0.5 -> x=5, not clamped at 10
+    expect(moverX(renderer)).toBeCloseTo(5, 1);
+  });
+
+  it('"once" forces a single clamped pass even though GLB clips loop by default', async () => {
+    const renderer = await mountScene();
+    await ReactThreeTestRenderer.act(async () => transport.selectClip('slide'));
+    await ReactThreeTestRenderer.act(async () => transport.setLoopOverride('once'));
+    await ReactThreeTestRenderer.act(async () => transport.play());
+    await renderer.advanceFrames(1, 1.5); // past the 1s length -> clamped at the final key
+    expect(moverX(renderer)).toBeCloseTo(10, 1);
+  });
+});

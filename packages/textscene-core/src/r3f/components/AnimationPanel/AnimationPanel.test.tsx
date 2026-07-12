@@ -52,7 +52,7 @@ describe('AnimationPanel — empty state', () => {
 describe('AnimationPanel — clip selector (G2)', () => {
   it('renders an option per clip and reflects the selected clip', () => {
     renderPanel();
-    const select = screen.getByRole('combobox') as HTMLSelectElement;
+    const select = screen.getByRole('combobox', { name: /animation/i }) as HTMLSelectElement;
     const options = Array.from(select.options).map((o) => o.value);
     expect(options).toEqual(['idle', 'walk']);
     expect(select.value).toBe('idle');
@@ -60,18 +60,20 @@ describe('AnimationPanel — clip selector (G2)', () => {
 
   it('changing the selector selects that clip', () => {
     renderPanel();
-    const select = screen.getByRole('combobox') as HTMLSelectElement;
+    const select = screen.getByRole('combobox', { name: /animation/i }) as HTMLSelectElement;
     act(() => {
       fireEvent.change(select, { target: { value: 'walk' } });
     });
-    expect((screen.getByRole('combobox') as HTMLSelectElement).value).toBe('walk');
+    expect(
+      (screen.getByRole('combobox', { name: /animation/i }) as HTMLSelectElement).value
+    ).toBe('walk');
   });
 });
 
 describe('AnimationPanel — autoplay marker (E)', () => {
   it('marks the autoplay clip in the selector and leaves others unmarked', () => {
     renderPanel(); // REG: clips [idle, walk], autoplay 'idle'
-    const select = screen.getByRole('combobox') as HTMLSelectElement;
+    const select = screen.getByRole('combobox', { name: /animation/i }) as HTMLSelectElement;
     const idle = Array.from(select.options).find((o) => o.value === 'idle');
     const walk = Array.from(select.options).find((o) => o.value === 'walk');
     expect(idle?.textContent).toContain('★');
@@ -80,7 +82,7 @@ describe('AnimationPanel — autoplay marker (E)', () => {
 
   it('lists RESET plainly (unmarked) when it is present', () => {
     renderPanel({ clips: ['RESET', 'spin'], durations: { RESET: 0, spin: 1 }, autoplay: 'spin' });
-    const select = screen.getByRole('combobox') as HTMLSelectElement;
+    const select = screen.getByRole('combobox', { name: /animation/i }) as HTMLSelectElement;
     const reset = Array.from(select.options).find((o) => o.value === 'RESET');
     expect(reset).toBeDefined();
     expect(reset?.textContent).not.toContain('★');
@@ -112,5 +114,55 @@ describe('AnimationPanel — scrubber (G4)', () => {
     expect(slider.max).toBe('1'); // idle duration
     act(() => fireEvent.change(slider, { target: { value: '0.5' } }));
     expect(screen.getByTestId('timecode').textContent).toContain('0:00.50');
+  });
+});
+
+describe('AnimationPanel — playback speed (#224)', () => {
+  it('defaults the speed selector to 1x', () => {
+    renderPanel();
+    const select = screen.getByRole('combobox', { name: /speed/i }) as HTMLSelectElement;
+    expect(select.value).toBe('1');
+  });
+
+  it('changing the speed selector updates the shared transport', () => {
+    function Reader() {
+      const t = useAnimationTransport();
+      return <span data-testid="speed">{t.playbackSpeed}</span>;
+    }
+    render(
+      <AnimationTransportProvider>
+        <Register reg={REG} />
+        <AnimationPanel />
+        <Reader />
+      </AnimationTransportProvider>
+    );
+    const select = screen.getByRole('combobox', { name: /speed/i }) as HTMLSelectElement;
+    act(() => fireEvent.change(select, { target: { value: '2' } }));
+    expect(screen.getByTestId('speed').textContent).toBe('2');
+  });
+});
+
+describe('AnimationPanel — loop override (#224)', () => {
+  it('defaults the loop selector to Auto', () => {
+    renderPanel();
+    const select = screen.getByRole('combobox', { name: /loop/i }) as HTMLSelectElement;
+    expect(select.value).toBe('auto');
+  });
+
+  it('changing the loop selector updates the shared transport', () => {
+    function Reader() {
+      const t = useAnimationTransport();
+      return <span data-testid="loop">{t.loopOverride}</span>;
+    }
+    render(
+      <AnimationTransportProvider>
+        <Register reg={REG} />
+        <AnimationPanel />
+        <Reader />
+      </AnimationTransportProvider>
+    );
+    const select = screen.getByRole('combobox', { name: /loop/i }) as HTMLSelectElement;
+    act(() => fireEvent.change(select, { target: { value: 'once' } }));
+    expect(screen.getByTestId('loop').textContent).toBe('once');
   });
 });

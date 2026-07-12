@@ -3,8 +3,9 @@
  * and selection state from `<SelectionContext>`. Replaces the imperative
  * `packages/textscene-core/src/ui/SceneTreeViewer.ts`.
  */
-import { useCallback, useMemo, useState, type ChangeEvent } from 'react';
+import { useCallback, useMemo, useState, type ChangeEvent, type KeyboardEvent } from 'react';
 import type { TscnNode, TscnExternalResource } from '../../../parser/types.js';
+import { getAncestorPaths } from '../../../utils/nodePath.js';
 import { useHierarchy } from '../../contexts/HierarchyContext.js';
 import { useSelection } from '../../contexts/SelectionContext.js';
 import { useResourceLoader } from '../../../resources/useResource.js';
@@ -12,6 +13,16 @@ import { liveTreeContext, useLiveTreeVersion } from '../../useLiveSceneTree.js';
 import { walkLiveTree } from '../../liveSceneTree.js';
 import { TreeNode } from './TreeNode.js';
 import styles from './SceneTreeViewer.module.css';
+
+/**
+ * The node path for a treeitem row. `data-node-path` lives on the OUTER
+ * `.node` wrapper (also used elsewhere to look up a row by path), not the
+ * treeitem div itself — duplicating it onto the treeitem would break every
+ * `[data-node-path="X"]` query that assumes exactly one match per row.
+ */
+function nodePathFor(row: HTMLElement): string | null {
+  return row.closest<HTMLElement>('[data-node-path]')?.dataset.nodePath ?? null;
+}
 
 export interface SceneTreeViewerProps {
   /** Optional callback fired when a tree row is double-clicked (host can jump to source). */
@@ -21,7 +32,15 @@ export interface SceneTreeViewerProps {
 
 export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewerProps) {
   const { sceneGraph } = useHierarchy();
-  const { setExpandedNodePaths, hiddenNodePaths, toggleHidden } = useSelection();
+  const {
+    selectedNodePath,
+    expandedNodePaths,
+    setExpandedNodePaths,
+    hiddenNodePaths,
+    toggleHidden,
+    setSelectedNodePath,
+    toggleExpandedNodePath,
+  } = useSelection();
   const loader = useResourceLoader();
   const version = useLiveTreeVersion(loader);
 
@@ -88,6 +107,93 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
     setSearchTerm(e.target.value);
   }, []);
 
+  // #224: WAI-ARIA APG Tree View keyboard pattern. One handler on the tree
+  // container (event delegation) instead of one per row. Arrow keys move
+  // focus AND selection together — this app has no separate "focused but
+  // unselected" concept, so treating them as one keeps the roving-tabIndex
+  // row in TreeNode.tsx in sync for free.
+  const handleTreeKeyDown = useCallback(
+    (e: KeyboardEvent<HTMLDivElement>) => {
+      const currentRow = (e.target as HTMLElement).closest<HTMLElement>('[role="treeitem"]');
+      if (!currentRow) return;
+
+      const allRows = Array.from(
+        e.currentTarget.querySelectorAll<HTMLElement>('[role="treeitem"]')
+      );
+      const index = allRows.indexOf(currentRow);
+      if (index === -1) return;
+
+      const focusAndSelect = (row: HTMLElement | null | undefined) => {
+        if (!row) return;
+        row.focus();
+        const path = nodePathFor(row);
+        if (path) setSelectedNodePath(path);
+      };
+
+      switch (e.key) {
+        case 'ArrowDown':
+          e.preventDefault();
+          focusAndSelect(allRows[index + 1]);
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          focusAndSelect(allRows[index - 1]);
+          break;
+        case 'ArrowRight': {
+          e.preventDefault();
+          const expanded = currentRow.getAttribute('aria-expanded');
+          if (expanded === 'false') {
+            const path = nodePathFor(currentRow);
+            if (path) toggleExpandedNodePath(path);
+          } else if (expanded === 'true') {
+            focusAndSelect(allRows[index + 1]);
+          }
+          break;
+        }
+        case 'ArrowLeft': {
+          e.preventDefault();
+          const expanded = currentRow.getAttribute('aria-expanded');
+          const path = nodePathFor(currentRow);
+          if (expanded === 'true') {
+            if (path) toggleExpandedNodePath(path);
+          } else if (path) {
+            // Move to the parent row via the slash-joined path model the
+            // whole handler already leans on (rather than walking TreeNode's
+            // private DOM nesting): the nearest ancestor path is the parent;
+            // a root row has none.
+            const parentPath = getAncestorPaths(path).pop();
+            if (parentPath) {
+              focusAndSelect(allRows.find((row) => nodePathFor(row) === parentPath));
+            }
+          }
+          break;
+        }
+        case 'Home':
+          e.preventDefault();
+          focusAndSelect(allRows[0]);
+          break;
+        case 'End':
+          e.preventDefault();
+          focusAndSelect(allRows[allRows.length - 1]);
+          break;
+        default:
+          break;
+      }
+    },
+    [setSelectedNodePath, toggleExpandedNodePath]
+  );
+
+  // #224 roving tabIndex: the selected row is normally the tree's one tab
+  // stop, but only while it is actually RENDERED — collapsing an ancestor or
+  // filtering it out via search unmounts it, and without a fallback every
+  // remaining row would be tabIndex -1 (Tab would skip the tree entirely).
+  // A row renders iff it survives the search filter and every ancestor is
+  // expanded — the same conditions TreeNode's recursion applies.
+  const selectedRowRendered =
+    selectedNodePath !== null &&
+    matches(selectedNodePath) &&
+    getAncestorPaths(selectedNodePath).every((p) => expandedNodePaths.has(p));
+
   if (sceneGraph === null) {
     return (
       <div className={styles.root}>
@@ -129,13 +235,18 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
         </button>
       </div>
 
-      <div className={styles.tree} role="tree" aria-label="Scene tree">
+      <div
+        className={styles.tree}
+        role="tree"
+        aria-label="Scene tree"
+        onKeyDown={handleTreeKeyDown}
+      >
         {rootNodes.length === 0 ? (
           <div className={styles.empty}>No nodes to display</div>
         ) : visibleRoots.length === 0 ? (
           <div className={styles.empty}>No nodes match &ldquo;{searchTerm}&rdquo;</div>
         ) : (
-          visibleRoots.map((node) => (
+          visibleRoots.map((node, index) => (
             <TreeNode
               key={node.name}
               node={node}
@@ -147,6 +258,7 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
               onOpenSubScene={onOpenSubScene}
               matches={matches}
               externalResources={externalResources}
+              isDefaultFocusable={index === 0 && !selectedRowRendered}
             />
           ))
         )}

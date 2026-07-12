@@ -25,14 +25,14 @@ describe('SelectionContext.clearAll (WI-UX-5)', () => {
 
     act(() => {
       result.current.setSelectedNodePath('Root/Mesh');
-      result.current.setHoveredNodePath('Root/Light');
+      result.current.hoverStore.set('Root/Light');
       result.current.toggleExpandedNodePath('Root');
       result.current.toggleHidden('Root/Mesh');
       result.current.registerNodeObject('Root/Mesh', fakeObject);
     });
 
     expect(result.current.selectedNodePath).toBe('Root/Mesh');
-    expect(result.current.hoveredNodePath).toBe('Root/Light');
+    expect(result.current.hoverStore.get()).toBe('Root/Light');
     expect(result.current.expandedNodePaths.has('Root')).toBe(true);
     expect(result.current.hiddenNodePaths.has('Root/Mesh')).toBe(true);
     expect(result.current.nodeObjectMap.has('Root/Mesh')).toBe(true);
@@ -42,7 +42,7 @@ describe('SelectionContext.clearAll (WI-UX-5)', () => {
     });
 
     expect(result.current.selectedNodePath).toBeNull();
-    expect(result.current.hoveredNodePath).toBeNull();
+    expect(result.current.hoverStore.get()).toBeNull();
     expect(result.current.expandedNodePaths.size).toBe(0);
     expect(result.current.hiddenNodePaths.size).toBe(0);
     expect(result.current.nodeObjectMap.size).toBe(0);
@@ -57,7 +57,7 @@ describe('SelectionContext.clearAll (WI-UX-5)', () => {
     });
 
     expect(result.current.selectedNodePath).toBeNull();
-    expect(result.current.hoveredNodePath).toBeNull();
+    expect(result.current.hoverStore.get()).toBeNull();
     expect(result.current.expandedNodePaths.size).toBe(0);
     expect(result.current.hiddenNodePaths.size).toBe(0);
     expect(result.current.nodeObjectMap.size).toBe(0);

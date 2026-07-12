@@ -204,6 +204,56 @@ describe('AnimatedSprite2D playback (transport-driven)', () => {
     expect(frameWidth(r)).toBe(32); // authored frame 0
   });
 
+  it('stop rewinds the transport playhead to 0 (no stale flush overwrites the reset)', async () => {
+    const r = await mount('0');
+    await select(SPRITE_PATH);
+    await ReactThreeTestRenderer.act(async () => transport.play());
+    await r.advanceFrames(1, 0.3);
+    await settle();
+    await ReactThreeTestRenderer.act(async () => transport.stop());
+    await r.advanceFrames(2, 0.1); // frames where a (buggy) stop-edge flush would fire
+    await settle();
+    expect(transport.time).toBe(0); // the scrubber/timecode read 0:00 while stopped
+  });
+
+  it('advances in real time despite the WI-213 reportTime throttle (local playhead, not transport.time)', async () => {
+    // 25 frames × 16ms ≈ 0.41s of wall clock inside ONE throttle window
+    // (Date.now barely moves in tests, so transport.time stays frozen after
+    // the first commit). Integrating the throttled transport.time would leave
+    // the playhead at ~2 frame-deltas (frame 0); the local accumulator
+    // reaches ~0.4s → wraps the 0.4s loop → lands in frame 0/1 territory
+    // having actually TRAVERSED frame 1 — assert via a non-wrapping check at
+    // 0.3s instead for determinism.
+    const r = await mount('0');
+    await select(SPRITE_PATH);
+    await ReactThreeTestRenderer.act(async () => transport.play());
+    await r.advanceFrames(18, 1 / 60); // 0.3s accumulated in ~0ms of wall time
+    await settle();
+    expect(frameWidth(r)).toBe(64); // frame 1 — a throttle-frozen clock stays on frame 0 (32)
+  });
+
+  it('honours the #224 preview Speed multiplier', async () => {
+    const r = await mount('0');
+    await select(SPRITE_PATH);
+    await ReactThreeTestRenderer.act(async () => transport.setPlaybackSpeed(2));
+    await ReactThreeTestRenderer.act(async () => transport.play());
+    await r.advanceFrames(1, 0.15); // 0.15s × 2 = 0.3s → frame 1 (at 1x it'd still be frame 0)
+    await settle();
+    expect(frameWidth(r)).toBe(64);
+  });
+
+  it("honours the #224 Loop override: 'once' holds an authored-looping clip at its last frame", async () => {
+    const r = await mount('0');
+    await select(SPRITE_PATH);
+    await ReactThreeTestRenderer.act(async () => transport.setLoopOverride('once'));
+    await ReactThreeTestRenderer.act(async () => transport.play());
+    await r.advanceFrames(1, 0.55); // past the 0.4s clip end
+    await settle();
+    // 'auto' would wrap ((0.55 % 0.4) = 0.15s → frame 0); 'once' clamps to the
+    // end and holds the LAST frame.
+    expect(frameWidth(r)).toBe(64);
+  });
+
   it('stops driving when another node is selected', async () => {
     const r = await mount('0');
     await select(SPRITE_PATH);

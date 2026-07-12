@@ -27,7 +27,11 @@ export interface Label3DProperties extends Node3DProperties {
   /** Size of one pixel's width in 3D world units (default: 0.01) */
   pixel_size: number;
 
-  /** Billboard mode (default: BILLBOARD_ENABLED) */
+  /**
+   * Billboard mode. Default: BILLBOARD_DISABLED — a deliberate parser
+   * default (see `Component.parity.test.tsx`: "was ENABLED → labels
+   * wrongly tracked camera"), same as Sprite3D's default.
+   */
   billboard: BillboardMode;
 
   /** Text color/tint (default: white) */

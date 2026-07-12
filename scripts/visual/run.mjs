@@ -26,6 +26,7 @@
 
 import { spawn, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { createServer } from 'node:net';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
@@ -40,9 +41,22 @@ const OUTPUT_DIR = join(here, 'output');
 const WEB_DIST_INDEX = join(REPO_ROOT, 'apps/textscene-web/dist/index.html');
 
 // Dedicated uncommon port: never collides with a manually running
-// `pnpm preview` (4173) or the showcase pipeline (4188).
-const PORT = 4317;
+// `pnpm preview` (4173) or the showcase pipeline (4188). Override with
+// VISUAL_PORT when another checkout on the same host is already using 4317
+// (e.g. concurrent worktrees each running this harness) — `waitForServer`
+// only polls for *a* 200 response, so two harnesses racing for the same
+// port would otherwise silently capture from whichever process got there
+// first, with no error.
+const PORT = Number(process.env.VISUAL_PORT) || 4317;
 const VIEWPORT = { width: 1280, height: 800 };
+
+// The Source pane (`tscn-web-source-pane` in apps/textscene-web/src/r3f-main.tsx)
+// is an editing affordance, not part of the previewed scene, and is visible by
+// default for any fresh browser context with no persisted preference. Seed it
+// closed via an init script (runs before the page's own scripts on every
+// navigation in this context) so golden baselines stay scoped to the rendered
+// scene at its full canvas width, not incidental editor chrome.
+const SOURCE_PANE_STORAGE_KEY = 'tscn-web-source-pane';
 
 const SETTLE_INITIAL_MS = 1200; // covers the last CameraFit reframe at 1100 ms
 const SETTLE_INTERVAL_MS = 350;
@@ -72,6 +86,33 @@ function ensureWebBuilt() {
   });
   if (r.status !== 0) {
     console.error('[visual] web previewer build failed');
+    process.exit(1);
+  }
+}
+
+/**
+ * Refuse to silently capture from someone else's process. `--strictPort`
+ * makes our own preview spawn fail on an occupied port, but that spawn runs
+ * detached (`stdio: 'ignore'`) and `waitForServer` below only polls for *a*
+ * 200 response — so without this check, an already-listening server (a
+ * leftover from a previous run, or a concurrent worktree on the same host
+ * also running this harness against the shared default port) would answer
+ * instead, and every capture would silently reflect a foreign build.
+ */
+async function assertPortFree(port) {
+  const free = await new Promise((resolve) => {
+    const probe = createServer();
+    probe.once('error', () => resolve(false));
+    probe.once('listening', () => probe.close(() => resolve(true)));
+    probe.listen(port, '0.0.0.0');
+  });
+  if (!free) {
+    console.error(
+      `\n[visual] port ${port} is already in use by another process — refusing to capture ` +
+        `against an unverified server (it may be a leftover preview from a previous run, or a ` +
+        `concurrent worktree on this host also running the visual harness). Free the port, or ` +
+        `set VISUAL_PORT=<free-port> to use a different one.\n`
+    );
     process.exit(1);
   }
 }
@@ -132,6 +173,14 @@ async function captureScene(page, baseUrl, scene) {
       return { buffer: null, reason: `select target not found in tree: ${scene.select}` };
     }
     await row.click();
+    // `.click()` moves the mouse over the row first, which fires a real
+    // `mouseenter` and leaves that row's hover-highlight engaged (since the
+    // mouse never moves away afterward) — an accidental artifact of driving
+    // a real click, not something these `-selected` scenes intend to capture
+    // (this harness exercises the selection path, per the doc comment above;
+    // hover is a separate, untested-here affordance). Move the pointer off
+    // the tree entirely so only true selection state renders.
+    await page.mouse.move(0, 0);
   }
 
   await page.waitForTimeout(SETTLE_INITIAL_MS);
@@ -205,6 +254,7 @@ async function main() {
     }
   }
 
+  await assertPortFree(PORT);
   ensureWebBuilt();
   const { proc, baseUrl } = startPreview();
   let browser;
@@ -221,6 +271,11 @@ async function main() {
       viewport: VIEWPORT,
       deviceScaleFactor: 1,
     });
+    /* global window */ // the addInitScript callback below runs in the browser
+    await context.addInitScript(
+      ([key, value]) => window.localStorage.setItem(key, value),
+      [SOURCE_PANE_STORAGE_KEY, JSON.stringify({ visible: false, width: 320 })]
+    );
     const page = await context.newPage();
 
     for (const scene of scenes) {

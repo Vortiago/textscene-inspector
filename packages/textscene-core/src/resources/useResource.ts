@@ -17,7 +17,7 @@ import { useContext, useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import type { TscnScene } from '../parser/types';
 import type { ResourceEventBus, ResourceType as BusResourceType } from './ResourceEventBus';
-import { cloneWithMaterials } from './processing/glbProcessing';
+import { cloneWithMaterials, disposeClonedMaterials } from './processing/glbProcessing';
 import { ResourceLoaderContext } from './ResourceLoaderContext';
 import { useMissingResources } from '../r3f/contexts/MissingResourcesContext';
 
@@ -122,6 +122,12 @@ export function useResource<T>(path: string, type: ResourceType): ResourceResult
   const currentRef = useRef<{ path: string; type: ResourceType }>({ path, type });
   currentRef.current = { path, type };
 
+  // The ONE clone this hook instance currently holds (GLBMesh only — stays
+  // null for every other resource type). Persists across effect re-runs so
+  // a path/type swap or unmount can dispose the outgoing clone's materials
+  // before the ref is replaced or the hook goes away.
+  const clonedRef = useRef<THREE.Object3D | null>(null);
+
   useEffect(() => {
     // Empty path: short-circuit. Callers use the empty string to signal
     // "no request" when they need to keep the hook-call count stable
@@ -157,17 +163,43 @@ export function useResource<T>(path: string, type: ResourceType): ResourceResult
     const isCurrent = () =>
       currentRef.current.path === path && currentRef.current.type === type;
 
+    // Dispose this hook instance's currently-held clone's cloned materials
+    // (never its geometry — shared with the template/siblings, see
+    // disposeClonedMaterials' docstring). Called before replacing the
+    // clone with a fresh one and on unmount/path-swap cleanup.
+    const disposePreviousClone = () => {
+      if (clonedRef.current) {
+        disposeClonedMaterials(clonedRef.current);
+        clonedRef.current = null;
+      }
+    };
+
     /**
-     * Apply a successfully-loaded value to the hook state. For Object3D
-     * resources (GLBMesh) this clones the cached template so each
-     * consumer gets its own attachable instance.
+     * For Object3D resources (GLBMesh) clone the cached template so each
+     * consumer gets its own attachable instance, tracking the clone so a
+     * later replacement/unmount can dispose its materials. Every other
+     * resource type passes the raw value through unchanged.
+     */
+    const toConsumerValue = (rawValue: unknown): unknown => {
+      if (type === 'GLBMesh' && rawValue instanceof THREE.Object3D) {
+        disposePreviousClone();
+        const cloned = cloneWithMaterials(rawValue);
+        clonedRef.current = cloned;
+        return cloned;
+      }
+      return rawValue;
+    };
+
+    /**
+     * Apply a successfully-loaded value to the hook state (via
+     * `toConsumerValue`, which owns the per-consumer GLB cloning). The ONE
+     * loaded-state writer — both the synchronous cache hit below and the
+     * async `loaded` event land here, so the clone/dispose lifecycle can't
+     * drift between the two paths.
      */
     const applyValue = (rawValue: unknown) => {
       if (!isCurrent()) return;
-      let value = rawValue as T;
-      if (type === 'GLBMesh' && rawValue instanceof THREE.Object3D) {
-        value = cloneWithMaterials(rawValue) as unknown as T;
-      }
+      const value = toConsumerValue(rawValue) as T;
       setResult({ value, status: 'loaded' });
     };
 
@@ -195,11 +227,7 @@ export function useResource<T>(path: string, type: ResourceType): ResourceResult
       // Still subscribe — the host may later call resourceLoader.provideFile()
       // and we want to react.
     } else if (cached !== undefined) {
-      let value = cached as T;
-      if (type === 'GLBMesh' && cached instanceof THREE.Object3D) {
-        value = cloneWithMaterials(cached) as unknown as T;
-      }
-      setResult({ value, status: 'loaded' });
+      applyValue(cached); // isCurrent() is trivially true this synchronously
       // Still subscribe — the host may invalidate (clearCache) and
       // re-load.
     } else {
@@ -229,6 +257,7 @@ export function useResource<T>(path: string, type: ResourceType): ResourceResult
     return () => {
       eventBus.off(busType, 'loaded', onLoaded);
       eventBus.off<Error>(busType, 'failed', onFailed);
+      disposePreviousClone();
     };
   }, [loader, path, type]);
 

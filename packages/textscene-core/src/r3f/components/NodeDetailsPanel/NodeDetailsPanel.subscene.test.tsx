@@ -27,7 +27,7 @@ import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext
 import { ResourceEventBus } from '../../../resources/ResourceEventBus';
 import { MetadataStore } from '../../../resources/MetadataStore';
 import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph';
-import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';
+import { nodeRegistry } from '../../../core/NodeRegistry';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
 import type { TscnNode, TscnScene, TscnExternalResource } from '../../../parser/types';
 
@@ -103,11 +103,8 @@ const LAMP_MESH_TYPE = '___LampMeshType___';
 const COIN_ROOT_TYPE = '___CoinRootType___';
 
 afterEach(() => {
-  const registrations = (nodeRegistry as unknown as {
-    registrations: Map<string, NodeTypeRegistration>;
-  }).registrations;
-  registrations.delete(LAMP_MESH_TYPE);
-  registrations.delete(COIN_ROOT_TYPE);
+  nodeRegistry.unregister(LAMP_MESH_TYPE);
+  nodeRegistry.unregister(COIN_ROOT_TYPE);
 });
 
 describe('<NodeDetailsPanel> BUG 1 — sub-scene interior selection', () => {

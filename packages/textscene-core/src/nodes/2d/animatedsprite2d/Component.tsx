@@ -13,7 +13,7 @@
  * `useSpriteFrames` / `resolveFrameTexture`.
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
@@ -22,6 +22,8 @@ import { composeFrameTexture, frameSizePx, type SpriteFrameProps } from '../../.
 import { useResource } from '../../../resources/useResource';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import { useAnimationTransport } from '../../../r3f/contexts/AnimationTransportContext';
+import { flushTimeOnPauseEdge } from '../../../r3f/animation/usePlaybackLoop';
+import { loopsUnderOverride } from '../../../r3f/animation/loopOverride';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useOptionalSelection } from '../../../r3f/contexts/SelectionContext';
 import { resolveFrameTexture, type FrameTextureRegion } from './frameTexture';
@@ -70,20 +72,48 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
   // playing/paused; when stopped the authored `props.frame` is shown directly.
   const [playbackFrame, setPlaybackFrame] = useState(0);
   const { time: transportTime, reportTime } = transport;
+  // Only the 'playing' branch below reports, so capture the last value it
+  // computed for `flushTimeOnPauseEdge` (WI-213) — unlike the mixer drivers,
+  // there is no action to read the live playhead back from.
+  const prevStateRef = useRef(effectiveState);
+  const prevAnimRef = useRef<string | null>(null);
+  const lastPlayingTimeRef = useRef(0);
   useFrame((_, delta) => {
     if (!currentAnim) return;
+    flushTimeOnPauseEdge(prevStateRef.current, effectiveState, () => lastPlayingTimeRef.current, reportTime);
     if (effectiveState === 'playing') {
       const dur = clipDuration(currentAnim);
-      // Wrap a looping clip past its end; hold a one-shot at its last frame.
-      const t = dur > 0 && currentAnim.loop ? (transportTime + delta) % dur : Math.min(transportTime + delta, dur);
+      // Advance a LOCAL playhead: `transport.time` is throttle-frozen between
+      // commits (WI-213), so integrating it would run playback at a fraction
+      // of real speed — this ref is the sprite's clock the way `action.time`
+      // is the mixer drivers'; the transport only *displays* what we report.
+      // Re-seed from the transport where it IS authoritative: entering
+      // 'playing' (resume picks up a paused seek) or a clip switch
+      // (`selectClip` resets the playhead to 0).
+      const continuing =
+        prevStateRef.current === 'playing' && prevAnimRef.current === currentAnim.name;
+      const base = continuing ? lastPlayingTimeRef.current : transportTime;
+      // #224: the preview Speed multiplier and Loop override apply to this
+      // driver exactly like the mixer drivers (loopsUnderOverride mirrors
+      // applyLoopOverride). Wrap a repeating clip past its end; hold a
+      // non-repeating one at its last frame.
+      const step = delta * transport.playbackSpeed;
+      const loops = loopsUnderOverride(transport.loopOverride, currentAnim.loop);
+      const t = dur > 0 && loops ? (base + step) % dur : Math.min(base + step, dur);
       reportTime(t);
-      const next = frameAtTime(currentAnim, t);
+      lastPlayingTimeRef.current = t;
+      // frameAtTime consults the anim's OWN loop flag (wrap vs clamp at the
+      // end), so hand it the override-effective flag, not the authored one.
+      const effectiveAnim = loops === currentAnim.loop ? currentAnim : { ...currentAnim, loop: loops };
+      const next = frameAtTime(effectiveAnim, t);
       setPlaybackFrame((prev) => (prev === next ? prev : next));
     } else if (effectiveState === 'paused') {
       const next = frameAtTime(currentAnim, transportTime); // sample the seeked time
       setPlaybackFrame((prev) => (prev === next ? prev : next));
     }
     // stopped: the authored frame is shown below — nothing to drive here.
+    prevStateRef.current = effectiveState;
+    prevAnimRef.current = currentAnim.name;
   });
 
   const frameCount = currentAnim?.frames.length ?? 0;

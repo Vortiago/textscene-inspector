@@ -27,11 +27,15 @@ import {
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
-import { useAnimationTransport, type PlayState } from '../../../r3f/contexts/AnimationTransportContext';
+import {
+  useAnimationTransport,
+  type PlayState,
+} from '../../../r3f/contexts/AnimationTransportContext';
 import { useRegisterDriver } from '../../../r3f/contexts/AnimationDriverContext';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useOptionalSelection } from '../../../r3f/contexts/SelectionContext';
 import { usePlaybackLoop } from '../../../r3f/animation/usePlaybackLoop';
+import { applyLoopOverride } from '../../../r3f/animation/loopOverride';
 import { useAnimatedValueRegistry } from '../../../r3f/contexts/AnimatedValueContext';
 import { resolveAnimations, type GodotAnimation } from './animationResolver';
 import { buildClip, loopSettingsFor } from './clipBuilder';
@@ -153,11 +157,17 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
     playState: effectiveState,
     selectedClip: isActive ? transport.selectedClip : null,
     transportTime: transport.time,
-    speedScale: properties.speed_scale,
+    // #224: the preview speed multiplier stacks on top of the authored
+    // speed_scale — it never replaces it.
+    speedScale: (properties.speed_scale ?? 1) * transport.playbackSpeed,
     mixerRef,
     actionsRef,
-    configureAction: (action, clipName) =>
-      configureLoop(action, loopModesRef.current.get(clipName) ?? 0),
+    configureAction: (action, clipName) => {
+      // 'auto' keeps the clip's authored Godot loop_mode (via loopSettingsFor).
+      const authoredMode = loopModesRef.current.get(clipName) ?? 0;
+      applyLoopOverride(action, transport.loopOverride, loopSettingsFor(authoredMode));
+    },
+    reconfigureKey: transport.loopOverride,
     reportTime: transport.reportTime,
     restore: () => restoreSnapshot(snapshotRef.current),
   });
@@ -240,12 +250,6 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
       {children}
     </group>
   );
-}
-
-function configureLoop(action: AnimationAction, loopMode: number): void {
-  const { loop, repetitions, clampWhenFinished } = loopSettingsFor(loopMode);
-  action.setLoop(loop, repetitions);
-  action.clampWhenFinished = clampWhenFinished;
 }
 
 /**

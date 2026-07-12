@@ -25,16 +25,24 @@
  * tests) the component is a no-op via `useOptionalSelection`.
  */
 import * as THREE from 'three';
-import { useOptionalSelection } from '../contexts/SelectionContext.js';
-import { useSceneHelper } from '../hooks/useTHREEHelper.js';
+import { useHoveredNodePath, useOptionalSelection } from '../contexts/SelectionContext.js';
+import { useHelperTickUpdate, useSceneHelper } from '../hooks/useTHREEHelper.js';
+import { useResourceLoader } from '../../resources/useResource.js';
+import { useLiveTreeVersion } from '../useLiveSceneTree.js';
 import { WorldBoxHelper } from './WorldBoxHelper.js';
 
 const HOVER_COLOR = 0xff8800;
 
 export function HoverHighlight() {
+  // WI-213: hover lives in a ref-based external store, not SelectionContext's
+  // React state — this is the ONE component that reads it.
+  const hoveredNodePath = useHoveredNodePath();
   const selection = useOptionalSelection();
-  const hoveredNodePath = selection?.hoveredNodePath ?? null;
   const nodeObjectMap = selection?.nodeObjectMap ?? null;
+  const tickUpdate = useHelperTickUpdate();
+  // See SelectionHighlight: refresh the box when an async GLB/sub-scene lands
+  // inside the hovered wrapper while the tick gate is closed.
+  const resourceVersion = useLiveTreeVersion(useResourceLoader());
 
   useSceneHelper<THREE.BoxHelper>(
     () => {
@@ -47,7 +55,8 @@ export function HoverHighlight() {
       helper.name = 'tscn-hover-highlight';
       return helper;
     },
-    [hoveredNodePath, nodeObjectMap]
+    [hoveredNodePath, nodeObjectMap, resourceVersion],
+    { tickUpdate }
   );
 
   return null;

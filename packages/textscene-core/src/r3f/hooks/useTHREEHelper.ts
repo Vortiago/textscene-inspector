@@ -45,6 +45,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
+import { useAnimationTransport } from '../contexts/AnimationTransportContext.js';
 
 interface HelperLike extends THREE.Object3D {
   /** Optional — most THREE helpers (BoxHelper, *LightHelper) expose this. */
@@ -87,6 +88,17 @@ function useHelperLifecycle<H extends HelperLike>(
   const [helper, setHelper] = useState<H | null>(null);
   const helperRef = useRef<H | null>(null);
 
+  // One GRACE frame after the tick gate closes: the React commit that flips
+  // `tickUpdate` false (e.g. the transport's play → stopped edge) lands
+  // BEFORE the frame in which the driver's 'stopped' branch restores the
+  // authored pose — the drivers mount ahead of the helper consumers, so
+  // their useFrame runs first within that frame. Without one more update the
+  // helper would freeze at the mid-animation pose the instant the gate shut.
+  const graceFramesRef = useRef(0);
+  const prevTickUpdateRef = useRef(tickUpdate);
+  if (prevTickUpdateRef.current && !tickUpdate) graceFramesRef.current = 1;
+  prevTickUpdateRef.current = tickUpdate;
+
   useEffect(() => {
     const created = factory();
     if (!created) {
@@ -110,10 +122,28 @@ function useHelperLifecycle<H extends HelperLike>(
   }, deps);
 
   useFrame(() => {
-    if (tickUpdate) helperRef.current?.update?.();
+    if (tickUpdate) {
+      helperRef.current?.update?.();
+    } else if (graceFramesRef.current > 0) {
+      graceFramesRef.current -= 1;
+      helperRef.current?.update?.();
+    }
   });
 
   return helper;
+}
+
+/**
+ * PERF (WI-213): the `tickUpdate` value for helpers that track a scene
+ * object (selection/hover boxes). A static scene never needs the helper
+ * recomputed after its initial placement (the helper's constructor already
+ * runs `update()` once); only an active playback driver can move the target
+ * between renders. `paused` still counts — a scrub seeks the mixer without
+ * flipping `playState` back to `'playing'`.
+ */
+export function useHelperTickUpdate(): boolean {
+  const { playState } = useAnimationTransport();
+  return playState !== 'stopped';
 }
 
 /**

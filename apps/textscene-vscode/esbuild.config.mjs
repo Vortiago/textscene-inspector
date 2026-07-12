@@ -8,7 +8,7 @@
  * under VS Code's restrictive content-security policy.
  */
 import * as esbuild from 'esbuild';
-import { rm } from 'node:fs/promises';
+import { rm, writeFile } from 'node:fs/promises';
 import cssModulesPlugin from 'esbuild-css-modules-plugin';
 
 const production = process.argv.includes('--production');
@@ -35,6 +35,11 @@ const extensionOptions = {
   sourcemap: !production,
   minify: production,
   logLevel: 'info',
+  // The metafile lists every input module bundled into the host — written
+  // to dist/*.meta.json below so `scripts/check-bundle-size.mjs` can assert
+  // precisely that no react/three module was pulled in (#215), instead of
+  // heuristically token-scanning the minified output.
+  metafile: true,
 };
 
 /**
@@ -57,6 +62,12 @@ const extensionWebOptions = {
 
 /**
  * @type {esbuild.BuildOptions}
+ *
+ * The webview initial-paint budget gate (main + 200 KB gzipped) is NOT
+ * enforced here — this file only produces `dist/webview/`. The gate itself
+ * lives in `scripts/check-bundle-size.mjs`, invoked via the root
+ * `check:bundle-size` npm script (see ARCHITECTURE.md, "Bundle Size
+ * Target", for current numbers and why it's still informational).
  */
 const webviewOptions = {
   entryPoints: ['src/webview/webview.ts'],
@@ -140,5 +151,10 @@ if (watch) {
     builds.push(esbuild.build(testOptions));
   }
 
-  await Promise.all(builds);
+  const [extensionResult, extensionWebResult] = await Promise.all(builds);
+  // Persist the host builds' metafiles for the #215 host-bundle guard.
+  await Promise.all([
+    writeFile('dist/extension.meta.json', JSON.stringify(extensionResult.metafile)),
+    writeFile('dist/extension.web.meta.json', JSON.stringify(extensionWebResult.metafile)),
+  ]);
 }

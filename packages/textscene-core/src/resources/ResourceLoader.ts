@@ -223,13 +223,24 @@ export class ResourceLoader {
 
   // ---- Cache management ----------------------------------------------------
 
-  /** Clear all caches, metadata, and event subscribers. */
+  /**
+   * Clear all caches, metadata, and event subscribers.
+   *
+   * #217: `eventBus.clear()` wipes EVERY subscriber, including the loader's
+   * own `setupFailureCallbacks` subscriptions — without re-registering them,
+   * calling `clear()` on a live loader would permanently silence the
+   * missing-resources reporting (`onResourceNeeded`) for the rest of that
+   * loader's lifetime, with no error or warning to say so. Re-subscribing
+   * here keeps `clear()` safe to call at any point; it only drops CALLER
+   * subscribers (matching the doc below), never the loader's own plumbing.
+   */
   clear(): void {
     this.metadata.clear();
     for (const proc of this.processors.values()) {
       proc.clearCache();
     }
     this.eventBus.clear();
+    this.setupFailureCallbacks();
     logger.info('[ResourceLoader] Cleared all caches');
   }
 

@@ -83,6 +83,32 @@ describe('createResourceProcessor', () => {
       expect(processor.isLoading('res://a.txt')).toBe(false);
     });
 
+    it('drops the raw FileEventBus bytes once processing succeeds (avoids double-retention)', async () => {
+      provider.files.set('res://a.txt', 'raw');
+
+      processor.request('res://a.txt');
+      await flush();
+
+      // The decoded resource is cached by the processor...
+      expect(processor.isCached('res://a.txt')).toBe(true);
+      // ...but the raw bytes FileEventBus held to produce it are gone.
+      expect(fileEventBus.isCached('res://a.txt')).toBe(false);
+    });
+
+    it('drops the raw FileEventBus bytes when processing fails too (no retry needs them)', async () => {
+      provider.files.set('res://a.txt', 'raw');
+      processSpy.mockImplementation(async () => {
+        throw new Error('decode failed');
+      });
+      eventBus.on<Error>('resource', 'failed', () => {});
+
+      processor.request('res://a.txt');
+      await flush();
+
+      expect(processor.getCached('res://a.txt')).toBeNull();
+      expect(fileEventBus.isCached('res://a.txt')).toBe(false);
+    });
+
     it('shouldProcess gating: a non-matching arrival is left for another processor (no process, no emission, still inflight)', async () => {
       // ArrayBuffer data fails this processor's `typeof data === 'string'` gate.
       provider.files.set('res://a.bin', new ArrayBuffer(4));
@@ -101,6 +127,9 @@ describe('createResourceProcessor', () => {
       // (sharing the FileEventBus) handles data this one rejects.
       expect(processor.isLoading('res://a.bin')).toBe(true);
       expect(processor.isCached('res://a.bin')).toBe(false);
+      // This processor didn't consume the bytes, so it must NOT drop them
+      // out from under the sibling processor that will.
+      expect(fileEventBus.isCached('res://a.bin')).toBe(true);
     });
 
     it('failure is cached as null and a repeat request re-emits failed WITHOUT re-hitting the provider', async () => {
@@ -277,6 +306,93 @@ describe('createResourceProcessor', () => {
       expect(dispose).toHaveBeenCalledTimes(1);
       expect(dispose).toHaveBeenCalledWith('direct:res://good');
       expect(processor.getCacheSize()).toBe(0);
+    });
+  });
+
+  describe('bounded cache', () => {
+    it('evicts the least-recently-used entry once maxEntries is exceeded, disposing it', async () => {
+      const dispose = vi.fn();
+      const processor = createResourceProcessor<string>({
+        eventBus,
+        resourceType: 'resource',
+        loadDirectly: async (path) => `direct:${path}`,
+        dispose,
+        maxEntries: 2,
+      });
+
+      processor.request('res://a');
+      await flush();
+      processor.request('res://b');
+      await flush();
+      processor.request('res://c'); // over capacity -> evicts 'res://a'
+      await flush();
+
+      expect(processor.getCacheSize()).toBe(2);
+      expect(processor.isCached('res://a')).toBe(false);
+      expect(processor.isCached('res://b')).toBe(true);
+      expect(processor.isCached('res://c')).toBe(true);
+      expect(dispose).toHaveBeenCalledTimes(1);
+      expect(dispose).toHaveBeenCalledWith('direct:res://a');
+    });
+
+    it('a cache-hit re-request bumps recency, protecting it from eviction', async () => {
+      const dispose = vi.fn();
+      const processor = createResourceProcessor<string>({
+        eventBus,
+        resourceType: 'resource',
+        loadDirectly: async (path) => `direct:${path}`,
+        dispose,
+        maxEntries: 2,
+      });
+
+      processor.request('res://a');
+      await flush();
+      processor.request('res://b');
+      await flush();
+      processor.request('res://a'); // cache-hit -> bumps 'a' recency
+      processor.request('res://c'); // over capacity -> evicts 'b', not 'a'
+      await flush();
+
+      expect(processor.isCached('res://a')).toBe(true);
+      expect(processor.isCached('res://b')).toBe(false);
+      expect(processor.isCached('res://c')).toBe(true);
+      expect(dispose).toHaveBeenCalledWith('direct:res://b');
+    });
+
+    it('does not dispose a failed (null) entry on eviction', async () => {
+      const dispose = vi.fn();
+      const processor = createResourceProcessor<string>({
+        eventBus,
+        resourceType: 'resource',
+        loadDirectly: async (path) => {
+          if (path === 'res://bad') throw new Error('nope');
+          return `direct:${path}`;
+        },
+        dispose,
+        maxEntries: 1,
+      });
+
+      processor.request('res://bad');
+      await flush();
+      processor.request('res://good'); // over capacity -> evicts 'res://bad' (null)
+
+      expect(dispose).not.toHaveBeenCalled();
+    });
+
+    it('leaves the cache unbounded for practical purposes by default (no eviction across a normal scene-sized set)', async () => {
+      const processor = createResourceProcessor<string>({
+        eventBus,
+        resourceType: 'resource',
+        loadDirectly: async (path) => `direct:${path}`,
+      });
+
+      for (let i = 0; i < 50; i += 1) {
+        processor.request(`res://item-${i}`);
+      }
+      await flush();
+
+      expect(processor.getCacheSize()).toBe(50);
+      expect(processor.isCached('res://item-0')).toBe(true);
     });
   });
 

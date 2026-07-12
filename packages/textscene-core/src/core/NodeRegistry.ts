@@ -17,6 +17,7 @@
 import type { ParsedHeading } from '../parser/utils';
 import type { TscnNode } from '../parser/types';
 import { warn } from '../logger';
+import { createTypeRegistry } from './createTypeRegistry';
 
 export interface PropertyItem {
   label: string;
@@ -52,19 +53,24 @@ export interface NodeTypeRegistration {
 }
 
 class NodeRegistry {
-  private registrations = new Map<string, NodeTypeRegistration>();
+  // Backed by the shared ADR-0002 registry so all three domains (parser,
+  // 3D-render, 2D-render) share ONE tested overwrite-with-a-warn contract
+  // instead of this class carrying its own bespoke Map.
+  private registrations = createTypeRegistry<NodeTypeRegistration>('NodeRegistry');
 
   register(registration: NodeTypeRegistration): void {
-    if (this.registrations.has(registration.typeName)) {
-      warn(`Node type "${registration.typeName}" is already registered. Overwriting.`);
-    }
-    this.registrations.set(registration.typeName, registration);
+    this.registrations.register(registration.typeName, registration);
+  }
+
+  /** Remove one registration (test teardown for probe types); true if it existed. */
+  unregister(typeName: string): boolean {
+    return this.registrations.unregister(typeName);
   }
 
   findRegistration(heading: ParsedHeading): NodeTypeRegistration | null {
     // Only `[node]` headings resolve to a node registration — a
     // `[sub_resource type="BoxMesh"]` must never match a node typeName.
-    // The Map is keyed by typeName, so the lookup is O(1) and the match is
+    // The registry is keyed by typeName, so the lookup is O(1) and the match is
     // exactly what the old per-type guards computed (`attributes.type === typeName`).
     if (heading.type !== 'node') return null;
     const type = heading.attributes.type;
@@ -73,11 +79,11 @@ class NodeRegistry {
   }
 
   getRegistration(typeName: string): NodeTypeRegistration | null {
-    return this.registrations.get(typeName) || null;
+    return this.registrations.get(typeName) ?? null;
   }
 
   getAllTypeNames(): string[] {
-    return Array.from(this.registrations.keys());
+    return this.registrations.getAllTypeNames();
   }
 
   clear(): void {

@@ -30,6 +30,7 @@ import {
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useOptionalSelection } from '../../../r3f/contexts/SelectionContext';
 import { useAnimationDriver } from '../../../r3f/contexts/AnimationDriverContext';
+import { flushTimeOnPauseEdge } from '../../../r3f/animation/usePlaybackLoop';
 import { snapshotSubtree, restoreSnapshot } from '../../../r3f/animation/poseSnapshot';
 import { resolveTreeRoot } from './treeResources';
 import { evaluateTree } from './evaluateTree';
@@ -143,6 +144,13 @@ export function AnimationTree({ node, children }: NodeComponentProps) {
     }
     const actions = actionsRef.current;
 
+    flushTimeOnPauseEdge(
+      prevStateRef.current,
+      state,
+      () => (dominant ? actions.get(dominant.clip)?.time ?? 0 : null),
+      transport.reportTime
+    );
+
     switch (state) {
       case 'playing': {
         for (const { clip, weight, timeScale } of program) {
@@ -158,7 +166,12 @@ export function AnimationTree({ node, children }: NodeComponentProps) {
             action.play();
           }
         }
-        mixer.update(delta);
+        // #224: the preview speed multiplier applies here too (it's a global
+        // playback-rate control). The loop OVERRIDE does not: a blend program
+        // drives N weighted actions at once with per-action timeScale/weight,
+        // and Godot itself has no single "loop mode" for a state-machine/blend
+        // tree preview to override — there's no one loop setting to force.
+        mixer.update(delta * transport.playbackSpeed);
         if (dominant) transport.reportTime(actions.get(dominant.clip)?.time ?? 0);
         break;
       }

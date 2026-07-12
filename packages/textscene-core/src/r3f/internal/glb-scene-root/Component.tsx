@@ -41,6 +41,7 @@ import { useRegisterDriver } from '../../contexts/AnimationDriverContext';
 import { useNodePath } from '../../contexts/NodePathContext';
 import { useOptionalSelection } from '../../contexts/SelectionContext';
 import { usePlaybackLoop } from '../../animation/usePlaybackLoop';
+import { applyLoopOverride, LOOP_REPEAT_SETTINGS } from '../../animation/loopOverride';
 import { snapshotSubtree, restoreSnapshot } from '../../animation/poseSnapshot';
 import { joinPath } from '../../../utils/nodePath';
 
@@ -173,18 +174,21 @@ export function GLBSceneRoot({ node }: NodeComponentProps) {
 
   // An inactive driver is forced to 'stopped' so it never touches the scene
   // (and restores the authored pose when it loses selection). Native glTF
-  // clips just loop by default — no Godot loop_mode to honour.
+  // clips just loop by default — no Godot loop_mode to honour — unless the
+  // preview loop override (#224) forces a single clamped pass instead.
   const effectiveState: PlayState = isActive ? transport.playState : 'stopped';
   usePlaybackLoop({
     playState: effectiveState,
     selectedClip: isActive ? transport.selectedClip : null,
     transportTime: transport.time,
+    speedScale: transport.playbackSpeed,
     mixerRef,
     actionsRef,
-    configureAction: (action) => {
-      action.setLoop(THREE.LoopRepeat, Infinity);
-      action.clampWhenFinished = false;
-    },
+    // Native glTF clips have no Godot loop_mode — their authored default is
+    // an infinite repeat, so that's what 'auto' (and 'loop') resolve to.
+    configureAction: (action) =>
+      applyLoopOverride(action, transport.loopOverride, LOOP_REPEAT_SETTINGS),
+    reconfigureKey: transport.loopOverride,
     reportTime: transport.reportTime,
     restore: () => restoreSnapshot(snapshotRef.current),
   });

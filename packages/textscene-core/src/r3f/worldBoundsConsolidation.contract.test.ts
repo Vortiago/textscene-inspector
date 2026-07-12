@@ -9,7 +9,7 @@
  * in a corrupted frame far from the origin. The selection/hover helpers were already
  * fixed (they route through `computeWorldBoundingBox`, which unions each descendant's
  * `geometry.boundingBox × matrixWorld` and ignores `SkinnedMesh.boundingBox`). The
- * one remaining production offender is `frameSceneBounds()` in `TscnCanvas.tsx`, the
+ * one remaining production offender is `frameSceneBounds()` (frameSceneBounds.ts), the
  * scene auto-framing path: it calls `new THREE.Box3().setFromObject(obj)` per rendered
  * leaf, so a skinned GLB leaf contributes a corrupt box that drags the framed centre
  * toward the origin (non-empty + finite, so the existing guards do not catch it).
@@ -35,7 +35,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, extname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { frameSceneBounds } from './TscnCanvas.js';
+import { frameSceneBounds } from './frameSceneBounds.js';
 
 const here = dirname(fileURLToPath(import.meta.url)); // .../src/r3f
 const srcRoot = resolve(here, '..'); // .../src

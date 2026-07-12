@@ -130,6 +130,14 @@ describe('AnimationPlayer playback (E)', () => {
     expect(targetX(renderer)).toBeCloseTo(5, 1);
   });
 
+  it('stacks the preview playbackSpeed multiplier on top of speed_scale (#224)', async () => {
+    const renderer = await mountScene({ speed_scale: 2.0 });
+    await ReactThreeTestRenderer.act(async () => transport.setPlaybackSpeed(2));
+    await ReactThreeTestRenderer.act(async () => transport.play());
+    await renderer.advanceFrames(1, 0.25); // 0.25 * 2 (speed_scale) * 2 (preview) = 1.0 -> clamped x=10
+    expect(targetX(renderer)).toBeCloseTo(10, 1);
+  });
+
   it('samples the seeked time while paused (E4)', async () => {
     const renderer = await mountScene();
     await ReactThreeTestRenderer.act(async () => transport.play());
@@ -204,5 +212,58 @@ describe('AnimationPlayer playback (E)', () => {
     await ReactThreeTestRenderer.act(async () => transport.stop());
     await renderer.advanceFrames(1, 0);
     expect(targetX(renderer)).toBeCloseTo(0);
+  });
+});
+
+describe('AnimationPlayer playback — loop override (#224)', () => {
+  // Authored to loop linearly (loop_mode 1) so 'auto' vs an explicit override
+  // produce clearly distinguishable outcomes past the clip's 1s length.
+  const LOOPING_INTERNAL: TscnInternalResource[] = [
+    { id: 'Lib', type: 'AnimationLibrary', data: { _data: '{\n"slide": SubResource("A")\n}' } },
+    {
+      id: 'A',
+      type: 'Animation',
+      data: {
+        length: '1.0',
+        loop_mode: '1',
+        'tracks/0/type': '"value"',
+        'tracks/0/path': 'NodePath("Target:position")',
+        'tracks/0/keys':
+          '{\n"times": PackedFloat32Array(0, 1),\n"values": [Vector3(0, 0, 0), Vector3(10, 0, 0)]\n}',
+      },
+    },
+  ];
+
+  it('"auto" respects the authored loop_mode — wraps around past the clip length', async () => {
+    const renderer = await mountScene({}, LOOPING_INTERNAL);
+    await ReactThreeTestRenderer.act(async () => transport.play());
+    await renderer.advanceFrames(1, 1.5); // 1.5 mod 1.0 = 0.5 -> x=5, not clamped at 10
+    expect(targetX(renderer)).toBeCloseTo(5, 1);
+  });
+
+  it('"once" forces a single clamped pass even though the clip is authored to loop', async () => {
+    const renderer = await mountScene({}, LOOPING_INTERNAL);
+    await ReactThreeTestRenderer.act(async () => transport.setLoopOverride('once'));
+    await ReactThreeTestRenderer.act(async () => transport.play());
+    await renderer.advanceFrames(1, 1.5); // past the 1s length -> clamped at the final key
+    expect(targetX(renderer)).toBeCloseTo(10, 1);
+  });
+
+  it('applies a live loop-override flip immediately, without restarting the running clip', async () => {
+    const renderer = await mountScene({}, LOOPING_INTERNAL);
+    await ReactThreeTestRenderer.act(async () => transport.play());
+    await renderer.advanceFrames(1, 0.4); // x=4, still mid-first-pass
+    await ReactThreeTestRenderer.act(async () => transport.setLoopOverride('once'));
+    await renderer.advanceFrames(1, 0.9); // total 1.3s -> past length -> clamped at 10, not wrapped
+    expect(targetX(renderer)).toBeCloseTo(10, 1);
+  });
+
+  it('"loop" forces an infinite repeat even on a clip authored with no loop', async () => {
+    // Default INTERNAL fixture has no loop_mode (defaults to 0 / no loop).
+    const renderer = await mountScene({}, INTERNAL);
+    await ReactThreeTestRenderer.act(async () => transport.setLoopOverride('loop'));
+    await ReactThreeTestRenderer.act(async () => transport.play());
+    await renderer.advanceFrames(1, 1.5); // would clamp at 10 if not overridden; wraps to x=5 instead
+    expect(targetX(renderer)).toBeCloseTo(5, 1);
   });
 });

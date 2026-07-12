@@ -23,6 +23,8 @@ node_modules/
 # Build artifacts (except dist which we need)
 *.log
 *.vsix
+# esbuild metafiles — consumed only by scripts/check-bundle-size.mjs (#215)
+dist/*.meta.json
 
 # Development files
 .vscode/

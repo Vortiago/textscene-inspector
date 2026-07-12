@@ -89,7 +89,10 @@ This repository also has validation hooks for **Claude Code Web** (`.claude/hook
 | Claude Code CLI | Husky hooks (as above) |
 | Claude Code Web | `.claude/hooks/validate-commit.sh` (`pnpm validate`) |
 
-Pre-push and CI both run the full `pnpm validate`, ensuring consistency across all environments.
+Pre-push runs the full `pnpm validate` in one shot; CI (`.github/workflows/ci.yml`) runs the
+same gates as discrete steps (lint, type-check, tests, builds, `check:bundle-size`,
+`check:package`) so a failure is attributed to the right step in the Actions UI. Either path
+blocks on the same checks, so nothing reaches a shared branch unvalidated.
 
 See `.claude/hooks/README.md` for Claude Code Web hook documentation.
 

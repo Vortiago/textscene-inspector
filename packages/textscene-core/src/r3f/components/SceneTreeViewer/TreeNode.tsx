@@ -74,6 +74,14 @@ export interface TreeNodeProps {
    * resolution without re-reading HierarchyContext.
    */
   externalResources: readonly TscnExternalResource[];
+  /**
+   * #224 (roving tabIndex, WAI-ARIA APG Tree View pattern): true ONLY for
+   * the first root-level row, and only while no SELECTED row is rendered
+   * (nothing selected, or the selection collapsed/filtered out of view) —
+   * `<SceneTreeViewer>` computes that condition; every recursively-rendered
+   * child defaults to false and never sets this.
+   */
+  isDefaultFocusable?: boolean;
 }
 
 function TreeNodeImpl({
@@ -86,6 +94,7 @@ function TreeNodeImpl({
   onOpenSubScene,
   matches,
   externalResources,
+  isDefaultFocusable = false,
 }: TreeNodeProps) {
   const nodePath = joinPath(parentPath, node.name);
   const scenePath = node.instance
@@ -170,7 +179,7 @@ function TreeNodeImpl({
     selectedNodePath,
     expandedNodePaths,
     setSelectedNodePath,
-    setHoveredNodePath,
+    hoverStore,
     toggleExpandedNodePath,
   } = useSelection();
 
@@ -179,6 +188,11 @@ function TreeNodeImpl({
   const isHidden = hiddenNodePaths.has(nodePath);
 
   const isUnsupported = !isRenderableNodeType(effective.type);
+
+  // #224 roving tabIndex: this row is the tree's ONE tab stop when it's
+  // selected, or when it's the designated fallback row (the first root row,
+  // set by SceneTreeViewer only while no selected row is rendered).
+  const isRovingTabStop = isSelected || isDefaultFocusable;
 
   const headerClasses = [styles.header];
   if (isSelected) headerClasses.push(styles.selected!);
@@ -199,11 +213,11 @@ function TreeNodeImpl({
   }
 
   function handleMouseEnter() {
-    setHoveredNodePath(nodePath);
+    hoverStore.set(nodePath);
   }
 
   function handleMouseLeave() {
-    setHoveredNodePath(null);
+    hoverStore.set(null);
   }
 
   function handleToggleVisibility(e: MouseEvent) {
@@ -222,6 +236,7 @@ function TreeNodeImpl({
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         role="treeitem"
+        tabIndex={isRovingTabStop ? 0 : -1}
         aria-selected={isSelected}
         aria-expanded={hasChildren ? isExpanded : undefined}
       >

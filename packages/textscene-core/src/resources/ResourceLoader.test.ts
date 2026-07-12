@@ -157,8 +157,9 @@ describe('ResourceLoader (loader-level gaps)', () => {
       expect(loader.scenes.isCached(SCENE_PATH)).toBe(false);
       expect(loader.metadata.getAll()).toHaveLength(0);
 
-      // A subscriber registered before the clear still receives events
-      // (unlike clear(), which wipes the bus and the loader's own callbacks).
+      // A CALLER subscriber registered before the clear still receives events
+      // — unlike clear() (#217), which wipes every subscriber, caller ones
+      // included, and only re-registers the loader's OWN internal callbacks.
       loader.register(SCENE_META);
       const second = loader.eventBus.once<TscnScene>('scene', 'loaded', SCENE_PATH);
       loader.request('scene', SCENE_PATH);
@@ -172,6 +173,119 @@ describe('ResourceLoader (loader-level gaps)', () => {
       const resSpy = vi.spyOn(loader.resources, 'request');
       expect(() => loader.request('resource', 'res://x.tres')).not.toThrow();
       expect(resSpy).toHaveBeenCalledWith('res://x.tres');
+    });
+  });
+
+  describe('onResourceNeeded fan-out', () => {
+    it('calls onResourceNeeded with path/type/referencedBy/error for a registered resource whose processor emits failed', () => {
+      const texMeta: ExtResource = { id: '3_tex', path: 'res://textures/missing.png', type: 'Texture2D' };
+      loader.register(texMeta);
+      const onResourceNeeded = vi.fn();
+      loader.setOnResourceNeeded(onResourceNeeded);
+
+      loader.eventBus.emit<Error>('texture', 'failed', texMeta.path, new Error('404 not found'));
+
+      expect(onResourceNeeded).toHaveBeenCalledTimes(1);
+      expect(onResourceNeeded).toHaveBeenCalledWith({
+        path: texMeta.path,
+        type: 'Texture2D',
+        referencedBy: 'Material using texture 3_tex',
+        error: '404 not found',
+      });
+    });
+
+    it('uses a generic "Unknown error" message when the failed event carries no Error', () => {
+      const matMeta: ExtResource = { id: '6_mat', path: 'res://materials/x.tres', type: 'StandardMaterial3D' };
+      loader.register(matMeta);
+      const onResourceNeeded = vi.fn();
+      loader.setOnResourceNeeded(onResourceNeeded);
+
+      loader.eventBus.emit('material', 'failed', matMeta.path);
+
+      expect(onResourceNeeded).toHaveBeenCalledWith(
+        expect.objectContaining({ error: 'Unknown error' })
+      );
+    });
+
+    it('does nothing when the failed path has no registered metadata', () => {
+      const onResourceNeeded = vi.fn();
+      loader.setOnResourceNeeded(onResourceNeeded);
+
+      loader.eventBus.emit<Error>('texture', 'failed', 'res://unregistered.png', new Error('404'));
+
+      expect(onResourceNeeded).not.toHaveBeenCalled();
+    });
+
+    it('does nothing (and does not throw) when no onResourceNeeded callback has been set', () => {
+      loader.register({ id: '4_tex', path: 'res://textures/x.png', type: 'Texture2D' });
+
+      expect(() =>
+        loader.eventBus.emit<Error>('texture', 'failed', 'res://textures/x.png', new Error('404'))
+      ).not.toThrow();
+    });
+
+    it('a rejected onResourceNeeded promise is caught internally, not left as an unhandled rejection', async () => {
+      const sceneMeta: ExtResource = { id: '5_scene', path: 'res://scenes/other.tscn', type: 'PackedScene' };
+      loader.register(sceneMeta);
+      const onResourceNeeded = vi.fn(() => Promise.reject(new Error('upload dialog dismissed')));
+      loader.setOnResourceNeeded(onResourceNeeded);
+
+      // Vitest fails the run on an unhandled rejection, so reaching the
+      // assertions below (after letting the `.catch` microtask settle)
+      // proves the loader contained the rejection.
+      loader.eventBus.emit<Error>('scene', 'failed', sceneMeta.path, new Error('404'));
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(onResourceNeeded).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('clear() — safety (#217)', () => {
+    it('re-registers its own failure callbacks so onResourceNeeded still fires after a clear()', async () => {
+      // clear() wipes the ENTIRE event bus, including the loader's own
+      // setupFailureCallbacks subscriptions — if it didn't re-register them,
+      // calling clear() on a live loader would permanently silence the
+      // missing-resources reporting for the rest of that loader's lifetime.
+      const onResourceNeeded = vi.fn();
+      loader.setOnResourceNeeded(onResourceNeeded);
+
+      const firstMeta: ExtResource = {
+        id: '1_missing',
+        path: 'res://missing-before.png',
+        type: 'Texture2D',
+      };
+      loader.register(firstMeta);
+      const firstFailure = loader.eventBus.once('texture', 'failed', firstMeta.path);
+      loader.textures.request(firstMeta.path);
+      await firstFailure;
+
+      expect(onResourceNeeded).toHaveBeenCalledWith(
+        expect.objectContaining({ path: firstMeta.path })
+      );
+
+      loader.clear();
+
+      const secondMeta: ExtResource = {
+        id: '2_missing',
+        path: 'res://missing-after.png',
+        type: 'Texture2D',
+      };
+      loader.register(secondMeta);
+      const secondFailure = loader.eventBus.once('texture', 'failed', secondMeta.path);
+      loader.textures.request(secondMeta.path);
+      await secondFailure;
+
+      expect(onResourceNeeded).toHaveBeenCalledWith(
+        expect.objectContaining({ path: secondMeta.path })
+      );
+    });
+
+    it('still drops caches and metadata (unchanged behavior)', () => {
+      loader.register(SCENE_META);
+      provider.files.set(SCENE_PATH, VALID_TSCN);
+      loader.clear();
+      expect(loader.metadata.getAll()).toHaveLength(0);
+      expect(loader.scenes.isCached(SCENE_PATH)).toBe(false);
     });
   });
 });

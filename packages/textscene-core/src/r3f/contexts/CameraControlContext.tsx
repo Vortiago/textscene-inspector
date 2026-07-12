@@ -23,6 +23,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type MutableRefObject,
   type ReactNode,
 } from 'react';
 
@@ -63,10 +64,43 @@ export interface CameraControlContextValue {
    * useEffect re-runs.
    */
   registerResetHandler: (handler: () => void) => () => void;
+  /**
+   * Capture the current 3D viewport as a PNG data URL (#224). Returns
+   * `null` when no canvas has registered a handler yet (e.g. in 2D mode,
+   * or during the brief mount window before `<TscnCanvas>`'s effect runs).
+   */
+  takeScreenshot: () => string | null;
+  /**
+   * Called from `<TscnCanvas>` so the toolbar's screenshot button can pull
+   * a frame from the canvas's WebGLRenderer. Mirrors `registerResetHandler`.
+   */
+  registerScreenshotHandler: (handler: () => string | null) => () => void;
 }
 
 const CameraControlContext = createContext<CameraControlContextValue | null>(null);
 CameraControlContext.displayName = 'CameraControlContext';
+
+/**
+ * A canvas-registered handler slot (reset, screenshot, …): the handler lives
+ * in a ref so registration never re-renders consumers, and the returned
+ * unregister only clears the slot if it still holds THAT handler (a newer
+ * canvas may have replaced it before the old one unmounts).
+ */
+function useHandlerSlot<T>(): {
+  ref: MutableRefObject<T | null>;
+  register: (handler: T) => () => void;
+} {
+  const ref = useRef<T | null>(null);
+  const register = useCallback((handler: T) => {
+    ref.current = handler;
+    return () => {
+      if (ref.current === handler) {
+        ref.current = null;
+      }
+    };
+  }, []);
+  return { ref, register };
+}
 
 export interface CameraControlProviderProps {
   children: ReactNode;
@@ -74,7 +108,6 @@ export interface CameraControlProviderProps {
 
 export function CameraControlProvider({ children }: CameraControlProviderProps) {
   const [activeCameraPath, setActiveCameraPath] = useState<string | null>(null);
-  const resetHandlerRef = useRef<(() => void) | null>(null);
   const [frame2D, setFrame2D] = useState<Frame2DRequest | null>(null);
   const frame2DIdRef = useRef(0);
 
@@ -94,18 +127,16 @@ export function CameraControlProvider({ children }: CameraControlProviderProps) 
     setActiveCameraPath(null);
   }, []);
 
-  const registerResetHandler = useCallback((handler: () => void) => {
-    resetHandlerRef.current = handler;
-    return () => {
-      if (resetHandlerRef.current === handler) {
-        resetHandlerRef.current = null;
-      }
-    };
-  }, []);
-
+  const { ref: resetHandlerRef, register: registerResetHandler } = useHandlerSlot<() => void>();
   const resetCamera = useCallback(() => {
     resetHandlerRef.current?.();
-  }, []);
+  }, [resetHandlerRef]);
+
+  const { ref: screenshotHandlerRef, register: registerScreenshotHandler } =
+    useHandlerSlot<() => string | null>();
+  const takeScreenshot = useCallback(() => {
+    return screenshotHandlerRef.current?.() ?? null;
+  }, [screenshotHandlerRef]);
 
   const value = useMemo<CameraControlContextValue>(
     () => ({
@@ -116,8 +147,20 @@ export function CameraControlProvider({ children }: CameraControlProviderProps) 
       requestFrame2D,
       resetCamera,
       registerResetHandler,
+      takeScreenshot,
+      registerScreenshotHandler,
     }),
-    [activeCameraPath, switchToCamera, returnToFreeView, frame2D, requestFrame2D, resetCamera, registerResetHandler]
+    [
+      activeCameraPath,
+      switchToCamera,
+      returnToFreeView,
+      frame2D,
+      requestFrame2D,
+      resetCamera,
+      registerResetHandler,
+      takeScreenshot,
+      registerScreenshotHandler,
+    ]
   );
 
   return (
