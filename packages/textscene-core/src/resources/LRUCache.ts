@@ -26,6 +26,13 @@
  * Unpin to zero does NOT eagerly dispose the entry; the entry remains in the
  * cache and is simply eligible for ordinary LRU eviction on the next
  * `set` that triggers overflow.
+ *
+ * `delete` and `clear` drop entries but PRESERVE pin counts: pins track
+ * mounted consumers, whose lifecycle is independent of cache contents. A
+ * hot-reload deletes and re-sets a key while its consumer stays mounted —
+ * the re-set entry must come back protected. Symmetrically, `pin` on a key
+ * not (yet) in the cache stores the count and honours it once the key is
+ * set. The consumer's eventual `unpin` releases the count either way.
  */
 export class LRUCache<V> {
   private readonly map = new Map<string, V>();
@@ -59,16 +66,14 @@ export class LRUCache<V> {
     if (existing !== undefined && !Object.is(existing, value)) {
       this.onEvict?.(key, existing);
     }
-    this.evictOverflow();
+    this.evictOverflow(key);
   }
 
   delete(key: string): boolean {
-    this.pins.delete(key);
     return this.map.delete(key);
   }
 
   clear(): void {
-    this.pins.clear();
     this.map.clear();
   }
 
@@ -107,19 +112,18 @@ export class LRUCache<V> {
     return (this.pins.get(key) ?? 0) > 0;
   }
 
-  private evictOverflow(): void {
-    if (this.map.size <= this.maxEntries) return;
-    // Collect the candidate keys before mutating the map. The last key in
-    // insertion order is the one we just inserted (most recently used) — it
-    // is never an eviction candidate on its own insertion, so we exclude it
-    // from the scan. This ensures that when all pre-existing entries are
-    // pinned the cache temporarily grows rather than immediately evicting
-    // the item we just added.
-    const keys = Array.from(this.map.keys());
-    const candidates = keys.slice(0, keys.length - 1); // oldest ... (excluding newest)
-    for (const key of candidates) {
-      if (this.map.size <= this.maxEntries) break;
-      if (this.isPinned(key)) continue;
+  /**
+   * Evict least-recently-used zero-pin entries until the cache is back
+   * within `maxEntries`. `justSet` — the key the triggering `set` inserted —
+   * is never a candidate on its own insertion: when every other entry is
+   * pinned the cache temporarily grows rather than immediately evicting the
+   * item just added. (Deleting the entry being visited while iterating a
+   * `Map`'s keys is well-defined.)
+   */
+  private evictOverflow(justSet: string): void {
+    for (const key of this.map.keys()) {
+      if (this.map.size <= this.maxEntries) return;
+      if (key === justSet || this.isPinned(key)) continue;
       const value = this.map.get(key) as V;
       this.map.delete(key);
       this.onEvict?.(key, value);

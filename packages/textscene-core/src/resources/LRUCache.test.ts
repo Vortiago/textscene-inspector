@@ -3,7 +3,7 @@
  * per-type resource cache. Pins recency tracking, eviction, and the
  * `onEvict` disposal hook contract independent of any resource-loading
  * concern. Also covers the pin/unpin reference-counting API that prevents
- * eviction of mounted consumers (issue #248).
+ * eviction of mounted consumers.
  */
 import { describe, it, expect, vi } from 'vitest';
 import { LRUCache } from './LRUCache';
@@ -150,7 +150,7 @@ describe('LRUCache', () => {
   });
 
   // -------------------------------------------------------------------
-  // Reference-counting: pin / unpin (issue #248)
+  // Reference-counting: pin / unpin
   // -------------------------------------------------------------------
   describe('pin / unpin', () => {
     it('a pinned entry is skipped by evictOverflow — zero-count entries are evicted first', () => {
@@ -277,23 +277,49 @@ describe('LRUCache', () => {
     });
 
     it('unpin below zero is clamped to zero (never negative)', () => {
-      const cache = new LRUCache<string>(3);
+      const onEvict = vi.fn();
+      const cache = new LRUCache<string>(1, onEvict);
       cache.set('a', 'A');
       cache.pin('a');
       cache.unpin('a');
-      cache.unpin('a'); // extra unpin — must not go negative
+      cache.unpin('a'); // extra unpin — clamped at zero
 
-      // 'a' should be evictable (count 0), not stuck in a bad state.
+      // A single pin must protect again: if the count had gone to -1, this
+      // pin would only bring it back to 0 and 'a' would be evicted below.
+      cache.pin('a');
+      cache.set('b', 'B'); // overflow — 'a' is the LRU candidate but pinned
+      expect(cache.has('a')).toBe(true);
+      expect(onEvict).not.toHaveBeenCalled();
+    });
+
+    it('delete preserves the pin count — a re-set key comes back protected (hot-reload)', () => {
       const onEvict = vi.fn();
-      const cache2 = new LRUCache<string>(1, onEvict);
-      cache2.set('a', 'A');
-      cache2.pin('a');
-      cache2.unpin('a');
-      cache2.unpin('a'); // extra unpin
+      const cache = new LRUCache<string>(1, onEvict);
+      cache.set('a', 'A');
+      cache.pin('a'); // mounted consumer
+      cache.delete('a'); // host invalidation (clearCache / provideFile)
+      cache.set('a', 'A2'); // reload lands — must still be pinned
 
-      cache2.set('b', 'B'); // 'a' must be evicted (count is 0, not negative)
-      expect(cache2.has('a')).toBe(false);
-      expect(onEvict).toHaveBeenCalledWith('a', 'A');
+      cache.set('b', 'B'); // overflow — 'a' is the LRU candidate but pinned
+      expect(cache.has('a')).toBe(true);
+      expect(onEvict).not.toHaveBeenCalledWith('a', expect.anything());
+
+      cache.unpin('a'); // consumer unmounts — accounting stays balanced
+      cache.set('c', 'C');
+      expect(cache.has('a')).toBe(false);
+    });
+
+    it('clear preserves pin counts — re-set keys come back protected', () => {
+      const onEvict = vi.fn();
+      const cache = new LRUCache<string>(1, onEvict);
+      cache.set('a', 'A');
+      cache.pin('a');
+      cache.clear();
+      cache.set('a', 'A2');
+
+      cache.set('b', 'B'); // overflow — 'a' is the LRU candidate but pinned
+      expect(cache.has('a')).toBe(true);
+      expect(onEvict).not.toHaveBeenCalledWith('a', expect.anything());
     });
 
     it('StrictMode double-invoke: mount -> unmount -> mount ends at pin count 1, never disposes', () => {

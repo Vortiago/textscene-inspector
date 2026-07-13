@@ -36,14 +36,17 @@ export type { ResourceType };
  * so 200 distinct entries in a single processor's cache is >7x any single
  * scene's entire working set.
  *
- * ## Eviction safety guarantee (issue #248)
+ * ## Eviction safety guarantee
  *
  * `useResource` increments a per-entry reference count (`LRUCache.pin`) on
  * mount and decrements it (`LRUCache.unpin`) on unmount. `evictOverflow`
  * skips entries with a nonzero count, falling back to pure LRU among the
  * zero-count (unmounted) entries. This is an absolute guarantee: a resource
- * held by at least one mounted consumer is never evicted regardless of how
- * many other resources are loaded in the same session.
+ * held by at least one mounted consumer is never CAPACITY-evicted regardless
+ * of how many other resources are loaded in the same session. (Explicit
+ * invalidation — `clearCache` / hot-reload — still disposes and removes the
+ * entry, but the pin count survives it, so the re-loaded entry comes back
+ * protected for the still-mounted consumer.)
  *
  * When every cached entry is pinned and capacity is exceeded, the cache
  * temporarily grows beyond `maxEntries` rather than disposing a live

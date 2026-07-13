@@ -413,7 +413,7 @@ describe('createResourceProcessor', () => {
     });
   });
 
-  describe('pin / unpin (reference counting, issue #248)', () => {
+  describe('pin / unpin (reference counting)', () => {
     it('a pinned entry is not evicted even when it is the LRU candidate', async () => {
       const dispose = vi.fn();
       const processor = createResourceProcessor<string>({
@@ -506,6 +506,36 @@ describe('createResourceProcessor', () => {
 
       expect(processor.isCached('res://a')).toBe(true);
       expect(dispose).not.toHaveBeenCalled();
+    });
+
+    it('pin survives clearCache(path) — the re-loaded entry is still protected (late-arrival flow)', async () => {
+      const dispose = vi.fn();
+      const processor = createResourceProcessor<string>({
+        eventBus,
+        resourceType: 'resource',
+        loadDirectly: async (path) => `direct:${path}`,
+        dispose,
+        maxEntries: 2,
+      });
+
+      processor.request('res://a');
+      await flush();
+      processor.pin('res://a'); // mounted consumer
+
+      // Host invalidation + re-request while the consumer stays mounted
+      // (the provideFile hot-reload flow).
+      processor.clearCache('res://a');
+      processor.request('res://a');
+      await flush();
+
+      processor.request('res://b');
+      await flush();
+      processor.request('res://c');
+      await flush(); // overflow — 'a' is the LRU candidate but must stay pinned
+
+      expect(processor.isCached('res://a')).toBe(true);
+      expect(processor.isCached('res://b')).toBe(false);
+      expect(processor.isCached('res://c')).toBe(true);
     });
   });
 });
