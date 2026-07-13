@@ -122,10 +122,10 @@ function checkSkeleton3D(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // INFO: show_rest_only = true (debugging mode, animations disabled)
+  // Warning: show_rest_only = true (debugging mode, animations disabled)
   if (rawProps.show_rest_only === 'true') {
     diagnostics.push({
-      severity: 'info',
+      severity: 'warning',
       message: `show_rest_only is enabled. Skeleton is in debugging mode with bones forced to rest pose. Animations are disabled.`,
       nodeName: node.name,
       nodeType: node.type,
@@ -133,10 +133,10 @@ function checkSkeleton3D(context: RuleContext): Diagnostic[] {
     });
   }
 
-  // INFO: animate_physical_bones = true (advanced ragdoll feature)
+  // Warning: animate_physical_bones = true (deprecated ragdoll feature)
   if (rawProps.animate_physical_bones === 'true') {
     diagnostics.push({
-      severity: 'info',
+      severity: 'warning',
       message: `animate_physical_bones is enabled. This is a deprecated feature for ragdoll physics. Consider using the new SkeletonModifier3D system instead.`,
       nodeName: node.name,
       nodeType: node.type,
@@ -144,24 +144,7 @@ function checkSkeleton3D(context: RuleContext): Diagnostic[] {
     });
   }
 
-  // INFO: modifier_callback_mode_process set to PHYSICS (0)
-  if (rawProps.modifier_callback_mode_process === '0') {
-    diagnostics.push({
-      severity: 'info',
-      message: `modifier_callback_mode_process is set to PHYSICS. Skeleton modifiers will run during physics processing. Use this when skeleton modifications depend on physics state.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'skeleton3d-modifier-mode',
-    });
-  } else if (rawProps.modifier_callback_mode_process === '2') {
-    diagnostics.push({
-      severity: 'info',
-      message: `modifier_callback_mode_process is set to MANUAL. You must manually call update methods to process skeleton modifiers.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'skeleton3d-modifier-mode',
-    });
-  }
+  // modifier_callback_mode_process values are valid modes — no diagnostic
 
   // WARNING: Skeleton3D without MeshInstance3D children using it (unused skeleton)
   // Find all MeshInstance3D nodes in the scene

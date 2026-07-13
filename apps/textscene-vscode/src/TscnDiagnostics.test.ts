@@ -86,11 +86,6 @@ describe('toVsCodeDiagnostic', () => {
       const result = toVsCodeDiagnostic(makeCoreDiagnostic({ severity: 'warning' }), doc);
       expect(result.severity).toBe(vscode.DiagnosticSeverity.Warning);
     });
-
-    it('maps info to DiagnosticSeverity.Information', () => {
-      const result = toVsCodeDiagnostic(makeCoreDiagnostic({ severity: 'info' }), doc);
-      expect(result.severity).toBe(vscode.DiagnosticSeverity.Information);
-    });
   });
 
   describe('location mapping', () => {

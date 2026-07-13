@@ -302,23 +302,23 @@ describe('PathFollow3D Linter', () => {
   });
 
   describe('Semantic Validation (Conflicting Properties)', () => {
-    it('should info when both progress and progress_ratio are set', () => {
-      const info = expectDiagnostic(pathScene({ progress: '50.0', progress_ratio: '0.5' }), {
+    it('should warn when both progress and progress_ratio are set', () => {
+      const warning = expectDiagnostic(pathScene({ progress: '50.0', progress_ratio: '0.5' }), {
         ruleName: 'pathfollow3d-both-progress-properties',
-        severity: 'info',
+        severity: 'warning',
         nodeType: 'PathFollow3D',
         contains: ['both', 'takes precedence'],
       });
-      expect(info.nodeName).toBe('PathFollow');
+      expect(warning.nodeName).toBe('PathFollow');
     });
 
-    it('should not info when only progress is set', () => {
+    it('should not warn when only progress is set', () => {
       expectNoDiagnostic(pathScene({ progress: '50.0' }), {
         ruleName: 'pathfollow3d-both-progress-properties',
       });
     });
 
-    it('should not info when only progress_ratio is set', () => {
+    it('should not warn when only progress_ratio is set', () => {
       expectNoDiagnostic(pathScene({ progress_ratio: '0.5' }), {
         ruleName: 'pathfollow3d-both-progress-properties',
       });

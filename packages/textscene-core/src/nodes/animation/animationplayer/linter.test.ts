@@ -145,11 +145,9 @@ describe('AnimationPlayer Linter', () => {
         }
       });
 
-      it('should provide info about negative speed_scale', () => {
-        expectDiagnostic(scene(node('AnimationPlayer', { speed_scale: -2.0 })), {
+      it('should not flag negative speed_scale (reverse playback is valid)', () => {
+        expectNoDiagnostic(scene(node('AnimationPlayer', { speed_scale: -2.0 })), {
           prop: 'negative',
-          severity: 'info',
-          contains: ['negative', 'reverse'],
         });
       });
     });
@@ -275,11 +273,11 @@ describe('AnimationPlayer Linter', () => {
       });
     });
 
-    describe('playback_active info', () => {
-      it('should provide info when playback_active is false', () => {
+    describe('playback_active warning', () => {
+      it('should warn when playback_active is false', () => {
         expectDiagnostic(scene(node('AnimationPlayer', { playback_active: false })), {
           prop: 'playback_active',
-          severity: 'info',
+          severity: 'warning',
           contains: ['playback_active', 'false', 'will not play'],
         });
       });
@@ -455,16 +453,15 @@ describe('AnimationPlayer Linter', () => {
       );
     });
 
-    it('should handle reverse playback with warning', () => {
-      // Should have info about reverse playback
-      expectDiagnostic(
+    it('should not flag reverse playback (negative speed_scale is valid)', () => {
+      expectNoDiagnostic(
         scene(
           node('AnimationPlayer', {
             speed_scale: -1.5,
             'anims/idle': 'SubResource("Animation_1")',
           })
         ),
-        { prop: 'reverse', severity: 'info', contains: ['reverse'] }
+        { prop: 'reverse' }
       );
     });
 

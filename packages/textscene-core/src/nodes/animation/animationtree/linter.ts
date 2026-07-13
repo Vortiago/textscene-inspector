@@ -149,10 +149,10 @@ function checkAnimationTree(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // INFO: active = false
+  // Warning: active = false
   if (rawProps.active === 'false') {
     diagnostics.push({
-      severity: 'info',
+      severity: 'warning',
       message: `AnimationTree 'active' is set to false. The AnimationTree will not process animations until this is set to true at runtime.`,
       nodeName: node.name,
       nodeType: node.type,
@@ -160,19 +160,7 @@ function checkAnimationTree(context: RuleContext): Diagnostic[] {
     });
   }
 
-  // INFO: root_motion_track set (common pattern, may be empty)
-  if (rawProps.root_motion_track) {
-    const path = extractNodePath(rawProps.root_motion_track);
-    if (path && path !== '') {
-      diagnostics.push({
-        severity: 'info',
-        message: `AnimationTree 'root_motion_track' is set to "${path}". Ensure this track exists in your animations and is properly configured for root motion.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'animationtree-root-motion-track-set',
-      });
-    }
-  }
+  // root_motion_track set — purely informational; no diagnostic
 
   // WARNING: audio_max_polyphony unusually low or high
   if (rawProps.audio_max_polyphony) {
@@ -198,20 +186,7 @@ function checkAnimationTree(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // INFO: advance_expression_base_node set (advanced feature)
-  if (rawProps.advance_expression_base_node) {
-    const path = extractNodePath(rawProps.advance_expression_base_node);
-    // Show info if path is set (including ".." which is a valid path)
-    if (path !== '' && path !== null) {
-      diagnostics.push({
-        severity: 'info',
-        message: `AnimationTree 'advance_expression_base_node' is set to "${path}". This is an advanced feature for custom animation timing expressions.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'animationtree-advance-expression-set',
-      });
-    }
-  }
+  // advance_expression_base_node — purely informational; no diagnostic
 
   return diagnostics;
 }

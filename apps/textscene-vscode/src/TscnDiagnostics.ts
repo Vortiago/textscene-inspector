@@ -33,7 +33,6 @@ function readDiagnosticsConfig(): DiagnosticsConfig {
 const SEVERITY_MAP: Record<TscnLintDiagnostic['severity'], vscode.DiagnosticSeverity> = {
   error: vscode.DiagnosticSeverity.Error,
   warning: vscode.DiagnosticSeverity.Warning,
-  info: vscode.DiagnosticSeverity.Information,
 };
 
 /** Minimal slice of `vscode.TextDocument` the mapping needs (testable without a full mock). */

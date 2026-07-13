@@ -2,7 +2,7 @@
  * PathFollow2D linter tests — parent must be Path2D + progress range checks.
  */
 import { describe, it, expect } from 'vitest';
-import { node, scene, lint, expectDiagnostic, expectNoErrors } from '../../../linter/testing/testkit';
+import { node, scene, lint, expectDiagnostic, expectNoDiagnostic, expectNoErrors } from '../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
 
@@ -45,6 +45,34 @@ progress_ratio = 0.5
         node('PathFollow2D', { progress_ratio: 1.5 }, { parent: '.' })
       ),
       { ruleName: 'pathfollow2d-progress-ratio-out-of-range', severity: 'warning' }
+    );
+  });
+
+  it('warns when both progress and progress_ratio are set', () => {
+    expectDiagnostic(
+      scene(
+        node('Path2D'),
+        node('PathFollow2D', { progress: 50.0, progress_ratio: 0.5 }, { parent: '.' })
+      ),
+      {
+        ruleName: 'pathfollow2d-both-progress-properties',
+        severity: 'warning',
+        contains: ['both', 'takes precedence'],
+      }
+    );
+  });
+
+  it('does not warn when only progress is set', () => {
+    expectNoDiagnostic(
+      scene(node('Path2D'), node('PathFollow2D', { progress: 50.0 }, { parent: '.' })),
+      { ruleName: 'pathfollow2d-both-progress-properties' }
+    );
+  });
+
+  it('does not warn when only progress_ratio is set', () => {
+    expectNoDiagnostic(
+      scene(node('Path2D'), node('PathFollow2D', { progress_ratio: 0.5 }, { parent: '.' })),
+      { ruleName: 'pathfollow2d-both-progress-properties' }
     );
   });
 

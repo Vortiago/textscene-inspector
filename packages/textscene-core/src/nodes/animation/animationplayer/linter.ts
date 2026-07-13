@@ -59,19 +59,7 @@ function checkAnimationPlayer(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // WARNING: Negative speed_scale (reverse playback)
-  if (rawProps.speed_scale !== undefined) {
-    const speed = parseFloat(rawProps.speed_scale);
-    if (!isNaN(speed) && speed < 0) {
-      diagnostics.push({
-        severity: 'info',
-        message: `AnimationPlayer 'speed_scale' is negative (${speed}). This will play animations in reverse.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'animationplayer-reverse-playback',
-      });
-    }
-  }
+  // Negative speed_scale is valid for reverse playback — no diagnostic
 
   // WARNING: No animations defined (AnimationPlayer without animations is useless)
   // Note: In TSCN format, animations are typically stored in the anims/ section
@@ -166,10 +154,10 @@ function checkAnimationPlayer(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // INFO: playback_active is false
+  // Warning: playback_active is false
   if (rawProps.playback_active === 'false') {
     diagnostics.push({
-      severity: 'info',
+      severity: 'warning',
       message: `AnimationPlayer 'playback_active' is set to false. Animations will not play until this is set to true at runtime.`,
       nodeName: node.name,
       nodeType: node.type,

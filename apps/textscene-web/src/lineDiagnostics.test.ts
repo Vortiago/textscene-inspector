@@ -33,14 +33,14 @@ describe('groupDiagnosticsByLine', () => {
     const diagnostics = [
       diagnostic({ severity: 'warning', message: 'first warning', location: { line: 5 } }),
       diagnostic({ severity: 'error', message: 'fatal problem', location: { line: 5 } }),
-      diagnostic({ severity: 'info', message: 'minor note', location: { line: 5 } }),
+      diagnostic({ severity: 'warning', message: 'another note', location: { line: 5 } }),
     ];
     const byLine = groupDiagnosticsByLine(diagnostics);
     expect(byLine.size).toBe(1);
     expect(byLine.get(5)).toEqual({
       line: 5,
       severity: 'error',
-      messages: ['first warning', 'fatal problem', 'minor note'],
+      messages: ['first warning', 'fatal problem', 'another note'],
     });
   });
 
@@ -75,39 +75,34 @@ describe('summarizeDiagnostics', () => {
       diagnostic({ severity: 'error', message: 'a' }),
       diagnostic({ severity: 'error', message: 'b' }),
       diagnostic({ severity: 'warning', message: 'c' }),
-      diagnostic({ severity: 'info', message: 'd' }),
+      diagnostic({ severity: 'warning', message: 'd' }),
     ];
     expect(summarizeDiagnostics(diagnostics)).toEqual({
       errors: 2,
-      warnings: 1,
-      infos: 1,
+      warnings: 2,
       total: 4,
     });
   });
 
   it('returns all-zero counts for no diagnostics', () => {
-    expect(summarizeDiagnostics([])).toEqual({ errors: 0, warnings: 0, infos: 0, total: 0 });
+    expect(summarizeDiagnostics([])).toEqual({ errors: 0, warnings: 0, total: 0 });
   });
 });
 
 describe('formatProblemBadge', () => {
   it('returns null when there are no problems (badge should not render)', () => {
-    expect(formatProblemBadge({ errors: 0, warnings: 0, infos: 0, total: 0 })).toBeNull();
+    expect(formatProblemBadge({ errors: 0, warnings: 0, total: 0 })).toBeNull();
   });
 
   it('formats errors and warnings together, errors first', () => {
-    expect(formatProblemBadge({ errors: 1, warnings: 2, infos: 0, total: 3 })).toBe('✖ 1 / ⚠ 2');
+    expect(formatProblemBadge({ errors: 1, warnings: 2, total: 3 })).toBe('✖ 1 / ⚠ 2');
   });
 
   it('formats only errors when there are no warnings', () => {
-    expect(formatProblemBadge({ errors: 3, warnings: 0, infos: 0, total: 3 })).toBe('✖ 3');
+    expect(formatProblemBadge({ errors: 3, warnings: 0, total: 3 })).toBe('✖ 3');
   });
 
   it('formats only warnings when there are no errors', () => {
-    expect(formatProblemBadge({ errors: 0, warnings: 2, infos: 0, total: 2 })).toBe('⚠ 2');
-  });
-
-  it('includes info counts when present', () => {
-    expect(formatProblemBadge({ errors: 0, warnings: 0, infos: 5, total: 5 })).toBe('ℹ 5');
+    expect(formatProblemBadge({ errors: 0, warnings: 2, total: 2 })).toBe('⚠ 2');
   });
 });

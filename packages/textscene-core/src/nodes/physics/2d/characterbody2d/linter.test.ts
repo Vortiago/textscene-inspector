@@ -153,12 +153,12 @@ describe('CharacterBody2D Linter', () => {
       },
     ]);
 
-    it('should info about custom up_direction', () => {
+    it('should warn about custom up_direction', () => {
       expectDiagnostic(
         scene(node('CharacterBody2D', { up_direction: 'Vector2(1, 0)' }), collisionShape2d),
         {
           ruleName: 'characterbody2d-non-standard-up-direction',
-          severity: 'info',
+          severity: 'warning',
         }
       );
     });
@@ -440,12 +440,12 @@ describe('CharacterBody2D Linter', () => {
       );
     });
 
-    it('should info about non-standard 2D up_direction', () => {
+    it('should warn about non-standard 2D up_direction', () => {
       expectDiagnostic(
         scene(node('CharacterBody2D', { up_direction: 'Vector2(0, 1)' }), collisionShape2d),
         {
           ruleName: 'characterbody2d-non-standard-up-direction',
-          severity: 'info',
+          severity: 'warning',
           contains: ['Vector2(0, -1)'],
         }
       );
