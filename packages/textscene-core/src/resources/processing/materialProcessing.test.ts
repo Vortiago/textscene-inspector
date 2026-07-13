@@ -186,6 +186,13 @@ describe('createMaterialFromContent', () => {
     ).rejects.toThrow('Unsupported material type: ORMMaterial3D');
   });
 
+  it('warns and returns a default StandardMaterial3D for a header-only .tres (no [resource] section)', async () => {
+    const material = await createMaterialFromContent(
+      '[gd_resource type="StandardMaterial3D" format=3]\n'
+    );
+    expect(material).toBeInstanceOf(THREE.MeshStandardMaterial);
+  });
+
   it('propagates .tres parse failures (missing header)', async () => {
     await expect(
       createMaterialFromContent('not a tres file')
