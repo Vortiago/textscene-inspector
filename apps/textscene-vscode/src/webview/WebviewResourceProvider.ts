@@ -5,6 +5,7 @@
 
 import type { ResourceProvider } from '@textscene/core';
 import type { HostToWebviewMessage, WebviewToHostMessage } from '../protocol';
+import { decodeResourceResponse } from '../wireCodec';
 
 interface VsCodeApi {
   postMessage: (message: unknown) => void;
@@ -26,19 +27,7 @@ export class WebviewResourceProvider implements ResourceProvider {
         if (pending) {
           clearTimeout(pending.timeoutId);
           this.pendingRequests.delete(message.requestId);
-
-          // Convert base64 back to content
-          if (message.isBinary) {
-            // Decode base64 to ArrayBuffer
-            const binaryString = atob(message.content);
-            const bytes = new Uint8Array(binaryString.length);
-            for (let i = 0; i < binaryString.length; i++) {
-              bytes[i] = binaryString.charCodeAt(i);
-            }
-            pending.resolve(bytes.buffer);
-          } else {
-            pending.resolve(message.content);
-          }
+          pending.resolve(decodeResourceResponse(message));
         }
       } else if (message.type === 'resourceLoadError') {
         const pending = this.pendingRequests.get(message.requestId);

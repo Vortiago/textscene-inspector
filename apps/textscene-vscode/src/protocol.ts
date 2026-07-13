@@ -13,6 +13,7 @@
  */
 
 import type { MissingResource } from '@textscene/core/parser';
+import type { WireResourcePayload } from './wireCodec';
 
 // ============================================================================
 // Host -> Webview
@@ -41,10 +42,7 @@ export type IncrementalUpdateMessage = {
 export type ResourceLoadedMessage = {
   type: 'resourceLoaded';
   requestId: string;
-  /** Text content, or base64-encoded bytes when `isBinary` is true. */
-  content: string;
-  isBinary: boolean;
-};
+} & WireResourcePayload;
 
 /** Failed response to a webview `loadResource` request. */
 export type ResourceLoadErrorMessage = {
