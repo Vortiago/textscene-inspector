@@ -9,15 +9,14 @@
  *   - debounced edit forward through resolveForwardedContent (sourceGate)
  *   - authoritative replace (the unconditional path upload uses)
  *
- * Unit-testable with fake timers + stubbed fetch, no DOM.
+ * Unit-testable with a stubbed fetch, no DOM.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { resolveForwardedContent } from './sourceGate';
-
-const STORAGE_KEY = 'tscn-web-r3f-fixture';
+import { FIXTURE_STORAGE_KEY } from './useFixtureSelection';
 
 /** Pane edits reach the renderer only after this pause — never on the keystroke itself (ADR-0020). */
-const DEBOUNCE_MS = 250;
+export const DEBOUNCE_MS = 250;
 
 export interface UseSceneSourceOptions {
   /** The currently selected fixture file path, or '' when on an upload. */
@@ -65,11 +64,14 @@ export function useSceneSource({
   const editedSinceLoadRef = useRef(false);
 
   // Authoritative replacement: buffer and forwardedContent move together,
-  // superseding any pending debounced edit forward.
+  // superseding any pending debounced edit forward. The pane now holds known
+  // content, so a fetch error no longer describes it — clear it (uploads
+  // never re-run the fetch effect, so nothing else would).
   const replace = useCallback((text: string) => {
     clearTimeout(timerRef.current);
     setBuffer(text);
     setForwardedContent(text);
+    setLoadError(null);
   }, []);
 
   // Fixture fetch effect. Re-runs when fixtureFile or uploadedTscnName changes.
@@ -82,6 +84,9 @@ export function useSceneSource({
     };
 
     if (!fixtureFile) {
+      // A previous fixture's fetch may still be in flight — the `cancelled`
+      // guard makes its finally() skip the reset, so reset the flag here.
+      setIsFetching(false);
       // User is on an uploaded TSCN or the fixture is genuinely cleared with
       // no upload — do not overwrite whatever replace() already set.
       if (!uploadedTscnName) {
@@ -110,7 +115,7 @@ export function useSceneSource({
         // only.
         replace(text);
         try {
-          window.localStorage.setItem(STORAGE_KEY, fixtureFile);
+          window.localStorage.setItem(FIXTURE_STORAGE_KEY, fixtureFile);
         } catch {
           // Best-effort.
         }

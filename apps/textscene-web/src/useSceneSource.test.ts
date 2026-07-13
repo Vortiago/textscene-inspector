@@ -362,6 +362,62 @@ describe('replace — upload supersedes pending debounce', () => {
     expect(result.current.buffer).toBe(UPLOADED_TSCN);
     expect(result.current.forwardedContent).toBe(UPLOADED_TSCN);
   });
+
+  it('clears a stale fetch loadError — the pane now holds known content', async () => {
+    globalThis.fetch = mockFetchFail();
+
+    const { result } = renderHook(() =>
+      useSceneSource({ fixtureFile: 'unit-plane-mesh.tscn', uploadedTscnName: null })
+    );
+
+    await waitFor(() => {
+      expect(result.current.loadError).toBeTruthy();
+    });
+
+    act(() => {
+      result.current.replace(UPLOADED_TSCN);
+    });
+
+    expect(result.current.loadError).toBeNull();
+    expect(result.current.buffer).toBe(UPLOADED_TSCN);
+    expect(result.current.forwardedContent).toBe(UPLOADED_TSCN);
+  });
+
+  it('resets isFetching when an upload supersedes an in-flight fixture fetch', async () => {
+    // Hold the fixture fetch open, then switch to an upload before it resolves.
+    const text = deferred<string>();
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      text: () => text.promise,
+    } as unknown as Response) as unknown as typeof fetch;
+
+    const { result, rerender } = renderHook(
+      (props: { fixtureFile: string; uploadedTscnName: string | null }) => useSceneSource(props),
+      { initialProps: { fixtureFile: 'unit-plane-mesh.tscn', uploadedTscnName: null } }
+    );
+
+    await waitFor(() => {
+      expect(result.current.isFetching).toBe(true);
+    });
+
+    // Upload path: fixture cleared, upload name set, content replaced.
+    act(() => {
+      result.current.replace(UPLOADED_TSCN);
+    });
+    rerender({ fixtureFile: '', uploadedTscnName: 'uploaded.tscn' });
+
+    // The cancelled fetch's finally() skips its reset — the effect's
+    // empty-fixture branch must clear the flag instead.
+    expect(result.current.isFetching).toBe(false);
+
+    // The abandoned fetch resolving later must not stomp the upload.
+    await act(async () => {
+      text.resolve(FIXTURE_TSCN);
+    });
+    expect(result.current.buffer).toBe(UPLOADED_TSCN);
+    expect(result.current.forwardedContent).toBe(UPLOADED_TSCN);
+    expect(result.current.isFetching).toBe(false);
+  });
 });
 
 // ---------------------------------------------------------------------------

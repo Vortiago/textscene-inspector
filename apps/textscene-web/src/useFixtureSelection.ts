@@ -4,12 +4,14 @@
  * Pure selection persistence; zero buffer interaction. Owns:
  *   - first-visit default selection
  *   - `?fixture=` deep-link read at mount
- *   - localStorage read/write
+ *   - localStorage read at init (useSceneSource writes the same key on a
+ *     successful load, so only fixtures that actually load are remembered)
  *   - `?fixture=` URL writeback via history.replaceState on every switch
  */
 import { useEffect, useState } from 'react';
 
-const STORAGE_KEY = 'tscn-web-r3f-fixture';
+/** localStorage key remembering the last successfully loaded fixture. */
+export const FIXTURE_STORAGE_KEY = 'tscn-web-r3f-fixture';
 
 export interface FixtureEntry {
   file: string;
@@ -48,7 +50,7 @@ export function useFixtureSelection({
       ) {
         return param;
       }
-      return window.localStorage.getItem(STORAGE_KEY) ?? defaultFixture;
+      return window.localStorage.getItem(FIXTURE_STORAGE_KEY) ?? defaultFixture;
     } catch {
       return defaultFixture;
     }

@@ -44,7 +44,7 @@ import {
 } from './lineDiagnostics';
 import { SourceGutter } from './SourceGutter';
 import { pickTscnFile, matchResourceFiles } from './multiFileUpload';
-import { useSceneSource } from './useSceneSource';
+import { useSceneSource, DEBOUNCE_MS } from './useSceneSource';
 import { useFixtureSelection } from './useFixtureSelection';
 import styles from './r3f-main.module.css';
 
@@ -52,9 +52,6 @@ import styles from './r3f-main.module.css';
 const NO_FIXTURE = '';
 
 const SOURCE_PANE_STORAGE_KEY = 'tscn-web-source-pane';
-
-/** Pane edits reach the renderer only after this pause — never on the keystroke itself (ADR-0020). */
-const DEBOUNCE_MS = 250;
 
 /**
  * #202: the web app is the first browser consumer of `@textscene/core/linter`.
@@ -153,6 +150,11 @@ export function R3FApp() {
   // deselected.
   const [uploadedTscnName, setUploadedTscnName] = useState<string | null>(null);
 
+  // Upload-path errors (unreadable file, no .tscn among the dropped/selected
+  // files). Distinct from `loadError`, which useSceneSource owns for fixture
+  // fetches; cleared on the next successful upload, fixture switch, or edit.
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
   // useFixtureSelection owns: deep-link init, localStorage persistence, URL writeback.
   const { fixtureFile, setFixtureFile } = useFixtureSelection({
     fixtures,
@@ -172,10 +174,11 @@ export function R3FApp() {
   const dragCounterRef = useRef(0);
   const [dragActive, setDragActive] = useState(false);
 
-  // #202: lint the buffer continuously, debounced — independent of the
-  // render-forward gate above (a buffer that fails to RENDER can still be
-  // LINTED; the gutter is what tells the user why). Re-runs whenever the
-  // buffer changes for any reason (typing, fixture load, upload).
+  // #202: lint the buffer continuously, debounced at the same cadence as
+  // useSceneSource's render-forward — but independent of its gate (a buffer
+  // that fails to RENDER can still be LINTED; the gutter is what tells the
+  // user why). Re-runs whenever the buffer changes for any reason (typing,
+  // fixture load, upload).
   const [diagnostics, setDiagnostics] = useState<Diagnostic[]>([]);
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -243,8 +246,10 @@ export function R3FApp() {
   }, [uploadedTscnName]);
 
   function handleFixtureChange(newFixture: string) {
-    // Switching to a fixture replaces any user-loaded TSCN content.
+    // Switching to a fixture replaces any user-loaded TSCN content — and
+    // supersedes any upload-path error still on screen.
     setUploadedTscnName(null);
+    setUploadError(null);
     setFixtureFile(newFixture);
   }
 
@@ -260,17 +265,6 @@ export function R3FApp() {
     setUploadedTscnName(file.name);
     replace(text);
   }
-
-  function handleTscnUploadError(message: string) {
-    // loadError is owned by useSceneSource; surface it via replace-cycle is
-    // not possible here. We set it through the shared prop instead.
-    // The existing approach routes error display through the Toolbar's
-    // `loadError` prop — keep that wiring by using a local error state for
-    // upload errors (distinct from fetch errors which useSceneSource owns).
-    setUploadError(message);
-  }
-
-  const [uploadError, setUploadError] = useState<string | null>(null);
 
   function handleResourceUpload(path: string, file: File) {
     provider.addUploadedFile(path, file);
@@ -293,7 +287,7 @@ export function R3FApp() {
       text = await tscnFile.text();
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      handleTscnUploadError(`Failed to read TSCN file: ${message}`);
+      setUploadError(`Failed to read TSCN file: ${message}`);
       return;
     }
     setUploadError(null);
@@ -369,11 +363,12 @@ export function R3FApp() {
     }
   }
 
-  // The effective error shown in the toolbar is the fetch error (from
-  // useSceneSource) or an upload-level error, whichever is most recent.
-  // loadError from useSceneSource is cleared by edits; uploadError is
-  // cleared by a successful upload or a new edit.
-  const effectiveLoadError = loadError ?? uploadError;
+  // The toolbar shows the newest error. `uploadError` wins when both are set:
+  // fetch errors only arise from fixture loads, and every path that starts one
+  // clears uploadError first — so a live uploadError is always the more recent.
+  // Each error is cleared by the interactions that supersede it: edits clear
+  // both, fixture switches clear uploadError, replace() clears loadError.
+  const effectiveLoadError = uploadError ?? loadError;
 
   // #203: nothing has EVER rendered (forwardedContent stays '' once a valid
   // render has occurred — hold-last-valid never reverts it) AND the current
