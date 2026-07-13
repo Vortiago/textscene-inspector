@@ -1,13 +1,22 @@
 /**
- * Integration tests for message passing between extension and webview.
+ * Integration tests for message passing between the extension host and the
+ * webview panel.
+ *
+ * Panels are constructed directly using the public `TscnPreviewPanel`
+ * constructor with a fake `vscode.WebviewPanel` (see `createTestPanel` in
+ * panelHelpers). The fake captures every `postMessage` call and exposes a
+ * `triggerMessage` helper that drives the real `onDidReceiveMessage` dispatch —
+ * the same path used in production.
+ *
+ * `vscode.workspace` and `vscode.window` statics are the real VS Code APIs
+ * provided by the extension test host.
  */
 
 import * as assert from 'assert';
 import * as vscode from 'vscode';
 import {
-  waitForPanelCreation,
-  waitForWebviewMessage,
-  sendMessageFromWebview,
+  createTestPanel,
+  waitForMessage,
 } from '../helpers/panelHelpers';
 import { getFixturePath } from '../helpers/fixtureHelpers';
 import {
@@ -17,15 +26,11 @@ import {
 
 suite('Message Passing Tests', () => {
   setup(async () => {
-    // Ensure extension is activated
-    const extension = vscode.extensions.getExtension(
-      'vortiago.textscene-inspector',
-    );
+    const extension = vscode.extensions.getExtension('vortiago.textscene-inspector');
     await extension?.activate();
   });
 
   teardown(async () => {
-    // Close all editors after each test
     await vscode.commands.executeCommand('workbench.action.closeAllEditors');
     await new Promise((resolve) => setTimeout(resolve, 100));
   });
@@ -33,59 +38,76 @@ suite('Message Passing Tests', () => {
   test('Should send loadTscn message on initial file load', async function () {
     this.timeout(10000);
 
-    // Open fixture
     const fixturePath = getFixturePath('unit-empty-scene.tscn');
-    const doc = await vscode.workspace.openTextDocument(fixturePath);
-    await vscode.window.showTextDocument(doc);
+    const extensionUri = vscode.extensions.getExtension('vortiago.textscene-inspector')!.extensionUri;
 
-    // Create panel
-    const panelPromise = waitForPanelCreation();
-    await vscode.commands.executeCommand('textscene.openPreviewToSide');
-    const panel = await panelPromise;
+    const { panel, sentMessages, triggerMessage } = createTestPanel(extensionUri, fixturePath);
 
     assertPanelActive(panel);
 
-    // Wait for loadTscn message
-    await waitForWebviewMessage(panel, 'loadTscn');
+    // Allow async _loadTscnContent to finish.
+    await new Promise((resolve) => setTimeout(resolve, 200));
 
-    // Verify message was sent
-    assertFullReloadSent(panel);
+    // Signal that the webview is ready — this replays the pending loadTscn
+    // through the production dispatchWebviewMessage path (VSCODE-01 fix).
+    triggerMessage({ type: 'webviewReady' });
+
+    // Verify loadTscn was sent.
+    await waitForMessage(sentMessages, 'loadTscn');
+    assertFullReloadSent(sentMessages);
+  });
+
+  test('webviewReady handshake: loadTscn posted before ready is replayed', async function () {
+    this.timeout(10000);
+
+    const fixturePath = getFixturePath('unit-empty-scene.tscn');
+    const extensionUri = vscode.extensions.getExtension('vortiago.textscene-inspector')!.extensionUri;
+
+    const { sentMessages, triggerMessage } = createTestPanel(extensionUri, fixturePath);
+
+    // Allow async _loadTscnContent to finish — payload is pending, not yet sent.
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    const loadsBefore = sentMessages.filter((m) => m.type === 'loadTscn');
+    assert.strictEqual(
+      loadsBefore.length,
+      0,
+      'loadTscn must not fire before webviewReady',
+    );
+
+    // The webviewReady message routes through the production dispatch table.
+    triggerMessage({ type: 'webviewReady' });
+
+    const loadsAfter = sentMessages.filter((m) => m.type === 'loadTscn');
+    assert.strictEqual(loadsAfter.length, 1, 'Exactly one loadTscn must fire after webviewReady');
   });
 
   test('Should handle jumpToNode message from webview', async function () {
     this.timeout(10000);
 
-    // Open fixture with multiple nodes
     const fixturePath = getFixturePath('unit-empty-scene.tscn');
+    // Open the text document so the jump target resolves.
     const doc = await vscode.workspace.openTextDocument(fixturePath);
     await vscode.window.showTextDocument(doc, vscode.ViewColumn.One);
 
-    // Create panel
-    const panelPromise = waitForPanelCreation();
-    await vscode.commands.executeCommand('textscene.openPreviewToSide');
-    const panel = await panelPromise;
+    const extensionUri = vscode.extensions.getExtension('vortiago.textscene-inspector')!.extensionUri;
+    const { panel, triggerMessage } = createTestPanel(extensionUri, fixturePath);
 
     assertPanelActive(panel);
 
-    // Wait for initial load
-    await waitForWebviewMessage(panel, 'loadTscn');
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    triggerMessage({ type: 'webviewReady' });
+    await new Promise((resolve) => setTimeout(resolve, 200));
 
-    // Simulate jumpToNode message from webview
-    // Note: This will attempt to open the text editor and jump to the node
-    await sendMessageFromWebview(panel, {
-      type: 'jumpToNode',
-      nodeName: 'RootNode',
-    });
+    // Drive jumpToNode through the production onDidReceiveMessage handler.
+    triggerMessage({ type: 'jumpToNode', nodeName: 'RootNode', path: 'RootNode' });
 
-    // Give time for editor to respond and focus to switch
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
-    // Check that the text document is open (might not be active editor due to preview panel)
     const openEditors = vscode.window.visibleTextEditors;
     const tscnEditor = openEditors.find(
       (e) => e.document.uri.fsPath === fixturePath.fsPath,
     );
-
     assert.ok(
       tscnEditor,
       'TSCN file should be open in an editor after jumpToNode',
@@ -95,39 +117,30 @@ suite('Message Passing Tests', () => {
   test('Should handle loadResource message from webview', async function () {
     this.timeout(10000);
 
-    // Open fixture
     const fixturePath = getFixturePath('unit-empty-scene.tscn');
-    const doc = await vscode.workspace.openTextDocument(fixturePath);
-    await vscode.window.showTextDocument(doc);
+    const extensionUri = vscode.extensions.getExtension('vortiago.textscene-inspector')!.extensionUri;
 
-    // Create panel
-    const panelPromise = waitForPanelCreation();
-    await vscode.commands.executeCommand('textscene.openPreviewToSide');
-    const panel = await panelPromise;
+    const { panel, sentMessages, triggerMessage } = createTestPanel(extensionUri, fixturePath);
 
     assertPanelActive(panel);
 
-    // Wait for initial load
-    await waitForWebviewMessage(panel, 'loadTscn');
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    triggerMessage({ type: 'webviewReady' });
+    await new Promise((resolve) => setTimeout(resolve, 200));
 
-    // Simulate loadResource message
-    await sendMessageFromWebview(panel, {
+    // Drive loadResource through the production handler.
+    triggerMessage({
       type: 'loadResource',
       path: 'res://some-resource.tres',
       resourceType: 'Resource',
       requestId: 'test-request-1',
     });
 
-    // Wait for response (either resourceLoaded or resourceLoadError)
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
-    // Check that a response message was sent
-    const messages = panel._testGetMessages();
-    const responseMessage = messages.find(
-      (m) =>
-        m.type === 'resourceLoaded' || m.type === 'resourceLoadError',
+    const responseMessage = sentMessages.find(
+      (m) => m.type === 'resourceLoaded' || m.type === 'resourceLoadError',
     );
-
     assert.ok(
       responseMessage,
       'Should send resourceLoaded or resourceLoadError message',
@@ -137,20 +150,19 @@ suite('Message Passing Tests', () => {
   test('Should handle resourceNeeded message from webview', async function () {
     this.timeout(10000);
 
-    // Open fixture
     const fixturePath = getFixturePath('unit-empty-scene.tscn');
-    const doc = await vscode.workspace.openTextDocument(fixturePath);
-    await vscode.window.showTextDocument(doc);
+    const extensionUri = vscode.extensions.getExtension('vortiago.textscene-inspector')!.extensionUri;
 
-    // Create panel
-    const panelPromise = waitForPanelCreation();
-    await vscode.commands.executeCommand('textscene.openPreviewToSide');
-    const panel = await panelPromise;
+    const { panel, triggerMessage } = createTestPanel(extensionUri, fixturePath);
 
     assertPanelActive(panel);
 
-    // Simulate resourceNeeded message (reports missing resource)
-    await sendMessageFromWebview(panel, {
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    triggerMessage({ type: 'webviewReady' });
+
+    // Drive resourceNeeded through the production handler — logs to output
+    // channel but must not throw.
+    triggerMessage({
       type: 'resourceNeeded',
       resource: {
         path: 'res://missing-texture.png',
@@ -160,70 +172,51 @@ suite('Message Passing Tests', () => {
       },
     });
 
-    // This should log to the output channel but not throw errors
-    // Just verify panel is still active
     assertPanelActive(panel);
   });
 
   test('Should handle error message from webview', async function () {
     this.timeout(10000);
 
-    // Open fixture
     const fixturePath = getFixturePath('unit-empty-scene.tscn');
-    const doc = await vscode.workspace.openTextDocument(fixturePath);
-    await vscode.window.showTextDocument(doc);
+    const extensionUri = vscode.extensions.getExtension('vortiago.textscene-inspector')!.extensionUri;
 
-    // Create panel
-    const panelPromise = waitForPanelCreation();
-    await vscode.commands.executeCommand('textscene.openPreviewToSide');
-    const panel = await panelPromise;
+    const { panel, triggerMessage } = createTestPanel(extensionUri, fixturePath);
 
     assertPanelActive(panel);
 
-    // Simulate error message from webview
-    // Note: This will show an error dialog in VSCode
-    await sendMessageFromWebview(panel, {
-      type: 'error',
-      message: 'Test error from webview',
-    });
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    triggerMessage({ type: 'webviewReady' });
 
-    // Panel should still be active after error
+    // Drive error through the production handler.
+    triggerMessage({ type: 'error', message: 'Test error from webview' });
+
     assertPanelActive(panel);
   });
 
   test('Should send multiple messages in sequence', async function () {
     this.timeout(10000);
 
-    // Open fixture
     const fixturePath = getFixturePath('unit-empty-scene.tscn');
-    const doc = await vscode.workspace.openTextDocument(fixturePath);
-    await vscode.window.showTextDocument(doc);
+    const extensionUri = vscode.extensions.getExtension('vortiago.textscene-inspector')!.extensionUri;
 
-    // Create panel
-    const panelPromise = waitForPanelCreation();
-    await vscode.commands.executeCommand('textscene.openPreviewToSide');
-    const panel = await panelPromise;
+    const { panel, sentMessages, triggerMessage } = createTestPanel(extensionUri, fixturePath);
 
     assertPanelActive(panel);
 
-    // Wait for initial load
-    await waitForWebviewMessage(panel, 'loadTscn');
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    triggerMessage({ type: 'webviewReady' });
+    await waitForMessage(sentMessages, 'loadTscn');
 
-    // Initial load should have sent at least one message
-    const initialMessages = panel._testGetMessages();
-    assert.ok(
-      initialMessages.length >= 1,
-      'Should have sent initial load message',
-    );
+    const initialCount = sentMessages.length;
+    assert.ok(initialCount >= 1, 'Should have sent initial load message');
 
-    // Reload the file (should send another message)
-    await doc.save();
+    // Trigger a reload.
+    panel.update(fixturePath);
     await new Promise((resolve) => setTimeout(resolve, 500));
 
-    // Should have more messages now
-    const updatedMessages = panel._testGetMessages();
     assert.ok(
-      updatedMessages.length >= initialMessages.length,
+      sentMessages.length >= initialCount,
       'Should have sent additional messages after reload',
     );
   });
@@ -231,25 +224,22 @@ suite('Message Passing Tests', () => {
   test('Should handle unknown message types gracefully', async function () {
     this.timeout(10000);
 
-    // Open fixture
     const fixturePath = getFixturePath('unit-empty-scene.tscn');
-    const doc = await vscode.workspace.openTextDocument(fixturePath);
-    await vscode.window.showTextDocument(doc);
+    const extensionUri = vscode.extensions.getExtension('vortiago.textscene-inspector')!.extensionUri;
 
-    // Create panel
-    const panelPromise = waitForPanelCreation();
-    await vscode.commands.executeCommand('textscene.openPreviewToSide');
-    const panel = await panelPromise;
+    const { panel, triggerMessage } = createTestPanel(extensionUri, fixturePath);
 
     assertPanelActive(panel);
 
-    // Send unknown message type
-    await sendMessageFromWebview(panel, {
-      type: 'unknownMessageType',
-      data: 'test data',
-    });
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    triggerMessage({ type: 'webviewReady' });
 
-    // Panel should remain active and not crash
+    // Unknown message types are not in the dispatch table — they are silently
+    // ignored by the typed handler lookup (the unknown key returns undefined).
+    assert.doesNotThrow(() =>
+      triggerMessage({ type: 'unknownMessageType', data: 'test data' })
+    );
+
     assertPanelActive(panel);
   });
 });

@@ -10,26 +10,36 @@ import { VSCodeResourceProvider } from './providers/VSCodeResourceProvider';
 import { findNodeHeadingLine } from './nodeHeadingResolver';
 import * as logger from './logger';
 
-// Test observability hooks (only active when running in test context)
-// Check for mocha test functions in global scope
-// `typeof process` guard: the web extension host (vscode.dev) runs in a
-// web worker where `process` does not exist.
-const IS_TEST_MODE =
-  typeof (globalThis as { it?: unknown }).it === 'function' ||
-  typeof (globalThis as { describe?: unknown }).describe === 'function' ||
-  typeof (globalThis as { suite?: unknown }).suite === 'function' ||
-  (typeof process !== 'undefined' && process.env.VSCODE_TEST_RUNNER === 'true');
+// ============================================================================
+// Dispatch table
+// ============================================================================
 
-if (IS_TEST_MODE) {
-  // Global registry of active panels for testing
-  (globalThis as { _testActivePanels?: Map<string, TscnPreviewPanel> })._testActivePanels =
-    (globalThis as { _testActivePanels?: Map<string, TscnPreviewPanel> })._testActivePanels || new Map();
+/**
+ * Exhaustive handler table over the webview-to-host protocol union.
+ * Adding a new message type to `WebviewToHostMessage` without adding a handler
+ * here is a compile error — the mapped type guarantees coverage.
+ */
+type WebviewMessageHandlers = {
+  [K in WebviewToHostMessage['type']]: (
+    msg: Extract<WebviewToHostMessage, { type: K }>
+  ) => void;
+};
 
-  // Global event emitter for panel creation
-  (globalThis as { _testPanelCreated?: vscode.EventEmitter<TscnPreviewPanel> })._testPanelCreated =
-    (globalThis as { _testPanelCreated?: vscode.EventEmitter<TscnPreviewPanel> })._testPanelCreated ||
-    new vscode.EventEmitter<TscnPreviewPanel>();
+/**
+ * Route `msg` to the corresponding handler in `handlers`.
+ * Both the production `onDidReceiveMessage` listener and tests go through
+ * this function, so the two paths cannot drift.
+ */
+export function dispatchWebviewMessage(
+  msg: WebviewToHostMessage,
+  handlers: WebviewMessageHandlers
+): void {
+  (handlers[msg.type] as (m: WebviewToHostMessage) => void)(msg);
 }
+
+// ============================================================================
+// Panel class
+// ============================================================================
 
 export class TscnPreviewPanel {
   public static readonly viewType = 'tscnPreview';
@@ -65,9 +75,6 @@ export class TscnPreviewPanel {
    */
   private _resourceProvider: VSCodeResourceProvider | null = null;
 
-  // Test observability: message history
-  private _messageHistory: HostToWebviewMessage[] = [];
-
   public static create(extensionUri: vscode.Uri, resource: vscode.Uri): TscnPreviewPanel {
     const column = vscode.window.activeTextEditor
       ? vscode.window.activeTextEditor.viewColumn! + 1
@@ -85,29 +92,14 @@ export class TscnPreviewPanel {
       }
     );
 
-    const instance = new TscnPreviewPanel(panel, extensionUri, resource);
-
-    // Test observability: register panel and emit creation event
-    if (IS_TEST_MODE) {
-      const registry = (globalThis as { _testActivePanels?: Map<string, TscnPreviewPanel> })._testActivePanels;
-      if (registry) {
-        registry.set(resource.fsPath, instance);
-      }
-
-      const emitter = (globalThis as { _testPanelCreated?: vscode.EventEmitter<TscnPreviewPanel> })._testPanelCreated;
-      if (emitter) {
-        emitter.fire(instance);
-      }
-    }
-
-    return instance;
+    return new TscnPreviewPanel(panel, extensionUri, resource);
   }
 
   public reveal(column?: vscode.ViewColumn): void {
     this._panel.reveal(column);
   }
 
-  private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri, resource: vscode.Uri) {
+  public constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri, resource: vscode.Uri) {
     this._panel = panel;
     this._extensionUri = extensionUri;
     this._currentResource = resource;
@@ -120,33 +112,35 @@ export class TscnPreviewPanel {
 
     this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
 
+    const handlers: WebviewMessageHandlers = {
+      webviewReady: (_msg) => {
+        this._webviewReady = true;
+        if (this._pendingLoadContent !== undefined) {
+          const content = this._pendingLoadContent;
+          this._pendingLoadContent = undefined;
+          this._postMessageToWebview({ type: 'loadTscn', content });
+        }
+      },
+      error: (msg) => {
+        vscode.window.showErrorMessage(msg.message);
+      },
+      jumpToNode: (msg) => {
+        void this._jumpToNodeDefinition(msg.nodeName, msg.parent);
+      },
+      loadResource: (msg) => {
+        void this._handleLoadResource(msg.path, msg.resourceType, msg.requestId);
+      },
+      resourceNeeded: (msg) => {
+        this._handleResourceNeeded(msg.resource);
+      },
+      log: (msg) => {
+        this._handleLog(msg.level, msg.message, msg.args);
+      },
+    };
+
     this._panel.webview.onDidReceiveMessage(
       (message: WebviewToHostMessage) => {
-        switch (message.type) {
-          case 'webviewReady':
-            this._webviewReady = true;
-            if (this._pendingLoadContent !== undefined) {
-              const content = this._pendingLoadContent;
-              this._pendingLoadContent = undefined;
-              this._postMessageToWebview({ type: 'loadTscn', content });
-            }
-            return;
-          case 'error':
-            vscode.window.showErrorMessage(message.message);
-            return;
-          case 'jumpToNode':
-            this._jumpToNodeDefinition(message.nodeName, message.parent);
-            return;
-          case 'loadResource':
-            this._handleLoadResource(message.path, message.resourceType, message.requestId);
-            return;
-          case 'resourceNeeded':
-            this._handleResourceNeeded(message.resource);
-            return;
-          case 'log':
-            this._handleLog(message.level, message.message, message.args);
-            return;
-        }
+        dispatchWebviewMessage(message, handlers);
       },
       null,
       this._disposables
@@ -166,14 +160,6 @@ export class TscnPreviewPanel {
     }
 
     this._onDidDispose.dispose();
-
-    // Test observability: remove from registry
-    if (IS_TEST_MODE) {
-      const registry = (globalThis as { _testActivePanels?: Map<string, TscnPreviewPanel> })._testActivePanels;
-      if (registry) {
-        registry.delete(this._currentResource.fsPath);
-      }
-    }
   }
 
   public get resource(): vscode.Uri {
@@ -390,71 +376,8 @@ export class TscnPreviewPanel {
     }
   }
 
-  /**
-   * Post a message to the webview with test observability.
-   */
   private _postMessageToWebview(message: HostToWebviewMessage): void {
-    // Record message in test mode
-    if (IS_TEST_MODE) {
-      this._messageHistory.push(message);
-    }
-
     this._panel.webview.postMessage(message);
-  }
-
-  /**
-   * Test hook: Get all messages sent to the webview.
-   * Only available in test mode.
-   */
-  public _testGetMessages(): HostToWebviewMessage[] {
-    if (!IS_TEST_MODE) {
-      throw new Error('Test hooks not available outside test mode');
-    }
-    return [...this._messageHistory];
-  }
-
-  /**
-   * Test hook: Simulate a message from the webview.
-   * Only available in test mode.
-   *
-   * Accepts a loose record (not `WebviewToHostMessage`) so integration
-   * tests can send partial and unknown message shapes.
-   */
-  public _testTriggerMessage(message: { type: string; [key: string]: unknown }): void {
-    if (!IS_TEST_MODE) {
-      throw new Error('Test hooks not available outside test mode');
-    }
-
-    // Simulate the webview message handler
-    // Note: Arrow functions or explicit binding to preserve 'this' context
-    switch (message.type) {
-      case 'error':
-        vscode.window.showErrorMessage((message.message as string) || 'Unknown error');
-        return;
-      case 'jumpToNode':
-        void this._jumpToNodeDefinition(
-          message.nodeName as string,
-          message.parent as string | undefined,
-        );
-        return;
-      case 'loadResource':
-        void this._handleLoadResource(
-          message.path as string,
-          message.resourceType as string,
-          message.requestId as string,
-        );
-        return;
-      case 'resourceNeeded':
-        this._handleResourceNeeded(message.resource as MissingResource);
-        return;
-      case 'log':
-        this._handleLog(
-          message.level as string,
-          message.message as string,
-          message.args as unknown[]
-        );
-        return;
-    }
   }
 
   private _handleResourceNeeded(resource: MissingResource): void {
