@@ -31,7 +31,7 @@ export function encodeResourceResponse(content: string | ArrayBuffer): WireResou
   const chunkSize = 8192;
   let binaryString = '';
   for (let i = 0; i < bytes.length; i += chunkSize) {
-    const chunk = bytes.subarray(i, Math.min(i + chunkSize, bytes.length));
+    const chunk = bytes.subarray(i, i + chunkSize);
     binaryString += String.fromCharCode(...chunk);
   }
   return { content: btoa(binaryString), isBinary: true };
