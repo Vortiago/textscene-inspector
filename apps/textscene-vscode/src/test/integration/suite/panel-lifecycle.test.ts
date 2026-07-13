@@ -11,6 +11,7 @@ import * as assert from 'assert';
 import * as vscode from 'vscode';
 import {
   createTestPanel,
+  getExtensionUri,
   waitForPanelDisposal,
 } from '../helpers/panelHelpers';
 import {
@@ -37,7 +38,7 @@ suite('Panel Lifecycle Tests', () => {
     this.timeout(10000);
 
     const fixturePath = getFixturePath('unit-empty-scene.tscn');
-    const extensionUri = vscode.extensions.getExtension('vortiago.textscene-inspector')!.extensionUri;
+    const extensionUri = getExtensionUri();
 
     const { panel } = createTestPanel(extensionUri, fixturePath);
 
@@ -49,7 +50,7 @@ suite('Panel Lifecycle Tests', () => {
     this.timeout(10000);
 
     const fixturePath = getFixturePath('unit-empty-scene.tscn');
-    const extensionUri = vscode.extensions.getExtension('vortiago.textscene-inspector')!.extensionUri;
+    const extensionUri = getExtensionUri();
 
     const { panel } = createTestPanel(extensionUri, fixturePath);
 
@@ -70,7 +71,7 @@ suite('Panel Lifecycle Tests', () => {
       return;
     }
 
-    const extensionUri = vscode.extensions.getExtension('vortiago.textscene-inspector')!.extensionUri;
+    const extensionUri = getExtensionUri();
     const fixture1Path = getFixturePath(fixtures[0]!);
     const fixture2Path = getFixturePath(fixtures[1]!);
 
@@ -91,7 +92,7 @@ suite('Panel Lifecycle Tests', () => {
     this.timeout(10000);
 
     const fixturePath = getFixturePath('unit-empty-scene.tscn');
-    const extensionUri = vscode.extensions.getExtension('vortiago.textscene-inspector')!.extensionUri;
+    const extensionUri = getExtensionUri();
 
     const { panel } = createTestPanel(extensionUri, fixturePath);
 
@@ -116,7 +117,7 @@ suite('Panel Lifecycle Tests', () => {
     this.timeout(15000);
 
     const fixturePath = getFixturePath('unit-empty-scene.tscn');
-    const extensionUri = vscode.extensions.getExtension('vortiago.textscene-inspector')!.extensionUri;
+    const extensionUri = getExtensionUri();
 
     for (let i = 0; i < 3; i++) {
       const { panel } = createTestPanel(extensionUri, fixturePath);

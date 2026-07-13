@@ -7,7 +7,8 @@
  *   correct handler (happy path + all six types).
  * - The `webviewReady` handshake replay travels through the production
  *   dispatch path — the path that was previously unreachable from tests
- *   because `_testTriggerMessage` omitted the `webviewReady` case.
+ *   because the retired test-plumbing message simulator omitted the
+ *   `webviewReady` case.
  * - The panel's `postMessage` captures let tests observe host→webview
  *   messages without any message-history plumbing in production code.
  */
@@ -23,108 +24,49 @@ const MINIMAL_TSCN = '[gd_scene format=3]\n[node name="Root" type="Node3D"]';
 // dispatchWebviewMessage — standalone unit tests
 // ============================================================================
 
+function makeHandlers() {
+  return {
+    webviewReady: vi.fn(),
+    error: vi.fn(),
+    jumpToNode: vi.fn(),
+    loadResource: vi.fn(),
+    resourceNeeded: vi.fn(),
+    log: vi.fn(),
+  };
+}
+
 describe('dispatchWebviewMessage', () => {
-  it('calls the webviewReady handler for a webviewReady message', () => {
-    const handlers = {
-      webviewReady: vi.fn(),
-      error: vi.fn(),
-      jumpToNode: vi.fn(),
-      loadResource: vi.fn(),
-      resourceNeeded: vi.fn(),
-      log: vi.fn(),
-    };
-    const msg: WebviewToHostMessage = { type: 'webviewReady' };
-    dispatchWebviewMessage(msg, handlers);
-    expect(handlers.webviewReady).toHaveBeenCalledWith(msg);
-    expect(handlers.error).not.toHaveBeenCalled();
-  });
-
-  it('calls the error handler for an error message', () => {
-    const handlers = {
-      webviewReady: vi.fn(),
-      error: vi.fn(),
-      jumpToNode: vi.fn(),
-      loadResource: vi.fn(),
-      resourceNeeded: vi.fn(),
-      log: vi.fn(),
-    };
-    const msg: WebviewToHostMessage = { type: 'error', message: 'boom' };
-    dispatchWebviewMessage(msg, handlers);
-    expect(handlers.error).toHaveBeenCalledWith(msg);
-  });
-
-  it('calls the jumpToNode handler for a jumpToNode message', () => {
-    const handlers = {
-      webviewReady: vi.fn(),
-      error: vi.fn(),
-      jumpToNode: vi.fn(),
-      loadResource: vi.fn(),
-      resourceNeeded: vi.fn(),
-      log: vi.fn(),
-    };
-    const msg: WebviewToHostMessage = {
-      type: 'jumpToNode',
-      nodeName: 'Leaf',
-      path: 'Root/Leaf',
-      parent: '.',
-    };
-    dispatchWebviewMessage(msg, handlers);
-    expect(handlers.jumpToNode).toHaveBeenCalledWith(msg);
-  });
-
-  it('calls the loadResource handler for a loadResource message', () => {
-    const handlers = {
-      webviewReady: vi.fn(),
-      error: vi.fn(),
-      jumpToNode: vi.fn(),
-      loadResource: vi.fn(),
-      resourceNeeded: vi.fn(),
-      log: vi.fn(),
-    };
-    const msg: WebviewToHostMessage = {
-      type: 'loadResource',
-      path: 'res://tex.png',
-      resourceType: 'Texture2D',
-      requestId: 'r1',
-    };
-    dispatchWebviewMessage(msg, handlers);
-    expect(handlers.loadResource).toHaveBeenCalledWith(msg);
-  });
-
-  it('calls the resourceNeeded handler for a resourceNeeded message', () => {
-    const handlers = {
-      webviewReady: vi.fn(),
-      error: vi.fn(),
-      jumpToNode: vi.fn(),
-      loadResource: vi.fn(),
-      resourceNeeded: vi.fn(),
-      log: vi.fn(),
-    };
-    const msg: WebviewToHostMessage = {
+  const ROUTING_CASES: WebviewToHostMessage[] = [
+    { type: 'webviewReady' },
+    { type: 'error', message: 'boom' },
+    { type: 'jumpToNode', nodeName: 'Leaf', path: 'Root/Leaf', parent: '.' },
+    { type: 'loadResource', path: 'res://tex.png', resourceType: 'Texture2D', requestId: 'r1' },
+    {
       type: 'resourceNeeded',
       resource: { path: 'res://x.png', type: 'Texture2D', referencedBy: 'Node', error: 'miss' },
-    };
+    },
+    { type: 'log', level: 'info', message: 'hello', args: [] },
+  ];
+
+  it.each(ROUTING_CASES)('routes a $type message to its handler only', (msg) => {
+    const handlers = makeHandlers();
     dispatchWebviewMessage(msg, handlers);
-    expect(handlers.resourceNeeded).toHaveBeenCalledWith(msg);
+    for (const [type, handler] of Object.entries(handlers)) {
+      if (type === msg.type) {
+        expect(handler).toHaveBeenCalledWith(msg);
+      } else {
+        expect(handler).not.toHaveBeenCalled();
+      }
+    }
   });
 
-  it('calls the log handler for a log message', () => {
-    const handlers = {
-      webviewReady: vi.fn(),
-      error: vi.fn(),
-      jumpToNode: vi.fn(),
-      loadResource: vi.fn(),
-      resourceNeeded: vi.fn(),
-      log: vi.fn(),
-    };
-    const msg: WebviewToHostMessage = {
-      type: 'log',
-      level: 'info',
-      message: 'hello',
-      args: [],
-    };
-    dispatchWebviewMessage(msg, handlers);
-    expect(handlers.log).toHaveBeenCalledWith(msg);
+  it('silently ignores a runtime message whose type has no table entry', () => {
+    const handlers = makeHandlers();
+    const unknown = { type: 'unknownMessageType', data: 'x' } as unknown as WebviewToHostMessage;
+    expect(() => dispatchWebviewMessage(unknown, handlers)).not.toThrow();
+    for (const handler of Object.values(handlers)) {
+      expect(handler).not.toHaveBeenCalled();
+    }
   });
 });
 
@@ -152,8 +94,8 @@ describe('TscnPreviewPanel webviewReady through production dispatch', () => {
     expect(loadTscnMessages(webview)).toHaveLength(0);
 
     // The webviewReady message reaches the handler through the same
-    // dispatchWebviewMessage call used in production — the path that was
-    // previously untestable via _testTriggerMessage (which omitted the case).
+    // dispatchWebviewMessage call used in production — the path the retired
+    // test-plumbing simulator could not reach (it omitted this case).
     triggerMessage({ type: 'webviewReady' });
 
     const calls = loadTscnMessages(webview);
@@ -172,8 +114,8 @@ describe('TscnPreviewPanel webviewReady through production dispatch', () => {
     await new Promise<void>((r) => setTimeout(r, 10));
     triggerMessage({ type: 'webviewReady' });
 
-    // The single observation mechanism is the captured fake panel.webview.postMessage —
-    // no _testGetMessages or _messageHistory is involved.
+    // The single observation mechanism is the captured fake
+    // panel.webview.postMessage — no message-history plumbing is involved.
     const allMessages = webview.postMessage.mock.calls.map((c) => c[0]);
     const loadTscn = allMessages.find((m) => (m as { type: string }).type === 'loadTscn');
     expect(loadTscn).toBeDefined();

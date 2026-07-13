@@ -16,6 +16,7 @@ import * as assert from 'assert';
 import * as vscode from 'vscode';
 import {
   createTestPanel,
+  getExtensionUri,
   waitForMessage,
 } from '../helpers/panelHelpers';
 import { getFixturePath } from '../helpers/fixtureHelpers';
@@ -39,7 +40,7 @@ suite('Message Passing Tests', () => {
     this.timeout(10000);
 
     const fixturePath = getFixturePath('unit-empty-scene.tscn');
-    const extensionUri = vscode.extensions.getExtension('vortiago.textscene-inspector')!.extensionUri;
+    const extensionUri = getExtensionUri();
 
     const { panel, sentMessages, triggerMessage } = createTestPanel(extensionUri, fixturePath);
 
@@ -48,8 +49,8 @@ suite('Message Passing Tests', () => {
     // Allow async _loadTscnContent to finish.
     await new Promise((resolve) => setTimeout(resolve, 200));
 
-    // Signal that the webview is ready — this replays the pending loadTscn
-    // through the production dispatchWebviewMessage path (VSCODE-01 fix).
+    // Signal that the webview is ready; this replays the pending loadTscn
+    // through the production dispatchWebviewMessage path.
     triggerMessage({ type: 'webviewReady' });
 
     // Verify loadTscn was sent.
@@ -61,7 +62,7 @@ suite('Message Passing Tests', () => {
     this.timeout(10000);
 
     const fixturePath = getFixturePath('unit-empty-scene.tscn');
-    const extensionUri = vscode.extensions.getExtension('vortiago.textscene-inspector')!.extensionUri;
+    const extensionUri = getExtensionUri();
 
     const { sentMessages, triggerMessage } = createTestPanel(extensionUri, fixturePath);
 
@@ -90,7 +91,7 @@ suite('Message Passing Tests', () => {
     const doc = await vscode.workspace.openTextDocument(fixturePath);
     await vscode.window.showTextDocument(doc, vscode.ViewColumn.One);
 
-    const extensionUri = vscode.extensions.getExtension('vortiago.textscene-inspector')!.extensionUri;
+    const extensionUri = getExtensionUri();
     const { panel, triggerMessage } = createTestPanel(extensionUri, fixturePath);
 
     assertPanelActive(panel);
@@ -118,7 +119,7 @@ suite('Message Passing Tests', () => {
     this.timeout(10000);
 
     const fixturePath = getFixturePath('unit-empty-scene.tscn');
-    const extensionUri = vscode.extensions.getExtension('vortiago.textscene-inspector')!.extensionUri;
+    const extensionUri = getExtensionUri();
 
     const { panel, sentMessages, triggerMessage } = createTestPanel(extensionUri, fixturePath);
 
@@ -151,7 +152,7 @@ suite('Message Passing Tests', () => {
     this.timeout(10000);
 
     const fixturePath = getFixturePath('unit-empty-scene.tscn');
-    const extensionUri = vscode.extensions.getExtension('vortiago.textscene-inspector')!.extensionUri;
+    const extensionUri = getExtensionUri();
 
     const { panel, triggerMessage } = createTestPanel(extensionUri, fixturePath);
 
@@ -179,7 +180,7 @@ suite('Message Passing Tests', () => {
     this.timeout(10000);
 
     const fixturePath = getFixturePath('unit-empty-scene.tscn');
-    const extensionUri = vscode.extensions.getExtension('vortiago.textscene-inspector')!.extensionUri;
+    const extensionUri = getExtensionUri();
 
     const { panel, triggerMessage } = createTestPanel(extensionUri, fixturePath);
 
@@ -198,7 +199,7 @@ suite('Message Passing Tests', () => {
     this.timeout(10000);
 
     const fixturePath = getFixturePath('unit-empty-scene.tscn');
-    const extensionUri = vscode.extensions.getExtension('vortiago.textscene-inspector')!.extensionUri;
+    const extensionUri = getExtensionUri();
 
     const { panel, sentMessages, triggerMessage } = createTestPanel(extensionUri, fixturePath);
 
@@ -225,7 +226,7 @@ suite('Message Passing Tests', () => {
     this.timeout(10000);
 
     const fixturePath = getFixturePath('unit-empty-scene.tscn');
-    const extensionUri = vscode.extensions.getExtension('vortiago.textscene-inspector')!.extensionUri;
+    const extensionUri = getExtensionUri();
 
     const { panel, triggerMessage } = createTestPanel(extensionUri, fixturePath);
 
@@ -234,8 +235,8 @@ suite('Message Passing Tests', () => {
     await new Promise((resolve) => setTimeout(resolve, 200));
     triggerMessage({ type: 'webviewReady' });
 
-    // Unknown message types are not in the dispatch table — they are silently
-    // ignored by the typed handler lookup (the unknown key returns undefined).
+    // Unknown message types have no dispatch-table entry;
+    // dispatchWebviewMessage guards the lookup and silently ignores them.
     assert.doesNotThrow(() =>
       triggerMessage({ type: 'unknownMessageType', data: 'test data' })
     );
