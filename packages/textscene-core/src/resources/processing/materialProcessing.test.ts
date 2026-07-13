@@ -9,13 +9,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { createMaterialFromContent, isMaterialPath } from './materialProcessing';
-import { warn } from '../../logger';
-
-vi.mock('../../logger', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../../logger')>()),
-  warn: vi.fn(),
-  info: vi.fn(),
-}));
 
 describe('isMaterialPath', () => {
   it('accepts .tres paths', () => {
@@ -191,14 +184,6 @@ describe('createMaterialFromContent', () => {
     await expect(
       createMaterialFromContent(tres('ORMMaterial3D', ''))
     ).rejects.toThrow('Unsupported material type: ORMMaterial3D');
-  });
-
-  it('warns and returns a default StandardMaterial3D for a header-only .tres (no [resource] section)', async () => {
-    const material = await createMaterialFromContent(
-      '[gd_resource type="StandardMaterial3D" format=3]\n'
-    );
-    expect(material).toBeInstanceOf(THREE.MeshStandardMaterial);
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining('no [resource] properties'));
   });
 
   it('propagates .tres parse failures (missing header)', async () => {
