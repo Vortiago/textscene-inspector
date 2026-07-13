@@ -11,6 +11,10 @@
  * an external `.tres` (ExtResource); frames may be standalone textures
  * (ExtResource) or AtlasTexture cells (SubResource atlas + region) — see
  * `useSpriteFrames` / `resolveFrameTexture`.
+ *
+ * The per-frame transport-actuation decision is delegated to the pure
+ * `stepPlayback` reducer; this component is a thin adapter that actuates the
+ * returned command on its local time accumulator and `frameAtTime` lookup.
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -22,7 +26,7 @@ import { composeFrameTexture, frameSizePx, type SpriteFrameProps } from '../../.
 import { useResource } from '../../../resources/useResource';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import { useAnimationTransport } from '../../../r3f/contexts/AnimationTransportContext';
-import { flushTimeOnPauseEdge } from '../../../r3f/animation/usePlaybackLoop';
+import { stepPlayback } from '../../../r3f/animation/stepPlayback';
 import { loopsUnderOverride } from '../../../r3f/animation/loopOverride';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useOptionalSelection } from '../../../r3f/contexts/SelectionContext';
@@ -72,48 +76,74 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
   // playing/paused; when stopped the authored `props.frame` is shown directly.
   const [playbackFrame, setPlaybackFrame] = useState(0);
   const { time: transportTime, reportTime } = transport;
-  // Only the 'playing' branch below reports, so capture the last value it
-  // computed for `flushTimeOnPauseEdge` (WI-213) — unlike the mixer drivers,
-  // there is no action to read the live playhead back from.
+  // The local time accumulator: unlike the mixer drivers, AnimatedSprite2D has
+  // no THREE action to read the live playhead from, so it maintains its own
+  // clock. Re-seeded from the transport on fresh play entry (resume) and clip
+  // switch — the `continuing` logic folds into the reducer's `resume` flag.
   const prevStateRef = useRef(effectiveState);
   const prevAnimRef = useRef<string | null>(null);
+  const prevTimeRef = useRef(0);
   const lastPlayingTimeRef = useRef(0);
+
   useFrame((_, delta) => {
     if (!currentAnim) return;
-    flushTimeOnPauseEdge(prevStateRef.current, effectiveState, () => lastPlayingTimeRef.current, reportTime);
-    if (effectiveState === 'playing') {
-      const dur = clipDuration(currentAnim);
-      // Advance a LOCAL playhead: `transport.time` is throttle-frozen between
-      // commits (WI-213), so integrating it would run playback at a fraction
-      // of real speed — this ref is the sprite's clock the way `action.time`
-      // is the mixer drivers'; the transport only *displays* what we report.
-      // Re-seed from the transport where it IS authoritative: entering
-      // 'playing' (resume picks up a paused seek) or a clip switch
-      // (`selectClip` resets the playhead to 0).
-      const continuing =
-        prevStateRef.current === 'playing' && prevAnimRef.current === currentAnim.name;
-      const base = continuing ? lastPlayingTimeRef.current : transportTime;
-      // #224: the preview Speed multiplier and Loop override apply to this
-      // driver exactly like the mixer drivers (loopsUnderOverride mirrors
-      // applyLoopOverride). Wrap a repeating clip past its end; hold a
-      // non-repeating one at its last frame.
-      const step = delta * transport.playbackSpeed;
-      const loops = loopsUnderOverride(transport.loopOverride, currentAnim.loop);
-      const t = dur > 0 && loops ? (base + step) % dur : Math.min(base + step, dur);
-      reportTime(t);
-      lastPlayingTimeRef.current = t;
-      // frameAtTime consults the anim's OWN loop flag (wrap vs clamp at the
-      // end), so hand it the override-effective flag, not the authored one.
-      const effectiveAnim = loops === currentAnim.loop ? currentAnim : { ...currentAnim, loop: loops };
-      const next = frameAtTime(effectiveAnim, t);
-      setPlaybackFrame((prev) => (prev === next ? prev : next));
-    } else if (effectiveState === 'paused') {
-      const next = frameAtTime(currentAnim, transportTime); // sample the seeked time
-      setPlaybackFrame((prev) => (prev === next ? prev : next));
+
+    const step = stepPlayback({
+      prevState: prevStateRef.current,
+      state: effectiveState,
+      prevTime: prevTimeRef.current,
+      transportTime,
+      liveTime: lastPlayingTimeRef.current,
+      // Treat an animation change as a "clip changed" so resume fires.
+      clipChanged: currentAnim.name !== prevAnimRef.current,
+    });
+
+    // WI-213 pause-edge flush: the adapter guards the null (liveTime is always
+    // a number here, but the contract is clear).
+    if (step.flushTime) {
+      reportTime(lastPlayingTimeRef.current, { immediate: true });
     }
-    // stopped: the authored frame is shown below — nothing to drive here.
+
+    switch (step.command) {
+      case 'ensure-playing': {
+        const dur = clipDuration(currentAnim);
+        // Re-seed the local clock on fresh (re)entry into playing OR clip switch.
+        // `resume` from the reducer folds in the former `continuing` logic.
+        const base = step.resume ? transportTime : lastPlayingTimeRef.current;
+        // #224: the preview Speed multiplier and Loop override apply to this
+        // driver exactly like the mixer drivers (loopsUnderOverride mirrors
+        // applyLoopOverride). Wrap a repeating clip past its end; hold a
+        // non-repeating one at its last frame.
+        const s = delta * transport.playbackSpeed;
+        const loops = loopsUnderOverride(transport.loopOverride, currentAnim.loop);
+        const t = dur > 0 && loops ? (base + s) % dur : Math.min(base + s, dur);
+        reportTime(t);
+        lastPlayingTimeRef.current = t;
+        // frameAtTime consults the anim's OWN loop flag (wrap vs clamp at the
+        // end), so hand it the override-effective flag, not the authored one.
+        const effectiveAnim = loops === currentAnim.loop ? currentAnim : { ...currentAnim, loop: loops };
+        const next = frameAtTime(effectiveAnim, t);
+        setPlaybackFrame((prev) => (prev === next ? prev : next));
+        break;
+      }
+      case 'seek':
+      case 'hold-paused': {
+        // Paused: sample the transport time either way — with no THREE action
+        // to hold, "hold" and "seek" collapse to the same frame lookup.
+        const next = frameAtTime(currentAnim, transportTime);
+        setPlaybackFrame((prev) => (prev === next ? prev : next));
+        break;
+      }
+      case 'stop-and-restore':
+      case 'none': {
+        // stopped: the authored frame is shown below via props.frame — nothing to drive here.
+        break;
+      }
+    }
+
     prevStateRef.current = effectiveState;
     prevAnimRef.current = currentAnim.name;
+    prevTimeRef.current = transportTime;
   });
 
   const frameCount = currentAnim?.frames.length ?? 0;
