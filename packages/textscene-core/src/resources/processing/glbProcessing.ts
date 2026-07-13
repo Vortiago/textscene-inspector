@@ -22,12 +22,15 @@ import * as THREE from 'three';
 // Lazy module cache — populated on the first GLB load, null until then.
 // ---------------------------------------------------------------------------
 
-type GLTFLoaderType = typeof import('three/addons/loaders/GLTFLoader.js')['GLTFLoader'];
-type SkeletonCloneType = typeof import('three/addons/utils/SkeletonUtils.js').clone;
+interface GlbModules {
+  GLTFLoader: typeof import('three/addons/loaders/GLTFLoader.js')['GLTFLoader'];
+  skeletonClone: typeof import('three/addons/utils/SkeletonUtils.js')['clone'];
+}
 
-let _GLTFLoader: GLTFLoaderType | null = null;
-let _skeletonClone: SkeletonCloneType | null = null;
-let _initPromise: Promise<void> | null = null;
+// Synchronous view of the cache for `cloneWithMaterials`; set exactly once
+// when `initPromise` resolves.
+let glbModules: GlbModules | null = null;
+let initPromise: Promise<GlbModules> | null = null;
 
 /**
  * Lazily load GLTFLoader and SkeletonUtils on the first GLB request.
@@ -35,17 +38,24 @@ let _initPromise: Promise<void> | null = null;
  * Exported for tests that need to pre-initialise before calling
  * `cloneWithMaterials` directly.
  */
-export function initGlbModules(): Promise<void> {
-  if (_initPromise) return _initPromise;
-  _initPromise = (async () => {
-    const [loaderMod, skeletonMod] = await Promise.all([
-      import('three/addons/loaders/GLTFLoader.js'),
-      import('three/addons/utils/SkeletonUtils.js'),
-    ]);
-    _GLTFLoader = loaderMod.GLTFLoader;
-    _skeletonClone = skeletonMod.clone;
-  })();
-  return _initPromise;
+export function initGlbModules(): Promise<GlbModules> {
+  initPromise ??= Promise.all([
+    import('three/addons/loaders/GLTFLoader.js'),
+    import('three/addons/utils/SkeletonUtils.js'),
+  ])
+    .then(([loaderMod, skeletonMod]) => {
+      glbModules = { GLTFLoader: loaderMod.GLTFLoader, skeletonClone: skeletonMod.clone };
+      return glbModules;
+    })
+    .catch((error: unknown) => {
+      // A failed chunk load (transient network/host hiccup) must not poison
+      // the cache: clear it so the next GLB request retries the import. The
+      // rejection still propagates to this caller, which surfaces it through
+      // the standard missing-resource failure path.
+      initPromise = null;
+      throw error;
+    });
+  return initPromise;
 }
 
 // ---------------------------------------------------------------------------
@@ -113,18 +123,14 @@ export function disposeClonedMaterials(object: THREE.Object3D): void {
  * fetchable ones (the web app points them at its fixtures mirror via
  * setURLModifier; hosts without a mapping fail the load → standard
  * missing-resource placeholder UX).
- *
- * Lazily imports GLTFLoader and SkeletonUtils on the first call so they
- * are split into a separate on-demand chunk and excluded from the
- * webview's initial-paint bundle.
  */
 export async function createGLBMesh(
   data: ArrayBuffer,
   resourcePath = '',
   manager?: THREE.LoadingManager
 ): Promise<THREE.Object3D> {
-  await initGlbModules();
-  const loader = new _GLTFLoader!(manager);
+  const { GLTFLoader } = await initGlbModules();
+  const loader = new GLTFLoader(manager);
   const gltf = await loader.parseAsync(data, resourcePath);
   // GLTFLoader returns embedded clips on `gltf.animations`, not on the scene
   // object. Attach them to the scene's conventional `.animations` array so the
@@ -155,14 +161,14 @@ export async function createGLBMesh(
  * In tests, call `initGlbModules()` in a beforeAll.
  */
 export function cloneWithMaterials(mesh: THREE.Object3D): THREE.Object3D {
-  if (!_skeletonClone) {
+  if (!glbModules) {
     throw new Error(
       '[glbProcessing] cloneWithMaterials called before initGlbModules(). ' +
         'Await initGlbModules() in a beforeAll/beforeEach in tests, or ensure ' +
         'createGLBMesh has been called at least once before cloning.'
     );
   }
-  const cloned = _skeletonClone(mesh);
+  const cloned = glbModules.skeletonClone(mesh);
 
   // SkeletonUtils shares material references between source and clone; clone
   // them so per-instance material mutations don't bleed across instances.

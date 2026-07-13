@@ -461,7 +461,7 @@ than `main + 200 KB gzipped`". History:
 - WI-R3F-18 (ESM + splitting + React.lazy panels): initial-paint static-import closure is 1,357,273 B raw / 390,322 B gzipped — +143 KB gz vs main, 57 KB under the +200 KB budget ✅
 - Post-WI-R3F-18 feature growth (GLB support — GLTFLoader/KTX2Loader/DRACOLoader/MeshoptDecoder — plus further node/animation coverage) pushed the closure back over budget: **536,997 B gzipped, 87.4 KB OVER budget**. Part of that regrowth was drei's `<Text>` (troika-three-text + bidi-js + its sdf-generator worker, statically imported by `InternalTextLabel` for the empty-state placeholder label) baked directly into `webview.js`.
 - **Issue #215: `InternalTextLabel`'s drei `<Text>` converted to `React.lazy`.** It no longer sits in `webview.js`; it resolves in its own on-demand chunk the first time it actually renders. Result: **492,801 B gzipped — still 44.2 KB OVER budget**, a ~44 KB gz reduction from the troika split alone.
-- **Issue #241: GLTFLoader + SkeletonUtils converted to dynamic `import()` in `glbProcessing.ts`.** Both modules are now split into on-demand lazy chunks (`GLTFLoader-*.js`, `SkeletonUtils-*.js`) that only load on the first actual GLB resource request. Scenes without any GLB references pay no loading cost for the loader chain at all. Result: **485,119 B gzipped — 36.7 KB OVER budget**, an 11.1 KB gz reduction (484.8 → 473.7 KB) from the GLTFLoader/SkeletonUtils split. Investigation confirmed DRACOLoader, KTX2Loader, and MeshoptDecoder are NOT imported anywhere in source — they only appear as string plugin-name literals inside GLTFLoader; none of the vendored fixture GLBs use Draco or Meshopt compression.
+- **Issue #241: GLTFLoader + SkeletonUtils converted to dynamic `import()` in `glbProcessing.ts`.** Both modules are now split into on-demand lazy chunks (`GLTFLoader-*.js`, `SkeletonUtils-*.js`) that only load on the first actual GLB resource request. Scenes without any GLB references pay no loading cost for the loader chain at all. Result: **484,921 B gzipped — 36.5 KB OVER budget**, an 11.2 KB gz reduction (484.8 → 473.6 KB) from the GLTFLoader/SkeletonUtils split. Investigation confirmed DRACOLoader, KTX2Loader, and MeshoptDecoder are NOT imported anywhere in source — they only appear as string plugin-name literals inside GLTFLoader; none of the vendored fixture GLBs use Draco or Meshopt compression.
 
 WI-R3F-18 closed the gap (at the time) with three combined changes:
 
@@ -497,7 +497,7 @@ budget still runs informationally (warn-only) — see "Status of the
 budget gate" for why `--enforce` isn't flipped yet.
 
 **Status of the budget gate.** As of this commit (issue #241) the
-webview closure is **36.7 KB gzipped OVER budget** — flipping
+webview closure is **36.5 KB gzipped OVER budget** — flipping
 `check:bundle-size`'s `--enforce` would hard-fail `pnpm validate` /
 pre-push / CI immediately, so it stays informational. The remaining
 overage is legitimate feature cost: React + react-dom/react-reconciler,
