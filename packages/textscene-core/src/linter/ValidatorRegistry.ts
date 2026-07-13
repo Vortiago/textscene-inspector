@@ -103,6 +103,16 @@ export class ValidatorRegistry {
   }
 
   /**
+   * Keys registered directly for a node type (no base-walk).
+   * Used by the property-grammar parity guard to compare each slice's
+   * own validator surface against its parser's own property reads.
+   */
+  getOwnValidatorKeys(nodeType: string): string[] {
+    const own = this.validators.get(nodeType);
+    return own ? Object.keys(own) : [];
+  }
+
+  /**
    * Clear all registered validators (useful for testing)
    */
   clear(): void {
