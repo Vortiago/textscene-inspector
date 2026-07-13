@@ -6,7 +6,7 @@
  * content-diff guard then no-oped. The fix pushes a `resourceChanged` message so
  * the webview re-fetches just that resource, independent of the main-scene text.
  */
-import { describe, expect, it, type Mock } from 'vitest';
+import { describe, expect, it, vi, type Mock } from 'vitest';
 import * as vscode from 'vscode';
 import { TscnPreviewPanel } from './TscnPreviewPanel';
 import { createMockUri, createMockFileData, setupMockPanel, type MockWebview } from './test-setup';
@@ -189,6 +189,51 @@ describe('TscnPreviewPanel dependency hot-reload', () => {
     expect(resourceChangedCalls(webview)).toEqual([
       { type: 'resourceChanged', path: 'res://textures/wood.png' },
     ]);
+  });
+
+  it('posts resourceChanged for a deleted dependency (re-fetch fails -> missing placeholder)', async () => {
+    const { webview, triggerMessage } = setupMockPanel();
+    const panel = await createReadyPanel(triggerMessage);
+    (vscode.workspace.getWorkspaceFolder as Mock).mockReturnValue({
+      uri: createMockUri('/workspace'),
+    });
+
+    // Establish relevance: the resource was previously served.
+    panel._testTriggerMessage({
+      type: 'loadResource',
+      path: 'res://textures/wood.png',
+      resourceType: 'Texture2D',
+      requestId: 'r1',
+    });
+    await new Promise<void>((r) => setTimeout(r, 10));
+
+    // The file is deleted on disk; the watcher fires onDidDelete -> handleDependencyChange.
+    await panel.handleDependencyChange(createMockUri('/workspace/textures/wood.png'));
+
+    // resourceChanged causes the webview to re-fetch; that fetch will fail and
+    // flip to the magenta missing placeholder — same path as a failed load.
+    expect(resourceChangedCalls(webview)).toEqual([
+      { type: 'resourceChanged', path: 'res://textures/wood.png' },
+    ]);
+  });
+
+  it('surfaces an error and holds the last render when the panel\'s own main scene is deleted', async () => {
+    const { triggerMessage } = setupMockPanel();
+    const panel = await createReadyPanel(triggerMessage);
+
+    // Main-scene file is gone; update() -> _loadTscnContent -> readFile throws.
+    (vscode.workspace.fs.readFile as Mock).mockRejectedValue(new Error('ENOENT: file deleted'));
+    const showError = vscode.window.showErrorMessage as ReturnType<typeof vi.fn>;
+    showError.mockClear();
+
+    panel.update(createMockUri('/workspace/scene.tscn'));
+    await new Promise<void>((r) => setTimeout(r, 10));
+
+    // The panel shows an error message but does NOT send a new loadTscn
+    // (the previous render is left in place).
+    expect(showError).toHaveBeenCalledWith(
+      expect.stringContaining('Failed to load TSCN file')
+    );
   });
 
   it('skips resolution IO entirely when the webview is not ready', async () => {
