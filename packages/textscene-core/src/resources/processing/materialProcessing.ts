@@ -32,8 +32,9 @@ export async function createMaterialFromContent(
   const { resourceType, properties, extResources } = parseTresFile(content);
 
   // A header-only .tres (no [resource] section) is valid enough to warn on
-  // rather than throw; yield a default StandardMaterial3D.
-  const hasResourceSection = /^\[resource\b/m.test(content);
+  // rather than throw; yield a default StandardMaterial3D. Leading whitespace
+  // is tolerated because the scanning loop trims heading lines.
+  const hasResourceSection = /^[ \t]*\[resource\b/m.test(content);
   if (!hasResourceSection) {
     warn(
       `[material] .tres has no [resource] section (type="${resourceType}") — using default StandardMaterial3D.`
@@ -47,8 +48,7 @@ export async function createMaterialFromContent(
       const { createStandardMaterial } = await import('../materials/standardmaterial3d/renderer');
       const { parseVector3 } = await import('../../parser/vectors');
 
-      // Build StandardMaterial3DProperties from raw string properties.
-      // parseTresFile returns Record<string, string> — all values are raw strings.
+      // Build StandardMaterial3DProperties by decoding the raw value strings.
       const result: Record<string, unknown> = {};
 
       for (const [key, value] of Object.entries(properties)) {
@@ -91,7 +91,7 @@ export async function createMaterialFromContent(
 
         for (const slot of textureSlots) {
           const propValue = properties[slot];
-          if (typeof propValue === 'string') {
+          if (propValue !== undefined) {
             const texPath = resolveExtResourcePath(propValue, extResources);
             if (texPath) {
               texturePromises.push(
