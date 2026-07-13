@@ -34,17 +34,27 @@ export type { ResourceType };
  * vendored fixture (`scenes/demos/2d/role_playing_game/grid_movement/exploration.tscn`)
  * declares 28 external resources TOTAL across every resource type combined —
  * so 200 distinct entries in a single processor's cache is >7x any single
- * scene's entire working set. In practice, given today's corpus, eviction
- * reclaims resources from PREVIOUSLY-viewed fixtures in a long browsing
- * session (unbounded corpus-browsing growth) long before it would reach a
- * live scene's mounted consumers — which matters because eviction disposes
- * the resource (`dispose` callback), and a GLB's cached template's geometry
- * is shared by every per-consumer clone (`cloneWithMaterials` clones
- * materials only). This is a probabilistic guarantee, not an absolute one:
- * recency is tracked per cache `get`/`set` call, not per mount, so a
- * resource that stays displayed without being re-requested is never
- * "touched" again and can still become the LRU victim if 200+ other
- * distinct same-type resources are requested afterward in one session.
+ * scene's entire working set.
+ *
+ * ## Eviction safety guarantee
+ *
+ * `useResource` increments a per-entry reference count (`LRUCache.pin`) on
+ * mount and decrements it (`LRUCache.unpin`) on unmount. `evictOverflow`
+ * skips entries with a nonzero count, falling back to pure LRU among the
+ * zero-count (unmounted) entries. This is an absolute guarantee: a resource
+ * held by at least one mounted consumer is never CAPACITY-evicted regardless
+ * of how many other resources are loaded in the same session. (Explicit
+ * invalidation — `clearCache` / hot-reload — still disposes and removes the
+ * entry, but the pin count survives it, so the re-loaded entry comes back
+ * protected for the still-mounted consumer.)
+ *
+ * When every cached entry is pinned and capacity is exceeded, the cache
+ * temporarily grows beyond `maxEntries` rather than disposing a live
+ * resource, and shrinks back as pins are released on unmount.
+ *
+ * React StrictMode double-invoke (mount -> unmount -> mount) is handled
+ * correctly: the transient unmount decrements to zero but does not dispose
+ * the entry, and the immediate remount increments back to 1.
  */
 const DEFAULT_MAX_ENTRIES = 200;
 
@@ -85,6 +95,18 @@ export interface ResourceProcessor<T> {
   clearCache(path?: string): void;
   /** Get cache size for debugging */
   getCacheSize(): number;
+  /**
+   * Increment the pin count for `path`. While count > 0, eviction will
+   * skip this entry, preferring zero-count (unmounted) entries as eviction
+   * candidates. Call on mount; pair with `unpin` on unmount.
+   */
+  pin(path: string): void;
+  /**
+   * Decrement the pin count for `path`, clamped at zero. Does not
+   * immediately dispose or remove the entry — it becomes eligible for
+   * ordinary LRU eviction on the next cache overflow.
+   */
+  unpin(path: string): void;
 }
 
 /**
@@ -272,6 +294,14 @@ export function createResourceProcessor<T>(
 
     getCacheSize(): number {
       return cache.size;
+    },
+
+    pin(path: string): void {
+      cache.pin(path);
+    },
+
+    unpin(path: string): void {
+      cache.unpin(path);
     },
   };
 }

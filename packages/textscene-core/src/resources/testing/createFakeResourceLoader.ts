@@ -31,6 +31,8 @@ import type { ResourceLoader } from '../ResourceLoader';
 export interface FakeProcessor<T> {
   /** Backing cache — `undefined` = never requested, `null` = failed/sentinel-miss, value = loaded. */
   readonly cache: Map<string, T | null>;
+  /** Pin counts — for asserting that useResource wires pin/unpin correctly. */
+  readonly pinCounts: Map<string, number>;
   // Public ResourceProcessor<T> surface consumed by useResource:
   request(path: string): void;
   getCached(path: string): T | null | undefined;
@@ -38,6 +40,8 @@ export interface FakeProcessor<T> {
   isLoading(): boolean;
   clearCache(path?: string): void;
   getCacheSize(): number;
+  pin(path: string): void;
+  unpin(path: string): void;
   /** Override what `request()` does — pass a spy to assert calls, or a no-op. */
   setRequestImpl(impl: (path: string) => void): void;
   /** Seed the cache without emitting. `null` seeds a sentinel miss. */
@@ -62,9 +66,11 @@ export interface FakeResourceLoader {
 
 function makeFakeProcessor<T>(eventBus: ResourceEventBus, type: ResourceType): FakeProcessor<T> {
   const cache = new Map<string, T | null>();
+  const pinCounts = new Map<string, number>();
   let requestImpl: (path: string) => void = () => {};
   return {
     cache,
+    pinCounts,
     request(path: string): void {
       requestImpl(path);
     },
@@ -83,6 +89,14 @@ function makeFakeProcessor<T>(eventBus: ResourceEventBus, type: ResourceType): F
     },
     getCacheSize(): number {
       return cache.size;
+    },
+    pin(path: string): void {
+      pinCounts.set(path, (pinCounts.get(path) ?? 0) + 1);
+    },
+    unpin(path: string): void {
+      const count = pinCounts.get(path) ?? 0;
+      if (count <= 1) pinCounts.delete(path);
+      else pinCounts.set(path, count - 1);
     },
     setRequestImpl(impl: (path: string) => void): void {
       requestImpl = impl;

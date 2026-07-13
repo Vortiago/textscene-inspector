@@ -6,7 +6,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderHook, act, render } from '@testing-library/react';
 import * as THREE from 'three';
-import type { ReactNode } from 'react';
+import { StrictMode, type ReactNode } from 'react';
 import { useResource } from './useResource';
 import { ResourceLoaderProvider } from './ResourceLoaderContext';
 import type { ResourceLoader } from './ResourceLoader';
@@ -467,6 +467,105 @@ describe('useResource', () => {
       expect(result.current.value).toBeUndefined();
       expect(requestSpy).not.toHaveBeenCalled();
       expect(loader.eventBus.getHandlerCount('texture', 'loaded')).toBe(before);
+    });
+  });
+
+  // -------------------------------------------------------------------
+  // Reference-counting: pin / unpin wiring.
+  // The hook must increment the processor pin count on mount and
+  // decrement on unmount so the LRU cache never evicts a cached entry
+  // that a mounted consumer still holds.
+  // -------------------------------------------------------------------
+  describe('pin / unpin lifecycle', () => {
+    it('pins the resource on mount and unpins on unmount', () => {
+      loader.textures.cache.set('res://t.png', textureA);
+
+      const { unmount } = renderHook(
+        () => useResource<THREE.Texture>('res://t.png', 'Texture2D'),
+        { wrapper: withLoader(loader) }
+      );
+
+      expect(loader.textures.pinCounts.get('res://t.png')).toBe(1);
+
+      unmount();
+
+      expect(loader.textures.pinCounts.get('res://t.png')).toBeUndefined();
+    });
+
+    it('two concurrent consumers each add a pin; both must unpin before count reaches zero', () => {
+      loader.textures.cache.set('res://t.png', textureA);
+
+      const hookA = renderHook(
+        () => useResource<THREE.Texture>('res://t.png', 'Texture2D'),
+        { wrapper: withLoader(loader) }
+      );
+      const hookB = renderHook(
+        () => useResource<THREE.Texture>('res://t.png', 'Texture2D'),
+        { wrapper: withLoader(loader) }
+      );
+
+      expect(loader.textures.pinCounts.get('res://t.png')).toBe(2);
+
+      hookA.unmount();
+      expect(loader.textures.pinCounts.get('res://t.png')).toBe(1);
+
+      hookB.unmount();
+      expect(loader.textures.pinCounts.get('res://t.png')).toBeUndefined();
+    });
+
+    it('path swap unpins the old path and pins the new path', () => {
+      loader.textures.cache.set('res://a.png', textureA);
+      loader.textures.cache.set('res://b.png', textureB);
+
+      const { rerender } = renderHook(
+        ({ path }: { path: string }) => useResource<THREE.Texture>(path, 'Texture2D'),
+        { wrapper: withLoader(loader), initialProps: { path: 'res://a.png' } }
+      );
+
+      expect(loader.textures.pinCounts.get('res://a.png')).toBe(1);
+      expect(loader.textures.pinCounts.get('res://b.png')).toBeUndefined();
+
+      rerender({ path: 'res://b.png' });
+
+      expect(loader.textures.pinCounts.get('res://a.png')).toBeUndefined();
+      expect(loader.textures.pinCounts.get('res://b.png')).toBe(1);
+    });
+
+    it('StrictMode double-invoke: mount->unmount->mount ends at pin count 1 and never evicts', () => {
+      // A real <StrictMode> wrapper makes React run the effect, its
+      // cleanup, then the effect again on mount. Net result must be
+      // pin count = 1, with no disposal in the gap.
+      loader.textures.cache.set('res://t.png', textureA);
+      const StrictWrapper = ({ children }: { children: ReactNode }) => (
+        <StrictMode>
+          <ResourceLoaderProvider loader={loader}>{children}</ResourceLoaderProvider>
+        </StrictMode>
+      );
+
+      const { result, unmount } = renderHook(
+        () => useResource<THREE.Texture>('res://t.png', 'Texture2D'),
+        { wrapper: StrictWrapper }
+      );
+
+      expect(loader.textures.pinCounts.get('res://t.png')).toBe(1);
+      expect(result.current.status).toBe('loaded');
+      // The resource must still be in cache (not disposed in the gap).
+      expect(loader.textures.cache.has('res://t.png')).toBe(true);
+
+      // The real unmount releases the last pin.
+      unmount();
+      expect(loader.textures.pinCounts.get('res://t.png')).toBeUndefined();
+    });
+
+    it('empty path does not pin anything', () => {
+      const { unmount } = renderHook(
+        () => useResource<THREE.Texture>('', 'Texture2D'),
+        { wrapper: withLoader(loader) }
+      );
+
+      expect(loader.textures.pinCounts.size).toBe(0);
+      unmount();
+      expect(loader.textures.pinCounts.size).toBe(0);
     });
   });
 });
