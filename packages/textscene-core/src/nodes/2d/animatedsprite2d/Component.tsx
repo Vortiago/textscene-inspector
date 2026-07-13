@@ -126,12 +126,10 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
         setPlaybackFrame((prev) => (prev === next ? prev : next));
         break;
       }
-      case 'seek': {
-        const next = frameAtTime(currentAnim, transportTime);
-        setPlaybackFrame((prev) => (prev === next ? prev : next));
-        break;
-      }
+      case 'seek':
       case 'hold-paused': {
+        // Paused: sample the transport time either way — with no THREE action
+        // to hold, "hold" and "seek" collapse to the same frame lookup.
         const next = frameAtTime(currentAnim, transportTime);
         setPlaybackFrame((prev) => (prev === next ? prev : next));
         break;

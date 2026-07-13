@@ -34,15 +34,12 @@ export function startAction(action: AnimationAction, opts: ActionOpts = {}): voi
 }
 
 /**
- * Seek a paused action to `time`. Re-applies weight/timeScale after play() so
- * the weight invariant holds whether or not the action was already running.
+ * Seek a paused action to `time`: start it (re-applying weight/timeScale on
+ * the same call as play(), so the weight invariant holds whether or not the
+ * action was already running), then hold it paused at the target time.
  */
 export function seekAction(action: AnimationAction, time: number, opts: ActionOpts = {}): void {
-  const { weight = 1, timeScale = 1 } = opts;
-  action.enabled = true;
-  action.setEffectiveWeight(weight);
-  action.setEffectiveTimeScale(timeScale);
-  action.play();
+  startAction(action, opts);
   action.paused = true;
   action.time = time;
 }

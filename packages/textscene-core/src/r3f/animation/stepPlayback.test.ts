@@ -137,7 +137,7 @@ describe('stepPlayback — paused → paused', () => {
     expect(result.flushTime).toBe(false);
   });
 
-  it('emits seek on the FIRST paused frame after a stop → pause jump (prevTime === transportTime === 0 but state changed)', () => {
+  it('emits hold-paused on a stop → pause jump with an unmoved playhead (prevTime === transportTime === 0)', () => {
     // stopped (prevTime=0) → paused (time=0): no seek because time is unchanged.
     // This tests the "already at 0" path — no wasted re-seek.
     const result = stepPlayback(
