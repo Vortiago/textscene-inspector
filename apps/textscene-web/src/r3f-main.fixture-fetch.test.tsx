@@ -6,7 +6,9 @@
  *     surfaces the load-error banner (role="alert");
  *   - a pending edit forward (the pane's debounce) is superseded by a fixture
  *     switch — the switched root renders and the edited root never does, whether
- *     the switch's fetch succeeds or fails.
+ *     the switch's fetch succeeds or fails;
+ *   - a stale error banner is cleared by the interaction that supersedes it
+ *     (fetch error → upload; upload error → fixture switch).
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
@@ -170,5 +172,55 @@ describe('debounce supersession — a fixture switch cancels a pending edit forw
     expect(screen.queryByText('EditedRoot')).toBeNull();
     expect(paneTextarea().value).toBe('');
     expect(screen.queryByText('StubRoot')).toBeTruthy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Error-banner supersession — newer interactions clear stale errors
+// ---------------------------------------------------------------------------
+
+const UPLOADED_TSCN = `[gd_scene load_steps=1 format=3]
+
+[node name="UploadedRoot" type="Node3D"]
+`;
+
+/** Drop files on the app root (React only reads `.files` off dataTransfer). */
+function dropFiles(files: File[]) {
+  fireEvent.drop(screen.getByTestId('app-root'), {
+    dataTransfer: { files, types: ['Files'] },
+  });
+}
+
+describe('error-banner supersession — stale errors do not outlive the next action', () => {
+  it('clears the load-error banner when a valid .tscn is uploaded afterwards', async () => {
+    mockFetch('fail');
+    render(<R3FApp />);
+    await waitForScene();
+
+    await switchToTarget();
+    await waitFor(() => {
+      expect(screen.queryByRole('alert')?.textContent).toContain('Failed to load fixture');
+    });
+
+    dropFiles([new File([UPLOADED_TSCN], 'uploaded.tscn', { type: 'text/plain' })]);
+
+    await waitForScene('UploadedRoot');
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('clears the "no .tscn" upload error when the user switches to a fixture', async () => {
+    mockFetch('ok');
+    render(<R3FApp />);
+    await waitForScene();
+
+    dropFiles([new File(['not a scene'], 'texture.png', { type: 'image/png' })]);
+    await waitFor(() => {
+      expect(screen.queryByRole('alert')?.textContent).toContain('No .tscn file found');
+    });
+
+    await switchToTarget();
+
+    await waitForScene('SwitchedRoot');
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 });
