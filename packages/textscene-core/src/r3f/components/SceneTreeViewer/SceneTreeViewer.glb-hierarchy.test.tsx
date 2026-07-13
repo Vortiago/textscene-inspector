@@ -4,7 +4,7 @@
  * (it renders). Mirrors the sub-scene inlining test's loader-cache harness,
  * but stages a THREE.Object3D in the glb cache.
  */
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import * as THREE from 'three';
@@ -17,6 +17,7 @@ import { ResourceEventBus } from '../../../resources/ResourceEventBus';
 import { MetadataStore } from '../../../resources/MetadataStore';
 import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
+import { initGlbModules } from '../../../resources/processing/glbProcessing';
 
 function makeLoader(): { loader: ResourceLoader; setGlbCached: (path: string, obj: THREE.Object3D) => void } {
   const glbCache = new Map<string, THREE.Object3D | null>();
@@ -85,6 +86,12 @@ function glbGraph() {
     internalResources: [],
   });
 }
+
+// SceneTreeViewer resolves GLB Object3D via cloneWithMaterials which requires
+// the lazy GLB module cache to be initialised first.
+beforeAll(async () => {
+  await initGlbModules();
+});
 
 describe('<SceneTreeViewer> WI-C — GLB internal hierarchy', () => {
   it('shows the GLB row with children and never flags it "Not implemented"', () => {

@@ -461,6 +461,7 @@ than `main + 200 KB gzipped`". History:
 - WI-R3F-18 (ESM + splitting + React.lazy panels): initial-paint static-import closure is 1,357,273 B raw / 390,322 B gzipped — +143 KB gz vs main, 57 KB under the +200 KB budget ✅
 - Post-WI-R3F-18 feature growth (GLB support — GLTFLoader/KTX2Loader/DRACOLoader/MeshoptDecoder — plus further node/animation coverage) pushed the closure back over budget: **536,997 B gzipped, 87.4 KB OVER budget**. Part of that regrowth was drei's `<Text>` (troika-three-text + bidi-js + its sdf-generator worker, statically imported by `InternalTextLabel` for the empty-state placeholder label) baked directly into `webview.js`.
 - **Issue #215: `InternalTextLabel`'s drei `<Text>` converted to `React.lazy`.** It no longer sits in `webview.js`; it resolves in its own on-demand chunk the first time it actually renders. Result: **492,801 B gzipped — still 44.2 KB OVER budget**, a ~44 KB gz reduction from the troika split alone.
+- **Issue #241: GLTFLoader + SkeletonUtils converted to dynamic `import()` in `glbProcessing.ts`.** Both modules are now split into on-demand lazy chunks (`GLTFLoader-*.js`, `SkeletonUtils-*.js`) that only load on the first actual GLB resource request. Scenes without any GLB references pay no loading cost for the loader chain at all. Result: **485,119 B gzipped — 36.7 KB OVER budget**, an 11.1 KB gz reduction (484.8 → 473.7 KB) from the GLTFLoader/SkeletonUtils split. Investigation confirmed DRACOLoader, KTX2Loader, and MeshoptDecoder are NOT imported anywhere in source — they only appear as string plugin-name literals inside GLTFLoader; none of the vendored fixture GLBs use Draco or Meshopt compression.
 
 WI-R3F-18 closed the gap (at the time) with three combined changes:
 
@@ -479,13 +480,13 @@ WI-R3F-18 closed the gap (at the time) with three combined changes:
    so the webview can fetch chunk URIs.
 
 The initial chunk now contains: React, react-dom/react-reconciler
-(react-three-fiber's runtime), drei's non-`Text` runtime, three.js, the
-GLTF/KTX2/DRACO/Meshopt loaders (GLB support), the scene canvas
-(`<TscnCanvas>`), the node component registry (registers all node types
-on import), the resource pipeline, contexts, and selection. The lazy
-chunks contain: the tree viewer, the details panel, drei's `<Text>`
-(troika-three-text + bidi-js + its sdf-generator worker), and the CSS
-modules the DOM panels own.
+(react-three-fiber's runtime), drei's non-`Text` runtime, three.js core,
+the scene canvas (`<TscnCanvas>`), the node component registry (registers
+all node types on import), the resource pipeline, contexts, and selection.
+The lazy chunks contain: the tree viewer, the details panel, drei's
+`<Text>` (troika-three-text + bidi-js + its sdf-generator worker),
+GLTFLoader + SkeletonUtils (loaded on the first GLB resource request),
+and the CSS modules the DOM panels own.
 
 **Bundle-size guard.** `scripts/check-bundle-size.mjs` walks the
 static-import closure starting at `webview.js`, gzips the
@@ -495,21 +496,17 @@ validate` and CI (`.github/workflows/ci.yml`, issue #215); the webview
 budget still runs informationally (warn-only) — see "Status of the
 budget gate" for why `--enforce` isn't flipped yet.
 
-**Status of the budget gate.** As of this commit the webview closure is
-**44.2 KB gzipped OVER budget**, even after lazy-loading troika —
-flipping `check:bundle-size`'s `--enforce` now would hard-fail `pnpm
-validate` / pre-push / CI immediately, so it stays informational. The
-remaining overage is legitimate feature cost, not misconfiguration: GLB
-support (GLTFLoader + KTX2Loader + DRACOLoader + MeshoptDecoder, ~209 KB
-raw combined) landed after the 390 KB gz measurement above and has no
-`React.lazy` seam as clean as troika's — any node can reference a GLB
-mesh at parse time, so the loader chain can't be deferred behind a
-single, edge-case call site the way `InternalTextLabel` could. Closing
-the remaining gap is tracked as its own follow-up (issue #241:
-candidates are lazy-loading the GLB/KTX2/DRACO loader chain behind the
-first actual GLB reference in a loaded scene, revisiting whether
-Draco/Meshopt/KTX2 are all needed given the vendored fixture set, or
-renegotiating the budget) before `--enforce` can flip safely.
+**Status of the budget gate.** As of this commit (issue #241) the
+webview closure is **36.7 KB gzipped OVER budget** — flipping
+`check:bundle-size`'s `--enforce` would hard-fail `pnpm validate` /
+pre-push / CI immediately, so it stays informational. The remaining
+overage is legitimate feature cost: React + react-dom/react-reconciler,
+three.js core, react-three-fiber's runtime, and drei's non-Text helpers
+together account for the bulk of the ~237 KB gz delta over the plain-JS
+`main` baseline. The next candidates for reducing this overage are
+budget renegotiation (the `main + 200 KB` criterion predates GLB support
+and react-three-fiber as committed features) or profiling drei for unused
+helpers that could be tree-shaken with more targeted imports.
 
 ### Known limitations
 

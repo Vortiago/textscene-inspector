@@ -3,9 +3,10 @@
  * the SceneTreeViewer can select (gizmo) + hide individual nodes, and drives
  * per-object visibility from the hidden-paths set. Registrations clear on unmount.
  */
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
+import { initGlbModules } from '../../../resources/processing/glbProcessing';
 import { GLBSceneRoot, GLB_SCENE_ROOT_TYPE } from './Component';
 import { ResourceEventBus } from '../../../resources/ResourceEventBus';
 import { MetadataStore } from '../../../resources/MetadataStore';
@@ -85,6 +86,12 @@ async function mount(loader: ResourceLoader) {
   await new Promise<void>((r) => setTimeout(r, 10));
   return renderer;
 }
+
+// GLBSceneRoot clones Object3D via cloneWithMaterials which requires the lazy
+// GLB module cache to be initialised first.
+beforeAll(async () => {
+  await initGlbModules();
+});
 
 describe('GLBSceneRoot — WI-D select + hide', () => {
   it('registers each internal object under its tree path', async () => {

@@ -15,7 +15,7 @@
  * baked translation, and asserts the override zeroes it so the mesh ends
  * up at the roof_lamp origin — co-located with the OmniLight3D.
  */
-import { describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode, TscnScene } from '../../../parser/types';
@@ -27,9 +27,16 @@ import { ResourceEventBus } from '../../../resources/ResourceEventBus';
 import { MetadataStore } from '../../../resources/MetadataStore';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
 import { GLB_SCENE_ROOT_TYPE } from './Component';
+import { initGlbModules } from '../../../resources/processing/glbProcessing';
 
 // Register node-type components (Node3D / OmniLight3D / GLBSceneRoot / …).
 import '../../nodes/index';
+
+// GLBSceneRoot clones Object3D via cloneWithMaterials which requires the lazy
+// GLB module cache to be initialised first.
+beforeAll(async () => {
+  await initGlbModules();
+});
 
 const GLB_PATH = 'res://assets/roof_lamp.glb';
 const LAMP_TSCN = 'res://assets/roof_lamp.tscn';

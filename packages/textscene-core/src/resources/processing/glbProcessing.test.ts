@@ -9,13 +9,14 @@
 
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import {
   cloneWithMaterials,
   createGLBMesh,
   disposeClonedMaterials,
   gltfResourceDir,
+  initGlbModules,
   isGLBPath,
 } from './glbProcessing';
 
@@ -33,6 +34,13 @@ function findRepoAsset(relative: string): string {
   }
   throw new Error(`Asset not found walking up from ${process.cwd()}: ${relative}`);
 }
+
+// cloneWithMaterials uses SkeletonUtils.clone, which is lazily imported on the
+// first GLB load. Pre-initialise once for the whole test file so tests that
+// call cloneWithMaterials directly don't need to go through createGLBMesh first.
+beforeAll(async () => {
+  await initGlbModules();
+});
 
 describe('createGLBMesh', () => {
   it('surfaces a GLB’s embedded animation clips on the returned object', async () => {
