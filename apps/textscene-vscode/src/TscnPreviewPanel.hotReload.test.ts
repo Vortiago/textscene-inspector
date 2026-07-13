@@ -6,7 +6,7 @@
  * content-diff guard then no-oped. The fix pushes a `resourceChanged` message so
  * the webview re-fetches just that resource, independent of the main-scene text.
  */
-import { describe, expect, it, vi, type Mock } from 'vitest';
+import { describe, expect, it, type Mock } from 'vitest';
 import * as vscode from 'vscode';
 import { TscnPreviewPanel } from './TscnPreviewPanel';
 import { createMockUri, createMockFileData, setupMockPanel, type MockWebview } from './test-setup';
@@ -207,7 +207,10 @@ describe('TscnPreviewPanel dependency hot-reload', () => {
     });
     await new Promise<void>((r) => setTimeout(r, 10));
 
-    // The file is deleted on disk; the watcher fires onDidDelete -> handleDependencyChange.
+    // The file is deleted on disk, so any further read of it fails. The watcher
+    // fires onDidDelete -> handleDependencyChange, whose invalidation must not
+    // depend on the file still being readable.
+    (vscode.workspace.fs.readFile as Mock).mockRejectedValue(new Error('ENOENT'));
     await panel.handleDependencyChange(createMockUri('/workspace/textures/wood.png'));
 
     // resourceChanged causes the webview to re-fetch; that fetch will fail and
@@ -218,12 +221,17 @@ describe('TscnPreviewPanel dependency hot-reload', () => {
   });
 
   it('surfaces an error and holds the last render when the panel\'s own main scene is deleted', async () => {
-    const { triggerMessage } = setupMockPanel();
+    const { webview, triggerMessage } = setupMockPanel();
     const panel = await createReadyPanel(triggerMessage);
+    const loadTscnCalls = (): number =>
+      webview.postMessage.mock.calls.filter(
+        (c) => (c[0] as { type: string }).type === 'loadTscn'
+      ).length;
+    const loadsBefore = loadTscnCalls();
 
     // Main-scene file is gone; update() -> _loadTscnContent -> readFile throws.
     (vscode.workspace.fs.readFile as Mock).mockRejectedValue(new Error('ENOENT: file deleted'));
-    const showError = vscode.window.showErrorMessage as ReturnType<typeof vi.fn>;
+    const showError = vscode.window.showErrorMessage as Mock;
     showError.mockClear();
 
     panel.update(createMockUri('/workspace/scene.tscn'));
@@ -234,6 +242,7 @@ describe('TscnPreviewPanel dependency hot-reload', () => {
     expect(showError).toHaveBeenCalledWith(
       expect.stringContaining('Failed to load TSCN file')
     );
+    expect(loadTscnCalls()).toBe(loadsBefore);
   });
 
   it('skips resolution IO entirely when the webview is not ready', async () => {

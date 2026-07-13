@@ -435,8 +435,8 @@ describe('Extension', () => {
       activate(mockContext);
       // No panel opened.
 
-      const unrelevantUri = createMockUri('/workspace/other.png');
-      await Promise.all(resourceDeleteHandlers.map((handler) => handler(unrelevantUri)));
+      const irrelevantUri = createMockUri('/workspace/other.png');
+      await Promise.all(resourceDeleteHandlers.map((handler) => handler(irrelevantUri)));
 
       expect(mockPanel.handleDependencyChange).not.toHaveBeenCalled();
       expect(mockPanel.update).not.toHaveBeenCalled();
