@@ -1,13 +1,14 @@
 /**
  * Unit tests for material processing helpers: path detection and the .tres →
- * THREE.Material pipeline, including its value coercion edges (Color/Vector3
- * objects, boolean strings, numeric strings) and texture-slot loading via the
+ * THREE.Material pipeline, including its raw-string value decoding edges
+ * (Color/Vector3, booleans, numbers) and texture-slot loading via the
  * injected loader function, resolved against the file's own [ext_resource]
  * headers.
  */
 
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
+import * as logger from '../../logger';
 import { createMaterialFromContent, isMaterialPath } from './materialProcessing';
 
 describe('isMaterialPath', () => {
@@ -184,6 +185,28 @@ describe('createMaterialFromContent', () => {
     await expect(
       createMaterialFromContent(tres('ORMMaterial3D', ''))
     ).rejects.toThrow('Unsupported material type: ORMMaterial3D');
+  });
+
+  it('warns and returns a default StandardMaterial3D for a header-only .tres (no [resource] section)', async () => {
+    const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+    try {
+      const material = await createMaterialFromContent(
+        '[gd_resource type="StandardMaterial3D" format=3]\n'
+      );
+      expect(material).toBeInstanceOf(THREE.MeshStandardMaterial);
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('no [resource] section')
+      );
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
+  it('recognizes an indented [resource] heading (scanning loop trims lines)', async () => {
+    const material = (await createMaterialFromContent(
+      '[gd_resource type="StandardMaterial3D" format=3]\n\n  [resource]\nalbedo_color = Color(1, 0, 0, 1)\n'
+    )) as THREE.MeshStandardMaterial;
+    expect(material.color.getHex()).toBe(0xff0000);
   });
 
   it('propagates .tres parse failures (missing header)', async () => {

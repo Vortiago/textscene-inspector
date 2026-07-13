@@ -5,8 +5,7 @@
  * loop: ext/sub resources come back from the core; a ParseObserver captures
  * what the core drops for non-scene files (the header type and the [resource]
  * properties). Values stay raw strings — typed decoding belongs to consumers
- * (e.g. the TileSet resolver). The legacy `parseResourceFile` reads only the
- * [resource] body and remains in place for the material path.
+ * (e.g. the TileSet resolver, the material path).
  */
 
 import { TscnParserCore, type ParseObserver } from './TscnParserCore.js';
