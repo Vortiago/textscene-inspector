@@ -103,6 +103,15 @@ export class ValidatorRegistry {
   }
 
   /**
+   * Keys registered directly under `nodeType` (own registration only, no
+   * base-walk). Used by the meta-guard test to detect shadow copies.
+   */
+  getOwnKeys(nodeType: string): string[] {
+    const own = this.validators.get(nodeType);
+    return own ? Object.keys(own) : [];
+  }
+
+  /**
    * Clear all registered validators (useful for testing)
    */
   clear(): void {

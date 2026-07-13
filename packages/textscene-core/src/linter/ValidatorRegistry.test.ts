@@ -61,6 +61,38 @@ describe('ValidatorRegistry', () => {
     });
   });
 
+  describe('getOwnKeys', () => {
+    it('should return the keys registered directly for a node type', () => {
+      const mockValidator: PropertyValidator = () => null;
+
+      registry.registerAll('MeshInstance3D', {
+        mesh: mockValidator,
+        cast_shadow: mockValidator,
+      });
+
+      expect(registry.getOwnKeys('MeshInstance3D').sort()).toEqual([
+        'cast_shadow',
+        'mesh',
+      ]);
+    });
+
+    it('should return an empty array for an unregistered node type', () => {
+      expect(registry.getOwnKeys('NoSuchType')).toEqual([]);
+    });
+
+    it('should not walk the base-type chain', () => {
+      const mockValidator: PropertyValidator = () => null;
+      const walkingRegistry = new ValidatorRegistry({ MeshInstance3D: 'Node3D' });
+
+      walkingRegistry.registerAll('Node3D', { visible: mockValidator });
+      walkingRegistry.registerAll('MeshInstance3D', { mesh: mockValidator });
+
+      // findValidator walks the chain, getOwnKeys must not.
+      expect(walkingRegistry.findValidator('MeshInstance3D', 'visible')).toBe(mockValidator);
+      expect(walkingRegistry.getOwnKeys('MeshInstance3D')).toEqual(['mesh']);
+    });
+  });
+
   describe('findValidator - exact match', () => {
     it('should find validator by exact property key', () => {
       const mockValidator: PropertyValidator = () => null;
