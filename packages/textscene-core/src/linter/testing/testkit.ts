@@ -119,7 +119,7 @@ export function expectNoDiagnostic(content: string, where: DiagnosticExpectation
 }
 
 /**
- * Assert the scene produces no *error*-severity diagnostics (warnings/info tolerated).
+ * Assert the scene produces no *error*-severity diagnostics (warnings tolerated).
  * Optionally narrow to errors mentioning a property (`prop`) or with a given `ruleName`
  * (e.g. `{ ruleName: 'strict-parser' }` for "no strict-parser format errors").
  */

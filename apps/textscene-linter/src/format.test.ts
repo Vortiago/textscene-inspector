@@ -233,12 +233,6 @@ describe('formatGithubAnnotations', () => {
     expect(formatGithubAnnotations([file])[0]).toMatch(/^::warning /);
   });
 
-  it('formats a warning-severity diagnostic as a ::warning workflow command', () => {
-    const file: FileDiagnostics = { filePath: 'warn2.tscn', diagnostics: [makeDiagnostic({ severity: 'warning' })] };
-
-    expect(formatGithubAnnotations([file])[0]).toMatch(/^::warning /);
-  });
-
   it('omits line and col params when the diagnostic has no location', () => {
     const file: FileDiagnostics = { filePath: 'a.tscn', diagnostics: [makeDiagnostic()] };
 
