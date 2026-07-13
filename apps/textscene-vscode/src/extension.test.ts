@@ -35,6 +35,7 @@ describe('Extension', () => {
   let commandHandlers: Map<string, (...args: unknown[]) => unknown>;
   let saveDocumentHandlers: Array<(...args: unknown[]) => unknown>;
   let resourceChangeHandlers: Array<(uri: unknown) => unknown>;
+  let resourceDeleteHandlers: Array<(uri: unknown) => unknown>;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -42,6 +43,7 @@ describe('Extension', () => {
     commandHandlers = new Map();
     saveDocumentHandlers = [];
     resourceChangeHandlers = [];
+    resourceDeleteHandlers = [];
 
     // Mock context
     mockContext = {
@@ -88,7 +90,10 @@ describe('Extension', () => {
         resourceChangeHandlers.push(handler);
         return { dispose: vi.fn() };
       }),
-      onDidDelete: vi.fn().mockReturnValue({ dispose: vi.fn() }),
+      onDidDelete: vi.fn((handler: (uri: unknown) => unknown) => {
+        resourceDeleteHandlers.push(handler);
+        return { dispose: vi.fn() };
+      }),
       dispose: vi.fn(),
     }));
   });
@@ -131,7 +136,7 @@ describe('Extension', () => {
     it('should add disposables to context subscriptions', () => {
       activate(mockContext);
 
-      expect(mockContext.subscriptions.length).toBe(9); // command + symbol provider + definition provider + document link provider + diagnostics + save listener + resource watcher + 2 watcher handlers
+      expect(mockContext.subscriptions.length).toBe(10); // command + symbol provider + definition provider + document link provider + diagnostics + save listener + resource watcher + 3 watcher handlers (onChange + onCreate + onDelete)
     });
 
     it('should register a document link provider for res:// references', () => {
@@ -403,6 +408,38 @@ describe('Extension', () => {
       // must refresh it via update(); it must NOT be re-fetched as a dependency.
       expect(mockPanel.update).toHaveBeenCalledWith(mainUri);
       expect(mockPanel.handleDependencyChange).not.toHaveBeenCalled();
+    });
+
+    it('routes a deleted dependency through handleDependencyChange (missing placeholder path)', async () => {
+      activate(mockContext);
+      openPanelFor('/workspace/scene.tscn');
+
+      const depUri = createMockUri('/workspace/textures/wood.png');
+      await Promise.all(resourceDeleteHandlers.map((handler) => handler(depUri)));
+
+      expect(mockPanel.handleDependencyChange).toHaveBeenCalledWith(depUri);
+    });
+
+    it('routes deletion of the main scene through update() so the panel holds last render and surfaces an error', async () => {
+      activate(mockContext);
+      openPanelFor('/workspace/scene.tscn');
+
+      const mainUri = createMockUri('/workspace/scene.tscn');
+      await Promise.all(resourceDeleteHandlers.map((handler) => handler(mainUri)));
+
+      expect(mockPanel.update).toHaveBeenCalledWith(mainUri);
+      expect(mockPanel.handleDependencyChange).not.toHaveBeenCalled();
+    });
+
+    it('deletion of a file no panel cares about causes no invalidation', async () => {
+      activate(mockContext);
+      // No panel opened.
+
+      const irrelevantUri = createMockUri('/workspace/other.png');
+      await Promise.all(resourceDeleteHandlers.map((handler) => handler(irrelevantUri)));
+
+      expect(mockPanel.handleDependencyChange).not.toHaveBeenCalled();
+      expect(mockPanel.update).not.toHaveBeenCalled();
     });
   });
 

@@ -117,7 +117,8 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     resourceWatcher.onDidChange(handleResourceChange),
-    resourceWatcher.onDidCreate(handleResourceChange)
+    resourceWatcher.onDidCreate(handleResourceChange),
+    resourceWatcher.onDidDelete(handleResourceChange)
   );
 }
 
