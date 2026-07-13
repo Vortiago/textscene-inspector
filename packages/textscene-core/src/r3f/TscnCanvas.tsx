@@ -174,8 +174,8 @@ function ActiveCameraSwitcher() {
  * mount AFTER the selection is applied, so they are invisible to the load-time
  * timers if the user selects a node after those timers have already fired.
  * This closes the race that produced nondeterministic framing in the visual
- * regression harness (#243) and also improves the live-app UX: the camera
- * widens to include a large gizmo even after the initial settle is done.
+ * regression harness and also improves the live-app UX: the camera widens
+ * to include a large gizmo even after the initial settle is done.
  *
  * Exported for unit testing — it is an internal canvas component that must
  * remain mounted inside `<Canvas>` (needs `useThree`).
@@ -190,25 +190,22 @@ export function CameraFit() {
   const activeCameraPath = control?.activeCameraPath ?? null;
   const selectedNodePath = selection?.selectedNodePath ?? null;
 
-  useEffect(() => {
-    if (!hasScene || activeCameraPath) return undefined;
-    const timers = [150, 500, 1100].map((delay) =>
-      setTimeout(() => {
-        const state = get();
-        frameSceneBounds(state.scene, state.camera, state.controls as OrbitLike | null);
-      }, delay)
-    );
-    return () => timers.forEach(clearTimeout);
-  }, [rootKey, hasScene, activeCameraPath, get]);
+  const fit = useCallback(() => {
+    const state = get();
+    frameSceneBounds(state.scene, state.camera, state.controls as OrbitLike | null);
+  }, [get]);
 
   useEffect(() => {
     if (!hasScene || activeCameraPath) return undefined;
-    const timer = setTimeout(() => {
-      const state = get();
-      frameSceneBounds(state.scene, state.camera, state.controls as OrbitLike | null);
-    }, 300);
+    const timers = [150, 500, 1100].map((delay) => setTimeout(fit, delay));
+    return () => timers.forEach(clearTimeout);
+  }, [rootKey, hasScene, activeCameraPath, fit]);
+
+  useEffect(() => {
+    if (!hasScene || activeCameraPath) return undefined;
+    const timer = setTimeout(fit, 300);
     return () => clearTimeout(timer);
-  }, [selectedNodePath, hasScene, activeCameraPath, get]);
+  }, [selectedNodePath, hasScene, activeCameraPath, fit]);
 
   return null;
 }
