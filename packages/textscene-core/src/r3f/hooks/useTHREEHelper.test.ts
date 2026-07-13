@@ -15,7 +15,7 @@ import { correctHelperForParentGroup } from './useTHREEHelper';
 /** Minimal HelperLike stub — just the `update()` contract the function requires. */
 function makeStubHelper(): THREE.Object3D & { update: () => void; updateCount: number } {
   const obj = new THREE.Object3D() as THREE.Object3D & { update: () => void; updateCount: number };
-  (obj as { matrixAutoUpdate: boolean }).matrixAutoUpdate = false;
+  obj.matrixAutoUpdate = false;
   obj.updateCount = 0;
   obj.update = function () { this.updateCount += 1; };
   return obj;
@@ -24,14 +24,15 @@ function makeStubHelper(): THREE.Object3D & { update: () => void; updateCount: n
 /**
  * Builds a minimal scene graph:
  *   scene
- *   └── parent (translated by `parentPos`)
+ *   └── parent (translated by `parentPos`, optionally rotated about Y)
  *       ├── target (at identity relative to parent, world pos == parentPos)
  *       └── helper (sibling of target, placed by correctHelperForParentGroup)
  */
-function makeSceneGraph(parentPos: THREE.Vector3Like) {
+function makeSceneGraph(parentPos: THREE.Vector3Like, parentRotationY = 0) {
   const scene = new THREE.Scene();
   const parent = new THREE.Object3D();
   parent.position.set(parentPos.x, parentPos.y, parentPos.z);
+  parent.rotation.y = parentRotationY;
   scene.add(parent);
 
   const target = new THREE.Object3D();
@@ -66,10 +67,10 @@ describe('correctHelperForParentGroup', () => {
     // be invoked once per wrapped call, verified through the counter that the
     // stub increments.
     const { target, helper } = makeSceneGraph({ x: 0, y: 5, z: 0 });
-    // Capture the original counter before wrapping.
     expect(helper.updateCount).toBe(0);
     correctHelperForParentGroup(helper, target);
-    // No parent: the correction branch is skipped, but nativeUpdate still fires.
+    // The helper is parented, so the correction branch also runs; the point
+    // here is only that nativeUpdate fires exactly once per wrapped call.
     helper.update();
     expect(helper.updateCount).toBe(1);
   });
@@ -131,20 +132,7 @@ describe('correctHelperForParentGroup', () => {
   });
 
   it('works when the parent group has both translation and rotation', () => {
-    const scene = new THREE.Scene();
-    const parent = new THREE.Object3D();
-    parent.position.set(3, 4, 0);
-    parent.rotation.y = Math.PI / 4; // 45 degrees around Y
-    scene.add(parent);
-
-    const target = new THREE.Object3D();
-    parent.add(target);
-
-    const helper = makeStubHelper();
-    helper.matrix = target.matrixWorld;
-    parent.add(helper);
-
-    scene.updateMatrixWorld(true);
+    const { target, helper } = makeSceneGraph({ x: 3, y: 4, z: 0 }, Math.PI / 4);
     correctHelperForParentGroup(helper, target);
     helper.update();
 
