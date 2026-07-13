@@ -109,14 +109,22 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
     return resolveAnimationRoot(mountedGroup, properties.root_node) ?? null;
   }, [mountedGroup, properties.root_node]);
 
-  // Loop modes indexed by clip name, kept in a ref so configureAction reads
-  // the latest value without causing a re-render.
-  const loopModesRef = useRef<Map<string, number>>(new Map());
+  // Loop modes indexed by clip name; configureAction below closes over the
+  // memo (usePlaybackLoop reads the latest closure each frame).
+  const loopModes = useMemo(
+    () => new Map<string, number>(animations.map((a) => [a.name, a.loopMode])),
+    [animations]
+  );
+
+  // Godot composes Euler rotations in YXZ order. Reorder each rotation target
+  // (orientation-preserving) as soon as the root resolves — independent of
+  // selection, because an AnimationTree can play this driver's published clips
+  // on the same root without the player ever being active (ADR-0019). Declared
+  // before the mount hook so it runs first and the snapshot taken there keeps
+  // the YXZ order too (restoreSnapshot preserves it via Euler.copy).
   useEffect(() => {
-    const next = new Map<string, number>();
-    for (const animation of animations) next.set(animation.name, animation.loopMode);
-    loopModesRef.current = next;
-  }, [animations]);
+    if (mixerRoot) applyGodotEulerOrder(mixerRoot, animations);
+  }, [mixerRoot, animations]);
 
   // Per-driver pose snapshot: track-derived targets + Godot Euler-order reorder.
   // GLBSceneRoot uses the full-subtree poseSnapshot instead.
@@ -126,9 +134,6 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
 
   const onMixerBuilt = useCallback(
     (root: Object3D) => {
-      // Reorder rotation targets before snapshotting so the rest pose keeps
-      // the YXZ order that the clip's per-component writes expect.
-      applyGodotEulerOrder(root, animations);
       snapshotRef.current = snapshotTargets(root, animations);
     },
     [animations]
@@ -159,7 +164,7 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
     actionsRef,
     configureAction: (action, clipName) => {
       // 'auto' keeps the clip's authored Godot loop_mode (via loopSettingsFor).
-      const authoredMode = loopModesRef.current.get(clipName) ?? 0;
+      const authoredMode = loopModes.get(clipName) ?? 0;
       applyLoopOverride(action, transport.loopOverride, loopSettingsFor(authoredMode));
     },
     reconfigureKey: transport.loopOverride,

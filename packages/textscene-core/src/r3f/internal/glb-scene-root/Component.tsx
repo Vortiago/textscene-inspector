@@ -28,7 +28,7 @@
  * GLB's own node names, so the mixer roots on the object itself rather than on
  * an Animation root / `root_node`.
  */
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../NodeComponentRegistry';
 import { useResource } from '../../../resources/useResource';
@@ -44,7 +44,6 @@ import { applyLoopOverride, LOOP_REPEAT_SETTINGS } from '../../animation/loopOve
 import { snapshotSubtree, restoreSnapshot, type PoseSnapshot } from '../../animation/poseSnapshot';
 import { useAnimationDriverMount } from '../../animation/useAnimationDriverMount';
 import { joinPath } from '../../../utils/nodePath';
-import { useRef } from 'react';
 
 /**
  * Reserved node type the createSceneProcessor synthesises for binary

@@ -15,7 +15,10 @@ import { describe, expect, it, vi } from 'vitest';
 import { useCallback, useMemo } from 'react';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
-import { useAnimationDriverMount } from './useAnimationDriverMount';
+import {
+  useAnimationDriverMount,
+  type UseAnimationDriverMountResult,
+} from './useAnimationDriverMount';
 import {
   AnimationTransportProvider,
   useAnimationTransport,
@@ -56,20 +59,17 @@ interface HarnessProps {
   isActive: boolean;
   autoplay?: string;
   durations?: Record<string, number>;
-  onMixerBuilt?: (
-    obj: THREE.Object3D,
-    mixer: THREE.AnimationMixer,
-    actions: Map<string, THREE.AnimationAction>
-  ) => void;
+  onMixerBuilt?: (obj: THREE.Object3D) => void;
   restore?: () => void;
 }
 
 /**
- * Mounts the hook inside all required providers. Captures transport and
- * selection so tests can manipulate them.
+ * Mounts the hook inside all required providers. Captures transport,
+ * selection, and the hook's returned refs so tests can manipulate/assert them.
  */
 let capturedTransport: AnimationTransport;
 let capturedDriver: AnimationDriverEntry | null;
+let capturedResult: UseAnimationDriverMountResult;
 
 function DriverCapture() {
   capturedDriver = useAnimationDriver(NODE_PATH);
@@ -96,18 +96,14 @@ function Harness({
     [durations, clips]
   );
   const stableOnMixerBuilt = useCallback(
-    (
-      obj: THREE.Object3D,
-      mixer: THREE.AnimationMixer,
-      actions: Map<string, THREE.AnimationAction>
-    ) => {
-      onMixerBuilt?.(obj, mixer, actions);
+    (obj: THREE.Object3D) => {
+      onMixerBuilt?.(obj);
     },
     [onMixerBuilt]
   );
   const stableRestore = useCallback(() => restore?.(), [restore]);
 
-  useAnimationDriverMount({
+  capturedResult = useAnimationDriverMount({
     object,
     clips,
     nodePath: NODE_PATH,
@@ -330,11 +326,9 @@ describe('useAnimationDriverMount — mixer build (ADR-0012)', () => {
     const renderer = await mountHarness({ object, clips, isActive: true, onMixerBuilt });
 
     expect(onMixerBuilt).toHaveBeenCalledTimes(1);
-    const [passedObj, passedMixer, passedActions] = onMixerBuilt.mock.calls[0]!;
-    expect(passedObj).toBe(object);
-    expect(passedMixer).toBeInstanceOf(THREE.AnimationMixer);
-    expect(passedActions).toBeInstanceOf(Map);
-    expect(passedActions.has('idle')).toBe(true);
+    expect(onMixerBuilt).toHaveBeenCalledWith(object);
+    expect(capturedResult.mixerRef.current).toBeInstanceOf(THREE.AnimationMixer);
+    expect(capturedResult.actionsRef.current.has('idle')).toBe(true);
 
     await renderer.unmount();
   });
@@ -395,6 +389,8 @@ describe('useAnimationDriverMount — mixer build (ADR-0012)', () => {
     );
 
     expect(restore).toHaveBeenCalledTimes(1);
+    expect(capturedResult.mixerRef.current).toBeNull();
+    expect(capturedResult.actionsRef.current.size).toBe(0);
 
     await renderer.unmount();
   });
@@ -440,14 +436,12 @@ describe('useAnimationDriverMount — mixer build (ADR-0012)', () => {
   });
 
   it('actions map contains one entry per clip', async () => {
-    const onMixerBuilt = vi.fn();
     const clips = [makeClip('idle'), makeClip('run'), makeClip('jump', 0.5)];
     const object = makeObject();
 
-    const renderer = await mountHarness({ object, clips, isActive: true, onMixerBuilt });
+    const renderer = await mountHarness({ object, clips, isActive: true });
 
-    const [, , actions] = onMixerBuilt.mock.calls[0]!;
-    expect([...actions.keys()]).toEqual(['idle', 'run', 'jump']);
+    expect([...capturedResult.actionsRef.current.keys()]).toEqual(['idle', 'run', 'jump']);
 
     await renderer.unmount();
   });

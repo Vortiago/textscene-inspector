@@ -31,10 +31,7 @@
 
 import { useEffect, useRef, type MutableRefObject } from 'react';
 import { AnimationMixer, type AnimationAction, type AnimationClip, type Object3D } from 'three';
-import {
-  useAnimationTransport,
-  type PlayerRegistration,
-} from '../contexts/AnimationTransportContext';
+import { useAnimationTransport } from '../contexts/AnimationTransportContext';
 import { useRegisterDriver } from '../contexts/AnimationDriverContext';
 
 export interface UseAnimationDriverMountParams {
@@ -62,21 +59,16 @@ export interface UseAnimationDriverMountParams {
   /** Clip name → duration in seconds, for the transport's scrubber. */
   durations: Record<string, number>;
   /**
-   * Called once when the mixer is built: the driver applies its own
-   * pre-playback mutations (Euler-order reorder on AnimationPlayer) and
-   * takes its pose snapshot. Receives the object, mixer, and actions map so
-   * the driver can capture the snapshot after all mixer state is ready.
+   * Called once when the mixer is built, with the object it is rooted on:
+   * the driver takes its pose snapshot here, after all mixer state is ready.
    */
-  onMixerBuilt: (
-    object: Object3D,
-    mixer: AnimationMixer,
-    actions: Map<string, AnimationAction>
-  ) => void;
+  onMixerBuilt: (object: Object3D) => void;
   /**
    * Called when the mixer is torn down (deselect or unmount): restore the
    * authored pose from the snapshot captured in `onMixerBuilt`. The hook
-   * calls this before clearing the mixer ref so the driver's closure over
-   * its own snapshot still has a live object to write to.
+   * calls this after `stopAllAction` (so the snapshot wins over THREE's own
+   * binding-state restore on action deactivation) and before clearing the
+   * mixer ref.
    */
   restore: () => void;
 }
@@ -106,12 +98,7 @@ export function useAnimationDriverMount(
   const { registerPlayer } = transport;
   useEffect(() => {
     if (!isActive) return;
-    const registration: PlayerRegistration = {
-      clips: clips.map((c) => c.name),
-      durations,
-    };
-    if (autoplay) registration.autoplay = autoplay;
-    return registerPlayer(registration);
+    return registerPlayer({ clips: clips.map((c) => c.name), durations, autoplay });
   }, [isActive, clips, durations, autoplay, registerPlayer]);
 
   // 2. Publish { object, clips } into the AnimationDriverRegistry whenever
@@ -125,8 +112,10 @@ export function useAnimationDriverMount(
 
   // 3. Build the THREE.AnimationMixer + actions while active AND loaded.
   //    Gating on isActive means inactive drivers pay no allocation cost.
-  //    On teardown (deselect/unmount) the authored pose is restored before
-  //    the mixer is cleared, then the mixer is stopped and discarded.
+  //    Teardown (deselect/unmount) is stop-then-restore, matching
+  //    usePlaybackLoop's stop path: stopping first lets THREE run its own
+  //    binding-state restore on action deactivation, then the driver's
+  //    snapshot restore wins.
   useEffect(() => {
     if (!isActive || !object || clips.length === 0) return;
 
@@ -139,11 +128,11 @@ export function useAnimationDriverMount(
     mixerRef.current = mixer;
     actionsRef.current = actions;
 
-    onMixerBuilt(object, mixer, actions);
+    onMixerBuilt(object);
 
     return () => {
-      restore();
       mixer.stopAllAction();
+      restore();
       mixerRef.current = null;
       actionsRef.current = new Map();
     };
