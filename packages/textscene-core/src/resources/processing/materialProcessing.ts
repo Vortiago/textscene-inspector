@@ -25,87 +25,49 @@ export async function createMaterialFromContent(
   content: string,
   loadTexture?: TextureLoaderFn
 ): Promise<THREE.Material> {
-  // Parse .tres file
-  const { parseResourceFile } = await import('../../parser/resourceParsers');
   const { parseTresFile } = await import('../../parser/tresParser');
   const { resolveExtResourcePath } = await import('../SubResourceResolver');
-  const { type, properties } = parseResourceFile(content);
-  // A .tres file's own ExtResource ids are local to it — resolve them against
-  // its own [ext_resource] headers, not the host scene's.
-  const { extResources } = parseTresFile(content);
+  const { resourceType, properties, extResources } = parseTresFile(content);
 
   // Parse and create material based on type
-  switch (type) {
+  switch (resourceType) {
     case 'StandardMaterial3D': {
+      // A header-only .tres (no [resource] section) has no properties; warn and
+      // return the renderer's default material so the lenient path keeps going.
+      if (Object.keys(properties).length === 0) {
+        warn('[material] StandardMaterial3D .tres has no [resource] section — using default material.');
+        return new THREE.MeshStandardMaterial();
+      }
+
       const { parseColor } = await import('../materials/standardmaterial3d/parser');
       const { createStandardMaterial } = await import('../materials/standardmaterial3d/renderer');
       const { parseVector3 } = await import('../../parser/vectors');
-      const { warn } = await import('../../logger');
 
-      // Build StandardMaterial3DProperties from parsed properties
+      // Build StandardMaterial3DProperties from raw-string properties
       const result: Record<string, unknown> = {};
 
-      // Convert parsed properties
       for (const [key, value] of Object.entries(properties)) {
-        if (value && typeof value === 'object' && 'type' in value) {
-          const typedValue = value as {
-            type: string;
-            r?: number;
-            g?: number;
-            b?: number;
-            a?: number;
-            x?: number;
-            y?: number;
-            z?: number;
-          };
-          if (
-            typedValue.type === 'Color' &&
-            'r' in typedValue &&
-            'g' in typedValue &&
-            'b' in typedValue &&
-            'a' in typedValue
-          ) {
-            // Store parsed color directly
-            result[key] = {
-              r: typedValue.r,
-              g: typedValue.g,
-              b: typedValue.b,
-              a: typedValue.a,
-            };
-          } else if (
-            typedValue.type === 'Vector3' &&
-            'x' in typedValue &&
-            'y' in typedValue &&
-            'z' in typedValue
-          ) {
-            result[key] = { x: typedValue.x, y: typedValue.y, z: typedValue.z };
+        if (value.startsWith('Color(')) {
+          try {
+            result[key] = parseColor(value);
+          } catch (error) {
+            warn(`Failed to parse ${key}: ${error instanceof Error ? error.message : String(error)}`);
           }
-        } else if (typeof value === 'string') {
-          // Parse string values
-          if (value.startsWith('Color(')) {
-            try {
-              result[key] = parseColor(value);
-            } catch (error) {
-              warn(`Failed to parse ${key}: ${error instanceof Error ? error.message : String(error)}`);
-            }
-          } else if (value.startsWith('Vector3(')) {
-            try {
-              result[key] = parseVector3(value);
-            } catch (error) {
-              warn(`Failed to parse ${key}: ${error instanceof Error ? error.message : String(error)}`);
-            }
-          } else if (value === 'true') {
-            result[key] = true;
-          } else if (value === 'false') {
-            result[key] = false;
-          } else {
-            const num = parseFloat(value);
-            if (!isNaN(num)) {
-              result[key] = num;
-            }
+        } else if (value.startsWith('Vector3(')) {
+          try {
+            result[key] = parseVector3(value);
+          } catch (error) {
+            warn(`Failed to parse ${key}: ${error instanceof Error ? error.message : String(error)}`);
           }
-        } else if (typeof value === 'number' || typeof value === 'boolean') {
-          result[key] = value;
+        } else if (value === 'true') {
+          result[key] = true;
+        } else if (value === 'false') {
+          result[key] = false;
+        } else {
+          const num = parseFloat(value);
+          if (!isNaN(num)) {
+            result[key] = num;
+          }
         }
       }
 
@@ -166,6 +128,6 @@ export async function createMaterialFromContent(
       });
 
     default:
-      throw new Error(`Unsupported material type: ${type}`);
+      throw new Error(`Unsupported material type: ${resourceType}`);
   }
 }

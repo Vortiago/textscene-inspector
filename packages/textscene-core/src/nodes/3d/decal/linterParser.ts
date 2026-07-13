@@ -1,10 +1,10 @@
 /** Decal strict validators for linting (format validation). */
 
+import '../../base/node3d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
 
 validatorRegistry.registerAll('Decal', {
-  transform: v.transform3d('transform'),
   texture_albedo: v.resourceReference('texture_albedo'),
   texture_normal: v.resourceReference('texture_normal'),
   texture_orm: v.resourceReference('texture_orm'),

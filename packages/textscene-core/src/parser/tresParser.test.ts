@@ -1,7 +1,7 @@
 /**
  * parseTresFile — full-file .tres parsing: the [gd_resource] header type, the
- * [ext_resource]/[sub_resource] sections (which parseResourceFile ignores),
- * and the [resource] body, all as raw value strings.
+ * [ext_resource]/[sub_resource] sections, and the [resource] body, all as raw
+ * value strings.
  */
 import { describe, it, expect } from 'vitest';
 import { parseTresFile } from './tresParser';

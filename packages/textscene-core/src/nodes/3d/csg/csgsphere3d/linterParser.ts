@@ -1,5 +1,6 @@
 /** CSGSphere3D strict validators for linting. */
 
+import '../../../base/node3d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
 
@@ -11,5 +12,4 @@ validatorRegistry.registerAll('CSGSphere3D', {
   rings: v.int('rings', { min: 1 }),
   material: v.resourceReference('material'),
   operation: v.enumInt('operation', 0, 2, OPERATION),
-  transform: v.transform3d('transform'),
 });
