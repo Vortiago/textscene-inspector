@@ -12,6 +12,19 @@ import * as vscode from 'vscode';
 import { TscnPreviewPanel } from '../../../TscnPreviewPanel';
 import type { HostToWebviewMessage } from '../../../protocol';
 
+const EXTENSION_ID = 'vortiago.textscene-inspector';
+
+/**
+ * Resolve the extension's install URI from the VS Code test host.
+ */
+export function getExtensionUri(): vscode.Uri {
+  const extension = vscode.extensions.getExtension(EXTENSION_ID);
+  if (!extension) {
+    throw new Error(`Extension ${EXTENSION_ID} is not available in the test host`);
+  }
+  return extension.extensionUri;
+}
+
 export interface TestPanel {
   /** The `TscnPreviewPanel` under test. */
   panel: TscnPreviewPanel;
@@ -40,6 +53,7 @@ export function createTestPanel(
 
   const messageListeners: Array<(msg: unknown) => void> = [];
   const disposeListeners: Array<() => void> = [];
+  let disposed = false;
 
   const fakeWebview = {
     html: '',
@@ -78,6 +92,13 @@ export function createTestPanel(
     onDidChangeViewState: (_listener: unknown) => ({ dispose: () => { /* no-op */ } }),
     reveal: (_column?: vscode.ViewColumn, _preserveFocus?: boolean) => { /* no-op */ },
     dispose: () => {
+      // The real WebviewPanel is idempotent on dispose. Without this guard,
+      // TscnPreviewPanel.dispose() -> fakePanel.dispose() -> onDidDispose
+      // listener -> TscnPreviewPanel.dispose() recurses forever.
+      if (disposed) {
+        return;
+      }
+      disposed = true;
       for (const listener of disposeListeners) {
         listener();
       }

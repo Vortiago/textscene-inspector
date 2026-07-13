@@ -34,7 +34,11 @@ export function dispatchWebviewMessage(
   msg: WebviewToHostMessage,
   handlers: WebviewMessageHandlers
 ): void {
-  (handlers[msg.type] as (m: WebviewToHostMessage) => void)(msg);
+  // The webview is an untrusted runtime source: a message whose `type` is
+  // outside the protocol union has no table entry, so guard before invoking
+  // (matching the old switch's silent fall-through for unknown types).
+  const handler = handlers[msg.type] as ((m: WebviewToHostMessage) => void) | undefined;
+  handler?.(msg);
 }
 
 // ============================================================================
