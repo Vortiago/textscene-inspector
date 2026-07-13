@@ -23,6 +23,7 @@ vi.mock('@textscene/core', async () => {
 import { R3FApp } from './r3f-main';
 import { fixtures } from './fixturesAll';
 import { buildFixtureTree, type TreeBranch } from './fixtureTree';
+import { DEBOUNCE_MS } from './useSceneSource';
 
 const STUB_TSCN = `[gd_scene load_steps=1 format=3]
 
@@ -90,21 +91,33 @@ function paneTextarea() {
   return within(screen.getByTestId('source-pane')).getByRole('textbox') as HTMLTextAreaElement;
 }
 
-/** Open the palette and click the switch target. The events are synchronous, so an
- * armed debounce timer (250 ms) cannot fire between a preceding edit and the switch. */
-async function switchToTarget() {
+/**
+ * Open the palette and click the switch target. `justBeforeClick` (if given)
+ * runs in the same synchronous task as the click itself, so anything it arms —
+ * specifically the pane's DEBOUNCE_MS edit forward — cannot fire before the
+ * switch lands. Arming the edit BEFORE this call would race the real debounce
+ * timer against the awaited palette lookup and flake under machine load.
+ */
+async function switchToTarget(justBeforeClick?: () => void) {
   fireEvent.keyDown(window, { key: 'k', ctrlKey: true });
   const palette = await screen.findByRole('dialog', { name: 'Open or switch scene' });
   fireEvent.change(within(palette).getByLabelText('Filter built-in scenes'), {
     target: { value: SWITCH_TARGET.label },
   });
+  justBeforeClick?.();
   fireEvent.click(within(palette).getByText(SWITCH_TARGET.label));
 }
 
-/** Let real time pass with React kept happy about the debounce timer's state flush. */
-async function settle(ms: number) {
+/**
+ * Deterministically outlast the pane's debounce, keeping React happy about
+ * the timer's state flush. This sleep timer is armed strictly AFTER any edit
+ * debounce timer, so timer-expiry ordering guarantees a (wrongly) surviving
+ * edit forward fires before this resolves — regardless of machine load. The
+ * 2x is pure margin, not load compensation.
+ */
+async function settlePastDebounce() {
   await act(async () => {
-    await new Promise((r) => setTimeout(r, ms));
+    await new Promise((r) => setTimeout(r, DEBOUNCE_MS * 2));
   });
 }
 
@@ -148,11 +161,13 @@ describe('debounce supersession — a fixture switch cancels a pending edit forw
     render(<R3FApp />);
     await waitForScene();
 
-    fireEvent.change(paneTextarea(), { target: { value: EDITED_TSCN } }); // arms the debounce
-    await switchToTarget(); // well inside the debounce window
+    await switchToTarget(() => {
+      // Armed in the same task as the click — guaranteed inside the window.
+      fireEvent.change(paneTextarea(), { target: { value: EDITED_TSCN } });
+    });
 
     await waitForScene('SwitchedRoot');
-    await settle(600); // past any debounce — the abandoned edit must never surface
+    await settlePastDebounce(); // the abandoned edit must never surface
     expect(screen.queryByText('EditedRoot')).toBeNull();
     expect(paneTextarea().value).toBe(SWITCHED_TSCN);
   });
@@ -162,13 +177,15 @@ describe('debounce supersession — a fixture switch cancels a pending edit forw
     render(<R3FApp />);
     await waitForScene();
 
-    fireEvent.change(paneTextarea(), { target: { value: EDITED_TSCN } });
-    await switchToTarget();
+    await switchToTarget(() => {
+      // Armed in the same task as the click — guaranteed inside the window.
+      fireEvent.change(paneTextarea(), { target: { value: EDITED_TSCN } });
+    });
 
     await waitFor(() => {
       expect(screen.queryByRole('alert')?.textContent).toContain('Failed to load fixture');
     });
-    await settle(600);
+    await settlePastDebounce();
     expect(screen.queryByText('EditedRoot')).toBeNull();
     expect(paneTextarea().value).toBe('');
     expect(screen.queryByText('StubRoot')).toBeTruthy();

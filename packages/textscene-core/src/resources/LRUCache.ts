@@ -12,7 +12,11 @@
  * `set` DOES invoke `onEvict` for the value it replaces at an existing key
  * (distinct from `Object.is`-identical re-sets) — the reference to that old
  * value is dropped exactly as it would be on capacity eviction, so it gets
- * the same disposal guarantee rather than silently leaking.
+ * the same disposal guarantee rather than silently leaking. If the key is
+ * pinned at replace time, disposal of the old value is DEFERRED until the
+ * pin count returns to zero (see below): a mounted consumer may still hold
+ * the replaced value during an explicit re-provide/hot-reload, and disposing
+ * it out from under the consumer would hand it a dead resource.
  *
  * ## Reference counting (pin / unpin)
  *
@@ -25,7 +29,10 @@
  *
  * Unpin to zero does NOT eagerly dispose the entry; the entry remains in the
  * cache and is simply eligible for ordinary LRU eviction on the next
- * `set` that triggers overflow.
+ * `set` that triggers overflow. It DOES flush any disposals deferred by
+ * pinned replaces of that key: once no consumer holds a reference, the
+ * replaced values are released (skipping a value that has meanwhile been
+ * re-set as the key's current value).
  *
  * `delete` and `clear` drop entries but PRESERVE pin counts: pins track
  * mounted consumers, whose lifecycle is independent of cache contents. A
@@ -37,6 +44,8 @@
 export class LRUCache<V> {
   private readonly map = new Map<string, V>();
   private readonly pins = new Map<string, number>();
+  /** Values replaced while their key was pinned, awaiting unpin-to-zero. */
+  private readonly deferredDisposals = new Map<string, V[]>();
 
   constructor(
     private readonly maxEntries: number,
@@ -62,9 +71,17 @@ export class LRUCache<V> {
     // A real replacement — not a no-op re-set of the identical value — drops
     // the old reference exactly like capacity eviction does, so it gets the
     // same `onEvict` disposal instead of silently leaking whatever the old
-    // value owned (a THREE texture/material/geometry).
+    // value owned (a THREE texture/material/geometry). While the key is
+    // pinned, a mounted consumer may still hold the replaced value, so its
+    // disposal is deferred until the pin count returns to zero.
     if (existing !== undefined && !Object.is(existing, value)) {
-      this.onEvict?.(key, existing);
+      if (this.isPinned(key)) {
+        const pending = this.deferredDisposals.get(key) ?? [];
+        pending.push(existing);
+        this.deferredDisposals.set(key, pending);
+      } else {
+        this.onEvict?.(key, existing);
+      }
     }
     this.evictOverflow(key);
   }
@@ -97,12 +114,14 @@ export class LRUCache<V> {
   /**
    * Decrement the pin count for `key`, clamped at zero. Does NOT dispose or
    * remove the entry — it simply becomes eligible for ordinary LRU eviction
-   * on the next overflow.
+   * on the next overflow. Reaching zero flushes any disposals that `set`
+   * deferred while the key was pinned.
    */
   unpin(key: string): void {
     const count = this.pins.get(key) ?? 0;
     if (count <= 1) {
       this.pins.delete(key);
+      this.flushDeferredDisposals(key);
     } else {
       this.pins.set(key, count - 1);
     }
@@ -110,6 +129,26 @@ export class LRUCache<V> {
 
   private isPinned(key: string): boolean {
     return (this.pins.get(key) ?? 0) > 0;
+  }
+
+  /**
+   * Dispose values whose replacement happened while `key` was pinned, now
+   * that no consumer holds a reference. Skips a value that is `Object.is`
+   * the key's CURRENT cached value (it was re-set after being replaced and
+   * is live again), and disposes each distinct value at most once.
+   */
+  private flushDeferredDisposals(key: string): void {
+    const pending = this.deferredDisposals.get(key);
+    if (!pending) return;
+    this.deferredDisposals.delete(key);
+    const current = this.map.get(key);
+    const disposed: V[] = [];
+    for (const value of pending) {
+      if (current !== undefined && Object.is(value, current)) continue;
+      if (disposed.some((d) => Object.is(d, value))) continue;
+      disposed.push(value);
+      this.onEvict?.(key, value);
+    }
   }
 
   /**

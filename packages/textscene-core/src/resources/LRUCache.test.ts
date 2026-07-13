@@ -322,6 +322,141 @@ describe('LRUCache', () => {
       expect(onEvict).not.toHaveBeenCalledWith('a', expect.anything());
     });
 
+    describe('replace-while-pinned defers disposal until unpin-to-zero', () => {
+      interface DeferredDisposalCase {
+        name: string;
+        /** Ops executed against a capacity-5 cache with a spy onEvict. */
+        script: (cache: LRUCache<string>) => void;
+        /** Expected full onEvict call list, in order, after the script. */
+        expectedDisposals: [key: string, value: string][];
+        /** Expected surviving current value of 'a' (undefined = evicted/absent). */
+        expectedCurrent: string | undefined;
+      }
+
+      const cases: DeferredDisposalCase[] = [
+        {
+          name: 'replace while pinned does NOT dispose the old value immediately',
+          script: (c) => {
+            c.set('a', 'A');
+            c.pin('a');
+            c.set('a', 'A2'); // hot-reload lands while the consumer is mounted
+          },
+          expectedDisposals: [],
+          expectedCurrent: 'A2',
+        },
+        {
+          name: 'unpin to zero flushes the deferred disposal of the replaced value',
+          script: (c) => {
+            c.set('a', 'A');
+            c.pin('a');
+            c.set('a', 'A2');
+            c.unpin('a'); // consumer unmounts — nothing holds 'A' any more
+          },
+          expectedDisposals: [['a', 'A']],
+          expectedCurrent: 'A2',
+        },
+        {
+          name: 'multiple replaces while pinned flush every superseded value on unpin-to-zero',
+          script: (c) => {
+            c.set('a', 'A');
+            c.pin('a');
+            c.set('a', 'A2');
+            c.set('a', 'A3');
+            c.unpin('a');
+          },
+          expectedDisposals: [
+            ['a', 'A'],
+            ['a', 'A2'],
+          ],
+          expectedCurrent: 'A3',
+        },
+        {
+          name: 'a deferred value re-set as current again is NOT disposed at flush time',
+          script: (c) => {
+            c.set('a', 'A');
+            c.pin('a');
+            c.set('a', 'A2'); // defers 'A'
+            c.set('a', 'A'); // defers 'A2'; 'A' is live again
+            c.unpin('a');
+          },
+          expectedDisposals: [['a', 'A2']],
+          expectedCurrent: 'A',
+        },
+        {
+          name: 'a value deferred twice (replaced, restored, replaced again) is disposed only once',
+          script: (c) => {
+            c.set('a', 'A');
+            c.pin('a');
+            c.set('a', 'A2'); // defers 'A'
+            c.set('a', 'A'); // defers 'A2'
+            c.set('a', 'A3'); // defers 'A' again
+            c.unpin('a');
+          },
+          expectedDisposals: [
+            ['a', 'A'],
+            ['a', 'A2'],
+          ],
+          expectedCurrent: 'A3',
+        },
+        {
+          name: 'Object.is-identical re-set while pinned defers nothing; unpin flushes nothing',
+          script: (c) => {
+            c.set('a', 'A');
+            c.pin('a');
+            c.set('a', 'A'); // no-op re-set
+            c.unpin('a');
+          },
+          expectedDisposals: [],
+          expectedCurrent: 'A',
+        },
+        {
+          name: 'multi-pin: unpin from 2 to 1 does not flush; the final unpin does',
+          script: (c) => {
+            c.set('a', 'A');
+            c.pin('a');
+            c.pin('a');
+            c.set('a', 'A2');
+            c.unpin('a'); // count 2 -> 1: second consumer may still hold 'A'
+            expect(c.get('a')).toBe('A2');
+            c.unpin('a'); // count 1 -> 0: flush
+          },
+          expectedDisposals: [['a', 'A']],
+          expectedCurrent: 'A2',
+        },
+        {
+          name: 'delete while pinned keeps the deferred value pending until unpin-to-zero',
+          script: (c) => {
+            c.set('a', 'A');
+            c.pin('a');
+            c.set('a', 'A2'); // defers 'A'
+            c.delete('a'); // host invalidation — pins (and deferrals) survive
+            c.unpin('a'); // consumer unmounts: 'A' finally released
+          },
+          expectedDisposals: [['a', 'A']],
+          expectedCurrent: undefined,
+        },
+        {
+          name: 'replace while NOT pinned still disposes the old value immediately',
+          script: (c) => {
+            c.set('a', 'A');
+            c.set('a', 'A2');
+          },
+          expectedDisposals: [['a', 'A']],
+          expectedCurrent: 'A2',
+        },
+      ];
+
+      it.each(cases)('$name', ({ script, expectedDisposals, expectedCurrent }) => {
+        const onEvict = vi.fn();
+        const cache = new LRUCache<string>(5, onEvict);
+
+        script(cache);
+
+        expect(onEvict.mock.calls).toEqual(expectedDisposals);
+        expect(cache.get('a')).toBe(expectedCurrent);
+      });
+    });
+
     it('StrictMode double-invoke: mount -> unmount -> mount ends at pin count 1, never disposes', () => {
       // React StrictMode calls mount effect, then immediately unmount + remount.
       // Simulated sequence: pin (mount) -> unpin (unmount) -> pin (remount).

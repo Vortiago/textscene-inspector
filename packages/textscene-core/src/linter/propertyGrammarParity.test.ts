@@ -43,6 +43,7 @@ const nodesRoot = resolve(here, '../nodes');
 const BASE_TYPE_TO_PARSER_SUBPATH: Readonly<Record<string, string>> = {
   Node3D: 'base/node3d/parser.ts',
   Node2D: 'base/node2d/parser.ts',
+  Light3D: '3d/lights/shared/parser.ts',
   Control: '2d/ui/control/parser.ts',
   Node: 'node/parser.ts',
 };
@@ -68,16 +69,14 @@ interface AsymmetryEntry {
 }
 
 /**
- * Keys registered through the SHARED_LIGHT_VALIDATORS object spread in each
- * light slice's linterParser.ts; the parser reads them via the
- * parseBaseLightProperties / parseBaseLightWithNormalBias shared helpers,
- * so neither side is visible to the per-file scrape.
+ * Light3D base validators (registered once under the abstract 'Light3D' key
+ * in 3d/lights/shared/linterParser.ts and inherited by every concrete light
+ * via the base-walk) that the shared parser helpers never read: bake/cull and
+ * fine shadow-tuning properties with no effect on the static preview.
  */
-const SHARED_LIGHT_KEYS = [
-  'light_energy', 'light_color', 'light_indirect_energy', 'light_volumetric_fog_energy',
-  'light_negative', 'light_specular', 'light_bake_mode', 'light_cull_mask',
-  'shadow_enabled', 'shadow_bias', 'shadow_normal_bias', 'shadow_blur',
-  'shadow_transmittance_bias', 'shadow_opacity', 'shadow_reverse_cull_face',
+const LIGHT3D_LINTER_ONLY_KEYS = [
+  'light_bake_mode', 'light_cull_mask', 'light_indirect_energy',
+  'shadow_opacity', 'shadow_reverse_cull_face', 'shadow_transmittance_bias',
 ] as const;
 
 /**
@@ -110,6 +109,11 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
       'top_level', 'rotation_order', 'visibility_parent',
     ],
     reason: 'Parser uses the transform matrix; linter validates discrete component forms and global equivalents that the renderer ignores.',
+  },
+
+  Light3D: {
+    linterOnly: LIGHT3D_LINTER_ONLY_KEYS,
+    reason: 'Light3D base validators live in 3d/lights/shared/linterParser.ts and reach every concrete light via the base-walk; bake/cull-mask and fine shadow-tuning keys are runtime-only, so the shared parser helpers never read them.',
   },
 
   Node2D: {
@@ -340,7 +344,9 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
   },
 
   // -------------------------------------------------------------------------
-  // Lights (SHARED_LIGHT_VALIDATORS spread + parseBaseLight* helper pattern)
+  // Lights (Light3D base level: shared validators + parseBaseLight* helpers,
+  // both walked via the Light3D entries in NODE_BASE_TYPES and
+  // BASE_TYPE_TO_PARSER_SUBPATH; base-level asymmetries live on Light3D above)
   // -------------------------------------------------------------------------
 
   DirectionalLight3D: {
@@ -351,24 +357,20 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
       'directional_shadow_pancake_size',
       'directional_shadow_split_1', 'directional_shadow_split_2', 'directional_shadow_split_3',
       'sky_mode',
-      ...SHARED_LIGHT_KEYS,
     ],
-    reason: 'DirectionalLight3D linter uses SHARED_LIGHT_VALIDATORS spread (not scrape-visible) and validates additional shadow/sky tuning properties the static renderer ignores.',
+    reason: 'DirectionalLight3D linter validates additional shadow-cascade/sky tuning properties the static renderer ignores; the Light3D base keys are covered by the Light3D entry on both sides.',
   },
 
   OmniLight3D: {
-    linterOnly: SHARED_LIGHT_KEYS,
-    reason: 'OmniLight3D linter uses SHARED_LIGHT_VALIDATORS spread not captured by per-file scrape; parser reads them via parseBaseLightWithNormalBias shared helper.',
+    reason: 'No unique asymmetries; omni_* keys are symmetric and Light3D base keys are covered by the Light3D entry on both sides.',
   },
 
   SpotLight3D: {
-    linterOnly: SHARED_LIGHT_KEYS,
-    reason: 'SpotLight3D linter uses SHARED_LIGHT_VALIDATORS spread not captured by per-file scrape; parser reads them via parseBaseLightProperties shared helper.',
+    reason: 'No unique asymmetries; spot_* keys are symmetric and Light3D base keys are covered by the Light3D entry on both sides.',
   },
 
   AreaLight3D: {
-    linterOnly: SHARED_LIGHT_KEYS,
-    reason: 'AreaLight3D linter uses SHARED_LIGHT_VALIDATORS spread not captured by per-file scrape; parser reads them via parseBaseLightWithNormalBias shared helper.',
+    reason: 'No unique asymmetries; area_* keys are symmetric and Light3D base keys are covered by the Light3D entry on both sides.',
   },
 
   // -------------------------------------------------------------------------
