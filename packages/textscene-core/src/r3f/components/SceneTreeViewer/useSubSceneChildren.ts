@@ -24,6 +24,7 @@
  * applicable (no instance ref, not yet loaded, or failed to load).
  * Callers concatenate these with `node.children` for rendering.
  */
+import { useMemo } from 'react';
 import type { TscnNode, TscnScene, TscnExternalResource } from '../../../parser/types';
 import { useResource, useResourceLoader } from '../../../resources/useResource';
 import { resolveInstancePath, parseResourceReference } from '../../../resources/SubResourceResolver';
@@ -67,8 +68,12 @@ export function useSubSceneChildren(
   // tree rows (rules of hooks).
   const result = useResource<TscnScene>(scenePath ?? '', 'PackedScene');
 
-  if (!scenePath || result.status !== 'loaded' || !result.value) {
-    return null;
-  }
-  return { nodes: result.value.nodes, externalResources: result.value.externalResources };
+  // Memoized so the loaded result keeps a stable identity across re-renders
+  // (mirroring useGlbChildren) — callers feed it straight into useMemo deps.
+  return useMemo(() => {
+    if (!scenePath || result.status !== 'loaded' || !result.value) {
+      return null;
+    }
+    return { nodes: result.value.nodes, externalResources: result.value.externalResources };
+  }, [scenePath, result.status, result.value]);
 }

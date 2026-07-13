@@ -137,6 +137,12 @@ export function liveChildGroups(
   sceneCache: CachedSceneSource,
   glbCache?: CachedGlbSource
 ): LiveChildGroup[] {
+  // A node's own authored children in the incoming (OUTER) scope — the answer
+  // for every non-instance case and every not-(yet-)resolvable instance case.
+  const inlineOnly = (): LiveChildGroup[] => [
+    { origin: 'inline', children: node.children, externalResources },
+  ];
+
   // GLBSceneRoot: its children are the loaded GLB's internal nodes. No instance
   // refs of their own; they live in the OUTER scope.
   if (node.type === GLB_SCENE_ROOT_TYPE && glbCache) {
@@ -147,19 +153,13 @@ export function liveChildGroups(
     }
   }
 
-  if (!node.instance) {
-    return [{ origin: 'inline', children: node.children, externalResources }];
-  }
+  if (!node.instance) return inlineOnly();
 
   const scenePath = resolveInstancePath(node.instance, externalResources);
-  if (!scenePath) {
-    return [{ origin: 'inline', children: node.children, externalResources }];
-  }
+  if (!scenePath) return inlineOnly();
 
   const cached = sceneCache.getCached(scenePath);
-  if (!cached) {
-    return [{ origin: 'inline', children: node.children, externalResources }];
-  }
+  if (!cached) return inlineOnly();
 
   const subResources = cached.externalResources ?? [];
 
@@ -181,21 +181,15 @@ export function liveChildGroups(
 }
 
 /**
- * The single source of truth for "what is below this node, and in what resource
- * scope". For an instance node the scope is the LOADED sub-scene's own resource
- * table — a nested instance references its parent sub-scene's ExtResources,
- * absent from the outer scene, so descent must switch scope. GLB / non-instance
- * children keep the incoming scope.
+ * Flat view of {@link liveChildGroups}: a node's live children in one list,
+ * paired with ONE resource scope — the LOADED sub-scene's own table for an
+ * instance node (a nested instance references its parent sub-scene's
+ * ExtResources, absent from the outer scene), the incoming scope otherwise.
  *
- * This is a flatten over {@link liveChildGroups}. The flat view is correct for
- * descent (each group's children are walked with that group's scope), but
- * callers that need per-group key namespaces or per-group scope directly should
- * call `liveChildGroups` instead.
- *
- * Note: for the fallback (multi-root / GLB instance) case the flattened list
- * contains children from two different scopes; the `liveChainLinks` walk
- * handles this by iterating groups individually so each segment search uses
- * the right scope.
+ * Note: in the fallback (multi-root / GLB instance) case the flattened list
+ * mixes children from two scopes and the reported scope is the first group's;
+ * the scope-aware walkers (`liveChainLinks`, `walkLiveTree`) and any caller
+ * needing per-group key namespaces consume the groups directly instead.
  */
 export function liveChildren(
   node: TscnNode,
@@ -208,11 +202,8 @@ export function liveChildren(
     const g = groups[0]!;
     return { children: g.children, externalResources: g.externalResources };
   }
-  // Multiple groups: flatten children. The externalResources returned here is
-  // the first group's scope (OUTER), which is what the path-walk needs for the
-  // first candidate set. `liveChainLinks` overrides this by searching per-group.
   return {
-    children: groups.flatMap((g) => g.children as TscnNode[]),
+    children: groups.flatMap((g) => g.children),
     externalResources: groups[0]!.externalResources,
   };
 }
@@ -250,8 +241,9 @@ function liveChainLinks(
 
   const links: LiveChainLink[] = [];
   // Seed: the root-level candidates are in a single implicit inline group.
-  let candidateGroups: Array<{ children: readonly TscnNode[]; externalResources: readonly TscnExternalResource[] }> =
-    [{ children: roots, externalResources: ctx.externalResources }];
+  let candidateGroups: ChildScope[] = [
+    { children: roots, externalResources: ctx.externalResources },
+  ];
 
   for (const segment of segments) {
     // Find the segment in any of the current candidate groups, tracking which

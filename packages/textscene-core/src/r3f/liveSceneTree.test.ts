@@ -577,7 +577,8 @@ describe('liveChildGroups — origin-tagged child groups with per-group scope', 
     const groups = liveChildGroups(node, outer, cacheOf({ 'res://multi.tscn': multi }));
     // No inline children → no inline group emitted.
     expect(groups.map((g) => g.origin)).toEqual(['subscene']);
-    expect(digest(groups[0]!.children.length > 0 ? groups : [])).toBeDefined();
+    expect(groups[0]!.children.map((c) => c.name)).toEqual(['RootA', 'RootB']);
+    expect(groups[0]!.externalResources).toBe(multi.externalResources);
   });
 
   it('GLBSceneRoot → one glb group in OUTER scope', () => {
@@ -599,8 +600,8 @@ describe('liveChildGroups — origin-tagged child groups with per-group scope', 
   });
 
   it('fallback-inline scope fix: inline children of a multi-root instance resolve OUTER ExtResources', () => {
-    // This is the divergence the issue documents: the old liveChildren gave sub-scope
-    // to the concatenated list, making inline children (host-authored) unable to
+    // The documented divergence: the old liveChildren gave sub-scope to the
+    // concatenated list, making inline children (host-authored) unable to
     // resolve ExtResource ids that are only in the outer scene. liveChildGroups
     // gives OUTER scope to the inline group, fixing this.
     const outerOnlyExt = ext('gadget', 'res://gadget.tscn');

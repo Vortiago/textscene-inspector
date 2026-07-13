@@ -116,13 +116,15 @@ function TreeNodeImpl({
   // for non-GLB rows; the hook re-renders when the GLB arrives.
   const glbChildren = useGlbChildren(node);
 
-  // liveChildGroups (#251) — the single origin-tagged source of truth for
-  // what lives below this node and in what resource scope. Replaces the old
+  // liveChildGroups — the single origin-tagged source of truth for what lives
+  // below this node and in what resource scope. Replaces the old
   // `mergedChildren`/`inlineChildren`/`dynamicChildren` three-way branch.
   //
   // The pure `liveChildGroups` function needs the loaded data the hooks
   // already fetched:
-  //   - sub-scene: hand a singleSceneCache keyed to scenePath + loaded nodes.
+  //   - sub-scene: hand a singleSceneCache keyed to scenePath + the loaded
+  //     sub-scene (`subScene` already has the `{ nodes, externalResources }`
+  //     shape the cache expects).
   //   - GLB: for GLBSceneRoot nodes, the hook already computed the synthetic
   //     TscnNode list; return a glb group directly to avoid re-walking the
   //     THREE.Object3D tree (glbSceneRootChildren is idempotent but the hook
@@ -134,14 +136,7 @@ function TreeNodeImpl({
     if (node.type === GLB_SCENE_ROOT_TYPE && glbChildren) {
       return [{ origin: 'glb' as const, children: glbChildren, externalResources }];
     }
-    const loadedScene = subScene
-      ? { nodes: subScene.nodes, externalResources: subScene.externalResources }
-      : null;
-    return liveChildGroups(
-      node,
-      externalResources,
-      singleSceneCache(scenePath, loadedScene)
-    );
+    return liveChildGroups(node, externalResources, singleSceneCache(scenePath, subScene));
   }, [node, externalResources, scenePath, subScene, glbChildren]);
 
   // Instance root merge (ADR-0013) via collapseLiveNode — the SAME decision the
@@ -149,15 +144,7 @@ function TreeNodeImpl({
   // and properties for the row header (badge + transform icon). Memoized so an
   // unrelated re-render doesn't re-merge this instance's subtree every frame.
   const effective = useMemo(
-    () =>
-      collapseLiveNode(
-        node,
-        externalResources,
-        singleSceneCache(
-          scenePath,
-          subScene ? { nodes: subScene.nodes, externalResources: subScene.externalResources } : null
-        )
-      ),
+    () => collapseLiveNode(node, externalResources, singleSceneCache(scenePath, subScene)),
     [node, externalResources, scenePath, subScene]
   );
 
