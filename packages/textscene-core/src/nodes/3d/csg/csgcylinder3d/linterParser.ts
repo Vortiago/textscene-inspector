@@ -1,5 +1,6 @@
 /** CSGCylinder3D strict validators for linting. */
 
+import '../../../base/node3d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
 
@@ -12,5 +13,4 @@ validatorRegistry.registerAll('CSGCylinder3D', {
   cone: v.boolean('cone'),
   material: v.resourceReference('material'),
   operation: v.enumInt('operation', 0, 2, OPERATION),
-  transform: v.transform3d('transform'),
 });

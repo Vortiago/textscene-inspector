@@ -4,12 +4,20 @@
  * Node2D / Control base validator sets apply to every subclass automatically,
  * instead of each subclass silently escaping validation.
  *
- * Only four levels actually carry validators today — `Node3D`, `Node2D`,
+ * Five levels carry validators today — `Node3D`, `Light3D`, `Node2D`,
  * `Control`, and the terminal `Node` — so leaves map straight to their nearest
  * validator-bearing ancestor rather than modelling every intermediate Godot
  * class. Every chain terminates at `Node` (which has no entry). Pure data:
  * React/THREE-free, so it stays on the linter side of the bundle boundary.
  */
+
+/** Light3D-derived concrete nodes — each maps to `Light3D` then `Node3D`. */
+const LIGHT3D_LEAVES = [
+  'DirectionalLight3D',
+  'OmniLight3D',
+  'SpotLight3D',
+  'AreaLight3D',
+] as const;
 
 /** Base for every spatial (3D) node — Node3D carries the transform/visible set. */
 const NODE3D_LEAVES = [
@@ -22,9 +30,6 @@ const NODE3D_LEAVES = [
   'Skeleton3D',
   'GPUParticles3D',
   'Marker3D',
-  'DirectionalLight3D',
-  'OmniLight3D',
-  'SpotLight3D',
   'CSGBox3D',
   'CSGCylinder3D',
   'CSGSphere3D',
@@ -37,7 +42,6 @@ const NODE3D_LEAVES = [
   'RigidBody3D',
   'CharacterBody3D',
   'CollisionShape3D',
-  'AreaLight3D',
   'RemoteTransform3D',
   'NavigationObstacle3D',
 ] as const;
@@ -88,9 +92,12 @@ const CONTROL_LEAVES = [
 ] as const;
 
 export const NODE_BASE_TYPES: Readonly<Record<string, string>> = Object.freeze({
+  ...Object.fromEntries(LIGHT3D_LEAVES.map((t) => [t, 'Light3D'])),
   ...Object.fromEntries(NODE3D_LEAVES.map((t) => [t, 'Node3D'])),
   ...Object.fromEntries(NODE2D_LEAVES.map((t) => [t, 'Node2D'])),
   ...Object.fromEntries(CONTROL_LEAVES.map((t) => [t, 'Control'])),
+  // Abstract/non-authorable intermediate classes.
+  Light3D: 'Node3D',
   // Base classes and non-spatial nodes collapse to the terminal Node.
   Node3D: 'Node',
   Node2D: 'Node',

@@ -1,11 +1,14 @@
 /**
  * DirectionalLight3D strict validators for linting.
  * Migrated to the declarative `v` namespace (WI-ARCH-1).
+ *
+ * Light3D base validators (light_* / shadow_*) are inherited via the
+ * base-walk: DirectionalLight3D → Light3D → Node3D.
  */
 
+import '../shared/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
-import { SHARED_LIGHT_VALIDATORS } from '../shared/linterParser.js';
 
 const DIRECTIONAL_SHADOW_MODE = {
   0: 'ORTHOGONAL',
@@ -16,7 +19,6 @@ const DIRECTIONAL_SHADOW_MODE = {
 const SKY_MODE = { 0: 'LIGHT_AND_SKY', 1: 'LIGHT_ONLY', 2: 'SKY_ONLY' };
 
 validatorRegistry.registerAll('DirectionalLight3D', {
-  ...SHARED_LIGHT_VALIDATORS,
   directional_shadow_mode: v.enumInt(
     'directional_shadow_mode',
     0,

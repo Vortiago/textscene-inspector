@@ -3,6 +3,7 @@
  * Migrated to the declarative `v` namespace (WI-ARCH-1).
  */
 
+import '../../base/node3d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
 
@@ -37,5 +38,4 @@ validatorRegistry.registerAll('MeshInstance3D', {
   skeleton: v.nodePath('skeleton'),
   skin: v.resourceReference('skin'),
   'surface_material_override/*': v.resourceReference('surface_material_override'),
-  transform: v.transform3d('transform'),
 });

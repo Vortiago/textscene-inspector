@@ -31,6 +31,15 @@ describe('NODE_BASE_TYPES', () => {
     }
   });
 
+  it('routes concrete light types through Light3D then Node3D', () => {
+    for (const t of ['DirectionalLight3D', 'OmniLight3D', 'SpotLight3D', 'AreaLight3D']) {
+      const c = chain(t);
+      expect(c, `${t} should pass through Light3D`).toContain('Light3D');
+      expect(c, `${t} should pass through Node3D`).toContain('Node3D');
+      expect(c[c.length - 1]).toBe('Node');
+    }
+  });
+
   it('routes spatial nodes through Node3D', () => {
     expect(chain('MeshInstance3D')).toContain('Node3D');
     expect(chain('Camera3D')).toContain('Node3D');

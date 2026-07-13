@@ -1,16 +1,18 @@
 /**
  * Validators shared by every Light3D-derived node (SpotLight3D / OmniLight3D /
- * DirectionalLight3D): the `light_*` and `shadow_*` properties from the Light3D
- * base. Each light's `linterParser.ts` spreads these and adds its own
- * type-specific validators (spot_*, omni_*, directional_*). Extracted because
- * the block was copy-pasted verbatim across all three (architecture review S-4).
+ * DirectionalLight3D / AreaLight3D): the `light_*` and `shadow_*` properties
+ * from the Light3D base class. Registered under the abstract key `'Light3D'`
+ * so the base-walk in ValidatorRegistry delivers them to every concrete light
+ * subclass automatically. Each light's `index.linter.ts` imports this module
+ * for its side-effect registration.
  */
 
+import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
 
 const LIGHT_BAKE_MODE = { 0: 'DISABLED', 1: 'STATIC', 2: 'DYNAMIC' };
 
-export const SHARED_LIGHT_VALIDATORS = {
+validatorRegistry.registerAll('Light3D', {
   light_energy: v.nonNegativeFloat('light_energy'),
   light_color: v.color('light_color'),
   light_indirect_energy: v.nonNegativeFloat('light_indirect_energy'),
@@ -31,4 +33,4 @@ export const SHARED_LIGHT_VALIDATORS = {
   shadow_transmittance_bias: v.float('shadow_transmittance_bias', { min: -10, max: 10 }),
   shadow_opacity: v.float('shadow_opacity', { min: 0, max: 1 }),
   shadow_reverse_cull_face: v.boolean('shadow_reverse_cull_face'),
-};
+});
