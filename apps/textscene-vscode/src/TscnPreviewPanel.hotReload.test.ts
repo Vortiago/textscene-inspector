@@ -199,7 +199,7 @@ describe('TscnPreviewPanel dependency hot-reload', () => {
     });
 
     // Establish relevance: the resource was previously served.
-    panel._testTriggerMessage({
+    triggerMessage({
       type: 'loadResource',
       path: 'res://textures/wood.png',
       resourceType: 'Texture2D',
