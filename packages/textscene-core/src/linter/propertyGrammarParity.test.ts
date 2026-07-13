@@ -7,7 +7,7 @@
  *
  * Each side is augmented by the inherited set its ancestor contributes:
  *   - Validator keys: walk NODE_BASE_TYPES and collect each base type's
- *     own registered keys via `validatorRegistry.getOwnValidatorKeys()`.
+ *     own registered keys via `validatorRegistry.getOwnKeys()`.
  *   - Parser properties: walk NODE_BASE_TYPES and scrape each base type's
  *     `parser.ts` file for `properties.X` accesses.
  *
@@ -487,9 +487,9 @@ function getInheritedParserProps(nodeType: string): Set<string> {
 
 /** Validator keys registered directly for a node type or any of its ancestors. */
 function getFullValidatorKeys(nodeType: string): Set<string> {
-  const result = new Set(validatorRegistry.getOwnValidatorKeys(nodeType));
+  const result = new Set(validatorRegistry.getOwnKeys(nodeType));
   for (const base of baseChain(nodeType)) {
-    for (const k of validatorRegistry.getOwnValidatorKeys(base)) result.add(k);
+    for (const k of validatorRegistry.getOwnKeys(base)) result.add(k);
   }
   return result;
 }
