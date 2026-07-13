@@ -318,15 +318,4 @@ describe('WebviewResourceProvider', () => {
     });
   });
 
-  // ============================================================================
-  // hasResource Method
-  // ============================================================================
-
-  describe('hasResource', () => {
-    it('should always return true', () => {
-      expect(provider.hasResource('res://any/path.txt')).toBe(true);
-      expect(provider.hasResource('res://another/file.png')).toBe(true);
-      expect(provider.hasResource('res://nonexistent.tscn')).toBe(true);
-    });
-  });
 });

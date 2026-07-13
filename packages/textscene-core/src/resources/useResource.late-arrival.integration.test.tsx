@@ -53,10 +53,6 @@ class MockProvider implements ResourceProvider {
     }
     return null;
   }
-
-  hasResource(path: string): boolean {
-    return this.files.has(path);
-  }
 }
 
 /**

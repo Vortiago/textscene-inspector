@@ -42,9 +42,6 @@ class NoopProvider implements ResourceProvider {
   async loadResource(): Promise<string | ArrayBuffer | null> {
     return null;
   }
-  hasResource(): boolean {
-    return false;
-  }
 }
 
 function makeLoader(): ResourceLoader {

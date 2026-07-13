@@ -11,12 +11,4 @@ export interface ResourceProvider {
    * @returns Resource content as string (text files) or ArrayBuffer (binary files), or null if not found
    */
   loadResource(path: string, type?: string): Promise<string | ArrayBuffer | null>;
-
-  /**
-   * Check if a resource is available without loading it.
-   * Useful for UI hints about missing resources.
-   * @param path - Godot resource path
-   * @returns true if resource can be loaded
-   */
-  hasResource?(path: string): boolean;
 }

@@ -27,9 +27,6 @@ class MissingFileProvider implements ResourceProvider {
   async loadResource(): Promise<string | ArrayBuffer | null> {
     return null;
   }
-  hasResource(): boolean {
-    return false;
-  }
 }
 
 function makeFixture(): {
