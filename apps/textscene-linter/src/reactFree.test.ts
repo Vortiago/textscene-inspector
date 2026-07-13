@@ -13,14 +13,14 @@
  *
  *   - No `.tsx` render component is reachable.
  *   - No react / react-dom / @react-three / three bare specifier is value-imported.
- *   - Every `@textscene/core` subpath resolves (walker stays exhaustive).
+ *   - Every workspace import resolves (walker stays exhaustive).
  *
  * Modeled on `apps/textscene-vscode/src/webExtensionSafe.test.ts`.
  */
 
 import { describe, it, expect } from 'vitest';
 import { readFileSync, existsSync } from 'node:fs';
-import { dirname, resolve, extname } from 'node:path';
+import { dirname, resolve, extname, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url)); // .../apps/textscene-linter/src
@@ -84,7 +84,7 @@ function walkClosure(entry: string): Closure {
       if (resolved) {
         stack.push(resolved);
       } else if (isWorkspace) {
-        unresolved.push(spec);
+        unresolved.push(`${spec} (from ${relative(repoRoot, file)})`);
       } else {
         bareValueImports.add(spec);
       }
@@ -100,7 +100,7 @@ function forbiddenBare(closure: Closure): string[] {
 describe('linter-app React-free boundary', () => {
   const closure = walkClosure(resolve(here, 'cli.ts'));
 
-  it('walker resolves every @textscene/core subpath (guard stays exhaustive)', () => {
+  it('walker resolves every workspace import (guard stays exhaustive)', () => {
     expect(closure.unresolved).toEqual([]);
   });
 

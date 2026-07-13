@@ -224,12 +224,15 @@ export function MeshInstance3D({ node }: NodeComponentProps) {
   const castShadow = shadowFlags.castShadow;
   const visible = properties.visible !== false && !shadowFlags.shadowsOnly;
 
+  // Every render branch wraps its content in the same attribute shell.
+  const shellProps = { name: node.name, position, rotation, scale, visible, castShadow };
+
   // Unresolved mesh (no mesh, external GLB, missing SubResource): magenta
   // wireframe placeholder. An external ArrayMesh (`arrayMeshPath`) is NOT
   // unresolved — it loads asynchronously below.
   if (!meshResource && !arrayMeshPath) {
     return (
-      <MeshShell name={node.name} position={position} rotation={rotation} scale={scale} visible={visible} castShadow={castShadow}>
+      <MeshShell {...shellProps}>
         <boxGeometry args={[1, 1, 1]} />
         <meshBasicMaterial color={0xff00ff} wireframe />
       </MeshShell>
@@ -242,7 +245,7 @@ export function MeshInstance3D({ node }: NodeComponentProps) {
   if (arrayMeshPath) {
     if (arrayMeshResult.status === 'unavailable') {
       return (
-        <MeshShell name={node.name} position={position} rotation={rotation} scale={scale} visible={visible} castShadow={castShadow}>
+        <MeshShell {...shellProps}>
           <boxGeometry args={[1, 1, 1]} />
           <meshBasicMaterial color={0xff00ff} wireframe />
         </MeshShell>
@@ -259,7 +262,7 @@ export function MeshInstance3D({ node }: NodeComponentProps) {
     const surfacePaths = materialPaths.length > 0 ? materialPaths : [null];
     const multiSurface = surfacePaths.length > 1;
     return (
-      <MeshShell name={node.name} position={position} rotation={rotation} scale={scale} visible={visible} castShadow={castShadow}>
+      <MeshShell {...shellProps}>
         <primitive object={geometry} attach="geometry" />
         {surfacePaths.map((path, i) => (
           <ArrayMeshSurfaceMaterial
@@ -282,7 +285,7 @@ export function MeshInstance3D({ node }: NodeComponentProps) {
   // is still used for the placeholder branch trigger.
   if (firstMissingPath !== null) {
     return (
-      <MeshShell name={node.name} position={position} rotation={rotation} scale={scale} visible={visible} castShadow={castShadow}>
+      <MeshShell {...shellProps}>
         {geometryElement}
         <meshStandardMaterial color="magenta" />
       </MeshShell>
@@ -290,7 +293,7 @@ export function MeshInstance3D({ node }: NodeComponentProps) {
   }
 
   return (
-    <MeshShell name={node.name} position={position} rotation={rotation} scale={scale} visible={visible} castShadow={castShadow}>
+    <MeshShell {...shellProps}>
       {geometryElement}
       <StandardMaterialSlot
         scalars={materialScalars}
