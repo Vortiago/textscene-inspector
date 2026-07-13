@@ -412,4 +412,100 @@ describe('createResourceProcessor', () => {
       expect(processor.isLoading('res://a')).toBe(false);
     });
   });
+
+  describe('pin / unpin (reference counting, issue #248)', () => {
+    it('a pinned entry is not evicted even when it is the LRU candidate', async () => {
+      const dispose = vi.fn();
+      const processor = createResourceProcessor<string>({
+        eventBus,
+        resourceType: 'resource',
+        loadDirectly: async (path) => `direct:${path}`,
+        dispose,
+        maxEntries: 2,
+      });
+
+      processor.request('res://a');
+      await flush();
+      processor.request('res://b');
+      await flush();
+
+      processor.pin('res://a'); // protect 'a' from eviction
+
+      processor.request('res://c');
+      await flush(); // 'a' is LRU but pinned -> 'b' is evicted instead
+
+      expect(processor.isCached('res://a')).toBe(true);
+      expect(processor.isCached('res://b')).toBe(false);
+      expect(processor.isCached('res://c')).toBe(true);
+      expect(dispose).toHaveBeenCalledWith('direct:res://b');
+      expect(dispose).not.toHaveBeenCalledWith('direct:res://a');
+    });
+
+    it('after unpin the entry becomes evictable again', async () => {
+      const dispose = vi.fn();
+      const processor = createResourceProcessor<string>({
+        eventBus,
+        resourceType: 'resource',
+        loadDirectly: async (path) => `direct:${path}`,
+        dispose,
+        maxEntries: 2,
+      });
+
+      processor.request('res://a');
+      await flush();
+      processor.request('res://b');
+      await flush();
+      processor.pin('res://a');
+      processor.unpin('res://a'); // count back to 0
+
+      processor.request('res://c');
+      await flush(); // 'a' is LRU and unpinned -> evicted
+
+      expect(processor.isCached('res://a')).toBe(false);
+      expect(dispose).toHaveBeenCalledWith('direct:res://a');
+    });
+
+    it('when all cached entries are pinned, the cache temporarily grows beyond maxEntries', async () => {
+      const dispose = vi.fn();
+      const processor = createResourceProcessor<string>({
+        eventBus,
+        resourceType: 'resource',
+        loadDirectly: async (path) => `direct:${path}`,
+        dispose,
+        maxEntries: 2,
+      });
+
+      processor.request('res://a');
+      await flush();
+      processor.request('res://b');
+      await flush();
+      processor.pin('res://a');
+      processor.pin('res://b');
+
+      processor.request('res://c');
+      await flush(); // both pinned — no eviction, size temporarily = 3
+
+      expect(processor.getCacheSize()).toBe(3);
+      expect(dispose).not.toHaveBeenCalled();
+    });
+
+    it('unpin does NOT dispose the entry — it stays in cache until LRU eviction', async () => {
+      const dispose = vi.fn();
+      const processor = createResourceProcessor<string>({
+        eventBus,
+        resourceType: 'resource',
+        loadDirectly: async (path) => `direct:${path}`,
+        dispose,
+        maxEntries: 5,
+      });
+
+      processor.request('res://a');
+      await flush();
+      processor.pin('res://a');
+      processor.unpin('res://a'); // count = 0, but still in cache
+
+      expect(processor.isCached('res://a')).toBe(true);
+      expect(dispose).not.toHaveBeenCalled();
+    });
+  });
 });

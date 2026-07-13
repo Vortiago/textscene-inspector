@@ -68,6 +68,10 @@ interface ProcessorAccess<T> {
   getCached: (path: string) => T | null | undefined;
   /** Trigger a load through the FileEventBus → processor pipeline. */
   request: (path: string) => void;
+  /** Increment the pin count — protects this entry from LRU eviction while mounted. */
+  pin: (path: string) => void;
+  /** Decrement the pin count — makes the entry eligible for LRU eviction again. */
+  unpin: (path: string) => void;
 }
 
 /**
@@ -156,6 +160,18 @@ export function useResource<T>(path: string, type: ResourceType): ResourceResult
     const busType = BUS_TYPE[type];
     const eventBus: ResourceEventBus = loader.eventBus;
     const access = getProcessorAccess<T>(loader, type);
+
+    // Pin this entry so the LRU cache never evicts it while this hook
+    // instance is mounted. The matching unpin in the cleanup guarantees
+    // count returns to zero once every consumer unmounts. React StrictMode
+    // will call mount, cleanup, mount in rapid succession — the net count
+    // after the remount is correctly 1, and no disposal happens in the gap
+    // because unpin-to-zero does not eagerly dispose the cache entry.
+    //
+    // The guard (`typeof ... === 'function'`) keeps backward compatibility
+    // with minimal test-only loader stubs that pre-date the pin API and
+    // intentionally omit the method rather than implement it.
+    if (typeof access.pin === 'function') access.pin(path);
 
     // Fresh subscription per (path, type) pair — keeps cleanup simple
     // and prevents stale handlers from accumulating when the consumer
@@ -255,6 +271,7 @@ export function useResource<T>(path: string, type: ResourceType): ResourceResult
     }
 
     return () => {
+      if (typeof access.unpin === 'function') access.unpin(path);
       eventBus.off(busType, 'loaded', onLoaded);
       eventBus.off<Error>(busType, 'failed', onFailed);
       disposePreviousClone();
