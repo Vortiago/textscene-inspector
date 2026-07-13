@@ -99,11 +99,103 @@ interface ChildScope {
 }
 
 /**
+ * One origin-tagged group of live children. The origin is the React key
+ * namespace (`merged`/`inline`/`subscene`/`glb`) and the authoritative
+ * record of which resource scope its children resolve against.
+ *
+ * - `merged`   — collapsed single-root instance; children from merged node; sub-scene scope.
+ * - `inline`   — host-authored children of an instance node; OUTER scope.
+ * - `subscene` — loaded roots of a fallback (multi-root / GLB) instance; sub-scene scope.
+ * - `glb`      — synthetic nodes from a GLBSceneRoot's loaded GLB; OUTER scope.
+ */
+export interface LiveChildGroup {
+  origin: 'merged' | 'inline' | 'subscene' | 'glb';
+  children: readonly TscnNode[];
+  externalResources: readonly TscnExternalResource[];
+}
+
+/**
+ * The single origin-tagged source of truth for "what is below this node, and
+ * in what ExtResource scope". Each group carries the scope its children resolve
+ * their own instance refs against:
+ *
+ * - Non-instance node → one `inline` group (OUTER scope).
+ * - Collapsed single-root instance (ADR-0013) → one `merged` group (sub-scene scope).
+ * - Fallback (multi-root / GLB instance) → an `inline` group (OUTER scope, for
+ *   host-authored children) + a `subscene` group (sub-scene scope, for loaded roots).
+ *   This is the bug fix vs. the old `liveChildren`: the old code assigned sub-scene
+ *   scope to the concatenated list; inline children are authored in the OUTER scene
+ *   and must resolve against OUTER resources.
+ * - GLBSceneRoot → one `glb` group (OUTER scope — GLB nodes carry no instance refs).
+ *
+ * `liveChildren` is a thin flatten over these groups; the tree and viewport walkers
+ * can map groups directly to get per-group scope without re-computing the branch.
+ */
+export function liveChildGroups(
+  node: TscnNode,
+  externalResources: readonly TscnExternalResource[],
+  sceneCache: CachedSceneSource,
+  glbCache?: CachedGlbSource
+): LiveChildGroup[] {
+  // GLBSceneRoot: its children are the loaded GLB's internal nodes. No instance
+  // refs of their own; they live in the OUTER scope.
+  if (node.type === GLB_SCENE_ROOT_TYPE && glbCache) {
+    const glbPath = (node.properties as Record<string, unknown>).glbPath as string | undefined;
+    const object = glbPath ? glbCache.getCached(glbPath) : undefined;
+    if (object) {
+      return [{ origin: 'glb', children: glbSceneRootChildren(object), externalResources }];
+    }
+  }
+
+  if (!node.instance) {
+    return [{ origin: 'inline', children: node.children, externalResources }];
+  }
+
+  const scenePath = resolveInstancePath(node.instance, externalResources);
+  if (!scenePath) {
+    return [{ origin: 'inline', children: node.children, externalResources }];
+  }
+
+  const cached = sceneCache.getCached(scenePath);
+  if (!cached) {
+    return [{ origin: 'inline', children: node.children, externalResources }];
+  }
+
+  const subResources = cached.externalResources ?? [];
+
+  // Collapsed single-root instance (ADR-0013): one merged group under sub-scene scope.
+  const merged = mergeInstanceRoot(node, cached);
+  if (merged) {
+    return [{ origin: 'merged', children: merged.children, externalResources: subResources }];
+  }
+
+  // Fallback (multi-root / GLB instance): inline children stay in OUTER scope;
+  // the loaded sub-scene roots go in sub-scene scope. This is the correct split —
+  // inline children are authored in the host scene and resolve against its resources.
+  const groups: LiveChildGroup[] = [];
+  if (node.children.length > 0) {
+    groups.push({ origin: 'inline', children: node.children, externalResources });
+  }
+  groups.push({ origin: 'subscene', children: cached.nodes, externalResources: subResources });
+  return groups;
+}
+
+/**
  * The single source of truth for "what is below this node, and in what resource
  * scope". For an instance node the scope is the LOADED sub-scene's own resource
  * table — a nested instance references its parent sub-scene's ExtResources,
  * absent from the outer scene, so descent must switch scope. GLB / non-instance
  * children keep the incoming scope.
+ *
+ * This is a flatten over {@link liveChildGroups}. The flat view is correct for
+ * descent (each group's children are walked with that group's scope), but
+ * callers that need per-group key namespaces or per-group scope directly should
+ * call `liveChildGroups` instead.
+ *
+ * Note: for the fallback (multi-root / GLB instance) case the flattened list
+ * contains children from two different scopes; the `liveChainLinks` walk
+ * handles this by iterating groups individually so each segment search uses
+ * the right scope.
  */
 export function liveChildren(
   node: TscnNode,
@@ -111,37 +203,17 @@ export function liveChildren(
   sceneCache: CachedSceneSource,
   glbCache?: CachedGlbSource
 ): ChildScope {
-  const inline = node.children;
-  const keep = (children: readonly TscnNode[]): ChildScope => ({ children, externalResources });
-
-  // GLBSceneRoot: its children are the loaded GLB's internal nodes (+ a synthetic
-  // AnimationPlayer when it has clips). No instance refs of their own.
-  if (node.type === GLB_SCENE_ROOT_TYPE && glbCache) {
-    const glbPath = (node.properties as Record<string, unknown>).glbPath as string | undefined;
-    const object = glbPath ? glbCache.getCached(glbPath) : undefined;
-    if (object) return keep(glbSceneRootChildren(object));
+  const groups = liveChildGroups(node, externalResources, sceneCache, glbCache);
+  if (groups.length === 1) {
+    const g = groups[0]!;
+    return { children: g.children, externalResources: g.externalResources };
   }
-
-  if (!node.instance) return keep(inline);
-
-  const scenePath = resolveInstancePath(node.instance, externalResources);
-  if (!scenePath) return keep(inline);
-
-  const cached = sceneCache.getCached(scenePath);
-  if (!cached) return keep(inline);
-
-  const subResources = cached.externalResources ?? [];
-
-  // Collapsed single-root instance: descend into the merged children (root's
-  // children first, then host-added).
-  const merged = mergeInstanceRoot(node, cached);
-  if (merged) return { children: merged.children, externalResources: subResources };
-
-  // Fallback (GLB / multi-root): inline children first, then the loaded roots —
-  // matching the tree's hierarchy.
+  // Multiple groups: flatten children. The externalResources returned here is
+  // the first group's scope (OUTER), which is what the path-walk needs for the
+  // first candidate set. `liveChainLinks` overrides this by searching per-group.
   return {
-    children: inline.length > 0 ? [...inline, ...cached.nodes] : cached.nodes,
-    externalResources: subResources,
+    children: groups.flatMap((g) => g.children as TscnNode[]),
+    externalResources: groups[0]!.externalResources,
   };
 }
 
@@ -162,6 +234,11 @@ interface LiveChainLink {
  * read from: descend a slash-joined path, collapsing each segment and switching
  * resource scope per sub-scene, capturing the raw + collapsed node at each level.
  * Returns `null` if any segment is unresolvable.
+ *
+ * Uses `liveChildGroups` directly (rather than the flattened `liveChildren`) so
+ * that in the multi-group fallback case — where inline children carry OUTER scope
+ * and sub-scene roots carry sub-scene scope — the walk picks up the correct scope
+ * for the matched node's own descent instead of defaulting to the first group's scope.
  */
 function liveChainLinks(
   path: string,
@@ -172,20 +249,31 @@ function liveChainLinks(
   if (segments.length === 0) return null;
 
   const links: LiveChainLink[] = [];
-  let candidates: readonly TscnNode[] = roots;
-  let candidatesResources = ctx.externalResources;
+  // Seed: the root-level candidates are in a single implicit inline group.
+  let candidateGroups: Array<{ children: readonly TscnNode[]; externalResources: readonly TscnExternalResource[] }> =
+    [{ children: roots, externalResources: ctx.externalResources }];
 
   for (const segment of segments) {
-    const match = candidates.find((n) => n.name === segment);
+    // Find the segment in any of the current candidate groups, tracking which
+    // group it was found in so we inherit that group's scope for collapse + descent.
+    let match: TscnNode | undefined;
+    let matchScope: readonly TscnExternalResource[] = ctx.externalResources;
+    for (const group of candidateGroups) {
+      const found = group.children.find((n) => n.name === segment);
+      if (found) {
+        match = found;
+        matchScope = group.externalResources;
+        break;
+      }
+    }
     if (!match) return null;
-    // The collapsed node uses the scope it lives in (its parent's child scope).
+    // The collapsed node uses the scope it lives in (its own group's scope).
     links.push({
       raw: match,
-      collapsed: collapseLiveNode(match, candidatesResources, ctx.sceneCache),
+      collapsed: collapseLiveNode(match, matchScope, ctx.sceneCache),
     });
-    const next = liveChildren(match, candidatesResources, ctx.sceneCache, ctx.glbCache);
-    candidates = next.children;
-    candidatesResources = next.externalResources;
+    // Descend: use liveChildGroups so each next-level group carries the right scope.
+    candidateGroups = liveChildGroups(match, matchScope, ctx.sceneCache, ctx.glbCache);
   }
 
   return links;
@@ -263,6 +351,11 @@ const MAX_DEPTH = 100;
  * Depth-first walk of the entire live tree, invoking `visit` with each node's
  * effective identity and full path. The building block for enumeration adapters
  * (cameras, stats, search).
+ *
+ * Uses `liveChildGroups` per node so each child group's correct scope is
+ * threaded into the recursive descent — the fallback (multi-root / GLB instance)
+ * case has inline children in OUTER scope and sub-scene roots in sub-scene scope,
+ * and the walk must respect that split.
  */
 export function walkLiveTree(
   roots: readonly TscnNode[],
@@ -279,8 +372,10 @@ export function walkLiveTree(
     for (const node of nodes) {
       const path = joinPath(parentPath, node.name);
       visit({ node: collapseLiveNode(node, scope, ctx.sceneCache), path });
-      const next = liveChildren(node, scope, ctx.sceneCache, ctx.glbCache);
-      walk(next.children, next.externalResources, path, depth + 1);
+      const groups = liveChildGroups(node, scope, ctx.sceneCache, ctx.glbCache);
+      for (const group of groups) {
+        walk(group.children, group.externalResources, path, depth + 1);
+      }
     }
   };
   walk(roots, ctx.externalResources, '', 0);

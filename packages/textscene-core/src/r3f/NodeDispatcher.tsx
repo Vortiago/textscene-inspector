@@ -41,7 +41,7 @@ import { useCanvasWorkspace } from './contexts/CanvasWorkspaceContext.js';
 import { TWO_D_UI_TYPES } from './controls/has2DUIContent.js';
 import { NodePathProvider } from './contexts/NodePathContext.js';
 import { useResource, useResourceLoader } from '../resources/useResource.js';
-import { collapseLiveNode, singleSceneCache } from './liveSceneTree.js';
+import { collapseLiveNode, liveChildGroups, singleSceneCache } from './liveSceneTree.js';
 import { parseResourceReference, resolveInstancePath } from '../resources/SubResourceResolver.js';
 import {
   SceneResourcesProvider,
@@ -318,6 +318,14 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
   }
 
   // Fallback (`.glb` synthetic root / multi-root): historical nested form.
+  // Enumerate the `subscene` group from liveChildGroups — the single source of
+  // truth for which nodes are the loaded roots — rather than reaching into
+  // loadedScene.nodes directly. The subscene group carries sub-scene scope,
+  // matching the SceneResourcesProvider below.
+  const groups = liveChildGroups(node, externalResources, singleSceneCache(scenePath, loadedScene));
+  const subsceneGroup = groups.find((g) => g.origin === 'subscene');
+  const subsceneNodes = subsceneGroup?.children ?? loadedScene.nodes;
+
   return (
     <GlbOverridesProvider overrides={node.children}>
       <PlainNode node={node} path={path}>
@@ -325,7 +333,7 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
           internalResources={loadedScene.internalResources}
           externalResources={loadedScene.externalResources}
         >
-          {loadedScene.nodes.map((child) => (
+          {subsceneNodes.map((child) => (
             <DispatchedNode key={child.name} node={child} path={joinPath(path, child.name)} />
           ))}
         </SceneResourcesProvider>
