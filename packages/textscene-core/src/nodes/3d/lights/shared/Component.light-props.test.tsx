@@ -10,7 +10,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { DirectionalLight3D } from '../directionallight3d/Component';
 import { OmniLight3D } from '../omnilight3d/Component';
 import { SpotLight3D } from '../spotlight3d/Component';
-import { LIGHT_INTENSITY_SCALE } from '../../../../utils/lightConstants';
+import { LIGHT_INTENSITY_SCALE } from '../../../../r3f/lightConstants';
 import type { TscnNode } from '../../../../parser/types';
 import type { DirectionalLight3DProperties } from '../directionallight3d/types';
 import type { OmniLight3DProperties } from '../omnilight3d/types';

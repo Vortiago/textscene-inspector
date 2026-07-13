@@ -21,7 +21,7 @@ import type { AreaLight3DProperties } from './types';
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../../r3f/nodeTransform';
 import { parseColorToHex } from '../../../../utils/colorParser';
-import { LIGHT_INTENSITY_SCALE } from '../../../../utils/lightConstants';
+import { LIGHT_INTENSITY_SCALE } from '../../../../r3f/lightConstants';
 
 RectAreaLightUniformsLib.init();
 

@@ -3,7 +3,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { DirectionalLight3D } from './Component';
 import type { TscnNode } from '../../../../parser/types';
 import type { DirectionalLight3DProperties } from './types';
-import { LIGHT_INTENSITY_SCALE } from '../../../../utils/lightConstants';
+import { LIGHT_INTENSITY_SCALE } from '../../../../r3f/lightConstants';
 
 function makeNode(overrides: Partial<DirectionalLight3DProperties> = {}): TscnNode {
   const props: DirectionalLight3DProperties = {

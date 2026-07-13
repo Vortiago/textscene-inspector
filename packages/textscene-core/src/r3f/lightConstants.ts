@@ -1,5 +1,9 @@
 /**
- * Shared constants for lighting calculations
+ * Shared constants for lighting calculations — render-side only.
+ *
+ * These constants tune three.js light output to match Godot's visual
+ * appearance and live next to their render-side consumers in `r3f/`.
+ * No parse- or lint-side code should import from here.
  */
 
 /**

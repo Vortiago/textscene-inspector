@@ -3,7 +3,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { AreaLight3D } from './Component';
 import type { TscnNode } from '../../../../parser/types';
 import type { AreaLight3DProperties } from './types';
-import { LIGHT_INTENSITY_SCALE } from '../../../../utils/lightConstants';
+import { LIGHT_INTENSITY_SCALE } from '../../../../r3f/lightConstants';
 
 function makeNode(overrides: Partial<AreaLight3DProperties> = {}): TscnNode {
   const props: AreaLight3DProperties = {

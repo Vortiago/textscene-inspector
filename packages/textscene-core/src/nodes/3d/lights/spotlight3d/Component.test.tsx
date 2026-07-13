@@ -3,7 +3,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { SpotLight3D } from './Component';
 import type { TscnNode } from '../../../../parser/types';
 import type { SpotLight3DProperties } from './types';
-import { LIGHT_INTENSITY_SCALE } from '../../../../utils/lightConstants';
+import { LIGHT_INTENSITY_SCALE } from '../../../../r3f/lightConstants';
 
 function makeNode(overrides: Partial<SpotLight3DProperties> = {}): TscnNode {
   const props: SpotLight3DProperties = {
