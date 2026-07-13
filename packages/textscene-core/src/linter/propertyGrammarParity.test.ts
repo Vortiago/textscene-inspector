@@ -13,7 +13,7 @@
  *
  * Legitimate asymmetries are recorded in ASYMMETRY_ALLOWLIST below.  Every
  * entry carries a one-line justification and doubles as the inventory that
- * feeds the descriptor-DSL pilot design (issue #253).
+ * feeds the descriptor-DSL pilot design.
  *
  * Desync detection:
  *   - A parser-only key not in the allowlist means a property was added to
@@ -50,8 +50,6 @@ const BASE_TYPE_TO_PARSER_SUBPATH: Readonly<Record<string, string>> = {
 // ---------------------------------------------------------------------------
 // Allowlist of known, justified asymmetries.
 //
-// Structure: `{ parserOnly?: string[], linterOnly?: string[] }` per node type.
-//
 // "parserOnly"  — parser reads this property for rendering but no linter
 //                 validator is registered (acceptable: the renderer needs it,
 //                 the linter has nothing to check).
@@ -68,6 +66,29 @@ interface AsymmetryEntry {
   linterOnly?: readonly string[];
   reason: string;
 }
+
+/**
+ * Keys registered through the SHARED_LIGHT_VALIDATORS object spread in each
+ * light slice's linterParser.ts; the parser reads them via the
+ * parseBaseLightProperties / parseBaseLightWithNormalBias shared helpers,
+ * so neither side is visible to the per-file scrape.
+ */
+const SHARED_LIGHT_KEYS = [
+  'light_energy', 'light_color', 'light_indirect_energy', 'light_volumetric_fog_energy',
+  'light_negative', 'light_specular', 'light_bake_mode', 'light_cull_mask',
+  'shadow_enabled', 'shadow_bias', 'shadow_normal_bias', 'shadow_blur',
+  'shadow_transmittance_bias', 'shadow_opacity', 'shadow_reverse_cull_face',
+] as const;
+
+/**
+ * Keys read by the parseAudioBase shared helper (not captured by the per-file
+ * scrape of each audio player's parser.ts); each linterParser.ts registers
+ * them explicitly.
+ */
+const AUDIO_BASE_KEYS = [
+  'stream', 'volume_db', 'pitch_scale', 'playing', 'autoplay',
+  'stream_paused', 'bus', 'max_polyphony',
+] as const;
 
 const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
   // -------------------------------------------------------------------------
@@ -261,13 +282,9 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
 
   NavigationAgent3D: {
     parserOnly: [
-      // NavigationAgent3D uses parseNode (not parseNode3D) in the parser,
-      // so the base scrape picks up only Node.transform; the linter maps
-      // NavigationAgent3D to Node (no spatial validators) and NODE_BASE_TYPES
-      // confirms Node as the base.  The parser calling parseNode reads
-      // `transform` from node/parser.ts which is already in the base chain.
-      // However NODE_BASE_TYPES does not include a spatial base for this type,
-      // so `transform` read by node/parser.ts has no counterpart validator.
+      // NavigationAgent3D's parser inherits `transform` via parseNode
+      // (node/parser.ts), but NODE_BASE_TYPES maps NavigationAgent3D to Node,
+      // which registers no spatial validators — so transform is parser-only.
       'transform',
     ],
     reason: 'NavigationAgent3D parser inherits transform via parseNode (node/parser.ts); NODE_BASE_TYPES maps NavigationAgent3D to Node with no spatial validators, so transform is parser-only.',
@@ -299,7 +316,7 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
   },
 
   // -------------------------------------------------------------------------
-  // Audio
+  // Audio (parseAudioBase shared-helper pattern)
   // -------------------------------------------------------------------------
 
   AudioStreamPlayer: {
@@ -308,37 +325,22 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
       // NODE_BASE_TYPES maps it to Node with no spatial validators.
       'transform',
     ],
-    linterOnly: [
-      // Audio properties read by parseAudioBase shared helper (not captured
-      // by scrape of audiostreamplayer/parser.ts directly); linter registers
-      // them explicitly.
-      'stream', 'volume_db', 'pitch_scale', 'playing', 'autoplay',
-      'stream_paused', 'bus', 'max_polyphony',
-    ],
+    linterOnly: AUDIO_BASE_KEYS,
     reason: 'AudioStreamPlayer reads audio properties via parseAudioBase shared helper (not visible to per-file scrape); linter registers them explicitly. parser/parser.ts delegates entirely to helpers.',
   },
 
   AudioStreamPlayer2D: {
-    linterOnly: [
-      // Audio properties read by parseAudioBase shared helper; same pattern
-      // as AudioStreamPlayer above.
-      'stream', 'volume_db', 'pitch_scale', 'playing', 'autoplay',
-      'stream_paused', 'bus', 'max_polyphony',
-    ],
+    linterOnly: AUDIO_BASE_KEYS,
     reason: 'AudioStreamPlayer2D reads audio base properties via parseAudioBase shared helper not captured by per-file scrape; linter registers them explicitly.',
   },
 
   AudioStreamPlayer3D: {
-    linterOnly: [
-      // Same parseAudioBase pattern as the other audio players.
-      'stream', 'volume_db', 'pitch_scale', 'playing', 'autoplay',
-      'stream_paused', 'bus', 'max_polyphony',
-    ],
+    linterOnly: AUDIO_BASE_KEYS,
     reason: 'AudioStreamPlayer3D reads audio base properties via parseAudioBase shared helper not captured by per-file scrape; linter registers them explicitly.',
   },
 
   // -------------------------------------------------------------------------
-  // Lights (shared-helper pattern)
+  // Lights (SHARED_LIGHT_VALIDATORS spread + parseBaseLight* helper pattern)
   // -------------------------------------------------------------------------
 
   DirectionalLight3D: {
@@ -349,51 +351,23 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
       'directional_shadow_pancake_size',
       'directional_shadow_split_1', 'directional_shadow_split_2', 'directional_shadow_split_3',
       'sky_mode',
-      // Shared light and shadow properties from SHARED_LIGHT_VALIDATORS spread —
-      // registered at runtime but not visible to the scrape; the parser reads
-      // them via parseBaseLightWithNormalBias shared helper.
-      'light_energy', 'light_color', 'light_indirect_energy', 'light_volumetric_fog_energy',
-      'light_negative', 'light_specular', 'light_bake_mode', 'light_cull_mask',
-      'shadow_enabled', 'shadow_bias', 'shadow_normal_bias', 'shadow_blur',
-      'shadow_transmittance_bias', 'shadow_opacity', 'shadow_reverse_cull_face',
+      ...SHARED_LIGHT_KEYS,
     ],
     reason: 'DirectionalLight3D linter uses SHARED_LIGHT_VALIDATORS spread (not scrape-visible) and validates additional shadow/sky tuning properties the static renderer ignores.',
   },
 
   OmniLight3D: {
-    linterOnly: [
-      // SHARED_LIGHT_VALIDATORS spread (same pattern as DirectionalLight3D).
-      'light_energy', 'light_color', 'light_indirect_energy', 'light_volumetric_fog_energy',
-      'light_negative', 'light_specular', 'light_bake_mode', 'light_cull_mask',
-      'shadow_enabled', 'shadow_bias', 'shadow_normal_bias', 'shadow_blur',
-      'shadow_transmittance_bias', 'shadow_opacity', 'shadow_reverse_cull_face',
-    ],
+    linterOnly: SHARED_LIGHT_KEYS,
     reason: 'OmniLight3D linter uses SHARED_LIGHT_VALIDATORS spread not captured by per-file scrape; parser reads them via parseBaseLightWithNormalBias shared helper.',
   },
 
   SpotLight3D: {
-    linterOnly: [
-      // SHARED_LIGHT_VALIDATORS spread (same pattern).
-      'light_energy', 'light_color', 'light_indirect_energy', 'light_volumetric_fog_energy',
-      'light_negative', 'light_specular', 'light_bake_mode', 'light_cull_mask',
-      'shadow_enabled', 'shadow_bias', 'shadow_normal_bias', 'shadow_blur',
-      'shadow_transmittance_bias', 'shadow_opacity', 'shadow_reverse_cull_face',
-      // Spotlight linter also validates shadow_normal_bias at its own level
-      // but parser inherits from parseBaseLightWithNormalBias.
-    ],
+    linterOnly: SHARED_LIGHT_KEYS,
     reason: 'SpotLight3D linter uses SHARED_LIGHT_VALIDATORS spread not captured by per-file scrape; parser reads them via parseBaseLightProperties shared helper.',
   },
 
   AreaLight3D: {
-    linterOnly: [
-      // SHARED_LIGHT_VALIDATORS spread registered at runtime but not visible
-      // to the per-file parser scrape; the parser reads them via
-      // parseBaseLightWithNormalBias shared helper.
-      'light_energy', 'light_color', 'light_indirect_energy', 'light_volumetric_fog_energy',
-      'light_negative', 'light_specular', 'light_bake_mode', 'light_cull_mask',
-      'shadow_enabled', 'shadow_bias', 'shadow_normal_bias', 'shadow_blur',
-      'shadow_transmittance_bias', 'shadow_opacity', 'shadow_reverse_cull_face',
-    ],
+    linterOnly: SHARED_LIGHT_KEYS,
     reason: 'AreaLight3D linter uses SHARED_LIGHT_VALIDATORS spread not captured by per-file scrape; parser reads them via parseBaseLightWithNormalBias shared helper.',
   },
 
@@ -452,15 +426,9 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
 
 /** Walk dir recursively; collect paths where both parser.ts and linterParser.ts exist. */
 function findSliceDirs(dir: string): string[] {
-  const result: string[] = [];
   const entries = readdirSync(dir, { withFileTypes: true });
-  let hasParser = false;
-  let hasLinter = false;
-  for (const e of entries) {
-    if (e.name === 'parser.ts') hasParser = true;
-    if (e.name === 'linterParser.ts') hasLinter = true;
-  }
-  if (hasParser && hasLinter) result.push(dir);
+  const names = new Set(entries.map((e) => e.name));
+  const result = names.has('parser.ts') && names.has('linterParser.ts') ? [dir] : [];
   for (const e of entries) {
     if (e.isDirectory()) result.push(...findSliceDirs(join(dir, e.name)));
   }
@@ -483,41 +451,45 @@ function scrapeParserProps(src: string): Set<string> {
   return props;
 }
 
-/**
- * Collect all `properties.X` accesses from the base parser files for a given
- * node type, walking the NODE_BASE_TYPES chain.
- */
-function getInheritedParserProps(nodeType: string): Set<string> {
-  const result = new Set<string>();
-  const visited = new Set<string>();
+/** Ancestor chain of a node type (excluding the type itself), cycle-safe. */
+function baseChain(nodeType: string): string[] {
+  const chain: string[] = [];
+  const visited = new Set<string>([nodeType]);
   let current: string | undefined = NODE_BASE_TYPES[nodeType];
   while (current && !visited.has(current)) {
     visited.add(current);
-    const subpath = BASE_TYPE_TO_PARSER_SUBPATH[current];
-    if (subpath) {
-      const parserPath = join(nodesRoot, subpath);
-      if (existsSync(parserPath)) {
-        const src = readFileSync(parserPath, 'utf8');
-        for (const p of scrapeParserProps(src)) result.add(p);
-      }
-    }
+    chain.push(current);
     current = NODE_BASE_TYPES[current];
+  }
+  return chain;
+}
+
+/**
+ * All `properties.X` accesses inherited from the base parser files of a node
+ * type's NODE_BASE_TYPES chain. Throws if a mapped base parser file has moved,
+ * so a broken mapping fails loudly instead of surfacing as bogus asymmetries.
+ */
+function getInheritedParserProps(nodeType: string): Set<string> {
+  const result = new Set<string>();
+  for (const base of baseChain(nodeType)) {
+    const subpath = BASE_TYPE_TO_PARSER_SUBPATH[base];
+    if (!subpath) continue;
+    const parserPath = join(nodesRoot, subpath);
+    if (!existsSync(parserPath)) {
+      throw new Error(
+        `BASE_TYPE_TO_PARSER_SUBPATH['${base}'] points at a missing file: ${subpath}`
+      );
+    }
+    for (const p of scrapeParserProps(readFileSync(parserPath, 'utf8'))) result.add(p);
   }
   return result;
 }
 
-/**
- * Collect all validator keys registered for a node type, walking the
- * NODE_BASE_TYPES chain (own keys only at each level — no findValidator walk).
- */
-function getInheritedValidatorKeys(nodeType: string): Set<string> {
-  const result = new Set<string>();
-  const visited = new Set<string>();
-  let current: string | undefined = NODE_BASE_TYPES[nodeType];
-  while (current && !visited.has(current)) {
-    visited.add(current);
-    for (const k of validatorRegistry.getOwnValidatorKeys(current)) result.add(k);
-    current = NODE_BASE_TYPES[current];
+/** Validator keys registered directly for a node type or any of its ancestors. */
+function getFullValidatorKeys(nodeType: string): Set<string> {
+  const result = new Set(validatorRegistry.getOwnValidatorKeys(nodeType));
+  for (const base of baseChain(nodeType)) {
+    for (const k of validatorRegistry.getOwnValidatorKeys(base)) result.add(k);
   }
   return result;
 }
@@ -533,6 +505,44 @@ function extractNodeType(src: string): string | null {
 }
 
 // ---------------------------------------------------------------------------
+// Slice inventory: one walk + one scrape per slice, shared by all tests.
+// ---------------------------------------------------------------------------
+
+interface SliceInfo {
+  /** Slice directory relative to src/nodes. */
+  slice: string;
+  nodeType: string;
+  /** Own scraped props + inherited base parser props. */
+  parserProps: Set<string>;
+  /** Own registered keys + inherited base validator keys. */
+  validatorKeys: Set<string>;
+}
+
+let cachedSlices: SliceInfo[] | null = null;
+
+function collectSlices(): SliceInfo[] {
+  if (cachedSlices) return cachedSlices;
+  cachedSlices = [];
+  for (const dir of findSliceDirs(nodesRoot).sort()) {
+    const linterSrc = readFileSync(join(dir, 'linterParser.ts'), 'utf8');
+    const nodeType = extractNodeType(linterSrc);
+    if (!nodeType) continue; // shared-helper file — no registerAll
+
+    const parserSrc = readFileSync(join(dir, 'parser.ts'), 'utf8');
+    cachedSlices.push({
+      slice: dir.slice(nodesRoot.length + 1),
+      nodeType,
+      parserProps: new Set([
+        ...scrapeParserProps(parserSrc),
+        ...getInheritedParserProps(nodeType),
+      ]),
+      validatorKeys: getFullValidatorKeys(nodeType),
+    });
+  }
+  return cachedSlices;
+}
+
+// ---------------------------------------------------------------------------
 // Core guard logic
 // ---------------------------------------------------------------------------
 
@@ -545,57 +555,28 @@ interface ParityViolation {
 
 function checkParity(): ParityViolation[] {
   const violations: ParityViolation[] = [];
-  const sliceDirs = findSliceDirs(nodesRoot).sort();
 
-  for (const dir of sliceDirs) {
-    const parserSrc = readFileSync(join(dir, 'parser.ts'), 'utf8');
-    const linterSrc = readFileSync(join(dir, 'linterParser.ts'), 'utf8');
-
-    const nodeType = extractNodeType(linterSrc);
-    if (!nodeType) continue; // shared-helper file — no registerAll
-
-    // Build the full parser property set (own + inherited base).
-    const ownParserProps = scrapeParserProps(parserSrc);
-    const inheritedParserProps = getInheritedParserProps(nodeType);
-    const fullParserProps = new Set([...ownParserProps, ...inheritedParserProps]);
-
-    // Build the full validator key set (own + inherited base).
-    const ownValidatorKeys = new Set(validatorRegistry.getOwnValidatorKeys(nodeType));
-    const inheritedValidatorKeys = getInheritedValidatorKeys(nodeType);
-    const fullValidatorKeys = new Set([...ownValidatorKeys, ...inheritedValidatorKeys]);
-
+  for (const { slice, nodeType, parserProps, validatorKeys } of collectSlices()) {
     // Collect allowlist entries from this type AND all ancestor types so a
     // base-type entry (e.g. Node3D.linterOnly) applies to every leaf slice.
     const allowedParserOnly = new Set<string>();
     const allowedLinterOnly = new Set<string>();
-    {
-      const seen = new Set<string>();
-      let t: string | undefined = nodeType;
-      while (t && !seen.has(t)) {
-        seen.add(t);
-        const e = ASYMMETRY_ALLOWLIST[t];
-        if (e) {
-          for (const k of e.parserOnly ?? []) allowedParserOnly.add(k);
-          for (const k of e.linterOnly ?? []) allowedLinterOnly.add(k);
-        }
-        t = NODE_BASE_TYPES[t];
-      }
+    for (const t of [nodeType, ...baseChain(nodeType)]) {
+      const e = ASYMMETRY_ALLOWLIST[t];
+      if (!e) continue;
+      for (const k of e.parserOnly ?? []) allowedParserOnly.add(k);
+      for (const k of e.linterOnly ?? []) allowedLinterOnly.add(k);
     }
 
-    const parserOnlyNotAllowlisted = [...fullParserProps]
-      .filter((k) => !fullValidatorKeys.has(k) && !allowedParserOnly.has(k))
+    const parserOnlyNotAllowlisted = [...parserProps]
+      .filter((k) => !validatorKeys.has(k) && !allowedParserOnly.has(k))
       .sort();
-    const linterOnlyNotAllowlisted = [...fullValidatorKeys]
-      .filter((k) => !fullParserProps.has(k) && !allowedLinterOnly.has(k))
+    const linterOnlyNotAllowlisted = [...validatorKeys]
+      .filter((k) => !parserProps.has(k) && !allowedLinterOnly.has(k))
       .sort();
 
     if (parserOnlyNotAllowlisted.length > 0 || linterOnlyNotAllowlisted.length > 0) {
-      violations.push({
-        slice: dir.slice(nodesRoot.length + 1),
-        nodeType,
-        parserOnlyNotAllowlisted,
-        linterOnlyNotAllowlisted,
-      });
+      violations.push({ slice, nodeType, parserOnlyNotAllowlisted, linterOnlyNotAllowlisted });
     }
   }
 
@@ -608,72 +589,50 @@ function checkParity(): ParityViolation[] {
 
 describe('property-grammar parity guard', () => {
   it('finds slice pairs to check (sanity: walk is not empty)', () => {
-    expect(findSliceDirs(nodesRoot).length).toBeGreaterThan(0);
+    expect(collectSlices().length).toBeGreaterThan(0);
   });
 
   it('every slice pair has symmetric property coverage (or an allowlisted asymmetry)', () => {
     const violations = checkParity();
 
-    if (violations.length > 0) {
-      const lines: string[] = ['Unapproved parser/validator asymmetries:'];
-      for (const v of violations) {
-        lines.push(`\n  ${v.slice} [${v.nodeType}]:`);
-        if (v.parserOnlyNotAllowlisted.length > 0)
-          lines.push(`    parser-only (no validator): ${v.parserOnlyNotAllowlisted.join(', ')}`);
-        if (v.linterOnlyNotAllowlisted.length > 0)
-          lines.push(`    linter-only (no parser read): ${v.linterOnlyNotAllowlisted.join(', ')}`);
-        lines.push(`    → add to ASYMMETRY_ALLOWLIST['${v.nodeType}'] with a reason, or fix the desync.`);
-      }
-      expect.fail(lines.join('\n'));
+    const lines: string[] = ['Unapproved parser/validator asymmetries:'];
+    for (const v of violations) {
+      lines.push(`\n  ${v.slice} [${v.nodeType}]:`);
+      if (v.parserOnlyNotAllowlisted.length > 0)
+        lines.push(`    parser-only (no validator): ${v.parserOnlyNotAllowlisted.join(', ')}`);
+      if (v.linterOnlyNotAllowlisted.length > 0)
+        lines.push(`    linter-only (no parser read): ${v.linterOnlyNotAllowlisted.join(', ')}`);
+      lines.push(`    → add to ASYMMETRY_ALLOWLIST['${v.nodeType}'] with a reason, or fix the desync.`);
     }
-
-    expect(violations).toEqual([]);
+    expect(violations, lines.join('\n')).toEqual([]);
   });
 
   it('allowlist entries stay honest: every listed key is genuinely asymmetric', () => {
+    const slicesByType = new Map(collectSlices().map((s) => [s.nodeType, s]));
     const staleSections: string[] = [];
 
     for (const [nodeType, entry] of Object.entries(ASYMMETRY_ALLOWLIST)) {
-      const ownValidatorKeys = new Set(validatorRegistry.getOwnValidatorKeys(nodeType));
-      const inheritedValidatorKeys = getInheritedValidatorKeys(nodeType);
-      const fullValidatorKeys = new Set([...ownValidatorKeys, ...inheritedValidatorKeys]);
-
-      // Find the slice dir for this node type to scrape the parser
-      const sliceDirs = findSliceDirs(nodesRoot);
-      const matchingDir = sliceDirs.find((d) => {
-        const linterSrc = readFileSync(join(d, 'linterParser.ts'), 'utf8');
-        return extractNodeType(linterSrc) === nodeType;
-      });
-
-      if (!matchingDir) {
-        // Node type no longer has a slice pair — allowlist entry is stale
+      const slice = slicesByType.get(nodeType);
+      if (!slice) {
+        // Node type no longer has a slice pair — allowlist entry is stale.
         staleSections.push(`${nodeType}: no parser.ts+linterParser.ts pair found`);
         continue;
       }
 
-      const parserSrc = readFileSync(join(matchingDir, 'parser.ts'), 'utf8');
-      const ownParserProps = scrapeParserProps(parserSrc);
-      const inheritedParserProps = getInheritedParserProps(nodeType);
-      const fullParserProps = new Set([...ownParserProps, ...inheritedParserProps]);
-
-      // Check parserOnly entries: they should NOT be in the validator set
+      // parserOnly keys should NOT have a validator; linterOnly keys should
+      // NOT be read by the parser — otherwise the asymmetry has been fixed.
       for (const key of entry.parserOnly ?? []) {
-        if (fullValidatorKeys.has(key)) {
+        if (slice.validatorKeys.has(key)) {
           staleSections.push(`${nodeType}.parserOnly['${key}']: now has a validator — remove from allowlist`);
         }
       }
-
-      // Check linterOnly entries: they should NOT be in the parser set
       for (const key of entry.linterOnly ?? []) {
-        if (fullParserProps.has(key)) {
+        if (slice.parserProps.has(key)) {
           staleSections.push(`${nodeType}.linterOnly['${key}']: now read by the parser — remove from allowlist`);
         }
       }
     }
 
-    if (staleSections.length > 0) {
-      expect.fail(`Stale allowlist entries found:\n  ${staleSections.join('\n  ')}`);
-    }
-    expect(staleSections).toEqual([]);
+    expect(staleSections, `Stale allowlist entries found:\n  ${staleSections.join('\n  ')}`).toEqual([]);
   });
 });
