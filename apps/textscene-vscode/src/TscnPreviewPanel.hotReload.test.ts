@@ -14,7 +14,7 @@ import { createMockUri, createMockFileData, setupMockPanel, type MockWebview } f
 const MINIMAL_TSCN = '[gd_scene format=3]\n[node name="Root" type="Node3D"]';
 
 async function createReadyPanel(
-  triggerMessage: (msg: { type: string }) => void
+  triggerMessage: (msg: { type: string; [key: string]: unknown }) => void
 ): Promise<TscnPreviewPanel> {
   (vscode.workspace.fs.readFile as Mock).mockResolvedValue(createMockFileData(MINIMAL_TSCN));
   const panel = TscnPreviewPanel.create(
@@ -70,7 +70,7 @@ describe('TscnPreviewPanel dependency hot-reload', () => {
 
     // Establish relevance: the webview must have requested this resource at
     // least once before a disk change to it is considered worth invalidating.
-    panel._testTriggerMessage({
+    triggerMessage({
       type: 'loadResource',
       path: 'res://textures/wood.png',
       resourceType: 'Texture2D',
@@ -100,14 +100,14 @@ describe('TscnPreviewPanel dependency hot-reload', () => {
 
   it('caches project-root resolution across repeated loadResource calls on the same panel', async () => {
     const { triggerMessage } = setupMockPanel();
-    const panel = await createReadyPanel(triggerMessage);
+    await createReadyPanel(triggerMessage);
     (vscode.workspace.getWorkspaceFolder as Mock).mockReturnValue({
       uri: createMockUri('/workspace'),
     });
     const stat = vscode.workspace.fs.stat as Mock;
     stat.mockClear();
 
-    panel._testTriggerMessage({
+    triggerMessage({
       type: 'loadResource',
       path: 'res://a.png',
       resourceType: 'Texture2D',
@@ -117,7 +117,7 @@ describe('TscnPreviewPanel dependency hot-reload', () => {
     const callsAfterFirst = stat.mock.calls.length;
     expect(callsAfterFirst).toBeGreaterThan(0);
 
-    panel._testTriggerMessage({
+    triggerMessage({
       type: 'loadResource',
       path: 'res://b.png',
       resourceType: 'Texture2D',
@@ -139,7 +139,7 @@ describe('TscnPreviewPanel dependency hot-reload', () => {
     const stat = vscode.workspace.fs.stat as Mock;
     stat.mockClear();
 
-    panel._testTriggerMessage({
+    triggerMessage({
       type: 'loadResource',
       path: 'res://a.png',
       resourceType: 'Texture2D',
@@ -153,7 +153,7 @@ describe('TscnPreviewPanel dependency hot-reload', () => {
     panel.update(createMockUri('/workspace/other.tscn'));
     await new Promise<void>((r) => setTimeout(r, 10));
 
-    panel._testTriggerMessage({
+    triggerMessage({
       type: 'loadResource',
       path: 'res://b.png',
       resourceType: 'Texture2D',
@@ -174,7 +174,7 @@ describe('TscnPreviewPanel dependency hot-reload', () => {
 
     // Initial load fails — the texture is referenced but doesn't exist on disk yet.
     (vscode.workspace.fs.readFile as Mock).mockRejectedValue(new Error('ENOENT'));
-    panel._testTriggerMessage({
+    triggerMessage({
       type: 'loadResource',
       path: 'res://textures/wood.png',
       resourceType: 'Texture2D',

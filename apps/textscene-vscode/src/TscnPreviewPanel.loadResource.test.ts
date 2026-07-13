@@ -16,7 +16,7 @@ import { createMockUri, createMockFileData, setupMockPanel, type MockWebview } f
 const MINIMAL_TSCN = '[gd_scene format=3]\n[node name="Root" type="Node3D"]';
 
 async function createReadyPanel(
-  triggerMessage: (msg: { type: string }) => void
+  triggerMessage: (msg: { type: string; [key: string]: unknown }) => void
 ): Promise<TscnPreviewPanel> {
   (vscode.workspace.fs.readFile as Mock).mockResolvedValue(createMockFileData(MINIMAL_TSCN));
   const panel = TscnPreviewPanel.create(
@@ -68,7 +68,7 @@ function decodeBase64ToBytes(base64: string): Uint8Array {
 describe('TscnPreviewPanel loadResource — binary encoding', () => {
   it('base64-round-trips a binary resource crossing multiple 8KB chunk boundaries', async () => {
     const { webview, triggerMessage } = setupMockPanel();
-    const panel = await createReadyPanel(triggerMessage);
+    await createReadyPanel(triggerMessage);
     (vscode.workspace.getWorkspaceFolder as Mock).mockReturnValue({
       uri: createMockUri('/workspace'),
     });
@@ -83,7 +83,7 @@ describe('TscnPreviewPanel loadResource — binary encoding', () => {
     }
     (vscode.workspace.fs.readFile as Mock).mockResolvedValue(bytes);
 
-    panel._testTriggerMessage({
+    triggerMessage({
       type: 'loadResource',
       path: 'res://textures/large.png',
       resourceType: 'Texture2D',
@@ -100,7 +100,7 @@ describe('TscnPreviewPanel loadResource — binary encoding', () => {
 
   it('base64-round-trips a binary resource smaller than one chunk', async () => {
     const { webview, triggerMessage } = setupMockPanel();
-    const panel = await createReadyPanel(triggerMessage);
+    await createReadyPanel(triggerMessage);
     (vscode.workspace.getWorkspaceFolder as Mock).mockReturnValue({
       uri: createMockUri('/workspace'),
     });
@@ -108,7 +108,7 @@ describe('TscnPreviewPanel loadResource — binary encoding', () => {
     const bytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x00, 0xff, 0x7f, 0x10]);
     (vscode.workspace.fs.readFile as Mock).mockResolvedValue(bytes);
 
-    panel._testTriggerMessage({
+    triggerMessage({
       type: 'loadResource',
       path: 'res://textures/icon.png',
       resourceType: 'Texture2D',
@@ -124,7 +124,7 @@ describe('TscnPreviewPanel loadResource — binary encoding', () => {
 
   it('loads a text resource as a plain (non-base64) string with isBinary: false', async () => {
     const { webview, triggerMessage } = setupMockPanel();
-    const panel = await createReadyPanel(triggerMessage);
+    await createReadyPanel(triggerMessage);
     (vscode.workspace.getWorkspaceFolder as Mock).mockReturnValue({
       uri: createMockUri('/workspace'),
     });
@@ -132,7 +132,7 @@ describe('TscnPreviewPanel loadResource — binary encoding', () => {
     const subSceneText = '[gd_scene format=3]\n[node name="Sub" type="Node3D"]';
     (vscode.workspace.fs.readFile as Mock).mockResolvedValue(createMockFileData(subSceneText));
 
-    panel._testTriggerMessage({
+    triggerMessage({
       type: 'loadResource',
       path: 'res://scenes/Sub.tscn',
       resourceType: 'PackedScene',
@@ -150,13 +150,13 @@ describe('TscnPreviewPanel loadResource — binary encoding', () => {
 describe('TscnPreviewPanel loadResource — error paths', () => {
   it('posts resourceLoadError "No workspace folder found" when the resource has no owning workspace', async () => {
     const { webview, triggerMessage } = setupMockPanel();
-    const panel = await createReadyPanel(triggerMessage);
+    await createReadyPanel(triggerMessage);
     // `vi.clearAllMocks()` (test-setup's afterEach) clears call history but not a
     // previously-set `mockReturnValue` — pin this explicitly so the test doesn't
     // depend on running before any test that gives it a real workspace folder.
     (vscode.workspace.getWorkspaceFolder as Mock).mockReturnValue(undefined);
 
-    panel._testTriggerMessage({
+    triggerMessage({
       type: 'loadResource',
       path: 'res://textures/orphan.png',
       resourceType: 'Texture2D',
@@ -173,13 +173,13 @@ describe('TscnPreviewPanel loadResource — error paths', () => {
 
   it('posts resourceLoadError when both the primary and fallback reads fail', async () => {
     const { webview, triggerMessage } = setupMockPanel();
-    const panel = await createReadyPanel(triggerMessage);
+    await createReadyPanel(triggerMessage);
     (vscode.workspace.getWorkspaceFolder as Mock).mockReturnValue({
       uri: createMockUri('/workspace'),
     });
     (vscode.workspace.fs.readFile as Mock).mockRejectedValue(new Error('ENOENT: no such file'));
 
-    panel._testTriggerMessage({
+    triggerMessage({
       type: 'loadResource',
       path: 'res://textures/missing.png',
       resourceType: 'Texture2D',
