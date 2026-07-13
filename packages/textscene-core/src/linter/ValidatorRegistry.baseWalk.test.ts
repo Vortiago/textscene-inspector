@@ -10,9 +10,8 @@ import { describe, it, expect } from 'vitest';
 import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { ValidatorRegistry } from './ValidatorRegistry.js';
+import { ValidatorRegistry, validatorRegistry } from './ValidatorRegistry.js';
 import type { PropertyValidator } from './ValidatorRegistry.js';
-import { validatorRegistry } from './ValidatorRegistry.js';
 import { NODE_BASE_TYPES } from './nodeBaseTypes.js';
 import './index.js'; // trigger all validator registrations
 
@@ -82,7 +81,7 @@ describe('ValidatorRegistry base-class walk', () => {
 
 // ---------------------------------------------------------------------------
 // Meta-guard: no linterParser.ts may re-declare a key that its base chain
-// already carries. Shadow copies are the anti-pattern this issue (#254) removes.
+// already carries — a shadow copy silently drifts from the base validator.
 // ---------------------------------------------------------------------------
 
 /**
@@ -113,22 +112,41 @@ function walkLinterParsers(dir: string): string[] {
 }
 
 /**
- * Extract (nodeType, key[]) from a linterParser.ts source file.
- * Handles the pattern: validatorRegistry.registerAll('TypeName', { key: ... })
- * Regex captures the first non-nested block after the opening brace.
+ * Slice of `source` from `start` (just past an opening `{`) to its balanced
+ * closing `}`. Good enough for validator registrations: none of the scanned
+ * sources put braces inside string literals.
  */
-const REGISTER_ALL_RE = /registerAll\(\s*'([^']+)'\s*,\s*\{([^}]*)\}/gs;
-const KEY_RE = /^\s*'([^']+)'\s*:|^\s*([\w/*]+)\s*:/gm;
+function balancedBody(source: string, start: number): string {
+  let depth = 1;
+  for (let i = start; i < source.length; i++) {
+    const ch = source[i];
+    if (ch === '{') depth++;
+    else if (ch === '}' && --depth === 0) return source.slice(start, i);
+  }
+  return source.slice(start);
+}
 
+/**
+ * Extract (nodeType, key[]) from a linterParser.ts source file. Finds each
+ * `validatorRegistry.registerAll('TypeName', { … })` call, captures the full
+ * balanced object literal, and reads only its top-level keys — nested option
+ * objects like `v.int('rings', { min: 1 })` are stripped first so keys
+ * declared after them are still seen.
+ */
 function extractRegisteredKeys(source: string): Array<{ nodeType: string; keys: string[] }> {
   const results: Array<{ nodeType: string; keys: string[] }> = [];
-  const blockRe = new RegExp(REGISTER_ALL_RE.source, 'gs');
-  let blockMatch: RegExpExecArray | null;
-  while ((blockMatch = blockRe.exec(source)) !== null) {
-    const nodeType = blockMatch[1]!;
-    const body = blockMatch[2]!;
+  const headRe = /registerAll\(\s*'([^']+)'\s*,\s*\{/g;
+  let head: RegExpExecArray | null;
+  while ((head = headRe.exec(source)) !== null) {
+    const nodeType = head[1]!;
+    let body = balancedBody(source, headRe.lastIndex);
+    // Repeatedly drop innermost object literals until only top-level keys remain.
+    for (let prev = ''; prev !== body; ) {
+      prev = body;
+      body = body.replace(/\{[^{}]*\}/g, '');
+    }
     const keys: string[] = [];
-    const keyRe = new RegExp(KEY_RE.source, 'gm');
+    const keyRe = /^\s*(?:'([^']+)'|([\w/*]+))\s*:/gm;
     let keyMatch: RegExpExecArray | null;
     while ((keyMatch = keyRe.exec(body)) !== null) {
       const key = keyMatch[1] ?? keyMatch[2];
@@ -137,6 +155,27 @@ function extractRegisteredKeys(source: string): Array<{ nodeType: string; keys: 
     results.push({ nodeType, keys });
   }
   return results;
+}
+
+/**
+ * The guard itself: every key a registration re-declares while its base chain
+ * already carries it is a violation, unless allowlisted as `Type:key`.
+ */
+function findShadowViolations(
+  registrations: Array<{ nodeType: string; keys: string[] }>,
+  inheritedKeysOf: (nodeType: string) => Set<string>,
+  intentionalOverrides: Set<string>
+): string[] {
+  const violations: string[] = [];
+  for (const { nodeType, keys } of registrations) {
+    const inherited = inheritedKeysOf(nodeType);
+    for (const key of keys) {
+      if (inherited.has(key) && !intentionalOverrides.has(`${nodeType}:${key}`)) {
+        violations.push(`'${nodeType}' re-declares '${key}' which is already in its base chain`);
+      }
+    }
+  }
+  return violations;
 }
 
 /** Collect all keys registered for a type by walking up its base chain. */
@@ -154,19 +193,52 @@ function baseChainKeys(nodeType: string): Set<string> {
 }
 
 describe('ValidatorRegistry meta-guard: no shadow copies', () => {
-  it('seeded duplicate key on a scratch registry is detected by the algorithm', () => {
-    // Prove the detection logic works before running the filesystem scan.
+  // A scratch chain where 'Child' inherits 'transform': proves the guard fires
+  // before trusting the filesystem scan's silence.
+  const scratchInherited = (nodeType: string): Set<string> =>
+    new Set(nodeType === 'Child' ? ['transform'] : []);
+
+  it('fails on a seeded duplicate key', () => {
     const source = `
       validatorRegistry.registerAll('Child', {
         transform: v.transform3d('transform'),
         own_prop: v.boolean('own_prop'),
       });
     `;
+    const violations = findShadowViolations(
+      extractRegisteredKeys(source),
+      scratchInherited,
+      new Set()
+    );
+    expect(violations).toHaveLength(1);
+    expect(violations[0]).toContain("'Child' re-declares 'transform'");
+  });
+
+  it('an INTENTIONAL_OVERRIDES entry suppresses the seeded violation', () => {
+    const source = `
+      validatorRegistry.registerAll('Child', {
+        transform: v.transform3d('transform'),
+      });
+    `;
+    const violations = findShadowViolations(
+      extractRegisteredKeys(source),
+      scratchInherited,
+      new Set(['Child:transform'])
+    );
+    expect(violations).toHaveLength(0);
+  });
+
+  it('sees keys declared after a nested option object', () => {
+    // The deleted shadow copies sat at the END of registrations that contain
+    // option objects — the extraction must not stop at the first nested `}`.
+    const source = `
+      validatorRegistry.registerAll('Child', {
+        rings: v.int('rings', { min: 1 }),
+        transform: v.transform3d('transform'),
+      });
+    `;
     const parsed = extractRegisteredKeys(source);
-    expect(parsed).toHaveLength(1);
-    expect(parsed[0]!.nodeType).toBe('Child');
-    expect(parsed[0]!.keys).toContain('transform');
-    expect(parsed[0]!.keys).toContain('own_prop');
+    expect(parsed[0]!.keys).toEqual(['rings', 'transform']);
   });
 
   it('no linterParser.ts re-declares a key that its base chain already registers', () => {
@@ -179,19 +251,12 @@ describe('ValidatorRegistry meta-guard: no shadow copies', () => {
 
     for (const file of files) {
       const source = readFileSync(file, 'utf8');
-      const registrations = extractRegisteredKeys(source);
-
-      for (const { nodeType, keys } of registrations) {
-        const inherited = baseChainKeys(nodeType);
-        for (const key of keys) {
-          const overrideId = `${nodeType}:${key}`;
-          if (inherited.has(key) && !INTENTIONAL_OVERRIDES.has(overrideId)) {
-            violations.push(
-              `${file}\n  → '${nodeType}' re-declares '${key}' which is already in its base chain`
-            );
-          }
-        }
-      }
+      const found = findShadowViolations(
+        extractRegisteredKeys(source),
+        baseChainKeys,
+        INTENTIONAL_OVERRIDES
+      );
+      violations.push(...found.map((v) => `${file}\n  → ${v}`));
     }
 
     if (violations.length > 0) {

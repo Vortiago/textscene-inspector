@@ -11,7 +11,8 @@ import * as THREE from 'three';
 import { createMaterialFromContent, isMaterialPath } from './materialProcessing';
 import { warn } from '../../logger';
 
-vi.mock('../../logger', () => ({
+vi.mock('../../logger', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../logger')>()),
   warn: vi.fn(),
   info: vi.fn(),
 }));
@@ -197,7 +198,7 @@ describe('createMaterialFromContent', () => {
       '[gd_resource type="StandardMaterial3D" format=3]\n'
     );
     expect(material).toBeInstanceOf(THREE.MeshStandardMaterial);
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining('no [resource] section'));
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('no [resource] properties'));
   });
 
   it('propagates .tres parse failures (missing header)', async () => {

@@ -32,10 +32,11 @@ export async function createMaterialFromContent(
   // Parse and create material based on type
   switch (resourceType) {
     case 'StandardMaterial3D': {
-      // A header-only .tres (no [resource] section) has no properties; warn and
-      // return the renderer's default material so the lenient path keeps going.
+      // A .tres with no [resource] properties (header-only, or an empty
+      // [resource] section) has nothing to map; warn and return the renderer's
+      // default material so the lenient path keeps going.
       if (Object.keys(properties).length === 0) {
-        warn('[material] StandardMaterial3D .tres has no [resource] section — using default material.');
+        warn('[material] StandardMaterial3D .tres has no [resource] properties — using default material.');
         return new THREE.MeshStandardMaterial();
       }
 
@@ -86,7 +87,7 @@ export async function createMaterialFromContent(
 
         for (const slot of textureSlots) {
           const propValue = properties[slot];
-          if (typeof propValue === 'string') {
+          if (propValue) {
             const texPath = resolveExtResourcePath(propValue, extResources);
             if (texPath) {
               texturePromises.push(
