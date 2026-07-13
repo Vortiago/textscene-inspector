@@ -36,7 +36,6 @@ import { fixtures } from './fixturesAll';
 import { FixtureTreeView } from './FixtureTree';
 import { corpusRootFor, fixtureUrlForRes } from './corpusRoot';
 import { WebResourceProvider } from './providers/WebResourceProvider';
-import { resolveForwardedContent } from './sourceGate';
 import {
   groupDiagnosticsByLine,
   summarizeDiagnostics,
@@ -45,12 +44,13 @@ import {
 } from './lineDiagnostics';
 import { SourceGutter } from './SourceGutter';
 import { pickTscnFile, matchResourceFiles } from './multiFileUpload';
+import { useSceneSource } from './useSceneSource';
+import { useFixtureSelection } from './useFixtureSelection';
 import styles from './r3f-main.module.css';
 
 /** Sentinel value used by `<ViewportSelector>` when no fixture is active (user is on an uploaded .tscn). */
 const NO_FIXTURE = '';
 
-const STORAGE_KEY = 'tscn-web-r3f-fixture';
 const SOURCE_PANE_STORAGE_KEY = 'tscn-web-source-pane';
 
 /** Pane edits reach the renderer only after this pause — never on the keystroke itself (ADR-0020). */
@@ -147,64 +147,23 @@ export function R3FApp() {
   // don't leak document listeners or setState on an unmounted component.
   useEffect(() => detachDragListeners, [detachDragListeners]);
 
-  const [fixtureFile, setFixtureFile] = useState<string>(() => {
-    try {
-      // Deep-link: `?fixture=<file>` opens directly on a specific scene
-      // (used by the showcase recorder to skip the default-fixture detour,
-      // and handy for sharing a link to a particular scene). Unlisted
-      // demo subscenes are accepted too — the selector only lists each
-      // demo's main scene, but every mirrored scene stays linkable. Games
-      // (on-demand corpus) get the same allowance for their unlisted subscenes.
-      const param = new URLSearchParams(window.location.search).get('fixture');
-      if (
-        param &&
-        (fixtures.some((f) => f.file === param) ||
-          param.startsWith('demos/') ||
-          param.startsWith('games/'))
-      ) {
-        return param;
-      }
-      return window.localStorage.getItem(STORAGE_KEY) ?? DEFAULT_FIXTURE;
-    } catch {
-      return DEFAULT_FIXTURE;
-    }
-  });
-
-  // #221: write `?fixture=` back on every scene switch — read-once at mount
-  // was the only direction before, so reloading or sharing the URL reopened
-  // whatever localStorage remembered, not the scene actually on screen.
-  // `replaceState` (never `pushState`): switching scenes is not a navigation
-  // the user expects Back to step through.
-  useEffect(() => {
-    try {
-      const url = new URL(window.location.href);
-      if (fixtureFile) {
-        url.searchParams.set('fixture', fixtureFile);
-      } else {
-        url.searchParams.delete('fixture');
-      }
-      window.history.replaceState(null, '', url);
-    } catch {
-      // Best-effort — an unsupported History API must never break the app.
-    }
-  }, [fixtureFile]);
-
-  const [buffer, setBuffer] = useState<string>('');
-  const [forwardedContent, setForwardedContent] = useState<string>('');
-  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  // Flips true when the user edits the pane after the current fixture load
-  // started — a resolving load must never stomp newer keystrokes.
-  const editedSinceLoadRef = useRef(false);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  // #221: true only while a fixture's `fetch()` is in flight — the fetch
-  // effect below had no pending state at all, so a slow load looked
-  // identical to a stuck app.
-  const [isFetchingFixture, setIsFetchingFixture] = useState(false);
   // When non-null, the user has loaded a TSCN file from their disk via
   // the toolbar's Upload button. We track the display name so the
   // toolbar can show what's active when the fixture dropdown is
   // deselected.
   const [uploadedTscnName, setUploadedTscnName] = useState<string | null>(null);
+
+  // useFixtureSelection owns: deep-link init, localStorage persistence, URL writeback.
+  const { fixtureFile, setFixtureFile } = useFixtureSelection({
+    fixtures,
+    defaultFixture: DEFAULT_FIXTURE,
+  });
+
+  // useSceneSource owns the hold-last-valid invariant's full span: fixture
+  // fetch + cancellation + editedSinceLoad tracking + debounced edit forward +
+  // authoritative replace (ADR-0020).
+  const { buffer, forwardedContent, isFetching: isFetchingFixture, loadError, onBufferChange: handleSourceChange, replace } =
+    useSceneSource({ fixtureFile, uploadedTscnName });
 
   // #221: drag-and-drop a .tscn (+ resource files) onto the page. A counter,
   // not a boolean, because dragenter/dragleave bubble from every descendant
@@ -283,71 +242,6 @@ export function R3FApp() {
     return fixtureOptions;
   }, [uploadedTscnName]);
 
-  // Authoritative source replacement (fixture clear, fetch resolve, upload):
-  // buffer and forwardedContent move together, superseding any pending
-  // debounced edit forward. The timer cancel matters on paths that do NOT
-  // re-run the fetch effect (e.g. re-uploading a same-named file — the
-  // effect's deps are unchanged); at the effect-driven sites it is a no-op
-  // because the effect cleanup has already cleared the timer.
-  function replaceSource(text: string) {
-    clearTimeout(timerRef.current);
-    setBuffer(text);
-    setForwardedContent(text);
-  }
-
-  useEffect(() => {
-    let cancelled = false;
-    // A source change supersedes any pending edit forward — cancel the
-    // debounce timer whenever the load changes (and on unmount).
-    const cleanup = () => {
-      cancelled = true;
-      clearTimeout(timerRef.current);
-    };
-    if (!fixtureFile) {
-      // The user is on an uploaded TSCN (`fixtureFile === ''`) — do not
-      // overwrite the buffer set by `handleTscnUpload`. Also skip
-      // when fixture is genuinely cleared with no upload.
-      if (!uploadedTscnName) {
-        replaceSource('');
-      }
-      return cleanup;
-    }
-    editedSinceLoadRef.current = false;
-    setLoadError(null);
-    setIsFetchingFixture(true);
-    fetch(`/fixtures/${fixtureFile}`)
-      .then((r) => {
-        if (!r.ok) {
-          throw new Error(`Failed to load fixture: ${r.statusText}`);
-        }
-        return r.text();
-      })
-      .then((text) => {
-        if (cancelled || editedSinceLoadRef.current) return;
-        // Forward fetched text ungated (like upload): a zero-node fixture
-        // must surface the shell's parse-error banner, not silently hold the
-        // previous render — hold-last-valid applies to the edit loop only.
-        replaceSource(text);
-        try {
-          window.localStorage.setItem(STORAGE_KEY, fixtureFile);
-        } catch {
-          // Best-effort.
-        }
-      })
-      .catch((err: unknown) => {
-        if (cancelled || editedSinceLoadRef.current) return;
-        const message = err instanceof Error ? err.message : String(err);
-        setLoadError(message);
-        setBuffer('');
-        // forwardedContent unchanged — hold last valid render on fetch failure
-      })
-      .finally(() => {
-        if (cancelled) return;
-        setIsFetchingFixture(false);
-      });
-    return cleanup;
-  }, [fixtureFile, uploadedTscnName]);
-
   function handleFixtureChange(newFixture: string) {
     // Switching to a fixture replaces any user-loaded TSCN content.
     setUploadedTscnName(null);
@@ -362,15 +256,21 @@ export function R3FApp() {
   }
 
   function handleTscnUpload(file: File, text: string) {
-    setLoadError(null);
     setFixtureFile(NO_FIXTURE);
     setUploadedTscnName(file.name);
-    replaceSource(text);
+    replace(text);
   }
 
   function handleTscnUploadError(message: string) {
-    setLoadError(message);
+    // loadError is owned by useSceneSource; surface it via replace-cycle is
+    // not possible here. We set it through the shared prop instead.
+    // The existing approach routes error display through the Toolbar's
+    // `loadError` prop — keep that wiring by using a local error state for
+    // upload errors (distinct from fetch errors which useSceneSource owns).
+    setUploadError(message);
   }
+
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   function handleResourceUpload(path: string, file: File) {
     provider.addUploadedFile(path, file);
@@ -385,7 +285,7 @@ export function R3FApp() {
   async function handleFilesUpload(files: readonly File[]) {
     const tscnFile = pickTscnFile(files);
     if (!tscnFile) {
-      setLoadError('No .tscn file found among the dropped/selected files.');
+      setUploadError('No .tscn file found among the dropped/selected files.');
       return;
     }
     let text: string;
@@ -396,6 +296,7 @@ export function R3FApp() {
       handleTscnUploadError(`Failed to read TSCN file: ${message}`);
       return;
     }
+    setUploadError(null);
     handleTscnUpload(tscnFile, text);
 
     const others = files.filter((f) => f !== tscnFile);
@@ -432,16 +333,9 @@ export function R3FApp() {
 
   function handleBufferChange(e: ChangeEvent<HTMLTextAreaElement>) {
     const newValue = e.target.value;
-    setBuffer(newValue);
-    editedSinceLoadRef.current = true;
-    // The user has taken over from the load — a fetch error no longer
-    // describes what the pane holds.
-    setLoadError(null);
-
-    clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => {
-      setForwardedContent((prev) => resolveForwardedContent(newValue, prev));
-    }, DEBOUNCE_MS);
+    // Clear any upload-level error when the user starts editing.
+    setUploadError(null);
+    handleSourceChange(newValue);
   }
 
   function handleResourceRemove(path: string) {
@@ -475,17 +369,23 @@ export function R3FApp() {
     }
   }
 
+  // The effective error shown in the toolbar is the fetch error (from
+  // useSceneSource) or an upload-level error, whichever is most recent.
+  // loadError from useSceneSource is cleared by edits; uploadError is
+  // cleared by a successful upload or a new edit.
+  const effectiveLoadError = loadError ?? uploadError;
+
   // #203: nothing has EVER rendered (forwardedContent stays '' once a valid
   // render has occurred — hold-last-valid never reverts it) AND the current
   // buffer isn't blank either — so the user pasted/typed something that
   // simply doesn't parse. The shell's own content==='' state ("Loading
   // scene…") would otherwise look identical to a genuinely empty pane, so
   // this notice — outside the (unmodified) shared shell — fills that gap.
-  // `!loadError` keeps this mutually exclusive with the toolbar's own
+  // `!effectiveLoadError` keeps this mutually exclusive with the toolbar's own
   // role="alert" banner by construction, not by relying on every call site
   // that sets one to also clear the other.
   const showUnrenderableNotice =
-    !loadError && forwardedContent.trim().length === 0 && buffer.trim().length > 0;
+    !effectiveLoadError && forwardedContent.trim().length === 0 && buffer.trim().length > 0;
 
   return (
     <ResourceLoaderProvider loader={loader}>
@@ -572,7 +472,7 @@ export function R3FApp() {
                 options={options}
                 fixtureFile={fixtureFile}
                 uploadedTscnName={uploadedTscnName}
-                loadError={loadError}
+                loadError={effectiveLoadError}
                 onFixtureChange={handleFixtureChange}
                 onFilesSelected={handleFilesUpload}
                 paneVisible={sourcePane.visible}
@@ -599,8 +499,8 @@ export function R3FApp() {
                 role="alert"
                 className={styles.unrenderableNotice}
               >
-                <strong>Nothing has rendered yet.</strong> The pasted/typed content doesn’t parse
-                as a valid .tscn scene — fix the errors marked in the Source pane’s gutter to see
+                <strong>Nothing has rendered yet.</strong> The pasted/typed content doesn't parse
+                as a valid .tscn scene — fix the errors marked in the Source pane's gutter to see
                 a preview.
               </div>
             )
