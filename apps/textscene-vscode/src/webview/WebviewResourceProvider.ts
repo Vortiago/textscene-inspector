@@ -74,5 +74,4 @@ export class WebviewResourceProvider implements ResourceProvider {
       } satisfies WebviewToHostMessage);
     });
   }
-
 }

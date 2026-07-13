@@ -82,5 +82,4 @@ export class WebResourceProvider implements ResourceProvider {
     // Resource not available - will trigger onResourceNeeded callback
     throw new Error(`Resource not found: ${path}`);
   }
-
 }

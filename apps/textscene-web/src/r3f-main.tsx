@@ -22,7 +22,6 @@ import {
   type DragEvent as ReactDragEvent,
   type MouseEvent as ReactMouseEvent,
 } from 'react';
-import { useCorpusRoot } from './useCorpusRoot';
 import { createRoot } from 'react-dom/client';
 import {
   createResourcePipeline,
@@ -36,6 +35,7 @@ import { Linter, type Diagnostic } from '@textscene/core/linter';
 import { fixtures } from './fixturesAll';
 import { FixtureTreeView } from './FixtureTree';
 import { corpusRootFor } from './corpusRoot';
+import { useCorpusRoot } from './useCorpusRoot';
 import { WebResourceProvider } from './providers/WebResourceProvider';
 import {
   groupDiagnosticsByLine,
@@ -202,20 +202,15 @@ export function R3FApp() {
   // the lifetime of the app; React component identity preserves them
   // across fixture switches so an already-uploaded texture survives a
   // fixture reload.
-  const { provider, loader } = useMemo(
-    () => createResourcePipeline(new WebResourceProvider()),
-    []
-  );
+  const pipeline = useMemo(() => createResourcePipeline(new WebResourceProvider()), []);
+  const { provider, loader } = pipeline;
 
   // Each vendored demo project keeps its own res:// namespace; the active
   // fixture's `root` scopes the provider's lookups to that subtree. Declared
   // BEFORE the content-fetch effect so the root is in place by the time the
   // newly-mounted scene starts requesting resources.
   const resourceRoot = useMemo(() => corpusRootFor(fixtureFile, fixtures), [fixtureFile]);
-
-  // useCorpusRoot owns the full three-step root-switch sequence:
-  // setResourceRoot + THREE URL modifier + clearCaches on change.
-  useCorpusRoot({ provider, loader }, resourceRoot);
+  useCorpusRoot(pipeline, resourceRoot);
 
   const options = useMemo<ViewportSelectorOption[]>(() => {
     const fixtureOptions: ViewportSelectorOption[] = fixtures.map((f) => ({

@@ -317,5 +317,4 @@ describe('WebviewResourceProvider', () => {
       expect(result3).toBe('ok2');
     });
   });
-
 });

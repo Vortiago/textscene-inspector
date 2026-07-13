@@ -4,42 +4,31 @@
  */
 // @vitest-environment happy-dom
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { useCorpusRoot } from './useCorpusRoot';
 import type { ResourcePipeline } from '@textscene/core';
 import type { WebResourceProvider } from './providers/WebResourceProvider';
 
-function makePipeline(overrides?: Partial<{
-  setResourceRoot: (root: string) => void;
-  setURLModifier: (fn: (url: string) => string) => void;
-  clearCaches: () => void;
-}>): ResourcePipeline<WebResourceProvider> {
-  const setURLModifier = overrides?.setURLModifier ?? vi.fn();
-  return {
-    provider: {
-      setResourceRoot: overrides?.setResourceRoot ?? vi.fn(),
-      loadResource: vi.fn(),
-      addUploadedFile: vi.fn(),
-      removeUploadedFile: vi.fn(),
-    } as unknown as WebResourceProvider,
+function makePipeline() {
+  const setResourceRoot = vi.fn<(root: string) => void>();
+  const setURLModifier = vi.fn<(modify: (url: string) => string) => void>();
+  const clearCaches = vi.fn<() => void>();
+  const pipeline: ResourcePipeline<WebResourceProvider> = {
+    provider: { setResourceRoot } as unknown as WebResourceProvider,
     loader: {
-      clearCaches: overrides?.clearCaches ?? vi.fn(),
+      clearCaches,
       eventBus: {
         getThreeManager: () => ({ setURLModifier }),
       },
     } as unknown as ResourcePipeline<WebResourceProvider>['loader'],
   };
+  return { pipeline, setResourceRoot, setURLModifier, clearCaches };
 }
 
 describe('useCorpusRoot', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it('calls setResourceRoot with the initial root on mount', () => {
-    const setResourceRoot = vi.fn();
-    const pipeline = makePipeline({ setResourceRoot });
+    const { pipeline, setResourceRoot } = makePipeline();
 
     renderHook(() => useCorpusRoot(pipeline, 'demos/2d/platformer'));
 
@@ -47,8 +36,7 @@ describe('useCorpusRoot', () => {
   });
 
   it('installs a THREE URL modifier on mount', () => {
-    const setURLModifier = vi.fn();
-    const pipeline = makePipeline({ setURLModifier });
+    const { pipeline, setURLModifier } = makePipeline();
 
     renderHook(() => useCorpusRoot(pipeline, ''));
 
@@ -56,8 +44,7 @@ describe('useCorpusRoot', () => {
   });
 
   it('does NOT call clearCaches on the initial mount', () => {
-    const clearCaches = vi.fn();
-    const pipeline = makePipeline({ clearCaches });
+    const { pipeline, clearCaches } = makePipeline();
 
     renderHook(() => useCorpusRoot(pipeline, 'demos/2d/platformer'));
 
@@ -65,8 +52,7 @@ describe('useCorpusRoot', () => {
   });
 
   it('calls clearCaches exactly once when the root changes', () => {
-    const clearCaches = vi.fn();
-    const pipeline = makePipeline({ clearCaches });
+    const { pipeline, clearCaches } = makePipeline();
 
     const { rerender } = renderHook(
       ({ root }: { root: string }) => useCorpusRoot(pipeline, root),
@@ -79,8 +65,7 @@ describe('useCorpusRoot', () => {
   });
 
   it('does NOT call clearCaches when re-rendered with the same root', () => {
-    const clearCaches = vi.fn();
-    const pipeline = makePipeline({ clearCaches });
+    const { pipeline, clearCaches } = makePipeline();
 
     const { rerender } = renderHook(
       ({ root }: { root: string }) => useCorpusRoot(pipeline, root),
@@ -93,8 +78,7 @@ describe('useCorpusRoot', () => {
   });
 
   it('updates setResourceRoot when the root changes', () => {
-    const setResourceRoot = vi.fn();
-    const pipeline = makePipeline({ setResourceRoot });
+    const { pipeline, setResourceRoot } = makePipeline();
 
     const { rerender } = renderHook(
       ({ root }: { root: string }) => useCorpusRoot(pipeline, root),
@@ -107,32 +91,38 @@ describe('useCorpusRoot', () => {
   });
 
   it('maps res:// URLs to /fixtures/ via the URL modifier using the active root', () => {
-    let capturedModifier: ((url: string) => string) | undefined;
-    const setURLModifier = vi.fn((fn: (url: string) => string) => {
-      capturedModifier = fn;
-    });
-    const pipeline = makePipeline({ setURLModifier });
+    const { pipeline, setURLModifier } = makePipeline();
 
-    renderHook(
-      ({ root }: { root: string }) => useCorpusRoot(pipeline, root),
-      { initialProps: { root: 'demos/2d/platformer' } }
-    );
+    renderHook(() => useCorpusRoot(pipeline, 'demos/2d/platformer'));
 
-    expect(capturedModifier).toBeDefined();
-    expect(capturedModifier!('res://textures/player.png')).toBe(
+    const modifier = setURLModifier.mock.lastCall![0];
+    expect(modifier('res://textures/player.png')).toBe(
       '/fixtures/demos/2d/platformer/textures/player.png'
     );
   });
 
+  it('remaps res:// URLs with the new root after a root change', () => {
+    const { pipeline, setURLModifier } = makePipeline();
+
+    const { rerender } = renderHook(
+      ({ root }: { root: string }) => useCorpusRoot(pipeline, root),
+      { initialProps: { root: 'demos/2d/platformer' } }
+    );
+
+    rerender({ root: 'demos/3d/fps' });
+
+    const modifier = setURLModifier.mock.lastCall![0];
+    expect(modifier('res://textures/player.png')).toBe(
+      '/fixtures/demos/3d/fps/textures/player.png'
+    );
+  });
+
   it('passes non-res:// URLs through the URL modifier unchanged', () => {
-    let capturedModifier: ((url: string) => string) | undefined;
-    const setURLModifier = vi.fn((fn: (url: string) => string) => {
-      capturedModifier = fn;
-    });
-    const pipeline = makePipeline({ setURLModifier });
+    const { pipeline, setURLModifier } = makePipeline();
 
     renderHook(() => useCorpusRoot(pipeline, ''));
 
-    expect(capturedModifier!('blob:http://localhost/abc')).toBe('blob:http://localhost/abc');
+    const modifier = setURLModifier.mock.lastCall![0];
+    expect(modifier('blob:http://localhost/abc')).toBe('blob:http://localhost/abc');
   });
 });
