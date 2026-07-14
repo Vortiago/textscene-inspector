@@ -9,6 +9,7 @@ import type { HostToWebviewMessage, WebviewToHostMessage } from './protocol';
 import { VSCodeResourceProvider } from './providers/VSCodeResourceProvider';
 import { findNodeHeadingLine } from './nodeHeadingResolver';
 import * as logger from './logger';
+import { encodeResourceResponse } from './wireCodec';
 
 // ============================================================================
 // Dispatch table
@@ -348,28 +349,12 @@ export class TscnPreviewPanel {
       }
 
       const content = await provider.loadResource(resourcePath, resourceType);
-
-      // Convert ArrayBuffer to base64 for binary data
-      let responseContent: string;
-      if (content instanceof ArrayBuffer) {
-        const bytes = new Uint8Array(content);
-        // Convert to base64 in chunks to avoid stack overflow with large files
-        const chunkSize = 8192; // Process 8KB at a time
-        let binaryString = '';
-        for (let i = 0; i < bytes.length; i += chunkSize) {
-          const chunk = bytes.subarray(i, Math.min(i + chunkSize, bytes.length));
-          binaryString += String.fromCharCode(...chunk);
-        }
-        responseContent = btoa(binaryString);
-      } else {
-        responseContent = content;
-      }
+      const payload = encodeResourceResponse(content);
 
       this._postMessageToWebview({
         type: 'resourceLoaded',
         requestId,
-        content: responseContent,
-        isBinary: content instanceof ArrayBuffer,
+        ...payload,
       });
     } catch (error) {
       this._postMessageToWebview({
