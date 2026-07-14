@@ -20,10 +20,11 @@ export function setupTestWorkspace(workspaceRoot: string): void {
   }
   mkdirSync(workspaceRoot, { recursive: true });
 
-  // Paths relative to the project root
-  // __dirname points to out/test/integration after tsc compile
-  // Go up: integration -> test -> out -> vscode root -> apps -> repo root
-  const projectRoot = join(__dirname, '../../../../..');
+  // Derive the repo root from the workspace path, not from __dirname: this
+  // module is inlined into whichever test bundle imports it, so __dirname
+  // would point at the importer's output directory, not this file's.
+  // workspaceRoot is <repo>/apps/textscene-vscode/.test-workspace.
+  const projectRoot = join(workspaceRoot, '../../..');
   const scenesRoot = join(projectRoot, 'scenes');
   const fixturesSource = join(scenesRoot, 'fixtures');
   const examplesSource = join(scenesRoot, 'examples');
