@@ -19,6 +19,11 @@
  *     consecutive captures before it is compared or accepted as a
  *     baseline. A scene that never settles FAILS as unstable; flakiness
  *     is rejected here, not absorbed by tolerance.
+ *   - `-selected` scenes click their tree row only AFTER CameraFit's
+ *     load-time fit timers (last at 1100ms) have provably fired. Selection
+ *     never moves the camera (by design), so this pins every capture to
+ *     the single tight, pre-selection framing equilibrium regardless of
+ *     host load (issue #243's two-equilibria race).
  *
  * On failure, <name>.actual.png and <name>.diff.png land in
  * scripts/visual/output/ (gitignored; uploaded as a CI artifact).
@@ -61,6 +66,11 @@ const SOURCE_PANE_STORAGE_KEY = 'tscn-web-source-pane';
 const SETTLE_INITIAL_MS = 1200; // covers the last CameraFit reframe at 1100 ms
 const SETTLE_INTERVAL_MS = 350;
 const SETTLE_MAX_ATTEMPTS = 12;
+
+// Strictly greater than CameraFit's last load-time fit timer (1100ms after
+// the scene mounts), with a comfortable margin for render-loop latency under
+// host contention. See the wait in `captureScene`.
+const PRE_SELECT_FIT_QUIESCENCE_MS = 1500;
 
 function parseArgs(argv) {
   const opts = { update: false, scene: null };
@@ -198,6 +208,18 @@ async function captureScene(page, baseUrl, scene) {
     } catch {
       return { buffer: null, reason: `select target not found in tree: ${scene.select}` };
     }
+    // Click only after CameraFit's load-time fit timers (150/500/1100ms after
+    // the scene mounts) have ALL fired. Selection never moves the camera (by
+    // design — see CameraFit in packages/textscene-core/src/r3f/TscnCanvas.tsx),
+    // so a click that lands BEFORE the 1100ms timer lets that timer see the
+    // just-mounted gizmo and widen the frame, while a click AFTER it leaves
+    // the tight pre-selection framing — two individually stable equilibria
+    // whose winner depends on host load (issue #243). The tree row's presence
+    // above is our scene-ready signal: rows render from the same scene-graph
+    // state whose arrival starts CameraFit's timers, so waiting comfortably
+    // past the last timer from here guarantees the timers are spent and pins
+    // every `-selected` capture to the single tight equilibrium.
+    await page.waitForTimeout(PRE_SELECT_FIT_QUIESCENCE_MS);
     await row.click();
     // `.click()` moves the mouse over the row first, which fires a real
     // `mouseenter` and leaves that row's hover-highlight engaged (since the
