@@ -122,10 +122,10 @@ pnpm test:integration:debug
       "name": "Debug Integration Tests",
       "type": "node",
       "request": "launch",
-      "program": "${workspaceFolder}/apps/textscene-vscode/out/test/integration/runTests.js",
+      "program": "${workspaceFolder}/apps/textscene-vscode/dist/test/integration/runTests.js",
       "cwd": "${workspaceFolder}/apps/textscene-vscode",
       "preLaunchTask": "npm: build",
-      "outFiles": ["${workspaceFolder}/apps/textscene-vscode/out/**/*.js"]
+      "outFiles": ["${workspaceFolder}/apps/textscene-vscode/dist/**/*.js"]
     }
   ]
 }

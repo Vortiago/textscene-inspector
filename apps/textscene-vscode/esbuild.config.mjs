@@ -10,6 +10,7 @@
 import * as esbuild from 'esbuild';
 import { rm, writeFile } from 'node:fs/promises';
 import cssModulesPlugin from 'esbuild-css-modules-plugin';
+import { globSync } from 'glob';
 
 const production = process.argv.includes('--production');
 const watch = process.argv.includes('--watch');
@@ -109,14 +110,25 @@ const webviewOptions = {
 };
 
 /**
+ * Integration-test build.
+ *
+ * The extension host loads these files by PATH at runtime (runTests spawns
+ * Electron pointing at suite/index, which then globs `**\/*.test.js` next to
+ * itself), so every runtime-loaded file must be its own entry point. The
+ * `*.test.ts` entries are globbed rather than listed so a new suite file is
+ * picked up automatically. Everything they import — including the real
+ * `TscnPreviewPanel` and `@textscene/core` — is BUNDLED: `@textscene/core`'s
+ * dist is bundler-only ESM (extensionless relative imports), so Node's own
+ * resolver cannot load it from a plain tsc-compiled CJS tree; esbuild
+ * resolves it exactly like the production extension bundle does.
+ *
  * @type {esbuild.BuildOptions}
  */
 const testOptions = {
   entryPoints: [
     'src/test/integration/runTests.ts',
-    'src/test/integration/setupWorkspace.ts',
     'src/test/integration/suite/index.ts',
-    'src/test/integration/suite/extension.test.ts',
+    ...globSync('src/test/integration/suite/*.test.ts'),
   ],
   bundle: true,
   outdir: 'dist',
