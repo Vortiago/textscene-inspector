@@ -144,6 +144,9 @@ importers:
       '@textscene/core':
         specifier: workspace:*
         version: link:../../packages/textscene-core
+      '@textscene/dev-kit':
+        specifier: workspace:*
+        version: link:../../packages/textscene-dev-kit
       '@types/node':
         specifier: 'catalog:'
         version: 22.18.12
@@ -172,6 +175,9 @@ importers:
         specifier: 'catalog:'
         version: 19.2.6(react@19.2.6)
     devDependencies:
+      '@textscene/dev-kit':
+        specifier: workspace:*
+        version: link:../../packages/textscene-dev-kit
       '@types/mocha':
         specifier: ^10.0.10
         version: 10.0.10
@@ -297,6 +303,9 @@ importers:
       '@testing-library/user-event':
         specifier: 'catalog:'
         version: 14.6.1(@testing-library/dom@10.4.1)
+      '@textscene/dev-kit':
+        specifier: workspace:*
+        version: link:../textscene-dev-kit
       '@types/node':
         specifier: 'catalog:'
         version: 22.18.12
@@ -312,6 +321,21 @@ importers:
       jsdom:
         specifier: 'catalog:'
         version: 29.1.1
+      rimraf:
+        specifier: 'catalog:'
+        version: 6.0.1
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.6(@types/node@22.18.12)(@vitest/coverage-v8@4.1.6)(@vitest/ui@4.1.6)(happy-dom@20.0.10)(jsdom@29.1.1)(vite@6.4.1(@types/node@22.18.12)(lightningcss@1.32.0)(yaml@2.8.1))
+
+  packages/textscene-dev-kit:
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 22.18.12
       rimraf:
         specifier: 'catalog:'
         version: 6.0.1
@@ -3503,10 +3527,6 @@ packages:
 
   tinybench@2.9.0:
     resolution: {integrity: sha512-0+DUvqWMValLmha6lr4kD8iAMK1HzV0/aKnCtWb9v9641TnP/MFb7Pc2bxoxQjTXAErryXVgUOfv2YqNllqGeg==}
-
-  tinyexec@1.1.2:
-    resolution: {integrity: sha512-dAqSqE/RabpBKI8+h26GfLq6Vb3JVXs30XYQjdMjaj/c2tS8IYYMbIzP599KtRj7c57/wYApb3QjgRgXmrCukA==}
-    engines: {node: '>=18'}
 
   tinyexec@1.2.4:
     resolution: {integrity: sha512-SHf/r48b7vOrjve9PxJo3MN5v5yuyjHvdUcrQffT3WXMUfnGmHDVbC4k3sHJaJTgZCwpUplIaAo5ANtMyp3YHg==}
@@ -7273,8 +7293,6 @@ snapshots:
 
   tinybench@2.9.0: {}
 
-  tinyexec@1.1.2: {}
-
   tinyexec@1.2.4: {}
 
   tinyglobby@0.2.15:
@@ -7460,7 +7478,7 @@ snapshots:
       picomatch: 4.0.3
       std-env: 4.1.0
       tinybench: 2.9.0
-      tinyexec: 1.1.2
+      tinyexec: 1.2.4
       tinyglobby: 0.2.15
       tinyrainbow: 3.1.0
       vite: 6.4.1(@types/node@22.18.12)(lightningcss@1.32.0)(yaml@2.8.1)
@@ -7491,7 +7509,7 @@ snapshots:
       picomatch: 4.0.3
       std-env: 4.1.0
       tinybench: 2.9.0
-      tinyexec: 1.1.2
+      tinyexec: 1.2.4
       tinyglobby: 0.2.15
       tinyrainbow: 3.1.0
       vite: 6.4.1(@types/node@22.18.12)(lightningcss@1.32.0)(yaml@2.8.1)
@@ -7522,7 +7540,7 @@ snapshots:
       picomatch: 4.0.3
       std-env: 4.1.0
       tinybench: 2.9.0
-      tinyexec: 1.1.2
+      tinyexec: 1.2.4
       tinyglobby: 0.2.15
       tinyrainbow: 3.1.0
       vite: 6.4.1(@types/node@24.10.0)(lightningcss@1.32.0)(yaml@2.8.1)
