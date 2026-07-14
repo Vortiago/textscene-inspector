@@ -11,10 +11,9 @@
  *    scene's direct ExtResources AND the caller-supplied set of currently-
  *    missing `res://` paths, so repeated drops can fulfill a sub-scene's own
  *    dependencies.
- * 3. No-`.tscn` batch: when there are no `.tscn` files the caller should
- *    attempt to fulfill missing rows directly instead of erroring.
+ * 3. No-`.tscn` batch: the caller passes `tscnText: null` to match purely
+ *    against the missing paths, fulfilling missing rows instead of erroring.
  */
-import { info } from '@textscene/core/logger';
 import { TscnParser } from '@textscene/core';
 
 /** A non-`.tscn` file matched to the `res://` path it fulfills. */
@@ -34,16 +33,17 @@ export interface AmbiguousMatch {
 export interface MatchResult {
   /** Files that were matched to a `res://` path. */
   matches: ResourceFileMatch[];
-  /** Files that matched multiple candidates (logged as a warning). First candidate used. */
+  /** Files that matched multiple candidates (for the caller to log). First candidate used. */
   ambiguousMatches: AmbiguousMatch[];
   /** Files that matched nothing — ignored per contract. */
   unmatched: File[];
 }
 
-/** Result of `pickRootMostTscn`. */
+/** Result of `pickRootMostTscn`: the picked file with its already-read text. */
 export interface RootMostTscnResult {
   file: File;
-  /** True when the pick was ambiguous (tie or cycle) and fell back to first. */
+  text: string;
+  /** True when the pick was ambiguous (tie or cycle) and fell back to the first candidate — for the caller to log. */
   ambiguous: boolean;
 }
 
@@ -53,15 +53,11 @@ function basename(path: string): string {
   return idx === -1 ? path : path.slice(idx + 1);
 }
 
-/** The first `.tscn` file among `files` (case-insensitive extension), or `undefined` if none. */
-export function pickTscnFile(files: readonly File[]): File | undefined {
-  return files.find((f) => f.name.toLowerCase().endsWith('.tscn'));
-}
-
 /**
  * Picks the root-most `.tscn` from a batch: the file whose basename no other
- * file in the batch references. Tie or cycle falls back to the first file,
- * with `ambiguous: true`.
+ * file in the batch references. A tie (several unreferenced scenes) picks the
+ * first of them; a cycle (every scene referenced by another) picks the first
+ * file overall — both flagged `ambiguous: true`.
  *
  * `filesWithText` must contain all `.tscn` files in the batch with their
  * already-read text content.
@@ -74,7 +70,7 @@ export function pickRootMostTscn(
   }
   const first = filesWithText[0]!;
   if (filesWithText.length === 1) {
-    return { file: first.file, ambiguous: false };
+    return { ...first, ambiguous: false };
   }
 
   // Collect all basenames of .tscn files referenced across every file in the batch.
@@ -92,20 +88,14 @@ export function pickRootMostTscn(
     }
   }
 
-  // Root-most: a tscn whose basename no other tscn in the batch references.
-  const rootMost = filesWithText.find(
+  // Root-most candidates: tscns whose basename no other tscn in the batch references.
+  const candidates = filesWithText.filter(
     ({ file }) => !referencedBasenames.has(file.name.toLowerCase())
   );
-
-  if (rootMost) {
-    return { file: rootMost.file, ambiguous: false };
+  if (candidates.length === 1) {
+    return { ...candidates[0]!, ambiguous: false };
   }
-
-  // Tie or cycle — fall back to first.
-  info(
-    '[MultiFileUpload] Ambiguous root-most pick: all dropped .tscn files reference each other or form a cycle; falling back to first.'
-  );
-  return { file: first.file, ambiguous: true };
+  return { ...(candidates[0] ?? first), ambiguous: true };
 }
 
 /**
@@ -113,6 +103,8 @@ export function pickRootMostTscn(
  *
  * Matching priority:
  * 1. Direct ExtResource reference in `tscnText` (scene's own dependencies).
+ *    Pass `null` when the batch carries no scene — matching then runs purely
+ *    against `missingPaths`.
  * 2. Currently-missing `res://` paths in `missingPaths` (fulfills a sub-scene's
  *    dependencies on repeated drops).
  *
@@ -121,7 +113,7 @@ export function pickRootMostTscn(
  * Files matching nothing are collected in `unmatched`.
  */
 export function matchResourceFiles(
-  tscnText: string,
+  tscnText: string | null,
   others: readonly File[],
   missingPaths: ReadonlySet<string>
 ): MatchResult {
@@ -129,7 +121,9 @@ export function matchResourceFiles(
     return { matches: [], ambiguousMatches: [], unmatched: [] };
   }
 
-  const { externalResources } = new TscnParser().parse(tscnText);
+  const externalResources =
+    tscnText === null ? [] : new TscnParser().parse(tscnText).externalResources;
+  const missingList = Array.from(missingPaths);
 
   const matches: ResourceFileMatch[] = [];
   const ambiguousMatches: AmbiguousMatch[] = [];
@@ -154,7 +148,7 @@ export function matchResourceFiles(
     }
 
     // Priority 2: missing-path match.
-    const missingCandidates = Array.from(missingPaths).filter(
+    const missingCandidates = missingList.filter(
       (p) => basename(p).toLowerCase() === nameLower
     );
     if (missingCandidates.length > 0) {

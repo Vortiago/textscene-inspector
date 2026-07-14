@@ -14,9 +14,28 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 
+// Under happy-dom nothing mounts inside the Canvas, so no `useResource()`
+// call ever reports a missing path. Tests that need missing rows inject them
+// through this hoisted override — the Toolbar mirrors whatever
+// `useMissingResources()` returns into `missingPathsRef`, which is exactly
+// the seam `handleFilesUpload` reads.
+const missingPathsOverride = vi.hoisted(() => ({
+  current: null as ReadonlySet<string> | null,
+}));
+
 vi.mock('@textscene/core', async () => {
   const real = await vi.importActual<typeof import('@textscene/core')>('@textscene/core');
-  return { ...real, TscnCanvas: () => null, TscnSceneContents: () => null };
+  return {
+    ...real,
+    TscnCanvas: () => null,
+    TscnSceneContents: () => null,
+    useMissingResources: () => {
+      const value = real.useMissingResources();
+      return missingPathsOverride.current
+        ? { ...value, missingPaths: missingPathsOverride.current }
+        : value;
+    },
+  };
 });
 
 import { R3FApp } from './r3f-main';
@@ -86,6 +105,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  missingPathsOverride.current = null;
   vi.restoreAllMocks();
 });
 
@@ -171,6 +191,28 @@ describe('root-most scene pick (acceptance criteria)', () => {
 });
 
 describe('no-.tscn drop fulfills missing rows', () => {
+  it('fulfills a missing row on a texture-only drop (sub-scene dependency arriving later)', async () => {
+    const addUploadedFileSpy = vi.spyOn(WebResourceProvider.prototype, 'addUploadedFile');
+
+    // The loaded scene's sub-scene reported this texture missing.
+    missingPathsOverride.current = new Set(['res://textures/child_tex.png']);
+
+    render(<R3FApp />);
+    await waitForScene();
+
+    const textureFile = new File(['bytes'], 'child_tex.png', { type: 'image/png' });
+    await act(async () => {
+      dropFiles([textureFile]);
+    });
+
+    await waitFor(() => {
+      expect(addUploadedFileSpy).toHaveBeenCalledWith('res://textures/child_tex.png', textureFile);
+    });
+    // Fulfilled, not errored — and the active scene is untouched.
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByText('StubRoot')).toBeTruthy();
+  });
+
   it('surfaces the no-match error when dropping a texture with no missing rows', async () => {
     render(<R3FApp />);
     await waitForScene();

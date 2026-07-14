@@ -46,7 +46,7 @@ import {
 } from './lineDiagnostics';
 import { SourceGutter } from './SourceGutter';
 import { info, warn } from '@textscene/core/logger';
-import { pickRootMostTscn, matchResourceFiles } from './multiFileUpload';
+import { pickRootMostTscn, matchResourceFiles, type MatchResult } from './multiFileUpload';
 import { useSceneSource, DEBOUNCE_MS } from './useSceneSource';
 import { useFixtureSelection } from './useFixtureSelection';
 import styles from './r3f-main.module.css';
@@ -177,10 +177,10 @@ export function R3FApp() {
   const dragCounterRef = useRef(0);
   const [dragActive, setDragActive] = useState(false);
 
-  // Stable ref that Toolbar writes on every missingPaths change. This lets the
-  // drop handler (which lives outside MissingResourcesProvider) read the latest
-  // missing set without lifting MissingResourcesProvider above TscnPreviewShell
-  // or re-rendering R3FApp on each missing-path change.
+  // Stable ref that Toolbar writes on every missingPaths change. This lets
+  // handleFilesUpload (defined outside MissingResourcesProvider) read the
+  // latest missing set without lifting MissingResourcesProvider above
+  // TscnPreviewShell or re-rendering R3FApp on each missing-path change.
   const missingPathsRef = useRef<ReadonlySet<string>>(new Set());
 
   // #202: lint the buffer continuously, debounced at the same cadence as
@@ -270,77 +270,9 @@ export function R3FApp() {
     loader.provideFile(path);
   }
 
-  // Shared entry point for BOTH drag-and-drop and the toolbar's (now
-  // multi-select) file input, implementing the Multi-file matching contract:
-  //
-  // 1. Root-most scene pick: the .tscn whose basename no other dropped .tscn
-  //    references becomes the active scene; tie/cycle falls back to first.
-  // 2. Missing-list matching: every other file is matched against the picked
-  //    scene's ExtResources AND the caller-supplied missing paths, so a
-  //    sub-scene's own dependencies arrive by repeated drops.
-  // 3. No-.tscn drop: when there are no .tscn files, attempt to fulfill the
-  //    missing paths directly instead of surfacing an error.
-  async function handleFilesUpload(files: readonly File[], missingPaths: ReadonlySet<string>) {
-    const tscnFiles = files.filter((f) => f.name.toLowerCase().endsWith('.tscn'));
-
-    if (tscnFiles.length === 0) {
-      // No .tscn — attempt to fulfill missing rows by matching against missingPaths.
-      if (missingPaths.size === 0) {
-        setUploadError('No .tscn file found among the dropped/selected files.');
-        return;
-      }
-      const emptyTscn = `[gd_scene format=3]\n`;
-      const { matches, ambiguousMatches, unmatched } = matchResourceFiles(
-        emptyTscn,
-        files,
-        missingPaths
-      );
-      if (matches.length === 0) {
-        setUploadError('No .tscn file found among the dropped/selected files.');
-        return;
-      }
-      for (const { candidates, file } of ambiguousMatches) {
-        warn(
-          `[MultiFileUpload] Ambiguous basename match for "${file.name}": candidates are ${candidates.join(', ')}. Using first match.`
-        );
-      }
-      if (unmatched.length > 0) {
-        info(`[MultiFileUpload] ${unmatched.length} dropped file(s) matched no res:// reference and were ignored.`);
-      }
-      setUploadError(null);
-      for (const { path, file } of matches) {
-        handleResourceUpload(path, file);
-      }
-      return;
-    }
-
-    // Read all tscn texts for root-most pick.
-    const tscnPairs: { file: File; text: string }[] = [];
-    for (const f of tscnFiles) {
-      let text: string;
-      try {
-        text = await f.text();
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        setUploadError(`Failed to read TSCN file: ${message}`);
-        return;
-      }
-      tscnPairs.push({ file: f, text });
-    }
-
-    const { file: tscnFile, ambiguous } = pickRootMostTscn(tscnPairs);
-    if (ambiguous) {
-      info(
-        '[MultiFileUpload] Could not determine root-most scene unambiguously; using first .tscn file.'
-      );
-    }
-    const text = tscnPairs.find((p) => p.file === tscnFile)!.text;
-
-    setUploadError(null);
-    handleTscnUpload(tscnFile, text);
-
-    const others = files.filter((f) => f !== tscnFile);
-    const { matches, ambiguousMatches, unmatched } = matchResourceFiles(text, others, missingPaths);
+  // Surfaces one matching round's diagnostics and wires every matched file
+  // into the resource pipeline.
+  function applyMatchResult({ matches, ambiguousMatches, unmatched }: MatchResult) {
     for (const { candidates, file } of ambiguousMatches) {
       warn(
         `[MultiFileUpload] Ambiguous basename match for "${file.name}": candidates are ${candidates.join(', ')}. Using first match.`
@@ -352,6 +284,59 @@ export function R3FApp() {
     for (const { path, file } of matches) {
       handleResourceUpload(path, file);
     }
+  }
+
+  // Shared entry point for BOTH drag-and-drop and the toolbar's (now
+  // multi-select) file input, implementing the Multi-file matching contract:
+  //
+  // 1. Root-most scene pick: the .tscn whose basename no other dropped .tscn
+  //    references becomes the active scene; tie/cycle falls back to first.
+  // 2. Missing-list matching: every other file is matched against the picked
+  //    scene's ExtResources AND the current missing paths (read through
+  //    missingPathsRef), so a sub-scene's own dependencies arrive by
+  //    repeated drops.
+  // 3. No-.tscn drop: when there are no .tscn files, attempt to fulfill the
+  //    missing paths directly instead of surfacing an error.
+  async function handleFilesUpload(files: readonly File[]) {
+    const missingPaths = missingPathsRef.current;
+    const tscnFiles = files.filter((f) => f.name.toLowerCase().endsWith('.tscn'));
+
+    if (tscnFiles.length === 0) {
+      // No .tscn — the drop can still fulfill currently-missing res:// rows.
+      const result = matchResourceFiles(null, files, missingPaths);
+      if (result.matches.length === 0) {
+        setUploadError('No .tscn file found among the dropped/selected files.');
+        return;
+      }
+      setUploadError(null);
+      applyMatchResult(result);
+      return;
+    }
+
+    // Read all tscn texts for the root-most pick.
+    let tscnPairs: { file: File; text: string }[];
+    try {
+      tscnPairs = await Promise.all(
+        tscnFiles.map(async (file) => ({ file, text: await file.text() }))
+      );
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setUploadError(`Failed to read TSCN file: ${message}`);
+      return;
+    }
+
+    const { file: tscnFile, text, ambiguous } = pickRootMostTscn(tscnPairs);
+    if (ambiguous) {
+      info(
+        '[MultiFileUpload] Could not determine root-most scene unambiguously; using first .tscn file.'
+      );
+    }
+
+    setUploadError(null);
+    handleTscnUpload(tscnFile, text);
+
+    const others = files.filter((f) => f !== tscnFile);
+    applyMatchResult(matchResourceFiles(text, others, missingPaths));
   }
 
   function handleDragEnter(e: ReactDragEvent) {
@@ -377,7 +362,7 @@ export function R3FApp() {
     e.preventDefault();
     dragCounterRef.current = 0;
     setDragActive(false);
-    void handleFilesUpload(Array.from(e.dataTransfer.files), missingPathsRef.current);
+    void handleFilesUpload(Array.from(e.dataTransfer.files));
   }
 
   function handleBufferChange(e: ChangeEvent<HTMLTextAreaElement>) {
@@ -569,15 +554,15 @@ interface ToolbarProps {
   loadError: string | null;
   onFixtureChange: (value: string) => void;
   /**
-   * One or more files picked via the file input or drag-and-drop — a scene
-   * plus, optionally, its resources. The toolbar supplies the current
-   * missing-paths set so the handler can match non-scene files against it.
+   * One or more files picked via the file input — a scene plus, optionally,
+   * its resources. The handler reads the current missing-paths set through
+   * `missingPathsRef`.
    */
-  onFilesSelected: (files: File[], missingPaths: ReadonlySet<string>) => void;
+  onFilesSelected: (files: File[]) => void;
   /**
-   * A ref the toolbar writes on every missingPaths change. Allows the outer
-   * drag-and-drop handler (outside MissingResourcesProvider) to read the
-   * latest missing set without re-rendering R3FApp on each change.
+   * A ref the toolbar writes on every missingPaths change. Allows the upload
+   * handlers (outside MissingResourcesProvider) to read the latest missing
+   * set without re-rendering R3FApp on each change.
    */
   missingPathsRef: RefObject<ReadonlySet<string>>;
   paneVisible: boolean;
@@ -680,7 +665,7 @@ function Toolbar({
   function handleTscnFileChange(e: ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
     if (!files || files.length === 0) return;
-    onFilesSelected(Array.from(files), missingPaths);
+    onFilesSelected(Array.from(files));
     // Reset so the same filename(s) can be re-opened.
     if (tscnInputRef.current) tscnInputRef.current.value = '';
     setOpen(false);

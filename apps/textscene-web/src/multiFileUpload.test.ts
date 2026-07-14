@@ -2,7 +2,7 @@
  * Pure helpers behind multi-file / drag-and-drop upload.
  */
 import { describe, expect, it } from 'vitest';
-import { pickTscnFile, pickRootMostTscn, matchResourceFiles } from './multiFileUpload';
+import { pickRootMostTscn, matchResourceFiles } from './multiFileUpload';
 
 const SCENE_WITH_RESOURCES = `[gd_scene load_steps=2 format=3]
 
@@ -31,27 +31,6 @@ function makeFile(name: string, content = 'x', type = 'application/octet-stream'
   return new File([content], name, { type });
 }
 
-describe('pickTscnFile', () => {
-  it('returns the .tscn file among a mixed batch', () => {
-    const tscn = makeFile('scene.tscn');
-    const files = [makeFile('player.png'), tscn, makeFile('enemy.tscn')];
-    expect(pickTscnFile(files)).toBe(tscn);
-  });
-
-  it('matches the extension case-insensitively', () => {
-    const tscn = makeFile('Scene.TSCN');
-    expect(pickTscnFile([tscn])).toBe(tscn);
-  });
-
-  it('returns undefined when no .tscn file is present', () => {
-    expect(pickTscnFile([makeFile('player.png'), makeFile('enemy.png')])).toBeUndefined();
-  });
-
-  it('returns undefined for an empty file list', () => {
-    expect(pickTscnFile([])).toBeUndefined();
-  });
-});
-
 describe('pickRootMostTscn', () => {
   it('returns the tscn not referenced by any other tscn in the batch', () => {
     const parent = makeFile('parent.tscn');
@@ -62,6 +41,7 @@ describe('pickRootMostTscn', () => {
       { file: child, text: CHILD_SCENE },
     ]);
     expect(result.file).toBe(parent);
+    expect(result.text).toBe(PARENT_SCENE);
     expect(result.ambiguous).toBe(false);
   });
 
@@ -97,11 +77,29 @@ describe('pickRootMostTscn', () => {
     expect(result.ambiguous).toBe(true);
   });
 
+  it('flags a tie when several dropped scenes are all unreferenced', () => {
+    // Neither scene references the other — two independent roots, so the
+    // pick falls back to the first and must be flagged ambiguous.
+    const a = makeFile('a.tscn');
+    const b = makeFile('b.tscn');
+    const result = pickRootMostTscn([
+      { file: a, text: CHILD_SCENE },
+      { file: b, text: CHILD_SCENE },
+    ]);
+    expect(result.file).toBe(a);
+    expect(result.ambiguous).toBe(true);
+  });
+
   it('returns the single tscn directly', () => {
     const only = makeFile('scene.tscn');
     const result = pickRootMostTscn([{ file: only, text: CHILD_SCENE }]);
     expect(result.file).toBe(only);
+    expect(result.text).toBe(CHILD_SCENE);
     expect(result.ambiguous).toBe(false);
+  });
+
+  it('throws on an empty batch', () => {
+    expect(() => pickRootMostTscn([])).toThrow('at least one entry');
   });
 });
 
@@ -160,6 +158,20 @@ describe('matchResourceFiles', () => {
     const result = matchResourceFiles(SCENE_WITH_RESOURCES, [file], missingPaths);
     // Should match the ExtResource path, not the missing path
     expect(result.matches).toEqual([{ path: 'res://textures/player.png', file }]);
+  });
+
+  it('matches purely against missing paths when tscnText is null (no scene in the batch)', () => {
+    const file = makeFile('child.png');
+    const result = matchResourceFiles(null, [file], new Set(['res://textures/child.png']));
+    expect(result.matches).toEqual([{ path: 'res://textures/child.png', file }]);
+    expect(result.unmatched).toHaveLength(0);
+  });
+
+  it('leaves every file unmatched when tscnText is null and nothing is missing', () => {
+    const file = makeFile('child.png');
+    const result = matchResourceFiles(null, [file], new Set());
+    expect(result.matches).toEqual([]);
+    expect(result.unmatched).toEqual([file]);
   });
 
   it('reports ambiguous match when multiple missing paths share a basename', () => {
