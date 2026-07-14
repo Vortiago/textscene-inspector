@@ -168,9 +168,7 @@ function PlaneMeshGeometry({ properties }: { properties: PlaneMeshProperties }) 
     properties.subdivideWidth,
     properties.subdivideDepth,
     properties.orientation,
-    properties.centerOffset?.x,
-    properties.centerOffset?.y,
-    properties.centerOffset?.z,
+    properties.centerOffset,
     properties.flipFaces,
   ]);
 

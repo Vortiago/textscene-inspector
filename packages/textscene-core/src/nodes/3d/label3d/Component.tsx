@@ -86,9 +86,10 @@ export function Label3D({ node }: NodeComponentProps) {
 
   // Godot modulate is sRGB → convert to linear before the unlit material tint
   // (the white canvas text is colorized by this), matching Sprite2D/Sprite3D.
+  const { r: mr, g: mg, b: mb } = properties.modulate;
   const tint = useMemo(
-    () => godotColorToLinear(properties.modulate),
-    [properties.modulate.r, properties.modulate.g, properties.modulate.b]
+    () => godotColorToLinear({ r: mr, g: mg, b: mb }),
+    [mr, mg, mb]
   );
 
   // Off by default (ADR-0008): in-viewport text is opt-in via the Labels toggle.

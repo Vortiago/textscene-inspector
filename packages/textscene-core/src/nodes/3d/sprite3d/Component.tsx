@@ -102,9 +102,10 @@ export function Sprite3D({ node }: NodeComponentProps) {
   // additive: opacity = modulate.a * (1 - transparency). Godot stores modulate
   // in sRGB → convert to the linear working space before the unlit material
   // (matching Sprite2D / WorldEnvironment).
+  const { r: mr, g: mg, b: mb } = properties.modulate;
   const color = useMemo(
-    () => godotColorToLinear(properties.modulate),
-    [properties.modulate.r, properties.modulate.g, properties.modulate.b]
+    () => godotColorToLinear({ r: mr, g: mg, b: mb }),
+    [mr, mg, mb]
   );
   const opacity = clamp01(properties.modulate.a * (1 - properties.transparency));
   // `transparent=false` (Godot) ignores texture alpha entirely → opaque quad.

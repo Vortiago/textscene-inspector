@@ -82,6 +82,10 @@ export function useLiveSceneNodes(predicate: (node: TscnNode) => boolean): LiveT
     const lt = liveTreeContext(sceneGraph, loader);
     if (!lt) return [];
     return collectLiveNodes(lt.roots, lt.ctx, predicate);
+    // `version` is an intentional cache-buster: it increments each time a
+    // sub-scene or GLB finishes loading so the live-node list re-derives.
+    // The value itself is not read inside the callback.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sceneGraph, loader, version, predicate]);
 }
 
@@ -104,5 +108,9 @@ export function useLiveNode(path: string | null | undefined): ResolvedLiveNode |
     const lt = liveTreeContext(sceneGraph, loader);
     if (!lt) return null;
     return resolveLiveEntry(path, lt.roots, lt.ctx);
+    // `version` is an intentional cache-buster: it increments each time a
+    // resource finishes loading so a node inside an unresolved sub-scene
+    // re-derives the moment that sub-scene lands.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sceneGraph, loader, version, path]);
 }

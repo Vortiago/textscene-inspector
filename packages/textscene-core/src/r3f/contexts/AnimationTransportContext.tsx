@@ -134,7 +134,7 @@ export function AnimationTransportProvider({ children }: { children: ReactNode }
   const [playbackSpeed, setPlaybackSpeedState] = useState(1);
   const [loopOverride, setLoopOverride] = useState<LoopOverride>('auto');
 
-  const clips = registration?.clips ?? [];
+  const clips = useMemo(() => registration?.clips ?? [], [registration]);
   const hasPlayer = registration !== null;
   const autoplayClip =
     registration?.autoplay && clips.includes(registration.autoplay) ? registration.autoplay : null;

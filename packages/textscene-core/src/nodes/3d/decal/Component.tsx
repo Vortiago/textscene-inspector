@@ -81,9 +81,10 @@ export function Decal({ node, children }: NodeComponentProps) {
 
   // Godot stores modulate in sRGB → convert to the linear working space before
   // the unlit material (same as Sprite3D / Sprite2D).
+  const { r: mr, g: mg, b: mb } = modulate;
   const color = useMemo(
-    () => godotColorToLinear(modulate),
-    [modulate.r, modulate.g, modulate.b]
+    () => godotColorToLinear({ r: mr, g: mg, b: mb }),
+    [mr, mg, mb]
   );
 
   // albedo_mix scales how strongly the projected albedo replaces the surface;

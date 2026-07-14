@@ -138,14 +138,17 @@ export function MeshInstance3D({ node }: NodeComponentProps) {
     'Texture2D'
   );
 
-  const textureSlots = {
-    albedo_texture: textureRequests.albedo_texture ? albedoStatus : null,
-    normal_texture: textureRequests.normal_texture ? normalStatus : null,
-    roughness_texture: textureRequests.roughness_texture ? roughnessStatus : null,
-    metallic_texture: textureRequests.metallic_texture ? metallicStatus : null,
-    emission_texture: textureRequests.emission_texture ? emissionStatus : null,
-    ao_texture: textureRequests.ao_texture ? aoStatus : null,
-  };
+  const textureSlots = useMemo(
+    () => ({
+      albedo_texture: textureRequests.albedo_texture ? albedoStatus : null,
+      normal_texture: textureRequests.normal_texture ? normalStatus : null,
+      roughness_texture: textureRequests.roughness_texture ? roughnessStatus : null,
+      metallic_texture: textureRequests.metallic_texture ? metallicStatus : null,
+      emission_texture: textureRequests.emission_texture ? emissionStatus : null,
+      ao_texture: textureRequests.ao_texture ? aoStatus : null,
+    }),
+    [textureRequests, albedoStatus, normalStatus, roughnessStatus, metallicStatus, emissionStatus, aoStatus]
+  );
 
   // Apply the material's UV transform (`uv1_scale` / `uv1_offset`) to
   // every loaded texture. `applyUVTransform` clones the texture before
