@@ -28,7 +28,7 @@
  * GLB's own node names, so the mixer roots on the object itself rather than on
  * an Animation root / `root_node`.
  */
-import { useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../NodeComponentRegistry';
 import { useResource } from '../../../resources/useResource';
@@ -37,12 +37,12 @@ import { useGlbOverrides } from './GlbOverridesContext';
 import { applyGlbNodeOverrides } from './glbNodeOverrides';
 import { flattenGlbObjects, GLB_ANIMATION_PLAYER_NAME } from './glbHierarchy';
 import { useAnimationTransport, type PlayState } from '../../contexts/AnimationTransportContext';
-import { useRegisterDriver } from '../../contexts/AnimationDriverContext';
 import { useNodePath } from '../../contexts/NodePathContext';
 import { useOptionalSelection } from '../../contexts/SelectionContext';
 import { usePlaybackLoop } from '../../animation/usePlaybackLoop';
 import { applyLoopOverride, LOOP_REPEAT_SETTINGS } from '../../animation/loopOverride';
-import { snapshotSubtree, restoreSnapshot } from '../../animation/poseSnapshot';
+import { snapshotSubtree, restoreSnapshot, type PoseSnapshot } from '../../animation/poseSnapshot';
+import { useAnimationDriverMount } from '../../animation/useAnimationDriverMount';
 import { joinPath } from '../../../utils/nodePath';
 
 /**
@@ -125,52 +125,34 @@ export function GLBSceneRoot({ node }: NodeComponentProps) {
     };
   }, [object]);
 
-  // Publish this GLB's clips into the AnimationDriverRegistry (keyed by the
-  // synthesised AnimationPlayer node path) whenever they're loaded — regardless
-  // of selection — so an AnimationTree whose `anim_player` resolves here can
-  // root a blended mixer on the GLB object and play its clips (ADR-0019).
-  const registerDriver = useRegisterDriver();
-  useEffect(() => {
-    if (!object || clips.length === 0 || animationPlayerPath === null) return;
-    return registerDriver(animationPlayerPath, { object, clips });
-  }, [object, clips, animationPlayerPath, registerDriver]);
+  // Per-driver: GLB uses a full-subtree snapshot (poseSnapshot.ts) because
+  // skeletal/blended clips touch arbitrary bones. AnimationPlayer uses a
+  // track-derived snapshot with Euler-order reorder instead.
+  const snapshotRef = useRef<PoseSnapshot[]>([]);
+  const restore = useCallback(() => restoreSnapshot(snapshotRef.current), []);
 
-  // Register this driver's clips with the transport while it is selected —
-  // even with zero clips, so the Animation tab still appears (and reads
-  // "no animations"). Registration is the tab's source of truth.
-  const { registerPlayer } = transport;
-  useEffect(() => {
-    if (!isActive || !object) return;
-    return registerPlayer({ clips: clips.map((c) => c.name), durations });
-  }, [isActive, object, clips, durations, registerPlayer]);
-
-  // Build the mixer + actions only while this driver is the selected one
-  // (ADR-0012). Gating on isActive — not just object availability — means a
-  // scene full of GLBs doesn't each build a mixer and snapshot its whole
-  // skeleton when never selected; only the active driver pays that cost. The
-  // clips are bound by name to the GLB's own nodes, so the mixer roots on the
-  // object itself (no Animation root indirection). On teardown (deselect) we
-  // restore the authored pose, since the mixer is gone before usePlaybackLoop
-  // could observe the stop.
-  const mixerRef = useRef<THREE.AnimationMixer | null>(null);
-  const actionsRef = useRef<Map<string, THREE.AnimationAction>>(new Map());
-  const snapshotRef = useRef<ReturnType<typeof snapshotSubtree>>([]);
-  useEffect(() => {
-    if (!isActive || !object || clips.length === 0) return;
-    const mixer = new THREE.AnimationMixer(object);
-    const actions = new Map<string, THREE.AnimationAction>();
-    for (const clip of clips) actions.set(clip.name, mixer.clipAction(clip));
-    mixerRef.current = mixer;
-    actionsRef.current = actions;
-    snapshotRef.current = snapshotSubtree(object);
-    return () => {
-      mixer.stopAllAction();
-      restoreSnapshot(snapshotRef.current);
-      mixerRef.current = null;
-      actionsRef.current = new Map();
-      snapshotRef.current = [];
-    };
-  }, [isActive, object, clips]);
+  const { mixerRef, actionsRef } = useAnimationDriverMount({
+    // Pass the loaded object always so the AnimationDriverRegistry entry is
+    // published whenever clips are available — regardless of selection — and
+    // an AnimationTree whose `anim_player` resolves here can root its blended
+    // mixer without requiring the user to have selected the player first.
+    // The mixer build is separately gated on isActive inside the hook.
+    object: object ?? null,
+    clips,
+    // The driver's registry key is the synthesised AnimationPlayer path, not
+    // the GLB root — so an AnimationTree resolving `anim_player` to this path
+    // finds the correct object + clips.
+    nodePath: animationPlayerPath,
+    isActive,
+    durations,
+    onMixerBuilt: useCallback(
+      (root) => {
+        snapshotRef.current = snapshotSubtree(root);
+      },
+      []
+    ),
+    restore,
+  });
 
   // An inactive driver is forced to 'stopped' so it never touches the scene
   // (and restores the authored pose when it loses selection). Native glTF
@@ -190,7 +172,7 @@ export function GLBSceneRoot({ node }: NodeComponentProps) {
       applyLoopOverride(action, transport.loopOverride, LOOP_REPEAT_SETTINGS),
     reconfigureKey: transport.loopOverride,
     reportTime: transport.reportTime,
-    restore: () => restoreSnapshot(snapshotRef.current),
+    restore,
   });
 
   if (result.status === 'unavailable') {

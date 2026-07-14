@@ -11,16 +11,14 @@
  * transforms captured at mount are restored.
  */
 
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import {
-  AnimationMixer,
   Euler,
   Group,
   Object3D,
   Quaternion,
   Vector3,
-  type AnimationAction,
   type AnimationClip,
   type EulerOrder,
 } from 'three';
@@ -31,11 +29,11 @@ import {
   useAnimationTransport,
   type PlayState,
 } from '../../../r3f/contexts/AnimationTransportContext';
-import { useRegisterDriver } from '../../../r3f/contexts/AnimationDriverContext';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useOptionalSelection } from '../../../r3f/contexts/SelectionContext';
 import { usePlaybackLoop } from '../../../r3f/animation/usePlaybackLoop';
 import { applyLoopOverride } from '../../../r3f/animation/loopOverride';
+import { useAnimationDriverMount } from '../../../r3f/animation/useAnimationDriverMount';
 import { useAnimatedValueRegistry } from '../../../r3f/contexts/AnimatedValueContext';
 import { resolveAnimations, type GodotAnimation } from './animationResolver';
 import { buildClip, loopSettingsFor } from './clipBuilder';
@@ -46,10 +44,11 @@ import {
   VALUE_PUSH_PROPERTIES,
 } from './valueTracks';
 
-/** Godot composes Euler rotations in YXZ order; THREE objects default to XYZ. */
-const GODOT_EULER_ORDER: EulerOrder = 'YXZ';
 import { resolveAnimationRoot } from './animationRoot';
 import type { AnimationPlayerProperties } from './types';
+
+/** Godot composes Euler rotations in YXZ order; THREE objects default to XYZ. */
+const GODOT_EULER_ORDER: EulerOrder = 'YXZ';
 
 interface Snapshot {
   object: Object3D;
@@ -61,8 +60,6 @@ interface Snapshot {
 
 export function AnimationPlayer({ node, children }: NodeComponentProps) {
   const properties = node.properties as AnimationPlayerProperties;
-  const groupRef = useRef<Group>(null);
-  const transport = useAnimationTransport();
   const { internalResources } = useSceneResources();
 
   // Selection-driven (ADR-0012): this player is "active" — owns the transport
@@ -70,6 +67,8 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
   const nodePath = useNodePath();
   const selectedNodePath = useOptionalSelection()?.selectedNodePath ?? null;
   const isActive = nodePath !== null && nodePath === selectedNodePath;
+
+  const transport = useAnimationTransport();
 
   const { position, rotation, scale } = useMemo(
     () => transformFromNode3DProperties(properties),
@@ -81,74 +80,75 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
     [properties.libraries, internalResources]
   );
 
-  // Register this player's clips with the scene transport.
-  const { registerPlayer } = transport;
+  // Build THREE.AnimationClips from the resolved GodotAnimations.
+  // Per-driver: AnimationPlayer builds clips from GodotAnimation tracks;
+  // GLBSceneRoot uses ready-made glTF clips.
+  const clips = useMemo<AnimationClip[]>(
+    () => animations.map((a) => buildClip(a)),
+    [animations]
+  );
+
   const durations = useMemo(
     () => Object.fromEntries(animations.map((a) => [a.name, a.length])),
     [animations]
   );
-  // Register whenever this player is selected — even with no animations, so
-  // the Animation tab still appears (and reads "no animations"). Registration
-  // is the tab's source of truth, which also covers instanced players that
-  // never enter the parse-time `flattenedNodes`.
-  useEffect(() => {
-    if (!isActive) return;
-    return registerPlayer({
-      clips: animations.map((a) => a.name),
-      durations,
-      autoplay: properties.autoplay || undefined,
-    });
-  }, [isActive, animations, durations, properties.autoplay, registerPlayer]);
 
-  // Build the mixer + actions once the group (hence root_node) is mounted.
-  const mixerRef = useRef<AnimationMixer | null>(null);
-  const actionsRef = useRef<Map<string, AnimationAction>>(new Map());
+  // Track the mounted group via a callback ref so state updates when it mounts.
+  // The mixer root is resolved from the group (root_node may be a sibling),
+  // and we need a stable reactive value — not a ref read inside useMemo —
+  // to feed useAnimationDriverMount.
+  const [mountedGroup, setMountedGroup] = useState<Group | null>(null);
+  const groupCallbackRef = useCallback((group: Group | null) => {
+    setMountedGroup(group);
+  }, []);
+
+  // Per-driver mixer root: AnimationPlayer resolves via root_node (sibling/
+  // ancestor), while GLBSceneRoot roots on the object itself.
+  const mixerRoot = useMemo<Object3D | null>(() => {
+    if (!mountedGroup) return null;
+    return resolveAnimationRoot(mountedGroup, properties.root_node) ?? null;
+  }, [mountedGroup, properties.root_node]);
+
+  // Loop modes indexed by clip name; configureAction below closes over the
+  // memo (usePlaybackLoop reads the latest closure each frame).
+  const loopModes = useMemo(
+    () => new Map<string, number>(animations.map((a) => [a.name, a.loopMode])),
+    [animations]
+  );
+
+  // Godot composes Euler rotations in YXZ order. Reorder each rotation target
+  // (orientation-preserving) as soon as the root resolves — independent of
+  // selection, because an AnimationTree can play this driver's published clips
+  // on the same root without the player ever being active (ADR-0019). Declared
+  // before the mount hook so it runs first and the snapshot taken there keeps
+  // the YXZ order too (restoreSnapshot preserves it via Euler.copy).
+  useEffect(() => {
+    if (mixerRoot) applyGodotEulerOrder(mixerRoot, animations);
+  }, [mixerRoot, animations]);
+
+  // Per-driver pose snapshot: track-derived targets + Godot Euler-order reorder.
+  // GLBSceneRoot uses the full-subtree poseSnapshot instead.
   const snapshotRef = useRef<Snapshot[]>([]);
-  const loopModesRef = useRef<Map<string, number>>(new Map());
 
-  const registerDriver = useRegisterDriver();
-  useEffect(() => {
-    const group = groupRef.current;
-    if (!group || animations.length === 0) return;
-    const root = resolveAnimationRoot(group, properties.root_node);
-    if (!root) return;
+  const restore = useCallback(() => restoreSnapshot(snapshotRef.current), []);
 
-    const mixer = new AnimationMixer(root);
-    const actions = new Map<string, AnimationAction>();
-    const loopModes = new Map<string, number>();
-    const clips: AnimationClip[] = [];
-    for (const animation of animations) {
-      const clip = buildClip(animation);
-      clips.push(clip);
-      const action = mixer.clipAction(clip);
-      actions.set(animation.name, action);
-      loopModes.set(animation.name, animation.loopMode);
-    }
+  const onMixerBuilt = useCallback(
+    (root: Object3D) => {
+      snapshotRef.current = snapshotTargets(root, animations);
+    },
+    [animations]
+  );
 
-    // Publish into the AnimationDriverRegistry (keyed by this player's node
-    // path) so an AnimationTree whose `anim_player` resolves here can root a
-    // blended mixer on the same animation root and play these clips (ADR-0019).
-    const unregister =
-      nodePath !== null ? registerDriver(nodePath, { object: root, clips }) : undefined;
-
-    // Godot composes Euler rotations in YXZ order. Reorder each rotation
-    // target (orientation-preserving) so per-component `.rotation[x|y|z]`
-    // writes compose to the same orientation Godot would produce. Done before
-    // the snapshot so the restored rest pose keeps the YXZ order too.
-    applyGodotEulerOrder(root, animations);
-
-    mixerRef.current = mixer;
-    actionsRef.current = actions;
-    loopModesRef.current = loopModes;
-    snapshotRef.current = snapshotTargets(root, animations);
-
-    return () => {
-      unregister?.();
-      mixer.stopAllAction();
-      mixerRef.current = null;
-      actionsRef.current = new Map();
-    };
-  }, [animations, properties.root_node, nodePath, registerDriver]);
+  const { mixerRef, actionsRef } = useAnimationDriverMount({
+    object: mixerRoot,
+    clips,
+    nodePath,
+    isActive,
+    autoplay: properties.autoplay || undefined,
+    durations,
+    onMixerBuilt,
+    restore,
+  });
 
   // An inactive player is forced to the 'stopped' state so it never touches
   // the scene (and restores the authored pose when it loses selection).
@@ -164,12 +164,12 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
     actionsRef,
     configureAction: (action, clipName) => {
       // 'auto' keeps the clip's authored Godot loop_mode (via loopSettingsFor).
-      const authoredMode = loopModesRef.current.get(clipName) ?? 0;
+      const authoredMode = loopModes.get(clipName) ?? 0;
       applyLoopOverride(action, transport.loopOverride, loopSettingsFor(authoredMode));
     },
     reconfigureKey: transport.loopOverride,
     reportTime: transport.reportTime,
-    restore: () => restoreSnapshot(snapshotRef.current),
+    restore,
   });
 
   // ADR-0016/0017: non-transform value tracks can't go through the THREE mixer
@@ -240,7 +240,7 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
 
   return (
     <group
-      ref={groupRef}
+      ref={groupCallbackRef}
       name={node.name}
       position={position}
       rotation={rotation}

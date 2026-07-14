@@ -40,6 +40,23 @@ const INTERNAL: TscnInternalResource[] = [
   },
 ];
 
+// A constant multi-axis "tilt" rotation on Target: with XYZ vs YXZ Euler order
+// the resulting quaternion differs, so tests using it pin the order.
+const ROT_EULER = [0.3, 0.5, 0.7] as const;
+const ROT_INTERNAL: TscnInternalResource[] = [
+  { id: 'Lib', type: 'AnimationLibrary', data: { _data: '{\n"tilt": SubResource("RA")\n}' } },
+  {
+    id: 'RA',
+    type: 'Animation',
+    data: {
+      length: '1.0',
+      'tracks/0/type': '"value"',
+      'tracks/0/path': 'NodePath("Target:rotation")',
+      'tracks/0/keys': `{\n"times": PackedFloat32Array(0, 1),\n"values": [Vector3(${ROT_EULER[0]}, ${ROT_EULER[1]}, ${ROT_EULER[2]}), Vector3(${ROT_EULER[0]}, ${ROT_EULER[1]}, ${ROT_EULER[2]})]\n}`,
+    },
+  },
+];
+
 function makeAP(overrides: Partial<AnimationPlayerProperties> = {}): TscnNode {
   const props: AnimationPlayerProperties = {
     name: 'AnimationPlayer',
@@ -175,23 +192,7 @@ describe('AnimationPlayer playback (E)', () => {
   });
 
   it('composes 3D rotation in Godot YXZ Euler order (fidelity)', async () => {
-    // A constant multi-axis rotation: with XYZ vs YXZ order the resulting
-    // quaternion differs, so this pins the order, not just the components.
-    const e = [0.3, 0.5, 0.7];
-    const rotInternal: TscnInternalResource[] = [
-      { id: 'Lib', type: 'AnimationLibrary', data: { _data: '{\n"tilt": SubResource("RA")\n}' } },
-      {
-        id: 'RA',
-        type: 'Animation',
-        data: {
-          length: '1.0',
-          'tracks/0/type': '"value"',
-          'tracks/0/path': 'NodePath("Target:rotation")',
-          'tracks/0/keys': `{\n"times": PackedFloat32Array(0, 1),\n"values": [Vector3(${e[0]}, ${e[1]}, ${e[2]}), Vector3(${e[0]}, ${e[1]}, ${e[2]})]\n}`,
-        },
-      },
-    ];
-    const renderer = await mountScene({ autoplay: 'tilt' }, rotInternal);
+    const renderer = await mountScene({ autoplay: 'tilt' }, ROT_INTERNAL);
     const target = renderer.scene.findByProps({ name: 'Target' }).instance as THREE.Object3D;
     expect(target.rotation.order).toBe('YXZ');
 
@@ -199,9 +200,19 @@ describe('AnimationPlayer playback (E)', () => {
     await renderer.advanceFrames(1, 0.5);
 
     const expected = new THREE.Quaternion().setFromEuler(
-      new THREE.Euler(e[0], e[1], e[2], 'YXZ')
+      new THREE.Euler(ROT_EULER[0], ROT_EULER[1], ROT_EULER[2], 'YXZ')
     );
     expect(target.quaternion.angleTo(expected)).toBeLessThan(1e-3);
+  });
+
+  it('reorders rotation targets to YXZ even while never selected (ADR-0019 registry consumers)', async () => {
+    // An AnimationTree can play this player's published clips on the same root
+    // without the player ever being active, so the orientation-preserving
+    // reorder must not be gated on selection.
+    const renderer = await mountScene({}, ROT_INTERNAL, { select: null });
+    const target = renderer.scene.findByProps({ name: 'Target' }).instance as THREE.Object3D;
+    expect(target.rotation.order).toBe('YXZ');
+    await renderer.unmount();
   });
 
   it('restores the authored pose on stop (E5)', async () => {
