@@ -58,6 +58,8 @@ function makeLoader(): {
     isLoading: () => false,
     clearCache: () => {},
     getCacheSize: () => cache.size,
+    pin: () => {},
+    unpin: () => {},
   });
   const sceneCache = new Map<string, unknown | null>();
   const loader = {

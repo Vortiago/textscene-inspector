@@ -69,13 +69,12 @@ interface ProcessorAccess<T> {
   /** Trigger a load through the FileEventBus → processor pipeline. */
   request: (path: string) => void;
   /**
-   * Increment the pin count — protects this entry from LRU eviction while
-   * mounted. Optional: hand-rolled test-loader stubs predating the pin API
-   * omit it, so the hook calls it with optional chaining.
+   * Increment the pin count — a non-zero pin count protects this entry from
+   * LRU eviction for as long as a consumer is mounted against it.
    */
-  pin?: (path: string) => void;
+  pin: (path: string) => void;
   /** Decrement the pin count — makes the entry eligible for LRU eviction again. */
-  unpin?: (path: string) => void;
+  unpin: (path: string) => void;
 }
 
 /**
@@ -169,7 +168,7 @@ export function useResource<T>(path: string, type: ResourceType): ResourceResult
     // instance is mounted; the cleanup's matching unpin releases it. Safe
     // under StrictMode's mount -> cleanup -> mount: unpin-to-zero does not
     // eagerly dispose, so the remount re-pins the still-cached entry.
-    access.pin?.(path);
+    access.pin(path);
 
     // Fresh subscription per (path, type) pair — keeps cleanup simple
     // and prevents stale handlers from accumulating when the consumer
@@ -269,7 +268,7 @@ export function useResource<T>(path: string, type: ResourceType): ResourceResult
     }
 
     return () => {
-      access.unpin?.(path);
+      access.unpin(path);
       eventBus.off(busType, 'loaded', onLoaded);
       eventBus.off<Error>(busType, 'failed', onFailed);
       disposePreviousClone();

@@ -51,6 +51,8 @@ function makeLoader(): { loader: ResourceLoader; setSceneCached: (path: string, 
     isLoading: () => false,
     clearCache: () => {},
     getCacheSize: () => cache.size,
+    pin: () => {},
+    unpin: () => {},
   });
 
   const loader = {
