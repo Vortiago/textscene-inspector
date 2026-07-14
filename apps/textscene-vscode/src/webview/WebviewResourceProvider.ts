@@ -63,9 +63,4 @@ export class WebviewResourceProvider implements ResourceProvider {
       } satisfies WebviewToHostMessage);
     });
   }
-
-  hasResource(_path: string): boolean {
-    // Can't determine synchronously in webview, return true
-    return true;
-  }
 }

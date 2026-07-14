@@ -30,20 +30,6 @@ export class WebResourceProvider implements ResourceProvider {
   }
 
   /**
-   * Get all uploaded files.
-   */
-  getUploadedFiles(): Map<string, File> {
-    return this.uploadedFiles;
-  }
-
-  /**
-   * Clear all uploaded files.
-   */
-  clearUploadedFiles(): void {
-    this.uploadedFiles.clear();
-  }
-
-  /**
    * Remove a single uploaded file. After removal, requesting the path
    * again falls through to the fixtures fetch (or fails).
    */
@@ -95,9 +81,5 @@ export class WebResourceProvider implements ResourceProvider {
 
     // Resource not available - will trigger onResourceNeeded callback
     throw new Error(`Resource not found: ${path}`);
-  }
-
-  hasResource(path: string): boolean {
-    return this.uploadedFiles.has(path);
   }
 }

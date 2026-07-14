@@ -34,7 +34,8 @@ import {
 import { Linter, type Diagnostic } from '@textscene/core/linter';
 import { fixtures } from './fixturesAll';
 import { FixtureTreeView } from './FixtureTree';
-import { corpusRootFor, fixtureUrlForRes } from './corpusRoot';
+import { corpusRootFor } from './corpusRoot';
+import { useCorpusRoot } from './useCorpusRoot';
 import { WebResourceProvider } from './providers/WebResourceProvider';
 import {
   groupDiagnosticsByLine,
@@ -201,30 +202,15 @@ export function R3FApp() {
   // the lifetime of the app; React component identity preserves them
   // across fixture switches so an already-uploaded texture survives a
   // fixture reload.
-  const { provider, loader } = useMemo(
-    () => createResourcePipeline(new WebResourceProvider()),
-    []
-  );
+  const pipeline = useMemo(() => createResourcePipeline(new WebResourceProvider()), []);
+  const { provider, loader } = pipeline;
 
   // Each vendored demo project keeps its own res:// namespace; the active
   // fixture's `root` scopes the provider's lookups to that subtree. Declared
   // BEFORE the content-fetch effect so the root is in place by the time the
   // newly-mounted scene starts requesting resources.
   const resourceRoot = useMemo(() => corpusRootFor(fixtureFile, fixtures), [fixtureFile]);
-  const lastRootRef = useRef(resourceRoot);
-  useEffect(() => {
-    provider.setResourceRoot(resourceRoot);
-    // Text .gltf files load their external buffers/images through THREE's
-    // LoadingManager with res://-relative URLs — map those onto the public
-    // fixtures mirror (same scheme as the provider's own fetches).
-    loader.eventBus.getThreeManager().setURLModifier((url) => fixtureUrlForRes(url, resourceRoot));
-    if (lastRootRef.current !== resourceRoot) {
-      lastRootRef.current = resourceRoot;
-      // Two corpora can reference the same res:// path (e.g. art/player.png)
-      // — drop the previous corpus's cached resources, keep subscribers.
-      loader.clearCaches();
-    }
-  }, [resourceRoot, provider, loader]);
+  useCorpusRoot(pipeline, resourceRoot);
 
   const options = useMemo<ViewportSelectorOption[]>(() => {
     const fixtureOptions: ViewportSelectorOption[] = fixtures.map((f) => ({

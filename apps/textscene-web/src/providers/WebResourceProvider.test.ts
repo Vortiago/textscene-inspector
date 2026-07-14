@@ -174,110 +174,43 @@ describe('WebResourceProvider', () => {
   });
 
   describe('addUploadedFile', () => {
-    // State change: File added to map
-    it('should add file to uploaded files map', () => {
-      const mockFile = new File(['content'], 'test.tscn');
+    // State change: File added and loadable
+    it('should add file so it can be loaded by path', async () => {
+      const content = '[gd_scene format=3]';
+      const mockFile = new File([content], 'test.tscn');
 
       provider.addUploadedFile('res://test.tscn', mockFile);
 
-      const uploadedFiles = provider.getUploadedFiles();
-      expect(uploadedFiles.has('res://test.tscn')).toBe(true);
-      expect(uploadedFiles.get('res://test.tscn')).toBe(mockFile);
+      const result = await provider.loadResource('res://test.tscn', 'PackedScene');
+      expect(result).toBe(content);
     });
 
     // Edge case: Replace existing file
-    it('should replace existing file with same path', () => {
+    it('should replace existing file with same path', async () => {
       const file1 = new File(['content1'], 'test.tscn');
       const file2 = new File(['content2'], 'test.tscn');
 
       provider.addUploadedFile('res://test.tscn', file1);
       provider.addUploadedFile('res://test.tscn', file2);
 
-      const uploadedFiles = provider.getUploadedFiles();
-      expect(uploadedFiles.get('res://test.tscn')).toBe(file2);
-      expect(uploadedFiles.size).toBe(1);
+      const result = await provider.loadResource('res://test.tscn', 'PackedScene');
+      expect(result).toBe('content2');
     });
 
     // Edge case: Multiple different files
-    it('should track multiple files with different paths', () => {
+    it('should track multiple files with different paths', async () => {
       const file1 = new File(['content1'], 'file1.tscn');
       const file2 = new File(['content2'], 'file2.tscn');
 
       provider.addUploadedFile('res://file1.tscn', file1);
       provider.addUploadedFile('res://file2.tscn', file2);
 
-      const uploadedFiles = provider.getUploadedFiles();
-      expect(uploadedFiles.size).toBe(2);
-    });
-  });
-
-  describe('getUploadedFiles', () => {
-    // Happy path: Return uploaded files map
-    it('should return uploaded files map', () => {
-      const mockFile = new File(['content'], 'test.tscn');
-      provider.addUploadedFile('res://test.tscn', mockFile);
-
-      const uploadedFiles = provider.getUploadedFiles();
-
-      expect(uploadedFiles).toBeInstanceOf(Map);
-      expect(uploadedFiles.size).toBe(1);
-    });
-
-    // Edge case: Empty map when no files uploaded
-    it('should return empty map when no files uploaded', () => {
-      const uploadedFiles = provider.getUploadedFiles();
-
-      expect(uploadedFiles.size).toBe(0);
-    });
-  });
-
-  describe('clearUploadedFiles', () => {
-    // State change: All files removed
-    it('should remove all uploaded files', () => {
-      const file1 = new File(['content1'], 'file1.tscn');
-      const file2 = new File(['content2'], 'file2.tscn');
-      provider.addUploadedFile('res://file1.tscn', file1);
-      provider.addUploadedFile('res://file2.tscn', file2);
-
-      provider.clearUploadedFiles();
-
-      const uploadedFiles = provider.getUploadedFiles();
-      expect(uploadedFiles.size).toBe(0);
-    });
-
-    // Edge case: Clear when already empty
-    it('should handle clearing empty map without error', () => {
-      expect(() => provider.clearUploadedFiles()).not.toThrow();
-
-      const uploadedFiles = provider.getUploadedFiles();
-      expect(uploadedFiles.size).toBe(0);
-    });
-  });
-
-  describe('hasResource', () => {
-    // Happy path: Return true for uploaded files
-    it('should return true for uploaded files', () => {
-      const mockFile = new File(['content'], 'test.tscn');
-      provider.addUploadedFile('res://test.tscn', mockFile);
-
-      const has = provider.hasResource('res://test.tscn');
-
-      expect(has).toBe(true);
-    });
-
-    // Edge case: Return false for non-uploaded files
-    it('should return false for non-uploaded files', () => {
-      const has = provider.hasResource('res://not-uploaded.tscn');
-
-      expect(has).toBe(false);
-    });
-
-    // Known limitation: Doesn't check fixtures
-    it('should return false for fixtures (BUG: does not check /fixtures/)', () => {
-      // This documents known limitation - hasResource only checks uploaded files
-      const has = provider.hasResource('res://child_cube.tscn');
-
-      expect(has).toBe(false); // Even if fixture exists, returns false
+      const [r1, r2] = await Promise.all([
+        provider.loadResource('res://file1.tscn', 'PackedScene'),
+        provider.loadResource('res://file2.tscn', 'PackedScene'),
+      ]);
+      expect(r1).toBe('content1');
+      expect(r2).toBe('content2');
     });
   });
 
