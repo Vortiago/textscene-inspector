@@ -6,7 +6,7 @@
  * instance node + the synthesised GLB root's basename) would surface as the
  * Animation tab failing to populate on selection.
  */
-import { describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode, TscnScene } from '../../../parser/types';
@@ -26,9 +26,16 @@ import {
   type SelectionContextValue,
 } from '../../contexts/SelectionContext';
 import { GLB_SCENE_ROOT_TYPE } from './Component';
+import { initGlbModules } from '../../../resources/processing/glbProcessing';
 
 // Register node-type components (Node3D / GLBSceneRoot / …).
 import '../../nodes/index';
+
+// GLBSceneRoot clones Object3D via cloneWithMaterials which requires the lazy
+// GLB module cache to be initialised first.
+beforeAll(async () => {
+  await initGlbModules();
+});
 
 const GLB_PATH = 'res://player.glb';
 

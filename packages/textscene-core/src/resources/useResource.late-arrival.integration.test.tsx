@@ -10,7 +10,7 @@
  * `<MeshInstance3D>` and the real R3F-side rendering arrive in WI-R3F-3;
  * here we use a tiny stub that's just enough to drive the hook.
  */
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { act, render } from '@testing-library/react';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -24,6 +24,7 @@ import { FileEventBus } from './FileEventBus';
 import type { ResourceProvider } from './ResourceProvider';
 import { useResource } from './useResource';
 import { ResourceLoaderProvider } from './ResourceLoaderContext';
+import { initGlbModules } from './processing/glbProcessing';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -84,6 +85,12 @@ function MeshStub(props: { path: string; resourcePath: string }) {
     </div>
   );
 }
+
+// GLBMesh hooks call cloneWithMaterials, which requires SkeletonUtils to be
+// lazily loaded first. Initialise once for the whole test file.
+beforeAll(async () => {
+  await initGlbModules();
+});
 
 describe('useResource late-arrival integration', () => {
   let parser: TscnParser;

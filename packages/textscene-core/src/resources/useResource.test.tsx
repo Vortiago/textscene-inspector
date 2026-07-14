@@ -3,7 +3,7 @@
  * R3F-contracts.md §1: status transitions, identity equality vs Object3D
  * clone semantics, and the late-arrival flow (the WI-R3F-2 hard gate).
  */
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
 import { renderHook, act, render } from '@testing-library/react';
 import * as THREE from 'three';
 import { StrictMode, type ReactNode } from 'react';
@@ -11,6 +11,7 @@ import { useResource } from './useResource';
 import { ResourceLoaderProvider } from './ResourceLoaderContext';
 import type { ResourceLoader } from './ResourceLoader';
 import { createFakeResourceLoader, type FakeProcessor } from './testing/createFakeResourceLoader';
+import { initGlbModules } from './processing/glbProcessing';
 
 /**
  * A fake ResourceLoader whose cache + event emits these hook tests drive
@@ -33,6 +34,12 @@ function withLoader(loader: ResourceLoader) {
     return <ResourceLoaderProvider loader={loader}>{children}</ResourceLoaderProvider>;
   };
 }
+
+// GLBMesh tests call cloneWithMaterials (via the hook), which requires
+// SkeletonUtils to be lazily loaded first. Initialise once for the file.
+beforeAll(async () => {
+  await initGlbModules();
+});
 
 describe('useResource', () => {
   let loader: MockLoader;

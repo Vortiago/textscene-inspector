@@ -5,7 +5,7 @@
  * (the GLB counterpart to AnimationPlayer / ADR-0011).
  */
 
-import { describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { GLBSceneRoot } from './Component';
@@ -24,6 +24,13 @@ import {
   type SelectionContextValue,
 } from '../../contexts/SelectionContext';
 import { NodePathProvider } from '../../contexts/NodePathContext';
+import { initGlbModules } from '../../../resources/processing/glbProcessing';
+
+// GLBSceneRoot clones Object3D via cloneWithMaterials which requires the lazy
+// GLB module cache to be initialised first.
+beforeAll(async () => {
+  await initGlbModules();
+});
 
 const GLB_PATH = 'res://player.glb';
 const GLB_NODE_PATH = 'Root/player';

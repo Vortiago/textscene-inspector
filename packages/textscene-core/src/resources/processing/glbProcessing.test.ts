@@ -9,13 +9,14 @@
 
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import {
   cloneWithMaterials,
   createGLBMesh,
   disposeClonedMaterials,
   gltfResourceDir,
+  initGlbModules,
   isGLBPath,
 } from './glbProcessing';
 
@@ -33,6 +34,54 @@ function findRepoAsset(relative: string): string {
   }
   throw new Error(`Asset not found walking up from ${process.cwd()}: ${relative}`);
 }
+
+// cloneWithMaterials uses SkeletonUtils.clone, which is lazily imported on the
+// first GLB load. Pre-initialise once for the whole test file so tests that
+// call cloneWithMaterials directly don't need to go through createGLBMesh first.
+beforeAll(async () => {
+  await initGlbModules();
+});
+
+describe('initGlbModules', () => {
+  it('returns the same cached promise on repeated calls, resolved with the loaded modules', async () => {
+    const first = initGlbModules();
+    expect(initGlbModules()).toBe(first);
+
+    const modules = await first;
+    expect(modules.GLTFLoader).toBeTypeOf('function');
+    expect(modules.skeletonClone).toBeTypeOf('function');
+  });
+
+  it('cloneWithMaterials throws a clear error when called before initialisation', async () => {
+    // A fresh module instance has an empty lazy cache — the guard must fire.
+    vi.resetModules();
+    const fresh = await import('./glbProcessing');
+
+    expect(() => fresh.cloneWithMaterials(new THREE.Object3D())).toThrow(
+      /cloneWithMaterials called before initGlbModules/
+    );
+  });
+
+  it('does not cache a failed module load — the next call retries and succeeds', async () => {
+    vi.resetModules();
+    vi.doMock('three/addons/loaders/GLTFLoader.js', () => {
+      throw new Error('simulated chunk load failure');
+    });
+    try {
+      const fresh = await import('./glbProcessing');
+      // Vitest wraps a throwing mock factory in its own error message, so
+      // assert only that the load rejects — the retry below is the contract.
+      await expect(fresh.initGlbModules()).rejects.toThrow();
+
+      vi.doUnmock('three/addons/loaders/GLTFLoader.js');
+      const modules = await fresh.initGlbModules();
+      expect(modules.GLTFLoader).toBeTypeOf('function');
+      expect(modules.skeletonClone).toBeTypeOf('function');
+    } finally {
+      vi.doUnmock('three/addons/loaders/GLTFLoader.js');
+    }
+  });
+});
 
 describe('createGLBMesh', () => {
   it('surfaces a GLB’s embedded animation clips on the returned object', async () => {
