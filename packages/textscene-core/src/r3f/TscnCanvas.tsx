@@ -168,7 +168,7 @@ function ActiveCameraSwitcher() {
  * a short settle window so async-loaded content (GLB, instanced scenes) is
  * captured without fighting the user's subsequent orbit.
  *
- * Selection changes NEVER move the camera — framing is deliberately not keyed
+ * Selection changes NEVER move the camera: framing is deliberately not keyed
  * on selection state (design decision: an unrequested camera move on click is
  * worse than a selection-gated gizmo extending past the current frame; the
  * user re-frames explicitly via FrameSelectedShortcut). The visual-regression

@@ -210,10 +210,10 @@ async function captureScene(page, baseUrl, scene) {
     }
     // Click only after CameraFit's load-time fit timers (150/500/1100ms after
     // the scene mounts) have ALL fired. Selection never moves the camera (by
-    // design — see CameraFit in packages/textscene-core/src/r3f/TscnCanvas.tsx),
+    // design; see CameraFit in packages/textscene-core/src/r3f/TscnCanvas.tsx),
     // so a click that lands BEFORE the 1100ms timer lets that timer see the
     // just-mounted gizmo and widen the frame, while a click AFTER it leaves
-    // the tight pre-selection framing — two individually stable equilibria
+    // the tight pre-selection framing: two individually stable equilibria
     // whose winner depends on host load (issue #243). The tree row's presence
     // above is our scene-ready signal: rows render from the same scene-graph
     // state whose arrival starts CameraFit's timers, so waiting comfortably

@@ -3,7 +3,7 @@
  *
  * Design decision: selection changes must NEVER move the camera. Once the
  * load-time fit timers (150ms, 500ms, 1100ms) have fired, nothing but a
- * scene/camera change re-frames — an unrequested camera move on click is
+ * scene/camera change re-frames: an unrequested camera move on click is
  * worse than a selection-gated gizmo extending past the current frame (the
  * user re-frames explicitly via FrameSelectedShortcut). Deterministic
  * `-selected` visual captures are the harness's job (scripts/visual/run.mjs
