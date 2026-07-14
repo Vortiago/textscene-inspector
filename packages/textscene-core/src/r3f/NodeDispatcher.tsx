@@ -41,7 +41,7 @@ import { useCanvasWorkspace } from './contexts/CanvasWorkspaceContext.js';
 import { TWO_D_UI_TYPES } from './controls/has2DUIContent.js';
 import { NodePathProvider } from './contexts/NodePathContext.js';
 import { useResource, useResourceLoader } from '../resources/useResource.js';
-import { collapseLiveNode, liveChildGroups, singleSceneCache } from './liveSceneTree.js';
+import { collapseLiveNode, singleSceneCache } from './liveSceneTree.js';
 import { parseResourceReference, resolveInstancePath } from '../resources/SubResourceResolver.js';
 import {
   SceneResourcesProvider,
@@ -291,19 +291,6 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
     [node, externalResources, scenePath, loadedScene]
   );
 
-  // Fallback child set (`.glb` synthetic root / multi-root): the `subscene`
-  // group from liveChildGroups — the single source of truth for which nodes
-  // are the loaded roots — rather than reaching into loadedScene.nodes
-  // directly. The subscene group carries sub-scene scope, matching the
-  // SceneResourcesProvider in the fallback render below. Memoized for the
-  // same reason as `effective`: an unrelated re-render must not re-derive
-  // the merge decision (a raw-property re-parse) every frame.
-  const subsceneNodes = useMemo(() => {
-    if (!loadedScene) return null;
-    const groups = liveChildGroups(node, externalResources, singleSceneCache(scenePath, loadedScene));
-    return groups.find((g) => g.origin === 'subscene')?.children ?? loadedScene.nodes;
-  }, [node, externalResources, scenePath, loadedScene]);
-
   // Unresolvable ref or failed load: keep the node visible with a magenta
   // placeholder child, matching the missing-texture UX (WI-R3F-7).
   if (!scenePath || result.status === 'unavailable') {
@@ -338,7 +325,7 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
           internalResources={loadedScene.internalResources}
           externalResources={loadedScene.externalResources}
         >
-          {(subsceneNodes ?? loadedScene.nodes).map((child) => (
+          {loadedScene.nodes.map((child) => (
             <DispatchedNode key={child.name} node={child} path={joinPath(path, child.name)} />
           ))}
         </SceneResourcesProvider>

@@ -168,14 +168,25 @@ export function R3FApp() {
   const { buffer, forwardedContent, isFetching: isFetchingFixture, loadError, onBufferChange: handleSourceChange, replace } =
     useSceneSource({ fixtureFile, uploadedTscnName });
 
-  // #221: drag-and-drop a .tscn (+ resource files) onto the page. A counter,
+  // Two error channels owned by different layers (uploadError here, loadError
+  // inside useSceneSource) feed one toolbar banner, which must show whichever
+  // was set most recently. Value order can't encode that — an in-flight fixture
+  // fetch can reject AFTER an upload error was set — so set-order is tracked
+  // explicitly: upload failures bump the channel at their set sites, and this
+  // effect records a fetch error's arrival.
+  const [newestErrorChannel, setNewestErrorChannel] = useState<'upload' | 'load'>('upload');
+  useEffect(() => {
+    if (loadError !== null) setNewestErrorChannel('load');
+  }, [loadError]);
+
+  // Drag-and-drop a .tscn (+ resource files) onto the page. A counter,
   // not a boolean, because dragenter/dragleave bubble from every descendant
   // as the cursor crosses child element boundaries during one continuous
   // drag over the app root — only net-zero really means "left the window".
   const dragCounterRef = useRef(0);
   const [dragActive, setDragActive] = useState(false);
 
-  // #202: lint the buffer continuously, debounced at the same cadence as
+  // Lint the buffer continuously, debounced at the same cadence as
   // useSceneSource's render-forward — but independent of its gate (a buffer
   // that fails to RENDER can still be LINTED; the gutter is what tells the
   // user why). Re-runs whenever the buffer changes for any reason (typing,
@@ -198,7 +209,7 @@ export function R3FApp() {
   const lineCount = useMemo(() => countLines(buffer), [buffer]);
   const [gutterScrollTop, setGutterScrollTop] = useState(0);
 
-  // Wire the WI-79 resource pipeline. One provider + bus + loader for
+  // Wire the resource pipeline. One provider + bus + loader for
   // the lifetime of the app; React component identity preserves them
   // across fixture switches so an already-uploaded texture survives a
   // fixture reload.
@@ -257,7 +268,7 @@ export function R3FApp() {
     loader.provideFile(path);
   }
 
-  // #221: shared entry point for BOTH drag-and-drop and the toolbar's
+  // Shared entry point for BOTH drag-and-drop and the toolbar's
   // (now multi-select) file input. The first `.tscn` among `files` becomes
   // the active scene; every OTHER file is matched to one of ITS external-
   // resource `res://` paths by basename, so a scene + its textures open in
@@ -266,6 +277,7 @@ export function R3FApp() {
     const tscnFile = pickTscnFile(files);
     if (!tscnFile) {
       setUploadError('No .tscn file found among the dropped/selected files.');
+      setNewestErrorChannel('upload');
       return;
     }
     let text: string;
@@ -274,6 +286,7 @@ export function R3FApp() {
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       setUploadError(`Failed to read TSCN file: ${message}`);
+      setNewestErrorChannel('upload');
       return;
     }
     setUploadError(null);
@@ -319,7 +332,7 @@ export function R3FApp() {
   }
 
   function handleResourceRemove(path: string) {
-    // WI-UX-6: drop the uploaded file AND re-request through the loader
+    // Drop the uploaded file AND re-request through the loader
     // so dependents flip back to `missing`. Without provideFile() the
     // dispatcher's `useResource` would keep its `loaded` value (cached
     // texture) and the panel row would never reappear in the missing
@@ -349,14 +362,15 @@ export function R3FApp() {
     }
   }
 
-  // The toolbar shows the newest error. `uploadError` wins when both are set:
-  // fetch errors only arise from fixture loads, and every path that starts one
-  // clears uploadError first — so a live uploadError is always the more recent.
-  // Each error is cleared by the interactions that supersede it: edits clear
-  // both, fixture switches clear uploadError, replace() clears loadError.
-  const effectiveLoadError = uploadError ?? loadError;
+  // The toolbar shows the most recently SET error (newestErrorChannel above);
+  // if that channel has since been cleared, the other one — if still live —
+  // shows instead. Each error is cleared by the interactions that supersede
+  // it: edits clear both, fixture switches clear uploadError, replace()
+  // clears loadError.
+  const effectiveLoadError =
+    newestErrorChannel === 'load' ? (loadError ?? uploadError) : (uploadError ?? loadError);
 
-  // #203: nothing has EVER rendered (forwardedContent stays '' once a valid
+  // Nothing has EVER rendered (forwardedContent stays '' once a valid
   // render has occurred — hold-last-valid never reverts it) AND the current
   // buffer isn't blank either — so the user pasted/typed something that
   // simply doesn't parse. The shell's own content==='' state ("Loading

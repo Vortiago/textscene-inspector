@@ -16,11 +16,19 @@ const production = process.argv.includes('--production');
 const watch = process.argv.includes('--watch');
 const skipTests = process.argv.includes('--skip-tests');
 
-// The webview build emits content-hashed chunks (chunks/[name]-[hash].js).
-// esbuild never deletes outputs from previous builds, so stale chunks
-// accumulate in dist/webview/chunks/ and would get packaged into the VSIX.
-// Clear the webview output dir up front so every build starts clean.
+// esbuild never deletes outputs from previous builds, so both build dirs
+// accumulate stale files across runs:
+//   - dist/webview: content-hashed chunks (chunks/[name]-[hash].js) pile up
+//     and would get packaged into the VSIX.
+//   - dist/test: the integration-test build (outdir 'dist' + outbase 'src')
+//     emits every suite into dist/test/..., so a deleted or renamed
+//     `*.test.ts` leaves a compiled `.test.js` behind that suite/index.ts
+//     still globs and runs locally (CI is immune — it builds a fresh
+//     checkout). Nothing else emits into dist/test (tsconfig.test.json is
+//     noEmit), so clearing it wholesale is safe.
+// Clear both output dirs up front so every build starts clean.
 await rm('dist/webview', { recursive: true, force: true });
+await rm('dist/test', { recursive: true, force: true });
 
 /**
  * @type {esbuild.BuildOptions}

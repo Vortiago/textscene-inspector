@@ -8,7 +8,8 @@
  *     switch — the switched root renders and the edited root never does, whether
  *     the switch's fetch succeeds or fails;
  *   - a stale error banner is cleared by the interaction that supersedes it
- *     (fetch error → upload; upload error → fixture switch).
+ *     (fetch error → upload; upload error → fixture switch), and when both
+ *     channels hold an error the most recently SET one shows.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
@@ -127,7 +128,7 @@ beforeEach(() => {
   } catch {
     // happy-dom may throw in edge cases; ignore.
   }
-  // #221: a fixture switch now writes `?fixture=` back to the URL
+  // A fixture switch writes `?fixture=` back to the URL
   // (history.replaceState) — reset it so one test's switch doesn't leak
   // into the next test's initial mount as a stale deep link.
   window.history.replaceState(null, '', '/');
@@ -239,5 +240,41 @@ describe('error-banner supersession — stale errors do not outlive the next act
 
     await waitForScene('SwitchedRoot');
     expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('shows the fixture error, not the stale upload error, when the switch fetch fails after a bad drop', async () => {
+    // The switch target's fetch stays in flight until the test fails it,
+    // opening the window where an upload error lands BEFORE the fetch error.
+    // The banner must then show the fetch error — the most recently set one.
+    let failSwitchFetch!: () => void;
+    globalThis.fetch = vi.fn().mockImplementation((url: unknown) => {
+      if (String(url).endsWith(`/${SWITCH_TARGET.file}`)) {
+        return new Promise<Response>((resolve) => {
+          failSwitchFetch = () =>
+            resolve({ ok: false, statusText: 'Not Found' } as unknown as Response);
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        text: () => Promise.resolve(STUB_TSCN),
+      } as unknown as Response);
+    }) as unknown as typeof fetch;
+
+    render(<R3FApp />);
+    await waitForScene();
+
+    await switchToTarget();
+    dropFiles([new File(['not a scene'], 'texture.png', { type: 'image/png' })]);
+    await waitFor(() => {
+      expect(screen.queryByRole('alert')?.textContent).toContain('No .tscn file found');
+    });
+
+    await act(async () => {
+      failSwitchFetch();
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByRole('alert')?.textContent).toContain('Failed to load fixture');
+    });
   });
 });

@@ -8,7 +8,7 @@ import { joinPath } from '../../../utils/nodePath.js';
 import { isRenderableNodeType } from '../../nodeSupport.js';
 import { useSelection } from '../../contexts/SelectionContext.js';
 import { resolveInstancePath } from '../../../resources/SubResourceResolver.js';
-import { collapseLiveNode, liveChildGroups, singleSceneCache, type LiveChildGroup } from '../../liveSceneTree.js';
+import { liveChildGroups, singleSceneCache, type LiveChildGroup } from '../../liveSceneTree.js';
 import { GLB_SCENE_ROOT_TYPE } from '../../internal/glb-scene-root/Component.js';
 import { useSubSceneChildren } from './useSubSceneChildren.js';
 import { useGlbChildren } from './useGlbChildren.js';
@@ -131,7 +131,8 @@ function TreeNodeImpl({
   //     result is already memoized by useGlbChildren).
   //
   // Memoized so a collapsed row keeps stable group identity across unrelated
-  // re-renders (selection/hover/expand), mirroring the former collapseLiveNode memo.
+  // re-renders (selection/hover/expand) — and so the derived `effective` node
+  // below reuses this one merge instead of re-parsing on every re-render.
   const groups: readonly LiveChildGroup[] = useMemo(() => {
     if (node.type === GLB_SCENE_ROOT_TYPE && glbChildren) {
       return [{ origin: 'glb' as const, children: glbChildren, externalResources }];
@@ -139,13 +140,15 @@ function TreeNodeImpl({
     return liveChildGroups(node, externalResources, singleSceneCache(scenePath, subScene));
   }, [node, externalResources, scenePath, subScene, glbChildren]);
 
-  // Instance root merge (ADR-0013) via collapseLiveNode — the SAME decision the
-  // viewport, inspector, and panels make. Used here to derive the effective type
-  // and properties for the row header (badge + transform icon). Memoized so an
-  // unrelated re-render doesn't re-merge this instance's subtree every frame.
+  // Instance root merge (ADR-0013) — the SAME decision the viewport, inspector,
+  // and panels make — used here for the row header (badge + transform icon).
+  // Derived from the `merged` group `groups` already built, so the single-root
+  // merge (a raw-property re-parse) runs ONCE per row instead of a second time in
+  // its own collapseLiveNode call. Every other origin leaves the node unchanged,
+  // matching collapseLiveNode's fallback (it returns the raw node there too).
   const effective = useMemo(
-    () => collapseLiveNode(node, externalResources, singleSceneCache(scenePath, subScene)),
-    [node, externalResources, scenePath, subScene]
+    () => groups.find((g) => g.origin === 'merged')?.mergedNode ?? node,
+    [groups, node]
   );
 
   const hasChildren = groups.some((g) => g.children.length > 0);

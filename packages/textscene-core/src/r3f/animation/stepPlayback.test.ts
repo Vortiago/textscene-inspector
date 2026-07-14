@@ -5,7 +5,7 @@
  * The reducer decides which transport edge fired this frame and what the
  * driver adapter must do, without touching any THREE object or React hook.
  * Tests exercise every documented transition and the deliberate no-flush-on-
- * stop subtlety (WI-213).
+ * stop subtlety.
  */
 import { describe, expect, it } from 'vitest';
 import { stepPlayback, type StepPlaybackInput } from './stepPlayback';
@@ -82,7 +82,7 @@ describe('stepPlayback — playing → playing', () => {
 });
 
 // ---------------------------------------------------------------------------
-// playing → paused  (pause edge — must flush time, WI-213)
+// playing → paused  (pause edge — must flush time)
 // ---------------------------------------------------------------------------
 describe('stepPlayback — playing → paused', () => {
   it('emits hold-paused + flushTime=true so the paused readout is never stale', () => {
@@ -155,7 +155,7 @@ describe('stepPlayback — paused → paused', () => {
 });
 
 // ---------------------------------------------------------------------------
-// playing → stopped  (stop edge — must NOT flush time, WI-213)
+// playing → stopped  (stop edge — must NOT flush time)
 // ---------------------------------------------------------------------------
 describe('stepPlayback — playing → stopped', () => {
   it('emits stop-and-restore with flushTime=false (transport already reset the playhead)', () => {
@@ -165,7 +165,7 @@ describe('stepPlayback — playing → stopped', () => {
     expect(result.command).toBe('stop-and-restore');
     expect(result.resume).toBe(false);
     // DELIBERATE: stop() resets transport.time to 0; flushing the pre-stop
-    // playhead here would overwrite that reset (stuck-scrubber bug, WI-213).
+    // playhead here would overwrite that reset (stuck-scrubber bug).
     expect(result.flushTime).toBe(false);
   });
 });
