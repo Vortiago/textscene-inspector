@@ -1,5 +1,5 @@
 /**
- * WI-UX-7 regression: the toolbar's "Upload TSCN" file input lets the
+ * Upload-TSCN regression: the toolbar's "Upload TSCN" file input lets the
  * user load a .tscn file from disk. The parsed scene tree must populate
  * with the uploaded content's root nodes, and the dropdown should
  * deselect so the user knows they're not on a fixture anymore.
@@ -54,7 +54,7 @@ describe('<R3FApp> Upload TSCN (WI-UX-7)', () => {
 
     const uploadInput = screen.getByTestId('upload-tscn-input') as HTMLInputElement;
     expect(uploadInput).toBeTruthy();
-    // #221: multi-file upload broadened `accept` to the resource kinds
+    // Multi-file upload broadened `accept` to the resource kinds
     // handleFilesUpload's basename-matching can resolve, not just `.tscn`.
     expect(uploadInput.accept).toContain('.tscn');
 

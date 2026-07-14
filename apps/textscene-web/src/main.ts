@@ -1,7 +1,7 @@
 /**
  * Standalone web application for previewing TSCN files.
  *
- * The R3F path is the only path post-WI-R3F-6. Mounts `<TscnPreviewShell>`
+ * The R3F path is the only path. Mounts `<TscnPreviewShell>`
  * with the fixture-selector toolbar into the body's `#app` container.
  */
 
