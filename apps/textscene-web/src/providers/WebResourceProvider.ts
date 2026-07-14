@@ -7,6 +7,12 @@ import { isBinaryResourceType, info, warn } from '@textscene/core';
 import type { ResourceProvider } from '@textscene/core';
 
 export class WebResourceProvider implements ResourceProvider {
+  /**
+   * Uploaded files keyed by a compound key: the corpus root active when the
+   * file was added, separated from the res:// path by a NUL byte.  This
+   * ensures that a file uploaded while corpus A is active is never served to
+   * a consumer that was opened under a different corpus root.
+   */
   private uploadedFiles: Map<string, File> = new Map();
   /**
    * Public-fixtures subtree the active scene's res:// namespace maps onto.
@@ -20,26 +26,34 @@ export class WebResourceProvider implements ResourceProvider {
     this.resourceRoot = root;
   }
 
+  /** Compound storage key: corpus root + NUL separator + res:// path. */
+  private uploadKey(path: string): string {
+    return `${this.resourceRoot}\0${path}`;
+  }
+
   /**
-   * Add a manually uploaded file.
+   * Add a manually uploaded file, scoped to the currently-active corpus root.
+   * Uploading while corpus A is active will NOT make the file visible when the
+   * provider is later switched to a different corpus root.
    * @param path - Godot resource path (e.g., 'res://scenes/Door.tscn')
    * @param file - The uploaded File object
    */
   addUploadedFile(path: string, file: File): void {
-    this.uploadedFiles.set(path, file);
+    this.uploadedFiles.set(this.uploadKey(path), file);
   }
 
   /**
-   * Remove a single uploaded file. After removal, requesting the path
-   * again falls through to the fixtures fetch (or fails).
+   * Remove a single uploaded file from the currently-active corpus root.
+   * After removal, requesting the path again falls through to the fixtures
+   * fetch (or fails).
    */
   removeUploadedFile(path: string): boolean {
-    return this.uploadedFiles.delete(path);
+    return this.uploadedFiles.delete(this.uploadKey(path));
   }
 
   async loadResource(path: string, type: string): Promise<string | ArrayBuffer> {
-    // Check uploaded files first
-    const uploadedFile = this.uploadedFiles.get(path);
+    // Check uploaded files first (only for the active corpus root)
+    const uploadedFile = this.uploadedFiles.get(this.uploadKey(path));
     if (uploadedFile) {
       return isBinaryResourceType(type, path) ? uploadedFile.arrayBuffer() : uploadedFile.text();
     }
