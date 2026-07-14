@@ -16,7 +16,6 @@ import { useCallback, useEffect, useState } from 'react';
 import * as THREE from 'three';
 import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
 import { useOptionalCameraControl } from './contexts/CameraControlContext.js';
-import { useOptionalSelection } from './contexts/SelectionContext.js';
 import { useViewportMode } from './contexts/ViewportModeContext.js';
 import { SceneResourcesProvider } from './SceneResourcesContext.js';
 import { NodeDispatcher } from './NodeDispatcher.js';
@@ -169,13 +168,12 @@ function ActiveCameraSwitcher() {
  * a short settle window so async-loaded content (GLB, instanced scenes) is
  * captured without fighting the user's subsequent orbit.
  *
- * A second effect re-runs a single delayed fit whenever the active selection
- * changes: selection-gated gizmos (e.g. PointLightHelper for OmniLight3D) only
- * mount AFTER the selection is applied, so they are invisible to the load-time
- * timers if the user selects a node after those timers have already fired.
- * This closes the race that produced nondeterministic framing in the visual
- * regression harness and also improves the live-app UX: the camera widens
- * to include a large gizmo even after the initial settle is done.
+ * Selection changes NEVER move the camera: framing is deliberately not keyed
+ * on selection state (design decision: an unrequested camera move on click is
+ * worse than a selection-gated gizmo extending past the current frame; the
+ * user re-frames explicitly via FrameSelectedShortcut). The visual-regression
+ * harness gets deterministic `-selected` captures by clicking only after these
+ * load-time timers have all fired (scripts/visual/run.mjs).
  *
  * Exported for unit testing — it is an internal canvas component that must
  * remain mounted inside `<Canvas>` (needs `useThree`).
@@ -183,29 +181,21 @@ function ActiveCameraSwitcher() {
 export function CameraFit() {
   const hierarchy = useOptionalHierarchy();
   const control = useOptionalCameraControl();
-  const selection = useOptionalSelection();
   const get = useThree((s) => s.get);
   const rootKey = hierarchy?.sceneGraph?.rootScene ?? '';
   const hasScene = !!hierarchy?.sceneGraph;
   const activeCameraPath = control?.activeCameraPath ?? null;
-  const selectedNodePath = selection?.selectedNodePath ?? null;
-
-  const fit = useCallback(() => {
-    const state = get();
-    frameSceneBounds(state.scene, state.camera, state.controls as OrbitLike | null);
-  }, [get]);
 
   useEffect(() => {
     if (!hasScene || activeCameraPath) return undefined;
-    const timers = [150, 500, 1100].map((delay) => setTimeout(fit, delay));
+    const timers = [150, 500, 1100].map((delay) =>
+      setTimeout(() => {
+        const state = get();
+        frameSceneBounds(state.scene, state.camera, state.controls as OrbitLike | null);
+      }, delay)
+    );
     return () => timers.forEach(clearTimeout);
-  }, [rootKey, hasScene, activeCameraPath, fit]);
-
-  useEffect(() => {
-    if (!hasScene || activeCameraPath) return undefined;
-    const timer = setTimeout(fit, 300);
-    return () => clearTimeout(timer);
-  }, [selectedNodePath, hasScene, activeCameraPath, fit]);
+  }, [rootKey, hasScene, activeCameraPath, get]);
 
   return null;
 }

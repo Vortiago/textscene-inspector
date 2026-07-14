@@ -1,11 +1,13 @@
 /**
- * CameraFit selection-triggered re-fit.
+ * CameraFit is selection-inert.
  *
- * When `selectedNodePath` changes, `CameraFit` must schedule one additional
- * delayed `frameSceneBounds` call so selection-mounted gizmo bounds (e.g. a
- * PointLightHelper) are always eventually included in the camera frame, even
- * when the gizmo mounts after the load-time timers (150ms, 500ms, 1100ms)
- * have already fired.
+ * Design decision: selection changes must NEVER move the camera. Once the
+ * load-time fit timers (150ms, 500ms, 1100ms) have fired, nothing but a
+ * scene/camera change re-frames: an unrequested camera move on click is
+ * worse than a selection-gated gizmo extending past the current frame (the
+ * user re-frames explicitly via FrameSelectedShortcut). Deterministic
+ * `-selected` visual captures are the harness's job (scripts/visual/run.mjs
+ * clicks only after the last fit timer has provably fired).
  *
  * Seam: the `frameSceneBounds` module boundary, mocked so we can count
  * calls independently of Three.js scene geometry.
@@ -56,21 +58,24 @@ function tree(graph: ReturnType<typeof makeGraph>, path: string | null) {
 
 /**
  * Mounts CameraFit with `initialPath` selected, drains the load-time timers
- * (150/500/1100ms plus the mount-time 300ms fit), resets the mock, then
- * re-renders with `nextPath`. Callers assert on what the pending
- * selection-triggered timer (if any) does.
+ * (150/500/1100ms), resets the mock, then re-renders with `nextPath` and
+ * returns the pending-timer count captured immediately before and after that
+ * selection change. Callers assert nothing new was scheduled and no frame
+ * call ever fires.
  */
 async function mountThenSelect(initialPath: string | null, nextPath: string | null) {
   const graph = makeGraph();
   const renderer = await ReactThreeTestRenderer.create(tree(graph, initialPath));
   vi.advanceTimersByTime(1200);
   frameSceneBoundsMock.mockClear();
+  const timersBefore = vi.getTimerCount();
   await ReactThreeTestRenderer.act(async () => {
     await renderer.update(tree(graph, nextPath));
   });
+  return { timersBefore, timersAfter: vi.getTimerCount() };
 }
 
-describe('CameraFit selection-triggered re-fit', () => {
+describe('CameraFit ignores selection changes', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     frameSceneBoundsMock.mockClear();
@@ -80,41 +85,31 @@ describe('CameraFit selection-triggered re-fit', () => {
     vi.useRealTimers();
   });
 
-  it('schedules a frame call when selectedNodePath becomes non-null', async () => {
-    await mountThenSelect(null, 'Root/OmniLight3D');
+  it('schedules nothing when selectedNodePath becomes non-null', async () => {
+    const { timersBefore, timersAfter } = await mountThenSelect(null, 'Root/OmniLight3D');
 
-    // Before the delayed timer fires: no new call yet.
+    expect(timersAfter).toBe(timersBefore);
+    vi.advanceTimersByTime(5000);
     expect(frameSceneBoundsMock).not.toHaveBeenCalled();
-
-    // After the selection-triggered delay fires, at least one call is expected.
-    vi.advanceTimersByTime(600);
-    expect(frameSceneBoundsMock).toHaveBeenCalledTimes(1);
   });
 
-  it('schedules a frame call when selectedNodePath changes from one path to another', async () => {
-    await mountThenSelect('Root/Node1', 'Root/Node2');
+  it('schedules nothing when selectedNodePath changes from one path to another', async () => {
+    const { timersBefore, timersAfter } = await mountThenSelect('Root/Node1', 'Root/Node2');
 
-    vi.advanceTimersByTime(600);
-    expect(frameSceneBoundsMock).toHaveBeenCalledTimes(1);
+    expect(timersAfter).toBe(timersBefore);
+    vi.advanceTimersByTime(5000);
+    expect(frameSceneBoundsMock).not.toHaveBeenCalled();
   });
 
-  it('schedules a frame call when selectedNodePath is cleared back to null', async () => {
-    await mountThenSelect('Root/OmniLight3D', null);
+  it('schedules nothing when selectedNodePath is cleared back to null', async () => {
+    const { timersBefore, timersAfter } = await mountThenSelect('Root/OmniLight3D', null);
 
-    vi.advanceTimersByTime(600);
-    expect(frameSceneBoundsMock).toHaveBeenCalledTimes(1);
+    expect(timersAfter).toBe(timersBefore);
+    vi.advanceTimersByTime(5000);
+    expect(frameSceneBoundsMock).not.toHaveBeenCalled();
   });
 
-  it('does not schedule an extra frame call when selection is unchanged', async () => {
-    await mountThenSelect('Root/OmniLight3D', 'Root/OmniLight3D');
-
-    vi.advanceTimersByTime(600);
-    // The Selector component re-sets the same path; SelectionContext bails
-    // on the no-op update, so CameraFit's selection effect never re-runs.
-    expect(frameSceneBoundsMock).toHaveBeenCalledTimes(0);
-  });
-
-  it('does not fire the selection re-fit when an authored camera is active', async () => {
+  it('stays idle on selection change when an authored camera is active', async () => {
     const graph = makeGraph();
 
     function ActivateAuthoredCamera() {
@@ -147,8 +142,7 @@ describe('CameraFit selection-triggered re-fit', () => {
       await renderer.update(cameraTree('Root/OmniLight3D'));
     });
 
-    vi.advanceTimersByTime(600);
-    // With an authored camera active, CameraFit must stay completely idle.
-    expect(frameSceneBoundsMock).toHaveBeenCalledTimes(0);
+    vi.advanceTimersByTime(5000);
+    expect(frameSceneBoundsMock).not.toHaveBeenCalled();
   });
 });
