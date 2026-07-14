@@ -2,7 +2,9 @@
 /**
  * Bundle-size guards for the VS Code extension:
  *
- * 1. The webview's initial-paint chunk (soft budget, see `main()` below).
+ * 1. The webview's initial-paint chunk (600 kB gzipped budget, see
+ *    `main()` below — the repo's `check:bundle-size` script passes
+ *    `--enforce`, so validate/pre-push/CI hard-fail when it is exceeded).
  * 2. The extension HOST bundles (`dist/extension.js` / `extension.web.js`),
  *    which must never bundle `react`/`three` (hard invariant — see
  *    `checkHostBundles()`).
@@ -10,8 +12,8 @@
  * ## Webview budget
  *
  * Walks the static import closure starting from `dist/webview/webview.js`,
- * gzips the concatenation, and compares against the main baseline + the
- * agreed-upon budget. Dynamic `import()` (React.lazy) chunks are
+ * gzips the concatenation, and compares against the renegotiated absolute
+ * budget (`BUDGET_GZ`). Dynamic `import()` (React.lazy) chunks are
  * deliberately excluded — they don't load on the canvas-paint critical
  * path, so they don't count against this budget.
  *
@@ -38,7 +40,11 @@
  *
  * Run modes:
  *   node scripts/check-bundle-size.mjs            # webview budget informational; host guard always hard-fails
- *   node scripts/check-bundle-size.mjs --enforce  # webview budget also exits 1 if over budget (CI hard-fail)
+ *   node scripts/check-bundle-size.mjs --enforce  # webview budget also exits 1 if over budget (hard-fail)
+ *
+ * The repo's `pnpm check:bundle-size` script (package.json) passes
+ * `--enforce`, so validate / pre-push / CI all hard-fail on a webview
+ * budget breach.
  */
 
 import { gzipSync } from 'node:zlib';
@@ -134,11 +140,20 @@ function checkHostBundles() {
   return ok;
 }
 
-// Baseline + budget from PR #44's pre-merge measurement and the agreed
-// +200 KB gzipped acceptance criterion. See ARCHITECTURE.md.
+// Budget history (see ARCHITECTURE.md "Bundle Size Target"):
+// - Original budget: main baseline + 200 KB gzipped (247,543 + 200,000 =
+//   447,543 B), from the WI-R3F-6 acceptance criterion. That criterion
+//   predates GLB support becoming a committed, shipped feature.
+// - Renegotiated 2026-07-14 to an absolute 600 kB gzipped ceiling, after
+//   the realistic lazy-loading was done (drei <Text>/troika, issue #215;
+//   GLTFLoader + SkeletonUtils, issue #241) and the closure settled at
+//   484,921 B gz, leaving ~115 KB of headroom. Growth is acceptable for now;
+//   the future direction is exploring lighter rendering technologies,
+//   not squeezing this stack further.
+// MAIN_BASELINE_GZ (PR #44's pre-merge measurement of `main`) is kept
+// only for the informational delta-vs-main report line.
 const MAIN_BASELINE_GZ = 247_543;
-const BUDGET_OVER_BASELINE_GZ = 200_000;
-const BUDGET_GZ = MAIN_BASELINE_GZ + BUDGET_OVER_BASELINE_GZ; // 447 KB gzipped
+const BUDGET_GZ = 600_000; // renegotiated absolute ceiling, gzipped
 
 // Dead-weight chunks that must never ship in the VSIX. These appear when
 // someone imports from the `@react-three/drei` barrel instead of the
@@ -246,7 +261,6 @@ function main() {
   console.log(`Total gzipped:    ${formatKb(totalGz)}  (${totalGz} B)`);
   console.log(`Main baseline:    ${formatKb(MAIN_BASELINE_GZ)}  (${MAIN_BASELINE_GZ} B)`);
   console.log(`Delta vs main:    ${overBaseline >= 0 ? '+' : ''}${formatKb(overBaseline)}  (${overBaseline} B)`);
-  console.log(`Budget over main: ${formatKb(BUDGET_OVER_BASELINE_GZ)}  (${BUDGET_OVER_BASELINE_GZ} B)`);
   console.log(`Budget absolute:  ${formatKb(BUDGET_GZ)}  (${BUDGET_GZ} B)`);
 
   const overBudget = totalGz - BUDGET_GZ;
