@@ -1,5 +1,5 @@
 /**
- * WI-D: GLBSceneRoot registers each internal GLB object under its tree path so
+ * GLBSceneRoot registers each internal GLB object under its tree path so
  * the SceneTreeViewer can select (gizmo) + hide individual nodes, and drives
  * per-object visibility from the hidden-paths set. Registrations clear on unmount.
  */

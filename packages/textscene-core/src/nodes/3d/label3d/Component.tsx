@@ -64,7 +64,7 @@ export function Label3D({ node }: NodeComponentProps) {
 
   const meshRef = useRef<THREE.Mesh | null>(null);
 
-  // WI-R3F-19 parity-audit fix: the pre-migration imperative renderer
+  // Parity-audit fix: the pre-migration imperative renderer
   // updated each Label3D's rotation per-frame via `TscnRenderer.updateLabels()`.
   // We restore that behaviour with `useFrame`:
   //   BILLBOARD_DISABLED — no-op.

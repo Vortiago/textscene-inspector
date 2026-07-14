@@ -1,5 +1,5 @@
 /**
- * WI-UX-3 regression: useResource reports missing paths to the
+ * Regression: useResource reports missing paths to the
  * MissingResourcesContext, so the DOM panel can aggregate them.
  */
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -123,7 +123,7 @@ describe('useResource → MissingResourcesContext aggregation', () => {
     // Simulate the host providing the file: clear the failure cache and
     // emit a `loaded` event for the same path. `useResource` should pick
     // it up via the bus subscription and transition status to `loaded`,
-    // which (per WI-UX-6) calls `markUploaded(path)`.
+    // which calls `markUploaded(path)`.
     act(() => {
       textures.clearCache('res://textures/missing.png');
       textures._resolve('res://textures/missing.png', new THREE.Texture());

@@ -48,8 +48,8 @@ export interface StandardMaterial3DScalars {
   side: THREE.Side;
   /**
    * Whether `cull_mode` was explicitly set on the source material. Lets
-   * downstream consumers apply a per-mesh-type default (see WI-HALL-6:
-   * PlaneMesh-backed Canvas planes default to DoubleSide when the
+   * downstream consumers apply a per-mesh-type default (PlaneMesh-backed
+   * Canvas planes default to DoubleSide when the
    * source material didn't pick a side, to survive 90° flip transforms
    * that would otherwise back-cull the photo into invisibility).
    */
@@ -57,7 +57,7 @@ export interface StandardMaterial3DScalars {
   /** Uniform XY scale applied to the normal map (no-op without normalMap). */
   normalScale: { x: number; y: number };
   /**
-   * Godot `uv1_triplanar` / `uv1_world_triplanar` (WI-HALL-5). We don't run a
+   * Godot `uv1_triplanar` / `uv1_world_triplanar`. We don't run a
    * triplanar shader; instead the consumer reproduces the tiling DENSITY for
    * planar meshes (repeat = mesh size × `uv1_scale`) via `triplanarPlaneScale`.
    * True when EITHER flag is set.
@@ -130,7 +130,7 @@ export function parseStandardMaterial3DScalars(
   const triplanar =
     properties['uv1_triplanar'] === 'true' || properties['uv1_world_triplanar'] === 'true';
 
-  // WI-HALL-2: Godot encodes colors in sRGB. three.js's `<meshStandardMaterial color={...}>`
+  // Godot encodes colors in sRGB. three.js's `<meshStandardMaterial color={...}>`
   // prop treats incoming values as **linear** RGB. Without converting,
   // mid-tone reds like `Color(0.545, 0.117, 0.117, 1)` (dark red `#8B1E1E`
   // in Godot) render as bright saturated pink because the renderer's

@@ -1,5 +1,5 @@
 /**
- * AudioStreamPlayer3D R3F component tests (WI-R3F-16 slice B).
+ * AudioStreamPlayer3D R3F component tests.
  *
  * The component renders an editor-only gizmo, not a runtime mesh, so
  * assertions focus on: gizmo presence, userData markers, optional
@@ -24,7 +24,7 @@ import {
 } from './types';
 
 /**
- * WI-UX-14: the speaker + range gizmos are now gated on selection. To
+ * The speaker + range gizmos are now gated on selection. To
  * exercise the gizmo content the test scaffolding must (a) place the
  * component inside a NodePathProvider so it knows its path and (b)
  * set `selectedNodePath` to that same path through SelectionProvider.
@@ -96,7 +96,7 @@ describe('<AudioStreamPlayer3D> (WI-R3F-16 slice B)', () => {
       withSelectedAudio('Audio', <AudioStreamPlayer3D node={makeNode()} />)
     );
     // Cone + cylinder front disk = 2 mesh primitives in the gizmo body.
-    // Pre-WI-UX-14 this was unconditional; now requires the audio node
+    // This used to be unconditional; now requires the audio node
     // to be the active selection.
     const meshes = renderer.scene.findAllByType('Mesh');
     expect(meshes.length).toBeGreaterThanOrEqual(2);

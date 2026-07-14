@@ -1,12 +1,12 @@
 /**
- * Issue #175 (part 2) — finish the value-decoder sweep: the residual NaN-leak / crash sites
- * PR #210 did not reach.
+ * Part 2 of the value-decoder sweep — finish the residual NaN-leak / crash sites the earlier
+ * pass did not reach.
  *
- * RED contract. #210 shared the canonical grammar leaf and converted control / camera3d /
+ * RED contract. Part 1 shared the canonical grammar leaf and converted control / camera3d /
  * directionallight3d / lights-shared / meshinstance3d + the promoted helpers
  * (`floatOr` / `intOr` / `vec2Or` / `parseOptionalFloat` / `parseOptionalInt` /
  * `parseColorOrUndefined`). This pins the sibling PARSER slices that still carry the same drift,
- * so #175 is finished — not a representative subset (an earlier pass under-pinned and shipped a
+ * so the sweep is finished — not a representative subset (an earlier pass under-pinned and shipped a
  * partial sweep). Every case below fails against the current (unfixed) sibling slices.
  *
  * The contract (same framing as part 1):

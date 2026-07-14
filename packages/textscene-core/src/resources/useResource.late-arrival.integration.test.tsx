@@ -1,5 +1,5 @@
 /**
- * Integration test for the WI-R3F-2 hard gate: the late-arrival flow.
+ * Integration test for the hard gate: the late-arrival flow.
  *
  * Loads `scenes/fixtures/test-multiple-meshes-shared-texture.tscn`, mounts
  * a stub component for each MeshInstance3D that calls `useResource` for
@@ -7,7 +7,7 @@
  * scenario, then injects the file later and asserts that ONLY the meshes
  * which depend on the path transition to `'loaded'`.
  *
- * `<MeshInstance3D>` and the real R3F-side rendering arrive in WI-R3F-3;
+ * `<MeshInstance3D>` and the real R3F-side rendering arrive later;
  * here we use a tiny stub that's just enough to drive the hook.
  */
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';

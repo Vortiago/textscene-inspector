@@ -1,7 +1,7 @@
 /**
  * createExternalStore — a minimal ref-based pub/sub cell for values that
  * change at high frequency but should only re-render the specific consumer
- * that reads them (WI-213), not every consumer of a broader React Context.
+ * that reads them, not every consumer of a broader React Context.
  */
 import { describe, expect, it, vi } from 'vitest';
 import { createExternalStore } from './createExternalStore';

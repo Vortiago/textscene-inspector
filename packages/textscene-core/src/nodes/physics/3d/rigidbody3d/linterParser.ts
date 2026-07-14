@@ -1,6 +1,6 @@
 /**
  * RigidBody3D strict validators for linting.
- * Migrated to the declarative `v` namespace (WI-ARCH-1).
+ * Migrated to the declarative `v` namespace.
  *
  * `inertia` keeps a bespoke validator because RigidBody3D inertia is a
  * Vector3 (per-axis) and the per-node test asserts that each component

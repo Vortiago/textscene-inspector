@@ -2,8 +2,8 @@
  * `<TscnCanvas>` — the top-level React component for rendering a parsed
  * TSCN scene under react-three-fiber.
  *
- * WI-R3F-1: empty canvas with default lighting.
- * WI-R3F-5 (this file): consumes `HierarchyContext.sceneGraph` and the
+ * Renders an empty canvas with default lighting when no scene is loaded.
+ * Otherwise consumes `HierarchyContext.sceneGraph` and the
  * `<NodeDispatcher>` to render the scene tree; provides
  * `<SceneResourcesProvider>` so MeshInstance3D / WorldEnvironment can
  * synchronously read internal/external resources; switches the active
@@ -34,14 +34,14 @@ import styles from './TscnCanvas.module.css';
  *
  * Reads its sceneGraph from `HierarchyContext`. Falls back to the empty
  * default-lighting scene when no provider is mounted (matches the
- * WI-R3F-1 baseline test).
+ * empty-canvas baseline test).
  */
 export function TscnSceneContents() {
   const hierarchy = useOptionalHierarchy();
   const sceneGraph = hierarchy?.sceneGraph ?? null;
   const rootScene = sceneGraph?.scenes.get(sceneGraph.rootScene);
   const nodes = rootScene?.nodes ?? null;
-  // Gap 8 (WI-UX-4): show a grid + prompt when nothing has loaded.
+  // Gap 8: show a grid + prompt when nothing has loaded.
   // Without this the canvas is a black void and indistinguishable from
   // a renderer crash. The grid also gives the orbit controls a tangible
   // surface so the initial-camera framing feels intentional.
@@ -88,7 +88,7 @@ function GroundGrid() {
 }
 
 /**
- * #224: an OPT-IN ground-plane grid for a non-empty scene, off by default
+ * An OPT-IN ground-plane grid for a non-empty scene, off by default
  * (see ViewportModeContext's doc comment for why). The empty-scene indicator
  * already draws its own grid unconditionally, so this one only adds a SECOND
  * grid when there's actual content to reference it against. A child
@@ -212,7 +212,7 @@ interface ResettableControls {
  * directly under a `HierarchyContext` provider instead.
  */
 export function TscnCanvas() {
-  // WI-UX-7: capture the OrbitControls instance via a callback ref so
+  // Capture the OrbitControls instance via a callback ref so
   // the toolbar's "Reset Camera" button can call its `.reset()`. Drei's
   // `<OrbitControls>` accepts a ref typed to the upstream three-stdlib
   // type which isn't exported from this package's deps — a callback ref
@@ -263,7 +263,7 @@ function OrbitControlsResetBridge({
 
 /**
  * Bridges the WebGLRenderer into `CameraControlContext` so the toolbar's
- * screenshot button can capture a frame from outside the `<Canvas>` (#224).
+ * screenshot button can capture a frame from outside the `<Canvas>`.
  * Forces an explicit render right before reading the buffer back: WebGL only
  * clears the drawing buffer when the browser COMPOSITES (i.e. after the
  * current task returns to the event loop), so a same-task render + toDataURL

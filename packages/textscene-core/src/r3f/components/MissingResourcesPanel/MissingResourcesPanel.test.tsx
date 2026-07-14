@@ -1,5 +1,5 @@
 /**
- * WI-UX-3 regression: aggregated missing-files panel.
+ * Regression: aggregated missing-files panel.
  *
  * Verifies the DOM-side panel mirrors `main:apps/textscene-web/src/main.ts`
  * `updateResourceFilesList`:

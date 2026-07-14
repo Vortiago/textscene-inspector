@@ -1,6 +1,6 @@
 /**
  * Skeleton3D strict validators for linting.
- * Migrated to the declarative `v` namespace (WI-ARCH-1).
+ * Migrated to the declarative `v` namespace.
  *
  * Bone properties (`bones/<idx>/<sub>`) keep a bespoke validator
  * because the sub-property name drives format choice (Vector3 for

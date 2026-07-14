@@ -1,13 +1,13 @@
 /**
  * Editor-only visual marker for "this resource is referenced but failed
- * to resolve". WI-ARCH-3 consolidates two near-identical magenta-shape
+ * to resolve". Consolidates two near-identical magenta-shape
  * widgets that previously lived inline in node components:
  *   - `NodeDispatcher.InstancePlaceholder` — wireframe magenta box for a
  *     missing PackedScene reference.
  *   - `Sprite3D.Placeholder` — translucent magenta plane for a missing
  *     sprite texture (the plane shape reflects the sprite's quad nature).
  *
- * Both render no text — Gap 12 (WI-UX-3) moved the path label into the
+ * Both render no text — Gap 12 moved the path label into the
  * DOM `<MissingResourcesPanel>` because in-3D drei text overlapped into
  * illegible blobs when several missing-resource markers clustered.
  *

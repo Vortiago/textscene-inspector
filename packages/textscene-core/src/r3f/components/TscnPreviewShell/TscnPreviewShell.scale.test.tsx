@@ -1,5 +1,5 @@
 /**
- * WI-UX-13 regression: a dock's scrollable body (`.dockBody`) must use
+ * A dock's scrollable body (`.dockBody`) must use
  * `overflow: auto` (not `hidden`) so that if any child overflows the
  * available height — beyond the per-component caps each one declares — the
  * user can still scroll the dock to reach the tree + details below. (Post

@@ -2,7 +2,7 @@
  * @textscene/core — public entry point for TextScene Inspector.
  *
  * The library parses Godot .tscn files and renders them with
- * react-three-fiber. The imperative renderer was removed in WI-R3F-6;
+ * react-three-fiber. The imperative renderer was removed;
  * all visual / UI surface lives under `r3f/`.
  */
 
@@ -72,7 +72,7 @@ export {
   writePersisted,
 } from './r3f/index';
 
-// Resource loading (WI-R3F-2)
+// Resource loading
 export { useResource, useResourceLoader, resolveResourcePath } from './resources/useResource';
 export type { ResourceResult, ResourceStatus, ResourceType } from './resources/useResource';
 export {

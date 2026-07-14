@@ -48,7 +48,7 @@ import { MasterDetailHandle, CollapsedDock } from './DockChrome.js';
 import { HelpLink } from './HelpLink.js';
 import styles from './TscnPreviewShell.module.css';
 
-// WI-R3F-18 bundle reduction: lazy-load the DOM panels so they don't
+// Bundle reduction: lazy-load the DOM panels so they don't
 // land in the initial canvas-paint bundle. The first frame doesn't
 // need either panel — they hydrate after the canvas is up. Each is a
 // `React.lazy` of the module's default export; the underlying file
@@ -69,7 +69,7 @@ const DEFAULT_ROOT_SCENE_PATH = 'res://__inline__.tscn';
 
 type DetailTab = 'inspector' | 'resources' | 'cameras' | 'animation';
 
-// #224 usePersistedState validators — reject a corrupt/unexpected persisted
+// usePersistedState validators — reject a corrupt/unexpected persisted
 // shape (a stale schema, a hand-edited localStorage entry) in favor of the
 // hook's own default rather than propagating garbage into layout state.
 function isFiniteNumber(value: unknown): value is number {
@@ -141,9 +141,9 @@ export function TscnPreviewShell({
   // Split Dock (ADR-0007): a single resizable + collapsible RIGHT dock holding
   // a master (scene tree) over a tabbed detail. `treeShare` is the master's
   // fraction of the dock height (0..1), dragged via the horizontal handle.
-  // #224: persisted across sessions (host-agnostic — VS Code webviews are a
+  // Persisted across sessions (host-agnostic — VS Code webviews are a
   // browser context too) so a resized/collapsed dock survives a reload; a
-  // fresh session with no persisted value keeps the pre-#224 defaults below.
+  // fresh session with no persisted value keeps the defaults below.
   const [dockWidth, setDockWidth] = usePersistedState('tsi.dockWidth', 320, isFiniteNumber);
   const [dockCollapsed, setDockCollapsed] = usePersistedState('tsi.dockCollapsed', false, isBoolean);
   const [treeShare, setTreeShare] = usePersistedState('tsi.treeShare', 0.46, isFiniteNumber);
@@ -186,8 +186,8 @@ export function TscnPreviewShell({
     );
   }
 
-  // #224: seed ViewportModeProvider's initial mode/grid from whatever was
-  // persisted last session (defaults match the pre-#224 baseline — 3D,
+  // Seed ViewportModeProvider's initial mode/grid from whatever was
+  // persisted last session (defaults match the baseline — 3D,
   // grid off — for a fresh session with nothing in localStorage yet).
   // Read ONCE (never-set state): the live value lives in the provider; the
   // toolbar writes an explicit user choice back to storage at its own click
@@ -198,7 +198,7 @@ export function TscnPreviewShell({
     showGrid: readPersisted(SHOW_GRID_STORAGE_KEY, false, isBoolean),
   }));
 
-  // #217: flattens what was an 8-level hand-nested provider pyramid into one
+  // Flattens what was an 8-level hand-nested provider pyramid into one
   // call. Each entry still mounts its own INDEPENDENT provider, in the SAME
   // order as before — composeProviders only removes the JSX-nesting
   // boilerplate; ADR-0002 (and its per-domain-UI-state analogues here) keeps
@@ -209,7 +209,7 @@ export function TscnPreviewShell({
     (children) => <CameraControlProvider>{children}</CameraControlProvider>,
     (children) => <MissingResourcesProvider>{children}</MissingResourcesProvider>,
     (children) => (
-      // #222: a host-forced `initialViewportMode` (e.g. the VS Code extension's
+      // A host-forced `initialViewportMode` (e.g. the VS Code extension's
       // `textscene.defaultViewportMode` setting) wins over whatever was
       // persisted from a prior session.
       <ViewportModeProvider

@@ -1,5 +1,5 @@
 /**
- * Regression test for WI-UX-5: switching fixtures clears selection
+ * Regression test: switching fixtures clears selection
  * state instead of leaking it into the new scene.
  *
  * Before the fix: clicking "Root" in fixture A then rerendering with

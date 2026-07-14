@@ -2,7 +2,7 @@
  * Factory function for creating resource processors.
  *
  * One generic cache + inflight + event-emission machine, parameterised
- * by *how* a resource is fetched and processed. WI-ARCH-2: the
+ * by *how* a resource is fetched and processed. The
  * standalone `SceneLoader` class that previously reimplemented this
  * exact loop for PackedScene is now a `createSceneProcessor` factory
  * built on top of this one (see `processors/createSceneProcessor.ts`).

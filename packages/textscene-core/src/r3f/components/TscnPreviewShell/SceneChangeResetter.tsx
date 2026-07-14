@@ -10,7 +10,7 @@
  * non-null → non-null transitions ARE clears: the old scene's
  * `selectedNodePath` would otherwise hang around and the
  * `SelectionHighlight` BoxHelper would render against an unmounted
- * Object3D at the prior fixture's coordinates (WI-UX-5 regression).
+ * Object3D at the prior fixture's coordinates.
  *
  * Lives inside `<SelectionProvider>` so it can call `clearAll()`.
  * Renders no DOM.

@@ -5,8 +5,7 @@
  *   - Texture state machine: `useResource('Texture2D')` against the
  *     resolved ExtResource path. Pending → render nothing (lets the
  *     scene continue); missing/error → magenta placeholder mesh +
- *     drei `<Text>` label naming the path (matches MeshInstance3D UX
- *     from WI-R3F-7).
+ *     drei `<Text>` label naming the path (matches MeshInstance3D UX).
  *   - Quad geometry: `<planeGeometry>` sized by `pixel_size` × the
  *     active texture region (full image, sprite-sheet tile, or
  *     `region_rect` sub-image). Same pattern as Label3D's textured
@@ -156,8 +155,8 @@ export function Sprite3D({ node }: NodeComponentProps) {
     );
   }
 
-  // Texture failed to load: magenta-quad placeholder. Gap 12 (WI-UX-3):
-  // the in-3D path label was moved to the DOM `<MissingResourcesPanel>`.
+  // Texture failed to load: magenta-quad placeholder. The in-3D path
+  // label was moved to the DOM `<MissingResourcesPanel>`.
   if (texResult.status === 'unavailable') {
     return (
       <MissingResourcePlaceholder

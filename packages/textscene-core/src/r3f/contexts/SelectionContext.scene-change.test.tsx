@@ -1,5 +1,5 @@
 /**
- * Regression test for WI-UX-5.
+ * Regression test for selection reset on scene change.
  *
  * Pins `SelectionContext.clearAll()`: a single call must reset every
  * selection-derived state slot (selected/hovered paths, expanded set,

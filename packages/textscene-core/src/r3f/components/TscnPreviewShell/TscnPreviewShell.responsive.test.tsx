@@ -1,7 +1,7 @@
 /**
- * Regression test for WI-UX-9: narrow-viewport responsive layout.
+ * Regression test for narrow-viewport responsive layout.
  *
- * Before WI-UX-9, `TscnPreviewShell.module.css` had zero `@media`
+ * Before this fix, `TscnPreviewShell.module.css` had zero `@media`
  * blocks; the canvas + 320px sidebar always rendered side-by-side, so
  * at phone/tablet widths the sidebar squeezed the canvas to an unusable
  * sliver. Main shipped a CSS-only radio-tab pattern at ≤767px (see

@@ -1,5 +1,5 @@
 /**
- * Tests for WI-R3F-19: Tier-1 parity-audit silent drops.
+ * Tests for Tier-1 parity-audit silent drops.
  *
  * Each test exercises ONE of the 8 HIGH-severity feature drops surfaced
  * by `docs/PARITY-AUDIT.md` and pins the property to its expected
@@ -68,7 +68,7 @@ function makeLoader(): {
     textures: makeProc<THREE.Texture>(textureCache),
     materials: makeProc<THREE.Material>(materialCache),
     glbMeshes: makeProc<THREE.Object3D>(glbCache),
-    scenes: makeProc<unknown>(sceneCache), // WI-ARCH-2: peer processor
+    scenes: makeProc<unknown>(sceneCache), // peer processor
     getSceneCached: () => undefined,
     requestScene: () => {},
     register: () => {},

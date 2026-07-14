@@ -1,5 +1,5 @@
 /**
- * Regression test for WI-HALL-2: sRGB → linear conversion for
+ * Regression test for sRGB → linear conversion for
  * StandardMaterial3D albedo + emission colors.
  *
  * Godot stores material colors in sRGB. three.js's
@@ -10,7 +10,7 @@
  * `Color(0.545, 0.117, 0.117)` (`#8B1E1E`) came out as bright saturated
  * pink, which ld58-verifier flagged on the hallway fixture.
  *
- * Post-WI-HALL-2: `materialScalars.parseStandardMaterial3DScalars`
+ * Now `materialScalars.parseStandardMaterial3DScalars`
  * converts the parsed albedo + emission via the standard sRGB inverse
  * transfer function before exposing them. The downstream
  * `<meshStandardMaterial>` then receives true linear values; the

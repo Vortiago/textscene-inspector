@@ -1,5 +1,5 @@
 /**
- * WI-UX-6 regression: when a previously-missing path is uploaded the
+ * Regression: when a previously-missing path is uploaded the
  * panel must keep the row visible with the `uploaded ✓` state (and a
  * Remove button), not silently delete it. Mirrors main's
  * `apps/textscene-web/src/main.ts:46-140` behaviour where uploaded

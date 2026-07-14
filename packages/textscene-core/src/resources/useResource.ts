@@ -1,6 +1,6 @@
 /**
  * useResource(path, type) — the single surface API for loading any
- * external resource inside an R3F node component. Wraps the WI-79 event
+ * external resource inside an R3F node component. Wraps the event
  * bus internals so callers only see a status machine: pending → loaded
  * | unavailable → loaded (late-arrival).
  *
@@ -78,8 +78,8 @@ interface ProcessorAccess<T> {
 }
 
 /**
- * Return the processor appropriate for the given resource type. Post
- * WI-ARCH-2 all four resource types are normal `ResourceProcessor<T>`
+ * Return the processor appropriate for the given resource type. Now
+ * all four resource types are normal `ResourceProcessor<T>`
  * instances on the loader; PackedScene no longer needs its own adapter.
  */
 function getProcessorAccess<T>(
@@ -275,7 +275,7 @@ export function useResource<T>(path: string, type: ResourceType): ResourceResult
     };
   }, [loader, path, type]);
 
-  // Aggregate missing-path reporting (WI-UX-3 / WI-UX-6). Runs on every
+  // Aggregate missing-path reporting. Runs on every
   // status transition for the current path. The context's default value
   // is a no-op when no provider is mounted, so consumers outside a shell
   // (e.g. linter callers, isolated unit tests) pay no cost.
@@ -290,7 +290,7 @@ export function useResource<T>(path: string, type: ResourceType): ResourceResult
   const markUploaded = missingResources.markUploaded;
 
   // Track whether THIS hook instance has ever reported its current path
-  // as missing. WI-UX-6: when status flips missing → loaded the user just
+  // as missing. When status flips missing → loaded the user just
   // uploaded the file, and the panel should keep the row visible (with
   // the uploaded ✓ state) so they know what they fixed. But paths that
   // load on first request (normal fixture resources) never went through

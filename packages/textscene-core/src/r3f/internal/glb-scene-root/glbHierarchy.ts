@@ -3,7 +3,7 @@
  * tree. The traversal is DETERMINISTIC (children in order, duplicate sibling
  * names disambiguated by an `@<n>` suffix) so the relative paths it produces are
  * identical across the two clones a GLB has at runtime — the tree's structural
- * clone (WI-C) and the viewport's rendered clone (WI-D). That lets a tree row's
+ * clone and the viewport's rendered clone. That lets a tree row's
  * path line up with the rendered object registered for selection/visibility.
  */
 
@@ -107,7 +107,7 @@ export function glbInternalNodeType(displayType: string): string {
  * Convert the GLB hierarchy into synthetic `TscnNode`s for the scene tree. The
  * node NAME is the disambiguated relPath segment so the tree's
  * `joinPath(parent, name)` reproduces `relPath` exactly — keeping tree rows in
- * lockstep with the objects WI-D registers for selection/visibility.
+ * lockstep with the objects registered for selection/visibility.
  */
 export function glbHierarchyToTscnNodes(nodes: readonly GlbHierarchyNode[]): TscnNode[] {
   return nodes.map((n) => ({
@@ -130,7 +130,7 @@ export const GLB_ANIMATION_PLAYER_TYPE = 'GLBAnimationPlayer';
 
 /**
  * The synthetic tree children of a `GLBSceneRoot`: the GLB's internal hierarchy
- * (WI-C), plus — when the GLB carries animation clips — an `AnimationPlayer`
+ * plus — when the GLB carries animation clips — an `AnimationPlayer`
  * node that surfaces those clips in the hierarchy (Godot parity) and activates
  * the Animation transport when selected. Centralised so the tree
  * (`useGlbChildren`) and the inspector resolver (`resolveLiveNode`) produce

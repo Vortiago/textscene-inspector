@@ -1,7 +1,7 @@
 /**
- * Regression test for WI-UX-14: gate light gizmos on selection.
+ * Regression test: gate light gizmos on selection.
  *
- * Before WI-UX-14 each light gizmo (`*LightGizmo` in `lightHelpers.tsx`)
+ * Previously each light gizmo (`*LightGizmo` in `lightHelpers.tsx`)
  * mounted its `THREE.*LightHelper` unconditionally on light mount.
  * `example-hallway.tscn` has 18 SpotLight3D nodes, so the viewport showed
  * 18 overlapping yellow cones that obscured the actual scene meshes —
@@ -9,13 +9,13 @@
  * `HelperManager.setHelper('highlight', …)` only attached a gizmo when
  * the corresponding node was the active selection.
  *
- * After WI-UX-14: gizmos are gated through `useNodePath()` +
+ * Now gizmos are gated through `useNodePath()` +
  * `SelectionContext.selectedNodePath`. No selection → 0 helpers, even
  * with N lights. Selection on a light's path → exactly that light's
  * helper appears. Selection on a non-light path → 0 helpers.
  *
- * Hover is intentionally NOT a trigger; the orange BoxHelper from
- * WI-UX-10 is the hover affordance. Documented in `lightHelpers.tsx`.
+ * Hover is intentionally NOT a trigger; the orange BoxHelper is
+ * the hover affordance. Documented in `lightHelpers.tsx`.
  */
 import { useEffect } from 'react';
 import { describe, expect, it } from 'vitest';
@@ -359,8 +359,8 @@ describe('Light gizmos — selection gating (WI-UX-14)', () => {
     // matrixWorld — rather than only asserting a hardcoded expected Y — is
     // what catches a subtly-wrong "fix" here. THREE.DirectionalLight's
     // constructor defaults its OWN local position to `Object3D.DEFAULT_UP`
-    // (0, 1, 0), which used to leak into the effective shading direction
-    // (see #237) — `<directionalLight>` now sets an explicit
+    // (0, 1, 0), which used to leak into the effective shading direction —
+    // `<directionalLight>` now sets an explicit
     // `position={[0, 0, 0]}` so only the shared parent group's authored
     // transform determines world position, giving this fixture's true
     // world Y of 5 (the group's origin.y), not 6.
@@ -436,7 +436,7 @@ describe('Light gizmos — selection gating (WI-UX-14)', () => {
 });
 
 /**
- * Scope expansion for WI-UX-14: ui-designer-2's visual A/B (commit
+ * Scope expansion: ui-designer-2's visual A/B (commit
  * `a03dedc`) found the same eager-gizmo pattern in Camera3D's
  * `THREE.CameraHelper` frustum wireframe. Same fix shape — gate via
  * `useGizmoVisible()`.

@@ -1,5 +1,5 @@
 /**
- * Contract for issue #119 — promote `computeWorldBoundingBox` to the sanctioned
+ * Contract — promote `computeWorldBoundingBox` to the sanctioned
  * subtree-bounds util and route the last raw `Box3.setFromObject` call site
  * through it, so the SkinnedMesh trap cannot silently re-enter the codebase.
  *

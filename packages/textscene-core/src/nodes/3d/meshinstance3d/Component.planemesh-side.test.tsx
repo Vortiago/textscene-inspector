@@ -1,5 +1,5 @@
 /**
- * Regression test for WI-HALL-6: Canvas photo-frame plane visibility.
+ * Regression test for Canvas photo-frame plane visibility.
  *
  * The hallway photo-frame fixture (HouseKeeper.tscn + 5 siblings)
  * declares a `Canvas` MeshInstance3D backed by a PlaneMesh with a 90°
@@ -8,13 +8,13 @@
  * from the camera. Godot's default `cull_mode = BACK` then back-culls
  * the photo into invisibility from the viewer's side.
  *
- * Pre-WI-HALL-6 the material slot used `scalars.side` verbatim, which
+ * Originally the material slot used `scalars.side` verbatim, which
  * resolved to THREE.FrontSide (Godot BACK culling → only the front
  * face is visible). The Canvas plane was face-away → silently
  * invisible. The user uploaded the SarahMills.png texture, the
  * resource loaded, the material bound it — but the user saw no photo.
  *
- * Post-WI-HALL-6: when the underlying mesh is a PlaneMesh AND the
+ * Afterward, when the underlying mesh is a PlaneMesh AND the
  * source material did NOT explicitly set `cull_mode`, MaterialSlot
  * upgrades to THREE.DoubleSide. The photo is now visible from either
  * side regardless of how the parent transform flips the normal.
@@ -81,13 +81,13 @@ describe('MeshInstance3D + PlaneMesh — material.side default (Godot BACK = Fro
     // Godot's StandardMaterial3D default is `cull_mode = 0` (BACK), so an
     // omitted cull_mode means "render only the front face". This matches
     // wall PlaneMeshes in real Godot scenes — you can't see into a room
-    // through the back of a wall. The earlier WI-HALL-6 override that
+    // through the back of a wall. The earlier override that
     // upgraded this case to DoubleSide unintentionally broke that
     // semantic and was reverted. Photo-frame Canvas planes that want
     // DoubleSide must set `cull_mode = 2` explicitly in their source
     // material (which the LD-58 fixtures do, once their .tres material
-    // is loaded — the issue WI-HALL-6 was working around was missing
-    // material data, not a default mismatch).
+    // is loaded — the issue that override was working around was
+    // missing material data, not a default mismatch).
     const mat = await renderWithMeshAndMaterial('PlaneMesh', {
       albedo_color: 'Color(1, 1, 1, 1)',
     });
@@ -148,7 +148,7 @@ describe('MeshInstance3D + PlaneMesh — material.side default (Godot BACK = Fro
     // cull_mode. Godot renders this with BACK culling (FrontSide).
     //
     // Two earlier regressions broke this:
-    //   1. WI-HALL-6 (67c199b): added a defensive override that
+    //   1. Commit 67c199b added a defensive override that
     //      upgraded PlaneMesh + missing cull_mode to DoubleSide.
     //      Intended for the photo Canvas planes whose author had
     //      missed `cull_mode = 2`; collateral damage was every wall

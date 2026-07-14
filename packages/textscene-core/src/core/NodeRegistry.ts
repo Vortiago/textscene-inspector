@@ -9,8 +9,8 @@
  *
  * Historical note: this used to also carry a `renderer` callback that
  * returned a `THREE.Object3D` for the imperative renderer pipeline.
- * WI-R3F-6 removed the imperative path and the `renderer` field with
- * it; rendering now happens via the parallel `nodeComponentRegistry`
+ * The R3F migration removed the imperative path and the `renderer` field
+ * with it; rendering now happens via the parallel `nodeComponentRegistry`
  * in `r3f/NodeComponentRegistry.ts`.
  */
 

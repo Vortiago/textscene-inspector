@@ -4,7 +4,7 @@
  * TSCN node is the currently selected node in the panel's SelectionContext.
  *
  * Without this gate a scene with many decorated nodes (e.g. example-hallway's
- * 18 spotlights, WI-UX-14) renders a thicket of overlapping helpers that
+ * 18 spotlights) renders a thicket of overlapping helpers that
  * obscure the actual scene. Hover does NOT show the gizmo — the orange
  * HoverHighlight BoxHelper is the hover affordance.
  *

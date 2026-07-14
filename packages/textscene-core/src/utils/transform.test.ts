@@ -250,13 +250,13 @@ describe('transform utils', () => {
 
     describe('rotation + scale combined', () => {
       it('should decompose 90° Y-rotation with Z-scale=6 (edge-plane-rotated-scaled.tscn TestWall)', () => {
-        // Restored from 401f8f5 (#31 "Fix Transform3D decomposition for
+        // Restored from 401f8f5 ("Fix Transform3D decomposition for
         // rotated+scaled planes"). The intermediate commit b4ccaab
-        // (WI-R3F-10) wrongly rewrote this test to assert the buggy
-        // (transposed) decomposition output, with a rationalising comment
-        // that the user's intent "isn't recoverable". That was wrong —
-        // Godot's Basis is `Vector3 rows[3]`, so the matrix CAN be
-        // recovered correctly; earlier code was transposing it.
+        // wrongly rewrote this test to assert the buggy (transposed)
+        // decomposition output, with a rationalising comment that the
+        // user's intent "isn't recoverable". That was wrong — Godot's
+        // Basis is `Vector3 rows[3]`, so the matrix CAN be recovered
+        // correctly; earlier code was transposing it.
         const transform = parseTransform3D(
           'Transform3D(-4.371139e-08, 0, 6, 0, 1, 0, -1, 0, -2.6226832e-07, 0, 0, 0)'
         );

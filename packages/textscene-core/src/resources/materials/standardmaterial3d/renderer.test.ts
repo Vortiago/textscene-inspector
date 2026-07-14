@@ -82,7 +82,7 @@ describe('StandardMaterial3D Renderer', () => {
 
       const material = createStandardMaterial(properties);
 
-      // WI-HALL-2: Godot's sRGB 0.5 → linear ≈ 0.214. The renderer's
+      // Godot's sRGB 0.5 → linear ≈ 0.214. The renderer's
       // sRGB → linear conversion is the deliberate fix for bright-pink
       // mid-tone rendering; assert the conversion happened (NOT that
       // the channel still equals 0.5).
@@ -128,7 +128,7 @@ describe('StandardMaterial3D Renderer', () => {
       expect(material.color.b).toBeCloseTo(0.00651, 3);
       // Sanity: the linear values are STRICTLY less than the sRGB
       // input for mid-tones, which is the load-bearing property —
-      // pre-WI-HALL-2 these would have been EQUAL to the inputs, which
+      // before the fix these would have been EQUAL to the inputs, which
       // is the bug that caused the bright-pink rendering.
       expect(material.color.r).toBeLessThan(0.545098);
       expect(material.color.g).toBeLessThan(0.270588);

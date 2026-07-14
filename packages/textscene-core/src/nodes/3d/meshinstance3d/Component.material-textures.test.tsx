@@ -1,5 +1,5 @@
 /**
- * Strict-verification harness (WI-R3F-9, group D) — 8 assertions covering
+ * Strict-verification harness (group D) — 8 assertions covering
  * StandardMaterial3D texture slots. The key question for each slot is
  * "did the loaded THREE.Texture actually land on the corresponding map
  * property of <meshStandardMaterial>?".
@@ -238,7 +238,7 @@ describe('StandardMaterial3D textures (assertions 32–39)', () => {
     expect(mat.emissiveMap).toBeInstanceOf(THREE.Texture);
   });
 
-  // WI-R3F-11 regression: unit-uv-scale.tscn uses `surface_material_override/0`
+  // Regression: unit-uv-scale.tscn uses `surface_material_override/0`
   // (not `material_override`) to attach a textured StandardMaterial3D. The
   // browser-verifier caught all three planes rendering as solid white because
   // the chain MeshInstance3D → surface_material_override/0 → SubResource
@@ -282,7 +282,7 @@ describe('StandardMaterial3D textures (assertions 32–39)', () => {
     expect(mat.map).toBeInstanceOf(THREE.Texture);
   });
 
-  // WI-R3F-11 regression: when a texture arrives async (via eventBus emit
+  // Regression: when a texture arrives async (via eventBus emit
   // *after* first render), the material's `map` prop must end up bound to
   // the loaded texture. The earlier unit tests pre-seeded the cache so the
   // texture was already present on first render and the bug went unseen;

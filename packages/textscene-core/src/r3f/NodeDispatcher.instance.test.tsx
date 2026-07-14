@@ -1,5 +1,5 @@
 /**
- * Tests for WI-R3F-12: PackedScene instance rendering.
+ * Tests for PackedScene instance rendering.
  *
  * `<NodeDispatcher>` walks a TSCN scene; nodes with `instance =
  * ExtResource("scene_id")` need to load the referenced external scene
@@ -63,7 +63,7 @@ function makeLoader(): {
     unpin: () => {},
   });
 
-  // WI-ARCH-2: useResource now reads scenes via `loader.scenes` directly,
+  // useResource now reads scenes via `loader.scenes` directly,
   // so the mock must expose a ResourceProcessor-shaped object for scenes
   // alongside textures/materials/glbMeshes. The legacy `getSceneCached` /
   // `requestScene` helpers are retained for back-compat callers (the

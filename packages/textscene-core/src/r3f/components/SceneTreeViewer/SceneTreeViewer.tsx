@@ -51,7 +51,7 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
     return sceneGraph.scenes.get(sceneGraph.rootScene)?.nodes ?? [];
   }, [sceneGraph]);
 
-  // WI-HALL-1: the root scene's externalResources are how
+  // The root scene's externalResources are how
   // `node.instance = ExtResource("id")` references get resolved to a
   // `res://` path. Threaded into every TreeNode so each row can
   // attempt sub-scene resolution on its own without re-reading the
@@ -107,7 +107,7 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
     setSearchTerm(e.target.value);
   }, []);
 
-  // #224: WAI-ARIA APG Tree View keyboard pattern. One handler on the tree
+  // WAI-ARIA APG Tree View keyboard pattern. One handler on the tree
   // container (event delegation) instead of one per row. Arrow keys move
   // focus AND selection together — this app has no separate "focused but
   // unselected" concept, so treating them as one keeps the roving-tabIndex
@@ -183,7 +183,7 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
     [setSelectedNodePath, toggleExpandedNodePath]
   );
 
-  // #224 roving tabIndex: the selected row is normally the tree's one tab
+  // Roving tabIndex: the selected row is normally the tree's one tab
   // stop, but only while it is actually RENDERED — collapsing an ancestor or
   // filtering it out via search unmounts it, and without a fallback every
   // remaining row would be tabIndex -1 (Tab would skip the tree entirely).
