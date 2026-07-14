@@ -7,12 +7,7 @@ import { isBinaryResourceType, info, warn } from '@textscene/core';
 import type { ResourceProvider } from '@textscene/core';
 
 export class WebResourceProvider implements ResourceProvider {
-  /**
-   * Uploaded files keyed by a compound key: the corpus root active when the
-   * file was added, separated from the res:// path by a NUL byte.  This
-   * ensures that a file uploaded while corpus A is active is never served to
-   * a consumer that was opened under a different corpus root.
-   */
+  /** Uploaded files, keyed per corpus root via {@link uploadKey}. */
   private uploadedFiles: Map<string, File> = new Map();
   /**
    * Public-fixtures subtree the active scene's res:// namespace maps onto.
@@ -26,7 +21,11 @@ export class WebResourceProvider implements ResourceProvider {
     this.resourceRoot = root;
   }
 
-  /** Compound storage key: corpus root + NUL separator + res:// path. */
+  /**
+   * Compound storage key: active corpus root + NUL separator + res:// path.
+   * Scopes every upload to the corpus root active when it was added, so a
+   * file uploaded in corpus A is never served under a different corpus root.
+   */
   private uploadKey(path: string): string {
     return `${this.resourceRoot}\0${path}`;
   }

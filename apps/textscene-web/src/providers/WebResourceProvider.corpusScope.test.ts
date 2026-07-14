@@ -5,12 +5,28 @@
  * uploads belong to whichever corpus was active when they added them, never
  * to a foreign corpus that happens to share the same res:// path.
  */
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { WebResourceProvider } from './WebResourceProvider';
 
+async function loadAsText(provider: WebResourceProvider, path: string): Promise<string> {
+  const result = await provider.loadResource(path, 'Texture2D');
+  expect(result).toBeInstanceOf(ArrayBuffer);
+  return new TextDecoder().decode(new Uint8Array(result as ArrayBuffer));
+}
+
 describe('WebResourceProvider — corpus-scoped uploads', () => {
+  let provider: WebResourceProvider;
+
+  beforeEach(() => {
+    provider = new WebResourceProvider();
+    // Fixture fetches 404 so loadResource resolves only via an upload.
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: false,
+      status: 404,
+    } as Response);
+  });
+
   it('serves an uploaded file under the corpus root it was added with', async () => {
-    const provider = new WebResourceProvider();
     provider.setResourceRoot('demos/2d/platformer');
 
     const file = new File(['content-A'], 'player.png', { type: 'image/png' });
@@ -21,13 +37,6 @@ describe('WebResourceProvider — corpus-scoped uploads', () => {
   });
 
   it('does NOT serve a file uploaded under a different corpus root', async () => {
-    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-      ok: false,
-      status: 404,
-    } as Response);
-
-    const provider = new WebResourceProvider();
-
     // Upload while corpus A is active
     provider.setResourceRoot('demos/2d/platformer');
     const file = new File(['content-A'], 'player.png', { type: 'image/png' });
@@ -43,8 +52,6 @@ describe('WebResourceProvider — corpus-scoped uploads', () => {
   });
 
   it('serves the same res:// path if uploaded independently under the new corpus root', async () => {
-    const provider = new WebResourceProvider();
-
     // Upload under corpus A
     provider.setResourceRoot('demos/2d/platformer');
     const fileA = new File(['content-A'], 'player.png', { type: 'image/png' });
@@ -56,28 +63,14 @@ describe('WebResourceProvider — corpus-scoped uploads', () => {
     provider.addUploadedFile('res://textures/player.png', fileB);
 
     // Corpus B serves its own file
-    const result = await provider.loadResource('res://textures/player.png', 'Texture2D');
-    expect(result).toBeInstanceOf(ArrayBuffer);
-    const bytes = new Uint8Array(result as ArrayBuffer);
-    const text = new TextDecoder().decode(bytes);
-    expect(text).toBe('content-B');
+    expect(await loadAsText(provider, 'res://textures/player.png')).toBe('content-B');
 
     // Switch back — corpus A still serves its own file
     provider.setResourceRoot('demos/2d/platformer');
-    const resultA = await provider.loadResource('res://textures/player.png', 'Texture2D');
-    const bytesA = new Uint8Array(resultA as ArrayBuffer);
-    const textA = new TextDecoder().decode(bytesA);
-    expect(textA).toBe('content-A');
+    expect(await loadAsText(provider, 'res://textures/player.png')).toBe('content-A');
   });
 
   it('removeUploadedFile removes only the file under the active corpus root', async () => {
-    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-      ok: false,
-      status: 404,
-    } as Response);
-
-    const provider = new WebResourceProvider();
-
     // Upload under corpus A
     provider.setResourceRoot('demos/2d/platformer');
     const fileA = new File(['content-A'], 'player.png', { type: 'image/png' });
@@ -102,13 +95,6 @@ describe('WebResourceProvider — corpus-scoped uploads', () => {
   });
 
   it('an upload added under the empty root (fixture corpus) is not visible under a named corpus', async () => {
-    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-      ok: false,
-      status: 404,
-    } as Response);
-
-    const provider = new WebResourceProvider();
-
     // Upload with empty root (the base fixture corpus)
     provider.setResourceRoot('');
     const file = new File(['base-bytes'], 'icon.png', { type: 'image/png' });
