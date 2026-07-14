@@ -24,7 +24,7 @@ import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { Node3D } from '../../base/node3d/Component';
-import { godotColorToLinear } from '../../../r3f/godotColor';
+import { useGodotLinearColor } from '../../../r3f/godotColor';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useAnimatedValue } from '../../../r3f/contexts/AnimatedValueContext';
 import { resolveExtResourcePath } from '../../../resources/SubResourceResolver';
@@ -81,11 +81,7 @@ export function Decal({ node, children }: NodeComponentProps) {
 
   // Godot stores modulate in sRGB → convert to the linear working space before
   // the unlit material (same as Sprite3D / Sprite2D).
-  const { r: mr, g: mg, b: mb } = modulate;
-  const color = useMemo(
-    () => godotColorToLinear({ r: mr, g: mg, b: mb }),
-    [mr, mg, mb]
-  );
+  const color = useGodotLinearColor(modulate);
 
   // albedo_mix scales how strongly the projected albedo replaces the surface;
   // fold it together with modulate alpha into the preview quad's opacity.

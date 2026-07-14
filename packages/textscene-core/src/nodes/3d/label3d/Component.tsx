@@ -16,7 +16,7 @@ import type { Label3DProperties } from './types';
 import { BillboardMode } from './types';
 import type { Color } from '../../../utils/colorParser';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
-import { godotColorToLinear } from '../../../r3f/godotColor';
+import { useGodotLinearColor } from '../../../r3f/godotColor';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { useViewportMode } from '../../../r3f/contexts/ViewportModeContext';
 
@@ -86,11 +86,7 @@ export function Label3D({ node }: NodeComponentProps) {
 
   // Godot modulate is sRGB → convert to linear before the unlit material tint
   // (the white canvas text is colorized by this), matching Sprite2D/Sprite3D.
-  const { r: mr, g: mg, b: mb } = properties.modulate;
-  const tint = useMemo(
-    () => godotColorToLinear({ r: mr, g: mg, b: mb }),
-    [mr, mg, mb]
-  );
+  const tint = useGodotLinearColor(properties.modulate);
 
   // Off by default (ADR-0008): in-viewport text is opt-in via the Labels toggle.
   // When off (or the canvas couldn't be built), render an invisible marker group

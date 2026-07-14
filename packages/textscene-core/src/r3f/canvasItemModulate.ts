@@ -13,7 +13,7 @@
 
 import { createContext, useContext, useMemo } from 'react';
 import type * as THREE from 'three';
-import { godotColorToLinear } from './godotColor';
+import { useGodotLinearColor } from './godotColor';
 
 export interface RGBA {
   r: number;
@@ -55,6 +55,6 @@ export function useCanvasItemTint(props: { modulate: RGBA; self_modulate: RGBA }
   const parent = useParentModulate();
   const inherited = useMemo(() => multiplyModulate(parent, props.modulate), [parent, props.modulate]);
   const own = useMemo(() => multiplyModulate(inherited, props.self_modulate), [inherited, props.self_modulate]);
-  const color = useMemo(() => godotColorToLinear(own), [own]);
+  const color = useGodotLinearColor(own);
   return { inherited, own, color, opacity: own.a };
 }
