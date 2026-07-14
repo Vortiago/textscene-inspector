@@ -63,7 +63,7 @@ export function generateWebviewHtml(options: WebviewHtmlOptions): string {
     ? `<script nonce="${nonce}">window.__TEXTSCENE_CONFIG__ = ${JSON.stringify(initialConfig).replace(/</g, '\\u003c')};</script>`
     : '';
 
-  // WI-R3F-18: the webview build emits ESM with code-splitting now.
+  // The webview build emits ESM with code-splitting.
   // `<script type="module">` is required for dynamic `import()` to load
   // chunks; the CSP must also allow chunk URIs (the entry script's
   // module imports), which means `script-src` permits `${cspSource}`
