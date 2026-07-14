@@ -207,16 +207,41 @@ export function teardownDepChainWorkspace(): void {
 // ---------------------------------------------------------------------------
 
 /**
- * Fire `loadResource` messages through the fake panel for each resource in
- * the three-layer dependency chain, then wait for responses.
+ * Fire one `loadResource` message through the fake panel and wait for its
+ * response (success or error), populating `VSCodeResourceProvider`'s
+ * served-resources map — the map that `handleDependencyChange` consults when
+ * the watcher fires. Without priming, the relevance gate rejects every
+ * dependency change because the panel never served the file.
  *
- * This populates `VSCodeResourceProvider.servedResources` — the map that
- * `handleDependencyChange` consults when the watcher fires. Without this
- * priming step, the relevance gate rejects every dependency change because
- * the panel has never been asked to serve any of those files.
- *
- * The calls are sequential so each response has settled before the next
- * request goes out, keeping the served-map population deterministic.
+ * Count-based polling detects the NEW response rather than returning on a
+ * previous one. A timeout is acceptable: path-resolution records the served
+ * entry before the file-read, so even a timeout means the entry exists.
+ */
+export async function primeResource(
+  triggerMessage: (msg: Record<string, unknown>) => void,
+  sentMessages: HostToWebviewMessage[],
+  resource: { path: string; resourceType: string; requestId: string },
+): Promise<void> {
+  const countResponses = () =>
+    sentMessages.filter(
+      (m) => m.type === 'resourceLoaded' || m.type === 'resourceLoadError',
+    ).length;
+  const responseBefore = countResponses();
+
+  triggerMessage({ type: 'loadResource', ...resource });
+
+  const deadline = Date.now() + 5000;
+  while (Date.now() < deadline && countResponses() === responseBefore) {
+    await new Promise<void>((r) => setTimeout(r, 50));
+  }
+  // Drain any remaining async work.
+  await new Promise<void>((r) => setTimeout(r, 100));
+}
+
+/**
+ * Prime every resource in the three-layer dependency chain. The calls are
+ * sequential so each response has settled before the next request goes out,
+ * keeping the served-map population deterministic.
  */
 export async function primePanelForDepChain(
   triggerMessage: (msg: Record<string, unknown>) => void,
@@ -229,33 +254,8 @@ export async function primePanelForDepChain(
   ];
 
   for (const resource of resources) {
-    // Capture the response count before issuing the request so we can detect
-    // the NEW response rather than returning on a previous one.
-    const responseBefore = sentMessages.filter(
-      (m) => m.type === 'resourceLoaded' || m.type === 'resourceLoadError',
-    ).length;
-
-    triggerMessage({ type: 'loadResource', ...resource });
-
-    // Wait for a NEW response to appear (success or error). The served-resources
-    // map is populated at path-resolution time inside VSCodeResourceProvider, so
-    // even an error response means the path was recorded and the priming worked.
-    const deadline = Date.now() + 5000;
-    while (Date.now() < deadline) {
-      const responseCount = sentMessages.filter(
-        (m) => m.type === 'resourceLoaded' || m.type === 'resourceLoadError',
-      ).length;
-      if (responseCount > responseBefore) {
-        break;
-      }
-      await new Promise<void>((r) => setTimeout(r, 50));
-    }
-    // Timeout is acceptable: path-resolution records the served entry before
-    // the file-read, so even a timeout here means the served map entry exists.
+    await primeResource(triggerMessage, sentMessages, resource);
   }
-
-  // Drain any remaining async work.
-  await new Promise<void>((r) => setTimeout(r, 100));
 }
 
 // ---------------------------------------------------------------------------
@@ -273,8 +273,8 @@ export async function waitForResourceChanged(
 ): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    const found = sentMessages.find(
-      (m) => m.type === 'resourceChanged' && (m as { path?: string }).path === expectedPath,
+    const found = sentMessages.some(
+      (m) => m.type === 'resourceChanged' && m.path === expectedPath,
     );
     if (found) {
       return;
@@ -282,8 +282,7 @@ export async function waitForResourceChanged(
     await new Promise<void>((r) => setTimeout(r, 50));
   }
   const seen = sentMessages
-    .filter((m) => m.type === 'resourceChanged')
-    .map((m) => (m as { path?: string }).path ?? '')
+    .flatMap((m) => (m.type === 'resourceChanged' ? [m.path] : []))
     .join(', ');
   const allTypes = sentMessages.map((m) => m.type).join(', ');
   const errors = sentMessages
@@ -299,33 +298,27 @@ export async function waitForResourceChanged(
 }
 
 /**
- * Assert that no `resourceChanged` message was posted within `windowMs`.
- * Used for negative scenarios (irrelevant file changed).
+ * Run `action` and assert that it posts no `resourceChanged` message, neither
+ * synchronously nor within `windowMs` afterwards. The baseline count is
+ * captured before the action so a synchronous post is caught too. Used for
+ * negative scenarios (irrelevant file changed, unrelated panel).
  */
 export async function assertNoResourceChanged(
   sentMessages: HostToWebviewMessage[],
+  action: () => Promise<void>,
   windowMs = 500,
 ): Promise<void> {
+  const countBefore = countResourceChanged(sentMessages);
+  await action();
   await new Promise<void>((r) => setTimeout(r, windowMs));
-  const found = sentMessages.some((m) => m.type === 'resourceChanged');
-  if (found) {
+  const countAfter = countResourceChanged(sentMessages);
+  if (countAfter !== countBefore) {
     throw new Error(
-      'Expected no resourceChanged message, but at least one was posted.',
+      `Expected no new resourceChanged messages, got ${countAfter - countBefore}.`,
     );
   }
 }
 
-/**
- * Return the current count of `resourceChanged` messages in `sentMessages`.
- * Snapshot this before an action and compare after to detect new messages.
- */
-export function countResourceChanged(sentMessages: HostToWebviewMessage[]): number {
+function countResourceChanged(sentMessages: HostToWebviewMessage[]): number {
   return sentMessages.filter((m) => m.type === 'resourceChanged').length;
-}
-
-/** Return all `resourceChanged` res:// paths posted so far. */
-export function resourceChangedPaths(sentMessages: HostToWebviewMessage[]): string[] {
-  return sentMessages
-    .filter((m) => m.type === 'resourceChanged')
-    .map((m) => (m as { path?: string }).path ?? '');
 }

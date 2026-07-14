@@ -34,7 +34,6 @@
  * served-map bleed. Each test creates fresh panels.
  */
 
-import * as assert from 'assert';
 import * as fs from 'fs';
 import * as vscode from 'vscode';
 import {
@@ -51,13 +50,12 @@ import {
   materialTresPath,
   unrelatedTscnPath,
   primePanelForDepChain,
+  primeResource,
   waitForResourceChanged,
   assertNoResourceChanged,
-  countResourceChanged,
   RES_TEXTURE,
   RES_MATERIAL,
 } from '../helpers/depChainHelpers';
-import type { TscnPreviewPanel } from '../../../TscnPreviewPanel';
 import type { HostToWebviewMessage } from '../../../protocol';
 
 // ---------------------------------------------------------------------------
@@ -122,9 +120,11 @@ suite('Dependency Hot-Reload E2E', () => {
     // No loadResource messages — the panel never requested texture.png.
     await new Promise<void>((r) => setTimeout(r, 100));
 
-    await panel.handleDependencyChange(vscode.Uri.file(texturePngPath()));
-
-    await assertNoResourceChanged(sentMessages, 400);
+    await assertNoResourceChanged(
+      sentMessages,
+      () => panel.handleDependencyChange(vscode.Uri.file(texturePngPath())),
+      400,
+    );
   });
 
   // -------------------------------------------------------------------------
@@ -144,17 +144,11 @@ suite('Dependency Hot-Reload E2E', () => {
     await handshake(triggerMessage, sentMessages);
 
     // sub.tscn references texture.png — prime that resource.
-    triggerMessage({
-      type: 'loadResource',
+    await primeResource(triggerMessage, sentMessages, {
       path: RES_TEXTURE,
       resourceType: 'Texture2D',
       requestId: 'sub-prime-tex',
     });
-    await Promise.race([
-      waitForMessage(sentMessages, 'resourceLoaded', 5000),
-      waitForMessage(sentMessages, 'resourceLoadError', 5000),
-    ]).catch(() => { /* timeout acceptable */ });
-    await new Promise<void>((r) => setTimeout(r, 100));
 
     await panel.handleDependencyChange(vscode.Uri.file(texturePngPath()));
 
@@ -173,22 +167,18 @@ suite('Dependency Hot-Reload E2E', () => {
     const extensionUri = getExtensionUri();
     const mainUri = vscode.Uri.file(mainTscnPath());
 
-    const { panel, sentMessages, triggerMessage } = buildHiddenPanel(extensionUri, mainUri);
+    const { panel, sentMessages, triggerMessage } = createTestPanel(extensionUri, mainUri, {
+      visible: false, // panel is hidden behind another editor
+    });
 
     await handshake(triggerMessage, sentMessages);
 
     // Prime texture.png into the served map.
-    triggerMessage({
-      type: 'loadResource',
+    await primeResource(triggerMessage, sentMessages, {
       path: RES_TEXTURE,
       resourceType: 'Texture2D',
       requestId: 'hidden-prime-tex',
     });
-    await Promise.race([
-      waitForMessage(sentMessages, 'resourceLoaded', 5000),
-      waitForMessage(sentMessages, 'resourceLoadError', 5000),
-    ]).catch(() => { /* timeout acceptable */ });
-    await new Promise<void>((r) => setTimeout(r, 100));
 
     // Watcher fires while panel is hidden.
     await panel.handleDependencyChange(vscode.Uri.file(texturePngPath()));
@@ -263,17 +253,11 @@ suite('Dependency Hot-Reload E2E', () => {
     const irrelevantPath = texturePngPath().replace('texture.png', 'completely-irrelevant.png');
     fs.writeFileSync(irrelevantPath, Buffer.alloc(4, 0));
 
-    const beforeCount = countResourceChanged(sentMessages);
-
     try {
-      await panel.handleDependencyChange(vscode.Uri.file(irrelevantPath));
-      await new Promise<void>((r) => setTimeout(r, 300));
-
-      const afterCount = countResourceChanged(sentMessages);
-      assert.strictEqual(
-        afterCount,
-        beforeCount,
-        `Expected no new resourceChanged messages, got ${afterCount - beforeCount}`,
+      await assertNoResourceChanged(
+        sentMessages,
+        () => panel.handleDependencyChange(vscode.Uri.file(irrelevantPath)),
+        300,
       );
     } finally {
       try { fs.unlinkSync(irrelevantPath); } catch { /* already gone */ }
@@ -296,32 +280,26 @@ suite('Dependency Hot-Reload E2E', () => {
     await handshake(triggerMessage, sentMessages);
 
     // Prime material.tres into the served map.
-    triggerMessage({
-      type: 'loadResource',
+    await primeResource(triggerMessage, sentMessages, {
       path: RES_MATERIAL,
       resourceType: 'Material',
       requestId: 'del-prime-mat',
     });
-    await Promise.race([
-      waitForMessage(sentMessages, 'resourceLoaded', 5000),
-      waitForMessage(sentMessages, 'resourceLoadError', 5000),
-    ]).catch(() => { /* timeout acceptable */ });
-    await new Promise<void>((r) => setTimeout(r, 100));
 
-    const beforeCount = countResourceChanged(sentMessages);
-
-    // Simulate watcher's onDidDelete for the material file.
+    // Really delete the file, then simulate the watcher's onDidDelete.
     // handleDependencyChange only consults the served map (no disk read) —
     // deletion cannot block the invalidation even though the file is gone.
-    await panel.handleDependencyChange(vscode.Uri.file(materialTresPath()));
+    const materialBytes = fs.readFileSync(materialTresPath());
+    fs.unlinkSync(materialTresPath());
 
-    await waitForResourceChanged(sentMessages, RES_MATERIAL, 8000);
+    try {
+      await panel.handleDependencyChange(vscode.Uri.file(materialTresPath()));
 
-    const afterCount = countResourceChanged(sentMessages);
-    assert.ok(
-      afterCount > beforeCount,
-      `resourceChanged count should have increased (before=${beforeCount}, after=${afterCount})`,
-    );
+      await waitForResourceChanged(sentMessages, RES_MATERIAL, 8000);
+    } finally {
+      // Restore so the fixture stays intact for any test that runs after.
+      fs.writeFileSync(materialTresPath(), materialBytes);
+    }
   });
 });
 
@@ -341,83 +319,4 @@ async function handshake(
   await new Promise<void>((r) => setTimeout(r, 200));
   triggerMessage({ type: 'webviewReady' });
   await waitForMessage(sentMessages, 'loadTscn', 8000);
-}
-
-/**
- * Build a `TscnPreviewPanel` backed by a fake webview whose `visible` property
- * is `false`. Used for scenario 3 (hidden panel). The fake panel is otherwise
- * identical to the one `createTestPanel` produces — captured messages and
- * `triggerMessage` work the same way.
- */
-function buildHiddenPanel(
-  extensionUri: vscode.Uri,
-  resourceUri: vscode.Uri,
-): {
-  panel: TscnPreviewPanel;
-  sentMessages: HostToWebviewMessage[];
-  triggerMessage: (msg: Record<string, unknown>) => void;
-} {
-  const sentMessages: HostToWebviewMessage[] = [];
-  const messageListeners: Array<(msg: unknown) => void> = [];
-  const disposeListeners: Array<() => void> = [];
-  let disposed = false;
-
-  const fakeWebview = {
-    html: '',
-    cspSource: 'vscode-webview://fake',
-    postMessage: (message: unknown) => {
-      sentMessages.push(message as HostToWebviewMessage);
-      return Promise.resolve(true);
-    },
-    asWebviewUri: (uri: vscode.Uri) => uri,
-    onDidReceiveMessage: (
-      listener: (msg: unknown) => void,
-      _thisArg?: unknown,
-      _disposables?: vscode.Disposable[],
-    ) => {
-      messageListeners.push(listener);
-      return { dispose: () => { /* no-op */ } };
-    },
-  };
-
-  const fakePanel = {
-    webview: fakeWebview,
-    title: '',
-    viewColumn: vscode.ViewColumn.Two,
-    active: false,
-    visible: false, // panel is hidden behind another editor
-    options: {} as vscode.WebviewPanelOptions,
-    viewType: 'tscnPreview',
-    onDidDispose: (
-      listener: () => void,
-      _thisArg?: unknown,
-      _disposables?: vscode.Disposable[],
-    ) => {
-      disposeListeners.push(listener);
-      return { dispose: () => { /* no-op */ } };
-    },
-    onDidChangeViewState: (_listener: unknown) => ({ dispose: () => { /* no-op */ } }),
-    reveal: (_column?: vscode.ViewColumn, _preserveFocus?: boolean) => { /* no-op */ },
-    dispose: () => {
-      if (disposed) return;
-      disposed = true;
-      for (const l of disposeListeners) l();
-    },
-  };
-
-  // Avoid a circular import by requiring the module at call time. The test
-  // bundle is CommonJS so `require` is available; the import is synchronous.
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { TscnPreviewPanel } = require('../../../TscnPreviewPanel') as typeof import('../../../TscnPreviewPanel');
-  const panel = new TscnPreviewPanel(
-    fakePanel as unknown as vscode.WebviewPanel,
-    extensionUri,
-    resourceUri,
-  );
-
-  const triggerMessage = (msg: Record<string, unknown>) => {
-    for (const l of messageListeners) l(msg);
-  };
-
-  return { panel, sentMessages, triggerMessage };
 }
