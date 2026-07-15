@@ -112,8 +112,9 @@
  * activity bar + Explorer, so a left rail would clash and waste width.
  */
 
-/* Full-width top bar: brand, host toolbar (fixture picker), viewport-mode
-   controls pushed to the right. */
+/* Full-width top bar: brand, host toolbar (fixture picker), scene-stat chips.
+   Viewport-mode controls float over the viewport (see .viewportToolbarOverlay),
+   not here — the row over-constrained when the source pane narrowed it (#300). */
 .topBar {
   display: flex;
   align-items: center;
@@ -442,6 +443,10 @@
   position: absolute;
   top: var(--tsi-space-2);
   right: var(--tsi-space-2);
+  /* Bounded to the viewport so a narrow center (VS Code split editor, a widened
+     dock) can never push the right-anchored controls off the left edge — the
+     toolbar wraps to a second row instead (see .toolbar flex-wrap). #300. */
+  max-width: calc(100% - 2 * var(--tsi-space-2));
   z-index: 6;
   display: flex;
   align-items: center;
@@ -458,7 +463,8 @@
    scene carries Control/CanvasLayer nodes (ADR-0006). Clicking it flips to 2D. */
 .viewportHint {
   position: absolute;
-  top: var(--tsi-space-3);
+  /* Bottom-center, clear of the top-right viewport toolbar overlay (#300). */
+  bottom: var(--tsi-space-3);
   left: 50%;
   transform: translateX(-50%);
   z-index: 2;

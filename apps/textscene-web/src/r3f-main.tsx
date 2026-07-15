@@ -621,7 +621,7 @@ function Toolbar({
   onTogglePane,
   problemBadge,
 }: ToolbarProps) {
-  // Reset Camera lives in the shared <ViewportToolbar> in the shell top bar.
+  // Reset Camera lives in the shared <ViewportToolbar>, floated over the viewport.
   const tscnInputRef = useRef<HTMLInputElement | null>(null);
   const searchRef = useRef<HTMLInputElement | null>(null);
   const [open, setOpen] = useState(false);
