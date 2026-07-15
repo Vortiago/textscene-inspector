@@ -1,7 +1,7 @@
 /**
  * VS Code previewer showcase capture.
  *
- * Launches the extension dev-host against the real ld-58 Godot project, then for
+ * Launches the extension dev-host against the committed example scenes, then for
  * each target scene drives the workbench so OUR previewer is the subject of the
  * shot (not raw .tscn text or the Copilot sidebar): close the Copilot auxiliary
  * bar, open the scene, run "Open Preview to the Side", close the source editor so
@@ -34,18 +34,18 @@ function rmRetry(dir) {
 
 const WT = process.cwd();
 const EXT = `${WT}/apps/textscene-vscode`;
-// Open the vendored, script-stripped closure as the workspace: it IS the res://
-// root (so paths resolve) and has no .csproj/.cs, so the C# Dev Kit never
-// activates and hijacks focus with its welcome page. Same scenes as the web showcase.
-const WS = `${WT}/scenes/ld58`;
+// Open the committed example scenes as the workspace: self-contained .tscn with
+// no .csproj/.cs, so the C# Dev Kit never activates and hijacks focus with its
+// welcome page. Same scenes as the web showcase.
+const WS = `${WT}/scenes/examples`;
 const UD = `${WT}/.tmp/vsc-showcase-ud`;
 const OUT = `${WT}/docs/screenshots/vscode`;
 const PORT = 9222;
 
-// res://-relative paths within the ld-58 workspace → output screenshot name + caption.
+// Workspace-relative paths within the examples workspace → output screenshot name + caption.
 const SCENES = {
-  'vscode-main': { file: 'main.tscn', desc: 'game-entry composite (Hallway + WorldEnvironment + UI layers)' },
-  'vscode-hallway': { file: 'Scenes/Hallway/Hallway.tscn', desc: 'the 286-node furnished murder scene' },
+  'vscode-main': { file: 'example-ui-dialog.tscn', desc: 'a 2D-UI field-journal dialog rendered by the Control overlay' },
+  'vscode-hallway': { file: 'example-hallway-mockup.tscn', desc: 'a self-contained CSG hallway mockup with portrait frames' },
 };
 
 const wanted = process.argv.slice(2);

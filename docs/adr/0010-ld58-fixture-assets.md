@@ -34,3 +34,22 @@ way and renders end-to-end from the in-repo fixtures (no upload cascade needed).
 Recorded because the private-now / strip-before-public lifecycle is a deliberate
 decision a future contributor must know (don't publish ld-58 assets), and the
 `res://`-mirrored fixture layout is non-obvious.
+
+## Amendment (2026-07-15): the strip has been executed
+
+The public-move step described above has run. `scenes/ld58/` is no longer
+committed — it is gitignored, and a contributor who wants the original vendored
+corpus locally (e.g. to re-derive a fixture) can re-vendor it with
+`pnpm vendor:ld58` (`scripts/vendor-ld58.mjs`), which is a manual, opt-in step
+against the private source, not part of `pnpm install` or CI. The showcase
+clips and screenshots that depended on `scenes/ld58/` content were removed or
+re-recorded against synthetic/public fixtures.
+
+Committed regression coverage that used to run against the vendored corpus
+(wall-transform, instance-composition, and 2D-UI-overlay regression tests) now
+rests on synthetic fixtures checked into `scenes/examples/` and
+`scenes/fixtures/` that reproduce the same structural shapes (nested instance
+transforms, rotated planes, Control-heavy UI trees) without carrying any
+vendored asset or content. The `res://`-mirrored fixture layout described above
+is preserved as the historical record of how the closure was committed while
+this was a private repository; it no longer describes the current tree.

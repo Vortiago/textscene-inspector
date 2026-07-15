@@ -6,15 +6,7 @@ Regenerate the whole set after any UI change with one command — **`pnpm showca
 
 ## Hallway progress
 
-The ld-58 hallway is the yardstick for "can it render a full scene". Two views track that progress.
-
-### Full ld-58 hallway geometry
-
-![hallway-ld58](web/hallway-ld58.png)
-
-[▶ web/hallway-ld58.webm](web/hallway-ld58.webm)
-
-The real ld-58 hallway geometry with its actual wall and wood textures (PlaneMesh walls plus instanced `WallSection` / `CornerColumn` components, resolved through the `res://` dependency closure with OpenGameArt textures). This is the yardstick for supporting the full hallway. Triplanar (`uv1_world_triplanar`) tiling now matches Godot's world-unit density on planar meshes (floor/walls/ceiling tile `size × uv1_scale` instead of stretching one copy); non-planar triplanar geometry remains approximate. The furnished hallway — photo frames, props, evidence — arrives as more P5 assets land.
+A self-contained hallway scene is the yardstick for "can it render a full scene". Triplanar (`uv1_world_triplanar`) tiling matches Godot's world-unit density on planar meshes (floor/walls/ceiling tile `size × uv1_scale` instead of stretching one copy); non-planar triplanar geometry remains approximate.
 
 ### CSG hallway mockup
 
@@ -22,7 +14,7 @@ The real ld-58 hallway geometry with its actual wall and wood textures (PlaneMes
 
 [▶ web/hallway.webm](web/hallway.webm)
 
-The ld-58 hallway mockup: CSG corridor (floor / walls / ceiling), portrait frames, and Label3D name plates — self-contained, tracks 3D-rendering progress.
+The hallway mockup: CSG corridor (floor / walls / ceiling), portrait frames, and Label3D name plates — self-contained, tracks 3D-rendering progress.
 
 ## Split Dock chrome + 2D UI
 
@@ -32,13 +24,11 @@ The ld-58 hallway mockup: CSG corridor (floor / walls / ceiling), portrait frame
 
 [▶ web/dcc-layout.webm](web/dcc-layout.webm)
 
-The shipped chrome is a 2-column **Split Dock** (ADR-0007): the viewport alongside a single right dock holding the scene tree on top and the tabbed detail panel (**Inspector** / **Resources** / **Cameras**) directly below — no left rail. The top bar carries the brand, the scene chip + Ctrl/Cmd+K palette, and the Reset Camera / 3D-2D / Collisions controls. The clip orbits the textured ld-58 hallway, then switches to the EndGameDialog scene and flips to **2D** mode so the Control overlay renders the dialog UI — note that it was recorded against the earlier 3-column layout and needs a re-run (`pnpm showcase:regen`) to show the Split Dock. Until then, these stills capture the current UI:
-
-![Current Split Dock chrome — viewport + right dock with scene tree and detail tabs](../screenshots/j-integration/web-3d-split-dock.png)
+The shipped chrome is a 2-column **Split Dock** (ADR-0007): the viewport alongside a single right dock holding the scene tree on top and the tabbed detail panel (**Inspector** / **Resources** / **Cameras**) directly below — no left rail. The top bar carries the brand, the scene chip + Ctrl/Cmd+K palette, and the Reset Camera / 3D-2D / Collisions controls. The clip orbits the textured hallway mockup, then switches to a 2D-UI example scene and flips to **2D** mode so the Control overlay renders the dialog UI — note that it was recorded against the earlier 3-column layout and needs a re-run (`pnpm showcase:regen`) to show the Split Dock. Until then, this still captures the current toolbar:
 
 ![Current toolbar with the scene chip's Ctrl/Cmd+K command palette open](../screenshots/j-integration/web-toolbar-palette.png)
 
-The 2D-overlay renders of the seven vendored ld-58 UI scenes (StartScreen, GameUI, EndGameDialog, AboutDialog, DialogSystem, ClueContainer, ClueItem) are captured as stills in [`verify/`](verify/) with per-scene control stats in [`verify/verify-2d.json`](verify/verify-2d.json).
+The 2D-overlay renders of the synthetic Control-coverage scenes (`example-ui-dialog`, `unit-control-containers`, the BBCode `RichTextLabel` demo) are captured as stills in [`verify/`](verify/) with per-scene control stats in [`verify/verify-2d.json`](verify/verify-2d.json).
 
 ### ui-hint
 
@@ -46,7 +36,7 @@ The 2D-overlay renders of the seven vendored ld-58 UI scenes (StartScreen, GameU
 
 [▶ web/ui-hint.webm](web/ui-hint.webm)
 
-ADR-0006 discoverability: a Control-only scene (EndGameDialog) opens in the default 3D viewport, so the shell floats a **"Contains 2D UI — switch to 2D"** hint over the canvas. Clicking it flips to the 2D overlay, which renders the dialog.
+ADR-0006 discoverability: a Control-only scene (`example-ui-dialog`) opens in the default 3D viewport, so the shell floats a **"Contains 2D UI — switch to 2D"** hint over the canvas. Clicking it flips to the 2D overlay, which renders the dialog.
 
 ## Feature clips
 
@@ -172,7 +162,7 @@ Fresh captures against the latest renderer need a desktop session.
 
 Planned or in flight; re-run the showcase to capture them once they land:
 
-- The furnished full hallway — photo frames, props, evidence — once more ld-58 assets are committed.
+- A furnished hallway variant — photo frames, props, evidence — as a stretch goal for scene-corpus breadth.
 - A dedicated lit-scene lighting demo.
 - A re-recorded `dcc-layout` clip showing the 2-column Split Dock chrome (the current clip predates ADR-0007).
 

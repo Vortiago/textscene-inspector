@@ -1,0 +1,89 @@
+[gd_scene load_steps=3 format=3]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_card"]
+bg_color = Color(0.18, 0.18, 0.2, 0.95)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_badge"]
+bg_color = Color(0.25, 0.4, 0.3, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Scroll" type="ScrollContainer" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 16.0
+offset_top = 16.0
+offset_right = -16.0
+offset_bottom = -16.0
+
+[node name="Column" type="VBoxContainer" parent="Scroll"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 600)
+theme_override_constants/separation = 12
+
+[node name="Card" type="PanelContainer" parent="Scroll/Column"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_card")
+
+[node name="CardMargin" type="MarginContainer" parent="Scroll/Column/Card"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="Grid" type="GridContainer" parent="Scroll/Column/Card/CardMargin"]
+layout_mode = 2
+columns = 2
+theme_override_constants/h_separation = 16
+theme_override_constants/v_separation = 8
+
+[node name="KeyName" type="Label" parent="Scroll/Column/Card/CardMargin/Grid"]
+layout_mode = 2
+text = "Name"
+
+[node name="ValName" type="Label" parent="Scroll/Column/Card/CardMargin/Grid"]
+layout_mode = 2
+text = "Ada Byron"
+
+[node name="KeyRole" type="Label" parent="Scroll/Column/Card/CardMargin/Grid"]
+layout_mode = 2
+text = "Role"
+
+[node name="ValRole" type="Label" parent="Scroll/Column/Card/CardMargin/Grid"]
+layout_mode = 2
+text = "Analyst"
+
+[node name="Centered" type="CenterContainer" parent="Scroll/Column"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 64)
+
+[node name="Badge" type="Panel" parent="Scroll/Column/Centered"]
+custom_minimum_size = Vector2(96, 48)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_badge")
+
+[node name="Row" type="HBoxContainer" parent="Scroll/Column"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Swatch" type="ColorRect" parent="Scroll/Column/Row"]
+custom_minimum_size = Vector2(24, 24)
+layout_mode = 2
+color = Color(0.85, 0.55, 0.2, 1)
+
+[node name="SwatchLabel" type="Label" parent="Scroll/Column/Row"]
+layout_mode = 2
+text = "Amber"

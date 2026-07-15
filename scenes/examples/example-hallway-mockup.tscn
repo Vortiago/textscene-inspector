@@ -51,80 +51,80 @@ material = SubResource("StandardMaterial3D_floor")
 
 [node name="Portraits" type="Node3D" parent="."]
 
-[node name="LadyMargaret" type="Node3D" parent="Portraits"]
+[node name="Portrait1" type="Node3D" parent="Portraits"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.35, 2, -3)
 
-[node name="Frame" type="CSGBox3D" parent="Portraits/LadyMargaret"]
+[node name="Frame" type="CSGBox3D" parent="Portraits/Portrait1"]
 size = Vector3(0.1, 1.2, 0.9)
 material = SubResource("StandardMaterial3D_frame")
 
-[node name="Label3D" type="Label3D" parent="Portraits/LadyMargaret"]
+[node name="Label3D" type="Label3D" parent="Portraits/Portrait1"]
 transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 0.3, 0, 0)
-text = "Lady Margaret"
+text = "Portrait No. 1"
 font_size = 24
 
-[node name="SarahMills" type="Node3D" parent="Portraits"]
+[node name="Portrait2" type="Node3D" parent="Portraits"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.35, 2, -7)
 
-[node name="Frame" type="CSGBox3D" parent="Portraits/SarahMills"]
+[node name="Frame" type="CSGBox3D" parent="Portraits/Portrait2"]
 size = Vector3(0.1, 1, 0.8)
 material = SubResource("StandardMaterial3D_frame")
 
-[node name="Label3D" type="Label3D" parent="Portraits/SarahMills"]
+[node name="Label3D" type="Label3D" parent="Portraits/Portrait2"]
 transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 0.3, 0, 0)
-text = "Sarah Mills"
+text = "Portrait No. 2"
 font_size = 24
 
-[node name="InspectorCrawford" type="Node3D" parent="Portraits"]
+[node name="Portrait3" type="Node3D" parent="Portraits"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.35, 2, -5)
 
-[node name="Frame" type="CSGBox3D" parent="Portraits/InspectorCrawford"]
+[node name="Frame" type="CSGBox3D" parent="Portraits/Portrait3"]
 transform = Transform3D(-1, 0, -8.74228e-08, 0, 1, 0, 8.74228e-08, 0, -1, 0, 0, 0)
 size = Vector3(0.1, 1.2, 0.9)
 material = SubResource("StandardMaterial3D_frame")
 
-[node name="Label3D" type="Label3D" parent="Portraits/InspectorCrawford"]
+[node name="Label3D" type="Label3D" parent="Portraits/Portrait3"]
 transform = Transform3D(4.37114e-08, 0, -1, 0, 1, 0, 1, 0, 4.37114e-08, -0.3, 0, 0)
-text = "Inspector Crawford
-(PLAYER START)"
+text = "Portrait No. 3
+(Entrance)"
 font_size = 20
 
-[node name="DrMorrison" type="Node3D" parent="Portraits"]
+[node name="Portrait4" type="Node3D" parent="Portraits"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 2, -14.65)
 
-[node name="Frame" type="CSGBox3D" parent="Portraits/DrMorrison"]
+[node name="Frame" type="CSGBox3D" parent="Portraits/Portrait4"]
 transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, 0, 0, 0)
 size = Vector3(0.1, 1.1, 0.85)
 material = SubResource("StandardMaterial3D_frame")
 
-[node name="Label3D" type="Label3D" parent="Portraits/DrMorrison"]
+[node name="Label3D" type="Label3D" parent="Portraits/Portrait4"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.3)
-text = "Dr. Morrison"
+text = "Portrait No. 4"
 font_size = 24
 
-[node name="YoungTimothy" type="Node3D" parent="Portraits"]
+[node name="Portrait5" type="Node3D" parent="Portraits"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 1.8, -14.65)
 
-[node name="Frame" type="CSGBox3D" parent="Portraits/YoungTimothy"]
+[node name="Frame" type="CSGBox3D" parent="Portraits/Portrait5"]
 transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, 0, 0, 0)
 size = Vector3(0.1, 0.9, 0.7)
 material = SubResource("StandardMaterial3D_frame")
 
-[node name="Label3D" type="Label3D" parent="Portraits/YoungTimothy"]
+[node name="Label3D" type="Label3D" parent="Portraits/Portrait5"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.3)
-text = "Young Timothy"
+text = "Portrait No. 5"
 font_size = 24
 
-[node name="EleanorHartwell" type="Node3D" parent="Portraits"]
+[node name="Portrait6" type="Node3D" parent="Portraits"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 2, -17.35)
 
-[node name="Frame" type="CSGBox3D" parent="Portraits/EleanorHartwell"]
+[node name="Frame" type="CSGBox3D" parent="Portraits/Portrait6"]
 size = Vector3(0.1, 1.3, 1)
 material = SubResource("StandardMaterial3D_frame")
 
-[node name="Label3D" type="Label3D" parent="Portraits/EleanorHartwell"]
+[node name="Label3D" type="Label3D" parent="Portraits/Portrait6"]
 transform = Transform3D(-1, 0, -8.74228e-08, 0, 1, 0, 8.74228e-08, 0, -1, 0, 0, -0.3)
-text = "Eleanor Hartwell"
+text = "Portrait No. 6"
 font_size = 24
 
 [node name="CrimeScene" type="Node3D" parent="."]
@@ -137,10 +137,10 @@ material = SubResource("StandardMaterial3D_body")
 
 [node name="BodyLabel" type="Label3D" parent="CrimeScene/Body"]
 transform = Transform3D(1, 0, 0, 0, -4.37114e-08, 1, 0, -1, -4.37114e-08, 0, 0.3, 0)
-text = "Lord Edgar's Body"
+text = "Marker"
 font_size = 20
 
-[node name="LetterOpener" type="CSGBox3D" parent="CrimeScene"]
+[node name="SmallItem" type="CSGBox3D" parent="CrimeScene"]
 transform = Transform3D(0.866025, 0, 0.5, 0, 1, 0, -0.5, 0, 0.866025, -0.1, 0.35, 0.2)
 size = Vector3(0.05, 0.05, 0.3)
 material = SubResource("StandardMaterial3D_evidence")
@@ -177,8 +177,7 @@ material = SubResource("StandardMaterial3D_frame")
 
 [node name="Label3D" type="Label3D" parent="Evidence/WallSconce"]
 transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 0.3, 0, 0)
-text = "Wall Sconce
-(knocked)"
+text = "Wall Fixture"
 font_size = 16
 
 [node name="MuddyFootprints" type="Node3D" parent="Evidence"]
@@ -233,30 +232,30 @@ transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 8, 0.11, -16.5)
 size = Vector3(0.15, 0.01, 0.25)
 material = SubResource("StandardMaterial3D_evidence")
 
-[node name="Handkerchief" type="Node3D" parent="Evidence"]
+[node name="ClothItem" type="Node3D" parent="Evidence"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.5, 0.15, -15.5)
 
-[node name="Cloth" type="CSGBox3D" parent="Evidence/Handkerchief"]
+[node name="Cloth" type="CSGBox3D" parent="Evidence/ClothItem"]
 transform = Transform3D(0.906308, -0.422618, 0, 0.422618, 0.906308, 0, 0, 0, 1, 0, 0, 0)
 size = Vector3(0.2, 0.01, 0.2)
 material = SubResource("StandardMaterial3D_evidence")
 
-[node name="Label3D" type="Label3D" parent="Evidence/Handkerchief"]
+[node name="Label3D" type="Label3D" parent="Evidence/ClothItem"]
 transform = Transform3D(1, 0, 0, 0, -4.37114e-08, 1, 0, -1, -4.37114e-08, 0, 0.3, 0)
-text = "Handkerchief \"T.H.\""
+text = "Misplaced Item"
 font_size = 16
 
-[node name="DroppedLedger" type="Node3D" parent="Evidence"]
+[node name="BookItem" type="Node3D" parent="Evidence"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6.5, 0.15, -16.5)
 
-[node name="Book" type="CSGBox3D" parent="Evidence/DroppedLedger"]
+[node name="Book" type="CSGBox3D" parent="Evidence/BookItem"]
 transform = Transform3D(0.819152, -0.573576, 0, 0.573576, 0.819152, 0, 0, 0, 1, 0, 0, 0)
 size = Vector3(0.25, 0.05, 0.35)
 material = SubResource("StandardMaterial3D_evidence")
 
-[node name="Label3D" type="Label3D" parent="Evidence/DroppedLedger"]
+[node name="Label3D" type="Label3D" parent="Evidence/BookItem"]
 transform = Transform3D(1, 0, 0, 0, -4.37114e-08, 1, 0, -1, -4.37114e-08, 0, 0.3, 0)
-text = "Dropped Ledger"
+text = "Stray Item"
 font_size = 16
 
 [node name="PottedPlant" type="CSGCylinder3D" parent="Evidence"]
@@ -279,8 +278,7 @@ material = SubResource("StandardMaterial3D_ceiling")
 
 [node name="Label3D" type="Label3D" parent="Evidence/EscapeWindow"]
 transform = Transform3D(-1, 0, -8.74228e-08, 0, 1, 0, 8.74228e-08, 0, -1, -0.4, 0, 0)
-text = "ESCAPE WINDOW
-(Forced Open)"
+text = "Window"
 font_size = 20
 
 [node name="Camera3D" type="Camera3D" parent="."]

@@ -2,4 +2,3 @@
 # Vendored game/demo corpora — exclude from language stats and diffs by default
 scenes/demos/** linguist-vendored
 scenes/isometric/** linguist-vendored
-scenes/ld58/** linguist-vendored

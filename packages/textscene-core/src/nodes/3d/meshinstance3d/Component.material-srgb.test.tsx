@@ -8,7 +8,7 @@
  * gamma curve on output. Without an intermediate sRGB → linear
  * conversion, mid-tone colors render double-encoded — a Godot dark red
  * `Color(0.545, 0.117, 0.117)` (`#8B1E1E`) came out as bright saturated
- * pink, which ld58-verifier flagged on the hallway fixture.
+ * pink, which a mid-tone-color regression check flagged.
  *
  * Now `materialScalars.parseStandardMaterial3DScalars`
  * converts the parsed albedo + emission via the standard sRGB inverse

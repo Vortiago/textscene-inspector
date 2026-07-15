@@ -82,38 +82,22 @@ export const scenarios = {
   // CSG hallway mockup — self-contained, renders fully today.
   hallway: orbitScene(
     'Hallway Mockup',
-    'The ld-58 hallway mockup: CSG corridor (floor / walls / ceiling), portrait frames, and Label3D name plates — self-contained, tracks 3D-rendering progress.',
+    'A self-contained CSG hallway mockup: corridor (floor / walls / ceiling), portrait frames, and Label3D name plates — tracks 3D-rendering progress.',
     { dx: 320, dy: 20, steps: 70 }
-  ),
-
-  // Full ld-58 hallway GEOMETRY — real textured walls/columns via the res://
-  // dependency closure (WallSection / CornerColumn + OpenGameArt textures).
-  'hallway-ld58': orbitScene(
-    'Hallway Geometry',
-    "The unfurnished ld-58 hallway geometry with its actual wall/wood textures (PlaneMesh walls + instanced WallSection/CornerColumn components) — the architectural shell the full scene is furnished into.",
-    { dx: 320, dy: 20, steps: 70 }
-  ),
-
-  // The full furnished ld-58 murder scene — geometry + instanced GLB props +
-  // portrait frames + the crime-scene tableau (286 nodes). The marquee clip:
-  // the entire res:// dependency closure rendered end to end.
-  'hallway-full': orbitScene(
-    'Hallway',
-    'The complete ld-58 "Hallway Murder" scene (286 nodes): textured walls and floor, instanced GLB portrait frames carrying their painted portraits, doors, roof lamps, and the full crime-scene tableau — corner table, body, and evidence props. The entire res:// dependency closure rendered end to end.',
-    { dx: 300, dy: 22, steps: 64 }
   ),
 
   // Layout tour: the Split Dock shell (ADR-0007) + the 2D Control overlay. Opens
-  // on the textured hallway (3D), orbits, switches to a rich ld-58 dialog scene
-  // via the command palette, then flips to 2D mode so the overlay renders its UI.
+  // on the CSG hallway mockup (3D), orbits, switches to a Control-based dialog
+  // scene via the command palette, then flips to 2D mode so the overlay renders
+  // its UI.
   'dcc-layout': {
-    label: 'Hallway',
+    label: 'Hallway Mockup',
     caption:
-      'The Split Dock shell (ADR-0007): a large viewport beside one right master-detail dock — scene tree on top, a tabbed Inspector / Resources / Cameras pane below that follows the selection. Orbits the fully furnished ld-58 murder scene, switches to the EndGameDialog scene via the ⌘K command palette, then flips to 2D mode, where the Control overlay renders the dialog UI faithfully.',
+      'The Split Dock shell (ADR-0007): a large viewport beside one right master-detail dock — scene tree on top, a tabbed Inspector / Resources / Cameras pane below that follows the selection. Orbits the self-contained CSG hallway mockup, switches to the UI Dialog scene via the ⌘K command palette, then flips to 2D mode, where the Control overlay renders the dialog UI faithfully.',
     run: async (page, h) => {
       await h.poster();
       await h.orbit(page, { dx: 280, dy: 18, steps: 48 });
-      await h.selectScene(page, 'End Game Dialog');
+      await h.selectScene(page, 'Ui Dialog');
       const btn2d = page.getByRole('button', { name: '2D' });
       if (await btn2d.count()) await btn2d.first().click();
       await page.waitForSelector('[data-control-overlay="true"]', { timeout: 15000 }).catch(() => {});
@@ -121,13 +105,13 @@ export const scenarios = {
     },
   },
 
-  // The 2D-UI discoverability hint (ADR-0006): a Control-only scene opens in
+  // The 2D-UI discoverability hint (ADR-0006): a Control-carrying scene opens in
   // the default 3D viewport, the "switch to 2D" hint floats over it, and a
   // click flips to the 2D overlay that renders the dialog.
   'ui-hint': {
-    label: 'End Game Dialog',
+    label: 'Ui Dialog',
     caption:
-      'A 2D-UI scene (EndGameDialog) opens in the default 3D viewport; since it carries Control nodes, the shell floats a "switch to 2D" hint. Clicking the hint flips to the 2D overlay, which renders the dialog faithfully.',
+      'A 2D-UI scene (a field-journal dialog) opens in the default 3D viewport; since it carries Control nodes, the shell floats a "switch to 2D" hint. Clicking the hint flips to the 2D overlay, which renders the dialog faithfully.',
     run: async (page, h) => {
       await page.waitForTimeout(700); // let the hint appear over the empty 3D viewport
       await h.poster(); // capture the hint
@@ -170,9 +154,21 @@ export const scenarios = {
       await h.orbit(page, { dx: 120, dy: 14, steps: 26 }); // show the untextured room
       await h.openDetailTab(page, 'Resources'); // reveal the missing list
       await page.waitForTimeout(700);
-      await h.uploadResource(page, 'res://demo/missing/floor_albedo.png', 'scenes/ld58/assets/textures/wood1.png');
-      await h.uploadResource(page, 'res://demo/missing/wall_albedo.png', 'scenes/ld58/assets/textures/fy_acc_lien.png');
-      await h.uploadResource(page, 'res://demo/missing/crate_albedo.png', 'scenes/ld58/assets/textures/g_toit-tower.png');
+      await h.uploadResource(
+        page,
+        'res://demo/missing/floor_albedo.png',
+        'scenes/demos/2d/role_playing_game/grid_movement/grid/tiles/ground_grass.png'
+      );
+      await h.uploadResource(
+        page,
+        'res://demo/missing/wall_albedo.png',
+        'scenes/demos/2d/role_playing_game/theme/images/background.png'
+      );
+      await h.uploadResource(
+        page,
+        'res://demo/missing/crate_albedo.png',
+        'scenes/demos/2d/physics_platformer/background/plank.png'
+      );
       await page.waitForTimeout(700);
       await h.poster(); // textured "after" — the thumbnail
       await h.orbit(page, { dx: 300, dy: 18, steps: 58 }); // orbit the now-textured room

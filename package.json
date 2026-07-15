@@ -25,6 +25,7 @@
     "check:package": "publint packages/textscene-core",
     "generate:fixtures": "node scripts/generate-fixtures.js",
     "vendor:games": "node scripts/vendor-godot-games.mjs && node scripts/generate-fixtures.js",
+    "vendor:ld58": "node scripts/vendor-ld58.mjs && node scripts/generate-fixtures.js",
     "new:node": "node scripts/new-node-slice.mjs",
     "test:visual": "node scripts/visual/run.mjs",
     "test:visual:update": "node scripts/visual/run.mjs --update",

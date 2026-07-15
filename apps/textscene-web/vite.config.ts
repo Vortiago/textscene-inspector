@@ -9,9 +9,9 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 3000,
     open: true,
-    // Allow access over Tailscale (MagicDNS short name + full FQDN, and any
-    // `*.ts.net` tailnet host). Vite 6 blocks unknown Host headers by default.
-    allowedHosts: ['thinker', 'thinker.tail437c40.ts.net', '.ts.net'],
+    // Allow Tailscale MagicDNS hosts for LAN dev access — Vite 6 blocks
+    // unknown Host headers by default.
+    allowedHosts: ['.ts.net'],
   },
   build: {
     outDir: 'dist',

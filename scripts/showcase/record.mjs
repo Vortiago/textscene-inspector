@@ -2,9 +2,9 @@
  * Reusable Playwright record harness for the web-previewer feature showcase.
  *
  * Records a real .webm screen capture of the web app while a scenario callback
- * drives it, using the system Chrome (channel) with SwiftShader so WebGL renders
- * in headless. Output: docs/showcase/web/<name>.webm (+ a poster <name>.png that
- * the scenario captures mid-run).
+ * drives it (browser selection + WebGL flags: see browser.mjs). Output:
+ * docs/showcase/web/<name>.webm (+ a poster <name>.png that the scenario
+ * captures mid-run).
  *
  * The scenario receives `(page, helpers)`; `helpers` are reliable interaction
  * primitives (selectScene, orbit, expandTree, clickNode, useThisCamera,
@@ -12,11 +12,25 @@
  * behavior — e.g. switching between Camera3D nodes — not just a generic orbit.
  */
 
-import { chromium } from 'playwright';
 import { mkdirSync, renameSync, statSync, existsSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
+import { launchShowcaseBrowser } from './browser.mjs';
 
 const OUT_DIR = process.env.SHOWCASE_OUT || 'docs/showcase/web';
+
+// Fail-fast actionability budget, applied context-wide in recordShowcase and
+// reused by every explicit helper wait so the policy is tuned in one place.
+const ACTION_TIMEOUT_MS = 5000;
+
+/** Best-effort click for the boolean helpers: false instead of a thrown timeout. */
+async function tryClick(locator, timeout = ACTION_TIMEOUT_MS) {
+  try {
+    await locator.click({ timeout });
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 /** Drag across the 3D canvas to orbit the camera (OrbitControls). */
 async function orbit(page, { dx = 230, dy = 35, steps = 55 } = {}) {
@@ -36,15 +50,18 @@ async function orbit(page, { dx = 230, dy = 35, steps = 55 } = {}) {
 /**
  * Switch scenes through the command-palette scene switcher (the native <select>
  * dropdown was retired for it): open the scene chip, filter by the fixture's
- * label, and Enter to pick the top match, then settle.
+ * label, click the matching row, then settle. Exported for the standalone
+ * verify harness (_verify.mjs).
  */
-async function selectScene(page, label) {
+export async function selectScene(page, label) {
   await page.locator('button[aria-haspopup="dialog"]').first().click();
-  const search = page.getByPlaceholder(/filter built-in scenes/i);
-  await search.waitFor({ state: 'visible', timeout: 5000 });
+  const search = page.getByLabel(/filter built-in scenes/i);
+  await search.waitFor({ state: 'visible', timeout: ACTION_TIMEOUT_MS });
   await search.fill(label);
   await page.waitForTimeout(150); // filter settle
-  await search.press('Enter');
+  // The palette's tree view has no Enter-to-select; click the matching row.
+  await page.locator('[role="dialog"]').getByText(label, { exact: true }).first().click();
+  await page.locator('[role="dialog"]').waitFor({ state: 'detached', timeout: ACTION_TIMEOUT_MS });
   await page.waitForTimeout(1300); // parse + resource load + CameraFit settle
 }
 
@@ -53,7 +70,7 @@ async function expandTree(page) {
   for (let i = 0; i < 60; i++) {
     const collapsed = page.locator('[aria-label="Expand"]');
     if ((await collapsed.count()) === 0) break;
-    await collapsed.first().click();
+    if (!(await tryClick(collapsed.first()))) break;
     await page.waitForTimeout(120);
   }
 }
@@ -67,7 +84,7 @@ async function clickNode(page, { path, type } = {}) {
       : '[data-node-path]';
   const row = page.locator(`${sel} >> [role="treeitem"]`).first();
   if ((await row.count()) === 0) return false;
-  await row.click();
+  if (!(await tryClick(row))) return false;
   await page.waitForTimeout(400);
   return true;
 }
@@ -83,7 +100,7 @@ async function cameraNodePaths(page) {
 async function useThisCamera(page) {
   const btn = page.getByRole('button', { name: 'Use This Camera' });
   if ((await btn.count()) === 0) return false;
-  await btn.first().click();
+  if (!(await tryClick(btn.first()))) return false;
   await page.waitForTimeout(1300); // hold on this camera's POV
   return true;
 }
@@ -92,7 +109,8 @@ async function useThisCamera(page) {
 async function resetCamera(page) {
   const btn = page.getByRole('button', { name: /reset camera/i });
   if ((await btn.count()) === 0) return false;
-  await btn.first().click();
+  // Best-effort: the button can be covered by the top toolbar at narrow widths.
+  if (!(await tryClick(btn.first()))) return false;
   await page.waitForTimeout(700);
   return true;
 }
@@ -108,17 +126,11 @@ async function fillSearch(page, text) {
 
 /** Open one of the detail-dock tabs (Inspector / Resources / Cameras). */
 async function openDetailTab(page, name) {
-  const tab = page.getByRole('tab', { name });
-  if (await tab.count()) {
-    await tab.first().click();
-    await page.waitForTimeout(300);
-    return true;
-  }
-  const byText = page.getByText(name, { exact: true });
-  if (await byText.count()) {
-    await byText.first().click();
-    await page.waitForTimeout(300);
-    return true;
+  for (const candidate of [page.getByRole('tab', { name }), page.getByText(name, { exact: true })]) {
+    if ((await candidate.count()) && (await tryClick(candidate.first()))) {
+      await page.waitForTimeout(300);
+      return true;
+    }
   }
   return false;
 }
@@ -130,7 +142,7 @@ async function openDetailTab(page, name) {
  */
 async function uploadResource(page, resPath, diskPath) {
   const input = page.locator(`div[data-path="${resPath}"] input[type="file"]`);
-  await input.waitFor({ state: 'attached', timeout: 5000 });
+  await input.waitFor({ state: 'attached', timeout: ACTION_TIMEOUT_MS });
   await input.setInputFiles(diskPath);
   await page.waitForTimeout(900); // re-resolve + re-render settle
 }
@@ -148,16 +160,17 @@ export async function recordShowcase(name, file, scenario, opts = {}) {
   const height = opts.height ?? 800;
   mkdirSync(OUT_DIR, { recursive: true });
 
-  const browser = await chromium.launch({
-    channel: 'chrome',
-    headless: true,
-    args: ['--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--use-gl=angle'],
-  });
+  const browser = await launchShowcaseBrowser();
   const context = await browser.newContext({
     viewport: { width, height },
     deviceScaleFactor: 1,
     recordVideo: { dir: OUT_DIR, size: { width, height } },
   });
+  // Fail-fast actionability policy: a covered/missing control should cost a
+  // scenario seconds, not Playwright's 30s default. Explicit timeouts and
+  // navigation keep their own budgets.
+  context.setDefaultTimeout(ACTION_TIMEOUT_MS);
+  context.setDefaultNavigationTimeout(30000);
   const page = await context.newPage();
   const errors = [];
   page.on('console', (m) => {
@@ -185,12 +198,20 @@ export async function recordShowcase(name, file, scenario, opts = {}) {
     uploadResource,
     poster: (n = name) => poster(page, n),
   };
-  await scenario(page, helpers);
-  await page.waitForTimeout(400);
-
-  const video = page.video();
-  await context.close(); // finalizes the .webm
-  await browser.close();
+  // On a scenario throw the browser must still close and the auto-named
+  // recorder temp video (page@<hash>.webm) must not survive to be committed.
+  let ok = false;
+  let video;
+  try {
+    await scenario(page, helpers);
+    await page.waitForTimeout(400);
+    ok = true;
+  } finally {
+    video = page.video();
+    await context.close(); // finalizes the .webm
+    await browser.close();
+    if (video && !ok) rmSync(await video.path(), { force: true });
+  }
 
   if (video) {
     const src = await video.path();

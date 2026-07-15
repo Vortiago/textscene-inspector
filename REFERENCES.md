@@ -20,7 +20,7 @@ Use these with the Context7 MCP tool for up-to-date documentation:
 ## Core Documentation
 
 ### TSCN Format
-- https://docs.godotengine.org/en/4.4/contributing/development/file_formats/tscn.html
+- https://docs.godotengine.org/en/stable/contributing/development/file_formats/tscn.html
 
 ### three.js
 - https://threejs.org/docs/

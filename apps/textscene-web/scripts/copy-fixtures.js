@@ -52,9 +52,11 @@ for (const file of exampleFiles) {
 const totalFiles = fixtureFiles.length + exampleFiles.length;
 console.log(`Copied ${totalFiles} scene files to public/fixtures/ (${fixtureFiles.length} fixtures + ${exampleFiles.length} examples)`);
 
-// Copy the ld-58 closure (scenes/ld58/**) into public/fixtures/ PRESERVING the
-// res:// subpath structure (components/, assets/textures/, …) so a real ld-58
-// scene's `res://...` references resolve to /fixtures/... at fetch time.
+// Mirror the optional locally-vendored corpus (scenes/ld58/**) into
+// public/fixtures/ PRESERVING its res:// subpath structure (components/,
+// assets/textures/, …) so each scene's `res://...` references resolve to
+// /fixtures/... at fetch time. Absent on a fresh clone — the try/catch no-ops
+// until the corpus is vendored (`pnpm vendor:ld58`).
 const ld58Source = join(scenesRoot, 'ld58');
 function copyRecursive(src, dest) {
   for (const entry of readdirSync(src, { withFileTypes: true })) {
@@ -73,10 +75,10 @@ function copyRecursive(src, dest) {
 try {
   if (statSync(ld58Source).isDirectory()) {
     copyRecursive(ld58Source, fixturesTarget);
-    console.log('Copied ld-58 closure to public/fixtures/ (res:// mirrored)');
+    console.log('Copied the vendored corpus to public/fixtures/ (res:// mirrored)');
   }
 } catch {
-  // No ld58 directory — skip.
+  // Corpus not vendored — skip.
 }
 
 // Copy the vendored isometric-dungeon closure (scenes/isometric/**) the same
@@ -93,9 +95,9 @@ try {
 }
 
 // Mirror the godot-demo-projects corpora (scenes/demos/**) PRESERVING the
-// demos/<top>/<project>/ structure — unlike ld-58/isometric these are NOT
-// flattened to the root: each project keeps its own res:// namespace, and
-// the web provider resolves res:// against the fixture's `root` subtree.
+// demos/<top>/<project>/ structure — unlike the flattened corpora above these
+// are NOT flattened to the root: each project keeps its own res:// namespace,
+// and the web provider resolves res:// against the fixture's `root` subtree.
 const demosSource = join(scenesRoot, 'demos');
 const demosTarget = join(fixturesTarget, 'demos');
 try {

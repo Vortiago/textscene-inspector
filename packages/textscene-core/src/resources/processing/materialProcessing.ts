@@ -117,7 +117,7 @@ export async function createMaterialFromContent(
     case 'ShaderMaterial':
       // ADR-0004: we don't compile GLSL. Approximate a ShaderMaterial as a
       // translucent, slightly-emissive standard material so the lenient render
-      // path keeps going instead of throwing (e.g. ld-58's window-glass shader).
+      // path keeps going instead of throwing (e.g. a window-glass shader).
       warn(
         '[material] ShaderMaterial is not compiled — rendering a translucent ' +
           'standard-material fallback.'

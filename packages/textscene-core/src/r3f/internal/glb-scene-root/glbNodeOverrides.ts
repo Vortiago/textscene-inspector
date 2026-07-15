@@ -3,7 +3,7 @@
  * INSIDE an instanced GLB.
  *
  * Godot lets an instancing scene override the transform of a node inside
- * the instanced PackedScene, e.g. `roof_lamp.tscn`:
+ * the instanced PackedScene, e.g. `ceiling_lamp.tscn`:
  *
  *   [node name="plafoniera" parent="." index="0"]
  *   transform = Transform3D(0.18924935, …, origin 0, 0, 0)

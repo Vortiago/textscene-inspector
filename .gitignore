@@ -65,6 +65,12 @@ apps/textscene-web/public/fixtures/
 /scenes/games/
 apps/textscene-web/src/fixtures.games.ts
 
+# Optional ld-58 corpus — vendored locally with `pnpm vendor:ld58`, never
+# committed. Its manifest is generated alongside the base one and merged at
+# runtime by fixturesAll.ts.
+/scenes/ld58/
+apps/textscene-web/src/fixtures.ld58.ts
+
 # Test projects
 ld-58/
 

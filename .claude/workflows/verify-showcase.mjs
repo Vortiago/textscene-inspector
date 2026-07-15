@@ -25,9 +25,8 @@ const CLIPS = [
   ['label3d', 'Label3D billboarded 3D text nodes with color/outline variations, facing the camera.'],
   ['mixed-nodes', 'A mixed hierarchy of multiple mesh instances rendered with correct lighting.'],
   ['physics-bodies', 'StaticBody3D / Area3D transform groups positioning child meshes; AudioStreamPlayer renders nothing.'],
-  ['hallway', 'The ld-58 hallway mockup: a CSG corridor (floor/walls/ceiling) with portrait frames and Label3D name plates.'],
-  ['hallway-ld58', 'The real ld-58 hallway geometry with actual wall/wood textures (instanced wall/column components).'],
-  ['dcc-layout', 'The 3-column DCC chrome showing the textured hallway in the center viewport.'],
+  ['hallway', 'A self-contained CSG hallway mockup: a corridor (floor/walls/ceiling) with portrait frames and Label3D name plates.'],
+  ['dcc-layout', 'The 3-column DCC chrome showing the CSG hallway mockup in the center viewport.'],
   ['multi-camera', 'A multi-camera scene; the poster shows a free-orbit overview of the scene geometry.'],
 ];
 
@@ -46,14 +45,15 @@ const SCHEMA = {
 };
 
 const CHROME = `
-Expected app chrome (TextScene Inspector — a Godot .tscn previewer), 3-column DCC layout:
-- A full-width TOP BAR: the brand text "TextScene Inspector" at far left, a "Scene:" dropdown,
-  an "Upload TSCN" file picker, and at the far right a "Reset Camera" button + a "3D"/"2D"
-  segmented toggle + a "Collisions" checkbox.
-- A LEFT dock titled "SCENE" containing scene info + a node tree.
+Expected app chrome (TextScene Inspector — a Godot .tscn previewer), Split Dock layout:
+- A TOP BAR: the brand text "TextScene Inspector", a "Hide Source"/"Show Source" toggle, an
+  "Open .tscn" button, a scene chip showing the current scene name, a "3D"/"2D" segmented
+  toggle, and "Collisions"/"Labels"/"Navigation"/"Grid" checkboxes.
+- An optional LEFT source pane (raw .tscn text) when Source is shown.
 - A CENTER viewport (dark) showing the 3D scene.
-- A RIGHT dock titled "INSPECTOR".
-chromeCorrect = true only if the top bar + both docks + center viewport are all present and not
+- A RIGHT dock: "SCENE TREE" (search + node tree) on top, a tabbed
+  "Inspector / Resources / Cameras" detail pane below it.
+chromeCorrect = true only if the top bar + right dock + center viewport are all present and not
 visibly broken (no doubled titles, no full-width misplaced buttons, no overlapping panels).
 `;
 

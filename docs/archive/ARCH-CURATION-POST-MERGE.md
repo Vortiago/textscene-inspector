@@ -22,7 +22,7 @@ Parity-auditor-2 calls Gate 1 MET. Verified: 17 PRESENT + 1 N/A in Layer B;
 **Disposition: DEFER-POST-GOAL**
 
 Rationale:
-- `material_overlay` does not appear in any LD-58 hallway or fixture file.
+- `material_overlay` does not appear in any hallway or fixture file.
   No user-visible rendering defect blocks Gate 1 or Gate 2.
 - Implementing overlay blending in R3F requires a second material pass
   (`depthTest: false, blending: AdditiveBlending` or similar). It is a
@@ -39,7 +39,7 @@ Rationale:
 Rationale:
 - `shadow_filter` controls PCF/PCSS softness — a visual refinement, not a
   correctness regression. Shadows render correctly with WebGL defaults.
-- The LD-58 hallway uses `shadow_filter = 2` (PCF-Soft) on its directional
+- The hallway fixture uses `shadow_filter = 2` (PCF-Soft) on its directional
   light. The current render is acceptable; no user has flagged hard-shadow
   artifacts as a blocker.
 - Implementing this requires mapping Godot's filter enum to
@@ -57,7 +57,7 @@ Rationale:
 - Viewport-click selection correctly expands ancestors. The gap is that
   `TreeNode.tsx:115` `setSelectedNodePath` does not call `expandAncestors`.
   This is a one-line fix in the tree click handler, but the verifier did not
-  flag it as a Gate-1 blocker and no LD-58 fixture triggers the failure path
+  flag it as a Gate-1 blocker and no hallway fixture triggers the failure path
   in normal usage.
 - The fix is low-risk and cosmetically desirable; bundle it into the next
   `SceneTreeViewer` polish WI (same WI as the expand-all sub-scene item

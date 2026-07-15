@@ -1,6 +1,6 @@
 # Archive — dated working artifacts
 
-Phase-bound documents produced during specific work phases (R3F migration, LD-58
+Phase-bound documents produced during specific work phases (R3F migration, hallway
 verification, parity audits, architecture sprints). They are kept as historical
 records and are **not maintained**: implementation pointers, line numbers, and
 commit references inside them describe the repo as it was at the time of writing.
@@ -17,12 +17,11 @@ Living references stay in `docs/` (e.g. `PARITY-LIMITATIONS.md`, the user guides
 | `ARCH-SCOUT-CURATION.md` | Curation of the 2026-05-20 arch-scout candidates for sprint dispatch | Historical record |
 | `ARCHITECTURE-REVIEW.md` | Architecture review of the UX-regression WI cycle on `feat/r3f-migration` (`fc137e1`) | Historical record |
 | `BUG-ARCHAEOLOGY-2026-05-28.md` | Investigation of test rewrites that masked regressions during the R3F migration | Historical record |
-| `HALLWAY-END-TO-END.md` | LD-58 Hallway end-to-end verification run (`feat/ld58-verify` off `8c841a9`) | Historical record |
 | `MAIN-FEATURE-INVENTORY.md` | Pre-migration baseline inventory of the vanilla-DOM app shell (`main` @ `80fa99e`) | Historical record (intentional snapshot — do not update) |
 | `MAIN-VS-MIGRATION-DELTA.md` | Completeness gate comparing `main` vs `feat/r3f-migration` before the PR #48 merge (2026-05-20) | Historical record |
 | `PARITY-AUDIT-POST-MERGE.md` | Godot-parity audit on the post-merge tip `05bd4d8` (2026-05-27) | Historical record |
 | `PARITY-AUDIT-PROGRESS.md` | Batch tracker for the 2026-06-03 expanded parity audit (all batches completed; surviving divergences live in `docs/PARITY-LIMITATIONS.md`) | Historical record |
-| `POST-MORTEM-WALL-REGRESSIONS.md` | Post-mortem on the LD-58 hallway wall regressions (2026-05-28) | Historical record |
+| `POST-MORTEM-WALL-REGRESSIONS.md` | Post-mortem on the hallway-fixture wall regressions (2026-05-28) | Historical record |
 | `UX-FLOW-GAPS.md` | UX field run on `feat/r3f-migration` (`c771507`) that produced the WI-UX work items | Historical record |
 | `UX-REGRESSIONS.md` | Cross-cutting UX-regression snapshot `main` vs `feat/r3f-migration` (all three regressions since resolved) | Historical record |
 | `VISUAL-AB-MAIN-VS-MIGRATION.md` | Visual A/B screenshot comparison `main` @ `80fa99e` vs migration @ `2e065d5` (2026-05-20) | Historical record |

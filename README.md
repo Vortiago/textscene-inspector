@@ -1,6 +1,13 @@
 # TextScene Inspector
 
+[![CI/CD](https://github.com/Vortiago/Text-Scene-.tscn-File-Previewer/actions/workflows/ci.yml/badge.svg)](https://github.com/Vortiago/Text-Scene-.tscn-File-Previewer/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+
 Preview **Godot `.tscn` scenes in 3D — inside VS Code or your browser, with no Godot install.** Renders meshes, materials, lights and cameras via react-three-fiber/three.js, plus a scene-tree inspector and a `.tscn` linter. See [ARCHITECTURE.md](./ARCHITECTURE.md) for the layout.
+
+![TextScene Inspector rendering a CSG hallway mockup in the web previewer's Split Dock UI](./docs/showcase/web/hallway.png)
+
+*The web previewer's Split Dock chrome (scene tree + Inspector/Resources/Cameras tabs) rendering a self-contained CSG corridor scene — floor, walls, ceiling, portrait frames, and Label3D name plates, all built from primitive nodes.*
 
 ## Status
 

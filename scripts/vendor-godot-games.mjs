@@ -23,11 +23,11 @@
  */
 
 import { cpSync, mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
-import { execFileSync } from 'node:child_process';
 import { join, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { isPruned } from './vendor-prune.mjs';
+import { fetchShallow } from './vendor-git.mjs';
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const TARGET = join(REPO_ROOT, 'scenes/games');
@@ -63,17 +63,6 @@ const GAMES = [
   },
 ];
 
-/** Shallow-fetch a single pinned commit into `dest` (no history, no .git). */
-function fetchPinned(url, commit, dest) {
-  mkdirSync(dest, { recursive: true });
-  const git = (...args) => execFileSync('git', ['-C', dest, ...args], { stdio: 'pipe' });
-  git('init', '-q');
-  git('remote', 'add', 'origin', url);
-  git('fetch', '-q', '--depth', '1', 'origin', commit);
-  git('checkout', '-q', 'FETCH_HEAD');
-  rmSync(join(dest, '.git'), { recursive: true, force: true });
-}
-
 const work = mkdtempSync(join(tmpdir(), 'vendor-godot-games-'));
 rmSync(TARGET, { recursive: true, force: true });
 mkdirSync(TARGET, { recursive: true });
@@ -84,7 +73,7 @@ try {
   for (const game of GAMES) {
     const src = join(work, game.dir);
     process.stdout.write(`  fetch   ${game.dir} @ ${game.commit.slice(0, 12)} … `);
-    fetchPinned(game.url, game.commit, src);
+    fetchShallow(game.url, game.commit, src);
     const dest = join(TARGET, game.dir);
     let files = 0;
     cpSync(src, dest, {

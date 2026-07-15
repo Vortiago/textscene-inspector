@@ -1,5 +1,5 @@
 /**
- * Render-level coverage for the 11 ld-58 Control components fanned out on top of
+ * Render-level coverage for the 11 extended Control components fanned out on top of
  * the base 4 (Control/VBox/Label/ColorRect, covered in ControlDispatcher.test).
  * Each test mounts the component through <ControlOverlay> (so it runs under the
  * real SceneResources + ControlParent contexts) and asserts its signature CSS or

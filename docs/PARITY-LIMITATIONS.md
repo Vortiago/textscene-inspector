@@ -3,7 +3,13 @@
 Known cases where the renderer **cannot reproduce Godot exactly** because of
 three.js platform constraints. Everything else in materials + primitive meshes
 was verified faithful against the Godot 4.4 spec in the parity audit
-(2026-06-03); the 11 divergences that remain unfixed are recorded below.
+(2026-06-03); the 11 divergences that remain unfixed are recorded below. The
+parser and corpus have since grown to track later format versions (`format=4`,
+`uid://` resource references, an `AreaLight3D` node) — the parser itself is
+format-version-agnostic, but that later-format coverage has not been re-run
+through a full parity audit, so treat this catalogue as verified against the
+4.4 spec specifically, not as a claim that 4.6/4.7-only features have been
+audited.
 
 Each item below is harmless for the scenes shipped today. This catalogue exists
 so divergences are **recorded, not discovered by eye** — if a render ever looks
@@ -161,8 +167,8 @@ which is monotonic (higher exponent → harder edge) and lands the Godot default
 (`spot_angle_attenuation = 1.0`) at `penumbra = 0.5` — a moderately soft edge.
 
 - **Impact:** shipped spotlights render with a soft cone edge by default (vs the
-  old hardcoded near-hard `0.1`). Visually verified acceptable on the ld58
-  hallway; the absolute default (0.5) is pinned by a test.
+  old hardcoded near-hard `0.1`). Visually verified acceptable on the vendored
+  hallway corpus; the absolute default (0.5) is pinned by a test.
 - **Why not exact:** the exponent→softness relationship is non-linear and has no
   closed-form three.js equivalent; the mapping is a deliberate approximation.
 - Site: `nodes/3d/lights/spotlight3d/Component.tsx` (penumbra derivation).

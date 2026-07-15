@@ -118,36 +118,36 @@ describe('<NodeDetailsPanel> BUG 1 — sub-scene interior selection', () => {
 
     const { loader, setSceneCached } = makeLoader();
 
-    // Sub-scene (e.g. roof_lamp.tscn): a root with an interior mesh node.
+    // Sub-scene (e.g. ceiling_lamp.tscn): a root with an interior mesh node.
     const subScene: TscnScene = {
       nodes: [
-        makeNode('roof_lamp', 'Node3D', {
+        makeNode('ceiling_lamp', 'Node3D', {
           children: [makeNode('plafoniera', LAMP_MESH_TYPE)],
         }),
       ],
       externalResources: [],
       internalResources: [],
     };
-    setSceneCached('res://roof_lamp.tscn', subScene);
+    setSceneCached('res://ceiling_lamp.tscn', subScene);
 
-    // Root scene instances the sub-scene at "HallwayGeometry/roof_lamp".
+    // Root scene instances the sub-scene at "RoomGeometry/ceiling_lamp".
     const graph = createSceneGraphFromTscnScene({
       nodes: [
-        makeNode('HallwayGeometry', 'Node3D', {
+        makeNode('RoomGeometry', 'Node3D', {
           children: [
-            makeNode('roof_lamp', 'Node3D', { instance: 'ExtResource("3_as5ck")' }),
+            makeNode('ceiling_lamp', 'Node3D', { instance: 'ExtResource("3_as5ck")' }),
           ],
         }),
       ],
-      externalResources: [makeExtResource('3_as5ck', 'res://roof_lamp.tscn')],
+      externalResources: [makeExtResource('3_as5ck', 'res://ceiling_lamp.tscn')],
       internalResources: [],
     });
 
     // The interior mesh path the tree builds. Instance root merge (ADR-0013)
     // collapses the sub-scene root INTO the instance node, so the interior
     // child sits directly under the instance node's path — no doubled
-    // 'roof_lamp' wrapper segment.
-    const interiorPath = 'HallwayGeometry/roof_lamp/plafoniera';
+    // 'ceiling_lamp' wrapper segment.
+    const interiorPath = 'RoomGeometry/ceiling_lamp/plafoniera';
 
     render(
       <>
@@ -187,17 +187,17 @@ describe('<NodeDetailsPanel> BUG 1 — sub-scene interior selection', () => {
 
     const graph = createSceneGraphFromTscnScene({
       nodes: [
-        makeNode('HallwayGeometry', 'Node3D', {
+        makeNode('RoomGeometry', 'Node3D', {
           children: [
-            makeNode('roof_lamp', 'Node3D', { instance: 'ExtResource("3_as5ck")' }),
+            makeNode('ceiling_lamp', 'Node3D', { instance: 'ExtResource("3_as5ck")' }),
           ],
         }),
       ],
-      externalResources: [makeExtResource('3_as5ck', 'res://roof_lamp.tscn')],
+      externalResources: [makeExtResource('3_as5ck', 'res://ceiling_lamp.tscn')],
       internalResources: [],
     });
 
-    const interiorPath = 'HallwayGeometry/roof_lamp/plafoniera';
+    const interiorPath = 'RoomGeometry/ceiling_lamp/plafoniera';
 
     render(
       <>
@@ -220,7 +220,7 @@ describe('<NodeDetailsPanel> BUG 1 — sub-scene interior selection', () => {
     // version tick — with no re-selection.
     const subScene: TscnScene = {
       nodes: [
-        makeNode('roof_lamp', 'Node3D', {
+        makeNode('ceiling_lamp', 'Node3D', {
           children: [makeNode('plafoniera', LAMP_MESH_TYPE)],
         }),
       ],
@@ -228,8 +228,8 @@ describe('<NodeDetailsPanel> BUG 1 — sub-scene interior selection', () => {
       internalResources: [],
     };
     await act(async () => {
-      setSceneCached('res://roof_lamp.tscn', subScene);
-      loader.eventBus.emit('scene', 'loaded', 'res://roof_lamp.tscn');
+      setSceneCached('res://ceiling_lamp.tscn', subScene);
+      loader.eventBus.emit('scene', 'loaded', 'res://ceiling_lamp.tscn');
     });
 
     expect(screen.queryByText(/Select a node/i)).toBeNull();
