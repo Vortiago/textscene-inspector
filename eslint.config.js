@@ -35,6 +35,7 @@ export default [
     files: [
       'apps/textscene-vscode/src/**/*.ts',
       'apps/textscene-linter/src/**/*.ts',
+      'packages/textscene-dev-kit/src/**/*.ts',
       '**/*.config.ts',
       'vitest.shared.ts',
     ],
