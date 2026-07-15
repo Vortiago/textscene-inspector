@@ -207,8 +207,8 @@ How both **Host**s' screens update after a parse: the scene renders immediately 
 _Avoid_: loading-screen framing; treating a missing resource as a scene error.
 
 **Corpus root** (web):
-The active fixture's `res://` namespace — each vendored demo project keeps its own, resource lookups are scoped to it, and switching corpora must never serve the other corpus's bytes for a same-named `res://` path.
-_Avoid_: "fixture folder" (the root scopes resolution, not just storage); sharing one resource cache across corpora.
+The active fixture's `res://` namespace — each vendored demo project keeps its own, resource lookups are scoped to it, and switching corpora must never serve the other corpus's bytes for a same-named `res://` path. **Resource upload**s are scoped the same way: stored under the corpus root active when added, so an upload made in corpus A is invisible in corpus B. An **Uploaded scene** lives in its own base ('') corpus, so uploading a scene starts the user's own working corpus rather than patching the fixture's; uploads never bleed across corpus boundaries.
+_Avoid_: "fixture folder" (the root scopes resolution, not just storage); sharing one resource cache across corpora; global uploads that shadow every corpus.
 
 ### Content intake (web)
 

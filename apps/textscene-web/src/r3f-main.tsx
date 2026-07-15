@@ -260,6 +260,11 @@ export function R3FApp() {
   function handleTscnUpload(file: File, text: string) {
     setFixtureFile(NO_FIXTURE);
     setUploadedTscnName(file.name);
+    // An uploaded scene lives in the base ('') corpus. Sync the provider now,
+    // not just via useCorpusRoot's post-render effect: companion files added
+    // synchronously after this call (multi-file upload) must be keyed under
+    // the uploaded scene's corpus, not the fixture corpus being left behind.
+    provider.setResourceRoot('');
     replace(text);
   }
 
