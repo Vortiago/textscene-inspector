@@ -65,7 +65,7 @@ function killProcessTree(proc) {
     // xvfb-run started — it carries no user-data-dir marker for killStaleHost to
     // match, and xvfb-run's own cleanup trap does not fire on a killed parent.
     if (IS_WIN) proc.kill();
-    else process.kill(-proc.pid, 'SIGKILL');
+    else if (proc.pid) process.kill(-proc.pid, 'SIGKILL'); // no pid ⇒ launch never started
   } catch { /* already gone */ }
 }
 
@@ -106,13 +106,20 @@ function execInDir(dir) {
   return `${dir}/code`;
 }
 
-/** A finished VS Code build already sitting in the shared cache, or null. */
+/** Numeric version tuple from a `vscode-<platform>-<a.b.c>` cache dir (missing → -Infinity). */
+function cacheDirVersion(dir) {
+  const m = /(\d+)\.(\d+)\.(\d+)\b/.exec(dir);
+  return m ? Number(m[1]) * 1e6 + Number(m[2]) * 1e3 + Number(m[3]) : -Infinity;
+}
+
+/** The newest finished VS Code build in the shared cache, or null. */
 function cachedVscode() {
   if (!existsSync(VSCODE_CACHE)) return null;
   const dirs = readdirSync(VSCODE_CACHE)
     .filter((d) => d.startsWith('vscode-') && existsSync(`${VSCODE_CACHE}/${d}/is-complete`))
-    .sort();
-  for (const d of dirs.reverse()) {
+    // Highest semver first — a lexical sort would rank 1.99.0 above 1.128.1.
+    .sort((a, b) => cacheDirVersion(b) - cacheDirVersion(a));
+  for (const d of dirs) {
     const exe = execInDir(`${VSCODE_CACHE}/${d}`);
     if (existsSync(exe)) return exe;
   }
@@ -128,11 +135,16 @@ function codeOnPath() {
   } catch { return null; }
 }
 
-/** Resolve a VS Code binary: $VSCODE_BIN → PATH → shared cache → download. */
+/** Resolve a VS Code binary: $VSCODE_BIN → PATH (non-headless) → shared cache → download. */
 async function resolveVscodeBin() {
   if (process.env.VSCODE_BIN) return { bin: process.env.VSCODE_BIN, viaPath: false };
-  const onPath = codeOnPath();
-  if (onPath) return { bin: onPath, viaPath: true };
+  // Skip a PATH `code` under xvfb: it's a launcher that detaches the real
+  // Electron and returns, so xvfb-run tears down Xvfb before the webview paints.
+  // The cached/downloaded build is the direct binary that stays in the foreground.
+  if (!HEADLESS) {
+    const onPath = codeOnPath();
+    if (onPath) return { bin: onPath, viaPath: true };
+  }
   const cached = cachedVscode();
   if (cached) return { bin: cached, viaPath: false };
   console.log('[vscode] no cached/installed VS Code — downloading (first run, a few minutes)…');
@@ -234,10 +246,18 @@ console.log(`[vscode] launching dev-host (${cmd === 'xvfb-run' ? `xvfb-run → $
 // detached (POSIX): make the launch a process-group leader so cleanup can
 // SIGKILL the whole tree — xvfb-run, the Xvfb it spawns, and the dev-host.
 const proc = spawn(cmd, spawnArgs, { shell: useShell, stdio: 'ignore', detached: !IS_WIN });
+// A missing launcher (no xvfb-run, bad $VSCODE_BIN) emits an async 'error' with
+// no pid; surface it as a rejection so catch/finally run instead of an
+// uncaughtException crashing the process past cleanup. A late error after CDP
+// is up settles this already-resolved race harmlessly (the listener prevents a
+// throw either way).
+const launchFailed = new Promise((_resolve, reject) => {
+  proc.on('error', (err) => reject(new Error(`failed to launch "${cmd}": ${err.message}`)));
+});
 
 let browser;
 try {
-  await waitCDP();
+  await Promise.race([waitCDP(), launchFailed]);
   await sleep(5000); // window settle
   browser = await chromium.connectOverCDP(`http://localhost:${PORT}`);
   const page = browser.contexts()[0].pages().find((p) => /workbench/.test(p.url())) ?? browser.contexts()[0].pages()[0];
@@ -294,3 +314,7 @@ try {
   // re-parented Electron helper) still carries the user-data-dir marker.
   killStaleHost(UD_MARKER);
 }
+// waitCDP()'s poll loop (or a lost Promise.race branch on launch failure) can
+// keep the event loop alive after cleanup; exit explicitly so a failed launch
+// terminates promptly instead of lingering until the CDP timeout.
+process.exit(process.exitCode ?? 0);
