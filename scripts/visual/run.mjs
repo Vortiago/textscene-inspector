@@ -23,7 +23,7 @@
  *     load-time fit timers (last at 1100ms) have provably fired. Selection
  *     never moves the camera (by design), so this pins every capture to
  *     the single tight, pre-selection framing equilibrium regardless of
- *     host load (issue #243's two-equilibria race).
+ *     host load (the two-equilibria race explained at the click site).
  *
  * On failure, <name>.actual.png and <name>.diff.png land in
  * scripts/visual/output/ (gitignored; uploaded as a CI artifact).
@@ -214,7 +214,7 @@ async function captureScene(page, baseUrl, scene) {
     // so a click that lands BEFORE the 1100ms timer lets that timer see the
     // just-mounted gizmo and widen the frame, while a click AFTER it leaves
     // the tight pre-selection framing: two individually stable equilibria
-    // whose winner depends on host load (issue #243). The tree row's presence
+    // whose winner depends on host load. The tree row's presence
     // above is our scene-ready signal: rows render from the same scene-graph
     // state whose arrival starts CameraFit's timers, so waiting comfortably
     // past the last timer from here guarantees the timers are spent and pins

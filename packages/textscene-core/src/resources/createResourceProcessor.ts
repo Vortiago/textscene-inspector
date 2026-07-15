@@ -43,10 +43,13 @@ export type { ResourceType };
  * skips entries with a nonzero count, falling back to pure LRU among the
  * zero-count (unmounted) entries. This is an absolute guarantee: a resource
  * held by at least one mounted consumer is never CAPACITY-evicted regardless
- * of how many other resources are loaded in the same session. (Explicit
- * invalidation — `clearCache` / hot-reload — still disposes and removes the
- * entry, but the pin count survives it, so the re-loaded entry comes back
- * protected for the still-mounted consumer.)
+ * of how many other resources are loaded in the same session. Explicit
+ * invalidation — `clearCache` / hot-reload — removes the entry too, but
+ * disposal is pin-aware: an unpinned value is disposed immediately, while a
+ * value a mounted consumer still holds is deferred until its last unpin (so
+ * a hot-reload never hands a live mesh a dead material/texture/geometry).
+ * The pin count survives the removal either way, so the re-loaded entry
+ * comes back protected for the still-mounted consumer.
  *
  * When every cached entry is pinned and capacity is exceeded, the cache
  * temporarily grows beyond `maxEntries` rather than disposing a live
@@ -271,21 +274,16 @@ export function createResourceProcessor<T>(
     },
 
     clearCache(path?: string): void {
+      // Disposal is the cache's job: `delete`/`clear` route the removed value
+      // through the same pin-aware path as capacity eviction, so a value a
+      // mounted consumer still holds is deferred (not disposed out from under
+      // it) until its last unpin. The `onEvict` hook wired above skips `null`
+      // failure sentinels.
       if (path) {
-        const cached = cache.get(path);
-        if (cached && dispose) {
-          dispose(cached);
-        }
         cache.delete(path);
         inflight.delete(path);
         logger.info(`[${resourceType}Processor] Cleared cache for: ${path}`);
       } else {
-        // Clear all
-        if (dispose) {
-          for (const resource of cache.values()) {
-            if (resource) dispose(resource);
-          }
-        }
         cache.clear();
         inflight.clear();
         logger.info(`[${resourceType}Processor] Cleared all cache`);

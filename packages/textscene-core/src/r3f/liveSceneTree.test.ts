@@ -11,7 +11,6 @@ import {
   collectLiveNodes,
   collapseLiveNode,
   liveChildGroups,
-  liveChildren,
   liveNodeChain,
   resolveLiveNode,
   resolveLiveEntry,
@@ -446,7 +445,7 @@ describe('singleSceneCache — one-entry adapter the tree + viewport hand their 
     expect(cache.getCached('res://anything.tscn')).toBeUndefined();
   });
 
-  it('drives collapseLiveNode + liveChildren so children switch to the sub-scene resource scope', () => {
+  it('drives collapseLiveNode + liveChildGroups so children switch to the sub-scene resource scope', () => {
     // The platformer-player pattern: player.tscn instances player.glb via
     // player.tscn's OWN ext id — absent from the outer scene's scope.
     const sub: TscnScene = {
@@ -464,10 +463,12 @@ describe('singleSceneCache — one-entry adapter the tree + viewport hand their 
 
     expect(collapseLiveNode(node, outer, cache).type).toBe('CharacterBody3D');
 
-    const { children, externalResources } = liveChildren(node, outer, cache);
-    expect(children.map((c) => c.name)).toEqual(['Model']);
+    const groups = liveChildGroups(node, outer, cache);
+    // Single-root collapse → one merged group carrying the sub-scene's children.
+    expect(groups).toHaveLength(1);
+    expect(groups[0]!.children.map((c) => c.name)).toEqual(['Model']);
     // Scope switched to the sub-scene's table, so the nested GLB ref resolves.
-    expect(externalResources).toBe(sub.externalResources);
+    expect(groups[0]!.externalResources).toBe(sub.externalResources);
   });
 });
 
@@ -534,10 +535,14 @@ describe('liveChildGroups — origin-tagged child groups with per-group scope', 
     expect(groups[0]!.children.map((c) => c.name)).toEqual(['Camera', 'Mesh']);
     // Scope is the sub-scene's own resource table.
     expect(groups[0]!.externalResources).toBe(sub.externalResources);
+    // The merged group carries the collapsed node (keeps the instance name,
+    // adopts the sub-scene root's type) so callers reuse the merge.
+    expect(groups[0]!.mergedNode?.name).toBe('Player');
+    expect(groups[0]!.mergedNode?.type).toBe('CharacterBody3D');
   });
 
   it('fallback multi-root instance → inline group (OUTER scope) + subscene group (sub scope)', () => {
-    // BUG FIX: old liveChildren gave sub-scope to the concatenated list.
+    // BUG FIX: the old flattened form gave sub-scope to the concatenated list.
     // The correct split: inline children → OUTER scope, loaded roots → sub scope.
     const outer = [ext('1', 'res://multi.tscn')];
     const subExt = [ext('inner', 'res://inner.tscn')];
@@ -600,7 +605,7 @@ describe('liveChildGroups — origin-tagged child groups with per-group scope', 
   });
 
   it('fallback-inline scope fix: inline children of a multi-root instance resolve OUTER ExtResources', () => {
-    // The documented divergence: the old liveChildren gave sub-scope to the
+    // The documented divergence: the old flattened form gave sub-scope to the
     // concatenated list, making inline children (host-authored) unable to
     // resolve ExtResource ids that are only in the outer scene. liveChildGroups
     // gives OUTER scope to the inline group, fixing this.

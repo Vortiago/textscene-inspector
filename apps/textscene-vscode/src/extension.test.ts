@@ -420,14 +420,18 @@ describe('Extension', () => {
       expect(mockPanel.handleDependencyChange).toHaveBeenCalledWith(depUri);
     });
 
-    it('routes deletion of the main scene through update() so the panel holds last render and surfaces an error', async () => {
+    it('ignores deletion of the main scene so the panel silently holds its last render', async () => {
       activate(mockContext);
       openPanelFor('/workspace/scene.tscn');
 
       const mainUri = createMockUri('/workspace/scene.tscn');
       await Promise.all(resourceDeleteHandlers.map((handler) => handler(mainUri)));
 
-      expect(mockPanel.update).toHaveBeenCalledWith(mainUri);
+      // A deleted main scene cannot be re-read — routing it into update()
+      // would only surface a spurious load-error toast (branch switches and
+      // renames delete transiently). The panel keeps its last-loaded render;
+      // dependency propagation to OTHER panels is covered above.
+      expect(mockPanel.update).not.toHaveBeenCalled();
       expect(mockPanel.handleDependencyChange).not.toHaveBeenCalled();
     });
 

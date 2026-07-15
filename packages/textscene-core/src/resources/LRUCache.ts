@@ -7,16 +7,24 @@
  * Recency is tracked via `Map`'s insertion-order iteration: `get` and `set`
  * both delete-then-reinsert the key, which moves it to the end of the
  * iteration order, so `keys().next()` is always the least-recently-used
- * entry. `delete` and `clear` never invoke `onEvict` — those are explicit
- * caller-driven removals (hot-reload, corpus switch), not capacity eviction.
- * `set` DOES invoke `onEvict` for the value it replaces at an existing key
- * (distinct from `Object.is`-identical re-sets) — the reference to that old
- * value is dropped exactly as it would be on capacity eviction, so it gets
- * the same disposal guarantee rather than silently leaking. If the key is
- * pinned at replace time, disposal of the old value is DEFERRED until the
- * pin count returns to zero (see below): a mounted consumer may still hold
- * the replaced value during an explicit re-provide/hot-reload, and disposing
- * it out from under the consumer would hand it a dead resource.
+ * entry.
+ *
+ * ## Disposal on removal (the single owner)
+ *
+ * Every path that drops a value's reference routes disposal through one
+ * pin-aware decision (`disposeOrDefer`): capacity eviction, a replacing
+ * `set` (distinct from an `Object.is`-identical re-set), and the explicit
+ * caller-driven removals `delete` and `clear` (hot-reload, corpus switch).
+ * The reference is dropped exactly the same way regardless of which path
+ * removes it, so no removal silently leaks whatever the value owned (a THREE
+ * texture/material/geometry).
+ *
+ * If the key is UNPINNED at removal time, the value is disposed immediately
+ * via `onEvict`. If it is PINNED, a mounted consumer may still hold that
+ * value, so disposal is DEFERRED until the pin count returns to zero (see
+ * below): disposing it out from under the consumer would hand it a dead
+ * resource. `evictOverflow` is the one path that never defers — it evicts
+ * only zero-pin entries by construction, so it disposes directly.
  *
  * ## Reference counting (pin / unpin)
  *
@@ -34,12 +42,14 @@
  * replaced values are released (skipping a value that has meanwhile been
  * re-set as the key's current value).
  *
- * `delete` and `clear` drop entries but PRESERVE pin counts: pins track
- * mounted consumers, whose lifecycle is independent of cache contents. A
- * hot-reload deletes and re-sets a key while its consumer stays mounted —
- * the re-set entry must come back protected. Symmetrically, `pin` on a key
- * not (yet) in the cache stores the count and honours it once the key is
- * set. The consumer's eventual `unpin` releases the count either way.
+ * `delete` and `clear` drop entries and dispose their values (per the rule
+ * above) but PRESERVE pin counts: pins track mounted consumers, whose
+ * lifecycle is independent of cache contents. A hot-reload deletes and
+ * re-sets a key while its consumer stays mounted — the re-set entry must
+ * come back protected, and the old value it replaced must not be disposed
+ * until that consumer unmounts. Symmetrically, `pin` on a key not (yet) in
+ * the cache stores the count and honours it once the key is set. The
+ * consumer's eventual `unpin` releases the count either way.
  */
 export class LRUCache<V> {
   private readonly map = new Map<string, V>();
@@ -69,28 +79,28 @@ export class LRUCache<V> {
     this.map.delete(key);
     this.map.set(key, value);
     // A real replacement — not a no-op re-set of the identical value — drops
-    // the old reference exactly like capacity eviction does, so it gets the
-    // same `onEvict` disposal instead of silently leaking whatever the old
-    // value owned (a THREE texture/material/geometry). While the key is
-    // pinned, a mounted consumer may still hold the replaced value, so its
-    // disposal is deferred until the pin count returns to zero.
+    // the old reference exactly like capacity eviction or an explicit
+    // delete/clear does, so it goes through the same pin-aware disposal
+    // instead of silently leaking whatever the old value owned (a THREE
+    // texture/material/geometry).
     if (existing !== undefined && !Object.is(existing, value)) {
-      if (this.isPinned(key)) {
-        const pending = this.deferredDisposals.get(key) ?? [];
-        pending.push(existing);
-        this.deferredDisposals.set(key, pending);
-      } else {
-        this.onEvict?.(key, existing);
-      }
+      this.disposeOrDefer(key, existing);
     }
     this.evictOverflow(key);
   }
 
   delete(key: string): boolean {
-    return this.map.delete(key);
+    if (!this.map.has(key)) return false;
+    const value = this.map.get(key) as V;
+    this.map.delete(key);
+    this.disposeOrDefer(key, value);
+    return true;
   }
 
   clear(): void {
+    for (const [key, value] of this.map) {
+      this.disposeOrDefer(key, value);
+    }
     this.map.clear();
   }
 
@@ -114,8 +124,8 @@ export class LRUCache<V> {
   /**
    * Decrement the pin count for `key`, clamped at zero. Does NOT dispose or
    * remove the entry — it simply becomes eligible for ordinary LRU eviction
-   * on the next overflow. Reaching zero flushes any disposals that `set`
-   * deferred while the key was pinned.
+   * on the next overflow. Reaching zero flushes any disposals that a
+   * replacing `set`, `delete`, or `clear` deferred while the key was pinned.
    */
   unpin(key: string): void {
     const count = this.pins.get(key) ?? 0;
@@ -132,10 +142,29 @@ export class LRUCache<V> {
   }
 
   /**
-   * Dispose values whose replacement happened while `key` was pinned, now
-   * that no consumer holds a reference. Skips a value that is `Object.is`
-   * the key's CURRENT cached value (it was re-set after being replaced and
-   * is live again), and disposes each distinct value at most once.
+   * Drop `value`'s reference for `key`: dispose it immediately when the entry
+   * is unpinned, or defer disposal to the last unpin when a mounted consumer
+   * may still hold it. The single owner of disposal-on-removal, shared by a
+   * replacing `set`, `delete`, and `clear`. Deferred values accumulate and
+   * are released by `flushDeferredDisposals`, which de-duplicates and skips a
+   * value that is live again as the key's current entry.
+   */
+  private disposeOrDefer(key: string, value: V): void {
+    if (this.isPinned(key)) {
+      const pending = this.deferredDisposals.get(key) ?? [];
+      pending.push(value);
+      this.deferredDisposals.set(key, pending);
+    } else {
+      this.onEvict?.(key, value);
+    }
+  }
+
+  /**
+   * Dispose values whose removal (a replacing `set`, `delete`, or `clear`)
+   * happened while `key` was pinned, now that no consumer holds a reference.
+   * Skips a value that is `Object.is` the key's CURRENT cached value (it was
+   * re-set after being removed and is live again), and disposes each distinct
+   * value at most once.
    */
   private flushDeferredDisposals(key: string): void {
     const pending = this.deferredDisposals.get(key);

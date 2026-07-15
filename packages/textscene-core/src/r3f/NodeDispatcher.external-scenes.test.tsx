@@ -50,6 +50,8 @@ function makeLoader(): {
     isLoading: () => false,
     clearCache: () => {},
     getCacheSize: () => cache.size,
+    pin: () => {},
+    unpin: () => {},
   });
 
   const scenesProc = makeProc<TscnScene>(sceneCache);

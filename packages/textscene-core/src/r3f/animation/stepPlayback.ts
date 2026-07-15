@@ -20,12 +20,12 @@
  *
  * flushTime:
  *   true only on the playing → paused edge. The transport's `reportTime` is
- *   throttled (WI-213); the last report before leaving 'playing' can be stale.
+ *   throttled; the last report before leaving 'playing' can be stale.
  *   Flushing once, immediately, on this edge keeps the paused readout accurate.
  *   Deliberately false on the playing → stopped edge: `stop()` already resets
  *   the transport playhead to 0 and a flush here would overwrite that reset,
  *   leaving the scrubber/timecode stuck at the pre-stop time while the pose
- *   shows the authored rest state (the stuck-scrubber bug, WI-213).
+ *   shows the authored rest state (the stuck-scrubber bug).
  */
 import type { PlayState } from '../contexts/AnimationTransportContext';
 
@@ -70,7 +70,7 @@ export function stepPlayback(input: StepPlaybackInput): StepPlaybackResult {
     }
 
     case 'paused': {
-      // Flush only on the playing → paused edge (WI-213).
+      // Flush only on the playing → paused edge.
       const flushTime = prevState === 'playing';
       // Seek when the transport scrub position changed — covers both the
       // initial paused-entry case (prevTime !== transportTime from the

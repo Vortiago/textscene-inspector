@@ -112,6 +112,14 @@ export interface LiveChildGroup {
   origin: 'merged' | 'inline' | 'subscene' | 'glb';
   children: readonly TscnNode[];
   externalResources: readonly TscnExternalResource[];
+  /**
+   * `origin: 'merged'` groups only: the collapsed root node the instance became
+   * (Instance root merge, ADR-0013) — the effective identity the tree row and
+   * inspector render. Carried here so a caller that already built the groups
+   * derives the collapsed node without a second `mergeInstanceRoot` pass.
+   * Absent on every other origin, whose effective node is the raw node itself.
+   */
+  mergedNode?: TscnNode;
 }
 
 /**
@@ -123,13 +131,12 @@ export interface LiveChildGroup {
  * - Collapsed single-root instance (ADR-0013) → one `merged` group (sub-scene scope).
  * - Fallback (multi-root / GLB instance) → an `inline` group (OUTER scope, for
  *   host-authored children) + a `subscene` group (sub-scene scope, for loaded roots).
- *   This is the bug fix vs. the old `liveChildren`: the old code assigned sub-scene
- *   scope to the concatenated list; inline children are authored in the OUTER scene
- *   and must resolve against OUTER resources.
+ *   The split matters: inline children are authored in the OUTER scene and must
+ *   resolve against OUTER resources, not the sub-scene scope of the loaded roots.
  * - GLBSceneRoot → one `glb` group (OUTER scope — GLB nodes carry no instance refs).
  *
- * `liveChildren` is a thin flatten over these groups; the tree and viewport walkers
- * can map groups directly to get per-group scope without re-computing the branch.
+ * The tree and viewport walkers map these groups directly to get per-group scope
+ * without re-computing the branch.
  */
 export function liveChildGroups(
   node: TscnNode,
@@ -163,10 +170,14 @@ export function liveChildGroups(
 
   const subResources = cached.externalResources ?? [];
 
-  // Collapsed single-root instance (ADR-0013): one merged group under sub-scene scope.
+  // Collapsed single-root instance (ADR-0013): one merged group under sub-scene
+  // scope. The merged node rides along on the group so a caller needing the
+  // collapsed identity (the tree row) reuses this merge instead of re-running it.
   const merged = mergeInstanceRoot(node, cached);
   if (merged) {
-    return [{ origin: 'merged', children: merged.children, externalResources: subResources }];
+    return [
+      { origin: 'merged', children: merged.children, externalResources: subResources, mergedNode: merged },
+    ];
   }
 
   // Fallback (multi-root / GLB instance): inline children stay in OUTER scope;
@@ -178,34 +189,6 @@ export function liveChildGroups(
   }
   groups.push({ origin: 'subscene', children: cached.nodes, externalResources: subResources });
   return groups;
-}
-
-/**
- * Flat view of {@link liveChildGroups}: a node's live children in one list,
- * paired with ONE resource scope — the LOADED sub-scene's own table for an
- * instance node (a nested instance references its parent sub-scene's
- * ExtResources, absent from the outer scene), the incoming scope otherwise.
- *
- * Note: in the fallback (multi-root / GLB instance) case the flattened list
- * mixes children from two scopes and the reported scope is the first group's;
- * the scope-aware walkers (`liveChainLinks`, `walkLiveTree`) and any caller
- * needing per-group key namespaces consume the groups directly instead.
- */
-export function liveChildren(
-  node: TscnNode,
-  externalResources: readonly TscnExternalResource[],
-  sceneCache: CachedSceneSource,
-  glbCache?: CachedGlbSource
-): ChildScope {
-  const groups = liveChildGroups(node, externalResources, sceneCache, glbCache);
-  if (groups.length === 1) {
-    const g = groups[0]!;
-    return { children: g.children, externalResources: g.externalResources };
-  }
-  return {
-    children: groups.flatMap((g) => g.children),
-    externalResources: groups[0]!.externalResources,
-  };
 }
 
 /**
@@ -226,7 +209,7 @@ interface LiveChainLink {
  * resource scope per sub-scene, capturing the raw + collapsed node at each level.
  * Returns `null` if any segment is unresolvable.
  *
- * Uses `liveChildGroups` directly (rather than the flattened `liveChildren`) so
+ * Uses `liveChildGroups` directly (rather than a single flattened child list) so
  * that in the multi-group fallback case — where inline children carry OUTER scope
  * and sub-scene roots carry sub-scene scope — the walk picks up the correct scope
  * for the matched node's own descent instead of defaulting to the first group's scope.

@@ -17,8 +17,8 @@
  * deliberately excluded — they don't load on the canvas-paint critical
  * path, so they don't count against this budget.
  *
- * WI-R3F-18 (this commit) flipped the webview build from `iife` to
- * `esm` + splitting so React.lazy could actually code-split. Pre-this-WI
+ * The webview build was flipped from `iife` to `esm` + splitting so
+ * React.lazy could actually code-split. Before that flip
  * the entire bundle was the initial chunk (4.1 MB raw / 717 KB gzipped
  * unminified, or 1.4 MB raw / ~620 KB gzipped minified).
  *
@@ -142,16 +142,16 @@ function checkHostBundles() {
 
 // Budget history (see ARCHITECTURE.md "Bundle Size Target"):
 // - Original budget: main baseline + 200 KB gzipped (247,543 + 200,000 =
-//   447,543 B), from the WI-R3F-6 acceptance criterion. That criterion
+//   447,543 B), from the original acceptance criterion. That criterion
 //   predates GLB support becoming a committed, shipped feature.
 // - Renegotiated 2026-07-14 to an absolute 600 kB gzipped ceiling, after
-//   the realistic lazy-loading was done (drei <Text>/troika, issue #215;
-//   GLTFLoader + SkeletonUtils, issue #241) and the closure settled at
+//   the realistic lazy-loading was done (drei <Text>/troika; GLTFLoader +
+//   SkeletonUtils) and the closure settled at
 //   484,921 B gz, leaving ~115 KB of headroom. Growth is acceptable for now;
 //   the future direction is exploring lighter rendering technologies,
 //   not squeezing this stack further.
-// MAIN_BASELINE_GZ (PR #44's pre-merge measurement of `main`) is kept
-// only for the informational delta-vs-main report line.
+// MAIN_BASELINE_GZ (the pre-merge measurement of `main` from the original
+// budget) is kept only for the informational delta-vs-main report line.
 const MAIN_BASELINE_GZ = 247_543;
 const BUDGET_GZ = 600_000; // renegotiated absolute ceiling, gzipped
 
@@ -171,8 +171,11 @@ const DEAD_CHUNK_RE = /^(hls|vision_bundle)-/;
 function findStaticImports(content) {
   const stripped = content.replace(/import\([^)]*\)/g, '__DYN__()');
   const out = new Set();
-  // import ... from '...';
-  const re1 = /import[^'";]*?from[^'"]*["']\.\/(?:chunks\/)?([^'"]+)["']/g;
+  // import ... from '...';  export ... from '...';  export * from '...';
+  // (re-export forwards pull the target chunk onto the critical path just
+  // like imports do, even though esbuild's current splitting output happens
+  // to emit only the import form — the gate must not depend on that.)
+  const re1 = /(?:import|export)[^'";]*?from[^'"]*["']\.\/(?:chunks\/)?([^'"]+)["']/g;
   let m;
   while ((m = re1.exec(stripped))) out.add(m[1]);
   // bare side-effect import: import '...';

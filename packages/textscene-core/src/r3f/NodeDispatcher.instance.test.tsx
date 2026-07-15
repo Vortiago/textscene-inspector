@@ -59,6 +59,8 @@ function makeLoader(): {
     isLoading: () => false,
     clearCache: () => {},
     getCacheSize: () => cache.size,
+    pin: () => {},
+    unpin: () => {},
   });
 
   // WI-ARCH-2: useResource now reads scenes via `loader.scenes` directly,

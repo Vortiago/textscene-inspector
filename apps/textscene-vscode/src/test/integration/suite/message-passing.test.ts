@@ -24,6 +24,7 @@ import {
   assertPanelActive,
   assertFullReloadSent,
 } from '../helpers/assertionHelpers';
+import type { LoadTscnMessage } from '../../../protocol';
 
 suite('Message Passing Tests', () => {
   setup(async () => {
@@ -195,10 +196,11 @@ suite('Message Passing Tests', () => {
     assertPanelActive(panel);
   });
 
-  test('Should send multiple messages in sequence', async function () {
+  test('Should post a new loadTscn when updated to a different scene', async function () {
     this.timeout(10000);
 
     const fixturePath = getFixturePath('unit-empty-scene.tscn');
+    const otherPath = getFixturePath('unit-box-mesh.tscn');
     const extensionUri = getExtensionUri();
 
     const { panel, sentMessages, triggerMessage } = createTestPanel(extensionUri, fixturePath);
@@ -209,16 +211,28 @@ suite('Message Passing Tests', () => {
     triggerMessage({ type: 'webviewReady' });
     await waitForMessage(sentMessages, 'loadTscn');
 
-    const initialCount = sentMessages.length;
-    assert.ok(initialCount >= 1, 'Should have sent initial load message');
+    const loadsBefore = sentMessages.filter((m) => m.type === 'loadTscn');
+    assert.strictEqual(loadsBefore.length, 1, 'Exactly one loadTscn for the initial scene');
 
-    // Trigger a reload.
-    panel.update(fixturePath);
+    // Point the panel at a DIFFERENT scene. Its text differs from the first,
+    // so the content-diff guard in _loadTscnContent does NOT suppress the post
+    // and a fresh loadTscn must go out carrying the new file's text — the same
+    // text this reads straight off disk.
+    const expected = new TextDecoder().decode(
+      await vscode.workspace.fs.readFile(otherPath),
+    );
+
+    panel.update(otherPath);
     await new Promise((resolve) => setTimeout(resolve, 500));
 
-    assert.ok(
-      sentMessages.length >= initialCount,
-      'Should have sent additional messages after reload',
+    const loadsAfter = sentMessages.filter(
+      (m): m is LoadTscnMessage => m.type === 'loadTscn',
+    );
+    assert.strictEqual(loadsAfter.length, 2, 'A second loadTscn fires for the new scene');
+    assert.strictEqual(
+      loadsAfter[1]!.content,
+      expected,
+      "The new loadTscn carries the second scene's text",
     );
   });
 

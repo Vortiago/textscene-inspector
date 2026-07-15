@@ -264,7 +264,7 @@ describe('createResourceProcessor', () => {
       expect(handler).toHaveBeenCalledWith('res://a', 'direct:res://a');
     });
 
-    it('clearCache(path) invokes the disposer for that resource only', async () => {
+    it('clearCache(path) disposes an unpinned resource immediately, for that path only', async () => {
       const dispose = vi.fn();
       const processor = createResourceProcessor<string>({
         eventBus,
@@ -283,6 +283,30 @@ describe('createResourceProcessor', () => {
       expect(dispose).toHaveBeenCalledWith('direct:res://a');
       expect(processor.isCached('res://a')).toBe(false);
       expect(processor.isCached('res://b')).toBe(true);
+    });
+
+    it('clearCache(path) on a PINNED resource defers disposal until the last unpin (one dispose)', async () => {
+      const dispose = vi.fn();
+      const processor = createResourceProcessor<string>({
+        eventBus,
+        resourceType: 'resource',
+        loadDirectly: async (path) => `direct:${path}`,
+        dispose,
+      });
+      processor.request('res://a');
+      await flush();
+      processor.pin('res://a'); // a mounted consumer still holds this resource
+
+      processor.clearCache('res://a');
+
+      // The value a mounted mesh still references must NOT be disposed out
+      // from under it — bypassing the pin guarantee is the bug under repair.
+      expect(dispose).not.toHaveBeenCalled();
+      expect(processor.isCached('res://a')).toBe(false);
+
+      processor.unpin('res://a'); // consumer unmounts — released exactly once
+      expect(dispose).toHaveBeenCalledTimes(1);
+      expect(dispose).toHaveBeenCalledWith('direct:res://a');
     });
 
     it('clearCache() disposes every cached resource and skips null failure entries', async () => {
@@ -306,6 +330,32 @@ describe('createResourceProcessor', () => {
       expect(dispose).toHaveBeenCalledTimes(1);
       expect(dispose).toHaveBeenCalledWith('direct:res://good');
       expect(processor.getCacheSize()).toBe(0);
+    });
+
+    it('clearCache() disposes unpinned entries now but defers pinned ones to their last unpin', async () => {
+      const dispose = vi.fn();
+      const processor = createResourceProcessor<string>({
+        eventBus,
+        resourceType: 'resource',
+        loadDirectly: async (path) => `direct:${path}`,
+        dispose,
+      });
+      processor.request('res://pinned');
+      processor.request('res://unpinned');
+      await flush();
+      processor.pin('res://pinned'); // held by a mounted consumer
+
+      processor.clearCache();
+
+      // Unpinned value released immediately; the pinned one is held back.
+      expect(dispose).toHaveBeenCalledTimes(1);
+      expect(dispose).toHaveBeenCalledWith('direct:res://unpinned');
+      expect(dispose).not.toHaveBeenCalledWith('direct:res://pinned');
+      expect(processor.getCacheSize()).toBe(0);
+
+      processor.unpin('res://pinned'); // consumer unmounts — released once
+      expect(dispose).toHaveBeenCalledTimes(2);
+      expect(dispose).toHaveBeenCalledWith('direct:res://pinned');
     });
   });
 
@@ -528,6 +578,11 @@ describe('createResourceProcessor', () => {
       processor.request('res://a');
       await flush();
 
+      // The value the still-mounted consumer holds must survive the
+      // invalidation: disposing it out from under the mesh would hand it a
+      // dead resource. It stays deferred while the pin is held.
+      expect(dispose).not.toHaveBeenCalled();
+
       processor.request('res://b');
       await flush();
       processor.request('res://c');
@@ -536,6 +591,46 @@ describe('createResourceProcessor', () => {
       expect(processor.isCached('res://a')).toBe(true);
       expect(processor.isCached('res://b')).toBe(false);
       expect(processor.isCached('res://c')).toBe(true);
+      // 'b' is legitimately capacity-evicted, but the pinned 'a' value is
+      // never disposed while its consumer stays mounted.
+      expect(dispose).not.toHaveBeenCalledWith('direct:res://a');
+    });
+
+    it('re-request after clearCache while pinned: old value disposed on unpin, new value untouched', async () => {
+      // THREE resources are distinct instances even when a path re-loads, so
+      // model the cached value as a fresh object per load — a string would be
+      // `Object.is`-equal across reloads and mask the identity handling.
+      const dispose = vi.fn();
+      let version = 0;
+      const processor = createResourceProcessor<{ path: string; version: number }>({
+        eventBus,
+        resourceType: 'resource',
+        loadDirectly: async (path) => ({ path, version: version++ }),
+        dispose,
+        maxEntries: 3,
+      });
+
+      processor.request('res://a');
+      await flush();
+      const first = processor.getCached('res://a');
+      processor.pin('res://a'); // mounted consumer holds `first`
+
+      // Hot-reload: invalidate, then a distinct new value lands at the same path.
+      processor.clearCache('res://a');
+      processor.request('res://a');
+      await flush();
+      const second = processor.getCached('res://a');
+
+      expect(second).not.toBe(first); // a genuinely new instance is cached
+      expect(dispose).not.toHaveBeenCalled(); // still pinned — nothing released
+
+      processor.unpin('res://a'); // last consumer unmounts
+
+      // Only the superseded value is disposed; the live re-loaded value stays.
+      expect(dispose).toHaveBeenCalledTimes(1);
+      expect(dispose).toHaveBeenCalledWith(first);
+      expect(dispose).not.toHaveBeenCalledWith(second);
+      expect(processor.getCached('res://a')).toBe(second);
     });
   });
 });
