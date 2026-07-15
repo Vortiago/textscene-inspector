@@ -127,156 +127,156 @@ transform = Transform3D(-1, 0, -8.74228e-08, 0, 1, 0, 8.74228e-08, 0, -1, 0, 0, 
 text = "Portrait No. 6"
 font_size = 24
 
-[node name="CrimeScene" type="Node3D" parent="."]
+[node name="Furnishings" type="Node3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 0, -12.5)
 
-[node name="Body" type="CSGBox3D" parent="CrimeScene"]
+[node name="Bench" type="CSGBox3D" parent="Furnishings"]
 transform = Transform3D(0.866025, 0, 0.5, 0, 1, 0, -0.5, 0, 0.866025, 0, 0.25, 0)
 size = Vector3(0.6, 0.3, 1.8)
 material = SubResource("StandardMaterial3D_body")
 
-[node name="BodyLabel" type="Label3D" parent="CrimeScene/Body"]
+[node name="BenchLabel" type="Label3D" parent="Furnishings/Bench"]
 transform = Transform3D(1, 0, 0, 0, -4.37114e-08, 1, 0, -1, -4.37114e-08, 0, 0.3, 0)
 text = "Marker"
 font_size = 20
 
-[node name="SmallItem" type="CSGBox3D" parent="CrimeScene"]
+[node name="SmallItem" type="CSGBox3D" parent="Furnishings"]
 transform = Transform3D(0.866025, 0, 0.5, 0, 1, 0, -0.5, 0, 0.866025, -0.1, 0.35, 0.2)
 size = Vector3(0.05, 0.05, 0.3)
 material = SubResource("StandardMaterial3D_evidence")
 
-[node name="BloodSplatter" type="CSGBox3D" parent="CrimeScene"]
+[node name="FloorRug" type="CSGBox3D" parent="Furnishings"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.11, 0)
 size = Vector3(1.5, 0.01, 1.5)
 material = SubResource("StandardMaterial3D_evidence")
 
-[node name="OverturnedTable" type="CSGBox3D" parent="CrimeScene"]
+[node name="SideTable" type="CSGBox3D" parent="Furnishings"]
 transform = Transform3D(0.819152, -0.573576, 0, 0.573576, 0.819152, 0, 0, 0, 1, 0.6, 0.4, -0.5)
 size = Vector3(0.6, 0.1, 0.6)
 material = SubResource("StandardMaterial3D_wall")
 
-[node name="FinancialPapers" type="CSGBox3D" parent="CrimeScene"]
+[node name="Folio" type="CSGBox3D" parent="Furnishings"]
 transform = Transform3D(0.965926, -0.258819, 0, 0.258819, 0.965926, 0, 0, 0, 1, 0.5, 0.12, -0.3)
 size = Vector3(0.3, 0.01, 0.4)
 material = SubResource("StandardMaterial3D_evidence")
 
-[node name="SurgicalInstruments" type="CSGBox3D" parent="CrimeScene"]
+[node name="Ornament" type="CSGBox3D" parent="Furnishings"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5, 0.15, 0.5)
 size = Vector3(0.3, 0.1, 0.2)
 material = SubResource("StandardMaterial3D_evidence")
 
-[node name="Evidence" type="Node3D" parent="."]
+[node name="Props" type="Node3D" parent="."]
 
-[node name="WallSconce" type="Node3D" parent="Evidence"]
+[node name="WallSconce" type="Node3D" parent="Props"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.2, 2.2, -4)
 
-[node name="Base" type="CSGBox3D" parent="Evidence/WallSconce"]
+[node name="Base" type="CSGBox3D" parent="Props/WallSconce"]
 transform = Transform3D(0.996195, -0.0871557, 0, 0.0871557, 0.996195, 0, 0, 0, 1, 0, 0, 0)
 size = Vector3(0.15, 0.3, 0.15)
 material = SubResource("StandardMaterial3D_frame")
 
-[node name="Label3D" type="Label3D" parent="Evidence/WallSconce"]
+[node name="Label3D" type="Label3D" parent="Props/WallSconce"]
 transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 0.3, 0, 0)
 text = "Wall Fixture"
 font_size = 16
 
-[node name="MuddyFootprints" type="Node3D" parent="Evidence"]
+[node name="FloorTiles" type="Node3D" parent="Props"]
 
-[node name="Print1" type="CSGBox3D" parent="Evidence/MuddyFootprints"]
+[node name="Tile1" type="CSGBox3D" parent="Props/FloorTiles"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.3, 0.11, -2)
 size = Vector3(0.15, 0.01, 0.25)
 material = SubResource("StandardMaterial3D_evidence")
 
-[node name="Print2" type="CSGBox3D" parent="Evidence/MuddyFootprints"]
+[node name="Tile2" type="CSGBox3D" parent="Props/FloorTiles"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3, 0.11, -3)
 size = Vector3(0.15, 0.01, 0.25)
 material = SubResource("StandardMaterial3D_evidence")
 
-[node name="Print3" type="CSGBox3D" parent="Evidence/MuddyFootprints"]
+[node name="Tile3" type="CSGBox3D" parent="Props/FloorTiles"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.3, 0.11, -4)
 size = Vector3(0.15, 0.01, 0.25)
 material = SubResource("StandardMaterial3D_evidence")
 
-[node name="Print4" type="CSGBox3D" parent="Evidence/MuddyFootprints"]
+[node name="Tile4" type="CSGBox3D" parent="Props/FloorTiles"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3, 0.11, -5)
 size = Vector3(0.15, 0.01, 0.25)
 material = SubResource("StandardMaterial3D_evidence")
 
-[node name="Print5" type="CSGBox3D" parent="Evidence/MuddyFootprints"]
+[node name="Tile5" type="CSGBox3D" parent="Props/FloorTiles"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0.11, -8)
 size = Vector3(0.15, 0.01, 0.25)
 material = SubResource("StandardMaterial3D_evidence")
 
-[node name="Print6" type="CSGBox3D" parent="Evidence/MuddyFootprints"]
+[node name="Tile6" type="CSGBox3D" parent="Props/FloorTiles"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.8, 0.11, -11)
 size = Vector3(0.15, 0.01, 0.25)
 material = SubResource("StandardMaterial3D_evidence")
 
-[node name="Print7" type="CSGBox3D" parent="Evidence/MuddyFootprints"]
+[node name="Tile7" type="CSGBox3D" parent="Props/FloorTiles"]
 transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 2, 0.11, -15)
 size = Vector3(0.15, 0.01, 0.25)
 material = SubResource("StandardMaterial3D_evidence")
 
-[node name="Print8" type="CSGBox3D" parent="Evidence/MuddyFootprints"]
+[node name="Tile8" type="CSGBox3D" parent="Props/FloorTiles"]
 transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 4, 0.11, -15.5)
 size = Vector3(0.15, 0.01, 0.25)
 material = SubResource("StandardMaterial3D_evidence")
 
-[node name="Print9" type="CSGBox3D" parent="Evidence/MuddyFootprints"]
+[node name="Tile9" type="CSGBox3D" parent="Props/FloorTiles"]
 transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 6, 0.11, -16)
 size = Vector3(0.15, 0.01, 0.25)
 material = SubResource("StandardMaterial3D_evidence")
 
-[node name="Print10" type="CSGBox3D" parent="Evidence/MuddyFootprints"]
+[node name="Tile10" type="CSGBox3D" parent="Props/FloorTiles"]
 transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 8, 0.11, -16.5)
 size = Vector3(0.15, 0.01, 0.25)
 material = SubResource("StandardMaterial3D_evidence")
 
-[node name="ClothItem" type="Node3D" parent="Evidence"]
+[node name="ClothItem" type="Node3D" parent="Props"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.5, 0.15, -15.5)
 
-[node name="Cloth" type="CSGBox3D" parent="Evidence/ClothItem"]
+[node name="Cloth" type="CSGBox3D" parent="Props/ClothItem"]
 transform = Transform3D(0.906308, -0.422618, 0, 0.422618, 0.906308, 0, 0, 0, 1, 0, 0, 0)
 size = Vector3(0.2, 0.01, 0.2)
 material = SubResource("StandardMaterial3D_evidence")
 
-[node name="Label3D" type="Label3D" parent="Evidence/ClothItem"]
+[node name="Label3D" type="Label3D" parent="Props/ClothItem"]
 transform = Transform3D(1, 0, 0, 0, -4.37114e-08, 1, 0, -1, -4.37114e-08, 0, 0.3, 0)
 text = "Misplaced Item"
 font_size = 16
 
-[node name="BookItem" type="Node3D" parent="Evidence"]
+[node name="BookItem" type="Node3D" parent="Props"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6.5, 0.15, -16.5)
 
-[node name="Book" type="CSGBox3D" parent="Evidence/BookItem"]
+[node name="Book" type="CSGBox3D" parent="Props/BookItem"]
 transform = Transform3D(0.819152, -0.573576, 0, 0.573576, 0.819152, 0, 0, 0, 1, 0, 0, 0)
 size = Vector3(0.25, 0.05, 0.35)
 material = SubResource("StandardMaterial3D_evidence")
 
-[node name="Label3D" type="Label3D" parent="Evidence/BookItem"]
+[node name="Label3D" type="Label3D" parent="Props/BookItem"]
 transform = Transform3D(1, 0, 0, 0, -4.37114e-08, 1, 0, -1, -4.37114e-08, 0, 0.3, 0)
 text = "Stray Item"
 font_size = 16
 
-[node name="PottedPlant" type="CSGCylinder3D" parent="Evidence"]
+[node name="PottedPlant" type="CSGCylinder3D" parent="Props"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.5, 0.4, -16.5)
 radius = 0.25
 height = 0.8
 material = SubResource("StandardMaterial3D_frame")
 
-[node name="EscapeWindow" type="Node3D" parent="Evidence"]
+[node name="Window" type="Node3D" parent="Props"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9.85, 2, -16)
 
-[node name="WindowFrame" type="CSGBox3D" parent="Evidence/EscapeWindow"]
+[node name="WindowFrame" type="CSGBox3D" parent="Props/Window"]
 size = Vector3(0.2, 2.5, 1.2)
 material = SubResource("StandardMaterial3D_frame")
 
-[node name="OpenPane" type="CSGBox3D" parent="Evidence/EscapeWindow"]
+[node name="OpenPane" type="CSGBox3D" parent="Props/Window"]
 transform = Transform3D(0.906308, 0, -0.422618, 0, 1, 0, 0.422618, 0, 0.906308, 0.3, 0, 0)
 size = Vector3(0.05, 2.3, 1)
 material = SubResource("StandardMaterial3D_ceiling")
 
-[node name="Label3D" type="Label3D" parent="Evidence/EscapeWindow"]
+[node name="Label3D" type="Label3D" parent="Props/Window"]
 transform = Transform3D(-1, 0, -8.74228e-08, 0, 1, 0, 8.74228e-08, 0, -1, -0.4, 0, 0)
 text = "Window"
 font_size = 20
