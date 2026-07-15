@@ -14,7 +14,8 @@
  *   - SwiftShader software GL: no GPU/driver variance.
  *   - Fixed viewport, deviceScaleFactor 1, fresh browser context.
  *   - Canvas-element screenshot only — shell DOM/font rendering never
- *     enters the image.
+ *     enters the image; the viewport toolbar (which floats over the canvas)
+ *     is hidden per capture so only the render is compared.
  *   - Stabilization gate: a scene must produce two byte-identical
  *     consecutive captures before it is compared or accepted as a
  *     baseline. A scene that never settles FAILS as unstable; flakiness
@@ -28,6 +29,7 @@
  * On failure, <name>.actual.png and <name>.diff.png land in
  * scripts/visual/output/ (gitignored; uploaded as a CI artifact).
  */
+/* global document, HTMLElement */ // used only inside page.evaluate() callbacks, which run in the browser.
 
 import { spawn, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -198,6 +200,16 @@ async function captureScene(page, baseUrl, scene) {
     return { buffer: null, reason: `expected exactly 1 canvas, found ${count}` };
   }
   const canvas = canvases.first();
+
+  // Keep this a pure render comparison (see header): the viewport toolbar now
+  // floats over the canvas, and Playwright's canvas.screenshot() composites any
+  // DOM painted on top of the canvas box, so an overlapping overlay would churn
+  // every 3D baseline. Hide it — we compare the rendered scene, not chrome.
+  await page.evaluate(() => {
+    const toolbar = document.querySelector('[role="toolbar"][aria-label="Viewport controls"]');
+    const overlay = toolbar?.parentElement;
+    if (overlay instanceof HTMLElement) overlay.style.display = 'none';
+  });
 
   if (scene.select) {
     // Expand the whole tree so nested nodes are reachable, then click the row.

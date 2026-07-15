@@ -430,6 +430,28 @@
   background: var(--tsi-bg-canvas);
 }
 
+/* Viewport controls (Reset Camera, 3D/2D switch, toggles) float over the
+   viewport's top-right corner rather than sharing the shell's fixed-height top
+   bar. In the top bar they over-constrained the row once the source pane
+   narrowed the shell, collapsing the host toolbar and burying these controls
+   (#300). As a compact overlay they stay reachable at every width, in both the
+   web app and the VS Code webview. A quiet translucent panel keeps the ghost
+   buttons legible over arbitrary 3D content; it sits above the canvas and the
+   2D Control overlay so you can always switch back to 3D. */
+.viewportToolbarOverlay {
+  position: absolute;
+  top: var(--tsi-space-2);
+  right: var(--tsi-space-2);
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  padding: 2px var(--tsi-space-2);
+  border: 1px solid var(--tsi-border);
+  border-radius: var(--tsi-radius-md);
+  background: color-mix(in srgb, var(--tsi-bg-panel) 84%, transparent);
+  backdrop-filter: blur(4px);
+}
+
 /* The 2D canvas stage's rules live in Canvas2DStage/Canvas2DStage.module.css. */
 
 /* "Contains 2D UI" discoverability hint, floated over the 3D viewport when a

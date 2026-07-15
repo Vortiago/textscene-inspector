@@ -241,7 +241,6 @@ export function TscnPreviewShell({
           {toolbar && <div className={styles.topToolbar}>{toolbar}</div>}
           <div className={styles.topSpacer} />
           <SceneStats />
-          <ViewportToolbar />
           <HelpLink />
         </header>
         {error && (
@@ -252,6 +251,12 @@ export function TscnPreviewShell({
         <div className={styles.columns}>
           {/* CENTER — 3D canvas or 2D overlay; takes all width left of the dock. */}
           <main className={styles.center} aria-label="Viewport">
+            {/* Viewport controls float over the viewport (top-right), not in the
+                shell header — the header row over-constrains when the source
+                pane narrows the shell and used to bury these controls (#300). */}
+            <div className={styles.viewportToolbarOverlay}>
+              <ViewportToolbar />
+            </div>
             <PreviewErrorBoundary sceneGraph={sceneGraph}>
               <ViewportArea sceneGraph={sceneGraph} />
             </PreviewErrorBoundary>
