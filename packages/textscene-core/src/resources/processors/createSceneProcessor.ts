@@ -1,6 +1,6 @@
 /**
  * Factory for the PackedScene processor — fourth peer of texture /
- * material / GLB. Pre-WI-ARCH-2 this lived in a standalone `SceneLoader`
+ * material / GLB. This previously lived in a standalone `SceneLoader`
  * class that reimplemented the same cache/inflight/event-emission
  * machine; now it shares the single `createResourceProcessor` loop with
  * the other three.
@@ -81,7 +81,7 @@ export function createSceneProcessor({
       }
       const content = await provider.loadResource(metadata.path, metadata.type);
 
-      // WI-HALL-3: PackedScene references in Godot can point at either
+      // PackedScene references in Godot can point at either
       // a `.tscn` text file or a `.glb` / `.gltf` binary file (the
       // hallway fixture references both kinds — see PortraitFrame2.glb
       // / doormesh.glb / grandfatherclock.glb). The host provider
@@ -136,7 +136,7 @@ export function createSceneProcessor({
  *     code paths.
  *
  * The synthesised node's name is the file basename (without extension)
- * so the SceneTreeViewer (after WI-HALL-1's sub-scene inlining lands)
+ * so the SceneTreeViewer (after sub-scene inlining lands)
  * shows a meaningful label rather than a synthetic placeholder.
  */
 export function synthesiseGLBScene(glbPath: string): TscnScene {

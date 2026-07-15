@@ -21,7 +21,7 @@ import {
 export type PlayState = 'stopped' | 'playing' | 'paused';
 
 /**
- * Preview-only loop override (#224): 'auto' respects each clip's authored
+ * Preview-only loop override: 'auto' respects each clip's authored
  * loop behavior (Godot `loop_mode` for AnimationPlayer clips; a GLB's
  * default infinite repeat). 'loop' forces an infinite repeat regardless of
  * authoring; 'once' forces a single clamped pass. Resets to 'auto' whenever
@@ -56,13 +56,13 @@ export interface AnimationTransport {
   /** Duration of the selected clip (0 when none). */
   duration: number;
   /**
-   * Preview playback rate multiplier (#224), applied ON TOP OF any
+   * Preview playback rate multiplier, applied ON TOP OF any
    * authored `speed_scale` (AnimationPlayer) or GLB default (1x). Resets to
    * 1 on player registration. Defaults to 1 (no change from authored speed).
    */
   playbackSpeed: number;
   setPlaybackSpeed(speed: number): void;
-  /** Preview loop override (#224); resets to 'auto' on player registration. */
+  /** Preview loop override; resets to 'auto' on player registration. */
   loopOverride: LoopOverride;
   setLoopOverride(mode: LoopOverride): void;
   /** Register the scene's AnimationPlayer; returns an unregister cleanup. */
@@ -74,7 +74,7 @@ export interface AnimationTransport {
   selectClip(name: string): void;
   /**
    * Component → transport: report the live playhead for the scrubber.
-   * Throttled to REPORT_THROTTLE_MS (WI-213) — the driver's useFrame loop
+   * Throttled to REPORT_THROTTLE_MS — the driver's useFrame loop
    * calls this every rendered frame, and committing React state that often
    * re-renders every AnimationTransport consumer (the mixer-owning
    * Component included) for a value only the scrubber/timecode actually
@@ -134,7 +134,7 @@ export function AnimationTransportProvider({ children }: { children: ReactNode }
   const [playbackSpeed, setPlaybackSpeedState] = useState(1);
   const [loopOverride, setLoopOverride] = useState<LoopOverride>('auto');
 
-  const clips = registration?.clips ?? [];
+  const clips = useMemo(() => registration?.clips ?? [], [registration]);
   const hasPlayer = registration !== null;
   const autoplayClip =
     registration?.autoplay && clips.includes(registration.autoplay) ? registration.autoplay : null;
@@ -142,7 +142,7 @@ export function AnimationTransportProvider({ children }: { children: ReactNode }
     (selectedClip ? registration?.durations[selectedClip] : undefined) ?? 0;
 
   const registerPlayer = useCallback((reg: PlayerRegistration) => {
-    // #224: a freshly (re)selected player starts neutral — a 2x speed or
+    // A freshly (re)selected player starts neutral — a 2x speed or
     // "once" override left over from a PREVIOUS player would otherwise
     // silently apply to a clip the user never chose that setting for. ONE
     // shared reset for registration and unregistration, so a future
@@ -195,7 +195,7 @@ export function AnimationTransportProvider({ children }: { children: ReactNode }
     setTime(0);
   }, []);
 
-  // WI-213: reportTime is called every rendered animation frame (via
+  // reportTime is called every rendered animation frame (via
   // usePlaybackLoop's useFrame) while playing. Throttling the React-state
   // commit to REPORT_THROTTLE_MS keeps every OTHER AnimationTransport
   // consumer (the mixer-owning Component in particular) from re-rendering

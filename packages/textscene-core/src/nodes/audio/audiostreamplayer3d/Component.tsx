@@ -46,7 +46,7 @@ export function AudioStreamPlayer3D({ node, children }: NodeComponentProps) {
   // the user has overridden the default.
   const showRangeSphere = properties.unit_size > 0 && properties.unit_size !== 10;
 
-  // WI-UX-14: gate the editor-only speaker + range gizmo on selection,
+  // Gate the editor-only speaker + range gizmo on selection,
   // same as Camera3D and the light gizmos. Without this, every audio
   // node in the scene drew a yellow wireframe cone/disk + range sphere
   // regardless of selection — main's HelperManager rendered nothing for

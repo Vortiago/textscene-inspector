@@ -7,7 +7,7 @@
  * `HelperManager.highlightNode` color (`0x00ff00`) so users moving
  * between branches see a consistent affordance.
  *
- * WI-ARCH-3: lifecycle (build/dispose/tick-update/add-remove) delegated
+ * Lifecycle (build/dispose/tick-update/add-remove) delegated
  * to `useSceneHelper`. The factory returns null when nothing is
  * selected; the hook tears down the helper accordingly.
  *

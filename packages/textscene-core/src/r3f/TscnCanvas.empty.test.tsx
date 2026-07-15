@@ -1,5 +1,5 @@
 /**
- * WI-UX-4 (Gap 8): the canvas must show a grid + prompt when there is
+ * Gap 8: the canvas must show a grid + prompt when there is
  * no scene loaded, instead of rendering as a flat black rectangle that
  * is indistinguishable from a renderer crash.
  */

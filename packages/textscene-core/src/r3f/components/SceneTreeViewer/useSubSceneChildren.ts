@@ -2,7 +2,7 @@
  * Resolve the dynamically-loaded PackedScene children of an instance
  * node so the SceneTreeViewer can render the sub-scene's tree inline.
  *
- * Pre-WI-HALL-1 the tree only walked the parsed root scene's
+ * Previously the tree only walked the parsed root scene's
  * `node.children`. The 3D viewport (via NodeDispatcher's
  * `InstancedSceneSubtree`) loaded sub-scenes and rendered them, but the
  * tree was blind to that — instance nodes appeared as leaves with a 📦

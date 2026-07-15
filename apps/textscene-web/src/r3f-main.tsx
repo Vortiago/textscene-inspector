@@ -6,11 +6,10 @@
  * external resources. Missing-resource uploads are driven by the
  * shell's `<MissingResourcesPanel>` (one row per missing path,
  * per-row file input) instead of a global filename-guessing input
- * (see `docs/archive/UX-REGRESSIONS.md` §3 — WI-UX-3). The toolbar carries
+ * (see `docs/archive/UX-REGRESSIONS.md` §3). The toolbar carries
  * three top-level app-shell entry points: scene-fixture dropdown,
  * "Upload TSCN File" for user-supplied .tscn content, and
- * "Reset Camera" to frame the orbit controls back to default
- * (WI-UX-7).
+ * "Reset Camera" to frame the orbit controls back to default.
  */
 import {
   useCallback,
@@ -57,7 +56,7 @@ const NO_FIXTURE = '';
 const SOURCE_PANE_STORAGE_KEY = 'tscn-web-source-pane';
 
 /**
- * #202: the web app is the first browser consumer of `@textscene/core/linter`.
+ * The web app is the first browser consumer of `@textscene/core/linter`.
  * One instance for the app's lifetime — `Linter` carries no per-call state,
  * and the rule/validator registries it reads from are populated once at
  * import time (self-registration side effects in `linter/index.ts`).
@@ -84,7 +83,7 @@ function isSourcePaneState(value: unknown): value is SourcePaneState {
   );
 }
 /**
- * First-visit default. WI-UX-15: pick a fixture with zero `ext_resource`
+ * First-visit default. Pick a fixture with zero `ext_resource`
  * lines so a new visitor's first paint shows a clean scene, not a wall
  * of missing-file warnings. `unit-plane-mesh.tscn` is the canonical
  * "hello world" of the app: single PlaneMesh, no externals, parses
@@ -170,6 +169,17 @@ export function R3FApp() {
   const { buffer, forwardedContent, isFetching: isFetchingFixture, loadError, onBufferChange: handleSourceChange, replace } =
     useSceneSource({ fixtureFile, uploadedTscnName });
 
+  // Two error channels owned by different layers (uploadError here, loadError
+  // inside useSceneSource) feed one toolbar banner, which must show whichever
+  // was set most recently. Value order can't encode that — an in-flight fixture
+  // fetch can reject AFTER an upload error was set — so set-order is tracked
+  // explicitly: upload failures bump the channel at their set sites, and this
+  // effect records a fetch error's arrival.
+  const [newestErrorChannel, setNewestErrorChannel] = useState<'upload' | 'load'>('upload');
+  useEffect(() => {
+    if (loadError !== null) setNewestErrorChannel('load');
+  }, [loadError]);
+
   // Drag-and-drop a .tscn (+ resource files) onto the page. A counter,
   // not a boolean, because dragenter/dragleave bubble from every descendant
   // as the cursor crosses child element boundaries during one continuous
@@ -183,7 +193,7 @@ export function R3FApp() {
   // TscnPreviewShell or re-rendering R3FApp on each missing-path change.
   const missingPathsRef = useRef<ReadonlySet<string>>(new Set());
 
-  // #202: lint the buffer continuously, debounced at the same cadence as
+  // Lint the buffer continuously, debounced at the same cadence as
   // useSceneSource's render-forward — but independent of its gate (a buffer
   // that fails to RENDER can still be LINTED; the gutter is what tells the
   // user why). Re-runs whenever the buffer changes for any reason (typing,
@@ -206,7 +216,7 @@ export function R3FApp() {
   const lineCount = useMemo(() => countLines(buffer), [buffer]);
   const [gutterScrollTop, setGutterScrollTop] = useState(0);
 
-  // Wire the WI-79 resource pipeline. One provider + bus + loader for
+  // Wire the resource pipeline. One provider + bus + loader for
   // the lifetime of the app; React component identity preserves them
   // across fixture switches so an already-uploaded texture survives a
   // fixture reload.
@@ -306,6 +316,7 @@ export function R3FApp() {
       const result = matchResourceFiles(null, files, missingPaths);
       if (result.matches.length === 0) {
         setUploadError('No .tscn file found among the dropped/selected files.');
+        setNewestErrorChannel('upload');
         return;
       }
       setUploadError(null);
@@ -322,6 +333,7 @@ export function R3FApp() {
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       setUploadError(`Failed to read TSCN file: ${message}`);
+      setNewestErrorChannel('upload');
       return;
     }
 
@@ -373,7 +385,7 @@ export function R3FApp() {
   }
 
   function handleResourceRemove(path: string) {
-    // WI-UX-6: drop the uploaded file AND re-request through the loader
+    // Drop the uploaded file AND re-request through the loader
     // so dependents flip back to `missing`. Without provideFile() the
     // dispatcher's `useResource` would keep its `loaded` value (cached
     // texture) and the panel row would never reappear in the missing
@@ -382,7 +394,7 @@ export function R3FApp() {
     loader.provideFile(path);
   }
 
-  // #203: Download .tscn — a Blob + anchor export, no write-back to disk
+  // Download .tscn — a Blob + anchor export, no write-back to disk
   // (ADR-0020). Named after whatever is active so a batch of downloads
   // doesn't collide on a generic "scene.tscn".
   function downloadFilename(): string {
@@ -403,14 +415,15 @@ export function R3FApp() {
     }
   }
 
-  // The toolbar shows the newest error. `uploadError` wins when both are set:
-  // fetch errors only arise from fixture loads, and every path that starts one
-  // clears uploadError first — so a live uploadError is always the more recent.
-  // Each error is cleared by the interactions that supersede it: edits clear
-  // both, fixture switches clear uploadError, replace() clears loadError.
-  const effectiveLoadError = uploadError ?? loadError;
+  // The toolbar shows the most recently SET error (newestErrorChannel above);
+  // if that channel has since been cleared, the other one — if still live —
+  // shows instead. Each error is cleared by the interactions that supersede
+  // it: edits clear both, fixture switches clear uploadError, replace()
+  // clears loadError.
+  const effectiveLoadError =
+    newestErrorChannel === 'load' ? (loadError ?? uploadError) : (uploadError ?? loadError);
 
-  // #203: nothing has EVER rendered (forwardedContent stays '' once a valid
+  // Nothing has EVER rendered (forwardedContent stays '' once a valid
   // render has occurred — hold-last-valid never reverts it) AND the current
   // buffer isn't blank either — so the user pasted/typed something that
   // simply doesn't parse. The shell's own content==='' state ("Loading
@@ -593,7 +606,7 @@ function SceneGlyph() {
  * Note on missing files: a scene's missing `res://` dependencies are provided
  * separately and per-path in the shell's Resources tab — deliberately kept
  * distinct from "open a scene" so a picked file always maps to a known
- * target. A compact badge (#221) nudges the user toward that tab without
+ * target. A compact badge nudges the user toward that tab without
  * requiring it be open first.
  */
 function Toolbar({
@@ -614,8 +627,8 @@ function Toolbar({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
 
-  // `<Toolbar>` is rendered THROUGH the shell's `toolbar` slot, i.e. as a
-  // descendant of the shell's own `<MissingResourcesProvider>` — so this
+  // `<Toolbar>` is rendered THROUGH the shell's `toolbar` slot, i.e. as
+  // a descendant of the shell's own `<MissingResourcesProvider>` — so this
   // reads the SAME live missing-paths set the shell's own
   // `<MissingResourcesPanel>` (in the Resources tab) aggregates, without any
   // new plumbing. Surfacing it here means a missing texture/scene is visible
@@ -748,7 +761,7 @@ function Toolbar({
       <input
         ref={tscnInputRef}
         type="file"
-        // #221: multi-select — a .tscn plus its resource files can be picked
+        // Multi-select — a .tscn plus its resource files can be picked
         // in one gesture. `accept` covers the file kinds handleFilesUpload's
         // basename-matching can actually resolve (mirrors the binary
         // resource-extension list resourceProviderUtils.isBinaryResourceType

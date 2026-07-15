@@ -76,6 +76,8 @@ function makeLoader() {
     isLoading: () => false,
     clearCache: () => {},
     getCacheSize: () => cache.size,
+    pin: () => {},
+    unpin: () => {},
   });
   return {
     eventBus,

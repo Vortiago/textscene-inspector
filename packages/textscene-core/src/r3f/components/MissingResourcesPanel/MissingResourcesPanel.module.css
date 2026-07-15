@@ -6,7 +6,7 @@
   background: var(--tsi-bg-elevated);
   border-bottom: 1px solid var(--tsi-border);
   font-size: var(--tsi-font-sm);
-  /* WI-UX-13: on big fixtures (e.g. `example-hallway.tscn` with 9+
+  /* On big fixtures (e.g. `example-hallway.tscn` with 9+
      missing externals) this panel grew unboundedly, pushed the tree +
      details panels off the bottom of the sidebar, and made the tree
      unreachable. Cap at a portion of the viewport and scroll inside.
@@ -33,7 +33,7 @@
 }
 
 .item {
-  /* WI-UX-6: stack icon/path on top, action below, so the path gets the
+  /* Stack icon/path on top, action below, so the path gets the
      full sidebar width before deciding whether to truncate. Common
      `res://textures/<file>.png` paths fit on one line; longer paths
      ellipsize but the full path is still discoverable via `title=` hover

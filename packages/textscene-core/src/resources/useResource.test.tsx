@@ -1,7 +1,7 @@
 /**
  * Tests for the useResource hook. Exercises the public contract from
  * R3F-contracts.md §1: status transitions, identity equality vs Object3D
- * clone semantics, and the late-arrival flow (the WI-R3F-2 hard gate).
+ * clone semantics, and the late-arrival flow (the hard gate).
  */
 import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
 import { renderHook, act, render } from '@testing-library/react';
@@ -130,7 +130,7 @@ describe('useResource', () => {
   });
 
   // -------------------------------------------------------------------
-  // THE WI-R3F-2 HARD GATE — `missing → loaded` late-arrival.
+  // THE HARD GATE — `missing → loaded` late-arrival.
   // -------------------------------------------------------------------
   it('unavailable -> loaded: the late-arrival hard gate fires a loaded event after a previous failure', () => {
     loader.textures.setRequestImpl(() => {});

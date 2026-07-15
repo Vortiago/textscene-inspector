@@ -1,5 +1,5 @@
 /**
- * RED contract for Line2D strict validators (issue #130). The validators must
+ * RED contract for Line2D strict validators. The validators must
  * be lenient enough that a witnessed Line2D form lints clean (so the bulk
  * fixtureLint guard stays green), while still rejecting a malformed
  * `default_color` or a non-numeric `width`. Mirrors the Polygon2D linter test.

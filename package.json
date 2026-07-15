@@ -63,6 +63,7 @@
     "@vitest/coverage-v8": "^4.1",
     "@vitest/ui": "catalog:",
     "eslint": "^9.18.0",
+    "eslint-plugin-react-hooks": "catalog:",
     "globals": "^16.4.0",
     "happy-dom": "^20.0.8",
     "husky": "^9.1.7",

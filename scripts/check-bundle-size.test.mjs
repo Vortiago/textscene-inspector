@@ -1,6 +1,6 @@
 /**
  * Unit tests for the pure token-scanning logic behind the VS Code extension
- * HOST-bundle guard (issue #215): `dist/extension.js` and
+ * HOST-bundle guard: `dist/extension.js` and
  * `dist/extension.web.js` must never contain `react`/`three` — a host file
  * that reaches for the root `@textscene/core` barrel (instead of the
  * React-free `/parser`, `/linter`, `/logger` subpaths) balloons the bundle

@@ -102,12 +102,25 @@ export function activate(context: vscode.ExtensionContext) {
   // pull, branch switch — that fire no save event; the content-diff guard in
   // update() dedups the in-editor save already handled by onDidSaveTextDocument),
   // while every other panel re-fetches it as a dependency or instanced sub-scene.
-  const handleResourceChange = async (uri: vscode.Uri): Promise<void> => {
+  //
+  // A DELETE is the exception on the identity branch: the own main scene's file
+  // is now gone, so routing it into update() -> _loadTscnContent would read the
+  // missing file, throw, and surface a spurious "Failed to load" toast on an
+  // ordinary branch switch / rename / delete. The panel keeps rendering its
+  // last-loaded content instead; other panels still propagate the deletion as a
+  // dependency change (flipping a vanished texture/.tres/sub-scene to its
+  // missing placeholder).
+  const handleResourceChange = async (
+    uri: vscode.Uri,
+    deleted = false,
+  ): Promise<void> => {
     const changedKey = uri.toString();
     await Promise.all(
       [...panels].map(([panelKey, panel]) => {
         if (panelKey === changedKey) {
-          panel.update(uri);
+          if (!deleted) {
+            panel.update(uri);
+          }
           return Promise.resolve();
         }
         return panel.handleDependencyChange(uri);
@@ -118,7 +131,7 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     resourceWatcher.onDidChange(handleResourceChange),
     resourceWatcher.onDidCreate(handleResourceChange),
-    resourceWatcher.onDidDelete(handleResourceChange)
+    resourceWatcher.onDidDelete((uri) => handleResourceChange(uri, true))
   );
 }
 

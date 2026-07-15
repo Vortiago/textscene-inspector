@@ -99,14 +99,16 @@ describe('LRUCache', () => {
     expect(onEvict).not.toHaveBeenCalled();
   });
 
-  it('delete() removes a single entry without invoking onEvict', () => {
+  it('delete() disposes an unpinned entry immediately via onEvict', () => {
     const onEvict = vi.fn();
     const cache = new LRUCache<string>(3, onEvict);
     cache.set('a', 'A');
 
     expect(cache.delete('a')).toBe(true);
     expect(cache.has('a')).toBe(false);
-    expect(onEvict).not.toHaveBeenCalled();
+    // No mounted consumer holds it, so the value is released right away.
+    expect(onEvict).toHaveBeenCalledTimes(1);
+    expect(onEvict).toHaveBeenCalledWith('a', 'A');
   });
 
   it('delete() returns false for a key that is not present', () => {
@@ -114,7 +116,7 @@ describe('LRUCache', () => {
     expect(cache.delete('nope')).toBe(false);
   });
 
-  it('clear() drops every entry without invoking onEvict', () => {
+  it('clear() disposes every unpinned entry via onEvict', () => {
     const onEvict = vi.fn();
     const cache = new LRUCache<string>(3, onEvict);
     cache.set('a', 'A');
@@ -125,7 +127,10 @@ describe('LRUCache', () => {
     expect(cache.size).toBe(0);
     expect(cache.has('a')).toBe(false);
     expect(cache.has('b')).toBe(false);
-    expect(onEvict).not.toHaveBeenCalled();
+    // Nothing is pinned, so both values are released immediately.
+    expect(onEvict).toHaveBeenCalledTimes(2);
+    expect(onEvict).toHaveBeenCalledWith('a', 'A');
+    expect(onEvict).toHaveBeenCalledWith('b', 'B');
   });
 
   it('values() iterates every live entry in insertion/recency order', () => {
@@ -322,6 +327,42 @@ describe('LRUCache', () => {
       expect(onEvict).not.toHaveBeenCalledWith('a', expect.anything());
     });
 
+    it('clear() disposes unpinned entries immediately but defers pinned ones to unpin', () => {
+      const onEvict = vi.fn();
+      const cache = new LRUCache<string>(5, onEvict);
+      cache.set('pinned', 'P');
+      cache.set('loose', 'L');
+      cache.pin('pinned'); // a mounted consumer still holds 'P'
+
+      cache.clear();
+
+      // The unpinned value is released now; the pinned one is held back.
+      expect(onEvict.mock.calls).toEqual([['loose', 'L']]);
+
+      cache.unpin('pinned'); // consumer unmounts — 'P' released exactly once
+      expect(onEvict.mock.calls).toEqual([
+        ['loose', 'L'],
+        ['pinned', 'P'],
+      ]);
+    });
+
+    it('delete() defers a pinned value, then disposes it exactly once on the last unpin', () => {
+      const onEvict = vi.fn();
+      const cache = new LRUCache<string>(3, onEvict);
+      cache.set('a', 'A');
+      cache.pin('a');
+      cache.pin('a'); // two mounted consumers
+
+      cache.delete('a');
+      expect(onEvict).not.toHaveBeenCalled(); // held while any pin remains
+
+      cache.unpin('a'); // count 2 -> 1: still held
+      expect(onEvict).not.toHaveBeenCalled();
+
+      cache.unpin('a'); // count 1 -> 0: released once
+      expect(onEvict.mock.calls).toEqual([['a', 'A']]);
+    });
+
     describe('replace-while-pinned defers disposal until unpin-to-zero', () => {
       interface DeferredDisposalCase {
         name: string;
@@ -424,13 +465,27 @@ describe('LRUCache', () => {
           expectedCurrent: 'A2',
         },
         {
-          name: 'delete while pinned keeps the deferred value pending until unpin-to-zero',
+          name: 'delete while pinned defers BOTH the superseded and the current value until unpin-to-zero',
           script: (c) => {
             c.set('a', 'A');
             c.pin('a');
             c.set('a', 'A2'); // defers 'A'
-            c.delete('a'); // host invalidation — pins (and deferrals) survive
-            c.unpin('a'); // consumer unmounts: 'A' finally released
+            c.delete('a'); // pinned — defers the current 'A2' too; pins survive
+            c.unpin('a'); // consumer unmounts: 'A' and 'A2' finally released
+          },
+          expectedDisposals: [
+            ['a', 'A'],
+            ['a', 'A2'],
+          ],
+          expectedCurrent: undefined,
+        },
+        {
+          name: 'clear while pinned defers the current value until unpin-to-zero',
+          script: (c) => {
+            c.set('a', 'A');
+            c.pin('a');
+            c.clear(); // pinned — defers 'A'; pins survive the clear
+            c.unpin('a'); // consumer unmounts: 'A' released
           },
           expectedDisposals: [['a', 'A']],
           expectedCurrent: undefined,

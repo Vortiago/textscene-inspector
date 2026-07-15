@@ -2,7 +2,7 @@
  * usePlaybackLoop — the shared transport→mixer per-frame loop driving both
  * AnimationPlayer and the GLB animation driver.
  *
- * PERF (WI-213): reportTime() is throttled inside AnimationTransportContext,
+ * PERF: reportTime() is throttled inside AnimationTransportContext,
  * so a stale-but-throttled `time` would otherwise persist forever once
  * playback pauses (the 'paused' branch below never calls reportTime again on
  * its own). This pins that the loop flushes the mixer's exact current time

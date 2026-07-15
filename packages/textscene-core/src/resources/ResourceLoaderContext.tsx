@@ -1,6 +1,6 @@
 /**
  * React context that exposes the per-panel ResourceLoader to descendants.
- * Provided by `<TscnPreviewShell>` in WI-R3F-4 alongside SelectionContext
+ * Provided by `<TscnPreviewShell>` alongside SelectionContext
  * and HierarchyContext. Consumed by `useResource` and any future hooks
  * that want to drive the event bus without prop-drilling.
  */

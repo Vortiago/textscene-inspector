@@ -9,7 +9,7 @@
  * scenes/demos/<top>/<project>/, pruning Godot editor artifacts and source
  * art that the previewer never reads. `2d/isometric` is skipped — it is
  * vendored standalone at scenes/isometric/ as the TileMapLayer integration
- * corpus (issue #74) and pinned by tests there.
+ * corpus and pinned by tests there.
  *
  * Re-runnable: wipes scenes/demos/ first, then copies fresh, and records the
  * source commit in scenes/demos/README.md. After running:

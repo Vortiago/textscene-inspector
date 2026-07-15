@@ -1,5 +1,5 @@
 /**
- * Unit test for the WI-R3F-7 webview-ready handshake (VSCODE-01 fix).
+ * Unit test for the webview-ready handshake.
  *
  * The race: the extension host posts `loadTscn` from the panel's
  * constructor, but the React effect that installs the `message`

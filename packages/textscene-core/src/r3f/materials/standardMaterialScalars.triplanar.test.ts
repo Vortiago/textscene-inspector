@@ -1,5 +1,5 @@
 /**
- * StandardMaterial3D triplanar handling (WI-HALL-5).
+ * StandardMaterial3D triplanar handling.
  *
  * Godot's `uv1_triplanar` (+ `uv1_world_triplanar`) project the albedo /
  * normal / etc. texture from world (or object) axes and tile it once per
@@ -36,7 +36,7 @@ describe('parseStandardMaterial3DScalars — triplanar flag (WI-HALL-5)', () => 
       metallic: '0.6',
       roughness: '0.3',
     });
-    // Albedo went through the WI-HALL-2 sRGB → linear conversion.
+    // Albedo went through the sRGB → linear conversion.
     expect(result.color[0]).toBeGreaterThan(0);
     expect(result.color[0]).toBeLessThan(0.8);
     expect(result.metalness).toBeCloseTo(0.6, 4);

@@ -1,5 +1,5 @@
 /**
- * WI-HALL-5: world-triplanar planar tiling. The ld58 hallway floor/ceiling
+ * World-triplanar planar tiling. The ld58 hallway floor/ceiling
  * use `uv1_world_triplanar = true`, where Godot tiles the texture once per
  * world unit × uv1_scale. We don't run a triplanar shader, but for a PlaneMesh
  * the tiling density is reproduced exactly by setting `repeat = size × scale`.

@@ -3,7 +3,7 @@
  * and the path→Object3D ref-map. Provided by `<TscnPreviewShell>`; each shell
  * instance owns its own state so two panels cannot corrupt each other.
  *
- * Hover lives OUTSIDE this context's React state (WI-213): `hoveredNodePath`
+ * Hover lives OUTSIDE this context's React state: `hoveredNodePath`
  * changes on every pointer move over the viewport, but only `<HoverHighlight>`
  * ever reads it — every node wrapper and every tree row used to re-render on
  * each hover change anyway, because a React Context re-renders every consumer
@@ -31,7 +31,7 @@ export interface SelectionContextValue {
   expandedNodePaths: ReadonlySet<string>;
   hiddenNodePaths: ReadonlySet<string>;
   /**
-   * Ref-based external store backing `hoveredNodePath` (WI-213) — see the
+   * Ref-based external store backing `hoveredNodePath` — see the
    * module doc comment. Read it via `useHoveredNodePath()`; write it via
    * `hoverStore.set(path)` directly (the reference is stable across
    * renders, so it's safe to depend on in a `useCallback` deps array).
@@ -47,7 +47,7 @@ export interface SelectionContextValue {
    * paths, expanded set, hidden set, and the `nodeObjectMap` ref-map.
    * Used by `<TscnPreviewShell>` on scene-graph swap so stale state
    * from the previous scene (e.g. a BoxHelper targeting an unmounted
-   * Object3D, see WI-UX-5) does not leak into the new scene.
+   * Object3D) does not leak into the new scene.
    */
   clearAll: () => void;
   /**
@@ -61,7 +61,7 @@ export interface SelectionContextValue {
    */
   nodeObjectMap: Map<string, THREE.Object3D>;
   /**
-   * The reverse of `nodeObjectMap` (WI-213): wrapping THREE.Object3D → its
+   * The reverse of `nodeObjectMap`: wrapping THREE.Object3D → its
    * TSCN node path. Populated by the SAME `registerNodeObject` calls. Lets
    * the viewport's ONE delegated pointer handler recover "which node did
    * this raycasted mesh belong to" (`resolvePathFromObject`) by walking the
@@ -234,7 +234,7 @@ export function useOptionalSelection(): SelectionContextValue | null {
 const NO_PROVIDER_HOVER_STORE = createExternalStore<string | null>(null);
 
 /**
- * The hovered node path (WI-213). Subscribes ONLY this component to hover
+ * The hovered node path. Subscribes ONLY this component to hover
  * changes via the ref-based `hoverStore` — reading `hoveredNodePath` off
  * `useSelection()` directly would re-render on every selection/expand/hide
  * change too, and (before this store existed) every consumer re-rendered on

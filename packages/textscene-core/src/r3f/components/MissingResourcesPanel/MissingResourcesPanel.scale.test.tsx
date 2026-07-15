@@ -1,12 +1,12 @@
 /**
- * WI-UX-13 regression: on big fixtures with many missing externals
+ * Regression: on big fixtures with many missing externals
  * (`example-hallway.tscn` has 9+), the panel must NOT grow unbounded
  * and push the SceneTreeViewer + NodeDetailsPanel out of the sidebar.
  *
  * happy-dom does not run layout, so we can't measure real pixel heights.
  * Two-layer assertion instead:
  *   1. Many rows still render correctly (no regression on the row-per-
- *      path contract from WI-UX-3) — this is a behavior assertion.
+ *      path contract) — this is a behavior assertion.
  *   2. The panel's CSS rule declares `max-height` + `overflow: auto` +
  *      `flex-shrink: 0` — this is the load-bearing cap that prevents
  *      the BLOCKER. Asserting the source file keeps the test honest

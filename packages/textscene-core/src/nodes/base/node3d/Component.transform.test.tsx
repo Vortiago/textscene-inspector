@@ -1,5 +1,5 @@
 /**
- * Strict-verification harness (WI-R3F-9, group A) — 10 assertions covering
+ * Strict-verification harness — 10 assertions covering
  * Node3D's transform decomposition. Each assertion exercises ONE property
  * to ground truth on the resulting THREE.Group instance.
  *

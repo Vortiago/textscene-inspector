@@ -1,5 +1,5 @@
 /**
- * A minimal ref-based external store (WI-213): a single mutable value plus a
+ * A minimal ref-based external store: a single mutable value plus a
  * subscriber set, read via `useSyncExternalStore` so only the component that
  * actually subscribes re-renders on a change — unlike a value carried on a
  * broader React Context, where EVERY consumer of that context re-renders on

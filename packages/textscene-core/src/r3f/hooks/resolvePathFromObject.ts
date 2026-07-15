@@ -1,6 +1,6 @@
 /**
  * Resolves the TSCN node path that owns a raycasted THREE.Object3D, for the
- * viewport's event-delegated pointer picking (WI-213).
+ * viewport's event-delegated pointer picking.
  *
  * Before this, every node's wrapper `<group>` carried its OWN
  * onPointerDown/Up/Over/Out handlers — R3F's picker treats every object with

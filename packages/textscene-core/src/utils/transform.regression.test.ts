@@ -7,7 +7,7 @@
  * 401f8f5 ("Fix Transform3D decomposition for rotated+scaled planes", Nov 2025)
  * established that the ShortWall transform decomposes to scale.z=6, rotation.y=+π/2.
  *
- * b4ccaab ("WI-R3F-10", May 2026) re-broke decomposeTransform3D by treating basis
+ * b4ccaab (May 2026) re-broke decomposeTransform3D by treating basis
  * vectors as columns instead of rows, then rewrote tests to assert the buggy output
  * (scale.x=6, rotation.y=-π/2) with a comment saying the user intent "isn't
  * recoverable from the flat serialisation". That was incorrect.

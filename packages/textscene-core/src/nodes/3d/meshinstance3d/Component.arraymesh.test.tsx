@@ -1,5 +1,5 @@
 /**
- * WI-1 (ArrayMesh): a MeshInstance3D whose `mesh` is an ExtResource pointing
+ * ArrayMesh: a MeshInstance3D whose `mesh` is an ExtResource pointing
  * at an external ArrayMesh `.tres` renders the decoded BufferGeometry — not
  * the magenta placeholder box that every ExtResource mesh produced before.
  *

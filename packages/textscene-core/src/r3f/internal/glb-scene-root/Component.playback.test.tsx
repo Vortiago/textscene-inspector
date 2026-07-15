@@ -67,6 +67,8 @@ function makeLoader(glb: THREE.Object3D): ResourceLoader {
     isLoading: () => false,
     clearCache: () => {},
     getCacheSize: () => cache.size,
+    pin: () => {},
+    unpin: () => {},
   });
   return {
     eventBus,

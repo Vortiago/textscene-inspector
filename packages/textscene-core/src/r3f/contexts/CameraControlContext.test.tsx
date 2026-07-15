@@ -1,9 +1,9 @@
 /**
- * WI-UX-7 regression: CameraControlContext exposes a `resetCamera`
+ * CameraControlContext exposes a `resetCamera`
  * callback that, when fired, drives a registered handler (the canvas's
  * `<OrbitControls>.reset()`). Also pins the pre-existing camera-switch
  * surface (`switchToCamera` / `returnToFreeView` / `activeCameraPath`)
- * so the WI-UX-7 additions don't drift it.
+ * so the reset-camera additions don't drift it.
  */
 import { useEffect, type ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';

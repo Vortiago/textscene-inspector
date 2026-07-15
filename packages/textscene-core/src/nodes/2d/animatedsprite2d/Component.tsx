@@ -98,7 +98,7 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
       clipChanged: currentAnim.name !== prevAnimRef.current,
     });
 
-    // WI-213 pause-edge flush: the adapter guards the null (liveTime is always
+    // Pause-edge flush: the adapter guards the null (liveTime is always
     // a number here, but the contract is clear).
     if (step.flushTime) {
       reportTime(lastPlayingTimeRef.current, { immediate: true });
@@ -110,8 +110,8 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
         // Re-seed the local clock on fresh (re)entry into playing OR clip switch.
         // `resume` from the reducer folds in the former `continuing` logic.
         const base = step.resume ? transportTime : lastPlayingTimeRef.current;
-        // #224: the preview Speed multiplier and Loop override apply to this
-        // driver exactly like the mixer drivers (loopsUnderOverride mirrors
+        // The preview Speed multiplier and Loop override apply to this driver
+        // exactly like the mixer drivers (loopsUnderOverride mirrors
         // applyLoopOverride). Wrap a repeating clip past its end; hold a
         // non-repeating one at its last frame.
         const s = delta * transport.playbackSpeed;

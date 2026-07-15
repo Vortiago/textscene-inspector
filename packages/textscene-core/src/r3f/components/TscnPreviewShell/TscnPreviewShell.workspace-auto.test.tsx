@@ -31,6 +31,8 @@ function makeLoader(scenes: Record<string, TscnScene>): ResourceLoader {
     request: () => {},
     clearCache: () => {},
     getCacheSize: () => Object.keys(cache).length,
+    pin: () => {},
+    unpin: () => {},
   });
   return {
     eventBus: new ResourceEventBus(),

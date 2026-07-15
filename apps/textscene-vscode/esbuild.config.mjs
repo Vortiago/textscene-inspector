@@ -2,8 +2,8 @@
  * esbuild configuration for bundling the extension and webview.
  *
  * The webview build uses esbuild-css-modules-plugin so that `*.module.css`
- * files imported from `@textscene/core` (the R3F components added in
- * WI-R3F-1 onward) emit a separate CSS bundle alongside the JS bundle.
+ * files imported from `@textscene/core` (the R3F components) emit a
+ * separate CSS bundle alongside the JS bundle.
  * The webview HTML links that CSS file with the CSP nonce so it loads
  * under VS Code's restrictive content-security policy.
  */
@@ -16,11 +16,19 @@ const production = process.argv.includes('--production');
 const watch = process.argv.includes('--watch');
 const skipTests = process.argv.includes('--skip-tests');
 
-// The webview build emits content-hashed chunks (chunks/[name]-[hash].js).
-// esbuild never deletes outputs from previous builds, so stale chunks
-// accumulate in dist/webview/chunks/ and would get packaged into the VSIX.
-// Clear the webview output dir up front so every build starts clean.
+// esbuild never deletes outputs from previous builds, so both build dirs
+// accumulate stale files across runs:
+//   - dist/webview: content-hashed chunks (chunks/[name]-[hash].js) pile up
+//     and would get packaged into the VSIX.
+//   - dist/test: the integration-test build (outdir 'dist' + outbase 'src')
+//     emits every suite into dist/test/..., so a deleted or renamed
+//     `*.test.ts` leaves a compiled `.test.js` behind that suite/index.ts
+//     still globs and runs locally (CI is immune — it builds a fresh
+//     checkout). Nothing else emits into dist/test (tsconfig.test.json is
+//     noEmit), so clearing it wholesale is safe.
+// Clear both output dirs up front so every build starts clean.
 await rm('dist/webview', { recursive: true, force: true });
+await rm('dist/test', { recursive: true, force: true });
 
 /**
  * @type {esbuild.BuildOptions}
@@ -38,7 +46,7 @@ const extensionOptions = {
   logLevel: 'info',
   // The metafile lists every input module bundled into the host — written
   // to dist/*.meta.json below so `scripts/check-bundle-size.mjs` can assert
-  // precisely that no react/three module was pulled in (#215), instead of
+  // precisely that no react/three module was pulled in, instead of
   // heuristically token-scanning the minified output.
   metafile: true,
 };
@@ -73,7 +81,7 @@ const extensionWebOptions = {
 const webviewOptions = {
   entryPoints: ['src/webview/webview.ts'],
   bundle: true,
-  // WI-R3F-18: ESM + splitting. The previous `format: 'iife'` couldn't
+  // ESM + splitting. The previous `format: 'iife'` couldn't
   // code-split, which forced every transitive import of the entry into
   // the single `webview.js` bundle — including the (large) DOM panels
   // we'd ideally lazy-load. ESM + splitting moves those panels (and
@@ -164,7 +172,7 @@ if (watch) {
   }
 
   const [extensionResult, extensionWebResult] = await Promise.all(builds);
-  // Persist the host builds' metafiles for the #215 host-bundle guard.
+  // Persist the host builds' metafiles for the host-bundle guard.
   await Promise.all([
     writeFile('dist/extension.meta.json', JSON.stringify(extensionResult.metafile)),
     writeFile('dist/extension.web.meta.json', JSON.stringify(extensionWebResult.metafile)),

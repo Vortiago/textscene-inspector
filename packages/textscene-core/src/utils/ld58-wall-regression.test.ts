@@ -5,12 +5,12 @@
  * `D:/CodeRepos/ld-58/HallwayGeometry.tscn`. Two regressions silently
  * broke wall rendering in the R3F migration before the user noticed:
  *
- *   1. b4ccaab (WI-R3F-10) rewrote the 401f8f5 Transform3D row-vector
+ *   1. b4ccaab rewrote the 401f8f5 Transform3D row-vector
  *      test assertions to match buggy column-major output. The visible
  *      effect: walls rendered at 1/3 to 1/6 their intended width.
  *      Restored by 99c1479 (decomposeTransform3D fix) and these tests.
  *
- *   2. 67c199b (WI-HALL-6) made PlaneMesh + unset cull_mode default to
+ *   2. 67c199b made PlaneMesh + unset cull_mode default to
  *      DoubleSide. The visible effect: walls visible from both sides
  *      so you could see "through" the corridor. Restored by the
  *      MaterialSlot revert and Component.planemesh-side.test.tsx.

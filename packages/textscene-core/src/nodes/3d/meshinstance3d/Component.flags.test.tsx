@@ -1,5 +1,5 @@
 /**
- * Strict-verification harness (WI-R3F-9, group B) — 7 assertions covering
+ * Strict-verification harness (group B) — 7 assertions covering
  * MeshInstance3D's structural flags: mesh resolution, material override
  * precedence, visibility, shadow casting.
  *
@@ -94,7 +94,7 @@ describe('MeshInstance3D flags (assertions 11–17)', () => {
       sub('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' }),
       sub('StandardMaterial3D', 'Surf1', { albedo_color: 'Color(1, 1, 0, 1)' }),
     ]);
-    // WI-R3F-19 multi-surface fix: mesh.material is an array — slot 0
+    // Multi-surface fix: mesh.material is an array — slot 0
     // defaults to grey placeholder, slot 1 carries the yellow override.
     // Each surface gets its own material slot in the array, mirroring
     // the pre-migration imperative renderer's `materials[N]` semantics.

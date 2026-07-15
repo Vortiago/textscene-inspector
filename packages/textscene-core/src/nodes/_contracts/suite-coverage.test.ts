@@ -1,7 +1,7 @@
 /**
- * #162 coverage contract (RED until the slice ships).
+ * Coverage contract (RED until the slice ships).
  *
- * The six co-located test files issue #162 asks for must exist, carry a minimum
+ * The six co-located test files the slice asks for must exist, carry a minimum
  * number of cases, and reference the node type / shared parser they cover. This
  * pins COMPLETENESS (no dropped slice) — the QUALITY of those tests (distinguishing,
  * adversarial, not stubs) is judged at /code-review, not here.

@@ -10,7 +10,7 @@
  * nodes; the canvas reads `activeCameraPath` and uses `useThree().set`
  * to swap.
  *
- * WI-UX-7: also carries a reset handler so the toolbar's "Reset Camera"
+ * Also carries a reset handler so the toolbar's "Reset Camera"
  * button can frame the orbit-controls back to its default. The canvas
  * registers its `OrbitControls.reset` via `registerResetHandler`; the
  * toolbar calls `resetCamera()`.
@@ -65,7 +65,7 @@ export interface CameraControlContextValue {
    */
   registerResetHandler: (handler: () => void) => () => void;
   /**
-   * Capture the current 3D viewport as a PNG data URL (#224). Returns
+   * Capture the current 3D viewport as a PNG data URL. Returns
    * `null` when no canvas has registered a handler yet (e.g. in 2D mode,
    * or during the brief mount window before `<TscnCanvas>`'s effect runs).
    */

@@ -17,7 +17,7 @@
     "clean": "rimraf dist",
     "test": "vitest run",
     "test:watch": "vitest --watch",
-    "pretype-check": "pnpm --filter @textscene/core build",
+    "pretype-check": "pnpm --filter @textscene/core build && pnpm --filter @textscene/dev-kit build",
     "type-check": "tsc --noEmit"
   },
   "keywords": [
@@ -45,6 +45,7 @@
   },
   "devDependencies": {
     "@textscene/core": "workspace:*",
+    "@textscene/dev-kit": "workspace:*",
     "@types/node": "catalog:",
     "esbuild": "catalog:",
     "rimraf": "catalog:",

@@ -1,5 +1,5 @@
 /**
- * WI-ARCH-1: unit tests for the declarative validator namespace `v`.
+ * Unit tests for the declarative validator namespace `v`.
  *
  * Each combinator is exercised on its happy path + at least one edge
  * (NaN, out-of-range, wrong format). The asserts pin message text the

@@ -15,7 +15,7 @@ function wrap({ children }: { children: ReactNode }) {
 }
 
 /**
- * A ThreeEvent-shaped mock. WI-213: event delegation resolves the node path
+ * A ThreeEvent-shaped mock. Event delegation resolves the node path
  * from `e.object` (the nearest raycasted mesh) via the reverse
  * `objectPathMap`, instead of a per-node `withNodePath(path)` handler
  * factory — so tests register a real Object3D at a path and put it on the

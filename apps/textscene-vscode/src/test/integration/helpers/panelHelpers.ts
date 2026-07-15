@@ -37,6 +37,15 @@ export interface TestPanel {
   triggerMessage(msg: Record<string, unknown>): void;
 }
 
+export interface TestPanelOptions {
+  /**
+   * Initial `visible` state of the fake `vscode.WebviewPanel`. `false`
+   * simulates a panel hidden behind another editor (`retainContextWhenHidden`
+   * keeps its webview alive). A hidden panel is also inactive. Default `true`.
+   */
+  visible?: boolean;
+}
+
 /**
  * Create a `TscnPreviewPanel` wired to a fake `vscode.WebviewPanel`.
  *
@@ -48,7 +57,9 @@ export interface TestPanel {
 export function createTestPanel(
   extensionUri: vscode.Uri,
   resourceUri: vscode.Uri,
+  options: TestPanelOptions = {},
 ): TestPanel {
+  const visible = options.visible ?? true;
   const sentMessages: HostToWebviewMessage[] = [];
 
   const messageListeners: Array<(msg: unknown) => void> = [];
@@ -77,8 +88,8 @@ export function createTestPanel(
     webview: fakeWebview,
     title: '',
     viewColumn: vscode.ViewColumn.Two,
-    active: true,
-    visible: true,
+    active: visible,
+    visible,
     options: {} as vscode.WebviewPanelOptions,
     viewType: TscnPreviewPanel.viewType,
     onDidDispose: (

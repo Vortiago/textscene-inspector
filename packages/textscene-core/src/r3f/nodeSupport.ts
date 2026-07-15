@@ -14,7 +14,7 @@ import { nodeComponentRegistry } from './NodeComponentRegistry.js';
 /**
  * Synthetic node types with no parser registration that are nonetheless valid
  * to display (and select/hide) in the tree. The GLB-internal hierarchy types
- * (WI-C) are registered here.
+ * are registered here.
  */
 export const INTERNAL_DISPLAY_NODE_TYPES: ReadonlySet<string> = new Set<string>([]);
 

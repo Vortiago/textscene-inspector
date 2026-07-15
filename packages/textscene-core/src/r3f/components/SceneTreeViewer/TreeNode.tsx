@@ -8,7 +8,7 @@ import { joinPath } from '../../../utils/nodePath.js';
 import { isRenderableNodeType } from '../../nodeSupport.js';
 import { useSelection } from '../../contexts/SelectionContext.js';
 import { resolveInstancePath } from '../../../resources/SubResourceResolver.js';
-import { collapseLiveNode, liveChildGroups, singleSceneCache, type LiveChildGroup } from '../../liveSceneTree.js';
+import { liveChildGroups, singleSceneCache, type LiveChildGroup } from '../../liveSceneTree.js';
 import { GLB_SCENE_ROOT_TYPE } from '../../internal/glb-scene-root/Component.js';
 import { useSubSceneChildren } from './useSubSceneChildren.js';
 import { useGlbChildren } from './useGlbChildren.js';
@@ -68,7 +68,7 @@ export interface TreeNodeProps {
    */
   matches: (path: string) => boolean;
   /**
-   * WI-HALL-1: the host scene's externalResources, used to resolve
+   * The host scene's externalResources, used to resolve
    * `node.instance = ExtResource("id")` references against the
    * `res://` path of the referenced PackedScene. Threaded down from
    * `SceneTreeViewer` so every TreeNode can attempt sub-scene
@@ -76,7 +76,7 @@ export interface TreeNodeProps {
    */
   externalResources: readonly TscnExternalResource[];
   /**
-   * #224 (roving tabIndex, WAI-ARIA APG Tree View pattern): true ONLY for
+   * Roving tabIndex (WAI-ARIA APG Tree View pattern): true ONLY for
    * the first root-level row, and only while no SELECTED row is rendered
    * (nothing selected, or the selection collapsed/filtered out of view) —
    * `<SceneTreeViewer>` computes that condition; every recursively-rendered
@@ -103,7 +103,7 @@ function TreeNodeImpl({
     : null;
   const instanceScenePath = onOpenSubScene ? scenePath : null;
 
-  // WI-HALL-1: dynamically-loaded sub-scene children (when this node
+  // Dynamically-loaded sub-scene children (when this node
   // has `instance = ExtResource("...")`). Returns null for non-instance
   // rows or while the sub-scene is still loading; treated as an empty
   // list for rendering. The `useResource` hook inside subscribes to the
@@ -131,7 +131,8 @@ function TreeNodeImpl({
   //     result is already memoized by useGlbChildren).
   //
   // Memoized so a collapsed row keeps stable group identity across unrelated
-  // re-renders (selection/hover/expand), mirroring the former collapseLiveNode memo.
+  // re-renders (selection/hover/expand) — and so the derived `effective` node
+  // below reuses this one merge instead of re-parsing on every re-render.
   const groups: readonly LiveChildGroup[] = useMemo(() => {
     if (node.type === GLB_SCENE_ROOT_TYPE && glbChildren) {
       return [{ origin: 'glb' as const, children: glbChildren, externalResources }];
@@ -139,13 +140,15 @@ function TreeNodeImpl({
     return liveChildGroups(node, externalResources, singleSceneCache(scenePath, subScene));
   }, [node, externalResources, scenePath, subScene, glbChildren]);
 
-  // Instance root merge (ADR-0013) via collapseLiveNode — the SAME decision the
-  // viewport, inspector, and panels make. Used here to derive the effective type
-  // and properties for the row header (badge + transform icon). Memoized so an
-  // unrelated re-render doesn't re-merge this instance's subtree every frame.
+  // Instance root merge (ADR-0013) — the SAME decision the viewport, inspector,
+  // and panels make — used here for the row header (badge + transform icon).
+  // Derived from the `merged` group `groups` already built, so the single-root
+  // merge (a raw-property re-parse) runs ONCE per row instead of a second time in
+  // its own collapseLiveNode call. Every other origin leaves the node unchanged,
+  // matching collapseLiveNode's fallback (it returns the raw node there too).
   const effective = useMemo(
-    () => collapseLiveNode(node, externalResources, singleSceneCache(scenePath, subScene)),
-    [node, externalResources, scenePath, subScene]
+    () => groups.find((g) => g.origin === 'merged')?.mergedNode ?? node,
+    [groups, node]
   );
 
   const hasChildren = groups.some((g) => g.children.length > 0);
@@ -189,7 +192,7 @@ function TreeNodeImpl({
 
   const isUnsupported = !isRenderableNodeType(effective.type);
 
-  // #224 roving tabIndex: this row is the tree's ONE tab stop when it's
+  // Roving tabIndex: this row is the tree's ONE tab stop when it's
   // selected, or when it's the designated fallback row (the first root row,
   // set by SceneTreeViewer only while no selected row is rendered).
   const isRovingTabStop = isSelected || isDefaultFocusable;

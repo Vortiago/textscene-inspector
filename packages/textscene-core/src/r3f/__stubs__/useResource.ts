@@ -1,8 +1,8 @@
 /**
- * Temporary stub for useResource pending WI-R3F-2 merge.
+ * Temporary stub for useResource pending the resource-loading merge.
  * Always returns status: 'pending' so components render placeholder paths.
  *
- * When WI-R3F-2 lands, swap component imports from
+ * When the real implementation lands, swap component imports from
  *   `../__stubs__/useResource`
  * to
  *   `../../resources/useResource`

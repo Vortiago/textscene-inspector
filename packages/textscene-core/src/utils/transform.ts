@@ -59,7 +59,7 @@ export function parseTransform3D(transformString: string): Transform3D {
  * Convention: Godot stores Basis as `Vector3 rows[3]`. The parsed
  * `basis_x`, `basis_y`, `basis_z` ARE the three rows of the 3×3 matrix
  * (NOT columns — earlier code mistakenly transposed by treating them
- * as columns, see commit history around b4ccaab / WI-R3F-10 regression
+ * as columns, see commit history around b4ccaab regression
  * and 401f8f5 fix that documented the row interpretation). Columns —
  * what per-axis scale is measured along — are therefore
  * `(basis_x.c, basis_y.c, basis_z.c)`.

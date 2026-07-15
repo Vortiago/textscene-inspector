@@ -36,10 +36,17 @@ export function dispatchWebviewMessage(
   handlers: WebviewMessageHandlers
 ): void {
   // The webview is an untrusted runtime source: a message whose `type` is
-  // outside the protocol union has no table entry, so guard before invoking
-  // (matching the old switch's silent fall-through for unknown types).
-  const handler = handlers[msg.type] as ((m: WebviewToHostMessage) => void) | undefined;
-  handler?.(msg);
+  // outside the protocol union — including inherited-property names like
+  // `__proto__`, `constructor`, or `toString` — has no OWN entry in the
+  // handler table. Gate on hasOwnProperty rather than a truthy lookup: a bare
+  // `handlers[msg.type]` would resolve those inherited members (throwing on
+  // `__proto__`, invoking a builtin on `toString`), whereas this makes every
+  // unknown type fall through silently, matching the old switch's default case.
+  if (!Object.prototype.hasOwnProperty.call(handlers, msg.type)) {
+    return;
+  }
+  const handler = handlers[msg.type] as (m: WebviewToHostMessage) => void;
+  handler(msg);
 }
 
 // ============================================================================
@@ -273,7 +280,7 @@ export class TscnPreviewPanel {
   }
 
   private _getHtmlForWebview(webview: vscode.Webview): string {
-    // WI-R3F-18: webview build moved to `dist/webview/` (ESM + splitting)
+    // The webview build lives in `dist/webview/` (ESM + splitting)
     // so lazy-loaded chunks live alongside the entry script and import
     // each other via relative URIs.
     const scriptUri = webview.asWebviewUri(

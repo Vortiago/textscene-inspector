@@ -1,5 +1,5 @@
 /**
- * Strict-verification harness (WI-R3F-9, group F) — 12 assertions covering
+ * Strict-verification harness (group F) — 12 assertions covering
  * the 7 primitive mesh types and their key parameters.
  *
  * Assertions: 48–59 of `docs/archive/STRICT-VERIFICATION.md`.

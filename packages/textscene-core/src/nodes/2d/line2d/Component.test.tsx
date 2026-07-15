@@ -1,5 +1,5 @@
 /**
- * RED contract for the <Line2D> R3F component (issue #130). Pins the OBSERVABLE
+ * RED contract for the <Line2D> R3F component. Pins the OBSERVABLE
  * behaviour without dictating the drawing primitive (the plan proposes whether
  * the polyline is a THREE.Line or a width-aware mesh): a valid multi-point line
  * draws a primitive carrying geometry, coloured by `default_color`, Y-negated

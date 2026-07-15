@@ -154,7 +154,7 @@ function PlaneMeshGeometry({ properties }: { properties: PlaneMeshProperties }) 
         properties.centerOffset.z
       );
     }
-    // WI-R3F-19 parity-audit fix: `flip_faces` reverses winding so the
+    // Parity-audit fix: `flip_faces` reverses winding so the
     // surface is visible from the opposite side. The pre-migration
     // imperative renderer used `geometry.scale(-1, 1, 1); computeVertexNormals()`.
     if (properties.flipFaces) {
@@ -168,9 +168,7 @@ function PlaneMeshGeometry({ properties }: { properties: PlaneMeshProperties }) 
     properties.subdivideWidth,
     properties.subdivideDepth,
     properties.orientation,
-    properties.centerOffset?.x,
-    properties.centerOffset?.y,
-    properties.centerOffset?.z,
+    properties.centerOffset,
     properties.flipFaces,
   ]);
 
@@ -183,7 +181,7 @@ function PlaneMeshGeometry({ properties }: { properties: PlaneMeshProperties }) 
  * (azimuth 0); three.js's CylinderGeometry's first vertex sits at the
  * first edge, giving an off-by-30° orientation. The pre-migration
  * imperative renderer rotated the geometry by `π/6` around Y to align,
- * and this restores parity (WI-R3F-19).
+ * and this restores parity.
  */
 function PrismMeshGeometry({
   properties,

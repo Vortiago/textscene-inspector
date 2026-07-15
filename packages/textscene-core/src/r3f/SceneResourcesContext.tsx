@@ -7,7 +7,7 @@
  * hook — primitive resolution is purely synchronous.
  *
  * Provided either directly by tests, or by HierarchyContext consumers
- * (WI-R3F-4) once that lands. Defaults to empty so components rendered
+ * once that wiring lands. Defaults to empty so components rendered
  * without a provider degrade to placeholder paths instead of throwing.
  */
 

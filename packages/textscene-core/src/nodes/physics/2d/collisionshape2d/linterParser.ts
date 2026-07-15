@@ -1,6 +1,6 @@
 /**
  * CollisionShape2D strict validators for linting.
- * Migrated to the declarative `v` namespace (WI-ARCH-1).
+ * Migrated to the declarative `v` namespace.
  *
  * `debug_color` keeps a bespoke validator because it accepts BOTH
  * `Color(r,g,b)` (3-component) and `Color(r,g,b,a)` (4-component), unlike

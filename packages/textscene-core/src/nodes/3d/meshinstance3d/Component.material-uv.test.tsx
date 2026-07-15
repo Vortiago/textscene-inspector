@@ -1,5 +1,5 @@
 /**
- * Strict-verification harness (WI-R3F-9, group E) — 8 assertions covering
+ * Strict-verification harness (group E) — 8 assertions covering
  * StandardMaterial3D UV transforms (uv1_scale, uv1_offset). The bug-catcher
  * here is #47: UV must apply to ALL active texture maps, not just albedo.
  *

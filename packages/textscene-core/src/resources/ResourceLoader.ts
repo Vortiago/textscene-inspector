@@ -1,7 +1,7 @@
 /**
  * Event-based resource loader.
  *
- * **WI-ARCH-2**: there used to be three implementations of the same
+ * There used to be three implementations of the same
  * cache/inflight/event-emission loop — this file, `loaders/SceneLoader.ts`,
  * and `createResourceProcessor.ts`. The standalone `SceneLoader` class is
  * gone; PackedScene now flows through the same `createResourceProcessor`
@@ -187,7 +187,7 @@ export class ResourceLoader {
     this.onResourceNeeded = callback;
   }
 
-  // ---- Type-generic surface (WI-ARCH-2) ------------------------------------
+  // ---- Type-generic surface ------------------------------------------------
 
   /** Request a resource through the appropriate processor for `type`. */
   request(type: ResourceType, path: string): void {

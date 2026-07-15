@@ -1,6 +1,6 @@
 /**
  * AudioStreamPlayer3D strict validators for linting.
- * Migrated to the declarative `v` namespace (WI-ARCH-1).
+ * Migrated to the declarative `v` namespace.
  *
  * `stream` and `bus` use the shared audio validators: `streamValidator`
  * enforces the "ExtResource or SubResource" wording (per-node test asserts
