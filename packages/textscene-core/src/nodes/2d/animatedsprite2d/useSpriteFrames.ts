@@ -86,7 +86,7 @@ export function useSpriteFrames(spriteFramesRef: string | undefined): SpriteFram
           status: 'loaded',
         }
       : EMPTY;
-  }, [spriteFramesRef, ref?.type, ref?.id, internalResources, externalResources, resolvedPath, tresPath, tresResult.status, tresResult.value]);
+  }, [spriteFramesRef, ref?.type, ref?.id, internalResources, externalResources, tresPath, tresResult.status, tresResult.value]);
 }
 
 /** Parse a raw `animations` value into the map, or null when absent/empty. */

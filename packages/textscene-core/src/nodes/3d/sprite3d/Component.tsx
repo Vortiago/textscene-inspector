@@ -39,7 +39,7 @@
 import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
-import { godotColorToLinear } from '../../../r3f/godotColor';
+import { useGodotLinearColor } from '../../../r3f/godotColor';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { composeFrameTexture, frameSizePx } from '../../../r3f/spriteFrame';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
@@ -102,10 +102,7 @@ export function Sprite3D({ node }: NodeComponentProps) {
   // additive: opacity = modulate.a * (1 - transparency). Godot stores modulate
   // in sRGB → convert to the linear working space before the unlit material
   // (matching Sprite2D / WorldEnvironment).
-  const color = useMemo(
-    () => godotColorToLinear(properties.modulate),
-    [properties.modulate.r, properties.modulate.g, properties.modulate.b]
-  );
+  const color = useGodotLinearColor(properties.modulate);
   const opacity = clamp01(properties.modulate.a * (1 - properties.transparency));
   // `transparent=false` (Godot) ignores texture alpha entirely → opaque quad.
   const transparent =

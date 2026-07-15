@@ -83,7 +83,10 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
       }
     });
     return found;
-    // `version` re-runs the search once a sub-scene/GLB finishes loading.
+    // `version` is an intentional cache-buster: it increments each time a
+    // sub-scene or GLB finishes loading so the search result updates to include
+    // newly-visible nodes. The value itself is not read inside the callback.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [term, sceneGraph, loader, version]);
 
   const matches = useCallback(

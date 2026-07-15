@@ -115,10 +115,14 @@ function useHelperLifecycle<H extends HelperLike>(
       created.dispose?.();
       helperRef.current = null;
     };
-    // The `factory` and `mount` callbacks intentionally capture current
-    // render closure state (target refs, helper-type constructor args).
-    // Only `deps` controls re-runs; we don't want a fresh function
-    // identity to retrigger the lifecycle every render.
+    // `factory` and `mount` are intentionally excluded from deps: callers
+    // pass arrow functions that close over render-time refs (target objects,
+    // constructor args). The `deps` array passed in by the caller is the
+    // sole trigger for re-running the lifecycle; including `factory`/`mount`
+    // would retrigger on every render as their identities change. The
+    // non-array-literal form is required because `deps` is the caller's
+    // explicit control surface.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
 
   useFrame(() => {

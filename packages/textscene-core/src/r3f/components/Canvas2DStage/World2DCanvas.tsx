@@ -37,12 +37,13 @@ export interface World2DCanvasProps {
 function CameraRig({ pan, zoom }: { pan: { x: number; y: number }; zoom: number }) {
   const camera = useThree((s) => s.camera) as OrthographicCamera;
   const size = useThree((s) => s.size);
+  const { x: panX, y: panY } = pan;
   useLayoutEffect(() => {
-    const pose = world2DCameraPose(pan, zoom, size.width, size.height);
+    const pose = world2DCameraPose({ x: panX, y: panY }, zoom, size.width, size.height);
     camera.position.set(pose.x, pose.y, 1000);
     camera.zoom = pose.zoom;
     camera.updateProjectionMatrix();
-  }, [camera, pan.x, pan.y, zoom, size.width, size.height]);
+  }, [camera, panX, panY, zoom, size.width, size.height]);
   return null;
 }
 

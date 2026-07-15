@@ -32,7 +32,10 @@ export function WorkspaceAutoSelect({ sceneGraph }: { sceneGraph: SceneGraph | n
     const root = lt?.roots[0];
     if (!lt || !root) return null;
     return workspaceForRoot(collapseLiveNode(root, lt.ctx.externalResources, lt.ctx.sceneCache));
-    // `version` re-derives the claim once a root instance's sub-scene loads.
+    // `version` is an intentional cache-buster: it increments each time a
+    // resource finishes loading so the workspace claim re-derives once a
+    // root instance's sub-scene lands. The value itself is not read in the callback.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sceneGraph, loader, version]);
 
   // Auto-select ONCE per scene, the moment the workspace becomes known (at parse

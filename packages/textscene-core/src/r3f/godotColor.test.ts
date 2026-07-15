@@ -9,7 +9,8 @@
  * non-exponent cases live in utils/colorParser.test.ts.
  */
 import { describe, expect, it } from 'vitest';
-import { godotColorToLinear } from './godotColor';
+import { renderHook } from '@testing-library/react';
+import { godotColorToLinear, useGodotLinearColor } from './godotColor';
 import { parseColor } from '../utils/colorParser';
 
 describe('godotColorToLinear', () => {
@@ -43,6 +44,34 @@ describe('godotColorToLinear', () => {
     expect(c.r).toBeCloseTo(1, 10);
     expect(c.g).toBeCloseTo(0.21404114, 6);
     expect(c.b).toBeCloseTo(0.05087609, 6);
+  });
+});
+
+describe('useGodotLinearColor', () => {
+  it('converts through the same sRGB→linear seam as godotColorToLinear', () => {
+    const { result } = renderHook(() => useGodotLinearColor({ r: 0.5, g: 1, b: 0.25 }));
+    expect(result.current.r).toBeCloseTo(0.21404114, 6);
+    expect(result.current.g).toBeCloseTo(1, 10);
+    expect(result.current.b).toBeCloseTo(0.05087609, 6);
+  });
+
+  it('keeps the same THREE.Color instance when a fresh object carries the same values', () => {
+    const { result, rerender } = renderHook(({ c }) => useGodotLinearColor(c), {
+      initialProps: { c: { r: 0.5, g: 0.5, b: 0.5 } },
+    });
+    const first = result.current;
+    rerender({ c: { r: 0.5, g: 0.5, b: 0.5 } }); // new identity, same values
+    expect(result.current).toBe(first);
+  });
+
+  it('recomputes when a channel value changes', () => {
+    const { result, rerender } = renderHook(({ c }) => useGodotLinearColor(c), {
+      initialProps: { c: { r: 0.5, g: 0.5, b: 0.5 } },
+    });
+    const first = result.current;
+    rerender({ c: { r: 1, g: 0.5, b: 0.5 } });
+    expect(result.current).not.toBe(first);
+    expect(result.current.r).toBeCloseTo(1, 10);
   });
 });
 
