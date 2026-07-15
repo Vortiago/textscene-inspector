@@ -1,5 +1,5 @@
 /**
- * Tests for the WI-R3F-7 missing-texture chain (WEB-03/04/05).
+ * Tests for the missing-texture chain.
  *
  * Verifies that `<MeshInstance3D>` walks `material_override → SubResource
  * StandardMaterial3D → ExtResource Texture2D` and renders a magenta

@@ -6,11 +6,10 @@
  * external resources. Missing-resource uploads are driven by the
  * shell's `<MissingResourcesPanel>` (one row per missing path,
  * per-row file input) instead of a global filename-guessing input
- * (see `docs/archive/UX-REGRESSIONS.md` §3 — WI-UX-3). The toolbar carries
+ * (see `docs/archive/UX-REGRESSIONS.md` §3). The toolbar carries
  * three top-level app-shell entry points: scene-fixture dropdown,
  * "Upload TSCN File" for user-supplied .tscn content, and
- * "Reset Camera" to frame the orbit controls back to default
- * (WI-UX-7).
+ * "Reset Camera" to frame the orbit controls back to default.
  */
 import {
   useCallback,
@@ -55,7 +54,7 @@ const NO_FIXTURE = '';
 const SOURCE_PANE_STORAGE_KEY = 'tscn-web-source-pane';
 
 /**
- * #202: the web app is the first browser consumer of `@textscene/core/linter`.
+ * The web app is the first browser consumer of `@textscene/core/linter`.
  * One instance for the app's lifetime — `Linter` carries no per-call state,
  * and the rule/validator registries it reads from are populated once at
  * import time (self-registration side effects in `linter/index.ts`).
@@ -82,7 +81,7 @@ function isSourcePaneState(value: unknown): value is SourcePaneState {
   );
 }
 /**
- * First-visit default. WI-UX-15: pick a fixture with zero `ext_resource`
+ * First-visit default. Pick a fixture with zero `ext_resource`
  * lines so a new visitor's first paint shows a clean scene, not a wall
  * of missing-file warnings. `unit-plane-mesh.tscn` is the canonical
  * "hello world" of the app: single PlaneMesh, no externals, parses
@@ -346,7 +345,7 @@ export function R3FApp() {
     loader.provideFile(path);
   }
 
-  // #203: Download .tscn — a Blob + anchor export, no write-back to disk
+  // Download .tscn — a Blob + anchor export, no write-back to disk
   // (ADR-0020). Named after whatever is active so a batch of downloads
   // doesn't collide on a generic "scene.tscn".
   function downloadFilename(): string {
@@ -517,11 +516,11 @@ interface ToolbarProps {
   uploadedTscnName: string | null;
   loadError: string | null;
   onFixtureChange: (value: string) => void;
-  /** #221: one or more files picked via the file input — a scene plus, optionally, its resources. */
+  /** One or more files picked via the file input — a scene plus, optionally, its resources. */
   onFilesSelected: (files: File[]) => void;
   paneVisible: boolean;
   onTogglePane: () => void;
-  /** #202: compact problem-count text (e.g. "✖ 1 / ⚠ 2"), or `null` when the buffer is clean. */
+  /** Compact problem-count text (e.g. "✖ 1 / ⚠ 2"), or `null` when the buffer is clean. */
   problemBadge: string | null;
 }
 
@@ -547,7 +546,7 @@ function SceneGlyph() {
  * Note on missing files: a scene's missing `res://` dependencies are provided
  * separately and per-path in the shell's Resources tab — deliberately kept
  * distinct from "open a scene" so a picked file always maps to a known
- * target. A compact badge (#221) nudges the user toward that tab without
+ * target. A compact badge nudges the user toward that tab without
  * requiring it be open first.
  */
 function Toolbar({
@@ -567,7 +566,7 @@ function Toolbar({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
 
-  // #221: `<Toolbar>` is rendered THROUGH the shell's `toolbar` slot, i.e. as
+  // `<Toolbar>` is rendered THROUGH the shell's `toolbar` slot, i.e. as
   // a descendant of the shell's own `<MissingResourcesProvider>` — so this
   // reads the SAME live missing-paths set the shell's own
   // `<MissingResourcesPanel>` (in the Resources tab) aggregates, without any
@@ -695,7 +694,7 @@ function Toolbar({
       <input
         ref={tscnInputRef}
         type="file"
-        // #221: multi-select — a .tscn plus its resource files can be picked
+        // Multi-select — a .tscn plus its resource files can be picked
         // in one gesture. `accept` covers the file kinds handleFilesUpload's
         // basename-matching can actually resolve (mirrors the binary
         // resource-extension list resourceProviderUtils.isBinaryResourceType

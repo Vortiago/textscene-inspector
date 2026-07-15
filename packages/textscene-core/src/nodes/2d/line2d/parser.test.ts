@@ -1,5 +1,5 @@
 /**
- * RED contract for the Line2D parser (issue #130). Pins the parsed shape:
+ * RED contract for the Line2D parser. Pins the parsed shape:
  * `points` (flat Float32Array), `width` (number), `defaultColor` (Color),
  * `closed` (boolean), plus the Node2D transform base. Godot defaults:
  * width = 10, default_color = white, closed = false. Mirrors the Polygon2D

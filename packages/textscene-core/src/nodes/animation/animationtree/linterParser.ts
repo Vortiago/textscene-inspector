@@ -1,6 +1,6 @@
 /**
  * AnimationTree strict validators for linting.
- * Migrated to the declarative `v` namespace (WI-ARCH-1).
+ * Migrated to the declarative `v` namespace.
  *
  * `tree_root`, `anim_player`, `root_motion_track`,
  * `advance_expression_base_node`, `root_node` keep bespoke validators

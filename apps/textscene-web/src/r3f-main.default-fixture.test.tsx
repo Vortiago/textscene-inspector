@@ -1,5 +1,5 @@
 /**
- * WI-UX-15 regression: a first-time visitor (empty localStorage) lands
+ * First-visit default regression: a first-time visitor (empty localStorage) lands
  * on a fixture with zero `ext_resource` lines, so the first paint shows
  * a clean scene rather than a wall of missing-file warnings.
  */
@@ -36,7 +36,7 @@ beforeEach(() => {
   } catch {
     // happy-dom may throw in some edge cases; ignore.
   }
-  // #221: a fixture switch/load now writes `?fixture=` back to the URL
+  // A fixture switch/load now writes `?fixture=` back to the URL
   // (history.replaceState) — reset it so one test's load doesn't leak into
   // the next test's initial mount as a stale deep link (which would
   // otherwise outrank the localStorage choice these tests exercise).

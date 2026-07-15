@@ -1,9 +1,9 @@
 /**
- * WI-HALL-3: synthesised root for a PackedScene that's actually a GLB/GLTF.
+ * Synthesised root for a PackedScene that's actually a GLB/GLTF.
  *
  * Godot PackedScene refs can point at .glb / .gltf files (the hallway
  * fixture references PortraitFrame2.glb, doormesh.glb, grandfatherclock.glb,
- * etc.). Pre-WI-HALL-3 the `createSceneProcessor` threw
+ * etc.). Previously the `createSceneProcessor` threw
  * "Scene must be text content" when handed an ArrayBuffer and the user
  * saw a magenta placeholder cube via `<MissingResourcePlaceholder shape="box">`.
  *
@@ -78,7 +78,7 @@ export function GLBSceneRoot({ node }: NodeComponentProps) {
     // resolved object or override set changes is sufficient and cheap.
   }, [object, overrides]);
 
-  // WI-D: tie each internal GLB object to a tree path so the SceneTreeViewer
+  // Tie each internal GLB object to a tree path so the SceneTreeViewer
   // can select (gizmo) + hide individual nodes. We walk THIS rendered clone
   // with the same relPath scheme the tree uses, then register each object and
   // drive its visibility from the hidden-paths set.

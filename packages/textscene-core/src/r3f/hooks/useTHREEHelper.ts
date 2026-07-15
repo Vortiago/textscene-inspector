@@ -1,5 +1,5 @@
 /**
- * WI-ARCH-3 — unified THREE helper lifecycle.
+ * Unified THREE helper lifecycle.
  *
  * Before this hook the codebase had **six** independent reimplementations
  * of the same lifecycle:
@@ -138,7 +138,7 @@ function useHelperLifecycle<H extends HelperLike>(
 }
 
 /**
- * PERF (WI-213): the `tickUpdate` value for helpers that track a scene
+ * PERF: the `tickUpdate` value for helpers that track a scene
  * object (selection/hover boxes). A static scene never needs the helper
  * recomputed after its initial placement (the helper's constructor already
  * runs `update()` once); only an active playback driver can move the target

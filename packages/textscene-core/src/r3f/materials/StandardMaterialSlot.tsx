@@ -25,7 +25,7 @@ export interface StandardMaterialSlotProps {
   /**
    * The underlying mesh type (PlaneMesh, BoxMesh, etc.). Reserved for
    * per-mesh-type culling defaults; currently unused (see git history for the
-   * reverted WI-HALL-6 PlaneMesh DoubleSide default).
+   * reverted PlaneMesh DoubleSide default).
    */
   meshType?: string;
   /** R3F attach key — `material-0` for multi-surface meshes. */

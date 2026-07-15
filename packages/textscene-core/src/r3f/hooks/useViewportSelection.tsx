@@ -1,11 +1,11 @@
 /**
  * Canvas-side mesh picker. Returns ONE set of R3F pointer-event handlers
- * (WI-213: event-delegated) that drive `<SelectionContext>` from the
+ * (event-delegated) that drive `<SelectionContext>` from the
  * viewport — attach them to a single root group in `NodeDispatcher`, not to
  * every node. Replaces the imperative
  * `packages/textscene-core/src/ui/ViewportSelector.ts` mesh picker.
  *
- * Before WI-213 every node's wrapper `<group>` carried its own copy of these
+ * Previously every node's wrapper `<group>` carried its own copy of these
  * handlers, bound to that node's path via a `withNodePath(path)` factory.
  * R3F treats every object with a registered pointer handler as its own
  * interactive raycast root, so a mesh at depth d got triangle-tested once

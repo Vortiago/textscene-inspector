@@ -2,7 +2,7 @@
  * <Node> — base Godot Node. Renders children inside a `<group>` and
  * applies an optional Transform3D when the parsed node carries one.
  *
- * WI-HALL-4: Pre-fix the component dropped the transform entirely. The
+ * Pre-fix the component dropped the transform entirely. The
  * `Node` fallback type is what `parseNodeWithRegistry` assigns to any
  * TSCN node that has no explicit `type` attribute — including
  * instance-only nodes like `[node name="LetterOpener"

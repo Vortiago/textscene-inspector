@@ -1,6 +1,6 @@
 /**
  * OmniLight3D strict validators for linting.
- * Migrated to the declarative `v` namespace (WI-ARCH-1).
+ * Migrated to the declarative `v` namespace.
  *
  * Light3D base validators (light_* / shadow_*) are inherited via the
  * base-walk: OmniLight3D → Light3D → Node3D.

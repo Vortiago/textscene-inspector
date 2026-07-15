@@ -28,7 +28,7 @@ export function Camera3D({ node, children }: NodeComponentProps) {
     [properties]
   );
 
-  // WI-R3F-19 parity-audit fix: `h_offset` / `v_offset` shift the camera
+  // Parity-audit fix: `h_offset` / `v_offset` shift the camera
   // along its LOCAL right / up vectors after the base transform is
   // applied. The pre-migration imperative renderer used
   // `addScaledVector(localX, h)` / `addScaledVector(localY, v)` — equivalent
@@ -187,13 +187,13 @@ interface CameraGizmoProps {
 }
 
 function CameraGizmo({ cameraRef, name }: CameraGizmoProps) {
-  // WI-UX-14: gate on selection — same pattern as the light gizmos.
+  // Gate on selection — same pattern as the light gizmos.
   // Without this, every Camera3D in the scene drew a yellow CameraHelper
   // frustum wireframe regardless of selection (ui-designer-2's A/B
   // finding on the hallway fixture). The gizmo now only appears when
   // the user has selected this Camera3D's tree row.
   //
-  // WI-ARCH-3: build + dispose lifecycle delegated to `usePrimitiveHelper`.
+  // Build + dispose lifecycle delegated to `usePrimitiveHelper`.
   // `THREE.CameraHelper` shares `DirectionalLightHelper`/`PointLightHelper`'s
   // `this.matrix = camera.matrixWorld` + `matrixAutoUpdate = false`
   // constructor aliasing — mounted as a `<primitive>` SIBLING of the camera

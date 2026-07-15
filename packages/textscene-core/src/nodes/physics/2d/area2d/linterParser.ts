@@ -1,6 +1,6 @@
 /**
  * Area2D strict validators for linting.
- * Migrated to the declarative `v` namespace (WI-ARCH-1).
+ * Migrated to the declarative `v` namespace.
  *
  * Uses the specialized `createSpaceOverride`, `createCollisionLayer`,
  * `createCollisionMask`, and `createDisableMode` helpers from

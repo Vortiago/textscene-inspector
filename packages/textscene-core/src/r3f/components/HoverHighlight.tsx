@@ -19,7 +19,7 @@
  * the hover state, but a fresh hover after a click does NOT clear
  * the highlight).
  *
- * WI-ARCH-3: lifecycle delegated to `useSceneHelper`.
+ * Lifecycle delegated to `useSceneHelper`.
  *
  * Renders no DOM. Outside a SelectionProvider (standalone canvas
  * tests) the component is a no-op via `useOptionalSelection`.
@@ -34,7 +34,7 @@ import { WorldBoxHelper } from './WorldBoxHelper.js';
 const HOVER_COLOR = 0xff8800;
 
 export function HoverHighlight() {
-  // WI-213: hover lives in a ref-based external store, not SelectionContext's
+  // Hover lives in a ref-based external store, not SelectionContext's
   // React state — this is the ONE component that reads it.
   const hoveredNodePath = useHoveredNodePath();
   const selection = useOptionalSelection();

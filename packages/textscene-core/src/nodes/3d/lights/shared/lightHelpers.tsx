@@ -6,16 +6,15 @@
  * Pattern: the light component creates a ref, renders its `<*Light>`
  * with that ref, and additionally renders `<*LightGizmo lightRef={ref}>`.
  *
- * WI-UX-14: gizmos are gated on the owning light's TSCN path matching
+ * Gizmos are gated on the owning light's TSCN path matching
  * `SelectionContext.selectedNodePath`. Without this gate, a scene with
  * many lights (e.g. `example-hallway.tscn`'s 18 spotlights) rendered 18
  * overlapping yellow cones that obscured the actual scene meshes. Matches
  * main's `HelperManager.setHelper('highlight', ...)` behavior — only the
  * selected node carries a visible gizmo. Hover does NOT show the gizmo;
- * the orange `HoverHighlight` BoxHelper from WI-UX-10 is the hover
- * affordance.
+ * the orange `HoverHighlight` BoxHelper is the hover affordance.
  *
- * WI-ARCH-3: lifecycle (build/dispose/tick-update) delegated to
+ * Lifecycle (build/dispose/tick-update) delegated to
  * `usePrimitiveHelper`. The selection gate is expressed as
  * "factory returns null when not visible" — see `lightHelperFactory`.
  *

@@ -11,7 +11,7 @@
  * resources. External textures route through `useResource` and the host
  * file provider. When ANY referenced texture comes back missing, the
  * mesh switches to a magenta placeholder material with a drei `<Text>`
- * label naming the missing path (WI-R3F-7 / WEB-03/04/05).
+ * label naming the missing path.
  *
  * Material precedence (matches Godot):
  *   surface_material_override > material_override > mesh's own material > default placeholder.
@@ -75,7 +75,7 @@ export function MeshInstance3D({ node }: NodeComponentProps) {
   );
   const arrayMeshResult = useResource<ArrayMeshResource>(arrayMeshPath ?? '', 'ArrayMesh');
 
-  // WI-R3F-19 parity-audit fix: when multiple `surface_material_override/N`
+  // Parity-audit fix: when multiple `surface_material_override/N`
   // slots are populated (e.g. a GLB or multi-surface mesh), build an
   // array of material SubResources so each surface gets its own slot.
   // Single-surface meshes return a length-1 array.
@@ -130,7 +130,7 @@ export function MeshInstance3D({ node }: NodeComponentProps) {
     textureRequests.emission_texture ?? '',
     'Texture2D'
   );
-  // WI-R3F-19 parity-audit fix: `ao_texture` now resolves and wires
+  // Parity-audit fix: `ao_texture` now resolves and wires
   // through to `material.aoMap`. Was silently dropped because the slot
   // wasn't in `TEXTURE_PROPERTIES` pre-fix.
   const aoStatus = useResource<THREE.Texture>(
@@ -157,7 +157,7 @@ export function MeshInstance3D({ node }: NodeComponentProps) {
   // (scale = 1,1 and offset = 0,0) skip the clone and return the
   // original.
   //
-  // WI-HALL-5: a triplanar material tiles per WORLD unit, not across the
+  // A triplanar material tiles per WORLD unit, not across the
   // mesh's 0..1 UVs. For a PlaneMesh we reproduce that density by folding
   // the plane's size into the scale (repeat = size × uv1_scale) — otherwise
   // a 12×3.5 hallway floor stretched one texture copy and read "too big".
@@ -220,7 +220,7 @@ export function MeshInstance3D({ node }: NodeComponentProps) {
     return null;
   }, [textureSlots, textureRequests]);
 
-  // WI-R3F-19 parity-audit fix: cast_shadow mode 2 (DOUBLE_SIDED) sets
+  // Parity-audit fix: cast_shadow mode 2 (DOUBLE_SIDED) sets
   // material.shadowSide = DoubleSide; mode 3 (SHADOWS_ONLY) keeps the
   // shadow pass on but hides the mesh from the colour buffer.
   const shadowFlags = shadowCastingFlags(properties.castShadow);
@@ -282,10 +282,10 @@ export function MeshInstance3D({ node }: NodeComponentProps) {
   // Primitive SubResource geometry (declarative <MeshGeometry>).
   const geometryElement = <MeshGeometry resource={meshResource!} />;
 
-  // Missing texture: magenta placeholder material. Gap 12 (WI-UX-3):
-  // the in-3D floating label was redundant once the DOM
-  // `<MissingResourcesPanel>` lists every missing path. `firstMissingPath`
-  // is still used for the placeholder branch trigger.
+  // Missing texture: magenta placeholder material. The in-3D floating
+  // label was redundant once the DOM `<MissingResourcesPanel>` lists
+  // every missing path. `firstMissingPath` is still used for the
+  // placeholder branch trigger.
   if (firstMissingPath !== null) {
     return (
       <MeshShell {...shellProps}>
@@ -567,9 +567,9 @@ interface ShadowFlags {
 
 /**
  * Decode Godot's `cast_shadow` enum (0=OFF, 1=ON, 2=DOUBLE_SIDED,
- * 3=SHADOWS_ONLY) into the three flags the renderer needs. WI-R3F-19
- * parity-audit fix: previously only the boolean was returned and modes
- * 2 and 3 collapsed silently to castShadow=true.
+ * 3=SHADOWS_ONLY) into the three flags the renderer needs. Previously
+ * only the boolean was returned and modes 2 and 3 collapsed silently to
+ * castShadow=true.
  */
 function shadowCastingFlags(value: number | undefined): ShadowFlags {
   if (value === undefined || value === 0) {

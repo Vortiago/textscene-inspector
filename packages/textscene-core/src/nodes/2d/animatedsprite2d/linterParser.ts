@@ -1,6 +1,6 @@
 /**
  * AnimatedSprite2D strict validators for linting.
- * Migrated to the declarative `v` namespace (WI-ARCH-1).
+ * Migrated to the declarative `v` namespace.
  *
  * `animation` and `autoplay` take any string value (semantic validation
  * happens in the linter pass). The original validator was a no-op

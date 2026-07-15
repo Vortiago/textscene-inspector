@@ -61,7 +61,7 @@ export const GOLDEN_SCENES = [
   // by the two-identical-frames settle); the box edges are AA-sensitive like
   // physics-bodies, hence the relaxed threshold.
   { name: 'decal', file: 'unit-decal.tscn', maxDiffPct: 0.3 },
-  // PathFollow2D follow-offset (issue #129): a Polygon2D follower placed at
+  // PathFollow2D follow-offset: a Polygon2D follower placed at
   // progress_ratio 0.5 along the parent Path2D's Curve2D. The Marker2D cross
   // and Path2D curve gizmos are selection-gated (ADR-0018) and the harness
   // drives no selection, so this scene pins the one visible, non-gated piece —
@@ -83,7 +83,7 @@ export const GOLDEN_SCENES = [
   { name: 'path3d-selected', file: 'unit-pathfollow-3d.tscn', select: 'PathFollow3DRoot/TrackPath', maxDiffPct: 0.5 },
   { name: 'pathfollow3d-selected', file: 'unit-pathfollow-3d.tscn', select: 'PathFollow3DRoot/TrackPath/Follower', maxDiffPct: 0.5 },
 
-  // --- Lights / Camera3D / AudioStreamPlayer3D gizmo E2E coverage (#159) ---
+  // --- Lights / Camera3D / AudioStreamPlayer3D gizmo E2E coverage ---
   // Unselected: pins the non-gizmo render (ground + shading only — no helper).
   { name: 'directional-light-3d', file: 'unit-directional-light-3d.tscn' },
   { name: 'omni-light-3d', file: 'unit-omni-light-3d.tscn' },
@@ -125,7 +125,7 @@ export const GOLDEN_SCENES = [
     maxDiffPct: 0.5,
   },
 
-  // --- Mesh primitives + StandardMaterial3D features (#160) ---
+  // --- Mesh primitives + StandardMaterial3D features ---
   { name: 'box-mesh', file: 'unit-box-mesh.tscn' },
   { name: 'capsule-mesh', file: 'unit-capsule-mesh.tscn' },
   { name: 'cylinder-mesh', file: 'unit-cylinder-mesh.tscn' },
@@ -141,7 +141,7 @@ export const GOLDEN_SCENES = [
   // emission/normal, advanced PBR, transparency/glass).
   { name: 'material-features', file: 'integration-material-features.tscn' },
 
-  // --- Sprite2D/Sprite3D + 3D physics-body roundout (#162) ---
+  // --- Sprite2D/Sprite3D + 3D physics-body roundout ---
   { name: 'sprite2d', file: 'unit-sprite2d.tscn' },
   { name: 'sprite3d', file: 'unit-sprite3d.tscn' },
   // Transform-only bodies (ADR-0005/ADR-0008): reuse the Node3D component, so
@@ -150,7 +150,7 @@ export const GOLDEN_SCENES = [
   { name: 'rigidbody3d', file: 'unit-rigidbody3d.tscn' },
   { name: 'characterbody3d', file: 'unit-characterbody3d.tscn' },
 
-  // --- TileMap / TileMapLayer batched-geometry coverage (#164) ---
+  // --- TileMap / TileMapLayer batched-geometry coverage ---
   { name: 'tile-map', file: 'unit-tile-map.tscn' },
   { name: 'tile-map-layer', file: 'unit-tile-map-layer.tscn' },
   { name: 'tile-map-layer-isometric', file: 'unit-tile-map-layer-isometric.tscn' },

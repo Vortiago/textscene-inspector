@@ -25,7 +25,7 @@ describe('<TscnPreviewShell>', () => {
   it('renders the canvas, the tree, and the details panel', async () => {
     render(<TscnPreviewShell panelId="p1" content={MINIMAL_TSCN} />);
     expect(screen.getByTestId('canvas-stub')).toBeTruthy();
-    // WI-R3F-18: SceneTreeViewer and NodeDetailsPanel are React.lazy
+    // SceneTreeViewer and NodeDetailsPanel are React.lazy
     // imports — they resolve in a microtask after the initial render.
     // findBy* awaits Suspense resolution; getBy* would race.
     expect(await screen.findByText('Root')).toBeTruthy();
@@ -69,7 +69,7 @@ describe('<TscnPreviewShell>', () => {
 
   it('surfaces a parse-error banner when the lenient parser extracts no nodes from non-empty content (WI-R3F-7 / WEB-10)', () => {
     // The lenient parser doesn't throw on this content; it just returns
-    // zero root nodes. Before WI-R3F-7 the user saw the same "No nodes
+    // zero root nodes. Before this fix the user saw the same "No nodes
     // to display" message they'd see for a legitimately empty scene.
     // The shell now distinguishes "empty content" from "non-empty
     // content that produced no nodes" and surfaces a banner.

@@ -15,7 +15,7 @@ export interface TscnScene {
   externalResources: TscnExternalResource[];
   /** Internal resource definitions */
   internalResources: TscnInternalResource[];
-  /** Event-based resource loader (WI-79 salvage, used by SceneGraph helpers). */
+  /** Event-based resource loader (used by SceneGraph helpers). */
   resourceLoader?: ResourceLoader;
 }
 

@@ -1,5 +1,5 @@
 /**
- * PERF (WI-213): gate the selection/hover BoxHelper's per-frame recompute.
+ * PERF: gate the selection/hover BoxHelper's per-frame recompute.
  *
  * `useSceneHelper` defaults `tickUpdate` to true, so before this fix
  * `<SelectionHighlight>`/`<HoverHighlight>` ran `updateWorldMatrix(true,true)`

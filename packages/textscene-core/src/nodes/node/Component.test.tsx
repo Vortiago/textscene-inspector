@@ -41,7 +41,7 @@ describe('<Node>', () => {
   });
 
   /**
-   * WI-HALL-4: pre-fix, instance-only nodes (no explicit `type`
+   * Pre-fix, instance-only nodes (no explicit `type`
    * attribute, only `name` + `instance`) were typed as the base `Node`
    * fallback in NodeRegistry. The base `Node` parser correctly captured
    * `properties.transform`, but the R3F `<Node>` component dropped it
@@ -49,7 +49,7 @@ describe('<Node>', () => {
    * evidence GLB in the hallway fixture rendered ~40× too big
    * (its instance's basis carried a uniform 0.025 scale).
    *
-   * After WI-HALL-4 the component threads `properties.transform`
+   * After the fix the component threads `properties.transform`
    * through `transformFromNode3DProperties` and applies the
    * decomposed position / rotation / scale to the wrapping group.
    */

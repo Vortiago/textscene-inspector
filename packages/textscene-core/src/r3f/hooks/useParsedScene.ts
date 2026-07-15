@@ -37,7 +37,7 @@ export function parseTscnContent(content: string, rootScenePath: string): ParseR
     // returning whatever nodes it could salvage. If the body had any
     // text at all but the parser produced zero root nodes, the file is
     // probably broken — surface that as an error rather than letting
-    // the user stare at "No nodes to display" (WI-R3F-7 / WEB-10).
+    // the user stare at "No nodes to display".
     if (tscnScene.nodes.length === 0 && content.trim().length > 0) {
       return {
         sceneGraph: null,

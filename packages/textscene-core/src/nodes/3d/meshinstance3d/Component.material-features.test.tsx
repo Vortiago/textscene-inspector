@@ -1,5 +1,5 @@
 /**
- * Tests for WI-R3F-8: StandardMaterial3D feature completion.
+ * Tests for StandardMaterial3D feature completion.
  *
  * Verifies that <MeshInstance3D>:
  *   - Wires every loaded texture map (albedo / normal / roughness /
@@ -57,7 +57,7 @@ function makeLoader(): ResourceLoader {
  * had been successfully loaded by the file pipeline. We monkey-patch
  * `request()` and `getCached()` to short-circuit the FileEventBus
  * round-trip — there's no other public surface for "pre-cache a
- * texture" today, and the WI-R3F-7 missing-texture test only exercises
+ * texture" today, and the missing-texture test only exercises
  * the failure path. The `loaded` event fires synchronously on
  * `request()` so the `useResource` hook's effect picks it up just like
  * a real cache hit.

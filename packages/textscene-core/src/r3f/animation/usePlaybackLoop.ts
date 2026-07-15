@@ -36,7 +36,7 @@ export interface PlaybackLoopParams {
   /**
    * When this value changes (compared with `Object.is`), `configureAction`
    * re-runs on the CURRENTLY selected action even though the clip itself
-   * hasn't changed — e.g. flipping a live loop-override preference (#224)
+   * hasn't changed — e.g. flipping a live loop-override preference
    * must take effect immediately, not only on the next clip switch/replay.
    * Omit (stays `undefined`) to keep the original reconfigure-on-clip-switch-
    * only behavior.
@@ -44,7 +44,7 @@ export interface PlaybackLoopParams {
   reconfigureKey?: unknown;
   /**
    * Report the live playhead to the transport (for the scrubber). The
-   * transport throttles this internally (WI-213); pass `{ immediate: true }`
+   * transport throttles this internally; pass `{ immediate: true }`
    * to force an unthrottled flush — this loop does so once on the
    * playing → paused edge so the paused readout is never left showing a
    * throttle-stale time.
@@ -74,7 +74,7 @@ export function usePlaybackLoop(params: PlaybackLoopParams): void {
       prev?.stop();
       prevClipRef.current = selectedClip;
     }
-    // #224: reconfigure on a clip switch OR when reconfigureKey itself
+    // Reconfigure on a clip switch OR when reconfigureKey itself
     // changes (e.g. the user flips the loop-override preference mid-clip) —
     // without restarting the currently-running action.
     const reconfigureChanged = !Object.is(params.reconfigureKey, prevReconfigureKeyRef.current);

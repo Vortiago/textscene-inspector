@@ -1,5 +1,5 @@
 /**
- * Regression test for WI-UX-1.
+ * Regression test for tree-row eye-button visibility.
  *
  * Pins the wire from `SelectionContext.hiddenNodePaths` to the
  * `visible` flag on the per-node wrapping `<group>` in `NodeDispatcher`.

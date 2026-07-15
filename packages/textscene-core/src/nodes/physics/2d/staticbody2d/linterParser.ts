@@ -1,6 +1,6 @@
 /**
  * StaticBody2D strict validators for linting.
- * Migrated to the declarative `v` namespace (WI-ARCH-1).
+ * Migrated to the declarative `v` namespace.
  */
 
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';

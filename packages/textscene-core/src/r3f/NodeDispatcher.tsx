@@ -9,7 +9,7 @@
  *      asynchronously load the referenced PackedScene and inject its
  *      root nodes as additional children of the instancing node. This is
  *      how Godot's external-scene composition (`integration-three-cubes.tscn`
- *      → `child_cube.tscn`) is rendered (WI-R3F-12).
+ *      → `child_cube.tscn`) is rendered.
  *   4. Otherwise render `<GenericNodeFallback>` so unknown types stay
  *      visible in the viewport.
  *
@@ -17,7 +17,7 @@
  * or any context providers — those are owned by `<TscnCanvas>` and
  * `<TscnPreviewShell>` respectively.
  *
- * WI-213 (event delegation): the WHOLE dispatched tree is wrapped in ONE
+ * Event delegation: the WHOLE dispatched tree is wrapped in ONE
  * root `<group>` carrying `useViewportSelection`'s pointer handlers, instead
  * of every node's own wrapper group carrying a copy. R3F treats every
  * object with a registered pointer handler as its own interactive raycast
@@ -62,7 +62,7 @@ export interface NodeDispatcherProps {
 }
 
 /**
- * Position for the crash-fallback placeholder (#216). `transformFromNode3DProperties`
+ * Position for the crash-fallback placeholder. `transformFromNode3DProperties`
  * reads `properties.transform` — a field only `Node3DProperties` carries, so
  * casting a Node2D-world node's properties to it silently resolves to the
  * origin (Node2DProperties has no `.transform`), placing the fallback box at
@@ -182,7 +182,7 @@ function PlainNode({
   }
 
   // The wrapper is registered (path <-> Object3D, both directions) so the
-  // viewport's ONE delegated pointer-handler root (WI-213) can resolve which
+  // viewport's ONE delegated pointer-handler root can resolve which
   // node owns a raycasted mesh, and so SelectionHighlight/HoverHighlight can
   // find the Object3D for a path. Picking selects whichever node OWNS the
   // clicked geometry; if a child mesh is clicked, the child's wrapper wins
@@ -193,7 +193,7 @@ function PlainNode({
   // (e.g. Camera3D tags its THREE.Camera with this so the canvas can
   // later swap to it on "Use This Camera").
   //
-  // `<ErrorBoundary>` (#216) isolates a thrown render exception (NaN into a
+  // `<ErrorBoundary>` isolates a thrown render exception (NaN into a
   // BufferGeometry, an unexpected GLB structure) to just THIS node instead
   // of unwinding the WHOLE R3F scene tree — `<Canvas>` mounts its own
   // react-reconciler root, so an uncaught error here would otherwise blank
@@ -255,7 +255,7 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
   //
   // Lives in an effect (not the render body) so this instancing subtree's
   // render stays a pure computation — the loader mutation only happens once
-  // per commit for a given instance ref, not on every re-render (WI-213).
+  // per commit for a given instance ref, not on every re-render.
   useEffect(() => {
     if (!loader || !scenePath) return;
     const parsed = parseResourceReference(instanceRef);
@@ -282,7 +282,7 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
   // to satisfy rules-of-hooks) so an unrelated re-render (selection/hover
   // elsewhere in the tree) doesn't re-merge + re-parse this instance's
   // subtree every frame — the same fix TreeNode.tsx already applies to its
-  // own collapseLiveNode call (WI-213).
+  // own collapseLiveNode call.
   const effective = useMemo(
     () =>
       loadedScene
@@ -292,7 +292,7 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
   );
 
   // Unresolvable ref or failed load: keep the node visible with a magenta
-  // placeholder child, matching the missing-texture UX (WI-R3F-7).
+  // placeholder child, matching the missing-texture UX.
   if (!scenePath || result.status === 'unavailable') {
     return (
       <PlainNode node={node} path={path}>

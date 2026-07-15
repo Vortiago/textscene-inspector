@@ -1,6 +1,6 @@
 /**
  * Node3D strict validators for linting.
- * Migrated to the declarative `v` namespace (WI-ARCH-1).
+ * Migrated to the declarative `v` namespace.
  *
  * `scale` keeps a bespoke validator because it folds a vector-format check with
  * a per-component non-zero check (a zero axis collapses the node — a genuine

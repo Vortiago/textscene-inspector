@@ -1,5 +1,5 @@
 /**
- * Strict-verification harness (WI-R3F-9, group J) — 5 assertions covering
+ * Strict-verification harness (group J) — 5 assertions covering
  * Label3D rendering. Several of these properties are nominally in Godot's
  * Label3D but not in our parser/types yet; failures here drive the
  * inventory of missing Label3D feature coverage.

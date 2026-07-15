@@ -1,11 +1,11 @@
 /**
- * #162 fixtures contract (RED until the slice ships).
+ * Fixtures contract (RED until the slice ships).
  *
  * Witnesses that the six new `unit-*.tscn` fixtures exist, parse via the real
- * TscnParser, and carry the representative shape issue #162 calls for. This
+ * TscnParser, and carry the representative shape the slice calls for. This
  * gates the fiddly Godot serialization on actual parsed values — not just file
  * existence. The QUALITY of the co-located parser/Component test suites is gated
- * separately (issue162-coverage.test.ts) and judged at /code-review.
+ * separately (suite-coverage.test.ts) and judged at /code-review.
  *
  * Repo root is resolved by walking up to pnpm-workspace.yaml so the test is
  * insensitive to its own depth.

@@ -67,7 +67,7 @@ class WebviewLogAdapter implements LogAdapter {
 function R3FWebviewApp({ vscode }: { vscode: VsCodeApi }) {
   const [content, setContent] = useState<string>('');
 
-  // Wire the WI-79 resource pipeline. The extension host services the
+  // Wire the resource pipeline. The extension host services the
   // provider's `loadResource` calls by responding to `loadResource`
   // postMessages with the file bytes; the FileEventBus + ResourceLoader
   // sit between that provider and `useResource` in node components.

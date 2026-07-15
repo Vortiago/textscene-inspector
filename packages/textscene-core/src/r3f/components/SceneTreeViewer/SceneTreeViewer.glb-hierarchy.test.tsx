@@ -1,5 +1,5 @@
 /**
- * WI-C: a GLBSceneRoot row surfaces the loaded GLB's internal THREE.Object3D
+ * A GLBSceneRoot row surfaces the loaded GLB's internal THREE.Object3D
  * hierarchy as expandable child rows, and is NOT flagged "Not implemented"
  * (it renders). Mirrors the sub-scene inlining test's loader-cache harness,
  * but stages a THREE.Object3D in the glb cache.

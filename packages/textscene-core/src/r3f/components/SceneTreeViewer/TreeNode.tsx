@@ -68,7 +68,7 @@ export interface TreeNodeProps {
    */
   matches: (path: string) => boolean;
   /**
-   * WI-HALL-1: the host scene's externalResources, used to resolve
+   * The host scene's externalResources, used to resolve
    * `node.instance = ExtResource("id")` references against the
    * `res://` path of the referenced PackedScene. Threaded down from
    * `SceneTreeViewer` so every TreeNode can attempt sub-scene
@@ -76,7 +76,7 @@ export interface TreeNodeProps {
    */
   externalResources: readonly TscnExternalResource[];
   /**
-   * #224 (roving tabIndex, WAI-ARIA APG Tree View pattern): true ONLY for
+   * Roving tabIndex (WAI-ARIA APG Tree View pattern): true ONLY for
    * the first root-level row, and only while no SELECTED row is rendered
    * (nothing selected, or the selection collapsed/filtered out of view) —
    * `<SceneTreeViewer>` computes that condition; every recursively-rendered
@@ -103,7 +103,7 @@ function TreeNodeImpl({
     : null;
   const instanceScenePath = onOpenSubScene ? scenePath : null;
 
-  // WI-HALL-1: dynamically-loaded sub-scene children (when this node
+  // Dynamically-loaded sub-scene children (when this node
   // has `instance = ExtResource("...")`). Returns null for non-instance
   // rows or while the sub-scene is still loading; treated as an empty
   // list for rendering. The `useResource` hook inside subscribes to the
@@ -192,7 +192,7 @@ function TreeNodeImpl({
 
   const isUnsupported = !isRenderableNodeType(effective.type);
 
-  // #224 roving tabIndex: this row is the tree's ONE tab stop when it's
+  // Roving tabIndex: this row is the tree's ONE tab stop when it's
   // selected, or when it's the designated fallback row (the first root row,
   // set by SceneTreeViewer only while no selected row is rendered).
   const isRovingTabStop = isSelected || isDefaultFocusable;

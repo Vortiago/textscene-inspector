@@ -1,8 +1,8 @@
 /**
- * Regression test for WI-HALL-1: SceneTreeViewer inlines PackedScene
+ * Regression test: SceneTreeViewer inlines PackedScene
  * sub-scene contents.
  *
- * Pre-WI-HALL-1 the tree only walked the parsed root scene's
+ * Previously the tree only walked the parsed root scene's
  * `node.children`. Instance nodes (carrying `instance =
  * ExtResource("...")`) appeared as leaves — the user could see the 📦
  * marker but couldn't expand the node to see what's INSIDE the
@@ -10,7 +10,7 @@
  * NodeDispatcher's `InstancedSceneSubtree`); the tree was just blind to
  * the dynamically-loaded data.
  *
- * Post-WI-HALL-1: each TreeNode calls `useSubSceneChildren` (which
+ * Now each TreeNode calls `useSubSceneChildren` (which
  * routes through `useResource('PackedScene', path)`); when the loader's
  * scene cache has the path, the sub-scene's nodes render as inline
  * children of the instance row.

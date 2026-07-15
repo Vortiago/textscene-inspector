@@ -1,8 +1,8 @@
 /**
- * Regression test for WI-UX-2: viewport selection feedback.
+ * Regression test for viewport selection feedback.
  *
  * Pins the wire from `SelectionContext.selectedNodePath` →
- * `THREE.BoxHelper` attached to the canvas scene. Before WI-UX-2 the
+ * `THREE.BoxHelper` attached to the canvas scene. Before this fix the
  * tree click updated `selectedNodePath` but nothing rendered in 3D, so
  * the user could not tell which object in the viewport corresponded to
  * the row they were inspecting. See docs/archive/UX-REGRESSIONS.md §2 and

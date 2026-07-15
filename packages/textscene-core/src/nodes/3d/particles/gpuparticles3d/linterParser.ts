@@ -1,6 +1,6 @@
 /**
  * GPUParticles3D strict validators for linting.
- * Migrated to the declarative `v` namespace (WI-ARCH-1).
+ * Migrated to the declarative `v` namespace.
  *
  * `amount` keeps a bespoke validator because it has THREE branches
  * (format / non-positive / excessive). `visibility_aabb` similarly

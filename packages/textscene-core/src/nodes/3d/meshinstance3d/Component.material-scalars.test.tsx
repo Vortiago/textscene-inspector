@@ -1,5 +1,5 @@
 /**
- * Strict-verification harness (WI-R3F-9, group C) — 14 assertions covering
+ * Strict-verification harness (group C) — 14 assertions covering
  * StandardMaterial3D scalar properties (color, metallic, roughness,
  * opacity, emission, transparency, blend_mode, cull_mode).
  *
@@ -62,7 +62,7 @@ async function renderWithMaterial(
 describe('StandardMaterial3D scalars (assertions 18–31)', () => {
   it('#18 albedo_color RGB → material.color matches (sRGB → linear, WI-HALL-2)', async () => {
     const mat = await renderWithMaterial({ albedo_color: 'Color(0.5, 0.25, 0.75, 1)' });
-    // Godot encodes colors in sRGB; WI-HALL-2 converts to linear so
+    // Godot encodes colors in sRGB; we convert to linear so
     // three.js's sRGB output transform doesn't double-encode and the
     // user sees the true mid-tone (not bright-pink). Assert the
     // sRGB → linear conversion happened: 0.5 → ~0.214, 0.25 → ~0.0508,

@@ -1,5 +1,5 @@
 /**
- * WI-UX-4 (Gap 7): when a parse error is shown in the banner, the tree
+ * Gap 7: when a parse error is shown in the banner, the tree
  * pane must not present its "Loading scene…" empty state — that looks
  * like a hang. A dedicated empty-state message points the user at the
  * actionable banner instead.

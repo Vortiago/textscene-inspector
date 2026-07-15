@@ -4,7 +4,7 @@
  * Historical note: this module previously also exported `resolveGeometry`
  * and `resolveMaterial` async helpers that the imperative renderer used
  * to turn TSCN references into THREE.BufferGeometry / THREE.Material.
- * WI-R3F-6 deleted those along with the imperative path. The R3F
+ * Those were deleted along with the imperative path. The R3F
  * components resolve geometry/material synchronously inside their own
  * Component.tsx files using only the parsers from the `meshes` and
  * `materials` folders, so the runtime resolver layer is gone.

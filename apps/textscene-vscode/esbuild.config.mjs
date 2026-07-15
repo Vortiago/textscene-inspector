@@ -2,8 +2,8 @@
  * esbuild configuration for bundling the extension and webview.
  *
  * The webview build uses esbuild-css-modules-plugin so that `*.module.css`
- * files imported from `@textscene/core` (the R3F components added in
- * WI-R3F-1 onward) emit a separate CSS bundle alongside the JS bundle.
+ * files imported from `@textscene/core` (the R3F components) emit a
+ * separate CSS bundle alongside the JS bundle.
  * The webview HTML links that CSS file with the CSP nonce so it loads
  * under VS Code's restrictive content-security policy.
  */
@@ -46,7 +46,7 @@ const extensionOptions = {
   logLevel: 'info',
   // The metafile lists every input module bundled into the host — written
   // to dist/*.meta.json below so `scripts/check-bundle-size.mjs` can assert
-  // precisely that no react/three module was pulled in (#215), instead of
+  // precisely that no react/three module was pulled in, instead of
   // heuristically token-scanning the minified output.
   metafile: true,
 };
@@ -81,7 +81,7 @@ const extensionWebOptions = {
 const webviewOptions = {
   entryPoints: ['src/webview/webview.ts'],
   bundle: true,
-  // WI-R3F-18: ESM + splitting. The previous `format: 'iife'` couldn't
+  // ESM + splitting. The previous `format: 'iife'` couldn't
   // code-split, which forced every transitive import of the entry into
   // the single `webview.js` bundle — including the (large) DOM panels
   // we'd ideally lazy-load. ESM + splitting moves those panels (and
@@ -172,7 +172,7 @@ if (watch) {
   }
 
   const [extensionResult, extensionWebResult] = await Promise.all(builds);
-  // Persist the host builds' metafiles for the #215 host-bundle guard.
+  // Persist the host builds' metafiles for the host-bundle guard.
   await Promise.all([
     writeFile('dist/extension.meta.json', JSON.stringify(extensionResult.metafile)),
     writeFile('dist/extension.web.meta.json', JSON.stringify(extensionWebResult.metafile)),

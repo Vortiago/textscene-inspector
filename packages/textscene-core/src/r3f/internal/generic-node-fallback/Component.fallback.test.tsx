@@ -1,5 +1,5 @@
 /**
- * Strict-verification harness (WI-R3F-9, group K) — fallback assertions.
+ * Strict-verification harness (group K) — fallback assertions.
  *
  * Assertion 95 (userData carries nodeType/nodeName) still holds. Assertion 96
  * ("fallback is visible — non-zero placeholder mesh") is SUPERSEDED by ADR-0008:

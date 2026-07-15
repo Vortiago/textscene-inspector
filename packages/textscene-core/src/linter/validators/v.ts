@@ -2,7 +2,7 @@
  * Declarative validator namespace `v` — the thin DSL that lets each
  * node's `linterParser.ts` become a flat property → combinator map.
  *
- * WI-ARCH-1: arch-scout candidate #1. Before this file the 31
+ * Before this file the 31
  * `linterParser.ts` files totalled 9,488 LOC of near-identical
  * `parseFloat → NaN check → range check → return {ParseError shape}`.
  * Each validator now collapses to a single call site of ~30 chars.

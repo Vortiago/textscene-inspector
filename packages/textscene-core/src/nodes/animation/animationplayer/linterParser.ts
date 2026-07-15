@@ -1,6 +1,6 @@
 /**
  * AnimationPlayer strict validators for linting.
- * Migrated to the declarative `v` namespace (WI-ARCH-1).
+ * Migrated to the declarative `v` namespace.
  *
  * `speed_scale`, `autoplay`, and `root_node` keep bespoke validators
  * because they encode multi-branch business rules (zero-prohibition +

@@ -1,5 +1,5 @@
 /**
- * Sprite3D component tests (WI-R3F-13).
+ * Sprite3D component tests.
  *
  * 12 assertions covering texture loading, billboard persistence, quad
  * sizing, modulate, transparency, alpha_cut, spritesheet UV (the
