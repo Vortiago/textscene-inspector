@@ -15,7 +15,7 @@
  *   - Fixed viewport, deviceScaleFactor 1, fresh browser context.
  *   - Canvas-element screenshot only — shell DOM/font rendering never
  *     enters the image; the viewport toolbar (which floats over the canvas)
- *     is hidden per capture so only the render is compared.
+ *     is hidden for the whole capture context so only the render is compared.
  *   - Stabilization gate: a scene must produce two byte-identical
  *     consecutive captures before it is compared or accepted as a
  *     baseline. A scene that never settles FAILS as unstable; flakiness
@@ -29,7 +29,7 @@
  * On failure, <name>.actual.png and <name>.diff.png land in
  * scripts/visual/output/ (gitignored; uploaded as a CI artifact).
  */
-/* global document, HTMLElement */ // used only inside page.evaluate() callbacks, which run in the browser.
+/* global document */ // used only inside the addInitScript callback, which runs in the browser.
 
 import { spawn, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -201,16 +201,6 @@ async function captureScene(page, baseUrl, scene) {
   }
   const canvas = canvases.first();
 
-  // Keep this a pure render comparison (see header): the viewport toolbar now
-  // floats over the canvas, and Playwright's canvas.screenshot() composites any
-  // DOM painted on top of the canvas box, so an overlapping overlay would churn
-  // every 3D baseline. Hide it — we compare the rendered scene, not chrome.
-  await page.evaluate(() => {
-    const toolbar = document.querySelector('[role="toolbar"][aria-label="Viewport controls"]');
-    const overlay = toolbar?.parentElement;
-    if (overlay instanceof HTMLElement) overlay.style.display = 'none';
-  });
-
   if (scene.select) {
     // Expand the whole tree so nested nodes are reachable, then click the row.
     await page.locator('[aria-label="Expand all"]').click();
@@ -331,11 +321,26 @@ async function main() {
       viewport: VIEWPORT,
       deviceScaleFactor: 1,
     });
-    /* global window */ // the addInitScript callback below runs in the browser
+    /* global window */ // the addInitScript callbacks below run in the browser
     await context.addInitScript(
       ([key, value]) => window.localStorage.setItem(key, value),
       [SOURCE_PANE_STORAGE_KEY, JSON.stringify({ visible: false, width: 320 })]
     );
+    // Keep this a pure render comparison (see header): the viewport toolbar
+    // floats over the canvas, and canvas.screenshot() composites any DOM
+    // painted over the canvas box, so the overlay would churn every 3D
+    // baseline. Hide it once for the whole context (survives every navigation).
+    // The <style> must land in <head> once it exists — appending at
+    // document-start puts it in an invalid position that the parser drops.
+    await context.addInitScript(() => {
+      const add = () => {
+        const style = document.createElement('style');
+        style.textContent = '[data-testid="viewport-toolbar-overlay"]{display:none !important}';
+        document.head.appendChild(style);
+      };
+      if (document.head) add();
+      else document.addEventListener('DOMContentLoaded', add, { once: true });
+    });
     const page = await context.newPage();
 
     for (const scene of scenes) {

@@ -40,22 +40,6 @@ const MINIMAL_TSCN = `[gd_scene load_steps=1 format=3]
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const CSS_SOURCE = readFileSync(path.join(HERE, 'TscnPreviewShell.module.css'), 'utf8');
 
-/** Balanced-brace extraction of a single `.selector { ... }` rule body. */
-function extractRule(source: string, selector: string): string | null {
-  const re = new RegExp(`\\${selector}\\s*\\{`);
-  const match = re.exec(source);
-  if (!match) return null;
-  let depth = 1;
-  let i = match.index + match[0].length;
-  const start = i;
-  while (i < source.length && depth > 0) {
-    if (source[i] === '{') depth += 1;
-    else if (source[i] === '}') depth -= 1;
-    i += 1;
-  }
-  return depth === 0 ? source.slice(start, i - 1) : null;
-}
-
 describe('<TscnPreviewShell> viewport controls live over the viewport, not the top bar (#300)', () => {
   it('renders the viewport toolbar inside the viewport <main>, not the <header>', () => {
     const { container } = render(
@@ -74,13 +58,27 @@ describe('<TscnPreviewShell> viewport controls live over the viewport, not the t
     expect(viewport!.contains(toolbar)).toBe(true);
   });
 
+  it('marks the overlay with the stable hook the visual harness hides during capture', () => {
+    const { container } = render(
+      <TscnPreviewShell panelId="p-300-hook" content={MINIMAL_TSCN} />
+    );
+    // scripts/visual/run.mjs hides [data-testid="viewport-toolbar-overlay"] so
+    // the floating toolbar doesn't composite into canvas.screenshot(); the
+    // overlay must be that element's wrapper (which carries the panel chrome),
+    // not the inner toolbar. Removing the hook silently re-churns every golden.
+    const overlay = container.querySelector('[data-testid="viewport-toolbar-overlay"]');
+    const toolbar = container.querySelector('[role="toolbar"][aria-label="Viewport controls"]');
+    expect(overlay).toBeTruthy();
+    expect(overlay!.contains(toolbar)).toBe(true);
+  });
+
   it('anchors the viewport-toolbar overlay absolutely so it floats clear of the row', () => {
-    const rule = extractRule(CSS_SOURCE, '.viewportToolbarOverlay');
-    expect(rule).not.toBeNull();
-    // Absolute + a corner anchor + a stacking context above the canvas is what
-    // keeps the controls reachable regardless of viewport width.
-    expect(rule!).toMatch(/position:\s*absolute/);
-    expect(rule!).toMatch(/right:/);
-    expect(rule!).toMatch(/z-index:/);
+    // The rule is a flat block (no nested braces), so `[^}]*` reaches its
+    // closing brace — the idiom the sibling responsive test uses. Absolute + a
+    // corner anchor + a stacking context above the canvas is what keeps the
+    // controls reachable regardless of viewport width.
+    expect(CSS_SOURCE).toMatch(/\.viewportToolbarOverlay\s*\{[^}]*position:\s*absolute/);
+    expect(CSS_SOURCE).toMatch(/\.viewportToolbarOverlay\s*\{[^}]*right:/);
+    expect(CSS_SOURCE).toMatch(/\.viewportToolbarOverlay\s*\{[^}]*z-index:/);
   });
 });

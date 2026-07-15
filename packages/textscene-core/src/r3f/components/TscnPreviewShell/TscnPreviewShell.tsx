@@ -251,10 +251,9 @@ export function TscnPreviewShell({
         <div className={styles.columns}>
           {/* CENTER — 3D canvas or 2D overlay; takes all width left of the dock. */}
           <main className={styles.center} aria-label="Viewport">
-            {/* Viewport controls float over the viewport (top-right), not in the
-                shell header — the header row over-constrains when the source
-                pane narrows the shell and used to bury these controls (#300). */}
-            <div className={styles.viewportToolbarOverlay}>
+            {/* Floated over the viewport, not the header — see
+                .viewportToolbarOverlay in the CSS module for why (#300). */}
+            <div className={styles.viewportToolbarOverlay} data-testid="viewport-toolbar-overlay">
               <ViewportToolbar />
             </div>
             <PreviewErrorBoundary sceneGraph={sceneGraph}>
