@@ -1,24 +1,41 @@
 /**
- * Issue #221 — multi-file upload via the toolbar's file input: a scene plus
- * its resource files, selected together, should open in one gesture instead
- * of requiring the missing-resource panel's per-path upload for each file.
- * Reuses the `r3f-main.*.test.tsx` WebGL-mock pattern.
+ * Multi-file upload via the toolbar's file input and drag-and-drop.
+ * Covers the Multi-file matching contract:
+ * 1. Root-most scene pick (regardless of file order in the batch)
+ * 2. Missing-list matching (non-tscn files fulfill missing res:// rows on
+ *    repeated drops, not just the scene's direct ExtResources)
+ * 3. No-.tscn drops fulfill missing rows instead of erroring
  *
- * Under happy-dom (no WebGL) `TscnSceneContents` never mounts, so nothing
- * ever calls `useResource()` for the texture — there is no real render-side
- * signal to observe. Instead this spies on `WebResourceProvider.prototype
- * .addUploadedFile`, the exact seam `handleFilesUpload` calls through
- * (mirroring the single-path Resources-tab upload's own
- * `provider.addUploadedFile` call) — a real, non-mocked integration between
- * the file-input handler, the pure `matchResourceFiles` helper (already
+ * Spies on `WebResourceProvider.prototype.addUploadedFile` — the exact seam
+ * `handleFilesUpload` calls through — a real, non-mocked integration between
+ * the file-input handler, the pure helpers in multiFileUpload.ts (already
  * covered by co-located unit tests), and the resource pipeline.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 
+// Under happy-dom nothing mounts inside the Canvas, so no `useResource()`
+// call ever reports a missing path. Tests that need missing rows inject them
+// through this hoisted override — the Toolbar mirrors whatever
+// `useMissingResources()` returns into `missingPathsRef`, which is exactly
+// the seam `handleFilesUpload` reads.
+const missingPathsOverride = vi.hoisted(() => ({
+  current: null as ReadonlySet<string> | null,
+}));
+
 vi.mock('@textscene/core', async () => {
   const real = await vi.importActual<typeof import('@textscene/core')>('@textscene/core');
-  return { ...real, TscnCanvas: () => null, TscnSceneContents: () => null };
+  return {
+    ...real,
+    TscnCanvas: () => null,
+    TscnSceneContents: () => null,
+    useMissingResources: () => {
+      const value = real.useMissingResources();
+      return missingPathsOverride.current
+        ? { ...value, missingPaths: missingPathsOverride.current }
+        : value;
+    },
+  };
 });
 
 import { R3FApp } from './r3f-main';
@@ -34,6 +51,23 @@ const SCENE_WITH_TEXTURE = `[gd_scene load_steps=2 format=3]
 [ext_resource type="Texture2D" path="res://textures/player.png" id="1_abc"]
 
 [node name="MultiUploadRoot" type="Node3D"]
+`;
+
+// Parent scene references child.tscn and a background texture.
+const PARENT_SCENE = `[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/child.tscn" id="1_abc"]
+[ext_resource type="Texture2D" path="res://textures/bg.png" id="2_def"]
+
+[node name="ParentRoot" type="Node3D"]
+`;
+
+// Child scene referenced by the parent.
+const CHILD_SCENE = `[gd_scene load_steps=1 format=3]
+
+[ext_resource type="Texture2D" path="res://textures/child_tex.png" id="1_xyz"]
+
+[node name="ChildRoot" type="Node3D"]
 `;
 
 function resetPersistence() {
@@ -58,16 +92,24 @@ async function waitForScene(rootName = 'StubRoot') {
   });
 }
 
+function dropFiles(files: File[]) {
+  const target = screen.getByTestId('app-root');
+  fireEvent.dragEnter(target, { dataTransfer: { files, types: ['Files'] } });
+  fireEvent.dragOver(target, { dataTransfer: { files, types: ['Files'] } });
+  fireEvent.drop(target, { dataTransfer: { files, types: ['Files'] } });
+}
+
 beforeEach(() => {
   resetPersistence();
   mockFetch();
 });
 
 afterEach(() => {
+  missingPathsOverride.current = null;
   vi.restoreAllMocks();
 });
 
-describe('#221 multi-file upload via the file input', () => {
+describe('multi-file upload via the file input', () => {
   it('accepts multiple files at once', async () => {
     render(<R3FApp />);
     await waitForScene();
@@ -113,6 +155,104 @@ describe('#221 multi-file upload via the file input', () => {
     });
 
     await waitForScene('MultiUploadRoot');
+    expect(addUploadedFileSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe('root-most scene pick (acceptance criteria)', () => {
+  it('picks the parent scene regardless of drop order (reversed batch)', async () => {
+    const addUploadedFileSpy = vi.spyOn(WebResourceProvider.prototype, 'addUploadedFile');
+
+    render(<R3FApp />);
+    await waitForScene();
+
+    const parentFile = new File([PARENT_SCENE], 'parent.tscn', { type: 'text/plain' });
+    const childFile = new File([CHILD_SCENE], 'child.tscn', { type: 'text/plain' });
+    const bgTexture = new File(['bg-bytes'], 'bg.png', { type: 'image/png' });
+
+    // Drop with reversed file order: child first, then parent, then texture.
+    // The root-most pick should still choose parent.tscn because child.tscn is
+    // referenced by parent.tscn.
+    const input = screen.getByTestId('upload-tscn-input') as HTMLInputElement;
+    await act(async () => {
+      fireEvent.change(input, {
+        target: { files: [childFile, bgTexture, parentFile] },
+      });
+      await Promise.resolve();
+    });
+
+    await waitForScene('ParentRoot');
+    expect(screen.getByTestId('uploaded-tscn-label').textContent).toBe('parent.tscn');
+    // bg.png is a direct ExtResource of parent.tscn and should be uploaded.
+    expect(addUploadedFileSpy).toHaveBeenCalledWith('res://textures/bg.png', bgTexture);
+    // child.tscn is an ExtResource of parent — it should also be uploaded as a resource.
+    expect(addUploadedFileSpy).toHaveBeenCalledWith('res://scenes/child.tscn', childFile);
+  });
+});
+
+describe('no-.tscn drop fulfills missing rows', () => {
+  it('fulfills a missing row on a texture-only drop (sub-scene dependency arriving later)', async () => {
+    const addUploadedFileSpy = vi.spyOn(WebResourceProvider.prototype, 'addUploadedFile');
+
+    // The loaded scene's sub-scene reported this texture missing.
+    missingPathsOverride.current = new Set(['res://textures/child_tex.png']);
+
+    render(<R3FApp />);
+    await waitForScene();
+
+    const textureFile = new File(['bytes'], 'child_tex.png', { type: 'image/png' });
+    await act(async () => {
+      dropFiles([textureFile]);
+    });
+
+    await waitFor(() => {
+      expect(addUploadedFileSpy).toHaveBeenCalledWith('res://textures/child_tex.png', textureFile);
+    });
+    // Fulfilled, not errored — and the active scene is untouched.
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByText('StubRoot')).toBeTruthy();
+  });
+
+  it('surfaces the no-match error when dropping a texture with no missing rows', async () => {
+    render(<R3FApp />);
+    await waitForScene();
+
+    // Drop a texture with no .tscn and no missing rows yet — should error.
+    const textureFile = new File(['bytes'], 'player.png', { type: 'image/png' });
+    await act(async () => {
+      dropFiles([textureFile]);
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByRole('alert')).toBeTruthy();
+    });
+    // The previously-loaded scene must still be showing (hold last valid).
+    expect(screen.queryByText('StubRoot')).toBeTruthy();
+  });
+
+  it('repeated texture-only drop surfaces no-match error when nothing matches missing list', async () => {
+    const addUploadedFileSpy = vi.spyOn(WebResourceProvider.prototype, 'addUploadedFile');
+
+    render(<R3FApp />);
+    await waitForScene();
+
+    // First: load a scene with a texture so there are missing rows.
+    const sceneFile = new File([SCENE_WITH_TEXTURE], 'with-texture.tscn', { type: 'text/plain' });
+    const input = screen.getByTestId('upload-tscn-input') as HTMLInputElement;
+    await act(async () => {
+      fireEvent.change(input, { target: { files: [sceneFile] } });
+      await Promise.resolve();
+    });
+    await waitForScene('MultiUploadRoot');
+
+    // Now drop an unrelated texture (not player.png) — should error since nothing matches.
+    await act(async () => {
+      dropFiles([new File(['bytes'], 'unrelated.png', { type: 'image/png' })]);
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByRole('alert')).toBeTruthy();
+    });
     expect(addUploadedFileSpy).not.toHaveBeenCalled();
   });
 });
