@@ -17,7 +17,7 @@ catalog:
   rimraf: ^6.0.1
   '@vitest/ui': ^4.1
   '@types/node': ^22.10.5
-  vite: ^6.0.7
+  vite: ^8.1.5
   esbuild: ^0.24.2
   happy-dom: ^20.0.10
   jsdom: ^29
