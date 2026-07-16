@@ -138,7 +138,7 @@ export function parseStandardMaterial3DScalars(
 
   const clearcoatEnabled = properties['clearcoat_enabled'] === 'true';
   const clearcoat = clearcoatEnabled
-    ? clamp01(numericOr(properties['clearcoat'], 1))
+    ? clamp01(numericOr(properties['clearcoat'], DEFAULT_SCALARS.clearcoat))
     : 0;
   const clearcoatRoughness = clearcoatEnabled
     ? clamp01(numericOr(properties['clearcoat_roughness'], 0.5))
