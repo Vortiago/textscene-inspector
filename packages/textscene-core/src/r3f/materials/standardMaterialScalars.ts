@@ -63,6 +63,10 @@ export interface StandardMaterial3DScalars {
    * True when EITHER flag is set.
    */
   triplanar: boolean;
+  /** Godot `clearcoat` strength (0..1), gated on `clearcoat_enabled`. */
+  clearcoat: number;
+  /** Godot `clearcoat_roughness` (0..1), gated on `clearcoat_enabled`. */
+  clearcoatRoughness: number;
 }
 
 const DEFAULT_SCALARS: StandardMaterial3DScalars = {
@@ -85,6 +89,8 @@ const DEFAULT_SCALARS: StandardMaterial3DScalars = {
   cullModeExplicit: false,
   normalScale: { x: 1, y: 1 },
   triplanar: false,
+  clearcoat: 0,
+  clearcoatRoughness: 0,
 };
 
 export function parseStandardMaterial3DScalars(
@@ -129,6 +135,14 @@ export function parseStandardMaterial3DScalars(
 
   const triplanar =
     properties['uv1_triplanar'] === 'true' || properties['uv1_world_triplanar'] === 'true';
+
+  const clearcoatEnabled = properties['clearcoat_enabled'] === 'true';
+  const clearcoat = clearcoatEnabled
+    ? clamp01(numericOr(properties['clearcoat'], 1))
+    : 0;
+  const clearcoatRoughness = clearcoatEnabled
+    ? clamp01(numericOr(properties['clearcoat_roughness'], 0.5))
+    : 0;
 
   // Godot encodes colors in sRGB. three.js's `<meshStandardMaterial color={...}>`
   // prop treats incoming values as **linear** RGB. Without converting,
@@ -186,6 +200,8 @@ export function parseStandardMaterial3DScalars(
     cullModeExplicit,
     normalScale,
     triplanar,
+    clearcoat,
+    clearcoatRoughness,
   };
 }
 
