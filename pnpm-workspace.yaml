@@ -46,4 +46,4 @@ catalog:
   '@testing-library/user-event': ^14.6.1
 
   # ESLint plugins
-  eslint-plugin-react-hooks: ^5.2
+  eslint-plugin-react-hooks: ^7.1
