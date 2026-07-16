@@ -110,7 +110,7 @@ const uploadResult = await mcp__chrome_devtools__evaluate_script({
 // Upload file using Chrome DevTools MCP
 await mcp__chrome_devtools__upload_file({
   uid: uploadResult.uid, // Or find the input element
-  filePath: 'D:/CodeRepos/Text-Scene-.tscn-File-Previewer/test-assets/test-upload.png'
+  filePath: '<repo-root>/test-assets/test-upload.png'
 });
 ```
 
@@ -213,7 +213,7 @@ const missingState = await mcp__chrome_devtools__evaluate_script({
 // Upload albedo texture
 await mcp__chrome_devtools__upload_file({
   uid: 'albedo-upload-input',
-  filePath: 'D:/CodeRepos/Text-Scene-.tscn-File-Previewer/test-assets/albedo.png'
+  filePath: '<repo-root>/test-assets/albedo.png'
 });
 
 await new Promise(resolve => setTimeout(resolve, 500));
@@ -221,7 +221,7 @@ await new Promise(resolve => setTimeout(resolve, 500));
 // Upload normal texture
 await mcp__chrome_devtools__upload_file({
   uid: 'normal-upload-input',
-  filePath: 'D:/CodeRepos/Text-Scene-.tscn-File-Previewer/test-assets/normal.png'
+  filePath: '<repo-root>/test-assets/normal.png'
 });
 
 await new Promise(resolve => setTimeout(resolve, 500));
@@ -236,7 +236,7 @@ await mcp__chrome_devtools__take_screenshot({
 ```javascript
 await mcp__chrome_devtools__upload_file({
   uid: 'material-upload-input',
-  filePath: 'D:/CodeRepos/Text-Scene-.tscn-File-Previewer/scenes/fixtures/materials/test.tres'
+  filePath: '<repo-root>/scenes/fixtures/materials/test.tres'
 });
 
 await new Promise(resolve => setTimeout(resolve, 1000));
@@ -322,7 +322,7 @@ const treeState = await mcp__chrome_devtools__evaluate_script({
 ```javascript
 await mcp__chrome_devtools__upload_file({
   uid: 'external-scene-upload-input',
-  filePath: 'D:/CodeRepos/Text-Scene-.tscn-File-Previewer/scenes/fixtures/subscenes/child.tscn'
+  filePath: '<repo-root>/scenes/fixtures/subscenes/child.tscn'
 });
 
 await new Promise(resolve => setTimeout(resolve, 1000));
@@ -393,7 +393,7 @@ const beforeCount = (await mcp__chrome_devtools__list_console_messages({ types: 
 ```javascript
 await mcp__chrome_devtools__upload_file({
   uid: 'shared-texture-upload-input',
-  filePath: 'D:/CodeRepos/Text-Scene-.tscn-File-Previewer/test-assets/shared.png'
+  filePath: '<repo-root>/test-assets/shared.png'
 });
 
 await new Promise(resolve => setTimeout(resolve, 1000));

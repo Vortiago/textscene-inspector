@@ -11,8 +11,8 @@ export class WebResourceProvider implements ResourceProvider {
   private uploadedFiles: Map<string, File> = new Map();
   /**
    * Public-fixtures subtree the active scene's res:// namespace maps onto.
-   * '' = the fixtures root (unit fixtures, examples, ld-58, isometric);
-   * vendored demo projects each set their own root (e.g.
+   * '' = the fixtures root (unit fixtures, examples, the flattened isometric
+   * corpus); vendored demo projects each set their own root (e.g.
    * 'demos/2d/platformer') so their res:// paths cannot collide.
    */
   private resourceRoot = '';

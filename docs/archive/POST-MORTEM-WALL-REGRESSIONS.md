@@ -1,4 +1,4 @@
-# Post-mortem: how the LD-58 hallway wall regressions stayed hidden
+# Post-mortem: how the hallway-fixture wall regressions stayed hidden
 
 Date: 2026-05-28
 Branches involved: `feat/r3f-16-audio-animation` (integration tip), `main` (proven-working reference), various R3F-migration WI branches between them.
@@ -29,7 +29,7 @@ Independently, the `decomposeTransform3D` implementation regressed at the same t
 
 ### R2 (DoubleSide override): commit `67c199b` "WI-HALL-6: PlaneMesh defaults to DoubleSide when cull_mode unset"
 
-WI-HALL-6 was a real fix for a real problem: the LD-58 hallway's `Canvas` photo planes are rotated 90° around Y and would be back-culled into invisibility under Godot's BACK culling default. The author shipped a defensive override:
+WI-HALL-6 was a real fix for a real problem: the hallway fixture's `Canvas` photo planes are rotated 90° around Y and would be back-culled into invisibility under Godot's BACK culling default. The author shipped a defensive override:
 
 ```ts
 const effectiveSide =
@@ -38,9 +38,9 @@ const effectiveSide =
     : scalars.side;
 ```
 
-But every wall in `WallSection.tscn` is also a PlaneMesh, and its `StandardMaterial3D_mt8pv` follows Godot's omit-the-default convention — no explicit `cull_mode`. So every wall in the hallway was silently double-sided too, breaking the "can't see in from outside" semantic.
+But every wall in the fixture's wall sub-scene is also a PlaneMesh, and its `StandardMaterial3D_mt8pv` follows Godot's omit-the-default convention — no explicit `cull_mode`. So every wall in the hallway was silently double-sided too, breaking the "can't see in from outside" semantic.
 
-The correct fix is narrower: respect Godot's `cull_mode` default verbatim, and require Canvas planes to specify `cull_mode = 2` in their source material if they need DoubleSide (which, on inspection, the LD-58 Canvas materials do).
+The correct fix is narrower: respect Godot's `cull_mode` default verbatim, and require Canvas planes to specify `cull_mode = 2` in their source material if they need DoubleSide (which, on inspection, the fixture's Canvas materials do).
 
 ## Root causes — process failures that hid both bugs
 
@@ -65,7 +65,7 @@ This is the textbook anti-pattern of "the test fails, so the test must be wrong.
 
 ### P3: Verifier methodology bias toward "renders without errors" over numerical truth
 
-Through this incident, `ld58-verifier-3` produced multiple verdicts on the matrix fix:
+Through this incident, `hallway-verifier-3` produced multiple verdicts on the matrix fix:
 
 - First verdict (on the actual fix at `99c1479`): "FAIL — regression from 0a60e63".
 - Second verdict (after numerical probe): "transform math is provably identical between 99c1479 and 0a60e63".
@@ -90,8 +90,8 @@ This is dispatch-discipline drift: forming a conclusion, then continuing to defe
 
 | Bug | Fix commit / change | Regression test added |
 |---|---|---|
-| R1 matrix transpose | `99c1479` swaps `m.set()` args to row-major | `src/utils/transform.test.ts` (restored 401f8f5 assertions), `src/utils/endwall-probe.test.ts`, `src/r3f/NodeDispatcher.instance.test.tsx` nested-instance test, `src/utils/ld58-wall-regression.test.ts` (LD-58 specific) |
-| R2 DoubleSide override | `MaterialSlot.effectiveSide = scalars.side` (revert of WI-HALL-6's PlaneMesh override) | `src/r3f/nodes/meshinstance3d/Component.planemesh-side.test.tsx` LD-58-wall-shaped regression test |
+| R1 matrix transpose | `99c1479` swaps `m.set()` args to row-major | `src/utils/transform.test.ts` (restored 401f8f5 assertions), `src/utils/endwall-probe.test.ts`, `src/r3f/NodeDispatcher.instance.test.tsx` nested-instance test, `src/utils/wall-transform-regression.test.ts` (hallway-fixture specific) |
+| R2 DoubleSide override | `MaterialSlot.effectiveSide = scalars.side` (revert of WI-HALL-6's PlaneMesh override) | `src/r3f/nodes/meshinstance3d/Component.planemesh-side.test.tsx` — a hallway-fixture-wall-shaped regression test |
 
 ## Process changes to prevent recurrence
 

@@ -101,6 +101,9 @@ importers:
       '@vitest/ui':
         specifier: 'catalog:'
         version: 4.1.6(vitest@4.1.6)
+      '@vscode/test-electron':
+        specifier: ^2.5.2
+        version: 2.5.2
       eslint:
         specifier: ^9.18.0
         version: 9.38.0

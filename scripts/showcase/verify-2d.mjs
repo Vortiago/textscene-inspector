@@ -1,5 +1,5 @@
 /**
- * 2D-overlay visual verification harness. For each ld-58 UI fixture: open it via
+ * 2D-overlay visual verification harness. For each 2D-UI fixture: open it via
  * the ?fixture= deep-link (loads in 3D), click the ViewportToolbar "2D" button to
  * mount the Control overlay, then screenshot + report objective stats (rendered
  * control count, unregistered-fallback count, distinct types, console errors).
@@ -12,32 +12,23 @@
 
 /* global document */ // the page.evaluate callback below runs in the browser
 
-import { chromium } from 'playwright';
+import { launchShowcaseBrowser } from './browser.mjs';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const OUT = process.env.VERIFY_OUT || 'docs/showcase/verify';
 const BASE = process.env.SHOWCASE_URL || 'http://localhost:4173';
 
-// [screenshot-name, fixture file (res://-relative, as listed in fixtures.ts)]
+// [screenshot-name, fixture file (as listed in fixtures.ts)]
 const TARGETS = [
-  ['startscreen', 'Scenes/StartScreen/StartScreen.tscn'],
-  ['gameui', 'Scenes/GameUI/GameUI.tscn'],
-  ['dialogsystem', 'Scenes/DialogSystem/DialogSystem.tscn'],
-  ['aboutdialog', 'Scenes/AboutDialog/AboutDialog.tscn'],
-  ['endgamedialog', 'Scenes/EndGameDialog/EndGameDialog.tscn'],
-  ['cluecontainer', 'ClueContainer.tscn'],
-  ['clueitem', 'ClueItem.tscn'],
+  ['ui-dialog', 'example-ui-dialog.tscn'],
+  ['control-containers', 'unit-control-containers.tscn'],
   ['bbcode', 'unit-rich-text-label.tscn'],
 ];
 
 mkdirSync(OUT, { recursive: true });
 
-const browser = await chromium.launch({
-  channel: 'chrome',
-  headless: true,
-  args: ['--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--use-gl=angle'],
-});
+const browser = await launchShowcaseBrowser();
 const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 });
 
 const results = [];

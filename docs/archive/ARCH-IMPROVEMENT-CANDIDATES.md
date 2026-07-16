@@ -127,8 +127,8 @@ resource-reference parsing into one utils module".
 graph, but **sub-scene children only exist after `useSubSceneChildren` resolves
 inside each `TreeNode`**. So the expand-all walker can't see them at all —
 the data lives in `ResourceLoader.scenes` cache, not in the parsed
-`sceneGraph`. ld58-verifier flagged this as polish item #5 in
-`docs/archive/HALLWAY-END-TO-END.md:250`.
+`sceneGraph`. The hallway-verifier flagged this as polish item #5 during the
+hallway-fixture end-to-end verification pass.
 
 **Architectural read**: this is not just a UI bug; it's the **shape mismatch
 between "what the tree shows" and "what the data layer carries"**. The tree
@@ -149,7 +149,7 @@ Two ways to fix:
    React tree imperatively (querySelectorAll on the rendered tree). Cheap but
    couples to the DOM.
 
-**Why LOW**: ld58-verifier classified this as polish; the user can click each
+**Why LOW**: the hallway-verifier classified this as polish; the user can click each
 row manually. The underlying smell (data-vs-view mismatch) is real but small.
 The right time to act is when search-inside-subscenes or export-tree becomes
 a feature — that's the second leg that turns this into a Rule-of-Three trigger.
@@ -226,7 +226,7 @@ attach a BoxHelper to an empty group — the BoxHelper computes a zero-size
 bounding box. The user sees no visible highlight outline around the actual
 GLB geometry.
 
-This was NOT flagged by ld58-verifier (their `BoxHelper-on-GLBSceneRoot`
+This was NOT flagged by the hallway-verifier (their `BoxHelper-on-GLBSceneRoot`
 visual check wasn't part of the strict-checklist for hallway). It might
 already be a latent UX defect, OR `THREE.BoxHelper` may automatically descend
 into children when computing the box (worth verifying — THREE's docs say
@@ -278,8 +278,8 @@ MEDIUM/HIGH because:
 - The two sRGB implementations behave identically (NEW-1).
 - The two `resolveInstancePath` copies are a 12-line literal duplication, no
   behavioural risk (NEW-2).
-- Expand-all-missing-subscenes is a polish item, classified by the ld58
-  verifier as such (NEW-3).
+- Expand-all-missing-subscenes is a polish item, classified by the
+  hallway-verifier as such (NEW-3).
 - GLB-as-scene synthesis is single-use and cleanly bounded (NEW-4 — watch only).
 - The BoxHelper-on-GLBSceneRoot concern needs verification before
   classification (NEW-5).

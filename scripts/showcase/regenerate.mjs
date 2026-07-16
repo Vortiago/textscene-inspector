@@ -63,6 +63,8 @@ try {
 
   const names = Object.keys(scenarios);
   console.log(`[regenerate] recording ${names.length} scenarios…`);
+  // One broken scenario must not abort the sweep — record the rest, fail at the end.
+  const failures = [];
   for (const name of names) {
     const scenario = scenarios[name];
     const file = fileForLabel(scenario.label);
@@ -70,13 +72,18 @@ try {
       console.warn(`[regenerate] skip "${name}": no fixture for label "${scenario.label}"`);
       continue;
     }
-    await recordShowcase(name, file, scenario.run);
+    try {
+      await recordShowcase(name, file, scenario.run);
+    } catch (err) {
+      console.error(`[regenerate] ✗ ${name}: ${String(err.message).split('\n')[0]}`);
+      failures.push(name);
+    }
   }
-
   // 2D-overlay verification screenshots + stats (its own browser/process).
   console.log('[regenerate] capturing 2D overlay screenshots…');
   await spawnNode(['scripts/showcase/verify-2d.mjs'], { ...process.env, SHOWCASE_URL: baseUrl });
 
+  if (failures.length) throw new Error(`${failures.length} scenario(s) failed: ${failures.join(', ')}`);
   console.log('[regenerate] ✅ clips + screenshots regenerated');
 } catch (err) {
   console.error('[regenerate] failed:', err.message);

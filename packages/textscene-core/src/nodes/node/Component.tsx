@@ -5,12 +5,12 @@
  * Pre-fix the component dropped the transform entirely. The
  * `Node` fallback type is what `parseNodeWithRegistry` assigns to any
  * TSCN node that has no explicit `type` attribute — including
- * instance-only nodes like `[node name="LetterOpener"
+ * instance-only nodes like `[node name="Crate"
  * parent="..." instance=ExtResource("...")]`. In Godot those instance
  * nodes still carry a `transform = Transform3D(...)` property, and
  * the parsed node's `properties.transform` slot DOES get populated by
  * the base `parseNode`. But because the R3F component ignored
- * `properties.transform`, the LetterOpener evidence node — which has
+ * `properties.transform`, the Crate instance node — which has
  * a uniform 0.025 scale baked into its transform basis — rendered
  * its underlying GLB at full size (~40× too big in the hallway
  * fixture).

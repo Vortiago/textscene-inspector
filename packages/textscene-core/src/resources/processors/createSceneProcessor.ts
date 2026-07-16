@@ -82,9 +82,9 @@ export function createSceneProcessor({
       const content = await provider.loadResource(metadata.path, metadata.type);
 
       // PackedScene references in Godot can point at either
-      // a `.tscn` text file or a `.glb` / `.gltf` binary file (the
-      // hallway fixture references both kinds — see PortraitFrame2.glb
-      // / doormesh.glb / grandfatherclock.glb). The host provider
+      // a `.tscn` text file or a `.glb` / `.gltf` binary file (a
+      // single scene can reference both kinds — e.g. props/chest.glb
+      // / props/lamp.glb / props/clock.glb). The host provider
       // correctly returns text for one and ArrayBuffer for the other;
       // branch on the registered path's extension to decide how to
       // materialise the result as a TscnScene.

@@ -13,7 +13,7 @@ import {
 
 describe('isIncompleteValue', () => {
   it('flags an open string', () => {
-    expect(isIncompleteValue('"Inspector Crawford')).toBe(true);
+    expect(isIncompleteValue('"Field Notes')).toBe(true);
     expect(isIncompleteValue('"closed"')).toBe(false);
   });
   it('flags a value with more open brackets than close (spans more lines)', () => {

@@ -1,8 +1,8 @@
 /**
  * <CSGBox3D> — renders a Godot CSGBox3D as a solid box primitive.
  *
- * For ld-58 the ADR-0004 base-primitive rendering is exact (every CSG node
- * uses the default union). Scaffold lives in the shared <CsgPrimitive>.
+ * For the vendored corpus the ADR-0004 base-primitive rendering is exact (every
+ * CSG node uses the default union). Scaffold lives in the shared <CsgPrimitive>.
  */
 
 import type { CSGBox3DProperties } from './types';

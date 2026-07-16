@@ -1,181 +1,62 @@
 [
   {
-    "name": "startscreen",
-    "file": "Scenes/StartScreen/StartScreen.tscn",
+    "name": "ui-dialog",
+    "file": "example-ui-dialog.tscn",
     "switched": true,
     "overlay": true,
-    "controls": 11,
-    "fallbacks": 0,
+    "controls": 15,
+    "fallbacks": 1,
     "types": [
       "Button",
       "CanvasLayer",
       "CenterContainer",
-      "Control",
-      "Label",
-      "MarginContainer",
-      "Node",
-      "Panel",
-      "PanelContainer",
-      "VBoxContainer"
-    ],
-    "textSample": [
-      "Inspector Crawford\nand the Hallway Murde",
-      "Inspector Crawford\nand the Hallway Murde",
-      "Inspector Crawford\nand the Hallway Murde",
-      "Inspector Crawford\nand the Hallway Murde",
-      "Inspector Crawford\nand the Hallway Murde",
-      "Inspector Crawford\nand the Hallway Murde"
-    ],
-    "errors": []
-  },
-  {
-    "name": "gameui",
-    "file": "Scenes/GameUI/GameUI.tscn",
-    "switched": true,
-    "overlay": true,
-    "controls": 4,
-    "fallbacks": 0,
-    "types": [
-      "Button",
-      "CanvasLayer",
-      "HBoxContainer"
-    ],
-    "textSample": [
-      "CluesSolve Mystery",
-      "CluesSolve Mystery",
-      "Clues",
-      "Solve Mystery"
-    ],
-    "errors": []
-  },
-  {
-    "name": "dialogsystem",
-    "file": "Scenes/DialogSystem/DialogSystem.tscn",
-    "switched": true,
-    "overlay": true,
-    "controls": 18,
-    "fallbacks": 1,
-    "types": [
-      "Button",
-      "CanvasLayer",
       "ColorRect",
-      "Control",
       "HBoxContainer",
       "Label",
       "MarginContainer",
-      "Panel",
+      "Node",
+      "PanelContainer",
       "RichTextLabel",
       "TextureRect",
       "VBoxContainer"
     ],
-    "textSample": [],
-    "errors": []
-  },
-  {
-    "name": "aboutdialog",
-    "file": "Scenes/AboutDialog/AboutDialog.tscn",
-    "switched": true,
-    "overlay": true,
-    "controls": 9,
-    "fallbacks": 0,
-    "types": [
-      "Button",
-      "ColorRect",
-      "HBoxContainer",
-      "Label",
-      "MarginContainer",
-      "PanelContainer",
-      "RichTextLabel",
-      "ScrollContainer",
-      "VBoxContainer"
-    ],
     "textSample": [
-      "AboutX",
-      "AboutX",
-      "AboutX",
-      "AboutX",
-      "About",
-      "X"
+      "Field JournalDay 12. The northern trail ",
+      "Field JournalDay 12. The northern trail ",
+      "Field JournalDay 12. The northern trail ",
+      "Field JournalDay 12. The northern trail ",
+      "Field JournalDay 12. The northern trail ",
+      "Field Journal"
     ],
     "errors": []
   },
   {
-    "name": "endgamedialog",
-    "file": "Scenes/EndGameDialog/EndGameDialog.tscn",
+    "name": "control-containers",
+    "file": "unit-control-containers.tscn",
     "switched": true,
     "overlay": true,
-    "controls": 29,
+    "controls": 15,
     "fallbacks": 0,
     "types": [
-      "Button",
+      "CenterContainer",
       "ColorRect",
-      "HBoxContainer",
-      "Label",
-      "MarginContainer",
-      "PanelContainer",
-      "VBoxContainer"
-    ],
-    "textSample": [
-      "Solve the MysteryXWho committed the murd",
-      "Solve the MysteryXWho committed the murd",
-      "Solve the MysteryXWho committed the murd",
-      "Solve the MysteryX",
-      "Solve the Mystery",
-      "X"
-    ],
-    "errors": []
-  },
-  {
-    "name": "cluecontainer",
-    "file": "ClueContainer.tscn",
-    "switched": true,
-    "overlay": true,
-    "controls": 8,
-    "fallbacks": 0,
-    "types": [
-      "Button",
-      "ColorRect",
+      "Control",
       "GridContainer",
       "HBoxContainer",
       "Label",
       "MarginContainer",
+      "Panel",
       "PanelContainer",
+      "ScrollContainer",
       "VBoxContainer"
     ],
     "textSample": [
-      "CluesX",
-      "CluesX",
-      "CluesX",
-      "CluesX",
-      "Clues",
-      "X"
-    ],
-    "errors": []
-  },
-  {
-    "name": "clueitem",
-    "file": "ClueItem.tscn",
-    "switched": true,
-    "overlay": true,
-    "controls": 10,
-    "fallbacks": 1,
-    "types": [
-      "Button",
-      "ColorRect",
-      "HBoxContainer",
-      "Label",
-      "MarginContainer",
-      "PanelContainer",
-      "TextureRect",
-      "VBoxContainer"
-    ],
-    "textSample": [
-      "Clue NameXLorem ipsum dolor sit amet, co",
-      "Clue NameXLorem ipsum dolor sit amet, co",
-      "Clue NameXLorem ipsum dolor sit amet, co",
-      "Clue NameXLorem ipsum dolor sit amet, co",
-      "Clue NameX",
-      "Clue Name"
+      "NameAda ByronRoleAnalystAmber",
+      "NameAda ByronRoleAnalystAmber",
+      "NameAda ByronRoleAnalystAmber",
+      "NameAda ByronRoleAnalyst",
+      "NameAda ByronRoleAnalyst",
+      "NameAda ByronRoleAnalyst"
     ],
     "errors": []
   },

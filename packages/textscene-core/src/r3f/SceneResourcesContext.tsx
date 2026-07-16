@@ -52,8 +52,8 @@ export function SceneResourcesProvider({
   //
   // Why inherit: an instanced sub-scene COLLAPSES into its instance node
   // (Instance root merge, ADR-0013) and re-dispatches under this provider.
-  // Children the HOST added under that instance node (e.g. the Hallway's
-  // `roof_lamp`/`Door` instances parented to a `HallwayGeometry` instance)
+  // Children the HOST added under that instance node (e.g. a room's
+  // `ceiling_lamp`/`Door` instances parented to a `RoomGeometry` instance)
   // carry HOST `ExtResource` ids; without inheritance they'd resolve against
   // the sub-scene's pool and fail to load. A node only ever references ids
   // from its own scene, so the fallback is exercised only by such host-scoped

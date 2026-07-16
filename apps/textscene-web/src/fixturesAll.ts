@@ -1,11 +1,13 @@
 /**
  * The full fixture set the previewer renders: the committed base manifest
- * (./fixtures, generated) PLUS the on-demand open-source games corpus
- * (./fixtures.games, gitignored — written by `pnpm vendor:games`).
+ * (./fixtures, generated) PLUS two on-demand, gitignored corpora — the
+ * open-source games (./fixtures.games, written by `pnpm vendor:games`) and the
+ * optional author-only ld-58 project (./fixtures.ld58, vendored via
+ * `pnpm vendor:ld58`).
  *
- * The games are fetched on demand, not committed, so the games manifest may not
- * exist. `import.meta.glob` resolves to an empty set when the file is absent
- * (fresh clone / CI), so the app simply shows no games until they're vendored —
+ * Both are fetched on demand, not committed, so their manifests may not exist.
+ * `import.meta.glob` resolves to an empty set when a file is absent (fresh clone
+ * / CI), so the app simply shows no games / no ld-58 until they're vendored —
  * no drift in the committed manifest, no broken imports.
  *
  * Runtime consumers import `fixtures` from HERE; the generated `./fixtures`
@@ -19,4 +21,9 @@ const gameModules = import.meta.glob<{ gameFixtures?: Fixture[] }>('./fixtures.g
 });
 const gameFixtures: Fixture[] = Object.values(gameModules).flatMap((m) => m.gameFixtures ?? []);
 
-export const fixtures: Fixture[] = [...baseFixtures, ...gameFixtures];
+const ld58Modules = import.meta.glob<{ ld58Fixtures?: Fixture[] }>('./fixtures.ld58.ts', {
+  eager: true,
+});
+const ld58Fixtures: Fixture[] = Object.values(ld58Modules).flatMap((m) => m.ld58Fixtures ?? []);
+
+export const fixtures: Fixture[] = [...baseFixtures, ...gameFixtures, ...ld58Fixtures];

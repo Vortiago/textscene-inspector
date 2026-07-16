@@ -513,6 +513,11 @@ export const fixtures: Fixture[] = [
     "category": "Examples - Complex Scenes"
   },
   {
+    "name": "Ui Dialog",
+    "file": "example-ui-dialog.tscn",
+    "category": "Examples - Complex Scenes"
+  },
+  {
     "name": "All Meshes",
     "file": "integration-all-meshes.tscn",
     "category": "Examples - Complex Scenes"
@@ -690,6 +695,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Control Anchors Theme",
     "file": "unit-control-anchors-theme.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Control Containers",
+    "file": "unit-control-containers.tscn",
     "category": "Unit - 2D UI Controls"
   },
   {
@@ -916,201 +926,6 @@ export const fixtures: Fixture[] = [
     "name": "Navigation Region 3d",
     "file": "unit-navigation-region-3d.tscn",
     "category": "Unit - Navigation"
-  },
-  {
-    "name": "Clue Container",
-    "file": "ClueContainer.tscn",
-    "category": "Examples - ld-58 Scenes"
-  },
-  {
-    "name": "Clue Item",
-    "file": "ClueItem.tscn",
-    "category": "Examples - ld-58 Scenes"
-  },
-  {
-    "name": "Hallway Geometry",
-    "file": "HallwayGeometry.tscn",
-    "category": "Examples - ld-58 Scenes"
-  },
-  {
-    "name": "About Dialog",
-    "file": "Scenes/AboutDialog/AboutDialog.tscn",
-    "category": "Examples - ld-58 Scenes"
-  },
-  {
-    "name": "Dialog System",
-    "file": "Scenes/DialogSystem/DialogSystem.tscn",
-    "category": "Examples - ld-58 Scenes"
-  },
-  {
-    "name": "End Game Dialog",
-    "file": "Scenes/EndGameDialog/EndGameDialog.tscn",
-    "category": "Examples - ld-58 Scenes"
-  },
-  {
-    "name": "Dropped Ledger",
-    "file": "Scenes/Evidence/DroppedLedger/DroppedLedger.tscn",
-    "category": "Examples - ld-58 Scenes"
-  },
-  {
-    "name": "Handkerchief",
-    "file": "Scenes/Evidence/Handkerchief/Handkerchief.tscn",
-    "category": "Examples - ld-58 Scenes"
-  },
-  {
-    "name": "Handkerchief Model",
-    "file": "Scenes/Evidence/Handkerchief/HandkerchiefModel.tscn",
-    "category": "Examples - ld-58 Scenes"
-  },
-  {
-    "name": "Letter Opener",
-    "file": "Scenes/Evidence/LetterOpener/LetterOpener.tscn",
-    "category": "Examples - ld-58 Scenes"
-  },
-  {
-    "name": "Game UI",
-    "file": "Scenes/GameUI/GameUI.tscn",
-    "category": "Examples - ld-58 Scenes"
-  },
-  {
-    "name": "Hallway",
-    "file": "Scenes/Hallway/Hallway.tscn",
-    "category": "Examples - ld-58 Scenes"
-  },
-  {
-    "name": "Boat",
-    "file": "Scenes/PhotoFrame/Boat/Boat.tscn",
-    "category": "Examples - ld-58 Scenes"
-  },
-  {
-    "name": "Books",
-    "file": "Scenes/PhotoFrame/Books/Books.tscn",
-    "category": "Examples - ld-58 Scenes"
-  },
-  {
-    "name": "Car",
-    "file": "Scenes/PhotoFrame/Car/Car.tscn",
-    "category": "Examples - ld-58 Scenes"
-  },
-  {
-    "name": "Cat",
-    "file": "Scenes/PhotoFrame/Cat/Cat.tscn",
-    "category": "Examples - ld-58 Scenes"
-  },
-  {
-    "name": "Clock",
-    "file": "Scenes/PhotoFrame/Clock/Clock.tscn",
-    "category": "Examples - ld-58 Scenes"
-  },
-  {
-    "name": "Dog",
-    "file": "Scenes/PhotoFrame/Dog/Dog.tscn",
-    "category": "Examples - ld-58 Scenes"
-  },
-  {
-    "name": "Dr Henry Morrison",
-    "file": "Scenes/PhotoFrame/DrHenryMorrison/DrHenryMorrison.tscn",
-    "category": "Examples - ld-58 Scenes"
-  },
-  {
-    "name": "Eleanor Heartwell",
-    "file": "Scenes/PhotoFrame/EleanorHartwell/EleanorHeartwell.tscn",
-    "category": "Examples - ld-58 Scenes"
-  },
-  {
-    "name": "Flowers",
-    "file": "Scenes/PhotoFrame/Flowers/Flowers.tscn",
-    "category": "Examples - ld-58 Scenes"
-  },
-  {
-    "name": "House Keeper",
-    "file": "Scenes/PhotoFrame/HouseKeeper/HouseKeeper.tscn",
-    "category": "Examples - ld-58 Scenes"
-  },
-  {
-    "name": "Inspector Crawford",
-    "file": "Scenes/PhotoFrame/InspectorCrawford/InspectorCrawford.tscn",
-    "category": "Examples - ld-58 Scenes"
-  },
-  {
-    "name": "Lady Blackwood",
-    "file": "Scenes/PhotoFrame/LadyBlackwood/LadyBlackwood.tscn",
-    "category": "Examples - ld-58 Scenes"
-  },
-  {
-    "name": "Young Tim Blackwood",
-    "file": "Scenes/PhotoFrame/YoungTimBlackwood/YoungTimBlackwood.tscn",
-    "category": "Examples - ld-58 Scenes"
-  },
-  {
-    "name": "Start Screen",
-    "file": "Scenes/StartScreen/StartScreen.tscn",
-    "category": "Examples - ld-58 Scenes"
-  },
-  {
-    "name": "Doormesh",
-    "file": "assets/doormesh.tscn",
-    "category": "Examples - ld-58 Scenes"
-  },
-  {
-    "name": "Grandfatherclock",
-    "file": "assets/grandfatherclock.tscn",
-    "category": "Examples - ld-58 Scenes"
-  },
-  {
-    "name": "Victorian 1",
-    "file": "assets/picture_frames_lib/victorian_1.tscn",
-    "category": "Examples - ld-58 Scenes"
-  },
-  {
-    "name": "Victorian 2",
-    "file": "assets/picture_frames_lib/victorian_2.tscn",
-    "category": "Examples - ld-58 Scenes"
-  },
-  {
-    "name": "Victorian 3",
-    "file": "assets/picture_frames_lib/victorian_3.tscn",
-    "category": "Examples - ld-58 Scenes"
-  },
-  {
-    "name": "Victorian 5",
-    "file": "assets/picture_frames_lib/victorian_5.tscn",
-    "category": "Examples - ld-58 Scenes"
-  },
-  {
-    "name": "Roof Lamp",
-    "file": "assets/roof_lamp.tscn",
-    "category": "Examples - ld-58 Scenes"
-  },
-  {
-    "name": "Corner Column",
-    "file": "components/CornerColumn.tscn",
-    "category": "Examples - ld-58 Scenes"
-  },
-  {
-    "name": "Door",
-    "file": "components/Door.tscn",
-    "category": "Examples - ld-58 Scenes"
-  },
-  {
-    "name": "Entrance Door",
-    "file": "components/EntranceDoor.tscn",
-    "category": "Examples - ld-58 Scenes"
-  },
-  {
-    "name": "Interactable Object",
-    "file": "components/InteractableObject.tscn",
-    "category": "Examples - ld-58 Scenes"
-  },
-  {
-    "name": "Wall Section",
-    "file": "components/WallSection.tscn",
-    "category": "Examples - ld-58 Scenes"
-  },
-  {
-    "name": "Main",
-    "file": "main.tscn",
-    "category": "Examples - ld-58 Scenes"
   },
   {
     "name": "Bone Pile 1",

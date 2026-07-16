@@ -2,7 +2,7 @@
  * BUG 2: carries an instancing node's inline override children down to
  * the `GLBSceneRoot` that renders the GLB it instances.
  *
- * Godot's GLB-internal-node overrides (e.g. `roof_lamp.tscn`'s
+ * Godot's GLB-internal-node overrides (e.g. `ceiling_lamp.tscn`'s
  * `plafoniera` child with `parent="." index="0"`) are declared as inline
  * children of the instancing node. But the GLB is rendered in a SEPARATE
  * synthesised scene by `InstancedSceneSubtree`, so `GLBSceneRoot` cannot

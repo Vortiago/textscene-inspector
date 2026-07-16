@@ -1,8 +1,8 @@
 /**
  * Synthesised root for a PackedScene that's actually a GLB/GLTF.
  *
- * Godot PackedScene refs can point at .glb / .gltf files (the hallway
- * fixture references PortraitFrame2.glb, doormesh.glb, grandfatherclock.glb,
+ * Godot PackedScene refs can point at .glb / .gltf files (a single scene
+ * can reference props/chest.glb, props/lamp.glb, props/clock.glb,
  * etc.). Previously the `createSceneProcessor` threw
  * "Scene must be text content" when handed an ArrayBuffer and the user
  * saw a magenta placeholder cube via `<MissingResourcePlaceholder shape="box">`.
@@ -67,7 +67,7 @@ export function GLBSceneRoot({ node }: NodeComponentProps) {
   const result = useResource<THREE.Object3D>(props.glbPath ?? '', 'GLBMesh');
 
   // BUG 2: the instancing scene's inline override children (e.g.
-  // roof_lamp.tscn's `plafoniera`) target nodes INSIDE this GLB. Apply
+  // ceiling_lamp.tscn's `plafoniera`) target nodes INSIDE this GLB. Apply
   // their transforms onto the matching GLB-internal nodes by name, so a
   // GLB node's large baked translation is overridden as Godot does.
   const overrides = useGlbOverrides();

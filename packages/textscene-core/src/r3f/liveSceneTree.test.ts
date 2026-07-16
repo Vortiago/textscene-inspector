@@ -224,7 +224,7 @@ describe('resolveLiveNode — single-node path resolution (the inspector adapter
   // Rehomed from the former SceneTreeViewer/resolveNodeByPath forwarder: these
   // exercise the public single-node entry point the NodeDetailsPanel reads via
   // `useLiveNode`, so the inspector resolves any tree row.
-  const EXT: TscnExternalResource[] = [ext('3_as5ck', 'res://roof_lamp.tscn')];
+  const EXT: TscnExternalResource[] = [ext('3_as5ck', 'res://ceiling_lamp.tscn')];
 
   it('resolves an inline node by path', () => {
     const roots = [
@@ -272,21 +272,21 @@ describe('resolveLiveNode — single-node path resolution (the inspector adapter
       internalResources: [],
     };
     const roots = [
-      makeNode('HallwayGeometry', 'Node3D', {
-        children: [makeNode('roof_lamp', 'Node3D', { instance: 'ExtResource("3_as5ck")' })],
+      makeNode('RoomGeometry', 'Node3D', {
+        children: [makeNode('ceiling_lamp', 'Node3D', { instance: 'ExtResource("3_as5ck")' })],
       }),
     ];
     const ctx: LiveTreeContext = {
       externalResources: EXT,
-      sceneCache: cacheOf({ 'res://roof_lamp.tscn': subScene }),
+      sceneCache: cacheOf({ 'res://ceiling_lamp.tscn': subScene }),
     };
 
-    const node = resolveLiveNode('HallwayGeometry/roof_lamp/plafoniera', roots, ctx);
+    const node = resolveLiveNode('RoomGeometry/ceiling_lamp/plafoniera', roots, ctx);
     expect(node?.name).toBe('plafoniera');
     expect(node?.type).toBe('MeshInstance3D');
 
     // The collapsed root's own name is NOT a path segment.
-    expect(resolveLiveNode('HallwayGeometry/roof_lamp/LampBody/plafoniera', roots, ctx)).toBeNull();
+    expect(resolveLiveNode('RoomGeometry/ceiling_lamp/LampBody/plafoniera', roots, ctx)).toBeNull();
   });
 
   it('resolves a selected collapsed instance ROOT to the merged (root-typed) node', () => {
@@ -298,7 +298,7 @@ describe('resolveLiveNode — single-node path resolution (the inspector adapter
     const roots = [makeNode('Coin1', 'Node3D', { instance: 'ExtResource("3_as5ck")' })];
     const node = resolveLiveNode('Coin1', roots, {
       externalResources: EXT,
-      sceneCache: cacheOf({ 'res://roof_lamp.tscn': subScene }),
+      sceneCache: cacheOf({ 'res://ceiling_lamp.tscn': subScene }),
     });
     // The inspector must see the SAME identity the tree row + viewport show:
     // the merged node keeps the instance name but adopts the root's type.
@@ -339,9 +339,9 @@ describe('resolveLiveNode — single-node path resolution (the inspector adapter
   });
 
   it('returns null when the sub-scene is not yet cached', () => {
-    const roots = [makeNode('roof_lamp', 'Node3D', { instance: 'ExtResource("3_as5ck")' })];
+    const roots = [makeNode('ceiling_lamp', 'Node3D', { instance: 'ExtResource("3_as5ck")' })];
     expect(
-      resolveLiveNode('roof_lamp/plafoniera', roots, { externalResources: EXT, sceneCache: cacheOf({}) })
+      resolveLiveNode('ceiling_lamp/plafoniera', roots, { externalResources: EXT, sceneCache: cacheOf({}) })
     ).toBeNull();
   });
 
@@ -360,7 +360,7 @@ describe('resolveLiveNode — single-node path resolution (the inspector adapter
 });
 
 describe('resolveLiveEntry — effective node + ORIGINATING instance ref (for the inspector 📦 indicator)', () => {
-  const EXT: TscnExternalResource[] = [ext('3_as5ck', 'res://roof_lamp.tscn')];
+  const EXT: TscnExternalResource[] = [ext('3_as5ck', 'res://ceiling_lamp.tscn')];
 
   it('returns the collapsed type AND the originating instance ref for an instance ROOT', () => {
     // The merged node adopts the sub-scene root's type and DROPS its own
@@ -374,7 +374,7 @@ describe('resolveLiveEntry — effective node + ORIGINATING instance ref (for th
     const roots = [makeNode('Coin1', 'Node3D', { instance: 'ExtResource("3_as5ck")' })];
     const entry = resolveLiveEntry('Coin1', roots, {
       externalResources: EXT,
-      sceneCache: cacheOf({ 'res://roof_lamp.tscn': subScene }),
+      sceneCache: cacheOf({ 'res://ceiling_lamp.tscn': subScene }),
     });
     expect(entry?.node.type).toBe('Area3D');
     // The merged node's own instance ref is gone (plain root)...
@@ -400,13 +400,13 @@ describe('resolveLiveEntry — effective node + ORIGINATING instance ref (for th
       internalResources: [],
     };
     const roots = [
-      makeNode('HallwayGeometry', 'Node3D', {
-        children: [makeNode('roof_lamp', 'Node3D', { instance: 'ExtResource("3_as5ck")' })],
+      makeNode('RoomGeometry', 'Node3D', {
+        children: [makeNode('ceiling_lamp', 'Node3D', { instance: 'ExtResource("3_as5ck")' })],
       }),
     ];
-    const entry = resolveLiveEntry('HallwayGeometry/roof_lamp/plafoniera', roots, {
+    const entry = resolveLiveEntry('RoomGeometry/ceiling_lamp/plafoniera', roots, {
       externalResources: EXT,
-      sceneCache: cacheOf({ 'res://roof_lamp.tscn': subScene }),
+      sceneCache: cacheOf({ 'res://ceiling_lamp.tscn': subScene }),
     });
     expect(entry?.node.name).toBe('plafoniera');
     expect(entry?.instanceRef).toBeUndefined();

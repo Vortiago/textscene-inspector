@@ -6,10 +6,13 @@
  * Mirrors the path mapping used by scripts/copy-fixtures.js (and the root
  * scripts/generate-fixtures.js): scenes/fixtures/*.tscn and scenes/examples/*.tscn
  * are copied FLAT into public/fixtures/ (entry `file` is a basename), while
- * scenes/ld58/** and scenes/isometric/** are mirrored recursively (entry `file`
- * is a res://-relative path) and scenes/demos/** is mirrored under
- * public/fixtures/demos/ (entry `file` starts with 'demos/'). A manifest entry
- * is therefore valid iff its `file` resolves under one of those source roots.
+ * scenes/isometric/** is mirrored recursively (entry `file` is a res://-relative
+ * path) and scenes/demos/** is mirrored under public/fixtures/demos/ (entry
+ * `file` starts with 'demos/'). A manifest entry is therefore valid iff its
+ * `file` resolves under one of those source roots. Optional vendored corpora
+ * (games, ld-58) live in separate gitignored manifests merged by fixturesAll.ts
+ * and are out of this guard's scope — the committed fixtures.ts never carries
+ * their entries.
  */
 
 import { existsSync } from 'node:fs';
@@ -23,7 +26,6 @@ const scenesRoot = join(__dirname, '../../../scenes');
 const sourceRoots = [
   join(scenesRoot, 'fixtures'),
   join(scenesRoot, 'examples'),
-  join(scenesRoot, 'ld58'),
   join(scenesRoot, 'isometric'),
 ];
 

@@ -2,7 +2,7 @@
  * BUG 2 regression: Godot instance-property overrides must be applied to
  * nodes INSIDE an instanced GLB.
  *
- * roof_lamp.tscn instances roof_lamp.glb, whose internal `plafoniera`
+ * ceiling_lamp.tscn instances ceiling_lamp.glb, whose internal `plafoniera`
  * node carries a large baked translation (1.11, -9.73, -9.73). The
  * .tscn declares an override `[node name="plafoniera" parent="." index=0]`
  * that keeps the 0.189 scale but resets translation to (0,0,0). Pre-fix
@@ -13,7 +13,7 @@
  * This test drives the real NodeDispatcher → InstancedSceneSubtree →
  * GLBSceneRoot path with a fake GLB whose `plafoniera` node sits at the
  * baked translation, and asserts the override zeroes it so the mesh ends
- * up at the roof_lamp origin — co-located with the OmniLight3D.
+ * up at the ceiling_lamp origin — co-located with the OmniLight3D.
  */
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
@@ -38,8 +38,8 @@ beforeAll(async () => {
   await initGlbModules();
 });
 
-const GLB_PATH = 'res://assets/roof_lamp.glb';
-const LAMP_TSCN = 'res://assets/roof_lamp.tscn';
+const GLB_PATH = 'res://assets/ceiling_lamp.glb';
+const LAMP_TSCN = 'res://assets/ceiling_lamp.tscn';
 const BAKED = { x: 1.1099722, y: -9.726781, z: -9.7296133 };
 const SCALE = 0.18924935;
 
@@ -100,7 +100,7 @@ function makeSynthesisedGlbScene(): TscnScene {
   return {
     nodes: [
       {
-        name: 'roof_lamp',
+        name: 'ceiling_lamp',
         type: GLB_SCENE_ROOT_TYPE,
         children: [],
         properties: { glbPath: GLB_PATH } as Record<string, unknown>,
@@ -111,10 +111,10 @@ function makeSynthesisedGlbScene(): TscnScene {
   };
 }
 
-/** roof_lamp.tscn: root instances the GLB, with a `plafoniera` transform override + OmniLight3D. */
-function makeRoofLampScene(): TscnScene {
+/** ceiling_lamp.tscn: root instances the GLB, with a `plafoniera` transform override + OmniLight3D. */
+function makeCeilingLampScene(): TscnScene {
   const root: TscnNode = {
-    name: 'roof_lamp',
+    name: 'ceiling_lamp',
     type: 'Node',
     instance: `ExtResource("glb_1")`,
     children: [
@@ -140,7 +140,7 @@ function makeRoofLampScene(): TscnScene {
         properties: { name: 'OmniLight3D' } as Record<string, unknown>,
       },
     ],
-    properties: { name: 'roof_lamp' } as Record<string, unknown>,
+    properties: { name: 'ceiling_lamp' } as Record<string, unknown>,
   };
   return {
     nodes: [root],
@@ -149,15 +149,15 @@ function makeRoofLampScene(): TscnScene {
   };
 }
 
-/** Hallway-level instancing node: roof_lamp at origin (8.803779, 4, 0). */
+/** Hallway-level instancing node: ceiling_lamp at origin (8.803779, 4, 0). */
 function makeHallwayLampNode(): TscnNode {
   return {
-    name: 'roof_lamp',
+    name: 'ceiling_lamp',
     type: 'Node3D',
     instance: `ExtResource("lamp_1")`,
     children: [],
     properties: {
-      name: 'roof_lamp',
+      name: 'ceiling_lamp',
       transform: {
         basis_x: { x: 1, y: 0, z: 0 },
         basis_y: { x: 0, y: 1, z: 0 },
@@ -200,7 +200,7 @@ function findMeshWorldPosition(
 describe('GLBSceneRoot — BUG 2 instance override onto GLB-internal node', () => {
   it('zeroes the GLB plafoniera baked translation per the .tscn override', async () => {
     const { loader, setSceneCached, setGlbCached } = makeLoader();
-    setSceneCached(LAMP_TSCN, makeRoofLampScene());
+    setSceneCached(LAMP_TSCN, makeCeilingLampScene());
     setSceneCached(GLB_PATH, makeSynthesisedGlbScene());
     setGlbCached(GLB_PATH, makeFakeGlb());
 
@@ -208,8 +208,8 @@ describe('GLBSceneRoot — BUG 2 instance override onto GLB-internal node', () =
 
     const pos = findMeshWorldPosition(renderer, 'plafoniera');
 
-    // Expected: roof_lamp origin (8.803779, 4, 0) + override origin (0,0,0).
-    // NOT roof_lamp origin + baked (1.11, -9.73, -9.73).
+    // Expected: ceiling_lamp origin (8.803779, 4, 0) + override origin (0,0,0).
+    // NOT ceiling_lamp origin + baked (1.11, -9.73, -9.73).
     expect(pos.x).toBeCloseTo(8.803779, 4);
     expect(pos.y).toBeCloseTo(4, 4);
     expect(pos.z).toBeCloseTo(0, 4);
@@ -221,16 +221,16 @@ describe('GLBSceneRoot — BUG 2 instance override onto GLB-internal node', () =
   it('leaves a GLB internal node untouched when the .tscn declares no override for it', async () => {
     const { loader, setSceneCached, setGlbCached } = makeLoader();
 
-    // roof_lamp.tscn with NO override children — the GLB should keep its
+    // ceiling_lamp.tscn with NO override children — the GLB should keep its
     // baked transform (we must not zero translations globally).
     const noOverrideScene: TscnScene = {
       nodes: [
         {
-          name: 'roof_lamp',
+          name: 'ceiling_lamp',
           type: 'Node',
           instance: `ExtResource("glb_1")`,
           children: [],
-          properties: { name: 'roof_lamp' } as Record<string, unknown>,
+          properties: { name: 'ceiling_lamp' } as Record<string, unknown>,
         },
       ],
       externalResources: [{ id: 'glb_1', path: GLB_PATH, type: 'PackedScene' }],
@@ -243,7 +243,7 @@ describe('GLBSceneRoot — BUG 2 instance override onto GLB-internal node', () =
     const renderer = await renderHallwayLamp(loader);
     const pos = findMeshWorldPosition(renderer, 'plafoniera');
 
-    // Baked translation survives: roof_lamp origin + baked.
+    // Baked translation survives: ceiling_lamp origin + baked.
     expect(pos.x).toBeCloseTo(8.803779 + BAKED.x, 4);
     expect(pos.y).toBeCloseTo(4 + BAKED.y, 4);
     expect(pos.z).toBeCloseTo(0 + BAKED.z, 4);

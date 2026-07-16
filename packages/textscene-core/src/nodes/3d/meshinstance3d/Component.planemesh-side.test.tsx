@@ -85,7 +85,7 @@ describe('MeshInstance3D + PlaneMesh — material.side default (Godot BACK = Fro
     // upgraded this case to DoubleSide unintentionally broke that
     // semantic and was reverted. Photo-frame Canvas planes that want
     // DoubleSide must set `cull_mode = 2` explicitly in their source
-    // material (which the LD-58 fixtures do, once their .tres material
+    // material (which the vendored fixtures do, once their .tres material
     // is loaded — the issue that override was working around was
     // missing material data, not a default mismatch).
     const mat = await renderWithMeshAndMaterial('PlaneMesh', {
@@ -141,10 +141,10 @@ describe('MeshInstance3D + PlaneMesh — material.side default (Godot BACK = Fro
     expect(mat.side).toBe(THREE.FrontSide);
   });
 
-  it('REGRESSION (LD-58 wall): PlaneMesh + StandardMaterial3D with albedo_texture only → FrontSide', async () => {
-    // This is the EXACT shape of WallSection.tscn's wall material from
-    // LD-58: a PlaneMesh with FACE_X orientation, a StandardMaterial3D
-    // referencing an albedo texture (g_toit-tower.png), NO explicit
+  it('REGRESSION (wall PlaneMesh): PlaneMesh + StandardMaterial3D with albedo_texture only → FrontSide', async () => {
+    // This is the EXACT shape of a wall material from a real-world scene:
+    // a PlaneMesh with FACE_X orientation, a StandardMaterial3D
+    // referencing an albedo texture, NO explicit
     // cull_mode. Godot renders this with BACK culling (FrontSide).
     //
     // Two earlier regressions broke this:
@@ -157,12 +157,12 @@ describe('MeshInstance3D + PlaneMesh — material.side default (Godot BACK = Fro
     //      wrong axis, leading to walls 1/3 to 1/6 of their intended
     //      width.
     //
-    // This test pins the LD-58 wall-shaped material to FrontSide
+    // This test pins the wall-shaped material to FrontSide
     // explicitly so any future "PlaneMesh-friendly" override has to
     // grapple with breaking it.
     const mat = await renderWithMeshAndMaterial('PlaneMesh', {
       albedo_color: 'Color(1, 1, 1, 1)',
-      // No cull_mode — exactly like WallSection.tscn's StandardMaterial3D_mt8pv.
+      // No cull_mode — exactly like a bare wall StandardMaterial3D.
       // In a real fixture there would also be an `albedo_texture =
       // ExtResource(...)` ref, but the side decision is independent of
       // whether the texture actually resolves — what matters is that

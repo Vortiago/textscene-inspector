@@ -45,8 +45,8 @@ describe('<Node>', () => {
    * attribute, only `name` + `instance`) were typed as the base `Node`
    * fallback in NodeRegistry. The base `Node` parser correctly captured
    * `properties.transform`, but the R3F `<Node>` component dropped it
-   * before applying to the wrapping `<group>` — so the LetterOpener
-   * evidence GLB in the hallway fixture rendered ~40× too big
+   * before applying to the wrapping `<group>` — so the Crate
+   * instance GLB in the hallway fixture rendered ~40× too big
    * (its instance's basis carried a uniform 0.025 scale).
    *
    * After the fix the component threads `properties.transform`
@@ -54,7 +54,7 @@ describe('<Node>', () => {
    * decomposed position / rotation / scale to the wrapping group.
    */
   it('applies properties.transform when present (WI-HALL-4 — instance-node Transform3D)', async () => {
-    // The actual LetterOpener instance transform from the hallway TSCN.
+    // A representative instance transform from a real-world hallway scene.
     // basis columns encode a Y-axis ~90° rotation combined with a
     // uniform 0.025 scale; origin is the world placement (9.659, 0.059, 6.018).
     const transform: Transform3D = {
@@ -64,14 +64,14 @@ describe('<Node>', () => {
       origin: { x: 9.659, y: 0.059, z: 6.018 },
     };
     const node: TscnNode = {
-      name: 'LetterOpener',
+      name: 'Crate',
       type: 'Node',
       children: [],
-      properties: { name: 'LetterOpener', transform } as Record<string, unknown>,
+      properties: { name: 'Crate', transform } as Record<string, unknown>,
     };
 
     const renderer = await ReactThreeTestRenderer.create(<Node node={node} />);
-    const group = renderer.scene.findByProps({ name: 'LetterOpener' });
+    const group = renderer.scene.findByProps({ name: 'Crate' });
 
     // Origin is applied verbatim.
     expect(group.instance.position.x).toBeCloseTo(9.659, 4);

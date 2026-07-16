@@ -1,0 +1,99 @@
+[gd_scene load_steps=3 format=3]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
+bg_color = Color(0.16, 0.15, 0.13, 0.96)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.4, 0.36, 0.3, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button"]
+bg_color = Color(0.32, 0.3, 0.26, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[node name="JournalUI" type="CanvasLayer"]
+layer = 1
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0, 0.4)
+
+[node name="Center" type="CenterContainer" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Dialog" type="PanelContainer" parent="Center"]
+custom_minimum_size = Vector2(420, 300)
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="Margin" type="MarginContainer" parent="Center/Dialog"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="Body" type="VBoxContainer" parent="Center/Dialog/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="TitleRow" type="HBoxContainer" parent="Center/Dialog/Margin/Body"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Icon" type="TextureRect" parent="Center/Dialog/Margin/Body/TitleRow"]
+custom_minimum_size = Vector2(32, 32)
+layout_mode = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Title" type="Label" parent="Center/Dialog/Margin/Body/TitleRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 24
+text = "Field Journal"
+vertical_alignment = 1
+
+[node name="Divider" type="ColorRect" parent="Center/Dialog/Margin/Body"]
+custom_minimum_size = Vector2(0, 2)
+layout_mode = 2
+color = Color(0.4, 0.36, 0.3, 1)
+
+[node name="Entry" type="RichTextLabel" parent="Center/Dialog/Margin/Body"]
+custom_minimum_size = Vector2(0, 120)
+layout_mode = 2
+size_flags_vertical = 3
+bbcode_enabled = true
+fit_content = true
+text = "[b]Day 12.[/b] The northern trail was quiet. I logged three [color=#7fb069]bird sightings[/color] and refilled the canteen at the ridge spring."
+theme_override_font_sizes/normal_font_size = 16
+theme_override_colors/default_color = Color(0.88, 0.86, 0.8, 1)
+
+[node name="JournalController" type="Node" parent="Center/Dialog/Margin/Body"]
+
+[node name="ButtonRow" type="HBoxContainer" parent="Center/Dialog/Margin/Body"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="SaveButton" type="Button" parent="Center/Dialog/Margin/Body/ButtonRow"]
+custom_minimum_size = Vector2(120, 36)
+layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+text = "Save Entry"
+
+[node name="CloseButton" type="Button" parent="Center/Dialog/Margin/Body/ButtonRow"]
+custom_minimum_size = Vector2(120, 36)
+layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+text = "Close"

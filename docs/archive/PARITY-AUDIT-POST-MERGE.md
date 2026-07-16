@@ -2,7 +2,7 @@
 
 **Audit tip: 05bd4d8 — date 2026-05-27**
 
-Produced by `parity-auditor-2` on the `ld58-completion` team.
+Produced by `parity-auditor-2` on the `hallway-completion` team.
 Prior audit reference: `docs/archive/MAIN-VS-MIGRATION-DELTA.md` (tip `923ba7d`, 2026-05-20).
 Parity reference: `main` HEAD `80fa99e`.
 
@@ -81,7 +81,7 @@ via `configureLightShadow` shadow map type; R3F uses WebGLRenderer defaults).
 
 **Classification: PARTIAL** — `shadow_filter` silently dropped. Shadows are
 rendered but the filter mode (soft/PCF/PCSS) is not user-configurable. Low-impact
-for the ld58 use-case.
+for the hallway use-case.
 
 ---
 
@@ -301,8 +301,8 @@ Every row from `docs/archive/MAIN-FEATURE-INVENTORY.md` is classified below:
 
 **Summary:** 17 PRESENT / 1 N/A / 2 PARTIAL / 0 MISSING / 0 SILENT-DROP-BLOCKER
 
-One SILENT-DROP identified: `materialOverlay`. Not a blocker for ld58 gate since
-the hallway fixture does not use `material_overlay`.
+One SILENT-DROP identified: `materialOverlay`. Not a blocker for the hallway
+gate since the hallway fixture does not use `material_overlay`.
 
 ---
 
@@ -314,5 +314,5 @@ the hallway fixture does not use `material_overlay`.
 **Result: Gate 1 MET at 05bd4d8.**
 
 Remaining PARTIAL items (auto-expand-ancestors, empty-state hint, shadow_filter,
-materialOverlay) are low-impact and do not block the ld58 LD or a PR merge.
+materialOverlay) are low-impact and do not block the hallway gate or a PR merge.
 They are tracked as post-MVS candidates.
