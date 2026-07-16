@@ -63,7 +63,7 @@
     "@typescript-eslint/parser": "^8.20.0",
     "@vitest/coverage-v8": "^4.1",
     "@vitest/ui": "catalog:",
-    "@vscode/test-electron": "^2.5.2",
+    "@vscode/test-electron": "catalog:",
     "eslint": "^9.18.0",
     "eslint-plugin-react-hooks": "catalog:",
     "globals": "^16.4.0",

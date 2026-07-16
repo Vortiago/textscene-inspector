@@ -1,5 +1,5 @@
 /**
- * EscapeDeselect (#224) — a global Escape key clears the current selection,
+ * EscapeDeselect — a global Escape key clears the current selection,
  * regardless of viewport mode (2D/3D). Guarded against firing while the
  * user is typing (the web app's Source pane, ADR-0020, or any input).
  */

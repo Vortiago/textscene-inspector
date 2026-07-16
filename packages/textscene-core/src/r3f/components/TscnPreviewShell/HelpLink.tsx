@@ -1,5 +1,5 @@
 /**
- * Help affordance (#224) — a small "?" link in the shared top bar pointing
+ * Help affordance — a small "?" link in the shared top bar pointing
  * at the GitHub-hosted README's Documentation section, which in turn links
  * `docs/user-guide-web.md` / `docs/user-guide-vscode.md`. A single external
  * link keeps the web app and the VS Code webview at parity: VS Code's

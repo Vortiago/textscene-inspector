@@ -121,4 +121,43 @@ describe('MissingResourcesContext', () => {
     }).not.toThrow();
     expect(result.current.missingPaths.size).toBe(0);
   });
+
+  it('onMissingPathsChange observes the set after mount and after every change', () => {
+    const observed: ReadonlySet<string>[] = [];
+    const observe = (paths: ReadonlySet<string>) => observed.push(paths);
+    const { result } = renderHook(() => useMissingResources(), {
+      wrapper: ({ children }: { children: ReactNode }) => (
+        <MissingResourcesProvider onMissingPathsChange={observe}>
+          {children}
+        </MissingResourcesProvider>
+      ),
+    });
+
+    expect(observed.at(-1)?.size).toBe(0);
+    act(() => result.current.report('res://a.png'));
+    expect(Array.from(observed.at(-1)!)).toEqual(['res://a.png']);
+    act(() => result.current.markUploaded('res://a.png'));
+    expect(observed.at(-1)?.size).toBe(0);
+  });
+
+  it('onMissingPathsChange does not re-fire on callback-identity changes (hosts may pass inline arrows)', () => {
+    const calls: ReadonlySet<string>[] = [];
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      // A fresh arrow per render — the provider must still notify only on
+      // actual set changes, or an inline-callback host would loop.
+      <MissingResourcesProvider onMissingPathsChange={(paths) => calls.push(paths)}>
+        {children}
+      </MissingResourcesProvider>
+    );
+    const { result, rerender } = renderHook(() => useMissingResources(), { wrapper });
+
+    const afterMount = calls.length;
+    rerender();
+    rerender();
+    expect(calls.length).toBe(afterMount);
+
+    act(() => result.current.report('res://a.png'));
+    expect(calls.length).toBe(afterMount + 1);
+    expect(Array.from(calls.at(-1)!)).toEqual(['res://a.png']);
+  });
 });

@@ -15,7 +15,6 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { MeshInstance3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
-import type { ResourceLoader } from '../../../resources/ResourceLoader';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import type {
   TscnExternalResource,
@@ -23,24 +22,6 @@ import type {
   TscnNode,
 } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
-
-/**
- * Minimal mock ResourceLoader for the texture path. Lets a test pre-seed
- * cached THREE.Textures keyed by path so `useResource('texture')` returns
- * status=loaded synchronously on first render.
- */
-function makeLoader(): {
-  loader: ResourceLoader;
-  setTextureCached: (path: string, tex: THREE.Texture) => void;
-  setTextureMissing: (path: string) => void;
-} {
-  const fake = createFakeResourceLoader();
-  return {
-    loader: fake.loader,
-    setTextureCached: (p, t) => fake.textures.seed(p, t),
-    setTextureMissing: (p) => fake.textures.seed(p, null),
-  };
-}
 
 function makeNode(properties: Partial<MeshInstance3DProperties> = {}): TscnNode {
   const props: MeshInstance3DProperties = {
@@ -80,15 +61,14 @@ async function renderWithTexture(opts: {
   externals: TscnExternalResource[];
   cached?: Array<{ path: string; texture: THREE.Texture | 'missing' }>;
 }) {
-  const { loader, setTextureCached, setTextureMissing } = makeLoader();
+  const fake = createFakeResourceLoader();
   for (const { path, texture } of opts.cached ?? []) {
-    if (texture === 'missing') setTextureMissing(path);
-    else setTextureCached(path, texture);
+    fake.textures.seed(path, texture === 'missing' ? null : texture);
   }
 
   const node = makeNode();
   const renderer = await ReactThreeTestRenderer.create(
-    <ResourceLoaderProvider loader={loader}>
+    <ResourceLoaderProvider loader={fake.loader}>
       <SceneResourcesProvider
         internalResources={[
           sub('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' }),
@@ -246,8 +226,8 @@ describe('StandardMaterial3D textures (assertions 32–39)', () => {
   // This test pins the surface-override chain so that regression can't recur.
   it('WI-R3F-11 surface_material_override/0 → albedo_texture lands on material.map', async () => {
     const tex = makeTexture();
-    const { loader, setTextureCached } = makeLoader();
-    setTextureCached(TEXTURE_PATH, tex);
+    const fake = createFakeResourceLoader();
+    fake.textures.seed(TEXTURE_PATH, tex);
 
     const surfaceMap = new Map<number, string>([[0, 'SubResource("Mat")']]);
     const node: TscnNode = {
@@ -263,7 +243,7 @@ describe('StandardMaterial3D textures (assertions 32–39)', () => {
     };
 
     const renderer = await ReactThreeTestRenderer.create(
-      <ResourceLoaderProvider loader={loader}>
+      <ResourceLoaderProvider loader={fake.loader}>
         <SceneResourcesProvider
           internalResources={[
             sub('PlaneMesh', 'Plane_1', { size: 'Vector2(2, 2)' }),
@@ -290,8 +270,8 @@ describe('StandardMaterial3D textures (assertions 32–39)', () => {
   // is always async, so the empty-cache → emit → re-render path is the
   // real one.
   it('WI-R3F-11 async texture load (cache empty on first render) → material.map binds after load event', async () => {
-    const { loader } = makeLoader();
-    // NOTE: NO setTextureCached. The texture isn't in the cache when the
+    const fake = createFakeResourceLoader();
+    // NOTE: nothing seeded. The texture isn't in the cache when the
     // component first renders; it arrives via the bus afterwards, mimicking
     // the production fetch-then-decode flow.
 
@@ -308,7 +288,7 @@ describe('StandardMaterial3D textures (assertions 32–39)', () => {
     };
 
     const renderer = await ReactThreeTestRenderer.create(
-      <ResourceLoaderProvider loader={loader}>
+      <ResourceLoaderProvider loader={fake.loader}>
         <SceneResourcesProvider
           internalResources={[
             sub('PlaneMesh', 'Plane_1', { size: 'Vector2(2, 2)' }),
@@ -332,7 +312,7 @@ describe('StandardMaterial3D textures (assertions 32–39)', () => {
     // SVG/PNG is decoded into a THREE.Texture by createTextureFromBuffer.
     const tex = makeTexture();
     await ReactThreeTestRenderer.act(async () => {
-      loader.eventBus.emit<THREE.Texture>('texture', 'loaded', TEXTURE_PATH, tex);
+      fake.eventBus.emit<THREE.Texture>('texture', 'loaded', TEXTURE_PATH, tex);
     });
 
     const matAfter = renderer.scene.findByType('Mesh').instance.material as THREE.MeshStandardMaterial;

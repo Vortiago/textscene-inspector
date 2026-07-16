@@ -30,7 +30,7 @@ const VECTOR3_RE = new RegExp(String.raw`^Vector3\s*\(\s*(${F})\s*,\s*(${F})\s*,
 
 /**
  * `Color(r, g, b, a)` — the SAME float grammar as the vectors above. Compiled ONCE and shared by
- * the material/Environment Color decoder and linter validators (#141) so render and lint agree on
+ * the material/Environment Color decoder and linter validators so render and lint agree on
  * the channel grammar and never rebuild this regex per parse/lint call. No `g` flag, so `.test()`
  * and `.match()` on the shared instance are stateless.
  */

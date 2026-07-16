@@ -1,5 +1,5 @@
 /**
- * Preview loop override (#224) → THREE action loop config, shared by every
+ * Preview loop override → THREE action loop config, shared by every
  * transport driver so the override semantics cannot drift between slices:
  * 'once' forces a single clamped pass, 'loop' an infinite repeat, 'auto'
  * keeps the driver's authored settings (Godot `loop_mode` for

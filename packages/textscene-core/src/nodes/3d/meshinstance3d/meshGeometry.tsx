@@ -128,6 +128,13 @@ type ParsedMesh =
  * verts before the node-level transform stage.
  */
 function PlaneMeshGeometry({ properties }: { properties: PlaneMeshProperties }) {
+  // Scalar deps, not the centerOffset object: the parser allocates a fresh
+  // {x,y,z} per reparse, and an identity-keyed memo would rebuild the
+  // geometry (undisposed — r3f never disposes primitives) on every
+  // source-pane edit tick.
+  const offsetX = properties.centerOffset?.x;
+  const offsetY = properties.centerOffset?.y;
+  const offsetZ = properties.centerOffset?.z;
   const geometry = useMemo(() => {
     // Godot subdivide_* = extra edge loops: N loops → N+1 face segments
     // (subdivide 0 → 1 segment).
@@ -147,12 +154,8 @@ function PlaneMeshGeometry({ properties }: { properties: PlaneMeshProperties }) 
     } else if (properties.orientation === 1) {
       geom.rotateX(-Math.PI / 2);
     }
-    if (properties.centerOffset) {
-      geom.translate(
-        properties.centerOffset.x,
-        properties.centerOffset.y,
-        properties.centerOffset.z
-      );
+    if (offsetX !== undefined && offsetY !== undefined && offsetZ !== undefined) {
+      geom.translate(offsetX, offsetY, offsetZ);
     }
     // Parity-audit fix: `flip_faces` reverses winding so the
     // surface is visible from the opposite side. The pre-migration
@@ -168,7 +171,9 @@ function PlaneMeshGeometry({ properties }: { properties: PlaneMeshProperties }) 
     properties.subdivideWidth,
     properties.subdivideDepth,
     properties.orientation,
-    properties.centerOffset,
+    offsetX,
+    offsetY,
+    offsetZ,
     properties.flipFaces,
   ]);
 

@@ -78,9 +78,9 @@ interface ProcessorAccess<T> {
 }
 
 /**
- * Return the processor appropriate for the given resource type. Now
- * all four resource types are normal `ResourceProcessor<T>`
- * instances on the loader; PackedScene no longer needs its own adapter.
+ * Return the processor appropriate for the given resource type. Every
+ * resource type is a normal `ResourceProcessor<T>` instance on the
+ * loader; PackedScene no longer needs its own adapter.
  */
 function getProcessorAccess<T>(
   loader: NonNullable<ReturnType<typeof useResourceLoader>>,

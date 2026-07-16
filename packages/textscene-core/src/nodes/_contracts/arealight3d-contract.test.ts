@@ -1,12 +1,11 @@
 /**
- * #126 (AreaLight3D slice) behavioral contract — RED until the slice ships.
+ * AreaLight3D slice behavioral contract — written RED before the slice shipped.
  *
  * Godot 4.7 adds AreaLight3D, a rectangular real-time area light. The previewer
  * implements DirectionalLight3D / OmniLight3D / SpotLight3D under
- * nodes/3d/lights/ but has NO AreaLight3D — a 4.7 scene using it silently
- * renders no light. This slice, carved from umbrella #126 (item 1, "highest
- * value"), adds the full node slice: parse + register + render (three.js
- * RectAreaLight) + a lint-clean fixture.
+ * nodes/3d/lights/ but had NO AreaLight3D — a 4.7 scene using it silently
+ * rendered no light. The slice adds the full vertical: parse + register +
+ * render (three.js RectAreaLight) + a lint-clean fixture.
  *
  * This is a WRITE slice (the behaviour does NOT yet ship), so unlike a
  * test-writing slice these are REAL behavioural witnesses through STABLE public

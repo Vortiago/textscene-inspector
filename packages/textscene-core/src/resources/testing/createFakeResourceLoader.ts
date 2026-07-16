@@ -4,9 +4,10 @@
  * FileEventBus + provider.
  *
  * Concentrates the assembly that every resource-consuming test used to
- * hand-roll: a real `ResourceEventBus` + `MetadataStore` plus four
- * Map-backed processors (texture / material / glb / scene) implementing
- * the public `ResourceProcessor` surface, wired with `clear()` and
+ * hand-roll: a real `ResourceEventBus` + `MetadataStore` plus Map-backed
+ * processors for every slot the real loader carries (texture / material /
+ * glb / scene / resource / arraymesh) implementing the public
+ * `ResourceProcessor` surface, wired with `register()`, `clear()` and
  * `provideFile()`. Each processor handle adds a small driving API:
  *
  *   - `_resolve(path, value)` — cache + emit `<type>:loaded` (event-driven tests)
@@ -23,10 +24,11 @@
 
 import * as THREE from 'three';
 import type { ParsedTresFile } from '../../parser/tresParser';
-import type { TscnScene } from '../../parser/types';
+import type { ExtResource, TscnScene } from '../../parser/types';
 import { ResourceEventBus, type ResourceType } from '../ResourceEventBus';
 import { MetadataStore } from '../MetadataStore';
-import type { ResourceLoader } from '../ResourceLoader';
+import { busTypeFor, type ResourceLoader } from '../ResourceLoader';
+import type { ArrayMeshResource } from '../processors/createArrayMeshProcessor';
 
 export interface FakeProcessor<T> {
   /** Backing cache — `undefined` = never requested, `null` = failed/sentinel-miss, value = loaded. */
@@ -37,7 +39,7 @@ export interface FakeProcessor<T> {
   request(path: string): void;
   getCached(path: string): T | null | undefined;
   isCached(path: string): boolean;
-  isLoading(): boolean;
+  isLoading(path: string): boolean;
   clearCache(path?: string): void;
   getCacheSize(): number;
   pin(path: string): void;
@@ -62,6 +64,9 @@ export interface FakeResourceLoader {
   readonly glbMeshes: FakeProcessor<THREE.Object3D>;
   readonly scenes: FakeProcessor<TscnScene>;
   readonly resources: FakeProcessor<ParsedTresFile>;
+  readonly arrayMeshes: FakeProcessor<ArrayMeshResource>;
+  /** Every ExtResource passed to `loader.register`, in call order — for assertions. */
+  readonly registerCalls: ExtResource[];
 }
 
 function makeFakeProcessor<T>(eventBus: ResourceEventBus, type: ResourceType): FakeProcessor<T> {
@@ -80,7 +85,7 @@ function makeFakeProcessor<T>(eventBus: ResourceEventBus, type: ResourceType): F
     isCached(path: string): boolean {
       return cache.has(path);
     },
-    isLoading(): boolean {
+    isLoading(_path: string): boolean {
       return false;
     },
     clearCache(path?: string): void {
@@ -123,6 +128,18 @@ export function createFakeResourceLoader(): FakeResourceLoader {
   const glbMeshes = makeFakeProcessor<THREE.Object3D>(eventBus, 'glb');
   const scenes = makeFakeProcessor<TscnScene>(eventBus, 'scene');
   const resources = makeFakeProcessor<ParsedTresFile>(eventBus, 'resource');
+  const arrayMeshes = makeFakeProcessor<ArrayMeshResource>(eventBus, 'arraymesh');
+  const registerCalls: ExtResource[] = [];
+
+  const byType: Record<ResourceType, FakeProcessor<unknown>> = {
+    texture: textures,
+    material: materials,
+    glb: glbMeshes,
+    scene: scenes,
+    resource: resources,
+    arraymesh: arrayMeshes,
+  };
+  const all = Object.values(byType);
 
   const loader = {
     eventBus,
@@ -132,34 +149,38 @@ export function createFakeResourceLoader(): FakeResourceLoader {
     glbMeshes,
     scenes,
     resources,
-    // Legacy pass-throughs a few consumers still reach for.
-    getSceneCached: (path: string) => scenes.getCached(path) ?? undefined,
-    requestScene: (path: string) => scenes.request(path),
-    // Mirror the real ResourceLoader.provideFile: clear caches then re-route.
-    // Tests usually drive `_resolve` directly instead of calling this.
+    arrayMeshes,
+    // Mirror ResourceLoader.register (metadata bookkeeping) and record the
+    // call so tests can assert registration without a vitest spy.
+    register(resource: ExtResource): void {
+      registerCalls.push(resource);
+      metadata.register(resource);
+    },
+    // Mirror the real ResourceLoader.provideFile: clear the path everywhere,
+    // then re-route — metadata-typed processor when known, the same .tres and
+    // texture+material fan-outs otherwise. Re-requests land in each
+    // processor's `requestImpl`, so `setRequestImpl` spies observe them.
     provideFile(path: string): void {
-      textures.clearCache(path);
-      materials.clearCache(path);
-      glbMeshes.clearCache(path);
-      scenes.clearCache(path);
-      resources.clearCache(path);
+      for (const proc of all) proc.clearCache(path);
+      const busType = busTypeFor(metadata.get(path)?.type);
+      if (busType) {
+        byType[busType].request(path);
+      } else if (path.endsWith('.tres')) {
+        materials.request(path);
+        resources.request(path);
+      } else {
+        textures.request(path);
+        materials.request(path);
+      }
     },
     clear(): void {
-      textures.clearCache();
-      materials.clearCache();
-      glbMeshes.clearCache();
-      scenes.clearCache();
-      resources.clearCache();
+      for (const proc of all) proc.clearCache();
       eventBus.clear();
       metadata.clear();
     },
     // Mirror ResourceLoader.clearCaches: caches + metadata, subscribers kept.
     clearCaches(): void {
-      textures.clearCache();
-      materials.clearCache();
-      glbMeshes.clearCache();
-      scenes.clearCache();
-      resources.clearCache();
+      for (const proc of all) proc.clearCache();
       metadata.clear();
     },
   };
@@ -173,5 +194,7 @@ export function createFakeResourceLoader(): FakeResourceLoader {
     glbMeshes,
     scenes,
     resources,
+    arrayMeshes,
+    registerCalls,
   };
 }

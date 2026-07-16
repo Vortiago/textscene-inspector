@@ -1,5 +1,5 @@
 /**
- * Issue #200 — source pane, rendered-width regression guard.
+ * Source pane, rendered-width regression guard.
  *
  * happy-dom does no flex layout, so the behavioral `.test.tsx` suite reads only
  * the inline `style.width` — it cannot see the real-browser bug where a

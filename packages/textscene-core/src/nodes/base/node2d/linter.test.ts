@@ -137,7 +137,7 @@ describe('Node2D Linter', () => {
     // Extreme-but-nonzero scales are valid Godot (the renderer draws them; real
     // scenes use near-zero "hide" scales), so they must lint clean — erroring
     // would re-introduce parser/linter divergence now that every Node2D subclass
-    // inherits this validator via the base-walk (#143).
+    // inherits this validator via the base-walk.
     it('tolerates a very large (but finite) scale', () => {
       expectClean(scene(node('Node2D', { scale: 'Vector2(10000, 1)' })));
     });

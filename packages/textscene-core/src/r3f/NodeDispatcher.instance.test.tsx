@@ -24,77 +24,12 @@ import * as mergeInstanceRootModule from '../resources/mergeInstanceRoot';
 import { SelectionProvider } from './contexts/SelectionContext';
 import { SceneResourcesProvider } from './SceneResourcesContext';
 import { ResourceLoaderProvider } from '../resources/ResourceLoaderContext';
-import { ResourceEventBus } from '../resources/ResourceEventBus';
-import { MetadataStore } from '../resources/MetadataStore';
+import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader';
 import type { ResourceLoader } from '../resources/ResourceLoader';
 
 // All node-type components self-register on import. Pull in the barrel
 // so MeshInstance3D / Node3D / etc. dispatch through to their components.
 import './nodes/index';
-
-/**
- * Make a fake ResourceLoader whose `requestScene` / `getSceneCached`
- * surface return pre-staged TscnScene objects synchronously. Mirrors
- * the `makeLoader` pattern from the texture tests — the production
- * SceneLoader pipeline (fetch + parse) is async and brittle to stub
- * end-to-end; this lets the dispatcher exercise the happy and missing
- * paths deterministically.
- */
-function makeLoader(): {
-  loader: ResourceLoader;
-  setSceneCached: (path: string, scene: TscnScene) => void;
-  setSceneMissing: (path: string) => void;
-} {
-  const eventBus = new ResourceEventBus();
-  const metadata = new MetadataStore();
-  const sceneCache = new Map<string, TscnScene | null>();
-  const textureCache = new Map<string, THREE.Texture | null>();
-  const materialCache = new Map<string, THREE.Material | null>();
-  const glbCache = new Map<string, THREE.Object3D | null>();
-
-  const makeProc = <T,>(cache: Map<string, T | null>) => ({
-    request: vi.fn(),
-    getCached: (p: string) => cache.get(p),
-    isCached: (p: string) => cache.has(p),
-    isLoading: () => false,
-    clearCache: () => {},
-    getCacheSize: () => cache.size,
-    pin: () => {},
-    unpin: () => {},
-  });
-
-  // useResource now reads scenes via `loader.scenes` directly,
-  // so the mock must expose a ResourceProcessor-shaped object for scenes
-  // alongside textures/materials/glbMeshes. The legacy `getSceneCached` /
-  // `requestScene` helpers are retained for back-compat callers (the
-  // helpers below still drive the scene cache through `setSceneCached`).
-  const scenesProc = makeProc<TscnScene>(sceneCache);
-
-  const loader = {
-    eventBus,
-    metadata,
-    textures: makeProc<THREE.Texture>(textureCache),
-    materials: makeProc<THREE.Material>(materialCache),
-    glbMeshes: makeProc<THREE.Object3D>(glbCache),
-    scenes: scenesProc,
-    getSceneCached: (p: string) => sceneCache.get(p),
-    requestScene: vi.fn(),
-    register: vi.fn(),
-    provideFile: () => {},
-    clear: () => {
-      sceneCache.clear();
-      textureCache.clear();
-      materialCache.clear();
-      glbCache.clear();
-    },
-  } as unknown as ResourceLoader;
-
-  return {
-    loader,
-    setSceneCached: (p, s) => sceneCache.set(p, s),
-    setSceneMissing: (p) => sceneCache.set(p, null),
-  };
-}
 
 function makeNode(
   name: string,
@@ -154,8 +89,8 @@ async function renderTree(
 
 describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-12, ADR-0013)', () => {
   it('collapses a single-root instance: the instance node becomes the root, keeping its name + transform', async () => {
-    const { loader, setSceneCached } = makeLoader();
-    setSceneCached('res://child_cube.tscn', makeBoxScene('TheBox'));
+    const fake = createFakeResourceLoader();
+    fake.scenes.seed('res://child_cube.tscn', makeBoxScene('TheBox'));
 
     const instancingNode: TscnNode = {
       name: 'LeftCube',
@@ -175,7 +110,7 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
 
     const renderer = await renderTree(
       [instancingNode],
-      loader,
+      fake.loader,
       [{ id: '1_cube', path: 'res://child_cube.tscn', type: 'PackedScene' }]
     );
 
@@ -190,8 +125,8 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
   });
 
   it('renders a magenta placeholder when the referenced scene is missing', async () => {
-    const { loader, setSceneMissing } = makeLoader();
-    setSceneMissing('res://missing_scene.tscn');
+    const fake = createFakeResourceLoader();
+    fake.scenes.seed('res://missing_scene.tscn', null);
 
     const instancingNode: TscnNode = {
       name: 'BrokenInstance',
@@ -203,7 +138,7 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
 
     const renderer = await renderTree(
       [instancingNode],
-      loader,
+      fake.loader,
       [
         {
           id: '99_missing',
@@ -223,7 +158,7 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
   });
 
   it('recursively collapses nested instancing (A → B → C) down to a single node', async () => {
-    const { loader, setSceneCached } = makeLoader();
+    const fake = createFakeResourceLoader();
 
     // Scene C: a single MeshInstance3D rendering a sphere.
     const sceneC: TscnScene = {
@@ -259,8 +194,8 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
       internalResources: [],
     };
 
-    setSceneCached('res://scene_b.tscn', sceneB);
-    setSceneCached('res://scene_c.tscn', sceneC);
+    fake.scenes.seed('res://scene_b.tscn', sceneB);
+    fake.scenes.seed('res://scene_c.tscn', sceneC);
 
     // Scene A: instances scene B.
     const sceneANodes: TscnNode[] = [
@@ -275,7 +210,7 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
 
     const renderer = await renderTree(
       sceneANodes,
-      loader,
+      fake.loader,
       [{ id: 'b_ref', path: 'res://scene_b.tscn', type: 'PackedScene' }]
     );
 
@@ -292,8 +227,8 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
   });
 
   it('renders multiple instances of the same scene at distinct positions', async () => {
-    const { loader, setSceneCached } = makeLoader();
-    setSceneCached('res://cube.tscn', makeBoxScene('TheBox'));
+    const fake = createFakeResourceLoader();
+    fake.scenes.seed('res://cube.tscn', makeBoxScene('TheBox'));
 
     const positions = [-3, 0, 3];
     const nodes: TscnNode[] = positions.map((x, i) => ({
@@ -314,7 +249,7 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
 
     const renderer = await renderTree(
       nodes,
-      loader,
+      fake.loader,
       [{ id: '1_cube', path: 'res://cube.tscn', type: 'PackedScene' }]
     );
 
@@ -328,7 +263,7 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
   });
 
   it('merges children the host added under the instance alongside the collapsed root subtree', async () => {
-    const { loader, setSceneCached } = makeLoader();
+    const fake = createFakeResourceLoader();
 
     // Sub-scene whose root is a transform-only container (Node3D) holding a
     // mesh. Merging onto a container preserves both the root's own children
@@ -353,7 +288,7 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
         { id: 'Box_1', type: 'BoxMesh', data: { id: 'Box_1', size: 'Vector3(1, 1, 1)' } },
       ],
     };
-    setSceneCached('res://inner.tscn', innerScene);
+    fake.scenes.seed('res://inner.tscn', innerScene);
 
     // Parent instances inner.tscn AND declares an added child of its own.
     const parentNode: TscnNode = {
@@ -373,7 +308,7 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
     };
 
     const renderer = await ReactThreeTestRenderer.create(
-      <ResourceLoaderProvider loader={loader}>
+      <ResourceLoaderProvider loader={fake.loader}>
         <SceneResourcesProvider
           internalResources={[
             { id: 'Box_1', type: 'BoxMesh', data: { id: 'Box_1', size: 'Vector3(1, 1, 1)' } },
@@ -402,7 +337,7 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
   });
 
   it('falls back to the nested form when the loaded scene has multiple roots', async () => {
-    const { loader, setSceneCached } = makeLoader();
+    const fake = createFakeResourceLoader();
 
     // A scene with TWO top-level nodes cannot collapse into one instance node,
     // so it keeps the historical nesting: the instance node's own group holds
@@ -429,7 +364,7 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
         { id: 'Box_1', type: 'BoxMesh', data: { id: 'Box_1', size: 'Vector3(1, 1, 1)' } },
       ],
     };
-    setSceneCached('res://multi.tscn', multiRootScene);
+    fake.scenes.seed('res://multi.tscn', multiRootScene);
 
     const instancingNode: TscnNode = {
       name: 'MultiHost',
@@ -441,7 +376,7 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
 
     const renderer = await renderTree(
       [instancingNode],
-      loader,
+      fake.loader,
       [{ id: 'multi_ref', path: 'res://multi.tscn', type: 'PackedScene' }]
     );
 
@@ -461,7 +396,7 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
     // dispatched under the sub-scene's resource pool; it must still resolve its
     // host-scoped ExtResource id (via SceneResourcesProvider inheritance) or it
     // silently fails to load and vanishes — exactly the lamps/doors regression.
-    const { loader, setSceneCached } = makeLoader();
+    const fake = createFakeResourceLoader();
 
     // Sub-scene the Wrapper instances — its own pool does NOT contain the
     // gadget ref.
@@ -484,8 +419,8 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
       externalResources: [],
       internalResources: [{ id: 'S_1', type: 'SphereMesh', data: { id: 'S_1', radius: '0.5' } }],
     };
-    setSceneCached('res://wrapper.tscn', wrapperScene);
-    setSceneCached('res://gadget.tscn', gadgetScene);
+    fake.scenes.seed('res://wrapper.tscn', wrapperScene);
+    fake.scenes.seed('res://gadget.tscn', gadgetScene);
 
     const wrapperNode: TscnNode = {
       name: 'Wrapper',
@@ -500,7 +435,7 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
 
     const renderer = await renderTree(
       [wrapperNode],
-      loader,
+      fake.loader,
       [
         { id: 'wrapper_ref', path: 'res://wrapper.tscn', type: 'PackedScene' },
         { id: 'gadget_ref', path: 'res://gadget.tscn', type: 'PackedScene' },
@@ -522,7 +457,7 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
     // (Godot parity). TopRoot's x=2 replaces MiddleWrapper's z=3, so the fully
     // collapsed leaf lands at (2,0,0). This pins the replace-not-compose
     // behavior and guards against re-introducing the double-transform.
-    const { loader, setSceneCached } = makeLoader();
+    const fake = createFakeResourceLoader();
 
     // Level 3 (leaf): a single box mesh, NO transform.
     const leafScene: TscnScene = {
@@ -570,8 +505,8 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
       internalResources: [],
     };
 
-    setSceneCached('res://leaf.tscn', leafScene);
-    setSceneCached('res://middle.tscn', middleScene);
+    fake.scenes.seed('res://leaf.tscn', leafScene);
+    fake.scenes.seed('res://middle.tscn', middleScene);
 
     // Level 1 (top): a Node3D translated x=2 that instances middle.
     const topNodes: TscnNode[] = [
@@ -594,7 +529,7 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
 
     const renderer = await renderTree(
       topNodes,
-      loader,
+      fake.loader,
       [{ id: 'middle_ref', path: 'res://middle.tscn', type: 'PackedScene' }]
     );
 
@@ -628,8 +563,8 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
     // unrelated re-render elsewhere in the tree (selection, hover, an
     // unrelated sibling's state) doesn't re-walk this instance's merge every
     // render — the same fix TreeNode.tsx already applies on the tree side.
-    const { loader, setSceneCached } = makeLoader();
-    setSceneCached('res://child_cube.tscn', makeBoxScene('TheBox'));
+    const fake = createFakeResourceLoader();
+    fake.scenes.seed('res://child_cube.tscn', makeBoxScene('TheBox'));
 
     const instancingNode: TscnNode = {
       name: 'LeftCube',
@@ -653,7 +588,7 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
 
     function Harness({ tick }: { tick: number }) {
       return (
-        <ResourceLoaderProvider loader={loader}>
+        <ResourceLoaderProvider loader={fake.loader}>
           <SceneResourcesProvider
             internalResources={internalResources}
             externalResources={externalResources}
@@ -684,9 +619,8 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
   });
 
   it('PERF (WI-213): registers the instanced ExtResource from an effect, not the render body', async () => {
-    const { loader, setSceneCached } = makeLoader();
-    setSceneCached('res://child_cube.tscn', makeBoxScene('TheBox'));
-    const registerSpy = loader.register as unknown as ReturnType<typeof vi.fn>;
+    const fake = createFakeResourceLoader();
+    fake.scenes.seed('res://child_cube.tscn', makeBoxScene('TheBox'));
 
     const instancingNode: TscnNode = {
       name: 'LeftCube',
@@ -698,14 +632,14 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
 
     await renderTree(
       [instancingNode],
-      loader,
+      fake.loader,
       [{ id: '1_cube', path: 'res://child_cube.tscn', type: 'PackedScene' }]
     );
 
     // Behavior is preserved (registration still happens, so the resource
     // pipeline can resolve the instanced scene) even though the call now
     // lives inside a useEffect instead of the render body.
-    expect(registerSpy).toHaveBeenCalledWith({
+    expect(fake.registerCalls).toContainEqual({
       id: '1_cube',
       path: 'res://child_cube.tscn',
       type: 'PackedScene',

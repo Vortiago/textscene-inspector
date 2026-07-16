@@ -1,5 +1,5 @@
 /**
- * F-to-frame target resolution (#224): frame the selected node if one is
+ * F-to-frame target resolution: frame the selected node if one is
  * selected AND its Object3D is registered (`SelectionContext.nodeObjectMap`,
  * the same map `SelectionHighlight` uses); otherwise frame the whole scene —
  * matching common DCC-tool convention (Blender/Godot: F frames the

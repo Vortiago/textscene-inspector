@@ -1,5 +1,5 @@
 /**
- * localStorage-backed `useState` (#224). Mirrors the try/catch
+ * localStorage-backed `useState`. Mirrors the try/catch
  * getItem+JSON.parse-with-fallback pattern the web app already uses inline
  * for its fixture/Source-pane persistence (`apps/textscene-web/src/r3f-main.tsx`),
  * generalised so `<TscnPreviewShell>` (shared core, both hosts) can persist

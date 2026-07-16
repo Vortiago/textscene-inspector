@@ -1,5 +1,5 @@
 /**
- * Base Control strict validators for linting (#143).
+ * Base Control strict validators for linting.
  *
  * Control is the root of the 2D UI family (Label, Button, Panel, the
  * *Containers, …). Registering the shared layout/anchor/offset + theme-override

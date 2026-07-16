@@ -158,7 +158,7 @@ describe('ResourceLoader (loader-level gaps)', () => {
       expect(loader.metadata.getAll()).toHaveLength(0);
 
       // A CALLER subscriber registered before the clear still receives events
-      // — unlike clear() (#217), which wipes every subscriber, caller ones
+      // — unlike clear(), which wipes every subscriber, caller ones
       // included, and only re-registers the loader's OWN internal callbacks.
       loader.register(SCENE_META);
       const second = loader.eventBus.once<TscnScene>('scene', 'loaded', SCENE_PATH);

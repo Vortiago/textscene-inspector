@@ -1,5 +1,5 @@
 /**
- * applyLoopOverride (#224) — the ONE place the preview loop override maps to
+ * applyLoopOverride — the ONE place the preview loop override maps to
  * THREE action loop config, shared by the AnimationPlayer and GLB drivers.
  */
 import { describe, expect, it, vi } from 'vitest';

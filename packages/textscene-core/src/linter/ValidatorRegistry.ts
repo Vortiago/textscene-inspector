@@ -121,6 +121,6 @@ export class ValidatorRegistry {
 
 /**
  * Singleton instance of ValidatorRegistry, wired with the real node base-type
- * table so every subclass inherits its base validators (#143).
+ * table so every subclass inherits its base validators.
  */
 export const validatorRegistry = new ValidatorRegistry(NODE_BASE_TYPES);

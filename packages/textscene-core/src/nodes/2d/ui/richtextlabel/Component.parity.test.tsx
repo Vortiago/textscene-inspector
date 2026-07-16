@@ -1,5 +1,5 @@
 /**
- * Parity: RichTextLabel.fit_content (#45) — shrink height to content.
+ * Parity: RichTextLabel.fit_content — shrink height to content.
  */
 import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/react';

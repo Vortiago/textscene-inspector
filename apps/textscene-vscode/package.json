@@ -176,7 +176,7 @@
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@types/vscode": "^1.85.0",
-    "@vscode/test-electron": "^2.5.2",
+    "@vscode/test-electron": "catalog:",
     "@vscode/test-web": "^0.0.80",
     "@vscode/vsce": "^3.2.1",
     "esbuild": "catalog:",

@@ -1,5 +1,5 @@
 /**
- * Issue #221 — missing-resource badge: today a scene's missing `res://`
+ * Missing-resource badge: today a scene's missing `res://`
  * dependencies are silent unless the user has the Resources tab open.
  *
  * `useMissingResources()` (from `@textscene/core`) is the shell's own

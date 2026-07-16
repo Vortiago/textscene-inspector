@@ -20,14 +20,6 @@ import type {
 } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
 
-function makeLoader() {
-  const fake = createFakeResourceLoader();
-  return {
-    loader: fake.loader,
-    setTextureCached: (p: string, t: THREE.Texture) => fake.textures.seed(p, t),
-  };
-}
-
 function makeNode(): TscnNode {
   const props: MeshInstance3DProperties = {
     name: 'M',
@@ -59,11 +51,11 @@ async function renderUV(opts: {
   externals: TscnExternalResource[];
   cached: Array<{ path: string; texture: THREE.Texture }>;
 }) {
-  const { loader, setTextureCached } = makeLoader();
-  for (const { path, texture } of opts.cached) setTextureCached(path, texture);
+  const fake = createFakeResourceLoader();
+  for (const { path, texture } of opts.cached) fake.textures.seed(path, texture);
 
   const renderer = await ReactThreeTestRenderer.create(
-    <ResourceLoaderProvider loader={loader}>
+    <ResourceLoaderProvider loader={fake.loader}>
       <SceneResourcesProvider
         internalResources={[
           sub('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' }),

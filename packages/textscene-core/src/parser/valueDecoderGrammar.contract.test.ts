@@ -1,5 +1,5 @@
 /**
- * Issue #175 — Consolidate drifted value decoders onto the canonical float grammar.
+ * Consolidate drifted value decoders onto the canonical float grammar.
  *
  * RED contract. Pins the BEHAVIOUR the consolidation must produce, against the one source of
  * grammar truth (`FLOAT_PATTERN_SOURCE` / `parseVector2` in `parser/vectors.ts`, the `*Or`
@@ -12,7 +12,7 @@
  *   bug is the NaN-leak from *truthy garbage only* — an authored "0" (truthy string) is not
  *   lost; only an unparseable-but-present value currently leaks NaN.
  *
- * The seam this pins (each maps to an acceptance criterion of #175):
+ * The seam this pins (each maps to an acceptance criterion of the issue):
  *   AC4  a promoted OPTIONAL Vector2 reader in valueParsers, sharing FLOAT_PATTERN_SOURCE;
  *   AC1  control + styleBox Vector2 reads go through the canonical grammar (loose-regex-only
  *        garbage no longer parses to NaN / a wrong number);

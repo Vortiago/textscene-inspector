@@ -16,19 +16,28 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 
 // Under happy-dom nothing mounts inside the Canvas, so no `useResource()`
 // call ever reports a missing path. Tests that need missing rows inject them
-// through this hoisted override — the Toolbar mirrors whatever
-// `useMissingResources()` returns into `missingPathsRef`, which is exactly
-// the seam `handleFilesUpload` reads.
+// through this hoisted override, delivered via the SAME prop contract the
+// production shell uses (`onMissingPathsChange`) — which is exactly the seam
+// `handleFilesUpload` reads.
 const missingPathsOverride = vi.hoisted(() => ({
   current: null as ReadonlySet<string> | null,
 }));
 
 vi.mock('@textscene/core', async () => {
   const real = await vi.importActual<typeof import('@textscene/core')>('@textscene/core');
+  const React = await vi.importActual<typeof import('react')>('react');
   return {
     ...real,
     TscnCanvas: () => null,
     TscnSceneContents: () => null,
+    TscnPreviewShell: (props: Parameters<typeof real.TscnPreviewShell>[0]) =>
+      // Substitute the override AT the provider's own observer seam — no
+      // parent effect racing the provider's report, no ordering dependency.
+      React.createElement(real.TscnPreviewShell, {
+        ...props,
+        onMissingPathsChange: (paths: ReadonlySet<string>) =>
+          props.onMissingPathsChange?.(missingPathsOverride.current ?? paths),
+      }),
     useMissingResources: () => {
       const value = real.useMissingResources();
       return missingPathsOverride.current

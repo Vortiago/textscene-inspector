@@ -1,12 +1,13 @@
 /**
- * #147 — AudioStreamPlayer / AudioStreamPlayer2D render parsers drop the audio
- * properties the linter validates.  BEHAVIORAL CONTRACT (RED until the slice ships).
+ * AudioStreamPlayer / AudioStreamPlayer2D render parsers dropped the audio
+ * properties the linter validates.  BEHAVIORAL CONTRACT (written RED before the
+ * slice shipped).
  *
- * Both players register the shared base parser (parseNode / parseNode2D), so every
- * audio property is silently discarded at parse/render time, neither slice has a
- * propertyFormatter (the Inspector shows nothing), and the plain AudioStreamPlayer
- * linter is missing the `bus`/`playing` validators its 2D/3D siblings already have —
- * a parser↔linter divergence.  AudioStreamPlayer3D is the working sibling to mirror.
+ * Both players registered the shared base parser (parseNode / parseNode2D), so every
+ * audio property was silently discarded at parse/render time, neither slice had a
+ * propertyFormatter (the Inspector showed nothing), and the plain AudioStreamPlayer
+ * linter was missing the `bus`/`playing` validators its 2D/3D siblings already had —
+ * a parser↔linter divergence.  AudioStreamPlayer3D was the working sibling to mirror.
  *
  * Written through STABLE public surfaces only (TscnParser, nodeRegistry, Linter) so it
  * survives refactors.  Two side-effect imports are load-bearing and MUST stay:

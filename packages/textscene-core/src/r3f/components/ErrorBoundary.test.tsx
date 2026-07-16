@@ -1,5 +1,5 @@
 /**
- * ErrorBoundary (#216) — the shared class component both PreviewErrorBoundary
+ * ErrorBoundary — the shared class component both PreviewErrorBoundary
  * (around <ViewportArea>) and NodeDispatcher's per-node catch reuse. Plain
  * react-dom render here since error-boundary semantics are renderer-agnostic
  * (a core React feature, not R3F-specific); NodeDispatcher.test.tsx pins the
@@ -99,7 +99,7 @@ describe('ErrorBoundary', () => {
 
   it('resetKeys: clears a caught error when a resetKey changes, WITHOUT remounting the boundary itself', () => {
     // Mirrors PreviewErrorBoundary's "clears when the file is fixed" contract
-    // (#216) — the fix arrives as new props (a fresh sceneGraph), not a user
+    // — the fix arrives as new props (a fresh sceneGraph), not a user
     // click, and must NOT force a remount of everything the boundary wraps
     // (that would drop OrbitControls camera state / playback state on every
     // edit, not just a crash recovery).

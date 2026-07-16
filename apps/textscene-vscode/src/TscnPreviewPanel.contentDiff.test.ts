@@ -1,6 +1,6 @@
 /**
  * Unit tests for `TscnPreviewPanel._loadTscnContent`'s content-diff guard and
- * error path (#218). The dependency hot-reload suite
+ * error path. The dependency hot-reload suite
  * (`TscnPreviewPanel.hotReload.test.ts`) and the handshake suite
  * (`TscnPreviewPanel.handshake.test.ts`) exercise `update()` for a resource-
  * provider cache switch and for a genuine content change respectively, but

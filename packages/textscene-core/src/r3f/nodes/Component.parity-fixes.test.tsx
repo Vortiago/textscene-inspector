@@ -26,9 +26,7 @@ import { Label3D } from '../../nodes/3d/label3d/Component';
 import { ViewportModeProvider } from '../contexts/ViewportModeContext';
 import { SceneResourcesProvider } from '../SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
-import { ResourceEventBus } from '../../resources/ResourceEventBus';
-import { MetadataStore } from '../../resources/MetadataStore';
-import type { ResourceLoader } from '../../resources/ResourceLoader';
+import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
 import type {
   TscnInternalResource,
   TscnNode,
@@ -41,45 +39,6 @@ import {
 } from '../../nodes/3d/camera3d/types';
 import type { Label3DProperties } from '../../nodes/3d/label3d/types';
 import { BillboardMode } from '../../nodes/3d/label3d/types';
-
-function makeLoader(): {
-  loader: ResourceLoader;
-  setTextureCached: (path: string, tex: THREE.Texture) => void;
-} {
-  const eventBus = new ResourceEventBus();
-  const metadata = new MetadataStore();
-  const textureCache = new Map<string, THREE.Texture | null>();
-  const materialCache = new Map<string, THREE.Material | null>();
-  const glbCache = new Map<string, THREE.Object3D | null>();
-  const makeProc = <T,>(cache: Map<string, T | null>) => ({
-    request: vi.fn(),
-    getCached: (p: string) => cache.get(p),
-    isCached: (p: string) => cache.has(p),
-    isLoading: () => false,
-    clearCache: () => {},
-    getCacheSize: () => cache.size,
-    pin: () => {},
-    unpin: () => {},
-  });
-  const sceneCache = new Map<string, unknown | null>();
-  const loader = {
-    eventBus,
-    metadata,
-    textures: makeProc<THREE.Texture>(textureCache),
-    materials: makeProc<THREE.Material>(materialCache),
-    glbMeshes: makeProc<THREE.Object3D>(glbCache),
-    scenes: makeProc<unknown>(sceneCache), // peer processor
-    getSceneCached: () => undefined,
-    requestScene: () => {},
-    register: () => {},
-    provideFile: () => {},
-    clear: () => {},
-  } as unknown as ResourceLoader;
-  return {
-    loader,
-    setTextureCached: (p, t) => textureCache.set(p, t),
-  };
-}
 
 function sub(type: string, id: string, data: Record<string, string | undefined> = {}): TscnInternalResource {
   return {
@@ -174,13 +133,13 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
   });
 
   it('audit slot 38a — ao_texture loaded → material.aoMap is a THREE.Texture', async () => {
-    const { loader, setTextureCached } = makeLoader();
+    const fake = createFakeResourceLoader();
     const aoTex = new THREE.Texture();
     const AO_PATH = 'res://textures/ao.png';
-    setTextureCached(AO_PATH, aoTex);
+    fake.textures.seed(AO_PATH, aoTex);
 
     const renderer = await ReactThreeTestRenderer.create(
-      <ResourceLoaderProvider loader={loader}>
+      <ResourceLoaderProvider loader={fake.loader}>
         <SceneResourcesProvider
           internalResources={[
             sub('BoxMesh', 'Mesh_1', { size: 'Vector3(1, 1, 1)' }),

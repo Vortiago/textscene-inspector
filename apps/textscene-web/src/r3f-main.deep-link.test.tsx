@@ -1,5 +1,5 @@
 /**
- * Issue #221 — shareable deep links: `?fixture=` was read once at mount but
+ * Shareable deep links: `?fixture=` was read once at mount but
  * never written back, so switching scenes and reloading (or sharing the
  * URL) reopened whatever was last persisted in localStorage, not the scene
  * actually on screen. Reuses the `r3f-main.*.test.tsx` WebGL-mock pattern.

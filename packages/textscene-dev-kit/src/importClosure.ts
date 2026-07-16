@@ -12,13 +12,15 @@
  *
  * The walker reads source text and matches import/export statements with a
  * regex rather than a full parser on purpose: it must agree with what the
- * bundler keeps in the runtime graph (statement-level `import`/`export … from`
- * and bare side-effect imports; `import type` erased), and a regex pins that
- * contract without an AST dependency.
+ * bundler keeps in the runtime graph (statement-level `import`/`export … from`,
+ * bare side-effect imports, and literal dynamic `import('…')` expressions;
+ * `import type` erased), and a regex pins that contract without an AST
+ * dependency.
  */
 
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, extname, relative, resolve } from 'node:path';
+import { stripComments } from './commentSpans';
 
 /**
  * Captures the specifier of any `import`/`export … from` statement and bare
@@ -28,6 +30,19 @@ import { dirname, extname, relative, resolve } from 'node:path';
  * so the walker keeps agreeing with the bundler's runtime graph.
  */
 const SPEC_RE = /(?:^|\n)\s*(import|export)\s+(type\s+)?(?:[^;'"]*?\sfrom\s*)?['"]([^'"]+)['"]/g;
+
+/**
+ * Dynamic `import('…')` expressions with a literal specifier. The bundler
+ * keeps these in the runtime graph (as lazy chunks), so a boundary guard that
+ * ignored them would pass green while `await import('three')` ships the
+ * forbidden module anyway. Computed specifiers can't be followed statically
+ * and are out of contract. Group 1 captures a preceding `typeof` — the
+ * `typeof import('…')` type-annotation form is erased by the compiler and
+ * must be skipped, matching the `import type` handling above. Comments are
+ * blanked before this scan (see stripComments) so prose mentioning
+ * `import('x')` never enters the closure.
+ */
+const DYNAMIC_RE = /\b(typeof\s+)?import\s*\(\s*['"]([^'"]+)['"]\s*\)/g;
 
 /** Bare specifiers for the UI frameworks that must never reach a host/linter bundle. */
 export const FRAMEWORK_BARE_RE: readonly RegExp[] = [
@@ -137,12 +152,8 @@ export function walkImportClosure(
     if (files.has(file) || exclude?.(file)) continue;
     files.add(file);
     const src = readFileSync(file, 'utf8');
-    const re = new RegExp(SPEC_RE.source, 'g');
-    let m: RegExpExecArray | null;
-    while ((m = re.exec(src)) !== null) {
-      const isTypeOnly = m[2] !== undefined; // `import type` / `export type` — erased by the bundler
-      if (isTypeOnly) continue;
-      const spec = m[3]!;
+
+    const follow = (spec: string): void => {
       const resolved = resolveSpecifier(file, spec, aliases);
       if (resolved) {
         stack.push(resolved);
@@ -153,6 +164,20 @@ export function walkImportClosure(
         if (!importers) bareValueImports.set(spec, (importers = new Set()));
         importers.add(label(file));
       }
+    };
+
+    const re = new RegExp(SPEC_RE.source, 'g');
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(src)) !== null) {
+      const isTypeOnly = m[2] !== undefined; // `import type` / `export type` — erased by the bundler
+      if (isTypeOnly) continue;
+      follow(m[3]!);
+    }
+    const dyn = new RegExp(DYNAMIC_RE.source, 'g');
+    const dynSrc = stripComments(src);
+    while ((m = dyn.exec(dynSrc)) !== null) {
+      if (m[1] !== undefined) continue; // `typeof import('…')` — type-only, erased
+      follow(m[2]!);
     }
   }
   return { files, bareValueImports, unresolved };

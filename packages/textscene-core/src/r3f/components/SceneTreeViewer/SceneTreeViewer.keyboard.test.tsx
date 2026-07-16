@@ -1,5 +1,5 @@
 /**
- * Keyboard-operable scene tree (#224): `role="tree"` was declared but there
+ * Keyboard-operable scene tree: `role="tree"` was declared but there
  * was no tabIndex/arrow-nav/roving focus, so the ARIA was a false promise.
  * Roving tabIndex per the WAI-ARIA APG Tree View pattern: exactly ONE
  * treeitem is a tab stop at a time (the selected row, or the first root row

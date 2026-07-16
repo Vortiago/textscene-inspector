@@ -1,5 +1,5 @@
 /**
- * usePersistedState (#224) — the shared localStorage-backed state hook
+ * usePersistedState — the shared localStorage-backed state hook
  * `TscnPreviewShell` uses for dock layout + viewport mode, mirroring the
  * web app's existing inline pattern (r3f-main.tsx) so both hosts get it for
  * free (VS Code webviews are a browser context too — localStorage works the

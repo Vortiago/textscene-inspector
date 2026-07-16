@@ -16,7 +16,7 @@
  * exactly. This catches any future composition regression across every
  * PhotoFrame, and documents that the outlier's height is data, not a bug.
  */
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode, TscnScene, TscnInternalResource } from '../parser/types';
@@ -24,41 +24,10 @@ import { NodeDispatcher } from './NodeDispatcher';
 import { SelectionProvider } from './contexts/SelectionContext';
 import { SceneResourcesProvider } from './SceneResourcesContext';
 import { ResourceLoaderProvider } from '../resources/ResourceLoaderContext';
-import { ResourceEventBus } from '../resources/ResourceEventBus';
-import { MetadataStore } from '../resources/MetadataStore';
+import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader';
 import type { ResourceLoader } from '../resources/ResourceLoader';
 
 import './nodes/index';
-
-function makeLoader() {
-  const eventBus = new ResourceEventBus();
-  const metadata = new MetadataStore();
-  const sceneCache = new Map<string, TscnScene | null>();
-  const makeProc = <T,>(cache: Map<string, T | null>) => ({
-    request: vi.fn(),
-    getCached: (p: string) => cache.get(p),
-    isCached: (p: string) => cache.has(p),
-    isLoading: () => false,
-    clearCache: () => {},
-    getCacheSize: () => cache.size,
-    pin: () => {},
-    unpin: () => {},
-  });
-  const loader = {
-    eventBus,
-    metadata,
-    textures: makeProc<THREE.Texture>(new Map()),
-    materials: makeProc<THREE.Material>(new Map()),
-    glbMeshes: makeProc<THREE.Object3D>(new Map()),
-    scenes: makeProc<TscnScene>(sceneCache),
-    getSceneCached: (p: string) => sceneCache.get(p),
-    requestScene: vi.fn(),
-    register: vi.fn(),
-    provideFile: () => {},
-    clear: () => {},
-  } as unknown as ResourceLoader;
-  return { loader, setSceneCached: (p: string, s: TscnScene) => sceneCache.set(p, s) };
-}
 
 /** A PhotoFrame sub-scene: root Node3D with an identity Canvas MeshInstance3D. */
 function makePhotoFrameScene(canvasName: string): TscnScene {
@@ -158,12 +127,12 @@ describe('PhotoFrame composition — Canvas mesh inherits the authored instance 
   it.each(FRAMES)(
     '$name Canvas world position == authored instance origin',
     async ({ name, origin }) => {
-      const { loader, setSceneCached } = makeLoader();
+      const fake = createFakeResourceLoader();
       const scenePath = `res://${name}.tscn`;
-      setSceneCached(scenePath, makePhotoFrameScene('Canvas'));
+      fake.scenes.seed(scenePath, makePhotoFrameScene('Canvas'));
 
       const renderer = await renderFrame(
-        loader,
+        fake.loader,
         makeFrameInstanceNode(name, scenePath, origin),
         { id: `${name}_ref`, path: scenePath }
       );
@@ -176,12 +145,12 @@ describe('PhotoFrame composition — Canvas mesh inherits the authored instance 
   );
 
   it('PhotoFrameA renders at its authored Y=3.008 (data outlier, faithfully reproduced — not a renderer bug)', async () => {
-    const { loader, setSceneCached } = makeLoader();
+    const fake = createFakeResourceLoader();
     const origin = { x: 8.548, y: 3.008, z: -1.625 };
-    setSceneCached('res://PhotoFrameA.tscn', makePhotoFrameScene('Canvas'));
+    fake.scenes.seed('res://PhotoFrameA.tscn', makePhotoFrameScene('Canvas'));
 
     const renderer = await renderFrame(
-      loader,
+      fake.loader,
       makeFrameInstanceNode('PhotoFrameA', 'res://PhotoFrameA.tscn', origin),
       { id: 'PhotoFrameA_ref', path: 'res://PhotoFrameA.tscn' }
     );

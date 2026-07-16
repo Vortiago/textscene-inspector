@@ -10,7 +10,7 @@ import {
 } from '../../contexts/AnimationTransportContext';
 import styles from './AnimationPanel.module.css';
 
-/** Discrete preview speed multipliers (#224) — enough range to spot subtle
+/** Discrete preview speed multipliers — enough range to spot subtle
  * timing without cluttering the dock with a free-form input. */
 const SPEED_OPTIONS = [0.25, 0.5, 1, 1.5, 2] as const;
 

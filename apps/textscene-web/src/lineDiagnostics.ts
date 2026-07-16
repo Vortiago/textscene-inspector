@@ -1,5 +1,5 @@
 /**
- * Issue #202 — pure `Diagnostic[]` → per-line gutter grouping + problem-count
+ * Pure `Diagnostic[]` → per-line gutter grouping + problem-count
  * badge formatting. No React, no WebGL: the unit-testable seam the linter
  * gutter (`r3f-main.tsx`) builds on.
  */

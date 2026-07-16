@@ -1,9 +1,9 @@
 /**
- * Issue #200 — Source pane skeleton (toggle, splitter, persistence, source display).
+ * Source pane skeleton (toggle, splitter, persistence, source display).
  *
  * RED contract. Behavioral `<R3FApp>` tests (the pattern the issue prescribes:
  * reuse `r3f-main.*.test.tsx` with `TscnCanvas`/`TscnSceneContents` mocked — happy-dom has no WebGL).
- * Each `describe` maps to one acceptance criterion of #200. These pin BEHAVIOR the slice must add,
+ * Each `describe` maps to one acceptance criterion of the issue. These pin BEHAVIOR the slice must add,
  * not a specific implementation — but they do fix the DOM handles the pane must expose so the tests
  * are deterministic (the repo's established convention: `data-testid` on interactive elements, cf.
  * `upload-tscn-input` / `reset-camera-button`):

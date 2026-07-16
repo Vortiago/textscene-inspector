@@ -1,5 +1,5 @@
 /**
- * Command-palette (Ctrl/⌘K scene switcher) coverage (#218).
+ * Command-palette (Ctrl/⌘K scene switcher) coverage.
  *
  * `<Toolbar>`'s palette (r3f-main.tsx:640-841) had no dedicated test: other
  * `r3f-main.*.test.tsx` files (deep-link, fixture-fetch, source-edit) open it

@@ -1,5 +1,5 @@
 /**
- * "F" frames the camera on the selected node (#224) — Blender/Godot-style:
+ * "F" frames the camera on the selected node — Blender/Godot-style:
  * frames the selection if one exists, else the whole scene. Reuses the
  * already-tested `frameSceneBounds` and `resolveFrameTarget` for the target
  * resolution; this component is just the `useGlobalShortcut` wiring.
