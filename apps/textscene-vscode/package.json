@@ -181,7 +181,7 @@
     "@vscode/vsce": "^3.2.1",
     "esbuild": "catalog:",
     "esbuild-css-modules-plugin": "^3.1.5",
-    "glob": "^11.0.3",
+    "glob": "^13.0.6",
     "happy-dom": "catalog:",
     "mocha": "^11.7.5",
     "rimraf": "catalog:",
