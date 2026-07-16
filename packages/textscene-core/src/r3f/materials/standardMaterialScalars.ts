@@ -137,8 +137,12 @@ export function parseStandardMaterial3DScalars(
     properties['uv1_triplanar'] === 'true' || properties['uv1_world_triplanar'] === 'true';
 
   const clearcoatEnabled = properties['clearcoat_enabled'] === 'true';
+  // Godot's BaseMaterial3D `clearcoat` defaults to 1.0 (not 0). Because .tscn
+  // omits default-valued properties, `clearcoat_enabled` on with `clearcoat`
+  // absent is the COMMON input and must resolve to a full-strength coat — NOT
+  // DEFAULT_SCALARS.clearcoat, which is our flag-OFF (three.js off-state) constant.
   const clearcoat = clearcoatEnabled
-    ? clamp01(numericOr(properties['clearcoat'], DEFAULT_SCALARS.clearcoat))
+    ? clamp01(numericOr(properties['clearcoat'], 1))
     : 0;
   const clearcoatRoughness = clearcoatEnabled
     ? clamp01(numericOr(properties['clearcoat_roughness'], 0.5))

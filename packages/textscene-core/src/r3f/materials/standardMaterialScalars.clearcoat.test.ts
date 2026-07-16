@@ -13,9 +13,11 @@
  * ignores the property, so the parse must yield 0 (no coat) rather than leak a
  * stray strength that would paint gloss onto a material the author never
  * enabled it for. This file pins the strength round-trip when enabled, the
- * flag-gating (the load-bearing guardrail), and non-interference with the
- * other scalars. The render-side wiring into the material is out-of-gate
- * (verified by code-review), as is the enabled-but-unset Godot default.
+ * flag-gating (the load-bearing guardrail), the enabled-but-unset Godot
+ * defaults (clearcoat 1.0 / clearcoat_roughness 0.5 — the COMMON input, since
+ * .tscn omits default-valued properties), the 0..1 clamp, and non-interference
+ * with the other scalars. The render-side wiring into the material is
+ * out-of-gate (verified by code-review) — tracked for the follow-up PR.
  */
 import { describe, expect, it } from 'vitest';
 import { parseStandardMaterial3DScalars } from './standardMaterialScalars';
@@ -32,6 +34,29 @@ describe('parseStandardMaterial3DScalars — clearcoat flag (WI-66)', () => {
         clearcoat_roughness: '0.25',
       })
     ).toMatchObject({ clearcoat: 0.7, clearcoatRoughness: 0.25 });
+  });
+
+  it('enabled but strengths unset → Godot defaults (clearcoat 1, clearcoat_roughness 0.5)', () => {
+    // COMMON REAL-WORLD INPUT: .tscn omits default-valued properties, so a
+    // clearcoat-enabled material usually ships the flag alone. Godot's
+    // BaseMaterial3D defaults are clearcoat 1.0 and clearcoat_roughness 0.5 —
+    // NOT 0 (that is the flag-OFF / three.js off-state). Pins the exact path a
+    // self-review once regressed through undetected.
+    expect(parseStandardMaterial3DScalars({ clearcoat_enabled: 'true' })).toMatchObject({
+      clearcoat: 1,
+      clearcoatRoughness: 0.5,
+    });
+  });
+
+  it('clamps the enabled clearcoat strength to 0..1 (over-range → 1, negative → 0)', () => {
+    // Strength is a 0..1 scalar; a stray out-of-range value must saturate, not
+    // leak past the range into the renderer.
+    expect(
+      parseStandardMaterial3DScalars({ clearcoat_enabled: 'true', clearcoat: '2.5' }).clearcoat
+    ).toBe(1);
+    expect(
+      parseStandardMaterial3DScalars({ clearcoat_enabled: 'true', clearcoat: '-1' }).clearcoat
+    ).toBe(0);
   });
 
   it('gates on clearcoat_enabled — scalars present but the flag absent → no coat (0)', () => {
