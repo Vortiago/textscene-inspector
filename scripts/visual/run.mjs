@@ -14,7 +14,8 @@
  *   - SwiftShader software GL: no GPU/driver variance.
  *   - Fixed viewport, deviceScaleFactor 1, fresh browser context.
  *   - Canvas-element screenshot only — shell DOM/font rendering never
- *     enters the image.
+ *     enters the image; the viewport toolbar (which floats over the canvas)
+ *     is hidden for the whole capture context so only the render is compared.
  *   - Stabilization gate: a scene must produce two byte-identical
  *     consecutive captures before it is compared or accepted as a
  *     baseline. A scene that never settles FAILS as unstable; flakiness
@@ -28,6 +29,7 @@
  * On failure, <name>.actual.png and <name>.diff.png land in
  * scripts/visual/output/ (gitignored; uploaded as a CI artifact).
  */
+/* global document */ // used only inside the addInitScript callback, which runs in the browser.
 
 import { spawn, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -319,11 +321,26 @@ async function main() {
       viewport: VIEWPORT,
       deviceScaleFactor: 1,
     });
-    /* global window */ // the addInitScript callback below runs in the browser
+    /* global window */ // the addInitScript callbacks below run in the browser
     await context.addInitScript(
       ([key, value]) => window.localStorage.setItem(key, value),
       [SOURCE_PANE_STORAGE_KEY, JSON.stringify({ visible: false, width: 320 })]
     );
+    // Keep this a pure render comparison (see header): the viewport toolbar
+    // floats over the canvas, and canvas.screenshot() composites any DOM
+    // painted over the canvas box, so the overlay would churn every 3D
+    // baseline. Hide it once for the whole context (survives every navigation).
+    // The <style> must land in <head> once it exists — appending at
+    // document-start puts it in an invalid position that the parser drops.
+    await context.addInitScript(() => {
+      const add = () => {
+        const style = document.createElement('style');
+        style.textContent = '[data-testid="viewport-toolbar-overlay"]{display:none !important}';
+        document.head.appendChild(style);
+      };
+      if (document.head) add();
+      else document.addEventListener('DOMContentLoaded', add, { once: true });
+    });
     const page = await context.newPage();
 
     for (const scene of scenes) {
