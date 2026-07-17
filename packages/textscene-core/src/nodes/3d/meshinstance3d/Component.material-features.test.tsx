@@ -387,4 +387,31 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
     expect(renderer.scene.findAllByType('MeshPhysicalMaterial')).toHaveLength(0);
     expect(renderer.scene.findAllByType('MeshStandardMaterial')).toHaveLength(1);
   });
+
+  it('renders a rim material as MeshPhysicalMaterial with rim mapped to sheen', async () => {
+    const loader = makeLoader();
+    const internalResources: TscnInternalResource[] = [
+      { id: 'box', type: 'BoxMesh', data: { id: 'box' } },
+      {
+        id: 'mat',
+        type: 'StandardMaterial3D',
+        data: {
+          id: 'mat',
+          rim_enabled: 'true',
+          rim: '0.7',
+          rim_tint: '0.25',
+        } as Record<string, string>,
+      },
+    ];
+
+    const renderer = await renderWith(makeNode('mat'), internalResources, [], loader);
+    await new Promise<void>((r) => setTimeout(r, 10));
+
+    // Rim upgrades the slot to MeshPhysicalMaterial and maps the rim strength
+    // onto three.js's Fresnel sheen term (the closest native analog).
+    const physical = renderer.scene.findAllByType('MeshPhysicalMaterial');
+    expect(physical).toHaveLength(1);
+    const material = physical[0]!.instance as THREE.MeshPhysicalMaterial;
+    expect(material.sheen).toBeCloseTo(0.7, 5);
+  });
 });
