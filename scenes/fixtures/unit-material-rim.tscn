@@ -1,0 +1,29 @@
+[gd_scene format=3]
+
+[sub_resource type="SphereMesh" id="SphereMesh_1"]
+radius = 1.0
+height = 2.0
+radial_segments = 32
+rings = 16
+
+[sub_resource type="StandardMaterial3D" id="Material_rim"]
+albedo_color = Color(0.15, 0.17, 0.22, 1)
+metallic = 0.0
+roughness = 0.6
+rim_enabled = true
+rim = 1.0
+rim_tint = 0.25
+
+[node name="Root" type="Node3D"]
+
+[node name="RimSphere" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+mesh = SubResource("SphereMesh_1")
+surface_material_override/0 = SubResource("Material_rim")
+
+[node name="Title" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
+text = "Rim Lighting Material Test"
+pixel_size = 0.008
+billboard = 1
+modulate = Color(1, 1, 0.7, 1)
