@@ -20,6 +20,8 @@ export interface StandardMaterialSlotProps {
   metalnessMap?: THREE.Texture;
   emissiveMap?: THREE.Texture;
   aoMap?: THREE.Texture;
+  /** Godot `heightmap_texture` → three.js displacementMap (height mapping). */
+  displacementMap?: THREE.Texture;
   /** Override for shadow-pass side culling (Godot DOUBLE_SIDED cast_shadow). */
   shadowSide?: THREE.Side;
   /**
@@ -40,6 +42,7 @@ export function StandardMaterialSlot({
   metalnessMap,
   emissiveMap,
   aoMap,
+  displacementMap,
   shadowSide,
   meshType: _meshType,
   attach,
@@ -125,6 +128,15 @@ export function StandardMaterialSlot({
     aoMap: aoMap ?? null,
     emissive: scalars.emissive,
     emissiveIntensity: scalars.emissiveIntensity,
+    // Godot heightmap (FEATURE_HEIGHT_MAPPING) → three.js vertex displacement.
+    // PARITY LIMITATION: Godot uses texture-space parallax; three.js
+    // displacement moves real vertices, so it needs a subdivided mesh and its
+    // depth is in world units (a different space than Godot's heightmap_scale).
+    // Faithful in kind (a height texture raises the surface), approximate in
+    // exact depth. Both are inert for a non-heightmap material: heightmapScale
+    // is 0 and there is no displacementMap, so no vertices move.
+    displacementMap: displacementMap ?? null,
+    displacementScale: scalars.heightmapScale,
   };
   // Godot clearcoat (FEATURE_CLEARCOAT, a glossy coat) and rim (FEATURE_RIM, a
   // Fresnel edge highlight) both live natively on MeshPhysicalMaterial only —

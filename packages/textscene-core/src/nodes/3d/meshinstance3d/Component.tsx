@@ -48,6 +48,7 @@ const TEXTURE_PROPERTIES = [
   'metallic_texture',
   'emission_texture',
   'ao_texture',
+  'heightmap_texture',
 ] as const;
 
 export function MeshInstance3D({ node }: NodeComponentProps) {
@@ -137,6 +138,10 @@ export function MeshInstance3D({ node }: NodeComponentProps) {
     textureRequests.ao_texture ?? '',
     'Texture2D'
   );
+  const heightmapStatus = useResource<THREE.Texture>(
+    textureRequests.heightmap_texture ?? '',
+    'Texture2D'
+  );
 
   const textureSlots = useMemo(
     () => ({
@@ -146,8 +151,18 @@ export function MeshInstance3D({ node }: NodeComponentProps) {
       metallic_texture: textureRequests.metallic_texture ? metallicStatus : null,
       emission_texture: textureRequests.emission_texture ? emissionStatus : null,
       ao_texture: textureRequests.ao_texture ? aoStatus : null,
+      heightmap_texture: textureRequests.heightmap_texture ? heightmapStatus : null,
     }),
-    [textureRequests, albedoStatus, normalStatus, roughnessStatus, metallicStatus, emissionStatus, aoStatus]
+    [
+      textureRequests,
+      albedoStatus,
+      normalStatus,
+      roughnessStatus,
+      metallicStatus,
+      emissionStatus,
+      aoStatus,
+      heightmapStatus,
+    ]
   );
 
   // Apply the material's UV transform (`uv1_scale` / `uv1_offset`) to
@@ -204,6 +219,10 @@ export function MeshInstance3D({ node }: NodeComponentProps) {
   const aoMap = useMemo(
     () => transformedTexture(textureSlots.ao_texture, uvTransform),
     [textureSlots.ao_texture, uvTransform]
+  );
+  const displacementMap = useMemo(
+    () => transformedTexture(textureSlots.heightmap_texture, uvTransform),
+    [textureSlots.heightmap_texture, uvTransform]
   );
 
   // If any requested slot resolved to `unavailable`, surface the FIRST
@@ -306,6 +325,7 @@ export function MeshInstance3D({ node }: NodeComponentProps) {
         metalnessMap={metalnessMap}
         emissiveMap={emissiveMap}
         aoMap={materialScalars?.aoEnabled ? aoMap : undefined}
+        displacementMap={displacementMap}
         shadowSide={shadowFlags.shadowSide}
         meshType={meshResource?.type}
         // Multi-surface meshes (slot N>0 populated): attach the primary

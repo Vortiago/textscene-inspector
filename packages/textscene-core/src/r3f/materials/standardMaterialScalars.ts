@@ -71,6 +71,12 @@ export interface StandardMaterial3DScalars {
   rim: number;
   /** Godot `rim_tint` (0..1, blend light↔albedo), gated on `rim_enabled`. */
   rimTint: number;
+  /**
+   * Godot `heightmap_scale` (depth of the parallax/height effect; NOT clamped
+   * to 0..1 — it is a scale factor, can exceed 1 or go negative to invert).
+   * 0 when `heightmap_enabled` is off. Mapped to three.js `displacementScale`.
+   */
+  heightmapScale: number;
 }
 
 const DEFAULT_SCALARS: StandardMaterial3DScalars = {
@@ -97,6 +103,7 @@ const DEFAULT_SCALARS: StandardMaterial3DScalars = {
   clearcoatRoughness: 0,
   rim: 0,
   rimTint: 0,
+  heightmapScale: 0,
 };
 
 export function parseStandardMaterial3DScalars(
@@ -160,6 +167,12 @@ export function parseStandardMaterial3DScalars(
   const rim = rimEnabled ? clamp01(numericOr(properties['rim'], 1)) : 0;
   const rimTint = rimEnabled ? clamp01(numericOr(properties['rim_tint'], 0.5)) : 0;
 
+  // Godot heightmap (FEATURE_HEIGHT_MAPPING). heightmap_scale defaults to 5.0
+  // when enabled (docs.godotengine.org) and is NOT clamped to 0..1 — it is a
+  // depth scale that can exceed 1 or go negative. 0 when disabled.
+  const heightmapEnabled = properties['heightmap_enabled'] === 'true';
+  const heightmapScale = heightmapEnabled ? numericOr(properties['heightmap_scale'], 5.0) : 0;
+
   // Godot encodes colors in sRGB. three.js's `<meshStandardMaterial color={...}>`
   // prop treats incoming values as **linear** RGB. Without converting,
   // mid-tone reds like `Color(0.545, 0.117, 0.117, 1)` (dark red `#8B1E1E`
@@ -220,6 +233,7 @@ export function parseStandardMaterial3DScalars(
     clearcoatRoughness,
     rim,
     rimTint,
+    heightmapScale,
   };
 }
 
