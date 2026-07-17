@@ -258,10 +258,13 @@ export function useResource<T>(path: string, type: ResourceType): ResourceResult
     };
     // A FULL cache clear (corpus switch) dropped this path with no
     // replacement on the way. The value in this hook's state belongs to the
-    // cleared era — re-request under the new provider/corpus state, keeping
-    // the last value on screen until the fresh load resolves (the same
-    // hold-last UX hot-reload has); the resulting loaded/failed event lands
-    // in the handlers above.
+    // cleared era — re-request under the new provider/corpus state; the
+    // resulting loaded/failed event lands in the handlers above. The last
+    // value stays on screen while the reload is in flight; when the path
+    // doesn't exist in the new corpus (the common case for an outgoing
+    // scene's consumers) the reload FAILS and this flips to unavailable —
+    // an accepted one-off burst of doomed refetches per switch, bounded by
+    // the mounted working set.
     const onInvalidated = (eventPath: string) => {
       if (eventPath !== path) return;
       if (!isCurrent()) return;

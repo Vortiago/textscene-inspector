@@ -16,16 +16,17 @@ export type FileFailedHandler = (path: string, error: Error) => void;
  */
 export class FileEventBus {
   private cache = new Map<string, FileData>();
-  private inflight = new Set<string>();
+  /**
+   * Per-path flight identity. A fetch owns its path's entry via a unique
+   * token; any clear (full OR per-path) removes the entry, so the fetch's
+   * completion — which ran against the provider/URL-modifier state of the
+   * cleared era — finds its token gone and drops silently, never caching or
+   * announcing. A post-clear request installs a NEW token and fetches fresh
+   * instead of deduping into the doomed flight.
+   */
+  private inflight = new Map<string, symbol>();
   private loadedHandlers = new Set<FileLoadedHandler>();
   private failedHandlers = new Set<FileFailedHandler>();
-  /**
-   * Bumped by every FULL clearCache() (corpus switch). A fetch that started
-   * before the bump ran against the previous provider/URL-modifier state —
-   * its bytes must not repopulate the cache or be announced, or the cleared
-   * corpus leaks into the new one.
-   */
-  private clearGeneration = 0;
 
   constructor(private provider: ResourceProvider) {}
 
@@ -64,19 +65,17 @@ export class FileEventBus {
   }
 
   private async loadAsync(path: string): Promise<void> {
-    this.inflight.add(path);
+    const flight = Symbol(path);
+    this.inflight.set(path, flight);
     const startTime = performance.now();
-    const startGeneration = this.clearGeneration;
 
     try {
       // ResourceProvider.loadResource returns string | ArrayBuffer | null
       const data = await this.provider.loadResource(path);
 
-      if (this.clearGeneration !== startGeneration) {
-        // A full clear landed mid-flight: these bytes were fetched under the
-        // cleared corpus's provider state. Drop them without touching the
-        // cache, the inflight set (a post-clear request owns it now), or the
-        // handlers.
+      if (this.inflight.get(path) !== flight) {
+        // Cleared-era completion — drop without touching cache, inflight
+        // (a post-clear flight may own it now), or handlers. See `inflight`.
         logger.info(`[FileEventBus] Dropped stale load: ${path}`);
         return;
       }
@@ -100,7 +99,7 @@ export class FileEventBus {
         }
       }
     } catch (error) {
-      if (this.clearGeneration !== startGeneration) {
+      if (this.inflight.get(path) !== flight) {
         logger.info(`[FileEventBus] Dropped stale failure: ${path}`);
         return;
       }
@@ -152,17 +151,17 @@ export class FileEventBus {
    * @param path - Specific file to clear, or all files if omitted
    */
   clearCache(path?: string): void {
+    // Dropping the flight token invalidates any in-flight completion for the
+    // cleared path(s) and lets a follow-up request start a FRESH fetch
+    // instead of deduping into the doomed flight — the same rule for the
+    // per-path (hot-reload/provideFile) and full (corpus switch) forms.
     if (path) {
       this.cache.delete(path);
+      this.inflight.delete(path);
       logger.info(`[FileEventBus] Cleared cache: ${path}`);
     } else {
       this.cache.clear();
-      // Also reset the inflight set and invalidate in-flight completions:
-      // post-clear requests must start fresh fetches (not dedupe into a
-      // cleared-era flight), and cleared-era completions must not refill
-      // the cache (see loadAsync's generation check).
       this.inflight.clear();
-      this.clearGeneration++;
       logger.info(`[FileEventBus] Cleared all cache`);
     }
   }

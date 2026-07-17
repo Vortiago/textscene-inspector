@@ -20,7 +20,8 @@ vi.mock('@textscene/core', async () => {
 
 import { R3FApp } from './r3f-main';
 import { fixtures } from './fixturesAll';
-import { buildFixtureTree, type TreeBranch } from './fixtureTree';
+import { buildFixtureTree } from './fixtureTree';
+import { flattenLeaves, type Leaf } from './fixtureTree.testkit';
 
 const STUB_TSCN = `[gd_scene load_steps=1 format=3]
 
@@ -42,18 +43,6 @@ const SWITCHED_TSCN = `[gd_scene load_steps=1 format=3]
 [node name="SwitchedRoot" type="Node3D"]
 `;
 
-type Leaf = { file: string; label: string };
-function flattenLeaves(branches: readonly TreeBranch[]): Leaf[] {
-  const out: Leaf[] = [];
-  const walk = (b: TreeBranch) => {
-    for (const child of b.children) {
-      if (child.kind === 'branch') walk(child);
-      else out.push({ file: child.file, label: child.label });
-    }
-  };
-  branches.forEach(walk);
-  return out;
-}
 const DEFAULT_FILE = 'unit-plane-mesh.tscn';
 const SWITCH_TARGET = flattenLeaves(buildFixtureTree(fixtures)).find(
   (l) => l.file !== DEFAULT_FILE
@@ -202,6 +191,27 @@ describe('Source-pane edit-discard guard', () => {
     await switchViaPalette();
     await waitForScene('SwitchedRoot');
     expect(confirmSpy).not.toHaveBeenCalled();
+  });
+
+  it('re-selecting the CURRENT fixture never prompts — accepting would discard nothing', async () => {
+    const confirmSpy = stubConfirm(true);
+    render(<R3FApp />);
+    await waitForScene();
+
+    typeBuffer(EDITED_TSCN);
+    // Pick the fixture that is already active (the palette does not exclude it).
+    fireEvent.keyDown(window, { key: 'k', ctrlKey: true });
+    const palette = await screen.findByRole('dialog', { name: 'Open or switch scene' });
+    const currentLeaf = flattenLeaves(buildFixtureTree(fixtures)).find(
+      (l) => l.file === DEFAULT_FILE
+    ) as Leaf;
+    fireEvent.change(within(palette).getByLabelText('Filter built-in scenes'), {
+      target: { value: currentLeaf.label },
+    });
+    fireEvent.click(within(palette).getByText(currentLeaf.label));
+
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(paneTextarea().value).toBe(EDITED_TSCN);
   });
 
   it('a resource-only drop never prompts even with an edited pane', async () => {

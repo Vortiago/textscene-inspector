@@ -98,6 +98,15 @@ export interface ResourceProcessor<T> {
   clearCache(path?: string): void;
   /** Get cache size for debugging */
   getCacheSize(): number;
+  /** Snapshot of the currently-cached paths (for the loader's full-clear announcement). */
+  cachedPaths(): string[];
+  /**
+   * Snapshot of the paths currently loading. The loader's full-clear
+   * announcement must cover these too: their completions are dropped as
+   * cleared-era flights, so without an `invalidated` for them a mounted
+   * consumer waiting on the load would hang in `pending` forever.
+   */
+  inflightPaths(): string[];
   /**
    * Increment the pin count for `path`. While count > 0, eviction will
    * skip this entry, preferring zero-count (unmounted) entries as eviction
@@ -133,11 +142,13 @@ export function createResourceProcessor<T>(
   const cache = new LRUCache<T | null>(config.maxEntries ?? DEFAULT_MAX_ENTRIES, (_path, value) => {
     if (value && dispose) dispose(value);
   });
-  const inflight = new Set<string>();
-  // Bumped by every FULL clearCache(). A load that started before the bump
-  // finished under the previous corpus's provider/URL state — its result
-  // must neither be cached nor announced, or the cleared era leaks back in.
-  let generation = 0;
+  // Per-path flight identity. A load owns its path's entry via a unique
+  // token; any clear (per-path hot-reload or full corpus switch) removes the
+  // entry, so the load's completion — produced under the cleared era's
+  // provider/content state — finds its token gone and is dropped (disposed,
+  // never cached or announced). A post-clear request installs a NEW token
+  // and loads fresh instead of racing the doomed flight.
+  const inflight = new Map<string, symbol>();
 
   /**
    * Shared finish-lane used by both the FileEventBus arrival handler and
@@ -146,16 +157,14 @@ export function createResourceProcessor<T>(
    */
   const finishLoad = async (path: string, work: () => Promise<T>): Promise<void> => {
     const startTime = performance.now();
-    const startGeneration = generation;
+    const flight = inflight.get(path);
     eventBus.emit(resourceType, 'loading', path);
 
     try {
       const result = await work();
-      if (startGeneration !== generation) {
-        // A full clear landed mid-flight: the result was produced under the
-        // cleared era (old corpus URL/provider state). Dispose and drop it —
-        // caching or announcing it would resurrect exactly what the clear
-        // removed.
+      if (inflight.get(path) !== flight) {
+        // Cleared-era completion — dispose and drop; caching or announcing
+        // it would resurrect what the clear removed. See `inflight`.
         if (result && dispose) dispose(result);
         logger.info(`[${resourceType}Processor] Dropped stale load: ${path}`);
         return;
@@ -166,7 +175,7 @@ export function createResourceProcessor<T>(
       logger.info(`[${resourceType}Processor] Loaded: ${path} (${elapsed.toFixed(2)}ms)`);
       eventBus.emit<T>(resourceType, 'loaded', path, result);
     } catch (error) {
-      if (startGeneration !== generation) {
+      if (inflight.get(path) !== flight) {
         logger.info(`[${resourceType}Processor] Dropped stale failure: ${path}`);
         return;
       }
@@ -259,7 +268,7 @@ export function createResourceProcessor<T>(
       }
 
       // Start loading
-      inflight.add(path);
+      inflight.set(path, Symbol(path));
       eventBus.emit(resourceType, 'requested', path);
 
       if (loadDirectly) {
@@ -305,26 +314,27 @@ export function createResourceProcessor<T>(
         inflight.delete(path);
         logger.info(`[${resourceType}Processor] Cleared cache for: ${path}`);
       } else {
-        const clearedPaths = [...cache.keys()];
+        // Silent by design: announcing dropped paths is the LOADER's job
+        // (ResourceLoader.clearCaches emits `invalidated` after every layer
+        // is reset) — emitting here would let re-entrant re-requests observe
+        // a half-cleared composition. Dropping the flight tokens invalidates
+        // cleared-era in-flight completions.
         cache.clear();
         inflight.clear();
-        // Invalidate BEHIND a generation bump so in-flight completions from
-        // the cleared era are dropped, and any synchronous re-request a
-        // subscriber makes runs under the new generation.
-        generation++;
         logger.info(`[${resourceType}Processor] Cleared all cache`);
-        // A full clear has no follow-up request of its own — announce each
-        // dropped path so mounted consumers (which hold the value in React
-        // state and would otherwise never re-read) can re-request under the
-        // new provider/corpus state.
-        for (const clearedPath of clearedPaths) {
-          eventBus.emit(resourceType, 'invalidated', clearedPath);
-        }
       }
     },
 
     getCacheSize(): number {
       return cache.size;
+    },
+
+    cachedPaths(): string[] {
+      return [...cache.keys()];
+    },
+
+    inflightPaths(): string[] {
+      return [...inflight.keys()];
     },
 
     pin(path: string): void {

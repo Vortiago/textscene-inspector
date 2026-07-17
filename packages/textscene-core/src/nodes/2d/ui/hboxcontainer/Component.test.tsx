@@ -52,6 +52,10 @@ describe('<HBoxContainer>', () => {
     expect(renderRow({ alignment: '7' }).style.justifyContent).toBe('flex-start');
   });
 
+  it('stays hidden when visible = false — the container flex display must not override it', () => {
+    expect(renderRow({ visible: 'false' }).style.display).toBe('none');
+  });
+
   it('provides the row layout kind to its subtree', () => {
     const { getByTestId } = render(
       <HBoxContainer node={node()}>

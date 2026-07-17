@@ -635,7 +635,7 @@ describe('createResourceProcessor', () => {
   });
 
   describe('full-clear invalidation (corpus switch)', () => {
-    it('full clearCache emits invalidated for each formerly-cached path; per-path clear emits none', async () => {
+    it('clearCache never emits invalidated itself — announcing is the loader\'s job — and cachedPaths snapshots keys', async () => {
       const processor = createResourceProcessor<string>({
         eventBus,
         resourceType: 'resource',
@@ -647,13 +647,13 @@ describe('createResourceProcessor', () => {
       processor.request('res://a');
       processor.request('res://b');
       await flush();
+      expect(processor.cachedPaths()).toEqual(['res://a', 'res://b']);
 
       processor.clearCache('res://a'); // per-path (hot-reload): silent
+      processor.clearCache(); // full clear: also silent at this layer
       expect(invalidated).toEqual([]);
-
-      processor.clearCache(); // full clear announces the remaining path
-      expect(invalidated).toEqual(['res://b']);
       expect(processor.getCacheSize()).toBe(0);
+      expect(processor.cachedPaths()).toEqual([]);
     });
 
     it('a direct load resolving after a full clear is dropped: not cached, not announced, disposed', async () => {
@@ -686,6 +686,32 @@ describe('createResourceProcessor', () => {
       await flush();
       expect(loaded).toHaveBeenCalledTimes(1);
       expect(processor.getCached('res://a')).toBe('fresh');
+    });
+
+    it('a per-path clear + re-request (hot-reload) never lets the superseded flight overwrite the fresh result', async () => {
+      let releaseStale!: (value: string) => void;
+      const gate = new Promise<string>((r) => (releaseStale = r));
+      let calls = 0;
+      const processor = createResourceProcessor<string>({
+        eventBus,
+        resourceType: 'resource',
+        loadDirectly: async () => (++calls === 1 ? gate : 'fresh'),
+      });
+      const loaded = vi.fn();
+      eventBus.on('resource', 'loaded', loaded);
+
+      processor.request('res://a'); // save 1 — slow flight departs
+      processor.clearCache('res://a'); // save 2 — hot-reload clears the path
+      processor.request('res://a'); // reload flight, resolves fast
+      await flush();
+      expect(processor.getCached('res://a')).toBe('fresh');
+
+      releaseStale('stale'); // the superseded flight finally resolves
+      await flush();
+
+      expect(processor.getCached('res://a')).toBe('fresh'); // never overwritten
+      expect(loaded).toHaveBeenCalledTimes(1);
+      expect(loaded).toHaveBeenCalledWith('res://a', 'fresh');
     });
 
     it('a stale failure after a full clear is dropped instead of caching a null sentinel', async () => {

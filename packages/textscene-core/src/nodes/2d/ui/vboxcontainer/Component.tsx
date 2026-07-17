@@ -6,14 +6,10 @@
  */
 
 import { createContainerComponent } from '../../../../r3f/controls/createContainerComponent';
+import { alignmentJustify } from '../shared/boxContainer';
 import type { VBoxContainerProperties } from './types';
 
 const DEFAULT_SEPARATION = 4; // Godot VBoxContainer default
-
-/** AlignmentMode → main-axis packing; absent/out-of-range = BEGIN (Godot default). */
-function alignmentJustify(alignment: number | undefined): 'flex-start' | 'center' | 'flex-end' {
-  return alignment === 1 ? 'center' : alignment === 2 ? 'flex-end' : 'flex-start';
-}
 
 export const VBoxContainer = createContainerComponent<VBoxContainerProperties>({
   typeName: 'VBoxContainer',

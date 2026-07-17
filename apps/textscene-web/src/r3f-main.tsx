@@ -266,6 +266,10 @@ export function R3FApp() {
   }, [uploadedTscnName]);
 
   function handleFixtureChange(newFixture: string) {
+    // Re-selecting the already-active fixture is a state no-op (the fetch
+    // effect never re-runs) — return before the guard so the user isn't
+    // shown a "discard your edits?" prompt whose acceptance discards nothing.
+    if (newFixture === fixtureFile && !uploadedTscnName) return;
     // Guards the fixture palette AND the tree's ⤢ open-sub-scene (which
     // routes through here).
     if (!confirmDiscardEdits()) return;

@@ -28,6 +28,7 @@ import type { ExtResource, TscnScene } from '../../parser/types';
 import { ResourceEventBus, type ResourceType } from '../ResourceEventBus';
 import { MetadataStore } from '../MetadataStore';
 import { busTypeFor, type ResourceLoader } from '../ResourceLoader';
+import { runClearCachesSequence } from '../clearCachesSequence';
 import type { ArrayMeshResource } from '../processors/createArrayMeshProcessor';
 
 export interface FakeProcessor<T> {
@@ -41,6 +42,8 @@ export interface FakeProcessor<T> {
   isCached(path: string): boolean;
   isLoading(path: string): boolean;
   clearCache(path?: string): void;
+  cachedPaths(): string[];
+  inflightPaths(): string[];
   getCacheSize(): number;
   pin(path: string): void;
   unpin(path: string): void;
@@ -48,9 +51,15 @@ export interface FakeProcessor<T> {
   setRequestImpl(impl: (path: string) => void): void;
   /** Seed the cache without emitting. `null` seeds a sentinel miss. */
   seed(path: string, value: T | null): void;
-  /** Simulate a successful load: cache the value + emit `<type>:loaded`. */
+  /**
+   * Simulate a successful load: cache the value + emit `<type>:loaded`.
+   * Always a NEW-era completion — the real pipeline DROPS completions whose
+   * flight departed before a clear (flight tokens), which a manually-driven
+   * fake cannot represent; don't use `_resolve`/`_fail` to model a load that
+   * was in flight when a clear happened.
+   */
   _resolve(path: string, value: T): void;
-  /** Simulate a failure: cache `null` + emit `<type>:failed`. */
+  /** Simulate a failure: cache `null` + emit `<type>:failed`. See `_resolve`'s era note. */
   _fail(path: string, message: string): void;
 }
 
@@ -89,17 +98,16 @@ function makeFakeProcessor<T>(eventBus: ResourceEventBus, type: ResourceType): F
       return false;
     },
     clearCache(path?: string): void {
-      if (path === undefined) {
-        // Mirror the real processor: a FULL clear announces every dropped
-        // path so mounted consumers re-request; per-path clears stay silent.
-        const clearedPaths = [...cache.keys()];
-        cache.clear();
-        for (const clearedPath of clearedPaths) {
-          eventBus.emit(type, 'invalidated', clearedPath);
-        }
-      } else {
-        cache.delete(path);
-      }
+      if (path === undefined) cache.clear();
+      else cache.delete(path);
+    },
+    cachedPaths(): string[] {
+      return [...cache.keys()];
+    },
+    // The fake has no async flights — loads are driven manually via
+    // `_resolve`/`_fail` — so nothing is ever "in flight".
+    inflightPaths(): string[] {
+      return [];
     },
     getCacheSize(): number {
       return cache.size;
@@ -187,10 +195,14 @@ export function createFakeResourceLoader(): FakeResourceLoader {
       eventBus.clear();
       metadata.clear();
     },
-    // Mirror ResourceLoader.clearCaches: caches + metadata, subscribers kept.
+    // The real clearCaches choreography, via its single owner — order is
+    // the contract, so the fake runs the SAME sequence rather than a copy.
     clearCaches(): void {
-      for (const proc of all) proc.clearCache();
-      metadata.clear();
+      runClearCachesSequence({
+        processors: Object.entries(byType) as [ResourceType, FakeProcessor<unknown>][],
+        eventBus,
+        metadata,
+      });
     },
   };
 

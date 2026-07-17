@@ -23,7 +23,8 @@ vi.mock('@textscene/core', async () => {
 
 import { R3FApp } from './r3f-main';
 import { fixtures } from './fixturesAll';
-import { buildFixtureTree, type TreeBranch } from './fixtureTree';
+import { buildFixtureTree } from './fixtureTree';
+import { flattenLeaves, type Leaf } from './fixtureTree.testkit';
 import { DEBOUNCE_MS } from './useSceneSource';
 
 const STUB_TSCN = `[gd_scene load_steps=1 format=3]
@@ -41,20 +42,8 @@ const SWITCHED_TSCN = `[gd_scene load_steps=1 format=3]
 [node name="SwitchedRoot" type="Node3D"]
 `;
 
-/** The fixture the tests switch TO (any leaf that isn't the app's default). */
-type Leaf = { file: string; label: string };
-function flattenLeaves(branches: readonly TreeBranch[]): Leaf[] {
-  const out: Leaf[] = [];
-  const walk = (b: TreeBranch) => {
-    for (const child of b.children) {
-      if (child.kind === 'branch') walk(child);
-      else out.push({ file: child.file, label: child.label });
-    }
-  };
-  branches.forEach(walk);
-  return out;
-}
 const DEFAULT_FILE = 'unit-plane-mesh.tscn';
+/** The fixture the tests switch TO (any leaf that isn't the app's default). */
 const SWITCH_TARGET = flattenLeaves(buildFixtureTree(fixtures)).find(
   (l) => l.file !== DEFAULT_FILE
 ) as Leaf;
