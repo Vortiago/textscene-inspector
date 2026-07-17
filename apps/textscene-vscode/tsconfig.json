@@ -2,7 +2,13 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "rootDir": "./src"
+    "rootDir": "./src",
+    // Node globals (fs, process, __dirname) used by extension-host and
+    // integration-helper sources. Previously @types/node rode in via a
+    // transitive `/// <reference types="node" />` in glob@11's path-scurry;
+    // glob@13 dropped it, so declare the dependency explicitly (mirrors
+    // tsconfig.test.json).
+    "types": ["node"]
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.spec.ts"]
