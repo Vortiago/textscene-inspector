@@ -97,30 +97,47 @@ export function StandardMaterialSlot({
       />
     );
   }
-  return (
-    <meshStandardMaterial
-      key={slotKey}
-      attach={attach}
-      color={scalars.color}
-      vertexColors={scalars.useVertexColors}
-      metalness={scalars.metalness}
-      roughness={scalars.roughness}
-      transparent={scalars.transparent}
-      opacity={scalars.opacity}
-      alphaTest={scalars.alphaTest}
-      depthWrite={scalars.depthWrite}
-      blending={scalars.blending}
-      side={effectiveSide}
-      shadowSide={shadowSide ?? null}
-      map={albedoMap ?? null}
-      normalMap={normalMap ?? null}
-      normalScale={normalScale}
-      roughnessMap={roughnessMap ?? null}
-      metalnessMap={metalnessMap ?? null}
-      emissiveMap={emissiveMap ?? null}
-      aoMap={aoMap ?? null}
-      emissive={scalars.emissive}
-      emissiveIntensity={scalars.emissiveIntensity}
-    />
-  );
+  // Shared PBR props for the shaded path. MeshPhysicalMaterial is a strict
+  // superset of MeshStandardMaterial, so the same props drive either; we only
+  // upgrade to <meshPhysicalMaterial> when Godot's clearcoat feature is active,
+  // keeping the common (no-clearcoat) path on the lighter standard material so
+  // existing behaviour — and the material type the component tests assert on —
+  // is unchanged.
+  const pbrProps = {
+    attach,
+    color: scalars.color,
+    vertexColors: scalars.useVertexColors,
+    metalness: scalars.metalness,
+    roughness: scalars.roughness,
+    transparent: scalars.transparent,
+    opacity: scalars.opacity,
+    alphaTest: scalars.alphaTest,
+    depthWrite: scalars.depthWrite,
+    blending: scalars.blending,
+    side: effectiveSide,
+    shadowSide: shadowSide ?? null,
+    map: albedoMap ?? null,
+    normalMap: normalMap ?? null,
+    normalScale,
+    roughnessMap: roughnessMap ?? null,
+    metalnessMap: metalnessMap ?? null,
+    emissiveMap: emissiveMap ?? null,
+    aoMap: aoMap ?? null,
+    emissive: scalars.emissive,
+    emissiveIntensity: scalars.emissiveIntensity,
+  };
+  // Godot clearcoat (FEATURE_CLEARCOAT): a thin glossy coat over the base
+  // surface. three.js models it natively on MeshPhysicalMaterial only, so a
+  // material carrying a coat renders as <meshPhysicalMaterial>.
+  if (scalars.clearcoat > 0) {
+    return (
+      <meshPhysicalMaterial
+        key={`physical-${slotKey}`}
+        {...pbrProps}
+        clearcoat={scalars.clearcoat}
+        clearcoatRoughness={scalars.clearcoatRoughness}
+      />
+    );
+  }
+  return <meshStandardMaterial key={slotKey} {...pbrProps} />;
 }

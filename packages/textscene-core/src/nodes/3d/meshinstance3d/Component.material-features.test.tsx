@@ -338,4 +338,53 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
     expect(matA!.map!.repeat.x).toBe(0.5);
     expect(matB!.map!.repeat.x).toBe(2);
   });
+
+  it('renders a clearcoat material as MeshPhysicalMaterial carrying the coat scalars', async () => {
+    const loader = makeLoader();
+    const internalResources: TscnInternalResource[] = [
+      { id: 'box', type: 'BoxMesh', data: { id: 'box' } },
+      {
+        id: 'mat',
+        type: 'StandardMaterial3D',
+        data: {
+          id: 'mat',
+          clearcoat_enabled: 'true',
+          clearcoat: '0.7',
+          clearcoat_roughness: '0.25',
+        } as Record<string, string>,
+      },
+    ];
+
+    const renderer = await renderWith(makeNode('mat'), internalResources, [], loader);
+    await new Promise<void>((r) => setTimeout(r, 10));
+
+    // A coat upgrades the slot to three.js's MeshPhysicalMaterial (the only
+    // material with native clearcoat), carrying the parsed strength + roughness.
+    const physical = renderer.scene.findAllByType('MeshPhysicalMaterial');
+    expect(physical).toHaveLength(1);
+    const material = physical[0]!.instance as THREE.MeshPhysicalMaterial;
+    expect(material.clearcoat).toBeCloseTo(0.7, 5);
+    expect(material.clearcoatRoughness).toBeCloseTo(0.25, 5);
+  });
+
+  it('keeps a material with no clearcoat on the standard (non-physical) material', async () => {
+    // Guardrail: the common path must stay MeshStandardMaterial so existing
+    // behaviour — and the material type every other test asserts on — is
+    // unchanged; only an enabled coat upgrades to MeshPhysicalMaterial.
+    const loader = makeLoader();
+    const internalResources: TscnInternalResource[] = [
+      { id: 'box', type: 'BoxMesh', data: { id: 'box' } },
+      {
+        id: 'mat',
+        type: 'StandardMaterial3D',
+        data: { id: 'mat', roughness: '0.4' } as Record<string, string>,
+      },
+    ];
+
+    const renderer = await renderWith(makeNode('mat'), internalResources, [], loader);
+    await new Promise<void>((r) => setTimeout(r, 10));
+
+    expect(renderer.scene.findAllByType('MeshPhysicalMaterial')).toHaveLength(0);
+    expect(renderer.scene.findAllByType('MeshStandardMaterial')).toHaveLength(1);
+  });
 });
