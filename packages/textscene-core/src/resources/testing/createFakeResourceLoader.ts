@@ -89,8 +89,17 @@ function makeFakeProcessor<T>(eventBus: ResourceEventBus, type: ResourceType): F
       return false;
     },
     clearCache(path?: string): void {
-      if (path === undefined) cache.clear();
-      else cache.delete(path);
+      if (path === undefined) {
+        // Mirror the real processor: a FULL clear announces every dropped
+        // path so mounted consumers re-request; per-path clears stay silent.
+        const clearedPaths = [...cache.keys()];
+        cache.clear();
+        for (const clearedPath of clearedPaths) {
+          eventBus.emit(type, 'invalidated', clearedPath);
+        }
+      } else {
+        cache.delete(path);
+      }
     },
     getCacheSize(): number {
       return cache.size;

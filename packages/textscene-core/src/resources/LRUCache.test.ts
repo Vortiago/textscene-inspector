@@ -429,15 +429,35 @@ describe('LRUCache', () => {
             c.set('a', 'A');
             c.pin('a');
             c.set('a', 'A2'); // defers 'A'
-            c.set('a', 'A'); // defers 'A2'
-            c.set('a', 'A3'); // defers 'A' again
-            c.unpin('a');
+            c.set('a', 'A'); // defers 'A2' ('A' is live again — kept)
+            c.set('a', 'A3'); // defers 'A'; the capped backlog releases 'A2' here
+            c.unpin('a'); // flushes the remaining 'A'
           },
+          // The backlog cap releases a superseded pending value at the NEXT
+          // defer, so 'A2' goes before 'A' — each still disposed exactly
+          // once, never while it is the key's current value.
           expectedDisposals: [
-            ['a', 'A'],
             ['a', 'A2'],
+            ['a', 'A'],
           ],
           expectedCurrent: 'A3',
+        },
+        {
+          name: 'hot-reload loop while pinned: each superseded value is released at the next defer, not hoarded until unmount',
+          script: (c) => {
+            c.set('a', 'A1');
+            c.pin('a');
+            c.set('a', 'A2'); // defers 'A1'
+            c.set('a', 'A3'); // releases 'A1', defers 'A2'
+            c.set('a', 'A4'); // releases 'A2', defers 'A3'
+            c.unpin('a'); // flushes 'A3'
+          },
+          expectedDisposals: [
+            ['a', 'A1'],
+            ['a', 'A2'],
+            ['a', 'A3'],
+          ],
+          expectedCurrent: 'A4',
         },
         {
           name: 'Object.is-identical re-set while pinned defers nothing; unpin flushes nothing',
@@ -531,6 +551,77 @@ describe('LRUCache', () => {
       cache.set('b', 'B'); // would evict 'a' if it were unpinned
       expect(cache.has('a')).toBe(true);
       expect(onEvict).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('zero-pin candidate bookkeeping (the O(1) eviction bail)', () => {
+    it('oversubscribed regime: pinned entries beyond capacity grow the cache, and eviction resumes once pins release', () => {
+      const onEvict = vi.fn();
+      const cache = new LRUCache<string>(2, onEvict);
+      for (const k of ['a', 'b', 'c']) {
+        cache.set(k, k.toUpperCase());
+        cache.pin(k);
+      }
+      // All pinned, over capacity — streaming more pinned sets never evicts.
+      cache.set('d', 'D');
+      cache.pin('d');
+      expect(cache.size).toBe(4);
+      expect(onEvict).not.toHaveBeenCalled();
+
+      // Releasing pins makes those entries candidates again on the next set.
+      cache.unpin('a');
+      cache.unpin('b');
+      cache.set('e', 'E'); // evicts back toward capacity: a then b
+      expect(cache.has('a')).toBe(false);
+      expect(cache.has('b')).toBe(false);
+      expect(onEvict.mock.calls).toEqual([
+        ['a', 'A'],
+        ['b', 'B'],
+      ]);
+    });
+
+    it('unpin of a key deleted while pinned does not corrupt a later re-set entry’s candidacy', () => {
+      const onEvict = vi.fn();
+      const cache = new LRUCache<string>(1, onEvict);
+      cache.set('a', 'A');
+      cache.pin('a');
+      cache.delete('a'); // removed while pinned (hot-reload shape)
+      cache.unpin('a'); // key absent from the map at unpin time
+
+      cache.set('a', 'A2'); // re-set unpinned — must be a normal candidate
+      cache.set('b', 'B'); // over capacity: 'a' must evict
+      expect(cache.has('a')).toBe(false);
+      expect(cache.has('b')).toBe(true);
+    });
+
+    it('pin on an absent key, honoured at set, still blocks eviction; double pin needs both unpins', () => {
+      const onEvict = vi.fn();
+      const cache = new LRUCache<string>(1, onEvict);
+      cache.pin('a');
+      cache.pin('a');
+      cache.set('a', 'A');
+      cache.set('b', 'B'); // 'a' pinned → grows past capacity, 'b' is justSet
+      expect(cache.has('a')).toBe(true);
+      expect(cache.has('b')).toBe(true);
+
+      cache.unpin('a');
+      cache.set('c', 'C'); // still one pin on 'a': only 'b' evictable
+      expect(cache.has('a')).toBe(true);
+      expect(cache.has('b')).toBe(false);
+
+      cache.unpin('a');
+      cache.set('d', 'D'); // now 'a' evicts too (oldest zero-pin)
+      expect(cache.has('a')).toBe(false);
+    });
+  });
+
+  describe('keys()', () => {
+    it('iterates cached keys in recency order', () => {
+      const cache = new LRUCache<string>(3);
+      cache.set('a', 'A');
+      cache.set('b', 'B');
+      cache.get('a'); // refresh 'a'
+      expect([...cache.keys()]).toEqual(['b', 'a']);
     });
   });
 });

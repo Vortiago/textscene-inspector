@@ -633,4 +633,84 @@ describe('createResourceProcessor', () => {
       expect(processor.getCached('res://a')).toBe(second);
     });
   });
+
+  describe('full-clear invalidation (corpus switch)', () => {
+    it('full clearCache emits invalidated for each formerly-cached path; per-path clear emits none', async () => {
+      const processor = createResourceProcessor<string>({
+        eventBus,
+        resourceType: 'resource',
+        loadDirectly: async (path) => `v:${path}`,
+      });
+      const invalidated: string[] = [];
+      eventBus.on('resource', 'invalidated', (id) => invalidated.push(id));
+
+      processor.request('res://a');
+      processor.request('res://b');
+      await flush();
+
+      processor.clearCache('res://a'); // per-path (hot-reload): silent
+      expect(invalidated).toEqual([]);
+
+      processor.clearCache(); // full clear announces the remaining path
+      expect(invalidated).toEqual(['res://b']);
+      expect(processor.getCacheSize()).toBe(0);
+    });
+
+    it('a direct load resolving after a full clear is dropped: not cached, not announced, disposed', async () => {
+      let release!: (value: string) => void;
+      const gate = new Promise<string>((r) => (release = r));
+      const dispose = vi.fn();
+      // First request hangs on the gate (the cleared-era fetch); later
+      // requests resolve immediately with fresh content.
+      let calls = 0;
+      const processor = createResourceProcessor<string>({
+        eventBus,
+        resourceType: 'resource',
+        loadDirectly: async () => (++calls === 1 ? gate : 'fresh'),
+        dispose,
+      });
+      const loaded = vi.fn();
+      eventBus.on('resource', 'loaded', loaded);
+
+      processor.request('res://a'); // cleared-era flight departs
+      processor.clearCache(); // corpus switch lands mid-flight
+      release('stale');
+      await flush();
+
+      expect(loaded).not.toHaveBeenCalled();
+      expect(processor.isCached('res://a')).toBe(false);
+      expect(dispose).toHaveBeenCalledWith('stale');
+
+      // A post-clear request starts a fresh load under the new generation.
+      processor.request('res://a');
+      await flush();
+      expect(loaded).toHaveBeenCalledTimes(1);
+      expect(processor.getCached('res://a')).toBe('fresh');
+    });
+
+    it('a stale failure after a full clear is dropped instead of caching a null sentinel', async () => {
+      let reject!: (err: Error) => void;
+      const gate = new Promise<string>((_r, rj) => (reject = rj));
+      let calls = 0;
+      const processor = createResourceProcessor<string>({
+        eventBus,
+        resourceType: 'resource',
+        loadDirectly: async () => (++calls === 1 ? gate : 'fresh'),
+      });
+      const failed = vi.fn();
+      eventBus.on('resource', 'failed', failed);
+
+      processor.request('res://a');
+      processor.clearCache();
+      reject(new Error('old-corpus 404'));
+      await flush();
+
+      expect(failed).not.toHaveBeenCalled();
+      expect(processor.isCached('res://a')).toBe(false); // no null sentinel
+
+      processor.request('res://a');
+      await flush();
+      expect(processor.getCached('res://a')).toBe('fresh');
+    });
+  });
 });

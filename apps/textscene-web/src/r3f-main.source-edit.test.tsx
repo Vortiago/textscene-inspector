@@ -211,6 +211,10 @@ describe('#201 native undo — the app must not swallow Ctrl+Z in the pane (crit
 
 describe('#201 buffer reset — switching fixture / uploading replaces the buffer (criterion 5)', () => {
   it('uploading a .tscn resets an edited buffer to the uploaded content', async () => {
+    // The edited pane triggers the discard guard on scene replacement —
+    // accept it (happy-dom has no window.confirm to spy on); the guard's own
+    // contract lives in r3f-main.edit-guard.test.tsx.
+    vi.stubGlobal('confirm', vi.fn(() => true));
     render(<R3FApp />);
     await waitForScene();
 
@@ -231,6 +235,10 @@ describe('#201 buffer reset — switching fixture / uploading replaces the buffe
   });
 
   it('switching scenes via the palette resets an edited buffer to the new fixture', async () => {
+    // The edited pane triggers the discard guard on scene replacement —
+    // accept it (happy-dom has no window.confirm to spy on); the guard's own
+    // contract lives in r3f-main.edit-guard.test.tsx.
+    vi.stubGlobal('confirm', vi.fn(() => true));
     render(<R3FApp />);
     await waitForScene();
 

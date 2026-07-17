@@ -5,7 +5,19 @@
 
 import * as THREE from 'three';
 
-export type ResourceEventType = 'requested' | 'loading' | 'progress' | 'loaded' | 'failed';
+export type ResourceEventType =
+  | 'requested'
+  | 'loading'
+  | 'progress'
+  | 'loaded'
+  | 'failed'
+  /**
+   * A previously-cached path was dropped by a FULL cache clear (corpus
+   * switch) with no replacement on the way. Mounted consumers re-request so
+   * they never keep serving a value from the cleared era; a per-path clear
+   * (hot-reload) does NOT emit this — its caller re-requests itself.
+   */
+  | 'invalidated';
 export type ResourceType = 'texture' | 'material' | 'scene' | 'glb' | 'resource' | 'arraymesh';
 
 export interface ProgressData {

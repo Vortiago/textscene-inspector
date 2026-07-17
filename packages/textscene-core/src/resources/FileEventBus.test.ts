@@ -185,6 +185,59 @@ describe('FileEventBus', () => {
 
       expect(eventBus.getCacheSize()).toBe(0);
     });
+
+    it('a fetch resolving after a full clear neither repopulates the cache nor emits', async () => {
+      const loaded = vi.fn();
+      eventBus.on('loaded', loaded);
+      let release!: (data: string) => void;
+      vi.mocked(mockProvider.loadResource).mockReturnValue(
+        new Promise((r) => (release = r))
+      );
+
+      eventBus.request('res://tex.png'); // cleared-era flight departs
+      eventBus.clearCache(); // full clear (corpus switch) mid-flight
+      release('old-corpus bytes');
+      await new Promise((r) => setTimeout(r, 10));
+
+      expect(loaded).not.toHaveBeenCalled();
+      expect(eventBus.isCached('res://tex.png')).toBe(false);
+    });
+
+    it('a post-clear request starts a fresh fetch instead of deduping into a cleared-era flight', async () => {
+      const loaded = vi.fn();
+      eventBus.on('loaded', loaded);
+      let releaseStale!: (data: string) => void;
+      vi.mocked(mockProvider.loadResource)
+        .mockReturnValueOnce(new Promise((r) => (releaseStale = r)))
+        .mockResolvedValueOnce('fresh bytes');
+
+      eventBus.request('res://tex.png'); // stale flight
+      eventBus.clearCache();
+      eventBus.request('res://tex.png'); // must NOT dedupe into the stale flight
+      releaseStale('old-corpus bytes');
+
+      await vi.waitFor(() => {
+        expect(loaded).toHaveBeenCalledTimes(1);
+      });
+      expect(loaded).toHaveBeenCalledWith('res://tex.png', 'fresh bytes');
+      expect(mockProvider.loadResource).toHaveBeenCalledTimes(2);
+    });
+
+    it('a stale failure after a full clear is dropped silently', async () => {
+      const failed = vi.fn();
+      eventBus.on('failed', failed);
+      let rejectStale!: (err: Error) => void;
+      vi.mocked(mockProvider.loadResource).mockReturnValue(
+        new Promise((_r, rj) => (rejectStale = rj))
+      );
+
+      eventBus.request('res://tex.png');
+      eventBus.clearCache();
+      rejectStale(new Error('old-corpus 404'));
+      await new Promise((r) => setTimeout(r, 10));
+
+      expect(failed).not.toHaveBeenCalled();
+    });
   });
 
   describe('isLoading()', () => {

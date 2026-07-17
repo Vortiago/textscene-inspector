@@ -157,6 +157,16 @@ describe('fixture fetch failure — pane clears, render holds, banner shows', ()
 });
 
 describe('debounce supersession — a fixture switch cancels a pending edit forward', () => {
+  // These scenarios edit the pane mid-switch, which now triggers the
+  // edit-discard guard — accept it (happy-dom has no window.confirm); the
+  // guard's own contract lives in r3f-main.edit-guard.test.tsx.
+  beforeEach(() => {
+    vi.stubGlobal('confirm', vi.fn(() => true));
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it('renders the switched root, never the edited one, when the switch fetch succeeds', async () => {
     mockFetch('ok');
     render(<R3FApp />);

@@ -134,6 +134,10 @@ export function createResourceProcessor<T>(
     if (value && dispose) dispose(value);
   });
   const inflight = new Set<string>();
+  // Bumped by every FULL clearCache(). A load that started before the bump
+  // finished under the previous corpus's provider/URL state — its result
+  // must neither be cached nor announced, or the cleared era leaks back in.
+  let generation = 0;
 
   /**
    * Shared finish-lane used by both the FileEventBus arrival handler and
@@ -142,16 +146,30 @@ export function createResourceProcessor<T>(
    */
   const finishLoad = async (path: string, work: () => Promise<T>): Promise<void> => {
     const startTime = performance.now();
+    const startGeneration = generation;
     eventBus.emit(resourceType, 'loading', path);
 
     try {
       const result = await work();
+      if (startGeneration !== generation) {
+        // A full clear landed mid-flight: the result was produced under the
+        // cleared era (old corpus URL/provider state). Dispose and drop it —
+        // caching or announcing it would resurrect exactly what the clear
+        // removed.
+        if (result && dispose) dispose(result);
+        logger.info(`[${resourceType}Processor] Dropped stale load: ${path}`);
+        return;
+      }
       cache.set(path, result);
       inflight.delete(path);
       const elapsed = performance.now() - startTime;
       logger.info(`[${resourceType}Processor] Loaded: ${path} (${elapsed.toFixed(2)}ms)`);
       eventBus.emit<T>(resourceType, 'loaded', path, result);
     } catch (error) {
+      if (startGeneration !== generation) {
+        logger.info(`[${resourceType}Processor] Dropped stale failure: ${path}`);
+        return;
+      }
       cache.set(path, null); // Cache failure to prevent retries
       inflight.delete(path);
       const elapsed = performance.now() - startTime;
@@ -280,13 +298,28 @@ export function createResourceProcessor<T>(
       // it) until its last unpin. The `onEvict` hook wired above skips `null`
       // failure sentinels.
       if (path) {
+        // Per-path clear (hot-reload) stays silent: its caller re-requests
+        // the path itself, and the resulting loaded/failed event heals
+        // subscribed consumers.
         cache.delete(path);
         inflight.delete(path);
         logger.info(`[${resourceType}Processor] Cleared cache for: ${path}`);
       } else {
+        const clearedPaths = [...cache.keys()];
         cache.clear();
         inflight.clear();
+        // Invalidate BEHIND a generation bump so in-flight completions from
+        // the cleared era are dropped, and any synchronous re-request a
+        // subscriber makes runs under the new generation.
+        generation++;
         logger.info(`[${resourceType}Processor] Cleared all cache`);
+        // A full clear has no follow-up request of its own — announce each
+        // dropped path so mounted consumers (which hold the value in React
+        // state and would otherwise never re-read) can re-request under the
+        // new provider/corpus state.
+        for (const clearedPath of clearedPaths) {
+          eventBus.emit(resourceType, 'invalidated', clearedPath);
+        }
       }
     },
 

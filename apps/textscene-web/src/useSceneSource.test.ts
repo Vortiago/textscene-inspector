@@ -496,3 +496,40 @@ describe('fixture switch — loads new fixture content into buffer', () => {
     expect(result.current.forwardedContent).toBe(SECOND_TSCN);
   });
 });
+
+describe('editedSinceLoad — the discard-guard predicate', () => {
+  it('is false after a load, true after a keystroke, false again after replace and after a new fixture load', async () => {
+    globalThis.fetch = mockFetchOk(FIXTURE_TSCN);
+
+    const { result, rerender } = renderHook(
+      ({ fixtureFile }: { fixtureFile: string }) =>
+        useSceneSource({ fixtureFile, uploadedTscnName: null }),
+      { initialProps: { fixtureFile: 'unit-plane-mesh.tscn' } }
+    );
+    await waitFor(() => {
+      expect(result.current.buffer).toBe(FIXTURE_TSCN);
+    });
+    expect(result.current.editedSinceLoad()).toBe(false);
+
+    act(() => {
+      result.current.onBufferChange(GARBAGE);
+    });
+    expect(result.current.editedSinceLoad()).toBe(true);
+
+    // Authoritative replace (upload) — pane holds known content again.
+    act(() => {
+      result.current.replace(UPLOADED_TSCN);
+    });
+    expect(result.current.editedSinceLoad()).toBe(false);
+
+    // Edit again, then a new fixture load resets the flag.
+    act(() => {
+      result.current.onBufferChange(GARBAGE);
+    });
+    expect(result.current.editedSinceLoad()).toBe(true);
+    rerender({ fixtureFile: 'unit-box-mesh.tscn' });
+    await waitFor(() => {
+      expect(result.current.editedSinceLoad()).toBe(false);
+    });
+  });
+});

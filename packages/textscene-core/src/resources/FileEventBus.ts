@@ -19,6 +19,13 @@ export class FileEventBus {
   private inflight = new Set<string>();
   private loadedHandlers = new Set<FileLoadedHandler>();
   private failedHandlers = new Set<FileFailedHandler>();
+  /**
+   * Bumped by every FULL clearCache() (corpus switch). A fetch that started
+   * before the bump ran against the previous provider/URL-modifier state —
+   * its bytes must not repopulate the cache or be announced, or the cleared
+   * corpus leaks into the new one.
+   */
+  private clearGeneration = 0;
 
   constructor(private provider: ResourceProvider) {}
 
@@ -59,10 +66,20 @@ export class FileEventBus {
   private async loadAsync(path: string): Promise<void> {
     this.inflight.add(path);
     const startTime = performance.now();
+    const startGeneration = this.clearGeneration;
 
     try {
       // ResourceProvider.loadResource returns string | ArrayBuffer | null
       const data = await this.provider.loadResource(path);
+
+      if (this.clearGeneration !== startGeneration) {
+        // A full clear landed mid-flight: these bytes were fetched under the
+        // cleared corpus's provider state. Drop them without touching the
+        // cache, the inflight set (a post-clear request owns it now), or the
+        // handlers.
+        logger.info(`[FileEventBus] Dropped stale load: ${path}`);
+        return;
+      }
 
       if (data === null) {
         throw new Error(`File not found: ${path}`);
@@ -83,6 +100,10 @@ export class FileEventBus {
         }
       }
     } catch (error) {
+      if (this.clearGeneration !== startGeneration) {
+        logger.info(`[FileEventBus] Dropped stale failure: ${path}`);
+        return;
+      }
       this.inflight.delete(path);
 
       const elapsed = performance.now() - startTime;
@@ -136,6 +157,12 @@ export class FileEventBus {
       logger.info(`[FileEventBus] Cleared cache: ${path}`);
     } else {
       this.cache.clear();
+      // Also reset the inflight set and invalidate in-flight completions:
+      // post-clear requests must start fresh fetches (not dedupe into a
+      // cleared-era flight), and cleared-era completions must not refill
+      // the cache (see loadAsync's generation check).
+      this.inflight.clear();
+      this.clearGeneration++;
       logger.info(`[FileEventBus] Cleared all cache`);
     }
   }

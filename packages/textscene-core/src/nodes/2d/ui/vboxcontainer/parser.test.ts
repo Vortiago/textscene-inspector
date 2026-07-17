@@ -32,4 +32,27 @@ describe('parseVBoxContainer', () => {
     });
     expect(p.themeOverrideConstants).toBeUndefined();
   });
+
+  it.each([
+    ['0', 0],
+    ['1', 1],
+    ['2', 2],
+  ])('parses alignment %s as %i', (raw, expected) => {
+    const p = parseVBoxContainer(heading('VBoxContainer', { name: 'Stack' }), {
+      alignment: raw,
+    });
+    expect(p.alignment).toBe(expected);
+  });
+
+  it('leaves alignment undefined when absent', () => {
+    const p = parseVBoxContainer(heading('VBoxContainer', { name: 'Stack' }), {});
+    expect(p.alignment).toBeUndefined();
+  });
+
+  it('ignores a malformed (non-numeric) alignment', () => {
+    const p = parseVBoxContainer(heading('VBoxContainer', { name: 'Stack' }), {
+      alignment: 'garbage',
+    });
+    expect(p.alignment).toBeUndefined();
+  });
 });

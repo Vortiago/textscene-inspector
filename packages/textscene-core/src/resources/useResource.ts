@@ -256,9 +256,21 @@ export function useResource<T>(path: string, type: ResourceType): ResourceResult
       if (eventPath !== path) return;
       applyFailure(error?.message ?? 'Unknown error');
     };
+    // A FULL cache clear (corpus switch) dropped this path with no
+    // replacement on the way. The value in this hook's state belongs to the
+    // cleared era — re-request under the new provider/corpus state, keeping
+    // the last value on screen until the fresh load resolves (the same
+    // hold-last UX hot-reload has); the resulting loaded/failed event lands
+    // in the handlers above.
+    const onInvalidated = (eventPath: string) => {
+      if (eventPath !== path) return;
+      if (!isCurrent()) return;
+      access.request(path);
+    };
 
     eventBus.on(busType, 'loaded', onLoaded);
     eventBus.on<Error>(busType, 'failed', onFailed);
+    eventBus.on(busType, 'invalidated', onInvalidated);
 
     // 3. If we had no cache entry yet, drive the request now. This is
     //    intentionally after subscribing so we don't miss a synchronous
@@ -271,6 +283,7 @@ export function useResource<T>(path: string, type: ResourceType): ResourceResult
       access.unpin(path);
       eventBus.off(busType, 'loaded', onLoaded);
       eventBus.off<Error>(busType, 'failed', onFailed);
+      eventBus.off(busType, 'invalidated', onInvalidated);
       disposePreviousClone();
     };
   }, [loader, path, type]);
