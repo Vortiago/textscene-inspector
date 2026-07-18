@@ -126,16 +126,27 @@ export function StandardMaterialSlot({
     emissive: scalars.emissive,
     emissiveIntensity: scalars.emissiveIntensity,
   };
-  // Godot clearcoat (FEATURE_CLEARCOAT): a thin glossy coat over the base
-  // surface. three.js models it natively on MeshPhysicalMaterial only, so a
-  // material carrying a coat renders as <meshPhysicalMaterial>.
-  if (scalars.clearcoat > 0) {
+  // Godot clearcoat (FEATURE_CLEARCOAT, a glossy coat) and rim (FEATURE_RIM, a
+  // Fresnel edge highlight) both live natively on MeshPhysicalMaterial only —
+  // clearcoat as `clearcoat`, rim mapped to `sheen` (three.js's Fresnel edge
+  // term, the closest native analog). A material carrying either renders as
+  // <meshPhysicalMaterial>; rim_tint blends the highlight from the light colour
+  // (0) toward the albedo (1) via sheenColor.
+  if (scalars.clearcoat > 0 || scalars.rim > 0) {
+    const rimTint = scalars.rimTint;
+    const sheenColor = new THREE.Color(
+      1 + rimTint * (scalars.color[0] - 1),
+      1 + rimTint * (scalars.color[1] - 1),
+      1 + rimTint * (scalars.color[2] - 1)
+    );
     return (
       <meshPhysicalMaterial
         key={`physical-${slotKey}`}
         {...pbrProps}
         clearcoat={scalars.clearcoat}
         clearcoatRoughness={scalars.clearcoatRoughness}
+        sheen={scalars.rim}
+        sheenColor={sheenColor}
       />
     );
   }
