@@ -883,8 +883,18 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Materials"
   },
   {
+    "name": "Material Clearcoat",
+    "file": "unit-material-clearcoat.tscn",
+    "category": "Unit - Materials"
+  },
+  {
     "name": "Material Emissive",
     "file": "unit-material-emissive.tscn",
+    "category": "Unit - Materials"
+  },
+  {
+    "name": "Material Heightmap",
+    "file": "unit-material-heightmap.tscn",
     "category": "Unit - Materials"
   },
   {
@@ -900,6 +910,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Material Override",
     "file": "unit-material-override.tscn",
+    "category": "Unit - Materials"
+  },
+  {
+    "name": "Material Rim",
+    "file": "unit-material-rim.tscn",
     "category": "Unit - Materials"
   },
   {

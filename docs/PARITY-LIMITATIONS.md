@@ -42,6 +42,18 @@ form can't be reproduced.
 - **Why not fixed:** three.js has no additive emissive-map mode without a custom shader.
 - Site: `r3f/materials/standardMaterialScalars.ts` (emission block).
 
+### Height mapping = vertex displacement  *(WI-65)*
+
+Godot's `heightmap_*` is texture-space parallax occlusion (offsets texture lookups, no geometry
+change); three.js `displacementMap` moves real mesh vertices along their normals.
+- **Faithful when:** the mesh is finely subdivided and the depth is modest.
+- **Diverges when:** the mesh is coarse (no vertices to move → no effect), or the depth reads
+  differently — `displacementScale` is in world units, whereas Godot's `heightmap_scale` is a
+  parallax-depth space, so the same value does not map 1:1.
+- **Why not fixed:** faithful parallax needs a custom shader (Option 2 in the issue); the
+  displacement approach is the recommended v1.
+- Site: `r3f/materials/StandardMaterialSlot.tsx` (displacementMap / displacementScale).
+
 ### uv1_offset under world-triplanar  *(audit #22)*
 `uv1_offset` is applied as a three.js UV-space offset. Under
 `uv1_world_triplanar`, Godot's offset is in **world units**, so a non-zero offset

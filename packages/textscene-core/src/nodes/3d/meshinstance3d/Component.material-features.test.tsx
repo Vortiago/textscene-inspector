@@ -414,4 +414,45 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
     const material = physical[0]!.instance as THREE.MeshPhysicalMaterial;
     expect(material.sheen).toBeCloseTo(0.7, 5);
   });
+
+  it('applies heightmap_scale to the rendered material.displacementScale', async () => {
+    const loader = makeLoader();
+    const internalResources: TscnInternalResource[] = [
+      { id: 'box', type: 'BoxMesh', data: { id: 'box' } },
+      {
+        id: 'mat',
+        type: 'StandardMaterial3D',
+        data: {
+          id: 'mat',
+          heightmap_enabled: 'true',
+          heightmap_scale: '3',
+        } as Record<string, string>,
+      },
+    ];
+
+    const renderer = await renderWith(makeNode('mat'), internalResources, [], loader);
+    await new Promise<void>((r) => setTimeout(r, 10));
+
+    const material = findMaterial(renderer);
+    expect(material).toBeDefined();
+    expect(material!.displacementScale).toBe(3);
+  });
+
+  it('leaves displacementScale at 0 (no displacement) for a non-heightmap material', async () => {
+    const loader = makeLoader();
+    const internalResources: TscnInternalResource[] = [
+      { id: 'box', type: 'BoxMesh', data: { id: 'box' } },
+      {
+        id: 'mat',
+        type: 'StandardMaterial3D',
+        data: { id: 'mat', roughness: '0.4' } as Record<string, string>,
+      },
+    ];
+
+    const renderer = await renderWith(makeNode('mat'), internalResources, [], loader);
+    await new Promise<void>((r) => setTimeout(r, 10));
+
+    const material = findMaterial(renderer);
+    expect(material!.displacementScale).toBe(0);
+  });
 });

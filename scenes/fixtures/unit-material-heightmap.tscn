@@ -1,0 +1,31 @@
+[gd_scene format=3]
+
+[ext_resource type="Texture2D" path="res://textures/height-bumps.svg" id="1_height"]
+
+[sub_resource type="SphereMesh" id="SphereMesh_1"]
+radius = 1.0
+height = 2.0
+radial_segments = 96
+rings = 48
+
+[sub_resource type="StandardMaterial3D" id="Material_heightmap"]
+albedo_color = Color(0.6, 0.55, 0.5, 1)
+metallic = 0.0
+roughness = 0.7
+heightmap_enabled = true
+heightmap_texture = ExtResource("1_height")
+heightmap_scale = 0.22
+
+[node name="Root" type="Node3D"]
+
+[node name="HeightmapSphere" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+mesh = SubResource("SphereMesh_1")
+surface_material_override/0 = SubResource("Material_heightmap")
+
+[node name="Title" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
+text = "Height Mapping Material Test"
+pixel_size = 0.008
+billboard = 1
+modulate = Color(1, 1, 0.7, 1)

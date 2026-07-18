@@ -36,6 +36,10 @@ export const GOLDEN_SCENES = [
   { name: 'navigation-region-3d', file: 'unit-navigation-region-3d.tscn' },
   { name: 'material-metallic', file: 'unit-material-metallic.tscn' },
   { name: 'material-emissive', file: 'unit-material-emissive.tscn' },
+  // Height mapping: a local grayscale height SVG drives displacementMap on a
+  // finely-subdivided sphere — the baseline pins that the relief actually
+  // renders (a normal map, or a missing displacementMap, reads as a flat ball).
+  { name: 'material-heightmap', file: 'unit-material-heightmap.tscn' },
   { name: 'world-environment', file: 'unit-world-environment-basic.tscn' },
   // NOTE: unit-label3d.tscn is deliberately NOT in the set — Label3D
   // labels render effectively invisible after auto-framing (default
