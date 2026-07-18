@@ -280,7 +280,7 @@ const gameFixtures = gameDirs().flatMap(dir => {
   });
 });
 
-// The optional ld-58 corpus (scenes/ld58/) — an author-only project vendored on
+// The optional ld-58 corpus (scenes/ld58/) — a repo-external project vendored on
 // demand (`pnpm vendor:ld58`), not committed. Same split as the games corpus: on
 // a fresh clone ld58Files is empty and this manifest is written to a SEPARATE,
 // gitignored file that fixturesAll.ts merges via import.meta.glob when present.
