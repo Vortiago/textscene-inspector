@@ -1,5 +1,5 @@
 /**
- * Control base validators (#143). Control is the root of the 2D UI family; its
+ * Control base validators. Control is the root of the 2D UI family; its
  * layout/anchor/offset + theme-override validators are inherited by every
  * Control subclass through the ValidatorRegistry base-walk. Scalar props run
  * through the shared accept/reject table; the `theme_override_*` wildcard groups

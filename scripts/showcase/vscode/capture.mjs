@@ -27,6 +27,7 @@
 /* global document */ // `document` appears only inside page.frames().evaluate() callbacks, which run in the browser.
 import { spawn, execSync } from 'node:child_process';
 import { chromium } from 'playwright';
+import { SWIFTSHADER_GL_ARGS } from '../browser.mjs';
 import { rmSync, mkdirSync, existsSync, readdirSync } from 'node:fs';
 import { downloadAndUnzipVSCode } from '@vscode/test-electron';
 
@@ -205,7 +206,10 @@ async function waitForCanvas(page, timeoutMs = 30000) {
 
 mkdirSync(OUT, { recursive: true });
 mkdirSync(`${WT}/.tmp`, { recursive: true });
-const UD_MARKER = 'vsc-showcase-ud';
+// Match on the ABSOLUTE user-data-dir: the basename alone is identical in
+// every worktree, so it would SIGKILL a concurrent capture's dev-host in a
+// sibling worktree (this machine runs many at once).
+const UD_MARKER = UD;
 killStaleHost(UD_MARKER); // a prior aborted run can leave the host holding the dir
 await rmRetry(UD);
 
@@ -221,12 +225,8 @@ const vscodeArgs = [
 if (IS_LINUX) {
   // Sandbox flags: the cached chrome-sandbox is not setuid, so the namespace
   // sandbox may be unavailable under xvfb — @vscode/test-electron passes these
-  // for exactly this reason. GL flags force ANGLE + SwiftShader so the webview's
-  // WebGL context paints in software (never --disable-gpu, which kills WebGL).
-  vscodeArgs.push(
-    '--no-sandbox', '--disable-gpu-sandbox',
-    '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--use-gl=angle',
-  );
+  // for exactly this reason.
+  vscodeArgs.push('--no-sandbox', '--disable-gpu-sandbox', ...SWIFTSHADER_GL_ARGS);
 }
 vscodeArgs.push(WS);
 

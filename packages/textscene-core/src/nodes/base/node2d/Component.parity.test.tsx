@@ -1,5 +1,5 @@
 /**
- * Parity: CanvasItem.show_behind_parent (#36) — the node draws just behind its
+ * Parity: CanvasItem.show_behind_parent — the node draws just behind its
  * parent (a small negative Z offset in the conjugated 2D group frame).
  */
 import { describe, it, expect } from 'vitest';

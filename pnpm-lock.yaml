@@ -42,6 +42,9 @@ catalogs:
     '@vitest/ui':
       specifier: ^4.1
       version: 4.1.6
+    '@vscode/test-electron':
+      specifier: ^2.5.2
+      version: 2.5.2
     commander:
       specifier: ^12.1.0
       version: 12.1.0
@@ -102,7 +105,7 @@ importers:
         specifier: 'catalog:'
         version: 4.1.6(vitest@4.1.6)
       '@vscode/test-electron':
-        specifier: ^2.5.2
+        specifier: 'catalog:'
         version: 2.5.2
       eslint:
         specifier: ^9.18.0
@@ -203,7 +206,7 @@ importers:
         specifier: ^1.85.0
         version: 1.105.0
       '@vscode/test-electron':
-        specifier: ^2.5.2
+        specifier: 'catalog:'
         version: 2.5.2
       '@vscode/test-web':
         specifier: ^0.0.81

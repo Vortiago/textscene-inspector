@@ -1,12 +1,12 @@
 /**
- * Issue #201 — Source pane slice 2: editable buffer drives the render (hold-last-valid gate).
+ * Source pane slice 2: editable buffer drives the render (hold-last-valid gate).
  *
  * RED contract. Behavioral `<R3FApp>` tests reusing the `r3f-main.*.test.tsx` WebGL-mock
  * pattern (happy-dom has no WebGL; `TscnCanvas`/`TscnSceneContents` stubbed, everything else
  * real — the scene TREE panel is real DOM, so "the viewport updated" is asserted as "the new
  * root node's name appears in the tree").
  *
- * Each `describe` maps to one acceptance criterion of #201 (ADR-0020 §2/§3/§5):
+ * Each `describe` maps to one acceptance criterion of the issue (ADR-0020 §2/§3/§5):
  *   1. editing the pane updates the scene tree via the shell's `content` — after the
  *      debounce, never synchronously on the keystroke;
  *   2. a transiently broken buffer HOLDS the last valid render (the pane keeps the broken

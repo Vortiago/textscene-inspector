@@ -6,14 +6,14 @@
  * instance node + the synthesised GLB root's basename) would surface as the
  * Animation tab failing to populate on selection.
  */
-import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode, TscnScene } from '../../../parser/types';
 import { NodeDispatcher } from '../../NodeDispatcher';
 import { SceneResourcesProvider } from '../../SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
-import { ResourceEventBus } from '../../../resources/ResourceEventBus';
+import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
 import {
   AnimationTransportProvider,
@@ -65,28 +65,11 @@ function makeSynthScene(): TscnScene {
   };
 }
 
-function makeLoader() {
-  const eventBus = new ResourceEventBus();
-  const sceneCache = new Map<string, TscnScene | null>([[GLB_PATH, makeSynthScene()]]);
-  const glbCache = new Map<string, THREE.Object3D | null>([[GLB_PATH, makeAnimatedGlb()]]);
-  const makeProc = <T,>(cache: Map<string, T | null>) => ({
-    request: vi.fn(),
-    getCached: (p: string) => cache.get(p),
-    isCached: (p: string) => cache.has(p),
-    isLoading: () => false,
-    clearCache: () => {},
-    getCacheSize: () => cache.size,
-    pin: () => {},
-    unpin: () => {},
-  });
-  return {
-    eventBus,
-    glbMeshes: makeProc<THREE.Object3D>(glbCache),
-    scenes: makeProc<TscnScene>(sceneCache),
-    getSceneCached: (p: string) => sceneCache.get(p),
-    requestScene: vi.fn(),
-    register: vi.fn(),
-  } as unknown as ResourceLoader;
+function makeLoader(): ResourceLoader {
+  const fake = createFakeResourceLoader();
+  fake.scenes.seed(GLB_PATH, makeSynthScene());
+  fake.glbMeshes.seed(GLB_PATH, makeAnimatedGlb());
+  return fake.loader;
 }
 
 /** Host: a Player instance node whose instance is the GLB directly. */

@@ -11,8 +11,9 @@
  *    scene's direct ExtResources AND the caller-supplied set of currently-
  *    missing `res://` paths, so repeated drops can fulfill a sub-scene's own
  *    dependencies.
- * 3. No-`.tscn` batch: the caller passes `tscnText: null` to match purely
- *    against the missing paths, fulfilling missing rows instead of erroring.
+ * 3. No-`.tscn` batch: the caller passes an empty ext-resource list to match
+ *    purely against the missing paths, fulfilling missing rows instead of
+ *    erroring.
  */
 import { TscnParser } from '@textscene/core';
 
@@ -45,12 +46,28 @@ export interface RootMostTscnResult {
   text: string;
   /** True when the pick was ambiguous (tie or cycle) and fell back to the first candidate — for the caller to log. */
   ambiguous: boolean;
+  /**
+   * The picked scene's ext-resource paths when the pick already parsed it
+   * (multi-`.tscn` batches — the pick and the subsequent resource matching
+   * share one parse). `null` when the pick needed no parse (single `.tscn`);
+   * callers that then need the paths parse lazily via `extResourcePaths`.
+   */
+  extResourcePaths: readonly string[] | null;
 }
 
 /** The last path segment of a `res://`-or-plain slash-separated path. */
 function basename(path: string): string {
   const idx = path.lastIndexOf('/');
   return idx === -1 ? path : path.slice(idx + 1);
+}
+
+/** All ExtResource paths of a scene text; `[]` when the text doesn't parse. */
+export function extResourcePaths(text: string): readonly string[] {
+  try {
+    return new TscnParser().parse(text).externalResources.map((r) => r.path);
+  } catch {
+    return [];
+  }
 }
 
 /**
@@ -70,96 +87,87 @@ export function pickRootMostTscn(
   }
   const first = filesWithText[0]!;
   if (filesWithText.length === 1) {
-    return { ...first, ambiguous: false };
+    return { ...first, ambiguous: false, extResourcePaths: null };
   }
 
-  // Collect all basenames of .tscn files referenced across every file in the batch.
+  // Parse each scene ONCE — the same parse answers "which .tscn basenames does
+  // each file reference?" for the pick AND supplies the picked file's paths
+  // for the resource matching that follows.
+  const entries = filesWithText.map((entry) => ({
+    entry,
+    paths: extResourcePaths(entry.text),
+  }));
+
+  // Collect all basenames of .tscn files referenced across every file in the
+  // batch. A file's reference to its OWN basename (e.g. `door.tscn` instancing
+  // `res://variants/door.tscn`) is skipped — a scene can't instance itself, so
+  // such a reference must point at a different, same-named file and must not
+  // disqualify the referencing scene from being the root.
   const referencedBasenames = new Set<string>();
-  for (const { text } of filesWithText) {
-    try {
-      const { externalResources } = new TscnParser().parse(text);
-      for (const r of externalResources) {
-        if (r.path.toLowerCase().endsWith('.tscn')) {
-          referencedBasenames.add(basename(r.path).toLowerCase());
-        }
+  for (const { entry, paths } of entries) {
+    const ownName = entry.file.name.toLowerCase();
+    for (const path of paths) {
+      const refName = basename(path).toLowerCase();
+      if (refName.endsWith('.tscn') && refName !== ownName) {
+        referencedBasenames.add(refName);
       }
-    } catch {
-      // Unparseable — skip reference extraction for this file.
     }
   }
 
   // Root-most candidates: tscns whose basename no other tscn in the batch references.
-  const candidates = filesWithText.filter(
-    ({ file }) => !referencedBasenames.has(file.name.toLowerCase())
+  const candidates = entries.filter(
+    ({ entry }) => !referencedBasenames.has(entry.file.name.toLowerCase())
   );
-  if (candidates.length === 1) {
-    return { ...candidates[0]!, ambiguous: false };
-  }
-  return { ...(candidates[0] ?? first), ambiguous: true };
+  const pick = candidates[0] ?? entries[0]!;
+  return { ...pick.entry, ambiguous: candidates.length !== 1, extResourcePaths: pick.paths };
 }
 
 /**
  * Matches every file in `others` to a `res://` path by case-insensitive basename.
  *
  * Matching priority:
- * 1. Direct ExtResource reference in `tscnText` (scene's own dependencies).
- *    Pass `null` when the batch carries no scene — matching then runs purely
- *    against `missingPaths`.
+ * 1. Direct ExtResource path of the active scene (`extResourcePaths` — the
+ *    scene's own dependencies). Pass `[]` when the batch carries no scene;
+ *    matching then runs purely against `missingPaths`.
  * 2. Currently-missing `res://` paths in `missingPaths` (fulfills a sub-scene's
  *    dependencies on repeated drops).
  *
- * Ambiguous matches (multiple candidates share the same basename) use the first
- * candidate and record the collision in `ambiguousMatches` for the caller to log.
- * Files matching nothing are collected in `unmatched`.
+ * Ambiguous matches (multiple candidates in the winning tier share the same
+ * basename) use the first candidate and record the collision in
+ * `ambiguousMatches` for the caller to log. Files matching nothing are
+ * collected in `unmatched`.
  */
 export function matchResourceFiles(
-  tscnText: string | null,
+  extResources: readonly string[],
   others: readonly File[],
   missingPaths: ReadonlySet<string>
 ): MatchResult {
-  if (others.length === 0) {
-    return { matches: [], ambiguousMatches: [], unmatched: [] };
-  }
-
-  const externalResources =
-    tscnText === null ? [] : new TscnParser().parse(tscnText).externalResources;
-  const missingList = Array.from(missingPaths);
-
   const matches: ResourceFileMatch[] = [];
   const ambiguousMatches: AmbiguousMatch[] = [];
   const unmatched: File[] = [];
 
+  // Priority tiers: the first tier with any basename match wins for a file
+  // (first-declared candidate wins within the tier).
+  const tiers = [extResources, Array.from(missingPaths)];
+
   for (const file of others) {
     const nameLower = file.name.toLowerCase();
+    const candidates = tiers
+      // Dedup within the tier: a scene declaring the same res:// path in two
+      // ext_resource headers is one candidate, not a fake ambiguity.
+      .map((tier) => [
+        ...new Set(tier.filter((path) => basename(path).toLowerCase() === nameLower)),
+      ])
+      .find((tierMatches) => tierMatches.length > 0);
 
-    // Priority 1: direct ExtResource match (first-declared wins for ties).
-    const directMatches = externalResources.filter(
-      (r) => basename(r.path).toLowerCase() === nameLower
-    );
-    if (directMatches.length > 0) {
-      if (directMatches.length > 1) {
-        ambiguousMatches.push({
-          file,
-          candidates: directMatches.map((r) => r.path),
-        });
-      }
-      matches.push({ path: directMatches[0]!.path, file });
+    if (candidates === undefined) {
+      unmatched.push(file);
       continue;
     }
-
-    // Priority 2: missing-path match.
-    const missingCandidates = missingList.filter(
-      (p) => basename(p).toLowerCase() === nameLower
-    );
-    if (missingCandidates.length > 0) {
-      if (missingCandidates.length > 1) {
-        ambiguousMatches.push({ file, candidates: missingCandidates });
-      }
-      matches.push({ path: missingCandidates[0]!, file });
-      continue;
+    if (candidates.length > 1) {
+      ambiguousMatches.push({ file, candidates });
     }
-
-    unmatched.push(file);
+    matches.push({ path: candidates[0]!, file });
   }
 
   return { matches, ambiguousMatches, unmatched };

@@ -49,9 +49,9 @@ import * as logger from '../logger';
  * Returns the canonical ResourceType bus tag for a TSCN resource-type
  * string. PackedScene → 'scene', StandardMaterial3D → 'material', etc.
  * Used by `provideFile` to route a re-request through the right
- * processor.
+ * processor (exported so the test fake mirrors the same routing).
  */
-function busTypeFor(resourceType: string | undefined): ResourceType | null {
+export function busTypeFor(resourceType: string | undefined): ResourceType | null {
   if (!resourceType) return null;
   if (resourceType.includes('Texture')) return 'texture';
   if (resourceType.includes('Material')) return 'material';

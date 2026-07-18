@@ -1,5 +1,5 @@
 /**
- * Base-class walk for `findValidator` (#143). A subclass with no validator of
+ * Base-class walk for `findValidator`. A subclass with no validator of
  * its own inherits its base type's validators, so the single Node3D/Node2D/
  * Control base validator sets reach every subclass instead of silently passing.
  * The walk is driven by an injected base-type map; the registry defaults to no

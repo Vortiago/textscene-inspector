@@ -1,5 +1,5 @@
 /**
- * Generic render-time error boundary (#216).
+ * Generic render-time error boundary.
  *
  * The architecture invests heavily in graceful degradation for RESOLUTION
  * failures (fallback cubes, missing-resource placeholders) but had nothing

@@ -1,6 +1,6 @@
 /**
- * Parity: Sprite2D modulate sRGB→linear (#6), self_modulate own-pixels +
- * non-propagation (#38), and region_rect + hframes/vframes composition (#16).
+ * Parity: Sprite2D modulate sRGB→linear, self_modulate own-pixels +
+ * non-propagation, and region_rect + hframes/vframes composition.
  */
 import type { ReactElement } from 'react';
 import { describe, it, expect } from 'vitest';

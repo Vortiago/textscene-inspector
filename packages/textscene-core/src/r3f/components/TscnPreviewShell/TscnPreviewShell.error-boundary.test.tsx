@@ -1,5 +1,5 @@
 /**
- * PreviewErrorBoundary (#216) — wraps <ViewportArea> in the shell so a thrown
+ * PreviewErrorBoundary — wraps <ViewportArea> in the shell so a thrown
  * render exception there doesn't blank the whole shell (tree/inspector/toolbar
  * stay usable), and clears the moment a fresh parse hands it a new sceneGraph
  * (the file was fixed) — via resetKeys, NOT a key-driven remount. The

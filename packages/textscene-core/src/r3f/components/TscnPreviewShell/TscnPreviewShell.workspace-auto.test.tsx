@@ -18,28 +18,15 @@ vi.mock('../Canvas2DStage/Canvas2DStage', () => ({
 
 import { TscnPreviewShell } from './TscnPreviewShell';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
-import { ResourceEventBus } from '../../../resources/ResourceEventBus';
+import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { TscnParser } from '../../../parser/TscnParser';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
 import type { TscnScene } from '../../../parser/types';
 
 function makeLoader(scenes: Record<string, TscnScene>): ResourceLoader {
-  const proc = <T,>(cache: Record<string, T>) => ({
-    getCached: (p: string) => cache[p],
-    isCached: (p: string) => p in cache,
-    isLoading: () => false,
-    request: () => {},
-    clearCache: () => {},
-    getCacheSize: () => Object.keys(cache).length,
-    pin: () => {},
-    unpin: () => {},
-  });
-  return {
-    eventBus: new ResourceEventBus(),
-    scenes: proc<TscnScene>(scenes),
-    glbMeshes: proc<never>({}),
-    register: () => {},
-  } as unknown as ResourceLoader;
+  const fake = createFakeResourceLoader();
+  for (const [path, scene] of Object.entries(scenes)) fake.scenes.seed(path, scene);
+  return fake.loader;
 }
 
 const SPRITE_SCENE = `[gd_scene format=3]\n\n[node name="World" type="Sprite2D"]\n`;

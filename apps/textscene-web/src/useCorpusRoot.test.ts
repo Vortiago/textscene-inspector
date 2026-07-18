@@ -6,7 +6,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { renderHook } from '@testing-library/react';
-import { useCorpusRoot } from './useCorpusRoot';
+import { switchCorpusRoot, useCorpusRoot } from './useCorpusRoot';
 import type { ResourcePipeline } from '@textscene/core';
 import type { WebResourceProvider } from './providers/WebResourceProvider';
 
@@ -25,6 +25,28 @@ function makePipeline() {
   };
   return { pipeline, setResourceRoot, setURLModifier, clearCaches };
 }
+
+describe('switchCorpusRoot', () => {
+  it('routes the provider and the URL modifier to the new root synchronously', () => {
+    const { pipeline, setResourceRoot, setURLModifier } = makePipeline();
+
+    switchCorpusRoot(pipeline, 'demos/2d/platformer');
+
+    expect(setResourceRoot).toHaveBeenCalledWith('demos/2d/platformer');
+    const modifier = setURLModifier.mock.lastCall![0];
+    expect(modifier('res://textures/player.png')).toBe(
+      '/fixtures/demos/2d/platformer/textures/player.png'
+    );
+  });
+
+  it('never clears caches itself — that stays with useCorpusRoot', () => {
+    const { pipeline, clearCaches } = makePipeline();
+
+    switchCorpusRoot(pipeline, 'demos/3d/fps');
+
+    expect(clearCaches).not.toHaveBeenCalled();
+  });
+});
 
 describe('useCorpusRoot', () => {
   it('calls setResourceRoot with the initial root on mount', () => {

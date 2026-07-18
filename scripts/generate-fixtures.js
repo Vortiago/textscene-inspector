@@ -384,11 +384,13 @@ console.log(`✅ Generated fixtures.ts with ${fixtures.length} fixtures across $
 /**
  * Optional vendored corpora (games, ld-58) are fetched on demand, not
  * committed, so each manifest goes to a SEPARATE, gitignored file that
- * fixturesAll.ts merges via import.meta.glob when present. On a fresh clone
- * the corpus is absent; any stale manifest is removed so the committed state
- * stays corpus-free.
+ * fixturesAll.ts merges via one wildcard import.meta.glob when present. Every
+ * manifest exports the SAME conventional `corpusFixtures` name — that is what
+ * lets the consumer stay a single glob with no per-corpus code; a new corpus
+ * only adds a call below. On a fresh clone the corpus is absent; any stale
+ * manifest is removed so the committed state stays corpus-free.
  */
-function writeOptionalCorpusManifest({ fileName, exportName, corpusLabel, vendorCmd, items }) {
+function writeOptionalCorpusManifest({ fileName, corpusLabel, vendorCmd, items }) {
   const outPath = join(rootDir, 'apps/textscene-web/src', fileName);
   if (items.length > 0) {
     const { categories: corpusCategories, sorted } = groupByCategory(items);
@@ -400,7 +402,7 @@ function writeOptionalCorpusManifest({ fileName, exportName, corpusLabel, vendor
 
 import type { Fixture } from './fixtures';
 
-export const ${exportName}: Fixture[] = ${JSON.stringify(sorted, null, 2)};
+export const corpusFixtures: Fixture[] = ${JSON.stringify(sorted, null, 2)};
 `;
     writeFileSync(outPath, manifest);
     console.log(`✅ Generated ${fileName} with ${items.length} ${corpusLabel} fixtures across ${corpusCategories.length} categories`);
@@ -412,7 +414,6 @@ export const ${exportName}: Fixture[] = ${JSON.stringify(sorted, null, 2)};
 
 writeOptionalCorpusManifest({
   fileName: 'fixtures.games.ts',
-  exportName: 'gameFixtures',
   corpusLabel: 'games',
   vendorCmd: 'pnpm vendor:games',
   items: gameFixtures,
@@ -420,7 +421,6 @@ writeOptionalCorpusManifest({
 
 writeOptionalCorpusManifest({
   fileName: 'fixtures.ld58.ts',
-  exportName: 'ld58Fixtures',
   corpusLabel: 'ld-58',
   vendorCmd: 'pnpm vendor:ld58',
   items: ld58Fixtures,

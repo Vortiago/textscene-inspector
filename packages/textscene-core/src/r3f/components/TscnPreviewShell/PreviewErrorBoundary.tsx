@@ -1,7 +1,7 @@
 /**
  * Wraps `<ViewportArea>` so a render-time exception there (thrown before
  * `<Canvas>` even mounts, or from the 2D `Canvas2DStage` DOM overlay) shows a
- * recoverable message instead of leaving the whole shell dark (#216). This is
+ * recoverable message instead of leaving the whole shell dark. This is
  * the OUTER half of the fix — it does NOT catch anything thrown from inside
  * `<TscnCanvas>`'s own `<Canvas>` (R3F mounts a separate react-reconciler
  * root there); `NodeDispatcher`'s per-node `<ErrorBoundary>` covers that half.

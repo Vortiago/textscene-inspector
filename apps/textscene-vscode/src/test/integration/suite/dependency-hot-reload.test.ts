@@ -40,15 +40,13 @@ import {
   createTestPanel,
   getExtensionUri,
   waitForMessage,
+  type TestPanel,
+  type TestPanelOptions,
 } from '../helpers/panelHelpers';
 import {
   setupDepChainWorkspace,
   teardownDepChainWorkspace,
-  mainTscnPath,
-  subTscnPath,
-  texturePngPath,
-  materialTresPath,
-  unrelatedTscnPath,
+  depChainFile,
   primePanelForDepChain,
   primeResource,
   waitForResourceChanged,
@@ -90,15 +88,10 @@ suite('Dependency Hot-Reload E2E', () => {
   test('scenario 1: texture change at the deepest dependency layer reaches the main.tscn panel', async function () {
     this.timeout(30000);
 
-    const extensionUri = getExtensionUri();
-    const mainUri = vscode.Uri.file(mainTscnPath());
-
-    const { panel, sentMessages, triggerMessage } = createTestPanel(extensionUri, mainUri);
-
-    await handshake(triggerMessage, sentMessages);
+    const { panel, sentMessages, triggerMessage } = await openPanel(depChainFile('main.tscn'));
     await primePanelForDepChain(triggerMessage, sentMessages);
 
-    await panel.handleDependencyChange(vscode.Uri.file(texturePngPath()));
+    await panel.handleDependencyChange(vscode.Uri.file(depChainFile('texture.png')));
 
     await waitForResourceChanged(sentMessages, RES_TEXTURE, 8000);
   });
@@ -111,18 +104,13 @@ suite('Dependency Hot-Reload E2E', () => {
   test('scenario 2a: panel for an unrelated scene receives no resourceChanged when texture changes', async function () {
     this.timeout(30000);
 
-    const extensionUri = getExtensionUri();
-    const unrelatedUri = vscode.Uri.file(unrelatedTscnPath());
-
-    const { panel, sentMessages, triggerMessage } = createTestPanel(extensionUri, unrelatedUri);
-
-    await handshake(triggerMessage, sentMessages);
+    const { panel, sentMessages } = await openPanel(depChainFile('unrelated.tscn'));
     // No loadResource messages — the panel never requested texture.png.
     await new Promise<void>((r) => setTimeout(r, 100));
 
     await assertNoResourceChanged(
       sentMessages,
-      () => panel.handleDependencyChange(vscode.Uri.file(texturePngPath())),
+      () => panel.handleDependencyChange(vscode.Uri.file(depChainFile('texture.png'))),
       400,
     );
   });
@@ -136,12 +124,7 @@ suite('Dependency Hot-Reload E2E', () => {
   test('scenario 2b: panel for sub.tscn (which also served texture) receives resourceChanged', async function () {
     this.timeout(30000);
 
-    const extensionUri = getExtensionUri();
-    const subUri = vscode.Uri.file(subTscnPath());
-
-    const { panel, sentMessages, triggerMessage } = createTestPanel(extensionUri, subUri);
-
-    await handshake(triggerMessage, sentMessages);
+    const { panel, sentMessages, triggerMessage } = await openPanel(depChainFile('sub.tscn'));
 
     // sub.tscn references texture.png — prime that resource.
     await primeResource(triggerMessage, sentMessages, {
@@ -150,7 +133,7 @@ suite('Dependency Hot-Reload E2E', () => {
       requestId: 'sub-prime-tex',
     });
 
-    await panel.handleDependencyChange(vscode.Uri.file(texturePngPath()));
+    await panel.handleDependencyChange(vscode.Uri.file(depChainFile('texture.png')));
 
     await waitForResourceChanged(sentMessages, RES_TEXTURE, 8000);
   });
@@ -164,14 +147,9 @@ suite('Dependency Hot-Reload E2E', () => {
   test('scenario 3: a panel whose visible flag is false still receives resourceChanged', async function () {
     this.timeout(30000);
 
-    const extensionUri = getExtensionUri();
-    const mainUri = vscode.Uri.file(mainTscnPath());
-
-    const { panel, sentMessages, triggerMessage } = createTestPanel(extensionUri, mainUri, {
+    const { panel, sentMessages, triggerMessage } = await openPanel(depChainFile('main.tscn'), {
       visible: false, // panel is hidden behind another editor
     });
-
-    await handshake(triggerMessage, sentMessages);
 
     // Prime texture.png into the served map.
     await primeResource(triggerMessage, sentMessages, {
@@ -181,7 +159,7 @@ suite('Dependency Hot-Reload E2E', () => {
     });
 
     // Watcher fires while panel is hidden.
-    await panel.handleDependencyChange(vscode.Uri.file(texturePngPath()));
+    await panel.handleDependencyChange(vscode.Uri.file(depChainFile('texture.png')));
 
     await waitForResourceChanged(sentMessages, RES_TEXTURE, 8000);
   });
@@ -195,15 +173,10 @@ suite('Dependency Hot-Reload E2E', () => {
   test('scenario 4: creating a previously-missing resource delivers resourceChanged', async function () {
     this.timeout(30000);
 
-    const extensionUri = getExtensionUri();
-    const mainUri = vscode.Uri.file(mainTscnPath());
-
-    const { panel, sentMessages, triggerMessage } = createTestPanel(extensionUri, mainUri);
-
-    await handshake(triggerMessage, sentMessages);
+    const { panel, sentMessages, triggerMessage } = await openPanel(depChainFile('main.tscn'));
 
     // Use a path for a texture that does NOT yet exist on disk.
-    const missingTexPath = texturePngPath().replace('texture.png', 'missing-heal.png');
+    const missingTexPath = depChainFile('missing-heal.png');
     const missingTexUri = vscode.Uri.file(missingTexPath);
     const RES_MISSING = 'res://missing-heal.png';
 
@@ -239,18 +212,13 @@ suite('Dependency Hot-Reload E2E', () => {
   test('scenario 5: changing a file the scene never referenced produces no resourceChanged', async function () {
     this.timeout(30000);
 
-    const extensionUri = getExtensionUri();
-    const mainUri = vscode.Uri.file(mainTscnPath());
-
-    const { panel, sentMessages, triggerMessage } = createTestPanel(extensionUri, mainUri);
-
-    await handshake(triggerMessage, sentMessages);
+    const { panel, sentMessages, triggerMessage } = await openPanel(depChainFile('main.tscn'));
     // Prime the known resources so the provider is initialised with something.
     await primePanelForDepChain(triggerMessage, sentMessages);
     await new Promise<void>((r) => setTimeout(r, 100));
 
     // Create a file the scene never referenced.
-    const irrelevantPath = texturePngPath().replace('texture.png', 'completely-irrelevant.png');
+    const irrelevantPath = depChainFile('completely-irrelevant.png');
     fs.writeFileSync(irrelevantPath, Buffer.alloc(4, 0));
 
     try {
@@ -272,12 +240,7 @@ suite('Dependency Hot-Reload E2E', () => {
   test('scenario 6: deleting a served dependency sends resourceChanged so the webview shows missing placeholder', async function () {
     this.timeout(30000);
 
-    const extensionUri = getExtensionUri();
-    const mainUri = vscode.Uri.file(mainTscnPath());
-
-    const { panel, sentMessages, triggerMessage } = createTestPanel(extensionUri, mainUri);
-
-    await handshake(triggerMessage, sentMessages);
+    const { panel, sentMessages, triggerMessage } = await openPanel(depChainFile('main.tscn'));
 
     // Prime material.tres into the served map.
     await primeResource(triggerMessage, sentMessages, {
@@ -289,16 +252,17 @@ suite('Dependency Hot-Reload E2E', () => {
     // Really delete the file, then simulate the watcher's onDidDelete.
     // handleDependencyChange only consults the served map (no disk read) —
     // deletion cannot block the invalidation even though the file is gone.
-    const materialBytes = fs.readFileSync(materialTresPath());
-    fs.unlinkSync(materialTresPath());
+    const materialPath = depChainFile('material.tres');
+    const materialBytes = fs.readFileSync(materialPath);
+    fs.unlinkSync(materialPath);
 
     try {
-      await panel.handleDependencyChange(vscode.Uri.file(materialTresPath()));
+      await panel.handleDependencyChange(vscode.Uri.file(materialPath));
 
       await waitForResourceChanged(sentMessages, RES_MATERIAL, 8000);
     } finally {
       // Restore so the fixture stays intact for any test that runs after.
-      fs.writeFileSync(materialTresPath(), materialBytes);
+      fs.writeFileSync(materialPath, materialBytes);
     }
   });
 });
@@ -306,6 +270,17 @@ suite('Dependency Hot-Reload E2E', () => {
 // ---------------------------------------------------------------------------
 // Shared test helpers
 // ---------------------------------------------------------------------------
+
+/**
+ * Open a fresh test panel on `scenePath` and complete the webview handshake —
+ * the shared preamble of every scenario. Returns the panel wiring for the
+ * scenario's own priming, action, and assertions.
+ */
+async function openPanel(scenePath: string, options?: TestPanelOptions): Promise<TestPanel> {
+  const testPanel = createTestPanel(getExtensionUri(), vscode.Uri.file(scenePath), options);
+  await handshake(testPanel.triggerMessage, testPanel.sentMessages);
+  return testPanel;
+}
 
 /**
  * Complete the webview handshake: trigger webviewReady and wait for the

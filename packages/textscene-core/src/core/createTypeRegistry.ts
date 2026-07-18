@@ -6,7 +6,7 @@
  * all share this one tested implementation instead of re-rolling the Map
  * boilerplate (`NodeRegistry` wraps it for the parser domain; the two render
  * registries consume it directly). Registration silently overwrites
- * (HMR-friendly) but warns (#217), so all three ADR-0002 registries behave
+ * (HMR-friendly) but warns, so all three ADR-0002 registries behave
  * identically on a duplicate `typeName`, whether that's a genuine
  * slice-registration collision or an expected HMR re-import.
  */

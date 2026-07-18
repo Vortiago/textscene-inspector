@@ -67,7 +67,7 @@ describe('Node3D Linter', () => {
         // Any nonzero magnitude is valid Godot and lints clean, including
         // negative (a mirror/flip) and extreme-but-finite values; only a zero
         // axis (a collapsed transform) and malformed values error. See
-        // linterParser.ts — the base-walk (#143) inherits this to every Node3D
+        // linterParser.ts — the base-walk inherits this to every Node3D
         // subclass, so it must match what the renderer accepts (and Node2D).
         prop: 'scale',
         valid: [

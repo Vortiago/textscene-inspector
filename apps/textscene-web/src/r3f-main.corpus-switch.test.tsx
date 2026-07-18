@@ -1,5 +1,5 @@
 /**
- * Corpus-scoped uploads — app-shell integration (issue #264).
+ * Corpus-scoped uploads — app-shell integration.
  *
  * Exercises the real wiring, not the provider in isolation (that contract
  * lives in WebResourceProvider.corpusScope.test.ts):
@@ -111,7 +111,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe('#264 corpus-scoped uploads — app-shell wiring', () => {
+describe('Corpus-scoped uploads — app-shell wiring', () => {
   it('keys companion uploads under the uploaded scene corpus even when a demo corpus was active', async () => {
     // Deep-link straight into a vendored demo so the provider's active root
     // is a demo corpus when the multi-file upload arrives.

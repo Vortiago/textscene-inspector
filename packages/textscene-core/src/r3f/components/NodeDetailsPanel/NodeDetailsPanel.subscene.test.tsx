@@ -13,62 +13,21 @@
  * loader's scene cache, re-deriving on the live-tree version tick), so any
  * tree row resolves — including one selected before its sub-scene loads.
  *
- * The loader stub mirrors the one in
- * SceneTreeViewer.subscene-inlining.test.tsx.
+ * Uses the shared `createFakeResourceLoader` fixture (as
+ * SceneTreeViewer.subscene-inlining.test.tsx does).
  */
 import { afterEach, describe, expect, it } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import * as THREE from 'three';
 import { NodeDetailsPanel } from './NodeDetailsPanel';
 import { HierarchyProvider } from '../../contexts/HierarchyContext';
 import { SelectionProvider, useSelection } from '../../contexts/SelectionContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
-import { ResourceEventBus } from '../../../resources/ResourceEventBus';
-import { MetadataStore } from '../../../resources/MetadataStore';
+import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph';
 import { nodeRegistry } from '../../../core/NodeRegistry';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
 import type { TscnNode, TscnScene, TscnExternalResource } from '../../../parser/types';
-
-function makeLoader(): {
-  loader: ResourceLoader;
-  setSceneCached: (path: string, scene: TscnScene) => void;
-} {
-  const eventBus = new ResourceEventBus();
-  const metadata = new MetadataStore();
-  const sceneCache = new Map<string, TscnScene | null>();
-  const textureCache = new Map<string, THREE.Texture | null>();
-  const materialCache = new Map<string, THREE.Material | null>();
-  const glbCache = new Map<string, THREE.Object3D | null>();
-
-  const makeProc = <T,>(cache: Map<string, T | null>) => ({
-    request: () => {},
-    getCached: (p: string) => cache.get(p),
-    isCached: (p: string) => cache.has(p),
-    isLoading: () => false,
-    clearCache: () => {},
-    getCacheSize: () => cache.size,
-  });
-
-  const loader = {
-    eventBus,
-    metadata,
-    textures: makeProc<THREE.Texture>(textureCache),
-    materials: makeProc<THREE.Material>(materialCache),
-    glbMeshes: makeProc<THREE.Object3D>(glbCache),
-    scenes: makeProc<TscnScene>(sceneCache),
-    getSceneCached: (p: string) => sceneCache.get(p),
-    requestScene: () => {},
-    register: () => {},
-    provideFile: () => {},
-    clear: () => {
-      sceneCache.clear();
-    },
-  } as unknown as ResourceLoader;
-
-  return { loader, setSceneCached: (path, scene) => sceneCache.set(path, scene) };
-}
 
 function makeNode(name: string, type: string, extras: Partial<TscnNode> = {}): TscnNode {
   return { name, type, children: [], properties: {}, ...extras };
@@ -116,7 +75,7 @@ describe('<NodeDetailsPanel> BUG 1 — sub-scene interior selection', () => {
       renderer: () => null as never,
     });
 
-    const { loader, setSceneCached } = makeLoader();
+    const { loader, scenes } = createFakeResourceLoader();
 
     // Sub-scene (e.g. ceiling_lamp.tscn): a root with an interior mesh node.
     const subScene: TscnScene = {
@@ -128,7 +87,7 @@ describe('<NodeDetailsPanel> BUG 1 — sub-scene interior selection', () => {
       externalResources: [],
       internalResources: [],
     };
-    setSceneCached('res://ceiling_lamp.tscn', subScene);
+    scenes.seed('res://ceiling_lamp.tscn', subScene);
 
     // Root scene instances the sub-scene at "RoomGeometry/ceiling_lamp".
     const graph = createSceneGraphFromTscnScene({
@@ -183,7 +142,7 @@ describe('<NodeDetailsPanel> BUG 1 — sub-scene interior selection', () => {
     // above, which pre-seeds it. This exercises the version-tick path: the
     // panel must re-resolve when the sub-scene lands, not stick on the
     // placeholder forever (the original BUG 1).
-    const { loader, setSceneCached } = makeLoader();
+    const { loader, scenes } = createFakeResourceLoader();
 
     const graph = createSceneGraphFromTscnScene({
       nodes: [
@@ -228,7 +187,7 @@ describe('<NodeDetailsPanel> BUG 1 — sub-scene interior selection', () => {
       internalResources: [],
     };
     await act(async () => {
-      setSceneCached('res://ceiling_lamp.tscn', subScene);
+      scenes.seed('res://ceiling_lamp.tscn', subScene);
       loader.eventBus.emit('scene', 'loaded', 'res://ceiling_lamp.tscn');
     });
 
@@ -245,7 +204,7 @@ describe('<NodeDetailsPanel> BUG 1 — sub-scene interior selection', () => {
       renderer: () => null as never,
     });
 
-    const { loader } = makeLoader();
+    const { loader } = createFakeResourceLoader();
     const graph = createSceneGraphFromTscnScene({
       nodes: [makeNode('InlineNode', LAMP_MESH_TYPE)],
     });
@@ -276,7 +235,7 @@ describe('<NodeDetailsPanel> BUG 2 — instance root shows the collapsed identit
       renderer: () => null as never,
     });
 
-    const { loader, setSceneCached } = makeLoader();
+    const { loader, scenes } = createFakeResourceLoader();
 
     // Single-root sub-scene → Instance root merge (ADR-0013): the instance node
     // ADOPTS the sub-scene root's type/properties. The tree row + viewport show
@@ -286,7 +245,7 @@ describe('<NodeDetailsPanel> BUG 2 — instance root shows the collapsed identit
       externalResources: [],
       internalResources: [],
     };
-    setSceneCached('res://coin.tscn', subScene);
+    scenes.seed('res://coin.tscn', subScene);
 
     // Root scene: a top-level instance node whose WRAPPER type is Node3D.
     const graph = createSceneGraphFromTscnScene({

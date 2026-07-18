@@ -42,12 +42,25 @@ export class WebResourceProvider implements ResourceProvider {
   }
 
   /**
-   * Remove a single uploaded file from the currently-active corpus root.
+   * Remove an uploaded file under EVERY corpus root, not just the active one.
+   * The uploaded-rows UI keys on the bare res:// path and survives corpus
+   * switches, so a root-scoped delete would silently no-op after a switch —
+   * the row would vanish while the file kept being served whenever its
+   * original corpus became active again. Remove is an explicit user action
+   * on the path itself; deleting it everywhere matches what the row shows.
    * After removal, requesting the path again falls through to the fixtures
    * fetch (or fails).
    */
   removeUploadedFile(path: string): boolean {
-    return this.uploadedFiles.delete(this.uploadKey(path));
+    const suffix = `\0${path}`;
+    let removed = false;
+    for (const key of this.uploadedFiles.keys()) {
+      if (key.endsWith(suffix)) {
+        this.uploadedFiles.delete(key);
+        removed = true;
+      }
+    }
+    return removed;
   }
 
   async loadResource(path: string, type: string): Promise<string | ArrayBuffer> {

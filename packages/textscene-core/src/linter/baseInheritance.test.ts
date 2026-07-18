@@ -1,5 +1,5 @@
 /**
- * End-to-end validator inheritance (#143): the base transform/visible/layout
+ * End-to-end validator inheritance: the base transform/visible/layout
  * validators must reach subclasses through the full Linter, so the render and
  * linter pipelines agree on which nodes get checked. Each case is a real-Godot
  * witness from the parser/linter divergence audit (demo-corpus line refs in the

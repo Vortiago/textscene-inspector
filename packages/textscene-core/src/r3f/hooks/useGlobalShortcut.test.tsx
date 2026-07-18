@@ -1,5 +1,5 @@
 /**
- * useGlobalShortcut (#224) — the shared window-keydown wiring behind
+ * useGlobalShortcut — the shared window-keydown wiring behind
  * F-to-frame and Escape-deselect. The consumers' own tests cover their
  * behavior; this covers the hook's contract: key matching (case-insensitive),
  * the isTypingTarget guard, the subscribe-once ref indirection, and cleanup.

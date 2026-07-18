@@ -1,5 +1,5 @@
 /**
- * Tests for `r3f-webview-main.tsx`, the R3F webview entry point (#218).
+ * Tests for `r3f-webview-main.tsx`, the R3F webview entry point.
  *
  * This file previously had ZERO test coverage. It is the webview-side half
  * of the host<->webview protocol (`../protocol.ts`): it installs the

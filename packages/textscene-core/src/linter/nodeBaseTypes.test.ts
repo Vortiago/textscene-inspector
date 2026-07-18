@@ -1,5 +1,5 @@
 /**
- * Integrity of the node base-type table (#143): every chain must terminate (no
+ * Integrity of the node base-type table: every chain must terminate (no
  * cycles), every subclass must resolve to the base that carries its validators,
  * and every node type the linter registers validators for must be reachable.
  */

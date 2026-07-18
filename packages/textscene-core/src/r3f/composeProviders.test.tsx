@@ -1,5 +1,5 @@
 /**
- * composeProviders (#217) — flattens a provider-nesting pyramid into a
+ * composeProviders — flattens a provider-nesting pyramid into a
  * single call. Purely a JSX-shape helper: it does NOT merge contexts
  * (ADR-0002 keeps parse/3D-render/2D-render domains separate on purpose) —
  * each entry still mounts its own, independent Provider component.

@@ -1,5 +1,5 @@
 /**
- * Issue #221 — drag-and-drop: no drop handling existed today; upload was a
+ * Drag-and-drop: no drop handling existed today; upload was a
  * hidden file input only. Reuses the `r3f-main.*.test.tsx` WebGL-mock
  * pattern. `fireEvent.drop`/`dragOver` accept a plain object for
  * `dataTransfer` — React only reads `.files` off it, so a real

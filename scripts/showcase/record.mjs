@@ -208,9 +208,15 @@ export async function recordShowcase(name, file, scenario, opts = {}) {
     ok = true;
   } finally {
     video = page.video();
-    await context.close(); // finalizes the .webm
-    await browser.close();
-    if (video && !ok) rmSync(await video.path(), { force: true });
+    try {
+      await context.close(); // finalizes the .webm
+      await browser.close();
+      if (video && !ok) rmSync(await video.path(), { force: true });
+    } catch (cleanupErr) {
+      // A crashed browser rejects close() too — log it, but never let the
+      // cleanup error mask the scenario's own failure.
+      console.warn(`[record] cleanup failed: ${cleanupErr?.message ?? cleanupErr}`);
+    }
   }
 
   if (video) {

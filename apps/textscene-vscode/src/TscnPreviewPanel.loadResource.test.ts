@@ -1,5 +1,5 @@
 /**
- * Unit tests for `TscnPreviewPanel`'s `loadResource` handling (#218).
+ * Unit tests for `TscnPreviewPanel`'s `loadResource` handling.
  *
  * `_handleLoadResource` was previously only integration-exercised (mocha,
  * `test/integration/**`) with small fixtures — no unit test pinned the

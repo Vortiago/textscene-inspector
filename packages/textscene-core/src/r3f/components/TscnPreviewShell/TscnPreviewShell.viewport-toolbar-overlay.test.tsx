@@ -1,5 +1,5 @@
 /**
- * Regression test for #300: the viewport controls used to live in the shell's
+ * Regression test: the viewport controls used to live in the shell's
  * top bar, sharing a fixed-height flex row with the host file toolbar. When the
  * web app opens its Source pane the shell narrows to ~956px, the row
  * over-constrains, the host toolbar collapses to width 0, and its content
@@ -40,7 +40,7 @@ const MINIMAL_TSCN = `[gd_scene load_steps=1 format=3]
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const CSS_SOURCE = readFileSync(path.join(HERE, 'TscnPreviewShell.module.css'), 'utf8');
 
-describe('<TscnPreviewShell> viewport controls live over the viewport, not the top bar (#300)', () => {
+describe('<TscnPreviewShell> viewport controls live over the viewport, not the top bar', () => {
   it('renders the viewport toolbar inside the viewport <main>, not the <header>', () => {
     const { container } = render(
       <TscnPreviewShell panelId="p-300" content={MINIMAL_TSCN} />

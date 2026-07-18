@@ -45,6 +45,19 @@ beforeAll(() => {
     'pkgRoot/deep.ts': "export const deep = 'deep';",
     'component.tsx': 'export const C = () => null;',
     'withComponent.ts': "import { C } from './component';\nexport const use = C;",
+    'lazy.ts': [
+      "export async function load() {",
+      "  const three = await import('three');",
+      "  const local = await import('./nested/c');",
+      "  return { three, local };",
+      "}",
+    ].join('\n'),
+    'lazyTypeOnly.ts': [
+      "// A doc mention of import('react-dom') must not enter the closure.",
+      "/* Nor import('./component') inside a block comment. */",
+      "type Loader = typeof import('react')['createElement'];",
+      "export const marker: Loader | null = null;",
+    ].join('\n'),
   });
 });
 
@@ -114,6 +127,18 @@ describe('walkImportClosure', () => {
     });
     expect(closure.files).not.toContain(resolve(root, 'component.tsx'));
     expect(tsxFiles(closure)).toEqual([]);
+  });
+
+  it('follows literal dynamic import() expressions — lazy chunks still ship the module', () => {
+    const closure = walkImportClosure(resolve(root, 'lazy.ts'));
+    expect(closure.files).toContain(resolve(root, 'nested/c.ts'));
+    expect(bareSpecifiers(closure)).toContain('three');
+  });
+
+  it('skips typeof import() annotations and import() inside comments — both erased/inert', () => {
+    const closure = walkImportClosure(resolve(root, 'lazyTypeOnly.ts'));
+    expect(bareSpecifiers(closure)).toEqual([]);
+    expect(closure.files).not.toContain(resolve(root, 'component.tsx'));
   });
 
   it('throws when the entry file does not exist', () => {

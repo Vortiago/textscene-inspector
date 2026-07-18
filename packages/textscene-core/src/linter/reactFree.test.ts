@@ -34,24 +34,26 @@ const srcRoot = resolve(here, '..'); // .../src
 const frameworkBare = (specs: string[]): string[] =>
   specs.filter((s) => FRAMEWORK_BARE_RE.some((re) => re.test(s)));
 
+// One walk per entry point, shared across assertions — the closure spans the
+// whole linter/parser surface, so walking it once per `it` doubles a full
+// synchronous fs sweep for nothing.
+const linterClosure = walkImportClosure(resolve(here, 'index.ts'));
+const parserClosure = walkImportClosure(resolve(srcRoot, 'parser/TscnParser.ts'));
+
 describe('React-free boundary (ADR-0001)', () => {
   it('linter entry point reaches no .tsx render component', () => {
-    const closure = walkImportClosure(resolve(here, 'index.ts'));
-    expect(tsxFiles(closure)).toEqual([]);
+    expect(tsxFiles(linterClosure)).toEqual([]);
   });
 
   it('linter entry point value-imports no react/three', () => {
-    const closure = walkImportClosure(resolve(here, 'index.ts'));
-    expect(frameworkBare(bareSpecifiers(closure))).toEqual([]);
+    expect(frameworkBare(bareSpecifiers(linterClosure))).toEqual([]);
   });
 
   it('lenient parser barrel reaches no .tsx render component', () => {
-    const closure = walkImportClosure(resolve(srcRoot, 'parser/TscnParser.ts'));
-    expect(tsxFiles(closure)).toEqual([]);
+    expect(tsxFiles(parserClosure)).toEqual([]);
   });
 
   it('lenient parser barrel value-imports no react/three', () => {
-    const closure = walkImportClosure(resolve(srcRoot, 'parser/TscnParser.ts'));
-    expect(frameworkBare(bareSpecifiers(closure))).toEqual([]);
+    expect(frameworkBare(bareSpecifiers(parserClosure))).toEqual([]);
   });
 });

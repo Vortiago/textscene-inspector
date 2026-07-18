@@ -8,8 +8,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import { initGlbModules } from '../../../resources/processing/glbProcessing';
 import { GLBSceneRoot, GLB_SCENE_ROOT_TYPE } from './Component';
-import { ResourceEventBus } from '../../../resources/ResourceEventBus';
-import { MetadataStore } from '../../../resources/MetadataStore';
+import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import {
@@ -19,33 +18,6 @@ import {
 } from '../../contexts/SelectionContext';
 import { NodePathProvider } from '../../contexts/NodePathContext';
 import type { TscnNode } from '../../../parser/types';
-
-function makeLoader() {
-  const glbCache = new Map<string, THREE.Object3D | null>();
-  const empty = new Map<string, never>();
-  const makeProc = <T,>(cache: Map<string, T | null>) => ({
-    request: () => {},
-    getCached: (p: string) => cache.get(p),
-    isCached: (p: string) => cache.has(p),
-    isLoading: () => false,
-    clearCache: () => {},
-    getCacheSize: () => cache.size,
-    pin: () => {},
-    unpin: () => {},
-  });
-  const loader = {
-    eventBus: new ResourceEventBus(),
-    metadata: new MetadataStore(),
-    textures: makeProc(empty),
-    materials: makeProc(empty),
-    glbMeshes: makeProc<THREE.Object3D>(glbCache),
-    scenes: makeProc(empty),
-    register: () => {},
-    provideFile: () => {},
-    clear: () => {},
-  } as unknown as ResourceLoader;
-  return { loader, setGlbCached: (p: string, o: THREE.Object3D) => glbCache.set(p, o) };
-}
 
 /** body (Mesh), Armature (Group → hand Mesh). */
 function makeFakeGlb(): THREE.Object3D {
@@ -97,9 +69,9 @@ beforeAll(async () => {
 
 describe('GLBSceneRoot — WI-D select + hide', () => {
   it('registers each internal object under its tree path', async () => {
-    const { loader, setGlbCached } = makeLoader();
-    setGlbCached('res://x.glb', makeFakeGlb());
-    await mount(loader);
+    const fake = createFakeResourceLoader();
+    fake.glbMeshes.seed('res://x.glb', makeFakeGlb());
+    await mount(fake.loader);
 
     expect(captured.nodeObjectMap.get('Glb/body')).toBeDefined();
     expect(captured.nodeObjectMap.get('Glb/Armature')).toBeDefined();
@@ -107,9 +79,9 @@ describe('GLBSceneRoot — WI-D select + hide', () => {
   });
 
   it('hides only the toggled internal node', async () => {
-    const { loader, setGlbCached } = makeLoader();
-    setGlbCached('res://x.glb', makeFakeGlb());
-    await mount(loader);
+    const fake = createFakeResourceLoader();
+    fake.glbMeshes.seed('res://x.glb', makeFakeGlb());
+    await mount(fake.loader);
 
     await ReactThreeTestRenderer.act(async () => {
       captured.toggleHidden('Glb/Armature/hand');
@@ -120,9 +92,9 @@ describe('GLBSceneRoot — WI-D select + hide', () => {
   });
 
   it('unregisters internal objects on unmount', async () => {
-    const { loader, setGlbCached } = makeLoader();
-    setGlbCached('res://x.glb', makeFakeGlb());
-    const renderer = await mount(loader);
+    const fake = createFakeResourceLoader();
+    fake.glbMeshes.seed('res://x.glb', makeFakeGlb());
+    const renderer = await mount(fake.loader);
 
     await ReactThreeTestRenderer.act(async () => {
       await renderer.unmount();

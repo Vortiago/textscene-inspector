@@ -1,5 +1,5 @@
 /**
- * Global keyboard shortcut (#224): one `window` keydown listener with the
+ * Global keyboard shortcut: one `window` keydown listener with the
  * `isTypingTarget` guard built in, so every shortcut (F-to-frame,
  * Escape-deselect, and whatever comes next) gets the don't-hijack-typing
  * behavior without re-rolling the wiring — and can't forget the guard.
