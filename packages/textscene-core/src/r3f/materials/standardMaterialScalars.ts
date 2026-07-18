@@ -63,6 +63,14 @@ export interface StandardMaterial3DScalars {
    * True when EITHER flag is set.
    */
   triplanar: boolean;
+  /** Godot `clearcoat` strength (0..1), gated on `clearcoat_enabled`. */
+  clearcoat: number;
+  /** Godot `clearcoat_roughness` (0..1), gated on `clearcoat_enabled`. */
+  clearcoatRoughness: number;
+  /** Godot `rim` strength (0..1), gated on `rim_enabled`. */
+  rim: number;
+  /** Godot `rim_tint` (0..1, blend light↔albedo), gated on `rim_enabled`. */
+  rimTint: number;
 }
 
 const DEFAULT_SCALARS: StandardMaterial3DScalars = {
@@ -85,6 +93,10 @@ const DEFAULT_SCALARS: StandardMaterial3DScalars = {
   cullModeExplicit: false,
   normalScale: { x: 1, y: 1 },
   triplanar: false,
+  clearcoat: 0,
+  clearcoatRoughness: 0,
+  rim: 0,
+  rimTint: 0,
 };
 
 export function parseStandardMaterial3DScalars(
@@ -129,6 +141,24 @@ export function parseStandardMaterial3DScalars(
 
   const triplanar =
     properties['uv1_triplanar'] === 'true' || properties['uv1_world_triplanar'] === 'true';
+
+  const clearcoatEnabled = properties['clearcoat_enabled'] === 'true';
+  // Godot's BaseMaterial3D `clearcoat` defaults to 1.0 (not 0). Because .tscn
+  // omits default-valued properties, `clearcoat_enabled` on with `clearcoat`
+  // absent is the COMMON input and must resolve to a full-strength coat — NOT
+  // DEFAULT_SCALARS.clearcoat, which is our flag-OFF (three.js off-state) constant.
+  const clearcoat = clearcoatEnabled
+    ? clamp01(numericOr(properties['clearcoat'], 1))
+    : 0;
+  const clearcoatRoughness = clearcoatEnabled
+    ? clamp01(numericOr(properties['clearcoat_roughness'], 0.5))
+    : 0;
+
+  // Godot rim (FEATURE_RIM) enabled-but-unset defaults: rim 1.0 / rim_tint 0.5
+  // (docs.godotengine.org). Gated on rim_enabled, clamped to 0..1.
+  const rimEnabled = properties['rim_enabled'] === 'true';
+  const rim = rimEnabled ? clamp01(numericOr(properties['rim'], 1)) : 0;
+  const rimTint = rimEnabled ? clamp01(numericOr(properties['rim_tint'], 0.5)) : 0;
 
   // Godot encodes colors in sRGB. three.js's `<meshStandardMaterial color={...}>`
   // prop treats incoming values as **linear** RGB. Without converting,
@@ -186,6 +216,10 @@ export function parseStandardMaterial3DScalars(
     cullModeExplicit,
     normalScale,
     triplanar,
+    clearcoat,
+    clearcoatRoughness,
+    rim,
+    rimTint,
   };
 }
 

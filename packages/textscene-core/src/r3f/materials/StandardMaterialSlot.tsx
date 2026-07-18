@@ -97,30 +97,58 @@ export function StandardMaterialSlot({
       />
     );
   }
-  return (
-    <meshStandardMaterial
-      key={slotKey}
-      attach={attach}
-      color={scalars.color}
-      vertexColors={scalars.useVertexColors}
-      metalness={scalars.metalness}
-      roughness={scalars.roughness}
-      transparent={scalars.transparent}
-      opacity={scalars.opacity}
-      alphaTest={scalars.alphaTest}
-      depthWrite={scalars.depthWrite}
-      blending={scalars.blending}
-      side={effectiveSide}
-      shadowSide={shadowSide ?? null}
-      map={albedoMap ?? null}
-      normalMap={normalMap ?? null}
-      normalScale={normalScale}
-      roughnessMap={roughnessMap ?? null}
-      metalnessMap={metalnessMap ?? null}
-      emissiveMap={emissiveMap ?? null}
-      aoMap={aoMap ?? null}
-      emissive={scalars.emissive}
-      emissiveIntensity={scalars.emissiveIntensity}
-    />
-  );
+  // Shared PBR props for the shaded path. MeshPhysicalMaterial is a strict
+  // superset of MeshStandardMaterial, so the same props drive either; we only
+  // upgrade to <meshPhysicalMaterial> when Godot's clearcoat feature is active,
+  // keeping the common (no-clearcoat) path on the lighter standard material so
+  // existing behaviour — and the material type the component tests assert on —
+  // is unchanged.
+  const pbrProps = {
+    attach,
+    color: scalars.color,
+    vertexColors: scalars.useVertexColors,
+    metalness: scalars.metalness,
+    roughness: scalars.roughness,
+    transparent: scalars.transparent,
+    opacity: scalars.opacity,
+    alphaTest: scalars.alphaTest,
+    depthWrite: scalars.depthWrite,
+    blending: scalars.blending,
+    side: effectiveSide,
+    shadowSide: shadowSide ?? null,
+    map: albedoMap ?? null,
+    normalMap: normalMap ?? null,
+    normalScale,
+    roughnessMap: roughnessMap ?? null,
+    metalnessMap: metalnessMap ?? null,
+    emissiveMap: emissiveMap ?? null,
+    aoMap: aoMap ?? null,
+    emissive: scalars.emissive,
+    emissiveIntensity: scalars.emissiveIntensity,
+  };
+  // Godot clearcoat (FEATURE_CLEARCOAT, a glossy coat) and rim (FEATURE_RIM, a
+  // Fresnel edge highlight) both live natively on MeshPhysicalMaterial only —
+  // clearcoat as `clearcoat`, rim mapped to `sheen` (three.js's Fresnel edge
+  // term, the closest native analog). A material carrying either renders as
+  // <meshPhysicalMaterial>; rim_tint blends the highlight from the light colour
+  // (0) toward the albedo (1) via sheenColor.
+  if (scalars.clearcoat > 0 || scalars.rim > 0) {
+    const rimTint = scalars.rimTint;
+    const sheenColor = new THREE.Color(
+      1 + rimTint * (scalars.color[0] - 1),
+      1 + rimTint * (scalars.color[1] - 1),
+      1 + rimTint * (scalars.color[2] - 1)
+    );
+    return (
+      <meshPhysicalMaterial
+        key={`physical-${slotKey}`}
+        {...pbrProps}
+        clearcoat={scalars.clearcoat}
+        clearcoatRoughness={scalars.clearcoatRoughness}
+        sheen={scalars.rim}
+        sheenColor={sheenColor}
+      />
+    );
+  }
+  return <meshStandardMaterial key={slotKey} {...pbrProps} />;
 }
