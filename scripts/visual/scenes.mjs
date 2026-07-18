@@ -136,6 +136,20 @@ export const GOLDEN_SCENES = [
   { name: 'prism-mesh', file: 'unit-prism-mesh.tscn' },
   { name: 'quadmesh', file: 'unit-quadmesh.tscn' },
   { name: 'torus-mesh', file: 'unit-torus-mesh.tscn' },
+  // Completeness backfill (node-completeness audit): deterministic renderable
+  // nodes that had a fixture but no golden, so their real-browser render was
+  // unguarded. Each baseline was eyeballed at generation.
+  { name: 'csg-box-3d', file: 'unit-csg-box.tscn' },
+  { name: 'csg-sphere-3d', file: 'unit-csg-sphere.tscn' },
+  { name: 'csg-cylinder-3d', file: 'unit-csg-cylinder.tscn' },
+  // 2D nodes render in the 2D view (with its zoom/pan chrome) — relax the
+  // threshold like the other 2D goldens (marker2d/path2d).
+  { name: 'polygon-2d', file: 'unit-polygon2d.tscn', maxDiffPct: 0.5 },
+  { name: 'line-2d', file: 'unit-line2d.tscn', maxDiffPct: 0.5 },
+  { name: 'navigation-region-2d', file: 'unit-navigation-region-2d.tscn', maxDiffPct: 0.5 },
+  // NOTE: AreaLight3D deliberately has no golden — its fixture is light-only
+  // (no lit geometry), so the frame is blank. Add one once the fixture gains a
+  // lit surface to show the emitter's effect.
   { name: 'material-ao', file: 'unit-material-ao.tscn' },
   { name: 'material-normal-map', file: 'unit-material-normal-map.tscn' },
   { name: 'material-textured', file: 'unit-material-textured.tscn' },
