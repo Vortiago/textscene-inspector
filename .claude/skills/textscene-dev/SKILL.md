@@ -38,6 +38,11 @@ packages/textscene-core/src/resources/materials/[materialtype]/
 
 ### Adding a New Node Type
 
+> For the COMPLETE per-feature layer checklist — including the layers the walkthrough below omits
+> (the `pnpm new:node` scaffolder, the linter's two sub-layers, fixture-catalog regeneration, docs,
+> golden images, the meta-guards, and the material/mesh central-dispatch shape) — use the
+> **`implement-feature`** skill. The walkthrough below is the node-type essentials.
+
 **Example: Adding DirectionalLight3D support**
 
 1. **Research Phase** - Use `tscn-threejs-docs-researcher` agent:

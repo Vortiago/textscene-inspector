@@ -23,6 +23,19 @@ Covers all implementation work including:
 - Adding utilities or shared functionality
 - Any TypeScript development work
 
+### implement-feature
+**Land any feature end-to-end — the complete per-feature layer checklist.**
+
+The authoritative checklist of every layer a feature must touch (parse, render, registrations/barrels,
+lint, tests, fixture + catalog, docs, golden) for both shapes — self-registering **node types** and
+central-dispatch **material/mesh/resource** features — so nothing ships as a half-feature. Narrower and
+more prescriptive than `textscene-dev`'s broad orientation.
+
+**When to use:**
+- Implementing any node type or material/resource feature/property
+- Authoring the RED contract for one (pin every layer)
+- Reviewing one for completeness (each layer present or explicitly N/A)
+
 ### e2e-testing
 **End-to-end browser automation testing and validation.**
 
