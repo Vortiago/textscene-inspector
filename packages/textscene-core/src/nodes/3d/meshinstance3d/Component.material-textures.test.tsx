@@ -51,6 +51,7 @@ const NORMAL_PATH = 'res://textures/normal.png';
 const ROUGHNESS_PATH = 'res://textures/rough.png';
 const METALLIC_PATH = 'res://textures/metal.png';
 const EMISSION_PATH = 'res://textures/emit.png';
+const HEIGHT_PATH = 'res://textures/height.png';
 
 function extRef(id: string, path: string): TscnExternalResource {
   return { id, type: 'Texture2D', path };
@@ -123,6 +124,24 @@ describe('StandardMaterial3D textures (assertions 32–39)', () => {
     });
     const mat = renderer.scene.findByType('Mesh').instance.material as THREE.MeshStandardMaterial;
     expect(mat.normalMap).toBeInstanceOf(THREE.Texture);
+  });
+
+  it('heightmap_texture loaded → material.displacementMap is a THREE.Texture (+ scale)', async () => {
+    // The scalar (displacementScale) alone displaces nothing — the height
+    // TEXTURE must reach material.displacementMap for any relief to render.
+    const tex = makeTexture();
+    const renderer = await renderWithTexture({
+      matData: {
+        heightmap_enabled: 'true',
+        heightmap_texture: 'ExtResource("6_hgt")',
+        heightmap_scale: '0.3',
+      },
+      externals: [extRef('6_hgt', HEIGHT_PATH)],
+      cached: [{ path: HEIGHT_PATH, texture: tex }],
+    });
+    const mat = renderer.scene.findByType('Mesh').instance.material as THREE.MeshStandardMaterial;
+    expect(mat.displacementMap).toBeInstanceOf(THREE.Texture);
+    expect(mat.displacementScale).toBeCloseTo(0.3, 5);
   });
 
   it('#35 normal_scale=2.0 → material.normalScale.x === 2.0 and .y === 2.0', async () => {

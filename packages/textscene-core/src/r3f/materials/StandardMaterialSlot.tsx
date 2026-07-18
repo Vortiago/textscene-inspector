@@ -78,7 +78,11 @@ export function StandardMaterialSlot({
     `${roughnessMap ? 'r' : '-'}` +
     `${metalnessMap ? 'm' : '-'}` +
     `${emissiveMap ? 'e' : '-'}` +
-    `${aoMap ? 'o' : '-'}`;
+    `${aoMap ? 'o' : '-'}` +
+    // displacementMap MUST be keyed too: three.js bakes USE_DISPLACEMENTMAP at
+    // compile time, so a coat/height texture arriving async needs a fresh
+    // material or the vertices never move (the map is set but the shader ignores it).
+    `${displacementMap ? 'd' : '-'}`;
 
   // Godot SHADING_MODE_UNSHADED (0): albedo is output directly, unaffected by
   // lights/shadows. three.js MeshBasicMaterial is the unlit equivalent — no PBR
