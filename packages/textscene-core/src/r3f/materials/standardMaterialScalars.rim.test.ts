@@ -1,5 +1,5 @@
 /**
- * StandardMaterial3D rim lighting handling (WI-67).
+ * StandardMaterial3D rim lighting handling.
  *
  * Godot's BaseMaterial3D exposes a rim-lighting feature — a Fresnel edge
  * highlight — behind a `rim_enabled` flag, with a `rim` strength scalar
@@ -11,7 +11,7 @@
  *
  * Like `emission_enabled` / the sibling clearcoat feature, the rim scalars are
  * GATED on `rim_enabled`: with the flag off, Godot ignores the properties, so
- * the parse yields 0 (no rim). Following the WI-66 clearcoat lesson, this
+ * the parse yields 0 (no rim). Following the clearcoat lesson, this
  * contract PINS the enabled-but-unset Godot defaults (the COMMON .tscn input,
  * since Godot omits default-valued properties) so no later refactor can
  * silently regress them, plus the clamp and the flag-gate guardrail.
@@ -33,7 +33,7 @@ describe('parseStandardMaterial3DScalars — rim lighting flag (WI-67)', () => {
   });
 
   it('uses Godot defaults when rim_enabled is true but the scalars are omitted', () => {
-    // WI-66 lesson: flag-on + scalars-absent is the COMMON .tscn input and must
+    // Clearcoat taught this: flag-on + scalars-absent is the COMMON .tscn input and must
     // resolve to Godot's enabled defaults (rim 1.0 / rim_tint 0.5), NOT 0.
     const r = parseStandardMaterial3DScalars({ rim_enabled: 'true' });
     expect(r.rim).toBe(1.0);

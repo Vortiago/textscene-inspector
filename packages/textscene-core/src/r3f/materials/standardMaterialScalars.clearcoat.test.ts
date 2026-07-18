@@ -1,5 +1,5 @@
 /**
- * StandardMaterial3D clearcoat handling (WI-66).
+ * StandardMaterial3D clearcoat handling.
  *
  * Godot's BaseMaterial3D exposes a clear-coat feature — a thin glossy layer
  * over the base surface — behind a `clearcoat_enabled` flag, with a
