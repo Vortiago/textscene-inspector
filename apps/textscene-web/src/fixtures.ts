@@ -893,6 +893,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Materials"
   },
   {
+    "name": "Material Heightmap",
+    "file": "unit-material-heightmap.tscn",
+    "category": "Unit - Materials"
+  },
+  {
     "name": "Material Metallic",
     "file": "unit-material-metallic.tscn",
     "category": "Unit - Materials"

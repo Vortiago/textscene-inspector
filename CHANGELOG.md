@@ -15,6 +15,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Browsable demo fixtures and an on-demand open-source Godot games corpus, widening real-world `.tscn` coverage; previously-binary demo resources (`ArrayMesh`, `GridMap`, `Navigation`) were converted to text so they render instead of falling back to the missing-resource placeholder.
 - Linter: `GridMap`, `AudioStreamPlayer`/2D/3D, and `NavigationRegion2D`/`NavigationRegion3D` semantic validator slices; base-class validator inheritance so a subclass node type automatically picks up its parent's checks.
 - Parser: richer `AudioStreamPlayer`/2D/3D property parsing (volume, bus, autoplay, and related fields) and `WorldEnvironment` sky/tonemap + `Light3D` base-property parsing and linting.
+- StandardMaterial3D feature flags: `clearcoat` (glossy coat → `MeshPhysicalMaterial.clearcoat`), `rim` lighting (Fresnel edge → `sheen`), and `heightmap` (parallax → `displacementMap`/`displacementScale`) — each parsed, rendered, linted, and demoed with a `unit-material-*` fixture.
 
 ### Changed
 - `NodeDetailsPanel` resolves the selected node through the live scene tree (`useLiveNode`) instead of the static SceneGraph, so the Inspector stays correct for instanced and merged nodes.
