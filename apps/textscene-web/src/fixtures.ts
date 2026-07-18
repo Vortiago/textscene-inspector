@@ -883,6 +883,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Materials"
   },
   {
+    "name": "Material Clearcoat",
+    "file": "unit-material-clearcoat.tscn",
+    "category": "Unit - Materials"
+  },
+  {
     "name": "Material Emissive",
     "file": "unit-material-emissive.tscn",
     "category": "Unit - Materials"

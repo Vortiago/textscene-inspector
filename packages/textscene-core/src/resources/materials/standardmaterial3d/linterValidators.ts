@@ -89,6 +89,7 @@ const validateUv1Scale: PropertyValidator = (key, value, line) => {
 validatorRegistry.registerAll('StandardMaterial3D', {
   normal_enabled: validateBoolean,
   emission_enabled: validateBoolean,
+  clearcoat_enabled: validateBoolean,
   normal_texture: validateExtResource,
   albedo_texture: validateExtResource,
   metallic_texture: validateExtResource,
