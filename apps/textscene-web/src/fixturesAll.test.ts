@@ -1,7 +1,7 @@
 /**
  * fixturesAll merges the committed base manifest with the on-demand games
  * corpus (gitignored, fetched via `pnpm vendor:games`) and the optional
- * author-only ld-58 corpus (gitignored, vendored via `pnpm vendor:ld58`). When
+ * deploy-included ld-58 corpus (gitignored, vendored via `pnpm vendor:ld58`). When
  * neither has been vendored, import.meta.glob resolves to nothing and the merged
  * set equals the base — so this holds whether or not either is present on the
  * test runner.

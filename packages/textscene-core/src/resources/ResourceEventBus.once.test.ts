@@ -59,7 +59,7 @@ describe('ResourceEventBus.once (live promise bridge)', () => {
 
   it('timeout path: rejects and removes both the loaded and failed listeners', async () => {
     const promise = bus.once<string>('texture', 'loaded', 'res://slow.png', 30);
-    expect(bus.getTotalHandlerCount()).toBe(2); // loaded + companion failed listener
+    expect(bus.getTotalHandlerCount()).toBe(3); // loaded + companion failed + invalidated listeners
 
     await expect(promise).rejects.toThrow('Timeout waiting for texture:loaded:res://slow.png');
     expect(bus.getTotalHandlerCount()).toBe(0);
@@ -67,7 +67,7 @@ describe('ResourceEventBus.once (live promise bridge)', () => {
 
   it('cleans up listeners after resolution — emitting again cannot re-settle or leak', async () => {
     const promise = bus.once<string>('texture', 'loaded', 'res://a.png');
-    expect(bus.getTotalHandlerCount()).toBe(2);
+    expect(bus.getTotalHandlerCount()).toBe(3);
 
     bus.emit('texture', 'loaded', 'res://a.png', 'first');
     await expect(promise).resolves.toBe('first');
@@ -95,15 +95,41 @@ describe('ResourceEventBus.once (live promise bridge)', () => {
   it('concurrent once() calls for different ids settle and clean up independently', async () => {
     const p1 = bus.once<string>('texture', 'loaded', 'tex1');
     const p2 = bus.once<string>('texture', 'loaded', 'tex2');
-    expect(bus.getTotalHandlerCount()).toBe(4);
+    expect(bus.getTotalHandlerCount()).toBe(6);
 
     bus.emit('texture', 'loaded', 'tex2', 'data2');
     await expect(p2).resolves.toBe('data2');
     // Only tex1's pair remains live.
-    expect(bus.getTotalHandlerCount()).toBe(2);
+    expect(bus.getTotalHandlerCount()).toBe(3);
 
     bus.emit('texture', 'loaded', 'tex1', 'data1');
     await expect(p1).resolves.toBe('data1');
+    expect(bus.getTotalHandlerCount()).toBe(0);
+  });
+});
+
+describe('once() vs invalidated', () => {
+  it('rejects when the awaited path is invalidated (a full clear drops the flight with no loaded/failed) and cleans up', async () => {
+    const bus = new ResourceEventBus();
+    const p = bus.once<string>('texture', 'loaded', 'res://tex.png');
+    // Guard against an unhandled-rejection blip between emit and the await.
+    const settled = p.catch((err: Error) => err);
+
+    bus.emit('texture', 'invalidated', 'res://tex.png');
+
+    const err = (await settled) as Error;
+    expect(err.message).toContain('invalidated while awaited');
+    expect(bus.getTotalHandlerCount()).toBe(0);
+  });
+
+  it("ignores another path's invalidation", async () => {
+    const bus = new ResourceEventBus();
+    const p = bus.once<string>('texture', 'loaded', 'res://tex.png');
+
+    bus.emit('texture', 'invalidated', 'res://other.png');
+    bus.emit('texture', 'loaded', 'res://tex.png', 'data');
+
+    await expect(p).resolves.toBe('data');
     expect(bus.getTotalHandlerCount()).toBe(0);
   });
 });

@@ -28,7 +28,8 @@ vi.mock('@textscene/core', async () => {
 
 import { R3FApp } from './r3f-main';
 import { fixtures } from './fixturesAll';
-import { buildFixtureTree, type TreeBranch } from './fixtureTree';
+import { buildFixtureTree } from './fixtureTree';
+import { flattenLeaves, type Leaf } from './fixtureTree.testkit';
 
 const STUB_TSCN = `[gd_scene load_steps=1 format=3]
 
@@ -59,20 +60,8 @@ const SWITCHED_TSCN = `[gd_scene load_steps=1 format=3]
 
 const GARBAGE = 'mid-edit garbage, not a scene }{ ]] [[';
 
-/** The fixture the palette test switches TO (any leaf that isn't the app's default). */
-type Leaf = { file: string; label: string };
-function flattenLeaves(branches: readonly TreeBranch[]): Leaf[] {
-  const out: Leaf[] = [];
-  const walk = (b: TreeBranch) => {
-    for (const child of b.children) {
-      if (child.kind === 'branch') walk(child);
-      else out.push({ file: child.file, label: child.label });
-    }
-  };
-  branches.forEach(walk);
-  return out;
-}
 const DEFAULT_FILE = 'unit-plane-mesh.tscn';
+/** The fixture the palette test switches TO (any leaf that isn't the app's default). */
 const SWITCH_TARGET = flattenLeaves(buildFixtureTree(fixtures)).find(
   (l) => l.file !== DEFAULT_FILE
 ) as Leaf;
@@ -211,6 +200,10 @@ describe('#201 native undo — the app must not swallow Ctrl+Z in the pane (crit
 
 describe('#201 buffer reset — switching fixture / uploading replaces the buffer (criterion 5)', () => {
   it('uploading a .tscn resets an edited buffer to the uploaded content', async () => {
+    // The edited pane triggers the discard guard on scene replacement —
+    // accept it (happy-dom has no window.confirm to spy on); the guard's own
+    // contract lives in r3f-main.edit-guard.test.tsx.
+    vi.stubGlobal('confirm', vi.fn(() => true));
     render(<R3FApp />);
     await waitForScene();
 
@@ -231,6 +224,10 @@ describe('#201 buffer reset — switching fixture / uploading replaces the buffe
   });
 
   it('switching scenes via the palette resets an edited buffer to the new fixture', async () => {
+    // The edited pane triggers the discard guard on scene replacement —
+    // accept it (happy-dom has no window.confirm to spy on); the guard's own
+    // contract lives in r3f-main.edit-guard.test.tsx.
+    vi.stubGlobal('confirm', vi.fn(() => true));
     render(<R3FApp />);
     await waitForScene();
 

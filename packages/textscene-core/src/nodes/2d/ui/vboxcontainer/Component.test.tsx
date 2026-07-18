@@ -57,6 +57,31 @@ describe('<VBoxContainer>', () => {
     expect(div.style.gap).toBe('0px');
   });
 
+  it('packs children from the start by default and for an explicit ALIGNMENT_BEGIN', () => {
+    for (const raw of [{}, { alignment: '0' }]) {
+      const { container } = render(<VBoxContainer node={node(raw)} />);
+      const div = container.querySelector('[data-control-type="VBoxContainer"]') as HTMLElement;
+      expect(div.style.justifyContent).toBe('flex-start');
+    }
+  });
+
+  it('maps ALIGNMENT_CENTER / ALIGNMENT_END to center / flex-end packing', () => {
+    for (const [raw, expected] of [
+      ['1', 'center'],
+      ['2', 'flex-end'],
+    ] as const) {
+      const { container } = render(<VBoxContainer node={node({ alignment: raw })} />);
+      const div = container.querySelector('[data-control-type="VBoxContainer"]') as HTMLElement;
+      expect(div.style.justifyContent).toBe(expected);
+    }
+  });
+
+  it('falls back to flex-start for an out-of-range alignment', () => {
+    const { container } = render(<VBoxContainer node={node({ alignment: '7' })} />);
+    const div = container.querySelector('[data-control-type="VBoxContainer"]') as HTMLElement;
+    expect(div.style.justifyContent).toBe('flex-start');
+  });
+
   it('renders children in scene order as direct flex items', () => {
     const { container } = render(
       <VBoxContainer node={node()}>

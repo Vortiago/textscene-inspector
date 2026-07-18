@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Optional, author-only corpus vendor — NOT part of the public repo.
+// Deploy-time corpus vendor — never committed, but part of the DEPLOYED site.
 /**
  * Vendor the ld-58 Godot project into scenes/ld58/ as an OPT-IN local corpus,
  * mirroring the scenes/games/ scheme (scripts/vendor-godot-games.mjs): the
@@ -9,7 +9,10 @@
  *
  * The ld-58 repo is PRIVATE, so most contributors won't have access — that is
  * expected and fine: the previewer builds and every committed fixture works
- * without it. This script only matters to the author.
+ * without it. The DEPLOYED site, however, does include this corpus (ADR-0010
+ * amendment): `pnpm build:site` vendors it (script-stripped) alongside the
+ * games corpora before the production web build, so deploys need access to
+ * the private source; contributors without access simply deploy without it.
  *
  * Usage:
  *   pnpm vendor:ld58                       # fetch the default repo @ main
@@ -217,7 +220,7 @@ function main() {
     console.error(
       `\n[vendor-ld58] Could not obtain the ld-58 source` +
         (srcArg ? ` from ${srcArg}.` : ` from ${url} (ref ${ref}).`) +
-        `\n  ld-58 is a private, author-only corpus — most contributors will NOT` +
+        `\n  ld-58 is vendored from a private repo — most contributors will NOT` +
         `\n  have access, and that's expected: the previewer builds and every` +
         `\n  committed fixture works without it. If you have a local checkout, run:` +
         `\n    pnpm vendor:ld58 --src /path/to/ld-58`

@@ -170,8 +170,18 @@ export function R3FApp() {
   // useSceneSource owns the hold-last-valid invariant's full span: fixture
   // fetch + cancellation + editedSinceLoad tracking + debounced edit forward +
   // authoritative replace (ADR-0020).
-  const { buffer, forwardedContent, isFetching: isFetchingFixture, loadError, onBufferChange: handleSourceChange, replace } =
+  const { buffer, forwardedContent, isFetching: isFetchingFixture, loadError, onBufferChange: handleSourceChange, replace, editedSinceLoad } =
     useSceneSource({ fixtureFile, uploadedTscnName });
+
+  // Edits are ephemeral (ADR-0020) — but the one-click switch affordances
+  // (fixture palette, the tree's ⤢ open-sub-scene, a scene-replacing drop)
+  // put total loss one misclick away, so loss must not be SILENT. Confirm
+  // before any scene replacement that would discard pane keystrokes.
+  const confirmDiscardEdits = () =>
+    !editedSinceLoad() ||
+    window.confirm(
+      'Discard your Source-pane edits? They are not saved anywhere — use "Download .tscn" first to keep them.'
+    );
 
   // Two error channels owned by different layers (uploadError here, loadError
   // inside useSceneSource) feed one toolbar banner, which must show whichever
@@ -256,6 +266,13 @@ export function R3FApp() {
   }, [uploadedTscnName]);
 
   function handleFixtureChange(newFixture: string) {
+    // Re-selecting the already-active fixture is a state no-op (the fetch
+    // effect never re-runs) — return before the guard so the user isn't
+    // shown a "discard your edits?" prompt whose acceptance discards nothing.
+    if (newFixture === fixtureFile && !uploadedTscnName) return;
+    // Guards the fixture palette AND the tree's ⤢ open-sub-scene (which
+    // routes through here).
+    if (!confirmDiscardEdits()) return;
     // Switching to a fixture replaces any user-loaded TSCN content — and
     // supersedes any upload-path error still on screen.
     setUploadedTscnName(null);
@@ -317,6 +334,10 @@ export function R3FApp() {
   async function handleFilesUpload(files: readonly File[]) {
     const missingPaths = missingPathsRef.current;
     const tscnFiles = files.filter((f) => f.name.toLowerCase().endsWith('.tscn'));
+
+    // A batch with a .tscn replaces the active scene (and the pane buffer);
+    // a resource-only batch fulfills missing rows without touching edits.
+    if (tscnFiles.length > 0 && !confirmDiscardEdits()) return;
 
     if (tscnFiles.length === 0) {
       // No .tscn — the drop can still fulfill currently-missing res:// rows.

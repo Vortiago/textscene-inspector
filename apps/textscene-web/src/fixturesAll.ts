@@ -2,7 +2,8 @@
  * The full fixture set the previewer renders: the committed base manifest
  * (./fixtures, generated) PLUS any on-demand, gitignored corpora — e.g. the
  * open-source games (./fixtures.games, written by `pnpm vendor:games`) and the
- * optional author-only ld-58 project (./fixtures.ld58, `pnpm vendor:ld58`).
+ * ld-58 project (./fixtures.ld58, `pnpm vendor:ld58` — repo-external but
+ * part of the deployed site, see ADR-0010).
  *
  * Optional corpora are fetched on demand, not committed, so their manifests
  * may not exist. Every manifest exports the same conventional `corpusFixtures`
