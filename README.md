@@ -153,7 +153,7 @@ Integration tests run on all platforms (Ubuntu, macOS, Windows) in GitHub Action
 - `pnpm lint` - Lint code
 - `pnpm lint:tscn <files>` - Lint .tscn scene files (build first with `pnpm build:linter`)
 - `pnpm type-check` - Type check
-- `pnpm build:site` - Full deployable web build: vendors the games + ld-58 corpora (script-stripped, never committed; ld-58 needs access to its private source) and produces `apps/textscene-web/dist`
+- `pnpm build:site` - Full deployable web build: vendors the games + ld-58 corpora (script-stripped, never committed) and produces `apps/textscene-web/dist`
 - `pnpm clean` - Clean artifacts
 
 ## Architecture Highlights
