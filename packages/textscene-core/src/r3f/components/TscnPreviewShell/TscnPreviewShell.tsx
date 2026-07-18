@@ -109,6 +109,13 @@ export interface TscnPreviewShellProps {
    */
   onResourceRemove?: (path: string) => void;
   /**
+   * Observer for the shell's live missing-resources set — fired after mount
+   * and after every change. The explicit surface for host code that lives
+   * OUTSIDE the shell (e.g. a page-level drop handler matching dropped files
+   * against currently-missing paths) to read the set the shell aggregates.
+   */
+  onMissingPathsChange?: (paths: ReadonlySet<string>) => void;
+  /**
    * Host-provided viewport-mode override (VS Code's `textscene.defaultViewportMode`
    * setting). Omitted (the default) preserves Godot-editor parity: `WorkspaceAutoSelect`
    * (ADR-0006) picks 2D/3D from the scene root's node type. An explicit mode both seeds
@@ -129,6 +136,7 @@ export function TscnPreviewShell({
   toolbar,
   onResourceUpload,
   onResourceRemove,
+  onMissingPathsChange,
   initialViewportMode,
 }: TscnPreviewShellProps) {
   const { sceneGraph, error } = useParsedScene(content, rootScenePath);
@@ -207,7 +215,11 @@ export function TscnPreviewShell({
     (children) => <HierarchyProvider value={hierarchyValue}>{children}</HierarchyProvider>,
     (children) => <SelectionProvider>{children}</SelectionProvider>,
     (children) => <CameraControlProvider>{children}</CameraControlProvider>,
-    (children) => <MissingResourcesProvider>{children}</MissingResourcesProvider>,
+    (children) => (
+      <MissingResourcesProvider onMissingPathsChange={onMissingPathsChange}>
+        {children}
+      </MissingResourcesProvider>
+    ),
     (children) => (
       // A host-forced `initialViewportMode` (e.g. the VS Code extension's
       // `textscene.defaultViewportMode` setting) wins over whatever was
@@ -252,7 +264,7 @@ export function TscnPreviewShell({
           {/* CENTER — 3D canvas or 2D overlay; takes all width left of the dock. */}
           <main className={styles.center} aria-label="Viewport">
             {/* Floated over the viewport, not the header — see
-                .viewportToolbarOverlay in the CSS module for why (#300). */}
+                .viewportToolbarOverlay in the CSS module for why. */}
             <div className={styles.viewportToolbarOverlay} data-testid="viewport-toolbar-overlay">
               <ViewportToolbar />
             </div>

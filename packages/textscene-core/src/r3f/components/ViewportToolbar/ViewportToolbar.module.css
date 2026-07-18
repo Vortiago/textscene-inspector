@@ -5,10 +5,9 @@
 .toolbar {
   display: flex;
   align-items: center;
-  flex-wrap: wrap; /* in the viewport overlay, wrap to a 2nd row when the center is narrow rather than overflow (#300) */
+  flex-wrap: wrap; /* in the viewport overlay, wrap to a 2nd row when the center is narrow rather than overflow */
   justify-content: flex-end;
   gap: var(--tsi-space-2);
-  margin-left: auto; /* push to the right of any host toolbar content */
   font-family: var(--tsi-font-ui);
 }
 

@@ -18,64 +18,15 @@
 import { describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import * as THREE from 'three';
 import { SceneTreeViewer } from './SceneTreeViewer';
 import { HierarchyProvider } from '../../contexts/HierarchyContext';
 import { SelectionProvider } from '../../contexts/SelectionContext';
 import { MissingResourcesProvider } from '../../contexts/MissingResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
-import { ResourceEventBus } from '../../../resources/ResourceEventBus';
-import { MetadataStore } from '../../../resources/MetadataStore';
+import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
 import type { TscnNode, TscnScene, TscnExternalResource } from '../../../parser/types';
-
-/**
- * Mock loader whose `loader.scenes` returns a pre-staged sub-scene
- * synchronously so the tree's `useResource('PackedScene', ...)` hits a
- * cache-hit on first render. Mirrors the pattern in
- * NodeDispatcher.instance.test.tsx.
- */
-function makeLoader(): { loader: ResourceLoader; setSceneCached: (path: string, scene: TscnScene) => void } {
-  const eventBus = new ResourceEventBus();
-  const metadata = new MetadataStore();
-  const sceneCache = new Map<string, TscnScene | null>();
-  const textureCache = new Map<string, THREE.Texture | null>();
-  const materialCache = new Map<string, THREE.Material | null>();
-  const glbCache = new Map<string, THREE.Object3D | null>();
-
-  const makeProc = <T,>(cache: Map<string, T | null>) => ({
-    request: () => {},
-    getCached: (p: string) => cache.get(p),
-    isCached: (p: string) => cache.has(p),
-    isLoading: () => false,
-    clearCache: () => {},
-    getCacheSize: () => cache.size,
-    pin: () => {},
-    unpin: () => {},
-  });
-
-  const loader = {
-    eventBus,
-    metadata,
-    textures: makeProc<THREE.Texture>(textureCache),
-    materials: makeProc<THREE.Material>(materialCache),
-    glbMeshes: makeProc<THREE.Object3D>(glbCache),
-    scenes: makeProc<TscnScene>(sceneCache),
-    getSceneCached: (p: string) => sceneCache.get(p),
-    requestScene: () => {},
-    register: () => {},
-    provideFile: () => {},
-    clear: () => {
-      sceneCache.clear();
-    },
-  } as unknown as ResourceLoader;
-
-  return {
-    loader,
-    setSceneCached: (path, scene) => sceneCache.set(path, scene),
-  };
-}
 
 function makeNode(name: string, type: string, extras: Partial<TscnNode> = {}): TscnNode {
   return {
@@ -107,7 +58,7 @@ function wrap(loader: ResourceLoader, sceneGraph: ReturnType<typeof createSceneG
 
 describe('<SceneTreeViewer> WI-HALL-1 — sub-scene inlining', () => {
   it('renders a sub-scene\'s root nodes as inline children of the instance row when the loader has it cached', () => {
-    const { loader, setSceneCached } = makeLoader();
+    const fake = createFakeResourceLoader();
 
     // Sub-scene's content: a Node3D named "Frame" containing a MeshInstance3D.
     const subScene: TscnScene = {
@@ -119,7 +70,7 @@ describe('<SceneTreeViewer> WI-HALL-1 — sub-scene inlining', () => {
       externalResources: [],
       internalResources: [],
     };
-    setSceneCached('res://photo_frame.tscn', subScene);
+    fake.scenes.seed('res://photo_frame.tscn', subScene);
 
     // Root scene's content: a single instancing node that points at the sub-scene.
     const graph = createSceneGraphFromTscnScene({
@@ -132,7 +83,7 @@ describe('<SceneTreeViewer> WI-HALL-1 — sub-scene inlining', () => {
       internalResources: [],
     });
 
-    render(<SceneTreeViewer />, { wrapper: wrap(loader, graph) });
+    render(<SceneTreeViewer />, { wrapper: wrap(fake.loader, graph) });
 
     // The instance row should now report it has children (aria-expanded
     // attribute will be present and falsy, but the chevron should be there).
@@ -165,7 +116,7 @@ describe('<SceneTreeViewer> WI-HALL-1 — sub-scene inlining', () => {
     // which instances player.glb via player.tscn's OWN ExtResource id (absent
     // from game.tscn). The inner instance must resolve against the sub-scene's
     // resource table or it dead-ends as a leaf.
-    const { loader, setSceneCached } = makeLoader();
+    const fake = createFakeResourceLoader();
     const subB: TscnScene = {
       nodes: [makeNode('BRoot', 'Node3D', { children: [makeNode('Leaf', 'MeshInstance3D')] })],
       externalResources: [],
@@ -181,8 +132,8 @@ describe('<SceneTreeViewer> WI-HALL-1 — sub-scene inlining', () => {
       externalResources: [makeExtResource('9_subB', 'res://subB.tscn')],
       internalResources: [],
     };
-    setSceneCached('res://subA.tscn', subA);
-    setSceneCached('res://subB.tscn', subB);
+    fake.scenes.seed('res://subA.tscn', subA);
+    fake.scenes.seed('res://subB.tscn', subB);
 
     // Outer scene knows only subA ("1_subA"); it has NO "9_subB".
     const graph = createSceneGraphFromTscnScene({
@@ -191,7 +142,7 @@ describe('<SceneTreeViewer> WI-HALL-1 — sub-scene inlining', () => {
       internalResources: [],
     });
 
-    render(<SceneTreeViewer />, { wrapper: wrap(loader, graph) });
+    render(<SceneTreeViewer />, { wrapper: wrap(fake.loader, graph) });
 
     // A collapses subA (ARoot merges in), so its child row is "Inner". Expand A.
     const aRow = screen.getByText('A').closest('[data-node-path]');
@@ -204,7 +155,7 @@ describe('<SceneTreeViewer> WI-HALL-1 — sub-scene inlining', () => {
   });
 
   it('offers an "open sub-scene standalone" action that reports the instance res:// path', () => {
-    const { loader } = makeLoader();
+    const fake = createFakeResourceLoader();
     const graph = createSceneGraphFromTscnScene({
       nodes: [makeNode('Coin1', 'Node3D', { instance: 'ExtResource("coin")' })],
       externalResources: [makeExtResource('coin', 'res://coin/coin.tscn')],
@@ -212,7 +163,7 @@ describe('<SceneTreeViewer> WI-HALL-1 — sub-scene inlining', () => {
     });
     const onOpenSubScene = vi.fn();
 
-    render(<SceneTreeViewer onOpenSubScene={onOpenSubScene} />, { wrapper: wrap(loader, graph) });
+    render(<SceneTreeViewer onOpenSubScene={onOpenSubScene} />, { wrapper: wrap(fake.loader, graph) });
 
     const button = screen.getByRole('button', { name: /open sub-scene standalone/i });
     act(() => fireEvent.click(button));
@@ -220,25 +171,25 @@ describe('<SceneTreeViewer> WI-HALL-1 — sub-scene inlining', () => {
   });
 
   it('shows no open-sub-scene action on non-instance rows', () => {
-    const { loader } = makeLoader();
+    const fake = createFakeResourceLoader();
     const graph = createSceneGraphFromTscnScene({
       nodes: [makeNode('Plain', 'Node3D')],
       externalResources: [],
       internalResources: [],
     });
-    render(<SceneTreeViewer onOpenSubScene={vi.fn()} />, { wrapper: wrap(loader, graph) });
+    render(<SceneTreeViewer onOpenSubScene={vi.fn()} />, { wrapper: wrap(fake.loader, graph) });
     expect(screen.queryByRole('button', { name: /open sub-scene standalone/i })).toBeNull();
   });
 
   it('inline children of an instance node coexist with sub-scene children', () => {
-    const { loader, setSceneCached } = makeLoader();
+    const fake = createFakeResourceLoader();
 
     const subScene: TscnScene = {
       nodes: [makeNode('SubRoot', 'Node3D')],
       externalResources: [],
       internalResources: [],
     };
-    setSceneCached('res://sub.tscn', subScene);
+    fake.scenes.seed('res://sub.tscn', subScene);
 
     // The instance node has BOTH a `children` array (inline TSCN children
     // that override sub-scene contents) AND an `instance` ref. The tree
@@ -254,7 +205,7 @@ describe('<SceneTreeViewer> WI-HALL-1 — sub-scene inlining', () => {
       internalResources: [],
     });
 
-    render(<SceneTreeViewer />, { wrapper: wrap(loader, graph) });
+    render(<SceneTreeViewer />, { wrapper: wrap(fake.loader, graph) });
 
     // The instance row should report having children (the chevron should
     // appear), since both inline + sub-scene children exist.
@@ -264,7 +215,7 @@ describe('<SceneTreeViewer> WI-HALL-1 — sub-scene inlining', () => {
   });
 
   it('does not crash when an instance node references a path the loader has not cached yet', () => {
-    const { loader } = makeLoader(); // intentionally empty cache
+    const fake = createFakeResourceLoader(); // intentionally empty cache
 
     const graph = createSceneGraphFromTscnScene({
       nodes: [
@@ -280,13 +231,13 @@ describe('<SceneTreeViewer> WI-HALL-1 — sub-scene inlining', () => {
     // because the loader's scene cache misses on this path — no children
     // appear, no exception thrown.
     expect(() => {
-      render(<SceneTreeViewer />, { wrapper: wrap(loader, graph) });
+      render(<SceneTreeViewer />, { wrapper: wrap(fake.loader, graph) });
     }).not.toThrow();
     expect(screen.getByText('Unresolved')).toBeTruthy();
   });
 
   it('renders a non-instance node as a leaf when it has no children (no sub-scene resolution attempted)', () => {
-    const { loader } = makeLoader();
+    const fake = createFakeResourceLoader();
 
     const graph = createSceneGraphFromTscnScene({
       nodes: [makeNode('Plain', 'Node3D')],
@@ -294,7 +245,7 @@ describe('<SceneTreeViewer> WI-HALL-1 — sub-scene inlining', () => {
       internalResources: [],
     });
 
-    render(<SceneTreeViewer />, { wrapper: wrap(loader, graph) });
+    render(<SceneTreeViewer />, { wrapper: wrap(fake.loader, graph) });
 
     const row = screen.getByText('Plain').closest('[data-node-path]');
     expect(row).not.toBeNull();
@@ -317,7 +268,7 @@ describe('<SceneTreeViewer> Instance root merge (ADR-0013)', () => {
   }
 
   it('collapses the wrapper: the instance row adopts the sub-scene root type and shows the root children directly', () => {
-    const { loader, setSceneCached } = makeLoader();
+    const fake = createFakeResourceLoader();
 
     // Sub-scene root is an Area3D (a different type than the instance node)
     // holding the coin internals.
@@ -330,7 +281,7 @@ describe('<SceneTreeViewer> Instance root merge (ADR-0013)', () => {
       externalResources: [],
       internalResources: [],
     };
-    setSceneCached('res://coin/coin.tscn', subScene);
+    fake.scenes.seed('res://coin/coin.tscn', subScene);
 
     const graph = createSceneGraphFromTscnScene({
       nodes: [makeNode('Coin1', 'Node3D', { instance: 'ExtResource("coin")' })],
@@ -338,7 +289,7 @@ describe('<SceneTreeViewer> Instance root merge (ADR-0013)', () => {
       internalResources: [],
     });
 
-    const { container } = render(<SceneTreeViewer />, { wrapper: wrap(loader, graph) });
+    const { container } = render(<SceneTreeViewer />, { wrapper: wrap(fake.loader, graph) });
 
     // The instance row adopts the root's Area3D type (badge shorthand 'Area').
     const coin1Row = screen.getByText('Coin1').closest('[data-node-path]') as HTMLElement;
@@ -354,8 +305,8 @@ describe('<SceneTreeViewer> Instance root merge (ADR-0013)', () => {
   });
 
   it('keeps the open-sub-scene affordance on a collapsed (cached, single-root) instance row', () => {
-    const { loader, setSceneCached } = makeLoader();
-    setSceneCached('res://coin/coin.tscn', {
+    const fake = createFakeResourceLoader();
+    fake.scenes.seed('res://coin/coin.tscn', {
       nodes: [makeNode('Coin', 'Area3D')],
       externalResources: [],
       internalResources: [],
@@ -367,7 +318,7 @@ describe('<SceneTreeViewer> Instance root merge (ADR-0013)', () => {
     });
     const onOpenSubScene = vi.fn();
 
-    render(<SceneTreeViewer onOpenSubScene={onOpenSubScene} />, { wrapper: wrap(loader, graph) });
+    render(<SceneTreeViewer onOpenSubScene={onOpenSubScene} />, { wrapper: wrap(fake.loader, graph) });
 
     const button = screen.getByRole('button', { name: /open sub-scene standalone/i });
     act(() => fireEvent.click(button));
@@ -375,8 +326,8 @@ describe('<SceneTreeViewer> Instance root merge (ADR-0013)', () => {
   });
 
   it('does NOT collapse a multi-root sub-scene: it keeps the nested form', () => {
-    const { loader, setSceneCached } = makeLoader();
-    setSceneCached('res://multi.tscn', {
+    const fake = createFakeResourceLoader();
+    fake.scenes.seed('res://multi.tscn', {
       nodes: [makeNode('RootA', 'Node3D'), makeNode('RootB', 'Node3D')],
       externalResources: [],
       internalResources: [],
@@ -387,7 +338,7 @@ describe('<SceneTreeViewer> Instance root merge (ADR-0013)', () => {
       internalResources: [],
     });
 
-    const { container } = render(<SceneTreeViewer />, { wrapper: wrap(loader, graph) });
+    const { container } = render(<SceneTreeViewer />, { wrapper: wrap(fake.loader, graph) });
 
     // Host keeps its own Node3D type (no single-root to adopt).
     const hostRow = screen.getByText('MultiHost').closest('[data-node-path]') as HTMLElement;
@@ -401,8 +352,8 @@ describe('<SceneTreeViewer> Instance root merge (ADR-0013)', () => {
   });
 
   it('search reaches a node inside an instanced sub-scene, keeping the instance row visible', () => {
-    const { loader, setSceneCached } = makeLoader();
-    setSceneCached('res://frame.tscn', {
+    const fake = createFakeResourceLoader();
+    fake.scenes.seed('res://frame.tscn', {
       nodes: [makeNode('FrameRoot', 'Node3D', { children: [makeNode('SpecialMesh', 'MeshInstance3D')] })],
       externalResources: [],
       internalResources: [],
@@ -416,7 +367,7 @@ describe('<SceneTreeViewer> Instance root merge (ADR-0013)', () => {
       internalResources: [],
     });
 
-    render(<SceneTreeViewer />, { wrapper: wrap(loader, graph) });
+    render(<SceneTreeViewer />, { wrapper: wrap(fake.loader, graph) });
 
     // Expand the instance so its sub-scene rows render.
     expandRow('Frame');

@@ -1,5 +1,5 @@
 /**
- * Parity: Label autowrap modes (#20) and uppercase (#44) vs Godot.
+ * Parity: Label autowrap modes and uppercase vs Godot.
  */
 import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/react';

@@ -1,5 +1,5 @@
 /**
- * Issue #202 — Source pane slice 3: linter surfaced (gutter dots + hover
+ * Source pane slice 3: linter surfaced (gutter dots + hover
  * popover + toggle problem-count badge).
  *
  * RED contract. Behavioral `<R3FApp>` tests reusing the `r3f-main.*.test.tsx`

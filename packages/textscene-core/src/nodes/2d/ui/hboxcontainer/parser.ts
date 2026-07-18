@@ -1,16 +1,17 @@
 /**
- * HBoxContainer parser. Adds no fields beyond Control — its horizontal stacking
- * and `theme_override_constants/separation` are handled by the Component +
- * the base Control parser's theme-override collection.
+ * HBoxContainer parser — delegates to the shared BoxContainer base (Control
+ * plus `alignment`); the horizontal stacking itself and
+ * `theme_override_constants/separation` are handled by the Component + the
+ * base Control parser's theme-override collection.
  */
 
 import type { ParsedHeading } from '../../../../parser/utils';
-import type { ControlProperties } from '../control/types';
-import { parseControl } from '../control/parser';
+import { parseBoxContainer } from '../shared/boxContainer';
+import type { HBoxContainerProperties } from './types';
 
 export function parseHBoxContainer(
   heading: ParsedHeading,
   properties: Record<string, string>
-): ControlProperties {
-  return parseControl(heading, properties);
+): HBoxContainerProperties {
+  return parseBoxContainer(heading, properties);
 }

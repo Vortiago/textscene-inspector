@@ -1,5 +1,5 @@
 /**
- * Issue #202 — Source pane linter gutter: one row per source line, an
+ * Source pane linter gutter: one row per source line, an
  * error/warning/info dot on lines with diagnostics (highest severity per
  * line — see `lineDiagnostics.ts`), and a hover/focus popover listing that
  * line's message(s). Scroll-synced with the textarea via the `scrollTop`

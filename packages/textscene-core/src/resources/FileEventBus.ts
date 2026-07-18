@@ -16,7 +16,15 @@ export type FileFailedHandler = (path: string, error: Error) => void;
  */
 export class FileEventBus {
   private cache = new Map<string, FileData>();
-  private inflight = new Set<string>();
+  /**
+   * Per-path flight identity. A fetch owns its path's entry via a unique
+   * token; any clear (full OR per-path) removes the entry, so the fetch's
+   * completion — which ran against the provider/URL-modifier state of the
+   * cleared era — finds its token gone and drops silently, never caching or
+   * announcing. A post-clear request installs a NEW token and fetches fresh
+   * instead of deduping into the doomed flight.
+   */
+  private inflight = new Map<string, symbol>();
   private loadedHandlers = new Set<FileLoadedHandler>();
   private failedHandlers = new Set<FileFailedHandler>();
 
@@ -57,12 +65,20 @@ export class FileEventBus {
   }
 
   private async loadAsync(path: string): Promise<void> {
-    this.inflight.add(path);
+    const flight = Symbol(path);
+    this.inflight.set(path, flight);
     const startTime = performance.now();
 
     try {
       // ResourceProvider.loadResource returns string | ArrayBuffer | null
       const data = await this.provider.loadResource(path);
+
+      if (this.inflight.get(path) !== flight) {
+        // Cleared-era completion — drop without touching cache, inflight
+        // (a post-clear flight may own it now), or handlers. See `inflight`.
+        logger.info(`[FileEventBus] Dropped stale load: ${path}`);
+        return;
+      }
 
       if (data === null) {
         throw new Error(`File not found: ${path}`);
@@ -83,6 +99,10 @@ export class FileEventBus {
         }
       }
     } catch (error) {
+      if (this.inflight.get(path) !== flight) {
+        logger.info(`[FileEventBus] Dropped stale failure: ${path}`);
+        return;
+      }
       this.inflight.delete(path);
 
       const elapsed = performance.now() - startTime;
@@ -131,11 +151,17 @@ export class FileEventBus {
    * @param path - Specific file to clear, or all files if omitted
    */
   clearCache(path?: string): void {
+    // Dropping the flight token invalidates any in-flight completion for the
+    // cleared path(s) and lets a follow-up request start a FRESH fetch
+    // instead of deduping into the doomed flight — the same rule for the
+    // per-path (hot-reload/provideFile) and full (corpus switch) forms.
     if (path) {
       this.cache.delete(path);
+      this.inflight.delete(path);
       logger.info(`[FileEventBus] Cleared cache: ${path}`);
     } else {
       this.cache.clear();
+      this.inflight.clear();
       logger.info(`[FileEventBus] Cleared all cache`);
     }
   }

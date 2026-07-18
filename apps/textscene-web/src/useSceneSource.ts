@@ -47,6 +47,13 @@ export interface UseSceneSourceResult {
    * cancelling any pending debounce. Used by uploads (unconditional path).
    */
   replace: (text: string) => void;
+  /**
+   * True when the pane holds keystrokes newer than the last load/replace —
+   * i.e. content that a fixture switch, ⤢ open-sub-scene, or upload-replace
+   * would silently discard. A function (reads the live ref) so event
+   * handlers get the current answer without re-render churn.
+   */
+  editedSinceLoad: () => boolean;
 }
 
 export function useSceneSource({
@@ -66,12 +73,14 @@ export function useSceneSource({
   // Authoritative replacement: buffer and forwardedContent move together,
   // superseding any pending debounced edit forward. The pane now holds known
   // content, so a fetch error no longer describes it — clear it (uploads
-  // never re-run the fetch effect, so nothing else would).
+  // never re-run the fetch effect, so nothing else would) — and any earlier
+  // keystrokes are gone, so the edited flag resets too.
   const replace = useCallback((text: string) => {
     clearTimeout(timerRef.current);
     setBuffer(text);
     setForwardedContent(text);
     setLoadError(null);
+    editedSinceLoadRef.current = false;
   }, []);
 
   // Fixture fetch effect. Re-runs when fixtureFile or uploadedTscnName changes.
@@ -151,5 +160,7 @@ export function useSceneSource({
     []
   );
 
-  return { buffer, forwardedContent, isFetching, loadError, onBufferChange, replace };
+  const editedSinceLoad = useCallback(() => editedSinceLoadRef.current, []);
+
+  return { buffer, forwardedContent, isFetching, loadError, onBufferChange, replace, editedSinceLoad };
 }

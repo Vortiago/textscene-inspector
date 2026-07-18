@@ -5,7 +5,19 @@
 
 import * as THREE from 'three';
 
-export type ResourceEventType = 'requested' | 'loading' | 'progress' | 'loaded' | 'failed';
+export type ResourceEventType =
+  | 'requested'
+  | 'loading'
+  | 'progress'
+  | 'loaded'
+  | 'failed'
+  /**
+   * A previously-cached path was dropped by a FULL cache clear (corpus
+   * switch) with no replacement on the way. Mounted consumers re-request so
+   * they never keep serving a value from the cleared era; a per-path clear
+   * (hot-reload) does NOT emit this — its caller re-requests itself.
+   */
+  | 'invalidated';
 export type ResourceType = 'texture' | 'material' | 'scene' | 'glb' | 'resource' | 'arraymesh';
 
 export interface ProgressData {
@@ -83,7 +95,10 @@ export class ResourceEventBus {
   /**
    * Promise wrapper for one-time event subscription.
    * Resolves when the specified event fires for the given resource ID.
-   * Rejects if the 'failed' event fires instead.
+   * Rejects if the 'failed' event fires instead — or if 'invalidated' fires:
+   * a full cache clear drops the awaited flight's completion without any
+   * loaded/failed emit, so without this the promise (and its handlers) would
+   * hang forever.
    *
    * Used for backward-compatible promise API.
    */
@@ -105,6 +120,9 @@ export class ResourceEventBus {
         if (eventType !== 'failed') {
           this.off(resourceType, 'failed', failedHandler);
         }
+        if (eventType !== 'invalidated') {
+          this.off(resourceType, 'invalidated', invalidatedHandler);
+        }
       };
 
       const loadedHandler: EventHandler<T> = (eventId: string, data?: T) => {
@@ -121,11 +139,21 @@ export class ResourceEventBus {
         }
       };
 
+      const invalidatedHandler: EventHandler = (eventId: string) => {
+        if (eventId === id) {
+          cleanup();
+          reject(new Error(`Resource ${resourceType}:${id} invalidated while awaited`));
+        }
+      };
+
       this.on<T>(resourceType, eventType, loadedHandler);
 
-      // Also listen for failed events unless we're specifically waiting for failure
+      // Also listen for failed/invalidated unless that's what we wait for.
       if (eventType !== 'failed') {
         this.on<Error>(resourceType, 'failed', failedHandler);
+      }
+      if (eventType !== 'invalidated') {
+        this.on(resourceType, 'invalidated', invalidatedHandler);
       }
 
       // Optional timeout

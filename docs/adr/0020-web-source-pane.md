@@ -60,10 +60,17 @@ that wraps `<TscnPreviewShell>`. Specifics and the alternatives rejected:
    workaround because it is alignment-sensitive; monospace makes it tractable when wanted.
 
 5. **Ephemeral persistence + Download.** Edits live in memory only; switching scene or
-   reloading resets the buffer to the file's content (no unsaved-changes warning). A
-   "Download .tscn" button exports the current buffer. *Rejected:* File System Access API
-   write-back — Chromium-only, permission-prompt heavy, well beyond bare-bones, and squarely
-   the VS Code extension's job.
+   reloading resets the buffer to the file's content. A "Download .tscn" button exports the
+   current buffer. *Rejected:* File System Access API write-back — Chromium-only,
+   permission-prompt heavy, well beyond bare-bones, and squarely the VS Code extension's job.
+
+   *Amended 2026-07-17:* edits stay ephemeral, but loss is no longer SILENT for in-app
+   one-click replacements — the fixture palette, the tree's ⤢ open-sub-scene, and a
+   scene-replacing drop/upload confirm (native `window.confirm`, no custom modal) before
+   discarding a buffer edited since its last load; unedited panes and resource-only drops
+   never prompt. The one-misclick-total-loss risk of the ⤢ affordance motivated the change.
+   Deliberately excluded: browser reload/close stays unguarded (no `beforeunload` handler) —
+   reload-resets remain the documented reset path.
 
 6. **Shown by default.** The production flow is upload/paste with few fixtures, so an
    editor-first split is the right first impression; an empty pane shows a "Paste or type

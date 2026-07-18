@@ -21,4 +21,27 @@ describe('parseHBoxContainer', () => {
     });
     expect(props.themeOverrideConstants?.separation).toBe(12);
   });
+
+  it.each([
+    ['0', 0],
+    ['1', 1],
+    ['2', 2],
+  ])('parses alignment %s as %i', (raw, expected) => {
+    const props = parseHBoxContainer(h({ name: 'Row', type: 'HBoxContainer' }), {
+      alignment: raw,
+    });
+    expect(props.alignment).toBe(expected);
+  });
+
+  it('leaves alignment undefined when absent', () => {
+    const props = parseHBoxContainer(h({ name: 'Row', type: 'HBoxContainer' }), {});
+    expect(props.alignment).toBeUndefined();
+  });
+
+  it('ignores a malformed (non-numeric) alignment', () => {
+    const props = parseHBoxContainer(h({ name: 'Row', type: 'HBoxContainer' }), {
+      alignment: 'garbage',
+    });
+    expect(props.alignment).toBeUndefined();
+  });
 });

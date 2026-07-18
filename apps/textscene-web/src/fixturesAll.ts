@@ -1,29 +1,40 @@
 /**
  * The full fixture set the previewer renders: the committed base manifest
- * (./fixtures, generated) PLUS two on-demand, gitignored corpora — the
+ * (./fixtures, generated) PLUS any on-demand, gitignored corpora — e.g. the
  * open-source games (./fixtures.games, written by `pnpm vendor:games`) and the
- * optional author-only ld-58 project (./fixtures.ld58, vendored via
- * `pnpm vendor:ld58`).
+ * ld-58 project (./fixtures.ld58, `pnpm vendor:ld58` — repo-external but
+ * part of the deployed site, see ADR-0010).
  *
- * Both are fetched on demand, not committed, so their manifests may not exist.
- * `import.meta.glob` resolves to an empty set when a file is absent (fresh clone
- * / CI), so the app simply shows no games / no ld-58 until they're vendored —
- * no drift in the committed manifest, no broken imports.
+ * Optional corpora are fetched on demand, not committed, so their manifests
+ * may not exist. Every manifest exports the same conventional `corpusFixtures`
+ * name (written by generate-fixtures.js), so ONE wildcard glob merges them
+ * all — a new corpus needs no change here. `import.meta.glob` resolves to an
+ * empty set when a file is absent (fresh clone / CI), so the app simply shows
+ * no vendored scenes until they're vendored — no drift in the committed
+ * manifest, no broken imports.
  *
  * Runtime consumers import `fixtures` from HERE; the generated `./fixtures`
  * stays a plain base-only manifest (kept JSON-parseable for the showcase
  * tooling that reads it as text).
  */
+import { warn } from '@textscene/core';
 import { fixtures as baseFixtures, type Fixture } from './fixtures';
 
-const gameModules = import.meta.glob<{ gameFixtures?: Fixture[] }>('./fixtures.games.ts', {
-  eager: true,
+const corpusModules = import.meta.glob<{ corpusFixtures?: Fixture[] }>(
+  ['./fixtures.*.ts', '!./*.test.ts'],
+  { eager: true }
+);
+const corpusFixtures: Fixture[] = Object.entries(corpusModules).flatMap(([path, m]) => {
+  if (!m.corpusFixtures) {
+    // A manifest written by an older generator (different export name) would
+    // otherwise vanish silently — make the stale-manifest case loud.
+    warn(
+      `[Fixtures] ${path} matched the corpus-manifest glob but exports no ` +
+        "'corpusFixtures' — regenerate it with `pnpm generate:fixtures` (or re-run the vendor script)."
+    );
+    return [];
+  }
+  return m.corpusFixtures;
 });
-const gameFixtures: Fixture[] = Object.values(gameModules).flatMap((m) => m.gameFixtures ?? []);
 
-const ld58Modules = import.meta.glob<{ ld58Fixtures?: Fixture[] }>('./fixtures.ld58.ts', {
-  eager: true,
-});
-const ld58Fixtures: Fixture[] = Object.values(ld58Modules).flatMap((m) => m.ld58Fixtures ?? []);
-
-export const fixtures: Fixture[] = [...baseFixtures, ...gameFixtures, ...ld58Fixtures];
+export const fixtures: Fixture[] = [...baseFixtures, ...corpusFixtures];

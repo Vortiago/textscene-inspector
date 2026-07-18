@@ -1,6 +1,6 @@
 /**
- * Canonical node-type → base-type table for the linter's validator inheritance
- * (#143). `ValidatorRegistry.findValidator` walks this chain so the Node3D /
+ * Canonical node-type → base-type table for the linter's validator inheritance.
+ * `ValidatorRegistry.findValidator` walks this chain so the Node3D /
  * Node2D / Control base validator sets apply to every subclass automatically,
  * instead of each subclass silently escaping validation.
  *

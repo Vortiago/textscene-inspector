@@ -37,6 +37,7 @@ import { createServer } from 'node:net';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
+import { SWIFTSHADER_GL_ARGS } from '../showcase/browser.mjs';
 import { PNG } from 'pngjs';
 import pixelmatch from 'pixelmatch';
 import { DEFAULT_MAX_DIFF_PCT, GOLDEN_SCENES } from './scenes.mjs';
@@ -315,7 +316,7 @@ async function main() {
 
     browser = await chromium.launch({
       headless: true,
-      args: ['--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--use-gl=angle'],
+      args: SWIFTSHADER_GL_ARGS,
     });
     const context = await browser.newContext({
       viewport: VIEWPORT,

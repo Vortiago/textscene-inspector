@@ -1,5 +1,5 @@
 /**
- * Flattens a provider-nesting pyramid into a single call (#217).
+ * Flattens a provider-nesting pyramid into a single call.
  *
  * `<TscnPreviewShell>` mounts 8 independent context providers
  * (Hierarchy/Selection/CameraControl/MissingResources/ViewportMode/

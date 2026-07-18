@@ -1,5 +1,5 @@
 /**
- * Registration-collision guard (#217).
+ * Registration-collision guard.
  *
  * ADR-0002's three type registries — `nodeRegistry` (parser domain),
  * `nodeComponentRegistry` (3D render domain), `controlComponentRegistry` (2D

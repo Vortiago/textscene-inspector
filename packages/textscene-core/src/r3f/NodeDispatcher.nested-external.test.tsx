@@ -15,68 +15,17 @@
  * with SceneManager; the DELETED_FEATURE test below pins that removal.
  */
 
-import * as THREE from 'three';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode, TscnScene } from '../parser/types';
 import { NodeDispatcher } from './NodeDispatcher';
 import { SelectionProvider } from './contexts/SelectionContext';
 import { SceneResourcesProvider } from './SceneResourcesContext';
 import { ResourceLoaderProvider } from '../resources/ResourceLoaderContext';
-import { ResourceEventBus } from '../resources/ResourceEventBus';
-import { MetadataStore } from '../resources/MetadataStore';
+import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader';
 import type { ResourceLoader } from '../resources/ResourceLoader';
 
 import './nodes/index';
-
-function makeLoader(): {
-  loader: ResourceLoader;
-  setSceneCached: (path: string, scene: TscnScene) => void;
-  setSceneMissing: (path: string) => void;
-} {
-  const eventBus = new ResourceEventBus();
-  const metadata = new MetadataStore();
-  const sceneCache = new Map<string, TscnScene | null>();
-  const textureCache = new Map<string, THREE.Texture | null>();
-  const materialCache = new Map<string, THREE.Material | null>();
-  const glbCache = new Map<string, THREE.Object3D | null>();
-
-  const makeProc = <T,>(cache: Map<string, T | null>) => ({
-    request: vi.fn(),
-    getCached: (p: string) => cache.get(p),
-    isCached: (p: string) => cache.has(p),
-    isLoading: () => false,
-    clearCache: () => {},
-    getCacheSize: () => cache.size,
-    pin: () => {},
-    unpin: () => {},
-  });
-
-  const loader = {
-    eventBus,
-    metadata,
-    textures: makeProc<THREE.Texture>(textureCache),
-    materials: makeProc<THREE.Material>(materialCache),
-    glbMeshes: makeProc<THREE.Object3D>(glbCache),
-    scenes: makeProc<TscnScene>(sceneCache),
-    getSceneCached: (p: string) => sceneCache.get(p),
-    requestScene: vi.fn(),
-    register: vi.fn(),
-    provideFile: () => {},
-    clear: () => {
-      sceneCache.clear();
-      textureCache.clear();
-      materialCache.clear();
-      glbCache.clear();
-    },
-  } as unknown as ResourceLoader;
-
-  return {
-    loader,
-    setSceneCached: (p, s) => sceneCache.set(p, s),
-    setSceneMissing: (p) => sceneCache.set(p, null),
-  };
-}
 
 function makeNode(name: string, type: string, overrides: Partial<TscnNode> = {}): TscnNode {
   return {
@@ -218,11 +167,11 @@ async function renderTopScene(
 describe('NodeDispatcher — nested external scenes (3+ levels)', () => {
   describe('3-Level Hierarchy Resolution', () => {
     it('resolves and renders all 3 levels of nested external scenes', async () => {
-      const { loader, setSceneCached } = makeLoader();
-      setSceneCached('res://test-nested-leaf.tscn', makeLeafScene());
-      setSceneCached('res://test-nested-middle.tscn', makeMiddleScene());
+      const fake = createFakeResourceLoader();
+      fake.scenes.seed('res://test-nested-leaf.tscn', makeLeafScene());
+      fake.scenes.seed('res://test-nested-middle.tscn', makeMiddleScene());
 
-      const renderer = await renderTopScene(loader);
+      const renderer = await renderTopScene(fake.loader);
 
       const groups = renderer.scene.findAllByType('Group');
       const groupNames = groups.map((g) => g.instance.name);
@@ -245,11 +194,11 @@ describe('NodeDispatcher — nested external scenes (3+ levels)', () => {
     });
 
     it('creates THREE.js objects for all nested levels', async () => {
-      const { loader, setSceneCached } = makeLoader();
-      setSceneCached('res://test-nested-leaf.tscn', makeLeafScene());
-      setSceneCached('res://test-nested-middle.tscn', makeMiddleScene());
+      const fake = createFakeResourceLoader();
+      fake.scenes.seed('res://test-nested-leaf.tscn', makeLeafScene());
+      fake.scenes.seed('res://test-nested-middle.tscn', makeMiddleScene());
 
-      const renderer = await renderTopScene(loader);
+      const renderer = await renderTopScene(fake.loader);
 
       // Level 1 objects
       const groups = renderer.scene.findAllByType('Group');
@@ -279,11 +228,11 @@ describe('NodeDispatcher — nested external scenes (3+ levels)', () => {
     });
 
     it('applies transforms correctly across nested levels', async () => {
-      const { loader, setSceneCached } = makeLoader();
-      setSceneCached('res://test-nested-leaf.tscn', makeLeafScene());
-      setSceneCached('res://test-nested-middle.tscn', makeMiddleScene());
+      const fake = createFakeResourceLoader();
+      fake.scenes.seed('res://test-nested-leaf.tscn', makeLeafScene());
+      fake.scenes.seed('res://test-nested-middle.tscn', makeMiddleScene());
 
-      const renderer = await renderTopScene(loader);
+      const renderer = await renderTopScene(fake.loader);
 
       // MiddleInstance has origin z=3
       const groups = renderer.scene.findAllByType('Group');
@@ -300,11 +249,11 @@ describe('NodeDispatcher — nested external scenes (3+ levels)', () => {
 
   describe('Error Handling for Deep Nesting', () => {
     it('still renders Level 1 nodes when Level 2 scene is missing', async () => {
-      const { loader, setSceneMissing } = makeLoader();
+      const fake = createFakeResourceLoader();
       // Only leaf is cached, middle is missing
-      setSceneMissing('res://test-nested-middle.tscn');
+      fake.scenes.seed('res://test-nested-middle.tscn', null);
 
-      const renderer = await renderTopScene(loader);
+      const renderer = await renderTopScene(fake.loader);
 
       const groups = renderer.scene.findAllByType('Group');
       const groupNames = groups.map((g) => g.instance.name);
@@ -321,11 +270,11 @@ describe('NodeDispatcher — nested external scenes (3+ levels)', () => {
     });
 
     it('still renders Level 1 and Level 2 when Level 3 (leaf) scene is missing', async () => {
-      const { loader, setSceneCached, setSceneMissing } = makeLoader();
-      setSceneCached('res://test-nested-middle.tscn', makeMiddleScene());
-      setSceneMissing('res://test-nested-leaf.tscn');
+      const fake = createFakeResourceLoader();
+      fake.scenes.seed('res://test-nested-middle.tscn', makeMiddleScene());
+      fake.scenes.seed('res://test-nested-leaf.tscn', null);
 
-      const renderer = await renderTopScene(loader);
+      const renderer = await renderTopScene(fake.loader);
 
       const groups = renderer.scene.findAllByType('Group');
       const groupNames = groups.map((g) => g.instance.name);

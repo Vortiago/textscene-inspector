@@ -5,12 +5,12 @@
  * (the GLB counterpart to AnimationPlayer / ADR-0011).
  */
 
-import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { GLBSceneRoot } from './Component';
 import type { TscnNode } from '../../../parser/types';
-import { ResourceEventBus } from '../../../resources/ResourceEventBus';
+import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import {
@@ -58,23 +58,9 @@ function makeAnimatedGlb(): THREE.Object3D {
 }
 
 function makeLoader(glb: THREE.Object3D): ResourceLoader {
-  const eventBus = new ResourceEventBus();
-  const glbCache = new Map<string, THREE.Object3D | null>([[GLB_PATH, glb]]);
-  const makeProc = <T,>(cache: Map<string, T | null>) => ({
-    request: vi.fn(),
-    getCached: (p: string) => cache.get(p),
-    isCached: (p: string) => cache.has(p),
-    isLoading: () => false,
-    clearCache: () => {},
-    getCacheSize: () => cache.size,
-    pin: () => {},
-    unpin: () => {},
-  });
-  return {
-    eventBus,
-    glbMeshes: makeProc<THREE.Object3D>(glbCache),
-    register: vi.fn(),
-  } as unknown as ResourceLoader;
+  const fake = createFakeResourceLoader();
+  fake.glbMeshes.seed(GLB_PATH, glb);
+  return fake.loader;
 }
 
 function makeGlbNode(): TscnNode {

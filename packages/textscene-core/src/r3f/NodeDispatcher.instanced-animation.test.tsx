@@ -10,7 +10,7 @@
  * the player's `useNodePath()` and the tab activates. This test pins that the
  * collapsed path activates the transport and the old wrapper path does not.
  */
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode, TscnScene, TscnInternalResource } from '../parser/types';
 import { NodeDispatcher } from './NodeDispatcher';
@@ -26,40 +26,10 @@ import {
 } from './contexts/AnimationTransportContext';
 import { SceneResourcesProvider } from './SceneResourcesContext';
 import { ResourceLoaderProvider } from '../resources/ResourceLoaderContext';
-import { ResourceEventBus } from '../resources/ResourceEventBus';
-import { MetadataStore } from '../resources/MetadataStore';
-import type { ResourceLoader } from '../resources/ResourceLoader';
+import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader';
 import { AnimationProcessMode, MethodCallMode } from '../nodes/animation/animationplayer/types';
 
 import './nodes/index';
-
-function makeLoader(): { loader: ResourceLoader; setSceneCached: (p: string, s: TscnScene) => void } {
-  const sceneCache = new Map<string, TscnScene | null>();
-  const makeProc = <T,>(cache: Map<string, T | null>) => ({
-    request: vi.fn(),
-    getCached: (p: string) => cache.get(p),
-    isCached: (p: string) => cache.has(p),
-    isLoading: () => false,
-    clearCache: () => {},
-    getCacheSize: () => cache.size,
-    pin: () => {},
-    unpin: () => {},
-  });
-  const loader = {
-    eventBus: new ResourceEventBus(),
-    metadata: new MetadataStore(),
-    textures: makeProc(new Map()),
-    materials: makeProc(new Map()),
-    glbMeshes: makeProc(new Map()),
-    scenes: makeProc<TscnScene>(sceneCache),
-    getSceneCached: (p: string) => sceneCache.get(p),
-    requestScene: vi.fn(),
-    register: vi.fn(),
-    provideFile: () => {},
-    clear: () => sceneCache.clear(),
-  } as unknown as ResourceLoader;
-  return { loader, setSceneCached: (p, s) => sceneCache.set(p, s) };
-}
 
 // AnimationLibrary with one "slide" clip moving a sibling Target.
 const INTERNAL: TscnInternalResource[] = [
@@ -145,8 +115,8 @@ async function setSelection(path: string | null) {
 
 describe('instanced AnimationPlayer — selection-driven tab via the collapsed path', () => {
   it('activates the transport at the collapsed path, not the old wrapper path', async () => {
-    const { loader, setSceneCached } = makeLoader();
-    setSceneCached('res://coin/coin.tscn', makeCoinScene());
+    const fake = createFakeResourceLoader();
+    fake.scenes.seed('res://coin/coin.tscn', makeCoinScene());
 
     // Root scene: Coins → Coin1 (instance). After merge, Coin1 BECOMES the
     // Area3D root, so the AnimationPlayer sits at 'Coins/Coin1/Animation'.
@@ -162,7 +132,7 @@ describe('instanced AnimationPlayer — selection-driven tab via the collapsed p
     ];
 
     await ReactThreeTestRenderer.create(
-      <ResourceLoaderProvider loader={loader}>
+      <ResourceLoaderProvider loader={fake.loader}>
         <SceneResourcesProvider
           internalResources={[]}
           externalResources={[{ id: 'coin', path: 'res://coin/coin.tscn', type: 'PackedScene' }]}

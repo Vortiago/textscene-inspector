@@ -179,7 +179,7 @@ _Avoid_: "default node".
 ### Shell & editing
 
 **Source pane**:
-The web previewer's editable `.tscn` text view — a left sibling of the preview shell, never inside it. Holds the single editable buffer, fed three ways (fixture-select, file upload, or direct paste/type), that is the source of truth for both the **Linter** (surfaced in the browser as gutter markers with a hover popover) and — gated on a clean **Lenient parser** result (**Hold-last-valid**) — the shell's rendered scene. Edits are ephemeral: they reset on scene switch or reload and leave the browser only via a "Download .tscn" export; nothing is written back to disk (ADR-0020).
+The web previewer's editable `.tscn` text view — a left sibling of the preview shell, never inside it. Holds the single editable buffer, fed three ways (fixture-select, file upload, or direct paste/type), that is the source of truth for both the **Linter** (surfaced in the browser as gutter markers with a hover popover) and — gated on a clean **Lenient parser** result (**Hold-last-valid**) — the shell's rendered scene. Edits are ephemeral and leave the browser only via a "Download .tscn" export; nothing is written back to disk. A browser reload resets silently, but an in-app one-click scene replacement (fixture palette, ⤢ open-sub-scene, scene-replacing drop/upload) of an *edited* buffer confirms before discarding (ADR-0020 as amended).
 _Avoid_: "code editor" / "Monaco" / "CodeMirror" — it is a bare `<textarea>`, no editor library; conflating it with the **SceneTreeViewer** ("scene tree" UI panel) or with the VS Code extension's own real text editor.
 
 **Host (app)**:

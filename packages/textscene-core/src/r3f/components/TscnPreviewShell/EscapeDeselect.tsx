@@ -1,5 +1,5 @@
 /**
- * Escape clears the current selection (#224) — a global shortcut, not
+ * Escape clears the current selection — a global shortcut, not
  * scoped to the 3D `<Canvas>` (unlike F-to-frame, which needs THREE camera
  * state and lives inside TscnCanvas), so it works the same in 2D and 3D
  * viewport modes. `useGlobalShortcut` carries the isTypingTarget guard so

@@ -98,6 +98,15 @@ export interface ResourceProcessor<T> {
   clearCache(path?: string): void;
   /** Get cache size for debugging */
   getCacheSize(): number;
+  /** Snapshot of the currently-cached paths (for the loader's full-clear announcement). */
+  cachedPaths(): string[];
+  /**
+   * Snapshot of the paths currently loading. The loader's full-clear
+   * announcement must cover these too: their completions are dropped as
+   * cleared-era flights, so without an `invalidated` for them a mounted
+   * consumer waiting on the load would hang in `pending` forever.
+   */
+  inflightPaths(): string[];
   /**
    * Increment the pin count for `path`. While count > 0, eviction will
    * skip this entry, preferring zero-count (unmounted) entries as eviction
@@ -133,7 +142,13 @@ export function createResourceProcessor<T>(
   const cache = new LRUCache<T | null>(config.maxEntries ?? DEFAULT_MAX_ENTRIES, (_path, value) => {
     if (value && dispose) dispose(value);
   });
-  const inflight = new Set<string>();
+  // Per-path flight identity. A load owns its path's entry via a unique
+  // token; any clear (per-path hot-reload or full corpus switch) removes the
+  // entry, so the load's completion — produced under the cleared era's
+  // provider/content state — finds its token gone and is dropped (disposed,
+  // never cached or announced). A post-clear request installs a NEW token
+  // and loads fresh instead of racing the doomed flight.
+  const inflight = new Map<string, symbol>();
 
   /**
    * Shared finish-lane used by both the FileEventBus arrival handler and
@@ -142,16 +157,28 @@ export function createResourceProcessor<T>(
    */
   const finishLoad = async (path: string, work: () => Promise<T>): Promise<void> => {
     const startTime = performance.now();
+    const flight = inflight.get(path);
     eventBus.emit(resourceType, 'loading', path);
 
     try {
       const result = await work();
+      if (inflight.get(path) !== flight) {
+        // Cleared-era completion — dispose and drop; caching or announcing
+        // it would resurrect what the clear removed. See `inflight`.
+        if (result && dispose) dispose(result);
+        logger.info(`[${resourceType}Processor] Dropped stale load: ${path}`);
+        return;
+      }
       cache.set(path, result);
       inflight.delete(path);
       const elapsed = performance.now() - startTime;
       logger.info(`[${resourceType}Processor] Loaded: ${path} (${elapsed.toFixed(2)}ms)`);
       eventBus.emit<T>(resourceType, 'loaded', path, result);
     } catch (error) {
+      if (inflight.get(path) !== flight) {
+        logger.info(`[${resourceType}Processor] Dropped stale failure: ${path}`);
+        return;
+      }
       cache.set(path, null); // Cache failure to prevent retries
       inflight.delete(path);
       const elapsed = performance.now() - startTime;
@@ -241,7 +268,7 @@ export function createResourceProcessor<T>(
       }
 
       // Start loading
-      inflight.add(path);
+      inflight.set(path, Symbol(path));
       eventBus.emit(resourceType, 'requested', path);
 
       if (loadDirectly) {
@@ -280,10 +307,18 @@ export function createResourceProcessor<T>(
       // it) until its last unpin. The `onEvict` hook wired above skips `null`
       // failure sentinels.
       if (path) {
+        // Per-path clear (hot-reload) stays silent: its caller re-requests
+        // the path itself, and the resulting loaded/failed event heals
+        // subscribed consumers.
         cache.delete(path);
         inflight.delete(path);
         logger.info(`[${resourceType}Processor] Cleared cache for: ${path}`);
       } else {
+        // Silent by design: announcing dropped paths is the LOADER's job
+        // (ResourceLoader.clearCaches emits `invalidated` after every layer
+        // is reset) — emitting here would let re-entrant re-requests observe
+        // a half-cleared composition. Dropping the flight tokens invalidates
+        // cleared-era in-flight completions.
         cache.clear();
         inflight.clear();
         logger.info(`[${resourceType}Processor] Cleared all cache`);
@@ -292,6 +327,14 @@ export function createResourceProcessor<T>(
 
     getCacheSize(): number {
       return cache.size;
+    },
+
+    cachedPaths(): string[] {
+      return [...cache.keys()];
+    },
+
+    inflightPaths(): string[] {
+      return [...inflight.keys()];
     },
 
     pin(path: string): void {

@@ -23,7 +23,9 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
@@ -57,9 +59,20 @@ MissingResourcesContext.displayName = 'MissingResourcesContext';
 
 export interface MissingResourcesProviderProps {
   children: ReactNode;
+  /**
+   * Observer for the live missing-paths set — fired after mount and after
+   * every change (never on mere callback-identity changes, so hosts may pass
+   * an inline arrow). The explicit surface for code OUTSIDE the provider's
+   * subtree (e.g. a host drop handler above the shell) to read the current
+   * set; consumers inside the tree use `useMissingResources` instead.
+   */
+  onMissingPathsChange?: (paths: ReadonlySet<string>) => void;
 }
 
-export function MissingResourcesProvider({ children }: MissingResourcesProviderProps) {
+export function MissingResourcesProvider({
+  children,
+  onMissingPathsChange,
+}: MissingResourcesProviderProps) {
   const [missingPaths, setMissingPaths] = useState<ReadonlySet<string>>(
     () => new Set<string>()
   );
@@ -120,6 +133,17 @@ export function MissingResourcesProvider({ children }: MissingResourcesProviderP
       return next;
     });
   }, []);
+
+  // Latest-callback ref: notifying must key ONLY on the set's identity. An
+  // unmemoized host callback in the deps would re-fire per render — and a
+  // host that stores the set in state would then loop render→notify→render.
+  const onMissingPathsChangeRef = useRef(onMissingPathsChange);
+  useEffect(() => {
+    onMissingPathsChangeRef.current = onMissingPathsChange;
+  });
+  useEffect(() => {
+    onMissingPathsChangeRef.current?.(missingPaths);
+  }, [missingPaths]);
 
   const value = useMemo<MissingResourcesContextValue>(
     () => ({

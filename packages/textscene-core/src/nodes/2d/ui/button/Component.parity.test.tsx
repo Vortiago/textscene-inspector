@@ -1,5 +1,5 @@
 /**
- * Parity: Button.alignment (#21) — text alignment inside the button box.
+ * Parity: Button.alignment — text alignment inside the button box.
  */
 import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/react';

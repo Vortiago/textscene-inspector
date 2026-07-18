@@ -7,7 +7,7 @@
  *   default, like Godot's "Visible Collision Shapes").
  * - `showLabels` — drives in-viewport text (Label3D); off by default so text
  *   doesn't clutter the 3D view (ADR-0008), toggled on like the collision gizmo.
- * - `showGrid` (#224) — a ground-plane grid helper in the 3D viewport. Off by
+ * - `showGrid` — a ground-plane grid helper in the 3D viewport. Off by
  *   default: a sibling hardening bucket regenerates ALL visual-regression
  *   baselines in this same round, so a toggle that's visible out of the box
  *   would invalidate that work. A user who turns it on gets it persisted
@@ -32,7 +32,7 @@ import {
 export type ViewportMode = '2D' | '3D';
 
 /**
- * localStorage keys for the two persisted viewport preferences (#224).
+ * localStorage keys for the two persisted viewport preferences.
  * `<TscnPreviewShell>` reads them once to seed this provider;
  * `<ViewportToolbar>` writes them on an EXPLICIT user choice. Programmatic
  * mode changes (WorkspaceAutoSelect's typed-root pick, the Cameras panel's

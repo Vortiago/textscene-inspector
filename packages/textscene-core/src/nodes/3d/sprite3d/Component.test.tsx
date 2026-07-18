@@ -27,16 +27,6 @@ import {
 
 const TEXTURE_PATH = 'res://textures/sprite.png';
 
-/** Minimal ResourceLoader stub — pre-seed texture cache to drive `useResource`. */
-function makeLoader() {
-  const fake = createFakeResourceLoader();
-  return {
-    loader: fake.loader,
-    setTextureCached: (p: string, t: THREE.Texture) => fake.textures.seed(p, t),
-    setTextureMissing: (p: string) => fake.textures.seed(p, null),
-  };
-}
-
 /** Build a THREE.Texture with explicit image dimensions for sizing/region tests. */
 function makeTexture(imageWidth = 256, imageHeight = 256): THREE.Texture {
   const t = new THREE.Texture();
@@ -78,13 +68,12 @@ async function render(opts: {
   externals?: TscnExternalResource[];
   cached?: Array<{ path: string; texture: THREE.Texture | 'missing' }>;
 }) {
-  const { loader, setTextureCached, setTextureMissing } = makeLoader();
+  const fake = createFakeResourceLoader();
   for (const { path, texture } of opts.cached ?? []) {
-    if (texture === 'missing') setTextureMissing(path);
-    else setTextureCached(path, texture);
+    fake.textures.seed(path, texture === 'missing' ? null : texture);
   }
   return ReactThreeTestRenderer.create(
-    <ResourceLoaderProvider loader={loader}>
+    <ResourceLoaderProvider loader={fake.loader}>
       <SceneResourcesProvider externalResources={opts.externals ?? []}>
         <Sprite3D node={opts.node} />
       </SceneResourcesProvider>

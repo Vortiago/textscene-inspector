@@ -1,5 +1,5 @@
 /**
- * Ground-plane grid toggle (#224). Default OFF: a sibling hardening bucket
+ * Ground-plane grid toggle. Default OFF: a sibling hardening bucket
  * regenerates ALL visual-regression baselines in this same round, so an
  * on-by-default visual change here would invalidate that work. Only a
  * user who explicitly turns it on (persisted host-side) sees it in a

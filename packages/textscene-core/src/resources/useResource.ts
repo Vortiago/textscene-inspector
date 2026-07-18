@@ -78,9 +78,9 @@ interface ProcessorAccess<T> {
 }
 
 /**
- * Return the processor appropriate for the given resource type. Now
- * all four resource types are normal `ResourceProcessor<T>`
- * instances on the loader; PackedScene no longer needs its own adapter.
+ * Return the processor appropriate for the given resource type. Every
+ * resource type is a normal `ResourceProcessor<T>` instance on the
+ * loader; PackedScene no longer needs its own adapter.
  */
 function getProcessorAccess<T>(
   loader: NonNullable<ReturnType<typeof useResourceLoader>>,
@@ -256,9 +256,24 @@ export function useResource<T>(path: string, type: ResourceType): ResourceResult
       if (eventPath !== path) return;
       applyFailure(error?.message ?? 'Unknown error');
     };
+    // A FULL cache clear (corpus switch) dropped this path with no
+    // replacement on the way. The value in this hook's state belongs to the
+    // cleared era — re-request under the new provider/corpus state; the
+    // resulting loaded/failed event lands in the handlers above. The last
+    // value stays on screen while the reload is in flight; when the path
+    // doesn't exist in the new corpus (the common case for an outgoing
+    // scene's consumers) the reload FAILS and this flips to unavailable —
+    // an accepted one-off burst of doomed refetches per switch, bounded by
+    // the mounted working set.
+    const onInvalidated = (eventPath: string) => {
+      if (eventPath !== path) return;
+      if (!isCurrent()) return;
+      access.request(path);
+    };
 
     eventBus.on(busType, 'loaded', onLoaded);
     eventBus.on<Error>(busType, 'failed', onFailed);
+    eventBus.on(busType, 'invalidated', onInvalidated);
 
     // 3. If we had no cache entry yet, drive the request now. This is
     //    intentionally after subscribing so we don't miss a synchronous
@@ -271,6 +286,7 @@ export function useResource<T>(path: string, type: ResourceType): ResourceResult
       access.unpin(path);
       eventBus.off(busType, 'loaded', onLoaded);
       eventBus.off<Error>(busType, 'failed', onFailed);
+      eventBus.off(busType, 'invalidated', onInvalidated);
       disposePreviousClone();
     };
   }, [loader, path, type]);

@@ -70,7 +70,7 @@ describe('WebResourceProvider — corpus-scoped uploads', () => {
     expect(await loadAsText(provider, 'res://textures/player.png')).toBe('content-A');
   });
 
-  it('removeUploadedFile removes only the file under the active corpus root', async () => {
+  it('removeUploadedFile removes the path under EVERY corpus root (the uploaded-rows UI keys on the bare path and survives corpus switches)', async () => {
     // Upload under corpus A
     provider.setResourceRoot('demos/2d/platformer');
     const fileA = new File(['content-A'], 'player.png', { type: 'image/png' });
@@ -81,17 +81,35 @@ describe('WebResourceProvider — corpus-scoped uploads', () => {
     const fileB = new File(['content-B'], 'player.png', { type: 'image/png' });
     provider.addUploadedFile('res://textures/player.png', fileB);
 
-    // Remove from corpus B
+    // Remove while corpus B is active
     const removed = provider.removeUploadedFile('res://textures/player.png');
     expect(removed).toBe(true);
     await expect(
       provider.loadResource('res://textures/player.png', 'Texture2D')
     ).rejects.toThrow('Resource not found');
 
-    // Switch back — corpus A's file must still be there
+    // Switch back — corpus A's copy is gone too: a removed path never
+    // resurrects when its original corpus becomes active again.
     provider.setResourceRoot('demos/2d/platformer');
-    const resultA = await provider.loadResource('res://textures/player.png', 'Texture2D');
-    expect(resultA).toBeInstanceOf(ArrayBuffer);
+    await expect(
+      provider.loadResource('res://textures/player.png', 'Texture2D')
+    ).rejects.toThrow('Resource not found');
+  });
+
+  it('removeUploadedFile after a corpus switch still removes a file uploaded under the previous root', async () => {
+    // The remove-after-switch regression: upload under the base ('') corpus,
+    // switch to a fixture corpus, then Remove — the file must actually go.
+    provider.setResourceRoot('');
+    const file = new File(['content'], 'player.png', { type: 'image/png' });
+    provider.addUploadedFile('res://textures/player.png', file);
+
+    provider.setResourceRoot('demos/2d/platformer');
+    expect(provider.removeUploadedFile('res://textures/player.png')).toBe(true);
+
+    provider.setResourceRoot('');
+    await expect(
+      provider.loadResource('res://textures/player.png', 'Texture2D')
+    ).rejects.toThrow('Resource not found');
   });
 
   it('an upload added under the empty root (fixture corpus) is not visible under a named corpus', async () => {

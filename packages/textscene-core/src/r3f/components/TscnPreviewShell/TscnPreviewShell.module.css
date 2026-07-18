@@ -114,7 +114,7 @@
 
 /* Full-width top bar: brand, host toolbar (fixture picker), scene-stat chips.
    Viewport-mode controls float over the viewport (see .viewportToolbarOverlay),
-   not here — the row over-constrained when the source pane narrowed it (#300). */
+   not here — the row over-constrained when the source pane narrowed it. */
 .topBar {
   display: flex;
   align-items: center;
@@ -253,7 +253,7 @@
   gap: var(--tsi-space-2);
 }
 
-/* Help affordance (#224): a small circular "?" badge at the far right of
+/* Help affordance: a small circular "?" badge at the far right of
    the top bar, matching .collapseButton's minimal icon-button treatment. */
 .helpLink {
   display: flex;
@@ -434,9 +434,9 @@
 /* Viewport controls (Reset Camera, 3D/2D switch, toggles) float over the
    viewport's top-right corner rather than sharing the shell's fixed-height top
    bar. In the top bar they over-constrained the row once the source pane
-   narrowed the shell, collapsing the host toolbar and burying these controls
-   (#300). As a compact overlay they stay reachable at every width, in both the
-   web app and the VS Code webview. A quiet translucent panel keeps the ghost
+   narrowed the shell, collapsing the host toolbar and burying these controls.
+   As a compact overlay they stay reachable at every width, in both the
+   web app and the VS Code webview. A quiet near-opaque panel keeps the ghost
    buttons legible over arbitrary 3D content; it sits above the canvas and the
    2D Control overlay so you can always switch back to 3D. */
 .viewportToolbarOverlay {
@@ -445,7 +445,7 @@
   right: var(--tsi-space-2);
   /* Bounded to the viewport so a narrow center (VS Code split editor, a widened
      dock) can never push the right-anchored controls off the left edge — the
-     toolbar wraps to a second row instead (see .toolbar flex-wrap). #300. */
+     toolbar wraps to a second row instead (see .toolbar flex-wrap). */
   max-width: calc(100% - 2 * var(--tsi-space-2));
   z-index: 6;
   display: flex;
@@ -453,8 +453,9 @@
   padding: 2px var(--tsi-space-2);
   border: 1px solid var(--tsi-border);
   border-radius: var(--tsi-radius-md);
-  background: color-mix(in srgb, var(--tsi-bg-panel) 84%, transparent);
-  backdrop-filter: blur(4px);
+  /* High opacity instead of backdrop-filter: a blur over the always-repainting
+     WebGL canvas would re-blur this region every frame — a standing GPU tax. */
+  background: color-mix(in srgb, var(--tsi-bg-panel) 94%, transparent);
 }
 
 /* The 2D canvas stage's rules live in Canvas2DStage/Canvas2DStage.module.css. */
@@ -463,7 +464,7 @@
    scene carries Control/CanvasLayer nodes (ADR-0006). Clicking it flips to 2D. */
 .viewportHint {
   position: absolute;
-  /* Bottom-center, clear of the top-right viewport toolbar overlay (#300). */
+  /* Bottom-center, clear of the top-right viewport toolbar overlay. */
   bottom: var(--tsi-space-3);
   left: 50%;
   transform: translateX(-50%);

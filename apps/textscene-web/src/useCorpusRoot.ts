@@ -13,21 +13,39 @@ import type { ResourcePipeline } from '@textscene/core';
 import type { WebResourceProvider } from './providers/WebResourceProvider';
 import { fixtureUrlForRes } from './corpusRoot';
 
-export function useCorpusRoot(
+/**
+ * Apply the synchronous half of a corpus-root switch: route the provider's
+ * res:// lookups into the subtree and point the THREE LoadingManager URL
+ * modifier at it. The cache clear stays with `useCorpusRoot`, which knows
+ * whether the root actually CHANGED. Callers needing the switch ahead of
+ * React's commit (an upload keying companion files under the new corpus)
+ * call this directly and let the hook's effect settle the caches — never
+ * write `provider.setResourceRoot` on its own, which would leave the URL
+ * modifier serving the corpus being left behind.
+ */
+export function switchCorpusRoot(
   pipeline: ResourcePipeline<WebResourceProvider>,
   resourceRoot: string
 ): void {
   const { provider, loader } = pipeline;
+  provider.setResourceRoot(resourceRoot);
+  loader.eventBus.getThreeManager().setURLModifier(
+    (url: string) => fixtureUrlForRes(url, resourceRoot)
+  );
+}
+
+export function useCorpusRoot(
+  pipeline: ResourcePipeline<WebResourceProvider>,
+  resourceRoot: string
+): void {
+  const { loader } = pipeline;
   const lastRootRef = useRef<string | null>(null);
 
   useEffect(() => {
-    provider.setResourceRoot(resourceRoot);
-    loader.eventBus.getThreeManager().setURLModifier(
-      (url: string) => fixtureUrlForRes(url, resourceRoot)
-    );
+    switchCorpusRoot(pipeline, resourceRoot);
     if (lastRootRef.current !== null && lastRootRef.current !== resourceRoot) {
       loader.clearCaches();
     }
     lastRootRef.current = resourceRoot;
-  }, [resourceRoot, provider, loader]);
+  }, [resourceRoot, pipeline, loader]);
 }

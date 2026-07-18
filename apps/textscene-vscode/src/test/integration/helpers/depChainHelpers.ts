@@ -19,6 +19,7 @@
 
 import * as path from 'path';
 import * as fs from 'fs';
+import { waitFor } from './panelHelpers';
 import type { HostToWebviewMessage } from '../../../protocol';
 
 // ---------------------------------------------------------------------------
@@ -34,29 +35,12 @@ export function depChainDir(): string {
   return path.resolve(__dirname, '../../../../.test-workspace/dep-chain');
 }
 
-/** Absolute path to the main entry scene. */
-export function mainTscnPath(): string {
-  return path.join(depChainDir(), 'main.tscn');
-}
-
-/** Absolute path to the instanced sub-scene. */
-export function subTscnPath(): string {
-  return path.join(depChainDir(), 'sub.tscn');
-}
-
-/** Absolute path to the shared material file. */
-export function materialTresPath(): string {
-  return path.join(depChainDir(), 'material.tres');
-}
-
-/** Absolute path to the shared texture. */
-export function texturePngPath(): string {
-  return path.join(depChainDir(), 'texture.png');
-}
-
-/** Absolute path to an unrelated scene that main.tscn does NOT reference. */
-export function unrelatedTscnPath(): string {
-  return path.join(depChainDir(), 'unrelated.tscn');
+/**
+ * Absolute path to a fixture file inside the dep-chain workspace
+ * (e.g. `depChainFile('main.tscn')` — see the dependency graph above).
+ */
+export function depChainFile(name: string): string {
+  return path.join(depChainDir(), name);
 }
 
 // res:// paths (Godot canonical) — depth-layer reference keys.
@@ -230,10 +214,8 @@ export async function primeResource(
 
   triggerMessage({ type: 'loadResource', ...resource });
 
-  const deadline = Date.now() + 5000;
-  while (Date.now() < deadline && countResponses() === responseBefore) {
-    await new Promise<void>((r) => setTimeout(r, 50));
-  }
+  // No describeFailure: a timeout is tolerated per the contract above.
+  await waitFor(() => countResponses() > responseBefore, 5000);
   // Drain any remaining async work.
   await new Promise<void>((r) => setTimeout(r, 100));
 }
@@ -271,29 +253,26 @@ export async function waitForResourceChanged(
   expectedPath: string,
   timeoutMs = 8000,
 ): Promise<void> {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    const found = sentMessages.some(
-      (m) => m.type === 'resourceChanged' && m.path === expectedPath,
-    );
-    if (found) {
-      return;
-    }
-    await new Promise<void>((r) => setTimeout(r, 50));
-  }
-  const seen = sentMessages
-    .flatMap((m) => (m.type === 'resourceChanged' ? [m.path] : []))
-    .join(', ');
-  const allTypes = sentMessages.map((m) => m.type).join(', ');
-  const errors = sentMessages
-    .filter((m) => m.type === 'resourceLoadError')
-    .map((m) => JSON.stringify(m))
-    .join('; ');
-  throw new Error(
-    `Timed out waiting for resourceChanged '${expectedPath}' after ${timeoutMs}ms. ` +
-      `resourceChanged paths seen: [${seen || 'none'}]. ` +
-      `All message types: [${allTypes || 'none'}]. ` +
-      `resourceLoadError messages: [${errors || 'none'}]`,
+  await waitFor(
+    () =>
+      sentMessages.some((m) => m.type === 'resourceChanged' && m.path === expectedPath),
+    timeoutMs,
+    () => {
+      const seen = sentMessages
+        .flatMap((m) => (m.type === 'resourceChanged' ? [m.path] : []))
+        .join(', ');
+      const allTypes = sentMessages.map((m) => m.type).join(', ');
+      const errors = sentMessages
+        .filter((m) => m.type === 'resourceLoadError')
+        .map((m) => JSON.stringify(m))
+        .join('; ');
+      return (
+        `Timed out waiting for resourceChanged '${expectedPath}' after ${timeoutMs}ms. ` +
+        `resourceChanged paths seen: [${seen || 'none'}]. ` +
+        `All message types: [${allTypes || 'none'}]. ` +
+        `resourceLoadError messages: [${errors || 'none'}]`
+      );
+    },
   );
 }
 

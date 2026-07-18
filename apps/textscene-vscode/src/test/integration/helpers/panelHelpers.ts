@@ -132,6 +132,36 @@ export function createTestPanel(
 }
 
 /**
+ * Poll every 50ms until `predicate()` is true or `timeoutMs` elapses — the ONE
+ * deadline/poll policy every integration-test wait builds on. Returns whether
+ * the predicate was satisfied. When `describeFailure` is given, a timeout
+ * throws with its message instead of returning `false` — rich diagnostics stay
+ * in the caller's closure.
+ */
+export async function waitFor(
+  predicate: () => boolean,
+  timeoutMs: number,
+  describeFailure?: () => string,
+): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (predicate()) {
+      return true;
+    }
+    await new Promise((r) => setTimeout(r, 50));
+  }
+  // Final check: the condition may have become true during the last sleep —
+  // without this, a loaded CI runner reports spurious timeouts.
+  if (predicate()) {
+    return true;
+  }
+  if (describeFailure) {
+    throw new Error(describeFailure());
+  }
+  return false;
+}
+
+/**
  * Wait for a specific message type to appear in `sentMessages`.
  */
 export async function waitForMessage(
@@ -139,15 +169,13 @@ export async function waitForMessage(
   messageType: string,
   timeout = 5000,
 ): Promise<HostToWebviewMessage> {
-  const deadline = Date.now() + timeout;
-  while (Date.now() < deadline) {
-    const found = sentMessages.find((m) => m.type === messageType);
-    if (found) {
-      return found;
-    }
-    await new Promise((r) => setTimeout(r, 50));
-  }
-  throw new Error(`Timed out waiting for message type '${messageType}' after ${timeout}ms`);
+  await waitFor(
+    () => sentMessages.some((m) => m.type === messageType),
+    timeout,
+    () => `Timed out waiting for message type '${messageType}' after ${timeout}ms`,
+  );
+  // waitFor threw on timeout, so the message is guaranteed present.
+  return sentMessages.find((m) => m.type === messageType)!;
 }
 
 /**

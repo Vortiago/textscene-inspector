@@ -1,5 +1,5 @@
 /**
- * Issue #221 — loading indicator: the fixture fetch has no pending state
+ * Loading indicator: the fixture fetch has no pending state
  * today (only success/failure), so a slow fixture load looks identical to a
  * stuck app. Reuses the `r3f-main.*.test.tsx` WebGL-mock pattern; the
  * fetch's `.text()` promise is held open with a manually-resolved deferred

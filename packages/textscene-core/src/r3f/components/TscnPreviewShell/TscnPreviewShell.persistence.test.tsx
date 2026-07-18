@@ -1,5 +1,5 @@
 /**
- * Persisted dock layout + viewport mode (#224). `usePersistedState` itself
+ * Persisted dock layout + viewport mode. `usePersistedState` itself
  * is unit-tested in isolation (usePersistedState.test.ts); this file only
  * proves the SHELL actually wires it up — a representative field from each
  * (dockCollapsed for layout, viewport mode for ViewportModeContext) rather

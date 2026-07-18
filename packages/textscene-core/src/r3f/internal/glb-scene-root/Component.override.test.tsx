@@ -15,7 +15,7 @@
  * baked translation, and asserts the override zeroes it so the mesh ends
  * up at the ceiling_lamp origin — co-located with the OmniLight3D.
  */
-import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode, TscnScene } from '../../../parser/types';
@@ -23,8 +23,7 @@ import { NodeDispatcher } from '../../NodeDispatcher';
 import { SelectionProvider } from '../../contexts/SelectionContext';
 import { SceneResourcesProvider } from '../../SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
-import { ResourceEventBus } from '../../../resources/ResourceEventBus';
-import { MetadataStore } from '../../../resources/MetadataStore';
+import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
 import { GLB_SCENE_ROOT_TYPE } from './Component';
 import { initGlbModules } from '../../../resources/processing/glbProcessing';
@@ -42,46 +41,6 @@ const GLB_PATH = 'res://assets/ceiling_lamp.glb';
 const LAMP_TSCN = 'res://assets/ceiling_lamp.tscn';
 const BAKED = { x: 1.1099722, y: -9.726781, z: -9.7296133 };
 const SCALE = 0.18924935;
-
-function makeLoader() {
-  const eventBus = new ResourceEventBus();
-  const metadata = new MetadataStore();
-  const sceneCache = new Map<string, TscnScene | null>();
-  const textureCache = new Map<string, THREE.Texture | null>();
-  const materialCache = new Map<string, THREE.Material | null>();
-  const glbCache = new Map<string, THREE.Object3D | null>();
-
-  const makeProc = <T,>(cache: Map<string, T | null>) => ({
-    request: vi.fn(),
-    getCached: (p: string) => cache.get(p),
-    isCached: (p: string) => cache.has(p),
-    isLoading: () => false,
-    clearCache: () => {},
-    getCacheSize: () => cache.size,
-    pin: () => {},
-    unpin: () => {},
-  });
-
-  const loader = {
-    eventBus,
-    metadata,
-    textures: makeProc<THREE.Texture>(textureCache),
-    materials: makeProc<THREE.Material>(materialCache),
-    glbMeshes: makeProc<THREE.Object3D>(glbCache),
-    scenes: makeProc<TscnScene>(sceneCache),
-    getSceneCached: (p: string) => sceneCache.get(p),
-    requestScene: vi.fn(),
-    register: vi.fn(),
-    provideFile: () => {},
-    clear: () => {},
-  } as unknown as ResourceLoader;
-
-  return {
-    loader,
-    setSceneCached: (p: string, s: TscnScene) => sceneCache.set(p, s),
-    setGlbCached: (p: string, o: THREE.Object3D) => glbCache.set(p, o),
-  };
-}
 
 /** Build a GLB-like scene: a Group root with one named child mesh at the baked translation. */
 function makeFakeGlb(): THREE.Object3D {
@@ -199,12 +158,12 @@ function findMeshWorldPosition(
 
 describe('GLBSceneRoot — BUG 2 instance override onto GLB-internal node', () => {
   it('zeroes the GLB plafoniera baked translation per the .tscn override', async () => {
-    const { loader, setSceneCached, setGlbCached } = makeLoader();
-    setSceneCached(LAMP_TSCN, makeCeilingLampScene());
-    setSceneCached(GLB_PATH, makeSynthesisedGlbScene());
-    setGlbCached(GLB_PATH, makeFakeGlb());
+    const fake = createFakeResourceLoader();
+    fake.scenes.seed(LAMP_TSCN, makeCeilingLampScene());
+    fake.scenes.seed(GLB_PATH, makeSynthesisedGlbScene());
+    fake.glbMeshes.seed(GLB_PATH, makeFakeGlb());
 
-    const renderer = await renderHallwayLamp(loader);
+    const renderer = await renderHallwayLamp(fake.loader);
 
     const pos = findMeshWorldPosition(renderer, 'plafoniera');
 
@@ -219,7 +178,7 @@ describe('GLBSceneRoot — BUG 2 instance override onto GLB-internal node', () =
   });
 
   it('leaves a GLB internal node untouched when the .tscn declares no override for it', async () => {
-    const { loader, setSceneCached, setGlbCached } = makeLoader();
+    const fake = createFakeResourceLoader();
 
     // ceiling_lamp.tscn with NO override children — the GLB should keep its
     // baked transform (we must not zero translations globally).
@@ -236,11 +195,11 @@ describe('GLBSceneRoot — BUG 2 instance override onto GLB-internal node', () =
       externalResources: [{ id: 'glb_1', path: GLB_PATH, type: 'PackedScene' }],
       internalResources: [],
     };
-    setSceneCached(LAMP_TSCN, noOverrideScene);
-    setSceneCached(GLB_PATH, makeSynthesisedGlbScene());
-    setGlbCached(GLB_PATH, makeFakeGlb());
+    fake.scenes.seed(LAMP_TSCN, noOverrideScene);
+    fake.scenes.seed(GLB_PATH, makeSynthesisedGlbScene());
+    fake.glbMeshes.seed(GLB_PATH, makeFakeGlb());
 
-    const renderer = await renderHallwayLamp(loader);
+    const renderer = await renderHallwayLamp(fake.loader);
     const pos = findMeshWorldPosition(renderer, 'plafoniera');
 
     // Baked translation survives: ceiling_lamp origin + baked.

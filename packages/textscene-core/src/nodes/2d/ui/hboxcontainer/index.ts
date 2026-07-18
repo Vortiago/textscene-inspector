@@ -12,3 +12,4 @@ nodeRegistry.register(hBoxContainerRegistration);
 
 export { hBoxContainerRegistration };
 export * from './parser';
+export * from './types';

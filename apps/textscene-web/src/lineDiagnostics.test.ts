@@ -1,5 +1,5 @@
 /**
- * Issue #202 — pure Diagnostic[] → per-line grouping + problem-count badge
+ * Pure Diagnostic[] → per-line grouping + problem-count badge
  * formatting. No WebGL, no React: this is the unit-testable seam the issue's
  * "Testing Decisions" section calls for, mirrored on the repo's existing
  * co-located pure-helper pattern (`sourceGate.ts` / `sourceGate.test.ts`).

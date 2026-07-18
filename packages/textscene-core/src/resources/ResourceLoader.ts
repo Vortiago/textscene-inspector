@@ -41,6 +41,7 @@ import { createGLBProcessor } from './processors/createGLBProcessor';
 import { createSceneProcessor } from './processors/createSceneProcessor';
 import { createTresResourceProcessor } from './processors/createTresResourceProcessor';
 import { createArrayMeshProcessor, type ArrayMeshResource } from './processors/createArrayMeshProcessor';
+import { runClearCachesSequence } from './clearCachesSequence';
 import type { ParsedTresFile } from '../parser/tresParser';
 import type { ResourceProcessor } from './createResourceProcessor';
 import * as logger from '../logger';
@@ -49,9 +50,9 @@ import * as logger from '../logger';
  * Returns the canonical ResourceType bus tag for a TSCN resource-type
  * string. PackedScene → 'scene', StandardMaterial3D → 'material', etc.
  * Used by `provideFile` to route a re-request through the right
- * processor.
+ * processor (exported so the test fake mirrors the same routing).
  */
-function busTypeFor(resourceType: string | undefined): ResourceType | null {
+export function busTypeFor(resourceType: string | undefined): ResourceType | null {
   if (!resourceType) return null;
   if (resourceType.includes('Texture')) return 'texture';
   if (resourceType.includes('Material')) return 'material';
@@ -226,13 +227,15 @@ export class ResourceLoader {
   /**
    * Clear all caches, metadata, and event subscribers.
    *
-   * #217: `eventBus.clear()` wipes EVERY subscriber, including the loader's
+   * `eventBus.clear()` wipes EVERY subscriber, including the loader's
    * own `setupFailureCallbacks` subscriptions — without re-registering them,
    * calling `clear()` on a live loader would permanently silence the
    * missing-resources reporting (`onResourceNeeded`) for the rest of that
    * loader's lifetime, with no error or warning to say so. Re-subscribing
    * here keeps `clear()` safe to call at any point; it only drops CALLER
    * subscribers (matching the doc below), never the loader's own plumbing.
+   * Teardown semantics — no `invalidated` announcements: subscribers are
+   * being dropped, so there is no audience by construction.
    */
   clear(): void {
     this.metadata.clear();
@@ -250,14 +253,22 @@ export class ResourceLoader {
    * Used when the active scene switches to a different vendored corpus whose
    * res:// namespace would otherwise alias the previous corpus's cache
    * entries (two demos both referencing e.g. `res://art/player.png`).
+   *
+   * The clear→announce→metadata-last choreography lives in
+   * `runClearCachesSequence` (shared with the test fake — order is the
+   * contract; see that module for the full rationale). PRECONDITION for
+   * hosts: repoint the provider / URL modifier BEFORE calling this —
+   * announced consumers refetch immediately under whatever provider state
+   * is current (the web host's switchCorpusRoot ordering does exactly this).
    */
   clearCaches(): void {
-    this._fileEventBus?.clearCache();
-    for (const proc of this.processors.values()) {
-      proc.clearCache();
-    }
-    this.metadata.clear();
-    logger.info('[ResourceLoader] Cleared caches (subscribers kept)');
+    runClearCachesSequence({
+      processors: this.processors,
+      eventBus: this.eventBus,
+      metadata: this.metadata,
+      clearFileBus: () => this._fileEventBus?.clearCache(),
+      log: () => logger.info('[ResourceLoader] Cleared caches (subscribers kept)'),
+    });
   }
 
   /**

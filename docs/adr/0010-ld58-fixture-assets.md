@@ -53,3 +53,24 @@ transforms, rotated planes, Control-heavy UI trees) without carrying any
 vendored asset or content. The `res://`-mirrored fixture layout described above
 is preserved as the historical record of how the closure was committed while
 this was a private repository; it no longer describes the current tree.
+
+## Amendment (2026-07-18): deployed, not committed
+
+The strip above governs the REPOSITORY only. The public web DEPLOYMENT
+(Cloudflare Pages today; whatever hosts `apps/textscene-web/dist` tomorrow)
+DOES carry the ld-58 corpus, alongside the vendored open-source games corpora —
+the hosted previewer is the showcase, and ld-58 is its richest real-world
+content. The decision rests on ownership: ld-58 is the author's own project, so
+redistributing its (script-stripped, music-omitted, texture-downscaled) assets
+on the author's own deployment needs no third-party licence. The earlier
+"don't publish ld-58 assets" note therefore narrows to: don't COMMIT them, and
+don't ship them in any artifact other than the web deployment (repo, npm
+packages, the VS Code extension, CI artifacts all stay clean).
+
+Mechanics: `pnpm build:site` vendors both corpora (`vendor:games`,
+`vendor:ld58` — the latter needs access to the private source repo),
+regenerates the fixture manifests, and produces the deployable
+`apps/textscene-web/dist`. Everything vendored stays gitignored; a deploy
+without private-repo access simply ships games-only. Old deployments made
+while the corpus was committed UNSTRIPPED should still be purged — the
+replacement deploy carries the script-stripped vendored form.

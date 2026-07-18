@@ -1,5 +1,5 @@
 /**
- * Issue #201 — Source pane slice 2: the pure renderable-gate helper (criterion 6).
+ * Source pane slice 2: the pure renderable-gate helper (criterion 6).
  *
  * RED contract. Pins the SEAM the slice must expose so the gate decision is unit-testable
  * without WebGL (the issue: "Extract the gate decision into a pure helper (given the buffer +

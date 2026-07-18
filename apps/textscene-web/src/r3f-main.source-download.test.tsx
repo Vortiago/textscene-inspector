@@ -1,5 +1,5 @@
 /**
- * Issue #203 — Source pane slice 4: download + paste-to-preview polish.
+ * Source pane slice 4: download + paste-to-preview polish.
  *
  * RED contract. Behavioral `<R3FApp>` tests reusing the `r3f-main.*.test.tsx`
  * WebGL-mock pattern (happy-dom has no WebGL; `TscnCanvas`/`TscnSceneContents`

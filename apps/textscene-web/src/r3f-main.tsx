@@ -20,7 +20,6 @@ import {
   type ChangeEvent,
   type DragEvent as ReactDragEvent,
   type MouseEvent as ReactMouseEvent,
-  type RefObject,
 } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
@@ -35,7 +34,7 @@ import { Linter, type Diagnostic } from '@textscene/core/linter';
 import { fixtures } from './fixturesAll';
 import { FixtureTreeView } from './FixtureTree';
 import { corpusRootFor } from './corpusRoot';
-import { useCorpusRoot } from './useCorpusRoot';
+import { switchCorpusRoot, useCorpusRoot } from './useCorpusRoot';
 import { WebResourceProvider } from './providers/WebResourceProvider';
 import {
   groupDiagnosticsByLine,
@@ -45,7 +44,12 @@ import {
 } from './lineDiagnostics';
 import { SourceGutter } from './SourceGutter';
 import { info, warn } from '@textscene/core/logger';
-import { pickRootMostTscn, matchResourceFiles, type MatchResult } from './multiFileUpload';
+import {
+  pickRootMostTscn,
+  matchResourceFiles,
+  extResourcePaths,
+  type MatchResult,
+} from './multiFileUpload';
 import { useSceneSource, DEBOUNCE_MS } from './useSceneSource';
 import { useFixtureSelection } from './useFixtureSelection';
 import styles from './r3f-main.module.css';
@@ -166,8 +170,18 @@ export function R3FApp() {
   // useSceneSource owns the hold-last-valid invariant's full span: fixture
   // fetch + cancellation + editedSinceLoad tracking + debounced edit forward +
   // authoritative replace (ADR-0020).
-  const { buffer, forwardedContent, isFetching: isFetchingFixture, loadError, onBufferChange: handleSourceChange, replace } =
+  const { buffer, forwardedContent, isFetching: isFetchingFixture, loadError, onBufferChange: handleSourceChange, replace, editedSinceLoad } =
     useSceneSource({ fixtureFile, uploadedTscnName });
+
+  // Edits are ephemeral (ADR-0020) — but the one-click switch affordances
+  // (fixture palette, the tree's ⤢ open-sub-scene, a scene-replacing drop)
+  // put total loss one misclick away, so loss must not be SILENT. Confirm
+  // before any scene replacement that would discard pane keystrokes.
+  const confirmDiscardEdits = () =>
+    !editedSinceLoad() ||
+    window.confirm(
+      'Discard your Source-pane edits? They are not saved anywhere — use "Download .tscn" first to keep them.'
+    );
 
   // Two error channels owned by different layers (uploadError here, loadError
   // inside useSceneSource) feed one toolbar banner, which must show whichever
@@ -187,11 +201,13 @@ export function R3FApp() {
   const dragCounterRef = useRef(0);
   const [dragActive, setDragActive] = useState(false);
 
-  // Stable ref that Toolbar writes on every missingPaths change. This lets
-  // handleFilesUpload (defined outside MissingResourcesProvider) read the
-  // latest missing set without lifting MissingResourcesProvider above
-  // TscnPreviewShell or re-rendering R3FApp on each missing-path change.
+  // Latest missing-paths set, fed by the shell's onMissingPathsChange. A ref,
+  // not state, so handleFilesUpload (outside MissingResourcesProvider) reads
+  // the current set without re-rendering R3FApp on each missing-path change.
   const missingPathsRef = useRef<ReadonlySet<string>>(new Set());
+  const handleMissingPathsChange = useCallback((paths: ReadonlySet<string>) => {
+    missingPathsRef.current = paths;
+  }, []);
 
   // Lint the buffer continuously, debounced at the same cadence as
   // useSceneSource's render-forward — but independent of its gate (a buffer
@@ -250,6 +266,13 @@ export function R3FApp() {
   }, [uploadedTscnName]);
 
   function handleFixtureChange(newFixture: string) {
+    // Re-selecting the already-active fixture is a state no-op (the fetch
+    // effect never re-runs) — return before the guard so the user isn't
+    // shown a "discard your edits?" prompt whose acceptance discards nothing.
+    if (newFixture === fixtureFile && !uploadedTscnName) return;
+    // Guards the fixture palette AND the tree's ⤢ open-sub-scene (which
+    // routes through here).
+    if (!confirmDiscardEdits()) return;
     // Switching to a fixture replaces any user-loaded TSCN content — and
     // supersedes any upload-path error still on screen.
     setUploadedTscnName(null);
@@ -267,11 +290,12 @@ export function R3FApp() {
   function handleTscnUpload(file: File, text: string) {
     setFixtureFile(NO_FIXTURE);
     setUploadedTscnName(file.name);
-    // An uploaded scene lives in the base ('') corpus. Sync the provider now,
+    // An uploaded scene lives in the base ('') corpus. Apply the switch now,
     // not just via useCorpusRoot's post-render effect: companion files added
-    // synchronously after this call (multi-file upload) must be keyed under
-    // the uploaded scene's corpus, not the fixture corpus being left behind.
-    provider.setResourceRoot('');
+    // synchronously after this call (multi-file upload) must be keyed — and
+    // URL-resolved — under the uploaded scene's corpus, not the fixture corpus
+    // being left behind. The hook's effect still settles the cache clear.
+    switchCorpusRoot(pipeline, '');
     replace(text);
   }
 
@@ -302,8 +326,8 @@ export function R3FApp() {
   // 1. Root-most scene pick: the .tscn whose basename no other dropped .tscn
   //    references becomes the active scene; tie/cycle falls back to first.
   // 2. Missing-list matching: every other file is matched against the picked
-  //    scene's ExtResources AND the current missing paths (read through
-  //    missingPathsRef), so a sub-scene's own dependencies arrive by
+  //    scene's ExtResources AND the current missing paths (as last reported
+  //    by the shell), so a sub-scene's own dependencies arrive by
   //    repeated drops.
   // 3. No-.tscn drop: when there are no .tscn files, attempt to fulfill the
   //    missing paths directly instead of surfacing an error.
@@ -311,9 +335,13 @@ export function R3FApp() {
     const missingPaths = missingPathsRef.current;
     const tscnFiles = files.filter((f) => f.name.toLowerCase().endsWith('.tscn'));
 
+    // A batch with a .tscn replaces the active scene (and the pane buffer);
+    // a resource-only batch fulfills missing rows without touching edits.
+    if (tscnFiles.length > 0 && !confirmDiscardEdits()) return;
+
     if (tscnFiles.length === 0) {
       // No .tscn — the drop can still fulfill currently-missing res:// rows.
-      const result = matchResourceFiles(null, files, missingPaths);
+      const result = matchResourceFiles([], files, missingPaths);
       if (result.matches.length === 0) {
         setUploadError('No .tscn file found among the dropped/selected files.');
         setNewestErrorChannel('upload');
@@ -337,18 +365,34 @@ export function R3FApp() {
       return;
     }
 
-    const { file: tscnFile, text, ambiguous } = pickRootMostTscn(tscnPairs);
-    if (ambiguous) {
+    const picked = pickRootMostTscn(tscnPairs);
+    if (picked.ambiguous) {
       info(
         '[MultiFileUpload] Could not determine root-most scene unambiguously; using first .tscn file.'
       );
     }
 
     setUploadError(null);
-    handleTscnUpload(tscnFile, text);
+    handleTscnUpload(picked.file, picked.text);
 
-    const others = files.filter((f) => f !== tscnFile);
-    applyMatchResult(matchResourceFiles(text, others, missingPaths));
+    const others = files.filter((f) => f !== picked.file);
+    if (others.length > 0) {
+      // Tier-2 (missing-list) matching exists for the repeated-drop workflow
+      // WITHIN the '' upload corpus. When this drop leaves a fixture corpus
+      // (resourceRoot !== ''), the outgoing scene's missing paths belong to a
+      // namespace the upload keying just abandoned — matching against them
+      // would silently store files under keys the new scene can never request.
+      const replaceMissingPaths = resourceRoot === '' ? missingPaths : new Set<string>();
+      // A multi-.tscn pick already parsed the scene — reuse those paths; a
+      // single-.tscn batch parses here, only because there are files to match.
+      applyMatchResult(
+        matchResourceFiles(
+          picked.extResourcePaths ?? extResourcePaths(picked.text),
+          others,
+          replaceMissingPaths
+        )
+      );
+    }
   }
 
   function handleDragEnter(e: ReactDragEvent) {
@@ -514,6 +558,7 @@ export function R3FApp() {
             }`}
             onResourceUpload={handleResourceUpload}
             onResourceRemove={handleResourceRemove}
+            onMissingPathsChange={handleMissingPathsChange}
             onOpenSubScene={handleOpenSubScene}
             toolbar={
               <Toolbar
@@ -523,7 +568,6 @@ export function R3FApp() {
                 loadError={effectiveLoadError}
                 onFixtureChange={handleFixtureChange}
                 onFilesSelected={handleFilesUpload}
-                missingPathsRef={missingPathsRef}
                 paneVisible={sourcePane.visible}
                 onTogglePane={() =>
                   setSourcePane((prev) => ({ ...prev, visible: !prev.visible }))
@@ -568,16 +612,10 @@ interface ToolbarProps {
   onFixtureChange: (value: string) => void;
   /**
    * One or more files picked via the file input — a scene plus, optionally,
-   * its resources. The handler reads the current missing-paths set through
-   * `missingPathsRef`.
+   * its resources. The handler matches them against the shell-reported
+   * missing-paths set.
    */
   onFilesSelected: (files: File[]) => void;
-  /**
-   * A ref the toolbar writes on every missingPaths change. Allows the upload
-   * handlers (outside MissingResourcesProvider) to read the latest missing
-   * set without re-rendering R3FApp on each change.
-   */
-  missingPathsRef: RefObject<ReadonlySet<string>>;
   paneVisible: boolean;
   onTogglePane: () => void;
   /** Compact problem-count text (e.g. "✖ 1 / ⚠ 2"), or `null` when the buffer is clean. */
@@ -616,7 +654,6 @@ function Toolbar({
   loadError,
   onFixtureChange,
   onFilesSelected,
-  missingPathsRef,
   paneVisible,
   onTogglePane,
   problemBadge,
@@ -634,12 +671,6 @@ function Toolbar({
   // new plumbing. Surfacing it here means a missing texture/scene is visible
   // without opening that tab first.
   const { missingPaths } = useMissingResources();
-
-  // Keep the outer drop handler's ref current so it can read missingPaths
-  // even though the drop target lives outside MissingResourcesProvider.
-  useEffect(() => {
-    missingPathsRef.current = missingPaths;
-  });
 
   // Built-in dev fixtures to switch between (drop the uploaded-placeholder
   // option, whose value is the empty sentinel).
@@ -763,10 +794,12 @@ function Toolbar({
         type="file"
         // Multi-select — a .tscn plus its resource files can be picked
         // in one gesture. `accept` covers the file kinds handleFilesUpload's
-        // basename-matching can actually resolve (mirrors the binary
-        // resource-extension list resourceProviderUtils.isBinaryResourceType
-        // uses to tell text vs. binary resources apart).
-        accept=".tscn,.glb,.gltf,.png,.jpg,.jpeg,.webp,.svg,.wav,.ogg,.mp3"
+        // basename-matching can actually resolve: the binary resource
+        // extensions (resourceProviderUtils.isBinaryResourceType) plus the
+        // text resources the pipeline routes (.tres materials/tilesets) —
+        // missing rows are routinely .tres, and drag-and-drop already
+        // accepts them, so the picker must too.
+        accept=".tscn,.tres,.glb,.gltf,.png,.jpg,.jpeg,.webp,.svg,.wav,.ogg,.mp3"
         multiple
         onChange={handleTscnFileChange}
         className={styles.srOnly}

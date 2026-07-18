@@ -1,7 +1,7 @@
 /**
- * #170 (parser subset) coverage contract — RED until the slice ships.
+ * Parser-subset coverage contract — written RED before the suites shipped.
  *
- * Issue #170 bundles six independent unit-test gaps. This slice carves the two
+ * From a bundle of six independent unit-test gaps, this slice carves the two
  * PURE-PARSER items (no R3F, no fixtures, no mocking):
  *   1. the base Node parser — a NEW co-located `node/parser.test.ts` covering
  *      parseNode(): name / parent / instance (raw ExtResource ref) / index /
