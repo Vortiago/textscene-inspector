@@ -41,7 +41,7 @@ The public-move step described above has run. `scenes/ld58/` is no longer
 committed — it is gitignored, and a contributor who wants the original vendored
 corpus locally (e.g. to re-derive a fixture) can re-vendor it with
 `pnpm vendor:ld58` (`scripts/vendor-ld58.mjs`), which is a manual, opt-in step
-against the private source, not part of `pnpm install` or CI. The showcase
+against the (public) source repo, not part of `pnpm install` or CI. The showcase
 clips and screenshots that depended on `scenes/ld58/` content were removed or
 re-recorded against synthetic/public fixtures.
 
@@ -68,9 +68,11 @@ don't ship them in any artifact other than the web deployment (repo, npm
 packages, the VS Code extension, CI artifacts all stay clean).
 
 Mechanics: `pnpm build:site` vendors both corpora (`vendor:games`,
-`vendor:ld58` — the latter needs access to the private source repo),
-regenerates the fixture manifests, and produces the deployable
-`apps/textscene-web/dist`. Everything vendored stays gitignored; a deploy
-without private-repo access simply ships games-only. Old deployments made
-while the corpus was committed UNSTRIPPED should still be purged — the
-replacement deploy carries the script-stripped vendored form.
+`vendor:ld58` — both public sources, anonymous fetch), regenerates the
+fixture manifests, and produces the deployable `apps/textscene-web/dist`.
+Everything vendored stays gitignored. Note the ld-58 SOURCE repo being
+public doesn't change this repo's stance: the corpus stays repo-external
+here (curated whitelist, script-strip) and reaches users only through the
+web deployment. Old deployments made while the corpus was committed
+UNSTRIPPED should still be purged — the replacement deploy carries the
+script-stripped vendored form.
