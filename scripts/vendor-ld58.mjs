@@ -7,12 +7,11 @@
  * and `pnpm generate:fixtures` writes its manifest to the gitignored
  * apps/textscene-web/src/fixtures.ld58.ts that fixturesAll.ts merges at runtime.
  *
- * The ld-58 repo is PRIVATE, so most contributors won't have access — that is
- * expected and fine: the previewer builds and every committed fixture works
- * without it. The DEPLOYED site, however, does include this corpus (ADR-0010
- * amendment): `pnpm build:site` vendors it (script-stripped) alongside the
- * games corpora before the production web build, so deploys need access to
- * the private source; contributors without access simply deploy without it.
+ * The ld-58 repo is public but repo-EXTERNAL: nothing here is committed, and
+ * the previewer builds and every committed fixture works without it. The
+ * DEPLOYED site does include this corpus (ADR-0010 amendment): `pnpm
+ * build:site` vendors it (script-stripped) alongside the games corpora
+ * before the production web build — anonymous fetch, no credentials needed.
  *
  * Usage:
  *   pnpm vendor:ld58                       # fetch the default repo @ main
@@ -50,9 +49,9 @@ const DEFAULT_URL = 'https://github.com/Vortiago/ld-58.git';
 /**
  * The exact source-relative paths to vendor (the res:// closure as curated at
  * the pre-strip commit). Kept verbatim so each scene's `res://…` references
- * resolve once mirrored under public/fixtures/. This is a deliberate whitelist
- * over a private repo — never derive it by walking the source, or newly added
- * private assets would be vendored silently. To re-list the original closure:
+ * resolve once mirrored under public/fixtures/. This is a deliberate curated
+ * whitelist — never derive it by walking the source, or newly added game
+ * assets would be vendored silently. To re-list the original closure:
  *   git ls-tree -r --name-only d7cc1791 scenes/ld58 | sed 's|^scenes/ld58/||'
  */
 const FILES = [
@@ -215,14 +214,13 @@ function main() {
       console.log('done');
     }
   } catch {
-    // Only source ACQUISITION gets the friendly no-stack message: the repo is
-    // private, so a fetch failure for contributors without access is expected.
+    // Only source ACQUISITION gets the friendly no-stack message — a fetch
+    // failure is a network/remote problem, not a bug in this script.
     console.error(
       `\n[vendor-ld58] Could not obtain the ld-58 source` +
         (srcArg ? ` from ${srcArg}.` : ` from ${url} (ref ${ref}).`) +
-        `\n  ld-58 is vendored from a private repo — most contributors will NOT` +
-        `\n  have access, and that's expected: the previewer builds and every` +
-        `\n  committed fixture works without it. If you have a local checkout, run:` +
+        `\n  The repo is public — check network access / the URL, or vendor from` +
+        `\n  a local checkout instead:` +
         `\n    pnpm vendor:ld58 --src /path/to/ld-58`
     );
     process.exitCode = 1;
