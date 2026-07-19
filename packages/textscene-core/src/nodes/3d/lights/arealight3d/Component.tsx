@@ -27,7 +27,7 @@ RectAreaLightUniformsLib.init();
 
 const DEFAULT_AREA_SIZE = { x: 1, y: 1 } as const;
 
-export function AreaLight3D({ node }: NodeComponentProps) {
+export function AreaLight3D({ node, children }: NodeComponentProps) {
   const properties = node.properties as AreaLight3DProperties;
   const lightRef = useRef<THREE.RectAreaLight | null>(null);
   const { position, rotation, scale } = useMemo(
@@ -47,6 +47,7 @@ export function AreaLight3D({ node }: NodeComponentProps) {
         width={width}
         height={height}
       />
+      {children}
     </group>
   );
 }

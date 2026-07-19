@@ -9,6 +9,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { rangeAdvisories } from '../../../linter/rangeAdvisory.js';
+import { unquoteString } from '../../../parser/utils.js';
 
 // Thresholds for warnings
 const MAX_NORMAL_PIXEL_SIZE = 1.0;
@@ -34,7 +35,7 @@ function checkLabel3D(context: RuleContext): Diagnostic[] {
 
   // WARN: Empty text
   if (rawProps.text !== undefined) {
-    const text = rawProps.text.replace(/^"(.*)"$/, '$1'); // Remove quotes
+    const text = unquoteString(rawProps.text);
     if (text === '') {
       diagnostics.push({
         severity: 'warning',

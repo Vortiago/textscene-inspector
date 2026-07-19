@@ -59,7 +59,7 @@ interface GLBSceneRootProperties {
 }
 
 
-export function GLBSceneRoot({ node }: NodeComponentProps) {
+export function GLBSceneRoot({ node, children }: NodeComponentProps) {
   // The synthesised node's `properties` slot is a Record<string, unknown>
   // populated by createSceneProcessor; cast through unknown so it
   // satisfies the Node3DProperties union the dispatcher carries.
@@ -175,14 +175,23 @@ export function GLBSceneRoot({ node }: NodeComponentProps) {
     restore,
   });
 
+  // `children` is the dispatched subtree the host scene parents under this
+  // GLB root (Godot parents an instanced scene's extra nodes to its root
+  // node). It does not depend on the GLB resolving, so every branch renders
+  // it — otherwise a slow or missing .glb silently deletes those nodes too.
   if (result.status === 'unavailable') {
-    return <MissingResourcePlaceholder shape="box" />;
+    return (
+      <>
+        <MissingResourcePlaceholder shape="box" />
+        {children}
+      </>
+    );
   }
   if (result.status === 'pending' || !object) {
-    return null;
+    return <>{children}</>;
   }
   // useResource already clones GLB Object3D per consumer to satisfy
   // three.js's "Object3D can only have one parent" invariant, so we
   // mount the returned ref directly via <primitive>.
-  return <primitive object={object} />;
+  return <primitive object={object}>{children}</primitive>;
 }

@@ -1,0 +1,35 @@
+[gd_scene load_steps=5 format=3 uid="uid://unitsubtreeleaf"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_host"]
+size = Vector3(1, 1, 1)
+
+[sub_resource type="SphereMesh" id="SphereMesh_child"]
+radius = 0.35
+height = 0.7
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_child"]
+albedo_color = Color(0.9, 0.25, 0.2, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_lightchild"]
+size = Vector3(0.6, 0.6, 0.6)
+
+[node name="SubtreeRoot" type="Node3D"]
+
+[node name="HostMesh" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.5, 0, 0)
+mesh = SubResource("BoxMesh_host")
+
+[node name="ChildOfMesh" type="MeshInstance3D" parent="HostMesh"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, 0)
+mesh = SubResource("SphereMesh_child")
+material_override = SubResource("StandardMaterial3D_child")
+
+[node name="HostLight" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 0, 0)
+light_energy = 2.0
+omni_range = 6.0
+
+[node name="ChildOfLight" type="MeshInstance3D" parent="HostLight"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, 0)
+mesh = SubResource("BoxMesh_lightchild")
+material_override = SubResource("StandardMaterial3D_child")

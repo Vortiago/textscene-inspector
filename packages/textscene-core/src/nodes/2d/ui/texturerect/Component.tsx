@@ -26,7 +26,7 @@ import { resolveExtResourcePath } from '../../../../resources/SubResourceResolve
 import { useResource } from '../../../../resources/useResource';
 import type { TextureRectProperties } from './types';
 
-export function TextureRect({ node }: ControlComponentProps) {
+export function TextureRect({ node, children }: ControlComponentProps) {
   const props = node.properties as TextureRectProperties;
   const parentKind = useControlParent();
   const { externalResources } = useSceneResources();
@@ -56,6 +56,7 @@ export function TextureRect({ node }: ControlComponentProps) {
         ) : (
           <img src={src} alt={node.name} style={textureRectFit(props)} />
         )}
+        {children}
       </div>
     );
   }
@@ -71,7 +72,9 @@ export function TextureRect({ node }: ControlComponentProps) {
         outline: '1px dashed #c792ea',
       }}
       title={path ?? 'no texture'}
-    />
+    >
+      {children}
+    </div>
   );
 }
 

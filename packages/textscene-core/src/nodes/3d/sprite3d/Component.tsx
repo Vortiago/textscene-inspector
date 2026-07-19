@@ -52,7 +52,7 @@ import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResou
 
 const DEFAULT_ALPHA_TEST = 0.5;
 
-export function Sprite3D({ node }: NodeComponentProps) {
+export function Sprite3D({ node, children }: NodeComponentProps) {
   const properties = node.properties as Sprite3DProperties;
   const { externalResources } = useSceneResources();
 
@@ -137,18 +137,34 @@ export function Sprite3D({ node }: NodeComponentProps) {
   // when a new one replaces it / on unmount.
   useEffect(() => () => geometry.dispose(), [geometry]);
 
+  // Descendants ride in a SIBLING group carrying the same transform rather
+  // than inside the sprite quad: `billboard` re-aims the quad at the camera,
+  // and in Godot that is a shader-side effect on the sprite alone — it never
+  // spins the node's children. Every branch below renders it, including the
+  // placeholder and pending ones, so a missing or slow texture cannot delete
+  // the subtree parented under the sprite.
+  const subtree =
+    children === undefined ? null : (
+      <group position={position} rotation={rotation} scale={scale}>
+        {children}
+      </group>
+    );
+
   // No texture path requested at all: render a stub placeholder so users
   // see that the sprite node exists in the scene even without a texture.
   // (Linter would already flag this as `sprite3d-requires-texture`.)
   if (!texturePath) {
     return (
-      <MissingResourcePlaceholder
-        shape="plane"
-        name={node.name}
-        position={position}
-        rotation={rotation}
-        scale={scale}
-      />
+      <>
+        <MissingResourcePlaceholder
+          shape="plane"
+          name={node.name}
+          position={position}
+          rotation={rotation}
+          scale={scale}
+        />
+        {subtree}
+      </>
     );
   }
 
@@ -156,13 +172,16 @@ export function Sprite3D({ node }: NodeComponentProps) {
   // label was moved to the DOM `<MissingResourcesPanel>`.
   if (texResult.status === 'unavailable') {
     return (
-      <MissingResourcePlaceholder
-        shape="plane"
-        name={node.name}
-        position={position}
-        rotation={rotation}
-        scale={scale}
-      />
+      <>
+        <MissingResourcePlaceholder
+          shape="plane"
+          name={node.name}
+          position={position}
+          rotation={rotation}
+          scale={scale}
+        />
+        {subtree}
+      </>
     );
   }
 
@@ -171,36 +190,42 @@ export function Sprite3D({ node }: NodeComponentProps) {
   // cycle once the host provides the file).
   if (!displayedTexture) {
     return (
-      <group
-        name={node.name}
-        position={position}
-        rotation={rotation}
-        scale={scale}
-        userData={{ billboardMode: properties.billboard, billboardAxis: properties.axis }}
-      />
+      <>
+        <group
+          name={node.name}
+          position={position}
+          rotation={rotation}
+          scale={scale}
+          userData={{ billboardMode: properties.billboard, billboardAxis: properties.axis }}
+        />
+        {subtree}
+      </>
     );
   }
 
   return (
-    <mesh
-      name={node.name}
-      position={position}
-      rotation={rotation}
-      scale={scale}
-      renderOrder={properties.render_priority}
-      userData={{ billboardMode: properties.billboard, billboardAxis: properties.axis }}
-    >
-      <primitive object={geometry} attach="geometry" />
-      <meshBasicMaterial
-        map={displayedTexture}
-        color={color}
-        opacity={opacity}
-        transparent={transparent}
-        alphaTest={alphaTest}
-        depthWrite={depthWrite}
-        side={properties.double_sided === false ? THREE.FrontSide : THREE.DoubleSide}
-      />
-    </mesh>
+    <>
+      <mesh
+        name={node.name}
+        position={position}
+        rotation={rotation}
+        scale={scale}
+        renderOrder={properties.render_priority}
+        userData={{ billboardMode: properties.billboard, billboardAxis: properties.axis }}
+      >
+        <primitive object={geometry} attach="geometry" />
+        <meshBasicMaterial
+          map={displayedTexture}
+          color={color}
+          opacity={opacity}
+          transparent={transparent}
+          alphaTest={alphaTest}
+          depthWrite={depthWrite}
+          side={properties.double_sided === false ? THREE.FrontSide : THREE.DoubleSide}
+        />
+      </mesh>
+      {subtree}
+    </>
   );
 }
 

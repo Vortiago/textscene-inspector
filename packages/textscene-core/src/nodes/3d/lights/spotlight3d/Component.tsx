@@ -14,7 +14,7 @@ import { LIGHT_INTENSITY_SCALE, DEFAULT_SHADOW_BIAS } from '../../../../r3f/ligh
 import { LightWithTarget } from '../shared/lightShared';
 import { SpotLightGizmo } from '../shared/lightHelpers';
 
-export function SpotLight3D({ node }: NodeComponentProps) {
+export function SpotLight3D({ node, children }: NodeComponentProps) {
   const properties = node.properties as SpotLight3DProperties;
   const lightRef = useRef<THREE.SpotLight | null>(null);
   const { position, rotation, scale } = useMemo(
@@ -63,6 +63,8 @@ export function SpotLight3D({ node }: NodeComponentProps) {
           <SpotLightGizmo lightRef={lightRef} />
         </>
       )}
-    />
+    >
+      {children}
+    </LightWithTarget>
   );
 }

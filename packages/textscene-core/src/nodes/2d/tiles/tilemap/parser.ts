@@ -6,7 +6,7 @@
  * renders, see tileData.ts).
  */
 
-import type { ParsedHeading } from '../../../../parser/utils';
+import { type ParsedHeading, unquoteString } from '../../../../parser/utils';
 import { parseNode2D } from '../../../base/node2d/parser';
 import { boolOr, intOr } from '../../../../parser/valueParsers';
 import { parseColor } from '../../../../utils/colorParser';
@@ -39,7 +39,7 @@ export function parseTileMap(
     .sort(([a], [b]) => a - b)
     .map(([index, props]): TileMapLayerData => {
       // `layer_0/name = "Ground"` — the raw value keeps its quotes.
-      const rawName = props.name?.replace(/^"(.*)"$/, '$1');
+      const rawName = props.name === undefined ? undefined : unquoteString(props.name);
       const layer: TileMapLayerData = {
         name: rawName || `Layer ${index}`,
         enabled: boolOr(props.enabled, true),

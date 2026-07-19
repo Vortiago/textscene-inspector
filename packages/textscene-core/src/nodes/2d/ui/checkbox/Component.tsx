@@ -13,7 +13,7 @@ import { controlLayoutStyle } from '../../../../r3f/controls/controlLayout';
 import { textThemeStyle } from '../../../../r3f/controls/textThemeStyle';
 import type { CheckBoxProperties } from './types';
 
-export function CheckBox({ node }: ControlComponentProps) {
+export function CheckBox({ node, children }: ControlComponentProps) {
   const props = node.properties as CheckBoxProperties;
   const parentKind = useControlParent();
   const style: CSSProperties = {
@@ -26,6 +26,7 @@ export function CheckBox({ node }: ControlComponentProps) {
   return (
     <div data-control-type="CheckBox" data-node-name={node.name} data-checked={props.buttonPressed ? 'true' : 'false'} style={style}>
       {props.text ?? ''}
+      {children}
     </div>
   );
 }

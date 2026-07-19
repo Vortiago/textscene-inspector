@@ -51,7 +51,7 @@ const TEXTURE_PROPERTIES = [
   'heightmap_texture',
 ] as const;
 
-export function MeshInstance3D({ node }: NodeComponentProps) {
+export function MeshInstance3D({ node, children }: NodeComponentProps) {
   const properties = node.properties as MeshInstance3DProperties;
   const { internalResources, externalResources } = useSceneResources();
 
@@ -247,7 +247,15 @@ export function MeshInstance3D({ node }: NodeComponentProps) {
   const visible = properties.visible !== false && !shadowFlags.shadowsOnly;
 
   // Every render branch wraps its content in the same attribute shell.
-  const shellProps = { name: node.name, position, rotation, scale, visible, castShadow };
+  const shellProps = {
+    name: node.name,
+    position,
+    rotation,
+    scale,
+    visible,
+    castShadow,
+    subtree: children,
+  };
 
   // Unresolved mesh (no mesh, external GLB, missing SubResource): magenta
   // wireframe placeholder. An external ArrayMesh (`arrayMeshPath`) is NOT
@@ -273,7 +281,9 @@ export function MeshInstance3D({ node }: NodeComponentProps) {
         </MeshShell>
       );
     }
-    if (!arrayMeshResult.value) return null;
+    // Still loading: draw no geometry, but keep the shell so the node's own
+    // descendants (which do not depend on the .tres) stay mounted meanwhile.
+    if (!arrayMeshResult.value) return <MeshShell {...shellProps}>{null}</MeshShell>;
 
     // Loaded external ArrayMesh: render the decoded geometry with one material
     // per surface (draw group). Each surface's StandardMaterial3D `.tres` is
@@ -353,17 +363,34 @@ interface MeshShellProps {
   scale: [number, number, number];
   visible: boolean;
   castShadow: boolean;
+  /** The dispatched scene-tree subtree parented under this MeshInstance3D. */
+  subtree: ReactNode;
   children: ReactNode;
 }
 
 /**
  * Shared attribute shell for every `<mesh>` branch in MeshInstance3D.
  * All five branches (placeholder, unavailable ArrayMesh, loading ArrayMesh,
- * missing-texture and fully-resolved) set the same six positional/visibility
- * props; this helper keeps them in one place so a future prop rename or
- * addition only changes one definition.
+ * missing-texture and fully-resolved) set the same props; this helper keeps
+ * them in one place so a future prop rename or addition only changes one
+ * definition.
+ *
+ * `children` is the geometry/material slot each branch fills; `subtree` is the
+ * node's own scene-tree descendants, which render inside the mesh so they
+ * inherit its transform (Godot draws children after, and relative to, the
+ * node). Every branch — including the ones that draw a placeholder — must pass
+ * it, or the descendants vanish with the mesh.
  */
-function MeshShell({ name, position, rotation, scale, visible, castShadow, children }: MeshShellProps) {
+function MeshShell({
+  name,
+  position,
+  rotation,
+  scale,
+  visible,
+  castShadow,
+  subtree,
+  children,
+}: MeshShellProps) {
   return (
     <mesh
       name={name}
@@ -375,6 +402,7 @@ function MeshShell({ name, position, rotation, scale, visible, castShadow, child
       receiveShadow
     >
       {children}
+      {subtree}
     </mesh>
   );
 }

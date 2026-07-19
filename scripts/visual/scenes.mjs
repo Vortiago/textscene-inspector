@@ -34,6 +34,12 @@ export const GOLDEN_SCENES = [
   // explicitly, which is why a wrong default (CSGBox3D 2,2,2 vs Godot's 1,1,1)
   // sat unnoticed. The 1x1 ruler plate underneath gives the eyeball a scale.
   { name: 'csg-defaults', file: 'unit-csg-defaults.tscn' },
+  // Nodes parented UNDER a MeshInstance3D and an OmniLight3D. Both components
+  // used to destructure only `node` and silently delete the subtree the
+  // dispatcher handed them (144 authored child nodes across 19 vendored demo
+  // scenes). Every other 3D fixture hangs its content off Node3D, so nothing
+  // in the golden set could see it.
+  { name: 'subtree-under-leaf-nodes', file: 'unit-subtree-under-leaf-nodes.tscn' },
   // External ArrayMesh .tres: decoded quad with Godot's packed normals. Loads
   // a local resource (deterministic), gated by the two-identical-frames settle.
   { name: 'arraymesh', file: 'unit-arraymesh.tscn' },

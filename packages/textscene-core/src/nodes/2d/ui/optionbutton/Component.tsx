@@ -22,7 +22,7 @@ const DROPDOWN_DEFAULTS: CSSProperties = {
   color: '#e8e8ea',
 };
 
-export function OptionButton({ node }: ControlComponentProps) {
+export function OptionButton({ node, children }: ControlComponentProps) {
   const props = node.properties as OptionButtonProperties;
   const parentKind = useControlParent();
   const style: CSSProperties = {
@@ -44,6 +44,7 @@ export function OptionButton({ node }: ControlComponentProps) {
   return (
     <div data-control-type="OptionButton" data-node-name={node.name} style={style}>
       {selectedItem?.text ?? ''}
+      {children}
     </div>
   );
 }

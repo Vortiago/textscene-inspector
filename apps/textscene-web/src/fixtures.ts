@@ -273,6 +273,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Subtree Under Leaf Nodes",
+    "file": "unit-subtree-under-leaf-nodes.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Surface Material Override",
     "file": "unit-surface-material-override.tscn",
     "category": "Other"
@@ -725,6 +730,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Control Instanced Hud",
     "file": "unit-control-instanced-hud.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Control Nested Children",
+    "file": "unit-control-nested-children.tscn",
     "category": "Unit - 2D UI Controls"
   },
   {

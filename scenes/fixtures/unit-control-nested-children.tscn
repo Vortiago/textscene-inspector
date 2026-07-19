@@ -1,0 +1,51 @@
+[gd_scene load_steps=2 format=3 uid="uid://unitctrlnestedchildren"]
+
+[ext_resource type="Texture2D" path="res://textures/checkerboard.svg" id="1_tex"]
+
+[node name="NestedChildrenRoot" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_right = 0.0
+offset_bottom = 0.0
+
+[node name="Rows" type="VBoxContainer" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_right = 0.0
+offset_bottom = 0.0
+
+[node name="HostLabel" type="Label" parent="Rows"]
+text = "HOST LABEL"
+
+[node name="UnderLabel" type="Label" parent="Rows/HostLabel"]
+text = "UNDER LABEL"
+
+[node name="HostCheckBox" type="CheckBox" parent="Rows"]
+button_pressed = true
+text = "HOST CHECKBOX"
+
+[node name="UnderCheckBox" type="Label" parent="Rows/HostCheckBox"]
+text = "UNDER CHECKBOX"
+
+[node name="HostOptionButton" type="OptionButton" parent="Rows"]
+item_count = 1
+popup/item_0/text = "HOST OPTION"
+popup/item_0/id = 0
+
+[node name="UnderOptionButton" type="Label" parent="Rows/HostOptionButton"]
+text = "UNDER OPTION"
+
+[node name="HostTextureRect" type="TextureRect" parent="Rows"]
+texture = ExtResource("1_tex")
+
+[node name="UnderTextureRect" type="Label" parent="Rows/HostTextureRect"]
+text = "UNDER TEXTURE"
+
+[node name="HostRichTextLabel" type="RichTextLabel" parent="Rows"]
+bbcode_enabled = true
+text = "HOST RICHTEXT"
+
+[node name="UnderRichTextLabel" type="Label" parent="Rows/HostRichTextLabel"]
+text = "UNDER RICHTEXT"

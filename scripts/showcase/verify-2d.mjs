@@ -53,6 +53,25 @@ const TARGETS = [
     'unit-control-instanced-hud.tscn',
     { minControls: 5, types: ['Label', 'TextureRect'], texts: ['HUD LAYER', 'BADGE'] },
   ],
+  // A Control parented to each of the five Control types that used to render
+  // only `node` and drop the `children` ControlDispatcher handed them. Every
+  // other 2D fixture nests under containers, which forward children, so the
+  // loss was invisible: the five UNDER * strings are what proves it.
+  [
+    'control-nested-children',
+    'unit-control-nested-children.tscn',
+    {
+      minControls: 11,
+      types: ['Label', 'CheckBox', 'OptionButton', 'TextureRect', 'RichTextLabel'],
+      texts: [
+        'UNDER LABEL',
+        'UNDER CHECKBOX',
+        'UNDER OPTION',
+        'UNDER TEXTURE',
+        'UNDER RICHTEXT',
+      ],
+    },
+  ],
 ];
 
 mkdirSync(OUT, { recursive: true });

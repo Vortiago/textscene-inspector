@@ -45,4 +45,27 @@ export interface Label3DProperties extends Node3DProperties {
 
   /** Visible from behind (Godot default true → THREE.DoubleSide). */
   double_sided: boolean;
+
+  /** Glyph size in Godot pixels; drives the quad's world size (default 32). */
+  font_size: number;
+
+  /**
+   * Extra vertical space between lines, in Godot pixels, added to each line's
+   * descent (default 0). May be negative.
+   */
+  line_spacing: number;
+
+  /** Horizontal alignment of each line within the quad (default 1 = CENTER). */
+  horizontal_alignment: HorizontalAlignment;
+
+  /** Draw on top of everything regardless of depth (default false). */
+  no_depth_test: boolean;
+}
+
+/** Godot's `HorizontalAlignment` enum, as it appears in `.tscn` files. */
+export enum HorizontalAlignment {
+  LEFT = 0,
+  CENTER = 1,
+  RIGHT = 2,
+  FILL = 3,
 }

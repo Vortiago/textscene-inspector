@@ -19,9 +19,22 @@ export interface LightWithTargetProps {
    * the light should point at; pass it as the light's `target` prop.
    */
   renderLight: (target: THREE.Object3D) => ReactNode;
+  /**
+   * The node's dispatched scene-tree descendants. A light is an ordinary
+   * Node3D in Godot, so anything parented under it renders at its own
+   * transform relative to the light's.
+   */
+  children?: ReactNode;
 }
 
-export function LightWithTarget({ name, position, rotation, scale, renderLight }: LightWithTargetProps) {
+export function LightWithTarget({
+  name,
+  position,
+  rotation,
+  scale,
+  renderLight,
+  children,
+}: LightWithTargetProps) {
   const targetRef = useRef<THREE.Object3D>(new THREE.Object3D());
 
   // Lazily initialised once; expose target via ref for the renderLight closure.
@@ -34,6 +47,7 @@ export function LightWithTarget({ name, position, rotation, scale, renderLight }
     <group name={name} position={position} rotation={rotation} scale={scale}>
       {renderLight(targetRef.current)}
       <primitive object={targetRef.current} position={[0, 0, -1]} />
+      {children}
     </group>
   );
 }
