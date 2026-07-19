@@ -33,7 +33,7 @@ import {
 import { Linter, type Diagnostic } from '@textscene/core/linter';
 import { fixtures } from './fixturesAll';
 import { FixtureTreeView } from './FixtureTree';
-import { corpusRootFor } from './corpusRoot';
+import { corpusRootFor, resToFixtureFile, fixtureFileToRes } from './corpusRoot';
 import { switchCorpusRoot, useCorpusRoot } from './useCorpusRoot';
 import { WebResourceProvider } from './providers/WebResourceProvider';
 import {
@@ -283,8 +283,7 @@ export function R3FApp() {
   // "Open sub-scene standalone": map an instance's res:// path onto the active
   // corpus root → fixture file, and load it as its own scene (≈ Open in Editor).
   function handleOpenSubScene(scenePath: string) {
-    const rest = scenePath.startsWith('res://') ? scenePath.slice('res://'.length) : scenePath;
-    handleFixtureChange(resourceRoot ? `${resourceRoot}/${rest}` : rest);
+    handleFixtureChange(resToFixtureFile(scenePath, resourceRoot));
   }
 
   function handleTscnUpload(file: File, text: string) {
@@ -548,14 +547,13 @@ export function R3FApp() {
           <TscnPreviewShell
             panelId={`web-${fixtureFile || uploadedTscnName || 'empty'}`}
             content={forwardedContent}
-            rootScenePath={`res://${
-              // The scene's res:// identity is relative to its corpus root.
-              (resourceRoot && fixtureFile.startsWith(`${resourceRoot}/`)
-                ? fixtureFile.slice(resourceRoot.length + 1)
-                : fixtureFile) ||
-              uploadedTscnName ||
-              'empty.tscn'
-            }`}
+            rootScenePath={
+              // The scene's res:// identity is relative to its corpus root; an
+              // uploaded scene (no fixture file) is named by its upload name.
+              fixtureFile
+                ? fixtureFileToRes(fixtureFile, resourceRoot)
+                : `res://${uploadedTscnName || 'empty.tscn'}`
+            }
             onResourceUpload={handleResourceUpload}
             onResourceRemove={handleResourceRemove}
             onMissingPathsChange={handleMissingPathsChange}

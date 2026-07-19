@@ -8,6 +8,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
+import { rangeAdvisories } from '../../../linter/rangeAdvisory.js';
 
 // Thresholds for warnings
 const MAX_NORMAL_PIXEL_SIZE = 1.0;
@@ -45,19 +46,19 @@ function checkLabel3D(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // WARN: Very large pixel_size (likely unintentional)
-  if (rawProps.pixel_size !== undefined) {
-    const pixelSize = parseFloat(rawProps.pixel_size);
-    if (!isNaN(pixelSize) && pixelSize > MAX_NORMAL_PIXEL_SIZE) {
-      diagnostics.push({
-        severity: 'warning',
-        message: `Label3D pixel_size is very large (${pixelSize}). Values above ${MAX_NORMAL_PIXEL_SIZE} may create unexpectedly large text in the scene.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'label3d-large-pixel-size',
-      });
-    }
-  }
+  // Range advisory: very large pixel_size (likely unintentional).
+  diagnostics.push(
+    ...rangeAdvisories(node, {
+      pixel_size: [
+        {
+          over: MAX_NORMAL_PIXEL_SIZE,
+          ruleName: 'label3d-large-pixel-size',
+          message: (pixelSize) =>
+            `Label3D pixel_size is very large (${pixelSize}). Values above ${MAX_NORMAL_PIXEL_SIZE} may create unexpectedly large text in the scene.`,
+        },
+      ],
+    })
+  );
 
   return diagnostics;
 }

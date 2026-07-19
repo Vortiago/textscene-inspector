@@ -8,6 +8,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
+import { rangeAdvisories } from '../../../linter/rangeAdvisory.js';
 
 // Thresholds for warnings
 const MIN_NEAR_CLIPPING_WARNING = 0.01;
@@ -51,13 +52,12 @@ function checkCamera3D(context: RuleContext): Diagnostic[] {
     });
   }
 
-  // Validate clipping planes relationship
+  // ERROR: near must be less than far (cross-field consistency, not a range advisory)
   if (rawProps.near !== undefined && rawProps.far !== undefined) {
     const near = parseFloat(rawProps.near);
     const far = parseFloat(rawProps.far);
 
     if (!isNaN(near) && !isNaN(far)) {
-      // ERROR: near must be less than far
       if (near >= far) {
         diagnostics.push({
           severity: 'error',
@@ -70,57 +70,41 @@ function checkCamera3D(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // Warn if near is very small (can cause z-fighting)
-  if (rawProps.near !== undefined) {
-    const near = parseFloat(rawProps.near);
-    if (!isNaN(near) && near < MIN_NEAR_CLIPPING_WARNING) {
-      diagnostics.push({
-        severity: 'warning',
-        message: `Camera3D 'near' clipping plane is very small (${near}). Values below ${MIN_NEAR_CLIPPING_WARNING} can cause z-fighting and depth precision issues.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'camera3d-small-near-plane',
-      });
-    }
-  }
-
-  // Warn if far is very large (can cause precision issues)
-  if (rawProps.far !== undefined) {
-    const far = parseFloat(rawProps.far);
-    if (!isNaN(far) && far > MAX_FAR_CLIPPING_WARNING) {
-      diagnostics.push({
-        severity: 'warning',
-        message: `Camera3D 'far' clipping plane is very large (${far}). Values above ${MAX_FAR_CLIPPING_WARNING} can cause depth precision issues and reduce rendering quality.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'camera3d-large-far-plane',
-      });
-    }
-  }
-
-  // Warn if fov is extreme (unusual for games)
-  if (rawProps.fov !== undefined) {
-    const fov = parseFloat(rawProps.fov);
-    if (!isNaN(fov)) {
-      if (fov < MIN_NORMAL_FOV) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `Camera3D field of view is very narrow (${fov} degrees). Values below ${MIN_NORMAL_FOV} degrees are unusual for games and may create a 'tunnel vision' effect.`,
-          nodeName: node.name,
-          nodeType: node.type,
+  // Range advisories: tiny near plane, huge far plane, extreme fov.
+  diagnostics.push(
+    ...rangeAdvisories(node, {
+      near: [
+        {
+          under: MIN_NEAR_CLIPPING_WARNING,
+          ruleName: 'camera3d-small-near-plane',
+          message: (near) =>
+            `Camera3D 'near' clipping plane is very small (${near}). Values below ${MIN_NEAR_CLIPPING_WARNING} can cause z-fighting and depth precision issues.`,
+        },
+      ],
+      far: [
+        {
+          over: MAX_FAR_CLIPPING_WARNING,
+          ruleName: 'camera3d-large-far-plane',
+          message: (far) =>
+            `Camera3D 'far' clipping plane is very large (${far}). Values above ${MAX_FAR_CLIPPING_WARNING} can cause depth precision issues and reduce rendering quality.`,
+        },
+      ],
+      fov: [
+        {
+          under: MIN_NORMAL_FOV,
           ruleName: 'camera3d-extreme-fov',
-        });
-      } else if (fov > MAX_NORMAL_FOV) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `Camera3D field of view is very wide (${fov} degrees). Values above ${MAX_NORMAL_FOV} degrees are unusual for games and may cause distortion at screen edges.`,
-          nodeName: node.name,
-          nodeType: node.type,
+          message: (fov) =>
+            `Camera3D field of view is very narrow (${fov} degrees). Values below ${MIN_NORMAL_FOV} degrees are unusual for games and may create a 'tunnel vision' effect.`,
+        },
+        {
+          over: MAX_NORMAL_FOV,
           ruleName: 'camera3d-extreme-fov',
-        });
-      }
-    }
-  }
+          message: (fov) =>
+            `Camera3D field of view is very wide (${fov} degrees). Values above ${MAX_NORMAL_FOV} degrees are unusual for games and may cause distortion at screen edges.`,
+        },
+      ],
+    })
+  );
 
   return diagnostics;
 }

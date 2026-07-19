@@ -7,28 +7,22 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { checkLightEnergy } from '../shared/linterChecks.js';
-import { isValidProperties } from '../../../../linter/linterUtils.js';
+import { rangeAdvisories } from '../../../../linter/rangeAdvisory.js';
+import { lightEnergyArms } from '../shared/linterChecks.js';
 
 /**
  * Validate AreaLight3D semantic rules
  */
 function checkAreaLight3D(context: RuleContext): Diagnostic[] {
-  const diagnostics: Diagnostic[] = [];
   const { node } = context;
 
   if (node.type !== 'AreaLight3D') {
-    return diagnostics;
+    return [];
   }
 
-  if (!isValidProperties(node.properties)) {
-    return diagnostics;
-  }
-
-  const rawProps = node.properties as Record<string, string>;
-  checkLightEnergy(rawProps, node.name, node.type, 'arealight3d', diagnostics);
-
-  return diagnostics;
+  return rangeAdvisories(node, {
+    light_energy: lightEnergyArms('arealight3d'),
+  });
 }
 
 /**

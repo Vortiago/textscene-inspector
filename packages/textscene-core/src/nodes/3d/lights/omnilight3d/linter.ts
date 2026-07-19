@@ -7,8 +7,8 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { isValidProperties } from '../../../../linter/linterUtils.js';
-import { checkLightEnergy } from '../shared/linterChecks.js';
+import { rangeAdvisories } from '../../../../linter/rangeAdvisory.js';
+import { lightEnergyArms, lightRangeArms } from '../shared/linterChecks.js';
 
 // Thresholds for warnings
 const LARGE_OMNI_RANGE = 1000;
@@ -20,72 +20,31 @@ const EXTREME_OMNI_ATTENUATION_MAX = 5;
  * Validate OmniLight3D semantic rules
  */
 function checkOmniLight3D(context: RuleContext): Diagnostic[] {
-  const diagnostics: Diagnostic[] = [];
   const { node } = context;
 
   // Only run for OmniLight3D nodes
   if (node.type !== 'OmniLight3D') {
-    return diagnostics;
+    return [];
   }
 
-  // Type guard for properties
-  if (!isValidProperties(node.properties)) {
-    return diagnostics;
-  }
-
-  const rawProps = node.properties as Record<string, string>;
-
-  checkLightEnergy(rawProps, node.name, node.type, 'omnilight3d', diagnostics);
-
-  // Warn if omni_range is very large (performance concern)
-  if (rawProps.omni_range !== undefined) {
-    const range = parseFloat(rawProps.omni_range);
-    if (!isNaN(range)) {
-      if (range > LARGE_OMNI_RANGE) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `Light range is very large (${range}). Values above ${LARGE_OMNI_RANGE} can impact performance significantly.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: 'omnilight3d-large-range',
-        });
-      } else if (range < SMALL_OMNI_RANGE) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `Light range is very small (${range}). Values below ${SMALL_OMNI_RANGE} might not be visible.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: 'omnilight3d-small-range',
-        });
-      }
-    }
-  }
-
-  // Warn if omni_attenuation is extreme
-  if (rawProps.omni_attenuation !== undefined) {
-    const attenuation = parseFloat(rawProps.omni_attenuation);
-    if (!isNaN(attenuation)) {
-      if (attenuation < EXTREME_OMNI_ATTENUATION_MIN) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `Light attenuation is very low (${attenuation}). Values below ${EXTREME_OMNI_ATTENUATION_MIN} result in very slow falloff.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: 'omnilight3d-extreme-attenuation',
-        });
-      } else if (attenuation > EXTREME_OMNI_ATTENUATION_MAX) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `Light attenuation is very high (${attenuation}). Values above ${EXTREME_OMNI_ATTENUATION_MAX} can impact performance if range is also large.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: 'omnilight3d-extreme-attenuation',
-        });
-      }
-    }
-  }
-
-  return diagnostics;
+  return rangeAdvisories(node, {
+    light_energy: lightEnergyArms('omnilight3d'),
+    omni_range: lightRangeArms('omnilight3d', LARGE_OMNI_RANGE, SMALL_OMNI_RANGE),
+    omni_attenuation: [
+      {
+        under: EXTREME_OMNI_ATTENUATION_MIN,
+        ruleName: 'omnilight3d-extreme-attenuation',
+        message: (attenuation) =>
+          `Light attenuation is very low (${attenuation}). Values below ${EXTREME_OMNI_ATTENUATION_MIN} result in very slow falloff.`,
+      },
+      {
+        over: EXTREME_OMNI_ATTENUATION_MAX,
+        ruleName: 'omnilight3d-extreme-attenuation',
+        message: (attenuation) =>
+          `Light attenuation is very high (${attenuation}). Values above ${EXTREME_OMNI_ATTENUATION_MAX} can impact performance if range is also large.`,
+      },
+    ],
+  });
 }
 
 /**

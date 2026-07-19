@@ -11,7 +11,7 @@
 import { useEffect, useRef } from 'react';
 import type { ResourcePipeline } from '@textscene/core';
 import type { WebResourceProvider } from './providers/WebResourceProvider';
-import { fixtureUrlForRes } from './corpusRoot';
+import { fixtureUrlForGltfUri } from './corpusRoot';
 
 /**
  * Apply the synchronous half of a corpus-root switch: route the provider's
@@ -30,7 +30,7 @@ export function switchCorpusRoot(
   const { provider, loader } = pipeline;
   provider.setResourceRoot(resourceRoot);
   loader.eventBus.getThreeManager().setURLModifier(
-    (url: string) => fixtureUrlForRes(url, resourceRoot)
+    (url: string) => fixtureUrlForGltfUri(url, resourceRoot)
   );
 }
 

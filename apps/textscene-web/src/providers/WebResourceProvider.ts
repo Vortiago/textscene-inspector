@@ -5,6 +5,7 @@
 
 import { isBinaryResourceType, info, warn } from '@textscene/core';
 import type { ResourceProvider } from '@textscene/core';
+import { fixtureUrlForRes } from '../corpusRoot';
 
 export class WebResourceProvider implements ResourceProvider {
   /** Uploaded files, keyed per corpus root via {@link uploadKey}. */
@@ -74,9 +75,7 @@ export class WebResourceProvider implements ResourceProvider {
     if (path.startsWith('res://')) {
       try {
         // Convert Godot path to fixture path under the active corpus root.
-        const filename = path.replace('res://', '');
-        const prefix = this.resourceRoot ? `${this.resourceRoot}/` : '';
-        const fixtureUrl = `/fixtures/${prefix}${filename}`;
+        const fixtureUrl = fixtureUrlForRes(path, this.resourceRoot);
 
         info(`[WebResourceProvider] Attempting to fetch ${type}: ${fixtureUrl}`);
         const response = await fetch(fixtureUrl);

@@ -8,6 +8,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
+import { rangeAdvisories } from '../../../linter/rangeAdvisory.js';
 import { extractLibraries, stripQuotes } from './parser.js';
 import { resolveAnimations } from './animationResolver.js';
 
@@ -140,19 +141,19 @@ function checkAnimationPlayer(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // WARNING: Large blend time
-  if (rawProps.playback_default_blend_time !== undefined) {
-    const blendTime = parseFloat(rawProps.playback_default_blend_time);
-    if (!isNaN(blendTime) && blendTime > 2.0) {
-      diagnostics.push({
-        severity: 'warning',
-        message: `AnimationPlayer 'playback_default_blend_time' is large (${blendTime} seconds). Long blend times may cause noticeable delays between animation transitions.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'animationplayer-large-blend-time',
-      });
-    }
-  }
+  // WARNING: Large blend time (range advisory)
+  diagnostics.push(
+    ...rangeAdvisories(node, {
+      playback_default_blend_time: [
+        {
+          over: 2.0,
+          ruleName: 'animationplayer-large-blend-time',
+          message: (blendTime) =>
+            `AnimationPlayer 'playback_default_blend_time' is large (${blendTime} seconds). Long blend times may cause noticeable delays between animation transitions.`,
+        },
+      ],
+    })
+  );
 
   // Warning: playback_active is false
   if (rawProps.playback_active === 'false') {

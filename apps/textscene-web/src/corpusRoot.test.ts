@@ -1,11 +1,17 @@
 /**
- * corpusRootFor — which public/fixtures subtree a fixture file's res://
- * namespace maps onto. Manifest entries carry it; unlisted demo subscenes
- * (deep links — the selector only lists each demo's main scene) derive it
- * from their demos/<top>/<project>/ prefix.
+ * The corpus ↔ res:// boundary: `corpusRootFor` derives which public/fixtures
+ * subtree a fixture file maps onto; `resToFixtureFile` / `fixtureFileToRes` are
+ * the inverse pair between a res:// path and its fixtures file; `fixtureUrlForRes`
+ * / `fixtureUrlForGltfUri` derive the fetch URL (the latter decodes glTF URIs).
  */
 import { describe, it, expect } from 'vitest';
-import { corpusRootFor, fixtureUrlForRes } from './corpusRoot';
+import {
+  corpusRootFor,
+  resToFixtureFile,
+  fixtureFileToRes,
+  fixtureUrlForRes,
+  fixtureUrlForGltfUri,
+} from './corpusRoot';
 import type { Fixture } from './fixtures';
 
 const manifest: Fixture[] = [
@@ -54,6 +60,42 @@ describe('corpusRootFor', () => {
   });
 });
 
+describe('resToFixtureFile / fixtureFileToRes (bijection)', () => {
+  it('maps a res:// path onto its fixtures file under the active root', () => {
+    expect(resToFixtureFile('res://level/level.tscn', 'demos/2d/platformer')).toBe(
+      'demos/2d/platformer/level/level.tscn'
+    );
+    expect(resToFixtureFile('res://unit-plane-mesh.tscn', '')).toBe('unit-plane-mesh.tscn');
+  });
+
+  it('prefixes a non-res path as-is (open sub-scene by fixture path)', () => {
+    expect(resToFixtureFile('level/level.tscn', 'demos/2d/platformer')).toBe(
+      'demos/2d/platformer/level/level.tscn'
+    );
+  });
+
+  it('recovers the res:// identity of a fixtures file under its root', () => {
+    expect(fixtureFileToRes('demos/2d/platformer/level/level.tscn', 'demos/2d/platformer')).toBe(
+      'res://level/level.tscn'
+    );
+    expect(fixtureFileToRes('unit-plane-mesh.tscn', '')).toBe('res://unit-plane-mesh.tscn');
+  });
+
+  it('keeps the whole path when the file is outside the active root (uploaded scene)', () => {
+    expect(fixtureFileToRes('my-scene.tscn', 'demos/2d/platformer')).toBe('res://my-scene.tscn');
+  });
+
+  it('round-trips res:// → fixtures file → res://', () => {
+    for (const [res, root] of [
+      ['res://art/player.png', 'demos/2d/platformer'],
+      ['res://a.tscn', ''],
+      ['res://deep/nested/thing.tres', 'games/kenney-platformer'],
+    ] as const) {
+      expect(fixtureFileToRes(resToFixtureFile(res, root), root)).toBe(res);
+    }
+  });
+});
+
 describe('fixtureUrlForRes', () => {
   it('maps res:// URLs onto the fixtures mirror under the active root', () => {
     expect(fixtureUrlForRes('res://art/player.png', 'demos/2d/platformer')).toBe(
@@ -62,16 +104,28 @@ describe('fixtureUrlForRes', () => {
     expect(fixtureUrlForRes('res://tileset/tiles.png', '')).toBe('/fixtures/tileset/tiles.png');
   });
 
-  it('decodes URI-encoded glTF dependency paths (textures%2Fgrass.webp)', () => {
-    // glTF URIs are percent-encoded per spec; the mirrored files use real
-    // directory separators.
-    expect(fixtureUrlForRes('res://town/textures%2Fgrass_lossy.webp', 'demos/3d/truck_town')).toBe(
-      '/fixtures/demos/3d/truck_town/town/textures/grass_lossy.webp'
+  it('does NOT decode percent-encoding (raw parser paths have real separators)', () => {
+    expect(fixtureUrlForRes('res://town/textures%2Fgrass.webp', 'demos/3d/truck_town')).toBe(
+      '/fixtures/demos/3d/truck_town/town/textures%2Fgrass.webp'
     );
   });
 
   it('passes non-res URLs through untouched', () => {
     expect(fixtureUrlForRes('blob:abc', 'demos/2d/x')).toBe('blob:abc');
     expect(fixtureUrlForRes('/already/mapped.png', '')).toBe('/already/mapped.png');
+  });
+});
+
+describe('fixtureUrlForGltfUri', () => {
+  it('decodes URI-encoded glTF dependency paths (textures%2Fgrass.webp)', () => {
+    // glTF URIs are percent-encoded per spec; the mirrored files use real
+    // directory separators.
+    expect(fixtureUrlForGltfUri('res://town/textures%2Fgrass_lossy.webp', 'demos/3d/truck_town')).toBe(
+      '/fixtures/demos/3d/truck_town/town/textures/grass_lossy.webp'
+    );
+  });
+
+  it('passes non-res URLs through untouched', () => {
+    expect(fixtureUrlForGltfUri('blob:abc', 'demos/2d/x')).toBe('blob:abc');
   });
 });

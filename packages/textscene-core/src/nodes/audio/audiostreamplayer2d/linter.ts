@@ -9,9 +9,10 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { checkResourceExists } from '../../../linter/resourceChecker.js';
+import { rangeAdvisories } from '../../../linter/rangeAdvisory.js';
 import {
-  checkExtremeVolume,
-  checkUnusualPitch,
+  extremeVolumeArms,
+  unusualPitchArms,
   checkInvalidMaxPolyphony,
 } from '../sharedLinterChecks.js';
 
@@ -89,64 +90,42 @@ function checkAudioStreamPlayer2D(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // WARNING: max_distance too small or too large for typical 2D games
-  if (rawProps.max_distance !== undefined) {
-    const maxDistance = parseFloat(rawProps.max_distance);
-    if (!isNaN(maxDistance)) {
-      if (maxDistance < MIN_MAX_DISTANCE_2D) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `Property 'max_distance' is very small (${maxDistance}). Values below ${MIN_MAX_DISTANCE_2D} may cause audio to cut off too quickly in 2D games.`,
-          nodeName: node.name,
-          nodeType: node.type,
+  // Range advisories: distance / attenuation / volume / pitch bands.
+  diagnostics.push(
+    ...rangeAdvisories(node, {
+      max_distance: [
+        {
+          under: MIN_MAX_DISTANCE_2D,
           ruleName: 'audiostreamplayer2d-small-max-distance',
-        });
-      } else if (maxDistance > MAX_MAX_DISTANCE_2D) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `Property 'max_distance' is very large (${maxDistance}). Values above ${MAX_MAX_DISTANCE_2D} may cause audio to be heard from too far away in 2D games.`,
-          nodeName: node.name,
-          nodeType: node.type,
+          message: (maxDistance) =>
+            `Property 'max_distance' is very small (${maxDistance}). Values below ${MIN_MAX_DISTANCE_2D} may cause audio to cut off too quickly in 2D games.`,
+        },
+        {
+          over: MAX_MAX_DISTANCE_2D,
           ruleName: 'audiostreamplayer2d-large-max-distance',
-        });
-      }
-    }
-  }
-
-  // WARNING: attenuation too steep or too flat
-  if (rawProps.attenuation !== undefined) {
-    const attenuation = parseFloat(rawProps.attenuation);
-    if (!isNaN(attenuation)) {
-      if (attenuation < MIN_ATTENUATION) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `Property 'attenuation' is very flat (${attenuation}). Values below ${MIN_ATTENUATION} cause very slow distance falloff.`,
-          nodeName: node.name,
-          nodeType: node.type,
+          message: (maxDistance) =>
+            `Property 'max_distance' is very large (${maxDistance}). Values above ${MAX_MAX_DISTANCE_2D} may cause audio to be heard from too far away in 2D games.`,
+        },
+      ],
+      attenuation: [
+        {
+          under: MIN_ATTENUATION,
           ruleName: 'audiostreamplayer2d-flat-attenuation',
-        });
-      } else if (attenuation > MAX_ATTENUATION) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `Property 'attenuation' is very steep (${attenuation}). Values above ${MAX_ATTENUATION} cause very rapid distance falloff.`,
-          nodeName: node.name,
-          nodeType: node.type,
+          message: (attenuation) =>
+            `Property 'attenuation' is very flat (${attenuation}). Values below ${MIN_ATTENUATION} cause very slow distance falloff.`,
+        },
+        {
+          over: MAX_ATTENUATION,
           ruleName: 'audiostreamplayer2d-steep-attenuation',
-        });
-      }
-    }
-  }
-
-  checkExtremeVolume(
-    rawProps,
-    node.name,
-    node.type,
-    'audiostreamplayer2d',
-    EXTREME_VOLUME_DB_MIN,
-    EXTREME_VOLUME_DB_MAX,
-    diagnostics
+          message: (attenuation) =>
+            `Property 'attenuation' is very steep (${attenuation}). Values above ${MAX_ATTENUATION} cause very rapid distance falloff.`,
+        },
+      ],
+      volume_db: extremeVolumeArms('audiostreamplayer2d', EXTREME_VOLUME_DB_MIN, EXTREME_VOLUME_DB_MAX),
+      pitch_scale: unusualPitchArms('audiostreamplayer2d'),
+    })
   );
-  checkUnusualPitch(rawProps, node.name, node.type, 'audiostreamplayer2d', diagnostics);
+
   checkInvalidMaxPolyphony(rawProps, node.name, node.type, 'audiostreamplayer2d', diagnostics);
 
   return diagnostics;
