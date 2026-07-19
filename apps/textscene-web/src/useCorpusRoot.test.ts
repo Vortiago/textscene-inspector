@@ -1,6 +1,8 @@
 /**
- * useCorpusRoot — owns the full root-switch sequence for the web previewer:
- * setResourceRoot, THREE URL modifier, and clearCaches on change.
+ * useCorpusRoot — owns the root-switch sequence for the web previewer:
+ * setResourceRoot, THREE URL modifier, and clearCaches on change. The switch
+ * is applied explicitly at a scene swap (never derived from the selection),
+ * so these cover the returned `applyCorpusRoot` rather than a reactive prop.
  */
 // @vitest-environment happy-dom
 
@@ -26,6 +28,13 @@ function makePipeline() {
   return { pipeline, setResourceRoot, setURLModifier, clearCaches };
 }
 
+/** Mounts the hook and hands back its `applyCorpusRoot` plus the spies. */
+function mountHook() {
+  const parts = makePipeline();
+  const { result } = renderHook(() => useCorpusRoot(parts.pipeline));
+  return { ...parts, applyCorpusRoot: result.current };
+}
+
 describe('switchCorpusRoot', () => {
   it('routes the provider and the URL modifier to the new root synchronously', () => {
     const { pipeline, setResourceRoot, setURLModifier } = makePipeline();
@@ -49,73 +58,73 @@ describe('switchCorpusRoot', () => {
 });
 
 describe('useCorpusRoot', () => {
-  it('calls setResourceRoot with the initial root on mount', () => {
-    const { pipeline, setResourceRoot } = makePipeline();
+  it('installs the base ("") routing on mount, before anything renders', () => {
+    const { setResourceRoot, setURLModifier } = mountHook();
 
-    renderHook(() => useCorpusRoot(pipeline, 'demos/2d/platformer'));
-
-    expect(setResourceRoot).toHaveBeenCalledWith('demos/2d/platformer');
-  });
-
-  it('installs a THREE URL modifier on mount', () => {
-    const { pipeline, setURLModifier } = makePipeline();
-
-    renderHook(() => useCorpusRoot(pipeline, ''));
-
+    expect(setResourceRoot).toHaveBeenCalledWith('');
     expect(setURLModifier).toHaveBeenCalledWith(expect.any(Function));
   });
 
-  it('does NOT call clearCaches on the initial mount', () => {
-    const { pipeline, clearCaches } = makePipeline();
-
-    renderHook(() => useCorpusRoot(pipeline, 'demos/2d/platformer'));
+  it('does NOT clear caches on the initial mount', () => {
+    const { clearCaches } = mountHook();
 
     expect(clearCaches).not.toHaveBeenCalled();
   });
 
-  it('calls clearCaches exactly once when the root changes', () => {
-    const { pipeline, clearCaches } = makePipeline();
+  it('routes the provider at the root it is applied with', () => {
+    const { applyCorpusRoot, setResourceRoot } = mountHook();
 
-    const { rerender } = renderHook(
-      ({ root }: { root: string }) => useCorpusRoot(pipeline, root),
-      { initialProps: { root: 'demos/2d/platformer' } }
-    );
+    applyCorpusRoot('demos/2d/platformer');
 
-    rerender({ root: 'demos/3d/fps' });
+    expect(setResourceRoot).toHaveBeenLastCalledWith('demos/2d/platformer');
+  });
+
+  it('does NOT clear on the first scene swap — nothing has been loaded to go stale', () => {
+    const { applyCorpusRoot, clearCaches } = mountHook();
+
+    applyCorpusRoot('demos/2d/platformer');
+
+    expect(clearCaches).not.toHaveBeenCalled();
+  });
+
+  it('clears caches exactly once when the root actually changes', () => {
+    const { applyCorpusRoot, clearCaches } = mountHook();
+
+    applyCorpusRoot('demos/2d/platformer');
+    applyCorpusRoot('demos/3d/fps');
 
     expect(clearCaches).toHaveBeenCalledTimes(1);
   });
 
-  it('does NOT call clearCaches when re-rendered with the same root', () => {
-    const { pipeline, clearCaches } = makePipeline();
+  it('is idempotent — re-applying the same root neither re-routes nor clears', () => {
+    const { applyCorpusRoot, setResourceRoot, clearCaches } = mountHook();
 
-    const { rerender } = renderHook(
-      ({ root }: { root: string }) => useCorpusRoot(pipeline, root),
-      { initialProps: { root: 'demos/2d/platformer' } }
-    );
+    applyCorpusRoot('demos/2d/platformer');
+    const routedOnce = setResourceRoot.mock.calls.length;
+    applyCorpusRoot('demos/2d/platformer');
 
-    rerender({ root: 'demos/2d/platformer' });
-
+    expect(setResourceRoot.mock.calls.length).toBe(routedOnce);
     expect(clearCaches).not.toHaveBeenCalled();
   });
 
-  it('updates setResourceRoot when the root changes', () => {
-    const { pipeline, setResourceRoot } = makePipeline();
+  it('re-renders never re-apply on their own — only an explicit swap moves the root', () => {
+    const { pipeline, setResourceRoot, clearCaches } = makePipeline();
 
-    const { rerender } = renderHook(
-      ({ root }: { root: string }) => useCorpusRoot(pipeline, root),
-      { initialProps: { root: '' } }
-    );
+    const { result, rerender } = renderHook(() => useCorpusRoot(pipeline));
+    result.current('demos/2d/platformer');
+    setResourceRoot.mockClear();
+    clearCaches.mockClear();
 
-    rerender({ root: 'demos/3d/fps' });
+    rerender();
 
-    expect(setResourceRoot).toHaveBeenLastCalledWith('demos/3d/fps');
+    expect(setResourceRoot).not.toHaveBeenCalled();
+    expect(clearCaches).not.toHaveBeenCalled();
   });
 
-  it('maps res:// URLs to /fixtures/ via the URL modifier using the active root', () => {
-    const { pipeline, setURLModifier } = makePipeline();
+  it('maps res:// URLs to /fixtures/ via the URL modifier using the applied root', () => {
+    const { applyCorpusRoot, setURLModifier } = mountHook();
 
-    renderHook(() => useCorpusRoot(pipeline, 'demos/2d/platformer'));
+    applyCorpusRoot('demos/2d/platformer');
 
     const modifier = setURLModifier.mock.lastCall![0];
     expect(modifier('res://textures/player.png')).toBe(
@@ -124,14 +133,10 @@ describe('useCorpusRoot', () => {
   });
 
   it('remaps res:// URLs with the new root after a root change', () => {
-    const { pipeline, setURLModifier } = makePipeline();
+    const { applyCorpusRoot, setURLModifier } = mountHook();
 
-    const { rerender } = renderHook(
-      ({ root }: { root: string }) => useCorpusRoot(pipeline, root),
-      { initialProps: { root: 'demos/2d/platformer' } }
-    );
-
-    rerender({ root: 'demos/3d/fps' });
+    applyCorpusRoot('demos/2d/platformer');
+    applyCorpusRoot('demos/3d/fps');
 
     const modifier = setURLModifier.mock.lastCall![0];
     expect(modifier('res://textures/player.png')).toBe(
@@ -140,9 +145,7 @@ describe('useCorpusRoot', () => {
   });
 
   it('passes non-res:// URLs through the URL modifier unchanged', () => {
-    const { pipeline, setURLModifier } = makePipeline();
-
-    renderHook(() => useCorpusRoot(pipeline, ''));
+    const { setURLModifier } = mountHook();
 
     const modifier = setURLModifier.mock.lastCall![0];
     expect(modifier('blob:http://localhost/abc')).toBe('blob:http://localhost/abc');

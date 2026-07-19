@@ -34,7 +34,7 @@ import { Linter, type Diagnostic } from '@textscene/core/linter';
 import { fixtures } from './fixturesAll';
 import { FixtureTreeView } from './FixtureTree';
 import { corpusRootFor, resToFixtureFile, fixtureFileToRes } from './corpusRoot';
-import { switchCorpusRoot, useCorpusRoot } from './useCorpusRoot';
+import { useCorpusRoot } from './useCorpusRoot';
 import { WebResourceProvider } from './providers/WebResourceProvider';
 import {
   groupDiagnosticsByLine,
@@ -167,11 +167,36 @@ export function R3FApp() {
     defaultFixture: DEFAULT_FIXTURE,
   });
 
+  // Wire the resource pipeline. One provider + bus + loader for
+  // the lifetime of the app; React component identity preserves them
+  // across fixture switches so an already-uploaded texture survives a
+  // fixture reload.
+  const pipeline = useMemo(() => createResourcePipeline(new WebResourceProvider()), []);
+  const { provider, loader } = pipeline;
+
+  // Each vendored demo project keeps its own res:// namespace. The switch into
+  // a subtree happens at the scene swap below — never while a scene is on
+  // screen, which would make the OUTGOING scene re-request its res:// paths out
+  // of the incoming corpus (see useCorpusRoot).
+  const applyCorpusRoot = useCorpusRoot(pipeline);
+  const handleBeforeSwap = useCallback(
+    (file: string) => applyCorpusRoot(corpusRootFor(file, fixtures)),
+    [applyCorpusRoot]
+  );
+
   // useSceneSource owns the hold-last-valid invariant's full span: fixture
   // fetch + cancellation + editedSinceLoad tracking + debounced edit forward +
   // authoritative replace (ADR-0020).
-  const { buffer, forwardedContent, isFetching: isFetchingFixture, loadError, onBufferChange: handleSourceChange, replace, editedSinceLoad } =
-    useSceneSource({ fixtureFile, uploadedTscnName });
+  const { buffer, forwardedContent, renderedFixtureFile, isFetching: isFetchingFixture, loadError, onBufferChange: handleSourceChange, replace, editedSinceLoad } =
+    useSceneSource({ fixtureFile, uploadedTscnName, onBeforeSwap: handleBeforeSwap });
+
+  // The corpus root of the scene ON SCREEN. Keyed on the rendered fixture, not
+  // the selected one: during a fixture fetch the selection has already moved on
+  // while the previous scene — and its res:// namespace — is still live.
+  const resourceRoot = useMemo(
+    () => corpusRootFor(renderedFixtureFile, fixtures),
+    [renderedFixtureFile]
+  );
 
   // Edits are ephemeral (ADR-0020) — but the one-click switch affordances
   // (fixture palette, the tree's ⤢ open-sub-scene, a scene-replacing drop)
@@ -232,20 +257,6 @@ export function R3FApp() {
   const lineCount = useMemo(() => countLines(buffer), [buffer]);
   const [gutterScrollTop, setGutterScrollTop] = useState(0);
 
-  // Wire the resource pipeline. One provider + bus + loader for
-  // the lifetime of the app; React component identity preserves them
-  // across fixture switches so an already-uploaded texture survives a
-  // fixture reload.
-  const pipeline = useMemo(() => createResourcePipeline(new WebResourceProvider()), []);
-  const { provider, loader } = pipeline;
-
-  // Each vendored demo project keeps its own res:// namespace; the active
-  // fixture's `root` scopes the provider's lookups to that subtree. Declared
-  // BEFORE the content-fetch effect so the root is in place by the time the
-  // newly-mounted scene starts requesting resources.
-  const resourceRoot = useMemo(() => corpusRootFor(fixtureFile, fixtures), [fixtureFile]);
-  useCorpusRoot(pipeline, resourceRoot);
-
   const options = useMemo<ViewportSelectorOption[]>(() => {
     const fixtureOptions: ViewportSelectorOption[] = fixtures.map((f) => ({
       value: f.file,
@@ -277,6 +288,13 @@ export function R3FApp() {
     // supersedes any upload-path error still on screen.
     setUploadedTscnName(null);
     setUploadError(null);
+    // Crossing a corpus boundary tears the current scene down NOW, ahead of the
+    // fetch, instead of holding it until the new content lands: the root switch
+    // that follows clears the loader caches, and a scene still mounted when that
+    // lands answers the invalidation by re-requesting its own res:// paths under
+    // the incoming corpus — downloading an unrelated fixture's files. The
+    // fetch-in-flight overlay covers the gap.
+    if (corpusRootFor(newFixture, fixtures) !== resourceRoot) replace('');
     setFixtureFile(newFixture);
   }
 
@@ -289,12 +307,13 @@ export function R3FApp() {
   function handleTscnUpload(file: File, text: string) {
     setFixtureFile(NO_FIXTURE);
     setUploadedTscnName(file.name);
-    // An uploaded scene lives in the base ('') corpus. Apply the switch now,
-    // not just via useCorpusRoot's post-render effect: companion files added
-    // synchronously after this call (multi-file upload) must be keyed — and
-    // URL-resolved — under the uploaded scene's corpus, not the fixture corpus
-    // being left behind. The hook's effect still settles the cache clear.
-    switchCorpusRoot(pipeline, '');
+    // An uploaded scene lives in the base ('') corpus — this is its scene swap,
+    // so the root switch (and its cache clear) lands here, before the content:
+    // companion files added synchronously after this call (multi-file upload)
+    // must be keyed — and URL-resolved — under the uploaded scene's corpus, not
+    // the fixture corpus being left behind. `handleFilesUpload` has already torn
+    // the outgoing scene down when the two corpora differ.
+    applyCorpusRoot('');
     replace(text);
   }
 
@@ -336,7 +355,15 @@ export function R3FApp() {
 
     // A batch with a .tscn replaces the active scene (and the pane buffer);
     // a resource-only batch fulfills missing rows without touching edits.
-    if (tscnFiles.length > 0 && !confirmDiscardEdits()) return;
+    if (tscnFiles.length > 0) {
+      if (!confirmDiscardEdits()) return;
+      // An uploaded scene lives in the base ('') corpus, so dropping one while a
+      // vendored demo is on screen crosses a corpus boundary — same teardown
+      // rule as a fixture switch, and it must happen BEFORE the awaited file
+      // reads below so the demo's scene is gone by the time handleTscnUpload
+      // switches the root and clears the caches.
+      if (resourceRoot !== '') replace('');
+    }
 
     if (tscnFiles.length === 0) {
       // No .tscn — the drop can still fulfill currently-missing res:// rows.
@@ -548,10 +575,11 @@ export function R3FApp() {
             panelId={`web-${fixtureFile || uploadedTscnName || 'empty'}`}
             content={forwardedContent}
             rootScenePath={
-              // The scene's res:// identity is relative to its corpus root; an
-              // uploaded scene (no fixture file) is named by its upload name.
-              fixtureFile
-                ? fixtureFileToRes(fixtureFile, resourceRoot)
+              // The scene's res:// identity is relative to its corpus root — so
+              // it names the RENDERED fixture, which is what `resourceRoot` is
+              // relative to; an uploaded scene is named by its upload name.
+              renderedFixtureFile
+                ? fixtureFileToRes(renderedFixtureFile, resourceRoot)
                 : `res://${uploadedTscnName || 'empty.tscn'}`
             }
             onResourceUpload={handleResourceUpload}
