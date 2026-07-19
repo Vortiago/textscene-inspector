@@ -19,7 +19,7 @@ The parsed-and-built tree of Nodes for one or more scenes; produced by the scene
 _Avoid_: "scene tree" for the data structure — reserve "scene tree" for the UI panel (`SceneTreeViewer`).
 
 **Live scene tree** (`r3f/liveSceneTree.ts`):
-The composed, *runtime* tree the user navigates: the **SceneGraph**'s root Nodes with **PackedScene instancing** folded in (**Instance root merge** plus lazily-loaded sub-scenes) and **GLBSceneRoot** internals descended, in one consistent node-path space with per-sub-scene **ExtResource** scope. Unlike **SceneGraph** (static, parse-time, root-scene only) it depends on the **resource event bus** caches, so it is derived on demand from a cache snapshot. `liveSceneTree.ts` defines the single traversal; the viewport (**NodeDispatcher**), the scene tree panel, the inspector resolver (`useLiveNode` → `resolveLiveEntry`), and the cameras/stats panels are its consumers.
+The composed, *runtime* tree the user navigates: the **SceneGraph**'s root Nodes with **PackedScene instancing** folded in (**Instance root merge** plus lazily-loaded sub-scenes) and **GLBSceneRoot** internals descended, in one consistent node-path space with per-sub-scene **ExtResource** scope. Unlike **SceneGraph** (static, parse-time, root-scene only) it depends on the **resource event bus** caches, so it is derived on demand from a cache snapshot. `liveSceneTree.ts` defines the single traversal; the 3D viewport and 2D world (**NodeDispatcher**), the **Control overlay** (`ControlDispatcher`), the scene tree panel, the inspector resolver (`useLiveNode` → `resolveLiveEntry`), and the cameras/stats panels are its consumers. Every consumer that *renders* a subtree descends this tree — a consumer reading **SceneGraph** children directly sees an instance as a childless node and silently drops everything inside it.
 _Avoid_: conflating with **SceneGraph** (the parsed structure) or "scene tree" (the UI panel).
 
 **ExtResource**:
@@ -121,7 +121,7 @@ The DOM analogue of NodeDispatcher — recursively walks a Control subtree and e
 _Avoid_: "UI renderer".
 
 **Viewport mode**:
-The single `'2D' | '3D'` display state of the center viewport — `3D` mounts the R3F canvas, `2D` mounts the Control overlay; chosen by an auto-default heuristic on the scene root type, overridable by the toolbar toggle.
+The single `'2D' | '3D'` display state of the center viewport — `3D` mounts the R3F canvas, `2D` mounts the **2D stage** (project-viewport frame + 2D world canvas + **Control overlay**); chosen by an auto-default heuristic on the scene root type, overridable by the toolbar toggle.
 _Avoid_: "2D mode" alone (it is one of two values of one state).
 
 **Control overlay**:

@@ -713,6 +713,21 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Control Instanced Hud Badge",
+    "file": "unit-control-instanced-hud-badge.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Control Instanced Hud Layer",
+    "file": "unit-control-instanced-hud-layer.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Control Instanced Hud",
+    "file": "unit-control-instanced-hud.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Grid Container",
     "file": "unit-grid-container.tscn",
     "category": "Unit - 2D UI Controls"

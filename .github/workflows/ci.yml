@@ -117,12 +117,28 @@ jobs:
         env:
           VISUAL_SKIP_BUILD: '1'
 
+      # The goldens are WebGL-canvas-only and happy-dom has no layout, so the
+      # 2D DOM overlay has no other gate (ADR-0024). Reuses the same downloaded
+      # dist via `vite preview`; bundled chromium, never system Chrome.
+      - name: Verify 2D Control overlay
+        run: |
+          pnpm --filter @textscene/web-previewer preview --port 4173 --strictPort &
+          for _ in $(seq 60); do curl -sf http://localhost:4173 >/dev/null && break; sleep 1; done
+          pnpm verify:2d
+
       - name: Upload diff artifacts
         if: failure()
         uses: actions/upload-artifact@v7
         with:
           name: visual-diffs
           path: scripts/visual/output/
+
+      - name: Upload 2D overlay captures
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: verify-2d
+          path: docs/showcase/verify/
           if-no-files-found: ignore
 
   integration-tests:

@@ -1,0 +1,10 @@
+[gd_scene load_steps=2 format=3 uid="uid://unitcontrolinstancedhud"]
+
+[ext_resource type="PackedScene" path="res://unit-control-instanced-hud-layer.tscn" id="1_layer"]
+
+[node name="Root" type="Node3D"]
+
+[node name="Ground" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+
+[node name="Hud" parent="." instance=ExtResource("1_layer")]

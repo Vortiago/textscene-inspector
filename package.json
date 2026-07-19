@@ -30,6 +30,7 @@
     "new:node": "node scripts/new-node-slice.mjs",
     "test:visual": "node scripts/visual/run.mjs",
     "test:visual:update": "node scripts/visual/run.mjs --update",
+    "verify:2d": "SHOWCASE_CHANNEL=bundled node scripts/showcase/verify-2d.mjs",
     "showcase:regen": "pnpm --filter @textscene/web-previewer build && node scripts/showcase/regenerate.mjs",
     "clean": "pnpm -r clean && rimraf node_modules",
     "vsc:package": "pnpm --filter textscene-inspector package",
