@@ -109,7 +109,7 @@ let clearCaches: ReturnType<typeof vi.spyOn>;
  * paper over it. `value` stays `undefined` until it fires, so `toBeNull()` also
  * fails a re-point that never happened.
  */
-function firstSighting() {
+function firstDemoSighting() {
   let value: HTMLElement | null | undefined;
   return {
     record: () => {
@@ -123,12 +123,12 @@ function firstSighting() {
 
 /** At the cache clear, and at the provider re-point (the upload path re-points
  *  synchronously in its own handler, where React defers the clear past the swap). */
-let atClear: ReturnType<typeof firstSighting>;
-let atRootSwitch: ReturnType<typeof firstSighting>;
+let atClear: ReturnType<typeof firstDemoSighting>;
+let atRootSwitch: ReturnType<typeof firstDemoSighting>;
 
 function resetFingerprints() {
-  atClear = firstSighting();
-  atRootSwitch = firstSighting();
+  atClear = firstDemoSighting();
+  atRootSwitch = firstDemoSighting();
 }
 
 beforeEach(() => {

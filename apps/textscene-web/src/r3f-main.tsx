@@ -22,6 +22,7 @@ import {
   type MouseEvent as ReactMouseEvent,
 } from 'react';
 import { createRoot } from 'react-dom/client';
+import { flushSync } from 'react-dom';
 import {
   createResourcePipeline,
   ResourceLoaderProvider,
@@ -184,7 +185,7 @@ export function R3FApp() {
   // fetch + cancellation + editedSinceLoad tracking + debounced edit forward +
   // authoritative replace (ADR-0020). `onBeforeSwap` is read from a ref there,
   // so a plain function — not a useCallback — is what it wants.
-  const { buffer, forwardedContent, renderedFixtureFile, isFetching: isFetchingFixture, loadError, onBufferChange: handleSourceChange, replace, editedSinceLoad } =
+  const { buffer, forwardedContent, renderedFixtureFile, isFetching: isFetchingFixture, loadError, onBufferChange: handleSourceChange, replace, clearRender, editedSinceLoad } =
     useSceneSource({
       fixtureFile,
       uploadedTscnName,
@@ -200,15 +201,18 @@ export function R3FApp() {
   );
 
   /**
-   * Cross a corpus boundary with the viewport EMPTY. The root switch that
-   * follows clears the loader caches, and a scene still mounted when that lands
-   * answers the invalidation by re-requesting its own res:// paths under the
-   * incoming corpus — downloading an unrelated fixture's files (see
-   * `useCorpusRoot`). Every scene replacement that may change corpus goes
-   * through here; the fetch-in-flight overlay covers the gap.
+   * Cross a corpus boundary with the viewport EMPTY (the reason: `useCorpusRoot`).
+   * Every scene replacement that may change corpus goes through here.
+   *
+   * `flushSync` so the unmount is COMMITTED before the caller re-points the
+   * provider, rather than merely scheduled ahead of it: on the upload path only
+   * an `await file.text()` separates the two, and a scene still mounted when the
+   * caches clear is the leak itself. Both callers are event handlers, which is
+   * where flushSync is legal.
    */
   const tearDownIfCrossingCorpus = (nextRoot: string) => {
-    if (nextRoot !== resourceRoot) replace('');
+    if (nextRoot === resourceRoot) return;
+    flushSync(() => clearRender());
   };
 
   // Edits are ephemeral (ADR-0020) — but the one-click switch affordances
@@ -508,7 +512,13 @@ export function R3FApp() {
   // role="alert" banner by construction, not by relying on every call site
   // that sets one to also clear the other.
   const showUnrenderableNotice =
-    !effectiveLoadError && forwardedContent.trim().length === 0 && buffer.trim().length > 0;
+    !effectiveLoadError &&
+    forwardedContent.trim().length === 0 &&
+    buffer.trim().length > 0 &&
+    // Only the user's OWN unparseable input earns this notice. A corpus-boundary
+    // teardown also empties the render while the pane still holds the outgoing
+    // source — that is a load in progress, not a buffer that fails to parse.
+    editedSinceLoad();
 
   return (
     <ResourceLoaderProvider loader={loader}>

@@ -60,12 +60,19 @@ export interface UseSceneSourceResult {
   onBufferChange: (value: string) => void;
   /**
    * Authoritative replacement — sets buffer and forwardedContent together,
-   * cancelling any pending debounce. Used by uploads (unconditional path)
-   * and by the corpus-boundary teardown (`replace('')`). `from` records the
-   * fixture the text came from; omitted for content that belongs to no
-   * fixture (an upload, a blanked render).
+   * cancelling any pending debounce. Used by uploads (unconditional path).
+   * `from` records the fixture the text came from; omitted for content that
+   * belongs to no fixture (an upload).
    */
   replace: (text: string, from?: string) => void;
+  /**
+   * Drop the RENDERED scene, leaving the pane buffer alone — the
+   * corpus-boundary teardown. Only what the renderer holds has to go (a
+   * mounted scene is what turns a root switch into cross-corpus fetches); the
+   * editor keeps showing the outgoing source until the incoming scene lands,
+   * exactly as a same-corpus switch does.
+   */
+  clearRender: () => void;
   /**
    * True when the pane holds keystrokes newer than the last load/replace —
    * i.e. content that a fixture switch, ⤢ open-sub-scene, or upload-replace
@@ -108,6 +115,16 @@ export function useSceneSource({
     setRenderedFixtureFile(from);
     setLoadError(null);
     editedSinceLoadRef.current = false;
+  }, []);
+
+  // Teardown half of a corpus crossing. Deliberately does NOT touch `buffer`,
+  // `loadError` or the edited flag: the caller either has a fetch about to
+  // reset them or an upload's `replace` about to supersede them, and blanking
+  // the editor for the whole fetch is not something the leak requires.
+  const clearRender = useCallback(() => {
+    clearTimeout(timerRef.current);
+    setForwardedContent('');
+    setRenderedFixtureFile('');
   }, []);
 
   // Fixture fetch effect. Re-runs when fixtureFile or uploadedTscnName changes.
@@ -203,6 +220,7 @@ export function useSceneSource({
     loadError,
     onBufferChange,
     replace,
+    clearRender,
     editedSinceLoad,
   };
 }
