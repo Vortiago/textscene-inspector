@@ -22,16 +22,16 @@ import type { ControlComponentProps } from '../../../../r3f/controls/ControlComp
 import { useControlParent } from '../../../../r3f/controls/ControlParentContext';
 import { controlLayoutStyle } from '../../../../r3f/controls/controlLayout';
 import { useSceneResources } from '../../../../r3f/SceneResourcesContext';
-import { resolveExtResourcePath } from '../../../../resources/SubResourceResolver';
+import { resolveTexture2DPath } from '../../../../resources/SubResourceResolver';
 import { useResource } from '../../../../resources/useResource';
 import type { TextureRectProperties } from './types';
 
 export function TextureRect({ node, children }: ControlComponentProps) {
   const props = node.properties as TextureRectProperties;
   const parentKind = useControlParent();
-  const { externalResources } = useSceneResources();
+  const { externalResources, internalResources } = useSceneResources();
 
-  const path = resolveExtResourcePath(props.texture, externalResources);
+  const path = resolveTexture2DPath(props.texture, externalResources, internalResources);
 
   // Always call the hook (rules of hooks); '' short-circuits to pending.
   const tex = useResource<THREE.Texture>(path ?? '', 'Texture2D');

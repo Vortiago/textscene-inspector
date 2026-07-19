@@ -37,6 +37,7 @@ import { MeshGeometry } from './meshGeometry';
 import { parseStandardMaterial3DScalars } from '../../../r3f/materials/standardMaterialScalars';
 import { resolveStandardMaterial } from '../../../r3f/materials/resolveStandardMaterial';
 import { StandardMaterialSlot } from '../../../r3f/materials/StandardMaterialSlot';
+import { ExternalMaterialSlot } from '../../../r3f/materials/ExternalMaterialSlot';
 import { applyUVTransform } from './applyUVTransform';
 import { triplanarPlaneScale } from './triplanarScale';
 
@@ -287,7 +288,7 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
 
     // Loaded external ArrayMesh: render the decoded geometry with one material
     // per surface (draw group). Each surface's StandardMaterial3D `.tres` is
-    // resolved through the material pipeline by an <ArrayMeshSurfaceMaterial>
+    // resolved through the material pipeline by an <ExternalMaterialSlot>
     // child — that keeps the `useResource` calls one-per-component (rules of
     // hooks) while still loading textured materials for every surface.
     const { geometry, materialPaths } = arrayMeshResult.value;
@@ -297,7 +298,7 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
       <MeshShell {...shellProps}>
         <primitive object={geometry} attach="geometry" />
         {surfacePaths.map((path, i) => (
-          <ArrayMeshSurfaceMaterial
+          <ExternalMaterialSlot
             key={`surf-${i}`}
             path={path}
             attach={multiSurface ? `material-${i}` : 'material'}
@@ -453,39 +454,6 @@ function SecondarySurfaceMaterial({
       shadowSide={shadowSide ?? null}
       emissive={scalars.emissive}
       emissiveIntensity={scalars.emissiveIntensity}
-    />
-  );
-}
-
-/**
- * Material for one ArrayMesh surface (draw group). Loads the surface's
- * StandardMaterial3D `.tres` through the material pipeline (textures and all)
- * and attaches it at the group's slot. Falls back to Godot's default white
- * material while pending or when the surface declares no material. One
- * `useResource` per component instance keeps the rules of hooks satisfied for
- * an arbitrary surface count.
- */
-function ArrayMeshSurfaceMaterial({
-  path,
-  attach,
-  shadowSide,
-}: {
-  path: string | null;
-  attach: string;
-  shadowSide?: THREE.Side;
-}) {
-  const result = useResource<THREE.Material>(path ?? '', 'StandardMaterial3D');
-  if (path && result.value) {
-    return <primitive object={result.value} attach={attach} />;
-  }
-  return (
-    <meshStandardMaterial
-      attach={attach}
-      color={0xffffff}
-      metalness={0}
-      roughness={1}
-      side={THREE.FrontSide}
-      shadowSide={shadowSide ?? null}
     />
   );
 }

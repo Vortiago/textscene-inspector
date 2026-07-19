@@ -6,24 +6,20 @@
  * Collision Shapes".
  */
 
-import { useMemo } from 'react';
 import type { CollisionShape2DProperties } from './types';
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../../r3f/components/CanvasItem2D';
 import { useSceneResources } from '../../../../r3f/SceneResourcesContext';
-import { resolveSubResourceRef } from '../../../../resources/SubResourceResolver';
+import { useShapeResource } from '../../../../resources/shapes/useShapeResource';
 import { useViewportMode } from '../../../../r3f/contexts/ViewportModeContext';
 import { CollisionGizmo2D } from './CollisionGizmo2D';
 
 export function CollisionShape2D({ node, children }: NodeComponentProps) {
   const properties = node.properties as CollisionShape2DProperties;
-  const { internalResources } = useSceneResources();
+  const { internalResources, externalResources } = useSceneResources();
   const { showCollisions } = useViewportMode();
 
-  const shapeResource = useMemo(
-    () => resolveSubResourceRef(properties.shape, internalResources),
-    [properties.shape, internalResources]
-  );
+  const shapeResource = useShapeResource(properties.shape, internalResources, externalResources);
 
   return (
     <CanvasItem2D

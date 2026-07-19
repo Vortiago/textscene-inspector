@@ -10,13 +10,13 @@ import type { CollisionShape3DProperties } from './types';
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../../r3f/nodeTransform';
 import { useSceneResources } from '../../../../r3f/SceneResourcesContext';
-import { resolveSubResourceRef } from '../../../../resources/SubResourceResolver';
+import { useShapeResource } from '../../../../resources/shapes/useShapeResource';
 import { useViewportMode } from '../../../../r3f/contexts/ViewportModeContext';
 import { CollisionGizmo } from './CollisionGizmo';
 
 export function CollisionShape3D({ node, children }: NodeComponentProps) {
   const properties = node.properties as CollisionShape3DProperties;
-  const { internalResources } = useSceneResources();
+  const { internalResources, externalResources } = useSceneResources();
   const { showCollisions } = useViewportMode();
 
   const { position, rotation, scale } = useMemo(
@@ -24,10 +24,7 @@ export function CollisionShape3D({ node, children }: NodeComponentProps) {
     [properties]
   );
 
-  const shapeResource = useMemo(
-    () => resolveSubResourceRef(properties.shape, internalResources),
-    [properties.shape, internalResources]
-  );
+  const shapeResource = useShapeResource(properties.shape, internalResources, externalResources);
 
   return (
     <group name={node.name} position={position} rotation={rotation} scale={scale}>

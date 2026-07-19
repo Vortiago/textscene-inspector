@@ -25,14 +25,14 @@ import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
 import { composeFrameTexture, frameSizePx } from '../../../r3f/spriteFrame';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useAnimatedValue } from '../../../r3f/contexts/AnimatedValueContext';
-import { resolveExtResourcePath } from '../../../resources/SubResourceResolver';
+import { resolveTexture2DPath } from '../../../resources/SubResourceResolver';
 import { useResource } from '../../../resources/useResource';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import type { Sprite2DProperties } from './types';
 
 export function Sprite2D({ node, children }: NodeComponentProps) {
   const props = node.properties as Sprite2DProperties;
-  const { externalResources } = useSceneResources();
+  const { externalResources, internalResources } = useSceneResources();
 
   // An active AnimationPlayer can drive this sprite's sheet `frame` (ADR-0016);
   // `null` means none is, so the authored `frame` shows. The registry carries a
@@ -40,8 +40,8 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
   const animatedFrame = useAnimatedValue('frame', (v) => v[0] ?? null);
 
   const texturePath = useMemo(
-    () => resolveExtResourcePath(props.texture, externalResources),
-    [props.texture, externalResources]
+    () => resolveTexture2DPath(props.texture, externalResources, internalResources),
+    [props.texture, externalResources, internalResources]
   );
   const texResult = useResource<THREE.Texture>(texturePath ?? '', 'Texture2D');
 

@@ -1,0 +1,16 @@
+[gd_scene load_steps=3 format=3 uid="uid://unitcsgextmatscene"]
+
+[ext_resource type="Material" path="res://unit-csg-external-material.tres" id="1_ext"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_inline"]
+albedo_color = Color(0.85, 0.3, 0.2, 1)
+
+[node name="CsgExternalMaterialRoot" type="Node3D"]
+
+[node name="ExternalMaterialBox" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.75, 0, 0)
+material = ExtResource("1_ext")
+
+[node name="InlineMaterialBox" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.75, 0, 0)
+material = SubResource("StandardMaterial3D_inline")

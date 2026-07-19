@@ -40,6 +40,18 @@ export const GOLDEN_SCENES = [
   // scenes). Every other 3D fixture hangs its content off Node3D, so nothing
   // in the golden set could see it.
   { name: 'subtree-under-leaf-nodes', file: 'unit-subtree-under-leaf-nodes.tscn' },
+  // CSG `material` as an ExtResource .tres beside the same node with an inline
+  // SubResource material. Only the sub-resource form used to resolve, so the
+  // 33 ExtResource materials in scenes/demos/3d/csg/csg.tscn rendered white —
+  // and both existing CSG fixtures declare their materials inline, so no
+  // golden could see it. The left box must be green, the right one red.
+  { name: 'csg-external-material', file: 'unit-csg-external-material.tscn' },
+  // A Sprite2D whose `texture` is a CanvasTexture sub-resource (wrapping the
+  // same image the sibling references directly). CanvasTexture is a first-class
+  // Texture2D, but the slot only resolved ExtResource refs, so all four sprites
+  // in scenes/demos/2d/lights_and_shadows/light_shadows.tscn drew the magenta
+  // missing-resource placeholder. Both markers must render identically.
+  { name: 'sprite2d-canvastexture', file: 'unit-sprite2d-canvastexture.tscn' },
   // External ArrayMesh .tres: decoded quad with Godot's packed normals. Loads
   // a local resource (deterministic), gated by the two-identical-frames settle.
   { name: 'arraymesh', file: 'unit-arraymesh.tscn' },

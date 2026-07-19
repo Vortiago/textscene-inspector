@@ -8,7 +8,12 @@
  * R3F components).
  */
 import { describe, it, expect } from 'vitest';
-import { parseResourceReference, resolveInstancePath, resolveSubResourceRef } from './SubResourceResolver';
+import {
+  parseResourceReference,
+  resolveInstancePath,
+  resolveSubResourceRef,
+  resolveTexture2DPath,
+} from './SubResourceResolver';
 import type { TscnExternalResource, TscnInternalResource } from '../parser/types';
 
 const externalResources: readonly TscnExternalResource[] = [
@@ -102,5 +107,48 @@ describe('resolveSubResourceRef', () => {
   it('returns undefined when the SubResource id is not registered (error path)', () => {
     expect(resolveSubResourceRef('SubResource("Missing_1")', internalResources)).toBeUndefined();
     expect(resolveSubResourceRef('SubResource("RectangleShape2D_1")', [])).toBeUndefined();
+  });
+});
+
+describe('resolveTexture2DPath', () => {
+  const externals: readonly TscnExternalResource[] = [
+    { id: '5', path: 'res://godot.png', type: 'Texture2D' },
+    { id: '6', path: 'res://godot_normal.png', type: 'Texture2D' },
+  ];
+  const internals: readonly TscnInternalResource[] = [
+    {
+      id: 'CanvasTexture_hlulo',
+      type: 'CanvasTexture',
+      data: {
+        diffuse_texture: 'ExtResource("5")',
+        normal_texture: 'ExtResource("6")',
+        specular_shininess: '0.5',
+      },
+    },
+    { id: 'Plain_1', type: 'PlaceholderTexture2D', data: {} },
+  ];
+
+  it('passes a raw res:// path through', () => {
+    expect(resolveTexture2DPath('res://icon.png', externals, internals)).toBe('res://icon.png');
+  });
+
+  it('resolves an ExtResource reference', () => {
+    expect(resolveTexture2DPath('ExtResource("5")', externals, internals)).toBe('res://godot.png');
+  });
+
+  it('unwraps a CanvasTexture SubResource to its diffuse_texture', () => {
+    expect(resolveTexture2DPath('SubResource("CanvasTexture_hlulo")', externals, internals)).toBe(
+      'res://godot.png'
+    );
+  });
+
+  it('returns null for a SubResource that carries no diffuse texture', () => {
+    expect(resolveTexture2DPath('SubResource("Plain_1")', externals, internals)).toBeNull();
+  });
+
+  it('returns null for an unknown id, a malformed ref, and an absent value', () => {
+    expect(resolveTexture2DPath('SubResource("nope")', externals, internals)).toBeNull();
+    expect(resolveTexture2DPath('not a reference', externals, internals)).toBeNull();
+    expect(resolveTexture2DPath(undefined, externals, internals)).toBeNull();
   });
 });

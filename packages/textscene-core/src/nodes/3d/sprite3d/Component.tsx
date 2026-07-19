@@ -42,7 +42,7 @@ import { useGodotLinearColor } from '../../../r3f/godotColor';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { composeFrameTexture, frameSizePx } from '../../../r3f/spriteFrame';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
-import { resolveExtResourcePath } from '../../../resources/SubResourceResolver';
+import { resolveTexture2DPath } from '../../../resources/SubResourceResolver';
 import { useResource } from '../../../resources/useResource';
 import {
   AlphaCutMode,
@@ -54,7 +54,7 @@ const DEFAULT_ALPHA_TEST = 0.5;
 
 export function Sprite3D({ node, children }: NodeComponentProps) {
   const properties = node.properties as Sprite3DProperties;
-  const { externalResources } = useSceneResources();
+  const { externalResources, internalResources } = useSceneResources();
 
   const { position, rotation, scale } = useMemo(
     () => transformFromNode3DProperties(properties),
@@ -66,8 +66,8 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
   // useResource's contract) so we keep the hook-call count stable when
   // texture is absent.
   const texturePath = useMemo(
-    () => resolveExtResourcePath(properties.texture, externalResources),
-    [properties.texture, externalResources]
+    () => resolveTexture2DPath(properties.texture, externalResources, internalResources),
+    [properties.texture, externalResources, internalResources]
   );
 
   const texResult = useResource<THREE.Texture>(texturePath ?? '', 'Texture2D');

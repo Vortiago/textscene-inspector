@@ -838,6 +838,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - CSG Primitives"
   },
   {
+    "name": "Csg External Material",
+    "file": "unit-csg-external-material.tscn",
+    "category": "Unit - CSG Primitives"
+  },
+  {
     "name": "Csg Sphere",
     "file": "unit-csg-sphere.tscn",
     "category": "Unit - CSG Primitives"
@@ -890,6 +895,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Polygon2d",
     "file": "unit-polygon2d.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Sprite2d Canvastexture",
+    "file": "unit-sprite2d-canvastexture.tscn",
     "category": "Unit - 2D Canvas"
   },
   {
