@@ -19,8 +19,15 @@ import { launchShowcaseBrowser } from './browser.mjs';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-const OUT = process.env.VERIFY_OUT || 'docs/showcase/verify';
+// Gitignored by default: the gate runs often, and overwriting the committed
+// showcase captures would drop binary diffs into unrelated changes. Point
+// VERIFY_OUT at docs/showcase/verify to refresh those deliberately.
+const OUT = process.env.VERIFY_OUT || 'scripts/showcase/output';
 const BASE = process.env.SHOWCASE_URL || 'http://localhost:4173';
+// Bundled Chromium unless told otherwise: this is a gate, and the repo's
+// determinism contract is the lockfile-pinned browser, never system Chrome.
+// Set here rather than as a script env prefix, which cmd.exe cannot parse.
+process.env.SHOWCASE_CHANNEL = process.env.SHOWCASE_CHANNEL || 'bundled';
 
 /**
  * [screenshot-name, fixture file, expectations].
@@ -92,6 +99,10 @@ for (const [name, file, expect = {}] of TARGETS) {
       controls: all.length,
       fallbacks: document.querySelectorAll('[data-control-fallback="true"]').length,
       types: [...new Set(all.map((e) => e.getAttribute('data-control-type')))].sort(),
+      // Every rendered string, for assertions. `textSample` below is the
+      // truncated human-readable version for the report — never assert on it,
+      // a required string can fall outside the slice.
+      texts: all.map((e) => e.textContent?.trim() ?? '').filter((t) => t.length > 0),
       textSample: all
         .filter((e) => e.textContent && e.textContent.trim().length)
         .slice(0, 6)
@@ -110,7 +121,7 @@ for (const [name, file, expect = {}] of TARGETS) {
     if (!stats.types.includes(type)) failures.push(`missing control type ${type}`);
   }
   for (const text of expect.texts ?? []) {
-    if (!stats.textSample.some((t) => t.includes(text))) failures.push(`missing text "${text}"`);
+    if (!stats.texts.some((t) => t.includes(text))) failures.push(`missing text "${text}"`);
   }
   const maxFallbacks = expect.maxFallbacks ?? 0;
   if (stats.fallbacks > maxFallbacks) {

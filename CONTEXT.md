@@ -121,7 +121,7 @@ The DOM analogue of NodeDispatcher — recursively walks a Control subtree and e
 _Avoid_: "UI renderer".
 
 **Viewport mode**:
-The single `'2D' | '3D'` display state of the center viewport — `3D` mounts the R3F canvas, `2D` mounts the **2D stage** (project-viewport frame + 2D world canvas + **Control overlay**); chosen by an auto-default heuristic on the scene root type, overridable by the toolbar toggle.
+The single `'2D' | '3D'` display state of the center viewport — `3D` mounts the R3F canvas, `2D` mounts the pannable 2D stage (project-viewport frame + 2D world canvas + **Control overlay**, in Godot's 2D-editor order); chosen by an auto-default heuristic on the scene root type, overridable by the toolbar toggle.
 _Avoid_: "2D mode" alone (it is one of two values of one state).
 
 **Control overlay**:

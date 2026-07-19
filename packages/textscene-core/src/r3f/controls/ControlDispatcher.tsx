@@ -7,12 +7,15 @@
  *
  * Descends the **Live scene tree**, not the parsed SceneGraph: at an `instance=`
  * boundary the parsed node is a childless `Node`, so walking `node.children`
- * renders a HUD assembled by instancing as an empty passthrough. `liveChildGroups`
- * supplies the composed children AND the ExtResource scope each group resolves
- * against — a sub-scene's texture/StyleBox refs are its own, not the host's — so
- * each group mounts under its own `<SceneResourcesProvider>` (the nested override
- * ADR-0009 carves out as load-bearing for instancing, distinct from the overlay's
- * own top-level mount).
+ * renders a HUD assembled by instancing as an empty passthrough. A loaded
+ * sub-scene is composed in two shapes (ADR-0013): a single-root one collapses,
+ * the instance node BECOMING that root, so the node itself renders in the
+ * sub-scene's scope; a multi-root one keeps the instance node and injects the
+ * loaded roots beneath it. Either way the subtree mounts under its own
+ * `<SceneResourcesProvider>` — a sub-scene's texture/StyleBox ids are its own,
+ * and the host's scope would resolve them to different files. That nested
+ * override is what ADR-0009 carves out as load-bearing for instancing, distinct
+ * from the overlay's own top-level mount.
  *
  * Honors the scene-tree eye toggle the same way NodeDispatcher does in 3D: a
  * node whose path is in `SelectionContext.hiddenNodePaths` (and its subtree) is
