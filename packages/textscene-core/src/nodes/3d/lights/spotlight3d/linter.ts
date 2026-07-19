@@ -8,7 +8,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { rangeAdvisories } from '../../../../linter/rangeAdvisory.js';
-import { lightEnergyArms } from '../shared/linterChecks.js';
+import { lightEnergyArms, lightRangeArms } from '../shared/linterChecks.js';
 
 // Thresholds for warnings
 const LARGE_SPOT_RANGE = 1000;
@@ -32,20 +32,7 @@ function checkSpotLight3D(context: RuleContext): Diagnostic[] {
 
   return rangeAdvisories(node, {
     light_energy: lightEnergyArms('spotlight3d'),
-    spot_range: [
-      {
-        over: LARGE_SPOT_RANGE,
-        ruleName: 'spotlight3d-large-range',
-        message: (range) =>
-          `Light range is very large (${range}). Values above ${LARGE_SPOT_RANGE} can impact performance significantly.`,
-      },
-      {
-        under: SMALL_SPOT_RANGE,
-        ruleName: 'spotlight3d-small-range',
-        message: (range) =>
-          `Light range is very small (${range}). Values below ${SMALL_SPOT_RANGE} might not be visible.`,
-      },
-    ],
+    spot_range: lightRangeArms('spotlight3d', LARGE_SPOT_RANGE, SMALL_SPOT_RANGE),
     spot_attenuation: [
       {
         under: EXTREME_SPOT_ATTENUATION_MIN,

@@ -8,7 +8,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { rangeAdvisories } from '../../../../linter/rangeAdvisory.js';
-import { lightEnergyArms } from '../shared/linterChecks.js';
+import { lightEnergyArms, lightRangeArms } from '../shared/linterChecks.js';
 
 // Thresholds for warnings
 const LARGE_OMNI_RANGE = 1000;
@@ -29,20 +29,7 @@ function checkOmniLight3D(context: RuleContext): Diagnostic[] {
 
   return rangeAdvisories(node, {
     light_energy: lightEnergyArms('omnilight3d'),
-    omni_range: [
-      {
-        over: LARGE_OMNI_RANGE,
-        ruleName: 'omnilight3d-large-range',
-        message: (range) =>
-          `Light range is very large (${range}). Values above ${LARGE_OMNI_RANGE} can impact performance significantly.`,
-      },
-      {
-        under: SMALL_OMNI_RANGE,
-        ruleName: 'omnilight3d-small-range',
-        message: (range) =>
-          `Light range is very small (${range}). Values below ${SMALL_OMNI_RANGE} might not be visible.`,
-      },
-    ],
+    omni_range: lightRangeArms('omnilight3d', LARGE_OMNI_RANGE, SMALL_OMNI_RANGE),
     omni_attenuation: [
       {
         under: EXTREME_OMNI_ATTENUATION_MIN,

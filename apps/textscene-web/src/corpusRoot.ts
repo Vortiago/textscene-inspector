@@ -75,6 +75,6 @@ export function fixtureUrlForGltfUri(uri: string, resourceRoot: string): string 
   } catch {
     // Malformed escape — use the raw path.
   }
-  const prefix = resourceRoot ? `${resourceRoot}/` : '';
-  return `/fixtures/${prefix}${rest}`;
+  // The decoded remainder is a bare fixtures-relative path; reuse the one mapping.
+  return `/fixtures/${resToFixtureFile(rest, resourceRoot)}`;
 }

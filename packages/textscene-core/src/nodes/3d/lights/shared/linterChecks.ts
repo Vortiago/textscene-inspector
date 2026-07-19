@@ -32,3 +32,26 @@ export function lightEnergyArms(rulePrefix: string): RangeArm[] {
     },
   ];
 }
+
+/**
+ * The two `<prop>_range` **Range advisory** arms shared by point/spot lights — a
+ * very large range (performance) or very small range (invisible). Same message
+ * text across those lights; only the rule-name prefix (`<prefix>-large-range` /
+ * `<prefix>-small-range`) and the bounds vary.
+ */
+export function lightRangeArms(rulePrefix: string, large: number, small: number): RangeArm[] {
+  return [
+    {
+      over: large,
+      ruleName: `${rulePrefix}-large-range`,
+      message: (range) =>
+        `Light range is very large (${range}). Values above ${large} can impact performance significantly.`,
+    },
+    {
+      under: small,
+      ruleName: `${rulePrefix}-small-range`,
+      message: (range) =>
+        `Light range is very small (${range}). Values below ${small} might not be visible.`,
+    },
+  ];
+}
