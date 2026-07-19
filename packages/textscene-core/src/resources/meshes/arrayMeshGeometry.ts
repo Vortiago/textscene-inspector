@@ -35,8 +35,12 @@ export function buildArrayMeshGeometry(mesh: ArrayMeshData): THREE.BufferGeometr
     // build their UVs for), which uploads the image bottom-up. Handing Godot's V
     // through unchanged therefore samples the texture vertically mirrored —
     // every tile of an atlas lands on the wrong row.
-    if (uvs && surface.uvs) {
-      uvs.set(surface.uvs, vertexBase * 2);
+    if (uvs) {
+      if (surface.uvs) uvs.set(surface.uvs, vertexBase * 2);
+      // Flip this surface's whole range, including a surface that carries no
+      // UVs of its own — `hasUV` is `some`, so the buffer spans those too, and
+      // Godot samples them at UV (0,0), the image's TOP-left. Flipping only the
+      // written surfaces would leave one geometry in two V spaces.
       for (let i = 0; i < surface.vertexCount; i++) {
         const v = (vertexBase + i) * 2 + 1;
         uvs[v] = 1 - uvs[v]!;

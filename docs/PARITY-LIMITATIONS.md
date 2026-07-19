@@ -65,6 +65,53 @@ would shift the texture by a different amount than Godot.
   formula for a zero-impact case adds risk for no benefit.
 - Site: `nodes/3d/meshinstance3d/Component.tsx` (uvTransform).
 
+### uv1_scale / uv1_offset V anchoring
+Godot samples `UV = uv * uv1_scale + uv1_offset` with V measured from the image
+**top**; three.js samples `uv * repeat + offset` with V from the bottom (textures
+load `flipY=true`). Both UV-transform sites copy Godot's values straight across
+(`repeat = scale`, `offset = offset`), which is only equivalent when the V terms
+happen to cancel. Reproducing Godot exactly needs
+
+    repeat.y = scale.y      offset.y = 1 - scale.y - uv1_offset.y
+
+- **Diverges when:** `uv1_scale.y` is non-integer (an integer scale makes the
+  `1 - scale.y` term vanish mod 1), or `uv1_offset.y` is non-zero — where the
+  sign is currently inverted.
+- **Impact today:** zero. No shipped `.tscn` sets `uv1_offset`, and the only
+  `uv1_scale` on a Godot-authored mesh is `demos/3d/soft_body_physics/box.tscn`
+  at an integer 2. The `uv1_scale` fixtures use PlaneMesh primitives.
+- **Why not fixed:** the same formula applies to primitive meshes, whose current
+  appearance is what the existing fixtures were eyeballed against; correcting it
+  is a rendering change across both mesh paths that is unverifiable without a
+  visual Godot reference, for a case nothing in the corpus exercises.
+- Sites: `nodes/3d/meshinstance3d/applyUVTransform.ts` (parsed-scalar path) and
+  `resources/materials/standardmaterial3d/renderer.ts` (ArrayMesh surface
+  materials — this one also drops `uv1_offset` entirely).
+
+### ArrayMesh compressed attributes
+A surface with `ARRAY_FLAG_COMPRESS_ATTRIBUTES` (bit 29) stores UV1/UV2 as
+normalised `uint16` to be rescaled by the surface's `uv_scale`. The decoder reads
+the uncompressed layout only, so such a surface now yields **no** UVs rather than
+float32 garbage read out of the quantised bytes (values like `6.7e37`).
+
+- **Impact today:** three surfaces in the corpus set the flag —
+  `demos/3d/material_testers/models/godot_ball.tres` and
+  `demos/3d/truck_town/vehicles/meshes/*.tres`. They render untextured instead of
+  with a scrambled texture.
+- **Why not fixed:** dequantising needs the `uv_scale` Vector4 applied per
+  surface, and the same flag also changes the vertex/normal layout — a decoder
+  feature, not a patch.
+- Site: `resources/meshes/arrayMeshDecode.ts` (`decodeArrayMesh`).
+
+### GridMap cell_scale
+Godot's `_octant_update` composes `T(cell·size + offset) × R × scale(cell_scale)
+× mesh_transform`. We apply the translation, orientation and `mesh_transform`,
+but `cell_scale` (default 1.0) is not parsed — a GridMap that sets it renders
+every tile at the wrong size.
+
+- **Impact today:** zero — `cell_scale` appears in no fixture in the corpus.
+- Site: `nodes/3d/gridmap/Component.tsx` (`cellMatrix`).
+
 ### WorldEnvironment volumetric fog  *(audit #11)*
 Godot has two fog systems. **Screen-space fog** (`fog_enabled`/`fog_density`/`fog_light_color`/`fog_mode`) maps to `THREE.FogExp2` and is supported. **Volumetric fog** (`volumetric_fog_*`, a froxel-based 3D scattering effect) has no three.js equivalent and is intentionally **not** applied to `scene.fog` — its density scale differs by orders of magnitude, so approximating it with FogExp2 produced wildly over-dense fog. Screen-space `FOG_MODE_DEPTH` (1) is approximated with the same density-based exponential fog (no separate linear depth params).
 

@@ -13,7 +13,13 @@ import { parseTresFile } from '../../parser/tresParser.js';
 /** Godot Mesh.ArrayFormat flags. */
 const ARRAY_FORMAT_NORMAL = 1 << 1;
 const ARRAY_FORMAT_TANGENT = 1 << 2;
+const ARRAY_FORMAT_COLOR = 1 << 3;
 const ARRAY_FORMAT_TEX_UV = 1 << 4;
+/** Attributes are quantised (UVs become normalised uint16 scaled by uv_scale). */
+const ARRAY_FLAG_COMPRESS_ATTRIBUTES = 1 << 29;
+
+/** RGBA8 vertex colour, which Godot writes BEFORE UV1 in the attribute record. */
+const COLOR_BYTES = 4;
 
 /** Float32 position component size in the vertex buffer (uncompressed). */
 const POSITION_STRIDE = 12;
@@ -84,14 +90,15 @@ function readLeadingFloats(
   bytes: Uint8Array,
   vertexCount: number,
   floatsPerVertex: number,
-  strideBytes?: number
+  strideBytes?: number,
+  offsetBytes = 0
 ): Float32Array {
   const out = new Float32Array(vertexCount * floatsPerVertex);
   if (vertexCount === 0 || bytes.byteLength === 0) return out;
   const stride = strideBytes ?? bytes.byteLength / vertexCount;
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   for (let i = 0; i < vertexCount; i++) {
-    const base = i * stride;
+    const base = i * stride + offsetBytes;
     for (let f = 0; f < floatsPerVertex; f++) {
       out[i * floatsPerVertex + f] = view.getFloat32(base + f * 4, true);
     }
@@ -178,10 +185,22 @@ export function decodeArrayMesh(content: string): ArrayMeshData {
     const positions = readLeadingFloats(vertexData, vertexCount, 3, POSITION_STRIDE);
     // Normals: octahedral pairs in the block following the positions.
     const normals = decodeNormals(vertexData, vertexCount, format);
-    // UV1: leads attribute_data; derive stride to skip any trailing UV2/color.
+    // UV1 within attribute_data. Godot orders the record COLOR, UV1, UV2, …, so
+    // a surface with vertex colours puts 4 bytes of RGBA8 ahead of UV1 — reading
+    // from offset 0 there decodes the colour as `u`. Compressed attributes store
+    // UVs as uint16 scaled by `uv_scale` and are not decoded (see
+    // docs/PARITY-LIMITATIONS.md); reading them as float32 yields garbage, so
+    // skip rather than emit nonsense UVs.
     const uvs =
-      (format & ARRAY_FORMAT_TEX_UV) !== 0
-        ? readLeadingFloats(readPackedBytes(block, 'attribute_data'), vertexCount, 2)
+      (format & ARRAY_FORMAT_TEX_UV) !== 0 &&
+      (format & ARRAY_FLAG_COMPRESS_ATTRIBUTES) === 0
+        ? readLeadingFloats(
+            readPackedBytes(block, 'attribute_data'),
+            vertexCount,
+            2,
+            undefined,
+            (format & ARRAY_FORMAT_COLOR) !== 0 ? COLOR_BYTES : 0
+          )
         : undefined;
     const indices = decodeIndices(readPackedBytes(block, 'index_data'), indexCount);
 

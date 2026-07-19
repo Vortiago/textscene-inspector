@@ -121,6 +121,9 @@ function GridMapItem({ item, cells, cellSize, cellCenter }: GridMapItemProps) {
   const materialPath = meshResult.value?.materialPaths[0] ?? '';
   const materialResult = useResource<THREE.Material>(materialPath, 'StandardMaterial3D');
 
+  // `cellCenter` is compared by identity: the parser hands back one shared
+  // frozen instance for the all-centered default, so re-parsing an unchanged
+  // file (every debounced keystroke) does not rebuild every cell's matrix.
   const matrices = useMemo(
     () => cells.map((cell) => cellMatrix(cell, cellSize, cellCenter, item?.meshTransform ?? null)),
     [cells, cellSize, cellCenter, item?.meshTransform]

@@ -37,6 +37,13 @@ function gridMapNode(properties: Record<string, string>): TscnNode {
   };
 }
 
+/** The wireframe boxes <GridMap> falls back to when no MeshLibrary resolves. */
+function placeholderCells(renderer: Awaited<ReturnType<typeof render>>) {
+  return renderer.scene
+    .findAllByType('Mesh')
+    .filter((m) => (m.instance.material as THREE.MeshBasicMaterial)?.wireframe);
+}
+
 function render(node: TscnNode, children?: ReactNode) {
   return ReactThreeTestRenderer.create(
     <ResourceLoaderProvider loader={makeLoader()}>
@@ -65,10 +72,7 @@ describe('<GridMap>', () => {
     const renderer = await render(
       gridMapNode({ data: '{"cells": PackedInt32Array(0, 0, 0, 1, 0, 0)}' })
     );
-    const wireframes = renderer.scene
-      .findAllByType('Mesh')
-      .filter((m) => (m.instance.material as THREE.MeshBasicMaterial)?.wireframe);
-    expect(wireframes).toHaveLength(2);
+    expect(placeholderCells(renderer)).toHaveLength(2);
   });
 
   it('offsets each cell by half a cell — Godot centers all three axes by default', async () => {
@@ -80,10 +84,7 @@ describe('<GridMap>', () => {
       gridMapNode({ data: '{"cells": PackedInt32Array(0, 0, 0)}' })
     );
 
-    const box = renderer.scene
-      .findAllByType('Mesh')
-      .find((m) => (m.instance.material as THREE.MeshBasicMaterial)?.wireframe)!;
-    expect(box.instance.position.toArray()).toEqual([1, 1, 1]);
+    expect(placeholderCells(renderer)[0]!.instance.position.toArray()).toEqual([1, 1, 1]);
   });
 
   it('drops the offset per axis when cell_center_* is off', async () => {
@@ -96,10 +97,7 @@ describe('<GridMap>', () => {
     );
 
     // Only y stays centered.
-    const box = renderer.scene
-      .findAllByType('Mesh')
-      .find((m) => (m.instance.material as THREE.MeshBasicMaterial)?.wireframe)!;
-    expect(box.instance.position.toArray()).toEqual([0, 1, 0]);
+    expect(placeholderCells(renderer)[0]!.instance.position.toArray()).toEqual([0, 1, 0]);
   });
 
   it('adds the offset on top of the cell stride, not instead of it', async () => {
@@ -108,10 +106,7 @@ describe('<GridMap>', () => {
       gridMapNode({ data: '{"cells": PackedInt32Array(1, 0, 0)}' })
     );
 
-    const box = renderer.scene
-      .findAllByType('Mesh')
-      .find((m) => (m.instance.material as THREE.MeshBasicMaterial)?.wireframe)!;
-    expect(box.instance.position.toArray()).toEqual([3, 1, 1]);
+    expect(placeholderCells(renderer)[0]!.instance.position.toArray()).toEqual([3, 1, 1]);
   });
 
   it('renders nothing extra for an empty grid', async () => {

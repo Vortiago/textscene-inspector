@@ -66,6 +66,7 @@ const VIEWPORT = { width: 1280, height: 800 };
 // scene at its full canvas width, not incidental editor chrome.
 const SOURCE_PANE_STORAGE_KEY = 'tscn-web-source-pane';
 
+const SKIP_BUILD_VALUES = new Set(['1', 'true', 'yes']);
 const NETWORK_IDLE_MS = 20000; // ceiling for the app's own resource chain to go quiet
 const SETTLE_INITIAL_MS = 1200; // covers the last CameraFit reframe at 1100 ms
 const SETTLE_INTERVAL_MS = 350;
@@ -99,8 +100,11 @@ function parseArgs(argv) {
  * VISUAL_SKIP_BUILD=1 to reuse `dist/` while iterating locally.
  */
 function ensureWebBuilt() {
-  if (existsSync(WEB_DIST_INDEX) && process.env.VISUAL_SKIP_BUILD === '1') {
-    console.log('[visual] VISUAL_SKIP_BUILD=1 — reusing existing dist/ (may be stale)');
+  const skip = process.env.VISUAL_SKIP_BUILD;
+  if (skip !== undefined && !SKIP_BUILD_VALUES.has(skip.trim().toLowerCase())) {
+    console.warn(`[visual] VISUAL_SKIP_BUILD="${skip}" not recognised — building anyway`);
+  } else if (skip !== undefined && existsSync(WEB_DIST_INDEX)) {
+    console.log('[visual] VISUAL_SKIP_BUILD set — reusing existing dist/ (may be stale)');
     return;
   }
   console.log('[visual] building web previewer…');
@@ -213,7 +217,14 @@ async function captureScene(page, baseUrl, scene) {
   // the untextured placeholder and freeze THAT into a baseline, which then
   // passes forever while seeing none of the texture. Wait for the network to go
   // quiet first; a scene that never idles still falls through to the gate.
-  await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_MS }).catch(() => {});
+  await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_MS }).catch((err) => {
+    // A scene that never idles still falls through to the settle gate, but say
+    // so — silence here is how a stalled resource chain becomes a baseline.
+    // Anything that is NOT a timeout (crashed target, closed page) is a real
+    // failure and must not be mistaken for one.
+    if (err?.name !== 'TimeoutError') throw err;
+    console.log(`[visual]   ${scene.name}: no network idle within ${NETWORK_IDLE_MS}ms`);
+  });
   const canvases = page.locator('canvas');
   await canvases.first().waitFor({ timeout: 30000 });
   const count = await canvases.count();
@@ -325,8 +336,12 @@ async function main() {
     }
   }
 
-  await assertPortFree(PORT);
+  // Build BEFORE the port check: the build is now unconditional, and a cold
+  // one is long enough that another worktree's harness could claim the port in
+  // between — the exact race assertPortFree exists to catch, widened by the
+  // time it takes to run.
   ensureWebBuilt();
+  await assertPortFree(PORT);
   const { proc, baseUrl } = startPreview();
   let browser;
   const results = [];

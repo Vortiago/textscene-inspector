@@ -28,6 +28,21 @@ _surfaces = [{
 blend_shape_mode = 0
 `;
 
+/** The single-triangle surface these tests vary one field of at a time. */
+function triangle(overrides: Partial<ArrayMeshData['surfaces'][number]> = {}) {
+  return {
+    format: 0,
+    primitive: 3,
+    vertexCount: 3,
+    indexCount: 3,
+    positions: new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]),
+    uvs: new Float32Array([0, 0, 1, 0, 0, 1]),
+    indices: new Uint16Array([0, 1, 2]),
+    materialPath: 'res://a.tres',
+    ...overrides,
+  };
+}
+
 describe('buildArrayMeshGeometry', () => {
   it('builds a BufferGeometry with position, uv, index and Godot normals', () => {
     const geo = buildArrayMeshGeometry(decodeArrayMesh(WALL_TRES));
@@ -67,27 +82,29 @@ describe('buildArrayMeshGeometry', () => {
     // default (the convention spriteFrame.ts / tileGeometry.ts also target), so
     // a pass-through V samples an atlas mirrored — the whole texture reads off
     // by one row. V=0 (Godot's top edge) must become V=1 here.
-    const data: ArrayMeshData = {
-      surfaces: [
-        {
-          format: 0,
-          primitive: 3,
-          vertexCount: 3,
-          indexCount: 3,
-          positions: new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]),
-          uvs: new Float32Array([0, 0, 1, 0.25, 0.5, 1]),
-          indices: new Uint16Array([0, 1, 2]),
-          materialPath: 'res://m.tres',
-        },
-      ],
-    };
-
-    const uv = buildArrayMeshGeometry(data).getAttribute('uv');
+    const uv = buildArrayMeshGeometry({
+      surfaces: [triangle({ uvs: new Float32Array([0, 0, 1, 0.25, 0.5, 1]) })],
+    }).getAttribute('uv');
 
     // U is untouched; only V is mirrored.
     expect([uv.getX(0), uv.getY(0)]).toEqual([0, 1]);
     expect([uv.getX(1), uv.getY(1)]).toEqual([1, 0.75]);
     expect([uv.getX(2), uv.getY(2)]).toEqual([0.5, 0]);
+  });
+
+  it('converts a UV-less surface too, so one geometry never holds two V spaces', () => {
+    // Godot allows per-surface vertex formats: only some surfaces may declare
+    // TEX_UV. `hasUV` is `some`, so the merged buffer covers the UV-less ones
+    // as zeros — and Godot samples those at UV (0,0), the image TOP, which is
+    // V=1 here. Leaving them at 0 would point them at the opposite edge from
+    // their textured neighbours.
+    const uv = buildArrayMeshGeometry({
+      surfaces: [triangle(), triangle({ uvs: undefined })],
+    }).getAttribute('uv');
+
+    expect(uv.getY(0)).toBe(1); // written 0 → image top
+    expect(uv.getY(3)).toBe(1); // unwritten 0 → same edge, not the opposite one
+    expect(uv.getY(4)).toBe(1);
   });
 
   it('adds one draw group per surface for per-surface materials', () => {
@@ -98,17 +115,9 @@ describe('buildArrayMeshGeometry', () => {
   });
 
   it('merges multiple surfaces, re-basing each surface\'s indices and grouping them', () => {
-    const surface = (mat: string) => ({
-      format: 0,
-      primitive: 3,
-      vertexCount: 3,
-      indexCount: 3,
-      positions: new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]),
-      uvs: new Float32Array([0, 0, 1, 0, 0, 1]),
-      indices: new Uint16Array([0, 1, 2]),
-      materialPath: mat,
-    });
-    const data: ArrayMeshData = { surfaces: [surface('res://a.tres'), surface('res://b.tres')] };
+    const data: ArrayMeshData = {
+      surfaces: [triangle(), triangle({ materialPath: 'res://b.tres' })],
+    };
 
     const geo = buildArrayMeshGeometry(data);
 

@@ -195,10 +195,11 @@ decoders, which stay faithful readers of what the file says:
   Textures are shared **by identity** between 2D and 3D consumers, so this is
   converted per consumer, never by flipping the texture:
   `resources/meshes/arrayMeshGeometry.ts` (mesh UV attribute),
-  `resources/tileset/tileGeometry.ts` (`pxRectToUv`), and — for texture
-  offset/repeat windowing — `r3f/spriteFrame.ts` plus
-  `nodes/3d/meshinstance3d/applyUVTransform.ts`. The shapes differ enough that
-  the shared part is only the `1 -`; there is deliberately no helper.
+  `resources/tileset/tileGeometry.ts` (`pxRectToUv`) and `r3f/spriteFrame.ts`
+  (region/frame windowing via texture offset+repeat). The shapes differ enough
+  that the shared part is only the `1 -`; there is deliberately no helper.
+  The material UV transform (`uv1_scale`/`uv1_offset`) does **not** convert —
+  see the `uv1` entry in [docs/PARITY-LIMITATIONS.md](./docs/PARITY-LIMITATIONS.md).
 - **Triangle winding.** Godot fronts triangles clockwise, three.js expects
   counter-clockwise — every decoded index triple is reversed (`arrayMeshGeometry.ts`).
   Without it, flat meshes vanish and closed meshes render inside-out.

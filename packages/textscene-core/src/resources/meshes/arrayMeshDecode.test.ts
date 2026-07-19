@@ -140,3 +140,37 @@ _surfaces = [{
 }]
 blend_shape_mode = 0
 `;
+
+const COLOR_UV_TRES = `[gd_resource type="ArrayMesh" format=4]
+
+[resource]
+_surfaces = [{
+"aabb": AABB(0, 0, 0, 1, 1, 0),
+"attribute_data": PackedByteArray("/wAA/wAAgD4AAAA/AP8A/wAAQD8AAIA/"),
+"format": 4121,
+"index_count": 0,
+"primitive": 3,
+"vertex_count": 2,
+"vertex_data": PackedByteArray("AAAAAAAAAAAAAAAAAACAPwAAgD8AAAAA")
+}]
+`;
+
+describe('attribute_data layout', () => {
+  it('reads UV1 past the vertex colour instead of decoding the colour as u', () => {
+    // Godot orders the attribute record COLOR, UV1, UV2 — a surface with vertex
+    // colours puts 4 RGBA8 bytes ahead of UV1, so reading from offset 0 decodes
+    // the colour as `u`. Real case: the COLOR+TEX_UV surface of
+    // demos/3d/material_testers/models/godot_ball.tres (12-byte record).
+    const surface = decodeArrayMesh(COLOR_UV_TRES).surfaces[0]!;
+
+    expect(Array.from(surface.uvs!)).toEqual([0.25, 0.5, 0.75, 1]);
+  });
+
+  it('emits no UVs for a compressed-attribute surface rather than garbage floats', () => {
+    // uint16-quantised UVs scaled by uv_scale are not decoded; reading them as
+    // float32 produced values like 6.7e37 (docs/PARITY-LIMITATIONS.md).
+    const compressed = COLOR_UV_TRES.replace('"format": 4121', '"format": 536875025');
+
+    expect(decodeArrayMesh(compressed).surfaces[0]!.uvs).toBeUndefined();
+  });
+});
