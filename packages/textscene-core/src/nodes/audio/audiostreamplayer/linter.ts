@@ -9,7 +9,8 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { checkResourceExists } from '../../../linter/resourceChecker.js';
-import { checkExtremeVolume } from '../sharedLinterChecks.js';
+import { rangeAdvisories } from '../../../linter/rangeAdvisory.js';
+import { extremeVolumeArms } from '../sharedLinterChecks.js';
 
 // Thresholds for extreme-volume warning (same as AudioStreamPlayer2D)
 const EXTREME_VOLUME_DB_MIN = -60;
@@ -51,14 +52,10 @@ function checkAudioStreamPlayer(context: RuleContext): Diagnostic[] {
     });
   }
 
-  checkExtremeVolume(
-    rawProps,
-    node.name,
-    node.type,
-    'audiostreamplayer',
-    EXTREME_VOLUME_DB_MIN,
-    EXTREME_VOLUME_DB_MAX,
-    diagnostics
+  diagnostics.push(
+    ...rangeAdvisories(node, {
+      volume_db: extremeVolumeArms('audiostreamplayer', EXTREME_VOLUME_DB_MIN, EXTREME_VOLUME_DB_MAX),
+    })
   );
 
   return diagnostics;

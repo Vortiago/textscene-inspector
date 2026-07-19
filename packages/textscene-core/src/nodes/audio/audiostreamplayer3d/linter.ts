@@ -9,9 +9,10 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { checkResourceExists } from '../../../linter/resourceChecker.js';
+import { rangeAdvisories } from '../../../linter/rangeAdvisory.js';
 import {
-  checkExtremeVolume,
-  checkUnusualPitch,
+  extremeVolumeArms,
+  unusualPitchArms,
   checkInvalidMaxPolyphony,
 } from '../sharedLinterChecks.js';
 
@@ -124,16 +125,14 @@ function checkAudioStreamPlayer3D(context: RuleContext): Diagnostic[] {
     });
   }
 
-  checkExtremeVolume(
-    rawProps,
-    node.name,
-    node.type,
-    'audiostreamplayer3d',
-    EXTREME_VOLUME_DB_MIN,
-    EXTREME_VOLUME_DB_MAX,
-    diagnostics
+  // Range advisories: volume + pitch bands.
+  diagnostics.push(
+    ...rangeAdvisories(node, {
+      volume_db: extremeVolumeArms('audiostreamplayer3d', EXTREME_VOLUME_DB_MIN, EXTREME_VOLUME_DB_MAX),
+      pitch_scale: unusualPitchArms('audiostreamplayer3d'),
+    })
   );
-  checkUnusualPitch(rawProps, node.name, node.type, 'audiostreamplayer3d', diagnostics);
+
   checkInvalidMaxPolyphony(rawProps, node.name, node.type, 'audiostreamplayer3d', diagnostics);
 
   return diagnostics;

@@ -1,86 +1,66 @@
 /**
- * Semantic lint checks shared by the AudioStreamPlayer family. Extracted because
- * the extreme-volume / unusual-pitch / max_polyphony blocks were copy-pasted
- * verbatim across the 2D/3D/base `linter.ts` files (architecture review) — only
- * the rule-name prefix and the volume thresholds differed.
+ * Semantic lint checks shared by the AudioStreamPlayer family. The
+ * extreme-volume / unusual-pitch bands were copy-pasted verbatim across the
+ * 2D/3D/base `linter.ts` files (architecture review) — only the rule-name prefix
+ * and the volume thresholds differed — so they are **Range advisory** arms now,
+ * flowing through the shared `rangeAdvisories` combinator. `max_polyphony` stays
+ * a hand-written check because it is an ERROR, not an advisory.
  */
 
 import type { Diagnostic } from '../../linter/types.js';
+import type { RangeArm } from '../../linter/rangeAdvisory.js';
 
 const TYPICAL_PITCH_SCALE_MIN = 0.5;
 const TYPICAL_PITCH_SCALE_MAX = 2.0;
 
 /**
- * Warn when `volume_db` is implausibly low or high. Thresholds differ per node
- * type (2D/base tolerate a wider range than 3D), so the caller passes them.
- * `rulePrefix` is the node-type slug (e.g. 'audiostreamplayer2d') so each slice
- * keeps its own rule name (`<prefix>-extreme-volume`). Pushes onto `diagnostics`;
- * no-op when the property is absent or non-numeric.
+ * The two `volume_db` **Range advisory** arms — implausibly low or high.
+ * Thresholds differ per node type (2D/base tolerate a wider range than 3D), so
+ * the caller passes them. `rulePrefix` is the node-type slug so each slice keeps
+ * its own `<prefix>-extreme-volume` rule name.
  */
-export function checkExtremeVolume(
-  rawProps: Record<string, string>,
-  nodeName: string,
-  nodeType: string,
+export function extremeVolumeArms(
   rulePrefix: string,
   volumeDbMin: number,
-  volumeDbMax: number,
-  diagnostics: Diagnostic[]
-): void {
-  if (rawProps.volume_db === undefined) return;
-  const volumeDb = parseFloat(rawProps.volume_db);
-  if (Number.isNaN(volumeDb)) return;
-
-  if (volumeDb < volumeDbMin) {
-    diagnostics.push({
-      severity: 'warning',
-      message: `Volume is very low (${volumeDb} dB). Values below ${volumeDbMin} dB are rarely intentional.`,
-      nodeName,
-      nodeType,
+  volumeDbMax: number
+): RangeArm[] {
+  return [
+    {
+      under: volumeDbMin,
       ruleName: `${rulePrefix}-extreme-volume`,
-    });
-  } else if (volumeDb > volumeDbMax) {
-    diagnostics.push({
-      severity: 'warning',
-      message: `Volume is very high (${volumeDb} dB). Values above ${volumeDbMax} dB can cause distortion.`,
-      nodeName,
-      nodeType,
+      message: (volumeDb) =>
+        `Volume is very low (${volumeDb} dB). Values below ${volumeDbMin} dB are rarely intentional.`,
+    },
+    {
+      over: volumeDbMax,
       ruleName: `${rulePrefix}-extreme-volume`,
-    });
-  }
+      message: (volumeDb) =>
+        `Volume is very high (${volumeDb} dB). Values above ${volumeDbMax} dB can cause distortion.`,
+    },
+  ];
 }
 
 /**
- * Warn when a positive `pitch_scale` falls outside the typical 0.5–2.0 range
- * (`<prefix>-unusual-pitch`). Non-positive values are the slice's own concern.
+ * The two `pitch_scale` **Range advisory** arms — a POSITIVE pitch outside the
+ * typical 0.5–2.0 range (`<prefix>-unusual-pitch`). The `floor: 0` on the low arm
+ * keeps non-positive values the slice's own (error-level) concern.
  */
-export function checkUnusualPitch(
-  rawProps: Record<string, string>,
-  nodeName: string,
-  nodeType: string,
-  rulePrefix: string,
-  diagnostics: Diagnostic[]
-): void {
-  if (rawProps.pitch_scale === undefined) return;
-  const pitchScale = parseFloat(rawProps.pitch_scale);
-  if (Number.isNaN(pitchScale) || pitchScale <= 0) return;
-
-  if (pitchScale < TYPICAL_PITCH_SCALE_MIN) {
-    diagnostics.push({
-      severity: 'warning',
-      message: `Pitch scale is very low (${pitchScale}). Values below ${TYPICAL_PITCH_SCALE_MIN} sound very slow/deep.`,
-      nodeName,
-      nodeType,
+export function unusualPitchArms(rulePrefix: string): RangeArm[] {
+  return [
+    {
+      under: TYPICAL_PITCH_SCALE_MIN,
+      floor: 0,
       ruleName: `${rulePrefix}-unusual-pitch`,
-    });
-  } else if (pitchScale > TYPICAL_PITCH_SCALE_MAX) {
-    diagnostics.push({
-      severity: 'warning',
-      message: `Pitch scale is very high (${pitchScale}). Values above ${TYPICAL_PITCH_SCALE_MAX} sound very fast/high-pitched.`,
-      nodeName,
-      nodeType,
+      message: (pitchScale) =>
+        `Pitch scale is very low (${pitchScale}). Values below ${TYPICAL_PITCH_SCALE_MIN} sound very slow/deep.`,
+    },
+    {
+      over: TYPICAL_PITCH_SCALE_MAX,
       ruleName: `${rulePrefix}-unusual-pitch`,
-    });
-  }
+      message: (pitchScale) =>
+        `Pitch scale is very high (${pitchScale}). Values above ${TYPICAL_PITCH_SCALE_MAX} sound very fast/high-pitched.`,
+    },
+  ];
 }
 
 /** Error when `max_polyphony` parses below 1 (`<prefix>-invalid-max-polyphony`). */

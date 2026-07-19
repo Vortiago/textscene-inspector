@@ -8,7 +8,8 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
-import { checkLightEnergy } from '../shared/linterChecks.js';
+import { rangeAdvisories } from '../../../../linter/rangeAdvisory.js';
+import { lightEnergyArms } from '../shared/linterChecks.js';
 
 // Thresholds for warnings
 const LARGE_SHADOW_MAX_DISTANCE = 10000;
@@ -17,22 +18,33 @@ const LARGE_SHADOW_MAX_DISTANCE = 10000;
  * Validate DirectionalLight3D semantic rules
  */
 function checkDirectionalLight3D(context: RuleContext): Diagnostic[] {
-  const diagnostics: Diagnostic[] = [];
   const { node } = context;
 
   // Only run for DirectionalLight3D nodes
   if (node.type !== 'DirectionalLight3D') {
-    return diagnostics;
+    return [];
   }
 
-  // Type guard for properties
+  // Range advisories: light energy + very large shadow distance.
+  const diagnostics = rangeAdvisories(node, {
+    light_energy: lightEnergyArms('directionallight3d'),
+    directional_shadow_max_distance: [
+      {
+        over: LARGE_SHADOW_MAX_DISTANCE,
+        ruleName: 'directionallight3d-large-shadow-distance',
+        message: (maxDistance) =>
+          `Shadow max distance is very large (${maxDistance}). Values above ${LARGE_SHADOW_MAX_DISTANCE} can impact performance significantly.`,
+      },
+    ],
+  });
+
+  // The remaining checks are cross-field consistency (shadow split ordering + mode),
+  // not range advisories — they stay hand-written.
   if (!isValidProperties(node.properties)) {
     return diagnostics;
   }
 
   const rawProps = node.properties as Record<string, string>;
-
-  checkLightEnergy(rawProps, node.name, node.type, 'directionallight3d', diagnostics);
 
   // Validate shadow split ordering (split_1 < split_2 < split_3)
   const split1 = rawProps.directional_shadow_split_1 ? parseFloat(rawProps.directional_shadow_split_1) : undefined;
@@ -71,20 +83,6 @@ function checkDirectionalLight3D(context: RuleContext): Diagnostic[] {
         nodeName: node.name,
         nodeType: node.type,
         ruleName: 'directionallight3d-shadow-split-order',
-      });
-    }
-  }
-
-  // Warn if shadow_max_distance is very large (performance concern)
-  if (rawProps.directional_shadow_max_distance !== undefined) {
-    const maxDistance = parseFloat(rawProps.directional_shadow_max_distance);
-    if (!isNaN(maxDistance) && maxDistance > LARGE_SHADOW_MAX_DISTANCE) {
-      diagnostics.push({
-        severity: 'warning',
-        message: `Shadow max distance is very large (${maxDistance}). Values above ${LARGE_SHADOW_MAX_DISTANCE} can impact performance significantly.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'directionallight3d-large-shadow-distance',
       });
     }
   }

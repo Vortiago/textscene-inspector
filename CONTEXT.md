@@ -64,6 +64,10 @@ _Avoid_: advisory/warning conditions as validators (they belong in a **Lint rule
 A per-node-type check that runs on the parsed scene, matches its node type exactly (no base-type inheritance), and chooses its own **Severity** — the only home for advisory conditions.
 _Avoid_: bare "rule" for a **Validator**; expecting base-class inheritance from rules (that is the validators' walk).
 
+**Range advisory** (`linter/rangeAdvisory.ts`):
+A **Lint rule** that warns when a single numeric property falls outside a plausible `[low, high]` band — the semantic-warning analogue of a format **Validator**. Emitted by the shared `rangeAdvisories` combinator from a per-property table of **arms** (a too-high or too-low threshold, each with its own rule name and message; a too-low arm may carry a `floor` that suppresses it at/below a value). The combinator owns the presence check, numeric parse, NaN guard, and comparison, so each rule is a declarative table rather than hand-written branching. **Always a warning** — an out-of-band value is suspicious, never objectively invalid; that severity is the sorting principle for what belongs: error-severity checks (a zero/negative `zoom`) and cross-field consistency checks (`limit_right` below `limit_left`) are **not** range advisories.
+_Avoid_: modelling cross-field consistency or presence-dependency checks as range advisories (different control flow, not just different data); a range advisory that emits an **error**.
+
 **Severity**:
 Two levels. **error** — the file is objectively invalid per the TSCN format; fails the CLI and CI, and no committed fixture may carry one. **warning** — legal but suspicious; advisory, so healthy scenes and positive fixtures may carry them and nothing fails. (`info` is retired.)
 _Avoid_: advisory conditions as errors (breaks fixtureLint); severity as presentation (surfaces map it, never redefine it).

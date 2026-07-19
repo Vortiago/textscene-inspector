@@ -7,8 +7,8 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { isValidProperties } from '../../../../linter/linterUtils.js';
-import { checkLightEnergy } from '../shared/linterChecks.js';
+import { rangeAdvisories } from '../../../../linter/rangeAdvisory.js';
+import { lightEnergyArms } from '../shared/linterChecks.js';
 
 // Thresholds for warnings
 const LARGE_SPOT_RANGE = 1000;
@@ -23,112 +23,67 @@ const SMALL_SPOT_ANGLE = 1;
  * Validate SpotLight3D semantic rules
  */
 function checkSpotLight3D(context: RuleContext): Diagnostic[] {
-  const diagnostics: Diagnostic[] = [];
   const { node } = context;
 
   // Only run for SpotLight3D nodes
   if (node.type !== 'SpotLight3D') {
-    return diagnostics;
+    return [];
   }
 
-  // Type guard for properties
-  if (!isValidProperties(node.properties)) {
-    return diagnostics;
-  }
-
-  const rawProps = node.properties as Record<string, string>;
-
-  checkLightEnergy(rawProps, node.name, node.type, 'spotlight3d', diagnostics);
-
-  // Warn if spot_range is very large (performance concern)
-  if (rawProps.spot_range !== undefined) {
-    const range = parseFloat(rawProps.spot_range);
-    if (!isNaN(range)) {
-      if (range > LARGE_SPOT_RANGE) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `Light range is very large (${range}). Values above ${LARGE_SPOT_RANGE} can impact performance significantly.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: 'spotlight3d-large-range',
-        });
-      } else if (range < SMALL_SPOT_RANGE) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `Light range is very small (${range}). Values below ${SMALL_SPOT_RANGE} might not be visible.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: 'spotlight3d-small-range',
-        });
-      }
-    }
-  }
-
-  // Warn if spot_attenuation is extreme
-  if (rawProps.spot_attenuation !== undefined) {
-    const attenuation = parseFloat(rawProps.spot_attenuation);
-    if (!isNaN(attenuation)) {
-      if (attenuation < EXTREME_SPOT_ATTENUATION_MIN) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `Light attenuation is very low (${attenuation}). Values below ${EXTREME_SPOT_ATTENUATION_MIN} result in very slow falloff.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: 'spotlight3d-extreme-attenuation',
-        });
-      } else if (attenuation > EXTREME_SPOT_ATTENUATION_MAX) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `Light attenuation is very high (${attenuation}). Values above ${EXTREME_SPOT_ATTENUATION_MAX} result in very fast falloff.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: 'spotlight3d-extreme-attenuation',
-        });
-      }
-    }
-  }
-
-  // Warn if spot_angle_attenuation is extreme
-  if (rawProps.spot_angle_attenuation !== undefined) {
-    const angleAttenuation = parseFloat(rawProps.spot_angle_attenuation);
-    if (!isNaN(angleAttenuation)) {
-      if (angleAttenuation < EXTREME_SPOT_ANGLE_ATTENUATION_MIN) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `Angular attenuation is very low (${angleAttenuation}). Values below ${EXTREME_SPOT_ANGLE_ATTENUATION_MIN} result in very soft edges.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: 'spotlight3d-extreme-angle-attenuation',
-        });
-      } else if (angleAttenuation > EXTREME_SPOT_ANGLE_ATTENUATION_MAX) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `Angular attenuation is very high (${angleAttenuation}). Values above ${EXTREME_SPOT_ANGLE_ATTENUATION_MAX} result in very sharp edges.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: 'spotlight3d-extreme-angle-attenuation',
-        });
-      }
-    }
-  }
-
-  // Warn if spot_angle is very small
-  if (rawProps.spot_angle !== undefined) {
-    const angle = parseFloat(rawProps.spot_angle);
-    if (!isNaN(angle)) {
-      if (angle < SMALL_SPOT_ANGLE && angle > 0) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `Spot angle is very small (${angle} degrees). Values below ${SMALL_SPOT_ANGLE} degree might not be visible.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: 'spotlight3d-small-angle',
-        });
-      }
-    }
-  }
-
-  return diagnostics;
+  return rangeAdvisories(node, {
+    light_energy: lightEnergyArms('spotlight3d'),
+    spot_range: [
+      {
+        over: LARGE_SPOT_RANGE,
+        ruleName: 'spotlight3d-large-range',
+        message: (range) =>
+          `Light range is very large (${range}). Values above ${LARGE_SPOT_RANGE} can impact performance significantly.`,
+      },
+      {
+        under: SMALL_SPOT_RANGE,
+        ruleName: 'spotlight3d-small-range',
+        message: (range) =>
+          `Light range is very small (${range}). Values below ${SMALL_SPOT_RANGE} might not be visible.`,
+      },
+    ],
+    spot_attenuation: [
+      {
+        under: EXTREME_SPOT_ATTENUATION_MIN,
+        ruleName: 'spotlight3d-extreme-attenuation',
+        message: (attenuation) =>
+          `Light attenuation is very low (${attenuation}). Values below ${EXTREME_SPOT_ATTENUATION_MIN} result in very slow falloff.`,
+      },
+      {
+        over: EXTREME_SPOT_ATTENUATION_MAX,
+        ruleName: 'spotlight3d-extreme-attenuation',
+        message: (attenuation) =>
+          `Light attenuation is very high (${attenuation}). Values above ${EXTREME_SPOT_ATTENUATION_MAX} result in very fast falloff.`,
+      },
+    ],
+    spot_angle_attenuation: [
+      {
+        under: EXTREME_SPOT_ANGLE_ATTENUATION_MIN,
+        ruleName: 'spotlight3d-extreme-angle-attenuation',
+        message: (angleAttenuation) =>
+          `Angular attenuation is very low (${angleAttenuation}). Values below ${EXTREME_SPOT_ANGLE_ATTENUATION_MIN} result in very soft edges.`,
+      },
+      {
+        over: EXTREME_SPOT_ANGLE_ATTENUATION_MAX,
+        ruleName: 'spotlight3d-extreme-angle-attenuation',
+        message: (angleAttenuation) =>
+          `Angular attenuation is very high (${angleAttenuation}). Values above ${EXTREME_SPOT_ANGLE_ATTENUATION_MAX} result in very sharp edges.`,
+      },
+    ],
+    spot_angle: [
+      {
+        under: SMALL_SPOT_ANGLE,
+        floor: 0,
+        ruleName: 'spotlight3d-small-angle',
+        message: (angle) =>
+          `Spot angle is very small (${angle} degrees). Values below ${SMALL_SPOT_ANGLE} degree might not be visible.`,
+      },
+    ],
+  });
 }
 
 /**
