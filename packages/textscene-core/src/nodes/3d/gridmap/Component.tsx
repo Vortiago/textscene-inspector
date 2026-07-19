@@ -2,7 +2,8 @@
  * <GridMap> — renders a Godot GridMap by instancing MeshLibrary item meshes at
  * each populated cell. Cells are decoded from the packed int stream; each cell
  * places its item's ArrayMesh, oriented by one of the 24 orthogonal bases and
- * positioned at `cell · cell_size`. Cells of the same item are batched into one
+ * positioned at `cell · cell_size` plus Godot's per-axis centering offset
+ * (`cell_center_x/y/z`, all ON by default). Cells of the same item are batched into one
  * THREE.InstancedMesh. Items whose mesh hasn't resolved fall back to a
  * cell-sized wireframe box so the level's structure is still visible.
  *
@@ -44,8 +45,21 @@ function transform3DToMatrix4(t: Transform3D): THREE.Matrix4 {
   );
 }
 
-/** World matrix for one cell: translate(cell·size) × orientation × meshTransform. */
-function cellMatrix(cell: GridMapCell, cellSize: Vector3, meshTransform: Transform3D | null): THREE.Matrix4 {
+/**
+ * World matrix for one cell: translate(cell·size + centering offset) ×
+ * orientation × meshTransform.
+ *
+ * The offset is Godot's `_get_offset()`: `cell_size * 0.5` on each axis whose
+ * `cell_center_*` is on — and all three default to ON. Dropping it shifts the
+ * whole grid half a cell, which is invisible in a GridMap-only scene but puts
+ * the tiles half a cell off from every sibling node in a real level.
+ */
+function cellMatrix(
+  cell: GridMapCell,
+  cellSize: Vector3,
+  cellCenter: GridMapProperties['cellCenter'],
+  meshTransform: Transform3D | null
+): THREE.Matrix4 {
   const basis = ORTHO_BASES[cell.rot] ?? ORTHO_BASES[0]!;
   const orient = new THREE.Matrix4().set(
     basis[0]!, basis[1]!, basis[2]!, 0,
@@ -54,9 +68,9 @@ function cellMatrix(cell: GridMapCell, cellSize: Vector3, meshTransform: Transfo
     0, 0, 0, 1
   );
   const matrix = new THREE.Matrix4().makeTranslation(
-    cell.x * cellSize.x,
-    cell.y * cellSize.y,
-    cell.z * cellSize.z
+    cell.x * cellSize.x + (cellCenter.x ? cellSize.x * 0.5 : 0),
+    cell.y * cellSize.y + (cellCenter.y ? cellSize.y * 0.5 : 0),
+    cell.z * cellSize.z + (cellCenter.z ? cellSize.z * 0.5 : 0)
   );
   matrix.multiply(orient);
   if (meshTransform) matrix.multiply(transform3DToMatrix4(meshTransform));
@@ -85,6 +99,7 @@ export function GridMap({ node, children }: NodeComponentProps) {
           item={library.model?.get(itemId) ?? null}
           cells={cells}
           cellSize={properties.cellSize}
+          cellCenter={properties.cellCenter}
         />
       ))}
       {children}
@@ -96,18 +111,19 @@ interface GridMapItemProps {
   item: MeshLibraryItem | null;
   cells: GridMapCell[];
   cellSize: Vector3;
+  cellCenter: GridMapProperties['cellCenter'];
 }
 
 /** All cells sharing one MeshLibrary item, batched into a single InstancedMesh. */
-function GridMapItem({ item, cells, cellSize }: GridMapItemProps) {
+function GridMapItem({ item, cells, cellSize, cellCenter }: GridMapItemProps) {
   const meshResult = useResource<ArrayMeshResource>(item?.meshPath ?? '', 'ArrayMesh');
   // The surface material path only becomes known once the ArrayMesh resolves.
   const materialPath = meshResult.value?.materialPaths[0] ?? '';
   const materialResult = useResource<THREE.Material>(materialPath, 'StandardMaterial3D');
 
   const matrices = useMemo(
-    () => cells.map((cell) => cellMatrix(cell, cellSize, item?.meshTransform ?? null)),
-    [cells, cellSize, item?.meshTransform]
+    () => cells.map((cell) => cellMatrix(cell, cellSize, cellCenter, item?.meshTransform ?? null)),
+    [cells, cellSize, cellCenter, item?.meshTransform]
   );
 
   const instanced = useMemo(() => {

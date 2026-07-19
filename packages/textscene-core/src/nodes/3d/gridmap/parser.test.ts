@@ -44,4 +44,18 @@ describe('parseGridMap', () => {
     expect(result.cells).toBe('');
     expect(result.meshLibrary).toBeUndefined();
   });
+
+  it('defaults every cell_center axis to TRUE — Godot only writes them when off', () => {
+    const result = parseGridMap(heading('GridMap', { name: 'G' }), {});
+    expect(result.cellCenter).toEqual({ x: true, y: true, z: true });
+  });
+
+  it('reads cell_center_x/y/z independently when present', () => {
+    const result = parseGridMap(heading('GridMap', { name: 'G' }), {
+      cell_center_x: 'false',
+      cell_center_z: 'false',
+    });
+    // y is absent, so it keeps Godot's default.
+    expect(result.cellCenter).toEqual({ x: false, y: true, z: false });
+  });
 });

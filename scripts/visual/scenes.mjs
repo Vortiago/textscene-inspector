@@ -39,6 +39,13 @@ export const GOLDEN_SCENES = [
   // read at the TOP of the quad, red at the bottom.
   { name: 'arraymesh-uv', file: 'unit-arraymesh-uv.tscn' },
   { name: 'grid-map', file: 'unit-grid-map.tscn' },
+  // `grid-map` above is GridMap-ONLY, so the camera auto-fit reframes any
+  // uniform shift of the whole grid into an identical image — it cannot see a
+  // placement error at all. This scene puts static markers at the origin and at
+  // (1,1,1) so the cell's position is measured against something that does not
+  // move: with Godot's default cell_center_x/y/z the cell sits on the (1,1,1)
+  // marker, and dropping the half-cell offset visibly moves it to the origin.
+  { name: 'grid-map-centering', file: 'unit-grid-map-centering.tscn' },
   { name: 'navigation-region-3d', file: 'unit-navigation-region-3d.tscn' },
   { name: 'material-metallic', file: 'unit-material-metallic.tscn' },
   { name: 'material-emissive', file: 'unit-material-emissive.tscn' },

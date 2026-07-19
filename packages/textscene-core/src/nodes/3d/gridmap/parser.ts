@@ -8,6 +8,7 @@
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseNode3D } from '../../base/node3d/parser';
 import { parseVector3, type Vector3 } from '../../../parser/vectors';
+import { boolOr } from '../../../parser/valueParsers';
 import type { GridMapProperties } from './types';
 
 const DEFAULT_CELL_SIZE: Vector3 = { x: 2, y: 2, z: 2 };
@@ -38,6 +39,13 @@ export function parseGridMap(
     ...baseProperties,
     meshLibrary: properties.mesh_library,
     cellSize,
+    // Godot defaults every axis to centered, and only writes the property when
+    // it is turned OFF — so an absent key means true, not false.
+    cellCenter: {
+      x: boolOr(properties.cell_center_x, true, 'GridMap.cell_center_x'),
+      y: boolOr(properties.cell_center_y, true, 'GridMap.cell_center_y'),
+      z: boolOr(properties.cell_center_z, true, 'GridMap.cell_center_z'),
+    },
     cells: extractCells(properties.data),
   };
 }
