@@ -185,7 +185,7 @@ export function R3FApp() {
   // fetch + cancellation + editedSinceLoad tracking + debounced edit forward +
   // authoritative replace (ADR-0020). `onBeforeSwap` is read from a ref there,
   // so a plain function — not a useCallback — is what it wants.
-  const { buffer, forwardedContent, renderedFixtureFile, isFetching: isFetchingFixture, loadError, onBufferChange: handleSourceChange, replace, clearRender, editedSinceLoad } =
+  const { buffer, forwardedContent, renderedFixtureFile, isFetching: isFetchingFixture, loadError, onBufferChange: handleSourceChange, replace, clearRender, reload, editedSinceLoad } =
     useSceneSource({
       fixtureFile,
       uploadedTscnName,
@@ -204,11 +204,18 @@ export function R3FApp() {
    * Cross a corpus boundary with the viewport EMPTY (the reason: `useCorpusRoot`).
    * Every scene replacement that may change corpus goes through here.
    *
-   * `flushSync` so the unmount is COMMITTED before the caller re-points the
-   * provider, rather than merely scheduled ahead of it: on the upload path only
-   * an `await file.text()` separates the two, and a scene still mounted when the
-   * caches clear is the leak itself. Both callers are event handlers, which is
-   * where flushSync is legal.
+   * `flushSync` so the unmount is COMMITTED, not merely scheduled, before the
+   * root moves — a scene still mounted when the caches clear is the leak itself.
+   * Both callers are event handlers, which is where flushSync is legal.
+   *
+   * The root is deliberately NOT re-pointed here, tempting as it looks: the
+   * viewport is r3f's own reconciler root, and its unmount does NOT land inside
+   * the parent's flushSync — it is scheduled. Clearing the caches at this
+   * instant announces invalidation to scene consumers that are still
+   * subscribed, and they answer it by refetching their res:// paths under the
+   * new root. That is the original leak, measured, not theorised. The root
+   * moves at the swap instead, a network round-trip later, by which point the
+   * outgoing consumers are provably gone.
    */
   const tearDownIfCrossingCorpus = (nextRoot: string) => {
     if (nextRoot === resourceRoot) return;
@@ -297,7 +304,14 @@ export function R3FApp() {
     // Re-selecting the already-active fixture is a state no-op (the fetch
     // effect never re-runs) — return before the guard so the user isn't
     // shown a "discard your edits?" prompt whose acceptance discards nothing.
-    if (newFixture === fixtureFile && !uploadedTscnName) return;
+    // Unless the last load FAILED: picking the scene again is the only retry
+    // affordance there is, and after a corpus crossing there is nothing on
+    // screen to fall back to. (An edit since the failure clears `loadError`,
+    // so this can never stomp the user's own buffer.)
+    if (newFixture === fixtureFile && !uploadedTscnName) {
+      if (loadError) reload();
+      return;
+    }
     // Guards the fixture palette AND the tree's ⤢ open-sub-scene (which
     // routes through here).
     if (!confirmDiscardEdits()) return;
@@ -368,9 +382,15 @@ export function R3FApp() {
     // a resource-only batch fulfills missing rows without touching edits.
     if (tscnFiles.length > 0) {
       if (!confirmDiscardEdits()) return;
-      // An uploaded scene lives in the base ('') corpus. This must run BEFORE
-      // the awaited file reads below, so the outgoing scene is gone by the time
-      // handleTscnUpload switches the root and clears the caches.
+      // An uploaded scene lives in the base ('') corpus, so this drop may cross
+      // a boundary. This MUST stay ahead of the awaited reads below: the
+      // viewport is r3f's own reconciler root, so the teardown's flushSync
+      // commits the DOM tree but only SCHEDULES r3f's unmount. The awaited read
+      // is the gap in which that unmount actually lands, and without it
+      // handleTscnUpload clears the caches while the outgoing scene's consumers
+      // are still subscribed — measured to refetch their res:// paths under the
+      // incoming corpus, which is the leak this whole change exists to close.
+      // The cost is that a read which then throws leaves the viewport empty.
       tearDownIfCrossingCorpus('');
     }
 

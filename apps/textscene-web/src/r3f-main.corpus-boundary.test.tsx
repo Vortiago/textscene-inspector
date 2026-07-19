@@ -167,12 +167,13 @@ describe('corpus boundary — the root never moves under a mounted scene', () =>
     await switchViaPalette(BASE.file);
 
     // The incoming fixture's fetch is still in flight. Re-pointing resolution
-    // now is exactly the leak: the demo's consumers would answer the cache
-    // clear by re-requesting their res:// paths under the base corpus.
+    // now is exactly the leak: the demo's consumers — which r3f unmounts on its
+    // own reconciler's schedule, not inside the teardown's flushSync — would
+    // answer the cache clear by re-requesting their res:// paths under the base
+    // corpus. The root waits for the swap, a network round-trip away.
     expect(setResourceRoot).not.toHaveBeenCalled();
     expect(clearCaches).not.toHaveBeenCalled();
-    // And nothing of the demo is left rendering while the base fixture loads,
-    // so no consumer of its corpus survives to observe the switch.
+    // And nothing of the demo is left rendering while the base fixture loads.
     await waitFor(() => {
       expect(screen.queryByText('DemoRoot')).toBeNull();
     });
@@ -216,6 +217,33 @@ describe('corpus boundary — the root never moves under a mounted scene', () =>
     expect(atClear.value).toBeNull();
     expect(setResourceRoot).toHaveBeenCalledWith('');
     expect(atRootSwitch.value).toBeNull();
+  });
+
+  it('refetches when the user re-picks a fixture whose load failed', async () => {
+    // The scene fetch fails once, then succeeds — re-picking the same entry is
+    // the only retry affordance, and a corpus crossing leaves nothing on screen
+    // to fall back to.
+    let attempt = 0;
+    globalThis.fetch = vi.fn().mockImplementation(async (url: unknown) => {
+      const path = String(url).replace(/^.*\/fixtures\//, '');
+      if (path !== BASE.file) return { ok: false, status: 404 } as Response;
+      attempt += 1;
+      if (attempt === 1) return { ok: false, statusText: 'Not Found' } as Response;
+      return {
+        ok: true,
+        text: () => Promise.resolve(sceneWithRoot('BaseRoot')),
+      } as unknown as Response;
+    }) as unknown as typeof fetch;
+
+    resetPersistence(`/?fixture=${BASE.file}`);
+    render(<R3FApp />);
+    await screen.findByRole('alert');
+    expect(screen.queryByText('BaseRoot')).toBeNull();
+
+    await switchViaPalette(BASE.file);
+
+    await waitForScene('BaseRoot');
+    expect(attempt).toBe(2);
   });
 
   it('leaves resolution untouched across a same-corpus switch, holding the old render', async () => {

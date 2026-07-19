@@ -74,6 +74,12 @@ export interface UseSceneSourceResult {
    */
   clearRender: () => void;
   /**
+   * Re-run the current fixture's fetch. Selecting the already-selected fixture
+   * is a state no-op, so without this a load that FAILED has no way back —
+   * the viewport stays empty however many times the user picks that scene.
+   */
+  reload: () => void;
+  /**
    * True when the pane holds keystrokes newer than the last load/replace —
    * i.e. content that a fixture switch, ⤢ open-sub-scene, or upload-replace
    * would silently discard. A function (reads the live ref) so event
@@ -92,6 +98,8 @@ export function useSceneSource({
   const [renderedFixtureFile, setRenderedFixtureFile] = useState<string>('');
   const [isFetching, setIsFetching] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  // Bumped by `reload` to re-run the fetch effect at an unchanged fixtureFile.
+  const [reloadNonce, setReloadNonce] = useState(0);
 
   // Kept in a ref so a caller's inline callback can never land in the fetch
   // effect's deps and re-trigger the fetch.
@@ -117,15 +125,20 @@ export function useSceneSource({
     editedSinceLoadRef.current = false;
   }, []);
 
-  // Teardown half of a corpus crossing. Deliberately does NOT touch `buffer`,
-  // `loadError` or the edited flag: the caller either has a fetch about to
-  // reset them or an upload's `replace` about to supersede them, and blanking
-  // the editor for the whole fetch is not something the leak requires.
+  // Teardown half of a corpus crossing. Deliberately does NOT touch `buffer` or
+  // the edited flag: the caller either has a fetch about to reset them or an
+  // upload's `replace` about to supersede them, and blanking the editor for the
+  // whole fetch is not something the leak requires. `loadError` DOES go — it
+  // described the render being dropped, and would otherwise caption the blank
+  // viewport with a previous fixture's failure.
   const clearRender = useCallback(() => {
     clearTimeout(timerRef.current);
     setForwardedContent('');
     setRenderedFixtureFile('');
+    setLoadError(null);
   }, []);
+
+  const reload = useCallback(() => setReloadNonce((n) => n + 1), []);
 
   // Fixture fetch effect. Re-runs when fixtureFile or uploadedTscnName changes.
   useEffect(() => {
@@ -192,7 +205,7 @@ export function useSceneSource({
       });
 
     return cleanup;
-  }, [fixtureFile, uploadedTscnName, replace]);
+  }, [fixtureFile, uploadedTscnName, replace, reloadNonce]);
 
   const onBufferChange = useCallback(
     (value: string) => {
@@ -221,6 +234,7 @@ export function useSceneSource({
     onBufferChange,
     replace,
     clearRender,
+    reload,
     editedSinceLoad,
   };
 }
