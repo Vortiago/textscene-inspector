@@ -2,6 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { parseCSGBox3D } from './parser';
 import { heading } from '../../../../parser/testing/parserKit';
 
+// Defaults here are Godot's, taken from the class reference
+// (docs.godotengine.org/en/stable/classes/class_csgbox3d.html). Godot omits a
+// property at its default, so a wrong default silently mis-sizes every node
+// that writes none — this file previously pinned (2,2,2) as if it were correct.
 describe('parseCSGBox3D', () => {
   it('parses size from Vector3', () => {
     const props = parseCSGBox3D(heading('CSGBox3D', { name: 'Floor' }), {
@@ -10,9 +14,9 @@ describe('parseCSGBox3D', () => {
     expect(props.size).toEqual({ x: 3, y: 0.2, z: 12 });
   });
 
-  it('defaults size to Godot default (2,2,2) when absent', () => {
+  it('defaults size to the Godot default Vector3(1, 1, 1) when absent', () => {
     const props = parseCSGBox3D(heading('CSGBox3D', { name: 'Box' }), {});
-    expect(props.size).toEqual({ x: 2, y: 2, z: 2 });
+    expect(props.size).toEqual({ x: 1, y: 1, z: 1 });
   });
 
   it('preserves Node3D transform origin', () => {
@@ -41,6 +45,6 @@ describe('parseCSGBox3D', () => {
     const props = parseCSGBox3D(heading('CSGBox3D', { name: 'Box' }), {
       size: 'not-a-vector',
     });
-    expect(props.size).toEqual({ x: 2, y: 2, z: 2 });
+    expect(props.size).toEqual({ x: 1, y: 1, z: 1 });
   });
 });

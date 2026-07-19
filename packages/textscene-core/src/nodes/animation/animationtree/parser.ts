@@ -22,7 +22,10 @@ export function parseAnimationTree(
     ...baseProps,
     parameters: collectParameters(properties),
     anim_player: properties.anim_player ?? 'NodePath("..")',
-    active: boolOr(properties.active, false),
+    // Godot's AnimationMixer.active defaults to TRUE and is omitted at its
+    // default, so an absent key means active — defaulting to false leaves every
+    // authored AnimationTree inert.
+    active: boolOr(properties.active, true),
     process_callback: enumOr(
       properties.process_callback,
       AnimationTreeProcessMode.IDLE,

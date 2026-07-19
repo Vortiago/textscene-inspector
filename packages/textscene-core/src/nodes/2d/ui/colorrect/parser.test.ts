@@ -18,14 +18,17 @@ describe('parseColorRect', () => {
     expect(p.sizeFlagsHorizontal).toBe(3);
   });
 
-  it('leaves color undefined for an empty/falsy value (malformed)', () => {
+  it('falls back to the Godot default for an empty/falsy value (malformed)', () => {
     const p = parseColorRect(heading('ColorRect', { name: 'Bg' }), { color: '' });
-    expect(p.color).toBeUndefined();
+    expect(p.color).toBe('Color(1, 1, 1, 1)');
   });
 
-  it('leaves color undefined when the property is absent entirely', () => {
+  it('defaults to Godot opaque white when the property is absent entirely', () => {
+    // Godot omits a property at its default, so an absent `color` means
+    // Color(1, 1, 1, 1) — not "no fill". Rendering nothing here made a
+    // ColorRect that Godot fills solid white invisible in the overlay.
     const p = parseColorRect(heading('ColorRect', { name: 'Bg' }), {});
-    expect(p.color).toBeUndefined();
+    expect(p.color).toBe('Color(1, 1, 1, 1)');
   });
 
   it('passes a non-Color-syntax string through raw (parser does not validate syntax)', () => {

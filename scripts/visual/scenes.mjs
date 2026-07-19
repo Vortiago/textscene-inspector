@@ -29,6 +29,11 @@ export const GOLDEN_SCENES = [
   { name: 'plane-rotated-scaled', file: 'edge-plane-rotated-scaled.tscn' },
   { name: 'all-meshes', file: 'integration-all-meshes.tscn' },
   { name: 'all-primitives', file: 'integration-all-primitives.tscn' },
+  // Every CSG dimension OMITTED, so the render depends entirely on our parser
+  // defaults matching Godot's. The other CSG fixtures set size/radius/height
+  // explicitly, which is why a wrong default (CSGBox3D 2,2,2 vs Godot's 1,1,1)
+  // sat unnoticed. The 1x1 ruler plate underneath gives the eyeball a scale.
+  { name: 'csg-defaults', file: 'unit-csg-defaults.tscn' },
   // External ArrayMesh .tres: decoded quad with Godot's packed normals. Loads
   // a local resource (deterministic), gated by the two-identical-frames settle.
   { name: 'arraymesh', file: 'unit-arraymesh.tscn' },

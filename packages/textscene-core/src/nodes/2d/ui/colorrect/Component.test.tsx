@@ -37,9 +37,11 @@ describe('<ColorRect>', () => {
     expect(div.style.backgroundColor).toBe('rgba(255, 0, 0, 0.5)');
   });
 
-  it('defaults to a transparent background when color is absent', () => {
+  it('paints Godot opaque white when color is absent', () => {
+    // The parser supplies Godot's Color(1, 1, 1, 1) default; a ColorRect that
+    // writes no `color` is a solid white rect in Godot, not an invisible one.
     const div = renderRect();
-    expect(div.style.backgroundColor).toBe('transparent');
+    expect(div.style.backgroundColor).toBe('rgba(255, 255, 255, 1)');
   });
 
   it('tags the div with the node name and renders children inside', () => {

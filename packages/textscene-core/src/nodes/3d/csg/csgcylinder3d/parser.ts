@@ -6,7 +6,10 @@ import { parseNode3D } from '../../../base/node3d/parser';
 import { finishCsgParse } from '../sharedParser';
 import { floatOr, intOr } from '../../../../parser/valueParsers';
 
-const DEFAULTS = { radius: 1, height: 1, sides: 8, cone: false } as const;
+// Godot's own defaults (class_csgcylinder3d): radius 0.5, height 2.0, sides 8,
+// cone false. An omitted property means Godot's value, so ours must match or a
+// cylinder that writes none renders at the wrong size.
+const DEFAULTS = { radius: 0.5, height: 2, sides: 8, cone: false } as const;
 
 export function parseCSGCylinder3D(
   heading: ParsedHeading,

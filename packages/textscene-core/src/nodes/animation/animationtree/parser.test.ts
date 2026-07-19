@@ -18,7 +18,8 @@ const HEADING: ParsedHeading = {
 describe('parseAnimationTree defaults', () => {
   it('applies Godot defaults when only the heading is supplied', () => {
     const props = parseAnimationTree(HEADING, {});
-    expect(props.active).toBe(false);
+    // AnimationMixer.active defaults to TRUE and is omitted at its default.
+    expect(props.active).toBe(true);
     expect(props.tree_root).toBeUndefined();
     expect(props.process_callback).toBe(AnimationTreeProcessMode.IDLE);
     expect(props.callback_mode_process).toBe(AnimationTreeProcessMode.IDLE);

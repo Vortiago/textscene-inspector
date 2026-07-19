@@ -11,6 +11,8 @@ afterEach(() => {
   warnSpy.mockRestore();
 });
 
+// Defaults are Godot's, from class_csgcylinder3d: radius 0.5, height 2.0,
+// sides 8, cone false. This file previously pinned radius 1 / height 1.
 describe('parseCSGCylinder3D', () => {
   it('parses radius and height', () => {
     const props = parseCSGCylinder3D(heading('CSGCylinder3D', { name: 'Plant' }), {
@@ -21,10 +23,10 @@ describe('parseCSGCylinder3D', () => {
     expect(props.height).toBe(0.8);
   });
 
-  it('applies Godot defaults when absent (radius 1, height 1, sides 8, cone false)', () => {
+  it('applies Godot defaults when absent (radius 0.5, height 2, sides 8, cone false)', () => {
     const props = parseCSGCylinder3D(heading('CSGCylinder3D', { name: 'Cyl' }), {});
-    expect(props.radius).toBe(1);
-    expect(props.height).toBe(1);
+    expect(props.radius).toBe(0.5);
+    expect(props.height).toBe(2);
     expect(props.sides).toBe(8);
     expect(props.cone).toBe(false);
   });
@@ -53,8 +55,8 @@ describe('parseCSGCylinder3D', () => {
       height: 'garbage',
       sides: 'garbage',
     });
-    expect(props.radius).toBe(1);
-    expect(props.height).toBe(1);
+    expect(props.radius).toBe(0.5);
+    expect(props.height).toBe(2);
     expect(props.sides).toBe(8);
     expect(Number.isNaN(props.radius)).toBe(false);
     expect(warnSpy).toHaveBeenCalled();

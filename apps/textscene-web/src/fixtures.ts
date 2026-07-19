@@ -823,6 +823,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - CSG Primitives"
   },
   {
+    "name": "Csg Defaults",
+    "file": "unit-csg-defaults.tscn",
+    "category": "Unit - CSG Primitives"
+  },
+  {
     "name": "Csg Sphere",
     "file": "unit-csg-sphere.tscn",
     "category": "Unit - CSG Primitives"
