@@ -23,12 +23,11 @@ import { fixtureUrlForGltfUri } from './corpusRoot';
 
 /**
  * Route the provider's res:// lookups into the subtree and point the THREE
- * LoadingManager URL modifier at it. The cache clear stays with
- * {@link useCorpusRoot}, which knows whether the root actually CHANGED —
- * never call this on its own, which would leave the caches holding the
- * corpus being left behind.
+ * LoadingManager URL modifier at it. Module-private: routing without the cache
+ * clear that `applyCorpusRoot` pairs it with would leave the caches holding the
+ * corpus being left behind, so there is deliberately no way to call it alone.
  */
-export function switchCorpusRoot(
+function switchCorpusRoot(
   pipeline: ResourcePipeline<WebResourceProvider>,
   resourceRoot: string
 ): void {
@@ -47,20 +46,17 @@ export function switchCorpusRoot(
 export function useCorpusRoot(
   pipeline: ResourcePipeline<WebResourceProvider>
 ): (root: string) => void {
-  // Both halves of "have we already applied this?" — a fresh pipeline needs
-  // re-routing even at an unchanged root, and only a root CHANGE clears.
-  const appliedRef = useRef<{
-    pipeline: ResourcePipeline<WebResourceProvider>;
-    root: string;
-  } | null>(null);
+  // The root of the last swap — null until the first one, which routes without
+  // clearing: nothing has been loaded yet to go stale.
+  const appliedRootRef = useRef<string | null>(null);
 
   const applyCorpusRoot = useCallback(
     (root: string) => {
-      const applied = appliedRef.current;
-      if (applied?.pipeline === pipeline && applied.root === root) return;
+      const applied = appliedRootRef.current;
+      if (applied === root) return;
       switchCorpusRoot(pipeline, root);
-      if (applied && applied.root !== root) pipeline.loader.clearCaches();
-      appliedRef.current = { pipeline, root };
+      if (applied !== null) pipeline.loader.clearCaches();
+      appliedRootRef.current = root;
     },
     [pipeline]
   );

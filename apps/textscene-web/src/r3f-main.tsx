@@ -179,16 +179,17 @@ export function R3FApp() {
   // screen, which would make the OUTGOING scene re-request its res:// paths out
   // of the incoming corpus (see useCorpusRoot).
   const applyCorpusRoot = useCorpusRoot(pipeline);
-  const handleBeforeSwap = useCallback(
-    (file: string) => applyCorpusRoot(corpusRootFor(file, fixtures)),
-    [applyCorpusRoot]
-  );
 
   // useSceneSource owns the hold-last-valid invariant's full span: fixture
   // fetch + cancellation + editedSinceLoad tracking + debounced edit forward +
-  // authoritative replace (ADR-0020).
+  // authoritative replace (ADR-0020). `onBeforeSwap` is read from a ref there,
+  // so a plain function — not a useCallback — is what it wants.
   const { buffer, forwardedContent, renderedFixtureFile, isFetching: isFetchingFixture, loadError, onBufferChange: handleSourceChange, replace, editedSinceLoad } =
-    useSceneSource({ fixtureFile, uploadedTscnName, onBeforeSwap: handleBeforeSwap });
+    useSceneSource({
+      fixtureFile,
+      uploadedTscnName,
+      onBeforeSwap: (file) => applyCorpusRoot(corpusRootFor(file, fixtures)),
+    });
 
   // The corpus root of the scene ON SCREEN. Keyed on the rendered fixture, not
   // the selected one: during a fixture fetch the selection has already moved on
@@ -197,6 +198,18 @@ export function R3FApp() {
     () => corpusRootFor(renderedFixtureFile, fixtures),
     [renderedFixtureFile]
   );
+
+  /**
+   * Cross a corpus boundary with the viewport EMPTY. The root switch that
+   * follows clears the loader caches, and a scene still mounted when that lands
+   * answers the invalidation by re-requesting its own res:// paths under the
+   * incoming corpus — downloading an unrelated fixture's files (see
+   * `useCorpusRoot`). Every scene replacement that may change corpus goes
+   * through here; the fetch-in-flight overlay covers the gap.
+   */
+  const tearDownIfCrossingCorpus = (nextRoot: string) => {
+    if (nextRoot !== resourceRoot) replace('');
+  };
 
   // Edits are ephemeral (ADR-0020) — but the one-click switch affordances
   // (fixture palette, the tree's ⤢ open-sub-scene, a scene-replacing drop)
@@ -288,13 +301,7 @@ export function R3FApp() {
     // supersedes any upload-path error still on screen.
     setUploadedTscnName(null);
     setUploadError(null);
-    // Crossing a corpus boundary tears the current scene down NOW, ahead of the
-    // fetch, instead of holding it until the new content lands: the root switch
-    // that follows clears the loader caches, and a scene still mounted when that
-    // lands answers the invalidation by re-requesting its own res:// paths under
-    // the incoming corpus — downloading an unrelated fixture's files. The
-    // fetch-in-flight overlay covers the gap.
-    if (corpusRootFor(newFixture, fixtures) !== resourceRoot) replace('');
+    tearDownIfCrossingCorpus(corpusRootFor(newFixture, fixtures));
     setFixtureFile(newFixture);
   }
 
@@ -357,12 +364,10 @@ export function R3FApp() {
     // a resource-only batch fulfills missing rows without touching edits.
     if (tscnFiles.length > 0) {
       if (!confirmDiscardEdits()) return;
-      // An uploaded scene lives in the base ('') corpus, so dropping one while a
-      // vendored demo is on screen crosses a corpus boundary — same teardown
-      // rule as a fixture switch, and it must happen BEFORE the awaited file
-      // reads below so the demo's scene is gone by the time handleTscnUpload
-      // switches the root and clears the caches.
-      if (resourceRoot !== '') replace('');
+      // An uploaded scene lives in the base ('') corpus. This must run BEFORE
+      // the awaited file reads below, so the outgoing scene is gone by the time
+      // handleTscnUpload switches the root and clears the caches.
+      tearDownIfCrossingCorpus('');
     }
 
     if (tscnFiles.length === 0) {

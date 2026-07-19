@@ -1,14 +1,14 @@
 /**
  * useCorpusRoot — owns the root-switch sequence for the web previewer:
- * setResourceRoot, THREE URL modifier, and clearCaches on change. The switch
- * is applied explicitly at a scene swap (never derived from the selection),
- * so these cover the returned `applyCorpusRoot` rather than a reactive prop.
+ * setResourceRoot, THREE URL modifier, and clearCaches on change. The switch is
+ * applied explicitly at a scene swap (never derived from the selection), so
+ * these cover the returned `applyCorpusRoot` — the module's only export.
  */
 // @vitest-environment happy-dom
 
 import { describe, it, expect, vi } from 'vitest';
 import { renderHook } from '@testing-library/react';
-import { switchCorpusRoot, useCorpusRoot } from './useCorpusRoot';
+import { useCorpusRoot } from './useCorpusRoot';
 import type { ResourcePipeline } from '@textscene/core';
 import type { WebResourceProvider } from './providers/WebResourceProvider';
 
@@ -34,28 +34,6 @@ function mountHook() {
   const { result } = renderHook(() => useCorpusRoot(parts.pipeline));
   return { ...parts, applyCorpusRoot: result.current };
 }
-
-describe('switchCorpusRoot', () => {
-  it('routes the provider and the URL modifier to the new root synchronously', () => {
-    const { pipeline, setResourceRoot, setURLModifier } = makePipeline();
-
-    switchCorpusRoot(pipeline, 'demos/2d/platformer');
-
-    expect(setResourceRoot).toHaveBeenCalledWith('demos/2d/platformer');
-    const modifier = setURLModifier.mock.lastCall![0];
-    expect(modifier('res://textures/player.png')).toBe(
-      '/fixtures/demos/2d/platformer/textures/player.png'
-    );
-  });
-
-  it('never clears caches itself — that stays with useCorpusRoot', () => {
-    const { pipeline, clearCaches } = makePipeline();
-
-    switchCorpusRoot(pipeline, 'demos/3d/fps');
-
-    expect(clearCaches).not.toHaveBeenCalled();
-  });
-});
 
 describe('useCorpusRoot', () => {
   it('installs the base ("") routing on mount, before anything renders', () => {
