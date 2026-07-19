@@ -89,9 +89,20 @@ function parseArgs(argv) {
   return opts;
 }
 
+/**
+ * Build the previewer every run. Reusing an existing `dist/` is how this
+ * harness silently captured a build that predated the change under test —
+ * every scene "passed" against stale code, and a newly added fixture was
+ * missing from the bundle entirely, so its deep link fell back and baked a
+ * bogus baseline. A stale-green visual suite is worse than a slow one; set
+ * VISUAL_SKIP_BUILD=1 to reuse `dist/` while iterating locally.
+ */
 function ensureWebBuilt() {
-  if (existsSync(WEB_DIST_INDEX)) return;
-  console.log('[visual] web previewer dist missing — building…');
+  if (existsSync(WEB_DIST_INDEX) && process.env.VISUAL_SKIP_BUILD === '1') {
+    console.log('[visual] VISUAL_SKIP_BUILD=1 — reusing existing dist/ (may be stale)');
+    return;
+  }
+  console.log('[visual] building web previewer…');
   const r = spawnSync('pnpm', ['--filter', '@textscene/web-previewer', 'build'], {
     cwd: REPO_ROOT,
     shell: true,
@@ -194,6 +205,14 @@ async function captureScene(page, baseUrl, scene) {
   await page.goto(`${baseUrl}/?fixture=${encodeURIComponent(scene.file)}`, {
     waitUntil: 'load',
   });
+  // `load` fires before the app's OWN resource chain finishes: a scene fetches
+  // its .tscn, then an ArrayMesh .tres, then that surface's material, then the
+  // material's texture — each only discoverable once the previous one parsed.
+  // The settle gate below would otherwise happily find two identical frames of
+  // the untextured placeholder and freeze THAT into a baseline, which then
+  // passes forever while seeing none of the texture. Wait for the network to go
+  // quiet first; a scene that never idles still falls through to the gate.
+  await page.waitForLoadState('networkidle', { timeout: 20000 }).catch(() => {});
   const canvases = page.locator('canvas');
   await canvases.first().waitFor({ timeout: 30000 });
   const count = await canvases.count();

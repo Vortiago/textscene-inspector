@@ -62,6 +62,55 @@ describe('buildArrayMeshGeometry', () => {
     expect(geo.getAttribute('normal').getZ(0)).toBeCloseTo(1, 3);
   });
 
+  it("flips V so Godot's top-left-origin UVs match the app's flipY=true textures", () => {
+    // Godot writes V from the image TOP; three.js uploads textures bottom-up by
+    // default (the convention spriteFrame.ts / tileGeometry.ts also target), so
+    // a pass-through V samples an atlas mirrored — the whole texture reads off
+    // by one row. V=0 (Godot's top edge) must become V=1 here.
+    const data: ArrayMeshData = {
+      surfaces: [
+        {
+          format: 0,
+          primitive: 3,
+          vertexCount: 3,
+          indexCount: 3,
+          positions: new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]),
+          uvs: new Float32Array([0, 0, 1, 0.25, 0.5, 1]),
+          indices: new Uint16Array([0, 1, 2]),
+          materialPath: 'res://m.tres',
+        },
+      ],
+    };
+
+    const uv = buildArrayMeshGeometry(data).getAttribute('uv');
+
+    // U is untouched; only V is mirrored.
+    expect([uv.getX(0), uv.getY(0)]).toEqual([0, 1]);
+    expect([uv.getX(1), uv.getY(1)]).toEqual([1, 0.75]);
+    expect([uv.getX(2), uv.getY(2)]).toEqual([0.5, 0]);
+  });
+
+  it('flips V per surface when several surfaces are merged', () => {
+    const surface = () => ({
+      format: 0,
+      primitive: 3,
+      vertexCount: 3,
+      indexCount: 3,
+      positions: new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]),
+      uvs: new Float32Array([0, 0, 1, 0, 0, 1]),
+      indices: new Uint16Array([0, 1, 2]),
+      materialPath: 'res://a.tres',
+    });
+    const data: ArrayMeshData = { surfaces: [surface(), surface()] };
+
+    const uv = buildArrayMeshGeometry(data).getAttribute('uv');
+
+    // The second surface's vertices are written at an offset — the flip must
+    // follow them there, not stop at the first surface.
+    expect(uv.getY(3)).toBe(1);
+    expect(uv.getY(5)).toBe(0);
+  });
+
   it('adds one draw group per surface for per-surface materials', () => {
     const geo = buildArrayMeshGeometry(decodeArrayMesh(WALL_TRES));
 

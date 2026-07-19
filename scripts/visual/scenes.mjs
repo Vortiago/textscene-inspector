@@ -32,6 +32,12 @@ export const GOLDEN_SCENES = [
   // External ArrayMesh .tres: decoded quad with Godot's packed normals. Loads
   // a local resource (deterministic), gated by the two-identical-frames settle.
   { name: 'arraymesh', file: 'unit-arraymesh.tscn' },
+  // The same decoded quad, TEXTURED with a four-band atlas. `arraymesh` above
+  // carries no material, so it cannot see a UV error at all — this one pins the
+  // V orientation: Godot's V origin is the image top, while textures load with
+  // flipY=true, so a pass-through V samples the bands upside down. Green must
+  // read at the TOP of the quad, red at the bottom.
+  { name: 'arraymesh-uv', file: 'unit-arraymesh-uv.tscn' },
   { name: 'grid-map', file: 'unit-grid-map.tscn' },
   { name: 'navigation-region-3d', file: 'unit-navigation-region-3d.tscn' },
   { name: 'material-metallic', file: 'unit-material-metallic.tscn' },

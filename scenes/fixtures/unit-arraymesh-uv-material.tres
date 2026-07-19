@@ -1,0 +1,7 @@
+[gd_resource type="StandardMaterial3D" format=3 uid="uid://unitarraymeshuvmat"]
+
+[ext_resource type="Texture2D" path="res://textures/uv-bands.svg" id="1_bands"]
+
+[resource]
+resource_name = "unit_arraymesh_uv_bands"
+albedo_texture = ExtResource("1_bands")

@@ -593,6 +593,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Lights"
   },
   {
+    "name": "Arraymesh Uv",
+    "file": "unit-arraymesh-uv.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
     "name": "Arraymesh",
     "file": "unit-arraymesh.tscn",
     "category": "Unit - Primitive Meshes"
