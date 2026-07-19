@@ -93,8 +93,11 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # Reuse the dist built by the build job — run.mjs skips its own build
-      # when dist/index.html is present.
+      # Reuse the dist built by the build job. run.mjs rebuilds by default —
+      # locally that guards against capturing a stale dist that predates the
+      # change under test — but here the artifact IS this commit's build, so
+      # VISUAL_SKIP_BUILD=1 below keeps it and skips a redundant cold rebuild
+      # (which would also wipe this download via vite's emptyOutDir).
       - uses: actions/download-artifact@v4
         with:
           name: web-previewer
@@ -111,6 +114,8 @@ jobs:
 
       - name: Compare golden images
         run: pnpm test:visual
+        env:
+          VISUAL_SKIP_BUILD: '1'
 
       - name: Upload diff artifacts
         if: failure()

@@ -66,6 +66,7 @@ const VIEWPORT = { width: 1280, height: 800 };
 // scene at its full canvas width, not incidental editor chrome.
 const SOURCE_PANE_STORAGE_KEY = 'tscn-web-source-pane';
 
+const NETWORK_IDLE_MS = 20000; // ceiling for the app's own resource chain to go quiet
 const SETTLE_INITIAL_MS = 1200; // covers the last CameraFit reframe at 1100 ms
 const SETTLE_INTERVAL_MS = 350;
 const SETTLE_MAX_ATTEMPTS = 12;
@@ -212,7 +213,7 @@ async function captureScene(page, baseUrl, scene) {
   // the untextured placeholder and freeze THAT into a baseline, which then
   // passes forever while seeing none of the texture. Wait for the network to go
   // quiet first; a scene that never idles still falls through to the gate.
-  await page.waitForLoadState('networkidle', { timeout: 20000 }).catch(() => {});
+  await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_MS }).catch(() => {});
   const canvases = page.locator('canvas');
   await canvases.first().waitFor({ timeout: 30000 });
   const count = await canvases.count();

@@ -90,27 +90,6 @@ describe('buildArrayMeshGeometry', () => {
     expect([uv.getX(2), uv.getY(2)]).toEqual([0.5, 0]);
   });
 
-  it('flips V per surface when several surfaces are merged', () => {
-    const surface = () => ({
-      format: 0,
-      primitive: 3,
-      vertexCount: 3,
-      indexCount: 3,
-      positions: new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]),
-      uvs: new Float32Array([0, 0, 1, 0, 0, 1]),
-      indices: new Uint16Array([0, 1, 2]),
-      materialPath: 'res://a.tres',
-    });
-    const data: ArrayMeshData = { surfaces: [surface(), surface()] };
-
-    const uv = buildArrayMeshGeometry(data).getAttribute('uv');
-
-    // The second surface's vertices are written at an offset — the flip must
-    // follow them there, not stop at the first surface.
-    expect(uv.getY(3)).toBe(1);
-    expect(uv.getY(5)).toBe(0);
-  });
-
   it('adds one draw group per surface for per-surface materials', () => {
     const geo = buildArrayMeshGeometry(decodeArrayMesh(WALL_TRES));
 
@@ -139,5 +118,10 @@ describe('buildArrayMeshGeometry', () => {
     // Surface 1's indices [0,1,2] are re-based by +3 AND winding-reversed
     // (Godot CW → three.js CCW), so [0,1,2] → [3, 5, 4] in the merged buffer.
     expect(Array.from(geo.getIndex()!.array).slice(3)).toEqual([3, 5, 4]);
+    // The V flip must follow surface 1 to its offset, not stop at surface 0:
+    // a flip that forgot `vertexBase` passes the single-surface test above.
+    const uv = geo.getAttribute('uv');
+    expect(uv.getY(3)).toBe(1);
+    expect(uv.getY(5)).toBe(0);
   });
 });

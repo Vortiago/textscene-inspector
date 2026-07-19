@@ -36,9 +36,10 @@ export function buildArrayMeshGeometry(mesh: ArrayMeshData): THREE.BufferGeometr
     // through unchanged therefore samples the texture vertically mirrored —
     // every tile of an atlas lands on the wrong row.
     if (uvs && surface.uvs) {
+      uvs.set(surface.uvs, vertexBase * 2);
       for (let i = 0; i < surface.vertexCount; i++) {
-        uvs[(vertexBase + i) * 2] = surface.uvs[i * 2]!;
-        uvs[(vertexBase + i) * 2 + 1] = 1 - surface.uvs[i * 2 + 1]!;
+        const v = (vertexBase + i) * 2 + 1;
+        uvs[v] = 1 - uvs[v]!;
       }
     }
     if (normals && surface.normals) normals.set(surface.normals, vertexBase * 3);
