@@ -9,7 +9,7 @@
 import styles from './TscnPreviewShell.module.css';
 
 const HELP_URL =
-  'https://github.com/Vortiago/Text-Scene-.tscn-File-Previewer#documentation';
+  'https://github.com/Vortiago/textscene-inspector#documentation';
 
 export function HelpLink() {
   return (

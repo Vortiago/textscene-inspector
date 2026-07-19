@@ -1,125 +1,126 @@
 # TextScene Inspector
 
-[![CI/CD](https://github.com/Vortiago/Text-Scene-.tscn-File-Previewer/actions/workflows/ci.yml/badge.svg)](https://github.com/Vortiago/Text-Scene-.tscn-File-Previewer/actions/workflows/ci.yml)
+[![CI/CD](https://github.com/Vortiago/textscene-inspector/actions/workflows/ci.yml/badge.svg)](https://github.com/Vortiago/textscene-inspector/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
-Preview **Godot `.tscn` scenes in 3D — inside VS Code or your browser, with no Godot install.** Renders meshes, materials, lights and cameras via react-three-fiber/three.js, plus a scene-tree inspector and a `.tscn` linter. See [ARCHITECTURE.md](./ARCHITECTURE.md) for the layout.
+Renders Godot `.tscn` scenes in 3D, without Godot.
 
-![TextScene Inspector rendering a CSG hallway mockup in the web previewer's Split Dock UI](./docs/showcase/web/hallway.png)
+TextScene Inspector parses the `.tscn` text directly and draws it with
+react-three-fiber over three.js — meshes, PBR materials, lights, cameras,
+environments, and instanced sub-scenes. There is no Godot install, no editor
+cache, and no import step. It ships as a VS Code extension (desktop and
+vscode.dev), a standalone web previewer, and a `.tscn` linter that runs both as
+a CLI and as in-editor diagnostics.
 
-*The web previewer's Split Dock chrome (scene tree + Inspector/Resources/Cameras tabs) rendering a self-contained CSG corridor scene — floor, walls, ceiling, portrait frames, and Label3D name plates, all built from primitive nodes.*
+Try it without installing anything: **[textscene-inspector.pages.dev](https://textscene-inspector.pages.dev/)**.
 
-## Status
+![The web previewer rendering a CSG hallway mockup in the Split Dock UI](./docs/showcase/web/hallway.png)
 
-**Active Development** - Core rendering functionality implemented with self-registering node system.
+*The web previewer's Split Dock chrome — scene tree on the left, Inspector /
+Resources / Cameras tabs on the right — rendering a self-contained CSG corridor:
+floor, walls, ceiling, portrait frames, and Label3D name plates, all built from
+primitive nodes.*
 
-Current release: **0.9.0** — on the road to v1.0; see [CHANGELOG.md](./CHANGELOG.md).
+## What it renders
 
-## Features
+Around 66 node types, each a self-registering vertical slice.
 
-**Why it's different** (what other `.tscn` tools don't do):
-- 🧊 **Real 3D rendering** of the scene — meshes, PBR materials, lights, cameras, environments, and instanced sub-scenes — not just a node tree
-- 🚫 **No Godot install or editor cache** — renders straight from the `.tscn` text
-- 🌐 **Runs in the browser** via the standalone web previewer
-- ✅ **Built-in `.tscn` linter** for catching malformed scenes
+| Category | Types |
+|---|---|
+| Meshes | Box, Sphere, Cylinder, Plane, Capsule, Torus, Prism, Quad |
+| CSG | CSGBox3D, CSGCylinder3D, CSGSphere3D |
+| Lights & camera | Spot, Directional, Omni, Area (with shadows), Camera3D, Camera2D, WorldEnvironment |
+| Physics | Bodies plus collision-shape gizmos |
+| 2D | Sprite2D, AnimatedSprite2D, Polygon2D, Line2D, TileMap, TileMapLayer, NavigationRegion2D, Marker2D, Path2D, PathFollow2D |
+| 3D scene | Sprite3D, Label3D, Decal, GridMap, NavigationRegion3D, Marker3D, Path3D, PathFollow3D |
+| UI | 17 Control types, rendered as a DOM overlay |
 
-**Implemented:**
-- ✅ TSCN parsing with full scene tree hierarchy (lenient render parser + strict lint parser sharing one scanning loop)
-- ✅ ~66 self-registering node types as unified vertical slices: meshes (Box/Sphere/Cylinder/Plane/Capsule/Torus/Prism/Quad), CSG primitives (Box/Cylinder/Sphere), lights (Spot/Directional/Omni/Area with shadows), Camera3D/Camera2D, WorldEnvironment, Label3D, physics bodies + collision gizmos, sprites (2D/3D), GridMap, TileMap/TileMapLayer, NavigationRegion2D/3D, Decal, Polygon2D, Line2D, Marker2D/3D, Path2D/PathFollow2D/Path3D/PathFollow3D, and 17 Control types rendered as a DOM overlay
-- ✅ StandardMaterial3D PBR (albedo/metallic/roughness/normal/emission/AO, UV transforms, external textures)
-- ✅ External resources: PackedScene instancing, textures, materials, GLB meshes — event-driven with late-arrival upload recovery
-- ✅ react-three-fiber rendering, Split Dock shell (scene tree, inspector, resources, cameras), 2D/3D viewport modes
-- ✅ Animation playback — AnimationPlayer (transform tracks via `THREE.AnimationMixer`, plus non-transform value tracks like sprite frames and Decal modulate/size via the AnimatedValue push registry) and AnimationTree (blend-tree/state-machine) drivers, GLB-embedded clips, AnimatedSprite2D frame playback, all behind one selection-driven play/pause/scrub transport
-- ✅ Linter: CLI (`tscn-lint`) and in-editor diagnostics (VS Code Problems panel), React/THREE-free bundle
-- ✅ VS Code extension — desktop **and** web (vscode.dev) entry points, outline, go-to-definition, hot-reload
-- ✅ Web previewer with fixture browser, an "Open .tscn" file picker (Ctrl/Cmd+K scene palette), drag-and-drop and multi-file upload (a scene + its textures in one gesture), and shareable `?fixture=` deep links
-- ✅ Editable Source pane (paste/upload/type `.tscn` text and see it render live) with an in-browser linter gutter (error/warning dots, hover popover, toggle problem-count badge) and a "Download .tscn" export
+Beyond the node set:
 
-See the [GitHub issues](https://github.com/Vortiago/Text-Scene-.tscn-File-Previewer/issues) for the road to v1.0.
+- **Materials.** StandardMaterial3D PBR — albedo, metallic, roughness, normal,
+  emission, AO, heightmap, clearcoat, rim, and UV transforms, with external
+  textures.
+- **External resources.** PackedScene instancing, textures, materials, and GLB
+  meshes flow through a typed event bus that recovers when a file arrives after
+  the scene that references it.
+- **Animation.** AnimationPlayer (transform tracks via `THREE.AnimationMixer`,
+  plus value tracks like sprite frames and Decal modulate/size), AnimationTree
+  blend trees and state machines, GLB-embedded clips, and AnimatedSprite2D
+  frames — all behind one selection-driven play/pause/scrub transport.
+- **Linting.** A React- and THREE-free bundle powers both `tscn-lint` on the
+  command line and the VS Code Problems panel.
 
-## Getting Started
+## Surfaces
 
-### Prerequisites
+**VS Code extension** — desktop and web (vscode.dev) entry points, scene
+outline, go-to-definition on node and resource paths, and hot reload on save.
+Not yet published to the Marketplace; build it from source (below).
 
-- Node.js 20+
-- pnpm 9+
+**Web previewer** — a fixture browser, an "Open .tscn" picker with a
+<kbd>Ctrl/Cmd+K</kbd> scene palette, drag-and-drop multi-file upload (drop a
+scene and its textures in one gesture), and shareable `?fixture=` deep links.
+An editable Source pane renders `.tscn` text as you type, with a linter gutter
+(error/warning dots, hover popover, problem-count badge) and a
+"Download .tscn" export.
 
-### Developer Environment Setup (Windows)
+**CLI linter** — `pnpm lint:tscn <files>`, after `pnpm build:linter`.
 
-For Windows developers, you can quickly install Node.js and pnpm using WinGet:
+## Quick start
+
+Requires Node.js 20+ and pnpm 9+.
+
+```bash
+pnpm install
+pnpm build
+pnpm dev:web          # web previewer on localhost
+```
+
+For the VS Code extension:
+
+```bash
+pnpm --filter textscene-inspector build     # dist/extension.js (desktop),
+                                            # dist/extension.web.js (vscode.dev),
+                                            # plus the webview bundles
+pnpm --filter textscene-inspector package   # .vsix
+```
+
+Install the `.vsix` with **Extensions: Install from VSIX…** in the command
+palette, then open any `.tscn` file.
+
+<details>
+<summary>Windows: installing Node and pnpm with WinGet</summary>
 
 ```bash
 winget configure scripts/winget-dev-setup.yaml
 ```
 
-This installs the required versions from the official package sources.
+Installs the required versions from the official package sources. Needs WinGet
+v1.6.2631 or later (`winget --version`).
+</details>
 
-**Requirements:** WinGet v1.6.2631 or later (check with `winget --version`)
-
-### Installation
-
-```bash
-pnpm install
-pnpm type-check
-pnpm test
-```
-
-### Development
+## Tests
 
 ```bash
-# Build all packages
-pnpm build
-
-# Web previewer (for fast iteration)
-cd apps/textscene-web
-pnpm dev
-
-# VS Code extension
-cd apps/textscene-vscode
-pnpm build        # emits dist/extension.js (desktop), dist/extension.web.js (vscode.dev), and the webview bundles
-pnpm test:web     # manual smoke: serves the extension in a headless VS Code for Web instance
-
-# Lint .tscn files from the CLI
-pnpm build:linter
-pnpm lint:tscn scenes/fixtures/*.tscn
+pnpm test                # full vitest suite
+pnpm test:watch          # watch mode
+pnpm test:visual         # golden images, headless chromium + pixelmatch
+pnpm test:visual:update  # rewrite baselines after an intentional change — eyeball, then commit
 ```
 
-## Testing
-
-### Unit Tests
+The VS Code extension carries its own integration suite, run in a real VS Code
+instance and separate from the vitest run:
 
 ```bash
-# Run all unit tests once
-pnpm test
-
-# Watch mode for development
-pnpm test:watch
+pnpm --filter textscene-inspector test:integration
 ```
 
-### Visual Regression
+CI runs that suite on Ubuntu, macOS, and Windows — `xvfb-run` for headless
+Linux — and verifies VSIX installation on each.
 
-```bash
-# Compare golden scenes against committed baselines (headless chromium + pixelmatch)
-pnpm test:visual
+<details>
+<summary>Debugging the integration tests</summary>
 
-# Rewrite baselines after an intentional visual change — eyeball, then commit
-pnpm test:visual:update
-```
-
-### Integration Tests
-
-The VS Code extension includes comprehensive integration tests that run in a real VS Code instance:
-
-```bash
-# Run integration tests (the bundled fixture suite in a real VS Code instance)
-cd apps/textscene-vscode
-pnpm test:integration
-
-# Debug integration tests
-pnpm test:integration:debug
-```
-
-**Debug Configuration**: Add to `.vscode/launch.json` for debugging:
+Add to `.vscode/launch.json`:
 
 ```json
 {
@@ -137,43 +138,39 @@ pnpm test:integration:debug
   ]
 }
 ```
-
-### Continuous Integration
-
-Integration tests run on all platforms (Ubuntu, macOS, Windows) in GitHub Actions:
-- Uses `xvfb-run` for headless testing on Linux
-- Verifies VSIX installation on all platforms
-- Runs the bundled scene-fixture suite automatically
+</details>
 
 ## Scripts
 
-- `pnpm build` - Build all packages
-- `pnpm test` - Run all unit tests once (`vitest run`; the VS Code integration suite runs separately via `pnpm --filter textscene-inspector test:integration`)
-- `pnpm test:watch` - Run unit tests in watch mode
-- `pnpm lint` - Lint code
-- `pnpm lint:tscn <files>` - Lint .tscn scene files (build first with `pnpm build:linter`)
-- `pnpm type-check` - Type check
-- `pnpm build:site` - Full deployable web build: vendors the games + ld-58 corpora (script-stripped, never committed) and produces `apps/textscene-web/dist`
-- `pnpm clean` - Clean artifacts
+| Command | Does |
+|---|---|
+| `pnpm build` | Build all packages |
+| `pnpm build:site` | Deployable web build — vendors the games and ld-58 corpora (script-stripped, never committed) into `apps/textscene-web/dist` |
+| `pnpm build:linter` | Build the standalone linter bundle |
+| `pnpm test` | Full unit suite |
+| `pnpm lint` | ESLint |
+| `pnpm lint:tscn <files>` | Lint `.tscn` scene files |
+| `pnpm type-check` | Type check |
+| `pnpm clean` | Remove build artifacts |
 
-## Architecture Highlights
+## Architecture
 
-**Node Registry Pattern**: New node types self-register - no need to edit central parser/renderer files.
+Two parsers share one scanning loop. A lenient parser renders whatever it can
+salvage; a strict parser lints and reports everything. Node types self-register
+on import, so adding one touches its own directory and three aggregation
+imports — never a central parser or renderer file. The web previewer and the
+VS Code extension are thin shells over the same `@textscene/core` library, which
+keeps them at feature parity by construction.
 
-**Event-Driven Resource Loading**: Textures, materials, GLB meshes, and packed scenes flow through a typed event bus with late-arrival upload recovery.
-
-**Feature Parity**: Web previewer and VS Code extension share the same UI components and rendering engine through the shared @textscene/core library.
-
-See [ARCHITECTURE.md](./ARCHITECTURE.md) for detailed explanations.
+[ARCHITECTURE.md](./ARCHITECTURE.md) has the details.
 
 ## Documentation
 
-- [docs/user-guide-web.md](./docs/user-guide-web.md) - Web previewer user guide (viewport controls, scene tree, inspector)
-- [docs/user-guide-vscode.md](./docs/user-guide-vscode.md) - VS Code extension user guide
-- [CLAUDE.md](./CLAUDE.md) - AI assistant guidelines
-- [ARCHITECTURE.md](./ARCHITECTURE.md) - Project structure and patterns
-- [GitHub issues](https://github.com/Vortiago/Text-Scene-.tscn-File-Previewer/issues) - Implementation roadmap and open work items
-- [REFERENCES.md](./REFERENCES.md) - Documentation links
+- [docs/user-guide-web.md](./docs/user-guide-web.md) — viewport controls, scene tree, inspector
+- [docs/user-guide-vscode.md](./docs/user-guide-vscode.md) — VS Code extension guide
+- [ARCHITECTURE.md](./ARCHITECTURE.md) — project structure and patterns
+- [REFERENCES.md](./REFERENCES.md) — Godot and three.js documentation links
+- [GitHub issues](https://github.com/Vortiago/textscene-inspector/issues) — roadmap and open work
 
 ## License
 

@@ -33,7 +33,7 @@ Living references stay in `docs/` (e.g. `PARITY-LIMITATIONS.md`, the user guides
 Files moved out of `work_items/` during the roadmap normalization pass. The
 `work_items/` directory itself (and the old `TODO.md`) has since been removed —
 the live roadmap and all open work items now live as
-[GitHub issues](https://github.com/Vortiago/Text-Scene-.tscn-File-Previewer/issues),
+[GitHub issues](https://github.com/Vortiago/textscene-inspector/issues),
 with each former `WI-{number}.md` detail file's content preserved in its issue
 body. The references to `work_items/WI-*.md` in the table below are historical.
 

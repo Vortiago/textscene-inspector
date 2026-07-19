@@ -66,12 +66,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Vortiago/Text-Scene-.tscn-File-Previewer.git",
+    "url": "https://github.com/Vortiago/textscene-inspector.git",
     "directory": "packages/textscene-core"
   },
-  "homepage": "https://github.com/Vortiago/Text-Scene-.tscn-File-Previewer#readme",
+  "homepage": "https://github.com/Vortiago/textscene-inspector#readme",
   "bugs": {
-    "url": "https://github.com/Vortiago/Text-Scene-.tscn-File-Previewer/issues"
+    "url": "https://github.com/Vortiago/textscene-inspector/issues"
   },
   "dependencies": {
     "@react-three/drei": "catalog:",

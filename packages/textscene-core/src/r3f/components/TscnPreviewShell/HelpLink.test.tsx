@@ -7,7 +7,7 @@ describe('<HelpLink> (#224)', () => {
     render(<HelpLink />);
     const link = screen.getByRole('link', { name: /help and documentation/i });
     expect(link.getAttribute('href')).toBe(
-      'https://github.com/Vortiago/Text-Scene-.tscn-File-Previewer#documentation'
+      'https://github.com/Vortiago/textscene-inspector#documentation'
     );
   });
 

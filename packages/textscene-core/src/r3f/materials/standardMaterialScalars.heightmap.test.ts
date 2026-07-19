@@ -1,5 +1,5 @@
 /**
- * StandardMaterial3D height mapping handling (WI-65).
+ * StandardMaterial3D height mapping handling.
  *
  * Godot's BaseMaterial3D exposes a height-mapping / parallax feature
  * (FEATURE_HEIGHT_MAPPING) behind a `heightmap_enabled` flag, with a
@@ -11,14 +11,13 @@
  * Unlike clearcoat/rim, `heightmap_scale` is a SCALE FACTOR, NOT a 0..1 value:
  * it may exceed 1 and may be negative (inverting the displacement), so the
  * parse must NOT clamp it. Gated on `heightmap_enabled`: off → 0 (no
- * displacement). Following the WI-66 lesson, the enabled-but-unset Godot
- * default (5.0) is PINNED (the common .tscn input, since Godot omits
- * default-valued properties).
+ * displacement). The enabled-but-unset Godot default (5.0) is PINNED — it is
+ * the common .tscn input, since Godot omits default-valued properties.
  */
 import { describe, expect, it } from 'vitest';
 import { parseStandardMaterial3DScalars } from './standardMaterialScalars';
 
-describe('parseStandardMaterial3DScalars — height mapping flag (WI-65)', () => {
+describe('parseStandardMaterial3DScalars — height mapping flag', () => {
   it('parses heightmap_scale when heightmap_enabled is true', () => {
     expect(
       parseStandardMaterial3DScalars({ heightmap_enabled: 'true', heightmap_scale: '3' }).heightmapScale
@@ -26,8 +25,8 @@ describe('parseStandardMaterial3DScalars — height mapping flag (WI-65)', () =>
   });
 
   it('uses the Godot default (5.0) when heightmap_enabled is true but the scale is omitted', () => {
-    // WI-66 lesson: flag-on + scale-absent is the COMMON .tscn input and must
-    // resolve to Godot's enabled default (5.0), NOT 0.
+    // Flag-on + scale-absent is the COMMON .tscn input and must resolve to
+    // Godot's enabled default (5.0), NOT 0.
     expect(parseStandardMaterial3DScalars({ heightmap_enabled: 'true' }).heightmapScale).toBe(5.0);
   });
 

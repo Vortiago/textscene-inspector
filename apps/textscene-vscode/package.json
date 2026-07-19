@@ -1,9 +1,21 @@
 {
   "name": "textscene-inspector",
-  "displayName": "TextScene Inspector",
+  "displayName": "TextScene Inspector — Godot .tscn Preview",
   "description": "Live 3D preview of Godot .tscn scene files in VS Code — no Godot install required. Renders meshes, PBR materials, lights and cameras via three.js, with a scene-tree inspector and a .tscn linter.",
   "version": "0.9.0",
   "publisher": "vortiago",
+  "keywords": [
+    "godot",
+    "godot engine",
+    "godot4",
+    "tscn",
+    "scene",
+    "3d",
+    "preview",
+    "gamedev",
+    "linter",
+    "three.js"
+  ],
   "icon": "images/icon.png",
   "galleryBanner": {
     "color": "#1e1e2e",
@@ -157,12 +169,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Vortiago/Text-Scene-.tscn-File-Previewer.git",
+    "url": "https://github.com/Vortiago/textscene-inspector.git",
     "directory": "apps/textscene-vscode"
   },
-  "homepage": "https://github.com/Vortiago/Text-Scene-.tscn-File-Previewer#readme",
+  "homepage": "https://github.com/Vortiago/textscene-inspector#readme",
   "bugs": {
-    "url": "https://github.com/Vortiago/Text-Scene-.tscn-File-Previewer/issues"
+    "url": "https://github.com/Vortiago/textscene-inspector/issues"
   },
   "dependencies": {
     "@textscene/core": "workspace:*",
