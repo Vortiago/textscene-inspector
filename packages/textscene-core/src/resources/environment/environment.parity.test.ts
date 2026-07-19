@@ -1,8 +1,9 @@
 /**
  * Parity: Environment ambient + fog vs Godot 4.x.
  * - ambient_light_color default is BLACK (no ambient), not white.
- * - ambient_light_source gates flat ambient: BG(0)/DISABLED(1) emit none;
- *   COLOR(2)/SKY(3) emit the flat colour.
+ * - ambient_light_source gates flat ambient: DISABLED(1) emits none, COLOR(2)/
+ *   SKY(3) emit the flat colour, and BG(0) — the default — emits the BACKGROUND
+ *   colour (see renderer.bg-ambient.test.ts for that table).
  * - scene fog is driven by Godot's SCREEN-SPACE fog (fog_enabled), not by
  *   volumetric_fog (which has no three.js equivalent — see PARITY-LIMITATIONS).
  */
@@ -20,8 +21,13 @@ describe('Environment Godot parity', () => {
     expect(parseEnvironment({ ambient_light_source: '2' }).ambient_light_source).toBe(2);
   });
 
-  it('emits no flat ambient for BG/DISABLED source; emits for COLOR source', () => {
-    expect(createEnvironmentSettings(parseEnvironment({})).ambient).toBeNull(); // BG default
+  it('emits none for DISABLED; emits for BG (from the background) and COLOR', () => {
+    // BG(0) is the default source AND CLEAR_COLOR(0) the default mode, so a
+    // bare Environment lights the scene with Godot's default clear colour.
+    expect(createEnvironmentSettings(parseEnvironment({})).ambient).toEqual({
+      color: { r: 0.3, g: 0.3, b: 0.3, a: 1 },
+      energy: 1,
+    });
     expect(createEnvironmentSettings(parseEnvironment({ ambient_light_source: '1' })).ambient).toBeNull(); // DISABLED
     const colored = createEnvironmentSettings(
       parseEnvironment({ ambient_light_source: '2', ambient_light_color: 'Color(0.2, 0.2, 0.2, 1)' })

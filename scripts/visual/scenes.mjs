@@ -52,6 +52,13 @@ export const GOLDEN_SCENES = [
   // in scenes/demos/2d/lights_and_shadows/light_shadows.tscn drew the magenta
   // missing-resource placeholder. Both markers must render identically.
   { name: 'sprite2d-canvastexture', file: 'unit-sprite2d-canvastexture.tscn' },
+  // Two AreaLight3D panels of the SAME light_energy but very different
+  // area_size, each lighting its own plate. Godot normalises the emitted colour
+  // by the rectangle's area (area_normalize_energy, default true), so both
+  // plates read the same; without it the 4 x 0.05 strip is 5x dimmer. The one
+  // pre-existing AreaLight3D fixture lights no geometry at all, so nothing
+  // could see this.
+  { name: 'area-light-normalize', file: 'unit-area-light-normalize.tscn' },
   // External ArrayMesh .tres: decoded quad with Godot's packed normals. Loads
   // a local resource (deterministic), gated by the two-identical-frames settle.
   { name: 'arraymesh', file: 'unit-arraymesh.tscn' },

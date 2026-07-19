@@ -232,6 +232,28 @@ which is monotonic (higher exponent → harder edge) and lands the Godot default
   closed-form three.js equivalent; the mapping is a deliberate approximation.
 - Site: `nodes/3d/lights/spotlight3d/Component.tsx` (penumbra derivation).
 
+### The previewer always adds editor preview lights
+`TscnSceneContents` mounts an unconditional `ambientLight intensity={0.4}` plus a
+`directionalLight` so a scene with no lights of its own is not a black void. Godot's
+editor makes the equivalent preview environment yield to a scene that carries its
+own `WorldEnvironment`; ours does not.
+
+- **Impact:** any lighting a scene contributes competes with a fixed baseline that
+  Godot would not be applying. The clearest case is `WorldEnvironment`'s ambient:
+  at the vendored corpus's own values (`background_color = Color(0.6, 0.6, 0.6, 1)`
+  at `background_energy_multiplier = 1`, from
+  `scenes/demos/3d/graphics_settings/control.tscn`) its contribution does not
+  survive 8-bit quantisation beside the preview lights — a golden only moves once
+  the multiplier is pushed to roughly 50. That is why the BG-ambient behaviour is
+  guarded at the component seam (`worldenvironment/Component.bg-ambient.test.tsx`)
+  rather than by a baseline image that could not fail.
+- **Why not fixed here:** *when* the preview lights should yield is a product
+  decision for this previewer, not a Godot class-reference fact — a scene may carry
+  a `WorldEnvironment`, its own lights, both, or an environment that emits nothing.
+  Picking a rule blind would trade one divergence for another, and it would move
+  most 3D baselines at once.
+- Site: `r3f/TscnCanvas.tsx` (`TscnSceneContents`).
+
 ## Control / Theme (StyleBox)
 
 ### TextureRect absent stretch_mode → `contain` (not Godot's STRETCH_SCALE)  *(deliberate)*

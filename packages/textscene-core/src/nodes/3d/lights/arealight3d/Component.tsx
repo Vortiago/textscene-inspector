@@ -35,8 +35,15 @@ export function AreaLight3D({ node, children }: NodeComponentProps) {
     [properties]
   );
   const color = parseColorToHex(properties.light_color);
-  const intensity = properties.light_energy * LIGHT_INTENSITY_SCALE;
   const { x: width, y: height } = properties.area_size ?? DEFAULT_AREA_SIZE;
+  // Godot divides the emitted colour by the rectangle's surface area when
+  // `area_normalize_energy` is on (its default), so the total output is
+  // size-independent. three.js RectAreaLight intensity is a luminance, which
+  // scales with area for the same reason — so the same division applies here.
+  const area = width * height;
+  const normalize = properties.area_normalize_energy && area > 0;
+  const intensity =
+    (properties.light_energy * LIGHT_INTENSITY_SCALE) / (normalize ? area : 1);
 
   return (
     <group name={node.name} position={position} rotation={rotation} scale={scale}>

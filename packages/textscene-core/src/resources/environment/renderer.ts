@@ -11,7 +11,10 @@ export interface EnvironmentSettings {
     color: Color;
     energyMultiplier: number;
   };
-  /** Flat ambient — null when ambient_light_source is BG(0)/DISABLED(1). */
+  /**
+   * Flat ambient — null when the source emits none (DISABLED) or when the
+   * ambient is a cubemap rather than a constant (a sky background).
+   */
   ambient: {
     color: Color;
     energy: number;
@@ -42,14 +45,7 @@ export function createEnvironmentSettings(
       color: properties.background_color,
       energyMultiplier: properties.background_energy_multiplier,
     },
-    // Flat ambient only for COLOR(2)/SKY(3) sources; BG(0)/DISABLED(1) emit none.
-    ambient:
-      properties.ambient_light_source === 2 || properties.ambient_light_source === 3
-        ? {
-            color: properties.ambient_light_color,
-            energy: properties.ambient_light_energy,
-          }
-        : null,
+    ambient: ambientFor(properties),
     // Scene fog is driven by Godot's screen-space fog; volumetric fog has no
     // THREE equivalent and is intentionally not applied (see PARITY-LIMITATIONS).
     fog: properties.fog_enabled
@@ -73,4 +69,35 @@ export function createEnvironmentSettings(
         }
       : null,
   };
+}
+
+/** Godot's ProjectSettings `rendering/environment/defaults/default_clear_color`. */
+const DEFAULT_CLEAR_COLOR: Color = { r: 0.3, g: 0.3, b: 0.3, a: 1 };
+
+/**
+ * The flat ambient this Environment contributes, per Godot's
+ * `AmbientSource` × `BGMode` table (identical in the RD and GLES3 renderers).
+ *
+ *   BG (0, the DEFAULT source)
+ *     ├─ BG_CLEAR_COLOR (0, the DEFAULT mode) → default_clear_color × background_energy
+ *     ├─ BG_COLOR (1)                          → background_color   × background_energy
+ *     └─ anything else (sky, canvas, …)        → not flat; a cubemap or nothing
+ *   DISABLED (1)                               → none
+ *   COLOR (2) / SKY (3)                        → ambient_light_color × ambient_light_energy
+ *
+ * The sRGB→linear conversion happens at the consumer (`godotColorToLinear` in
+ * the WorldEnvironment component), so these stay Godot-space colours.
+ */
+function ambientFor(properties: EnvironmentProperties): EnvironmentSettings['ambient'] {
+  if (properties.ambient_light_source === 0) {
+    if (properties.background_mode !== 0 && properties.background_mode !== 1) return null;
+    return {
+      color: properties.background_mode === 0 ? DEFAULT_CLEAR_COLOR : properties.background_color,
+      energy: properties.background_energy_multiplier,
+    };
+  }
+  if (properties.ambient_light_source === 2 || properties.ambient_light_source === 3) {
+    return { color: properties.ambient_light_color, energy: properties.ambient_light_energy };
+  }
+  return null;
 }

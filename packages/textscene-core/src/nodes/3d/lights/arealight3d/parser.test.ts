@@ -17,7 +17,8 @@ describe('AreaLight3D Parser', () => {
       expect(result.parent).toBe('.');
       expect(result.light_color).toBe('Color(1, 1, 1, 1)');
       expect(result.light_energy).toBe(1.0);
-      expect(result.area_range).toBe(1.0);
+      // class_arealight3d.html properties table: area_range defaults to 5.0.
+      expect(result.area_range).toBe(5.0);
       expect(result.area_size).toEqual({ x: 1, y: 1 });
       expect(result.shadow_enabled).toBe(false);
     });

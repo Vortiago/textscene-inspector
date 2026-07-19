@@ -598,6 +598,11 @@ export const fixtures: Fixture[] = [
     "category": "Integration - Multi-Node"
   },
   {
+    "name": "Area Light Normalize",
+    "file": "unit-area-light-normalize.tscn",
+    "category": "Unit - Lights"
+  },
+  {
     "name": "Area Light3d",
     "file": "unit-area-light3d.tscn",
     "category": "Unit - Lights"

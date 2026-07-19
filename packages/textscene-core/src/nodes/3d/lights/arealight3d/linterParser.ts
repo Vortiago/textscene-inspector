@@ -13,4 +13,5 @@ import { v } from '../../../../linter/validators/index.js';
 validatorRegistry.registerAll('AreaLight3D', {
   area_range: v.positiveFloat('area_range'),
   area_size: v.vector2('area_size'),
+  area_normalize_energy: v.boolean('area_normalize_energy'),
 });
