@@ -588,7 +588,9 @@ interface ShadowFlags {
  * castShadow=true.
  */
 function shadowCastingFlags(value: number | undefined): ShadowFlags {
-  if (value === undefined || value === 0) {
+  // class_geometryinstance3d.html: cast_shadow defaults to 1
+  // (SHADOW_CASTING_SETTING_ON), so an absent key means the mesh DOES cast.
+  if (value === 0) {
     return { castShadow: false, shadowsOnly: false };
   }
   if (value === 2) {

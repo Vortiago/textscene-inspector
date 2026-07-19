@@ -28,7 +28,11 @@ export const GOLDEN_SCENES = [
   // baseline pins what it LOOKS like.
   { name: 'plane-rotated-scaled', file: 'edge-plane-rotated-scaled.tscn' },
   { name: 'all-meshes', file: 'integration-all-meshes.tscn' },
-  { name: 'all-primitives', file: 'integration-all-primitives.tscn' },
+  // Shadow-bearing scenes: the shadow map is the most GPU-sensitive content in
+  // the set (soft-edge PCF sampling differs across drivers), so these carry the
+  // same relaxed threshold as the thin-AA gizmo scenes. The shadows themselves
+  // are small contact regions — a missing shadow moves far more than 0.5%.
+  { name: 'all-primitives', file: 'integration-all-primitives.tscn', maxDiffPct: 0.5 },
   // Every CSG dimension OMITTED, so the render depends entirely on our parser
   // defaults matching Godot's. The other CSG fixtures set size/radius/height
   // explicitly, which is why a wrong default (CSGBox3D 2,2,2 vs Godot's 1,1,1)
@@ -95,7 +99,7 @@ export const GOLDEN_SCENES = [
   // authored pose, but the fixtures exist to be played, so they stay out of
   // the stability-gated visual set (same rationale as Label3D above).
   { name: 'mixed-nodes', file: 'integration-mixed-nodes.tscn' },
-  { name: 'hallway-mockup', file: 'example-hallway-mockup.tscn' },
+  { name: 'hallway-mockup', file: 'example-hallway-mockup.tscn', maxDiffPct: 0.5 },
   // Instance root merge (ADR-0013): two instances of unit-instance-child.tscn
   // collapse into Area3D coins at x=±1.5. Pins the rendered pixels of a
   // sub-scene-instancing scene so the wrapper-collapse + transform-replace
@@ -134,7 +138,7 @@ export const GOLDEN_SCENES = [
   // Unselected: pins the non-gizmo render (ground + shading only — no helper).
   { name: 'directional-light-3d', file: 'unit-directional-light-3d.tscn' },
   { name: 'omni-light-3d', file: 'unit-omni-light-3d.tscn' },
-  { name: 'spot-light-3d', file: 'unit-spot-light-3d.tscn' },
+  { name: 'spot-light-3d', file: 'unit-spot-light-3d.tscn', maxDiffPct: 0.5 },
   { name: 'camera-basic', file: 'unit-camera-basic.tscn' },
   { name: 'audio-stream-player-3d', file: 'unit-audio-stream-player.tscn' },
   // Selected: the core deliverable — real tree-click → selection → gizmo
@@ -200,7 +204,7 @@ export const GOLDEN_SCENES = [
   { name: 'surface-material-override', file: 'unit-surface-material-override.tscn' },
   // Multi-property showcase guard (12 spheres across 4 rows: basic PBR,
   // emission/normal, advanced PBR, transparency/glass).
-  { name: 'material-features', file: 'integration-material-features.tscn' },
+  { name: 'material-features', file: 'integration-material-features.tscn', maxDiffPct: 0.5 },
 
   // --- Sprite2D/Sprite3D + 3D physics-body roundout ---
   { name: 'sprite2d', file: 'unit-sprite2d.tscn' },

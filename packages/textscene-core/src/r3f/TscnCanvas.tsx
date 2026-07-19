@@ -225,7 +225,12 @@ export function TscnCanvas() {
 
   return (
     <div className={styles.root}>
-      <Canvas camera={{ position: [3, 3, 3] }}>
+      {/* `shadows` turns three.js's shadow map on for the whole scene. Without
+          it every light slice's `castShadow` / `shadow-bias` / `shadow-camera-*`
+          wiring is inert and a `shadow_enabled = true` light casts nothing —
+          which is what Godot's own light fixtures exist to show. PCFSoft is the
+          closest cheap match to Godot's soft shadows. */}
+      <Canvas camera={{ position: [3, 3, 3] }} shadows="soft">
         <TscnSceneContents />
         <ActiveCameraSwitcher />
         <CameraFit />

@@ -254,6 +254,16 @@ own `WorldEnvironment`; ours does not.
   most 3D baselines at once.
 - Site: `r3f/TscnCanvas.tsx` (`TscnSceneContents`).
 
+### `cast_shadow = SHADOWS_ONLY` (3) hides the node's descendants too
+Godot's SHADOWS_ONLY hides the mesh itself while still casting its shadow; we
+implement it by setting `visible = false` on the R3F `<mesh>`, and three.js skips
+an invisible object's whole subtree — both in the colour pass and in the shadow
+pass. So a SHADOWS_ONLY mesh currently casts no shadow and hides anything
+parented under it.
+
+- **Impact:** none in the vendored corpus — no scene sets `cast_shadow = 3`.
+- Site: `nodes/3d/meshinstance3d/Component.tsx` (`shadowCastingFlags`).
+
 ## Control / Theme (StyleBox)
 
 ### TextureRect absent stretch_mode → `contain` (not Godot's STRETCH_SCALE)  *(deliberate)*
