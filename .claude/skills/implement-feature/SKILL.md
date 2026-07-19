@@ -84,10 +84,10 @@ catches it. Verify these two barrels by hand.
 
 ## Docs (the most-forgotten layer)
 
-Landing complete updates: `README.md` (the node count + bullet list — a guard checks the count),
-`CHANGELOG.md` (`## [Unreleased]`), `docs/PARITY-LIMITATIONS.md` (if the Godot→three.js mapping is lossy —
-cite the exact render line). Only when relevant: `CONTEXT.md` (a NEW domain term, not per feature),
-`docs/adr/NNNN-*.md` (an architectural decision).
+Landing complete updates: `README.md` (the approximate node count and the "What it renders" table),
+`docs/PARITY-LIMITATIONS.md` (if the Godot→three.js mapping is lossy — cite the exact render line).
+Only when relevant: `CONTEXT.md` (a NEW domain term, not per feature), `docs/adr/NNNN-*.md` (an
+architectural decision).
 
 ## Golden image (conditional)
 

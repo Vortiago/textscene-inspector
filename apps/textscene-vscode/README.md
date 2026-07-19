@@ -69,9 +69,9 @@ Unrecognized node types degrade gracefully: they stay in the scene tree so child
 
 ## More
 
-- Source, issues, and full project documentation: [github.com/Vortiago/Text-Scene-.tscn-File-Previewer](https://github.com/Vortiago/Text-Scene-.tscn-File-Previewer)
-- The same rendering core powers a standalone [web previewer](https://github.com/Vortiago/Text-Scene-.tscn-File-Previewer/tree/main/apps/textscene-web) and a [CLI linter](https://github.com/Vortiago/Text-Scene-.tscn-File-Previewer/tree/main/apps/textscene-linter).
+- Source, issues, and full project documentation: [github.com/Vortiago/textscene-inspector](https://github.com/Vortiago/textscene-inspector)
+- The same rendering core powers a standalone [web previewer](https://github.com/Vortiago/textscene-inspector/tree/main/apps/textscene-web) and a [CLI linter](https://github.com/Vortiago/textscene-inspector/tree/main/apps/textscene-linter).
 
 ## License
 
-[MIT](https://github.com/Vortiago/Text-Scene-.tscn-File-Previewer/blob/main/LICENSE)
+[MIT](https://github.com/Vortiago/textscene-inspector/blob/main/LICENSE)
