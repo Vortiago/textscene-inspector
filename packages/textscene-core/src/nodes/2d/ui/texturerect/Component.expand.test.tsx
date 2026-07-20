@@ -17,10 +17,11 @@
  *   FIT_HEIGHT (4)              → Size2(0, get_size().x)
  *   FIT_HEIGHT_PROPORTIONAL (5) → Size2(0, get_size().x / aspect)
  *
- * The four FIT_* modes derive a minimum from the control's CURRENT size, which
- * CSS cannot express (and which Godot itself marks experimental). The
- * proportional pair maps onto `aspect-ratio`; the other two get no minimum, and
- * that gap is recorded in docs/PARITY-LIMITATIONS.md.
+ * The four FIT_* modes derive a minimum from the control's CURRENT size — a
+ * self-referential rule with no direct CSS equivalent, but `aspect-ratio` says
+ * the same thing from the other direction: FIT_WIDTH/FIT_HEIGHT tie one axis to
+ * the other 1:1 (Godot ignores the texture's own aspect for those), and the
+ * PROPORTIONAL pair ties them at the texture's aspect.
  */
 import { describe, expect, it } from 'vitest';
 import { textureRectMinSize } from './Component';
@@ -37,14 +38,17 @@ describe('textureRectMinSize', () => {
     expect(textureRectMinSize(1, TEXTURE)).toEqual({});
   });
 
-  it('pins the aspect ratio for the PROPORTIONAL fit modes', () => {
+  it('pins the texture aspect for the PROPORTIONAL fit modes', () => {
     expect(textureRectMinSize(3, TEXTURE)).toEqual({ aspectRatio: '320 / 160' });
     expect(textureRectMinSize(5, TEXTURE)).toEqual({ aspectRatio: '320 / 160' });
   });
 
-  it('contributes nothing for the size-derived fit modes', () => {
-    expect(textureRectMinSize(2, TEXTURE)).toEqual({});
-    expect(textureRectMinSize(4, TEXTURE)).toEqual({});
+  it('squares the box for the non-proportional fit modes', () => {
+    // "The height of the texture will be ignored. Minimum width will be equal
+    // to the current height." — the two axes are tied 1:1, texture aspect
+    // deliberately discarded.
+    expect(textureRectMinSize(2, TEXTURE)).toEqual({ aspectRatio: '1 / 1' });
+    expect(textureRectMinSize(4, TEXTURE)).toEqual({ aspectRatio: '1 / 1' });
   });
 
   it('contributes nothing when the texture has not loaded', () => {

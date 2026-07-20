@@ -11,9 +11,16 @@ through a full parity audit, so treat this catalogue as verified against the
 4.4 spec specifically, not as a claim that 4.6/4.7-only features have been
 audited.
 
-Each item below is harmless for the scenes shipped today. This catalogue exists
-so divergences are **recorded, not discovered by eye** — if a render ever looks
-wrong in one of these areas, this is the first place to check.
+This catalogue exists so divergences are **recorded, not discovered by eye** —
+if a render ever looks wrong in one of these areas, this is the first place to
+check.
+
+An entry here needs a reason a three.js renderer *cannot* match Godot, or a
+concrete blocker to fixing it. "No scene in the vendored corpus hits this" is
+NOT such a reason: that corpus is a sample of Godot's own demos, not the set of
+scenes this previewer has to open, so its silence says nothing about whether a
+user will hit the bug tomorrow. Where a corpus count appears below it is there
+to size the blast radius of a fix, never to justify skipping one.
 
 ## StandardMaterial3D
 
@@ -77,13 +84,17 @@ happen to cancel. Reproducing Godot exactly needs
 - **Diverges when:** `uv1_scale.y` is non-integer (an integer scale makes the
   `1 - scale.y` term vanish mod 1), or `uv1_offset.y` is non-zero — where the
   sign is currently inverted.
-- **Impact today:** zero. No shipped `.tscn` sets `uv1_offset`, and the only
+- **Why not fixed yet:** the correction applies to primitive meshes as well as
+  ArrayMesh surfaces, so it moves every textured mesh baseline at once — and the
+  current baselines were eyeballed into place, not checked against Godot. The
+  formula above is derived, not measured; the sign of the `uv1_offset.y` term in
+  particular wants a side-by-side Godot render before it is frozen into ~20
+  goldens. That is a "needs a reference render" blocker, NOT a "no scene hits it"
+  one: the vendored corpus is a sample of Godot scenes, not the set of scenes
+  this previewer has to handle, so its silence is not evidence the bug is
+  harmless. (For scale: today no shipped `.tscn` sets `uv1_offset`, and the only
   `uv1_scale` on a Godot-authored mesh is `demos/3d/soft_body_physics/box.tscn`
-  at an integer 2. The `uv1_scale` fixtures use PlaneMesh primitives.
-- **Why not fixed:** the same formula applies to primitive meshes, whose current
-  appearance is what the existing fixtures were eyeballed against; correcting it
-  is a rendering change across both mesh paths that is unverifiable without a
-  visual Godot reference, for a case nothing in the corpus exercises.
+  at an integer 2, where the `1 - scale.y` term vanishes mod 1.)
 - Sites: `nodes/3d/meshinstance3d/applyUVTransform.ts` (parsed-scalar path) and
   `resources/materials/standardmaterial3d/renderer.ts` (ArrayMesh surface
   materials — this one also drops `uv1_offset` entirely).
@@ -254,28 +265,20 @@ own `WorldEnvironment`; ours does not.
   most 3D baselines at once.
 - Site: `r3f/TscnCanvas.tsx` (`TscnSceneContents`).
 
-### `cast_shadow = SHADOWS_ONLY` (3) hides the node's descendants too
-Godot's SHADOWS_ONLY hides the mesh itself while still casting its shadow; we
-implement it by setting `visible = false` on the R3F `<mesh>`, and three.js skips
-an invisible object's whole subtree — both in the colour pass and in the shadow
-pass. So a SHADOWS_ONLY mesh currently casts no shadow and hides anything
-parented under it.
-
-- **Impact:** none in the vendored corpus — no scene sets `cast_shadow = 3`.
-- Site: `nodes/3d/meshinstance3d/Component.tsx` (`shadowCastingFlags`).
-
 ## Control
 
-### `TextureRect.expand_mode` FIT_WIDTH (2) / FIT_HEIGHT (4)
-Both derive a minimum size from the control's **current** size —
-`get_minimum_size()` returns `Size2(get_size().y, 0)` and `Size2(0, get_size().x)`
-— a self-referential rule CSS cannot express (and one Godot itself marks
-experimental on the member). We contribute no minimum for those two.
+### `TextureRect.expand_mode` FIT_* modes: which axis is authoritative
+All four FIT_* modes are implemented as `aspect-ratio` — FIT_WIDTH/FIT_HEIGHT
+tie the two axes 1:1 (Godot ignores the texture's own aspect for those) and the
+PROPORTIONAL pair ties them at the texture's aspect. What does NOT carry over is
+*direction*: Godot derives a minimum from the control's **current** size
+(`Size2(get_size().y, 0)` for FIT_WIDTH, `Size2(0, get_size().x)` for
+FIT_HEIGHT), naming one axis as the driver, whereas CSS resolves whichever axis
+the surrounding layout leaves unconstrained.
 
-- **Impact:** none in the vendored corpus — every TextureRect there is either at
-  the default `EXPAND_KEEP_SIZE` (implemented: the control is floored at the
-  texture's own size) or `EXPAND_IGNORE_SIZE` (implemented: no minimum).
-- The two PROPORTIONAL variants (3, 5) ARE implemented, as `aspect-ratio`.
+- **Impact:** the box takes the right shape either way; the two differ only when
+  the layout constrains BOTH axes, where Godot's named axis wins and CSS's
+  constraint does. Godot marks the member experimental for related reasons.
 - Site: `nodes/2d/ui/texturerect/Component.tsx` (`textureRectMinSize`).
 
 ### `Control.rotation` / `scale` are dropped inside a Container — deliberately

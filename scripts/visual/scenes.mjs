@@ -48,6 +48,13 @@ export const GOLDEN_SCENES = [
   // scenes). Every other 3D fixture hangs its content off Node3D, so nothing
   // in the golden set could see it.
   { name: 'subtree-under-leaf-nodes', file: 'unit-subtree-under-leaf-nodes.tscn' },
+  // `cast_shadow = SHADOWS_ONLY`: the box must be ABSENT from the colour buffer
+  // while its shadow lands on the ground and the sphere parented under it still
+  // renders. Implemented as `visible = false` this scene showed no shadow and
+  // no sphere — three skips an invisible object in the shadow pass and stops
+  // walking its subtree. Soft-shadow edges are GPU-sensitive, hence the
+  // relaxed threshold.
+  { name: 'shadows-only', file: 'unit-shadows-only.tscn', maxDiffPct: 0.5 },
   // CSG `material` as an ExtResource .tres beside the same node with an inline
   // SubResource material. Only the sub-resource form used to resolve, so the
   // 33 ExtResource materials in scenes/demos/3d/csg/csg.tscn rendered white —

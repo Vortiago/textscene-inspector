@@ -9,7 +9,7 @@
  * Audit slot numbers from STRICT-VERIFICATION.md Section 1:
  *   14a — surface_material_override slot N>0 → mesh.material[N]
  *   16a — cast_shadow=2 → material.shadowSide === DoubleSide
- *   16b — cast_shadow=3 → mesh.visible === false && castShadow === true
+ *   16b — cast_shadow=3 → castShadow === true, colour write suppressed
  *   38a — ao_texture → material.aoMap is a THREE.Texture
  *   59a — PrismMesh rotateY(π/6) aligns triangular face with +X
  *   60  — PlaneMesh flip_faces=true → mirrored geometry (negative scale on X axis)
@@ -107,7 +107,7 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
     expect(mesh.material.shadowSide).toBe(THREE.DoubleSide);
   });
 
-  it('audit slot 16b — cast_shadow=3 (SHADOWS_ONLY) → mesh.visible === false but castShadow === true', async () => {
+  it('audit slot 16b — cast_shadow=3 (SHADOWS_ONLY) → still casts, draws no colour', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <SceneResourcesProvider
         internalResources={[
@@ -127,9 +127,15 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
     const mesh = renderer.scene.findByType('Mesh').instance as {
       castShadow: boolean;
       visible: boolean;
+      material: { colorWrite: boolean };
     };
     expect(mesh.castShadow).toBe(true);
-    expect(mesh.visible).toBe(false);
+    // NOT `visible = false`: three's shadow pass bails on an invisible object
+    // and stops walking its subtree, so that spelling cost both the shadow and
+    // every descendant. Suppressing the colour write leaves both intact — see
+    // meshinstance3d/Component.shadows-only.test.tsx.
+    expect(mesh.visible).toBe(true);
+    expect(mesh.material.colorWrite).toBe(false);
   });
 
   it('audit slot 38a — ao_texture loaded → material.aoMap is a THREE.Texture', async () => {

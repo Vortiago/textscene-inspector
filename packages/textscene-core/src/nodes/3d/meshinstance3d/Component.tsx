@@ -240,12 +240,12 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     return null;
   }, [textureSlots, textureRequests]);
 
-  // Parity-audit fix: cast_shadow mode 2 (DOUBLE_SIDED) sets
-  // material.shadowSide = DoubleSide; mode 3 (SHADOWS_ONLY) keeps the
-  // shadow pass on but hides the mesh from the colour buffer.
+  // cast_shadow mode 2 (DOUBLE_SIDED) sets material.shadowSide = DoubleSide;
+  // mode 3 (SHADOWS_ONLY) hides the mesh from the colour buffer while it keeps
+  // casting — see MeshShell for why that is NOT `visible = false`.
   const shadowFlags = shadowCastingFlags(properties.castShadow);
   const castShadow = shadowFlags.castShadow;
-  const visible = properties.visible !== false && !shadowFlags.shadowsOnly;
+  const visible = properties.visible !== false;
 
   // Every render branch wraps its content in the same attribute shell.
   const shellProps = {
@@ -255,6 +255,7 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     scale,
     visible,
     castShadow,
+    shadowsOnly: shadowFlags.shadowsOnly,
     subtree: children,
   };
 
@@ -364,6 +365,8 @@ interface MeshShellProps {
   scale: [number, number, number];
   visible: boolean;
   castShadow: boolean;
+  /** `cast_shadow = SHADOWS_ONLY` (3): cast, but draw nothing. */
+  shadowsOnly: boolean;
   /** The dispatched scene-tree subtree parented under this MeshInstance3D. */
   subtree: ReactNode;
   children: ReactNode;
@@ -389,6 +392,7 @@ function MeshShell({
   scale,
   visible,
   castShadow,
+  shadowsOnly,
   subtree,
   children,
 }: MeshShellProps) {
@@ -403,6 +407,19 @@ function MeshShell({
       receiveShadow
     >
       {children}
+      {/* SHADOWS_ONLY draws nothing but must still CAST, and its descendants
+          must still render. `visible = false` gives neither: three's
+          `WebGLShadowMap.renderObject` opens with
+          `if (object.visible === false) return;`, which skips the shadow pass
+          AND stops walking the subtree. Setting `material.visible = false` is
+          no better — the same function gates the depth material on it. A
+          material that writes neither colour nor depth is what separates the
+          two passes: `getDepthMaterial` copies alphaMap/alphaTest/map and never
+          `colorWrite`, so the shadow comes through untouched. Mounting after
+          `children` makes this the material R3F attaches last. */}
+      {shadowsOnly && (
+        <meshBasicMaterial attach="material" colorWrite={false} depthWrite={false} />
+      )}
       {subtree}
     </mesh>
   );

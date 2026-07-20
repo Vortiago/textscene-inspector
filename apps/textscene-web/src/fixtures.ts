@@ -258,6 +258,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Shadows Only",
+    "file": "unit-shadows-only.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Skeleton3d",
     "file": "unit-skeleton3d.tscn",
     "category": "Other"

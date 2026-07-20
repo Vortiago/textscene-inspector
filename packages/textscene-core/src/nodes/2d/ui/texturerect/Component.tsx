@@ -182,10 +182,14 @@ interface ImageLike {
  * The default EXPAND_KEEP_SIZE floors the control at the texture's own size —
  * without it, a TextureRect inside a container collapses to nothing, because
  * the `<img>` is positioned out of flow so it cannot floor anything itself.
- * The four FIT_* modes derive their minimum from the control's CURRENT size,
- * which CSS has no way to express; the PROPORTIONAL pair maps onto
- * `aspect-ratio`, and the other two contribute nothing (see
- * docs/PARITY-LIMITATIONS.md).
+ *
+ * The four FIT_* modes derive their minimum from the control's CURRENT size, a
+ * self-referential rule with no direct CSS equivalent — but `aspect-ratio`
+ * states the same relationship from the other direction. FIT_WIDTH/FIT_HEIGHT
+ * tie the two axes 1:1 ("the height of the texture will be ignored"), and the
+ * PROPORTIONAL pair ties them at the texture's aspect. What CSS resolves for us
+ * rather than being told is WHICH axis is authoritative; see
+ * docs/PARITY-LIMITATIONS.md.
  */
 export function textureRectMinSize(
   expandMode: number | undefined,
@@ -198,10 +202,13 @@ export function textureRectMinSize(
   switch (expandMode ?? 0) {
     case 0: // EXPAND_KEEP_SIZE
       return { minWidth: width, minHeight: height };
+    case 2: // EXPAND_FIT_WIDTH — one axis follows the other, texture aspect ignored
+    case 4: // EXPAND_FIT_HEIGHT
+      return { aspectRatio: '1 / 1' };
     case 3: // EXPAND_FIT_WIDTH_PROPORTIONAL
     case 5: // EXPAND_FIT_HEIGHT_PROPORTIONAL
       return { aspectRatio: `${width} / ${height}` };
-    default: // IGNORE_SIZE, FIT_WIDTH, FIT_HEIGHT
+    default: // EXPAND_IGNORE_SIZE
       return {};
   }
 }
