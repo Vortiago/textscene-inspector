@@ -139,11 +139,9 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
       'transform',
     ],
     linterOnly: [
-      // Visual-only modulation handled by Node2D/CanvasItem; no validator
-      // needed because the parser reads them as CanvasItem properties.
-      'modulate', 'self_modulate',
-      // Layout control not read by the parser for rendering.
-      'rotation', 'scale', 'pivot_offset',
+      // (`modulate`, `self_modulate`, `rotation`, `scale` and `pivot_offset`
+      // used to sit here as "not read by the parser for rendering"; they are
+      // all rendered now.)
       // Theme-override wildcard keys — validated by pattern match in the
       // linter; the parser uses a loop over `theme_override_*/*` keys and
       // there is no fixed per-key scraping surface to compare against.
@@ -151,7 +149,7 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
       'theme_override_font_sizes/*', 'theme_override_styles/*',
       'theme_override_fonts/*',
     ],
-    reason: 'Control parser reads transform for compatibility but linter does not validate it; linter validates layout and theme-override properties not needed for rendering.',
+    reason: 'Control parser reads transform for compatibility but linter does not validate it; the theme-override keys are wildcard-matched in the linter and loop-scraped in the parser, so they have no per-key surface to compare.',
   },
 
   // -------------------------------------------------------------------------

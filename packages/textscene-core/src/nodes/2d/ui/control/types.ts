@@ -40,6 +40,26 @@ export interface ControlProperties {
   sizeFlagsStretchRatio?: number;
   customMinimumSize?: { x: number; y: number };
 
+  /**
+   * CanvasItem tint applied to this node AND its CanvasItem children.
+   * Godot default `Color(1, 1, 1, 1)`; absent means "no tint".
+   */
+  modulate?: ControlColor;
+  /** CanvasItem tint applied to this node ONLY, not its children. */
+  selfModulate?: ControlColor;
+
+  /** Rotation about the pivot, in RADIANS (the inspector shows degrees). */
+  rotation?: number;
+  /** Scale about the pivot; a negative axis mirrors. */
+  scale?: { x: number; y: number };
+  /** Pivot offset in pixels from the node's top-left. */
+  pivotOffset?: { x: number; y: number };
+  /**
+   * Pivot offset as a fraction of the node's own size — `(1, 1)` is the
+   * bottom-right corner. The effective pivot is this PLUS `pivotOffset`.
+   */
+  pivotOffsetRatio?: { x: number; y: number };
+
   /** `theme_override_constants/<name>` → number (e.g. separation, margin_left). */
   themeOverrideConstants?: Record<string, number>;
   /** `theme_override_colors/<name>` → color (e.g. font_color). */

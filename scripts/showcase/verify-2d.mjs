@@ -13,7 +13,7 @@
  *   node scripts/showcase/verify-2d.mjs
  */
 
-/* global document */ // the page.evaluate callback below runs in the browser
+/* global document, getComputedStyle */ // the page.evaluate callbacks below run in the browser
 
 import { launchShowcaseBrowser } from './browser.mjs';
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -72,6 +72,30 @@ const TARGETS = [
         ['unchecked', 'check', 1],
         ['checked', 'radio', 1],
         ['unchecked', 'radio', 1],
+      ],
+    },
+  ],
+  // modulate (opacity + tint filter), the Control transform, FILL-beats-SHRINK
+  // size-flag precedence, TextureRect's expand_mode minimum, and Button.icon.
+  [
+    'control-transform-modulate',
+    'unit-control-transform-modulate.tscn',
+    {
+      minControls: 9,
+      types: ['Label', 'TextureRect', 'Button', 'HBoxContainer', 'CenterContainer'],
+      loadedIcons: 1,
+      computed: [
+        ['FadedLabel', 'opacity', (v) => Math.abs(Number(v) - 0.4) < 0.01, '0.4'],
+        ['TintedLabel', 'filter', (v) => v !== 'none', 'a colour-multiply filter'],
+        ['PlainLabel', 'filter', (v) => v === 'none', 'no filter'],
+        ['RotatedIcon', 'transform', (v) => v !== 'none', 'a rotation matrix'],
+        ['MirroredLabel', 'transform', (v) => v.includes('-1'), 'a mirrored matrix'],
+        // FILL|SHRINK_CENTER must STRETCH; SHRINK_CENTER alone must centre.
+        ['FillCentreLabel', 'alignSelf', (v) => v === 'stretch', 'stretch'],
+        ['ShrinkCentreLabel', 'alignSelf', (v) => v === 'center', 'center'],
+        // EXPAND_KEEP_SIZE floors the control at the texture's own size.
+        ['LogoInContainer', 'width', (v) => v > 0, 'a non-zero width'],
+        ['LogoInContainer', 'height', (v) => v > 0, 'a non-zero height'],
       ],
     },
   ],
@@ -154,6 +178,31 @@ for (const [name, file, expect = {}] of TARGETS) {
         state: e.getAttribute('data-check-indicator'),
         style: e.getAttribute('data-check-style'),
       })),
+      // Computed CSS for named nodes: the only way to see modulate (opacity /
+      // filter), the Control transform, cross-axis size flags, and a
+      // TextureRect's expand_mode minimum — none of which change textContent.
+      computed: Object.fromEntries(
+        all
+          .filter((e) => e.getAttribute('data-node-name'))
+          .map((e) => {
+            const cs = getComputedStyle(e);
+            const box = e.getBoundingClientRect();
+            return [
+              e.getAttribute('data-node-name'),
+              {
+                opacity: cs.opacity,
+                filter: cs.filter,
+                transform: cs.transform,
+                alignSelf: cs.alignSelf,
+                width: Math.round(box.width),
+                height: Math.round(box.height),
+              },
+            ];
+          })
+      ),
+      icons: [...document.querySelectorAll('[data-button-icon]')].map((e) =>
+        e.getAttribute('data-button-icon')
+      ),
       textSample: all
         .filter((e) => e.textContent && e.textContent.trim().length)
         .slice(0, 6)
@@ -171,6 +220,17 @@ for (const [name, file, expect = {}] of TARGETS) {
   for (const name of expect.hiddenNodes ?? []) {
     if (stats.laidOutNodes.includes(name)) {
       failures.push(`node "${name}" has visible = false but is still laid out`);
+    }
+  }
+  for (const [name, prop, predicate, label] of expect.computed ?? []) {
+    const value = stats.computed[name]?.[prop];
+    if (value === undefined) failures.push(`node "${name}" not rendered (no ${prop})`);
+    else if (!predicate(value)) failures.push(`${name}.${prop} = ${value} — expected ${label}`);
+  }
+  if (expect.loadedIcons !== undefined) {
+    const loaded = stats.icons.filter((i) => i === 'loaded').length;
+    if (loaded !== expect.loadedIcons) {
+      failures.push(`expected ${expect.loadedIcons} loaded button icon(s), found ${loaded}`);
     }
   }
   for (const [state, style, count] of expect.indicators ?? []) {

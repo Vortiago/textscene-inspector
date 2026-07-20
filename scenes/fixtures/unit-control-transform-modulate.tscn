@@ -1,0 +1,80 @@
+[gd_scene load_steps=2 format=3 uid="uid://unitctrltransmod"]
+
+[ext_resource type="Texture2D" path="res://textures/checkerboard.svg" id="1_tex"]
+
+[node name="TransformModulateRoot" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="PlainLabel" type="Label" parent="."]
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 220.0
+offset_bottom = 44.0
+text = "PLAIN LABEL"
+
+[node name="TintedLabel" type="Label" parent="."]
+offset_left = 20.0
+offset_top = 60.0
+offset_right = 220.0
+offset_bottom = 84.0
+modulate = Color(1, 1, 0, 1)
+text = "TINTED LABEL"
+
+[node name="FadedLabel" type="Label" parent="."]
+offset_left = 20.0
+offset_top = 100.0
+offset_right = 220.0
+offset_bottom = 124.0
+modulate = Color(1, 1, 1, 0.4)
+text = "FADED LABEL"
+
+[node name="RotatedIcon" type="TextureRect" parent="."]
+offset_left = 260.0
+offset_top = 20.0
+offset_right = 292.0
+offset_bottom = 52.0
+rotation = 0.785398
+pivot_offset = Vector2(16, 16)
+texture = ExtResource("1_tex")
+
+[node name="MirroredLabel" type="Label" parent="."]
+offset_left = 20.0
+offset_top = 140.0
+offset_right = 220.0
+offset_bottom = 164.0
+scale = Vector2(-1, 1)
+pivot_offset = Vector2(100, 12)
+text = "MIRRORED LABEL"
+
+[node name="Row" type="HBoxContainer" parent="."]
+offset_left = 20.0
+offset_top = 190.0
+offset_right = 420.0
+offset_bottom = 260.0
+
+[node name="FillCentreLabel" type="Label" parent="Row"]
+size_flags_vertical = 5
+text = "FILL PLUS SHRINK"
+
+[node name="ShrinkCentreLabel" type="Label" parent="Row"]
+size_flags_vertical = 4
+text = "SHRINK ONLY"
+
+[node name="Centred" type="CenterContainer" parent="."]
+offset_left = 260.0
+offset_top = 280.0
+offset_right = 460.0
+offset_bottom = 400.0
+
+[node name="LogoInContainer" type="TextureRect" parent="Centred"]
+texture = ExtResource("1_tex")
+
+[node name="IconButton" type="Button" parent="."]
+offset_left = 20.0
+offset_top = 300.0
+offset_right = 140.0
+offset_bottom = 336.0
+icon = ExtResource("1_tex")
+text = "ICON BUTTON"

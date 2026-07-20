@@ -264,6 +264,29 @@ parented under it.
 - **Impact:** none in the vendored corpus — no scene sets `cast_shadow = 3`.
 - Site: `nodes/3d/meshinstance3d/Component.tsx` (`shadowCastingFlags`).
 
+## Control
+
+### `TextureRect.expand_mode` FIT_WIDTH (2) / FIT_HEIGHT (4)
+Both derive a minimum size from the control's **current** size —
+`get_minimum_size()` returns `Size2(get_size().y, 0)` and `Size2(0, get_size().x)`
+— a self-referential rule CSS cannot express (and one Godot itself marks
+experimental on the member). We contribute no minimum for those two.
+
+- **Impact:** none in the vendored corpus — every TextureRect there is either at
+  the default `EXPAND_KEEP_SIZE` (implemented: the control is floored at the
+  texture's own size) or `EXPAND_IGNORE_SIZE` (implemented: no minimum).
+- The two PROPORTIONAL variants (3, 5) ARE implemented, as `aspect-ratio`.
+- Site: `nodes/2d/ui/texturerect/Component.tsx` (`textureRectMinSize`).
+
+### `Control.rotation` / `scale` are dropped inside a Container — deliberately
+Not a limitation but a rule worth stating, because it looks like one: Godot's
+`Container::fit_child_in_rect` ends with `set_rotation(0)` and
+`set_scale(Vector2(1, 1))`, and class_control.html says so outright. A Control
+inside any container therefore renders unrotated and unscaled whatever the scene
+file says, and we match that.
+
+- Site: `r3f/controls/controlLayout.ts` (`applyTransform`).
+
 ## Control / Theme (StyleBox)
 
 ### TextureRect absent stretch_mode → `contain` (not Godot's STRETCH_SCALE)  *(deliberate)*

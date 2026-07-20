@@ -6,13 +6,17 @@
  * system font stack is used (the VS Code webview CSP blocks web fonts).
  */
 
-import type { CSSProperties } from 'react';
+import { useMemo, type CSSProperties } from 'react';
+import type * as THREE from 'three';
 import type { ControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { useControlParent } from '../../../../r3f/controls/ControlParentContext';
 import { useSceneResources } from '../../../../r3f/SceneResourcesContext';
 import { controlStyle } from '../../../../r3f/controls/controlLayout';
 import { textThemeStyle } from '../../../../r3f/controls/textThemeStyle';
 import { resolveStyleBoxCss } from '../../../../r3f/controls/resolveStyleBox';
+import { imageToDataUrl } from '../../../../r3f/controls/imageToDataUrl';
+import { resolveTexture2DPath } from '../../../../resources/SubResourceResolver';
+import { useResource } from '../../../../resources/useResource';
 import type { ButtonProperties } from './types';
 
 const DEFAULTS: CSSProperties = {
@@ -55,8 +59,55 @@ export function Button({ node, children }: ControlComponentProps) {
 
   return (
     <div data-control-type="Button" data-node-name={node.name} style={style}>
+      <ButtonIcon icon={props.icon} name={node.name} expand={props.expandIcon === true} />
       {props.text ?? ''}
       {children}
     </div>
   );
+}
+
+/** Gap between an icon and the label, matching the theme's `h_separation`. */
+const ICON_TEXT_GAP = 4;
+/** Icon box when `expand_icon` is off — Godot draws it at its natural size. */
+const ICON_SIZE = 16;
+
+/**
+ * `Button.icon` — drawn before the text at Godot's default `icon_alignment`
+ * (LEFT) and `vertical_icon_alignment` (CENTER). An icon-only Button is a real
+ * shape: `scenes/demos/3d/truck_town/car_select/car_select.tscn` is three of
+ * them, and without this they rendered as empty chrome.
+ */
+function ButtonIcon({
+  icon,
+  name,
+  expand,
+}: {
+  icon: string | undefined;
+  name: string;
+  expand: boolean;
+}) {
+  const { externalResources, internalResources } = useSceneResources();
+  const path = resolveTexture2DPath(icon, externalResources, internalResources);
+  // Always call the hook (rules of hooks); '' short-circuits to pending.
+  const tex = useResource<THREE.Texture>(path ?? '', 'Texture2D');
+  const src = useMemo(() => imageToDataUrl(tex.value?.image), [tex.value]);
+  if (!icon) return null;
+
+  const style: CSSProperties = {
+    flex: '0 0 auto',
+    marginRight: `${ICON_TEXT_GAP}px`,
+    objectFit: 'contain',
+    // `expand_icon` scales the icon to the button while keeping its aspect;
+    // otherwise Godot draws it at its own size.
+    ...(expand
+      ? { maxWidth: '100%', maxHeight: '100%' }
+      : { width: `${ICON_SIZE}px`, height: `${ICON_SIZE}px` }),
+  };
+
+  if (!src) {
+    // The texture has not resolved: keep the icon's box so the button does not
+    // silently collapse to its (possibly empty) label.
+    return <span data-button-icon="pending" style={{ ...style, display: 'inline-block' }} />;
+  }
+  return <img data-button-icon="loaded" src={src} alt={`${name} icon`} style={style} />;
 }

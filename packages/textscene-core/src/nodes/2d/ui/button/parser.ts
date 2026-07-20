@@ -14,5 +14,12 @@ export function parseButton(
   result.disabled = properties.disabled === 'true';
   result.flat = properties.flat === 'true';
   result.alignment = parseOptionalInt(properties.alignment);
+  // class_button.html: icon_alignment 0 (LEFT), vertical_icon_alignment 1
+  // (CENTER), expand_icon false. An icon-only button is a real shape — the
+  // car-select screen in the truck_town demo is three of them.
+  if (properties.icon !== undefined) result.icon = properties.icon;
+  result.iconAlignment = parseOptionalInt(properties.icon_alignment);
+  result.verticalIconAlignment = parseOptionalInt(properties.vertical_icon_alignment);
+  result.expandIcon = properties.expand_icon === 'true';
   return result;
 }

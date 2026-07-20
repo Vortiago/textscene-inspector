@@ -38,6 +38,7 @@ validatorRegistry.registerAll('Control', {
   rotation: v.float('rotation'),
   scale: v.vector2('scale'),
   pivot_offset: v.vector2('pivot_offset'),
+  pivot_offset_ratio: v.vector2('pivot_offset_ratio'),
 
   // Container-child sizing.
   size_flags_horizontal: v.int('size_flags_horizontal', { min: 0 }),

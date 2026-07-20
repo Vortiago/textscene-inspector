@@ -20,9 +20,10 @@ import { useMemo, type CSSProperties } from 'react';
 import type * as THREE from 'three';
 import type { ControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { useControlParent } from '../../../../r3f/controls/ControlParentContext';
-import { controlLayoutStyle } from '../../../../r3f/controls/controlLayout';
+import { controlStyle } from '../../../../r3f/controls/controlLayout';
 import { useSceneResources } from '../../../../r3f/SceneResourcesContext';
 import { resolveTexture2DPath } from '../../../../resources/SubResourceResolver';
+import { imageToDataUrl } from '../../../../r3f/controls/imageToDataUrl';
 import { useResource } from '../../../../resources/useResource';
 import type { TextureRectProperties } from './types';
 
@@ -37,7 +38,11 @@ export function TextureRect({ node, children }: ControlComponentProps) {
   const tex = useResource<THREE.Texture>(path ?? '', 'Texture2D');
   const src = useMemo(() => imageToDataUrl(tex.value?.image), [tex.value]);
 
-  const layout = controlLayoutStyle(props, parentKind);
+  const layout = controlStyle(
+    props,
+    parentKind,
+    textureRectMinSize(props.expandMode, tex.value?.image as ImageLike | undefined)
+  );
 
   if (src) {
     // The image layer is absolutely positioned inside this layout-sized wrapper
@@ -78,35 +83,6 @@ export function TextureRect({ node, children }: ControlComponentProps) {
   );
 }
 
-/**
- * Draw a decoded texture image (HTMLImageElement / ImageBitmap / canvas) to a
- * canvas and return a self-contained data URL. The decoded bitmap survives the
- * loader revoking its source blob URL, so this is stable where reusing
- * `image.src` is not. Returns undefined when the image isn't decoded yet, no
- * DOM/canvas is available (jsdom tests), or the draw is cross-origin tainted.
- */
-function imageToDataUrl(image: unknown): string | undefined {
-  const img = image as
-    | { width?: number; height?: number; naturalWidth?: number; naturalHeight?: number }
-    | undefined;
-  if (!img) return undefined;
-  const w = img.naturalWidth || img.width || 0;
-  const h = img.naturalHeight || img.height || 0;
-  if (!w || !h) return undefined;
-  const doc = globalThis.document;
-  if (!doc) return undefined;
-  try {
-    const canvas = doc.createElement('canvas');
-    canvas.width = w;
-    canvas.height = h;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return undefined;
-    ctx.drawImage(img as CanvasImageSource, 0, 0);
-    return canvas.toDataURL();
-  } catch {
-    return undefined; // tainted canvas / unsupported image source
-  }
-}
 
 
 /**
@@ -189,4 +165,43 @@ function stretchObjectPosition(mode: number | undefined): string | undefined {
 function flipTransform(props: { flipH?: boolean; flipV?: boolean }): string | undefined {
   if (!props.flipH && !props.flipV) return undefined;
   return `scale(${props.flipH ? -1 : 1}, ${props.flipV ? -1 : 1})`;
+}
+
+/** Just enough of a decoded image to read its pixel dimensions. */
+interface ImageLike {
+  width?: number;
+  height?: number;
+  naturalWidth?: number;
+  naturalHeight?: number;
+}
+
+/**
+ * The minimum size a TextureRect contributes to its parent's layout, from
+ * `expand_mode` (`texture_rect.cpp::get_minimum_size()`).
+ *
+ * The default EXPAND_KEEP_SIZE floors the control at the texture's own size —
+ * without it, a TextureRect inside a container collapses to nothing, because
+ * the `<img>` is positioned out of flow so it cannot floor anything itself.
+ * The four FIT_* modes derive their minimum from the control's CURRENT size,
+ * which CSS has no way to express; the PROPORTIONAL pair maps onto
+ * `aspect-ratio`, and the other two contribute nothing (see
+ * docs/PARITY-LIMITATIONS.md).
+ */
+export function textureRectMinSize(
+  expandMode: number | undefined,
+  image: ImageLike | undefined
+): CSSProperties {
+  const width = image?.naturalWidth || image?.width || 0;
+  const height = image?.naturalHeight || image?.height || 0;
+  if (width <= 0 || height <= 0) return {};
+
+  switch (expandMode ?? 0) {
+    case 0: // EXPAND_KEEP_SIZE
+      return { minWidth: width, minHeight: height };
+    case 3: // EXPAND_FIT_WIDTH_PROPORTIONAL
+    case 5: // EXPAND_FIT_HEIGHT_PROPORTIONAL
+      return { aspectRatio: `${width} / ${height}` };
+    default: // IGNORE_SIZE, FIT_WIDTH, FIT_HEIGHT
+      return {};
+  }
 }

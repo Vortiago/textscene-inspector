@@ -79,6 +79,16 @@ export function parseControl(
   result.sizeFlagsStretchRatio = parseOptionalFloat(properties.size_flags_stretch_ratio);
   result.customMinimumSize = parseOptionalVector2(properties.custom_minimum_size);
 
+  // CanvasItem tint + the Control's own 2D transform. Both were dropped for the
+  // whole 2D UI family; `rotation` is radians in the file, degrees only in the
+  // inspector.
+  result.modulate = parseColorOrUndefined(properties.modulate);
+  result.selfModulate = parseColorOrUndefined(properties.self_modulate);
+  result.rotation = parseOptionalFloat(properties.rotation);
+  result.scale = parseOptionalVector2(properties.scale);
+  result.pivotOffset = parseOptionalVector2(properties.pivot_offset);
+  result.pivotOffsetRatio = parseOptionalVector2(properties.pivot_offset_ratio);
+
   Object.assign(result, parseThemeOverrides(properties));
 
   return result;
