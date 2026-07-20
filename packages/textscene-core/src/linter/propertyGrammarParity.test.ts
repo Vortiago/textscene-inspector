@@ -392,10 +392,11 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
 
   CollisionShape2D: {
     linterOnly: [
-      // Visual and physics-behavior properties not read by the renderer.
-      'debug_color', 'one_way_collision', 'one_way_collision_margin',
+      // Physics-behaviour properties with no visual counterpart. (`debug_color`
+      // used to sit here; the gizmo draws in it now.)
+      'one_way_collision', 'one_way_collision_margin',
     ],
-    reason: 'CollisionShape2D debug_color and one_way settings affect runtime behaviour only; the renderer reads shape/disabled for visual display.',
+    reason: 'CollisionShape2D one_way settings affect runtime physics only; the renderer reads shape/disabled/debug_color for visual display.',
   },
 
   // -------------------------------------------------------------------------

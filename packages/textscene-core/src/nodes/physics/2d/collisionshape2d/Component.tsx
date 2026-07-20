@@ -13,6 +13,8 @@ import { useSceneResources } from '../../../../r3f/SceneResourcesContext';
 import { useShapeResource } from '../../../../resources/shapes/useShapeResource';
 import { useViewportMode } from '../../../../r3f/contexts/ViewportModeContext';
 import { CollisionGizmo2D } from './CollisionGizmo2D';
+import { useGodotLinearColor } from '../../../../r3f/godotColor';
+import { DEFAULT_COLLISION_DEBUG_COLOR } from '../../shared/debugColor';
 
 export function CollisionShape2D({ node, children }: NodeComponentProps) {
   const properties = node.properties as CollisionShape2DProperties;
@@ -20,12 +22,18 @@ export function CollisionShape2D({ node, children }: NodeComponentProps) {
   const { showCollisions } = useViewportMode();
 
   const shapeResource = useShapeResource(properties.shape, internalResources, externalResources);
+  // Godot draws the shape in the node's own `debug_color`; the literal is sRGB.
+  const debugColor = useGodotLinearColor(properties.debugColor ?? DEFAULT_COLLISION_DEBUG_COLOR);
 
   return (
     <CanvasItem2D
       node={node}
       props={properties}
-      body={() => (showCollisions && shapeResource ? <CollisionGizmo2D shape={shapeResource} /> : null)}
+      body={() =>
+        showCollisions && shapeResource ? (
+          <CollisionGizmo2D shape={shapeResource} color={debugColor} />
+        ) : null
+      }
     >
       {children}
     </CanvasItem2D>

@@ -1,8 +1,8 @@
 /**
  * Wireframe gizmo for a collision-shape resource. Renders the shape's geometry
- * as a green wireframe (mirrors Godot's editor collision overlay). Only mounted
- * when `showCollisions` is on (see CollisionShape3D), so it costs nothing by
- * default.
+ * as a wireframe in the node's `debug_color` (mirrors Godot's editor collision
+ * overlay). Only mounted when `showCollisions` is on (see CollisionShape3D), so
+ * it costs nothing by default.
  *
  * `ConvexPolygonShape3D` builds a `ConvexGeometry`, which lives in three's
  * examples bundle — it is lazy-`import()`ed so it stays OFF the static-paint
@@ -15,11 +15,18 @@ import type { TscnInternalResource } from '../../../../parser/types';
 import { parseBoxShape3D } from '../../../../resources/shapes/boxshape3d/parser';
 import { parseConvexPolygonShape3D } from '../../../../resources/shapes/convexpolygonshape3d/parser';
 import { parseConcavePolygonShape3D } from '../../../../resources/shapes/concavepolygonshape3d/parser';
+import { parseCapsuleShape3D } from '../../../../resources/shapes/capsuleshape3d/parser';
+import { parseSphereShape3D } from '../../../../resources/shapes/sphereshape3d/parser';
+import { parseCylinderShape3D } from '../../../../resources/shapes/cylindershape3d/parser';
 import { warn } from '../../../../logger';
 
-const WIRE_COLOR = 0x00ff88;
+interface CollisionGizmoProps {
+  shape: TscnInternalResource;
+  /** The node's `debug_color`, already resolved to a three colour. */
+  color: THREE.Color;
+}
 
-export function CollisionGizmo({ shape }: { shape: TscnInternalResource }) {
+export function CollisionGizmo({ shape, color }: CollisionGizmoProps) {
   const data = shape.data as Record<string, string>;
   switch (shape.type) {
     case 'BoxShape3D': {
@@ -27,27 +34,54 @@ export function CollisionGizmo({ shape }: { shape: TscnInternalResource }) {
       return (
         <mesh>
           <boxGeometry args={[size.x, size.y, size.z]} />
-          <meshBasicMaterial color={WIRE_COLOR} wireframe />
+          <meshBasicMaterial color={color} wireframe />
+        </mesh>
+      );
+    }
+    case 'CapsuleShape3D': {
+      const { radius, height } = parseCapsuleShape3D(data);
+      return (
+        <mesh>
+          {/* Godot's `height` spans the whole capsule; three's `length` is only
+              the cylindrical section between the two hemispheres. */}
+          <capsuleGeometry args={[radius, height - radius * 2, 4, 16]} />
+          <meshBasicMaterial color={color} wireframe />
+        </mesh>
+      );
+    }
+    case 'SphereShape3D':
+      return (
+        <mesh>
+          <sphereGeometry args={[parseSphereShape3D(data).radius, 16, 12]} />
+          <meshBasicMaterial color={color} wireframe />
+        </mesh>
+      );
+    case 'CylinderShape3D': {
+      const { radius, height } = parseCylinderShape3D(data);
+      return (
+        <mesh>
+          <cylinderGeometry args={[radius, radius, height, 16]} />
+          <meshBasicMaterial color={color} wireframe />
         </mesh>
       );
     }
     case 'ConcavePolygonShape3D':
-      return <TriangleSoupWire data={parseConcavePolygonShape3D(data).data} />;
+      return <TriangleSoupWire data={parseConcavePolygonShape3D(data).data} color={color} />;
     case 'ConvexPolygonShape3D':
-      return <ConvexHullWire points={parseConvexPolygonShape3D(data).points} />;
+      return <ConvexHullWire points={parseConvexPolygonShape3D(data).points} color={color} />;
     default:
       warn(`[CollisionShape3D] Unsupported shape type "${shape.type}" — drawing a unit wireframe box.`);
       return (
         <mesh>
           <boxGeometry args={[1, 1, 1]} />
-          <meshBasicMaterial color={WIRE_COLOR} wireframe />
+          <meshBasicMaterial color={color} wireframe />
         </mesh>
       );
   }
 }
 
 /** Concave shapes are already a triangle soup — bind it as a non-indexed BufferGeometry. */
-function TriangleSoupWire({ data }: { data: Float32Array }) {
+function TriangleSoupWire({ data, color }: { data: Float32Array; color: THREE.Color }) {
   const geometry = useMemo(() => {
     const geom = new THREE.BufferGeometry();
     geom.setAttribute('position', new THREE.BufferAttribute(data, 3));
@@ -57,13 +91,13 @@ function TriangleSoupWire({ data }: { data: Float32Array }) {
   if (data.length < 9) return null;
   return (
     <mesh geometry={geometry}>
-      <meshBasicMaterial color={WIRE_COLOR} wireframe />
+      <meshBasicMaterial color={color} wireframe />
     </mesh>
   );
 }
 
 /** Convex hull from a point cloud — ConvexGeometry is lazy-loaded (bundle budget). */
-function ConvexHullWire({ points }: { points: Float32Array }) {
+function ConvexHullWire({ points, color }: { points: Float32Array; color: THREE.Color }) {
   const [geometry, setGeometry] = useState<THREE.BufferGeometry | null>(null);
 
   useEffect(() => {
@@ -91,7 +125,7 @@ function ConvexHullWire({ points }: { points: Float32Array }) {
   if (!geometry) return null;
   return (
     <mesh geometry={geometry}>
-      <meshBasicMaterial color={WIRE_COLOR} wireframe />
+      <meshBasicMaterial color={color} wireframe />
     </mesh>
   );
 }

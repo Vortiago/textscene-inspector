@@ -5,8 +5,10 @@
 
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
+import { debugColorValidator } from '../../shared/debugColor.js';
 
 validatorRegistry.registerAll('CollisionShape3D', {
   shape: v.resourceReference('shape'),
   disabled: v.boolean('disabled'),
+  debug_color: debugColorValidator,
 });

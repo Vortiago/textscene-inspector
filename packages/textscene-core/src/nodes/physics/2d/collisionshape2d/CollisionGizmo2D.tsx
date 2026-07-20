@@ -15,10 +15,10 @@ import type { TscnInternalResource } from '../../../../parser/types';
 import { parseRectangleShape2D } from '../../../../resources/shapes/rectangleshape2d/parser';
 import { parseCircleShape2D } from '../../../../resources/shapes/circleshape2d/parser';
 import { parseCapsuleShape2D } from '../../../../resources/shapes/capsuleshape2d/parser';
+import type * as THREE from 'three';
 import { GizmoLine } from '../../../../r3f/components/GizmoLine';
 import { warn } from '../../../../logger';
 
-const WIRE_COLOR = 0x00ff88;
 const CIRCLE_SEGMENTS = 32;
 const CAPSULE_CAP_SEGMENTS = 16;
 
@@ -105,7 +105,14 @@ export function capsulePoints(radius: number, height: number): Point2D[] {
   return points;
 }
 
-export function CollisionGizmo2D({ shape }: { shape: TscnInternalResource }) {
+export function CollisionGizmo2D({
+  shape,
+  color,
+}: {
+  shape: TscnInternalResource;
+  /** The node's `debug_color`, already resolved to a three colour. */
+  color: THREE.Color;
+}) {
   const data = shape.data as Record<string, string>;
 
   const points = useMemo((): Point2D[] => {
@@ -126,5 +133,5 @@ export function CollisionGizmo2D({ shape }: { shape: TscnInternalResource }) {
 
   const positions = useMemo(() => loopToSegments(points), [points]);
 
-  return <GizmoLine positions={positions} color={WIRE_COLOR} />;
+  return <GizmoLine positions={positions} color={color} />;
 }

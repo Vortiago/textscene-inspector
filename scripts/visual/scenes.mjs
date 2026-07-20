@@ -11,6 +11,10 @@
  * overrides the default failure threshold for scenes with antialiasing-
  * sensitive content (thin gizmo lines).
  *
+ * `collisions: true` (optional) ticks the toolbar's "Visible Collision Shapes"
+ * checkbox before capturing, so CollisionShape2D/3D gizmos render — they are
+ * off by default (ADR-0005/0006) and therefore invisible to every other scene.
+ *
  * `select` (optional) is a node path the harness selects in the scene tree
  * before capturing, so a selection-gated gizmo (Marker/Path/PathFollow, ADR-0018)
  * renders. These `*-selected` scenes are the real-browser regression guard for
@@ -107,6 +111,17 @@ export const GOLDEN_SCENES = [
   { name: 'instanced-subscene', file: 'integration-instanced-subscene.tscn' },
   // Thin collision-gizmo lines are the most AA-sensitive content in the set.
   { name: 'physics-bodies', file: 'unit-physics-bodies.tscn', maxDiffPct: 0.3 },
+  // The first golden ever to show a collision gizmo: `physics-bodies` above
+  // carries CollisionShape3D nodes but the toggle is off, so its baseline is a
+  // bare plane. Capsule / sphere / cylinder all used to fall through to a 1x1x1
+  // box, and every gizmo was hard-coded green regardless of `debug_color`.
+  // Thin wireframe lines, hence the relaxed threshold.
+  {
+    name: 'collision-shapes',
+    file: 'unit-collision-shapes.tscn',
+    collisions: true,
+    maxDiffPct: 0.5,
+  },
   // Decal projects a local checkerboard texture onto a quad and draws a thin
   // wireframe projection box. Loads a texture (deterministic local SVG, gated
   // by the two-identical-frames settle); the box edges are AA-sensitive like

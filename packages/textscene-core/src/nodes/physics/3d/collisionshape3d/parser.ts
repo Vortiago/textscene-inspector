@@ -3,13 +3,17 @@
 import type { ParsedHeading } from '../../../../parser/utils';
 import type { CollisionShape3DProperties } from './types';
 import { parseNode3D } from '../../../base/node3d/parser';
+import { parseDebugColor } from '../../shared/debugColor';
 
 export function parseCollisionShape3D(
   heading: ParsedHeading,
   properties: Record<string, string>
 ): CollisionShape3DProperties {
   const node3d = parseNode3D(heading, properties);
-  const result: CollisionShape3DProperties = { ...node3d };
+  const result: CollisionShape3DProperties = {
+    ...node3d,
+    debugColor: parseDebugColor(properties.debug_color),
+  };
   if (properties.shape) {
     result.shape = properties.shape;
   }
