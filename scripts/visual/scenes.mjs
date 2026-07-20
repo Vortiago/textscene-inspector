@@ -190,6 +190,15 @@ export const GOLDEN_SCENES = [
     select: 'Scene/Speaker_Default',
     maxDiffPct: 0.5,
   },
+  // The emission cone: `Speaker_Cone` is the only corpus node anywhere that
+  // sets `emission_angle_enabled`, and until now nothing rendered or asserted
+  // it — the node existed purely to exercise a gizmo that was never drawn.
+  {
+    name: 'audio-stream-player-3d-cone-selected',
+    file: 'unit-audio-stream-player.tscn',
+    select: 'Scene/Speaker_Cone',
+    maxDiffPct: 0.5,
+  },
 
   // --- Mesh primitives + StandardMaterial3D features ---
   { name: 'box-mesh', file: 'unit-box-mesh.tscn' },

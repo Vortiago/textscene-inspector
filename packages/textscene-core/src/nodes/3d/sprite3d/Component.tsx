@@ -35,7 +35,7 @@
  * component just persists the mode and axis so the consumer can act.
  */
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { useGodotLinearColor } from '../../../r3f/godotColor';
@@ -49,11 +49,16 @@ import {
   type Sprite3DProperties,
 } from './types';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
+import { useBillboard } from '../../../r3f/hooks/useBillboard';
 
 const DEFAULT_ALPHA_TEST = 0.5;
 
 export function Sprite3D({ node, children }: NodeComponentProps) {
+  // Godot's billboard is a material-side effect on the sprite quad; the shared
+  // hook applies the same modes Label3D uses.
+  const spriteRef = useRef<THREE.Object3D | null>(null);
   const properties = node.properties as Sprite3DProperties;
+  useBillboard(spriteRef, properties.billboard);
   const { externalResources, internalResources } = useSceneResources();
 
   const { position, rotation, scale } = useMemo(
@@ -192,6 +197,7 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
     return (
       <>
         <group
+          ref={spriteRef}
           name={node.name}
           position={position}
           rotation={rotation}
@@ -206,6 +212,7 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
   return (
     <>
       <mesh
+        ref={spriteRef}
         name={node.name}
         position={position}
         rotation={rotation}

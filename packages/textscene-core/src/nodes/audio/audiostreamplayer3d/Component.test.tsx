@@ -9,6 +9,7 @@
 
 import { useEffect, type ReactNode } from 'react';
 import { describe, expect, it } from 'vitest';
+import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { AudioStreamPlayer3D } from './Component';
 import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
@@ -114,22 +115,28 @@ describe('<AudioStreamPlayer3D> (WI-R3F-16 slice B)', () => {
     expect(sphere).toBeUndefined();
   });
 
-  it('renders the range sphere when unit_size is overridden and the node is selected (WI-UX-14)', async () => {
+  it('renders the range circle scaled by the attenuation model when selected (WI-UX-14)', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       withSelectedAudio(
         'Audio',
         <AudioStreamPlayer3D node={makeNode({ unit_size: 25 })} />
       )
     );
-    const meshes = renderer.scene.findAllByType('Mesh');
-    const sphere = meshes.find((m) => {
-      const ud = m.instance.userData as { isAudioRangeSphere?: boolean };
+    const group = renderer.scene.findAllByType('Group').find((g) => {
+      const ud = g.instance.userData as { isAudioRangeSphere?: boolean };
       return ud.isAudioRangeSphere === true;
     });
-    expect(sphere).toBeDefined();
-    // SphereGeometry.parameters.radius should match unit_size.
-    const geom = sphere!.instance.geometry as unknown as { parameters: { radius: number } };
-    expect(geom.parameters.radius).toBe(25);
+    expect(group).toBeDefined();
+    // Godot draws a camera-facing CIRCLE of lines at
+    // `unit_size x soft_multiplier`; the default ATTENUATION_INVERSE_DISTANCE
+    // multiplier is 12, so 25 x 12 = 300 — not unit_size raw.
+    const line = (group!.instance as unknown as THREE.Object3D).children[0] as THREE.Line;
+    const position = line.geometry.getAttribute('position');
+    let max = 0;
+    for (let i = 0; i < position.count; i++) {
+      max = Math.max(max, Math.hypot(position.getX(i), position.getY(i), position.getZ(i)));
+    }
+    expect(max).toBeCloseTo(300, 4);
   });
 
   it('positions the gizmo group at transform.origin', async () => {

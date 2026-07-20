@@ -11,14 +11,14 @@
 
 import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
-import { useFrame } from '@react-three/fiber';
 import type { Label3DProperties } from './types';
-import { BillboardMode, HorizontalAlignment } from './types';
+import { HorizontalAlignment } from './types';
 import type { Color } from '../../../utils/colorParser';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { useGodotLinearColor } from '../../../r3f/godotColor';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { useViewportMode } from '../../../r3f/contexts/ViewportModeContext';
+import { useBillboard } from '../../../r3f/hooks/useBillboard';
 
 /**
  * Canvas rasterisation resolution, independent of Godot's `font_size`: the
@@ -55,25 +55,10 @@ export function Label3D({ node, children }: NodeComponentProps) {
 
   const meshRef = useRef<THREE.Mesh | null>(null);
 
-  // Parity-audit fix: the pre-migration imperative renderer
-  // updated each Label3D's rotation per-frame via `TscnRenderer.updateLabels()`.
-  // We restore that behaviour with `useFrame`:
-  //   BILLBOARD_DISABLED — no-op.
-  //   BILLBOARD_ENABLED  — copy camera.quaternion (full look-at).
-  //   BILLBOARD_FIXED_Y  — yaw-only look-at (keep world-up aligned).
-  useFrame(({ camera }) => {
-    const mesh = meshRef.current;
-    if (!mesh) return;
-    const mode = properties.billboard;
-    if (mode === BillboardMode.BILLBOARD_DISABLED) return;
-    if (mode === BillboardMode.BILLBOARD_FIXED_Y) {
-      const cp = camera.position;
-      const mp = mesh.position;
-      mesh.rotation.set(0, Math.atan2(cp.x - mp.x, cp.z - mp.z), 0);
-      return;
-    }
-    mesh.quaternion.copy(camera.quaternion);
-  });
+  // The pre-migration imperative renderer turned each Label3D per frame via
+  // `TscnRenderer.updateLabels()`; `useBillboard` is that behaviour, shared
+  // with Sprite3D so both slices implement Godot's modes identically.
+  useBillboard(meshRef, properties.billboard);
 
   // Godot modulate is sRGB → convert to linear before the unlit material tint
   // (the white canvas text is colorized by this), matching Sprite2D/Sprite3D.

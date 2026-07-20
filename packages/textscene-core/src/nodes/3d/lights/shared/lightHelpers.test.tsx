@@ -635,7 +635,7 @@ function audioNode(name: string, overrides: Partial<AudioStreamPlayer3DPropertie
  * primitive inside R3F-managed groups whose parent identity differs
  * from the production THREE.Scene's. The two markers
  * (`isAudioGizmoBody` on the speaker group, `isAudioRangeSphere` on
- * the range-sphere mesh) are the production-side hooks for this.
+ * the range gizmo's group) are the production-side hooks for this.
  */
 function countAudioGizmoParts(
   renderer: { scene: { findAllByType: (t: string) => { instance: THREE.Object3D }[] } },
@@ -645,9 +645,11 @@ function countAudioGizmoParts(
     const ud = g.instance.userData as { isAudioGizmoBody?: boolean };
     return ud.isAudioGizmoBody === true;
   }).length;
-  const meshes = renderer.scene.findAllByType('Mesh');
-  const rangeSpheres = meshes.filter((m) => {
-    const ud = m.instance.userData as { isAudioRangeSphere?: boolean };
+  // The audible range is a camera-facing CIRCLE of lines (what Godot's gizmo
+  // plugin draws), so its marker sits on a group wrapping a <lineSegments>,
+  // not on a mesh.
+  const rangeSpheres = groups.filter((g) => {
+    const ud = g.instance.userData as { isAudioRangeSphere?: boolean };
     return ud.isAudioRangeSphere === true;
   }).length;
   return { speakerGroups, rangeSpheres };
