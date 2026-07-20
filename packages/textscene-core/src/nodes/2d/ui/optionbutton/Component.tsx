@@ -9,7 +9,7 @@
 import type { CSSProperties } from 'react';
 import type { ControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { useControlParent } from '../../../../r3f/controls/ControlParentContext';
-import { controlLayoutStyle } from '../../../../r3f/controls/controlLayout';
+import { controlStyle } from '../../../../r3f/controls/controlLayout';
 import { textThemeStyle } from '../../../../r3f/controls/textThemeStyle';
 import type { OptionButtonProperties } from './types';
 
@@ -25,13 +25,13 @@ const DROPDOWN_DEFAULTS: CSSProperties = {
 export function OptionButton({ node, children }: ControlComponentProps) {
   const props = node.properties as OptionButtonProperties;
   const parentKind = useControlParent();
-  const style: CSSProperties = {
-    ...controlLayoutStyle(props, parentKind),
-    ...DROPDOWN_DEFAULTS,
-    textAlign: 'left',
-    cursor: props.disabled ? 'default' : 'pointer',
-    ...textThemeStyle(props, { sizeKey: 'font_size', colorKey: 'font_color' }),
-  };
+  const style: CSSProperties = controlStyle(
+    props,
+    parentKind,
+    DROPDOWN_DEFAULTS,
+    { textAlign: 'left', cursor: props.disabled ? 'default' : 'pointer' },
+    textThemeStyle(props, { sizeKey: 'font_size', colorKey: 'font_color' })
+  );
 
   if (props.disabled) style.opacity = 0.6;
 

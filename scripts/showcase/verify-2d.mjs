@@ -57,6 +57,24 @@ const TARGETS = [
   // only `node` and drop the `children` ControlDispatcher handed them. Every
   // other 2D fixture nests under containers, which forward children, so the
   // loss was invisible: the five UNDER * strings are what proves it.
+  // Checked/unchecked/radio indicators, and three Control types whose own
+  // `display` default used to overwrite a hidden node's `display: none`.
+  [
+    'control-state',
+    'unit-control-state.tscn',
+    {
+      minControls: 8,
+      types: ['CheckBox', 'OptionButton', 'Button', 'GridContainer'],
+      texts: ['VISIBLE DROPDOWN'],
+      hiddenNodes: ['HiddenDropdown', 'HiddenButton', 'HiddenGrid'],
+      indicators: [
+        ['checked', 'check', 1],
+        ['unchecked', 'check', 1],
+        ['checked', 'radio', 1],
+        ['unchecked', 'radio', 1],
+      ],
+    },
+  ],
   [
     'control-nested-children',
     'unit-control-nested-children.tscn',
@@ -122,6 +140,20 @@ for (const [name, file, expect = {}] of TARGETS) {
       // truncated human-readable version for the report — never assert on it,
       // a required string can fall outside the slice.
       texts: all.map((e) => e.textContent?.trim() ?? '').filter((t) => t.length > 0),
+      // Node names the browser actually LAYS OUT. Text can't answer "is this
+      // hidden": a visible container's textContent still includes a
+      // `display: none` child's string. Per-node box presence can — which is
+      // the OptionButton/Button/GridContainer bug this gate now guards.
+      laidOutNodes: all
+        .filter((e) => e.getClientRects().length > 0)
+        .map((e) => e.getAttribute('data-node-name'))
+        .filter((n) => n),
+      // CheckBox draws its state as an indicator glyph; without one a checked
+      // and an unchecked box are indistinguishable on screen.
+      checkIndicators: [...document.querySelectorAll('[data-check-indicator]')].map((e) => ({
+        state: e.getAttribute('data-check-indicator'),
+        style: e.getAttribute('data-check-style'),
+      })),
       textSample: all
         .filter((e) => e.textContent && e.textContent.trim().length)
         .slice(0, 6)
@@ -135,6 +167,19 @@ for (const [name, file, expect = {}] of TARGETS) {
   if (!overlay) failures.push('overlay never mounted');
   if (stats.controls < (expect.minControls ?? 1)) {
     failures.push(`controls ${stats.controls} < expected ${expect.minControls ?? 1}`);
+  }
+  for (const name of expect.hiddenNodes ?? []) {
+    if (stats.laidOutNodes.includes(name)) {
+      failures.push(`node "${name}" has visible = false but is still laid out`);
+    }
+  }
+  for (const [state, style, count] of expect.indicators ?? []) {
+    const found = stats.checkIndicators.filter(
+      (i) => i.state === state && i.style === style
+    ).length;
+    if (found !== count) {
+      failures.push(`expected ${count} ${state} ${style} indicator(s), found ${found}`);
+    }
   }
   for (const type of expect.types ?? []) {
     if (!stats.types.includes(type)) failures.push(`missing control type ${type}`);

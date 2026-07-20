@@ -10,7 +10,7 @@ import type { CSSProperties } from 'react';
 import type { ControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { useControlParent } from '../../../../r3f/controls/ControlParentContext';
 import { useSceneResources } from '../../../../r3f/SceneResourcesContext';
-import { controlLayoutStyle } from '../../../../r3f/controls/controlLayout';
+import { controlStyle } from '../../../../r3f/controls/controlLayout';
 import { textThemeStyle } from '../../../../r3f/controls/textThemeStyle';
 import { resolveStyleBoxCss } from '../../../../r3f/controls/resolveStyleBox';
 import type { ButtonProperties } from './types';
@@ -35,18 +35,21 @@ export function Button({ node, children }: ControlComponentProps) {
   const useDefaults = !props.flat && Object.keys(styleBoxCss).length === 0;
 
   const alignment = props.alignment ?? 1; // Godot default: CENTER
-  const style: CSSProperties = {
-    ...controlLayoutStyle(props, parentKind),
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: JUSTIFY[alignment] ?? 'center',
-    boxSizing: 'border-box',
-    cursor: props.disabled ? 'default' : 'pointer',
-    textAlign: TEXT_ALIGN[alignment] ?? 'center',
-    ...(useDefaults ? DEFAULTS : {}),
-    ...styleBoxCss,
-    ...textThemeStyle(props, { sizeKey: 'font_size', colorKey: 'font_color' }),
-  };
+  const style: CSSProperties = controlStyle(
+    props,
+    parentKind,
+    {
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: JUSTIFY[alignment] ?? 'center',
+      boxSizing: 'border-box',
+      cursor: props.disabled ? 'default' : 'pointer',
+      textAlign: TEXT_ALIGN[alignment] ?? 'center',
+    },
+    useDefaults ? DEFAULTS : {},
+    styleBoxCss,
+    textThemeStyle(props, { sizeKey: 'font_size', colorKey: 'font_color' })
+  );
 
   if (props.disabled) style.opacity = 0.6;
 

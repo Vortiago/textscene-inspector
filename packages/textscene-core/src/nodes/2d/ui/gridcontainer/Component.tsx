@@ -16,7 +16,7 @@ import type { CSSProperties } from 'react';
 import type { ControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
 import { useControlParent, ControlParentProvider } from '../../../../r3f/controls/ControlParentContext';
-import { controlLayoutStyle } from '../../../../r3f/controls/controlLayout';
+import { controlStyle } from '../../../../r3f/controls/controlLayout';
 import { useOptionalSelection } from '../../../../r3f/contexts/SelectionContext';
 import { joinPath } from '../../../../utils/nodePath';
 import type { ControlProperties } from '../control/types';
@@ -43,13 +43,12 @@ export function GridContainer({ node, path, children }: ControlComponentProps) {
     return !hiddenNodePaths.has(childPath);
   });
 
-  const style: CSSProperties = {
-    ...controlLayoutStyle(props, parentKind),
+  const style: CSSProperties = controlStyle(props, parentKind, {
     display: 'grid',
     gridTemplateColumns: gridColumnTemplate(items, columns),
     columnGap: `${props.themeOverrideConstants?.h_separation ?? DEFAULT_SEPARATION}px`,
     rowGap: `${props.themeOverrideConstants?.v_separation ?? DEFAULT_SEPARATION}px`,
-  };
+  });
 
   return (
     <div data-control-type="GridContainer" data-node-name={node.name} style={style}>

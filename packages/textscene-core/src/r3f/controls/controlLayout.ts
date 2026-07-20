@@ -157,3 +157,24 @@ export function controlLayoutStyle(
 }
 
 export { PRESET_ANCHORS };
+
+/**
+ * Compose a Control's own CSS on top of its layout CSS, keeping the layout's
+ * `display: none` authoritative.
+ *
+ * A component that spreads its own `display` default after the layout's
+ * silently un-hides a `visible = false` node — later key wins. That bug shipped
+ * three times over (Button, GridContainer, OptionButton), so the guard lives
+ * here rather than being re-derived per slice; `visibleConformance.test.tsx`
+ * holds every registered type to it.
+ */
+export function controlStyle(
+  props: ControlProperties,
+  parent: ParentLayoutKind,
+  ...own: (CSSProperties | undefined)[]
+): CSSProperties {
+  const layout = controlLayoutStyle(props, parent);
+  const style: CSSProperties = Object.assign({}, layout, ...own);
+  if (layout.display === 'none') style.display = 'none';
+  return style;
+}

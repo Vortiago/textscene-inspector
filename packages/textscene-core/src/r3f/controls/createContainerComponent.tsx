@@ -11,7 +11,7 @@
 import type { CSSProperties } from 'react';
 import type { ControlComponentProps } from './ControlComponentRegistry';
 import { useControlParent, ControlParentProvider } from './ControlParentContext';
-import { controlLayoutStyle } from './controlLayout';
+import { controlStyle } from './controlLayout';
 import type { ParentLayoutKind } from './controlLayout';
 import type { ControlComponent } from './ControlComponentRegistry';
 import type { ControlProperties } from '../../nodes/2d/ui/control/types';
@@ -35,17 +35,11 @@ export function createContainerComponent<P extends ControlProperties = ControlPr
   function Container({ node, children }: ControlComponentProps) {
     const props = node.properties as P;
     const parentKind = useControlParent();
-    const layoutStyle = controlLayoutStyle(props, parentKind);
-    const style: CSSProperties = {
-      ...layoutStyle,
-      ...(config.useStyle ? config.useStyle(props) : {}),
-    };
-    // A hidden control's `display: none` (visible = false, set by the layout
-    // style) must survive the container style's own `display: flex` — the
-    // spread order exists for layout properties, not for visibility.
-    if (layoutStyle.display === 'none') {
-      style.display = 'none';
-    }
+    const style: CSSProperties = controlStyle(
+      props,
+      parentKind,
+      config.useStyle ? config.useStyle(props) : {}
+    );
     return (
       <div data-control-type={config.typeName} data-node-name={node.name} style={style}>
         <ControlParentProvider kind={config.kind}>{children}</ControlParentProvider>
