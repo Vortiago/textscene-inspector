@@ -603,6 +603,66 @@ export const fixtures: Fixture[] = [
     "category": "Integration - Multi-Node"
   },
   {
+    "name": "2d Geometry Parity",
+    "file": "unit-2d-geometry-parity.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Line2d",
+    "file": "unit-line2d.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Marker2d",
+    "file": "unit-marker2d.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Path2d",
+    "file": "unit-path2d.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Pathfollow2d",
+    "file": "unit-pathfollow2d.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Polygon2d",
+    "file": "unit-polygon2d.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Sprite2d Canvastexture",
+    "file": "unit-sprite2d-canvastexture.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Sprite2d",
+    "file": "unit-sprite2d.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Tile Map Layer Hexagon",
+    "file": "unit-tile-map-layer-hexagon.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Tile Map Layer Isometric",
+    "file": "unit-tile-map-layer-isometric.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Tile Map Layer",
+    "file": "unit-tile-map-layer.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Tile Map",
+    "file": "unit-tile-map.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
     "name": "Area Light Normalize",
     "file": "unit-area-light-normalize.tscn",
     "category": "Unit - Lights"
@@ -891,61 +951,6 @@ export const fixtures: Fixture[] = [
     "name": "External Texture",
     "file": "unit-external-texture.tscn",
     "category": "Unit - External Resources"
-  },
-  {
-    "name": "Line2d",
-    "file": "unit-line2d.tscn",
-    "category": "Unit - 2D Canvas"
-  },
-  {
-    "name": "Marker2d",
-    "file": "unit-marker2d.tscn",
-    "category": "Unit - 2D Canvas"
-  },
-  {
-    "name": "Path2d",
-    "file": "unit-path2d.tscn",
-    "category": "Unit - 2D Canvas"
-  },
-  {
-    "name": "Pathfollow2d",
-    "file": "unit-pathfollow2d.tscn",
-    "category": "Unit - 2D Canvas"
-  },
-  {
-    "name": "Polygon2d",
-    "file": "unit-polygon2d.tscn",
-    "category": "Unit - 2D Canvas"
-  },
-  {
-    "name": "Sprite2d Canvastexture",
-    "file": "unit-sprite2d-canvastexture.tscn",
-    "category": "Unit - 2D Canvas"
-  },
-  {
-    "name": "Sprite2d",
-    "file": "unit-sprite2d.tscn",
-    "category": "Unit - 2D Canvas"
-  },
-  {
-    "name": "Tile Map Layer Hexagon",
-    "file": "unit-tile-map-layer-hexagon.tscn",
-    "category": "Unit - 2D Canvas"
-  },
-  {
-    "name": "Tile Map Layer Isometric",
-    "file": "unit-tile-map-layer-isometric.tscn",
-    "category": "Unit - 2D Canvas"
-  },
-  {
-    "name": "Tile Map Layer",
-    "file": "unit-tile-map-layer.tscn",
-    "category": "Unit - 2D Canvas"
-  },
-  {
-    "name": "Tile Map",
-    "file": "unit-tile-map.tscn",
-    "category": "Unit - 2D Canvas"
   },
   {
     "name": "Material Ao",

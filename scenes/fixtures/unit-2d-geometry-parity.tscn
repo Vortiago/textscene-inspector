@@ -1,0 +1,38 @@
+[gd_scene load_steps=2 format=3 uid="uid://unit2dgeomparity"]
+
+[sub_resource type="NavigationPolygon" id="NavigationPolygon_1"]
+vertices = PackedVector2Array(0, 0, 120, 0, 120, 60, 0, 60)
+polygons = [PackedInt32Array(0, 1, 2, 3)]
+
+[node name="GeometryParityRoot" type="Node2D"]
+
+[node name="SharpJoints" type="Line2D" parent="."]
+position = Vector2(40, 40)
+points = PackedVector2Array(0, 0, 80, 0, 80, 80, 160, 80)
+width = 16.0
+default_color = Color(1, 0.8, 0.2, 1)
+
+[node name="RoundJoints" type="Line2D" parent="."]
+position = Vector2(40, 180)
+points = PackedVector2Array(0, 0, 80, 0, 80, 80, 160, 80)
+width = 16.0
+joint_mode = 2
+round_precision = 12
+default_color = Color(0.3, 0.8, 1, 1)
+
+[node name="MultiPartPolygon" type="Polygon2D" parent="."]
+position = Vector2(280, 40)
+polygon = PackedVector2Array(0, 0, 60, 0, 60, 60, 0, 60, 90, 0, 150, 0, 150, 60, 90, 60)
+polygons = [PackedInt32Array(0, 1, 2, 3), PackedInt32Array(4, 5, 6, 7)]
+color = Color(0.4, 0.9, 0.5, 1)
+
+[node name="InvertedPolygon" type="Polygon2D" parent="."]
+position = Vector2(300, 180)
+polygon = PackedVector2Array(0, 0, 60, 0, 60, 60, 0, 60)
+invert_enabled = true
+invert_border = 30.0
+color = Color(0.9, 0.4, 0.6, 1)
+
+[node name="Navmesh" type="NavigationRegion2D" parent="."]
+position = Vector2(40, 320)
+navigation_polygon = SubResource("NavigationPolygon_1")

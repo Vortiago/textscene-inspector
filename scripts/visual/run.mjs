@@ -233,6 +233,21 @@ async function captureScene(page, baseUrl, scene) {
   }
   const canvas = canvases.first();
 
+  if (scene.navigation) {
+    // The navmesh overlay has its own toolbar toggle. It defaults ON, but drive
+    // it explicitly so the scene's state does not depend on a default that a
+    // future change could flip out from under the baseline.
+    const toggle = page.locator('label:has-text("Navigation") input[type="checkbox"]').first();
+    try {
+      await toggle.waitFor({ state: 'attached', timeout: 10000 });
+    } catch {
+      return { buffer: null, reason: 'Navigation toggle not found in the toolbar' };
+    }
+    if (!(await toggle.isChecked())) await toggle.dispatchEvent('click');
+    await page.waitForTimeout(PRE_SELECT_FIT_QUIESCENCE_MS);
+    await page.mouse.move(0, 0);
+  }
+
   if (scene.collisions) {
     // "Visible Collision Shapes" is OFF by default (ADR-0005/0006), so a
     // CollisionShape gizmo is invisible to every other golden — which is how

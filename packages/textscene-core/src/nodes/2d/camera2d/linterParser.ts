@@ -42,6 +42,7 @@ validatorRegistry.registerAll('Camera2D', {
   limit_right: v.lenientInt('limit_right'),
   limit_bottom: v.lenientInt('limit_bottom'),
   limit_smoothed: v.boolean('limit_smoothed'),
+  limit_enabled: v.boolean('limit_enabled'),
   position_smoothing_enabled: v.boolean('position_smoothing_enabled'),
   position_smoothing_speed: v.positiveFloat('position_smoothing_speed'),
   rotation_smoothing_enabled: v.boolean('rotation_smoothing_enabled'),

@@ -169,8 +169,9 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
     linterOnly: [
       // Viewport behaviour / editor aids: valid TSCN keys with no effect
       // on the static scene preview.
-      'ignore_rotation', 'process_callback',
-      'limit_left', 'limit_top', 'limit_right', 'limit_bottom', 'limit_smoothed',
+      // (`limit_left/top/right/bottom` used to sit here; the Cameras panel
+      // clamps the framed view to them now.)
+      'ignore_rotation', 'process_callback', 'limit_smoothed',
       'position_smoothing_enabled', 'position_smoothing_speed',
       'rotation_smoothing_enabled', 'rotation_smoothing_speed',
       'drag_horizontal_enabled', 'drag_vertical_enabled',
@@ -192,15 +193,16 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
 
   Polygon2D: {
     parserOnly: [
-      // PackedVector2Array body (same pattern as Line2D.points above).
-      'polygon',
+      // PackedVector2Array / Array-of-PackedInt32Array bodies (same pattern as
+      // Line2D.points above): opaque encoded data with no per-key grammar.
+      'polygon', 'polygons',
     ],
     linterOnly: [
-      // Display tweaks with no rendering parity requirement.
-      'antialiased', 'invert_enabled', 'invert_border',
-      'texture_offset', 'texture_rotation', 'texture_scale',
+      // Display tweaks with no rendering parity requirement. (`invert_enabled`
+      // and `invert_border` used to sit here; both are rendered now.)
+      'antialiased', 'texture_offset', 'texture_rotation', 'texture_scale',
     ],
-    reason: 'polygon is a PackedVector2Array (opaque encoded data); invert/texture-transform properties affect visual output but the renderer reads color/offset only.',
+    reason: 'polygon/polygons are encoded packed arrays with no per-key grammar; the remaining texture-transform properties affect visual output but the renderer reads color/offset only.',
   },
 
   TileMapLayer: {

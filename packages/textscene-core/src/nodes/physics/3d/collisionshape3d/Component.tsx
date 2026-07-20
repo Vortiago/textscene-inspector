@@ -10,7 +10,7 @@ import type { CollisionShape3DProperties } from './types';
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../../r3f/nodeTransform';
 import { useSceneResources } from '../../../../r3f/SceneResourcesContext';
-import { useShapeResource } from '../../../../resources/shapes/useShapeResource';
+import { useSubOrExtResource } from '../../../../resources/useSubOrExtResource';
 import { useViewportMode } from '../../../../r3f/contexts/ViewportModeContext';
 import { CollisionGizmo } from './CollisionGizmo';
 import { useGodotLinearColor } from '../../../../r3f/godotColor';
@@ -26,7 +26,7 @@ export function CollisionShape3D({ node, children }: NodeComponentProps) {
     [properties]
   );
 
-  const shapeResource = useShapeResource(properties.shape, internalResources, externalResources);
+  const shapeResource = useSubOrExtResource(properties.shape, internalResources, externalResources);
   // Godot draws the shape in the node's own `debug_color`; the literal is sRGB.
   const debugColor = useGodotLinearColor(properties.debugColor ?? DEFAULT_COLLISION_DEBUG_COLOR);
 

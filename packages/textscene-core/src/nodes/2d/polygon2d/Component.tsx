@@ -23,14 +23,32 @@ import { multiplyModulate, type CanvasItemTint } from '../../../r3f/canvasItemMo
 import { godotColorToLinear } from '../../../r3f/godotColor';
 import type { Vector2 } from '../../base/node2d/types';
 import type { Polygon2DProperties } from './types';
+import { polygonRings, type PolygonRings } from './polygonShapes';
 
 export function Polygon2D({ node, children }: NodeComponentProps) {
   const props = node.properties as Polygon2DProperties;
 
-  // Geometry depends only on the outline + offset; the tint composites in body.
+  // Geometry depends only on the rings + offset; the tint composites in body.
   const geometry = useMemo(
-    () => buildFilledPolygonGeometry(props.polygon, props.offset),
-    [props.polygon, props.offset]
+    () =>
+      buildFilledPolygonGeometry(
+        polygonRings(
+          props.polygon,
+          props.polygons,
+          props.internalVertexCount,
+          props.invertEnabled,
+          props.invertBorder
+        ),
+        props.offset
+      ),
+    [
+      props.polygon,
+      props.polygons,
+      props.internalVertexCount,
+      props.invertEnabled,
+      props.invertBorder,
+      props.offset,
+    ]
   );
   // R3F won't auto-dispose a geometry passed via `attach`; release on rebuild.
   useEffect(() => () => geometry?.dispose(), [geometry]);
@@ -79,22 +97,30 @@ function FilledPolygon({
 }
 
 /**
- * Build a filled `ShapeGeometry` from the flat `[x0,y0,…]` outline, applying the
- * pixel `offset` and the +Y-down → three Y-negation. Fewer than 3 vertices is
- * degenerate (nothing to fill) → null. Winding is irrelevant: the material is
- * double-sided.
+ * Build a filled `ShapeGeometry` from the resolved rings, applying the pixel
+ * `offset` and the +Y-down → three Y-negation. No fillable ring → null.
+ * Winding is irrelevant: the material is double-sided.
+ *
+ * `polygons` yields several independent shapes (Godot triangulates each entry
+ * on its own); `invert_enabled` yields one shape with the polygon as a hole.
+ * THREE.ShapeGeometry takes an array of shapes, so both fall out of the same
+ * call.
  */
 function buildFilledPolygonGeometry(
-  polygon: Float32Array,
+  rings: PolygonRings,
   offset: Vector2
 ): THREE.ShapeGeometry | null {
-  const n = Math.floor(polygon.length / 2);
-  if (n < 3) return null;
+  if (rings.outlines.length === 0) return null;
 
-  const shape = new THREE.Shape();
-  shape.moveTo(polygon[0]! + offset.x, -(polygon[1]! + offset.y));
-  for (let i = 1; i < n; i++) {
-    shape.lineTo(polygon[2 * i]! + offset.x, -(polygon[2 * i + 1]! + offset.y));
-  }
-  return new THREE.ShapeGeometry(shape);
+  const shapes = rings.outlines.map((ring) => {
+    const shape = new THREE.Shape(ring.map((p) => toThree(p, offset)));
+    if (rings.hole) shape.holes.push(new THREE.Path(rings.hole.map((p) => toThree(p, offset))));
+    return shape;
+  });
+  return new THREE.ShapeGeometry(shapes);
+}
+
+/** Godot pixel space (+Y down) → three's 2D plane, with `offset` applied. */
+function toThree(p: Vector2, offset: Vector2): THREE.Vector2 {
+  return new THREE.Vector2(p.x + offset.x, -(p.y + offset.y));
 }

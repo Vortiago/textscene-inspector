@@ -15,6 +15,16 @@ export interface Camera2DProperties extends Node2DProperties {
   offset: Vector2;
   /** 0 = FIXED_TOP_LEFT, 1 = DRAG_CENTER (Godot default). */
   anchor_mode: number;
+  /**
+   * Scroll limits in canvas pixels. Godot's defaults are +/-10000000 — large
+   * enough to be "unlimited" in practice, but real values in real scenes.
+   */
+  limitLeft: number;
+  limitTop: number;
+  limitRight: number;
+  limitBottom: number;
+  /** When false the four limits are ignored entirely. Godot default true. */
+  limitEnabled: boolean;
   /** Whether this camera is the active one (default true). */
   enabled: boolean;
 }

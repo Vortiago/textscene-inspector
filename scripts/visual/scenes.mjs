@@ -60,6 +60,16 @@ export const GOLDEN_SCENES = [
   // in scenes/demos/2d/lights_and_shadows/light_shadows.tscn drew the magenta
   // missing-resource placeholder. Both markers must render identically.
   { name: 'sprite2d-canvastexture', file: 'unit-sprite2d-canvastexture.tscn' },
+  // 2D geometry parity in one frame: Line2D corner joints (sharp + round),
+  // Polygon2D `polygons` index lists and `invert_enabled`, and the
+  // NavigationRegion2D navmesh, whose vertices used to render mirrored about
+  // the region origin. Thin joint wedges and navmesh edges are AA-sensitive.
+  {
+    name: '2d-geometry-parity',
+    file: 'unit-2d-geometry-parity.tscn',
+    navigation: true,
+    maxDiffPct: 0.5,
+  },
   // Two AreaLight3D panels of the SAME light_energy but very different
   // area_size, each lighting its own plate. Godot normalises the emitted colour
   // by the rectangle's area (area_normalize_energy, default true), so both
@@ -217,6 +227,10 @@ export const GOLDEN_SCENES = [
   // threshold like the other 2D goldens (marker2d/path2d).
   { name: 'polygon-2d', file: 'unit-polygon2d.tscn', maxDiffPct: 0.5 },
   { name: 'line-2d', file: 'unit-line2d.tscn', maxDiffPct: 0.5 },
+  // Baseline corrected in the Y-flip fix: a NavigationPolygon's vertices are
+  // Godot canvas pixels (+Y DOWN), and this overlay was the one 2D geometry
+  // path that skipped the negation — so the navmesh used to sit ABOVE the
+  // region origin instead of below it.
   { name: 'navigation-region-2d', file: 'unit-navigation-region-2d.tscn', maxDiffPct: 0.5 },
   // NOTE: AreaLight3D deliberately has no golden — its fixture is light-only
   // (no lit geometry), so the frame is blank. Add one once the fixture gains a

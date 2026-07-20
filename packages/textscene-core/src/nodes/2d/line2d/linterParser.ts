@@ -12,4 +12,8 @@ validatorRegistry.registerAll('Line2D', {
   width: v.float('width'),
   default_color: v.color('default_color'),
   closed: v.boolean('closed'),
+  // LineJointMode: SHARP 0, BEVEL 1, ROUND 2.
+  joint_mode: v.enumInt('joint_mode', 0, 2, { 0: 'SHARP', 1: 'BEVEL', 2: 'ROUND' }),
+  sharp_limit: v.float('sharp_limit', { min: 0 }),
+  round_precision: v.int('round_precision', { min: 1 }),
 });

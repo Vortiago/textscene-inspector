@@ -6,7 +6,7 @@
 
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseNode2D } from '../../base/node2d/parser';
-import { intOr, vec2Or } from '../../../parser/valueParsers';
+import { boolOr, intOr, vec2Or } from '../../../parser/valueParsers';
 import { Camera2DAnchorMode, type Camera2DProperties } from './types';
 
 export function parseCamera2D(
@@ -19,6 +19,12 @@ export function parseCamera2D(
     zoom: vec2Or(properties.zoom, { x: 1, y: 1 }, 'Camera2D'),
     offset: vec2Or(properties.offset, { x: 0, y: 0 }, 'Camera2D'),
     anchor_mode: intOr(properties.anchor_mode, Camera2DAnchorMode.DRAG_CENTER),
+    // class_camera2d.html: limits default to +/-10000000, limit_enabled true.
+    limitLeft: intOr(properties.limit_left, -10000000),
+    limitTop: intOr(properties.limit_top, -10000000),
+    limitRight: intOr(properties.limit_right, 10000000),
+    limitBottom: intOr(properties.limit_bottom, 10000000),
+    limitEnabled: boolOr(properties.limit_enabled, true),
     enabled: properties.enabled === undefined ? true : properties.enabled !== 'false',
   };
 }
