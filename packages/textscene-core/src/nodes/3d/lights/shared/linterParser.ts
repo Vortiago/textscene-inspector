@@ -8,7 +8,7 @@
  */
 
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
-import { v } from '../../../../linter/validators/index.js';
+import { layerBitmask, v } from '../../../../linter/validators/index.js';
 
 const LIGHT_BAKE_MODE = { 0: 'DISABLED', 1: 'STATIC', 2: 'DYNAMIC' };
 
@@ -20,12 +20,7 @@ validatorRegistry.registerAll('Light3D', {
   light_negative: v.boolean('light_negative'),
   light_specular: v.float('light_specular', { min: 0, max: 1 }),
   light_bake_mode: v.enumInt('light_bake_mode', 0, 2, LIGHT_BAKE_MODE),
-  light_cull_mask: v.int('light_cull_mask', {
-    min: 1,
-    max: 1048575,
-    message:
-      "Property 'light_cull_mask' must be between 1 and 1048575. Valid range: bits 1-20",
-  }),
+  light_cull_mask: layerBitmask('light_cull_mask'),
   shadow_enabled: v.boolean('shadow_enabled'),
   shadow_bias: v.float('shadow_bias'),
   shadow_normal_bias: v.float('shadow_normal_bias'),

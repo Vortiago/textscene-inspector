@@ -6,7 +6,7 @@
  *   - modulate = white opaque
  *   - albedo_mix = 1, emission_energy = 1
  *   - normal_fade = 0, upper_fade = lower_fade = 0.3
- *   - cull_mask = 0xFFFFF (1048575 — all 20 render layers)
+ *   - cull_mask = 0xFFFFF (1048575 — Godot's default: the 20 editor-visible layers)
  * Texture references are optional and only set when present.
  */
 

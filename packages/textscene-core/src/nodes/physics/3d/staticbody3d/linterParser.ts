@@ -4,7 +4,7 @@
  */
 
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
-import { v } from '../../../../linter/validators/index.js';
+import { layerBitmask, v } from '../../../../linter/validators/index.js';
 
 const DISABLE_MODE = { 0: 'REMOVE', 1: 'MAKE_STATIC', 2: 'KEEP_ACTIVE' };
 
@@ -12,18 +12,8 @@ validatorRegistry.registerAll('StaticBody3D', {
   physics_material_override: v.resourceReference('physics_material_override'),
   constant_linear_velocity: v.vector3('constant_linear_velocity'),
   constant_angular_velocity: v.vector3('constant_angular_velocity'),
-  collision_layer: v.int('collision_layer', {
-    min: 0,
-    max: 1048575,
-    message:
-      "Property 'collision_layer' must be between 0 and 1048575. Valid range: 20-bit bitmask",
-  }),
-  collision_mask: v.int('collision_mask', {
-    min: 0,
-    max: 1048575,
-    message:
-      "Property 'collision_mask' must be between 0 and 1048575. Valid range: 20-bit bitmask",
-  }),
+  collision_layer: layerBitmask('collision_layer'),
+  collision_mask: layerBitmask('collision_mask'),
   collision_priority: v.float('collision_priority'),
   disable_mode: v.enumInt('disable_mode', 0, 2, DISABLE_MODE),
   input_ray_pickable: v.boolean('input_ray_pickable'),

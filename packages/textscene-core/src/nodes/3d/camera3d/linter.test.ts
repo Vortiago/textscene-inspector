@@ -120,10 +120,9 @@ describe('Camera3D Linter', () => {
         },
         {
           prop: 'cull_mask',
-          valid: [1, 100, 1048575],
+          valid: [1, 100, 1048575, 0, 2000000, 2147483648, 4294967295],
           invalid: [
-            { value: 0, contains: ['between 1 and 1048575'] },
-            { value: 2000000, contains: ['between 1 and 1048575'] },
+
           ],
         },
         {

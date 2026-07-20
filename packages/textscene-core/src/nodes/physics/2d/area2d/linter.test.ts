@@ -118,22 +118,20 @@ describe('Area2D Linter', () => {
       },
       { prop: 'audio_bus_name', valid: ['"Master"', '"SFX"'] },
       {
-        prop: 'collision_layer',
-        valid: [1, 100, 1048575],
-        invalid: [
-          { value: -1, contains: ['between 0 and 1048575'] },
-          { value: 2000000, contains: ['between 0 and 1048575'] },
+          prop: 'collision_layer',
+          valid: [1, 100, 1048575, 2000000, 2147483648, 4294967295],
+          invalid: [
+{ value: -1, contains: ['must be between 0 and 4294967295'] },
           { value: '"layer1"' },
-        ],
-      },
+          ],
+        },
       {
-        prop: 'collision_mask',
-        valid: [1, 255, 1048575],
-        invalid: [
-          { value: -5, contains: ['between 0 and 1048575'] },
-          { value: 5000000, contains: ['between 0 and 1048575'] },
-        ],
-      },
+          prop: 'collision_mask',
+          valid: [1, 255, 1048575, 5000000, 2147483648, 4294967295],
+          invalid: [
+{ value: -5, contains: ['must be between 0 and 4294967295'] },
+          ],
+        },
       {
         prop: 'disable_mode',
         valid: [0, 1, 2],

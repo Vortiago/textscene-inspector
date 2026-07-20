@@ -12,7 +12,7 @@ import {
   v,
   VECTOR3_REGEX,
 } from '../../../../linter/validators/index.js';
-import { propertyError } from '../../../../linter/validators/index.js';
+import { layerBitmask, propertyError } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 
 const CENTER_OF_MASS_MODE = { 0: 'AUTO', 1: 'CUSTOM' };
@@ -55,18 +55,8 @@ validatorRegistry.registerAll('RigidBody3D', {
     min: 0,
     message: "Property 'angular_damp' must be >= 0. Damping cannot be negative.",
   }),
-  collision_layer: v.int('collision_layer', {
-    min: 0,
-    max: 1048575,
-    message:
-      "Property 'collision_layer' must be between 0 and 1048575. Valid range: 20-bit bitmask",
-  }),
-  collision_mask: v.int('collision_mask', {
-    min: 0,
-    max: 1048575,
-    message:
-      "Property 'collision_mask' must be between 0 and 1048575. Valid range: 20-bit bitmask",
-  }),
+  collision_layer: layerBitmask('collision_layer'),
+  collision_mask: layerBitmask('collision_mask'),
   collision_priority: v.float('collision_priority'),
   lock_rotation: v.boolean('lock_rotation'),
   freeze_mode: v.enumInt('freeze_mode', 0, 1, FREEZE_MODE),

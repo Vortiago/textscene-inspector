@@ -4,7 +4,7 @@
  */
 
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
-import { v } from '../../../linter/validators/index.js';
+import { layerBitmask, v } from '../../../linter/validators/index.js';
 
 const PROJECTION = { 0: 'PERSPECTIVE', 1: 'ORTHOGONAL', 2: 'FRUSTUM' };
 const KEEP_ASPECT = { 0: 'KEEP_WIDTH', 1: 'KEEP_HEIGHT', 2: 'KEEP_ASPECT_DISABLED' };
@@ -23,12 +23,7 @@ validatorRegistry.registerAll('Camera3D', {
   near: v.positiveFloat('near'),
   far: v.positiveFloat('far'),
   keep_aspect: v.enumInt('keep_aspect', 0, 2, KEEP_ASPECT),
-  cull_mask: v.int('cull_mask', {
-    min: 1,
-    max: 1048575,
-    message:
-      "Property 'cull_mask' must be between 1 and 1048575. Valid range: bits 1-20",
-  }),
+  cull_mask: layerBitmask('cull_mask'),
   doppler_tracking: v.enumInt('doppler_tracking', 0, 2, DOPPLER_TRACKING),
   current: v.boolean('current'),
   h_offset: v.float('h_offset'),

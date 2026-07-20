@@ -7,4 +7,5 @@ export * from './resourceValidators.js';
 export { propertyError } from './propertyError.js';
 export { floatTupleValidator, makeFloatTupleRegex } from './floatTupleValidator.js';
 export { v } from './v.js';
+export { layerBitmask, MAX_LAYER_BITMASK } from './layerBitmask.js';
 export type { FloatOpts, IntOpts, EnumOpts } from './v.js';

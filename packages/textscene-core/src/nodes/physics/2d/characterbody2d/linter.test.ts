@@ -132,16 +132,15 @@ describe('CharacterBody2D Linter', () => {
       {
         // Valid values warn (e.g. zero-layer) but produce no errors.
         prop: 'collision_layer',
-        valid: [0, 1, 100, 1048575],
+        valid: [0, 1, 100, 1048575, 2147483648, 4294967295],
         acceptMode: 'no-error',
         invalid: [
-          { value: -1, contains: ['between 0 and 1048575'] },
-          { value: 2000000, contains: ['between 0 and 1048575'] },
+          { value: -1, contains: ['between 0 and 4294967295'] },
         ],
       },
       {
         prop: 'collision_mask',
-        valid: [0, 1, 255, 1048575],
+        valid: [0, 1, 255, 1048575, 2147483648, 4294967295],
         acceptMode: 'no-error',
         invalid: [{ value: -5 }],
       },

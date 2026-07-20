@@ -198,6 +198,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Layer Bitmask 32bit",
+    "file": "unit-layer-bitmask-32bit.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Light Base Properties",
     "file": "unit-light-base-properties.tscn",
     "category": "Other"

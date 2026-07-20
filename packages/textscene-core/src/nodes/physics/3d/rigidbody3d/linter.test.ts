@@ -140,18 +140,17 @@ custom_integrator = false
         // Valid values include 0, which legitimately warns (zero collision layer).
         prop: 'collision_layer',
         acceptMode: 'no-error',
-        valid: [0, 1, 100, 1048575],
+        valid: [0, 1, 100, 1048575, 2147483648, 4294967295],
         invalid: [
-          { value: -1, contains: ['between 0 and 1048575'] },
-          { value: 2000000, contains: ['between 0 and 1048575'] },
+          { value: -1, contains: ['between 0 and 4294967295'] },
         ],
       },
       {
         // Valid values include 0, which legitimately warns (zero collision mask).
         prop: 'collision_mask',
         acceptMode: 'no-error',
-        valid: [0, 1, 255, 1048575],
-        invalid: [{ value: -5, contains: ['between 0 and 1048575'] }],
+        valid: [0, 1, 255, 1048575, 2147483648, 4294967295],
+        invalid: [{ value: -5, contains: ['between 0 and 4294967295'] }],
       },
     ]);
 
