@@ -28,4 +28,12 @@ export interface AreaLight3DProperties extends Node3DProperties, BaseLightWithNo
    * there is no per-consumer re-parse.
    */
   area_size?: Vector2;
+
+  /**
+   * Godot divides the light's colour by `area_size.x * area_size.y` when this
+   * is on (its default), so resizing the rectangle does not change how much
+   * light it emits. three.js RectAreaLight intensity is a luminance and scales
+   * with area for the same reason, so the same division applies at render.
+   */
+  area_normalize_energy: boolean;
 }

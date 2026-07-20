@@ -35,26 +35,31 @@
  * component just persists the mode and axis so the consumer can act.
  */
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { useGodotLinearColor } from '../../../r3f/godotColor';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { composeFrameTexture, frameSizePx } from '../../../r3f/spriteFrame';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
-import { resolveExtResourcePath } from '../../../resources/SubResourceResolver';
+import { resolveTexture2DPath } from '../../../resources/SubResourceResolver';
 import { useResource } from '../../../resources/useResource';
 import {
   AlphaCutMode,
   type Sprite3DProperties,
 } from './types';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
+import { useBillboard } from '../../../r3f/hooks/useBillboard';
 
 const DEFAULT_ALPHA_TEST = 0.5;
 
-export function Sprite3D({ node }: NodeComponentProps) {
+export function Sprite3D({ node, children }: NodeComponentProps) {
+  // Godot's billboard is a material-side effect on the sprite quad; the shared
+  // hook applies the same modes Label3D uses.
+  const spriteRef = useRef<THREE.Object3D | null>(null);
   const properties = node.properties as Sprite3DProperties;
-  const { externalResources } = useSceneResources();
+  useBillboard(spriteRef, properties.billboard);
+  const { externalResources, internalResources } = useSceneResources();
 
   const { position, rotation, scale } = useMemo(
     () => transformFromNode3DProperties(properties),
@@ -66,8 +71,8 @@ export function Sprite3D({ node }: NodeComponentProps) {
   // useResource's contract) so we keep the hook-call count stable when
   // texture is absent.
   const texturePath = useMemo(
-    () => resolveExtResourcePath(properties.texture, externalResources),
-    [properties.texture, externalResources]
+    () => resolveTexture2DPath(properties.texture, externalResources, internalResources),
+    [properties.texture, externalResources, internalResources]
   );
 
   const texResult = useResource<THREE.Texture>(texturePath ?? '', 'Texture2D');
@@ -137,18 +142,34 @@ export function Sprite3D({ node }: NodeComponentProps) {
   // when a new one replaces it / on unmount.
   useEffect(() => () => geometry.dispose(), [geometry]);
 
+  // Descendants ride in a SIBLING group carrying the same transform rather
+  // than inside the sprite quad: `billboard` re-aims the quad at the camera,
+  // and in Godot that is a shader-side effect on the sprite alone — it never
+  // spins the node's children. Every branch below renders it, including the
+  // placeholder and pending ones, so a missing or slow texture cannot delete
+  // the subtree parented under the sprite.
+  const subtree =
+    children === undefined ? null : (
+      <group position={position} rotation={rotation} scale={scale}>
+        {children}
+      </group>
+    );
+
   // No texture path requested at all: render a stub placeholder so users
   // see that the sprite node exists in the scene even without a texture.
   // (Linter would already flag this as `sprite3d-requires-texture`.)
   if (!texturePath) {
     return (
-      <MissingResourcePlaceholder
-        shape="plane"
-        name={node.name}
-        position={position}
-        rotation={rotation}
-        scale={scale}
-      />
+      <>
+        <MissingResourcePlaceholder
+          shape="plane"
+          name={node.name}
+          position={position}
+          rotation={rotation}
+          scale={scale}
+        />
+        {subtree}
+      </>
     );
   }
 
@@ -156,13 +177,16 @@ export function Sprite3D({ node }: NodeComponentProps) {
   // label was moved to the DOM `<MissingResourcesPanel>`.
   if (texResult.status === 'unavailable') {
     return (
-      <MissingResourcePlaceholder
-        shape="plane"
-        name={node.name}
-        position={position}
-        rotation={rotation}
-        scale={scale}
-      />
+      <>
+        <MissingResourcePlaceholder
+          shape="plane"
+          name={node.name}
+          position={position}
+          rotation={rotation}
+          scale={scale}
+        />
+        {subtree}
+      </>
     );
   }
 
@@ -171,36 +195,44 @@ export function Sprite3D({ node }: NodeComponentProps) {
   // cycle once the host provides the file).
   if (!displayedTexture) {
     return (
-      <group
-        name={node.name}
-        position={position}
-        rotation={rotation}
-        scale={scale}
-        userData={{ billboardMode: properties.billboard, billboardAxis: properties.axis }}
-      />
+      <>
+        <group
+          ref={spriteRef}
+          name={node.name}
+          position={position}
+          rotation={rotation}
+          scale={scale}
+          userData={{ billboardMode: properties.billboard, billboardAxis: properties.axis }}
+        />
+        {subtree}
+      </>
     );
   }
 
   return (
-    <mesh
-      name={node.name}
-      position={position}
-      rotation={rotation}
-      scale={scale}
-      renderOrder={properties.render_priority}
-      userData={{ billboardMode: properties.billboard, billboardAxis: properties.axis }}
-    >
-      <primitive object={geometry} attach="geometry" />
-      <meshBasicMaterial
-        map={displayedTexture}
-        color={color}
-        opacity={opacity}
-        transparent={transparent}
-        alphaTest={alphaTest}
-        depthWrite={depthWrite}
-        side={properties.double_sided === false ? THREE.FrontSide : THREE.DoubleSide}
-      />
-    </mesh>
+    <>
+      <mesh
+        ref={spriteRef}
+        name={node.name}
+        position={position}
+        rotation={rotation}
+        scale={scale}
+        renderOrder={properties.render_priority}
+        userData={{ billboardMode: properties.billboard, billboardAxis: properties.axis }}
+      >
+        <primitive object={geometry} attach="geometry" />
+        <meshBasicMaterial
+          map={displayedTexture}
+          color={color}
+          opacity={opacity}
+          transparent={transparent}
+          alphaTest={alphaTest}
+          depthWrite={depthWrite}
+          side={properties.double_sided === false ? THREE.FrontSide : THREE.DoubleSide}
+        />
+      </mesh>
+      {subtree}
+    </>
   );
 }
 

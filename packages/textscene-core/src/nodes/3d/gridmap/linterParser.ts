@@ -7,4 +7,7 @@ import { v } from '../../../linter/validators/index.js';
 validatorRegistry.registerAll('GridMap', {
   mesh_library: v.resourceReference('mesh_library'),
   cell_size: v.vector3('cell_size'),
+  cell_center_x: v.boolean('cell_center_x'),
+  cell_center_y: v.boolean('cell_center_y'),
+  cell_center_z: v.boolean('cell_center_z'),
 });

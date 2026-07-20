@@ -9,7 +9,7 @@
  */
 
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
-import { v } from '../../../linter/validators/index.js';
+import { layerBitmask, v } from '../../../linter/validators/index.js';
 import { busValidator } from '../busValidator.js';
 import { streamValidator } from '../streamValidator.js';
 
@@ -43,12 +43,7 @@ validatorRegistry.registerAll('AudioStreamPlayer3D', {
   attenuation_filter_db: v.float('attenuation_filter_db'),
   doppler_tracking: v.enumInt('doppler_tracking', 0, 2, DOPPLER_TRACKING),
   panning_strength: v.float('panning_strength', { min: 0, max: 1 }),
-  area_mask: v.int('area_mask', {
-    min: 0,
-    max: 1048575,
-    message:
-      "Property 'area_mask' must be between 0 and 1048575. Valid range: bits 0-20",
-  }),
+  area_mask: layerBitmask('area_mask'),
   emission_angle_enabled: v.boolean('emission_angle_enabled'),
   emission_angle_degrees: v.float('emission_angle_degrees', { min: 0, max: 90 }),
   emission_angle_filter_attenuation_db: v.float('emission_angle_filter_attenuation_db'),

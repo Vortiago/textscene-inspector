@@ -18,14 +18,19 @@ const HEADING: ParsedHeading = {
 describe('parseAnimationTree defaults', () => {
   it('applies Godot defaults when only the heading is supplied', () => {
     const props = parseAnimationTree(HEADING, {});
-    expect(props.active).toBe(false);
+    // AnimationMixer.active defaults to TRUE and is omitted at its default.
+    expect(props.active).toBe(true);
     expect(props.tree_root).toBeUndefined();
     expect(props.process_callback).toBe(AnimationTreeProcessMode.IDLE);
     expect(props.callback_mode_process).toBe(AnimationTreeProcessMode.IDLE);
     expect(props.callback_mode_method).toBe(CallbackModeMethod.DEFERRED);
-    expect(props.callback_mode_discrete).toBe(CallbackModeDiscrete.DOMINANT);
+    // AnimationTree OVERRIDES two AnimationMixer defaults (its class XML marks
+    // both `overrides="AnimationMixer"`): FORCE_CONTINUOUS instead of the
+    // mixer's RECESSIVE, and deterministic true instead of false.
+    expect(props.callback_mode_discrete).toBe(CallbackModeDiscrete.FORCE_CONTINUOUS);
     expect(props.audio_max_polyphony).toBe(32);
-    expect(props.deterministic).toBe(false);
+    expect(props.deterministic).toBe(true);
+    expect(props.advance_expression_base_node).toBe('NodePath(".")');
     expect(props.reset_on_save).toBe(true);
     expect(props.root_motion_local).toBe(false);
   });

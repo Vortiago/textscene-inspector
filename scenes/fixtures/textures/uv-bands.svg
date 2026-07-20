@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <!-- Four bands, top to bottom, for pinning texture V orientation: a mesh that
+       samples this must show GREEN at the top and RED at the bottom. Any V flip
+       inverts the order, which no flat or symmetric texture would reveal. -->
+  <rect x="0" y="0" width="256" height="64" fill="#2ecc40"/>
+  <rect x="0" y="64" width="256" height="64" fill="#8b5a2b"/>
+  <rect x="0" y="128" width="256" height="64" fill="#0074d9"/>
+  <rect x="0" y="192" width="256" height="64" fill="#ff4136"/>
+</svg>

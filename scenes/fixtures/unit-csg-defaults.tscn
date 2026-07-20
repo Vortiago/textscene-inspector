@@ -1,0 +1,20 @@
+[gd_scene load_steps=2 format=3 uid="uid://unitcsgdefaults"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ref"]
+albedo_color = Color(0.35, 0.55, 0.85, 1)
+
+[node name="CSGDefaultsRoot" type="Node3D"]
+
+[node name="DefaultBox" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, 0)
+
+[node name="DefaultCylinder" type="CSGCylinder3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+
+[node name="DefaultSphere" type="CSGSphere3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, 0)
+
+[node name="UnitRuler" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.5, 0)
+size = Vector3(1, 0.05, 1)
+material = SubResource("StandardMaterial3D_ref")

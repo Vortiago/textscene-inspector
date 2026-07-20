@@ -63,7 +63,12 @@ describe('createEnvironmentSettings', () => {
   });
 
   it('gates flat ambient on ambient_light_source', () => {
-    expect(createEnvironmentSettings(base()).ambient).toBeNull(); // BG (0)
+    // `base()` is BG source (0) with BG_COLOR (1), so the ambient is the
+    // background colour — black here, but present rather than null.
+    expect(createEnvironmentSettings(base()).ambient).toEqual({
+      color: { r: 0, g: 0, b: 0, a: 1 },
+      energy: 1,
+    });
     expect(createEnvironmentSettings(base({ ambient_light_source: 1 })).ambient).toBeNull(); // DISABLED
     const colored = createEnvironmentSettings(
       base({ ambient_light_source: 2, ambient_light_color: { r: 0.2, g: 0.2, b: 0.2, a: 1 }, ambient_light_energy: 0.5 })

@@ -37,6 +37,13 @@ function gridMapNode(properties: Record<string, string>): TscnNode {
   };
 }
 
+/** The wireframe boxes <GridMap> falls back to when no MeshLibrary resolves. */
+function placeholderCells(renderer: Awaited<ReturnType<typeof render>>) {
+  return renderer.scene
+    .findAllByType('Mesh')
+    .filter((m) => (m.instance.material as THREE.MeshBasicMaterial)?.wireframe);
+}
+
 function render(node: TscnNode, children?: ReactNode) {
   return ReactThreeTestRenderer.create(
     <ResourceLoaderProvider loader={makeLoader()}>
@@ -65,10 +72,41 @@ describe('<GridMap>', () => {
     const renderer = await render(
       gridMapNode({ data: '{"cells": PackedInt32Array(0, 0, 0, 1, 0, 0)}' })
     );
-    const wireframes = renderer.scene
-      .findAllByType('Mesh')
-      .filter((m) => (m.instance.material as THREE.MeshBasicMaterial)?.wireframe);
-    expect(wireframes).toHaveLength(2);
+    expect(placeholderCells(renderer)).toHaveLength(2);
+  });
+
+  it('offsets each cell by half a cell — Godot centers all three axes by default', async () => {
+    // One cell at the grid origin. Godot's _get_offset() puts it at
+    // cell_size * 0.5 on every axis whose cell_center_* is on, and all three
+    // default to on — so (0,0,0) renders at (1,1,1) with the default 2-unit
+    // cell, NOT at the origin.
+    const renderer = await render(
+      gridMapNode({ data: '{"cells": PackedInt32Array(0, 0, 0)}' })
+    );
+
+    expect(placeholderCells(renderer)[0]!.instance.position.toArray()).toEqual([1, 1, 1]);
+  });
+
+  it('drops the offset per axis when cell_center_* is off', async () => {
+    const renderer = await render(
+      gridMapNode({
+        data: '{"cells": PackedInt32Array(0, 0, 0)}',
+        cell_center_x: 'false',
+        cell_center_z: 'false',
+      })
+    );
+
+    // Only y stays centered.
+    expect(placeholderCells(renderer)[0]!.instance.position.toArray()).toEqual([0, 1, 0]);
+  });
+
+  it('adds the offset on top of the cell stride, not instead of it', async () => {
+    // Cell (1, 0, 0) with the default 2-unit cell: 1*2 + 1 = 3 on x.
+    const renderer = await render(
+      gridMapNode({ data: '{"cells": PackedInt32Array(1, 0, 0)}' })
+    );
+
+    expect(placeholderCells(renderer)[0]!.instance.position.toArray()).toEqual([3, 1, 1]);
   });
 
   it('renders nothing extra for an empty grid', async () => {

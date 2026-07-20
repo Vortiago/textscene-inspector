@@ -6,6 +6,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
+import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { WorldEnvironment } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
@@ -76,11 +77,22 @@ describe('WorldEnvironment (assertions 81–89)', () => {
     expect(c.getHexString()).toBe('4d99e6'); // (0.3,0.6,0.9) sRGB
   });
 
-  it('#84b default ambient source (BG) → no flat AmbientLight emitted', async () => {
+  it('#84b default ambient source (BG) → ambient comes from the BACKGROUND colour', async () => {
+    // AMBIENT_SOURCE_BG (0, the default) ignores ambient_light_color entirely
+    // and lights the scene from background_color — see
+    // resources/environment/renderer.bg-ambient.test.ts for the full table.
     const renderer = await render(makeNode(), [
-      envSub({ background_mode: '1', ambient_light_color: 'Color(0.3, 0.6, 0.9, 1)' }),
+      envSub({
+        background_mode: '1',
+        background_color: 'Color(0.4, 0.4, 0.4, 1)',
+        ambient_light_color: 'Color(0.3, 0.6, 0.9, 1)',
+      }),
     ]);
-    expect(renderer.scene.findAllByType('AmbientLight').length).toBe(0);
+    const lights = renderer.scene.findAllByType('AmbientLight');
+    expect(lights.length).toBe(1);
+    expect((lights[0]!.instance as unknown as THREE.AmbientLight).color.getHexString()).toBe(
+      '666666'
+    );
   });
 
   it('#85 ambient_light_energy → ambient light intensity matches', async () => {

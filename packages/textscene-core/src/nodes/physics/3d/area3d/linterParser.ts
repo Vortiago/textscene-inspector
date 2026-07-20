@@ -4,7 +4,7 @@
  */
 
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
-import { v } from '../../../../linter/validators/index.js';
+import { layerBitmask, v } from '../../../../linter/validators/index.js';
 
 const SPACE_OVERRIDE = {
   0: 'DISABLED',
@@ -14,10 +14,6 @@ const SPACE_OVERRIDE = {
   4: 'REPLACE_COMBINE',
 };
 
-const COLLISION_LAYER_MSG =
-  "Property 'collision_layer' must be between 0 and 1048575. Valid range: 20-bit bitmask";
-const COLLISION_MASK_MSG =
-  "Property 'collision_mask' must be between 0 and 1048575. Valid range: 20-bit bitmask";
 
 validatorRegistry.registerAll('Area3D', {
   monitoring: v.boolean('monitoring'),
@@ -56,6 +52,6 @@ validatorRegistry.registerAll('Area3D', {
   priority: v.float('priority'),
   audio_bus_override: v.boolean('audio_bus_override'),
   audio_bus_name: v.string('audio_bus_name'),
-  collision_layer: v.int('collision_layer', { min: 0, max: 1048575, message: COLLISION_LAYER_MSG }),
-  collision_mask: v.int('collision_mask', { min: 0, max: 1048575, message: COLLISION_MASK_MSG }),
+  collision_layer: layerBitmask('collision_layer'),
+  collision_mask: layerBitmask('collision_mask'),
 });

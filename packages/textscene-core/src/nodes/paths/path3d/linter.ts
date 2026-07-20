@@ -7,7 +7,7 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
-import type { TscnNode } from '../../../parser/types.js';
+import type { TscnNode, TscnScene } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { checkResourceExists } from '../../../linter/resourceChecker.js';
 
@@ -65,9 +65,12 @@ function checkPath3D(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // WARNING: Check if Path3D has PathFollow3D children
-  // Paths are typically used with PathFollow3D nodes, though they can be accessed programmatically
-  if (!hasPathFollowChildren(node)) {
+  // WARNING: nothing in the scene appears to consume this path.
+  // PathFollow3D descendants are the usual consumer, but a CSGPolygon3D in PATH
+  // mode extrudes along a Path3D it names through `path_node` and needs no
+  // PathFollow3D at all — a first-class Godot pattern that two vendored scenes
+  // use, and that this rule used to warn about.
+  if (!hasPathFollowChildren(node) && !isReferencedByPathNode(context.scene, node.name)) {
     diagnostics.push({
       severity: 'warning',
       message: `Path3D '${node.name}' has no PathFollow3D children. While paths can be used programmatically, they are typically followed by PathFollow3D nodes. Consider adding a PathFollow3D child if you intend to animate objects along this path.`,
@@ -98,3 +101,32 @@ ruleRegistry.register(path3DValidationRule);
 
 // Export for testing
 export { path3DValidationRule };
+
+/**
+ * Is any node in the scene pointing a `path_node` NodePath at this Path3D?
+ *
+ * Matched by the NodePath's FINAL SEGMENT rather than resolved properly: the
+ * linter reads a single static scene, where an instanced sub-scene's internals
+ * are opaque and a relative NodePath may leave the file entirely. A false
+ * negative (staying quiet about a genuinely unused path) is much cheaper here
+ * than warning about a correct scene.
+ */
+function isReferencedByPathNode(scene: TscnScene, pathName: string): boolean {
+  let found = false;
+  const visit = (nodes: readonly TscnNode[]): void => {
+    for (const n of nodes) {
+      const raw = (n.properties as Record<string, unknown>).path_node;
+      if (typeof raw === 'string' && nodePathLeaf(raw) === pathName) found = true;
+      if (n.children.length > 0) visit(n.children);
+    }
+  };
+  visit(scene.nodes);
+  return found;
+}
+
+/** Last segment of a `NodePath("a/b/Target")` literal, or the raw string. */
+function nodePathLeaf(raw: string): string {
+  const inner = raw.match(/^NodePath\s*\(\s*"([^"]*)"\s*\)$/)?.[1] ?? raw;
+  const segments = inner.split('/').filter((s) => s.length > 0 && s !== '..' && s !== '.');
+  return segments[segments.length - 1] ?? '';
+}

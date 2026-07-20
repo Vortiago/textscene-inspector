@@ -7,8 +7,8 @@ import { finishCsgParse } from '../sharedParser';
 import { parseVector3 } from '../../../../parser/vectors';
 import { warn } from '../../../../logger';
 
-/** Godot CSGBox3D default size. */
-const DEFAULT_SIZE = { x: 2, y: 2, z: 2 } as const;
+/** Godot's own default (class_csgbox3d): `size = Vector3(1, 1, 1)`. */
+const DEFAULT_SIZE = { x: 1, y: 1, z: 1 } as const;
 
 export function parseCSGBox3D(
   heading: ParsedHeading,

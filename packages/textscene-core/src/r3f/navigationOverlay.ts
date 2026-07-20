@@ -39,13 +39,24 @@ export function buildNavEdgeGeometry(positions: Float32Array, polygons: number[]
   return geometry;
 }
 
-/** Lift a flat `PackedVector2Array` (x, y pairs) into 3D positions at z = 0. */
+/**
+ * Lift a flat `PackedVector2Array` (x, y pairs) into 3D positions at z = 0,
+ * negating Y.
+ *
+ * A NavigationPolygon's vertices are raw local canvas pixels in Godot's
+ * **+Y-down** space — `navigation_region_2d.cpp::_update_debug_mesh()` copies
+ * them verbatim and draws them under the region's Node2D transform with an
+ * identity mesh transform. Passing that Y through unchanged mirrors the whole
+ * navmesh about the region's origin; every other 2D slice does the same
+ * negation in `node2dGroupProps`.
+ */
 export function vector2ToPositions(flat: Float32Array): Float32Array {
   const count = Math.floor(flat.length / 2);
   const positions = new Float32Array(count * 3);
   for (let i = 0; i < count; i++) {
     positions[i * 3 + 0] = flat[i * 2 + 0]!;
-    positions[i * 3 + 1] = flat[i * 2 + 1]!;
+    // `0 - v` (not `-v`) so a zero input stays +0, never -0.
+    positions[i * 3 + 1] = 0 - flat[i * 2 + 1]!;
     positions[i * 3 + 2] = 0;
   }
   return positions;

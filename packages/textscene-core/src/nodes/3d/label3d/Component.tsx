@@ -11,29 +11,26 @@
 
 import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
-import { useFrame } from '@react-three/fiber';
 import type { Label3DProperties } from './types';
-import { BillboardMode } from './types';
+import { HorizontalAlignment } from './types';
 import type { Color } from '../../../utils/colorParser';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { useGodotLinearColor } from '../../../r3f/godotColor';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { useViewportMode } from '../../../r3f/contexts/ViewportModeContext';
-
-const DEFAULT_FONT_SIZE = 128; // canvas render resolution (crispness)
-const GODOT_DEFAULT_FONT_SIZE = 16; // Godot Label3D font_size default (world sizing)
+import { useBillboard } from '../../../r3f/hooks/useBillboard';
 
 /**
- * Some Godot Label3D properties (font_size, no_depth_test) aren't yet
- * captured by the parser/typed API; they appear opportunistically on the
- * properties record when callers add them. This accessor reads them
- * defensively without forcing the type to grow.
+ * Canvas rasterisation resolution, independent of Godot's `font_size`: the
+ * quad's WORLD size follows `font_size`, while the texture is always drawn at
+ * this size so a small label stays crisp when the camera moves in.
  */
-function readExtra<T>(properties: Label3DProperties, key: string): T | undefined {
-  return (properties as unknown as Record<string, unknown>)[key] as T | undefined;
-}
+const RENDER_FONT_SIZE = 128;
 
-export function Label3D({ node }: NodeComponentProps) {
+/** Padding baked into the canvas around the text, in render pixels. */
+const CANVAS_PADDING = 10;
+
+export function Label3D({ node, children }: NodeComponentProps) {
   const { showLabels } = useViewportMode();
   const properties = node.properties as Label3DProperties;
   const { position, rotation, scale } = useMemo(
@@ -41,17 +38,11 @@ export function Label3D({ node }: NodeComponentProps) {
     [properties]
   );
 
-  // The canvas is rasterised at DEFAULT_FONT_SIZE for crispness when no
-  // font_size is given, but the WORLD size must follow Godot's actual font_size
-  // (default 16). `godotFontSize` drives the quad dimensions; `fontSize` the
-  // canvas resolution.
-  const godotFontSize = readExtra<number>(properties, 'font_size') ?? GODOT_DEFAULT_FONT_SIZE;
-  const fontSize = readExtra<number>(properties, 'font_size') ?? DEFAULT_FONT_SIZE;
-  const noDepthTest = readExtra<boolean>(properties, 'no_depth_test') === true;
+  const noDepthTest = properties.no_depth_test;
 
   const built = useMemo(
-    () => buildLabelTexture(properties, fontSize, godotFontSize),
-    [properties, fontSize, godotFontSize]
+    () => buildLabelTexture(properties, RENDER_FONT_SIZE, properties.font_size),
+    [properties]
   );
 
   // Dispose of the GPU texture and source canvas when the label unmounts
@@ -64,25 +55,10 @@ export function Label3D({ node }: NodeComponentProps) {
 
   const meshRef = useRef<THREE.Mesh | null>(null);
 
-  // Parity-audit fix: the pre-migration imperative renderer
-  // updated each Label3D's rotation per-frame via `TscnRenderer.updateLabels()`.
-  // We restore that behaviour with `useFrame`:
-  //   BILLBOARD_DISABLED — no-op.
-  //   BILLBOARD_ENABLED  — copy camera.quaternion (full look-at).
-  //   BILLBOARD_FIXED_Y  — yaw-only look-at (keep world-up aligned).
-  useFrame(({ camera }) => {
-    const mesh = meshRef.current;
-    if (!mesh) return;
-    const mode = properties.billboard;
-    if (mode === BillboardMode.BILLBOARD_DISABLED) return;
-    if (mode === BillboardMode.BILLBOARD_FIXED_Y) {
-      const cp = camera.position;
-      const mp = mesh.position;
-      mesh.rotation.set(0, Math.atan2(cp.x - mp.x, cp.z - mp.z), 0);
-      return;
-    }
-    mesh.quaternion.copy(camera.quaternion);
-  });
+  // The pre-migration imperative renderer turned each Label3D per frame via
+  // `TscnRenderer.updateLabels()`; `useBillboard` is that behaviour, shared
+  // with Sprite3D so both slices implement Godot's modes identically.
+  useBillboard(meshRef, properties.billboard);
 
   // Godot modulate is sRGB → convert to linear before the unlit material tint
   // (the white canvas text is colorized by this), matching Sprite2D/Sprite3D.
@@ -92,29 +68,44 @@ export function Label3D({ node }: NodeComponentProps) {
   // When off (or the canvas couldn't be built), render an invisible marker group
   // so the node still positions any children and stays selectable.
   if (!showLabels || !built) {
-    return <group name={node.name} position={position} rotation={rotation} scale={scale} />;
+    return (
+      <group name={node.name} position={position} rotation={rotation} scale={scale}>
+        {children}
+      </group>
+    );
   }
 
   return (
-    <mesh
-      ref={meshRef}
-      name={node.name}
-      position={position}
-      rotation={rotation}
-      scale={scale}
-      userData={{ billboardMode: properties.billboard, isLabel3D: true }}
-    >
-      <planeGeometry args={[built.width, built.height]} />
-      <meshBasicMaterial
-        map={built.texture}
-        color={tint}
-        transparent
-        opacity={properties.modulate.a}
-        side={properties.double_sided === false ? THREE.FrontSide : THREE.DoubleSide}
-        depthWrite={false}
-        depthTest={!noDepthTest}
-      />
-    </mesh>
+    <>
+      <mesh
+        ref={meshRef}
+        name={node.name}
+        position={position}
+        rotation={rotation}
+        scale={scale}
+        userData={{ billboardMode: properties.billboard, isLabel3D: true }}
+      >
+        <planeGeometry args={[built.width, built.height]} />
+        <meshBasicMaterial
+          map={built.texture}
+          color={tint}
+          transparent
+          opacity={properties.modulate.a}
+          side={properties.double_sided === false ? THREE.FrontSide : THREE.DoubleSide}
+          depthWrite={false}
+          depthTest={!noDepthTest}
+        />
+      </mesh>
+      {/* Descendants sit in a SIBLING group carrying the same transform, not
+          inside the label mesh: `billboard` rewrites the mesh's quaternion
+          every frame, and in Godot that is a shader-side effect on the label
+          itself — it never spins the node's children. */}
+      {children === undefined ? null : (
+        <group position={position} rotation={rotation} scale={scale}>
+          {children}
+        </group>
+      )}
+    </>
   );
 }
 
@@ -131,31 +122,49 @@ function buildLabelTexture(
 ): BuiltLabel | null {
   if (typeof document === 'undefined') return null;
   try {
-    const text = properties.text || '';
+    // Godot breaks the paragraph on `\n` and stacks the lines; a trailing
+    // newline therefore yields an empty final line that still takes height.
+    // Canvas2D `fillText` ignores `\n` entirely, so the split has to happen
+    // here or every multi-line label collapses onto one baseline.
+    const lines = (properties.text || '').split('\n');
     const canvas = document.createElement('canvas');
     const context = canvas.getContext('2d');
     if (!context) return null;
 
-    context.font = `${fontSize}px Arial`;
-    const metrics = context.measureText(text);
-    canvas.width = Math.max(1, Math.ceil(metrics.width) + 20);
-    canvas.height = fontSize + 20;
+    // Godot-pixel quantities (font_size, line_spacing, outline_size) scale to
+    // the canvas resolution by this factor.
+    const renderScale = fontSize / godotFontSize;
+    const lineHeight = fontSize + properties.line_spacing * renderScale;
 
-    if (properties.outline_size > 0) {
-      context.font = `${fontSize}px Arial`;
+    context.font = `${fontSize}px Arial`;
+    const lineWidths = lines.map((line) => context.measureText(line).width);
+    const textWidth = Math.max(0, ...lineWidths);
+    canvas.width = Math.max(1, Math.ceil(textWidth) + CANVAS_PADDING * 2);
+    canvas.height = Math.max(1, Math.ceil(lineHeight * lines.length) + CANVAS_PADDING * 2);
+
+    // Setting width/height resets every context attribute, so re-apply the
+    // font after sizing the canvas.
+    context.font = `${fontSize}px Arial`;
+
+    // outline_size is in Godot font-pixels; scale to the canvas resolution.
+    const strokeWidth =
+      properties.outline_size > 0 ? properties.outline_size * renderScale : 0;
+    if (strokeWidth > 0) {
       context.strokeStyle = colorToCss(properties.outline_modulate);
-      // outline_size is in Godot font-pixels; scale to the canvas render
-      // resolution (fontSize / godotFontSize).
-      context.lineWidth = properties.outline_size * (fontSize / godotFontSize);
-      context.strokeText(text, 10, fontSize);
+      context.lineWidth = strokeWidth;
     }
 
     // Rasterise the text in white. The material's `color` carries the
     // modulate tint, so the texture stays font-size-agnostic and can be
     // re-tinted without rebuilding the canvas.
     context.fillStyle = '#ffffff';
-    context.font = `${fontSize}px Arial`;
-    context.fillText(text, 10, fontSize);
+
+    lines.forEach((line, i) => {
+      const x = lineOriginX(properties.horizontal_alignment, textWidth, lineWidths[i] ?? 0);
+      const baseline = CANVAS_PADDING + lineHeight * i + fontSize;
+      if (strokeWidth > 0) context.strokeText(line, x, baseline);
+      context.fillText(line, x, baseline);
+    });
 
     const texture = new THREE.CanvasTexture(canvas);
     texture.needsUpdate = true;
@@ -171,6 +180,22 @@ function buildLabelTexture(
   } catch {
     return null;
   }
+}
+
+/**
+ * Left edge of one line inside the text block, per Godot's
+ * `horizontal_alignment`. FILL justifies to the block width, which without a
+ * shaper is indistinguishable from LEFT for a single run of glyphs.
+ */
+function lineOriginX(
+  alignment: HorizontalAlignment,
+  blockWidth: number,
+  lineWidth: number
+): number {
+  const slack = blockWidth - lineWidth;
+  if (alignment === HorizontalAlignment.CENTER) return CANVAS_PADDING + slack / 2;
+  if (alignment === HorizontalAlignment.RIGHT) return CANVAS_PADDING + slack;
+  return CANVAS_PADDING;
 }
 
 function colorToCss(color: Color): string {

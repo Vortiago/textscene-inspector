@@ -1,0 +1,53 @@
+[gd_scene load_steps=2 format=3 uid="uid://unitcontrolstate"]
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_radio"]
+
+[node name="ControlStateRoot" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Rows" type="VBoxContainer" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="CheckedBox" type="CheckBox" parent="Rows"]
+button_pressed = true
+text = "CHECKED BOX"
+
+[node name="UncheckedBox" type="CheckBox" parent="Rows"]
+text = "UNCHECKED BOX"
+
+[node name="RadioOn" type="CheckBox" parent="Rows"]
+button_pressed = true
+button_group = SubResource("ButtonGroup_radio")
+text = "RADIO ON"
+
+[node name="RadioOff" type="CheckBox" parent="Rows"]
+button_group = SubResource("ButtonGroup_radio")
+text = "RADIO OFF"
+
+[node name="VisibleDropdown" type="OptionButton" parent="Rows"]
+item_count = 1
+selected = 0
+popup/item_0/text = "VISIBLE DROPDOWN"
+popup/item_0/id = 0
+
+[node name="HiddenDropdown" type="OptionButton" parent="Rows"]
+visible = false
+item_count = 1
+selected = 0
+popup/item_0/text = "HIDDEN DROPDOWN"
+popup/item_0/id = 0
+
+[node name="HiddenButton" type="Button" parent="Rows"]
+visible = false
+text = "HIDDEN BUTTON"
+
+[node name="HiddenGrid" type="GridContainer" parent="Rows"]
+visible = false
+columns = 1
+
+[node name="HiddenGridLabel" type="Label" parent="Rows/HiddenGrid"]
+text = "HIDDEN GRID LABEL"

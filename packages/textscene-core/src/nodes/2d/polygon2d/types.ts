@@ -13,9 +13,23 @@ export interface Polygon2DProperties extends Node2DProperties {
   /** Pixel offset added to every polygon vertex (default 0,0). */
   offset: Vector2;
   /**
+   * Index lists into `polygon`, one per sub-polygon. When non-empty Godot
+   * ignores the stored vertex order and fills each list separately.
+   */
+  polygons: number[][];
+  /**
+   * Trailing vertices of `polygon` that are UV/skinning helpers rather than
+   * outline points. Godot drops them ONLY when `polygons` is empty.
+   */
+  internalVertexCount: number;
+  /** Fill the grown bounding box with the polygon punched out (default false). */
+  invertEnabled: boolean;
+  /** Padding added to the bounds when inverted, in pixels (default 100). */
+  invertBorder: number;
+  /**
    * `ExtResource("id")` / `SubResource("id")` texture reference. Captured for
-   * the inspector and linter; the textured/`uv` mapping and `invert_enabled`
-   * fill are deferred — the node renders its flat-colored fill (see Component).
+   * the inspector and linter; the textured/`uv` mapping is deferred — the node
+   * renders its flat-colored fill (see Component).
    */
   texture?: string;
 }

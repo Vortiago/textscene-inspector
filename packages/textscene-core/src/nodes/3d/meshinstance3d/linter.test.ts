@@ -92,13 +92,12 @@ describe('MeshInstance3D Linter', () => {
         invalid: [{ value: 5, contains: ['0-2'] }],
       },
       {
-        prop: 'layers',
-        valid: [1, 1048575],
-        invalid: [
-          { value: 0, contains: ['1 and 1048575'] },
-          { value: 2000000, contains: ['1 and 1048575'] },
-        ],
-      },
+          prop: 'layers',
+          valid: [1, 1048575, 0, 2000000, 2147483648, 4294967295],
+          invalid: [
+
+          ],
+        },
     ]);
 
     describe('material resource reference validation', () => {

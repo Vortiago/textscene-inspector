@@ -12,5 +12,6 @@ export function parseCheckBox(
   if (properties.text !== undefined) result.text = unquoteString(properties.text);
   result.buttonPressed = properties.button_pressed === 'true';
   result.disabled = properties.disabled === 'true';
+  if (properties.button_group !== undefined) result.buttonGroup = properties.button_group;
   return result;
 }

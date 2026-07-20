@@ -52,6 +52,6 @@ export interface MeshInstance3DProperties extends Node3DProperties {
   /** Visibility range fade mode (0=DISABLED, 1=SELF, 2=DEPENDENCIES) */
   visibilityRangeFadeMode?: number;
 
-  /** Render layer bitmask (1-1048575 for bits 1-20) */
+  /** Render layer bitmask (32 bits; the editor exposes the first 20). */
   layers?: number;
 }

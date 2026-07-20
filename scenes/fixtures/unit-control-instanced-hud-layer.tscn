@@ -1,0 +1,25 @@
+[gd_scene load_steps=3 format=3 uid="uid://unitcontrolinstlayer"]
+
+[ext_resource type="PackedScene" path="res://unit-control-instanced-hud-badge.tscn" id="1_badge"]
+[ext_resource type="Texture2D" path="res://textures/albedo-red.svg" id="1_tex"]
+
+[node name="HudLayer" type="CanvasLayer"]
+layer = 1
+
+[node name="LayerLabel" type="Label" parent="."]
+anchors_preset = 0
+offset_left = 16.0
+offset_top = 128.0
+offset_right = 260.0
+offset_bottom = 152.0
+text = "HUD LAYER"
+
+[node name="LayerIcon" type="TextureRect" parent="."]
+anchors_preset = 0
+offset_left = 96.0
+offset_top = 16.0
+offset_right = 160.0
+offset_bottom = 80.0
+texture = ExtResource("1_tex")
+
+[node name="Badge" parent="." instance=ExtResource("1_badge")]

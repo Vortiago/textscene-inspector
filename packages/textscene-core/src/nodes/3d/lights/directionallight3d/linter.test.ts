@@ -143,13 +143,12 @@ describe('DirectionalLight3D Linter', () => {
         invalid: [{ value: 5, contains: ['0-2'] }],
       },
       {
-        prop: 'light_cull_mask',
-        valid: [1, 100, 1048575],
-        invalid: [
-          { value: 0, contains: ['between 1 and 1048575'] },
-          { value: 2000000, contains: ['between 1 and 1048575'] },
-        ],
-      },
+          prop: 'light_cull_mask',
+          valid: [1, 100, 1048575, 0, 2000000, 2147483648, 4294967295],
+          invalid: [
+
+          ],
+        },
       {
         prop: 'sky_mode',
         valid: [0, 1, 2],

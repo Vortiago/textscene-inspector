@@ -7,7 +7,7 @@
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseNode2D } from '../../base/node2d/parser';
 import { parseColor } from '../../../utils/colorParser';
-import { floatOr, boolOr } from '../../../parser/valueParsers';
+import { boolOr, floatOr, intOr } from '../../../parser/valueParsers';
 import { parsePackedVector2Array } from '../../../resources/shapes/packedArray';
 import { warn } from '../../../logger';
 import type { Line2DProperties } from './types';
@@ -37,5 +37,10 @@ export function parseLine2D(
       ? parseColor(properties.default_color)
       : { r: 1, g: 1, b: 1, a: 1 },
     closed: boolOr(properties.closed, false, base.name || 'Line2D'),
+    // class_line2d.html: joint_mode 0 (LINE_JOINT_SHARP), sharp_limit 2.0,
+    // round_precision 8.
+    jointMode: intOr(properties.joint_mode, 0),
+    sharpLimit: floatOr(properties.sharp_limit, 2, base.name || 'Line2D'),
+    roundPrecision: intOr(properties.round_precision, 8),
   };
 }

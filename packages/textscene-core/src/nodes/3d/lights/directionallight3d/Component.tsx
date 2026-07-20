@@ -15,7 +15,7 @@ import { DirectionalLightGizmo } from '../shared/lightHelpers';
 
 const SHADOW_FRUSTUM_HALF = 20;
 
-export function DirectionalLight3D({ node }: NodeComponentProps) {
+export function DirectionalLight3D({ node, children }: NodeComponentProps) {
   const properties = node.properties as DirectionalLight3DProperties;
   const lightRef = useRef<THREE.DirectionalLight | null>(null);
   const { position, rotation, scale } = useMemo(
@@ -55,6 +55,8 @@ export function DirectionalLight3D({ node }: NodeComponentProps) {
           <DirectionalLightGizmo lightRef={lightRef} />
         </>
       )}
-    />
+    >
+      {children}
+    </LightWithTarget>
   );
 }

@@ -15,7 +15,7 @@ const H_ALIGN = ['left', 'center', 'right', 'justify'] as const;
 // Godot VerticalAlignment 0 TOP / 1 CENTER / 2 BOTTOM / 3 FILL → flex main-axis.
 const V_JUSTIFY = ['flex-start', 'center', 'flex-end', 'stretch'] as const;
 
-export function Label({ node }: ControlComponentProps) {
+export function Label({ node, children }: ControlComponentProps) {
   const props = node.properties as LabelProperties;
   const parentKind = useControlParent();
   const style: CSSProperties = {
@@ -43,6 +43,7 @@ export function Label({ node }: ControlComponentProps) {
   return (
     <div data-control-type="Label" data-node-name={node.name} style={style}>
       {props.text ?? ''}
+      {children}
     </div>
   );
 }

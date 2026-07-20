@@ -4,7 +4,7 @@
  */
 
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
-import { v } from '../../../../linter/validators/index.js';
+import { layerBitmask, v } from '../../../../linter/validators/index.js';
 
 const MOTION_MODE = { 0: 'GROUNDED', 1: 'FLOATING' };
 const PLATFORM_ON_LEAVE = {
@@ -54,18 +54,8 @@ validatorRegistry.registerAll('CharacterBody3D', {
     min: 0,
     message: "Property 'safe_margin' must be >= 0",
   }),
-  collision_layer: v.int('collision_layer', {
-    min: 0,
-    max: 1048575,
-    message:
-      "Property 'collision_layer' must be between 0 and 1048575. Valid range: 20-bit bitmask",
-  }),
-  collision_mask: v.int('collision_mask', {
-    min: 0,
-    max: 1048575,
-    message:
-      "Property 'collision_mask' must be between 0 and 1048575. Valid range: 20-bit bitmask",
-  }),
+  collision_layer: layerBitmask('collision_layer'),
+  collision_mask: layerBitmask('collision_mask'),
   collision_priority: v.float('collision_priority'),
   max_slides: v.positiveInt(
     'max_slides',

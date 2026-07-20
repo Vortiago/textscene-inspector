@@ -17,6 +17,10 @@ Godot `.tscn` parser/linter/renderer (react-three-fiber over three.js). pnpm mon
 - Changed `.tscn` fixtures: `pnpm build:linter && pnpm lint:tscn <files>`.
 - Changed rendering: `pnpm test:visual` (golden images); `pnpm test:visual:update`
   rewrites baselines — eyeball, then commit.
+- Changed the **Control overlay** (2D DOM UI): `pnpm verify:2d` against a running
+  preview (`SHOWCASE_URL`, default `:4173`). The goldens are WebGL-canvas-only and
+  happy-dom has no layout, so this is the only gate that sees a DOM-overlay
+  regression (ADR-0024).
 
 ## Vertical slices
 

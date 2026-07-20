@@ -13,6 +13,7 @@ import { warn } from '../../logger';
 import type { ParsedTresFile } from '../../parser/tresParser';
 import { parseResourceReference } from '../SubResourceResolver';
 import { parseTransform3D } from '../../utils/transform';
+import { unquoteString } from '../../parser/utils';
 import type { MeshLibraryModel, MeshLibraryItem } from './meshLibraryModel';
 
 const ITEM_KEY_RE = /^item\/(\d+)\/(name|mesh|mesh_transform)$/;
@@ -38,7 +39,7 @@ export function meshLibraryFromTres(tres: ParsedTresFile): MeshLibraryModel {
     const item = ensure(id);
 
     if (field === 'name') {
-      item.name = rawValue.replace(/^"|"$/g, '');
+      item.name = unquoteString(rawValue);
     } else if (field === 'mesh') {
       const ref = parseResourceReference(rawValue);
       item.meshPath = ref?.type === 'ExtResource' ? (extPathById.get(ref.id) ?? null) : null;

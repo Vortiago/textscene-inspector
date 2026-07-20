@@ -1,0 +1,17 @@
+[gd_scene load_steps=3 format=3 uid="uid://unitsprite2dcanvastex"]
+
+[ext_resource type="Texture2D" path="res://textures/sprite2d-marker.png" id="1_marker"]
+
+[sub_resource type="CanvasTexture" id="CanvasTexture_wrapped"]
+diffuse_texture = ExtResource("1_marker")
+specular_shininess = 0.5
+
+[node name="World" type="Node2D"]
+
+[node name="DirectTexture" type="Sprite2D" parent="."]
+texture = ExtResource("1_marker")
+position = Vector2(80, 120)
+
+[node name="CanvasTextureSprite" type="Sprite2D" parent="."]
+texture = SubResource("CanvasTexture_wrapped")
+position = Vector2(260, 120)

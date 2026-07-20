@@ -183,6 +183,33 @@ by each node type's `parser.ts`. Each node-type's `index.ts` registers
 its parser + property formatter on module load via side-effect
 imports declared in `parser/TscnParser.ts`.
 
+### Godot → three.js orientation conversions
+
+Godot and three.js disagree on three axis conventions. Each is converted at the
+boundary where Godot data becomes a three.js object — never in the parsers or
+decoders, which stay faithful readers of what the file says:
+
+- **Texture V.** Godot's UV origin is the image's **top**-left. Textures load
+  with three's default `flipY=true` (nothing in the codebase sets it), which
+  uploads the image bottom-up, so a Godot V must be mirrored: `v → 1 - v`.
+  Textures are shared **by identity** between 2D and 3D consumers, so this is
+  converted per consumer, never by flipping the texture:
+  `resources/meshes/arrayMeshGeometry.ts` (mesh UV attribute),
+  `resources/tileset/tileGeometry.ts` (`pxRectToUv`) and `r3f/spriteFrame.ts`
+  (region/frame windowing via texture offset+repeat). The shapes differ enough
+  that the shared part is only the `1 -`; there is deliberately no helper.
+  The material UV transform (`uv1_scale`/`uv1_offset`) does **not** convert —
+  see the `uv1` entry in [docs/PARITY-LIMITATIONS.md](./docs/PARITY-LIMITATIONS.md).
+- **Triangle winding.** Godot fronts triangles clockwise, three.js expects
+  counter-clockwise — every decoded index triple is reversed (`arrayMeshGeometry.ts`).
+  Without it, flat meshes vanish and closed meshes render inside-out.
+- **2D Y.** Godot's 2D Y grows downward; the Y negation lives in
+  `r3f/node2dTransform.ts`.
+
+A regression here is invisible to most fixtures — an untextured mesh, or a
+vertically symmetric texture, cannot show a V error at all. `unit-arraymesh-uv.tscn`
+exists to pin it: a four-band atlas whose green band must read at the TOP.
+
 ### Resource Loading
 
 External resources (textures, materials, GLB meshes, packed scenes) flow through

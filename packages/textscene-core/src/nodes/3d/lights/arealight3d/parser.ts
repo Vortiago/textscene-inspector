@@ -6,7 +6,7 @@ import type { ParsedHeading } from '../../../../parser/utils';
 import type { AreaLight3DProperties } from './types';
 import { parseNode3D } from '../../../base/node3d/parser';
 import { parseBaseLightWithNormalBias } from '../shared/parser';
-import { floatOr, vec2Or } from '../../../../parser/valueParsers';
+import { boolOr, floatOr, vec2Or } from '../../../../parser/valueParsers';
 
 export function parseAreaLight3D(
   heading: ParsedHeading,
@@ -18,7 +18,10 @@ export function parseAreaLight3D(
   return {
     ...node3dProps,
     ...baseLightProps,
-    area_range: floatOr(properties.area_range, 1.0, 'AreaLight3D'),
+    // class_arealight3d.html: area_range 5.0, area_size Vector2(1, 1),
+    // area_normalize_energy true.
+    area_range: floatOr(properties.area_range, 5.0, 'AreaLight3D'),
     area_size: vec2Or(properties.area_size, { x: 1, y: 1 }, 'AreaLight3D'),
+    area_normalize_energy: boolOr(properties.area_normalize_energy, true),
   };
 }

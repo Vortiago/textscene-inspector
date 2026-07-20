@@ -1,5 +1,8 @@
 /**
- * 2D-overlay visual verification harness. For each 2D-UI fixture: open it via
+ * 2D-overlay verification GATE (ADR-0024). The visual-golden harness is
+ * WebGL-canvas only, so nothing else can see a DOM-overlay regression; happy-dom
+ * unit tests can assert a Control is in the DOM but never that it is laid out.
+ * This is the only check that answers "did the overlay actually render it". For each 2D-UI fixture: open it via
  * the ?fixture= deep-link (loads in 3D), click the ViewportToolbar "2D" button to
  * mount the Control overlay, then screenshot + report objective stats (rendered
  * control count, unregistered-fallback count, distinct types, console errors).
@@ -10,20 +13,107 @@
  *   node scripts/showcase/verify-2d.mjs
  */
 
-/* global document */ // the page.evaluate callback below runs in the browser
+/* global document, getComputedStyle */ // the page.evaluate callbacks below run in the browser
 
 import { launchShowcaseBrowser } from './browser.mjs';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-const OUT = process.env.VERIFY_OUT || 'docs/showcase/verify';
+// Gitignored by default: the gate runs often, and overwriting the committed
+// showcase captures would drop binary diffs into unrelated changes. Point
+// VERIFY_OUT at docs/showcase/verify to refresh those deliberately.
+const OUT = process.env.VERIFY_OUT || 'scripts/showcase/output';
 const BASE = process.env.SHOWCASE_URL || 'http://localhost:4173';
+// Bundled Chromium unless told otherwise: this is a gate, and the repo's
+// determinism contract is the lockfile-pinned browser, never system Chrome.
+// Set here rather than as a script env prefix, which cmd.exe cannot parse.
+process.env.SHOWCASE_CHANNEL = process.env.SHOWCASE_CHANNEL || 'bundled';
 
-// [screenshot-name, fixture file (as listed in fixtures.ts)]
+/**
+ * [screenshot-name, fixture file, expectations].
+ *
+ * `expect` turns a target from a report into a gate. `minControls` guards the
+ * failure this exists to catch — a subtree silently disappearing — and
+ * `types` names the ones whose absence would otherwise look like a smaller
+ * number. `maxFallbacks` defaults to 0 — a TextureRect that cannot resolve its
+ * texture draws a dashed placeholder, which for a fixture that DOES declare one
+ * means a broken resource scope; raise it only where a fixture deliberately
+ * leaves a TextureRect textureless. Console errors are never allowed.
+ */
 const TARGETS = [
-  ['ui-dialog', 'example-ui-dialog.tscn'],
-  ['control-containers', 'unit-control-containers.tscn'],
-  ['bbcode', 'unit-rich-text-label.tscn'],
+  // Its `Icon` TextureRect declares no `texture` at all (a layout placeholder in
+  // the mockup), so one dashed fallback is the correct render, not a defect.
+  ['ui-dialog', 'example-ui-dialog.tscn', { minControls: 5, maxFallbacks: 1 }],
+  ['control-containers', 'unit-control-containers.tscn', { minControls: 5 }],
+  ['bbcode', 'unit-rich-text-label.tscn', { minControls: 1 }],
+  // Controls living inside instanced sub-scenes, nested two deep behind a
+  // Node3D root — the shape every real Godot HUD uses.
+  [
+    'control-instanced-hud',
+    'unit-control-instanced-hud.tscn',
+    { minControls: 5, types: ['Label', 'TextureRect'], texts: ['HUD LAYER', 'BADGE'] },
+  ],
+  // A Control parented to each of the five Control types that used to render
+  // only `node` and drop the `children` ControlDispatcher handed them. Every
+  // other 2D fixture nests under containers, which forward children, so the
+  // loss was invisible: the five UNDER * strings are what proves it.
+  // Checked/unchecked/radio indicators, and three Control types whose own
+  // `display` default used to overwrite a hidden node's `display: none`.
+  [
+    'control-state',
+    'unit-control-state.tscn',
+    {
+      minControls: 8,
+      types: ['CheckBox', 'OptionButton', 'Button', 'GridContainer'],
+      texts: ['VISIBLE DROPDOWN'],
+      hiddenNodes: ['HiddenDropdown', 'HiddenButton', 'HiddenGrid'],
+      indicators: [
+        ['checked', 'check', 1],
+        ['unchecked', 'check', 1],
+        ['checked', 'radio', 1],
+        ['unchecked', 'radio', 1],
+      ],
+    },
+  ],
+  // modulate (opacity + tint filter), the Control transform, FILL-beats-SHRINK
+  // size-flag precedence, TextureRect's expand_mode minimum, and Button.icon.
+  [
+    'control-transform-modulate',
+    'unit-control-transform-modulate.tscn',
+    {
+      minControls: 9,
+      types: ['Label', 'TextureRect', 'Button', 'HBoxContainer', 'CenterContainer'],
+      loadedIcons: 1,
+      computed: [
+        ['FadedLabel', 'opacity', (v) => Math.abs(Number(v) - 0.4) < 0.01, '0.4'],
+        ['TintedLabel', 'filter', (v) => v !== 'none', 'a colour-multiply filter'],
+        ['PlainLabel', 'filter', (v) => v === 'none', 'no filter'],
+        ['RotatedIcon', 'transform', (v) => v !== 'none', 'a rotation matrix'],
+        ['MirroredLabel', 'transform', (v) => v.includes('-1'), 'a mirrored matrix'],
+        // FILL|SHRINK_CENTER must STRETCH; SHRINK_CENTER alone must centre.
+        ['FillCentreLabel', 'alignSelf', (v) => v === 'stretch', 'stretch'],
+        ['ShrinkCentreLabel', 'alignSelf', (v) => v === 'center', 'center'],
+        // EXPAND_KEEP_SIZE floors the control at the texture's own size.
+        ['LogoInContainer', 'width', (v) => v > 0, 'a non-zero width'],
+        ['LogoInContainer', 'height', (v) => v > 0, 'a non-zero height'],
+      ],
+    },
+  ],
+  [
+    'control-nested-children',
+    'unit-control-nested-children.tscn',
+    {
+      minControls: 11,
+      types: ['Label', 'CheckBox', 'OptionButton', 'TextureRect', 'RichTextLabel'],
+      texts: [
+        'UNDER LABEL',
+        'UNDER CHECKBOX',
+        'UNDER OPTION',
+        'UNDER TEXTURE',
+        'UNDER RICHTEXT',
+      ],
+    },
+  ],
 ];
 
 mkdirSync(OUT, { recursive: true });
@@ -32,7 +122,7 @@ const browser = await launchShowcaseBrowser();
 const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 });
 
 const results = [];
-for (const [name, file] of TARGETS) {
+for (const [name, file, expect = {}] of TARGETS) {
   const page = await ctx.newPage();
   const errors = [];
   page.on('console', (m) => {
@@ -70,6 +160,49 @@ for (const [name, file] of TARGETS) {
       controls: all.length,
       fallbacks: document.querySelectorAll('[data-control-fallback="true"]').length,
       types: [...new Set(all.map((e) => e.getAttribute('data-control-type')))].sort(),
+      // Every rendered string, for assertions. `textSample` below is the
+      // truncated human-readable version for the report — never assert on it,
+      // a required string can fall outside the slice.
+      texts: all.map((e) => e.textContent?.trim() ?? '').filter((t) => t.length > 0),
+      // Node names the browser actually LAYS OUT. Text can't answer "is this
+      // hidden": a visible container's textContent still includes a
+      // `display: none` child's string. Per-node box presence can — which is
+      // the OptionButton/Button/GridContainer bug this gate now guards.
+      laidOutNodes: all
+        .filter((e) => e.getClientRects().length > 0)
+        .map((e) => e.getAttribute('data-node-name'))
+        .filter((n) => n),
+      // CheckBox draws its state as an indicator glyph; without one a checked
+      // and an unchecked box are indistinguishable on screen.
+      checkIndicators: [...document.querySelectorAll('[data-check-indicator]')].map((e) => ({
+        state: e.getAttribute('data-check-indicator'),
+        style: e.getAttribute('data-check-style'),
+      })),
+      // Computed CSS for named nodes: the only way to see modulate (opacity /
+      // filter), the Control transform, cross-axis size flags, and a
+      // TextureRect's expand_mode minimum — none of which change textContent.
+      computed: Object.fromEntries(
+        all
+          .filter((e) => e.getAttribute('data-node-name'))
+          .map((e) => {
+            const cs = getComputedStyle(e);
+            const box = e.getBoundingClientRect();
+            return [
+              e.getAttribute('data-node-name'),
+              {
+                opacity: cs.opacity,
+                filter: cs.filter,
+                transform: cs.transform,
+                alignSelf: cs.alignSelf,
+                width: Math.round(box.width),
+                height: Math.round(box.height),
+              },
+            ];
+          })
+      ),
+      icons: [...document.querySelectorAll('[data-button-icon]')].map((e) =>
+        e.getAttribute('data-button-icon')
+      ),
       textSample: all
         .filter((e) => e.textContent && e.textContent.trim().length)
         .slice(0, 6)
@@ -78,9 +211,53 @@ for (const [name, file] of TARGETS) {
   });
 
   await page.screenshot({ path: join(OUT, `${name}-2d.png`) });
-  results.push({ name, file, switched, overlay, ...stats, errors: errors.slice(0, 5) });
+
+  const failures = [];
+  if (!overlay) failures.push('overlay never mounted');
+  if (stats.controls < (expect.minControls ?? 1)) {
+    failures.push(`controls ${stats.controls} < expected ${expect.minControls ?? 1}`);
+  }
+  for (const name of expect.hiddenNodes ?? []) {
+    if (stats.laidOutNodes.includes(name)) {
+      failures.push(`node "${name}" has visible = false but is still laid out`);
+    }
+  }
+  for (const [name, prop, predicate, label] of expect.computed ?? []) {
+    const value = stats.computed[name]?.[prop];
+    if (value === undefined) failures.push(`node "${name}" not rendered (no ${prop})`);
+    else if (!predicate(value)) failures.push(`${name}.${prop} = ${value} — expected ${label}`);
+  }
+  if (expect.loadedIcons !== undefined) {
+    const loaded = stats.icons.filter((i) => i === 'loaded').length;
+    if (loaded !== expect.loadedIcons) {
+      failures.push(`expected ${expect.loadedIcons} loaded button icon(s), found ${loaded}`);
+    }
+  }
+  for (const [state, style, count] of expect.indicators ?? []) {
+    const found = stats.checkIndicators.filter(
+      (i) => i.state === state && i.style === style
+    ).length;
+    if (found !== count) {
+      failures.push(`expected ${count} ${state} ${style} indicator(s), found ${found}`);
+    }
+  }
+  for (const type of expect.types ?? []) {
+    if (!stats.types.includes(type)) failures.push(`missing control type ${type}`);
+  }
+  for (const text of expect.texts ?? []) {
+    if (!stats.texts.some((t) => t.includes(text))) failures.push(`missing text "${text}"`);
+  }
+  const maxFallbacks = expect.maxFallbacks ?? 0;
+  if (stats.fallbacks > maxFallbacks) {
+    failures.push(`${stats.fallbacks} unresolved-texture fallback(s) > allowed ${maxFallbacks}`);
+  }
+  if (errors.length > 0) failures.push(`${errors.length} console error(s)`);
+
+  results.push({ name, file, switched, overlay, ...stats, failures, errors: errors.slice(0, 5) });
   console.log(
-    `✓ ${name}: overlay=${overlay} controls=${stats.controls} fallbacks=${stats.fallbacks} types=[${stats.types.join(',')}] errors=${errors.length}`
+    `${failures.length ? '✗' : '✓'} ${name}: overlay=${overlay} controls=${stats.controls} ` +
+      `fallbacks=${stats.fallbacks} types=[${stats.types.join(',')}] errors=${errors.length}` +
+      (failures.length ? `\n    ${failures.join('\n    ')}` : '')
   );
   await page.close();
 }
@@ -89,3 +266,11 @@ await ctx.close();
 await browser.close();
 writeFileSync(join(OUT, 'verify-2d.json'), JSON.stringify(results, null, 2));
 console.log(`\nWrote ${results.length} screenshots + verify-2d.json to ${OUT}`);
+
+const failed = results.filter((r) => r.failures.length > 0);
+if (failed.length > 0) {
+  console.error(`\n[verify-2d] ${failed.length}/${results.length} target(s) failed:`);
+  for (const r of failed) console.error(`  ${r.name}: ${r.failures.join('; ')}`);
+  process.exit(1);
+}
+console.log(`[verify-2d] PASS: ${results.length}/${results.length} targets.`);

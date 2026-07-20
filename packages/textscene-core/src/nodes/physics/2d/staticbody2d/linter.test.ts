@@ -115,22 +115,20 @@ physics_material_override = SubResource("mat_1")
 
     runPropertyValidation({ nodeType: 'StaticBody2D', acceptChild: collisionShape2d }, [
       {
-        prop: 'collision_layer',
-        valid: [1, 100, 1048575],
-        invalid: [
-          { value: -1, contains: ['between 0 and 1048575'] },
-          { value: 2000000, contains: ['between 0 and 1048575'] },
+          prop: 'collision_layer',
+          valid: [1, 100, 1048575, 2000000, 2147483648, 4294967295],
+          invalid: [
+{ value: -1, contains: ['must be between 0 and 4294967295'] },
           { value: '"invalid"' },
-        ],
-      },
+          ],
+        },
       {
-        prop: 'collision_mask',
-        valid: [1, 255, 1048575],
-        invalid: [
-          { value: -5, contains: ['between 0 and 1048575'] },
-          { value: 5000000, contains: ['between 0 and 1048575'] },
-        ],
-      },
+          prop: 'collision_mask',
+          valid: [1, 255, 1048575, 5000000, 2147483648, 4294967295],
+          invalid: [
+{ value: -5, contains: ['must be between 0 and 4294967295'] },
+          ],
+        },
       {
         prop: 'collision_priority',
         valid: [0.0, 0.5, 1.0, -1.0, 100.5],

@@ -5,7 +5,7 @@
 
 import '../../base/node3d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
-import { v } from '../../../linter/validators/index.js';
+import { layerBitmask, v } from '../../../linter/validators/index.js';
 
 const CAST_SHADOW = { 0: 'OFF', 1: 'ON', 2: 'DOUBLE_SIDED', 3: 'SHADOWS_ONLY' };
 const GI_MODE = { 0: 'DISABLED', 1: 'STATIC', 2: 'DYNAMIC' };
@@ -26,12 +26,7 @@ validatorRegistry.registerAll('MeshInstance3D', {
     2,
     VISIBILITY_FADE_MODE
   ),
-  layers: v.int('layers', {
-    min: 1,
-    max: 1048575,
-    message:
-      "Property 'layers' must be between 1 and 1048575. Valid range: bits 1-20",
-  }),
+  layers: layerBitmask('layers'),
   mesh: v.resourceReference('mesh'),
   material_override: v.resourceReference('material_override'),
   material_overlay: v.resourceReference('material_overlay'),

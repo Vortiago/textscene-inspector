@@ -178,6 +178,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Grid Map Centering",
+    "file": "unit-grid-map-centering.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Grid Map",
     "file": "unit-grid-map.tscn",
     "category": "Other"
@@ -190,6 +195,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Label3d",
     "file": "unit-label3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Layer Bitmask 32bit",
+    "file": "unit-layer-bitmask-32bit.tscn",
     "category": "Other"
   },
   {
@@ -248,6 +258,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Shadows Only",
+    "file": "unit-shadows-only.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Skeleton3d",
     "file": "unit-skeleton3d.tscn",
     "category": "Other"
@@ -265,6 +280,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Staticbody2d",
     "file": "unit-staticbody2d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Subtree Under Leaf Nodes",
+    "file": "unit-subtree-under-leaf-nodes.tscn",
     "category": "Other"
   },
   {
@@ -588,9 +608,84 @@ export const fixtures: Fixture[] = [
     "category": "Integration - Multi-Node"
   },
   {
+    "name": "2d Geometry Parity",
+    "file": "unit-2d-geometry-parity.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Line2d",
+    "file": "unit-line2d.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Marker2d",
+    "file": "unit-marker2d.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Path2d",
+    "file": "unit-path2d.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Pathfollow2d",
+    "file": "unit-pathfollow2d.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Polygon2d",
+    "file": "unit-polygon2d.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Sprite2d Canvastexture",
+    "file": "unit-sprite2d-canvastexture.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Sprite2d",
+    "file": "unit-sprite2d.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Tile Map Layer Flips",
+    "file": "unit-tile-map-layer-flips.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Tile Map Layer Hexagon",
+    "file": "unit-tile-map-layer-hexagon.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Tile Map Layer Isometric",
+    "file": "unit-tile-map-layer-isometric.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Tile Map Layer",
+    "file": "unit-tile-map-layer.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Tile Map",
+    "file": "unit-tile-map.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Area Light Normalize",
+    "file": "unit-area-light-normalize.tscn",
+    "category": "Unit - Lights"
+  },
+  {
     "name": "Area Light3d",
     "file": "unit-area-light3d.tscn",
     "category": "Unit - Lights"
+  },
+  {
+    "name": "Arraymesh Uv",
+    "file": "unit-arraymesh-uv.tscn",
+    "category": "Unit - Primitive Meshes"
   },
   {
     "name": "Arraymesh",
@@ -703,6 +798,36 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Control Instanced Hud Badge",
+    "file": "unit-control-instanced-hud-badge.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Control Instanced Hud Layer",
+    "file": "unit-control-instanced-hud-layer.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Control Instanced Hud",
+    "file": "unit-control-instanced-hud.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Control Nested Children",
+    "file": "unit-control-nested-children.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Control State",
+    "file": "unit-control-state.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Control Transform Modulate",
+    "file": "unit-control-transform-modulate.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Grid Container",
     "file": "unit-grid-container.tscn",
     "category": "Unit - 2D UI Controls"
@@ -798,6 +923,16 @@ export const fixtures: Fixture[] = [
     "category": "Unit - CSG Primitives"
   },
   {
+    "name": "Csg Defaults",
+    "file": "unit-csg-defaults.tscn",
+    "category": "Unit - CSG Primitives"
+  },
+  {
+    "name": "Csg External Material",
+    "file": "unit-csg-external-material.tscn",
+    "category": "Unit - CSG Primitives"
+  },
+  {
     "name": "Csg Sphere",
     "file": "unit-csg-sphere.tscn",
     "category": "Unit - CSG Primitives"
@@ -826,56 +961,6 @@ export const fixtures: Fixture[] = [
     "name": "External Texture",
     "file": "unit-external-texture.tscn",
     "category": "Unit - External Resources"
-  },
-  {
-    "name": "Line2d",
-    "file": "unit-line2d.tscn",
-    "category": "Unit - 2D Canvas"
-  },
-  {
-    "name": "Marker2d",
-    "file": "unit-marker2d.tscn",
-    "category": "Unit - 2D Canvas"
-  },
-  {
-    "name": "Path2d",
-    "file": "unit-path2d.tscn",
-    "category": "Unit - 2D Canvas"
-  },
-  {
-    "name": "Pathfollow2d",
-    "file": "unit-pathfollow2d.tscn",
-    "category": "Unit - 2D Canvas"
-  },
-  {
-    "name": "Polygon2d",
-    "file": "unit-polygon2d.tscn",
-    "category": "Unit - 2D Canvas"
-  },
-  {
-    "name": "Sprite2d",
-    "file": "unit-sprite2d.tscn",
-    "category": "Unit - 2D Canvas"
-  },
-  {
-    "name": "Tile Map Layer Hexagon",
-    "file": "unit-tile-map-layer-hexagon.tscn",
-    "category": "Unit - 2D Canvas"
-  },
-  {
-    "name": "Tile Map Layer Isometric",
-    "file": "unit-tile-map-layer-isometric.tscn",
-    "category": "Unit - 2D Canvas"
-  },
-  {
-    "name": "Tile Map Layer",
-    "file": "unit-tile-map-layer.tscn",
-    "category": "Unit - 2D Canvas"
-  },
-  {
-    "name": "Tile Map",
-    "file": "unit-tile-map.tscn",
-    "category": "Unit - 2D Canvas"
   },
   {
     "name": "Material Ao",

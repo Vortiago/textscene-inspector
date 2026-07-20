@@ -30,7 +30,22 @@ export function buildArrayMeshGeometry(mesh: ArrayMeshData): THREE.BufferGeometr
   let indexBase = 0;
   mesh.surfaces.forEach((surface, surfaceIndex) => {
     positions.set(surface.positions, vertexBase * 3);
-    if (uvs && surface.uvs) uvs.set(surface.uvs, vertexBase * 2);
+    // Godot's UV origin is the image's TOP-left; textures load here with THREE's
+    // default flipY=true (the convention `spriteFrame.ts` and `tileGeometry.ts`
+    // build their UVs for), which uploads the image bottom-up. Handing Godot's V
+    // through unchanged therefore samples the texture vertically mirrored —
+    // every tile of an atlas lands on the wrong row.
+    if (uvs) {
+      if (surface.uvs) uvs.set(surface.uvs, vertexBase * 2);
+      // Flip this surface's whole range, including a surface that carries no
+      // UVs of its own — `hasUV` is `some`, so the buffer spans those too, and
+      // Godot samples them at UV (0,0), the image's TOP-left. Flipping only the
+      // written surfaces would leave one geometry in two V spaces.
+      for (let i = 0; i < surface.vertexCount; i++) {
+        const v = (vertexBase + i) * 2 + 1;
+        uvs[v] = 1 - uvs[v]!;
+      }
+    }
     if (normals && surface.normals) normals.set(surface.normals, vertexBase * 3);
     // Re-base each surface's indices into the merged vertex array AND reverse
     // each triangle's winding: Godot fronts triangles clockwise, three.js

@@ -14,4 +14,13 @@ export interface Line2DProperties extends Node2DProperties {
    * When closed, one extra quad is emitted from last point → first point.
    */
   closed: boolean;
+  /**
+   * Corner style. Godot has no "no joint" value — `LINE_JOINT_SHARP` (0) is the
+   * default, so interior corners are ALWAYS filled.
+   */
+  jointMode: number;
+  /** Miter length limit in half-widths before SHARP bevels. Default 2.0. */
+  sharpLimit: number;
+  /** Triangles per ROUND joint. Default 8. */
+  roundPrecision: number;
 }

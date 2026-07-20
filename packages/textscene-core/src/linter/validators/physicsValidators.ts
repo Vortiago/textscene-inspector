@@ -2,9 +2,14 @@
 
 import type { ParseError } from '../../linter/types.js';
 import { propertyError } from './propertyError.js';
+import { MAX_LAYER_BITMASK } from './layerBitmask.js';
 
-/** Collision layer/mask bitmask maximum (20 bits: 2^20 - 1 = 1048575) */
-export const MAX_COLLISION_BITMASK = 1048575;
+/**
+ * Collision layer/mask bitmask maximum. Godot stores these as 32-bit masks —
+ * see `layerBitmask.ts` for why 1048575 (the 20 user-visible render layers)
+ * is a default, never a bound.
+ */
+export const MAX_COLLISION_BITMASK = MAX_LAYER_BITMASK;
 
 /** Space override enum values (used in Area2D/Area3D) */
 export const SPACE_OVERRIDE_VALUES = {
@@ -24,7 +29,7 @@ export const DISABLE_MODE_VALUES = {
 
 /**
  * Creates a collision layer validator
- * Validates bitmask in range 0-1048575 (20 bits)
+ * Validates a 32-bit bitmask (0 .. 2^32 - 1)
  */
 export function createCollisionLayerValidator(
   errorCodeFormat: string = 'INVALID_COLLISION_LAYER_FORMAT',
@@ -36,7 +41,7 @@ export function createCollisionLayerValidator(
       return propertyError(key, line, `Property 'collision_layer' must be a number, got: "${value}"`, errorCodeFormat);
     }
     if (num < 0 || num > MAX_COLLISION_BITMASK) {
-      return propertyError(key, line, `Property 'collision_layer' must be between 0 and ${MAX_COLLISION_BITMASK} (got ${num}). Valid range: 20-bit bitmask`, errorCodeValue);
+      return propertyError(key, line, `Property 'collision_layer' must be between 0 and ${MAX_COLLISION_BITMASK} (got ${num}). Valid range: 32-bit bitmask`, errorCodeValue);
     }
     return null;
   };
@@ -44,7 +49,7 @@ export function createCollisionLayerValidator(
 
 /**
  * Creates a collision mask validator
- * Validates bitmask in range 0-1048575 (20 bits)
+ * Validates a 32-bit bitmask (0 .. 2^32 - 1)
  */
 export function createCollisionMaskValidator(
   errorCodeFormat: string = 'INVALID_COLLISION_MASK_FORMAT',
@@ -56,7 +61,7 @@ export function createCollisionMaskValidator(
       return propertyError(key, line, `Property 'collision_mask' must be a number, got: "${value}"`, errorCodeFormat);
     }
     if (num < 0 || num > MAX_COLLISION_BITMASK) {
-      return propertyError(key, line, `Property 'collision_mask' must be between 0 and ${MAX_COLLISION_BITMASK} (got ${num}). Valid range: 20-bit bitmask`, errorCodeValue);
+      return propertyError(key, line, `Property 'collision_mask' must be between 0 and ${MAX_COLLISION_BITMASK} (got ${num}). Valid range: 32-bit bitmask`, errorCodeValue);
     }
     return null;
   };

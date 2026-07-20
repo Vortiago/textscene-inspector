@@ -1,0 +1,23 @@
+[gd_scene load_steps=2 format=3 uid="uid://unitlayerbitmask32"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_body"]
+size = Vector3(1, 1, 1)
+
+[node name="LayerBitmaskRoot" type="Node3D"]
+
+[node name="HighLayerBody" type="StaticBody3D" parent="."]
+collision_layer = 2147483654
+collision_mask = 2147483648
+
+[node name="Shape" type="CollisionShape3D" parent="HighLayerBody"]
+shape = SubResource("BoxShape3D_body")
+
+[node name="AllLayersLight" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
+light_cull_mask = 4294967295
+fov = 70.0
+
+[node name="AllLayersCamera" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 4)
+cull_mask = 4294967295
+fov = 70.0

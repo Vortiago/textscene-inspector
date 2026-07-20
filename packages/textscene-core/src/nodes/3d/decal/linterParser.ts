@@ -2,7 +2,7 @@
 
 import '../../base/node3d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
-import { v } from '../../../linter/validators/index.js';
+import { layerBitmask, v } from '../../../linter/validators/index.js';
 
 validatorRegistry.registerAll('Decal', {
   texture_albedo: v.resourceReference('texture_albedo'),
@@ -16,9 +16,5 @@ validatorRegistry.registerAll('Decal', {
   normal_fade: v.float('normal_fade', { min: 0, max: 1 }),
   upper_fade: v.float('upper_fade', { min: 0, max: 1 }),
   lower_fade: v.float('lower_fade', { min: 0, max: 1 }),
-  cull_mask: v.int('cull_mask', {
-    min: 1,
-    max: 1048575,
-    message: "Property 'cull_mask' must be between 1 and 1048575. Valid range: bits 1-20",
-  }),
+  cull_mask: layerBitmask('cull_mask'),
 });

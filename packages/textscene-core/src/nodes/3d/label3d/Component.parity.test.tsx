@@ -3,7 +3,8 @@
  * - billboard default is DISABLED (was ENABLED → labels wrongly tracked camera).
  * - pixel_size default 0.005; outline_size default 12 (Godot defaults).
  * - quad world size = Godot-font-pixels × pixel_size (worldScale corrects for
- *   the high-res canvas rendered at DEFAULT_FONT_SIZE vs Godot's font_size 16).
+ *   the high-res canvas rendered at RENDER_FONT_SIZE vs Godot's font_size,
+ *   whose class-reference default is 32 — class_label3d.html properties table).
  * - double_sided=false → FrontSide.
  */
 import { beforeEach, describe, it, expect, vi } from 'vitest';
@@ -81,20 +82,20 @@ describe('Label3D render parity', () => {
   });
 
   it('outline_size scales canvas lineWidth by render/Godot font ratio (#14)', async () => {
-    // outline_size 12 default; canvas renders at DEFAULT_FONT_SIZE 128, Godot
-    // font_size 16 → lineWidth = 12 × (128 / 16) = 96.
+    // outline_size 12 default; canvas renders at RENDER_FONT_SIZE 128, Godot
+    // font_size default 32 → lineWidth = 12 × (128 / 32) = 48.
     await renderLabel(node({ outline_size: '12' }));
-    expect(mockContext.lineWidth).toBeCloseTo(96, 5);
+    expect(mockContext.lineWidth).toBeCloseTo(48, 5);
   });
 
-  it('quad height = canvas pixels × pixel_size × worldScale (Godot 16 / render 128)', async () => {
-    // canvas.height = DEFAULT_FONT_SIZE(128) + 20 = 148; worldScale = 16/128 maps
-    // the high-res canvas back to Godot-pixel space so the world size matches
-    // Godot's default font_size, not the 128px render resolution.
+  it('quad height = canvas pixels × pixel_size × worldScale (Godot 32 / render 128)', async () => {
+    // One line: canvas.height = RENDER_FONT_SIZE(128) + 2×10 padding = 148;
+    // worldScale = 32/128 maps the high-res canvas back to Godot-pixel space so
+    // the world size matches Godot's default font_size, not the render one.
     const r = await renderLabel(node({ pixel_size: '0.01' }));
     const geom = r.scene.findByType('Mesh').instance.geometry as unknown as {
       parameters: { height: number };
     };
-    expect(geom.parameters.height).toBeCloseTo(148 * 0.01 * (16 / 128), 4); // ≈ 0.185
+    expect(geom.parameters.height).toBeCloseTo(148 * 0.01 * (32 / 128), 4); // ≈ 0.37
   });
 });

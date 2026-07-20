@@ -1,0 +1,23 @@
+[gd_scene load_steps=2 format=3 uid="uid://unitarraymeshuvscene"]
+
+[ext_resource type="ArrayMesh" path="res://unit-arraymesh-uv-quad.tres" id="1_quad"]
+
+[node name="Root" type="Node3D"]
+
+[node name="Quad" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+mesh = ExtResource("1_quad")
+
+[node name="Title" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.8, 0)
+text = "ArrayMesh UV orientation"
+pixel_size = 0.008
+billboard = 1
+modulate = Color(1, 1, 0.7, 1)
+
+[node name="Description" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.8, 0)
+text = "Green band on TOP, red on BOTTOM (Godot V origin = image top)"
+pixel_size = 0.006
+billboard = 1
+modulate = Color(1, 1, 1, 1)

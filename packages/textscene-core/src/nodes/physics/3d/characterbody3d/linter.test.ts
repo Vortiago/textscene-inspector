@@ -178,15 +178,15 @@ describe('CharacterBody3D Linter', () => {
         expectDiagnostic(scene(node('CharacterBody3D', { collision_layer: -1 })), {
           prop: 'collision_layer',
           severity: 'error',
-          contains: ['between 0 and 1048575'],
+          contains: ['between 0 and 4294967295'],
         });
       });
 
-      it('should reject collision_layer exceeding maximum', () => {
-        expectDiagnostic(scene(node('CharacterBody3D', { collision_layer: 2000000 })), {
+      it('should reject collision_layer exceeding the 32-bit maximum', () => {
+        expectDiagnostic(scene(node('CharacterBody3D', { collision_layer: 4294967296 })), {
           prop: 'collision_layer',
           severity: 'error',
-          contains: ['between 0 and 1048575'],
+          contains: ['between 0 and 4294967295'],
         });
       });
     });

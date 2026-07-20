@@ -37,8 +37,16 @@ export interface GodotTrack {
    * derived from the track type: `position`, `scale`, or `quaternion`.
    */
   property: string;
-  /** Godot interpolation mode (0 nearest, 1 linear, 2 cubic). */
+  /**
+   * Godot interpolation mode: NEAREST 0, LINEAR 1 (the default when the key is
+   * absent), CUBIC 2, LINEAR_ANGLE 3, CUBIC_ANGLE 4.
+   */
   interp: number;
+  /**
+   * VALUE-track update mode: CONTINUOUS 0, DISCRETE 1, CAPTURE 2. DISCRETE
+   * FORCES nearest interpolation regardless of `interp` (`animation.cpp`).
+   */
+  updateMode?: number;
   keys: GodotKeyframe[];
 }
 
@@ -110,7 +118,10 @@ function parseTracks(data: Record<string, unknown>): GodotTrack[] {
     const type = stripQuotes(asString(data[`tracks/${i}/type`]) ?? '');
     const rawPath = asString(data[`tracks/${i}/path`]) ?? '';
     const rawKeys = asString(data[`tracks/${i}/keys`]) ?? '';
+    // class_animation.html / animation.h: interp defaults to 1 (LINEAR),
+    // update_mode to 0 (CONTINUOUS).
     const interp = numberOr(data[`tracks/${i}/interp`], 1);
+    const updateMode = numberOr(data[`tracks/${i}/update`], 0);
 
     // `hasOwn` so a track type that collides with an Object.prototype key
     // (e.g. "constructor", "toString") doesn't resolve to an inherited member.
@@ -128,7 +139,7 @@ function parseTracks(data: Record<string, unknown>): GodotTrack[] {
       const keys = parseFlatTransformKeys(rawKeys, transform3d.components);
       if (keys.length === 0) continue;
 
-      tracks.push({ type, targetPath: inner, property: transform3d.property, interp, keys });
+      tracks.push({ type, targetPath: inner, property: transform3d.property, interp, updateMode, keys });
       continue;
     }
 
@@ -140,7 +151,14 @@ function parseTracks(data: Record<string, unknown>): GodotTrack[] {
     const keys = parseKeys(rawKeys);
     if (keys.length === 0) continue;
 
-    tracks.push({ type, targetPath: target.targetPath, property: target.property, interp, keys });
+    tracks.push({
+      type,
+      targetPath: target.targetPath,
+      property: target.property,
+      interp,
+      updateMode,
+      keys,
+    });
   }
   return tracks;
 }

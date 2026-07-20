@@ -13,7 +13,7 @@ import { parseColorToHex } from '../../../../utils/colorParser';
 import { LIGHT_INTENSITY_SCALE, DEFAULT_SHADOW_BIAS } from '../../../../r3f/lightConstants';
 import { PointLightGizmo } from '../shared/lightHelpers';
 
-export function OmniLight3D({ node }: NodeComponentProps) {
+export function OmniLight3D({ node, children }: NodeComponentProps) {
   const properties = node.properties as OmniLight3DProperties;
   const lightRef = useRef<THREE.PointLight | null>(null);
   const { position, rotation, scale } = useMemo(
@@ -40,6 +40,7 @@ export function OmniLight3D({ node }: NodeComponentProps) {
         shadow-camera-far={properties.omni_range}
       />
       <PointLightGizmo lightRef={lightRef} />
+      {children}
     </group>
   );
 }

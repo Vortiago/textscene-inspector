@@ -22,7 +22,10 @@ export function parseAnimationTree(
     ...baseProps,
     parameters: collectParameters(properties),
     anim_player: properties.anim_player ?? 'NodePath("..")',
-    active: boolOr(properties.active, false),
+    // Godot's AnimationMixer.active defaults to TRUE and is omitted at its
+    // default, so an absent key means active — defaulting to false leaves every
+    // authored AnimationTree inert.
+    active: boolOr(properties.active, true),
     process_callback: enumOr(
       properties.process_callback,
       AnimationTreeProcessMode.IDLE,
@@ -38,16 +41,22 @@ export function parseAnimationTree(
       CallbackModeMethod.DEFERRED,
       [CallbackModeMethod.DEFERRED, CallbackModeMethod.IMMEDIATE]
     ),
+    // AnimationTree OVERRIDES two AnimationMixer defaults — its own XML carries
+    // `overrides="AnimationMixer"` on both: callback_mode_discrete is 2
+    // (FORCE_CONTINUOUS, "the default behavior for AnimationTree") where the
+    // mixer's is 1, and `deterministic` is true where the mixer's is false.
     callback_mode_discrete: enumOr(
       properties.callback_mode_discrete,
-      CallbackModeDiscrete.DOMINANT,
+      CallbackModeDiscrete.FORCE_CONTINUOUS,
       [CallbackModeDiscrete.DOMINANT, CallbackModeDiscrete.RECESSIVE, CallbackModeDiscrete.FORCE_CONTINUOUS]
     ),
     root_motion_track: properties.root_motion_track ?? 'NodePath("")',
-    advance_expression_base_node: properties.advance_expression_base_node ?? 'NodePath("..")',
+    // class_animationtree.html: NodePath(".") — the mixer's NodePath("..") is
+    // `root_node`'s default, a different property the two used to share.
+    advance_expression_base_node: properties.advance_expression_base_node ?? 'NodePath(".")',
     audio_max_polyphony: intOr(properties.audio_max_polyphony, 32),
     root_node: properties.root_node ?? 'NodePath("..")',
-    deterministic: boolOr(properties.deterministic, false),
+    deterministic: boolOr(properties.deterministic, true),
     reset_on_save: boolOr(properties.reset_on_save, true),
     root_motion_local: boolOr(properties.root_motion_local, false),
   };

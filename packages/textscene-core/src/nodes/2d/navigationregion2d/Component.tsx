@@ -11,10 +11,8 @@ import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { Node2D } from '../../base/node2d/Component';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
+import { useSubOrExtResource } from '../../../resources/useSubOrExtResource';
 import { useViewportMode } from '../../../r3f/contexts/ViewportModeContext';
-import { resolveExtResourcePath } from '../../../resources/SubResourceResolver';
-import { useResource } from '../../../resources/useResource';
-import type { ParsedTresFile } from '../../../parser/tresParser';
 import { parsePackedVector2Array, parsePackedInt32Arrays } from '../../../resources/shapes/packedArray';
 import {
   buildNavFaceGeometry,
@@ -26,17 +24,19 @@ import type { NavigationRegion2DProperties } from './types';
 
 export function NavigationRegion2D({ node, children }: NodeComponentProps) {
   const properties = node.properties as NavigationRegion2DProperties;
-  const { externalResources } = useSceneResources();
+  const { externalResources, internalResources } = useSceneResources();
   const { showNavigation } = useViewportMode();
 
-  const resolvedPath = properties.navigationPolygon
-    ? resolveExtResourcePath(properties.navigationPolygon, externalResources)
-    : null;
-  const tresPath = resolvedPath?.endsWith('.tres') ? resolvedPath : null;
-  const result = useResource<ParsedTresFile>(tresPath ?? '', 'Resource');
+  // A NavigationPolygon is as often an inline `[sub_resource]` as a `.tres`;
+  // resolving only one form drew no navmesh for the other.
+  const resource = useSubOrExtResource(
+    properties.navigationPolygon,
+    internalResources,
+    externalResources
+  );
 
   const overlay = useMemo(() => {
-    const props = result.value?.properties;
+    const props = resource?.data as Record<string, string> | undefined;
     if (!props || !props['vertices'] || !props['polygons']) return null;
     const positions = vector2ToPositions(parsePackedVector2Array(props['vertices']));
     const polygons = parsePackedInt32Arrays(props['polygons']);
@@ -45,7 +45,7 @@ export function NavigationRegion2D({ node, children }: NodeComponentProps) {
       faces: buildNavFaceGeometry(positions, polygons),
       edges: buildNavEdgeGeometry(positions, polygons),
     };
-  }, [result.value]);
+  }, [resource]);
 
   // Per-component geometries (not cached); R3F won't auto-dispose geometry
   // passed via attach. Dispose on rebuild / unmount to avoid GPU leaks.

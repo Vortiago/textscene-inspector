@@ -1,0 +1,23 @@
+[gd_scene load_steps=3 format=3 uid="uid://unitgridmapcentering"]
+
+[ext_resource type="MeshLibrary" path="res://unit-grid-map-lib.tres" id="1_lib"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_ref"]
+size = Vector3(0.7, 0.7, 0.7)
+
+[node name="Root" type="Node3D"]
+
+[node name="GridMap" type="GridMap" parent="."]
+mesh_library = ExtResource("1_lib")
+cell_size = Vector3(2, 2, 2)
+data = {
+"cells": PackedInt32Array(0, 0, 0)
+}
+
+[node name="CellCenterMarker" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, -1)
+mesh = SubResource("BoxMesh_ref")
+
+[node name="OriginMarker" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -1)
+mesh = SubResource("BoxMesh_ref")

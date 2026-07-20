@@ -123,6 +123,15 @@ describe('MeshInstance3D flags (assertions 11–17)', () => {
     expect(renderer.scene.findByType('Mesh').instance.castShadow).toBe(false);
   });
 
+  it('an absent cast_shadow is ON, not OFF — Godot defaults it to 1', async () => {
+    // class_geometryinstance3d.html properties table: cast_shadow default 1
+    // (SHADOW_CASTING_SETTING_ON). Treating undefined as OFF meant no mesh in
+    // the corpus cast a shadow unless the scene said so explicitly.
+    const node = makeNode({ mesh: 'SubResource("Box_1")' });
+    const renderer = await render(node, [sub('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' })]);
+    expect(renderer.scene.findByType('Mesh').instance.castShadow).toBe(true);
+  });
+
   it('#17 cast_shadow=1 (ON) → mesh.castShadow === true', async () => {
     const node = makeNode({ mesh: 'SubResource("Box_1")', castShadow: 1 });
     const renderer = await render(node, [sub('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' })]);

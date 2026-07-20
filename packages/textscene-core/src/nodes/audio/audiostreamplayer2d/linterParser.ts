@@ -4,7 +4,7 @@
  */
 
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
-import { v } from '../../../linter/validators/index.js';
+import { layerBitmask, v } from '../../../linter/validators/index.js';
 import { busValidator } from '../busValidator.js';
 import { streamValidator } from '../streamValidator.js';
 
@@ -24,12 +24,7 @@ validatorRegistry.registerAll('AudioStreamPlayer2D', {
   max_distance: v.positiveFloat('max_distance'),
   attenuation: v.positiveFloat('attenuation'),
   panning_strength: v.float('panning_strength', { min: 0, max: 1 }),
-  area_mask: v.int('area_mask', {
-    min: 0,
-    max: 1048575,
-    message:
-      "Property 'area_mask' must be between 0 and 1048575. Valid range: 20-bit bitmask",
-  }),
+  area_mask: layerBitmask('area_mask'),
   playback_type: v.enumInt('playback_type', 0, 2, PLAYBACK_TYPE),
   bus: busValidator,
   max_polyphony: v.int('max_polyphony', {

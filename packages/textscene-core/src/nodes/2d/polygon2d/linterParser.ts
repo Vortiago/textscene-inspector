@@ -16,6 +16,7 @@ validatorRegistry.registerAll('Polygon2D', {
   antialiased: v.boolean('antialiased'),
   invert_enabled: v.boolean('invert_enabled'),
   invert_border: v.float('invert_border'),
+  internal_vertex_count: v.int('internal_vertex_count', { min: 0 }),
   texture_offset: v.vector2('texture_offset'),
   texture_scale: v.vector2('texture_scale'),
   texture_rotation: v.float('texture_rotation'),

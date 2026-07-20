@@ -37,6 +37,7 @@ import { MeshGeometry } from './meshGeometry';
 import { parseStandardMaterial3DScalars } from '../../../r3f/materials/standardMaterialScalars';
 import { resolveStandardMaterial } from '../../../r3f/materials/resolveStandardMaterial';
 import { StandardMaterialSlot } from '../../../r3f/materials/StandardMaterialSlot';
+import { ExternalMaterialSlot } from '../../../r3f/materials/ExternalMaterialSlot';
 import { applyUVTransform } from './applyUVTransform';
 import { triplanarPlaneScale } from './triplanarScale';
 
@@ -51,7 +52,7 @@ const TEXTURE_PROPERTIES = [
   'heightmap_texture',
 ] as const;
 
-export function MeshInstance3D({ node }: NodeComponentProps) {
+export function MeshInstance3D({ node, children }: NodeComponentProps) {
   const properties = node.properties as MeshInstance3DProperties;
   const { internalResources, externalResources } = useSceneResources();
 
@@ -239,15 +240,24 @@ export function MeshInstance3D({ node }: NodeComponentProps) {
     return null;
   }, [textureSlots, textureRequests]);
 
-  // Parity-audit fix: cast_shadow mode 2 (DOUBLE_SIDED) sets
-  // material.shadowSide = DoubleSide; mode 3 (SHADOWS_ONLY) keeps the
-  // shadow pass on but hides the mesh from the colour buffer.
+  // cast_shadow mode 2 (DOUBLE_SIDED) sets material.shadowSide = DoubleSide;
+  // mode 3 (SHADOWS_ONLY) hides the mesh from the colour buffer while it keeps
+  // casting — see MeshShell for why that is NOT `visible = false`.
   const shadowFlags = shadowCastingFlags(properties.castShadow);
   const castShadow = shadowFlags.castShadow;
-  const visible = properties.visible !== false && !shadowFlags.shadowsOnly;
+  const visible = properties.visible !== false;
 
   // Every render branch wraps its content in the same attribute shell.
-  const shellProps = { name: node.name, position, rotation, scale, visible, castShadow };
+  const shellProps = {
+    name: node.name,
+    position,
+    rotation,
+    scale,
+    visible,
+    castShadow,
+    shadowsOnly: shadowFlags.shadowsOnly,
+    subtree: children,
+  };
 
   // Unresolved mesh (no mesh, external GLB, missing SubResource): magenta
   // wireframe placeholder. An external ArrayMesh (`arrayMeshPath`) is NOT
@@ -273,11 +283,13 @@ export function MeshInstance3D({ node }: NodeComponentProps) {
         </MeshShell>
       );
     }
-    if (!arrayMeshResult.value) return null;
+    // Still loading: draw no geometry, but keep the shell so the node's own
+    // descendants (which do not depend on the .tres) stay mounted meanwhile.
+    if (!arrayMeshResult.value) return <MeshShell {...shellProps}>{null}</MeshShell>;
 
     // Loaded external ArrayMesh: render the decoded geometry with one material
     // per surface (draw group). Each surface's StandardMaterial3D `.tres` is
-    // resolved through the material pipeline by an <ArrayMeshSurfaceMaterial>
+    // resolved through the material pipeline by an <ExternalMaterialSlot>
     // child — that keeps the `useResource` calls one-per-component (rules of
     // hooks) while still loading textured materials for every surface.
     const { geometry, materialPaths } = arrayMeshResult.value;
@@ -287,7 +299,7 @@ export function MeshInstance3D({ node }: NodeComponentProps) {
       <MeshShell {...shellProps}>
         <primitive object={geometry} attach="geometry" />
         {surfacePaths.map((path, i) => (
-          <ArrayMeshSurfaceMaterial
+          <ExternalMaterialSlot
             key={`surf-${i}`}
             path={path}
             attach={multiSurface ? `material-${i}` : 'material'}
@@ -353,17 +365,37 @@ interface MeshShellProps {
   scale: [number, number, number];
   visible: boolean;
   castShadow: boolean;
+  /** `cast_shadow = SHADOWS_ONLY` (3): cast, but draw nothing. */
+  shadowsOnly: boolean;
+  /** The dispatched scene-tree subtree parented under this MeshInstance3D. */
+  subtree: ReactNode;
   children: ReactNode;
 }
 
 /**
  * Shared attribute shell for every `<mesh>` branch in MeshInstance3D.
  * All five branches (placeholder, unavailable ArrayMesh, loading ArrayMesh,
- * missing-texture and fully-resolved) set the same six positional/visibility
- * props; this helper keeps them in one place so a future prop rename or
- * addition only changes one definition.
+ * missing-texture and fully-resolved) set the same props; this helper keeps
+ * them in one place so a future prop rename or addition only changes one
+ * definition.
+ *
+ * `children` is the geometry/material slot each branch fills; `subtree` is the
+ * node's own scene-tree descendants, which render inside the mesh so they
+ * inherit its transform (Godot draws children after, and relative to, the
+ * node). Every branch — including the ones that draw a placeholder — must pass
+ * it, or the descendants vanish with the mesh.
  */
-function MeshShell({ name, position, rotation, scale, visible, castShadow, children }: MeshShellProps) {
+function MeshShell({
+  name,
+  position,
+  rotation,
+  scale,
+  visible,
+  castShadow,
+  shadowsOnly,
+  subtree,
+  children,
+}: MeshShellProps) {
   return (
     <mesh
       name={name}
@@ -375,6 +407,20 @@ function MeshShell({ name, position, rotation, scale, visible, castShadow, child
       receiveShadow
     >
       {children}
+      {/* SHADOWS_ONLY draws nothing but must still CAST, and its descendants
+          must still render. `visible = false` gives neither: three's
+          `WebGLShadowMap.renderObject` opens with
+          `if (object.visible === false) return;`, which skips the shadow pass
+          AND stops walking the subtree. Setting `material.visible = false` is
+          no better — the same function gates the depth material on it. A
+          material that writes neither colour nor depth is what separates the
+          two passes: `getDepthMaterial` copies alphaMap/alphaTest/map and never
+          `colorWrite`, so the shadow comes through untouched. Mounting after
+          `children` makes this the material R3F attaches last. */}
+      {shadowsOnly && (
+        <meshBasicMaterial attach="material" colorWrite={false} depthWrite={false} />
+      )}
+      {subtree}
     </mesh>
   );
 }
@@ -425,39 +471,6 @@ function SecondarySurfaceMaterial({
       shadowSide={shadowSide ?? null}
       emissive={scalars.emissive}
       emissiveIntensity={scalars.emissiveIntensity}
-    />
-  );
-}
-
-/**
- * Material for one ArrayMesh surface (draw group). Loads the surface's
- * StandardMaterial3D `.tres` through the material pipeline (textures and all)
- * and attaches it at the group's slot. Falls back to Godot's default white
- * material while pending or when the surface declares no material. One
- * `useResource` per component instance keeps the rules of hooks satisfied for
- * an arbitrary surface count.
- */
-function ArrayMeshSurfaceMaterial({
-  path,
-  attach,
-  shadowSide,
-}: {
-  path: string | null;
-  attach: string;
-  shadowSide?: THREE.Side;
-}) {
-  const result = useResource<THREE.Material>(path ?? '', 'StandardMaterial3D');
-  if (path && result.value) {
-    return <primitive object={result.value} attach={attach} />;
-  }
-  return (
-    <meshStandardMaterial
-      attach={attach}
-      color={0xffffff}
-      metalness={0}
-      roughness={1}
-      side={THREE.FrontSide}
-      shadowSide={shadowSide ?? null}
     />
   );
 }
@@ -592,7 +605,9 @@ interface ShadowFlags {
  * castShadow=true.
  */
 function shadowCastingFlags(value: number | undefined): ShadowFlags {
-  if (value === undefined || value === 0) {
+  // class_geometryinstance3d.html: cast_shadow defaults to 1
+  // (SHADOW_CASTING_SETTING_ON), so an absent key means the mesh DOES cast.
+  if (value === 0) {
     return { castShadow: false, shadowsOnly: false };
   }
   if (value === 2) {

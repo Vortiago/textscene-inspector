@@ -27,7 +27,7 @@ import { Node3D } from '../../base/node3d/Component';
 import { useGodotLinearColor } from '../../../r3f/godotColor';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useAnimatedValue } from '../../../r3f/contexts/AnimatedValueContext';
-import { resolveExtResourcePath } from '../../../resources/SubResourceResolver';
+import { resolveTexture2DPath } from '../../../resources/SubResourceResolver';
 import { useResource } from '../../../resources/useResource';
 import type { Color } from '../../../utils/colorParser';
 import type { Vector3 } from '../../../parser/vectors';
@@ -38,7 +38,7 @@ const BOX_COLOR = '#ff9d3b';
 
 export function Decal({ node, children }: NodeComponentProps) {
   const properties = node.properties as DecalProperties;
-  const { externalResources } = useSceneResources();
+  const { externalResources, internalResources } = useSceneResources();
 
   // Unit-cube projection-volume wireframe — `size` is applied as a scale on the
   // inner group (below), so animating `size` (ADR-0017) is a cheap scale write
@@ -56,8 +56,8 @@ export function Decal({ node, children }: NodeComponentProps) {
   // short-circuits useResource (its contract) so the hook count stays stable
   // whether or not an albedo texture is present.
   const texturePath = useMemo(
-    () => resolveExtResourcePath(properties.texture_albedo, externalResources),
-    [properties.texture_albedo, externalResources]
+    () => resolveTexture2DPath(properties.texture_albedo, externalResources, internalResources),
+    [properties.texture_albedo, externalResources, internalResources]
   );
   const texResult = useResource<THREE.Texture>(texturePath ?? '', 'Texture2D');
 

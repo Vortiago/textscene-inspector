@@ -3,7 +3,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { Label3D } from './Component';
 import type { TscnNode } from '../../../parser/types';
 import type { Label3DProperties } from './types';
-import { BillboardMode } from './types';
+import { BillboardMode, HorizontalAlignment } from './types';
 import { ViewportModeProvider } from '../../../r3f/contexts/ViewportModeContext';
 
 // happy-dom provides HTMLCanvasElement but not a 2D rendering context.
@@ -33,6 +33,11 @@ function makeNode(overrides: Partial<Label3DProperties> = {}): TscnNode {
     modulate: { r: 1, g: 1, b: 1, a: 1 },
     outline_size: 0,
     outline_modulate: { r: 0, g: 0, b: 0, a: 1 },
+    double_sided: true,
+    font_size: 32,
+    line_spacing: 0,
+    horizontal_alignment: HorizontalAlignment.CENTER,
+    no_depth_test: false,
     ...overrides,
   };
   return { name: properties.name ?? 'Label', type: 'Label3D', children: [], properties };

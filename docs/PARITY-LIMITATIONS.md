@@ -11,9 +11,16 @@ through a full parity audit, so treat this catalogue as verified against the
 4.4 spec specifically, not as a claim that 4.6/4.7-only features have been
 audited.
 
-Each item below is harmless for the scenes shipped today. This catalogue exists
-so divergences are **recorded, not discovered by eye** — if a render ever looks
-wrong in one of these areas, this is the first place to check.
+This catalogue exists so divergences are **recorded, not discovered by eye** —
+if a render ever looks wrong in one of these areas, this is the first place to
+check.
+
+An entry here needs a reason a three.js renderer *cannot* match Godot, or a
+concrete blocker to fixing it. "No scene in the vendored corpus hits this" is
+NOT such a reason: that corpus is a sample of Godot's own demos, not the set of
+scenes this previewer has to open, so its silence says nothing about whether a
+user will hit the bug tomorrow. Where a corpus count appears below it is there
+to size the blast radius of a fix, never to justify skipping one.
 
 ## StandardMaterial3D
 
@@ -64,6 +71,57 @@ would shift the texture by a different amount than Godot.
   unverifiable without a visual Godot reference, and shipping an unverified
   formula for a zero-impact case adds risk for no benefit.
 - Site: `nodes/3d/meshinstance3d/Component.tsx` (uvTransform).
+
+### uv1_scale / uv1_offset V anchoring
+Godot samples `UV = uv * uv1_scale + uv1_offset` with V measured from the image
+**top**; three.js samples `uv * repeat + offset` with V from the bottom (textures
+load `flipY=true`). Both UV-transform sites copy Godot's values straight across
+(`repeat = scale`, `offset = offset`), which is only equivalent when the V terms
+happen to cancel. Reproducing Godot exactly needs
+
+    repeat.y = scale.y      offset.y = 1 - scale.y - uv1_offset.y
+
+- **Diverges when:** `uv1_scale.y` is non-integer (an integer scale makes the
+  `1 - scale.y` term vanish mod 1), or `uv1_offset.y` is non-zero — where the
+  sign is currently inverted.
+- **Why not fixed yet:** the correction applies to primitive meshes as well as
+  ArrayMesh surfaces, so it moves every textured mesh baseline at once — and the
+  current baselines were eyeballed into place, not checked against Godot. The
+  formula above is derived, not measured; the sign of the `uv1_offset.y` term in
+  particular wants a side-by-side Godot render before it is frozen into ~20
+  goldens. That is a "needs a reference render" blocker, NOT a "no scene hits it"
+  one: the vendored corpus is a sample of Godot scenes, not the set of scenes
+  this previewer has to handle, so its silence is not evidence the bug is
+  harmless. (For scale: today no shipped `.tscn` sets `uv1_offset`, and the only
+  `uv1_scale` on a Godot-authored mesh is `demos/3d/soft_body_physics/box.tscn`
+  at an integer 2, where the `1 - scale.y` term vanishes mod 1.)
+- Sites: `nodes/3d/meshinstance3d/applyUVTransform.ts` (parsed-scalar path) and
+  `resources/materials/standardmaterial3d/renderer.ts` (ArrayMesh surface
+  materials — this one also drops `uv1_offset` entirely).
+
+### ArrayMesh compressed attributes
+A surface with `ARRAY_FLAG_COMPRESS_ATTRIBUTES` (bit 29) stores UV1/UV2 as
+normalised `uint16` to be rescaled by the surface's `uv_scale`. The decoder reads
+the uncompressed layout only, so such a surface now yields **no** UVs rather than
+float32 garbage read out of the quantised bytes (values like `6.7e37`).
+
+- **Impact today:** three surfaces in the corpus set the flag —
+  `demos/3d/material_testers/models/godot_ball.tres` and
+  `demos/3d/truck_town/vehicles/meshes/*.tres`. They render untextured instead of
+  with a scrambled texture.
+- **Why not fixed:** dequantising needs the `uv_scale` Vector4 applied per
+  surface, and the same flag also changes the vertex/normal layout — a decoder
+  feature, not a patch.
+- Site: `resources/meshes/arrayMeshDecode.ts` (`decodeArrayMesh`).
+
+### GridMap cell_scale
+Godot's `_octant_update` composes `T(cell·size + offset) × R × scale(cell_scale)
+× mesh_transform`. We apply the translation, orientation and `mesh_transform`,
+but `cell_scale` (default 1.0) is not parsed — a GridMap that sets it renders
+every tile at the wrong size.
+
+- **Impact today:** zero — `cell_scale` appears in no fixture in the corpus.
+- Site: `nodes/3d/gridmap/Component.tsx` (`cellMatrix`).
 
 ### WorldEnvironment volumetric fog  *(audit #11)*
 Godot has two fog systems. **Screen-space fog** (`fog_enabled`/`fog_density`/`fog_light_color`/`fog_mode`) maps to `THREE.FogExp2` and is supported. **Volumetric fog** (`volumetric_fog_*`, a froxel-based 3D scattering effect) has no three.js equivalent and is intentionally **not** applied to `scene.fog` — its density scale differs by orders of magnitude, so approximating it with FogExp2 produced wildly over-dense fog. Screen-space `FOG_MODE_DEPTH` (1) is approximated with the same density-based exponential fog (no separate linear depth params).
@@ -184,6 +242,53 @@ which is monotonic (higher exponent → harder edge) and lands the Godot default
 - **Why not exact:** the exponent→softness relationship is non-linear and has no
   closed-form three.js equivalent; the mapping is a deliberate approximation.
 - Site: `nodes/3d/lights/spotlight3d/Component.tsx` (penumbra derivation).
+
+### The previewer always adds editor preview lights
+`TscnSceneContents` mounts an unconditional `ambientLight intensity={0.4}` plus a
+`directionalLight` so a scene with no lights of its own is not a black void. Godot's
+editor makes the equivalent preview environment yield to a scene that carries its
+own `WorldEnvironment`; ours does not.
+
+- **Impact:** any lighting a scene contributes competes with a fixed baseline that
+  Godot would not be applying. The clearest case is `WorldEnvironment`'s ambient:
+  at the vendored corpus's own values (`background_color = Color(0.6, 0.6, 0.6, 1)`
+  at `background_energy_multiplier = 1`, from
+  `scenes/demos/3d/graphics_settings/control.tscn`) its contribution does not
+  survive 8-bit quantisation beside the preview lights — a golden only moves once
+  the multiplier is pushed to roughly 50. That is why the BG-ambient behaviour is
+  guarded at the component seam (`worldenvironment/Component.bg-ambient.test.tsx`)
+  rather than by a baseline image that could not fail.
+- **Why not fixed here:** *when* the preview lights should yield is a product
+  decision for this previewer, not a Godot class-reference fact — a scene may carry
+  a `WorldEnvironment`, its own lights, both, or an environment that emits nothing.
+  Picking a rule blind would trade one divergence for another, and it would move
+  most 3D baselines at once.
+- Site: `r3f/TscnCanvas.tsx` (`TscnSceneContents`).
+
+## Control
+
+### `TextureRect.expand_mode` FIT_* modes: which axis is authoritative
+All four FIT_* modes are implemented as `aspect-ratio` — FIT_WIDTH/FIT_HEIGHT
+tie the two axes 1:1 (Godot ignores the texture's own aspect for those) and the
+PROPORTIONAL pair ties them at the texture's aspect. What does NOT carry over is
+*direction*: Godot derives a minimum from the control's **current** size
+(`Size2(get_size().y, 0)` for FIT_WIDTH, `Size2(0, get_size().x)` for
+FIT_HEIGHT), naming one axis as the driver, whereas CSS resolves whichever axis
+the surrounding layout leaves unconstrained.
+
+- **Impact:** the box takes the right shape either way; the two differ only when
+  the layout constrains BOTH axes, where Godot's named axis wins and CSS's
+  constraint does. Godot marks the member experimental for related reasons.
+- Site: `nodes/2d/ui/texturerect/Component.tsx` (`textureRectMinSize`).
+
+### `Control.rotation` / `scale` are dropped inside a Container — deliberately
+Not a limitation but a rule worth stating, because it looks like one: Godot's
+`Container::fit_child_in_rect` ends with `set_rotation(0)` and
+`set_scale(Vector2(1, 1))`, and class_control.html says so outright. A Control
+inside any container therefore renders unrotated and unscaled whatever the scene
+file says, and we match that.
+
+- Site: `r3f/controls/controlLayout.ts` (`applyTransform`).
 
 ## Control / Theme (StyleBox)
 

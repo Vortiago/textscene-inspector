@@ -11,6 +11,10 @@
  * overrides the default failure threshold for scenes with antialiasing-
  * sensitive content (thin gizmo lines).
  *
+ * `collisions: true` (optional) ticks the toolbar's "Visible Collision Shapes"
+ * checkbox before capturing, so CollisionShape2D/3D gizmos render — they are
+ * off by default (ADR-0005/0006) and therefore invisible to every other scene.
+ *
  * `select` (optional) is a node path the harness selects in the scene tree
  * before capturing, so a selection-gated gizmo (Marker/Path/PathFollow, ADR-0018)
  * renders. These `*-selected` scenes are the real-browser regression guard for
@@ -28,11 +32,75 @@ export const GOLDEN_SCENES = [
   // baseline pins what it LOOKS like.
   { name: 'plane-rotated-scaled', file: 'edge-plane-rotated-scaled.tscn' },
   { name: 'all-meshes', file: 'integration-all-meshes.tscn' },
-  { name: 'all-primitives', file: 'integration-all-primitives.tscn' },
+  // Shadow-bearing scenes: the shadow map is the most GPU-sensitive content in
+  // the set (soft-edge PCF sampling differs across drivers), so these carry the
+  // same relaxed threshold as the thin-AA gizmo scenes. The shadows themselves
+  // are small contact regions — a missing shadow moves far more than 0.5%.
+  { name: 'all-primitives', file: 'integration-all-primitives.tscn', maxDiffPct: 0.5 },
+  // Every CSG dimension OMITTED, so the render depends entirely on our parser
+  // defaults matching Godot's. The other CSG fixtures set size/radius/height
+  // explicitly, which is why a wrong default (CSGBox3D 2,2,2 vs Godot's 1,1,1)
+  // sat unnoticed. The 1x1 ruler plate underneath gives the eyeball a scale.
+  { name: 'csg-defaults', file: 'unit-csg-defaults.tscn' },
+  // Nodes parented UNDER a MeshInstance3D and an OmniLight3D. Both components
+  // used to destructure only `node` and silently delete the subtree the
+  // dispatcher handed them (144 authored child nodes across 19 vendored demo
+  // scenes). Every other 3D fixture hangs its content off Node3D, so nothing
+  // in the golden set could see it.
+  { name: 'subtree-under-leaf-nodes', file: 'unit-subtree-under-leaf-nodes.tscn' },
+  // `cast_shadow = SHADOWS_ONLY`: the box must be ABSENT from the colour buffer
+  // while its shadow lands on the ground and the sphere parented under it still
+  // renders. Implemented as `visible = false` this scene showed no shadow and
+  // no sphere — three skips an invisible object in the shadow pass and stops
+  // walking its subtree. Soft-shadow edges are GPU-sensitive, hence the
+  // relaxed threshold.
+  { name: 'shadows-only', file: 'unit-shadows-only.tscn', maxDiffPct: 0.5 },
+  // CSG `material` as an ExtResource .tres beside the same node with an inline
+  // SubResource material. Only the sub-resource form used to resolve, so the
+  // 33 ExtResource materials in scenes/demos/3d/csg/csg.tscn rendered white —
+  // and both existing CSG fixtures declare their materials inline, so no
+  // golden could see it. The left box must be green, the right one red.
+  { name: 'csg-external-material', file: 'unit-csg-external-material.tscn' },
+  // A Sprite2D whose `texture` is a CanvasTexture sub-resource (wrapping the
+  // same image the sibling references directly). CanvasTexture is a first-class
+  // Texture2D, but the slot only resolved ExtResource refs, so all four sprites
+  // in scenes/demos/2d/lights_and_shadows/light_shadows.tscn drew the magenta
+  // missing-resource placeholder. Both markers must render identically.
+  { name: 'sprite2d-canvastexture', file: 'unit-sprite2d-canvastexture.tscn' },
+  // 2D geometry parity in one frame: Line2D corner joints (sharp + round),
+  // Polygon2D `polygons` index lists and `invert_enabled`, and the
+  // NavigationRegion2D navmesh, whose vertices used to render mirrored about
+  // the region origin. Thin joint wedges and navmesh edges are AA-sensitive.
+  {
+    name: '2d-geometry-parity',
+    file: 'unit-2d-geometry-parity.tscn',
+    navigation: true,
+    maxDiffPct: 0.5,
+  },
+  // Two AreaLight3D panels of the SAME light_energy but very different
+  // area_size, each lighting its own plate. Godot normalises the emitted colour
+  // by the rectangle's area (area_normalize_energy, default true), so both
+  // plates read the same; without it the 4 x 0.05 strip is 5x dimmer. The one
+  // pre-existing AreaLight3D fixture lights no geometry at all, so nothing
+  // could see this.
+  { name: 'area-light-normalize', file: 'unit-area-light-normalize.tscn' },
   // External ArrayMesh .tres: decoded quad with Godot's packed normals. Loads
   // a local resource (deterministic), gated by the two-identical-frames settle.
   { name: 'arraymesh', file: 'unit-arraymesh.tscn' },
+  // The same decoded quad, TEXTURED with a four-band atlas. `arraymesh` above
+  // carries no material, so it cannot see a UV error at all — this one pins the
+  // V orientation: Godot's V origin is the image top, while textures load with
+  // flipY=true, so a pass-through V samples the bands upside down. Green must
+  // read at the TOP of the quad, red at the bottom.
+  { name: 'arraymesh-uv', file: 'unit-arraymesh-uv.tscn' },
   { name: 'grid-map', file: 'unit-grid-map.tscn' },
+  // `grid-map` above is GridMap-ONLY, so the camera auto-fit reframes any
+  // uniform shift of the whole grid into an identical image — it cannot see a
+  // placement error at all. This scene puts static markers at the origin and at
+  // (1,1,1) so the cell's position is measured against something that does not
+  // move: with Godot's default cell_center_x/y/z the cell sits on the (1,1,1)
+  // marker, and dropping the half-cell offset visibly moves it to the origin.
+  { name: 'grid-map-centering', file: 'unit-grid-map-centering.tscn' },
   { name: 'navigation-region-3d', file: 'unit-navigation-region-3d.tscn' },
   { name: 'material-metallic', file: 'unit-material-metallic.tscn' },
   { name: 'material-emissive', file: 'unit-material-emissive.tscn' },
@@ -52,7 +120,7 @@ export const GOLDEN_SCENES = [
   // authored pose, but the fixtures exist to be played, so they stay out of
   // the stability-gated visual set (same rationale as Label3D above).
   { name: 'mixed-nodes', file: 'integration-mixed-nodes.tscn' },
-  { name: 'hallway-mockup', file: 'example-hallway-mockup.tscn' },
+  { name: 'hallway-mockup', file: 'example-hallway-mockup.tscn', maxDiffPct: 0.5 },
   // Instance root merge (ADR-0013): two instances of unit-instance-child.tscn
   // collapse into Area3D coins at x=±1.5. Pins the rendered pixels of a
   // sub-scene-instancing scene so the wrapper-collapse + transform-replace
@@ -60,6 +128,17 @@ export const GOLDEN_SCENES = [
   { name: 'instanced-subscene', file: 'integration-instanced-subscene.tscn' },
   // Thin collision-gizmo lines are the most AA-sensitive content in the set.
   { name: 'physics-bodies', file: 'unit-physics-bodies.tscn', maxDiffPct: 0.3 },
+  // The first golden ever to show a collision gizmo: `physics-bodies` above
+  // carries CollisionShape3D nodes but the toggle is off, so its baseline is a
+  // bare plane. Capsule / sphere / cylinder all used to fall through to a 1x1x1
+  // box, and every gizmo was hard-coded green regardless of `debug_color`.
+  // Thin wireframe lines, hence the relaxed threshold.
+  {
+    name: 'collision-shapes',
+    file: 'unit-collision-shapes.tscn',
+    collisions: true,
+    maxDiffPct: 0.5,
+  },
   // Decal projects a local checkerboard texture onto a quad and draws a thin
   // wireframe projection box. Loads a texture (deterministic local SVG, gated
   // by the two-identical-frames settle); the box edges are AA-sensitive like
@@ -91,7 +170,7 @@ export const GOLDEN_SCENES = [
   // Unselected: pins the non-gizmo render (ground + shading only — no helper).
   { name: 'directional-light-3d', file: 'unit-directional-light-3d.tscn' },
   { name: 'omni-light-3d', file: 'unit-omni-light-3d.tscn' },
-  { name: 'spot-light-3d', file: 'unit-spot-light-3d.tscn' },
+  { name: 'spot-light-3d', file: 'unit-spot-light-3d.tscn', maxDiffPct: 0.5 },
   { name: 'camera-basic', file: 'unit-camera-basic.tscn' },
   { name: 'audio-stream-player-3d', file: 'unit-audio-stream-player.tscn' },
   // Selected: the core deliverable — real tree-click → selection → gizmo
@@ -128,6 +207,15 @@ export const GOLDEN_SCENES = [
     select: 'Scene/Speaker_Default',
     maxDiffPct: 0.5,
   },
+  // The emission cone: `Speaker_Cone` is the only corpus node anywhere that
+  // sets `emission_angle_enabled`, and until now nothing rendered or asserted
+  // it — the node existed purely to exercise a gizmo that was never drawn.
+  {
+    name: 'audio-stream-player-3d-cone-selected',
+    file: 'unit-audio-stream-player.tscn',
+    select: 'Scene/Speaker_Cone',
+    maxDiffPct: 0.5,
+  },
 
   // --- Mesh primitives + StandardMaterial3D features ---
   { name: 'box-mesh', file: 'unit-box-mesh.tscn' },
@@ -146,6 +234,10 @@ export const GOLDEN_SCENES = [
   // threshold like the other 2D goldens (marker2d/path2d).
   { name: 'polygon-2d', file: 'unit-polygon2d.tscn', maxDiffPct: 0.5 },
   { name: 'line-2d', file: 'unit-line2d.tscn', maxDiffPct: 0.5 },
+  // Baseline corrected in the Y-flip fix: a NavigationPolygon's vertices are
+  // Godot canvas pixels (+Y DOWN), and this overlay was the one 2D geometry
+  // path that skipped the negation — so the navmesh used to sit ABOVE the
+  // region origin instead of below it.
   { name: 'navigation-region-2d', file: 'unit-navigation-region-2d.tscn', maxDiffPct: 0.5 },
   // NOTE: AreaLight3D deliberately has no golden — its fixture is light-only
   // (no lit geometry), so the frame is blank. Add one once the fixture gains a
@@ -157,7 +249,7 @@ export const GOLDEN_SCENES = [
   { name: 'surface-material-override', file: 'unit-surface-material-override.tscn' },
   // Multi-property showcase guard (12 spheres across 4 rows: basic PBR,
   // emission/normal, advanced PBR, transparency/glass).
-  { name: 'material-features', file: 'integration-material-features.tscn' },
+  { name: 'material-features', file: 'integration-material-features.tscn', maxDiffPct: 0.5 },
 
   // --- Sprite2D/Sprite3D + 3D physics-body roundout ---
   { name: 'sprite2d', file: 'unit-sprite2d.tscn' },
@@ -171,6 +263,18 @@ export const GOLDEN_SCENES = [
   // --- TileMap / TileMapLayer batched-geometry coverage ---
   { name: 'tile-map', file: 'unit-tile-map.tscn' },
   { name: 'tile-map-layer', file: 'unit-tile-map-layer.tscn' },
+  // Six cells of the SAME atlas tile at six orientations, encoded the way Godot
+  // paints them: flip/transpose bits inside the alternative id. Every other
+  // tile fixture and golden carries alternativeId 0 only, so the flip/transpose
+  // UV composition — the most intricate and most corpus-exercised piece of the
+  // tile slices — was guarded by nothing but a hand-written array in the test
+  // written alongside it. The marker glyph is asymmetric on both axes, so each
+  // orientation is visually distinct.
+  // Tight threshold on purpose: a 2D canvas render with no AA-sensitive
+  // shading is byte-stable, and only the four TRANSPOSED cells move when the
+  // composition order is wrong — 0.21% of the frame. The default 0.1% leaves
+  // too little margin for a guard this specific.
+  { name: 'tile-map-layer-flips', file: 'unit-tile-map-layer-flips.tscn', maxDiffPct: 0.02 },
   { name: 'tile-map-layer-isometric', file: 'unit-tile-map-layer-isometric.tscn' },
   // Hexagon grid (shape=3, vertical offset axis): odd columns stagger by
   // half a tile — the half-offset placement math had no visual guard before.

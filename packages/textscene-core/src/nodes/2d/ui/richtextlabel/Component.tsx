@@ -16,7 +16,7 @@ import { textThemeStyle } from '../../../../r3f/controls/textThemeStyle';
 import { parseBBCode } from './bbcode';
 import type { RichTextLabelProperties } from './types';
 
-export function RichTextLabel({ node }: ControlComponentProps) {
+export function RichTextLabel({ node, children }: ControlComponentProps) {
   const props = node.properties as RichTextLabelProperties;
   const parentKind = useControlParent();
   const style: CSSProperties = {
@@ -38,6 +38,7 @@ export function RichTextLabel({ node }: ControlComponentProps) {
   return (
     <div data-control-type="RichTextLabel" data-node-name={node.name} style={style}>
       {content}
+      {children}
     </div>
   );
 }
