@@ -15,10 +15,14 @@ import {
   LoopOnce,
   LoopPingPong,
   LoopRepeat,
+  InterpolateDiscrete,
+  InterpolateLinear,
+  InterpolateSmooth,
   NumberKeyframeTrack,
   QuaternionKeyframeTrack,
   VectorKeyframeTrack,
   type AnimationActionLoopStyles,
+  type InterpolationModes,
   type KeyframeTrack,
 } from 'three';
 import type { GodotAnimation, GodotKeyframe, GodotTrack } from './animationResolver';
@@ -55,6 +59,39 @@ export function buildClip(animation: GodotAnimation): AnimationClip {
 }
 
 function buildTracks(track: GodotTrack): KeyframeTrack[] {
+  const built = buildTrackData(track);
+  const interpolation = threeInterpolation(track);
+  for (const t of built) t.setInterpolation(interpolation);
+  return built;
+}
+
+/**
+ * Godot's per-track `interp` → the THREE interpolation constant.
+ *
+ * NEAREST is a step/hold, not a round-to-nearest: `animation.cpp` returns
+ * `p_keys[idx].value` for the key at-or-before the query time, which is exactly
+ * `InterpolateDiscrete`. CUBIC is a time-aware Catmull-Rom, closest to
+ * `InterpolateSmooth` (not bit-identical for unevenly-spaced keys). The
+ * `*_ANGLE` variants only add shortest-path rotation, which THREE's quaternion
+ * tracks already take, so they reduce to their base mode.
+ *
+ * A VALUE track in UPDATE_DISCRETE mode is FORCED to nearest whatever `interp`
+ * says — same file.
+ */
+function threeInterpolation(track: GodotTrack): InterpolationModes {
+  if (track.type === 'value' && track.updateMode === 1) return InterpolateDiscrete;
+  switch (track.interp) {
+    case 0:
+      return InterpolateDiscrete;
+    case 2:
+    case 4:
+      return InterpolateSmooth;
+    default:
+      return InterpolateLinear;
+  }
+}
+
+function buildTrackData(track: GodotTrack): KeyframeTrack[] {
   const times = track.keys.map((k) => k.time);
   // A track targeting the animation root itself (Godot `NodePath(".")`) binds
   // to the root via an empty node name — THREE.PropertyBinding resolves the

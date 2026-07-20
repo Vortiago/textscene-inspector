@@ -643,6 +643,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D Canvas"
   },
   {
+    "name": "Tile Map Layer Flips",
+    "file": "unit-tile-map-layer-flips.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
     "name": "Tile Map Layer Hexagon",
     "file": "unit-tile-map-layer-hexagon.tscn",
     "category": "Unit - 2D Canvas"

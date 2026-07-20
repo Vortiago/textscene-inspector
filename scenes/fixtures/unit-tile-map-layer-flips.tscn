@@ -1,0 +1,18 @@
+[gd_scene load_steps=3 format=3 uid="uid://unittilemapflips"]
+
+[ext_resource type="Texture2D" path="res://textures/sprite2d-marker.png" id="1_marker"]
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_a"]
+texture = ExtResource("1_marker")
+texture_region_size = Vector2i(96, 96)
+0:0/0 = 0
+
+[sub_resource type="TileSet" id="TileSet_b"]
+tile_size = Vector2i(96, 96)
+sources/0 = SubResource("TileSetAtlasSource_a")
+
+[node name="World" type="Node2D"]
+
+[node name="Layer0" type="TileMapLayer" parent="."]
+tile_map_data = PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 16, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 32, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 48, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 64, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 80, 2, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 96, 3, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 112)
+tile_set = SubResource("TileSet_b")

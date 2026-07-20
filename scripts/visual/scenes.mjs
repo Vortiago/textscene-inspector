@@ -256,6 +256,18 @@ export const GOLDEN_SCENES = [
   // --- TileMap / TileMapLayer batched-geometry coverage ---
   { name: 'tile-map', file: 'unit-tile-map.tscn' },
   { name: 'tile-map-layer', file: 'unit-tile-map-layer.tscn' },
+  // Six cells of the SAME atlas tile at six orientations, encoded the way Godot
+  // paints them: flip/transpose bits inside the alternative id. Every other
+  // tile fixture and golden carries alternativeId 0 only, so the flip/transpose
+  // UV composition — the most intricate and most corpus-exercised piece of the
+  // tile slices — was guarded by nothing but a hand-written array in the test
+  // written alongside it. The marker glyph is asymmetric on both axes, so each
+  // orientation is visually distinct.
+  // Tight threshold on purpose: a 2D canvas render with no AA-sensitive
+  // shading is byte-stable, and only the four TRANSPOSED cells move when the
+  // composition order is wrong — 0.21% of the frame. The default 0.1% leaves
+  // too little margin for a guard this specific.
+  { name: 'tile-map-layer-flips', file: 'unit-tile-map-layer-flips.tscn', maxDiffPct: 0.02 },
   { name: 'tile-map-layer-isometric', file: 'unit-tile-map-layer-isometric.tscn' },
   // Hexagon grid (shape=3, vertical offset axis): odd columns stagger by
   // half a tile — the half-offset placement math had no visual guard before.
