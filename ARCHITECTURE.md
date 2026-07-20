@@ -214,10 +214,13 @@ do the async I/O underneath — see the note below.)
    formerly-cached path on `ResourceLoader.clearCaches()` (corpus switch) —
    mounted hooks hold their value in React state, so without it they would keep
    serving the cleared corpus's resource forever; on receiving it they
-   re-request under whatever provider state the HOST has arranged (the host
-   must repoint the provider/URL modifier before clearing). The LOADER owns the
-   announcement, emitting only after every cache layer is reset and before
-   metadata clears (scene loads validate registration synchronously); a
+   re-request under whatever provider state the HOST has arranged (the host must
+   repoint the provider/URL modifier before clearing — **and must clear only with
+   the outgoing corpus's scene already torn down**, since every consumer still
+   mounted answers the announcement by re-requesting its own `res://` paths out
+   of the incoming corpus, downloading an unrelated fixture's files). The LOADER
+   owns the announcement, emitting only after every cache layer is reset and
+   before metadata clears (scene loads validate registration synchronously); a
    processor's own full clear is silent. Both the `FileEventBus` and each
    processor also carry a clear **generation**: a fetch that departed before a
    full clear finishes under the cleared era and its result (success or

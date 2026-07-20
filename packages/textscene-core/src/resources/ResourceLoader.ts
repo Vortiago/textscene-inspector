@@ -256,10 +256,12 @@ export class ResourceLoader {
    *
    * The clear→announce→metadata-last choreography lives in
    * `runClearCachesSequence` (shared with the test fake — order is the
-   * contract; see that module for the full rationale). PRECONDITION for
-   * hosts: repoint the provider / URL modifier BEFORE calling this —
-   * announced consumers refetch immediately under whatever provider state
-   * is current (the web host's switchCorpusRoot ordering does exactly this).
+   * contract; see that module for the full rationale). PRECONDITION for hosts:
+   * repoint the provider / URL modifier BEFORE calling this, and call it only
+   * once the outgoing corpus's scene is torn down — announced consumers refetch
+   * immediately under whatever provider state is current, so any still mounted
+   * would pull their own res:// paths out of the incoming corpus (the web
+   * host's `applyCorpusRoot` is called at the scene swap for exactly this).
    */
   clearCaches(): void {
     runClearCachesSequence({

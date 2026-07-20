@@ -5,8 +5,7 @@
  * lives in WebResourceProvider.corpusScope.test.ts):
  *  - uploading a scene + companion files while a demo corpus is active must
  *    key the companions under the uploaded scene's base ('') corpus, not the
- *    demo root that was still active when the upload handler ran (the
- *    useCorpusRoot effect only lands after re-render);
+ *    demo root that was active when the upload handler ran;
  *  - switching from an uploaded scene to a demo fixture through the scene
  *    palette must stop serving the uploaded-scene corpus's files.
  * Reuses the `r3f-main.*.test.tsx` WebGL-mock pattern.
