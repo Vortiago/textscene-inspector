@@ -1,0 +1,28 @@
+[gd_scene format=3]
+
+[sub_resource type="SphereMesh" id="SphereMesh_1"]
+radius = 1.0
+height = 2.0
+radial_segments = 32
+rings = 16
+
+[sub_resource type="StandardMaterial3D" id="Material_anisotropy"]
+albedo_color = Color(0.62, 0.63, 0.66, 1)
+metallic = 1.0
+roughness = 0.35
+anisotropy_enabled = true
+anisotropy = 0.8
+
+[node name="Root" type="Node3D"]
+
+[node name="AnisotropySphere" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+mesh = SubResource("SphereMesh_1")
+surface_material_override/0 = SubResource("Material_anisotropy")
+
+[node name="Title" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
+text = "Anisotropy Material Test"
+pixel_size = 0.008
+billboard = 1
+modulate = Color(1, 1, 0.7, 1)

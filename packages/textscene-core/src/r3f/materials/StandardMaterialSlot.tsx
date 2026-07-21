@@ -111,10 +111,10 @@ export function StandardMaterialSlot({
   }
   // Shared PBR props for the shaded path. MeshPhysicalMaterial is a strict
   // superset of MeshStandardMaterial, so the same props drive either; we only
-  // upgrade to <meshPhysicalMaterial> when Godot's clearcoat feature is active,
-  // keeping the common (no-clearcoat) path on the lighter standard material so
-  // existing behaviour — and the material type the component tests assert on —
-  // is unchanged.
+  // upgrade to <meshPhysicalMaterial> when a physical-only feature (clearcoat,
+  // rim, or anisotropy) is active, keeping the common path on the lighter
+  // standard material so existing behaviour — and the material type the
+  // component tests assert on — is unchanged.
   const pbrProps = {
     attach,
     color: scalars.color,
@@ -147,10 +147,12 @@ export function StandardMaterialSlot({
     displacementMap: displacementMap ?? null,
     displacementScale: scalars.heightmapScale,
   };
-  // Godot clearcoat (FEATURE_CLEARCOAT, a glossy coat) and rim (FEATURE_RIM, a
-  // Fresnel edge highlight) both live natively on MeshPhysicalMaterial only —
-  // clearcoat as `clearcoat`, rim mapped to `sheen` (three.js's Fresnel edge
-  // term, the closest native analog). A material carrying either renders as
+  // Godot clearcoat (FEATURE_CLEARCOAT, a glossy coat), rim (FEATURE_RIM, a
+  // Fresnel edge highlight), and anisotropy (FEATURE_ANISOTROPY, a directional
+  // specular stretch) live natively on MeshPhysicalMaterial only — clearcoat as
+  // `clearcoat`, rim mapped to `sheen` (three.js's Fresnel edge term, the
+  // closest native analog), anisotropy as `anisotropy` / `anisotropyRotation` /
+  // `anisotropyMap`. A material carrying any of them renders as
   // <meshPhysicalMaterial>; rim_tint blends the highlight from the light colour
   // (0) toward the albedo (1) via sheenColor.
   if (scalars.clearcoat > 0 || scalars.rim > 0 || scalars.anisotropy > 0) {

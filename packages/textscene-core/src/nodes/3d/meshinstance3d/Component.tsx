@@ -234,12 +234,17 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     [textureSlots.heightmap_texture, uvTransform]
   );
   const anisotropyMap = useMemo(() => {
+    // Only an anisotropy-enabled material renders as MeshPhysicalMaterial and
+    // samples anisotropyMap; skip the repack (a full-buffer copy + per-pixel
+    // pass) and the slotKey churn when the strength is 0 — the map would never
+    // be read on the standard-material fallback.
+    if (!materialScalars || materialScalars.anisotropy <= 0) return undefined;
     const value = textureSlots.anisotropy_flowmap?.value;
     if (!value) return undefined;
     const repacked = repackAnisotropyFlowmap(value);
     if (!repacked) return undefined;
-    return uvTransform ? applyUVTransform(repacked, uvTransform) : repacked;
-  }, [textureSlots.anisotropy_flowmap, uvTransform]);
+    return transformedTexture({ value: repacked }, uvTransform);
+  }, [materialScalars, textureSlots.anisotropy_flowmap, uvTransform]);
 
   // If any requested slot resolved to `unavailable`, surface the FIRST
   // such path as the placeholder label. Listing more than one would
