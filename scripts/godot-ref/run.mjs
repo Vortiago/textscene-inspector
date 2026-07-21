@@ -43,6 +43,9 @@ import { PNG } from 'pngjs';
 const DEFAULT_WIDTH = 400;
 const DEFAULT_HEIGHT = 300;
 
+/** `editors/3d/default_fov`. A `Camera3D` node's own default is 75. */
+const EDITOR_FOV = 70;
+
 /** Godot's preview sun: white, energy 1.0, shadows on, euler (-60°, 150°, 0). */
 const PREVIEW_SUN_ALTITUDE_DEG = -60;
 const PREVIEW_SUN_AZIMUTH_DEG = 150;
@@ -66,6 +69,10 @@ export function parseArgs(argv) {
     width: DEFAULT_WIDTH,
     height: DEFAULT_HEIGHT,
     previews: true,
+    // Godot's EDITOR viewport fov (`editors/3d/default_fov`), which is NOT the
+    // 75 a bare Camera3D node defaults to. Rendering the reference at 75 while
+    // the previewer draws at 70 is a silent zoom difference in every frame.
+    fov: EDITOR_FOV,
     emitBounds: false,
     camera: null,
     lookAt: null,
@@ -90,6 +97,9 @@ export function parseArgs(argv) {
         break;
       case '--emit-bounds':
         args.emitBounds = true;
+        break;
+      case '--fov':
+        args.fov = Number(argv[++i]);
         break;
       case '--camera':
         args.camera = vec3('--camera', argv[++i]);
@@ -212,13 +222,14 @@ const gdColor = (c) => `Color(${c[0]}, ${c[1]}, ${c[2]})`;
  * The bootstrap scene's script. Instantiates the target scene, applies Godot's
  * editor-preview yield rule, frames a camera, and writes one settled frame.
  */
-function bootstrapScript({ scenePath, previews, camera, lookAt, out, boundsOut }) {
+function bootstrapScript({ scenePath, previews, camera, lookAt, out, boundsOut, fov }) {
   return `extends Node3D
 
 const SCENE_PATH := "${scenePath}"
 const PREVIEWS := ${previews ? 'true' : 'false'}
 const OUT := "${out}"
 const BOUNDS_OUT := "${boundsOut ?? ''}"
+const FOV := ${fov}
 
 func _ready() -> void:
 	var target: Node = load(SCENE_PATH).instantiate()
@@ -308,13 +319,17 @@ ${
   camera
     ? `	var cam := Camera3D.new()
 	add_child(cam)
+	cam.fov = FOV
 	cam.global_position = ${gdVec3(camera)}
 	cam.look_at(${gdVec3(lookAt ?? [0, 0, 0])}, Vector3.UP)
 	cam.make_current()`
-    : `	if _find_camera(target) != null:
+    : `	var existing := _find_camera(target)
+	if existing != null:
+		existing.fov = FOV
 		return
 	var cam := Camera3D.new()
 	add_child(cam)
+	cam.fov = FOV
 	var bounds := _scene_bounds(target)
 	var size: float = maxf(bounds.size.length(), 1.0)
 	cam.global_position = bounds.get_center() + Vector3(0.7, 0.6, 1.0).normalized() * size * 1.4
@@ -384,6 +399,7 @@ export async function renderReference({
   camera = null,
   lookAt = null,
   boundsOut = null,
+  fov = EDITOR_FOV,
 }) {
   const scenePath = resolve(scene);
   if (!existsSync(scenePath)) throw new Error(`No such scene: ${scenePath}`);
@@ -407,6 +423,7 @@ export async function renderReference({
       lookAt,
       out: resolve(out),
       boundsOut: boundsOut ? resolve(boundsOut) : null,
+      fov,
     })
   );
   await writeFile(join(work, '__ref_main.tscn'), MAIN_SCENE);

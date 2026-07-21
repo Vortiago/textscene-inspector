@@ -39,25 +39,34 @@ Proven this session; the pieces exist:
 
 ## Validated on two scenes
 
-Derived by hand for `unit-preview-lighting` and `unit-sky-physical` and rendered
-both sides from it. The frames match; the remaining difference is real, and two
-divergences the mismatched pair had been hiding are now visible:
+Derived by hand for `unit-preview-lighting` and `unit-sky-physical`, rendered
+both sides from it. Whole-frame mean difference **4.77/255** for
+`unit-preview-lighting`.
+
+Getting there exposed a harness bug worth remembering: a bare `Camera3D.new()`
+defaults to **fov 75**, while the editor viewport — which is what this previewer
+reproduces — uses `editors/3d/default_fov` = **70**. Rendering the reference at
+75 against a previewer at 70 is a silent zoom difference in every frame, and it
+accounted for most of the earlier mismatch (mean 17.1 → 4.8). It also produced a
+false lead: the horizon transition looked 25/255 off and was suspected to be the
+`inv_sky_curve` application. It was the FOV. With the FOV matched the sky is
+pixel-exact at the zenith and mid-band.
 
 | Region | Ours | Godot | Delta /255 |
 | --- | --- | --- | --- |
-| Sky at zenith | 184, 190, 198 | 176, 184, 194 | +8 |
-| Horizon transition | 77, 69, 62 | 102, 93, 95 | **−25** |
-| Lit ground plane | 238, 241, 246 | 227, 229, 233 | +11 |
+| Sky at zenith | 184, 190, 198 | 184, 190, 198 | 0 |
+| Sky, upper band | 183, 185, 188 | 183, 185, 187 | 0 |
+| Horizon transition | 77, 69, 62 | 80, 66, 66 | −3 |
+| Lit ground plane | 238, 241, 246 | 227, 229, 233 | **+11** |
+| Rough sphere | 164, 170, 182 | 188, 192, 202 | **−24** |
 | Inside a shadow | 141, 158, 179 | 107, 122, 143 | **+34** |
 
-Whole-frame mean 17.1/255, 34.9% of pixels more than 8/255 apart.
-
-- **Shadows are too light.** The sky IBL fills shadowed surfaces more than
-  Godot's does. Worth chasing before the sheets are written, or every 3D sheet
-  will report the same divergence.
-- **The horizon transition sits lower and narrower than Godot's.** Suspect the
-  `inv_sky_curve` / `inv_ground_curve` application rather than the colours,
-  which match at both extremes.
+The sky itself is done. What remains is the **split between direct light and
+IBL**: flat up-facing surfaces and shadowed areas read too bright, curved
+surfaces too dark. Prime suspect is `LIGHT_INTENSITY_SCALE = 2` in
+`r3f/lightConstants.ts` — an eyeballed constant from before any of this could be
+measured, and now measurable. Chase it before writing the sheets, or every 3D
+sheet repeats the same divergence.
 
 ## Sequencing
 
