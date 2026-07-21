@@ -46,17 +46,17 @@ import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, relative, resolve, sep } from 'node:path';
 import { PNG } from 'pngjs';
+import { CANVAS_CAPTURE } from '../visual/previewServer.mjs';
 
 /**
- * The size `capture-ours.mjs` gets when it screenshots the canvas element
- * inside its 1280x800 viewport. Matching it here is what makes the two
- * harnesses' probe coordinates address the same surface point with no
- * arguments — a different aspect ratio alone would break that, since at a
- * shared vertical fov the wider frame covers a wider horizontal frustum and no
- * rescaling maps probes 1:1. `run.test.mjs` pins the pair.
+ * The frame `capture-ours.mjs` produces, taken from the one definition of it.
+ * Matching it is what makes the two harnesses' probe coordinates address the
+ * same surface point with no arguments — differing aspect ratios alone would
+ * break that, since at a shared vertical fov the wider frame covers a wider
+ * horizontal frustum and no rescaling maps probes 1:1.
  */
-const DEFAULT_WIDTH = 955;
-const DEFAULT_HEIGHT = 756;
+const DEFAULT_WIDTH = CANVAS_CAPTURE.width;
+const DEFAULT_HEIGHT = CANVAS_CAPTURE.height;
 
 /** `editors/3d/default_fov`. A `Camera3D` node's own default is 75. */
 export const EDITOR_FOV = 70;

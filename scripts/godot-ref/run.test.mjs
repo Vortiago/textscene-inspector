@@ -24,6 +24,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { PNG } from 'pngjs';
+import { CANVAS_CAPTURE } from '../visual/previewServer.mjs';
 import {
   EDITOR_CAMERA_DIRECTION,
   EDITOR_CAMERA_DISTANCE,
@@ -73,10 +74,13 @@ describe('parseArgs', () => {
     );
   });
 
-  it('defaults the viewport to 400x300 and previews to on', () => {
+  it('defaults to the frame our own capture produces, and previews to on', () => {
+    // Not an arbitrary size: a bare `ref:godot` and a bare `ref:ours` have to
+    // put a probe at (x, y) on the same surface point, which needs the same
+    // pixels AND the same aspect ratio.
     const args = parseArgs(['a.tscn']);
-    expect(args.width).toBe(400);
-    expect(args.height).toBe(300);
+    expect(args.width).toBe(CANVAS_CAPTURE.width);
+    expect(args.height).toBe(CANVAS_CAPTURE.height);
     expect(args.previews).toBe(true);
   });
 

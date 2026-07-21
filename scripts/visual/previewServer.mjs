@@ -145,6 +145,17 @@ const SOURCE_PANE_STORAGE_KEY = 'tscn-web-source-pane';
 const FRAME_ON_OPEN_STORAGE_KEY = 'tsi.frameOnOpen';
 
 export const VIEWPORT = { width: 1280, height: 800 };
+
+/**
+ * The size of the canvas ELEMENT inside that viewport, once the shell's chrome
+ * has taken its share — i.e. the size `canvas.screenshot()` returns.
+ *
+ * Measured, not derived: it falls out of the app's CSS layout. It lives here so
+ * the Godot harness can default to the same frame, which is what makes a probe
+ * at (x, y) address the same surface point on both sides with no arguments.
+ * Changing VIEWPORT above means re-measuring this.
+ */
+export const CANVAS_CAPTURE = { width: 955, height: 756 };
 export const NETWORK_IDLE_MS = 20000; // ceiling for the app's own resource chain to go quiet
 export const SETTLE_INITIAL_MS = 1200; // covers the last CameraFit reframe at 1100 ms
 export const SETTLE_INTERVAL_MS = 350;
