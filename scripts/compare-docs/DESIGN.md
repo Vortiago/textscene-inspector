@@ -37,6 +37,28 @@ Proven this session; the pieces exist:
    deliberately does not auto-activate it, because Godot's *editor* does not
    either — it keeps its own free camera and shows the node as a frustum gizmo.
 
+## Validated on two scenes
+
+Derived by hand for `unit-preview-lighting` and `unit-sky-physical` and rendered
+both sides from it. The frames match; the remaining difference is real, and two
+divergences the mismatched pair had been hiding are now visible:
+
+| Region | Ours | Godot | Delta /255 |
+| --- | --- | --- | --- |
+| Sky at zenith | 184, 190, 198 | 176, 184, 194 | +8 |
+| Horizon transition | 77, 69, 62 | 102, 93, 95 | **−25** |
+| Lit ground plane | 238, 241, 246 | 227, 229, 233 | +11 |
+| Inside a shadow | 141, 158, 179 | 107, 122, 143 | **+34** |
+
+Whole-frame mean 17.1/255, 34.9% of pixels more than 8/255 apart.
+
+- **Shadows are too light.** The sky IBL fills shadowed surfaces more than
+  Godot's does. Worth chasing before the sheets are written, or every 3D sheet
+  will report the same divergence.
+- **The horizon transition sits lower and narrower than Godot's.** Suspect the
+  `inv_sky_curve` / `inv_ground_curve` application rather than the colours,
+  which match at both extremes.
+
 ## Sequencing
 
 **3D first.** Steps 1–4 work today for anything with a `VisualInstance3D` bound.
