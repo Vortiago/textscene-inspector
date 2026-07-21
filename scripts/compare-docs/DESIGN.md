@@ -118,6 +118,16 @@ rather than pairing two differently-framed images, and `findCanvas2DFrame`
 rejects a frame that is not exactly 1152×648 on whole pixels — the failures that
 otherwise still produce a plausible-looking picture.
 
+What this frame cannot show is the same thing the 3D one cannot: **editor
+gizmos**. The reference renders the GAME, so a fixture whose only content is a
+CollisionShape2D outline, a Marker2D cross, a Path2D curve or an
+AudioStreamPlayer2D icon comes back empty from Godot — and empty from us too,
+since those are selection-gated or toggle-gated here. Seven of the 31 2D
+fixtures render nothing on the Godot side for that reason — six pair as two
+agreeing empty frames, and `unit-navigation-region-2d` shows OUR navmesh overlay
+(toolbar-toggled, on by default) against Godot's empty one. Comparing a gizmo
+needs the editor, not a render, and is out of this tool's reach.
+
 The 2D capture uses a **wider browser viewport** (1600×900) than the 3D one, for
 the single reason that the frame must fit inside the stage at zoom 1. Every
 piece of it is opt-in (`createCaptureContext({ canvas2D: true })`), because the
