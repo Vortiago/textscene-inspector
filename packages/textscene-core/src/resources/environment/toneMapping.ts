@@ -49,6 +49,12 @@ export function toneMappingFor(mode: number): THREE.ToneMapping {
  * unmount matters because the renderer, the scene and three's shader chunks all
  * outlive any one environment: a previewer that swaps scenes would otherwise
  * keep the departed environment's curve.
+ *
+ * `THREE.ShaderChunk` is module-global, so this assumes ONE environment applies
+ * at a time. That holds: the web app mounts a single shell, each VS Code
+ * webview is its own realm, and Godot allows only one `WorldEnvironment` per
+ * scene (it warns otherwise). A scene that ships two anyway gets last-mount-
+ * wins, which is also what Godot's own renderer does with them.
  */
 export function applyToneMapping(
   gl: ToneMappedRenderer,
