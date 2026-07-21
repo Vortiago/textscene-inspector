@@ -61,3 +61,27 @@ describe('<DirectionalLight3D>', () => {
     expect(group.instance.position.y).toBe(10);
   });
 });
+
+describe('<DirectionalLight3D> shadow frustum', () => {
+  it('sits back from the node so a light at the origin still casts shadows', async () => {
+    // three's shadow camera sits AT the light's position, but Godot's
+    // directional shadow ignores the node's position entirely. A light
+    // authored at the origin — the default for a bare DirectionalLight3D —
+    // therefore had every caster behind its own near plane and cast nothing.
+    const renderer = await ReactThreeTestRenderer.create(
+      <DirectionalLight3D
+        node={{ name: 'Sun', type: 'DirectionalLight3D', properties: {}, children: [] } as never}
+        properties={{ light_color: 'Color(1, 1, 1, 1)', light_energy: 1, shadow_enabled: true } as never}
+      />
+    );
+    const light = renderer.scene.findByType('DirectionalLight').instance as THREE.DirectionalLight;
+    expect(light.position.z).toBeGreaterThan(0);
+    // Still pointing down its own -Z: the target sits at local (0, 0, -1),
+    // so pulling back must not have changed the direction it lights from.
+    const direction = light.target.position.clone().sub(light.position).normalize();
+    expect(direction.z).toBeCloseTo(-1, 6);
+    // The near plane must clear the pullback, and far must still reach past
+    // the scene rather than being consumed by the offset.
+    expect(light.shadow.camera.far).toBeGreaterThan(light.position.z);
+  });
+});
