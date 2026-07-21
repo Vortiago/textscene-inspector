@@ -113,10 +113,16 @@ glass default (ior 1.5); Godot exposes no ior.
 - **Deferred:** `refraction_texture` and `refraction_texture_channel` (per-pixel
   refraction strength) are not yet implemented — three.js `transmissionMap` has a
   different semantic (transparency mask, not distortion strength).
-- **Why not fixed:** Godot's `refraction_scale` maps volumetrically (thickness),
-  not as a material property; the mapping is faithful in KIND but the exact visual
-  distortion will always differ (screen-space UV offset → volumetric ray bending).
-  A proper fix needs a refraction shader (out of scope for the scalar-parse layer).
+- **Secondary surfaces (`material-N`, N>0):** transmission is dropped for a mesh's
+  non-primary surfaces — `SecondarySurfaceMaterial`
+  (`nodes/3d/meshinstance3d/Component.tsx`) renders a scalar-only
+  `<meshStandardMaterial>` and forwards no `transmission`/`thickness`, so refraction
+  on a secondary slot renders opaque. This is the shared rules-of-hooks deferral
+  (textures and physical-only features on slots N>0 would need `useResource` inside a
+  render loop) — the same drop already applies to clearcoat/rim/anisotropy, not a
+  refraction-specific gap. Surface 0 upgrades correctly.
+- **Why not fixed:** a proper fix needs a refraction shader (out of scope for the
+  scalar-parse layer).
 - Site: `r3f/materials/standardMaterialScalars.ts` (refraction block),
   `r3f/materials/StandardMaterialSlot.tsx` (transmission/thickness).
 

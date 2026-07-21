@@ -81,6 +81,10 @@ describe('<MeshInstance3D> refraction material (WI-69)', () => {
     const material = physical[0]!.instance as THREE.MeshPhysicalMaterial;
     expect(material.transmission).toBeCloseTo(1, 5);
     expect(material.thickness).toBeCloseTo(0.2, 5);
+    // ior is left unset so it stays at three's MeshPhysicalMaterial glass
+    // default (1.5) — Godot exposes no ior, so a hallucinated override would
+    // silently diverge. Pin the invariant, not just the mechanism the diff set.
+    expect(material.ior).toBe(1.5);
   });
 
   it('keeps a material with no refraction on the standard (non-physical) material', async () => {
