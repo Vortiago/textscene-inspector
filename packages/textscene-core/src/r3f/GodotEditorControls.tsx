@@ -355,8 +355,10 @@ export function GodotEditorControls() {
     function handleKeyDown(event: KeyboardEvent): void {
       if (isTypingTarget(event.target)) return;
 
+      // Read the sprint modifier off the event rather than tracking its own
+      // keydown: Shift held BEFORE freelook started never fires one.
+      sprintRef.current = event.shiftKey;
       if (freelookRef.current) {
-        if (event.code === 'ShiftLeft' || event.code === 'ShiftRight') sprintRef.current = true;
         if (FREELOOK_KEYS[event.code]) {
           heldKeysRef.current.add(event.code);
           event.preventDefault();
@@ -382,7 +384,7 @@ export function GodotEditorControls() {
     }
 
     function handleKeyUp(event: KeyboardEvent): void {
-      if (event.code === 'ShiftLeft' || event.code === 'ShiftRight') sprintRef.current = false;
+      sprintRef.current = event.shiftKey;
       heldKeysRef.current.delete(event.code);
     }
 

@@ -256,6 +256,29 @@ describe('<GodotEditorControls> keyboard', () => {
   });
 });
 
+/** Fly forward for two frames and report how far the camera travelled. */
+async function flyForward(shiftKey: boolean): Promise<number> {
+  const { renderer, get, element } = await mount();
+  const camera = get().camera;
+  const before = camera.position.clone();
+  if (shiftKey) window.dispatchEvent(new KeyboardEvent('keydown', { code: 'ShiftLeft', shiftKey }));
+  element.dispatchEvent(
+    new PointerEvent('pointerdown', { pointerId: 1, button: 2, clientX: 0, clientY: 0 })
+  );
+  window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyW', shiftKey }));
+  await renderer.advanceFrames(2, 16);
+  return camera.position.distanceTo(before);
+}
+
+describe('<GodotEditorControls> freelook sprint', () => {
+  it('sprints on Shift, including when Shift went down before freelook started', async () => {
+    const walked = await flyForward(false);
+    const sprinted = await flyForward(true);
+    expect(walked).toBeGreaterThan(0);
+    expect(sprinted).toBeCloseTo(walked * 3, 6);
+  });
+});
+
 describe('EditorControlsHandle framing contract', () => {
   it('re-aims at a target written from outside without moving the camera', async () => {
     const { get, controls } = await mount();
