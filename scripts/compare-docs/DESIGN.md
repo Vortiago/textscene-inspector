@@ -72,14 +72,12 @@ Two traps this exposed, both of which produced confident wrong pictures:
 3. **Fan out** the 3D sheets.
 4. **2D capture path**, then the 2D sheets.
 
-Decided, and outstanding work in its own right: replace drei's
-`<OrbitControls>` with Godot's editor navigation — middle-drag orbit,
-shift+middle pan, right-drag freelook with WASD, numpad 1/3/7/5 view snapping.
-`OrbitControls` is three's *examples* code (via `three-stdlib`, via drei), not
-core, and it is the web-viewer convention rather than anything Godot does. Only
-`OrbitControls` and `Text` are used from drei, so this is a contained swap; the
-dependency stays for `Text`. Freeing left-drag also leaves it available for
-selection.
+The viewport itself navigates like Godot's editor rather than like a web viewer
+(`GodotEditorControls.tsx`, maths in `godotEditorControls.ts`): middle-drag
+orbit, shift+middle pan, ctrl+middle and wheel zoom, right-drag freelook with
+WASD/QE flying, numpad 1/3/7 view snapping and 5 for orthographic, no damping.
+Left-drag is left free for selection, as Godot leaves it. drei remains a
+dependency for `Text` only.
 
 ## Sequencing
 

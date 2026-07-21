@@ -160,7 +160,7 @@ describe('<TscnPreviewShell>', () => {
     // Camera state is owned by the THREE.Camera object inside <Canvas>.
     // The shell uses useMemo on `content` to re-parse, but the tree
     // structure (the <TscnCanvas> child) keeps the same React identity
-    // across renders — so OrbitControls camera state survives a content
+    // across renders — so the viewport camera state survives a content
     // swap. This test verifies the canvas stub is the SAME DOM node
     // before and after the swap, which is the load-bearing property:
     // React's reconciler reuses the same fiber.

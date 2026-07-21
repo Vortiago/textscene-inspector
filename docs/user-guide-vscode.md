@@ -119,7 +119,7 @@ The PRD wants the camera's orbit position to survive a save when only the file's
 
 ![Preview after edit (transform X 0 → 1.5) — same panel instance, scene re-rendered](screenshots/vscode/vscode-08-b.png)
 
-The verifier edited the Box transform translation to X=1.5 and saved. The preview tab remained the same instance — no panel disposal, no re-mount — and the scene re-rendered with the new transform. The architectural prerequisites for camera-survival are present in the code: the webview's React tree is reconciled (not re-mounted) on content updates, OrbitControls state lives in component refs, and the `TscnPreviewShell` does not carry a `key` prop that varies on content. The PRD's strict "camera position matches within 0.001 tolerance" cannot be measured from outside the cross-origin webview iframe, but the component-identity prerequisite is in place.
+The verifier edited the Box transform translation to X=1.5 and saved. The preview tab remained the same instance — no panel disposal, no re-mount — and the scene re-rendered with the new transform. The architectural prerequisites for camera-survival are present in the code: the webview's React tree is reconciled (not re-mounted) on content updates, the camera pose lives on the THREE camera and the navigation handle rather than in React state, and the `TscnPreviewShell` does not carry a `key` prop that varies on content. The PRD's strict "camera position matches within 0.001 tolerance" cannot be measured from outside the cross-origin webview iframe, but the component-identity prerequisite is in place.
 
 ---
 

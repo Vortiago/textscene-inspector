@@ -1,7 +1,7 @@
 /**
  * CameraControlContext exposes a `resetCamera`
  * callback that, when fired, drives a registered handler (the canvas's
- * `<OrbitControls>.reset()`). Also pins the pre-existing camera-switch
+ * `<GodotEditorControls>` handle's `reset()`). Also pins the pre-existing camera-switch
  * surface (`switchToCamera` / `returnToFreeView` / `activeCameraPath`)
  * so the reset-camera additions don't drift it.
  */

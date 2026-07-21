@@ -25,7 +25,7 @@
  * `PreviewErrorBoundary` passes `[sceneGraph]` so a crash clears the instant
  * a fixed file re-parses. A `key`-based remount would work too but would
  * also tear down and rebuild everything the boundary wraps (losing
- * OrbitControls camera state / animation playback state) on EVERY scene
+ * the viewport camera state / animation playback state) on EVERY scene
  * change, not just when recovering from a crash.
  */
 import { Component, type ErrorInfo, type ReactNode } from 'react';

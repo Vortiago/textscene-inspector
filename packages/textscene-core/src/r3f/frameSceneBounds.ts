@@ -18,7 +18,7 @@ export const FRAME_MARGIN = 1.6;
 /** A near-flat (2D) scene is viewed head-on and needs far less room. */
 export const FLAT_FRAME_MARGIN = 1.15;
 
-/** Minimal shape we touch on the OrbitControls instance for framing. */
+/** Minimal shape we touch on the viewport controls instance for framing. */
 export interface OrbitLike {
   target?: THREE.Vector3;
   update?: () => void;
@@ -28,7 +28,7 @@ export interface OrbitLike {
  * Frame the camera so the whole scene fits the viewport. Unions the bounding
  * boxes of every rendered Mesh (skipping the empty-state grid), then pulls the
  * camera back along an isometric-ish direction far enough that the largest
- * dimension fits the vertical FOV, and re-points OrbitControls at the centre.
+ * dimension fits the vertical FOV, and re-points the controls at the centre.
  * No-op for empty scenes or non-finite bounds.
  */
 export function frameSceneBounds(

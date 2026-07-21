@@ -40,7 +40,7 @@ import { frameSceneBounds } from './frameSceneBounds.js';
 const here = dirname(fileURLToPath(import.meta.url)); // .../src/r3f
 const srcRoot = resolve(here, '..'); // .../src
 
-/** A minimal OrbitControls stand-in — `frameSceneBounds` copies the framed centre here. */
+/** A minimal controls stand-in — `frameSceneBounds` copies the framed centre here. */
 function makeControls(): { target: THREE.Vector3; update(): void } {
   return { target: new THREE.Vector3(), update() {} };
 }
@@ -51,7 +51,7 @@ function unitBoxGeometry(): THREE.BufferGeometry {
   return geo;
 }
 
-/** Frame a single-model scene and return the centre OrbitControls was pointed at. */
+/** Frame a single-model scene and return the centre the controls were pointed at. */
 function framedCentre(model: THREE.Object3D): THREE.Vector3 {
   const scene = new THREE.Scene();
   scene.add(model);

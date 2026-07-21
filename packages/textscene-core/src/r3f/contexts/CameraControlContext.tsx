@@ -12,7 +12,7 @@
  *
  * Also carries a reset handler so the toolbar's "Reset Camera"
  * button can frame the orbit-controls back to its default. The canvas
- * registers its `OrbitControls.reset` via `registerResetHandler`; the
+ * registers the navigation handle's `reset` via `registerResetHandler`; the
  * toolbar calls `resetCamera()`.
  */
 
@@ -56,7 +56,7 @@ export interface CameraControlContextValue {
   resetCamera: () => void;
   /**
    * Called from `<TscnCanvas>` so the toolbar's reset button can drive
-   * the canvas's `<OrbitControls>`. Returns an unregister callback so
+   * the canvas's `<GodotEditorControls>`. Returns an unregister callback so
    * the canvas can drop the handler on unmount.
    *
    * Implementation detail: the handler is stored in a ref so consumers
