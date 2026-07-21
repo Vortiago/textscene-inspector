@@ -99,6 +99,23 @@ happen to cancel. Reproducing Godot exactly needs
   `resources/materials/standardmaterial3d/renderer.ts` (ArrayMesh surface
   materials — this one also drops `uv1_offset` entirely).
 
+### Refraction = volumetric transmission  *(WI-69)*
+Godot's `refraction_*` is a **screen-space** distortion of the background, scaled
+by `refraction_scale`. three.js has no screen-space refraction and instead models
+it **volumetrically** via `MeshPhysicalMaterial.transmission` + `thickness`. We
+map `refraction_enabled` → `transmission = 1` and `refraction_scale` → `thickness`
+(clamped ≥ 0, Godot default 0.05). The index of refraction stays at three.js's
+glass default (ior 1.5); Godot exposes no ior.
+
+- **Faithful in kind:** both produce the "see behind the surface" glass/water effect.
+- **Diverges in exact distortion:** screen-space UV offset vs volumetric ray bending
+  will differ visually, especially at oblique angles or with extreme scale values.
+- **Deferred:** `refraction_texture` and `refraction_texture_channel` (per-pixel
+  refraction strength) are not yet implemented — three.js `transmissionMap` has a
+  different semantic (transparency mask, not distortion strength).
+- Site: `r3f/materials/standardMaterialScalars.ts` (refraction block),
+  `r3f/materials/StandardMaterialSlot.tsx` (transmission/thickness).
+
 ### ArrayMesh compressed attributes
 A surface with `ARRAY_FLAG_COMPRESS_ATTRIBUTES` (bit 29) stores UV1/UV2 as
 normalised `uint16` to be rescaled by the surface's `uv_scale`. The decoder reads

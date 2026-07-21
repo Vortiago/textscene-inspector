@@ -155,7 +155,7 @@ export function StandardMaterialSlot({
   // `anisotropyMap`. A material carrying any of them renders as
   // <meshPhysicalMaterial>; rim_tint blends the highlight from the light colour
   // (0) toward the albedo (1) via sheenColor.
-  if (scalars.clearcoat > 0 || scalars.rim > 0 || scalars.anisotropy > 0) {
+  if (scalars.clearcoat > 0 || scalars.rim > 0 || scalars.anisotropy > 0 || scalars.transmission > 0) {
     const rimTint = scalars.rimTint;
     const sheenColor = new THREE.Color(
       1 + rimTint * (scalars.color[0] - 1),
@@ -173,6 +173,8 @@ export function StandardMaterialSlot({
         anisotropy={scalars.anisotropy}
         anisotropyRotation={scalars.anisotropyRotation}
         anisotropyMap={anisotropyMap ?? null}
+        transmission={scalars.transmission}
+        thickness={scalars.refractionThickness}
       />
     );
   }
