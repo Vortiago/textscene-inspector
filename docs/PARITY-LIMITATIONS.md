@@ -126,6 +126,34 @@ every tile at the wrong size.
 ### WorldEnvironment volumetric fog  *(audit #11)*
 Godot has two fog systems. **Screen-space fog** (`fog_enabled`/`fog_density`/`fog_light_color`/`fog_mode`) maps to `THREE.FogExp2` and is supported. **Volumetric fog** (`volumetric_fog_*`, a froxel-based 3D scattering effect) has no three.js equivalent and is intentionally **not** applied to `scene.fog` — its density scale differs by orders of magnitude, so approximating it with FogExp2 produced wildly over-dense fog. Screen-space `FOG_MODE_DEPTH` (1) is approximated with the same density-based exponential fog (no separate linear depth params).
 
+### StandardMaterial3D.diffuse_mode
+Godot defaults to Burley (`DIFFUSE_BURLEY`); three.js's physical material is
+always Lambert.
+
+- **Faithful when:** light and view are near the surface normal — the two agree
+  at normal incidence.
+- **Diverges when:** either angle is grazing, where Burley's Fresnel-weighted
+  retro-reflection brightens the surface and Lambert does not. Measured against
+  a Godot render of `unit-preview-lighting`, a rough sphere reads ~5/255 dark
+  at its silhouette.
+- **Why not fixed:** three's `MeshStandardMaterial` has no diffuse-model hook;
+  a faithful Burley needs a custom shader. `DIFFUSE_LAMBERT` scenes are exact.
+- Site: `r3f/materials/StandardMaterialSlot.tsx`.
+
+### StandardMaterial3D.metallic_specular is not applied
+Godot derives the dielectric reflectance as `F0 = 0.16 * specular²`, so the
+default of 0.5 gives F0 = 0.04. `MeshStandardMaterial` hard-wires F0 at 0.04
+and exposes no knob.
+
+- **Faithful when:** `metallic_specular` is left at its 0.5 default, which is
+  exactly three's fixed value.
+- **Diverges when:** a material authors it away from 0.5 — the specular lobe
+  keeps default strength instead of dimming or brightening.
+- **Why not fixed:** the knob exists only on `MeshPhysicalMaterial`
+  (`specularIntensity`), so honouring it means promoting the material and
+  paying that shader's cost on the common path.
+- Site: `r3f/materials/StandardMaterialSlot.tsx`.
+
 ## Meshes
 
 ### CylinderMesh single-cap removal  *(parity batch)*
@@ -228,6 +256,22 @@ VS Code webview has no such mapping — there the load fails into the
 missing-resource placeholder UX.
 
 ## Lights
+
+### OmniLight3D / SpotLight3D distance falloff
+Godot attenuates by `pow(max(1 - d / range, 0), attenuation)`, which reaches
+exactly zero at `range`. three.js uses physical inverse-square with a windowing
+term (`decay`, `distance`), which does not.
+
+- **Faithful when:** the surface is close to the light, where both curves are
+  near their maximum.
+- **Diverges when:** the surface is anywhere in the middle of the falloff — the
+  two curves have different shapes, so no single scale reconciles them at every
+  distance.
+- **Why not fixed:** matching Godot's curve requires a custom shader per light;
+  three exposes only `decay`. The energy scale (× PI, `lightConstants.ts`) is
+  matched at the source, so the near field agrees.
+- Site: `nodes/3d/lights/omnilight3d/Component.tsx`,
+  `nodes/3d/lights/spotlight3d/Component.tsx`.
 
 ### SpotLight3D.spot_angle_attenuation → penumbra  *(audit #15)*
 Godot's cone-edge softness is `pow(spot_rim, spot_angle_attenuation)` — a curve

@@ -7,73 +7,68 @@ the fixtures that already exist.
 ## The problem this solves first
 
 Cross-renderer screenshots are worthless unless both sides frame identically.
-Every measurement taken before this was caveated: Godot renders through the
-scene's own `Camera3D`, this previewer frames scene bounds or opens at Godot's
-fixed orbit, so a pixel at (x, y) means different things in each image. Only
+Until both harnesses defaulted to the same camera, every measurement was
+caveated — a pixel at (x, y) meant different things in each image, and only
 view-independent quantities (the colour of a flat lit surface) survived.
 
-## The approach — one camera, derived once, handed to both
+## The approach — both sides open where Godot's editor opens
 
-Proven this session; the pieces exist:
+There is nothing to derive. The previewer opens every scene at Godot's editor
+camera (`Node3DEditorViewport::Cursor()` — fixed orbit, distance 4, fov 70), and
+the reference harness now does the same, so:
 
-1. **Get the scene's world AABB from Godot.** `pnpm ref:godot <scene> --emit-bounds`
-   writes `<out>.bounds.json` next to the render — Godot's own
-   `VisualInstance3D.get_aabb()` union, not our estimate of it.
-2. **Derive one camera from that AABB.** Godot's editor direction
-   (`editorCameraDirection()`, `(0.4207, 0.4794, 0.7702)`), 70° FOV, distance
-   fitted to the bounding sphere with a margin. Pure maths, one implementation,
-   both consumers.
-3. **Godot render:** `pnpm ref:godot <scene> --camera x,y,z --look-at cx,cy,cz`.
-   Preview sun/environment inject per the yield rule (ADR-0025) exactly as the
-   app applies them, so the lighting matches too.
-4. **Our render:** write a temp copy of the fixture into
-   `apps/textscene-web/public/fixtures/` with a `Camera3D` injected at that same
-   transform, load it in the preview, then select that node in the scene tree and
-   click **Use This Camera** — the same path `scripts/visual/run.mjs` already uses
-   to click tree rows by `data-node-path`. Screenshot the canvas, delete the temp
-   fixture.
+    pnpm ref:godot scenes/fixtures/<scene>.tscn --out godot.png
+    pnpm ref:ours  <scene>.tscn --out ours.png
 
-   The UI click is required, not laziness: our `Camera3D` parses `current` but
-   deliberately does not auto-activate it, because Godot's *editor* does not
-   either — it keeps its own free camera and shows the node as a frustum gizmo.
+produce the same frame with no camera arguments on either side, and a probe at
+(x, y) addresses the same surface point in both. `--probe x,y --patch 5` prints
+the per-channel median of a patch on either side, in the same format.
 
-## Validated on two scenes
+Two flags cover the rest:
 
-Derived by hand for `unit-preview-lighting` and `unit-sky-physical`, rendered
-both sides from it. Whole-frame mean difference **4.77/255** for
-`unit-preview-lighting`.
+- `--frame` (both harnesses) fits the scene's geometry bounds the way
+  `frameSceneBounds.ts` does — the previewer's opt-in "frame on open" — for a
+  scene too large to read at distance 4.
+- `--scene-camera` (Godot side) renders through a scene's own `Camera3D`. Off by
+  default, because the previewer ignores it too: Godot's editor keeps its free
+  camera and draws the node as a frustum gizmo.
 
-Getting there exposed a harness bug worth remembering: a bare `Camera3D.new()`
-defaults to **fov 75**, while the editor viewport — which is what this previewer
-reproduces — uses `editors/3d/default_fov` = **70**. Rendering the reference at
-75 against a previewer at 70 is a silent zoom difference in every frame, and it
-accounted for most of the earlier mismatch (mean 17.1 → 4.8). It also produced a
-false lead: the horizon transition looked 25/255 off and was suspected to be the
-`inv_sky_curve` application. It was the FOV. With the FOV matched the sky is
-pixel-exact at the zenith and mid-band.
+An earlier design derived one camera from `--emit-bounds` and drove the
+previewer's **Use This Camera** button to match it. That is no longer needed, and
+it was fragile in a way worth remembering: two framing rules that must agree, and
+no way to see when they stop agreeing. They did stop — `--emit-bounds` unioned
+every `VisualInstance3D`, and `Light3D` is one, so a sun 5 units above a flat
+plane moved the derived centre by 3 units. Bounds are geometry-first now, and are
+only load-bearing for `--frame`.
 
-| Region | Ours | Godot | Delta /255 |
-| --- | --- | --- | --- |
-| Sky at zenith | 184, 190, 198 | 184, 190, 198 | 0 |
-| Sky, upper band | 183, 185, 188 | 183, 185, 187 | 0 |
-| Horizon transition | 77, 69, 62 | 80, 66, 66 | −3 |
-| Lit ground plane | 238, 241, 246 | 227, 229, 233 | **+11** |
-| Rough sphere | 164, 170, 182 | 188, 192, 202 | **−24** |
-| Inside a shadow | 141, 158, 179 | 107, 122, 143 | **+34** |
+## What the matched frames measured
 
-The sky itself is done. What remains is the **split between direct light and
-IBL**: flat up-facing surfaces and shadowed areas read too bright, curved
-surfaces too dark. Prime suspect is `LIGHT_INTENSITY_SCALE = 2` in
-`r3f/lightConstants.ts` — an eyeballed constant from before any of this could be
-measured, and now measurable. Chase it before writing the sheets, or every 3D
-sheet repeats the same divergence.
+Whole-frame mean difference, both sides at the default camera:
+
+| Fixture | Mean Δ /255 |
+| --- | --- |
+| `unit-light-transport-direct` | 0.204 |
+| `unit-light-transport-ambient` | 0.692 |
+| `unit-light-transport-sky` | 0.319 |
+| `unit-light-transport-sky-graded` | 1.142 |
+| `unit-preview-lighting` (held out) | 1.455 |
+
+Two traps this exposed, both of which produced confident wrong pictures:
+
+- A bare `Camera3D.new()` defaults to **fov 75**; the editor viewport uses
+  `editors/3d/default_fov` = **70**. A silent zoom difference in every frame, and
+  it manufactured a false lead — the horizon looked 25/255 off and the sky curve
+  was suspected, when the curve had been right all along.
+- `ref:ours` with `VISUAL_SKIP_BUILD=1` on a fixture the bundle predates does not
+  fail; the deep link falls back to another scene and renders something
+  plausible. Always build for a new fixture.
 
 ## Order of work (decided)
 
-1. **`LIGHT_INTENSITY_SCALE`.** Sweep it against a Godot render and take the
-   value that minimises the residual. Must land before any sheet is written, or
-   all ~30 of them repeat the same divergence. Moves every 3D baseline again.
-2. **`capture.mjs`**, verified by eye on two fixtures.
+1. ~~**`LIGHT_INTENSITY_SCALE`**~~ — done, and it was four defects rather than
+   one: the energy scale (π, not 2), flat ambient, the sky shader's energy, and
+   the default material an unmaterialed mesh gets. See the table above.
+2. ~~**Capture harness**~~ — done, as `pnpm ref:ours` beside `pnpm ref:godot`.
 3. **Fan out** the 3D sheets.
 4. **2D capture path**, then the 2D sheets.
 
