@@ -12,6 +12,7 @@
  */
 
 import * as THREE from 'three';
+import type { TscnNode } from '../../parser/types';
 import type { Color } from '../../resources/materials/standardmaterial3d/types';
 import { createEnvironmentSettings, type EnvironmentSettings } from '../../resources/environment/renderer';
 import { parseSkyMaterial } from '../../resources/sky/parser';
@@ -37,6 +38,13 @@ export const PREVIEW_SUN_SHADOW_MAX_DISTANCE = 100;
 
 const PREVIEW_SKY_TOP: Color = { r: 0.385, g: 0.454, b: 0.55, a: 1 };
 const PREVIEW_GROUND_BOTTOM: Color = { r: 0.2, g: 0.169, b: 0.133, a: 1 };
+
+/**
+ * The nodes Godot's two counters watch. A stable module-level predicate: the
+ * live-tree hook memoises on it.
+ */
+export const YIELDS_A_PREVIEW = (node: TscnNode): boolean =>
+  node.type === PREVIEW_SUN_YIELD_TYPE || node.type === PREVIEW_ENVIRONMENT_YIELD_TYPE;
 
 export interface PreviewToggles {
   sun: boolean;

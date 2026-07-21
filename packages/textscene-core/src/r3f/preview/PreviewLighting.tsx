@@ -13,24 +13,15 @@ import { useViewportMode } from '../contexts/ViewportModeContext';
 import { useLiveSceneNodes } from '../useLiveSceneTree';
 import { EnvironmentLayer } from '../environment/EnvironmentLayer';
 import { LIGHT_INTENSITY_SCALE, DEFAULT_SHADOW_BIAS } from '../lightConstants';
-import type { TscnNode } from '../../parser/types';
 import {
-  PREVIEW_ENVIRONMENT_YIELD_TYPE,
   PREVIEW_SUN_COLOR,
   PREVIEW_SUN_ENERGY,
   PREVIEW_SUN_SHADOW_MAX_DISTANCE,
-  PREVIEW_SUN_YIELD_TYPE,
+  YIELDS_A_PREVIEW,
   previewEnvironment,
   previewSunDirection,
   previewYield,
 } from './previewLighting';
-
-/**
- * Module-level so the live-tree memo does not recompute every render — the
- * hook's contract asks for a stable predicate.
- */
-const YIELDS_A_PREVIEW = (node: TscnNode) =>
-  node.type === PREVIEW_SUN_YIELD_TYPE || node.type === PREVIEW_ENVIRONMENT_YIELD_TYPE;
 
 /**
  * How far back the preview sun sits. Directional light is parallel, so this

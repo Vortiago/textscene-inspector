@@ -37,7 +37,10 @@ export function liveTreeContext(
   sceneGraph: SceneGraph | null | undefined,
   loader: ResourceLoader | null | undefined
 ): { roots: readonly TscnNode[]; ctx: LiveTreeContext } | null {
-  const root = sceneGraph?.scenes.get(sceneGraph.rootScene);
+  // `scenes` is optional-chained too: readers outside the canvas (the toolbar)
+  // see whatever the host put in HierarchyContext, which is not always a fully
+  // built SceneGraph.
+  const root = sceneGraph?.scenes?.get(sceneGraph.rootScene);
   if (!root) return null;
   return {
     roots: root.nodes,
