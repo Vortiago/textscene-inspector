@@ -51,19 +51,23 @@ const DEFAULT_WIDTH = 400;
 const DEFAULT_HEIGHT = 300;
 
 /** `editors/3d/default_fov`. A `Camera3D` node's own default is 75. */
-const EDITOR_FOV = 70;
+export const EDITOR_FOV = 70;
 
 /**
  * `Node3DEditorViewport::Cursor()` — where the editor opens EVERY scene,
  * whatever is in it. Mirrors `godotEditorCamera.ts`, which is what the
  * previewer opens at, so a bare `ref:godot` and a bare `ref:ours` frame the
- * same picture with no arguments and nothing to keep in sync.
+ * same picture with no arguments. This file generates GDScript and runs under
+ * plain node, so it cannot import the TypeScript — `run.test.mjs` asserts these
+ * against `godotEditorCamera.ts` instead, because a one-sided edit here would
+ * leave both harnesses "working" while framing different pictures, and every
+ * probe measured after that would be quietly wrong.
  */
-const EDITOR_CAMERA_DIRECTION = [0.4207355, 0.4794255, 0.7701512];
-const EDITOR_CAMERA_DISTANCE = 4;
+export const EDITOR_CAMERA_DIRECTION = [0.4207355, 0.4794255, 0.7701512];
+export const EDITOR_CAMERA_DISTANCE = 4;
 
 /** `frameSceneBounds.ts`'s margin, for the opt-in framed mode. */
-const FRAME_MARGIN = 1.6;
+export const FRAME_MARGIN = 1.6;
 
 /** Godot's preview sun: white, energy 1.0, shadows on, euler (-60°, 150°, 0). */
 const PREVIEW_SUN_ALTITUDE_DEG = -60;

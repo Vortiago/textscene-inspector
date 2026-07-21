@@ -29,7 +29,6 @@
  * On failure, <name>.actual.png and <name>.diff.png land in
  * scripts/visual/output/ (gitignored; uploaded as a CI artifact).
  */
-/* global document */ // used only inside the addInitScript callback, which runs in the browser.
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -41,8 +40,12 @@ import pixelmatch from 'pixelmatch';
 import { DEFAULT_MAX_DIFF_PCT, GOLDEN_SCENES } from './scenes.mjs';
 import {
   assertPortFree,
+  createCaptureContext,
   ensureWebBuilt,
+  findCanvas,
+  gotoFixture,
   killPreviewGroup,
+  settleCanvas,
   startPreview,
   waitForServer,
 } from './previewServer.mjs';
@@ -59,20 +62,6 @@ const OUTPUT_DIR = join(here, 'output');
 // port would otherwise silently capture from whichever process got there
 // first, with no error.
 const PORT = Number(process.env.VISUAL_PORT) || 4317;
-const VIEWPORT = { width: 1280, height: 800 };
-
-// The Source pane (`tscn-web-source-pane` in apps/textscene-web/src/r3f-main.tsx)
-// is an editing affordance, not part of the previewed scene, and is visible by
-// default for any fresh browser context with no persisted preference. Seed it
-// closed via an init script (runs before the page's own scripts on every
-// navigation in this context) so golden baselines stay scoped to the rendered
-// scene at its full canvas width, not incidental editor chrome.
-const SOURCE_PANE_STORAGE_KEY = 'tscn-web-source-pane';
-
-const NETWORK_IDLE_MS = 20000; // ceiling for the app's own resource chain to go quiet
-const SETTLE_INITIAL_MS = 1200; // covers the last CameraFit reframe at 1100 ms
-const SETTLE_INTERVAL_MS = 350;
-const SETTLE_MAX_ATTEMPTS = 12;
 
 // Strictly greater than CameraFit's last load-time fit timer (1100ms after
 // the scene mounts), with a comfortable margin for render-loop latency under
@@ -105,31 +94,12 @@ function parseArgs(argv) {
  * browser, not just the component's gating logic in isolation.
  */
 async function captureScene(page, baseUrl, scene) {
-  await page.goto(`${baseUrl}/?fixture=${encodeURIComponent(scene.file)}`, {
-    waitUntil: 'load',
-  });
-  // `load` fires before the app's OWN resource chain finishes: a scene fetches
-  // its .tscn, then an ArrayMesh .tres, then that surface's material, then the
-  // material's texture — each only discoverable once the previous one parsed.
-  // The settle gate below would otherwise happily find two identical frames of
-  // the untextured placeholder and freeze THAT into a baseline, which then
-  // passes forever while seeing none of the texture. Wait for the network to go
-  // quiet first; a scene that never idles still falls through to the gate.
-  await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_MS }).catch((err) => {
-    // A scene that never idles still falls through to the settle gate, but say
-    // so — silence here is how a stalled resource chain becomes a baseline.
-    // Anything that is NOT a timeout (crashed target, closed page) is a real
-    // failure and must not be mistaken for one.
-    if (err?.name !== 'TimeoutError') throw err;
-    console.log(`[visual]   ${scene.name}: no network idle within ${NETWORK_IDLE_MS}ms`);
-  });
-  const canvases = page.locator('canvas');
-  await canvases.first().waitFor({ timeout: 30000 });
-  const count = await canvases.count();
-  if (count !== 1) {
-    return { buffer: null, reason: `expected exactly 1 canvas, found ${count}` };
-  }
-  const canvas = canvases.first();
+  // Silence here is how a stalled resource chain becomes a baseline, so say so.
+  await gotoFixture(page, baseUrl, scene.file, (ms) =>
+    console.log(`[visual]   ${scene.name}: no network idle within ${ms}ms`)
+  );
+  const { canvas, reason: canvasReason } = await findCanvas(page);
+  if (!canvas) return { buffer: null, reason: canvasReason };
 
   if (scene.navigation) {
     // The navmesh overlay has its own toolbar toggle. It defaults ON, but drive
@@ -206,22 +176,7 @@ async function captureScene(page, baseUrl, scene) {
     await page.mouse.move(0, 0);
   }
 
-  await page.waitForTimeout(SETTLE_INITIAL_MS);
-  let prev = await canvas.screenshot();
-  for (let attempt = 0; attempt < SETTLE_MAX_ATTEMPTS; attempt++) {
-    await page.waitForTimeout(SETTLE_INTERVAL_MS);
-    const cur = await canvas.screenshot();
-    if (cur.equals(prev)) {
-      return { buffer: cur, reason: null };
-    }
-    prev = cur;
-  }
-  return {
-    buffer: null,
-    reason: `never settled: ${SETTLE_MAX_ATTEMPTS} captures over ${
-      SETTLE_MAX_ATTEMPTS * SETTLE_INTERVAL_MS
-    }ms all differed`,
-  };
+  return settleCanvas(page, canvas);
 }
 
 function compareToBaseline(scene, actualBuffer) {
@@ -294,38 +249,13 @@ async function main() {
       headless: true,
       args: SWIFTSHADER_GL_ARGS,
     });
-    const context = await browser.newContext({
-      viewport: VIEWPORT,
-      deviceScaleFactor: 1,
-    });
-    /* global window */ // the addInitScript callbacks below run in the browser
-    await context.addInitScript(
-      ([key, value]) => window.localStorage.setItem(key, value),
-      [SOURCE_PANE_STORAGE_KEY, JSON.stringify({ visible: false, width: 320 })]
-    );
     // Frame each scene on load. The APP defaults to Godot's fixed orbit
     // (ADR-0025), which would leave the larger fixtures mostly out of frame —
     // a baseline showing empty space cannot fail when the render breaks. These
-    // goldens exist to guard the renderer, so they get the framed view.
-    await context.addInitScript(
-      ([key, value]) => window.localStorage.setItem(key, value),
-      ['tsi.frameOnOpen', 'true']
-    );
-    // Keep this a pure render comparison (see header): the viewport toolbar
-    // floats over the canvas, and canvas.screenshot() composites any DOM
-    // painted over the canvas box, so the overlay would churn every 3D
-    // baseline. Hide it once for the whole context (survives every navigation).
-    // The <style> must land in <head> once it exists — appending at
-    // document-start puts it in an invalid position that the parser drops.
-    await context.addInitScript(() => {
-      const add = () => {
-        const style = document.createElement('style');
-        style.textContent = '[data-testid="viewport-toolbar-overlay"]{display:none !important}';
-        document.head.appendChild(style);
-      };
-      if (document.head) add();
-      else document.addEventListener('DOMContentLoaded', add, { once: true });
-    });
+    // goldens exist to guard the renderer, so they get the framed view; the
+    // parity harness deliberately does NOT (it measures against Godot, which
+    // opens at that same fixed orbit).
+    const context = await createCaptureContext(browser, { frameOnOpen: true });
     const page = await context.newPage();
 
     for (const scene of scenes) {

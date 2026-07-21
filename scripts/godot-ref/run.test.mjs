@@ -25,6 +25,10 @@ import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { PNG } from 'pngjs';
 import {
+  EDITOR_CAMERA_DIRECTION,
+  EDITOR_CAMERA_DISTANCE,
+  EDITOR_FOV,
+  FRAME_MARGIN,
   parseArgs,
   resolveProjectRoot,
   projectConfig,
@@ -33,6 +37,34 @@ import {
 } from './run.mjs';
 
 const REPO_ROOT = join(import.meta.dirname, '..', '..');
+
+/**
+ * The harness hand-mirrors the previewer's editor-camera constants because it
+ * generates GDScript and runs under plain node. Nothing else pins the two
+ * copies together, and a one-sided edit does not fail — it makes `ref:godot`
+ * and `ref:ours` frame different pictures while both appear to work, which is
+ * exactly the silent zoom skew that once cost a whole false lead (the sky curve
+ * was blamed for a mismatch that was really fov 75 against fov 70).
+ */
+describe('editor-camera constants mirror the previewer', () => {
+  it('matches godotEditorCamera.ts', async () => {
+    const { editorCameraDirection, EDITOR_CAMERA_DISTANCE: coreDistance, EDITOR_CAMERA_FOV } =
+      await import('../../packages/textscene-core/src/r3f/godotEditorCamera.ts');
+    const core = editorCameraDirection();
+    expect(EDITOR_CAMERA_DIRECTION[0]).toBeCloseTo(core.x, 6);
+    expect(EDITOR_CAMERA_DIRECTION[1]).toBeCloseTo(core.y, 6);
+    expect(EDITOR_CAMERA_DIRECTION[2]).toBeCloseTo(core.z, 6);
+    expect(EDITOR_CAMERA_DISTANCE).toBe(coreDistance);
+    expect(EDITOR_FOV).toBe(EDITOR_CAMERA_FOV);
+  });
+
+  it('matches frameSceneBounds.ts’s framing margin', async () => {
+    const { FRAME_MARGIN: coreMargin } = await import(
+      '../../packages/textscene-core/src/r3f/frameSceneBounds.ts'
+    );
+    expect(FRAME_MARGIN).toBe(coreMargin);
+  });
+});
 
 describe('parseArgs', () => {
   it('takes the scene as the sole positional argument', () => {
@@ -209,36 +241,15 @@ describe.skipIf(!hasEngine)('renderReference (real Godot)', () => {
       previews: true,
     });
     const b = JSON.parse(await readFile(boundsOut, 'utf8'));
-    // The fixture is an 8x8 plane at y=0 with a 2.5x2.5 patch on it, plus a
-    // DirectionalLight3D parked at y=5. The plane alone spans y 0..0.01.
+    // These bounds exist to derive ONE camera both renderers can use, so they
+    // obey the same rule frameSceneBounds.ts does: geometry first. Light3D is a
+    // VisualInstance3D too, and this fixture's sun sits 5 units above an 8x8
+    // plane — unioning every visual put the centre at y=3 instead of y=0 and
+    // silently framed the reference 3 units above the previewer.
     expect(b.position[1]).toBeCloseTo(0, 3);
     expect(b.size[1]).toBeLessThan(0.5);
     expect(b.size[0]).toBeCloseTo(8, 3);
     expect(b.size[2]).toBeCloseTo(8, 3);
-  }, 180_000);
-
-  it('bounds the GEOMETRY, so a distant light cannot move the derived camera', async () => {
-    // These bounds exist to derive ONE camera both renderers use, so they have
-    // to obey the same rule frameSceneBounds.ts does: geometry first. Light3D
-    // is a VisualInstance3D too, and this fixture's sun sits 5 units above a
-    // flat plane — unioning every visual put the centre at y=3 instead of y=0
-    // and silently framed the reference 3 units higher than the previewer.
-    const dir = await mkdtemp(join(tmpdir(), 'godot-ref-'));
-    const out = join(dir, 'shot.png');
-    const boundsOut = join(dir, 'shot.bounds.json');
-    await renderReference({
-      scene: join(REPO_ROOT, 'scenes/fixtures/unit-light-transport-direct.tscn'),
-      out,
-      boundsOut,
-      width: 200,
-      height: 150,
-      previews: true,
-    });
-    const bounds = JSON.parse(await readFile(boundsOut, 'utf8'));
-    // The 8x8 plane and the patch resting on it, and nothing else.
-    expect(bounds.position[1]).toBeCloseTo(0, 3);
-    expect(bounds.size[1]).toBeLessThan(0.5);
-    expect(bounds.size[0]).toBeCloseTo(8, 3);
   }, 180_000);
 
   it('lights the scene only because of the previews — --no-previews is runtime semantics', async () => {

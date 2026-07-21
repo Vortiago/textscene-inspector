@@ -40,6 +40,30 @@ export const LIGHT_INTENSITY_SCALE = Math.PI;
 export const SHADOW_BIAS_SCALE = 0.01;
 
 /**
+ * How far back along its own ray a directional light stands before rendering
+ * its shadow map, and the half-extent of the orthographic frustum it renders.
+ *
+ * three's shadow camera sits AT the light's position, but Godot's directional
+ * shadow ignores the node's position entirely and fits cascades to the view. A
+ * light authored at the origin would otherwise put every caster behind its own
+ * near plane and cast nothing at all.
+ *
+ * Shared by the authored `DirectionalLight3D` and the editor preview sun so the
+ * two cannot drift: they had already diverged on the far plane, leaving the
+ * preview sun 70 units of usable depth where its own max-distance says 100.
+ * Add the pullback to any authored max distance (`directionalShadowFar`) rather
+ * than replacing it — Godot measures that distance from the camera, so the
+ * offset must not eat into it.
+ */
+export const DIRECTIONAL_SHADOW_PULLBACK = 30;
+export const DIRECTIONAL_SHADOW_FRUSTUM_HALF = 20;
+
+/** The shadow camera's far plane for a directional light standing that far back. */
+export function directionalShadowFar(maxDistance: number): number {
+  return DIRECTIONAL_SHADOW_PULLBACK + maxDistance;
+}
+
+/**
  * Default shadow radius for soft shadows in three.js.
  * Higher values create softer shadows but may impact performance.
  */

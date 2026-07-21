@@ -60,9 +60,15 @@ export function SkyLayer({ sky, intensity = 1, asBackground = true }: SkyLayerPr
   // effects run before the parent's, but the very first paint happens before
   // any of them.
   const [pass, setPass] = useState(0);
-  useEffect(() => setPass((n) => (n === 0 ? 1 : n)), []);
+  useEffect(() => setPass(1), []);
 
   useEffect(() => {
+    // Nothing built on the first pass would ever be seen: the corrective pass
+    // below follows in the same tick and disposes it. Building anyway cost a
+    // six-face cube render and a PMREM prefilter on every mount, and the
+    // preview environment puts a SkyLayer in nearly every 3D scene.
+    if (pass === 0) return undefined;
+
     const built = buildSkyEnvironment(gl, {
       sky,
       lights: directionalLights(scene),
@@ -120,6 +126,9 @@ function directionalLights(scene: THREE.Scene): SkyLight[] {
       // `light.intensity` straight through made the sun disc PI times too
       // bright, and PMREM then fed that error back into the IBL.
       energy: light.intensity / LIGHT_INTENSITY_SCALE,
+      // Assumes the light came through `LIGHT_INTENSITY_SCALE`, which every
+      // light this renderer creates does. A light arriving inside a GLB
+      // (KHR_lights_punctual) never did, and its disc would read 1/PI dim.
       // `light_angular_distance` defaults to 0 — a point sun with only the
       // soft falloff `sun_curve` gives it.
       angularRadius: 0,

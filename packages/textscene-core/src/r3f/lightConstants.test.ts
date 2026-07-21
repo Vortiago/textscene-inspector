@@ -25,24 +25,21 @@ function godotDiffuse(albedo: number, nDotL: number, energy: number): number {
 }
 
 describe('LIGHT_INTENSITY_SCALE', () => {
-  it('makes three reproduce Godot’s diffuse at every incidence angle', () => {
-    const albedo = 0.2140; // Color(0.5, 0.5, 0.5) through sRGB → linear
-    for (const nDotL of [1, 0.75, 0.5, 0.25, 0.05]) {
-      for (const energy of [0.5, 1, 2.5]) {
-        expect(threeDiffuse(albedo, nDotL, energy * LIGHT_INTENSITY_SCALE)).toBeCloseTo(
-          godotDiffuse(albedo, nDotL, energy),
-          12
-        );
-      }
-    }
-  });
-
-  it('renders a fully lit Lambertian surface as exactly its own albedo', () => {
-    // The physical statement behind the constant, and what
-    // scenes/fixtures/unit-light-transport-direct.tscn shows on screen: under a
-    // white energy-1.0 light at normal incidence the surface returns its albedo,
-    // so an unshaded patch of that albedo laid on it becomes invisible.
+  it('makes three reproduce Godot’s diffuse', () => {
+    // Both sides are linear in N·L and in energy, so one pair settles it —
+    // sweeping more would only restate this. `albedo` is Color(0.5, 0.5, 0.5)
+    // through sRGB → linear; it cancels, and is here to keep the equations
+    // readable as the physics they encode.
+    //
+    // The statement is that a Lambertian surface facing a white energy-1.0
+    // light renders exactly its own albedo, which
+    // scenes/fixtures/unit-light-transport-direct.tscn shows on screen: an
+    // unshaded patch of that albedo laid on the lit plane disappears into it.
     const albedo = 0.2140;
+    expect(threeDiffuse(albedo, 1, 1 * LIGHT_INTENSITY_SCALE)).toBeCloseTo(
+      godotDiffuse(albedo, 1, 1),
+      12
+    );
     expect(threeDiffuse(albedo, 1, 1 * LIGHT_INTENSITY_SCALE)).toBeCloseTo(albedo, 12);
   });
 

@@ -9,6 +9,15 @@ import * as THREE from 'three';
 import { editorCameraDirection } from './godotEditorCamera.js';
 import { computeWorldBoundingBox } from './bounds.js';
 
+/**
+ * How much room to leave around the framed bounds. Exported because the Godot
+ * reference harness mirrors it to frame the same picture (`--frame`), and a
+ * one-sided change there is invisible.
+ */
+export const FRAME_MARGIN = 1.6;
+/** A near-flat (2D) scene is viewed head-on and needs far less room. */
+export const FLAT_FRAME_MARGIN = 1.15;
+
 /** Minimal shape we touch on the OrbitControls instance for framing. */
 export interface OrbitLike {
   target?: THREE.Vector3;
@@ -65,7 +74,8 @@ export function frameSceneBounds(
   const persp = camera as THREE.PerspectiveCamera;
   const fov = ((persp.isPerspectiveCamera ? persp.fov : 50) * Math.PI) / 180;
   const fitDim = isFlat ? Math.max(maxXY, 0.001) : maxDim;
-  const distance = ((fitDim / 2 / Math.tan(fov / 2)) || fitDim) * (isFlat ? 1.15 : 1.6);
+  const distance =
+    ((fitDim / 2 / Math.tan(fov / 2)) || fitDim) * (isFlat ? FLAT_FRAME_MARGIN : FRAME_MARGIN);
 
   // Godot's own editor viewing angle, so a framed scene presents the same face
   // it does in the editor (godotEditorCamera.ts). A flat scene is still viewed

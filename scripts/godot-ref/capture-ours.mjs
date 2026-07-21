@@ -22,7 +22,6 @@
  * same surface point on both. `--frame` switches both to the previewer's
  * fit-the-bounds mode for scenes too large to read at distance 4.
  */
-/* global document, window */ // the addInitScript callbacks below run in the browser.
 
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
@@ -31,8 +30,12 @@ import { SWIFTSHADER_GL_ARGS } from '../showcase/browser.mjs';
 import { probePixels } from './run.mjs';
 import {
   assertPortFree,
+  createCaptureContext,
   ensureWebBuilt,
+  findCanvas,
+  gotoFixture,
   killPreviewGroup,
+  settleCanvas,
   startPreview,
   waitForServer,
 } from '../visual/previewServer.mjs';
@@ -40,16 +43,8 @@ import {
 // Distinct from the visual harness's 4317 so a capture and a golden run can
 // share a host without either silently answering for the other.
 const PORT = Number(process.env.PARITY_PORT) || 4319;
-const VIEWPORT = { width: 1280, height: 800 };
 
-const NETWORK_IDLE_MS = 20000;
-const SETTLE_INITIAL_MS = 1200; // covers the last CameraFit reframe at 1100 ms
-const SETTLE_INTERVAL_MS = 350;
-const SETTLE_MAX_ATTEMPTS = 12;
-
-const SOURCE_PANE_STORAGE_KEY = 'tscn-web-source-pane';
-
-export function parseArgs(argv) {
+function parseArgs(argv) {
   const args = { fixture: null, out: null, probes: [], patch: 1, frame: false };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
@@ -81,75 +76,29 @@ export function parseArgs(argv) {
   return args;
 }
 
-/**
- * Capture the canvas once it is provably settled: two consecutive
- * byte-identical screenshots. Same gate as the visual harness — a scene that
- * never settles is a measurement that cannot be trusted, so it fails rather
- * than returning whatever frame happened to be up.
- */
-async function capture(page, baseUrl, fixture) {
-  await page.goto(`${baseUrl}/?fixture=${encodeURIComponent(fixture)}`, { waitUntil: 'load' });
-  await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_MS }).catch((err) => {
-    if (err?.name !== 'TimeoutError') throw err;
-    console.log(`[ours] no network idle within ${NETWORK_IDLE_MS}ms`);
-  });
-
-  const canvases = page.locator('canvas');
-  await canvases.first().waitFor({ timeout: 30000 });
-  const count = await canvases.count();
-  if (count !== 1) throw new Error(`expected exactly 1 canvas, found ${count}`);
-  const canvas = canvases.first();
-
-  await page.waitForTimeout(SETTLE_INITIAL_MS);
-  let prev = await canvas.screenshot();
-  for (let attempt = 0; attempt < SETTLE_MAX_ATTEMPTS; attempt++) {
-    await page.waitForTimeout(SETTLE_INTERVAL_MS);
-    const cur = await canvas.screenshot();
-    if (cur.equals(prev)) return cur;
-    prev = cur;
-  }
-  throw new Error(
-    `never settled: ${SETTLE_MAX_ATTEMPTS} captures over ` +
-      `${SETTLE_MAX_ATTEMPTS * SETTLE_INTERVAL_MS}ms all differed`
-  );
-}
-
-export async function captureOurs({ fixture, frame = false }) {
-  ensureWebBuilt((m) => console.log(m));
+async function captureOurs({ fixture, frame = false }) {
+  ensureWebBuilt();
   await assertPortFree(PORT, 'PARITY_PORT');
   const { proc, baseUrl } = startPreview(PORT);
   let browser;
   try {
     await waitForServer(`${baseUrl}/`);
     browser = await chromium.launch({ headless: true, args: SWIFTSHADER_GL_ARGS });
-    const context = await browser.newContext({ viewport: VIEWPORT, deviceScaleFactor: 1 });
-    await context.addInitScript(
-      ([key, value]) => window.localStorage.setItem(key, value),
-      [SOURCE_PANE_STORAGE_KEY, JSON.stringify({ visible: false, width: 320 })]
-    );
     // Leave the app at Godot's fixed editor orbit (ADR-0025) — the same place
     // `ref:godot` puts its camera — so both sides frame identically with
     // nothing derived. `--frame` opts into the previewer's fit-the-bounds mode
     // for a scene too large to read at distance 4, and `ref:godot --frame`
     // mirrors it.
-    await context.addInitScript(
-      ([key, value]) => window.localStorage.setItem(key, value),
-      ['tsi.frameOnOpen', frame ? 'true' : 'false']
-    );
-    // The toolbar floats over the canvas and `canvas.screenshot()` composites
-    // any DOM painted over the canvas box, so it would land in the pixels
-    // being measured.
-    await context.addInitScript(() => {
-      const add = () => {
-        const style = document.createElement('style');
-        style.textContent = '[data-testid="viewport-toolbar-overlay"]{display:none !important}';
-        document.head.appendChild(style);
-      };
-      if (document.head) add();
-      else document.addEventListener('DOMContentLoaded', add, { once: true });
-    });
+    const context = await createCaptureContext(browser, { frameOnOpen: frame });
     const page = await context.newPage();
-    return await capture(page, baseUrl, fixture);
+    await gotoFixture(page, baseUrl, fixture, (ms) =>
+      console.log(`[ours] no network idle within ${ms}ms`)
+    );
+    const { canvas, reason: canvasReason } = await findCanvas(page);
+    if (!canvas) throw new Error(canvasReason);
+    const { buffer, reason } = await settleCanvas(page, canvas);
+    if (!buffer) throw new Error(reason);
+    return buffer;
   } finally {
     await browser?.close();
     killPreviewGroup(proc);

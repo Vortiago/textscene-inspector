@@ -295,7 +295,7 @@ its radiance as ambient, FILMIC tonemapping — is (ADR-0025).
 - **Why not exact:** glow is a compositor pass over the rendered frame. This
   renderer draws straight to the canvas with no post-processing chain, so there
   is nothing to hang it on.
-- Site: `r3f/preview/previewLighting.ts` (`previewEnvironment`).
+- Site: `r3f/preview/godotPreviewLighting.ts` (`previewEnvironment`).
 
 ### Sky ambient and sky reflections share one intensity
 Godot scales the sky's *ambient* contribution by `ambient_light_sky_contribution`

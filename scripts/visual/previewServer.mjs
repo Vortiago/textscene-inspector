@@ -125,3 +125,108 @@ export async function waitForServer(url, timeoutMs = 40000) {
   }
   throw new Error(`preview server at ${url} not ready in ${timeoutMs}ms`);
 }
+
+// ---------------------------------------------------------------------------
+// Capture layer
+//
+// Everything below encodes an app contract rather than a browser mechanic: the
+// localStorage keys the shell reads, the toolbar's testid, and CameraFit's
+// load-time timers. A second copy of these does not fail when the app changes —
+// it silently measures the wrong pixels (the toolbar composited into a probe,
+// or a frame captured before the camera settled), which is the worst failure a
+// parity tool can have. Both harnesses share them for that reason.
+// ---------------------------------------------------------------------------
+
+/* global document, window */ // the addInitScript callbacks run in the browser.
+
+/** `tscn-web-source-pane` in apps/textscene-web/src/r3f-main.tsx. */
+const SOURCE_PANE_STORAGE_KEY = 'tscn-web-source-pane';
+/** `FRAME_ON_OPEN_STORAGE_KEY` in r3f/contexts/ViewportModeContext.tsx. */
+const FRAME_ON_OPEN_STORAGE_KEY = 'tsi.frameOnOpen';
+
+export const VIEWPORT = { width: 1280, height: 800 };
+export const NETWORK_IDLE_MS = 20000; // ceiling for the app's own resource chain to go quiet
+export const SETTLE_INITIAL_MS = 1200; // covers the last CameraFit reframe at 1100 ms
+export const SETTLE_INTERVAL_MS = 350;
+export const SETTLE_MAX_ATTEMPTS = 12;
+
+/**
+ * A browser context scoped to rendering only the scene: source pane closed,
+ * viewport toolbar painted out (it floats over the canvas, and
+ * `canvas.screenshot()` composites any DOM over the canvas box), and
+ * frame-on-open set explicitly rather than inherited from a default a future
+ * change could flip.
+ */
+export async function createCaptureContext(browser, { frameOnOpen }) {
+  const context = await browser.newContext({ viewport: VIEWPORT, deviceScaleFactor: 1 });
+  await context.addInitScript(
+    ([key, value]) => window.localStorage.setItem(key, value),
+    [SOURCE_PANE_STORAGE_KEY, JSON.stringify({ visible: false, width: 320 })]
+  );
+  await context.addInitScript(
+    ([key, value]) => window.localStorage.setItem(key, value),
+    [FRAME_ON_OPEN_STORAGE_KEY, frameOnOpen ? 'true' : 'false']
+  );
+  // The <style> must land in <head> once it exists — appending at
+  // document-start puts it in an invalid position the parser drops.
+  await context.addInitScript(() => {
+    const add = () => {
+      const style = document.createElement('style');
+      style.textContent = '[data-testid="viewport-toolbar-overlay"]{display:none !important}';
+      document.head.appendChild(style);
+    };
+    if (document.head) add();
+    else document.addEventListener('DOMContentLoaded', add, { once: true });
+  });
+  return context;
+}
+
+/**
+ * Navigate to a fixture and wait for the app's OWN resource chain to go quiet.
+ * `load` fires well before that chain finishes — a scene fetches its .tscn,
+ * then an ArrayMesh .tres, then that surface's material, then the material's
+ * texture, each only discoverable once the previous one parsed. Without this
+ * the settle gate below happily finds two identical frames of the untextured
+ * placeholder. A scene that never idles still falls through to the gate.
+ */
+export async function gotoFixture(page, baseUrl, fixture, onSlow = () => {}) {
+  await page.goto(`${baseUrl}/?fixture=${encodeURIComponent(fixture)}`, { waitUntil: 'load' });
+  await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_MS }).catch((err) => {
+    // Anything that is NOT a timeout (crashed target, closed page) is a real
+    // failure and must not be mistaken for one.
+    if (err?.name !== 'TimeoutError') throw err;
+    onSlow(NETWORK_IDLE_MS);
+  });
+}
+
+/** The single canvas the scene renders into, or a reason there isn't exactly one. */
+export async function findCanvas(page) {
+  const canvases = page.locator('canvas');
+  await canvases.first().waitFor({ timeout: 30000 });
+  const count = await canvases.count();
+  if (count !== 1) return { canvas: null, reason: `expected exactly 1 canvas, found ${count}` };
+  return { canvas: canvases.first(), reason: null };
+}
+
+/**
+ * Screenshot the canvas once it is provably settled: two consecutive
+ * byte-identical captures. A scene that never settles is a measurement that
+ * cannot be trusted, so it returns a reason rather than whatever frame was up —
+ * flakiness is rejected here, not absorbed by tolerance downstream.
+ */
+export async function settleCanvas(page, canvas) {
+  await page.waitForTimeout(SETTLE_INITIAL_MS);
+  let prev = await canvas.screenshot();
+  for (let attempt = 0; attempt < SETTLE_MAX_ATTEMPTS; attempt++) {
+    await page.waitForTimeout(SETTLE_INTERVAL_MS);
+    const cur = await canvas.screenshot();
+    if (cur.equals(prev)) return { buffer: cur, reason: null };
+    prev = cur;
+  }
+  return {
+    buffer: null,
+    reason: `never settled: ${SETTLE_MAX_ATTEMPTS} captures over ${
+      SETTLE_MAX_ATTEMPTS * SETTLE_INTERVAL_MS
+    }ms all differed`,
+  };
+}

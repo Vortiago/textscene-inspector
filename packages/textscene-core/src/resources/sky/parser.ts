@@ -10,7 +10,7 @@ import type { Color } from '../materials/standardmaterial3d/types';
 import type { SkyProperties } from './types';
 import { floatOr } from '../../parser/valueParsers';
 import { colorOr } from '../../utils/colorParser';
-import { findSubResource, parseResourceReference } from '../SubResourceResolver';
+import { resolveSubResourceRef } from '../SubResourceResolver';
 
 const rgb = (r: number, g: number, b: number): Color => ({ r, g, b, a: 1 });
 
@@ -77,22 +77,13 @@ export function resolveSky(
   skyRef: string | undefined,
   internalResources: readonly TscnInternalResource[]
 ): SkyProperties | null {
-  const skyResource = subResource(skyRef, internalResources);
+  const skyResource = resolveSubResourceRef(skyRef, internalResources);
   if (skyResource?.type !== 'Sky') return null;
 
   const materialRef = (skyResource.data as { sky_material?: string }).sky_material;
-  const material = subResource(materialRef, internalResources);
+  const material = resolveSubResourceRef(materialRef, internalResources);
   if (!material) return null;
 
   return parseSkyMaterial(material.type, material.data as Record<string, string>);
 }
 
-function subResource(
-  reference: string | undefined,
-  internalResources: readonly TscnInternalResource[]
-): TscnInternalResource | undefined {
-  if (!reference) return undefined;
-  const parsed = parseResourceReference(reference);
-  if (!parsed || parsed.type !== 'SubResource') return undefined;
-  return findSubResource(internalResources, parsed.id);
-}
