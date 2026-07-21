@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3 uid="uid://unit_texture_rect"]
 
-[ext_resource type="Texture2D" path="res://textures/test_texture.png" id="1_tex"]
+[ext_resource type="Texture2D" path="res://textures/sprite2d-marker.png" id="1_tex"]
 
 [node name="Root" type="Control"]
 anchors_preset = 15
