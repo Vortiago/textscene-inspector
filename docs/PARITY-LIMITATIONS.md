@@ -257,6 +257,19 @@ missing-resource placeholder UX.
 
 ## Lights
 
+### AreaLight3D has no Godot 4.6 reference
+`AreaLight3D` postdates Godot 4.6, so the reference harness — which runs 4.6.3
+— parses the node and emits no light from it. Measured: `--no-previews` on
+`unit-area-light3d.tscn` leaves the ground neutral grey with no trace of the
+lamp's colour.
+
+- **Faithful when:** unknown. Nothing in this repo can currently compare our
+  AreaLight3D against the engine.
+- **Why not fixed:** it needs a Godot 4.7 binary beside the 4.6 one. Until
+  then the node's behaviour is pinned by `unit-area-light-normalize`, which
+  asserts the area-normalisation relationship rather than absolute pixels.
+- Site: `nodes/3d/lights/arealight3d/Component.tsx`.
+
 ### OmniLight3D / SpotLight3D distance falloff
 Godot attenuates by `pow(max(1 - d / range, 0), attenuation)`, which reaches
 exactly zero at `range`. three.js uses physical inverse-square with a windowing
@@ -272,6 +285,19 @@ term (`decay`, `distance`), which does not.
   matched at the source, so the near field agrees.
 - Site: `nodes/3d/lights/omnilight3d/Component.tsx`,
   `nodes/3d/lights/spotlight3d/Component.tsx`.
+
+### RemoteTransform3D / RemoteTransform2D do not drive their target
+`remote_path` is parsed and shown in the inspector, but no renderer applies the
+transform to the target node; Godot's runtime pushes it every frame.
+
+- **Faithful when:** the scene is read for structure — the property is visible
+  and linted like any other NodePath.
+- **Diverges when:** a scene relies on the remote to place something. The
+  target renders at its authored transform instead of the driven one.
+- **Why not fixed:** ADR-0008 keeps runtime behaviour out of the previewer;
+  driving a transform is simulation, not description. A static one-shot apply
+  is a reasonable future option and would stay deterministic.
+- Site: `nodes/3d/remotetransform3d/`, `nodes/2d/remotetransform2d/`.
 
 ### SpotLight3D.spot_angle_attenuation → penumbra  *(audit #15)*
 Godot's cone-edge softness is `pow(spot_rim, spot_angle_attenuation)` — a curve

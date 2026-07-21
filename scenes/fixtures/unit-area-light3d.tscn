@@ -1,10 +1,37 @@
-[gd_scene format=3]
+; AreaLight3D lighting a surface, so what the light DOES is visible rather than
+; only that it parses. The ground and marker mirror unit-omni-light-3d and
+; unit-spot-light-3d, which makes the light fixtures directly comparable: the
+; same geometry under a different lamp.
+;
+; A rectangular lamp is why the geometry matters — `area_size` is wider than it
+; is tall, so its falloff across the ground is elongated and the box catches the
+; near edge. A light with nothing to light shows none of that, in either engine.
+[gd_scene load_steps=4 format=3]
 
+[sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
+size = Vector2(6, 6)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ground"]
+albedo_color = Color(0.75, 0.75, 0.75, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_marker"]
+size = Vector3(1, 1, 1)
 
 [node name="Root" type="Node3D"]
 
+[node name="Ground" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1, 0)
+mesh = SubResource("PlaneMesh_ground")
+surface_material_override/0 = SubResource("StandardMaterial3D_ground")
 
+[node name="Marker" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
+mesh = SubResource("BoxMesh_marker")
+
+; Aimed down at the ground. An AreaLight3D emits along its local -Z, and the
+; basis rows below put that axis at -Y.
 [node name="Area" type="AreaLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0, 1, 0, -1, 0, 0, 2, 0)
 light_color = Color(0.5, 0.6, 0.7, 1)
 light_energy = 4.0
 shadow_enabled = true
