@@ -214,6 +214,15 @@ async function captureOurs(fixtures, force, godotModes) {
           process.stdout.write(`[ours] ${++done}/${capturable.length} ${fixture} (${mode}) … `);
           try {
             await gotoFixture(page, baseUrl, fixture);
+            const { target, reason: targetReason } = await findCaptureTarget(page, {
+              canvas2D: mode === '2d',
+            });
+            if (!target) throw new Error(targetReason);
+            const { buffer, reason } = await settleCanvas(page, target);
+            if (!buffer) throw new Error(reason);
+            // Asked once the frame has settled, not before: the workspace claim
+            // is re-derived as a scene's sub-resources land, so a page read
+            // early enough can still be showing the 3D default.
             const opened = await readViewportMode(page);
             if (opened !== mode) {
               throw new Error(
@@ -221,12 +230,6 @@ async function captureOurs(fixtures, force, godotModes) {
                   `it as ${mode.toUpperCase()} — the two frames are not comparable`
               );
             }
-            const { target, reason: targetReason } = await findCaptureTarget(page, {
-              canvas2D: mode === '2d',
-            });
-            if (!target) throw new Error(targetReason);
-            const { buffer, reason } = await settleCanvas(page, target);
-            if (!buffer) throw new Error(reason);
             writeFileSync(imagePath(fixture, 'ours'), buffer);
             console.log('ok');
           } catch (error) {
