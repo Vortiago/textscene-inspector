@@ -25,7 +25,7 @@
  * instantly for the visual-regression and Godot-parity capture harnesses.
  *
  * The component itself only translates events into cursor edits — all the
- * navigation maths lives in `godotEditorControls.ts`, and all the camera
+ * navigation maths lives in `godotEditorCursor.ts`, and all the camera
  * bookkeeping in `EditorControlsHandle` below.
  */
 import { useFrame, useThree, type Camera as R3FCamera } from '@react-three/fiber';
@@ -52,7 +52,7 @@ import {
   type FreelookKeys,
   type GodotViewAngle,
   type ZoomRange,
-} from './godotEditorControls.js';
+} from './godotEditorCursor.js';
 
 /** Numpad view snaps. Ctrl inverts each to the opposite face. */
 const VIEW_SNAP_KEYS: Readonly<Record<string, GodotViewAngle>> = {

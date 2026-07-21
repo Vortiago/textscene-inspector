@@ -44,7 +44,9 @@ import {
 const here = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(here, '../..');
 const PLAN = join(here, 'plan.json');
-const IMAGES = join(here, 'images');
+// Beside the sheets that embed them, so a sheet's `![](images/...)` link is
+// relative and the pair travels together.
+const IMAGES = join(REPO_ROOT, 'docs/comparison/images');
 
 // Distinct from both the golden harness (4317) and the single-shot parity
 // capture (4319), so a long batch run cannot collide with either.

@@ -37,7 +37,7 @@ import {
   wheelZoomScale,
   type EditorCursor,
   type GodotViewAngle,
-} from './godotEditorControls';
+} from './godotEditorCursor';
 
 const ORIGIN = new THREE.Vector3();
 const WIDE_RANGE = { near: 0.001, far: 100000 };
