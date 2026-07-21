@@ -39,9 +39,8 @@ energy-1.0 `DirectionalLight3D` with shadows on at euler `(-60°, 150°, 0)`, an
 environment is `BG_SKY` over a `ProceduralSkyMaterial` with `sky_top_color = Color(0.385,
 0.454, 0.55)` and `ground_bottom_color = Color(0.2, 0.169, 0.133)`.
 
-So *when* the previewer should yield was never a product decision — it is a class-reference
-grade fact we had not looked up. `PARITY-LIMITATIONS.md` claimed the opposite and is corrected
-by this ADR.
+The yield condition is therefore documented engine behaviour, not a product decision for this
+previewer.
 
 ## Decision
 
@@ -65,7 +64,10 @@ which is a visible feature of the sky, not a detail (measured: 3.1% of pixels, l
 Godot's `reflection_source` defaults to the background. A `HemisphereLight` approximation was
 rejected: it is diffuse-only, so every metallic or smooth material stays visibly wrong.
 `ambient_light_energy` rides `scene.environmentIntensity`; `AMBIENT_SOURCE_COLOR` remains a
-flat `ambientLight`; `AMBIENT_SOURCE_DISABLED` emits nothing.
+flat `ambientLight`; `AMBIENT_SOURCE_DISABLED` emits nothing. `AMBIENT_SOURCE_SKY` reads the
+IBL, blended with the flat colour by `ambient_light_sky_contribution` — the existing branch
+returning `ambient_light_color × energy` for that source is wrong (the colour is inert at the
+default contribution of 1.0) and is replaced, not extended.
 
 **`tonemap_mode` is implemented**, mapping Godot's enum onto `gl.toneMapping`. The preview
 environment uses FILMIC, and ignoring it is a measured 25/255 mean channel error — 20× the
@@ -99,7 +101,11 @@ Godot and our previous behaviour. The yield rule and the sky IBL have to land to
 - **Most 3D baselines move at once**, and they move for a reason no diff can show. They are
   therefore validated against **Godot reference renders** produced by `scripts/godot-ref`
   (Godot 4.6.3 under Xvfb/llvmpipe) rather than eyeballed — the same tooling that lets any
-  future parity question be measured instead of derived.
+  future parity question be measured instead of derived. The preview sun and preview
+  environment are `Node3DEditor` members and **do not exist at runtime**, which is what
+  `godot --path` runs: a reference render of scene X must inject them per the yield rule and
+  suppress any project `default_environment`, or it depicts a Godot that never lit the scene
+  and the comparison calibrates to the wrong target.
 - **The sky depends on the scene's directional lights** (Godot's shader takes `LIGHT0..3`),
   so sky generation reads the same live-tree query the yield rule uses. One query, two
   consumers.
