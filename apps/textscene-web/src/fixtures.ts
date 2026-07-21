@@ -963,6 +963,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - External Resources"
   },
   {
+    "name": "Material Anisotropy",
+    "file": "unit-material-anisotropy.tscn",
+    "category": "Unit - Materials"
+  },
+  {
     "name": "Material Ao",
     "file": "unit-material-ao.tscn",
     "category": "Unit - Materials"
