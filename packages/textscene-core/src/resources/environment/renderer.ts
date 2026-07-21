@@ -2,7 +2,7 @@
  * Environment renderer - creates structured settings object for applying to THREE.js scene
  */
 
-import type { EnvironmentProperties } from './types';
+import { BackgroundMode, type EnvironmentProperties } from './types';
 import type { Color } from '../materials/standardmaterial3d/types';
 
 export interface EnvironmentSettings {
@@ -18,6 +18,16 @@ export interface EnvironmentSettings {
   ambient: {
     color: Color;
     energy: number;
+  } | null;
+  /**
+   * The sky's own radiance as an ambient source — an IBL, not a constant, so
+   * it both lights surfaces and is what they reflect. `energy` is Godot's
+   * `background_energy_multiplier`; `contribution` is how much of the ambient
+   * it accounts for versus the flat colour.
+   */
+  skyAmbient: {
+    energy: number;
+    contribution: number;
   } | null;
   /**
    * Godot's tonemapper. Always present — LINEAR (the default) is a real
@@ -54,7 +64,7 @@ export function createEnvironmentSettings(
       color: properties.background_color,
       energyMultiplier: properties.background_energy_multiplier,
     },
-    ambient: ambientFor(properties),
+    ...ambientFor(properties),
     toneMapping: {
       mode: properties.tonemap_mode,
       exposure: properties.tonemap_exposure,
@@ -87,30 +97,66 @@ export function createEnvironmentSettings(
 /** Godot's ProjectSettings `rendering/environment/defaults/default_clear_color`. */
 const DEFAULT_CLEAR_COLOR: Color = { r: 0.3, g: 0.3, b: 0.3, a: 1 };
 
+const AMBIENT_SOURCE_BG = 0;
+const AMBIENT_SOURCE_COLOR = 2;
+const AMBIENT_SOURCE_SKY = 3;
+
 /**
- * The flat ambient this Environment contributes, per Godot's
- * `AmbientSource` × `BGMode` table (identical in the RD and GLES3 renderers).
+ * The ambient this Environment contributes, transcribed from
+ * `RenderSceneDataRD::update_ubo` — the code that fills the shader's ambient.
+ * (`sky_bake_panorama` looks similar and is NOT the same table; it is the
+ * baking path.)
  *
- *   BG (0, the DEFAULT source)
- *     ├─ BG_CLEAR_COLOR (0, the DEFAULT mode) → default_clear_color × background_energy
- *     ├─ BG_COLOR (1)                          → background_color   × background_energy
- *     └─ anything else (sky, canvas, …)        → not flat; a cubemap or nothing
- *   DISABLED (1)                               → none
- *   COLOR (2) / SKY (3)                        → ambient_light_color × ambient_light_energy
+ *   BG (0, the DEFAULT source) + BG_CLEAR_COLOR / BG_COLOR
+ *       → flat = that colour × background_energy_multiplier
+ *   otherwise
+ *       → flat    = ambient_light_color × ambient_light_energy
+ *         cubemap = (BG + BG_SKY) or SKY
+ *         used    = cubemap or COLOR
  *
- * The sRGB→linear conversion happens at the consumer (`godotColorToLinear` in
- * the WorldEnvironment component), so these stay Godot-space colours.
+ * and the shader then blends the two:
+ *
+ *   ambient = mix(flat, sky × background_energy_multiplier, sky_contribution)
+ *
+ * The blend is folded into the returned energies so the render layer applies
+ * each term at the strength it already has: at the default contribution of 1.0
+ * the flat term is scaled to zero, which is why a scene that sets
+ * `ambient_light_color` under `AMBIENT_SOURCE_SKY` sees no trace of it in
+ * Godot. The sRGB→linear conversion happens at the consumer, so colours stay
+ * in Godot space here.
  */
-function ambientFor(properties: EnvironmentProperties): EnvironmentSettings['ambient'] {
-  if (properties.ambient_light_source === 0) {
-    if (properties.background_mode !== 0 && properties.background_mode !== 1) return null;
+function ambientFor(properties: EnvironmentProperties): {
+  ambient: EnvironmentSettings['ambient'];
+  skyAmbient: EnvironmentSettings['skyAmbient'];
+} {
+  const source = properties.ambient_light_source;
+  const background = properties.background_mode;
+
+  if (source === AMBIENT_SOURCE_BG && (background === 0 || background === 1)) {
     return {
-      color: properties.background_mode === 0 ? DEFAULT_CLEAR_COLOR : properties.background_color,
-      energy: properties.background_energy_multiplier,
+      ambient: {
+        color: background === 0 ? DEFAULT_CLEAR_COLOR : properties.background_color,
+        energy: properties.background_energy_multiplier,
+      },
+      skyAmbient: null,
     };
   }
-  if (properties.ambient_light_source === 2 || properties.ambient_light_source === 3) {
-    return { color: properties.ambient_light_color, energy: properties.ambient_light_energy };
+
+  const fromCubemap =
+    (source === AMBIENT_SOURCE_BG && background === BackgroundMode.BG_SKY) ||
+    source === AMBIENT_SOURCE_SKY;
+  if (!fromCubemap && source !== AMBIENT_SOURCE_COLOR) {
+    return { ambient: null, skyAmbient: null };
   }
-  return null;
+
+  const contribution = fromCubemap ? properties.ambient_light_sky_contribution : 0;
+  return {
+    ambient: {
+      color: properties.ambient_light_color,
+      energy: properties.ambient_light_energy * (1 - contribution),
+    },
+    skyAmbient: fromCubemap
+      ? { energy: properties.background_energy_multiplier, contribution }
+      : null,
+  };
 }

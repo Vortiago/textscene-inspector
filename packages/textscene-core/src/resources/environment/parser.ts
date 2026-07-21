@@ -26,6 +26,11 @@ export function parseEnvironment(
     ambient_light_source: intOr(properties.ambient_light_source, 0, 'ambient_light_source'),
     ambient_light_color: colorOr(properties.ambient_light_color, { r: 0, g: 0, b: 0, a: 1 }),
     ambient_light_energy: floatOr(properties.ambient_light_energy, 1.0, 'ambient_light_energy'),
+    ambient_light_sky_contribution: floatOr(
+      properties.ambient_light_sky_contribution,
+      1.0,
+      'ambient_light_sky_contribution'
+    ),
 
     // Screen-space fog (Godot defaults: density 0.01, light_color ~bluish-grey)
     fog_enabled: properties.fog_enabled === 'true',

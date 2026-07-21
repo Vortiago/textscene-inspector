@@ -37,6 +37,12 @@ export interface EnvironmentProperties {
   ambient_light_source: number;
   ambient_light_color: Color;
   ambient_light_energy: number;
+  /**
+   * How much of the ambient comes from the sky rather than
+   * `ambient_light_color`, 0..1. Only read when the ambient source is a
+   * cubemap; at the default 1.0 the flat colour contributes nothing.
+   */
+  ambient_light_sky_contribution: number;
 
   // Screen-space fog (maps to THREE.Fog/FogExp2)
   fog_enabled: boolean;

@@ -21,21 +21,39 @@ import { parseEnvironment } from '../../../resources/environment/parser';
 import { BackgroundMode } from '../../../resources/environment/types';
 import { createEnvironmentSettings } from '../../../resources/environment/renderer';
 import { applyToneMapping } from '../../../resources/environment/toneMapping';
+import { resolveSky } from '../../../resources/sky/parser';
+import type { SkyProperties } from '../../../resources/sky/types';
+import { SkyLayer } from '../../../r3f/sky/SkyLayer';
 import type { EnvironmentSettings } from '../../../resources/environment/renderer';
 
 export function WorldEnvironment({ node, children }: NodeComponentProps) {
   const properties = node.properties as WorldEnvironmentProperties;
   const { internalResources } = useSceneResources();
 
-  const settings = useMemo(
+  const resolved = useMemo(
     () => resolveEnvironment(properties.environment, internalResources),
     [properties.environment, internalResources]
   );
+  const settings = resolved?.settings ?? null;
+  const sky = resolved?.sky ?? null;
+
+  // Godot draws the sky as the background under BG_SKY, and takes ambient from
+  // it whenever the source resolves to a cubemap — the two are independent,
+  // so a sky can light the scene without being shown, and vice versa.
+  const showsSky = settings?.background.mode === BackgroundMode.BG_SKY;
+  const skyAmbient = settings?.skyAmbient ?? null;
 
   return (
     <group name={node.name}>
-      {settings && <EnvironmentApplier settings={settings} />}
-      {settings?.ambient && (
+      {settings && <EnvironmentApplier settings={settings} hasSky={!!sky} />}
+      {sky && (showsSky || skyAmbient) && (
+        <SkyLayer
+          sky={sky}
+          asBackground={showsSky}
+          intensity={skyAmbient ? skyAmbient.energy * skyAmbient.contribution : 0}
+        />
+      )}
+      {settings?.ambient && settings.ambient.energy > 0 && (
         <ambientLight
           color={godotColorToLinear(settings.ambient.color)}
           intensity={settings.ambient.energy}
@@ -48,9 +66,11 @@ export function WorldEnvironment({ node, children }: NodeComponentProps) {
 
 interface EnvironmentApplierProps {
   settings: EnvironmentSettings;
+  /** When a real sky renders, it owns the background and this must not fight it. */
+  hasSky: boolean;
 }
 
-function EnvironmentApplier({ settings }: EnvironmentApplierProps) {
+function EnvironmentApplier({ settings, hasSky }: EnvironmentApplierProps) {
   const scene = useThree((state) => state.scene);
   const gl = useThree((state) => state.gl);
 
@@ -63,17 +83,16 @@ function EnvironmentApplier({ settings }: EnvironmentApplierProps) {
     if (showBackgroundColor) {
       // Godot Color literals are sRGB; convert to three.js's linear working space.
       scene.background = godotColorToLinear(settings.background.color);
-    } else if (mode === BackgroundMode.BG_SKY) {
-      // Full sky/IBL rendering is out of MVS scope; we fall back to a
-      // mid-blue solid so the scene still has a visible background and
-      // downstream code (and tests) can rely on scene.background being
-      // non-null whenever SKY mode is requested.
+    } else if (mode === BackgroundMode.BG_SKY && !hasSky) {
+      // A sky we cannot resolve — an unsupported material, or one held in an
+      // ExtResource `.tres`. A mid-blue solid keeps the background non-null so
+      // the scene still reads as "sky here" rather than as a black void.
       scene.background = godotColorToLinear({ r: 0.5, g: 0.6, b: 0.75 });
     }
     return () => {
       scene.background = previousBackground;
     };
-  }, [scene, showBackgroundColor, mode, settings.background.color]);
+  }, [scene, showBackgroundColor, mode, settings.background.color, hasSky]);
 
   const { mode: toneMapMode, exposure: toneMapExposure } = settings.toneMapping;
   useEffect(
@@ -100,12 +119,15 @@ function EnvironmentApplier({ settings }: EnvironmentApplierProps) {
 function resolveEnvironment(
   environmentRef: string | undefined,
   internalResources: ReturnType<typeof useSceneResources>['internalResources']
-): EnvironmentSettings | null {
+): { settings: EnvironmentSettings; sky: SkyProperties | null } | null {
   if (!environmentRef) return null;
   const parsed = parseResourceReference(environmentRef);
   if (!parsed || parsed.type !== 'SubResource') return null;
   const resource = findSubResource(internalResources, parsed.id);
   if (!resource || resource.type !== 'Environment') return null;
   const envProps = parseEnvironment(resource.data as Record<string, string>);
-  return createEnvironmentSettings(envProps);
+  return {
+    settings: createEnvironmentSettings(envProps),
+    sky: resolveSky(envProps.sky, internalResources),
+  };
 }
