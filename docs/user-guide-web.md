@@ -1,10 +1,31 @@
 # TextScene Inspector — Web Previewer User Guide
 
-The TextScene Inspector web previewer is a browser-based viewer for Godot `.tscn` scene files. Open your own `.tscn` from disk or pick a fixture from the scene palette (Ctrl/Cmd+K), the 3D scene renders inline, and the right-hand Split Dock shows the scene-tree hierarchy and per-node properties. You can orbit the camera (left-drag), zoom (scroll wheel), pan (right-drag or middle-drag), and click a mesh in the viewport to select it.
+The TextScene Inspector web previewer is a browser-based viewer for Godot `.tscn` scene files. Open your own `.tscn` from disk or pick a fixture from the scene palette (Ctrl/Cmd+K), the 3D scene renders inline, and the right-hand Split Dock shows the scene-tree hierarchy and per-node properties. The viewport navigates like Godot's own 3D editor (see below), and clicking a mesh selects it.
 
 This guide walks through every user-visible feature against the verification scenarios in `docs/user-flows.md`. Each section captures one flow, embeds the screenshot the verifier took, and is honest about what works today and what does not.
 
 **Source of verification:** verified against the current code, 2026-06-10. Dev server runs on `http://localhost:3000/` after `pnpm --filter @textscene/web-previewer dev`. Some screenshots predate the Split Dock shell (ADR-0007) and the scene palette; the prose describes the current behavior.
+
+---
+
+## Viewport navigation
+
+The 3D viewport uses Godot's own editor navigation, so muscle memory carries over:
+
+| Input | Action |
+| --- | --- |
+| Middle-drag | Orbit |
+| Shift + middle-drag | Pan |
+| Ctrl + middle-drag, or the wheel | Zoom |
+| Alt + left-drag / Alt + Shift + left-drag | Orbit / pan, for mice and trackpads without a middle button |
+| Right-drag | Freelook — turn the camera in place |
+| W A S D Q E while right-dragging | Fly (Shift sprints) |
+| Numpad 1 / 3 / 7 | Front / right / top view; Ctrl for the opposite face |
+| Numpad 5 | Perspective ⇄ orthographic |
+| F | Frame the selected node, or the whole scene when nothing is selected |
+
+Plain left-drag deliberately does nothing: left-click selects, as it does in Godot.
+There is no damping — the camera stops the moment you release.
 
 ---
 

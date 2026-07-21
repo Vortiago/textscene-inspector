@@ -406,7 +406,7 @@ stays byte-stable.
 - File watcher: when a `.tscn` file changes, the extension host posts
   a fresh `loadTscn` message to the webview, which re-parses and
   re-renders. The R3F canvas DOM node is preserved across content
-  changes so OrbitControls camera state survives hot-reload.
+  changes so the viewport camera state survives hot-reload.
 
 ### Web Source Pane
 

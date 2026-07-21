@@ -152,7 +152,7 @@ The web previewer is single-panel. It exposes a scene palette (Ctrl/Cmd+K, opene
 - **User intent:** A user has orbited their camera around a scene; saving an edit to the file's content (not switching to a different file) must not reset their viewpoint.
 - **Steps:**
   1. Select `scenes/fixtures/unit-box-mesh.tscn`.
-  2. Use orbit-controls to rotate the camera to a non-default angle (drag the canvas to rotate by approximately 45° azimuth, 20° elevation).
+  2. Rotate the camera to a non-default angle (middle-drag the canvas by approximately 45° azimuth, 20° elevation).
   3. Record the current camera position and target via `browser_evaluate` reading the controls state.
   4. Modify the fixture file's content (e.g., change a transform value) and save. The Vite HMR pipeline propagates the change to the open page.
   5. Wait for the canvas to settle.
