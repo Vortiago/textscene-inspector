@@ -68,6 +68,24 @@ surfaces too dark. Prime suspect is `LIGHT_INTENSITY_SCALE = 2` in
 measured, and now measurable. Chase it before writing the sheets, or every 3D
 sheet repeats the same divergence.
 
+## Order of work (decided)
+
+1. **`LIGHT_INTENSITY_SCALE`.** Sweep it against a Godot render and take the
+   value that minimises the residual. Must land before any sheet is written, or
+   all ~30 of them repeat the same divergence. Moves every 3D baseline again.
+2. **`capture.mjs`**, verified by eye on two fixtures.
+3. **Fan out** the 3D sheets.
+4. **2D capture path**, then the 2D sheets.
+
+Tracked separately, not a blocker for the sheets: replace drei's
+`<OrbitControls>` with Godot's editor navigation — middle-drag orbit,
+shift+middle pan, right-drag freelook with WASD, numpad 1/3/7/5 view snapping.
+`OrbitControls` is three's *examples* code (via `three-stdlib`, via drei), not
+core, and it is the web-viewer convention rather than anything Godot does. Only
+`OrbitControls` and `Text` are used from drei, so this is a contained swap; the
+dependency stays for `Text`. Freeing left-drag also leaves it available for
+selection.
+
 ## Sequencing
 
 **3D first.** Steps 1–4 work today for anything with a `VisualInstance3D` bound.
