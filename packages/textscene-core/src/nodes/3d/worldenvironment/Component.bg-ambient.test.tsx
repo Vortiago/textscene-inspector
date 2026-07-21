@@ -51,7 +51,11 @@ describe('<WorldEnvironment> ambient from the background', () => {
     // space; reading it back as sRGB must give the authored 0.6 (0.6 x 255 = 153
     // = 0x99) rather than the background's black or a linearised 0x57.
     expect(lights[0]!.color.getHexString()).toBe('999999');
-    expect(lights[0]!.intensity).toBe(2);
+    // three's ambient irradiance carries no 1/PI where Godot's does, so the
+    // energy reaches the light as `background_energy_multiplier * PI`; what
+    // must hold is that a Lambertian surface ends up at 2x its albedo.
+    const albedo = 0.25;
+    expect((albedo / Math.PI) * lights[0]!.intensity).toBeCloseTo(albedo * 2, 6);
   });
 
   it('mounts one for a bare Environment, from the default clear colour', async () => {

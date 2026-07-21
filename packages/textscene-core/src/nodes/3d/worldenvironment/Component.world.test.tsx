@@ -107,7 +107,16 @@ describe('WorldEnvironment (assertions 81–89)', () => {
     const ambients = renderer.scene.findAllByType('AmbientLight');
     expect(ambients.length).toBeGreaterThan(0);
     const intensity = (ambients[0]!.instance as { intensity: number }).intensity;
-    expect(intensity).toBeCloseTo(2, 3);
+
+    // Godot adds a constant ambient as `ambient_light * albedo`; three's
+    // getAmbientLightIrradiance returns the colour unscaled and then multiplies
+    // by albedo/PI. The intensity that makes the two agree is therefore
+    // energy * PI, and the check is that a white energy-2.0 ambient lands a
+    // Lambertian surface at exactly 2x its own albedo — the physical statement,
+    // not a restatement of the constant.
+    const albedo = 0.25;
+    const threeDiffuse = (albedo / Math.PI) * intensity;
+    expect(threeDiffuse).toBeCloseTo(albedo * 2, 6);
   });
 
   it('#86 fog_enabled=false → scene.fog === null', async () => {
