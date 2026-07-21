@@ -24,8 +24,9 @@ import type {
   TscnInternalResource,
 } from '../../../parser/types.js';
 import { useOptionalCameraControl } from '../../contexts/CameraControlContext.js';
+import { readPersisted } from '../../hooks/usePersistedState.js';
 import { World2DCanvas } from './World2DCanvas.js';
-import { CANVAS_2D_WIDTH, CANVAS_2D_HEIGHT } from './viewport2d.js';
+import { CANVAS_2D_WIDTH, CANVAS_2D_HEIGHT, FIT_ON_OPEN_2D_STORAGE_KEY } from './viewport2d.js';
 import styles from './Canvas2DStage.module.css';
 
 // The 2D-UI overlay (ADR-0003) is lazy-loaded — keeping the 15 Control
@@ -40,6 +41,8 @@ const ControlOverlay = lazy(() =>
 const ZOOM_MIN = 0.1;
 const ZOOM_MAX = 4;
 const clampZoom = (z: number) => Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, z));
+
+const isBoolean = (value: unknown): value is boolean => typeof value === 'boolean';
 
 export interface Canvas2DStageProps {
   /** Root scene's nodes — the overlay lays out the Control subtree(s) within. */
@@ -82,10 +85,12 @@ export function Canvas2DStage({
     });
   }, []);
 
-  // Fit on mount.
+  // Fit on mount, unless the view is pinned (read once — the preference decides
+  // how this scene OPENS; the Fit button and pan/zoom stay live either way).
+  const [fitOnOpen] = useState(() => readPersisted(FIT_ON_OPEN_2D_STORAGE_KEY, true, isBoolean));
   useEffect(() => {
-    fit();
-  }, [fit]);
+    if (fitOnOpen) fit();
+  }, [fit, fitOnOpen]);
 
   // "View through" a Camera2D (Cameras panel): one-shot framing request —
   // center the camera's view point at its magnification; the user keeps free
@@ -180,9 +185,11 @@ export function Canvas2DStage({
       onPointerUp={endStageDrag}
       onPointerCancel={endStageDrag}
       aria-label="2D canvas"
+      data-testid="canvas-2d-stage"
     >
       <div
         className={styles.canvasFrame}
+        data-testid="canvas-2d-frame"
         style={{
           width: CANVAS_2D_WIDTH,
           height: CANVAS_2D_HEIGHT,
@@ -219,8 +226,12 @@ export function Canvas2DStage({
         zoom={zoom}
       />
 
+      {/* The Godot project-viewport rectangle in the DOM: the Control overlay's
+          own box, and the region a parity capture clips to (its testid is the
+          contract `scripts/visual/previewServer.mjs` addresses it by). */}
       <div
         className={styles.overlayFrame}
+        data-testid="canvas-2d-capture-frame"
         style={{
           width: CANVAS_2D_WIDTH,
           height: CANVAS_2D_HEIGHT,
@@ -242,9 +253,11 @@ export function Canvas2DStage({
         </Suspense>
       </div>
 
-      <div className={styles.canvas2dHint}>scroll = zoom · drag = pan</div>
+      <div className={styles.canvas2dHint} data-testid="canvas-2d-hint">
+        scroll = zoom · drag = pan
+      </div>
 
-      <div className={styles.zoomHud} role="group" aria-label="Canvas zoom">
+      <div className={styles.zoomHud} role="group" aria-label="Canvas zoom" data-testid="canvas-2d-zoom">
         <button type="button" onClick={() => zoomAroundCentre(1 / 1.2)} aria-label="Zoom out">
           −
         </button>
