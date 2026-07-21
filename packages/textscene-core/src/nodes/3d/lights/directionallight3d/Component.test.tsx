@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { DirectionalLight3D } from './Component';
 import type { TscnNode } from '../../../../parser/types';
