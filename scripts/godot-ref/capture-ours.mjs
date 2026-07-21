@@ -16,11 +16,11 @@
  * `scenes/fixtures/` is unreachable here until `pnpm generate:fixtures` has
  * regenerated that catalog.
  *
- * WHAT THIS DOES NOT DO: match Godot's camera. The previewer frames the scene
- * itself, so probes address the same *surface* on both sides only for
- * view-independent quantities. That is sufficient for — and precisely why it
- * suits — light-transport calibration on flat surfaces, where Lambertian
- * response does not depend on where the camera stands.
+ * Both sides open at Godot's editor camera by default (`godotEditorCamera.ts`
+ * in the app, the same constants in `run.mjs`), so a bare `ref:godot` and a
+ * bare `ref:ours` frame the same picture and a probe at (x, y) addresses the
+ * same surface point on both. `--frame` switches both to the previewer's
+ * fit-the-bounds mode for scenes too large to read at distance 4.
  */
 /* global document, window */ // the addInitScript callbacks below run in the browser.
 
@@ -50,7 +50,7 @@ const SETTLE_MAX_ATTEMPTS = 12;
 const SOURCE_PANE_STORAGE_KEY = 'tscn-web-source-pane';
 
 export function parseArgs(argv) {
-  const args = { fixture: null, out: null, probes: [], patch: 1, frame: true };
+  const args = { fixture: null, out: null, probes: [], patch: 1, frame: false };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     switch (arg) {
@@ -60,8 +60,8 @@ export function parseArgs(argv) {
       case '--patch':
         args.patch = Number(argv[++i]);
         break;
-      case '--no-frame':
-        args.frame = false;
+      case '--frame':
+        args.frame = true;
         break;
       case '--probe': {
         const raw = argv[++i];
@@ -114,7 +114,7 @@ async function capture(page, baseUrl, fixture) {
   );
 }
 
-export async function captureOurs({ fixture, frame = true }) {
+export async function captureOurs({ fixture, frame = false }) {
   ensureWebBuilt((m) => console.log(m));
   await assertPortFree(PORT, 'PARITY_PORT');
   const { proc, baseUrl } = startPreview(PORT);
@@ -127,10 +127,11 @@ export async function captureOurs({ fixture, frame = true }) {
       ([key, value]) => window.localStorage.setItem(key, value),
       [SOURCE_PANE_STORAGE_KEY, JSON.stringify({ visible: false, width: 320 })]
     );
-    // Frame the scene so the surface under measurement fills the canvas and a
-    // probe patch lands well inside it. The app itself opens at Godot's fixed
-    // editor orbit (ADR-0025), which would put most fixtures partly out of
-    // frame — fine for a user, useless for a probe.
+    // Leave the app at Godot's fixed editor orbit (ADR-0025) — the same place
+    // `ref:godot` puts its camera — so both sides frame identically with
+    // nothing derived. `--frame` opts into the previewer's fit-the-bounds mode
+    // for a scene too large to read at distance 4, and `ref:godot --frame`
+    // mirrors it.
     await context.addInitScript(
       ([key, value]) => window.localStorage.setItem(key, value),
       ['tsi.frameOnOpen', frame ? 'true' : 'false']
@@ -162,7 +163,7 @@ async function main() {
   } catch (error) {
     console.error(error.message);
     console.error('Usage: pnpm ref:ours <fixture.tscn> [--out file.png]');
-    console.error('       [--probe x,y] [--patch n] [--no-frame]');
+    console.error('       [--probe x,y] [--patch n] [--frame]');
     process.exit(2);
   }
 

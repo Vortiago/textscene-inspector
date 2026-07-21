@@ -188,6 +188,59 @@ describe.skipIf(!hasEngine)('renderReference (real Godot)', () => {
     expect(Math.max(...sky)).toBeGreaterThan(120);
   }, 180_000);
 
+  /**
+   * `--emit-bounds` exists so both renderers can derive ONE camera, which only
+   * works if it measures what the previewer frames on. `frameSceneBounds.ts`
+   * unions MESHES (falling back to gizmos when a scene has none), but in Godot
+   * a Light3D is a VisualInstance3D too — so unioning every visual dragged the
+   * centre towards a light the previewer never framed on, and a sun 5 units up
+   * moved the derived look-at by 3.
+   */
+  it('bounds the GEOMETRY, not every VisualInstance3D', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'godot-ref-'));
+    const out = join(dir, 'shot.png');
+    const boundsOut = join(dir, 'shot.bounds.json');
+    await renderReference({
+      scene: join(REPO_ROOT, 'scenes/fixtures/unit-light-transport-direct.tscn'),
+      out,
+      boundsOut,
+      width: 160,
+      height: 120,
+      previews: true,
+    });
+    const b = JSON.parse(await readFile(boundsOut, 'utf8'));
+    // The fixture is an 8x8 plane at y=0 with a 2.5x2.5 patch on it, plus a
+    // DirectionalLight3D parked at y=5. The plane alone spans y 0..0.01.
+    expect(b.position[1]).toBeCloseTo(0, 3);
+    expect(b.size[1]).toBeLessThan(0.5);
+    expect(b.size[0]).toBeCloseTo(8, 3);
+    expect(b.size[2]).toBeCloseTo(8, 3);
+  }, 180_000);
+
+  it('bounds the GEOMETRY, so a distant light cannot move the derived camera', async () => {
+    // These bounds exist to derive ONE camera both renderers use, so they have
+    // to obey the same rule frameSceneBounds.ts does: geometry first. Light3D
+    // is a VisualInstance3D too, and this fixture's sun sits 5 units above a
+    // flat plane — unioning every visual put the centre at y=3 instead of y=0
+    // and silently framed the reference 3 units higher than the previewer.
+    const dir = await mkdtemp(join(tmpdir(), 'godot-ref-'));
+    const out = join(dir, 'shot.png');
+    const boundsOut = join(dir, 'shot.bounds.json');
+    await renderReference({
+      scene: join(REPO_ROOT, 'scenes/fixtures/unit-light-transport-direct.tscn'),
+      out,
+      boundsOut,
+      width: 200,
+      height: 150,
+      previews: true,
+    });
+    const bounds = JSON.parse(await readFile(boundsOut, 'utf8'));
+    // The 8x8 plane and the patch resting on it, and nothing else.
+    expect(bounds.position[1]).toBeCloseTo(0, 3);
+    expect(bounds.size[1]).toBeLessThan(0.5);
+    expect(bounds.size[0]).toBeCloseTo(8, 3);
+  }, 180_000);
+
   it('lights the scene only because of the previews — --no-previews is runtime semantics', async () => {
     const [lit, unlit] = [await render(true), await render(false)];
     // The same geometry, the same camera. With the previews the ground is a

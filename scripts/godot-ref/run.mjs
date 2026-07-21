@@ -13,12 +13,19 @@
  * Requires a local Godot 4.6 (`godot`) and `xvfb-run`; there is no CI copy of
  * either, so this is a developer tool, never a gate.
  *
- * CAMERA CAVEAT: a scene carrying its own `Camera3D` is framed through it here,
- * while the previewer auto-frames the scene bounds unless the user picks that
- * camera. Comparisons are therefore sound for view-independent quantities — the
- * colour of a lit Lambertian surface, the sky at the zenith — and NOT for
- * "the pixel at (x, y)". Pass `--camera` / `--look-at` to pin both sides when a
- * measurement needs the same frame.
+ * CAMERA: by default this opens where Godot's EDITOR opens every scene —
+ * `Node3DEditorViewport::Cursor()`'s fixed orbit at distance 4, fov 70 — which
+ * is exactly where the previewer opens it too. So a bare `ref:godot` and a bare
+ * `ref:ours` produce the same frame with nothing derived and nothing to keep in
+ * sync, and "the pixel at (x, y)" means the same thing on both sides.
+ *
+ * A scene's own `Camera3D` is IGNORED by default, because the previewer ignores
+ * it too: Godot's editor keeps its own free camera and draws the node as a
+ * frustum gizmo. `--scene-camera` opts into rendering through it.
+ *
+ * `--frame` instead fits the scene's geometry bounds the way `frameSceneBounds.ts`
+ * does (the previewer's opt-in "frame on open"), for a scene too large to read
+ * at distance 4. `--camera` / `--look-at` override everything.
  *
  * TWO THINGS THIS HARNESS DOES THAT A NAIVE `godot --path` DOES NOT:
  *
@@ -45,6 +52,18 @@ const DEFAULT_HEIGHT = 300;
 
 /** `editors/3d/default_fov`. A `Camera3D` node's own default is 75. */
 const EDITOR_FOV = 70;
+
+/**
+ * `Node3DEditorViewport::Cursor()` — where the editor opens EVERY scene,
+ * whatever is in it. Mirrors `godotEditorCamera.ts`, which is what the
+ * previewer opens at, so a bare `ref:godot` and a bare `ref:ours` frame the
+ * same picture with no arguments and nothing to keep in sync.
+ */
+const EDITOR_CAMERA_DIRECTION = [0.4207355, 0.4794255, 0.7701512];
+const EDITOR_CAMERA_DISTANCE = 4;
+
+/** `frameSceneBounds.ts`'s margin, for the opt-in framed mode. */
+const FRAME_MARGIN = 1.6;
 
 /** Godot's preview sun: white, energy 1.0, shadows on, euler (-60°, 150°, 0). */
 const PREVIEW_SUN_ALTITUDE_DEG = -60;
@@ -74,6 +93,8 @@ export function parseArgs(argv) {
     // the previewer draws at 70 is a silent zoom difference in every frame.
     fov: EDITOR_FOV,
     emitBounds: false,
+    frame: false,
+    sceneCamera: false,
     camera: null,
     lookAt: null,
     probes: [],
@@ -97,6 +118,12 @@ export function parseArgs(argv) {
         break;
       case '--emit-bounds':
         args.emitBounds = true;
+        break;
+      case '--frame':
+        args.frame = true;
+        break;
+      case '--scene-camera':
+        args.sceneCamera = true;
         break;
       case '--fov':
         args.fov = Number(argv[++i]);
@@ -222,7 +249,17 @@ const gdColor = (c) => `Color(${c[0]}, ${c[1]}, ${c[2]})`;
  * The bootstrap scene's script. Instantiates the target scene, applies Godot's
  * editor-preview yield rule, frames a camera, and writes one settled frame.
  */
-function bootstrapScript({ scenePath, previews, camera, lookAt, out, boundsOut, fov }) {
+function bootstrapScript({
+  scenePath,
+  previews,
+  camera,
+  lookAt,
+  frame,
+  sceneCamera,
+  out,
+  boundsOut,
+  fov,
+}) {
   return `extends Node3D
 
 const SCENE_PATH := "${scenePath}"
@@ -323,17 +360,28 @@ ${
 	cam.global_position = ${gdVec3(camera)}
 	cam.look_at(${gdVec3(lookAt ?? [0, 0, 0])}, Vector3.UP)
 	cam.make_current()`
-    : `	var existing := _find_camera(target)
+    : `${
+        sceneCamera
+          ? `	var existing := _find_camera(target)
 	if existing != null:
 		existing.fov = FOV
 		return
-	var cam := Camera3D.new()
+`
+          : ''
+      }	var cam := Camera3D.new()
 	add_child(cam)
 	cam.fov = FOV
-	var bounds := _scene_bounds(target)
-	var size: float = maxf(bounds.size.length(), 1.0)
-	cam.global_position = bounds.get_center() + Vector3(0.7, 0.6, 1.0).normalized() * size * 1.4
-	cam.look_at(bounds.get_center(), Vector3.UP)
+${
+  frame
+    ? `	var bounds := _scene_bounds(target)
+	var span: float = maxf(maxf(bounds.size.x, bounds.size.y), bounds.size.z)
+	var distance := (span / 2.0 / tan(deg_to_rad(FOV) / 2.0)) * ${FRAME_MARGIN}
+	var focus := bounds.get_center()`
+    : `	var distance := float(${EDITOR_CAMERA_DISTANCE})
+	var focus := Vector3.ZERO`
+}
+	cam.global_position = focus + ${gdVec3(EDITOR_CAMERA_DIRECTION)} * distance
+	cam.look_at(focus, Vector3.UP)
 	cam.make_current()`
 }
 
@@ -346,26 +394,40 @@ func _find_camera(node: Node) -> Camera3D:
 			return found
 	return null
 
+# Bounds over GEOMETRY, with everything else only as a fallback — the same rule
+# frameSceneBounds.ts applies (meshes first, gizmos only when there are no
+# meshes). It has to be the same rule, because the whole point of these bounds
+# is to derive ONE camera both renderers use: Light3D and friends are
+# VisualInstance3D too, so unioning every visual pulls the centre towards a
+# light the previewer never framed on. A sun 5 units up moved the derived
+# look-at by 3 units.
 func _scene_bounds(node: Node) -> AABB:
+	var geometry: Variant = _union(_visuals(node, true))
+	if geometry != null:
+		return geometry
+	var any: Variant = _union(_visuals(node, false))
+	if any != null:
+		return any
+	return AABB(Vector3(-1, -1, -1), Vector3(2, 2, 2))
+
+func _union(visuals: Array) -> Variant:
 	var bounds := AABB()
 	var seeded := false
-	for visual: VisualInstance3D in _visuals(node):
+	for visual: VisualInstance3D in visuals:
 		var world: AABB = visual.global_transform * visual.get_aabb()
 		if seeded:
 			bounds = bounds.merge(world)
 		else:
 			bounds = world
 			seeded = true
-	if not seeded:
-		return AABB(Vector3(-1, -1, -1), Vector3(2, 2, 2))
-	return bounds
+	return bounds if seeded else null
 
-func _visuals(node: Node) -> Array:
+func _visuals(node: Node, geometry_only: bool) -> Array:
 	var found: Array = []
-	if node is VisualInstance3D:
+	if node is GeometryInstance3D or (not geometry_only and node is VisualInstance3D):
 		found.append(node)
 	for child in node.get_children():
-		found.append_array(_visuals(child))
+		found.append_array(_visuals(child, geometry_only))
 	return found
 `;
 }
@@ -398,6 +460,8 @@ export async function renderReference({
   previews = true,
   camera = null,
   lookAt = null,
+  frame = false,
+  sceneCamera = false,
   boundsOut = null,
   fov = EDITOR_FOV,
 }) {
@@ -421,6 +485,8 @@ export async function renderReference({
       previews,
       camera,
       lookAt,
+      frame,
+      sceneCamera,
       out: resolve(out),
       boundsOut: boundsOut ? resolve(boundsOut) : null,
       fov,
