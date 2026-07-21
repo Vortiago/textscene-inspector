@@ -19,6 +19,7 @@ import type { EnvironmentSettings } from '../../resources/environment/renderer';
 import { applyToneMapping } from '../../resources/environment/toneMapping';
 import type { SkyProperties } from '../../resources/sky/types';
 import { godotColorToLinear } from '../godotColor';
+import { LIGHT_INTENSITY_SCALE } from '../lightConstants';
 import { SkyLayer } from '../sky/SkyLayer';
 
 export interface EnvironmentLayerProps {
@@ -47,9 +48,19 @@ export function EnvironmentLayer({ settings, sky }: EnvironmentLayerProps) {
         />
       )}
       {flatAmbient && flatAmbient.energy > 0 && (
+        // `* LIGHT_INTENSITY_SCALE` for the same reason a directional light
+        // needs it, on the path where it is easiest to miss because Godot
+        // writes it most simply: Godot adds `ambient_light * albedo` with no
+        // 1/PI, while three's `getAmbientLightIrradiance` returns the colour
+        // unscaled and then multiplies by `albedo/PI`.
+        //
+        // The SKY ambient below does NOT take this factor: three's
+        // `getIBLIrradiance` already returns `PI * envColor * intensity`, and
+        // that PI cancels against the same Lambert 1/PI. Applying it there too
+        // would break the one ambient path that is already right.
         <ambientLight
           color={godotColorToLinear(flatAmbient.color)}
-          intensity={flatAmbient.energy}
+          intensity={flatAmbient.energy * LIGHT_INTENSITY_SCALE}
         />
       )}
     </>

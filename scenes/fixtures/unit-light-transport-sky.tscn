@@ -1,0 +1,68 @@
+; Sky ambient (image-based light), isolated — the third way energy reaches a
+; surface, after `unit-light-transport-direct` and `-ambient`.
+;
+; The sky is deliberately UNIFORM: all four ProceduralSkyMaterial colours are
+; white, so radiance is 1.0 in every direction and the irradiance on any
+; surface is exactly 1.0 whatever its normal. A Lambertian surface therefore
+; renders its own albedo again, and the unshaded square laid on the ground is
+; that albedo — invisible when the IBL scale is right.
+;
+; Uniformity is the point. A convolution of a constant is that same constant,
+; so this fixture measures the IBL's SCALE with the filter shape removed:
+; three's PMREM roughness-1 mip and Godot's roughest radiance mip are different
+; convolutions of the same cubemap and disagree by a few /255 on a graded sky,
+; which would otherwise be indistinguishable from a scale error.
+;
+; The DirectionalLight3D at energy 0 suppresses Godot's editor preview sun
+; (ADR-0025 counts node types, not energy) and leaves the sky shader's sun disc
+; unlit, so the sky stays uniform.
+[gd_scene load_steps=8 format=3]
+
+[sub_resource type="ProceduralSkyMaterial" id="SkyMat_1"]
+sky_top_color = Color(1, 1, 1, 1)
+sky_horizon_color = Color(1, 1, 1, 1)
+ground_bottom_color = Color(1, 1, 1, 1)
+ground_horizon_color = Color(1, 1, 1, 1)
+
+[sub_resource type="Sky" id="Sky_1"]
+sky_material = SubResource("SkyMat_1")
+
+[sub_resource type="Environment" id="Env_1"]
+background_mode = 2
+sky = SubResource("Sky_1")
+ambient_light_source = 3
+ambient_light_sky_contribution = 1.0
+tonemap_mode = 0
+
+[sub_resource type="PlaneMesh" id="Ground_1"]
+size = Vector2(8, 8)
+
+[sub_resource type="PlaneMesh" id="Patch_1"]
+size = Vector2(2.5, 2.5)
+
+[sub_resource type="StandardMaterial3D" id="Lit_1"]
+albedo_color = Color(0.5, 0.5, 0.5, 1)
+metallic = 0.0
+roughness = 1.0
+diffuse_mode = 1
+
+[sub_resource type="StandardMaterial3D" id="Unshaded_1"]
+albedo_color = Color(0.5, 0.5, 0.5, 1)
+shading_mode = 0
+
+[node name="LightTransportSky" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env_1")
+
+[node name="DarkSun" type="DirectionalLight3D" parent="."]
+light_energy = 0.0
+
+[node name="LitGround" type="MeshInstance3D" parent="."]
+mesh = SubResource("Ground_1")
+surface_material_override/0 = SubResource("Lit_1")
+
+[node name="UnshadedReference" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.01, 0)
+mesh = SubResource("Patch_1")
+surface_material_override/0 = SubResource("Unshaded_1")

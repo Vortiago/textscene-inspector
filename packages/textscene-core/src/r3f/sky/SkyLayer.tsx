@@ -18,6 +18,7 @@ import { resolveTexture2DPath } from '../../resources/SubResourceResolver';
 import { useSceneResources } from '../SceneResourcesContext';
 import { useLiveTreeVersion } from '../useLiveSceneTree';
 import { buildSkyEnvironment } from './skyEnvironment';
+import { LIGHT_INTENSITY_SCALE } from '../lightConstants';
 import type { SkyLight } from './skyUniforms';
 
 export interface SkyLayerProps {
@@ -112,7 +113,13 @@ function directionalLights(scene: THREE.Scene): SkyLight[] {
     lights.push({
       direction: direction.normalize(),
       color: light.color.clone(),
-      energy: light.intensity,
+      // Back to Godot's `light_energy`. The sky is the one consumer that must
+      // NOT see three's scaled intensity: Godot's sky shader is fed the raw
+      // energy (`sky.cpp` sets `sky_light_data.energy` from LIGHT_PARAM_ENERGY
+      // with no PI), while the scene shader gets the PI-multiplied one. Passing
+      // `light.intensity` straight through made the sun disc PI times too
+      // bright, and PMREM then fed that error back into the IBL.
+      energy: light.intensity / LIGHT_INTENSITY_SCALE,
       // `light_angular_distance` defaults to 0 — a point sun with only the
       // soft falloff `sun_curve` gives it.
       angularRadius: 0,

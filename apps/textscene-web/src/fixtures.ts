@@ -208,6 +208,26 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Light Transport Ambient",
+    "file": "unit-light-transport-ambient.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Light Transport Direct",
+    "file": "unit-light-transport-direct.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Light Transport Sky Graded",
+    "file": "unit-light-transport-sky-graded.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Light Transport Sky",
+    "file": "unit-light-transport-sky.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Marker 3d",
     "file": "unit-marker-3d.tscn",
     "category": "Other"
