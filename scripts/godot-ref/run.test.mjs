@@ -17,9 +17,9 @@
  *   previewer has no such notion, so the generated project must not carry one
  *   even when the source project declares it.
  */
-import { describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it } from 'vitest';
 import { existsSync } from 'node:fs';
-import { readFile, mkdtemp } from 'node:fs/promises';
+import { readFile, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -195,12 +195,25 @@ const hasEngine =
   spawnSync('which', ['godot']).status === 0 && spawnSync('which', ['xvfb-run']).status === 0;
 
 describe.skipIf(!hasEngine)('renderReference (real Godot)', () => {
+  // Each render needs somewhere to write; on a tmpfs /tmp these otherwise
+  // accumulate in RAM for every suite run, which is how ~250 of them piled up
+  // before anyone looked.
+  const scratch = [];
+  const scratchDir = async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'godot-ref-'));
+    scratch.push(dir);
+    return dir;
+  };
+  afterAll(async () => {
+    await Promise.all(scratch.map((dir) => rm(dir, { recursive: true, force: true })));
+  });
+
   const scene = join(import.meta.dirname, 'scenes', 'preview-lighting.tscn');
   const SKY = [200, 8];
   const GROUND = [200, 292];
 
   async function render(previews) {
-    const out = join(await mkdtemp(join(tmpdir(), 'godot-ref-')), 'shot.png');
+    const out = join(await scratchDir(), 'shot.png');
     await renderReference({
       scene,
       out,
@@ -233,7 +246,7 @@ describe.skipIf(!hasEngine)('renderReference (real Godot)', () => {
    * moved the derived look-at by 3.
    */
   it('bounds the GEOMETRY, not every VisualInstance3D', async () => {
-    const dir = await mkdtemp(join(tmpdir(), 'godot-ref-'));
+    const dir = await scratchDir();
     const out = join(dir, 'shot.png');
     const boundsOut = join(dir, 'shot.bounds.json');
     await renderReference({
