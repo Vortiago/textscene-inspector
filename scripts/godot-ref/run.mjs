@@ -66,6 +66,7 @@ export function parseArgs(argv) {
     width: DEFAULT_WIDTH,
     height: DEFAULT_HEIGHT,
     previews: true,
+    emitBounds: false,
     camera: null,
     lookAt: null,
     probes: [],
@@ -85,6 +86,9 @@ export function parseArgs(argv) {
         break;
       case '--no-previews':
         args.previews = false;
+        break;
+      case '--emit-bounds':
+        args.emitBounds = true;
         break;
       case '--camera':
         args.camera = vec3('--camera', argv[++i]);
@@ -176,12 +180,13 @@ const gdColor = (c) => `Color(${c[0]}, ${c[1]}, ${c[2]})`;
  * The bootstrap scene's script. Instantiates the target scene, applies Godot's
  * editor-preview yield rule, frames a camera, and writes one settled frame.
  */
-function bootstrapScript({ scenePath, previews, camera, lookAt, out }) {
+function bootstrapScript({ scenePath, previews, camera, lookAt, out, boundsOut }) {
   return `extends Node3D
 
 const SCENE_PATH := "${scenePath}"
 const PREVIEWS := ${previews ? 'true' : 'false'}
 const OUT := "${out}"
+const BOUNDS_OUT := "${boundsOut ?? ''}"
 
 func _ready() -> void:
 	var target: Node = load(SCENE_PATH).instantiate()
@@ -193,7 +198,23 @@ func _ready() -> void:
 		await get_tree().process_frame
 	await RenderingServer.frame_post_draw
 	get_viewport().get_texture().get_image().save_png(OUT)
+	_write_bounds(target)
 	get_tree().quit()
+
+# The scene's world-space AABB, so a comparison can derive ONE camera both
+# renderers use rather than each framing the scene its own way.
+func _write_bounds(target: Node) -> void:
+	if BOUNDS_OUT == "":
+		return
+	var b := _scene_bounds(target)
+	var file := FileAccess.open(BOUNDS_OUT, FileAccess.WRITE)
+	if file == null:
+		return
+	file.store_string(JSON.stringify({
+		"position": [b.position.x, b.position.y, b.position.z],
+		"size": [b.size.x, b.size.y, b.size.z],
+	}))
+	file.close()
 
 # Node3DEditor::_node_added — two INDEPENDENT presence checks, by node type,
 # with no regard for visibility.
@@ -330,6 +351,7 @@ export async function renderReference({
   previews = true,
   camera = null,
   lookAt = null,
+  boundsOut = null,
 }) {
   const scenePath = resolve(scene);
   if (!existsSync(scenePath)) throw new Error(`No such scene: ${scenePath}`);
@@ -346,7 +368,14 @@ export async function renderReference({
   const resPath = `res://${relative(root, scenePath).split(sep).join('/')}`;
   await writeFile(
     join(work, '__ref_bootstrap.gd'),
-    bootstrapScript({ scenePath: resPath, previews, camera, lookAt, out: resolve(out) })
+    bootstrapScript({
+      scenePath: resPath,
+      previews,
+      camera,
+      lookAt,
+      out: resolve(out),
+      boundsOut: boundsOut ? resolve(boundsOut) : null,
+    })
   );
   await writeFile(join(work, '__ref_main.tscn'), MAIN_SCENE);
 
@@ -374,8 +403,10 @@ async function main() {
 
   const out = args.out ?? join(import.meta.dirname, 'output', `${basename(args.scene, '.tscn')}.png`);
   await mkdir(dirname(out), { recursive: true });
-  const { out: written } = await renderReference({ ...args, out });
+  const boundsOut = args.emitBounds ? out.replace(/\.png$/, '.bounds.json') : null;
+  const { out: written } = await renderReference({ ...args, out, boundsOut });
   console.log(`Rendered ${written}`);
+  if (boundsOut && existsSync(boundsOut)) console.log(`Bounds ${boundsOut}`);
 
   if (args.probes.length > 0) {
     const buffer = await readFile(written);
