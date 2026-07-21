@@ -143,8 +143,51 @@ export async function waitForServer(url, timeoutMs = 40000) {
 const SOURCE_PANE_STORAGE_KEY = 'tscn-web-source-pane';
 /** `FRAME_ON_OPEN_STORAGE_KEY` in r3f/contexts/ViewportModeContext.tsx. */
 const FRAME_ON_OPEN_STORAGE_KEY = 'tsi.frameOnOpen';
+/**
+ * `FIT_ON_OPEN_2D_STORAGE_KEY` in r3f/components/Canvas2DStage/viewport2d.ts.
+ * Exported so a test can pin it to that one: a key that stops matching leaves
+ * the stage fitting the scene again, which still captures a picture — just not
+ * the one the Godot frame can be compared with.
+ */
+export const FIT_ON_OPEN_2D_STORAGE_KEY = 'tsi.fitOnOpen2D';
 
 export const VIEWPORT = { width: 1280, height: 800 };
+
+/**
+ * The 2D capture frame: Godot's project viewport (`CANVAS_2D_WIDTH/HEIGHT` in
+ * `viewport2d.ts`), which is the rectangle the previewer's 2D stage draws and
+ * the one a Control resolves its anchors against. Both sides render it 1:1 —
+ * the Godot harness through a SubViewport of this size, ours by clipping the
+ * stage's frame at zoom 1 — so a 2D pair compares pixel for pixel.
+ *
+ * `clearColor` is Godot's `rendering/environment/defaults/default_clear_color`
+ * default, and `background` is what it MEASURES as in a 2D render (2D composits
+ * in sRGB, so the 0.3 lands as byte 76 with no transfer applied). Our stage
+ * paints its own editor background, so the capture flattens it to that same
+ * grey — otherwise every transparent pixel of the scene would differ.
+ *
+ * `viewport` is the browser viewport a 2D capture needs: the frame must fit
+ * INSIDE the stage at zoom 1, and the stage is what remains of the window after
+ * the shell's dock (325px) and top bar (44px).
+ */
+export const CANVAS_2D_CAPTURE = {
+  width: 1152,
+  height: 648,
+  clearColor: [0.3, 0.3, 0.3],
+  background: '#4c4c4c',
+  viewport: { width: 1600, height: 900 },
+};
+
+/** The 2D stage's chrome, painted out for a capture (see `createCaptureContext`). */
+export const CANVAS_2D_TESTIDS = {
+  stage: 'canvas-2d-stage',
+  frame: 'canvas-2d-frame',
+  captureFrame: 'canvas-2d-capture-frame',
+  hint: 'canvas-2d-hint',
+  zoom: 'canvas-2d-zoom',
+  originAxisX: 'origin-axis-x',
+  originAxisY: 'origin-axis-y',
+};
 
 /**
  * The size of the canvas ELEMENT inside that viewport, once the shell's chrome
@@ -167,9 +210,21 @@ export const SETTLE_MAX_ATTEMPTS = 12;
  * `canvas.screenshot()` composites any DOM over the canvas box), and
  * frame-on-open set explicitly rather than inherited from a default a future
  * change could flip.
+ *
+ * `canvas2D` prepares the 2D stage the same way for the 2D comparison frame:
+ * its chrome (grid, viewport outline and dimension label, origin axes, the
+ * pan/zoom hint, the zoom HUD) painted out, its background flattened to what
+ * Godot clears a 2D viewport to, and its opening view pinned to zoom 1 at the
+ * origin instead of "Fit" — so the frame is the game frame at 1:1 and sits at
+ * the same integer pixels every run. It is OPT-IN because the golden gate
+ * captures 2D scenes WITH that chrome; turning any of it on unconditionally
+ * would move those baselines.
  */
-export async function createCaptureContext(browser, { frameOnOpen }) {
-  const context = await browser.newContext({ viewport: VIEWPORT, deviceScaleFactor: 1 });
+export async function createCaptureContext(browser, { frameOnOpen, canvas2D = false }) {
+  const context = await browser.newContext({
+    viewport: canvas2D ? CANVAS_2D_CAPTURE.viewport : VIEWPORT,
+    deviceScaleFactor: 1,
+  });
   await context.addInitScript(
     ([key, value]) => window.localStorage.setItem(key, value),
     [SOURCE_PANE_STORAGE_KEY, JSON.stringify({ visible: false, width: 320 })]
@@ -178,18 +233,90 @@ export async function createCaptureContext(browser, { frameOnOpen }) {
     ([key, value]) => window.localStorage.setItem(key, value),
     [FRAME_ON_OPEN_STORAGE_KEY, frameOnOpen ? 'true' : 'false']
   );
+  if (canvas2D) {
+    await context.addInitScript(
+      ([key, value]) => window.localStorage.setItem(key, value),
+      [FIT_ON_OPEN_2D_STORAGE_KEY, 'false']
+    );
+  }
+  const hidden = ['viewport-toolbar-overlay'];
+  let css = '';
+  if (canvas2D) {
+    hidden.push(
+      CANVAS_2D_TESTIDS.frame,
+      CANVAS_2D_TESTIDS.hint,
+      CANVAS_2D_TESTIDS.zoom,
+      CANVAS_2D_TESTIDS.originAxisX,
+      CANVAS_2D_TESTIDS.originAxisY
+    );
+    css +=
+      `[data-testid="${CANVAS_2D_TESTIDS.stage}"]{background-image:none !important;` +
+      `background-color:${CANVAS_2D_CAPTURE.background} !important}`;
+  }
+  css += `${hidden.map((id) => `[data-testid="${id}"]`).join(',')}{display:none !important}`;
   // The <style> must land in <head> once it exists — appending at
   // document-start puts it in an invalid position the parser drops.
-  await context.addInitScript(() => {
+  await context.addInitScript((rules) => {
     const add = () => {
       const style = document.createElement('style');
-      style.textContent = '[data-testid="viewport-toolbar-overlay"]{display:none !important}';
+      style.textContent = rules;
       document.head.appendChild(style);
     };
     if (document.head) add();
     else document.addEventListener('DOMContentLoaded', add, { once: true });
-  });
+  }, css);
   return context;
+}
+
+/** Which workspace the app itself opened the scene in — its own decision, asked, not re-derived. */
+export async function readViewportMode(page) {
+  const stage = page.locator(`[data-testid="${CANVAS_2D_TESTIDS.stage}"]`);
+  return (await stage.count()) > 0 ? '2d' : '3d';
+}
+
+/**
+ * The 2D comparison frame: the project-viewport rectangle inside the stage, or
+ * a reason it cannot be captured. Checked rather than assumed, because every
+ * way this goes wrong produces an image that still looks plausible — a stage
+ * too small to hold the frame at zoom 1 clips it (the shell's chrome creeps in
+ * at the edges), and a fractional origin resamples every pixel of the scene
+ * against a reference that was rendered on the integer grid.
+ */
+export async function findCanvas2DFrame(page) {
+  const stage = page.locator(`[data-testid="${CANVAS_2D_TESTIDS.stage}"]`);
+  const frame = page.locator(`[data-testid="${CANVAS_2D_TESTIDS.captureFrame}"]`);
+  try {
+    await frame.waitFor({ timeout: 30000 });
+  } catch {
+    return { frame: null, reason: 'the 2D stage never mounted — the app opened this scene in 3D' };
+  }
+  const box = await frame.boundingBox();
+  const stageBox = await stage.boundingBox();
+  if (!box || !stageBox) return { frame: null, reason: '2D stage frame has no layout box' };
+  const { width, height } = CANVAS_2D_CAPTURE;
+  if (box.width !== width || box.height !== height) {
+    return {
+      frame: null,
+      reason: `2D frame is ${box.width}x${box.height}, expected ${width}x${height} (zoom is not 1)`,
+    };
+  }
+  if (!Number.isInteger(box.x) || !Number.isInteger(box.y)) {
+    return { frame: null, reason: `2D frame origin ${box.x},${box.y} is not on a whole pixel` };
+  }
+  if (
+    box.x < stageBox.x ||
+    box.y < stageBox.y ||
+    box.x + box.width > stageBox.x + stageBox.width ||
+    box.y + box.height > stageBox.y + stageBox.height
+  ) {
+    return {
+      frame: null,
+      reason:
+        `2D frame ${width}x${height} does not fit the ` +
+        `${stageBox.width}x${stageBox.height} stage — widen the capture viewport`,
+    };
+  }
+  return { frame, reason: null };
 }
 
 /**
@@ -217,6 +344,20 @@ export async function findCanvas(page) {
   const count = await canvases.count();
   if (count !== 1) return { canvas: null, reason: `expected exactly 1 canvas, found ${count}` };
   return { canvas: canvases.first(), reason: null };
+}
+
+/**
+ * The element a capture clips to: the 2D comparison frame when the scene opened
+ * in the 2D workspace, the scene canvas otherwise. One call so a caller cannot
+ * pick the 2D context and then screenshot the 3D element.
+ */
+export async function findCaptureTarget(page, { canvas2D = false } = {}) {
+  if (canvas2D) {
+    const { frame, reason } = await findCanvas2DFrame(page);
+    return { target: frame, reason };
+  }
+  const { canvas, reason } = await findCanvas(page);
+  return { target: canvas, reason };
 }
 
 /**
