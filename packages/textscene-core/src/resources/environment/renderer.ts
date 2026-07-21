@@ -19,6 +19,15 @@ export interface EnvironmentSettings {
     color: Color;
     energy: number;
   } | null;
+  /**
+   * Godot's tonemapper. Always present — LINEAR (the default) is a real
+   * choice meaning "no tone mapping", not an absence, and the editor preview
+   * environment deliberately picks FILMIC instead.
+   */
+  toneMapping: {
+    mode: number;
+    exposure: number;
+  };
   /** Screen-space fog (Godot fog_enabled). Volumetric fog has no THREE equivalent. */
   fog: {
     density: number;
@@ -46,6 +55,10 @@ export function createEnvironmentSettings(
       energyMultiplier: properties.background_energy_multiplier,
     },
     ambient: ambientFor(properties),
+    toneMapping: {
+      mode: properties.tonemap_mode,
+      exposure: properties.tonemap_exposure,
+    },
     // Scene fog is driven by Godot's screen-space fog; volumetric fog has no
     // THREE equivalent and is intentionally not applied (see PARITY-LIMITATIONS).
     fog: properties.fog_enabled

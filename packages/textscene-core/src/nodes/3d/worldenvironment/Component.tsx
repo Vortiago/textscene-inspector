@@ -20,6 +20,7 @@ import { parseResourceReference } from '../../../resources/SubResourceResolver';
 import { parseEnvironment } from '../../../resources/environment/parser';
 import { BackgroundMode } from '../../../resources/environment/types';
 import { createEnvironmentSettings } from '../../../resources/environment/renderer';
+import { applyToneMapping } from '../../../resources/environment/toneMapping';
 import type { EnvironmentSettings } from '../../../resources/environment/renderer';
 
 export function WorldEnvironment({ node, children }: NodeComponentProps) {
@@ -51,6 +52,7 @@ interface EnvironmentApplierProps {
 
 function EnvironmentApplier({ settings }: EnvironmentApplierProps) {
   const scene = useThree((state) => state.scene);
+  const gl = useThree((state) => state.gl);
 
   const mode = settings.background.mode;
   const showBackgroundColor =
@@ -72,6 +74,12 @@ function EnvironmentApplier({ settings }: EnvironmentApplierProps) {
       scene.background = previousBackground;
     };
   }, [scene, showBackgroundColor, mode, settings.background.color]);
+
+  const { mode: toneMapMode, exposure: toneMapExposure } = settings.toneMapping;
+  useEffect(
+    () => applyToneMapping(gl, { mode: toneMapMode, exposure: toneMapExposure }, scene),
+    [gl, scene, toneMapMode, toneMapExposure]
+  );
 
   const fog = settings.fog;
   useEffect(() => {
