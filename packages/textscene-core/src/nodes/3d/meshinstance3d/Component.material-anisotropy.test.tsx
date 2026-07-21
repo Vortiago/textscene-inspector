@@ -1,5 +1,5 @@
 /**
- * Render-side contract for StandardMaterial3D anisotropy (WI-68).
+ * Render-side contract for StandardMaterial3D anisotropy.
  *
  * Parsing anisotropy is necessary but not sufficient — the values have to reach
  * the rendered material or nothing changes on screen. three.js exposes

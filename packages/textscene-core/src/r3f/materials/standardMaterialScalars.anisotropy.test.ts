@@ -1,5 +1,5 @@
 /**
- * StandardMaterial3D anisotropy handling (WI-68) — parse layer.
+ * StandardMaterial3D anisotropy handling — parse layer.
  *
  * Godot's BaseMaterial3D anisotropy feature stretches the specular highlight
  * along tangent space (brushed metal, hair), behind an `anisotropy_enabled`
