@@ -109,6 +109,16 @@ export const GOLDEN_SCENES = [
   // renders (a normal map, or a missing displacementMap, reads as a flat ball).
   { name: 'material-heightmap', file: 'unit-material-heightmap.tscn' },
   { name: 'world-environment', file: 'unit-world-environment-basic.tscn' },
+  // Godot's editor preview sun + preview environment on a scene that declares
+  // neither (ADR-0025). Godot's own render of the same lighting is committed at
+  // scripts/godot-ref/reference/preview-lighting.png. Shadow-bearing, hence the
+  // relaxed threshold shared with the other shadow scenes.
+  { name: 'preview-lighting', file: 'unit-preview-lighting.tscn', maxDiffPct: 0.5 },
+  // Scene-owned skies, authored away from Godot's defaults so the gradient and
+  // the sun disc are legible. Both carry their own light AND environment, so
+  // they also pin that BOTH previews yield.
+  { name: 'sky-procedural', file: 'unit-sky-procedural.tscn', maxDiffPct: 0.5 },
+  { name: 'sky-physical', file: 'unit-sky-physical.tscn', maxDiffPct: 0.5 },
   // NOTE: unit-label3d.tscn is deliberately NOT in the set — Label3D
   // labels render effectively invisible after auto-framing (default
   // pixel_size 0.005 → ~0.08 world units tall; the committed showcase

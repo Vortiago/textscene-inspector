@@ -13,6 +13,13 @@
  * Requires a local Godot 4.6 (`godot`) and `xvfb-run`; there is no CI copy of
  * either, so this is a developer tool, never a gate.
  *
+ * CAMERA CAVEAT: a scene carrying its own `Camera3D` is framed through it here,
+ * while the previewer auto-frames the scene bounds unless the user picks that
+ * camera. Comparisons are therefore sound for view-independent quantities — the
+ * colour of a lit Lambertian surface, the sky at the zenith — and NOT for
+ * "the pixel at (x, y)". Pass `--camera` / `--look-at` to pin both sides when a
+ * measurement needs the same frame.
+ *
  * TWO THINGS THIS HARNESS DOES THAT A NAIVE `godot --path` DOES NOT:
  *
  * 1. **It injects the editor previews.** `godot --path` runs the GAME. Godot's

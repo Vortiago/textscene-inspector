@@ -238,6 +238,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Preview Lighting",
+    "file": "unit-preview-lighting.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Remote Transform 2d",
     "file": "unit-remote-transform-2d.tscn",
     "category": "Other"
@@ -265,6 +270,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Skeleton3d",
     "file": "unit-skeleton3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Sky Physical",
+    "file": "unit-sky-physical.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Sky Procedural",
+    "file": "unit-sky-procedural.tscn",
     "category": "Other"
   },
   {

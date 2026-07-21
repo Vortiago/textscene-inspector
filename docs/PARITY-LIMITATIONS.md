@@ -243,17 +243,41 @@ which is monotonic (higher exponent → harder edge) and lands the Godot default
   closed-form three.js equivalent; the mapping is a deliberate approximation.
 - Site: `nodes/3d/lights/spotlight3d/Component.tsx` (penumbra derivation).
 
-### The previewer always adds editor preview lights
-`TscnSceneContents` mounts an unconditional `ambientLight intensity={0.4}` plus a
-`directionalLight`. Godot's editor mounts a preview sun and a preview environment,
-each yielded to a scene carrying its own `DirectionalLight3D` / `WorldEnvironment`.
-Ours yield to neither, and the values differ.
+### Preview environment glow
+Godot's editor preview environment enables glow (bloom); this previewer does not
+reproduce it. Everything else the preview supplies — the sun, the procedural sky,
+its radiance as ambient, FILMIC tonemapping — is (ADR-0025).
 
-- **Impact:** a scene's own lighting competes with a baseline Godot would not be
-  applying. A `WorldEnvironment` taking its ambient from a sky emits nothing here,
-  so that fixed baseline is all that lights it.
-- **Fix:** specified in ADR-0025.
-- Site: `r3f/TscnCanvas.tsx` (`TscnSceneContents`).
+- **Why not exact:** glow is a compositor pass over the rendered frame. This
+  renderer draws straight to the canvas with no post-processing chain, so there
+  is nothing to hang it on.
+- Site: `r3f/preview/previewLighting.ts` (`previewEnvironment`).
+
+### Sky ambient and sky reflections share one intensity
+Godot scales the sky's *ambient* contribution by `ambient_light_sky_contribution`
+and decides its *reflection* contribution separately via `reflection_source`.
+three.js has a single `scene.environmentIntensity` governing both.
+
+- **Impact:** the two agree at the defaults, which is the overwhelmingly common
+  case (`ambient_light_sky_contribution = 1.0`, `reflection_source = BG`). They
+  diverge when a scene lowers the sky contribution — reflections dim with the
+  ambient — and when `ambient_light_source = DISABLED` over a sky background,
+  where honouring the explicit "no ambient" also costs the sky reflections.
+- **Why not fixed:** separating them needs a per-material `envMapIntensity`
+  distinct from the scene-level one, applied to every material this previewer
+  builds; the divergence only shows on non-default settings.
+- Site: `r3f/sky/SkyLayer.tsx`.
+
+### `tonemap_mode = AGX` uses three's AgX, not Godot's
+REINHARDT, FILMIC and ACES are ported from Godot's own shader
+(`godotToneMapping.ts`) and normalised by `tonemap_white` exactly as the engine
+does. AGX is left to three's `AgXToneMapping`.
+
+- **Why not exact:** Godot's AgX is by its own description "an approximation and
+  simplification of EaryChow's AgX implementation"; three's is a different
+  approximation of the same source. Porting Godot's would mean carrying its LUT
+  fit as well.
+- Site: `resources/environment/godotToneMapping.ts`.
 
 ## Control
 
