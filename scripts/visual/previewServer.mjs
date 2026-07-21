@@ -161,7 +161,7 @@ export const VIEWPORT = { width: 1280, height: 800 };
  * stage's frame at zoom 1 — so a 2D pair compares pixel for pixel.
  *
  * `clearColor` is Godot's `rendering/environment/defaults/default_clear_color`
- * default, and `background` is what it MEASURES as in a 2D render (2D composits
+ * default, and `background` is what it MEASURES as in a 2D render (2D composites
  * in sRGB, so the 0.3 lands as byte 76 with no transfer applied). Our stage
  * paints its own editor background, so the capture flattens it to that same
  * grey — otherwise every transparent pixel of the scene would differ.
