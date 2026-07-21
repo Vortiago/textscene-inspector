@@ -77,6 +77,10 @@ export interface StandardMaterial3DScalars {
    * 0 when `heightmap_enabled` is off. Mapped to three.js `displacementScale`.
    */
   heightmapScale: number;
+  /** Godot `anisotropy` magnitude (0..1), gated on `anisotropy_enabled`. */
+  anisotropy: number;
+  /** Godot `anisotropy` direction: 0 (positive) or π/2 (negative). */
+  anisotropyRotation: number;
 }
 
 const DEFAULT_SCALARS: StandardMaterial3DScalars = {
@@ -104,6 +108,8 @@ const DEFAULT_SCALARS: StandardMaterial3DScalars = {
   rim: 0,
   rimTint: 0,
   heightmapScale: 0,
+  anisotropy: 0,
+  anisotropyRotation: 0,
 };
 
 export function parseStandardMaterial3DScalars(
@@ -173,6 +179,11 @@ export function parseStandardMaterial3DScalars(
   const heightmapEnabled = properties['heightmap_enabled'] === 'true';
   const heightmapScale = heightmapEnabled ? numericOr(properties['heightmap_scale'], 5.0) : 0;
 
+  const anisotropyEnabled = properties['anisotropy_enabled'] === 'true';
+  const rawAniso = numericOr(properties['anisotropy'], 0);
+  const anisotropy = anisotropyEnabled ? clamp01(Math.abs(rawAniso)) : 0;
+  const anisotropyRotation = anisotropyEnabled && rawAniso < 0 ? Math.PI / 2 : 0;
+
   // Godot encodes colors in sRGB. three.js's `<meshStandardMaterial color={...}>`
   // prop treats incoming values as **linear** RGB. Without converting,
   // mid-tone reds like `Color(0.545, 0.117, 0.117, 1)` (dark red `#8B1E1E`
@@ -234,6 +245,8 @@ export function parseStandardMaterial3DScalars(
     rim,
     rimTint,
     heightmapScale,
+    anisotropy,
+    anisotropyRotation,
   };
 }
 

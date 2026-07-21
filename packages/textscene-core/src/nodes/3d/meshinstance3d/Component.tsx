@@ -39,6 +39,7 @@ import { resolveStandardMaterial } from '../../../r3f/materials/resolveStandardM
 import { StandardMaterialSlot } from '../../../r3f/materials/StandardMaterialSlot';
 import { ExternalMaterialSlot } from '../../../r3f/materials/ExternalMaterialSlot';
 import { applyUVTransform } from './applyUVTransform';
+import { repackAnisotropyFlowmap } from './repackFlowmap';
 import { triplanarPlaneScale } from './triplanarScale';
 
 /** Texture slots StandardMaterial3D exposes — checked in this order. */
@@ -48,9 +49,10 @@ const TEXTURE_PROPERTIES = [
   'roughness_texture',
   'metallic_texture',
   'emission_texture',
-  'ao_texture',
-  'heightmap_texture',
-] as const;
+   'ao_texture',
+   'heightmap_texture',
+   'anisotropy_flowmap',
+ ] as const;
 
 export function MeshInstance3D({ node, children }: NodeComponentProps) {
   const properties = node.properties as MeshInstance3DProperties;
@@ -143,6 +145,10 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     textureRequests.heightmap_texture ?? '',
     'Texture2D'
   );
+  const anisotropyFlowmapStatus = useResource<THREE.Texture>(
+    textureRequests.anisotropy_flowmap ?? '',
+    'Texture2D'
+  );
 
   const textureSlots = useMemo(
     () => ({
@@ -153,6 +159,7 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
       emission_texture: textureRequests.emission_texture ? emissionStatus : null,
       ao_texture: textureRequests.ao_texture ? aoStatus : null,
       heightmap_texture: textureRequests.heightmap_texture ? heightmapStatus : null,
+      anisotropy_flowmap: textureRequests.anisotropy_flowmap ? anisotropyFlowmapStatus : null,
     }),
     [
       textureRequests,
@@ -163,6 +170,7 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
       emissionStatus,
       aoStatus,
       heightmapStatus,
+      anisotropyFlowmapStatus,
     ]
   );
 
@@ -225,6 +233,13 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     () => transformedTexture(textureSlots.heightmap_texture, uvTransform),
     [textureSlots.heightmap_texture, uvTransform]
   );
+  const anisotropyMap = useMemo(() => {
+    const value = textureSlots.anisotropy_flowmap?.value;
+    if (!value) return undefined;
+    const repacked = repackAnisotropyFlowmap(value);
+    if (!repacked) return undefined;
+    return uvTransform ? applyUVTransform(repacked, uvTransform) : repacked;
+  }, [textureSlots.anisotropy_flowmap, uvTransform]);
 
   // If any requested slot resolved to `unavailable`, surface the FIRST
   // such path as the placeholder label. Listing more than one would
@@ -338,6 +353,7 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
         emissiveMap={emissiveMap}
         aoMap={materialScalars?.aoEnabled ? aoMap : undefined}
         displacementMap={displacementMap}
+        anisotropyMap={anisotropyMap}
         shadowSide={shadowFlags.shadowSide}
         meshType={meshResource?.type}
         // Multi-surface meshes (slot N>0 populated): attach the primary

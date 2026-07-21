@@ -22,6 +22,8 @@ export interface StandardMaterialSlotProps {
   aoMap?: THREE.Texture;
   /** Godot `heightmap_texture` → three.js displacementMap (height mapping). */
   displacementMap?: THREE.Texture;
+  /** Godot `anisotropy_flowmap` → three.js anisotropyMap (flowmap). */
+  anisotropyMap?: THREE.Texture;
   /** Override for shadow-pass side culling (Godot DOUBLE_SIDED cast_shadow). */
   shadowSide?: THREE.Side;
   /**
@@ -43,6 +45,7 @@ export function StandardMaterialSlot({
   emissiveMap,
   aoMap,
   displacementMap,
+  anisotropyMap,
   shadowSide,
   meshType: _meshType,
   attach,
@@ -82,7 +85,8 @@ export function StandardMaterialSlot({
     // displacementMap MUST be keyed too: three.js bakes USE_DISPLACEMENTMAP at
     // compile time, so a coat/height texture arriving async needs a fresh
     // material or the vertices never move (the map is set but the shader ignores it).
-    `${displacementMap ? 'd' : '-'}`;
+    `${displacementMap ? 'd' : '-'}` +
+    `${anisotropyMap ? 'f' : '-'}`;  // 'f' for flowmap
 
   // Godot SHADING_MODE_UNSHADED (0): albedo is output directly, unaffected by
   // lights/shadows. three.js MeshBasicMaterial is the unlit equivalent — no PBR
@@ -148,7 +152,7 @@ export function StandardMaterialSlot({
   // term, the closest native analog). A material carrying either renders as
   // <meshPhysicalMaterial>; rim_tint blends the highlight from the light colour
   // (0) toward the albedo (1) via sheenColor.
-  if (scalars.clearcoat > 0 || scalars.rim > 0) {
+  if (scalars.clearcoat > 0 || scalars.rim > 0 || scalars.anisotropy > 0) {
     const rimTint = scalars.rimTint;
     const sheenColor = new THREE.Color(
       1 + rimTint * (scalars.color[0] - 1),
@@ -163,6 +167,9 @@ export function StandardMaterialSlot({
         clearcoatRoughness={scalars.clearcoatRoughness}
         sheen={scalars.rim}
         sheenColor={sheenColor}
+        anisotropy={scalars.anisotropy}
+        anisotropyRotation={scalars.anisotropyRotation}
+        anisotropyMap={anisotropyMap ?? null}
       />
     );
   }
