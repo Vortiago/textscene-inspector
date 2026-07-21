@@ -72,7 +72,7 @@ Two traps this exposed, both of which produced confident wrong pictures:
 3. **Fan out** the 3D sheets.
 4. **2D capture path**, then the 2D sheets.
 
-Tracked separately, not a blocker for the sheets: replace drei's
+Decided, and outstanding work in its own right: replace drei's
 `<OrbitControls>` with Godot's editor navigation — middle-drag orbit,
 shift+middle pan, right-drag freelook with WASD, numpad 1/3/7/5 view snapping.
 `OrbitControls` is three's *examples* code (via `three-stdlib`, via drei), not

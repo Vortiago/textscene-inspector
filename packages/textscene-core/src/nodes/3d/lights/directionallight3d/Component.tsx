@@ -13,8 +13,7 @@ import {
   LIGHT_INTENSITY_SCALE,
   DEFAULT_SHADOW_BIAS,
   DIRECTIONAL_SHADOW_FRUSTUM_HALF,
-  DIRECTIONAL_SHADOW_PULLBACK,
-  directionalShadowFar,
+  DIRECTIONAL_SHADOW_NEAR,
 } from '../../../../r3f/lightConstants';
 import { LightWithTarget } from '../shared/lightShared';
 import { DirectionalLightGizmo } from '../shared/lightHelpers';
@@ -44,13 +43,13 @@ export function DirectionalLight3D({ node, children }: NodeComponentProps) {
         <>
           <directionalLight
             ref={lightRef}
-            position={[0, 0, DIRECTIONAL_SHADOW_PULLBACK]}
+            position={[0, 0, 0]}
             color={color}
             intensity={intensity}
             castShadow={properties.shadow_enabled}
             shadow-bias={bias}
-            shadow-camera-near={0.1}
-            shadow-camera-far={directionalShadowFar(shadowFar)}
+            shadow-camera-near={DIRECTIONAL_SHADOW_NEAR}
+            shadow-camera-far={shadowFar}
             shadow-camera-left={-DIRECTIONAL_SHADOW_FRUSTUM_HALF}
             shadow-camera-right={DIRECTIONAL_SHADOW_FRUSTUM_HALF}
             shadow-camera-top={DIRECTIONAL_SHADOW_FRUSTUM_HALF}

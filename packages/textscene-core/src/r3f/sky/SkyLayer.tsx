@@ -31,12 +31,24 @@ export interface SkyLayerProps {
    * over a colour background).
    */
   asBackground?: boolean;
+  /**
+   * Godot's `background_energy_multiplier` applied to the DRAWN sky. It scales
+   * what the sky lights (through `intensity`) and what it looks like alike, so
+   * without this a doubled multiplier brightened every surface while the sky
+   * behind them stayed put.
+   */
+  backgroundIntensity?: number;
 }
 
 /** Godot's sky shader has four light slots; the rest of the scene's lights don't reach it. */
 const LIGHT_SLOTS = 4;
 
-export function SkyLayer({ sky, intensity = 1, asBackground = true }: SkyLayerProps) {
+export function SkyLayer({
+  sky,
+  intensity = 1,
+  asBackground = true,
+  backgroundIntensity = 1,
+}: SkyLayerProps) {
   const gl = useThree((state) => state.gl);
   const scene = useThree((state) => state.scene);
   const loader = useResourceLoader();
@@ -79,18 +91,35 @@ export function SkyLayer({ sky, intensity = 1, asBackground = true }: SkyLayerPr
     const previousEnvironment = scene.environment;
     const previousIntensity = scene.environmentIntensity;
     const previousBackground = scene.background;
+    const previousBackgroundIntensity = scene.backgroundIntensity;
 
     scene.environment = built.environment;
     scene.environmentIntensity = intensity;
-    if (asBackground) scene.background = built.background;
+    if (asBackground) {
+      scene.background = built.background;
+      scene.backgroundIntensity = backgroundIntensity;
+    }
 
     return () => {
       scene.environment = previousEnvironment;
       scene.environmentIntensity = previousIntensity;
-      if (asBackground) scene.background = previousBackground;
+      if (asBackground) {
+        scene.background = previousBackground;
+        scene.backgroundIntensity = previousBackgroundIntensity;
+      }
       built.dispose();
     };
-  }, [gl, scene, sky, intensity, panorama, asBackground, treeVersion, pass]);
+  }, [
+    gl,
+    scene,
+    sky,
+    intensity,
+    panorama,
+    asBackground,
+    backgroundIntensity,
+    treeVersion,
+    pass,
+  ]);
 
   return null;
 }
@@ -109,6 +138,10 @@ function directionalLights(scene: THREE.Scene): SkyLight[] {
   scene.traverse((object) => {
     if (lights.length >= LIGHT_SLOTS) return;
     if (!(object as THREE.DirectionalLight).isDirectionalLight) return;
+    // `traverse` descends into hidden subtrees, but three's renderer skips them
+    // when lighting — and Godot's sky only sees lights in the render list, so a
+    // `visible = false` light draws no disc there either.
+    if (!isRendered(object)) return;
     const light = object as THREE.DirectionalLight;
 
     light.getWorldPosition(from);
@@ -136,4 +169,12 @@ function directionalLights(scene: THREE.Scene): SkyLight[] {
   });
 
   return lights;
+}
+
+/** Visible, and not buried under a hidden ancestor. */
+function isRendered(object: THREE.Object3D): boolean {
+  for (let node: THREE.Object3D | null = object; node; node = node.parent) {
+    if (!node.visible) return false;
+  }
+  return true;
 }

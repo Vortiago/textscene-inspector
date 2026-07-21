@@ -42,13 +42,21 @@
  */
 import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { cp, mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
+import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, relative, resolve, sep } from 'node:path';
 import { PNG } from 'pngjs';
 
-const DEFAULT_WIDTH = 400;
-const DEFAULT_HEIGHT = 300;
+/**
+ * The size `capture-ours.mjs` gets when it screenshots the canvas element
+ * inside its 1280x800 viewport. Matching it here is what makes the two
+ * harnesses' probe coordinates address the same surface point with no
+ * arguments — a different aspect ratio alone would break that, since at a
+ * shared vertical fov the wider frame covers a wider horizontal frustum and no
+ * rescaling maps probes 1:1. `run.test.mjs` pins the pair.
+ */
+const DEFAULT_WIDTH = 955;
+const DEFAULT_HEIGHT = 756;
 
 /** `editors/3d/default_fov`. A `Camera3D` node's own default is 75. */
 export const EDITOR_FOV = 70;
@@ -77,6 +85,26 @@ const PREVIEW_SUN_AZIMUTH_DEG = 150;
 const PREVIEW_SKY_TOP = [0.385, 0.454, 0.55];
 const PREVIEW_GROUND_BOTTOM = [0.2, 0.169, 0.133];
 
+/** Reject NaN early: it reaches Godot as `viewport_width=NaN`, which does not
+ * fail — the engine produces nothing and never exits, so both 300s spawn
+ * timeouts elapse before the harness reports an unrelated "produced no image".
+ */
+function positiveNumber(flag, raw) {
+  const value = Number(raw);
+  if (!Number.isFinite(value) || value <= 0) {
+    throw new Error(`${flag} needs a positive number, got "${raw}"`);
+  }
+  return value;
+}
+
+function vec2(flag, raw) {
+  const parts = String(raw).split(',').map((n) => Number(n.trim()));
+  if (parts.length !== 2 || parts.some((n) => !Number.isInteger(n))) {
+    throw new Error(`${flag} needs two comma-separated integers, got "${raw}"`);
+  }
+  return parts;
+}
+
 function vec3(flag, raw) {
   const parts = raw.split(',').map((n) => Number(n.trim()));
   if (parts.length !== 3 || parts.some((n) => !Number.isFinite(n))) {
@@ -96,6 +124,7 @@ export function parseArgs(argv) {
     // 75 a bare Camera3D node defaults to. Rendering the reference at 75 while
     // the previewer draws at 70 is a silent zoom difference in every frame.
     fov: EDITOR_FOV,
+    fovExplicit: false,
     emitBounds: false,
     frame: false,
     sceneCamera: false,
@@ -112,10 +141,10 @@ export function parseArgs(argv) {
         args.out = argv[++i];
         break;
       case '--width':
-        args.width = Number(argv[++i]);
+        args.width = positiveNumber('--width', argv[++i]);
         break;
       case '--height':
-        args.height = Number(argv[++i]);
+        args.height = positiveNumber('--height', argv[++i]);
         break;
       case '--no-previews':
         args.previews = false;
@@ -130,7 +159,8 @@ export function parseArgs(argv) {
         args.sceneCamera = true;
         break;
       case '--fov':
-        args.fov = Number(argv[++i]);
+        args.fov = positiveNumber('--fov', argv[++i]);
+        args.fovExplicit = true;
         break;
       case '--camera':
         args.camera = vec3('--camera', argv[++i]);
@@ -138,13 +168,11 @@ export function parseArgs(argv) {
       case '--look-at':
         args.lookAt = vec3('--look-at', argv[++i]);
         break;
-      case '--probe': {
-        const [x, y] = vec3('--probe', `${argv[++i]},0`);
-        args.probes.push([x, y]);
+      case '--probe':
+        args.probes.push(vec2('--probe', argv[++i]));
         break;
-      }
       case '--patch':
-        args.patch = Number(argv[++i]);
+        args.patch = positiveNumber('--patch', argv[++i]);
         break;
       default:
         if (arg.startsWith('--')) throw new Error(`Unknown flag ${arg}`);
@@ -225,6 +253,11 @@ export function probePixels(buffer, probes, { patch = 1 } = {}) {
   }
   const reach = (patch - 1) / 2;
   return probes.map(([x, y]) => {
+    if (!Number.isInteger(x) || !Number.isInteger(y)) {
+      // A fractional coordinate lands the byte index mid-pixel, so the
+      // "colour" returned is the tail of one pixel and the head of the next.
+      throw new Error(`probe ${x},${y} must be integer pixel coordinates`);
+    }
     if (x - reach < 0 || y - reach < 0 || x + reach >= png.width || y + reach >= png.height) {
       throw new Error(
         `probe ${x},${y} (patch ${patch}) falls outside the ${png.width}x${png.height} image`
@@ -263,6 +296,7 @@ function bootstrapScript({
   out,
   boundsOut,
   fov,
+  fovExplicit,
 }) {
   return `extends Node3D
 
@@ -368,8 +402,15 @@ ${
         sceneCamera
           ? `	var existing := _find_camera(target)
 	if existing != null:
-		existing.fov = FOV
-		return
+${
+  fovExplicit
+    ? `		existing.fov = FOV
+`
+    : `		# Leave the authored fov alone — a Camera3D defaults to 75, and forcing
+		# the editor's 70 would render neither what Godot shows through this
+		# camera nor what the previewer shows when the user picks it.
+`
+}		return
 `
           : ''
       }	var cam := Camera3D.new()
@@ -468,12 +509,34 @@ export async function renderReference({
   sceneCamera = false,
   boundsOut = null,
   fov = EDITOR_FOV,
+  fovExplicit = false,
+  keepWork = false,
 }) {
   const scenePath = resolve(scene);
   if (!existsSync(scenePath)) throw new Error(`No such scene: ${scenePath}`);
 
   const root = resolveProjectRoot(scenePath);
   const work = await mkdtemp(join(tmpdir(), 'godot-ref-'));
+  try {
+    return await renderInto(work, { root, scenePath, out, width, height, previews, camera,
+      lookAt, frame, sceneCamera, boundsOut, fov, fovExplicit });
+  } finally {
+    // Each run copies the whole res:// root, and `keepWork` is the only reason
+    // to hold one afterwards. On a tmpfs /tmp these accumulate in RAM: 236 of
+    // them, ~260MB, had piled up on the development host before this cleanup
+    // existed — and the engine-gated tests now run inside `pnpm test:unit`,
+    // so every suite run added more.
+    if (!keepWork) await rm(work, { recursive: true, force: true });
+  }
+}
+
+async function renderInto(
+  work,
+  {
+    root, scenePath, out, width, height, previews, camera, lookAt, frame, sceneCamera,
+    boundsOut, fov, fovExplicit,
+  }
+) {
   await cp(root, work, { recursive: true, dereference: true });
 
   const sourceIni = existsSync(join(root, 'project.godot'))
@@ -491,6 +554,7 @@ export async function renderReference({
       lookAt,
       frame,
       sceneCamera,
+      fovExplicit,
       out: resolve(out),
       boundsOut: boundsOut ? resolve(boundsOut) : null,
       fov,

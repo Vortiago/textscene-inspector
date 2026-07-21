@@ -40,28 +40,27 @@ export const LIGHT_INTENSITY_SCALE = Math.PI;
 export const SHADOW_BIAS_SCALE = 0.01;
 
 /**
- * How far back along its own ray a directional light stands before rendering
- * its shadow map, and the half-extent of the orthographic frustum it renders.
+ * How far BEHIND a directional light its shadow camera starts, and the
+ * half-extent of the orthographic frustum it renders.
  *
- * three's shadow camera sits AT the light's position, but Godot's directional
+ * three's shadow camera sits at the light's position, but Godot's directional
  * shadow ignores the node's position entirely and fits cascades to the view. A
- * light authored at the origin would otherwise put every caster behind its own
- * near plane and cast nothing at all.
+ * light authored at the origin — the default for a bare node — would otherwise
+ * put every caster behind its own near plane and cast nothing at all.
+ *
+ * The reach is bought with a NEGATIVE near plane rather than by moving the
+ * light. An orthographic near plane is just a distance along the view axis and
+ * may be negative, whereas displacing the light drags everything anchored to
+ * its transform with it: the selection-gated helper, the selection box that
+ * unions the helper's target line, and F-to-frame, which for a mesh-less node
+ * frames exactly that box. Godot draws those affordances at the node.
  *
  * Shared by the authored `DirectionalLight3D` and the editor preview sun so the
- * two cannot drift: they had already diverged on the far plane, leaving the
- * preview sun 70 units of usable depth where its own max-distance says 100.
- * Add the pullback to any authored max distance (`directionalShadowFar`) rather
- * than replacing it — Godot measures that distance from the camera, so the
- * offset must not eat into it.
+ * two cannot drift; they had already diverged on the far plane, leaving the
+ * preview sun 70 units of usable depth where its own max distance says 100.
  */
-export const DIRECTIONAL_SHADOW_PULLBACK = 30;
+export const DIRECTIONAL_SHADOW_NEAR = -30;
 export const DIRECTIONAL_SHADOW_FRUSTUM_HALF = 20;
-
-/** The shadow camera's far plane for a directional light standing that far back. */
-export function directionalShadowFar(maxDistance: number): number {
-  return DIRECTIONAL_SHADOW_PULLBACK + maxDistance;
-}
 
 /**
  * Default shadow radius for soft shadows in three.js.

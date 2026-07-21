@@ -44,6 +44,7 @@ export function EnvironmentLayer({ settings, sky }: EnvironmentLayerProps) {
         <SkyLayer
           sky={sky}
           asBackground={showsSky}
+          backgroundIntensity={settings.background.energyMultiplier}
           intensity={skyAmbient ? skyAmbient.energy * skyAmbient.contribution : 0}
         />
       )}
@@ -97,10 +98,16 @@ function EnvironmentApplier({ settings, hasSky }: EnvironmentApplierProps) {
     };
   }, [scene, showBackgroundColor, mode, settings.background.color, hasSky]);
 
-  const { mode: toneMapMode, exposure: toneMapExposure } = settings.toneMapping;
+  const { mode: toneMapMode, exposure: toneMapExposure, white: toneMapWhite } =
+    settings.toneMapping;
   useEffect(
-    () => applyToneMapping(gl, { mode: toneMapMode, exposure: toneMapExposure }, scene),
-    [gl, scene, toneMapMode, toneMapExposure]
+    () =>
+      applyToneMapping(
+        gl,
+        { mode: toneMapMode, exposure: toneMapExposure, white: toneMapWhite },
+        scene
+      ),
+    [gl, scene, toneMapMode, toneMapExposure, toneMapWhite]
   );
 
   const fog = settings.fog;

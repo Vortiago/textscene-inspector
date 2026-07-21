@@ -16,8 +16,7 @@ import {
   LIGHT_INTENSITY_SCALE,
   DEFAULT_SHADOW_BIAS,
   DIRECTIONAL_SHADOW_FRUSTUM_HALF,
-  DIRECTIONAL_SHADOW_PULLBACK,
-  directionalShadowFar,
+  DIRECTIONAL_SHADOW_NEAR,
 } from '../lightConstants';
 import {
   PREVIEW_SUN_COLOR,
@@ -29,6 +28,13 @@ import {
   previewYield,
 } from './godotPreviewLighting';
 
+
+/**
+ * Where the preview sun stands. It has no scene node, so unlike an authored
+ * light nothing is anchored to its transform and the distance is free; the
+ * direction it lights from is what this encodes.
+ */
+const PREVIEW_SUN_DISTANCE = 30;
 
 export function PreviewLighting() {
   const { showPreviewSun, showPreviewEnvironment } = useViewportMode();
@@ -61,7 +67,7 @@ function PreviewSun() {
   // A tuple, not a Vector3: R3F assigns an object-valued `position` straight
   // onto the instance, and `Object3D.position` has no setter.
   const position = useMemo((): [number, number, number] => {
-    const { x, y, z } = previewSunDirection().multiplyScalar(-DIRECTIONAL_SHADOW_PULLBACK);
+    const { x, y, z } = previewSunDirection().multiplyScalar(-PREVIEW_SUN_DISTANCE);
     return [x, y, z];
   }, []);
 
@@ -75,8 +81,8 @@ function PreviewSun() {
         intensity={PREVIEW_SUN_ENERGY * LIGHT_INTENSITY_SCALE}
         castShadow
         shadow-bias={DEFAULT_SHADOW_BIAS.DIRECTIONAL}
-        shadow-camera-near={0.1}
-        shadow-camera-far={directionalShadowFar(PREVIEW_SUN_SHADOW_MAX_DISTANCE)}
+        shadow-camera-near={DIRECTIONAL_SHADOW_NEAR}
+        shadow-camera-far={PREVIEW_SUN_SHADOW_MAX_DISTANCE}
         shadow-camera-left={-DIRECTIONAL_SHADOW_FRUSTUM_HALF}
         shadow-camera-right={DIRECTIONAL_SHADOW_FRUSTUM_HALF}
         shadow-camera-top={DIRECTIONAL_SHADOW_FRUSTUM_HALF}

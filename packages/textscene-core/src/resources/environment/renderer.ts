@@ -37,6 +37,8 @@ export interface EnvironmentSettings {
   toneMapping: {
     mode: number;
     exposure: number;
+    /** `tonemap_white` — the input the curve maps to 1.0. */
+    white: number;
   };
   /** Screen-space fog (Godot fog_enabled). Volumetric fog has no THREE equivalent. */
   fog: {
@@ -68,6 +70,7 @@ export function createEnvironmentSettings(
     toneMapping: {
       mode: properties.tonemap_mode,
       exposure: properties.tonemap_exposure,
+      white: properties.tonemap_white,
     },
     // Scene fog is driven by Godot's screen-space fog; volumetric fog has no
     // THREE equivalent and is intentionally not applied (see PARITY-LIMITATIONS).

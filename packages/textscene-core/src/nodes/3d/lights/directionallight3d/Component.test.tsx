@@ -76,13 +76,11 @@ describe('<DirectionalLight3D> shadow frustum', () => {
       />
     );
     const light = renderer.scene.findByType('DirectionalLight').instance as THREE.DirectionalLight;
-    expect(light.position.z).toBeGreaterThan(0);
-    // Still pointing down its own -Z: the target sits at local (0, 0, -1),
-    // so pulling back must not have changed the direction it lights from.
-    const direction = light.target.position.clone().sub(light.position).normalize();
-    expect(direction.z).toBeCloseTo(-1, 6);
-    // The near plane must clear the pullback, and far must still reach past
-    // the scene rather than being consumed by the offset.
-    expect(light.shadow.camera.far).toBeGreaterThan(light.position.z);
+    // The reach comes from a NEGATIVE near plane, not from displacing the
+    // light: everything anchored to the light's transform — its helper, the
+    // selection box, F-to-frame — must stay at the node, as Godot draws them.
+    expect(light.position.length()).toBe(0);
+    expect(light.shadow.camera.near).toBeLessThan(0);
+    expect(light.shadow.camera.far).toBeGreaterThan(0);
   });
 });
