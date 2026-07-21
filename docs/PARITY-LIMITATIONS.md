@@ -113,6 +113,10 @@ glass default (ior 1.5); Godot exposes no ior.
 - **Deferred:** `refraction_texture` and `refraction_texture_channel` (per-pixel
   refraction strength) are not yet implemented — three.js `transmissionMap` has a
   different semantic (transparency mask, not distortion strength).
+- **Why not fixed:** Godot's `refraction_scale` maps volumetrically (thickness),
+  not as a material property; the mapping is faithful in KIND but the exact visual
+  distortion will always differ (screen-space UV offset → volumetric ray bending).
+  A proper fix needs a refraction shader (out of scope for the scalar-parse layer).
 - Site: `r3f/materials/standardMaterialScalars.ts` (refraction block),
   `r3f/materials/StandardMaterialSlot.tsx` (transmission/thickness).
 
