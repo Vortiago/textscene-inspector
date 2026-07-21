@@ -312,6 +312,40 @@ three.js has a single `scene.environmentIntensity` governing both.
   builds; the divergence only shows on non-default settings.
 - Site: `r3f/sky/SkyLayer.tsx`.
 
+### `tonemap_exposure` is ignored under `tonemap_mode = LINEAR`
+Godot multiplies by `tonemap_exposure` before every tonemapper, linear
+included. three only emits the tonemapping chunk — and with it the
+`toneMappingExposure` uniform — when `toneMapping !== NoToneMapping`, which is
+what LINEAR maps to.
+
+- **Faithful when:** `tonemap_exposure` is left at its 1.0 default, which is
+  every scene that does not deliberately expose.
+- **Diverges when:** a scene sets an exposure under the DEFAULT tonemapper —
+  the render stays at full brightness instead of scaling.
+- **Why not fixed yet:** the fix is to route LINEAR through
+  `THREE.CustomToneMapping` with an identity curve so the exposure uniform is
+  emitted. Contained, but it changes the default path for every scene and
+  wants its own measured before/after.
+- Site: `resources/environment/toneMapping.ts` (`toneMappingFor`).
+
+### Switching between two Godot tone curves keeps the first
+The ported curves are installed by swapping `THREE.ShaderChunk`, but three's
+program cache key records only the `CustomToneMapping` enum, not the chunk
+text. Two different Godot curves therefore share one cache key, and
+`material.needsUpdate` cannot force a recompile of a program whose key is
+unchanged.
+
+- **Faithful when:** one Environment applies for the lifetime of the scene —
+  the overwhelmingly common case, and what a fresh page load always gives.
+- **Diverges when:** a second Environment with a DIFFERENT curve reaches live
+  materials: a hot-reload edit of `tonemap_mode`, or a `WorldEnvironment`
+  inside a late-loading instanced sub-scene. The scene keeps rendering with the
+  departed curve.
+- **Why not fixed:** forcing a recompile means either disposing every affected
+  material or perturbing something the cache key does read; both are heavier
+  than the case warrants.
+- Site: `resources/environment/toneMapping.ts` (`applyToneMapping`).
+
 ### `tonemap_mode = AGX` uses three's AgX, not Godot's
 REINHARDT, FILMIC and ACES are ported from Godot's own shader
 (`godotToneMapping.ts`) and normalised by `tonemap_white` exactly as the engine
