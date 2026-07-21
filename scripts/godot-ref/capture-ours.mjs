@@ -21,6 +21,13 @@
  * bare `ref:ours` frame the same picture and a probe at (x, y) addresses the
  * same surface point on both. `--frame` switches both to the previewer's
  * fit-the-bounds mode for scenes too large to read at distance 4.
+ *
+ * `--2d` captures a 2D/Control scene the way `ref:godot` renders one: the
+ * project viewport rectangle at zoom 1 with the stage's chrome painted out,
+ * which `ref:godot` picks by itself from the scene root. Here it is a flag —
+ * this harness renders whatever the app decided to show, and the flag says
+ * which of the two frames to expect (a mismatch fails rather than silently
+ * capturing the other one).
  */
 
 import { mkdir, writeFile } from 'node:fs/promises';
@@ -32,7 +39,7 @@ import {
   assertPortFree,
   createCaptureContext,
   ensureWebBuilt,
-  findCanvas,
+  findCaptureTarget,
   gotoFixture,
   killPreviewGroup,
   settleCanvas,
@@ -45,7 +52,7 @@ import {
 const PORT = Number(process.env.PARITY_PORT) || 4319;
 
 function parseArgs(argv) {
-  const args = { fixture: null, out: null, probes: [], patch: 1, frame: false };
+  const args = { fixture: null, out: null, probes: [], patch: 1, frame: false, canvas2D: false };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     switch (arg) {
@@ -57,6 +64,9 @@ function parseArgs(argv) {
         break;
       case '--frame':
         args.frame = true;
+        break;
+      case '--2d':
+        args.canvas2D = true;
         break;
       case '--probe': {
         const raw = argv[++i];
@@ -76,7 +86,7 @@ function parseArgs(argv) {
   return args;
 }
 
-async function captureOurs({ fixture, frame = false }) {
+async function captureOurs({ fixture, frame = false, canvas2D = false }) {
   ensureWebBuilt();
   await assertPortFree(PORT, 'PARITY_PORT');
   const { proc, baseUrl } = startPreview(PORT);
@@ -89,14 +99,14 @@ async function captureOurs({ fixture, frame = false }) {
     // nothing derived. `--frame` opts into the previewer's fit-the-bounds mode
     // for a scene too large to read at distance 4, and `ref:godot --frame`
     // mirrors it.
-    const context = await createCaptureContext(browser, { frameOnOpen: frame });
+    const context = await createCaptureContext(browser, { frameOnOpen: frame, canvas2D });
     const page = await context.newPage();
     await gotoFixture(page, baseUrl, fixture, (ms) =>
       console.log(`[ours] no network idle within ${ms}ms`)
     );
-    const { canvas, reason: canvasReason } = await findCanvas(page);
-    if (!canvas) throw new Error(canvasReason);
-    const { buffer, reason } = await settleCanvas(page, canvas);
+    const { target, reason: targetReason } = await findCaptureTarget(page, { canvas2D });
+    if (!target) throw new Error(targetReason);
+    const { buffer, reason } = await settleCanvas(page, target);
     if (!buffer) throw new Error(reason);
     return buffer;
   } finally {
@@ -112,7 +122,7 @@ async function main() {
   } catch (error) {
     console.error(error.message);
     console.error('Usage: pnpm ref:ours <fixture.tscn> [--out file.png]');
-    console.error('       [--probe x,y] [--patch n] [--frame]');
+    console.error('       [--probe x,y] [--patch n] [--frame] [--2d]');
     process.exit(2);
   }
 
