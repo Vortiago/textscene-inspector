@@ -160,6 +160,22 @@ _Avoid_: "physics body" implying simulation; "transform container" (collides wit
 Which of the two render outcomes a node type takes — a *visible renderer* (draws geometry/text) or a *transform-only group* (invisible, positions children). "Renders nothing" is an explicit intent, not an unregistered accident; in-viewport text and collision shapes are opt-in toggles (`showLabels`, `showCollisions`) on the viewport-mode seam (ADR-0006, ADR-0008). One invisible type is **not** inert: the **AnimationPlayer** draws nothing itself but *drives* sibling objects — a transform-only group that is also an **animation driver** (ADR-0011).
 _Avoid_: "placeholder", "not implemented" — an invisible node may be fully intended; "inert" for AnimationPlayer.
 
+**Preview sun**:
+The stand-in directional light this previewer supplies so a scene with no light of its own is not a black void — Godot's editor preview sun, with Godot's values. It **yields**: a scene containing any `DirectionalLight3D` gets none. Not part of the scene, never rendered by the running game (ADR-0025).
+_Avoid_: "default light", "fill light" (both hide that it is a faithful reproduction of a specific Godot object that disappears under a specific condition).
+
+**Preview environment**:
+The stand-in **WorldEnvironment** this previewer supplies — Godot's editor preview environment: a procedural sky that is both the background and the scene's ambient light. Yields independently of the **Preview sun**: a scene containing any `WorldEnvironment` gets none, whatever that environment actually emits (ADR-0025).
+_Avoid_: "default environment", "skybox"; treating it as coupled to the **Preview sun** — the two yield separately, and a scene routinely has one and not the other.
+
+**Yield** (of preview lighting):
+What a preview element does when the scene supplies its own: it is not mounted at all. Keyed on the presence of a node **type** anywhere in the **Live scene tree** — never on whether that node is visible, enabled, or contributes any light.
+_Avoid_: "override", "fallback" — nothing is layered or blended; the preview is present or absent.
+
+**Sky ambient**:
+The illumination a sky background contributes to everything in the scene — in Godot a radiance map, so it lights surfaces *and* is what they reflect, not a directionless constant. Distinct from a flat ambient colour, which is what `AMBIENT_SOURCE_COLOR` specifies.
+_Avoid_: "ambient light" alone for the sky case (loses the reflection half); "IBL" in user-facing text.
+
 **Resource event bus** / `useResource`:
 The async resource pipeline — a render component calls `useResource(path, type)`, the host `ResourceLoader` fetches, and a `loaded`/`missing` event resolves the hook; backs textures, GLB meshes, and PackedScene instancing.
 _Avoid_: "asset loader" (reserve `ResourceLoader` for the host implementation).
