@@ -57,13 +57,18 @@ describe('<CsgPrimitive> material resolution', () => {
     expect(materialOf(renderer).color.getHex()).not.toBe(0xffffff);
   });
 
-  it('falls back to Godot default white when the .tres has not loaded', async () => {
+  it('shows the unresolved-resource placeholder while the .tres has not loaded', async () => {
     const renderer = await render('ExtResource("1_blue")');
     expect(materialOf(renderer).color.getHex()).toBe(0xffffff);
   });
 
-  it('falls back to Godot default white when no material is declared', async () => {
+  it('falls back to Godot’s default material shader when no material is declared', async () => {
     const renderer = await render(undefined);
-    expect(materialOf(renderer).color.getHex()).toBe(0xffffff);
+    // ALBEDO = vec3(0.6) in Godot's hardcoded default shader, linear.
+    const linear = materialOf(renderer).color.getRGB(
+      { r: 0, g: 0, b: 0 } as THREE.Color,
+      THREE.LinearSRGBColorSpace
+    );
+    expect(linear.r).toBeCloseTo(0.6, 5);
   });
 });

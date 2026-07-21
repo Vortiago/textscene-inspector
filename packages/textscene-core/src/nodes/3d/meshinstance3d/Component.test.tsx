@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { MeshInstance3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
@@ -225,20 +226,24 @@ describe('<MeshInstance3D>', () => {
       expect(material.opacity).toBeCloseTo(0.4, 5);
     });
 
-    it('falls back to Godot default material (white, matte, non-metallic) when no material reference exists', async () => {
+    it('falls back to Godot’s default material SHADER, not a default StandardMaterial3D', async () => {
       const node = makeNode({ mesh: 'SubResource("Box_1")' });
       const resources: TscnInternalResource[] = [
         meshSubResource('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' }),
       ];
       const renderer = await render(node, resources);
-      const material = renderer.scene.findByType('Mesh').instance.material as {
-        color: { getHexString(): string };
-        metalness: number;
-        roughness: number;
-      };
-      expect(material.color.getHexString()).toBe('ffffff');
-      expect(material.metalness).toBe(0);
-      expect(material.roughness).toBe(1);
+      const material = renderer.scene.findByType('Mesh').instance.material as THREE.MeshStandardMaterial;
+      // Godot binds a hardcoded shader for an unmaterialed mesh —
+      // `ALBEDO = vec3(0.6); ROUGHNESS = 0.8; METALLIC = 0.2;` — rather than
+      // instantiating a StandardMaterial3D, so this is mid-grey and slightly
+      // metallic, not the white matte a default-constructed one would give.
+      const linear = material.color.getRGB(
+        { r: 0, g: 0, b: 0 } as THREE.Color,
+        THREE.LinearSRGBColorSpace
+      );
+      expect(linear.r).toBeCloseTo(0.6, 5);
+      expect(material.metalness).toBe(0.2);
+      expect(material.roughness).toBe(0.8);
     });
 
     it('prefers surface_material_override[0] over material_override', async () => {
