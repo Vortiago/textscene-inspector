@@ -26,7 +26,7 @@ import {
   PREVIEW_ENVIRONMENT_YIELD_TYPE,
   PREVIEW_SUN_YIELD_TYPE,
   YIELDS_A_PREVIEW,
-} from '../../preview/previewLighting.js';
+} from '../../preview/godotPreviewLighting.js';
 import styles from './ViewportToolbar.module.css';
 
 const MODES: ViewportMode[] = ['3D', '2D'];

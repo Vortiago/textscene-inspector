@@ -25,7 +25,7 @@ import {
   previewEnvironment,
   previewSunDirection,
   previewYield,
-} from './previewLighting';
+} from './godotPreviewLighting';
 import type { ProceduralSkyProperties } from '../../resources/sky/types';
 
 describe('previewYield', () => {

@@ -21,7 +21,7 @@ import {
   previewEnvironment,
   previewSunDirection,
   previewYield,
-} from './previewLighting';
+} from './godotPreviewLighting';
 
 /**
  * How far back the preview sun sits. Directional light is parallel, so this

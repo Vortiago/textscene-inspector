@@ -106,6 +106,6 @@ describe('preview environment yielding', () => {
   // Whether the preview ENVIRONMENT mounted is not observable from the scene
   // graph — it applies itself to `scene.background`/`scene.environment` through
   // a GPU render that the headless test renderer cannot run. The decision is
-  // covered at its seam in previewLighting.test.ts, and the pixels by the
+  // covered at its seam in godotPreviewLighting.test.ts, and the pixels by the
   // `preview-lighting` visual golden.
 });
