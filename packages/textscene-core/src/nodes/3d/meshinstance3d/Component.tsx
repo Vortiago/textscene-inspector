@@ -49,10 +49,10 @@ const TEXTURE_PROPERTIES = [
   'roughness_texture',
   'metallic_texture',
   'emission_texture',
-   'ao_texture',
-   'heightmap_texture',
-   'anisotropy_flowmap',
- ] as const;
+  'ao_texture',
+  'heightmap_texture',
+  'anisotropy_flowmap',
+] as const;
 
 export function MeshInstance3D({ node, children }: NodeComponentProps) {
   const properties = node.properties as MeshInstance3DProperties;

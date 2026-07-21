@@ -27,7 +27,8 @@ export function repackAnisotropyFlowmap(texture: THREE.Texture): THREE.Texture |
   out.wrapT = texture.wrapT;
   out.magFilter = texture.magFilter;
   out.minFilter = texture.minFilter;
-  out.colorSpace = texture.colorSpace;
+  // anisotropyMap is non-color data (direction + strength) — three.js requires NoColorSpace.
+  out.colorSpace = THREE.NoColorSpace;
   out.flipY = texture.flipY;
   return out;
 }

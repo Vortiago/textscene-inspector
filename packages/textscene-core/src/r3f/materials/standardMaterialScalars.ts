@@ -8,6 +8,7 @@
  *   - uv1_scale, uv1_offset
  *   - transparency, blend_mode, cull_mode  (rendering flags)
  *   - normal_scale
+ *   - anisotropy strength and direction
  *
  * External textures (albedo / normal / roughness / metallic / emission)
  * are handled by `useResource` in the parent component. Shared by every
@@ -79,7 +80,7 @@ export interface StandardMaterial3DScalars {
   heightmapScale: number;
   /** Godot `anisotropy` magnitude (0..1), gated on `anisotropy_enabled`. */
   anisotropy: number;
-  /** Godot `anisotropy` direction: 0 (positive) or π/2 (negative). */
+  /** Godot `anisotropy` direction: 0 when positive, π/2 when negative. */
   anisotropyRotation: number;
 }
 

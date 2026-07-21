@@ -86,7 +86,8 @@ export function StandardMaterialSlot({
     // compile time, so a coat/height texture arriving async needs a fresh
     // material or the vertices never move (the map is set but the shader ignores it).
     `${displacementMap ? 'd' : '-'}` +
-    `${anisotropyMap ? 'f' : '-'}`;  // 'f' for flowmap
+    // 'f' for flowmap
+    `${anisotropyMap ? 'f' : '-'}`;
 
   // Godot SHADING_MODE_UNSHADED (0): albedo is output directly, unaffected by
   // lights/shadows. three.js MeshBasicMaterial is the unlit equivalent — no PBR
