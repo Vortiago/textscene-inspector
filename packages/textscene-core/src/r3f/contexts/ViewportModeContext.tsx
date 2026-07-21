@@ -53,6 +53,15 @@ export interface ViewportModeValue {
   setShowNavigation: (show: boolean) => void;
   showGrid: boolean;
   setShowGrid: (show: boolean) => void;
+  /**
+   * The editor preview sun / preview environment (ADR-0025). On by default,
+   * as in Godot, and forced off for whichever preview the scene supersedes —
+   * these flags only say what the USER asked for.
+   */
+  showPreviewSun: boolean;
+  setShowPreviewSun: (show: boolean) => void;
+  showPreviewEnvironment: boolean;
+  setShowPreviewEnvironment: (show: boolean) => void;
 }
 
 const DEFAULT_VALUE: ViewportModeValue = {
@@ -66,6 +75,10 @@ const DEFAULT_VALUE: ViewportModeValue = {
   setShowNavigation: () => {},
   showGrid: false,
   setShowGrid: () => {},
+  showPreviewSun: true,
+  setShowPreviewSun: () => {},
+  showPreviewEnvironment: true,
+  setShowPreviewEnvironment: () => {},
 };
 
 const ViewportModeContext = createContext<ViewportModeValue>(DEFAULT_VALUE);
@@ -78,6 +91,8 @@ export interface ViewportModeProviderProps {
   initialShowLabels?: boolean;
   initialShowNavigation?: boolean;
   initialShowGrid?: boolean;
+  initialShowPreviewSun?: boolean;
+  initialShowPreviewEnvironment?: boolean;
 }
 
 export function ViewportModeProvider({
@@ -87,12 +102,18 @@ export function ViewportModeProvider({
   initialShowLabels = false,
   initialShowNavigation = true,
   initialShowGrid = false,
+  initialShowPreviewSun = true,
+  initialShowPreviewEnvironment = true,
 }: ViewportModeProviderProps) {
   const [mode, setMode] = useState<ViewportMode>(initialMode);
   const [showCollisions, setShowCollisions] = useState(initialShowCollisions);
   const [showLabels, setShowLabels] = useState(initialShowLabels);
   const [showNavigation, setShowNavigation] = useState(initialShowNavigation);
   const [showGrid, setShowGrid] = useState(initialShowGrid);
+  const [showPreviewSun, setShowPreviewSun] = useState(initialShowPreviewSun);
+  const [showPreviewEnvironment, setShowPreviewEnvironment] = useState(
+    initialShowPreviewEnvironment
+  );
   const value = useMemo<ViewportModeValue>(
     () => ({
       mode,
@@ -105,8 +126,20 @@ export function ViewportModeProvider({
       setShowNavigation,
       showGrid,
       setShowGrid,
+      showPreviewSun,
+      setShowPreviewSun,
+      showPreviewEnvironment,
+      setShowPreviewEnvironment,
     }),
-    [mode, showCollisions, showLabels, showNavigation, showGrid]
+    [
+      mode,
+      showCollisions,
+      showLabels,
+      showNavigation,
+      showGrid,
+      showPreviewSun,
+      showPreviewEnvironment,
+    ]
   );
   return <ViewportModeContext.Provider value={value}>{children}</ViewportModeContext.Provider>;
 }

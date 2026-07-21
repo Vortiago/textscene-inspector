@@ -23,6 +23,7 @@ import { SelectionHighlight } from './components/SelectionHighlight.js';
 import { HoverHighlight } from './components/HoverHighlight.js';
 import { InternalTextLabel } from './internalTextLabel.js';
 import { FrameSelectedShortcut } from './FrameSelectedShortcut.js';
+import { PreviewLighting } from './preview/PreviewLighting.js';
 import { frameSceneBounds, type OrbitLike } from './frameSceneBounds.js';
 import styles from './TscnCanvas.module.css';
 
@@ -49,8 +50,11 @@ export function TscnSceneContents() {
 
   return (
     <>
-      <ambientLight intensity={0.4} />
-      <directionalLight position={[5, 5, 5]} intensity={1} />
+      {/* Godot's editor preview sun and preview environment, each mounted only
+          while the scene supplies no DirectionalLight3D / WorldEnvironment of
+          its own (ADR-0025). At runtime Godot adds neither — an editor's job is
+          to show you your scene, so this previewer takes the editor's rule. */}
+      <PreviewLighting />
       {isEmpty && <EmptySceneIndicator />}
       {!isEmpty && <ContentGroundGrid />}
       {nodes && rootScene && (
