@@ -20,6 +20,7 @@ import { CameraControlProvider } from '../../contexts/CameraControlContext.js';
 import { MissingResourcesProvider } from '../../contexts/MissingResourcesContext.js';
 import {
   ViewportModeProvider,
+  FRAME_ON_OPEN_STORAGE_KEY,
   SHOW_GRID_STORAGE_KEY,
   VIEWPORT_MODE_STORAGE_KEY,
   type ViewportMode,
@@ -204,6 +205,7 @@ export function TscnPreviewShell({
   const [initialViewport] = useState(() => ({
     mode: readPersisted<ViewportMode>(VIEWPORT_MODE_STORAGE_KEY, '3D', isViewportMode),
     showGrid: readPersisted(SHOW_GRID_STORAGE_KEY, false, isBoolean),
+    frameOnOpen: readPersisted(FRAME_ON_OPEN_STORAGE_KEY, false, isBoolean),
   }));
 
   // Flattens what was an 8-level hand-nested provider pyramid into one
@@ -227,6 +229,7 @@ export function TscnPreviewShell({
       <ViewportModeProvider
         initialMode={initialViewportMode ?? initialViewport.mode}
         initialShowGrid={initialViewport.showGrid}
+        initialFrameOnOpen={initialViewport.frameOnOpen}
       >
         {children}
       </ViewportModeProvider>

@@ -6,6 +6,7 @@
  * import back from `TscnCanvas` itself.
  */
 import * as THREE from 'three';
+import { editorCameraDirection } from './godotEditorCamera.js';
 import { computeWorldBoundingBox } from './bounds.js';
 
 /** Minimal shape we touch on the OrbitControls instance for framing. */
@@ -66,7 +67,10 @@ export function frameSceneBounds(
   const fitDim = isFlat ? Math.max(maxXY, 0.001) : maxDim;
   const distance = ((fitDim / 2 / Math.tan(fov / 2)) || fitDim) * (isFlat ? 1.15 : 1.6);
 
-  const dir = isFlat ? new THREE.Vector3(0, 0, 1) : new THREE.Vector3(1, 0.7, 1).normalize();
+  // Godot's own editor viewing angle, so a framed scene presents the same face
+  // it does in the editor (godotEditorCamera.ts). A flat scene is still viewed
+  // head-on — an edge-on plane frames to nothing.
+  const dir = isFlat ? new THREE.Vector3(0, 0, 1) : editorCameraDirection();
   camera.position.copy(center.clone().add(dir.multiplyScalar(distance)));
   if (persp.isPerspectiveCamera) {
     // Keep the near plane below the framing distance so microscopic scenes

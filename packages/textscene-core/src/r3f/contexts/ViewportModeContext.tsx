@@ -41,6 +41,13 @@ export type ViewportMode = '2D' | '3D';
  */
 export const VIEWPORT_MODE_STORAGE_KEY = 'tsi.viewportMode';
 export const SHOW_GRID_STORAGE_KEY = 'tsi.showGrid';
+/**
+ * Whether to frame the scene on load. OFF by default, which is Godot: its
+ * editor opens every scene at a fixed orbit and leaves framing to F. That also
+ * costs less to draw — a framed scene puts every object inside the frustum,
+ * so nothing is culled.
+ */
+export const FRAME_ON_OPEN_STORAGE_KEY = 'tsi.frameOnOpen';
 
 export interface ViewportModeValue {
   mode: ViewportMode;
@@ -62,6 +69,9 @@ export interface ViewportModeValue {
   setShowPreviewSun: (show: boolean) => void;
   showPreviewEnvironment: boolean;
   setShowPreviewEnvironment: (show: boolean) => void;
+  /** Frame the scene to the viewport on load, instead of Godot's fixed orbit. */
+  frameOnOpen: boolean;
+  setFrameOnOpen: (frame: boolean) => void;
 }
 
 const DEFAULT_VALUE: ViewportModeValue = {
@@ -79,6 +89,8 @@ const DEFAULT_VALUE: ViewportModeValue = {
   setShowPreviewSun: () => {},
   showPreviewEnvironment: true,
   setShowPreviewEnvironment: () => {},
+  frameOnOpen: false,
+  setFrameOnOpen: () => {},
 };
 
 const ViewportModeContext = createContext<ViewportModeValue>(DEFAULT_VALUE);
@@ -93,6 +105,7 @@ export interface ViewportModeProviderProps {
   initialShowGrid?: boolean;
   initialShowPreviewSun?: boolean;
   initialShowPreviewEnvironment?: boolean;
+  initialFrameOnOpen?: boolean;
 }
 
 export function ViewportModeProvider({
@@ -104,6 +117,7 @@ export function ViewportModeProvider({
   initialShowGrid = false,
   initialShowPreviewSun = true,
   initialShowPreviewEnvironment = true,
+  initialFrameOnOpen = false,
 }: ViewportModeProviderProps) {
   const [mode, setMode] = useState<ViewportMode>(initialMode);
   const [showCollisions, setShowCollisions] = useState(initialShowCollisions);
@@ -114,6 +128,7 @@ export function ViewportModeProvider({
   const [showPreviewEnvironment, setShowPreviewEnvironment] = useState(
     initialShowPreviewEnvironment
   );
+  const [frameOnOpen, setFrameOnOpen] = useState(initialFrameOnOpen);
   const value = useMemo<ViewportModeValue>(
     () => ({
       mode,
@@ -130,6 +145,8 @@ export function ViewportModeProvider({
       setShowPreviewSun,
       showPreviewEnvironment,
       setShowPreviewEnvironment,
+      frameOnOpen,
+      setFrameOnOpen,
     }),
     [
       mode,
@@ -139,6 +156,7 @@ export function ViewportModeProvider({
       showGrid,
       showPreviewSun,
       showPreviewEnvironment,
+      frameOnOpen,
     ]
   );
   return <ViewportModeContext.Provider value={value}>{children}</ViewportModeContext.Provider>;

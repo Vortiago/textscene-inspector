@@ -405,6 +405,14 @@ async function main() {
       ([key, value]) => window.localStorage.setItem(key, value),
       [SOURCE_PANE_STORAGE_KEY, JSON.stringify({ visible: false, width: 320 })]
     );
+    // Frame each scene on load. The APP defaults to Godot's fixed orbit
+    // (ADR-0025), which would leave the larger fixtures mostly out of frame —
+    // a baseline showing empty space cannot fail when the render breaks. These
+    // goldens exist to guard the renderer, so they get the framed view.
+    await context.addInitScript(
+      ([key, value]) => window.localStorage.setItem(key, value),
+      ['tsi.frameOnOpen', 'true']
+    );
     // Keep this a pure render comparison (see header): the viewport toolbar
     // floats over the canvas, and canvas.screenshot() composites any DOM
     // painted over the canvas box, so the overlay would churn every 3D

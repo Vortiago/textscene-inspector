@@ -14,6 +14,7 @@
 
 import {
   useViewportMode,
+  FRAME_ON_OPEN_STORAGE_KEY,
   SHOW_GRID_STORAGE_KEY,
   VIEWPORT_MODE_STORAGE_KEY,
   type ViewportMode,
@@ -57,6 +58,8 @@ export function ViewportToolbar() {
     setShowPreviewSun,
     showPreviewEnvironment,
     setShowPreviewEnvironment,
+    frameOnOpen,
+    setFrameOnOpen,
   } = useViewportMode();
   const camera = useOptionalCameraControl();
   const hierarchy = useOptionalHierarchy();
@@ -88,6 +91,10 @@ export function ViewportToolbar() {
   function handleGridChange(show: boolean) {
     setShowGrid(show);
     writePersisted(SHOW_GRID_STORAGE_KEY, show);
+  }
+  function handleFrameOnOpenChange(frame: boolean) {
+    setFrameOnOpen(frame);
+    writePersisted(FRAME_ON_OPEN_STORAGE_KEY, frame);
   }
 
   return (
@@ -154,6 +161,19 @@ export function ViewportToolbar() {
         />
         Navigation
       </label>
+      {mode === '3D' && (
+        <label
+          className={styles.checkbox}
+          title="Frame the whole scene when it loads. Off matches Godot, which opens at a fixed orbit — press F to frame."
+        >
+          <input
+            type="checkbox"
+            checked={frameOnOpen}
+            onChange={(e) => handleFrameOnOpenChange(e.target.checked)}
+          />
+          Frame on open
+        </label>
+      )}
       {mode === '3D' && (
         <label className={styles.checkbox} title="Show a ground-plane reference grid">
           <input

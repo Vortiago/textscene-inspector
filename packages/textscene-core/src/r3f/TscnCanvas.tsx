@@ -25,6 +25,7 @@ import { InternalTextLabel } from './internalTextLabel.js';
 import { FrameSelectedShortcut } from './FrameSelectedShortcut.js';
 import { PreviewLighting } from './preview/PreviewLighting.js';
 import { frameSceneBounds, type OrbitLike } from './frameSceneBounds.js';
+import { EDITOR_CAMERA_FOV, editorCameraPosition } from './godotEditorCamera.js';
 import styles from './TscnCanvas.module.css';
 
 /**
@@ -167,10 +168,12 @@ function ActiveCameraSwitcher() {
 }
 
 /**
- * Auto-frames the scene to the viewport on load / scene change, but ONLY in
- * free-orbit mode (never when a Camera3D is the active camera) and only during
- * a short settle window so async-loaded content (GLB, instanced scenes) is
- * captured without fighting the user's subsequent orbit.
+ * Frames the scene to the viewport on load / scene change — but only when the
+ * user has asked for it (`frameOnOpen`, off by default: Godot's editor opens at
+ * a fixed orbit and leaves framing to F). Free-orbit mode only, never when a
+ * Camera3D is the active camera, and only during a short settle window so
+ * async-loaded content (GLB, instanced scenes) is captured without fighting the
+ * user's subsequent orbit.
  *
  * Selection changes NEVER move the camera: framing is deliberately not keyed
  * on selection state (design decision: an unrequested camera move on click is
@@ -185,13 +188,14 @@ function ActiveCameraSwitcher() {
 export function CameraFit() {
   const hierarchy = useOptionalHierarchy();
   const control = useOptionalCameraControl();
+  const { frameOnOpen } = useViewportMode();
   const get = useThree((s) => s.get);
   const rootKey = hierarchy?.sceneGraph?.rootScene ?? '';
   const hasScene = !!hierarchy?.sceneGraph;
   const activeCameraPath = control?.activeCameraPath ?? null;
 
   useEffect(() => {
-    if (!hasScene || activeCameraPath) return undefined;
+    if (!frameOnOpen || !hasScene || activeCameraPath) return undefined;
     const timers = [150, 500, 1100].map((delay) =>
       setTimeout(() => {
         const state = get();
@@ -199,7 +203,7 @@ export function CameraFit() {
       }, delay)
     );
     return () => timers.forEach(clearTimeout);
-  }, [rootKey, hasScene, activeCameraPath, get]);
+  }, [rootKey, hasScene, activeCameraPath, frameOnOpen, get]);
 
   return null;
 }
@@ -234,7 +238,13 @@ export function TscnCanvas() {
           wiring is inert and a `shadow_enabled = true` light casts nothing —
           which is what Godot's own light fixtures exist to show. PCFSoft is the
           closest cheap match to Godot's soft shadows. */}
-      <Canvas camera={{ position: [3, 3, 3] }} shadows="soft">
+      {/* Godot's editor opens every scene at the same fixed orbit and the same
+          70-degree FOV, whatever is in it (godotEditorCamera.ts). Framing is a
+          deliberate act there — F — and an opt-in setting here. */}
+      <Canvas
+        camera={{ position: editorCameraPosition(), fov: EDITOR_CAMERA_FOV }}
+        shadows="soft"
+      >
         <TscnSceneContents />
         <ActiveCameraSwitcher />
         <CameraFit />
