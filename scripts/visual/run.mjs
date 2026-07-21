@@ -31,9 +31,7 @@
  */
 /* global document */ // used only inside the addInitScript callback, which runs in the browser.
 
-import { spawn, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { createServer } from 'node:net';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
@@ -41,12 +39,17 @@ import { SWIFTSHADER_GL_ARGS } from '../showcase/browser.mjs';
 import { PNG } from 'pngjs';
 import pixelmatch from 'pixelmatch';
 import { DEFAULT_MAX_DIFF_PCT, GOLDEN_SCENES } from './scenes.mjs';
+import {
+  assertPortFree,
+  ensureWebBuilt,
+  killPreviewGroup,
+  startPreview,
+  waitForServer,
+} from './previewServer.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const REPO_ROOT = join(here, '../..');
 const BASELINE_DIR = join(here, 'baselines');
 const OUTPUT_DIR = join(here, 'output');
-const WEB_DIST_INDEX = join(REPO_ROOT, 'apps/textscene-web/dist/index.html');
 
 // Dedicated uncommon port: never collides with a manually running
 // `pnpm preview` (4173) or the showcase pipeline (4188). Override with
@@ -66,7 +69,6 @@ const VIEWPORT = { width: 1280, height: 800 };
 // scene at its full canvas width, not incidental editor chrome.
 const SOURCE_PANE_STORAGE_KEY = 'tscn-web-source-pane';
 
-const SKIP_BUILD_VALUES = new Set(['1', 'true', 'yes']);
 const NETWORK_IDLE_MS = 20000; // ceiling for the app's own resource chain to go quiet
 const SETTLE_INITIAL_MS = 1200; // covers the last CameraFit reframe at 1100 ms
 const SETTLE_INTERVAL_MS = 350;
@@ -89,110 +91,6 @@ function parseArgs(argv) {
     }
   }
   return opts;
-}
-
-/**
- * Build the previewer every run. Reusing an existing `dist/` is how this
- * harness silently captured a build that predated the change under test —
- * every scene "passed" against stale code, and a newly added fixture was
- * missing from the bundle entirely, so its deep link fell back and baked a
- * bogus baseline. A stale-green visual suite is worse than a slow one; set
- * VISUAL_SKIP_BUILD=1 to reuse `dist/` while iterating locally.
- */
-function ensureWebBuilt() {
-  const skip = process.env.VISUAL_SKIP_BUILD;
-  if (skip !== undefined && !SKIP_BUILD_VALUES.has(skip.trim().toLowerCase())) {
-    console.warn(`[visual] VISUAL_SKIP_BUILD="${skip}" not recognised — building anyway`);
-  } else if (skip !== undefined && existsSync(WEB_DIST_INDEX)) {
-    console.log('[visual] VISUAL_SKIP_BUILD set — reusing existing dist/ (may be stale)');
-    return;
-  }
-  console.log('[visual] building web previewer…');
-  const r = spawnSync('pnpm', ['--filter', '@textscene/web-previewer', 'build'], {
-    cwd: REPO_ROOT,
-    shell: true,
-    stdio: 'inherit',
-  });
-  if (r.status !== 0) {
-    console.error('[visual] web previewer build failed');
-    process.exit(1);
-  }
-}
-
-/**
- * Refuse to silently capture from someone else's process. `--strictPort`
- * makes our own preview spawn fail on an occupied port, but that spawn runs
- * detached (`stdio: 'ignore'`) and `waitForServer` below only polls for *a*
- * 200 response — so without this check, an already-listening server (a
- * leftover from a previous run, or a concurrent worktree on the same host
- * also running this harness against the shared default port) would answer
- * instead, and every capture would silently reflect a foreign build.
- *
- * (This is also why `startPreview` below kills the whole process GROUP, not
- * just its direct child — a `shell: true` spawn's immediate child is the
- * shell, not the `pnpm`→`vite preview` grandchild that actually holds the
- * port; killing only the shell can leave that grandchild running as an
- * orphan, which is exactly the kind of leftover this check guards against.)
- */
-async function assertPortFree(port) {
-  const free = await new Promise((resolve) => {
-    const probe = createServer();
-    probe.once('error', () => resolve(false));
-    probe.once('listening', () => probe.close(() => resolve(true)));
-    probe.listen(port, '0.0.0.0');
-  });
-  if (!free) {
-    console.error(
-      `\n[visual] port ${port} is already in use by another process — refusing to capture ` +
-        `against an unverified server (it may be a leftover preview from a previous run, or a ` +
-        `concurrent worktree on this host also running the visual harness). Free the port, or ` +
-        `set VISUAL_PORT=<free-port> to use a different one.\n`
-    );
-    process.exit(1);
-  }
-}
-
-function startPreview() {
-  const proc = spawn(
-    'pnpm',
-    ['--filter', '@textscene/web-previewer', 'preview', '--port', String(PORT), '--strictPort'],
-    { cwd: REPO_ROOT, shell: true, stdio: 'ignore', detached: true }
-  );
-  return { proc, baseUrl: `http://localhost:${PORT}` };
-}
-
-/**
- * Kill the whole `proc` process GROUP (negative pid), not just `proc` itself.
- * `proc` is a `shell: true` spawn's immediate child — the shell — not the
- * `pnpm`→`vite preview` grandchild that actually binds the port. `detached:
- * true` above makes `proc` its own process-group leader, so its descendants
- * share its pgid and `-proc.pid` reaches all of them in one signal. Killing
- * only `proc.pid` reliably kills the shell but can leave the grandchild
- * running as an orphaned server — which then holds this script's event loop
- * open indefinitely even after all real work (captures + the results table)
- * is done, since nothing else is scheduled to keep it alive except that
- * leftover handle. Swallow ESRCH: the group may already be gone.
- */
-function killPreviewGroup(proc) {
-  try {
-    process.kill(-proc.pid, 'SIGTERM');
-  } catch {
-    /* already exited */
-  }
-}
-
-async function waitForServer(url, timeoutMs = 40000) {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    try {
-      const res = await fetch(url, { method: 'GET' });
-      if (res.ok) return;
-    } catch {
-      /* not up yet */
-    }
-    await new Promise((r) => setTimeout(r, 500));
-  }
-  throw new Error(`preview server at ${url} not ready in ${timeoutMs}ms`);
 }
 
 /**
@@ -385,7 +283,7 @@ async function main() {
   // time it takes to run.
   ensureWebBuilt();
   await assertPortFree(PORT);
-  const { proc, baseUrl } = startPreview();
+  const { proc, baseUrl } = startPreview(PORT);
   let browser;
   const results = [];
   try {

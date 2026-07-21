@@ -70,6 +70,7 @@ export function parseArgs(argv) {
     camera: null,
     lookAt: null,
     probes: [],
+    patch: 1,
   };
 
   for (let i = 0; i < argv.length; i++) {
@@ -101,6 +102,9 @@ export function parseArgs(argv) {
         args.probes.push([x, y]);
         break;
       }
+      case '--patch':
+        args.patch = Number(argv[++i]);
+        break;
       default:
         if (arg.startsWith('--')) throw new Error(`Unknown flag ${arg}`);
         args.scene = arg;
@@ -162,15 +166,43 @@ export function projectConfig(sourceIni, { width, height }) {
   ].join('\n');
 }
 
-export function probePixels(buffer, probes) {
+/**
+ * Read back the colour at each probe. `patch` (odd, default 1) samples a
+ * square of that side centred on the coordinate and returns the per-channel
+ * MEDIAN.
+ *
+ * A single pixel is not a safe sample across two renderers: ours composites
+ * through an antialiased canvas while these references render MSAA-off, so one
+ * pixel anywhere near an edge, a silhouette or a shadow boundary carries a
+ * blend weight that exists on one side only. The median (not the mean) also
+ * discards a stray outlier outright instead of averaging it in.
+ */
+export function probePixels(buffer, probes, { patch = 1 } = {}) {
   const png = PNG.sync.read(buffer);
+  if (patch < 1 || patch % 2 === 0) {
+    throw new Error(`patch must be a positive odd number, got ${patch}`);
+  }
+  const reach = (patch - 1) / 2;
   return probes.map(([x, y]) => {
-    if (x < 0 || y < 0 || x >= png.width || y >= png.height) {
-      throw new Error(`probe ${x},${y} is outside the ${png.width}x${png.height} image`);
+    if (x - reach < 0 || y - reach < 0 || x + reach >= png.width || y + reach >= png.height) {
+      throw new Error(
+        `probe ${x},${y} (patch ${patch}) falls outside the ${png.width}x${png.height} image`
+      );
     }
-    const i = (png.width * y + x) * 4;
-    return { x, y, rgb: [png.data[i], png.data[i + 1], png.data[i + 2]] };
+    const channels = [[], [], []];
+    for (let dy = -reach; dy <= reach; dy++) {
+      for (let dx = -reach; dx <= reach; dx++) {
+        const i = (png.width * (y + dy) + (x + dx)) * 4;
+        for (let c = 0; c < 3; c++) channels[c].push(png.data[i + c]);
+      }
+    }
+    return { x, y, rgb: channels.map(median) };
   });
+}
+
+function median(values) {
+  const sorted = [...values].sort((a, b) => a - b);
+  return sorted[(sorted.length - 1) >> 1];
 }
 
 const gdVec3 = (v) => `Vector3(${v[0]}, ${v[1]}, ${v[2]})`;
@@ -397,7 +429,9 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
   if (!args.scene) {
     console.error('usage: pnpm ref:godot <scene.tscn> [--out png] [--camera x,y,z]');
-    console.error('       [--look-at x,y,z] [--probe x,y] [--no-previews] [--width n] [--height n]');
+    console.error(
+      '       [--look-at x,y,z] [--probe x,y] [--patch n] [--no-previews] [--width n] [--height n]'
+    );
     process.exit(2);
   }
 
@@ -410,7 +444,7 @@ async function main() {
 
   if (args.probes.length > 0) {
     const buffer = await readFile(written);
-    for (const { x, y, rgb } of probePixels(buffer, args.probes)) {
+    for (const { x, y, rgb } of probePixels(buffer, args.probes, { patch: args.patch })) {
       console.log(`  probe ${x},${y} → rgb(${rgb.join(', ')})`);
     }
   }
