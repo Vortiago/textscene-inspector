@@ -27,6 +27,14 @@
  * does (the previewer's opt-in "frame on open"), for a scene too large to read
  * at distance 4. `--camera` / `--look-at` override everything.
  *
+ * 2D: a scene whose root is a CanvasItem (or a CanvasLayer) has no 3D camera to
+ * place, and forcing one renders a sky with the scene's Controls laid out
+ * against the wrong rectangle. Such a scene renders instead through a
+ * SubViewport the size of Godot's project viewport — the same rectangle the
+ * previewer's 2D stage draws — so both sides produce the game frame 1:1 and
+ * `--width` / `--height` (which size the 3D frame) do not apply. `--mode`
+ * forces the choice when the root's type does not settle it.
+ *
  * TWO THINGS THIS HARNESS DOES THAT A NAIVE `godot --path` DOES NOT:
  *
  * 1. **It injects the editor previews.** `godot --path` runs the GAME. Godot's
@@ -46,7 +54,7 @@ import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, relative, resolve, sep } from 'node:path';
 import { PNG } from 'pngjs';
-import { CANVAS_CAPTURE } from '../visual/previewServer.mjs';
+import { CANVAS_2D_CAPTURE, CANVAS_CAPTURE } from '../visual/previewServer.mjs';
 
 /**
  * The frame `capture-ours.mjs` produces, taken from the one definition of it.
@@ -76,6 +84,9 @@ export const EDITOR_CAMERA_DISTANCE = 4;
 
 /** `frameSceneBounds.ts`'s margin, for the opt-in framed mode. */
 export const FRAME_MARGIN = 1.6;
+
+/** The render modes, and what `--mode` accepts. */
+export const RENDER_MODES = ['auto', '2d', '3d'];
 
 /** Godot's preview sun: white, energy 1.0, shadows on, euler (-60°, 150°, 0). */
 const PREVIEW_SUN_ALTITUDE_DEG = -60;
@@ -128,6 +139,11 @@ export function parseArgs(argv) {
     emitBounds: false,
     frame: false,
     sceneCamera: false,
+    // 2D or 3D is a property of the SCENE, not of the invocation, so the
+    // engine itself decides by default (`_is_canvas_scene`) — a JS copy of
+    // Godot's class hierarchy would be one more pair of constants to keep in
+    // sync, and this one cannot be checked by looking at the picture.
+    mode: 'auto',
     camera: null,
     lookAt: null,
     probes: [],
@@ -158,6 +174,14 @@ export function parseArgs(argv) {
       case '--scene-camera':
         args.sceneCamera = true;
         break;
+      case '--mode': {
+        const mode = String(argv[++i]).toLowerCase();
+        if (!RENDER_MODES.includes(mode)) {
+          throw new Error(`--mode takes one of ${RENDER_MODES.join('|')}, got "${mode}"`);
+        }
+        args.mode = mode;
+        break;
+      }
       case '--fov':
         args.fov = positiveNumber('--fov', argv[++i]);
         args.fovExplicit = true;
@@ -283,8 +307,8 @@ const gdVec3 = (v) => `Vector3(${v[0]}, ${v[1]}, ${v[2]})`;
 const gdColor = (c) => `Color(${c[0]}, ${c[1]}, ${c[2]})`;
 
 /**
- * The bootstrap scene's script. Instantiates the target scene, applies Godot's
- * editor-preview yield rule, frames a camera, and writes one settled frame.
+ * The bootstrap scene's script. Instantiates the target scene, picks the 2D or
+ * 3D path for it, and writes one settled frame.
  */
 function bootstrapScript({
   scenePath,
@@ -293,8 +317,10 @@ function bootstrapScript({
   lookAt,
   frame,
   sceneCamera,
+  mode,
   out,
   boundsOut,
+  modeOut,
   fov,
   fovExplicit,
 }) {
@@ -304,20 +330,84 @@ const SCENE_PATH := "${scenePath}"
 const PREVIEWS := ${previews ? 'true' : 'false'}
 const OUT := "${out}"
 const BOUNDS_OUT := "${boundsOut ?? ''}"
+const MODE_OUT := "${modeOut}"
+const MODE := "${mode}"
+const SCENE_CAMERA := ${sceneCamera ? 'true' : 'false'}
 const FOV := ${fov}
+const CANVAS_2D_SIZE := Vector2i(${CANVAS_2D_CAPTURE.width}, ${CANVAS_2D_CAPTURE.height})
+const CLEAR_2D := ${gdColor(CANVAS_2D_CAPTURE.clearColor)}
 
 func _ready() -> void:
 	var target: Node = load(SCENE_PATH).instantiate()
+	var two_d := MODE == "2d" or (MODE == "auto" and _is_canvas_scene(target))
+	# Written before the render, so a run that dies mid-frame still says which
+	# path it took — the caller pairs our image with the previewer's on it.
+	_write_mode(two_d)
+	if two_d:
+		await _render_2d(target)
+	else:
+		await _render_3d(target)
+	get_tree().quit()
+
+# Godot's CanvasItemEditor claims a CanvasItem root, which is the rule
+# workspaceForScene.ts mirrors — plus CanvasLayer, which is a plain Node that
+# exists only to host CanvasItems, and which the previewer counts as 2D too.
+func _is_canvas_scene(target: Node) -> bool:
+	return target is CanvasItem or target is CanvasLayer
+
+func _render_3d(target: Node) -> void:
 	add_child(target)
 	if PREVIEWS:
 		_apply_preview_lighting(target)
 	_place_camera(target)
+	await _settle()
+	get_viewport().get_texture().get_image().save_png(OUT)
+	_write_bounds(target)
+
+# A 2D scene has nothing to point a camera at: Godot draws it through the
+# canvas transform into the PROJECT VIEWPORT rectangle, and a Control resolves
+# its anchors against that rectangle — so the frame size is part of the picture,
+# not a capture setting. Rendering into a SubViewport of exactly that size gives
+# the game frame 1:1 whatever the window is, which is the rectangle the
+# previewer's 2D stage draws. No preview sun or environment: those are
+# Node3DEditor's, and 2D lighting is a scene's own business.
+func _render_2d(target: Node) -> void:
+	RenderingServer.set_default_clear_color(CLEAR_2D)
+	var vp := SubViewport.new()
+	vp.size = CANVAS_2D_SIZE
+	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	add_child(vp)
+	if not SCENE_CAMERA:
+		_disable_2d_cameras(target)
+	vp.add_child(target)
+	await _settle()
+	vp.get_texture().get_image().save_png(OUT)
+
+# An enabled Camera2D becomes current the moment it enters the tree and offsets
+# the whole canvas transform. The previewer ignores a scene's camera (Godot's
+# editor keeps its own view and draws the node as a gizmo), so the reference has
+# to as well — disabled BEFORE the subtree is added, since a camera that has
+# already claimed the viewport leaves its offset behind.
+func _disable_2d_cameras(node: Node) -> void:
+	var camera := node as Camera2D
+	if camera != null:
+		camera.enabled = false
+	for child in node.get_children():
+		_disable_2d_cameras(child)
+
+func _settle() -> void:
 	for _i in 6:
 		await get_tree().process_frame
 	await RenderingServer.frame_post_draw
-	get_viewport().get_texture().get_image().save_png(OUT)
-	_write_bounds(target)
-	get_tree().quit()
+
+func _write_mode(two_d: bool) -> void:
+	if MODE_OUT == "":
+		return
+	var file := FileAccess.open(MODE_OUT, FileAccess.WRITE)
+	if file == null:
+		return
+	file.store_string("2d" if two_d else "3d")
+	file.close()
 
 # The scene's world-space AABB, so a comparison can derive ONE camera both
 # renderers use rather than each framing the scene its own way.
@@ -507,6 +597,7 @@ export async function renderReference({
   lookAt = null,
   frame = false,
   sceneCamera = false,
+  mode = 'auto',
   boundsOut = null,
   fov = EDITOR_FOV,
   fovExplicit = false,
@@ -514,12 +605,15 @@ export async function renderReference({
 }) {
   const scenePath = resolve(scene);
   if (!existsSync(scenePath)) throw new Error(`No such scene: ${scenePath}`);
+  if (!RENDER_MODES.includes(mode)) {
+    throw new Error(`mode must be one of ${RENDER_MODES.join('|')}, got "${mode}"`);
+  }
 
   const root = resolveProjectRoot(scenePath);
   const work = await mkdtemp(join(tmpdir(), 'godot-ref-'));
   try {
     return await renderInto(work, { root, scenePath, out, width, height, previews, camera,
-      lookAt, frame, sceneCamera, boundsOut, fov, fovExplicit });
+      lookAt, frame, sceneCamera, mode, boundsOut, fov, fovExplicit });
   } finally {
     // Each run copies the whole res:// root, and `keepWork` is the only reason
     // to hold one afterwards. On a tmpfs /tmp these accumulate in RAM: 236 of
@@ -534,10 +628,13 @@ async function renderInto(
   work,
   {
     root, scenePath, out, width, height, previews, camera, lookAt, frame, sceneCamera,
-    boundsOut, fov, fovExplicit,
+    mode, boundsOut, fov, fovExplicit,
   }
 ) {
   await cp(root, work, { recursive: true, dereference: true });
+  // Inside the scratch project, not beside the image: the mode is how the
+  // caller pairs this render with the previewer's, not an artefact to keep.
+  const modeOut = join(work, '__ref_mode.txt');
 
   const sourceIni = existsSync(join(root, 'project.godot'))
     ? await readFile(join(root, 'project.godot'), 'utf8')
@@ -554,9 +651,11 @@ async function renderInto(
       lookAt,
       frame,
       sceneCamera,
+      mode,
       fovExplicit,
       out: resolve(out),
       boundsOut: boundsOut ? resolve(boundsOut) : null,
+      modeOut,
       fov,
     })
   );
@@ -573,7 +672,8 @@ async function renderInto(
       `Godot produced no image for ${basename(scenePath)}.\n${render.stdout}\n${render.stderr}`
     );
   }
-  return { workDir: work, out: resolve(out) };
+  const rendered = existsSync(modeOut) ? (await readFile(modeOut, 'utf8')).trim() : null;
+  return { workDir: work, out: resolve(out), mode: rendered };
 }
 
 async function main() {
@@ -583,14 +683,18 @@ async function main() {
     console.error(
       '       [--look-at x,y,z] [--probe x,y] [--patch n] [--no-previews] [--width n] [--height n]'
     );
+    console.error(
+      `       [--mode ${RENDER_MODES.join('|')}]  (2d renders the project viewport, ` +
+        `${CANVAS_2D_CAPTURE.width}x${CANVAS_2D_CAPTURE.height}; --width/--height size the 3D frame)`
+    );
     process.exit(2);
   }
 
   const out = args.out ?? join(import.meta.dirname, 'output', `${basename(args.scene, '.tscn')}.png`);
   await mkdir(dirname(out), { recursive: true });
   const boundsOut = args.emitBounds ? out.replace(/\.png$/, '.bounds.json') : null;
-  const { out: written } = await renderReference({ ...args, out, boundsOut });
-  console.log(`Rendered ${written}`);
+  const { out: written, mode } = await renderReference({ ...args, out, boundsOut });
+  console.log(`Rendered ${written}${mode ? ` (${mode})` : ''}`);
   if (boundsOut && existsSync(boundsOut)) console.log(`Bounds ${boundsOut}`);
 
   if (args.probes.length > 0) {

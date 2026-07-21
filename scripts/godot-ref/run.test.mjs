@@ -24,7 +24,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { PNG } from 'pngjs';
-import { CANVAS_CAPTURE } from '../visual/previewServer.mjs';
+import {
+  CANVAS_2D_CAPTURE,
+  CANVAS_CAPTURE,
+  FIT_ON_OPEN_2D_STORAGE_KEY,
+  VIEWPORT,
+} from '../visual/previewServer.mjs';
 import {
   EDITOR_CAMERA_DIRECTION,
   EDITOR_CAMERA_DISTANCE,
@@ -65,6 +70,40 @@ describe('editor-camera constants mirror the previewer', () => {
     );
     expect(FRAME_MARGIN).toBe(coreMargin);
   });
+
+  /**
+   * The 2D pair has no camera to agree on — it agrees on a RECTANGLE instead:
+   * Godot renders the project viewport through a SubViewport of this size, and
+   * the previewer's stage draws a frame of exactly the same size at zoom 1. A
+   * one-sided edit here produces two images that still look right individually
+   * and cannot be compared at all (a Control's anchors resolve against the
+   * frame, so its content MOVES with it).
+   */
+  it('matches viewport2d.ts’s project-viewport rectangle and its fit preference', async () => {
+    const { CANVAS_2D_WIDTH, CANVAS_2D_HEIGHT, FIT_ON_OPEN_2D_STORAGE_KEY: coreKey } =
+      await import(
+        '../../packages/textscene-core/src/r3f/components/Canvas2DStage/viewport2d.ts'
+      );
+    expect(CANVAS_2D_CAPTURE.width).toBe(CANVAS_2D_WIDTH);
+    expect(CANVAS_2D_CAPTURE.height).toBe(CANVAS_2D_HEIGHT);
+    expect(FIT_ON_OPEN_2D_STORAGE_KEY).toBe(coreKey);
+  });
+
+  it('gives a 2D capture room for the frame at zoom 1', () => {
+    // The stage is what remains of the browser viewport after the shell's dock
+    // and top bar; a frame that does not FIT it is clipped, and the capture
+    // quietly picks up the shell's chrome at the edges instead of the scene.
+    const chrome = {
+      width: VIEWPORT.width - CANVAS_CAPTURE.width,
+      height: VIEWPORT.height - CANVAS_CAPTURE.height,
+    };
+    expect(CANVAS_2D_CAPTURE.viewport.width - chrome.width).toBeGreaterThanOrEqual(
+      CANVAS_2D_CAPTURE.width
+    );
+    expect(CANVAS_2D_CAPTURE.viewport.height - chrome.height).toBeGreaterThanOrEqual(
+      CANVAS_2D_CAPTURE.height
+    );
+  });
 });
 
 describe('parseArgs', () => {
@@ -104,6 +143,16 @@ describe('parseArgs', () => {
 
   it('rejects a --camera without three components rather than rendering a wrong frame', () => {
     expect(() => parseArgs(['a.tscn', '--camera', '0,1'])).toThrow(/three/i);
+  });
+
+  it('leaves 2D-or-3D to the engine unless --mode says otherwise', () => {
+    expect(parseArgs(['a.tscn']).mode).toBe('auto');
+    expect(parseArgs(['a.tscn', '--mode', '2d']).mode).toBe('2d');
+    expect(parseArgs(['a.tscn', '--mode', '3D']).mode).toBe('3d');
+  });
+
+  it('rejects an unknown --mode instead of falling back to a camera the scene has no use for', () => {
+    expect(() => parseArgs(['a.tscn', '--mode', 'canvas'])).toThrow(/auto\|2d\|3d/);
   });
 });
 
@@ -267,6 +316,35 @@ describe.skipIf(!hasEngine)('renderReference (real Godot)', () => {
     expect(b.size[1]).toBeLessThan(0.5);
     expect(b.size[0]).toBeCloseTo(8, 3);
     expect(b.size[2]).toBeCloseTo(8, 3);
+  }, 180_000);
+
+  /**
+   * The 2D path, end to end: a Node2D scene must come back as the PROJECT
+   * VIEWPORT rectangle — the frame the previewer's 2D stage draws — with the
+   * scene in it and no 3D camera anywhere near it. Rendered through the 3D
+   * path such a scene comes back the wrong size, over a sky, with its content
+   * laid out against a rectangle nothing else uses.
+   */
+  it('renders a 2D scene as the project viewport, cleared to the 2D background', async () => {
+    const out = join(await scratchDir(), 'canvas.png');
+    const { mode } = await renderReference({
+      scene: join(REPO_ROOT, 'scenes/fixtures/unit-line2d.tscn'),
+      out,
+    });
+    expect(mode).toBe('2d');
+    const buffer = await readFile(out);
+    const png = PNG.sync.read(buffer);
+    expect([png.width, png.height]).toEqual([CANVAS_2D_CAPTURE.width, CANVAS_2D_CAPTURE.height]);
+
+    // Bottom-right corner: empty canvas, so the clear colour our side flattens
+    // its stage background to.
+    const [corner] = probePixels(buffer, [[png.width - 8, png.height - 8]], { patch: 5 });
+    const background = CANVAS_2D_CAPTURE.background;
+    expect(corner.rgb).toEqual([1, 3, 5].map((i) => parseInt(background.slice(i, i + 2), 16)));
+    // …and the scene itself: the fixture's white line runs through the upper
+    // left, so SOMETHING far brighter than the background is drawn there.
+    const [line] = probePixels(buffer, [[150, 150]], { patch: 21 });
+    expect(Math.min(...line.rgb)).toBeGreaterThan(150);
   }, 180_000);
 
   it('lights the scene only because of the previews — --no-previews is runtime semantics', async () => {
