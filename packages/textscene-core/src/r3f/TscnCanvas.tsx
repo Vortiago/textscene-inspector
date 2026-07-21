@@ -11,8 +11,7 @@
  * This Camera" on a Camera3D node.
  */
 import { Canvas, useThree } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei/core/OrbitControls';
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import * as THREE from 'three';
 import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
 import { useOptionalCameraControl } from './contexts/CameraControlContext.js';
@@ -23,6 +22,7 @@ import { SelectionHighlight } from './components/SelectionHighlight.js';
 import { HoverHighlight } from './components/HoverHighlight.js';
 import { InternalTextLabel } from './internalTextLabel.js';
 import { FrameSelectedShortcut } from './FrameSelectedShortcut.js';
+import { EditorControlsHandle, GodotEditorControls } from './GodotEditorControls.js';
 import { PreviewLighting } from './preview/PreviewLighting.js';
 import { frameSceneBounds, type OrbitLike } from './frameSceneBounds.js';
 import { EDITOR_CAMERA_FOV, editorCameraPosition } from './godotEditorCamera.js';
@@ -208,11 +208,6 @@ export function CameraFit() {
   return null;
 }
 
-/** Structural shape we need from the OrbitControls instance — just `.reset()`. */
-interface ResettableControls {
-  reset: () => void;
-}
-
 /**
  * `<TscnCanvas>` takes no props — it reads everything it needs from context
  * (`HierarchyContext`, `CameraControlContext`, `ViewportModeContext`). Test
@@ -220,17 +215,6 @@ interface ResettableControls {
  * directly under a `HierarchyContext` provider instead.
  */
 export function TscnCanvas() {
-  // Capture the OrbitControls instance via a callback ref so
-  // the toolbar's "Reset Camera" button can call its `.reset()`. Drei's
-  // `<OrbitControls>` accepts a ref typed to the upstream three-stdlib
-  // type which isn't exported from this package's deps — a callback ref
-  // sidesteps the type incompatibility cleanly and lets us narrow to
-  // the structural `ResettableControls` shape inside the effect.
-  const [controls, setControls] = useState<ResettableControls | null>(null);
-  const onControlsRef = useCallback((instance: ResettableControls | null) => {
-    setControls(instance);
-  }, []);
-
   return (
     <div className={styles.root}>
       {/* `shadows` turns three.js's shadow map on for the whole scene. Without
@@ -249,8 +233,8 @@ export function TscnCanvas() {
         <ActiveCameraSwitcher />
         <CameraFit />
         <FrameSelectedShortcut />
-        <OrbitControls ref={onControlsRef} makeDefault enableDamping dampingFactor={0.1} />
-        <OrbitControlsResetBridge controls={controls} />
+        <GodotEditorControls />
+        <EditorControlsResetBridge />
         <ScreenshotBridge />
       </Canvas>
     </div>
@@ -258,19 +242,17 @@ export function TscnCanvas() {
 }
 
 /**
- * Bridges the `<OrbitControls>` instance into `CameraControlContext` so
- * the toolbar can drive `reset()` from outside the `<Canvas>`. The
- * controls instance arrives via state set by a callback ref, so this
- * component re-renders once with a non-null `controls` and its effect
- * wires up the reset handler.
+ * Bridges the navigation handle into `CameraControlContext` so the toolbar can
+ * drive `reset()` from outside the `<Canvas>`. `<GodotEditorControls>`
+ * publishes the handle as R3F's `state.controls` (the same slot
+ * `frameSceneBounds` reads), so this reads it back from there rather than
+ * threading a ref through the tree.
  */
-function OrbitControlsResetBridge({
-  controls,
-}: {
-  controls: ResettableControls | null;
-}) {
+function EditorControlsResetBridge() {
   const control = useOptionalCameraControl();
   const registerResetHandler = control?.registerResetHandler;
+  const published = useThree((s) => s.controls);
+  const controls = published instanceof EditorControlsHandle ? published : null;
 
   useEffect(() => {
     if (!registerResetHandler || !controls) return undefined;

@@ -6,7 +6,7 @@
  * import back from `TscnCanvas` itself.
  */
 import * as THREE from 'three';
-import { editorCameraDirection } from './godotEditorCamera.js';
+import { EDITOR_CAMERA_FOV, editorCameraDirection } from './godotEditorCamera.js';
 import { computeWorldBoundingBox } from './bounds.js';
 
 /**
@@ -71,8 +71,12 @@ export function frameSceneBounds(
   const maxXY = Math.max(size.x, size.y);
   const isFlat = size.z <= Math.max(maxXY, 1) * 0.02;
 
+  // The only orthographic camera framing ever sees is the editor camera in its
+  // Numpad-5 projection, whose frustum is sized from the SAME 70-degree field
+  // of view (`GodotEditorControls`); framing it at three's unrelated 50-degree
+  // default would leave it zoomed out by half again.
   const persp = camera as THREE.PerspectiveCamera;
-  const fov = ((persp.isPerspectiveCamera ? persp.fov : 50) * Math.PI) / 180;
+  const fov = ((persp.isPerspectiveCamera ? persp.fov : EDITOR_CAMERA_FOV) * Math.PI) / 180;
   const fitDim = isFlat ? Math.max(maxXY, 0.001) : maxDim;
   const distance =
     ((fitDim / 2 / Math.tan(fov / 2)) || fitDim) * (isFlat ? FLAT_FRAME_MARGIN : FRAME_MARGIN);
