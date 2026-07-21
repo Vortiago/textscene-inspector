@@ -1,8 +1,8 @@
 # Godot comparison sheets — capture design
 
 Per-node-type markdown showing how a fixture renders here versus in Godot, from
-**the same camera**. One file per supported visual node type, terse, built from
-the fixtures that already exist.
+**the same camera** (3D) or into **the same rectangle** (2D). One file per
+supported visual node type, terse, built from the fixtures that already exist.
 
 ## The problem this solves first
 
@@ -23,6 +23,9 @@ the reference harness now does the same, so:
 produce the same frame with no camera arguments on either side, and a probe at
 (x, y) addresses the same surface point in both. `--probe x,y --patch 5` prints
 the per-channel median of a patch on either side, in the same format.
+
+— for a 3D scene. A 2D one needs no camera arguments either, but a different
+frame; see the 2D contract below (`ref:godot` detects it, `ref:ours --2d`).
 
 Two flags cover the rest:
 
@@ -70,7 +73,7 @@ Two traps this exposed, both of which produced confident wrong pictures:
    the default material an unmaterialed mesh gets. See the table above.
 2. ~~**Capture harness**~~ — done, as `pnpm ref:ours` beside `pnpm ref:godot`.
 3. **Fan out** the 3D sheets.
-4. **2D capture path**, then the 2D sheets.
+4. ~~**2D capture path**~~ — done; the contract is below. Then the 2D sheets.
 
 The viewport itself navigates like Godot's editor rather than like a web viewer
 (`GodotEditorControls.tsx`, maths in `godotEditorControls.ts`): middle-drag
@@ -79,19 +82,51 @@ WASD/QE flying, numpad 1/3/7 view snapping and 5 for orthographic, no damping.
 Left-drag is left free for selection, as Godot leaves it. drei remains a
 dependency for `Text` only.
 
+## The 2D contract — a rectangle, not a camera
+
+A 2D scene has no camera to agree on. Godot draws it through the canvas
+transform into the **project viewport** rectangle, and a `Control` resolves its
+anchors against that rectangle — so the frame size is part of the picture, not a
+capture setting. Both sides therefore render that rectangle, 1:1:
+
+- **Godot** instantiates the scene into a `SubViewport` of exactly
+  `CANVAS_2D_WIDTH × CANVAS_2D_HEIGHT` (1152×648, `viewport2d.ts`), with no
+  `Camera3D`, no preview sun and no preview environment — those are
+  `Node3DEditor`'s, and 2D lighting is a scene's own business. `run.mjs` picks
+  that path from the scene root (`is CanvasItem`, plus `CanvasLayer`), which is
+  the rule `workspaceForScene.ts` mirrors; `--mode 2d|3d` forces it.
+- **Ours** opens the 2D stage pinned at zoom 1 with world origin at the stage
+  origin (`tsi.fitOnOpen2D=false`, the 2D counterpart of frame-on-open), paints
+  out the stage's chrome — grid, viewport outline and dimension label, origin
+  axes, the pan/zoom hint, the zoom HUD — and clips the screenshot to the frame
+  element. A Control overlay is DOM (ADR-0003) and a Node2D world is WebGL; an
+  element-clipped screenshot composites both, so one capture holds the whole
+  picture.
+- **Backgrounds** are pinned to the same grey: Godot clears a 2D viewport to
+  `default_clear_color` (0.3, which lands as `#4c4c4c` — 2D composites in sRGB,
+  no transfer applied), and the capture flattens our editor background to it.
+  Without that every transparent pixel of the scene would differ.
+- **A scene's `Camera2D` is ignored** on both sides, for the same reason the 3D
+  path ignores `Camera3D`: Godot's editor keeps its own view. The reference
+  disables them before the subtree enters the tree — a camera that has already
+  claimed the viewport leaves its offset behind.
+
+**Which of the two a fixture is comes from Godot**, which knows its own class
+hierarchy; our side then has to agree. `capture.mjs` asks the page which
+workspace it opened (`readViewportMode`) and fails the pair when it differs
+rather than pairing two differently-framed images, and `findCanvas2DFrame`
+rejects a frame that is not exactly 1152×648 on whole pixels — the failures that
+otherwise still produce a plausible-looking picture.
+
+The 2D capture uses a **wider browser viewport** (1600×900) than the 3D one, for
+the single reason that the frame must fit inside the stage at zoom 1. Every
+piece of it is opt-in (`createCaptureContext({ canvas2D: true })`), because the
+79-image golden gate captures 2D scenes WITH the chrome and at the fitted zoom.
+
 ## Sequencing
 
 **3D first.** Steps 1–4 work today for anything with a `VisualInstance3D` bound.
-
-**2D after**, because it is a different capture problem, not a variation on this
-one:
-
-- Controls are an HTML/CSS overlay (ADR-0003), not canvas pixels — capturing
-  them is the `verify-2d` browser path, not `canvas.screenshot()`.
-- Our 2D world is a pannable/zoomable stage; Godot's is a `Camera2D` with `zoom`
-  and an anchor mode. Matching those is its own derivation.
-
-Building the 3D set first also settles the document format on the easier half.
+Building the 3D set first also settled the document format on the easier half.
 
 ## Document shape
 
