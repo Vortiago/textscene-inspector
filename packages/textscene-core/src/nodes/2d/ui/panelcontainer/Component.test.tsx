@@ -1,7 +1,8 @@
 /**
  * <PanelContainer> render contract: a default panel fill overridden by a
- * `theme_override_styles/panel` StyleBox, providing the 'block' layout kind so
- * its child flows inside the box's content margins.
+ * `theme_override_styles/panel` StyleBox, rendering as a flex column that hands
+ * its child the 'margin' layout kind so the child fills (not just flows inside)
+ * the box's content margins — the same single-child fit MarginContainer uses.
  */
 import { describe, expect, it } from 'vitest';
 import { render } from '@testing-library/react';
@@ -47,7 +48,7 @@ describe('<PanelContainer>', () => {
     expect(div.style.backgroundColor).toBe('rgba(0, 255, 0, 1)');
   });
 
-  it('provides the block layout kind to its subtree', () => {
+  it('provides the margin layout kind to its subtree, so the child fills the box', () => {
     const { getByTestId } = render(
       <SceneResourcesProvider>
         <PanelContainer node={node()}>
@@ -55,6 +56,12 @@ describe('<PanelContainer>', () => {
         </PanelContainer>
       </SceneResourcesProvider>
     );
-    expect(getByTestId('kind').textContent).toBe('block');
+    expect(getByTestId('kind').textContent).toBe('margin');
+  });
+
+  it('renders a flex column so the single child can fill the content height', () => {
+    const div = renderBox();
+    expect(div.style.display).toBe('flex');
+    expect(div.style.flexDirection).toBe('column');
   });
 });
