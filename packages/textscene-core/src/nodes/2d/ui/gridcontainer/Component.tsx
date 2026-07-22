@@ -18,12 +18,12 @@ import { controlComponentRegistry } from '../../../../r3f/controls/ControlCompon
 import { useControlParent, ControlParentProvider } from '../../../../r3f/controls/ControlParentContext';
 import { controlStyle } from '../../../../r3f/controls/controlLayout';
 import { useOptionalSelection } from '../../../../r3f/contexts/SelectionContext';
+import { DEFAULT_SEPARATION } from '../../../../r3f/controls/godotDefaultTheme';
 import { joinPath } from '../../../../utils/nodePath';
 import type { ControlProperties } from '../control/types';
 import type { TscnNode } from '../../../../parser/types';
 import type { GridContainerProperties } from './types';
 
-const DEFAULT_SEPARATION = 4; // Godot GridContainer default
 const SIZE_FLAG_EXPAND = 2;
 const NO_HIDDEN: ReadonlySet<string> = new Set();
 
@@ -46,6 +46,10 @@ export function GridContainer({ node, path, children }: ControlComponentProps) {
   const style: CSSProperties = controlStyle(props, parentKind, {
     display: 'grid',
     gridTemplateColumns: gridColumnTemplate(items, columns),
+    // Godot content-sizes the rows and packs them at the top; without this the
+    // CSS-grid default (align-content: stretch) spreads the rows to fill the
+    // container's height, so a full-rect grid's rows drift apart.
+    alignContent: 'start',
     columnGap: `${props.themeOverrideConstants?.h_separation ?? DEFAULT_SEPARATION}px`,
     rowGap: `${props.themeOverrideConstants?.v_separation ?? DEFAULT_SEPARATION}px`,
   });

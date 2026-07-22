@@ -11,7 +11,8 @@ import { useControlParent } from '../../../../r3f/controls/ControlParentContext'
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import type { TscnInternalResource, TscnNode } from '../../../../parser/types';
 
-const DEFAULT_BACKGROUND = 'rgba(42, 42, 46, 0.92)';
+// Godot's default PanelContainer `panel` stylebox fill (style_normal_color).
+const DEFAULT_BACKGROUND = 'rgba(26, 26, 26, 0.6)';
 const heading = { type: 'node', attributes: { type: 'PanelContainer', name: 'Box' } };
 
 function node(raw: Record<string, string> = {}): TscnNode {

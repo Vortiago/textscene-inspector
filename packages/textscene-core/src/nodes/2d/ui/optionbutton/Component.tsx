@@ -11,15 +11,27 @@ import type { ControlComponentProps } from '../../../../r3f/controls/ControlComp
 import { useControlParent } from '../../../../r3f/controls/ControlParentContext';
 import { controlStyle } from '../../../../r3f/controls/controlLayout';
 import { textThemeStyle } from '../../../../r3f/controls/textThemeStyle';
+import {
+  DEFAULT_CORNER_RADIUS,
+  DEFAULT_FONT_COLOR,
+  DEFAULT_FONT_SIZE,
+  OPTION_BUTTON_CONTENT_MARGIN_X,
+  OPTION_BUTTON_CONTENT_MARGIN_Y,
+  STYLE_NORMAL_FILL,
+} from '../../../../r3f/controls/godotDefaultTheme';
 import type { OptionButtonProperties } from './types';
 
+// Godot's OptionButton wears the button "normal" StyleBoxFlat (dark, translucent)
+// with 8/4 content margins — sourced from the default theme so it blends over
+// the overlay backdrop the way the engine does.
 const DROPDOWN_DEFAULTS: CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
-  padding: '6px 14px',
-  borderRadius: '4px',
-  backgroundColor: 'rgba(70, 78, 94, 0.95)',
-  color: '#e8e8ea',
+  padding: `${OPTION_BUTTON_CONTENT_MARGIN_Y}px ${OPTION_BUTTON_CONTENT_MARGIN_X}px`,
+  borderRadius: `${DEFAULT_CORNER_RADIUS}px`,
+  backgroundColor: STYLE_NORMAL_FILL,
+  fontSize: `${DEFAULT_FONT_SIZE}px`,
+  color: DEFAULT_FONT_COLOR,
 };
 
 export function OptionButton({ node, children }: ControlComponentProps) {

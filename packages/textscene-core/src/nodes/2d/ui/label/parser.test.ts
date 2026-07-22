@@ -47,4 +47,15 @@ describe('parseLabel', () => {
     const p = parseLabel(heading('Label', { name: 'T' }), { text: '""' });
     expect(p.text).toBe('');
   });
+
+  it("defaults vertical size flags to Godot's Label SHRINK_CENTER (4) when unset", () => {
+    // Godot's `Label` constructor overrides Control's SIZE_FILL default, so a
+    // Label centres on a box container's cross axis instead of filling it.
+    expect(parseLabel(heading('Label', { name: 'T' }), {}).sizeFlagsVertical).toBe(4);
+  });
+
+  it('keeps an explicit size_flags_vertical from the scene', () => {
+    const p = parseLabel(heading('Label', { name: 'T' }), { size_flags_vertical: '1' });
+    expect(p.sizeFlagsVertical).toBe(1);
+  });
 });
