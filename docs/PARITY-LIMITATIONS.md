@@ -166,6 +166,40 @@ caps (the closest representable result); both-off correctly opens the ends.
 (`repeat = size × uv1_scale`). Curved / GLB geometry falls back to the mesh's own
 UVs (approximate) — a true 3-axis triplanar shader is out of scope.
 
+## Decal
+
+### Decal projects albedo only; fades, cull_mask, and secondary maps are unapplied
+A `Decal` projects `texture_albedo` down its local -Y axis onto the scene
+surfaces its `size` box overlaps, baked with three's `DecalGeometry` after mount
+(`decalProjection.ts`), clipped to the box, tinted by `modulate` and blended by
+`albedo_mix × modulate.a`. That albedo projection — the bulk of a decal's look —
+is faithful. What is not reproduced:
+
+- **`cull_mask`** — every overlapping mesh receives the projection; Godot filters
+  receivers by the render-layer bitmask. Parsed and surfaced in the inspector,
+  not applied to selection.
+- **`upper_fade` / `lower_fade` / `normal_fade`** — the projection has a hard box
+  edge and no surface-angle falloff. On a flat surface at a single depth (what
+  decals usually target) these are near-invisible.
+- **`distance_fade_*`** — no camera-distance fade.
+- **`texture_normal` / `texture_orm` / `texture_emission`** — only albedo is
+  baked; the other maps are parsed but not projected.
+- **`albedo_mix`** is an alpha blend over the lit surface, not Godot's
+  albedo-channel replacement — the two agree at `albedo_mix = 1` and diverge
+  slightly in the partial-blend midrange.
+
+- **Faithful when:** an albedo decal projects onto roughly-planar surfaces with
+  default fades — the common case, and what the reference render shows.
+- **Why not fixed:** `cull_mask` needs per-mesh render-layer tracking threaded
+  through the scene build; the fades, distance falloff, secondary maps, and the
+  exact `albedo_mix` blend all need a custom projector shader — `DecalGeometry`
+  bakes a static mesh with none of those channels. Disproportionate for effects
+  that barely register on the flat surfaces decals usually cover.
+- **Also:** the projection bakes against the meshes mounted at the time (rebuilt
+  when async sub-scenes/GLBs load), not per frame; a decal wrapping a sharp
+  corner can show mild `DecalGeometry` distortion.
+- Sites: `nodes/3d/decal/Component.tsx`, `nodes/3d/decal/decalProjection.ts`.
+
 ## Transforms (Node2D / Node3D)
 
 > **Resolved:** `Node2D.skew` (audit #34) was previously listed here as
