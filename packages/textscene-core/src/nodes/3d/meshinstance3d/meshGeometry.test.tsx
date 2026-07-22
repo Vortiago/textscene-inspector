@@ -212,6 +212,20 @@ describe('TorusMesh radii mapping', () => {
     expect(p.radialSegments).toBe(24);
     expect(p.tubularSegments).toBe(48);
   });
+
+  it('lies flat in the XZ plane (hole facing +Y), matching Godot — not three\'s upright default', async () => {
+    // inner=1, outer=3 → center radius 2, tube 1. three's unrotated TorusGeometry
+    // stands upright (thin in Z, tall in Y); Godot's TorusMesh lies flat. The π/2
+    // rotateX bakes that in, so the ring spans XZ (max.z ≈ radius+tube = 3) and is
+    // thin along Y (max.y ≈ tube = 1). If the rotation were missing these swap.
+    const geometry = await renderGeometry(sub('TorusMesh', { inner_radius: '1', outer_radius: '3' }));
+    geometry.computeBoundingBox();
+    const box = geometry.boundingBox!;
+    expect(box.max.z).toBeCloseTo(3, 5);
+    expect(box.min.z).toBeCloseTo(-3, 5);
+    expect(box.max.y).toBeCloseTo(1, 5);
+    expect(box.min.y).toBeCloseTo(-1, 5);
+  });
 });
 
 describe('PrismMesh approximation', () => {
