@@ -213,6 +213,16 @@ async function captureOurFrames(fixture, framesDir) {
     const duration = Number(await scrubber.getAttribute('max'));
     if (!Number.isFinite(duration) || duration <= 0) throw new Error(`bad scrubber max: ${duration}`);
 
+    // Enter the PAUSED state before scrubbing. Seeking from the initial STOPPED
+    // state restores the authored (rest) pose and ignores the time — only a
+    // paused transport applies the seeked pose. Play then Pause is how the
+    // transport reaches it; an exact-name match avoids the "Animation Player"
+    // clip dropdown, whose label also contains "Play".
+    await page.getByRole('button', { name: 'Play', exact: true }).click();
+    await page.waitForTimeout(150);
+    await page.getByRole('button', { name: 'Pause', exact: true }).click();
+    await page.waitForTimeout(150);
+
     await mkdir(framesDir, { recursive: true });
     const canvas = page.locator('canvas').first();
     for (let i = 0; i < FRAMES; i++) {

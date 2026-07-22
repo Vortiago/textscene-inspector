@@ -164,10 +164,12 @@ export const GOLDEN_SCENES = [
     collisions: true,
     maxDiffPct: 0.5,
   },
-  // Decal projects a local checkerboard texture onto a quad and draws a thin
-  // wireframe projection box. Loads a texture (deterministic local SVG, gated
-  // by the two-identical-frames settle); the box edges are AA-sensitive like
-  // physics-bodies, hence the relaxed threshold.
+  // Decal PROJECTS a local checkerboard onto the floor plane its box intersects
+  // (DecalGeometry, baked after mount), one plain and one tinted. The box gizmo
+  // is selection-gated (ADR-0018) and the harness drives no selection, so this
+  // captures the Godot-runtime view: projection only, no outline. Loads a
+  // texture (deterministic local SVG, gated by the two-identical-frames settle);
+  // the projection edges are AA-sensitive, hence the relaxed threshold.
   { name: 'decal', file: 'unit-decal.tscn', maxDiffPct: 0.3 },
   // PathFollow2D follow-offset: a Polygon2D follower placed at
   // progress_ratio 0.5 along the parent Path2D's Curve2D. The Marker2D cross
