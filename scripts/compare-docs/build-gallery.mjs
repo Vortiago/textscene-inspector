@@ -26,9 +26,10 @@ const SHEETS_DIR = join(REPO_ROOT, 'docs/comparison/sheets');
 const IMAGES_DIR = join(REPO_ROOT, 'docs/comparison/images');
 
 function parseArgs(argv) {
-  const args = { inline: false, out: join(REPO_ROOT, 'docs/comparison/index.html') };
+  const args = { inline: false, fragment: false, out: join(REPO_ROOT, 'docs/comparison/index.html') };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '--inline') args.inline = true;
+    else if (argv[i] === '--fragment') args.fragment = true;
     else if (argv[i] === '--out') args.out = argv[++i];
     else throw new Error(`Unknown flag ${argv[i]}`);
   }
@@ -126,7 +127,7 @@ function imageSrc(basename, side, inlineImages) {
 
 const CATEGORY_ORDER = ['3D', '2D', 'Other'];
 
-function build(sheets, inlineImages) {
+function build(sheets, inlineImages, fragment) {
   const missing = [];
   const nodes = sheets
     .map(({ meta, body }) => {
@@ -171,10 +172,10 @@ function build(sheets, inlineImages) {
         ${n.rendersAs ? `<span class="renders">renders as ${inline(n.rendersAs)}</span>` : ''}
         ${n.fixture ? `<span class="fixture"><code>${escapeHtml(n.fixture)}</code></span>` : ''}
       </header>
-      <div class="compare" data-godot="${n.godot}" data-ours="${n.ours}">
+      <div class="compare">
         <div class="stage">
-          <img class="base" src="${n.godot}" alt="Godot render of ${escapeHtml(n.type)}">
-          <div class="over"><img src="${n.ours}" alt="Our render of ${escapeHtml(n.type)}"></div>
+          <img class="img-godot" src="${n.godot}" alt="Godot render of ${escapeHtml(n.type)}">
+          <img class="img-ours" src="${n.ours}" alt="Our render of ${escapeHtml(n.type)}">
           <div class="handle"></div>
           <span class="tag g">Godot 4.6.3</span>
           <span class="tag o">Ours</span>
@@ -189,10 +190,25 @@ function build(sheets, inlineImages) {
     )
     .join('');
 
-  return { html: page(nav, panels, nodes[0]?.type), missing };
+  return { html: page(nav, panels, nodes[0]?.type, fragment), missing };
 }
 
-function page(nav, panels, firstType) {
+/**
+ * A standalone document for the repo/website, or — under `fragment` — just the
+ * page content an Artifact publish expects (it supplies its own
+ * doctype/head/body skeleton, so those tags must not be repeated here).
+ */
+function page(nav, panels, firstType, fragment) {
+  const body = `<aside class="side">
+  <div class="brand"><span class="dot"></span>Render comparison</div>
+  <input id="search" type="search" placeholder="Filter nodes…" aria-label="Filter nodes">
+  <nav>${nav}</nav>
+</aside>
+<main id="main">${panels}</main>
+<script>const FIRST=${JSON.stringify(firstType ?? null)};${JS}</script>`;
+  if (fragment) {
+    return `<title>Godot ⇄ TextScene — render comparison</title>\n<style>${CSS}</style>\n${body}`;
+  }
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -202,13 +218,7 @@ function page(nav, panels, firstType) {
 <style>${CSS}</style>
 </head>
 <body>
-<aside class="side">
-  <div class="brand"><span class="dot"></span>Render comparison</div>
-  <input id="search" type="search" placeholder="Filter nodes…" aria-label="Filter nodes">
-  <nav>${nav}</nav>
-</aside>
-<main id="main">${panels}</main>
-<script>const FIRST=${JSON.stringify(firstType ?? null)};${JS}</script>
+${body}
 </body>
 </html>`;
 }
@@ -247,15 +257,16 @@ main{padding:28px clamp(16px,4vw,48px)}
 .fixture{margin-left:auto;font-size:12px;color:var(--muted)}
 code{font-family:var(--mono);font-size:.9em;background:var(--panel-2);padding:1px 5px;border-radius:4px}
 .compare{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
-.stage{position:relative;user-select:none;touch-action:none;background:var(--panel-2)}
+/* Slider: godot underneath fills the box; ours overlays it, clipped from the
+   LEFT by --split so the left band shows godot and the right band shows ours —
+   which is what the corner tags say. */
+.stage{position:relative;user-select:none;touch-action:none;background:var(--panel-2);--split:50%}
 .stage img{display:block;width:100%;height:auto}
-.over{position:absolute;inset:0;overflow:hidden;width:50%}
-.over img{position:absolute;top:0;left:0;height:100%;width:auto;max-width:none}
+.stage .img-ours{position:absolute;inset:0;width:100%;height:100%;clip-path:inset(0 0 0 var(--split))}
 .stage.sbs{display:grid;grid-template-columns:1fr 1fr;gap:2px}
-.stage.sbs .over{position:static;width:auto;overflow:visible}
-.stage.sbs .over img{position:static;width:100%;height:auto}
+.stage.sbs .img-ours{position:static;width:100%;height:auto;clip-path:none}
 .stage.sbs .handle{display:none}
-.handle{position:absolute;top:0;bottom:0;left:50%;width:2px;margin-left:-1px;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.4);cursor:ew-resize}
+.handle{position:absolute;top:0;bottom:0;left:var(--split);width:2px;margin-left:-1px;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.4);cursor:ew-resize}
 .handle::after{content:"";position:absolute;top:50%;left:50%;width:28px;height:28px;transform:translate(-50%,-50%);border-radius:50%;background:#fff;box-shadow:0 1px 5px rgba(0,0,0,.4)}
 .tag{position:absolute;top:8px;font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#fff;padding:3px 7px;border-radius:5px}
 .tag.g{left:8px;background:var(--godot)}.tag.o{right:8px;background:var(--ours)}
@@ -295,24 +306,21 @@ document.getElementById('search').addEventListener('input',e=>{
 });
 function initCompare(sheet){
   const stage=sheet.querySelector('.stage');
-  const over=sheet.querySelector('.over');
   const handle=sheet.querySelector('.handle');
   if(stage.dataset.wired)return; stage.dataset.wired='1';
-  let split=.5;
-  const place=()=>{const w=stage.clientWidth;over.style.width=(split*100)+'%';handle.style.left=(split*100)+'%';
-    const img=over.querySelector('img');img.style.width=w+'px';};
-  const set=x=>{const r=stage.getBoundingClientRect();split=Math.min(1,Math.max(0,(x-r.left)/r.width));place();};
+  // clip-path is a % of the element, so a single --split drives the clip and the
+  // handle with no width bookkeeping — and nothing to break in side-by-side.
+  const set=x=>{const r=stage.getBoundingClientRect();
+    const p=Math.min(100,Math.max(0,((x-r.left)/r.width)*100));
+    stage.style.setProperty('--split',p+'%');};
   let drag=false;
   handle.addEventListener('pointerdown',e=>{drag=true;handle.setPointerCapture(e.pointerId);});
   stage.addEventListener('pointermove',e=>{if(drag)set(e.clientX);});
   addEventListener('pointerup',()=>{drag=false;});
-  new ResizeObserver(place).observe(stage);
   sheet.querySelectorAll('[data-mode]').forEach(btn=>btn.addEventListener('click',()=>{
     sheet.querySelectorAll('[data-mode]').forEach(b=>b.setAttribute('aria-pressed',String(b===btn)));
     stage.classList.toggle('sbs',btn.dataset.mode==='sbs');
-    if(btn.dataset.mode==='slider')place();
   }));
-  place();
 }
 const initial=decodeURIComponent(location.hash.slice(1))||FIRST;
 if(initial)show(initial);
@@ -325,7 +333,7 @@ function main() {
   if (files.length === 0) throw new Error('No sheets to build');
 
   const sheets = files.map((f) => parseSheet(readFileSync(join(SHEETS_DIR, f), 'utf8'), f));
-  const { html, missing } = build(sheets, args.inline);
+  const { html, missing } = build(sheets, args.inline, args.fragment);
 
   mkdirSync(dirname(args.out), { recursive: true });
   writeFileSync(args.out, html);
