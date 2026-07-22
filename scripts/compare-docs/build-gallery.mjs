@@ -134,6 +134,12 @@ function imageSrc(basename, side, inlineImages) {
 
 const CATEGORY_ORDER = ['3D', '2D', 'Other'];
 
+// The public previewer, deployed from main. Its `?fixture=<file>` deep link
+// (useFixtureSelection.ts) opens directly on a scene, so each sheet can link to
+// the very fixture it documents. A fixture added in this PR only resolves once
+// it reaches main and the site redeploys — the sheets ship in the same PR.
+const PREVIEW_URL = 'https://textscene-inspector.pages.dev/';
+
 function build(sheets, inlineImages, fragment) {
   const missing = [];
   const nodes = sheets
@@ -189,7 +195,15 @@ function build(sheets, inlineImages, fragment) {
       <header class="sheet-head">
         <h2>${escapeHtml(n.type)}</h2>
         ${n.rendersAs ? `<span class="renders">renders as ${inline(n.rendersAs)}</span>` : ''}
-        ${n.fixture ? `<span class="fixture"><code>${escapeHtml(n.fixture)}</code></span>` : ''}
+        ${
+          n.fixture
+            ? `<a class="fixture" href="${PREVIEW_URL}?fixture=${encodeURIComponent(
+                n.fixture
+              )}" target="_blank" rel="noopener" title="Open ${escapeHtml(
+                n.fixture
+              )} in the previewer"><code>${escapeHtml(n.fixture)}</code> ↗</a>`
+            : ''
+        }
       </header>
       ${
         n.visual
@@ -280,7 +294,9 @@ main{padding:28px clamp(16px,4vw,48px)}
 .sheet-head h2{margin:0;font-size:26px;letter-spacing:-.02em}
 .renders{color:var(--muted);font-size:14px}
 .renders code{color:var(--ours)}
-.fixture{margin-left:auto;font-size:12px;color:var(--muted)}
+.fixture{margin-left:auto;font-size:12px;color:var(--muted);text-decoration:none;white-space:nowrap}
+.fixture code{color:inherit}
+.fixture:hover{color:var(--ours);text-decoration:underline}
 code{font-family:var(--mono);font-size:.9em;background:var(--panel-2);padding:1px 5px;border-radius:4px}
 .compare{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
 /* Slider: godot underneath fills the box; ours overlays it, clipped from the
