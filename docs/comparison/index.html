@@ -87,8 +87,8 @@ tr:last-child td{border-bottom:0}
       </header>
       <div class="compare">
         <div class="stage">
-          <img class="img-godot" src="images/unit-animatedsprite2d-godot.png" alt="Godot render of AnimatedSprite2D">
-          <img class="img-ours" src="images/unit-animatedsprite2d-ours.png" alt="Our render of AnimatedSprite2D">
+          <img class="img-godot" src="images/unit-animatedsprite2d-godot.gif" alt="Godot render of AnimatedSprite2D">
+          <img class="img-ours" src="images/unit-animatedsprite2d-ours.gif" alt="Our render of AnimatedSprite2D">
           <div class="handle"></div>
           <span class="tag g">Godot 4.6.3</span>
           <span class="tag o">Ours</span>
@@ -98,11 +98,11 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-      <div class="prose"><p>AnimatedSprite2D plays a SpriteFrames clip. Playback is selection-driven (ADR-0012), so a plain capture shows the authored <code>frame</code> statically: here frame 1 of the <code>walk</code> clip (<code>dodge-walk2.png</code>), the Dodge character, drawn as a textured quad centered and scaled 3x at the viewport's center.</p>
+      <div class="prose"><p>AnimatedSprite2D plays a SpriteFrames clip. Playback is selection-driven (ADR-0012): select the sprite and its transport advances the frame. Both images here are GIFs of the <code>walk</code> clip playing — the Dodge character (drawn as a textured quad centered and scaled 3x at the viewport centre) cycling its two frames (<code>dodge-walk1</code>/<code>walk2</code>, legs together then splayed), driven to the same frame at the same time on each side.</p>
 <h3>Properties exercised</h3>
-<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>position</code></td><td><code>Vector2(576, 324)</code></td><td>centers the sprite in the 1152x648 viewport</td></tr><tr><td><code>scale</code></td><td><code>Vector2(3, 3)</code></td><td>enlarges the sprite 3x</td></tr><tr><td><code>sprite_frames</code></td><td>embedded <code>SpriteFrames_walk</code></td><td>supplies the <code>walk</code> clip's two frame textures</td></tr><tr><td><code>animation</code></td><td><code>&amp;"walk"</code></td><td>selects the <code>walk</code> clip</td></tr><tr><td><code>frame</code></td><td><code>1</code></td><td>pins the second frame (<code>dodge-walk2.png</code>), shown statically</td></tr></tbody></table></div>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>position</code></td><td><code>Vector2(576, 324)</code></td><td>centers the sprite in the 1152x648 viewport</td></tr><tr><td><code>scale</code></td><td><code>Vector2(3, 3)</code></td><td>enlarges the sprite 3x</td></tr><tr><td><code>sprite_frames</code></td><td>embedded <code>SpriteFrames_walk</code></td><td>supplies the <code>walk</code> clip's two frame textures</td></tr><tr><td><code>animation</code></td><td><code>&amp;"walk"</code></td><td>selects the <code>walk</code> clip</td></tr><tr><td><code>frame</code></td><td><code>1</code></td><td>the authored still frame; the transport plays the whole clip</td></tr></tbody></table></div>
 <h3>Divergences</h3>
-<p>The sprite reads slightly flatter in the previewer. Its quad uses a tone-mapped material, so the preview's tone-mapping compresses the texture's highlights (the source's pure-white eye, <code>(255,255,255)</code>, renders at <code>(226,226,226)</code>) and nudges the mid-tones, whereas Godot's 2D canvas blits the texel values unchanged. Position, scale, and the displayed frame match.</p></div>
+<p>The sprite reads slightly flatter in the previewer. Its quad uses a tone-mapped material, so the preview's tone-mapping compresses the texture's highlights (the source's pure-white eye, <code>(255,255,255)</code>, renders at <code>(226,226,226)</code>) and nudges the mid-tones, whereas Godot's 2D canvas blits the texel values unchanged. Position, scale, and the played frames match at each moment of the clip.</p></div>
     </article>
     <article class="sheet" data-type="AnimationPlayer" hidden>
       <header class="sheet-head">
