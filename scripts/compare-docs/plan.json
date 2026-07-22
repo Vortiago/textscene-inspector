@@ -208,7 +208,7 @@
   {
    "type": "MeshInstance3D",
    "slice": "3d/meshinstance3d",
-   "fixture": "edge-meshinstance3d-missing-subresource.tscn"
+   "fixture": "unit-torus-mesh.tscn"
   },
   {
    "type": "NavigationAgent3D",
@@ -376,7 +376,7 @@
   "unit-omni-light-3d.tscn",
   "unit-spot-light-3d.tscn",
   "unit-marker-3d.tscn",
-  "edge-meshinstance3d-missing-subresource.tscn",
+  "unit-torus-mesh.tscn",
   "unit-navigation-agent-3d.tscn",
   "unit-navigation-obstacle-3d.tscn",
   "unit-navigation-region-3d.tscn",
