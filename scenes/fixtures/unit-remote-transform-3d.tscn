@@ -1,12 +1,25 @@
-[gd_scene format=3]
+[gd_scene load_steps=4 format=3 uid="uid://unitremotetransform3d"]
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
+size = Vector2(6, 6)
+
+[sub_resource type="BoxMesh" id="BoxMesh_target"]
+size = Vector3(1.2, 1.2, 1.2)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_target"]
+albedo_color = Color(0.2, 0.45, 0.9, 1)
 
 [node name="Root" type="Node3D"]
 
-[node name="DetachTransform" type="Node3D" parent="."]
+[node name="Ground" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1, 0)
+mesh = SubResource("PlaneMesh_ground")
 
-[node name="Geometry" type="Node3D" parent="DetachTransform"]
+[node name="TargetCube" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, 0)
+mesh = SubResource("BoxMesh_target")
+surface_material_override/0 = SubResource("StandardMaterial3D_target")
 
-[node name="PositionSynchronizer" type="RemoteTransform3D" parent="."]
-remote_path = NodePath("../DetachTransform/Geometry")
-update_rotation = false
-update_scale = false
+[node name="Relay" type="RemoteTransform3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, 0)
+remote_path = NodePath("../TargetCube")

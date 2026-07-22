@@ -304,4 +304,14 @@ export const GOLDEN_SCENES = [
   // Hexagon grid (shape=3, vertical offset axis): odd columns stagger by
   // half a tile — the half-offset placement math had no visual guard before.
   { name: 'tile-map-layer-hexagon', file: 'unit-tile-map-layer-hexagon.tscn' },
+
+  // --- RemoteTransform3D / RemoteTransform2D drive their target ---
+  // The relay copies its own transform onto the node its remote_path names
+  // (resolved once at parse time — r3f/remoteTransforms.ts). Each fixture
+  // authors the target AWAY from the relay so the render only reads right if
+  // the drive applied: the 3D cube is authored at -2 X but driven to the
+  // relay's +2; the 2D pentagon is authored at the gray ghost's spot but
+  // driven to the relay's upper-right. Verified against real Godot 4.6.3.
+  { name: 'remote-transform-3d', file: 'unit-remote-transform-3d.tscn' },
+  { name: 'remote-transform-2d', file: 'unit-remote-transform-2d.tscn', maxDiffPct: 0.5 },
 ];

@@ -286,18 +286,36 @@ term (`decay`, `distance`), which does not.
 - Site: `nodes/3d/lights/omnilight3d/Component.tsx`,
   `nodes/3d/lights/spotlight3d/Component.tsx`.
 
-### RemoteTransform3D / RemoteTransform2D do not drive their target
-`remote_path` is parsed and shown in the inspector, but no renderer applies the
-transform to the target node; Godot's runtime pushes it every frame.
+### RemoteTransform3D / RemoteTransform2D — driven, with three bounded gaps
+A `RemoteTransform3D`/`RemoteTransform2D` now copies its own transform onto the
+node its `remote_path` names, resolved once over the authored tree at parse time
+(`r3f/remoteTransforms.ts`, wired in `useParsedScene.toParseResult`). This is the
+static, on-load effect Godot applies on enter-tree, not per-frame simulation, so
+it does not conflict with ADR-0008 (the relay still draws nothing). Three cases
+are deliberately not fully reproduced:
 
-- **Faithful when:** the scene is read for structure — the property is visible
-  and linted like any other NodePath.
-- **Diverges when:** a scene relies on the remote to place something. The
-  target renders at its authored transform instead of the driven one.
-- **Why not fixed:** ADR-0008 keeps runtime behaviour out of the previewer;
-  driving a transform is simulation, not description. A static one-shot apply
-  is a reasonable future option and would stay deterministic.
-- Site: `nodes/3d/remotetransform3d/`, `nodes/2d/remotetransform2d/`.
+- **`use_global_coordinates = false` is a no-op.** Measured against Godot 4.6.3
+  on a matched pair (identical tree, the flag the only difference): the
+  default global-coordinate relay repositions its target on load, the
+  local-coordinate one leaves the target at its authored transform. Godot's
+  `_update_remote` keys off the relay's transform-changed notification, which the
+  global path satisfies on a static load and the local path does not — so a
+  static previewer (nothing moves the relay at runtime) only ever shows the
+  global-coordinate drive. Reproduced, not derived. The live-editor case was not
+  measured and is not claimed either way.
+- **Cross-instance `remote_path` is not resolved.** The pass sees only the
+  authored root scene; PackedScene instances are composed later by the live scene
+  tree (ADR-0013). A `remote_path` that crosses into or out of an instanced
+  sub-scene — or a relay living inside one — is left unresolved (the target keeps
+  its authored transform). In-scene resolution (the common case) works.
+- **Relay chains resolve in document order only.** A relay whose target is
+  itself a relay resolves correctly when the driver precedes the drivee in
+  document (pre-order) order — matching Godot's tree-order enter-tree
+  application. A feedback loop (a relay driving one of its own ancestors) is not
+  iterated to a fixed point.
+
+- Site: `r3f/remoteTransforms.ts`; fixtures `unit-remote-transform-3d.tscn`,
+  `unit-remote-transform-2d.tscn`.
 
 ### SpotLight3D.spot_angle_attenuation → penumbra  *(audit #15)*
 Godot's cone-edge softness is `pow(spot_rim, spot_angle_attenuation)` — a curve
