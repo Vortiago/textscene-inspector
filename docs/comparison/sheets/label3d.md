@@ -26,14 +26,11 @@ four labels render by default.
 
 ## Divergences
 
-Our labels carry a dark, boxy fringe hugging each glyph run: the transparent canvas
-backing is not fully keyed out, so a black halo shows around and behind the text. Godot's
-label planes are cleanly transparent, drawing only the tinted glyphs. It is most obvious
-on the yellow, cyan, and magenta labels.
-
-Glyph shapes also differ — a Chromium fallback font on our side versus Godot's bundled
-default — so letterforms, weight, and kerning vary across all four labels. This is
-inherent to rasterising through the browser's font stack.
+Glyph shapes differ — a Chromium fallback font on our side versus Godot's bundled default —
+so letterforms, weight, and kerning vary across all four labels. This is inherent to
+rasterising through the browser's font stack.
 
 Text presence, colour, placement, per-label size, billboard orientation, and the black
-outline on "Outlined Text" all match.
+outline on "Outlined Text" all match. The canvas texture is now premultiplied, so the
+glyphs no longer carry a dark halo, and the outline is scaled to Godot's thinner
+font-outline weight rather than a heavy centred stroke.
