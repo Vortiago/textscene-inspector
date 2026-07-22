@@ -47,4 +47,8 @@ export interface Node2DProperties {
   modulate: Color;
   /** CanvasItem RGBA tint; multiplies onto this node's own pixels only (not inherited). */
   self_modulate: Color;
+  /** When true, CanvasItem descendants are sorted by their world-space Y position. */
+  y_sort_enabled: boolean;
+  /** Y offset applied to sort keys (only meaningful for TileMapLayer tiles). */
+  y_sort_origin: number;
 }

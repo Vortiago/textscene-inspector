@@ -58,6 +58,12 @@ export function formatNode2DProperties(properties: Node2DProperties): PropertySe
   if (!isWhite(properties.self_modulate)) {
     canvasItems.push({ label: 'Self Modulate', value: formatColorRgba(properties.self_modulate) });
   }
+  if (properties.y_sort_enabled) {
+    canvasItems.push({ label: 'Y Sort Enabled', value: 'Yes' });
+    if (properties.y_sort_origin !== 0) {
+      canvasItems.push({ label: 'Y Sort Origin', value: properties.y_sort_origin.toFixed(1) });
+    }
+  }
   sections.push({ title: 'CanvasItem', items: canvasItems });
 
   if (properties.instance) {

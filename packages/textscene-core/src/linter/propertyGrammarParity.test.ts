@@ -121,14 +121,17 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
       // CanvasItem draw-order / tint properties parsed by the renderer but
       // not validated by the linter (no format constraints that could fail).
       'visible', 'modulate', 'self_modulate', 'show_behind_parent',
+      // y_sort_origin only meaningful for TileMapLayer tiles; no linter
+      // validator needed (any number is valid).
+      'y_sort_origin',
     ],
     linterOnly: [
-      // Global-space equivalents and y-sort flag — valid TSCN but the
-      // renderer ignores them (uses local transform / draw order).
+      // Global-space equivalents — valid TSCN but the renderer ignores them
+      // (uses local transform / draw order).
       'global_position', 'global_rotation', 'global_rotation_degrees',
-      'global_scale', 'global_skew', 'global_transform', 'y_sort_enabled',
+      'global_scale', 'global_skew', 'global_transform',
     ],
-    reason: 'Parser reads CanvasItem tint/draw-order fields not covered by linter validators; linter validates global-space and y-sort properties the renderer ignores.',
+    reason: 'Parser reads CanvasItem tint/draw-order and y_sort_origin fields not covered by linter validators; linter validates global-space properties the renderer ignores.',
   },
 
   Control: {
