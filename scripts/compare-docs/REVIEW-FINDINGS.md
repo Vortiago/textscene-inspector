@@ -93,3 +93,30 @@ static authored pose, matching our previewer.
 
 **Expected-no-fix (documented):** DirectionalLight3D (shadow cast but occluded
 from this camera), PathFollow2D (progress_ratio divergence is real + intended).
+
+## Dispatch (2026-07-22)
+
+Fixes split by resource to avoid the shared-`dist/` / shared-`run.mjs` races:
+
+- **Fixture workflow** (Godot-verify only, no build, no commit): Camera3D, Path3D,
+  PathFollow3D, Sprite2D, TileMap, TileMapLayer, PanelContainer, AnimatedSprite2D.
+- **Agent P — 3D + Label3D** (web build; no `run.mjs`): torus imperative
+  `rotateX(π/2)` + audit ALL primitives (esp. PlaneMesh) pixel-checked vs Godot;
+  Label3D `showLabels` default ON (verified it gates Label3D text, then rebaseline).
+- **Harness freeze** ✅ DONE + verified. `_freeze_game_logic()` before `_settle()`
+  in both `_render_3d`/`_render_2d` — `RigidBody3D/2D.freeze`, `AnimationPlayer.stop()`,
+  `AnimationTree.active=false`. Verified by render: frozen RigidBody3D sits at authored
+  y=1 (matches ours; old harness = fallen low) and frozen AnimationTree is upright at
+  rest (matches ours; old = rotated mid-blend). Guarded by a new `renderReference`
+  integration test asserting the crate's AABB floor stays at y=0.5. CollisionShape3D
+  rides the same RigidBody fall → covered.
+- **Agent Q — 2D theme cluster** (web build; after P, shares `dist/`):
+  `godotDefaultTheme.ts` + GridContainer `alignContent:'start'` + HBox Label
+  vertical SHRINK_CENTER + OptionButton dropdown colours.
+- **STAGED next — capture gizmos ON both sides**: Camera3D frustum,
+  CollisionShape3D outline, NavigationRegion3D navmesh need capture-time toggle
+  plumbing (ours) + a check whether headless Godot renders nav/collision debug
+  (may be editor-only). Not folded into this wave; tracked here so it doesn't slip.
+
+Then Wave 2: `generate:fixtures`, re-capture affected images (serial ours-capture),
+re-write affected sheets, rebuild + publish gallery, commit, push.
