@@ -1003,6 +1003,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Materials"
   },
   {
+    "name": "Material Refraction",
+    "file": "unit-material-refraction.tscn",
+    "category": "Unit - Materials"
+  },
+  {
     "name": "Material Rim",
     "file": "unit-material-rim.tscn",
     "category": "Unit - Materials"

@@ -62,6 +62,46 @@ describe('StandardMaterial3D Linter Validators', () => {
     });
   });
 
+  describe('refraction_enabled validator', () => {
+    it('should accept "true"', () => {
+      const validator = validatorRegistry.findValidator('StandardMaterial3D', 'refraction_enabled');
+      expect(validator).not.toBeNull();
+
+      const result = validator!('refraction_enabled', 'true', 1);
+      expect(result).toBeNull();
+    });
+
+    it('should reject invalid boolean', () => {
+      const validator = validatorRegistry.findValidator('StandardMaterial3D', 'refraction_enabled');
+      const result = validator!('refraction_enabled', 'yes', 1);
+
+      expect(result).not.toBeNull();
+      expect(result!.severity).toBe('error');
+      expect(result!.message).toContain('must be "true" or "false"');
+      expect(result!.code).toBe('INVALID_BOOLEAN');
+    });
+  });
+
+  describe('anisotropy_enabled validator', () => {
+    it('should accept "true"', () => {
+      const validator = validatorRegistry.findValidator('StandardMaterial3D', 'anisotropy_enabled');
+      expect(validator).not.toBeNull();
+
+      const result = validator!('anisotropy_enabled', 'true', 1);
+      expect(result).toBeNull();
+    });
+
+    it('should reject invalid boolean', () => {
+      const validator = validatorRegistry.findValidator('StandardMaterial3D', 'anisotropy_enabled');
+      const result = validator!('anisotropy_enabled', 'yes', 1);
+
+      expect(result).not.toBeNull();
+      expect(result!.severity).toBe('error');
+      expect(result!.message).toContain('must be "true" or "false"');
+      expect(result!.code).toBe('INVALID_BOOLEAN');
+    });
+  });
+
   describe('normal_texture validator', () => {
     it('should accept valid ExtResource reference', () => {
       const validator = validatorRegistry.findValidator('StandardMaterial3D', 'normal_texture');
