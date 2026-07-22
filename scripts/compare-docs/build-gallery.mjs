@@ -1,0 +1,340 @@
+#!/usr/bin/env node
+/**
+ * Assemble the comparison sheets under `docs/comparison/sheets/*.md` and the
+ * screenshots under `docs/comparison/images/` into one browsable HTML gallery:
+ * Godot beside our renderer, per node type, under a drag-slider.
+ *
+ *   node scripts/compare-docs/build-gallery.mjs                # -> docs/comparison/index.html, images referenced
+ *   node scripts/compare-docs/build-gallery.mjs --inline --out /tmp/gallery.html   # self-contained (artifact/preview)
+ *
+ * The sheets carry only content (see SHEET-STANDARD.md); everything visual is
+ * decided here, so re-styling the gallery never touches a sheet and refreshing
+ * the screenshots (`capture.mjs`) never touches one either.
+ *
+ * `--inline` base64-embeds every image so the file stands alone under an
+ * artifact's strict CSP; the default references `images/…` for the committed,
+ * website-served copy.
+ */
+
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const here = dirname(fileURLToPath(import.meta.url));
+const REPO_ROOT = join(here, '../..');
+const SHEETS_DIR = join(REPO_ROOT, 'docs/comparison/sheets');
+const IMAGES_DIR = join(REPO_ROOT, 'docs/comparison/images');
+
+function parseArgs(argv) {
+  const args = { inline: false, out: join(REPO_ROOT, 'docs/comparison/index.html') };
+  for (let i = 0; i < argv.length; i++) {
+    if (argv[i] === '--inline') args.inline = true;
+    else if (argv[i] === '--out') args.out = argv[++i];
+    else throw new Error(`Unknown flag ${argv[i]}`);
+  }
+  return args;
+}
+
+/** Split a sheet into `--- key: value ---` frontmatter and the Markdown body. */
+function parseSheet(text, file) {
+  const match = /^---\n([\s\S]*?)\n---\n([\s\S]*)$/.exec(text);
+  if (!match) throw new Error(`${file}: missing frontmatter`);
+  const meta = {};
+  for (const line of match[1].split('\n')) {
+    const kv = /^(\w+):\s*(.*)$/.exec(line.trim());
+    if (kv) meta[kv[1]] = kv[2].replace(/^#.*$/, '').trim();
+  }
+  for (const key of ['type', 'category', 'image']) {
+    if (!meta[key]) throw new Error(`${file}: frontmatter missing "${key}"`);
+  }
+  return { meta, body: match[2].trim() };
+}
+
+const escapeHtml = (s) =>
+  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+/** Inline Markdown: `code`, **bold**, and [text](href). Escapes first. */
+function inline(text) {
+  return escapeHtml(text)
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+}
+
+/**
+ * Render the strict Markdown subset the sheet standard permits: `##` headings,
+ * pipe tables, paragraphs. The `# H1` and the two `![]()` images are dropped —
+ * the gallery supplies the title and lays the images out itself.
+ */
+function renderBody(body) {
+  const lines = body.split('\n');
+  const out = [];
+  let paragraph = [];
+  const flush = () => {
+    if (paragraph.length) {
+      out.push(`<p>${inline(paragraph.join(' '))}</p>`);
+      paragraph = [];
+    }
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (/^#\s/.test(line) || /^!\[/.test(line.trim())) continue; // H1 and images handled elsewhere
+    if (/^##\s/.test(line)) {
+      flush();
+      out.push(`<h3>${inline(line.replace(/^##\s/, ''))}</h3>`);
+    } else if (/^\|/.test(line.trim())) {
+      flush();
+      const rows = [line];
+      while (i + 1 < lines.length && /^\|/.test(lines[i + 1].trim())) rows.push(lines[++i]);
+      out.push(renderTable(rows));
+    } else if (line.trim() === '') {
+      flush();
+    } else {
+      paragraph.push(line.trim());
+    }
+  }
+  flush();
+  return out.join('\n');
+}
+
+function renderTable(rows) {
+  const cells = (r) =>
+    r
+      .trim()
+      .replace(/^\||\|$/g, '')
+      .split('|')
+      .map((c) => c.trim());
+  const isDivider = (r) => /^[\s|:-]+$/.test(r);
+  const body = rows.filter((r) => !isDivider(r));
+  const [head, ...rest] = body;
+  const th = cells(head).map((c) => `<th>${inline(c)}</th>`).join('');
+  const trs = rest
+    .map((r) => `<tr>${cells(r).map((c) => `<td>${inline(c)}</td>`).join('')}</tr>`)
+    .join('');
+  return `<div class="tablewrap"><table><thead><tr>${th}</tr></thead><tbody>${trs}</tbody></table></div>`;
+}
+
+/** A screenshot as a `src` value — a data URI under `--inline`, else a relative path. */
+function imageSrc(basename, side, inlineImages) {
+  const rel = `images/${basename}-${side}.png`;
+  const file = join(IMAGES_DIR, `${basename}-${side}.png`);
+  if (!existsSync(file)) return null;
+  if (!inlineImages) return rel;
+  return `data:image/png;base64,${readFileSync(file).toString('base64')}`;
+}
+
+const CATEGORY_ORDER = ['3D', '2D', 'Other'];
+
+function build(sheets, inlineImages) {
+  const missing = [];
+  const nodes = sheets
+    .map(({ meta, body }) => {
+      const godot = imageSrc(meta.image, 'godot', inlineImages);
+      const ours = imageSrc(meta.image, 'ours', inlineImages);
+      if (!godot || !ours) missing.push(`${meta.type} (${meta.image})`);
+      return {
+        type: meta.type,
+        category: CATEGORY_ORDER.includes(meta.category) ? meta.category : 'Other',
+        fixture: meta.fixture ?? '',
+        rendersAs: meta.renders_as ?? '',
+        godot,
+        ours,
+        html: renderBody(body),
+      };
+    })
+    .sort((a, b) => a.type.localeCompare(b.type));
+
+  const groups = CATEGORY_ORDER.map((category) => ({
+    category,
+    items: nodes.filter((n) => n.category === category),
+  })).filter((g) => g.items.length);
+
+  const nav = groups
+    .map(
+      (g) =>
+        `<div class="nav-group"><div class="nav-head">${g.category}</div>${g.items
+          .map(
+            (n) =>
+              `<button class="nav-item" data-type="${n.type}">${n.type}</button>`
+          )
+          .join('')}</div>`
+    )
+    .join('');
+
+  const panels = nodes
+    .map(
+      (n) => `
+    <article class="sheet" data-type="${n.type}" hidden>
+      <header class="sheet-head">
+        <h2>${escapeHtml(n.type)}</h2>
+        ${n.rendersAs ? `<span class="renders">renders as ${inline(n.rendersAs)}</span>` : ''}
+        ${n.fixture ? `<span class="fixture"><code>${escapeHtml(n.fixture)}</code></span>` : ''}
+      </header>
+      <div class="compare" data-godot="${n.godot}" data-ours="${n.ours}">
+        <div class="stage">
+          <img class="base" src="${n.godot}" alt="Godot render of ${escapeHtml(n.type)}">
+          <div class="over"><img src="${n.ours}" alt="Our render of ${escapeHtml(n.type)}"></div>
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose">${n.html}</div>
+    </article>`
+    )
+    .join('');
+
+  return { html: page(nav, panels, nodes[0]?.type), missing };
+}
+
+function page(nav, panels, firstType) {
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Godot ⇄ TextScene — render comparison</title>
+<style>${CSS}</style>
+</head>
+<body>
+<aside class="side">
+  <div class="brand"><span class="dot"></span>Render comparison</div>
+  <input id="search" type="search" placeholder="Filter nodes…" aria-label="Filter nodes">
+  <nav>${nav}</nav>
+</aside>
+<main id="main">${panels}</main>
+<script>const FIRST=${JSON.stringify(firstType ?? null)};${JS}</script>
+</body>
+</html>`;
+}
+
+const CSS = String.raw`
+:root{
+  --bg:#f5f6f8; --panel:#fff; --panel-2:#eceef2; --ink:#161a20; --muted:#5c6470;
+  --line:#dde1e8; --godot:#b07430; --ours:#37729e; --ok:#2f8158; --warn:#b4553a;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0e1014; --panel:#161a20; --panel-2:#1d222b; --ink:#e6e9ee; --muted:#98a1af;
+  --line:#272d38; --godot:#d69b58; --ours:#69a8d6; --ok:#57b085; --warn:#e07a5f;
+}}
+:root[data-theme=dark]{--bg:#0e1014;--panel:#161a20;--panel-2:#1d222b;--ink:#e6e9ee;--muted:#98a1af;--line:#272d38;--godot:#d69b58;--ours:#69a8d6;--ok:#57b085;--warn:#e07a5f}
+:root[data-theme=light]{--bg:#f5f6f8;--panel:#fff;--panel-2:#eceef2;--ink:#161a20;--muted:#5c6470;--line:#dde1e8;--godot:#b07430;--ours:#37729e;--ok:#2f8158;--warn:#b4553a}
+*{box-sizing:border-box}
+body{margin:0;display:grid;grid-template-columns:264px 1fr;min-height:100vh;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.6}
+.side{border-right:1px solid var(--line);background:var(--panel);padding:18px 14px;position:sticky;top:0;height:100vh;overflow-y:auto}
+.brand{display:flex;align-items:center;gap:8px;font-weight:650;font-size:15px;letter-spacing:-.01em;margin-bottom:14px}
+.dot{width:10px;height:10px;border-radius:50%;background:linear-gradient(135deg,var(--godot),var(--ours))}
+#search{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--panel-2);color:var(--ink);font:inherit;font-size:13px;margin-bottom:12px}
+#search:focus{outline:2px solid var(--ours);outline-offset:1px}
+.nav-group{margin-bottom:14px}
+.nav-head{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);padding:0 8px 6px}
+.nav-item{display:block;width:100%;text-align:left;border:0;background:none;color:var(--ink);font:inherit;font-size:13.5px;padding:5px 8px;border-radius:6px;cursor:pointer}
+.nav-item:hover{background:var(--panel-2)}
+.nav-item[aria-current=true]{background:var(--ours);color:#fff}
+main{padding:28px clamp(16px,4vw,48px)}
+.sheet{max-width:900px;margin:0 auto}
+.sheet-head{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:18px}
+.sheet-head h2{margin:0;font-size:26px;letter-spacing:-.02em}
+.renders{color:var(--muted);font-size:14px}
+.renders code{color:var(--ours)}
+.fixture{margin-left:auto;font-size:12px;color:var(--muted)}
+code{font-family:var(--mono);font-size:.9em;background:var(--panel-2);padding:1px 5px;border-radius:4px}
+.compare{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.stage{position:relative;user-select:none;touch-action:none;background:var(--panel-2)}
+.stage img{display:block;width:100%;height:auto}
+.over{position:absolute;inset:0;overflow:hidden;width:50%}
+.over img{position:absolute;top:0;left:0;height:100%;width:auto;max-width:none}
+.stage.sbs{display:grid;grid-template-columns:1fr 1fr;gap:2px}
+.stage.sbs .over{position:static;width:auto;overflow:visible}
+.stage.sbs .over img{position:static;width:100%;height:auto}
+.stage.sbs .handle{display:none}
+.handle{position:absolute;top:0;bottom:0;left:50%;width:2px;margin-left:-1px;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.4);cursor:ew-resize}
+.handle::after{content:"";position:absolute;top:50%;left:50%;width:28px;height:28px;transform:translate(-50%,-50%);border-radius:50%;background:#fff;box-shadow:0 1px 5px rgba(0,0,0,.4)}
+.tag{position:absolute;top:8px;font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#fff;padding:3px 7px;border-radius:5px}
+.tag.g{left:8px;background:var(--godot)}.tag.o{right:8px;background:var(--ours)}
+.stage.sbs .tag.o{right:auto;left:calc(50% + 8px)}
+.modes{display:flex;gap:6px;padding:10px 12px;border-top:1px solid var(--line)}
+.modes button{font:inherit;font-size:12.5px;border:1px solid var(--line);background:var(--panel-2);color:var(--ink);border-radius:7px;padding:5px 11px;cursor:pointer}
+.modes button[aria-pressed=true]{background:var(--ours);border-color:var(--ours);color:#fff}
+.prose{margin-top:22px}
+.prose h3{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:26px 0 10px}
+.prose p{margin:0 0 12px;max-width:70ch}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;margin:0 0 12px}
+table{border-collapse:collapse;width:100%;font-size:14px;min-width:440px}
+th,td{text-align:left;padding:8px 13px;border-bottom:1px solid var(--line)}
+th{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+td{font-variant-numeric:tabular-nums}
+tr:last-child td{border-bottom:0}
+@media (max-width:720px){body{grid-template-columns:1fr}.side{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line)}}
+`;
+
+const JS = String.raw`
+const items=[...document.querySelectorAll('.nav-item')];
+const sheets=[...document.querySelectorAll('.sheet')];
+function show(type){
+  sheets.forEach(s=>s.hidden=s.dataset.type!==type);
+  items.forEach(b=>b.setAttribute('aria-current',String(b.dataset.type===type)));
+  const active=sheets.find(s=>s.dataset.type===type);
+  if(active) initCompare(active);
+  location.hash=encodeURIComponent(type);
+}
+items.forEach(b=>b.addEventListener('click',()=>show(b.dataset.type)));
+document.getElementById('search').addEventListener('input',e=>{
+  const q=e.target.value.toLowerCase();
+  items.forEach(b=>{b.style.display=b.dataset.type.toLowerCase().includes(q)?'':'none';});
+  document.querySelectorAll('.nav-group').forEach(g=>{
+    g.style.display=[...g.querySelectorAll('.nav-item')].some(b=>b.style.display!=='none')?'':'none';
+  });
+});
+function initCompare(sheet){
+  const stage=sheet.querySelector('.stage');
+  const over=sheet.querySelector('.over');
+  const handle=sheet.querySelector('.handle');
+  if(stage.dataset.wired)return; stage.dataset.wired='1';
+  let split=.5;
+  const place=()=>{const w=stage.clientWidth;over.style.width=(split*100)+'%';handle.style.left=(split*100)+'%';
+    const img=over.querySelector('img');img.style.width=w+'px';};
+  const set=x=>{const r=stage.getBoundingClientRect();split=Math.min(1,Math.max(0,(x-r.left)/r.width));place();};
+  let drag=false;
+  handle.addEventListener('pointerdown',e=>{drag=true;handle.setPointerCapture(e.pointerId);});
+  stage.addEventListener('pointermove',e=>{if(drag)set(e.clientX);});
+  addEventListener('pointerup',()=>{drag=false;});
+  new ResizeObserver(place).observe(stage);
+  sheet.querySelectorAll('[data-mode]').forEach(btn=>btn.addEventListener('click',()=>{
+    sheet.querySelectorAll('[data-mode]').forEach(b=>b.setAttribute('aria-pressed',String(b===btn)));
+    stage.classList.toggle('sbs',btn.dataset.mode==='sbs');
+    if(btn.dataset.mode==='slider')place();
+  }));
+  place();
+}
+const initial=decodeURIComponent(location.hash.slice(1))||FIRST;
+if(initial)show(initial);
+`;
+
+function main() {
+  const args = parseArgs(process.argv.slice(2));
+  if (!existsSync(SHEETS_DIR)) throw new Error(`No sheets at ${SHEETS_DIR}`);
+  const files = readdirSync(SHEETS_DIR).filter((f) => f.endsWith('.md'));
+  if (files.length === 0) throw new Error('No sheets to build');
+
+  const sheets = files.map((f) => parseSheet(readFileSync(join(SHEETS_DIR, f), 'utf8'), f));
+  const { html, missing } = build(sheets, args.inline);
+
+  mkdirSync(dirname(args.out), { recursive: true });
+  writeFileSync(args.out, html);
+  console.log(`[gallery] ${sheets.length} sheet(s) → ${args.out}`);
+  if (missing.length) {
+    console.error(`[gallery] ${missing.length} sheet(s) reference a MISSING image:`);
+    for (const m of missing) console.error(`  ${m}`);
+    process.exitCode = 1;
+  }
+}
+
+main();

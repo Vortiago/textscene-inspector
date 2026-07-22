@@ -150,3 +150,30 @@ One file per node type, terse, no narration:
 
 Corpus counts never justify an omission (see `docs/PARITY-LIMITATIONS.md`'s
 header); "no fixture covers this property" is a gap to fill, not a note to write.
+
+## Fixture quality — the rule for a fixture that earns a sheet
+
+A fixture that renders an empty frame documents nothing. Every fixture backing a
+sheet must actually *show the node doing its job*, judged against real Godot.
+Decided policy, in order of preference:
+
+1. **Missing fixture** → create one. A supported visual node type with no fixture
+   that demonstrates it gets one, house style (`SHEET-STANDARD.md` neighbours:
+   6×6 ground at y=−1, a 1×1 reference box, content within ±2 of origin).
+2. **Fixture that showcases the node poorly** (the AreaLight3D case — a light with
+   nothing to light) → rewrite it to demonstrate the effect, mirroring its
+   siblings so the family stays comparable.
+3. **Content that does not all fit at the editor camera** → first move/scale the
+   elements toward the origin if that does not distort what the fixture tests;
+   only if that is not viable, author one or more `Camera3D` nodes and capture
+   from them (Godot via `--scene-camera`; ours by activating that camera). A
+   camera is the fallback, not the first move, because both renderers ignore
+   scene cameras by default and a camera reintroduces the two-sides-must-agree
+   coupling the default-camera design removed.
+4. **A node whose whole point is motion** (AnimationPlayer, and anything it
+   drives) → capture a short GIF of it running on both sides rather than a still,
+   so the sheet shows the animation actually playing.
+
+A node that genuinely has no runtime visual in Godot (Timer, RemoteTransform's
+own body, an editor-only navmesh debug draw) is exempt — its sheet says so in one
+line, and no geometry is invented to fake a picture.
