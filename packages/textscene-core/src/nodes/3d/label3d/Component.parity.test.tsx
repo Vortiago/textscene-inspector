@@ -82,11 +82,12 @@ describe('Label3D render parity', () => {
     expect(color.r).toBeCloseTo(srgbToLinear(0.5), 4); // ≈ 0.214, not 0.5
   });
 
-  it('outline_size scales canvas lineWidth by render/Godot font ratio (#14)', async () => {
-    // outline_size 12 default; canvas renders at RENDER_FONT_SIZE 128, Godot
-    // font_size default 32 → lineWidth = 12 × (128 / 32) = 48.
+  it('outline_size scales canvas lineWidth by render/Godot font ratio, then Godot outline weight (#14)', async () => {
+    // outline_size 12; canvas renders at RENDER_FONT_SIZE 128, Godot font_size
+    // default 32 → raw 12 × (128 / 32) = 48, then × OUTLINE_WIDTH_SCALE (0.33)
+    // so the canvas stroke matches Godot's thinner font-outline: ≈ 15.84.
     await renderLabel(node({ outline_size: '12' }));
-    expect(mockContext.lineWidth).toBeCloseTo(48, 5);
+    expect(mockContext.lineWidth).toBeCloseTo(48 * 0.33, 4);
   });
 
   it('quad height = canvas pixels × pixel_size × worldScale (Godot 32 / render 128)', async () => {

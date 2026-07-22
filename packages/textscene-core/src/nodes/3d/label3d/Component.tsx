@@ -30,6 +30,15 @@ const RENDER_FONT_SIZE = 128;
 /** Padding baked into the canvas around the text, in render pixels. */
 const CANVAS_PADDING = 10;
 
+/**
+ * Godot renders a Label3D outline far thinner than a centred canvas `strokeText`
+ * of the same `outline_size`: three-outward vs Godot's font-outline rasteriser.
+ * Measured against a real Godot render of `unit-label3d.tscn`, a raw stroke came
+ * out ~3x too heavy (Godot's black outline runs ~2 px where ours ran ~6–7 px),
+ * so the stroke width is scaled to match Godot's outline weight.
+ */
+const OUTLINE_WIDTH_SCALE = 0.33;
+
 export function Label3D({ node, children }: NodeComponentProps) {
   const { showLabels } = useViewportMode();
   const properties = node.properties as Label3DProperties;
@@ -91,6 +100,7 @@ export function Label3D({ node, children }: NodeComponentProps) {
           map={built.texture}
           color={tint}
           transparent
+          premultipliedAlpha
           opacity={properties.modulate.a}
           side={properties.double_sided === false ? THREE.FrontSide : THREE.DoubleSide}
           depthWrite={false}
@@ -147,12 +157,19 @@ function buildLabelTexture(
     // font after sizing the canvas.
     context.font = `${fontSize}px Arial`;
 
-    // outline_size is in Godot font-pixels; scale to the canvas resolution.
+    // outline_size is in Godot font-pixels; scale to the canvas resolution, then
+    // by OUTLINE_WIDTH_SCALE to match Godot's thinner font-outline rasteriser.
     const strokeWidth =
-      properties.outline_size > 0 ? properties.outline_size * renderScale : 0;
+      properties.outline_size > 0
+        ? properties.outline_size * renderScale * OUTLINE_WIDTH_SCALE
+        : 0;
     if (strokeWidth > 0) {
       context.strokeStyle = colorToCss(properties.outline_modulate);
       context.lineWidth = strokeWidth;
+      // Round the outline joins so the stroke hugs the glyph instead of spiking
+      // into boxy miter corners — Godot's outline is a smooth dilation.
+      context.lineJoin = 'round';
+      context.miterLimit = 2;
     }
 
     // Rasterise the text in white. The material's `color` carries the
@@ -168,6 +185,11 @@ function buildLabelTexture(
     });
 
     const texture = new THREE.CanvasTexture(canvas);
+    // Premultiply alpha on upload so the transparent canvas edges (a white glyph
+    // fading to 0-alpha black) don't bilinear-interpolate their RGB toward black
+    // and leave a dark fringe hugging every glyph. Paired with the material's
+    // `premultipliedAlpha` blend below.
+    texture.premultiplyAlpha = true;
     texture.needsUpdate = true;
 
     // Godot world size = glyph-pixels (at the Godot font_size) × pixel_size.
