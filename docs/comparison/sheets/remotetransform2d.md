@@ -3,7 +3,6 @@ type: RemoteTransform2D
 category: 2D
 fixture: unit-remote-transform-2d.tscn
 image: unit-remote-transform-2d
-visual: false
 renders_as: nothing itself; it copies its transform onto its remote_path target
 ---
 

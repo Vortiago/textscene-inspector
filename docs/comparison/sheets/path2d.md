@@ -3,6 +3,7 @@ type: Path2D
 category: 2D
 fixture: unit-path2d.tscn
 image: unit-path2d
+visual: false
 renders_as: nothing at runtime; a selection-gated curve gizmo
 ---
 

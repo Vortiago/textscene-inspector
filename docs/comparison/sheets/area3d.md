@@ -3,6 +3,7 @@ type: Area3D
 category: 3D
 fixture: edge-area3d-inactive.tscn
 image: edge-area3d-inactive
+visual: false
 renders_as: an invisible transform-only group
 ---
 

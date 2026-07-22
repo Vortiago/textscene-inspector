@@ -3,6 +3,7 @@ type: CollisionShape2D
 category: 2D
 fixture: unit-collisionshape2d.tscn
 image: unit-collisionshape2d
+visual: false
 renders_as: a toggle-gated collision outline
 ---
 

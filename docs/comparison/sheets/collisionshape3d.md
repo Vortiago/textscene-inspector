@@ -9,7 +9,6 @@ renders_as: a toggle-gated collision wireframe
 # CollisionShape3D
 
 CollisionShape3D attaches a collision shape to a physics body and has no runtime
-visual: the previewer draws the shape as a wireframe gizmo only when "Visible
 Collision Shapes" is enabled (ADR-0005 / ADR-0006), off by default. So this plain
 capture draws nothing for it — the salmon cube on screen is the sibling
 `CrateMesh` (a MeshInstance3D) under the same RigidBody3D.

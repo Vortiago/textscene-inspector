@@ -3,6 +3,7 @@ type: Marker2D
 category: 2D
 fixture: unit-marker2d.tscn
 image: unit-marker2d
+visual: false
 renders_as: a selection-gated cross gizmo
 ---
 

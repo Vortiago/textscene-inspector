@@ -3,7 +3,6 @@ type: CanvasLayer
 category: 2D
 fixture: unit-canvas-layer.tscn
 image: unit-canvas-layer
-visual: false
 renders_as: a full-rect passthrough layer hosting Control children
 ---
 

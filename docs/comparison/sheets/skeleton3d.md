@@ -3,6 +3,7 @@ type: Skeleton3D
 category: 3D
 fixture: unit-skeleton3d.tscn
 image: unit-skeleton3d
+visual: false
 renders_as: a transform-only group
 ---
 

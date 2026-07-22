@@ -3,6 +3,7 @@ type: NavigationRegion2D
 category: 2D
 fixture: unit-navigation-region-2d.tscn
 image: unit-navigation-region-2d
+visual: false
 renders_as: a translucent green navigation-mesh overlay
 ---
 

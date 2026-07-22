@@ -3,7 +3,6 @@ type: Camera2D
 category: 2D
 fixture: unit-remote-transform-2d.tscn
 image: unit-remote-transform-2d
-visual: false
 renders_as: a 2D view frame with no drawn geometry
 ---
 

@@ -3,6 +3,7 @@ type: NavigationRegion3D
 category: 3D
 fixture: unit-navigation-region-3d.tscn
 image: unit-navigation-region-3d
+visual: false
 renders_as: a translucent green navmesh overlay
 ---
 

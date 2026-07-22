@@ -3,6 +3,7 @@ type: Marker3D
 category: 3D
 fixture: unit-marker-3d.tscn
 image: unit-marker-3d
+visual: false
 renders_as: a selection-gated axis-cross gizmo
 ---
 
