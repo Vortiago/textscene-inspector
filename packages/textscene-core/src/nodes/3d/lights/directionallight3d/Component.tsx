@@ -14,6 +14,7 @@ import {
   DEFAULT_SHADOW_BIAS,
   DIRECTIONAL_SHADOW_FRUSTUM_HALF,
   DIRECTIONAL_SHADOW_NEAR,
+  SHADOW_MAP_SIZE,
 } from '../../../../r3f/lightConstants';
 import { LightWithTarget } from '../shared/lightShared';
 import { DirectionalLightGizmo } from '../shared/lightHelpers';
@@ -47,6 +48,8 @@ export function DirectionalLight3D({ node, children }: NodeComponentProps) {
             color={color}
             intensity={intensity}
             castShadow={properties.shadow_enabled}
+            shadow-mapSize-width={SHADOW_MAP_SIZE}
+            shadow-mapSize-height={SHADOW_MAP_SIZE}
             shadow-bias={bias}
             shadow-camera-near={DIRECTIONAL_SHADOW_NEAR}
             shadow-camera-far={shadowFar}

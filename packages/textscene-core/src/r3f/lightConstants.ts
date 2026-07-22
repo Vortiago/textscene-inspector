@@ -69,6 +69,15 @@ export const DIRECTIONAL_SHADOW_FRUSTUM_HALF = 20;
 export const SHADOW_RADIUS_DEFAULT = 4;
 
 /**
+ * Shadow-map resolution for every casting light. three defaults to 512, which
+ * reads as blocky next to Godot's shadows; 2048 gives 4x the linear resolution
+ * — over the directional light's 40-unit frustum that is ~0.02-unit texels,
+ * ample for the small casters a preview scene holds — while staying cheap enough
+ * for a single headless frame. Shared so the three light types cannot drift.
+ */
+export const SHADOW_MAP_SIZE = 2048;
+
+/**
  * Default shadow bias values per light type.
  * These prevent shadow acne while minimizing peter-panning.
  */
