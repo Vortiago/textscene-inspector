@@ -3,6 +3,7 @@ type: Node3D
 category: 3D
 fixture: unit-node3d-basic.tscn
 image: unit-node3d-basic
+visual: false
 renders_as: an invisible transform group
 ---
 

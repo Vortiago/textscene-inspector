@@ -3,6 +3,7 @@ type: Node2D
 category: 2D
 fixture: unit-area2d.tscn
 image: unit-area2d
+visual: false
 renders_as: a transform-only THREE.Group
 ---
 

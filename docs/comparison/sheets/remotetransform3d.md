@@ -3,6 +3,7 @@ type: RemoteTransform3D
 category: 3D
 fixture: unit-remote-transform-3d.tscn
 image: unit-remote-transform-3d
+visual: false
 renders_as: nothing (a transform-only group that drives its target)
 ---
 

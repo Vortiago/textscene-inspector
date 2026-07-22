@@ -3,6 +3,7 @@ type: NavigationObstacle3D
 category: 3D
 fixture: unit-navigation-obstacle-3d.tscn
 image: unit-navigation-obstacle-3d
+visual: false
 renders_as: a transform-only group (no runtime visual)
 ---
 

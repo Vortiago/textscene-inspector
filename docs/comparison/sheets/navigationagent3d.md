@@ -3,6 +3,7 @@ type: NavigationAgent3D
 category: 3D
 fixture: unit-navigation-agent-3d.tscn
 image: unit-navigation-agent-3d
+visual: false
 renders_as: nothing (non-visual navigation helper)
 ---
 

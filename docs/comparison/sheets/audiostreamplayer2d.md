@@ -3,6 +3,7 @@ type: AudioStreamPlayer2D
 category: 2D
 fixture: unit-audio-stream-player-2d.tscn
 image: unit-audio-stream-player-2d
+visual: false
 renders_as: an invisible Node2D transform group
 ---
 

@@ -3,6 +3,7 @@ type: AudioStreamPlayer
 category: Other
 fixture: unit-physics-bodies.tscn
 image: unit-physics-bodies
+visual: false
 renders_as: nothing (a non-spatial audio node)
 ---
 

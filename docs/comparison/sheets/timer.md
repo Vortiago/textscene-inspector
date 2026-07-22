@@ -3,6 +3,7 @@ type: Timer
 category: Other
 fixture: unit-timer.tscn
 image: unit-timer
+visual: false
 renders_as: nothing (a countdown timer node)
 ---
 

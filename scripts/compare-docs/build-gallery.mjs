@@ -144,6 +144,11 @@ function build(sheets, inlineImages, fragment) {
       return {
         type: meta.type,
         category: CATEGORY_ORDER.includes(meta.category) ? meta.category : 'Other',
+        // A node with no visual output at all (Timer, an AudioStreamPlayer, a
+        // RemoteTransform body) sets `visual: false`; the gallery then shows an
+        // explicit "no visual output" note instead of an empty image pair that
+        // would imply something should be there.
+        visual: meta.visual !== 'false',
         fixture: meta.fixture ?? '',
         rendersAs: meta.renders_as ?? '',
         godot,
@@ -153,18 +158,25 @@ function build(sheets, inlineImages, fragment) {
     })
     .sort((a, b) => a.type.localeCompare(b.type));
 
-  const groups = CATEGORY_ORDER.map((category) => ({
-    category,
-    items: nodes.filter((n) => n.category === category),
-  })).filter((g) => g.items.length);
+  // Within each dimension (3D, 2D, Other) the nav splits Visual from Other, so a
+  // node that draws nothing sits apart from one that does.
+  const groups = CATEGORY_ORDER.flatMap((category) =>
+    [true, false].map((visual) => ({
+      category,
+      visual,
+      items: nodes.filter((n) => n.category === category && n.visual === visual),
+    }))
+  ).filter((g) => g.items.length);
 
   const nav = groups
     .map(
       (g) =>
-        `<div class="nav-group"><div class="nav-head">${g.category}</div>${g.items
+        `<div class="nav-group"><div class="nav-head">${g.category} · ${
+          g.visual ? 'Visual' : 'Other'
+        }</div>${g.items
           .map(
             (n) =>
-              `<button class="nav-item" data-type="${n.type}">${n.type}</button>`
+              `<button class="nav-item${n.visual ? '' : ' novis'}" data-type="${n.type}">${n.type}</button>`
           )
           .join('')}</div>`
     )
@@ -179,7 +191,9 @@ function build(sheets, inlineImages, fragment) {
         ${n.rendersAs ? `<span class="renders">renders as ${inline(n.rendersAs)}</span>` : ''}
         ${n.fixture ? `<span class="fixture"><code>${escapeHtml(n.fixture)}</code></span>` : ''}
       </header>
-      <div class="compare">
+      ${
+        n.visual
+          ? `<div class="compare">
         <div class="stage">
           <img class="img-godot" src="${n.godot}" alt="Godot render of ${escapeHtml(n.type)}">
           <img class="img-ours" src="${n.ours}" alt="Our render of ${escapeHtml(n.type)}">
@@ -191,7 +205,9 @@ function build(sheets, inlineImages, fragment) {
           <button data-mode="slider" aria-pressed="true">Slider</button>
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
-      </div>
+      </div>`
+          : `<div class="novisual">No visual output — this node draws nothing to compare.</div>`
+      }
       <div class="prose">${n.html}</div>
     </article>`
     )
@@ -255,6 +271,9 @@ body{margin:0;display:grid;grid-template-columns:264px 1fr;min-height:100vh;back
 .nav-item{display:block;width:100%;text-align:left;border:0;background:none;color:var(--ink);font:inherit;font-size:13.5px;padding:5px 8px;border-radius:6px;cursor:pointer}
 .nav-item:hover{background:var(--panel-2)}
 .nav-item[aria-current=true]{background:var(--ours);color:#fff}
+.nav-item.novis{color:var(--muted)}
+.nav-item.novis::after{content:"○";float:right;font-size:10px;line-height:1.6;opacity:.6}
+.novisual{background:var(--panel-2);border:1px dashed var(--line);border-radius:12px;padding:26px;text-align:center;color:var(--muted);font-size:14px}
 main{padding:28px clamp(16px,4vw,48px)}
 .sheet{max-width:900px;margin:0 auto}
 .sheet-head{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:18px}
@@ -313,6 +332,7 @@ document.getElementById('search').addEventListener('input',e=>{
 });
 function initCompare(sheet){
   const stage=sheet.querySelector('.stage');
+  if(!stage)return; // a no-visual sheet has no compare widget
   const handle=sheet.querySelector('.handle');
   if(stage.dataset.wired)return; stage.dataset.wired='1';
   // clip-path is a % of the element, so a single --split drives the clip and the
