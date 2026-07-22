@@ -1,0 +1,1809 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Godot ⇄ TextScene — render comparison</title>
+<style>
+:root{
+  --bg:#f5f6f8; --panel:#fff; --panel-2:#eceef2; --ink:#161a20; --muted:#5c6470;
+  --line:#dde1e8; --godot:#b07430; --ours:#37729e; --ok:#2f8158; --warn:#b4553a;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0e1014; --panel:#161a20; --panel-2:#1d222b; --ink:#e6e9ee; --muted:#98a1af;
+  --line:#272d38; --godot:#d69b58; --ours:#69a8d6; --ok:#57b085; --warn:#e07a5f;
+}}
+:root[data-theme=dark]{--bg:#0e1014;--panel:#161a20;--panel-2:#1d222b;--ink:#e6e9ee;--muted:#98a1af;--line:#272d38;--godot:#d69b58;--ours:#69a8d6;--ok:#57b085;--warn:#e07a5f}
+:root[data-theme=light]{--bg:#f5f6f8;--panel:#fff;--panel-2:#eceef2;--ink:#161a20;--muted:#5c6470;--line:#dde1e8;--godot:#b07430;--ours:#37729e;--ok:#2f8158;--warn:#b4553a}
+*{box-sizing:border-box}
+body{margin:0;display:grid;grid-template-columns:264px 1fr;min-height:100vh;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.6}
+.side{border-right:1px solid var(--line);background:var(--panel);padding:18px 14px;position:sticky;top:0;height:100vh;overflow-y:auto}
+.brand{display:flex;align-items:center;gap:8px;font-weight:650;font-size:15px;letter-spacing:-.01em;margin-bottom:14px}
+.dot{width:10px;height:10px;border-radius:50%;background:linear-gradient(135deg,var(--godot),var(--ours))}
+#search{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--panel-2);color:var(--ink);font:inherit;font-size:13px;margin-bottom:12px}
+#search:focus{outline:2px solid var(--ours);outline-offset:1px}
+.nav-group{margin-bottom:14px}
+.nav-head{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);padding:0 8px 6px}
+.nav-item{display:block;width:100%;text-align:left;border:0;background:none;color:var(--ink);font:inherit;font-size:13.5px;padding:5px 8px;border-radius:6px;cursor:pointer}
+.nav-item:hover{background:var(--panel-2)}
+.nav-item[aria-current=true]{background:var(--ours);color:#fff}
+main{padding:28px clamp(16px,4vw,48px)}
+.sheet{max-width:900px;margin:0 auto}
+.sheet-head{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:18px}
+.sheet-head h2{margin:0;font-size:26px;letter-spacing:-.02em}
+.renders{color:var(--muted);font-size:14px}
+.renders code{color:var(--ours)}
+.fixture{margin-left:auto;font-size:12px;color:var(--muted)}
+code{font-family:var(--mono);font-size:.9em;background:var(--panel-2);padding:1px 5px;border-radius:4px}
+.compare{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+/* Slider: godot underneath fills the box; ours overlays it, clipped from the
+   LEFT by --split so the left band shows godot and the right band shows ours —
+   which is what the corner tags say. */
+.stage{position:relative;user-select:none;touch-action:none;background:var(--panel-2);--split:50%}
+.stage img{display:block;width:100%;height:auto}
+.stage .img-ours{position:absolute;inset:0;width:100%;height:100%;clip-path:inset(0 0 0 var(--split))}
+.stage.sbs{display:grid;grid-template-columns:1fr 1fr;gap:2px}
+.stage.sbs .img-ours{position:static;width:100%;height:auto;clip-path:none}
+.stage.sbs .handle{display:none}
+.handle{position:absolute;top:0;bottom:0;left:var(--split);width:2px;margin-left:-1px;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.4);cursor:ew-resize}
+.handle::after{content:"";position:absolute;top:50%;left:50%;width:28px;height:28px;transform:translate(-50%,-50%);border-radius:50%;background:#fff;box-shadow:0 1px 5px rgba(0,0,0,.4)}
+.tag{position:absolute;top:8px;font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#fff;padding:3px 7px;border-radius:5px}
+.tag.g{left:8px;background:var(--godot)}.tag.o{right:8px;background:var(--ours)}
+.stage.sbs .tag.o{right:auto;left:calc(50% + 8px)}
+.modes{display:flex;gap:6px;padding:10px 12px;border-top:1px solid var(--line)}
+.modes button{font:inherit;font-size:12.5px;border:1px solid var(--line);background:var(--panel-2);color:var(--ink);border-radius:7px;padding:5px 11px;cursor:pointer}
+.modes button[aria-pressed=true]{background:var(--ours);border-color:var(--ours);color:#fff}
+.prose{margin-top:22px}
+.prose h3{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:26px 0 10px}
+.prose p{margin:0 0 12px;max-width:70ch}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;margin:0 0 12px}
+table{border-collapse:collapse;width:100%;font-size:14px;min-width:440px}
+th,td{text-align:left;padding:8px 13px;border-bottom:1px solid var(--line)}
+th{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+td{font-variant-numeric:tabular-nums}
+tr:last-child td{border-bottom:0}
+@media (max-width:720px){body{grid-template-columns:1fr}.side{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line)}}
+</style>
+</head>
+<body>
+<aside class="side">
+  <div class="brand"><span class="dot"></span>Render comparison</div>
+  <input id="search" type="search" placeholder="Filter nodes…" aria-label="Filter nodes">
+  <nav><div class="nav-group"><div class="nav-head">3D</div><button class="nav-item" data-type="AnimationPlayer">AnimationPlayer</button><button class="nav-item" data-type="AnimationTree">AnimationTree</button><button class="nav-item" data-type="Area3D">Area3D</button><button class="nav-item" data-type="AreaLight3D">AreaLight3D</button><button class="nav-item" data-type="AudioStreamPlayer3D">AudioStreamPlayer3D</button><button class="nav-item" data-type="Camera3D">Camera3D</button><button class="nav-item" data-type="CharacterBody3D">CharacterBody3D</button><button class="nav-item" data-type="CollisionShape3D">CollisionShape3D</button><button class="nav-item" data-type="CSGBox3D">CSGBox3D</button><button class="nav-item" data-type="CSGCylinder3D">CSGCylinder3D</button><button class="nav-item" data-type="CSGSphere3D">CSGSphere3D</button><button class="nav-item" data-type="Decal">Decal</button><button class="nav-item" data-type="DirectionalLight3D">DirectionalLight3D</button><button class="nav-item" data-type="GPUParticles3D">GPUParticles3D</button><button class="nav-item" data-type="GridMap">GridMap</button><button class="nav-item" data-type="Label3D">Label3D</button><button class="nav-item" data-type="Marker3D">Marker3D</button><button class="nav-item" data-type="MeshInstance3D">MeshInstance3D</button><button class="nav-item" data-type="NavigationAgent3D">NavigationAgent3D</button><button class="nav-item" data-type="NavigationObstacle3D">NavigationObstacle3D</button><button class="nav-item" data-type="NavigationRegion3D">NavigationRegion3D</button><button class="nav-item" data-type="Node3D">Node3D</button><button class="nav-item" data-type="OmniLight3D">OmniLight3D</button><button class="nav-item" data-type="Path3D">Path3D</button><button class="nav-item" data-type="PathFollow3D">PathFollow3D</button><button class="nav-item" data-type="RemoteTransform3D">RemoteTransform3D</button><button class="nav-item" data-type="RigidBody3D">RigidBody3D</button><button class="nav-item" data-type="Skeleton3D">Skeleton3D</button><button class="nav-item" data-type="SpotLight3D">SpotLight3D</button><button class="nav-item" data-type="Sprite3D">Sprite3D</button><button class="nav-item" data-type="StaticBody3D">StaticBody3D</button><button class="nav-item" data-type="WorldEnvironment">WorldEnvironment</button></div><div class="nav-group"><div class="nav-head">2D</div><button class="nav-item" data-type="AnimatedSprite2D">AnimatedSprite2D</button><button class="nav-item" data-type="Area2D">Area2D</button><button class="nav-item" data-type="AudioStreamPlayer2D">AudioStreamPlayer2D</button><button class="nav-item" data-type="Button">Button</button><button class="nav-item" data-type="Camera2D">Camera2D</button><button class="nav-item" data-type="CanvasLayer">CanvasLayer</button><button class="nav-item" data-type="CenterContainer">CenterContainer</button><button class="nav-item" data-type="CheckBox">CheckBox</button><button class="nav-item" data-type="CollisionShape2D">CollisionShape2D</button><button class="nav-item" data-type="ColorRect">ColorRect</button><button class="nav-item" data-type="Control">Control</button><button class="nav-item" data-type="GridContainer">GridContainer</button><button class="nav-item" data-type="HBoxContainer">HBoxContainer</button><button class="nav-item" data-type="Label">Label</button><button class="nav-item" data-type="Line2D">Line2D</button><button class="nav-item" data-type="MarginContainer">MarginContainer</button><button class="nav-item" data-type="Marker2D">Marker2D</button><button class="nav-item" data-type="NavigationRegion2D">NavigationRegion2D</button><button class="nav-item" data-type="Node2D">Node2D</button><button class="nav-item" data-type="OptionButton">OptionButton</button><button class="nav-item" data-type="Panel">Panel</button><button class="nav-item" data-type="PanelContainer">PanelContainer</button><button class="nav-item" data-type="Path2D">Path2D</button><button class="nav-item" data-type="PathFollow2D">PathFollow2D</button><button class="nav-item" data-type="Polygon2D">Polygon2D</button><button class="nav-item" data-type="RemoteTransform2D">RemoteTransform2D</button><button class="nav-item" data-type="RichTextLabel">RichTextLabel</button><button class="nav-item" data-type="ScrollContainer">ScrollContainer</button><button class="nav-item" data-type="Sprite2D">Sprite2D</button><button class="nav-item" data-type="TextureRect">TextureRect</button><button class="nav-item" data-type="TileMap">TileMap</button><button class="nav-item" data-type="TileMapLayer">TileMapLayer</button><button class="nav-item" data-type="VBoxContainer">VBoxContainer</button></div><div class="nav-group"><div class="nav-head">Other</div><button class="nav-item" data-type="AudioStreamPlayer">AudioStreamPlayer</button><button class="nav-item" data-type="Timer">Timer</button></div></nav>
+</aside>
+<main id="main">
+    <article class="sheet" data-type="AnimatedSprite2D" hidden>
+      <header class="sheet-head">
+        <h2>AnimatedSprite2D</h2>
+        <span class="renders">renders as a textured quad</span>
+        <span class="fixture"><code>unit-animatedsprite2d.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-animatedsprite2d-godot.png" alt="Godot render of AnimatedSprite2D">
+          <img class="img-ours" src="images/unit-animatedsprite2d-ours.png" alt="Our render of AnimatedSprite2D">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>AnimatedSprite2D plays a SpriteFrames animation. Playback is selection-driven (ADR-0012), so in a plain capture the unselected node draws its authored clip's current frame statically: the first <code>walk</code> frame (<code>dodge-walk1.png</code>) as a textured quad, centered on the node's origin. That origin sits at the viewport's top-left corner, so only the sprite's lower-right quadrant is on screen.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>sprite_frames</code></td><td>embedded <code>SpriteFrames_walk</code></td><td>supplies the <code>walk</code> clip's two frame textures</td></tr><tr><td><code>animation</code></td><td><code>&amp;"walk"</code></td><td>selects that clip; its frame 0 (<code>dodge-walk1.png</code>) is what's drawn</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>None visible in this fixture.</p></div>
+    </article>
+    <article class="sheet" data-type="AnimationPlayer" hidden>
+      <header class="sheet-head">
+        <h2>AnimationPlayer</h2>
+        <span class="renders">renders as nothing itself; it drives other nodes' properties over time</span>
+        <span class="fixture"><code>unit-animation-player.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-animation-player-godot.gif" alt="Godot render of AnimationPlayer">
+          <img class="img-ours" src="images/unit-animation-player-ours.gif" alt="Our render of AnimationPlayer">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>Godot's keyframe animation driver. It has no visual of its own — it animates other nodes' properties. The previewer plays its clips: select the player and its transport (play / scrub / speed) appears, and the driven nodes move. Both renders below play the autoplay clip <strong>spin</strong>, which rotates the box a full turn about Y over two seconds; the frames are captured at the same times on each side.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>autoplay</code></td><td><code>spin</code></td><td>the clip the transport starts on</td></tr><tr><td>clip <code>spin</code></td><td>rotation Y <code>0 → 2π</code>, <code>length 2.0</code>, <code>loop</code></td><td>the box turns once per loop</td></tr><tr><td>clip <code>bob</code></td><td>position Y, <code>length 1.0</code>, <code>loop</code></td><td>a second clip, selectable in the transport</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>None visible in this fixture — the box rotates through the same angles on both sides. The previewer does not autoplay on load (a static preview until you open the Animation tab), whereas Godot's <code>autoplay</code> runs immediately; the GIFs here drive both to the same frames so the motion matches.</p></div>
+    </article>
+    <article class="sheet" data-type="AnimationTree" hidden>
+      <header class="sheet-head">
+        <h2>AnimationTree</h2>
+        <span class="renders">renders as an empty group (a non-visual driver)</span>
+        <span class="fixture"><code>unit-animationtree-blend.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-animationtree-blend-godot.png" alt="Godot render of AnimationTree">
+          <img class="img-ours" src="images/unit-animationtree-blend-ours.png" alt="Our render of AnimationTree">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>AnimationTree is a non-visual node — it drives another node's clips through a blend tree but draws no geometry of its own. The previewer mounts it as an empty group, so the only thing on screen is the <code>Mesh</code> box at its authored transform. The tree animates that box only when its row is selected and play is pressed (Godot parity: a static capture has no game script and no selection, so nothing moves). Both images therefore show the same unanimated box.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>active</code></td><td><code>true</code></td><td>tree is allowed to process, but actuates only on select + play; no static visual</td></tr><tr><td><code>tree_root</code></td><td><code>AnimationNodeBlendTree</code></td><td>the blend program (spin + bob); reshapes the Mesh only during playback</td></tr><tr><td><code>anim_player</code></td><td><code>NodePath("../AnimationPlayer")</code></td><td>the driver whose clips it blends; no static effect</td></tr><tr><td><code>parameters/blend/blend_amount</code></td><td><code>0.5</code></td><td>50/50 spin+bob mix, applied only while playing</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>The bright sky/horizon band reads brighter and softer in Godot, blooming into the sky above and the ground below; ours renders the same band dimmer with a harder falloff. This fixture has no <code>WorldEnvironment</code>, so the reference is shot with the editor preview environment (ADR-0025), whose glow (bloom) lifts the scene's brightest region — an effect this previewer does not reproduce. The white cube shows no halo at this brightness, so the gap is confined to the horizon. <a href="../../PARITY-LIMITATIONS.md#preview-environment-glow">PARITY-LIMITATIONS.md</a></p></div>
+    </article>
+    <article class="sheet" data-type="Area2D" hidden>
+      <header class="sheet-head">
+        <h2>Area2D</h2>
+        <span class="renders">renders as a transform-only Node2D group</span>
+        <span class="fixture"><code>unit-area2d.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-area2d-godot.png" alt="Godot render of Area2D">
+          <img class="img-ours" src="images/unit-area2d-ours.png" alt="Our render of Area2D">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>Area2D is a 2D physics region that detects overlaps. Like every physics body it has no runtime visual, so the previewer mounts it as a transform-only Node2D group (ADR-0005/ADR-0008) and draws nothing for it. Both captures are an empty grey frame.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>position</code></td><td><code>Vector2(10, 20)</code></td><td>shifts the invisible node; no pixels</td></tr><tr><td><code>collision_layer</code></td><td><code>4</code></td><td>physics config; not drawn</td></tr><tr><td><code>collision_mask</code></td><td><code>1</code></td><td>physics config; not drawn</td></tr><tr><td><code>monitoring</code></td><td><code>true</code></td><td>physics config; not drawn</td></tr><tr><td><code>monitor_neighbors</code></td><td><code>true</code></td><td>physics config; not drawn</td></tr></tbody></table></div>
+<p>The child <code>CollisionShape2D</code> (a <code>CircleShape2D</code>) is a selection-gated gizmo and does not appear in a plain capture. The child <code>ColorRect</code> (color <code>Color(1, 0.4, 0.4, 1)</code>) carries no size, so its rect is empty and it too draws nothing.</p>
+<h3>Divergences</h3>
+<p>None visible in this fixture.</p></div>
+    </article>
+    <article class="sheet" data-type="Area3D" hidden>
+      <header class="sheet-head">
+        <h2>Area3D</h2>
+        <span class="renders">renders as an invisible transform-only group</span>
+        <span class="fixture"><code>edge-area3d-inactive.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/edge-area3d-inactive-godot.png" alt="Godot render of Area3D">
+          <img class="img-ours" src="images/edge-area3d-inactive-ours.png" alt="Our render of Area3D">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>Area3D is a physics region for detecting overlaps; it has no runtime visual of its own. The previewer mounts it as a transform-only Node3D group, so it draws nothing. Its child <code>CollisionShape3D</code> is a toggle-gated overlay (ADR-0005/0006) and stays hidden in a plain capture. Both images show only the preview environment's procedural sky — a grey-blue gradient fading to a brown ground below the horizon.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>monitoring</code></td><td><code>false</code></td><td>physics-only flag, no visual</td></tr><tr><td><code>monitorable</code></td><td><code>false</code></td><td>physics-only flag, no visual</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>None visible in this fixture.</p></div>
+    </article>
+    <article class="sheet" data-type="AreaLight3D" hidden>
+      <header class="sheet-head">
+        <h2>AreaLight3D</h2>
+        <span class="renders">renders as a THREE.RectAreaLight</span>
+        <span class="fixture"><code>unit-area-light3d.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-area-light3d-godot.png" alt="Godot render of AreaLight3D">
+          <img class="img-ours" src="images/unit-area-light3d-ours.png" alt="Our render of AreaLight3D">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>Godot's rectangular area lamp. The previewer renders it as a <code>THREE.RectAreaLight</code> sized from <code>area_size</code> and emitting <code>light_color</code> at <code>light_energy</code>, mounted here above the box and aimed straight down at the ground. RectAreaLight has no shadow or range control in three.js, so <code>shadow_enabled</code> and <code>area_range</code> are parsed but never drawn.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>light_color</code></td><td><code>Color(0.5, 0.6, 0.7, 1)</code></td><td>cool tint of the overhead fill our light adds</td></tr><tr><td><code>light_energy</code></td><td><code>4.0</code></td><td>strength of that fill — lifts the box's shadowed face and top</td></tr><tr><td><code>area_size</code></td><td><code>Vector2(2, 1)</code></td><td>width × height of the emitter rectangle</td></tr><tr><td><code>area_range</code></td><td><code>2.0</code></td><td>not represented — RectAreaLight has no range control</td></tr><tr><td><code>shadow_enabled</code></td><td><code>true</code></td><td>not represented — RectAreaLight casts no shadow</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>Godot 4.6.3 parses <code>AreaLight3D</code> but emits nothing from it — the node postdates that build — so its reference is lit by the editor preview sun alone: the box's front face is a dark blue-gray and the sun's cast shadow is a deep, solid parallelogram. Our render adds the light from overhead, which lifts that front face to a medium gray, brightens the top, and fills the cast shadow to a washed, lighter patch. Parity is unverified — nothing in this repo can compare our AreaLight3D against the engine until a 4.7 binary sits beside the 4.6 one: <a href="../../PARITY-LIMITATIONS.md#arealight3d-has-no-godot-46-reference">PARITY-LIMITATIONS.md</a>.</p></div>
+    </article>
+    <article class="sheet" data-type="AudioStreamPlayer" hidden>
+      <header class="sheet-head">
+        <h2>AudioStreamPlayer</h2>
+        <span class="renders">renders as nothing (a non-spatial audio node)</span>
+        <span class="fixture"><code>unit-physics-bodies.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-physics-bodies-godot.png" alt="Godot render of AudioStreamPlayer">
+          <img class="img-ours" src="images/unit-physics-bodies-ours.png" alt="Our render of AudioStreamPlayer">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>AudioStreamPlayer plays a non-spatial audio stream and has no runtime visual. The previewer draws nothing for it — reusing the base Node component with zero geometry rather than a placeholder cube. The blue slab in both images is the fixture's <code>Ground</code> StaticBody3D; the <code>Music</code> player is invisible in each.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>autoplay</code></td><td><code>true</code></td><td>none — playback has no visual</td></tr><tr><td><code>volume_db</code></td><td><code>-6.0</code></td><td>none — audio level has no visual</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>None visible in this fixture.</p></div>
+    </article>
+    <article class="sheet" data-type="AudioStreamPlayer2D" hidden>
+      <header class="sheet-head">
+        <h2>AudioStreamPlayer2D</h2>
+        <span class="renders">renders as an invisible Node2D transform group</span>
+        <span class="fixture"><code>unit-audio-stream-player-2d.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-audio-stream-player-2d-godot.png" alt="Godot render of AudioStreamPlayer2D">
+          <img class="img-ours" src="images/unit-audio-stream-player-2d-ours.png" alt="Our render of AudioStreamPlayer2D">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>A positional audio emitter. It has no runtime visual, so the previewer reuses the Node2D transform-group Component (ADR-0008): an invisible group that positions its children, drawing nothing itself. Both images are an empty scene.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>position</code></td><td><code>Vector2(120, 80)</code></td><td>places the (invisible) emitter and its children; no mark of its own</td></tr><tr><td><code>stream</code></td><td><code>AudioStreamGenerator</code></td><td>the audio to play — inaudible and invisible in a still render</td></tr><tr><td><code>volume_db</code></td><td><code>-6.0</code></td><td>playback gain; no visible effect</td></tr><tr><td><code>pitch_scale</code></td><td><code>1.2</code></td><td>playback pitch; no visible effect</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>None visible in this fixture.</p></div>
+    </article>
+    <article class="sheet" data-type="AudioStreamPlayer3D" hidden>
+      <header class="sheet-head">
+        <h2>AudioStreamPlayer3D</h2>
+        <span class="renders">renders as a selection-gated speaker gizmo</span>
+        <span class="fixture"><code>unit-audio-stream-player.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-audio-stream-player-godot.png" alt="Godot render of AudioStreamPlayer3D">
+          <img class="img-ours" src="images/unit-audio-stream-player-ours.png" alt="Our render of AudioStreamPlayer3D">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>A positional audio source with no runtime visual. The previewer draws an editor-only speaker gizmo — a wireframe cone and baffle disk, plus an optional range circle and emission cone — but gates all of it on selection, like the Camera3D and light gizmos. Nothing is selected in a plain capture, so the three speakers contribute nothing on screen; both images show only the grey ground plane and the preview sky.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>stream</code></td><td><code>res://audio/test_sound.ogg</code></td><td>the audio clip; never played, no visual</td></tr><tr><td><code>bus</code></td><td><code>Master</code> / <code>SFX</code> / <code>Music</code></td><td>routing only; not visible</td></tr><tr><td><code>unit_size</code></td><td><code>5.0</code> / <code>8.0</code></td><td>radius of the selection-gated range circle; gated, so not drawn</td></tr><tr><td><code>max_distance</code></td><td><code>12.0</code></td><td>clamps that range circle; gated</td></tr><tr><td><code>attenuation_model</code></td><td><code>1</code> (inverse-square)</td><td>picks the range multiplier; gated</td></tr><tr><td><code>emission_angle_enabled</code></td><td><code>true</code></td><td>adds the selection-gated emission cone; gated</td></tr><tr><td><code>emission_angle_degrees</code></td><td><code>30.0</code></td><td>cone half-angle; gated</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>None visible in this fixture.</p></div>
+    </article>
+    <article class="sheet" data-type="Button" hidden>
+      <header class="sheet-head">
+        <h2>Button</h2>
+        <span class="renders">renders as a positioned HTML div</span>
+        <span class="fixture"><code>unit-button.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-button-godot.png" alt="Godot render of Button">
+          <img class="img-ours" src="images/unit-button-ours.png" alt="Our render of Button">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>Button is Godot's clickable text control. This is a static viewer, so it draws each Button's NORMAL state as a positioned HTML <code>&lt;div&gt;</code> — background and border from the <code>normal</code> StyleBox (or a synthesized default when none is set), the label centered. The fixture stacks three centered buttons: an unthemed <code>Click Me</code>, a green <code>Styled</code> one with an explicit StyleBox, and a <code>disabled</code> one.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>text</code></td><td><code>"Click Me"</code> / <code>"Styled"</code> / <code>"Disabled"</code></td><td>the label on each of the three buttons</td></tr><tr><td><code>theme_override_styles/normal</code></td><td>green <code>StyleBoxFlat</code></td><td>replaces the default chrome on <strong>Styled</strong> — <code>bg_color = Color(0.2,0.5,0.35,1)</code> green fill, <code>corner_radius = 6</code> rounded corners, <code>content_margin 14/6</code> padding</td></tr><tr><td><code>disabled</code></td><td><code>true</code></td><td>dims the <strong>Disabled</strong> button and mutes its label</td></tr><tr><td><code>alignment</code></td><td><code>1</code> (CENTER)</td><td>centres the <strong>Styled</strong> label — Godot's Button default, so no visible change</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>The two <strong>unthemed</strong> buttons diverge in their background chrome. Godot draws its built-in default-theme StyleBox as a neutral charcoal that sits *darker* than the backdrop (<code>Click Me</code> rgb(46,46,46), <code>Disabled</code> rgb(61,61,61) against a rgb(76,76,76) ground). This previewer synthesizes its own default chrome instead — a lighter, blue-tinted slate (<code>Click Me</code> rgb(70,78,93), <code>Disabled</code> rgb(71,76,85)); at that luminance the <code>Click Me</code> chip nearly matches the backdrop and separates only by its blue tint, so it reads as a faint rectangle rather than a solid dark button. Disabled buttons are dimmed via opacity here rather than Godot's distinct disabled style. The <strong>Styled</strong> button, which supplies an explicit <code>StyleBoxFlat</code>, is pixel-exact — green rgb(51,128,89) in both. No PARITY-LIMITATIONS entry covers the default-theme chrome.</p></div>
+    </article>
+    <article class="sheet" data-type="Camera2D" hidden>
+      <header class="sheet-head">
+        <h2>Camera2D</h2>
+        <span class="renders">renders as a 2D view frame with no drawn geometry</span>
+        <span class="fixture"><code>unit-remote-transform-2d.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-remote-transform-2d-godot.png" alt="Godot render of Camera2D">
+          <img class="img-ours" src="images/unit-remote-transform-2d-ours.png" alt="Our render of Camera2D">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>Camera2D is a Node2D that defines the 2D view — which slice of the canvas the viewport shows. The previewer draws no geometry for it; it only tags its group so the Cameras panel can frame the view through it. The camera's outline is an editor-only gizmo, drawn in neither capture. This fixture contains no Camera2D node at all: what fills the frame is the fixture's two Polygon2D pentagons, the blue one dragged up to the right by a RemoteTransform2D relay while the grey ghost stays at the authored spot. Nothing on screen exercises Camera2D.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td>—</td><td>—</td><td>the fixture defines no Camera2D node, so no Camera2D property is set or exercised</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>The two frames place both pentagons identically; one difference is visible, in the blue fill rather than the layout:</p>
+<p>- <strong>The blue pentagon reads paler and less saturated in ours.</strong> Godot writes the authored 2D colour straight to the framebuffer (<code>0.2, 0.7, 0.9</code> → <code>51, 178, 229</code>); ours renders it lifted toward a washed cyan (<code>95, 191, 217</code>). With no <code>WorldEnvironment</code> in the scene the previewer mounts Godot's editor preview environment (ADR-0025), whose FILMIC tonemapping is set on the whole canvas — the unlit 2D polygons included — whereas Godot tonemaps only the 3D pass, never the 2D canvas. No PARITY-LIMITATIONS entry covers 2D colour.</p></div>
+    </article>
+    <article class="sheet" data-type="Camera3D" hidden>
+      <header class="sheet-head">
+        <h2>Camera3D</h2>
+        <span class="renders">renders as a passive THREE.PerspectiveCamera</span>
+        <span class="fixture"><code>unit-decal.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-decal-godot.png" alt="Godot render of Camera3D">
+          <img class="img-ours" src="images/unit-decal-ours.png" alt="Our render of Camera3D">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>Camera3D is the scene's authored viewpoint, but it is a passive scene-tree node in this capture: both images are framed from Godot's editor camera (<code>Node3DEditorViewport::Cursor</code>, matched on both sides), not from this node, so the fixture's <code>transform</code> and <code>fov</code> have no effect on what either render shows. The previewer builds a passive <code>THREE.PerspectiveCamera</code> that only becomes the viewport through the camera switcher, plus a frustum gizmo that is selection-gated — so the node draws nothing in either image.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>transform</code></td><td>origin <code>(0, 4, 6)</code>, tilted ~30° down</td><td>none here — the editor camera frames the capture, not this node</td></tr><tr><td><code>fov</code></td><td><code>70.0</code></td><td>none here — as above</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>None visible in this fixture.</p></div>
+    </article>
+    <article class="sheet" data-type="CanvasLayer" hidden>
+      <header class="sheet-head">
+        <h2>CanvasLayer</h2>
+        <span class="renders">renders as a full-rect passthrough layer hosting Control children</span>
+        <span class="fixture"><code>unit-canvas-layer.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-canvas-layer-godot.png" alt="Godot render of CanvasLayer">
+          <img class="img-ours" src="images/unit-canvas-layer-ours.png" alt="Our render of CanvasLayer">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>CanvasLayer is not a Control and paints nothing of its own — it fills the overlay and gives its Control children a viewport to anchor against. The visible "Score: 0" is the child Label, and it lands in the top-right corner of both images, which is the evidence the layer hosts and viewport-anchors its child faithfully.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>layer</code></td><td><code>1</code></td><td>z-order of this layer; with one CanvasLayer it has no visible consequence here</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>None visible in this fixture.</p></div>
+    </article>
+    <article class="sheet" data-type="CenterContainer" hidden>
+      <header class="sheet-head">
+        <h2>CenterContainer</h2>
+        <span class="renders">renders as a centering flex container</span>
+        <span class="fixture"><code>unit-center-container.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-center-container-godot.png" alt="Godot render of CenterContainer">
+          <img class="img-ours" src="images/unit-center-container-ours.png" alt="Our render of CenterContainer">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>CenterContainer places its single child at the exact center of its own rect, horizontally and vertically. The previewer maps it to a CSS flexbox centered on both axes, so the container draws nothing itself — only the centered child shows.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>anchors_preset</code></td><td><code>15</code></td><td>fills the parent Control (full rect), so the container's center is the viewport center</td></tr><tr><td><code>anchor_right</code> / <code>anchor_bottom</code></td><td><code>1.0</code></td><td>the container spans the full viewport width and height</td></tr><tr><td>child <code>Label.text</code></td><td><code>"Centered"</code></td><td>the single child; the container pins it dead-center</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>None visible in this fixture.</p></div>
+    </article>
+    <article class="sheet" data-type="CharacterBody3D" hidden>
+      <header class="sheet-head">
+        <h2>CharacterBody3D</h2>
+        <span class="renders">renders as a transform-only Node3D group</span>
+        <span class="fixture"><code>unit-characterbody3d.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-characterbody3d-godot.png" alt="Godot render of CharacterBody3D">
+          <img class="img-ours" src="images/unit-characterbody3d-ours.png" alt="Our render of CharacterBody3D">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>CharacterBody3D is a physics body with no visual of its own — it renders as a transform-only group (ADR-0005, ADR-0008), reusing the Node3D component. The blue capsule on screen is its child MeshInstance3D (a CapsuleMesh with a blue StandardMaterial3D); the sibling CollisionShape3D is selection-gated and draws nothing in a plain capture.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>transform</code></td><td><code>origin (0, 0.8, 0)</code></td><td>lifts the group so the capsule floats centered above the origin</td></tr><tr><td><code>velocity</code></td><td><code>Vector3(0, 0, 0)</code></td><td>runtime physics state; no visual effect in a static preview</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>None visible in this fixture.</p></div>
+    </article>
+    <article class="sheet" data-type="CheckBox" hidden>
+      <header class="sheet-head">
+        <h2>CheckBox</h2>
+        <span class="renders">renders as an inline HTML row with a drawn check indicator</span>
+        <span class="fixture"><code>unit-checkbox.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-checkbox-godot.png" alt="Godot render of CheckBox">
+          <img class="img-ours" src="images/unit-checkbox-ours.png" alt="Our render of CheckBox">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>A toggle button that shows a check indicator to the left of its label. The previewer draws it in the Control overlay as an inline row: a small square indicator followed by the label text.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>text</code></td><td><code>"Enable Sound"</code> / <code>"Disabled Option"</code></td><td>the label drawn after each indicator</td></tr><tr><td><code>button_pressed</code></td><td><code>true</code> / <code>false</code></td><td>the top row shows a tick; the bottom row's box is empty</td></tr><tr><td><code>disabled</code></td><td><code>true</code></td><td>dims the "Disabled Option" row's label and box</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>The indicator's fill. Godot draws the theme's icon textures — a bright, solid square with a tick for the checked row, a gray solid square for the unchecked, disabled one — while the previewer draws a thin outlined square with a Unicode tick when checked and an empty outline when not. The cause is that the theme's icons are textures the previewer has no access to, so the indicator is a drawn approximation. The checked/unchecked distinction and the dimmed disabled row read correctly in both, and the labels sit at the same place.</p></div>
+    </article>
+    <article class="sheet" data-type="CollisionShape2D" hidden>
+      <header class="sheet-head">
+        <h2>CollisionShape2D</h2>
+        <span class="renders">renders as a toggle-gated collision outline</span>
+        <span class="fixture"><code>unit-collisionshape2d.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-collisionshape2d-godot.png" alt="Godot render of CollisionShape2D">
+          <img class="img-ours" src="images/unit-collisionshape2d-ours.png" alt="Our render of CollisionShape2D">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>CollisionShape2D attaches a 2D collision shape to a physics body. It has no runtime visual — its outline is a debug gizmo gated behind "Visible Collision Shapes" (off by default, ADR-0005/0006), so a plain capture draws nothing.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>shape</code></td><td><code>RectangleShape2D</code> (40×60), <code>CircleShape2D</code> (r=15), <code>CapsuleShape2D</code> (r=10, h=30)</td><td>outline geometry of the gated gizmo; not drawn in a plain capture</td></tr><tr><td><code>disabled</code></td><td><code>false</code></td><td>shape stays active; no visual effect in a game render</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>None visible in this fixture.</p></div>
+    </article>
+    <article class="sheet" data-type="CollisionShape3D" hidden>
+      <header class="sheet-head">
+        <h2>CollisionShape3D</h2>
+        <span class="renders">renders as a toggle-gated collision wireframe</span>
+        <span class="fixture"><code>unit-rigidbody3d.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-rigidbody3d-godot.png" alt="Godot render of CollisionShape3D">
+          <img class="img-ours" src="images/unit-rigidbody3d-ours.png" alt="Our render of CollisionShape3D">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>CollisionShape3D attaches a collision shape to a physics body and has no runtime visual: the previewer draws the shape as a wireframe gizmo only when "Visible Collision Shapes" is enabled (ADR-0005 / ADR-0006), off by default. So this plain capture draws nothing for it — the salmon cube on screen is the sibling <code>CrateMesh</code> (a MeshInstance3D) under the same RigidBody3D.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>shape</code></td><td><code>BoxShape3D</code> (size 1×1×1)</td><td>the collision volume; drawn only as a gated wireframe box, so absent from this capture</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>CollisionShape3D draws nothing in either image, so it has no output of its own to differ. The one visible difference is the sibling cube (the MeshInstance3D): our frame places it higher and larger than Godot's, while its colour, shading, and the sky, horizon and ground all match to within a few values. The gap is where the cube sits in the frame, not how it is rendered.</p></div>
+    </article>
+    <article class="sheet" data-type="ColorRect" hidden>
+      <header class="sheet-head">
+        <h2>ColorRect</h2>
+        <span class="renders">renders as a color-filled div</span>
+        <span class="fixture"><code>unit-color-rect.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-color-rect-godot.png" alt="Godot render of ColorRect">
+          <img class="img-ours" src="images/unit-color-rect-ours.png" alt="Our render of ColorRect">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>A Control that fills its rect with a single flat <code>color</code>. The previewer draws a positioned <code>&lt;div&gt;</code> with that color as its <code>backgroundColor</code>, alpha included.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>color</code> (Solid)</td><td><code>Color(0.85, 0.2, 0.2, 1)</code></td><td>opaque red box</td></tr><tr><td><code>color</code> (Translucent)</td><td><code>Color(0.2, 0.4, 0.85, 0.5)</code></td><td>blue box at half alpha — the grey background shows through, muting it</td></tr><tr><td><code>color</code> (NoColor)</td><td>*unset*</td><td>opaque white box — an omitted <code>color</code> is Godot's <code>Color(1,1,1,1)</code> default, not "no fill"</td></tr><tr><td><code>offset_left/top/right/bottom</code></td><td><code>20–420</code> / <code>20–100</code></td><td>places three 120×80 boxes in a row along the top</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>None visible in this fixture.</p></div>
+    </article>
+    <article class="sheet" data-type="Control" hidden>
+      <header class="sheet-head">
+        <h2>Control</h2>
+        <span class="renders">renders as a full-rect layout region</span>
+        <span class="fixture"><code>unit-control-state.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-control-state-godot.png" alt="Godot render of Control">
+          <img class="img-ours" src="images/unit-control-state-ours.png" alt="Our render of Control">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>The base Godot UI node. The previewer maps it to a positioned <code>&lt;div&gt;</code> that establishes the containing block for its children; it draws no pixels of its own. Everything visible in both images is the child stack — a <code>VBoxContainer</code> of CheckBoxes, radio CheckBoxes, and an OptionButton — laid out inside the root's full-viewport rect.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>anchors_preset</code> / <code>anchor_right</code> / <code>anchor_bottom</code></td><td><code>15</code> / <code>1.0</code> / <code>1.0</code></td><td>the root fills the viewport, so the row stack starts at the top-left corner</td></tr><tr><td><code>visible</code></td><td><code>false</code> (HiddenDropdown, HiddenButton, HiddenGrid)</td><td>those children are drawn in neither image — the hidden state is faithful</td></tr><tr><td><code>button_pressed</code></td><td><code>true</code> (CheckedBox, RadioOn)</td><td>the checked box shows a tick, the radio-on row a filled dot</td></tr><tr><td><code>button_group</code></td><td><code>ButtonGroup_radio</code> (RadioOn, RadioOff)</td><td>the last two boxes render as radio indicators rather than square checks</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>The OptionButton ("VISIBLE DROPDOWN"). Godot draws a dark neutral bar with a right-edge dropdown chevron; the previewer draws a lighter slate-blue bar with no chevron. The chevron is a theme icon the previewer has no access to, and the bar tone is a drawn default rather than the theme's StyleBox.</p>
+<p>The checkbox and radio indicators are drawn approximations — thin outlines with a Unicode tick or a filled dot — where Godot draws solid theme icon textures. See <a href="checkbox.md">CheckBox</a> for the detail.</p>
+<p>Row pitch differs: Godot's rows are ~35px tall, the previewer's ~26px, so the whole stack reads ~30% shorter here. The cause is the theme's default line-height and control minimum sizes versus the previewer's more compact metrics.</p></div>
+    </article>
+    <article class="sheet" data-type="CSGBox3D" hidden>
+      <header class="sheet-head">
+        <h2>CSGBox3D</h2>
+        <span class="renders">renders as a solid box mesh</span>
+        <span class="fixture"><code>unit-csg-box.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-csg-box-godot.png" alt="Godot render of CSGBox3D">
+          <img class="img-ours" src="images/unit-csg-box-ours.png" alt="Our render of CSGBox3D">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>CSGBox3D is Godot's constructive-solid-geometry box. The previewer draws it as a plain box mesh carrying its StandardMaterial3D; the boolean <code>operation</code> is not evaluated (ADR-0004), so every CSG node renders as its solid base primitive. The fixture is two union boxes — a thin, wide floor slab and a tall wall standing at the far end.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>size</code> (Floor)</td><td><code>Vector3(3, 0.2, 12)</code></td><td>the thin, wide floor slab running into the distance</td></tr><tr><td><code>material</code> (Floor)</td><td>brown <code>albedo_color</code> <code>(0.4, 0.3, 0.25)</code></td><td>the tan floor colour</td></tr><tr><td><code>size</code> (BackWall)</td><td><code>Vector3(3, 4.5, 0.3)</code></td><td>the tall, thin upright wall</td></tr><tr><td><code>material</code> (BackWall)</td><td>grey <code>albedo_color</code> <code>(0.7, 0.65, 0.6)</code></td><td>the light-grey wall face</td></tr><tr><td><code>transform</code> (BackWall)</td><td>translate <code>(0, 2.25, -6)</code></td><td>lifts the wall and pushes it to the far end</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>None visible in this fixture.</p></div>
+    </article>
+    <article class="sheet" data-type="CSGCylinder3D" hidden>
+      <header class="sheet-head">
+        <h2>CSGCylinder3D</h2>
+        <span class="renders">renders as a THREE.CylinderGeometry mesh</span>
+        <span class="fixture"><code>unit-csg-cylinder.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-csg-cylinder-godot.png" alt="Godot render of CSGCylinder3D">
+          <img class="img-ours" src="images/unit-csg-cylinder-ours.png" alt="Our render of CSGCylinder3D">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>A CSG cylinder primitive. The previewer draws it as a solid cylinder mesh, or a cone when <code>cone</code> is set (top radius collapses to 0); CSG boolean ops are not composed (ADR-0004).</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>radius</code></td><td><code>0.5</code> / <code>0.4</code></td><td>base radius of the pillar / cone</td></tr><tr><td><code>height</code></td><td><code>2.0</code> / <code>1.0</code></td><td>the tall pillar vs the shorter cone</td></tr><tr><td><code>sides</code></td><td><code>16</code></td><td>radial segments — a smooth silhouette with faint faceting</td></tr><tr><td><code>cone</code></td><td><code>true</code> (Cone only)</td><td>collapses the top to a point, making a cone</td></tr><tr><td><code>material</code></td><td>albedo <code>Color(0.6, 0.5, 0.2)</code></td><td>the olive surface both shapes share</td></tr><tr><td><code>transform</code></td><td><code>+1.5</code> on X (Cone)</td><td>offsets the cone to the right of the pillar</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>None visible in this fixture.</p></div>
+    </article>
+    <article class="sheet" data-type="CSGSphere3D" hidden>
+      <header class="sheet-head">
+        <h2>CSGSphere3D</h2>
+        <span class="renders">renders as a solid sphere mesh</span>
+        <span class="fixture"><code>unit-csg-sphere.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-csg-sphere-godot.png" alt="Godot render of CSGSphere3D">
+          <img class="img-ours" src="images/unit-csg-sphere-ours.png" alt="Our render of CSGSphere3D">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>A constructive-solid-geometry sphere primitive. The previewer draws it as a solid sphere mesh carrying its StandardMaterial3D; the CSG boolean <code>operation</code> is not applied (ADR-0004), so the node renders as its plain base primitive.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>radius</code></td><td><code>1.25</code></td><td>the sphere's on-screen size, lifted to fill the upper frame</td></tr><tr><td><code>radial_segments</code></td><td><code>48</code></td><td>longitude divisions — smooth, facet-free silhouette</td></tr><tr><td><code>rings</code></td><td><code>24</code></td><td>latitude divisions — smooth top-to-bottom shading</td></tr><tr><td><code>material</code></td><td><code>StandardMaterial3D</code> (<code>albedo_color</code> blue)</td><td>the blue surface colour</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>None visible in this fixture.</p></div>
+    </article>
+    <article class="sheet" data-type="Decal" hidden>
+      <header class="sheet-head">
+        <h2>Decal</h2>
+        <span class="renders">renders as a texture projected onto the surfaces its box intersects</span>
+        <span class="fixture"><code>unit-decal.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-decal-godot.png" alt="Godot render of Decal">
+          <img class="img-ours" src="images/unit-decal-ours.png" alt="Our render of Decal">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>Godot's texture projector: it casts <code>texture_albedo</code> down the node's local −Y axis onto whatever surfaces sit inside its <code>size</code> box, blended onto the lit surface. The previewer now does the same — it bakes the projection onto each mesh the box overlaps (three's <code>DecalGeometry</code>) and shades it with the scene's lights, so the checkerboards lie flat on the floor rather than floating. The projector-box outline is selection-gated (ADR-0018), so the default render shows only the projection, as Godot's runtime does.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>texture_albedo</code></td><td><code>checkerboard.svg</code></td><td>the image projected onto the floor</td></tr><tr><td><code>size</code></td><td><code>Vector3(3, 3, 3)</code></td><td>the projection footprint and its depth into the surface</td></tr><tr><td><code>albedo_mix</code></td><td><code>1.0</code> / <code>0.7</code></td><td>how strongly the projection replaces the lit surface</td></tr><tr><td><code>modulate</code></td><td><code>Color(1, 0.4, 0.3, 0.8)</code></td><td>salmon tint + lower opacity on the second decal</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>The projection lands in the same place on both sides — flat on the floor where the box intersects it. Two differences remain, both in the blend rather than the geometry:</p>
+<p>- <strong>Ours reads bolder than Godot's.</strong> Godot fades the projection into the lit floor more than we do at a partial <code>albedo_mix</code>, so its checkerboards are paler; ours are higher-contrast. Exact <code>albedo_mix</code> blending needs a custom projector shader — see <a href="../../PARITY-LIMITATIONS.md">PARITY-LIMITATIONS.md</a>. - <strong>No edge fades or extra channels.</strong> <code>upper/lower/normal_fade</code>, <code>distance_fade_*</code>, <code>cull_mask</code>, and the normal/ORM/emission maps are not applied — <code>DecalGeometry</code> bakes a static mesh with none of them. They are near-invisible on the flat surfaces decals usually target and are recorded in PARITY-LIMITATIONS.</p></div>
+    </article>
+    <article class="sheet" data-type="DirectionalLight3D" hidden>
+      <header class="sheet-head">
+        <h2>DirectionalLight3D</h2>
+        <span class="renders">renders as a THREE.DirectionalLight</span>
+        <span class="fixture"><code>unit-directional-light-3d.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-directional-light-3d-godot.png" alt="Godot render of DirectionalLight3D">
+          <img class="img-ours" src="images/unit-directional-light-3d-ours.png" alt="Our render of DirectionalLight3D">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>A parallel light source (sunlight) lighting every surface from one fixed direction. The previewer emits a <code>THREE.DirectionalLight</code> aimed down the node's local -Z; it warms the lit faces of the box and the ground, and with <code>shadow_enabled</code> casts a shadow map.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>transform</code> (basis)</td><td>angled down toward -X/-Z</td><td>direction the parallel light travels; which box faces read lit</td></tr><tr><td><code>light_color</code></td><td><code>Color(1, 0.95, 0.85, 1)</code></td><td>warm cream tint on the lit box faces</td></tr><tr><td><code>light_energy</code></td><td><code>1.2</code></td><td>brightness of the lit faces</td></tr><tr><td><code>shadow_enabled</code></td><td><code>true</code></td><td>the box casts a ground shadow</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>Ground-shadow contrast. Ours renders a soft shadow darkening at the base of the box, spilling onto the ground to its left; the Godot frame reads essentially clean there. Both carry the same warm directional light — colour, energy, and lit-face tint agree — and the ~30° sun projects its shadow the same way in both, mostly behind the box and occluded from this camera. The difference is only in the near edge: three.js draws it with visible contrast where Godot's is washed out by the bright sky-ambient fill. No PARITY-LIMITATIONS entry covers directional shadows.</p></div>
+    </article>
+    <article class="sheet" data-type="GPUParticles3D" hidden>
+      <header class="sheet-head">
+        <h2>GPUParticles3D</h2>
+        <span class="renders">renders as a transform-only group</span>
+        <span class="fixture"><code>unit-gpuparticles3d.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-gpuparticles3d-godot.png" alt="Godot render of GPUParticles3D">
+          <img class="img-ours" src="images/unit-gpuparticles3d-ours.png" alt="Our render of GPUParticles3D">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>A GPU-simulated particle emitter. The previewer treats it as a transform-only node (ADR-0008) — it does not run the particle simulation, so it draws nothing.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>amount</code></td><td><code>200</code></td><td>~200 particles fill the Godot burst</td></tr><tr><td><code>lifetime</code></td><td><code>2.0</code></td><td>each particle lives 2 s before recycling</td></tr><tr><td><code>preprocess</code></td><td><code>1.2</code></td><td>simulation runs 1.2 s ahead, so the still catches a spread cloud, not the emission instant</td></tr><tr><td><code>process_material</code></td><td><code>ParticleProcessMaterial</code></td><td>drives the motion: upward <code>direction</code>, 45° <code>spread</code>, downward <code>gravity</code>, per-particle <code>scale</code> 0.5–1.0</td></tr><tr><td><code>draw_pass_1</code></td><td><code>SphereMesh</code> (r 0.12)</td><td>each particle is drawn as a small sphere</td></tr><tr><td><code>material_override</code></td><td>emissive <code>StandardMaterial3D</code></td><td>tints every particle glowing orange</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>The whole particle cloud is missing from our render. Godot shows ~200 orange emissive spheres spread across the frame; the previewer shows an empty scene — only the sky gradient and dark ground. GPUParticles3D renders as a transform-only group (ADR-0008): there is no GPU particle simulation, so none of the <code>process_material</code> motion or <code>draw_pass_1</code> mesh is drawn. This absence is the fixture's deliberate point, not a regression.</p></div>
+    </article>
+    <article class="sheet" data-type="GridContainer" hidden>
+      <header class="sheet-head">
+        <h2>GridContainer</h2>
+        <span class="renders">renders as a CSS grid container</span>
+        <span class="fixture"><code>unit-grid-container.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-grid-container-godot.png" alt="Godot render of GridContainer">
+          <img class="img-ours" src="images/unit-grid-container-ours.png" alt="Our render of GridContainer">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>GridContainer lays its children out left-to-right into a fixed number of columns, wrapping to a new row each time the column count is reached. The previewer maps it to a <code>display: grid</code> div, so <code>columns</code> becomes the column-template and the separation constants become the CSS gaps.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>columns</code></td><td><code>2</code></td><td>the four labels wrap into a 2-column grid — two per row</td></tr><tr><td><code>theme_override_constants/h_separation</code></td><td><code>8</code></td><td>horizontal gap between the two columns</td></tr><tr><td><code>theme_override_constants/v_separation</code></td><td><code>12</code></td><td>vertical gap between the two rows</td></tr><tr><td><code>anchors_preset</code></td><td><code>15</code></td><td>the container fills the parent Control (full rect)</td></tr><tr><td><code>anchor_right</code> / <code>anchor_bottom</code></td><td><code>1.0</code></td><td>it spans the full viewport width and height</td></tr><tr><td>child <code>Label.text</code></td><td><code>"Row N Col N"</code></td><td>the four cells, filled row-major</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>The second row sits tight under the first in Godot (only the 12px v_separation between them) but is pushed down to the vertical middle of the viewport in ours. Godot's container sizes its rows to content and packs them at the top-left; our grid div fills the full-rect viewport, and its implicit rows are <code>auto</code>, so CSS <code>align-content</code> stretches them to split the height in two, dropping row 1 to the centre. The horizontal layout, column count, and gaps match. No PARITY-LIMITATIONS entry covers this.</p></div>
+    </article>
+    <article class="sheet" data-type="GridMap" hidden>
+      <header class="sheet-head">
+        <h2>GridMap</h2>
+        <span class="renders">renders as a THREE.InstancedMesh per MeshLibrary item</span>
+        <span class="fixture"><code>unit-grid-map.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-grid-map-godot.png" alt="Godot render of GridMap">
+          <img class="img-ours" src="images/unit-grid-map-ours.png" alt="Our render of GridMap">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>GridMap instances each populated cell's MeshLibrary item mesh, batching cells of the same item into one THREE.InstancedMesh. This fixture places one flat quad tile across nine cells, which read as a single grey tiled surface receding to the upper right.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>mesh_library</code></td><td>ExtResource (<code>unit-grid-map-lib.tres</code>)</td><td>supplies the tile mesh — a flat 2×2 quad</td></tr><tr><td><code>cell_size</code></td><td><code>Vector3(2, 2, 2)</code></td><td>2-unit spacing, so the 2×2 tiles abut without gaps</td></tr><tr><td><code>data</code> / <code>cells</code></td><td>9 cells, item 0</td><td>the populated 3×3 patch that fills the frame</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>The nine tiles place pixel-for-pixel with Godot — same silhouette, same lower-left notch, same recession. Tone is the one difference: our tile is a few values darker and cooler (centre <code>93,99,111</code> → <code>82,88,98</code>, ~11/255 per channel, uniform across the plane). Sky (<code>194,197,203</code>) and ground (<code>~60,54,37</code>) are identical in both images, so this is the tile surface, not exposure or ambient. The quad's ArrayMesh declares no surface material, so the previewer paints it with its neutral grey placeholder (<code>0xb0b0b0</code>), which reads slightly darker than the surface Godot draws for the same material-less tile. Subtle, and a placeholder-material effect — the GridMap geometry itself matches.</p></div>
+    </article>
+    <article class="sheet" data-type="HBoxContainer" hidden>
+      <header class="sheet-head">
+        <h2>HBoxContainer</h2>
+        <span class="renders">renders as a CSS flex-row <code>&lt;div&gt;</code></span>
+        <span class="fixture"><code>unit-hbox-container.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-hbox-container-godot.png" alt="Godot render of HBoxContainer">
+          <img class="img-ours" src="images/unit-hbox-container-ours.png" alt="Our render of HBoxContainer">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>HBoxContainer stacks its children in a horizontal row. The previewer renders it as a CSS flex-row <code>&lt;div&gt;</code>: <code>separation</code> becomes the flex <code>gap</code>, <code>alignment</code> becomes <code>justify-content</code>, and each child's <code>size_flags</code> drive its grow and cross-axis alignment. Here two Labels ("Left", "Right") each carry <code>size_flags_horizontal = 3</code> (FILL|EXPAND), so each takes half the row.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>anchors_preset</code></td><td><code>15</code></td><td>the container fills the parent rect (the whole viewport)</td></tr><tr><td><code>alignment</code></td><td><code>1</code> (CENTER)</td><td>main-axis packing — no visible effect here, since both children EXPAND and already fill the row</td></tr><tr><td><code>theme_override_constants/separation</code></td><td><code>12</code></td><td>12px gap between the two labels (at the row's midpoint, where their cells meet)</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>The two labels differ in <strong>vertical</strong> placement: Godot centers them on the container's vertical axis; the previewer pins them to the top edge. Horizontal placement matches — "Left" at the far-left edge, "Right" starting just past center, each label filling its half of the row. The previewer stretches each label to the container's full height and, with no <code>vertical_alignment</code> set, leaves the text at the top; Godot renders the same labels centered on that axis.</p></div>
+    </article>
+    <article class="sheet" data-type="Label" hidden>
+      <header class="sheet-head">
+        <h2>Label</h2>
+        <span class="renders">renders as a positioned HTML div in the Control overlay</span>
+        <span class="fixture"><code>unit-label-2d.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-label-2d-godot.png" alt="Godot render of Label">
+          <img class="img-ours" src="images/unit-label-2d-ours.png" alt="Our render of Label">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>The 2D UI text node. The previewer draws each label as a positioned <code>&lt;div&gt;</code> in the Control overlay, styled from its alignment, case, and wrap settings. The fixture stacks three labels to exercise those in turn.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>text</code></td><td>three strings</td><td>the text each of the three labels shows</td></tr><tr><td><code>offset_left/top/right/bottom</code></td><td>e.g. <code>20/20/260/60</code></td><td>stacks the labels and fixes each box at 240px wide</td></tr><tr><td><code>horizontal_alignment</code></td><td><code>1</code> (Center)</td><td>"Centered label" sits centered within its box</td></tr><tr><td><code>vertical_alignment</code></td><td><code>1</code> (Center)</td><td>that same label's text is centered vertically in its box</td></tr><tr><td><code>uppercase</code></td><td><code>true</code></td><td>"shouts when rendered" renders as SHOUTS WHEN RENDERED</td></tr><tr><td><code>autowrap_mode</code></td><td><code>3</code> (WORD_SMART)</td><td>the long string wraps onto three lines</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>The auto-wrap paragraph breaks at a different word. Godot lays it out as "This label wraps across / multiple lines once it runs out / of horizontal space."; ours packs one more word onto each line — "This label wraps across multiple / lines once it runs out of / horizontal space." — and spaces those lines slightly tighter. Both reach three lines, and the centered and single-line labels occupy the same span in both images, so the box width is not wrong: the previewer draws the text in a system font stack (web fonts are CSP-blocked in the VS Code webview), so the browser's glyph advances and leading stand in for Godot's bundled theme font and nudge the break to a different word.</p></div>
+    </article>
+    <article class="sheet" data-type="Label3D" hidden>
+      <header class="sheet-head">
+        <h2>Label3D</h2>
+        <span class="renders">renders as a canvas-textured plane</span>
+        <span class="fixture"><code>unit-label3d.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-label3d-godot.png" alt="Godot render of Label3D">
+          <img class="img-ours" src="images/unit-label3d-ours.png" alt="Our render of Label3D">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>Label3D draws a line of text on a flat plane in 3D space. The previewer rasterises the text to a canvas and maps it onto a transparent <code>PlaneGeometry</code> sized by <code>pixel_size</code>, billboarded per the node's mode. In-viewport label text is gated behind the Labels toggle, <strong>off by default</strong> (ADR-0008), so it is absent from a plain capture.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>text</code></td><td>e.g. <code>"Billboard Enabled"</code></td><td>the glyph string each label shows</td></tr><tr><td><code>pixel_size</code></td><td><code>0.01</code> / <code>0.015</code></td><td>world size per glyph pixel; the <code>0.015</code> "Outlined Text" reads larger</td></tr><tr><td><code>billboard</code></td><td><code>0</code> / <code>1</code> / <code>2</code></td><td><code>1</code> faces the camera upright; <code>0</code> keeps a fixed orientation (the cyan label skews with the pitched camera); <code>2</code> yaws around Y only (the magenta label reads foreshortened)</td></tr><tr><td><code>modulate</code></td><td><code>Color(1,1,0,1)</code> …</td><td>tints the glyphs — yellow, cyan, magenta, white</td></tr><tr><td><code>outline_size</code></td><td><code>8</code></td><td>black outline width around "Outlined Text"</td></tr><tr><td><code>outline_modulate</code></td><td><code>Color(0,0,0,1)</code></td><td>the outline colour</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>The Godot reference renders all four labels (yellow "Billboard Enabled", cyan fixed-orientation "Billboard Disabled" tilting off-frame, magenta Y-axis "Y-Axis Billboard", and white "Outlined Text" with its black outline). Our capture is blank: in-viewport Label3D text is toggle-gated behind the Labels flag, off by default (ADR-0008), so a plain capture draws none of it. This is a UI default, not a rendering gap — with Labels on, the same canvas-textured planes draw.</p></div>
+    </article>
+    <article class="sheet" data-type="Line2D" hidden>
+      <header class="sheet-head">
+        <h2>Line2D</h2>
+        <span class="renders">renders as a stroked mesh polyline</span>
+        <span class="fixture"><code>unit-line2d.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-line2d-godot.png" alt="Godot render of Line2D">
+          <img class="img-ours" src="images/unit-line2d-ours.png" alt="Our render of Line2D">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>Line2D strokes a chain of points at a fixed width; the previewer draws it as flat mesh quads, one per segment, with sharp joint wedges filling the interior corners. The fixture places two: a white diagonal bar and a closed blue-purple triangle.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>points</code></td><td>2-point / 3-point arrays</td><td>the diagonal bar and the triangle's three edges</td></tr><tr><td><code>width</code></td><td><code>16</code> / <code>8</code></td><td>stroke thickness of each line</td></tr><tr><td><code>default_color</code></td><td>white / <code>(0.5, 0.5, 1)</code></td><td>the bar is white, the triangle blue-purple</td></tr><tr><td><code>closed</code></td><td><code>true</code> (triangle)</td><td>wraps the third point back to the first, closing the outline</td></tr><tr><td><code>position</code></td><td><code>(100,100)</code> / <code>(350,100)</code></td><td>places the two lines side by side</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>Position, width, cap shape, and closed-outline corners match Godot to within a pixel, but the colors are dimmer and shifted. Godot draws the 2D canvas colors straight in sRGB — pure white <code>(255,255,255)</code> and blue-purple <code>(128,128,255)</code>. Ours renders white as light grey <code>(226,226,226)</code> and the blue-purple as a lighter, slightly desaturated <code>(149,143,226)</code>: the Line2D meshes pass through the scene's editor-preview tonemapping ([ADR-0025], injected by the reference harness), which compresses the white highlight and desaturates the fill, whereas Godot's 2D canvas pipeline is not tonemapped.</p>
+<p>[ADR-0025]: ../../adr/0025-preview-lighting-mirrors-the-godot-editor.md</p></div>
+    </article>
+    <article class="sheet" data-type="MarginContainer" hidden>
+      <header class="sheet-head">
+        <h2>MarginContainer</h2>
+        <span class="renders">renders as a padded flex container</span>
+        <span class="fixture"><code>unit-margin-container.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-margin-container-godot.png" alt="Godot render of MarginContainer">
+          <img class="img-ours" src="images/unit-margin-container-ours.png" alt="Our render of MarginContainer">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>MarginContainer insets its single child by four theme-override margin constants. The previewer maps it to a CSS flex box whose padding is those margins, so the container draws nothing itself — the child's blue fill sits inset by the margins, and the grey background shows through the padding band.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>anchors_preset</code> / <code>anchor_right</code> / <code>anchor_bottom</code></td><td><code>15</code> / <code>1.0</code> / <code>1.0</code></td><td>the container fills the parent Control, so it spans the whole viewport</td></tr><tr><td><code>theme_override_constants/margin_left</code> · <code>margin_right</code></td><td><code>32</code></td><td>wider grey band down the left and right edges of the blue fill</td></tr><tr><td><code>theme_override_constants/margin_top</code> · <code>margin_bottom</code></td><td><code>16</code></td><td>shorter grey band top and bottom — half the horizontal inset</td></tr><tr><td>child <code>ColorRect.color</code></td><td><code>Color(0.2, 0.4, 0.8, 1)</code></td><td>the blue fill occupying the padded box</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>None visible in this fixture.</p></div>
+    </article>
+    <article class="sheet" data-type="Marker2D" hidden>
+      <header class="sheet-head">
+        <h2>Marker2D</h2>
+        <span class="renders">renders as a selection-gated cross gizmo</span>
+        <span class="fixture"><code>unit-marker2d.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-marker2d-godot.png" alt="Godot render of Marker2D">
+          <img class="img-ours" src="images/unit-marker2d-ours.png" alt="Our render of Marker2D">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>Marker2D is a Node2D transform anchor that positions its children and draws a small blue "+" cross at its origin. That cross is an editor decoration, so the previewer selection-gates it (ADR-0018) — it appears only while the node is selected. Godot's game render never draws the marker gizmo either, so in this plain, nothing-selected capture both sides show an empty frame.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>position</code></td><td><code>Vector2(120, 80)</code>, <code>(-140, -60)</code>, <code>(0, 160)</code></td><td>moves each anchor and its gated cross; nothing visible unselected</td></tr><tr><td><code>gizmo_extents</code></td><td><code>40.0</code> (BigMarker), <code>24.0</code> (RotatedMarker)</td><td>the cross arm length; only sizes the gated gizmo</td></tr><tr><td><code>rotation</code></td><td><code>0.6</code> (RotatedMarker)</td><td>tilts the anchor and its gated cross</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>None visible in this fixture.</p></div>
+    </article>
+    <article class="sheet" data-type="Marker3D" hidden>
+      <header class="sheet-head">
+        <h2>Marker3D</h2>
+        <span class="renders">renders as a selection-gated axis-cross gizmo</span>
+        <span class="fixture"><code>unit-marker-3d.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-marker-3d-godot.png" alt="Godot render of Marker3D">
+          <img class="img-ours" src="images/unit-marker-3d-ours.png" alt="Our render of Marker3D">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>A Node3D transform anchor that positions its children and draws a 3-axis editor cross at its origin. That cross is selection-gated (ADR-0018), so a plain capture shows nothing for it — and Godot's own editor gizmo does not render in the game, so both images are just the empty preview sky and ground.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>transform</code></td><td>position <code>(0, 1, 0)</code>, identity basis</td><td>anchors the marker one unit up; no visible geometry, and it has no children to place</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>None visible in this fixture.</p></div>
+    </article>
+    <article class="sheet" data-type="MeshInstance3D" hidden>
+      <header class="sheet-head">
+        <h2>MeshInstance3D</h2>
+        <span class="renders">renders as a THREE.Mesh</span>
+        <span class="fixture"><code>unit-torus-mesh.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-torus-mesh-godot.png" alt="Godot render of MeshInstance3D">
+          <img class="img-ours" src="images/unit-torus-mesh-ours.png" alt="Our render of MeshInstance3D">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>MeshInstance3D draws its <code>mesh</code> resource as a THREE.Mesh. This fixture feeds it a <code>TorusMesh</code> with an orange metallic <code>StandardMaterial3D</code> override, so the previewer builds a <code>torusGeometry</code> and shades it. The donut and its glossy highlight come through; the two frames disagree only on which way the ring faces.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>mesh</code></td><td><code>TorusMesh</code> sub-resource</td><td>the donut geometry that is drawn</td></tr><tr><td><code>inner_radius</code></td><td><code>0.5</code></td><td>radius of the hole</td></tr><tr><td><code>outer_radius</code></td><td><code>1.5</code></td><td>radius to the outer edge</td></tr><tr><td><code>rings</code> / <code>ring_segments</code></td><td><code>32</code> / <code>16</code></td><td>tessellation — both frames read as a smooth ring</td></tr><tr><td><code>surface_material_override/0</code></td><td><code>StandardMaterial3D</code></td><td>replaces the surface material</td></tr><tr><td><code>albedo_color</code></td><td><code>Color(0.9, 0.5, 0.2, 1)</code></td><td>the orange body</td></tr><tr><td><code>metallic</code> / <code>roughness</code></td><td><code>0.8</code> / <code>0.2</code></td><td>glossy metal with the tight specular streak both frames share</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>- <strong>The torus faces the wrong way.</strong> Godot's donut lies flat, hole opening upward — a foreshortened ring seen from slightly above. Ours stands upright and tilted, hole turned toward the camera, so it reads as a larger, rounder ring on a diagonal. Cause: Godot's <code>TorusMesh</code> revolves around Y (lies in the XZ plane); three's <code>torusGeometry</code> revolves around Z (lies in the XY plane), and the previewer passes it through unrotated, so under the shared camera it stands where Godot lies down. No PARITY-LIMITATIONS entry covers this.</p>
+<p>The fixture's two <code>Label3D</code> captions ("TorusMesh Test", the description line) show in Godot but not in ours — in-viewport Label3D text is toggle-gated off by default (ADR-0008), covered by the Label3D sheet, not a MeshInstance3D gap. Material, colour, and the grey-sky-over-brown-ground preview environment otherwise agree.</p></div>
+    </article>
+    <article class="sheet" data-type="NavigationAgent3D" hidden>
+      <header class="sheet-head">
+        <h2>NavigationAgent3D</h2>
+        <span class="renders">renders as nothing (non-visual navigation helper)</span>
+        <span class="fixture"><code>unit-navigation-agent-3d.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-navigation-agent-3d-godot.png" alt="Godot render of NavigationAgent3D">
+          <img class="img-ours" src="images/unit-navigation-agent-3d-ours.png" alt="Our render of NavigationAgent3D">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>A pathfinding and avoidance helper that steers its parent body toward a target. It has no runtime visual — only an editor-only path debug draw — so the previewer draws nothing for it. Both images show only the sky gradient over brown ground; the sibling <code>CollisionShape3D</code> is toggle-gated (ADR-0005/0006) and also absent.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>avoidance_enabled</code></td><td><code>true</code></td><td>none — avoidance is a simulation flag, no runtime visual</td></tr><tr><td><code>max_neighbors</code></td><td><code>1</code></td><td>none — avoidance tuning, not drawn</td></tr><tr><td><code>radius</code></td><td><code>0.4</code></td><td>none — avoidance radius, not drawn</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>None visible in this fixture.</p></div>
+    </article>
+    <article class="sheet" data-type="NavigationObstacle3D" hidden>
+      <header class="sheet-head">
+        <h2>NavigationObstacle3D</h2>
+        <span class="renders">renders as a transform-only group (no runtime visual)</span>
+        <span class="fixture"><code>unit-navigation-obstacle-3d.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-navigation-obstacle-3d-godot.png" alt="Godot render of NavigationObstacle3D">
+          <img class="img-ours" src="images/unit-navigation-obstacle-3d-ours.png" alt="Our render of NavigationObstacle3D">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>NavigationObstacle3D defines an avoidance region for navigation agents. It has no runtime visual — the previewer draws it as a transform-only Node3D group (ADR-0008), so nothing appears. Both images show only the shared editor sky and ground; the fixture's sibling CollisionShape3D is toggle-gated and also draws nothing in a plain capture.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>radius</code></td><td><code>1.5</code></td><td>avoidance region radius — no runtime visual</td></tr><tr><td><code>height</code></td><td><code>2.0</code></td><td>avoidance region height — no runtime visual</td></tr><tr><td><code>avoidance_enabled</code></td><td><code>true</code></td><td>enables avoidance for the region — no runtime visual</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>None visible in this fixture.</p></div>
+    </article>
+    <article class="sheet" data-type="NavigationRegion2D" hidden>
+      <header class="sheet-head">
+        <h2>NavigationRegion2D</h2>
+        <span class="renders">renders as a translucent green navigation-mesh overlay</span>
+        <span class="fixture"><code>unit-navigation-region-2d.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-navigation-region-2d-godot.png" alt="Godot render of NavigationRegion2D">
+          <img class="img-ours" src="images/unit-navigation-region-2d-ours.png" alt="Our render of NavigationRegion2D">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>A 2D region whose <code>NavigationPolygon</code> defines walkable area. The previewer draws that polygon as a translucent green fill plus edge lines — the editor's navigation visualization — gated on the <code>showNavigation</code> viewport toggle, on by default.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>navigation_polygon</code></td><td><code>ExtResource("1_poly")</code></td><td>the 128×128 polygon our previewer fills as a green overlay in the top-left</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>Godot's frame is empty grey; ours shows a translucent green 128×128 square at the origin. Navigation-mesh visualization is an editor/debug overlay — Godot's game reference render draws none of it, while our <code>showNavigation</code> toggle defaults on and paints the polygon fill and edges. Turning the toggle off matches Godot.</p></div>
+    </article>
+    <article class="sheet" data-type="NavigationRegion3D" hidden>
+      <header class="sheet-head">
+        <h2>NavigationRegion3D</h2>
+        <span class="renders">renders as a translucent green navmesh overlay</span>
+        <span class="fixture"><code>unit-navigation-region-3d.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-navigation-region-3d-godot.png" alt="Godot render of NavigationRegion3D">
+          <img class="img-ours" src="images/unit-navigation-region-3d-ours.png" alt="Our render of NavigationRegion3D">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>NavigationRegion3D holds a NavigationMesh describing walkable area. That mesh has no game-runtime visual in Godot — it is navigation data, drawn only by the editor's "Visible Navigation" overlay. This previewer surfaces that overlay by default, drawing the mesh as translucent green faces with edge lines.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>navigation_mesh</code></td><td><code>NavigationMesh</code> (a 4×4 ground quad, two triangles)</td><td>drawn as the translucent green overlay, split by the diagonal edge line</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>Godot's render shows only the empty preview environment — the navmesh is absent, because the reference render is the game view and does not inject the editor's "Visible Navigation" debug draw. Ours deliberately draws that overlay (a translucent green filled mesh with edge lines, the diagonal splitting it into the two authored triangles), so the quad is visible in our image and blank in Godot's. This is the useful thing a previewer can show, not a defect to fix.</p></div>
+    </article>
+    <article class="sheet" data-type="Node2D" hidden>
+      <header class="sheet-head">
+        <h2>Node2D</h2>
+        <span class="renders">renders as a transform-only THREE.Group</span>
+        <span class="fixture"><code>unit-area2d.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-area2d-godot.png" alt="Godot render of Node2D">
+          <img class="img-ours" src="images/unit-area2d-ours.png" alt="Our render of Node2D">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>Node2D is the base of 2D transform objects — sprites, bodies, areas: a transform (position/rotation/scale/skew and draw-order Z), no pixels of its own. The previewer maps it to a <code>&lt;group&gt;</code> and draws its children inside. Here the fixture's root is a bare Node2D, so the group is empty and the frame is blank.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>Area2D.position</code></td><td><code>Vector2(10, 20)</code></td><td>offsets the area's subtree; the Area2D itself draws nothing at runtime</td></tr><tr><td><code>CollisionShape2D.shape</code></td><td><code>CircleShape2D</code> (r=0.5)</td><td>a collision gizmo — editor/toggle-gated, absent from a plain capture</td></tr><tr><td><code>ColorRect.color</code></td><td><code>Color(1, 0.4, 0.4, 1)</code></td><td>would tint the rect, but no size is set so it lays out at 0×0 and nothing draws</td></tr></tbody></table></div>
+<p>The root Node2D sets no properties of its own; every node in this scene is transform, physics, or a zero-size Control, so both renders are the empty viewport.</p>
+<h3>Divergences</h3>
+<p>None visible in this fixture.</p></div>
+    </article>
+    <article class="sheet" data-type="Node3D" hidden>
+      <header class="sheet-head">
+        <h2>Node3D</h2>
+        <span class="renders">renders as an invisible transform group</span>
+        <span class="fixture"><code>unit-node3d-basic.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-node3d-basic-godot.png" alt="Godot render of Node3D">
+          <img class="img-ours" src="images/unit-node3d-basic-ours.png" alt="Our render of Node3D">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>Node3D is the base 3D node — a pure transform with no geometry of its own. The previewer renders it as a <code>&lt;group&gt;</code> that positions its children and draws nothing itself, decomposing each <code>Transform3D</code> into position/rotation/scale.</p>
+<p>The fixture nests a root with two children and a grandchild, then parents two Label3D captions high above origin (y = 4 and y = 3). Both are framed out by the shared editor camera, so each capture shows only the editor preview sky — a light blue-grey band fading to the procedural ground colour, with no visible geometry or text.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>transform</code></td><td>translation offsets on Child1 / Child2 / GrandChild</td><td>repositions invisible containers; nothing is drawn</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>None visible in this fixture.</p></div>
+    </article>
+    <article class="sheet" data-type="OmniLight3D" hidden>
+      <header class="sheet-head">
+        <h2>OmniLight3D</h2>
+        <span class="renders">renders as a THREE.PointLight</span>
+        <span class="fixture"><code>unit-omni-light-3d.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-omni-light-3d-godot.png" alt="Godot render of OmniLight3D">
+          <img class="img-ours" src="images/unit-omni-light-3d-ours.png" alt="Our render of OmniLight3D">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>Godot's omnidirectional point light — it emits from a single point in every direction with distance attenuation. The previewer renders it as a THREE.PointLight inside the node's transform group, energy scaled by PI to match Godot's brightness. Its wireframe-sphere gizmo is selection-gated, so it appears in neither capture.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>transform</code> origin</td><td><code>(1.5, 2, 1.5)</code></td><td>lights the cube from above the front-right, throwing its shadow to the front-left</td></tr><tr><td><code>light_color</code></td><td><code>Color(1, 0.9, 0.75)</code></td><td>warm tint on the lit ground and the cube's faces</td></tr><tr><td><code>light_energy</code></td><td><code>2.0</code></td><td>brightness of the lit pool on the plane</td></tr><tr><td><code>omni_range</code></td><td><code>8.0</code></td><td>reach of the light — the whole plane falls inside it</td></tr><tr><td><code>omni_attenuation</code></td><td><code>1.0</code></td><td>falloff exponent, carried to three's <code>decay</code></td></tr><tr><td><code>shadow_enabled</code></td><td><code>true</code></td><td>the cube casts a shadow onto the ground</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>The shadow's contact edge. In our render the shadow silhouette at the base of the cube is stepped and jagged; in Godot the same edge is smooth and soft. three renders a point light's shadow through a cube shadow map, whose resolution and bias leave an aliased fringe, where Godot filters its omni shadow to a soft edge. The shadow's direction, extent and the warm lit pool otherwise match — the ground illumination agrees to within ~1/255 across the whole plane, so the omni/spot distance-falloff divergence does not surface at this range.</p></div>
+    </article>
+    <article class="sheet" data-type="OptionButton" hidden>
+      <header class="sheet-head">
+        <h2>OptionButton</h2>
+        <span class="renders">renders as a collapsed dropdown div</span>
+        <span class="fixture"><code>unit-optionbutton.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-optionbutton-godot.png" alt="Godot render of OptionButton">
+          <img class="img-ours" src="images/unit-optionbutton-ours.png" alt="Our render of OptionButton">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>A dropdown that collapses to show its currently-selected item. Being a static viewer, the previewer draws only that selected item's text inside a positioned HTML <code>&lt;div&gt;</code> on the Control overlay — not the open popup, not the whole list. The fixture centres one <code>DifficultySelect</code> with three items (<code>Easy</code>, <code>Normal</code>, <code>Hard</code>) and <code>selected = 1</code>, so both renders show <code>Normal</code>.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>item_count</code> + <code>popup/item_N/text</code></td><td><code>3</code> items: <code>Easy</code> / <code>Normal</code> / <code>Hard</code></td><td>defines the option list; only the selected one is drawn</td></tr><tr><td><code>selected</code></td><td><code>1</code></td><td>shows <code>Normal</code> (the item at index 1) as the button label</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>Two, both in the button chrome rather than the label. Godot draws its default-theme StyleBox as a neutral charcoal with a <strong>dropdown chevron icon at the right edge</strong>; the previewer draws a lighter, blue-tinted slate fill (<code>rgba(70,78,94)</code>) and <strong>no arrow</strong>. The arrow is a theme icon texture the previewer has no access to (the same root cause as the CheckBox indicator), so the collapsed affordance reads as a plain tinted rectangle. The tint difference is the same default-theme chrome synthesis the Button render shows — this previewer draws its own chrome instead of Godot's charcoal. The selected-item resolution is correct in both: <code>selected = 1</code> picks <code>Normal</code>, not the first item. No PARITY-LIMITATIONS entry covers either the chevron or the default-theme chrome.</p></div>
+    </article>
+    <article class="sheet" data-type="Panel" hidden>
+      <header class="sheet-head">
+        <h2>Panel</h2>
+        <span class="renders">renders as a StyleBox-painted &lt;div&gt;</span>
+        <span class="fixture"><code>unit-panel.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-panel-godot.png" alt="Godot render of Panel">
+          <img class="img-ours" src="images/unit-panel-ours.png" alt="Our render of Panel">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>A <code>Panel</code> is a bare rectangular Control that paints its <code>theme_override_styles/panel</code> StyleBox and holds free-anchored children. The previewer renders it as a positioned <code>&lt;div&gt;</code> whose CSS is derived from that StyleBox.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td>offsets (<code>-160..160</code>, <code>-100..100</code>)</td><td>centered</td><td>a 320×200 box in the middle of the frame</td></tr><tr><td><code>bg_color</code></td><td><code>Color(0.16, 0.17, 0.22, 1)</code></td><td>the dark navy fill</td></tr><tr><td><code>corner_radius_*</code></td><td><code>8</code></td><td>the rounded corners</td></tr><tr><td><code>border_width_*</code></td><td><code>2</code></td><td>the thin visible edge</td></tr><tr><td><code>border_color</code></td><td><code>Color(0.4, 0.45, 0.6, 1)</code></td><td>the light blue-grey of that edge</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>None visible in this fixture.</p></div>
+    </article>
+    <article class="sheet" data-type="PanelContainer" hidden>
+      <header class="sheet-head">
+        <h2>PanelContainer</h2>
+        <span class="renders">renders as a StyleBox panel around its child</span>
+        <span class="fixture"><code>unit-panel-container.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-panel-container-godot.png" alt="Godot render of PanelContainer">
+          <img class="img-ours" src="images/unit-panel-container-ours.png" alt="Our render of PanelContainer">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>PanelContainer draws its <code>theme_override_styles/panel</code> StyleBox and lays its single child inside the box's content margins. The previewer maps it to a <code>&lt;div&gt;</code> carrying the StyleBox's fill, corner radius and padding, with the child in flow.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>theme_override_styles/panel</code></td><td><code>StyleBoxFlat</code></td><td>the panel's fill, rounded corners and padding all come from this box</td></tr><tr><td><code>bg_color</code></td><td><code>Color(0.16, 0.16, 0.18, 0.95)</code></td><td>dark near-opaque slate fill</td></tr><tr><td><code>corner_radius_*</code></td><td><code>6</code></td><td>rounded corners on all four sides</td></tr><tr><td><code>content_margin_*</code></td><td><code>16</code> / <code>12</code></td><td>padding between the panel edge and the label</td></tr><tr><td><code>anchors_preset</code></td><td><code>8</code> (center)</td><td>the previewer centers the panel on the canvas; Godot does not (see Divergences)</td></tr><tr><td><code>offset_left/top/right/bottom</code></td><td><code>-120 / -40 / 120 / 40</code></td><td>a 240×80 rect</td></tr><tr><td>child <code>Label.text</code></td><td><code>"Panel Container"</code></td><td>centered label the panel sizes around</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>The panel lands in a different place. The previewer centers it on the canvas; the Godot reference straddles the viewport origin, so only its bottom-right quadrant — the tail of the label and the rounded bottom-right corner — shows at the top-left. The fixture sets <code>anchors_preset = 8</code> but no explicit <code>anchor_*</code> values. Godot treats <code>anchors_preset</code> as editor-only metadata, so at runtime the anchors stay at their default <code>(0, 0, 0, 0)</code> and the negative offsets place the box across the origin; the previewer instead derives the center anchors <code>(0.5, …)</code> from the preset as a fallback (<code>r3f/controls/controlLayout.ts</code>, <code>resolveAnchors</code>). Where both panels are visible the StyleBox itself agrees — same dark fill, same 6px corners, same padding, same white centered text.</p></div>
+    </article>
+    <article class="sheet" data-type="Path2D" hidden>
+      <header class="sheet-head">
+        <h2>Path2D</h2>
+        <span class="renders">renders as nothing at runtime; a selection-gated curve gizmo</span>
+        <span class="fixture"><code>unit-path2d.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-path2d-godot.png" alt="Godot render of Path2D">
+          <img class="img-ours" src="images/unit-path2d-ours.png" alt="Our render of Path2D">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>A Node2D that carries a <code>Curve2D</code> for children to follow. It has no runtime visual of its own: the previewer draws the curve as a selection-gated white polyline gizmo (ADR-0018), shown only while the node is selected, mirroring Godot's 2D editor path line. In a plain capture nothing is selected, so both images are an empty grey field. The <code>PathFollow2D</code> child is a transform-only relay with no geometry, so it draws nothing either.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>position</code></td><td><code>Vector2(420, 280)</code></td><td>where the path origin sits; nothing is drawn there</td></tr><tr><td><code>curve</code></td><td><code>SubResource("Curve2D_arc")</code></td><td>the followed path; drawn only as a selection-gated gizmo, so invisible here</td></tr><tr><td><code>Follower.progress_ratio</code></td><td><code>0.5</code></td><td>places the follower halfway along the curve; transform-only, no visual</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>None visible in this fixture.</p></div>
+    </article>
+    <article class="sheet" data-type="Path3D" hidden>
+      <header class="sheet-head">
+        <h2>Path3D</h2>
+        <span class="renders">renders as a selection-gated curve gizmo</span>
+        <span class="fixture"><code>unit-pathfollow-3d.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-pathfollow-3d-godot.png" alt="Godot render of Path3D">
+          <img class="img-ours" src="images/unit-pathfollow-3d-ours.png" alt="Our render of Path3D">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p><code>Path3D</code> holds a <code>Curve3D</code> and hands it to its descendants so a <code>PathFollow3D</code> child can ride it. Its only visual is the white curve polyline, a selection-gated editor gizmo (ADR-0018); in a plain capture it draws nothing, exactly as Godot draws no path line while running. Every cube on screen belongs to the child meshes, not to the path.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>curve</code></td><td><code>Curve3D</code>, points <code>(0,0,0) → (3,0,0) → (3,0,3)</code></td><td>defines the L-shaped path; the polyline is a selection-gated gizmo, so nothing is drawn for it here; supplies the curve the <code>PathFollow3D</code> child samples</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>The follower cube — the 0.6 box under the <code>PathFollow3D</code> child — lands in a different place in each image. In Godot it stays at the curve's start (the origin), enclosing the small <code>OriginRef</code> box, so a single 0.6 cube reads at frame centre. In this previewer the follower advances to <code>progress_ratio = 0.5</code> (the curve midpoint at <code>(3,0,0)</code>), so it moves off to the right edge and the 0.3 <code>OriginRef</code> box is left visible at centre. Cause: Godot applies <code>progress_ratio</code> only once the node is parented to a <code>Path3D</code> with a baked curve — set during scene instantiation it is a no-op and progress stays 0 — whereas the previewer resolves the curve statically and honours the ratio. The <code>Path3D</code> curve line itself is absent from both frames: a match, not a divergence.</p></div>
+    </article>
+    <article class="sheet" data-type="PathFollow2D" hidden>
+      <header class="sheet-head">
+        <h2>PathFollow2D</h2>
+        <span class="renders">renders as a transform-only follower with a selection-gated dot</span>
+        <span class="fixture"><code>unit-pathfollow2d.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-pathfollow2d-godot.png" alt="Godot render of PathFollow2D">
+          <img class="img-ours" src="images/unit-pathfollow2d-ours.png" alt="Our render of PathFollow2D">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>PathFollow2D positions its children along the parent Path2D's curve; it has no runtime visual of its own, and its follow-point marker is a selection-gated dot gizmo (ADR-0018) that is absent in a plain capture. What makes the follow point visible here is its child <code>Polygon2D</code> — a 20 px square that sits wherever the follower lands. In both images that square is the only thing drawn on the grey field, so its position and colour report the whole story.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>Follower.progress_ratio</code></td><td><code>0.5</code></td><td>the follow distance along the curve; ours samples the midpoint, Godot leaves the follower at the curve start (see Divergences)</td></tr><tr><td><code>TrackPath.position</code></td><td><code>Vector2(440, 240)</code></td><td>the curve origin in screen space — where Godot's follower ends up</td></tr><tr><td><code>TrackPath.curve</code></td><td><code>Curve2D_loop</code></td><td>the rectangular path <code>(0,0)→(240,0)→(240,160)→(0,160)</code> the follower rides</td></tr><tr><td><code>Marker.color</code></td><td><code>Color(0.3, 0.8, 1, 1)</code></td><td>the square's fill, a sky-blue</td></tr><tr><td><code>Marker.polygon</code></td><td>20×20 quad</td><td>the visible square marking the follow point</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>Two, both real.</p>
+<p><strong>Follow position.</strong> Godot draws the square at <code>(439, 239)</code> — the curve origin, i.e. <code>progress</code> 0. Ours draws it at <code>(679, 319)</code> — the midpoint of the 640 px path that <code>progress_ratio = 0.5</code> samples. Ours applies <code>progress_ratio</code> directly; Godot binds the parent Path2D only on enter-tree, so a <code>progress_ratio</code> set during scene load (parent not yet resolved) is dropped and <code>progress</code> stays 0.</p>
+<p><strong>Marker colour.</strong> Godot fills the square with <code>(76, 204, 255)</code> — the exact sRGB of <code>Color(0.3, 0.8, 1)</code>. Ours renders a paler, desaturated <code>(134, 207, 225)</code>: the Polygon2D child passes through the scene's editor-preview FILMIC tonemapping ([ADR-0025], injected by the reference harness), which highlight-compresses and desaturates, whereas Godot's 2D canvas is not tonemapped. Same cause as <code>line2d</code>.</p>
+<p>[ADR-0025]: ../../adr/0025-preview-lighting-mirrors-the-godot-editor.md</p></div>
+    </article>
+    <article class="sheet" data-type="PathFollow3D" hidden>
+      <header class="sheet-head">
+        <h2>PathFollow3D</h2>
+        <span class="renders">renders as a curve-positioned transform group</span>
+        <span class="fixture"><code>unit-pathfollow-3d.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-pathfollow-3d-godot.png" alt="Godot render of PathFollow3D">
+          <img class="img-ours" src="images/unit-pathfollow-3d-ours.png" alt="Our render of PathFollow3D">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>PathFollow3D positions its children along its parent Path3D's curve. The previewer samples the curve at <code>progress_ratio</code> and drives a transform group to that point; its editor follow-point cross is selection-gated (ADR-0018), so nothing extra shows in a plain capture — only the child box the follower carries.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>progress_ratio</code></td><td><code>0.5</code></td><td>places the follower at the curve's arc-length midpoint — the corner <code>(3,0,0)</code> of the L-shaped path <code>(0,0,0) → (3,0,0) → (3,0,3)</code></td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>The follower lands in a different place in each image. In ours the 0.6 follower box sits at the corner <code>(3,0,0)</code> — where <code>progress_ratio</code> 0.5 falls by arc length — which the shared editor camera projects off the clipped lower-right edge (~<code>(997,514)</code>), leaving only the small 0.3 box that marks the path origin <code>(0,0,0)</code> at frame centre. Godot's reference shows a single, larger box at frame centre and nothing at the right edge: its follower is still at the path start <code>(0,0,0)</code>, stacked over the origin marker. The previewer resolves <code>progress_ratio</code> 0.5 to the 0.5 arc-length position; the reference capture shows the follower at the path start, so the ratio's effect is not visible there.</p></div>
+    </article>
+    <article class="sheet" data-type="Polygon2D" hidden>
+      <header class="sheet-head">
+        <h2>Polygon2D</h2>
+        <span class="renders">renders as a filled ShapeGeometry mesh</span>
+        <span class="fixture"><code>unit-polygon2d.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-polygon2d-godot.png" alt="Godot render of Polygon2D">
+          <img class="img-ours" src="images/unit-polygon2d-ours.png" alt="Our render of Polygon2D">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>A filled 2D polygon on the canvas. The previewer triangulates the <code>polygon</code> outline into an unlit, double-sided <code>ShapeGeometry</code> mesh and tints it with the flat <code>color</code>. Both images draw the same home-plate pentagon at the same pixels.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>position</code></td><td><code>Vector2(112, 72)</code></td><td>the outline's origin lands here — the shape's top-left corner sits at (112, 72)</td></tr><tr><td><code>polygon</code></td><td><code>(0,0 128,0 128,96 64,160 0,96)</code></td><td>the five-point outline: a 128×96 box tapering to a point at the bottom</td></tr><tr><td><code>color</code></td><td><code>Color(1, 0.33, 0.61, 0.50)</code></td><td>a semi-transparent pink fill, blended over the grey background</td></tr><tr><td><code>antialiased</code></td><td><code>true</code></td><td>smooth polygon edges — they read clean in both renders</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>The 50%-alpha fill tint differs slightly: Godot reads a pinker <code>rgb(166, 80, 116)</code>, ours a marginally more muted, purple-leaning <code>rgb(160, 90, 124)</code> (a flat ~6–10/255 per-channel shift). The shape, size, placement, and anti-aliased edge are pixel-identical; the gap is only in how the translucent fill composites over the background. No PARITY-LIMITATIONS entry covers it.</p></div>
+    </article>
+    <article class="sheet" data-type="RemoteTransform2D" hidden>
+      <header class="sheet-head">
+        <h2>RemoteTransform2D</h2>
+        <span class="renders">renders as nothing itself; it copies its transform onto its remote_path target</span>
+        <span class="fixture"><code>unit-remote-transform-2d.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-remote-transform-2d-godot.png" alt="Godot render of RemoteTransform2D">
+          <img class="img-ours" src="images/unit-remote-transform-2d-ours.png" alt="Our render of RemoteTransform2D">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>Godot's transform relay: it draws nothing of its own but writes its own transform onto the node its <code>remote_path</code> names. The previewer resolves this once over the authored tree on load — the static enter-tree effect, not per-frame — so the relay is invisible and its target jumps to the relay's position. Here two identical pentagons are authored at the same spot; the relay at <code>(760, 210)</code> drags <code>TargetPolygon</code> up to the right while <code>AuthoredGhost</code> stays behind to mark where it was authored.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>Relay.position</code></td><td><code>Vector2(760, 210)</code></td><td>the transform copied onto the target — where the blue pentagon lands</td></tr><tr><td><code>Relay.remote_path</code></td><td><code>NodePath("../TargetPolygon")</code></td><td>the node the relay drives, default global coordinates</td></tr><tr><td><code>TargetPolygon.color</code></td><td><code>Color(0.2, 0.7, 0.9, 1)</code></td><td>the driven, blue pentagon</td></tr><tr><td><code>AuthoredGhost.color</code></td><td><code>Color(0.5, 0.5, 0.5, 0.35)</code></td><td>the undriven ghost left at the authored <code>(320, 440)</code></td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>The relay itself is faithful — the blue pentagon lands at the same upper-right spot in both images, so the default global-coordinate drive is reproduced (<a href="../../PARITY-LIMITATIONS.md#remotetransform3d--remotetransform2d--driven-with-three-bounded-gaps">PARITY-LIMITATIONS.md</a>). One visible difference remains, in the polygon fill rather than its placement:</p>
+<p>- <strong>The blue pentagon reads paler and less saturated in ours.</strong> Godot writes the authored 2D colour straight to the framebuffer (<code>0.2, 0.7, 0.9</code> → <code>51, 178, 229</code> exactly); ours renders it lifted and desaturated (<code>95, 191, 217</code>). The scene has no <code>WorldEnvironment</code>, so the previewer mounts Godot's editor preview environment (ADR-0025), whose FILMIC tonemapping is set on the whole canvas — the unlit 2D polygons included — whereas Godot tonemaps only the 3D pass, never the 2D canvas. The semi-transparent ghost carries the same lift faintly (<code>93</code> → <code>98</code>). No PARITY-LIMITATIONS entry covers 2D colour.</p></div>
+    </article>
+    <article class="sheet" data-type="RemoteTransform3D" hidden>
+      <header class="sheet-head">
+        <h2>RemoteTransform3D</h2>
+        <span class="renders">renders as nothing (a transform-only group that drives its target)</span>
+        <span class="fixture"><code>unit-remote-transform-3d.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-remote-transform-3d-godot.png" alt="Godot render of RemoteTransform3D">
+          <img class="img-ours" src="images/unit-remote-transform-3d-ours.png" alt="Our render of RemoteTransform3D">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>A RemoteTransform3D pushes its own transform onto the node its <code>remote_path</code> names; it has no visual of its own. The previewer draws nothing for the relay and applies the drive statically at load, so the visible cube is the driven target sitting at the relay's position, not the relay itself.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>remote_path</code></td><td><code>../TargetCube</code></td><td>names the node the relay drives</td></tr><tr><td><code>transform</code> origin</td><td><code>(2, 0, 0)</code></td><td>copied onto TargetCube, moving it from its authored <code>x = -2</code> to <code>x = 2</code></td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>None visible in this fixture.</p></div>
+    </article>
+    <article class="sheet" data-type="RichTextLabel" hidden>
+      <header class="sheet-head">
+        <h2>RichTextLabel</h2>
+        <span class="renders">renders as a positioned HTML div of styled text</span>
+        <span class="fixture"><code>unit-rich-text-label.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-rich-text-label-godot.png" alt="Godot render of RichTextLabel">
+          <img class="img-ours" src="images/unit-rich-text-label-ours.png" alt="Our render of RichTextLabel">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>A Control that lays out a run of rich text; the previewer draws it as a positioned <code>&lt;div&gt;</code> and, with <code>bbcode_enabled</code>, renders a BBCode subset as inline styling (ADR-0003). Both images show one line reading "Bold, italic, underline, and colored BBCode" pinned to the top-left, with each tagged word carrying its style.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>text</code></td><td><code>"[b]Bold[/b], [i]italic[/i], [u]underline[/u], and [color=#e0a030]colored[/color] BBCode"</code></td><td>the visible line of text</td></tr><tr><td><code>bbcode_enabled</code></td><td><code>true</code></td><td>tags render as styling, not literal characters</td></tr><tr><td><code>fit_content</code></td><td><code>true</code></td><td>box shrinks to the single line's height at the top edge</td></tr><tr><td><code>theme_override_font_sizes/normal_font_size</code></td><td><code>18</code></td><td>the size of the text</td></tr><tr><td><code>theme_override_colors/default_color</code></td><td><code>Color(0.9, 0.9, 0.9, 1)</code></td><td>the light-grey of the untagged words</td></tr></tbody></table></div>
+<p><code>[b]</code> renders bold, <code>[i]</code> italic, <code>[u]</code> underlined, and <code>[color=#e0a030]</code> in the same orange in both images.</p>
+<h3>Divergences</h3>
+<p>None visible in this fixture.</p></div>
+    </article>
+    <article class="sheet" data-type="RigidBody3D" hidden>
+      <header class="sheet-head">
+        <h2>RigidBody3D</h2>
+        <span class="renders">renders as an invisible transform-only group</span>
+        <span class="fixture"><code>unit-rigidbody3d.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-rigidbody3d-godot.png" alt="Godot render of RigidBody3D">
+          <img class="img-ours" src="images/unit-rigidbody3d-ours.png" alt="Our render of RigidBody3D">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>RigidBody3D is a gravity-driven physics body. The previewer mounts it as a transform-only Node3D group — it draws nothing itself and runs no simulation (ADR-0005/0008), only positioning its children at the authored transform. The reddish crate on screen is its child <code>MeshInstance3D</code> (a 1×1×1 <code>BoxMesh</code> under a salmon <code>StandardMaterial3D</code>); the <code>CollisionShape3D</code> is a toggle-gated overlay (ADR-0006) and stays hidden. Both frames carry the grey-sky-over-brown-ground preview environment.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>transform</code></td><td>translate <code>(0, 1, 0)</code></td><td>lifts the body one unit up; its child mesh rides along</td></tr><tr><td><code>mass</code></td><td><code>2.0</code></td><td>physics-only, no visual in a static preview</td></tr><tr><td><code>gravity_scale</code></td><td><code>1.0</code></td><td>physics-only here; drives the fall seen in Godot's reference (see below)</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>- <strong>The crate sits well below centre in Godot; ours holds it higher.</strong> Same box, same salmon shading, same horizontal placement — Godot's crate is far lower in the frame and reads a touch smaller (a steeper downward view onto the dropped box). Cause: Godot's reference instantiates the scene and ticks a few frames before it shoots, and in those frames the RigidBody3D falls under gravity, dropping out of the authored <code>y = 1</code> spot. Our previewer is a static viewer with no physics loop (ADR-0005/0008), so it draws the body at rest where the scene places it. No PARITY-LIMITATIONS entry covers runtime simulation — the divergence is the reference moving, not a rendering gap.</p></div>
+    </article>
+    <article class="sheet" data-type="ScrollContainer" hidden>
+      <header class="sheet-head">
+        <h2>ScrollContainer</h2>
+        <span class="renders">renders as an overflow-scrolling DOM container</span>
+        <span class="fixture"><code>unit-scroll-container.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-scroll-container-godot.png" alt="Godot render of ScrollContainer">
+          <img class="img-ours" src="images/unit-scroll-container-ours.png" alt="Our render of ScrollContainer">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>A container that clips its single child and scrolls when the child overflows. The previewer renders it as a DOM overlay <code>&lt;div&gt;</code> whose Godot scroll modes map to CSS <code>overflow</code>; here the content VBox is forced to 800 px tall inside a ~608 px viewport, so its content is taller than the box.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>anchors_preset</code> / <code>anchor_right</code> / <code>anchor_bottom</code></td><td><code>15</code> / <code>1.0</code> / <code>1.0</code></td><td>the container fills the window</td></tr><tr><td><code>offset_left/top/right/bottom</code></td><td><code>16, 16, -16, -16</code></td><td>insets the container 16 px from every window edge</td></tr><tr><td><code>custom_minimum_size</code> (Content VBox)</td><td><code>Vector2(0, 800)</code></td><td>content is taller than the viewport, so the vertical axis overflows and scrolls</td></tr><tr><td><code>theme_override_constants/separation</code> (Content VBox)</td><td><code>8</code></td><td>8 px gap between the two labels at the top</td></tr></tbody></table></div>
+<p>Both <code>horizontal_scroll_mode</code> and <code>vertical_scroll_mode</code> are left unset (AUTO); the two labels render identically placed in both images.</p>
+<h3>Divergences</h3>
+<p>Godot draws its vertical scrollbar down the right edge — a slim full-height track with a rounded grabber. Ours shows no scrollbar. The previewer maps each scroll axis to a CSS <code>overflow</code> value rather than painting Godot's themed scrollbar, and none is rendered in this static capture.</p></div>
+    </article>
+    <article class="sheet" data-type="Skeleton3D" hidden>
+      <header class="sheet-head">
+        <h2>Skeleton3D</h2>
+        <span class="renders">renders as a transform-only group</span>
+        <span class="fixture"><code>unit-skeleton3d.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-skeleton3d-godot.png" alt="Godot render of Skeleton3D">
+          <img class="img-ours" src="images/unit-skeleton3d-ours.png" alt="Our render of Skeleton3D">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>A Skeleton3D holds the bone hierarchy that deforms attached meshes. On its own it has no runtime visual — the bones are an editor gizmo. The previewer reuses the Node3D component (ADR-0008), so the node contributes only its transform; with no bone-driven <code>MeshInstance3D</code> beneath it, it draws nothing.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>transform</code></td><td><code>Transform3D(1,0,0, 0,1,0, 0,0,1, 0,2,0)</code></td><td>positions the (empty) skeleton 2 units up — no visible mark</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>None visible in this fixture.</p></div>
+    </article>
+    <article class="sheet" data-type="SpotLight3D" hidden>
+      <header class="sheet-head">
+        <h2>SpotLight3D</h2>
+        <span class="renders">renders as a THREE.SpotLight</span>
+        <span class="fixture"><code>unit-spot-light-3d.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-spot-light-3d-godot.png" alt="Godot render of SpotLight3D">
+          <img class="img-ours" src="images/unit-spot-light-3d-ours.png" alt="Our render of SpotLight3D">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>Godot's cone-shaped light — it emits from a point along its local -Z axis and fades toward the cone's rim and its range. The previewer renders it as a THREE.SpotLight inside the node's transform group, energy scaled by PI to match Godot's brightness and the cone edge softened through <code>penumbra</code>. Its wireframe-cone gizmo is selection-gated, so it appears in neither capture.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>transform</code> origin</td><td><code>(0, 3, 0)</code>, aimed straight down</td><td>hangs the light above the cube, so the lit circle and the shadow center on it</td></tr><tr><td><code>light_color</code></td><td><code>Color(0.9, 0.95, 1, 1)</code></td><td>faint cool-white tint on the lit ground</td></tr><tr><td><code>light_energy</code></td><td><code>3.0</code></td><td>brightness of the lit pool on the plane</td></tr><tr><td><code>spot_range</code></td><td><code>8.0</code></td><td>reach of the cone — the floor sits well inside it</td></tr><tr><td><code>spot_angle</code></td><td><code>30.0</code></td><td>half-angle of the cone → diameter of the lit circle</td></tr><tr><td><code>shadow_enabled</code></td><td><code>true</code></td><td>the cube casts a shadow straight down onto the ground</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>Two, both slight. The lit pool close to the cube reads a touch brighter in our render — about 4-5/255 across the illuminated ring — while the far floor outside the cone and the pool's own outer edge match Godot to within ~1/255. That near-field lift is the distance-falloff curve: three's inverse-square-with- windowing runs hotter than Godot's <code>pow(1 - d/range)</code> through the middle of the range. See <a href="../../PARITY-LIMITATIONS.md#omnilight3d--spotlight3d-distance-falloff">PARITY-LIMITATIONS.md</a>.</p>
+<p>The shadow's near edge. Its dark core matches Godot, but the penumbra sits a few /255 lighter and its edge is softer and slightly grainier than Godot's cleanly filtered one — a shadow-map resolution/bias artifact, not the cone.</p></div>
+    </article>
+    <article class="sheet" data-type="Sprite2D" hidden>
+      <header class="sheet-head">
+        <h2>Sprite2D</h2>
+        <span class="renders">renders as an unlit textured quad</span>
+        <span class="fixture"><code>unit-sprite2d.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-sprite2d-godot.png" alt="Godot render of Sprite2D">
+          <img class="img-ours" src="images/unit-sprite2d-ours.png" alt="Our render of Sprite2D">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>Sprite2D draws a texture as a flat quad in the 2D canvas. The previewer renders each one as an unlit, double-sided plane sized to the texture's pixel dimensions (1 px = 1 unit), tinted by the CanvasItem <code>modulate</code>. The fixture scatters five markers around the origin; three land inside the frame — the sprite at the origin (top-left corner, only its lower-right quadrant on screen), one 140 px to the right, and one 140 px below. The flipped sprite (x = -140) and the rotated <code>Node2D</code> group's child (world y ≈ -106) fall off the left and top edges.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>texture</code></td><td><code>ExtResource marker</code></td><td>each sprite draws the 96×96 blue marker quad, centered on its position</td></tr><tr><td><code>position</code></td><td><code>(140, 0)</code>, <code>(0, 140)</code></td><td>places the right and below sprites; the unset Center stays at the origin</td></tr><tr><td><code>modulate</code></td><td><code>Color(1, 0.5, 0.5, 1)</code></td><td>red-tints the Below sprite — the one visible difference (below)</td></tr><tr><td><code>flip_h</code></td><td><code>true</code></td><td>set on the sprite at x = -140, which sits off the left edge — no visible effect here</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>The red-modulated <strong>Below</strong> sprite renders markedly darker in ours than in Godot. On the flat blue field the previewer shows <code>[22, 34, 111]</code> against Godot's <code>[45, 54, 112]</code> — red and green come out roughly half of Godot's, while blue matches. The white marker on that sprite likewise reads as a muddy dark salmon rather than Godot's brighter pink; it is the same tint applied too dark, not a second defect. The two unmodulated sprites match (blue field <code>[44, 115, 214]</code> vs <code>[45, 108, 223]</code>, a sub-10/255 round-trip shift), and every sprite's position, size, and marker shape are pixel-aligned. No PARITY-LIMITATIONS entry covers a <code>modulate</code> colour mismatch.</p></div>
+    </article>
+    <article class="sheet" data-type="Sprite3D" hidden>
+      <header class="sheet-head">
+        <h2>Sprite3D</h2>
+        <span class="renders">renders as an unlit textured THREE.Mesh quad</span>
+        <span class="fixture"><code>unit-sprite3d.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-sprite3d-godot.png" alt="Godot render of Sprite3D">
+          <img class="img-ours" src="images/unit-sprite3d-ours.png" alt="Our render of Sprite3D">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>Sprite3D draws a 2D texture on a quad in 3D space. The previewer renders it as an unlit textured plane (<code>meshBasicMaterial</code>), sized by <code>pixel_size</code> × the texture, with <code>modulate</code> driving colour and opacity and <code>billboard</code> applied as a per-frame look-at. The fixture shows three "F" markers over the preview sky: a plain blue one, an orange-tinted billboard that faces the camera, and a semi-transparent blue-tinted one.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>texture</code></td><td><code>ExtResource</code> (96×96 "F" marker)</td><td>the image drawn on each quad</td></tr><tr><td><code>pixel_size</code></td><td><code>0.01</code></td><td>quad size — 96 px × 0.01 ≈ 0.96 units square</td></tr><tr><td><code>billboard</code></td><td><code>1</code> (middle)</td><td>quad turns to face the camera — seen flat and frontal, not foreshortened like its neighbours</td></tr><tr><td><code>modulate</code></td><td><code>Color(1, 0.7, 0.4, 1)</code> (middle)</td><td>orange tint multiplies the texture — dark square with an orange F</td></tr><tr><td><code>modulate</code></td><td><code>Color(0.4, 0.7, 1, 0.6)</code> (right)</td><td>blue tint at 0.6 alpha — a semi-transparent blue quad</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>None visible in this fixture.</p></div>
+    </article>
+    <article class="sheet" data-type="StaticBody3D" hidden>
+      <header class="sheet-head">
+        <h2>StaticBody3D</h2>
+        <span class="renders">renders as a transform-only group</span>
+        <span class="fixture"><code>unit-physics-bodies.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-physics-bodies-godot.png" alt="Godot render of StaticBody3D">
+          <img class="img-ours" src="images/unit-physics-bodies-ours.png" alt="Our render of StaticBody3D">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>StaticBody3D is a non-moving physics body with no runtime visual of its own. The previewer mounts it as a transform-only Node3D group (ADR-0005), so it draws nothing directly — but it is the parent of the blue slab both images show: its child <code>GroundMesh</code> (a MeshInstance3D with a flat 2×0.4×2 BoxMesh and a blue <code>albedo_color</code>). Its other child, <code>GroundCollision</code>, is a toggle-gated collision overlay (ADR-0005/0006) and stays hidden in a plain capture.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td>(none)</td><td>—</td><td>the <code>Ground</code> StaticBody3D sets no properties; the visible box is its child MeshInstance3D</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>None visible in this fixture.</p></div>
+    </article>
+    <article class="sheet" data-type="TextureRect" hidden>
+      <header class="sheet-head">
+        <h2>TextureRect</h2>
+        <span class="renders">renders as an HTML img element</span>
+        <span class="fixture"><code>unit-texture-rect.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-texture-rect-godot.png" alt="Godot render of TextureRect">
+          <img class="img-ours" src="images/unit-texture-rect-ours.png" alt="Our render of TextureRect">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>A Control that displays a <code>Texture2D</code> inside its rect. The previewer loads the texture into an <code>&lt;img&gt;</code> positioned to fill the control's box, with <code>object-fit</code> and <code>object-position</code> set from <code>stretch_mode</code>.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>anchors_preset</code></td><td><code>15</code></td><td>full-rect anchors — the control fills the whole viewport</td></tr><tr><td><code>texture</code></td><td><code>ExtResource("1_tex")</code></td><td>the blue "F" marker sprite is drawn</td></tr><tr><td><code>expand_mode</code></td><td><code>1</code> (EXPAND_IGNORE_SIZE)</td><td>the control ignores the texture's natural minimum size</td></tr><tr><td><code>stretch_mode</code></td><td><code>5</code> (KEEP_ASPECT_CENTERED)</td><td>square texture fits the frame height and centers — grey letterbox on the left and right</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>None visible in this fixture.</p></div>
+    </article>
+    <article class="sheet" data-type="TileMap" hidden>
+      <header class="sheet-head">
+        <h2>TileMap</h2>
+        <span class="renders">renders as batched textured tile quads</span>
+        <span class="fixture"><code>unit-tile-map.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-tile-map-godot.png" alt="Godot render of TileMap">
+          <img class="img-ours" src="images/unit-tile-map-ours.png" alt="Our render of TileMap">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>TileMap draws each enabled layer's cells as batched textured quads sampled from its TileSet atlas. This fixture places six cells across two layers that reassemble regions of the 96×96 marker atlas into a blocky white "F" on blue in the top-left corner, with the one empty cell showing the background through.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>tile_set</code></td><td><code>SubResource TileSet_b</code></td><td>supplies the 32px marker atlas the cells draw from</td></tr><tr><td><code>format</code></td><td><code>2</code></td><td>selects the tile_data encoding so the layers decode; no visual of its own</td></tr><tr><td><code>layer_0/name</code></td><td><code>"Ground"</code></td><td>editor layer label; no visual</td></tr><tr><td><code>layer_0/tile_data</code></td><td>4 cells</td><td>draws the top bar and left stem of the white "F"</td></tr><tr><td><code>layer_1/name</code></td><td><code>"Props"</code></td><td>editor layer label; no visual</td></tr><tr><td><code>layer_1/z_index</code></td><td><code>1</code></td><td>raises the Props layer; no visible stacking here — its cell overlaps no ground cell</td></tr><tr><td><code>layer_1/tile_data</code></td><td>1 cell</td><td>fills the F's centre tile at cell (1,1)</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>The tiles are placed and shaped identically — same footprint (both fill x0–95, y0–63), same reconstructed "F", same empty-cell cutout, same background. The difference is colour: ours renders the marker's white as a light grey rather than pure white, and the blue reads marginally lighter and greener. The muted tone is uniform across the solid tile interiors, not just their edges.</p></div>
+    </article>
+    <article class="sheet" data-type="TileMapLayer" hidden>
+      <header class="sheet-head">
+        <h2>TileMapLayer</h2>
+        <span class="renders">renders as batched textured tile quads</span>
+        <span class="fixture"><code>unit-tile-map-layer.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-tile-map-layer-godot.png" alt="Godot render of TileMapLayer">
+          <img class="img-ours" src="images/unit-tile-map-layer-ours.png" alt="Our render of TileMapLayer">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>TileMapLayer paints a grid of tiles from a TileSet's atlas texture. The previewer decodes the packed cell data at parse time and draws one batched textured quad-mesh per atlas source. This fixture places a 2×2 block of 32 px cells at the origin, which reconstructs the marker sprite as a blue square with a white "F" in the top-left.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>tile_map_data</code></td><td><code>PackedByteArray(…)</code></td><td>four placed cells — the 2×2 tile block at the origin</td></tr><tr><td><code>tile_set</code></td><td><code>SubResource("TileSet_b")</code></td><td>32 px <code>tile_size</code> and the atlas source that supplies the texture</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>The marker's white pixels render light grey (~226/255) instead of pure white; the blue tile background (~214 vs 223 on the blue channel) is close but slightly dimmed, and every cell position matches Godot exactly. The unlit tile material (<code>meshBasicMaterial</code>) does not opt out of tone mapping, so it picks up the scene's tonemapper — which compresses the bright white — where Godot's 2D CanvasItem draw does not. No <a href="../../PARITY-LIMITATIONS.md">PARITY-LIMITATIONS.md</a> entry covers this.</p></div>
+    </article>
+    <article class="sheet" data-type="Timer" hidden>
+      <header class="sheet-head">
+        <h2>Timer</h2>
+        <span class="renders">renders as nothing (a countdown timer node)</span>
+        <span class="fixture"><code>unit-timer.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-timer-godot.png" alt="Godot render of Timer">
+          <img class="img-ours" src="images/unit-timer-ours.png" alt="Our render of Timer">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>Timer counts down and emits <code>timeout</code> — a logic node with no runtime visual. The previewer draws nothing for it, reusing the base Node component with zero geometry. Both images therefore show only the empty editor preview environment: a sky gradient fading into the ground, with no object anywhere, since the fixture's sole child is the invisible <code>RespawnTimer</code>.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>wait_time</code></td><td><code>1.5</code></td><td>none — countdown duration has no visual</td></tr><tr><td><code>autostart</code></td><td><code>true</code></td><td>none — starting the timer has no visual</td></tr><tr><td><code>one_shot</code></td><td><code>true</code></td><td>none — single-fire behaviour has no visual</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>None visible in this fixture.</p></div>
+    </article>
+    <article class="sheet" data-type="VBoxContainer" hidden>
+      <header class="sheet-head">
+        <h2>VBoxContainer</h2>
+        <span class="renders">renders as a CSS flex-column <code>&lt;div&gt;</code></span>
+        <span class="fixture"><code>unit-vbox-container.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-vbox-container-godot.png" alt="Godot render of VBoxContainer">
+          <img class="img-ours" src="images/unit-vbox-container-ours.png" alt="Our render of VBoxContainer">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>VBoxContainer stacks its children in a vertical column. The previewer renders it as a CSS flex-column <code>&lt;div&gt;</code>: <code>separation</code> becomes the flex <code>gap</code>, <code>alignment</code> becomes <code>justify-content</code>, and each child's <code>size_flags</code> drive its grow and cross-axis fill. Here <code>alignment = END</code> packs the two Labels ("Top", "Bottom") to the bottom of the container, each carrying <code>size_flags_horizontal = 3</code> (FILL|EXPAND) so it spans the container's full width.</p>
+<h3>Properties exercised</h3>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>anchors_preset</code></td><td><code>15</code></td><td>the container fills the parent rect (the whole viewport)</td></tr><tr><td><code>alignment</code></td><td><code>2</code> (END)</td><td>main-axis packing — both labels sit at the bottom of the column</td></tr><tr><td><code>theme_override_constants/separation</code></td><td><code>16</code></td><td>16px gap between "Top" and "Bottom"</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>The layout matches: both images pack "Top" above "Bottom" at the lower-left, at the same positions, with the same 16px separation between them. The only difference is font rendering — Godot draws the labels in its bundled theme font, which reads heavier and pure white, while the previewer uses the browser's system font stack (web fonts are CSP-blocked in the VS Code webview), so the glyphs come out thinner and a touch dimmer. Not catalogued in <a href="../../PARITY-LIMITATIONS.md">PARITY-LIMITATIONS.md</a>.</p></div>
+    </article>
+    <article class="sheet" data-type="WorldEnvironment" hidden>
+      <header class="sheet-head">
+        <h2>WorldEnvironment</h2>
+        <span class="renders">renders as the scene's background and environment lighting</span>
+        <span class="fixture"><code>unit-world-environment-basic.tscn</code></span>
+      </header>
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-world-environment-basic-godot.png" alt="Godot render of WorldEnvironment">
+          <img class="img-ours" src="images/unit-world-environment-basic-ours.png" alt="Our render of WorldEnvironment">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+      <div class="prose"><p>WorldEnvironment applies the scene's Environment resource — background, sky, ambient, tonemapping and fog — to the whole view; it draws no geometry of its own. Here the Environment sets a flat dark-navy colour background and enables bluish volumetric fog. The previewer paints the background colour and renders the node's children, but has no volumetric-fog equivalent.</p>
+<h3>Properties exercised</h3>
+<p>These live on the referenced Environment sub-resource.</p>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>background_mode</code></td><td><code>1</code> (Color)</td><td>fills the view with a flat colour instead of a sky</td></tr><tr><td><code>background_color</code></td><td><code>Color(0.05, 0.05, 0.15)</code></td><td>base backdrop — shows as-is in ours; fog tints it steel-blue in Godot</td></tr><tr><td><code>background_energy_multiplier</code></td><td><code>1.0</code></td><td>default; no visible change</td></tr><tr><td><code>volumetric_fog_enabled</code></td><td><code>true</code></td><td>Godot fills the view with a scattering haze; ours draws none</td></tr><tr><td><code>volumetric_fog_density</code></td><td><code>0.05</code></td><td>thickness of that haze in Godot</td></tr><tr><td><code>volumetric_fog_albedo</code></td><td><code>Color(0.6, 0.7, 0.9)</code></td><td>the bluish tint the haze takes</td></tr><tr><td><code>volumetric_fog_emission</code></td><td><code>Color(0, 0, 0)</code></td><td>the fog emits no light of its own</td></tr></tbody></table></div>
+<h3>Divergences</h3>
+<p>Godot fills the frame with a bluish-grey volumetric haze: the backdrop lifts from dark navy to steel-blue with a soft vertical gradient, and the red boxes wash out and desaturate with distance — the far pair nearly dissolving into the fog. Ours shows the flat dark-navy <code>background_color</code> with the boxes at full-saturated red against it and no haze at any depth. The whole difference is the volumetric fog, which has no three.js equivalent and is intentionally not approximated. See <a href="../../PARITY-LIMITATIONS.md#worldenvironment-volumetric-fog--audit-11">PARITY-LIMITATIONS.md</a>.</p></div>
+    </article></main>
+<script>const FIRST="AnimatedSprite2D";
+const items=[...document.querySelectorAll('.nav-item')];
+const sheets=[...document.querySelectorAll('.sheet')];
+function show(type){
+  sheets.forEach(s=>s.hidden=s.dataset.type!==type);
+  items.forEach(b=>b.setAttribute('aria-current',String(b.dataset.type===type)));
+  const active=sheets.find(s=>s.dataset.type===type);
+  if(active) initCompare(active);
+  location.hash=encodeURIComponent(type);
+}
+items.forEach(b=>b.addEventListener('click',()=>show(b.dataset.type)));
+document.getElementById('search').addEventListener('input',e=>{
+  const q=e.target.value.toLowerCase();
+  items.forEach(b=>{b.style.display=b.dataset.type.toLowerCase().includes(q)?'':'none';});
+  document.querySelectorAll('.nav-group').forEach(g=>{
+    g.style.display=[...g.querySelectorAll('.nav-item')].some(b=>b.style.display!=='none')?'':'none';
+  });
+});
+function initCompare(sheet){
+  const stage=sheet.querySelector('.stage');
+  const handle=sheet.querySelector('.handle');
+  if(stage.dataset.wired)return; stage.dataset.wired='1';
+  // clip-path is a % of the element, so a single --split drives the clip and the
+  // handle with no width bookkeeping — and nothing to break in side-by-side.
+  const set=x=>{const r=stage.getBoundingClientRect();
+    const p=Math.min(100,Math.max(0,((x-r.left)/r.width)*100));
+    stage.style.setProperty('--split',p+'%');};
+  let drag=false;
+  handle.addEventListener('pointerdown',e=>{drag=true;handle.setPointerCapture(e.pointerId);});
+  stage.addEventListener('pointermove',e=>{if(drag)set(e.clientX);});
+  addEventListener('pointerup',()=>{drag=false;});
+  sheet.querySelectorAll('[data-mode]').forEach(btn=>btn.addEventListener('click',()=>{
+    sheet.querySelectorAll('[data-mode]').forEach(b=>b.setAttribute('aria-pressed',String(b===btn)));
+    stage.classList.toggle('sbs',btn.dataset.mode==='sbs');
+  }));
+}
+const initial=decodeURIComponent(location.hash.slice(1))||FIRST;
+if(initial)show(initial);
+</script>
+</body>
+</html>
