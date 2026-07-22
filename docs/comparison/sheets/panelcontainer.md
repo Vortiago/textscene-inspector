@@ -8,9 +8,10 @@ renders_as: a StyleBox panel around its child
 
 # PanelContainer
 
-PanelContainer draws its `theme_override_styles/panel` StyleBox and lays its single
-child inside the box's content margins. The previewer maps it to a `<div>` carrying
-the StyleBox's fill, corner radius and padding, with the child in flow.
+PanelContainer draws its `theme_override_styles/panel` StyleBox and fits its single
+child inside the box's content margins. The previewer maps it to a flex-column
+`<div>` carrying the StyleBox's fill, corner radius and padding, and stretches the
+child to fill the content box — so a child Label's own alignment has room to act.
 
 ## Properties exercised
 
@@ -28,8 +29,6 @@ the StyleBox's fill, corner radius and padding, with the child in flow.
 
 ## Divergences
 
-The label sits noticeably higher in the previewer. Godot vertically centres the
-label text inside the panel's content box (`vertical_alignment = 1`), placing it on
-the panel's midline; our render rests it near the top of that box instead. Panel
-position, size, dark slate fill, 6 px corners, padding and horizontal centring all
-match.
+None visible in this fixture. The child now fills the content box, so the label's
+`vertical_alignment = 1` centres it on the panel's midline as in Godot; panel
+position, size, dark slate fill, 6 px corners, padding and both-axis centring match.
