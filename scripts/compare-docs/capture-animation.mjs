@@ -13,9 +13,12 @@
  * time, and screenshots. The two PNG sequences are encoded to
  * `<image>-godot.gif` and `<image>-ours.gif` beside the stills.
  *
- * 3D only — AnimationPlayer is a 3D node and the reference is framed with the
- * 3D editor camera. Both sides get Godot's editor preview environment (the
- * fixture brings a light but no `WorldEnvironment`), so the sky matches too.
+ * Two modes, chosen by the fixture: a 3D scene driven by an AnimationPlayer is
+ * framed with the 3D editor camera and lit by Godot's editor preview
+ * environment; a 2D scene driven by an AnimatedSprite2D renders into the project
+ * viewport (no camera, no preview sun — 2D lighting is the scene's own, exactly
+ * like the still 2D capture) and is cropped to a viewport-centred window so the
+ * GIF stays small. Both sample the SAME clip loop at the SAME 24 times.
  */
 /* global document, window */ // used only inside the page.evaluate callback, which runs in the browser.
 
@@ -38,8 +41,11 @@ import {
 } from '../godot-ref/run.mjs';
 import {
   assertPortFree,
+  CANVAS_2D_CAPTURE,
   createCaptureContext,
   ensureWebBuilt,
+  findCaptureTarget,
+  gotoFixture,
   killPreviewGroup,
   startPreview,
   waitForServer,
@@ -55,6 +61,16 @@ const FRAMES = 24; // over one loop of the clip
 const FPS = 12;
 const WIDTH = 640;
 const HEIGHT = 512;
+
+// A 2D animation renders at the project-viewport size (positions are absolute),
+// then each frame is cropped to this viewport-centred window — small GIF, and
+// the same frame shape as the 3D animation.
+const CROP_2D = {
+  w: 640,
+  h: 512,
+  x: Math.round((CANVAS_2D_CAPTURE.width - 640) / 2),
+  y: Math.round((CANVAS_2D_CAPTURE.height - 512) / 2),
+};
 
 // `_load_default_preview_settings`, mirrored from scripts/godot-ref/run.mjs so
 // the animated reference gets the same sky as the still one.
@@ -147,7 +163,65 @@ func _has_directional_light(node: Node) -> bool:
 `;
 }
 
-async function captureGodotFrames(fixture, framesDir) {
+// The 2D reference: an AnimatedSprite2D rendered into a SubViewport the size of
+// the project viewport (2D positions are absolute), stepping `frame` across one
+// loop. Mirrors run.mjs's _render_2d — no 3D camera, no editor preview sun or
+// environment (those are the 3D editor's; 2D lighting is the scene's own). A
+// Camera2D is disabled before the subtree is added so it can't offset the canvas.
+function godotBootstrap2D(resPath, framesDir) {
+  const [r, g, b] = CANVAS_2D_CAPTURE.clearColor;
+  return `extends Node
+
+func _ready() -> void:
+	RenderingServer.set_default_clear_color(Color(${r}, ${g}, ${b}, 1))
+	var vp := SubViewport.new()
+	vp.size = Vector2i(${CANVAS_2D_CAPTURE.width}, ${CANVAS_2D_CAPTURE.height})
+	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	add_child(vp)
+	var target: Node = load("${resPath}").instantiate()
+	_disable_2d_cameras(target)
+	vp.add_child(target)
+	var sprite := _find_sprite(target)
+	if sprite == null:
+		push_error("no AnimatedSprite2D in scene")
+		get_tree().quit(1)
+		return
+	var frames := sprite.sprite_frames
+	var clip: StringName = sprite.animation if sprite.animation != &"" else frames.get_animation_names()[0]
+	var fc: int = frames.get_frame_count(clip)
+	if fc <= 0:
+		push_error("SpriteFrames clip has no frames")
+		get_tree().quit(1)
+		return
+	sprite.animation = clip
+	for i in ${FRAMES}:
+		sprite.frame = int(floor(float(i) / ${FRAMES} * fc)) % fc
+		await get_tree().process_frame
+		await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		vp.get_texture().get_image().save_png("${framesDir}/frame_%02d.png" % i)
+	get_tree().quit()
+
+func _disable_2d_cameras(node: Node) -> void:
+	var cam := node as Camera2D
+	if cam != null:
+		cam.enabled = false
+	for child in node.get_children():
+		_disable_2d_cameras(child)
+
+func _find_sprite(node: Node) -> AnimatedSprite2D:
+	var s := node as AnimatedSprite2D
+	if s != null:
+		return s
+	for child in node.get_children():
+		var found := _find_sprite(child)
+		if found != null:
+			return found
+	return null
+`;
+}
+
+async function captureGodotFrames(fixture, framesDir, mode) {
   const scenePath = resolve(REPO_ROOT, 'scenes/fixtures', fixture);
   if (!existsSync(scenePath)) throw new Error(`No such fixture: ${scenePath}`);
   const root = resolveProjectRoot(scenePath);
@@ -157,16 +231,22 @@ async function captureGodotFrames(fixture, framesDir) {
     const ini = existsSync(join(root, 'project.godot'))
       ? await readFile(join(root, 'project.godot'), 'utf8')
       : null;
-    const config = projectConfig(ini, { width: WIDTH, height: HEIGHT }).replace(
+    const size =
+      mode === '2d'
+        ? { width: CANVAS_2D_CAPTURE.width, height: CANVAS_2D_CAPTURE.height }
+        : { width: WIDTH, height: HEIGHT };
+    const config = projectConfig(ini, size).replace(
       /run\/main_scene="[^"]*"/,
       'run/main_scene="res://__anim_main.tscn"'
     );
     await writeFile(join(work, 'project.godot'), config);
     const resPath = `res://${relative(root, scenePath).split(sep).join('/')}`;
-    await writeFile(join(work, '__anim.gd'), godotBootstrap(resPath, framesDir));
+    const bootstrap = mode === '2d' ? godotBootstrap2D : godotBootstrap;
+    const rootType = mode === '2d' ? 'Node' : 'Node3D';
+    await writeFile(join(work, '__anim.gd'), bootstrap(resPath, framesDir));
     await writeFile(
       join(work, '__anim_main.tscn'),
-      `[gd_scene load_steps=2 format=3]\n[ext_resource type="Script" path="res://__anim.gd" id="1"]\n[node name="Root" type="Node3D"]\nscript = ExtResource("1")\n`
+      `[gd_scene load_steps=2 format=3]\n[ext_resource type="Script" path="res://__anim.gd" id="1"]\n[node name="Root" type="${rootType}"]\nscript = ExtResource("1")\n`
     );
     await mkdir(framesDir, { recursive: true });
     spawnSync('xvfb-run', ['-a', 'godot', '--headless', '--path', work, '--import'], {
@@ -186,7 +266,7 @@ async function captureGodotFrames(fixture, framesDir) {
   }
 }
 
-async function captureOurFrames(fixture, framesDir) {
+async function captureOurFrames(fixture, framesDir, mode, driverText) {
   ensureWebBuilt();
   await assertPortFree(PORT, 'COMPARE_PORT');
   const { proc, baseUrl } = startPreview(PORT);
@@ -194,19 +274,25 @@ async function captureOurFrames(fixture, framesDir) {
   try {
     await waitForServer(`${baseUrl}/`);
     browser = await chromium.launch({ headless: true, args: SWIFTSHADER_GL_ARGS });
-    const context = await createCaptureContext(browser, { frameOnOpen: false });
+    const context = await createCaptureContext(browser, { frameOnOpen: false, canvas2D: mode === '2d' });
     const page = await context.newPage();
-    await page.goto(`${baseUrl}/?fixture=${encodeURIComponent(fixture)}`, { waitUntil: 'load' });
-    await page.waitForTimeout(2000);
+    await gotoFixture(page, baseUrl, fixture);
+    await page.waitForTimeout(500);
 
-    // The Animation tab (and its transport) mounts only while the
-    // AnimationPlayer is selected (ADR-0012), so select it, then drive the
-    // scrubber. The player is a transform-only node at the origin, so its
-    // selection draws no box into the frame.
+    // The Animation tab (and its transport) mounts only while the driver is
+    // selected (ADR-0012) — the AnimationPlayer (3D) or the AnimatedSprite2D
+    // (2D). Select it, then drive the scrubber. The driver is a transform-only
+    // node at the origin (3D) or the centred sprite (2D), so selecting it draws
+    // no selection box into the frame.
     await page.locator('[aria-label="Expand all"]').click().catch(() => {});
     await page.waitForTimeout(300);
-    await page.locator('[role="treeitem"]:has-text("AnimationPlayer")').first().click();
+    await page.locator(`[role="treeitem"]:has-text("${driverText}")`).first().click();
     await page.waitForTimeout(500);
+
+    // The frame screenshotted each step: the 3D canvas, or the 2D
+    // project-viewport capture frame (exactly the project rectangle).
+    const { target, reason: targetReason } = await findCaptureTarget(page, { canvas2D: mode === '2d' });
+    if (!target) throw new Error(targetReason ?? 'no capture target after selecting the driver');
 
     const scrubber = page.locator('input[type="range"]').first();
     if ((await scrubber.count()) === 0) throw new Error('no animation scrubber after selecting the player');
@@ -224,7 +310,6 @@ async function captureOurFrames(fixture, framesDir) {
     await page.waitForTimeout(150);
 
     await mkdir(framesDir, { recursive: true });
-    const canvas = page.locator('canvas').first();
     for (let i = 0; i < FRAMES; i++) {
       const t = (duration * i) / FRAMES;
       // The scrubber is a React-controlled input, so set through the native
@@ -237,11 +322,28 @@ async function captureOurFrames(fixture, framesDir) {
         el.dispatchEvent(new Event('change', { bubbles: true }));
       }, t);
       await page.waitForTimeout(220);
-      await canvas.screenshot({ path: join(framesDir, `frame_${String(i).padStart(2, '0')}.png`) });
+      await target.screenshot({ path: join(framesDir, `frame_${String(i).padStart(2, '0')}.png`) });
     }
   } finally {
     await browser?.close();
     killPreviewGroup(proc);
+  }
+}
+
+/**
+ * Crop every captured frame in place to a window. A 2D animation renders at the
+ * full project-viewport size (positions are absolute); the GIF only needs the
+ * region around the sprite, and cropping keeps it small.
+ */
+async function cropFrames(framesDir, { x, y, w, h }) {
+  const files = (await readdir(framesDir)).filter((f) => /^frame_\d+\.png$/.test(f));
+  for (const f of files) {
+    const src = PNG.sync.read(readFileSync(join(framesDir, f)));
+    const cw = Math.min(w, src.width - x);
+    const ch = Math.min(h, src.height - y);
+    const dst = new PNG({ width: cw, height: ch });
+    PNG.bitblt(src, dst, x, y, cw, ch, 0, 0);
+    writeFileSync(join(framesDir, f), PNG.sync.write(dst));
   }
 }
 
@@ -267,14 +369,26 @@ async function main() {
     console.error('Usage: node scripts/compare-docs/capture-animation.mjs <fixture.tscn>');
     process.exit(2);
   }
+  // The driver decides the mode: an AnimatedSprite2D means a 2D scene (rendered
+  // into the project viewport), otherwise an AnimationPlayer-driven 3D scene.
+  const scenePath = resolve(REPO_ROOT, 'scenes/fixtures', fixture);
+  const source = existsSync(scenePath) ? readFileSync(scenePath, 'utf8') : '';
+  const spriteMatch = source.match(/\[node name="([^"]+)"\s+type="AnimatedSprite2D"/);
+  const mode = spriteMatch ? '2d' : '3d';
+  const driverText = spriteMatch ? spriteMatch[1] : 'AnimationPlayer';
+
   const image = fixture.replace(/\.tscn$/, '');
   const scratch = await mkdtemp(join(tmpdir(), 'anim-frames-'));
   await mkdir(IMAGES, { recursive: true });
   try {
-    console.log(`[anim] ${fixture}: capturing Godot frames…`);
-    await captureGodotFrames(fixture, join(scratch, 'godot'));
+    console.log(`[anim] ${fixture} (${mode}): capturing Godot frames…`);
+    await captureGodotFrames(fixture, join(scratch, 'godot'), mode);
     console.log(`[anim] ${fixture}: capturing our frames…`);
-    await captureOurFrames(fixture, join(scratch, 'ours'));
+    await captureOurFrames(fixture, join(scratch, 'ours'), mode, driverText);
+    if (mode === '2d') {
+      await cropFrames(join(scratch, 'godot'), CROP_2D);
+      await cropFrames(join(scratch, 'ours'), CROP_2D);
+    }
     await encodeGif(join(scratch, 'godot'), join(IMAGES, `${image}-godot.gif`));
     await encodeGif(join(scratch, 'ours'), join(IMAGES, `${image}-ours.gif`));
     console.log(`[anim] wrote ${image}-godot.gif and ${image}-ours.gif to ${IMAGES}`);
