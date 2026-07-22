@@ -132,7 +132,7 @@ function imageSrc(basename, side, inlineImages) {
   return null;
 }
 
-const CATEGORY_ORDER = ['3D', '2D', 'Other'];
+const CATEGORY_ORDER = ['3D', '2D', 'Complex Scenes', 'Other'];
 
 // The public previewer, deployed from main. Its `?fixture=<file>` deep link
 // (useFixtureSelection.ts) opens directly on a scene, so each sheet can link to
@@ -174,11 +174,21 @@ function build(sheets, inlineImages, fragment) {
     }))
   ).filter((g) => g.items.length);
 
+  // A category shows the Visual/Other sub-label only when it actually has both;
+  // a single-group category (all-visual Complex Scenes) just shows its name.
+  const splitCategories = new Set(
+    CATEGORY_ORDER.filter(
+      (category) =>
+        nodes.some((n) => n.category === category && n.visual) &&
+        nodes.some((n) => n.category === category && !n.visual)
+    )
+  );
+
   const nav = groups
     .map(
       (g) =>
-        `<div class="nav-group"><div class="nav-head">${g.category} · ${
-          g.visual ? 'Visual' : 'Other'
+        `<div class="nav-group"><div class="nav-head">${
+          splitCategories.has(g.category) ? `${g.category} · ${g.visual ? 'Visual' : 'Other'}` : g.category
         }</div>${g.items
           .map(
             (n) =>
