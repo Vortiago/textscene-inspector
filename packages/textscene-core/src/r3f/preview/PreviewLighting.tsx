@@ -18,6 +18,7 @@ import {
   DIRECTIONAL_SHADOW_FRUSTUM_HALF,
   DIRECTIONAL_SHADOW_NEAR,
   SHADOW_MAP_SIZE,
+  SHADOW_NORMAL_BIAS,
 } from '../lightConstants';
 import {
   PREVIEW_SUN_COLOR,
@@ -84,6 +85,7 @@ function PreviewSun() {
         shadow-mapSize-width={SHADOW_MAP_SIZE}
         shadow-mapSize-height={SHADOW_MAP_SIZE}
         shadow-bias={DEFAULT_SHADOW_BIAS.DIRECTIONAL}
+        shadow-normalBias={SHADOW_NORMAL_BIAS}
         shadow-camera-near={DIRECTIONAL_SHADOW_NEAR}
         shadow-camera-far={PREVIEW_SUN_SHADOW_MAX_DISTANCE}
         shadow-camera-left={-DIRECTIONAL_SHADOW_FRUSTUM_HALF}

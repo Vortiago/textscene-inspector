@@ -79,13 +79,27 @@ export const SHADOW_MAP_SIZE = 2048;
 
 /**
  * Default shadow bias values per light type.
- * These prevent shadow acne while minimizing peter-panning.
+ *
+ * A constant depth bias detaches the shadow from the caster's base — the
+ * "peter-panning" gap where lit floor shows between a cube and its shadow. The
+ * 2048 shadow map (SHADOW_MAP_SIZE) has 4x finer texels than the old 512, so it
+ * needs far less bias to avoid acne; these are cut ~5x from the 512-era values
+ * to close the gap, with SHADOW_NORMAL_BIAS taking over acne suppression.
  */
 export const DEFAULT_SHADOW_BIAS = {
-  /** SpotLight default: -0.002 */
-  SPOT: -0.002,
-  /** DirectionalLight default: -0.0005 (lower bias for parallel rays) */
-  DIRECTIONAL: -0.0005,
-  /** OmniLight default: -0.001 (middle ground for omnidirectional) */
-  OMNI: -0.001,
+  /** SpotLight default. */
+  SPOT: -0.0004,
+  /** DirectionalLight default (lower bias for parallel rays). */
+  DIRECTIONAL: -0.0001,
+  /** OmniLight default (middle ground for omnidirectional). */
+  OMNI: -0.0002,
 } as const;
+
+/**
+ * Receiver offset along the surface normal (world units) before the shadow
+ * lookup. Unlike a constant depth bias, it suppresses acne on light-facing
+ * slopes WITHOUT pushing the shadow off the caster's base, so the contact
+ * shadow stays attached (Godot's shadows touch their casters). Shared by every
+ * casting light and the preview sun.
+ */
+export const SHADOW_NORMAL_BIAS = 0.04;
