@@ -5,8 +5,10 @@
  * - `mode` — `'3D'` mounts the R3F canvas; `'2D'` mounts the Control overlay.
  * - `showCollisions` — drives the CollisionShape3D wireframe gizmos (off by
  *   default, like Godot's "Visible Collision Shapes").
- * - `showLabels` — drives in-viewport text (Label3D); off by default so text
- *   doesn't clutter the 3D view (ADR-0008), toggled on like the collision gizmo.
+ * - `showLabels` — drives in-viewport text (Label3D); ON by default to match
+ *   Godot, which always rasterises Label3D text at runtime (ADR-0008 point 4
+ *   superseded — see its amendment note). The toolbar toggle turns it OFF when
+ *   the text clutters the view, mirroring the collision gizmo.
  * - `showGrid` — a ground-plane grid helper in the 3D viewport. Off by
  *   default: a sibling hardening bucket regenerates ALL visual-regression
  *   baselines in this same round, so a toggle that's visible out of the box
@@ -14,7 +16,7 @@
  *   (host-layered, like the mode itself) — only a FRESH session with no
  *   persisted preference sees it off.
  *
- * The context has a safe default (3D, collisions off, labels off, grid off)
+ * The context has a safe default (3D, collisions off, labels on, grid off)
  * so components that read it render correctly even when no provider is
  * mounted (test scaffolding, and the off-by-default toggles). The toolbar
  * toggle (P4) writes through the provider; persistence is layered on top via
@@ -79,7 +81,7 @@ const DEFAULT_VALUE: ViewportModeValue = {
   setMode: () => {},
   showCollisions: false,
   setShowCollisions: () => {},
-  showLabels: false,
+  showLabels: true,
   setShowLabels: () => {},
   showNavigation: true,
   setShowNavigation: () => {},
@@ -112,7 +114,7 @@ export function ViewportModeProvider({
   children,
   initialMode = '3D',
   initialShowCollisions = false,
-  initialShowLabels = false,
+  initialShowLabels = true,
   initialShowNavigation = true,
   initialShowGrid = false,
   initialShowPreviewSun = true,

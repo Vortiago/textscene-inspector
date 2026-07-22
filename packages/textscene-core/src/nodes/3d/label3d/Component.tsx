@@ -64,9 +64,10 @@ export function Label3D({ node, children }: NodeComponentProps) {
   // (the white canvas text is colorized by this), matching Sprite2D/Sprite3D.
   const tint = useGodotLinearColor(properties.modulate);
 
-  // Off by default (ADR-0008): in-viewport text is opt-in via the Labels toggle.
-  // When off (or the canvas couldn't be built), render an invisible marker group
-  // so the node still positions any children and stays selectable.
+  // On by default to match Godot (ADR-0008 point 4 superseded — see its
+  // amendment note); the Labels toggle can hide it. When off (or the canvas
+  // couldn't be built), render an invisible marker group so the node still
+  // positions any children and stays selectable.
   if (!showLabels || !built) {
     return (
       <group name={node.name} position={position} rotation={rotation} scale={scale}>

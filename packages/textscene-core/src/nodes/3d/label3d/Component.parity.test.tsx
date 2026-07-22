@@ -39,7 +39,8 @@ beforeEach(() => {
   ) as unknown as typeof HTMLCanvasElement.prototype.getContext;
 });
 
-// Label3D text is gated behind showLabels (off by default, ADR-0008).
+// Label3D text is gated behind showLabels (ON by default per the ADR-0008
+// Label3D parity amendment); render inside a provider with labels enabled.
 function renderLabel(n: TscnNode) {
   return ReactThreeTestRenderer.create(
     <ViewportModeProvider initialShowLabels>

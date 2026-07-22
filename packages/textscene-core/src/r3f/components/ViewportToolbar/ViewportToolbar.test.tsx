@@ -54,12 +54,12 @@ describe('ViewportToolbar', () => {
     ).toBe(true);
   });
 
-  it('labels checkbox reflects + toggles showLabels (off by default)', () => {
+  it('labels checkbox reflects + toggles showLabels (on by default)', () => {
     renderToolbar('3D', false);
     const checkbox = screen.getByRole('checkbox', { name: 'Labels' }) as HTMLInputElement;
-    expect(checkbox.checked).toBe(false);
-    fireEvent.click(checkbox);
     expect(checkbox.checked).toBe(true);
+    fireEvent.click(checkbox);
+    expect(checkbox.checked).toBe(false);
   });
 
   it('grid checkbox is unchecked by default and toggles showGrid (#224)', () => {

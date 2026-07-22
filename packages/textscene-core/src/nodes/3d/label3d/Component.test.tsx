@@ -43,8 +43,10 @@ function makeNode(overrides: Partial<Label3DProperties> = {}): TscnNode {
   return { name: properties.name ?? 'Label', type: 'Label3D', children: [], properties };
 }
 
-// Label3D text is gated behind the `showLabels` toggle (off by default, ADR-0008),
-// so render it inside a provider with labels enabled to assert the text mesh.
+// Label3D text is gated behind the `showLabels` toggle (ON by default per the
+// ADR-0008 Label3D parity amendment). The provider defaults labels on, so a bare
+// `<Label3D>` already renders the text mesh; wrap explicitly only to assert the
+// OFF state.
 function renderLabel(node: TscnNode) {
   return ReactThreeTestRenderer.create(
     <ViewportModeProvider initialShowLabels>
@@ -54,8 +56,12 @@ function renderLabel(node: TscnNode) {
 }
 
 describe('<Label3D>', () => {
-  it('renders an invisible group (no mesh) when labels are off — the default (ADR-0008)', async () => {
-    const renderer = await ReactThreeTestRenderer.create(<Label3D node={makeNode()} />);
+  it('renders an invisible group (no mesh) when labels are toggled off', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <ViewportModeProvider initialShowLabels={false}>
+        <Label3D node={makeNode()} />
+      </ViewportModeProvider>
+    );
     expect(renderer.scene.findAllByType('Mesh').length).toBe(0);
   });
 
