@@ -10,8 +10,8 @@ renders_as: a THREE.Mesh
 
 MeshInstance3D draws its `mesh` resource as a THREE.Mesh. This fixture feeds it a
 `TorusMesh` with an orange metallic `StandardMaterial3D` override, so the previewer
-builds a `torusGeometry` and shades it. The donut and its glossy highlight come
-through; the two frames disagree only on which way the ring faces.
+builds a `torusGeometry` and shades it. The donut lies flat, hole facing up, with a
+glossy highlight, and the scene's two Label3D captions sit above and below it.
 
 ## Properties exercised
 
@@ -27,15 +27,12 @@ through; the two frames disagree only on which way the ring faces.
 
 ## Divergences
 
-- **The torus faces the wrong way.** Godot's donut lies flat, hole opening upward —
-  a foreshortened ring seen from slightly above. Ours stands upright and tilted, hole
-  turned toward the camera, so it reads as a larger, rounder ring on a diagonal. Cause:
-  Godot's `TorusMesh` revolves around Y (lies in the XZ plane); three's `torusGeometry`
-  revolves around Z (lies in the XY plane), and the previewer passes it through
-  unrotated, so under the shared camera it stands where Godot lies down. No
-  PARITY-LIMITATIONS entry covers this.
+The torus now agrees on orientation: both frames lay it flat with the hole opening
+upward, matching outer/inner radii, tessellation, orange albedo, and the paired
+specular highlights. Both also render the two Label3D captions — the pale-yellow
+"TorusMesh Test" title above and the white description line below.
 
-The fixture's two `Label3D` captions ("TorusMesh Test", the description line) show in
-Godot but not in ours — in-viewport Label3D text is toggle-gated off by default
-(ADR-0008), covered by the Label3D sheet, not a MeshInstance3D gap. Material, colour,
-and the grey-sky-over-brown-ground preview environment otherwise agree.
+The captions differ only in typeface: Godot draws them in its default font, while ours
+uses the previewer's bundled font, so the glyph shapes and stroke weight of the same
+text read slightly differently. The grey-sky-over-brown-ground preview environment
+otherwise matches.

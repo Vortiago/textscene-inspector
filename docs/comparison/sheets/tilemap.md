@@ -9,26 +9,36 @@ renders_as: batched textured tile quads
 # TileMap
 
 TileMap draws each enabled layer's cells as batched textured quads sampled from
-its TileSet atlas. This fixture places six cells across two layers that reassemble
-regions of the 96×96 marker atlas into a blocky white "F" on blue in the top-left
-corner, with the one empty cell showing the background through.
+its TileSet atlas. This fixture lays five cells across two layers into a 3×2 grid,
+reassembling the top-left tiles of the 32px marker atlas into a blocky white "F"
+on blue; the vacant bottom-right cell leaves a notch of background showing
+through. `scale` and `position` enlarge and centre the map so the composition is
+legible.
 
 ## Properties exercised
 
 | Property | Value | Effect |
 | --- | --- | --- |
-| `tile_set` | `SubResource TileSet_b` | supplies the 32px marker atlas the cells draw from |
+| `position` | `Vector2(384, 196)` | centres the map in the frame |
+| `scale` | `Vector2(4, 4)` | enlarges the tiles 4× so they read clearly |
+| `tile_set` | `SubResource TileSet_b` | supplies the 32px marker atlas the cells sample |
 | `format` | `2` | selects the tile_data encoding so the layers decode; no visual of its own |
 | `layer_0/name` | `"Ground"` | editor layer label; no visual |
-| `layer_0/tile_data` | 4 cells | draws the top bar and left stem of the white "F" |
+| `layer_0/tile_data` | 4 cells | fills the top row (0,0)(1,0)(2,0) and the left cell (0,1) |
 | `layer_1/name` | `"Props"` | editor layer label; no visual |
-| `layer_1/z_index` | `1` | raises the Props layer; no visible stacking here — its cell overlaps no ground cell |
-| `layer_1/tile_data` | 1 cell | fills the F's centre tile at cell (1,1) |
+| `layer_1/z_index` | `1` | raises Props above Ground; no visible stacking here — its cell overlaps no Ground cell |
+| `layer_1/tile_data` | 1 cell | fills cell (1,1), the F's centre tile |
 
 ## Divergences
 
-The tiles are placed and shaped identically — same footprint (both fill x0–95,
-y0–63), same reconstructed "F", same empty-cell cutout, same background. The
-difference is colour: ours renders the marker's white as a light grey rather than
-pure white, and the blue reads marginally lighter and greener. The muted tone is
-uniform across the solid tile interiors, not just their edges.
+The tile composition matches: same 3×2 footprint, same reconstructed "F", same
+vacant bottom-right cell, and the blue reads the same in both. The one difference
+is that the white marker strokes render as a light grey in ours rather than the
+pure white Godot shows; the tint is uniform across the stroke interiors, not just
+their edges. The unlit tile material does not opt out of tone mapping, so it picks
+up the scene's editor-preview tonemapper ([ADR-0025], injected by the reference
+harness), which compresses the bright white, whereas Godot's 2D CanvasItem draw is
+not tonemapped. Same cause as `tilemaplayer` and `line2d`; no
+[PARITY-LIMITATIONS.md](../../PARITY-LIMITATIONS.md) entry covers it.
+
+[ADR-0025]: ../../adr/0025-preview-lighting-mirrors-the-godot-editor.md

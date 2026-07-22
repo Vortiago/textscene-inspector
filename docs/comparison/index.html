@@ -38,7 +38,9 @@ main{padding:28px clamp(16px,4vw,48px)}
 .sheet-head h2{margin:0;font-size:26px;letter-spacing:-.02em}
 .renders{color:var(--muted);font-size:14px}
 .renders code{color:var(--ours)}
-.fixture{margin-left:auto;font-size:12px;color:var(--muted)}
+.fixture{margin-left:auto;font-size:12px;color:var(--muted);text-decoration:none;white-space:nowrap}
+.fixture code{color:inherit}
+.fixture:hover{color:var(--ours);text-decoration:underline}
 code{font-family:var(--mono);font-size:.9em;background:var(--panel-2);padding:1px 5px;border-radius:4px}
 .compare{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
 /* Slider: godot underneath fills the box; ours overlays it, clipped from the
@@ -81,7 +83,7 @@ tr:last-child td{border-bottom:0}
       <header class="sheet-head">
         <h2>AnimatedSprite2D</h2>
         <span class="renders">renders as a textured quad</span>
-        <span class="fixture"><code>unit-animatedsprite2d.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-animatedsprite2d.tscn" target="_blank" rel="noopener" title="Open unit-animatedsprite2d.tscn in the previewer"><code>unit-animatedsprite2d.tscn</code> ↗</a>
       </header>
       <div class="compare">
         <div class="stage">
@@ -96,17 +98,17 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-      <div class="prose"><p>AnimatedSprite2D plays a SpriteFrames animation. Playback is selection-driven (ADR-0012), so in a plain capture the unselected node draws its authored clip's current frame statically: the first <code>walk</code> frame (<code>dodge-walk1.png</code>) as a textured quad, centered on the node's origin. That origin sits at the viewport's top-left corner, so only the sprite's lower-right quadrant is on screen.</p>
+      <div class="prose"><p>AnimatedSprite2D plays a SpriteFrames clip. Playback is selection-driven (ADR-0012), so a plain capture shows the authored <code>frame</code> statically: here frame 1 of the <code>walk</code> clip (<code>dodge-walk2.png</code>), the Dodge character, drawn as a textured quad centered and scaled 3x at the viewport's center.</p>
 <h3>Properties exercised</h3>
-<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>sprite_frames</code></td><td>embedded <code>SpriteFrames_walk</code></td><td>supplies the <code>walk</code> clip's two frame textures</td></tr><tr><td><code>animation</code></td><td><code>&amp;"walk"</code></td><td>selects that clip; its frame 0 (<code>dodge-walk1.png</code>) is what's drawn</td></tr></tbody></table></div>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>position</code></td><td><code>Vector2(576, 324)</code></td><td>centers the sprite in the 1152x648 viewport</td></tr><tr><td><code>scale</code></td><td><code>Vector2(3, 3)</code></td><td>enlarges the sprite 3x</td></tr><tr><td><code>sprite_frames</code></td><td>embedded <code>SpriteFrames_walk</code></td><td>supplies the <code>walk</code> clip's two frame textures</td></tr><tr><td><code>animation</code></td><td><code>&amp;"walk"</code></td><td>selects the <code>walk</code> clip</td></tr><tr><td><code>frame</code></td><td><code>1</code></td><td>pins the second frame (<code>dodge-walk2.png</code>), shown statically</td></tr></tbody></table></div>
 <h3>Divergences</h3>
-<p>None visible in this fixture.</p></div>
+<p>The sprite reads slightly flatter in the previewer. Its quad uses a tone-mapped material, so the preview's tone-mapping compresses the texture's highlights (the source's pure-white eye, <code>(255,255,255)</code>, renders at <code>(226,226,226)</code>) and nudges the mid-tones, whereas Godot's 2D canvas blits the texel values unchanged. Position, scale, and the displayed frame match.</p></div>
     </article>
     <article class="sheet" data-type="AnimationPlayer" hidden>
       <header class="sheet-head">
         <h2>AnimationPlayer</h2>
-        <span class="renders">renders as nothing itself; it drives other nodes' properties over time</span>
-        <span class="fixture"><code>unit-animation-player.tscn</code></span>
+        <span class="renders">renders as no visual of its own; an invisible driver of other nodes' properties</span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-animation-player.tscn" target="_blank" rel="noopener" title="Open unit-animation-player.tscn in the previewer"><code>unit-animation-player.tscn</code> ↗</a>
       </header>
       <div class="compare">
         <div class="stage">
@@ -121,17 +123,17 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-      <div class="prose"><p>Godot's keyframe animation driver. It has no visual of its own — it animates other nodes' properties. The previewer plays its clips: select the player and its transport (play / scrub / speed) appears, and the driven nodes move. Both renders below play the autoplay clip <strong>spin</strong>, which rotates the box a full turn about Y over two seconds; the frames are captured at the same times on each side.</p>
+      <div class="prose"><p>Godot's keyframe animation driver. It has no geometry — it animates other nodes' properties over time. In a still capture there is nothing to draw for the player itself, so both sides show the scene at its authored rest pose: the <code>Mesh</code> box unrotated at its resting height. The motion of the <code>spin</code> clip is documented separately as a GIF, not in this frame.</p>
 <h3>Properties exercised</h3>
-<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>autoplay</code></td><td><code>spin</code></td><td>the clip the transport starts on</td></tr><tr><td>clip <code>spin</code></td><td>rotation Y <code>0 → 2π</code>, <code>length 2.0</code>, <code>loop</code></td><td>the box turns once per loop</td></tr><tr><td>clip <code>bob</code></td><td>position Y, <code>length 1.0</code>, <code>loop</code></td><td>a second clip, selectable in the transport</td></tr></tbody></table></div>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>autoplay</code></td><td><code>spin</code></td><td>names the clip that would auto-run; the still shows the rest pose because the capture stops it</td></tr><tr><td><code>speed_scale</code></td><td><code>1.0</code></td><td>normal playback rate</td></tr><tr><td><code>playback_active</code></td><td><code>true</code></td><td>player marked active</td></tr><tr><td><code>libraries/</code></td><td><code>bob</code>, <code>spin</code></td><td>two clips are available to the transport</td></tr><tr><td>clip <code>spin</code></td><td>rotation Y <code>0 → 2π</code>, <code>length 2.0</code>, <code>loop</code></td><td>turns the box once per loop (not shown in this still)</td></tr><tr><td>clip <code>bob</code></td><td>position Y <code>0.5 → 1.0 → 0.5</code>, <code>length 1.0</code>, <code>loop</code></td><td>bobs the box up and down (not shown in this still)</td></tr></tbody></table></div>
 <h3>Divergences</h3>
-<p>None visible in this fixture — the box rotates through the same angles on both sides. The previewer does not autoplay on load (a static preview until you open the Animation tab), whereas Godot's <code>autoplay</code> runs immediately; the GIFs here drive both to the same frames so the motion matches.</p></div>
+<p>None visible in this fixture.</p></div>
     </article>
     <article class="sheet" data-type="AnimationTree" hidden>
       <header class="sheet-head">
         <h2>AnimationTree</h2>
         <span class="renders">renders as an empty group (a non-visual driver)</span>
-        <span class="fixture"><code>unit-animationtree-blend.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-animationtree-blend.tscn" target="_blank" rel="noopener" title="Open unit-animationtree-blend.tscn in the previewer"><code>unit-animationtree-blend.tscn</code> ↗</a>
       </header>
       <div class="compare">
         <div class="stage">
@@ -146,17 +148,17 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-      <div class="prose"><p>AnimationTree is a non-visual node — it drives another node's clips through a blend tree but draws no geometry of its own. The previewer mounts it as an empty group, so the only thing on screen is the <code>Mesh</code> box at its authored transform. The tree animates that box only when its row is selected and play is pressed (Godot parity: a static capture has no game script and no selection, so nothing moves). Both images therefore show the same unanimated box.</p>
+      <div class="prose"><p>AnimationTree is a non-visual node — it drives another node's clips through a blend tree but draws no geometry of its own. The previewer mounts it as an empty group, so the only thing on screen is the <code>Mesh</code> box at its authored transform. A static preview never ticks the tree, and the reference harness deactivates it, so both images show the same authored rest pose: an upright, axis-aligned box.</p>
 <h3>Properties exercised</h3>
-<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>active</code></td><td><code>true</code></td><td>tree is allowed to process, but actuates only on select + play; no static visual</td></tr><tr><td><code>tree_root</code></td><td><code>AnimationNodeBlendTree</code></td><td>the blend program (spin + bob); reshapes the Mesh only during playback</td></tr><tr><td><code>anim_player</code></td><td><code>NodePath("../AnimationPlayer")</code></td><td>the driver whose clips it blends; no static effect</td></tr><tr><td><code>parameters/blend/blend_amount</code></td><td><code>0.5</code></td><td>50/50 spin+bob mix, applied only while playing</td></tr></tbody></table></div>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>tree_root</code></td><td><code>AnimationNodeBlendTree</code></td><td>the blend program (spin + bob); reshapes the Mesh only during playback</td></tr><tr><td><code>anim_player</code></td><td><code>NodePath("../AnimationPlayer")</code></td><td>the driver whose clips it blends; no static effect</td></tr><tr><td><code>active</code></td><td><code>true</code></td><td>tree may process, but a static preview never runs it; no visual</td></tr><tr><td><code>parameters/blend/blend_amount</code></td><td><code>0.5</code></td><td>50/50 spin+bob mix, applied only while playing</td></tr></tbody></table></div>
 <h3>Divergences</h3>
-<p>The bright sky/horizon band reads brighter and softer in Godot, blooming into the sky above and the ground below; ours renders the same band dimmer with a harder falloff. This fixture has no <code>WorldEnvironment</code>, so the reference is shot with the editor preview environment (ADR-0025), whose glow (bloom) lifts the scene's brightest region — an effect this previewer does not reproduce. The white cube shows no halo at this brightness, so the gap is confined to the horizon. <a href="../../PARITY-LIMITATIONS.md#preview-environment-glow">PARITY-LIMITATIONS.md</a></p></div>
+<p>None visible in this fixture.</p></div>
     </article>
     <article class="sheet" data-type="Area2D" hidden>
       <header class="sheet-head">
         <h2>Area2D</h2>
         <span class="renders">renders as a transform-only Node2D group</span>
-        <span class="fixture"><code>unit-area2d.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-area2d.tscn" target="_blank" rel="noopener" title="Open unit-area2d.tscn in the previewer"><code>unit-area2d.tscn</code> ↗</a>
       </header>
       <div class="novisual">No visual output — this node draws nothing to compare.</div>
       <div class="prose"><p>Area2D is a 2D physics region that detects overlaps. Like every physics body it has no runtime visual, so the previewer mounts it as a transform-only Node2D group (ADR-0005/ADR-0008) and draws nothing for it. Both captures are an empty grey frame.</p>
@@ -170,7 +172,7 @@ tr:last-child td{border-bottom:0}
       <header class="sheet-head">
         <h2>Area3D</h2>
         <span class="renders">renders as an invisible transform-only group</span>
-        <span class="fixture"><code>edge-area3d-inactive.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=edge-area3d-inactive.tscn" target="_blank" rel="noopener" title="Open edge-area3d-inactive.tscn in the previewer"><code>edge-area3d-inactive.tscn</code> ↗</a>
       </header>
       <div class="novisual">No visual output — this node draws nothing to compare.</div>
       <div class="prose"><p>Area3D is a physics region for detecting overlaps; it has no runtime visual of its own. The previewer mounts it as a transform-only Node3D group, so it draws nothing. Its child <code>CollisionShape3D</code> is a toggle-gated overlay (ADR-0005/0006) and stays hidden in a plain capture. Both images show only the preview environment's procedural sky — a grey-blue gradient fading to a brown ground below the horizon.</p>
@@ -183,7 +185,7 @@ tr:last-child td{border-bottom:0}
       <header class="sheet-head">
         <h2>AreaLight3D</h2>
         <span class="renders">renders as a THREE.RectAreaLight</span>
-        <span class="fixture"><code>unit-area-light3d.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-area-light3d.tscn" target="_blank" rel="noopener" title="Open unit-area-light3d.tscn in the previewer"><code>unit-area-light3d.tscn</code> ↗</a>
       </header>
       <div class="compare">
         <div class="stage">
@@ -208,7 +210,7 @@ tr:last-child td{border-bottom:0}
       <header class="sheet-head">
         <h2>AudioStreamPlayer</h2>
         <span class="renders">renders as nothing (a non-spatial audio node)</span>
-        <span class="fixture"><code>unit-physics-bodies.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-physics-bodies.tscn" target="_blank" rel="noopener" title="Open unit-physics-bodies.tscn in the previewer"><code>unit-physics-bodies.tscn</code> ↗</a>
       </header>
       <div class="novisual">No visual output — this node draws nothing to compare.</div>
       <div class="prose"><p>AudioStreamPlayer plays a non-spatial audio stream and has no runtime visual. The previewer draws nothing for it — reusing the base Node component with zero geometry rather than a placeholder cube. The blue slab in both images is the fixture's <code>Ground</code> StaticBody3D; the <code>Music</code> player is invisible in each.</p>
@@ -221,7 +223,7 @@ tr:last-child td{border-bottom:0}
       <header class="sheet-head">
         <h2>AudioStreamPlayer2D</h2>
         <span class="renders">renders as an invisible Node2D transform group</span>
-        <span class="fixture"><code>unit-audio-stream-player-2d.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-audio-stream-player-2d.tscn" target="_blank" rel="noopener" title="Open unit-audio-stream-player-2d.tscn in the previewer"><code>unit-audio-stream-player-2d.tscn</code> ↗</a>
       </header>
       <div class="novisual">No visual output — this node draws nothing to compare.</div>
       <div class="prose"><p>A positional audio emitter. It has no runtime visual, so the previewer reuses the Node2D transform-group Component (ADR-0008): an invisible group that positions its children, drawing nothing itself. Both images are an empty scene.</p>
@@ -234,7 +236,7 @@ tr:last-child td{border-bottom:0}
       <header class="sheet-head">
         <h2>AudioStreamPlayer3D</h2>
         <span class="renders">renders as a selection-gated speaker gizmo</span>
-        <span class="fixture"><code>unit-audio-stream-player.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-audio-stream-player.tscn" target="_blank" rel="noopener" title="Open unit-audio-stream-player.tscn in the previewer"><code>unit-audio-stream-player.tscn</code> ↗</a>
       </header>
       <div class="compare">
         <div class="stage">
@@ -259,7 +261,7 @@ tr:last-child td{border-bottom:0}
       <header class="sheet-head">
         <h2>Button</h2>
         <span class="renders">renders as a positioned HTML div</span>
-        <span class="fixture"><code>unit-button.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-button.tscn" target="_blank" rel="noopener" title="Open unit-button.tscn in the previewer"><code>unit-button.tscn</code> ↗</a>
       </header>
       <div class="compare">
         <div class="stage">
@@ -274,17 +276,17 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-      <div class="prose"><p>Button is Godot's clickable text control. This is a static viewer, so it draws each Button's NORMAL state as a positioned HTML <code>&lt;div&gt;</code> — background and border from the <code>normal</code> StyleBox (or a synthesized default when none is set), the label centered. The fixture stacks three centered buttons: an unthemed <code>Click Me</code>, a green <code>Styled</code> one with an explicit StyleBox, and a <code>disabled</code> one.</p>
+      <div class="prose"><p>Button is Godot's clickable text control. This is a static viewer, so it draws each Button's NORMAL state as a positioned HTML <code>&lt;div&gt;</code> — background and border from the <code>normal</code> StyleBox (or the default-theme StyleBox when none is set), with the label centered. The fixture stacks three centered buttons: an unthemed <code>Click Me</code>, a green <code>Styled</code> one with an explicit StyleBox, and a <code>Disabled</code> one.</p>
 <h3>Properties exercised</h3>
-<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>text</code></td><td><code>"Click Me"</code> / <code>"Styled"</code> / <code>"Disabled"</code></td><td>the label on each of the three buttons</td></tr><tr><td><code>theme_override_styles/normal</code></td><td>green <code>StyleBoxFlat</code></td><td>replaces the default chrome on <strong>Styled</strong> — <code>bg_color = Color(0.2,0.5,0.35,1)</code> green fill, <code>corner_radius = 6</code> rounded corners, <code>content_margin 14/6</code> padding</td></tr><tr><td><code>disabled</code></td><td><code>true</code></td><td>dims the <strong>Disabled</strong> button and mutes its label</td></tr><tr><td><code>alignment</code></td><td><code>1</code> (CENTER)</td><td>centres the <strong>Styled</strong> label — Godot's Button default, so no visible change</td></tr></tbody></table></div>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>text</code></td><td><code>"Click Me"</code> / <code>"Styled"</code> / <code>"Disabled"</code></td><td>the label on each of the three buttons</td></tr><tr><td><code>theme_override_styles/normal</code></td><td>green <code>StyleBoxFlat</code></td><td>replaces the default chrome on <strong>Styled</strong> — <code>bg_color = Color(0.2,0.5,0.35,1)</code> green fill, <code>corner_radius = 6</code> rounded corners, <code>content_margin 14/6</code> padding</td></tr><tr><td><code>disabled</code></td><td><code>true</code></td><td>switches <strong>Disabled</strong> to the lighter disabled StyleBox and mutes its label</td></tr><tr><td><code>alignment</code></td><td><code>1</code> (CENTER)</td><td>centres the <strong>Styled</strong> label — Godot's Button default, so no visible change</td></tr></tbody></table></div>
 <h3>Divergences</h3>
-<p>The two <strong>unthemed</strong> buttons diverge in their background chrome. Godot draws its built-in default-theme StyleBox as a neutral charcoal that sits *darker* than the backdrop (<code>Click Me</code> rgb(46,46,46), <code>Disabled</code> rgb(61,61,61) against a rgb(76,76,76) ground). This previewer synthesizes its own default chrome instead — a lighter, blue-tinted slate (<code>Click Me</code> rgb(70,78,93), <code>Disabled</code> rgb(71,76,85)); at that luminance the <code>Click Me</code> chip nearly matches the backdrop and separates only by its blue tint, so it reads as a faint rectangle rather than a solid dark button. Disabled buttons are dimmed via opacity here rather than Godot's distinct disabled style. The <strong>Styled</strong> button, which supplies an explicit <code>StyleBoxFlat</code>, is pixel-exact — green rgb(51,128,89) in both. No PARITY-LIMITATIONS entry covers the default-theme chrome.</p></div>
+<p>The unthemed <strong>Click Me</strong> chrome now matches Godot's default theme exactly: a charcoal fill rgb(46,46,46) sitting darker than the rgb(76,76,76) backdrop, white label rgb(223,223,223), in both images. The <strong>Styled</strong> button is pixel-exact green rgb(51,128,89). The <strong>Disabled</strong> button renders with Godot's lighter disabled fill in both (Godot rgb(61,61,61), ours rgb(57,57,57)); its greyed label is marginally less muted here (ours rgb(164,164,164) vs Godot rgb(142,142,142)) because the disabled font tint is approximated rather than read from the default theme's disabled color.</p></div>
     </article>
     <article class="sheet" data-type="Camera2D" hidden>
       <header class="sheet-head">
         <h2>Camera2D</h2>
         <span class="renders">renders as a 2D view frame with no drawn geometry</span>
-        <span class="fixture"><code>unit-remote-transform-2d.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-remote-transform-2d.tscn" target="_blank" rel="noopener" title="Open unit-remote-transform-2d.tscn in the previewer"><code>unit-remote-transform-2d.tscn</code> ↗</a>
       </header>
       <div class="compare">
         <div class="stage">
@@ -309,13 +311,13 @@ tr:last-child td{border-bottom:0}
     <article class="sheet" data-type="Camera3D" hidden>
       <header class="sheet-head">
         <h2>Camera3D</h2>
-        <span class="renders">renders as a passive THREE.PerspectiveCamera</span>
-        <span class="fixture"><code>unit-decal.tscn</code></span>
+        <span class="renders">renders as a selection-gated frustum gizmo</span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-camera3d.tscn" target="_blank" rel="noopener" title="Open unit-camera3d.tscn in the previewer"><code>unit-camera3d.tscn</code> ↗</a>
       </header>
       <div class="compare">
         <div class="stage">
-          <img class="img-godot" src="images/unit-decal-godot.png" alt="Godot render of Camera3D">
-          <img class="img-ours" src="images/unit-decal-ours.png" alt="Our render of Camera3D">
+          <img class="img-godot" src="images/unit-camera3d-godot.png" alt="Godot render of Camera3D">
+          <img class="img-ours" src="images/unit-camera3d-ours.png" alt="Our render of Camera3D">
           <div class="handle"></div>
           <span class="tag g">Godot 4.6.3</span>
           <span class="tag o">Ours</span>
@@ -325,9 +327,9 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-      <div class="prose"><p>Camera3D is the scene's authored viewpoint, but it is a passive scene-tree node in this capture: both images are framed from Godot's editor camera (<code>Node3DEditorViewport::Cursor</code>, matched on both sides), not from this node, so the fixture's <code>transform</code> and <code>fov</code> have no effect on what either render shows. The previewer builds a passive <code>THREE.PerspectiveCamera</code> that only becomes the viewport through the camera switcher, plus a frustum gizmo that is selection-gated — so the node draws nothing in either image.</p>
+      <div class="prose"><p>Camera3D is an authored viewpoint that draws nothing at runtime — Godot renders the game, not the editor, so the camera is invisible. The previewer matches that: it draws only a frustum gizmo, and that gizmo is selection-gated (ADR-0018), so with nothing selected it is absent too. The fixture places three cameras (<code>MainCamera</code>, <code>LeftCamera</code>, <code>TopCamera</code>) among a gray ground plane and a blue and an orange box; only the reference geometry appears in either capture.</p>
 <h3>Properties exercised</h3>
-<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>transform</code></td><td>origin <code>(0, 4, 6)</code>, tilted ~30° down</td><td>none here — the editor camera frames the capture, not this node</td></tr><tr><td><code>fov</code></td><td><code>70.0</code></td><td>none here — as above</td></tr></tbody></table></div>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>current</code></td><td><code>true</code> (MainCamera)</td><td>marks the active camera; no visible effect — Camera3D renders nothing at runtime</td></tr><tr><td><code>fov</code></td><td><code>70.0</code> / <code>55.0</code> / <code>60.0</code></td><td>none — the capture is framed by the matched reference camera, not these nodes</td></tr><tr><td><code>transform</code></td><td>three distinct placements</td><td>none — the cameras are invisible</td></tr></tbody></table></div>
 <h3>Divergences</h3>
 <p>None visible in this fixture.</p></div>
     </article>
@@ -335,7 +337,7 @@ tr:last-child td{border-bottom:0}
       <header class="sheet-head">
         <h2>CanvasLayer</h2>
         <span class="renders">renders as a full-rect passthrough layer hosting Control children</span>
-        <span class="fixture"><code>unit-canvas-layer.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-canvas-layer.tscn" target="_blank" rel="noopener" title="Open unit-canvas-layer.tscn in the previewer"><code>unit-canvas-layer.tscn</code> ↗</a>
       </header>
       <div class="compare">
         <div class="stage">
@@ -360,7 +362,7 @@ tr:last-child td{border-bottom:0}
       <header class="sheet-head">
         <h2>CenterContainer</h2>
         <span class="renders">renders as a centering flex container</span>
-        <span class="fixture"><code>unit-center-container.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-center-container.tscn" target="_blank" rel="noopener" title="Open unit-center-container.tscn in the previewer"><code>unit-center-container.tscn</code> ↗</a>
       </header>
       <div class="compare">
         <div class="stage">
@@ -385,7 +387,7 @@ tr:last-child td{border-bottom:0}
       <header class="sheet-head">
         <h2>CharacterBody3D</h2>
         <span class="renders">renders as a transform-only Node3D group</span>
-        <span class="fixture"><code>unit-characterbody3d.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-characterbody3d.tscn" target="_blank" rel="noopener" title="Open unit-characterbody3d.tscn in the previewer"><code>unit-characterbody3d.tscn</code> ↗</a>
       </header>
       <div class="compare">
         <div class="stage">
@@ -410,7 +412,7 @@ tr:last-child td{border-bottom:0}
       <header class="sheet-head">
         <h2>CheckBox</h2>
         <span class="renders">renders as an inline HTML row with a drawn check indicator</span>
-        <span class="fixture"><code>unit-checkbox.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-checkbox.tscn" target="_blank" rel="noopener" title="Open unit-checkbox.tscn in the previewer"><code>unit-checkbox.tscn</code> ↗</a>
       </header>
       <div class="compare">
         <div class="stage">
@@ -435,7 +437,7 @@ tr:last-child td{border-bottom:0}
       <header class="sheet-head">
         <h2>CollisionShape2D</h2>
         <span class="renders">renders as a toggle-gated collision outline</span>
-        <span class="fixture"><code>unit-collisionshape2d.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-collisionshape2d.tscn" target="_blank" rel="noopener" title="Open unit-collisionshape2d.tscn in the previewer"><code>unit-collisionshape2d.tscn</code> ↗</a>
       </header>
       <div class="novisual">No visual output — this node draws nothing to compare.</div>
       <div class="prose"><p>CollisionShape2D attaches a 2D collision shape to a physics body. It has no runtime visual — its outline is a debug gizmo gated behind "Visible Collision Shapes" (off by default, ADR-0005/0006), so a plain capture draws nothing.</p>
@@ -448,7 +450,7 @@ tr:last-child td{border-bottom:0}
       <header class="sheet-head">
         <h2>CollisionShape3D</h2>
         <span class="renders">renders as a toggle-gated collision wireframe</span>
-        <span class="fixture"><code>unit-rigidbody3d.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-rigidbody3d.tscn" target="_blank" rel="noopener" title="Open unit-rigidbody3d.tscn in the previewer"><code>unit-rigidbody3d.tscn</code> ↗</a>
       </header>
       <div class="compare">
         <div class="stage">
@@ -463,17 +465,17 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-      <div class="prose"><p>CollisionShape3D attaches a collision shape to a physics body and has no runtime Collision Shapes" is enabled (ADR-0005 / ADR-0006), off by default. So this plain capture draws nothing for it — the salmon cube on screen is the sibling <code>CrateMesh</code> (a MeshInstance3D) under the same RigidBody3D.</p>
+      <div class="prose"><p>CollisionShape3D attaches a collision shape to a physics body and has no visible form at runtime. Its wireframe draws only when "Visible Collision Shapes" is enabled (ADR-0005 / ADR-0006), which is off in this capture, so the previewer draws nothing for it here. The salmon cube on screen is the sibling <code>CrateMesh</code> (a MeshInstance3D) under the same RigidBody3D.</p>
 <h3>Properties exercised</h3>
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>shape</code></td><td><code>BoxShape3D</code> (size 1×1×1)</td><td>the collision volume; drawn only as a gated wireframe box, so absent from this capture</td></tr></tbody></table></div>
 <h3>Divergences</h3>
-<p>CollisionShape3D draws nothing in either image, so it has no output of its own to differ. The one visible difference is the sibling cube (the MeshInstance3D): our frame places it higher and larger than Godot's, while its colour, shading, and the sky, horizon and ground all match to within a few values. The gap is where the cube sits in the frame, not how it is rendered.</p></div>
+<p>None visible in this fixture. The CollisionShape3D wireframe is toggle-gated and so appears in neither capture, and the sibling crate sits at its authored pose, colour, and shading identically on both sides.</p></div>
     </article>
     <article class="sheet" data-type="ColorRect" hidden>
       <header class="sheet-head">
         <h2>ColorRect</h2>
         <span class="renders">renders as a color-filled div</span>
-        <span class="fixture"><code>unit-color-rect.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-color-rect.tscn" target="_blank" rel="noopener" title="Open unit-color-rect.tscn in the previewer"><code>unit-color-rect.tscn</code> ↗</a>
       </header>
       <div class="compare">
         <div class="stage">
@@ -498,7 +500,7 @@ tr:last-child td{border-bottom:0}
       <header class="sheet-head">
         <h2>Control</h2>
         <span class="renders">renders as a full-rect layout region</span>
-        <span class="fixture"><code>unit-control-state.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-control-state.tscn" target="_blank" rel="noopener" title="Open unit-control-state.tscn in the previewer"><code>unit-control-state.tscn</code> ↗</a>
       </header>
       <div class="compare">
         <div class="stage">
@@ -513,19 +515,19 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-      <div class="prose"><p>The base Godot UI node. The previewer maps it to a positioned <code>&lt;div&gt;</code> that establishes the containing block for its children; it draws no pixels of its own. Everything visible in both images is the child stack — a <code>VBoxContainer</code> of CheckBoxes, radio CheckBoxes, and an OptionButton — laid out inside the root's full-viewport rect.</p>
+      <div class="prose"><p>The base Godot UI node. The previewer maps it to a positioned <code>&lt;div&gt;</code> that establishes the containing block for its children and draws no pixels of its own. Everything visible in both images is the child stack — a <code>VBoxContainer</code> holding two CheckBoxes, two radio CheckBoxes, and an OptionButton — laid out inside the root's full-viewport rect.</p>
 <h3>Properties exercised</h3>
-<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>anchors_preset</code> / <code>anchor_right</code> / <code>anchor_bottom</code></td><td><code>15</code> / <code>1.0</code> / <code>1.0</code></td><td>the root fills the viewport, so the row stack starts at the top-left corner</td></tr><tr><td><code>visible</code></td><td><code>false</code> (HiddenDropdown, HiddenButton, HiddenGrid)</td><td>those children are drawn in neither image — the hidden state is faithful</td></tr><tr><td><code>button_pressed</code></td><td><code>true</code> (CheckedBox, RadioOn)</td><td>the checked box shows a tick, the radio-on row a filled dot</td></tr><tr><td><code>button_group</code></td><td><code>ButtonGroup_radio</code> (RadioOn, RadioOff)</td><td>the last two boxes render as radio indicators rather than square checks</td></tr></tbody></table></div>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>anchors_preset</code> / <code>anchor_right</code> / <code>anchor_bottom</code></td><td><code>15</code> / <code>1.0</code> / <code>1.0</code></td><td>the root fills the viewport, so the row stack starts at the top-left corner</td></tr><tr><td><code>button_pressed</code></td><td><code>true</code> (CheckedBox, RadioOn)</td><td>the checked box shows a tick, the radio-on row a filled dot</td></tr><tr><td><code>button_group</code></td><td><code>ButtonGroup_radio</code> (RadioOn, RadioOff)</td><td>the last two boxes render as radio indicators rather than square checks</td></tr><tr><td><code>text</code></td><td>per row</td><td>the row labels ("CHECKED BOX", "RADIO ON", "VISIBLE DROPDOWN", …)</td></tr><tr><td><code>selected</code> / <code>popup/item_0/text</code></td><td><code>0</code> / <code>"VISIBLE DROPDOWN"</code></td><td>the OptionButton shows its selected item as a bar</td></tr><tr><td><code>visible</code></td><td><code>false</code> (HiddenDropdown, HiddenButton, HiddenGrid)</td><td>those children are drawn in neither image — the hidden state is faithful</td></tr></tbody></table></div>
 <h3>Divergences</h3>
-<p>The OptionButton ("VISIBLE DROPDOWN"). Godot draws a dark neutral bar with a right-edge dropdown chevron; the previewer draws a lighter slate-blue bar with no chevron. The chevron is a theme icon the previewer has no access to, and the bar tone is a drawn default rather than the theme's StyleBox.</p>
-<p>The checkbox and radio indicators are drawn approximations — thin outlines with a Unicode tick or a filled dot — where Godot draws solid theme icon textures. See <a href="checkbox.md">CheckBox</a> for the detail.</p>
-<p>Row pitch differs: Godot's rows are ~35px tall, the previewer's ~26px, so the whole stack reads ~30% shorter here. The cause is the theme's default line-height and control minimum sizes versus the previewer's more compact metrics.</p></div>
+<p>The OptionButton chevron. Godot draws a right-edge dropdown chevron on the "VISIBLE DROPDOWN" bar; the previewer draws none. The chevron is a theme icon the previewer has no access to. The bar tone itself now matches — both draw a dark neutral StyleBox.</p>
+<p>The checkbox and radio indicators are drawn approximations: the previewer draws thin outlines with a light tick or a filled dot, where Godot draws solid theme icon textures (a light filled square with a dark tick, a dark filled square, a ringed radio, a dark filled circle). Both distinguish the checked/unchecked and on/off states correctly. See <a href="checkbox.md">CheckBox</a> for the detail.</p>
+<p>Row pitch differs: Godot's rows are ~35px tall, the previewer's ~26px, so the whole stack reads shorter here. The cause is the default theme's larger control minimum sizes versus the previewer's more compact metrics.</p></div>
     </article>
     <article class="sheet" data-type="CSGBox3D" hidden>
       <header class="sheet-head">
         <h2>CSGBox3D</h2>
         <span class="renders">renders as a solid box mesh</span>
-        <span class="fixture"><code>unit-csg-box.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-csg-box.tscn" target="_blank" rel="noopener" title="Open unit-csg-box.tscn in the previewer"><code>unit-csg-box.tscn</code> ↗</a>
       </header>
       <div class="compare">
         <div class="stage">
@@ -550,7 +552,7 @@ tr:last-child td{border-bottom:0}
       <header class="sheet-head">
         <h2>CSGCylinder3D</h2>
         <span class="renders">renders as a THREE.CylinderGeometry mesh</span>
-        <span class="fixture"><code>unit-csg-cylinder.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-csg-cylinder.tscn" target="_blank" rel="noopener" title="Open unit-csg-cylinder.tscn in the previewer"><code>unit-csg-cylinder.tscn</code> ↗</a>
       </header>
       <div class="compare">
         <div class="stage">
@@ -575,7 +577,7 @@ tr:last-child td{border-bottom:0}
       <header class="sheet-head">
         <h2>CSGSphere3D</h2>
         <span class="renders">renders as a solid sphere mesh</span>
-        <span class="fixture"><code>unit-csg-sphere.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-csg-sphere.tscn" target="_blank" rel="noopener" title="Open unit-csg-sphere.tscn in the previewer"><code>unit-csg-sphere.tscn</code> ↗</a>
       </header>
       <div class="compare">
         <div class="stage">
@@ -600,7 +602,7 @@ tr:last-child td{border-bottom:0}
       <header class="sheet-head">
         <h2>Decal</h2>
         <span class="renders">renders as a texture projected onto the surfaces its box intersects</span>
-        <span class="fixture"><code>unit-decal.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-decal.tscn" target="_blank" rel="noopener" title="Open unit-decal.tscn in the previewer"><code>unit-decal.tscn</code> ↗</a>
       </header>
       <div class="compare">
         <div class="stage">
@@ -626,7 +628,7 @@ tr:last-child td{border-bottom:0}
       <header class="sheet-head">
         <h2>DirectionalLight3D</h2>
         <span class="renders">renders as a THREE.DirectionalLight</span>
-        <span class="fixture"><code>unit-directional-light-3d.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-directional-light-3d.tscn" target="_blank" rel="noopener" title="Open unit-directional-light-3d.tscn in the previewer"><code>unit-directional-light-3d.tscn</code> ↗</a>
       </header>
       <div class="compare">
         <div class="stage">
@@ -651,7 +653,7 @@ tr:last-child td{border-bottom:0}
       <header class="sheet-head">
         <h2>GPUParticles3D</h2>
         <span class="renders">renders as a transform-only group</span>
-        <span class="fixture"><code>unit-gpuparticles3d.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-gpuparticles3d.tscn" target="_blank" rel="noopener" title="Open unit-gpuparticles3d.tscn in the previewer"><code>unit-gpuparticles3d.tscn</code> ↗</a>
       </header>
       <div class="compare">
         <div class="stage">
@@ -666,17 +668,17 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-      <div class="prose"><p>A GPU-simulated particle emitter. The previewer treats it as a transform-only node (ADR-0008) — it does not run the particle simulation, so it draws nothing.</p>
+      <div class="prose"><p>A GPU-simulated particle emitter. The previewer renders it as a transform-only node (ADR-0008) — it does not run the particle simulation, so it contributes no visible geometry to the frame.</p>
 <h3>Properties exercised</h3>
-<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>amount</code></td><td><code>200</code></td><td>~200 particles fill the Godot burst</td></tr><tr><td><code>lifetime</code></td><td><code>2.0</code></td><td>each particle lives 2 s before recycling</td></tr><tr><td><code>preprocess</code></td><td><code>1.2</code></td><td>simulation runs 1.2 s ahead, so the still catches a spread cloud, not the emission instant</td></tr><tr><td><code>process_material</code></td><td><code>ParticleProcessMaterial</code></td><td>drives the motion: upward <code>direction</code>, 45° <code>spread</code>, downward <code>gravity</code>, per-particle <code>scale</code> 0.5–1.0</td></tr><tr><td><code>draw_pass_1</code></td><td><code>SphereMesh</code> (r 0.12)</td><td>each particle is drawn as a small sphere</td></tr><tr><td><code>material_override</code></td><td>emissive <code>StandardMaterial3D</code></td><td>tints every particle glowing orange</td></tr></tbody></table></div>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>amount</code></td><td><code>200</code></td><td>up to 200 particles fill Godot's burst</td></tr><tr><td><code>lifetime</code></td><td><code>2.0</code></td><td>each particle lives 2 s before recycling</td></tr><tr><td><code>preprocess</code></td><td><code>1.2</code></td><td>the sim runs 1.2 s ahead, so the still catches a spread cloud, not the emission instant</td></tr><tr><td><code>process_material</code></td><td><code>ParticleProcessMaterial</code></td><td>drives the motion: upward <code>direction</code>, 45° <code>spread</code>, downward <code>gravity</code>, per-particle <code>scale</code> 0.5–1.0</td></tr><tr><td><code>draw_pass_1</code></td><td><code>SphereMesh</code> (radius 0.12)</td><td>each particle is drawn as a small sphere</td></tr><tr><td><code>material_override</code></td><td>emissive <code>StandardMaterial3D</code></td><td>tints every particle glowing orange</td></tr></tbody></table></div>
 <h3>Divergences</h3>
-<p>The whole particle cloud is missing from our render. Godot shows ~200 orange emissive spheres spread across the frame; the previewer shows an empty scene — only the sky gradient and dark ground. GPUParticles3D renders as a transform-only group (ADR-0008): there is no GPU particle simulation, so none of the <code>process_material</code> motion or <code>draw_pass_1</code> mesh is drawn. This absence is the fixture's deliberate point, not a regression.</p></div>
+<p>Godot draws the whole particle burst; the previewer draws none of it. Godot's frame is a spread of ~200 orange emissive spheres of varying sizes fanning up and out from the emitter (the <code>preprocess</code> seek catches them mid-flight); ours shows only the sky gradient and dark ground with no particles at all. GPUParticles3D renders as a transform-only group (ADR-0008): there is no GPU particle simulation, so neither the <code>process_material</code> motion nor the <code>draw_pass_1</code> mesh appears. This absence is the fixture's deliberate point, not a regression.</p></div>
     </article>
     <article class="sheet" data-type="GridContainer" hidden>
       <header class="sheet-head">
         <h2>GridContainer</h2>
         <span class="renders">renders as a CSS grid container</span>
-        <span class="fixture"><code>unit-grid-container.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-grid-container.tscn" target="_blank" rel="noopener" title="Open unit-grid-container.tscn in the previewer"><code>unit-grid-container.tscn</code> ↗</a>
       </header>
       <div class="compare">
         <div class="stage">
@@ -691,17 +693,17 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-      <div class="prose"><p>GridContainer lays its children out left-to-right into a fixed number of columns, wrapping to a new row each time the column count is reached. The previewer maps it to a <code>display: grid</code> div, so <code>columns</code> becomes the column-template and the separation constants become the CSS gaps.</p>
+      <div class="prose"><p>GridContainer lays its children out left-to-right into a fixed number of columns, wrapping to a new row each time the column count is reached. The previewer maps it to a <code>display: grid</code> div, so <code>columns</code> becomes the column-template, the separation constants become the CSS gaps, and the rows pack to the top.</p>
 <h3>Properties exercised</h3>
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>columns</code></td><td><code>2</code></td><td>the four labels wrap into a 2-column grid — two per row</td></tr><tr><td><code>theme_override_constants/h_separation</code></td><td><code>8</code></td><td>horizontal gap between the two columns</td></tr><tr><td><code>theme_override_constants/v_separation</code></td><td><code>12</code></td><td>vertical gap between the two rows</td></tr><tr><td><code>anchors_preset</code></td><td><code>15</code></td><td>the container fills the parent Control (full rect)</td></tr><tr><td><code>anchor_right</code> / <code>anchor_bottom</code></td><td><code>1.0</code></td><td>it spans the full viewport width and height</td></tr><tr><td>child <code>Label.text</code></td><td><code>"Row N Col N"</code></td><td>the four cells, filled row-major</td></tr></tbody></table></div>
 <h3>Divergences</h3>
-<p>The second row sits tight under the first in Godot (only the 12px v_separation between them) but is pushed down to the vertical middle of the viewport in ours. Godot's container sizes its rows to content and packs them at the top-left; our grid div fills the full-rect viewport, and its implicit rows are <code>auto</code>, so CSS <code>align-content</code> stretches them to split the height in two, dropping row 1 to the centre. The horizontal layout, column count, and gaps match. No PARITY-LIMITATIONS entry covers this.</p></div>
+<p>None visible in this fixture.</p></div>
     </article>
     <article class="sheet" data-type="GridMap" hidden>
       <header class="sheet-head">
         <h2>GridMap</h2>
         <span class="renders">renders as a THREE.InstancedMesh per MeshLibrary item</span>
-        <span class="fixture"><code>unit-grid-map.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-grid-map.tscn" target="_blank" rel="noopener" title="Open unit-grid-map.tscn in the previewer"><code>unit-grid-map.tscn</code> ↗</a>
       </header>
       <div class="compare">
         <div class="stage">
@@ -726,7 +728,7 @@ tr:last-child td{border-bottom:0}
       <header class="sheet-head">
         <h2>HBoxContainer</h2>
         <span class="renders">renders as a CSS flex-row <code>&lt;div&gt;</code></span>
-        <span class="fixture"><code>unit-hbox-container.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-hbox-container.tscn" target="_blank" rel="noopener" title="Open unit-hbox-container.tscn in the previewer"><code>unit-hbox-container.tscn</code> ↗</a>
       </header>
       <div class="compare">
         <div class="stage">
@@ -743,15 +745,15 @@ tr:last-child td{border-bottom:0}
       </div>
       <div class="prose"><p>HBoxContainer stacks its children in a horizontal row. The previewer renders it as a CSS flex-row <code>&lt;div&gt;</code>: <code>separation</code> becomes the flex <code>gap</code>, <code>alignment</code> becomes <code>justify-content</code>, and each child's <code>size_flags</code> drive its grow and cross-axis alignment. Here two Labels ("Left", "Right") each carry <code>size_flags_horizontal = 3</code> (FILL|EXPAND), so each takes half the row.</p>
 <h3>Properties exercised</h3>
-<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>anchors_preset</code></td><td><code>15</code></td><td>the container fills the parent rect (the whole viewport)</td></tr><tr><td><code>alignment</code></td><td><code>1</code> (CENTER)</td><td>main-axis packing — no visible effect here, since both children EXPAND and already fill the row</td></tr><tr><td><code>theme_override_constants/separation</code></td><td><code>12</code></td><td>12px gap between the two labels (at the row's midpoint, where their cells meet)</td></tr></tbody></table></div>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>anchors_preset</code></td><td><code>15</code></td><td>the container fills the parent rect (the whole viewport)</td></tr><tr><td><code>alignment</code></td><td><code>1</code> (CENTER)</td><td>main-axis packing — no visible effect here, since both children EXPAND and already fill the row</td></tr><tr><td><code>theme_override_constants/separation</code></td><td><code>12</code></td><td>12px gap between the two labels, at the row's midpoint where their cells meet</td></tr><tr><td><code>size_flags_horizontal</code></td><td><code>3</code> (FILL\</td><td>EXPAND)</td><td>on each Label — the two cells split the row's width evenly</td></tr></tbody></table></div>
 <h3>Divergences</h3>
-<p>The two labels differ in <strong>vertical</strong> placement: Godot centers them on the container's vertical axis; the previewer pins them to the top edge. Horizontal placement matches — "Left" at the far-left edge, "Right" starting just past center, each label filling its half of the row. The previewer stretches each label to the container's full height and, with no <code>vertical_alignment</code> set, leaves the text at the top; Godot renders the same labels centered on that axis.</p></div>
+<p>None visible in this fixture.</p></div>
     </article>
     <article class="sheet" data-type="Label" hidden>
       <header class="sheet-head">
         <h2>Label</h2>
         <span class="renders">renders as a positioned HTML div in the Control overlay</span>
-        <span class="fixture"><code>unit-label-2d.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-label-2d.tscn" target="_blank" rel="noopener" title="Open unit-label-2d.tscn in the previewer"><code>unit-label-2d.tscn</code> ↗</a>
       </header>
       <div class="compare">
         <div class="stage">
@@ -776,7 +778,7 @@ tr:last-child td{border-bottom:0}
       <header class="sheet-head">
         <h2>Label3D</h2>
         <span class="renders">renders as a canvas-textured plane</span>
-        <span class="fixture"><code>unit-label3d.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-label3d.tscn" target="_blank" rel="noopener" title="Open unit-label3d.tscn in the previewer"><code>unit-label3d.tscn</code> ↗</a>
       </header>
       <div class="compare">
         <div class="stage">
@@ -791,17 +793,19 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-      <div class="prose"><p>Label3D draws a line of text on a flat plane in 3D space. The previewer rasterises the text to a canvas and maps it onto a transparent <code>PlaneGeometry</code> sized by <code>pixel_size</code>, billboarded per the node's mode. In-viewport label text is gated behind the Labels toggle, <strong>off by default</strong> (ADR-0008), so it is absent from a plain capture.</p>
+      <div class="prose"><p>Label3D draws a single line of text on a flat plane in 3D space. The previewer rasterises each label to a canvas texture, maps it onto a transparent <code>PlaneGeometry</code> sized by <code>pixel_size</code>, tints it by <code>modulate</code>, and orients it per the node's <code>billboard</code> mode. All four labels render by default.</p>
 <h3>Properties exercised</h3>
-<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>text</code></td><td>e.g. <code>"Billboard Enabled"</code></td><td>the glyph string each label shows</td></tr><tr><td><code>pixel_size</code></td><td><code>0.01</code> / <code>0.015</code></td><td>world size per glyph pixel; the <code>0.015</code> "Outlined Text" reads larger</td></tr><tr><td><code>billboard</code></td><td><code>0</code> / <code>1</code> / <code>2</code></td><td><code>1</code> faces the camera upright; <code>0</code> keeps a fixed orientation (the cyan label skews with the pitched camera); <code>2</code> yaws around Y only (the magenta label reads foreshortened)</td></tr><tr><td><code>modulate</code></td><td><code>Color(1,1,0,1)</code> …</td><td>tints the glyphs — yellow, cyan, magenta, white</td></tr><tr><td><code>outline_size</code></td><td><code>8</code></td><td>black outline width around "Outlined Text"</td></tr><tr><td><code>outline_modulate</code></td><td><code>Color(0,0,0,1)</code></td><td>the outline colour</td></tr></tbody></table></div>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>text</code></td><td><code>"Billboard Enabled"</code> …</td><td>the glyph string each label shows</td></tr><tr><td><code>pixel_size</code></td><td><code>0.01</code> / <code>0.015</code></td><td>world size per glyph pixel; the <code>0.015</code> "Outlined Text" reads larger</td></tr><tr><td><code>billboard</code></td><td><code>1</code> / <code>0</code> / <code>2</code></td><td><code>1</code> faces the camera upright (yellow, white); <code>0</code> holds a fixed orientation, so the cyan label skews with the pitched camera and runs off-frame; <code>2</code> yaws around Y only, so the magenta label reads foreshortened</td></tr><tr><td><code>modulate</code></td><td><code>Color(1,1,0,1)</code> …</td><td>tints the glyphs — yellow, cyan, magenta, white</td></tr><tr><td><code>outline_size</code></td><td><code>8</code></td><td>black outline width around "Outlined Text"</td></tr><tr><td><code>outline_modulate</code></td><td><code>Color(0,0,0,1)</code></td><td>the outline colour, black</td></tr></tbody></table></div>
 <h3>Divergences</h3>
-<p>The Godot reference renders all four labels (yellow "Billboard Enabled", cyan fixed-orientation "Billboard Disabled" tilting off-frame, magenta Y-axis "Y-Axis Billboard", and white "Outlined Text" with its black outline). Our capture is blank: in-viewport Label3D text is toggle-gated behind the Labels flag, off by default (ADR-0008), so a plain capture draws none of it. This is a UI default, not a rendering gap — with Labels on, the same canvas-textured planes draw.</p></div>
+<p>Our labels carry a dark, boxy fringe hugging each glyph run: the transparent canvas backing is not fully keyed out, so a black halo shows around and behind the text. Godot's label planes are cleanly transparent, drawing only the tinted glyphs. It is most obvious on the yellow, cyan, and magenta labels.</p>
+<p>Glyph shapes also differ — a Chromium fallback font on our side versus Godot's bundled default — so letterforms, weight, and kerning vary across all four labels. This is inherent to rasterising through the browser's font stack.</p>
+<p>Text presence, colour, placement, per-label size, billboard orientation, and the black outline on "Outlined Text" all match.</p></div>
     </article>
     <article class="sheet" data-type="Line2D" hidden>
       <header class="sheet-head">
         <h2>Line2D</h2>
         <span class="renders">renders as a stroked mesh polyline</span>
-        <span class="fixture"><code>unit-line2d.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-line2d.tscn" target="_blank" rel="noopener" title="Open unit-line2d.tscn in the previewer"><code>unit-line2d.tscn</code> ↗</a>
       </header>
       <div class="compare">
         <div class="stage">
@@ -827,7 +831,7 @@ tr:last-child td{border-bottom:0}
       <header class="sheet-head">
         <h2>MarginContainer</h2>
         <span class="renders">renders as a padded flex container</span>
-        <span class="fixture"><code>unit-margin-container.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-margin-container.tscn" target="_blank" rel="noopener" title="Open unit-margin-container.tscn in the previewer"><code>unit-margin-container.tscn</code> ↗</a>
       </header>
       <div class="compare">
         <div class="stage">
@@ -852,7 +856,7 @@ tr:last-child td{border-bottom:0}
       <header class="sheet-head">
         <h2>Marker2D</h2>
         <span class="renders">renders as a selection-gated cross gizmo</span>
-        <span class="fixture"><code>unit-marker2d.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-marker2d.tscn" target="_blank" rel="noopener" title="Open unit-marker2d.tscn in the previewer"><code>unit-marker2d.tscn</code> ↗</a>
       </header>
       <div class="novisual">No visual output — this node draws nothing to compare.</div>
       <div class="prose"><p>Marker2D is a Node2D transform anchor that positions its children and draws a small blue "+" cross at its origin. That cross is an editor decoration, so the previewer selection-gates it (ADR-0018) — it appears only while the node is selected. Godot's game render never draws the marker gizmo either, so in this plain, nothing-selected capture both sides show an empty frame.</p>
@@ -865,7 +869,7 @@ tr:last-child td{border-bottom:0}
       <header class="sheet-head">
         <h2>Marker3D</h2>
         <span class="renders">renders as a selection-gated axis-cross gizmo</span>
-        <span class="fixture"><code>unit-marker-3d.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-marker-3d.tscn" target="_blank" rel="noopener" title="Open unit-marker-3d.tscn in the previewer"><code>unit-marker-3d.tscn</code> ↗</a>
       </header>
       <div class="novisual">No visual output — this node draws nothing to compare.</div>
       <div class="prose"><p>A Node3D transform anchor that positions its children and draws a 3-axis editor cross at its origin. That cross is selection-gated (ADR-0018), so a plain capture shows nothing for it — and Godot's own editor gizmo does not render in the game, so both images are just the empty preview sky and ground.</p>
@@ -878,7 +882,7 @@ tr:last-child td{border-bottom:0}
       <header class="sheet-head">
         <h2>MeshInstance3D</h2>
         <span class="renders">renders as a THREE.Mesh</span>
-        <span class="fixture"><code>unit-torus-mesh.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-torus-mesh.tscn" target="_blank" rel="noopener" title="Open unit-torus-mesh.tscn in the previewer"><code>unit-torus-mesh.tscn</code> ↗</a>
       </header>
       <div class="compare">
         <div class="stage">
@@ -893,18 +897,18 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-      <div class="prose"><p>MeshInstance3D draws its <code>mesh</code> resource as a THREE.Mesh. This fixture feeds it a <code>TorusMesh</code> with an orange metallic <code>StandardMaterial3D</code> override, so the previewer builds a <code>torusGeometry</code> and shades it. The donut and its glossy highlight come through; the two frames disagree only on which way the ring faces.</p>
+      <div class="prose"><p>MeshInstance3D draws its <code>mesh</code> resource as a THREE.Mesh. This fixture feeds it a <code>TorusMesh</code> with an orange metallic <code>StandardMaterial3D</code> override, so the previewer builds a <code>torusGeometry</code> and shades it. The donut lies flat, hole facing up, with a glossy highlight, and the scene's two Label3D captions sit above and below it.</p>
 <h3>Properties exercised</h3>
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>mesh</code></td><td><code>TorusMesh</code> sub-resource</td><td>the donut geometry that is drawn</td></tr><tr><td><code>inner_radius</code></td><td><code>0.5</code></td><td>radius of the hole</td></tr><tr><td><code>outer_radius</code></td><td><code>1.5</code></td><td>radius to the outer edge</td></tr><tr><td><code>rings</code> / <code>ring_segments</code></td><td><code>32</code> / <code>16</code></td><td>tessellation — both frames read as a smooth ring</td></tr><tr><td><code>surface_material_override/0</code></td><td><code>StandardMaterial3D</code></td><td>replaces the surface material</td></tr><tr><td><code>albedo_color</code></td><td><code>Color(0.9, 0.5, 0.2, 1)</code></td><td>the orange body</td></tr><tr><td><code>metallic</code> / <code>roughness</code></td><td><code>0.8</code> / <code>0.2</code></td><td>glossy metal with the tight specular streak both frames share</td></tr></tbody></table></div>
 <h3>Divergences</h3>
-<p>- <strong>The torus faces the wrong way.</strong> Godot's donut lies flat, hole opening upward — a foreshortened ring seen from slightly above. Ours stands upright and tilted, hole turned toward the camera, so it reads as a larger, rounder ring on a diagonal. Cause: Godot's <code>TorusMesh</code> revolves around Y (lies in the XZ plane); three's <code>torusGeometry</code> revolves around Z (lies in the XY plane), and the previewer passes it through unrotated, so under the shared camera it stands where Godot lies down. No PARITY-LIMITATIONS entry covers this.</p>
-<p>The fixture's two <code>Label3D</code> captions ("TorusMesh Test", the description line) show in Godot but not in ours — in-viewport Label3D text is toggle-gated off by default (ADR-0008), covered by the Label3D sheet, not a MeshInstance3D gap. Material, colour, and the grey-sky-over-brown-ground preview environment otherwise agree.</p></div>
+<p>The torus now agrees on orientation: both frames lay it flat with the hole opening upward, matching outer/inner radii, tessellation, orange albedo, and the paired specular highlights. Both also render the two Label3D captions — the pale-yellow "TorusMesh Test" title above and the white description line below.</p>
+<p>The captions differ only in typeface: Godot draws them in its default font, while ours uses the previewer's bundled font, so the glyph shapes and stroke weight of the same text read slightly differently. The grey-sky-over-brown-ground preview environment otherwise matches.</p></div>
     </article>
     <article class="sheet" data-type="NavigationAgent3D" hidden>
       <header class="sheet-head">
         <h2>NavigationAgent3D</h2>
         <span class="renders">renders as nothing (non-visual navigation helper)</span>
-        <span class="fixture"><code>unit-navigation-agent-3d.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-navigation-agent-3d.tscn" target="_blank" rel="noopener" title="Open unit-navigation-agent-3d.tscn in the previewer"><code>unit-navigation-agent-3d.tscn</code> ↗</a>
       </header>
       <div class="novisual">No visual output — this node draws nothing to compare.</div>
       <div class="prose"><p>A pathfinding and avoidance helper that steers its parent body toward a target. It has no runtime visual — only an editor-only path debug draw — so the previewer draws nothing for it. Both images show only the sky gradient over brown ground; the sibling <code>CollisionShape3D</code> is toggle-gated (ADR-0005/0006) and also absent.</p>
@@ -917,7 +921,7 @@ tr:last-child td{border-bottom:0}
       <header class="sheet-head">
         <h2>NavigationObstacle3D</h2>
         <span class="renders">renders as a transform-only group (no runtime visual)</span>
-        <span class="fixture"><code>unit-navigation-obstacle-3d.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-navigation-obstacle-3d.tscn" target="_blank" rel="noopener" title="Open unit-navigation-obstacle-3d.tscn in the previewer"><code>unit-navigation-obstacle-3d.tscn</code> ↗</a>
       </header>
       <div class="novisual">No visual output — this node draws nothing to compare.</div>
       <div class="prose"><p>NavigationObstacle3D defines an avoidance region for navigation agents. It has no runtime visual — the previewer draws it as a transform-only Node3D group (ADR-0008), so nothing appears. Both images show only the shared editor sky and ground; the fixture's sibling CollisionShape3D is toggle-gated and also draws nothing in a plain capture.</p>
@@ -930,7 +934,7 @@ tr:last-child td{border-bottom:0}
       <header class="sheet-head">
         <h2>NavigationRegion2D</h2>
         <span class="renders">renders as a translucent green navigation-mesh overlay</span>
-        <span class="fixture"><code>unit-navigation-region-2d.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-navigation-region-2d.tscn" target="_blank" rel="noopener" title="Open unit-navigation-region-2d.tscn in the previewer"><code>unit-navigation-region-2d.tscn</code> ↗</a>
       </header>
       <div class="novisual">No visual output — this node draws nothing to compare.</div>
       <div class="prose"><p>A 2D region whose <code>NavigationPolygon</code> defines walkable area. The previewer draws that polygon as a translucent green fill plus edge lines — the editor's navigation visualization — gated on the <code>showNavigation</code> viewport toggle, on by default.</p>
@@ -943,7 +947,7 @@ tr:last-child td{border-bottom:0}
       <header class="sheet-head">
         <h2>NavigationRegion3D</h2>
         <span class="renders">renders as a translucent green navmesh overlay</span>
-        <span class="fixture"><code>unit-navigation-region-3d.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-navigation-region-3d.tscn" target="_blank" rel="noopener" title="Open unit-navigation-region-3d.tscn in the previewer"><code>unit-navigation-region-3d.tscn</code> ↗</a>
       </header>
       <div class="novisual">No visual output — this node draws nothing to compare.</div>
       <div class="prose"><p>NavigationRegion3D holds a NavigationMesh describing walkable area. That mesh has no game-runtime visual in Godot — it is navigation data, drawn only by the editor's "Visible Navigation" overlay. This previewer surfaces that overlay by default, drawing the mesh as translucent green faces with edge lines.</p>
@@ -956,7 +960,7 @@ tr:last-child td{border-bottom:0}
       <header class="sheet-head">
         <h2>Node2D</h2>
         <span class="renders">renders as a transform-only THREE.Group</span>
-        <span class="fixture"><code>unit-area2d.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-area2d.tscn" target="_blank" rel="noopener" title="Open unit-area2d.tscn in the previewer"><code>unit-area2d.tscn</code> ↗</a>
       </header>
       <div class="novisual">No visual output — this node draws nothing to compare.</div>
       <div class="prose"><p>Node2D is the base of 2D transform objects — sprites, bodies, areas: a transform (position/rotation/scale/skew and draw-order Z), no pixels of its own. The previewer maps it to a <code>&lt;group&gt;</code> and draws its children inside. Here the fixture's root is a bare Node2D, so the group is empty and the frame is blank.</p>
@@ -970,7 +974,7 @@ tr:last-child td{border-bottom:0}
       <header class="sheet-head">
         <h2>Node3D</h2>
         <span class="renders">renders as an invisible transform group</span>
-        <span class="fixture"><code>unit-node3d-basic.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-node3d-basic.tscn" target="_blank" rel="noopener" title="Open unit-node3d-basic.tscn in the previewer"><code>unit-node3d-basic.tscn</code> ↗</a>
       </header>
       <div class="novisual">No visual output — this node draws nothing to compare.</div>
       <div class="prose"><p>Node3D is the base 3D node — a pure transform with no geometry of its own. The previewer renders it as a <code>&lt;group&gt;</code> that positions its children and draws nothing itself, decomposing each <code>Transform3D</code> into position/rotation/scale.</p>
@@ -984,7 +988,7 @@ tr:last-child td{border-bottom:0}
       <header class="sheet-head">
         <h2>OmniLight3D</h2>
         <span class="renders">renders as a THREE.PointLight</span>
-        <span class="fixture"><code>unit-omni-light-3d.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-omni-light-3d.tscn" target="_blank" rel="noopener" title="Open unit-omni-light-3d.tscn in the previewer"><code>unit-omni-light-3d.tscn</code> ↗</a>
       </header>
       <div class="compare">
         <div class="stage">
@@ -1008,8 +1012,8 @@ tr:last-child td{border-bottom:0}
     <article class="sheet" data-type="OptionButton" hidden>
       <header class="sheet-head">
         <h2>OptionButton</h2>
-        <span class="renders">renders as a collapsed dropdown div</span>
-        <span class="fixture"><code>unit-optionbutton.tscn</code></span>
+        <span class="renders">renders as a collapsed dropdown box</span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-optionbutton.tscn" target="_blank" rel="noopener" title="Open unit-optionbutton.tscn in the previewer"><code>unit-optionbutton.tscn</code> ↗</a>
       </header>
       <div class="compare">
         <div class="stage">
@@ -1024,17 +1028,17 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-      <div class="prose"><p>A dropdown that collapses to show its currently-selected item. Being a static viewer, the previewer draws only that selected item's text inside a positioned HTML <code>&lt;div&gt;</code> on the Control overlay — not the open popup, not the whole list. The fixture centres one <code>DifficultySelect</code> with three items (<code>Easy</code>, <code>Normal</code>, <code>Hard</code>) and <code>selected = 1</code>, so both renders show <code>Normal</code>.</p>
+      <div class="prose"><p>A dropdown that collapses to show its currently-selected item. Being a static viewer, the previewer draws that selected item's text inside a positioned HTML box on the Control overlay — not the open popup, not the whole list. The fixture centres one <code>DifficultySelect</code> with three items and <code>selected = 1</code>, so both renders show <code>Normal</code> in a dark charcoal rounded box.</p>
 <h3>Properties exercised</h3>
-<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>item_count</code> + <code>popup/item_N/text</code></td><td><code>3</code> items: <code>Easy</code> / <code>Normal</code> / <code>Hard</code></td><td>defines the option list; only the selected one is drawn</td></tr><tr><td><code>selected</code></td><td><code>1</code></td><td>shows <code>Normal</code> (the item at index 1) as the button label</td></tr></tbody></table></div>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>item_count</code> + <code>popup/item_N/text</code></td><td><code>3</code> items: <code>Easy</code> / <code>Normal</code> / <code>Hard</code></td><td>defines the option list; only the selected item is drawn</td></tr><tr><td><code>selected</code></td><td><code>1</code></td><td>draws <code>Normal</code> (the item at index 1), not the first item</td></tr><tr><td><code>offset_left/right/top/bottom</code></td><td><code>-75 / 75 / -24 / 8</code></td><td>sizes the 150x32 button, centred by the <code>anchors_preset = 8</code> anchors</td></tr></tbody></table></div>
 <h3>Divergences</h3>
-<p>Two, both in the button chrome rather than the label. Godot draws its default-theme StyleBox as a neutral charcoal with a <strong>dropdown chevron icon at the right edge</strong>; the previewer draws a lighter, blue-tinted slate fill (<code>rgba(70,78,94)</code>) and <strong>no arrow</strong>. The arrow is a theme icon texture the previewer has no access to (the same root cause as the CheckBox indicator), so the collapsed affordance reads as a plain tinted rectangle. The tint difference is the same default-theme chrome synthesis the Button render shows — this previewer draws its own chrome instead of Godot's charcoal. The selected-item resolution is correct in both: <code>selected = 1</code> picks <code>Normal</code>, not the first item. No PARITY-LIMITATIONS entry covers either the chevron or the default-theme chrome.</p></div>
+<p>Godot draws a right-side chevron arrow icon inside the box; the previewer draws none. The arrow is a default-theme icon texture outside the fill/radius/padding chrome the previewer synthesises, so the collapsed affordance ends at the label. The box fill (dark charcoal ~rgb(46,46,46)), corner radius, padding, font, and the <code>Normal</code> label otherwise match.</p></div>
     </article>
     <article class="sheet" data-type="Panel" hidden>
       <header class="sheet-head">
         <h2>Panel</h2>
         <span class="renders">renders as a StyleBox-painted &lt;div&gt;</span>
-        <span class="fixture"><code>unit-panel.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-panel.tscn" target="_blank" rel="noopener" title="Open unit-panel.tscn in the previewer"><code>unit-panel.tscn</code> ↗</a>
       </header>
       <div class="compare">
         <div class="stage">
@@ -1059,7 +1063,7 @@ tr:last-child td{border-bottom:0}
       <header class="sheet-head">
         <h2>PanelContainer</h2>
         <span class="renders">renders as a StyleBox panel around its child</span>
-        <span class="fixture"><code>unit-panel-container.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-panel-container.tscn" target="_blank" rel="noopener" title="Open unit-panel-container.tscn in the previewer"><code>unit-panel-container.tscn</code> ↗</a>
       </header>
       <div class="compare">
         <div class="stage">
@@ -1076,15 +1080,15 @@ tr:last-child td{border-bottom:0}
       </div>
       <div class="prose"><p>PanelContainer draws its <code>theme_override_styles/panel</code> StyleBox and lays its single child inside the box's content margins. The previewer maps it to a <code>&lt;div&gt;</code> carrying the StyleBox's fill, corner radius and padding, with the child in flow.</p>
 <h3>Properties exercised</h3>
-<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>theme_override_styles/panel</code></td><td><code>StyleBoxFlat</code></td><td>the panel's fill, rounded corners and padding all come from this box</td></tr><tr><td><code>bg_color</code></td><td><code>Color(0.16, 0.16, 0.18, 0.95)</code></td><td>dark near-opaque slate fill</td></tr><tr><td><code>corner_radius_*</code></td><td><code>6</code></td><td>rounded corners on all four sides</td></tr><tr><td><code>content_margin_*</code></td><td><code>16</code> / <code>12</code></td><td>padding between the panel edge and the label</td></tr><tr><td><code>anchors_preset</code></td><td><code>8</code> (center)</td><td>the previewer centers the panel on the canvas; Godot does not (see Divergences)</td></tr><tr><td><code>offset_left/top/right/bottom</code></td><td><code>-120 / -40 / 120 / 40</code></td><td>a 240×80 rect</td></tr><tr><td>child <code>Label.text</code></td><td><code>"Panel Container"</code></td><td>centered label the panel sizes around</td></tr></tbody></table></div>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>anchors_preset</code> / <code>anchor_*</code></td><td><code>8</code> / <code>0.5</code></td><td>anchors the panel to the viewport centre</td></tr><tr><td><code>offset_left/top/right/bottom</code></td><td><code>-120 / -40 / 120 / 40</code></td><td>a 240×80 box straddling the centre anchor</td></tr><tr><td><code>theme_override_styles/panel</code></td><td><code>StyleBoxFlat</code></td><td>supplies the panel's fill, corners and padding</td></tr><tr><td><code>bg_color</code></td><td><code>Color(0.16, 0.16, 0.18, 0.95)</code></td><td>dark near-opaque slate fill</td></tr><tr><td><code>corner_radius_*</code></td><td><code>6</code></td><td>rounded corners on all four sides</td></tr><tr><td><code>content_margin_left/right</code></td><td><code>16</code></td><td>horizontal padding between panel edge and label</td></tr><tr><td><code>content_margin_top/bottom</code></td><td><code>12</code></td><td>vertical padding between panel edge and label</td></tr><tr><td>child <code>Label.text</code></td><td><code>"Panel Container"</code></td><td>the panel sizes around this label</td></tr><tr><td>child <code>Label</code> alignment</td><td><code>horizontal_alignment = 1</code>, <code>vertical_alignment = 1</code></td><td>label centred within the content box</td></tr></tbody></table></div>
 <h3>Divergences</h3>
-<p>The panel lands in a different place. The previewer centers it on the canvas; the Godot reference straddles the viewport origin, so only its bottom-right quadrant — the tail of the label and the rounded bottom-right corner — shows at the top-left. The fixture sets <code>anchors_preset = 8</code> but no explicit <code>anchor_*</code> values. Godot treats <code>anchors_preset</code> as editor-only metadata, so at runtime the anchors stay at their default <code>(0, 0, 0, 0)</code> and the negative offsets place the box across the origin; the previewer instead derives the center anchors <code>(0.5, …)</code> from the preset as a fallback (<code>r3f/controls/controlLayout.ts</code>, <code>resolveAnchors</code>). Where both panels are visible the StyleBox itself agrees — same dark fill, same 6px corners, same padding, same white centered text.</p></div>
+<p>The label sits noticeably higher in the previewer. Godot vertically centres the label text inside the panel's content box (<code>vertical_alignment = 1</code>), placing it on the panel's midline; our render rests it near the top of that box instead. Panel position, size, dark slate fill, 6 px corners, padding and horizontal centring all match.</p></div>
     </article>
     <article class="sheet" data-type="Path2D" hidden>
       <header class="sheet-head">
         <h2>Path2D</h2>
         <span class="renders">renders as nothing at runtime; a selection-gated curve gizmo</span>
-        <span class="fixture"><code>unit-path2d.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-path2d.tscn" target="_blank" rel="noopener" title="Open unit-path2d.tscn in the previewer"><code>unit-path2d.tscn</code> ↗</a>
       </header>
       <div class="novisual">No visual output — this node draws nothing to compare.</div>
       <div class="prose"><p>A Node2D that carries a <code>Curve2D</code> for children to follow. It has no runtime visual of its own: the previewer draws the curve as a selection-gated white polyline gizmo (ADR-0018), shown only while the node is selected, mirroring Godot's 2D editor path line. In a plain capture nothing is selected, so both images are an empty grey field. The <code>PathFollow2D</code> child is a transform-only relay with no geometry, so it draws nothing either.</p>
@@ -1097,12 +1101,12 @@ tr:last-child td{border-bottom:0}
       <header class="sheet-head">
         <h2>Path3D</h2>
         <span class="renders">renders as a selection-gated curve gizmo</span>
-        <span class="fixture"><code>unit-pathfollow-3d.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-path3d.tscn" target="_blank" rel="noopener" title="Open unit-path3d.tscn in the previewer"><code>unit-path3d.tscn</code> ↗</a>
       </header>
       <div class="compare">
         <div class="stage">
-          <img class="img-godot" src="images/unit-pathfollow-3d-godot.png" alt="Godot render of Path3D">
-          <img class="img-ours" src="images/unit-pathfollow-3d-ours.png" alt="Our render of Path3D">
+          <img class="img-godot" src="images/unit-path3d-godot.png" alt="Godot render of Path3D">
+          <img class="img-ours" src="images/unit-path3d-ours.png" alt="Our render of Path3D">
           <div class="handle"></div>
           <span class="tag g">Godot 4.6.3</span>
           <span class="tag o">Ours</span>
@@ -1112,17 +1116,17 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-      <div class="prose"><p><code>Path3D</code> holds a <code>Curve3D</code> and hands it to its descendants so a <code>PathFollow3D</code> child can ride it. Its only visual is the white curve polyline, a selection-gated editor gizmo (ADR-0018); in a plain capture it draws nothing, exactly as Godot draws no path line while running. Every cube on screen belongs to the child meshes, not to the path.</p>
+      <div class="prose"><p><code>Path3D</code> holds a <code>Curve3D</code> that its descendants can ride. Its only visual is the curve polyline, a selection-gated editor gizmo (ADR-0018), so a plain capture draws nothing for the path itself — exactly as Godot draws no path line while running. The fixture parents an orange marker sphere at each of the four curve points, so the arch shape reads even though the line is absent.</p>
 <h3>Properties exercised</h3>
-<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>curve</code></td><td><code>Curve3D</code>, points <code>(0,0,0) → (3,0,0) → (3,0,3)</code></td><td>defines the L-shaped path; the polyline is a selection-gated gizmo, so nothing is drawn for it here; supplies the curve the <code>PathFollow3D</code> child samples</td></tr></tbody></table></div>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>curve</code></td><td><code>Curve3D</code>, 4 points <code>(-1.7,0.3,0) → (-0.7,1.35,0) → (0.7,1.35,0) → (1.7,0.3,0)</code></td><td>defines a symmetric arch; the polyline is a selection-gated gizmo, so nothing is drawn for it here — the four marker spheres trace where the points sit</td></tr></tbody></table></div>
 <h3>Divergences</h3>
-<p>The follower cube — the 0.6 box under the <code>PathFollow3D</code> child — lands in a different place in each image. In Godot it stays at the curve's start (the origin), enclosing the small <code>OriginRef</code> box, so a single 0.6 cube reads at frame centre. In this previewer the follower advances to <code>progress_ratio = 0.5</code> (the curve midpoint at <code>(3,0,0)</code>), so it moves off to the right edge and the 0.3 <code>OriginRef</code> box is left visible at centre. Cause: Godot applies <code>progress_ratio</code> only once the node is parented to a <code>Path3D</code> with a baked curve — set during scene instantiation it is a no-op and progress stays 0 — whereas the previewer resolves the curve statically and honours the ratio. The <code>Path3D</code> curve line itself is absent from both frames: a match, not a divergence.</p></div>
+<p>Shadow filtering differs. In Godot the marker spheres and the reference cube cast smooth, soft grey shadows onto the ground, including distinct discs beneath the markers. In this previewer the cube's ground shadow is dithered and speckled and the marker shadow discs are faint to absent — the injected preview sun's shadow map has a lower resolution and coarser filter than Godot's, so its edges alias where Godot's stay soft. The arch of markers, the reference cube, and the ground plane match in both frames; the path line is gated off in both, a match rather than a divergence.</p></div>
     </article>
     <article class="sheet" data-type="PathFollow2D" hidden>
       <header class="sheet-head">
         <h2>PathFollow2D</h2>
         <span class="renders">renders as a transform-only follower with a selection-gated dot</span>
-        <span class="fixture"><code>unit-pathfollow2d.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-pathfollow2d.tscn" target="_blank" rel="noopener" title="Open unit-pathfollow2d.tscn in the previewer"><code>unit-pathfollow2d.tscn</code> ↗</a>
       </header>
       <div class="compare">
         <div class="stage">
@@ -1150,7 +1154,7 @@ tr:last-child td{border-bottom:0}
       <header class="sheet-head">
         <h2>PathFollow3D</h2>
         <span class="renders">renders as a curve-positioned transform group</span>
-        <span class="fixture"><code>unit-pathfollow-3d.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-pathfollow-3d.tscn" target="_blank" rel="noopener" title="Open unit-pathfollow-3d.tscn in the previewer"><code>unit-pathfollow-3d.tscn</code> ↗</a>
       </header>
       <div class="compare">
         <div class="stage">
@@ -1165,17 +1169,17 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-      <div class="prose"><p>PathFollow3D positions its children along its parent Path3D's curve. The previewer samples the curve at <code>progress_ratio</code> and drives a transform group to that point; its editor follow-point cross is selection-gated (ADR-0018), so nothing extra shows in a plain capture — only the child box the follower carries.</p>
+      <div class="prose"><p>PathFollow3D positions its children a set distance along its parent Path3D's curve. The previewer samples the curve and drives a transform group to that point; here it carries an orange box that lands at the arc-length midpoint of the U-shaped track, one node in the row of blue marker boxes that trace the curve. Its editor follow-point gizmo is selection-gated (ADR-0018), so a plain capture shows only the box the follower carries.</p>
 <h3>Properties exercised</h3>
-<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>progress_ratio</code></td><td><code>0.5</code></td><td>places the follower at the curve's arc-length midpoint — the corner <code>(3,0,0)</code> of the L-shaped path <code>(0,0,0) → (3,0,0) → (3,0,3)</code></td></tr></tbody></table></div>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>progress</code></td><td><code>3.0528675</code></td><td>absolute distance in metres along the curve; at instantiation Godot honours this value, placing the follower at the arc-length midpoint — the bottom of the U at <code>(0, 0, -1.4)</code></td></tr><tr><td><code>progress_ratio</code></td><td><code>0.5</code></td><td>the same midpoint expressed as a fraction of arc length; the fixture pins it to agree with <code>progress</code> so both renderers resolve the follower to one point</td></tr><tr><td><code>transform</code></td><td>translation <code>(0, 0, -1.4)</code></td><td>normally overridden by <code>progress</code>, but authored to the same midpoint so any resolution path lands the box identically</td></tr></tbody></table></div>
 <h3>Divergences</h3>
-<p>The follower lands in a different place in each image. In ours the 0.6 follower box sits at the corner <code>(3,0,0)</code> — where <code>progress_ratio</code> 0.5 falls by arc length — which the shared editor camera projects off the clipped lower-right edge (~<code>(997,514)</code>), leaving only the small 0.3 box that marks the path origin <code>(0,0,0)</code> at frame centre. Godot's reference shows a single, larger box at frame centre and nothing at the right edge: its follower is still at the path start <code>(0,0,0)</code>, stacked over the origin marker. The previewer resolves <code>progress_ratio</code> 0.5 to the 0.5 arc-length position; the reference capture shows the follower at the path start, so the ratio's effect is not visible there.</p></div>
+<p>The orange follower box lands at the bottom of the U at <code>(0, 0, -1.4)</code> in both images, beside the same blue marker — placement agrees. Shadows differ in edge softness: the reference box and markers cast crisp, dark footprints in Godot, while the previewer's directional light applies softer, more diffuse shadow filtering — most visible under the large reference box. This is a global shadow difference, not PathFollow3D behaviour.</p></div>
     </article>
     <article class="sheet" data-type="Polygon2D" hidden>
       <header class="sheet-head">
         <h2>Polygon2D</h2>
         <span class="renders">renders as a filled ShapeGeometry mesh</span>
-        <span class="fixture"><code>unit-polygon2d.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-polygon2d.tscn" target="_blank" rel="noopener" title="Open unit-polygon2d.tscn in the previewer"><code>unit-polygon2d.tscn</code> ↗</a>
       </header>
       <div class="compare">
         <div class="stage">
@@ -1200,7 +1204,7 @@ tr:last-child td{border-bottom:0}
       <header class="sheet-head">
         <h2>RemoteTransform2D</h2>
         <span class="renders">renders as nothing itself; it copies its transform onto its remote_path target</span>
-        <span class="fixture"><code>unit-remote-transform-2d.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-remote-transform-2d.tscn" target="_blank" rel="noopener" title="Open unit-remote-transform-2d.tscn in the previewer"><code>unit-remote-transform-2d.tscn</code> ↗</a>
       </header>
       <div class="compare">
         <div class="stage">
@@ -1226,7 +1230,7 @@ tr:last-child td{border-bottom:0}
       <header class="sheet-head">
         <h2>RemoteTransform3D</h2>
         <span class="renders">renders as nothing (a transform-only group that drives its target)</span>
-        <span class="fixture"><code>unit-remote-transform-3d.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-remote-transform-3d.tscn" target="_blank" rel="noopener" title="Open unit-remote-transform-3d.tscn in the previewer"><code>unit-remote-transform-3d.tscn</code> ↗</a>
       </header>
       <div class="compare">
         <div class="stage">
@@ -1251,7 +1255,7 @@ tr:last-child td{border-bottom:0}
       <header class="sheet-head">
         <h2>RichTextLabel</h2>
         <span class="renders">renders as a positioned HTML div of styled text</span>
-        <span class="fixture"><code>unit-rich-text-label.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-rich-text-label.tscn" target="_blank" rel="noopener" title="Open unit-rich-text-label.tscn in the previewer"><code>unit-rich-text-label.tscn</code> ↗</a>
       </header>
       <div class="compare">
         <div class="stage">
@@ -1277,7 +1281,7 @@ tr:last-child td{border-bottom:0}
       <header class="sheet-head">
         <h2>RigidBody3D</h2>
         <span class="renders">renders as an invisible transform-only group</span>
-        <span class="fixture"><code>unit-rigidbody3d.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-rigidbody3d.tscn" target="_blank" rel="noopener" title="Open unit-rigidbody3d.tscn in the previewer"><code>unit-rigidbody3d.tscn</code> ↗</a>
       </header>
       <div class="compare">
         <div class="stage">
@@ -1294,15 +1298,15 @@ tr:last-child td{border-bottom:0}
       </div>
       <div class="prose"><p>RigidBody3D is a gravity-driven physics body. The previewer mounts it as a transform-only Node3D group — it draws nothing itself and runs no simulation (ADR-0005/0008), only positioning its children at the authored transform. The reddish crate on screen is its child <code>MeshInstance3D</code> (a 1×1×1 <code>BoxMesh</code> under a salmon <code>StandardMaterial3D</code>); the <code>CollisionShape3D</code> is a toggle-gated overlay (ADR-0006) and stays hidden. Both frames carry the grey-sky-over-brown-ground preview environment.</p>
 <h3>Properties exercised</h3>
-<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>transform</code></td><td>translate <code>(0, 1, 0)</code></td><td>lifts the body one unit up; its child mesh rides along</td></tr><tr><td><code>mass</code></td><td><code>2.0</code></td><td>physics-only, no visual in a static preview</td></tr><tr><td><code>gravity_scale</code></td><td><code>1.0</code></td><td>physics-only here; drives the fall seen in Godot's reference (see below)</td></tr></tbody></table></div>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>transform</code></td><td>translate <code>(0, 1, 0)</code></td><td>lifts the body one unit up; its child mesh rides along and floats above centre</td></tr><tr><td><code>mass</code></td><td><code>2.0</code></td><td>physics-only, no visual in a static preview</td></tr><tr><td><code>gravity_scale</code></td><td><code>1.0</code></td><td>physics-only; nothing falls because neither side simulates</td></tr></tbody></table></div>
 <h3>Divergences</h3>
-<p>- <strong>The crate sits well below centre in Godot; ours holds it higher.</strong> Same box, same salmon shading, same horizontal placement — Godot's crate is far lower in the frame and reads a touch smaller (a steeper downward view onto the dropped box). Cause: Godot's reference instantiates the scene and ticks a few frames before it shoots, and in those frames the RigidBody3D falls under gravity, dropping out of the authored <code>y = 1</code> spot. Our previewer is a static viewer with no physics loop (ADR-0005/0008), so it draws the body at rest where the scene places it. No PARITY-LIMITATIONS entry covers runtime simulation — the divergence is the reference moving, not a rendering gap.</p></div>
+<p>None visible in this fixture.</p></div>
     </article>
     <article class="sheet" data-type="ScrollContainer" hidden>
       <header class="sheet-head">
         <h2>ScrollContainer</h2>
         <span class="renders">renders as an overflow-scrolling DOM container</span>
-        <span class="fixture"><code>unit-scroll-container.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-scroll-container.tscn" target="_blank" rel="noopener" title="Open unit-scroll-container.tscn in the previewer"><code>unit-scroll-container.tscn</code> ↗</a>
       </header>
       <div class="compare">
         <div class="stage">
@@ -1328,7 +1332,7 @@ tr:last-child td{border-bottom:0}
       <header class="sheet-head">
         <h2>Skeleton3D</h2>
         <span class="renders">renders as a transform-only group</span>
-        <span class="fixture"><code>unit-skeleton3d.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-skeleton3d.tscn" target="_blank" rel="noopener" title="Open unit-skeleton3d.tscn in the previewer"><code>unit-skeleton3d.tscn</code> ↗</a>
       </header>
       <div class="novisual">No visual output — this node draws nothing to compare.</div>
       <div class="prose"><p>A Skeleton3D holds the bone hierarchy that deforms attached meshes. On its own it has no runtime visual — the bones are an editor gizmo. The previewer reuses the Node3D component (ADR-0008), so the node contributes only its transform; with no bone-driven <code>MeshInstance3D</code> beneath it, it draws nothing.</p>
@@ -1341,7 +1345,7 @@ tr:last-child td{border-bottom:0}
       <header class="sheet-head">
         <h2>SpotLight3D</h2>
         <span class="renders">renders as a THREE.SpotLight</span>
-        <span class="fixture"><code>unit-spot-light-3d.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-spot-light-3d.tscn" target="_blank" rel="noopener" title="Open unit-spot-light-3d.tscn in the previewer"><code>unit-spot-light-3d.tscn</code> ↗</a>
       </header>
       <div class="compare">
         <div class="stage">
@@ -1367,7 +1371,7 @@ tr:last-child td{border-bottom:0}
       <header class="sheet-head">
         <h2>Sprite2D</h2>
         <span class="renders">renders as an unlit textured quad</span>
-        <span class="fixture"><code>unit-sprite2d.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-sprite2d.tscn" target="_blank" rel="noopener" title="Open unit-sprite2d.tscn in the previewer"><code>unit-sprite2d.tscn</code> ↗</a>
       </header>
       <div class="compare">
         <div class="stage">
@@ -1382,17 +1386,18 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-      <div class="prose"><p>Sprite2D draws a texture as a flat quad in the 2D canvas. The previewer renders each one as an unlit, double-sided plane sized to the texture's pixel dimensions (1 px = 1 unit), tinted by the CanvasItem <code>modulate</code>. The fixture scatters five markers around the origin; three land inside the frame — the sprite at the origin (top-left corner, only its lower-right quadrant on screen), one 140 px to the right, and one 140 px below. The flipped sprite (x = -140) and the rotated <code>Node2D</code> group's child (world y ≈ -106) fall off the left and top edges.</p>
+      <div class="prose"><p>Sprite2D draws a texture as a flat quad on the 2D canvas. The previewer renders each one as an unlit, double-sided plane sized to the texture's pixel dimensions (1 px = 1 unit), tinted by the CanvasItem <code>modulate</code>. The fixture centres a <code>Node2D</code> in the 1152×648 viewport and scatters five markers around it, so all five are on screen: a centre marker, one 140 px to its right, one 140 px to its left (flipped), one 140 px below (red-tinted), and a fifth carried by a rotated <code>Node2D</code> group above and to the right.</p>
 <h3>Properties exercised</h3>
-<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>texture</code></td><td><code>ExtResource marker</code></td><td>each sprite draws the 96×96 blue marker quad, centered on its position</td></tr><tr><td><code>position</code></td><td><code>(140, 0)</code>, <code>(0, 140)</code></td><td>places the right and below sprites; the unset Center stays at the origin</td></tr><tr><td><code>modulate</code></td><td><code>Color(1, 0.5, 0.5, 1)</code></td><td>red-tints the Below sprite — the one visible difference (below)</td></tr><tr><td><code>flip_h</code></td><td><code>true</code></td><td>set on the sprite at x = -140, which sits off the left edge — no visible effect here</td></tr></tbody></table></div>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>texture</code></td><td><code>ExtResource marker</code></td><td>each sprite draws the 96×96 blue marker quad, centred on its node position</td></tr><tr><td><code>position</code></td><td><code>(140, 0)</code>, <code>(0, 140)</code>, <code>(-140, 0)</code>, <code>(70, 0)</code></td><td>offsets the four outer markers around the centred origin; the unset Center stays at <code>(0, 0)</code></td></tr><tr><td><code>modulate</code></td><td><code>Color(1, 0.5, 0.5, 1)</code></td><td>red-tints the Below sprite (green and blue halved)</td></tr><tr><td><code>flip_h</code></td><td><code>true</code></td><td>mirrors the left marker horizontally — its F reads backwards</td></tr><tr><td><code>rotation</code></td><td><code>0.5</code></td><td>set on the Group <code>Node2D</code>; tilts its child sprite ~29° (the upper marker), inherited from the parent</td></tr></tbody></table></div>
 <h3>Divergences</h3>
-<p>The red-modulated <strong>Below</strong> sprite renders markedly darker in ours than in Godot. On the flat blue field the previewer shows <code>[22, 34, 111]</code> against Godot's <code>[45, 54, 112]</code> — red and green come out roughly half of Godot's, while blue matches. The white marker on that sprite likewise reads as a muddy dark salmon rather than Godot's brighter pink; it is the same tint applied too dark, not a second defect. The two unmodulated sprites match (blue field <code>[44, 115, 214]</code> vs <code>[45, 108, 223]</code>, a sub-10/255 round-trip shift), and every sprite's position, size, and marker shape are pixel-aligned. No PARITY-LIMITATIONS entry covers a <code>modulate</code> colour mismatch.</p></div>
+<p>Placement, size, <code>flip_h</code>, and <code>rotation</code> agree pixel-for-pixel: the five markers land in the same spots at the same size, the left marker's F is mirrored in both, and the group child is tilted identically.</p>
+<p>Colour diverges. The previewer dims the entire 2D output — no pixel in ours reaches pure white, so the marker F's cap at a light grey <code>[226, 226, 226]</code> where Godot's white texels render <code>[255, 255, 255]</code>. On the unmodulated blue field the shift is small (ours <code>[44, 115, 214]</code> vs Godot <code>[45, 108, 223]</code>), but on the red-<code>modulate</code> <strong>Below</strong> sprite it is stark: ours <code>[22, 34, 111]</code> against Godot <code>[45, 54, 112]</code> — red and green roughly half of Godot's while blue matches — and its glyph reads a muddy salmon <code>[238, 151, 146]</code> rather than Godot's brighter pink <code>[255, 128, 128]</code>. The Center sprite sets no <code>modulate</code> yet still caps below white, so this is a pipeline-wide colour shift in the previewer's 2D output; the Below sprite is that shift plus the tint multiply, not a separate <code>modulate</code>-only defect.</p></div>
     </article>
     <article class="sheet" data-type="Sprite3D" hidden>
       <header class="sheet-head">
         <h2>Sprite3D</h2>
         <span class="renders">renders as an unlit textured THREE.Mesh quad</span>
-        <span class="fixture"><code>unit-sprite3d.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-sprite3d.tscn" target="_blank" rel="noopener" title="Open unit-sprite3d.tscn in the previewer"><code>unit-sprite3d.tscn</code> ↗</a>
       </header>
       <div class="compare">
         <div class="stage">
@@ -1417,7 +1422,7 @@ tr:last-child td{border-bottom:0}
       <header class="sheet-head">
         <h2>StaticBody3D</h2>
         <span class="renders">renders as a transform-only group</span>
-        <span class="fixture"><code>unit-physics-bodies.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-physics-bodies.tscn" target="_blank" rel="noopener" title="Open unit-physics-bodies.tscn in the previewer"><code>unit-physics-bodies.tscn</code> ↗</a>
       </header>
       <div class="compare">
         <div class="stage">
@@ -1442,7 +1447,7 @@ tr:last-child td{border-bottom:0}
       <header class="sheet-head">
         <h2>TextureRect</h2>
         <span class="renders">renders as an HTML img element</span>
-        <span class="fixture"><code>unit-texture-rect.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-texture-rect.tscn" target="_blank" rel="noopener" title="Open unit-texture-rect.tscn in the previewer"><code>unit-texture-rect.tscn</code> ↗</a>
       </header>
       <div class="compare">
         <div class="stage">
@@ -1467,7 +1472,7 @@ tr:last-child td{border-bottom:0}
       <header class="sheet-head">
         <h2>TileMap</h2>
         <span class="renders">renders as batched textured tile quads</span>
-        <span class="fixture"><code>unit-tile-map.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-tile-map.tscn" target="_blank" rel="noopener" title="Open unit-tile-map.tscn in the previewer"><code>unit-tile-map.tscn</code> ↗</a>
       </header>
       <div class="compare">
         <div class="stage">
@@ -1482,17 +1487,18 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-      <div class="prose"><p>TileMap draws each enabled layer's cells as batched textured quads sampled from its TileSet atlas. This fixture places six cells across two layers that reassemble regions of the 96×96 marker atlas into a blocky white "F" on blue in the top-left corner, with the one empty cell showing the background through.</p>
+      <div class="prose"><p>TileMap draws each enabled layer's cells as batched textured quads sampled from its TileSet atlas. This fixture lays five cells across two layers into a 3×2 grid, reassembling the top-left tiles of the 32px marker atlas into a blocky white "F" on blue; the vacant bottom-right cell leaves a notch of background showing through. <code>scale</code> and <code>position</code> enlarge and centre the map so the composition is legible.</p>
 <h3>Properties exercised</h3>
-<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>tile_set</code></td><td><code>SubResource TileSet_b</code></td><td>supplies the 32px marker atlas the cells draw from</td></tr><tr><td><code>format</code></td><td><code>2</code></td><td>selects the tile_data encoding so the layers decode; no visual of its own</td></tr><tr><td><code>layer_0/name</code></td><td><code>"Ground"</code></td><td>editor layer label; no visual</td></tr><tr><td><code>layer_0/tile_data</code></td><td>4 cells</td><td>draws the top bar and left stem of the white "F"</td></tr><tr><td><code>layer_1/name</code></td><td><code>"Props"</code></td><td>editor layer label; no visual</td></tr><tr><td><code>layer_1/z_index</code></td><td><code>1</code></td><td>raises the Props layer; no visible stacking here — its cell overlaps no ground cell</td></tr><tr><td><code>layer_1/tile_data</code></td><td>1 cell</td><td>fills the F's centre tile at cell (1,1)</td></tr></tbody></table></div>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>position</code></td><td><code>Vector2(384, 196)</code></td><td>centres the map in the frame</td></tr><tr><td><code>scale</code></td><td><code>Vector2(4, 4)</code></td><td>enlarges the tiles 4× so they read clearly</td></tr><tr><td><code>tile_set</code></td><td><code>SubResource TileSet_b</code></td><td>supplies the 32px marker atlas the cells sample</td></tr><tr><td><code>format</code></td><td><code>2</code></td><td>selects the tile_data encoding so the layers decode; no visual of its own</td></tr><tr><td><code>layer_0/name</code></td><td><code>"Ground"</code></td><td>editor layer label; no visual</td></tr><tr><td><code>layer_0/tile_data</code></td><td>4 cells</td><td>fills the top row (0,0)(1,0)(2,0) and the left cell (0,1)</td></tr><tr><td><code>layer_1/name</code></td><td><code>"Props"</code></td><td>editor layer label; no visual</td></tr><tr><td><code>layer_1/z_index</code></td><td><code>1</code></td><td>raises Props above Ground; no visible stacking here — its cell overlaps no Ground cell</td></tr><tr><td><code>layer_1/tile_data</code></td><td>1 cell</td><td>fills cell (1,1), the F's centre tile</td></tr></tbody></table></div>
 <h3>Divergences</h3>
-<p>The tiles are placed and shaped identically — same footprint (both fill x0–95, y0–63), same reconstructed "F", same empty-cell cutout, same background. The difference is colour: ours renders the marker's white as a light grey rather than pure white, and the blue reads marginally lighter and greener. The muted tone is uniform across the solid tile interiors, not just their edges.</p></div>
+<p>The tile composition matches: same 3×2 footprint, same reconstructed "F", same vacant bottom-right cell, and the blue reads the same in both. The one difference is that the white marker strokes render as a light grey in ours rather than the pure white Godot shows; the tint is uniform across the stroke interiors, not just their edges. The unlit tile material does not opt out of tone mapping, so it picks up the scene's editor-preview tonemapper ([ADR-0025], injected by the reference harness), which compresses the bright white, whereas Godot's 2D CanvasItem draw is not tonemapped. Same cause as <code>tilemaplayer</code> and <code>line2d</code>; no <a href="../../PARITY-LIMITATIONS.md">PARITY-LIMITATIONS.md</a> entry covers it.</p>
+<p>[ADR-0025]: ../../adr/0025-preview-lighting-mirrors-the-godot-editor.md</p></div>
     </article>
     <article class="sheet" data-type="TileMapLayer" hidden>
       <header class="sheet-head">
         <h2>TileMapLayer</h2>
         <span class="renders">renders as batched textured tile quads</span>
-        <span class="fixture"><code>unit-tile-map-layer.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-tile-map-layer.tscn" target="_blank" rel="noopener" title="Open unit-tile-map-layer.tscn in the previewer"><code>unit-tile-map-layer.tscn</code> ↗</a>
       </header>
       <div class="compare">
         <div class="stage">
@@ -1507,17 +1513,17 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-      <div class="prose"><p>TileMapLayer paints a grid of tiles from a TileSet's atlas texture. The previewer decodes the packed cell data at parse time and draws one batched textured quad-mesh per atlas source. This fixture places a 2×2 block of 32 px cells at the origin, which reconstructs the marker sprite as a blue square with a white "F" in the top-left.</p>
+      <div class="prose"><p>TileMapLayer paints a grid of tiles from a TileSet's atlas texture. The previewer decodes the packed cell data at parse time and draws one batched textured quad-mesh per atlas source. This fixture tiles the marker sprite across the whole frame — a blue field covered by a regular grid of white "F" markers.</p>
 <h3>Properties exercised</h3>
-<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>tile_map_data</code></td><td><code>PackedByteArray(…)</code></td><td>four placed cells — the 2×2 tile block at the origin</td></tr><tr><td><code>tile_set</code></td><td><code>SubResource("TileSet_b")</code></td><td>32 px <code>tile_size</code> and the atlas source that supplies the texture</td></tr></tbody></table></div>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>tile_map_data</code></td><td><code>PackedByteArray(…)</code></td><td>the placed cells — a frame-filling grid of marker tiles</td></tr><tr><td><code>tile_set</code></td><td><code>SubResource("TileSet_b")</code></td><td>32 px <code>tile_size</code> and the atlas source that supplies the marker texture</td></tr><tr><td><code>scale</code></td><td><code>Vector2(4, 4)</code></td><td>enlarges each 32 px tile to 128 px on screen, so the grid fills the viewport</td></tr></tbody></table></div>
 <h3>Divergences</h3>
-<p>The marker's white pixels render light grey (~226/255) instead of pure white; the blue tile background (~214 vs 223 on the blue channel) is close but slightly dimmed, and every cell position matches Godot exactly. The unlit tile material (<code>meshBasicMaterial</code>) does not opt out of tone mapping, so it picks up the scene's tonemapper — which compresses the bright white — where Godot's 2D CanvasItem draw does not. No <a href="../../PARITY-LIMITATIONS.md">PARITY-LIMITATIONS.md</a> entry covers this.</p></div>
+<p>Godot draws the marker's white pixels at full white (~252); ours renders them light grey (~223). The tile mesh uses an unlit <code>meshBasicMaterial</code> that keeps three's default <code>toneMapped: true</code>, so the scene tonemapper compresses the bright white — Godot's 2D CanvasItem draw is not tonemapped. Tile positions, the grid, and the blue background (~214 vs ~223 on the blue channel) all match.</p></div>
     </article>
     <article class="sheet" data-type="Timer" hidden>
       <header class="sheet-head">
         <h2>Timer</h2>
         <span class="renders">renders as nothing (a countdown timer node)</span>
-        <span class="fixture"><code>unit-timer.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-timer.tscn" target="_blank" rel="noopener" title="Open unit-timer.tscn in the previewer"><code>unit-timer.tscn</code> ↗</a>
       </header>
       <div class="novisual">No visual output — this node draws nothing to compare.</div>
       <div class="prose"><p>Timer counts down and emits <code>timeout</code> — a logic node with no runtime visual. The previewer draws nothing for it, reusing the base Node component with zero geometry. Both images therefore show only the empty editor preview environment: a sky gradient fading into the ground, with no object anywhere, since the fixture's sole child is the invisible <code>RespawnTimer</code>.</p>
@@ -1530,7 +1536,7 @@ tr:last-child td{border-bottom:0}
       <header class="sheet-head">
         <h2>VBoxContainer</h2>
         <span class="renders">renders as a CSS flex-column <code>&lt;div&gt;</code></span>
-        <span class="fixture"><code>unit-vbox-container.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-vbox-container.tscn" target="_blank" rel="noopener" title="Open unit-vbox-container.tscn in the previewer"><code>unit-vbox-container.tscn</code> ↗</a>
       </header>
       <div class="compare">
         <div class="stage">
@@ -1555,7 +1561,7 @@ tr:last-child td{border-bottom:0}
       <header class="sheet-head">
         <h2>WorldEnvironment</h2>
         <span class="renders">renders as the scene's background and environment lighting</span>
-        <span class="fixture"><code>unit-world-environment-basic.tscn</code></span>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-world-environment-basic.tscn" target="_blank" rel="noopener" title="Open unit-world-environment-basic.tscn in the previewer"><code>unit-world-environment-basic.tscn</code> ↗</a>
       </header>
       <div class="compare">
         <div class="stage">

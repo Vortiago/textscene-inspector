@@ -8,27 +8,32 @@ renders_as: a canvas-textured plane
 
 # Label3D
 
-Label3D draws a line of text on a flat plane in 3D space. The previewer rasterises the
-text to a canvas and maps it onto a transparent `PlaneGeometry` sized by `pixel_size`,
-billboarded per the node's mode. In-viewport label text is gated behind the Labels
-toggle, **off by default** (ADR-0008), so it is absent from a plain capture.
+Label3D draws a single line of text on a flat plane in 3D space. The previewer rasterises
+each label to a canvas texture, maps it onto a transparent `PlaneGeometry` sized by
+`pixel_size`, tints it by `modulate`, and orients it per the node's `billboard` mode. All
+four labels render by default.
 
 ## Properties exercised
 
 | Property | Value | Effect |
 | --- | --- | --- |
-| `text` | e.g. `"Billboard Enabled"` | the glyph string each label shows |
+| `text` | `"Billboard Enabled"` … | the glyph string each label shows |
 | `pixel_size` | `0.01` / `0.015` | world size per glyph pixel; the `0.015` "Outlined Text" reads larger |
-| `billboard` | `0` / `1` / `2` | `1` faces the camera upright; `0` keeps a fixed orientation (the cyan label skews with the pitched camera); `2` yaws around Y only (the magenta label reads foreshortened) |
+| `billboard` | `1` / `0` / `2` | `1` faces the camera upright (yellow, white); `0` holds a fixed orientation, so the cyan label skews with the pitched camera and runs off-frame; `2` yaws around Y only, so the magenta label reads foreshortened |
 | `modulate` | `Color(1,1,0,1)` … | tints the glyphs — yellow, cyan, magenta, white |
 | `outline_size` | `8` | black outline width around "Outlined Text" |
-| `outline_modulate` | `Color(0,0,0,1)` | the outline colour |
+| `outline_modulate` | `Color(0,0,0,1)` | the outline colour, black |
 
 ## Divergences
 
-The Godot reference renders all four labels (yellow "Billboard Enabled", cyan
-fixed-orientation "Billboard Disabled" tilting off-frame, magenta Y-axis "Y-Axis
-Billboard", and white "Outlined Text" with its black outline). Our capture is blank:
-in-viewport Label3D text is toggle-gated behind the Labels flag, off by default
-(ADR-0008), so a plain capture draws none of it. This is a UI default, not a rendering
-gap — with Labels on, the same canvas-textured planes draw.
+Our labels carry a dark, boxy fringe hugging each glyph run: the transparent canvas
+backing is not fully keyed out, so a black halo shows around and behind the text. Godot's
+label planes are cleanly transparent, drawing only the tinted glyphs. It is most obvious
+on the yellow, cyan, and magenta labels.
+
+Glyph shapes also differ — a Chromium fallback font on our side versus Godot's bundled
+default — so letterforms, weight, and kerning vary across all four labels. This is
+inherent to rasterising through the browser's font stack.
+
+Text presence, colour, placement, per-label size, billboard orientation, and the black
+outline on "Outlined Text" all match.

@@ -11,7 +11,8 @@ renders_as: a CSS grid container
 GridContainer lays its children out left-to-right into a fixed number of
 columns, wrapping to a new row each time the column count is reached. The
 previewer maps it to a `display: grid` div, so `columns` becomes the
-column-template and the separation constants become the CSS gaps.
+column-template, the separation constants become the CSS gaps, and the rows
+pack to the top.
 
 ## Properties exercised
 
@@ -26,10 +27,4 @@ column-template and the separation constants become the CSS gaps.
 
 ## Divergences
 
-The second row sits tight under the first in Godot (only the 12px v_separation
-between them) but is pushed down to the vertical middle of the viewport in ours.
-Godot's container sizes its rows to content and packs them at the top-left; our
-grid div fills the full-rect viewport, and its implicit rows are `auto`, so
-CSS `align-content` stretches them to split the height in two, dropping row 1 to
-the centre. The horizontal layout, column count, and gaps match. No
-PARITY-LIMITATIONS entry covers this.
+None visible in this fixture.

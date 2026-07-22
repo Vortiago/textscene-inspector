@@ -1,34 +1,32 @@
 ---
 type: Path3D
 category: 3D
-fixture: unit-pathfollow-3d.tscn
-image: unit-pathfollow-3d
+fixture: unit-path3d.tscn
+image: unit-path3d
 renders_as: a selection-gated curve gizmo
 ---
 
 # Path3D
 
-`Path3D` holds a `Curve3D` and hands it to its descendants so a `PathFollow3D`
-child can ride it. Its only visual is the white curve polyline, a
-selection-gated editor gizmo (ADR-0018); in a plain capture it draws nothing,
-exactly as Godot draws no path line while running. Every cube on screen belongs
-to the child meshes, not to the path.
+`Path3D` holds a `Curve3D` that its descendants can ride. Its only visual is the
+curve polyline, a selection-gated editor gizmo (ADR-0018), so a plain capture
+draws nothing for the path itself — exactly as Godot draws no path line while
+running. The fixture parents an orange marker sphere at each of the four curve
+points, so the arch shape reads even though the line is absent.
 
 ## Properties exercised
 
 | Property | Value | Effect |
 | --- | --- | --- |
-| `curve` | `Curve3D`, points `(0,0,0) → (3,0,0) → (3,0,3)` | defines the L-shaped path; the polyline is a selection-gated gizmo, so nothing is drawn for it here; supplies the curve the `PathFollow3D` child samples |
+| `curve` | `Curve3D`, 4 points `(-1.7,0.3,0) → (-0.7,1.35,0) → (0.7,1.35,0) → (1.7,0.3,0)` | defines a symmetric arch; the polyline is a selection-gated gizmo, so nothing is drawn for it here — the four marker spheres trace where the points sit |
 
 ## Divergences
 
-The follower cube — the 0.6 box under the `PathFollow3D` child — lands in a
-different place in each image. In Godot it stays at the curve's start (the
-origin), enclosing the small `OriginRef` box, so a single 0.6 cube reads at
-frame centre. In this previewer the follower advances to `progress_ratio = 0.5`
-(the curve midpoint at `(3,0,0)`), so it moves off to the right edge and the 0.3
-`OriginRef` box is left visible at centre. Cause: Godot applies `progress_ratio`
-only once the node is parented to a `Path3D` with a baked curve — set during
-scene instantiation it is a no-op and progress stays 0 — whereas the previewer
-resolves the curve statically and honours the ratio. The `Path3D` curve line
-itself is absent from both frames: a match, not a divergence.
+Shadow filtering differs. In Godot the marker spheres and the reference cube cast
+smooth, soft grey shadows onto the ground, including distinct discs beneath the
+markers. In this previewer the cube's ground shadow is dithered and speckled and
+the marker shadow discs are faint to absent — the injected preview sun's shadow
+map has a lower resolution and coarser filter than Godot's, so its edges alias
+where Godot's stay soft. The arch of markers, the reference cube, and the ground
+plane match in both frames; the path line is gated off in both, a match rather
+than a divergence.

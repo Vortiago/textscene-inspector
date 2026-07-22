@@ -8,10 +8,11 @@ renders_as: a toggle-gated collision wireframe
 
 # CollisionShape3D
 
-CollisionShape3D attaches a collision shape to a physics body and has no runtime
-Collision Shapes" is enabled (ADR-0005 / ADR-0006), off by default. So this plain
-capture draws nothing for it — the salmon cube on screen is the sibling
-`CrateMesh` (a MeshInstance3D) under the same RigidBody3D.
+CollisionShape3D attaches a collision shape to a physics body and has no visible
+form at runtime. Its wireframe draws only when "Visible Collision Shapes" is enabled
+(ADR-0005 / ADR-0006), which is off in this capture, so the previewer draws nothing
+for it here. The salmon cube on screen is the sibling `CrateMesh` (a MeshInstance3D)
+under the same RigidBody3D.
 
 ## Properties exercised
 
@@ -21,8 +22,6 @@ capture draws nothing for it — the salmon cube on screen is the sibling
 
 ## Divergences
 
-CollisionShape3D draws nothing in either image, so it has no output of its own to
-differ. The one visible difference is the sibling cube (the MeshInstance3D): our
-frame places it higher and larger than Godot's, while its colour, shading, and the
-sky, horizon and ground all match to within a few values. The gap is where the
-cube sits in the frame, not how it is rendered.
+None visible in this fixture. The CollisionShape3D wireframe is toggle-gated and so
+appears in neither capture, and the sibling crate sits at its authored pose, colour,
+and shading identically on both sides.

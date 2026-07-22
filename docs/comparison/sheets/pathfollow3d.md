@@ -8,25 +8,26 @@ renders_as: a curve-positioned transform group
 
 # PathFollow3D
 
-PathFollow3D positions its children along its parent Path3D's curve. The previewer
-samples the curve at `progress_ratio` and drives a transform group to that point;
-its editor follow-point cross is selection-gated (ADR-0018), so nothing extra shows
-in a plain capture — only the child box the follower carries.
+PathFollow3D positions its children a set distance along its parent Path3D's
+curve. The previewer samples the curve and drives a transform group to that point;
+here it carries an orange box that lands at the arc-length midpoint of the
+U-shaped track, one node in the row of blue marker boxes that trace the curve. Its
+editor follow-point gizmo is selection-gated (ADR-0018), so a plain capture shows
+only the box the follower carries.
 
 ## Properties exercised
 
 | Property | Value | Effect |
 | --- | --- | --- |
-| `progress_ratio` | `0.5` | places the follower at the curve's arc-length midpoint — the corner `(3,0,0)` of the L-shaped path `(0,0,0) → (3,0,0) → (3,0,3)` |
+| `progress` | `3.0528675` | absolute distance in metres along the curve; at instantiation Godot honours this value, placing the follower at the arc-length midpoint — the bottom of the U at `(0, 0, -1.4)` |
+| `progress_ratio` | `0.5` | the same midpoint expressed as a fraction of arc length; the fixture pins it to agree with `progress` so both renderers resolve the follower to one point |
+| `transform` | translation `(0, 0, -1.4)` | normally overridden by `progress`, but authored to the same midpoint so any resolution path lands the box identically |
 
 ## Divergences
 
-The follower lands in a different place in each image. In ours the 0.6 follower box
-sits at the corner `(3,0,0)` — where `progress_ratio` 0.5 falls by arc length — which
-the shared editor camera projects off the clipped lower-right edge (~`(997,514)`),
-leaving only the small 0.3 box that marks the path origin `(0,0,0)` at frame centre.
-Godot's reference shows a single, larger box at frame centre and nothing at the right
-edge: its follower is still at the path start `(0,0,0)`, stacked over the origin
-marker. The previewer resolves `progress_ratio` 0.5 to the 0.5 arc-length position;
-the reference capture shows the follower at the path start, so the ratio's effect is
-not visible there.
+The orange follower box lands at the bottom of the U at `(0, 0, -1.4)` in both
+images, beside the same blue marker — placement agrees. Shadows differ in edge
+softness: the reference box and markers cast crisp, dark footprints in Godot, while
+the previewer's directional light applies softer, more diffuse shadow filtering —
+most visible under the large reference box. This is a global shadow difference, not
+PathFollow3D behaviour.

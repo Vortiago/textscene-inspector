@@ -8,19 +8,25 @@ renders_as: a textured quad
 
 # AnimatedSprite2D
 
-AnimatedSprite2D plays a SpriteFrames animation. Playback is selection-driven
-(ADR-0012), so in a plain capture the unselected node draws its authored clip's
-current frame statically: the first `walk` frame (`dodge-walk1.png`) as a
-textured quad, centered on the node's origin. That origin sits at the viewport's
-top-left corner, so only the sprite's lower-right quadrant is on screen.
+AnimatedSprite2D plays a SpriteFrames clip. Playback is selection-driven
+(ADR-0012), so a plain capture shows the authored `frame` statically: here
+frame 1 of the `walk` clip (`dodge-walk2.png`), the Dodge character, drawn as a
+textured quad centered and scaled 3x at the viewport's center.
 
 ## Properties exercised
 
 | Property | Value | Effect |
 | --- | --- | --- |
+| `position` | `Vector2(576, 324)` | centers the sprite in the 1152x648 viewport |
+| `scale` | `Vector2(3, 3)` | enlarges the sprite 3x |
 | `sprite_frames` | embedded `SpriteFrames_walk` | supplies the `walk` clip's two frame textures |
-| `animation` | `&"walk"` | selects that clip; its frame 0 (`dodge-walk1.png`) is what's drawn |
+| `animation` | `&"walk"` | selects the `walk` clip |
+| `frame` | `1` | pins the second frame (`dodge-walk2.png`), shown statically |
 
 ## Divergences
 
-None visible in this fixture.
+The sprite reads slightly flatter in the previewer. Its quad uses a tone-mapped
+material, so the preview's tone-mapping compresses the texture's highlights (the
+source's pure-white eye, `(255,255,255)`, renders at `(226,226,226)`) and nudges
+the mid-tones, whereas Godot's 2D canvas blits the texel values unchanged.
+Position, scale, and the displayed frame match.

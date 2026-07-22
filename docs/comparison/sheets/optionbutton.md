@@ -3,33 +3,29 @@ type: OptionButton
 category: 2D
 fixture: unit-optionbutton.tscn
 image: unit-optionbutton
-renders_as: a collapsed dropdown div
+renders_as: a collapsed dropdown box
 ---
 
 # OptionButton
 
 A dropdown that collapses to show its currently-selected item. Being a static
-viewer, the previewer draws only that selected item's text inside a positioned
-HTML `<div>` on the Control overlay — not the open popup, not the whole list. The
-fixture centres one `DifficultySelect` with three items (`Easy`, `Normal`, `Hard`)
-and `selected = 1`, so both renders show `Normal`.
+viewer, the previewer draws that selected item's text inside a positioned HTML
+box on the Control overlay — not the open popup, not the whole list. The fixture
+centres one `DifficultySelect` with three items and `selected = 1`, so both
+renders show `Normal` in a dark charcoal rounded box.
 
 ## Properties exercised
 
 | Property | Value | Effect |
 | --- | --- | --- |
-| `item_count` + `popup/item_N/text` | `3` items: `Easy` / `Normal` / `Hard` | defines the option list; only the selected one is drawn |
-| `selected` | `1` | shows `Normal` (the item at index 1) as the button label |
+| `item_count` + `popup/item_N/text` | `3` items: `Easy` / `Normal` / `Hard` | defines the option list; only the selected item is drawn |
+| `selected` | `1` | draws `Normal` (the item at index 1), not the first item |
+| `offset_left/right/top/bottom` | `-75 / 75 / -24 / 8` | sizes the 150x32 button, centred by the `anchors_preset = 8` anchors |
 
 ## Divergences
 
-Two, both in the button chrome rather than the label. Godot draws its default-theme
-StyleBox as a neutral charcoal with a **dropdown chevron icon at the right edge**;
-the previewer draws a lighter, blue-tinted slate fill (`rgba(70,78,94)`) and **no
-arrow**. The arrow is a theme icon texture the previewer has no access to (the same
-root cause as the CheckBox indicator), so the collapsed affordance reads as a plain
-tinted rectangle. The tint difference is the same default-theme chrome synthesis the
-Button render shows — this previewer draws its own chrome instead of Godot's charcoal. The
-selected-item resolution is correct in both: `selected = 1` picks `Normal`, not the
-first item. No PARITY-LIMITATIONS entry covers either the chevron or the default-theme
-chrome.
+Godot draws a right-side chevron arrow icon inside the box; the previewer draws
+none. The arrow is a default-theme icon texture outside the fill/radius/padding
+chrome the previewer synthesises, so the collapsed affordance ends at the label.
+The box fill (dark charcoal ~rgb(46,46,46)), corner radius, padding, font, and the
+`Normal` label otherwise match.
