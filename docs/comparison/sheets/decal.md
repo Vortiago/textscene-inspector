@@ -3,38 +3,40 @@ type: Decal
 category: 3D
 fixture: unit-decal.tscn
 image: unit-decal
-renders_as: a wireframe projection box plus a textured quad
+renders_as: a texture projected onto the surfaces its box intersects
 ---
 
 # Decal
 
-Godot's texture projector: it projects `texture_albedo` down the node's local -Y
-axis onto whatever surfaces sit inside its `size` box. The previewer approximates
-that with an editor-style gizmo — an orange wireframe outline of the projection
-volume, plus a textured quad on the box's mid-plane carrying the albedo.
+Godot's texture projector: it casts `texture_albedo` down the node's local −Y
+axis onto whatever surfaces sit inside its `size` box, blended onto the lit
+surface. The previewer now does the same — it bakes the projection onto each
+mesh the box overlaps (three's `DecalGeometry`) and shades it with the scene's
+lights, so the checkerboards lie flat on the floor rather than floating. The
+projector-box outline is selection-gated (ADR-0018), so the default render shows
+only the projection, as Godot's runtime does.
 
 ## Properties exercised
 
 | Property | Value | Effect |
 | --- | --- | --- |
-| `texture_albedo` | `checkerboard.svg` | the checkerboard image on each quad |
-| `size` | `Vector3(3, 2, 3)` | footprint of the box and quad on both decals |
-| `albedo_mix` | `1.0` / `0.7` | quad opacity — fully opaque vs. slightly softened |
-| `modulate` | `Color(1, 0.4, 0.3, 0.8)` | salmon tint + lower opacity on the tinted decal |
-| `cull_mask` | `1048575` | parsed, surfaced in the Inspector; no visible effect |
+| `texture_albedo` | `checkerboard.svg` | the image projected onto the floor |
+| `size` | `Vector3(3, 3, 3)` | the projection footprint and its depth into the surface |
+| `albedo_mix` | `1.0` / `0.7` | how strongly the projection replaces the lit surface |
+| `modulate` | `Color(1, 0.4, 0.3, 0.8)` | salmon tint + lower opacity on the second decal |
 
 ## Divergences
 
-The two images disagree substantially — the previewer draws a gizmo, Godot projects.
+The projection lands in the same place on both sides — flat on the floor where
+the box intersects it. Two differences remain, both in the blend rather than the
+geometry:
 
-- **Projection-box gizmo (ours only).** We draw an orange wireframe box around each
-  decal; Godot's runtime render shows none. This is an intentional v1 approximation
-  of the editor's projector outline, not present in the game frame.
-- **Panel floats above the floor.** Our albedo quad sits at the box mid-plane, a flat
-  panel hovering ~1 unit over the ground. Godot projects the texture flat **onto** the
-  floor surface at the box's base.
-- **Bold/opaque vs. faint/blended.** Our quad is drawn at full albedo strength and
-  reproduces neither Godot's blend into the lit floor nor the `upper_fade` / `lower_fade`
-  (both default `0.3`), so Godot's checkerboards read as pale, low-contrast smudges while
-  ours are high-contrast panels — the tinted decal's salmon reads strong here for the same
-  reason it stays faint in Godot.
+- **Ours reads bolder than Godot's.** Godot fades the projection into the lit
+  floor more than we do at a partial `albedo_mix`, so its checkerboards are
+  paler; ours are higher-contrast. Exact `albedo_mix` blending needs a custom
+  projector shader — see [PARITY-LIMITATIONS.md](../../PARITY-LIMITATIONS.md).
+- **No edge fades or extra channels.** `upper/lower/normal_fade`,
+  `distance_fade_*`, `cull_mask`, and the normal/ORM/emission maps are not
+  applied — `DecalGeometry` bakes a static mesh with none of them. They are
+  near-invisible on the flat surfaces decals usually target and are recorded in
+  PARITY-LIMITATIONS.
