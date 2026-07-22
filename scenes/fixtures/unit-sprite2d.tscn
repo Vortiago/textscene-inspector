@@ -3,6 +3,7 @@
 [ext_resource type="Texture2D" path="res://textures/sprite2d-marker.png" id="1_marker"]
 
 [node name="World" type="Node2D"]
+position = Vector2(576, 324)
 
 [node name="Center" type="Sprite2D" parent="."]
 texture = ExtResource("1_marker")

@@ -248,6 +248,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Path3d",
+    "file": "unit-path3d.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Pathfollow 3d",
     "file": "unit-pathfollow-3d.tscn",
     "category": "Other"
@@ -920,6 +925,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Camera Basic",
     "file": "unit-camera-basic.tscn",
+    "category": "Unit - Basic Nodes"
+  },
+  {
+    "name": "Camera3d",
+    "file": "unit-camera3d.tscn",
     "category": "Unit - Basic Nodes"
   },
   {

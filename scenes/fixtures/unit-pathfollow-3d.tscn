@@ -1,28 +1,82 @@
-[gd_scene format=3]
+[gd_scene load_steps=9 format=3 uid="uid://unitpathfollow3d"]
 
 [sub_resource type="Curve3D" id="Curve3D_track"]
 _data = {
-"points": PackedVector3Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 3),
+"points": PackedVector3Array(0, 0, 0, 0, 0, 0, -1.6, 0, 1.2, 0, 0, 0, 0, 0, 0, 0, 0, -1.4, 0, 0, 0, 0, 0, 0, 1.6, 0, 1.2),
 "tilts": PackedFloat32Array(0, 0, 0)
 }
 point_count = 3
 
-[sub_resource type="BoxMesh" id="BoxMesh_follower"]
-size = Vector3(0.6, 0.6, 0.6)
+[sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
+size = Vector2(6, 6)
 
-[sub_resource type="BoxMesh" id="BoxMesh_origin"]
-size = Vector3(0.3, 0.3, 0.3)
+[sub_resource type="BoxMesh" id="BoxMesh_ref"]
+size = Vector3(1, 1, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_marker"]
+size = Vector3(0.16, 0.16, 0.16)
+
+[sub_resource type="BoxMesh" id="BoxMesh_follower"]
+size = Vector3(0.4, 0.4, 0.4)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ref"]
+albedo_color = Color(0.6, 0.6, 0.6, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_marker"]
+albedo_color = Color(0.2, 0.6, 1, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_follower"]
+albedo_color = Color(1, 0.5, 0.1, 1)
 
 [node name="PathFollow3DRoot" type="Node3D"]
+
+[node name="Ground" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1, 0)
+mesh = SubResource("PlaneMesh_ground")
+
+[node name="RefBox" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.8, 0, -1.7)
+mesh = SubResource("BoxMesh_ref")
+surface_material_override/0 = SubResource("StandardMaterial3D_ref")
 
 [node name="TrackPath" type="Path3D" parent="."]
 curve = SubResource("Curve3D_track")
 
+[node name="Marker0" type="MeshInstance3D" parent="TrackPath"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.6, 0, 1.2)
+mesh = SubResource("BoxMesh_marker")
+surface_material_override/0 = SubResource("StandardMaterial3D_marker")
+
+[node name="Marker1" type="MeshInstance3D" parent="TrackPath"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.96, 0, 0.16)
+mesh = SubResource("BoxMesh_marker")
+surface_material_override/0 = SubResource("StandardMaterial3D_marker")
+
+[node name="Marker2" type="MeshInstance3D" parent="TrackPath"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, -0.75)
+mesh = SubResource("BoxMesh_marker")
+surface_material_override/0 = SubResource("StandardMaterial3D_marker")
+
+[node name="Marker3" type="MeshInstance3D" parent="TrackPath"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, -0.75)
+mesh = SubResource("BoxMesh_marker")
+surface_material_override/0 = SubResource("StandardMaterial3D_marker")
+
+[node name="Marker4" type="MeshInstance3D" parent="TrackPath"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.96, 0, 0.16)
+mesh = SubResource("BoxMesh_marker")
+surface_material_override/0 = SubResource("StandardMaterial3D_marker")
+
+[node name="Marker5" type="MeshInstance3D" parent="TrackPath"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.6, 0, 1.2)
+mesh = SubResource("BoxMesh_marker")
+surface_material_override/0 = SubResource("StandardMaterial3D_marker")
+
 [node name="Follower" type="PathFollow3D" parent="TrackPath"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -1.4)
+progress = 3.0528675
 progress_ratio = 0.5
 
-[node name="Box" type="MeshInstance3D" parent="TrackPath/Follower"]
+[node name="FollowerBox" type="MeshInstance3D" parent="TrackPath/Follower"]
 mesh = SubResource("BoxMesh_follower")
-
-[node name="OriginRef" type="MeshInstance3D" parent="TrackPath"]
-mesh = SubResource("BoxMesh_origin")
+surface_material_override/0 = SubResource("StandardMaterial3D_follower")

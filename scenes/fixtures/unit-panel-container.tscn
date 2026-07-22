@@ -12,12 +12,18 @@ content_margin_right = 16.0
 content_margin_bottom = 12.0
 
 [node name="Root" type="Control"]
+layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 
 [node name="MyPanelContainer" type="PanelContainer" parent="."]
+layout_mode = 1
 anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
 offset_left = -120.0
 offset_top = -40.0
 offset_right = 120.0
@@ -25,6 +31,7 @@ offset_bottom = 40.0
 theme_override_styles/panel = SubResource("StyleBoxFlat_1")
 
 [node name="Label" type="Label" parent="MyPanelContainer"]
+layout_mode = 2
 text = "Panel Container"
 horizontal_alignment = 1
 vertical_alignment = 1

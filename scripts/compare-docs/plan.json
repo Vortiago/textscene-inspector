@@ -148,7 +148,7 @@
   {
    "type": "Camera3D",
    "slice": "3d/camera3d",
-   "fixture": "unit-decal.tscn"
+   "fixture": "unit-camera3d.tscn"
   },
   {
    "type": "CSGBox3D",
@@ -288,7 +288,7 @@
   {
    "type": "Path3D",
    "slice": "paths/path3d",
-   "fixture": "unit-pathfollow-3d.tscn"
+   "fixture": "unit-path3d.tscn"
   },
   {
    "type": "PathFollow3D",
@@ -393,6 +393,8 @@
   "unit-area2d.tscn",
   "unit-node3d-basic.tscn",
   "unit-pathfollow-3d.tscn",
+  "unit-path3d.tscn",
+  "unit-camera3d.tscn",
   "unit-collisionshape2d.tscn",
   "edge-area3d-inactive.tscn",
   "unit-characterbody3d.tscn",
