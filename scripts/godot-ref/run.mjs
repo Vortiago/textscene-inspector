@@ -357,6 +357,7 @@ func _is_canvas_scene(target: Node) -> bool:
 
 func _render_3d(target: Node) -> void:
 	add_child(target)
+	_freeze_game_logic(target)
 	if PREVIEWS:
 		_apply_preview_lighting(target)
 	_place_camera(target)
@@ -380,6 +381,7 @@ func _render_2d(target: Node) -> void:
 	if not SCENE_CAMERA:
 		_disable_2d_cameras(target)
 	vp.add_child(target)
+	_freeze_game_logic(target)
 	await _settle()
 	vp.get_texture().get_image().save_png(OUT)
 
@@ -394,6 +396,26 @@ func _disable_2d_cameras(node: Node) -> void:
 		camera.enabled = false
 	for child in node.get_children():
 		_disable_2d_cameras(child)
+
+# The reference must show the AUTHORED pose, not a running game. _settle() steps
+# six process frames, which would let RigidBody physics FALL and autoplay /
+# AnimationTree clips ADVANCE past their rest pose. The Node3DEditor preview our
+# previewer mirrors never runs game logic, so we freeze it before settling: a
+# RigidBody stays where it was authored, animation stays at frame zero. Called
+# after the subtree is in the tree (autoplay has queued but not yet sampled) so
+# stop() cancels it before the first frame. GPUParticles are left alone — their
+# preprocessed burst is the authored look, not running game logic.
+func _freeze_game_logic(node: Node) -> void:
+	if node is RigidBody3D:
+		(node as RigidBody3D).freeze = true
+	if node is RigidBody2D:
+		(node as RigidBody2D).freeze = true
+	if node is AnimationPlayer:
+		(node as AnimationPlayer).stop()
+	if node is AnimationTree:
+		(node as AnimationTree).active = false
+	for child in node.get_children():
+		_freeze_game_logic(child)
 
 func _settle() -> void:
 	for _i in 6:

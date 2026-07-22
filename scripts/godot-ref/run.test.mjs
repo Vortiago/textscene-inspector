@@ -319,6 +319,31 @@ describe.skipIf(!hasEngine)('renderReference (real Godot)', () => {
   }, 180_000);
 
   /**
+   * The reference must show the AUTHORED pose, not a running game. `_settle()`
+   * steps six process frames, through which a live RigidBody3D FALLS — and this
+   * fixture has no floor, so it never stops. The previewer never runs physics,
+   * so the harness freezes game logic before settling and the crate has to stay
+   * where the scene put it. Its 1x1 box is centred at y=1, so the geometry AABB
+   * floor sits at y=0.5; a crate that fell through settle reports a lower floor.
+   */
+  it('freezes physics so a RigidBody keeps its authored pose through settle', async () => {
+    const dir = await scratchDir();
+    const out = join(dir, 'shot.png');
+    const boundsOut = join(dir, 'shot.bounds.json');
+    await renderReference({
+      scene: join(REPO_ROOT, 'scenes/fixtures/unit-rigidbody3d.tscn'),
+      out,
+      boundsOut,
+      width: 160,
+      height: 120,
+      previews: true,
+    });
+    const b = JSON.parse(await readFile(boundsOut, 'utf8'));
+    expect(b.position[1]).toBeCloseTo(0.5, 1);
+    expect(b.size[1]).toBeCloseTo(1, 1);
+  }, 180_000);
+
+  /**
    * The 2D path, end to end: a Node2D scene must come back as the PROJECT
    * VIEWPORT rectangle — the frame the previewer's 2D stage draws — with the
    * scene in it and no 3D camera anywhere near it. Rendered through the 3D
