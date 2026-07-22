@@ -24,6 +24,8 @@ export default [
       '**/.tmp/',
       '.spike/',
       'docs/probes/',
+      // Vendored third-party source (minified); linted upstream, not here.
+      'scripts/compare-docs/vendor/',
     ],
   },
 

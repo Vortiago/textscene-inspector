@@ -116,13 +116,20 @@ function renderTable(rows) {
   return `<div class="tablewrap"><table><thead><tr>${th}</tr></thead><tbody>${trs}</tbody></table></div>`;
 }
 
-/** A screenshot as a `src` value — a data URI under `--inline`, else a relative path. */
+/**
+ * A screenshot as a `src` value — a data URI under `--inline`, else a relative
+ * path. An animated node (AnimationPlayer) writes a `.gif`; a still writes a
+ * `.png`. Prefer the gif so a motion node plays, and fall back to the png.
+ */
 function imageSrc(basename, side, inlineImages) {
-  const rel = `images/${basename}-${side}.png`;
-  const file = join(IMAGES_DIR, `${basename}-${side}.png`);
-  if (!existsSync(file)) return null;
-  if (!inlineImages) return rel;
-  return `data:image/png;base64,${readFileSync(file).toString('base64')}`;
+  for (const ext of ['gif', 'png']) {
+    const file = join(IMAGES_DIR, `${basename}-${side}.${ext}`);
+    if (!existsSync(file)) continue;
+    if (!inlineImages) return `images/${basename}-${side}.${ext}`;
+    const mime = ext === 'gif' ? 'image/gif' : 'image/png';
+    return `data:${mime};base64,${readFileSync(file).toString('base64')}`;
+  }
+  return null;
 }
 
 const CATEGORY_ORDER = ['3D', '2D', 'Other'];
