@@ -52,3 +52,44 @@ expected), then fixed. `[ ]` open · `[~]` investigating · `[x]` done.
 - [ ] **TileMapLayer** — same.
 - [ ] **2D styling in general** — bring closer to default Godot Control theme
       (spans GridContainer/HBox/OptionButton/Panel and the Control set).
+
+## Investigation verdicts (2026-07-22)
+
+**Code bugs (renderer):**
+- MeshInstance3D torus — three's TorusGeometry is XY-plane (hole +Z), Godot's is
+  XZ-plane (hole +Y). Fix: `geom.rotateX(Math.PI/2)` in meshGeometry.tsx. Check
+  the other primitives for the same axis gap.
+- GridContainer — missing `align-content`; grid stretches. Add `alignContent:'start'`.
+- HBoxContainer — Labels pin to TOP; Godot vertical-centres them. Default the
+  Label vertical size flag to SHRINK_CENTER(4) in label/parser.ts.
+- OptionButton — dropdown chrome colours don't match Godot's default theme.
+
+**Styling (systematic):** no shared default-theme module; each Control hardcodes
+"default chrome" that misses Godot's default_theme. Introduce one
+`godotDefaultTheme.ts` and have Controls consume it.
+
+**Harness — the reference runs the GAME during `_settle()`** (6 process frames),
+so physics bodies FALL and active AnimationTrees/autoplay ADVANCE. This is the
+root of three "bugs": RigidBody3D (falls), CollisionShape3D (sibling falls),
+AnimationTree (mid-anim pose). Fix: before settle, recursively freeze
+RigidBody3D and deactivate AnimationTree/stop autoplay so the reference is the
+static authored pose, matching our previewer.
+
+**Capture-config (toggle ON):**
+- Label3D — Godot draws it at runtime always; ours gates it (showLabels off).
+  Default showLabels ON (user-requested), rebaseline.
+- NavigationRegion3D — capture Godot with runtime nav debug so both show the
+  navmesh; our overlay is already on.
+
+**Fixture fixes:**
+- Camera3D — wrong fixture (Decal). Own fixture; repoint plan.json.
+- Path3D — own fixture (stops sharing PathFollow3D) with marker geometry.
+- PathFollow3D — progress_ratio is a no-op at instantiation; place the follower
+  visibly (script or transform).
+- Sprite2D — no Camera2D; origin at viewport top-left. Centre it (576,324).
+- TileMap / TileMapLayer — tiles tiny in the corner; enlarge + centre / fill frame.
+- PanelContainer — anchors_preset without layout_mode=1 is inert; use explicit anchors.
+- AnimatedSprite2D — position agrees; make it read as animated (frames/GIF).
+
+**Expected-no-fix (documented):** DirectionalLight3D (shadow cast but occluded
+from this camera), PathFollow2D (progress_ratio divergence is real + intended).
