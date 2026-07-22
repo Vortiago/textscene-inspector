@@ -127,5 +127,17 @@ export function buildDecalProjectionGeometry(
     geometry.dispose();
     return null;
   }
+
+  // Flip V. Textures load with `flipY = true` (three's default, the convention
+  // arrayMeshGeometry/tileGeometry also work against), so V = 0 samples the
+  // image BOTTOM — but Godot's decal V-origin is the image TOP. Without this a
+  // projected texture is mirrored vertically: a directional albedo comes out
+  // upside-down, and an even checkerboard comes out with its cells inverted.
+  const uv = geometry.getAttribute('uv');
+  for (let i = 0; i < uv.count; i++) {
+    uv.setY(i, 1 - uv.getY(i));
+  }
+  uv.needsUpdate = true;
+
   return geometry;
 }
