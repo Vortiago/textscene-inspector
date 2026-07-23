@@ -73,6 +73,18 @@ export function Label3D({ node, children }: NodeComponentProps) {
   // (the white canvas text is colorized by this), matching Sprite2D/Sprite3D.
   const tint = useGodotLinearColor(properties.modulate);
 
+  // The texture is uploaded premultiplied (below), so the fragment RGB is ALREADY
+  // premultiplied by coverage — the material must therefore NOT premultiply again
+  // (`premultipliedAlpha` would `rgb *= a` in the shader, giving color·a² and
+  // eroding every anti-aliased glyph/outline edge). Use an explicit premultiplied
+  // OVER blend (src = 1, dst = 1−srcα) instead, and fold modulate's alpha into the
+  // tint so a translucent label scales its premultiplied RGB by opacity too (with
+  // premultiplied blending, `opacity` alone would scale only the alpha channel).
+  const tintWithOpacity = useMemo(
+    () => tint.clone().multiplyScalar(properties.modulate.a),
+    [tint, properties.modulate.a]
+  );
+
   // On by default to match Godot (ADR-0008 point 4 superseded — see its
   // amendment note); the Labels toggle can hide it. When off (or the canvas
   // couldn't be built), render an invisible marker group so the node still
@@ -98,9 +110,13 @@ export function Label3D({ node, children }: NodeComponentProps) {
         <planeGeometry args={[built.width, built.height]} />
         <meshBasicMaterial
           map={built.texture}
-          color={tint}
+          color={tintWithOpacity}
           transparent
-          premultipliedAlpha
+          blending={THREE.CustomBlending}
+          blendSrc={THREE.OneFactor}
+          blendDst={THREE.OneMinusSrcAlphaFactor}
+          blendSrcAlpha={THREE.OneFactor}
+          blendDstAlpha={THREE.OneMinusSrcAlphaFactor}
           opacity={properties.modulate.a}
           side={properties.double_sided === false ? THREE.FrontSide : THREE.DoubleSide}
           depthWrite={false}
