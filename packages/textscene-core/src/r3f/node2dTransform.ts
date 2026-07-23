@@ -35,6 +35,14 @@ export interface Node2DGroupProps {
 export const Z_INDEX_STEP = 0.1;
 
 /**
+ * Fine draw-order range WITHIN one z-index step, shared by y-sort ranks and the
+ * tree-order slots that separate sibling y-sort subtrees (see YSortSlotContext).
+ * Half a step so a `show_behind_parent` node (which sits at `-Z_INDEX_STEP*0.5`)
+ * never collides with the fine band above the layer base.
+ */
+export const YSORT_FINE_RANGE = Z_INDEX_STEP * 0.5;
+
+/**
  * Sub-z_index draw-order spacing inside a TileMap node: legacy layers stack by
  * index within one z_index step, and each layer's atlas sources get a smaller
  * deterministic nudge (Godot interleaves cells across sources in scan order —
