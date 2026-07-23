@@ -20,10 +20,19 @@ export interface EnvironmentSettings {
     energy: number;
   } | null;
   /**
-   * The sky's own radiance as an ambient source — an IBL, not a constant, so
-   * it both lights surfaces and is what they reflect. `energy` is Godot's
-   * `background_energy_multiplier`; `contribution` is how much of the ambient
-   * it accounts for versus the flat colour.
+   * The sky as an image-based light — an IBL, not a constant, so it both lights
+   * surfaces and is what they reflect. Present whenever a sky IBL exists to
+   * reflect (`reflection_source` defaults to the background), which under a sky
+   * background is INDEPENDENT of where the diffuse ambient comes from: a metal
+   * reflects the sky even when the flat ambient is a constant colour.
+   *
+   * `energy` is Godot's `background_energy_multiplier` — the sky's reflection
+   * strength. `contribution` is `ambient_light_sky_contribution`: how much of
+   * the DIFFUSE ambient the sky accounts for versus the flat colour (0 for
+   * `AMBIENT_SOURCE_COLOR`, so the sky is reflected but adds no diffuse). Godot
+   * scales these two separately; three.js couples them under one
+   * `environmentIntensity`, so the render layer restores the split with a
+   * per-material `envMapIntensity` keyed on metalness.
    */
   skyAmbient: {
     energy: number;
@@ -143,7 +152,7 @@ const AMBIENT_SOURCE_SKY = 3;
  *         cubemap = (BG + BG_SKY) or SKY
  *         used    = cubemap or COLOR
  *
- * and the shader then blends the two:
+ * and the shader then blends the two DIFFUSE terms:
  *
  *   ambient = mix(flat, sky × background_energy_multiplier, sky_contribution)
  *
@@ -153,6 +162,14 @@ const AMBIENT_SOURCE_SKY = 3;
  * `ambient_light_color` under `AMBIENT_SOURCE_SKY` sees no trace of it in
  * Godot. The sRGB→linear conversion happens at the consumer, so colours stay
  * in Godot space here.
+ *
+ * REFLECTIONS are separate. `reflection_source` defaults to the background, so
+ * a sky is reflected by metals whenever it is the background — INDEPENDENT of
+ * `ambient_light_source`. `skyAmbient` therefore appears whenever a sky IBL
+ * exists (sky background, or `AMBIENT_SOURCE_SKY`), carrying the reflection
+ * energy in `energy` and the DIFFUSE share in `contribution`; the render layer
+ * scales the two apart per-material. Only a solid-colour background with no
+ * sky truly has no reflection source.
  */
 function ambientFor(properties: EnvironmentProperties): {
   ambient: EnvironmentSettings['ambient'];
@@ -171,21 +188,31 @@ function ambientFor(properties: EnvironmentProperties): {
     };
   }
 
+  const overSky = background === BackgroundMode.BG_SKY;
   const fromCubemap =
-    (source === AMBIENT_SOURCE_BG && background === BackgroundMode.BG_SKY) ||
-    source === AMBIENT_SOURCE_SKY;
+    (source === AMBIENT_SOURCE_BG && overSky) || source === AMBIENT_SOURCE_SKY;
+
+  // How much of the DIFFUSE ambient the sky accounts for. A COLOR source (or
+  // DISABLED) takes none from the sky — only the flat colour — so its
+  // contribution is 0, but the sky is still reflected below.
+  const contribution = fromCubemap ? properties.ambient_light_sky_contribution : 0;
+
+  // The sky IBL exists — and is reflected — whenever it is the background or
+  // the ambient is baked from it, whatever lights the diffuse ambient.
+  const skyAmbient =
+    fromCubemap || overSky
+      ? { energy: properties.background_energy_multiplier, contribution }
+      : null;
+
   if (!fromCubemap && source !== AMBIENT_SOURCE_COLOR) {
-    return { ambient: null, skyAmbient: null };
+    return { ambient: null, skyAmbient };
   }
 
-  const contribution = fromCubemap ? properties.ambient_light_sky_contribution : 0;
   return {
     ambient: {
       color: properties.ambient_light_color,
       energy: properties.ambient_light_energy * (1 - contribution),
     },
-    skyAmbient: fromCubemap
-      ? { energy: properties.background_energy_multiplier, contribution }
-      : null,
+    skyAmbient,
   };
 }

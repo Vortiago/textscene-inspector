@@ -23,7 +23,13 @@ import type { SkyLight } from './skyUniforms';
 
 export interface SkyLayerProps {
   sky: SkyProperties;
-  /** Godot's ambient energy → `scene.environmentIntensity`. */
+  /**
+   * The sky's REFLECTION strength (Godot `background_energy_multiplier`) →
+   * `scene.environmentIntensity`. This is the full reflection energy, not the
+   * diffuse-scaled one: a metal reflects the whole sky whatever the ambient
+   * source, and `EnvironmentLayer` restores the diffuse share per-material via
+   * `envMapIntensity`.
+   */
   intensity?: number;
   /**
    * Whether this sky also paints the background. Godot's ambient can come from

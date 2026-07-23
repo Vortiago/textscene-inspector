@@ -11,9 +11,9 @@
  * because the renderer and scene outlive any one environment.
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { useThree } from '@react-three/fiber';
+import { useFrame, useThree } from '@react-three/fiber';
 import { BackgroundMode } from '../../resources/environment/types';
 import type { EnvironmentSettings } from '../../resources/environment/renderer';
 import { applyToneMapping } from '../../resources/environment/toneMapping';
@@ -63,12 +63,22 @@ export function EnvironmentLayer({ settings, sky }: EnvironmentLayerProps) {
       <EnvironmentApplier settings={settings} hasSky={!!sky} suppressToneMapping={useComposer} />
       {useComposer && <GlowLayer settings={settings} />}
       {sky && (showsSky || skyAmbient) && (
-        <SkyLayer
-          sky={sky}
-          asBackground={showsSky}
-          backgroundIntensity={settings.background.energyMultiplier}
-          intensity={skyAmbient ? skyAmbient.energy * skyAmbient.contribution : 0}
-        />
+        <>
+          <SkyLayer
+            sky={sky}
+            asBackground={showsSky}
+            backgroundIntensity={settings.background.energyMultiplier}
+            // The sky's REFLECTION strength drives `environmentIntensity`. Godot
+            // reflects the sky at `background_energy_multiplier` whatever the
+            // ambient source, so this is the full energy, not the diffuse-scaled
+            // one; the diffuse share is restored per-material below.
+            intensity={skyAmbient ? skyAmbient.energy : 0}
+          />
+          <SkyDiffuseReflectionSplit
+            contribution={skyAmbient ? skyAmbient.contribution : 1}
+            active={!!skyAmbient}
+          />
+        </>
       )}
       {flatAmbient && flatAmbient.energy > 0 && (
         // `* LIGHT_INTENSITY_SCALE` for the same reason a directional light
@@ -77,7 +87,7 @@ export function EnvironmentLayer({ settings, sky }: EnvironmentLayerProps) {
         // 1/PI, while three's `getAmbientLightIrradiance` returns the colour
         // unscaled and then multiplies by `albedo/PI`.
         //
-        // The SKY ambient below does NOT take this factor: three's
+        // The SKY ambient above does NOT take this factor: three's
         // `getIBLIrradiance` already returns `PI * envColor * intensity`, and
         // that PI cancels against the same Lambert 1/PI. Applying it there too
         // would break the one ambient path that is already right.
@@ -88,6 +98,88 @@ export function EnvironmentLayer({ settings, sky }: EnvironmentLayerProps) {
       )}
     </>
   );
+}
+
+/**
+ * Restores Godot's separation of sky DIFFUSE from sky REFLECTION, which three
+ * couples under one `scene.environmentIntensity`. Godot scales the diffuse
+ * ambient by `ambient_light_sky_contribution` while a metal reflects the whole
+ * sky regardless; three applies the single intensity to both. With
+ * `environmentIntensity` set to the full REFLECTION strength (in `SkyLayer`),
+ * each material's `envMapIntensity` is pulled back toward the diffuse
+ * contribution by how dielectric it is:
+ *
+ *   envMapIntensity = contribution + metalness · (1 − contribution)
+ *
+ * A full metal (metalness 1) keeps the whole reflection; a rough dielectric
+ * (metalness 0) keeps only `contribution` of the sky — 0 under a COLOR ambient,
+ * so it falls back to the flat ambient alone, exactly as Godot leaves it. This
+ * is the `envMapIntensity` split named in PARITY-LIMITATIONS.
+ *
+ * A no-op at `contribution >= 1` (the common case where the two already agree),
+ * so it never touches a material unless a scene lowers the sky contribution.
+ * Re-applied over a short window like the bloom probe below, so materials that
+ * mount a beat later (GLB, instanced sub-scenes) are caught; originals are
+ * restored on unmount because the renderer outlives any one environment.
+ */
+function SkyDiffuseReflectionSplit({
+  contribution,
+  active,
+}: {
+  contribution: number;
+  active: boolean;
+}) {
+  const scene = useThree((s) => s.scene);
+  const originals = useRef(
+    new Map<THREE.MeshStandardMaterial, { envMap: THREE.Texture | null; intensity: number }>()
+  );
+
+  // Applied every frame rather than once on mount: materials arrive across
+  // several frames (async textures force a fresh material, GLB and instanced
+  // sub-scenes mount late), and the assignment is idempotent, so re-stamping
+  // each frame is the robust way to catch them all without chasing mount order.
+  //
+  // three IGNORES a material's `envMapIntensity` while the IBL comes from
+  // `scene.environment` — the renderer overrides that uniform with
+  // `scene.environmentIntensity` unless the material owns its `envMap`
+  // (WebGLRenderer, `material.envMap === null && scene.environment !== null`).
+  // So the split is bought by pointing each material's own `envMap` at the sky
+  // (the same PMREM texture, same mapping — no recompile) and then setting its
+  // per-material intensity.
+  useFrame(() => {
+    if (!active || contribution >= 1) return;
+    const environment = scene.environment;
+    if (!environment) return;
+    scene.traverse((obj) => {
+      const material = (obj as THREE.Mesh).material;
+      const mats = Array.isArray(material) ? material : material ? [material] : [];
+      for (const m of mats) {
+        const std = m as THREE.MeshStandardMaterial;
+        if (typeof std.envMapIntensity !== 'number') continue;
+        if (!originals.current.has(std)) {
+          originals.current.set(std, { envMap: std.envMap, intensity: std.envMapIntensity });
+        }
+        std.envMap = environment;
+        const metalness = std.metalness ?? 0;
+        std.envMapIntensity = contribution + metalness * (1 - contribution);
+      }
+    });
+  });
+
+  // Restore what was found when this environment goes away — the renderer and
+  // its materials outlive any one environment.
+  useEffect(() => {
+    const captured = originals.current;
+    return () => {
+      for (const [mat, orig] of captured) {
+        mat.envMap = orig.envMap;
+        mat.envMapIntensity = orig.intensity;
+      }
+      captured.clear();
+    };
+  }, [contribution, active]);
+
+  return null;
 }
 
 /**

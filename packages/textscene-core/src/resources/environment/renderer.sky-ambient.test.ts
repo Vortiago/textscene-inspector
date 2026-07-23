@@ -22,6 +22,12 @@
  * at full strength (it is blended OUT entirely at the default contribution of
  * 1.0), and the sky's own contribution is scaled by `background_energy_multiplier`
  * — not by `ambient_light_energy`.
+ *
+ * REFLECTIONS are a separate channel: `reflection_source` defaults to the
+ * background, so a sky is reflected by metals whenever it is the background,
+ * WHATEVER lights the diffuse ambient. `skyAmbient` therefore carries the sky
+ * reflection energy even for a COLOR or DISABLED source over a sky, with its
+ * `contribution` (the diffuse share) at 0.
  */
 import { describe, expect, it } from 'vitest';
 import { createEnvironmentSettings } from './renderer';
@@ -102,9 +108,11 @@ describe('sky ambient', () => {
     expect(settings.skyAmbient).toEqual({ energy: 1, contribution: 0.25 });
   });
 
-  it('gives a colour source no sky term, whatever the contribution says', () => {
-    // ambient_light_sky_contribution is meaningless without a cubemap; Godot
-    // only reads it behind USE_AMBIENT_CUBEMAP.
+  it('reflects the sky for a colour source but takes no diffuse from it', () => {
+    // ambient_light_sky_contribution is meaningless for the DIFFUSE without a
+    // cubemap source; Godot only reads it behind USE_AMBIENT_CUBEMAP. The sky
+    // is still REFLECTED though (reflection_source defaults to the background),
+    // so skyAmbient carries the reflection energy at diffuse contribution 0.
     const settings = createEnvironmentSettings(
       base({
         ambient_light_source: 2,
@@ -112,14 +120,16 @@ describe('sky ambient', () => {
         ambient_light_sky_contribution: 0.5,
       })
     );
-    expect(settings.skyAmbient).toBeNull();
+    expect(settings.skyAmbient).toEqual({ energy: 1, contribution: 0 });
     expect(settings.ambient).toEqual({ color: { r: 0.4, g: 0.4, b: 0.4, a: 1 }, energy: 1 });
   });
 
-  it('gives a disabled source neither term, even over a sky background', () => {
+  it('reflects the sky for a disabled source but gives it no diffuse term', () => {
+    // DISABLED ambient means no diffuse fill, but a sky background is still a
+    // reflection source, so a metal keeps reflecting it.
     const settings = createEnvironmentSettings(base({ ambient_light_source: 1 }));
     expect(settings.ambient).toBeNull();
-    expect(settings.skyAmbient).toBeNull();
+    expect(settings.skyAmbient).toEqual({ energy: 1, contribution: 0 });
   });
 
   it('leaves a colour background on the flat path, with no sky term', () => {
