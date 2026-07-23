@@ -298,6 +298,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Sky Panorama",
+    "file": "unit-sky-panorama.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Sky Physical",
     "file": "unit-sky-physical.tscn",
     "category": "Other"
@@ -305,6 +310,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Sky Procedural",
     "file": "unit-sky-procedural.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Softbody3d",
+    "file": "unit-softbody3d.tscn",
     "category": "Other"
   },
   {

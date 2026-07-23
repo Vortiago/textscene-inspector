@@ -125,8 +125,13 @@ void main() {
     return;
   }
   vec3 eyedir = normalize(vEyeDirection);
-  // Godot's SKY_COORDS is the equirectangular projection of EYEDIR.
-  vec2 uv = vec2(atan(eyedir.x, -eyedir.z) * INV_TWO_PI + 0.5, acos(eyedir.y) * INV_PI);
+  // Godot's SKY_COORDS is the equirectangular projection of EYEDIR: u wraps
+  // atan(x,-z) into [0,1) so -Z maps to the texture's left edge (u=0), NOT its
+  // centre — a +0.5 instead offset the whole sky 180deg in azimuth. V uses
+  // acos(-y): the texture loads flipY=true (as the panorama-fixture measurement
+  // against real Godot confirms), so without the negation the sky renders
+  // upside-down. Verified pixel-for-pixel against Godot on unit-sky-panorama.
+  vec2 uv = vec2(fract(atan(eyedir.x, -eyedir.z) * INV_TWO_PI), acos(-eyedir.y) * INV_PI);
   gl_FragColor = vec4(texture2D(source_panorama, uv).rgb * exposure, 1.0);
 }
 `;

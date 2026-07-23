@@ -134,6 +134,9 @@ export const GOLDEN_SCENES = [
   // they also pin that BOTH previews yield.
   { name: 'sky-procedural', file: 'unit-sky-procedural.tscn', maxDiffPct: 0.5 },
   { name: 'sky-physical', file: 'unit-sky-physical.tscn', maxDiffPct: 0.5 },
+  // Locks the equirect V/U orientation (measured against real Godot); the black
+  // grid lines antialias, so it shares the sky scenes' relaxed threshold.
+  { name: 'sky-panorama', file: 'unit-sky-panorama.tscn', maxDiffPct: 0.5 },
   // NOTE: unit-label3d.tscn is deliberately NOT in the set — Label3D
   // labels render effectively invisible after auto-framing (default
   // pixel_size 0.005 → ~0.08 world units tall; the committed showcase
