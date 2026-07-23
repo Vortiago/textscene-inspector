@@ -55,6 +55,23 @@ export interface EnvironmentSettings {
   ssr: {
     enabled: boolean;
   } | null;
+  /**
+   * Glow/bloom post-process — null when disabled. A compositor pass (bloom on
+   * pre-tonemap HDR luminance), so the render layer that consumes this must own
+   * tonemapping too: bloom sits BEFORE the tonemapper (see `godotBloom.ts`).
+   */
+  glow: {
+    /** HDR luminance a pixel must exceed to bloom (`glow_hdr_threshold`). */
+    hdrThreshold: number;
+    /** Additive strength of the glow buffer (`glow_intensity`). */
+    intensity: number;
+    /** Blur spread (`glow_strength`). */
+    strength: number;
+    /** Sub-threshold lift, 0..1 (`glow_bloom`). */
+    bloom: number;
+    /** 0 ADDITIVE, 1 SCREEN, 2 SOFTLIGHT, 3 REPLACE, 4 MIX. */
+    blendMode: number;
+  } | null;
 }
 
 export function createEnvironmentSettings(
@@ -92,6 +109,15 @@ export function createEnvironmentSettings(
     ssr: properties.ssr_enabled
       ? {
           enabled: true,
+        }
+      : null,
+    glow: properties.glow_enabled
+      ? {
+          hdrThreshold: properties.glow_hdr_threshold,
+          intensity: properties.glow_intensity,
+          strength: properties.glow_strength,
+          bloom: properties.glow_bloom,
+          blendMode: properties.glow_blend_mode,
         }
       : null,
   };

@@ -121,8 +121,9 @@ function previewHorizonColor(): Color {
  * an authored `WorldEnvironment` goes through, so the two cannot diverge in
  * how they are applied.
  *
- * Not reproduced: the preview also enables glow, which needs a compositor pass
- * this renderer does not have.
+ * The preview also enables glow (matching `_load_default_preview_settings`),
+ * which the render layer turns into a bloom compositor pass (`GlowLayer`) so
+ * emissive materials bloom as they do in Godot's editor.
  */
 export function previewEnvironment(): { settings: EnvironmentSettings; sky: SkyProperties } {
   const settings = createEnvironmentSettings(
@@ -131,6 +132,8 @@ export function previewEnvironment(): { settings: EnvironmentSettings; sky: SkyP
       // TONE_MAPPER_FILMIC — the preview's deliberate departure from the
       // LINEAR default an authored Environment starts with.
       tonemap_mode: String(2),
+      // The editor preview enables glow; emissive materials bloom because of it.
+      glow_enabled: 'true',
     })
   );
 

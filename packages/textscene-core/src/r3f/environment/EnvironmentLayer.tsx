@@ -11,16 +11,19 @@
  * because the renderer and scene outlive any one environment.
  */
 
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import * as THREE from 'three';
 import { useThree } from '@react-three/fiber';
 import { BackgroundMode } from '../../resources/environment/types';
 import type { EnvironmentSettings } from '../../resources/environment/renderer';
 import { applyToneMapping } from '../../resources/environment/toneMapping';
+import { bloomParamsFor } from '../../resources/environment/godotBloom';
 import type { SkyProperties } from '../../resources/sky/types';
 import { godotColorToLinear } from '../godotColor';
 import { LIGHT_INTENSITY_SCALE } from '../lightConstants';
+import { useOptionalHierarchy } from '../contexts/HierarchyContext';
 import { SkyLayer } from '../sky/SkyLayer';
+import { GlowLayer } from './GlowLayer';
 
 export interface EnvironmentLayerProps {
   settings: EnvironmentSettings;
@@ -36,10 +39,29 @@ export function EnvironmentLayer({ settings, sky }: EnvironmentLayerProps) {
   const showsSky = settings.background.mode === BackgroundMode.BG_SKY;
   const skyAmbient = settings.skyAmbient;
   const flatAmbient = settings.ambient;
+  // Glow is a post-process. When active, the composer owns tonemapping (bloom
+  // must read pre-tonemap HDR), so the in-material tonemap path is suppressed to
+  // avoid a double tonemap / a `gl.toneMapping` fight with the composer.
+  //
+  // But the composer is expensive (a mip-blurred HDR pass), and the preview
+  // environment enables glow GLOBALLY — so mounting it on every scene, including
+  // ones with nothing bright, is pure cost (crippling the headless golden gate
+  // under software rendering) for zero visual change: Godot renders a scene with
+  // no above-threshold pixels identically with or without glow. So the composer
+  // is gated on the scene actually having bloomable content. When it is NOT
+  // mounted the scene stays on the ordinary in-material tonemap path, unchanged.
+  const glow = settings.glow;
+  const bloomThreshold = useMemo(
+    () => bloomParamsFor(settings)?.luminanceThreshold ?? Infinity,
+    [settings]
+  );
+  const hasBloomable = useSceneHasBloomableEmissive(bloomThreshold, !!glow);
+  const useComposer = !!glow && hasBloomable;
 
   return (
     <>
-      <EnvironmentApplier settings={settings} hasSky={!!sky} />
+      <EnvironmentApplier settings={settings} hasSky={!!sky} suppressToneMapping={useComposer} />
+      {useComposer && <GlowLayer settings={settings} />}
       {sky && (showsSky || skyAmbient) && (
         <SkyLayer
           sky={sky}
@@ -68,13 +90,70 @@ export function EnvironmentLayer({ settings, sky }: EnvironmentLayerProps) {
   );
 }
 
+/**
+ * Whether the live scene has any material bright enough to bloom — a linear
+ * emissive whose peak channel × `emissiveIntensity` exceeds the glow threshold
+ * (exactly the pixels `GlowLayer`'s peak-channel bright-pass would catch). Only
+ * then is mounting the bloom composer worth its cost.
+ *
+ * Re-checked over a short window after each scene change so async content (GLB,
+ * instanced sub-scenes) that mounts a beat later still turns the composer on;
+ * it errs toward mounting (a false positive only costs a redundant pass, a false
+ * negative would silently drop a real bloom). Diffuse-only brightness — lit
+ * white floors, unshaded Label3D text near 1.0 — stays below the threshold and
+ * does not trigger it, matching Godot (which does not bloom those either).
+ */
+function useSceneHasBloomableEmissive(threshold: number, glowEnabled: boolean): boolean {
+  const scene = useThree((s) => s.scene);
+  const hierarchy = useOptionalHierarchy();
+  const rootKey = hierarchy?.sceneGraph?.rootScene ?? '';
+  const [bloomable, setBloomable] = useState(false);
+
+  useEffect(() => {
+    if (!glowEnabled) {
+      setBloomable(false);
+      return undefined;
+    }
+    const check = () => {
+      let found = false;
+      scene.traverse((obj) => {
+        if (found) return;
+        const material = (obj as THREE.Mesh).material;
+        const mats = Array.isArray(material) ? material : material ? [material] : [];
+        for (const m of mats) {
+          const std = m as THREE.MeshStandardMaterial;
+          const e = std.emissive;
+          const intensity = std.emissiveIntensity ?? 0;
+          if (e && intensity > 0 && Math.max(e.r, e.g, e.b) * intensity > threshold) {
+            found = true;
+            break;
+          }
+        }
+      });
+      setBloomable((prev) => (prev === found ? prev : found));
+    };
+    check();
+    const timers = [150, 500, 1100].map((delay) => setTimeout(check, delay));
+    return () => timers.forEach(clearTimeout);
+  }, [scene, rootKey, threshold, glowEnabled]);
+
+  return bloomable;
+}
+
 interface EnvironmentApplierProps {
   settings: EnvironmentSettings;
   /** When a real sky renders, it owns the background and this must not fight it. */
   hasSky: boolean;
+  /**
+   * When glow is active the bloom composer owns tonemapping (it must read
+   * pre-tonemap HDR and forces the renderer to `NoToneMapping`), so the
+   * in-material tonemap must NOT be applied here — `GlowLayer`'s tonemap effect
+   * does it after bloom instead.
+   */
+  suppressToneMapping: boolean;
 }
 
-function EnvironmentApplier({ settings, hasSky }: EnvironmentApplierProps) {
+function EnvironmentApplier({ settings, hasSky, suppressToneMapping }: EnvironmentApplierProps) {
   const scene = useThree((state) => state.scene);
   const gl = useThree((state) => state.gl);
 
@@ -100,15 +179,14 @@ function EnvironmentApplier({ settings, hasSky }: EnvironmentApplierProps) {
 
   const { mode: toneMapMode, exposure: toneMapExposure, white: toneMapWhite } =
     settings.toneMapping;
-  useEffect(
-    () =>
-      applyToneMapping(
-        gl,
-        { mode: toneMapMode, exposure: toneMapExposure, white: toneMapWhite },
-        scene
-      ),
-    [gl, scene, toneMapMode, toneMapExposure, toneMapWhite]
-  );
+  useEffect(() => {
+    if (suppressToneMapping) return undefined;
+    return applyToneMapping(
+      gl,
+      { mode: toneMapMode, exposure: toneMapExposure, white: toneMapWhite },
+      scene
+    );
+  }, [gl, scene, toneMapMode, toneMapExposure, toneMapWhite, suppressToneMapping]);
 
   const fog = settings.fog;
   useEffect(() => {

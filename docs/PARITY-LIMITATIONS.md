@@ -365,22 +365,27 @@ which is monotonic (higher exponent → harder edge) and lands the Godot default
   closed-form three.js equivalent; the mapping is a deliberate approximation.
 - Site: `nodes/3d/lights/spotlight3d/Component.tsx` (penumbra derivation).
 
-### Preview environment glow
-Godot's editor preview environment enables glow (bloom); this previewer does not
-reproduce it. Everything else the preview supplies — the sun, the procedural sky,
-its radiance as ambient, FILMIC tonemapping — is (ADR-0025).
+### Environment glow (bloom) — reproduced, with a coarser blend
+Godot's environment glow is reproduced: an `@react-three/postprocessing`
+`EffectComposer` runs `RenderPass → Bloom → Godot-tonemap`, with the bloom
+parameters read from the environment's `glow_*` values (`godotBloom.ts`) and the
+bright-pass gated on the PEAK RGB channel like Godot's — so a saturated emissive
+(peak > 1) blooms even though its Rec.709 luminance is below 1. The editor preview
+environment enables it, so previewed emissive materials bloom as in the editor.
 
-- **Why not exact:** glow is a compositor pass over the rendered frame. This
-  renderer draws straight to the canvas with no post-processing chain, so there
-  is nothing to hang it on.
-- **Viable path (not yet taken):** an `@react-three/postprocessing`
-  `EffectComposer` with a `Bloom` pass fed by the parsed `glow_*` values, plus
-  Godot's tone curves re-homed from the per-material chunk into a final full-screen
-  pass (the composer forces `NoToneMapping` while mounted). Blocked on confirming
-  the golden harness can capture the HDR float buffers bloom needs — its default
-  ANGLE GL dropped the context; only SwiftShader held it — and on the wide
-  re-baseline the pipeline swap implies.
-- Site: `r3f/preview/godotPreviewLighting.ts` (`previewEnvironment`).
+- **Gated on bloomable content:** the composer is only mounted when the scene
+  actually has a material whose peak linear emissive × `emissiveIntensity` exceeds
+  the threshold. A scene with nothing above threshold renders identically with or
+  without glow (Godot too), so it skips the composer — keeping the render cheap and
+  those goldens on the ordinary in-material tonemap path.
+- **Coarser than Godot's default:** Godot's default is a 7-level SOFTLIGHT glow;
+  this is a single mip-blurred additive `BloomEffect`, so halos read a touch
+  brighter and wider, and `glow_blend_mode` is parsed but not applied.
+- **Bright non-emissive speculars do not bloom:** the gate keys on emissive
+  materials, so a metallic sphere's hot specular highlight (which Godot blooms
+  slightly) is not caught. Emissive content — the common and visible case — is.
+- Sites: `r3f/environment/{GlowLayer,GodotToneMappingEffect}.ts(x)`,
+  `resources/environment/godotBloom.ts`, `r3f/environment/EnvironmentLayer.tsx`.
 
 ### Sky ambient and sky reflections share one intensity
 Godot scales the sky's *ambient* contribution by `ambient_light_sky_contribution`

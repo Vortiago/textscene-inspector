@@ -100,6 +100,36 @@ ${body}
 `;
 }
 
+/**
+ * The same curve, packaged for a full-screen post-process instead of the
+ * per-material `CustomToneMapping` hook. When glow is enabled the render layer
+ * cannot let three tonemap in-material (bloom must read pre-tonemap HDR), so
+ * tonemapping moves to a final pass that runs after bloom — this is its GLSL.
+ *
+ * Emits a `godotToneMap(vec3, float exposure)` function with the white
+ * normalisation baked in, exactly as `toneMapping.ts` bakes it into the chunk.
+ * LINEAR and AGX have no ported curve here (LINEAR needs none; AGX falls back
+ * to three's own AgX on the material path) — callers treat a `null` return as
+ * "no custom curve, apply exposure only".
+ */
+export function toneMappingEffectGlsl(mode: number, white: number): string | null {
+  const body = CURVES[mode];
+  if (body === undefined) return null;
+  const bakedWhite = glslFloat(toneMappingWhiteParam(mode, white));
+  return /* glsl */ `
+vec3 godotToneMap(vec3 color, float exposure) {
+  const float godotToneMapWhite = ${bakedWhite};
+  color *= exposure;
+${body}
+}
+`;
+}
+
+/** GLSL has no int→float coercion in constant initialisers. */
+function glslFloat(value: number): string {
+  return Number.isInteger(value) ? `${value}.0` : String(value);
+}
+
 const CURVES: Record<number, string> = {
   // Reinhard's extended formula, equation 4 in https://doi.org/cjbgrt
   [GodotToneMapper.REINHARDT]: /* glsl */ `

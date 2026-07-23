@@ -44,6 +44,14 @@ export function parseEnvironment(
     volumetric_fog_albedo: colorOr(properties.volumetric_fog_albedo, { r: 1, g: 1, b: 1, a: 1 }),
     volumetric_fog_emission: colorOr(properties.volumetric_fog_emission, { r: 0, g: 0, b: 0, a: 1 }),
 
+    // Glow / bloom (Godot Environment defaults)
+    glow_enabled: properties.glow_enabled === 'true',
+    glow_intensity: floatOr(properties.glow_intensity, 0.8, 'glow_intensity'),
+    glow_strength: floatOr(properties.glow_strength, 1.0, 'glow_strength'),
+    glow_bloom: floatOr(properties.glow_bloom, 0.0, 'glow_bloom'),
+    glow_hdr_threshold: floatOr(properties.glow_hdr_threshold, 1.0, 'glow_hdr_threshold'),
+    glow_blend_mode: intOr(properties.glow_blend_mode, 2, 'glow_blend_mode'),
+
     // Adjustments
     adjustment_enabled: properties.adjustment_enabled === 'true',
     adjustment_brightness: floatOr(properties.adjustment_brightness, 1.0, 'adjustment_brightness'),
