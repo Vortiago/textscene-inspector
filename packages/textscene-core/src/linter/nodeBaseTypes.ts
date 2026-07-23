@@ -65,8 +65,8 @@ const NODE2D_LEAVES = [
   'RigidBody2D',
   'CharacterBody2D',
   'CollisionShape2D',
-   'RemoteTransform2D',
-   'CanvasModulate',
+  'RemoteTransform2D',
+  'CanvasModulate',
 ] as const;
 
 /**
