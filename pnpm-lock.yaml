@@ -46,8 +46,8 @@ catalogs:
       specifier: ^2.5.2
       version: 2.5.2
     commander:
-      specifier: ^12.1.0
-      version: 12.1.0
+      specifier: ^15.0.0
+      version: 15.0.0
     esbuild:
       specifier: ^0.28.1
       version: 0.28.1
@@ -151,7 +151,7 @@ importers:
     dependencies:
       commander:
         specifier: 'catalog:'
-        version: 12.1.0
+        version: 15.0.0
     devDependencies:
       '@textscene/core':
         specifier: workspace:*
@@ -1666,6 +1666,10 @@ packages:
   commander@14.0.2:
     resolution: {integrity: sha512-TywoWNNRbhoD0BXs1P3ZEScW8W5iKrnbithIl0YH+uCmBd0QpPOA8yc82DS3BIE5Ma6FnBVUsJ7wVUDz4dvOWQ==}
     engines: {node: '>=20'}
+
+  commander@15.0.0:
+    resolution: {integrity: sha512-z67u4ZhzCL/Tydu1lJARtEZYWbWaN7oYLHbsuzocr6y4N6WZAagG3RQ4FW61V1/0+jImpj293XfrcYnd1qxtPg==}
+    engines: {node: '>=22.12.0'}
 
   concat-map@0.0.1:
     resolution: {integrity: sha512-/Srv4dswyQNBfohGpz9o6Yb3Gz3SrUDqBH5rTuhGR7ahtlbYKnVxw2bCFMRljaA7EXHaXZ8wsHdodFvbkhKmqg==}
@@ -5288,6 +5292,8 @@ snapshots:
   commander@12.1.0: {}
 
   commander@14.0.2: {}
+
+  commander@15.0.0: {}
 
   concat-map@0.0.1: {}
 
