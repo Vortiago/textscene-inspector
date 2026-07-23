@@ -24,7 +24,7 @@ catalog:
   jsdom: ^29
 
   # CLI dependencies
-  commander: ^12.1.0
+  commander: ^15.0.0
 
   # R3F migration (Phase 14, WI-R3F-1) — spike-validated pins
   react: ^19.2
