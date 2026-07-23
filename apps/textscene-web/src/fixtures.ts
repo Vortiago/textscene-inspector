@@ -158,6 +158,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Coin Glow",
+    "file": "unit-coin-glow.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Decal",
     "file": "unit-decal.tscn",
     "category": "Other"
@@ -190,6 +195,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Instance Child",
     "file": "unit-instance-child.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Instanced Environment Child",
+    "file": "unit-instanced-environment-child.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Instanced Environment",
+    "file": "unit-instanced-environment.tscn",
     "category": "Other"
   },
   {
@@ -288,13 +303,13 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
-    "name": "Shadows Only",
-    "file": "unit-shadows-only.tscn",
+    "name": "Shader Sky Env",
+    "file": "unit-shader-sky-env.tscn",
     "category": "Other"
   },
   {
-    "name": "Tonemap Agx Shadow",
-    "file": "unit-tonemap-agx-shadow.tscn",
+    "name": "Shadows Only",
+    "file": "unit-shadows-only.tscn",
     "category": "Other"
   },
   {
@@ -333,6 +348,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Stage Ambient Ibl",
+    "file": "unit-stage-ambient-ibl.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Staticbody2d",
     "file": "unit-staticbody2d.tscn",
     "category": "Other"
@@ -350,6 +370,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Timer",
     "file": "unit-timer.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Tonemap Agx Shadow",
+    "file": "unit-tonemap-agx-shadow.tscn",
     "category": "Other"
   },
   {
@@ -1025,6 +1050,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Material Ao",
     "file": "unit-material-ao.tscn",
+    "category": "Unit - Materials"
+  },
+  {
+    "name": "Material Billboard",
+    "file": "unit-material-billboard.tscn",
     "category": "Unit - Materials"
   },
   {
