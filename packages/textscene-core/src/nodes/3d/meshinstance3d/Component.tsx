@@ -326,7 +326,12 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
   // mode 3 (SHADOWS_ONLY) hides the mesh from the colour buffer while it keeps
   // casting — see MeshShell for why that is NOT `visible = false`.
   const shadowFlags = shadowCastingFlags(properties.castShadow);
-  const castShadow = shadowFlags.castShadow;
+  // A blend-mode-transparent material (additive / subtractive / multiply)
+  // writes no shadow: Godot excludes those surfaces from the shadow pass, so an
+  // additive glow sprite must not drop a solid silhouette on the ground.
+  const blendTransparent =
+    !!materialScalars && materialScalars.blending !== THREE.NormalBlending;
+  const castShadow = shadowFlags.castShadow && !blendTransparent;
   const visible = properties.visible !== false;
 
   // Every render branch wraps its content in the same attribute shell.
