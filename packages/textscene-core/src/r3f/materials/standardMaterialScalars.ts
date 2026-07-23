@@ -23,8 +23,14 @@ export interface StandardMaterial3DScalars {
   opacity: number;
   metalness: number;
   roughness: number;
-  /** Hex RGB; 0x000000 means "no emission". */
-  emissive: number;
+  /**
+   * Linear RGB in [0,1]; `[0,0,0]` means "no emission". An ARRAY, not a hex
+   * number, so r3f applies it via `Color.fromArray` (already-linear, no decode).
+   * A hex number would go through `Color.setHex(hex, SRGBColorSpace)`, decoding
+   * these already-linear values sRGB→linear a SECOND time and rendering emission
+   * far too dark — the albedo `color` path is an array for the same reason.
+   */
+  emissive: [number, number, number];
   emissiveIntensity: number;
   /** Per-axis tiling factor for every texture map applied by this material. */
   uv1Scale: { x: number; y: number };
@@ -84,7 +90,7 @@ const DEFAULT_SCALARS: StandardMaterial3DScalars = {
   opacity: 1,
   metalness: 0,
   roughness: 1,
-  emissive: 0x000000,
+  emissive: [0, 0, 0],
   emissiveIntensity: 1,
   uv1Scale: { x: 1, y: 1 },
   uv1Offset: { x: 0, y: 0 },
@@ -213,8 +219,8 @@ export function parseStandardMaterial3DScalars(
     roughness: clamp01(roughness),
     emissive:
       emissionEnabled && linearEmission
-        ? rgbToHex(linearEmission[0], linearEmission[1], linearEmission[2])
-        : 0x000000,
+        ? [clamp01(linearEmission[0]), clamp01(linearEmission[1]), clamp01(linearEmission[2])]
+        : [0, 0, 0],
     emissiveIntensity: emissionEnabled ? Math.max(0, emissionEnergy * emissionPeak) : 0,
     uv1Scale,
     uv1Offset,
@@ -335,11 +341,4 @@ function numericOr(raw: string | undefined, fallback: number): number {
 
 function clamp01(value: number): number {
   return Math.max(0, Math.min(1, value));
-}
-
-function rgbToHex(r: number, g: number, b: number): number {
-  const ri = Math.round(clamp01(r) * 255);
-  const gi = Math.round(clamp01(g) * 255);
-  const bi = Math.round(clamp01(b) * 255);
-  return (ri << 16) | (gi << 8) | bi;
 }
