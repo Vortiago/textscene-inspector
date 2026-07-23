@@ -71,7 +71,7 @@
     "globals": "^17.7.0",
     "happy-dom": "^20.11.1",
     "husky": "^9.1.7",
-    "lint-staged": "^16.2.6",
+    "lint-staged": "^17.1.1",
     "pixelmatch": "^7.2.0",
     "playwright": "^1.61.1",
     "pngjs": "^7.0.0",
