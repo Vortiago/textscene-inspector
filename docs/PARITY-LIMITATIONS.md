@@ -373,6 +373,13 @@ its radiance as ambient, FILMIC tonemapping — is (ADR-0025).
 - **Why not exact:** glow is a compositor pass over the rendered frame. This
   renderer draws straight to the canvas with no post-processing chain, so there
   is nothing to hang it on.
+- **Viable path (not yet taken):** an `@react-three/postprocessing`
+  `EffectComposer` with a `Bloom` pass fed by the parsed `glow_*` values, plus
+  Godot's tone curves re-homed from the per-material chunk into a final full-screen
+  pass (the composer forces `NoToneMapping` while mounted). Blocked on confirming
+  the golden harness can capture the HDR float buffers bloom needs — its default
+  ANGLE GL dropped the context; only SwiftShader held it — and on the wide
+  re-baseline the pipeline swap implies.
 - Site: `r3f/preview/godotPreviewLighting.ts` (`previewEnvironment`).
 
 ### Sky ambient and sky reflections share one intensity
@@ -433,6 +440,14 @@ does. AGX is left to three's `AgXToneMapping`.
   simplification of EaryChow's AgX implementation"; three's is a different
   approximation of the same source. Porting Godot's would mean carrying its LUT
   fit as well.
+- **Most visible as shallow shadows:** Godot's AgX has a harder toe, so a surface
+  lit only by a flat ambient term reads much darker there. Measured on the 3D
+  Platformer (`game.tscn`, whose stage sets `tonemap_mode = 4`): a cast-shadow
+  region Godot renders near-black (mean brightness 71) stays dim-but-lit in ours
+  (mean 152), while ours' lit grass reads ~1.3× brighter — one curve difference,
+  both effects. The shadow *geometry* is correct (the `unit-shadows-only` golden,
+  on the FILMIC preview env, matches Godot to within 2/255); only the AgX toe
+  differs, so a shadowed scene looks flatter under AGX specifically.
 - Site: `resources/environment/godotToneMapping.ts`.
 
 ## Control
