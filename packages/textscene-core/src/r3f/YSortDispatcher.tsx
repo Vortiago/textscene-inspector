@@ -197,7 +197,7 @@ export function YSortDispatcher({ node, children: _children }: { node: TscnNode;
 
         if (item.node) {
           return (
-            <YSortZProvider key={item.treeOrder} value={fullZ}>
+            <YSortZProvider key={`${item.treeOrder}`} value={fullZ}>
               <YSortChild node={item.node} path={node.name} />
             </YSortZProvider>
           );
