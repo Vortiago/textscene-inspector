@@ -18,7 +18,7 @@
  */
 
 import * as THREE from 'three';
-import { useEffect, useMemo, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, type ReactNode, type RefObject } from 'react';
 import type { MeshInstance3DProperties } from './types';
 import type {
   TscnExternalResource,
@@ -39,6 +39,7 @@ import { parseStandardMaterial3DScalars } from '../../../r3f/materials/standardM
 import { resolveStandardMaterial } from '../../../r3f/materials/resolveStandardMaterial';
 import { StandardMaterialSlot } from '../../../r3f/materials/StandardMaterialSlot';
 import { ExternalMaterialSlot } from '../../../r3f/materials/ExternalMaterialSlot';
+import { useBillboard } from '../../../r3f/hooks/useBillboard';
 import { applyUVTransform } from './applyUVTransform';
 import { triplanarPlaneScale } from './triplanarScale';
 
@@ -289,6 +290,18 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     return null;
   }, [textureSlots, textureRequests]);
 
+  // A StandardMaterial3D carrying `billboard_mode` turns the whole mesh to
+  // face the camera — the same per-material effect Godot's shader applies, and
+  // the same enum `useBillboard` already implements for Label3D/Sprite3D. The
+  // hook is called unconditionally (rules of hooks) with the primary material's
+  // mode; it no-ops for the DISABLED/absent case, i.e. almost every mesh. The
+  // ref lands on whichever branch's `<mesh>` MeshShell renders. NOTE: a
+  // billboarded mesh's scene-tree children render inside the mesh and would
+  // inherit its billboard rotation, which Godot (a surface-only shader effect)
+  // does not do — no corpus scene billboards a mesh with children.
+  const meshRef = useRef<THREE.Mesh | null>(null);
+  useBillboard(meshRef, materialScalars?.billboardMode);
+
   // cast_shadow mode 2 (DOUBLE_SIDED) sets material.shadowSide = DoubleSide;
   // mode 3 (SHADOWS_ONLY) hides the mesh from the colour buffer while it keeps
   // casting — see MeshShell for why that is NOT `visible = false`.
@@ -299,6 +312,7 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
   // Every render branch wraps its content in the same attribute shell.
   const shellProps = {
     name: node.name,
+    meshRef,
     position,
     rotation,
     scale,
@@ -409,6 +423,8 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
 
 interface MeshShellProps {
   name: string;
+  /** Ref to the underlying THREE.Mesh, so `useBillboard` can turn it per frame. */
+  meshRef: RefObject<THREE.Mesh | null>;
   position: [number, number, number];
   rotation: [number, number, number];
   scale: [number, number, number];
@@ -436,6 +452,7 @@ interface MeshShellProps {
  */
 function MeshShell({
   name,
+  meshRef,
   position,
   rotation,
   scale,
@@ -447,6 +464,7 @@ function MeshShell({
 }: MeshShellProps) {
   return (
     <mesh
+      ref={meshRef}
       name={name}
       position={position}
       rotation={rotation}

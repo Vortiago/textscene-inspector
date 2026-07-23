@@ -83,6 +83,22 @@ export interface StandardMaterial3DScalars {
    * 0 when `heightmap_enabled` is off. Mapped to three.js `displacementScale`.
    */
   heightmapScale: number;
+  /**
+   * Godot `billboard_mode` (BaseMaterial3D.BillboardMode): 0 DISABLED (default),
+   * 1 ENABLED (full billboard — the surface faces the camera), 2 FIXED_Y
+   * (Y-locked, only yaw turns), 3 PARTICLES (flipbook; treated as ENABLED). The
+   * mesh consumer feeds this straight to `useBillboard` — the same hook and
+   * enum Label3D/Sprite3D drive — so a material that billboards turns its mesh
+   * to face the camera. 0/undefined is a no-op (the overwhelming common case).
+   */
+  billboardMode: number;
+  /**
+   * Godot `billboard_keep_scale`. Godot's default (false) normalizes the model
+   * scale away while billboarding; `useBillboard` only rewrites rotation, so our
+   * billboard always preserves the authored scale (equivalent to keep_scale =
+   * true). Parsed for completeness — see docs/PARITY-LIMITATIONS.md.
+   */
+  billboardKeepScale: boolean;
 }
 
 const DEFAULT_SCALARS: StandardMaterial3DScalars = {
@@ -110,6 +126,8 @@ const DEFAULT_SCALARS: StandardMaterial3DScalars = {
   rim: 0,
   rimTint: 0,
   heightmapScale: 0,
+  billboardMode: 0,
+  billboardKeepScale: false,
 };
 
 export function parseStandardMaterial3DScalars(
@@ -179,6 +197,12 @@ export function parseStandardMaterial3DScalars(
   const heightmapEnabled = properties['heightmap_enabled'] === 'true';
   const heightmapScale = heightmapEnabled ? numericOr(properties['heightmap_scale'], 5.0) : 0;
 
+  // Godot `billboard_mode` — the whole enum passes straight through to
+  // `useBillboard` (0 no-op, 2 fixed-Y, everything else = face camera), so
+  // PARTICLES (3) needs no special-casing here. Absent → 0 (DISABLED).
+  const billboardMode = Math.trunc(numericOr(properties['billboard_mode'], 0));
+  const billboardKeepScale = properties['billboard_keep_scale'] === 'true';
+
   // Godot encodes colors in sRGB. three.js's `<meshStandardMaterial color={...}>`
   // prop treats incoming values as **linear** RGB. Without converting,
   // mid-tone reds like `Color(0.545, 0.117, 0.117, 1)` (dark red `#8B1E1E`
@@ -240,6 +264,8 @@ export function parseStandardMaterial3DScalars(
     rim,
     rimTint,
     heightmapScale,
+    billboardMode,
+    billboardKeepScale,
   };
 }
 
