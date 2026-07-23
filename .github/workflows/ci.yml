@@ -22,7 +22,7 @@ jobs:
         with:
           version: 9.15.4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '20'
           cache: 'pnpm'
@@ -86,7 +86,7 @@ jobs:
         with:
           version: 9.15.4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '20'
           cache: 'pnpm'
@@ -98,7 +98,7 @@ jobs:
       # change under test — but here the artifact IS this commit's build, so
       # VISUAL_SKIP_BUILD=1 below keeps it and skips a redundant cold rebuild
       # (which would also wipe this download via vite's emptyOutDir).
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: web-previewer
           path: apps/textscene-web/dist/
@@ -155,7 +155,7 @@ jobs:
         with:
           version: 9.15.4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '20'
           cache: 'pnpm'
@@ -191,7 +191,7 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
       - name: Download VSIX artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: vscode-extension
           path: .

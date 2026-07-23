@@ -94,6 +94,8 @@ validatorRegistry.registerAll('StandardMaterial3D', {
   clearcoat_enabled: validateBoolean,
   rim_enabled: validateBoolean,
   heightmap_enabled: validateBoolean,
+  anisotropy_enabled: validateBoolean,
+  refraction_enabled: validateBoolean,
   normal_texture: validateTextureReference,
   albedo_texture: validateTextureReference,
   metallic_texture: validateTextureReference,

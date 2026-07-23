@@ -337,6 +337,11 @@ export const GOLDEN_SCENES = [
   // too little margin for a guard this specific.
   { name: 'tile-map-layer-flips', file: 'unit-tile-map-layer-flips.tscn', maxDiffPct: 0.02 },
   { name: 'tile-map-layer-isometric', file: 'unit-tile-map-layer-isometric.tscn' },
+  // Y-sort (issue 74) regression guard: the full isometric dungeon. Sibling y-sort
+  // subtrees (Floor / Walls / Decorations under the non-y-sorted root) must layer in
+  // disjoint tree-ordered z-bands, and each layer's tiles interleave with decorations
+  // by Y — decorations must NOT hide behind the floor. maxDiffPct covers SwiftShader AA.
+  { name: 'isometric-dungeon', file: 'dungeon.tscn', maxDiffPct: 0.5 },
   // Hexagon grid (shape=3, vertical offset axis): odd columns stagger by
   // half a tile — the half-offset placement math had no visual guard before.
   { name: 'tile-map-layer-hexagon', file: 'unit-tile-map-layer-hexagon.tscn' },

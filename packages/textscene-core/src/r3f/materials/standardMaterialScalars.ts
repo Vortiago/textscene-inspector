@@ -8,6 +8,7 @@
  *   - uv1_scale, uv1_offset
  *   - transparency, blend_mode, cull_mode  (rendering flags)
  *   - normal_scale
+ *   - anisotropy strength and direction
  *
  * External textures (albedo / normal / roughness / metallic / emission)
  * are handled by `useResource` in the parent component. Shared by every
@@ -99,6 +100,14 @@ export interface StandardMaterial3DScalars {
    * true). Parsed for completeness — see docs/PARITY-LIMITATIONS.md.
    */
   billboardKeepScale: boolean;
+  /** Godot `anisotropy` magnitude (0..1), gated on `anisotropy_enabled`. */
+  anisotropy: number;
+  /** Godot `anisotropy` direction: 0 when positive, π/2 when negative. */
+  anisotropyRotation: number;
+  /** three.js `MeshPhysicalMaterial.transmission` — 1 when refraction enabled, 0 otherwise. */
+  transmission: number;
+  /** three.js `MeshPhysicalMaterial.thickness` — derived from `refraction_scale`, clamped ≥ 0. */
+  refractionThickness: number;
 }
 
 const DEFAULT_SCALARS: StandardMaterial3DScalars = {
@@ -128,6 +137,10 @@ const DEFAULT_SCALARS: StandardMaterial3DScalars = {
   heightmapScale: 0,
   billboardMode: 0,
   billboardKeepScale: false,
+  anisotropy: 0,
+  anisotropyRotation: 0,
+  transmission: 0,
+  refractionThickness: 0,
 };
 
 export function parseStandardMaterial3DScalars(
@@ -203,6 +216,20 @@ export function parseStandardMaterial3DScalars(
   const billboardMode = Math.trunc(numericOr(properties['billboard_mode'], 0));
   const billboardKeepScale = properties['billboard_keep_scale'] === 'true';
 
+  const anisotropyEnabled = properties['anisotropy_enabled'] === 'true';
+  const rawAniso = numericOr(properties['anisotropy'], 0);
+  const anisotropy = anisotropyEnabled ? clamp01(Math.abs(rawAniso)) : 0;
+  const anisotropyRotation = anisotropyEnabled && rawAniso < 0 ? Math.PI / 2 : 0;
+
+  // Godot refraction (FEATURE_REFRACTION): screen-space distortion mapped to
+  // three.js volumetric transmission. refraction_scale defaults to 0.05 in
+  // Godot docs; clamped ≥ 0 (negative thickness is physically invalid).
+  const refractionEnabled = properties['refraction_enabled'] === 'true';
+  const refractionThickness = refractionEnabled
+    ? Math.max(0, numericOr(properties['refraction_scale'], 0.05))
+    : 0;
+  const transmission = refractionEnabled ? 1 : 0;
+
   // Godot encodes colors in sRGB. three.js's `<meshStandardMaterial color={...}>`
   // prop treats incoming values as **linear** RGB. Without converting,
   // mid-tone reds like `Color(0.545, 0.117, 0.117, 1)` (dark red `#8B1E1E`
@@ -266,6 +293,10 @@ export function parseStandardMaterial3DScalars(
     heightmapScale,
     billboardMode,
     billboardKeepScale,
+    anisotropy,
+    anisotropyRotation,
+    transmission,
+    refractionThickness,
   };
 }
 

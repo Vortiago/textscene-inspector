@@ -34,6 +34,7 @@ import type { ReactNode } from 'react';
 import type * as THREE from 'three';
 import type { TscnNode, TscnScene } from '../parser/types.js';
 import { joinPath } from '../utils/nodePath.js';
+import { hasYSortDescendant, YSortSlotProvider, useYSortSlot } from './contexts/YSortContext.js';
 import { nodeComponentRegistry } from './NodeComponentRegistry.js';
 import { GenericNodeFallback } from './internal/generic-node-fallback/index';
 import { useViewportSelection } from './hooks/useViewportSelection.js';
@@ -138,6 +139,7 @@ function PlainNode({
   const Component = nodeComponentRegistry.get(node.type) ?? GenericNodeFallback;
   const { hiddenNodePaths, registerNodeObject, unregisterNodeObject } = useSelection();
   const workspace = useCanvasWorkspace();
+  const parentSlot = useYSortSlot();
   const isHidden = hiddenNodePaths.has(path);
 
   const wrapperRef = useCallback(
@@ -159,6 +161,9 @@ function PlainNode({
   // per mounted instance, but rules-of-hooks wants the call order static.)
   const isCanvasItem =
     nodeComponentRegistry.isCanvasItem(node.type) || TWO_D_UI_TYPES.has(node.type);
+  // Memoized (before the early returns, for rules-of-hooks) so the recursive
+  // subtree scan for the slot distributor runs once per node, not every render.
+  const hasYSortChild = useMemo(() => hasYSortDescendant(node), [node]);
   if (workspace === '3d' && isCanvasItem) return null;
   if (
     workspace === '2d' &&
@@ -169,9 +174,27 @@ function PlainNode({
     return null;
   }
 
-  const inlineChildren = node.children.map((child) => (
-    <DispatchedNode key={child.name} node={child} path={joinPath(path, child.name)} />
-  ));
+  // If this non-y-sort container has a y-sort descendant, divide its z-slot into a
+  // tree-order sub-slot per child, so sibling y-sort subtrees (e.g. Floor vs Walls
+  // under the non-y-sorted dungeon root) get DISJOINT, tree-ordered z-bands instead
+  // of both landing in the same fine band. A y-sort child sorts within its slot; a
+  // plain child just sits at its slot base. Pure non-y-sort scenes never distribute.
+  const distribute =
+    isCanvasItem &&
+    (node.properties as { y_sort_enabled?: boolean }).y_sort_enabled !== true &&
+    node.children.length > 0 &&
+    hasYSortChild;
+  const subWidth = distribute ? parentSlot.width / node.children.length : 0;
+  const inlineChildren = node.children.map((child, i) => {
+    const el = <DispatchedNode key={child.name} node={child} path={joinPath(path, child.name)} />;
+    return distribute ? (
+      <YSortSlotProvider key={child.name} value={{ base: i * subWidth, width: subWidth }}>
+        {el}
+      </YSortSlotProvider>
+    ) : (
+      el
+    );
+  });
 
   const children: ReactNode[] = [];
   if (inlineChildren.length > 0) {

@@ -52,6 +52,8 @@ export interface StandardMaterialSlotProps {
   aoMap?: THREE.Texture;
   /** Godot `heightmap_texture` → three.js displacementMap (height mapping). */
   displacementMap?: THREE.Texture;
+  /** Godot `anisotropy_flowmap` → three.js anisotropyMap (flowmap). */
+  anisotropyMap?: THREE.Texture;
   /** Override for shadow-pass side culling (Godot DOUBLE_SIDED cast_shadow). */
   shadowSide?: THREE.Side;
   /**
@@ -64,6 +66,23 @@ export interface StandardMaterialSlotProps {
   attach?: string;
 }
 
+/**
+ * A StandardMaterial3D upgrades from <meshStandardMaterial> to
+ * <meshPhysicalMaterial> when any physical-only feature is active: clearcoat
+ * (FEATURE_CLEARCOAT), rim → sheen (FEATURE_RIM), anisotropy
+ * (FEATURE_ANISOTROPY), or refraction → transmission (FEATURE_REFRACTION).
+ * Declared in one place so a new physical-only flag extends exactly this set
+ * rather than an inline OR chain that a future addition could forget.
+ */
+function needsPhysicalMaterial(scalars: StandardMaterial3DScalars): boolean {
+  return (
+    scalars.clearcoat > 0 ||
+    scalars.rim > 0 ||
+    scalars.anisotropy > 0 ||
+    scalars.transmission > 0
+  );
+}
+
 export function StandardMaterialSlot({
   scalars,
   albedoMap,
@@ -73,6 +92,7 @@ export function StandardMaterialSlot({
   emissiveMap,
   aoMap,
   displacementMap,
+  anisotropyMap,
   shadowSide,
   meshType: _meshType,
   attach,
@@ -110,7 +130,9 @@ export function StandardMaterialSlot({
     // displacementMap MUST be keyed too: three.js bakes USE_DISPLACEMENTMAP at
     // compile time, so a coat/height texture arriving async needs a fresh
     // material or the vertices never move (the map is set but the shader ignores it).
-    `${displacementMap ? 'd' : '-'}`;
+    `${displacementMap ? 'd' : '-'}` +
+    // 'f' for flowmap
+    `${anisotropyMap ? 'f' : '-'}`;
 
   // Godot SHADING_MODE_UNSHADED (0): albedo is output directly, unaffected by
   // lights/shadows. three.js MeshBasicMaterial is the unlit equivalent — no PBR
@@ -134,10 +156,10 @@ export function StandardMaterialSlot({
   }
   // Shared PBR props for the shaded path. MeshPhysicalMaterial is a strict
   // superset of MeshStandardMaterial, so the same props drive either; we only
-  // upgrade to <meshPhysicalMaterial> when Godot's clearcoat feature is active,
-  // keeping the common (no-clearcoat) path on the lighter standard material so
-  // existing behaviour — and the material type the component tests assert on —
-  // is unchanged.
+  // upgrade to <meshPhysicalMaterial> when a physical-only feature is active
+  // (see needsPhysicalMaterial for the authoritative set), keeping the common
+  // path on the lighter standard material so existing behaviour — and the
+  // material type the component tests assert on — is unchanged.
   const pbrProps = {
     attach,
     color: scalars.color,
@@ -170,13 +192,16 @@ export function StandardMaterialSlot({
     displacementMap: displacementMap ?? null,
     displacementScale: scalars.heightmapScale,
   };
-  // Godot clearcoat (FEATURE_CLEARCOAT, a glossy coat) and rim (FEATURE_RIM, a
-  // Fresnel edge highlight) both live natively on MeshPhysicalMaterial only —
-  // clearcoat as `clearcoat`, rim mapped to `sheen` (three.js's Fresnel edge
-  // term, the closest native analog). A material carrying either renders as
-  // <meshPhysicalMaterial>; rim_tint blends the highlight from the light colour
-  // (0) toward the albedo (1) via sheenColor.
-  if (scalars.clearcoat > 0 || scalars.rim > 0) {
+  // clearcoat (FEATURE_CLEARCOAT, a glossy coat), rim (FEATURE_RIM, a Fresnel
+  // edge highlight), anisotropy (FEATURE_ANISOTROPY, a directional specular
+  // stretch), and refraction (FEATURE_REFRACTION) live natively on
+  // MeshPhysicalMaterial only — clearcoat as `clearcoat`, rim mapped to `sheen`
+  // (three.js's Fresnel edge term, the closest native analog), anisotropy as
+  // `anisotropy` / `anisotropyRotation` / `anisotropyMap`, and refraction as
+  // `transmission` + `thickness`. `needsPhysicalMaterial` gates the upgrade;
+  // rim_tint blends the highlight from the light colour (0) toward the albedo
+  // (1) via sheenColor.
+  if (needsPhysicalMaterial(scalars)) {
     const rimTint = scalars.rimTint;
     const sheenColor = new THREE.Color(
       1 + rimTint * (scalars.color[0] - 1),
@@ -191,6 +216,11 @@ export function StandardMaterialSlot({
         clearcoatRoughness={scalars.clearcoatRoughness}
         sheen={scalars.rim}
         sheenColor={sheenColor}
+        anisotropy={scalars.anisotropy}
+        anisotropyRotation={scalars.anisotropyRotation}
+        anisotropyMap={anisotropyMap ?? null}
+        transmission={scalars.transmission}
+        thickness={scalars.refractionThickness}
       />
     );
   }

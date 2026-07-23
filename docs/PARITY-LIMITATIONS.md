@@ -99,6 +99,33 @@ happen to cancel. Reproducing Godot exactly needs
   `resources/materials/standardmaterial3d/renderer.ts` (ArrayMesh surface
   materials — this one also drops `uv1_offset` entirely).
 
+### Refraction = volumetric transmission  *(WI-69)*
+Godot's `refraction_*` is a **screen-space** distortion of the background, scaled
+by `refraction_scale`. three.js has no screen-space refraction and instead models
+it **volumetrically** via `MeshPhysicalMaterial.transmission` + `thickness`. We
+map `refraction_enabled` → `transmission = 1` and `refraction_scale` → `thickness`
+(clamped ≥ 0, Godot default 0.05). The index of refraction stays at three.js's
+glass default (ior 1.5); Godot exposes no ior.
+
+- **Faithful in kind:** both produce the "see behind the surface" glass/water effect.
+- **Diverges in exact distortion:** screen-space UV offset vs volumetric ray bending
+  will differ visually, especially at oblique angles or with extreme scale values.
+- **Deferred:** `refraction_texture` and `refraction_texture_channel` (per-pixel
+  refraction strength) are not yet implemented — three.js `transmissionMap` has a
+  different semantic (transparency mask, not distortion strength).
+- **Secondary surfaces (`material-N`, N>0):** transmission is dropped for a mesh's
+  non-primary surfaces — `SecondarySurfaceMaterial`
+  (`nodes/3d/meshinstance3d/Component.tsx`) renders a scalar-only
+  `<meshStandardMaterial>` and forwards no `transmission`/`thickness`, so refraction
+  on a secondary slot renders opaque. This is the shared rules-of-hooks deferral
+  (textures and physical-only features on slots N>0 would need `useResource` inside a
+  render loop) — the same drop already applies to clearcoat/rim/anisotropy, not a
+  refraction-specific gap. Surface 0 upgrades correctly.
+- **Why not fixed:** a proper fix needs a refraction shader (out of scope for the
+  scalar-parse layer).
+- Site: `r3f/materials/standardMaterialScalars.ts` (refraction block),
+  `r3f/materials/StandardMaterialSlot.tsx` (transmission/thickness).
+
 ### ArrayMesh compressed attributes
 A surface with `ARRAY_FLAG_COMPRESS_ATTRIBUTES` (bit 29) stores UV1/UV2 as
 normalised `uint16` to be rescaled by the surface's `uv_scale`. The decoder reads
@@ -268,11 +295,21 @@ where overlapping cells come from different sources).
   is dominated by `texture_origin` overlap within a single source.
 - Site: `r3f/node2dTransform.ts` (`TILE_SOURCE_STEP`), tile slice Components.
 
-### Y-sort  *(issue #74, out of scope)*
-`y_sort_enabled` / `y_sort_origin` (sorting tiles and sibling nodes by their
-y position) is parsed but not applied; draw order comes from z_index + tree
-order like every other CanvasItem. The dungeon's wall/prop overlaps mostly
-coincide with tree order, so the preview reads correctly.
+### Y-sort  *(issue #74, implemented — static only)*
+`y_sort_enabled` / `y_sort_origin` are parsed and applied at render time
+for static scenes. A `y_sort_enabled` parent collects its descendant CanvasItems,
+sorts them by accumulated world-Y within effective-z buckets, and renders them
+front-to-back using rank-based z sub-steps. Non-y-sorted containers sort as one
+unit. `y_sort_origin` shifts sort keys for TileMapLayer tiles only.
+
+A y-sorted TileMapLayer is decomposed per-distinct-Y-group: each unique
+combined-Y (layer world Y + map-to-local pixel Y + y_sort_origin) becomes a
+separate draw target participating in the parent's flat sort, so interleaved
+siblings (decorations, sprites) land at correct depth relative to specific tile rows.
+
+- **Deferred:** per-frame re-sort when AnimationPlayer changes Y positions.
+  Animated scenes must be re-parsed to re-sort.
+- **Deferred:** `z_as_relative = false` (tracked separately in audit #35).
 
 ### Unsupported tile shapes, layouts, and data formats  *(issue #74)*
 - `tile_shape` half-offset-square (2) / hexagon (3): cells place on a square

@@ -1048,6 +1048,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - External Resources"
   },
   {
+    "name": "Material Anisotropy",
+    "file": "unit-material-anisotropy.tscn",
+    "category": "Unit - Materials"
+  },
+  {
     "name": "Material Ao",
     "file": "unit-material-ao.tscn",
     "category": "Unit - Materials"
@@ -1085,6 +1090,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Material Override",
     "file": "unit-material-override.tscn",
+    "category": "Unit - Materials"
+  },
+  {
+    "name": "Material Refraction",
+    "file": "unit-material-refraction.tscn",
     "category": "Unit - Materials"
   },
   {
