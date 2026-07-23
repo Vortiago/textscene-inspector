@@ -117,7 +117,7 @@ function vec2(flag, raw) {
 }
 
 function vec3(flag, raw) {
-  const parts = raw.split(',').map((n) => Number(n.trim()));
+  const parts = String(raw).split(',').map((n) => Number(n.trim()));
   if (parts.length !== 3 || parts.some((n) => !Number.isFinite(n))) {
     throw new Error(`${flag} needs three comma-separated numbers, got "${raw}"`);
   }
@@ -272,8 +272,10 @@ export function projectConfig(sourceIni, { width, height }) {
  */
 export function probePixels(buffer, probes, { patch = 1 } = {}) {
   const png = PNG.sync.read(buffer);
-  if (patch < 1 || patch % 2 === 0) {
-    throw new Error(`patch must be a positive odd number, got ${patch}`);
+  if (!Number.isInteger(patch) || patch < 1 || patch % 2 === 0) {
+    // Non-integer (or NaN, from a bad `--patch`) would set a fractional `reach`
+    // and read the buffer at mid-pixel byte offsets, returning garbage.
+    throw new Error(`patch must be a positive odd integer, got ${patch}`);
   }
   const reach = (patch - 1) / 2;
   return probes.map(([x, y]) => {
@@ -305,6 +307,17 @@ function median(values) {
 
 const gdVec3 = (v) => `Vector3(${v[0]}, ${v[1]}, ${v[2]})`;
 const gdColor = (c) => `Color(${c[0]}, ${c[1]}, ${c[2]})`;
+/**
+ * A GDScript string literal (quotes included) with the special characters
+ * escaped, so a path containing a quote, backslash or newline produces valid
+ * GDScript instead of a syntax error that never compiles the bootstrap.
+ */
+const gdString = (s) =>
+  `"${String(s)
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"')
+    .replace(/\n/g, '\\n')
+    .replace(/\t/g, '\\t')}"`;
 
 /**
  * The bootstrap scene's script. Instantiates the target scene, picks the 2D or
@@ -326,11 +339,11 @@ function bootstrapScript({
 }) {
   return `extends Node3D
 
-const SCENE_PATH := "${scenePath}"
+const SCENE_PATH := ${gdString(scenePath)}
 const PREVIEWS := ${previews ? 'true' : 'false'}
-const OUT := "${out}"
-const BOUNDS_OUT := "${boundsOut ?? ''}"
-const MODE_OUT := "${modeOut}"
+const OUT := ${gdString(out)}
+const BOUNDS_OUT := ${gdString(boundsOut ?? '')}
+const MODE_OUT := ${gdString(modeOut)}
 const MODE := "${mode}"
 const SCENE_CAMERA := ${sceneCamera ? 'true' : 'false'}
 const FOV := ${fov}
@@ -601,7 +614,14 @@ function runGodot(args, { display }) {
   const command = display ? 'xvfb-run' : 'godot';
   const argv = display ? ['-a', 'godot', ...args] : args;
   const result = spawnSync(command, argv, { encoding: 'utf8', timeout: 300_000 });
-  return { status: result.status, stdout: result.stdout ?? '', stderr: result.stderr ?? '' };
+  // `error` carries a spawn failure (ENOENT when godot/xvfb-run is missing, or a
+  // timeout) that `status` alone (null in that case) does not — callers surface it.
+  return {
+    status: result.status,
+    error: result.error ?? null,
+    stdout: result.stdout ?? '',
+    stderr: result.stderr ?? '',
+  };
 }
 
 /**
@@ -683,6 +703,14 @@ async function renderInto(
   );
   await writeFile(join(work, '__ref_main.tscn'), MAIN_SCENE);
 
+  // Delete any prior image at these paths BEFORE rendering. Success is judged by
+  // the file existing afterwards; the default `out` path is reused across runs, so
+  // a stale image from an earlier render would otherwise be reported as this run's
+  // result if Godot now crashes/times out — the exact silent-wrong-measurement this
+  // tool exists to prevent.
+  await rm(resolve(out), { force: true });
+  if (boundsOut) await rm(resolve(boundsOut), { force: true });
+
   // Import first, headless: textures and meshes must exist as .godot/imported
   // artefacts before a render can resolve them. Failures here are not fatal —
   // a scene with no importable assets legitimately has nothing to do.
@@ -690,8 +718,11 @@ async function renderInto(
 
   const render = runGodot(['--path', work, '--quit-after', '400'], { display: true });
   if (!existsSync(resolve(out))) {
+    // Surface the spawn error (missing godot/xvfb-run, timeout) that a bare
+    // "produced no image" would otherwise hide with empty stderr.
+    const why = render.error ? `\n${render.error.message}` : '';
     throw new Error(
-      `Godot produced no image for ${basename(scenePath)}.\n${render.stdout}\n${render.stderr}`
+      `Godot produced no image for ${basename(scenePath)} (exit ${render.status}).${why}\n${render.stdout}\n${render.stderr}`
     );
   }
   const rendered = existsSync(modeOut) ? (await readFile(modeOut, 'utf8')).trim() : null;
