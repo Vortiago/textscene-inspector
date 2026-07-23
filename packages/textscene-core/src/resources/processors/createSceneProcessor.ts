@@ -33,6 +33,14 @@ import { TscnParser } from '../../parser/TscnParser';
 import { createResourceProcessor, type ResourceProcessor } from '../createResourceProcessor';
 import { isGLBPath } from '../processing/glbProcessing';
 
+/**
+ * The `[gd_scene]` tag, allowing leading `;` comment lines and blank lines
+ * before it (Godot and our top-level parser both do), so a scene that renders
+ * at top level also loads when instanced. Anything else up front — HTML 404,
+ * stray text — still fails the guard.
+ */
+const SCENE_HEADER = /^(?:[ \t]*(?:;[^\n]*)?\r?\n)*[ \t]*\[gd_scene/;
+
 export interface SceneProcessorOptions {
   eventBus: ResourceEventBus;
   /**
@@ -109,7 +117,7 @@ export function createSceneProcessor({
           `Binary Godot scene (.scn) is not previewable — only text scenes (.tscn) load: ${metadata.path}`
         );
       }
-      if (!content.trimStart().startsWith('[gd_scene')) {
+      if (!SCENE_HEADER.test(content)) {
         throw new Error(`Not a text scene (missing [gd_scene header): ${metadata.path}`);
       }
       return parser.parse(content);

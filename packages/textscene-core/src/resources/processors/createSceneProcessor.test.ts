@@ -416,6 +416,26 @@ describe('createSceneProcessor (WI-ARCH-2 replacement for SceneLoader)', () => {
       const [, scene] = loadedHandler.mock.calls[0]!;
       expect(scene.nodes).toHaveLength(1);
     });
+
+    it('loads a scene whose [gd_scene] header is preceded by ; comment lines', async () => {
+      // A leading comment block is valid and renders at top level, so it must
+      // also load when instanced; the guard used to demand the tag on line 1,
+      // silently vanishing the instanced subtree.
+      mockProvider.loadResource = vi
+        .fn()
+        .mockResolvedValue('; a documentation header\n; second line\n\n[gd_scene format=3]\n\n[node name="A" type="Node3D"]\n');
+      registerMetadata('scene1', { id: 'scene1', path: 'res://scenes/room.tscn', type: 'PackedScene' });
+
+      const loadedHandler = vi.fn();
+      eventBus.on<TscnScene>('scene', 'loaded', loadedHandler);
+
+      processor.request('scene1');
+      await new Promise((r) => setTimeout(r, 50));
+
+      expect(loadedHandler).toHaveBeenCalled();
+      const [, scene] = loadedHandler.mock.calls[0]!;
+      expect(scene.nodes).toHaveLength(1);
+    });
   });
 
   /**
