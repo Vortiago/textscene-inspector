@@ -154,6 +154,28 @@ and exposes no knob.
   paying that shader's cost on the common path.
 - Site: `r3f/materials/StandardMaterialSlot.tsx`.
 
+### StandardMaterial3D.billboard_mode — two bounded gaps
+`billboard_mode` turns the mesh to face the camera via the shared `useBillboard`
+hook (the same enum Label3D/Sprite3D drive): mode 1 ENABLED copies the camera
+basis, mode 2 FIXED_Y locks yaw, mode 3 PARTICLES is treated as ENABLED. The
+orientation is faithful; two secondary aspects are not.
+
+- **`billboard_keep_scale`:** `useBillboard` only rewrites the mesh's rotation,
+  so the authored scale always survives — equivalent to `keep_scale = true`.
+  Godot's default (`false`) normalizes the model scale away while billboarding.
+  Faithful when the node's scale is 1 (e.g. the platformer coin's `GlowSprite`);
+  a scaled billboard with `keep_scale = false` keeps its scale here.
+- **Scene-tree children:** billboarding rewrites the whole `<mesh>` quaternion,
+  and a MeshInstance3D's children render inside that mesh, so they inherit the
+  billboard rotation. In Godot billboard is a per-surface shader effect that
+  never turns child nodes. No corpus scene billboards a mesh that has children,
+  so the gap is currently unobservable.
+- **Why not fixed:** honouring `keep_scale = false` and un-rotating children
+  both need per-frame work (scale renormalization; hoisting children into a
+  sibling group as Label3D does) for cases no scene exercises.
+- Site: `nodes/3d/meshinstance3d/Component.tsx`,
+  `r3f/materials/standardMaterialScalars.ts`.
+
 ## Meshes
 
 ### CylinderMesh single-cap removal  *(parity batch)*
@@ -387,20 +409,48 @@ environment enables it, so previewed emissive materials bloom as in the editor.
 - Sites: `r3f/environment/{GlowLayer,GodotToneMappingEffect}.ts(x)`,
   `resources/environment/godotBloom.ts`, `r3f/environment/EnvironmentLayer.tsx`.
 
-### Sky ambient and sky reflections share one intensity
-Godot scales the sky's *ambient* contribution by `ambient_light_sky_contribution`
-and decides its *reflection* contribution separately via `reflection_source`.
-three.js has a single `scene.environmentIntensity` governing both.
+### A dielectric's sky specular scales with the diffuse contribution
+Godot scales the sky's *diffuse* ambient by `ambient_light_sky_contribution`
+and reflects the sky (`reflection_source = BG`) separately at full strength.
+three.js couples both under one `scene.environmentIntensity`, so
+`SkyDiffuseReflectionSplit` restores the split per-material: it points each
+material's own `envMap` at the sky and sets
+`envMapIntensity = contribution + metalness · (1 − contribution)`. A metal keeps
+the whole reflection whatever the ambient source (a coin reflects the sky under
+a COLOR ambient); a rough dielectric keeps only `contribution` of the sky.
 
-- **Impact:** the two agree at the defaults, which is the overwhelmingly common
-  case (`ambient_light_sky_contribution = 1.0`, `reflection_source = BG`). They
-  diverge when a scene lowers the sky contribution — reflections dim with the
-  ambient — and when `ambient_light_source = DISABLED` over a sky background,
-  where honouring the explicit "no ambient" also costs the sky reflections.
-- **Why not fixed:** separating them needs a per-material `envMapIntensity`
-  distinct from the scene-level one, applied to every material this previewer
-  builds; the divergence only shows on non-default settings.
-- Site: `r3f/sky/SkyLayer.tsx`.
+- **Faithful when:** metals reflect at full strength always; dielectric DIFFUSE
+  is `mix(flat, sky, contribution)` exactly, at every contribution.
+- **Diverges when:** one intensity governs a dielectric's *specular* lobe too,
+  so at a partial contribution its faint sky reflection is scaled with the
+  diffuse rather than kept at full. The lobe is ~4% of a dielectric's response,
+  so it is not visible in practice.
+- Site: `r3f/environment/EnvironmentLayer.tsx` (`SkyDiffuseReflectionSplit`).
+
+### Custom `sky` shaders and `CompressedCubemap` skies are not resolved
+A `Sky` whose `sky_material` is a `ShaderMaterial` (a user `shader_type sky`), or
+whose panorama is a binary `CompressedCubemap`, cannot be reproduced: the
+previewer does not execute GDShaders and does not decode compressed cubemaps.
+`resolveSky` returns null and `EnvironmentApplier` draws the mid-blue fallback
+background (`0.5, 0.6, 0.75`) so the frame still reads as "sky here". The rest of
+the Environment is unaffected — AgX, fog, and the flat/COLOR ambient still apply,
+so diffuse surfaces are unchanged (verified: `unit-shader-sky-env` renders the
+identical lit and shadowed grass as its `ProceduralSkyMaterial` twin).
+
+- **Faithful when:** the sky is a `ProceduralSkyMaterial`, `PanoramaSkyMaterial`
+  (a plain image), or `PhysicalSkyMaterial` — the diffuse and, for a supported
+  sky, the reflection all match Godot (metallic reflection to 1/255,
+  `unit-stage-ambient-ibl`).
+- **Diverges when:** the sky is shader- or compressed-cubemap-driven (the 3D
+  platformer's `skybox.gdshader` over `skybox.webp`). With no sky to reflect,
+  metallic surfaces reflect near-black instead of the skybox — the platformer's
+  gold coin bodies read grey, and their additive glow halos, sitting over a
+  brighter-than-Godot shadow, wash out rather than glow. This is a missing sky,
+  not a lighting error.
+- **`ReflectionProbe`** is likewise unsupported (Node fallback), so the localized
+  reflections/GI it bakes into a scene's recesses are absent.
+- Sites: `resources/sky/parser.ts` (`resolveSky`, `parseSkyMaterial`),
+  `r3f/environment/EnvironmentLayer.tsx` (`EnvironmentApplier` fallback).
 
 ### `tonemap_exposure` is ignored under `tonemap_mode = LINEAR`
 Godot multiplies by `tonemap_exposure` before every tonemapper, linear

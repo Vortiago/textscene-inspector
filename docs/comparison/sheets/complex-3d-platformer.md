@@ -28,22 +28,32 @@ level, not a single node.
 ## Divergences
 
 The framing, layout, terrain, props, enemy and shadow shapes all match. The stage
-carries its own WorldEnvironment set to `tonemap_mode = AGX`, and Godot's AgX is
-now ported (fixture-exact to within 2/255 on a controlled AGX-shadow scene), so
-the shadows darken toward Godot's near-black rather than staying flatly lit, and
-the lit grass reads Godot's warmer, deeper tone. The enemy (a GLB mesh) casts and
-receives shadows on both sides now, so it self-shadows as in Godot.
+carries its own WorldEnvironment set to `tonemap_mode = AGX` with a flat COLOR
+ambient (`sky_contribution = 0`), and that whole lighting model is reproduced: on
+a controlled twin of this stage (`unit-stage-ambient-ibl`) the lit grass, the
+shadowed grass, and a metallic sphere reflecting the sky all match real Godot to
+within 6/255 — the metallic reflection to 1/255. The enemy (a GLB mesh) casts and
+receives shadows on both sides, so it self-shadows as in Godot.
 
-Two differences remain, each a separate parity gap rather than a bug here:
+The remaining divergence is one gap, not a lighting bug: the stage draws its sky
+from a **custom `sky` shader** (`skybox.gdshader`) sampling a **`CompressedCubemap`**
+(`skybox.webp`), and lights reflections with **`ReflectionProbe`** nodes — none of
+which this previewer supports (it does not execute GDShaders or decode compressed
+cubemaps). With the sky unresolved the environment still applies AgX and the flat
+ambient correctly (the diffuse terrain matches), but two things follow from having
+no sky to reflect:
 
-- **Shadow depth.** After the AgX port the shadowed grass still reads a little
-  brighter than Godot (mean ≈ 40 vs 23). The curve is correct — the residual is
-  *upstream radiance*: our shadowed surfaces receive slightly more pre-tonemap
-  light (a flat-ambient / shadow-attenuation parity question), not the tone curve.
-- **Coins.** The coin glow is a billboarded quad with an additive `GradientTexture2D`
-  sprite; the gradient texture now renders, but the material's `billboard_mode`
-  (face-camera) is not yet applied to a mesh, so at this angled camera the fixed
-  quad foreshortens and the halo reads faint. The coin body is metallic gold, which
-  reflects the sky differently than Godot under our environment. Neither is a glow
-  bug — the environment glow itself is reproduced elsewhere (see the Material
-  showcase).
+- **Coin bodies read grey.** The coin body is `metallic = 1`, so its colour is
+  almost entirely the reflected sky. Godot reflects the gold-lit skybox; with no
+  skybox we reflect near-black, so the bodies read dark grey instead of gold. Same
+  cause for the enemy's visor and any other smooth metal. The lighting math is not
+  at fault — swap the sky for a supported `ProceduralSkyMaterial` and the identical
+  metal matches Godot to 1/255 (`unit-stage-ambient-ibl`).
+- **Coin halos read faint.** The gold glow is the coin's `GlowSprite` — an additive,
+  unshaded, billboarded `GradientTexture2D` quad. That mechanism is correct and
+  reproduced (`unit-coin-glow`); `billboard_mode` now faces it at the camera. In
+  Godot the halos pop because they sit over near-black shadow; here the same
+  surfaces read a little brighter (this large level's sun shadow does not reach as
+  far as Godot's, and there is no ReflectionProbe GI darkening the recesses), so
+  the additive gold washes out rather than glowing. No post-process bloom is
+  involved — the stage environment has glow off.
