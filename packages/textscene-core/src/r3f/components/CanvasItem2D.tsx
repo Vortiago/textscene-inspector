@@ -13,7 +13,7 @@ import type { TscnNode } from '../../parser/types';
 import type { Node2DProperties } from '../../nodes/base/node2d/types';
 import { node2dGroupProps, node2dGroupSpread, canvasItemZ } from '../node2dTransform';
 import { Modulate2DContext, useCanvasItemTint, type CanvasItemTint } from '../canvasItemModulate';
-import { useYSortZContext } from '../contexts/YSortContext';
+import { useYSortZContext, useYSortSlot } from '../contexts/YSortContext';
 
 export interface CanvasItem2DProps {
   node: TscnNode;
@@ -27,12 +27,15 @@ export interface CanvasItem2DProps {
 
 export function CanvasItem2D({ node, props, body, children, zOverride }: CanvasItem2DProps) {
   const zSortZ = useYSortZContext();
-  // When y-sort provides a rank-based z offset (via context or explicit prop),
-  // use it instead of the node's own z_index so the wrapper group's world-space z
-  // reflects the sort position (which the contract test reads via getWorldPosition).
+  const slot = useYSortSlot();
+  // When y-sort provides a rank-based z offset, use it directly — the tree-order slot
+  // base is already baked into the enclosing y-sort group's z, so adding it here would
+  // double-count. Otherwise (a leaf CanvasItem sitting directly in a tree-order slot,
+  // e.g. a top-level TileMapLayer between two y-sort subtrees) shift by the slot base so
+  // it lands in its slot rather than the shared layer base.
   const z = zSortZ !== null
     ? zSortZ
-    : (zOverride ?? canvasItemZ(props));
+    : (zOverride ?? canvasItemZ(props)) + slot.base;
   const transform = useMemo(
     () => node2dGroupSpread(node2dGroupProps(props, z)),
     [props, z]

@@ -17,7 +17,7 @@
 import { useMemo, Fragment, type ReactNode } from 'react';
 import type { TscnNode } from '../parser/types.js';
 import * as THREE from 'three';
-import { useYSortContext, type YSortContextValue } from './contexts/YSortContext.js';
+import { useYSortContext, useYSortSlot, type YSortContextValue } from './contexts/YSortContext.js';
 import { Z_INDEX_STEP, TILE_SOURCE_STEP } from './node2dTransform.js';
 import { nodeComponentRegistry } from './NodeComponentRegistry.js';
 import type { TileMapLayerProperties } from '../nodes/2d/tiles/tilemaplayer/types.js';
@@ -156,6 +156,9 @@ export function computeZSortValues(
  */
 export function YSortDispatcher({ node, children: _children }: { node: TscnNode; children: ReactNode }) {
   const parent = useYSortContext();
+  // Ranks are laid out within THIS subtree's tree-order slot width (so sibling
+  // y-sort subtrees don't overlap); the slot base is already in the group's z.
+  const slot = useYSortSlot();
 
   // Collect raw items (y_sort TileMapLayer → one tileGroup placeholder per layer).
   const rawItems = useMemo(() => collectYSortedItems(node, parent, 0), [node, parent]);
@@ -233,7 +236,7 @@ export function YSortDispatcher({ node, children: _children }: { node: TscnNode;
       {sorted.map(({ item, rank }) => {
         const sameBucket = sorted.filter(s => s.item.effectiveZ === item.effectiveZ);
         const K = sameBucket.length;
-        const sortZ = ((rank + 1) / (K + 1)) * YSORT_SUBRANGE;
+        const sortZ = ((rank + 1) / (K + 1)) * slot.width;
         const fullZ = item.effectiveZ * Z_INDEX_STEP + sortZ;
 
         if (item.kind === 'tileGroup' && item.node) {

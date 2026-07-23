@@ -14,6 +14,7 @@ import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { node2dGroupProps, node2dGroupSpread, canvasItemZ } from '../../../r3f/node2dTransform';
 import { Modulate2DContext, multiplyModulate, useParentModulate } from '../../../r3f/canvasItemModulate';
 import { YSortDispatcher } from '../../../r3f/YSortDispatcher.js';
+import { useYSortSlot } from '../../../r3f/contexts/YSortContext';
 
 interface Node2DProps extends NodeComponentProps {
   zOverride?: number | null;
@@ -21,7 +22,11 @@ interface Node2DProps extends NodeComponentProps {
 
 export function Node2D({ node, children, zOverride }: Node2DProps) {
   const props = node.properties as Node2DProperties;
-  const z = zOverride !== undefined && zOverride !== null ? zOverride : canvasItemZ(props);
+  // A tree-order slot base (set by a non-y-sort ancestor that distributes its
+  // z-band among y-sort subtrees) shifts this group's whole subtree into its slot.
+  const slot = useYSortSlot();
+  const baseZ = zOverride !== undefined && zOverride !== null ? zOverride : canvasItemZ(props);
+  const z = baseZ + slot.base;
   const transform = useMemo(
     () => node2dGroupSpread(node2dGroupProps(props, z)),
     [props, z]

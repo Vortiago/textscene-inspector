@@ -129,4 +129,64 @@ ${poly('HighLoZ', 'Floor', 100)}
 `);
     expect(z.get('LowHiZ')!).toBeGreaterThan(z.get('HighLoZ')!);
   });
+
+  it('RED: sibling y-sort subtrees under a non-y-sort parent do NOT interleave — subtree order is tree order, not global Y', async () => {
+    // The root is NOT y-sorted; `SubA` is declared before `SubB`. So EVERY item in SubA must
+    // draw entirely BEHIND every item in SubB, regardless of Y — SubA's high-Y item is still
+    // behind SubB's low-Y item. Each y-sort subtree sorts internally, but the subtrees keep the
+    // parent's tree order. Today each subtree's dispatcher assigns z in the SAME (0, SUBRANGE)
+    // band, so SubA's high-Y item (high rank) gets z > SubB's low-Y item (low rank) → they
+    // interleave → this fails. (Mirrors the dungeon: Floor's tiles drawing over Walls' decorations.)
+    const z = await worldZByName(`[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="SubA" type="Node2D" parent="."]
+y_sort_enabled = true
+
+${poly('A_high', 'SubA', 100)}
+
+${poly('A_low', 'SubA', -100)}
+
+[node name="SubB" type="Node2D" parent="."]
+y_sort_enabled = true
+
+${poly('B_high', 'SubB', 100)}
+
+${poly('B_low', 'SubB', -100)}
+`);
+    for (const n of ['A_high', 'A_low', 'B_high', 'B_low']) expect(z.get(n)).toBeDefined();
+    const maxA = Math.max(z.get('A_high')!, z.get('A_low')!);
+    const minB = Math.min(z.get('B_high')!, z.get('B_low')!);
+    // SubA (declared first) entirely behind SubB (declared second) — no cross-subtree interleave.
+    expect(maxA).toBeLessThan(minB);
+  });
+
+  it('RED: a leaf CanvasItem sitting directly in a tree-order slot lands between the y-sort subtrees', async () => {
+    // `Mid` is a bare Polygon2D (a leaf CanvasItem, NOT a Node2D) declared between two y-sort
+    // subtrees under the non-y-sort root — mirrors the dungeon's top-level `HighWalls` TileMapLayer
+    // between `Walls` and `Decorations`. It must sit in ITS tree-order slot: behind SubB, in front
+    // of SubA — even though SubA's item has a higher Y. A leaf goes through CanvasItem2D (not Node2D),
+    // so it needs the slot base applied there too, else it stays at the shared layer base (z=0).
+    const z = await worldZByName(`[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="SubA" type="Node2D" parent="."]
+y_sort_enabled = true
+
+${poly('A1', 'SubA', 100)}
+
+${poly('Mid', '.', 0)}
+
+[node name="SubB" type="Node2D" parent="."]
+y_sort_enabled = true
+
+${poly('B1', 'SubB', -100)}
+`);
+    for (const n of ['A1', 'Mid', 'B1']) expect(z.get(n)).toBeDefined();
+    // Tree order Root -> [SubA, Mid, SubB]: A1 behind Mid behind B1, regardless of Y.
+    expect(z.get('A1')!).toBeLessThan(z.get('Mid')!);
+    expect(z.get('Mid')!).toBeLessThan(z.get('B1')!);
+  });
 });
