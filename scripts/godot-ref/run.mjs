@@ -427,6 +427,12 @@ func _freeze_game_logic(node: Node) -> void:
 		(node as AnimationPlayer).stop()
 	if node is AnimationTree:
 		(node as AnimationTree).active = false
+	if node is SoftBody3D:
+		# SoftBody3D has no freeze property; its cloth/mesh is integrated by the
+		# physics server every process frame and sags away from the authored rest
+		# mesh the previewer shows. Disabling the node stops that integration,
+		# holding it at rest (the freeze equivalent for a soft body).
+		(node as SoftBody3D).process_mode = Node.PROCESS_MODE_DISABLED
 	for child in node.get_children():
 		_freeze_game_logic(child)
 

@@ -344,6 +344,34 @@ describe.skipIf(!hasEngine)('renderReference (real Godot)', () => {
   }, 180_000);
 
   /**
+   * SoftBody3D has no freeze property, and (unlike a RigidBody) its `get_aabb`
+   * keeps reporting the REST AABB even as the physics server integrates its mesh
+   * every process frame — so an unpinned cloth FALLS and drapes away from the
+   * authored rest mesh the previewer shows, invisibly to the bounds. The harness
+   * disables the node to hold it at rest; this is measured from the render. The
+   * fixture's 2×2 plane fills the framed centre at rest; unfrozen it falls out of
+   * the centre within a few settle frames (a ~25% whole-frame change), leaving the
+   * dark preview-environment ground there instead of bright cloth.
+   */
+  it('freezes SoftBody3D so an unpinned cloth keeps its rest mesh through settle', async () => {
+    const out = join(await scratchDir(), 'shot.png');
+    await renderReference({
+      scene: join(REPO_ROOT, 'scenes/fixtures/unit-softbody3d.tscn'),
+      out,
+      mode: '3d',
+      frame: true,
+    });
+    const buffer = await readFile(out);
+    const png = PNG.sync.read(buffer);
+    const [centre] = probePixels(
+      buffer,
+      [[Math.floor(png.width / 2), Math.floor(png.height / 2)]],
+      { patch: 15 }
+    );
+    expect(Math.min(...centre.rgb)).toBeGreaterThan(150);
+  }, 180_000);
+
+  /**
    * The 2D path, end to end: a Node2D scene must come back as the PROJECT
    * VIEWPORT rectangle — the frame the previewer's 2D stage draws — with the
    * scene in it and no 3D camera anywhere near it. Rendered through the 3D

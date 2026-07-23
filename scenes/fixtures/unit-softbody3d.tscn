@@ -1,0 +1,12 @@
+[gd_scene format=3]
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_1"]
+size = Vector2(2, 2)
+subdivide_width = 12
+subdivide_depth = 12
+
+[node name="Root" type="Node3D"]
+
+[node name="SoftBody3D" type="SoftBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
+mesh = SubResource("PlaneMesh_1")
