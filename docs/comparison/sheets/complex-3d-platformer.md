@@ -27,10 +27,22 @@ level, not a single node.
 
 ## Divergences
 
-The framing matches; the differences are in shading and post-processing. Godot
-runs a glow pass, so the coins bloom into bright halos and the lit grass reads
-more vivid; the previewer has no glow, so the coins render as flat discs and the
-scene is a touch flatter. Godot also holds the enemy in the terrain's shadow
-(darker), where ours lights it more evenly — a shadow/exposure difference, not a
-geometry one. The level layout, terrain, props, and enemy all render in the same
-places.
+The framing matches; the level layout, terrain, props, and enemy all render in
+the same places, and the shadows fall in the same places too — the difference is
+the tone curve, not the shadows or geometry.
+
+This stage carries its own WorldEnvironment set to `tonemap_mode = AGX`, and
+Godot's AgX has a harder toe than three's: a surface lit only by the flat ambient
+term inside a cast shadow crushes to near-black in Godot but stays dim-but-lit in
+ours, while ours' lit grass reads a touch brighter. Measured, the shadowed
+mid-ground is mean-brightness 71 in Godot versus 152 in ours — same shadow shape,
+shallower fill. Our shadow geometry itself is correct (the FILMIC-lit
+`unit-shadows-only` reference matches Godot to within 2/255); only the AgX curve
+differs. This is the documented AGX tone-map limitation, not a shadow bug.
+
+The other differences are post-processing: Godot runs a glow pass, so the coins
+bloom into bright halos and the lit grass reads more vivid, where the previewer
+has no glow yet and the coins render as flat discs. The enemy — a GLB mesh — now
+casts and receives shadows on our side too (it was outside the shadow pass
+before), so it self-shadows as in Godot; its remaining flatness is the same AgX
+toe over the terrain's cast shadow.
