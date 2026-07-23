@@ -43,7 +43,11 @@ function parseSheet(text, file) {
   const meta = {};
   for (const line of match[1].split('\n')) {
     const kv = /^(\w+):\s*(.*)$/.exec(line.trim());
-    if (kv) meta[kv[1]] = kv[2].replace(/^#.*$/, '').trim();
+    // Strip a trailing `# ...` inline comment (the SHEET-STANDARD template
+    // documents values as `category: 3D   # 3D | 2D | Other`); `\s*#` catches both
+    // a trailing comment and a whole-line one. No frontmatter value contains a
+    // literal '#', so this never eats real content.
+    if (kv) meta[kv[1]] = kv[2].replace(/\s*#.*$/, '').trim();
   }
   for (const key of ['type', 'category', 'image']) {
     if (!meta[key]) throw new Error(`${file}: frontmatter missing "${key}"`);
@@ -89,6 +93,29 @@ function renderBody(body) {
       const rows = [line];
       while (i + 1 < lines.length && /^\|/.test(lines[i + 1].trim())) rows.push(lines[++i]);
       out.push(renderTable(rows));
+    } else if (/^-\s/.test(line.trim())) {
+      // A `- ` bullet list ("What it exercises" in every sheet). Without this it
+      // fell through to the paragraph branch and every item collapsed into one
+      // run-on `<p>- a - b - c</p>`. A wrapped continuation line (indented, not a
+      // new bullet or a blank) joins the current item, as paragraphs collapse wraps.
+      flush();
+      const items = [];
+      let item = line.trim().replace(/^-\s+/, '');
+      while (i + 1 < lines.length) {
+        const next = lines[i + 1];
+        if (/^-\s/.test(next.trim())) {
+          items.push(item);
+          item = next.trim().replace(/^-\s+/, '');
+          i++;
+        } else if (next.trim() === '' || /^#/.test(next.trim()) || /^\|/.test(next.trim())) {
+          break;
+        } else {
+          item += ` ${next.trim()}`;
+          i++;
+        }
+      }
+      items.push(item);
+      out.push(`<ul>${items.map((it) => `<li>${inline(it)}</li>`).join('')}</ul>`);
     } else if (line.trim() === '') {
       flush();
     } else {
@@ -156,6 +183,10 @@ function build(sheets, inlineImages, fragment) {
         // would imply something should be there.
         visual: meta.visual !== 'false',
         fixture: meta.fixture ?? '',
+        // Optional: a Camera3D node path to look through on open (`?camera=`), so
+        // the live link opens the SAME view as the captured image for scenes the
+        // previewer's default framing does not compose well on its own.
+        camera: meta.camera ?? '',
         rendersAs: meta.renders_as ?? '',
         godot,
         ours,
@@ -209,7 +240,9 @@ function build(sheets, inlineImages, fragment) {
           n.fixture
             ? `<a class="fixture" href="${PREVIEW_URL}?fixture=${encodeURIComponent(
                 n.fixture
-              )}" target="_blank" rel="noopener" title="Open ${escapeHtml(
+              )}${
+                n.camera ? `&camera=${encodeURIComponent(n.camera)}` : ''
+              }" target="_blank" rel="noopener" title="Open ${escapeHtml(
                 n.fixture
               )} in the previewer"><code>${escapeHtml(n.fixture)}</code> ↗</a>`
             : ''
@@ -329,6 +362,8 @@ code{font-family:var(--mono);font-size:.9em;background:var(--panel-2);padding:1p
 .prose{margin-top:22px}
 .prose h3{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:26px 0 10px}
 .prose p{margin:0 0 12px;max-width:70ch}
+.prose ul{margin:0 0 12px;padding-left:20px;max-width:70ch}
+.prose li{margin:0 0 5px}
 .tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;margin:0 0 12px}
 table{border-collapse:collapse;width:100%;font-size:14px;min-width:440px}
 th,td{text-align:left;padding:8px 13px;border-bottom:1px solid var(--line)}
