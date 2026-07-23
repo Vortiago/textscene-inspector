@@ -131,7 +131,7 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
       'global_position', 'global_rotation', 'global_rotation_degrees',
       'global_scale', 'global_skew', 'global_transform',
     ],
-    reason: 'Parser reads CanvasItem tint/draw-order and y_sort_origin fields not covered by linter validators; linter validates global-space properties the renderer ignores.',
+    reason: 'Parser reads CanvasItem tint/draw-order, y_sort_enabled and y_sort_origin fields not covered by linter validators; linter validates global-space properties the renderer ignores.',
   },
 
   Control: {

@@ -13,6 +13,7 @@ import type { TscnNode } from '../../parser/types';
 import type { Node2DProperties } from '../../nodes/base/node2d/types';
 import { node2dGroupProps, node2dGroupSpread, canvasItemZ } from '../node2dTransform';
 import { Modulate2DContext, useCanvasItemTint, type CanvasItemTint } from '../canvasItemModulate';
+import { useYSortZContext } from '../contexts/YSortContext';
 
 export interface CanvasItem2DProps {
   node: TscnNode;
@@ -20,12 +21,21 @@ export interface CanvasItem2DProps {
   /** Renders this node's own pixels with the resolved own-pixel tint. */
   body?: (tint: CanvasItemTint) => ReactNode;
   children?: ReactNode;
+  /** When non-null, overrides the wrapper group's z (used by y-sort rank offsets). */
+  zOverride?: number | null;
 }
 
-export function CanvasItem2D({ node, props, body, children }: CanvasItem2DProps) {
+export function CanvasItem2D({ node, props, body, children, zOverride }: CanvasItem2DProps) {
+  const zSortZ = useYSortZContext();
+  // When y-sort provides a rank-based z offset (via context or explicit prop),
+  // use it instead of the node's own z_index so the wrapper group's world-space z
+  // reflects the sort position (which the contract test reads via getWorldPosition).
+  const z = zSortZ !== null
+    ? zSortZ
+    : (zOverride ?? canvasItemZ(props));
   const transform = useMemo(
-    () => node2dGroupSpread(node2dGroupProps(props, canvasItemZ(props))),
-    [props]
+    () => node2dGroupSpread(node2dGroupProps(props, z)),
+    [props, z]
   );
   const tint = useCanvasItemTint(props);
 
