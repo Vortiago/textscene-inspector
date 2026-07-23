@@ -7,6 +7,10 @@
  *   z = effectiveZ * Z_INDEX_STEP + ((rank + 1) / (K + 1)) * YSORT_SUBRANGE
  * where YSORT_SUBRANGE < Z_INDEX_STEP (50% of step).
  *
+ * A y_sort_enabled TileMapLayer is decomposed per-Y-group via `groupBySortY`:
+ * each distinct sort-Y becomes a separate tileGroup item at its own rank,
+ * interleaving with sibling CanvasItem nodes in the parent's flat sort.
+ *
  * This module also exports computeZSortValues for the contract test.
  */
 
@@ -17,7 +21,10 @@ import { useYSortContext, type YSortContextValue } from './contexts/YSortContext
 import { Z_INDEX_STEP, TILE_SOURCE_STEP } from './node2dTransform.js';
 import { nodeComponentRegistry } from './NodeComponentRegistry.js';
 import type { TileMapLayerProperties } from '../nodes/2d/tiles/tilemaplayer/types.js';
+import type { PlacedCell } from '../nodes/2d/tiles/shared/tileData.js';
 import { useTileSetModel } from './useTileSetModel.js';
+import { groupBySortY } from '../resources/tileset/tileYSort.js';
+import type { YSortGroup } from '../resources/tileset/tileYSort.js';
 
 /** Z sub-range for y-sort ranks within one z-index bucket (50% of Z_INDEX_STEP). */
 const YSORT_SUBRANGE = Z_INDEX_STEP * 0.5;
@@ -29,7 +36,7 @@ export interface YSortItem {
   treeOrder: number;
   kind: 'node' | 'tileGroup';
   /** For 'tileGroup': TileMapLayer tile props. */
-  tileData?: { tileSetRef: string; worldY: number };
+  tileData?: { tileSetRef: string; worldY: number; cells?: readonly PlacedCell[] };
   /** The raw TscnNode for this item (used to re-dispatch it). */
   node?: TscnNode;
 }
@@ -150,8 +157,50 @@ export function computeZSortValues(
 export function YSortDispatcher({ node, children: _children }: { node: TscnNode; children: ReactNode }) {
   const parent = useYSortContext();
 
-  // Collect and sort.
-  const items = useMemo(() => collectYSortedItems(node, parent, 0), [node, parent]);
+  // Collect raw items (y_sort TileMapLayer → one tileGroup placeholder per layer).
+  const rawItems = useMemo(() => collectYSortedItems(node, parent, 0), [node, parent]);
+
+  // Resolve the tileset for any y-sorted TileMapLayer child so we can expand
+  // it into per-Y-group items (the dungeon fix).
+  const tileSetRef = useMemo(() => {
+    const tl = rawItems.find(i => i.kind === 'tileGroup' && i.node);
+    if (!tl?.node) return undefined;
+    return (tl.node.properties as TileMapLayerProperties).tile_set;
+  }, [rawItems]);
+  const { model, status } = useTileSetModel(tileSetRef);
+
+  // Expand tileGroup items into per-Y-group items using groupBySortY,
+  // then flatten (preserving tree-order position of the original layer).
+  const items = useMemo<YSortItem[]>(() => {
+    const expanded: YSortItem[] = [];
+    for (const item of rawItems) {
+      if (item.kind === 'tileGroup' && item.node && model && status === 'loaded') {
+        const tp = item.node.properties as TileMapLayerProperties;
+        const cells = tp.cells;
+        if (cells?.length) {
+          const grid = model;
+          const layerYSortOrigin = (tp.y_sort_origin as number) ?? 0;
+          const layerWorldY = parent.parentWorldY + (tp.position?.y ?? 0) + layerYSortOrigin;
+          const groups: YSortGroup[] = groupBySortY(cells, grid, layerYSortOrigin, layerWorldY);
+          for (let g = 0; g < groups.length; g++) {
+            const group = groups[g]!;
+            // Filter cells to this Y-group's cells only.
+            expanded.push({
+              sortY: group.sortY,
+              effectiveZ: item.effectiveZ,
+              treeOrder: item.treeOrder + g,
+              kind: 'tileGroup',
+              tileData: { ...item.tileData!, cells: group.cells },
+              node: item.node,
+            });
+          }
+          continue;
+        }
+      }
+      expanded.push(item);
+    }
+    return expanded;
+  }, [rawItems, model, status, parent.parentWorldY]);
 
   // Bucket by effectiveZ, sort within each bucket by sortY ascending (stable),
   // then assign rank-based z within each bucket.
@@ -189,7 +238,7 @@ export function YSortDispatcher({ node, children: _children }: { node: TscnNode;
 
         if (item.kind === 'tileGroup' && item.node) {
           return (
-            <YSortZProvider key={item.treeOrder} value={fullZ}>
+            <YSortZProvider key={`tg-${item.treeOrder}`} value={fullZ}>
               <TileGroupRenderer item={item} sortZ={sortZ} node={item.node} />
             </YSortZProvider>
           );
@@ -197,7 +246,7 @@ export function YSortDispatcher({ node, children: _children }: { node: TscnNode;
 
         if (item.node) {
           return (
-            <YSortZProvider key={`${item.treeOrder}`} value={fullZ}>
+            <YSortZProvider key={`n-${item.treeOrder}`} value={fullZ}>
               <YSortChild node={item.node} path={node.name} />
             </YSortZProvider>
           );
@@ -260,7 +309,9 @@ function TileGroupRenderer({ item, sortZ, node }: {
 }): ReactNode | null {
   const tileProps = node.properties as TileMapLayerProperties;
   const { model, status } = useTileSetModel(tileProps.tile_set);
-  const cells = tileProps.cells ?? null;
+  const allCells = tileProps.cells ?? null;
+  // When expanded by the y-sort pass, tileData.cells holds the filtered Y-group cells.
+  const cells = item.tileData?.cells ?? allCells;
 
   if (!cells?.length || status !== 'loaded' || !model) {
     return <group name={`TileGroup_${node.name}_${item.treeOrder}`} position={[0, 0, sortZ]} />;

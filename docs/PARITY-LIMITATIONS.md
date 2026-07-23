@@ -212,11 +212,16 @@ where overlapping cells come from different sources).
 - Site: `r3f/node2dTransform.ts` (`TILE_SOURCE_STEP`), tile slice Components.
 
 ### Y-sort  *(issue #74, implemented — static only)*
-`y_sort_enabled` / `y_sort_origin` are now parsed and applied at render time
+`y_sort_enabled` / `y_sort_origin` are parsed and applied at render time
 for static scenes. A `y_sort_enabled` parent collects its descendant CanvasItems,
 sorts them by accumulated world-Y within effective-z buckets, and renders them
 front-to-back using rank-based z sub-steps. Non-y-sorted containers sort as one
 unit. `y_sort_origin` shifts sort keys for TileMapLayer tiles only.
+
+A y-sorted TileMapLayer is decomposed per-distinct-Y-group: each unique
+combined-Y (layer world Y + map-to-local pixel Y + y_sort_origin) becomes a
+separate draw target participating in the parent's flat sort, so interleaved
+siblings (decorations, sprites) land at correct depth relative to specific tile rows.
 
 - **Deferred:** per-frame re-sort when AnimationPlayer changes Y positions.
   Animated scenes must be re-parsed to re-sort.
