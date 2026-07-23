@@ -77,22 +77,21 @@ describe('StandardMaterial3D Linter Validators', () => {
       expect(result).toBeNull();
     });
 
-    it('should reject invalid ExtResource format', () => {
+    it('should reject a malformed reference (missing quotes)', () => {
       const validator = validatorRegistry.findValidator('StandardMaterial3D', 'normal_texture');
       const result = validator!('normal_texture', 'ExtResource(1_abc)', 1);
 
       expect(result).not.toBeNull();
       expect(result!.severity).toBe('error');
-      expect(result!.message).toContain('must be an ExtResource reference');
-      expect(result!.code).toBe('INVALID_EXTRESOURCE');
+      expect(result!.message).toContain('must be a resource reference');
+      expect(result!.code).toBe('INVALID_TEXTURE_REFERENCE');
     });
 
-    it('should reject SubResource reference', () => {
+    it('should accept a SubResource reference (procedural/inline Texture2D)', () => {
       const validator = validatorRegistry.findValidator('StandardMaterial3D', 'normal_texture');
-      const result = validator!('normal_texture', 'SubResource("Material_1")', 1);
+      const result = validator!('normal_texture', 'SubResource("Tex_1")', 1);
 
-      expect(result).not.toBeNull();
-      expect(result!.severity).toBe('error');
+      expect(result).toBeNull();
     });
 
     it('should reject plain string', () => {
