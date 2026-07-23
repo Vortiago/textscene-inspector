@@ -1,5 +1,5 @@
 /**
- * RED contract — Y-sort TileMapLayer PER-Y interleave (issue #74, the dungeon symptom).
+ * RED contract — Y-sort TileMapLayer PER-Y interleave (the dungeon symptom).
  *
  * The dungeon bug: a decoration that sits between two rows of ground tiles must draw
  * in FRONT of the tiles behind it and BEHIND the tiles in front of it — i.e. its draw
@@ -99,10 +99,19 @@ polygon = PackedVector2Array(0, 0, 8, 0, 8, 8)
   let root: THREE.Object3D | null | undefined = first;
   while (root?.parent) root = root.parent;
   root?.traverse((o: THREE.Object3D) => {
-    // A y-sorted TileMapLayer renders one group per Y-group, named `TileGroup_<name>_<i>`.
+    // Assert on the ACTUAL rendered tile MESH (the harm layer), not the `TileGroup_*`
+    // wrapper group: the group carries the y-sort rank, but each tile mesh sits at
+    // group.z + its own local z, so a bug that double-counts the rank on the mesh
+    // (group AND mesh both offset by sortZ) is invisible from the wrapper and only
+    // shows here — where the pixels actually are. The batched tile mesh is an
+    // anonymous child of its `TileGroup_<name>_<i>` group.
     if (o.name?.startsWith('TileGroup_')) {
-      o.getWorldPosition(v);
-      tileZ.push(v.z);
+      o.traverse((m: THREE.Object3D) => {
+        if ((m as THREE.Mesh).isMesh) {
+          m.getWorldPosition(v);
+          tileZ.push(v.z);
+        }
+      });
     } else if (o.name === 'Decor') {
       o.getWorldPosition(v);
       decorZ = v.z;
@@ -126,11 +135,14 @@ describe('Y-sort TileMapLayer per-Y interleave (issue #74 dungeon symptom)', () 
 
     const { tileZ, decorZ } = await render(cells, decorY);
 
-    // Both tile groups and the decoration rendered.
+    // Both tile meshes and the decoration rendered.
     expect(tileZ.length).toBeGreaterThan(0);
     expect(decorZ).toBeDefined();
-    // THE PIN: the decoration's draw order lands strictly BETWEEN the tile groups'.
-    // One-unit approximation clusters all tiles at a single z (min === max) → fails.
+    // THE PIN: the decoration's draw order lands strictly BETWEEN the tile ROWS as
+    // rendered (the meshes). Two failure modes this catches: (1) the one-unit
+    // approximation clusters all tiles at a single z (min === max) → nothing between;
+    // (2) the tile mesh double-counts its rank (mesh at 2×rank while the decoration is
+    // at 1×rank) → the near tile row coincides with / overtakes the decoration.
     expect(Math.min(...tileZ)).toBeLessThan(decorZ!);
     expect(decorZ!).toBeLessThan(Math.max(...tileZ));
   });

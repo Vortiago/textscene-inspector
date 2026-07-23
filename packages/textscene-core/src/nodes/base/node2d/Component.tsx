@@ -14,19 +14,18 @@ import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { node2dGroupProps, node2dGroupSpread, canvasItemZ } from '../../../r3f/node2dTransform';
 import { Modulate2DContext, multiplyModulate, useParentModulate } from '../../../r3f/canvasItemModulate';
 import { YSortDispatcher } from '../../../r3f/YSortDispatcher.js';
-import { useYSortSlot } from '../../../r3f/contexts/YSortContext';
+import { useYSortSlot, useYSortZContext } from '../../../r3f/contexts/YSortContext';
 
-interface Node2DProps extends NodeComponentProps {
-  zOverride?: number | null;
-}
-
-export function Node2D({ node, children, zOverride }: Node2DProps) {
+export function Node2D({ node, children }: NodeComponentProps) {
   const props = node.properties as Node2DProperties;
   // A tree-order slot base (set by a non-y-sort ancestor that distributes its
   // z-band among y-sort subtrees) shifts this group's whole subtree into its slot.
   const slot = useYSortSlot();
-  const baseZ = zOverride !== undefined && zOverride !== null ? zOverride : canvasItemZ(props);
-  const z = baseZ + slot.base;
+  // When this Node2D is itself a y-sort item (its y-sort parent gave it a rank z via
+  // context), that rank z IS its draw position — exactly as CanvasItem2D does — so a
+  // Node2D-rooted unit sorts by its rank like a sprite sibling instead of ignoring it.
+  const zSortZ = useYSortZContext();
+  const z = zSortZ !== null ? zSortZ : canvasItemZ(props) + slot.base;
   const transform = useMemo(
     () => node2dGroupSpread(node2dGroupProps(props, z)),
     [props, z]

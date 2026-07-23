@@ -11,8 +11,6 @@ import { createTypeRegistry } from '../core/createTypeRegistry';
 export interface NodeComponentProps {
   node: TscnNode;
   children?: React.ReactNode;
-  /** When set by y-sort, overrides the group wrapper's z (avoids double-z). */
-  zOverride?: number | null;
 }
 
 export type NodeComponent = React.ComponentType<NodeComponentProps>;

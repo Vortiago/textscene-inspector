@@ -3,31 +3,27 @@
  * by (effectiveZ bucket → sortY → tree order), assigns rank-based z, and
  * re-renders in that order.
  *
- * Operator correction §1: within-bucket rank-based z sub-steps:
- *   z = effectiveZ * Z_INDEX_STEP + ((rank + 1) / (K + 1)) * YSORT_SUBRANGE
- * where YSORT_SUBRANGE < Z_INDEX_STEP (50% of step).
+ * Within-bucket rank-based z sub-steps:
+ *   z = effectiveZ * Z_INDEX_STEP + ((rank + 1) / (K + 1)) * slot.width
+ * where slot.width (≤ Z_INDEX_STEP * 0.5) is this y-sort subtree's allotted
+ * draw-order band (narrowed when sibling y-sort subtrees share a z-index step).
  *
  * A y_sort_enabled TileMapLayer is decomposed per-Y-group via `groupBySortY`:
  * each distinct sort-Y becomes a separate tileGroup item at its own rank,
  * interleaving with sibling CanvasItem nodes in the parent's flat sort.
- *
- * This module also exports computeZSortValues for the contract test.
  */
 
-import { useMemo, Fragment, type ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import type { TscnNode } from '../parser/types.js';
 import * as THREE from 'three';
 import { useYSortContext, useYSortSlot, type YSortContextValue } from './contexts/YSortContext.js';
-import { Z_INDEX_STEP, TILE_SOURCE_STEP } from './node2dTransform.js';
+import { Z_INDEX_STEP, TILE_SOURCE_STEP, YSORT_FINE_RANGE } from './node2dTransform.js';
 import { nodeComponentRegistry } from './NodeComponentRegistry.js';
 import type { TileMapLayerProperties } from '../nodes/2d/tiles/tilemaplayer/types.js';
 import type { PlacedCell } from '../nodes/2d/tiles/shared/tileData.js';
 import { useTileSetModel } from './useTileSetModel.js';
 import { groupBySortY } from '../resources/tileset/tileYSort.js';
 import type { YSortGroup } from '../resources/tileset/tileYSort.js';
-
-/** Z sub-range for y-sort ranks within one z-index bucket (50% of Z_INDEX_STEP). */
-const YSORT_SUBRANGE = Z_INDEX_STEP * 0.5;
 
 /** A renderable item collected by the y-sort pass. */
 export interface YSortItem {
@@ -100,57 +96,6 @@ export function collectYSortedItems(
 }
 
 /**
- * Compute sorted z-offsets for children of a y_sort_enabled node.
- * Pure function, called from the contract test to verify the sort algorithm.
- */
-export function computeZSortValues(
-  node: TscnNode,
-  parentWorldY: number
-): Array<{ name: string; sortY: number; z: number }> {
-  const parent: YSortContextValue = {
-    parentWorldY,
-    parentEffectiveZ: 0,
-    insideYSort: false,
-    depth: 0,
-  };
-  const items = collectYSortedItems(node, parent, 0);
-
-  // Sort: bucket by effectiveZ ascending, then by sortY ascending (stable sort).
-  const sorted = [...items]
-    .sort((a, b) => {
-      if (a.effectiveZ !== b.effectiveZ) return a.effectiveZ - b.effectiveZ;
-      return a.sortY - b.sortY;
-    });
-
-  // Assign z based on rank within each bucket.
-  const result: Array<{ name: string; sortY: number; z: number }> = [];
-  const buckets = new Map<number, typeof sorted>();
-  for (const item of sorted) {
-    const bucket = buckets.get(item.effectiveZ);
-    if (bucket) bucket.push(item);
-    else buckets.set(item.effectiveZ, [item]);
-  }
-  const bucketKeys = [...buckets.keys()].sort((a, b) => a - b);
-  for (const effZ of bucketKeys) {
-    const bucket = buckets.get(effZ)!;
-    for (let g = 0; g < bucket.length; g++) {
-      const item = bucket[g]!;
-      const K = bucket.length;
-      const sortZ = ((g + 1) / (K + 1)) * YSORT_SUBRANGE;
-      const z = item.effectiveZ * Z_INDEX_STEP + sortZ;
-      result.push({
-        name: item.kind === 'tileGroup'
-          ? `tilegroup:${item.tileData!.tileSetRef}`
-          : `node:${item.treeOrder}`,
-        sortY: item.sortY,
-        z,
-      });
-    }
-  }
-  return result;
-}
-
-/**
  * <YSortDispatcher> — the component that performs the y-sort pass on a
  * y_sort_enabled Node2D's children.
  */
@@ -183,7 +128,9 @@ export function YSortDispatcher({ node, children: _children }: { node: TscnNode;
         if (cells?.length) {
           const grid = model;
           const layerYSortOrigin = (tp.y_sort_origin as number) ?? 0;
-          const layerWorldY = parent.parentWorldY + (tp.position?.y ?? 0) + layerYSortOrigin;
+          // groupBySortY adds layerYSortOrigin to each cell's sort key itself, so the
+          // layer world-Y passed in must NOT include it (else the origin double-counts).
+          const layerWorldY = parent.parentWorldY + (tp.position?.y ?? 0);
           const groups: YSortGroup[] = groupBySortY(cells, grid, layerYSortOrigin, layerWorldY);
           for (let g = 0; g < groups.length; g++) {
             const group = groups[g]!;
@@ -232,7 +179,7 @@ export function YSortDispatcher({ node, children: _children }: { node: TscnNode;
   }, [items]);
 
   return (
-    <YSortCollectingProvider value={true}>
+    <>
       {sorted.map(({ item, rank }) => {
         const sameBucket = sorted.filter(s => s.item.effectiveZ === item.effectiveZ);
         const K = sameBucket.length;
@@ -240,10 +187,17 @@ export function YSortDispatcher({ node, children: _children }: { node: TscnNode;
         const fullZ = item.effectiveZ * Z_INDEX_STEP + sortZ;
 
         if (item.kind === 'tileGroup' && item.node) {
+          // The Y-group's whole draw position (z-index bucket + rank) rides the group;
+          // its meshes sit at their own per-source sub-step RELATIVE to it (see the
+          // group's `position` below), so the rank is applied ONCE. Key on the layer's
+          // name so sibling y-sort TileMapLayers can't collide on a shared treeOrder.
           return (
-            <YSortZProvider key={`tg-${item.treeOrder}`} value={fullZ}>
-              <TileGroupRenderer item={item} sortZ={sortZ} node={item.node} />
-            </YSortZProvider>
+            <TileGroupRenderer
+              key={`tg-${item.node.name}-${item.treeOrder}`}
+              item={item}
+              z={fullZ}
+              node={item.node}
+            />
           );
         }
 
@@ -256,7 +210,7 @@ export function YSortDispatcher({ node, children: _children }: { node: TscnNode;
         }
         return null;
       })}
-    </YSortCollectingProvider>
+    </>
   );
 }
 
@@ -282,7 +236,18 @@ function YSortChild({ node, path }: { node: TscnNode; path: string }) {
 
   const children: ReactNode[] = [];
   if (inlineChildren.length > 0) {
-    children.push(<Fragment key="__inline">{inlineChildren}</Fragment>);
+    // The y-sort rank z is applied to THIS item's group only (via the YSortZProvider
+    // wrapping this YSortChild). Its descendants are the atomic unit and render at
+    // their own canvasItemZ RELATIVE to this group — reset the rank-z context and the
+    // tree-order slot for them, so neither is re-added (which would double-count the
+    // rank per nesting level and the slot base per depth).
+    children.push(
+      <YSortZProvider key="__inline" value={null}>
+        <YSortSlotProvider value={{ base: 0, width: YSORT_FINE_RANGE }}>
+          {inlineChildren}
+        </YSortSlotProvider>
+      </YSortZProvider>
+    );
   }
 
   return (
@@ -304,10 +269,11 @@ function YSortChild({ node, path }: { node: TscnNode; path: string }) {
   );
 }
 
-/** Render a TileMapLayer Y-group as TileSourceMeshes. */
-function TileGroupRenderer({ item, sortZ, node }: {
+/** Render a TileMapLayer Y-group as TileSourceMeshes at draw position `z`. */
+function TileGroupRenderer({ item, z, node }: {
   item: YSortItem;
-  sortZ: number;
+  /** The Y-group's full draw position (z-index bucket + y-sort rank), carried by the group. */
+  z: number;
   node: TscnNode;
 }): ReactNode | null {
   const tileProps = node.properties as TileMapLayerProperties;
@@ -317,7 +283,7 @@ function TileGroupRenderer({ item, sortZ, node }: {
   const cells = item.tileData?.cells ?? allCells;
 
   if (!cells?.length || status !== 'loaded' || !model) {
-    return <group name={`TileGroup_${node.name}_${item.treeOrder}`} position={[0, 0, sortZ]} />;
+    return <group name={`TileGroup_${node.name}_${item.treeOrder}`} position={[0, 0, z]} />;
   }
 
   // Partition cells by source (per-source batching), then render each Y-group.
@@ -329,14 +295,14 @@ function TileGroupRenderer({ item, sortZ, node }: {
   })).filter((entry) => entry.cells.length > 0);
 
   return (
-    <group name={`TileGroup_${node.name}_${item.treeOrder}`} position={[0, 0, sortZ]}>
+    <group name={`TileGroup_${node.name}_${item.treeOrder}`} position={[0, 0, z]}>
       {cellsBySource.map(({ sourceId, sourceIndex, source, cells: sourceCells }) => (
         <TileSourceMesh
           key={`${sourceId}_${item.treeOrder}`}
           source={source}
           cells={sourceCells}
           grid={model}
-          z={sortZ + sourceIndex * TILE_SOURCE_STEP}
+          z={sourceIndex * TILE_SOURCE_STEP}
           color={new THREE.Color(1, 1, 1)}
           opacity={1}
           name={node.name}
@@ -355,4 +321,4 @@ import { TWO_D_UI_TYPES } from './controls/has2DUIContent.js';
 import { ErrorBoundary } from './components/ErrorBoundary.js';
 import { MissingResourcePlaceholder } from './components/MissingResourcePlaceholder.js';
 import { TileSourceMesh } from './TileSourceMesh.js';
-import { YSortCollectingProvider, YSortZProvider } from './contexts/YSortContext.js';
+import { YSortSlotProvider, YSortZProvider } from './contexts/YSortContext.js';

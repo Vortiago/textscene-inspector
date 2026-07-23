@@ -6,24 +6,20 @@ import { createContext, useContext, type ReactNode } from 'react';
 import type { TscnNode } from '../../parser/types';
 import { YSORT_FINE_RANGE } from '../node2dTransform';
 
+// NOTE: no provider currently sets non-default values, so parentWorldY /
+// parentEffectiveZ are always 0 — a y-sort node nested inside another y-sort
+// node sorts by LOCAL Y only. Accumulating these across nesting is tracked as a
+// follow-up; the context is the seam that fix will write to.
 export interface YSortContextValue {
   parentWorldY: number;
   parentEffectiveZ: number;
-  insideYSort: boolean;
-  depth: number;
 }
 
 const YSortContext = createContext<YSortContextValue>({
   parentWorldY: 0,
   parentEffectiveZ: 0,
-  insideYSort: false,
-  depth: 0,
 });
 YSortContext.displayName = 'YSortContext';
-
-export function YSortProvider({ value, children }: { value: YSortContextValue; children: ReactNode }) {
-  return <YSortContext.Provider value={value}>{children}</YSortContext.Provider>;
-}
 
 export function useYSortContext(): YSortContextValue {
   return useContext(YSortContext);
@@ -39,18 +35,6 @@ export function YSortZProvider({ value, children }: { value: number | null; chil
 
 export function useYSortZContext(): number | null {
   return useContext(YSortZContext);
-}
-
-/** Y-sort collecting context — signals TileMapLayer not to render (parent hoists tiles). */
-const YSortCollectingContext = createContext<boolean | null>(null);
-YSortCollectingContext.displayName = 'YSortCollectingContext';
-
-export function YSortCollectingProvider({ value, children }: { value: boolean; children: ReactNode }) {
-  return <YSortCollectingContext.Provider value={value}>{children}</YSortCollectingContext.Provider>;
-}
-
-export function useYSortCollecting(): boolean | null {
-  return useContext(YSortCollectingContext);
 }
 
 /**

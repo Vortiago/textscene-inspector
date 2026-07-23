@@ -21,11 +21,9 @@ export interface CanvasItem2DProps {
   /** Renders this node's own pixels with the resolved own-pixel tint. */
   body?: (tint: CanvasItemTint) => ReactNode;
   children?: ReactNode;
-  /** When non-null, overrides the wrapper group's z (used by y-sort rank offsets). */
-  zOverride?: number | null;
 }
 
-export function CanvasItem2D({ node, props, body, children, zOverride }: CanvasItem2DProps) {
+export function CanvasItem2D({ node, props, body, children }: CanvasItem2DProps) {
   const zSortZ = useYSortZContext();
   const slot = useYSortSlot();
   // When y-sort provides a rank-based z offset, use it directly — the tree-order slot
@@ -35,7 +33,7 @@ export function CanvasItem2D({ node, props, body, children, zOverride }: CanvasI
   // it lands in its slot rather than the shared layer base.
   const z = zSortZ !== null
     ? zSortZ
-    : (zOverride ?? canvasItemZ(props)) + slot.base;
+    : canvasItemZ(props) + slot.base;
   const transform = useMemo(
     () => node2dGroupSpread(node2dGroupProps(props, z)),
     [props, z]

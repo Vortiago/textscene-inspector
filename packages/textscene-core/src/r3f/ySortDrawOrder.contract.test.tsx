@@ -1,5 +1,5 @@
 /**
- * RED contract — Godot 2D Y-sort draw order (issue #74).
+ * RED contract — Godot 2D Y-sort draw order.
  *
  * Godot semantics (verified against 4.4 renderer_canvas_cull.cpp): within a
  * `y_sort_enabled` subtree, CanvasItem descendants draw front-to-back by
@@ -24,6 +24,7 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
+import { Z_INDEX_STEP } from './node2dTransform';
 import { NodeDispatcher } from './NodeDispatcher';
 import { CanvasWorkspaceProvider } from './contexts/CanvasWorkspaceContext';
 import { SelectionProvider } from './contexts/SelectionContext';
@@ -160,6 +161,38 @@ ${poly('B_low', 'SubB', -100)}
     const minB = Math.min(z.get('B_high')!, z.get('B_low')!);
     // SubA (declared first) entirely behind SubB (declared second) — no cross-subtree interleave.
     expect(maxA).toBeLessThan(minB);
+  });
+
+  it('RED: a Node2D atomic child of a y-sort parent honors its own z-index bucket, like a CanvasItem sibling', async () => {
+    // A y-sort parent sorts its children into effective-z buckets, then by Y. Both a
+    // plain CanvasItem (`Ref`) and a Node2D container (`Wrap`) carry z_index = 1, so
+    // both belong in the SAME z-index bucket. `Wrap`'s child `Inner` (z_index 0) must
+    // therefore render in `Wrap`'s bucket — NOT a full extra z-index step forward.
+    // Bug: Node2D ignores the y-sort rank z (only CanvasItem consumes it) AND the rank
+    // leaks through context to `Inner`, so `Inner` = Wrap.canvasItemZ + Wrap.rankZ,
+    // double-counting the z-index step (Inner lands at ~2×Z_INDEX_STEP) → RED.
+    const z = await worldZByName(`[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="Floor" type="Node2D" parent="."]
+y_sort_enabled = true
+
+${poly('Ref', 'Floor', 0, 'z_index = 1')}
+
+[node name="Wrap" type="Node2D" parent="Floor"]
+z_index = 1
+
+${poly('Inner', 'Floor/Wrap', 0)}
+`);
+    expect(z.get('Ref')).toBeDefined();
+    expect(z.get('Inner')).toBeDefined();
+    // Inner is in a z-index bucket (drawn in front of a z_index 0 item)…
+    expect(z.get('Inner')!).toBeGreaterThan(Z_INDEX_STEP);
+    // …but NOT beyond its own z_index=1 bucket (no doubled z-index step).
+    expect(z.get('Inner')!).toBeLessThan(2 * Z_INDEX_STEP);
+    // …and it shares Ref's bucket (both z_index=1), differing only by a rank sub-step.
+    expect(Math.abs(z.get('Inner')! - z.get('Ref')!)).toBeLessThan(Z_INDEX_STEP);
   });
 
   it('RED: a leaf CanvasItem sitting directly in a tree-order slot lands between the y-sort subtrees', async () => {
