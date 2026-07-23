@@ -436,23 +436,23 @@ unchanged.
   than the case warrants.
 - Site: `resources/environment/toneMapping.ts` (`applyToneMapping`).
 
-### `tonemap_mode = AGX` uses three's AgX, not Godot's
-REINHARDT, FILMIC and ACES are ported from Godot's own shader
-(`godotToneMapping.ts`) and normalised by `tonemap_white` exactly as the engine
-does. AGX is left to three's `AgXToneMapping`.
+### `tonemap_mode = AGX` — ported from Godot 4.6, contrast fixed
+REINHARDT, FILMIC, ACES and now AGX are ported from Godot's own shader
+(`godotToneMapping.ts`), on both the in-material and glow-composer paths. AGX is
+Godot 4.6's EaryChow curve — the `allenwp_curve` sigmoid and the inset/outset
+matrices from `tonemap.glsl` — run on linear light, with `tonemap_white` used as
+the shoulder's high-clip point (floored at 2.0, Godot's desktop/Forward+ rule)
+rather than a divide-at-white. Its harder toe is what crushes an ambient-lit
+surface inside a cast shadow toward black, where three's own AgX left it
+dim-but-lit. A controlled AGX + cast-shadow fixture
+(`unit-tonemap-agx-shadow.tscn`) matches Godot to within 2/255 across the toe
+and the shoulder, including a saturated colour through the matrices.
 
-- **Why not exact:** Godot's AgX is by its own description "an approximation and
-  simplification of EaryChow's AgX implementation"; three's is a different
-  approximation of the same source. Porting Godot's would mean carrying its LUT
-  fit as well.
-- **Most visible as shallow shadows:** Godot's AgX has a harder toe, so a surface
-  lit only by a flat ambient term reads much darker there. Measured on the 3D
-  Platformer (`game.tscn`, whose stage sets `tonemap_mode = 4`): a cast-shadow
-  region Godot renders near-black (mean brightness 71) stays dim-but-lit in ours
-  (mean 152), while ours' lit grass reads ~1.3× brighter — one curve difference,
-  both effects. The shadow *geometry* is correct (the `unit-shadows-only` golden,
-  on the FILMIC preview env, matches Godot to within 2/255); only the AgX toe
-  differs, so a shadowed scene looks flatter under AGX specifically.
+- **Residual approximation:** the curve contrast is fixed at Godot 4.6.3's
+  built-in 1.25 (the engine exposes no per-Environment `agx_contrast` setter in
+  this version), and the mobile renderer's cap-white-at-2.0 rule is not modelled
+  — the previewer follows the desktop/Forward+ path. The ~2/255 residual on the
+  fixture is GPU float precision in the in-shader parameter derivation.
 - Site: `resources/environment/godotToneMapping.ts`.
 
 ## Control

@@ -11,7 +11,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { applyToneMapping, toneMappingFor } from './toneMapping';
-import { toneMappingShaderChunk, toneMappingWhiteParam } from './godotToneMapping';
+import {
+  toneMappingEffectGlsl,
+  toneMappingShaderChunk,
+  toneMappingWhiteParam,
+} from './godotToneMapping';
 
 describe('toneMappingFor', () => {
   it('draws Godot\u2019s own curve for the three modes we ported', () => {
@@ -27,10 +31,11 @@ describe('toneMappingFor', () => {
     expect(toneMappingFor(0)).toBe(THREE.NoToneMapping);
   });
 
-  it('leaves AGX to three\u2019s own AgX', () => {
-    // Godot's AgX is "an approximation and simplification of EaryChow's"; so is
-    // three's. Neither claims to be the other.
-    expect(toneMappingFor(4)).toBe(THREE.AgXToneMapping);
+  it('draws AGX with Godot\u2019s own AgX, not three\u2019s different approximation', () => {
+    // three's AgX (a log2 EV encoding + polynomial sigmoid) renders a
+    // shallower shadow toe than Godot 4.6's allenwp curve, so AGX goes through
+    // CustomToneMapping with the ported curve like the other three modes.
+    expect(toneMappingFor(4)).toBe(THREE.CustomToneMapping);
   });
 
   it('falls back to no tone mapping for an unknown mode', () => {
@@ -60,9 +65,16 @@ describe('Godot\u2019s curves', () => {
     expect(toneMappingWhiteParam(3, 1)).toBeCloseTo(0.781071, 5);
   });
 
-  it('has no white parameter for the curves it does not normalise', () => {
+  it('has no white parameter for LINEAR, which does not normalise', () => {
     expect(toneMappingWhiteParam(0, 4)).toBe(1);
-    expect(toneMappingWhiteParam(4, 4)).toBe(1);
+  });
+
+  it('gives AGX its high-clip white, floored at Godot’s 2.0', () => {
+    // AgX does not divide by the curve at white; white is the shoulder's
+    // high-clip point, and Godot's environment_get_white floors it at 2.0 — so
+    // a default white of 1 becomes 2, and a larger white passes through.
+    expect(toneMappingWhiteParam(4, 1)).toBe(2);
+    expect(toneMappingWhiteParam(4, 5)).toBe(5);
   });
 
   it('emits a compilable CustomToneMapping body that consumes the exposure', () => {
@@ -71,6 +83,29 @@ describe('Godot\u2019s curves', () => {
     // three applies toneMappingExposure for its BUILT-IN curves only; a custom
     // one that forgets it silently ignores tonemap_exposure.
     expect(chunk).toMatch(/color \*= toneMappingExposure/);
+  });
+
+  it('emits an AGX body carrying Godot’s allenwp curve and matrices', () => {
+    const chunk = toneMappingShaderChunk(4);
+    expect(chunk).toMatch(/vec3 CustomToneMapping\(vec3 color\)/);
+    expect(chunk).toMatch(/color \*= toneMappingExposure/);
+    // Load-bearing AgX constants: the inset matrix's leading coefficient and the
+    // middle-grey crossover the piecewise curve pivots on.
+    expect(chunk).toMatch(/0\.544814746488245/);
+    expect(chunk).toMatch(/awp_crossover_point = 0\.18/);
+  });
+
+  it('emits the same AGX curve on the glow-composer path, keyed on the mode', () => {
+    // Both paths must tone-map AGX identically: the composer path returns the
+    // ported curve (baking the floored high-clip white) rather than the old
+    // exposure-only fallback that deferred to three's AgX.
+    const glsl = toneMappingEffectGlsl(4, 1);
+    expect(glsl).not.toBeNull();
+    expect(glsl).toMatch(/0\.544814746488245/);
+    expect(glsl).toMatch(/awp_crossover_point = 0\.18/);
+    expect(glsl).toMatch(/const float godotToneMapWhite = 2\.0;/);
+    // LINEAR still has no ported curve on this path.
+    expect(toneMappingEffectGlsl(0, 1)).toBeNull();
   });
 });
 
@@ -105,6 +140,19 @@ describe('applyToneMapping', () => {
       /const float godotToneMapWhite = 4\.0;/
     );
     THREE.ShaderChunk.tonemapping_pars_fragment = ORIGINAL_CHUNK;
+  });
+
+  it('installs the AGX curve and bakes its floored high-clip white', () => {
+    const gl = fakeRenderer();
+    const restore = applyToneMapping(gl, { mode: 4, exposure: 1 });
+    expect(gl.toneMapping).toBe(THREE.CustomToneMapping);
+    // white defaults to 1, which Godot floors to 2.0 for AgX.
+    expect(THREE.ShaderChunk.tonemapping_pars_fragment).toMatch(
+      /const float godotToneMapWhite = 2\.0;/
+    );
+    expect(THREE.ShaderChunk.tonemapping_pars_fragment).toMatch(/awp_crossover_point = 0\.18/);
+    restore();
+    expect(THREE.ShaderChunk.tonemapping_pars_fragment).toBe(ORIGINAL_CHUNK);
   });
 
   it('restores what it found, so an unmounting environment cannot leak its curve', () => {

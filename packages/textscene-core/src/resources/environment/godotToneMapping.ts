@@ -65,8 +65,15 @@ function acesGrey(x: number): number {
 
 /**
  * The `tonemapper_params.x` Godot computes on the CPU from `tonemap_white`.
- * Reinhard wants white squared; the others want the curve at white, which is
+ * Reinhard wants white squared; FILMIC/ACES want the curve at white, which is
  * what normalises the output so white maps to 1.0.
+ *
+ * AgX is different: white is not a normalisation divisor but the shoulder's
+ * high-clip point — the input the curve is shaped to just reach `output_max`.
+ * Godot's `environment_get_white` floors it at 2.0 for AgX (`max(2, white)` on
+ * the desktop/Forward+ path this previewer mirrors), so the default white of
+ * 1.0 becomes 2.0. The AgX GLSL reads this as `godotToneMapWhite` and derives
+ * the remaining curve parameters from it, exactly as Godot's CPU code does.
  */
 export function toneMappingWhiteParam(mode: number, white: number): number {
   switch (mode) {
@@ -76,6 +83,8 @@ export function toneMappingWhiteParam(mode: number, white: number): number {
       return filmic(white);
     case GodotToneMapper.ACES:
       return acesGrey(white);
+    case GodotToneMapper.AGX:
+      return Math.max(2, white);
     default:
       return 1;
   }
@@ -108,9 +117,9 @@ ${body}
  *
  * Emits a `godotToneMap(vec3, float exposure)` function with the white
  * normalisation baked in, exactly as `toneMapping.ts` bakes it into the chunk.
- * LINEAR and AGX have no ported curve here (LINEAR needs none; AGX falls back
- * to three's own AgX on the material path) — callers treat a `null` return as
- * "no custom curve, apply exposure only".
+ * Only LINEAR has no ported curve here (it needs none) — callers treat a `null`
+ * return as "no custom curve, apply exposure only". AGX is a real curve on both
+ * paths, so it returns GLSL like the others.
  */
 export function toneMappingEffectGlsl(mode: number, white: number): string | null {
   const body = CURVES[mode];
@@ -167,13 +176,72 @@ const CURVES: Record<number, string> = {
   vec3 tonemapped = (color * (color + A) - B) / (color * (C * color + D) + E);
   tonemapped *= odt_to_rgb;
   return tonemapped / godotToneMapWhite;`,
+
+  // EaryChow's AgX, as shipped in Godot 4.6.3 — `tonemap_agx` and the
+  // `allenwp_curve` sigmoid from `tonemap.glsl`. Unlike three's AgX (a
+  // different approximation, with a log2 EV encoding and a 6th-order polynomial)
+  // this runs directly on linear light: a rec709→rec2020+inset matrix, a
+  // piecewise Reinhard-shoulder / power-toe curve about middle grey, a clamp,
+  // then an outset+rec2020→rec709 matrix. Its harder toe is what crushes an
+  // ambient-lit surface inside a cast shadow toward black, where three's leaves
+  // it dim-but-lit.
+  //
+  // The four curve parameters are `environment_get_tonemap_parameters`'s AgX
+  // branch, computed here from `godotToneMapWhite` (Godot's `high_clip`, i.e.
+  // `max(2, white)`) and `awp_contrast`. Godot fills these on the CPU into a
+  // push constant; recomputing them in-shader from the one injected white is
+  // the same arithmetic and keeps AgX on the identical single-value injection
+  // seam as the curves above. `awp_contrast` is Godot's Environment default of
+  // 1.25 (a per-scene `agx_contrast` override is not parsed; see PARITY).
+  [GodotToneMapper.AGX]: /* glsl */ `
+  color = max(color, vec3(0.0));
+
+  const mat3 rec709_to_rec2020_agx_inset = mat3(
+      0.544814746488245, 0.140416948464053, 0.0888104196149096,
+      0.373787398372697, 0.754137554567394, 0.178871756420858,
+      0.0813978551390581, 0.105445496968552, 0.732317823964232);
+  const mat3 agx_outset_rec2020_to_rec709 = mat3(
+      1.96488741169489, -0.299313364904742, -0.164352742528393,
+      -0.855988495690215, 1.32639796461980, -0.238183969428088,
+      -0.108898916004672, -0.0270845997150571, 1.40253671195648);
+
+  const float awp_contrast = 1.25;
+  const float awp_crossover_point = 0.18;
+  const float output_max_value = 1.0;
+  const float awp_shoulder_max = output_max_value - awp_crossover_point;
+  float awp_high_clip = godotToneMapWhite;
+
+  float cp_pow_c = pow(awp_crossover_point, awp_contrast);
+  float awp_toe_a = ((1.0 / awp_crossover_point) - 1.0) * cp_pow_c;
+  float awp_slope_denom = cp_pow_c + awp_toe_a;
+  float awp_slope = (awp_contrast * pow(awp_crossover_point, awp_contrast - 1.0) * awp_toe_a) / (awp_slope_denom * awp_slope_denom);
+  float awp_w = awp_high_clip - awp_crossover_point;
+  awp_w = awp_w * awp_w;
+  awp_w = awp_w / awp_shoulder_max;
+  awp_w = awp_w * awp_slope;
+
+  color = rec709_to_rec2020_agx_inset * color;
+
+  vec3 s = color - awp_crossover_point;
+  vec3 slope_s = awp_slope * s;
+  s = slope_s * (1.0 + s / awp_w) / (1.0 + (slope_s / awp_shoulder_max));
+  s += awp_crossover_point;
+  vec3 t = pow(color, vec3(awp_contrast));
+  t = t / (t + awp_toe_a);
+  color = mix(s, t, lessThan(color, vec3(awp_crossover_point)));
+
+  color = min(vec3(output_max_value), color);
+  color = agx_outset_rec2020_to_rec709 * color;
+  // Godot's linear_to_srgb clamps to [0, 1] before the sRGB OETF; fold that in
+  // here, because the outset matrix's negative excursions on saturated colours
+  // would otherwise reach three's sRGB encode as NaN.
+  return clamp(color, 0.0, 1.0);`,
 };
 
 /**
  * Whether this previewer draws `mode` with Godot's own curve. LINEAR is
- * "no tone mapping" and needs no curve; AGX falls through to three's own AgX
- * approximation (Godot's is itself "an approximation and simplification of
- * EaryChow's AgX", and the two differ).
+ * "no tone mapping" and needs no curve; every other mode — REINHARDT, FILMIC,
+ * ACES and AGX — is ported from Godot's shader.
  */
 export function hasGodotCurve(mode: number): boolean {
   return mode in CURVES;

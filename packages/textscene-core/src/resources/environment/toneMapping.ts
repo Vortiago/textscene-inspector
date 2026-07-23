@@ -8,8 +8,10 @@
  * installed through `THREE.CustomToneMapping`, three's documented hook for
  * exactly this (`godotToneMapping.ts`).
  *
- * AGX keeps three's own AgX: Godot's is itself an approximation of EaryChow's,
- * and neither claims to be the other.
+ * AGX is ported too: three's own AgX is a different approximation of EaryChow's
+ * (a log2 EV encoding with a polynomial sigmoid) and renders shadows visibly
+ * dimmer than Godot's harder toe, so it goes through `CustomToneMapping` with
+ * Godot 4.6's `allenwp_curve` like the rest (`godotToneMapping.ts`).
  */
 
 import * as THREE from 'three';
@@ -40,7 +42,6 @@ const TONEMAP_CHUNK = 'tonemapping_pars_fragment';
 
 export function toneMappingFor(mode: number): THREE.ToneMapping {
   if (mode === GodotToneMapper.LINEAR) return THREE.NoToneMapping;
-  if (mode === GodotToneMapper.AGX) return THREE.AgXToneMapping;
   return hasGodotCurve(mode) ? THREE.CustomToneMapping : THREE.NoToneMapping;
 }
 

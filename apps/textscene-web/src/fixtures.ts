@@ -293,6 +293,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Tonemap Agx Shadow",
+    "file": "unit-tonemap-agx-shadow.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Skeleton3d",
     "file": "unit-skeleton3d.tscn",
     "category": "Other"

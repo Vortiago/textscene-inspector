@@ -27,9 +27,10 @@ export interface GodotToneMappingOptions {
 
 function fragmentShader(mode: number, white: number): string {
   const curve = toneMappingEffectGlsl(mode, white);
-  // LINEAR (and, as a prototype limitation, AGX) have no ported curve here:
-  // apply exposure only, leaving the colour otherwise untouched. AGX on this
-  // path is a known gap — the material path uses three's AgX (PARITY).
+  // Only LINEAR has no ported curve here — apply exposure only, leaving the
+  // colour otherwise untouched. Every other mode (AGX included) returns real
+  // GLSL, so both the glow-composer path and the in-material path tone-map
+  // identically.
   const body =
     curve ??
     /* glsl */ `vec3 godotToneMap(vec3 color, float exposure) { return color * exposure; }`;
