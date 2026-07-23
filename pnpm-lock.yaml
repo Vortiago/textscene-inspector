@@ -43,8 +43,8 @@ catalogs:
       specifier: ^4.1
       version: 4.1.10
     '@vscode/test-electron':
-      specifier: ^2.5.2
-      version: 2.5.2
+      specifier: ^3.0.0
+      version: 3.0.0
     commander:
       specifier: ^12.1.0
       version: 12.1.0
@@ -106,7 +106,7 @@ importers:
         version: 4.1.10(vitest@4.1.10)
       '@vscode/test-electron':
         specifier: 'catalog:'
-        version: 2.5.2
+        version: 3.0.0
       eslint:
         specifier: ^9.18.0
         version: 9.38.0
@@ -207,7 +207,7 @@ importers:
         version: 1.125.0
       '@vscode/test-electron':
         specifier: 'catalog:'
-        version: 2.5.2
+        version: 3.0.0
       '@vscode/test-web':
         specifier: ^0.0.81
         version: 0.0.81
@@ -1365,9 +1365,9 @@ packages:
   '@vitest/utils@4.1.6':
     resolution: {integrity: sha512-FxIY+U81R3LGKCxaHHFRQ5+g6/iRgGLmeHWdp2Amj4ljQRrEIWHmZyDfDYBRZlpyqA7qKxtS9DD1dhk8RnRIVQ==}
 
-  '@vscode/test-electron@2.5.2':
-    resolution: {integrity: sha512-8ukpxv4wYe0iWMRQU18jhzJOHkeGKbnw7xWRX3Zw1WJA4cEKbHcmmLPdPrPtL6rhDcrlCZN+xKRpv09n4gRHYg==}
-    engines: {node: '>=16'}
+  '@vscode/test-electron@3.0.0':
+    resolution: {integrity: sha512-TY5mC7aAjxSLDXsyjhrG8cJHgc/HLdiE5lvtW7hABYQrY24Qwozzr5UoO3HiuAM4Hzz4b7K/eZlwrCILj94CcA==}
+    engines: {node: '>=22'}
 
   '@vscode/test-web@0.0.81':
     resolution: {integrity: sha512-qAYNX1mf4hE0L3T/186J8AH+Z7Inm81OHMACkkyKE2J6HJZlXou0OgABkSvd8gt0BiPjI+V+xkduAaQ8Kcjexg==}
@@ -5099,7 +5099,7 @@ snapshots:
       convert-source-map: 2.0.0
       tinyrainbow: 3.1.0
 
-  '@vscode/test-electron@2.5.2':
+  '@vscode/test-electron@3.0.0':
     dependencies:
       http-proxy-agent: 7.0.2
       https-proxy-agent: 7.0.6
