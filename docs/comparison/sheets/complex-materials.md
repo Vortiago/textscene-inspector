@@ -34,19 +34,18 @@ spheres, each row named by a Label3D caption. Both images are the same whole sce
 
 ## Divergences
 
-The two frames agree on framing and on the plain PBR spheres: both render through the
-same authored Camera3D, so the layout, zoom and every Label3D caption line up, and the
-red, cyan, chrome-grey (with matching specular) and copper/brown spheres read the same
-in both.
+The two frames now agree closely. Both render through the same authored Camera3D, so
+the layout, zoom and every Label3D caption line up; the plain PBR spheres — red,
+chrome-grey with its matching specular, copper/brown — read the same; and the bright
+emissive materials bloom on both sides. Godot's editor environment runs a glow pass,
+and the previewer reproduces it (an HDR bloom driven by the environment's `glow_*`
+values): the emission-row sphere throws its cyan-green halo, the pale glass sphere
+glows lavender, and the emission cores tonemap toward a bright cyan-white wash rather
+than staying flat and saturated. The emission colour matches too — emission is now
+sRGB→linear converted exactly once, so the emissive sphere reads Godot's cyan-white
+instead of an over-saturated blue.
 
-What is left is glow and tone mapping. Godot's editor environment blooms the bright
-emissive materials and filmic-tonemaps the frame — the turquoise and green spheres
-throw coloured halos, the pale glass sphere glows lavender-magenta, and the title
-picks up a warm cream haze. The previewer applies the emission energy multiplier and
-the glass sphere's 0.3 opacity correctly, but runs no glow post-process or filmic
-tonemap, so those cores render flat and hard-edged: the bloom that lightens and cools
-Godot's emissive cores is gone, so the emission-row sphere that tonemaps toward
-turquoise there stays a flatter saturated green in ours with no halo, the glass sphere
-reads a more opaque periwinkle (its smooth surface reflecting the blue sky rather than
-blooming to lavender), and the title is a plainer yellow. This is the known glow/bloom
-+ tonemap gap, not a materials difference.
+What remains is minor: our single-pass additive bloom spreads a little brighter and
+wider than Godot's default SOFTLIGHT glow, so the halos are a touch stronger, and the
+`glow_blend_mode` is not yet applied. The spheres, their colours, and the bloom
+pattern all match.
