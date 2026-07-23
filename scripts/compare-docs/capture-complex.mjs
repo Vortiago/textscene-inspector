@@ -69,9 +69,15 @@ export const COMPLEX_SCENES = [
     ours: 'demos/3d/platformer/game.tscn',
   },
   {
+    // The scene authors a Camera3D framing the material spheres head-on; both
+    // sides render through it (Godot adopts the scene camera, the previewer
+    // activates it via `?camera=`), so the framing matches by construction
+    // instead of relying on two independent fit-to-bounds passes — which
+    // diverge here because billboard Label3D text extents differ per engine.
     slug: 'complex-materials',
     mode: '3d',
-    frame: true,
+    sceneCamera: true,
+    oursCamera: 'Root/Camera3D',
     godot: 'scenes/fixtures/integration-material-features.tscn',
     ours: 'integration-material-features.tscn',
   },
@@ -119,16 +125,17 @@ async function captureOurs(scenes) {
     browser = await chromium.launch({ headless: true, args: SWIFTSHADER_GL_ARGS });
     for (const c of scenes) {
       process.stdout.write(`[complex ours] ${c.slug} (${c.mode}) … `);
-      // Match the Godot framing: a 3D scene is fit to bounds on both sides only
-      // when Godot fits it (`frame`); otherwise both use the fixed editor orbit.
-      // 2D renders the project frame.
+      // Match the Godot framing. A 3D scene is fit to bounds on both sides only
+      // when Godot fits it (`frame`); `oursCamera` instead looks through a
+      // named scene Camera3D (Godot's `sceneCamera`), which needs neither fit;
+      // otherwise both use the fixed editor orbit. 2D renders the project frame.
       const context = await createCaptureContext(browser, {
         frameOnOpen: c.mode === '3d' && (c.frame ?? false),
         canvas2D: c.mode === '2d',
       });
       const page = await context.newPage();
       try {
-        await gotoFixture(page, baseUrl, c.ours);
+        await gotoFixture(page, baseUrl, c.ours, () => {}, c.oursCamera ? { camera: c.oursCamera } : {});
         // A scene with BOTH 3D and 2D content (e.g. the 3D platformer's touch UI)
         // floats a "switch to 2D" hint button over the 3D canvas — chrome that
         // must not land in the capture. It carries no testid, so target its title.

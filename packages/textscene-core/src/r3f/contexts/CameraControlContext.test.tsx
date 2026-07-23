@@ -34,6 +34,29 @@ describe('CameraControlContext', () => {
     expect(result.current.activeCameraPath).toBeNull();
   });
 
+  it('seeds activeCameraPath from initialActiveCameraPath (?camera= deep-link)', () => {
+    const { result } = renderHook(() => useCameraControl(), {
+      wrapper: ({ children }) => (
+        <CameraControlProvider initialActiveCameraPath="Root/Camera3D">
+          {children}
+        </CameraControlProvider>
+      ),
+    });
+    // The canvas looks through this camera on open without any user action.
+    expect(result.current.activeCameraPath).toBe('Root/Camera3D');
+
+    // Returning to free view still clears it — the seed is only the initial value.
+    act(() => {
+      result.current.returnToFreeView();
+    });
+    expect(result.current.activeCameraPath).toBeNull();
+  });
+
+  it('defaults activeCameraPath to null when no initial path is given', () => {
+    const { result } = renderHook(() => useCameraControl(), { wrapper });
+    expect(result.current.activeCameraPath).toBeNull();
+  });
+
   it('exposes resetCamera() that calls the registered handler (WI-UX-7)', () => {
     const handler = vi.fn();
 

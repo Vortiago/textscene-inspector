@@ -104,10 +104,21 @@ function useHandlerSlot<T>(): {
 
 export interface CameraControlProviderProps {
   children: ReactNode;
+  /**
+   * The camera to activate on mount, if any — a Camera3D node path (as
+   * `useNodePath` reports it) the host resolved from a deep-link (the web
+   * previewer's `?camera=` query param). `<ActiveCameraSwitcher>` looks it up
+   * once the scene has rendered; switching scenes drops back to free-orbit
+   * (`<SceneChangeResetter>`), so it only ever frames the deep-linked scene.
+   */
+  initialActiveCameraPath?: string | null;
 }
 
-export function CameraControlProvider({ children }: CameraControlProviderProps) {
-  const [activeCameraPath, setActiveCameraPath] = useState<string | null>(null);
+export function CameraControlProvider({
+  children,
+  initialActiveCameraPath = null,
+}: CameraControlProviderProps) {
+  const [activeCameraPath, setActiveCameraPath] = useState<string | null>(initialActiveCameraPath);
   const [frame2D, setFrame2D] = useState<Frame2DRequest | null>(null);
   const frame2DIdRef = useRef(0);
 

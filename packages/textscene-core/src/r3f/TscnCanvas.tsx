@@ -11,7 +11,7 @@
  * This Camera" on a Camera3D node.
  */
 import { Canvas, useThree } from '@react-three/fiber';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
 import { useOptionalCameraControl } from './contexts/CameraControlContext.js';
@@ -127,14 +127,39 @@ function EmptySceneIndicator() {
  * make it the active render camera; "Reset" returns to the default
  * orbit camera.
  */
-function ActiveCameraSwitcher() {
+/**
+ * A three camera identified by its own runtime flags rather than `instanceof`,
+ * so detection survives a second copy of three being loaded (e.g. the test
+ * renderer). `aspect`/`updateProjectionMatrix` exist only on the perspective
+ * camera; both are optional here.
+ */
+type CameraLike = THREE.Camera & {
+  isPerspectiveCamera?: boolean;
+  isOrthographicCamera?: boolean;
+  aspect?: number;
+  updateProjectionMatrix?: () => void;
+};
+
+export function ActiveCameraSwitcher() {
   const control = useOptionalCameraControl();
   const activeCameraPath = control?.activeCameraPath ?? null;
+  const hierarchy = useOptionalHierarchy();
+  // Re-run when the scene loads: a deep-linked (`?camera=`) path is set on the
+  // provider BEFORE any Camera3D has mounted, so the first pass finds nothing;
+  // the newly loaded scene's Camera3D only becomes discoverable once its own
+  // effect has tagged it, which this dependency waits for.
+  const rootKey = hierarchy?.sceneGraph?.rootScene ?? '';
   const scene = useThree((s) => s.scene);
   const camera = useThree((s) => s.camera);
   const set = useThree((s) => s.set);
+  const size = useThree((s) => s.size);
+  // Distinguish an INTENTIONAL activation from an incidental effect re-run.
+  const prevPathRef = useRef<string | null>(activeCameraPath);
+  const seedConsumedRef = useRef(false);
 
   useEffect(() => {
+    const pathChanged = prevPathRef.current !== activeCameraPath;
+    prevPathRef.current = activeCameraPath;
     if (!activeCameraPath) {
       // Free-orbit: restore the default perspective camera. R3F sets one
       // up automatically; we just need to ensure it's the active one.
@@ -145,24 +170,52 @@ function ActiveCameraSwitcher() {
     }
 
     // Find a camera whose userData carries our node-path tag (set by
-    // Camera3D below when ActiveCameraSwitcher is active). If we don't
-    // find one, fall back to the first camera with the matching name.
-    let target: THREE.Camera | null = null;
+    // Camera3D below when ActiveCameraSwitcher is active). Match on three's own
+    // `.isPerspectiveCamera`/`.isOrthographicCamera` flags rather than
+    // `instanceof` (the pattern frameSceneBounds already uses): the flags are
+    // set on the prototype, so they hold even when a second copy of three is
+    // loaded — e.g. under the test renderer — where `instanceof` would miss.
+    const cameras: (THREE.PerspectiveCamera | THREE.OrthographicCamera)[] = [];
     scene.traverse((object) => {
-      if (target) return;
-      if (
-        object instanceof THREE.PerspectiveCamera ||
-        object instanceof THREE.OrthographicCamera
-      ) {
-        const tag = (object.userData as { tscnPath?: string }).tscnPath;
-        if (tag === activeCameraPath) target = object;
+      const cam = object as CameraLike;
+      if (cam.isPerspectiveCamera || cam.isOrthographicCamera) {
+        cameras.push(object as THREE.PerspectiveCamera | THREE.OrthographicCamera);
       }
     });
+    const target =
+      cameras.find(
+        (c) => (c.userData as { tscnPath?: string }).tscnPath === activeCameraPath
+      ) ?? null;
+    if (!target) return;
+    // A node camera is authored with a fixed placeholder aspect (16/9) because
+    // at mount it cannot know the canvas size. R3F only re-syncs a camera's
+    // aspect on a resize event, so an activated scene camera would render
+    // horizontally stretched on a fixed-size (headless) canvas that never
+    // resizes. Match it to the live canvas here, as R3F does for the default
+    // camera — otherwise it distorts. Safe to run on every re-render (resize
+    // included), so it stays outside the activation gate below.
+    const persp = target as THREE.PerspectiveCamera | null;
+    if (persp?.isPerspectiveCamera && size.height > 0) {
+      const aspect = size.width / size.height;
+      if (persp.aspect !== aspect) {
+        persp.aspect = aspect;
+        persp.updateProjectionMatrix();
+      }
+    }
 
-    if (target && target !== camera) {
+    // Only SWAP the render camera on an intentional activation: an explicit pick
+    // (activeCameraPath just changed) or the one-shot deep-link seed taking effect
+    // on its initial scene. A later scene-switch re-runs this effect via `rootKey`
+    // with a possibly-stale, identically-named path (e.g. two scenes each with a
+    // root `Camera3D`) before SceneChangeResetter clears it — swapping then would
+    // hijack the new scene instead of letting it open in free orbit. The same gate
+    // stops a `camera`-dep re-run from undoing a Reset-Camera that swapped away.
+    const shouldActivate = pathChanged || !seedConsumedRef.current;
+    seedConsumedRef.current = true;
+    if (shouldActivate && target !== camera) {
       set({ camera: target });
     }
-  }, [activeCameraPath, scene, camera, set]);
+  }, [activeCameraPath, rootKey, scene, camera, set, size]);
 
   return null;
 }

@@ -327,8 +327,12 @@ export async function findCanvas2DFrame(page) {
  * the settle gate below happily finds two identical frames of the untextured
  * placeholder. A scene that never idles still falls through to the gate.
  */
-export async function gotoFixture(page, baseUrl, fixture, onSlow = () => {}) {
-  await page.goto(`${baseUrl}/?fixture=${encodeURIComponent(fixture)}`, { waitUntil: 'load' });
+export async function gotoFixture(page, baseUrl, fixture, onSlow = () => {}, extraParams = {}) {
+  let url = `${baseUrl}/?fixture=${encodeURIComponent(fixture)}`;
+  for (const [key, value] of Object.entries(extraParams)) {
+    if (value != null) url += `&${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`;
+  }
+  await page.goto(url, { waitUntil: 'load' });
   await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_MS }).catch((err) => {
     // Anything that is NOT a timeout (crashed target, closed page) is a real
     // failure and must not be mistaken for one.
