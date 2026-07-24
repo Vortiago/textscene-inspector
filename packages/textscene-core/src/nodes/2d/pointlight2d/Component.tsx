@@ -87,7 +87,6 @@ function QuadMesh({
   offset: { x: number; y: number };
   blendMode: number;
 }) {
-  // Blend mode mapping: 0 → Additive, 1 → Subtractive, 2 → Normal.
   let blending: THREE.Blending = THREE.NormalBlending;
   switch (blendMode) {
     case 0:

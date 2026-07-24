@@ -238,7 +238,7 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
-    "name": "Pointlight2d",
+    "name": "PointLight2D",
     "file": "unit-pointlight2d.tscn",
     "category": "Other"
   },
