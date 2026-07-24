@@ -36,3 +36,8 @@ The captions differ only in typeface: Godot draws them in its default font, whil
 uses the previewer's bundled font, so the glyph shapes and stroke weight of the same
 text read slightly differently. The grey-sky-over-brown-ground preview environment
 otherwise matches.
+
+## Known limitations
+
+- **CylinderMesh single cap** — three removes both end caps or neither, so a Godot cylinder with exactly one of `cap_top` / `cap_bottom` disabled renders with both caps.
+- **ArrayMesh compressed attributes** — a surface flagged `COMPRESS_ATTRIBUTES` stores UVs as quantized uint16; the decoder reads the uncompressed layout only, so such a surface renders untextured rather than with a scrambled texture.

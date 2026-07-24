@@ -41,3 +41,9 @@ harness), which compresses the bright white, whereas Godot's 2D CanvasItem draw 
 not tonemapped. Same cause as `tilemaplayer` and `line2d`.
 
 [ADR-0025]: ../../adr/0025-preview-lighting-mirrors-the-godot-editor.md
+
+## Known limitations
+
+- **Cross-source draw order** — tiles batch one mesh per atlas source (a performance requirement), so per-cell interleaving of different sources within a quadrant is not reproduced; sources draw in appearance order, each nudged in z.
+- **Y-sort** — `y_sort_enabled` is applied for static scenes (descendants sorted by world-Y within z buckets); a per-frame re-sort when an AnimationPlayer moves Y is deferred.
+- **Unsupported shapes / formats** — half-offset-square and hexagon tile shapes place on a square grid + warn; legacy `TileMap` format 0/1, scene-collection sources, and per-tile overrides are skipped + warn; animated tiles render their base frame.

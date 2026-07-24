@@ -28,3 +28,7 @@ physics, or a zero-size Control, so both renders are the empty viewport.
 ## Divergences
 
 None visible in this fixture.
+
+## Known limitations
+
+- **z_as_relative = false** — the default (true, effective Z = parent Z + `z_index`) is faithful; with `z_as_relative = false` Godot makes `z_index` absolute, but our nested 2D groups still accumulate ancestor Z. No corpus fixture sets it.

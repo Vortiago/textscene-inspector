@@ -114,7 +114,7 @@ export function EnvironmentLayer({ settings, sky }: EnvironmentLayerProps) {
  * A full metal (metalness 1) keeps the whole reflection; a rough dielectric
  * (metalness 0) keeps only `contribution` of the sky — 0 under a COLOR ambient,
  * so it falls back to the flat ambient alone, exactly as Godot leaves it. This
- * is the `envMapIntensity` split named in PARITY-LIMITATIONS.
+ * is the `envMapIntensity` split.
  *
  * A no-op at `contribution >= 1` (the common case where the two already agree),
  * so it never touches a material unless a scene lowers the sky contribution.

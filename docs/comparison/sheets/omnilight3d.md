@@ -34,3 +34,7 @@ bias leave an aliased fringe, where Godot filters its omni shadow to a soft edge
 The shadow's direction, extent and the warm lit pool otherwise match — the ground
 illumination agrees to within ~1/255 across the whole plane, so the omni/spot
 distance-falloff divergence does not surface at this range.
+
+## Known limitations
+
+- **Distance falloff** — Godot attenuates by `pow(1 - d/range, attenuation)`, reaching zero at `range`; three uses physical inverse-square with a windowing term. The energy scale is matched at the source so the near field agrees, but the mid-falloff curve shape differs.

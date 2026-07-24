@@ -27,3 +27,8 @@ black grid confirm the U/V orientation matches Godot (measured to ~2% earlier).
 
 An atmospheric-scattering sky. The grey-blue gradient, the horizon band, and the
 sphere and ground it lights match Godot's.
+
+## Known limitations
+
+- **Shader / compressed-cubemap skies** — a `Sky` whose material is a user `shader_type sky` `ShaderMaterial`, or whose panorama is a binary `CompressedCubemap`, is not resolved (we neither run GDShaders nor decode compressed cubemaps). The background falls back to a mid-blue solid and metallic surfaces reflect near-black; AgX, fog, and flat ambient still apply, so diffuse surfaces are unchanged. `ReflectionProbe` is likewise unsupported.
+- **Dielectric sky-specular split** — a metal reflects the sky at full strength under any ambient source, and a dielectric's diffuse takes `ambient_light_sky_contribution` exactly; only a dielectric's faint specular lobe (~4% of its response) is scaled with the diffuse rather than kept at full.

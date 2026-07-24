@@ -145,11 +145,12 @@ One file per node type, terse, no narration:
 - What the fixture exercises, in a sentence.
 - The two images side by side.
 - A short table of the properties the fixture sets.
-- **Divergences** — only real ones, each with a reason, linking
-  `docs/PARITY-LIMITATIONS.md` where one already covers it.
+- **Divergences** — only real ones, each with a reason, stated in full in the
+  sheet itself (and a `## Known limitations` section for gaps the fixture does not
+  exercise). The sheet is the home for a limitation; never link a separate file.
 
-Corpus counts never justify an omission (see `docs/PARITY-LIMITATIONS.md`'s
-header); "no fixture covers this property" is a gap to fill, not a note to write.
+Corpus counts never justify an omission; "no fixture covers this property" is a gap
+to fill, not a note to write.
 
 ## Fixture quality — the rule for a fixture that earns a sheet
 

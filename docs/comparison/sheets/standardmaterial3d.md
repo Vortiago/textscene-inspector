@@ -71,3 +71,11 @@ Godot's `heightmap_*` is texture-space parallax — the silhouette stays a smoot
 sphere. three.js has no parallax; it maps to `displacementMap`, which moves real
 vertices, so the sphere deforms into a lumpy blob (and the depth scale is in world
 units, a different space than Godot's).
+
+## Known limitations
+
+- **diffuse_mode** — Godot defaults to Burley; three's material is always Lambert. They agree near normal incidence; a rough sphere reads ~5/255 dark at grazing silhouette.
+- **metallic_specular** — three hard-wires dielectric F0 at 0.04 (Godot's 0.5 default). Authoring it away from 0.5 has no effect.
+- **uv1 V-anchoring** — Godot measures V from the image top, three from the bottom, so a non-integer `uv1_scale.y` or non-zero `uv1_offset.y` shifts V differently. Under `uv1_world_triplanar`, `uv1_offset` is in world units and is not converted.
+- **billboard_mode** — orientation is faithful, but `billboard_keep_scale = false` (scale normalized away while billboarding) is not honored, and a billboarded mesh's child nodes inherit its rotation (Godot's per-surface effect does not turn children).
+- **Triplanar on curved meshes** — tiling density is exact for planar meshes; curved / GLB geometry falls back to the mesh's own UVs.

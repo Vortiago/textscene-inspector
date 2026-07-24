@@ -23,3 +23,11 @@ sitting at the relay's position, not the relay itself.
 ## Divergences
 
 None visible in this fixture.
+
+## Known limitations
+
+The relay copies its transform onto its `remote_path` target once on load (the static enter-tree effect, not per-frame). Three cases are not fully reproduced:
+
+- **`use_global_coordinates = false`** — a no-op on a static load; only the default global-coordinate drive repositions the target (measured against Godot 4.6.3).
+- **Cross-instance `remote_path`** — a path crossing into or out of an instanced sub-scene is left unresolved; in-scene resolution (the common case) works.
+- **Relay chains** — resolve in document (pre-order) order; a feedback loop is not iterated to a fixed point.

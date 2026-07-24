@@ -99,7 +99,7 @@ export function createEnvironmentSettings(
       white: properties.tonemap_white,
     },
     // Scene fog is driven by Godot's screen-space fog; volumetric fog has no
-    // THREE equivalent and is intentionally not applied (see PARITY-LIMITATIONS).
+    // THREE equivalent and is intentionally not applied.
     fog: properties.fog_enabled
       ? {
           density: properties.fog_density,

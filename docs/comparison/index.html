@@ -974,7 +974,9 @@ tr:last-child td{border-bottom:0}
 <h3>Divergences</h3>
 <p>The OptionButton chevron. Godot draws a right-edge dropdown chevron on the "VISIBLE DROPDOWN" bar; the previewer draws none. The chevron is a theme icon the previewer has no access to. The bar tone itself now matches — both draw a dark neutral StyleBox.</p>
 <p>The checkbox and radio indicators are drawn approximations: the previewer draws thin outlines with a light tick or a filled dot, where Godot draws solid theme icon textures (a light filled square with a dark tick, a dark filled square, a ringed radio, a dark filled circle). Both distinguish the checked/unchecked and on/off states correctly. See <a href="checkbox.md">CheckBox</a> for the detail.</p>
-<p>Row pitch differs: Godot's rows are ~35px tall, the previewer's ~26px, so the whole stack reads shorter here. The cause is the default theme's larger control minimum sizes versus the previewer's more compact metrics.</p></div>
+<p>Row pitch differs: Godot's rows are ~35px tall, the previewer's ~26px, so the whole stack reads shorter here. The cause is the default theme's larger control minimum sizes versus the previewer's more compact metrics.</p>
+<h3>Known limitations</h3>
+<ul><li><strong>rotation / scale inside a Container</strong> — a Control inside any Container renders unrotated and unscaled whatever the scene says, matching Godot (<code>fit_child_in_rect</code> ends by resetting rotation and scale).</li></ul></div>
       <div class="compare">
         <div class="stage">
           <img class="img-godot" src="images/unit-control-state-godot.png" alt="Godot render of Control">
@@ -994,7 +996,9 @@ tr:last-child td{border-bottom:0}
 <h3>Divergences</h3>
 <p>The OptionButton chevron. Godot draws a right-edge dropdown chevron on the "VISIBLE DROPDOWN" bar; the previewer draws none. The chevron is a theme icon the previewer has no access to. The bar tone itself now matches — both draw a dark neutral StyleBox.</p>
 <p>The checkbox and radio indicators are drawn approximations: the previewer draws thin outlines with a light tick or a filled dot, where Godot draws solid theme icon textures (a light filled square with a dark tick, a dark filled square, a ringed radio, a dark filled circle). Both distinguish the checked/unchecked and on/off states correctly. See <a href="checkbox.md">CheckBox</a> for the detail.</p>
-<p>Row pitch differs: Godot's rows are ~35px tall, the previewer's ~26px, so the whole stack reads shorter here. The cause is the default theme's larger control minimum sizes versus the previewer's more compact metrics.</p></div>
+<p>Row pitch differs: Godot's rows are ~35px tall, the previewer's ~26px, so the whole stack reads shorter here. The cause is the default theme's larger control minimum sizes versus the previewer's more compact metrics.</p>
+<h3>Known limitations</h3>
+<ul><li><strong>rotation / scale inside a Container</strong> — a Control inside any Container renders unrotated and unscaled whatever the scene says, matching Godot (<code>fit_child_in_rect</code> ends by resetting rotation and scale).</li></ul></div>
     </article>
     <article class="sheet" data-type="ConvertTransformModifier3D" hidden>
       <header class="sheet-head">
@@ -1345,7 +1349,8 @@ tr:last-child td{border-bottom:0}
         </div>
       </div>
         <div class="prose"><p>The preview environment enables glow, which blooms emissive content. Ours reproduces the bloom, but with a stronger, coarser blend than Godot's editor glow — the halo spreads wider and reads brighter.</p></div>
-      </section>
+      </section><div class="prose"><h3>Known limitations</h3>
+<ul><li><strong>Volumetric fog</strong> — screen-space fog (<code>fog_enabled</code>) maps to <code>THREE.FogExp2</code> and is supported; volumetric fog (<code>volumetric_fog_*</code>) has no three.js equivalent and is intentionally not approximated.</li><li><strong>tonemap_exposure under LINEAR</strong> — three emits the exposure uniform only when a tonemapper is active, so an exposure set under the default LINEAR tonemapper is ignored (faithful at the 1.0 default).</li><li><strong>Switching tone curves at runtime</strong> — three's program cache keys on the tonemapping enum, not the ported chunk text, so a second Environment with a different curve reaching live materials (a hot-reload edit, or a late-loading instanced WorldEnvironment) keeps rendering with the first curve.</li><li><strong>AGX contrast</strong> — the AgX curve contrast is fixed at Godot 4.6.3's built-in 1.25 (the engine exposes no per-Environment setter in this version); the ~2/255 residual on the controlled fixture is GPU float precision.</li></ul></div>
     </article>
     <article class="sheet" data-type="FABRIK3D" hidden>
       <header class="sheet-head">
@@ -1704,7 +1709,9 @@ tr:last-child td{border-bottom:0}
 <h3>Properties exercised</h3>
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>mesh_library</code></td><td>ExtResource (<code>unit-grid-map-lib.tres</code>)</td><td>supplies the tile mesh — a flat 2×2 quad</td></tr><tr><td><code>cell_size</code></td><td><code>Vector3(2, 2, 2)</code></td><td>2-unit spacing, so the 2×2 tiles abut without gaps</td></tr><tr><td><code>data</code> / <code>cells</code></td><td>9 cells, item 0</td><td>the populated 3×3 patch that fills the frame</td></tr></tbody></table></div>
 <h3>Divergences</h3>
-<p>The nine tiles place pixel-for-pixel with Godot — same silhouette, same lower-left notch, same recession. Tone is the one difference: our tile is a few values darker and cooler (centre <code>93,99,111</code> → <code>82,88,98</code>, ~11/255 per channel, uniform across the plane). Sky (<code>194,197,203</code>) and ground (<code>~60,54,37</code>) are identical in both images, so this is the tile surface, not exposure or ambient. The quad's ArrayMesh declares no surface material, so the previewer paints it with its neutral grey placeholder (<code>0xb0b0b0</code>), which reads slightly darker than the surface Godot draws for the same material-less tile. Subtle, and a placeholder-material effect — the GridMap geometry itself matches.</p></div>
+<p>The nine tiles place pixel-for-pixel with Godot — same silhouette, same lower-left notch, same recession. Tone is the one difference: our tile is a few values darker and cooler (centre <code>93,99,111</code> → <code>82,88,98</code>, ~11/255 per channel, uniform across the plane). Sky (<code>194,197,203</code>) and ground (<code>~60,54,37</code>) are identical in both images, so this is the tile surface, not exposure or ambient. The quad's ArrayMesh declares no surface material, so the previewer paints it with its neutral grey placeholder (<code>0xb0b0b0</code>), which reads slightly darker than the surface Godot draws for the same material-less tile. Subtle, and a placeholder-material effect — the GridMap geometry itself matches.</p>
+<h3>Known limitations</h3>
+<ul><li><strong>cell_scale</strong> — a GridMap's <code>cell_scale</code> (default 1.0) is not parsed; a map that sets it would render every tile at the wrong size.</li></ul></div>
       <div class="compare">
         <div class="stage">
           <img class="img-godot" src="images/unit-grid-map-godot.png" alt="Godot render of GridMap">
@@ -1722,7 +1729,9 @@ tr:last-child td{border-bottom:0}
 <h3>Properties exercised</h3>
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>mesh_library</code></td><td>ExtResource (<code>unit-grid-map-lib.tres</code>)</td><td>supplies the tile mesh — a flat 2×2 quad</td></tr><tr><td><code>cell_size</code></td><td><code>Vector3(2, 2, 2)</code></td><td>2-unit spacing, so the 2×2 tiles abut without gaps</td></tr><tr><td><code>data</code> / <code>cells</code></td><td>9 cells, item 0</td><td>the populated 3×3 patch that fills the frame</td></tr></tbody></table></div>
 <h3>Divergences</h3>
-<p>The nine tiles place pixel-for-pixel with Godot — same silhouette, same lower-left notch, same recession. Tone is the one difference: our tile is a few values darker and cooler (centre <code>93,99,111</code> → <code>82,88,98</code>, ~11/255 per channel, uniform across the plane). Sky (<code>194,197,203</code>) and ground (<code>~60,54,37</code>) are identical in both images, so this is the tile surface, not exposure or ambient. The quad's ArrayMesh declares no surface material, so the previewer paints it with its neutral grey placeholder (<code>0xb0b0b0</code>), which reads slightly darker than the surface Godot draws for the same material-less tile. Subtle, and a placeholder-material effect — the GridMap geometry itself matches.</p></div>
+<p>The nine tiles place pixel-for-pixel with Godot — same silhouette, same lower-left notch, same recession. Tone is the one difference: our tile is a few values darker and cooler (centre <code>93,99,111</code> → <code>82,88,98</code>, ~11/255 per channel, uniform across the plane). Sky (<code>194,197,203</code>) and ground (<code>~60,54,37</code>) are identical in both images, so this is the tile surface, not exposure or ambient. The quad's ArrayMesh declares no surface material, so the previewer paints it with its neutral grey placeholder (<code>0xb0b0b0</code>), which reads slightly darker than the surface Godot draws for the same material-less tile. Subtle, and a placeholder-material effect — the GridMap geometry itself matches.</p>
+<h3>Known limitations</h3>
+<ul><li><strong>cell_scale</strong> — a GridMap's <code>cell_scale</code> (default 1.0) is not parsed; a map that sets it would render every tile at the wrong size.</li></ul></div>
     </article>
     <article class="sheet" data-type="GrooveJoint2D" hidden>
       <header class="sheet-head">
@@ -2242,7 +2251,9 @@ tr:last-child td{border-bottom:0}
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>mesh</code></td><td><code>TorusMesh</code> sub-resource</td><td>the donut geometry that is drawn</td></tr><tr><td><code>inner_radius</code></td><td><code>0.5</code></td><td>radius of the hole</td></tr><tr><td><code>outer_radius</code></td><td><code>1.5</code></td><td>radius to the outer edge</td></tr><tr><td><code>rings</code> / <code>ring_segments</code></td><td><code>32</code> / <code>16</code></td><td>tessellation — both frames read as a smooth ring</td></tr><tr><td><code>surface_material_override/0</code></td><td><code>StandardMaterial3D</code></td><td>replaces the surface material</td></tr><tr><td><code>albedo_color</code></td><td><code>Color(0.9, 0.5, 0.2, 1)</code></td><td>the orange body</td></tr><tr><td><code>metallic</code> / <code>roughness</code></td><td><code>0.8</code> / <code>0.2</code></td><td>glossy metal with the tight specular streak both frames share</td></tr></tbody></table></div>
 <h3>Divergences</h3>
 <p>The torus now agrees on orientation: both frames lay it flat with the hole opening upward, matching outer/inner radii, tessellation, orange albedo, and the paired specular highlights. Both also render the two Label3D captions — the pale-yellow "TorusMesh Test" title above and the white description line below.</p>
-<p>The captions differ only in typeface: Godot draws them in its default font, while ours uses the previewer's bundled font, so the glyph shapes and stroke weight of the same text read slightly differently. The grey-sky-over-brown-ground preview environment otherwise matches.</p></div>
+<p>The captions differ only in typeface: Godot draws them in its default font, while ours uses the previewer's bundled font, so the glyph shapes and stroke weight of the same text read slightly differently. The grey-sky-over-brown-ground preview environment otherwise matches.</p>
+<h3>Known limitations</h3>
+<ul><li><strong>CylinderMesh single cap</strong> — three removes both end caps or neither, so a Godot cylinder with exactly one of <code>cap_top</code> / <code>cap_bottom</code> disabled renders with both caps.</li><li><strong>ArrayMesh compressed attributes</strong> — a surface flagged <code>COMPRESS_ATTRIBUTES</code> stores UVs as quantized uint16; the decoder reads the uncompressed layout only, so such a surface renders untextured rather than with a scrambled texture.</li></ul></div>
       <div class="compare">
         <div class="stage">
           <img class="img-godot" src="images/unit-torus-mesh-godot.png" alt="Godot render of MeshInstance3D">
@@ -2261,7 +2272,9 @@ tr:last-child td{border-bottom:0}
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>mesh</code></td><td><code>TorusMesh</code> sub-resource</td><td>the donut geometry that is drawn</td></tr><tr><td><code>inner_radius</code></td><td><code>0.5</code></td><td>radius of the hole</td></tr><tr><td><code>outer_radius</code></td><td><code>1.5</code></td><td>radius to the outer edge</td></tr><tr><td><code>rings</code> / <code>ring_segments</code></td><td><code>32</code> / <code>16</code></td><td>tessellation — both frames read as a smooth ring</td></tr><tr><td><code>surface_material_override/0</code></td><td><code>StandardMaterial3D</code></td><td>replaces the surface material</td></tr><tr><td><code>albedo_color</code></td><td><code>Color(0.9, 0.5, 0.2, 1)</code></td><td>the orange body</td></tr><tr><td><code>metallic</code> / <code>roughness</code></td><td><code>0.8</code> / <code>0.2</code></td><td>glossy metal with the tight specular streak both frames share</td></tr></tbody></table></div>
 <h3>Divergences</h3>
 <p>The torus now agrees on orientation: both frames lay it flat with the hole opening upward, matching outer/inner radii, tessellation, orange albedo, and the paired specular highlights. Both also render the two Label3D captions — the pale-yellow "TorusMesh Test" title above and the white description line below.</p>
-<p>The captions differ only in typeface: Godot draws them in its default font, while ours uses the previewer's bundled font, so the glyph shapes and stroke weight of the same text read slightly differently. The grey-sky-over-brown-ground preview environment otherwise matches.</p></div>
+<p>The captions differ only in typeface: Godot draws them in its default font, while ours uses the previewer's bundled font, so the glyph shapes and stroke weight of the same text read slightly differently. The grey-sky-over-brown-ground preview environment otherwise matches.</p>
+<h3>Known limitations</h3>
+<ul><li><strong>CylinderMesh single cap</strong> — three removes both end caps or neither, so a Godot cylinder with exactly one of <code>cap_top</code> / <code>cap_bottom</code> disabled renders with both caps.</li><li><strong>ArrayMesh compressed attributes</strong> — a surface flagged <code>COMPRESS_ATTRIBUTES</code> stores UVs as quantized uint16; the decoder reads the uncompressed layout only, so such a surface renders untextured rather than with a scrambled texture.</li></ul></div>
     </article>
     <article class="sheet" data-type="ModifierBoneTarget3D" hidden>
       <header class="sheet-head">
@@ -2482,14 +2495,18 @@ tr:last-child td{border-bottom:0}
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>Area2D.position</code></td><td><code>Vector2(10, 20)</code></td><td>offsets the area's subtree; the Area2D itself draws nothing at runtime</td></tr><tr><td><code>CollisionShape2D.shape</code></td><td><code>CircleShape2D</code> (r=0.5)</td><td>a collision gizmo — editor/toggle-gated, absent from a plain capture</td></tr><tr><td><code>ColorRect.color</code></td><td><code>Color(1, 0.4, 0.4, 1)</code></td><td>would tint the rect, but no size is set so it lays out at 0×0 and nothing draws</td></tr></tbody></table></div>
 <p>The root Node2D sets no properties of its own; every node in this scene is transform, physics, or a zero-size Control, so both renders are the empty viewport.</p>
 <h3>Divergences</h3>
-<p>None visible in this fixture.</p></div>
+<p>None visible in this fixture.</p>
+<h3>Known limitations</h3>
+<ul><li><strong>z_as_relative = false</strong> — the default (true, effective Z = parent Z + <code>z_index</code>) is faithful; with <code>z_as_relative = false</code> Godot makes <code>z_index</code> absolute, but our nested 2D groups still accumulate ancestor Z. No corpus fixture sets it.</li></ul></div>
       <div class="novisual">No visual output — this node draws nothing to compare.</div>
       <div class="prose"><p>Node2D is the base of 2D transform objects — sprites, bodies, areas: a transform (position/rotation/scale/skew and draw-order Z), no pixels of its own. The previewer maps it to a <code>&lt;group&gt;</code> and draws its children inside. Here the fixture's root is a bare Node2D, so the group is empty and the frame is blank.</p>
 <h3>Properties exercised</h3>
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>Area2D.position</code></td><td><code>Vector2(10, 20)</code></td><td>offsets the area's subtree; the Area2D itself draws nothing at runtime</td></tr><tr><td><code>CollisionShape2D.shape</code></td><td><code>CircleShape2D</code> (r=0.5)</td><td>a collision gizmo — editor/toggle-gated, absent from a plain capture</td></tr><tr><td><code>ColorRect.color</code></td><td><code>Color(1, 0.4, 0.4, 1)</code></td><td>would tint the rect, but no size is set so it lays out at 0×0 and nothing draws</td></tr></tbody></table></div>
 <p>The root Node2D sets no properties of its own; every node in this scene is transform, physics, or a zero-size Control, so both renders are the empty viewport.</p>
 <h3>Divergences</h3>
-<p>None visible in this fixture.</p></div>
+<p>None visible in this fixture.</p>
+<h3>Known limitations</h3>
+<ul><li><strong>z_as_relative = false</strong> — the default (true, effective Z = parent Z + <code>z_index</code>) is faithful; with <code>z_as_relative = false</code> Godot makes <code>z_index</code> absolute, but our nested 2D groups still accumulate ancestor Z. No corpus fixture sets it.</li></ul></div>
     </article>
     <article class="sheet" data-type="Node3D" hidden>
       <header class="sheet-head">
@@ -2504,14 +2521,18 @@ tr:last-child td{border-bottom:0}
 <h3>Properties exercised</h3>
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>transform</code></td><td>translation offsets on Child1 / Child2 / GrandChild</td><td>repositions invisible containers; nothing is drawn</td></tr></tbody></table></div>
 <h3>Divergences</h3>
-<p>None visible in this fixture.</p></div>
+<p>None visible in this fixture.</p>
+<h3>Known limitations</h3>
+<ul><li><strong>top_level</strong> — with <code>top_level = true</code> a Node3D ignores ancestor transforms, but our renderer nests every node in its parent's group, so the parent transform is always inherited. No corpus fixture sets it.</li></ul></div>
       <div class="novisual">No visual output — this node draws nothing to compare.</div>
       <div class="prose"><p>Node3D is the base 3D node — a pure transform with no geometry of its own. The previewer renders it as a <code>&lt;group&gt;</code> that positions its children and draws nothing itself, decomposing each <code>Transform3D</code> into position/rotation/scale.</p>
 <p>The fixture nests a root with two children and a grandchild, then parents two Label3D captions high above origin (y = 4 and y = 3). Both are framed out by the shared editor camera, so each capture shows only the editor preview sky — a light blue-grey band fading to the procedural ground colour, with no visible geometry or text.</p>
 <h3>Properties exercised</h3>
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>transform</code></td><td>translation offsets on Child1 / Child2 / GrandChild</td><td>repositions invisible containers; nothing is drawn</td></tr></tbody></table></div>
 <h3>Divergences</h3>
-<p>None visible in this fixture.</p></div>
+<p>None visible in this fixture.</p>
+<h3>Known limitations</h3>
+<ul><li><strong>top_level</strong> — with <code>top_level = true</code> a Node3D ignores ancestor transforms, but our renderer nests every node in its parent's group, so the parent transform is always inherited. No corpus fixture sets it.</li></ul></div>
     </article>
     <article class="sheet" data-type="OccluderInstance3D" hidden>
       <header class="sheet-head">
@@ -2536,7 +2557,9 @@ tr:last-child td{border-bottom:0}
 <h3>Properties exercised</h3>
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>transform</code> origin</td><td><code>(1.5, 2, 1.5)</code></td><td>lights the cube from above the front-right, throwing its shadow to the front-left</td></tr><tr><td><code>light_color</code></td><td><code>Color(1, 0.9, 0.75)</code></td><td>warm tint on the lit ground and the cube's faces</td></tr><tr><td><code>light_energy</code></td><td><code>2.0</code></td><td>brightness of the lit pool on the plane</td></tr><tr><td><code>omni_range</code></td><td><code>8.0</code></td><td>reach of the light — the whole plane falls inside it</td></tr><tr><td><code>omni_attenuation</code></td><td><code>1.0</code></td><td>falloff exponent, carried to three's <code>decay</code></td></tr><tr><td><code>shadow_enabled</code></td><td><code>true</code></td><td>the cube casts a shadow onto the ground</td></tr></tbody></table></div>
 <h3>Divergences</h3>
-<p>The shadow's contact edge. In our render the shadow silhouette at the base of the cube is stepped and jagged; in Godot the same edge is smooth and soft. three renders a point light's shadow through a cube shadow map, whose resolution and bias leave an aliased fringe, where Godot filters its omni shadow to a soft edge. The shadow's direction, extent and the warm lit pool otherwise match — the ground illumination agrees to within ~1/255 across the whole plane, so the omni/spot distance-falloff divergence does not surface at this range.</p></div>
+<p>The shadow's contact edge. In our render the shadow silhouette at the base of the cube is stepped and jagged; in Godot the same edge is smooth and soft. three renders a point light's shadow through a cube shadow map, whose resolution and bias leave an aliased fringe, where Godot filters its omni shadow to a soft edge. The shadow's direction, extent and the warm lit pool otherwise match — the ground illumination agrees to within ~1/255 across the whole plane, so the omni/spot distance-falloff divergence does not surface at this range.</p>
+<h3>Known limitations</h3>
+<ul><li><strong>Distance falloff</strong> — Godot attenuates by <code>pow(1 - d/range, attenuation)</code>, reaching zero at <code>range</code>; three uses physical inverse-square with a windowing term. The energy scale is matched at the source so the near field agrees, but the mid-falloff curve shape differs.</li></ul></div>
       <div class="compare">
         <div class="stage">
           <img class="img-godot" src="images/unit-omni-light-3d-godot.png" alt="Godot render of OmniLight3D">
@@ -2554,7 +2577,9 @@ tr:last-child td{border-bottom:0}
 <h3>Properties exercised</h3>
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>transform</code> origin</td><td><code>(1.5, 2, 1.5)</code></td><td>lights the cube from above the front-right, throwing its shadow to the front-left</td></tr><tr><td><code>light_color</code></td><td><code>Color(1, 0.9, 0.75)</code></td><td>warm tint on the lit ground and the cube's faces</td></tr><tr><td><code>light_energy</code></td><td><code>2.0</code></td><td>brightness of the lit pool on the plane</td></tr><tr><td><code>omni_range</code></td><td><code>8.0</code></td><td>reach of the light — the whole plane falls inside it</td></tr><tr><td><code>omni_attenuation</code></td><td><code>1.0</code></td><td>falloff exponent, carried to three's <code>decay</code></td></tr><tr><td><code>shadow_enabled</code></td><td><code>true</code></td><td>the cube casts a shadow onto the ground</td></tr></tbody></table></div>
 <h3>Divergences</h3>
-<p>The shadow's contact edge. In our render the shadow silhouette at the base of the cube is stepped and jagged; in Godot the same edge is smooth and soft. three renders a point light's shadow through a cube shadow map, whose resolution and bias leave an aliased fringe, where Godot filters its omni shadow to a soft edge. The shadow's direction, extent and the warm lit pool otherwise match — the ground illumination agrees to within ~1/255 across the whole plane, so the omni/spot distance-falloff divergence does not surface at this range.</p></div>
+<p>The shadow's contact edge. In our render the shadow silhouette at the base of the cube is stepped and jagged; in Godot the same edge is smooth and soft. three renders a point light's shadow through a cube shadow map, whose resolution and bias leave an aliased fringe, where Godot filters its omni shadow to a soft edge. The shadow's direction, extent and the warm lit pool otherwise match — the ground illumination agrees to within ~1/255 across the whole plane, so the omni/spot distance-falloff divergence does not surface at this range.</p>
+<h3>Known limitations</h3>
+<ul><li><strong>Distance falloff</strong> — Godot attenuates by <code>pow(1 - d/range, attenuation)</code>, reaching zero at <code>range</code>; three uses physical inverse-square with a windowing term. The energy scale is matched at the source so the near field agrees, but the mid-falloff curve shape differs.</li></ul></div>
     </article>
     <article class="sheet" data-type="OpenXRBindingModifierEditor" hidden>
       <header class="sheet-head">
@@ -2699,7 +2724,9 @@ tr:last-child td{border-bottom:0}
 <h3>Properties exercised</h3>
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td>offsets (<code>-160..160</code>, <code>-100..100</code>)</td><td>centered</td><td>a 320×200 box in the middle of the frame</td></tr><tr><td><code>bg_color</code></td><td><code>Color(0.16, 0.17, 0.22, 1)</code></td><td>the dark navy fill</td></tr><tr><td><code>corner_radius_*</code></td><td><code>8</code></td><td>the rounded corners</td></tr><tr><td><code>border_width_*</code></td><td><code>2</code></td><td>the thin visible edge</td></tr><tr><td><code>border_color</code></td><td><code>Color(0.4, 0.45, 0.6, 1)</code></td><td>the light blue-grey of that edge</td></tr></tbody></table></div>
 <h3>Divergences</h3>
-<p>None visible in this fixture.</p></div>
+<p>None visible in this fixture.</p>
+<h3>Known limitations</h3>
+<ul><li><strong>StyleBoxFlat.border_blend</strong> — with <code>border_blend = true</code> Godot fades the border from <code>border_color</code> into <code>bg_color</code>; we map borders to a solid CSS border with a sharp edge. Defaults to false; no corpus fixture enables it.</li></ul></div>
       <div class="compare">
         <div class="stage">
           <img class="img-godot" src="images/unit-panel-godot.png" alt="Godot render of Panel">
@@ -2717,7 +2744,9 @@ tr:last-child td{border-bottom:0}
 <h3>Properties exercised</h3>
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td>offsets (<code>-160..160</code>, <code>-100..100</code>)</td><td>centered</td><td>a 320×200 box in the middle of the frame</td></tr><tr><td><code>bg_color</code></td><td><code>Color(0.16, 0.17, 0.22, 1)</code></td><td>the dark navy fill</td></tr><tr><td><code>corner_radius_*</code></td><td><code>8</code></td><td>the rounded corners</td></tr><tr><td><code>border_width_*</code></td><td><code>2</code></td><td>the thin visible edge</td></tr><tr><td><code>border_color</code></td><td><code>Color(0.4, 0.45, 0.6, 1)</code></td><td>the light blue-grey of that edge</td></tr></tbody></table></div>
 <h3>Divergences</h3>
-<p>None visible in this fixture.</p></div>
+<p>None visible in this fixture.</p>
+<h3>Known limitations</h3>
+<ul><li><strong>StyleBoxFlat.border_blend</strong> — with <code>border_blend = true</code> Godot fades the border from <code>border_color</code> into <code>bg_color</code>; we map borders to a solid CSS border with a sharp edge. Defaults to false; no corpus fixture enables it.</li></ul></div>
     </article>
     <article class="sheet" data-type="PanelContainer" hidden>
       <header class="sheet-head">
@@ -3114,7 +3143,10 @@ tr:last-child td{border-bottom:0}
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>Relay.position</code></td><td><code>Vector2(760, 210)</code></td><td>the transform copied onto the target — where the blue pentagon lands</td></tr><tr><td><code>Relay.remote_path</code></td><td><code>NodePath("../TargetPolygon")</code></td><td>the node the relay drives, default global coordinates</td></tr><tr><td><code>TargetPolygon.color</code></td><td><code>Color(0.2, 0.7, 0.9, 1)</code></td><td>the driven, blue pentagon</td></tr><tr><td><code>AuthoredGhost.color</code></td><td><code>Color(0.5, 0.5, 0.5, 0.35)</code></td><td>the undriven ghost left at the authored <code>(320, 440)</code></td></tr></tbody></table></div>
 <h3>Divergences</h3>
 <p>The relay itself is faithful — the blue pentagon lands at the same upper-right spot in both images, so the default global-coordinate drive is reproduced. One visible difference remains, in the polygon fill rather than its placement:</p>
-<ul><li><strong>The blue pentagon reads paler and less saturated in ours.</strong> Godot writes the authored 2D colour straight to the framebuffer (<code>0.2, 0.7, 0.9</code> → <code>51, 178, 229</code> exactly); ours renders it lifted and desaturated (<code>95, 191, 217</code>). The scene has no <code>WorldEnvironment</code>, so the previewer mounts Godot's editor preview environment (ADR-0025), whose FILMIC tonemapping is set on the whole canvas — the unlit 2D polygons included — whereas Godot tonemaps only the 3D pass, never the 2D canvas. The semi-transparent ghost carries the same lift faintly (<code>93</code> → <code>98</code>).</li></ul></div>
+<ul><li><strong>The blue pentagon reads paler and less saturated in ours.</strong> Godot writes the authored 2D colour straight to the framebuffer (<code>0.2, 0.7, 0.9</code> → <code>51, 178, 229</code> exactly); ours renders it lifted and desaturated (<code>95, 191, 217</code>). The scene has no <code>WorldEnvironment</code>, so the previewer mounts Godot's editor preview environment (ADR-0025), whose FILMIC tonemapping is set on the whole canvas — the unlit 2D polygons included — whereas Godot tonemaps only the 3D pass, never the 2D canvas. The semi-transparent ghost carries the same lift faintly (<code>93</code> → <code>98</code>).</li></ul>
+<h3>Known limitations</h3>
+<p>The relay copies its transform onto its <code>remote_path</code> target once on load (the static enter-tree effect, not per-frame). Three cases are not fully reproduced:</p>
+<ul><li><strong><code>use_global_coordinates = false</code></strong> — a no-op on a static load; only the default global-coordinate drive repositions the target (measured against Godot 4.6.3).</li><li><strong>Cross-instance <code>remote_path</code></strong> — a path crossing into or out of an instanced sub-scene is left unresolved; in-scene resolution (the common case) works.</li><li><strong>Relay chains</strong> — resolve in document (pre-order) order; a feedback loop is not iterated to a fixed point.</li></ul></div>
       <div class="compare">
         <div class="stage">
           <img class="img-godot" src="images/unit-remote-transform-2d-godot.png" alt="Godot render of RemoteTransform2D">
@@ -3133,7 +3165,10 @@ tr:last-child td{border-bottom:0}
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>Relay.position</code></td><td><code>Vector2(760, 210)</code></td><td>the transform copied onto the target — where the blue pentagon lands</td></tr><tr><td><code>Relay.remote_path</code></td><td><code>NodePath("../TargetPolygon")</code></td><td>the node the relay drives, default global coordinates</td></tr><tr><td><code>TargetPolygon.color</code></td><td><code>Color(0.2, 0.7, 0.9, 1)</code></td><td>the driven, blue pentagon</td></tr><tr><td><code>AuthoredGhost.color</code></td><td><code>Color(0.5, 0.5, 0.5, 0.35)</code></td><td>the undriven ghost left at the authored <code>(320, 440)</code></td></tr></tbody></table></div>
 <h3>Divergences</h3>
 <p>The relay itself is faithful — the blue pentagon lands at the same upper-right spot in both images, so the default global-coordinate drive is reproduced. One visible difference remains, in the polygon fill rather than its placement:</p>
-<ul><li><strong>The blue pentagon reads paler and less saturated in ours.</strong> Godot writes the authored 2D colour straight to the framebuffer (<code>0.2, 0.7, 0.9</code> → <code>51, 178, 229</code> exactly); ours renders it lifted and desaturated (<code>95, 191, 217</code>). The scene has no <code>WorldEnvironment</code>, so the previewer mounts Godot's editor preview environment (ADR-0025), whose FILMIC tonemapping is set on the whole canvas — the unlit 2D polygons included — whereas Godot tonemaps only the 3D pass, never the 2D canvas. The semi-transparent ghost carries the same lift faintly (<code>93</code> → <code>98</code>).</li></ul></div>
+<ul><li><strong>The blue pentagon reads paler and less saturated in ours.</strong> Godot writes the authored 2D colour straight to the framebuffer (<code>0.2, 0.7, 0.9</code> → <code>51, 178, 229</code> exactly); ours renders it lifted and desaturated (<code>95, 191, 217</code>). The scene has no <code>WorldEnvironment</code>, so the previewer mounts Godot's editor preview environment (ADR-0025), whose FILMIC tonemapping is set on the whole canvas — the unlit 2D polygons included — whereas Godot tonemaps only the 3D pass, never the 2D canvas. The semi-transparent ghost carries the same lift faintly (<code>93</code> → <code>98</code>).</li></ul>
+<h3>Known limitations</h3>
+<p>The relay copies its transform onto its <code>remote_path</code> target once on load (the static enter-tree effect, not per-frame). Three cases are not fully reproduced:</p>
+<ul><li><strong><code>use_global_coordinates = false</code></strong> — a no-op on a static load; only the default global-coordinate drive repositions the target (measured against Godot 4.6.3).</li><li><strong>Cross-instance <code>remote_path</code></strong> — a path crossing into or out of an instanced sub-scene is left unresolved; in-scene resolution (the common case) works.</li><li><strong>Relay chains</strong> — resolve in document (pre-order) order; a feedback loop is not iterated to a fixed point.</li></ul></div>
     </article>
     <article class="sheet" data-type="RemoteTransform3D" hidden>
       <header class="sheet-head">
@@ -3147,7 +3182,10 @@ tr:last-child td{border-bottom:0}
 <h3>Properties exercised</h3>
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>remote_path</code></td><td><code>../TargetCube</code></td><td>names the node the relay drives</td></tr><tr><td><code>transform</code> origin</td><td><code>(2, 0, 0)</code></td><td>copied onto TargetCube, moving it from its authored <code>x = -2</code> to <code>x = 2</code></td></tr></tbody></table></div>
 <h3>Divergences</h3>
-<p>None visible in this fixture.</p></div>
+<p>None visible in this fixture.</p>
+<h3>Known limitations</h3>
+<p>The relay copies its transform onto its <code>remote_path</code> target once on load (the static enter-tree effect, not per-frame). Three cases are not fully reproduced:</p>
+<ul><li><strong><code>use_global_coordinates = false</code></strong> — a no-op on a static load; only the default global-coordinate drive repositions the target (measured against Godot 4.6.3).</li><li><strong>Cross-instance <code>remote_path</code></strong> — a path crossing into or out of an instanced sub-scene is left unresolved; in-scene resolution (the common case) works.</li><li><strong>Relay chains</strong> — resolve in document (pre-order) order; a feedback loop is not iterated to a fixed point.</li></ul></div>
       <div class="compare">
         <div class="stage">
           <img class="img-godot" src="images/unit-remote-transform-3d-godot.png" alt="Godot render of RemoteTransform3D">
@@ -3165,7 +3203,10 @@ tr:last-child td{border-bottom:0}
 <h3>Properties exercised</h3>
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>remote_path</code></td><td><code>../TargetCube</code></td><td>names the node the relay drives</td></tr><tr><td><code>transform</code> origin</td><td><code>(2, 0, 0)</code></td><td>copied onto TargetCube, moving it from its authored <code>x = -2</code> to <code>x = 2</code></td></tr></tbody></table></div>
 <h3>Divergences</h3>
-<p>None visible in this fixture.</p></div>
+<p>None visible in this fixture.</p>
+<h3>Known limitations</h3>
+<p>The relay copies its transform onto its <code>remote_path</code> target once on load (the static enter-tree effect, not per-frame). Three cases are not fully reproduced:</p>
+<ul><li><strong><code>use_global_coordinates = false</code></strong> — a no-op on a static load; only the default global-coordinate drive repositions the target (measured against Godot 4.6.3).</li><li><strong>Cross-instance <code>remote_path</code></strong> — a path crossing into or out of an instanced sub-scene is left unresolved; in-scene resolution (the common case) works.</li><li><strong>Relay chains</strong> — resolve in document (pre-order) order; a feedback loop is not iterated to a fixed point.</li></ul></div>
     </article>
     <article class="sheet" data-type="ResourcePreloader" hidden>
       <header class="sheet-head">
@@ -3468,7 +3509,8 @@ tr:last-child td{border-bottom:0}
         </div>
       </div>
         <div class="prose"><p>An atmospheric-scattering sky. The grey-blue gradient, the horizon band, and the sphere and ground it lights match Godot's.</p></div>
-      </section>
+      </section><div class="prose"><h3>Known limitations</h3>
+<ul><li><strong>Shader / compressed-cubemap skies</strong> — a <code>Sky</code> whose material is a user <code>shader_type sky</code> <code>ShaderMaterial</code>, or whose panorama is a binary <code>CompressedCubemap</code>, is not resolved (we neither run GDShaders nor decode compressed cubemaps). The background falls back to a mid-blue solid and metallic surfaces reflect near-black; AgX, fog, and flat ambient still apply, so diffuse surfaces are unchanged. <code>ReflectionProbe</code> is likewise unsupported.</li><li><strong>Dielectric sky-specular split</strong> — a metal reflects the sky at full strength under any ambient source, and a dielectric's diffuse takes <code>ambient_light_sky_contribution</code> exactly; only a dielectric's faint specular lobe (~4% of its response) is scaled with the diffuse rather than kept at full.</li></ul></div>
     </article>
     <article class="sheet" data-type="SliderJoint3D" hidden>
       <header class="sheet-head">
@@ -3538,7 +3580,9 @@ tr:last-child td{border-bottom:0}
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>transform</code> origin</td><td><code>(0, 3, 0)</code>, aimed straight down</td><td>hangs the light above the cube, so the lit circle and the shadow center on it</td></tr><tr><td><code>light_color</code></td><td><code>Color(0.9, 0.95, 1, 1)</code></td><td>faint cool-white tint on the lit ground</td></tr><tr><td><code>light_energy</code></td><td><code>3.0</code></td><td>brightness of the lit pool on the plane</td></tr><tr><td><code>spot_range</code></td><td><code>8.0</code></td><td>reach of the cone — the floor sits well inside it</td></tr><tr><td><code>spot_angle</code></td><td><code>30.0</code></td><td>half-angle of the cone → diameter of the lit circle</td></tr><tr><td><code>shadow_enabled</code></td><td><code>true</code></td><td>the cube casts a shadow straight down onto the ground</td></tr></tbody></table></div>
 <h3>Divergences</h3>
 <p>Two, both slight. The lit pool close to the cube reads a touch brighter in our render — about 4-5/255 across the illuminated ring — while the far floor outside the cone and the pool's own outer edge match Godot to within ~1/255. That near-field lift is the distance-falloff curve: three's inverse-square-with- windowing runs hotter than Godot's <code>pow(1 - d/range)</code> through the middle of the range.</p>
-<p>The shadow's near edge. Its dark core matches Godot, but the penumbra sits a few /255 lighter and its edge is softer and slightly grainier than Godot's cleanly filtered one — a shadow-map resolution/bias artifact, not the cone.</p></div>
+<p>The shadow's near edge. Its dark core matches Godot, but the penumbra sits a few /255 lighter and its edge is softer and slightly grainier than Godot's cleanly filtered one — a shadow-map resolution/bias artifact, not the cone.</p>
+<h3>Known limitations</h3>
+<ul><li><strong>Distance falloff</strong> — as for OmniLight3D, Godot's <code>pow(1 - d/range, attenuation)</code> and three's inverse-square differ through the middle of the range; matched at the source.</li><li><strong>spot_angle_attenuation → penumbra</strong> — Godot's cone-edge softness curve has no exact three analogue (<code>SpotLight.penumbra</code> is a single 0..1). Approximated as <code>penumbra = 1/(spot_angle_attenuation + 1)</code>, landing the default at a moderately soft 0.5.</li></ul></div>
       <div class="compare">
         <div class="stage">
           <img class="img-godot" src="images/unit-spot-light-3d-godot.png" alt="Godot render of SpotLight3D">
@@ -3557,7 +3601,9 @@ tr:last-child td{border-bottom:0}
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>transform</code> origin</td><td><code>(0, 3, 0)</code>, aimed straight down</td><td>hangs the light above the cube, so the lit circle and the shadow center on it</td></tr><tr><td><code>light_color</code></td><td><code>Color(0.9, 0.95, 1, 1)</code></td><td>faint cool-white tint on the lit ground</td></tr><tr><td><code>light_energy</code></td><td><code>3.0</code></td><td>brightness of the lit pool on the plane</td></tr><tr><td><code>spot_range</code></td><td><code>8.0</code></td><td>reach of the cone — the floor sits well inside it</td></tr><tr><td><code>spot_angle</code></td><td><code>30.0</code></td><td>half-angle of the cone → diameter of the lit circle</td></tr><tr><td><code>shadow_enabled</code></td><td><code>true</code></td><td>the cube casts a shadow straight down onto the ground</td></tr></tbody></table></div>
 <h3>Divergences</h3>
 <p>Two, both slight. The lit pool close to the cube reads a touch brighter in our render — about 4-5/255 across the illuminated ring — while the far floor outside the cone and the pool's own outer edge match Godot to within ~1/255. That near-field lift is the distance-falloff curve: three's inverse-square-with- windowing runs hotter than Godot's <code>pow(1 - d/range)</code> through the middle of the range.</p>
-<p>The shadow's near edge. Its dark core matches Godot, but the penumbra sits a few /255 lighter and its edge is softer and slightly grainier than Godot's cleanly filtered one — a shadow-map resolution/bias artifact, not the cone.</p></div>
+<p>The shadow's near edge. Its dark core matches Godot, but the penumbra sits a few /255 lighter and its edge is softer and slightly grainier than Godot's cleanly filtered one — a shadow-map resolution/bias artifact, not the cone.</p>
+<h3>Known limitations</h3>
+<ul><li><strong>Distance falloff</strong> — as for OmniLight3D, Godot's <code>pow(1 - d/range, attenuation)</code> and three's inverse-square differ through the middle of the range; matched at the source.</li><li><strong>spot_angle_attenuation → penumbra</strong> — Godot's cone-edge softness curve has no exact three analogue (<code>SpotLight.penumbra</code> is a single 0..1). Approximated as <code>penumbra = 1/(spot_angle_attenuation + 1)</code>, landing the default at a moderately soft 0.5.</li></ul></div>
     </article>
     <article class="sheet" data-type="SpringArm3D" hidden>
       <header class="sheet-head">
@@ -3820,7 +3866,8 @@ tr:last-child td{border-bottom:0}
         </div>
       </div>
         <div class="prose"><p>Godot's <code>heightmap_*</code> is texture-space parallax — the silhouette stays a smooth sphere. three.js has no parallax; it maps to <code>displacementMap</code>, which moves real vertices, so the sphere deforms into a lumpy blob (and the depth scale is in world units, a different space than Godot's).</p></div>
-      </section>
+      </section><div class="prose"><h3>Known limitations</h3>
+<ul><li><strong>diffuse_mode</strong> — Godot defaults to Burley; three's material is always Lambert. They agree near normal incidence; a rough sphere reads ~5/255 dark at grazing silhouette.</li><li><strong>metallic_specular</strong> — three hard-wires dielectric F0 at 0.04 (Godot's 0.5 default). Authoring it away from 0.5 has no effect.</li><li><strong>uv1 V-anchoring</strong> — Godot measures V from the image top, three from the bottom, so a non-integer <code>uv1_scale.y</code> or non-zero <code>uv1_offset.y</code> shifts V differently. Under <code>uv1_world_triplanar</code>, <code>uv1_offset</code> is in world units and is not converted.</li><li><strong>billboard_mode</strong> — orientation is faithful, but <code>billboard_keep_scale = false</code> (scale normalized away while billboarding) is not honored, and a billboarded mesh's child nodes inherit its rotation (Godot's per-surface effect does not turn children).</li><li><strong>Triplanar on curved meshes</strong> — tiling density is exact for planar meshes; curved / GLB geometry falls back to the mesh's own UVs.</li></ul></div>
     </article>
     <article class="sheet" data-type="StaticBody2D" hidden>
       <header class="sheet-head">
@@ -4010,7 +4057,9 @@ tr:last-child td{border-bottom:0}
 <h3>Properties exercised</h3>
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>anchors_preset</code></td><td><code>15</code></td><td>full-rect anchors — the control fills the whole viewport</td></tr><tr><td><code>texture</code></td><td><code>ExtResource("1_tex")</code></td><td>the blue "F" marker sprite is drawn</td></tr><tr><td><code>expand_mode</code></td><td><code>1</code> (EXPAND_IGNORE_SIZE)</td><td>the control ignores the texture's natural minimum size</td></tr><tr><td><code>stretch_mode</code></td><td><code>5</code> (KEEP_ASPECT_CENTERED)</td><td>square texture fits the frame height and centers — grey letterbox on the left and right</td></tr></tbody></table></div>
 <h3>Divergences</h3>
-<p>None visible in this fixture.</p></div>
+<p>None visible in this fixture.</p>
+<h3>Known limitations</h3>
+<ul><li>**expand_mode FIT_* axis** — the FIT modes take the right shape, but Godot names one axis as the driver from the control's current size, whereas CSS resolves whichever axis the layout leaves unconstrained; they differ only when the layout constrains both axes.</li><li><strong>Absent stretch_mode → contain</strong> — an absent <code>stretch_mode</code> defaults to <code>object-fit: contain</code> (a deliberate deviation from Godot's STRETCH_SCALE default) so a texture fits rather than stretch-distorts; an explicit <code>stretch_mode = 0</code> still maps to fill.</li></ul></div>
       <div class="compare">
         <div class="stage">
           <img class="img-godot" src="images/unit-texture-rect-godot.png" alt="Godot render of TextureRect">
@@ -4028,7 +4077,9 @@ tr:last-child td{border-bottom:0}
 <h3>Properties exercised</h3>
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>anchors_preset</code></td><td><code>15</code></td><td>full-rect anchors — the control fills the whole viewport</td></tr><tr><td><code>texture</code></td><td><code>ExtResource("1_tex")</code></td><td>the blue "F" marker sprite is drawn</td></tr><tr><td><code>expand_mode</code></td><td><code>1</code> (EXPAND_IGNORE_SIZE)</td><td>the control ignores the texture's natural minimum size</td></tr><tr><td><code>stretch_mode</code></td><td><code>5</code> (KEEP_ASPECT_CENTERED)</td><td>square texture fits the frame height and centers — grey letterbox on the left and right</td></tr></tbody></table></div>
 <h3>Divergences</h3>
-<p>None visible in this fixture.</p></div>
+<p>None visible in this fixture.</p>
+<h3>Known limitations</h3>
+<ul><li>**expand_mode FIT_* axis** — the FIT modes take the right shape, but Godot names one axis as the driver from the control's current size, whereas CSS resolves whichever axis the layout leaves unconstrained; they differ only when the layout constrains both axes.</li><li><strong>Absent stretch_mode → contain</strong> — an absent <code>stretch_mode</code> defaults to <code>object-fit: contain</code> (a deliberate deviation from Godot's STRETCH_SCALE default) so a texture fits rather than stretch-distorts; an explicit <code>stretch_mode = 0</code> still maps to fill.</li></ul></div>
     </article>
     <article class="sheet" data-type="TileMap" hidden>
       <header class="sheet-head">
@@ -4043,7 +4094,9 @@ tr:last-child td{border-bottom:0}
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>position</code></td><td><code>Vector2(384, 196)</code></td><td>centres the map in the frame</td></tr><tr><td><code>scale</code></td><td><code>Vector2(4, 4)</code></td><td>enlarges the tiles 4× so they read clearly</td></tr><tr><td><code>tile_set</code></td><td><code>SubResource TileSet_b</code></td><td>supplies the 32px marker atlas the cells sample</td></tr><tr><td><code>format</code></td><td><code>2</code></td><td>selects the tile_data encoding so the layers decode; no visual of its own</td></tr><tr><td><code>layer_0/name</code></td><td><code>"Ground"</code></td><td>editor layer label; no visual</td></tr><tr><td><code>layer_0/tile_data</code></td><td>4 cells</td><td>fills the top row (0,0)(1,0)(2,0) and the left cell (0,1)</td></tr><tr><td><code>layer_1/name</code></td><td><code>"Props"</code></td><td>editor layer label; no visual</td></tr><tr><td><code>layer_1/z_index</code></td><td><code>1</code></td><td>raises Props above Ground; no visible stacking here — its cell overlaps no Ground cell</td></tr><tr><td><code>layer_1/tile_data</code></td><td>1 cell</td><td>fills cell (1,1), the F's centre tile</td></tr></tbody></table></div>
 <h3>Divergences</h3>
 <p>The tile composition matches: same 3×2 footprint, same reconstructed "F", same vacant bottom-right cell, and the blue reads the same in both. The one difference is that the white marker strokes render as a light grey in ours rather than the pure white Godot shows; the tint is uniform across the stroke interiors, not just their edges. The unlit tile material does not opt out of tone mapping, so it picks up the scene's editor-preview tonemapper ([ADR-0025], injected by the reference harness), which compresses the bright white, whereas Godot's 2D CanvasItem draw is not tonemapped. Same cause as <code>tilemaplayer</code> and <code>line2d</code>.</p>
-<p>[ADR-0025]: ../../adr/0025-preview-lighting-mirrors-the-godot-editor.md</p></div>
+<p>[ADR-0025]: ../../adr/0025-preview-lighting-mirrors-the-godot-editor.md</p>
+<h3>Known limitations</h3>
+<ul><li><strong>Cross-source draw order</strong> — tiles batch one mesh per atlas source (a performance requirement), so per-cell interleaving of different sources within a quadrant is not reproduced; sources draw in appearance order, each nudged in z.</li><li><strong>Y-sort</strong> — <code>y_sort_enabled</code> is applied for static scenes (descendants sorted by world-Y within z buckets); a per-frame re-sort when an AnimationPlayer moves Y is deferred.</li><li><strong>Unsupported shapes / formats</strong> — half-offset-square and hexagon tile shapes place on a square grid + warn; legacy <code>TileMap</code> format 0/1, scene-collection sources, and per-tile overrides are skipped + warn; animated tiles render their base frame.</li></ul></div>
       <div class="compare">
         <div class="stage">
           <img class="img-godot" src="images/unit-tile-map-godot.png" alt="Godot render of TileMap">
@@ -4062,7 +4115,9 @@ tr:last-child td{border-bottom:0}
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Value</th><th>Effect</th></tr></thead><tbody><tr><td><code>position</code></td><td><code>Vector2(384, 196)</code></td><td>centres the map in the frame</td></tr><tr><td><code>scale</code></td><td><code>Vector2(4, 4)</code></td><td>enlarges the tiles 4× so they read clearly</td></tr><tr><td><code>tile_set</code></td><td><code>SubResource TileSet_b</code></td><td>supplies the 32px marker atlas the cells sample</td></tr><tr><td><code>format</code></td><td><code>2</code></td><td>selects the tile_data encoding so the layers decode; no visual of its own</td></tr><tr><td><code>layer_0/name</code></td><td><code>"Ground"</code></td><td>editor layer label; no visual</td></tr><tr><td><code>layer_0/tile_data</code></td><td>4 cells</td><td>fills the top row (0,0)(1,0)(2,0) and the left cell (0,1)</td></tr><tr><td><code>layer_1/name</code></td><td><code>"Props"</code></td><td>editor layer label; no visual</td></tr><tr><td><code>layer_1/z_index</code></td><td><code>1</code></td><td>raises Props above Ground; no visible stacking here — its cell overlaps no Ground cell</td></tr><tr><td><code>layer_1/tile_data</code></td><td>1 cell</td><td>fills cell (1,1), the F's centre tile</td></tr></tbody></table></div>
 <h3>Divergences</h3>
 <p>The tile composition matches: same 3×2 footprint, same reconstructed "F", same vacant bottom-right cell, and the blue reads the same in both. The one difference is that the white marker strokes render as a light grey in ours rather than the pure white Godot shows; the tint is uniform across the stroke interiors, not just their edges. The unlit tile material does not opt out of tone mapping, so it picks up the scene's editor-preview tonemapper ([ADR-0025], injected by the reference harness), which compresses the bright white, whereas Godot's 2D CanvasItem draw is not tonemapped. Same cause as <code>tilemaplayer</code> and <code>line2d</code>.</p>
-<p>[ADR-0025]: ../../adr/0025-preview-lighting-mirrors-the-godot-editor.md</p></div>
+<p>[ADR-0025]: ../../adr/0025-preview-lighting-mirrors-the-godot-editor.md</p>
+<h3>Known limitations</h3>
+<ul><li><strong>Cross-source draw order</strong> — tiles batch one mesh per atlas source (a performance requirement), so per-cell interleaving of different sources within a quadrant is not reproduced; sources draw in appearance order, each nudged in z.</li><li><strong>Y-sort</strong> — <code>y_sort_enabled</code> is applied for static scenes (descendants sorted by world-Y within z buckets); a per-frame re-sort when an AnimationPlayer moves Y is deferred.</li><li><strong>Unsupported shapes / formats</strong> — half-offset-square and hexagon tile shapes place on a square grid + warn; legacy <code>TileMap</code> format 0/1, scene-collection sources, and per-tile overrides are skipped + warn; animated tiles render their base frame.</li></ul></div>
     </article>
     <article class="sheet" data-type="TileMapLayer" hidden>
       <header class="sheet-head">

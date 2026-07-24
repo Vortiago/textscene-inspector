@@ -37,3 +37,10 @@ gold sky at full strength (measured to 1/255). Faithful in the lighting — but 
 The preview environment enables glow, which blooms emissive content. Ours reproduces
 the bloom, but with a stronger, coarser blend than Godot's editor glow — the halo
 spreads wider and reads brighter.
+
+## Known limitations
+
+- **Volumetric fog** — screen-space fog (`fog_enabled`) maps to `THREE.FogExp2` and is supported; volumetric fog (`volumetric_fog_*`) has no three.js equivalent and is intentionally not approximated.
+- **tonemap_exposure under LINEAR** — three emits the exposure uniform only when a tonemapper is active, so an exposure set under the default LINEAR tonemapper is ignored (faithful at the 1.0 default).
+- **Switching tone curves at runtime** — three's program cache keys on the tonemapping enum, not the ported chunk text, so a second Environment with a different curve reaching live materials (a hot-reload edit, or a late-loading instanced WorldEnvironment) keeps rendering with the first curve.
+- **AGX contrast** — the AgX curve contrast is fixed at Godot 4.6.3's built-in 1.25 (the engine exposes no per-Environment setter in this version); the ~2/255 residual on the controlled fixture is GPU float precision.

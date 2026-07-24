@@ -41,3 +41,7 @@ on/off states correctly. See [CheckBox](checkbox.md) for the detail.
 Row pitch differs: Godot's rows are ~35px tall, the previewer's ~26px, so the
 whole stack reads shorter here. The cause is the default theme's larger control
 minimum sizes versus the previewer's more compact metrics.
+
+## Known limitations
+
+- **rotation / scale inside a Container** — a Control inside any Container renders unrotated and unscaled whatever the scene says, matching Godot (`fit_child_in_rect` ends by resetting rotation and scale).

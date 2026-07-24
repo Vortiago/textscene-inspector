@@ -199,7 +199,8 @@ decoders, which stay faithful readers of what the file says:
   (region/frame windowing via texture offset+repeat). The shapes differ enough
   that the shared part is only the `1 -`; there is deliberately no helper.
   The material UV transform (`uv1_scale`/`uv1_offset`) does **not** convert —
-  see the `uv1` entry in [docs/PARITY-LIMITATIONS.md](./docs/PARITY-LIMITATIONS.md).
+  see the `uv1 V-anchoring` note in the StandardMaterial3D comparison sheet
+  ([docs/comparison/sheets/standardmaterial3d.md](./docs/comparison/sheets/standardmaterial3d.md)).
 - **Triangle winding.** Godot fronts triangles clockwise, three.js expects
   counter-clockwise — every decoded index triple is reversed (`arrayMeshGeometry.ts`).
   Without it, flat meshes vanish and closed meshes render inside-out.

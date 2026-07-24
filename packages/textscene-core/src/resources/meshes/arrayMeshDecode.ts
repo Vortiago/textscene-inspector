@@ -188,8 +188,7 @@ export function decodeArrayMesh(content: string): ArrayMeshData {
     // UV1 within attribute_data. Godot orders the record COLOR, UV1, UV2, …, so
     // a surface with vertex colours puts 4 bytes of RGBA8 ahead of UV1 — reading
     // from offset 0 there decodes the colour as `u`. Compressed attributes store
-    // UVs as uint16 scaled by `uv_scale` and are not decoded (see
-    // docs/PARITY-LIMITATIONS.md); reading them as float32 yields garbage, so
+    // UVs as uint16 scaled by `uv_scale` and are not decoded; reading them as float32 yields garbage, so
     // skip rather than emit nonsense UVs.
     const uvs =
       (format & ARRAY_FORMAT_TEX_UV) !== 0 &&

@@ -5,8 +5,8 @@ verification, parity audits, architecture sprints). They are kept as historical
 records and are **not maintained**: implementation pointers, line numbers, and
 commit references inside them describe the repo as it was at the time of writing.
 
-Living references stay in `docs/` (e.g. `PARITY-LIMITATIONS.md`, the user guides,
-`user-flows.md`, and `docs/adr/`).
+Living references stay in `docs/` (e.g. the user guides, `user-flows.md`, the
+per-node comparison sheets under `docs/comparison/`, and `docs/adr/`).
 
 | File | Phase it came from | Status |
 |------|--------------------|--------|
@@ -20,7 +20,7 @@ Living references stay in `docs/` (e.g. `PARITY-LIMITATIONS.md`, the user guides
 | `MAIN-FEATURE-INVENTORY.md` | Pre-migration baseline inventory of the vanilla-DOM app shell (`main` @ `80fa99e`) | Historical record (intentional snapshot — do not update) |
 | `MAIN-VS-MIGRATION-DELTA.md` | Completeness gate comparing `main` vs `feat/r3f-migration` before the PR #48 merge (2026-05-20) | Historical record |
 | `PARITY-AUDIT-POST-MERGE.md` | Godot-parity audit on the post-merge tip `05bd4d8` (2026-05-27) | Historical record |
-| `PARITY-AUDIT-PROGRESS.md` | Batch tracker for the 2026-06-03 expanded parity audit (all batches completed; surviving divergences live in `docs/PARITY-LIMITATIONS.md`) | Historical record |
+| `PARITY-AUDIT-PROGRESS.md` | Batch tracker for the 2026-06-03 expanded parity audit (all batches completed; surviving divergences live in the per-node comparison sheets (`docs/comparison/sheets/`)) | Historical record |
 | `POST-MORTEM-WALL-REGRESSIONS.md` | Post-mortem on the hallway-fixture wall regressions (2026-05-28) | Historical record |
 | `UX-FLOW-GAPS.md` | UX field run on `feat/r3f-migration` (`c771507`) that produced the WI-UX work items | Historical record |
 | `UX-REGRESSIONS.md` | Cross-cutting UX-regression snapshot `main` vs `feat/r3f-migration` (all three regressions since resolved) | Historical record |

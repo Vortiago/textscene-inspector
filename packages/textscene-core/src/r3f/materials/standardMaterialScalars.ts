@@ -97,7 +97,7 @@ export interface StandardMaterial3DScalars {
    * Godot `billboard_keep_scale`. Godot's default (false) normalizes the model
    * scale away while billboarding; `useBillboard` only rewrites rotation, so our
    * billboard always preserves the authored scale (equivalent to keep_scale =
-   * true). Parsed for completeness — see docs/PARITY-LIMITATIONS.md.
+   * true). Parsed for completeness.
    */
   billboardKeepScale: boolean;
   /** Godot `anisotropy` magnitude (0..1), gated on `anisotropy_enabled`. */
@@ -242,7 +242,7 @@ export function parseStandardMaterial3DScalars(
   // AND both a colored `emission` and an `emission_texture`, Godot computes
   // (emission + tex) * energy, but three.js's emissiveMap is multiply-only
   // (emissive * intensity * tex), so the additive form can't be reproduced.
-  // The MULTIPLY operator case is faithful — see docs/PARITY-LIMITATIONS.md.
+  // The MULTIPLY operator case is faithful.
   // HDR emission: Godot allows emission channels > 1. three.js's emissive color
   // is [0,1] with brightness carried by emissiveIntensity, so normalize the
   // color by its peak channel and fold that peak into the energy — preserving

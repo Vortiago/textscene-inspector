@@ -30,3 +30,7 @@ tile surface, not exposure or ambient. The quad's ArrayMesh declares no surface 
 so the previewer paints it with its neutral grey placeholder (`0xb0b0b0`), which reads
 slightly darker than the surface Godot draws for the same material-less tile. Subtle, and
 a placeholder-material effect — the GridMap geometry itself matches.
+
+## Known limitations
+
+- **cell_scale** — a GridMap's `cell_scale` (default 1.0) is not parsed; a map that sets it would render every tile at the wrong size.

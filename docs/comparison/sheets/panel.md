@@ -25,3 +25,7 @@ StyleBox and holds free-anchored children. The previewer renders it as a positio
 ## Divergences
 
 None visible in this fixture.
+
+## Known limitations
+
+- **StyleBoxFlat.border_blend** — with `border_blend = true` Godot fades the border from `border_color` into `bg_color`; we map borders to a solid CSS border with a sharp edge. Defaults to false; no corpus fixture enables it.

@@ -216,8 +216,7 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     // PARITY LIMITATION (uv1_offset + world-triplanar): three.js applies
     // `offset` in UV space, but Godot's world-triplanar offset is in world
     // units, so a non-zero offset would shift by a different amount here. No
-    // shipped scene sets uv1_offset, so impact is currently zero — see
-    // docs/PARITY-LIMITATIONS.md.
+    // shipped scene sets uv1_offset, so impact is currently zero.
     return { scale, offset: materialScalars.uv1Offset };
   }, [materialScalars, meshResource]);
 
@@ -242,7 +241,7 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
   // (default RED). three.js's metalnessMap/roughnessMap read fixed channels
   // (BLUE / GREEN). Faithful for grayscale or matching-channel (ORM) maps; a
   // RED-packed map with differing channels would misread. A true fix needs
-  // runtime channel-swizzling — see docs/PARITY-LIMITATIONS.md.
+  // runtime channel-swizzling.
   const roughnessMap = useMemo(
     () =>
       transformedTexture(

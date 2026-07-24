@@ -37,3 +37,8 @@ range.
 The shadow's near edge. Its dark core matches Godot, but the penumbra sits a few
 /255 lighter and its edge is softer and slightly grainier than Godot's cleanly
 filtered one — a shadow-map resolution/bias artifact, not the cone.
+
+## Known limitations
+
+- **Distance falloff** — as for OmniLight3D, Godot's `pow(1 - d/range, attenuation)` and three's inverse-square differ through the middle of the range; matched at the source.
+- **spot_angle_attenuation → penumbra** — Godot's cone-edge softness curve has no exact three analogue (`SpotLight.penumbra` is a single 0..1). Approximated as `penumbra = 1/(spot_angle_attenuation + 1)`, landing the default at a moderately soft 0.5.

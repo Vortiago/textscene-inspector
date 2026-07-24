@@ -28,3 +28,7 @@ geometry or text.
 ## Divergences
 
 None visible in this fixture.
+
+## Known limitations
+
+- **top_level** — with `top_level = true` a Node3D ignores ancestor transforms, but our renderer nests every node in its parent's group, so the parent transform is always inherited. No corpus fixture sets it.

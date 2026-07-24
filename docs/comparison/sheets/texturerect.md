@@ -24,3 +24,8 @@ and `object-position` set from `stretch_mode`.
 ## Divergences
 
 None visible in this fixture.
+
+## Known limitations
+
+- **expand_mode FIT_* axis** — the FIT modes take the right shape, but Godot names one axis as the driver from the control's current size, whereas CSS resolves whichever axis the layout leaves unconstrained; they differ only when the layout constrains both axes.
+- **Absent stretch_mode → contain** — an absent `stretch_mode` defaults to `object-fit: contain` (a deliberate deviation from Godot's STRETCH_SCALE default) so a texture fits rather than stretch-distorts; an explicit `stretch_mode = 0` still maps to fill.

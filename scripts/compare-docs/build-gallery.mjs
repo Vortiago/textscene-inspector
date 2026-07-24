@@ -87,8 +87,14 @@ function parseSections(body) {
   const lines = body.split('\n');
   const sections = [];
   const intro = [];
+  const trailing = [];
   let cur = null;
+  let inTrailing = false;
   for (let i = 0; i < lines.length; i++) {
+    if (inTrailing) {
+      trailing.push(lines[i]);
+      continue;
+    }
     const heading = /^##\s+(.*)$/.exec(lines[i]);
     const marker =
       heading && i + 1 < lines.length
@@ -107,6 +113,11 @@ function parseSections(body) {
       };
       sections.push(cur);
       i++; // consume the marker line
+    } else if (heading && !marker && sections.length > 0) {
+      // A markerless `## Heading` after the compare-sections (e.g. a sheet-level
+      // "## Known limitations") is trailing content, not part of the last section.
+      inTrailing = true;
+      trailing.push(lines[i]);
     } else if (cur) {
       cur.bodyLines.push(lines[i]);
     } else {
@@ -115,6 +126,7 @@ function parseSections(body) {
   }
   return {
     intro: intro.join('\n').trim(),
+    trailing: trailing.join('\n').trim(),
     sections: sections.map((s) => ({ ...s, body: s.bodyLines.join('\n').trim() })),
   };
 }
@@ -276,7 +288,7 @@ function build(sheets, inlineImages, fragment) {
     catalogByType.get(type)?.group ?? metaGroup ?? category;
   const sheetNodes = sheets
     .map(({ meta, body }) => {
-      const { intro, sections } = parseSections(body);
+      const { intro, sections, trailing } = parseSections(body);
       const sectioned = sections.length > 0;
       // Section sheets resolve their images per section; a legacy sheet uses the
       // single `image:` frontmatter pair.
@@ -322,6 +334,7 @@ function build(sheets, inlineImages, fragment) {
         sectioned,
         sections: resolved,
         introHtml: renderBody(intro),
+        trailingHtml: renderBody(trailing ?? ''),
         godot,
         ours,
         html: renderBody(sectioned ? '' : body),
@@ -421,7 +434,8 @@ function build(sheets, inlineImages, fragment) {
         <div class="prose">${s.html}</div>
       </section>`
                 )
-                .join('')
+                .join('') +
+              (n.trailingHtml ? `<div class="prose">${n.trailingHtml}</div>` : '')
             : `${
                 n.visual
                   ? compareStage(n.godot, n.ours, n.type)

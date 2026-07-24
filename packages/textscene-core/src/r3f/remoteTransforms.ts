@@ -26,11 +26,11 @@
  *     transform. Godot's `_update_remote` keys off the relay's transform-changed
  *     notification, which the global path satisfies on load and the local path
  *     does not — so a static previewer (no game loop moving the relay) only ever
- *     shows the global-coordinate drive. Reproduced, not derived (PARITY-LIMITATIONS.md).
+ *     shows the global-coordinate drive. Reproduced, not derived.
  *   - `update_position`/`update_rotation`/`update_scale` (each default true)
  *     select which components are pushed; disabled components keep the target's.
  *
- * Scope / limits (see docs/PARITY-LIMITATIONS.md):
+ * Scope / limits:
  *   - The pass sees only the authored root scene. Instanced sub-scenes are
  *     composed later by the live scene tree (ADR-0013), so a `remote_path`
  *     crossing into/out of an instance — or a relay living inside an instanced

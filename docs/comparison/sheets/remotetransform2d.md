@@ -38,3 +38,11 @@ One visible difference remains, in the polygon fill rather than its placement:
   (ADR-0025), whose FILMIC tonemapping is set on the whole canvas — the unlit 2D
   polygons included — whereas Godot tonemaps only the 3D pass, never the 2D canvas.
   The semi-transparent ghost carries the same lift faintly (`93` → `98`).
+
+## Known limitations
+
+The relay copies its transform onto its `remote_path` target once on load (the static enter-tree effect, not per-frame). Three cases are not fully reproduced:
+
+- **`use_global_coordinates = false`** — a no-op on a static load; only the default global-coordinate drive repositions the target (measured against Godot 4.6.3).
+- **Cross-instance `remote_path`** — a path crossing into or out of an instanced sub-scene is left unresolved; in-scene resolution (the common case) works.
+- **Relay chains** — resolve in document (pre-order) order; a feedback loop is not iterated to a fixed point.

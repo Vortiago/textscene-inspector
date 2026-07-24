@@ -22,8 +22,7 @@
  *
  * Honoured: `texture_albedo`, `size`, `modulate`, `albedo_mix`. Parsed but not
  * yet projected: `cull_mask` (layer filtering), `upper_fade`/`lower_fade`/
- * `normal_fade`/`distance_fade_*`, and the normal/ORM/emission maps — see
- * docs/PARITY-LIMITATIONS.md.
+ * `normal_fade`/`distance_fade_*`, and the normal/ORM/emission maps.
  *
  * Wraps `<Node3D>` so transform, visibility, and children come from the base.
  */
