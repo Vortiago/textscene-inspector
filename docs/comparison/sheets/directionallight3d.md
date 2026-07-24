@@ -30,5 +30,4 @@ clean there. Both carry the same warm directional light — colour, energy, and
 lit-face tint agree — and the ~30° sun projects its shadow the same way in both,
 mostly behind the box and occluded from this camera. The difference is only in
 the near edge: three.js draws it with visible contrast where Godot's is washed
-out by the bright sky-ambient fill. No PARITY-LIMITATIONS entry covers
-directional shadows.
+out by the bright sky-ambient fill.

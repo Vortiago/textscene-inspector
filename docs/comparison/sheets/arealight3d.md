@@ -33,5 +33,4 @@ is a dark blue-gray and the sun's cast shadow is a deep, solid parallelogram. Ou
 render adds the light from overhead, which lifts that front face to a medium gray,
 brightens the top, and fills the cast shadow to a washed, lighter patch. Parity is
 unverified — nothing in this repo can compare our AreaLight3D against the engine until
-a 4.7 binary sits beside the 4.6 one:
-[PARITY-LIMITATIONS.md](../../PARITY-LIMITATIONS.md#arealight3d-has-no-godot-46-reference).
+a 4.7 binary sits beside the 4.6 one.

@@ -30,5 +30,4 @@ the same positions, with the same 16px separation between them. The only
 difference is font rendering — Godot draws the labels in its bundled theme font,
 which reads heavier and pure white, while the previewer uses the browser's system
 font stack (web fonts are CSP-blocked in the VS Code webview), so the glyphs come
-out thinner and a touch dimmer. Not catalogued in
-[PARITY-LIMITATIONS.md](../../PARITY-LIMITATIONS.md).
+out thinner and a touch dimmer.

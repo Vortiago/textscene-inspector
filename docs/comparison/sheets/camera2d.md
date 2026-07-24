@@ -33,4 +33,4 @@ blue fill rather than the layout:
   `WorldEnvironment` in the scene the previewer mounts Godot's editor preview
   environment (ADR-0025), whose FILMIC tonemapping is set on the whole canvas — the
   unlit 2D polygons included — whereas Godot tonemaps only the 3D pass, never the 2D
-  canvas. No PARITY-LIMITATIONS entry covers 2D colour.
+  canvas.

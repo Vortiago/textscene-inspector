@@ -36,5 +36,4 @@ wash out and desaturate with distance — the far pair nearly dissolving into th
 fog. Ours shows the flat dark-navy `background_color` with the boxes at
 full-saturated red against it and no haze at any depth. The whole difference is
 the volumetric fog, which has no three.js equivalent and is intentionally not
-approximated. See
-[PARITY-LIMITATIONS.md](../../PARITY-LIMITATIONS.md#worldenvironment-volumetric-fog--audit-11).
+approximated.

@@ -28,8 +28,7 @@ was authored.
 ## Divergences
 
 The relay itself is faithful — the blue pentagon lands at the same upper-right spot
-in both images, so the default global-coordinate drive is reproduced
-([PARITY-LIMITATIONS.md](../../PARITY-LIMITATIONS.md#remotetransform3d--remotetransform2d--driven-with-three-bounded-gaps)).
+in both images, so the default global-coordinate drive is reproduced.
 One visible difference remains, in the polygon fill rather than its placement:
 
 - **The blue pentagon reads paler and less saturated in ours.** Godot writes the
@@ -38,5 +37,4 @@ One visible difference remains, in the polygon fill rather than its placement:
   no `WorldEnvironment`, so the previewer mounts Godot's editor preview environment
   (ADR-0025), whose FILMIC tonemapping is set on the whole canvas — the unlit 2D
   polygons included — whereas Godot tonemaps only the 3D pass, never the 2D canvas.
-  The semi-transparent ghost carries the same lift faintly (`93` → `98`). No
-  PARITY-LIMITATIONS entry covers 2D colour.
+  The semi-transparent ghost carries the same lift faintly (`93` → `98`).

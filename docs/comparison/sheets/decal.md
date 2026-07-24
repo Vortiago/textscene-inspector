@@ -34,9 +34,8 @@ geometry:
 - **Ours reads bolder than Godot's.** Godot fades the projection into the lit
   floor more than we do at a partial `albedo_mix`, so its checkerboards are
   paler; ours are higher-contrast. Exact `albedo_mix` blending needs a custom
-  projector shader — see [PARITY-LIMITATIONS.md](../../PARITY-LIMITATIONS.md).
+  projector shader.
 - **No edge fades or extra channels.** `upper/lower/normal_fade`,
   `distance_fade_*`, `cull_mask`, and the normal/ORM/emission maps are not
   applied — `DecalGeometry` bakes a static mesh with none of them. They are
-  near-invisible on the flat surfaces decals usually target and are recorded in
-  PARITY-LIMITATIONS.
+  near-invisible on the flat surfaces decals usually target.

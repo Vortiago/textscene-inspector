@@ -27,5 +27,4 @@ The 50%-alpha fill tint differs slightly: Godot reads a pinker
 `rgb(166, 80, 116)`, ours a marginally more muted, purple-leaning
 `rgb(160, 90, 124)` (a flat ~6–10/255 per-channel shift). The shape, size,
 placement, and anti-aliased edge are pixel-identical; the gap is only in how the
-translucent fill composites over the background. No PARITY-LIMITATIONS entry
-covers it.
+translucent fill composites over the background.

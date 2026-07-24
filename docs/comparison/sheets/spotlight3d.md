@@ -32,7 +32,7 @@ render — about 4-5/255 across the illuminated ring — while the far floor out
 the cone and the pool's own outer edge match Godot to within ~1/255. That
 near-field lift is the distance-falloff curve: three's inverse-square-with-
 windowing runs hotter than Godot's `pow(1 - d/range)` through the middle of the
-range. See [PARITY-LIMITATIONS.md](../../PARITY-LIMITATIONS.md#omnilight3d--spotlight3d-distance-falloff).
+range.
 
 The shadow's near edge. Its dark core matches Godot, but the penumbra sits a few
 /255 lighter and its edge is softer and slightly grainier than Godot's cleanly

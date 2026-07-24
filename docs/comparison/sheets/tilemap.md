@@ -38,7 +38,6 @@ pure white Godot shows; the tint is uniform across the stroke interiors, not jus
 their edges. The unlit tile material does not opt out of tone mapping, so it picks
 up the scene's editor-preview tonemapper ([ADR-0025], injected by the reference
 harness), which compresses the bright white, whereas Godot's 2D CanvasItem draw is
-not tonemapped. Same cause as `tilemaplayer` and `line2d`; no
-[PARITY-LIMITATIONS.md](../../PARITY-LIMITATIONS.md) entry covers it.
+not tonemapped. Same cause as `tilemaplayer` and `line2d`.
 
 [ADR-0025]: ../../adr/0025-preview-lighting-mirrors-the-godot-editor.md

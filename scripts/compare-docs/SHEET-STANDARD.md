@@ -42,8 +42,8 @@ consequence. Read the fixture; never invent a property.
 
 ## Divergences
 
-What differs between the two images, each with a cause. Link a limitation where one
-covers it: `[PARITY-LIMITATIONS.md](../../PARITY-LIMITATIONS.md#omnilight3d--spotlight3d-distance-falloff)`.
+What differs between the two images, each with a cause, stated in full here — the
+sheet is the home for the limitation, so never point at a separate file.
 
 If the two agree, write exactly one line:
 
