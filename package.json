@@ -39,7 +39,7 @@
     "vsc:install": "pnpm vsc:package && node -e \"const fs=require('fs'),cp=require('child_process'),d='apps/textscene-vscode';const v=fs.readdirSync(d).filter(f=>/^textscene-inspector-.*\\.vsix$/.test(f)).map(f=>[f,fs.statSync(d+'/'+f).mtimeMs]).sort((a,b)=>b[1]-a[1])[0];if(!v)throw new Error('No textscene-inspector-*.vsix in '+d);const r=cp.spawnSync('code',['--install-extension',d+'/'+v[0],'--force'],{stdio:'inherit',shell:process.platform==='win32'});process.exit(r.status===null?1:r.status)\"",
     "vsc:publish": "pnpm --filter textscene-inspector publish",
     "prepare": "husky",
-    "nodes:unsupported": "node scripts/godot-ref/list-unsupported-nodes.mjs"
+    "nodes:catalog": "node scripts/compare-docs/build-node-catalog.mjs"
   },
   "keywords": [
     "tscn",

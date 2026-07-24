@@ -1,21 +1,20 @@
 #!/usr/bin/env node
 /**
- * List the Godot node types this previewer does NOT yet render with dedicated
- * support, grouped by dimension (3D / 2D / Other) and by what they do, so it is
- * easy to see what to add next.
+ * Build the node catalog the comparison gallery uses to place EVERY Godot node —
+ * supported or not — in the left menu, grouped by dimension (3D / 2D / Other) and
+ * by what it does (lighting, physics, particles, UI, …). Unsupported nodes show
+ * up in the gallery as "Not implemented" sheets; there is no separate list to
+ * maintain.
  *
- *   node scripts/godot-ref/list-unsupported-nodes.mjs        # -> docs/UNSUPPORTED-NODES.md
- *   node scripts/godot-ref/list-unsupported-nodes.mjs --print
+ *   pnpm nodes:catalog        # -> scripts/compare-docs/node-catalog.json
  *
  * The node list is Godot's own ClassDB (via enumerate-nodes.gd through the local
- * `godot` + `xvfb-run`), so re-running this against a newer Godot picks up any
- * nodes a Godot update introduced. "Supported" = a type registered in the node
- * registry (`nodeRegistry.register({ typeName })`); everything else renders only
- * through the generic Node fallback and is listed here.
- *
- * The functional grouping is derived from each class's ancestor chain — Godot's
- * own inheritance — so a new node auto-groups if it extends a known base; a new
- * base falls to "Uncategorized" and wants a GROUP_RULES entry.
+ * `godot` + `xvfb-run`), so re-running against a newer Godot picks up any nodes a
+ * Godot update introduced. "Supported" = a type registered in the node registry
+ * (`nodeRegistry.register({ typeName })`). The functional grouping is derived from
+ * each class's ancestor chain, so a new node auto-groups if it extends a known
+ * base; a genuinely novel base falls to "Uncategorized" and wants a GROUP_RULES
+ * entry.
  */
 import { spawnSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, writeFileSync, readdirSync, statSync } from 'node:fs';
@@ -25,10 +24,11 @@ import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(here, '../..');
-const OUT = join(repoRoot, 'docs/UNSUPPORTED-NODES.md');
+const OUT = join(here, 'node-catalog.json');
+const ENUM_GD = join(repoRoot, 'scripts/godot-ref/enumerate-nodes.gd');
 
-// Ordered, specific → general. First base class (or the node's own name) found
-// in a node's [name, ...ancestors] decides its group.
+// Ordered, specific → general. First base class (or the node's own name) found in
+// a node's [name, ...ancestors] decides its group.
 const GROUP_RULES = [
   // --- 3D ---
   ['Light3D', 'Lighting'],
@@ -154,17 +154,14 @@ const GROUP_RULES = [
   ['SpringBoneCollision3D', 'Skeleton, bones & IK'],
 ];
 
-/** Registered node types the previewer renders with dedicated support. */
 function supportedTypes() {
   const types = new Set();
   const walk = (dir) => {
     for (const entry of readdirSync(dir)) {
       const p = join(dir, entry);
-      if (statSync(p).isDirectory()) {
-        walk(p);
-      } else if (/\.tsx?$/.test(entry) && !/\.test\./.test(entry)) {
-        const text = readFileSync(p, 'utf8');
-        for (const m of text.matchAll(/typeName:\s*'([^']+)'/g)) types.add(m[1]);
+      if (statSync(p).isDirectory()) walk(p);
+      else if (/\.tsx?$/.test(entry) && !/\.test\./.test(entry)) {
+        for (const m of readFileSync(p, 'utf8').matchAll(/typeName:\s*'([^']+)'/g)) types.add(m[1]);
       }
     }
   };
@@ -174,86 +171,42 @@ function supportedTypes() {
 
 function enumerateGodotNodes() {
   const proj = mkdtempSync(join(tmpdir(), 'godot-nodes-'));
-  const gd = join(here, 'enumerate-nodes.gd');
-  const res = spawnSync(
-    'xvfb-run',
-    ['-a', 'godot', '--headless', '--path', proj, '-s', gd],
-    { encoding: 'utf8', timeout: 120_000 }
-  );
+  const res = spawnSync('xvfb-run', ['-a', 'godot', '--headless', '--path', proj, '-s', ENUM_GD], {
+    encoding: 'utf8',
+    timeout: 120_000,
+  });
   const out = `${res.stdout ?? ''}\n${res.stderr ?? ''}`;
   const marker = out.indexOf('###NODES_JSON###');
-  if (marker === -1) {
-    throw new Error(`Godot did not emit the node list. Output:\n${out.slice(-800)}`);
-  }
-  const json = out.slice(marker + '###NODES_JSON###'.length).trim().split('\n')[0];
-  return JSON.parse(json);
+  if (marker === -1) throw new Error(`Godot did not emit the node list. Output:\n${out.slice(-800)}`);
+  return JSON.parse(out.slice(marker + '###NODES_JSON###'.length).trim().split('\n')[0]);
 }
 
 function groupOf(node) {
   const names = new Set([node.name, ...node.chain]);
-  for (const [base, group] of GROUP_RULES) {
-    if (names.has(base)) return group;
-  }
-  // Name-prefix fallbacks for families that share no distinctive base class.
+  for (const [base, group] of GROUP_RULES) if (names.has(base)) return group;
   if (/^(OpenXR|XR)/.test(node.name)) return 'XR / AR';
   if (node.name.startsWith('SpringBone')) return 'Skeleton, bones & IK';
-  return 'Uncategorized';
-}
-
-function build() {
-  const supported = supportedTypes();
-  const all = enumerateGodotNodes()
-    // Editor-only plugins and engine-internal placeholders are not scene content.
-    .filter(
-      (n) =>
-        !n.name.startsWith('Editor') &&
-        !n.name.endsWith('EditorPlugin') &&
-        n.name !== 'MissingNode'
-    );
-  const unsupported = all.filter((n) => !supported.has(n.name));
-
-  const DIMS = ['3D', '2D', 'Other'];
-  const lines = [
-    '# Unsupported Godot nodes',
-    '',
-    '> Generated by `scripts/godot-ref/list-unsupported-nodes.mjs` from Godot ' +
-      `${godotVersion()}'s ClassDB. Re-run it after a Godot update to refresh.`,
-    '',
-    `Godot exposes **${all.length}** instantiable scene-node types; this previewer ` +
-      `renders **${all.length - unsupported.length}** with dedicated support. The ` +
-      `remaining **${unsupported.length}** fall back to a plain Node (transform + ` +
-      'children only) and are grouped below by dimension and purpose, as a menu of ' +
-      'what to add next.',
-    '',
-  ];
-
-  for (const dim of DIMS) {
-    const inDim = unsupported.filter((n) => n.dim === dim);
-    if (!inDim.length) continue;
-    lines.push(`## ${dim}${dim === 'Other' ? ' (no transform / non-visual)' : ''}`, '');
-    const byGroup = new Map();
-    for (const n of inDim) {
-      const g = groupOf(n);
-      if (!byGroup.has(g)) byGroup.set(g, []);
-      byGroup.get(g).push(n.name);
-    }
-    for (const g of [...byGroup.keys()].sort()) {
-      const names = byGroup.get(g).sort();
-      lines.push(`### ${g}`, names.map((n) => `- \`${n}\``).join('\n'), '');
-    }
-  }
-  return lines.join('\n');
+  // Dimension-aware catch-all so a base node (Node3D, Node) or any future node
+  // with an unfamiliar base still groups sensibly rather than vanishing.
+  if (names.has('Node3D')) return '3D generic';
+  if (names.has('CanvasItem')) return '2D generic';
+  return 'Generic';
 }
 
 function godotVersion() {
-  const res = spawnSync('godot', ['--version'], { encoding: 'utf8' });
-  return (res.stdout ?? '').trim().split('\n')[0] || 'unknown';
+  return (spawnSync('godot', ['--version'], { encoding: 'utf8' }).stdout ?? '').trim().split('\n')[0] || 'unknown';
 }
 
-const md = build();
-if (process.argv.includes('--print')) {
-  console.log(md);
-} else {
-  writeFileSync(OUT, `${md}\n`);
-  console.log(`Wrote ${OUT}`);
-}
+const supported = supportedTypes();
+const nodes = enumerateGodotNodes()
+  // Editor-only plugins and engine-internal placeholders are not scene content.
+  .filter((n) => !n.name.startsWith('Editor') && !n.name.endsWith('EditorPlugin') && n.name !== 'MissingNode')
+  .map((n) => ({ name: n.name, category: n.dim, group: groupOf(n), supported: supported.has(n.name) }))
+  .sort((a, b) => a.name.localeCompare(b.name));
+
+const catalog = { godotVersion: godotVersion(), generated: 'pnpm nodes:catalog', nodes };
+writeFileSync(OUT, `${JSON.stringify(catalog, null, 2)}\n`);
+const unsupported = nodes.filter((n) => !n.supported).length;
+console.log(
+  `Wrote ${OUT} — ${nodes.length} nodes (${nodes.length - unsupported} supported, ${unsupported} not implemented).`
+);

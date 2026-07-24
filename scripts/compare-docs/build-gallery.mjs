@@ -255,9 +255,26 @@ function compareStage(godot, ours, label) {
       </div>`;
 }
 
+/**
+ * The node catalog (`pnpm nodes:catalog`) maps every Godot node type to its
+ * dimension and functional group and whether the previewer supports it. It lets
+ * the gallery (a) group the nav by function and (b) list the not-yet-supported
+ * nodes as their own "Not implemented" sheets instead of in a side document.
+ */
+function loadCatalog() {
+  const file = join(here, 'node-catalog.json');
+  return existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : { nodes: [] };
+}
+
 function build(sheets, inlineImages, fragment) {
   const missing = [];
-  const nodes = sheets
+  const catalog = loadCatalog();
+  const catalogByType = new Map(catalog.nodes.map((n) => [n.name, n]));
+  // A node's functional group: from the catalog when it is a Godot node,
+  // otherwise its own category (resources and complex scenes group by category).
+  const groupFor = (type, category, metaGroup) =>
+    catalogByType.get(type)?.group ?? metaGroup ?? category;
+  const sheetNodes = sheets
     .map(({ meta, body }) => {
       const { intro, sections } = parseSections(body);
       const sectioned = sections.length > 0;
@@ -300,6 +317,7 @@ function build(sheets, inlineImages, fragment) {
         // previewer's default framing does not compose well on its own.
         camera: meta.camera ?? '',
         rendersAs: meta.renders_as ?? '',
+        group: groupFor(meta.type, CATEGORY_ORDER.includes(meta.category) ? meta.category : 'Other', meta.group),
         status,
         sectioned,
         sections: resolved,
@@ -308,42 +326,61 @@ function build(sheets, inlineImages, fragment) {
         ours,
         html: renderBody(sectioned ? '' : body),
       };
-    })
-    .sort((a, b) => a.type.localeCompare(b.type));
+    });
 
-  // Within each dimension (3D, 2D, Other) the nav splits Visual from Other, so a
-  // node that draws nothing sits apart from one that does.
-  const groups = CATEGORY_ORDER.flatMap((category) =>
-    [true, false].map((visual) => ({
-      category,
-      visual,
-      items: nodes.filter((n) => n.category === category && n.visual === visual),
-    }))
-  ).filter((g) => g.items.length);
+  // Every Godot node the previewer does NOT support yet becomes its own
+  // "Not implemented" sheet, so the whole node surface lives in one gallery
+  // rather than a side document. A hand-authored sheet always wins.
+  const sheetTypes = new Set(sheetNodes.map((n) => n.type));
+  const unimplemented = catalog.nodes
+    .filter((n) => !n.supported && !sheetTypes.has(n.name))
+    .map((n) => ({
+      type: n.name,
+      category: CATEGORY_ORDER.includes(n.category) ? n.category : 'Other',
+      group: n.group,
+      status: 'unimplemented',
+      unimplemented: true,
+      visual: true,
+      fixture: '',
+      camera: '',
+      rendersAs: '',
+      sectioned: false,
+      sections: [],
+      introHtml: '',
+      godot: null,
+      ours: null,
+      html: '',
+    }));
 
-  // A category shows the Visual/Other sub-label only when it actually has both;
-  // a single-group category (all-visual Complex Scenes) just shows its name.
-  const splitCategories = new Set(
-    CATEGORY_ORDER.filter(
-      (category) =>
-        nodes.some((n) => n.category === category && n.visual) &&
-        nodes.some((n) => n.category === category && !n.visual)
-    )
-  );
+  const nodes = [...sheetNodes, ...unimplemented].sort((a, b) => a.type.localeCompare(b.type));
 
-  const nav = groups
-    .map(
-      (g) =>
-        `<div class="nav-group"><div class="nav-head">${
-          splitCategories.has(g.category) ? `${g.category} · ${g.visual ? 'Visual' : 'Other'}` : g.category
-        }</div>${g.items
-          .map(
-            (n) =>
-              `<button class="nav-item${n.visual ? '' : ' novis'}" data-type="${n.type}" data-status="${n.status}"><span class="st st-${n.status}" title="${STATUS_LABEL[n.status]}"></span>${n.type}</button>`
-          )
-          .join('')}</div>`
-    )
-    .join('');
+  // Nav is two levels: a category divider (3D / 2D / Resources / …) then a
+  // sub-group per function (Lighting, Physics, UI, …). A category whose only
+  // group is itself (Resources, Complex Scenes) shows no redundant sub-head.
+  const nav = CATEGORY_ORDER.map((category) => {
+    const inCat = nodes.filter((n) => n.category === category);
+    if (!inCat.length) return '';
+    const byGroup = new Map();
+    for (const n of inCat) {
+      if (!byGroup.has(n.group)) byGroup.set(n.group, []);
+      byGroup.get(n.group).push(n);
+    }
+    const groupNames = [...byGroup.keys()].sort();
+    const bare = groupNames.length === 1 && groupNames[0] === category;
+    const groupsHtml = groupNames
+      .map(
+        (gname) =>
+          `<div class="nav-group">${bare ? '' : `<div class="nav-head">${escapeHtml(gname)}</div>`}${byGroup
+            .get(gname)
+            .map(
+              (n) =>
+                `<button class="nav-item" data-type="${n.type}" data-status="${n.status}"><span class="st st-${n.status}" title="${STATUS_LABEL[n.status]}"></span>${n.type}</button>`
+            )
+            .join('')}</div>`
+      )
+      .join('');
+    return `<div class="nav-cat">${escapeHtml(category)}</div>${groupsHtml}`;
+  }).join('');
 
   const panels = nodes
     .map(
@@ -368,10 +405,14 @@ function build(sheets, inlineImages, fragment) {
       ${n.sectioned ? '' : `<div class="status-note st-${n.status}"></div>`}
       ${n.introHtml ? `<div class="prose intro">${n.introHtml}</div>` : ''}
       ${
-        n.sectioned
-          ? n.sections
-              .map(
-                (s) => `
+        n.unimplemented
+          ? `<div class="novisual">Not yet implemented — the previewer renders this as a transform-only fallback (children still show, the node itself draws nothing). In Godot it is a <strong>${escapeHtml(
+              n.group
+            )}</strong> node.</div>`
+          : n.sectioned
+            ? n.sections
+                .map(
+                  (s) => `
       <section class="prop">
         <div class="prop-head"><h3>${escapeHtml(s.title)}</h3><span class="status st-${
           s.status
@@ -379,20 +420,22 @@ function build(sheets, inlineImages, fragment) {
         ${compareStage(s.godot, s.ours, s.title)}
         <div class="prose">${s.html}</div>
       </section>`
-              )
-              .join('')
-          : `${
-              n.visual
-                ? compareStage(n.godot, n.ours, n.type)
-                : `<div class="novisual">No visual output — this node draws nothing to compare.</div>`
-            }
+                )
+                .join('')
+            : `${
+                n.visual
+                  ? compareStage(n.godot, n.ours, n.type)
+                  : `<div class="novisual">No visual output — this node draws nothing to compare.</div>`
+              }
       <div class="prose">${n.html}</div>`
       }
     </article>`
     )
     .join('');
 
-  return { html: page(nav, panels, nodes[0]?.type, fragment), missing };
+  // Land on a real (implemented) sheet, not the first injected "not implemented" node.
+  const firstType = (nodes.find((n) => !n.unimplemented) ?? nodes[0])?.type;
+  return { html: page(nav, panels, firstType, fragment), missing };
 }
 
 /**
@@ -445,8 +488,10 @@ body{margin:0;display:grid;grid-template-columns:264px 1fr;min-height:100vh;back
 .dot{width:10px;height:10px;border-radius:50%;background:linear-gradient(135deg,var(--godot),var(--ours))}
 #search{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--panel-2);color:var(--ink);font:inherit;font-size:13px;margin-bottom:12px}
 #search:focus{outline:2px solid var(--ours);outline-offset:1px}
-.nav-group{margin-bottom:14px}
-.nav-head{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);padding:0 8px 6px}
+.nav-cat{font-size:12px;font-weight:700;letter-spacing:-.01em;color:var(--ink);margin:18px 0 6px;padding:0 8px 4px;border-bottom:1px solid var(--line)}
+.nav-cat:first-child{margin-top:0}
+.nav-group{margin-bottom:8px}
+.nav-head{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);padding:0 8px 5px}
 .nav-item{display:block;width:100%;text-align:left;border:0;background:none;color:var(--ink);font:inherit;font-size:13.5px;padding:5px 8px;border-radius:6px;cursor:pointer}
 .nav-item:hover{background:var(--panel-2)}
 .nav-item[aria-current=true]{background:var(--ours);color:#fff}
@@ -528,6 +573,15 @@ document.getElementById('search').addEventListener('input',e=>{
   items.forEach(b=>{b.style.display=b.dataset.type.toLowerCase().includes(q)?'':'none';});
   document.querySelectorAll('.nav-group').forEach(g=>{
     g.style.display=[...g.querySelectorAll('.nav-item')].some(b=>b.style.display!=='none')?'':'none';
+  });
+  // Hide a category divider when every group under it (its siblings up to the
+  // next divider) is filtered out.
+  document.querySelectorAll('.nav-cat').forEach(cat=>{
+    let any=false;
+    for(let el=cat.nextElementSibling; el && !el.classList.contains('nav-cat'); el=el.nextElementSibling){
+      if(el.style.display!=='none') any=true;
+    }
+    cat.style.display=any?'':'none';
   });
 });
 function initCompare(sheet){

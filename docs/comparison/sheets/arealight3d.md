@@ -1,6 +1,7 @@
 ---
 type: AreaLight3D
 category: 3D
+group: Lighting
 fixture: unit-area-light3d.tscn
 image: unit-area-light3d
 renders_as: a THREE.RectAreaLight
