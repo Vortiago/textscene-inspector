@@ -31,24 +31,18 @@ export function LightOccluder2D({ node, children }: NodeComponentProps) {
     if (!occluderResource) return null;
     const data = occluderResource.data as Record<string, string>;
     if (!data.polygon) return null;
+    // Flat `[x0,y0,x1,y1,...]`; polygonToSegments pairs and Y-negates it, and
+    // ignores a dangling odd coordinate.
     const raw = parsePackedVector2Array(data.polygon);
-    // raw is [x0,y0,x1,y1,...]; pair into points for polygonToSegments.
-    const points: { x: number; y: number }[] = [];
-    for (let i = 0; i < raw.length; i += 2) {
-      points.push({ x: raw[i]!, y: raw[i + 1]! });
-    }
     const closed = data.closed !== 'false';
-    return polygonToSegments(points, closed);
+    return polygonToSegments(raw, closed);
   }, [occluderResource]);
-
-  if (!visible || !positions)
-    return <CanvasItem2D node={node} props={properties} body={() => null}>{children}</CanvasItem2D>;
 
   return (
     <CanvasItem2D
       node={node}
       props={properties}
-      body={() => <GizmoLine positions={positions} />}
+      body={() => (visible && positions ? <GizmoLine positions={positions} /> : null)}
     >
       {children}
     </CanvasItem2D>

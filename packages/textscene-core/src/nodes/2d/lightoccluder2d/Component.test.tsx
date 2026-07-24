@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { Linter } from '../../../linter/Linter';
 import { nodeRegistry } from '../../../core/NodeRegistry';
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
+import { fixturesDir } from '../../../parser/testing/parserKit';
 import { polygonToSegments } from './polygonShapes';
 
 // Import the slice's self-registration side effects.
@@ -18,11 +19,11 @@ import '../../../linter/index';
 describe('polygonToSegments', () => {
   it('returns null for fewer than 2 points', () => {
     expect(polygonToSegments([], true)).toBeNull();
-    expect(polygonToSegments([{ x: 0, y: 0 }], true)).toBeNull();
+    expect(polygonToSegments([0, 0], true)).toBeNull();
   });
 
   it('closed 2-point polygon → 2 segments (4 positions)', () => {
-    const pts = [{ x: 0, y: 0 }, { x: 16, y: 0 }];
+    const pts = [0, 0, 16, 0];
     const out = polygonToSegments(pts, true);
     expect(out).toBeDefined();
     expect(out!.length).toBe(12); // 2 segments * 2 ends * 3 components
@@ -34,7 +35,7 @@ describe('polygonToSegments', () => {
   });
 
   it('open 2-point polygon → 1 segment (2 positions)', () => {
-    const pts = [{ x: 0, y: 0 }, { x: 16, y: 0 }];
+    const pts = [0, 0, 16, 0];
     const out = polygonToSegments(pts, false);
     expect(out).toBeDefined();
     expect(out!.length).toBe(6); // 1 segment * 2 ends * 3 components
@@ -42,8 +43,8 @@ describe('polygonToSegments', () => {
 
   it('closed 4-pt square → 4 segments (8 positions)', () => {
     const pts = [
-      { x: 0, y: 0 }, { x: 16, y: 0 },
-      { x: 16, y: 16 }, { x: 0, y: 16 },
+      0, 0, 16, 0,
+      16, 16, 0, 16,
     ];
     const out = polygonToSegments(pts, true);
     expect(out!.length).toBe(24); // 4 segments * 2 * 3
@@ -51,16 +52,16 @@ describe('polygonToSegments', () => {
 
   it('open 4-pt chain → 3 segments (6 positions)', () => {
     const pts = [
-      { x: 0, y: 0 }, { x: 16, y: 0 },
-      { x: 16, y: 16 }, { x: 0, y: 16 },
+      0, 0, 16, 0,
+      16, 16, 0, 16,
     ];
     const out = polygonToSegments(pts, false);
     expect(out!.length).toBe(18); // 3 segments * 2 * 3
   });
 
   it('y-negates correctly (Godot Y-down → three Y-up)', () => {
-    const pts = [{ x: 0, y: 10 }];
-    const out = polygonToSegments([...pts, { x: 10, y: 0 }], false);
+    // Points (0,10) and (10,0), open → 1 segment.
+    const out = polygonToSegments([0, 10, 10, 0], false);
     // First point (0, 10) → y = -10 in three-space
     expect(out![1]).toBe(-10);
     // Second point (10, 0) → y = 0 (may be -0)
@@ -82,20 +83,7 @@ describe('LightOccluder2D fixture is lint-clean', () => {
   it('fixture unit-lightoccluder2d.tscn lints with no errors', async () => {
     const { readFileSync } = await import('node:fs');
     const { resolve } = await import('node:path');
-    let dir = __dirname;
-    for (let i = 0; i < 12; i += 1) {
-      const ws = resolve(dir, 'pnpm-workspace.yaml');
-      try {
-        readFileSync(ws, 'utf8');
-        break;
-      } catch {
-        dir = resolve(dir, '..');
-      }
-    }
-    const raw = readFileSync(
-      resolve(dir, 'scenes/fixtures/unit-lightoccluder2d.tscn'),
-      'utf8'
-    );
+    const raw = readFileSync(resolve(fixturesDir(), 'unit-lightoccluder2d.tscn'), 'utf8');
     const errors = new Linter().lint(raw).filter((d) => d.severity === 'error');
     expect(errors).toHaveLength(0);
   });

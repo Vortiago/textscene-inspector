@@ -113,10 +113,19 @@ function SelectSeeder({ path }: { path: string }) {
   return null;
 }
 
-/** Render a .tscn through NodeDispatcher (2D workspace), optionally selecting a node. */
-async function renderOcc(tscn: string, selectPath?: string) {
+/**
+ * Render a .tscn through NodeDispatcher (2D workspace), optionally selecting a
+ * node. `seed` runs against the fake loader before render — used to make an
+ * ExtResource `.tres` occluder resolvable.
+ */
+async function renderOcc(
+  tscn: string,
+  selectPath?: string,
+  seed?: (fake: ReturnType<typeof createFakeResourceLoader>) => void
+) {
   const scene = new TscnParser().parse(tscn);
   const fake = createFakeResourceLoader();
+  seed?.(fake);
   const renderer = await ReactThreeTestRenderer.create(
     <CanvasWorkspaceProvider workspace="2d">
       <ResourceLoaderProvider loader={fake.loader}>
@@ -143,6 +152,15 @@ function lineSegmentCounts(renderer: TestRenderer): number[] {
   return renderer.scene
     .findAllByType('LineSegments')
     .map((o) => (o.instance as THREE.LineSegments).geometry.getAttribute('position').count);
+}
+
+/** [x,y] vertex pairs of the first rendered LineSegments' local position buffer. */
+function firstLineVertices(renderer: TestRenderer): [number, number][] {
+  const geom = (renderer.scene.findByType('LineSegments').instance as THREE.LineSegments).geometry;
+  const arr = geom.getAttribute('position').array;
+  const pairs: [number, number][] = [];
+  for (let i = 0; i + 2 < arr.length; i += 3) pairs.push([arr[i]!, arr[i + 1]!]);
+  return pairs;
 }
 
 function lintErrorCount(raw: string): number {
@@ -191,6 +209,43 @@ describe('LightOccluder2D slice — behavioral contract (RED until shipped)', ()
     const open = lineSegmentCounts(await renderOcc(occScene({ closedLine: 'closed = false' }), 'Root/Occ'));
     expect(closed[0]).toBe(8); // 4 pts closed → 4 segments → 8 positions
     expect(open[0]).toBe(6); // 4 pts open → 3 segments → 6 positions (naive always-close builder → RED)
+  });
+
+  it('renders vertices at the Godot→three Y-negated coordinates (a wrong Y-sign fails, not just a wrong count)', async () => {
+    if (!requireComp()) return;
+    // Polygon point (16,16) in Godot Y-down → (16,-16) in three Y-up. Pinning
+    // the VALUE (not just position.count) catches a renderer that negates the
+    // wrong axis / drops the negation and ships the occluder upside-down.
+    const verts = firstLineVertices(await renderOcc(occScene({}), 'Root/Occ'));
+    expect(verts).toContainEqual([16, -16]);
+    // No vertex keeps the raw Godot +Y (an un-negated / wrongly-signed build).
+    expect(verts.some(([, y]) => y === 16)).toBe(false);
+  });
+
+  it('renders the outline for an occluder loaded from an ExtResource .tres (not only an inline SubResource)', async () => {
+    if (!requireComp()) return;
+    const TRES_PATH = 'res://occ_polygon.tres';
+    const tscn = `[gd_scene format=3]
+
+[ext_resource type="OccluderPolygon2D" path="${TRES_PATH}" id="1_occ"]
+
+[node name="Root" type="Node2D"]
+
+[node name="Occ" type="LightOccluder2D" parent="."]
+occluder = ExtResource("1_occ")
+`;
+    const counts = lineSegmentCounts(
+      await renderOcc(tscn, 'Root/Occ', (fake) =>
+        fake.resources.seed(TRES_PATH, {
+          resourceType: 'OccluderPolygon2D',
+          properties: { polygon: 'PackedVector2Array(0, 0, 16, 0, 16, 16, 0, 16)' },
+          extResources: [],
+          subResources: [],
+        })
+      )
+    );
+    expect(counts.length, 'an ExtResource-backed occluder should render its outline').toBe(1);
+    expect(counts[0]).toBe(8); // 4 pts, closed default → 4 segments → 8 positions
   });
 
   it('renders NO occluder outline when the node is NOT selected (gizmo gate)', async () => {

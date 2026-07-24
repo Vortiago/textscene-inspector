@@ -14,7 +14,7 @@ export function parseLightOccluder2D(
   const baseProperties = parseNode2D(heading, properties);
   return {
     ...baseProperties,
-    occluder: properties.occluder ?? undefined,
+    occluder: properties.occluder,
     light_mask: intOr(properties.light_mask, 1, 'LightOccluder2D.light_mask'),
     sdf_collision: boolOr(properties.sdf_collision, true, 'LightOccluder2D.sdf_collision'),
     occluder_light_mask: intOr(properties.occluder_light_mask, 1, 'LightOccluder2D.occluder_light_mask'),
