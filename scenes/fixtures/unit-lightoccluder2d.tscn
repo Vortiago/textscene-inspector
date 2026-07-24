@@ -1,7 +1,23 @@
-[gd_scene format=3]
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Texture2D" path="res://textures/light2d.png" id="1_light"]
 
 [sub_resource type="OccluderPolygon2D" id="1"]
-polygon = PackedVector2Array(0, 0, 32, 0, 32, 32, 0, 32)
+polygon = PackedVector2Array(-40, -40, 40, -40, 40, 40, -40, 40)
 
-[node name="LightOccluder2D" type="LightOccluder2D"]
+[node name="Root" type="Node2D"]
+
+[node name="Surface" type="Polygon2D" parent="."]
+color = Color(0.22, 0.22, 0.26, 1)
+polygon = PackedVector2Array(220, 68, 900, 68, 900, 580, 220, 580)
+
+[node name="Lamp" type="PointLight2D" parent="."]
+position = Vector2(400, 200)
+texture = ExtResource("1_light")
+energy = 2.0
+texture_scale = 0.7
+shadow_enabled = true
+
+[node name="Caster" type="LightOccluder2D" parent="."]
+position = Vector2(576, 324)
 occluder = SubResource("1")

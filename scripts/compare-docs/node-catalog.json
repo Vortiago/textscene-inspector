@@ -173,8 +173,8 @@
     {
       "name": "CanvasModulate",
       "category": "2D",
-      "group": "2D generic",
-      "supported": false
+      "group": "Canvas effects",
+      "supported": true
     },
     {
       "name": "CCDIK3D",
@@ -606,7 +606,7 @@
       "name": "LightOccluder2D",
       "category": "2D",
       "group": "Lighting",
-      "supported": false
+      "supported": true
     },
     {
       "name": "LimitAngularVelocityModifier3D",
@@ -942,7 +942,7 @@
       "name": "PointLight2D",
       "category": "2D",
       "group": "Lighting",
-      "supported": false
+      "supported": true
     },
     {
       "name": "Polygon2D",

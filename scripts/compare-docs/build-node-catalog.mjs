@@ -131,10 +131,12 @@ const GROUP_RULES = [
   ['Sprite2D', '2D rendering'],
   ['Polygon2D', '2D rendering'],
   ['Line2D', '2D rendering'],
+  // CanvasModulate is a Node2D, so its specific rule must precede the Node2D
+  // catch-all below — order is most-specific-first.
+  ['CanvasModulate', 'Canvas effects'],
   ['Node2D', '2D generic'],
 
   // --- Other (neither CanvasItem nor Node3D) ---
-  ['CanvasModulate', 'Canvas effects'],
   ['CanvasLayer', 'Canvas layers'],
   ['Window', 'UI — windows'],
   ['AnimationPlayer', 'Animation'],
