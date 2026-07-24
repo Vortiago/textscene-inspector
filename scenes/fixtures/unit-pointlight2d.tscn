@@ -1,0 +1,9 @@
+[gd_scene format=3]
+[ext_resource type="Texture2D" path="res://light.png" id="1"]
+
+[node name="Root" type="Node2D"]
+
+[node name="Torch" type="PointLight2D" parent="."]
+texture = ExtResource("1")
+color = Color(1, 0.8, 0.4, 1)
+energy = 2.0

@@ -148,6 +148,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Canvas Modulate",
+    "file": "unit-canvas-modulate.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Characterbody2d",
     "file": "unit-characterbody2d.tscn",
     "category": "Other"
@@ -243,6 +248,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Lightoccluder2d",
+    "file": "unit-lightoccluder2d.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Marker 3d",
     "file": "unit-marker-3d.tscn",
     "category": "Other"
@@ -275,6 +285,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Photo Frame Base",
     "file": "unit-photo-frame-base.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Pointlight2d",
+    "file": "unit-pointlight2d.tscn",
     "category": "Other"
   },
   {

@@ -61,6 +61,9 @@ import '../../nodes/2d/path2d/index.r3f';
 import '../../nodes/2d/pathfollow2d/index.r3f';
 import '../../nodes/2d/line2d/index.r3f';
 import '../../nodes/2d/remotetransform2d/index.r3f';
+import '../../nodes/2d/canvasmodulate/index.r3f';
+import '../../nodes/2d/lightoccluder2d/index.r3f';
+import '../../nodes/2d/pointlight2d/index.r3f';
 import '../../nodes/timers/timer/index.r3f';
 
 export { GenericNodeFallback } from '../internal/generic-node-fallback/index';
