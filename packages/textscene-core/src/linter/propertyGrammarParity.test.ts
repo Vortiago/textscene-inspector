@@ -221,6 +221,16 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
     reason: 'No unique asymmetries; transform/position covered by Node2D base on both sides.',
   },
 
+  LightOccluder2D: {
+    parserOnly: [
+      // light_mask and occluder_light_mask are bitmasks (int32) with no
+      // range constraint that the linter can validate — any integer is valid
+      // in TSCN, so there is no grammar that can fail.
+      'light_mask', 'occluder_light_mask',
+    ],
+    reason: 'light_mask and occluder_light_mask are arbitrary bitmasks with no valid range; the linter has no grammar to validate.',
+  },
+
   // -------------------------------------------------------------------------
   // 3D leaf slices
   // -------------------------------------------------------------------------

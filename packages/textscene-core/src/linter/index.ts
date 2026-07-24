@@ -44,6 +44,7 @@ import '../nodes/2d/marker2d/index.linter.js';
 import '../nodes/2d/path2d/index.linter.js';
 import '../nodes/2d/line2d/index.linter.js';
 import '../nodes/2d/pathfollow2d/index.linter.js';
+import '../nodes/2d/lightoccluder2d/index.linter.js';
 
 import '../nodes/animation/animationplayer/index.linter.js';
 import '../nodes/animation/animationtree/index.linter.js';
