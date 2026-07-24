@@ -78,6 +78,7 @@ import '../nodes/2d/pathfollow2d/index.js';
 import '../nodes/2d/line2d/index.js';
 import '../nodes/2d/remotetransform2d/index.js';
 import '../nodes/2d/canvasmodulate/index.js';
+import '../nodes/2d/lightoccluder2d/index.js';
 import '../nodes/timers/timer/index.js';
 
 import type { TscnScene } from './types.js';

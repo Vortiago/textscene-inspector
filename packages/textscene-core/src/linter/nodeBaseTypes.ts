@@ -67,6 +67,7 @@ const NODE2D_LEAVES = [
   'CollisionShape2D',
   'RemoteTransform2D',
   'CanvasModulate',
+  'LightOccluder2D',
 ] as const;
 
 /**
