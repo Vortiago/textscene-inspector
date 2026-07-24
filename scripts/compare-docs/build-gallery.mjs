@@ -49,10 +49,61 @@ function parseSheet(text, file) {
     // literal '#', so this never eats real content.
     if (kv) meta[kv[1]] = kv[2].replace(/\s*#.*$/, '').trim();
   }
-  for (const key of ['type', 'category', 'image']) {
+  // `image` is required only for a single-pair sheet; a sheet built from
+  // per-property `<!-- compare: ... -->` sections supplies its images there.
+  for (const key of ['type', 'category']) {
     if (!meta[key]) throw new Error(`${file}: frontmatter missing "${key}"`);
   }
   return { meta, body: match[2].trim() };
+}
+
+/** Status vocabulary, worst-first — a node's nav badge rolls up to its worst section. */
+const STATUS_ORDER = ['unimplemented', 'limitation', 'done'];
+const STATUS_LABEL = { done: 'Done', limitation: 'Limitation', unimplemented: 'Not implemented' };
+const rollupStatus = (statuses) =>
+  STATUS_ORDER.find((s) => statuses.includes(s)) ?? 'done';
+
+/**
+ * Split a sheet body into the intro prose and its per-property comparison
+ * sections. A section is a `## Heading` immediately followed by a
+ * `<!-- compare: image=… status=… [fixture=…] -->` marker; everything up to the
+ * next such heading (or the end) is that section's prose. A sheet with no marker
+ * is a legacy single-pair sheet and yields an empty `sections`.
+ */
+function parseSections(body) {
+  const lines = body.split('\n');
+  const sections = [];
+  const intro = [];
+  let cur = null;
+  for (let i = 0; i < lines.length; i++) {
+    const heading = /^##\s+(.*)$/.exec(lines[i]);
+    const marker =
+      heading && i + 1 < lines.length
+        ? /^<!--\s*compare:\s*(.*?)\s*-->$/.exec(lines[i + 1].trim())
+        : null;
+    if (heading && marker) {
+      const attrs = Object.fromEntries(
+        marker[1].split(/\s+/).map((kv) => kv.split('='))
+      );
+      cur = {
+        title: heading[1].trim(),
+        image: attrs.image,
+        status: STATUS_ORDER.includes(attrs.status) ? attrs.status : 'done',
+        fixture: attrs.fixture ?? '',
+        bodyLines: [],
+      };
+      sections.push(cur);
+      i++; // consume the marker line
+    } else if (cur) {
+      cur.bodyLines.push(lines[i]);
+    } else {
+      intro.push(lines[i]);
+    }
+  }
+  return {
+    intro: intro.join('\n').trim(),
+    sections: sections.map((s) => ({ ...s, body: s.bodyLines.join('\n').trim() })),
+  };
 }
 
 const escapeHtml = (s) =>
@@ -159,7 +210,7 @@ function imageSrc(basename, side, inlineImages) {
   return null;
 }
 
-const CATEGORY_ORDER = ['3D', '2D', 'Complex Scenes', 'Other'];
+const CATEGORY_ORDER = ['3D', '2D', 'Resources', 'Complex Scenes', 'Other'];
 
 // The public previewer, deployed from main. Its `?fixture=<file>` deep link
 // (useFixtureSelection.ts) opens directly on a scene, so each sheet can link to
@@ -167,13 +218,60 @@ const CATEGORY_ORDER = ['3D', '2D', 'Complex Scenes', 'Other'];
 // it reaches main and the site redeploys — the sheets ship in the same PR.
 const PREVIEW_URL = 'https://textscene-inspector.pages.dev/';
 
+/**
+ * One Godot-vs-ours comparison widget (slider + side-by-side toggle). Reused for
+ * a legacy single-pair sheet and for every per-property section. A missing image
+ * pair renders a placeholder rather than a broken widget.
+ */
+function compareStage(godot, ours, label) {
+  if (!godot || !ours) {
+    return `<div class="novisual">Comparison images not captured yet for ${escapeHtml(label)}.</div>`;
+  }
+  return `<div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="${godot}" alt="Godot render of ${escapeHtml(label)}">
+          <img class="img-ours" src="${ours}" alt="Our render of ${escapeHtml(label)}">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>`;
+}
+
 function build(sheets, inlineImages, fragment) {
   const missing = [];
   const nodes = sheets
     .map(({ meta, body }) => {
-      const godot = imageSrc(meta.image, 'godot', inlineImages);
-      const ours = imageSrc(meta.image, 'ours', inlineImages);
-      if (!godot || !ours) missing.push(`${meta.type} (${meta.image})`);
+      const { intro, sections } = parseSections(body);
+      const sectioned = sections.length > 0;
+      // Section sheets resolve their images per section; a legacy sheet uses the
+      // single `image:` frontmatter pair.
+      const resolved = sections.map((s) => {
+        const godot = imageSrc(s.image, 'godot', inlineImages);
+        const ours = imageSrc(s.image, 'ours', inlineImages);
+        if (!godot || !ours) missing.push(`${meta.type} › ${s.title} (${s.image})`);
+        return { ...s, godot, ours, html: renderBody(s.body) };
+      });
+      let godot = null;
+      let ours = null;
+      if (!sectioned) {
+        godot = imageSrc(meta.image, 'godot', inlineImages);
+        ours = imageSrc(meta.image, 'ours', inlineImages);
+        if (meta.visual !== 'false' && (!godot || !ours)) {
+          missing.push(`${meta.type} (${meta.image})`);
+        }
+      }
+      // A node's nav badge rolls up to its worst section; a legacy sheet takes
+      // its status from frontmatter (`done` unless it declares otherwise).
+      const status = sectioned
+        ? rollupStatus(resolved.map((s) => s.status))
+        : STATUS_ORDER.includes(meta.status)
+          ? meta.status
+          : 'done';
       return {
         type: meta.type,
         category: CATEGORY_ORDER.includes(meta.category) ? meta.category : 'Other',
@@ -188,9 +286,13 @@ function build(sheets, inlineImages, fragment) {
         // previewer's default framing does not compose well on its own.
         camera: meta.camera ?? '',
         rendersAs: meta.renders_as ?? '',
+        status,
+        sectioned,
+        sections: resolved,
+        introHtml: renderBody(intro),
         godot,
         ours,
-        html: renderBody(body),
+        html: renderBody(sectioned ? '' : body),
       };
     })
     .sort((a, b) => a.type.localeCompare(b.type));
@@ -223,7 +325,7 @@ function build(sheets, inlineImages, fragment) {
         }</div>${g.items
           .map(
             (n) =>
-              `<button class="nav-item${n.visual ? '' : ' novis'}" data-type="${n.type}">${n.type}</button>`
+              `<button class="nav-item${n.visual ? '' : ' novis'}" data-type="${n.type}" data-status="${n.status}"><span class="st st-${n.status}" title="${STATUS_LABEL[n.status]}"></span>${n.type}</button>`
           )
           .join('')}</div>`
     )
@@ -247,25 +349,31 @@ function build(sheets, inlineImages, fragment) {
               )} in the previewer"><code>${escapeHtml(n.fixture)}</code> ↗</a>`
             : ''
         }
+        <span class="status st-${n.status}">${STATUS_LABEL[n.status]}</span>
       </header>
+      ${n.sectioned ? '' : `<div class="status-note st-${n.status}"></div>`}
+      ${n.introHtml ? `<div class="prose intro">${n.introHtml}</div>` : ''}
       ${
-        n.visual
-          ? `<div class="compare">
-        <div class="stage">
-          <img class="img-godot" src="${n.godot}" alt="Godot render of ${escapeHtml(n.type)}">
-          <img class="img-ours" src="${n.ours}" alt="Our render of ${escapeHtml(n.type)}">
-          <div class="handle"></div>
-          <span class="tag g">Godot 4.6.3</span>
-          <span class="tag o">Ours</span>
-        </div>
-        <div class="modes">
-          <button data-mode="slider" aria-pressed="true">Slider</button>
-          <button data-mode="sbs" aria-pressed="false">Side by side</button>
-        </div>
-      </div>`
-          : `<div class="novisual">No visual output — this node draws nothing to compare.</div>`
+        n.sectioned
+          ? n.sections
+              .map(
+                (s) => `
+      <section class="prop">
+        <div class="prop-head"><h3>${escapeHtml(s.title)}</h3><span class="status st-${
+          s.status
+        }">${STATUS_LABEL[s.status]}</span></div>
+        ${compareStage(s.godot, s.ours, s.title)}
+        <div class="prose">${s.html}</div>
+      </section>`
+              )
+              .join('')
+          : `${
+              n.visual
+                ? compareStage(n.godot, n.ours, n.type)
+                : `<div class="novisual">No visual output — this node draws nothing to compare.</div>`
+            }
+      <div class="prose">${n.html}</div>`
       }
-      <div class="prose">${n.html}</div>
     </article>`
     )
     .join('');
@@ -306,16 +414,16 @@ ${body}
 const CSS = String.raw`
 :root{
   --bg:#f5f6f8; --panel:#fff; --panel-2:#eceef2; --ink:#161a20; --muted:#5c6470;
-  --line:#dde1e8; --godot:#b07430; --ours:#37729e; --ok:#2f8158; --warn:#b4553a;
+  --line:#dde1e8; --godot:#b07430; --ours:#37729e; --ok:#2f8158; --warn:#b4553a; --err:#a23b3b;
   --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
   --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
 }
 @media (prefers-color-scheme:dark){:root{
   --bg:#0e1014; --panel:#161a20; --panel-2:#1d222b; --ink:#e6e9ee; --muted:#98a1af;
-  --line:#272d38; --godot:#d69b58; --ours:#69a8d6; --ok:#57b085; --warn:#e07a5f;
+  --line:#272d38; --godot:#d69b58; --ours:#69a8d6; --ok:#57b085; --warn:#e07a5f; --err:#e06a6a;
 }}
-:root[data-theme=dark]{--bg:#0e1014;--panel:#161a20;--panel-2:#1d222b;--ink:#e6e9ee;--muted:#98a1af;--line:#272d38;--godot:#d69b58;--ours:#69a8d6;--ok:#57b085;--warn:#e07a5f}
-:root[data-theme=light]{--bg:#f5f6f8;--panel:#fff;--panel-2:#eceef2;--ink:#161a20;--muted:#5c6470;--line:#dde1e8;--godot:#b07430;--ours:#37729e;--ok:#2f8158;--warn:#b4553a}
+:root[data-theme=dark]{--bg:#0e1014;--panel:#161a20;--panel-2:#1d222b;--ink:#e6e9ee;--muted:#98a1af;--line:#272d38;--godot:#d69b58;--ours:#69a8d6;--ok:#57b085;--warn:#e07a5f;--err:#e06a6a}
+:root[data-theme=light]{--bg:#f5f6f8;--panel:#fff;--panel-2:#eceef2;--ink:#161a20;--muted:#5c6470;--line:#dde1e8;--godot:#b07430;--ours:#37729e;--ok:#2f8158;--warn:#b4553a;--err:#a23b3b}
 *{box-sizing:border-box}
 body{margin:0;display:grid;grid-template-columns:264px 1fr;min-height:100vh;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.6}
 .side{border-right:1px solid var(--line);background:var(--panel);padding:18px 14px;position:sticky;top:0;height:100vh;overflow-y:auto}
@@ -330,6 +438,20 @@ body{margin:0;display:grid;grid-template-columns:264px 1fr;min-height:100vh;back
 .nav-item[aria-current=true]{background:var(--ours);color:#fff}
 .nav-item.novis{color:var(--muted)}
 .nav-item.novis::after{content:"○";float:right;font-size:10px;line-height:1.6;opacity:.6}
+/* Status: a small nav dot (.st) and a header/section chip (.status). */
+.st{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:8px;vertical-align:middle}
+.st-done{background:var(--ok)}.st-limitation{background:var(--warn)}.st-unimplemented{background:var(--err)}
+.status{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;padding:3px 9px;border-radius:20px;color:#fff;white-space:nowrap}
+.status.st-done{background:var(--ok)}.status.st-limitation{background:var(--warn)}.status.st-unimplemented{background:var(--err)}
+.sheet-head .status{margin-left:auto}
+.status-note{height:3px;border-radius:3px;margin:-6px 0 20px}
+.status-note.st-done{background:var(--ok)}.status-note.st-limitation{background:var(--warn)}.status-note.st-unimplemented{background:var(--err)}
+.prop{border-top:1px solid var(--line);padding-top:24px;margin-top:30px}
+.prop:first-of-type{border-top:0;padding-top:4px;margin-top:8px}
+.prop-head{display:flex;align-items:center;gap:12px;margin:0 0 14px}
+.prop-head h3{margin:0;font-size:18px;letter-spacing:-.01em;text-transform:none;color:var(--ink)}
+.prop .prose{margin-top:16px}
+.prose.intro{margin-top:0;margin-bottom:4px}
 .novisual{background:var(--panel-2);border:1px dashed var(--line);border-radius:12px;padding:26px;text-align:center;color:var(--muted);font-size:14px}
 main{padding:28px clamp(16px,4vw,48px)}
 .sheet{max-width:900px;margin:0 auto}
@@ -392,23 +514,26 @@ document.getElementById('search').addEventListener('input',e=>{
   });
 });
 function initCompare(sheet){
-  const stage=sheet.querySelector('.stage');
-  if(!stage)return; // a no-visual sheet has no compare widget
-  const handle=sheet.querySelector('.handle');
-  if(stage.dataset.wired)return; stage.dataset.wired='1';
-  // clip-path is a % of the element, so a single --split drives the clip and the
-  // handle with no width bookkeeping — and nothing to break in side-by-side.
-  const set=x=>{const r=stage.getBoundingClientRect();
-    const p=Math.min(100,Math.max(0,((x-r.left)/r.width)*100));
-    stage.style.setProperty('--split',p+'%');};
-  let drag=false;
-  handle.addEventListener('pointerdown',e=>{drag=true;handle.setPointerCapture(e.pointerId);});
-  stage.addEventListener('pointermove',e=>{if(drag)set(e.clientX);});
-  addEventListener('pointerup',()=>{drag=false;});
-  sheet.querySelectorAll('[data-mode]').forEach(btn=>btn.addEventListener('click',()=>{
-    sheet.querySelectorAll('[data-mode]').forEach(b=>b.setAttribute('aria-pressed',String(b===btn)));
-    stage.classList.toggle('sbs',btn.dataset.mode==='sbs');
-  }));
+  // A sectioned sheet has many independent compare widgets; wire each on its own
+  // so a slider drag or a side-by-side toggle only touches its own stage.
+  sheet.querySelectorAll('.compare').forEach(compare=>{
+    const stage=compare.querySelector('.stage');
+    if(!stage||stage.dataset.wired)return; stage.dataset.wired='1';
+    const handle=compare.querySelector('.handle');
+    // clip-path is a % of the element, so a single --split drives the clip and the
+    // handle with no width bookkeeping — and nothing to break in side-by-side.
+    const set=x=>{const r=stage.getBoundingClientRect();
+      const p=Math.min(100,Math.max(0,((x-r.left)/r.width)*100));
+      stage.style.setProperty('--split',p+'%');};
+    let drag=false;
+    handle.addEventListener('pointerdown',e=>{drag=true;handle.setPointerCapture(e.pointerId);});
+    stage.addEventListener('pointermove',e=>{if(drag)set(e.clientX);});
+    addEventListener('pointerup',()=>{drag=false;});
+    compare.querySelectorAll('[data-mode]').forEach(btn=>btn.addEventListener('click',()=>{
+      compare.querySelectorAll('[data-mode]').forEach(b=>b.setAttribute('aria-pressed',String(b===btn)));
+      stage.classList.toggle('sbs',btn.dataset.mode==='sbs');
+    }));
+  });
 }
 const initial=decodeURIComponent(location.hash.slice(1))||FIRST;
 if(initial)show(initial);
