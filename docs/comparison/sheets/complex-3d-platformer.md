@@ -1,6 +1,7 @@
 ---
 type: Godot 3D Platformer
 category: Complex Scenes
+status: limitation
 fixture: demos/3d/platformer/game.tscn
 image: complex-3d-platformer
 renders_as: Godot's 3D platformer level at the editor orbit

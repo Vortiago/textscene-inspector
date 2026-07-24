@@ -57,11 +57,24 @@ function parseSheet(text, file) {
   return { meta, body: match[2].trim() };
 }
 
-/** Status vocabulary, worst-first — a node's nav badge rolls up to its worst section. */
-const STATUS_ORDER = ['unimplemented', 'limitation', 'done'];
-const STATUS_LABEL = { done: 'Done', limitation: 'Limitation', unimplemented: 'Not implemented' };
+/**
+ * Status vocabulary, worst-first — a node's nav badge rolls up to its worst
+ * section. `done` (green) means genuinely faithful to Godot and is NEVER the
+ * default: a sheet earns it only by an explicit `status=done`. Everything not
+ * yet assessed against Godot reads `unreviewed` (grey), so the gallery never
+ * over-claims parity. `unreviewed` outranks `done` in the rollup so a single
+ * unchecked section keeps the whole node out of green.
+ */
+const STATUS_ORDER = ['unimplemented', 'limitation', 'unreviewed', 'done'];
+const DEFAULT_STATUS = 'unreviewed';
+const STATUS_LABEL = {
+  done: 'Done',
+  limitation: 'Limitation',
+  unimplemented: 'Not implemented',
+  unreviewed: 'Unreviewed',
+};
 const rollupStatus = (statuses) =>
-  STATUS_ORDER.find((s) => statuses.includes(s)) ?? 'done';
+  STATUS_ORDER.find((s) => statuses.includes(s)) ?? DEFAULT_STATUS;
 
 /**
  * Split a sheet body into the intro prose and its per-property comparison
@@ -88,7 +101,7 @@ function parseSections(body) {
       cur = {
         title: heading[1].trim(),
         image: attrs.image,
-        status: STATUS_ORDER.includes(attrs.status) ? attrs.status : 'done',
+        status: STATUS_ORDER.includes(attrs.status) ? attrs.status : DEFAULT_STATUS,
         fixture: attrs.fixture ?? '',
         bodyLines: [],
       };
@@ -266,12 +279,13 @@ function build(sheets, inlineImages, fragment) {
         }
       }
       // A node's nav badge rolls up to its worst section; a legacy sheet takes
-      // its status from frontmatter (`done` unless it declares otherwise).
+      // its status from frontmatter and defaults to `unreviewed` (never `done`)
+      // so a sheet that predates the status system does not falsely read green.
       const status = sectioned
         ? rollupStatus(resolved.map((s) => s.status))
         : STATUS_ORDER.includes(meta.status)
           ? meta.status
-          : 'done';
+          : DEFAULT_STATUS;
       return {
         type: meta.type,
         category: CATEGORY_ORDER.includes(meta.category) ? meta.category : 'Other',
@@ -441,11 +455,14 @@ body{margin:0;display:grid;grid-template-columns:264px 1fr;min-height:100vh;back
 /* Status: a small nav dot (.st) and a header/section chip (.status). */
 .st{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:8px;vertical-align:middle}
 .st-done{background:var(--ok)}.st-limitation{background:var(--warn)}.st-unimplemented{background:var(--err)}
+.st-unreviewed{background:var(--muted);opacity:.55}
 .status{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;padding:3px 9px;border-radius:20px;color:#fff;white-space:nowrap}
 .status.st-done{background:var(--ok)}.status.st-limitation{background:var(--warn)}.status.st-unimplemented{background:var(--err)}
+.status.st-unreviewed{background:none;color:var(--muted);border:1px solid var(--line)}
 .sheet-head .status{margin-left:auto}
 .status-note{height:3px;border-radius:3px;margin:-6px 0 20px}
 .status-note.st-done{background:var(--ok)}.status-note.st-limitation{background:var(--warn)}.status-note.st-unimplemented{background:var(--err)}
+.status-note.st-unreviewed{background:var(--line)}
 .prop{border-top:1px solid var(--line);padding-top:24px;margin-top:30px}
 .prop:first-of-type{border-top:0;padding-top:4px;margin-top:8px}
 .prop-head{display:flex;align-items:center;gap:12px;margin:0 0 14px}

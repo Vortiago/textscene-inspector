@@ -1,7 +1,8 @@
 # Comparison sheet standard
 
-One sheet per Godot node type, showing how this previewer renders it against real
-Godot. The **screenshots are produced by a script** (`scripts/compare-docs/capture.mjs`)
+One sheet per Godot node type — or per resource type (StandardMaterial3D,
+Environment, …), which sit under `category: Resources` in the left menu beside the
+nodes — showing how this previewer renders it against real Godot. The **screenshots are produced by a script** (`scripts/compare-docs/capture.mjs`)
 and committed under `docs/comparison/images/`. A sheet NEVER creates or edits an
 image — it only references the two the script already made, by fixed path. Re-running
 the capture script refreshes every screenshot without touching a single sheet.
@@ -16,7 +17,8 @@ website. So author plain, strict Markdown; styling is not your concern.
 ```markdown
 ---
 type: OmniLight3D
-category: 3D            # 3D | 2D | Other
+category: 3D            # 3D | 2D | Resources | Other
+status: unreviewed     # done | limitation | unimplemented | unreviewed (see Status)
 fixture: unit-omni-light-3d.tscn
 image: unit-omni-light-3d
 renders_as: a THREE.PointLight    # one short noun phrase
@@ -49,6 +51,57 @@ If the two agree, write exactly one line:
 
 Never pad this section. An invented divergence is worse than an empty one.
 ```
+
+## Sectioned sheets — one sheet, many per-property comparisons
+
+A node or resource with several visually distinct features (a StandardMaterial3D
+has metallic, emission, clearcoat, rim, …) gives each its OWN fixture and
+comparison as a **section**. A section is a `##` heading immediately followed by a
+`<!-- compare: … -->` marker; the generator lays out that section's Godot-vs-ours
+pair, status badge, and prose (which runs until the next such heading).
+
+```markdown
+---
+type: StandardMaterial3D
+category: Resources        # 3D | 2D | Resources | Other
+renders_as: a THREE.MeshStandardMaterial / MeshPhysicalMaterial
+---
+
+# StandardMaterial3D
+
+Intro sentence(s) — the whole resource, above the per-feature sections.
+
+## Metallic / roughness
+<!-- compare: image=unit-material-metallic status=done fixture=unit-material-metallic.tscn -->
+
+What the fixture sets and what the two images show; fold any limitation in here.
+
+## Refraction
+<!-- compare: image=unit-material-refraction status=limitation fixture=unit-material-refraction.tscn -->
+
+…
+```
+
+- Marker attributes: `image=` (required — the basename), `status=` (see below),
+  `fixture=` (optional — the live `?fixture=` deep link).
+- A sectioned sheet needs NO top-level `image:` frontmatter; each section supplies
+  its own. Legacy single-pair sheets (one `image:`, no markers) still work unchanged.
+
+## Status — never claim more than you have verified
+
+Every section and every legacy sheet carries a parity status, shown as a nav dot
+and a header/section badge. A node's badge **rolls up to its worst section**.
+
+| Status | Meaning |
+| --- | --- |
+| `done` | Faithful to Godot, verified by eye. Green. **Never the default — earn it.** |
+| `limitation` | Renders, but with a known divergence (a three.js constraint). Orange. |
+| `unimplemented` | Not rendered at all. Red. |
+| `unreviewed` | Not yet assessed against Godot. Grey. **The default.** |
+
+`done` is the strong claim: reserve it for a feature you have looked at and found
+matches. An unassessed sheet stays `unreviewed`; a whole-scene showcase with gaps is
+`limitation`, not `done`. When in doubt, do not go green.
 
 ## Rules
 

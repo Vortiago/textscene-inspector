@@ -1,6 +1,7 @@
 ---
 type: Godot 2D Platformer
 category: Complex Scenes
+status: limitation
 fixture: demos/2d/platformer/level/level.tscn
 image: complex-2d-platformer
 renders_as: Godot's 2D platformer demo level

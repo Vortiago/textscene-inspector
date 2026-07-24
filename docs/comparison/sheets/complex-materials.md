@@ -1,6 +1,7 @@
 ---
 type: Material Feature Showcase
 category: Complex Scenes
+status: limitation
 fixture: integration-material-features.tscn
 image: complex-materials
 camera: Root/Camera3D

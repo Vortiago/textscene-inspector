@@ -1,6 +1,7 @@
 ---
 type: Isometric Dungeon
 category: Complex Scenes
+status: limitation
 fixture: dungeon.tscn
 image: complex-isometric-dungeon
 renders_as: Godot's isometric dungeon demo — one whole scene
