@@ -1,0 +1,46 @@
+// Stage the Godot-vs-ours comparison gallery into the web app's deploy bundle.
+// Vite copies public/ verbatim into dist/, which Cloudflare Pages serves — so
+// building the gallery under public/parity/ makes it part of the deployment,
+// reachable at /parity/ and linked from the previewer's toolbar. Images are
+// REFERENCED (not inlined) and mirrored beside the HTML, mirroring copy-fixtures.
+import { execFileSync } from 'node:child_process';
+import { copyFileSync, mkdirSync, readdirSync, rmSync, statSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const repoRoot = join(__dirname, '../../..');
+const outDir = join(__dirname, '../public/parity');
+const imagesSource = join(repoRoot, 'docs/comparison/images');
+const imagesTarget = join(outDir, 'images');
+
+// Cloudflare Pages rejects any single file larger than 25 MiB (see copy-fixtures).
+const MAX_DEPLOY_FILE_BYTES = 25 * 1024 * 1024;
+
+rmSync(outDir, { recursive: true, force: true });
+mkdirSync(imagesTarget, { recursive: true });
+
+// The generator writes an index.html whose <img> src values are `images/…`,
+// resolved against the file — so index.html and images/ sit side by side here.
+execFileSync(
+  'node',
+  [join(repoRoot, 'scripts/compare-docs/build-gallery.mjs'), '--out', join(outDir, 'index.html')],
+  { stdio: 'inherit' }
+);
+
+let copied = 0;
+const skippedLargeFiles = [];
+for (const file of readdirSync(imagesSource)) {
+  if (!/\.(png|gif)$/.test(file)) continue;
+  const src = join(imagesSource, file);
+  if (statSync(src).size > MAX_DEPLOY_FILE_BYTES) {
+    skippedLargeFiles.push(file);
+    continue;
+  }
+  copyFileSync(src, join(imagesTarget, file));
+  copied++;
+}
+console.log(`Staged parity gallery + ${copied} comparison images to public/parity/`);
+if (skippedLargeFiles.length) {
+  console.warn(`Skipped ${skippedLargeFiles.length} oversized image(s): ${skippedLargeFiles.join(', ')}`);
+}

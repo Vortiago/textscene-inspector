@@ -837,6 +837,21 @@ function Toolbar({
         </span>
       </button>
 
+      {/* Opens the staged Godot-vs-ours comparison gallery (public/parity/,
+          served at /parity/ in dev and on the deployed site). */}
+      <a
+        className={styles.openButton}
+        href="parity/index.html"
+        target="_blank"
+        rel="noopener"
+        title="Open the Godot ⇄ ours render-comparison gallery"
+      >
+        <span className={styles.openIcon} aria-hidden>
+          ⇄
+        </span>
+        Parity
+      </a>
+
       {missingPaths.size > 0 && (
         <span
           className={styles.missingResourcesBadge}
