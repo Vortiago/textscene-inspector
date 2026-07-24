@@ -216,6 +216,10 @@ export function StandardMaterialSlot({
         clearcoatRoughness={scalars.clearcoatRoughness}
         sheen={scalars.rim}
         sheenColor={sheenColor}
+        // A low sheenRoughness concentrates the sheen toward grazing angles, so
+        // the effect reads as an edge rim rather than a broad fabric glow that
+        // would wash a dark-albedo sphere out to bright grey.
+        sheenRoughness={0.1}
         anisotropy={scalars.anisotropy}
         anisotropyRotation={scalars.anisotropyRotation}
         anisotropyMap={anisotropyMap ?? null}

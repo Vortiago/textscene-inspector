@@ -126,6 +126,21 @@ glass default (ior 1.5); Godot exposes no ior.
 - Site: `r3f/materials/standardMaterialScalars.ts` (refraction block),
   `r3f/materials/StandardMaterialSlot.tsx` (transmission/thickness).
 
+### Rim lighting = sheen  *(FEATURE_RIM)*
+Godot's `rim` is a Fresnel edge term added to the diffuse — a grazing-angle
+highlight tinted `light ↔ albedo` by `rim_tint`. three.js has no rim; the closest
+native analog is `MeshPhysicalMaterial.sheen`, a retroreflective lobe. It maps
+`sheen = rim`, `sheenColor = mix(white, albedo, rim_tint)`, with `sheenRoughness =
+0.1` so the sheen concentrates at the edge — a broad sheen washes a dark-albedo
+sphere out to bright grey.
+
+- **Faithful in kind:** a dark sphere keeps its dark body and gains a grazing-angle
+  highlight, not the full-surface glow the default sheen roughness produced.
+- **Diverges when:** the sheen is retroreflective (it peaks where view ≈ light, a
+  crescent) rather than an even Fresnel ring around the whole silhouette, so the
+  highlight's position and evenness differ from Godot's.
+- Site: `r3f/materials/StandardMaterialSlot.tsx` (sheen block).
+
 ### ArrayMesh compressed attributes
 A surface with `ARRAY_FLAG_COMPRESS_ATTRIBUTES` (bit 29) stores UV1/UV2 as
 normalised `uint16` to be rescaled by the surface's `uv_scale`. The decoder reads
