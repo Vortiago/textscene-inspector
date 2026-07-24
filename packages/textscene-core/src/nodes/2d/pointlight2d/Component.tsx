@@ -7,7 +7,7 @@
  * enters the tree at all (no additiveMaterials in the registry).
  */
 
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
@@ -28,25 +28,19 @@ export function PointLight2D({ node, children }: NodeComponentProps) {
     [props.texture, externalResources, internalResources]
   );
   const texResult = useResource<THREE.Texture>(texturePath ?? '', 'Texture2D');
-
-  const displayedTexture = useMemo(
-    () => texResult.value,
-    [texResult.value]
-  );
-  useEffect(() => () => displayedTexture?.dispose(), [displayedTexture]);
+  // The texture is owned by the shared resource loader — do NOT dispose it here
+  // (it may be shared by other PointLight2Ds using the same SubResource).
+  const displayedTexture = texResult.value;
 
   // Show placeholder when no texture path or loading failed.
   const showPlaceholder = !texturePath || texResult.status === 'unavailable';
 
-  // Convert Godot color to linear and scale by energy.
-  const litColor = useMemo(() => {
-    const linear = godotColorToLinear(props.color).clone();
-    linear.multiplyScalar(props.energy);
-    linear.r = Math.min(1, linear.r);
-    linear.g = Math.min(1, linear.g);
-    linear.b = Math.min(1, linear.b);
-    return linear;
-  }, [props.color, props.energy]);
+  // Emitted colour: Godot sRGB → linear, scaled by energy. NOT clamped — an
+  // additive light with energy > 1 is meant to over-brighten (bloom).
+  const litColor = useMemo(
+    () => godotColorToLinear(props.color).multiplyScalar(props.energy),
+    [props.color, props.energy]
+  );
 
   // When disabled: return null → no mesh in tree.
   if (!props.enabled) return null;
