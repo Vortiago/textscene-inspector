@@ -35,3 +35,16 @@ sides = 12
 ring_sides = 4
 smooth_faces = false
 material = SubResource("StandardMaterial3D_torus")
+
+; A ROTATED node, 45 degrees about X. No other CSG fixture carries a rotation, so
+; without this one the Transform3D basis convention is never measured against
+; Godot: basis_x/y/z are the matrix ROWS in TSCN, while Godot's C++
+; Basis(x, y, z) constructor sets COLUMNS. Reading it the C++ way transposes
+; every rotation, which is invisible on a translation-only scene.
+[node name="TiltedTorus" type="CSGTorus3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.7071068, -0.7071068, 0, 0.7071068, 0.7071068, 0, 1.6, 0)
+inner_radius = 0.3
+outer_radius = 0.7
+sides = 24
+ring_sides = 12
+material = SubResource("StandardMaterial3D_torus")
