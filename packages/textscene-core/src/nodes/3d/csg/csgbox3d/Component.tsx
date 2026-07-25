@@ -1,23 +1,35 @@
 /**
- * <CSGBox3D> — renders a Godot CSGBox3D as a solid box primitive.
+ * <CSGBox3D> — renders a Godot CSGBox3D as a solid box.
  *
- * ADR-0004: the boolean `operation` is parsed but never applied, so a
- * subtraction or intersection renders as a solid block. That IS visible on the
- * vendored corpus — 36 non-union CSG nodes across five scenes — and is not the
- * corpus-safe simplification this comment used to claim. Scaffold lives in the
- * shared <CsgPrimitive>.
+ * Geometry comes from `buildCsgBoxGeometry`, the same builder the boolean evaluator
+ * calls, so the box a scene draws on its own and the box it contributes to a subtraction
+ * are the same triangles with the same UVs and the same normals.
  */
 
+import { useMemo } from 'react';
 import type { CSGBox3DProperties } from './types';
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { CsgPrimitive } from '../CsgPrimitive';
+import { buildCsgBoxGeometry } from './boxGeometry';
 
 export function CSGBox3D({ node, children }: NodeComponentProps) {
   const properties = node.properties as CSGBox3DProperties;
   const { x, y, z } = properties.size;
+  const flipFaces = properties.flipFaces;
+
+  // Keyed on the scalars the builder reads, not the properties object: the parser
+  // allocates a fresh one per reparse, so identity would rebuild on every keystroke.
+  const geometry = useMemo(
+    () => buildCsgBoxGeometry({ size: { x, y, z }, flipFaces }),
+    [x, y, z, flipFaces]
+  );
 
   return (
-    <CsgPrimitive node={node} properties={properties} geometry={<boxGeometry args={[x, y, z]} />}>
+    <CsgPrimitive
+      node={node}
+      properties={properties}
+      geometry={<primitive object={geometry} attach="geometry" />}
+    >
       {children}
     </CsgPrimitive>
   );

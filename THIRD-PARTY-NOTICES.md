@@ -23,6 +23,7 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/r3f/sky/skyShaders.ts` | `scene/resources/3d/sky_material.cpp` |
 | `packages/textscene-core/src/resources/environment/godotToneMapping.ts` | `drivers/gles3/shaders/tonemap_inc.glsl` |
 | `packages/textscene-core/src/nodes/3d/csg/smoothNormals.ts` | `modules/csg/csg_shape.cpp` (`CSGShape3D::update_shape` normal accumulation, `flip_faces`) and `core/math/plane.h` (`Plane(p1, p2, p3)`) |
+| `packages/textscene-core/src/nodes/3d/csg/csgbox3d/boxGeometry.ts` | `modules/csg/csg_shape.cpp` (`CSGBox3D::_build_brush`) |
 | `packages/textscene-core/src/nodes/3d/csg/csgcylinder3d/cylinderGeometry.ts` | `modules/csg/csg_shape.cpp` (`CSGCylinder3D::_build_brush`) |
 | `packages/textscene-core/src/nodes/3d/csg/csgsphere3d/sphereGeometry.ts` | `modules/csg/csg_shape.cpp` (`CSGSphere3D::_build_brush`) |
 | `packages/textscene-core/src/nodes/3d/csg/csgpolygon3d/polygonGeometry.ts` | `modules/csg/csg_shape.cpp` (`CSGPolygon3D::_build_brush`) |

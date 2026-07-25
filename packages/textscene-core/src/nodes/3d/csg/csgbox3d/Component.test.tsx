@@ -13,6 +13,7 @@ function makeNode(
   const properties: CSGBox3DProperties = {
     name: 'Box',
     size: { x: 3, y: 0.2, z: 12 },
+    flipFaces: false,
     ...props,
   };
   return { name: properties.name, type: 'CSGBox3D', children, properties };
@@ -27,14 +28,18 @@ async function render(node: TscnNode, internalResources: TscnInternalResource[] 
 }
 
 describe('<CSGBox3D>', () => {
-  it('renders a BoxGeometry sized from the node `size`', async () => {
+  // Geometry is Godot's brush construction, not three's BoxGeometry, so there is no
+  // `.parameters` to read; this asserts the shape. Depth coverage lives in
+  // boxGeometry.test.ts.
+  it('builds a box of the requested size, centred on the origin', async () => {
     const renderer = await render(makeNode({ size: { x: 3, y: 0.2, z: 12 } }));
-    const geom = renderer.scene.findByType('Mesh').instance.geometry as THREE.BoxGeometry & {
-      parameters: { width: number; height: number; depth: number };
-    };
-    expect(geom.parameters.width).toBe(3);
-    expect(geom.parameters.height).toBe(0.2);
-    expect(geom.parameters.depth).toBe(12);
+    const geom = renderer.scene.findByType('Mesh').instance.geometry as THREE.BufferGeometry;
+    geom.computeBoundingBox();
+    const b = geom.boundingBox!;
+    expect(b.max.x - b.min.x).toBeCloseTo(3, 5);
+    expect(b.max.y - b.min.y).toBeCloseTo(0.2, 5);
+    expect(b.max.z - b.min.z).toBeCloseTo(12, 5);
+    expect(b.max.x).toBeCloseTo(1.5, 5);
   });
 
   it('applies the StandardMaterial3D albedo color from a SubResource', async () => {
