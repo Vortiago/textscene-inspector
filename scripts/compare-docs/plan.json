@@ -166,6 +166,26 @@
    "fixture": "unit-csg-sphere.tscn"
   },
   {
+   "type": "CSGCombiner3D",
+   "slice": "3d/csg/csgcombiner3d",
+   "fixture": "unit-csg-combiner.tscn"
+  },
+  {
+   "type": "CSGMesh3D",
+   "slice": "3d/csg/csgmesh3d",
+   "fixture": "unit-csg-mesh.tscn"
+  },
+  {
+   "type": "CSGPolygon3D",
+   "slice": "3d/csg/csgpolygon3d",
+   "fixture": "unit-csg-polygon-depth.tscn"
+  },
+  {
+   "type": "CSGTorus3D",
+   "slice": "3d/csg/csgtorus3d",
+   "fixture": "unit-csg-torus.tscn"
+  },
+  {
    "type": "Decal",
    "slice": "3d/decal",
    "fixture": "unit-decal.tscn"
@@ -369,6 +389,15 @@
   "unit-csg-box.tscn",
   "unit-csg-cylinder.tscn",
   "unit-csg-sphere.tscn",
+  "unit-csg-torus.tscn",
+  "unit-csg-combiner.tscn",
+  "unit-csg-mesh.tscn",
+  "unit-csg-polygon-depth.tscn",
+  "unit-csg-polygon-spin.tscn",
+  "unit-csg-polygon-path.tscn",
+  "unit-csg-boolean-ops.tscn",
+  "unit-csg-multi-material.tscn",
+  "unit-csg-transparency.tscn",
   "unit-grid-map.tscn",
   "unit-label3d.tscn",
   "unit-area-light3d.tscn",

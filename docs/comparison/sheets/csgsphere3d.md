@@ -23,4 +23,5 @@ sphere carrying its StandardMaterial3D. The CSG boolean `operation` IS applied
 
 ## Divergences
 
-None visible in this fixture.
+None visible in this fixture. Measured at 0.013% against Godot 4.6.3 with
+`pnpm ref:diff unit-csg-sphere.tscn`.

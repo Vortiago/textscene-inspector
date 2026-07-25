@@ -1,0 +1,88 @@
+---
+type: CSGPolygon3D
+category: 3D
+renders_as: a 2D profile swept into a solid
+---
+
+# CSGPolygon3D
+
+A 2D profile swept into a 3D solid. The sweep takes one of three shapes, chosen
+by `mode`: extruded straight back (DEPTH), revolved about +Y (SPIN), or carried
+along a Path3D's curve (PATH). All three are implemented, as a port of Godot's
+`_build_brush` rather than via `THREE.ExtrudeGeometry` / `LatheGeometry`, both of
+which get the axis and the caps wrong for this node. The boolean `operation` IS
+evaluated (ADR-0026).
+
+`smooth_faces` here defaults to `false`, the opposite of CSGTorus3D, and when it
+is on it applies to the swept WALLS only: both end caps are always flat.
+
+## Extrusion (mode = DEPTH)
+<!-- compare: image=unit-csg-polygon-depth status=done fixture=unit-csg-polygon-depth.tscn -->
+
+The default mode. The profile sits at `z = 0` and extrudes toward **-Z**, so the
+solid spans `[-depth, 0]` rather than being centred on the origin — the single
+most common thing to get wrong, and what `THREE.ExtrudeGeometry` would give as
+`[0, depth]`.
+
+| Property | Value | Effect |
+| --- | --- | --- |
+| `polygon` (Slope) | 3-point triangle | the wedge at left, extruded 2 units back |
+| `polygon` (Staircase) | 10-point concave step profile | the stair block; concave, so a fan triangulation would fail on it |
+| `depth` | `2.0` | how far each solid runs into the distance |
+| `smooth_faces` (SmoothWall) | `true` | the rounded blob's walls shade smoothly while its caps stay flat |
+| `polygon` (DefaultPolygon) | absent | pins our default `PackedVector2Array(0, 0, 0, 1, 1, 1, 1, 0)` and `depth = 1.0` against Godot's |
+
+Measured at 0.021% against Godot 4.6.3.
+
+## Revolution (mode = SPIN)
+<!-- compare: image=unit-csg-polygon-spin status=done fixture=unit-csg-polygon-spin.tscn -->
+
+The profile revolves about **+Y**, starting in XY and sweeping toward -Z. A
+partial revolution builds both end caps; a full 360° builds **none** and snaps
+the last frame back onto the first, so the surface closes on the same vertices
+instead of merely meeting there.
+
+| Property | Value | Effect |
+| --- | --- | --- |
+| `spin_degrees` (StaircaseSpin) | `90.0` | a quarter turn, so both end caps are present and visible |
+| `spin_sides` (StaircaseSpin) | `32` | the smooth quarter-round sweep |
+| `spin_degrees` (FullRevolution) | default `360` | the closed tube at right, with no caps at all |
+| `spin_sides` (FullRevolution) | `24` | its radial tessellation |
+| `smooth_faces` (FullRevolution) | `true` | smooth shading around the revolution |
+
+Measured at 0.058% against Godot 4.6.3.
+
+## Path sweep (mode = PATH)
+<!-- compare: image=unit-csg-polygon-path status=limitation fixture=unit-csg-polygon-path.tscn -->
+
+The profile is carried along a `Path3D` named by `path_node`. Because a component
+cannot reach a sibling, the path is resolved in a post-parse pass over the whole
+tree (the same shape `RemoteTransform3D` uses) and the resolved curve is written
+onto the node as plain data, so the tree viewer, inspector, bounds and the
+boolean evaluator all see it.
+
+| Property | Value | Effect |
+| --- | --- | --- |
+| `path_node` (RoadTop) | `NodePath("../Path3D")` | a SIBLING reference, resolved relative to the node |
+| `path_node` (Rail) | `NodePath("Path3D")` | a CHILD reference — the other witnessed shape |
+| `path_interval` | `0.25` / `0.5` | how finely each sweep is sampled along the curve |
+| `path_simplify_angle` (RoadTop) | `4.0` | drops a frame where the curve is near-straight |
+| `path_rotation` | `1` (PATH) | the profile follows the curve's direction |
+| `path_local` | `true` | the sweep is built in the polygon's own space |
+| `path_continuous_u` / `path_u_distance` | `true` / `2.0` | U runs continuously along the road rather than resetting per segment |
+| `smooth_faces` (RoadTop) | `true` | the road surface shades smoothly around its bends |
+
+**Divergences.** Three approximations, each of which the fixture avoids
+triggering but which a real scene can hit:
+
+- `path_rotation = 2` (PATH_FOLLOW) renders as PATH. Faithful PATH_FOLLOW needs
+  the curve's baked up-vectors (parallel transport plus per-point tilts), which
+  our sampler does not carry. It diverges only where the path banks. It IS
+  Godot's default, though neither vendored witness uses it.
+- `path_rotation_accurate = true` renders as `false`.
+- Godot bakes the curve at `Curve3D.bake_interval`; we tessellate at a fixed 16
+  segments per span. Positions agree sub-millimetre on corpus curves, but the
+  extrusion COUNT can differ by one on a tight span.
+
+Measured at 0.078% against Godot 4.6.3. The residual is antialiasing along the
+sweep's silhouette, not a shape difference.

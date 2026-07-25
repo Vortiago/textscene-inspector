@@ -15,8 +15,12 @@ browsable gallery is `index.html` (build with `scripts/compare-docs/build-galler
 - [CharacterBody3D](sheets/characterbody3d.md) — a transform-only Node3D group
 - [CollisionShape3D](sheets/collisionshape3d.md) — a toggle-gated collision wireframe
 - [CSGBox3D](sheets/csgbox3d.md) — a box, combined into its CSG root's boolean result
-- [CSGCylinder3D](sheets/csgcylinder3d.md) — a THREE.CylinderGeometry mesh
+- [CSGCombiner3D](sheets/csgcombiner3d.md) — a grouping node whose children fold into one solid
+- [CSGCylinder3D](sheets/csgcylinder3d.md) — a solid cylinder or cone mesh
+- [CSGMesh3D](sheets/csgmesh3d.md) — a solid built from an arbitrary Mesh resource
+- [CSGPolygon3D](sheets/csgpolygon3d.md) — a 2D profile swept into a solid
 - [CSGSphere3D](sheets/csgsphere3d.md) — a solid sphere mesh
+- [CSGTorus3D](sheets/csgtorus3d.md) — a solid torus mesh
 - [Decal](sheets/decal.md) — a texture projected onto the surfaces its box intersects
 - [DirectionalLight3D](sheets/directionallight3d.md) — a THREE.DirectionalLight
 - [GPUParticles3D](sheets/gpuparticles3d.md) — a transform-only group

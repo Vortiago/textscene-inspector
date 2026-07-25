@@ -27,4 +27,5 @@ the far end.
 
 ## Divergences
 
-None visible in this fixture.
+None visible in this fixture. Measured at 0.011% against Godot 4.6.3 with
+`pnpm ref:diff unit-csg-box.tscn`.
