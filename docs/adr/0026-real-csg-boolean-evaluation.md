@@ -93,9 +93,13 @@ permanent tax. `pnpm ref:diff` is a tool the author runs, like `ref:godot` itsel
   plan. Without it, one keystroke in the source pane (ADR-0020) re-runs every boolean.
 - Non-manifold input is not cheaply detectable; `three-bvh-csg` tolerates it silently
   rather than throwing. Godot's `snap` is the first knob to try if artifacts appear.
-- Transparency parity remains a **pre-existing, general** gap, measured at 6.415% and
-  3.163% on non-CSG fixtures against 1.067% on the CSG one. Tracked separately; CSG did
-  not introduce it and does not fix it.
+- `unit-csg-transparency` measures 1.067%, over the gate. Only the BLUE channel is short,
+  and only where the glass is over a dark background, which is the sky's specular
+  reflection on a glossy transparent surface rather than an alpha-blending error. Tracked
+  in the material-parity issue, not fixed here.
+- Measuring that fixture also turned up two larger, unrelated parity gaps that predate
+  this work and have nothing to do with CSG: an opaque albedo-only sphere reading too blue
+  in shadow, and Label3D text rasterisation. Same issue, separately scoped.
 
 Recorded because a reader finding a CSG library in a *previewer* will reasonably ask
 whether it belongs there, and because the answer to "why not the react-three wrapper" is
