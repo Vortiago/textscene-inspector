@@ -40,7 +40,7 @@
 
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import { basename, join, resolve } from 'node:path';
+import { basename, join, relative as relativePath, resolve, sep } from 'node:path';
 import { PNG } from 'pngjs';
 import pixelmatch from 'pixelmatch';
 import { renderReference } from './run.mjs';
@@ -82,15 +82,33 @@ export function parseArgs(argv) {
 
 /**
  * A fixture is addressed two different ways by the two harnesses: `ref:godot` wants a path
- * on disk, `ref:ours` wants the bare filename the web app's fixture catalog lists. Accept
- * either form and produce both, so the caller never has to know.
+ * on disk, `ref:ours` wants the name the web app's fixture catalog lists. Accept either
+ * form and produce both, so the caller never has to know.
+ *
+ * The catalog flattens `scenes/fixtures/` to a bare filename but keeps every other subtree
+ * as a relative path (`demos/3d/truck_town/town/town_scene.tscn`). Taking the basename for
+ * BOTH — as this did — silently measured the wrong scene for anything outside
+ * `scenes/fixtures/`: the app rejects an unknown `?fixture=` and falls back to the stored
+ * or default scene, so `ref:diff` on a demo compared Godot's town against our unit-plane
+ * fixture and reported 25%. `gotoFixture` now also asserts the app opened what was asked
+ * for, so a future mismatch fails instead of producing a number.
  */
 export function resolveFixture(input) {
   const name = basename(input);
   if (!name.endsWith('.tscn')) throw new Error(`not a .tscn: ${input}`);
   const scenePath = input.includes('/') ? resolve(REPO_ROOT, input) : join(FIXTURE_DIR, name);
   if (!existsSync(scenePath)) throw new Error(`no such scene: ${scenePath}`);
-  return { scenePath, fixtureName: name, label: basename(name, '.tscn') };
+  return { scenePath, fixtureName: catalogName(scenePath), label: basename(name, '.tscn') };
+}
+
+/** The `?fixture=` value the web catalog lists for a scene on disk. */
+export function catalogName(scenePath) {
+  const relative = relativePath(REPO_ROOT, scenePath).split(sep).join('/');
+  if (!relative.startsWith('scenes/')) throw new Error(`scene is outside scenes/: ${scenePath}`);
+  const withinScenes = relative.slice('scenes/'.length);
+  return withinScenes.startsWith('fixtures/')
+    ? withinScenes.slice('fixtures/'.length)
+    : withinScenes;
 }
 
 /** Pixel difference between two PNG buffers, plus the diff image. */

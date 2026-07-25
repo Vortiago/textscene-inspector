@@ -339,6 +339,26 @@ export async function gotoFixture(page, baseUrl, fixture, onSlow = () => {}, ext
     if (err?.name !== 'TimeoutError') throw err;
     onSlow(NETWORK_IDLE_MS);
   });
+  assertOpenedFixture(page, fixture);
+}
+
+/**
+ * Fail when the app did not open the fixture we asked for.
+ *
+ * `useFixtureSelection` validates `?fixture=` against the catalog and silently falls back
+ * to the stored or default scene when it does not match — correct for a shared link, fatal
+ * for a measurement. It writes the scene it actually opened back into the URL, so the
+ * post-load query string is the app's own answer to "what am I showing?". Without this a
+ * mistyped or wrongly-derived name yields a confident number for the wrong scene.
+ */
+function assertOpenedFixture(page, requested) {
+  const opened = new URL(page.url()).searchParams.get('fixture');
+  if (opened === requested) return;
+  throw new Error(
+    `previewer opened "${opened ?? '(none)'}" but "${requested}" was requested — ` +
+      'the name must match apps/textscene-web/src/fixtures.ts exactly ' +
+      '(run `pnpm generate:fixtures` if the scene is new)'
+  );
 }
 
 /** The single canvas the scene renders into, or a reason there isn't exactly one. */
