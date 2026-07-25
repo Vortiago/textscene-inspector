@@ -1,266 +1,35 @@
 /**
- * Renders the geometry JSX for a MeshInstance3D's `mesh` SubResource.
- * Switches on Godot mesh primitive type: BoxMesh / SphereMesh / PlaneMesh /
- * QuadMesh / CylinderMesh / CapsuleMesh / TorusMesh / PrismMesh.
+ * Renders the geometry for a MeshInstance3D's `mesh` SubResource.
  *
- * Returns null for unknown / external (GLB) / unresolvable mesh references —
- * the caller renders a placeholder geometry instead.
+ * The construction itself lives in `primitiveMeshGeometry.ts` as a plain function, so
+ * callers that need geometry as DATA rather than JSX can share exactly one definition of
+ * each Godot primitive: CSGMesh3D wraps a mesh resource as a CSG contribution, and the
+ * boolean evaluator needs triangles rather than a React element. Two definitions would
+ * drift, and the axis and winding corrections in there are precisely the kind of detail
+ * that drifts silently.
+ *
+ * Renders nothing for unknown / external (GLB) / unresolvable mesh references; the caller
+ * decides whether that warrants a placeholder.
  */
 
 import { useMemo } from 'react';
-import * as THREE from 'three';
 import type { TscnInternalResource } from '../../../parser/types';
-import { parseBoxMesh } from '../../../resources/meshes/boxmesh/parser';
-import { parseSphereMesh } from '../../../resources/meshes/spheremesh/parser';
-import { parsePlaneMesh } from '../../../resources/meshes/planemesh/parser';
-import { parseCylinderMesh } from '../../../resources/meshes/cylindermesh/parser';
-import { parseCapsuleMesh } from '../../../resources/meshes/capsulemesh/parser';
-import { parseTorusMesh } from '../../../resources/meshes/torusmesh/parser';
-import { parsePrismMesh } from '../../../resources/meshes/prismmesh/parser';
-import { parseQuadMesh } from '../../../resources/meshes/quadmesh/parser';
-import type { PlaneMeshProperties } from '../../../resources/meshes/planemesh/types';
+import {
+  buildPrimitiveMeshGeometry,
+  primitiveMeshGeometryKey,
+} from './primitiveMeshGeometry';
 
 export interface MeshGeometryProps {
   resource: TscnInternalResource;
 }
 
 export function MeshGeometry({ resource }: MeshGeometryProps) {
-  // useMemo avoids re-parsing on every render; resource is stable per scene.
-  const parsed = useMemo(() => parseByType(resource), [resource]);
+  // Keyed on the resource's CONTENT, not its identity: the parser allocates a fresh
+  // resource per parse and the source pane reparses on every keystroke, so an
+  // identity-keyed memo would rebuild (and never dispose) the geometry every tick.
+  const key = primitiveMeshGeometryKey(resource);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- `key` IS the content of `resource`.
+  const geometry = useMemo(() => buildPrimitiveMeshGeometry(resource), [key]);
 
-  switch (parsed.type) {
-    case 'BoxMesh':
-      return (
-        <boxGeometry
-          args={[
-            parsed.properties.size.x,
-            parsed.properties.size.y,
-            parsed.properties.size.z,
-            parsed.properties.subdivideWidth + 1,
-            parsed.properties.subdivideHeight + 1,
-            parsed.properties.subdivideDepth + 1,
-          ]}
-        />
-      );
-    case 'SphereMesh':
-      // is_hemisphere → render only the top dome (theta 0..π/2); a full sphere
-      // sweeps theta 0..π. phiStart/phiLength stay at the full-circle defaults.
-      return (
-        <sphereGeometry
-          args={[
-            parsed.properties.radius,
-            parsed.properties.radial_segments ?? 64,
-            parsed.properties.rings ?? 32,
-            0,
-            Math.PI * 2,
-            0,
-            parsed.properties.isHemisphere ? Math.PI / 2 : Math.PI,
-          ]}
-        />
-      );
-    case 'PlaneMesh':
-      return <PlaneMeshGeometry properties={parsed.properties} />;
-    case 'CylinderMesh':
-      return (
-        <cylinderGeometry
-          args={[
-            parsed.properties.top_radius,
-            parsed.properties.bottom_radius,
-            parsed.properties.height,
-            parsed.properties.radial_segments ?? 64,
-            parsed.properties.rings ?? 4,
-            // three.js can only drop BOTH caps; Godot single-cap removal isn't
-            // representable, so we open the ends only when both caps are off.
-            parsed.properties.capTop === false && parsed.properties.capBottom === false,
-          ]}
-        />
-      );
-    case 'CapsuleMesh': {
-      // Godot height includes hemisphere caps; three.js wants only the cylinder
-      // section. (THREE 0.184 renamed `length` → `height`.)
-      const cylinderHeight = Math.max(
-        0.01,
-        parsed.properties.height - 2 * parsed.properties.radius
-      );
-      return (
-        <capsuleGeometry
-          args={[
-            parsed.properties.radius,
-            cylinderHeight,
-            parsed.properties.rings,
-            parsed.properties.radialSegments,
-          ]}
-        />
-      );
-    }
-    case 'TorusMesh':
-      return <TorusMeshGeometry properties={parsed.properties} />;
-    case 'PrismMesh':
-      return <PrismMeshGeometry properties={parsed.properties} />;
-    default:
-      return null;
-  }
-}
-
-type ParsedMesh =
-  | { type: 'BoxMesh'; properties: ReturnType<typeof parseBoxMesh> }
-  | { type: 'SphereMesh'; properties: ReturnType<typeof parseSphereMesh> }
-  | { type: 'PlaneMesh'; properties: ReturnType<typeof parsePlaneMesh> }
-  | { type: 'CylinderMesh'; properties: ReturnType<typeof parseCylinderMesh> }
-  | { type: 'CapsuleMesh'; properties: ReturnType<typeof parseCapsuleMesh> }
-  | { type: 'TorusMesh'; properties: ReturnType<typeof parseTorusMesh> }
-  | { type: 'PrismMesh'; properties: ReturnType<typeof parsePrismMesh> }
-  | { type: 'unknown' };
-
-/**
- * PlaneMesh with `orientation` and `center_offset` baked into the
- * BufferGeometry. The default declarative `<planeGeometry>` produces an
- * XY plane (normal +Z); Godot orientation 0/1/2 = FACE_X / FACE_Y / FACE_Z
- * rotates that into the corresponding world axis. The mesh-local
- * `center_offset` is applied via `geometry.translate` so it shifts the
- * verts before the node-level transform stage.
- */
-function PlaneMeshGeometry({ properties }: { properties: PlaneMeshProperties }) {
-  // Scalar deps, not the centerOffset object: the parser allocates a fresh
-  // {x,y,z} per reparse, and an identity-keyed memo would rebuild the
-  // geometry (undisposed — r3f never disposes primitives) on every
-  // source-pane edit tick.
-  const offsetX = properties.centerOffset?.x;
-  const offsetY = properties.centerOffset?.y;
-  const offsetZ = properties.centerOffset?.z;
-  const geometry = useMemo(() => {
-    // Godot subdivide_* = extra edge loops: N loops → N+1 face segments
-    // (subdivide 0 → 1 segment).
-    const widthSegments = properties.subdivideWidth + 1;
-    const heightSegments = properties.subdivideDepth + 1;
-    const geom = new THREE.PlaneGeometry(
-      properties.size.x,
-      properties.size.y,
-      widthSegments,
-      heightSegments
-    );
-    // FACE_X (orientation 0) → plane sits in YZ, normal points +X.
-    // FACE_Y (orientation 1) → plane sits in XZ, normal points +Y.
-    // FACE_Z (orientation 2) → plane sits in XY (default), normal points +Z.
-    if (properties.orientation === 0) {
-      geom.rotateY(Math.PI / 2);
-    } else if (properties.orientation === 1) {
-      geom.rotateX(-Math.PI / 2);
-    }
-    if (offsetX !== undefined && offsetY !== undefined && offsetZ !== undefined) {
-      geom.translate(offsetX, offsetY, offsetZ);
-    }
-    // Parity-audit fix: `flip_faces` reverses winding so the
-    // surface is visible from the opposite side. The pre-migration
-    // imperative renderer used `geometry.scale(-1, 1, 1); computeVertexNormals()`.
-    if (properties.flipFaces) {
-      geom.scale(-1, 1, 1);
-      geom.computeVertexNormals();
-    }
-    return geom;
-  }, [
-    properties.size.x,
-    properties.size.y,
-    properties.subdivideWidth,
-    properties.subdivideDepth,
-    properties.orientation,
-    offsetX,
-    offsetY,
-    offsetZ,
-    properties.flipFaces,
-  ]);
-
-  return <primitive object={geometry} attach="geometry" />;
-}
-
-/**
- * TorusMesh revolves around a different axis than three's `TorusGeometry`.
- * three revolves the tube around Z: the ring lies in the XY plane and the hole
- * faces +Z (torus stands upright). Godot's TorusMesh revolves around Y: the ring
- * lies in the XZ plane and the hole faces +Y (torus lies flat). Rotating the
- * geometry by π/2 around X maps three's XY ring-plane onto XZ, so the hole faces
- * up like Godot. The torus is top/bottom symmetric, so the rotation sign is
- * immaterial. Radius/tube/segment mapping is unchanged from the declarative form.
- */
-function TorusMeshGeometry({
-  properties,
-}: {
-  properties: ReturnType<typeof parseTorusMesh>;
-}) {
-  const geometry = useMemo(() => {
-    const radius = (properties.outerRadius + properties.innerRadius) / 2;
-    const tube = (properties.outerRadius - properties.innerRadius) / 2;
-    const geom = new THREE.TorusGeometry(
-      radius,
-      tube,
-      properties.ringSegments,
-      properties.rings
-    );
-    geom.rotateX(Math.PI / 2);
-    return geom;
-  }, [
-    properties.outerRadius,
-    properties.innerRadius,
-    properties.ringSegments,
-    properties.rings,
-  ]);
-
-  return <primitive object={geometry} attach="geometry" />;
-}
-
-/**
- * PrismMesh approximates Godot's three-sided prism as a 3-radial-segment
- * cylinder. Godot orients the triangular face with a vertex at +X
- * (azimuth 0); three.js's CylinderGeometry's first vertex sits at the
- * first edge, giving an off-by-30° orientation. The pre-migration
- * imperative renderer rotated the geometry by `π/6` around Y to align,
- * and this restores parity.
- */
-function PrismMeshGeometry({
-  properties,
-}: {
-  properties: ReturnType<typeof parsePrismMesh>;
-}) {
-  const geometry = useMemo(() => {
-    const geom = new THREE.CylinderGeometry(
-      properties.size.x / 2,
-      properties.size.x / 2,
-      properties.size.y,
-      3,
-      // Godot subdivide_height = extra edge loops → N+1 height segments
-      // (matches Box/Plane; subdivide 0 → 1 segment).
-      properties.subdivideHeight + 1,
-      false
-    );
-    geom.rotateY(Math.PI / 6);
-    return geom;
-  }, [properties.size.x, properties.size.y, properties.subdivideHeight]);
-
-  return <primitive object={geometry} attach="geometry" />;
-}
-
-function parseByType(resource: TscnInternalResource): ParsedMesh {
-  const data = resource.data as Record<string, string>;
-  switch (resource.type) {
-    case 'BoxMesh':
-      return { type: 'BoxMesh', properties: parseBoxMesh(data) };
-    case 'SphereMesh':
-      return { type: 'SphereMesh', properties: parseSphereMesh(data) };
-    case 'PlaneMesh':
-      return { type: 'PlaneMesh', properties: parsePlaneMesh(data) };
-    // QuadMesh is a PlaneMesh subclass (faces +Z, 1×1 default); render through
-    // the same PlaneMesh path with QuadMesh's parsed defaults.
-    case 'QuadMesh':
-      return { type: 'PlaneMesh', properties: parseQuadMesh(data) };
-    case 'CylinderMesh':
-      return { type: 'CylinderMesh', properties: parseCylinderMesh(data) };
-    case 'CapsuleMesh':
-      return { type: 'CapsuleMesh', properties: parseCapsuleMesh(data) };
-    case 'TorusMesh':
-      return { type: 'TorusMesh', properties: parseTorusMesh(data) };
-    case 'PrismMesh':
-      return { type: 'PrismMesh', properties: parsePrismMesh(data) };
-    default:
-      return { type: 'unknown' };
-  }
+  return geometry ? <primitive object={geometry} attach="geometry" /> : null;
 }

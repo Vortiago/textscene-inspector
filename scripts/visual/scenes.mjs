@@ -287,6 +287,10 @@ export const GOLDEN_SCENES = [
   // The second, hidden combiner must contribute NOTHING: if its sphere appears, the
   // node fell through to the generic fallback, which ignores `visible`.
   { name: 'csg-combiner-3d', file: 'unit-csg-combiner.tscn' },
+  // No vendored witness exists for CSGMesh3D, so this is the only place its mesh
+  // resolution is exercised end to end. The third node has no `mesh` and must draw
+  // nothing rather than a placeholder.
+  { name: 'csg-mesh-3d', file: 'unit-csg-mesh.tscn' },
   // 2D nodes render in the 2D view (with its zoom/pan chrome) — relax the
   // threshold like the other 2D goldens (marker2d/path2d).
   { name: 'polygon-2d', file: 'unit-polygon2d.tscn', maxDiffPct: 0.5 },

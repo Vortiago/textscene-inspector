@@ -35,6 +35,7 @@ const NODE3D_LEAVES = [
   'CSGSphere3D',
   'CSGTorus3D',
   'CSGCombiner3D',
+  'CSGMesh3D',
   'Path3D',
   'PathFollow3D',
   'NavigationRegion3D',
