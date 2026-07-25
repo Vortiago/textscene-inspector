@@ -47,9 +47,10 @@
 
 import * as THREE from 'three';
 import type { TscnNode } from '../parser/types.js';
-import type { Node3DProperties, Transform3D } from '../nodes/base/node3d/types.js';
+import type { Node3DProperties } from '../nodes/base/node3d/types.js';
 import type { Node2DProperties, Vector2 } from '../nodes/base/node2d/types.js';
-import { joinPath } from '../utils/nodePath.js';
+import { joinPath, resolveNodePathLiteral } from '../utils/nodePath.js';
+import { globalMatrix3D, matrixToTransform3D } from './nodeTreeTransforms.js';
 
 const REMOTE_TRANSFORM_TYPES = new Set(['RemoteTransform3D', 'RemoteTransform2D']);
 
@@ -105,37 +106,6 @@ function readFlags(props: RelayProps): RemoteFlags {
   };
 }
 
-/** Inner path of a `remote_path` value, or null when it names no target. */
-function remoteTargetPath(relayPath: string, raw: string | undefined): string | null {
-  if (!raw) return null;
-  const match = /NodePath\(\s*"([^"]*)"\s*\)/.exec(raw);
-  const inner = (match?.[1] ?? raw).trim();
-  if (inner === '' || inner === '.') return null;
-  // Absolute paths (`/root/...`) address the live tree, which a static parse
-  // does not model — unsupported.
-  if (inner.startsWith('/')) return null;
-  return resolveRelativePath(relayPath, inner);
-}
-
-/**
- * Resolve a NodePath relative to the relay node's own full path.
- * `..` climbs to the parent; named segments descend. Returns null if it
- * climbs past the root.
- */
-function resolveRelativePath(basePath: string, relative: string): string | null {
-  const segments = basePath.split('/');
-  for (const part of relative.split('/')) {
-    if (part === '' || part === '.') continue;
-    if (part === '..') {
-      segments.pop();
-      if (segments.length === 0) return null;
-      continue;
-    }
-    segments.push(part);
-  }
-  return segments.length > 0 ? segments.join('/') : null;
-}
-
 function parentPathOf(path: string): string | null {
   const idx = path.lastIndexOf('/');
   return idx === -1 ? null : path.slice(0, idx);
@@ -149,7 +119,7 @@ function applyRelay3D(
   nodeByPath: Map<string, TscnNode>
 ): void {
   const props = relay.properties as RelayProps;
-  const targetPath = remoteTargetPath(relayPath, props.remote_path);
+  const targetPath = resolveNodePathLiteral(relayPath, props.remote_path);
   if (!targetPath) return;
   const target = nodeByPath.get(targetPath);
   if (!target) return;
@@ -169,24 +139,6 @@ function applyRelay3D(
   const newLocal = parentGlobal.clone().invert().multiply(desired);
 
   (target.properties as Node3DProperties).transform = matrixToTransform3D(newLocal);
-}
-
-/** Local Transform3D of a node as a Matrix4 (identity when absent). */
-function localMatrix3D(node: TscnNode): THREE.Matrix4 {
-  const t = (node.properties as Node3DProperties).transform;
-  return t ? transform3DToMatrix(t) : new THREE.Matrix4();
-}
-
-/** Global Matrix4 = root→node product of local matrices. */
-function globalMatrix3D(path: string, nodeByPath: Map<string, TscnNode>): THREE.Matrix4 {
-  const result = new THREE.Matrix4();
-  let acc = '';
-  for (const segment of path.split('/')) {
-    acc = acc ? `${acc}/${segment}` : segment;
-    const node = nodeByPath.get(acc);
-    if (node) result.multiply(localMatrix3D(node));
-  }
-  return result;
 }
 
 /**
@@ -217,31 +169,6 @@ function composeSelected3D(
   );
 }
 
-/**
- * Godot Transform3D → three Matrix4. Godot stores the Basis as rows
- * (`basis_x`/`basis_y`/`basis_z`), so they land as the matrix's first three
- * rows with `origin` in the translation column. `Matrix4.set` is row-major.
- */
-function transform3DToMatrix(t: Transform3D): THREE.Matrix4 {
-  return new THREE.Matrix4().set(
-    t.basis_x.x, t.basis_x.y, t.basis_x.z, t.origin.x,
-    t.basis_y.x, t.basis_y.y, t.basis_y.z, t.origin.y,
-    t.basis_z.x, t.basis_z.y, t.basis_z.z, t.origin.z,
-    0, 0, 0, 1
-  );
-}
-
-/** three Matrix4 → Godot Transform3D (inverse of {@link transform3DToMatrix}). */
-function matrixToTransform3D(m: THREE.Matrix4): Transform3D {
-  const e = m.elements; // column-major: e[col*4 + row]
-  return {
-    basis_x: { x: e[0]!, y: e[4]!, z: e[8]! },
-    basis_y: { x: e[1]!, y: e[5]!, z: e[9]! },
-    basis_z: { x: e[2]!, y: e[6]!, z: e[10]! },
-    origin: { x: e[12]!, y: e[13]!, z: e[14]! },
-  };
-}
-
 // --- 2D -------------------------------------------------------------------
 
 /**
@@ -265,7 +192,7 @@ function applyRelay2D(
   nodeByPath: Map<string, TscnNode>
 ): void {
   const props = relay.properties as RelayProps;
-  const targetPath = remoteTargetPath(relayPath, props.remote_path);
+  const targetPath = resolveNodePathLiteral(relayPath, props.remote_path);
   if (!targetPath) return;
   const target = nodeByPath.get(targetPath);
   if (!target) return;

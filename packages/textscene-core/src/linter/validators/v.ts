@@ -314,4 +314,60 @@ export const v = {
   basis(name: string): PropertyValidator {
     return floatTupleValidator(name, 'Basis', 9, 'Basis with 9 numbers like Basis(1, 0, 0, 0, 1, 0, 0, 0, 1)', formatCode(name));
   },
+
+  /**
+   * `PackedVector2Array(x, y, x, y, …)`, an arbitrary-length list of coordinate PAIRS.
+   *
+   * Not built on `floatTupleValidator`, which pins an exact arity. The interesting
+   * failure here is the one arity cannot express: an ODD number of values, meaning a
+   * truncated final vertex. That is a value error rather than a format error, because
+   * the grammar parsed fine and the content is wrong.
+   *
+   * Godot serialises an empty array as `PackedVector2Array()`, so zero values is legal.
+   * The corpus writes signed, scientific (`4.37114e-08`) and whitespace-padded numbers.
+   *
+   * Implemented standalone rather than reusing `parsePackedVector2Array` from the
+   * resources layer: that helper throws on bad input instead of returning a ParseError,
+   * and does not check pair parity at all.
+   */
+  packedVector2Array(name: string): PropertyValidator {
+    const formatErr = formatCode(name);
+    const valueErr = valueCode(name);
+    const WRAPPER = /^\s*PackedVector2Array\s*\(([\s\S]*)\)\s*$/;
+    return (key, value, line) => {
+      const match = WRAPPER.exec(value);
+      if (!match) {
+        return propertyError(
+          key,
+          line,
+          `Property '${name}' must be a PackedVector2Array like PackedVector2Array(0, 0, 1, 0), got: ${value}`,
+          formatErr
+        );
+      }
+      const body = match[1]!.trim();
+      if (body === '') return null;
+
+      const parts = body.split(',');
+      for (const part of parts) {
+        const n = Number(part.trim());
+        if (part.trim() === '' || !Number.isFinite(n)) {
+          return propertyError(
+            key,
+            line,
+            `Property '${name}' contains a non-numeric value: "${part.trim()}"`,
+            formatErr
+          );
+        }
+      }
+      if (parts.length % 2 !== 0) {
+        return propertyError(
+          key,
+          line,
+          `Property '${name}' must contain coordinate pairs, got ${parts.length} values (odd)`,
+          valueErr
+        );
+      }
+      return null;
+    };
+  },
 };

@@ -274,4 +274,45 @@ describe('float-tuple validators accept the renderer float grammar (#190 drift f
     expect(v.vector3('position')('position', 'Vector3(1, 2)', 1)).not.toBeNull();
     expect(v.color('c')('c', 'Color(1, 1, 1)', 1)).not.toBeNull();
   });
+
+  describe('v.packedVector2Array', () => {
+    const check = (value: string) => v.packedVector2Array('polygon')('polygon', value, 1);
+
+    it('accepts coordinate pairs', () => {
+      expect(check('PackedVector2Array(0, -1, 0, 0, 2, -1)')).toBeNull();
+    });
+
+    it('accepts an EMPTY array, which is how Godot serialises one', () => {
+      expect(check('PackedVector2Array()')).toBeNull();
+      expect(check('PackedVector2Array(  )')).toBeNull();
+    });
+
+    it('accepts the numeric forms the corpus actually writes', () => {
+      // Scientific notation appears verbatim in the vendored soft-body scenes.
+      expect(check('PackedVector2Array(4.37114e-08, -1.5, +0.5, .25)')).toBeNull();
+    });
+
+    it('rejects an ODD count as a value error, not a format error', () => {
+      // A truncated final vertex parses fine as a grammar but is not a polygon.
+      const err = check('PackedVector2Array(0, -1, 0)');
+      expect(err).not.toBeNull();
+      expect(err!.code).toBe('INVALID_POLYGON_VALUE');
+      expect(err!.message).toContain('pairs');
+    });
+
+    it('rejects a non-numeric entry as a format error', () => {
+      const err = check('PackedVector2Array(0, nope, 1, 2)');
+      expect(err).not.toBeNull();
+      expect(err!.code).toBe('INVALID_POLYGON_FORMAT');
+    });
+
+    it('rejects the wrong wrapper', () => {
+      expect(check('PackedVector3Array(0, 0, 0)')).not.toBeNull();
+      expect(check('[0, 0, 1, 1]')).not.toBeNull();
+    });
+
+    it('rejects a trailing comma rather than reading it as an empty coordinate', () => {
+      expect(check('PackedVector2Array(0, 1,)')).not.toBeNull();
+    });
+  });
 });

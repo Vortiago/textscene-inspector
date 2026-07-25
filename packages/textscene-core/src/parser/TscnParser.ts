@@ -17,6 +17,7 @@ import '../nodes/3d/csg/csgsphere3d/index.js';
 import '../nodes/3d/csg/csgtorus3d/index.js';
 import '../nodes/3d/csg/csgcombiner3d/index.js';
 import '../nodes/3d/csg/csgmesh3d/index.js';
+import '../nodes/3d/csg/csgpolygon3d/index.js';
 import '../nodes/3d/camera3d/index.js';
 import '../nodes/3d/label3d/index.js';
 import '../nodes/3d/sprite3d/index.js';

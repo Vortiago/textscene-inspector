@@ -291,6 +291,17 @@ export const GOLDEN_SCENES = [
   // resolution is exercised end to end. The third node has no `mesh` and must draw
   // nothing rather than a placeholder.
   { name: 'csg-mesh-3d', file: 'unit-csg-mesh.tscn' },
+  // DEPTH extrudes to LOCAL -Z over [-depth, 0], not to +Z and not centred; the
+  // Staircase is concave so its caps need a real triangulator, and the last node
+  // writes nothing at all so a wrong default polygon makes it vanish.
+  { name: 'csg-polygon-depth', file: 'unit-csg-polygon-depth.tscn' },
+  // SPIN revolves about +Y sweeping +X toward -Z. A partial spin gets both end
+  // caps; a full revolution gets NONE and closes on itself.
+  { name: 'csg-polygon-spin', file: 'unit-csg-polygon-spin.tscn' },
+  // PATH is the only scene that exercises the path_node resolution pass together
+  // with the curve tessellation, and it covers both NodePath shapes the corpus
+  // writes: a sibling and a child.
+  { name: 'csg-polygon-path', file: 'unit-csg-polygon-path.tscn' },
   // 2D nodes render in the 2D view (with its zoom/pan chrome) — relax the
   // threshold like the other 2D goldens (marker2d/path2d).
   { name: 'polygon-2d', file: 'unit-polygon2d.tscn', maxDiffPct: 0.5 },

@@ -25,6 +25,7 @@ import '../nodes/3d/csg/csgsphere3d/index.linter.js';
 import '../nodes/3d/csg/csgtorus3d/index.linter.js';
 import '../nodes/3d/csg/csgcombiner3d/index.linter.js';
 import '../nodes/3d/csg/csgmesh3d/index.linter.js';
+import '../nodes/3d/csg/csgpolygon3d/index.linter.js';
 import '../nodes/3d/lights/omnilight3d/index.linter.js';
 import '../nodes/3d/lights/directionallight3d/index.linter.js';
 import '../nodes/3d/lights/spotlight3d/index.linter.js';

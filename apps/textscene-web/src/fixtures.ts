@@ -1043,6 +1043,21 @@ export const fixtures: Fixture[] = [
     "category": "Unit - CSG Primitives"
   },
   {
+    "name": "Csg Polygon Depth",
+    "file": "unit-csg-polygon-depth.tscn",
+    "category": "Unit - CSG Primitives"
+  },
+  {
+    "name": "Csg Polygon Path",
+    "file": "unit-csg-polygon-path.tscn",
+    "category": "Unit - CSG Primitives"
+  },
+  {
+    "name": "Csg Polygon Spin",
+    "file": "unit-csg-polygon-spin.tscn",
+    "category": "Unit - CSG Primitives"
+  },
+  {
     "name": "Csg Sphere",
     "file": "unit-csg-sphere.tscn",
     "category": "Unit - CSG Primitives"
