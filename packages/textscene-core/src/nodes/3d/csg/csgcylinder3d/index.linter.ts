@@ -1,3 +1,3 @@
-/** CSGCylinder3D linter registration — CSG slices are validators-only by design (no semantic linter.ts; ADR-0004 scope). */
+/** CSGCylinder3D linter registration. CSG slices are validators-only by design: no semantic linter.ts. */
 
 import './linterParser.js';

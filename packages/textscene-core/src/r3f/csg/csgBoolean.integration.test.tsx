@@ -16,6 +16,7 @@ import { TscnParser } from '../../parser/TscnParser';
 import type { TscnNode } from '../../parser/types';
 import { nodeComponentRegistry } from '../NodeComponentRegistry';
 import { clearEvaluationCache } from './csgEvaluationCache';
+import { loadCsgModule } from './csgModule';
 import '../nodes/index';
 
 /** Mount a node with its CSG children, giving each the node path the dispatcher would. */
@@ -36,7 +37,16 @@ function parse(body: string) {
   return new TscnParser().parse(`[gd_scene format=3]\n\n${body}\n`);
 }
 
-async function render(body: string) {
+/**
+ * Render, then wait until the evaluated result has actually landed.
+ *
+ * The CSG library arrives through a dynamic import and the component publishes its
+ * status from a `.then`, so a single macrotask tick is not enough: under load (a
+ * concurrent visual run, a cold CI box) the assertions raced the evaluation and saw the
+ * un-subtracted box. Settling on an observable condition rather than a fixed delay
+ * removes the flake without inventing a timeout to tune.
+ */
+async function render(body: string, expectSettled = true) {
   clearEvaluationCache();
   const scene = parse(body);
   const root = scene.nodes[0]!.children[0]!;
@@ -45,11 +55,23 @@ async function render(body: string) {
       <Tree node={root} path={`Root/${root.name}`} />
     </SceneResourcesProvider>
   );
-  // The library loads through a dynamic import, so let the microtask queue drain and
-  // the resulting state update flush.
-  await ReactThreeTestRenderer.act(async () => {
-    await new Promise((resolve) => setTimeout(resolve, 0));
-  });
+
+  // Await the same memoized promise the component awaits, so the module is resident
+  // before we start flushing its state update.
+  await loadCsgModule().catch(() => undefined);
+
+  for (let attempt = 0; attempt < 20; attempt++) {
+    await ReactThreeTestRenderer.act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    if (!expectSettled) break;
+    // Settled once a bounds proxy exists (contributors pruned) or there is nothing to
+    // prune in the first place.
+    const hasProxy = renderer.scene
+      .findAllByType('Mesh')
+      .some((m) => (m.instance as THREE.Mesh).userData?.tscnBoundsProxy === true);
+    if (hasProxy || attempt > 2) break;
+  }
   return renderer;
 }
 
@@ -171,7 +193,7 @@ radius = 0.5
       throw new Error('chunk failed to load');
     });
 
-    const renderer = await render(SUBTRACTION);
+    const renderer = await render(SUBTRACTION, false);
     // Both solids drawn again rather than one merged result, or nothing at all.
     expect(drawnMeshes(renderer).length).toBeGreaterThanOrEqual(1);
 

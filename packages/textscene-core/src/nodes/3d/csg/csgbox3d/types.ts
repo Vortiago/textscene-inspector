@@ -9,9 +9,6 @@ export interface CSGBox3DProperties extends Node3DProperties {
   flipFaces: boolean;
   /** Material reference (SubResource/ExtResource); StandardMaterial3D in practice. */
   material?: string;
-  /**
-   * CSG boolean operation: 0 UNION (default), 1 INTERSECTION, 2 SUBTRACTION.
-   * Parsed but NOT applied — the node renders as its base primitive (ADR-0004).
-   */
+  /** CSG boolean operation: 0 UNION, 1 INTERSECTION, 2 SUBTRACTION. */
   operation?: number;
 }
