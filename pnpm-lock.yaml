@@ -78,6 +78,12 @@ catalogs:
     three:
       specifier: ^0.185
       version: 0.185.1
+    three-bvh-csg:
+      specifier: ^0.0.18
+      version: 0.0.18
+    three-mesh-bvh:
+      specifier: ^0.9.7
+      version: 0.9.13
     typescript:
       specifier: ^6.0.3
       version: 6.0.3
@@ -314,6 +320,12 @@ importers:
       three:
         specifier: 'catalog:'
         version: 0.185.1
+      three-bvh-csg:
+        specifier: 'catalog:'
+        version: 0.0.18(three-mesh-bvh@0.9.13(three@0.185.1))(three@0.185.1)
+      three-mesh-bvh:
+        specifier: 'catalog:'
+        version: 0.9.13(three@0.185.1)
     devDependencies:
       '@react-three/test-renderer':
         specifier: 'catalog:'
@@ -3481,8 +3493,19 @@ packages:
     resolution: {integrity: sha512-tXJwSr9355kFJI3lbCkPpUH5cP8/M0GGy2xLO34aZCjMXBaK3SoPnZwr/oWmo1FdCnELcs4npdCIOFtq9W3ruQ==}
     engines: {node: '>=4'}
 
+  three-bvh-csg@0.0.18:
+    resolution: {integrity: sha512-M3GCZMmGFgASGuDf+YMamM83nVlD/vdwzVHcYbFxgW+g1S7/nKPiuY00YVHOMbjmJPh8mLevGZL65ItHUuGt2w==}
+    peerDependencies:
+      three: '>=0.179.0'
+      three-mesh-bvh: '>=0.9.7'
+
   three-mesh-bvh@0.8.3:
     resolution: {integrity: sha512-4G5lBaF+g2auKX3P0yqx+MJC6oVt6sB5k+CchS6Ob0qvH0YIhuUk1eYr7ktsIpY+albCqE80/FVQGV190PmiAg==}
+    peerDependencies:
+      three: '>= 0.159.0'
+
+  three-mesh-bvh@0.9.13:
+    resolution: {integrity: sha512-2zRh4iTFDmiTISanSVFofIw6J92DxFSqWn2qsQTtKp2ko5Ebk/JaI/wpMqNaBJ3F0qx7/NuP9GPK4jGDX99J2Q==}
     peerDependencies:
       three: '>= 0.159.0'
 
@@ -7308,7 +7331,16 @@ snapshots:
     dependencies:
       editions: 6.22.0
 
+  three-bvh-csg@0.0.18(three-mesh-bvh@0.9.13(three@0.185.1))(three@0.185.1):
+    dependencies:
+      three: 0.185.1
+      three-mesh-bvh: 0.9.13(three@0.185.1)
+
   three-mesh-bvh@0.8.3(three@0.185.1):
+    dependencies:
+      three: 0.185.1
+
+  three-mesh-bvh@0.9.13(three@0.185.1):
     dependencies:
       three: 0.185.1
 
