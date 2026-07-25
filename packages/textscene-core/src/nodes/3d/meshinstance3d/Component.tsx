@@ -18,7 +18,7 @@
  */
 
 import * as THREE from 'three';
-import { useMemo, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, type ReactNode, type RefObject } from 'react';
 import type { MeshInstance3DProperties } from './types';
 import type {
   TscnExternalResource,
@@ -31,6 +31,7 @@ import {
   useSceneResources,
 } from '../../../r3f/SceneResourcesContext';
 import { parseResourceReference } from '../../../resources/SubResourceResolver';
+import { resolveGradientTexture2D } from '../../../resources/textures/gradienttexture2d/resolveGradientTexture';
 import { useResource } from '../../../resources/useResource';
 import type { ArrayMeshResource } from '../../../resources/processors/createArrayMeshProcessor';
 import { MeshGeometry } from './meshGeometry';
@@ -38,6 +39,7 @@ import { parseStandardMaterial3DScalars } from '../../../r3f/materials/standardM
 import { resolveStandardMaterial } from '../../../r3f/materials/resolveStandardMaterial';
 import { StandardMaterialSlot } from '../../../r3f/materials/StandardMaterialSlot';
 import { ExternalMaterialSlot } from '../../../r3f/materials/ExternalMaterialSlot';
+import { useBillboard } from '../../../r3f/hooks/useBillboard';
 import { applyUVTransform } from './applyUVTransform';
 import { repackAnisotropyFlowmap } from './repackFlowmap';
 import { triplanarPlaneScale } from './triplanarScale';
@@ -174,6 +176,26 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     ]
   );
 
+  // Procedural texture slots resolve synchronously from the scene's internal
+  // resources — a `SubResource(GradientTexture2D)` is fully described in the
+  // scene, so it is rasterised here rather than fetched through `useResource`
+  // like an ExtResource image. This is what gives the platformer coin its
+  // additive gradient glow. Any slot NOT carrying a procedural sub-resource
+  // stays undefined and falls back to the async `textureSlots` above.
+  const proceduralTextures = useMemo(
+    () => resolveProceduralTextures(materialSubResource, internalResources),
+    [materialSubResource, internalResources]
+  );
+
+  // Dispose the generated DataTextures when the material changes or the node
+  // unmounts — they own their pixel buffers (mirrors Label3D's CanvasTexture).
+  useEffect(() => {
+    const textures = Object.values(proceduralTextures);
+    return () => {
+      for (const texture of textures) texture?.dispose();
+    };
+  }, [proceduralTextures]);
+
   // Apply the material's UV transform (`uv1_scale` / `uv1_offset`) to
   // every loaded texture. `applyUVTransform` clones the texture before
   // mutating, so two MeshInstance3D nodes sharing the same path with
@@ -194,44 +216,71 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     // PARITY LIMITATION (uv1_offset + world-triplanar): three.js applies
     // `offset` in UV space, but Godot's world-triplanar offset is in world
     // units, so a non-zero offset would shift by a different amount here. No
-    // shipped scene sets uv1_offset, so impact is currently zero — see
-    // docs/PARITY-LIMITATIONS.md.
+    // shipped scene sets uv1_offset, so impact is currently zero.
     return { scale, offset: materialScalars.uv1Offset };
   }, [materialScalars, meshResource]);
 
   const albedoMap = useMemo(
-    () => transformedTexture(textureSlots.albedo_texture, uvTransform),
-    [textureSlots.albedo_texture, uvTransform]
+    () =>
+      transformedTexture(
+        effectiveSlot(proceduralTextures.albedo_texture, textureSlots.albedo_texture),
+        uvTransform
+      ),
+    [proceduralTextures.albedo_texture, textureSlots.albedo_texture, uvTransform]
   );
   const normalMap = useMemo(
-    () => transformedTexture(textureSlots.normal_texture, uvTransform),
-    [textureSlots.normal_texture, uvTransform]
+    () =>
+      transformedTexture(
+        effectiveSlot(proceduralTextures.normal_texture, textureSlots.normal_texture),
+        uvTransform
+      ),
+    [proceduralTextures.normal_texture, textureSlots.normal_texture, uvTransform]
   );
   // PARITY LIMITATION (metallic/roughness texture channel): Godot reads the
   // channel named by `metallic_texture_channel` / `roughness_texture_channel`
   // (default RED). three.js's metalnessMap/roughnessMap read fixed channels
   // (BLUE / GREEN). Faithful for grayscale or matching-channel (ORM) maps; a
   // RED-packed map with differing channels would misread. A true fix needs
-  // runtime channel-swizzling — see docs/PARITY-LIMITATIONS.md.
+  // runtime channel-swizzling.
   const roughnessMap = useMemo(
-    () => transformedTexture(textureSlots.roughness_texture, uvTransform),
-    [textureSlots.roughness_texture, uvTransform]
+    () =>
+      transformedTexture(
+        effectiveSlot(proceduralTextures.roughness_texture, textureSlots.roughness_texture),
+        uvTransform
+      ),
+    [proceduralTextures.roughness_texture, textureSlots.roughness_texture, uvTransform]
   );
   const metalnessMap = useMemo(
-    () => transformedTexture(textureSlots.metallic_texture, uvTransform),
-    [textureSlots.metallic_texture, uvTransform]
+    () =>
+      transformedTexture(
+        effectiveSlot(proceduralTextures.metallic_texture, textureSlots.metallic_texture),
+        uvTransform
+      ),
+    [proceduralTextures.metallic_texture, textureSlots.metallic_texture, uvTransform]
   );
   const emissiveMap = useMemo(
-    () => transformedTexture(textureSlots.emission_texture, uvTransform),
-    [textureSlots.emission_texture, uvTransform]
+    () =>
+      transformedTexture(
+        effectiveSlot(proceduralTextures.emission_texture, textureSlots.emission_texture),
+        uvTransform
+      ),
+    [proceduralTextures.emission_texture, textureSlots.emission_texture, uvTransform]
   );
   const aoMap = useMemo(
-    () => transformedTexture(textureSlots.ao_texture, uvTransform),
-    [textureSlots.ao_texture, uvTransform]
+    () =>
+      transformedTexture(
+        effectiveSlot(proceduralTextures.ao_texture, textureSlots.ao_texture),
+        uvTransform
+      ),
+    [proceduralTextures.ao_texture, textureSlots.ao_texture, uvTransform]
   );
   const displacementMap = useMemo(
-    () => transformedTexture(textureSlots.heightmap_texture, uvTransform),
-    [textureSlots.heightmap_texture, uvTransform]
+    () =>
+      transformedTexture(
+        effectiveSlot(proceduralTextures.heightmap_texture, textureSlots.heightmap_texture),
+        uvTransform
+      ),
+    [proceduralTextures.heightmap_texture, textureSlots.heightmap_texture, uvTransform]
   );
   const anisotropyMap = useMemo(() => {
     // Only an anisotropy-enabled material renders as MeshPhysicalMaterial and
@@ -260,16 +309,34 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     return null;
   }, [textureSlots, textureRequests]);
 
+  // A StandardMaterial3D carrying `billboard_mode` turns the whole mesh to
+  // face the camera — the same per-material effect Godot's shader applies, and
+  // the same enum `useBillboard` already implements for Label3D/Sprite3D. The
+  // hook is called unconditionally (rules of hooks) with the primary material's
+  // mode; it no-ops for the DISABLED/absent case, i.e. almost every mesh. The
+  // ref lands on whichever branch's `<mesh>` MeshShell renders. NOTE: a
+  // billboarded mesh's scene-tree children render inside the mesh and would
+  // inherit its billboard rotation, which Godot (a surface-only shader effect)
+  // does not do — no corpus scene billboards a mesh with children.
+  const meshRef = useRef<THREE.Mesh | null>(null);
+  useBillboard(meshRef, materialScalars?.billboardMode);
+
   // cast_shadow mode 2 (DOUBLE_SIDED) sets material.shadowSide = DoubleSide;
   // mode 3 (SHADOWS_ONLY) hides the mesh from the colour buffer while it keeps
   // casting — see MeshShell for why that is NOT `visible = false`.
   const shadowFlags = shadowCastingFlags(properties.castShadow);
-  const castShadow = shadowFlags.castShadow;
+  // A blend-mode-transparent material (additive / subtractive / multiply)
+  // writes no shadow: Godot excludes those surfaces from the shadow pass, so an
+  // additive glow sprite must not drop a solid silhouette on the ground.
+  const blendTransparent =
+    !!materialScalars && materialScalars.blending !== THREE.NormalBlending;
+  const castShadow = shadowFlags.castShadow && !blendTransparent;
   const visible = properties.visible !== false;
 
   // Every render branch wraps its content in the same attribute shell.
   const shellProps = {
     name: node.name,
+    meshRef,
     position,
     rotation,
     scale,
@@ -381,6 +448,8 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
 
 interface MeshShellProps {
   name: string;
+  /** Ref to the underlying THREE.Mesh, so `useBillboard` can turn it per frame. */
+  meshRef: RefObject<THREE.Mesh | null>;
   position: [number, number, number];
   rotation: [number, number, number];
   scale: [number, number, number];
@@ -408,6 +477,7 @@ interface MeshShellProps {
  */
 function MeshShell({
   name,
+  meshRef,
   position,
   rotation,
   scale,
@@ -419,6 +489,7 @@ function MeshShell({
 }: MeshShellProps) {
   return (
     <mesh
+      ref={meshRef}
       name={name}
       position={position}
       rotation={rotation}
@@ -509,6 +580,40 @@ function transformedTexture(
   if (!value) return undefined;
   if (!uv) return value;
   return applyUVTransform(value, uv);
+}
+
+/**
+ * A synchronously-resolved procedural texture (e.g. GradientTexture2D) takes
+ * precedence over the async-loaded slot for the same map. Returns a
+ * `transformedTexture`-shaped slot so the UV-transform path is shared.
+ */
+function effectiveSlot(
+  procedural: THREE.Texture | undefined,
+  asyncSlot: { value: THREE.Texture | undefined } | null
+): { value: THREE.Texture | undefined } | null {
+  return procedural ? { value: procedural } : asyncSlot;
+}
+
+/**
+ * Rasterise every material texture slot that references an inline procedural
+ * texture (currently `SubResource(GradientTexture2D)`) into a THREE.Texture.
+ * Slots carrying an ExtResource image, a non-gradient SubResource, or nothing
+ * are omitted, leaving the async `useResource` path to handle them.
+ */
+function resolveProceduralTextures(
+  materialSubResource: TscnInternalResource | undefined,
+  internalResources: readonly TscnInternalResource[]
+): Partial<Record<TextureSlot, THREE.Texture>> {
+  if (!materialSubResource) return {};
+  const out: Partial<Record<TextureSlot, THREE.Texture>> = {};
+  const data = materialSubResource.data as Record<string, unknown>;
+  for (const slot of TEXTURE_PROPERTIES) {
+    const raw = data[slot];
+    if (typeof raw !== 'string') continue;
+    const texture = resolveGradientTexture2D(raw, internalResources);
+    if (texture) out[slot] = texture;
+  }
+  return out;
 }
 
 function resolveMeshSubResource(

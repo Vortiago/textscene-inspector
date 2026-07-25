@@ -2,19 +2,26 @@
  * Value-track driving for continuous properties (ADR-0017): an AnimationPlayer
  * `value` track targeting `Decal:modulate` fades a sibling decal's colour/alpha
  * through the AnimatedValue registry — the THREE mixer drives transforms only,
- * so `modulate` is sampled (linearly interpolated) and pushed. Observable: the
- * decal quad's `material.opacity = albedo_mix × modulate.a`.
+ * so `modulate` is sampled (linearly interpolated) and pushed to the target's
+ * registered setter.
+ *
+ * The observable is the value the driver PUSHES for that node+property, read via
+ * a probe registered at the decal's path (the same `useAnimatedValue` seam the
+ * Decal component itself consumes). The decal's own render is a projection baked
+ * imperatively onto scene geometry — invisible to the test-renderer — so the
+ * pushed value, not a material, is what this test inspects. `modulate.a` is what
+ * a decal folds into its projection opacity (`albedo_mix × modulate.a`).
  */
 import { describe, expect, it } from 'vitest';
-import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { AnimationPlayer } from './Component';
-import { Decal } from '../../3d/decal/Component';
-import { parseDecal } from '../../3d/decal/parser';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
-import { AnimatedValueProvider } from '../../../r3f/contexts/AnimatedValueContext';
+import {
+  AnimatedValueProvider,
+  useAnimatedValue,
+} from '../../../r3f/contexts/AnimatedValueContext';
 import {
   AnimationTransportProvider,
   useAnimationTransport,
@@ -32,7 +39,6 @@ import { AnimationProcessMode, MethodCallMode } from './types';
 
 const DECAL_PATH = 'Holder/Decal';
 const AP_PATH = 'Holder/AnimationPlayer';
-const TEX = 'res://decal.png';
 
 // "fade": Decal:modulate alpha 1 → 0 over 1s, linear (interp=1). No transform tracks.
 const INTERNAL: TscnInternalResource[] = [
@@ -81,26 +87,21 @@ function Capture() {
   return null;
 }
 
+// Stands in for the Decal target: subscribes to the SAME `modulate` value seam
+// the Decal component uses, so it receives whatever the driver pushes for
+// `Holder/Decal:modulate`.
+let probedModulate: number[] | null = null;
+function ModulateProbe() {
+  probedModulate = useAnimatedValue<number[]>('modulate', (v) => v);
+  return null;
+}
+
 async function mount() {
   const fake = createFakeResourceLoader();
-  const tex = new THREE.Texture();
-  (tex as unknown as { image: { width: number; height: number } }).image = { width: 16, height: 16 };
-  fake.textures.seed(TEX, tex);
-  const decal: TscnNode = {
-    name: 'Decal',
-    type: 'Decal',
-    children: [],
-    properties: parseDecal(
-      { type: 'node', attributes: { type: 'Decal', name: 'Decal' } },
-      { texture_albedo: 'ExtResource("1")', albedo_mix: '1.0' }
-    ),
-  };
+  probedModulate = null;
   return ReactThreeTestRenderer.create(
     <ResourceLoaderProvider loader={fake.loader}>
-      <SceneResourcesProvider
-        internalResources={INTERNAL}
-        externalResources={[{ id: '1', type: 'Texture2D', path: TEX }]}
-      >
+      <SceneResourcesProvider internalResources={INTERNAL} externalResources={[]}>
         <AnimatedValueProvider>
           <SelectionProvider>
             <AnimationTransportProvider>
@@ -108,7 +109,7 @@ async function mount() {
               {/* A named ancestor so the player's root_node (`..`) resolves. */}
               <group name="Holder">
                 <NodePathProvider path={DECAL_PATH}>
-                  <Decal node={decal} />
+                  <ModulateProbe />
                 </NodePathProvider>
                 <NodePathProvider path={AP_PATH}>
                   <AnimationPlayer node={makeAP()} />
@@ -122,42 +123,38 @@ async function mount() {
   );
 }
 
-function decalQuadOpacity(r: Awaited<ReturnType<typeof mount>>): number {
-  const mesh = r.scene.findByType('Mesh').instance as THREE.Mesh;
-  return (mesh.material as THREE.MeshBasicMaterial).opacity;
-}
-
 const settle = () => ReactThreeTestRenderer.act(async () => {});
 const select = (path: string | null) =>
   ReactThreeTestRenderer.act(async () => selection?.setSelectedNodePath(path));
 
 describe('AnimationPlayer drives Decal:modulate (ADR-0017)', () => {
-  it('shows the authored modulate while the player is not driving', async () => {
-    const r = await mount();
-    expect(decalQuadOpacity(r)).toBeCloseTo(1, 5); // authored modulate.a = 1 × albedo_mix 1
+  it('pushes nothing while the player is not driving — the target keeps its authored modulate', async () => {
+    await mount();
+    expect(probedModulate).toBeNull();
   });
 
-  it('fades the decal opacity as the modulate alpha interpolates', async () => {
+  it('pushes the interpolated modulate alpha as it fades', async () => {
     const r = await mount();
     await select(AP_PATH);
     await ReactThreeTestRenderer.act(async () => transport.play());
     await r.advanceFrames(1, 0.5); // mixer playhead → 0.5s
     await r.advanceFrames(1, 0); // let the value sampler read the updated playhead
     await settle();
-    // alpha lerps 1 → 0 over 1s, so at 0.5s → 0.5; opacity = albedo_mix(1) × 0.5
-    expect(decalQuadOpacity(r)).toBeCloseTo(0.5, 2);
+    // alpha lerps 1 → 0 over 1s, so at 0.5s the pushed modulate.a → 0.5.
+    expect(probedModulate).not.toBeNull();
+    expect(probedModulate![3]).toBeCloseTo(0.5, 2);
   });
 
-  it('releases the decal to its authored modulate on stop', async () => {
+  it('releases the target (pushes null) on stop', async () => {
     const r = await mount();
     await select(AP_PATH);
     await ReactThreeTestRenderer.act(async () => transport.play());
     await r.advanceFrames(1, 0.5);
     await r.advanceFrames(1, 0);
     await settle();
-    expect(decalQuadOpacity(r)).toBeCloseTo(0.5, 2);
+    expect(probedModulate![3]).toBeCloseTo(0.5, 2);
     await ReactThreeTestRenderer.act(async () => transport.stop());
     await settle();
-    expect(decalQuadOpacity(r)).toBeCloseTo(1, 5); // back to authored modulate.a = 1
+    expect(probedModulate).toBeNull(); // released → authored modulate shows again
   });
 });

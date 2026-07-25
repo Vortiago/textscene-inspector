@@ -1,0 +1,125 @@
+# Comparison sheet standard
+
+One sheet per Godot node type — or per resource type (StandardMaterial3D,
+Environment, …), which sit under `category: Resources` in the left menu beside the
+nodes — showing how this previewer renders it against real Godot. The **screenshots are produced by a script** (`scripts/compare-docs/capture.mjs`)
+and committed under `docs/comparison/images/`. A sheet NEVER creates or edits an
+image — it only references the two the script already made, by fixed path. Re-running
+the capture script refreshes every screenshot without touching a single sheet.
+
+A sheet is a **Markdown file** at `docs/comparison/sheets/<slug>.md`. A separate
+generator (`scripts/compare-docs/build-gallery.mjs`) turns the whole folder plus the
+images into one browsable HTML gallery — for previewing as an artifact and for the
+website. So author plain, strict Markdown; styling is not your concern.
+
+## The shape — exactly this, in this order, nothing extra
+
+```markdown
+---
+type: OmniLight3D
+category: 3D            # 3D | 2D | Resources | Other
+status: unreviewed     # done | limitation | unimplemented | unreviewed (see Status)
+fixture: unit-omni-light-3d.tscn
+image: unit-omni-light-3d
+renders_as: a THREE.PointLight    # one short noun phrase
+---
+
+# OmniLight3D
+
+One or two sentences: what the node is, and what the previewer draws for it. Present
+tense, no hedging, no three.js tutorial.
+
+## Properties exercised
+
+| Property | Value | Effect |
+| --- | --- | --- |
+| `light_energy` | `2.0` | brightness of the pool on the ground |
+| `omni_range` | `8.0` | how far the light reaches |
+| `shadow_enabled` | `true` | the box casts a shadow |
+
+Only the properties the FIXTURE actually sets, with the value it sets and the visible
+consequence. Read the fixture; never invent a property.
+
+## Divergences
+
+What differs between the two images, each with a cause, stated in full here — the
+sheet is the home for the limitation, so never point at a separate file.
+
+If the two agree, write exactly one line:
+
+    None visible in this fixture.
+
+Never pad this section. An invented divergence is worse than an empty one.
+```
+
+## Sectioned sheets — one sheet, many per-property comparisons
+
+A node or resource with several visually distinct features (a StandardMaterial3D
+has metallic, emission, clearcoat, rim, …) gives each its OWN fixture and
+comparison as a **section**. A section is a `##` heading immediately followed by a
+`<!-- compare: … -->` marker; the generator lays out that section's Godot-vs-ours
+pair, status badge, and prose (which runs until the next such heading).
+
+```markdown
+---
+type: StandardMaterial3D
+category: Resources        # 3D | 2D | Resources | Other
+renders_as: a THREE.MeshStandardMaterial / MeshPhysicalMaterial
+---
+
+# StandardMaterial3D
+
+Intro sentence(s) — the whole resource, above the per-feature sections.
+
+## Metallic / roughness
+<!-- compare: image=unit-material-metallic status=done fixture=unit-material-metallic.tscn -->
+
+What the fixture sets and what the two images show; fold any limitation in here.
+
+## Refraction
+<!-- compare: image=unit-material-refraction status=limitation fixture=unit-material-refraction.tscn -->
+
+…
+```
+
+- Marker attributes: `image=` (required — the basename), `status=` (see below),
+  `fixture=` (optional — the live `?fixture=` deep link).
+- A sectioned sheet needs NO top-level `image:` frontmatter; each section supplies
+  its own. Legacy single-pair sheets (one `image:`, no markers) still work unchanged.
+
+## Status — never claim more than you have verified
+
+Every section and every legacy sheet carries a parity status, shown as a nav dot
+and a header/section badge. A node's badge **rolls up to its worst section**.
+
+| Status | Meaning |
+| --- | --- |
+| `done` | Faithful to Godot, verified by eye. Green. **Never the default — earn it.** |
+| `limitation` | Renders, but with a known divergence (a three.js constraint). Orange. |
+| `unimplemented` | Not rendered at all. Red. |
+| `unreviewed` | Not yet assessed against Godot. Grey. **The default.** |
+
+`done` is the strong claim: reserve it for a feature you have looked at and found
+matches. An unassessed sheet stays `unreviewed`; a whole-scene showcase with gaps is
+`limitation`, not `done`. When in doubt, do not go green.
+
+## Rules
+
+- **Look at both images.** Read `docs/comparison/images/<image>-godot.png` and
+  `-ours.png` with your own eyes. The prose and divergences must describe what is
+  actually on screen. A sheet written from the code alone is worthless — that is the
+  one thing only a viewer can do.
+- **Terse.** This is a reference to skim, not an essay. No restating the code, no
+  explaining what three.js is.
+- **No visual of its own?** A Timer, a RemoteTransform, an AudioStreamPlayer draws
+  nothing. Say so in one line under the heading and keep `## Divergences` short. That
+  absence IS the useful fact.
+- **Selection-gated gizmos** (Marker3D, Path3D, PathFollow3D — ADR-0018) and
+  **toggle-gated** overlays (collision shapes — ADR-0005/0006) do not appear in a
+  plain capture. Say the gizmo is gated, not missing.
+- **Editor-only gizmos** (light bulbs, camera frustums) appear in neither image: the
+  reference renders the game, not the editor. Never report their absence as a bug.
+- **The frontmatter is load-bearing** — the generator reads it to place the images and
+  group the sheet. `image` is the basename with no `-godot.png`/`-ours.png` suffix and
+  no directory. Copy it from the task; do not derive it.
+- Write only your own sheet. No AI-attribution lines, no TODOs, no placeholders.

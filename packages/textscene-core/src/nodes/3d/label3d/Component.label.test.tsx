@@ -4,8 +4,9 @@
  * Label3D but not in our parser/types yet; failures here drive the
  * inventory of missing Label3D feature coverage.
  *
- * Label3D text is gated behind the `showLabels` toggle (off by default,
- * ADR-0008), so each render runs inside a provider with labels enabled.
+ * Label3D text is gated behind the `showLabels` toggle (ON by default per the
+ * ADR-0008 Label3D parity amendment); each render runs inside a provider with
+ * labels enabled to make that explicit.
  *
  * Assertions: 90–94 of `docs/archive/STRICT-VERIFICATION.md`.
  */

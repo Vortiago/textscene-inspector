@@ -1,0 +1,71 @@
+; BG_SKY over a GOLD sky with AMBIENT_SOURCE_COLOR (flat 0.6,
+; ambient_light_sky_contribution = 0) and AgX tonemapping. The gold sky lets two
+; things separate by colour:
+;   * the shadowed grass, lit only by the flat grey ambient, must stay grey —
+;     a warm tint means sky IBL is leaking into diffuse despite contribution 0;
+;   * the metallic sphere, reflecting the sky, must read GOLD — a grey/black
+;     sphere means the reflection was switched off with the ambient.
+[gd_scene load_steps=8 format=3 uid="uid://unitstageambientibl"]
+
+[sub_resource type="ProceduralSkyMaterial" id="SkyMat_gold"]
+sky_top_color = Color(0.85, 0.5, 0.15, 1)
+sky_horizon_color = Color(0.9, 0.72, 0.4, 1)
+ground_bottom_color = Color(0.35, 0.25, 0.12, 1)
+ground_horizon_color = Color(0.9, 0.72, 0.4, 1)
+
+[sub_resource type="Sky" id="Sky_gold"]
+sky_material = SubResource("SkyMat_gold")
+
+[sub_resource type="Environment" id="Environment_stage"]
+background_mode = 2
+sky = SubResource("Sky_gold")
+ambient_light_source = 2
+ambient_light_color = Color(0.6, 0.6, 0.6, 1)
+ambient_light_sky_contribution = 0.0
+tonemap_mode = 4
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
+size = Vector2(7, 7)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_grass"]
+albedo_color = Color(0.25, 0.55, 0.15, 1)
+roughness = 1.0
+
+[sub_resource type="BoxMesh" id="BoxMesh_caster"]
+size = Vector3(2.4, 2.4, 2.4)
+
+[sub_resource type="SphereMesh" id="SphereMesh_metal"]
+radius = 0.9
+height = 1.8
+radial_segments = 48
+rings = 24
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_metal"]
+albedo_color = Color(0.75, 0.75, 0.78, 1)
+metallic = 1.0
+roughness = 0.1
+
+[node name="StageAmbientIblRoot" type="Node3D"]
+
+[node name="Ground" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1, 0)
+mesh = SubResource("PlaneMesh_ground")
+surface_material_override/0 = SubResource("StandardMaterial3D_grass")
+
+[node name="Caster" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.6, 0.2, -0.4)
+mesh = SubResource("BoxMesh_caster")
+cast_shadow = 3
+
+[node name="MetalSphere" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.7, 0, 0.6)
+mesh = SubResource("SphereMesh_metal")
+surface_material_override/0 = SubResource("StandardMaterial3D_metal")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866025, -0.433013, 0.25, 0, 0.5, 0.866025, -0.5, -0.75, 0.433013, 2, 4, 2)
+light_energy = 1.5
+shadow_enabled = true
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_stage")

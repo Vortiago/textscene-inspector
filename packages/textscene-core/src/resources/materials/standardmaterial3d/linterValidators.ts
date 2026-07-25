@@ -28,17 +28,19 @@ const validateBoolean: PropertyValidator = (key, value, line) => {
 };
 
 /**
- * Validate ExtResource reference format
+ * A texture slot accepts an `ExtResource` (imported image / `.tres`) OR a
+ * `SubResource` (an inline/procedural Texture2D — GradientTexture2D,
+ * NoiseTexture2D, CanvasTexture). Accept both; only a malformed reference errors.
  */
-const validateExtResource: PropertyValidator = (key, value, line) => {
-  const extResourcePattern = /^ExtResource\("([^"]+)"\)$/;
-  if (!extResourcePattern.test(value)) {
+const validateTextureReference: PropertyValidator = (key, value, line) => {
+  const referencePattern = /^(?:Sub|Ext)Resource\("([^"]+)"\)$/;
+  if (!referencePattern.test(value)) {
     return {
       severity: 'error',
-      message: `Property "${key}" must be an ExtResource reference like ExtResource("1_abc"), got: ${value}`,
+      message: `Property "${key}" must be a resource reference like ExtResource("1_abc") or SubResource("Tex_1"), got: ${value}`,
       line,
       column: 0,
-      code: 'INVALID_EXTRESOURCE',
+      code: 'INVALID_TEXTURE_REFERENCE',
     };
   }
   return null;
@@ -94,13 +96,13 @@ validatorRegistry.registerAll('StandardMaterial3D', {
   heightmap_enabled: validateBoolean,
   anisotropy_enabled: validateBoolean,
   refraction_enabled: validateBoolean,
-  normal_texture: validateExtResource,
-  albedo_texture: validateExtResource,
-  metallic_texture: validateExtResource,
-  roughness_texture: validateExtResource,
-  ao_texture: validateExtResource,
-  emission_texture: validateExtResource,
-  heightmap_texture: validateExtResource,
+  normal_texture: validateTextureReference,
+  albedo_texture: validateTextureReference,
+  metallic_texture: validateTextureReference,
+  roughness_texture: validateTextureReference,
+  ao_texture: validateTextureReference,
+  emission_texture: validateTextureReference,
+  heightmap_texture: validateTextureReference,
   uv1_scale: validateUv1Scale,
   albedo_color: validateAlbedoColor,
 });

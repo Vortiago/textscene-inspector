@@ -32,19 +32,22 @@ async function tryClick(locator, timeout = ACTION_TIMEOUT_MS) {
   }
 }
 
-/** Drag across the 3D canvas to orbit the camera (OrbitControls). */
+/**
+ * Drag across the 3D canvas to orbit the camera. Middle button, because the
+ * viewport navigates like Godot's editor: left-drag selects and never orbits.
+ */
 async function orbit(page, { dx = 230, dy = 35, steps = 55 } = {}) {
   const box = await page.locator('canvas').first().boundingBox();
   if (!box) return;
   const cx = box.x + box.width / 2;
   const cy = box.y + box.height / 2;
   await page.mouse.move(cx, cy);
-  await page.mouse.down();
+  await page.mouse.down({ button: 'middle' });
   for (let i = 1; i <= steps; i++) {
     await page.mouse.move(cx + (dx * i) / steps, cy + Math.sin(i / 6) * dy);
     await page.waitForTimeout(25);
   }
-  await page.mouse.up();
+  await page.mouse.up({ button: 'middle' });
 }
 
 /**

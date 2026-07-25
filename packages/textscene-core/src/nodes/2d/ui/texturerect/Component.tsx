@@ -188,8 +188,7 @@ interface ImageLike {
  * states the same relationship from the other direction. FIT_WIDTH/FIT_HEIGHT
  * tie the two axes 1:1 ("the height of the texture will be ignored"), and the
  * PROPORTIONAL pair ties them at the texture's aspect. What CSS resolves for us
- * rather than being told is WHICH axis is authoritative; see
- * docs/PARITY-LIMITATIONS.md.
+ * rather than being told is WHICH axis is authoritative.
  */
 export function textureRectMinSize(
   expandMode: number | undefined,

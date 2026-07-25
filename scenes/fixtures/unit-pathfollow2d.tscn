@@ -13,7 +13,7 @@ position = Vector2(440, 240)
 curve = SubResource("Curve2D_loop")
 
 [node name="Follower" type="PathFollow2D" parent="TrackPath"]
-progress_ratio = 0.5
+progress = 320.0
 
 [node name="Marker" type="Polygon2D" parent="TrackPath/Follower"]
 color = Color(0.3, 0.8, 1, 1)

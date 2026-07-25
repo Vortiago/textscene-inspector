@@ -12,6 +12,36 @@
 import * as THREE from 'three';
 import type { StandardMaterial3DScalars } from './standardMaterialScalars';
 
+/**
+ * Godot's default 3D material — what a mesh with no material actually gets.
+ *
+ * It is NOT a `StandardMaterial3D` with default properties. Every backend
+ * binds a hardcoded shader instead
+ * (`scene_shader_forward_clustered.cpp`, and identically in the Mobile and
+ * Compatibility renderers):
+ *
+ *     void vertex()   { ROUGHNESS = 0.8; }
+ *     void fragment() { ALBEDO = vec3(0.6); ROUGHNESS = 0.8; METALLIC = 0.2; }
+ *
+ * so an unmaterialed mesh is a mid-grey, slightly metallic, mostly-rough
+ * surface — not the white matte a default-constructed StandardMaterial3D
+ * would give. Reading it as white made every such mesh reflect roughly 1/0.6
+ * too much ambient, which is what blew out the ground plane in
+ * `unit-preview-lighting` against Godot's own render of it.
+ *
+ * `ALBEDO` is a shader constant, so 0.6 is LINEAR. It has to be built with an
+ * explicit colour space — three decodes a plain hex literal as sRGB, which
+ * would land at 0.318 linear instead.
+ */
+const DEFAULT_MATERIAL_ALBEDO = new THREE.Color().setRGB(
+  0.6,
+  0.6,
+  0.6,
+  THREE.LinearSRGBColorSpace
+);
+const DEFAULT_MATERIAL_ROUGHNESS = 0.8;
+const DEFAULT_MATERIAL_METALLIC = 0.2;
+
 export interface StandardMaterialSlotProps {
   scalars: StandardMaterial3DScalars | null;
   albedoMap?: THREE.Texture;
@@ -68,14 +98,12 @@ export function StandardMaterialSlot({
   attach,
 }: StandardMaterialSlotProps) {
   if (!scalars) {
-    // No material → Godot's default StandardMaterial3D: white, non-metallic,
-    // fully-rough matte, BACK culling (= three.js FrontSide).
     return (
       <meshStandardMaterial
         attach={attach}
-        color={0xffffff}
-        metalness={0}
-        roughness={1}
+        color={DEFAULT_MATERIAL_ALBEDO}
+        metalness={DEFAULT_MATERIAL_METALLIC}
+        roughness={DEFAULT_MATERIAL_ROUGHNESS}
         side={THREE.FrontSide}
         shadowSide={shadowSide ?? null}
       />
@@ -188,6 +216,10 @@ export function StandardMaterialSlot({
         clearcoatRoughness={scalars.clearcoatRoughness}
         sheen={scalars.rim}
         sheenColor={sheenColor}
+        // A low sheenRoughness concentrates the sheen toward grazing angles, so
+        // the effect reads as an edge rim rather than a broad fabric glow that
+        // would wash a dark-albedo sphere out to bright grey.
+        sheenRoughness={0.1}
         anisotropy={scalars.anisotropy}
         anisotropyRotation={scalars.anisotropyRotation}
         anisotropyMap={anisotropyMap ?? null}

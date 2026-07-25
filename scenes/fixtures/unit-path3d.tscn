@@ -1,0 +1,58 @@
+[gd_scene load_steps=7 format=3]
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
+size = Vector2(6, 6)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ground"]
+albedo_color = Color(0.75, 0.75, 0.75, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_ref"]
+size = Vector3(1, 1, 1)
+
+[sub_resource type="Curve3D" id="Curve3D_path"]
+_data = {
+"points": PackedVector3Array(0, 0, 0, 0, 0, 0, -1.7, 0.3, 0, 0, 0, 0, 0, 0, 0, -0.7, 1.35, 0, 0, 0, 0, 0, 0, 0, 0.7, 1.35, 0, 0, 0, 0, 0, 0, 0, 1.7, 0.3, 0),
+"tilts": PackedFloat32Array(0, 0, 0, 0)
+}
+point_count = 4
+
+[sub_resource type="SphereMesh" id="SphereMesh_marker"]
+radius = 0.15
+height = 0.3
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_marker"]
+albedo_color = Color(0.9, 0.4, 0.1, 1)
+
+[node name="Root" type="Node3D"]
+
+[node name="Ground" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1, 0)
+mesh = SubResource("PlaneMesh_ground")
+surface_material_override/0 = SubResource("StandardMaterial3D_ground")
+
+[node name="Reference" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
+mesh = SubResource("BoxMesh_ref")
+
+[node name="ArcPath" type="Path3D" parent="."]
+curve = SubResource("Curve3D_path")
+
+[node name="Point0" type="MeshInstance3D" parent="ArcPath"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.7, 0.3, 0)
+mesh = SubResource("SphereMesh_marker")
+surface_material_override/0 = SubResource("StandardMaterial3D_marker")
+
+[node name="Point1" type="MeshInstance3D" parent="ArcPath"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.7, 1.35, 0)
+mesh = SubResource("SphereMesh_marker")
+surface_material_override/0 = SubResource("StandardMaterial3D_marker")
+
+[node name="Point2" type="MeshInstance3D" parent="ArcPath"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.7, 1.35, 0)
+mesh = SubResource("SphereMesh_marker")
+surface_material_override/0 = SubResource("StandardMaterial3D_marker")
+
+[node name="Point3" type="MeshInstance3D" parent="ArcPath"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.7, 0.3, 0)
+mesh = SubResource("SphereMesh_marker")
+surface_material_override/0 = SubResource("StandardMaterial3D_marker")

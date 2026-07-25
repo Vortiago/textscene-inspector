@@ -168,7 +168,7 @@ describe('attribute_data layout', () => {
 
   it('emits no UVs for a compressed-attribute surface rather than garbage floats', () => {
     // uint16-quantised UVs scaled by uv_scale are not decoded; reading them as
-    // float32 produced values like 6.7e37 (docs/PARITY-LIMITATIONS.md).
+    // float32 produced values like 6.7e37.
     const compressed = COLOR_UV_TRES.replace('"format": 4121', '"format": 536875025');
 
     expect(decodeArrayMesh(compressed).surfaces[0]!.uvs).toBeUndefined();

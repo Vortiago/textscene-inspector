@@ -1,0 +1,34 @@
+; A StandardMaterial3D with billboard_mode = ENABLED on a QuadMesh: the quad must
+; turn to FACE the camera. The golden frames it from the editor's isometric angle,
+; where a non-billboarded +Z quad would foreshorten to a thin sliver — so if
+; billboarding ever regresses, the asymmetric walk sprite collapses and the golden
+; fails. A second quad (billboard_mode = DISABLED) sits beside it as the fixed
+; reference that SHOULD foreshorten.
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Texture2D" path="res://textures/dodge-walk1.png" id="1_tex"]
+
+[sub_resource type="QuadMesh" id="Quad_1"]
+size = Vector2(2, 2)
+
+[sub_resource type="StandardMaterial3D" id="Mat_Billboard"]
+shading_mode = 0
+albedo_texture = ExtResource("1_tex")
+billboard_mode = 1
+
+[sub_resource type="StandardMaterial3D" id="Mat_Fixed"]
+shading_mode = 0
+albedo_texture = ExtResource("1_tex")
+billboard_mode = 0
+
+[node name="Billboard" type="Node3D"]
+
+[node name="Facing" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.5, 0, 0)
+mesh = SubResource("Quad_1")
+surface_material_override/0 = SubResource("Mat_Billboard")
+
+[node name="Fixed" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 0, 0)
+mesh = SubResource("Quad_1")
+surface_material_override/0 = SubResource("Mat_Fixed")

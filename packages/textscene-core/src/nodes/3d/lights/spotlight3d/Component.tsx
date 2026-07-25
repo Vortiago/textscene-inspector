@@ -10,7 +10,12 @@ import type { SpotLight3DProperties } from './types';
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../../r3f/nodeTransform';
 import { parseColorToHex } from '../../../../utils/colorParser';
-import { LIGHT_INTENSITY_SCALE, DEFAULT_SHADOW_BIAS } from '../../../../r3f/lightConstants';
+import {
+  LIGHT_INTENSITY_SCALE,
+  DEFAULT_SHADOW_BIAS,
+  SHADOW_MAP_SIZE,
+  SHADOW_NORMAL_BIAS,
+} from '../../../../r3f/lightConstants';
 import { LightWithTarget } from '../shared/lightShared';
 import { SpotLightGizmo } from '../shared/lightHelpers';
 
@@ -55,7 +60,10 @@ export function SpotLight3D({ node, children }: NodeComponentProps) {
             penumbra={penumbra}
             decay={decay}
             castShadow={properties.shadow_enabled}
+            shadow-mapSize-width={SHADOW_MAP_SIZE}
+            shadow-mapSize-height={SHADOW_MAP_SIZE}
             shadow-bias={bias}
+            shadow-normalBias={SHADOW_NORMAL_BIAS}
             shadow-camera-near={0.5}
             shadow-camera-far={properties.spot_range}
             target={target}

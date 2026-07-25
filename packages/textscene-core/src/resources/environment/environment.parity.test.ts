@@ -5,7 +5,7 @@
  *   SKY(3) emit the flat colour, and BG(0) — the default — emits the BACKGROUND
  *   colour (see renderer.bg-ambient.test.ts for that table).
  * - scene fog is driven by Godot's SCREEN-SPACE fog (fog_enabled), not by
- *   volumetric_fog (which has no three.js equivalent — see PARITY-LIMITATIONS).
+ *   volumetric_fog (which has no three.js equivalent).
  */
 import { describe, it, expect } from 'vitest';
 import { parseEnvironment } from './parser';

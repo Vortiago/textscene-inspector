@@ -1,6 +1,6 @@
 # TextScene Inspector — Web Previewer User Guide
 
-The TextScene Inspector web previewer is a browser-based viewer for Godot `.tscn` scene files. Open your own `.tscn` from disk or pick a fixture from the scene palette (Ctrl/Cmd+K), the 3D scene renders inline, and the right-hand Split Dock shows the scene-tree hierarchy and per-node properties. You can orbit the camera (left-drag), zoom (scroll wheel), pan (right-drag or middle-drag), and click a mesh in the viewport to select it.
+The TextScene Inspector web previewer is a browser-based viewer for Godot `.tscn` scene files. Open your own `.tscn` from disk or pick a fixture from the scene palette (Ctrl/Cmd+K), the 3D scene renders inline, and the right-hand Split Dock shows the scene-tree hierarchy and per-node properties. The viewport navigates like Godot's own 3D editor (see below), and clicking a mesh selects it.
 
 This guide walks through every user-visible feature against the verification scenarios in `docs/user-flows.md`. Each section captures one flow, embeds the screenshot the verifier took, and is honest about what works today and what does not.
 
@@ -8,11 +8,32 @@ This guide walks through every user-visible feature against the verification sce
 
 ---
 
+## Viewport navigation
+
+The 3D viewport uses Godot's own editor navigation, so muscle memory carries over:
+
+| Input | Action |
+| --- | --- |
+| Middle-drag | Orbit |
+| Shift + middle-drag | Pan |
+| Ctrl + middle-drag, or the wheel | Zoom |
+| Alt + left-drag / Alt + Shift + left-drag | Orbit / pan, for mice and trackpads without a middle button |
+| Right-drag | Freelook — turn the camera in place |
+| W A S D Q E while right-dragging | Fly (Shift sprints) |
+| Numpad 1 / 3 / 7 | Front / right / top view; Ctrl for the opposite face |
+| Numpad 5 | Perspective ⇄ orthographic |
+| F | Frame the selected node, or the whole scene when nothing is selected |
+
+Plain left-drag deliberately does nothing: left-click selects, as it does in Godot.
+There is no damping — the camera stops the moment you release.
+
+---
+
 ## Opening the app — WEB-01
 
 **Status:** PASS
 
-Start the dev server and open the URL the Vite banner prints (typically `http://localhost:3000/`). The page boots directly to a working canvas — no flag, no setup, no waiting for assets beyond the initial bundle. On a first visit the default scene is `unit-plane-mesh.tscn` (WI-UX-15: a single PlaneMesh with zero external resources, so the first paint is clean rather than a wall of missing-file warnings). On subsequent visits the app restores the last scene you had open (persisted in `localStorage`), and a `?fixture=<file>` query parameter deep-links straight to a specific scene — handy for sharing a link or scripting captures. The Split Dock on the right shows the scene-tree panel on top and the tabbed detail panel (Inspector / Resources / Cameras) below.
+Start the dev server and open the URL the Vite banner prints (typically `http://localhost:3000/`). The page boots directly to a working canvas — no flag, no setup, no waiting for assets beyond the initial bundle. On a first visit the default scene is `unit-plane-mesh.tscn` (WI-UX-15: a single PlaneMesh with zero external resources, so the first paint is clean rather than a wall of missing-file warnings). On subsequent visits the app restores the last scene you had open (persisted in `localStorage`), and a `?fixture=<file>` query parameter deep-links straight to a specific scene — handy for sharing a link or scripting captures. Append `&camera=<node path>` (e.g. `?fixture=integration-material-features.tscn&camera=Root/Camera3D`) to open looking through a scene's own Camera3D instead of the free-orbit editor camera; the path is the one the Cameras panel lists, and an unknown path just falls back to free orbit. It is read once at open (the usual camera controls take over from there) and is not written back into the URL. The Split Dock on the right shows the scene-tree panel on top and the tabbed detail panel (Inspector / Resources / Cameras) below.
 
 ![App boots to a working canvas](screenshots/web/web-01-a.png)
 

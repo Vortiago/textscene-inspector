@@ -6,15 +6,16 @@
   "type": "module",
   "scripts": {
     "copy-fixtures": "node scripts/copy-fixtures.js",
-    "predev": "pnpm copy-fixtures && pnpm --filter @textscene/core build",
+    "stage-gallery": "node scripts/stage-gallery.mjs",
+    "predev": "pnpm copy-fixtures && pnpm stage-gallery && pnpm --filter @textscene/core build",
     "dev": "vite",
-    "prebuild": "pnpm copy-fixtures && pnpm --filter @textscene/core build",
+    "prebuild": "pnpm copy-fixtures && pnpm stage-gallery && pnpm --filter @textscene/core build",
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
     "pretype-check": "pnpm --filter @textscene/core build",
     "type-check": "tsc --noEmit",
-    "clean": "rimraf dist node_modules/.vite public/fixtures"
+    "clean": "rimraf dist node_modules/.vite public/fixtures public/parity"
   },
   "keywords": [
     "tscn",

@@ -13,7 +13,7 @@
  * recompute every render.
  */
 import { useEffect, useMemo, useState } from 'react';
-import { useHierarchy } from './contexts/HierarchyContext.js';
+import { useHierarchy, useOptionalHierarchy } from './contexts/HierarchyContext.js';
 import { useResourceLoader } from '../resources/useResource.js';
 import {
   collectLiveNodes,
@@ -37,7 +37,10 @@ export function liveTreeContext(
   sceneGraph: SceneGraph | null | undefined,
   loader: ResourceLoader | null | undefined
 ): { roots: readonly TscnNode[]; ctx: LiveTreeContext } | null {
-  const root = sceneGraph?.scenes.get(sceneGraph.rootScene);
+  // `scenes` is optional-chained too: readers outside the canvas (the toolbar)
+  // see whatever the host put in HierarchyContext, which is not always a fully
+  // built SceneGraph.
+  const root = sceneGraph?.scenes?.get(sceneGraph.rootScene);
   if (!root) return null;
   return {
     roots: root.nodes,
@@ -74,7 +77,9 @@ export function useLiveTreeVersion(loader: ResourceLoader | null | undefined): n
 }
 
 export function useLiveSceneNodes(predicate: (node: TscnNode) => boolean): LiveTreeEntry[] {
-  const { sceneGraph } = useHierarchy();
+  // Optional so viewport-level readers (the preview lighting) work in the
+  // empty-canvas and test-renderer cases, where no scene is mounted at all.
+  const sceneGraph = useOptionalHierarchy()?.sceneGraph ?? null;
   const loader = useResourceLoader();
   const version = useLiveTreeVersion(loader);
 

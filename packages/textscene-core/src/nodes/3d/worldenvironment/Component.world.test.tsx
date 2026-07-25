@@ -107,7 +107,14 @@ describe('WorldEnvironment (assertions 81–89)', () => {
     const ambients = renderer.scene.findAllByType('AmbientLight');
     expect(ambients.length).toBeGreaterThan(0);
     const intensity = (ambients[0]!.instance as { intensity: number }).intensity;
-    expect(intensity).toBeCloseTo(2, 3);
+
+    // Godot adds a constant ambient as `ambient_light * albedo` with no 1/PI;
+    // three's getAmbientLightIrradiance returns the colour unscaled and then
+    // multiplies by albedo/PI. So the intensity that makes a white energy-2.0
+    // ambient land a Lambertian surface at 2x its own albedo is energy * PI —
+    // asserted against PI directly rather than against the constant, which
+    // would only restate the source line.
+    expect(intensity).toBeCloseTo(2 * Math.PI, 6);
   });
 
   it('#86 fog_enabled=false → scene.fog === null', async () => {

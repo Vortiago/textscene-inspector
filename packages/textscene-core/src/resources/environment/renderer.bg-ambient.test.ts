@@ -45,7 +45,11 @@ describe('ambient from the background source', () => {
   });
 
   it('emits no flat ambient for a sky background — that path is a cubemap', () => {
-    expect(ambientFor({ background_mode: '2' })).toBeNull();
+    // The flat term survives with zero energy rather than vanishing: Godot
+    // blends `mix(flat, sky, sky_contribution)`, so the colour is still the
+    // other end of a blend that a contribution below 1.0 would reopen.
+    // See renderer.sky-ambient.test.ts for the cubemap side.
+    expect(ambientFor({ background_mode: '2' })?.energy).toBe(0);
   });
 
   it('emits none when the source is explicitly DISABLED (1)', () => {

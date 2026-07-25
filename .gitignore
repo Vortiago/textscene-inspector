@@ -59,6 +59,9 @@ settings.local.json
 # Test fixtures copied to web app during build
 apps/textscene-web/public/fixtures/
 
+# Comparison gallery staged into the deploy bundle by `pnpm stage-gallery`
+apps/textscene-web/public/parity/
+
 # On-demand open-source games corpus — fetched locally with `pnpm vendor:games`,
 # never committed (keeps the repo lean). The generated games manifest is written
 # alongside the base manifest and merged at runtime by fixturesAll.ts.
@@ -89,5 +92,6 @@ test-*.png
 tscn-rescue-*.png
 # Visual-regression failure artifacts (actual/diff PNGs)
 scripts/visual/output/
+scripts/godot-ref/output/
 scripts/showcase/output/
 scripts/e2e-screenshots/

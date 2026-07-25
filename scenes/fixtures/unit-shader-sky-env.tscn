@@ -1,0 +1,67 @@
+[gd_scene load_steps=9 format=3 uid="uid://unitshaderskyenv"]
+
+; Twin of unit-stage-ambient-ibl.tscn with one change: the sky is an unsupported
+; custom ShaderMaterial. Pins that an unresolvable sky still leaves AgX + ambient
+; applied (diffuse identical to the twin) — only the reflection and background go.
+
+[ext_resource type="Shader" path="res://sky-shader-stub.gdshader" id="1_shader"]
+
+[sub_resource type="ShaderMaterial" id="SkyMat_shader"]
+shader = ExtResource("1_shader")
+
+[sub_resource type="Sky" id="Sky_shader"]
+sky_material = SubResource("SkyMat_shader")
+
+[sub_resource type="Environment" id="Environment_stage"]
+background_mode = 2
+sky = SubResource("Sky_shader")
+ambient_light_source = 2
+ambient_light_color = Color(0.6, 0.6, 0.6, 1)
+ambient_light_sky_contribution = 0.0
+tonemap_mode = 4
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
+size = Vector2(7, 7)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_grass"]
+albedo_color = Color(0.25, 0.55, 0.15, 1)
+roughness = 1.0
+
+[sub_resource type="BoxMesh" id="BoxMesh_caster"]
+size = Vector3(2.4, 2.4, 2.4)
+
+[sub_resource type="SphereMesh" id="SphereMesh_metal"]
+radius = 0.9
+height = 1.8
+radial_segments = 48
+rings = 24
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_metal"]
+albedo_color = Color(0.75, 0.75, 0.78, 1)
+metallic = 1.0
+roughness = 0.1
+
+[node name="ShaderSkyEnvRoot" type="Node3D"]
+
+[node name="Ground" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1, 0)
+mesh = SubResource("PlaneMesh_ground")
+surface_material_override/0 = SubResource("StandardMaterial3D_grass")
+
+[node name="Caster" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.6, 0.2, -0.4)
+mesh = SubResource("BoxMesh_caster")
+cast_shadow = 3
+
+[node name="MetalSphere" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.7, 0, 0.6)
+mesh = SubResource("SphereMesh_metal")
+surface_material_override/0 = SubResource("StandardMaterial3D_metal")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866025, -0.433013, 0.25, 0, 0.5, 0.866025, -0.5, -0.75, 0.433013, 2, 4, 2)
+light_energy = 1.5
+shadow_enabled = true
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_stage")

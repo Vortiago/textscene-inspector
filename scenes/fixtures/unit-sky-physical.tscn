@@ -1,0 +1,44 @@
+; PhysicalSkyMaterial — Godot's Preetham atmospheric scattering sky, with the
+; sun low enough that the Rayleigh term reddens the horizon.
+;
+; The scene supplies its own DirectionalLight3D (the shader's LIGHT0, without
+; which a physical sky has no sun to scatter and renders black) and its own
+; WorldEnvironment, so no editor preview applies.
+[gd_scene load_steps=6 format=3]
+
+[sub_resource type="PhysicalSkyMaterial" id="Sky_mat"]
+turbidity = 4.0
+sun_disk_scale = 3.0
+
+[sub_resource type="Sky" id="Sky_1"]
+sky_material = SubResource("Sky_mat")
+
+[sub_resource type="Environment" id="Env_1"]
+background_mode = 2
+sky = SubResource("Sky_1")
+tonemap_mode = 2
+
+[sub_resource type="PlaneMesh" id="Plane_1"]
+size = Vector2(12, 12)
+
+[sub_resource type="SphereMesh" id="Sphere_1"]
+
+[node name="SkyPhysical" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env_1")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(-1, 0, 0, 0, 0.259, 0.966, 0, 0.966, -0.259, 0, 0, 0)
+light_angular_distance = 1.0
+
+[node name="Ground" type="MeshInstance3D" parent="."]
+mesh = SubResource("Plane_1")
+
+[node name="Ball" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+mesh = SubResource("Sphere_1")
+
+[node name="Camera" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.985, 0.174, 0, -0.174, 0.985, 0, 1.8, 5)
+fov = 60.0

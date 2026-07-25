@@ -6,7 +6,7 @@
  * `heightmap_scale` depth scalar (default 5.0). The render side maps it to
  * three.js `MeshStandardMaterial.displacementScale` + a `displacementMap` (the
  * `heightmap_texture`) — a vertex-displacement approximation of Godot's
- * texture-space parallax (see the render note / PARITY-LIMITATIONS).
+ * texture-space parallax.
  *
  * Unlike clearcoat/rim, `heightmap_scale` is a SCALE FACTOR, NOT a 0..1 value:
  * it may exceed 1 and may be negative (inverting the displacement), so the

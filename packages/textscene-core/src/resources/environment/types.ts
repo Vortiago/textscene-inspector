@@ -37,6 +37,12 @@ export interface EnvironmentProperties {
   ambient_light_source: number;
   ambient_light_color: Color;
   ambient_light_energy: number;
+  /**
+   * How much of the ambient comes from the sky rather than
+   * `ambient_light_color`, 0..1. Only read when the ambient source is a
+   * cubemap; at the default 1.0 the flat colour contributes nothing.
+   */
+  ambient_light_sky_contribution: number;
 
   // Screen-space fog (maps to THREE.Fog/FogExp2)
   fog_enabled: boolean;
@@ -50,6 +56,21 @@ export interface EnvironmentProperties {
   volumetric_fog_density: number;
   volumetric_fog_albedo: Color;
   volumetric_fog_emission: Color;
+
+  // Glow / bloom (a compositor post-process — a bright-pass blur over HDR
+  // luminance, added back before tonemapping). The editor preview environment
+  // enables it, which is why emissive materials bloom in Godot's editor.
+  glow_enabled: boolean;
+  /** Overall additive contribution of the blurred glow buffer. Default 0.8. */
+  glow_intensity: number;
+  /** Softens/broadens the blur (higher = wider halo). Default 1.0. */
+  glow_strength: number;
+  /** Lifts even sub-threshold pixels into the glow buffer, 0..1. Default 0.0. */
+  glow_bloom: number;
+  /** HDR luminance above which a pixel contributes to glow. Default 1.0. */
+  glow_hdr_threshold: number;
+  /** 0 ADDITIVE, 1 SCREEN, 2 SOFTLIGHT (default), 3 REPLACE, 4 MIX. */
+  glow_blend_mode: number;
 
   // Adjustments (parsed but warned in v1)
   adjustment_enabled: boolean;

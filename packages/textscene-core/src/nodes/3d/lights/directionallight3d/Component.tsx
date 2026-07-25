@@ -9,11 +9,17 @@ import type { DirectionalLight3DProperties } from './types';
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../../r3f/nodeTransform';
 import { parseColorToHex } from '../../../../utils/colorParser';
-import { LIGHT_INTENSITY_SCALE, DEFAULT_SHADOW_BIAS } from '../../../../r3f/lightConstants';
+import {
+  LIGHT_INTENSITY_SCALE,
+  DEFAULT_SHADOW_BIAS,
+  DIRECTIONAL_SHADOW_FRUSTUM_HALF,
+  DIRECTIONAL_SHADOW_NEAR,
+  SHADOW_MAP_SIZE,
+  SHADOW_NORMAL_BIAS,
+} from '../../../../r3f/lightConstants';
 import { LightWithTarget } from '../shared/lightShared';
 import { DirectionalLightGizmo } from '../shared/lightHelpers';
 
-const SHADOW_FRUSTUM_HALF = 20;
 
 export function DirectionalLight3D({ node, children }: NodeComponentProps) {
   const properties = node.properties as DirectionalLight3DProperties;
@@ -43,13 +49,16 @@ export function DirectionalLight3D({ node, children }: NodeComponentProps) {
             color={color}
             intensity={intensity}
             castShadow={properties.shadow_enabled}
+            shadow-mapSize-width={SHADOW_MAP_SIZE}
+            shadow-mapSize-height={SHADOW_MAP_SIZE}
             shadow-bias={bias}
-            shadow-camera-near={0.1}
+            shadow-normalBias={SHADOW_NORMAL_BIAS}
+            shadow-camera-near={DIRECTIONAL_SHADOW_NEAR}
             shadow-camera-far={shadowFar}
-            shadow-camera-left={-SHADOW_FRUSTUM_HALF}
-            shadow-camera-right={SHADOW_FRUSTUM_HALF}
-            shadow-camera-top={SHADOW_FRUSTUM_HALF}
-            shadow-camera-bottom={-SHADOW_FRUSTUM_HALF}
+            shadow-camera-left={-DIRECTIONAL_SHADOW_FRUSTUM_HALF}
+            shadow-camera-right={DIRECTIONAL_SHADOW_FRUSTUM_HALF}
+            shadow-camera-top={DIRECTIONAL_SHADOW_FRUSTUM_HALF}
+            shadow-camera-bottom={-DIRECTIONAL_SHADOW_FRUSTUM_HALF}
             target={target}
           />
           <DirectionalLightGizmo lightRef={lightRef} />

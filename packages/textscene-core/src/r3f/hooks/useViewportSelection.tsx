@@ -18,7 +18,7 @@
  * reproduces the historical "innermost node wins" behavior without R3F
  * bubbling.
  *
- * Drag-vs-click discrimination keeps OrbitControls drags from selecting:
+ * Drag-vs-click discrimination keeps navigation drags from selecting:
  * pointer-down records the position; pointer-up fires `setSelectedNodePath`
  * only if pointer travel stayed within `dragThresholdPx`.
  */

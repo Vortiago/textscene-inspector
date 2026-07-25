@@ -12,7 +12,7 @@
  *
  * Also carries a reset handler so the toolbar's "Reset Camera"
  * button can frame the orbit-controls back to its default. The canvas
- * registers its `OrbitControls.reset` via `registerResetHandler`; the
+ * registers the navigation handle's `reset` via `registerResetHandler`; the
  * toolbar calls `resetCamera()`.
  */
 
@@ -56,7 +56,7 @@ export interface CameraControlContextValue {
   resetCamera: () => void;
   /**
    * Called from `<TscnCanvas>` so the toolbar's reset button can drive
-   * the canvas's `<OrbitControls>`. Returns an unregister callback so
+   * the canvas's `<GodotEditorControls>`. Returns an unregister callback so
    * the canvas can drop the handler on unmount.
    *
    * Implementation detail: the handler is stored in a ref so consumers
@@ -104,10 +104,21 @@ function useHandlerSlot<T>(): {
 
 export interface CameraControlProviderProps {
   children: ReactNode;
+  /**
+   * The camera to activate on mount, if any — a Camera3D node path (as
+   * `useNodePath` reports it) the host resolved from a deep-link (the web
+   * previewer's `?camera=` query param). `<ActiveCameraSwitcher>` looks it up
+   * once the scene has rendered; switching scenes drops back to free-orbit
+   * (`<SceneChangeResetter>`), so it only ever frames the deep-linked scene.
+   */
+  initialActiveCameraPath?: string | null;
 }
 
-export function CameraControlProvider({ children }: CameraControlProviderProps) {
-  const [activeCameraPath, setActiveCameraPath] = useState<string | null>(null);
+export function CameraControlProvider({
+  children,
+  initialActiveCameraPath = null,
+}: CameraControlProviderProps) {
+  const [activeCameraPath, setActiveCameraPath] = useState<string | null>(initialActiveCameraPath);
   const [frame2D, setFrame2D] = useState<Frame2DRequest | null>(null);
   const frame2DIdRef = useRef(0);
 

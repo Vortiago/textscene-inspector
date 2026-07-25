@@ -1,0 +1,1446 @@
+{
+  "godotVersion": "4.6.3.stable.fedora.7d41c59c4",
+  "generated": "pnpm nodes:catalog",
+  "nodes": [
+    {
+      "name": "AcceptDialog",
+      "category": "Other",
+      "group": "UI — windows",
+      "supported": false
+    },
+    {
+      "name": "AimModifier3D",
+      "category": "3D",
+      "group": "Skeleton, bones & IK",
+      "supported": false
+    },
+    {
+      "name": "AnimatableBody2D",
+      "category": "2D",
+      "group": "Physics — bodies",
+      "supported": false
+    },
+    {
+      "name": "AnimatableBody3D",
+      "category": "3D",
+      "group": "Physics — bodies",
+      "supported": false
+    },
+    {
+      "name": "AnimatedSprite2D",
+      "category": "2D",
+      "group": "2D rendering",
+      "supported": true
+    },
+    {
+      "name": "AnimatedSprite3D",
+      "category": "3D",
+      "group": "Meshes & rendering",
+      "supported": false
+    },
+    {
+      "name": "AnimationPlayer",
+      "category": "Other",
+      "group": "Animation",
+      "supported": true
+    },
+    {
+      "name": "AnimationTree",
+      "category": "Other",
+      "group": "Animation",
+      "supported": true
+    },
+    {
+      "name": "Area2D",
+      "category": "2D",
+      "group": "Physics — areas",
+      "supported": true
+    },
+    {
+      "name": "Area3D",
+      "category": "3D",
+      "group": "Physics — areas",
+      "supported": true
+    },
+    {
+      "name": "AspectRatioContainer",
+      "category": "2D",
+      "group": "UI — containers",
+      "supported": false
+    },
+    {
+      "name": "AudioListener2D",
+      "category": "2D",
+      "group": "Audio",
+      "supported": false
+    },
+    {
+      "name": "AudioListener3D",
+      "category": "3D",
+      "group": "Audio",
+      "supported": false
+    },
+    {
+      "name": "AudioStreamPlayer",
+      "category": "Other",
+      "group": "Audio",
+      "supported": true
+    },
+    {
+      "name": "AudioStreamPlayer2D",
+      "category": "2D",
+      "group": "Audio",
+      "supported": true
+    },
+    {
+      "name": "AudioStreamPlayer3D",
+      "category": "3D",
+      "group": "Audio",
+      "supported": true
+    },
+    {
+      "name": "BackBufferCopy",
+      "category": "2D",
+      "group": "Canvas effects",
+      "supported": false
+    },
+    {
+      "name": "BaseButton",
+      "category": "2D",
+      "group": "UI — controls",
+      "supported": false
+    },
+    {
+      "name": "Bone2D",
+      "category": "2D",
+      "group": "Skeleton, bones & IK",
+      "supported": false
+    },
+    {
+      "name": "BoneAttachment3D",
+      "category": "3D",
+      "group": "Skeleton, bones & IK",
+      "supported": false
+    },
+    {
+      "name": "BoneConstraint3D",
+      "category": "3D",
+      "group": "Skeleton, bones & IK",
+      "supported": false
+    },
+    {
+      "name": "BoneTwistDisperser3D",
+      "category": "3D",
+      "group": "Skeleton, bones & IK",
+      "supported": false
+    },
+    {
+      "name": "BoxContainer",
+      "category": "2D",
+      "group": "UI — containers",
+      "supported": false
+    },
+    {
+      "name": "Button",
+      "category": "2D",
+      "group": "UI — controls",
+      "supported": true
+    },
+    {
+      "name": "Camera2D",
+      "category": "2D",
+      "group": "Cameras",
+      "supported": true
+    },
+    {
+      "name": "Camera3D",
+      "category": "3D",
+      "group": "Cameras",
+      "supported": true
+    },
+    {
+      "name": "CanvasGroup",
+      "category": "2D",
+      "group": "Canvas effects",
+      "supported": false
+    },
+    {
+      "name": "CanvasLayer",
+      "category": "Other",
+      "group": "Canvas layers",
+      "supported": true
+    },
+    {
+      "name": "CanvasModulate",
+      "category": "2D",
+      "group": "Canvas effects",
+      "supported": true
+    },
+    {
+      "name": "CCDIK3D",
+      "category": "3D",
+      "group": "Skeleton, bones & IK",
+      "supported": false
+    },
+    {
+      "name": "CenterContainer",
+      "category": "2D",
+      "group": "UI — containers",
+      "supported": true
+    },
+    {
+      "name": "CharacterBody2D",
+      "category": "2D",
+      "group": "Physics — bodies",
+      "supported": false
+    },
+    {
+      "name": "CharacterBody3D",
+      "category": "3D",
+      "group": "Physics — bodies",
+      "supported": true
+    },
+    {
+      "name": "CheckBox",
+      "category": "2D",
+      "group": "UI — controls",
+      "supported": true
+    },
+    {
+      "name": "CheckButton",
+      "category": "2D",
+      "group": "UI — controls",
+      "supported": false
+    },
+    {
+      "name": "CodeEdit",
+      "category": "2D",
+      "group": "UI — controls",
+      "supported": false
+    },
+    {
+      "name": "CollisionPolygon2D",
+      "category": "2D",
+      "group": "Collision shapes",
+      "supported": false
+    },
+    {
+      "name": "CollisionPolygon3D",
+      "category": "3D",
+      "group": "Collision shapes",
+      "supported": false
+    },
+    {
+      "name": "CollisionShape2D",
+      "category": "2D",
+      "group": "Collision shapes",
+      "supported": true
+    },
+    {
+      "name": "CollisionShape3D",
+      "category": "3D",
+      "group": "Collision shapes",
+      "supported": true
+    },
+    {
+      "name": "ColorPicker",
+      "category": "2D",
+      "group": "UI — containers",
+      "supported": false
+    },
+    {
+      "name": "ColorPickerButton",
+      "category": "2D",
+      "group": "UI — controls",
+      "supported": false
+    },
+    {
+      "name": "ColorRect",
+      "category": "2D",
+      "group": "UI — controls",
+      "supported": true
+    },
+    {
+      "name": "ConeTwistJoint3D",
+      "category": "3D",
+      "group": "Physics — joints",
+      "supported": false
+    },
+    {
+      "name": "ConfirmationDialog",
+      "category": "Other",
+      "group": "UI — windows",
+      "supported": false
+    },
+    {
+      "name": "Container",
+      "category": "2D",
+      "group": "UI — containers",
+      "supported": false
+    },
+    {
+      "name": "Control",
+      "category": "2D",
+      "group": "UI — controls",
+      "supported": true
+    },
+    {
+      "name": "ConvertTransformModifier3D",
+      "category": "3D",
+      "group": "Skeleton, bones & IK",
+      "supported": false
+    },
+    {
+      "name": "CopyTransformModifier3D",
+      "category": "3D",
+      "group": "Skeleton, bones & IK",
+      "supported": false
+    },
+    {
+      "name": "CPUParticles2D",
+      "category": "2D",
+      "group": "Particles",
+      "supported": false
+    },
+    {
+      "name": "CPUParticles3D",
+      "category": "3D",
+      "group": "Particles",
+      "supported": false
+    },
+    {
+      "name": "CSGBox3D",
+      "category": "3D",
+      "group": "CSG",
+      "supported": true
+    },
+    {
+      "name": "CSGCombiner3D",
+      "category": "3D",
+      "group": "CSG",
+      "supported": false
+    },
+    {
+      "name": "CSGCylinder3D",
+      "category": "3D",
+      "group": "CSG",
+      "supported": true
+    },
+    {
+      "name": "CSGMesh3D",
+      "category": "3D",
+      "group": "CSG",
+      "supported": false
+    },
+    {
+      "name": "CSGPolygon3D",
+      "category": "3D",
+      "group": "CSG",
+      "supported": false
+    },
+    {
+      "name": "CSGSphere3D",
+      "category": "3D",
+      "group": "CSG",
+      "supported": true
+    },
+    {
+      "name": "CSGTorus3D",
+      "category": "3D",
+      "group": "CSG",
+      "supported": false
+    },
+    {
+      "name": "DampedSpringJoint2D",
+      "category": "2D",
+      "group": "Physics — joints",
+      "supported": false
+    },
+    {
+      "name": "Decal",
+      "category": "3D",
+      "group": "Reflection & global illumination",
+      "supported": true
+    },
+    {
+      "name": "DirectionalLight2D",
+      "category": "2D",
+      "group": "Lighting",
+      "supported": false
+    },
+    {
+      "name": "DirectionalLight3D",
+      "category": "3D",
+      "group": "Lighting",
+      "supported": true
+    },
+    {
+      "name": "FABRIK3D",
+      "category": "3D",
+      "group": "Skeleton, bones & IK",
+      "supported": false
+    },
+    {
+      "name": "FileDialog",
+      "category": "Other",
+      "group": "UI — windows",
+      "supported": false
+    },
+    {
+      "name": "FlowContainer",
+      "category": "2D",
+      "group": "UI — containers",
+      "supported": false
+    },
+    {
+      "name": "FogVolume",
+      "category": "3D",
+      "group": "Reflection & global illumination",
+      "supported": false
+    },
+    {
+      "name": "FoldableContainer",
+      "category": "2D",
+      "group": "UI — containers",
+      "supported": false
+    },
+    {
+      "name": "Generic6DOFJoint3D",
+      "category": "3D",
+      "group": "Physics — joints",
+      "supported": false
+    },
+    {
+      "name": "GeometryInstance3D",
+      "category": "3D",
+      "group": "Meshes & rendering",
+      "supported": false
+    },
+    {
+      "name": "GPUParticles2D",
+      "category": "2D",
+      "group": "Particles",
+      "supported": false
+    },
+    {
+      "name": "GPUParticles3D",
+      "category": "3D",
+      "group": "Particles",
+      "supported": true
+    },
+    {
+      "name": "GPUParticlesAttractorBox3D",
+      "category": "3D",
+      "group": "Particles",
+      "supported": false
+    },
+    {
+      "name": "GPUParticlesAttractorSphere3D",
+      "category": "3D",
+      "group": "Particles",
+      "supported": false
+    },
+    {
+      "name": "GPUParticlesAttractorVectorField3D",
+      "category": "3D",
+      "group": "Particles",
+      "supported": false
+    },
+    {
+      "name": "GPUParticlesCollisionBox3D",
+      "category": "3D",
+      "group": "Particles",
+      "supported": false
+    },
+    {
+      "name": "GPUParticlesCollisionHeightField3D",
+      "category": "3D",
+      "group": "Particles",
+      "supported": false
+    },
+    {
+      "name": "GPUParticlesCollisionSDF3D",
+      "category": "3D",
+      "group": "Particles",
+      "supported": false
+    },
+    {
+      "name": "GPUParticlesCollisionSphere3D",
+      "category": "3D",
+      "group": "Particles",
+      "supported": false
+    },
+    {
+      "name": "GraphEdit",
+      "category": "2D",
+      "group": "UI — controls",
+      "supported": false
+    },
+    {
+      "name": "GraphElement",
+      "category": "2D",
+      "group": "UI — containers",
+      "supported": false
+    },
+    {
+      "name": "GraphFrame",
+      "category": "2D",
+      "group": "UI — containers",
+      "supported": false
+    },
+    {
+      "name": "GraphNode",
+      "category": "2D",
+      "group": "UI — containers",
+      "supported": false
+    },
+    {
+      "name": "GridContainer",
+      "category": "2D",
+      "group": "UI — containers",
+      "supported": true
+    },
+    {
+      "name": "GridMap",
+      "category": "3D",
+      "group": "Tilemaps & grids",
+      "supported": true
+    },
+    {
+      "name": "GrooveJoint2D",
+      "category": "2D",
+      "group": "Physics — joints",
+      "supported": false
+    },
+    {
+      "name": "HBoxContainer",
+      "category": "2D",
+      "group": "UI — containers",
+      "supported": true
+    },
+    {
+      "name": "HFlowContainer",
+      "category": "2D",
+      "group": "UI — containers",
+      "supported": false
+    },
+    {
+      "name": "HingeJoint3D",
+      "category": "3D",
+      "group": "Physics — joints",
+      "supported": false
+    },
+    {
+      "name": "HScrollBar",
+      "category": "2D",
+      "group": "UI — controls",
+      "supported": false
+    },
+    {
+      "name": "HSeparator",
+      "category": "2D",
+      "group": "UI — controls",
+      "supported": false
+    },
+    {
+      "name": "HSlider",
+      "category": "2D",
+      "group": "UI — controls",
+      "supported": false
+    },
+    {
+      "name": "HSplitContainer",
+      "category": "2D",
+      "group": "UI — containers",
+      "supported": false
+    },
+    {
+      "name": "HTTPRequest",
+      "category": "Other",
+      "group": "Networking",
+      "supported": false
+    },
+    {
+      "name": "ImporterMeshInstance3D",
+      "category": "3D",
+      "group": "Import / editor internals",
+      "supported": false
+    },
+    {
+      "name": "ItemList",
+      "category": "2D",
+      "group": "UI — controls",
+      "supported": false
+    },
+    {
+      "name": "JacobianIK3D",
+      "category": "3D",
+      "group": "Skeleton, bones & IK",
+      "supported": false
+    },
+    {
+      "name": "Label",
+      "category": "2D",
+      "group": "UI — controls",
+      "supported": true
+    },
+    {
+      "name": "Label3D",
+      "category": "3D",
+      "group": "Meshes & rendering",
+      "supported": true
+    },
+    {
+      "name": "LightmapGI",
+      "category": "3D",
+      "group": "Reflection & global illumination",
+      "supported": false
+    },
+    {
+      "name": "LightmapProbe",
+      "category": "3D",
+      "group": "Reflection & global illumination",
+      "supported": false
+    },
+    {
+      "name": "LightOccluder2D",
+      "category": "2D",
+      "group": "Lighting",
+      "supported": true
+    },
+    {
+      "name": "LimitAngularVelocityModifier3D",
+      "category": "3D",
+      "group": "Skeleton, bones & IK",
+      "supported": false
+    },
+    {
+      "name": "Line2D",
+      "category": "2D",
+      "group": "2D rendering",
+      "supported": true
+    },
+    {
+      "name": "LineEdit",
+      "category": "2D",
+      "group": "UI — controls",
+      "supported": false
+    },
+    {
+      "name": "LinkButton",
+      "category": "2D",
+      "group": "UI — controls",
+      "supported": false
+    },
+    {
+      "name": "LookAtModifier3D",
+      "category": "3D",
+      "group": "Skeleton, bones & IK",
+      "supported": false
+    },
+    {
+      "name": "MarginContainer",
+      "category": "2D",
+      "group": "UI — containers",
+      "supported": true
+    },
+    {
+      "name": "Marker2D",
+      "category": "2D",
+      "group": "Markers & helpers",
+      "supported": true
+    },
+    {
+      "name": "Marker3D",
+      "category": "3D",
+      "group": "Markers & helpers",
+      "supported": true
+    },
+    {
+      "name": "MenuBar",
+      "category": "2D",
+      "group": "UI — controls",
+      "supported": false
+    },
+    {
+      "name": "MenuButton",
+      "category": "2D",
+      "group": "UI — controls",
+      "supported": false
+    },
+    {
+      "name": "MeshInstance2D",
+      "category": "2D",
+      "group": "2D rendering",
+      "supported": false
+    },
+    {
+      "name": "MeshInstance3D",
+      "category": "3D",
+      "group": "Meshes & rendering",
+      "supported": true
+    },
+    {
+      "name": "ModifierBoneTarget3D",
+      "category": "3D",
+      "group": "Skeleton, bones & IK",
+      "supported": false
+    },
+    {
+      "name": "MultiMeshInstance2D",
+      "category": "2D",
+      "group": "2D rendering",
+      "supported": false
+    },
+    {
+      "name": "MultiMeshInstance3D",
+      "category": "3D",
+      "group": "Meshes & rendering",
+      "supported": false
+    },
+    {
+      "name": "MultiplayerSpawner",
+      "category": "Other",
+      "group": "Networking",
+      "supported": false
+    },
+    {
+      "name": "MultiplayerSynchronizer",
+      "category": "Other",
+      "group": "Networking",
+      "supported": false
+    },
+    {
+      "name": "NavigationAgent2D",
+      "category": "Other",
+      "group": "Navigation",
+      "supported": false
+    },
+    {
+      "name": "NavigationAgent3D",
+      "category": "Other",
+      "group": "Navigation",
+      "supported": true
+    },
+    {
+      "name": "NavigationLink2D",
+      "category": "2D",
+      "group": "Navigation",
+      "supported": false
+    },
+    {
+      "name": "NavigationLink3D",
+      "category": "3D",
+      "group": "Navigation",
+      "supported": false
+    },
+    {
+      "name": "NavigationObstacle2D",
+      "category": "2D",
+      "group": "Navigation",
+      "supported": false
+    },
+    {
+      "name": "NavigationObstacle3D",
+      "category": "3D",
+      "group": "Navigation",
+      "supported": true
+    },
+    {
+      "name": "NavigationRegion2D",
+      "category": "2D",
+      "group": "Navigation",
+      "supported": true
+    },
+    {
+      "name": "NavigationRegion3D",
+      "category": "3D",
+      "group": "Navigation",
+      "supported": true
+    },
+    {
+      "name": "NinePatchRect",
+      "category": "2D",
+      "group": "UI — controls",
+      "supported": false
+    },
+    {
+      "name": "Node",
+      "category": "Other",
+      "group": "Generic",
+      "supported": true
+    },
+    {
+      "name": "Node2D",
+      "category": "2D",
+      "group": "2D generic",
+      "supported": true
+    },
+    {
+      "name": "Node3D",
+      "category": "3D",
+      "group": "3D generic",
+      "supported": true
+    },
+    {
+      "name": "OccluderInstance3D",
+      "category": "3D",
+      "group": "Meshes & rendering",
+      "supported": false
+    },
+    {
+      "name": "OmniLight3D",
+      "category": "3D",
+      "group": "Lighting",
+      "supported": true
+    },
+    {
+      "name": "OpenXRBindingModifierEditor",
+      "category": "2D",
+      "group": "UI — containers",
+      "supported": false
+    },
+    {
+      "name": "OpenXRCompositionLayerCylinder",
+      "category": "3D",
+      "group": "XR / AR",
+      "supported": false
+    },
+    {
+      "name": "OpenXRCompositionLayerEquirect",
+      "category": "3D",
+      "group": "XR / AR",
+      "supported": false
+    },
+    {
+      "name": "OpenXRCompositionLayerQuad",
+      "category": "3D",
+      "group": "XR / AR",
+      "supported": false
+    },
+    {
+      "name": "OpenXRHand",
+      "category": "3D",
+      "group": "XR / AR",
+      "supported": false
+    },
+    {
+      "name": "OpenXRInteractionProfileEditor",
+      "category": "2D",
+      "group": "UI — containers",
+      "supported": false
+    },
+    {
+      "name": "OpenXRRenderModel",
+      "category": "3D",
+      "group": "XR / AR",
+      "supported": false
+    },
+    {
+      "name": "OpenXRRenderModelManager",
+      "category": "3D",
+      "group": "XR / AR",
+      "supported": false
+    },
+    {
+      "name": "OpenXRVisibilityMask",
+      "category": "3D",
+      "group": "Meshes & rendering",
+      "supported": false
+    },
+    {
+      "name": "OptionButton",
+      "category": "2D",
+      "group": "UI — controls",
+      "supported": true
+    },
+    {
+      "name": "Panel",
+      "category": "2D",
+      "group": "UI — controls",
+      "supported": true
+    },
+    {
+      "name": "PanelContainer",
+      "category": "2D",
+      "group": "UI — containers",
+      "supported": true
+    },
+    {
+      "name": "Parallax2D",
+      "category": "2D",
+      "group": "Parallax & scrolling",
+      "supported": false
+    },
+    {
+      "name": "ParallaxBackground",
+      "category": "Other",
+      "group": "Canvas layers",
+      "supported": false
+    },
+    {
+      "name": "ParallaxLayer",
+      "category": "2D",
+      "group": "Parallax & scrolling",
+      "supported": false
+    },
+    {
+      "name": "Path2D",
+      "category": "2D",
+      "group": "Paths & curves",
+      "supported": true
+    },
+    {
+      "name": "Path3D",
+      "category": "3D",
+      "group": "Paths & curves",
+      "supported": true
+    },
+    {
+      "name": "PathFollow2D",
+      "category": "2D",
+      "group": "Paths & curves",
+      "supported": true
+    },
+    {
+      "name": "PathFollow3D",
+      "category": "3D",
+      "group": "Paths & curves",
+      "supported": true
+    },
+    {
+      "name": "PhysicalBone2D",
+      "category": "2D",
+      "group": "Physics — bodies",
+      "supported": false
+    },
+    {
+      "name": "PhysicalBone3D",
+      "category": "3D",
+      "group": "Physics — bodies",
+      "supported": false
+    },
+    {
+      "name": "PhysicalBoneSimulator3D",
+      "category": "3D",
+      "group": "Skeleton, bones & IK",
+      "supported": false
+    },
+    {
+      "name": "PinJoint2D",
+      "category": "2D",
+      "group": "Physics — joints",
+      "supported": false
+    },
+    {
+      "name": "PinJoint3D",
+      "category": "3D",
+      "group": "Physics — joints",
+      "supported": false
+    },
+    {
+      "name": "PointLight2D",
+      "category": "2D",
+      "group": "Lighting",
+      "supported": true
+    },
+    {
+      "name": "Polygon2D",
+      "category": "2D",
+      "group": "2D rendering",
+      "supported": true
+    },
+    {
+      "name": "Popup",
+      "category": "Other",
+      "group": "UI — windows",
+      "supported": false
+    },
+    {
+      "name": "PopupMenu",
+      "category": "Other",
+      "group": "UI — windows",
+      "supported": false
+    },
+    {
+      "name": "PopupPanel",
+      "category": "Other",
+      "group": "UI — windows",
+      "supported": false
+    },
+    {
+      "name": "ProgressBar",
+      "category": "2D",
+      "group": "UI — controls",
+      "supported": false
+    },
+    {
+      "name": "Range",
+      "category": "2D",
+      "group": "UI — controls",
+      "supported": false
+    },
+    {
+      "name": "RayCast2D",
+      "category": "2D",
+      "group": "Physics — queries",
+      "supported": false
+    },
+    {
+      "name": "RayCast3D",
+      "category": "3D",
+      "group": "Physics — queries",
+      "supported": false
+    },
+    {
+      "name": "ReferenceRect",
+      "category": "2D",
+      "group": "UI — controls",
+      "supported": false
+    },
+    {
+      "name": "ReflectionProbe",
+      "category": "3D",
+      "group": "Reflection & global illumination",
+      "supported": false
+    },
+    {
+      "name": "RemoteTransform2D",
+      "category": "2D",
+      "group": "Transform helpers",
+      "supported": true
+    },
+    {
+      "name": "RemoteTransform3D",
+      "category": "3D",
+      "group": "Transform helpers",
+      "supported": true
+    },
+    {
+      "name": "ResourcePreloader",
+      "category": "Other",
+      "group": "Resources",
+      "supported": false
+    },
+    {
+      "name": "RetargetModifier3D",
+      "category": "3D",
+      "group": "Skeleton, bones & IK",
+      "supported": false
+    },
+    {
+      "name": "RichTextLabel",
+      "category": "2D",
+      "group": "UI — controls",
+      "supported": true
+    },
+    {
+      "name": "RigidBody2D",
+      "category": "2D",
+      "group": "Physics — bodies",
+      "supported": false
+    },
+    {
+      "name": "RigidBody3D",
+      "category": "3D",
+      "group": "Physics — bodies",
+      "supported": true
+    },
+    {
+      "name": "RootMotionView",
+      "category": "3D",
+      "group": "Meshes & rendering",
+      "supported": false
+    },
+    {
+      "name": "ScriptCreateDialog",
+      "category": "Other",
+      "group": "UI — windows",
+      "supported": false
+    },
+    {
+      "name": "ScrollContainer",
+      "category": "2D",
+      "group": "UI — containers",
+      "supported": true
+    },
+    {
+      "name": "ShaderGlobalsOverride",
+      "category": "Other",
+      "group": "Rendering globals",
+      "supported": false
+    },
+    {
+      "name": "ShapeCast2D",
+      "category": "2D",
+      "group": "Physics — queries",
+      "supported": false
+    },
+    {
+      "name": "ShapeCast3D",
+      "category": "3D",
+      "group": "Physics — queries",
+      "supported": false
+    },
+    {
+      "name": "Skeleton2D",
+      "category": "2D",
+      "group": "Skeleton, bones & IK",
+      "supported": false
+    },
+    {
+      "name": "Skeleton3D",
+      "category": "3D",
+      "group": "Skeleton, bones & IK",
+      "supported": true
+    },
+    {
+      "name": "SkeletonIK3D",
+      "category": "3D",
+      "group": "Skeleton, bones & IK",
+      "supported": false
+    },
+    {
+      "name": "SkeletonModifier3D",
+      "category": "3D",
+      "group": "Skeleton, bones & IK",
+      "supported": false
+    },
+    {
+      "name": "SliderJoint3D",
+      "category": "3D",
+      "group": "Physics — joints",
+      "supported": false
+    },
+    {
+      "name": "SoftBody3D",
+      "category": "3D",
+      "group": "Physics — bodies",
+      "supported": false
+    },
+    {
+      "name": "SpinBox",
+      "category": "2D",
+      "group": "UI — controls",
+      "supported": false
+    },
+    {
+      "name": "SplineIK3D",
+      "category": "3D",
+      "group": "Skeleton, bones & IK",
+      "supported": false
+    },
+    {
+      "name": "SplitContainer",
+      "category": "2D",
+      "group": "UI — containers",
+      "supported": false
+    },
+    {
+      "name": "SpotLight3D",
+      "category": "3D",
+      "group": "Lighting",
+      "supported": true
+    },
+    {
+      "name": "SpringArm3D",
+      "category": "3D",
+      "group": "Physics — queries",
+      "supported": false
+    },
+    {
+      "name": "SpringBoneCollision3D",
+      "category": "3D",
+      "group": "Skeleton, bones & IK",
+      "supported": false
+    },
+    {
+      "name": "SpringBoneCollisionCapsule3D",
+      "category": "3D",
+      "group": "Skeleton, bones & IK",
+      "supported": false
+    },
+    {
+      "name": "SpringBoneCollisionPlane3D",
+      "category": "3D",
+      "group": "Skeleton, bones & IK",
+      "supported": false
+    },
+    {
+      "name": "SpringBoneCollisionSphere3D",
+      "category": "3D",
+      "group": "Skeleton, bones & IK",
+      "supported": false
+    },
+    {
+      "name": "SpringBoneSimulator3D",
+      "category": "3D",
+      "group": "Skeleton, bones & IK",
+      "supported": false
+    },
+    {
+      "name": "Sprite2D",
+      "category": "2D",
+      "group": "2D rendering",
+      "supported": true
+    },
+    {
+      "name": "Sprite3D",
+      "category": "3D",
+      "group": "Meshes & rendering",
+      "supported": true
+    },
+    {
+      "name": "StaticBody2D",
+      "category": "2D",
+      "group": "Physics — bodies",
+      "supported": false
+    },
+    {
+      "name": "StaticBody3D",
+      "category": "3D",
+      "group": "Physics — bodies",
+      "supported": true
+    },
+    {
+      "name": "StatusIndicator",
+      "category": "Other",
+      "group": "OS integration",
+      "supported": false
+    },
+    {
+      "name": "SubViewport",
+      "category": "Other",
+      "group": "Viewports",
+      "supported": false
+    },
+    {
+      "name": "SubViewportContainer",
+      "category": "2D",
+      "group": "UI — containers",
+      "supported": false
+    },
+    {
+      "name": "TabBar",
+      "category": "2D",
+      "group": "UI — controls",
+      "supported": false
+    },
+    {
+      "name": "TabContainer",
+      "category": "2D",
+      "group": "UI — containers",
+      "supported": false
+    },
+    {
+      "name": "TextEdit",
+      "category": "2D",
+      "group": "UI — controls",
+      "supported": false
+    },
+    {
+      "name": "TextureButton",
+      "category": "2D",
+      "group": "UI — controls",
+      "supported": false
+    },
+    {
+      "name": "TextureProgressBar",
+      "category": "2D",
+      "group": "UI — controls",
+      "supported": false
+    },
+    {
+      "name": "TextureRect",
+      "category": "2D",
+      "group": "UI — controls",
+      "supported": true
+    },
+    {
+      "name": "TileMap",
+      "category": "2D",
+      "group": "Tilemaps & grids",
+      "supported": true
+    },
+    {
+      "name": "TileMapLayer",
+      "category": "2D",
+      "group": "Tilemaps & grids",
+      "supported": true
+    },
+    {
+      "name": "Timer",
+      "category": "Other",
+      "group": "Timers & logic",
+      "supported": true
+    },
+    {
+      "name": "TouchScreenButton",
+      "category": "2D",
+      "group": "Touch input",
+      "supported": false
+    },
+    {
+      "name": "Tree",
+      "category": "2D",
+      "group": "UI — controls",
+      "supported": false
+    },
+    {
+      "name": "TwoBoneIK3D",
+      "category": "3D",
+      "group": "Skeleton, bones & IK",
+      "supported": false
+    },
+    {
+      "name": "VBoxContainer",
+      "category": "2D",
+      "group": "UI — containers",
+      "supported": true
+    },
+    {
+      "name": "VehicleBody3D",
+      "category": "3D",
+      "group": "Physics — bodies",
+      "supported": false
+    },
+    {
+      "name": "VehicleWheel3D",
+      "category": "3D",
+      "group": "Physics — vehicles",
+      "supported": false
+    },
+    {
+      "name": "VFlowContainer",
+      "category": "2D",
+      "group": "UI — containers",
+      "supported": false
+    },
+    {
+      "name": "VideoStreamPlayer",
+      "category": "2D",
+      "group": "UI — controls",
+      "supported": false
+    },
+    {
+      "name": "VisibleOnScreenEnabler2D",
+      "category": "2D",
+      "group": "Visibility",
+      "supported": false
+    },
+    {
+      "name": "VisibleOnScreenEnabler3D",
+      "category": "3D",
+      "group": "Visibility",
+      "supported": false
+    },
+    {
+      "name": "VisibleOnScreenNotifier2D",
+      "category": "2D",
+      "group": "Visibility",
+      "supported": false
+    },
+    {
+      "name": "VisibleOnScreenNotifier3D",
+      "category": "3D",
+      "group": "Visibility",
+      "supported": false
+    },
+    {
+      "name": "VisualInstance3D",
+      "category": "3D",
+      "group": "Meshes & rendering",
+      "supported": false
+    },
+    {
+      "name": "VoxelGI",
+      "category": "3D",
+      "group": "Reflection & global illumination",
+      "supported": false
+    },
+    {
+      "name": "VScrollBar",
+      "category": "2D",
+      "group": "UI — controls",
+      "supported": false
+    },
+    {
+      "name": "VSeparator",
+      "category": "2D",
+      "group": "UI — controls",
+      "supported": false
+    },
+    {
+      "name": "VSlider",
+      "category": "2D",
+      "group": "UI — controls",
+      "supported": false
+    },
+    {
+      "name": "VSplitContainer",
+      "category": "2D",
+      "group": "UI — containers",
+      "supported": false
+    },
+    {
+      "name": "Window",
+      "category": "Other",
+      "group": "UI — windows",
+      "supported": false
+    },
+    {
+      "name": "WorldEnvironment",
+      "category": "Other",
+      "group": "Environment",
+      "supported": true
+    },
+    {
+      "name": "XRAnchor3D",
+      "category": "3D",
+      "group": "XR / AR",
+      "supported": false
+    },
+    {
+      "name": "XRBodyModifier3D",
+      "category": "3D",
+      "group": "Skeleton, bones & IK",
+      "supported": false
+    },
+    {
+      "name": "XRCamera3D",
+      "category": "3D",
+      "group": "Cameras",
+      "supported": false
+    },
+    {
+      "name": "XRController3D",
+      "category": "3D",
+      "group": "XR / AR",
+      "supported": false
+    },
+    {
+      "name": "XRFaceModifier3D",
+      "category": "3D",
+      "group": "XR / AR",
+      "supported": false
+    },
+    {
+      "name": "XRHandModifier3D",
+      "category": "3D",
+      "group": "Skeleton, bones & IK",
+      "supported": false
+    },
+    {
+      "name": "XRNode3D",
+      "category": "3D",
+      "group": "XR / AR",
+      "supported": false
+    },
+    {
+      "name": "XROrigin3D",
+      "category": "3D",
+      "group": "XR / AR",
+      "supported": false
+    }
+  ]
+}

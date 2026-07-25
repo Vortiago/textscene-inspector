@@ -1,7 +1,11 @@
 /**
- * RemoteTransform2D renders as a transform-only Node2D group (ADR-0008) —
- * it pushes its transform to a remote node but draws nothing itself.
- * `canvasItem: true`: Node2D-world content, never drawn in the 3D viewport.
+ * RemoteTransform2D renders as a transform-only Node2D group: it draws nothing
+ * itself (ADR-0008 governs only that). Pushing its transform onto the node its
+ * `remote_path` names is resolved by the scene-wide `applyRemoteTransforms`
+ * pass (r3f/remoteTransforms.ts) at parse time, which rewrites the TARGET's
+ * transform — a static, description-level effect (Godot applies it on
+ * enter-tree), so nothing here changes. `canvasItem: true`: Node2D-world
+ * content, never drawn in the 3D viewport.
  */
 
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';

@@ -1,22 +1,17 @@
 [gd_scene format=3]
 
-[sub_resource type="Curve2D" id="Curve2D_loop"]
-_data = {
-"points": PackedVector2Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 240, 0, 0, 0, 0, 0, 240, 160, 0, 0, 0, 0, 0, 160)
-}
-point_count = 4
-
 [node name="Root" type="Node2D"]
 
-[node name="TrackPath" type="Path2D" parent="."]
-curve = SubResource("Curve2D_loop")
+[node name="AuthoredGhost" type="Polygon2D" parent="."]
+position = Vector2(320, 440)
+color = Color(0.5, 0.5, 0.5, 0.35)
+polygon = PackedVector2Array(0, -80, 76, -24, 47, 66, -47, 66, -76, -24)
 
-[node name="PathFollow2D" type="PathFollow2D" parent="TrackPath"]
-progress_ratio = 0.5
+[node name="TargetPolygon" type="Polygon2D" parent="."]
+position = Vector2(320, 440)
+color = Color(0.2, 0.7, 0.9, 1)
+polygon = PackedVector2Array(0, -80, 76, -24, 47, 66, -47, 66, -76, -24)
 
-[node name="CameraAnchor" type="RemoteTransform2D" parent="TrackPath/PathFollow2D"]
-remote_path = NodePath("../../../Camera2D")
-update_rotation = false
-update_scale = false
-
-[node name="Camera2D" type="Camera2D" parent="."]
+[node name="Relay" type="RemoteTransform2D" parent="."]
+position = Vector2(760, 210)
+remote_path = NodePath("../TargetPolygon")

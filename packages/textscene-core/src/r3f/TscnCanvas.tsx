@@ -11,8 +11,7 @@
  * This Camera" on a Camera3D node.
  */
 import { Canvas, useThree } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei/core/OrbitControls';
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
 import { useOptionalCameraControl } from './contexts/CameraControlContext.js';
@@ -23,7 +22,10 @@ import { SelectionHighlight } from './components/SelectionHighlight.js';
 import { HoverHighlight } from './components/HoverHighlight.js';
 import { InternalTextLabel } from './internalTextLabel.js';
 import { FrameSelectedShortcut } from './FrameSelectedShortcut.js';
+import { EditorControlsHandle, GodotEditorControls } from './GodotEditorControls.js';
+import { PreviewLighting } from './preview/PreviewLighting.js';
 import { frameSceneBounds, type OrbitLike } from './frameSceneBounds.js';
+import { EDITOR_CAMERA_FOV, editorCameraPosition } from './godotEditorCamera.js';
 import styles from './TscnCanvas.module.css';
 
 /**
@@ -49,8 +51,11 @@ export function TscnSceneContents() {
 
   return (
     <>
-      <ambientLight intensity={0.4} />
-      <directionalLight position={[5, 5, 5]} intensity={1} />
+      {/* Godot's editor preview sun and preview environment, each mounted only
+          while the scene supplies no DirectionalLight3D / WorldEnvironment of
+          its own (ADR-0025). At runtime Godot adds neither — an editor's job is
+          to show you your scene, so this previewer takes the editor's rule. */}
+      <PreviewLighting />
       {isEmpty && <EmptySceneIndicator />}
       {!isEmpty && <ContentGroundGrid />}
       {nodes && rootScene && (
@@ -122,14 +127,39 @@ function EmptySceneIndicator() {
  * make it the active render camera; "Reset" returns to the default
  * orbit camera.
  */
-function ActiveCameraSwitcher() {
+/**
+ * A three camera identified by its own runtime flags rather than `instanceof`,
+ * so detection survives a second copy of three being loaded (e.g. the test
+ * renderer). `aspect`/`updateProjectionMatrix` exist only on the perspective
+ * camera; both are optional here.
+ */
+type CameraLike = THREE.Camera & {
+  isPerspectiveCamera?: boolean;
+  isOrthographicCamera?: boolean;
+  aspect?: number;
+  updateProjectionMatrix?: () => void;
+};
+
+export function ActiveCameraSwitcher() {
   const control = useOptionalCameraControl();
   const activeCameraPath = control?.activeCameraPath ?? null;
+  const hierarchy = useOptionalHierarchy();
+  // Re-run when the scene loads: a deep-linked (`?camera=`) path is set on the
+  // provider BEFORE any Camera3D has mounted, so the first pass finds nothing;
+  // the newly loaded scene's Camera3D only becomes discoverable once its own
+  // effect has tagged it, which this dependency waits for.
+  const rootKey = hierarchy?.sceneGraph?.rootScene ?? '';
   const scene = useThree((s) => s.scene);
   const camera = useThree((s) => s.camera);
   const set = useThree((s) => s.set);
+  const size = useThree((s) => s.size);
+  // Distinguish an INTENTIONAL activation from an incidental effect re-run.
+  const prevPathRef = useRef<string | null>(activeCameraPath);
+  const seedConsumedRef = useRef(false);
 
   useEffect(() => {
+    const pathChanged = prevPathRef.current !== activeCameraPath;
+    prevPathRef.current = activeCameraPath;
     if (!activeCameraPath) {
       // Free-orbit: restore the default perspective camera. R3F sets one
       // up automatically; we just need to ensure it's the active one.
@@ -140,33 +170,63 @@ function ActiveCameraSwitcher() {
     }
 
     // Find a camera whose userData carries our node-path tag (set by
-    // Camera3D below when ActiveCameraSwitcher is active). If we don't
-    // find one, fall back to the first camera with the matching name.
-    let target: THREE.Camera | null = null;
+    // Camera3D below when ActiveCameraSwitcher is active). Match on three's own
+    // `.isPerspectiveCamera`/`.isOrthographicCamera` flags rather than
+    // `instanceof` (the pattern frameSceneBounds already uses): the flags are
+    // set on the prototype, so they hold even when a second copy of three is
+    // loaded — e.g. under the test renderer — where `instanceof` would miss.
+    const cameras: (THREE.PerspectiveCamera | THREE.OrthographicCamera)[] = [];
     scene.traverse((object) => {
-      if (target) return;
-      if (
-        object instanceof THREE.PerspectiveCamera ||
-        object instanceof THREE.OrthographicCamera
-      ) {
-        const tag = (object.userData as { tscnPath?: string }).tscnPath;
-        if (tag === activeCameraPath) target = object;
+      const cam = object as CameraLike;
+      if (cam.isPerspectiveCamera || cam.isOrthographicCamera) {
+        cameras.push(object as THREE.PerspectiveCamera | THREE.OrthographicCamera);
       }
     });
+    const target =
+      cameras.find(
+        (c) => (c.userData as { tscnPath?: string }).tscnPath === activeCameraPath
+      ) ?? null;
+    if (!target) return;
+    // A node camera is authored with a fixed placeholder aspect (16/9) because
+    // at mount it cannot know the canvas size. R3F only re-syncs a camera's
+    // aspect on a resize event, so an activated scene camera would render
+    // horizontally stretched on a fixed-size (headless) canvas that never
+    // resizes. Match it to the live canvas here, as R3F does for the default
+    // camera — otherwise it distorts. Safe to run on every re-render (resize
+    // included), so it stays outside the activation gate below.
+    const persp = target as THREE.PerspectiveCamera | null;
+    if (persp?.isPerspectiveCamera && size.height > 0) {
+      const aspect = size.width / size.height;
+      if (persp.aspect !== aspect) {
+        persp.aspect = aspect;
+        persp.updateProjectionMatrix();
+      }
+    }
 
-    if (target && target !== camera) {
+    // Only SWAP the render camera on an intentional activation: an explicit pick
+    // (activeCameraPath just changed) or the one-shot deep-link seed taking effect
+    // on its initial scene. A later scene-switch re-runs this effect via `rootKey`
+    // with a possibly-stale, identically-named path (e.g. two scenes each with a
+    // root `Camera3D`) before SceneChangeResetter clears it — swapping then would
+    // hijack the new scene instead of letting it open in free orbit. The same gate
+    // stops a `camera`-dep re-run from undoing a Reset-Camera that swapped away.
+    const shouldActivate = pathChanged || !seedConsumedRef.current;
+    seedConsumedRef.current = true;
+    if (shouldActivate && target !== camera) {
       set({ camera: target });
     }
-  }, [activeCameraPath, scene, camera, set]);
+  }, [activeCameraPath, rootKey, scene, camera, set, size]);
 
   return null;
 }
 
 /**
- * Auto-frames the scene to the viewport on load / scene change, but ONLY in
- * free-orbit mode (never when a Camera3D is the active camera) and only during
- * a short settle window so async-loaded content (GLB, instanced scenes) is
- * captured without fighting the user's subsequent orbit.
+ * Frames the scene to the viewport on load / scene change — but only when the
+ * user has asked for it (`frameOnOpen`, off by default: Godot's editor opens at
+ * a fixed orbit and leaves framing to F). Free-orbit mode only, never when a
+ * Camera3D is the active camera, and only during a short settle window so
+ * async-loaded content (GLB, instanced scenes) is captured without fighting the
+ * user's subsequent orbit.
  *
  * Selection changes NEVER move the camera: framing is deliberately not keyed
  * on selection state (design decision: an unrequested camera move on click is
@@ -181,13 +241,14 @@ function ActiveCameraSwitcher() {
 export function CameraFit() {
   const hierarchy = useOptionalHierarchy();
   const control = useOptionalCameraControl();
+  const { frameOnOpen } = useViewportMode();
   const get = useThree((s) => s.get);
   const rootKey = hierarchy?.sceneGraph?.rootScene ?? '';
   const hasScene = !!hierarchy?.sceneGraph;
   const activeCameraPath = control?.activeCameraPath ?? null;
 
   useEffect(() => {
-    if (!hasScene || activeCameraPath) return undefined;
+    if (!frameOnOpen || !hasScene || activeCameraPath) return undefined;
     const timers = [150, 500, 1100].map((delay) =>
       setTimeout(() => {
         const state = get();
@@ -195,14 +256,9 @@ export function CameraFit() {
       }, delay)
     );
     return () => timers.forEach(clearTimeout);
-  }, [rootKey, hasScene, activeCameraPath, get]);
+  }, [rootKey, hasScene, activeCameraPath, frameOnOpen, get]);
 
   return null;
-}
-
-/** Structural shape we need from the OrbitControls instance — just `.reset()`. */
-interface ResettableControls {
-  reset: () => void;
 }
 
 /**
@@ -212,17 +268,6 @@ interface ResettableControls {
  * directly under a `HierarchyContext` provider instead.
  */
 export function TscnCanvas() {
-  // Capture the OrbitControls instance via a callback ref so
-  // the toolbar's "Reset Camera" button can call its `.reset()`. Drei's
-  // `<OrbitControls>` accepts a ref typed to the upstream three-stdlib
-  // type which isn't exported from this package's deps — a callback ref
-  // sidesteps the type incompatibility cleanly and lets us narrow to
-  // the structural `ResettableControls` shape inside the effect.
-  const [controls, setControls] = useState<ResettableControls | null>(null);
-  const onControlsRef = useCallback((instance: ResettableControls | null) => {
-    setControls(instance);
-  }, []);
-
   return (
     <div className={styles.root}>
       {/* `shadows` turns three.js's shadow map on for the whole scene. Without
@@ -230,13 +275,19 @@ export function TscnCanvas() {
           wiring is inert and a `shadow_enabled = true` light casts nothing —
           which is what Godot's own light fixtures exist to show. PCFSoft is the
           closest cheap match to Godot's soft shadows. */}
-      <Canvas camera={{ position: [3, 3, 3] }} shadows="soft">
+      {/* Godot's editor opens every scene at the same fixed orbit and the same
+          70-degree FOV, whatever is in it (godotEditorCamera.ts). Framing is a
+          deliberate act there — F — and an opt-in setting here. */}
+      <Canvas
+        camera={{ position: editorCameraPosition(), fov: EDITOR_CAMERA_FOV }}
+        shadows="soft"
+      >
         <TscnSceneContents />
         <ActiveCameraSwitcher />
         <CameraFit />
         <FrameSelectedShortcut />
-        <OrbitControls ref={onControlsRef} makeDefault enableDamping dampingFactor={0.1} />
-        <OrbitControlsResetBridge controls={controls} />
+        <GodotEditorControls />
+        <EditorControlsResetBridge />
         <ScreenshotBridge />
       </Canvas>
     </div>
@@ -244,19 +295,17 @@ export function TscnCanvas() {
 }
 
 /**
- * Bridges the `<OrbitControls>` instance into `CameraControlContext` so
- * the toolbar can drive `reset()` from outside the `<Canvas>`. The
- * controls instance arrives via state set by a callback ref, so this
- * component re-renders once with a non-null `controls` and its effect
- * wires up the reset handler.
+ * Bridges the navigation handle into `CameraControlContext` so the toolbar can
+ * drive `reset()` from outside the `<Canvas>`. `<GodotEditorControls>`
+ * publishes the handle as R3F's `state.controls` (the same slot
+ * `frameSceneBounds` reads), so this reads it back from there rather than
+ * threading a ref through the tree.
  */
-function OrbitControlsResetBridge({
-  controls,
-}: {
-  controls: ResettableControls | null;
-}) {
+function EditorControlsResetBridge() {
   const control = useOptionalCameraControl();
   const registerResetHandler = control?.registerResetHandler;
+  const published = useThree((s) => s.controls);
+  const controls = published instanceof EditorControlsHandle ? published : null;
 
   useEffect(() => {
     if (!registerResetHandler || !controls) return undefined;

@@ -24,8 +24,14 @@ export interface StandardMaterial3DScalars {
   opacity: number;
   metalness: number;
   roughness: number;
-  /** Hex RGB; 0x000000 means "no emission". */
-  emissive: number;
+  /**
+   * Linear RGB in [0,1]; `[0,0,0]` means "no emission". An ARRAY, not a hex
+   * number, so r3f applies it via `Color.fromArray` (already-linear, no decode).
+   * A hex number would go through `Color.setHex(hex, SRGBColorSpace)`, decoding
+   * these already-linear values sRGB→linear a SECOND time and rendering emission
+   * far too dark — the albedo `color` path is an array for the same reason.
+   */
+  emissive: [number, number, number];
   emissiveIntensity: number;
   /** Per-axis tiling factor for every texture map applied by this material. */
   uv1Scale: { x: number; y: number };
@@ -78,6 +84,22 @@ export interface StandardMaterial3DScalars {
    * 0 when `heightmap_enabled` is off. Mapped to three.js `displacementScale`.
    */
   heightmapScale: number;
+  /**
+   * Godot `billboard_mode` (BaseMaterial3D.BillboardMode): 0 DISABLED (default),
+   * 1 ENABLED (full billboard — the surface faces the camera), 2 FIXED_Y
+   * (Y-locked, only yaw turns), 3 PARTICLES (flipbook; treated as ENABLED). The
+   * mesh consumer feeds this straight to `useBillboard` — the same hook and
+   * enum Label3D/Sprite3D drive — so a material that billboards turns its mesh
+   * to face the camera. 0/undefined is a no-op (the overwhelming common case).
+   */
+  billboardMode: number;
+  /**
+   * Godot `billboard_keep_scale`. Godot's default (false) normalizes the model
+   * scale away while billboarding; `useBillboard` only rewrites rotation, so our
+   * billboard always preserves the authored scale (equivalent to keep_scale =
+   * true). Parsed for completeness.
+   */
+  billboardKeepScale: boolean;
   /** Godot `anisotropy` magnitude (0..1), gated on `anisotropy_enabled`. */
   anisotropy: number;
   /** Godot `anisotropy` direction: 0 when positive, π/2 when negative. */
@@ -93,7 +115,7 @@ const DEFAULT_SCALARS: StandardMaterial3DScalars = {
   opacity: 1,
   metalness: 0,
   roughness: 1,
-  emissive: 0x000000,
+  emissive: [0, 0, 0],
   emissiveIntensity: 1,
   uv1Scale: { x: 1, y: 1 },
   uv1Offset: { x: 0, y: 0 },
@@ -113,6 +135,8 @@ const DEFAULT_SCALARS: StandardMaterial3DScalars = {
   rim: 0,
   rimTint: 0,
   heightmapScale: 0,
+  billboardMode: 0,
+  billboardKeepScale: false,
   anisotropy: 0,
   anisotropyRotation: 0,
   transmission: 0,
@@ -186,6 +210,12 @@ export function parseStandardMaterial3DScalars(
   const heightmapEnabled = properties['heightmap_enabled'] === 'true';
   const heightmapScale = heightmapEnabled ? numericOr(properties['heightmap_scale'], 5.0) : 0;
 
+  // Godot `billboard_mode` — the whole enum passes straight through to
+  // `useBillboard` (0 no-op, 2 fixed-Y, everything else = face camera), so
+  // PARTICLES (3) needs no special-casing here. Absent → 0 (DISABLED).
+  const billboardMode = Math.trunc(numericOr(properties['billboard_mode'], 0));
+  const billboardKeepScale = properties['billboard_keep_scale'] === 'true';
+
   const anisotropyEnabled = properties['anisotropy_enabled'] === 'true';
   const rawAniso = numericOr(properties['anisotropy'], 0);
   const anisotropy = anisotropyEnabled ? clamp01(Math.abs(rawAniso)) : 0;
@@ -212,7 +242,7 @@ export function parseStandardMaterial3DScalars(
   // AND both a colored `emission` and an `emission_texture`, Godot computes
   // (emission + tex) * energy, but three.js's emissiveMap is multiply-only
   // (emissive * intensity * tex), so the additive form can't be reproduced.
-  // The MULTIPLY operator case is faithful — see docs/PARITY-LIMITATIONS.md.
+  // The MULTIPLY operator case is faithful.
   // HDR emission: Godot allows emission channels > 1. three.js's emissive color
   // is [0,1] with brightness carried by emissiveIntensity, so normalize the
   // color by its peak channel and fold that peak into the energy — preserving
@@ -240,8 +270,8 @@ export function parseStandardMaterial3DScalars(
     roughness: clamp01(roughness),
     emissive:
       emissionEnabled && linearEmission
-        ? rgbToHex(linearEmission[0], linearEmission[1], linearEmission[2])
-        : 0x000000,
+        ? [clamp01(linearEmission[0]), clamp01(linearEmission[1]), clamp01(linearEmission[2])]
+        : [0, 0, 0],
     emissiveIntensity: emissionEnabled ? Math.max(0, emissionEnergy * emissionPeak) : 0,
     uv1Scale,
     uv1Offset,
@@ -261,6 +291,8 @@ export function parseStandardMaterial3DScalars(
     rim,
     rimTint,
     heightmapScale,
+    billboardMode,
+    billboardKeepScale,
     anisotropy,
     anisotropyRotation,
     transmission,
@@ -366,11 +398,4 @@ function numericOr(raw: string | undefined, fallback: number): number {
 
 function clamp01(value: number): number {
   return Math.max(0, Math.min(1, value));
-}
-
-function rgbToHex(r: number, g: number, b: number): number {
-  const ri = Math.round(clamp01(r) * 255);
-  const gi = Math.round(clamp01(g) * 255);
-  const bi = Math.round(clamp01(b) * 255);
-  return (ri << 16) | (gi << 8) | bi;
 }

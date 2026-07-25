@@ -12,6 +12,7 @@ import type { SceneGraph } from '../../core/SceneGraph.js';
 import type { TscnScene } from '../../parser/types.js';
 import { isGLBPath } from '../../resources/processing/glbProcessing.js';
 import { synthesiseGLBScene } from '../../resources/processors/createSceneProcessor.js';
+import { applyRemoteTransforms } from '../remoteTransforms.js';
 
 export interface ParseResult {
   sceneGraph: SceneGraph | null;
@@ -56,9 +57,13 @@ export function parseTscnContent(content: string, rootScenePath: string): ParseR
 
 /** Wrap a parsed/synthesised TscnScene into a single-scene SceneGraph result. */
 function toParseResult(rootScenePath: string, tscnScene: TscnScene): ParseResult {
+  // Resolve RemoteTransform3D/2D drivers before the graph is built, so the
+  // moved target flows into render, gizmos, bounds, selection, tree and
+  // inspector uniformly (see remoteTransforms.ts).
+  const nodes = applyRemoteTransforms(tscnScene.nodes);
   const parsedScene = tscnSceneToParsedScene(
     rootScenePath,
-    tscnScene.nodes,
+    nodes,
     tscnScene.externalResources,
     tscnScene.internalResources
   );

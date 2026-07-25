@@ -1,0 +1,78 @@
+; Sky ambient with a GRADED sky — the shape half of the IBL, where
+; `unit-light-transport-sky` pins only its scale.
+;
+; A uniform sky cannot tell a correct hemispherical convolution from a
+; whole-sphere average: a constant convolves to itself, so every filter agrees.
+; This sky carries Godot's own editor-preview gradient — bright above, dark
+; below — so an up-facing surface and a down-facing one see very different
+; irradiance, and the ratio between them measures the filter's directionality.
+;
+; Two probe surfaces share one albedo: the floor faces +Y and sees almost only
+; sky, while the wall faces +Z and sees half sky, half ground. The unshaded
+; square gives the albedo itself, so each surface reads as a pure irradiance
+; multiple that compares across renderers without matching cameras.
+;
+; LINEAR tonemapping deliberately: this is the measurement that must not run
+; through a curve, because a curve compresses exactly the high end where a
+; distribution error shows up.
+[gd_scene load_steps=9 format=3]
+
+[sub_resource type="ProceduralSkyMaterial" id="SkyMat_1"]
+sky_top_color = Color(0.385, 0.454, 0.55, 1)
+sky_horizon_color = Color(0.66224, 0.67174, 0.68674, 1)
+ground_bottom_color = Color(0.2, 0.169, 0.133, 1)
+ground_horizon_color = Color(0.66224, 0.67174, 0.68674, 1)
+
+[sub_resource type="Sky" id="Sky_1"]
+sky_material = SubResource("SkyMat_1")
+
+[sub_resource type="Environment" id="Env_1"]
+background_mode = 2
+sky = SubResource("Sky_1")
+ambient_light_source = 3
+ambient_light_sky_contribution = 1.0
+tonemap_mode = 0
+
+[sub_resource type="PlaneMesh" id="Ground_1"]
+size = Vector2(8, 8)
+
+[sub_resource type="PlaneMesh" id="Wall_1"]
+size = Vector2(8, 8)
+
+[sub_resource type="PlaneMesh" id="Patch_1"]
+size = Vector2(2.5, 2.5)
+
+[sub_resource type="StandardMaterial3D" id="Lit_1"]
+albedo_color = Color(0.5, 0.5, 0.5, 1)
+metallic = 0.0
+roughness = 1.0
+diffuse_mode = 1
+
+[sub_resource type="StandardMaterial3D" id="Unshaded_1"]
+albedo_color = Color(0.5, 0.5, 0.5, 1)
+shading_mode = 0
+
+[node name="LightTransportSkyGraded" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env_1")
+
+[node name="DarkSun" type="DirectionalLight3D" parent="."]
+light_energy = 0.0
+
+[node name="LitGround" type="MeshInstance3D" parent="."]
+mesh = SubResource("Ground_1")
+surface_material_override/0 = SubResource("Lit_1")
+
+; Rotated 90 degrees about X so its normal points at +Z — a vertical wall,
+; which sees half sky and half ground where the floor sees almost only sky.
+; The floor/wall ratio is what measures the filter's directionality.
+[node name="LitWall" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 0, 2, -3)
+mesh = SubResource("Wall_1")
+surface_material_override/0 = SubResource("Lit_1")
+
+[node name="UnshadedReference" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.01, 0)
+mesh = SubResource("Patch_1")
+surface_material_override/0 = SubResource("Unshaded_1")

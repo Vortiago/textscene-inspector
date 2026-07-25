@@ -58,7 +58,9 @@ Not yet published to the Marketplace; build it from source (below).
 
 **Web previewer** — a fixture browser, an "Open .tscn" picker with a
 <kbd>Ctrl/Cmd+K</kbd> scene palette, drag-and-drop multi-file upload (drop a
-scene and its textures in one gesture), and shareable `?fixture=` deep links.
+scene and its textures in one gesture), and shareable `?fixture=` deep links
+(add `&camera=<node path>`, e.g. `&camera=Root/Camera3D`, to open looking through
+a scene's own Camera3D).
 An editable Source pane renders `.tscn` text as you type, with a linter gutter
 (error/warning dots, hover popover, problem-count badge) and a
 "Download .tscn" export.

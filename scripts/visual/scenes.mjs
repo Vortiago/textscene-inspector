@@ -109,6 +109,53 @@ export const GOLDEN_SCENES = [
   // renders (a normal map, or a missing displacementMap, reads as a flat ball).
   { name: 'material-heightmap', file: 'unit-material-heightmap.tscn' },
   { name: 'world-environment', file: 'unit-world-environment-basic.tscn' },
+  // Godot's editor preview sun + preview environment on a scene that declares
+  // neither (ADR-0025). Godot's own render of the same lighting is committed at
+  // scripts/godot-ref/reference/preview-lighting.png. Shadow-bearing, hence the
+  // relaxed threshold shared with the other shadow scenes.
+  { name: 'preview-lighting', file: 'unit-preview-lighting.tscn', maxDiffPct: 0.5 },
+  // The light-transport pair, one per way energy reaches a surface. Each puts
+  // an UNSHADED patch of the surface's own albedo onto the lit plane, and both
+  // Godot equations say a white energy-1.0 source renders exactly that albedo
+  // — so the patch is invisible when the scale is right and obvious when it is
+  // not. These read as a flat grey square by design; a visible seam is the
+  // failure. `LIGHT_INTENSITY_SCALE` at its old value of 2 showed one.
+  { name: 'light-transport-direct', file: 'unit-light-transport-direct.tscn' },
+  { name: 'light-transport-ambient', file: 'unit-light-transport-ambient.tscn' },
+  // The sky pair. `-sky` is a UNIFORM white sky, so it pins the IBL's scale
+  // with the filter shape removed (a convolution of a constant is that same
+  // constant). `-sky-graded` carries the editor preview's own gradient and a
+  // floor plus a wall, so it pins the DIRECTIONALITY the uniform one cannot
+  // see.
+  { name: 'light-transport-sky', file: 'unit-light-transport-sky.tscn' },
+  { name: 'light-transport-sky-graded', file: 'unit-light-transport-sky-graded.tscn' },
+  // Scene-owned skies, authored away from Godot's defaults so the gradient and
+  // the sun disc are legible. Both carry their own light AND environment, so
+  // they also pin that BOTH previews yield.
+  { name: 'sky-procedural', file: 'unit-sky-procedural.tscn', maxDiffPct: 0.5 },
+  { name: 'sky-physical', file: 'unit-sky-physical.tscn', maxDiffPct: 0.5 },
+  // Locks the equirect V/U orientation (measured against real Godot); the black
+  // grid lines antialias, so it shares the sky scenes' relaxed threshold.
+  { name: 'sky-panorama', file: 'unit-sky-panorama.tscn', maxDiffPct: 0.5 },
+  // BG_SKY over a GOLD sky with AMBIENT_SOURCE_COLOR (flat grey 0.6,
+  // sky_contribution 0) and AgX tonemapping. Pins two things together — the
+  // shadowed grass stays grey (no sky IBL leaking into diffuse) while the
+  // metallic sphere reflects the gold sky at full strength (reflection stays on
+  // under a COLOR ambient). Matches real Godot to ≤6/255 (reflection to 1/255);
+  // shadows + a metallic reflection are the most GPU-sensitive content, hence
+  // the relaxed threshold.
+  { name: 'stage-ambient-ibl', file: 'unit-stage-ambient-ibl.tscn', maxDiffPct: 0.5 },
+  // The same env with the WorldEnvironment INSTANCED one level down. Renders
+  // pixel-for-pixel like the direct fixture above — pins that an instanced
+  // WorldEnvironment still drives tonemap + ambient and yields the editor
+  // preview environment. If instance env-resolution regresses, this diverges
+  // while stage-ambient-ibl stays green.
+  { name: 'instanced-environment', file: 'unit-instanced-environment.tscn', maxDiffPct: 0.5 },
+  // The same env with an UNSUPPORTED custom-shader sky. Pins that an unresolvable
+  // sky does NOT collapse the environment: AgX + flat ambient still apply (grass
+  // identical to the gold-sky fixture), the background falls back to the mid-blue
+  // solid, and the metallic sphere — with no sky to reflect — reads near-black.
+  { name: 'shader-sky-env', file: 'unit-shader-sky-env.tscn', maxDiffPct: 0.5 },
   // NOTE: unit-label3d.tscn is deliberately NOT in the set — Label3D
   // labels render effectively invisible after auto-framing (default
   // pixel_size 0.005 → ~0.08 world units tall; the committed showcase
@@ -139,10 +186,12 @@ export const GOLDEN_SCENES = [
     collisions: true,
     maxDiffPct: 0.5,
   },
-  // Decal projects a local checkerboard texture onto a quad and draws a thin
-  // wireframe projection box. Loads a texture (deterministic local SVG, gated
-  // by the two-identical-frames settle); the box edges are AA-sensitive like
-  // physics-bodies, hence the relaxed threshold.
+  // Decal PROJECTS a local checkerboard onto the floor plane its box intersects
+  // (DecalGeometry, baked after mount), one plain and one tinted. The box gizmo
+  // is selection-gated (ADR-0018) and the harness drives no selection, so this
+  // captures the Godot-runtime view: projection only, no outline. Loads a
+  // texture (deterministic local SVG, gated by the two-identical-frames settle);
+  // the projection edges are AA-sensitive, hence the relaxed threshold.
   { name: 'decal', file: 'unit-decal.tscn', maxDiffPct: 0.3 },
   // PathFollow2D follow-offset: a Polygon2D follower placed at
   // progress_ratio 0.5 along the parent Path2D's Curve2D. The Marker2D cross
@@ -250,6 +299,18 @@ export const GOLDEN_SCENES = [
   // Multi-property showcase guard (12 spheres across 4 rows: basic PBR,
   // emission/normal, advanced PBR, transparency/glass).
   { name: 'material-features', file: 'integration-material-features.tscn', maxDiffPct: 0.5 },
+  // StandardMaterial3D `billboard_mode = ENABLED` on a QuadMesh: the left quad
+  // must turn to face the camera (full asymmetric walk sprite) while the right
+  // quad (billboard_mode = DISABLED) foreshortens at the editor orbit. The only
+  // golden that exercises mesh billboarding — every other fixture leaves it
+  // inert. Sprite edges antialias against the ground, hence the relaxed
+  // threshold.
+  { name: 'material-billboard', file: 'unit-material-billboard.tscn', maxDiffPct: 0.5 },
+  // An additive, unshaded, billboarded QuadMesh with a radial GradientTexture2D
+  // reads as a soft gold ring over the dark ground, beside a metallic + emissive
+  // body. Pins the additive-billboard-gradient glow path. Additive edges →
+  // relaxed threshold.
+  { name: 'coin-glow', file: 'unit-coin-glow.tscn', maxDiffPct: 0.5 },
 
   // --- Sprite2D/Sprite3D + 3D physics-body roundout ---
   { name: 'sprite2d', file: 'unit-sprite2d.tscn' },
@@ -284,4 +345,14 @@ export const GOLDEN_SCENES = [
   // Hexagon grid (shape=3, vertical offset axis): odd columns stagger by
   // half a tile — the half-offset placement math had no visual guard before.
   { name: 'tile-map-layer-hexagon', file: 'unit-tile-map-layer-hexagon.tscn' },
+
+  // --- RemoteTransform3D / RemoteTransform2D drive their target ---
+  // The relay copies its own transform onto the node its remote_path names
+  // (resolved once at parse time — r3f/remoteTransforms.ts). Each fixture
+  // authors the target AWAY from the relay so the render only reads right if
+  // the drive applied: the 3D cube is authored at -2 X but driven to the
+  // relay's +2; the 2D pentagon is authored at the gray ghost's spot but
+  // driven to the relay's upper-right. Verified against real Godot 4.6.3.
+  { name: 'remote-transform-3d', file: 'unit-remote-transform-3d.tscn' },
+  { name: 'remote-transform-2d', file: 'unit-remote-transform-2d.tscn', maxDiffPct: 0.5 },
 ];

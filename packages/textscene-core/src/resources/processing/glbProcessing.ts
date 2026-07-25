@@ -179,6 +179,15 @@ export function cloneWithMaterials(mesh: THREE.Object3D): THREE.Object3D {
       } else {
         node.material = node.material.clone();
       }
+      // Godot's glTF import mounts every surface as a MeshInstance3D that casts
+      // AND receives shadows by default (cast_shadow = SHADOW_CASTING_SETTING_ON,
+      // and a MeshInstance3D always receives). three defaults both flags to false,
+      // so a GLB PackedScene instance (e.g. the platformer enemy) would otherwise
+      // sit outside the shadow pass entirely — neither darkened when it stands in
+      // a caster's shadow nor casting one of its own. MeshInstance3D and GridMap
+      // set these on their own meshes; the GLB path is the one that was missing.
+      node.castShadow = true;
+      node.receiveShadow = true;
     }
   });
 

@@ -148,6 +148,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Canvas Modulate",
+    "file": "unit-canvas-modulate.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Characterbody2d",
     "file": "unit-characterbody2d.tscn",
     "category": "Other"
@@ -155,6 +160,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Characterbody3d",
     "file": "unit-characterbody3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Coin Glow",
+    "file": "unit-coin-glow.tscn",
     "category": "Other"
   },
   {
@@ -193,6 +203,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Instanced Environment Child",
+    "file": "unit-instanced-environment-child.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Instanced Environment",
+    "file": "unit-instanced-environment.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Label3d",
     "file": "unit-label3d.tscn",
     "category": "Other"
@@ -205,6 +225,31 @@ export const fixtures: Fixture[] = [
   {
     "name": "Light Base Properties",
     "file": "unit-light-base-properties.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Light Transport Ambient",
+    "file": "unit-light-transport-ambient.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Light Transport Direct",
+    "file": "unit-light-transport-direct.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Light Transport Sky Graded",
+    "file": "unit-light-transport-sky-graded.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Light Transport Sky",
+    "file": "unit-light-transport-sky.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Lightoccluder2d",
+    "file": "unit-lightoccluder2d.tscn",
     "category": "Other"
   },
   {
@@ -228,6 +273,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Path3d",
+    "file": "unit-path3d.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Pathfollow 3d",
     "file": "unit-pathfollow-3d.tscn",
     "category": "Other"
@@ -238,8 +288,13 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
-    "name": "PointLight2D",
+    "name": "Pointlight2d",
     "file": "unit-pointlight2d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Preview Lighting",
+    "file": "unit-preview-lighting.tscn",
     "category": "Other"
   },
   {
@@ -263,6 +318,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Shader Sky Env",
+    "file": "unit-shader-sky-env.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Shadows Only",
     "file": "unit-shadows-only.tscn",
     "category": "Other"
@@ -273,6 +333,26 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Sky Panorama",
+    "file": "unit-sky-panorama.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Sky Physical",
+    "file": "unit-sky-physical.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Sky Procedural",
+    "file": "unit-sky-procedural.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Softbody3d",
+    "file": "unit-softbody3d.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Spot Light 3d",
     "file": "unit-spot-light-3d.tscn",
     "category": "Other"
@@ -280,6 +360,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Sprite3d",
     "file": "unit-sprite3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Stage Ambient Ibl",
+    "file": "unit-stage-ambient-ibl.tscn",
     "category": "Other"
   },
   {
@@ -300,6 +385,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Timer",
     "file": "unit-timer.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Tonemap Agx Shadow",
+    "file": "unit-tonemap-agx-shadow.tscn",
     "category": "Other"
   },
   {
@@ -893,6 +983,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Basic Nodes"
   },
   {
+    "name": "Camera3d",
+    "file": "unit-camera3d.tscn",
+    "category": "Unit - Basic Nodes"
+  },
+  {
     "name": "Empty Scene",
     "file": "unit-empty-scene.tscn",
     "category": "Unit - Basic Nodes"
@@ -975,6 +1070,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Material Ao",
     "file": "unit-material-ao.tscn",
+    "category": "Unit - Materials"
+  },
+  {
+    "name": "Material Billboard",
+    "file": "unit-material-billboard.tscn",
     "category": "Unit - Materials"
   },
   {

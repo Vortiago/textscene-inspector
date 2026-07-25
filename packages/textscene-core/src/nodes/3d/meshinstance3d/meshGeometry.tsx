@@ -93,15 +93,8 @@ export function MeshGeometry({ resource }: MeshGeometryProps) {
         />
       );
     }
-    case 'TorusMesh': {
-      const radius = (parsed.properties.outerRadius + parsed.properties.innerRadius) / 2;
-      const tube = (parsed.properties.outerRadius - parsed.properties.innerRadius) / 2;
-      return (
-        <torusGeometry
-          args={[radius, tube, parsed.properties.ringSegments, parsed.properties.rings]}
-        />
-      );
-    }
+    case 'TorusMesh':
+      return <TorusMeshGeometry properties={parsed.properties} />;
     case 'PrismMesh':
       return <PrismMeshGeometry properties={parsed.properties} />;
     default:
@@ -175,6 +168,41 @@ function PlaneMeshGeometry({ properties }: { properties: PlaneMeshProperties }) 
     offsetY,
     offsetZ,
     properties.flipFaces,
+  ]);
+
+  return <primitive object={geometry} attach="geometry" />;
+}
+
+/**
+ * TorusMesh revolves around a different axis than three's `TorusGeometry`.
+ * three revolves the tube around Z: the ring lies in the XY plane and the hole
+ * faces +Z (torus stands upright). Godot's TorusMesh revolves around Y: the ring
+ * lies in the XZ plane and the hole faces +Y (torus lies flat). Rotating the
+ * geometry by π/2 around X maps three's XY ring-plane onto XZ, so the hole faces
+ * up like Godot. The torus is top/bottom symmetric, so the rotation sign is
+ * immaterial. Radius/tube/segment mapping is unchanged from the declarative form.
+ */
+function TorusMeshGeometry({
+  properties,
+}: {
+  properties: ReturnType<typeof parseTorusMesh>;
+}) {
+  const geometry = useMemo(() => {
+    const radius = (properties.outerRadius + properties.innerRadius) / 2;
+    const tube = (properties.outerRadius - properties.innerRadius) / 2;
+    const geom = new THREE.TorusGeometry(
+      radius,
+      tube,
+      properties.ringSegments,
+      properties.rings
+    );
+    geom.rotateX(Math.PI / 2);
+    return geom;
+  }, [
+    properties.outerRadius,
+    properties.innerRadius,
+    properties.ringSegments,
+    properties.rings,
   ]);
 
   return <primitive object={geometry} attach="geometry" />;

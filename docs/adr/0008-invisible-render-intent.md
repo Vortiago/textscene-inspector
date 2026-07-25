@@ -1,9 +1,17 @@
 # Non-visual nodes render as invisible transform-only groups; no viewport placeholder
 
-- Status: Accepted (2026-06-02); **partially amended by ADR-0018 (2026-06-24)**.
+- Status: Accepted (2026-06-02); **partially amended by ADR-0018 (2026-06-24) and by the
+  Label3D parity amendment (2026-07-22)**.
 - Generalizes ADR-0005 (physics bodies as transform-only groups).
 - Related: ADR-0006 (viewport-mode seam; `showCollisions` toggle).
 - Supersedes the WI-R3F-7 "visible gray-box placeholder" behaviour of `GenericNodeFallback`.
+
+> **Amendment (Label3D parity, 2026-07-22):** Point 4's "**off by default**" is superseded.
+> `showLabels` now defaults **ON** (context default + provider `initialShowLabels`), because Godot
+> always rasterises `Label3D` text at runtime, so a viewport that hides it reads as "unsupported"
+> rather than "parity." The `showLabels` flag and its `ViewportToolbar` toggle are unchanged — a user
+> who finds the text cluttered turns it OFF, exactly like the collision gizmo. With the flag off,
+> `Label3D` still renders an invisible marker group (the rest of point 4 holds).
 
 > **Amendment (ADR-0018):** `Marker3D`, `Path3D`, and `PathFollow3D` are no longer fully invisible.
 > They now draw a **selection-gated** gizmo (marker cross / curve polyline / follow handle) and

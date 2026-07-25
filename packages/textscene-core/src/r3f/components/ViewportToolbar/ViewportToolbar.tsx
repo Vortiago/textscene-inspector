@@ -14,6 +14,7 @@
 
 import {
   useViewportMode,
+  FRAME_ON_OPEN_STORAGE_KEY,
   SHOW_GRID_STORAGE_KEY,
   VIEWPORT_MODE_STORAGE_KEY,
   type ViewportMode,
@@ -21,6 +22,12 @@ import {
 import { useOptionalCameraControl } from '../../contexts/CameraControlContext.js';
 import { useOptionalHierarchy } from '../../contexts/HierarchyContext.js';
 import { writePersisted } from '../../hooks/usePersistedState.js';
+import { useLiveSceneNodes } from '../../useLiveSceneTree.js';
+import {
+  PREVIEW_ENVIRONMENT_YIELD_TYPE,
+  PREVIEW_SUN_YIELD_TYPE,
+  YIELDS_A_PREVIEW,
+} from '../../preview/godotPreviewLighting.js';
 import styles from './ViewportToolbar.module.css';
 
 const MODES: ViewportMode[] = ['3D', '2D'];
@@ -47,10 +54,25 @@ export function ViewportToolbar() {
     setShowNavigation,
     showGrid,
     setShowGrid,
+    showPreviewSun,
+    setShowPreviewSun,
+    showPreviewEnvironment,
+    setShowPreviewEnvironment,
+    frameOnOpen,
+    setFrameOnOpen,
   } = useViewportMode();
   const camera = useOptionalCameraControl();
   const hierarchy = useOptionalHierarchy();
   const sceneLoaded = Boolean(hierarchy?.sceneGraph);
+
+  // Godot disables each preview button outright — with the reason in its label
+  // — once the scene supplies its own, rather than letting the user re-enable a
+  // preview that would double up on the scene's lighting (ADR-0025).
+  const yielding = useLiveSceneNodes(YIELDS_A_PREVIEW);
+  const sceneHasSun = yielding.some((entry) => entry.node.type === PREVIEW_SUN_YIELD_TYPE);
+  const sceneHasEnvironment = yielding.some(
+    (entry) => entry.node.type === PREVIEW_ENVIRONMENT_YIELD_TYPE
+  );
 
   function handleScreenshot() {
     const dataUrl = camera?.takeScreenshot();
@@ -69,6 +91,10 @@ export function ViewportToolbar() {
   function handleGridChange(show: boolean) {
     setShowGrid(show);
     writePersisted(SHOW_GRID_STORAGE_KEY, show);
+  }
+  function handleFrameOnOpenChange(frame: boolean) {
+    setFrameOnOpen(frame);
+    writePersisted(FRAME_ON_OPEN_STORAGE_KEY, frame);
   }
 
   return (
@@ -136,6 +162,19 @@ export function ViewportToolbar() {
         Navigation
       </label>
       {mode === '3D' && (
+        <label
+          className={styles.checkbox}
+          title="Frame the whole scene when it loads. Off matches Godot, which opens at a fixed orbit — press F to frame."
+        >
+          <input
+            type="checkbox"
+            checked={frameOnOpen}
+            onChange={(e) => handleFrameOnOpenChange(e.target.checked)}
+          />
+          Frame on open
+        </label>
+      )}
+      {mode === '3D' && (
         <label className={styles.checkbox} title="Show a ground-plane reference grid">
           <input
             type="checkbox"
@@ -143,6 +182,42 @@ export function ViewportToolbar() {
             onChange={(e) => handleGridChange(e.target.checked)}
           />
           Grid
+        </label>
+      )}
+      {mode === '3D' && (
+        <label
+          className={styles.checkbox}
+          title={
+            sceneHasSun
+              ? 'Scene contains DirectionalLight3D. Preview disabled.'
+              : "Godot's editor preview sun, for a scene with no light of its own"
+          }
+        >
+          <input
+            type="checkbox"
+            checked={showPreviewSun && !sceneHasSun}
+            disabled={sceneHasSun}
+            onChange={(e) => setShowPreviewSun(e.target.checked)}
+          />
+          Preview Sun
+        </label>
+      )}
+      {mode === '3D' && (
+        <label
+          className={styles.checkbox}
+          title={
+            sceneHasEnvironment
+              ? 'Scene contains WorldEnvironment. Preview disabled.'
+              : "Godot's editor preview sky, for a scene with no environment of its own"
+          }
+        >
+          <input
+            type="checkbox"
+            checked={showPreviewEnvironment && !sceneHasEnvironment}
+            disabled={sceneHasEnvironment}
+            onChange={(e) => setShowPreviewEnvironment(e.target.checked)}
+          />
+          Preview Sky
         </label>
       )}
     </div>

@@ -30,6 +30,15 @@ const RENDER_FONT_SIZE = 128;
 /** Padding baked into the canvas around the text, in render pixels. */
 const CANVAS_PADDING = 10;
 
+/**
+ * Godot renders a Label3D outline far thinner than a centred canvas `strokeText`
+ * of the same `outline_size`: three-outward vs Godot's font-outline rasteriser.
+ * Measured against a real Godot render of `unit-label3d.tscn`, a raw stroke came
+ * out ~3x too heavy (Godot's black outline runs ~2 px where ours ran ~6–7 px),
+ * so the stroke width is scaled to match Godot's outline weight.
+ */
+const OUTLINE_WIDTH_SCALE = 0.33;
+
 export function Label3D({ node, children }: NodeComponentProps) {
   const { showLabels } = useViewportMode();
   const properties = node.properties as Label3DProperties;
@@ -64,9 +73,22 @@ export function Label3D({ node, children }: NodeComponentProps) {
   // (the white canvas text is colorized by this), matching Sprite2D/Sprite3D.
   const tint = useGodotLinearColor(properties.modulate);
 
-  // Off by default (ADR-0008): in-viewport text is opt-in via the Labels toggle.
-  // When off (or the canvas couldn't be built), render an invisible marker group
-  // so the node still positions any children and stays selectable.
+  // The texture is uploaded premultiplied (below), so the fragment RGB is ALREADY
+  // premultiplied by coverage — the material must therefore NOT premultiply again
+  // (`premultipliedAlpha` would `rgb *= a` in the shader, giving color·a² and
+  // eroding every anti-aliased glyph/outline edge). Use an explicit premultiplied
+  // OVER blend (src = 1, dst = 1−srcα) instead, and fold modulate's alpha into the
+  // tint so a translucent label scales its premultiplied RGB by opacity too (with
+  // premultiplied blending, `opacity` alone would scale only the alpha channel).
+  const tintWithOpacity = useMemo(
+    () => tint.clone().multiplyScalar(properties.modulate.a),
+    [tint, properties.modulate.a]
+  );
+
+  // On by default to match Godot (ADR-0008 point 4 superseded — see its
+  // amendment note); the Labels toggle can hide it. When off (or the canvas
+  // couldn't be built), render an invisible marker group so the node still
+  // positions any children and stays selectable.
   if (!showLabels || !built) {
     return (
       <group name={node.name} position={position} rotation={rotation} scale={scale}>
@@ -88,8 +110,13 @@ export function Label3D({ node, children }: NodeComponentProps) {
         <planeGeometry args={[built.width, built.height]} />
         <meshBasicMaterial
           map={built.texture}
-          color={tint}
+          color={tintWithOpacity}
           transparent
+          blending={THREE.CustomBlending}
+          blendSrc={THREE.OneFactor}
+          blendDst={THREE.OneMinusSrcAlphaFactor}
+          blendSrcAlpha={THREE.OneFactor}
+          blendDstAlpha={THREE.OneMinusSrcAlphaFactor}
           opacity={properties.modulate.a}
           side={properties.double_sided === false ? THREE.FrontSide : THREE.DoubleSide}
           depthWrite={false}
@@ -146,12 +173,19 @@ function buildLabelTexture(
     // font after sizing the canvas.
     context.font = `${fontSize}px Arial`;
 
-    // outline_size is in Godot font-pixels; scale to the canvas resolution.
+    // outline_size is in Godot font-pixels; scale to the canvas resolution, then
+    // by OUTLINE_WIDTH_SCALE to match Godot's thinner font-outline rasteriser.
     const strokeWidth =
-      properties.outline_size > 0 ? properties.outline_size * renderScale : 0;
+      properties.outline_size > 0
+        ? properties.outline_size * renderScale * OUTLINE_WIDTH_SCALE
+        : 0;
     if (strokeWidth > 0) {
       context.strokeStyle = colorToCss(properties.outline_modulate);
       context.lineWidth = strokeWidth;
+      // Round the outline joins so the stroke hugs the glyph instead of spiking
+      // into boxy miter corners — Godot's outline is a smooth dilation.
+      context.lineJoin = 'round';
+      context.miterLimit = 2;
     }
 
     // Rasterise the text in white. The material's `color` carries the
@@ -167,6 +201,11 @@ function buildLabelTexture(
     });
 
     const texture = new THREE.CanvasTexture(canvas);
+    // Premultiply alpha on upload so the transparent canvas edges (a white glyph
+    // fading to 0-alpha black) don't bilinear-interpolate their RGB toward black
+    // and leave a dark fringe hugging every glyph. Paired with the material's
+    // `premultipliedAlpha` blend below.
+    texture.premultiplyAlpha = true;
     texture.needsUpdate = true;
 
     // Godot world size = glyph-pixels (at the Godot font_size) × pixel_size.

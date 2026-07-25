@@ -33,6 +33,12 @@ describe('<GridContainer>', () => {
     expect(div.style.gridTemplateColumns).toBe('max-content max-content max-content');
   });
 
+  it('packs rows at the top (align-content: start) rather than stretching them', () => {
+    // Godot content-sizes rows; the CSS-grid default (stretch) would drift a
+    // full-rect grid's rows apart.
+    expect(renderGrid({ columns: '2' }).style.alignContent).toBe('start');
+  });
+
   it('defaults both gaps to 4px and maps h_/v_separation overrides', () => {
     const def = renderGrid({ columns: '2' });
     expect(def.style.columnGap).toBe('4px');

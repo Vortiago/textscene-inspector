@@ -4,26 +4,29 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { TscnSceneContents } from './TscnCanvas';
 import { frameSceneBounds } from './frameSceneBounds';
 
-describe('<TscnSceneContents> (default lighting)', () => {
-  it('mounts ambient and directional lights', async () => {
+describe('<TscnSceneContents> (preview lighting)', () => {
+  it('mounts the preview sun for a scene that supplies no light of its own', async () => {
     const renderer = await ReactThreeTestRenderer.create(<TscnSceneContents />);
-
-    const ambient = renderer.scene.findAllByType('AmbientLight');
-    const directional = renderer.scene.findAllByType('DirectionalLight');
-
-    expect(ambient).toHaveLength(1);
-    expect(directional).toHaveLength(1);
+    expect(renderer.scene.findAllByType('DirectionalLight')).toHaveLength(1);
   });
 
-  it('positions the directional light at [5, 5, 5]', async () => {
+  it('places it at Godot’s preview angles, casting a shadow', async () => {
+    // altitude 60° above the horizon, azimuth 150° — the light TRAVELS
+    // (-0.25, -0.866, 0.433), so it sits on the opposite side.
     const renderer = await ReactThreeTestRenderer.create(<TscnSceneContents />);
+    const sun = renderer.scene.findByType('DirectionalLight');
+    const position = sun.instance.position as THREE.Vector3;
 
-    const directional = renderer.scene.findByType('DirectionalLight');
-    const pos = directional.instance.position;
+    expect(position.clone().normalize().y).toBeCloseTo(0.866025, 4);
+    expect(position.clone().normalize().x).toBeCloseTo(0.25, 4);
+    expect(sun.instance.castShadow).toBe(true);
+  });
 
-    expect(pos.x).toBe(5);
-    expect(pos.y).toBe(5);
-    expect(pos.z).toBe(5);
+  it('adds no flat ambient light — the preview environment is a sky, not a constant', async () => {
+    // Godot's preview environment lights the scene through its sky's radiance.
+    // The fixed `ambientLight intensity={0.4}` this replaced was invented.
+    const renderer = await ReactThreeTestRenderer.create(<TscnSceneContents />);
+    expect(renderer.scene.findAllByType('AmbientLight')).toHaveLength(0);
   });
 });
 

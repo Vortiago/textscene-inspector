@@ -18,6 +18,8 @@ sources/0 = SubResource("TileSetAtlasSource_a")
 [node name="World" type="Node2D"]
 
 [node name="Map" type="TileMap" parent="."]
+position = Vector2(384, 196)
+scale = Vector2(4, 4)
 tile_set = SubResource("TileSet_b")
 format = 2
 layer_0/name = "Ground"

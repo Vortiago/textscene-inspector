@@ -10,7 +10,7 @@
  * parse hands the shell a new `SceneGraph` (the user fixed whatever crashed
  * it) — via `ErrorBoundary`'s props-driven reset, NOT a `key`-driven remount,
  * so a successful reparse does not tear down `<TscnCanvas>` and lose
- * OrbitControls camera state on every edit (see
+ * the viewport camera state on every edit (see
  * "preserves the same TscnCanvas instance across content changes" in
  * TscnPreviewShell.test.tsx).
  */

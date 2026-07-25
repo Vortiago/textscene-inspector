@@ -20,6 +20,7 @@ import { CameraControlProvider } from '../../contexts/CameraControlContext.js';
 import { MissingResourcesProvider } from '../../contexts/MissingResourcesContext.js';
 import {
   ViewportModeProvider,
+  FRAME_ON_OPEN_STORAGE_KEY,
   SHOW_GRID_STORAGE_KEY,
   VIEWPORT_MODE_STORAGE_KEY,
   type ViewportMode,
@@ -125,6 +126,14 @@ export interface TscnPreviewShellProps {
    * toggle still works afterward in either case.
    */
   initialViewportMode?: ViewportMode;
+  /**
+   * A Camera3D node path to activate on open (the web previewer resolves it from
+   * the `?camera=` query param). Threaded into `<CameraControlProvider>`, which
+   * seeds the active camera so the canvas looks through it once the scene loads.
+   * Omitted (the default) opens in free-orbit. Hosts without a URL (the VS Code
+   * webview) simply never pass it.
+   */
+  initialActiveCameraPath?: string | null;
 }
 
 export function TscnPreviewShell({
@@ -138,6 +147,7 @@ export function TscnPreviewShell({
   onResourceRemove,
   onMissingPathsChange,
   initialViewportMode,
+  initialActiveCameraPath,
 }: TscnPreviewShellProps) {
   const { sceneGraph, error } = useParsedScene(content, rootScenePath);
 
@@ -204,6 +214,7 @@ export function TscnPreviewShell({
   const [initialViewport] = useState(() => ({
     mode: readPersisted<ViewportMode>(VIEWPORT_MODE_STORAGE_KEY, '3D', isViewportMode),
     showGrid: readPersisted(SHOW_GRID_STORAGE_KEY, false, isBoolean),
+    frameOnOpen: readPersisted(FRAME_ON_OPEN_STORAGE_KEY, false, isBoolean),
   }));
 
   // Flattens what was an 8-level hand-nested provider pyramid into one
@@ -214,7 +225,11 @@ export function TscnPreviewShell({
   const withProviders = composeProviders(
     (children) => <HierarchyProvider value={hierarchyValue}>{children}</HierarchyProvider>,
     (children) => <SelectionProvider>{children}</SelectionProvider>,
-    (children) => <CameraControlProvider>{children}</CameraControlProvider>,
+    (children) => (
+      <CameraControlProvider initialActiveCameraPath={initialActiveCameraPath}>
+        {children}
+      </CameraControlProvider>
+    ),
     (children) => (
       <MissingResourcesProvider onMissingPathsChange={onMissingPathsChange}>
         {children}
@@ -227,6 +242,7 @@ export function TscnPreviewShell({
       <ViewportModeProvider
         initialMode={initialViewportMode ?? initialViewport.mode}
         initialShowGrid={initialViewport.showGrid}
+        initialFrameOnOpen={initialViewport.frameOnOpen}
       >
         {children}
       </ViewportModeProvider>

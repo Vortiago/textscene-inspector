@@ -101,7 +101,7 @@ describe('ErrorBoundary', () => {
     // Mirrors PreviewErrorBoundary's "clears when the file is fixed" contract
     // — the fix arrives as new props (a fresh sceneGraph), not a user
     // click, and must NOT force a remount of everything the boundary wraps
-    // (that would drop OrbitControls camera state / playback state on every
+    // (that would drop viewport camera state / playback state on every
     // edit, not just a crash recovery).
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 

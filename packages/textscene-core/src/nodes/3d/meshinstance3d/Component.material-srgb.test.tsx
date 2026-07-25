@@ -109,9 +109,12 @@ describe('StandardMaterial3D — sRGB albedo conversion (WI-HALL-2)', () => {
     expect(white.color.b).toBe(1);
   });
 
-  it('emission color is also sRGB-converted when emission_enabled=true', async () => {
-    // Godot's emission color is also sRGB. Apply the same conversion or
-    // a bright emissive looks subtly too-warm.
+  it('emission color is sRGB→linear converted exactly once, not twice (#341)', async () => {
+    // Godot's emission color is sRGB; three's emissive Color is linear, so the
+    // conversion must happen exactly ONCE. The material's emissive is applied as
+    // a linear [r,g,b] array (like albedo color); passing a hex number instead
+    // would let r3f's Color.setHex decode it sRGB→linear a SECOND time, leaving
+    // the rendered emission ~6x too dark.
     const mat = await renderWithMaterial({
       albedo_color: 'Color(1, 1, 1, 1)',
       emission_enabled: 'true',
@@ -119,19 +122,11 @@ describe('StandardMaterial3D — sRGB albedo conversion (WI-HALL-2)', () => {
       emission_energy_multiplier: '1',
     });
 
-    // emission is stored as a hex int in the scalars layer. Convert
-    // back from hex and assert the bytes correspond to linear values,
-    // not sRGB.
-    const hex = mat.emissive.getHex();
-    const r = ((hex >> 16) & 0xff) / 255;
-    const g = ((hex >> 8) & 0xff) / 255;
-    const b = (hex & 0xff) / 255;
-
-    // sRGB 0.5 → linear ≈ 0.214. After quantisation to 8 bits via
-    // rgbToHex (round(0.214 * 255) = 55 = 0x37 → 0.2156), all three
-    // channels should land near 0.215, NOT 0.5.
-    expect(r).toBeCloseTo(0.2156, 2);
-    expect(g).toBeCloseTo(0.2156, 2);
-    expect(b).toBeCloseTo(0.2156, 2);
+    // three.Color stores LINEAR components. sRGB 0.5 → linear ≈ 0.214 (one
+    // conversion). A double conversion would leave ≈ 0.037 — far too dark.
+    expect(mat.emissive.r).toBeCloseTo(0.214, 2);
+    expect(mat.emissive.g).toBeCloseTo(0.214, 2);
+    expect(mat.emissive.b).toBeCloseTo(0.214, 2);
+    expect(mat.emissive.r).toBeGreaterThan(0.1); // guards against the ~0.037 double-convert
   });
 });

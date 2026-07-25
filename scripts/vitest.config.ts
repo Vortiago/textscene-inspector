@@ -12,7 +12,7 @@ export default mergeConfig(
     test: {
       name: 'scripts',
       environment: 'node',
-      include: ['*.test.mjs'],
+      include: ['**/*.test.mjs'],
     },
   })
 );

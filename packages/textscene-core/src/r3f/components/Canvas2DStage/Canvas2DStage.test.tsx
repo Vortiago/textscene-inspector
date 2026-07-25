@@ -4,7 +4,7 @@
  * drag-to-pan. The lazy ControlOverlay barrel is stubbed — overlay layout
  * has its own suites; this one only covers the stage chrome around it.
  */
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 
 vi.mock('../../controls/index.js', () => ({
@@ -39,7 +39,32 @@ import {
   CameraControlProvider,
   useCameraControl,
 } from '../../contexts/CameraControlContext';
+import { FIT_ON_OPEN_2D_STORAGE_KEY } from './viewport2d';
 import type { TscnNode } from '../../../parser/types';
+
+/**
+ * happy-dom reports a zero-sized rect for everything, and `fit()` early-returns
+ * on one — so an opening view can only be observed once the stage has a size.
+ */
+function sizeEveryElement(width: number, height: number) {
+  return vi
+    .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+    .mockReturnValue({
+      width,
+      height,
+      left: 0,
+      top: 0,
+      right: width,
+      bottom: height,
+      x: 0,
+      y: 0,
+    } as DOMRect);
+}
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  window.localStorage.removeItem(FIT_ON_OPEN_2D_STORAGE_KEY);
+});
 
 function makeNode(name: string): TscnNode {
   return { name, type: 'Control', properties: {}, children: [] } as unknown as TscnNode;
@@ -182,6 +207,25 @@ describe('<Canvas2DStage>', () => {
     fireEvent.pointerMove(stage, { clientX: 45, clientY: 80, pointerId: 1 });
     expect(axisX().style.top).toBe('60px'); // pan.y = 80 − 20
     expect(axisY().style.left).toBe('35px'); // pan.x = 45 − 10
+  });
+
+  it('fits the viewport rectangle to the stage when a scene opens', () => {
+    sizeEveryElement(800, 600);
+    const { frame } = renderStage();
+    // zoom = min((800−56)/1152, (600−56)/648) = 0.6458…, centred in the stage.
+    expect(zoomLabel()).toBe('65%');
+    expect(frame.style.transform).toMatch(/scale\(0\.645/);
+  });
+
+  it('opens at zoom 1 with world origin at the stage origin when fit-on-open is off', () => {
+    // The pinned opening view a parity capture clips to: one canvas pixel per
+    // screen pixel, at the same place every run, so the frame is directly
+    // comparable with a Godot render of the same scene.
+    window.localStorage.setItem(FIT_ON_OPEN_2D_STORAGE_KEY, 'false');
+    sizeEveryElement(1600, 900);
+    const { frame } = renderStage();
+    expect(zoomLabel()).toBe('100%');
+    expect(frame.style.transform).toBe('translate(0px, 0px) scale(1)');
   });
 
   it('Fit recenters the frame inside the stage bounds with the margin-fitted zoom', () => {

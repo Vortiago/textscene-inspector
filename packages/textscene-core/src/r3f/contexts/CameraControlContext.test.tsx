@@ -1,7 +1,7 @@
 /**
  * CameraControlContext exposes a `resetCamera`
  * callback that, when fired, drives a registered handler (the canvas's
- * `<OrbitControls>.reset()`). Also pins the pre-existing camera-switch
+ * `<GodotEditorControls>` handle's `reset()`). Also pins the pre-existing camera-switch
  * surface (`switchToCamera` / `returnToFreeView` / `activeCameraPath`)
  * so the reset-camera additions don't drift it.
  */
@@ -31,6 +31,29 @@ describe('CameraControlContext', () => {
     act(() => {
       result.current.returnToFreeView();
     });
+    expect(result.current.activeCameraPath).toBeNull();
+  });
+
+  it('seeds activeCameraPath from initialActiveCameraPath (?camera= deep-link)', () => {
+    const { result } = renderHook(() => useCameraControl(), {
+      wrapper: ({ children }) => (
+        <CameraControlProvider initialActiveCameraPath="Root/Camera3D">
+          {children}
+        </CameraControlProvider>
+      ),
+    });
+    // The canvas looks through this camera on open without any user action.
+    expect(result.current.activeCameraPath).toBe('Root/Camera3D');
+
+    // Returning to free view still clears it — the seed is only the initial value.
+    act(() => {
+      result.current.returnToFreeView();
+    });
+    expect(result.current.activeCameraPath).toBeNull();
+  });
+
+  it('defaults activeCameraPath to null when no initial path is given', () => {
+    const { result } = renderHook(() => useCameraControl(), { wrapper });
     expect(result.current.activeCameraPath).toBeNull();
   });
 

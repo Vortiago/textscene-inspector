@@ -29,11 +29,8 @@
  * On failure, <name>.actual.png and <name>.diff.png land in
  * scripts/visual/output/ (gitignored; uploaded as a CI artifact).
  */
-/* global document */ // used only inside the addInitScript callback, which runs in the browser.
 
-import { spawn, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { createServer } from 'node:net';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
@@ -41,12 +38,21 @@ import { SWIFTSHADER_GL_ARGS } from '../showcase/browser.mjs';
 import { PNG } from 'pngjs';
 import pixelmatch from 'pixelmatch';
 import { DEFAULT_MAX_DIFF_PCT, GOLDEN_SCENES } from './scenes.mjs';
+import {
+  assertPortFree,
+  createCaptureContext,
+  ensureWebBuilt,
+  findCanvas,
+  gotoFixture,
+  killPreviewGroup,
+  settleCanvas,
+  startPreview,
+  waitForServer,
+} from './previewServer.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const REPO_ROOT = join(here, '../..');
 const BASELINE_DIR = join(here, 'baselines');
 const OUTPUT_DIR = join(here, 'output');
-const WEB_DIST_INDEX = join(REPO_ROOT, 'apps/textscene-web/dist/index.html');
 
 // Dedicated uncommon port: never collides with a manually running
 // `pnpm preview` (4173) or the showcase pipeline (4188). Override with
@@ -56,21 +62,6 @@ const WEB_DIST_INDEX = join(REPO_ROOT, 'apps/textscene-web/dist/index.html');
 // port would otherwise silently capture from whichever process got there
 // first, with no error.
 const PORT = Number(process.env.VISUAL_PORT) || 4317;
-const VIEWPORT = { width: 1280, height: 800 };
-
-// The Source pane (`tscn-web-source-pane` in apps/textscene-web/src/r3f-main.tsx)
-// is an editing affordance, not part of the previewed scene, and is visible by
-// default for any fresh browser context with no persisted preference. Seed it
-// closed via an init script (runs before the page's own scripts on every
-// navigation in this context) so golden baselines stay scoped to the rendered
-// scene at its full canvas width, not incidental editor chrome.
-const SOURCE_PANE_STORAGE_KEY = 'tscn-web-source-pane';
-
-const SKIP_BUILD_VALUES = new Set(['1', 'true', 'yes']);
-const NETWORK_IDLE_MS = 20000; // ceiling for the app's own resource chain to go quiet
-const SETTLE_INITIAL_MS = 1200; // covers the last CameraFit reframe at 1100 ms
-const SETTLE_INTERVAL_MS = 350;
-const SETTLE_MAX_ATTEMPTS = 12;
 
 // Strictly greater than CameraFit's last load-time fit timer (1100ms after
 // the scene mounts), with a comfortable margin for render-loop latency under
@@ -92,110 +83,6 @@ function parseArgs(argv) {
 }
 
 /**
- * Build the previewer every run. Reusing an existing `dist/` is how this
- * harness silently captured a build that predated the change under test —
- * every scene "passed" against stale code, and a newly added fixture was
- * missing from the bundle entirely, so its deep link fell back and baked a
- * bogus baseline. A stale-green visual suite is worse than a slow one; set
- * VISUAL_SKIP_BUILD=1 to reuse `dist/` while iterating locally.
- */
-function ensureWebBuilt() {
-  const skip = process.env.VISUAL_SKIP_BUILD;
-  if (skip !== undefined && !SKIP_BUILD_VALUES.has(skip.trim().toLowerCase())) {
-    console.warn(`[visual] VISUAL_SKIP_BUILD="${skip}" not recognised — building anyway`);
-  } else if (skip !== undefined && existsSync(WEB_DIST_INDEX)) {
-    console.log('[visual] VISUAL_SKIP_BUILD set — reusing existing dist/ (may be stale)');
-    return;
-  }
-  console.log('[visual] building web previewer…');
-  const r = spawnSync('pnpm', ['--filter', '@textscene/web-previewer', 'build'], {
-    cwd: REPO_ROOT,
-    shell: true,
-    stdio: 'inherit',
-  });
-  if (r.status !== 0) {
-    console.error('[visual] web previewer build failed');
-    process.exit(1);
-  }
-}
-
-/**
- * Refuse to silently capture from someone else's process. `--strictPort`
- * makes our own preview spawn fail on an occupied port, but that spawn runs
- * detached (`stdio: 'ignore'`) and `waitForServer` below only polls for *a*
- * 200 response — so without this check, an already-listening server (a
- * leftover from a previous run, or a concurrent worktree on the same host
- * also running this harness against the shared default port) would answer
- * instead, and every capture would silently reflect a foreign build.
- *
- * (This is also why `startPreview` below kills the whole process GROUP, not
- * just its direct child — a `shell: true` spawn's immediate child is the
- * shell, not the `pnpm`→`vite preview` grandchild that actually holds the
- * port; killing only the shell can leave that grandchild running as an
- * orphan, which is exactly the kind of leftover this check guards against.)
- */
-async function assertPortFree(port) {
-  const free = await new Promise((resolve) => {
-    const probe = createServer();
-    probe.once('error', () => resolve(false));
-    probe.once('listening', () => probe.close(() => resolve(true)));
-    probe.listen(port, '0.0.0.0');
-  });
-  if (!free) {
-    console.error(
-      `\n[visual] port ${port} is already in use by another process — refusing to capture ` +
-        `against an unverified server (it may be a leftover preview from a previous run, or a ` +
-        `concurrent worktree on this host also running the visual harness). Free the port, or ` +
-        `set VISUAL_PORT=<free-port> to use a different one.\n`
-    );
-    process.exit(1);
-  }
-}
-
-function startPreview() {
-  const proc = spawn(
-    'pnpm',
-    ['--filter', '@textscene/web-previewer', 'preview', '--port', String(PORT), '--strictPort'],
-    { cwd: REPO_ROOT, shell: true, stdio: 'ignore', detached: true }
-  );
-  return { proc, baseUrl: `http://localhost:${PORT}` };
-}
-
-/**
- * Kill the whole `proc` process GROUP (negative pid), not just `proc` itself.
- * `proc` is a `shell: true` spawn's immediate child — the shell — not the
- * `pnpm`→`vite preview` grandchild that actually binds the port. `detached:
- * true` above makes `proc` its own process-group leader, so its descendants
- * share its pgid and `-proc.pid` reaches all of them in one signal. Killing
- * only `proc.pid` reliably kills the shell but can leave the grandchild
- * running as an orphaned server — which then holds this script's event loop
- * open indefinitely even after all real work (captures + the results table)
- * is done, since nothing else is scheduled to keep it alive except that
- * leftover handle. Swallow ESRCH: the group may already be gone.
- */
-function killPreviewGroup(proc) {
-  try {
-    process.kill(-proc.pid, 'SIGTERM');
-  } catch {
-    /* already exited */
-  }
-}
-
-async function waitForServer(url, timeoutMs = 40000) {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    try {
-      const res = await fetch(url, { method: 'GET' });
-      if (res.ok) return;
-    } catch {
-      /* not up yet */
-    }
-    await new Promise((r) => setTimeout(r, 500));
-  }
-  throw new Error(`preview server at ${url} not ready in ${timeoutMs}ms`);
-}
-
-/**
  * Navigate to a scene and capture the canvas once it is provably settled:
  * two consecutive byte-identical screenshots. Returns the PNG buffer, or
  * null with a reason when the scene never stabilizes.
@@ -207,31 +94,12 @@ async function waitForServer(url, timeoutMs = 40000) {
  * browser, not just the component's gating logic in isolation.
  */
 async function captureScene(page, baseUrl, scene) {
-  await page.goto(`${baseUrl}/?fixture=${encodeURIComponent(scene.file)}`, {
-    waitUntil: 'load',
-  });
-  // `load` fires before the app's OWN resource chain finishes: a scene fetches
-  // its .tscn, then an ArrayMesh .tres, then that surface's material, then the
-  // material's texture — each only discoverable once the previous one parsed.
-  // The settle gate below would otherwise happily find two identical frames of
-  // the untextured placeholder and freeze THAT into a baseline, which then
-  // passes forever while seeing none of the texture. Wait for the network to go
-  // quiet first; a scene that never idles still falls through to the gate.
-  await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_MS }).catch((err) => {
-    // A scene that never idles still falls through to the settle gate, but say
-    // so — silence here is how a stalled resource chain becomes a baseline.
-    // Anything that is NOT a timeout (crashed target, closed page) is a real
-    // failure and must not be mistaken for one.
-    if (err?.name !== 'TimeoutError') throw err;
-    console.log(`[visual]   ${scene.name}: no network idle within ${NETWORK_IDLE_MS}ms`);
-  });
-  const canvases = page.locator('canvas');
-  await canvases.first().waitFor({ timeout: 30000 });
-  const count = await canvases.count();
-  if (count !== 1) {
-    return { buffer: null, reason: `expected exactly 1 canvas, found ${count}` };
-  }
-  const canvas = canvases.first();
+  // Silence here is how a stalled resource chain becomes a baseline, so say so.
+  await gotoFixture(page, baseUrl, scene.file, (ms) =>
+    console.log(`[visual]   ${scene.name}: no network idle within ${ms}ms`)
+  );
+  const { canvas, reason: canvasReason } = await findCanvas(page);
+  if (!canvas) return { buffer: null, reason: canvasReason };
 
   if (scene.navigation) {
     // The navmesh overlay has its own toolbar toggle. It defaults ON, but drive
@@ -308,22 +176,7 @@ async function captureScene(page, baseUrl, scene) {
     await page.mouse.move(0, 0);
   }
 
-  await page.waitForTimeout(SETTLE_INITIAL_MS);
-  let prev = await canvas.screenshot();
-  for (let attempt = 0; attempt < SETTLE_MAX_ATTEMPTS; attempt++) {
-    await page.waitForTimeout(SETTLE_INTERVAL_MS);
-    const cur = await canvas.screenshot();
-    if (cur.equals(prev)) {
-      return { buffer: cur, reason: null };
-    }
-    prev = cur;
-  }
-  return {
-    buffer: null,
-    reason: `never settled: ${SETTLE_MAX_ATTEMPTS} captures over ${
-      SETTLE_MAX_ATTEMPTS * SETTLE_INTERVAL_MS
-    }ms all differed`,
-  };
+  return settleCanvas(page, canvas);
 }
 
 function compareToBaseline(scene, actualBuffer) {
@@ -385,7 +238,7 @@ async function main() {
   // time it takes to run.
   ensureWebBuilt();
   await assertPortFree(PORT);
-  const { proc, baseUrl } = startPreview();
+  const { proc, baseUrl } = startPreview(PORT);
   let browser;
   const results = [];
   try {
@@ -396,30 +249,13 @@ async function main() {
       headless: true,
       args: SWIFTSHADER_GL_ARGS,
     });
-    const context = await browser.newContext({
-      viewport: VIEWPORT,
-      deviceScaleFactor: 1,
-    });
-    /* global window */ // the addInitScript callbacks below run in the browser
-    await context.addInitScript(
-      ([key, value]) => window.localStorage.setItem(key, value),
-      [SOURCE_PANE_STORAGE_KEY, JSON.stringify({ visible: false, width: 320 })]
-    );
-    // Keep this a pure render comparison (see header): the viewport toolbar
-    // floats over the canvas, and canvas.screenshot() composites any DOM
-    // painted over the canvas box, so the overlay would churn every 3D
-    // baseline. Hide it once for the whole context (survives every navigation).
-    // The <style> must land in <head> once it exists — appending at
-    // document-start puts it in an invalid position that the parser drops.
-    await context.addInitScript(() => {
-      const add = () => {
-        const style = document.createElement('style');
-        style.textContent = '[data-testid="viewport-toolbar-overlay"]{display:none !important}';
-        document.head.appendChild(style);
-      };
-      if (document.head) add();
-      else document.addEventListener('DOMContentLoaded', add, { once: true });
-    });
+    // Frame each scene on load. The APP defaults to Godot's fixed orbit
+    // (ADR-0025), which would leave the larger fixtures mostly out of frame —
+    // a baseline showing empty space cannot fail when the render breaks. These
+    // goldens exist to guard the renderer, so they get the framed view; the
+    // parity harness deliberately does NOT (it measures against Godot, which
+    // opens at that same fixed orbit).
+    const context = await createCaptureContext(browser, { frameOnOpen: true });
     const page = await context.newPage();
 
     for (const scene of scenes) {

@@ -1,15 +1,17 @@
 /**
- * Decal component tests.
+ * <Decal> component tests.
  *
- * The decal renders a projection-volume wireframe (always) plus a horizontal
- * textured quad once `texture_albedo` resolves. Coverage: the box gizmo is
- * present with and without a texture; the quad appears only when the albedo
- * loads; modulate + albedo_mix drive the quad material; the quad is sized to
- * the box footprint; the missing-texture edge falls back to the box alone.
+ * The decal PROJECTS its albedo onto scene surfaces via a post-mount scene walk
+ * (the projection maths itself is covered in decalProjection.test.ts — the
+ * test-renderer populates no matrixWorld and mounts no sibling meshes, so no
+ * projection can be baked here). What IS observable in isolation: the
+ * projection-box gizmo is selection-gated (ADR-0018) — hidden by default, shown
+ * only when this node is selected — the node never draws a standalone quad, and
+ * the Node3D transform / children pass through.
  */
 
+import { useEffect, type ReactNode } from 'react';
 import { describe, expect, it } from 'vitest';
-import type { ReactNode } from 'react';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { Decal } from './Component';
@@ -17,6 +19,7 @@ import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
+import { SelectionProvider, useSelection } from '../../../r3f/contexts/SelectionContext';
 import {
   AnimatedValueProvider,
   useAnimatedValueRegistry,
@@ -26,6 +29,7 @@ import type { TscnExternalResource, TscnNode } from '../../../parser/types';
 import { parseDecal } from './parser';
 
 const TEXTURE_PATH = 'res://textures/decal.png';
+const NODE_NAME = 'MyDecal';
 
 function makeTexture(width = 64, height = 64): THREE.Texture {
   const t = new THREE.Texture();
@@ -33,7 +37,7 @@ function makeTexture(width = 64, height = 64): THREE.Texture {
   return t;
 }
 
-function makeNode(props: Record<string, string> = {}, name = 'MyDecal'): TscnNode {
+function makeNode(props: Record<string, string> = {}, name = NODE_NAME): TscnNode {
   return {
     name,
     type: 'Decal',
@@ -46,98 +50,71 @@ function extRef(id: string, path: string): TscnExternalResource {
   return { id, type: 'Texture2D', path };
 }
 
+function SelectSeeder({ path }: { path: string | null }) {
+  const { setSelectedNodePath } = useSelection();
+  useEffect(() => {
+    setSelectedNodePath(path);
+  }, [path, setSelectedNodePath]);
+  return null;
+}
+
 async function render(opts: {
   node: TscnNode;
   externals?: TscnExternalResource[];
   cached?: Array<{ path: string; texture: THREE.Texture | 'missing' }>;
   children?: ReactNode;
+  selectedPath?: string | null;
 }) {
   const fake = createFakeResourceLoader();
   for (const { path, texture } of opts.cached ?? []) {
     fake.textures.seed(path, texture === 'missing' ? null : texture);
   }
+  const path = opts.node.name;
   return ReactThreeTestRenderer.create(
     <ResourceLoaderProvider loader={fake.loader}>
       <SceneResourcesProvider externalResources={opts.externals ?? []}>
-        <Decal node={opts.node}>{opts.children}</Decal>
+        <SelectionProvider>
+          {opts.selectedPath !== undefined && <SelectSeeder path={opts.selectedPath} />}
+          <NodePathProvider path={path}>
+            <Decal node={opts.node}>{opts.children}</Decal>
+          </NodePathProvider>
+        </SelectionProvider>
       </SceneResourcesProvider>
     </ResourceLoaderProvider>
   );
 }
 
 describe('<Decal>', () => {
-  it('always renders a projection-box wireframe (LineSegments), even without a texture', async () => {
+  it('hides the projection-box gizmo by default (Godot runtime draws none)', async () => {
     const renderer = await render({ node: makeNode() });
-    expect(renderer.scene.findAllByType('LineSegments').length).toBe(1);
+    expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(0);
   });
 
-  it('renders a textured quad when the albedo texture loads', async () => {
-    const tex = makeTexture();
+  it('draws the box gizmo, scaled by size, when the node is selected', async () => {
+    const renderer = await render({
+      node: makeNode({ size: 'Vector3(3, 2, 4)' }),
+      selectedPath: NODE_NAME,
+    });
+    const box = renderer.scene.findAllByType('LineSegments');
+    expect(box).toHaveLength(1);
+    const scale = (box[0].instance as THREE.Object3D).parent!.scale;
+    expect([scale.x, scale.y, scale.z]).toEqual([3, 2, 4]);
+  });
+
+  it('hides the gizmo when a different node is selected', async () => {
+    const renderer = await render({ node: makeNode(), selectedPath: 'SomethingElse' });
+    expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(0);
+  });
+
+  it('never draws a standalone quad — projection needs live scene geometry', async () => {
+    // Albedo loads, but no receiver meshes exist in isolation, so nothing is
+    // baked (the old floating mid-plane quad is gone).
     const renderer = await render({
       node: makeNode({ texture_albedo: 'ExtResource("1_tex")' }),
       externals: [extRef('1_tex', TEXTURE_PATH)],
-      cached: [{ path: TEXTURE_PATH, texture: tex }],
+      cached: [{ path: TEXTURE_PATH, texture: makeTexture() }],
     });
-    const mesh = renderer.scene.findByType('Mesh');
-    const mat = mesh.instance.material as THREE.MeshBasicMaterial;
-    expect(mat.map).toBeInstanceOf(THREE.Texture);
-  });
-
-  it('renders a unit quad scaled by size via the inner group (size.x × size.z footprint)', async () => {
-    const tex = makeTexture();
-    const renderer = await render({
-      node: makeNode({ texture_albedo: 'ExtResource("1_tex")', size: 'Vector3(3, 2, 4)' }),
-      externals: [extRef('1_tex', TEXTURE_PATH)],
-      cached: [{ path: TEXTURE_PATH, texture: tex }],
-    });
-    // Geometry is unit; `size` rides the inner group's scale (so it animates cheaply).
-    const geom = renderer.scene.findByType('Mesh').instance.geometry as unknown as {
-      parameters: { width: number; height: number };
-    };
-    expect(geom.parameters.width).toBeCloseTo(1, 5);
-    expect(geom.parameters.height).toBeCloseTo(1, 5);
-    const sizingGroup = renderer.scene
-      .findAllByType('Group')
-      .find((g) => (g.instance as THREE.Group).scale.x === 3);
-    expect(sizingGroup).toBeDefined();
-    const s = (sizingGroup!.instance as THREE.Group).scale;
-    expect([s.x, s.y, s.z]).toEqual([3, 2, 4]);
-  });
-
-  it('folds albedo_mix × modulate.a into the quad opacity and tints with modulate', async () => {
-    const tex = makeTexture();
-    const renderer = await render({
-      node: makeNode({
-        texture_albedo: 'ExtResource("1_tex")',
-        modulate: 'Color(1, 0, 0, 0.8)',
-        albedo_mix: '0.5',
-      }),
-      externals: [extRef('1_tex', TEXTURE_PATH)],
-      cached: [{ path: TEXTURE_PATH, texture: tex }],
-    });
-    const mat = renderer.scene.findByType('Mesh').instance.material as THREE.MeshBasicMaterial;
-    // opacity = clamp01(0.5 * 0.8) = 0.4
-    expect(mat.opacity).toBeCloseTo(0.4, 5);
-    expect(mat.transparent).toBe(true);
-    // modulate red, sRGB→linear: r stays 1, g/b stay 0.
-    expect(mat.color.r).toBeCloseTo(1, 3);
-    expect(mat.color.g).toBeCloseTo(0, 3);
-  });
-
-  it('renders the box alone (no textured quad) when the texture is missing', async () => {
-    const renderer = await render({
-      node: makeNode({ texture_albedo: 'ExtResource("1_tex")' }, 'Missing'),
-      externals: [extRef('1_tex', TEXTURE_PATH)],
-      cached: [{ path: TEXTURE_PATH, texture: 'missing' }],
-    });
-    expect(renderer.scene.findAllByType('LineSegments').length).toBe(1);
-    expect(renderer.scene.findAllByType('Mesh').length).toBe(0);
-  });
-
-  it('renders the box alone when no texture_albedo is set', async () => {
-    const renderer = await render({ node: makeNode() });
-    expect(renderer.scene.findAllByType('LineSegments').length).toBe(1);
-    expect(renderer.scene.findAllByType('Mesh').length).toBe(0);
+    expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
   });
 
   it('applies the Node3D transform and wraps children', async () => {
@@ -165,7 +142,7 @@ describe('<Decal>', () => {
     expect(renderer.scene.findByProps({ name: 'child' })).toBeDefined();
   });
 
-  it('overrides authored size with an AnimationPlayer-pushed value, reverting on release (ADR-0017)', async () => {
+  it('overrides the gizmo size with an AnimationPlayer-pushed value, reverting on release (ADR-0017)', async () => {
     let registry: AnimatedValueRegistry | null = null;
     function Capture() {
       registry = useAnimatedValueRegistry();
@@ -174,17 +151,19 @@ describe('<Decal>', () => {
     const renderer = await ReactThreeTestRenderer.create(
       <ResourceLoaderProvider loader={createFakeResourceLoader().loader}>
         <SceneResourcesProvider externalResources={[]}>
-          <AnimatedValueProvider>
-            <Capture />
-            <NodePathProvider path="D">
-              <Decal node={makeNode({ size: 'Vector3(2, 2, 2)' }, 'D')} />
-            </NodePathProvider>
-          </AnimatedValueProvider>
+          <SelectionProvider>
+            <SelectSeeder path="D" />
+            <AnimatedValueProvider>
+              <Capture />
+              <NodePathProvider path="D">
+                <Decal node={makeNode({ size: 'Vector3(2, 2, 2)' }, 'D')} />
+              </NodePathProvider>
+            </AnimatedValueProvider>
+          </SelectionProvider>
         </SceneResourcesProvider>
       </ResourceLoaderProvider>
     );
-    // The box-edge LineSegments lives inside the inner sizing group, whose scale
-    // IS the decal's `size`.
+    // The gizmo (visible because 'D' is selected) rides the size-scaled group.
     const sizingScale = () => {
       const ls = renderer.scene.findByType('LineSegments').instance as THREE.Object3D;
       const s = ls.parent!.scale;

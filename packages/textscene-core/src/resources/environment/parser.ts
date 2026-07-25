@@ -26,6 +26,11 @@ export function parseEnvironment(
     ambient_light_source: intOr(properties.ambient_light_source, 0, 'ambient_light_source'),
     ambient_light_color: colorOr(properties.ambient_light_color, { r: 0, g: 0, b: 0, a: 1 }),
     ambient_light_energy: floatOr(properties.ambient_light_energy, 1.0, 'ambient_light_energy'),
+    ambient_light_sky_contribution: floatOr(
+      properties.ambient_light_sky_contribution,
+      1.0,
+      'ambient_light_sky_contribution'
+    ),
 
     // Screen-space fog (Godot defaults: density 0.01, light_color ~bluish-grey)
     fog_enabled: properties.fog_enabled === 'true',
@@ -38,6 +43,14 @@ export function parseEnvironment(
     volumetric_fog_density: floatOr(properties.volumetric_fog_density, 0.05, 'volumetric_fog_density'),
     volumetric_fog_albedo: colorOr(properties.volumetric_fog_albedo, { r: 1, g: 1, b: 1, a: 1 }),
     volumetric_fog_emission: colorOr(properties.volumetric_fog_emission, { r: 0, g: 0, b: 0, a: 1 }),
+
+    // Glow / bloom (Godot Environment defaults)
+    glow_enabled: properties.glow_enabled === 'true',
+    glow_intensity: floatOr(properties.glow_intensity, 0.8, 'glow_intensity'),
+    glow_strength: floatOr(properties.glow_strength, 1.0, 'glow_strength'),
+    glow_bloom: floatOr(properties.glow_bloom, 0.0, 'glow_bloom'),
+    glow_hdr_threshold: floatOr(properties.glow_hdr_threshold, 1.0, 'glow_hdr_threshold'),
+    glow_blend_mode: intOr(properties.glow_blend_mode, 2, 'glow_blend_mode'),
 
     // Adjustments
     adjustment_enabled: properties.adjustment_enabled === 'true',

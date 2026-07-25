@@ -46,7 +46,7 @@ export const YSORT_FINE_RANGE = Z_INDEX_STEP * 0.5;
  * Sub-z_index draw-order spacing inside a TileMap node: legacy layers stack by
  * index within one z_index step, and each layer's atlas sources get a smaller
  * deterministic nudge (Godot interleaves cells across sources in scan order —
- * unattainable under per-source batching; see docs/PARITY-LIMITATIONS.md).
+ * unattainable under per-source batching).
  */
 export const TILE_LAYER_STEP = Z_INDEX_STEP / 64;
 export const TILE_SOURCE_STEP = Z_INDEX_STEP / 1024;

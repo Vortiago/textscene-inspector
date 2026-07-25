@@ -140,9 +140,9 @@ describe('Control components — containers', () => {
 });
 
 describe('Control components — StyleBox panels', () => {
-  it('Panel: neutral default background when un-themed', () => {
+  it('Panel: Godot default panel fill when un-themed', () => {
     const c = renderOverlay([node('P', 'Panel', {})]);
-    expect(styleOf(find(c, 'Panel')).backgroundColor).toBe('rgba(42, 42, 46, 0.92)');
+    expect(styleOf(find(c, 'Panel')).backgroundColor).toBe('rgba(26, 26, 26, 0.6)');
   });
 
   it('Panel: resolves theme_override_styles/panel StyleBox background', () => {
@@ -158,7 +158,7 @@ describe('Control components — StyleBox panels', () => {
       node('PC', 'PanelContainer', {}, [node('Inner', 'ColorRect', { color: 'Color(1, 0, 0, 1)' })]),
     ]);
     const pc = find(c, 'PanelContainer');
-    expect(styleOf(pc).backgroundColor).toBe('rgba(42, 42, 46, 0.92)');
+    expect(styleOf(pc).backgroundColor).toBe('rgba(26, 26, 26, 0.6)');
     // child renders inside, in-flow (block) → position relative, not absolute
     const inner = pc?.querySelector('[data-control-type="ColorRect"]');
     expect(inner).toBeTruthy();
@@ -171,7 +171,7 @@ describe('Control components — leaf controls', () => {
     const c = renderOverlay([node('B', 'Button', { text: 'Click' })]);
     const b = find(c, 'Button');
     expect(b?.textContent).toBe('Click');
-    expect(styleOf(b).backgroundColor).toBe('rgba(70, 78, 94, 0.95)');
+    expect(styleOf(b).backgroundColor).toBe('rgba(26, 26, 26, 0.6)');
     expect(styleOf(b).cursor).toBe('pointer');
   });
 

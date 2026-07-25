@@ -135,6 +135,29 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, 0)`;
       expect(child2!.children).toHaveLength(0);
     });
 
+    // Every node type's parser reads the heading itself, so "is this node
+    // attached to its parent" is a per-type property rather than a shared one.
+    // CanvasLayer's read no hierarchy attributes at all, which detached the
+    // layer AND everything under it — the shape every Godot HUD is written in.
+    it('keeps a subtree hanging off a non-Control layer node', () => {
+      const parser = new TscnParser();
+      const content = `[gd_scene format=3]
+
+[node name="Root" type="Control"]
+
+[node name="HUD" type="CanvasLayer" parent="."]
+
+[node name="Score" type="Label" parent="HUD"]
+text = "Score: 0"`;
+
+      const result = parser.parse(content);
+
+      expect(result.nodes).toHaveLength(1);
+      const layer = result.nodes[0].children[0];
+      expect(layer?.type).toBe('CanvasLayer');
+      expect(layer?.children.map((c) => c.name)).toEqual(['Score']);
+    });
+
     it('should handle single root with child', () => {
       const parser = new TscnParser();
       const content = `[gd_scene format=3]

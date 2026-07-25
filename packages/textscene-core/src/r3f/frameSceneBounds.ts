@@ -6,9 +6,19 @@
  * import back from `TscnCanvas` itself.
  */
 import * as THREE from 'three';
+import { EDITOR_CAMERA_FOV, editorCameraDirection } from './godotEditorCamera.js';
 import { computeWorldBoundingBox } from './bounds.js';
 
-/** Minimal shape we touch on the OrbitControls instance for framing. */
+/**
+ * How much room to leave around the framed bounds. Exported because the Godot
+ * reference harness mirrors it to frame the same picture (`--frame`), and a
+ * one-sided change there is invisible.
+ */
+export const FRAME_MARGIN = 1.6;
+/** A near-flat (2D) scene is viewed head-on and needs far less room. */
+export const FLAT_FRAME_MARGIN = 1.15;
+
+/** Minimal shape we touch on the viewport controls instance for framing. */
 export interface OrbitLike {
   target?: THREE.Vector3;
   update?: () => void;
@@ -18,7 +28,7 @@ export interface OrbitLike {
  * Frame the camera so the whole scene fits the viewport. Unions the bounding
  * boxes of every rendered Mesh (skipping the empty-state grid), then pulls the
  * camera back along an isometric-ish direction far enough that the largest
- * dimension fits the vertical FOV, and re-points OrbitControls at the centre.
+ * dimension fits the vertical FOV, and re-points the controls at the centre.
  * No-op for empty scenes or non-finite bounds.
  */
 export function frameSceneBounds(
@@ -61,12 +71,20 @@ export function frameSceneBounds(
   const maxXY = Math.max(size.x, size.y);
   const isFlat = size.z <= Math.max(maxXY, 1) * 0.02;
 
+  // The only orthographic camera framing ever sees is the editor camera in its
+  // Numpad-5 projection, whose frustum is sized from the SAME 70-degree field
+  // of view (`GodotEditorControls`); framing it at three's unrelated 50-degree
+  // default would leave it zoomed out by half again.
   const persp = camera as THREE.PerspectiveCamera;
-  const fov = ((persp.isPerspectiveCamera ? persp.fov : 50) * Math.PI) / 180;
+  const fov = ((persp.isPerspectiveCamera ? persp.fov : EDITOR_CAMERA_FOV) * Math.PI) / 180;
   const fitDim = isFlat ? Math.max(maxXY, 0.001) : maxDim;
-  const distance = ((fitDim / 2 / Math.tan(fov / 2)) || fitDim) * (isFlat ? 1.15 : 1.6);
+  const distance =
+    ((fitDim / 2 / Math.tan(fov / 2)) || fitDim) * (isFlat ? FLAT_FRAME_MARGIN : FRAME_MARGIN);
 
-  const dir = isFlat ? new THREE.Vector3(0, 0, 1) : new THREE.Vector3(1, 0.7, 1).normalize();
+  // Godot's own editor viewing angle, so a framed scene presents the same face
+  // it does in the editor (godotEditorCamera.ts). A flat scene is still viewed
+  // head-on — an edge-on plane frames to nothing.
+  const dir = isFlat ? new THREE.Vector3(0, 0, 1) : editorCameraDirection();
   camera.position.copy(center.clone().add(dir.multiplyScalar(distance)));
   if (persp.isPerspectiveCamera) {
     // Keep the near plane below the framing distance so microscopic scenes

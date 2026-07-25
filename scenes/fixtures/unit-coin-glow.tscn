@@ -1,0 +1,65 @@
+[gd_scene load_steps=9 format=3 uid="uid://unitcoinglow"]
+
+; An additive, unshaded, billboarded QuadMesh with a radial GradientTexture2D:
+; the halo must read as a soft gold ring against the dark ground and cast NO
+; shadow (a blend-mode material writes none). The metallic + emissive coin disc
+; beside it casts a normal shadow.
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_dark"]
+size = Vector2(10, 10)
+
+[sub_resource type="StandardMaterial3D" id="Mat_dark"]
+albedo_color = Color(0.05, 0.05, 0.06, 1)
+roughness = 1.0
+
+[sub_resource type="Gradient" id="Gradient_glow"]
+interpolation_mode = 2
+offsets = PackedFloat32Array(0, 0.642276, 1)
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0.180392, 1, 1, 1, 0)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_glow"]
+gradient = SubResource("Gradient_glow")
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+fill_to = Vector2(0.5, 0.01)
+
+[sub_resource type="QuadMesh" id="QuadMesh_glow"]
+size = Vector2(2, 2)
+
+[sub_resource type="StandardMaterial3D" id="Mat_glow"]
+transparency = 1
+blend_mode = 1
+shading_mode = 0
+albedo_color = Color(1, 0.858824, 0.572549, 0.25098)
+albedo_texture = SubResource("GradientTexture2D_glow")
+billboard_mode = 1
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_body"]
+top_radius = 0.6
+bottom_radius = 0.6
+height = 0.12
+radial_segments = 32
+
+[sub_resource type="StandardMaterial3D" id="Mat_body"]
+albedo_color = Color(1.5, 1.26, 0, 1)
+metallic = 1.0
+roughness = 0.2
+emission_enabled = true
+emission = Color(0.219922, 0.109961, 0, 1)
+
+[node name="CoinGlowRoot" type="Node3D"]
+
+[node name="Ground" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.5, 0)
+mesh = SubResource("PlaneMesh_dark")
+surface_material_override/0 = SubResource("Mat_dark")
+
+[node name="GlowSprite" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.2, 0, 0)
+mesh = SubResource("QuadMesh_glow")
+surface_material_override/0 = SubResource("Mat_glow")
+
+[node name="Body" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 1.2, 0, 0)
+mesh = SubResource("CylinderMesh_body")
+surface_material_override/0 = SubResource("Mat_body")

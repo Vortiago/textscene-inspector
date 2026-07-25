@@ -15,15 +15,27 @@ import { controlStyle } from '../../../../r3f/controls/controlLayout';
 import { textThemeStyle } from '../../../../r3f/controls/textThemeStyle';
 import { resolveStyleBoxCss } from '../../../../r3f/controls/resolveStyleBox';
 import { imageToDataUrl } from '../../../../r3f/controls/imageToDataUrl';
+import {
+  DEFAULT_CONTENT_MARGIN,
+  DEFAULT_CORNER_RADIUS,
+  DEFAULT_FONT_COLOR,
+  DEFAULT_FONT_SIZE,
+  STYLE_NORMAL_FILL,
+} from '../../../../r3f/controls/godotDefaultTheme';
 import { resolveTexture2DPath } from '../../../../resources/SubResourceResolver';
 import { useResource } from '../../../../resources/useResource';
 import type { ButtonProperties } from './types';
 
+// Godot's button "normal" StyleBoxFlat: dark translucent fill, 4px content
+// margins, 3px corners — from the default theme, so an un-styled Button matches
+// the engine rather than a hand-picked slate. A `theme_override_styles/normal`
+// StyleBox replaces this entirely (styleBoxCss below wins).
 const DEFAULTS: CSSProperties = {
-  padding: '6px 14px',
-  borderRadius: '4px',
-  backgroundColor: 'rgba(70, 78, 94, 0.95)',
-  color: '#e8e8ea',
+  padding: `${DEFAULT_CONTENT_MARGIN}px`,
+  borderRadius: `${DEFAULT_CORNER_RADIUS}px`,
+  backgroundColor: STYLE_NORMAL_FILL,
+  fontSize: `${DEFAULT_FONT_SIZE}px`,
+  color: DEFAULT_FONT_COLOR,
 };
 
 // Godot Button.alignment (HorizontalAlignment): 0 LEFT, 1 CENTER, 2 RIGHT.

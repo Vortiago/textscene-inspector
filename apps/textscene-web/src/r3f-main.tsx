@@ -53,6 +53,7 @@ import {
 } from './multiFileUpload';
 import { useSceneSource, DEBOUNCE_MS } from './useSceneSource';
 import { useFixtureSelection } from './useFixtureSelection';
+import { useCameraDeepLink } from './useCameraDeepLink';
 import styles from './r3f-main.module.css';
 
 /** Sentinel value used by `<ViewportSelector>` when no fixture is active (user is on an uploaded .tscn). */
@@ -167,6 +168,9 @@ export function R3FApp() {
     fixtures,
     defaultFixture: DEFAULT_FIXTURE,
   });
+
+  // `?camera=<node path>` deep-link: look through a scene Camera3D on open.
+  const initialActiveCameraPath = useCameraDeepLink();
 
   // Wire the resource pipeline. One provider + bus + loader for
   // the lifetime of the app; React component identity preserves them
@@ -621,6 +625,7 @@ export function R3FApp() {
             onResourceRemove={handleResourceRemove}
             onMissingPathsChange={handleMissingPathsChange}
             onOpenSubScene={handleOpenSubScene}
+            initialActiveCameraPath={initialActiveCameraPath}
             toolbar={
               <Toolbar
                 options={options}
@@ -831,6 +836,21 @@ function Toolbar({
           ▾
         </span>
       </button>
+
+      {/* Opens the staged Godot-vs-ours comparison gallery (public/parity/,
+          served at /parity/ in dev and on the deployed site). */}
+      <a
+        className={styles.openButton}
+        href="parity/index.html"
+        target="_blank"
+        rel="noopener"
+        title="Open the Godot ⇄ ours render-comparison gallery"
+      >
+        <span className={styles.openIcon} aria-hidden>
+          ⇄
+        </span>
+        Parity
+      </a>
 
       {missingPaths.size > 0 && (
         <span

@@ -1,0 +1,404 @@
+{
+ "chosen": [
+  {
+   "type": "AnimatedSprite2D",
+   "slice": "2d/animatedsprite2d",
+   "fixture": "unit-animatedsprite2d.tscn"
+  },
+  {
+   "type": "Camera2D",
+   "slice": "2d/camera2d",
+   "fixture": "unit-remote-transform-2d.tscn"
+  },
+  {
+   "type": "Line2D",
+   "slice": "2d/line2d",
+   "fixture": "unit-line2d.tscn"
+  },
+  {
+   "type": "Marker2D",
+   "slice": "2d/marker2d",
+   "fixture": "unit-marker2d.tscn"
+  },
+  {
+   "type": "NavigationRegion2D",
+   "slice": "2d/navigationregion2d",
+   "fixture": "unit-navigation-region-2d.tscn"
+  },
+  {
+   "type": "Path2D",
+   "slice": "2d/path2d",
+   "fixture": "unit-path2d.tscn"
+  },
+  {
+   "type": "PathFollow2D",
+   "slice": "2d/pathfollow2d",
+   "fixture": "unit-pathfollow2d.tscn"
+  },
+  {
+   "type": "Polygon2D",
+   "slice": "2d/polygon2d",
+   "fixture": "unit-polygon2d.tscn"
+  },
+  {
+   "type": "RemoteTransform2D",
+   "slice": "2d/remotetransform2d",
+   "fixture": "unit-remote-transform-2d.tscn"
+  },
+  {
+   "type": "Sprite2D",
+   "slice": "2d/sprite2d",
+   "fixture": "unit-sprite2d.tscn"
+  },
+  {
+   "type": "TileMap",
+   "slice": "2d/tiles/tilemap",
+   "fixture": "unit-tile-map.tscn"
+  },
+  {
+   "type": "TileMapLayer",
+   "slice": "2d/tiles/tilemaplayer",
+   "fixture": "unit-tile-map-layer.tscn"
+  },
+  {
+   "type": "Button",
+   "slice": "2d/ui/button",
+   "fixture": "unit-button.tscn"
+  },
+  {
+   "type": "CanvasLayer",
+   "slice": "2d/ui/canvaslayer",
+   "fixture": "unit-canvas-layer.tscn"
+  },
+  {
+   "type": "CenterContainer",
+   "slice": "2d/ui/centercontainer",
+   "fixture": "unit-center-container.tscn"
+  },
+  {
+   "type": "CheckBox",
+   "slice": "2d/ui/checkbox",
+   "fixture": "unit-checkbox.tscn"
+  },
+  {
+   "type": "ColorRect",
+   "slice": "2d/ui/colorrect",
+   "fixture": "unit-color-rect.tscn"
+  },
+  {
+   "type": "Control",
+   "slice": "2d/ui/control",
+   "fixture": "unit-control-state.tscn"
+  },
+  {
+   "type": "GridContainer",
+   "slice": "2d/ui/gridcontainer",
+   "fixture": "unit-grid-container.tscn"
+  },
+  {
+   "type": "HBoxContainer",
+   "slice": "2d/ui/hboxcontainer",
+   "fixture": "unit-hbox-container.tscn"
+  },
+  {
+   "type": "Label",
+   "slice": "2d/ui/label",
+   "fixture": "unit-label-2d.tscn"
+  },
+  {
+   "type": "MarginContainer",
+   "slice": "2d/ui/margincontainer",
+   "fixture": "unit-margin-container.tscn"
+  },
+  {
+   "type": "OptionButton",
+   "slice": "2d/ui/optionbutton",
+   "fixture": "unit-optionbutton.tscn"
+  },
+  {
+   "type": "Panel",
+   "slice": "2d/ui/panel",
+   "fixture": "unit-panel.tscn"
+  },
+  {
+   "type": "PanelContainer",
+   "slice": "2d/ui/panelcontainer",
+   "fixture": "unit-panel-container.tscn"
+  },
+  {
+   "type": "RichTextLabel",
+   "slice": "2d/ui/richtextlabel",
+   "fixture": "unit-rich-text-label.tscn"
+  },
+  {
+   "type": "ScrollContainer",
+   "slice": "2d/ui/scrollcontainer",
+   "fixture": "unit-scroll-container.tscn"
+  },
+  {
+   "type": "TextureRect",
+   "slice": "2d/ui/texturerect",
+   "fixture": "unit-texture-rect.tscn"
+  },
+  {
+   "type": "VBoxContainer",
+   "slice": "2d/ui/vboxcontainer",
+   "fixture": "unit-vbox-container.tscn"
+  },
+  {
+   "type": "Camera3D",
+   "slice": "3d/camera3d",
+   "fixture": "unit-camera3d.tscn"
+  },
+  {
+   "type": "CSGBox3D",
+   "slice": "3d/csg/csgbox3d",
+   "fixture": "unit-csg-box.tscn"
+  },
+  {
+   "type": "CSGCylinder3D",
+   "slice": "3d/csg/csgcylinder3d",
+   "fixture": "unit-csg-cylinder.tscn"
+  },
+  {
+   "type": "CSGSphere3D",
+   "slice": "3d/csg/csgsphere3d",
+   "fixture": "unit-csg-sphere.tscn"
+  },
+  {
+   "type": "Decal",
+   "slice": "3d/decal",
+   "fixture": "unit-decal.tscn"
+  },
+  {
+   "type": "GridMap",
+   "slice": "3d/gridmap",
+   "fixture": "unit-grid-map.tscn"
+  },
+  {
+   "type": "Label3D",
+   "slice": "3d/label3d",
+   "fixture": "unit-label3d.tscn"
+  },
+  {
+   "type": "AreaLight3D",
+   "slice": "3d/lights/arealight3d",
+   "fixture": "unit-area-light3d.tscn"
+  },
+  {
+   "type": "DirectionalLight3D",
+   "slice": "3d/lights/directionallight3d",
+   "fixture": "unit-directional-light-3d.tscn"
+  },
+  {
+   "type": "OmniLight3D",
+   "slice": "3d/lights/omnilight3d",
+   "fixture": "unit-omni-light-3d.tscn"
+  },
+  {
+   "type": "SpotLight3D",
+   "slice": "3d/lights/spotlight3d",
+   "fixture": "unit-spot-light-3d.tscn"
+  },
+  {
+   "type": "Marker3D",
+   "slice": "3d/marker3d",
+   "fixture": "unit-marker-3d.tscn"
+  },
+  {
+   "type": "MeshInstance3D",
+   "slice": "3d/meshinstance3d",
+   "fixture": "unit-torus-mesh.tscn"
+  },
+  {
+   "type": "NavigationAgent3D",
+   "slice": "3d/navigationagent3d",
+   "fixture": "unit-navigation-agent-3d.tscn"
+  },
+  {
+   "type": "NavigationObstacle3D",
+   "slice": "3d/navigationobstacle3d",
+   "fixture": "unit-navigation-obstacle-3d.tscn"
+  },
+  {
+   "type": "NavigationRegion3D",
+   "slice": "3d/navigationregion3d",
+   "fixture": "unit-navigation-region-3d.tscn"
+  },
+  {
+   "type": "GPUParticles3D",
+   "slice": "3d/particles/gpuparticles3d",
+   "fixture": "unit-gpuparticles3d.tscn"
+  },
+  {
+   "type": "RemoteTransform3D",
+   "slice": "3d/remotetransform3d",
+   "fixture": "unit-remote-transform-3d.tscn"
+  },
+  {
+   "type": "Skeleton3D",
+   "slice": "3d/skeleton3d",
+   "fixture": "unit-skeleton3d.tscn"
+  },
+  {
+   "type": "Sprite3D",
+   "slice": "3d/sprite3d",
+   "fixture": "unit-sprite3d.tscn"
+  },
+  {
+   "type": "WorldEnvironment",
+   "slice": "3d/worldenvironment",
+   "fixture": "unit-world-environment-basic.tscn"
+  },
+  {
+   "type": "AnimationPlayer",
+   "slice": "animation/animationplayer",
+   "fixture": "unit-animation-player.tscn"
+  },
+  {
+   "type": "AnimationTree",
+   "slice": "animation/animationtree",
+   "fixture": "unit-animationtree-blend.tscn"
+  },
+  {
+   "type": "AudioStreamPlayer",
+   "slice": "audio/audiostreamplayer",
+   "fixture": "unit-physics-bodies.tscn"
+  },
+  {
+   "type": "AudioStreamPlayer2D",
+   "slice": "audio/audiostreamplayer2d",
+   "fixture": "unit-audio-stream-player-2d.tscn"
+  },
+  {
+   "type": "AudioStreamPlayer3D",
+   "slice": "audio/audiostreamplayer3d",
+   "fixture": "unit-audio-stream-player.tscn"
+  },
+  {
+   "type": "Node2D",
+   "slice": "base/node2d",
+   "fixture": "unit-area2d.tscn"
+  },
+  {
+   "type": "Node3D",
+   "slice": "base/node3d",
+   "fixture": "unit-node3d-basic.tscn"
+  },
+  {
+   "type": "Path3D",
+   "slice": "paths/path3d",
+   "fixture": "unit-path3d.tscn"
+  },
+  {
+   "type": "PathFollow3D",
+   "slice": "paths/pathfollow3d",
+   "fixture": "unit-pathfollow-3d.tscn"
+  },
+  {
+   "type": "Area2D",
+   "slice": "physics/2d/area2d",
+   "fixture": "unit-area2d.tscn"
+  },
+  {
+   "type": "CollisionShape2D",
+   "slice": "physics/2d/collisionshape2d",
+   "fixture": "unit-collisionshape2d.tscn"
+  },
+  {
+   "type": "Area3D",
+   "slice": "physics/3d/area3d",
+   "fixture": "edge-area3d-inactive.tscn"
+  },
+  {
+   "type": "CharacterBody3D",
+   "slice": "physics/3d/characterbody3d",
+   "fixture": "unit-characterbody3d.tscn"
+  },
+  {
+   "type": "CollisionShape3D",
+   "slice": "physics/3d/collisionshape3d",
+   "fixture": "unit-rigidbody3d.tscn"
+  },
+  {
+   "type": "RigidBody3D",
+   "slice": "physics/3d/rigidbody3d",
+   "fixture": "unit-rigidbody3d.tscn"
+  },
+  {
+   "type": "StaticBody3D",
+   "slice": "physics/3d/staticbody3d",
+   "fixture": "unit-physics-bodies.tscn"
+  },
+  {
+   "type": "Timer",
+   "slice": "timers/timer",
+   "fixture": "unit-timer.tscn"
+  }
+ ],
+ "distinct": [
+  "unit-animatedsprite2d.tscn",
+  "unit-remote-transform-2d.tscn",
+  "unit-line2d.tscn",
+  "unit-marker2d.tscn",
+  "unit-navigation-region-2d.tscn",
+  "unit-path2d.tscn",
+  "unit-pathfollow2d.tscn",
+  "unit-polygon2d.tscn",
+  "unit-sprite2d.tscn",
+  "unit-tile-map.tscn",
+  "unit-tile-map-layer.tscn",
+  "unit-button.tscn",
+  "unit-canvas-layer.tscn",
+  "unit-center-container.tscn",
+  "unit-checkbox.tscn",
+  "unit-color-rect.tscn",
+  "unit-control-state.tscn",
+  "unit-grid-container.tscn",
+  "unit-hbox-container.tscn",
+  "unit-label-2d.tscn",
+  "unit-margin-container.tscn",
+  "unit-optionbutton.tscn",
+  "unit-panel.tscn",
+  "unit-panel-container.tscn",
+  "unit-rich-text-label.tscn",
+  "unit-scroll-container.tscn",
+  "unit-texture-rect.tscn",
+  "unit-vbox-container.tscn",
+  "unit-decal.tscn",
+  "unit-csg-box.tscn",
+  "unit-csg-cylinder.tscn",
+  "unit-csg-sphere.tscn",
+  "unit-grid-map.tscn",
+  "unit-label3d.tscn",
+  "unit-area-light3d.tscn",
+  "unit-directional-light-3d.tscn",
+  "unit-omni-light-3d.tscn",
+  "unit-spot-light-3d.tscn",
+  "unit-marker-3d.tscn",
+  "unit-torus-mesh.tscn",
+  "unit-navigation-agent-3d.tscn",
+  "unit-navigation-obstacle-3d.tscn",
+  "unit-navigation-region-3d.tscn",
+  "unit-gpuparticles3d.tscn",
+  "unit-remote-transform-3d.tscn",
+  "unit-skeleton3d.tscn",
+  "unit-sprite3d.tscn",
+  "unit-world-environment-basic.tscn",
+  "unit-animation-player.tscn",
+  "unit-animationtree-blend.tscn",
+  "unit-physics-bodies.tscn",
+  "unit-audio-stream-player-2d.tscn",
+  "unit-audio-stream-player.tscn",
+  "unit-area2d.tscn",
+  "unit-node3d-basic.tscn",
+  "unit-pathfollow-3d.tscn",
+  "unit-path3d.tscn",
+  "unit-camera3d.tscn",
+  "unit-collisionshape2d.tscn",
+  "edge-area3d-inactive.tscn",
+  "unit-characterbody3d.tscn",
+  "unit-rigidbody3d.tscn",
+  "unit-timer.tscn"
+ ]
+}
