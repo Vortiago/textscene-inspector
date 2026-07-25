@@ -1,0 +1,37 @@
+[gd_scene load_steps=2 format=3 uid="uid://unitcsgtorus"]
+
+; CSGTorus3D. Godot's ring lies in XZ with the hole on +Y, and `sides` counts
+; segments around the RING while `ring_sides` counts them around the TUBE, which
+; is the opposite of three's TorusGeometry naming. smooth_faces defaults TRUE
+; here (csg_shape.cpp:2146), unlike CSGPolygon3D.
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_torus"]
+albedo_color = Color(0.55, 0.45, 0.2, 1)
+
+[node name="CSGTorusRoot" type="Node3D"]
+
+; Vendored witness: scenes/demos/3d/csg/csg.tscn:268, a ring cut into a pillar.
+; ring_sides = 5 is deliberately coarse: no cross-section vertex lands at the top
+; of the tube, so the Y extent is tube * sin(72deg), not the tube radius.
+[node name="Ring" type="CSGTorus3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+inner_radius = 0.25
+outer_radius = 0.4
+sides = 32
+ring_sides = 5
+material = SubResource("StandardMaterial3D_torus")
+
+; Every dimension omitted, so this pins our defaults against Godot's
+; 0.5 / 1.0 / 8 / 6. A wrong default only shows on a node like this.
+[node name="DefaultTorus" type="CSGTorus3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0, 0)
+
+; smooth_faces = false exercises the non-default branch.
+[node name="FacetedTorus" type="CSGTorus3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 0, 0)
+inner_radius = 0.4
+outer_radius = 0.9
+sides = 12
+ring_sides = 4
+smooth_faces = false
+material = SubResource("StandardMaterial3D_torus")

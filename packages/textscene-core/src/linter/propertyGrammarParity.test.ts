@@ -273,6 +273,11 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
     reason: 'Same as CSGBox3D: finishCsgParse reads material/operation via shared helper not visible to the scrape.',
   },
 
+  CSGTorus3D: {
+    linterOnly: ['material', 'operation'],
+    reason: 'Same as CSGBox3D: finishCsgParse reads material/operation via shared helper not visible to the scrape.',
+  },
+
   Decal: {
     reason: 'No unique asymmetries; transform is covered by Node3D base on both parser and validator sides.',
   },

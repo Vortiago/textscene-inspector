@@ -1038,6 +1038,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - CSG Primitives"
   },
   {
+    "name": "Csg Torus",
+    "file": "unit-csg-torus.tscn",
+    "category": "Unit - CSG Primitives"
+  },
+  {
     "name": "External Cube",
     "file": "unit-external-cube.tscn",
     "category": "Unit - External Resources"

@@ -279,6 +279,10 @@ export const GOLDEN_SCENES = [
   { name: 'csg-box-3d', file: 'unit-csg-box.tscn' },
   { name: 'csg-sphere-3d', file: 'unit-csg-sphere.tscn' },
   { name: 'csg-cylinder-3d', file: 'unit-csg-cylinder.tscn' },
+  // Godot's ring is in XZ with the hole on +Y, and `sides`/`ring_sides` mean the
+  // opposite of three's TorusGeometry naming. Includes an all-defaults torus so a
+  // wrong default cannot hide behind explicit dimensions.
+  { name: 'csg-torus-3d', file: 'unit-csg-torus.tscn' },
   // 2D nodes render in the 2D view (with its zoom/pan chrome) — relax the
   // threshold like the other 2D goldens (marker2d/path2d).
   { name: 'polygon-2d', file: 'unit-polygon2d.tscn', maxDiffPct: 0.5 },
