@@ -4,12 +4,19 @@ import type { ParsedHeading } from '../../../../parser/utils';
 import type { CSGCylinder3DProperties } from './types';
 import { parseNode3D } from '../../../base/node3d/parser';
 import { finishCsgParse } from '../sharedParser';
-import { floatOr, intOr } from '../../../../parser/valueParsers';
+import { boolOr, floatOr, intOr } from '../../../../parser/valueParsers';
 
 // Godot's own defaults (class_csgcylinder3d): radius 0.5, height 2.0, sides 8,
 // cone false. An omitted property means Godot's value, so ours must match or a
 // cylinder that writes none renders at the wrong size.
-const DEFAULTS = { radius: 0.5, height: 2, sides: 8, cone: false } as const;
+const DEFAULTS = {
+  radius: 0.5,
+  height: 2,
+  sides: 8,
+  cone: false,
+  smoothFaces: true,
+  flipFaces: false,
+} as const;
 
 export function parseCSGCylinder3D(
   heading: ParsedHeading,
@@ -23,6 +30,8 @@ export function parseCSGCylinder3D(
     height: floatOr(properties.height, DEFAULTS.height, 'CSGCylinder3D height'),
     sides: intOr(properties.sides, DEFAULTS.sides, 'CSGCylinder3D sides'),
     cone: properties.cone === undefined ? DEFAULTS.cone : properties.cone === 'true',
+    smoothFaces: boolOr(properties.smooth_faces, DEFAULTS.smoothFaces, 'CSGCylinder3D smooth_faces'),
+    flipFaces: boolOr(properties.flip_faces, DEFAULTS.flipFaces, 'CSGCylinder3D flip_faces'),
   };
 
   finishCsgParse(result, properties, 'CSGCylinder3D', 'cylinder');

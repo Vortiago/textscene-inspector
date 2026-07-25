@@ -155,6 +155,24 @@ describe('applyCsgNormals', () => {
     });
   });
 
+  describe('winding: Godot fronts are CLOCKWISE, three fronts are COUNTER-CLOCKWISE', () => {
+    it('reverses the winding on the way out, so faces are not back-face culled', () => {
+      // Emitting Godot's vertex order verbatim culls every triangle and renders each
+      // solid as its own interior. Measured, that took unit-csg-cylinder from 0.788% to
+      // 4.223% against real Godot before this conversion was added.
+      const tri: [THREE.Vector3, THREE.Vector3, THREE.Vector3] = [v(0, 0, 0), v(1, 0, 0), v(0, 0, 1)];
+      const geometry = applyCsgNormals(soupOf([tri], { smooth: false }));
+      expect(positionAt(geometry, 0).toArray()).toEqual([0, 0, 0]);
+      expect(positionAt(geometry, 1).toArray()).toEqual([0, 0, 1]);
+      expect(positionAt(geometry, 2).toArray()).toEqual([1, 0, 0]);
+    });
+
+    it('leaves the normal alone, since it is supplied explicitly and not derived from winding', () => {
+      const geometry = applyCsgNormals(soupOf([[v(0, 0, 0), v(1, 0, 0), v(0, 0, 1)]], { smooth: false }));
+      expect(normalAt(geometry, 0).toArray()).toEqual([0, 1, 0]);
+    });
+  });
+
   describe('invert (Godot face.invert, the CSGPrimitive3D flip_faces property)', () => {
     it('negates the normal', () => {
       const tri: [THREE.Vector3, THREE.Vector3, THREE.Vector3] = [v(0, 0, 0), v(1, 0, 0), v(0, 0, 1)];
@@ -163,12 +181,14 @@ describe('applyCsgNormals', () => {
       expect(normalAt(flipped, 0).toArray()).toEqual(normalAt(plain, 0).negate().toArray());
     });
 
-    it('swaps vertices 1 and 2, so the winding reverses too', () => {
+    it('cancels the CW-to-CCW reversal, leaving Godot source order', () => {
+      // Godot's own invert swap and our winding conversion are both a 1<->2 swap, so
+      // together they compose back to the source order.
       const tri: [THREE.Vector3, THREE.Vector3, THREE.Vector3] = [v(0, 0, 0), v(1, 0, 0), v(0, 0, 1)];
       const flipped = applyCsgNormals(soupOf([tri], { smooth: false, invert: true }));
       expect(positionAt(flipped, 0).toArray()).toEqual([0, 0, 0]);
-      expect(positionAt(flipped, 1).toArray()).toEqual([0, 0, 1]);
-      expect(positionAt(flipped, 2).toArray()).toEqual([1, 0, 0]);
+      expect(positionAt(flipped, 1).toArray()).toEqual([1, 0, 0]);
+      expect(positionAt(flipped, 2).toArray()).toEqual([0, 0, 1]);
     });
   });
 

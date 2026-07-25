@@ -143,9 +143,18 @@ export function applyCsgNormals(soup: CsgFaceSoup): THREE.BufferGeometry {
     const base = t * 9;
     const uvBase = t * 6;
     const flipped = invert?.[t] === true;
-    // Godot: `int order[3] = {0,1,2}; if (invert) SWAP(order[1], order[2]);` then writes
-    // source vertex j to destination slot order[j].
-    const order = flipped ? [0, 2, 1] : [0, 1, 2];
+    // Two swaps compose here, and they cancel.
+    //
+    // Godot does `int order[3] = {0,1,2}; if (invert) SWAP(order[1], order[2]);` and
+    // writes source vertex j into destination slot order[j].
+    //
+    // On top of that, Godot's front faces are wound CLOCKWISE while three.js treats
+    // COUNTER-CLOCKWISE as front and culls the other side. Emitting Godot's order
+    // verbatim therefore back-face-culls every triangle, which renders each solid as its
+    // own interior: measured, that took unit-csg-cylinder from 0.788% to 4.223% against
+    // real Godot. The normals are unaffected (we supply them explicitly, and they came
+    // out correct throughout), so this is purely a winding conversion.
+    const order = flipped ? [0, 1, 2] : [0, 2, 1];
 
     planeNormal(positions, base, plane, edgeA, edgeB);
 

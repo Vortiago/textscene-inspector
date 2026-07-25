@@ -11,6 +11,8 @@ validatorRegistry.registerAll('CSGCylinder3D', {
   height: v.positiveFloat('height'),
   sides: v.int('sides', { min: 3, max: 64 }),
   cone: v.boolean('cone'),
+  smooth_faces: v.boolean('smooth_faces'),
+  flip_faces: v.boolean('flip_faces'),
   material: v.resourceReference('material'),
   operation: v.enumInt('operation', 0, 2, OPERATION),
 });
