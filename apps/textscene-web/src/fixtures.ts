@@ -1013,6 +1013,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Physics"
   },
   {
+    "name": "Csg Boolean Ops",
+    "file": "unit-csg-boolean-ops.tscn",
+    "category": "Unit - CSG Primitives"
+  },
+  {
     "name": "Csg Box",
     "file": "unit-csg-box.tscn",
     "category": "Unit - CSG Primitives"
@@ -1043,6 +1048,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - CSG Primitives"
   },
   {
+    "name": "Csg Multi Material",
+    "file": "unit-csg-multi-material.tscn",
+    "category": "Unit - CSG Primitives"
+  },
+  {
     "name": "Csg Polygon Depth",
     "file": "unit-csg-polygon-depth.tscn",
     "category": "Unit - CSG Primitives"
@@ -1065,6 +1075,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Csg Torus",
     "file": "unit-csg-torus.tscn",
+    "category": "Unit - CSG Primitives"
+  },
+  {
+    "name": "Csg Transparency",
+    "file": "unit-csg-transparency.tscn",
     "category": "Unit - CSG Primitives"
   },
   {

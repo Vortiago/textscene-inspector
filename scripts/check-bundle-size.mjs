@@ -89,7 +89,11 @@ export function findHostBundleViolations(content) {
  * Exported for unit testing; also used by `checkHostBundles()` below.
  */
 export function findForbiddenHostInputs(metafile) {
-  const forbidden = /node_modules\/(react|react-dom|scheduler|three|@react-three)\//;
+  // `three` is anchored by the trailing slash, so it does NOT match `three-bvh-csg/`
+  // or `three-mesh-bvh/`. The three-mesh-bvh gap predates the CSG work: drei has
+  // depended on it all along.
+  const forbidden =
+    /node_modules\/(react|react-dom|scheduler|three|three-bvh-csg|three-mesh-bvh|@react-three)\//;
   return Object.keys(metafile.inputs ?? {}).filter((input) => forbidden.test(input));
 }
 

@@ -1,21 +1,31 @@
 /**
- * <CSGCombiner3D> — a grouping node that draws nothing of its own.
+ * <CSGCombiner3D> — a grouping node whose shape is the boolean fold of its children.
  *
- * Godot's combiner has no shape: `_build_brush()` returns an empty brush
- * (csg_shape.cpp:1072). It exists so a set of CSG children can be folded into one solid
- * and then combined into ITS parent by its own `operation`. So this renders as a plain
- * transform group, and `<Node3D>` already is one.
+ * Godot's combiner has no solid: `_build_brush()` returns an empty brush
+ * (csg_shape.cpp:1072). It exists so a set of CSG children folds into one result, which
+ * then combines into ITS parent by its own `operation`.
  *
- * Registering the type is not a formality even before boolean evaluation lands. An
- * unregistered CSGCombiner3D falls through to `<GenericNodeFallback>`, which does not
- * apply `visible`, so a hidden combiner's children keep drawing. That is a real corpus
- * case: `scenes/demos/3d/ragdoll_physics/ragdoll_physics.tscn:92` hides its combiner
- * precisely because the same geometry is already baked into sibling nodes.
+ * It still routes through `<CsgPrimitive>`, with a null solid, because that is where a
+ * CSG ROOT is detected and evaluated. A combiner under a plain Node3D is the commonest
+ * root there is, and rendering it as a bare `<Node3D>` would leave each of its children
+ * to draw itself as a separate lone root, silently skipping the boolean entirely.
+ *
+ * Registering the type also fixes something visible without any booleans: an
+ * unregistered CSGCombiner3D falls through to GenericNodeFallback, which applies no
+ * `visible`, so a HIDDEN combiner's children keep drawing.
+ * `ragdoll_physics.tscn:92` hides its combiner precisely because the same geometry is
+ * already baked into sibling nodes.
  */
 
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
-import { Node3D } from '../../../base/node3d/Component';
+import { CsgPrimitive } from '../CsgPrimitive';
+import type { CSGCombiner3DProperties } from './types';
 
 export function CSGCombiner3D({ node, children }: NodeComponentProps) {
-  return <Node3D node={node}>{children}</Node3D>;
+  const properties = node.properties as CSGCombiner3DProperties;
+  return (
+    <CsgPrimitive node={node} properties={properties} geometry={null}>
+      {children}
+    </CsgPrimitive>
+  );
 }

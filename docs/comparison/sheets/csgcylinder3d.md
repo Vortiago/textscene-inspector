@@ -8,9 +8,9 @@ renders_as: a THREE.CylinderGeometry mesh
 
 # CSGCylinder3D
 
-A CSG cylinder primitive. The previewer draws it as a solid cylinder mesh, or a
-cone when `cone` is set (top radius collapses to 0); CSG boolean ops are not
-composed (ADR-0004).
+A CSG cylinder primitive, drawn as a solid cylinder or as a cone when `cone` is
+set (top radius collapses to 0). CSG boolean ops ARE composed (ADR-0026), so a
+cylinder inside a CSG root contributes to that root's result.
 
 ## Properties exercised
 

@@ -14,7 +14,7 @@ browsable gallery is `index.html` (build with `scripts/compare-docs/build-galler
 - [Camera3D](sheets/camera3d.md) — a passive THREE.PerspectiveCamera
 - [CharacterBody3D](sheets/characterbody3d.md) — a transform-only Node3D group
 - [CollisionShape3D](sheets/collisionshape3d.md) — a toggle-gated collision wireframe
-- [CSGBox3D](sheets/csgbox3d.md) — a solid box mesh
+- [CSGBox3D](sheets/csgbox3d.md) — a box, combined into its CSG root's boolean result
 - [CSGCylinder3D](sheets/csgcylinder3d.md) — a THREE.CylinderGeometry mesh
 - [CSGSphere3D](sheets/csgsphere3d.md) — a solid sphere mesh
 - [Decal](sheets/decal.md) — a texture projected onto the surfaces its box intersects

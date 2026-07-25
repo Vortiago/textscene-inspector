@@ -1,0 +1,43 @@
+[gd_scene load_steps=4 format=3 uid="uid://unitcsgmultimaterial"]
+
+; Multi-surface output. Godot interns one material per contributing brush and
+; emits one surface each (CSGShape3D::update_shape), so a boolean between two
+; differently-materialed solids produces a mesh with TWO surfaces.
+;
+; This is the only scene that can catch a group/materialIndex remap bug: with
+; one material everywhere, a wrong mapping is invisible. The subtraction is
+; arranged so faces of both materials survive into the result.
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_outer"]
+albedo_color = Color(0.2, 0.65, 0.35, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_inner"]
+albedo_color = Color(0.9, 0.25, 0.35, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_third"]
+albedo_color = Color(0.95, 0.85, 0.2, 1)
+
+[node name="CSGMultiMaterialRoot" type="Node3D"]
+
+[node name="Shell" type="CSGBox3D" parent="."]
+size = Vector3(2, 2, 2)
+material = SubResource("StandardMaterial3D_outer")
+
+; Cuts in from a corner, so the red cut surface and the green outer faces are
+; both visible in one frame.
+[node name="Cut" type="CSGSphere3D" parent="Shell"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1)
+operation = 2
+radius = 1.3
+radial_segments = 32
+rings = 16
+material = SubResource("StandardMaterial3D_inner")
+
+; A third material UNIONED on, so the surface count is three rather than two and
+; an off-by-one in the slot mapping cannot pass by coincidence.
+[node name="Boss" type="CSGCylinder3D" parent="Shell"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.7, 1.2, -0.7)
+radius = 0.35
+height = 1.2
+sides = 20
+material = SubResource("StandardMaterial3D_third")

@@ -56,6 +56,13 @@ import { node2dGroupProps } from './node2dTransform.js';
 import type { Node3DProperties } from '../nodes/base/node3d/types.js';
 import type { Node2DProperties } from '../nodes/base/node2d/types.js';
 import { GlbOverridesProvider } from './internal/glb-scene-root/GlbOverridesContext.js';
+import { prefetchCsgModule } from './csg/csgModule.js';
+
+/** Does this subtree contain anything that needs boolean evaluation? */
+function containsCsgShape(node: TscnNode): boolean {
+  if (nodeComponentRegistry.isCsgShape(node.type)) return true;
+  return node.children.some(containsCsgShape);
+}
 
 export interface NodeDispatcherProps {
   /** Root nodes from the active scene (typically `scene.scenes.get(rootScene).nodes`). */
@@ -87,6 +94,17 @@ function fallbackTransform(node: TscnNode): NodeTransform {
 
 export function NodeDispatcher({ nodes }: NodeDispatcherProps) {
   const { handlers } = useViewportSelection();
+
+  // Start fetching the CSG library the moment we know the scene needs it. CameraFit's
+  // last auto-frame retry fires at 1100 ms, so a boolean result that lands after that
+  // would be framed out of the opening view. This is the only CSG-aware line in the
+  // dispatcher: the evaluation seam itself lives in CsgPrimitive, because PlainNode is
+  // the sole caller of registerNodeObject and skipping CSG children here would strip
+  // selection from every one of them.
+  useEffect(() => {
+    if (nodes.some(containsCsgShape)) prefetchCsgModule();
+  }, [nodes]);
+
   return (
     <group
       onPointerDown={handlers.onPointerDown}

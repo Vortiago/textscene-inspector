@@ -75,7 +75,9 @@ The render and linter pipelines are **separately bundleable** because the parse,
 │           │   ├── 3d/
 │           │   │   ├── meshinstance3d/      # parser.ts, linter.ts, Component.tsx, index{,.linter,.r3f}.ts
 │           │   │   ├── camera3d/
-│           │   │   ├── csg/{csgbox3d,csgcylinder3d,csgsphere3d}/   # CSG-as-primitive (ADR-0004)
+│           │   │   ├── csg/{csgbox3d,csgcylinder3d,csgsphere3d,     # real booleans (ADR-0026)
+│           │   │   │        csgtorus3d,csgmesh3d,csgpolygon3d,
+│           │   │   │        csgcombiner3d}/
 │           │   │   ├── lights/{directional,omni,spot,area}light3d/  (+ shared/ — parser, formatter, lint checks, lightShared/lightHelpers render code)
 │           │   │   ├── {sprite3d,skeleton3d,particles/gpuparticles3d,marker3d,
 │           │   │   │     gridmap,navigationregion3d,decal}/
@@ -649,7 +651,7 @@ The 2D overlay maps `layout_mode = 2` (container-managed, the majority case) to 
 
 ### Scope (P2 — [ADR-0004](./docs/adr/0004-csg-as-primitive.md), [ADR-0005](./docs/adr/0005-physics-bodies-transform-only.md))
 
-Scoped to exactly the types the target real-world corpus uses: CSGBox3D/CSGCylinder3D (base primitive, all union), StaticBody3D/Area3D (transform-only groups), CollisionShape3D + BoxShape3D/ConvexPolygonShape3D/ConcavePolygonShape3D (toggleable wireframe gizmos), plain AudioStreamPlayer (zero-geometry node), and a ShaderMaterial→translucent-standard-material fallback.
+Scoped to exactly the types the target real-world corpus uses: CSGBox3D/CSGCylinder3D (since extended to all seven CSG types with real boolean evaluation, ADR-0026), StaticBody3D/Area3D (transform-only groups), CollisionShape3D + BoxShape3D/ConvexPolygonShape3D/ConcavePolygonShape3D (toggleable wireframe gizmos), plain AudioStreamPlayer (zero-geometry node), and a ShaderMaterial→translucent-standard-material fallback.
 
 ### Tracked deepening candidates (not yet scheduled)
 

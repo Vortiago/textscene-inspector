@@ -45,6 +45,18 @@ export function frameSceneBounds(
   let hasGizmo = false;
   scene.traverse((obj) => {
     if (obj.userData?.tscnEmptyState) return;
+    // CSG contributor bounds proxies are deliberately INCLUDED here.
+    //
+    // Excluding them looks right (a fully-subtracted brush cannot then enlarge the
+    // opening frame) and is wrong in practice: the CSG library loads asynchronously
+    // while CameraFit's last retry fires at 1100 ms, so a root whose result has not
+    // landed yet would be framed against nothing. A CSGCombiner3D has no solid of its
+    // own to stand in for it, so the scene framed on empty space. Measured: the
+    // csg-combiner golden auto-framed to a 26% different picture.
+    //
+    // Including them can only ever frame too LARGE, never too small, because a boolean
+    // result is a subset of the union of its contributions. Too large is a cosmetic
+    // margin; too small is an unusable opening view.
     const o = obj as THREE.Mesh & { isLine?: boolean; isLineSegments?: boolean; isPoints?: boolean };
     if (!o.isMesh && !o.isLine && !o.isLineSegments && !o.isPoints) return;
     const objBox = computeWorldBoundingBox(obj, new THREE.Box3());

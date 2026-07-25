@@ -9,8 +9,9 @@ renders_as: a solid box mesh
 # CSGBox3D
 
 CSGBox3D is Godot's constructive-solid-geometry box. The previewer draws it as a
-plain box mesh carrying its StandardMaterial3D; the boolean `operation` is not
-evaluated (ADR-0004), so every CSG node renders as its solid base primitive. The
+box carrying its StandardMaterial3D. The boolean `operation` IS evaluated
+(ADR-0026), so a box inside a CSG root contributes to that root's union,
+intersection or subtraction rather than drawing itself. The
 fixture is two union boxes — a thin, wide floor slab and a tall wall standing at
 the far end.
 

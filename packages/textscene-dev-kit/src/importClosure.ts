@@ -51,6 +51,9 @@ export const FRAMEWORK_BARE_RE: readonly RegExp[] = [
   /^@react-three\//,
   /^three$/,
   /^three\//,
+  // Heavier than three itself and reached only through the lazy CSG import site.
+  /^three-bvh-csg(\/.*)?$/,
+  /^three-mesh-bvh(\/.*)?$/,
 ];
 
 /**

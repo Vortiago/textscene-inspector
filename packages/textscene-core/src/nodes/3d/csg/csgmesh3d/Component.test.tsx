@@ -56,16 +56,18 @@ describe('<CSGMesh3D>', () => {
     expect(geom.boundingBox!.max.x).toBeCloseTo(0.4, 3);
   });
 
-  it('renders empty geometry, not a placeholder, when `mesh` is absent', async () => {
-    // Godot builds an empty brush for a CSGMesh3D with no mesh (csg_shape.cpp:1126),
-    // so an empty solid is the parity-correct picture rather than a magenta box.
-    const geom = geometryOf(await render(makeNode()));
-    expect(geom.getAttribute('position')?.count ?? 0).toBe(0);
+  it('draws nothing at all, not a placeholder, when `mesh` is absent', async () => {
+    // Godot builds an empty brush for a CSGMesh3D with no mesh (csg_shape.cpp:1126).
+    // No mesh is a closer match to that than an empty one, and neither is a magenta box.
+    const renderer = await render(makeNode());
+    expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
+    // The transform group survives, so children still land in the right place.
+    expect(renderer.scene.findAllByType('Group').length).toBeGreaterThan(0);
   });
 
   it('does not throw when the mesh reference cannot be resolved', async () => {
-    const geom = geometryOf(await render(makeNode({ mesh: 'SubResource("Missing_1")' })));
-    expect(geom.getAttribute('position')?.count ?? 0).toBe(0);
+    const renderer = await render(makeNode({ mesh: 'SubResource("Missing_1")' }));
+    expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
   });
 
   it('applies the node’s own material, proving it goes through CsgPrimitive', async () => {

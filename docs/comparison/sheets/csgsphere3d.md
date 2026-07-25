@@ -9,8 +9,8 @@ renders_as: a solid sphere mesh
 # CSGSphere3D
 
 A constructive-solid-geometry sphere primitive. The previewer draws it as a solid
-sphere mesh carrying its StandardMaterial3D; the CSG boolean `operation` is not
-applied (ADR-0004), so the node renders as its plain base primitive.
+sphere carrying its StandardMaterial3D. The CSG boolean `operation` IS applied
+(ADR-0026), so a sphere inside a CSG root contributes to that root's result.
 
 ## Properties exercised
 

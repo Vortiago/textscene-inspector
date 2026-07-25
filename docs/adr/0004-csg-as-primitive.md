@@ -1,3 +1,8 @@
+**Superseded by ADR-0026 (2026-07-25): the booleans are really evaluated now.** The
+history below is kept because it records WHY the divergence was accepted and what it
+cost, and because its terminal behaviour survives as the degradation fallback when the
+CSG library cannot load.
+
 # CSG nodes render as their base primitive; boolean operations ignored
 
 `CSGBox3D`, `CSGCylinder3D`, and `CSGSphere3D` render the corresponding three.js geometry from their own inline `size`/`radius`/`radial_segments`/`rings`/`height` properties; the `operation` (union/subtraction/intersection) is parsed but not applied. We do not perform real constructive solid geometry.

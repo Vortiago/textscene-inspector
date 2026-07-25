@@ -18,6 +18,7 @@ const CLIPS = [
   ['all-primitives', 'A green ground plane holds primitive meshes (prism, torus, capsule), each with its own material, as solid 3D geometry.'],
   ['all-meshes', 'Every primitive mesh type (cube, sphere, cylinder, capsule, plane, torus, prism) rendered together with distinct materials.'],
   ['csg-box', 'CSGBox3D shapes render as solid lit geometry with materials (not magenta placeholders).'],
+  // Booleans are evaluated for real (ADR-0026): the three groups must look DIFFERENT.
   ['csg-cylinder', 'CSGCylinder3D renders as a solid cylinder, including a tapered cone form.'],
   ['material-metallic', 'A high-metallic, low-roughness sphere with a tight specular highlight.'],
   ['material-emissive', 'An emissive material sphere that self-illuminates uniformly.'],

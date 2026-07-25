@@ -302,6 +302,15 @@ export const GOLDEN_SCENES = [
   // with the curve tessellation, and it covers both NodePath shapes the corpus
   // writes: a sibling and a child.
   { name: 'csg-polygon-path', file: 'unit-csg-polygon-path.tscn' },
+  // Real boolean evaluation (ADR-0026). Before it, all three groups rendered
+  // IDENTICALLY as a solid block beside a solid ball: a hole showed as filled.
+  // If they ever match again, the evaluator has stopped running.
+  { name: 'csg-boolean-ops', file: 'unit-csg-boolean-ops.tscn' },
+  // The only scene that can catch a group/materialIndex remap bug: with one
+  // material everywhere a wrong slot mapping is invisible.
+  { name: 'csg-multi-material', file: 'unit-csg-multi-material.tscn' },
+  // Transparency was the one measured confounder with no CSG coverage at all.
+  { name: 'csg-transparency', file: 'unit-csg-transparency.tscn' },
   // 2D nodes render in the 2D view (with its zoom/pan chrome) — relax the
   // threshold like the other 2D goldens (marker2d/path2d).
   { name: 'polygon-2d', file: 'unit-polygon2d.tscn', maxDiffPct: 0.5 },
