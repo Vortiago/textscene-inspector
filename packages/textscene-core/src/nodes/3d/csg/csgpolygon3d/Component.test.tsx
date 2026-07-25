@@ -4,7 +4,9 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import type { TscnInternalResource, TscnNode } from '../../../../parser/types';
 import { parseCSGPolygon3D } from './parser';
-import { CSGPolygon3D } from './Component';
+// Imports the wired slice, not the bare component: CsgPrimitive builds the solid
+// from the registered builder, so the registration is part of what is under test.
+import { CSGPolygon3D } from './index.r3f';
 import type { CSGPolygon3DProperties, CSGPolygon3DResolvedPath } from './types';
 
 function makeNode(
@@ -82,7 +84,6 @@ describe('<CSGPolygon3D>', () => {
             { in: zero, out: zero, position: { x: 0, y: 0, z: 0 } },
             { in: zero, out: zero, position: { x: 0, y: 0, z: -4 } },
           ],
-          pointCount: 2,
           baseTransform: null,
         })
       )

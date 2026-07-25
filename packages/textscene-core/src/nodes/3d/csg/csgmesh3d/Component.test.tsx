@@ -4,7 +4,9 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import type { TscnInternalResource, TscnNode } from '../../../../parser/types';
 import { parseCSGMesh3D } from './parser';
-import { CSGMesh3D } from './Component';
+// Imports the wired slice, not the bare component: CsgPrimitive builds the solid
+// from the registered builder, so the registration is part of what is under test.
+import { CSGMesh3D } from './index.r3f';
 
 const BOX_MESH: TscnInternalResource = {
   id: 'BoxMesh_csg',

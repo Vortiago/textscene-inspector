@@ -46,7 +46,7 @@ export interface CsgShapeRegistration {
    * Not optional, because it is the evaluation cache's key. The parser allocates a fresh
    * properties object per reparse and the source pane reparses on every keystroke, so an
    * identity-keyed cache would miss every time and re-run the whole boolean tree per
-   * character typed. `meshGeometry.tsx` documents the same trap one level down.
+   * character typed. `primitiveMeshGeometryKey` documents the same trap one level down.
    *
    * Takes the same context as `geometry` for a concrete reason: CSGMesh3D's solid lives
    * in a `[sub_resource]`, so its `mesh` reference string can stay identical while the

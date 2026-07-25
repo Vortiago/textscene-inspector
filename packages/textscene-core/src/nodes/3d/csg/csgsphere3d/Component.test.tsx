@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { CSGSphere3D } from './Component';
+// Imports the wired slice, not the bare component: CsgPrimitive builds the solid
+// from the registered builder, so the registration is part of what is under test.
+import { CSGSphere3D } from './index.r3f';
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import type { TscnInternalResource, TscnNode } from '../../../../parser/types';
 import type { CSGSphere3DProperties } from './types';

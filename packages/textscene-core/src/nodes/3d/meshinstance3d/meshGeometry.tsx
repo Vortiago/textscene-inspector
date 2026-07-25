@@ -24,9 +24,7 @@ export interface MeshGeometryProps {
 }
 
 export function MeshGeometry({ resource }: MeshGeometryProps) {
-  // Keyed on the resource's CONTENT, not its identity: the parser allocates a fresh
-  // resource per parse and the source pane reparses on every keystroke, so an
-  // identity-keyed memo would rebuild (and never dispose) the geometry every tick.
+  // Keyed on the resource's CONTENT, not its identity; see primitiveMeshGeometryKey.
   const key = primitiveMeshGeometryKey(resource);
   // eslint-disable-next-line react-hooks/exhaustive-deps -- `key` IS the content of `resource`.
   const geometry = useMemo(() => buildPrimitiveMeshGeometry(resource), [key]);

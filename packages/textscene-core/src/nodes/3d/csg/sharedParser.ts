@@ -14,15 +14,10 @@ import { parseOptionalInt } from '../../../parser/valueParsers';
  * is applied now (ADR-0026), so the warn would fire on every correctly rendered
  * subtraction: 33 times on scenes/demos/3d/csg/csg.tscn alone, burying real problems.
  *
- * `nodeType` and `primitiveNoun` are kept in the signature because every call site reads
- * as documentation of which slice is delegating here, and the degradation paths in
- * CsgRootMesh report by node path when a boolean genuinely fails.
  */
 export function finishCsgParse(
   result: { material?: string; operation?: number },
-  properties: Record<string, string>,
-  _nodeType: string,
-  _primitiveNoun: string
+  properties: Record<string, string>
 ): void {
   if (properties.material) {
     result.material = properties.material;

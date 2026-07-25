@@ -72,7 +72,6 @@ export function buildCsgSphereGeometry(spec: CsgSphereSpec): THREE.BufferGeometr
   const positions = new Float32Array(faceCount * 9);
   const uvs = new Float32Array(faceCount * 6);
   const smooth: boolean[] = new Array(faceCount).fill(smoothFaces);
-  const invert: boolean[] = new Array(faceCount).fill(flipFaces);
 
   // Latitude runs top-to-bottom "like in an image" so the V coordinate matches a texture.
   const latitudeStep = -Math.PI / rings;
@@ -141,5 +140,5 @@ export function buildCsgSphereGeometry(spec: CsgSphereSpec): THREE.BufferGeometr
     }
   }
 
-  return applyCsgNormals({ positions, uvs, smooth, invert } satisfies CsgFaceSoup);
+  return applyCsgNormals({ positions, uvs, smooth, invert: flipFaces } satisfies CsgFaceSoup);
 }

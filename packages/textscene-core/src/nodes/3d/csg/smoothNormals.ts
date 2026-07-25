@@ -20,9 +20,10 @@
  * meeting at a vertex pull on it equally. That is deliberate on Godot's side and is not
  * what area-weighted averaging (the usual choice) would produce.
  *
- * `invert` is Godot's per-face flag behind `CSGPrimitive3D.flip_faces`. It both swaps
- * vertices 1 and 2 and negates the normal, so it lives here with the winding rather than
- * being applied by each builder.
+ * `invert` is `CSGPrimitive3D.flip_faces`. It both swaps vertices 1 and 2 and negates the
+ * normal, so it lives here with the winding rather than being applied by each builder.
+ * Godot carries it per face because a `CSGBrush` merges faces from several shapes; a
+ * builder produces one shape, so it is one flag for the whole soup.
  *
  * ---------------------------------------------------------------------------
  * Derived from Godot Engine (`modules/csg/csg_shape.cpp`, `CSGShape3D::update_shape`,
@@ -68,8 +69,8 @@ export interface CsgFaceSoup {
   uvs: Float32Array;
   /** Per-triangle `smooth_faces`. Length is `positions.length / 9`. */
   smooth: readonly boolean[];
-  /** Per-triangle `flip_faces`. Defaults to all false. */
-  invert?: readonly boolean[];
+  /** `flip_faces` for the whole shape. Defaults to false. */
+  invert?: boolean;
 }
 
 /** Godot hashes the `Vector3` itself; the float32 triple is the faithful equivalent. */
@@ -138,23 +139,23 @@ export function applyCsgNormals(soup: CsgFaceSoup): THREE.BufferGeometry {
   const outNormals = new Float32Array(triangles * 9);
   const outUvs = new Float32Array(triangles * 6);
   const normal = new THREE.Vector3();
+  const flipped = invert === true;
+  // Two swaps compose here, and they cancel.
+  //
+  // Godot does `int order[3] = {0,1,2}; if (invert) SWAP(order[1], order[2]);` and
+  // writes source vertex j into destination slot order[j].
+  //
+  // On top of that, Godot's front faces are wound CLOCKWISE while three.js treats
+  // COUNTER-CLOCKWISE as front and culls the other side. Emitting Godot's order
+  // verbatim therefore back-face-culls every triangle, which renders each solid as its
+  // own interior: measured, that took unit-csg-cylinder from 0.788% to 4.223% against
+  // real Godot. The normals are unaffected (we supply them explicitly, and they came
+  // out correct throughout), so this is purely a winding conversion.
+  const order = flipped ? [0, 1, 2] : [0, 2, 1];
 
   for (let t = 0; t < triangles; t++) {
     const base = t * 9;
     const uvBase = t * 6;
-    const flipped = invert?.[t] === true;
-    // Two swaps compose here, and they cancel.
-    //
-    // Godot does `int order[3] = {0,1,2}; if (invert) SWAP(order[1], order[2]);` and
-    // writes source vertex j into destination slot order[j].
-    //
-    // On top of that, Godot's front faces are wound CLOCKWISE while three.js treats
-    // COUNTER-CLOCKWISE as front and culls the other side. Emitting Godot's order
-    // verbatim therefore back-face-culls every triangle, which renders each solid as its
-    // own interior: measured, that took unit-csg-cylinder from 0.788% to 4.223% against
-    // real Godot. The normals are unaffected (we supply them explicitly, and they came
-    // out correct throughout), so this is purely a winding conversion.
-    const order = flipped ? [0, 1, 2] : [0, 2, 1];
 
     planeNormal(positions, base, plane, edgeA, edgeB);
 

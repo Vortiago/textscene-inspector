@@ -32,7 +32,7 @@ export function parseCSGBox3D(
     flipFaces: boolOr(properties.flip_faces, false, 'CSGBox3D flip_faces'),
   };
 
-  finishCsgParse(result, properties, 'CSGBox3D', 'box');
+  finishCsgParse(result, properties);
 
   return result;
 }

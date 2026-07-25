@@ -31,7 +31,7 @@ function params<T>(geometry: THREE.BufferGeometry): T {
   return (geometry as THREE.BufferGeometry & { parameters: T }).parameters;
 }
 
-describe('MeshGeometry dispatch (parseByType)', () => {
+describe('MeshGeometry dispatch (buildPrimitiveMeshGeometry)', () => {
   const cases: Array<[resourceType: string, geometryType: string]> = [
     ['BoxMesh', 'BoxGeometry'],
     ['SphereMesh', 'SphereGeometry'],

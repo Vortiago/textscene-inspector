@@ -16,7 +16,8 @@ function pathPlan(p: CSGPolygon3DProperties): CsgPolygonPathPlan | null {
     baseMatrix: p.resolvedPath.baseTransform
       ? transform3DToMatrix(p.resolvedPath.baseTransform)
       : null,
-    pointCount: p.resolvedPath.pointCount,
+    // `Curve3D.point_count`, which PATH_INTERVAL_SUBDIVIDE counts in.
+    pointCount: p.resolvedPath.curvePoints.length,
   };
 }
 

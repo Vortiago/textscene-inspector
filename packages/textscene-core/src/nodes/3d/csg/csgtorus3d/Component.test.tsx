@@ -4,7 +4,9 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import type { TscnInternalResource, TscnNode } from '../../../../parser/types';
 import { parseCSGTorus3D } from './parser';
-import { CSGTorus3D } from './Component';
+// Imports the wired slice, not the bare component: CsgPrimitive builds the solid
+// from the registered builder, so the registration is part of what is under test.
+import { CSGTorus3D } from './index.r3f';
 import type { CSGTorus3DProperties } from './types';
 
 function makeNode(overrides: Record<string, string> = {}, children: TscnNode[] = []): TscnNode {

@@ -1,36 +1,19 @@
 /**
  * <CSGSphere3D> — renders a Godot CSGSphere3D as a solid sphere.
  *
- * Geometry comes from `buildCsgSphereGeometry`, a port of Godot's own brush construction,
- * rather than three's `SphereGeometry`. Godot walks latitude from the north pole down,
- * gives sin to X and cos to Z, and collapses each pole to one shared vertex whose normal
- * is the average of every face meeting it. Those are the same divergences that put the
- * CSGCylinder3D cone 0.788% away from real Godot.
+ * Geometry, materials and the boolean seam all live in `<CsgPrimitive>`, which builds the
+ * solid from this slice's REGISTERED builder (see `csgGeometry.ts`). That is the same
+ * builder the evaluator calls, so the shape a node draws alone and the shape it
+ * contributes to a boolean cannot drift apart.
  */
 
-import { useMemo } from 'react';
-import type { CSGSphere3DProperties } from './types';
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { CsgPrimitive } from '../CsgPrimitive';
-import { buildCsgSphereGeometry } from './sphereGeometry';
+import type { CSGSphere3DProperties } from './types';
 
 export function CSGSphere3D({ node, children }: NodeComponentProps) {
-  const properties = node.properties as CSGSphere3DProperties;
-  const { radius, radialSegments, rings, smoothFaces, flipFaces } = properties;
-
-  // Keyed on the scalars the builder reads, not on the properties object: the parser
-  // allocates a fresh one per reparse, so identity would rebuild on every keystroke.
-  const geometry = useMemo(
-    () => buildCsgSphereGeometry({ radius, radialSegments, rings, smoothFaces, flipFaces }),
-    [radius, radialSegments, rings, smoothFaces, flipFaces]
-  );
-
   return (
-    <CsgPrimitive
-      node={node}
-      properties={properties}
-      geometry={<primitive object={geometry} attach="geometry" />}
-    >
+    <CsgPrimitive node={node} properties={node.properties as CSGSphere3DProperties}>
       {children}
     </CsgPrimitive>
   );

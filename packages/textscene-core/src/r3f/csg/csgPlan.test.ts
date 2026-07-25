@@ -8,7 +8,7 @@
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { buildCsgPlan, isCsgRoot, CsgOperation } from './csgPlan';
+import { buildCsgPlan, CsgOperation } from './csgPlan';
 import type { TscnNode } from '../../parser/types';
 
 const CSG_TYPES = new Set([
@@ -20,12 +20,13 @@ const CSG_TYPES = new Set([
   'CSGMesh3D',
   'CSGCombiner3D',
 ]);
-const isCsgShape = (t: string) => CSG_TYPES.has(t);
-/** Only the combiner has no solid of its own. */
-const hasGeometry = (t: string) => CSG_TYPES.has(t) && t !== 'CSGCombiner3D';
-const geometryKey = (n: TscnNode) => `${n.type}:${n.name}`;
-
-const OPTS = { isCsgShape, hasGeometry, geometryKey };
+const OPTS = {
+  lookup: (t: string) =>
+    CSG_TYPES.has(t)
+      ? // Only the combiner has no solid of its own.
+        { hasGeometry: t !== 'CSGCombiner3D', key: (n: TscnNode) => `${n.type}:${n.name}` }
+      : null,
+};
 
 function node(
   type: string,
@@ -46,24 +47,6 @@ function translated(x: number, y: number, z: number) {
     },
   };
 }
-
-describe('isCsgRoot', () => {
-  it('treats a CSG node with no parent as a root', () => {
-    expect(isCsgRoot('CSGBox3D', undefined, isCsgShape)).toBe(true);
-  });
-
-  it('treats a CSG node under a plain Node3D as a root', () => {
-    expect(isCsgRoot('CSGBox3D', 'Node3D', isCsgShape)).toBe(true);
-  });
-
-  it('does NOT treat a CSG node under another CSG node as a root', () => {
-    expect(isCsgRoot('CSGSphere3D', 'CSGBox3D', isCsgShape)).toBe(false);
-  });
-
-  it('is false for a non-CSG type', () => {
-    expect(isCsgRoot('MeshInstance3D', 'Node3D', isCsgShape)).toBe(false);
-  });
-});
 
 describe('buildCsgPlan', () => {
   it('returns null for a node that is not a CSG shape', () => {
@@ -210,10 +193,6 @@ describe('buildCsgPlan', () => {
       expect(shown).not.toBe(hidden);
     });
 
-    it('changes when the resource version bumps, so a pending mesh does not cache as empty', () => {
-      const at = (v: number) => buildCsgPlan(node('CSGMesh3D', 'R'), 'R', { ...OPTS, resourceVersion: v })!.cacheKey;
-      expect(at(0)).not.toBe(at(1));
-    });
   });
 
   it('drops a contribution whose matrix is not finite', () => {

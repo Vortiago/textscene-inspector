@@ -4,7 +4,9 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode } from '../../../../parser/types';
 import { GenericNodeFallback } from '../../../../r3f/internal/generic-node-fallback/Component';
 import { parseCSGCombiner3D } from './parser';
-import { CSGCombiner3D } from './Component';
+// Imports the wired slice, not the bare component: CsgPrimitive builds the solid
+// from the registered builder, so the registration is part of what is under test.
+import { CSGCombiner3D } from './index.r3f';
 
 function makeNode(overrides: Record<string, string> = {}, children: TscnNode[] = []): TscnNode {
   const properties = parseCSGCombiner3D(

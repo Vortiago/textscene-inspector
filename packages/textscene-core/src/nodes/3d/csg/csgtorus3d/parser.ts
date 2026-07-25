@@ -34,7 +34,7 @@ export function parseCSGTorus3D(
     flipFaces: boolOr(properties.flip_faces, DEFAULTS.flipFaces, 'CSGTorus3D flip_faces'),
   };
 
-  finishCsgParse(result, properties, 'CSGTorus3D', 'torus');
+  finishCsgParse(result, properties);
 
   return result;
 }

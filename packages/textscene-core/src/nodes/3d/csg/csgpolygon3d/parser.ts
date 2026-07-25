@@ -95,7 +95,7 @@ export function parseCSGPolygon3D(
   // component cannot see its siblings.
   if (properties.path_node) result.pathNode = properties.path_node;
 
-  finishCsgParse(result, properties, 'CSGPolygon3D', 'polygon');
+  finishCsgParse(result, properties);
 
   return result;
 }

@@ -12,8 +12,6 @@ import type { Curve3DControlPoint } from '../../../../resources/shapes/curve3d';
  */
 export interface CSGPolygon3DResolvedPath {
   curvePoints: Curve3DControlPoint[];
-  /** `Curve3D.point_count`, which PATH_INTERVAL_SUBDIVIDE counts in. */
-  pointCount: number;
   /** The Path3D's global transform, or null when `path_local` is on. */
   baseTransform: Transform3D | null;
 }

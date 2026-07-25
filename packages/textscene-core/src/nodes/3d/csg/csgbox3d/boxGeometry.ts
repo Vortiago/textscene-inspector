@@ -57,7 +57,6 @@ export function buildCsgBoxGeometry(spec: CsgBoxSpec): THREE.BufferGeometry {
   const uvs = new Float32Array(faceCount * 6);
   // A box has no smooth_faces property: every face is flat.
   const smooth: boolean[] = new Array(faceCount).fill(false);
-  const invert: boolean[] = new Array(faceCount).fill(flipFaces);
 
   let face = 0;
   const put = (p: number[][], u: number[][]): void => {
@@ -87,5 +86,5 @@ export function buildCsgBoxGeometry(spec: CsgBoxSpec): THREE.BufferGeometry {
     put([facePoints[2]!, facePoints[3]!, facePoints[0]!], [u[2]!, u[3]!, u[0]!]);
   }
 
-  return applyCsgNormals({ positions, uvs, smooth, invert } satisfies CsgFaceSoup);
+  return applyCsgNormals({ positions, uvs, smooth, invert: flipFaces } satisfies CsgFaceSoup);
 }

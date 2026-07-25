@@ -48,15 +48,3 @@ export function useCsgSubtree(): CsgSubtreeValue | null {
   return useContext(CsgSubtreeContext);
 }
 
-/**
- * True when this node's solid belongs to an ancestor's boolean rather than to itself.
- *
- * False on `failed`, which is what makes the fallback work: every contributor starts
- * drawing its own solid again without any of them needing to know why.
- */
-export function useIsCsgContribution(path: string | null): boolean {
-  const subtree = useCsgSubtree();
-  if (!subtree || path === null) return false;
-  if (subtree.status === 'failed') return false;
-  return subtree.absorbedPaths.has(path);
-}

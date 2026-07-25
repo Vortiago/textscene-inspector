@@ -34,7 +34,7 @@ export function parseCSGCylinder3D(
     flipFaces: boolOr(properties.flip_faces, DEFAULTS.flipFaces, 'CSGCylinder3D flip_faces'),
   };
 
-  finishCsgParse(result, properties, 'CSGCylinder3D', 'cylinder');
+  finishCsgParse(result, properties);
 
   return result;
 }

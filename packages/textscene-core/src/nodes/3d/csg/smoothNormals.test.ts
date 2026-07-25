@@ -21,7 +21,7 @@ import { applyCsgNormals, type CsgFaceSoup } from './smoothNormals';
 /** Build a soup from triangles given as flat vertex triples. */
 function soupOf(
   triangles: Array<[THREE.Vector3, THREE.Vector3, THREE.Vector3]>,
-  { smooth = true, invert = false }: { smooth?: boolean | boolean[]; invert?: boolean | boolean[] } = {}
+  { smooth = true, invert = false }: { smooth?: boolean | boolean[]; invert?: boolean } = {}
 ): CsgFaceSoup {
   const positions = new Float32Array(triangles.length * 9);
   triangles.forEach((tri, t) => {
@@ -29,13 +29,11 @@ function soupOf(
       positions.set([v.x, v.y, v.z], t * 9 + j * 3);
     });
   });
-  const per = (flag: boolean | boolean[]): boolean[] =>
-    Array.isArray(flag) ? flag : new Array<boolean>(triangles.length).fill(flag);
   return {
     positions,
     uvs: new Float32Array(triangles.length * 6),
-    smooth: per(smooth),
-    invert: per(invert),
+    smooth: Array.isArray(smooth) ? smooth : new Array<boolean>(triangles.length).fill(smooth),
+    invert,
   };
 }
 

@@ -130,6 +130,9 @@ function toPoints(flat: Float32Array): THREE.Vector2[] {
 }
 
 /** `Transform3D().looking_at(dir, up)`, which is three's `lookAt` with the same convention. */
+/** Godot passes `Vector3(0, 1, 0)` as the up vector for every PATH frame. */
+const PATH_UP = new THREE.Vector3(0, 1, 0);
+
 function facingMatrix(dir: THREE.Vector3, up: THREE.Vector3): THREE.Matrix4 {
   const m = new THREE.Matrix4();
   // A zero or up-parallel direction makes the basis degenerate in Godot too; identity is
@@ -226,7 +229,6 @@ export function buildCsgPolygonGeometry(spec: CsgPolygonSpec): THREE.BufferGeome
   const positions = new Float32Array(maxFaces * 9);
   const uvs = new Float32Array(maxFaces * 6);
   const smooth: boolean[] = new Array(maxFaces).fill(false);
-  const invert: boolean[] = new Array(maxFaces).fill(spec.flipFaces);
   let face = 0;
 
   const putTri = (
@@ -263,23 +265,23 @@ export function buildCsgPolygonGeometry(spec: CsgPolygonSpec): THREE.BufferGeome
     return new THREE.Vector3(s.x, s.y, s.z);
   };
 
-  if (mode === PolygonMode.PATH) {
-    const up = new THREE.Vector3(0, 1, 0);
-    let point: THREE.Vector3;
-    let direction: THREE.Vector3;
-    if (spec.pathRotation === PathRotation.POLYGON) {
-      point = sampleAt(0);
-      direction = new THREE.Vector3(0, 0, -1);
-    } else {
-      point = sampleAt(0);
-      const next = sampleAt(extrusionStep);
-      direction = next.clone().sub(point);
-      if (spec.pathJoined) direction = next.clone().sub(sampleAt(curveLength));
-    }
-    currentXform = baseXform
+  /** Every PATH frame is `base · translate(point) · looking_at(direction, +Y)`. */
+  const pathFrame = (point: THREE.Vector3, direction: THREE.Vector3): THREE.Matrix4 =>
+    baseXform
       .clone()
       .multiply(new THREE.Matrix4().makeTranslation(point.x, point.y, point.z))
-      .multiply(facingMatrix(direction, up));
+      .multiply(facingMatrix(direction, PATH_UP));
+
+  if (mode === PolygonMode.PATH) {
+    const point = sampleAt(0);
+    let direction: THREE.Vector3;
+    if (spec.pathRotation === PathRotation.POLYGON) {
+      direction = new THREE.Vector3(0, 0, -1);
+    } else {
+      const next = sampleAt(extrusionStep);
+      direction = spec.pathJoined ? next.clone().sub(sampleAt(curveLength)) : next.clone().sub(point);
+    }
+    currentXform = pathFrame(point, direction);
   }
 
   const capUv = (p: THREE.Vector2, back: boolean): THREE.Vector2 => {
@@ -293,18 +295,22 @@ export function buildCsgPolygonGeometry(spec: CsgPolygonSpec): THREE.BufferGeome
   const shapeVertex = (i: number, m: THREE.Matrix4): THREE.Vector3 =>
     new THREE.Vector3(shape[i]!.x, shape[i]!.y, 0).applyMatrix4(m);
 
-  // --- Front cap ---
-  if (endCount > 0) {
+  /**
+   * A flat end cap on the frame `m`. The front cap's triangles are REVERSED so both caps
+   * face out of the sweep, and each half occupies its own side of the texture.
+   */
+  const emitCap = (m: THREE.Matrix4, back: boolean): void => {
     for (let f = 0; f < shapeFaceCount; f++) {
-      // Reversed, so the front cap faces out of the start of the sweep.
-      const idx = [0, 1, 2].map((k) => shapeFaces[f * 3 + 2 - k]!);
+      const idx = [0, 1, 2].map((k) => shapeFaces[f * 3 + (back ? k : 2 - k)]!);
       putTri(
-        idx.map((i) => shapeVertex(i, currentXform)) as [THREE.Vector3, THREE.Vector3, THREE.Vector3],
-        idx.map((i) => capUv(shape[i]!, false)) as [THREE.Vector2, THREE.Vector2, THREE.Vector2],
+        idx.map((i) => shapeVertex(i, m)) as [THREE.Vector3, THREE.Vector3, THREE.Vector3],
+        idx.map((i) => capUv(shape[i]!, back)) as [THREE.Vector2, THREE.Vector2, THREE.Vector2],
         false
       );
     }
-  }
+  };
+
+  if (endCount > 0) emitCap(currentXform, false);
 
   // --- Extrusion walls ---
   const angleSimplifyDot = Math.cos(THREE.MathUtils.degToRad(spec.pathSimplifyAngle));
@@ -351,7 +357,6 @@ export function buildCsgPolygonGeometry(spec: CsgPolygonSpec): THREE.BufferGeome
         previousSimplifyDir = extrusionDir;
       }
 
-      const up = new THREE.Vector3(0, 1, 0);
       let direction: THREE.Vector3;
       if (spec.pathRotation === PathRotation.POLYGON) {
         direction = new THREE.Vector3(0, 0, -1);
@@ -360,10 +365,7 @@ export function buildCsgPolygonGeometry(spec: CsgPolygonSpec): THREE.BufferGeome
         if (x0 === extrusions - 1) nextOffset = spec.pathJoined ? extrusionStep : currentOffset;
         direction = sampleAt(nextOffset).sub(previousPoint);
       }
-      currentXform = baseXform
-        .clone()
-        .multiply(new THREE.Matrix4().makeTranslation(currentPoint.x, currentPoint.y, currentPoint.z))
-        .multiply(facingMatrix(direction, up));
+      currentXform = pathFrame(currentPoint, direction);
     }
 
     let u0 = (x0 - facesCombined) * uStep;
@@ -397,23 +399,13 @@ export function buildCsgPolygonGeometry(spec: CsgPolygonSpec): THREE.BufferGeome
     }
   }
 
-  // --- Back cap ---
-  if (endCount > 1) {
-    for (let f = 0; f < shapeFaceCount; f++) {
-      const idx = [0, 1, 2].map((k) => shapeFaces[f * 3 + k]!);
-      putTri(
-        idx.map((i) => shapeVertex(i, currentXform)) as [THREE.Vector3, THREE.Vector3, THREE.Vector3],
-        idx.map((i) => capUv(shape[i]!, true)) as [THREE.Vector2, THREE.Vector2, THREE.Vector2],
-        false
-      );
-    }
-  }
+  if (endCount > 1) emitCap(currentXform, true);
 
   // `path_simplify_angle` rewinds `face`, so the tail of the buffer is unused.
   return applyCsgNormals({
     positions: positions.subarray(0, face * 9),
     uvs: uvs.subarray(0, face * 6),
     smooth: smooth.slice(0, face),
-    invert: invert.slice(0, face),
+    invert: spec.flipFaces,
   } satisfies CsgFaceSoup);
 }

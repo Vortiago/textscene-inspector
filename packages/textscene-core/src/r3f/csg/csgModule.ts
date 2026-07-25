@@ -18,9 +18,6 @@ export interface CsgModule {
   Brush: new (geometry?: THREE.BufferGeometry, material?: THREE.Material) => THREE.Mesh;
   Evaluator: new () => {
     useGroups: boolean;
-    consolidateGroups: boolean;
-    removeUnusedMaterials: boolean;
-    attributes: string[];
     evaluate: (a: THREE.Mesh, b: THREE.Mesh, operation: number, target?: THREE.Mesh) => THREE.Mesh;
   };
   ADDITION: number;

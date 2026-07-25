@@ -30,7 +30,7 @@ export function parseCSGSphere3D(
     flipFaces: boolOr(properties.flip_faces, DEFAULTS.flipFaces, 'CSGSphere3D flip_faces'),
   };
 
-  finishCsgParse(result, properties, 'CSGSphere3D', 'sphere');
+  finishCsgParse(result, properties);
 
   return result;
 }

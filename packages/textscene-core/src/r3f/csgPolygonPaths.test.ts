@@ -64,7 +64,6 @@ describe('resolveCsgPolygonPaths', () => {
     const resolved = resolvedOf(parse(SIBLING_SCENE), 'RoadTop');
     expect(resolved).toBeDefined();
     expect(resolved!.curvePoints).toHaveLength(3);
-    expect(resolved!.pointCount).toBe(3);
   });
 
   it('resolves a CHILD path_node (racetrack_csg.tscn:60)', () => {

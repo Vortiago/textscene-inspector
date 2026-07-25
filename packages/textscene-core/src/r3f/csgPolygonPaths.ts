@@ -101,7 +101,7 @@ export function resolveCsgPolygonPaths(
       ? null
       : matrixToTransform3D(globalMatrix3D(targetPath, nodeByPath));
 
-    props.resolvedPath = { curvePoints, pointCount: curvePoints.length, baseTransform };
+    props.resolvedPath = { curvePoints, baseTransform };
   }
 
   return nodes;

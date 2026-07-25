@@ -24,7 +24,7 @@ import * as THREE from 'three';
 import type { TscnNode } from '../../parser/types';
 import type { Node3DProperties } from '../../nodes/base/node3d/types';
 import { joinPath } from '../../utils/nodePath';
-import { transform3DToMatrix } from '../nodeTreeTransforms';
+import { localMatrix3D } from '../nodeTreeTransforms';
 
 /** Godot `CSGShape3D.Operation`. */
 export const CsgOperation = { UNION: 0, INTERSECTION: 1, SUBTRACTION: 2 } as const;
@@ -57,22 +57,23 @@ export interface CsgPlan {
   cacheKey: string;
 }
 
+/** What the plan needs to know about one CSG type. */
+export interface CsgPlanShape {
+  /** False for a grouping node like CSGCombiner3D, which has no solid of its own. */
+  hasGeometry: boolean;
+  /** Stable string over the properties the geometry builder reads. */
+  key: (node: TscnNode) => string;
+}
+
 interface BuildOptions {
   /** Paths hidden via the scene-tree eye toggle; treated exactly like `visible = false`. */
   hiddenPaths?: ReadonlySet<string>;
-  /** Bumped when async resources land, so a pending mesh does not cache as empty. */
-  resourceVersion?: number;
-  /** Injected so the builder stays testable without the r3f registry. */
-  isCsgShape: (type: string) => boolean;
-  /** False for a grouping node like CSGCombiner3D. */
-  hasGeometry: (type: string) => boolean;
-  /** Stable string over the properties the geometry builder reads. */
-  geometryKey: (node: TscnNode) => string;
-}
-
-function localMatrix(node: TscnNode): THREE.Matrix4 {
-  const t = (node.properties as Node3DProperties).transform;
-  return t ? transform3DToMatrix(t) : new THREE.Matrix4();
+  /**
+   * The one thing the plan asks about a node type; null means "not a CSG shape". Injected
+   * as a single lookup so the builder stays testable without the r3f registry, and so a
+   * caller cannot answer the three questions inconsistently.
+   */
+  lookup: (type: string) => CsgPlanShape | null;
 }
 
 function isVisible(node: TscnNode, path: string, hidden?: ReadonlySet<string>): boolean {
@@ -97,13 +98,13 @@ export function buildCsgPlan(
   rootPath: string,
   options: BuildOptions
 ): CsgPlan | null {
-  const { isCsgShape, hasGeometry, geometryKey, hiddenPaths, resourceVersion = 0 } = options;
-  if (!isCsgShape(root.type)) return null;
+  const { lookup, hiddenPaths } = options;
+  if (lookup(root.type) === null) return null;
 
   const contributions: CsgContribution[] = [];
   const surfaces: (string | undefined)[] = [];
   const absorbedPaths = new Set<string>();
-  const keyParts: string[] = [`root:${root.type}`, `res:${resourceVersion}`];
+  const keyParts: string[] = [`root:${root.type}`];
 
   const surfaceIndex = (material: string | undefined): number => {
     const existing = surfaces.indexOf(material);
@@ -117,11 +118,12 @@ export function buildCsgPlan(
 
     // The root's own transform is NOT baked in: the result mesh is mounted inside the
     // root's own transform group, so including it here would apply it twice.
-    const matrix = isRoot ? new THREE.Matrix4() : parentMatrix.clone().multiply(localMatrix(node));
+    const matrix = isRoot ? new THREE.Matrix4() : parentMatrix.clone().multiply(localMatrix3D(node));
 
     if (!isRoot) absorbedPaths.add(path);
 
-    if (hasGeometry(node.type)) {
+    const shape = lookup(node.type);
+    if (shape?.hasGeometry) {
       if (!isFinite4(matrix)) {
         keyParts.push(`${path}:nonfinite`);
       } else {
@@ -143,14 +145,14 @@ export function buildCsgPlan(
           node,
         });
         keyParts.push(
-          `${path}|${node.type}|${operation}|${geometryKey(node)}|${material ?? ''}|` +
+          `${path}|${node.type}|${operation}|${shape.key(node)}|${material ?? ''}|` +
             matrix.elements.map((n) => n.toFixed(6)).join(',')
         );
       }
     }
 
     for (const child of node.children) {
-      if (!isCsgShape(child.type)) continue;
+      if (lookup(child.type) === null) continue;
       visit(child, joinPath(path, child.name), matrix, false);
     }
   };
@@ -166,15 +168,3 @@ export function buildCsgPlan(
   };
 }
 
-/**
- * True when this node is a CSG ROOT: a CSG shape whose direct parent is not one.
- *
- * `parentType` is undefined for a top-level node.
- */
-export function isCsgRoot(
-  type: string,
-  parentType: string | undefined,
-  isCsgShape: (t: string) => boolean
-): boolean {
-  return isCsgShape(type) && (parentType === undefined || !isCsgShape(parentType));
-}

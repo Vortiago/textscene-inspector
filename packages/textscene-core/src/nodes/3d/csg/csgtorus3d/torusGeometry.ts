@@ -87,7 +87,6 @@ export function buildCsgTorusGeometry(spec: CsgTorusSpec): THREE.BufferGeometry 
   const positions = new Float32Array(faceCount * 9);
   const uvs = new Float32Array(faceCount * 6);
   const smooth: boolean[] = new Array(faceCount).fill(smoothFaces);
-  const invert: boolean[] = new Array(faceCount).fill(flipFaces);
 
   let face = 0;
   const put = (p: [number, number, number][], u: [number, number][]): void => {
@@ -139,5 +138,5 @@ export function buildCsgTorusGeometry(spec: CsgTorusSpec): THREE.BufferGeometry 
     }
   }
 
-  return applyCsgNormals({ positions, uvs, smooth, invert } satisfies CsgFaceSoup);
+  return applyCsgNormals({ positions, uvs, smooth, invert: flipFaces } satisfies CsgFaceSoup);
 }

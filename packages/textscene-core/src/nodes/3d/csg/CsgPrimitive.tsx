@@ -20,9 +20,8 @@
  * remove their own mesh from the inside, and the dispatcher is untouched.
  */
 
-import { useCallback, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import type { ReactNode } from 'react';
-import * as THREE from 'three';
 import type { TscnNode } from '../../../parser/types';
 import type { Node3DProperties } from '../../base/node3d/types';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
@@ -34,45 +33,59 @@ import { ExternalMaterialSlot } from '../../../r3f/materials/ExternalMaterialSlo
 import { resolveExtResourcePath } from '../../../resources/SubResourceResolver';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useOptionalSelection } from '../../../r3f/contexts/SelectionContext';
-import {
-  CsgSubtreeProvider,
-  useCsgSubtree,
-  type CsgSubtreeStatus,
-} from '../../../r3f/contexts/CsgSubtreeContext';
+import { useCsgSubtree } from '../../../r3f/contexts/CsgSubtreeContext';
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
 import { buildCsgPlan } from '../../../r3f/csg/csgPlan';
 import { CsgRootMesh } from '../../../r3f/csg/CsgRootMesh';
 
 const EMPTY_HIDDEN: ReadonlySet<string> = new Set();
 
-/** Marks the invisible proxy so `frameSceneBounds` can leave it out of the auto-frame. */
+/**
+ * Marks the invisible bounds proxy.
+ *
+ * `frameSceneBounds` deliberately does NOT skip these. Excluding them was tried and
+ * measured 26% off: the CSG library loads asynchronously while `CameraFit`'s last retry
+ * is at 1100 ms, and a combiner root has no solid of its own, so the auto-frame fitted an
+ * empty scene. Including a proxy can only frame too large, never too small.
+ */
 export const CSG_BOUNDS_PROXY = { tscnBoundsProxy: true } as const;
 
 interface CsgPrimitiveProps {
   node: TscnNode;
   properties: Node3DProperties & { material?: string };
-  /**
-   * The slice's own solid, already built. `null` for a node that HAS no solid:
-   * CSGCombiner3D, whose shape is the boolean fold of its children.
-   */
-  geometry: ReactNode | null;
   children?: ReactNode;
 }
 
-export function CsgPrimitive({ node, properties, geometry, children }: CsgPrimitiveProps) {
+export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) {
   const { internalResources, externalResources } = useSceneResources();
   const path = useNodePath();
   const subtree = useCsgSubtree();
   // Optional: a CSG node renders outside the shell in tests and in the
   // subtree-conformance probe, where nothing can be hidden anyway.
   const hiddenNodePaths = useOptionalSelection()?.hiddenNodePaths ?? EMPTY_HIDDEN;
-  const [status, setStatus] = useState<CsgSubtreeStatus>('pending');
-  const onStatus = useCallback((next: CsgSubtreeStatus) => setStatus(next), []);
 
   const { position, rotation, scale } = useMemo(
     () => transformFromNode3DProperties(properties),
     [properties]
   );
+
+  const ctx = useMemo(
+    () => ({ internalResources, externalResources }),
+    [internalResources, externalResources]
+  );
+
+  // The node's OWN solid comes from the same registered builder the evaluator calls, so a
+  // slice defines its geometry exactly once. Memoized on the registered `geometryKey`
+  // rather than on the properties object, which the parser reallocates every reparse.
+  const registration = nodeComponentRegistry.getCsgShape(node.type);
+  const builderProps = properties as unknown as Record<string, unknown>;
+  const ownKey = registration?.geometryKey?.(builderProps, ctx) ?? node.type;
+  const ownGeometry = useMemo(
+    () => registration?.geometry?.(builderProps, ctx) ?? null,
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `ownKey` IS the builder's inputs.
+    [ownKey]
+  );
+  const geometry = ownGeometry ? <primitive object={ownGeometry} attach="geometry" /> : null;
 
   const scalars = useMemo(() => {
     const sub = resolveStandardMaterial(properties.material, internalResources);
@@ -95,19 +108,16 @@ export function CsgPrimitive({ node, properties, geometry, children }: CsgPrimit
     if (absorbed || path === null) return null;
     return buildCsgPlan(node, path, {
       hiddenPaths: hiddenNodePaths,
-      isCsgShape: (type) => nodeComponentRegistry.isCsgShape(type),
-      hasGeometry: (type) => nodeComponentRegistry.getCsgShape(type)?.geometry != null,
-      geometryKey: (n) => {
-        const registration = nodeComponentRegistry.getCsgShape(n.type);
-        return (
-          registration?.geometryKey?.(n.properties as Record<string, unknown>, {
-            internalResources,
-            externalResources,
-          }) ?? n.type
-        );
+      lookup: (type) => {
+        const shape = nodeComponentRegistry.getCsgShape(type);
+        if (!shape) return null;
+        return {
+          hasGeometry: shape.geometry != null,
+          key: (n) => shape.geometryKey?.(n.properties as Record<string, unknown>, ctx) ?? n.type,
+        };
       },
     });
-  }, [absorbed, node, path, hiddenNodePaths, internalResources, externalResources]);
+  }, [absorbed, node, path, hiddenNodePaths, ctx]);
 
   const visible = properties.visible !== false;
   const combining = plan !== null && plan.contributions.length > 1;
@@ -124,7 +134,7 @@ export function CsgPrimitive({ node, properties, geometry, children }: CsgPrimit
           never consults `visible`, so per-node selection boxes and F-to-frame keep
           working for a node that draws nothing.
         */}
-        {geometry !== null && (
+        {geometry && (
           <mesh visible={false} userData={CSG_BOUNDS_PROXY}>
             {geometry}
           </mesh>
@@ -134,32 +144,26 @@ export function CsgPrimitive({ node, properties, geometry, children }: CsgPrimit
     );
   }
 
-  const materialSlot =
-    externalMaterialPath === null ? (
-      <StandardMaterialSlot scalars={scalars} />
-    ) : (
-      <ExternalMaterialSlot path={externalMaterialPath} />
-    );
+  // The node drawing its own solid: what a lone root IS, and what a combining root falls
+  // back to while the library loads or after it failed.
+  const ownSolid = geometry && (
+    <mesh castShadow receiveShadow>
+      {geometry}
+      {externalMaterialPath === null ? (
+        <StandardMaterialSlot scalars={scalars} />
+      ) : (
+        <ExternalMaterialSlot path={externalMaterialPath} />
+      )}
+    </mesh>
+  );
 
   // ---- C. Combining root ----------------------------------------------------------
   if (combining) {
     return (
       <group {...transform}>
-        <CsgRootMesh plan={plan} onStatus={onStatus} />
-        {/*
-          Wraps `children` even though the dispatcher created them: React context flows by
-          render-tree position, not by where an element was constructed.
-        */}
-        <CsgSubtreeProvider value={{ status, absorbedPaths: plan.absorbedPaths }}>
+        <CsgRootMesh plan={plan} fallback={ownSolid}>
           {children}
-        </CsgSubtreeProvider>
-        {/* While the library loads, or if it failed, the root shows its own solid. */}
-        {status !== 'ready' && geometry !== null && (
-          <mesh castShadow receiveShadow>
-            {geometry}
-            {materialSlot}
-          </mesh>
-        )}
+        </CsgRootMesh>
       </group>
     );
   }
@@ -169,18 +173,9 @@ export function CsgPrimitive({ node, properties, geometry, children }: CsgPrimit
   // fixture takes, which is why their goldens are unchanged.
   return (
     <group {...transform}>
-      {geometry !== null && (
-        <mesh castShadow receiveShadow>
-          {geometry}
-          {materialSlot}
-        </mesh>
-      )}
+      {ownSolid}
       {children}
     </group>
   );
 }
 
-/** Re-exported so tests can assert the proxy is excluded from scene framing. */
-export function isCsgBoundsProxy(object: THREE.Object3D): boolean {
-  return object.userData?.tscnBoundsProxy === true;
-}

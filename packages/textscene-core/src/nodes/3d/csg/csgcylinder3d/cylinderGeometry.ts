@@ -68,7 +68,6 @@ export function buildCsgCylinderGeometry(spec: CsgCylinderSpec): THREE.BufferGeo
   const positions = new Float32Array(faceCount * 9);
   const uvs = new Float32Array(faceCount * 6);
   const smooth: boolean[] = new Array(faceCount);
-  const invert: boolean[] = new Array(faceCount).fill(flipFaces);
 
   // `vertex_mul` scales a unit shape spanning y in [-1, 1], so `height` is the full height.
   const mulX = radius;
@@ -137,5 +136,5 @@ export function buildCsgCylinderGeometry(spec: CsgCylinderSpec): THREE.BufferGeo
     }
   }
 
-  return applyCsgNormals({ positions, uvs, smooth, invert } satisfies CsgFaceSoup);
+  return applyCsgNormals({ positions, uvs, smooth, invert: flipFaces } satisfies CsgFaceSoup);
 }

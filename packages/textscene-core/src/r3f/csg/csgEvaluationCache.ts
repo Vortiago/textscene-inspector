@@ -10,7 +10,7 @@
  * a reparse causes.
  */
 
-import type * as THREE from 'three';
+import { LRUCache } from '../../resources/LRUCache';
 import type { CsgEvaluation } from './evaluateCsgPlan';
 
 /**
@@ -20,34 +20,20 @@ import type { CsgEvaluation } from './evaluateCsgPlan';
  */
 const MAX_ENTRIES = 16;
 
-const cache = new Map<string, CsgEvaluation>();
+// r3f never disposes geometry it did not create, and these were built here.
+const cache = new LRUCache<CsgEvaluation>(MAX_ENTRIES, (_key, evaluation) =>
+  evaluation.geometry.dispose()
+);
 
 export function getCachedEvaluation(key: string): CsgEvaluation | undefined {
-  const hit = cache.get(key);
-  if (hit) {
-    // Re-insert so the least recently USED entry is evicted, not the oldest inserted.
-    cache.delete(key);
-    cache.set(key, hit);
-  }
-  return hit;
+  return cache.get(key);
 }
 
 export function setCachedEvaluation(key: string, evaluation: CsgEvaluation): void {
   cache.set(key, evaluation);
-  while (cache.size > MAX_ENTRIES) {
-    const oldest = cache.keys().next();
-    if (oldest.done) break;
-    const evicted = cache.get(oldest.value);
-    cache.delete(oldest.value);
-    // r3f never disposes geometry it did not create, and these were built here.
-    evicted?.geometry.dispose();
-  }
 }
 
 /** Test seam, and the hook HMR needs so a stale evaluation cannot outlive an edit. */
 export function clearEvaluationCache(): void {
-  for (const evaluation of cache.values()) {
-    (evaluation.geometry as THREE.BufferGeometry).dispose();
-  }
   cache.clear();
 }
