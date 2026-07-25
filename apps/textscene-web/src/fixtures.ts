@@ -1018,6 +1018,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - CSG Primitives"
   },
   {
+    "name": "Csg Combiner",
+    "file": "unit-csg-combiner.tscn",
+    "category": "Unit - CSG Primitives"
+  },
+  {
     "name": "Csg Cylinder",
     "file": "unit-csg-cylinder.tscn",
     "category": "Unit - CSG Primitives"

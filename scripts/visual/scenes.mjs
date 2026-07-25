@@ -283,6 +283,10 @@ export const GOLDEN_SCENES = [
   // opposite of three's TorusGeometry naming. Includes an all-defaults torus so a
   // wrong default cannot hide behind explicit dimensions.
   { name: 'csg-torus-3d', file: 'unit-csg-torus.tscn' },
+  // A combiner draws nothing itself; the visible subtree is its CSGBox3D children.
+  // The second, hidden combiner must contribute NOTHING: if its sphere appears, the
+  // node fell through to the generic fallback, which ignores `visible`.
+  { name: 'csg-combiner-3d', file: 'unit-csg-combiner.tscn' },
   // 2D nodes render in the 2D view (with its zoom/pan chrome) — relax the
   // threshold like the other 2D goldens (marker2d/path2d).
   { name: 'polygon-2d', file: 'unit-polygon2d.tscn', maxDiffPct: 0.5 },
