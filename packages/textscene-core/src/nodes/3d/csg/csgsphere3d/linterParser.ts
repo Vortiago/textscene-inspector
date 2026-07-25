@@ -10,6 +10,8 @@ validatorRegistry.registerAll('CSGSphere3D', {
   radius: v.positiveFloat('radius'),
   radial_segments: v.int('radial_segments', { min: 1 }),
   rings: v.int('rings', { min: 1 }),
+  smooth_faces: v.boolean('smooth_faces'),
+  flip_faces: v.boolean('flip_faces'),
   material: v.resourceReference('material'),
   operation: v.enumInt('operation', 0, 2, OPERATION),
 });

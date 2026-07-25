@@ -12,6 +12,8 @@ function makeNode(props: Partial<CSGSphere3DProperties>, children: TscnNode[] = 
     radius: 1.25,
     radialSegments: 48,
     rings: 24,
+    smoothFaces: true,
+    flipFaces: false,
     ...props,
   };
   return { name: properties.name, type: 'CSGSphere3D', children, properties };
@@ -26,14 +28,16 @@ async function render(node: TscnNode, internalResources: TscnInternalResource[] 
 }
 
 describe('<CSGSphere3D>', () => {
-  it('renders a SphereGeometry sized from radius with segments/rings mapped', async () => {
+  // The geometry is Godot's brush construction, not three's SphereGeometry, so there is
+  // no `.parameters` to read; this asserts the shape itself. Depth coverage of the
+  // construction lives in sphereGeometry.test.ts.
+  it('builds a sphere of the requested radius and tessellation', async () => {
     const renderer = await render(makeNode({ radius: 1.25, radialSegments: 48, rings: 24 }));
-    const geom = renderer.scene.findByType('Mesh').instance.geometry as THREE.SphereGeometry & {
-      parameters: { radius: number; widthSegments: number; heightSegments: number };
-    };
-    expect(geom.parameters.radius).toBe(1.25);
-    expect(geom.parameters.widthSegments).toBe(48);
-    expect(geom.parameters.heightSegments).toBe(24);
+    const geom = renderer.scene.findByType('Mesh').instance.geometry as THREE.BufferGeometry;
+    geom.computeBoundingSphere();
+    expect(geom.boundingSphere!.radius).toBeCloseTo(1.25, 5);
+    // csg_shape.cpp:1329 — two triangles per segment per ring, one fewer at each pole.
+    expect(geom.getAttribute('position').count / 3).toBe(24 * 48 * 2 - 48 * 2);
   });
 
   it('applies the StandardMaterial3D albedo color from a SubResource', async () => {
