@@ -7,6 +7,7 @@
 import type React from 'react';
 import type { TscnNode } from '../parser/types';
 import { createTypeRegistry } from '../core/createTypeRegistry';
+import type { CsgShapeRegistration } from './csg/csgRegistration';
 
 export interface NodeComponentProps {
   node: TscnNode;
@@ -31,12 +32,18 @@ export interface NodeComponentRegistration {
    * workspaces and their children render wherever they belong.
    */
   container?: boolean;
+  /**
+   * Present for CSG types, exposing the node's solid as data so the boolean evaluator
+   * can consume triangles rather than a React element. See csg/csgRegistration.ts.
+   */
+  csgShape?: CsgShapeRegistration;
 }
 
 class NodeComponentRegistryImpl {
   private readonly registry = createTypeRegistry<NodeComponent>('NodeComponentRegistry');
   private readonly canvasItemTypes = new Set<string>();
   private readonly containerTypes = new Set<string>();
+  private readonly csgShapes = new Map<string, CsgShapeRegistration>();
 
   register(registration: NodeComponentRegistration): void {
     this.registry.register(registration.typeName, registration.Component);
@@ -44,6 +51,8 @@ class NodeComponentRegistryImpl {
     else this.canvasItemTypes.delete(registration.typeName);
     if (registration.container) this.containerTypes.add(registration.typeName);
     else this.containerTypes.delete(registration.typeName);
+    if (registration.csgShape) this.csgShapes.set(registration.typeName, registration.csgShape);
+    else this.csgShapes.delete(registration.typeName);
   }
 
   get(typeName: string): NodeComponent | undefined {
@@ -60,6 +69,16 @@ class NodeComponentRegistryImpl {
     return this.containerTypes.has(typeName);
   }
 
+  /** True when the type takes part in CSG boolean evaluation. */
+  isCsgShape(typeName: string): boolean {
+    return this.csgShapes.has(typeName);
+  }
+
+  /** The CSG registration for a type, or undefined when it is not a CSG shape. */
+  getCsgShape(typeName: string): CsgShapeRegistration | undefined {
+    return this.csgShapes.get(typeName);
+  }
+
   getAllTypeNames(): string[] {
     return this.registry.getAllTypeNames();
   }
@@ -68,6 +87,7 @@ class NodeComponentRegistryImpl {
     this.registry.clear();
     this.canvasItemTypes.clear();
     this.containerTypes.clear();
+    this.csgShapes.clear();
   }
 }
 
