@@ -390,12 +390,17 @@ export async function findCaptureTarget(page, { canvas2D = false } = {}) {
  * cannot be trusted, so it returns a reason rather than whatever frame was up —
  * flakiness is rejected here, not absorbed by tolerance downstream.
  */
-export async function settleCanvas(page, canvas) {
+export async function settleCanvas(page, canvas, { screenshotTimeout } = {}) {
+  // A whole game world under SwiftShader can take longer to rasterise ONE frame
+  // than Playwright's default action timeout allows, which surfaces as a
+  // screenshot timeout rather than as "never settled". Raising it per scene
+  // keeps an ordinary scene's genuine hang from taking that long to report.
+  const shot = () => canvas.screenshot(screenshotTimeout ? { timeout: screenshotTimeout } : {});
   await page.waitForTimeout(SETTLE_INITIAL_MS);
-  let prev = await canvas.screenshot();
+  let prev = await shot();
   for (let attempt = 0; attempt < SETTLE_MAX_ATTEMPTS; attempt++) {
     await page.waitForTimeout(SETTLE_INTERVAL_MS);
-    const cur = await canvas.screenshot();
+    const cur = await shot();
     if (cur.equals(prev)) return { buffer: cur, reason: null };
     prev = cur;
   }

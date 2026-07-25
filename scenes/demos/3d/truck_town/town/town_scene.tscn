@@ -211,6 +211,16 @@ shadow_blur = 1.5
 directional_shadow_mode = 0
 directional_shadow_max_distance = 80.0
 
+; Added for the comparison harness, which frames a 3D scene through its own
+; Camera3D on BOTH sides (docs/comparison, capture-complex.mjs). Neither
+; fit-to-bounds nor the editor orbit works here: the scene's bounds are
+; 2048 x 1104 x 2048, so a fit shot shrinks the town to a speck, and the orbit
+; opens 4 units from the origin, underneath the terrain. Inert at runtime — the
+; truck spawns its own camera and calls make_current().
+[node name="PreviewCamera" type="Camera3D" parent="." unique_id=1990567780]
+transform = Transform3D(1, 0, 0, 0, 0.989521, 0.145075, 0, -0.145075, 0.989521, 5.5, 25, 90)
+fov = 75.0
+
 [node name="Lamps" type="Node3D" parent="." unique_id=1215593960]
 
 [node name="Lamp" parent="Lamps" unique_id=197257794 instance=ExtResource("3_clgdk")]
