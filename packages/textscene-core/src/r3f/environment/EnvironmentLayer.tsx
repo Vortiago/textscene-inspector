@@ -17,7 +17,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { BackgroundMode } from '../../resources/environment/types';
 import type { EnvironmentSettings } from '../../resources/environment/renderer';
 import { applyToneMapping } from '../../resources/environment/toneMapping';
-import { bloomParamsFor } from '../../resources/environment/godotBloom';
+import { glowNeedsEveryPixel, glowParamsFor } from '../../resources/environment/godotGlow';
 import type { SkyProperties } from '../../resources/sky/types';
 import { godotColorToLinear } from '../godotColor';
 import { LIGHT_INTENSITY_SCALE } from '../lightConstants';
@@ -50,13 +50,17 @@ export function EnvironmentLayer({ settings, sky }: EnvironmentLayerProps) {
   // no above-threshold pixels identically with or without glow. So the composer
   // is gated on the scene actually having bloomable content. When it is NOT
   // mounted the scene stays on the ordinary in-material tonemap path, unchanged.
-  const glow = settings.glow;
-  const bloomThreshold = useMemo(
-    () => bloomParamsFor(settings)?.luminanceThreshold ?? Infinity,
-    [settings]
-  );
-  const hasBloomable = useSceneHasBloomableEmissive(bloomThreshold, !!glow);
-  const useComposer = !!glow && hasBloomable;
+  const glowParams = useMemo(() => glowParamsFor(settings), [settings]);
+  // `glow_bloom` is a FLOOR on the bright-pass feedback, so above zero EVERY
+  // pixel enters the glow buffer however dark it is — the "is anything bright?"
+  // shortcut is then wrong, and the pass has to mount unconditionally. Likewise
+  // a pyramid whose weights are all zero can never produce glow, so it never
+  // needs the pass.
+  const alwaysGlows = !!glowParams && glowNeedsEveryPixel(glowParams);
+  const canGlow = !!glowParams && glowParams.maxLevel >= 0;
+  const bloomThreshold = glowParams?.hdrThreshold ?? Infinity;
+  const hasBloomable = useSceneHasBloomableEmissive(bloomThreshold, canGlow && !alwaysGlows);
+  const useComposer = canGlow && (alwaysGlows || hasBloomable);
 
   return (
     <>

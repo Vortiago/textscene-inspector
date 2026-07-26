@@ -65,21 +65,30 @@ export interface EnvironmentSettings {
     enabled: boolean;
   } | null;
   /**
-   * Glow/bloom post-process — null when disabled. A compositor pass (bloom on
-   * pre-tonemap HDR luminance), so the render layer that consumes this must own
-   * tonemapping too: bloom sits BEFORE the tonemapper (see `godotBloom.ts`).
+   * Glow/bloom post-process — null when disabled. A compositor pass, so the
+   * render layer that consumes this owns tonemapping too: every blend mode but
+   * SOFTLIGHT composites into linear HDR before the tone curve, and SOFTLIGHT
+   * composites after it (see `godotGlow.ts`).
    */
   glow: {
-    /** HDR luminance a pixel must exceed to bloom (`glow_hdr_threshold`). */
-    hdrThreshold: number;
-    /** Additive strength of the glow buffer (`glow_intensity`). */
+    /** The seven mip weights, finest first, already normalised if asked for. */
+    levels: number[];
+    /** Multiplies the gathered glow before the blend (`glow_intensity`). */
     intensity: number;
-    /** Blur spread (`glow_strength`). */
+    /** Per-pass multiplier on the glow buffer (`glow_strength`). */
     strength: number;
-    /** Sub-threshold lift, 0..1 (`glow_bloom`). */
+    /** MIX-blend lerp factor (`glow_mix`). */
+    mix: number;
+    /** Bright-pass feedback floor, 0..1 (`glow_bloom`). */
     bloom: number;
     /** 0 ADDITIVE, 1 SCREEN, 2 SOFTLIGHT, 3 REPLACE, 4 MIX. */
     blendMode: number;
+    /** Peak HDR channel where the bright-pass knee starts (`glow_hdr_threshold`). */
+    hdrThreshold: number;
+    /** Knee width above the threshold (`glow_hdr_scale`). */
+    hdrScale: number;
+    /** Per-channel ceiling on the bright-pass (`glow_hdr_luminance_cap`). */
+    luminanceCap: number;
   } | null;
 }
 
@@ -122,14 +131,31 @@ export function createEnvironmentSettings(
       : null,
     glow: properties.glow_enabled
       ? {
-          hdrThreshold: properties.glow_hdr_threshold,
+          levels: glowLevelsFor(properties),
           intensity: properties.glow_intensity,
           strength: properties.glow_strength,
+          mix: properties.glow_mix,
           bloom: properties.glow_bloom,
           blendMode: properties.glow_blend_mode,
+          hdrThreshold: properties.glow_hdr_threshold,
+          hdrScale: properties.glow_hdr_scale,
+          luminanceCap: properties.glow_hdr_luminance_cap,
         }
       : null,
   };
+}
+
+/**
+ * `Environment::_update_glow`'s level weights: sum-normalised under
+ * `glow_normalized`, passed through otherwise. Godot divides by the sum with no
+ * guard, so an all-zero set would hand the shader NaN; weights that sum to zero
+ * contribute nothing either way, so they pass through instead.
+ */
+function glowLevelsFor(properties: EnvironmentProperties): number[] {
+  const levels = properties.glow_levels;
+  if (!properties.glow_normalized) return levels;
+  const sum = levels.reduce((total, weight) => total + weight, 0);
+  return sum > 0 ? levels.map((weight) => weight / sum) : levels;
 }
 
 /** Godot's ProjectSettings `rendering/environment/defaults/default_clear_color`. */
