@@ -29,6 +29,7 @@
  */
 
 import type { EnvironmentSettings } from './renderer';
+import { glslFloat } from './glslLiterals';
 
 /** Godot `Environment.GlowBlendMode`. */
 export const GlowBlendMode = {
@@ -182,12 +183,6 @@ vec3 godotGlowBlend(vec3 color, vec3 glow) {
 ${body}
 }
 `;
-}
-
-/** GLSL has no int→float coercion in constant initialisers. */
-function glslFloat(value: number): string {
-  if (!Number.isFinite(value)) return '0.0';
-  return Number.isInteger(value) ? `${value}.0` : String(value);
 }
 
 function clamp01(value: number): number {

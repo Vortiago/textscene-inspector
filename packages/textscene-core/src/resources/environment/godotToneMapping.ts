@@ -24,6 +24,8 @@
  * ---------------------------------------------------------------------------
  */
 
+import { glslFloat } from './glslLiterals';
+
 /** Godot `ToneMapper`. */
 export const GodotToneMapper = {
   LINEAR: 0,
@@ -132,11 +134,6 @@ vec3 godotToneMap(vec3 color, float exposure) {
 ${body}
 }
 `;
-}
-
-/** GLSL has no int→float coercion in constant initialisers. */
-function glslFloat(value: number): string {
-  return Number.isInteger(value) ? `${value}.0` : String(value);
 }
 
 const CURVES: Record<number, string> = {

@@ -30,6 +30,7 @@ import {
   type GlowParams,
 } from '../../resources/environment/godotGlow';
 import { toneMappingEffectGlsl } from '../../resources/environment/godotToneMapping';
+import { glslFloat } from '../../resources/environment/glslLiterals';
 
 export interface GodotGlowOptions {
   glow: GlowParams;
@@ -334,14 +335,9 @@ uniform float godotExposure;
 ${curve}
 ${blendGlsl(glow, toneMapWhite)}
 void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
-  vec3 glow = texture2D(godotGlowBuffer, uv).rgb * ${glslLiteral(glow.intensity)};
+  vec3 glow = texture2D(godotGlowBuffer, uv).rgb * ${glslFloat(glow.intensity)};
 ${composite}
   outputColor = vec4(color, inputColor.a);
 }
 `;
-}
-
-function glslLiteral(value: number): string {
-  if (!Number.isFinite(value)) return '0.0';
-  return Number.isInteger(value) ? `${value}.0` : String(value);
 }
