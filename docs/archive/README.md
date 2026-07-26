@@ -20,7 +20,7 @@ per-node comparison sheets under `docs/comparison/`, and `docs/adr/`).
 | `MAIN-FEATURE-INVENTORY.md` | Pre-migration baseline inventory of the vanilla-DOM app shell (`main` @ `80fa99e`) | Historical record (intentional snapshot — do not update) |
 | `MAIN-VS-MIGRATION-DELTA.md` | Completeness gate comparing `main` vs `feat/r3f-migration` before the PR #48 merge (2026-05-20) | Historical record |
 | `PARITY-AUDIT-POST-MERGE.md` | Godot-parity audit on the post-merge tip `05bd4d8` (2026-05-27) | Historical record |
-| `PARITY-AUDIT-PROGRESS.md` | Batch tracker for the 2026-06-03 expanded parity audit (all batches completed; surviving divergences live in the per-node comparison sheets (`docs/comparison/sheets/`)) | Historical record |
+| `PARITY-AUDIT-PROGRESS.md` | Batch tracker for the 2026-06-03 expanded parity audit (all batches completed; surviving divergences live in the per-node comparison sheets (`<slice>/comparison.md`)) | Historical record |
 | `POST-MORTEM-WALL-REGRESSIONS.md` | Post-mortem on the hallway-fixture wall regressions (2026-05-28) | Historical record |
 | `UX-FLOW-GAPS.md` | UX field run on `feat/r3f-migration` (`c771507`) that produced the WI-UX work items | Historical record |
 | `UX-REGRESSIONS.md` | Cross-cutting UX-regression snapshot `main` vs `feat/r3f-migration` (all three regressions since resolved) | Historical record |
