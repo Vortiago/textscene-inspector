@@ -1,7 +1,6 @@
 /**
  * <WorldEnvironment> — applies the scene's own Environment: background, sky,
- * ambient, tonemapping and fog. Post-processing (adjustments, SSR, glow) is not
- * reproduced.
+ * ambient, tonemapping, fog and glow. Adjustments and SSR are not reproduced.
  *
  * The reference chain — environment → sky → sky material — is followed by
  * `useResolvedEnvironment`, which accepts either the inline or the external `.tres`
