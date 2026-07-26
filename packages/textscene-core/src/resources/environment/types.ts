@@ -57,20 +57,38 @@ export interface EnvironmentProperties {
   volumetric_fog_albedo: Color;
   volumetric_fog_emission: Color;
 
-  // Glow / bloom (a compositor post-process — a bright-pass blur over HDR
-  // luminance, added back before tonemapping). The editor preview environment
-  // enables it, which is why emissive materials bloom in Godot's editor.
+  // Glow / bloom (a compositor post-process — a peak-channel bright-pass over a
+  // weighted mip pyramid, blended back around the tone curve). The editor
+  // preview environment enables it, which is why emissive materials bloom in
+  // Godot's editor.
   glow_enabled: boolean;
-  /** Overall additive contribution of the blurred glow buffer. Default 0.8. */
+  /**
+   * The seven mip weights, finest (index 0, `glow_levels/1`) to coarsest.
+   * Godot sums `mip[i] * weight[i]`, unnormalised, skipping weights <= 0.0001 —
+   * so the defaults `[0, 0.8, 0.4, 0.1, 0, 0, 0]` are what keeps a Godot halo
+   * tight: the finest mip is off and nothing past the fourth contributes.
+   */
+  glow_levels: number[];
+  /** Divides every level weight by their sum. Default false. */
+  glow_normalized: boolean;
+  /** Multiplies the gathered glow just before the blend. Default 0.3. */
   glow_intensity: number;
-  /** Softens/broadens the blur (higher = wider halo). Default 1.0. */
+  /** Multiplies the glow buffer at EVERY pyramid pass, so it compounds. Default 1.0. */
   glow_strength: number;
-  /** Lifts even sub-threshold pixels into the glow buffer, 0..1. Default 0.0. */
+  /** The `color * (1 - mix) + glow` lerp factor, MIX blend only. Default 0.05. */
+  glow_mix: number;
+  /** Floor on the bright-pass feedback: at 1.0 every pixel glows. Default 0.0. */
   glow_bloom: number;
-  /** HDR luminance above which a pixel contributes to glow. Default 1.0. */
-  glow_hdr_threshold: number;
-  /** 0 ADDITIVE, 1 SCREEN, 2 SOFTLIGHT (default), 3 REPLACE, 4 MIX. */
+  /** 0 ADDITIVE, 1 SCREEN (default), 2 SOFTLIGHT, 3 REPLACE, 4 MIX. */
   glow_blend_mode: number;
+  /** Peak HDR channel where the bright-pass knee starts. Default 1.0. */
+  glow_hdr_threshold: number;
+  /** Width of the bright-pass smoothstep knee above the threshold. Default 2.0. */
+  glow_hdr_scale: number;
+  /** Per-channel ceiling on the bright-pass result. Default 12.0. */
+  glow_hdr_luminance_cap: number;
+  /** How far the glow map modulates the glow buffer, 0..1. Default 0.8. */
+  glow_map_strength: number;
 
   // Adjustments (parsed but warned in v1)
   adjustment_enabled: boolean;
