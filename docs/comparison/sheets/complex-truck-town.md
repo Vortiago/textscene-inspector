@@ -33,24 +33,38 @@ and both engines look through it.
 - **WorldEnvironment** — sky background, `ambient_light_sky_contribution = 0.5`,
   depth fog, `glow_intensity = 0.5`, and `tonemap_mode = 4` (AgX).
 
-## Scale: the trees are enormous in BOTH engines
+## Scale: the trees are wrong in both images
 
-Worth stating plainly, because it looks like a renderer bug and is not. The tree
-trunks tower over the entire town in Godot exactly as they do here — the houses
-are specks at their base — and the scene's bounds come out **2048 × 1104 × 2048**,
-where the 1104 is tree height.
+The tree trunks tower over the entire town — the houses are specks at their base
+— and the scene's bounds come out **2048 × 1104 × 2048**, where the 1104 is tree
+height. Both engines agree, so it reads like faithful parity. It is not: both are
+wrong the same way, because of something missing from the vendored copy.
 
-The cause is in the asset. `town/tree/scene.gltf` has an internal node (`"tree"`)
-whose `matrix` carries a uniform **scale of 100**; the instancing `.tscn` then
-scales each tree by `0.375`, for a net 37.5×. Upstream Godot ships a `.import`
-file pinning the importer's root scale, but `.import` files are generated rather
-than committed, so a fresh import regenerates the defaults — and both engines
-faithfully render the result. Nothing to fix on our side; it is the vendored
-copy's import state, reproduced identically.
+`town/tree/scene.gltf` is a Sketchfab export whose `"tree"` node carries a
+uniform **scale of 100** to compensate for a mesh authored in centimetre-ish
+units (raw extents ≈ 25). Godot cancels that at import time: upstream ships
+`scene.gltf.import` with
 
-It is also why the scene needs an explicit camera: fit-to-bounds frames all 2048
-units and shrinks the town to a speck, while Godot's editor orbit opens 4 units
-from the origin, underneath the terrain.
+    nodes/root_scale=0.00999999999999999
+
+so the real demo renders `25 × 100 × 0.01 × 0.375 ≈ **9.4 units**` — a normal tree
+beside a house. This repo vendors **no `.import` files at all** (zero across the
+whole corpus, against 25 model files), so a fresh Godot import regenerates the
+default `root_scale = 1.0` and the compensation never happens: `25 × 100 × 0.375
+≈ 937 units`.
+
+Two consequences worth separating. The reference side is only "correct" here in
+the sense that it faithfully renders the asset as vendored — it does not match
+the real Truck Town demo. And this previewer does not read `.import` files at
+all, so restoring them would fix Godot's side and leave ours at 937 units, which
+would then be a genuine divergence. Both halves are tracked as follow-ups.
+
+The tree is the ONLY model in the corpus carrying such a scale, so this is one
+asset's worth of visible impact, not a systemic rendering problem.
+
+The size is also why the scene needs an explicit camera: fit-to-bounds frames all
+2048 units and shrinks the town to a speck, while Godot's editor orbit opens 4
+units from the origin, underneath the terrain.
 
 ## Divergences
 
@@ -74,8 +88,13 @@ lighting does not, and it traces to one unresolved resource.
   the depth fog over it.
 
 This is the same limitation the platformer sheet records for a custom sky shader,
-reached by a different route: there the sky is a GDShader we do not execute, here
-it is a supported material we cannot follow because it lives in an external file.
+reached by a different route, and the two are not equally hard. There the sky is
+a GDShader we do not execute and a compressed cubemap we do not decode. Here it
+is a `ProceduralSkyMaterial` we fully support, in a plain `.tres` the resource
+pipeline already knows how to fetch and parse — only the sky resolver is
+synchronous over internal resources, so it never asks for it. Tracked as a
+follow-up.
+
 Screen-space fog, AgX tonemapping and the shadow-casting sun are all implemented
 and applied; it is specifically the sky, and the ambient derived from it, that is
 missing.
