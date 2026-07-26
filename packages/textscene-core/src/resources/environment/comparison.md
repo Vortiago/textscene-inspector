@@ -54,7 +54,22 @@ Where the blend happens depends on the mode, and Godot is not uniform about it:
 SOFTLIGHT composites AFTER the tone curve with the glow buffer itself tonemapped,
 while ADDITIVE, SCREEN, REPLACE and MIX composite into linear HDR before it. All five
 are implemented, SCREEN being Godot's default. MIX reads `glow_mix` where the others
-read `glow_intensity` — Godot fills one shader uniform from whichever the mode uses.
+read `glow_intensity` — Godot fills one shader uniform from whichever the mode uses,
+so they are never both live.
+
+The editor preview environment only ever flips `glow_enabled`, which left every other
+knob unreachable by measurement. Each now has a fixture that moves one thing, all
+measured with `ref:godot` against Godot 4.6.3 (floor 0.011–0.069%): coarse level
+weights under ADDITIVE 0.029%, `glow_strength` 0.000%, SOFTLIGHT over mid-grey
+0.010%, MIX 0.025%, REPLACE 0.006%, `glow_bloom` as a feedback floor 0.015%,
+`glow_normalized` 0.023%, and glow under AgX 0.143%. The AgX residual is the same
+float-precision one its own row records — glow puts a wide dim halo exactly where
+that curve's toe is steepest.
+
+Two of those fixtures exist because a default-valued scene cannot fail: `glow_strength`
+is inert at 1.0, and the level weights are unobservable while the halo is tight. The
+strength fixture caught the pyramid starting an octave too fine while it was being
+written.
 
 ## Known limitations
 

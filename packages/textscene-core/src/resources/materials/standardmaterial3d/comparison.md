@@ -50,6 +50,15 @@ renders nothing at all where Godot renders the whole texture.
 `shading_mode = unshaded` drops emission entirely in both: Godot's unshaded branch
 outputs `vec4(albedo, alpha)` and never reads its emission term.
 
+Measured with `ref:godot` against Godot 4.6.3: an HDR emission colour (a channel at
+2.0) lands at 0.023%, and the two texture-dependent operator cases side by side at
+0.498% — that residual is the checkerboard's own edge count under SVG rasterisation,
+with the square interiors matching. Those fixtures use flat quads rather than spheres
+on purpose: a checkerboard is a UV discriminator, and Godot's `SphereMesh` winds its
+UVs at a different phase than three's sphere does. That is measurable at 3.556% on
+plain albedo with no emission involved at all, so putting the operator test on a
+sphere would have measured the wrong thing.
+
 ## Clearcoat
 <!-- compare: image=unit-material-clearcoat status=done fixture=unit-material-clearcoat.tscn -->
 
@@ -95,6 +104,7 @@ units, a different space than Godot's).
 - **diffuse_mode** — Godot defaults to Burley; three's material is always Lambert. They agree near normal incidence; a rough sphere reads ~5/255 dark at grazing silhouette.
 - **metallic_specular** — three hard-wires dielectric F0 at 0.04 (Godot's 0.5 default). Authoring it away from 0.5 has no effect.
 - **uv1 V-anchoring** — Godot measures V from the image top, three from the bottom, so a non-integer `uv1_scale.y` or non-zero `uv1_offset.y` shifts V differently. Under `uv1_world_triplanar`, `uv1_offset` is in world units and is not converted.
+- **SphereMesh UV phase** — Godot winds a sphere's UVs at a different phase than three's `SphereGeometry`, so a patterned texture lands rotated relative to Godot's. Measured at 3.556% on a plain albedo checkerboard. Not a material property — it belongs to the mesh — but it is what makes any patterned-texture comparison on a sphere unreadable.
 - **billboard_mode** — orientation is faithful, but `billboard_keep_scale = false` (scale normalized away while billboarding) is not honored, and a billboarded mesh's child nodes inherit its rotation (Godot's per-surface effect does not turn children).
 - **Triplanar on curved meshes** — tiling density is exact for planar meshes; curved / GLB geometry falls back to the mesh's own UVs.
 - **emission_operator = Add with BOTH a lit colour and a texture** — Godot computes `(emission + tex) * energy`, a sum three's multiply-only emissive chain cannot express. The colour is applied as a multiply instead, so such a material reads darker and more tinted. The far more common cases — either term alone, and Add over the default black colour — are exact.
