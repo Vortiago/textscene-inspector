@@ -10,6 +10,7 @@
  */
 
 import * as THREE from 'three';
+import { resolveEmission } from '../../resources/materials/standardmaterial3d/emission';
 import type { StandardMaterial3DScalars } from './standardMaterialScalars';
 
 /**
@@ -137,6 +138,11 @@ export function StandardMaterialSlot({
   // Godot SHADING_MODE_UNSHADED (0): albedo is output directly, unaffected by
   // lights/shadows. three.js MeshBasicMaterial is the unlit equivalent — no PBR
   // slots (metalness/roughness/normal/emissive/ao) apply.
+  //
+  // Dropping EMISSION here is PARITY, not an omission: Godot's unshaded branch
+  // writes `frag_color = vec4(albedo, alpha)` and never reads the emission term
+  // its own fragment code computed, so an unshaded material with emission enabled
+  // is unlit in Godot too however bright the colour.
   if (scalars.shadingMode === 'unshaded') {
     return (
       <meshBasicMaterial
@@ -180,8 +186,9 @@ export function StandardMaterialSlot({
     metalnessMap: metalnessMap ?? null,
     emissiveMap: emissiveMap ?? null,
     aoMap: aoMap ?? null,
-    emissive: scalars.emissive,
-    emissiveIntensity: scalars.emissiveIntensity,
+    // Godot's `emission_operator` only becomes observable once a texture is in
+    // play, and whether one resolved is knowable here and not at parse time.
+    ...resolveEmission(scalars, !!emissiveMap),
     // Godot heightmap (FEATURE_HEIGHT_MAPPING) → three.js vertex displacement.
     // PARITY LIMITATION: Godot uses texture-space parallax; three.js
     // displacement moves real vertices, so it needs a subdivided mesh and its

@@ -31,14 +31,21 @@ describe('material misc scalar parity', () => {
     expect(parseStandardMaterial3DScalars({ ao_enabled: 'true' }).aoEnabled).toBe(true);
   });
 
-  it('HDR emission folds the peak channel into emissiveIntensity (not clamped away)', () => {
+  it('HDR emission folds the LINEAR peak into emissiveIntensity, preserving hue', () => {
     const s = parseStandardMaterial3DScalars({
       emission_enabled: 'true',
       emission: 'Color(2, 0.5, 0, 1)',
       emission_energy_multiplier: '1',
     });
-    // peak raw channel = 2 → folded into intensity (1 × 2); color normalized to ≤1.
-    expect(s.emissiveIntensity).toBeCloseTo(2, 5);
+    // Godot converts the `source_color` uniform sRGB→linear BEFORE energy, and
+    // its `pow` branch extrapolates past 1 rather than clipping:
+    //   ((2 + 0.055) / 1.055) ^ 2.4     = 4.9538488…
+    //   ((0.5 + 0.055) / 1.055) ^ 2.4   = 0.2140411…
+    // The peak goes into the intensity, so the colour keeps its ratio.
+    expect(s.emissiveIntensity).toBeCloseTo(4.9538488, 5);
+    expect(s.emissive[0]).toBeCloseTo(1, 5);
+    expect(s.emissive[1]).toBeCloseTo(0.2140411 / 4.9538488, 5);
+    expect(s.emissive[2]).toBe(0);
   });
 
   it('non-HDR emission leaves intensity = energy', () => {
@@ -76,6 +83,26 @@ describe('StandardMaterialSlot vertexColors', () => {
     const m = r.scene.findByType('Mesh').instance.material as THREE.MeshBasicMaterial;
     expect((m as THREE.Material).type).toBe('MeshBasicMaterial');
     expect(m.vertexColors).toBe(true);
+  });
+
+  it('unshaded drops emission entirely, as Godot does', async () => {
+    // Godot's unshaded branch writes `vec4(albedo, alpha)` and never reads the
+    // emission term, so a bright emissive unshaded material is unlit in Godot
+    // too. Pinned so the missing emissive here is not mistaken for a gap.
+    const scalars = parseStandardMaterial3DScalars({
+      shading_mode: '0',
+      emission_enabled: 'true',
+      emission: 'Color(1, 0, 0, 1)',
+      emission_energy_multiplier: '8',
+    });
+    const r = await ReactThreeTestRenderer.create(
+      <mesh>
+        <StandardMaterialSlot scalars={scalars} />
+      </mesh>
+    );
+    const m = r.scene.findByType('Mesh').instance.material as THREE.Material;
+    expect(m.type).toBe('MeshBasicMaterial');
+    expect('emissive' in m).toBe(false);
   });
 });
 

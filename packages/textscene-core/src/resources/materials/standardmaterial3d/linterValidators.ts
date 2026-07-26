@@ -87,6 +87,38 @@ const validateUv1Scale: PropertyValidator = (key, value, line) => {
   return null;
 };
 
+/**
+ * Godot's `emission_energy_multiplier` is `or_greater`, so there is no upper
+ * bound to check — only that it parses and is not negative.
+ */
+const validateEmissionEnergy: PropertyValidator = (key, value, line) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    return {
+      severity: 'error',
+      message: `Property "${key}" must be a non-negative number, got: ${value}`,
+      line,
+      column: 0,
+      code: 'INVALID_NUMBER',
+    };
+  }
+  return null;
+};
+
+/** Godot `EmissionOperator`: 0 ADD, 1 MULTIPLY. */
+const validateEmissionOperator: PropertyValidator = (key, value, line) => {
+  if (value !== '0' && value !== '1') {
+    return {
+      severity: 'error',
+      message: `Property "${key}" must be 0 (Add) or 1 (Multiply), got: ${value}`,
+      line,
+      column: 0,
+      code: 'INVALID_ENUM_VALUE',
+    };
+  }
+  return null;
+};
+
 // Register validators for StandardMaterial3D properties
 validatorRegistry.registerAll('StandardMaterial3D', {
   normal_enabled: validateBoolean,
@@ -105,4 +137,13 @@ validatorRegistry.registerAll('StandardMaterial3D', {
   heightmap_texture: validateTextureReference,
   uv1_scale: validateUv1Scale,
   albedo_color: validateAlbedoColor,
+  // Emission's colour and energy reach the renderer, so a malformed one should
+  // be reported rather than silently dropped back to Godot's default.
+  emission: validateAlbedoColor,
+  emission_energy_multiplier: validateEmissionEnergy,
+  emission_operator: validateEmissionOperator,
+  // Validated but not rendered (see the sheet's limitations): a malformed value
+  // is still worth reporting, since the scene is wrong in Godot either way.
+  emission_on_uv2: validateBoolean,
+  emission_intensity: validateEmissionEnergy,
 });

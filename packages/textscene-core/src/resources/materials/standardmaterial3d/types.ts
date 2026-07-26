@@ -21,6 +21,14 @@ export interface StandardMaterial3DProperties {
   normal_enabled?: boolean;
   emission_enabled?: boolean;
 
+  // Emission. Godot's `emission` defaults to BLACK, so an absent colour is not
+  // "unset, fall back to white" — it means the emission texture carries the
+  // whole signal (see `emission.ts` for how the operator resolves that).
+  emission?: Color;
+  emission_energy_multiplier?: number;
+  /** Godot `emission_operator`: 0 ADD (default), 1 MULTIPLY. */
+  emission_operator?: number;
+
   // UV transform
   uv1_scale?: { x: number; y: number; z: number };
 
