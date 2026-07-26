@@ -116,6 +116,23 @@ export const GOLDEN_SCENES = [
   // Soft light is the only mode Godot composites AFTER the tone curve, and the
   // only one whose result depends on the surface under it, hence the grey ground.
   { name: 'glow-softlight', file: 'unit-glow-softlight.tscn' },
+  // The remaining glow configurations, one variable each: MIX (which reads
+  // glow_mix where every other mode reads glow_intensity), REPLACE (the frame
+  // becomes the glow buffer, so the pyramid is visible with nothing under it),
+  // glow_bloom as a feedback floor (this scene has no emissive at all, so it
+  // mounts the composer purely through that), sum-normalised level weights, and
+  // glow under AgX rather than the FILMIC every other glow fixture uses.
+  { name: 'glow-mix', file: 'unit-glow-mix.tscn' },
+  { name: 'glow-replace', file: 'unit-glow-replace.tscn' },
+  { name: 'glow-bloom-floor', file: 'unit-glow-bloom-floor.tscn' },
+  { name: 'glow-normalized', file: 'unit-glow-normalized.tscn' },
+  { name: 'glow-agx', file: 'unit-glow-agx.tscn' },
+  // Emission's texture-dependent cases. Quads rather than spheres because a
+  // checkerboard is a UV discriminator and Godot's SphereMesh winds its UVs at a
+  // different phase than three's does — measurable on plain albedo, nothing to do
+  // with emission. maxDiffPct is raised for the checker's own edge count.
+  { name: 'material-emission-texture', file: 'unit-material-emission-texture.tscn', maxDiffPct: 0.6 },
+  { name: 'material-emission-hdr', file: 'unit-material-emission-hdr.tscn' },
   // Height mapping: a local grayscale height SVG drives displacementMap on a
   // finely-subdivided sphere — the baseline pins that the relief actually
   // renders (a normal map, or a missing displacementMap, reads as a flat ball).

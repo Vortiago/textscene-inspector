@@ -1,0 +1,44 @@
+[gd_scene load_steps=5 format=3 uid="uid://unitglowbloomfloor"]
+
+; glow_bloom above zero, which FLOORS the bright-pass feedback.
+;
+; Every pixel then enters the glow buffer however dark it is — glow_bloom is not a
+; lowered threshold, it is a `max()` on the feedback, so the dim albedo-only ground
+; here blooms as much as the emissive sphere does. That also makes this the fixture
+; that pins the composer-mount rule: a scene can need the pass with nothing in it
+; bright enough to cross the threshold.
+
+[sub_resource type="ProceduralSkyMaterial" id="Sky_dim"]
+sky_top_color = Color(0.1, 0.12, 0.16, 1)
+sky_horizon_color = Color(0.14, 0.14, 0.16, 1)
+ground_bottom_color = Color(0.12, 0.1, 0.08, 1)
+ground_horizon_color = Color(0.14, 0.14, 0.16, 1)
+
+[sub_resource type="Sky" id="Sky_1"]
+sky_material = SubResource("Sky_dim")
+
+[sub_resource type="Environment" id="Env_glow"]
+background_mode = 2
+sky = SubResource("Sky_1")
+tonemap_mode = 2
+glow_enabled = true
+glow_bloom = 0.35
+
+[sub_resource type="SphereMesh" id="SphereMesh_1"]
+radius = 0.6
+height = 1.2
+radial_segments = 32
+rings = 16
+
+[sub_resource type="StandardMaterial3D" id="Mat_plain"]
+albedo_color = Color(0.75, 0.7, 0.35, 1)
+roughness = 0.5
+
+[node name="GlowBloomFloorRoot" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env_glow")
+
+[node name="PlainSphere" type="MeshInstance3D" parent="."]
+mesh = SubResource("SphereMesh_1")
+surface_material_override/0 = SubResource("Mat_plain")
