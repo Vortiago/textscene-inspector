@@ -117,6 +117,13 @@ const camera3DValidationRule: LintRule = {
     name: 'valid-camera3d-properties',
     description: 'Validates Camera3D property values, required properties, clipping plane relationships, and performance considerations',
     category: 'validation',
+    emits: [
+      { ruleName: 'camera3d-missing-fov', severity: 'error' },
+      { ruleName: 'camera3d-invalid-clipping-planes', severity: 'error' },
+      { ruleName: 'camera3d-small-near-plane', severity: 'warning' },
+      { ruleName: 'camera3d-large-far-plane', severity: 'warning' },
+      { ruleName: 'camera3d-extreme-fov', severity: 'warning' },
+    ],
     applicableNodeTypes: ['Camera3D'],
   },
   check: checkCamera3D,

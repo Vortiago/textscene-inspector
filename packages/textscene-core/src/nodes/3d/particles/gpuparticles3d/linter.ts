@@ -153,6 +153,13 @@ const gpuParticles3DValidationRule: LintRule = {
     description: 'Validates GPUParticles3D resource references, trail configuration, sub-emitter paths, and performance considerations',
     category: 'validation',
     applicableNodeTypes: ['GPUParticles3D'],
+    emits: [
+      { ruleName: 'valid-gpuparticles3d-process-material', severity: 'error' },
+      { ruleName: 'valid-gpuparticles3d-resources', severity: 'error' },
+      { ruleName: 'valid-gpuparticles3d-trail-config', severity: 'error' },
+      { ruleName: 'valid-gpuparticles3d-sub-emitter', severity: 'error' },
+      { ruleName: 'gpuparticles3d-performance', severity: 'warning' },
+    ],
   },
   check: checkGPUParticles3D,
 };

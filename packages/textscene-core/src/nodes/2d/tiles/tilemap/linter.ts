@@ -73,6 +73,12 @@ const tileMapValidationRule: LintRule = {
     description: 'Validates TileMap tile_set assignment, data format, and per-layer tile data',
     category: 'validation',
     applicableNodeTypes: ['TileMap'],
+    emits: [
+      { ruleName: 'tilemap-requires-tileset', severity: 'warning' },
+      { ruleName: 'valid-tilemap-resources', severity: 'error' },
+      { ruleName: 'tilemap-unsupported-format', severity: 'warning' },
+      { ruleName: 'tilemap-invalid-tile-data', severity: 'error' },
+    ],
   },
   check: checkTileMap,
 };

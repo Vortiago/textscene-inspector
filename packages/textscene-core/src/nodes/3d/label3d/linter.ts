@@ -72,6 +72,10 @@ const label3DValidationRule: LintRule = {
     name: 'valid-label3d-properties',
     description: 'Validates Label3D property values and warns about empty text or unusual sizes',
     category: 'validation',
+    emits: [
+      { ruleName: 'label3d-empty-text', severity: 'warning' },
+      { ruleName: 'label3d-large-pixel-size', severity: 'warning' },
+    ],
     applicableNodeTypes: ['Label3D'],
   },
   check: checkLabel3D,

@@ -144,6 +144,16 @@ export function makeAreaLinterRule(dim: PhysicsDim): LintRule {
       description: `Validates ${type} collision shapes, monitoring configuration, gravity settings, and physics overrides`,
       category: 'validation',
       applicableNodeTypes: [type],
+      emits: [
+        { ruleName: `${prefix}-needs-collision-shape`, severity: 'warning' },
+        { ruleName: `${prefix}-inactive`, severity: 'warning' },
+        { ruleName: `${prefix}-point-gravity-missing-distance`, severity: 'error' },
+        { ruleName: `${prefix}-point-gravity-invalid-distance`, severity: 'error' },
+        { ruleName: `${prefix}-monitoring-zero-layer`, severity: 'warning' },
+        { ruleName: `${prefix}-monitoring-zero-mask`, severity: 'warning' },
+        { ruleName: `${prefix}-monitoring-no-collision`, severity: 'warning' },
+        { ruleName: `${prefix}-audio-override-missing-name`, severity: 'warning' },
+      ],
     },
     check,
   };

@@ -142,6 +142,17 @@ export function makeRigidBodyLinterRule(dim: PhysicsDim): LintRule {
       description: `Validates ${type} resource references, collision shapes, mass values, and physics configuration`,
       category: 'validation',
       applicableNodeTypes: [type],
+      emits: [
+        { ruleName: `valid-${prefix}-resources`, severity: 'error' },
+        { ruleName: `${prefix}-needs-collision-shape`, severity: 'warning' },
+        { ruleName: `${prefix}-mass-too-low`, severity: 'warning' },
+        { ruleName: `${prefix}-mass-too-high`, severity: 'warning' },
+        { ruleName: `${prefix}-excessive-linear-damp`, severity: 'warning' },
+        { ruleName: `${prefix}-excessive-angular-damp`, severity: 'warning' },
+        { ruleName: `${prefix}-max-contacts-without-monitor`, severity: 'warning' },
+        { ruleName: `${prefix}-zero-collision-layer`, severity: 'warning' },
+        { ruleName: `${prefix}-zero-collision-mask`, severity: 'warning' },
+      ],
     },
     check,
   };

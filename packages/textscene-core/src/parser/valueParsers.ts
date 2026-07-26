@@ -10,10 +10,13 @@
  * `intOr` / `floatOr` / `boolOr` / `enumOr` / `vec2Or` take a fallback and
  * always return a value. The `parseOptional*` family (`parseOptionalInt` /
  * `parseOptionalFloat` / `parseOptionalBool` / `parseOptionalVector2`) are the
- * distinct optional readers: each returns `undefined` for an absent/invalid
- * value (no fallback, no warn), for properties where "unset" is meaningful
- * (Control layout props, optional light scalars). Pass `context` (a node type
- * or name) to label the warning.
+ * distinct optional readers, for properties where "unset" is meaningful (Control
+ * layout props, optional light scalars): no fallback and no warning. All four
+ * return `undefined` when the property is ABSENT; on a present-but-unparseable
+ * value the numeric and vector readers also return `undefined`, but
+ * `parseOptionalBool` returns `false` — it is `value === 'true'`, so anything
+ * else reads as false rather than unset. Pass `context` (a node type or name) to
+ * label the warning.
  *
  * Pure `.ts` — importable by `linterParser` slices; never pulls in THREE.
  * These wrap the canonical leaf scanners (`parseVector2` in `parser/vectors.ts`);

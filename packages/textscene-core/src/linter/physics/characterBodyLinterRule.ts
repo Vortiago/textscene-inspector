@@ -161,6 +161,17 @@ export function makeCharacterBodyLinterRule(dim: PhysicsDim): LintRule {
       description: `Validates ${type} collision shapes, motion mode settings, floor/wall properties, and physics configuration`,
       category: 'validation',
       applicableNodeTypes: [type],
+      emits: [
+        { ruleName: `${prefix}-needs-collision-shape`, severity: 'warning' },
+        { ruleName: `${prefix}-floor-snap-too-small`, severity: 'warning' },
+        { ruleName: `${prefix}-floor-snap-too-large`, severity: 'warning' },
+        { ruleName: `${prefix}-floor-props-in-floating-mode`, severity: 'warning' },
+        { ruleName: `${prefix}-zero-collision-layer`, severity: 'warning' },
+        { ruleName: `${prefix}-zero-collision-mask`, severity: 'warning' },
+        { ruleName: `${prefix}-non-standard-up-direction`, severity: 'warning' },
+        { ruleName: `${prefix}-max-slides-too-low`, severity: 'warning' },
+        { ruleName: `${prefix}-safe-margin-too-large`, severity: 'warning' },
+      ],
     },
     check,
   };

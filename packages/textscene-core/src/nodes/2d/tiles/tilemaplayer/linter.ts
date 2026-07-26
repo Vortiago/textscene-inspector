@@ -63,6 +63,12 @@ const tileMapLayerValidationRule: LintRule = {
     description: 'Validates TileMapLayer tile_set assignment and tile data integrity',
     category: 'validation',
     applicableNodeTypes: ['TileMapLayer'],
+    emits: [
+      { ruleName: 'tilemaplayer-requires-tileset', severity: 'warning' },
+      { ruleName: 'valid-tilemaplayer-resources', severity: 'error' },
+      { ruleName: 'tilemaplayer-empty', severity: 'warning' },
+      { ruleName: 'tilemaplayer-invalid-tile-data', severity: 'error' },
+    ],
   },
   check: checkTileMapLayer,
 };
