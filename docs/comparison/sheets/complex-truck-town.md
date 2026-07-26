@@ -33,68 +33,43 @@ and both engines look through it.
 - **WorldEnvironment** — sky background, `ambient_light_sky_contribution = 0.5`,
   depth fog, `glow_intensity = 0.5`, and `tonemap_mode = 4` (AgX).
 
-## Scale: the trees are wrong in both images
+## Scale: what the import sidecar fixes
 
-The tree trunks tower over the entire town — the houses are specks at their base
-— and the scene's bounds come out **2048 × 1104 × 2048**, where the 1104 is tree
-height. Both engines agree, so it reads like faithful parity. It is not: both are
-wrong the same way, because of something missing from the vendored copy.
-
-`town/tree/scene.gltf` is a Sketchfab export whose `"tree"` node carries a
-uniform **scale of 100** to compensate for a mesh authored in centimetre-ish
-units (raw extents ≈ 25). Godot cancels that at import time: upstream ships
-`scene.gltf.import` with
+`town/tree/scene.gltf` is a Sketchfab export whose `"tree"` node carries a uniform
+**scale of 100**, compensating for a mesh authored at roughly centimetre units (raw
+extents ≈ 25). Godot cancels it at import time via `scene.gltf.import`:
 
     nodes/root_scale=0.00999999999999999
 
-so the real demo renders `25 × 100 × 0.01 × 0.375 ≈ **9.4 units**` — a normal tree
-beside a house. This repo vendors **no `.import` files at all** (zero across the
-whole corpus, against 25 model files), so a fresh Godot import regenerates the
-default `root_scale = 1.0` and the compensation never happens: `25 × 100 × 0.375
-≈ 937 units`.
+giving `25 × 100 × 0.01 × 0.375 ≈ 9.4 units` — a normal tree beside a house.
 
-Two consequences worth separating. The reference side is only "correct" here in
-the sense that it faithfully renders the asset as vendored — it does not match
-the real Truck Town demo. And this previewer does not read `.import` files at
-all, so restoring them would fix Godot's side and leave ours at 937 units, which
-would then be a genuine divergence. Both halves are tracked as follow-ups.
-
-The tree is the ONLY model in the corpus carrying such a scale, so this is one
-asset's worth of visible impact, not a systemic rendering problem.
-
-The size is also why the scene needs an explicit camera: fit-to-bounds frames all
-2048 units and shrinks the town to a speck, while Godot's editor orbit opens 4
-units from the origin, underneath the terrain.
+This repo vendored **no `.import` files at all**, so a fresh Godot import regenerated
+the default `root_scale = 1.0` and both engines rendered a **937-unit** tree that dwarfed
+the whole town. Both agreeing looked like parity; it was two renderers fed the same
+incomplete inputs. The previewer now reads the sidecar (ADR-0027) and the 25 scene
+sidecars are vendored, so both sides render the demo as it actually looks.
 
 ## Divergences
 
-Geometry, framing, terrain, roads, houses and tree placement all match. The
-lighting does not, and it traces to one unresolved resource.
+Geometry, framing, terrain, roads, houses, tree scale and the sky all match. The sky is
+the second thing this scene fixed: it holds its `sky_material` in an **ExtResource**
+(`res://town/sky_day.tres`), and the resolver used to follow internal resources only, so
+no sky was built at all. That cost the backdrop *and* the ambient — the environment draws
+half its ambient from the sky, so every surface the sun did not reach went black, most
+visibly the tree trunks. Both engines now draw the same procedural gradient.
 
-**The sky is not resolved, and the ambient goes with it.** The scene holds its
-`sky_material` in an **ExtResource** (`res://town/sky_day.tres`, a
-`ProceduralSkyMaterial`). `resolveSky` follows `Environment.sky` →
-`Sky.sky_material` through the scene's *internal* resources only, so an external
-`.tres` is a dead end and no sky is built. Two things follow:
+**What still differs: the ground reads far brighter and more saturated here.** Sampling
+the same regions of both frames, the near ground is `rgb(55, 110, 92)` in Godot against
+`rgb(165, 190, 119)` here, and the far ground `rgb(50, 74, 86)` against
+`rgb(169, 204, 182)`. So it is not only a distance falloff — the whole terrain is lighter
+and yellower, and Godot's is darker and tealer.
 
-- **The background is flat.** Godot draws the procedural gradient (deep blue
-  overhead, near-white at the horizon); we draw the default backdrop.
-- **Surfaces facing away from the sun read black.** The environment asks for half
-  its ambient from the sky (`ambient_light_sky_contribution = 0.5`). With no sky
-  to sample there is no sky ambient, so the tree trunks — lit blue-grey in Godot
-  — go nearly black on every face the sun does not reach. The sunlit ground is
-  correspondingly fine, which is what makes the contrast so stark: our grass is
-  bright and saturated where Godot's is washed pale by the sky's contribution and
-  the depth fog over it.
+This gap **predates both fixes on this branch** and is not diagnosed. Two candidates,
+neither confirmed: the scene sets `fog_enabled` with `fog_density = 0.0015`, and Godot's
+exponential fog is `1 - exp(-density · depth)` where `THREE.FogExp2` is
+`1 - exp(-density² · depth²)` — a large difference at these view distances; and the
+scene uses `tonemap_mode = 4` (AgX), which is implemented but whose contribution here has
+not been isolated. Stating them as possibilities rather than causes is deliberate: this
+sheet already had to be corrected once for naming a cause that measurement did not
+support.
 
-This is the same limitation the platformer sheet records for a custom sky shader,
-reached by a different route, and the two are not equally hard. There the sky is
-a GDShader we do not execute and a compressed cubemap we do not decode. Here it
-is a `ProceduralSkyMaterial` we fully support, in a plain `.tres` the resource
-pipeline already knows how to fetch and parse — only the sky resolver is
-synchronous over internal resources, so it never asks for it. Tracked as a
-follow-up.
-
-Screen-space fog, AgX tonemapping and the shadow-casting sun are all implemented
-and applied; it is specifically the sky, and the ambient derived from it, that is
-missing.

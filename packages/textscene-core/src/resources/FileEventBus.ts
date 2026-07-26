@@ -147,6 +147,34 @@ export class FileEventBus {
   }
 
   /**
+   * Read a file that is allowed not to exist, answering the caller and nobody else.
+   *
+   * `request()` treats a miss as a fault: it warns and fires the `failed` handlers,
+   * which is what turns a missing file into a user-visible **Missing resource**. That is
+   * right for a path a scene declares, and wrong for one discovered by convention — an
+   * **Import sidecar** (`scene.gltf` → `scene.gltf.import`) is absent for most assets,
+   * and its absence just means "use Godot's import defaults" (ADR-0027).
+   *
+   * Shares the cache with `request()` so a path is fetched once however it is reached,
+   * but deliberately fires neither handler set: no consumer subscribes to a sidecar, and
+   * waking every handler for one risks a re-entrant load.
+   */
+  async tryLoad(path: string): Promise<FileData | null> {
+    const cached = this.cache.get(path);
+    if (cached !== undefined) return cached;
+
+    try {
+      const data = await this.provider.loadResource(path);
+      if (data === null) return null;
+      this.cache.set(path, data);
+      return data;
+    } catch {
+      // Absence and unreachability are the same answer to the caller: no sidecar.
+      return null;
+    }
+  }
+
+  /**
    * Clear file cache.
    * @param path - Specific file to clear, or all files if omitted
    */

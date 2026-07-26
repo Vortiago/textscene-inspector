@@ -5,12 +5,10 @@
  * wrong is indistinguishable from getting the shader wrong.
  */
 
-import type { TscnInternalResource } from '../../parser/types';
 import type { Color } from '../materials/standardmaterial3d/types';
 import type { SkyProperties } from './types';
 import { floatOr } from '../../parser/valueParsers';
 import { colorOr } from '../../utils/colorParser';
-import { resolveSubResourceRef } from '../SubResourceResolver';
 
 const rgb = (r: number, g: number, b: number): Color => ({ r, g, b, a: 1 });
 
@@ -64,26 +62,3 @@ export function parseSkyMaterial(
       return null;
   }
 }
-
-/**
- * Resolves `Environment.sky` → `Sky.sky_material` → the parsed material.
- *
- * Null at every dead end, never a guess: an unresolvable sky renders no sky,
- * which is visibly wrong in a way a silently-substituted one is not. A
- * `sky_material` held in an ExtResource (`.tres`) cannot be followed from the
- * scene's internal resources and is therefore one of those dead ends.
- */
-export function resolveSky(
-  skyRef: string | undefined,
-  internalResources: readonly TscnInternalResource[]
-): SkyProperties | null {
-  const skyResource = resolveSubResourceRef(skyRef, internalResources);
-  if (skyResource?.type !== 'Sky') return null;
-
-  const materialRef = (skyResource.data as { sky_material?: string }).sky_material;
-  const material = resolveSubResourceRef(materialRef, internalResources);
-  if (!material) return null;
-
-  return parseSkyMaterial(material.type, material.data as Record<string, string>);
-}
-
