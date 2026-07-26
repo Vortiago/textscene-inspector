@@ -34,7 +34,7 @@ blue fill rather than the layout:
 ## Linting
 
 <!-- lint:begin Camera2D -->
-Strict parsing format-checks these `Camera2D` properties, plus 15 inherited from Node2D. Every validator failure is an **error**.
+Strict parsing format-checks these `Camera2D` properties, plus 17 inherited from Node2D. Every validator failure is an **error**.
 
 | Property |
 | --- |

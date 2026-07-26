@@ -196,16 +196,18 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
 
   Polygon2D: {
     parserOnly: [
-      // PackedVector2Array / Array-of-PackedInt32Array bodies (same pattern as
-      // Line2D.points above): opaque encoded data with no per-key grammar.
-      'polygon', 'polygons',
+      // PackedVector2Array / Array-of-PackedInt32Array / PackedColorArray
+      // bodies (same pattern as Line2D.points above): opaque encoded data with
+      // no per-key grammar. (`uv` used to sit here; it has one now.)
+      'polygon', 'polygons', 'vertex_colors',
     ],
     linterOnly: [
-      // Display tweaks with no rendering parity requirement. (`invert_enabled`
-      // and `invert_border` used to sit here; both are rendered now.)
-      'antialiased', 'texture_offset', 'texture_rotation', 'texture_scale',
+      // Display tweak with no rendering parity requirement. (`invert_enabled`,
+      // `invert_border` and the whole texture transform used to sit here; all
+      // are rendered now.)
+      'antialiased',
     ],
-    reason: 'polygon/polygons are encoded packed arrays with no per-key grammar; the remaining texture-transform properties affect visual output but the renderer reads color/offset only.',
+    reason: 'polygon/polygons/vertex_colors are encoded packed arrays with no per-key grammar; antialiased is a display tweak the renderer has no equivalent for.',
   },
 
   TileMapLayer: {

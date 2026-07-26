@@ -29,7 +29,7 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin AudioStreamPlayer2D -->
-Strict parsing format-checks these `AudioStreamPlayer2D` properties, plus 15 inherited from Node2D. Every validator failure is an **error**.
+Strict parsing format-checks these `AudioStreamPlayer2D` properties, plus 17 inherited from Node2D. Every validator failure is an **error**.
 
 | Property |
 | --- |

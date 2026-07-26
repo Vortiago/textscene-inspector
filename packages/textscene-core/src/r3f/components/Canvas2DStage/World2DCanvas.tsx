@@ -73,6 +73,11 @@ export function World2DCanvas(props: World2DCanvasProps) {
       orthographic
       camera={{ position: [0, 0, 1000], near: 0.1, far: 4000 }}
       gl={{ alpha: true }}
+      // Godot never tone-maps a canvas: authored 2D colour goes straight to the
+      // framebuffer, and only the 3D pass is tone-mapped. R3F otherwise
+      // defaults to ACESFilmic, which lifted highlights and desaturated every
+      // fill in this stage.
+      flat
       // Fill the stage and stay transparent to pointer input so the stage's
       // own drag-to-pan / wheel-to-zoom handlers keep working.
       style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}

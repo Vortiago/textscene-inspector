@@ -15,8 +15,8 @@
 
 import { useMemo, type ReactNode } from 'react';
 import type { TscnNode } from '../parser/types.js';
-import * as THREE from 'three';
 import { useYSortContext, useYSortSlot, type YSortContextValue } from './contexts/YSortContext.js';
+import { useCanvasItemTint } from './canvasItemModulate.js';
 import { Z_INDEX_STEP, TILE_SOURCE_STEP } from './node2dTransform.js';
 import { nodeComponentRegistry } from './NodeComponentRegistry.js';
 import type { TileMapLayerProperties } from '../nodes/2d/tiles/tilemaplayer/types.js';
@@ -234,6 +234,13 @@ function TileGroupRenderer({ item, z, node }: {
 }): ReactNode | null {
   const tileProps = node.properties as TileMapLayerProperties;
   const { model, status } = useTileSetModel(tileProps.tile_set);
+  // A y-sorted layer is decomposed into per-Y groups here instead of rendering
+  // through <TileMapLayer>, so its CanvasItem tint has to be resolved here too —
+  // the same `useCanvasItemTint` the component's body receives. Hardcoding white
+  // left y-sorted tiles as the only 2D drawable a modulate could not reach,
+  // which showed up as a dungeon whose props took the CanvasModulate and whose
+  // stonework did not.
+  const { color, opacity } = useCanvasItemTint(tileProps);
   const allCells = tileProps.cells ?? null;
   // When expanded by the y-sort pass, tileData.cells holds the filtered Y-group cells.
   const cells = item.tileData?.cells ?? allCells;
@@ -259,8 +266,8 @@ function TileGroupRenderer({ item, z, node }: {
           cells={sourceCells}
           grid={model}
           z={sourceIndex * TILE_SOURCE_STEP}
-          color={new THREE.Color(1, 1, 1)}
-          opacity={1}
+          color={color}
+          opacity={opacity}
           name={node.name}
         />
       ))}

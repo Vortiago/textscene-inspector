@@ -51,4 +51,15 @@ export interface Node2DProperties {
   y_sort_enabled: boolean;
   /** Y offset applied to sort keys (only meaningful for TileMapLayer tiles). */
   y_sort_origin: number;
+
+  /**
+   * CanvasItem `material` — an `ExtResource`/`SubResource` reference to a
+   * `CanvasItemMaterial` (or a ShaderMaterial, which is not implemented).
+   */
+  material?: string;
+  /**
+   * When true the node draws with its PARENT's material instead of its own,
+   * inherited up the chain until a node supplies one (CanvasItem, default false).
+   */
+  use_parent_material: boolean;
 }

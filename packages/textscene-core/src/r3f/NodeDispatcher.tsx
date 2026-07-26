@@ -59,6 +59,8 @@ import { MissingResourcePlaceholder } from './components/MissingResourcePlacehol
 import { ErrorBoundary } from './components/ErrorBoundary.js';
 import { transformFromNode3DProperties, type NodeTransform } from './nodeTransform.js';
 import { node2dGroupProps } from './node2dTransform.js';
+import { canvasModulateColor } from './canvasModulate.js';
+import { Modulate2DContext } from './canvasItemModulate.js';
 import type { Node3DProperties } from '../nodes/base/node3d/types.js';
 import type { Node2DProperties } from '../nodes/base/node2d/types.js';
 import { GlbOverridesProvider } from './internal/glb-scene-root/GlbOverridesContext.js';
@@ -111,6 +113,8 @@ export function NodeDispatcher({ nodes }: NodeDispatcherProps) {
     if (nodes.some(containsCsgShape)) prefetchCsgModule();
   }, [nodes]);
 
+  const canvasModulate = useMemo(() => canvasModulateColor(nodes), [nodes]);
+
   return (
     <group
       onPointerDown={handlers.onPointerDown}
@@ -118,9 +122,14 @@ export function NodeDispatcher({ nodes }: NodeDispatcherProps) {
       onPointerMove={handlers.onPointerMove}
       onPointerOut={handlers.onPointerOut}
     >
-      {nodes.map((node) => (
-        <DispatchedNode key={node.name} node={node} path={node.name} />
-      ))}
+      {/* A CanvasModulate tints the CANVAS, not its subtree, so its colour seeds
+          the modulate every CanvasItem inherits — wherever in the tree it sits,
+          and even with no children of its own. */}
+      <Modulate2DContext.Provider value={canvasModulate}>
+        {nodes.map((node) => (
+          <DispatchedNode key={node.name} node={node} path={node.name} />
+        ))}
+      </Modulate2DContext.Provider>
     </group>
   );
 }

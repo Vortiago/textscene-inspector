@@ -38,7 +38,7 @@ surface, so the warm colour survives at the centre instead of washing out.
 ## Linting
 
 <!-- lint:begin PointLight2D -->
-Strict parsing format-checks these `PointLight2D` properties, plus 15 inherited from Node2D. Every validator failure is an **error**.
+Strict parsing format-checks these `PointLight2D` properties, plus 17 inherited from Node2D. Every validator failure is an **error**.
 
 | Property |
 | --- |

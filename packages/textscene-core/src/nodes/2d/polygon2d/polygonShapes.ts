@@ -22,10 +22,20 @@
 import type { Vector2 } from '../../base/node2d/types';
 
 export interface PolygonRings {
+  /**
+   * The vertex pool every ring indexes into, in Godot pixel space and in the
+   * authored order — `polygon` itself, plus the corners `invert_enabled` adds.
+   *
+   * Rings are INDICES rather than points so a caller can carry any per-vertex
+   * attribute (`uv`, `vertex_colors`) through to the mesh: Godot pairs those
+   * arrays with the polygon positionally, so anything that renumbers or
+   * duplicates vertices silently mismatches them.
+   */
+  points: Vector2[];
   /** Filled outlines. One per `polygons` entry, or a single stored-order ring. */
-  outlines: Vector2[][];
+  outlines: number[][];
   /** The punched-out polygon when `invert_enabled` is on, else null. */
-  hole: Vector2[] | null;
+  hole: number[] | null;
 }
 
 /** Minimum vertices for a fillable ring. */
@@ -39,24 +49,30 @@ export function polygonRings(
   invertBorder: number
 ): PolygonRings {
   const all = toPoints(polygon);
+  const allIndices = all.map((_, i) => i);
 
   if (invertEnabled) {
-    // Invert ignores `polygons` and the internal-vertex trim alike.
-    const ring = all;
-    if (ring.length < MIN_RING) return { outlines: [], hole: null };
-    return { outlines: [grownBounds(ring, invertBorder)], hole: ring };
+    // Invert ignores `polygons` and the internal-vertex trim alike. The grown
+    // bounds are NEW vertices, appended to the pool so they get indices (and
+    // therefore UVs) of their own, as they do in Godot.
+    if (all.length < MIN_RING) return { points: all, outlines: [], hole: null };
+    const bounds = grownBounds(all, invertBorder);
+    const points = [...all, ...bounds];
+    const boundsIndices = bounds.map((_, i) => all.length + i);
+    return { points, outlines: [boundsIndices], hole: allIndices };
   }
 
   if (polygons.length > 0) {
     const outlines = polygons
       .filter((indices) => indices.length >= MIN_RING)
-      .map((indices) => indices.map((i) => all[i]).filter((p): p is Vector2 => p !== undefined))
+      .map((indices) => indices.filter((i) => all[i] !== undefined))
       .filter((ring) => ring.length >= MIN_RING);
-    return { outlines, hole: null };
+    return { points: all, outlines, hole: null };
   }
 
-  const outline = internalVertexCount > 0 ? all.slice(0, all.length - internalVertexCount) : all;
-  return { outlines: outline.length >= MIN_RING ? [outline] : [], hole: null };
+  const outline =
+    internalVertexCount > 0 ? allIndices.slice(0, all.length - internalVertexCount) : allIndices;
+  return { points: all, outlines: outline.length >= MIN_RING ? [outline] : [], hole: null };
 }
 
 function toPoints(flat: Float32Array): Vector2[] {

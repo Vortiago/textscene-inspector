@@ -33,7 +33,7 @@ pixel, but the colours are dimmer and shifted. Godot draws pure white
 ## Linting
 
 <!-- lint:begin Line2D -->
-Strict parsing format-checks these `Line2D` properties, plus 15 inherited from Node2D. Every validator failure is an **error**.
+Strict parsing format-checks these `Line2D` properties, plus 17 inherited from Node2D. Every validator failure is an **error**.
 
 | Property |
 | --- |

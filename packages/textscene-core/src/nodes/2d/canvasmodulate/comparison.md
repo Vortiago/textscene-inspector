@@ -3,9 +3,8 @@ type: CanvasModulate
 category: 2D
 fixture: unit-canvas-modulate.tscn
 image: unit-canvas-modulate
-status: limitation
 group: Canvas effects
-renders_as: a colour multiply folded onto its subtree
+renders_as: a colour multiply applied to the whole canvas
 ---
 
 # CanvasModulate
@@ -24,19 +23,32 @@ periwinkle and its black squares stay black.
 
 ## Divergences
 
-The multiply itself is faithful: white squares tint blue and black squares stay black on
-both sides, in the same places. The exact colour is shifted. Godot writes the product
-straight to the framebuffer — white `× (0.5, 0.5, 1)` lands at exactly `[128, 128, 255]`.
-Ours renders it `[149, 143, 226]`: red and green lifted, blue pulled down. The scene has no
-`WorldEnvironment`, so the previewer mounts Godot's editor preview environment (ADR-0025),
-whose tonemapping is applied across the whole canvas — the unlit 2D sprites included —
-lifting and desaturating the tint, whereas Godot tonemaps only the 3D pass and never the 2D
-canvas. It is the same 2D colour lift the Sprite2D and RemoteTransform2D sheets measure.
+The multiply is faithful and the frame matches to a mean channel error of
+0.43/255: white squares tint blue and black squares stay black on both sides, in
+the same places, and white `× (0.5, 0.5, 1)` lands on Godot's exact
+`[128, 128, 255]`.
+
+An earlier revision of this sheet measured `[149, 143, 226]` there and blamed the
+ADR-0025 preview environment. That was wrong on both counts — the 2D stage never
+mounts a preview environment — and the real cause, react-three-fiber's default
+ACES tone mapping on the stage's own `<Canvas>`, is now switched off. See
+"Why 2D colours used to read paler in our captures" in the comparison README.
+
+## Known limitations
+
+Two consequences of Godot applying the colour to the CANVAS
+(`RS::canvas_set_modulate` on ENTER_CANVAS) rather than to a subtree:
+
+- The colour is collected by walking the AUTHORED node tree, so a CanvasModulate
+  living inside an instanced sub-scene is not found. Godot would apply it.
+- Godot multiplies the composited canvas; the previewer multiplies each canvas
+  item as it draws. The two agree wherever content is opaque, and differ
+  marginally where alpha-blended items overlap each other.
 
 ## Linting
 
 <!-- lint:begin CanvasModulate -->
-Strict parsing format-checks these `CanvasModulate` properties, plus 15 inherited from Node2D. Every validator failure is an **error**.
+Strict parsing format-checks these `CanvasModulate` properties, plus 17 inherited from Node2D. Every validator failure is an **error**.
 
 | Property |
 | --- |

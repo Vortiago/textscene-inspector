@@ -19,25 +19,44 @@ framed by the 1152x648 project viewport.
 - A big isometric TileMapLayer: blue stone walls, standing pillars, multi-height platforms
   and a diamond-checkered floor, with a grey pit/void running through the middle
 - Sprite2D props: blue-and-gold ceramic jars, gold coin stacks and rings, red gold-trimmed
-  doors
+  doors — all of them PackedScene instances inside a `y_sort_enabled` subtree
 - Enemy sprites: pale bird-skull heads and red crab/spider creatures dotted across the floor
 - Draw order and occlusion: pillars and jars sit correctly in front of the floor and each
   other, walls layer front-to-back down the isometric depth
+- 41 Polygon2D nodes doing three different jobs — soft gradient shadows, floor decals, and
+  hand-painted additive torch pools via `CanvasItemMaterial.blend_mode = 1`
+- A canvas-wide `CanvasModulate` over 23 `PointLight2D`s and 7 `LightOccluder2D`s
 
 ## Divergences
 
-2D content is tone-mapped on our side, so the whole map reads a deeper, flatter, cooler
-blue while Godot's un-tonemapped canvas is brighter and warmer; the blue-and-gold jars lose
-the most contrast, the tallest one washing out to a pale glossy sphere in ours.
+**The whole map is uniformly too dark, and the torch pools are missing.** This is the one
+remaining structural gap and it has a single cause: `PointLight2D` is drawn as an additive
+glow quad rather than applied against each lit CanvasItem's albedo, so none of the scene's
+23 lights contribute. The `CanvasModulate` correctly darkens everything to Godot's base
+tone — unlit stone matches within 5–8/255 (a wall reads `[30, 68, 129]` against Godot's
+`[35, 71, 130]`) — but where Godot then lights the floor back up to `[25, 82, 152]`, ours
+stays at `[4, 46, 111]`. Every light also uses a `GradientTexture2D` sub-resource, which
+the 2D texture path cannot resolve, so they would draw nothing even under the current model.
 
-A class of the demo's dressing does not surface in our static render: the two large purple,
-gold-rimmed magic circles, the red skull banner, the lit torches (with the warm pools of
-light they throw on the surrounding stone), the small dark-blue creature sprites, and the
-reddish blood-splatter floor decals — all present in Godot, all absent in ours. Their world
-positions sit inside the shared frame (the jar and pillar beside the right-hand circle
-render identically in both images), so this is genuinely un-surfaced instanced/animated
-content, not a framing crop — the same category as the platformer demo's animated pickups.
+Whole-frame mean channel error is 21.7/255, and essentially all of it is in the lit regions.
 
-The two frames otherwise share the same view with only a slight vertical offset; a wedge of
-khaki background shows at our lower-left corner where Godot's frame is filled by tilemap and
-banner.
+Not surfaced at all: the candle flames, their glow and their sparkles. Those are
+`CPUParticles2D`, which is unimplemented — animated emission with no meaningful static frame.
+
+## Fixed since the previous capture
+
+Recorded because the previous revision of this sheet mis-attributed all three:
+
+- **The missing props were not "un-surfaced instanced/animated content."** Every vase, coin
+  pile, bone pile, the fifteen internal shadows and the player were dropped by a draw-order
+  regression: the y-sort pass re-dispatched children through a second renderer that never
+  handled `instance=`, and an instance node carries no `type=` for a registry lookup to hit.
+  48 nodes in this scene. They render now.
+- **The colour shift was not tone mapping of authored 2D content in general.** It was
+  react-three-fiber's default ACES tone mapping on the 2D stage's own `<Canvas>`, compounded
+  by a `CanvasModulate` that did nothing at all because the previewer scoped it to the node's
+  subtree and this scene's CanvasModulate is a childless leaf.
+- **The hard-edged navy, teal and khaki slabs were not a Z-order fault.** They were
+  `Polygon2D` drawing its flat `color` with no `texture`/`uv` mapping and no
+  `CanvasItemMaterial` blending, which turned 28 soft gradient shadows into opaque
+  quadrilaterals and 16 additive torch pools into flat olive rectangles.

@@ -52,4 +52,9 @@ validatorRegistry.registerAll('Node2D', {
   z_index: v.strictInt('z_index'),
   z_as_relative: v.boolean('z_as_relative'),
   y_sort_enabled: v.boolean('y_sort_enabled'),
+  // CanvasItem material slot. The reference is format-checked; whether it names
+  // a CanvasItemMaterial (the only kind the renderer applies) is not, because a
+  // ShaderMaterial there is valid Godot, just unimplemented here.
+  material: v.resourceReference('material'),
+  use_parent_material: v.boolean('use_parent_material'),
 });

@@ -14,12 +14,23 @@ import type { Node2DProperties } from '../../nodes/base/node2d/types';
 import { node2dGroupProps, node2dGroupSpread, canvasItemZ } from '../node2dTransform';
 import { Modulate2DContext, useCanvasItemTint, type CanvasItemTint } from '../canvasItemModulate';
 import { useYSortZContext, useYSortSlot } from '../contexts/YSortContext';
+import {
+  CanvasItemMaterialProvider,
+  useCanvasItemMaterial,
+} from './canvasItemMaterialContext';
+import type { CanvasItemMaterialProperties } from '../../resources/materials/canvasitemmaterial/types';
 
 export interface CanvasItem2DProps {
   node: TscnNode;
   props: Node2DProperties;
-  /** Renders this node's own pixels with the resolved own-pixel tint. */
-  body?: (tint: CanvasItemTint) => ReactNode;
+  /**
+   * Renders this node's own pixels with the resolved own-pixel tint and the
+   * CanvasItemMaterial in force (already resolved through `use_parent_material`,
+   * `null` when there is none). A slice that ignores the material draws with
+   * Godot's default MIX blending, which is what it did before the material
+   * existed.
+   */
+  body?: (tint: CanvasItemTint, material: CanvasItemMaterialProperties | null) => ReactNode;
   children?: ReactNode;
 }
 
@@ -39,11 +50,17 @@ export function CanvasItem2D({ node, props, body, children }: CanvasItem2DProps)
     [props, z]
   );
   const tint = useCanvasItemTint(props);
+  const material = useCanvasItemMaterial(props);
 
   return (
     <group name={node.name} {...transform} visible={props.visible !== false}>
-      {body?.(tint)}
-      <Modulate2DContext.Provider value={tint.inherited}>{children}</Modulate2DContext.Provider>
+      {body?.(tint, material)}
+      <Modulate2DContext.Provider value={tint.inherited}>
+        {/* Descendants inherit this node's material through `use_parent_material`,
+            so the provider carries what THIS node resolved — including a null,
+            which correctly stops an inherited material at a node that clears it. */}
+        <CanvasItemMaterialProvider value={material}>{children}</CanvasItemMaterialProvider>
+      </Modulate2DContext.Provider>
     </group>
   );
 }
