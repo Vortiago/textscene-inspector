@@ -17,7 +17,7 @@ import { useMemo, type ReactNode } from 'react';
 import type { TscnNode } from '../parser/types.js';
 import * as THREE from 'three';
 import { useYSortContext, useYSortSlot, type YSortContextValue } from './contexts/YSortContext.js';
-import { Z_INDEX_STEP, TILE_SOURCE_STEP, YSORT_FINE_RANGE } from './node2dTransform.js';
+import { Z_INDEX_STEP, TILE_SOURCE_STEP } from './node2dTransform.js';
 import { nodeComponentRegistry } from './NodeComponentRegistry.js';
 import type { TileMapLayerProperties } from '../nodes/2d/tiles/tilemaplayer/types.js';
 import type { PlacedCell } from '../nodes/2d/tiles/shared/tileData.js';
@@ -101,6 +101,10 @@ export function collectYSortedItems(
  */
 export function YSortDispatcher({ node, children: _children }: { node: TscnNode; children: ReactNode }) {
   const parent = useYSortContext();
+  // Sorted children are re-dispatched from here rather than from their position
+  // in the tree, so their selection paths have to be rebuilt from this node's
+  // own path (the dispatcher provided it when it rendered this node).
+  const basePath = useNodePath() ?? node.name;
   // Ranks are laid out within THIS subtree's tree-order slot width (so sibling
   // y-sort subtrees don't overlap); the slot base is already in the group's z.
   const slot = useYSortSlot();
@@ -202,9 +206,15 @@ export function YSortDispatcher({ node, children: _children }: { node: TscnNode;
         }
 
         if (item.node) {
+          // The item's own descendants draw between its rank and the next one,
+          // so hand them exactly that gap. Without the narrowing a nested
+          // subtree spends the whole fine range and reaches past its sibling's
+          // rank, which reverses the pair the sort just ordered.
           return (
             <YSortZProvider key={`n-${item.treeOrder}`} value={fullZ}>
-              <YSortChild node={item.node} path={node.name} />
+              <YSortSlotProvider value={{ base: 0, width: slot.width / (K + 1) }}>
+                <DispatchedNode node={item.node} path={joinPath(basePath, item.node.name)} />
+              </YSortSlotProvider>
             </YSortZProvider>
           );
         }
@@ -214,60 +224,6 @@ export function YSortDispatcher({ node, children: _children }: { node: TscnNode;
   );
 }
 
-/** Dispatch a child node through y-sort with its computed z offset. */
-function YSortChild({ node, path }: { node: TscnNode; path: string }) {
-  const { registerNodeObject, unregisterNodeObject } = useSelection();
-  const workspace = useCanvasWorkspace();
-  const { hiddenNodePaths } = useSelection();
-  const isHidden = hiddenNodePaths.has(path);
-
-  const Component = nodeComponentRegistry.get(node.type) ?? GenericNodeFallback;
-  const isCanvasItem = nodeComponentRegistry.isCanvasItem(node.type);
-  const isControl = TWO_D_UI_TYPES.has(node.type);
-
-  // In 2D workspace: skip 3D-only nodes.
-  if (workspace === '2d' && !isCanvasItem && !isControl && !nodeComponentRegistry.get(node.type)) {
-    return null;
-  }
-
-  const inlineChildren = node.children.map((child) => (
-    <YSortChild key={child.name} node={child} path={`${path}/${child.name}`} />
-  ));
-
-  const children: ReactNode[] = [];
-  if (inlineChildren.length > 0) {
-    // The y-sort rank z is applied to THIS item's group only (via the YSortZProvider
-    // wrapping this YSortChild). Its descendants are the atomic unit and render at
-    // their own canvasItemZ RELATIVE to this group — reset the rank-z context and the
-    // tree-order slot for them, so neither is re-added (which would double-count the
-    // rank per nesting level and the slot base per depth).
-    children.push(
-      <YSortZProvider key="__inline" value={null}>
-        <YSortSlotProvider value={{ base: 0, width: YSORT_FINE_RANGE }}>
-          {inlineChildren}
-        </YSortSlotProvider>
-      </YSortZProvider>
-    );
-  }
-
-  return (
-    <group ref={(obj) => {
-      if (obj) registerNodeObject(path, obj);
-      else unregisterNodeObject(path);
-    }} visible={!isHidden}>
-      <ErrorBoundary
-        resetKeys={[node]}
-        fallback={() => (
-          <MissingResourcePlaceholder shape="box" name={node.name} />
-        )}
-      >
-        <Component node={node}>
-          {children}
-        </Component>
-      </ErrorBoundary>
-    </group>
-  );
-}
 
 /** Render a TileMapLayer Y-group as TileSourceMeshes at draw position `z`. */
 function TileGroupRenderer({ item, z, node }: {
@@ -314,11 +270,14 @@ function TileGroupRenderer({ item, z, node }: {
 
 // --- Imports needed by components above ---
 
-import { GenericNodeFallback } from './internal/generic-node-fallback/index.js';
-import { useSelection } from './contexts/SelectionContext.js';
-import { useCanvasWorkspace } from './contexts/CanvasWorkspaceContext.js';
-import { TWO_D_UI_TYPES } from './controls/has2DUIContent.js';
-import { ErrorBoundary } from './components/ErrorBoundary.js';
-import { MissingResourcePlaceholder } from './components/MissingResourcePlaceholder.js';
 import { TileSourceMesh } from './TileSourceMesh.js';
 import { YSortSlotProvider, YSortZProvider } from './contexts/YSortContext.js';
+// Sorted children go back through the ONE dispatcher rather than a second
+// renderer here: that is what keeps `instance=` sub-scenes, selection
+// registration, hidden-node gating and the workspace split working under
+// y-sort without a copy of each that can drift. The reverse edge
+// (Node2D → YSortDispatcher) resolves through `nodeComponentRegistry` at
+// runtime, so this import introduces no static cycle.
+import { DispatchedNode } from './NodeDispatcher.js';
+import { useNodePath } from './contexts/NodePathContext.js';
+import { joinPath } from '../utils/nodePath.js';

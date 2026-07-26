@@ -7,6 +7,20 @@
  * (z_index dominates y-sort); a non-`y_sort_enabled` container sorts as ONE
  * unit (its children keep tree order); ties in Y fall back to tree order.
  *
+ * The two container rules were re-measured against real Godot 4.6.3 rather than
+ * read off the source, because they are easy to get backwards. Reproduce with
+ * `pnpm ref:godot scripts/godot-ref/scenes/<scene>.tscn --probe 400,250`, where
+ * the probe lands on a deliberate three-way overlap:
+ *
+ *   ysort-atomic-container — a PLAIN Node2D holding a low-Y and a high-Y child,
+ *     beside a mid-Y sibling. Godot renders BLUE (the mid-Y sibling), so the
+ *     container sorted as one unit at its OWN Y and the high-Y child did not
+ *     escape it. A non-y-sorted container is atomic.
+ *   ysort-nested-merge — the same tree with the container y-sorted. Godot
+ *     renders GREEN (the high-Y grandchild), so a y_sort_enabled child's
+ *     subtree MERGES into the parent's flat sort. Probing 600,65 also returns
+ *     the container's own YELLOW body, so a y-sorted node still draws itself.
+ *
  * The renderer maps draw order to `position.z` (higher accumulated z = drawn in
  * front, per `canvasItemZ`). These tests render real `.tscn` subtrees through
  * `NodeDispatcher` and assert the resulting accumulated world-z order of each

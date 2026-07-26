@@ -34,7 +34,13 @@ import type { ReactNode } from 'react';
 import type * as THREE from 'three';
 import type { TscnNode, TscnScene } from '../parser/types.js';
 import { joinPath } from '../utils/nodePath.js';
-import { hasYSortDescendant, YSortSlotProvider, useYSortSlot } from './contexts/YSortContext.js';
+import {
+  hasYSortDescendant,
+  YSortSlotProvider,
+  YSortZProvider,
+  useYSortSlot,
+  useYSortZContext,
+} from './contexts/YSortContext.js';
 import { nodeComponentRegistry } from './NodeComponentRegistry.js';
 import { GenericNodeFallback } from './internal/generic-node-fallback/index';
 import { useViewportSelection } from './hooks/useViewportSelection.js';
@@ -130,7 +136,7 @@ interface DispatchedNodeProps {
  * every already-merged node — renders directly in `PlainNode`. Holds no hooks
  * itself so the branch is free of rules-of-hooks concerns.
  */
-function DispatchedNode({ node, path }: DispatchedNodeProps): ReactNode {
+export function DispatchedNode({ node, path }: DispatchedNodeProps): ReactNode {
   if (node.instance) {
     return <InstancedNode node={node} path={path} />;
   }
@@ -182,6 +188,7 @@ function PlainNode({
   // Memoized (before the early returns, for rules-of-hooks) so the recursive
   // subtree scan for the slot distributor runs once per node, not every render.
   const hasYSortChild = useMemo(() => hasYSortDescendant(node), [node]);
+  const rankZ = useYSortZContext();
   if (workspace === '3d' && isCanvasItem) return null;
   if (
     workspace === '2d' &&
@@ -202,6 +209,14 @@ function PlainNode({
     (node.properties as { y_sort_enabled?: boolean }).y_sort_enabled !== true &&
     node.children.length > 0 &&
     hasYSortChild;
+  // A y-sort pass hands its rank z to exactly ONE node — the item it sorted,
+  // i.e. this one when `rankZ` is set. That rank is this node's whole draw
+  // position; its descendants are part of the same atomic unit and draw at their
+  // own z RELATIVE to it. So the rank is consumed here and cleared for the
+  // subtree — leaving it in context would re-add it at every nesting level. The
+  // slot is NOT reset: the y-sort pass already narrowed it to the gap before this
+  // item's next-ranked sibling, which is exactly the band the subtree may use.
+  const consumedRank = rankZ !== null;
   const subWidth = distribute ? parentSlot.width / node.children.length : 0;
   const inlineChildren = node.children.map((child, i) => {
     const el = <DispatchedNode key={child.name} node={child} path={joinPath(path, child.name)} />;
@@ -216,7 +231,15 @@ function PlainNode({
 
   const children: ReactNode[] = [];
   if (inlineChildren.length > 0) {
-    children.push(<Fragment key="__inline">{inlineChildren}</Fragment>);
+    children.push(
+      consumedRank ? (
+        <YSortZProvider key="__inline" value={null}>
+          {inlineChildren}
+        </YSortZProvider>
+      ) : (
+        <Fragment key="__inline">{inlineChildren}</Fragment>
+      )
+    );
   }
   if (extraChildren) {
     children.push(<Fragment key="__extra">{extraChildren}</Fragment>);
