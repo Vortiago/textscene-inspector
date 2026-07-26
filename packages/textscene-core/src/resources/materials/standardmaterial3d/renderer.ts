@@ -104,7 +104,8 @@ export function createStandardMaterial(properties: StandardMaterial3DProperties)
       properties.emission_energy_multiplier ?? 1
     );
     const resolved = resolveEmission(
-      { ...scalars, emissionOperator: properties.emission_operator },
+      scalars,
+      properties.emission_operator,
       !!properties.emission_texture
     );
     materialOptions.emissive = new THREE.Color().fromArray(resolved.emissive);

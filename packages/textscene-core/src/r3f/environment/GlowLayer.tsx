@@ -1,9 +1,9 @@
 /**
  * `<GlowLayer>` — Godot Environment glow as a compositor pass.
  *
- * Mounted only when the active environment has glow enabled (the editor preview
- * environment does; an authored `WorldEnvironment` may). It takes over the frame
- * with a `postprocessing` composer:
+ * Mounted by `EnvironmentLayer` only once it has decided the glow can change the
+ * frame, so this takes the resolved params rather than re-deriving them: the
+ * "can this glow do anything" question has one answer, at the mount site.
  *
  *   RenderPass (scene → linear HDR)  →  GodotGlowEffect
  *
@@ -13,20 +13,20 @@
  * curve depending on the blend mode. Because the composer disables the renderer's
  * in-material tonemapping while mounted, `EnvironmentApplier` must skip its own
  * tonemap on this path (it does) — the effect applies the same ported curve.
- *
- * Every glow knob comes from the parsed `glow_*` values (`godotGlow.ts`).
  */
 
 import { useEffect, useMemo } from 'react';
 import { useThree } from '@react-three/fiber';
 import { EffectComposer } from '@react-three/postprocessing';
 import type { Effect } from 'postprocessing';
+import type { GlowParams } from '../../resources/environment/godotGlow';
 import type { EnvironmentSettings } from '../../resources/environment/renderer';
-import { glowParamsFor } from '../../resources/environment/godotGlow';
 import { GodotGlowEffect } from './GodotGlowEffect';
 
 export interface GlowLayerProps {
-  settings: EnvironmentSettings;
+  /** Resolved by `EnvironmentLayer`, which has already checked it can bloom. */
+  glow: GlowParams;
+  toneMapping: EnvironmentSettings['toneMapping'];
 }
 
 /**
@@ -44,28 +44,28 @@ function hasRealGlContext(gl: { getContext?: () => unknown }): boolean {
   }
 }
 
-export function GlowLayer({ settings }: GlowLayerProps) {
+export function GlowLayer({ glow, toneMapping }: GlowLayerProps) {
   const gl = useThree((s) => s.gl);
-  const params = useMemo(() => glowParamsFor(settings), [settings]);
   const glReady = useMemo(() => hasRealGlContext(gl), [gl]);
+  const { mode, exposure, white } = toneMapping;
 
-  const { mode, exposure, white } = settings.toneMapping;
   // Typed as the base `Effect`: with the library's `declaration: true`, a class
   // extending postprocessing's `Effect` does not carry its inherited members
   // across a module boundary (the base's event-map type is not nameable in the
   // emitted `.d.ts`). The instance is still a `GodotGlowEffect`.
-  const glowEffect = useMemo<Effect | null>(() => {
-    if (!params) return null;
-    return new GodotGlowEffect({
-      glow: params,
-      toneMapMode: mode,
-      toneMapExposure: exposure,
-      toneMapWhite: white,
-    }) as Effect;
-  }, [params, mode, exposure, white]);
-  useEffect(() => () => glowEffect?.dispose(), [glowEffect]);
+  const glowEffect = useMemo<Effect>(
+    () =>
+      new GodotGlowEffect({
+        glow,
+        toneMapMode: mode,
+        toneMapExposure: exposure,
+        toneMapWhite: white,
+      }) as Effect,
+    [glow, mode, exposure, white]
+  );
+  useEffect(() => () => glowEffect.dispose(), [glowEffect]);
 
-  if (!glowEffect || !glReady) return null;
+  if (!glReady) return null;
 
   return (
     <EffectComposer>

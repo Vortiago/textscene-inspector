@@ -25,6 +25,7 @@ import { BlendFunction, Effect } from 'postprocessing';
 import * as THREE from 'three';
 import {
   blendGlsl,
+  blendsAfterToneMapping,
   brightPassGlsl,
   effectiveLevelWeights,
   type GlowParams,
@@ -72,9 +73,7 @@ export class GodotGlowEffect extends Effect {
   private readonly brightPassMaterial: THREE.ShaderMaterial;
   private readonly downsampleMaterial: THREE.ShaderMaterial;
   private readonly accumulateMaterial: THREE.ShaderMaterial;
-  private readonly emptyLevel: THREE.DataTexture;
   private readonly screen: THREE.Mesh;
-  private readonly pyramidScene: THREE.Scene;
   private readonly pyramidCamera: THREE.OrthographicCamera;
   private readonly weights: number[];
   private readonly maxLevel: number;
@@ -91,7 +90,11 @@ export class GodotGlowEffect extends Effect {
       ]),
     });
 
-    this.maxLevel = Math.max(0, glow.maxLevel);
+    // `EnvironmentLayer` only mounts this once it has checked some level carries
+    // weight, so `maxLevel` is a real index here rather than the -1 that means
+    // "nothing can glow" — clamping it would silently allocate a level and run a
+    // bright pass at weight zero.
+    this.maxLevel = glow.maxLevel;
     this.weights = effectiveLevelWeights(glow);
 
     this.brightPassMaterial = new THREE.ShaderMaterial({
@@ -131,22 +134,20 @@ export class GodotGlowEffect extends Effect {
       depthTest: false,
     });
 
-    // Bound wherever a sampler must stay valid but contribute nothing; sampling
-    // an unbound sampler2D is undefined behaviour, not zero.
-    this.emptyLevel = new THREE.DataTexture(new Uint8Array([0, 0, 0, 255]), 1, 1);
-    this.emptyLevel.needsUpdate = true;
-
+    // Two parallel chains, not a ping-pong pair: the coarse-to-fine sum writes
+    // rung L while reading rung L+1, and every rung is a different resolution, so
+    // reusing one set would mean reallocating at each step.
     for (let level = 0; level <= this.maxLevel; level++) {
       this.levelTargets.push(createTarget(`GodotGlow.Level${level}`));
       this.accumulationTargets.push(createTarget(`GodotGlow.Accumulation${level}`));
     }
 
     this.pyramidCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-    // Spans NDC exactly, so `vUv = position.xy * 0.5 + 0.5` covers 0..1.
+    // Spans NDC exactly, so `vUv = position.xy * 0.5 + 0.5` covers 0..1. Rendered
+    // as its own root — `WebGLRenderer.render` takes any `Object3D`, so a `Scene`
+    // wrapper around a single fullscreen quad would buy nothing.
     this.screen = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), this.brightPassMaterial);
     this.screen.frustumCulled = false;
-    this.pyramidScene = new THREE.Scene();
-    this.pyramidScene.add(this.screen);
   }
 
   override setSize(width: number, height: number): void {
@@ -173,7 +174,7 @@ export class GodotGlowEffect extends Effect {
 
     this.screen.material = this.brightPassMaterial;
     this.brightPassMaterial.uniforms['inputBuffer']!.value = inputBuffer.texture;
-    this.renderTo(renderer, this.levelTargets[0]);
+    this.renderTo(renderer, this.levelTargets[0]!);
 
     this.screen.material = this.downsampleMaterial;
     for (let level = 1; level <= this.maxLevel; level++) {
@@ -184,33 +185,33 @@ export class GodotGlowEffect extends Effect {
         1 / source.width,
         1 / source.height
       );
-      this.renderTo(renderer, this.levelTargets[level]);
+      this.renderTo(renderer, this.levelTargets[level]!);
     }
 
     this.screen.material = this.accumulateMaterial;
     const uniforms = this.accumulateMaterial.uniforms;
     for (let level = this.maxLevel; level >= 0; level--) {
       const coarser = level === this.maxLevel ? null : this.accumulationTargets[level + 1]!;
-      uniforms['coarserBuffer']!.value = coarser ? coarser.texture : this.emptyLevel;
+      // The coarsest rung has nothing summed below it. `coarserFactor` zeroes the
+      // contribution, so this only has to be a VALID binding — sampling an unbound
+      // sampler2D is undefined behaviour, not zero. Its own level serves, and
+      // cannot alias: this pass writes an accumulation target, never a level one.
+      uniforms['coarserBuffer']!.value = (coarser ?? this.levelTargets[level]!).texture;
       uniforms['coarserFactor']!.value = coarser ? 1 : 0;
       uniforms['levelBuffer']!.value = this.levelTargets[level]!.texture;
       uniforms['levelWeight']!.value = this.weights[level] ?? 0;
       const source = coarser ?? this.levelTargets[level]!;
       (uniforms['texelSize']!.value as THREE.Vector2).set(1 / source.width, 1 / source.height);
-      this.renderTo(renderer, this.accumulationTargets[level]);
+      this.renderTo(renderer, this.accumulationTargets[level]!);
     }
 
     renderer.setRenderTarget(previousTarget);
     this.uniforms.get('godotGlowBuffer')!.value = this.accumulationTargets[0]!.texture;
   }
 
-  private renderTo(
-    renderer: THREE.WebGLRenderer,
-    target: THREE.WebGLRenderTarget | undefined
-  ): void {
-    if (!target) return;
+  private renderTo(renderer: THREE.WebGLRenderer, target: THREE.WebGLRenderTarget): void {
     renderer.setRenderTarget(target);
-    renderer.render(this.pyramidScene, this.pyramidCamera);
+    renderer.render(this.screen, this.pyramidCamera);
   }
 
   override dispose(): void {
@@ -221,7 +222,6 @@ export class GodotGlowEffect extends Effect {
     this.downsampleMaterial.dispose();
     this.accumulateMaterial.dispose();
     this.screen.geometry.dispose();
-    this.emptyLevel.dispose();
     super.dispose();
   }
 }
@@ -323,7 +323,7 @@ function compositeFragmentShader(
   toneMapWhite: number
 ): string {
   const curve = toneMappingEffectGlsl(toneMapMode, toneMapWhite) ?? LINEAR_TONE_CURVE;
-  const composite = glow.blendAfterToneMapping
+  const composite = blendsAfterToneMapping(glow)
     ? /* glsl */ `  vec3 color = godotToneMap(max(inputColor.rgb, 0.0), godotExposure);
   color = godotGlowBlend(color, godotToneMap(glow, godotExposure));`
     : /* glsl */ `  vec3 color = godotGlowBlend(max(inputColor.rgb, 0.0), glow);

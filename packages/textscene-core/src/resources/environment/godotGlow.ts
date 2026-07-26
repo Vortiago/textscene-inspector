@@ -40,9 +40,6 @@ export const GlowBlendMode = {
   MIX: 4,
 } as const;
 
-/** Godot's `RS::MAX_GLOW_LEVELS`. */
-export const GLOW_LEVELS = 7;
-
 export interface GlowParams {
   /** The seven mip weights, finest first. Godot sums these unnormalised. */
   levels: number[];
@@ -65,11 +62,6 @@ export interface GlowParams {
    */
   intensity: number;
   blendMode: number;
-  /**
-   * Whether the blend runs on tonemapped operands (SOFTLIGHT) rather than on
-   * linear HDR before the tone curve (everything else).
-   */
-  blendAfterToneMapping: boolean;
 }
 
 /**
@@ -86,7 +78,7 @@ export function glowParamsFor(settings: EnvironmentSettings): GlowParams | null 
   const glow = settings.glow;
   if (!glow) return null;
 
-  const levels = glow.levels.slice(0, GLOW_LEVELS);
+  const levels = glow.levels;
   let maxLevel = -1;
   for (let i = 0; i < levels.length; i++) {
     if ((levels[i] ?? 0) > LEVEL_EPSILON) maxLevel = i;
@@ -103,7 +95,6 @@ export function glowParamsFor(settings: EnvironmentSettings): GlowParams | null 
     strength: Math.max(0, glow.strength),
     intensity: blendMode === GlowBlendMode.MIX ? glow.mix : glow.intensity,
     blendMode,
-    blendAfterToneMapping: blendMode === GlowBlendMode.SOFTLIGHT,
   };
 }
 
@@ -129,6 +120,16 @@ export function glowNeedsEveryPixel(params: GlowParams): boolean {
     params.blendMode === GlowBlendMode.MIX ||
     params.hdrThreshold < 1
   );
+}
+
+/**
+ * Whether the blend runs on tonemapped operands rather than on linear HDR before
+ * the tone curve. Godot splits on this: SOFTLIGHT composites after the curve
+ * (with the glow buffer itself tonemapped) so its polynomial sees operands in the
+ * range it is anchored for; every other mode composites before it.
+ */
+export function blendsAfterToneMapping(params: GlowParams): boolean {
+  return params.blendMode === GlowBlendMode.SOFTLIGHT;
 }
 
 /**
@@ -175,12 +176,12 @@ vec3 godotGlowBrightPass(vec3 color) {
  * left alone entirely above 1.0 where the curve would invert.
  */
 export function blendGlsl(params: GlowParams, white: number): string {
-  const body = BLEND_BODIES[params.blendMode] ?? BLEND_BODIES[GlowBlendMode.ADDITIVE];
+  // A mode whose value is outside the enum falls back to ADDITIVE: `glow_blend_mode`
+  // is parsed leniently, so a scene can carry anything.
+  const body = BLEND_BODIES[params.blendMode] ?? BLEND_BODIES[GlowBlendMode.ADDITIVE]!;
   return /* glsl */ `
 vec3 godotGlowBlend(vec3 color, vec3 glow) {
-  const float godotGlowWhite = ${glslFloat(white)};
-  const float godotGlowMix = ${glslFloat(clamp01(params.intensity))};
-${body}
+${body(params, white)}
 }
 `;
 }
@@ -196,26 +197,32 @@ const SOFTLIGHT_CHANNEL = (channel: string): string => /* glsl */ `
         ? ((16.0 * color.${channel} - 12.0) * color.${channel} + 4.0) * color.${channel}
         : sqrt(color.${channel})) - color.${channel});`;
 
-const BLEND_BODIES: Record<number, string> = {
-  [GlowBlendMode.ADDITIVE]: /* glsl */ `  return color + glow;`,
+/**
+ * One body per mode, each interpolating only the constants it actually reads —
+ * so an ADDITIVE shader is a single line rather than one line under two unused
+ * declarations.
+ */
+const BLEND_BODIES: Record<number, (params: GlowParams, white: number) => string> = {
+  [GlowBlendMode.ADDITIVE]: () => /* glsl */ `  return color + glow;`,
 
   // Screen, normalised to the white range and back — Godot ships the simplified
   // form, and clamps the glow to `white` because a negative light can drive the
   // buffer below zero.
-  [GlowBlendMode.SCREEN]: /* glsl */ `  glow = clamp(glow, 0.0, godotGlowWhite);
-  return color + glow - (color * glow / godotGlowWhite);`,
+  [GlowBlendMode.SCREEN]: (_params, white) => /* glsl */ `  glow = clamp(glow, 0.0, ${glslFloat(white)});
+  return color + glow - (color * glow / ${glslFloat(white)});`,
 
-  [GlowBlendMode.SOFTLIGHT]: /* glsl */ `  glow = clamp(glow, 0.0, 1.0);
+  [GlowBlendMode.SOFTLIGHT]: () => /* glsl */ `  glow = clamp(glow, 0.0, 1.0);
 ${SOFTLIGHT_CHANNEL('r')}
 ${SOFTLIGHT_CHANNEL('g')}
 ${SOFTLIGHT_CHANNEL('b')}
   return color;`,
 
-  [GlowBlendMode.REPLACE]: /* glsl */ `  return glow;`,
+  [GlowBlendMode.REPLACE]: () => /* glsl */ `  return glow;`,
 
-  // Godot's MIX reuses the intensity slot for `glow_mix`, so the lerp factor is
-  // already folded into `params.intensity` and arrives multiplied into `glow`.
-  // Undoing it here would need the raw factor, so the shader takes the lerp
-  // against the same constant the caller used.
-  [GlowBlendMode.MIX]: /* glsl */ `  return color * (1.0 - godotGlowMix) + glow;`,
+  // Godot's MIX reuses the intensity slot for `glow_mix`, so `params.intensity`
+  // IS the lerp factor and has already been multiplied into `glow` by the time
+  // this runs — hence lerping against that same value rather than a second one.
+  [GlowBlendMode.MIX]: (params) => /* glsl */ `  return color * (1.0 - ${glslFloat(
+    clamp01(params.intensity)
+  )}) + glow;`,
 };

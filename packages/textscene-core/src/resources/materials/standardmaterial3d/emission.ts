@@ -19,6 +19,7 @@
  */
 
 import type { Color } from './types';
+import { sRGBToLinearRGB } from '../../../utils/colorSpace';
 
 /** Godot `BaseMaterial3D.EmissionOperator`. */
 export const EmissionOperator = {
@@ -44,7 +45,7 @@ export interface EmissionScalars {
  * The sRGB→linear conversion has to happen BEFORE the peak is taken, because it
  * is not a linear function: normalising first and scaling after is a different
  * mapping. For `Color(2, 0.5, 0)` that difference is `(2, 0.102, 0)` against
- * Godot's `(5.10, 0.214, 0)` — wrong in magnitude AND hue. Since the peak is
+ * Godot's `(4.954, 0.214, 0)` — wrong in magnitude AND hue. Since the peak is
  * what the glow bright-pass gates on, the error also changes what blooms.
  *
  * three carries emission as a [0,1] colour times an unbounded intensity, so the
@@ -87,11 +88,12 @@ export function emissionScalars(
  * multiply instead, so such a material reads darker and more tinted than Godot's.
  */
 export function resolveEmission(
-  scalars: EmissionScalars & { emissionOperator?: number },
+  scalars: EmissionScalars,
+  operator: number | undefined,
   hasEmissiveMap: boolean
 ): EmissionScalars {
   const { emissive, emissiveIntensity } = scalars;
-  if (scalars.emissionOperator === EmissionOperator.MULTIPLY) {
+  if (operator === EmissionOperator.MULTIPLY) {
     return hasEmissiveMap
       ? { emissive, emissiveIntensity }
       : { emissive: [0, 0, 0], emissiveIntensity: 0 };
@@ -101,18 +103,4 @@ export function resolveEmission(
     return { emissive: [1, 1, 1], emissiveIntensity };
   }
   return { emissive, emissiveIntensity };
-}
-
-/**
- * Godot's `Color::srgb_to_linear`. Deliberately NOT clamped: the `pow` branch
- * extrapolates past 1 rather than clipping, which is what keeps an HDR emission
- * colour bright enough to cross the glow bright-pass.
- */
-function sRGBChannelToLinear(c: number): number {
-  if (c <= 0.04045) return c / 12.92;
-  return Math.pow((c + 0.055) / 1.055, 2.4);
-}
-
-function sRGBToLinearRGB(r: number, g: number, b: number): [number, number, number] {
-  return [sRGBChannelToLinear(r), sRGBChannelToLinear(g), sRGBChannelToLinear(b)];
 }

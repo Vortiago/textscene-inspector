@@ -18,6 +18,7 @@
 
 import * as THREE from 'three';
 import { parseColor } from '../../utils/colorParser';
+import { sRGBToLinearRGB } from '../../utils/colorSpace';
 import { emissionScalars } from '../../resources/materials/standardmaterial3d/emission';
 
 export interface StandardMaterial3DScalars {
@@ -288,23 +289,6 @@ export function parseStandardMaterial3DScalars(
     transmission,
     refractionThickness,
   };
-}
-
-/**
- * Convert a single sRGB channel to its linear-space value.
- * Standard IEC 61966-2-1 inverse transfer function — same formula
- * `THREE.Color.convertSRGBToLinear` applies internally. Deliberately NOT
- * clamped: Godot's `Color::srgb_to_linear` takes the same `pow` branch for
- * channels above 1, extrapolating rather than clipping, which is what keeps an
- * HDR emission colour bright enough to cross the glow bright-pass.
- */
-function sRGBChannelToLinear(c: number): number {
-  if (c <= 0.04045) return c / 12.92;
-  return Math.pow((c + 0.055) / 1.055, 2.4);
-}
-
-function sRGBToLinearRGB(r: number, g: number, b: number): [number, number, number] {
-  return [sRGBChannelToLinear(r), sRGBChannelToLinear(g), sRGBChannelToLinear(b)];
 }
 
 /** Godot Transparency enum value: 0 DISABLED, 1 ALPHA, 2 ALPHA_SCISSOR, 3 ALPHA_HASH, 4 DEPTH_PRE_PASS. */

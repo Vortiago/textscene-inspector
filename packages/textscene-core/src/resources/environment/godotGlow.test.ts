@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { parseEnvironment } from './parser';
+import { GLOW_LEVEL_COUNT, parseEnvironment } from './parser';
 import { createEnvironmentSettings } from './renderer';
 import {
   blendGlsl,
+  blendsAfterToneMapping,
   brightPassGlsl,
   effectiveLevelWeights,
-  GLOW_LEVELS,
   GlowBlendMode,
   glowNeedsEveryPixel,
   glowParamsFor,
@@ -50,7 +50,7 @@ describe('glowParamsFor', () => {
 
   it('maxLevel is -1 when every weight is zero, so nothing can glow', () => {
     const off: Record<string, string> = {};
-    for (let level = 1; level <= GLOW_LEVELS; level++) off[`glow_levels/${level}`] = '0';
+    for (let level = 1; level <= GLOW_LEVEL_COUNT; level++) off[`glow_levels/${level}`] = '0';
     expect(glowOn(off).maxLevel).toBe(-1);
   });
 
@@ -76,12 +76,12 @@ describe('glowParamsFor', () => {
   });
 
   it('blends after the tone curve only for SOFTLIGHT', () => {
-    expect(glowOn().blendAfterToneMapping).toBe(false);
+    expect(blendsAfterToneMapping(glowOn())).toBe(false);
     expect(
-      glowOn({ glow_blend_mode: String(GlowBlendMode.SOFTLIGHT) }).blendAfterToneMapping
+      blendsAfterToneMapping(glowOn({ glow_blend_mode: String(GlowBlendMode.SOFTLIGHT) }))
     ).toBe(true);
     expect(
-      glowOn({ glow_blend_mode: String(GlowBlendMode.ADDITIVE) }).blendAfterToneMapping
+      blendsAfterToneMapping(glowOn({ glow_blend_mode: String(GlowBlendMode.ADDITIVE) }))
     ).toBe(false);
   });
 
@@ -180,9 +180,8 @@ describe('blendGlsl', () => {
 
   it('SCREEN normalises against the tonemap white point', () => {
     const glsl = blendGlsl(glowOn({ glow_blend_mode: String(GlowBlendMode.SCREEN) }), 2);
-    expect(glsl).toContain('godotGlowWhite = 2.0');
-    expect(glsl).toContain('clamp(glow, 0.0, godotGlowWhite)');
-    expect(glsl).toContain('color + glow - (color * glow / godotGlowWhite)');
+    expect(glsl).toContain('clamp(glow, 0.0, 2.0)');
+    expect(glsl).toContain('color + glow - (color * glow / 2.0)');
   });
 
   it('SOFTLIGHT uses the W3C soft-light curve and leaves values above 1 alone', () => {
@@ -208,12 +207,21 @@ describe('blendGlsl', () => {
       glowOn({ glow_blend_mode: String(GlowBlendMode.MIX), glow_mix: '0.25' }),
       1
     );
-    expect(glsl).toContain('godotGlowMix = 0.25');
-    expect(glsl).toContain('color * (1.0 - godotGlowMix) + glow');
+    expect(glsl).toContain('color * (1.0 - 0.25) + glow');
   });
 
   it('falls back to ADDITIVE for a blend mode outside the enum', () => {
+    // `glow_blend_mode` is parsed leniently, so a scene can carry anything.
     const glsl = blendGlsl(glowOn({ glow_blend_mode: '99' }), 1);
     expect(glsl).toContain('return color + glow;');
+  });
+
+  it('emits only the constants the chosen mode reads', () => {
+    // An ADDITIVE shader used to carry a white point and a mix factor it never
+    // touched, which left a reader working out that both were inert.
+    const additive = blendGlsl(glowOn({ glow_blend_mode: String(GlowBlendMode.ADDITIVE) }), 2);
+    expect(additive).not.toContain('2.0');
+    const screen = blendGlsl(glowOn({ glow_blend_mode: String(GlowBlendMode.SCREEN) }), 2);
+    expect(screen).toContain('2.0');
   });
 });

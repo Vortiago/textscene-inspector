@@ -188,7 +188,7 @@ export function StandardMaterialSlot({
     aoMap: aoMap ?? null,
     // Godot's `emission_operator` only becomes observable once a texture is in
     // play, and whether one resolved is knowable here and not at parse time.
-    ...resolveEmission(scalars, !!emissiveMap),
+    ...resolveEmission(scalars, scalars.emissionOperator, !!emissiveMap),
     // Godot heightmap (FEATURE_HEIGHT_MAPPING) → three.js vertex displacement.
     // PARITY LIMITATION: Godot uses texture-space parallax; three.js
     // displacement moves real vertices, so it needs a subdivided mesh and its

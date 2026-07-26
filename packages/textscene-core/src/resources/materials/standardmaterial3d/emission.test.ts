@@ -55,7 +55,7 @@ describe('resolveEmission', () => {
   const black = emissionScalars(undefined, 2);
 
   it('ADD without a texture is the colour at its energy', () => {
-    const r = resolveEmission({ ...red, emissionOperator: EmissionOperator.ADD }, false);
+    const r = resolveEmission(red, EmissionOperator.ADD, false);
     expect(r.emissive).toEqual(red.emissive);
     expect(r.emissiveIntensity).toBeCloseTo(2, 6);
   });
@@ -63,31 +63,31 @@ describe('resolveEmission', () => {
   it('ADD with a texture and a black colour becomes a white emissive', () => {
     // Godot computes `(0 + tex) * energy`; three spells that as white × energy.
     // Multiplying the authored black through would render nothing at all.
-    const r = resolveEmission({ ...black, emissionOperator: EmissionOperator.ADD }, true);
+    const r = resolveEmission(black, EmissionOperator.ADD, true);
     expect(r.emissive).toEqual([1, 1, 1]);
     expect(r.emissiveIntensity).toBeCloseTo(2, 6);
   });
 
   it('ADD with a texture and a lit colour falls back to multiplying (documented gap)', () => {
-    const r = resolveEmission({ ...red, emissionOperator: EmissionOperator.ADD }, true);
+    const r = resolveEmission(red, EmissionOperator.ADD, true);
     expect(r.emissive).toEqual(red.emissive);
   });
 
   it('MULTIPLY without a texture is no emission at all', () => {
     // `hint_default_black` makes the absent sampler read zero, and Godot then
     // multiplies the colour by it.
-    const r = resolveEmission({ ...red, emissionOperator: EmissionOperator.MULTIPLY }, false);
+    const r = resolveEmission(red, EmissionOperator.MULTIPLY, false);
     expect(r.emissive).toEqual([0, 0, 0]);
     expect(r.emissiveIntensity).toBe(0);
   });
 
   it('MULTIPLY with a texture passes the colour through unchanged', () => {
-    const r = resolveEmission({ ...red, emissionOperator: EmissionOperator.MULTIPLY }, true);
+    const r = resolveEmission(red, EmissionOperator.MULTIPLY, true);
     expect(r.emissive).toEqual(red.emissive);
     expect(r.emissiveIntensity).toBeCloseTo(2, 6);
   });
 
   it('defaults to ADD when no operator is given', () => {
-    expect(resolveEmission(black, true).emissive).toEqual([1, 1, 1]);
+    expect(resolveEmission(black, undefined, true).emissive).toEqual([1, 1, 1]);
   });
 });

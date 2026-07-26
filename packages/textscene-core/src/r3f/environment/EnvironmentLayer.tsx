@@ -39,9 +39,9 @@ export function EnvironmentLayer({ settings, sky }: EnvironmentLayerProps) {
   const showsSky = settings.background.mode === BackgroundMode.BG_SKY;
   const skyAmbient = settings.skyAmbient;
   const flatAmbient = settings.ambient;
-  // Glow is a post-process. When active, the composer owns tonemapping (bloom
-  // must read pre-tonemap HDR), so the in-material tonemap path is suppressed to
-  // avoid a double tonemap / a `gl.toneMapping` fight with the composer.
+  // Glow is a post-process, and the effect that runs it owns the tone curve too
+  // (Godot's own tonemap shader gathers, blends and tonemaps in one), so the
+  // in-material tonemap path is suppressed while it is mounted.
   //
   // But the composer is expensive (a mip-blurred HDR pass), and the preview
   // environment enables glow GLOBALLY — so mounting it on every scene, including
@@ -51,21 +51,22 @@ export function EnvironmentLayer({ settings, sky }: EnvironmentLayerProps) {
   // is gated on the scene actually having bloomable content. When it is NOT
   // mounted the scene stays on the ordinary in-material tonemap path, unchanged.
   const glowParams = useMemo(() => glowParamsFor(settings), [settings]);
-  // `glow_bloom` is a FLOOR on the bright-pass feedback, so above zero EVERY
-  // pixel enters the glow buffer however dark it is — the "is anything bright?"
-  // shortcut is then wrong, and the pass has to mount unconditionally. Likewise
-  // a pyramid whose weights are all zero can never produce glow, so it never
-  // needs the pass.
-  const alwaysGlows = !!glowParams && glowNeedsEveryPixel(glowParams);
+  // A pyramid with no weight anywhere can never produce glow, whatever else is
+  // set, so it never needs the pass. `glowNeedsEveryPixel` covers the opposite
+  // case — the settings under which the emissive scan cannot answer the question
+  // at all and the pass has to mount regardless of what the scene holds.
   const canGlow = !!glowParams && glowParams.maxLevel >= 0;
-  const bloomThreshold = glowParams?.hdrThreshold ?? Infinity;
-  const hasBloomable = useSceneHasBloomableEmissive(bloomThreshold, canGlow && !alwaysGlows);
+  const alwaysGlows = canGlow && glowNeedsEveryPixel(glowParams!);
+  const hasBloomable = useSceneHasBloomableEmissive(
+    glowParams?.hdrThreshold ?? 0,
+    canGlow && !alwaysGlows
+  );
   const useComposer = canGlow && (alwaysGlows || hasBloomable);
 
   return (
     <>
       <EnvironmentApplier settings={settings} hasSky={!!sky} suppressToneMapping={useComposer} />
-      {useComposer && <GlowLayer settings={settings} />}
+      {useComposer && <GlowLayer glow={glowParams!} toneMapping={settings.toneMapping} />}
       {sky && (showsSky || skyAmbient) && (
         <>
           <SkyLayer
@@ -198,15 +199,19 @@ function SkyDiffuseReflectionSplit({
  * negative would silently drop a real bloom). Diffuse-only brightness — lit
  * white floors, unshaded Label3D text near 1.0 — stays below the threshold and
  * does not trigger it, matching Godot (which does not bloom those either).
+ *
+ * `needsScan` is false both when there is no glow at all and when the settings
+ * already force the pass to mount — the scan is only worth running when its
+ * answer is what decides.
  */
-function useSceneHasBloomableEmissive(threshold: number, glowEnabled: boolean): boolean {
+function useSceneHasBloomableEmissive(threshold: number, needsScan: boolean): boolean {
   const scene = useThree((s) => s.scene);
   const hierarchy = useOptionalHierarchy();
   const rootKey = hierarchy?.sceneGraph?.rootScene ?? '';
   const [bloomable, setBloomable] = useState(false);
 
   useEffect(() => {
-    if (!glowEnabled) {
+    if (!needsScan) {
       setBloomable(false);
       return undefined;
     }
@@ -231,7 +236,7 @@ function useSceneHasBloomableEmissive(threshold: number, glowEnabled: boolean): 
     check();
     const timers = [150, 500, 1100].map((delay) => setTimeout(check, delay));
     return () => timers.forEach(clearTimeout);
-  }, [scene, rootKey, threshold, glowEnabled]);
+  }, [scene, rootKey, threshold, needsScan]);
 
   return bloomable;
 }
@@ -241,10 +246,9 @@ interface EnvironmentApplierProps {
   /** When a real sky renders, it owns the background and this must not fight it. */
   hasSky: boolean;
   /**
-   * When glow is active the bloom composer owns tonemapping (it must read
-   * pre-tonemap HDR and forces the renderer to `NoToneMapping`), so the
-   * in-material tonemap must NOT be applied here — `GlowLayer`'s tonemap effect
-   * does it after bloom instead.
+   * The composer forces the renderer to `NoToneMapping` while mounted, and
+   * `GodotGlowEffect` applies the same ported curve itself — so the in-material
+   * tonemap must NOT also be applied here.
    */
   suppressToneMapping: boolean;
 }
