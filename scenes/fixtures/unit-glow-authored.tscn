@@ -1,0 +1,74 @@
+[gd_scene load_steps=5 format=3 uid="uid://unitglowauthored"]
+
+; An authored WorldEnvironment driving glow with NON-DEFAULT values, which the
+; preview environment can never exercise: it only ever flips glow_enabled and
+; leaves every other knob alone.
+;
+; The weights move the halo off Godot's default levels 2-4 onto the two coarsest
+; ones, so the emissive spheres wear a wide soft glow rather than a tight rim —
+; a level-weighting bug shows up here as a halo of the wrong SIZE, which a
+; default-weighted scene cannot reveal. ADDITIVE blend keeps the halo readable
+; against the dark background instead of screen-blending toward it.
+
+[sub_resource type="ProceduralSkyMaterial" id="Sky_dark"]
+sky_top_color = Color(0.02, 0.02, 0.04, 1)
+sky_horizon_color = Color(0.05, 0.05, 0.08, 1)
+ground_bottom_color = Color(0.02, 0.02, 0.02, 1)
+ground_horizon_color = Color(0.05, 0.05, 0.08, 1)
+
+[sub_resource type="Sky" id="Sky_1"]
+sky_material = SubResource("Sky_dark")
+
+[sub_resource type="Environment" id="Env_glow"]
+background_mode = 2
+sky = SubResource("Sky_1")
+tonemap_mode = 2
+glow_enabled = true
+glow_levels/1 = 0.0
+glow_levels/2 = 0.0
+glow_levels/3 = 0.0
+glow_levels/4 = 0.0
+glow_levels/5 = 0.0
+glow_levels/6 = 1.0
+glow_levels/7 = 0.6
+glow_intensity = 1.2
+glow_bloom = 0.0
+glow_blend_mode = 0
+glow_hdr_threshold = 0.8
+glow_hdr_scale = 1.5
+glow_hdr_luminance_cap = 6.0
+
+[sub_resource type="SphereMesh" id="SphereMesh_1"]
+radius = 0.5
+height = 1.0
+radial_segments = 32
+rings = 16
+
+[sub_resource type="StandardMaterial3D" id="Mat_hot"]
+albedo_color = Color(0.9, 0.3, 0.1, 1)
+roughness = 0.4
+emission_enabled = true
+emission = Color(1.0, 0.35, 0.05, 1)
+emission_energy_multiplier = 3.0
+
+[sub_resource type="StandardMaterial3D" id="Mat_cool"]
+albedo_color = Color(0.1, 0.3, 0.9, 1)
+roughness = 0.4
+emission_enabled = true
+emission = Color(0.1, 0.5, 1.0, 1)
+emission_energy_multiplier = 3.0
+
+[node name="GlowAuthoredRoot" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env_glow")
+
+[node name="HotSphere" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.9, 0, 0)
+mesh = SubResource("SphereMesh_1")
+surface_material_override/0 = SubResource("Mat_hot")
+
+[node name="CoolSphere" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.9, 0, 0)
+mesh = SubResource("SphereMesh_1")
+surface_material_override/0 = SubResource("Mat_cool")

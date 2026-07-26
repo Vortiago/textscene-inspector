@@ -183,6 +183,21 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Glow Authored",
+    "file": "unit-glow-authored.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Glow Softlight",
+    "file": "unit-glow-softlight.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Glow Strength",
+    "file": "unit-glow-strength.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Gpuparticles3d",
     "file": "unit-gpuparticles3d.tscn",
     "category": "Other"

@@ -104,6 +104,18 @@ export const GOLDEN_SCENES = [
   { name: 'navigation-region-3d', file: 'unit-navigation-region-3d.tscn' },
   { name: 'material-metallic', file: 'unit-material-metallic.tscn' },
   { name: 'material-emissive', file: 'unit-material-emissive.tscn' },
+  // Glow driven by an AUTHORED WorldEnvironment rather than the editor preview,
+  // which only ever flips glow_enabled: the weights sit on the two coarsest mip
+  // levels, so a level-weighting or pyramid-resolution regression reads here as
+  // a halo of visibly the wrong size.
+  { name: 'glow-authored', file: 'unit-glow-authored.tscn' },
+  // glow_strength compounds once per pyramid pass, so it is inert at its 1.0
+  // default and any exponent would pass every other scene — this is the one that
+  // pins the count.
+  { name: 'glow-strength', file: 'unit-glow-strength.tscn' },
+  // Soft light is the only mode Godot composites AFTER the tone curve, and the
+  // only one whose result depends on the surface under it, hence the grey ground.
+  { name: 'glow-softlight', file: 'unit-glow-softlight.tscn' },
   // Height mapping: a local grayscale height SVG drives displacementMap on a
   // finely-subdivided sphere — the baseline pins that the relief actually
   // renders (a normal map, or a missing displacementMap, reads as a flat ball).
