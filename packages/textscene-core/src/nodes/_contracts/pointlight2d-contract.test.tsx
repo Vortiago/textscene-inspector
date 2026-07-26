@@ -121,12 +121,23 @@ async function renderScene(tscn: string) {
 
 type TestRenderer = Awaited<ReturnType<typeof renderScene>>;
 
-/** The MeshBasicMaterials of every ADDITIVELY-blended mesh in the render. */
+/**
+ * The MeshBasicMaterials of every mesh drawn as a LIGHT — one applied against
+ * the surface under it rather than painted over it. Godot's ADD light leaves
+ * `albedo x (1 + light)`, which `DstColorFactor` reproduces exactly; plain
+ * AdditiveBlending would give `albedo + light` and wash the surface out.
+ */
 function additiveMaterials(renderer: TestRenderer): THREE.MeshBasicMaterial[] {
   return renderer.scene
     .findAllByType('Mesh')
     .map((o) => (o.instance as THREE.Mesh).material as THREE.MeshBasicMaterial)
-    .filter((m) => m.blending === THREE.AdditiveBlending);
+    .filter(
+      (m) =>
+        m.blending === THREE.CustomBlending &&
+        m.blendSrc === THREE.DstColorFactor &&
+        m.blendDst === THREE.OneFactor &&
+        m.blendEquation === THREE.AddEquation
+    );
 }
 
 function lintErrorCount(raw: string): number {
@@ -185,7 +196,7 @@ enabled = false
     expect(nodeComponentRegistry.get('PointLight2D')).toBeDefined();
   });
 
-  it('renders an ADDITIVELY-blended textured quad when blend_mode is omitted (default ADD)', async () => {
+  it('renders a surface-modulating textured quad when blend_mode is omitted (default ADD)', async () => {
     if (!requireComp()) return;
     const mats = additiveMaterials(await renderScene(litScene('')));
     expect(mats.length, 'PointLight2D should render an additively-blended mesh').toBeGreaterThan(0);

@@ -22,8 +22,7 @@ import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
 import { multiplyModulate, type CanvasItemTint } from '../../../r3f/canvasItemModulate';
 import { godotColorToLinear } from '../../../r3f/godotColor';
-import { resolveTexture2DPath } from '../../../resources/SubResourceResolver';
-import { useResource } from '../../../resources/useResource';
+import { useTexture2D } from '../../../resources/useTexture2D';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import type { Vector2 } from '../../base/node2d/types';
 import type { Polygon2DProperties } from './types';
@@ -38,14 +37,9 @@ export function Polygon2D({ node, children }: NodeComponentProps) {
   const props = node.properties as Polygon2DProperties;
   const { externalResources, internalResources } = useSceneResources();
 
-  const texturePath = useMemo(
-    () => resolveTexture2DPath(props.texture, externalResources, internalResources),
-    [props.texture, externalResources, internalResources]
-  );
-  const texResult = useResource<THREE.Texture>(texturePath ?? '', 'Texture2D');
-  // Owned by the shared resource loader (and shared with any other node using
-  // the same reference) — never disposed here.
-  const texture = (texturePath ? texResult.value : null) ?? null;
+  // Either an image file or an inline procedural texture; `useTexture2D` hides
+  // which, and owns the lifetime of the procedural one it rasterises.
+  const { texture } = useTexture2D(props.texture, externalResources, internalResources);
 
   const rings = useMemo(
     () =>

@@ -12,8 +12,7 @@ import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
 import { godotColorToLinear } from '../../../r3f/godotColor';
-import { resolveTexture2DPath } from '../../../resources/SubResourceResolver';
-import { useResource } from '../../../resources/useResource';
+import { useTexture2D } from '../../../resources/useTexture2D';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import type { PointLight2DProperties } from './types';
@@ -22,18 +21,15 @@ export function PointLight2D({ node, children }: NodeComponentProps) {
   const props = node.properties as PointLight2DProperties;
   const { externalResources, internalResources } = useSceneResources();
 
-  // Resolve the light texture path.
-  const texturePath = useMemo(
-    () => resolveTexture2DPath(props.texture, externalResources, internalResources),
-    [props.texture, externalResources, internalResources]
+  // The light cookie is a Texture2D slot like any other, and in real scenes it
+  // is usually a GradientTexture2D — a radial falloff described inline rather
+  // than shipped as an image. `useTexture2D` resolves either kind.
+  const { texture: displayedTexture, missing } = useTexture2D(
+    props.texture,
+    externalResources,
+    internalResources
   );
-  const texResult = useResource<THREE.Texture>(texturePath ?? '', 'Texture2D');
-  // The texture is owned by the shared resource loader — do NOT dispose it here
-  // (it may be shared by other PointLight2Ds using the same SubResource).
-  const displayedTexture = texResult.value;
-
-  // Show placeholder when no texture path or loading failed.
-  const showPlaceholder = !texturePath || texResult.status === 'unavailable';
+  const showPlaceholder = missing || !props.texture;
 
   // Emitted colour: Godot sRGB → linear, scaled by energy. NOT clamped — an
   // additive light with energy > 1 is meant to over-brighten (bloom).
@@ -81,19 +77,6 @@ function QuadMesh({
   offset: { x: number; y: number };
   blendMode: number;
 }) {
-  let blending: THREE.Blending = THREE.NormalBlending;
-  switch (blendMode) {
-    case 0:
-      blending = THREE.AdditiveBlending;
-      break;
-    case 1:
-      blending = THREE.SubtractiveBlending;
-      break;
-    case 2:
-      blending = THREE.NormalBlending;
-      break;
-  }
-
   const width = (texture.image as { width?: number } | null | undefined)?.width ?? 1;
   const height = (texture.image as { height?: number } | null | undefined)?.height ?? 1;
 
@@ -106,8 +89,49 @@ function QuadMesh({
         transparent
         depthWrite={false}
         side={THREE.DoubleSide}
-        blending={blending}
+        {...lightBlendState(blendMode)}
       />
     </mesh>
   );
+}
+
+/**
+ * A 2D light is applied AGAINST the surface, not painted over it.
+ *
+ * Godot's canvas light pass computes `light = light_texture × color × energy`
+ * and then combines it with the item's own albedo, so `Light2D.BlendMode.ADD`
+ * leaves the framebuffer at `albedo × (1 + light)` — a dark floor stays dark
+ * under a torch, a pale wall catches it. Painting the cookie on with plain
+ * additive blending instead gives `albedo + light`, which washes the whole
+ * neighbourhood toward white regardless of what is underneath. With 23 lights
+ * over one dungeon that is the difference between torchlight and fog.
+ *
+ * `DstColorFactor` recovers Godot's equation exactly without a second pass or a
+ * framebuffer read: the destination IS the albedo by the time the light draws,
+ * so `src × DST + dst × ONE` is `albedo × (1 + light)`. SUB is the same product
+ * subtracted. Alpha is left alone (`Zero`/`One`) — a light contributes colour,
+ * never coverage.
+ *
+ * MIX has no such identity (it interpolates toward the light colour by the
+ * light's alpha, which needs the destination as a term on both sides), so it
+ * stays an ordinary blend — see the slice's comparison sheet.
+ */
+function lightBlendState(blendMode: number): THREE.MeshBasicMaterialParameters {
+  const againstSurface = {
+    blending: THREE.CustomBlending,
+    blendSrc: THREE.DstColorFactor,
+    blendDst: THREE.OneFactor,
+    blendSrcAlpha: THREE.ZeroFactor,
+    blendDstAlpha: THREE.OneFactor,
+    blendEquationAlpha: THREE.AddEquation,
+  } as const;
+
+  switch (blendMode) {
+    case 1:
+      return { ...againstSurface, blendEquation: THREE.ReverseSubtractEquation };
+    case 2:
+      return { blending: THREE.NormalBlending };
+    default:
+      return { ...againstSurface, blendEquation: THREE.AddEquation };
+  }
 }

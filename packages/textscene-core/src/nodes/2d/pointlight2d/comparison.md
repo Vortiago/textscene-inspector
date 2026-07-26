@@ -5,7 +5,7 @@ fixture: unit-pointlight2d.tscn
 image: unit-pointlight2d
 status: limitation
 group: Lighting
-renders_as: the light's texture as an additive quad tinted by color × energy
+renders_as: the light's texture applied against the surface beneath it
 ---
 
 # PointLight2D
@@ -27,13 +27,29 @@ not light other CanvasItems per-pixel. The fixture puts a warm radial cookie ove
 
 ## Divergences
 
-Both sides place a warm radial pool at the same spot and size over the same dark surface,
-so position, falloff radius and blend agree. The core brightness does not. Ours drives the
-additive quad by `color × energy` and clamps at the framebuffer ceiling, so the centre goes
-to a near-white `[255, 255, 239]`; Godot's 2D light integrates the same cookie into a warmer
-mid-tone `[184, 160, 126]` and keeps the tint through the core. The gap is the additive
-model: a textured quad is a single additive pass, where Godot's light is applied against the
-surface, so the warm colour survives at the centre instead of washing out.
+Both sides place a warm radial pool at the same spot and size over the same dark
+surface, so position, falloff radius and blend agree, and the whole frame is
+within a mean 7.5/255.
+
+A 2D light is applied AGAINST the surface rather than painted over it: Godot's
+ADD blend leaves `albedo × (1 + light)`, which `DstColorFactor` reproduces
+exactly without a second pass. So the core no longer clips to a near-white
+`[255, 255, 239]` the way a plain additive quad did — but it now lands *under*
+Godot rather than over it, reading `[128, 128, 110]` against Godot's
+`[185, 161, 126]`, and losing the warm tint at the very centre.
+
+What is left is the rest of Godot's canvas-light pass, which a single blended
+quad cannot express:
+
+- `light_mask`, `range_item_cull_mask`, `range_layer_min/max` and
+  `range_z_min/max` are parsed but not applied, so every light reaches every
+  canvas item under it instead of only the ones it is masked to.
+- `CanvasItemMaterial.light_mode` is resolved but not consumed: an `Unshaded`
+  item is still lit, and a `LightOnly` item still draws where no light reaches.
+- `shadow_enabled` casts nothing. `LightOccluder2D` and `OccluderPolygon2D`
+  parse and render their outline, but no light is occluded by them.
+- `Light2D.BlendMode.MIX` has no destination-blend identity, so it stays an
+  ordinary alpha blend rather than interpolating toward the light colour.
 
 ## Linting
 

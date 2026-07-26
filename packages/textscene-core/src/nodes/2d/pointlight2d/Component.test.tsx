@@ -49,13 +49,20 @@ async function render(rootNode: TscnNode) {
 }
 
 describe('PointLight2D Component', () => {
-  it('renders an additively-blended mesh when enabled with texture', async () => {
+  it('renders a surface-modulating light mesh when enabled with texture', async () => {
     const r = await render(node());
     const meshes = r.scene.findAllByType('Mesh');
     expect(meshes.length).toBeGreaterThan(0);
     const mat = meshes[0]!.instance as THREE.Mesh;
     expect(mat.material).toBeDefined();
-    expect((mat.material as THREE.MeshBasicMaterial).blending).toBe(THREE.AdditiveBlending);
+    // A light is applied AGAINST the surface: Godot's ADD blend leaves
+    // `albedo x (1 + light)`, which is `src x DST + dst x ONE`. Plain additive
+    // blending would paint `albedo + light` over it and wash the surface out.
+    const lightMat = mat.material as THREE.MeshBasicMaterial;
+    expect(lightMat.blending).toBe(THREE.CustomBlending);
+    expect(lightMat.blendSrc).toBe(THREE.DstColorFactor);
+    expect(lightMat.blendDst).toBe(THREE.OneFactor);
+    expect(lightMat.blendEquation).toBe(THREE.AddEquation);
   });
 
   it('returns null (no mesh) when enabled=false', async () => {
