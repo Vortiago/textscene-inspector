@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * Assemble the comparison sheets under `docs/comparison/sheets/*.md` and the
+ * Assemble the comparison sheets (`<slice>/comparison.md`, plus the sliceless
+ * showcases under `docs/comparison/sheets/` — see sheetSources.mjs) and the
  * screenshots under `docs/comparison/images/` into one browsable HTML gallery:
  * Godot beside our renderer, per node type, under a drag-slider.
  *
@@ -19,11 +20,16 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  REPO_ROOT,
+  collectSheetFiles,
+  findImage,
+  parseFrontmatter,
+  sheetLabel,
+} from './sheetSources.mjs';
+import { renderCoverage as renderLintCoverage } from './lintCoverage.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const REPO_ROOT = join(here, '../..');
-const SHEETS_DIR = join(REPO_ROOT, 'docs/comparison/sheets');
-const IMAGES_DIR = join(REPO_ROOT, 'docs/comparison/images');
 
 function parseArgs(argv) {
   const args = { inline: false, fragment: false, out: join(REPO_ROOT, 'docs/comparison/index.html') };
@@ -38,23 +44,14 @@ function parseArgs(argv) {
 
 /** Split a sheet into `--- key: value ---` frontmatter and the Markdown body. */
 function parseSheet(text, file) {
-  const match = /^---\n([\s\S]*?)\n---\n([\s\S]*)$/.exec(text);
-  if (!match) throw new Error(`${file}: missing frontmatter`);
-  const meta = {};
-  for (const line of match[1].split('\n')) {
-    const kv = /^(\w+):\s*(.*)$/.exec(line.trim());
-    // Strip a trailing `# ...` inline comment (the SHEET-STANDARD template
-    // documents values as `category: 3D   # 3D | 2D | Other`); `\s*#` catches both
-    // a trailing comment and a whole-line one. No frontmatter value contains a
-    // literal '#', so this never eats real content.
-    if (kv) meta[kv[1]] = kv[2].replace(/\s*#.*$/, '').trim();
-  }
+  const parsed = parseFrontmatter(text);
+  if (!parsed) throw new Error(`${file}: missing frontmatter`);
   // `image` is required only for a single-pair sheet; a sheet built from
   // per-property `<!-- compare: ... -->` sections supplies its images there.
   for (const key of ['type', 'category']) {
-    if (!meta[key]) throw new Error(`${file}: frontmatter missing "${key}"`);
+    if (!parsed.meta[key]) throw new Error(`${file}: frontmatter missing "${key}"`);
   }
-  return { meta, body: match[2].trim() };
+  return { meta: parsed.meta, body: parsed.body.trim() };
 }
 
 /**
@@ -134,12 +131,52 @@ function parseSections(body) {
 const escapeHtml = (s) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
+/**
+ * `ADR-0025` in sheet prose becomes a link to the decision record.
+ *
+ * Absolute, not relative: sheets now live at varying depths inside the slice
+ * tree, the gallery HTML resolves relative paths against its own location, and
+ * the deployed /parity/ site has no docs/ directory at all. One generated
+ * absolute URL is correct in all three places, so no sheet hand-writes one.
+ */
+const ADR_FILES = existsSync(join(REPO_ROOT, 'docs/adr'))
+  ? readdirSync(join(REPO_ROOT, 'docs/adr')).filter((f) => f.endsWith('.md'))
+  : [];
+const ADR_BLOB = 'https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/';
+
+function linkAdrs(html) {
+  // Split on existing anchors and rewrite only outside them. Ordering alone does
+  // not protect: `\bADR-\d{4}\b` matches an anchor's inner text just as happily
+  // and would nest <a> inside <a>.
+  return html
+    .split(/(<a\b[^>]*>[\s\S]*?<\/a>)/g)
+    .map((segment) =>
+      segment.startsWith('<a')
+        ? segment
+        : segment.replace(/\bADR-(\d{4})\b/g, (whole, number) => {
+            const file = ADR_FILES.find((f) => f.startsWith(`${number}-`));
+            return file
+              ? `<a class="adr" href="${ADR_BLOB}${file}" target="_blank" rel="noopener">${whole}</a>`
+              : whole;
+          })
+    )
+    .join('');
+}
+
 /** Inline Markdown: `code`, **bold**, and [text](href). Escapes first. */
 function inline(text) {
-  return escapeHtml(text)
+  const html = escapeHtml(text)
     .replace(/`([^`]+)`/g, '<code>$1</code>')
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
+    // A sheet cites the shared-causes file by name; in the gallery that file is
+    // the notes panel, so the citation becomes an in-page link to it rather than
+    // a path the deployed site does not carry.
+    .replace(
+      /docs\/comparison\/README\.md/g,
+      `<a class="adr" href="#${encodeURIComponent(NOTES_TYPE)}">${NOTES_TYPE}</a>`
+    );
+  return linkAdrs(html);
 }
 
 /**
@@ -161,6 +198,9 @@ function renderBody(body) {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     if (/^#\s/.test(line) || /^!\[/.test(line.trim())) continue; // H1 and images handled elsewhere
+    // HTML comments are machine markers (`<!-- lint:begin … -->`), never content.
+    // Without this they fall through to the paragraph branch and render escaped.
+    if (/^<!--/.test(line.trim())) continue;
     if (/^##\s/.test(line)) {
       flush();
       out.push(`<h3>${inline(line.replace(/^##\s/, ''))}</h3>`);
@@ -225,14 +265,12 @@ function renderTable(rows) {
  * `.png`. Prefer the gif so a motion node plays, and fall back to the png.
  */
 function imageSrc(basename, side, inlineImages) {
-  for (const ext of ['gif', 'png']) {
-    const file = join(IMAGES_DIR, `${basename}-${side}.${ext}`);
-    if (!existsSync(file)) continue;
-    if (!inlineImages) return `images/${basename}-${side}.${ext}`;
-    const mime = ext === 'gif' ? 'image/gif' : 'image/png';
-    return `data:${mime};base64,${readFileSync(file).toString('base64')}`;
-  }
-  return null;
+  const file = findImage(basename, side);
+  if (!file) return null;
+  const ext = file.endsWith('.gif') ? 'gif' : 'png';
+  if (!inlineImages) return `images/${basename}-${side}.${ext}`;
+  const mime = ext === 'gif' ? 'image/gif' : 'image/png';
+  return `data:${mime};base64,${readFileSync(file).toString('base64')}`;
 }
 
 const CATEGORY_ORDER = ['3D', '2D', 'Resources', 'Complex Scenes', 'Other'];
@@ -275,13 +313,84 @@ function compareStage(godot, ours, label) {
  */
 function loadCatalog() {
   const file = join(here, 'node-catalog.json');
-  return existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : { nodes: [] };
+  return existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : { nodes: [], resources: [] };
+}
+
+/**
+ * Per-unsupported-node lint coverage, precomputed by `pnpm docs:lint-sections`.
+ *
+ * Read rather than computed: deciding whether a matcher rule reaches a node type
+ * means EXECUTING its predicate, which needs the built linter — and this script
+ * runs inside the web build before core is built. Absent file: the cards simply
+ * omit the section.
+ */
+function loadLintCoverage() {
+  const file = join(here, 'lint-coverage.json');
+  return existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')).unsupported ?? {} : {};
+}
+
+/** The nav entry holding the causes shared across sheets. */
+const NOTES_TYPE = 'Reading these sheets';
+
+/**
+ * Every field the panel template reads. Each panel source spreads this and
+ * overrides what it knows, so adding a field is one edit rather than three, and
+ * a source that does not set it renders empty rather than `undefined`.
+ */
+const BLANK_PANEL = {
+  docs: '',
+  source: '',
+  fixture: '',
+  camera: '',
+  rendersAs: '',
+  group: '',
+  status: DEFAULT_STATUS,
+  visual: true,
+  sectioned: false,
+  sections: [],
+  introHtml: '',
+  trailingHtml: '',
+  godot: null,
+  ours: null,
+  html: '',
+};
+
+/**
+ * The explanatory sections of `docs/comparison/README.md`, as their own panel.
+ *
+ * A cause that spans sheets is written there once and each sheet points at it.
+ * Only `index.html` and `images/` are deployed, so on the published site that
+ * pointer would otherwise be a dead end: the canonical text unreachable from the
+ * very page citing it. Carrying the sections into the gallery keeps the whole
+ * thing self-contained, with no link out to a private repo.
+ *
+ * Everything from the first category heading onward is the repo-facing file
+ * index, which the nav already supersedes.
+ */
+function loadSharedNotes() {
+  const file = join(REPO_ROOT, 'docs/comparison/README.md');
+  if (!existsSync(file)) return '';
+  const body = readFileSync(file, 'utf8');
+  const lines = body.split('\n');
+  const firstCategory = lines.findIndex(
+    (line) => line.startsWith('## ') && CATEGORY_ORDER.includes(line.slice(3))
+  );
+  const head = firstCategory === -1 ? lines : lines.slice(0, firstCategory);
+  return head.join('\n').replace(/^#\s+.*$/m, '').trim();
 }
 
 function build(sheets, inlineImages, fragment) {
   const missing = [];
   const catalog = loadCatalog();
-  const catalogByType = new Map(catalog.nodes.map((n) => [n.name, n]));
+  const lintCoverage = loadLintCoverage();
+  // Nodes and resources both carry `docs`/`source`; resources are absent from
+  // ClassDB's node enumeration but their sheets want the same chips.
+  const catalogByType = new Map(
+    [...(catalog.nodes ?? []), ...(catalog.resources ?? []), ...(catalog.extras ?? [])].map((n) => [
+      n.name,
+      n,
+    ])
+  );
   // A node's functional group: from the catalog when it is a Godot node,
   // otherwise its own category (resources and complex scenes group by category).
   const groupFor = (type, category, metaGroup) =>
@@ -303,7 +412,11 @@ function build(sheets, inlineImages, fragment) {
       if (!sectioned) {
         godot = imageSrc(meta.image, 'godot', inlineImages);
         ours = imageSrc(meta.image, 'ours', inlineImages);
-        if (meta.visual !== 'false' && (!godot || !ours)) {
+        // A DECLARED `image:` whose files are absent is a broken reference and
+        // fails the build. No `image:` at all is a sheet whose capture has not
+        // been run yet (a freshly scaffolded slice) — that renders the
+        // "not captured yet" placeholder instead of breaking every consumer.
+        if (meta.image && meta.visual !== 'false' && (!godot || !ours)) {
           missing.push(`${meta.type} (${meta.image})`);
         }
       }
@@ -316,7 +429,12 @@ function build(sheets, inlineImages, fragment) {
           ? meta.status
           : DEFAULT_STATUS;
       return {
+        ...BLANK_PANEL,
         type: meta.type,
+        // Godot's own class reference and engine source, generated and verified
+        // by `pnpm nodes:catalog` — never hand-written into a sheet.
+        docs: catalogByType.get(meta.type)?.docs ?? '',
+        source: catalogByType.get(meta.type)?.source ?? '',
         category: CATEGORY_ORDER.includes(meta.category) ? meta.category : 'Other',
         // A node with no visual output at all (Timer, an AudioStreamPlayer, a
         // RemoteTransform body) sets `visual: false`; the gallery then shows an
@@ -333,7 +451,10 @@ function build(sheets, inlineImages, fragment) {
         status,
         sectioned,
         sections: resolved,
-        introHtml: renderBody(intro),
+        // Only a SECTIONED sheet has an intro distinct from its body. For a
+        // legacy sheet parseSections puts the whole body in `intro`, and `html`
+        // holds it too — rendering both printed every legacy sheet twice.
+        introHtml: sectioned ? renderBody(intro) : '',
         trailingHtml: renderBody(trailing ?? ''),
         godot,
         ours,
@@ -348,24 +469,41 @@ function build(sheets, inlineImages, fragment) {
   const unimplemented = catalog.nodes
     .filter((n) => !n.supported && !sheetTypes.has(n.name))
     .map((n) => ({
+      ...BLANK_PANEL,
       type: n.name,
+      docs: n.docs ?? '',
+      source: n.source ?? '',
       category: CATEGORY_ORDER.includes(n.category) ? n.category : 'Other',
       group: n.group,
       status: 'unimplemented',
       unimplemented: true,
-      visual: true,
-      fixture: '',
-      camera: '',
-      rendersAs: '',
-      sectioned: false,
-      sections: [],
-      introHtml: '',
-      godot: null,
-      ours: null,
-      html: '',
+      // An unsupported node draws nothing, but the linter still has something to
+      // say about it — a universal rule, a type-family matcher, inherited
+      // validators — and that is the only real content these cards carry.
+      html: lintCoverage[n.name]
+        ? renderBody(`## Linting\n\n${renderLintCoverage(n.name, lintCoverage[n.name])}`)
+        : '',
     }));
 
-  const nodes = [...sheetNodes, ...unimplemented].sort((a, b) => a.type.localeCompare(b.type));
+  const sharedNotes = loadSharedNotes();
+  const notesPanel = sharedNotes
+    ? [
+        {
+          ...BLANK_PANEL,
+          type: NOTES_TYPE,
+          notes: true,
+          category: 'Other',
+          group: NOTES_TYPE,
+          visual: false,
+          html: renderBody(sharedNotes),
+        },
+      ]
+    : [];
+
+  const nodes = [
+    ...notesPanel,
+    ...[...sheetNodes, ...unimplemented].sort((a, b) => a.type.localeCompare(b.type)),
+  ];
 
   // Nav is two levels: a category divider (3D / 2D / Resources / …) then a
   // sub-group per function (Lighting, Physics, UI, …). A category whose only
@@ -402,6 +540,8 @@ function build(sheets, inlineImages, fragment) {
       <header class="sheet-head">
         <h2>${escapeHtml(n.type)}</h2>
         ${n.rendersAs ? `<span class="renders">renders as ${inline(n.rendersAs)}</span>` : ''}
+        ${n.docs ? `<a class="reflink" href="${n.docs}" target="_blank" rel="noopener" title="Godot class reference for ${escapeHtml(n.type)}">docs ↗</a>` : ''}
+        ${n.source ? `<a class="reflink" href="${n.source}" target="_blank" rel="noopener" title="Godot engine source for ${escapeHtml(n.type)}">source ↗</a>` : ''}
         ${
           n.fixture
             ? `<a class="fixture" href="${PREVIEW_URL}?fixture=${encodeURIComponent(
@@ -413,15 +553,17 @@ function build(sheets, inlineImages, fragment) {
               )} in the previewer"><code>${escapeHtml(n.fixture)}</code> ↗</a>`
             : ''
         }
-        <span class="status st-${n.status}">${STATUS_LABEL[n.status]}</span>
+        ${n.notes ? '' : `<span class="status st-${n.status}">${STATUS_LABEL[n.status]}</span>`}
       </header>
-      ${n.sectioned ? '' : `<div class="status-note st-${n.status}"></div>`}
+      ${n.sectioned || n.notes ? '' : `<div class="status-note st-${n.status}"></div>`}
       ${n.introHtml ? `<div class="prose intro">${n.introHtml}</div>` : ''}
       ${
-        n.unimplemented
+        n.notes
+          ? `<div class="prose">${n.html}</div>`
+          : n.unimplemented
           ? `<div class="novisual">Not yet implemented — the previewer renders this as a transform-only fallback (children still show, the node itself draws nothing). In Godot it is a <strong>${escapeHtml(
               n.group
-            )}</strong> node.</div>`
+            )}</strong> node.</div>${n.html ? `<div class="prose">${n.html}</div>` : ''}`
           : n.sectioned
             ? n.sections
                 .map(
@@ -448,7 +590,7 @@ function build(sheets, inlineImages, fragment) {
     .join('');
 
   // Land on a real (implemented) sheet, not the first injected "not implemented" node.
-  const firstType = (nodes.find((n) => !n.unimplemented) ?? nodes[0])?.type;
+  const firstType = (nodes.find((n) => !n.unimplemented && !n.notes) ?? nodes[0])?.type;
   return { html: page(nav, panels, firstType, fragment), missing };
 }
 
@@ -534,6 +676,13 @@ main{padding:28px clamp(16px,4vw,48px)}
 .sheet-head{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:18px}
 .sheet-head h2{margin:0;font-size:26px;letter-spacing:-.02em}
 .renders{color:var(--muted);font-size:14px}
+/* Godot reference chips — generated from the node catalog, never hand-written
+   into a sheet. Godot-toned to read as "the engine's side" of the comparison. */
+.reflink{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;text-decoration:none;color:var(--godot);border:1px solid var(--godot);border-radius:20px;padding:2px 9px;white-space:nowrap;opacity:.85}
+.reflink:hover{background:var(--godot);color:var(--panel);opacity:1}
+/* Inline ADR citation in prose, linked by the generator (never hand-written). */
+.adr{color:var(--ours);text-decoration:none;border-bottom:1px dotted currentColor}
+.adr:hover{border-bottom-style:solid}
 .renders code{color:var(--ours)}
 .fixture{margin-left:auto;font-size:12px;color:var(--muted);text-decoration:none;white-space:nowrap}
 .fixture code{color:inherit}
@@ -622,15 +771,35 @@ function initCompare(sheet){
 }
 const initial=decodeURIComponent(location.hash.slice(1))||FIRST;
 if(initial)show(initial);
+// Prose links to another panel (a sheet citing the shared-causes notes) navigate
+// by hash, and the back button does too. Without this the URL changes and the
+// page does not.
+addEventListener('hashchange',()=>{
+  const type=decodeURIComponent(location.hash.slice(1));
+  if(type&&sheets.some(s=>s.dataset.type===type))show(type);
+});
 `;
 
 function main() {
   const args = parseArgs(process.argv.slice(2));
-  if (!existsSync(SHEETS_DIR)) throw new Error(`No sheets at ${SHEETS_DIR}`);
-  const files = readdirSync(SHEETS_DIR).filter((f) => f.endsWith('.md'));
+  const files = collectSheetFiles();
   if (files.length === 0) throw new Error('No sheets to build');
 
-  const sheets = files.map((f) => parseSheet(readFileSync(join(SHEETS_DIR, f), 'utf8'), f));
+  const sheets = files.map((f) => parseSheet(readFileSync(f, 'utf8'), sheetLabel(f)));
+
+  // Two sheets claiming one `type` would render two <article data-type=X> and the
+  // nav's show() would unhide both. Only reachable now that sheets come from
+  // several roots (a half-finished move, a revert, a sheet added the old way).
+  const seen = new Map();
+  for (let i = 0; i < sheets.length; i++) {
+    const { type } = sheets[i].meta;
+    if (seen.has(type)) {
+      throw new Error(
+        `Duplicate sheet type "${type}": ${seen.get(type)} and ${sheetLabel(files[i])}`
+      );
+    }
+    seen.set(type, sheetLabel(files[i]));
+  }
   const { html, missing } = build(sheets, args.inline, args.fragment);
 
   mkdirSync(dirname(args.out), { recursive: true });
