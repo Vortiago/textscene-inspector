@@ -24,7 +24,15 @@ _Avoid_: conflating with **SceneGraph** (the parsed structure) or "scene tree" (
 
 **ExtResource**:
 An external file reference written `ExtResource("id")` and declared by an `[ext_resource]` heading carrying both a `uid=` and a `path="res://…"`.
-_Avoid_: "asset", "import".
+_Avoid_: "asset"; "import" (reserve that for the **Import sidecar**, which no scene ever references).
+
+**Import sidecar**:
+The `.import` file Godot writes beside a source asset, recording which importer produced it and with what parameters. Never referenced by any scene — it is found by path convention (`scene.gltf` → `scene.gltf.import`), which is why it is not an **ExtResource** and why a missing one is an ordinary outcome rather than a **Missing resource**.
+_Avoid_: "import file" for the asset itself; treating absence as an error.
+
+**Asset re-import**:
+What this previewer does in place of Godot's import pipeline: load the *source* asset (`.gltf`/`.glb`/`.obj`) and re-derive the scene from it, honouring a deliberately small allowlist of **Import sidecar** parameters. Godot never loads the source at runtime — it loads a pre-baked artifact under `.godot/imported/`, which is gitignored, binary and hash-named, so it is not an input a text-scene previewer can have. Decision and allowlist: ADR-0027.
+_Avoid_: implying we run Godot's importer, or that the source asset is what Godot renders.
 
 **SubResource**:
 An embedded resource written `SubResource("id")` and declared by a `[sub_resource]` heading stored in the scene's flat internal-resources list (meshes, materials, StyleBoxes, collision-shape resources).
