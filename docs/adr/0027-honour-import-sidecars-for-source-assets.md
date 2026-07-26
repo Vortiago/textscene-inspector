@@ -50,6 +50,16 @@ newly vendored demo needs a decision.
 - **A project without sidecars renders at Godot's import defaults**, which is what a
   fresh Godot import of that project would also produce. This is the honest answer, not
   a fallback.
+- **Nothing surfaces sidecar state in the UI, deliberately.** Once the 25 sidecars are
+  vendored no corpus scene is missing one, and real Godot projects always ship theirs,
+  so an indicator would never fire where anyone would see it. The one case it would
+  catch is a bare `.gltf` dragged in without its sidecar, which renders at import
+  defaults — enormous, if the asset relies on a root scale to compensate for an internal
+  one. Revisit only if that is actually reported; a console warning gated on "no sidecar
+  AND an internal node scale far from 1" is the cheap version, and an inspector row the
+  discoverable one. The latter would need a special case in shared inspector code,
+  because `GLBSceneRoot` is synthetic and has no `nodeRegistry` registration for the
+  `propertyFormatter` path to find.
 - **Only scene sidecars are vendored** (25 files). Texture, audio and font sidecars
   govern compression, mipmaps and sRGB, none of which this pipeline consumes; vendoring
   ~550 inert files would obscure the 25 that matter.
