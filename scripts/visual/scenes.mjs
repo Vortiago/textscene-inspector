@@ -302,7 +302,7 @@ export const GOLDEN_SCENES = [
   // with the curve tessellation, and it covers both NodePath shapes the corpus
   // writes: a sibling and a child.
   { name: 'csg-polygon-path', file: 'unit-csg-polygon-path.tscn' },
-  // Real boolean evaluation (ADR-0026). Before it, all three groups rendered
+  // Real boolean evaluation (ADR-0027). Before it, all three groups rendered
   // IDENTICALLY as a solid block beside a solid ball: a hole showed as filled.
   // If they ever match again, the evaluator has stopped running.
   { name: 'csg-boolean-ops', file: 'unit-csg-boolean-ops.tscn' },

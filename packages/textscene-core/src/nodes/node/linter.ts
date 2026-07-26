@@ -54,6 +54,7 @@ const binaryResourceRule: LintRule = {
     name: 'binary-resource-reference',
     description: 'Flags references to binary Godot resources (.scn/.res) the previewer cannot load',
     category: 'validation',
+    emits: [{ ruleName: 'binary-resource-reference', severity: 'warning' }],
   },
   check: checkBinaryResourceReferences,
 };

@@ -153,7 +153,7 @@ export class FileEventBus {
    * which is what turns a missing file into a user-visible **Missing resource**. That is
    * right for a path a scene declares, and wrong for one discovered by convention — an
    * **Import sidecar** (`scene.gltf` → `scene.gltf.import`) is absent for most assets,
-   * and its absence just means "use Godot's import defaults" (ADR-0027).
+   * and its absence just means "use Godot's import defaults" (ADR-0028).
    *
    * Shares the cache with `request()` so a path is fetched once however it is reached,
    * but deliberately fires neither handler set: no consumer subscribes to a sidecar, and

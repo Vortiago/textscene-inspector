@@ -32,7 +32,7 @@ function disposeGLBMesh(mesh: THREE.Object3D): void {
 }
 
 /**
- * Correct a freshly loaded asset by its **Import sidecar**'s root scale (ADR-0027).
+ * Correct a freshly loaded asset by its **Import sidecar**'s root scale (ADR-0028).
  *
  * Done HERE, once per path, rather than in a consumer: the processor owns the cached
  * template, so every downstream reader — render, bounds, selection, the scene tree —

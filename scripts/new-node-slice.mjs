@@ -492,6 +492,63 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
     );
   }
 
+  // The comparison sheet is slice content (SHEET-STANDARD.md). `image:` ships
+  // commented out: a declared-but-uncaptured basename fails build-gallery (and
+  // so the web build), while recapture only collects sheets that DO declare one.
+  // So the order is: uncomment the line, then `pnpm recapture --only <basename>`.
+  // Until then the gallery shows its "not captured yet" placeholder.
+  //
+  // `category` is a best guess — 2D/3D from the type suffix, Other for a
+  // non-visual node; the corpus is genuinely mixed here (AnimationPlayer is 3D,
+  // Timer is Other), so check the nav divider it lands under.
+  const imageBasename = fixtureName.replace(/\.tscn$/, '');
+  const sheetCategory = transformOnly
+    ? 'Other'
+    : /2D$/.test(typeName)
+      ? '2D'
+      : /3D$/.test(typeName)
+        ? '3D'
+        : baseKey === 'node2d'
+          ? '2D'
+          : '3D';
+  files.set(
+    'comparison.md',
+    `---
+type: ${typeName}
+category: ${sheetCategory}
+status: unreviewed
+fixture: ${fixtureName}
+# image: ${imageBasename}
+renders_as: ${transformOnly ? 'a transform-only group' : 'TBD — one short noun phrase'}
+---
+
+# ${typeName}
+
+${transformOnly
+      ? `Non-visual node: the previewer renders it as a transform-only group (ADR-0008), so it draws nothing of its own and its children still show.`
+      : `One or two sentences: what the node is, and what the previewer draws for it.`}
+
+## Properties exercised
+
+| Property | Value | Effect |
+| --- | --- | --- |
+
+## Divergences
+
+Not captured yet.
+
+## Linting
+
+<!-- lint:begin ${typeName} -->
+<!-- lint:end -->
+
+${typeName} registers no validators or semantic rules of its own yet, so the strict
+and lenient parsers agree on every property: whatever \`parser.ts\` reads it reads
+without substitution. Replace this once \`linterParser.ts\` has validators, naming
+the property and the value the lenient parser falls back to.
+`
+  );
+
   console.log(`[new-node-slice] ${typeName} → ${sliceRel} (base: ${baseKey}${transformOnly ? ', transform-only' : ''}${linter ? ', linter' : ''})`);
   for (const name of files.keys()) console.log(`  create  ${sliceRel}/${name}`);
   console.log(`  create  scenes/fixtures/${fixtureName}`);
@@ -514,8 +571,11 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
 
   console.log(`[new-node-slice] done. Next steps:
   1. Implement real parsed properties in ${sliceRel}/ (types, parser, Component)
-  2. pnpm type-check && pnpm --filter @textscene/core test
-  3. pnpm build:linter && pnpm lint:tscn scenes/fixtures/${fixtureName}`);
+  2. pnpm docs:lint-sections — fills the sheet's generated Linting block, and
+     rewrite the lenient-parser prose under it. CI checks both.
+  3. pnpm type-check && pnpm --filter @textscene/core test
+  4. pnpm build:linter && pnpm lint:tscn scenes/fixtures/${fixtureName}
+  5. Uncomment \`image:\` in comparison.md, then pnpm recapture --only ${imageBasename}`);
 }
 
 main();

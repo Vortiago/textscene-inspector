@@ -20,7 +20,7 @@
     "lint:tscn": "node apps/textscene-linter/bin/tscn-lint.js",
     "type-check": "pnpm -r type-check",
     "type-check:all": "pnpm --filter @textscene/core build && pnpm -r type-check",
-    "validate": "pnpm build && pnpm type-check && pnpm lint && pnpm test:unit && pnpm check:bundle-size && pnpm check:package",
+    "validate": "pnpm build && pnpm type-check && pnpm lint && pnpm test:unit && pnpm docs:lint-sections --check && pnpm check:bundle-size && pnpm check:package",
     "check:bundle-size": "node scripts/check-bundle-size.mjs --enforce",
     "check:package": "publint packages/textscene-core",
     "generate:fixtures": "node scripts/generate-fixtures.js",
@@ -41,6 +41,8 @@
     "vsc:publish": "pnpm --filter textscene-inspector publish",
     "prepare": "husky",
     "nodes:catalog": "node scripts/compare-docs/build-node-catalog.mjs",
+    "nodes:links": "node scripts/compare-docs/build-node-catalog.mjs --links-only",
+    "docs:lint-sections": "node scripts/compare-docs/build-lint-sections.mjs",
     "recapture": "node scripts/compare-docs/recapture.mjs"
   },
   "keywords": [
@@ -87,7 +89,7 @@
   },
   "packageManager": "pnpm@9.15.4",
   "engines": {
-    "node": ">=20.0.0",
+    "node": ">=24.0.0",
     "pnpm": ">=9.0.0"
   }
 }

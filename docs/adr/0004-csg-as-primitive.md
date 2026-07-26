@@ -1,4 +1,4 @@
-**Superseded by ADR-0026 (2026-07-25): the booleans are really evaluated now.** The
+**Superseded by ADR-0027 (2026-07-25): the booleans are really evaluated now.** The
 history below is kept because it records WHY the divergence was accepted and what it
 cost, and because its terminal behaviour survives as the degradation fallback when the
 CSG library cannot load.

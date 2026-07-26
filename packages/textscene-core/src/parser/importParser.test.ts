@@ -104,7 +104,7 @@ describe('importRootScale', () => {
   it('is null for a missing sidecar, an absent key, or a non-scene importer', () => {
     expect(importRootScale(null)).toBeNull();
     expect(importRootScale(parseImportFile('[params]\n\nmeshes/generate_lods=true\n'))).toBeNull();
-    // wavefront_obj has no nodes/root_scale; its scale_mesh is out of scope (ADR-0027).
+    // wavefront_obj has no nodes/root_scale; its scale_mesh is out of scope (ADR-0028).
     expect(importRootScale(parseImportFile(OBJ_IMPORT))).toBeNull();
   });
 

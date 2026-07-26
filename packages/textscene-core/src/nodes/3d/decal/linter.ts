@@ -64,6 +64,10 @@ const decalValidationRule: LintRule = {
     name: 'valid-decal-resources',
     description: 'Validates Decal texture references resolve and that a decal projects at least one texture',
     category: 'validation',
+    emits: [
+      { ruleName: 'decal-requires-texture', severity: 'warning' },
+      { ruleName: 'valid-decal-resources', severity: 'error' },
+    ],
     applicableNodeTypes: ['Decal'],
   },
   check: checkDecal,

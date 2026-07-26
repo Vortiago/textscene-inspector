@@ -51,6 +51,7 @@ export function makeNavigationRegionLinterRule(dim: PhysicsDim): LintRule {
       description: `Validates ${type} ${property} reference resolves`,
       category: 'validation',
       applicableNodeTypes: [type],
+      emits: [{ ruleName, severity: 'error' }],
     },
     check,
   };

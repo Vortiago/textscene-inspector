@@ -1,5 +1,5 @@
 /**
- * The GLB processor honours an **Import sidecar**'s root scale (ADR-0027).
+ * The GLB processor honours an **Import sidecar**'s root scale (ADR-0028).
  *
  * The witness is the truck town's tree: a Sketchfab export whose `"tree"` node carries a
  * scale of 100, cancelled upstream by `nodes/root_scale=0.01`. With the sidecar dropped,

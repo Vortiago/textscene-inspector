@@ -31,7 +31,7 @@ The `.import` file Godot writes beside a source asset, recording which importer 
 _Avoid_: "import file" for the asset itself; treating absence as an error.
 
 **Asset re-import**:
-What this previewer does in place of Godot's import pipeline: load the *source* asset (`.gltf`/`.glb`/`.obj`) and re-derive the scene from it, honouring a deliberately small allowlist of **Import sidecar** parameters. Godot never loads the source at runtime — it loads a pre-baked artifact under `.godot/imported/`, which is gitignored, binary and hash-named, so it is not an input a text-scene previewer can have. Decision and allowlist: ADR-0027.
+What this previewer does in place of Godot's import pipeline: load the *source* asset (`.gltf`/`.glb`/`.obj`) and re-derive the scene from it, honouring a deliberately small allowlist of **Import sidecar** parameters. Godot never loads the source at runtime — it loads a pre-baked artifact under `.godot/imported/`, which is gitignored, binary and hash-named, so it is not an input a text-scene previewer can have. Decision and allowlist: ADR-0028.
 _Avoid_: implying we run Godot's importer, or that the source asset is what Godot renders.
 
 **SubResource**:
@@ -157,7 +157,7 @@ A toggleable wireframe rendering of a CollisionShape3D's collision-shape resourc
 _Avoid_: "debug shape".
 
 **CSG root**:
-The `CSGShape3D` whose direct parent is not a `CSGShape3D`; the only node in a CSG subtree that produces a drawn mesh (ADR-0026).
+The `CSGShape3D` whose direct parent is not a `CSGShape3D`; the only node in a CSG subtree that produces a drawn mesh (ADR-0027).
 _Avoid_: "CSG parent"; "combiner" (`CSGCombiner3D` is one kind of root, not the definition).
 
 **Geometry contributor**:
@@ -174,14 +174,14 @@ _Avoid_: "CSG tree" (collides with the scene tree).
 
 **CSG-as-primitive**:
 The named *degraded fallback* when boolean evaluation is unavailable (the CSG library fails to load, or the evaluator throws): each CSG node draws its own base geometry and `operation` is ignored.
-_Avoid_: using it to describe intended behaviour. That was ADR-0004, superseded by ADR-0026.
+_Avoid_: using it to describe intended behaviour. That was ADR-0004, superseded by ADR-0027.
 
 **Transform-only group**:
-A node rendered as an invisible `<group>` that positions its children but draws nothing itself — the render intent for every non-visual type: physics bodies (`StaticBody3D`, `RigidBody3D`, `CharacterBody3D`, `Area3D`), `Skeleton3D`, `Path3D`/`PathFollow3D`, `GPUParticles3D`, the `Node3D`/`Node2D` bases, and the fallback for unsupported types. No simulation, and no geometry of its own that it draws (see ADR-0005, ADR-0008). A **geometry contributor** is the one kind that *has* own geometry: it still draws nothing, because its solid is consumed by its **CSG root** instead (ADR-0026).
+A node rendered as an invisible `<group>` that positions its children but draws nothing itself — the render intent for every non-visual type: physics bodies (`StaticBody3D`, `RigidBody3D`, `CharacterBody3D`, `Area3D`), `Skeleton3D`, `Path3D`/`PathFollow3D`, `GPUParticles3D`, the `Node3D`/`Node2D` bases, and the fallback for unsupported types. No simulation, and no geometry of its own that it draws (see ADR-0005, ADR-0008). A **geometry contributor** is the one kind that *has* own geometry: it still draws nothing, because its solid is consumed by its **CSG root** instead (ADR-0027).
 _Avoid_: "physics body" implying simulation; "transform container" (collides with Godot's Container Controls); "placeholder" (the visible gray-box placeholder was retired in ADR-0008).
 
 **Render intent**:
-Which of the two render outcomes a node type takes — a *visible renderer* (draws geometry/text) or a *transform-only group* (invisible, positions children). "Renders nothing" is an explicit intent, not an unregistered accident; in-viewport text and collision shapes are opt-in toggles (`showLabels`, `showCollisions`) on the viewport-mode seam (ADR-0006, ADR-0008). Two invisible roles are **not** inert: the **AnimationPlayer** draws nothing itself but *drives* sibling objects, a transform-only group that is also an **animation driver** (ADR-0011); and a **geometry contributor** draws nothing itself but supplies its solid to its **CSG root** (ADR-0026). Both are roles layered onto the second outcome, not a third outcome.
+Which of the two render outcomes a node type takes — a *visible renderer* (draws geometry/text) or a *transform-only group* (invisible, positions children). "Renders nothing" is an explicit intent, not an unregistered accident; in-viewport text and collision shapes are opt-in toggles (`showLabels`, `showCollisions`) on the viewport-mode seam (ADR-0006, ADR-0008). Two invisible roles are **not** inert: the **AnimationPlayer** draws nothing itself but *drives* sibling objects, a transform-only group that is also an **animation driver** (ADR-0011); and a **geometry contributor** draws nothing itself but supplies its solid to its **CSG root** (ADR-0027). Both are roles layered onto the second outcome, not a third outcome.
 _Avoid_: "placeholder", "not implemented" — an invisible node may be fully intended; "inert" for AnimationPlayer or a geometry contributor.
 
 **Preview sun**:

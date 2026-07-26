@@ -198,6 +198,15 @@ const animationPlayerValidationRule: LintRule = {
     description: 'Validates AnimationPlayer property values, animation references, and playback configuration',
     category: 'validation',
     applicableNodeTypes: ['AnimationPlayer'],
+    emits: [
+      { ruleName: 'animationplayer-extreme-speed', severity: 'warning' },
+      { ruleName: 'animationplayer-no-animations', severity: 'warning' },
+      { ruleName: 'animationplayer-autoplay-missing', severity: 'warning' },
+      { ruleName: 'animationplayer-current-animation-missing', severity: 'warning' },
+      { ruleName: 'animationplayer-large-blend-time', severity: 'warning' },
+      { ruleName: 'animationplayer-inactive', severity: 'warning' },
+      { ruleName: 'animationplayer-invalid-root-path', severity: 'warning' },
+    ],
   },
   check: checkAnimationPlayer,
 };

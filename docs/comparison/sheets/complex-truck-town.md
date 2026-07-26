@@ -46,7 +46,7 @@ giving `25 × 100 × 0.01 × 0.375 ≈ 9.4 units` — a normal tree beside a hou
 This repo vendored **no `.import` files at all**, so a fresh Godot import regenerated
 the default `root_scale = 1.0` and both engines rendered a **937-unit** tree that dwarfed
 the whole town. Both agreeing looked like parity; it was two renderers fed the same
-incomplete inputs. The previewer now reads the sidecar (ADR-0027) and the 25 scene
+incomplete inputs. The previewer now reads the sidecar (ADR-0028) and the 25 scene
 sidecars are vendored, so both sides render the demo as it actually looks.
 
 ## Divergences

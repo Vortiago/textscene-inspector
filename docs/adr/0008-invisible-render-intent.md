@@ -13,7 +13,7 @@
 > who finds the text cluttered turns it OFF, exactly like the collision gizmo. With the flag off,
 > `Label3D` still renders an invisible marker group (the rest of point 4 holds).
 
-> **Amendment (ADR-0026, real CSG boolean evaluation):** a **geometry contributor** (a CSG node
+> **Amendment (ADR-0027, real CSG boolean evaluation):** a **geometry contributor** (a CSG node
 > inside a CSG root's subtree) draws nothing itself, yet unlike every other transform-only type it
 > *has* geometry of its own: its solid is consumed by its CSG root's boolean result instead of being
 > drawn where it sits. This does **not** add a third outcome. It is a role layered onto the second

@@ -31,7 +31,8 @@ Godot `.tscn` parser/linter/renderer (react-three-fiber over three.js). pnpm mon
 
 Node types: `packages/textscene-core/src/nodes/<category>/<type>/` — `parser.ts` ·
 `linterParser.ts` + `linter.ts` · `propertyFormatter.ts` (optional) · `Component.tsx` ·
-`types.ts` · co-located `*.test.ts(x)` · three entry points:
+`types.ts` · `comparison.md` (the Godot-parity sheet; SHEET-STANDARD.md) ·
+co-located `*.test.ts(x)` · three entry points:
 
 - `index.ts` — parser + formatter → wire into `src/parser/TscnParser.ts`
 - `index.linter.ts` — validators/rules, imports `.ts` only, never `Component.tsx` →

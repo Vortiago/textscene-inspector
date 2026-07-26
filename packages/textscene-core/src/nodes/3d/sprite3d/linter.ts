@@ -117,6 +117,13 @@ const sprite3DValidationRule: LintRule = {
     description: 'Validates Sprite3D texture resources, frame ranges, and region configuration',
     category: 'validation',
     applicableNodeTypes: ['Sprite3D'],
+    emits: [
+      { ruleName: 'sprite3d-requires-texture', severity: 'error' },
+      { ruleName: 'valid-sprite3d-resources', severity: 'error' },
+      { ruleName: 'sprite3d-frame-range', severity: 'warning' },
+      { ruleName: 'sprite3d-region-configuration', severity: 'warning' },
+      { ruleName: 'sprite3d-axis-usage', severity: 'warning' },
+    ],
   },
   check: checkSprite3D,
 };

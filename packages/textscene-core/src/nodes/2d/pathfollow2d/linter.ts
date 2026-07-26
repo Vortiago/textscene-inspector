@@ -82,6 +82,13 @@ const pathFollow2DValidationRule: LintRule = {
     description: 'Validates PathFollow2D parent relationship and progress values',
     category: 'validation',
     applicableNodeTypes: ['PathFollow2D'],
+    emits: [
+      { ruleName: 'pathfollow2d-no-parent', severity: 'error' },
+      { ruleName: 'pathfollow2d-invalid-parent', severity: 'error' },
+      { ruleName: 'pathfollow2d-negative-progress', severity: 'warning' },
+      { ruleName: 'pathfollow2d-progress-ratio-out-of-range', severity: 'warning' },
+      { ruleName: 'pathfollow2d-both-progress-properties', severity: 'warning' },
+    ],
   },
   check: checkPathFollow2D,
 };

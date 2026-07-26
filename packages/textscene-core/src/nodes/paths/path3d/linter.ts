@@ -175,6 +175,12 @@ const path3DValidationRule: LintRule = {
     description: 'Validates Path3D curve resource references and checks for PathFollow3D children',
     category: 'validation',
     applicableNodeTypes: ['Path3D'],
+    emits: [
+      { ruleName: 'path3d-requires-curve', severity: 'error' },
+      { ruleName: 'valid-path3d-resources', severity: 'error' },
+      { ruleName: 'path3d-unused', severity: 'warning' },
+      { ruleName: 'curve3d-loadable', severity: 'error' },
+    ],
   },
   check: checkPath3D,
 };

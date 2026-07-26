@@ -82,6 +82,14 @@ const spotLight3DValidationRule: LintRule = {
     description: 'Validates SpotLight3D property values, required properties, and performance considerations',
     category: 'validation',
     applicableNodeTypes: ['SpotLight3D'],
+    emits: [
+      { ruleName: 'spotlight3d-extreme-energy', severity: 'warning' },
+      { ruleName: 'spotlight3d-large-range', severity: 'warning' },
+      { ruleName: 'spotlight3d-small-range', severity: 'warning' },
+      { ruleName: 'spotlight3d-extreme-attenuation', severity: 'warning' },
+      { ruleName: 'spotlight3d-extreme-angle-attenuation', severity: 'warning' },
+      { ruleName: 'spotlight3d-small-angle', severity: 'warning' },
+    ],
   },
   check: checkSpotLight3D,
 };

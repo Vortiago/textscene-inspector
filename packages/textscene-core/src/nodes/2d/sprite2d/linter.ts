@@ -135,6 +135,13 @@ const sprite2DValidationRule: LintRule = {
     description: 'Validates Sprite2D texture resources, frame ranges, and region configuration',
     category: 'validation',
     applicableNodeTypes: ['Sprite2D'],
+    emits: [
+      { ruleName: 'sprite2d-requires-texture', severity: 'error' },
+      { ruleName: 'valid-sprite2d-resources', severity: 'error' },
+      { ruleName: 'sprite2d-frame-range', severity: 'warning' },
+      { ruleName: 'sprite2d-frame-coords-range', severity: 'warning' },
+      { ruleName: 'sprite2d-region-configuration', severity: 'warning' },
+    ],
   },
   check: checkSprite2D,
 };

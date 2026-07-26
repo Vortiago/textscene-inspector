@@ -23,11 +23,9 @@ import {
   readSync,
   closeSync,
   readFileSync,
-  readdirSync,
   writeFileSync,
 } from 'node:fs';
-import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 import { SWIFTSHADER_GL_ARGS } from '../showcase/browser.mjs';
 import { renderReference } from '../godot-ref/run.mjs';
 import {
@@ -43,11 +41,14 @@ import {
   waitForServer,
   CANVAS_2D_CAPTURE,
 } from '../visual/previewServer.mjs';
-
-const here = dirname(fileURLToPath(import.meta.url));
-const REPO_ROOT = join(here, '../..');
-const SHEETS = join(REPO_ROOT, 'docs/comparison/sheets');
-const IMAGES = join(REPO_ROOT, 'docs/comparison/images');
+import {
+  IMAGES_DIR as IMAGES,
+  REPO_ROOT,
+  collectSheetFiles,
+  findScene,
+  parseCompareMarkers,
+  parseFrontmatter,
+} from './sheetSources.mjs';
 const PORT = Number(process.env.COMPARE_PORT) || 4321;
 
 function parseArgs(argv) {
@@ -63,20 +64,15 @@ function parseArgs(argv) {
 /** Every (image, fixture, camera) the sheets reference — legacy pair + sections. */
 function collectTargets() {
   const byImage = new Map();
-  for (const file of readdirSync(SHEETS).filter((f) => f.endsWith('.md'))) {
-    const text = readFileSync(join(SHEETS, file), 'utf8');
-    const fm = /^---\n([\s\S]*?)\n---\n([\s\S]*)$/.exec(text);
-    if (!fm) continue;
-    const meta = {};
-    for (const line of fm[1].split('\n')) {
-      const kv = /^(\w+):\s*(.*)$/.exec(line.trim());
-      if (kv) meta[kv[1]] = kv[2].replace(/\s*#.*$/, '').trim();
-    }
+  for (const file of collectSheetFiles()) {
+    const text = readFileSync(file, 'utf8');
+    const parsed = parseFrontmatter(text);
+    if (!parsed) continue;
+    const { meta } = parsed;
     const camera = meta.camera || '';
-    const markers = [...fm[2].matchAll(/<!--\s*compare:\s*(.*?)\s*-->/g)];
+    const markers = parseCompareMarkers(parsed.body);
     if (markers.length) {
-      for (const m of markers) {
-        const attrs = Object.fromEntries(m[1].split(/\s+/).map((kv) => kv.split('=')));
+      for (const attrs of markers) {
         if (attrs.image && attrs.fixture) byImage.set(attrs.image, { fixture: attrs.fixture, camera });
       }
     } else if (meta.visual !== 'false' && meta.image && meta.fixture) {
@@ -87,33 +83,9 @@ function collectTargets() {
   return [...byImage.entries()].map(([image, t]) => ({ image, ...t })).sort((a, b) => a.image.localeCompare(b.image));
 }
 
-// Lazy index of every .tscn under scenes/ by basename, so a bare fixture name
-// that is NOT in scenes/fixtures/ (a vendored corpus scene like dungeon.tscn)
-// still resolves to its real Godot path.
-let sceneIndex = null;
-function sceneByBasename(basename) {
-  if (!sceneIndex) {
-    sceneIndex = new Map();
-    const walk = (dir) => {
-      for (const e of readdirSync(dir, { withFileTypes: true })) {
-        const p = join(dir, e.name);
-        if (e.isDirectory()) walk(p);
-        else if (e.name.endsWith('.tscn') && !sceneIndex.has(e.name)) sceneIndex.set(e.name, p);
-      }
-    };
-    walk(join(REPO_ROOT, 'scenes'));
-  }
-  return sceneIndex.get(basename);
-}
-
 // The Godot-side scene path for a sheet's `fixture` value (which is the ours-side
-// `?fixture=` id). A path (demos/…) is under scenes/; a bare name is a fixture
-// unless it is a corpus scene found elsewhere in the tree.
-function godotScenePath(fixture) {
-  if (fixture.includes('/')) return join(REPO_ROOT, 'scenes', fixture);
-  const inFixtures = join(REPO_ROOT, 'scenes/fixtures', fixture);
-  return existsSync(inFixtures) ? inFixtures : sceneByBasename(fixture) ?? inFixtures;
-}
+// `?fixture=` id). Shared with the sheets test so both agree on what resolves.
+const godotScenePath = (fixture) => findScene(fixture) ?? join(REPO_ROOT, 'scenes/fixtures', fixture);
 const imgPath = (image, side) => join(IMAGES, `${image}-${side}.png`);
 
 function modeOfExistingGodot(image) {

@@ -1,5 +1,5 @@
 /**
- * Apply an **Import sidecar**'s root scale to a freshly loaded source asset (ADR-0027).
+ * Apply an **Import sidecar**'s root scale to a freshly loaded source asset (ADR-0028).
  *
  * Godot's importer bakes this before a game ever sees the scene; we re-derive it at load
  * time, so this runs once per asset inside the resource processor rather than per

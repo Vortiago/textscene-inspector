@@ -11,7 +11,7 @@ import { parseOptionalInt } from '../../../parser/valueParsers';
  * Copy `material` and `operation` onto a CSG parse result.
  *
  * A non-union `operation` used to warn here, because it was parsed and then dropped. It
- * is applied now (ADR-0026), so the warn would fire on every correctly rendered
+ * is applied now (ADR-0027), so the warn would fire on every correctly rendered
  * subtraction, burying real problems in a scene that uses booleans at all.
  *
  */

@@ -7,7 +7,12 @@ and committed under `docs/comparison/images/`. A sheet NEVER creates or edits an
 image — it only references the two the script already made, by fixed path. Re-running
 the capture script refreshes every screenshot without touching a single sheet.
 
-A sheet is a **Markdown file** at `docs/comparison/sheets/<slug>.md`. A separate
+A sheet is slice content: it documents the very `parser.ts` / `linterParser.ts`
+beside it, so it lives **in the slice** as
+`packages/textscene-core/src/nodes/<category>/<type>/comparison.md` (resources:
+`src/resources/<...>/comparison.md`). The only exceptions are the `complex-*`
+whole-scene showcases, which belong to no slice and stay at
+`docs/comparison/sheets/<slug>.md`. A separate
 generator (`scripts/compare-docs/build-gallery.mjs`) turns the whole folder plus the
 images into one browsable HTML gallery — for previewing as an artifact and for the
 website. So author plain, strict Markdown; styling is not your concern.
@@ -42,14 +47,25 @@ consequence. Read the fixture; never invent a property.
 
 ## Divergences
 
-What differs between the two images, each with a cause, stated in full here — the
-sheet is the home for the limitation, so never point at a separate file.
+What differs between the two images, each with a cause. Report YOUR measured
+pixels here; if the cause is one of the shared ones catalogued in
+`docs/comparison/README.md`, name your numbers and point there rather than
+restating the explanation.
 
 If the two agree, write exactly one line:
 
     None visible in this fixture.
 
 Never pad this section. An invented divergence is worse than an empty one.
+
+## Linting
+
+<!-- lint:begin OmniLight3D -->
+Generated. Do not edit inside these markers.
+<!-- lint:end -->
+
+Below the marker, by hand: what the LENIENT parser does where strict rejects.
+Name the property and the concrete fallback value.
 ```
 
 ## Sectioned sheets — one sheet, many per-property comparisons
@@ -86,6 +102,31 @@ What the fixture sets and what the two images show; fold any limitation in here.
   `fixture=` (optional — the live `?fixture=` deep link).
 - A sectioned sheet needs NO top-level `image:` frontmatter; each section supplies
   its own. Legacy single-pair sheets (one `image:`, no markers) still work unchanged.
+
+## Sections beyond the four
+
+`## Known limitations` is an accepted optional fifth section, used by sheets whose
+constraint is structural rather than visible in the capture. Put it last.
+
+## What the generator supplies — never hand-write these
+
+- **The Godot docs and source links** in the sheet header. Both are generated from
+  `node-catalog.json` (`pnpm nodes:catalog`), and the source URL is verified
+  against the engine's `GDCLASS` macro before it ships.
+- **The `## Linting` block** between `<!-- lint:begin … -->` and
+  `<!-- lint:end -->`, from the live linter registries (`pnpm docs:lint-sections`,
+  checked in CI). Editing inside the markers is destroyed on the next run and
+  fails the check. The hand-written lenient-parser prose goes BELOW `lint:end`.
+- **ADR links.** Write `ADR-0025` as plain text; the generator links it. A relative
+  path is wrong from a slice, wrong in the gallery, and broken on the deployed site.
+- **Shared causes.** A divergence explained in `docs/comparison/README.md` (2D
+  tonemapping, RemoteTransform relay limits) is written there once. Report your own
+  measured pixels and point at it.
+
+Two sheet kinds carry no `## Linting` block, and the sheets test asserts they have
+no markers: the `complex-*` whole-scene showcases (no single node type), and the
+`category: Resources` sheets (resources are validated through `resourceChecker`,
+not the per-node registries the generator reads, so a generated block would lie).
 
 ## Status — never claim more than you have verified
 

@@ -72,6 +72,11 @@ const path2DValidationRule: LintRule = {
     description: 'Validates Path2D curve resource references and checks for PathFollow2D children',
     category: 'validation',
     applicableNodeTypes: ['Path2D'],
+    emits: [
+      { ruleName: 'path2d-missing-curve', severity: 'warning' },
+      { ruleName: 'valid-path2d-resources', severity: 'error' },
+      { ruleName: 'path2d-unused', severity: 'warning' },
+    ],
   },
   check: checkPath2D,
 };

@@ -5,7 +5,7 @@
  * A sidecar is NOT a `.tres`: it has no `[gd_resource]` header, so `parseTresFile`
  * rejects it. It is a plain INI of `[section]` blocks and `key=value` lines, and only
  * `[params]` describes the import — `[remap]` and `[deps]` address the baked artifact
- * under `.godot/imported/`, which this previewer never reads (ADR-0027).
+ * under `.godot/imported/`, which this previewer never reads (ADR-0028).
  *
  * Values stay raw strings. `importRootScale` is the only typed reader, because
  * `nodes/root_scale` and `nodes/apply_root_scale` are the only parameters we honour;

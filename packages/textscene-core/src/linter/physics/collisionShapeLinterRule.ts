@@ -108,6 +108,14 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
       description,
       category: 'validation',
       applicableNodeTypes: [type],
+      emits: [
+        { ruleName: `${prefix}-requires-shape`, severity: 'error' },
+        { ruleName: `valid-${prefix}-resources`, severity: 'error' },
+        { ruleName: `${prefix}-invalid-parent`, severity: 'warning' },
+        { ruleName: `${prefix}-no-parent`, severity: 'warning' },
+        // 2D-only branch (dim === '2D'); never emitted by the 3D instantiation
+        ...(dim === '2D' ? [{ ruleName: `${prefix}-unused-one-way-margin`, severity: 'warning' as const }] : []),
+      ],
     },
     check,
   };

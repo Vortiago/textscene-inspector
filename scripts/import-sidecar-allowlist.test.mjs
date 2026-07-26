@@ -1,5 +1,5 @@
 /**
- * Guards the `.import` parameter allowlist against the corpus (ADR-0027).
+ * Guards the `.import` parameter allowlist against the corpus (ADR-0028).
  *
  * The previewer performs an **asset re-import**: it loads the source `.gltf`/`.glb`/
  * `.obj` and re-derives the scene, honouring `nodes/root_scale` and
@@ -84,7 +84,7 @@ const INERT = new Set([
  * corpus-wide default is asserted, so a scene that starts relying on one fails here
  * instead of rendering wrong. `scale_mesh`/`offset_mesh` are the wavefront_obj
  * equivalents of the root scale we DO honour for scenes — deliberately out of scope
- * while every OBJ in the corpus is identity (ADR-0027).
+ * while every OBJ in the corpus is identity (ADR-0028).
  */
 const MUST_BE_DEFAULT = new Map([
   ['nodes/root_type', ''],
@@ -101,7 +101,7 @@ const MUST_BE_DEFAULT = new Map([
  * vendored sidecar with overrides fails rather than joining the list silently.
  *
  * Two of these are real, unhandled divergences. They are narrow, pre-existing, and out
- * of scope for ADR-0027 (which is about root scale), but they are now WRITTEN DOWN
+ * of scope for ADR-0028 (which is about root scale), but they are now WRITTEN DOWN
  * rather than undiscovered — which is the whole point of the guard.
  */
 const KNOWN_SUBRESOURCE_OVERRIDES = {
@@ -160,7 +160,7 @@ const rel = (file) => relative(REPO_ROOT, file).split(sep).join('/');
 
 const sidecars = walk(SCENES);
 
-describe('.import sidecar allowlist (ADR-0027)', () => {
+describe('.import sidecar allowlist (ADR-0028)', () => {
   it('finds the vendored sidecars', () => {
     // A guard over an empty set proves nothing; fail loudly if they vanish.
     expect(sidecars.length).toBeGreaterThan(0);

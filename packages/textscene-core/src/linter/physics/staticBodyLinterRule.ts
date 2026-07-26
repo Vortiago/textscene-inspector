@@ -116,6 +116,13 @@ export function makeStaticBodyLinterRule(dim: PhysicsDim): LintRule {
       description: `Validates ${type} resource references, collision shapes, and physics configuration`,
       category: 'validation',
       applicableNodeTypes: [type],
+      emits: [
+        { ruleName: `valid-${prefix}-resources`, severity: 'error' },
+        { ruleName: `${prefix}-needs-collision-shape`, severity: 'warning' },
+        { ruleName: `${prefix}-constant-velocity-warning`, severity: 'warning' },
+        { ruleName: `${prefix}-zero-collision-layer`, severity: 'warning' },
+        { ruleName: `${prefix}-zero-collision-mask`, severity: 'warning' },
+      ],
     },
     check,
   };
