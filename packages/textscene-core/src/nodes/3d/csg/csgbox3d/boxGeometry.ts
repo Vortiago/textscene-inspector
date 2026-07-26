@@ -1,8 +1,8 @@
 /**
  * CSGBox3D geometry, built the way Godot builds it.
  *
- * three's `BoxGeometry` renders identically here (measured at 0.011% against real Godot),
- * so this is not a bug fix. It exists so all seven CSG types produce their solid through
+ * three's `BoxGeometry` renders identically here, so this is not a bug fix. It exists so
+ * all seven CSG types produce their solid through
  * one path: the boolean evaluator asks a registered builder for triangles, and a slice
  * that answered with a three primitive instead would be the one with different UVs and
  * different normal generation feeding into the same merge.

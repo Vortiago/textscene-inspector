@@ -10,8 +10,7 @@
  * Values stay raw strings. `importRootScale` is the only typed reader, because
  * `nodes/root_scale` and `nodes/apply_root_scale` are the only parameters we honour;
  * everything else is either something three's GLTFLoader already does or a bake concern
- * with no visual consequence. `scripts/import-allowlist.test.mjs` guards that boundary
- * against the corpus rather than leaving it to prose.
+ * with no visual consequence in a preview.
  */
 
 /** A `key=value` line, tolerating surrounding whitespace and a trailing comment-free tail. */
@@ -73,9 +72,9 @@ function unquote(value: string): string {
  *
  * `bake` is Godot's `nodes/apply_root_scale`, and it is not cosmetic. When true Godot
  * applies the scale to the MESHES and leaves the root node at scale 1, so nodes a
- * `.tscn` parents to the instanced root are NOT scaled — the truck town's tree relies on
- * exactly that, its CollisionShape3D child being authored against the final size. When
- * false the scale multiplies the root node instead, and does carry to such children.
+ * `.tscn` parents to the instanced root are NOT scaled, since those are authored against
+ * the final size. When false the scale multiplies the root node instead, and does carry
+ * to such children.
  */
 export function importRootScale(
   parsed: ParsedImportFile | null
@@ -87,8 +86,8 @@ export function importRootScale(
   // A zero or negative scale would collapse or mirror the asset; Godot's editor cannot
   // produce one, so treat it as corrupt and fall back to defaults rather than render it.
   if (!Number.isFinite(scale) || scale <= 0) return null;
-  // An identity scale is the overwhelmingly common case (24 of 25 vendored sidecars) and
-  // means there is nothing to do — returning null keeps the caller's hot path untouched.
+  // An identity scale is the overwhelmingly common case and means there is nothing to
+  // do — returning null keeps the caller's hot path untouched.
   if (scale === 1) return null;
 
   return { scale, bake: parsed!.params['nodes/apply_root_scale'] !== 'false' };

@@ -6,8 +6,8 @@
  * Godot's ring lies in XZ with the hole on +Y while three's lies in XY with the hole on
  * +Z; Godot's `sides` counts segments around the RING while three's `radialSegments`
  * counts them around the TUBE, so the two parameters swap; and the collapsed-vertex
- * normal problem that put the CSGCylinder3D cone 0.788% out applies to any three primitive
- * whose normals are analytic rather than accumulated by position.
+ * normal problem applies to any three primitive whose normals are analytic rather than
+ * accumulated by position.
  *
  * ---------------------------------------------------------------------------
  * Derived from Godot Engine (`modules/csg/csg_shape.cpp`, `CSGTorus3D::_build_brush`),

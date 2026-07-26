@@ -13,11 +13,10 @@ import type * as THREE from 'three';
  * `bake` mirrors Godot's `nodes/apply_root_scale`, and the difference is observable.
  *
  * TRUE applies the scale to the asset's own content and leaves the root node at 1, so
- * anything a `.tscn` later parents to the instanced root is NOT scaled. The truck town's
- * tree is exactly this case: `scene.gltf.import` bakes 0.01, and the scene parents a
- * `StaticBody3D/CollisionShape3D` to the tree whose capsule is authored against the
- * final ~9-unit tree. Setting `root.scale` instead would drag that collision shape down
- * with it by 100x.
+ * anything a `.tscn` later parents to the instanced root is NOT scaled. That matters
+ * whenever a scene hangs its own nodes off an instanced asset — a collision shape, say —
+ * since those are authored against the asset's final size. Setting `root.scale` instead
+ * would drag them along with it.
  *
  * FALSE multiplies the root node's scale, which does carry to those later children —
  * which is equally what Godot does in that mode.
@@ -39,11 +38,8 @@ export function applyRootScale(
   // well as sizes, so a multi-part asset shrinks as one piece instead of flying apart.
   //
   // Known limit: Godot also scales ANIMATION position tracks when it bakes, and this
-  // does not. An asset with both a non-identity root scale and animated positions would
-  // play its animation at the unscaled amplitude. No corpus asset has both — the tree is
-  // the only non-identity scale and it is static — so this is recorded rather than
-  // solved, and `scripts/import-sidecar-allowlist.test.mjs` is what would surface a
-  // second such asset arriving.
+  // does not, so an asset with both a non-identity root scale and animated positions
+  // would play its animation at the unscaled amplitude.
   for (const child of root.children) {
     child.position.multiplyScalar(scale);
     child.scale.multiplyScalar(scale);

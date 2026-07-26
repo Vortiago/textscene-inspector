@@ -97,11 +97,11 @@ function checkPath3D(context: RuleContext): Diagnostic[] {
  * This is worth a rule because it is invisible to everything else we have: our lenient
  * parser reads such a curve happily, the strict parser sees well-formed TSCN, and the
  * scene renders here while rendering EMPTY in Godot. That exact mistake was made while
- * authoring `unit-csg-polygon-path.tscn` and only surfaced from a pixel comparison
+ * authoring a swept-path scene and only surfaced from a pixel comparison
  * against a real Godot render.
  *
  * Errors rather than warnings: Godot refuses to load the resource, so this is not an
- * advisory style question. No Curve3D in the vendored corpus is missing either key.
+ * advisory style question.
  */
 function checkCurve3DData(context: RuleContext, curveRef: string): Diagnostic[] {
   const { node, scene } = context;

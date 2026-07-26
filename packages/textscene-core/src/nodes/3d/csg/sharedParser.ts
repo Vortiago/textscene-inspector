@@ -12,7 +12,7 @@ import { parseOptionalInt } from '../../../parser/valueParsers';
  *
  * A non-union `operation` used to warn here, because it was parsed and then dropped. It
  * is applied now (ADR-0026), so the warn would fire on every correctly rendered
- * subtraction: 33 times on scenes/demos/3d/csg/csg.tscn alone, burying real problems.
+ * subtraction, burying real problems in a scene that uses booleans at all.
  *
  */
 export function finishCsgParse(

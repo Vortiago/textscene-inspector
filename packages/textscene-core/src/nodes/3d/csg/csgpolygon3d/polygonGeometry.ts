@@ -8,8 +8,8 @@
  *
  * `polygonRings` from the Polygon2D slice is NOT reusable here: it works in Godot's
  * +Y-down pixel space and carries hole/invert machinery CSGPolygon3D has no concept of.
- * `fanTriangulate` is not usable either, being convex-only, while the corpus outlines
- * (the Staircase, the 45-vertex Road profile) are concave.
+ * `fanTriangulate` is not usable either, being convex-only, while a swept profile is
+ * routinely concave.
  *
  * ---------------------------------------------------------------------------
  * Derived from Godot Engine (`modules/csg/csg_shape.cpp`, `CSGPolygon3D::_build_brush`),
@@ -99,9 +99,9 @@ export interface CsgPolygonSpec {
 }
 
 /**
- * A previewer must not hang a tab. Godot has no such cap, but `racetrack_csg.tscn` at
- * `path_interval = 0.5` over its full curve already asks for well over a thousand frames,
- * so a runaway interval is a real shape rather than a hypothetical one.
+ * A previewer must not hang a tab. Godot has no such cap, but a long curve at a small
+ * `path_interval` runs to thousands of frames, so a runaway interval is a real shape
+ * rather than a hypothetical one.
  */
 const MAX_PATH_EXTRUSIONS = 4096;
 
@@ -129,10 +129,10 @@ function toPoints(flat: Float32Array): THREE.Vector2[] {
   return out;
 }
 
-/** `Transform3D().looking_at(dir, up)`, which is three's `lookAt` with the same convention. */
 /** Godot passes `Vector3(0, 1, 0)` as the up vector for every PATH frame. */
 const PATH_UP = new THREE.Vector3(0, 1, 0);
 
+/** `Transform3D().looking_at(dir, up)`, which is three's `lookAt` with the same convention. */
 function facingMatrix(dir: THREE.Vector3, up: THREE.Vector3): THREE.Matrix4 {
   const m = new THREE.Matrix4();
   // A zero or up-parallel direction makes the basis degenerate in Godot too; identity is

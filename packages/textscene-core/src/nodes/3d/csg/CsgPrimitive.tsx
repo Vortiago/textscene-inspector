@@ -43,10 +43,10 @@ const EMPTY_HIDDEN: ReadonlySet<string> = new Set();
 /**
  * Marks the invisible bounds proxy.
  *
- * `frameSceneBounds` deliberately does NOT skip these. Excluding them was tried and
- * measured 26% off: the CSG library loads asynchronously while `CameraFit`'s last retry
- * is at 1100 ms, and a combiner root has no solid of its own, so the auto-frame fitted an
- * empty scene. Including a proxy can only frame too large, never too small.
+ * `frameSceneBounds` deliberately does NOT skip these. The CSG library loads
+ * asynchronously and a combiner root has no solid of its own, so excluding proxies let
+ * the auto-frame fit an empty scene. Including one can only frame too large, never too
+ * small.
  */
 export const CSG_BOUNDS_PROXY = { tscnBoundsProxy: true } as const;
 
@@ -92,8 +92,8 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
     return sub ? parseStandardMaterial3DScalars(sub.data as Record<string, string>) : null;
   }, [properties.material, internalResources]);
 
-  // A CSG `material` is as often an ExtResource `.tres` as an inline sub-resource (33 of
-  // them in scenes/demos/3d/csg/csg.tscn alone); those load through the material pipeline.
+  // A CSG `material` is as often an ExtResource `.tres` as an inline sub-resource; those
+  // load through the material pipeline.
   const externalMaterialPath = useMemo(
     () => (scalars ? null : resolveExtResourcePath(properties.material, externalResources)),
     [scalars, properties.material, externalResources]

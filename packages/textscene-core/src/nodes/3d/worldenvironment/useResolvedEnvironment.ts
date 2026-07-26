@@ -2,12 +2,11 @@
  * Resolve `WorldEnvironment.environment` → `Environment.sky` → `Sky.sky_material`,
  * accepting either form at every level.
  *
- * Godot treats `SubResource("id")` and `ExtResource("id")` identically here; this used
- * to follow only the inline form, so a scene keeping any of the three in a standalone
- * `.tres` silently got no environment or no sky. `scenes/demos/3d/truck_town` is the
- * witness at the deepest level, and losing its sky cost more than a backdrop: the
- * Environment draws half its ambient from the sky, so every surface the sun did not
- * reach went black.
+ * Godot treats `SubResource("id")` and `ExtResource("id")` identically here; following
+ * only the inline form means a scene keeping any of the three in a standalone `.tres`
+ * silently gets no environment or no sky. Losing the sky costs more than a backdrop: an
+ * Environment can draw its ambient from the sky, so surfaces the sun does not reach go
+ * black.
  *
  * A hook rather than a pure function because the external form loads through the
  * resource pipeline. `useSubOrExtResource` returns the inline case synchronously on the

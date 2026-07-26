@@ -13,8 +13,7 @@
  * Keying on position rather than on vertex index is the load-bearing part, and it is where
  * three.js diverges. `THREE.CylinderGeometry(0, 0.4, 1, 8)` gives the collapsed cone apex
  * nine distinct vertices with nine radial normals; Godot collapses all nine into one
- * straight-up normal. Measured against real Godot 4.6.3, that difference alone put
- * `unit-csg-cylinder.tscn` 0.788% away, 7.9x the visual gate.
+ * straight-up normal. On a cone that difference alone is plainly visible as shading.
  *
  * The accumulation is an UNWEIGHTED sum of unit normals, so a large face and a small one
  * meeting at a vertex pull on it equally. That is deliberate on Godot's side and is not
@@ -148,9 +147,8 @@ export function applyCsgNormals(soup: CsgFaceSoup): THREE.BufferGeometry {
   // On top of that, Godot's front faces are wound CLOCKWISE while three.js treats
   // COUNTER-CLOCKWISE as front and culls the other side. Emitting Godot's order
   // verbatim therefore back-face-culls every triangle, which renders each solid as its
-  // own interior: measured, that took unit-csg-cylinder from 0.788% to 4.223% against
-  // real Godot. The normals are unaffected (we supply them explicitly, and they came
-  // out correct throughout), so this is purely a winding conversion.
+  // own interior. The normals are unaffected — we supply them explicitly — so this is
+  // purely a winding conversion.
   const order = flipped ? [0, 1, 2] : [0, 2, 1];
 
   for (let t = 0; t < triangles; t++) {

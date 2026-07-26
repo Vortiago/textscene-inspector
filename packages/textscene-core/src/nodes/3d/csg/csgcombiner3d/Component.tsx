@@ -13,8 +13,8 @@
  *
  * Registering the type also fixes something visible without any booleans: an unregistered
  * CSGCombiner3D falls through to GenericNodeFallback, which applies no `visible`, so a
- * HIDDEN combiner's children keep drawing. `ragdoll_physics.tscn:92` hides its combiner
- * precisely because the same geometry is already baked into sibling nodes.
+ * HIDDEN combiner's children keep drawing — and hiding a combiner whose geometry is
+ * already baked into sibling nodes is a real authoring pattern.
  */
 
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';

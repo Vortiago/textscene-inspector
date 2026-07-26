@@ -2,8 +2,7 @@
  * CSGPolygon3D `path_node` resolution pass (Godot MODE_PATH).
  *
  * A CSGPolygon3D in PATH mode sweeps its outline along a curve that belongs to a
- * DIFFERENT node. In the corpus that node is a sibling (`NodePath("../Path3D")` in
- * `csg.tscn`'s Road) or a child (`NodePath("Path3D")` in `racetrack_csg.tscn`), and a
+ * DIFFERENT node. That node is reached by a relative NodePath — a sibling or a child — and a
  * render component can reach neither.
  *
  * So this runs once over the parsed tree, right after `applyRemoteTransforms` and before
@@ -95,7 +94,7 @@ export function resolveCsgPolygonPaths(
     // Path3D's GLOBAL transform as the base. That combination is a Godot quirk worth
     // knowing about rather than fixing: the brush is built in the path's global frame but
     // consumed as the polygon's local geometry, so a non-local sweep lands
-    // doubly-transformed. Both corpus witnesses set path_local = true, which is why
+    // doubly-transformed. Scenes in practice set path_local = true, which is why
     // nobody trips over it.
     const baseTransform = props.pathLocal
       ? null

@@ -3,9 +3,8 @@
  *
  * three's `CylinderGeometry` is close but not the same shape: it starts the ring on +Z
  * where Godot starts on +X, and it gives a cone's collapsed apex one radial normal per
- * segment where Godot averages them into one. The second difference is visible. Measured
- * against real Godot 4.6.3, it put `unit-csg-cylinder.tscn` 0.788% out, 7.9x the visual
- * gate, on the cone alone.
+ * segment where Godot averages them into one. The second difference is plainly visible on
+ * a cone.
  *
  * So the faces come from Godot's own construction and the normals from
  * `applyCsgNormals`, which is the single normal rule every CSG builder here shares.

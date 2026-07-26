@@ -15,8 +15,7 @@ import type { CsgEvaluation } from './evaluateCsgPlan';
 
 /**
  * Small on purpose. Entries are whole evaluated meshes, and a scene has a handful of CSG
- * roots, not hundreds: `scenes/demos/3d/csg/csg.tscn` is the largest in the corpus at
- * eight independent roots.
+ * roots, not hundreds.
  */
 const MAX_ENTRIES = 16;
 

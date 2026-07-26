@@ -6,8 +6,7 @@
  * to X and cos to Z (not the other way round) so UVs run counter-clockwise on +X, and it
  * emits a single triangle per quad at each pole instead of a degenerate quad. Its poles
  * are collapsed vertices, which is exactly where three's per-segment normals and Godot's
- * position-keyed averaging diverge, the same class of bug that put the CSGCylinder3D cone
- * 0.788% out.
+ * position-keyed averaging diverge.
  *
  * ---------------------------------------------------------------------------
  * Derived from Godot Engine (`modules/csg/csg_shape.cpp`, `CSGSphere3D::_build_brush`),

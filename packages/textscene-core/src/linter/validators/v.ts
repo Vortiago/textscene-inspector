@@ -324,7 +324,7 @@ export const v = {
    * the grammar parsed fine and the content is wrong.
    *
    * Godot serialises an empty array as `PackedVector2Array()`, so zero values is legal.
-   * The corpus writes signed, scientific (`4.37114e-08`) and whitespace-padded numbers.
+   * Godot writes signed, scientific (`4.37114e-08`) and whitespace-padded numbers.
    *
    * Implemented standalone rather than reusing `parsePackedVector2Array` from the
    * resources layer: that helper throws on bad input instead of returning a ParseError,
