@@ -126,6 +126,15 @@ const animatedSprite2DValidationRule: LintRule = {
     description: 'Validates AnimatedSprite2D sprite_frames resources, animation properties, and playback settings',
     category: 'validation',
     applicableNodeTypes: ['AnimatedSprite2D'],
+    emits: [
+      { ruleName: 'animatedsprite2d-requires-spriteframes', severity: 'error' },
+      { ruleName: 'valid-animatedsprite2d-resources', severity: 'error' },
+      { ruleName: 'animatedsprite2d-autoplay-no-spriteframes', severity: 'warning' },
+      { ruleName: 'animatedsprite2d-animation-no-spriteframes', severity: 'warning' },
+      { ruleName: 'animatedsprite2d-speed-scale-zero', severity: 'warning' },
+      { ruleName: 'animatedsprite2d-frame-progress-range', severity: 'warning' },
+      { ruleName: 'animatedsprite2d-playing-deprecated', severity: 'warning' },
+    ],
   },
   check: checkAnimatedSprite2D,
 };

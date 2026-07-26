@@ -56,6 +56,12 @@ const omniLight3DValidationRule: LintRule = {
     description: 'Validates OmniLight3D property values, required properties, and performance considerations',
     category: 'validation',
     applicableNodeTypes: ['OmniLight3D'],
+    emits: [
+      { ruleName: 'omnilight3d-extreme-energy', severity: 'warning' },
+      { ruleName: 'omnilight3d-large-range', severity: 'warning' },
+      { ruleName: 'omnilight3d-small-range', severity: 'warning' },
+      { ruleName: 'omnilight3d-extreme-attenuation', severity: 'warning' },
+    ],
   },
   check: checkOmniLight3D,
 };

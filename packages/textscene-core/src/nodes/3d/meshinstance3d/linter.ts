@@ -187,6 +187,12 @@ const meshInstance3DValidationRule: LintRule = {
     description: 'Validates MeshInstance3D resource references, skeleton paths, and visibility ranges',
     category: 'validation',
     applicableNodeTypes: ['MeshInstance3D'],
+    emits: [
+      { ruleName: 'valid-meshinstance3d-resources', severity: 'error' },
+      { ruleName: 'valid-meshinstance3d-surface-index', severity: 'warning' },
+      { ruleName: 'valid-meshinstance3d-visibility-range', severity: 'error' },
+      { ruleName: 'valid-meshinstance3d-skeleton', severity: 'error' },
+    ],
   },
   check: checkMeshInstance3D,
 };

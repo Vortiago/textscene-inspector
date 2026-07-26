@@ -100,6 +100,25 @@ export interface RuleMeta {
    * without a matcher keep exact `applicableNodeTypes` matching.
    */
   applicableNodeTypeMatcher?: (nodeType: string) => boolean;
+  /**
+   * Every `ruleName`/`severity` pair this rule's `check` can emit.
+   *
+   * `name` is the REGISTRY key; a single registered rule routinely reports under
+   * many user-visible `ruleName`s (`valid-camera2d-properties` emits twelve, one
+   * of them the only error). Those names are the ones a user sees and suppresses,
+   * and until now nothing could enumerate them: they are string literals inside
+   * `check`, and the shared physics factories build theirs by interpolation, so
+   * no static scrape reaches them.
+   *
+   * Declaring them here makes the set readable from the live registry — which is
+   * what generates each comparison sheet's Linting chapter. `ruleCoverage.test.ts`
+   * holds it to the literals in the file (factories excepted, see there).
+   *
+   * WHEN WRITING A RULE: put `severity:` before `ruleName:` in every diagnostic
+   * object literal. The coverage guard pairs the two by source order, so the
+   * reverse order silently mispairs a severity.
+   */
+  emits?: ReadonlyArray<{ ruleName: string; severity: Severity }>;
 }
 
 /**

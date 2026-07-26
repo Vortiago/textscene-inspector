@@ -128,6 +128,12 @@ const worldEnvironmentValidationRule: LintRule = {
     description: 'Validates WorldEnvironment resource references and ensures only one WorldEnvironment exists',
     category: 'validation',
     applicableNodeTypes: ['WorldEnvironment'],
+    emits: [
+      { ruleName: 'worldenvironment-requires-environment', severity: 'error' },
+      { ruleName: 'valid-worldenvironment-resources', severity: 'error' },
+      { ruleName: 'valid-worldenvironment-resources', severity: 'warning' },
+      { ruleName: 'single-worldenvironment', severity: 'warning' },
+    ],
   },
   check: checkWorldEnvironment,
 };

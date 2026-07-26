@@ -161,6 +161,10 @@ const node3DValidationRule: LintRule = {
     // A predicate is required because getRulesForNodeType matches exact type
     // names, so a literal ['Node3D'] would never reach the subclasses.
     applicableNodeTypeMatcher: (nodeType) => nodeType === 'Node3D' || nodeType.endsWith('3D'),
+    emits: [
+      { ruleName: 'valid-node3d-visibility', severity: 'error' },
+      { ruleName: 'valid-node3d-visibility', severity: 'warning' },
+    ],
   },
   check: checkNode3D,
 };

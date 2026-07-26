@@ -118,6 +118,14 @@ const pathFollow3DValidationRule: LintRule = {
     description: 'Validates PathFollow3D parent relationship, progress values, and rotation mode requirements',
     category: 'validation',
     applicableNodeTypes: ['PathFollow3D'],
+    emits: [
+      { ruleName: 'pathfollow3d-no-parent', severity: 'error' },
+      { ruleName: 'pathfollow3d-invalid-parent', severity: 'error' },
+      { ruleName: 'pathfollow3d-negative-progress', severity: 'warning' },
+      { ruleName: 'pathfollow3d-progress-ratio-out-of-range', severity: 'warning' },
+      { ruleName: 'pathfollow3d-both-progress-properties', severity: 'warning' },
+      { ruleName: 'pathfollow3d-oriented-mode-requires-up-vector', severity: 'warning' },
+    ],
   },
   check: checkPathFollow3D,
 };

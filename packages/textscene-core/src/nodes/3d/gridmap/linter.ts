@@ -49,6 +49,10 @@ const gridMapValidationRule: LintRule = {
     description:
       'Validates GridMap mesh_library reference resolves and flags missing mesh_library as a warning',
     category: 'validation',
+    emits: [
+      { ruleName: 'gridmap-requires-mesh-library', severity: 'warning' },
+      { ruleName: 'valid-gridmap-resources', severity: 'error' },
+    ],
     applicableNodeTypes: ['GridMap'],
   },
   check: checkGridMap,

@@ -68,6 +68,11 @@ const audioStreamPlayerValidationRule: LintRule = {
       'Validates AudioStreamPlayer property values and logical consistency (non-positional node)',
     category: 'validation',
     applicableNodeTypes: ['AudioStreamPlayer'],
+    emits: [
+      { ruleName: 'audiostreamplayer-missing-stream-resource', severity: 'error' },
+      { ruleName: 'audiostreamplayer-autoplay-without-stream', severity: 'warning' },
+      { ruleName: 'audiostreamplayer-extreme-volume', severity: 'warning' },
+    ],
   },
   check: checkAudioStreamPlayer,
 };

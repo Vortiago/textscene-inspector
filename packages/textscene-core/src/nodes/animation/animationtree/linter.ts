@@ -200,6 +200,17 @@ const animationTreeValidationRule: LintRule = {
     description: 'Validates AnimationTree property values, resource references, and configuration dependencies',
     category: 'validation',
     applicableNodeTypes: ['AnimationTree'],
+    emits: [
+      { ruleName: 'animationtree-missing-tree-root', severity: 'warning' },
+      { ruleName: 'animationtree-tree-root-not-found', severity: 'error' },
+      { ruleName: 'animationtree-missing-anim-player', severity: 'warning' },
+      { ruleName: 'animationtree-anim-player-not-found', severity: 'warning' },
+      { ruleName: 'animationtree-anim-player-wrong-type', severity: 'warning' },
+      { ruleName: 'animationtree-active-but-incomplete', severity: 'warning' },
+      { ruleName: 'animationtree-inactive', severity: 'warning' },
+      { ruleName: 'animationtree-low-audio-polyphony', severity: 'warning' },
+      { ruleName: 'animationtree-high-audio-polyphony', severity: 'warning' },
+    ],
   },
   check: checkAnimationTree,
 };

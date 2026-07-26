@@ -17,10 +17,11 @@
  * entry.
  */
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, writeFileSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, writeFileSync, readdirSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { docsUrl, fetchSourceIndex, makeResolver, mapPool } from './godotLinks.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(here, '../..');
@@ -199,16 +200,160 @@ function godotVersion() {
   return (spawnSync('godot', ['--version'], { encoding: 'utf8' }).stdout ?? '').trim().split('\n')[0] || 'unknown';
 }
 
-const supported = supportedTypes();
-const nodes = enumerateGodotNodes()
-  // Editor-only plugins and engine-internal placeholders are not scene content.
-  .filter((n) => !n.name.startsWith('Editor') && !n.name.endsWith('EditorPlugin') && n.name !== 'MissingNode')
-  .map((n) => ({ name: n.name, category: n.dim, group: groupOf(n), supported: supported.has(n.name) }))
-  .sort((a, b) => a.name.localeCompare(b.name));
+/**
+ * Classes the previewer documents that the LOCAL Godot's ClassDB does not list —
+ * AreaLight3D exists in current Godot but not in 4.6.3, and the links are
+ * deliberately unpinned to `stable`/`master`. Without this its sheet is the one
+ * gallery entry with no reference chips. An entry self-heals into `nodes` the
+ * day the local Godot lists it (see the dedup filter at the call site).
+ */
+const EXTRA_CLASSES = [
+  { name: 'AreaLight3D', chain: ['Light3D', 'VisualInstance3D', 'Node3D', 'Node'] },
+];
 
-const catalog = { godotVersion: godotVersion(), generated: 'pnpm nodes:catalog', nodes };
+/**
+ * Resource classes the gallery documents. ClassDB's node enumeration does not
+ * reach them (they are Resources, not Nodes), but their sheets want the same
+ * docs/source chips, and this run is the only place holding the source index.
+ * Chains are their Godot ancestry, used the same way as a node's.
+ */
+const RESOURCE_CLASSES = [
+  { name: 'StandardMaterial3D', chain: ['BaseMaterial3D', 'Material', 'Resource'] },
+  { name: 'Environment', chain: ['Resource'] },
+  { name: 'Sky', chain: ['Resource'] },
+  { name: 'Texture2D', chain: ['Texture', 'Resource'] },
+];
+
+/**
+ * Attach `docs` and `source` to every entry. Source resolution is network-bound
+ * and best-effort: on any failure the previous run's value is carried forward
+ * rather than dropped, so a flaky network never silently strips the catalog.
+ */
+async function attachLinks(entries, previousByName) {
+  const carryForward = (why) => {
+    const noPrevious = entries.filter((e) => !previousByName.get(e.name)?.source).map((e) => e.name);
+    console.error(`[catalog] source resolution skipped (${why}); keeping previous values.`);
+    if (noPrevious.length) {
+      console.error(
+        `[catalog] ${noPrevious.length} class(es) have no previous link either and ship sourceless:\n  ${noPrevious.join('\n  ')}`
+      );
+    }
+    return entries.map((e) => {
+      const prev = previousByName.get(e.name);
+      return { ...e, docs: docsUrl(e.name), ...(prev?.source ? { source: prev.source } : {}) };
+    });
+  };
+
+  let index;
+  try {
+    index = await fetchSourceIndex();
+  } catch (err) {
+    return carryForward(err.message);
+  }
+
+  const resolve = makeResolver(index);
+  const unresolved = [];
+  const carried = [];
+  const linked = await mapPool(entries, 8, async (e) => {
+    let source = null;
+    try {
+      source = await resolve(e.name, e.chain ?? []);
+    } catch {
+      source = null;
+    }
+    if (!source) {
+      // Fall back to the previous value before giving up, so a transient miss
+      // does not delete a link that was already verified. This is reported:
+      // an upstream header RENAME also lands here, and carrying the old path
+      // silently would ship a 404 forever — the one way this design could still
+      // emit a wrong link.
+      source = previousByName.get(e.name)?.source ?? null;
+      if (source) carried.push(e.name);
+      else unresolved.push(e.name);
+    }
+    // `chain` is persisted: it is real ClassDB ancestry, and without it
+    // `--links-only` has nothing to walk and resolves only direct filename hits.
+    return { ...e, docs: docsUrl(e.name), ...(source ? { source } : {}) };
+  });
+
+  if (carried.length) {
+    console.error(
+      `[catalog] ${carried.length} class(es) FAILED verification and kept their previous source link — re-check these, the header may have been renamed upstream:\n  ${carried.join('\n  ')}`
+    );
+  }
+  if (unresolved.length) {
+    console.error(
+      `[catalog] ${unresolved.length} class(es) have NO verified source file and will ship without one:\n  ${unresolved.join('\n  ')}`
+    );
+  }
+  return linked;
+}
+
+const linksOnly = process.argv.includes('--links-only');
+const previous = existsSync(OUT)
+  ? JSON.parse(readFileSync(OUT, 'utf8'))
+  : { nodes: [], resources: [], extras: [] };
+const previousByName = new Map(
+  [...(previous.nodes ?? []), ...(previous.resources ?? []), ...(previous.extras ?? [])].map((n) => [
+    n.name,
+    n,
+  ])
+);
+
+// `--links-only` refreshes the docs/source links against the existing catalog:
+// the node list itself needs a local godot + xvfb-run, the links only need the
+// network, and they go stale on different schedules.
+let nodes;
+let godotVersionValue;
+if (linksOnly) {
+  if (!previous.nodes?.length) throw new Error(`--links-only needs an existing ${OUT}`);
+  nodes = previous.nodes.map((n) => {
+    const copy = { ...n };
+    delete copy.docs;
+    delete copy.source;
+    return copy;
+  });
+  if (!nodes.some((n) => n.chain?.length)) {
+    throw new Error(
+      `${OUT} predates persisted ancestry — run a full \`pnpm nodes:catalog\` once before --links-only.`
+    );
+  }
+  godotVersionValue = previous.godotVersion ?? 'unknown';
+} else {
+  const supported = supportedTypes();
+  nodes = enumerateGodotNodes()
+    // Editor-only plugins and engine-internal placeholders are not scene content.
+    .filter((n) => !n.name.startsWith('Editor') && !n.name.endsWith('EditorPlugin') && n.name !== 'MissingNode')
+    .map((n) => ({
+      name: n.name,
+      category: n.dim,
+      group: groupOf(n),
+      supported: supported.has(n.name),
+      chain: n.chain,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  godotVersionValue = godotVersion();
+}
+
+// One pass over everything: `attachLinks` downloads the ~4 MB source tree and
+// starts a fresh header cache each time it runs, so three calls meant three
+// downloads, three slices of the 60/hour API budget, and no cache sharing.
+const extras = EXTRA_CLASSES.filter((e) => !nodes.some((n) => n.name === e.name));
+const linked = await attachLinks([...nodes, ...RESOURCE_CLASSES, ...extras], previousByName);
+const linkedNodes = linked.slice(0, nodes.length);
+const linkedResources = linked.slice(nodes.length, nodes.length + RESOURCE_CLASSES.length);
+const linkedExtras = linked.slice(nodes.length + RESOURCE_CLASSES.length);
+
+const catalog = {
+  godotVersion: godotVersionValue,
+  generated: 'pnpm nodes:catalog',
+  nodes: linkedNodes,
+  resources: linkedResources,
+  extras: linkedExtras,
+};
 writeFileSync(OUT, `${JSON.stringify(catalog, null, 2)}\n`);
-const unsupported = nodes.filter((n) => !n.supported).length;
+const unsupported = linkedNodes.filter((n) => !n.supported).length;
+const sourced = linkedNodes.filter((n) => n.source).length;
 console.log(
-  `Wrote ${OUT} — ${nodes.length} nodes (${nodes.length - unsupported} supported, ${unsupported} not implemented).`
+  `Wrote ${OUT} — ${linkedNodes.length} nodes (${linkedNodes.length - unsupported} supported, ${unsupported} not implemented), ${sourced} with a verified source link, plus ${linkedResources.length} resources.`
 );

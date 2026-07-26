@@ -6,1441 +6,3501 @@
       "name": "AcceptDialog",
       "category": "Other",
       "group": "UI — windows",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Window",
+        "Viewport",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_acceptdialog.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/dialogs.h"
     },
     {
       "name": "AimModifier3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "BoneConstraint3D",
+        "SkeletonModifier3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_aimmodifier3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/aim_modifier_3d.h"
     },
     {
       "name": "AnimatableBody2D",
       "category": "2D",
       "group": "Physics — bodies",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "StaticBody2D",
+        "PhysicsBody2D",
+        "CollisionObject2D",
+        "Node2D",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_animatablebody2d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/2d/physics/animatable_body_2d.h"
     },
     {
       "name": "AnimatableBody3D",
       "category": "3D",
       "group": "Physics — bodies",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "StaticBody3D",
+        "PhysicsBody3D",
+        "CollisionObject3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_animatablebody3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/physics/animatable_body_3d.h"
     },
     {
       "name": "AnimatedSprite2D",
       "category": "2D",
       "group": "2D rendering",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "Node2D",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_animatedsprite2d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/2d/animated_sprite_2d.h"
     },
     {
       "name": "AnimatedSprite3D",
       "category": "3D",
       "group": "Meshes & rendering",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "SpriteBase3D",
+        "GeometryInstance3D",
+        "VisualInstance3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_animatedsprite3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/sprite_3d.h"
     },
     {
       "name": "AnimationPlayer",
       "category": "Other",
       "group": "Animation",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "AnimationMixer",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_animationplayer.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/animation/animation_player.h"
     },
     {
       "name": "AnimationTree",
       "category": "Other",
       "group": "Animation",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "AnimationMixer",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_animationtree.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/animation/animation_tree.h"
     },
     {
       "name": "Area2D",
       "category": "2D",
       "group": "Physics — areas",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "CollisionObject2D",
+        "Node2D",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_area2d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/2d/physics/area_2d.h"
     },
     {
       "name": "Area3D",
       "category": "3D",
       "group": "Physics — areas",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "CollisionObject3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_area3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/physics/area_3d.h"
     },
     {
       "name": "AspectRatioContainer",
       "category": "2D",
       "group": "UI — containers",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Container",
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_aspectratiocontainer.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/aspect_ratio_container.h"
     },
     {
       "name": "AudioListener2D",
       "category": "2D",
       "group": "Audio",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Node2D",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_audiolistener2d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/2d/audio_listener_2d.h"
     },
     {
       "name": "AudioListener3D",
       "category": "3D",
       "group": "Audio",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_audiolistener3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/audio_listener_3d.h"
     },
     {
       "name": "AudioStreamPlayer",
       "category": "Other",
       "group": "Audio",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_audiostreamplayer.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/audio/audio_stream_player.h"
     },
     {
       "name": "AudioStreamPlayer2D",
       "category": "2D",
       "group": "Audio",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "Node2D",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_audiostreamplayer2d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/2d/audio_stream_player_2d.h"
     },
     {
       "name": "AudioStreamPlayer3D",
       "category": "3D",
       "group": "Audio",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_audiostreamplayer3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/audio_stream_player_3d.h"
     },
     {
       "name": "BackBufferCopy",
       "category": "2D",
       "group": "Canvas effects",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Node2D",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_backbuffercopy.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/2d/back_buffer_copy.h"
     },
     {
       "name": "BaseButton",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_basebutton.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/base_button.h"
     },
     {
       "name": "Bone2D",
       "category": "2D",
       "group": "Skeleton, bones & IK",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Node2D",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_bone2d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/2d/skeleton_2d.h"
     },
     {
       "name": "BoneAttachment3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_boneattachment3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/bone_attachment_3d.h"
     },
     {
       "name": "BoneConstraint3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "SkeletonModifier3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_boneconstraint3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/bone_constraint_3d.h"
     },
     {
       "name": "BoneTwistDisperser3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "SkeletonModifier3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_bonetwistdisperser3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/bone_twist_disperser_3d.h"
     },
     {
       "name": "BoxContainer",
       "category": "2D",
       "group": "UI — containers",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Container",
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_boxcontainer.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/box_container.h"
     },
     {
       "name": "Button",
       "category": "2D",
       "group": "UI — controls",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "BaseButton",
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_button.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/button.h"
     },
     {
       "name": "Camera2D",
       "category": "2D",
       "group": "Cameras",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "Node2D",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_camera2d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/2d/camera_2d.h"
     },
     {
       "name": "Camera3D",
       "category": "3D",
       "group": "Cameras",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_camera3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/camera_3d.h"
     },
     {
       "name": "CanvasGroup",
       "category": "2D",
       "group": "Canvas effects",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Node2D",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_canvasgroup.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/2d/canvas_group.h"
     },
     {
       "name": "CanvasLayer",
       "category": "Other",
       "group": "Canvas layers",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_canvaslayer.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/main/canvas_layer.h"
     },
     {
       "name": "CanvasModulate",
       "category": "2D",
       "group": "Canvas effects",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "Node2D",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_canvasmodulate.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/2d/canvas_modulate.h"
     },
     {
       "name": "CCDIK3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "IterateIK3D",
+        "ChainIK3D",
+        "IKModifier3D",
+        "SkeletonModifier3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_ccdik3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/ccd_ik_3d.h"
     },
     {
       "name": "CenterContainer",
       "category": "2D",
       "group": "UI — containers",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "Container",
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_centercontainer.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/center_container.h"
     },
     {
       "name": "CharacterBody2D",
       "category": "2D",
       "group": "Physics — bodies",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "PhysicsBody2D",
+        "CollisionObject2D",
+        "Node2D",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_characterbody2d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/2d/physics/character_body_2d.h"
     },
     {
       "name": "CharacterBody3D",
       "category": "3D",
       "group": "Physics — bodies",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "PhysicsBody3D",
+        "CollisionObject3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_characterbody3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/physics/character_body_3d.h"
     },
     {
       "name": "CheckBox",
       "category": "2D",
       "group": "UI — controls",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "Button",
+        "BaseButton",
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_checkbox.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/check_box.h"
     },
     {
       "name": "CheckButton",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Button",
+        "BaseButton",
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_checkbutton.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/check_button.h"
     },
     {
       "name": "CodeEdit",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "TextEdit",
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_codeedit.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/code_edit.h"
     },
     {
       "name": "CollisionPolygon2D",
       "category": "2D",
       "group": "Collision shapes",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Node2D",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_collisionpolygon2d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/2d/physics/collision_polygon_2d.h"
     },
     {
       "name": "CollisionPolygon3D",
       "category": "3D",
       "group": "Collision shapes",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_collisionpolygon3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/physics/collision_polygon_3d.h"
     },
     {
       "name": "CollisionShape2D",
       "category": "2D",
       "group": "Collision shapes",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "Node2D",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_collisionshape2d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/2d/physics/collision_shape_2d.h"
     },
     {
       "name": "CollisionShape3D",
       "category": "3D",
       "group": "Collision shapes",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_collisionshape3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/physics/collision_shape_3d.h"
     },
     {
       "name": "ColorPicker",
       "category": "2D",
       "group": "UI — containers",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "VBoxContainer",
+        "BoxContainer",
+        "Container",
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_colorpicker.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/color_picker.h"
     },
     {
       "name": "ColorPickerButton",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Button",
+        "BaseButton",
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_colorpickerbutton.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/color_picker.h"
     },
     {
       "name": "ColorRect",
       "category": "2D",
       "group": "UI — controls",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_colorrect.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/color_rect.h"
     },
     {
       "name": "ConeTwistJoint3D",
       "category": "3D",
       "group": "Physics — joints",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Joint3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_conetwistjoint3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/physics/joints/cone_twist_joint_3d.h"
     },
     {
       "name": "ConfirmationDialog",
       "category": "Other",
       "group": "UI — windows",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "AcceptDialog",
+        "Window",
+        "Viewport",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_confirmationdialog.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/dialogs.h"
     },
     {
       "name": "Container",
       "category": "2D",
       "group": "UI — containers",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_container.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/container.h"
     },
     {
       "name": "Control",
       "category": "2D",
       "group": "UI — controls",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_control.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/control.h"
     },
     {
       "name": "ConvertTransformModifier3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "BoneConstraint3D",
+        "SkeletonModifier3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_converttransformmodifier3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/convert_transform_modifier_3d.h"
     },
     {
       "name": "CopyTransformModifier3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "BoneConstraint3D",
+        "SkeletonModifier3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_copytransformmodifier3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/copy_transform_modifier_3d.h"
     },
     {
       "name": "CPUParticles2D",
       "category": "2D",
       "group": "Particles",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Node2D",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_cpuparticles2d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/2d/cpu_particles_2d.h"
     },
     {
       "name": "CPUParticles3D",
       "category": "3D",
       "group": "Particles",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "GeometryInstance3D",
+        "VisualInstance3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_cpuparticles3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/cpu_particles_3d.h"
     },
     {
       "name": "CSGBox3D",
       "category": "3D",
       "group": "CSG",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "CSGPrimitive3D",
+        "CSGShape3D",
+        "GeometryInstance3D",
+        "VisualInstance3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_csgbox3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/modules/csg/csg_shape.h"
     },
     {
       "name": "CSGCombiner3D",
       "category": "3D",
       "group": "CSG",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "CSGShape3D",
+        "GeometryInstance3D",
+        "VisualInstance3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_csgcombiner3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/modules/csg/csg_shape.h"
     },
     {
       "name": "CSGCylinder3D",
       "category": "3D",
       "group": "CSG",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "CSGPrimitive3D",
+        "CSGShape3D",
+        "GeometryInstance3D",
+        "VisualInstance3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_csgcylinder3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/modules/csg/csg_shape.h"
     },
     {
       "name": "CSGMesh3D",
       "category": "3D",
       "group": "CSG",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "CSGPrimitive3D",
+        "CSGShape3D",
+        "GeometryInstance3D",
+        "VisualInstance3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_csgmesh3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/modules/csg/csg_shape.h"
     },
     {
       "name": "CSGPolygon3D",
       "category": "3D",
       "group": "CSG",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "CSGPrimitive3D",
+        "CSGShape3D",
+        "GeometryInstance3D",
+        "VisualInstance3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_csgpolygon3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/modules/csg/csg_shape.h"
     },
     {
       "name": "CSGSphere3D",
       "category": "3D",
       "group": "CSG",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "CSGPrimitive3D",
+        "CSGShape3D",
+        "GeometryInstance3D",
+        "VisualInstance3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_csgsphere3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/modules/csg/csg_shape.h"
     },
     {
       "name": "CSGTorus3D",
       "category": "3D",
       "group": "CSG",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "CSGPrimitive3D",
+        "CSGShape3D",
+        "GeometryInstance3D",
+        "VisualInstance3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_csgtorus3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/modules/csg/csg_shape.h"
     },
     {
       "name": "DampedSpringJoint2D",
       "category": "2D",
       "group": "Physics — joints",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Joint2D",
+        "Node2D",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_dampedspringjoint2d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/2d/physics/joints/damped_spring_joint_2d.h"
     },
     {
       "name": "Decal",
       "category": "3D",
       "group": "Reflection & global illumination",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "VisualInstance3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_decal.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/decal.h"
     },
     {
       "name": "DirectionalLight2D",
       "category": "2D",
       "group": "Lighting",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Light2D",
+        "Node2D",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_directionallight2d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/2d/light_2d.h"
     },
     {
       "name": "DirectionalLight3D",
       "category": "3D",
       "group": "Lighting",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "Light3D",
+        "VisualInstance3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_directionallight3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/light_3d.h"
     },
     {
       "name": "FABRIK3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "IterateIK3D",
+        "ChainIK3D",
+        "IKModifier3D",
+        "SkeletonModifier3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_fabrik3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/fabr_ik_3d.h"
     },
     {
       "name": "FileDialog",
       "category": "Other",
       "group": "UI — windows",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "ConfirmationDialog",
+        "AcceptDialog",
+        "Window",
+        "Viewport",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_filedialog.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/file_dialog.h"
     },
     {
       "name": "FlowContainer",
       "category": "2D",
       "group": "UI — containers",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Container",
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_flowcontainer.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/flow_container.h"
     },
     {
       "name": "FogVolume",
       "category": "3D",
       "group": "Reflection & global illumination",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "VisualInstance3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_fogvolume.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/fog_volume.h"
     },
     {
       "name": "FoldableContainer",
       "category": "2D",
       "group": "UI — containers",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Container",
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_foldablecontainer.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/foldable_container.h"
     },
     {
       "name": "Generic6DOFJoint3D",
       "category": "3D",
       "group": "Physics — joints",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Joint3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_generic6dofjoint3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/physics/joints/generic_6dof_joint_3d.h"
     },
     {
       "name": "GeometryInstance3D",
       "category": "3D",
       "group": "Meshes & rendering",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "VisualInstance3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_geometryinstance3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/visual_instance_3d.h"
     },
     {
       "name": "GPUParticles2D",
       "category": "2D",
       "group": "Particles",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Node2D",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_gpuparticles2d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/2d/gpu_particles_2d.h"
     },
     {
       "name": "GPUParticles3D",
       "category": "3D",
       "group": "Particles",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "GeometryInstance3D",
+        "VisualInstance3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_gpuparticles3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/gpu_particles_3d.h"
     },
     {
       "name": "GPUParticlesAttractorBox3D",
       "category": "3D",
       "group": "Particles",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "GPUParticlesAttractor3D",
+        "VisualInstance3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_gpuparticlesattractorbox3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/gpu_particles_collision_3d.h"
     },
     {
       "name": "GPUParticlesAttractorSphere3D",
       "category": "3D",
       "group": "Particles",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "GPUParticlesAttractor3D",
+        "VisualInstance3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_gpuparticlesattractorsphere3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/gpu_particles_collision_3d.h"
     },
     {
       "name": "GPUParticlesAttractorVectorField3D",
       "category": "3D",
       "group": "Particles",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "GPUParticlesAttractor3D",
+        "VisualInstance3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_gpuparticlesattractorvectorfield3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/gpu_particles_collision_3d.h"
     },
     {
       "name": "GPUParticlesCollisionBox3D",
       "category": "3D",
       "group": "Particles",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "GPUParticlesCollision3D",
+        "VisualInstance3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_gpuparticlescollisionbox3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/gpu_particles_collision_3d.h"
     },
     {
       "name": "GPUParticlesCollisionHeightField3D",
       "category": "3D",
       "group": "Particles",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "GPUParticlesCollision3D",
+        "VisualInstance3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_gpuparticlescollisionheightfield3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/gpu_particles_collision_3d.h"
     },
     {
       "name": "GPUParticlesCollisionSDF3D",
       "category": "3D",
       "group": "Particles",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "GPUParticlesCollision3D",
+        "VisualInstance3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_gpuparticlescollisionsdf3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/gpu_particles_collision_3d.h"
     },
     {
       "name": "GPUParticlesCollisionSphere3D",
       "category": "3D",
       "group": "Particles",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "GPUParticlesCollision3D",
+        "VisualInstance3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_gpuparticlescollisionsphere3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/gpu_particles_collision_3d.h"
     },
     {
       "name": "GraphEdit",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_graphedit.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/graph_edit.h"
     },
     {
       "name": "GraphElement",
       "category": "2D",
       "group": "UI — containers",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Container",
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_graphelement.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/graph_element.h"
     },
     {
       "name": "GraphFrame",
       "category": "2D",
       "group": "UI — containers",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "GraphElement",
+        "Container",
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_graphframe.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/graph_frame.h"
     },
     {
       "name": "GraphNode",
       "category": "2D",
       "group": "UI — containers",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "GraphElement",
+        "Container",
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_graphnode.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/graph_node.h"
     },
     {
       "name": "GridContainer",
       "category": "2D",
       "group": "UI — containers",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "Container",
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_gridcontainer.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/grid_container.h"
     },
     {
       "name": "GridMap",
       "category": "3D",
       "group": "Tilemaps & grids",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_gridmap.html",
+      "source": "https://github.com/godotengine/godot/blob/master/modules/gridmap/grid_map.h"
     },
     {
       "name": "GrooveJoint2D",
       "category": "2D",
       "group": "Physics — joints",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Joint2D",
+        "Node2D",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_groovejoint2d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/2d/physics/joints/groove_joint_2d.h"
     },
     {
       "name": "HBoxContainer",
       "category": "2D",
       "group": "UI — containers",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "BoxContainer",
+        "Container",
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_hboxcontainer.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/box_container.h"
     },
     {
       "name": "HFlowContainer",
       "category": "2D",
       "group": "UI — containers",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "FlowContainer",
+        "Container",
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_hflowcontainer.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/flow_container.h"
     },
     {
       "name": "HingeJoint3D",
       "category": "3D",
       "group": "Physics — joints",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Joint3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_hingejoint3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/physics/joints/hinge_joint_3d.h"
     },
     {
       "name": "HScrollBar",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "ScrollBar",
+        "Range",
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_hscrollbar.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/scroll_bar.h"
     },
     {
       "name": "HSeparator",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Separator",
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_hseparator.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/separator.h"
     },
     {
       "name": "HSlider",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Slider",
+        "Range",
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_hslider.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/slider.h"
     },
     {
       "name": "HSplitContainer",
       "category": "2D",
       "group": "UI — containers",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "SplitContainer",
+        "Container",
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_hsplitcontainer.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/split_container.h"
     },
     {
       "name": "HTTPRequest",
       "category": "Other",
       "group": "Networking",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_httprequest.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/main/http_request.h"
     },
     {
       "name": "ImporterMeshInstance3D",
       "category": "3D",
       "group": "Import / editor internals",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_importermeshinstance3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/importer_mesh_instance_3d.h"
     },
     {
       "name": "ItemList",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_itemlist.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/item_list.h"
     },
     {
       "name": "JacobianIK3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "IterateIK3D",
+        "ChainIK3D",
+        "IKModifier3D",
+        "SkeletonModifier3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_jacobianik3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/jacobian_ik_3d.h"
     },
     {
       "name": "Label",
       "category": "2D",
       "group": "UI — controls",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_label.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/label.h"
     },
     {
       "name": "Label3D",
       "category": "3D",
       "group": "Meshes & rendering",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "GeometryInstance3D",
+        "VisualInstance3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_label3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/label_3d.h"
     },
     {
       "name": "LightmapGI",
       "category": "3D",
       "group": "Reflection & global illumination",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "VisualInstance3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_lightmapgi.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/lightmap_gi.h"
     },
     {
       "name": "LightmapProbe",
       "category": "3D",
       "group": "Reflection & global illumination",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_lightmapprobe.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/lightmap_probe.h"
     },
     {
       "name": "LightOccluder2D",
       "category": "2D",
       "group": "Lighting",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "Node2D",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_lightoccluder2d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/2d/light_occluder_2d.h"
     },
     {
       "name": "LimitAngularVelocityModifier3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "SkeletonModifier3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_limitangularvelocitymodifier3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/limit_angular_velocity_modifier_3d.h"
     },
     {
       "name": "Line2D",
       "category": "2D",
       "group": "2D rendering",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "Node2D",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_line2d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/2d/line_2d.h"
     },
     {
       "name": "LineEdit",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_lineedit.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/line_edit.h"
     },
     {
       "name": "LinkButton",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "BaseButton",
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_linkbutton.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/link_button.h"
     },
     {
       "name": "LookAtModifier3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "SkeletonModifier3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_lookatmodifier3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/look_at_modifier_3d.h"
     },
     {
       "name": "MarginContainer",
       "category": "2D",
       "group": "UI — containers",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "Container",
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_margincontainer.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/margin_container.h"
     },
     {
       "name": "Marker2D",
       "category": "2D",
       "group": "Markers & helpers",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "Node2D",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_marker2d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/2d/marker_2d.h"
     },
     {
       "name": "Marker3D",
       "category": "3D",
       "group": "Markers & helpers",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_marker3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/marker_3d.h"
     },
     {
       "name": "MenuBar",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_menubar.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/menu_bar.h"
     },
     {
       "name": "MenuButton",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Button",
+        "BaseButton",
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_menubutton.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/menu_button.h"
     },
     {
       "name": "MeshInstance2D",
       "category": "2D",
       "group": "2D rendering",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Node2D",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_meshinstance2d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/2d/mesh_instance_2d.h"
     },
     {
       "name": "MeshInstance3D",
       "category": "3D",
       "group": "Meshes & rendering",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "GeometryInstance3D",
+        "VisualInstance3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_meshinstance3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/mesh_instance_3d.h"
     },
     {
       "name": "ModifierBoneTarget3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "SkeletonModifier3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_modifierbonetarget3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/modifier_bone_target_3d.h"
     },
     {
       "name": "MultiMeshInstance2D",
       "category": "2D",
       "group": "2D rendering",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Node2D",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_multimeshinstance2d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/2d/multimesh_instance_2d.h"
     },
     {
       "name": "MultiMeshInstance3D",
       "category": "3D",
       "group": "Meshes & rendering",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "GeometryInstance3D",
+        "VisualInstance3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_multimeshinstance3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/multimesh_instance_3d.h"
     },
     {
       "name": "MultiplayerSpawner",
       "category": "Other",
       "group": "Networking",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_multiplayerspawner.html",
+      "source": "https://github.com/godotengine/godot/blob/master/modules/multiplayer/multiplayer_spawner.h"
     },
     {
       "name": "MultiplayerSynchronizer",
       "category": "Other",
       "group": "Networking",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_multiplayersynchronizer.html",
+      "source": "https://github.com/godotengine/godot/blob/master/modules/multiplayer/multiplayer_synchronizer.h"
     },
     {
       "name": "NavigationAgent2D",
       "category": "Other",
       "group": "Navigation",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_navigationagent2d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/2d/navigation/navigation_agent_2d.h"
     },
     {
       "name": "NavigationAgent3D",
       "category": "Other",
       "group": "Navigation",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_navigationagent3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/navigation/navigation_agent_3d.h"
     },
     {
       "name": "NavigationLink2D",
       "category": "2D",
       "group": "Navigation",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Node2D",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_navigationlink2d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/2d/navigation/navigation_link_2d.h"
     },
     {
       "name": "NavigationLink3D",
       "category": "3D",
       "group": "Navigation",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_navigationlink3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/navigation/navigation_link_3d.h"
     },
     {
       "name": "NavigationObstacle2D",
       "category": "2D",
       "group": "Navigation",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Node2D",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_navigationobstacle2d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/2d/navigation/navigation_obstacle_2d.h"
     },
     {
       "name": "NavigationObstacle3D",
       "category": "3D",
       "group": "Navigation",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_navigationobstacle3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/navigation/navigation_obstacle_3d.h"
     },
     {
       "name": "NavigationRegion2D",
       "category": "2D",
       "group": "Navigation",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "Node2D",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_navigationregion2d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/2d/navigation/navigation_region_2d.h"
     },
     {
       "name": "NavigationRegion3D",
       "category": "3D",
       "group": "Navigation",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_navigationregion3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/navigation/navigation_region_3d.h"
     },
     {
       "name": "NinePatchRect",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_ninepatchrect.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/nine_patch_rect.h"
     },
     {
       "name": "Node",
       "category": "Other",
       "group": "Generic",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_node.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/main/node.h"
     },
     {
       "name": "Node2D",
       "category": "2D",
       "group": "2D generic",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_node2d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/2d/node_2d.h"
     },
     {
       "name": "Node3D",
       "category": "3D",
       "group": "3D generic",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_node3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/node_3d.h"
     },
     {
       "name": "OccluderInstance3D",
       "category": "3D",
       "group": "Meshes & rendering",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "VisualInstance3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_occluderinstance3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/occluder_instance_3d.h"
     },
     {
       "name": "OmniLight3D",
       "category": "3D",
       "group": "Lighting",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "Light3D",
+        "VisualInstance3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_omnilight3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/light_3d.h"
     },
     {
       "name": "OpenXRBindingModifierEditor",
       "category": "2D",
       "group": "UI — containers",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "PanelContainer",
+        "Container",
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_openxrbindingmodifiereditor.html",
+      "source": "https://github.com/godotengine/godot/blob/master/modules/openxr/editor/openxr_binding_modifier_editor.h"
     },
     {
       "name": "OpenXRCompositionLayerCylinder",
       "category": "3D",
       "group": "XR / AR",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "OpenXRCompositionLayer",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_openxrcompositionlayercylinder.html",
+      "source": "https://github.com/godotengine/godot/blob/master/modules/openxr/scene/openxr_composition_layer_cylinder.h"
     },
     {
       "name": "OpenXRCompositionLayerEquirect",
       "category": "3D",
       "group": "XR / AR",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "OpenXRCompositionLayer",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_openxrcompositionlayerequirect.html",
+      "source": "https://github.com/godotengine/godot/blob/master/modules/openxr/scene/openxr_composition_layer_equirect.h"
     },
     {
       "name": "OpenXRCompositionLayerQuad",
       "category": "3D",
       "group": "XR / AR",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "OpenXRCompositionLayer",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_openxrcompositionlayerquad.html",
+      "source": "https://github.com/godotengine/godot/blob/master/modules/openxr/scene/openxr_composition_layer_quad.h"
     },
     {
       "name": "OpenXRHand",
       "category": "3D",
       "group": "XR / AR",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_openxrhand.html",
+      "source": "https://github.com/godotengine/godot/blob/master/modules/openxr/scene/openxr_hand.h"
     },
     {
       "name": "OpenXRInteractionProfileEditor",
       "category": "2D",
       "group": "UI — containers",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "OpenXRInteractionProfileEditorBase",
+        "HBoxContainer",
+        "BoxContainer",
+        "Container",
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_openxrinteractionprofileeditor.html",
+      "source": "https://github.com/godotengine/godot/blob/master/modules/openxr/editor/openxr_interaction_profile_editor.h"
     },
     {
       "name": "OpenXRRenderModel",
       "category": "3D",
       "group": "XR / AR",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_openxrrendermodel.html",
+      "source": "https://github.com/godotengine/godot/blob/master/modules/openxr/scene/openxr_render_model.h"
     },
     {
       "name": "OpenXRRenderModelManager",
       "category": "3D",
       "group": "XR / AR",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_openxrrendermodelmanager.html",
+      "source": "https://github.com/godotengine/godot/blob/master/modules/openxr/scene/openxr_render_model_manager.h"
     },
     {
       "name": "OpenXRVisibilityMask",
       "category": "3D",
       "group": "Meshes & rendering",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "VisualInstance3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_openxrvisibilitymask.html",
+      "source": "https://github.com/godotengine/godot/blob/master/modules/openxr/scene/openxr_visibility_mask.h"
     },
     {
       "name": "OptionButton",
       "category": "2D",
       "group": "UI — controls",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "Button",
+        "BaseButton",
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_optionbutton.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/option_button.h"
     },
     {
       "name": "Panel",
       "category": "2D",
       "group": "UI — controls",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_panel.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/panel.h"
     },
     {
       "name": "PanelContainer",
       "category": "2D",
       "group": "UI — containers",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "Container",
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_panelcontainer.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/panel_container.h"
     },
     {
       "name": "Parallax2D",
       "category": "2D",
       "group": "Parallax & scrolling",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Node2D",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_parallax2d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/2d/parallax_2d.h"
     },
     {
       "name": "ParallaxBackground",
       "category": "Other",
       "group": "Canvas layers",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "CanvasLayer",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_parallaxbackground.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/2d/parallax_background.h"
     },
     {
       "name": "ParallaxLayer",
       "category": "2D",
       "group": "Parallax & scrolling",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Node2D",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_parallaxlayer.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/2d/parallax_layer.h"
     },
     {
       "name": "Path2D",
       "category": "2D",
       "group": "Paths & curves",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "Node2D",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_path2d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/2d/path_2d.h"
     },
     {
       "name": "Path3D",
       "category": "3D",
       "group": "Paths & curves",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_path3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/path_3d.h"
     },
     {
       "name": "PathFollow2D",
       "category": "2D",
       "group": "Paths & curves",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "Node2D",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_pathfollow2d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/2d/path_2d.h"
     },
     {
       "name": "PathFollow3D",
       "category": "3D",
       "group": "Paths & curves",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_pathfollow3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/path_3d.h"
     },
     {
       "name": "PhysicalBone2D",
       "category": "2D",
       "group": "Physics — bodies",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "RigidBody2D",
+        "PhysicsBody2D",
+        "CollisionObject2D",
+        "Node2D",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_physicalbone2d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/2d/physics/physical_bone_2d.h"
     },
     {
       "name": "PhysicalBone3D",
       "category": "3D",
       "group": "Physics — bodies",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "PhysicsBody3D",
+        "CollisionObject3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_physicalbone3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/physics/physical_bone_3d.h"
     },
     {
       "name": "PhysicalBoneSimulator3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "SkeletonModifier3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_physicalbonesimulator3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/physics/physical_bone_simulator_3d.h"
     },
     {
       "name": "PinJoint2D",
       "category": "2D",
       "group": "Physics — joints",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Joint2D",
+        "Node2D",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_pinjoint2d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/2d/physics/joints/pin_joint_2d.h"
     },
     {
       "name": "PinJoint3D",
       "category": "3D",
       "group": "Physics — joints",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Joint3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_pinjoint3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/physics/joints/pin_joint_3d.h"
     },
     {
       "name": "PointLight2D",
       "category": "2D",
       "group": "Lighting",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "Light2D",
+        "Node2D",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_pointlight2d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/2d/light_2d.h"
     },
     {
       "name": "Polygon2D",
       "category": "2D",
       "group": "2D rendering",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "Node2D",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_polygon2d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/2d/polygon_2d.h"
     },
     {
       "name": "Popup",
       "category": "Other",
       "group": "UI — windows",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Window",
+        "Viewport",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_popup.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/popup.h"
     },
     {
       "name": "PopupMenu",
       "category": "Other",
       "group": "UI — windows",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Popup",
+        "Window",
+        "Viewport",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_popupmenu.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/popup_menu.h"
     },
     {
       "name": "PopupPanel",
       "category": "Other",
       "group": "UI — windows",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Popup",
+        "Window",
+        "Viewport",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_popuppanel.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/popup.h"
     },
     {
       "name": "ProgressBar",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Range",
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_progressbar.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/progress_bar.h"
     },
     {
       "name": "Range",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_range.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/range.h"
     },
     {
       "name": "RayCast2D",
       "category": "2D",
       "group": "Physics — queries",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Node2D",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_raycast2d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/2d/physics/ray_cast_2d.h"
     },
     {
       "name": "RayCast3D",
       "category": "3D",
       "group": "Physics — queries",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_raycast3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/physics/ray_cast_3d.h"
     },
     {
       "name": "ReferenceRect",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_referencerect.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/reference_rect.h"
     },
     {
       "name": "ReflectionProbe",
       "category": "3D",
       "group": "Reflection & global illumination",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "VisualInstance3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_reflectionprobe.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/reflection_probe.h"
     },
     {
       "name": "RemoteTransform2D",
       "category": "2D",
       "group": "Transform helpers",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "Node2D",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_remotetransform2d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/2d/remote_transform_2d.h"
     },
     {
       "name": "RemoteTransform3D",
       "category": "3D",
       "group": "Transform helpers",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_remotetransform3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/remote_transform_3d.h"
     },
     {
       "name": "ResourcePreloader",
       "category": "Other",
       "group": "Resources",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_resourcepreloader.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/main/resource_preloader.h"
     },
     {
       "name": "RetargetModifier3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "SkeletonModifier3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_retargetmodifier3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/retarget_modifier_3d.h"
     },
     {
       "name": "RichTextLabel",
       "category": "2D",
       "group": "UI — controls",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_richtextlabel.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/rich_text_label.h"
     },
     {
       "name": "RigidBody2D",
       "category": "2D",
       "group": "Physics — bodies",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "PhysicsBody2D",
+        "CollisionObject2D",
+        "Node2D",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_rigidbody2d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/2d/physics/rigid_body_2d.h"
     },
     {
       "name": "RigidBody3D",
       "category": "3D",
       "group": "Physics — bodies",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "PhysicsBody3D",
+        "CollisionObject3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_rigidbody3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/physics/rigid_body_3d.h"
     },
     {
       "name": "RootMotionView",
       "category": "3D",
       "group": "Meshes & rendering",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "VisualInstance3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_rootmotionview.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/animation/root_motion_view.h"
     },
     {
       "name": "ScriptCreateDialog",
       "category": "Other",
       "group": "UI — windows",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "ConfirmationDialog",
+        "AcceptDialog",
+        "Window",
+        "Viewport",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_scriptcreatedialog.html",
+      "source": "https://github.com/godotengine/godot/blob/master/editor/script/script_create_dialog.h"
     },
     {
       "name": "ScrollContainer",
       "category": "2D",
       "group": "UI — containers",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "Container",
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_scrollcontainer.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/scroll_container.h"
     },
     {
       "name": "ShaderGlobalsOverride",
       "category": "Other",
       "group": "Rendering globals",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_shaderglobalsoverride.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/main/shader_globals_override.h"
     },
     {
       "name": "ShapeCast2D",
       "category": "2D",
       "group": "Physics — queries",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Node2D",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_shapecast2d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/2d/physics/shape_cast_2d.h"
     },
     {
       "name": "ShapeCast3D",
       "category": "3D",
       "group": "Physics — queries",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_shapecast3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/physics/shape_cast_3d.h"
     },
     {
       "name": "Skeleton2D",
       "category": "2D",
       "group": "Skeleton, bones & IK",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Node2D",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_skeleton2d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/2d/skeleton_2d.h"
     },
     {
       "name": "Skeleton3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_skeleton3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/skeleton_3d.h"
     },
     {
       "name": "SkeletonIK3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "SkeletonModifier3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_skeletonik3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/skeleton_ik_3d.h"
     },
     {
       "name": "SkeletonModifier3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_skeletonmodifier3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/skeleton_modifier_3d.h"
     },
     {
       "name": "SliderJoint3D",
       "category": "3D",
       "group": "Physics — joints",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Joint3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_sliderjoint3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/physics/joints/slider_joint_3d.h"
     },
     {
       "name": "SoftBody3D",
       "category": "3D",
       "group": "Physics — bodies",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "MeshInstance3D",
+        "GeometryInstance3D",
+        "VisualInstance3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_softbody3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/physics/soft_body_3d.h"
     },
     {
       "name": "SpinBox",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Range",
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_spinbox.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/spin_box.h"
     },
     {
       "name": "SplineIK3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "ChainIK3D",
+        "IKModifier3D",
+        "SkeletonModifier3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_splineik3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/spline_ik_3d.h"
     },
     {
       "name": "SplitContainer",
       "category": "2D",
       "group": "UI — containers",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Container",
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_splitcontainer.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/split_container.h"
     },
     {
       "name": "SpotLight3D",
       "category": "3D",
       "group": "Lighting",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "Light3D",
+        "VisualInstance3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_spotlight3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/light_3d.h"
     },
     {
       "name": "SpringArm3D",
       "category": "3D",
       "group": "Physics — queries",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_springarm3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/physics/spring_arm_3d.h"
     },
     {
       "name": "SpringBoneCollision3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_springbonecollision3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/spring_bone_collision_3d.h"
     },
     {
       "name": "SpringBoneCollisionCapsule3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "SpringBoneCollision3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_springbonecollisioncapsule3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/spring_bone_collision_capsule_3d.h"
     },
     {
       "name": "SpringBoneCollisionPlane3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "SpringBoneCollision3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_springbonecollisionplane3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/spring_bone_collision_plane_3d.h"
     },
     {
       "name": "SpringBoneCollisionSphere3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "SpringBoneCollision3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_springbonecollisionsphere3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/spring_bone_collision_sphere_3d.h"
     },
     {
       "name": "SpringBoneSimulator3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "SkeletonModifier3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_springbonesimulator3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/spring_bone_simulator_3d.h"
     },
     {
       "name": "Sprite2D",
       "category": "2D",
       "group": "2D rendering",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "Node2D",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_sprite2d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/2d/sprite_2d.h"
     },
     {
       "name": "Sprite3D",
       "category": "3D",
       "group": "Meshes & rendering",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "SpriteBase3D",
+        "GeometryInstance3D",
+        "VisualInstance3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_sprite3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/sprite_3d.h"
     },
     {
       "name": "StaticBody2D",
       "category": "2D",
       "group": "Physics — bodies",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "PhysicsBody2D",
+        "CollisionObject2D",
+        "Node2D",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_staticbody2d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/2d/physics/static_body_2d.h"
     },
     {
       "name": "StaticBody3D",
       "category": "3D",
       "group": "Physics — bodies",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "PhysicsBody3D",
+        "CollisionObject3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_staticbody3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/physics/static_body_3d.h"
     },
     {
       "name": "StatusIndicator",
       "category": "Other",
       "group": "OS integration",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_statusindicator.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/main/status_indicator.h"
     },
     {
       "name": "SubViewport",
       "category": "Other",
       "group": "Viewports",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Viewport",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_subviewport.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/main/viewport.h"
     },
     {
       "name": "SubViewportContainer",
       "category": "2D",
       "group": "UI — containers",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Container",
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_subviewportcontainer.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/subviewport_container.h"
     },
     {
       "name": "TabBar",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_tabbar.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/tab_bar.h"
     },
     {
       "name": "TabContainer",
       "category": "2D",
       "group": "UI — containers",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Container",
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_tabcontainer.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/tab_container.h"
     },
     {
       "name": "TextEdit",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_textedit.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/text_edit.h"
     },
     {
       "name": "TextureButton",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "BaseButton",
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_texturebutton.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/texture_button.h"
     },
     {
       "name": "TextureProgressBar",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Range",
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_textureprogressbar.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/texture_progress_bar.h"
     },
     {
       "name": "TextureRect",
       "category": "2D",
       "group": "UI — controls",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_texturerect.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/texture_rect.h"
     },
     {
       "name": "TileMap",
       "category": "2D",
       "group": "Tilemaps & grids",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "Node2D",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_tilemap.html",
+      "source": "https://github.com/godotengine/godot/blob/master/modules/tilemap/tile_map.h"
     },
     {
       "name": "TileMapLayer",
       "category": "2D",
       "group": "Tilemaps & grids",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "Node2D",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_tilemaplayer.html",
+      "source": "https://github.com/godotengine/godot/blob/master/modules/tilemap/tile_map_layer.h"
     },
     {
       "name": "Timer",
       "category": "Other",
       "group": "Timers & logic",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_timer.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/main/timer.h"
     },
     {
       "name": "TouchScreenButton",
       "category": "2D",
       "group": "Touch input",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Node2D",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_touchscreenbutton.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/2d/physics/touch_screen_button.h"
     },
     {
       "name": "Tree",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_tree.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/tree.h"
     },
     {
       "name": "TwoBoneIK3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "IKModifier3D",
+        "SkeletonModifier3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_twoboneik3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/two_bone_ik_3d.h"
     },
     {
       "name": "VBoxContainer",
       "category": "2D",
       "group": "UI — containers",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "BoxContainer",
+        "Container",
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_vboxcontainer.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/box_container.h"
     },
     {
       "name": "VehicleBody3D",
       "category": "3D",
       "group": "Physics — bodies",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "RigidBody3D",
+        "PhysicsBody3D",
+        "CollisionObject3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_vehiclebody3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/physics/vehicle_body_3d.h"
     },
     {
       "name": "VehicleWheel3D",
       "category": "3D",
       "group": "Physics — vehicles",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_vehiclewheel3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/physics/vehicle_body_3d.h"
     },
     {
       "name": "VFlowContainer",
       "category": "2D",
       "group": "UI — containers",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "FlowContainer",
+        "Container",
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_vflowcontainer.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/flow_container.h"
     },
     {
       "name": "VideoStreamPlayer",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_videostreamplayer.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/video_stream_player.h"
     },
     {
       "name": "VisibleOnScreenEnabler2D",
       "category": "2D",
       "group": "Visibility",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "VisibleOnScreenNotifier2D",
+        "Node2D",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_visibleonscreenenabler2d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/2d/visible_on_screen_notifier_2d.h"
     },
     {
       "name": "VisibleOnScreenEnabler3D",
       "category": "3D",
       "group": "Visibility",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "VisibleOnScreenNotifier3D",
+        "VisualInstance3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_visibleonscreenenabler3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/visible_on_screen_notifier_3d.h"
     },
     {
       "name": "VisibleOnScreenNotifier2D",
       "category": "2D",
       "group": "Visibility",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Node2D",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_visibleonscreennotifier2d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/2d/visible_on_screen_notifier_2d.h"
     },
     {
       "name": "VisibleOnScreenNotifier3D",
       "category": "3D",
       "group": "Visibility",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "VisualInstance3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_visibleonscreennotifier3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/visible_on_screen_notifier_3d.h"
     },
     {
       "name": "VisualInstance3D",
       "category": "3D",
       "group": "Meshes & rendering",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_visualinstance3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/visual_instance_3d.h"
     },
     {
       "name": "VoxelGI",
       "category": "3D",
       "group": "Reflection & global illumination",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "VisualInstance3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_voxelgi.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/voxel_gi.h"
     },
     {
       "name": "VScrollBar",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "ScrollBar",
+        "Range",
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_vscrollbar.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/scroll_bar.h"
     },
     {
       "name": "VSeparator",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Separator",
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_vseparator.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/separator.h"
     },
     {
       "name": "VSlider",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Slider",
+        "Range",
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_vslider.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/slider.h"
     },
     {
       "name": "VSplitContainer",
       "category": "2D",
       "group": "UI — containers",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "SplitContainer",
+        "Container",
+        "Control",
+        "CanvasItem",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_vsplitcontainer.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/gui/split_container.h"
     },
     {
       "name": "Window",
       "category": "Other",
       "group": "UI — windows",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Viewport",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_window.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/main/window.h"
     },
     {
       "name": "WorldEnvironment",
       "category": "Other",
       "group": "Environment",
-      "supported": true
+      "supported": true,
+      "chain": [
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_worldenvironment.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/world_environment.h"
     },
     {
       "name": "XRAnchor3D",
       "category": "3D",
       "group": "XR / AR",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "XRNode3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_xranchor3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/xr/xr_nodes.h"
     },
     {
       "name": "XRBodyModifier3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "SkeletonModifier3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_xrbodymodifier3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/xr/xr_body_modifier_3d.h"
     },
     {
       "name": "XRCamera3D",
       "category": "3D",
       "group": "Cameras",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Camera3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_xrcamera3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/xr/xr_nodes.h"
     },
     {
       "name": "XRController3D",
       "category": "3D",
       "group": "XR / AR",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "XRNode3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_xrcontroller3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/xr/xr_nodes.h"
     },
     {
       "name": "XRFaceModifier3D",
       "category": "3D",
       "group": "XR / AR",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_xrfacemodifier3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/xr/xr_face_modifier_3d.h"
     },
     {
       "name": "XRHandModifier3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "SkeletonModifier3D",
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_xrhandmodifier3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/xr/xr_hand_modifier_3d.h"
     },
     {
       "name": "XRNode3D",
       "category": "3D",
       "group": "XR / AR",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_xrnode3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/xr/xr_nodes.h"
     },
     {
       "name": "XROrigin3D",
       "category": "3D",
       "group": "XR / AR",
-      "supported": false
+      "supported": false,
+      "chain": [
+        "Node3D",
+        "Node",
+        "Object"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_xrorigin3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/xr/xr_nodes.h"
+    }
+  ],
+  "resources": [
+    {
+      "name": "StandardMaterial3D",
+      "chain": [
+        "BaseMaterial3D",
+        "Material",
+        "Resource"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_standardmaterial3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/resources/material.h"
+    },
+    {
+      "name": "Environment",
+      "chain": [
+        "Resource"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_environment.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/resources/environment.h"
+    },
+    {
+      "name": "Sky",
+      "chain": [
+        "Resource"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_sky.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/resources/sky.h"
+    },
+    {
+      "name": "Texture2D",
+      "chain": [
+        "Texture",
+        "Resource"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_texture2d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/resources/texture.h"
+    }
+  ],
+  "extras": [
+    {
+      "name": "AreaLight3D",
+      "chain": [
+        "Light3D",
+        "VisualInstance3D",
+        "Node3D",
+        "Node"
+      ],
+      "docs": "https://docs.godotengine.org/en/stable/classes/class_arealight3d.html",
+      "source": "https://github.com/godotengine/godot/blob/master/scene/3d/light_3d.h"
     }
   ]
 }

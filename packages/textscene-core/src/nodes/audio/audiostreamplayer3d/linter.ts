@@ -147,6 +147,18 @@ const audioStreamPlayer3DValidationRule: LintRule = {
     description: 'Validates AudioStreamPlayer3D property values, required properties, and logical consistency',
     category: 'validation',
     applicableNodeTypes: ['AudioStreamPlayer3D'],
+    emits: [
+      { ruleName: 'audiostreamplayer3d-missing-stream', severity: 'error' },
+      { ruleName: 'audiostreamplayer3d-missing-stream-resource', severity: 'error' },
+      { ruleName: 'audiostreamplayer3d-invalid-unit-size', severity: 'error' },
+      { ruleName: 'audiostreamplayer3d-invalid-max-distance', severity: 'error' },
+      { ruleName: 'audiostreamplayer3d-invalid-pitch-scale', severity: 'error' },
+      { ruleName: 'audiostreamplayer3d-emission-angle-not-enabled', severity: 'warning' },
+      { ruleName: 'audiostreamplayer3d-emission-filter-not-enabled', severity: 'warning' },
+      { ruleName: 'audiostreamplayer3d-extreme-volume', severity: 'warning' },
+      { ruleName: 'audiostreamplayer3d-unusual-pitch', severity: 'warning' },
+      { ruleName: 'audiostreamplayer3d-invalid-max-polyphony', severity: 'error' },
+    ],
   },
   check: checkAudioStreamPlayer3D,
 };

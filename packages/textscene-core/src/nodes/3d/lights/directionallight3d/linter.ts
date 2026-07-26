@@ -133,6 +133,13 @@ const directionalLight3DValidationRule: LintRule = {
     description: 'Validates DirectionalLight3D property values, shadow split ordering, and mode consistency',
     category: 'validation',
     applicableNodeTypes: ['DirectionalLight3D'],
+    emits: [
+      // via lightEnergyArms('directionallight3d')
+      { ruleName: 'directionallight3d-extreme-energy', severity: 'warning' },
+      { ruleName: 'directionallight3d-large-shadow-distance', severity: 'warning' },
+      { ruleName: 'directionallight3d-shadow-split-order', severity: 'error' },
+      { ruleName: 'directionallight3d-unused-splits', severity: 'warning' },
+    ],
   },
   check: checkDirectionalLight3D,
 };

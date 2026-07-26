@@ -24,7 +24,7 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: '20'
+          node-version: '24'
           cache: 'pnpm'
 
       - run: pnpm install --frozen-lockfile
@@ -35,8 +35,17 @@ jobs:
       - name: Type Check
         run: pnpm type-check
 
+      # Before the tests: loadCoreLinter.test.mjs skips itself when core's dist is
+      # absent, so building afterwards meant the loader guard never ran in CI.
+      # `docs:lint-sections --check` needs the same dist.
+      - name: Build Core
+        run: pnpm --filter @textscene/core build
+
       - name: Run Tests
         run: pnpm test:unit
+
+      - name: Check Generated Lint Sections
+        run: pnpm docs:lint-sections --check
 
       - name: Build Web Previewer
         run: pnpm --filter @textscene/web-previewer build
@@ -88,7 +97,7 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: '20'
+          node-version: '24'
           cache: 'pnpm'
 
       - run: pnpm install --frozen-lockfile
@@ -157,7 +166,7 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: '20'
+          node-version: '24'
           cache: 'pnpm'
 
       - run: pnpm install --frozen-lockfile

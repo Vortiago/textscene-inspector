@@ -175,6 +175,12 @@ const skeleton3DValidationRule: LintRule = {
     description: 'Validates Skeleton3D motion_scale values, debug modes, and usage patterns',
     category: 'validation',
     applicableNodeTypes: ['Skeleton3D'],
+    emits: [
+      { ruleName: 'valid-skeleton3d-motion-scale', severity: 'warning' },
+      { ruleName: 'skeleton3d-debug-mode', severity: 'warning' },
+      { ruleName: 'skeleton3d-deprecated-feature', severity: 'warning' },
+      { ruleName: 'skeleton3d-unused', severity: 'warning' },
+    ],
   },
   check: checkSkeleton3D,
 };
