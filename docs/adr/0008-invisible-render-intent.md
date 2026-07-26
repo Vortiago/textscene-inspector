@@ -13,6 +13,16 @@
 > who finds the text cluttered turns it OFF, exactly like the collision gizmo. With the flag off,
 > `Label3D` still renders an invisible marker group (the rest of point 4 holds).
 
+> **Amendment (ADR-0027, real CSG boolean evaluation):** a **geometry contributor** (a CSG node
+> inside a CSG root's subtree) draws nothing itself, yet unlike every other transform-only type it
+> *has* geometry of its own: its solid is consumed by its CSG root's boolean result instead of being
+> drawn where it sits. This does **not** add a third outcome. It is a role layered onto the second
+> one, exactly as `AnimationPlayer` is a transform-only group that is also an animation driver
+> (ADR-0011). The two-outcome contract below is unchanged; "draws nothing itself" continues to mean
+> what it says. A contributor also mounts an *invisible* bounds-proxy mesh so per-node selection and
+> `F`-to-frame keep working, which draws nothing either (three's raycaster skips invisible objects,
+> while `bounds.ts` keys on `.geometry` alone).
+
 > **Amendment (ADR-0018):** `Marker3D`, `Path3D`, and `PathFollow3D` are no longer fully invisible.
 > They now draw a **selection-gated** gizmo (marker cross / curve polyline / follow handle) and
 > PathFollow3D follows the parent curve — visible only while the node is selected, so the clutter this

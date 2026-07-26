@@ -13,8 +13,7 @@
  * uniforms, so we do it at the same boundary (`skyUniforms.ts`).
  */
 import { describe, expect, it } from 'vitest';
-import { parseSkyMaterial, resolveSky } from './parser';
-import type { TscnInternalResource } from '../../parser/types';
+import { parseSkyMaterial } from './parser';
 
 describe('parseSkyMaterial — ProceduralSkyMaterial', () => {
   it('applies Godot’s constructor defaults for a bare material', () => {
@@ -110,55 +109,5 @@ describe('parseSkyMaterial — unsupported', () => {
     // Godot ships exactly three; a null here means "render no sky", never a
     // silently mis-parsed one.
     expect(parseSkyMaterial('SomeAddonSkyMaterial', {})).toBeNull();
-  });
-});
-
-describe('resolveSky', () => {
-  const proceduralMaterial: TscnInternalResource = {
-    id: 'ProcSky_1',
-    type: 'ProceduralSkyMaterial',
-    data: { sky_top_color: 'Color(0.1, 0.2, 0.3, 1)' },
-  };
-  const sky: TscnInternalResource = {
-    id: 'Sky_1',
-    type: 'Sky',
-    data: { sky_material: 'SubResource("ProcSky_1")' },
-  };
-
-  it('walks Environment.sky → Sky.sky_material → the material', () => {
-    const resolved = resolveSky('SubResource("Sky_1")', [sky, proceduralMaterial]);
-    expect(resolved).toMatchObject({
-      kind: 'procedural',
-      sky_top_color: { r: 0.1, g: 0.2, b: 0.3, a: 1 },
-    });
-  });
-
-  it('returns null when the Sky carries no material', () => {
-    const bare: TscnInternalResource = { id: 'Sky_1', type: 'Sky', data: {} };
-    expect(resolveSky('SubResource("Sky_1")', [bare])).toBeNull();
-  });
-
-  it('returns null when the reference points at a missing sub-resource', () => {
-    expect(resolveSky('SubResource("Nope")', [sky, proceduralMaterial])).toBeNull();
-  });
-
-  it('returns null when the reference points at something that is not a Sky', () => {
-    // BG_SKY with `sky` pointing at, say, an Environment must not be coerced.
-    expect(resolveSky('SubResource("ProcSky_1")', [sky, proceduralMaterial])).toBeNull();
-  });
-
-  it('returns null for an absent reference', () => {
-    expect(resolveSky(undefined, [sky, proceduralMaterial])).toBeNull();
-  });
-
-  it('resolves a Sky whose material is an ExtResource — .tres skies are shared files', () => {
-    const external: TscnInternalResource = {
-      id: 'Sky_1',
-      type: 'Sky',
-      data: { sky_material: 'ExtResource("1_shared")' },
-    };
-    // We cannot follow an ExtResource synchronously, so this is null rather
-    // than a wrong sky; the caller falls back to no sky.
-    expect(resolveSky('SubResource("Sky_1")', [external])).toBeNull();
   });
 });

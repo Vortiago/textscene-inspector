@@ -80,7 +80,9 @@
     "postprocessing": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
-    "three": "catalog:"
+    "three": "catalog:",
+    "three-bvh-csg": "catalog:",
+    "three-mesh-bvh": "catalog:"
   },
   "devDependencies": {
     "@react-three/test-renderer": "catalog:",

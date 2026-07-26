@@ -1,0 +1,40 @@
+[gd_scene load_steps=3 format=3 uid="uid://unitcsgtransparency"]
+
+; The one measured confounder with no CSG coverage at all.
+;
+; Every other CSG fixture is opaque, so nothing here has ever exercised
+; transparency or refraction against Godot on this node family. Adding the
+; coverage is cheaper than assuming it is fine, and cheaper than discovering
+; later that a translucent CSG solid was wrong all along.
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_glass"]
+transparency = 1
+albedo_color = Color(0.4, 0.7, 0.9, 0.45)
+roughness = 0.1
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_solid"]
+albedo_color = Color(0.8, 0.5, 0.2, 1)
+
+[node name="CSGTransparencyRoot" type="Node3D"]
+
+; An opaque solid sitting BEHIND the glass, so the blend actually has something
+; to blend with. A transparent object over empty space would look plausible
+; whatever the alpha handling did.
+[node name="Backing" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -1.2)
+size = Vector3(1.4, 1.4, 0.3)
+material = SubResource("StandardMaterial3D_solid")
+
+[node name="Glass" type="CSGBox3D" parent="."]
+size = Vector3(2, 2, 0.4)
+material = SubResource("StandardMaterial3D_glass")
+
+; A transparent solid that is itself the result of a BOOLEAN, which is the case
+; that could plausibly differ: the merged mesh is one surface, not two objects.
+[node name="Hole" type="CSGCylinder3D" parent="Glass"]
+transform = Transform3D(1, 0, 0, 0, 0, 1, 0, -1, 0, 0.4, 0, 0)
+operation = 2
+radius = 0.45
+height = 2
+sides = 24
+material = SubResource("StandardMaterial3D_glass")

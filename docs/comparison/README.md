@@ -78,8 +78,12 @@ reproduced:
 - [CharacterBody3D](../../packages/textscene-core/src/nodes/physics/3d/characterbody3d/comparison.md) — a transform-only Node3D group
 - [CollisionShape3D](../../packages/textscene-core/src/nodes/physics/3d/collisionshape3d/comparison.md) — a toggle-gated collision wireframe
 - [CSGBox3D](../../packages/textscene-core/src/nodes/3d/csg/csgbox3d/comparison.md) — a solid box mesh
-- [CSGCylinder3D](../../packages/textscene-core/src/nodes/3d/csg/csgcylinder3d/comparison.md) — a THREE.CylinderGeometry mesh
+- [CSGCombiner3D](../../packages/textscene-core/src/nodes/3d/csg/csgcombiner3d/comparison.md) — a grouping node whose children fold into one solid
+- [CSGCylinder3D](../../packages/textscene-core/src/nodes/3d/csg/csgcylinder3d/comparison.md) — a solid cylinder or cone mesh
+- [CSGMesh3D](../../packages/textscene-core/src/nodes/3d/csg/csgmesh3d/comparison.md) — a solid built from an arbitrary Mesh resource
+- [CSGPolygon3D](../../packages/textscene-core/src/nodes/3d/csg/csgpolygon3d/comparison.md) — a 2D profile swept into a solid
 - [CSGSphere3D](../../packages/textscene-core/src/nodes/3d/csg/csgsphere3d/comparison.md) — a solid sphere mesh
+- [CSGTorus3D](../../packages/textscene-core/src/nodes/3d/csg/csgtorus3d/comparison.md) — a solid torus mesh
 - [Decal](../../packages/textscene-core/src/nodes/3d/decal/comparison.md) — a texture projected onto the surfaces its box intersects
 - [DirectionalLight3D](../../packages/textscene-core/src/nodes/3d/lights/directionallight3d/comparison.md) — a THREE.DirectionalLight
 - [GPUParticles3D](../../packages/textscene-core/src/nodes/3d/particles/gpuparticles3d/comparison.md) — a transform-only group

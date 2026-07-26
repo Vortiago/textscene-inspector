@@ -1,12 +1,21 @@
 [gd_scene format=3 uid="uid://edge_csg_invalid_operation"]
 
-; The issue asked for `operation=5` — out of the enumInt(0,2) range, a hard
-; format error that would break the fixtureLint gate. This instead pins the
-; ADR-0004 limitation with a valid-but-surprising operation value:
-; `operation=2` (SUBTRACTION) is schema-valid, but CSG boolean operations are
-; parsed and NOT applied by this renderer — a SUBTRACTION box next to a UNION
-; box renders IDENTICALLY (both solid), which is the actual degradation this
-; corpus documents. Lints completely clean.
+; `operation = 2` on a node whose parent is NOT a CSG node.
+;
+; This fixture used to document the ADR-0004 limitation: booleans were parsed and
+; dropped, so a SUBTRACTION box rendered identically to a UNION box. Booleans are
+; evaluated now (ADR-0026) and the two boxes STILL render identically, but for
+; the opposite reason. Both are CSG ROOTS, because each one's parent is a plain
+; Node3D, and a root's own operation is inert: Godot has nothing to fold it into
+; (is_root_shape / _get_brush). So this is a PARITY assertion, not a degradation.
+;
+; The NestedSubtraction group below is the contrast that makes that meaningful:
+; the same operation = 2 on a node whose parent IS a CSG node really does cut. If
+; the two ever stop differing, root detection has broken.
+;
+; The original issue asked for `operation = 5`, which is out of the enumInt(0,2)
+; range and a hard format error that would break the fixtureLint gate. Lints
+; completely clean as written.
 
 [node name="Scene" type="Node3D"]
 
@@ -15,7 +24,23 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.5, 0, 0)
 size = Vector3(1, 1, 1)
 operation = 0
 
+; A root, so its SUBTRACTION is ignored and it draws a whole box.
 [node name="SubtractionBox" type="CSGBox3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 0, 0)
 size = Vector3(1, 1, 1)
 operation = 2
+
+[node name="NestedSubtraction" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 0)
+
+[node name="Block" type="CSGBox3D" parent="NestedSubtraction"]
+size = Vector3(1, 1, 1)
+
+; Identical operation to SubtractionBox above, but its parent IS a CSG node, so
+; this one genuinely cuts a corner out of Block.
+[node name="Cut" type="CSGSphere3D" parent="NestedSubtraction/Block"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 0.5, 0.5)
+operation = 2
+radius = 0.6
+radial_segments = 20
+rings = 10

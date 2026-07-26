@@ -1,25 +1,19 @@
 /**
- * <CSGSphere3D> — renders a Godot CSGSphere3D as a solid sphere primitive.
+ * <CSGSphere3D> — renders a Godot CSGSphere3D as a solid sphere.
  *
- * `radial_segments`/`rings` map to three.js width/height segments. Scaffold
- * lives in the shared <CsgPrimitive> (ADR-0004 base-primitive rendering).
+ * Geometry, materials and the boolean seam all live in `<CsgPrimitive>`, which builds the
+ * solid from this slice's REGISTERED builder (see `csgGeometry.ts`). That is the same
+ * builder the evaluator calls, so the shape a node draws alone and the shape it
+ * contributes to a boolean cannot drift apart.
  */
 
-import type { CSGSphere3DProperties } from './types';
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { CsgPrimitive } from '../CsgPrimitive';
+import type { CSGSphere3DProperties } from './types';
 
 export function CSGSphere3D({ node, children }: NodeComponentProps) {
-  const properties = node.properties as CSGSphere3DProperties;
-
   return (
-    <CsgPrimitive
-      node={node}
-      properties={properties}
-      geometry={
-        <sphereGeometry args={[properties.radius, properties.radialSegments, properties.rings]} />
-      }
-    >
+    <CsgPrimitive node={node} properties={node.properties as CSGSphere3DProperties}>
       {children}
     </CsgPrimitive>
   );

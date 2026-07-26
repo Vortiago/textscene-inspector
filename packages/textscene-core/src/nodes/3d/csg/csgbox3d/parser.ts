@@ -4,6 +4,7 @@ import type { ParsedHeading } from '../../../../parser/utils';
 import type { CSGBox3DProperties } from './types';
 import { parseNode3D } from '../../../base/node3d/parser';
 import { finishCsgParse } from '../sharedParser';
+import { boolOr } from '../../../../parser/valueParsers';
 import { parseVector3 } from '../../../../parser/vectors';
 import { warn } from '../../../../logger';
 
@@ -25,9 +26,13 @@ export function parseCSGBox3D(
     }
   }
 
-  const result: CSGBox3DProperties = { ...node3d, size };
+  const result: CSGBox3DProperties = {
+    ...node3d,
+    size,
+    flipFaces: boolOr(properties.flip_faces, false, 'CSGBox3D flip_faces'),
+  };
 
-  finishCsgParse(result, properties, 'CSGBox3D', 'box');
+  finishCsgParse(result, properties);
 
   return result;
 }

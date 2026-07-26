@@ -28,7 +28,7 @@ Around 66 node types, each a self-registering vertical slice.
 | Category | Types |
 |---|---|
 | Meshes | Box, Sphere, Cylinder, Plane, Capsule, Torus, Prism, Quad |
-| CSG | CSGBox3D, CSGCylinder3D, CSGSphere3D |
+| CSG | CSGBox3D, CSGCylinder3D, CSGSphere3D, CSGTorus3D, CSGMesh3D, CSGPolygon3D, CSGCombiner3D — with real union / intersection / subtraction |
 | Lights & camera | Spot, Directional, Omni, Area (with shadows), Camera3D, Camera2D, WorldEnvironment |
 | Physics | Bodies plus collision-shape gizmos |
 | 2D | Sprite2D, AnimatedSprite2D, Polygon2D, Line2D, TileMap, TileMapLayer, NavigationRegion2D, Marker2D, Path2D, PathFollow2D |

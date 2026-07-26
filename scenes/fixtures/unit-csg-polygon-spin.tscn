@@ -1,0 +1,35 @@
+[gd_scene load_steps=2 format=3 uid="uid://unitcsgpolyspin"]
+
+; CSGPolygon3D MODE_SPIN revolves the outline about LOCAL +Y from angle 0, with
+; the profile starting in the XY plane, so +X sweeps toward -Z
+; (csg_shape.cpp:2358, a left-multiplied global rotation).
+;
+; three's LatheGeometry is not a substitute: it starts the profile on +Z, a
+; 90-degree offset, and emits no end caps at all.
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_spin"]
+albedo_color = Color(0.5, 0.55, 0.7, 1)
+
+[node name="CSGPolygonSpinRoot" type="Node3D"]
+
+; Vendored witness: csg.tscn:163, the StaircaseSpin. A PARTIAL spin, so Godot
+; builds BOTH end caps (csg_shape.cpp:2214).
+[node name="StaircaseSpin" type="CSGPolygon3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.5, 1, 1)
+polygon = PackedVector2Array(0, -1, 0, 0, 0.5, 0, 0.5, -0.25, 1, -0.25, 1, -0.5, 1.5, -0.5, 1.5, -0.75, 2, -0.75, 2, -1)
+mode = 1
+spin_degrees = 90.0
+spin_sides = 32
+material = SubResource("StandardMaterial3D_spin")
+
+; A FULL revolution, which is Godot's spin_degrees default. No caps at all: the
+; surface closes on itself, and the last frame snaps back to the base transform
+; so the seam shares vertices exactly rather than merely meeting
+; (csg_shape.cpp:2214-2216, :2355-2357).
+[node name="FullRevolution" type="CSGPolygon3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, 1, 0)
+polygon = PackedVector2Array(0.6, -0.5, 1, -0.5, 1, 0.5, 0.6, 0.5)
+mode = 1
+spin_sides = 24
+smooth_faces = true
+material = SubResource("StandardMaterial3D_spin")

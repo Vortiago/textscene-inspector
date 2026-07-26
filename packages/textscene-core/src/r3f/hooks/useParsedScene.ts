@@ -13,6 +13,7 @@ import type { TscnScene } from '../../parser/types.js';
 import { isGLBPath } from '../../resources/processing/glbProcessing.js';
 import { synthesiseGLBScene } from '../../resources/processors/createSceneProcessor.js';
 import { applyRemoteTransforms } from '../remoteTransforms.js';
+import { resolveCsgPolygonPaths } from '../csgPolygonPaths.js';
 
 export interface ParseResult {
   sceneGraph: SceneGraph | null;
@@ -60,7 +61,12 @@ function toParseResult(rootScenePath: string, tscnScene: TscnScene): ParseResult
   // Resolve RemoteTransform3D/2D drivers before the graph is built, so the
   // moved target flows into render, gizmos, bounds, selection, tree and
   // inspector uniformly (see remoteTransforms.ts).
-  const nodes = applyRemoteTransforms(tscnScene.nodes);
+  // Then resolve CSGPolygon3D `path_node` references, which likewise name a node the
+  // component cannot reach on its own (see csgPolygonPaths.ts).
+  const nodes = resolveCsgPolygonPaths(
+    applyRemoteTransforms(tscnScene.nodes),
+    tscnScene.internalResources
+  );
   const parsedScene = tscnSceneToParsedScene(
     rootScenePath,
     nodes,

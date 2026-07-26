@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { CSGCylinder3D } from './Component';
+// Imports the wired slice, not the bare component: CsgPrimitive builds the solid
+// from the registered builder, so the registration is part of what is under test.
+import { CSGCylinder3D } from './index.r3f';
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import type { TscnInternalResource, TscnNode } from '../../../../parser/types';
 import type { CSGCylinder3DProperties } from './types';
@@ -13,6 +15,8 @@ function makeNode(props: Partial<CSGCylinder3DProperties>, children: TscnNode[] 
     height: 0.8,
     sides: 8,
     cone: false,
+    smoothFaces: true,
+    flipFaces: false,
     ...props,
   };
   return { name: properties.name, type: 'CSGCylinder3D', children, properties };
@@ -28,24 +32,46 @@ async function render(node: TscnNode, internalResources: TscnInternalResource[] 
 
 async function geometryOf(node: TscnNode) {
   const renderer = await render(node);
-  return renderer.scene.findByType('Mesh').instance.geometry as THREE.CylinderGeometry & {
-    parameters: { radiusTop: number; radiusBottom: number; height: number; radialSegments: number };
-  };
+  return renderer.scene.findByType('Mesh').instance.geometry as THREE.BufferGeometry;
+}
+
+/**
+ * Distinct RIM positions at a given height. Excludes the on-axis point, which is the
+ * cap's centre vertex and sits at the same height as the ring it fans to.
+ */
+function ringAt(geometry: THREE.BufferGeometry, y: number): Set<string> {
+  const p = geometry.getAttribute('position');
+  const ring = new Set<string>();
+  for (let i = 0; i < p.count; i++) {
+    if (Math.abs(p.getY(i) - y) > 1e-6) continue;
+    const [x, z] = [p.getX(i), p.getZ(i)];
+    if (Math.abs(x) < 1e-6 && Math.abs(z) < 1e-6) continue;
+    ring.add(`${x.toFixed(5)},${z.toFixed(5)}`);
+  }
+  return ring;
 }
 
 describe('<CSGCylinder3D>', () => {
-  it('renders a CylinderGeometry with equal top/bottom radius and the right height/sides', async () => {
+  // The geometry is Godot's brush construction, not three's CylinderGeometry, so there
+  // is no `.parameters` to read; these assert the shape itself. Depth coverage of the
+  // construction lives in cylinderGeometry.test.ts.
+  it('builds a cylinder of the requested radius, height and side count', async () => {
     const geom = await geometryOf(makeNode({ radius: 0.25, height: 0.8, sides: 8 }));
-    expect(geom.parameters.radiusTop).toBe(0.25);
-    expect(geom.parameters.radiusBottom).toBe(0.25);
-    expect(geom.parameters.height).toBe(0.8);
-    expect(geom.parameters.radialSegments).toBe(8);
+    geom.computeBoundingBox();
+    const box = geom.boundingBox!;
+    expect(box.max.x).toBeCloseTo(0.25, 5);
+    expect(box.min.y).toBeCloseTo(-0.4, 5);
+    expect(box.max.y).toBeCloseTo(0.4, 5);
+    // Both rings carry the full complement of distinct radial positions.
+    expect(ringAt(geom, -0.4).size).toBe(8);
+    expect(ringAt(geom, 0.4).size).toBe(8);
   });
 
-  it('collapses the top radius to 0 when cone=true', async () => {
-    const geom = await geometryOf(makeNode({ radius: 0.5, cone: true }));
-    expect(geom.parameters.radiusTop).toBe(0);
-    expect(geom.parameters.radiusBottom).toBe(0.5);
+  it('collapses the top ring to a single apex vertex when cone=true', async () => {
+    const geom = await geometryOf(makeNode({ radius: 0.5, height: 0.8, cone: true }));
+    expect(ringAt(geom, -0.4).size).toBe(8);
+    // Nothing off-axis remains at the top: the ring has collapsed to the apex.
+    expect(ringAt(geom, 0.4).size).toBe(0);
   });
 
   it('applies the StandardMaterial3D albedo color from a SubResource', async () => {

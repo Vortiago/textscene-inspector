@@ -757,7 +757,7 @@
       "name": "CSGCombiner3D",
       "category": "3D",
       "group": "CSG",
-      "supported": false,
+      "supported": true,
       "chain": [
         "CSGShape3D",
         "GeometryInstance3D",
@@ -790,7 +790,7 @@
       "name": "CSGMesh3D",
       "category": "3D",
       "group": "CSG",
-      "supported": false,
+      "supported": true,
       "chain": [
         "CSGPrimitive3D",
         "CSGShape3D",
@@ -807,7 +807,7 @@
       "name": "CSGPolygon3D",
       "category": "3D",
       "group": "CSG",
-      "supported": false,
+      "supported": true,
       "chain": [
         "CSGPrimitive3D",
         "CSGShape3D",
@@ -841,7 +841,7 @@
       "name": "CSGTorus3D",
       "category": "3D",
       "group": "CSG",
-      "supported": false,
+      "supported": true,
       "chain": [
         "CSGPrimitive3D",
         "CSGShape3D",

@@ -47,6 +47,7 @@ Strict parsing format-checks these `Path3D` properties, plus 16 inherited from N
 | `valid-path3d` | `path3d-requires-curve` | error |
 |  | `valid-path3d-resources` | error |
 |  | `path3d-unused` | warning |
+|  | `curve3d-loadable` | error |
 <!-- lint:end -->
 
 `curve` is the only property, and the lenient parser does no substitution: it

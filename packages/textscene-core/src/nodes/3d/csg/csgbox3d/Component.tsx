@@ -1,23 +1,19 @@
 /**
- * <CSGBox3D> — renders a Godot CSGBox3D as a solid box primitive.
+ * <CSGBox3D> — renders a Godot CSGBox3D as a solid box.
  *
- * ADR-0004: the boolean `operation` is parsed but never applied, so a
- * subtraction or intersection renders as a solid block. That IS visible on the
- * vendored corpus — 36 non-union CSG nodes across five scenes — and is not the
- * corpus-safe simplification this comment used to claim. Scaffold lives in the
- * shared <CsgPrimitive>.
+ * Geometry, materials and the boolean seam all live in `<CsgPrimitive>`, which builds the
+ * solid from this slice's REGISTERED builder (see `csgGeometry.ts`). That is the same
+ * builder the evaluator calls, so the shape a node draws alone and the shape it
+ * contributes to a boolean cannot drift apart.
  */
 
-import type { CSGBox3DProperties } from './types';
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { CsgPrimitive } from '../CsgPrimitive';
+import type { CSGBox3DProperties } from './types';
 
 export function CSGBox3D({ node, children }: NodeComponentProps) {
-  const properties = node.properties as CSGBox3DProperties;
-  const { x, y, z } = properties.size;
-
   return (
-    <CsgPrimitive node={node} properties={properties} geometry={<boxGeometry args={[x, y, z]} />}>
+    <CsgPrimitive node={node} properties={node.properties as CSGBox3DProperties}>
       {children}
     </CsgPrimitive>
   );

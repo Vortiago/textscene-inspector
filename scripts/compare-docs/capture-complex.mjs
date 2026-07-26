@@ -81,6 +81,23 @@ export const COMPLEX_SCENES = [
     godot: 'scenes/fixtures/integration-material-features.tscn',
     ours: 'integration-material-features.tscn',
   },
+  {
+    // A whole game world: a glTF town model, ten instanced lamp sub-scenes, a
+    // CSG racetrack, a WorldEnvironment with sky + fog, shadows, and a Control
+    // UI over the top. Neither automatic framing works — the scene's bounds are
+    // 2048 x 1104 x 2048, so a fit shot shrinks the town to a speck, and the
+    // editor orbit opens 4 units from the origin, under the terrain — so the
+    // scene carries a PreviewCamera that both sides look through.
+    slug: 'complex-truck-town',
+    mode: '3d',
+    sceneCamera: true,
+    oursCamera: 'TownScene/PreviewCamera',
+    godot: 'scenes/demos/3d/truck_town/town/town_scene.tscn',
+    ours: 'demos/3d/truck_town/town/town_scene.tscn',
+    // The heaviest scene in the corpus; one software-rendered frame exceeds
+    // Playwright's default action timeout.
+    settleTimeout: 120000,
+  },
 ];
 
 function parseArgs(argv) {
@@ -144,7 +161,9 @@ async function captureOurs(scenes) {
           .catch(() => {});
         const { target, reason } = await findCaptureTarget(page, { canvas2D: c.mode === '2d' });
         if (!target) throw new Error(reason);
-        const { buffer, reason: settleReason } = await settleCanvas(page, target);
+        const { buffer, reason: settleReason } = await settleCanvas(page, target, {
+          screenshotTimeout: c.settleTimeout,
+        });
         if (!buffer) throw new Error(settleReason);
         writeFileSync(join(IMAGES, `${c.slug}-ours.png`), buffer);
         console.log('ok');

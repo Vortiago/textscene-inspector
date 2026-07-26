@@ -32,6 +32,7 @@
     "test:visual:update": "node scripts/visual/run.mjs --update",
     "ref:godot": "node scripts/godot-ref/run.mjs",
     "ref:ours": "node scripts/godot-ref/capture-ours.mjs",
+    "ref:diff": "node scripts/godot-ref/diff.mjs",
     "verify:2d": "node scripts/showcase/verify-2d.mjs",
     "showcase:regen": "pnpm --filter @textscene/web-previewer build && node scripts/showcase/regenerate.mjs",
     "clean": "pnpm -r clean && rimraf node_modules",

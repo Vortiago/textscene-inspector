@@ -1013,8 +1013,18 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Physics"
   },
   {
+    "name": "Csg Boolean Ops",
+    "file": "unit-csg-boolean-ops.tscn",
+    "category": "Unit - CSG Primitives"
+  },
+  {
     "name": "Csg Box",
     "file": "unit-csg-box.tscn",
+    "category": "Unit - CSG Primitives"
+  },
+  {
+    "name": "Csg Combiner",
+    "file": "unit-csg-combiner.tscn",
     "category": "Unit - CSG Primitives"
   },
   {
@@ -1033,8 +1043,43 @@ export const fixtures: Fixture[] = [
     "category": "Unit - CSG Primitives"
   },
   {
+    "name": "Csg Mesh",
+    "file": "unit-csg-mesh.tscn",
+    "category": "Unit - CSG Primitives"
+  },
+  {
+    "name": "Csg Multi Material",
+    "file": "unit-csg-multi-material.tscn",
+    "category": "Unit - CSG Primitives"
+  },
+  {
+    "name": "Csg Polygon Depth",
+    "file": "unit-csg-polygon-depth.tscn",
+    "category": "Unit - CSG Primitives"
+  },
+  {
+    "name": "Csg Polygon Path",
+    "file": "unit-csg-polygon-path.tscn",
+    "category": "Unit - CSG Primitives"
+  },
+  {
+    "name": "Csg Polygon Spin",
+    "file": "unit-csg-polygon-spin.tscn",
+    "category": "Unit - CSG Primitives"
+  },
+  {
     "name": "Csg Sphere",
     "file": "unit-csg-sphere.tscn",
+    "category": "Unit - CSG Primitives"
+  },
+  {
+    "name": "Csg Torus",
+    "file": "unit-csg-torus.tscn",
+    "category": "Unit - CSG Primitives"
+  },
+  {
+    "name": "Csg Transparency",
+    "file": "unit-csg-transparency.tscn",
     "category": "Unit - CSG Primitives"
   },
   {

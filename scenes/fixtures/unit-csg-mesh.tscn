@@ -1,0 +1,38 @@
+[gd_scene load_steps=4 format=3 uid="uid://unitcsgmesh"]
+
+; CSGMesh3D has ZERO occurrences in the vendored corpus, so unlike every other
+; CSG fixture here this one has no witness to copy. It is authored from the class
+; reference (csg_shape.cpp:1125-1300, CSGMesh3D.xml): `mesh` is any Mesh resource,
+; and `material` REPLACES the mesh's own surface material (csg_shape.cpp:1167-1172)
+; rather than layering per-surface overrides the way MeshInstance3D does.
+;
+; PlaneMesh and QuadMesh are deliberately absent: Godot's own property hint
+; excludes them (csg_shape.cpp:1298) because they are not manifold and so cannot
+; take part in a boolean.
+
+[sub_resource type="BoxMesh" id="BoxMesh_csg"]
+size = Vector3(1.5, 1, 1.5)
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_csg"]
+radius = 0.4
+height = 1.6
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_csgmesh"]
+albedo_color = Color(0.3, 0.6, 0.8, 1)
+
+[node name="CSGMeshRoot" type="Node3D"]
+
+[node name="BoxFromMesh" type="CSGMesh3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.4, 0, 0)
+mesh = SubResource("BoxMesh_csg")
+material = SubResource("StandardMaterial3D_csgmesh")
+
+[node name="CapsuleFromMesh" type="CSGMesh3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.4, 0, 0)
+mesh = SubResource("CapsuleMesh_csg")
+material = SubResource("StandardMaterial3D_csgmesh")
+
+; No `mesh` at all. Godot builds an empty brush (csg_shape.cpp:1126), so this must
+; draw nothing and must not throw or show a placeholder.
+[node name="NoMesh" type="CSGMesh3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.4, 0)

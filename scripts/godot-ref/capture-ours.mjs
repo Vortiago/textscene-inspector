@@ -86,7 +86,7 @@ function parseArgs(argv) {
   return args;
 }
 
-async function captureOurs({ fixture, frame = false, canvas2D = false }) {
+export async function captureOurs({ fixture, frame = false, canvas2D = false }) {
   ensureWebBuilt();
   await assertPortFree(PORT, 'PARITY_PORT');
   const { proc, baseUrl } = startPreview(PORT);
