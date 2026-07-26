@@ -76,6 +76,28 @@ describe('polygonRings', () => {
     ]);
   });
 
+  it('trims internal vertices when inverted — Godot trims on that branch too', () => {
+    // `if ((invert || polygons.is_empty()) && internal_vertices > 0) len -= internal_vertices;`
+    // — the trim is NOT skipped by invert, so the punched-out hole is the
+    // outline alone and the grown bounds are measured from it.
+    const rings = polygonRings(TWO_SQUARES, [], 4, true, 5);
+    expect(rings.hole).toEqual([0, 1, 2, 3]);
+    expect(rings.hole!.map((i) => rings.points[i])).toEqual([
+      { x: 0, y: 0 },
+      { x: 10, y: 0 },
+      { x: 10, y: 10 },
+      { x: 0, y: 10 },
+    ]);
+    // Bounds grown from the FIRST square only; the trimmed second square
+    // (x up to 30) must not widen them.
+    expect(rings.outlines[0]!.map((i) => rings.points[i])).toEqual([
+      { x: -5, y: -5 },
+      { x: 15, y: -5 },
+      { x: 15, y: 15 },
+      { x: -5, y: 15 },
+    ]);
+  });
+
   it('ignores `polygons` entirely when inverted, as Godot does', () => {
     const rings = polygonRings(TWO_SQUARES, [[4, 5, 6, 7]], 0, true, 5);
     expect(rings.hole).toHaveLength(8);
