@@ -16,7 +16,9 @@ Godot `.tscn` parser/linter/renderer (react-three-fiber over three.js). pnpm mon
   vitest + tsc but fail CI.
 - Changed `.tscn` fixtures: `pnpm build:linter && pnpm lint:tscn <files>`.
 - Changed rendering: `pnpm test:visual` (golden images); `pnpm test:visual:update`
-  rewrites baselines — eyeball, then commit.
+  rewrites baselines — eyeball, then commit. A NEW golden moves ONE variable, and its
+  `.tscn` header names it and says why a regression in it is invisible in every other
+  scene — a fixture that moves two cannot localise which one broke.
 - Parity questions: `pnpm ref:godot <scene.tscn> [--camera x,y,z] [--probe x,y]` renders
   through real Godot 4.6 and prints exact pixels — measure, never derive. Needs local
   `godot` + `xvfb-run`, so it is a tool, not a gate. It injects the editor preview

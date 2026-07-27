@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { compositeGlsl } from './godotCompositor';
 import { GLOW_LEVEL_COUNT, parseEnvironment } from './parser';
 import { createEnvironmentSettings } from './renderer';
 import {
@@ -6,8 +7,6 @@ import {
   blendsAfterToneMapping,
   unexposedBrightPassThreshold,
   brightPassGlsl,
-  compositeGlsl,
-  gatherWeights,
   glowLevelSize,
   GlowBlendMode,
   glowNeedsEveryPixel,
@@ -141,34 +140,40 @@ describe('unexposedBrightPassThreshold', () => {
     // `glow_hdr_threshold`, so at exposure 1.8 a colour peaking at 0.8 does cross a
     // threshold of 1.0. Anything measuring unexposed colour has to be held to the
     // lower bar or it disagrees with the shader about what blooms.
-    expect(unexposedBrightPassThreshold(glowOn(), 1.8)).toBeCloseTo(1 / 1.8, 6);
-    expect(unexposedBrightPassThreshold(glowOn(), 1)).toBeCloseTo(1, 6);
-    expect(unexposedBrightPassThreshold(glowOn({ glow_hdr_threshold: '2' }), 4)).toBeCloseTo(0.5, 6);
+    expect(unexposedBrightPassThreshold(glowOn({ tonemap_exposure: '1.8' }))).toBeCloseTo(
+      1 / 1.8,
+      6
+    );
+    expect(unexposedBrightPassThreshold(glowOn())).toBeCloseTo(1, 6);
+    expect(
+      unexposedBrightPassThreshold(glowOn({ glow_hdr_threshold: '2', tonemap_exposure: '4' }))
+    ).toBeCloseTo(0.5, 6);
   });
 
   it('survives a zero or negative exposure rather than dividing by it', () => {
-    expect(Number.isFinite(unexposedBrightPassThreshold(glowOn(), 0))).toBe(true);
-    expect(Number.isFinite(unexposedBrightPassThreshold(glowOn(), -2))).toBe(true);
+    expect(
+      Number.isFinite(unexposedBrightPassThreshold(glowOn({ tonemap_exposure: '0' })))
+    ).toBe(true);
+    expect(
+      Number.isFinite(unexposedBrightPassThreshold(glowOn({ tonemap_exposure: '-2' })))
+    ).toBe(true);
   });
 });
 
-describe('gatherWeights', () => {
-  it('is the authored weights, with glow_strength deliberately NOT folded in', () => {
+describe('levels', () => {
+  it('are the authored weights, with glow_strength deliberately NOT folded in', () => {
     // Godot multiplies by glow_strength once per pyramid pass, and on the first
-    // pass that lands BEFORE the knee and the luminance cap. Folding it in here
-    // would move it after both, so the passes apply it instead.
-    expect(gatherWeights(glowOn())).toEqual([0.0, 0.8, 0.4, 0.1, 0.0, 0.0, 0.0]);
-    expect(gatherWeights(glowOn({ glow_strength: '2' }))).toEqual([
-      0.0, 0.8, 0.4, 0.1, 0.0, 0.0, 0.0,
-    ]);
+    // pass that lands BEFORE the knee and the luminance cap. Folding it into the
+    // weights would move it after both, so the passes apply it instead.
+    expect(glowOn({ glow_strength: '2' }).levels).toEqual([0.0, 0.8, 0.4, 0.1, 0.0, 0.0, 0.0]);
   });
 });
 
-describe('brightPassGlsl exposure and strength', () => {
+describe('brightPassGlsl', () => {
   it('multiplies strength then exposure BEFORE evaluating the knee', () => {
     // `copy.glsl` order: strength, exposure, then the smoothstep and the cap. A
     // knee evaluated on unexposed HDR blooms the wrong pixels entirely.
-    const glsl = brightPassGlsl(glowOn({ glow_strength: '1.5' }), 2);
+    const glsl = brightPassGlsl(glowOn({ glow_strength: '1.5', tonemap_exposure: '2' }));
     const strengthAt = glsl.indexOf('color *= 1.5;');
     const exposureAt = glsl.indexOf('color *= 2.0;');
     const kneeAt = glsl.indexOf('smoothstep(');
@@ -177,10 +182,30 @@ describe('brightPassGlsl exposure and strength', () => {
     expect(kneeAt).toBeGreaterThan(exposureAt);
   });
 
+  it('gates on the peak channel with a smoothstep knee of width glow_hdr_scale', () => {
+    const glsl = brightPassGlsl(glowOn());
+    // Peak channel, not Rec.709 luminance: a saturated blue emissive is the
+    // dimmest surface in the frame by luminance and still blooms in Godot.
+    expect(glsl).toContain('max(color.r, max(color.g, color.b))');
+    // threshold 1.0, threshold + hdr_scale = 3.0
+    expect(glsl).toContain('smoothstep(1.0, 3.0, luminance)');
+  });
+
+  it('floors the feedback at glow_bloom and caps the result at the luminance cap', () => {
+    const glsl = brightPassGlsl(glowOn({ glow_bloom: '0.25', glow_hdr_luminance_cap: '8' }));
+    expect(glsl).toContain('0.25');
+    expect(glsl).toContain('min(color * feedback, vec3(8.0))');
+  });
+
+  it('emits a compilable float literal for integral values', () => {
+    // GLSL has no int→float coercion in a constant initialiser.
+    expect(brightPassGlsl(glowOn({ glow_hdr_threshold: '2' }))).toContain('smoothstep(2.0, 4.0');
+  });
+
   it('never emits a zero-width smoothstep knee', () => {
     // `smoothstep(e, e, x)` divides by the edge difference and is undefined in
     // GLSL ES, so a driver-dependent halo is the failure mode.
-    const glsl = brightPassGlsl(glowOn({ glow_hdr_threshold: '1', glow_hdr_scale: '0' }), 1);
+    const glsl = brightPassGlsl(glowOn({ glow_hdr_threshold: '1', glow_hdr_scale: '0' }));
     expect(glsl).not.toContain('smoothstep(1.0, 1.0,');
   });
 });
@@ -193,7 +218,6 @@ describe('compositeGlsl', () => {
   it('exposes the scene colour and leaves the glow alone, pre-tonemap modes', () => {
     const glsl = compositeGlsl(glowOn({ glow_blend_mode: String(GlowBlendMode.SCREEN) }), {
       mode: 2,
-      exposure: 1.8,
       white: 1,
     });
     // The scene gets exposure; the tone curve is then called with none left to apply.
@@ -208,7 +232,6 @@ describe('compositeGlsl', () => {
     // well, because soft light needs both operands in the compressed range.
     const glsl = compositeGlsl(glowOn({ glow_blend_mode: String(GlowBlendMode.SOFTLIGHT) }), {
       mode: 2,
-      exposure: 1.8,
       white: 1,
     });
     expect(glsl).toContain('godotToneMap(glow, 1.0)');
@@ -220,7 +243,7 @@ describe('compositeGlsl', () => {
     // `godotToneMap` and `godotGlowBlend` above it, so an index over the whole
     // string would compare declarations rather than the order they are called in.
     const body = (params: Parameters<typeof compositeGlsl>[0]) => {
-      const glsl = compositeGlsl(params, { mode: 2, exposure: 1, white: 1 });
+      const glsl = compositeGlsl(params, { mode: 2, white: 1 });
       return glsl.slice(glsl.indexOf('void mainImage'));
     };
     const screen = body(glowOn({ glow_blend_mode: String(GlowBlendMode.SCREEN) }));
@@ -250,28 +273,6 @@ describe('glowLevelSize', () => {
     // small frame reach zero quickly.
     expect(glowLevelSize(8, 8, 6)).toEqual({ width: 1, height: 1 });
     expect(glowLevelSize(1, 1, 0)).toEqual({ width: 1, height: 1 });
-  });
-});
-
-describe('brightPassGlsl', () => {
-  it('gates on the peak channel with a smoothstep knee of width glow_hdr_scale', () => {
-    const glsl = brightPassGlsl(glowOn());
-    // Peak channel, not Rec.709 luminance: a saturated blue emissive is the
-    // dimmest surface in the frame by luminance and still blooms in Godot.
-    expect(glsl).toContain('max(color.r, max(color.g, color.b))');
-    // threshold 1.0, threshold + hdr_scale = 3.0
-    expect(glsl).toContain('smoothstep(1.0, 3.0, luminance)');
-  });
-
-  it('floors the feedback at glow_bloom and caps the result at the luminance cap', () => {
-    const glsl = brightPassGlsl(glowOn({ glow_bloom: '0.25', glow_hdr_luminance_cap: '8' }));
-    expect(glsl).toContain('0.25');
-    expect(glsl).toContain('min(color * feedback, vec3(8.0))');
-  });
-
-  it('emits a compilable float literal for integral values', () => {
-    // GLSL has no int→float coercion in a constant initialiser.
-    expect(brightPassGlsl(glowOn({ glow_hdr_threshold: '2' }))).toContain('smoothstep(2.0, 4.0');
   });
 });
 

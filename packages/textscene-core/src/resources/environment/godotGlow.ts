@@ -22,15 +22,17 @@
  *    contributes at all. An equal-weighted 8-level pyramid instead spreads a
  *    haze over the whole frame, which is the failure this replaces.
  *
- * 3. THE BLEND, and WHERE it happens. Godot composites glow at two different
- *    points depending on the mode: SOFTLIGHT after the tone curve (with the glow
- *    buffer itself tonemapped), every other mode into linear HDR before it. Both
- *    orderings are expressed here so a scene picks its own.
+ * 3. THE BLEND, and WHICH SIDE of the tone curve it falls on. Godot composites
+ *    glow at two different points depending on the mode: SOFTLIGHT after the tone
+ *    curve (with the glow buffer itself tonemapped), every other mode into linear
+ *    HDR before it. Both are expressed here so a scene picks its own — but the
+ *    shader that actually assembles a blend and a curve together is
+ *    `godotCompositor.ts`, deliberately not here, so that asking whether an
+ *    environment glows does not drag in five tone-curve bodies.
  */
 
 import type { EnvironmentSettings } from './renderer';
 import { glslFloat } from './glslLiterals';
-import { toneMappingEffectGlsl } from './godotToneMapping';
 
 /** Godot `Environment.GlowBlendMode`. */
 export const GlowBlendMode = {
@@ -42,7 +44,16 @@ export const GlowBlendMode = {
 } as const;
 
 export interface GlowParams {
-  /** The seven mip weights, finest first. Godot sums these unnormalised. */
+  /**
+   * The seven mip weights, finest first, exactly as authored. Godot sums these
+   * unnormalised.
+   *
+   * `glow_strength` is deliberately NOT folded in. Godot multiplies by it once per
+   * pyramid pass, and on the FIRST pass that multiply lands before the knee and
+   * before the luminance cap — so folding it here would move it after both, and a
+   * strength above 1 could carry a level past a cap Godot had already clamped. The
+   * bright pass and each downsample apply it instead.
+   */
   levels: number[];
   /** Highest level index carrying weight — mips past it are never rendered. */
   maxLevel: number;
@@ -63,6 +74,14 @@ export interface GlowParams {
    */
   intensity: number;
   blendMode: number;
+  /**
+   * The Environment's `tonemap_exposure`. A glow input, not a tonemap one, because
+   * Godot hands it to the glow pass directly (`renderer_scene_render_rd.cpp` passes
+   * `environment_get_exposure` as `glow_exposure`) and the bright pass applies it
+   * before the knee. Carried here so the bright pass and anything inspecting colour
+   * upstream of it cannot be given different values.
+   */
+  exposure: number;
 }
 
 /**
@@ -133,6 +152,7 @@ export function glowParamsFor(settings: EnvironmentSettings): GlowParams | null 
     strength: Math.max(0, glow.strength),
     intensity: blendMode === GlowBlendMode.MIX ? clamp01(glow.mix) : glow.intensity,
     blendMode,
+    exposure: settings.toneMapping.exposure,
   };
 }
 
@@ -180,23 +200,10 @@ export function blendsAfterToneMapping(params: GlowParams): boolean {
  * unexposed — needs this rather than the raw threshold, or it disagrees with the
  * shader about what blooms.
  */
-export function unexposedBrightPassThreshold(params: GlowParams, exposure: number): number {
-  return params.hdrThreshold / Math.max(exposure, GLSL_EPSILON);
+export function unexposedBrightPassThreshold(params: GlowParams): number {
+  return params.hdrThreshold / Math.max(params.exposure, GLSL_EPSILON);
 }
 
-/**
- * The gather weights, which are the authored ones unchanged.
- *
- * `glow_strength` is NOT folded in here. Godot multiplies by it once per pyramid
- * pass, and on the first pass that multiply lands before the knee and the
- * luminance cap — so folding it into the gather would move it after both, and a
- * strength above 1 could then carry a level past a cap Godot had already
- * clamped. The bright pass and each downsample apply it instead, which reaches
- * the same total (`strength^(i+1)` at level `i`) in the right order.
- */
-export function gatherWeights(params: GlowParams): number[] {
-  return params.levels.slice();
-}
 
 /**
  * Godot's bright pass (`copy.glsl`, `MODE_GLOW` under `FLAG_GLOW_FIRST_PASS`).
@@ -210,12 +217,12 @@ export function gatherWeights(params: GlowParams): number[] {
  * (`renderer_scene_render_rd.cpp` passes `environment_get_exposure`), which is
  * why the composite must not apply exposure to the glow a second time.
  */
-export function brightPassGlsl(params: GlowParams, exposure: number): string {
+export function brightPassGlsl(params: GlowParams): string {
   const kneeEnd = params.hdrThreshold + Math.max(params.hdrScale, GLSL_EPSILON);
   return /* glsl */ `
 vec3 godotGlowBrightPass(vec3 color) {
   color *= ${glslFloat(params.strength)};
-  color *= ${glslFloat(exposure)};
+  color *= ${glslFloat(params.exposure)};
   float luminance = max(color.r, max(color.g, color.b));
   float feedback = max(
     smoothstep(${glslFloat(params.hdrThreshold)}, ${glslFloat(kneeEnd)}, luminance),
@@ -246,40 +253,6 @@ ${body(params, white)}
 `;
 }
 
-/**
- * The whole composite, in `tonemap.glsl`'s order — the glow gather, the blend, and
- * the tone curve in one shader, which is how Godot ships it.
- *
- * Exposure is the subtle part. Godot applies it to the SCENE colour once, before
- * the blend (`color.rgb *= exposure` near the top of `main()`), while the GLOW
- * buffer was already exposed by the bright pass. So the tone curve here is invoked
- * with an exposure of 1.0: it is the curve alone, and each operand has been exposed
- * exactly once. Multiplying by exposure again would double it on the glow and, on
- * the pre-tonemap path, scale the blended sum instead of its operands.
- */
-export function compositeGlsl(
-  params: GlowParams,
-  toneMapping: { mode: number; exposure: number; white: number }
-): string {
-  const blend = blendsAfterToneMapping(params)
-    ? /* glsl */ `  vec3 color = godotToneMap(max(inputColor.rgb, 0.0) * godotExposure, 1.0);
-  color = godotGlowBlend(color, godotToneMap(glow, 1.0));`
-    : /* glsl */ `  vec3 color = godotGlowBlend(max(inputColor.rgb, 0.0) * godotExposure, glow);
-  color = godotToneMap(color, 1.0);`;
-
-  return /* glsl */ `
-uniform sampler2D godotGlowBuffer;
-uniform float godotExposure;
-${toneMappingEffectGlsl(toneMapping.mode, toneMapping.white)}
-${blendGlsl(params, toneMapping.white)}
-void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
-  vec3 glow = texture2D(godotGlowBuffer, uv).rgb * ${glslFloat(params.intensity)};
-${blend}
-  outputColor = vec4(color, inputColor.a);
-}
-`;
-}
-
 function clamp01(value: number): number {
   return Math.max(0, Math.min(1, value));
 }
@@ -290,6 +263,10 @@ function clamp01(value: number): number {
  * zero width; SCREEN divides by the white point. Godot's own comment says white
  * "cannot be smaller than the maximum output value", so zero is outside its
  * contract rather than a case it handles — but a scene can still author it.
+ *
+ * Deliberately NOT `LEVEL_EPSILON`, which happens to be the same number: that one
+ * is Godot's authored-weight cutoff and this is a floor on generated GLSL. Merging
+ * them would couple a parity value to a codegen guard.
  */
 const GLSL_EPSILON = 1e-4;
 

@@ -56,16 +56,16 @@ export function EnvironmentLayer({ settings, sky }: EnvironmentLayerProps) {
   // is gated on the scene actually having bloomable content. When it is NOT
   // mounted the scene stays on the ordinary in-material tonemap path, unchanged.
   const glowParams = useMemo(() => glowParamsFor(settings), [settings]);
-  // Some settings glow every pixel, in which case the scene's own contents cannot
-  // answer whether the pass matters and the scan is not worth running.
-  const alwaysGlows = !!glowParams && glowNeedsEveryPixel(glowParams);
-  // Exposure-adjusted, because the scan measures unexposed material emissive
-  // while the bright pass exposes before thresholding.
-  const hasBloomable = useSceneHasBloomableEmissive(
-    glowParams ? unexposedBrightPassThreshold(glowParams, settings.toneMapping.exposure) : 0,
-    !!glowParams && !alwaysGlows
-  );
-  const activeGlow = glowParams && (alwaysGlows || hasBloomable) ? glowParams : null;
+  // null when scanning the scene cannot decide the question: either nothing could
+  // glow, or the settings glow every pixel regardless of what the scene holds. One
+  // nullable argument rather than a threshold plus a flag, because a threshold of 0
+  // means "everything blooms" and would be actively wrong if the flag were dropped.
+  const scanThreshold =
+    glowParams && !glowNeedsEveryPixel(glowParams)
+      ? unexposedBrightPassThreshold(glowParams)
+      : null;
+  const hasBloomable = useSceneHasBloomableEmissive(scanThreshold);
+  const activeGlow = glowParams && (scanThreshold === null || hasBloomable) ? glowParams : null;
 
   return (
     <>
@@ -192,24 +192,20 @@ function SkyDiffuseReflectionSplit({
 }
 
 /**
- * Whether the live scene has any material bright enough to bloom — a linear
- * emissive whose peak channel × `emissiveIntensity` exceeds the glow threshold
- * (exactly the pixels `GlowLayer`'s peak-channel bright-pass would catch). Only
- * then is mounting the bloom composer worth its cost.
+ * Whether the live scene has any material bright enough to bloom, and therefore
+ * whether mounting the compositor is worth its cost. What counts as bright enough
+ * is `sceneHasBloomableEmissive`'s to define; this owns only what that cannot know.
  *
  * Re-checked over a short window after each scene change so async content (GLB,
  * instanced sub-scenes) that mounts a beat later still turns the composer on;
  * it errs toward mounting (a false positive only costs a redundant pass, a false
  * negative would silently drop a real bloom), and having said so it LATCHES —
- * once something has bloomed, the answer stays true until the scene changes. Diffuse-only brightness — lit
- * white floors, unshaded Label3D text near 1.0 — stays below the threshold and
- * does not trigger it, matching Godot (which does not bloom those either).
+ * once something has bloomed, the answer stays true until the scene changes.
  *
- * `needsScan` is false both when there is no glow at all and when the settings
- * already force the pass to mount — the scan is only worth running when its
- * answer is what decides.
+ * A null threshold means the scan cannot decide and is skipped — there is no glow,
+ * or the settings glow every pixel whatever the scene holds.
  */
-function useSceneHasBloomableEmissive(threshold: number, needsScan: boolean): boolean {
+function useSceneHasBloomableEmissive(threshold: number | null): boolean {
   const scene = useThree((s) => s.scene);
   const hierarchy = useOptionalHierarchy();
   const rootKey = hierarchy?.sceneGraph?.rootScene ?? '';
@@ -220,7 +216,7 @@ function useSceneHasBloomableEmissive(threshold: number, needsScan: boolean): bo
     // below include the scene and its root, so a different scene must start from
     // "nothing bloomed yet" rather than inherit the previous scene's latch.
     setBloomable(false);
-    if (!needsScan) return undefined;
+    if (threshold === null) return undefined;
     const check = () => {
       const found = sceneHasBloomableEmissive(scene, threshold);
       // LATCHES, and only resets when the deps below change. Mounting the
@@ -235,7 +231,7 @@ function useSceneHasBloomableEmissive(threshold: number, needsScan: boolean): bo
     check();
     const timers = [150, 500, 1100].map((delay) => setTimeout(check, delay));
     return () => timers.forEach(clearTimeout);
-  }, [scene, rootKey, threshold, needsScan]);
+  }, [scene, rootKey, threshold]);
 
   return bloomable;
 }

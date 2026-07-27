@@ -82,14 +82,14 @@ export class ValidatorRegistry {
       return nodeValidators[propertyKey];
     }
 
-    // Try pattern matching (e.g., "surface_material_override/*")
-    for (const [pattern, validator] of Object.entries(nodeValidators)) {
-      if (pattern.endsWith('/*')) {
-        const prefix = pattern.slice(0, -2);
-        if (propertyKey.startsWith(prefix + '/')) {
-          return validator;
-        }
-      }
+    // Try pattern matching (e.g., "surface_material_override/*"). `for...in`
+    // rather than `Object.entries`, which allocates an array plus a pair per key
+    // on every miss — and every unregistered property is a miss.
+    for (const pattern in nodeValidators) {
+      if (!pattern.endsWith('/*')) continue;
+      if (!propertyKey.startsWith(pattern.slice(0, -2) + '/')) continue;
+      const validator = nodeValidators[pattern];
+      if (validator) return validator;
     }
 
     return null;

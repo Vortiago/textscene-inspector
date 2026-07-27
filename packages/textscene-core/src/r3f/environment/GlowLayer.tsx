@@ -47,7 +47,7 @@ function hasRealGlContext(gl: { getContext?: () => unknown }): boolean {
 export function GlowLayer({ glow, toneMapping }: GlowLayerProps) {
   const gl = useThree((s) => s.gl);
   const glReady = useMemo(() => hasRealGlContext(gl), [gl]);
-  const { mode, exposure, white } = toneMapping;
+  const { mode, white } = toneMapping;
 
   // Typed as the base `Effect`: with the library's `declaration: true`, a class
   // extending postprocessing's `Effect` does not carry its inherited members
@@ -58,10 +58,9 @@ export function GlowLayer({ glow, toneMapping }: GlowLayerProps) {
       new GodotGlowEffect({
         glow,
         toneMapMode: mode,
-        toneMapExposure: exposure,
         toneMapWhite: white,
       }) as Effect,
-    [glow, mode, exposure, white]
+    [glow, mode, white]
   );
   useEffect(() => () => glowEffect.dispose(), [glowEffect]);
 

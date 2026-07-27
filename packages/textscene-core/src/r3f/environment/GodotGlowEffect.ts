@@ -25,19 +25,16 @@ import { BlendFunction, Effect } from 'postprocessing';
 import * as THREE from 'three';
 import {
   brightPassGlsl,
-  compositeGlsl,
-  gatherWeights,
   glowLevelSize,
   type GlowParams,
 } from '../../resources/environment/godotGlow';
+import { compositeGlsl } from '../../resources/environment/godotCompositor';
 import { glslFloat } from '../../resources/environment/glslLiterals';
 
 export interface GodotGlowOptions {
   glow: GlowParams;
   /** Godot `tonemap_mode`: 0 LINEAR, 1 REINHARDT, 2 FILMIC, 3 ACES, 4 AGX. */
   toneMapMode: number;
-  /** Godot `tonemap_exposure`. */
-  toneMapExposure: number;
   /** Godot `tonemap_white` — also the white point SCREEN normalises against. */
   toneMapWhite: number;
 }
@@ -62,26 +59,26 @@ export class GodotGlowEffect extends Effect {
   private readonly weights: number[];
   private readonly maxLevel: number;
 
-  constructor({ glow, toneMapMode, toneMapExposure, toneMapWhite }: GodotGlowOptions) {
-    super('GodotGlowEffect', compositeGlsl(glow, { mode: toneMapMode, exposure: toneMapExposure, white: toneMapWhite }), {
+  constructor({ glow, toneMapMode, toneMapWhite }: GodotGlowOptions) {
+    super('GodotGlowEffect', compositeGlsl(glow, { mode: toneMapMode, white: toneMapWhite }), {
       // This effect writes the finished frame — the glow blend and the tone
       // curve are both already applied — so the composer must not blend it into
       // the scene a second time.
       blendFunction: BlendFunction.SRC,
       uniforms: new Map<string, THREE.Uniform>([
         ['godotGlowBuffer', new THREE.Uniform(null)],
-        ['godotExposure', new THREE.Uniform(toneMapExposure)],
+        ['godotExposure', new THREE.Uniform(glow.exposure)],
       ]),
     });
 
     // `glowParamsFor` returns null rather than an empty pyramid, so a `GlowParams`
     // that exists always has at least one weighted level.
     this.maxLevel = glow.maxLevel;
-    this.weights = gatherWeights(glow);
+    this.weights = glow.levels;
 
     this.brightPassMaterial = pyramidMaterial(
       'BrightPass',
-      brightPassFragmentShader(glow, toneMapExposure),
+      brightPassFragmentShader(glow),
       {
         inputBuffer: { value: null },
         texelSize: { value: new THREE.Vector2() },
@@ -141,10 +138,7 @@ export class GodotGlowEffect extends Effect {
     this.screen.material = this.brightPassMaterial;
     const brightUniforms = this.brightPassMaterial.uniforms;
     brightUniforms['inputBuffer']!.value = inputBuffer.texture;
-    (brightUniforms['texelSize']!.value as THREE.Vector2).set(
-      1 / inputBuffer.width,
-      1 / inputBuffer.height
-    );
+    setTexelSize(brightUniforms, inputBuffer);
     this.renderTo(renderer, this.levelTargets[0]!);
 
     this.screen.material = this.downsampleMaterial;
@@ -152,10 +146,7 @@ export class GodotGlowEffect extends Effect {
     for (let level = 1; level <= this.maxLevel; level++) {
       const source = this.levelTargets[level - 1]!;
       downsampleUniforms['inputBuffer']!.value = source.texture;
-      (downsampleUniforms['texelSize']!.value as THREE.Vector2).set(
-        1 / source.width,
-        1 / source.height
-      );
+      setTexelSize(downsampleUniforms, source);
       this.renderTo(renderer, this.levelTargets[level]!);
     }
 
@@ -172,7 +163,7 @@ export class GodotGlowEffect extends Effect {
       uniforms['levelBuffer']!.value = this.levelTargets[level]!.texture;
       uniforms['levelWeight']!.value = this.weights[level]!;
       const source = coarser ?? this.levelTargets[level]!;
-      (uniforms['texelSize']!.value as THREE.Vector2).set(1 / source.width, 1 / source.height);
+      setTexelSize(uniforms, source);
       this.renderTo(renderer, this.accumulationTargets[level]!);
     }
 
@@ -217,6 +208,14 @@ function pyramidMaterial(
   });
 }
 
+/** Confines the `IUniform` cast the three pyramid passes would each repeat. */
+function setTexelSize(
+  uniforms: Record<string, THREE.IUniform>,
+  source: { width: number; height: number }
+): void {
+  (uniforms['texelSize']!.value as THREE.Vector2).set(1 / source.width, 1 / source.height);
+}
+
 function createTarget(name: string): THREE.WebGLRenderTarget {
   const target = new THREE.WebGLRenderTarget(1, 1, {
     depthBuffer: false,
@@ -233,22 +232,16 @@ function createTarget(name: string): THREE.WebGLRenderTarget {
  * Level 0 skips a rung — it goes straight from the frame to a quarter of it — so
  * this is a 4x reduction where every later level does 2x.
  *
- * Godot ships TWO glow implementations and they filter this step differently. The
- * raster path (`blur_raster.glsl`, `MODE_GLOW_GATHER`) takes four bilinear taps at
- * the quadrant centres of each 4x4 block; the compute path (`copy.glsl`, used
- * whenever the GPU reports storage support, which is every desktop target this
- * previewer runs on) uses its separable gaussian instead. Measured against a real
- * Godot render, the wider kernel is the closer of the two — porting the raster
- * gather moved the REPLACE fixture, which shows the glow buffer with nothing
- * underneath it, from exact to 0.1% off. So this shares the downsample kernel.
+ * Godot ships two glow implementations that filter this step differently — the
+ * raster path takes four bilinear taps per 4x4 block, the compute path a separable
+ * gaussian — and it runs the compute one wherever storage buffers are supported,
+ * which is every desktop target. Neither transplants onto a normalised-UV pass, so
+ * this shares the 13-tap downsample; the sheet records which measured closer.
  */
-function brightPassFragmentShader(glow: GlowParams, exposure: number): string {
+function brightPassFragmentShader(glow: GlowParams): string {
   return /* glsl */ `
-uniform sampler2D inputBuffer;
-uniform vec2 texelSize;
-varying vec2 vUv;
 ${DOWNSAMPLE_TAPS}
-${brightPassGlsl(glow, exposure)}
+${brightPassGlsl(glow)}
 void main() {
   gl_FragColor = vec4(godotGlowBrightPass(max(downsample13(), 0.0)), 1.0);
 }
@@ -261,9 +254,14 @@ void main() {
  * Its whole job is to halve resolution without the aliasing a single tap leaves,
  * which is what would otherwise make a small bright object flicker as it moves.
  *
- * Shared with the bright pass, which faces the same 2x reduction from the frame.
+ * Declares the three uniforms it reads, so a pass that includes it cannot forget
+ * one and fail at shader-compile time rather than type-check time.
  */
 const DOWNSAMPLE_TAPS = /* glsl */ `
+uniform sampler2D inputBuffer;
+uniform vec2 texelSize;
+varying vec2 vUv;
+
 vec3 tap(vec2 offset) {
   return texture2D(inputBuffer, vUv + offset * texelSize).rgb;
 }
@@ -287,9 +285,6 @@ vec3 downsample13() {
  */
 function downsampleFragmentShader(glow: GlowParams): string {
   return /* glsl */ `
-uniform sampler2D inputBuffer;
-uniform vec2 texelSize;
-varying vec2 vUv;
 ${DOWNSAMPLE_TAPS}
 void main() {
   gl_FragColor = vec4(downsample13() * ${glslFloat(glow.strength)}, 1.0);

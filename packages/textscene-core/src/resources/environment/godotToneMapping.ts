@@ -99,7 +99,7 @@ export function toneMappingWhiteParam(mode: number, white: number): number {
  * `tonemap_exposure`.
  */
 export function toneMappingShaderChunk(mode: number): string {
-  const body = CURVES[mode] ?? 'return color;';
+  const body = CURVES[mode] ?? LINEAR_CURVE;
   return /* glsl */ `
 uniform float toneMappingExposure;
 uniform float godotToneMapWhite;
