@@ -9,6 +9,10 @@
  * no `useResource`/host-file round trip. Returns `null` for any other reference
  * form (ExtResource, a different SubResource type, a missing gradient), leaving
  * the caller's async path untouched.
+ *
+ * The result is SHARED and owned by `proceduralTextureCache` — many nodes point
+ * at one gradient, so it is rasterised once per (scene, sub-resource). Callers
+ * borrow it and must not dispose it.
  */
 
 import type { TscnInternalResource } from '../../../parser/types';
@@ -19,6 +23,7 @@ import {
 } from '../../SubResourceResolver';
 import { parseGradient, parseGradientTexture2D } from './parser';
 import { rasterizeGradientTexture2D } from './renderer';
+import { proceduralTexture } from '../proceduralTextureCache';
 import type * as THREE from 'three';
 
 export function resolveGradientTexture2D(
@@ -28,14 +33,16 @@ export function resolveGradientTexture2D(
   const parsed = parseResourceReference(ref ?? '');
   if (!parsed || parsed.type !== 'SubResource') return null;
 
-  const textureResource = findSubResource(internalResources, parsed.id);
-  if (!textureResource || textureResource.type !== 'GradientTexture2D') return null;
+  return proceduralTexture(internalResources, parsed.id, () => {
+    const textureResource = findSubResource(internalResources, parsed.id);
+    if (!textureResource || textureResource.type !== 'GradientTexture2D') return null;
 
-  const data = textureResource.data as Record<string, string>;
-  const gradientResource = resolveSubResourceRef(data.gradient, internalResources);
-  if (!gradientResource || gradientResource.type !== 'Gradient') return null;
+    const data = textureResource.data as Record<string, string>;
+    const gradientResource = resolveSubResourceRef(data.gradient, internalResources);
+    if (!gradientResource || gradientResource.type !== 'Gradient') return null;
 
-  const texture = parseGradientTexture2D(data);
-  const gradient = parseGradient(gradientResource.data as Record<string, string>);
-  return rasterizeGradientTexture2D(texture, gradient);
+    const texture = parseGradientTexture2D(data);
+    const gradient = parseGradient(gradientResource.data as Record<string, string>);
+    return rasterizeGradientTexture2D(texture, gradient);
+  }) as THREE.DataTexture | null;
 }

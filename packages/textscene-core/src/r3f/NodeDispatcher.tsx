@@ -59,8 +59,7 @@ import { MissingResourcePlaceholder } from './components/MissingResourcePlacehol
 import { ErrorBoundary } from './components/ErrorBoundary.js';
 import { transformFromNode3DProperties, type NodeTransform } from './nodeTransform.js';
 import { node2dGroupProps } from './node2dTransform.js';
-import { canvasModulateColor } from './canvasModulate.js';
-import { Modulate2DContext } from './canvasItemModulate.js';
+import { canvasModulateColor, CanvasModulateContext } from './canvasModulate.js';
 import type { Node3DProperties } from '../nodes/base/node3d/types.js';
 import type { Node2DProperties } from '../nodes/base/node2d/types.js';
 import { GlbOverridesProvider } from './internal/glb-scene-root/GlbOverridesContext.js';
@@ -122,14 +121,15 @@ export function NodeDispatcher({ nodes }: NodeDispatcherProps) {
       onPointerMove={handlers.onPointerMove}
       onPointerOut={handlers.onPointerOut}
     >
-      {/* A CanvasModulate tints the CANVAS, not its subtree, so its colour seeds
-          the modulate every CanvasItem inherits — wherever in the tree it sits,
-          and even with no children of its own. */}
-      <Modulate2DContext.Provider value={canvasModulate}>
+      {/* A CanvasModulate tints the CANVAS, not its subtree, so it is published
+          on its own context rather than seeded into the inherited modulate:
+          each item multiplies it into its OWN pixels once, and an Unshaded item
+          skips it entirely, exactly as Godot's base pass does. */}
+      <CanvasModulateContext.Provider value={canvasModulate}>
         {nodes.map((node) => (
           <DispatchedNode key={node.name} node={node} path={node.name} />
         ))}
-      </Modulate2DContext.Provider>
+      </CanvasModulateContext.Provider>
     </group>
   );
 }

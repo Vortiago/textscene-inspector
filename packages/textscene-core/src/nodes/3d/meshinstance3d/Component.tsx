@@ -18,7 +18,7 @@
  */
 
 import * as THREE from 'three';
-import { useEffect, useMemo, useRef, type ReactNode, type RefObject } from 'react';
+import { useMemo, useRef, type ReactNode, type RefObject } from 'react';
 import type { MeshInstance3DProperties } from './types';
 import type {
   TscnExternalResource,
@@ -187,14 +187,9 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     [materialSubResource, internalResources]
   );
 
-  // Dispose the generated DataTextures when the material changes or the node
-  // unmounts — they own their pixel buffers (mirrors Label3D's CanvasTexture).
-  useEffect(() => {
-    const textures = Object.values(proceduralTextures);
-    return () => {
-      for (const texture of textures) texture?.dispose();
-    };
-  }, [proceduralTextures]);
+  // Not disposed here: a procedural texture is shared by every node pointing at
+  // the same sub-resource and owned by the procedural cache, which frees it on
+  // eviction. Freeing it per consumer would pull it out from under the others.
 
   // Apply the material's UV transform (`uv1_scale` / `uv1_offset`) to
   // every loaded texture. `applyUVTransform` clones the texture before

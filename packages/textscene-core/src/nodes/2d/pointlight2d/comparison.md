@@ -44,8 +44,10 @@ quad cannot express:
 - `light_mask`, `range_item_cull_mask`, `range_layer_min/max` and
   `range_z_min/max` are parsed but not applied, so every light reaches every
   canvas item under it instead of only the ones it is masked to.
-- `CanvasItemMaterial.light_mode` is resolved but not consumed: an `Unshaded`
-  item is still lit, and a `LightOnly` item still draws where no light reaches.
+- `CanvasItemMaterial.light_mode` is only half consumed. An `Unshaded` item
+  correctly skips the CanvasModulate tint, as Godot's base pass does, but a
+  light quad still reaches it — excluding an item from a light needs the
+  per-item pass, not a blend. A `LightOnly` item likewise still draws its base.
 - `shadow_enabled` casts nothing. `LightOccluder2D` and `OccluderPolygon2D`
   parse and render their outline, but no light is occluded by them.
 - `Light2D.BlendMode.MIX` has no destination-blend identity, so it stays an

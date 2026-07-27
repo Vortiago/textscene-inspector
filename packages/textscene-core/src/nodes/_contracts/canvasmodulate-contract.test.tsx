@@ -213,6 +213,47 @@ describe('CanvasModulate slice — behavioral contract (RED until shipped)', () 
     expect(mat!.color.r).not.toBeCloseTo(squared.r, 3);
   });
 
+  it('an Unshaded item skips the canvas tint, as Godot\'s base pass does', async () => {
+    if (!requireComp()) return;
+    // canvas.glsl guards the multiply: `#elif !defined(MODE_UNSHADED)
+    // color *= canvas_modulation;` — so light_mode = 1 keeps its authored
+    // colour while its shaded sibling is tinted.
+    const renderer = await renderScene(`[gd_scene format=3]
+
+[sub_resource type="CanvasItemMaterial" id="unshaded"]
+light_mode = 1
+
+[node name="Root" type="Node2D"]
+
+[node name="Shaded" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(0, 0, 8, 0, 8, 8)
+
+[node name="Unshaded" type="Polygon2D" parent="."]
+material = SubResource("unshaded")
+polygon = PackedVector2Array(0, 0, 8, 0, 8, 8)
+
+[node name="CM" type="CanvasModulate" parent="."]
+color = Color(0.4, 0.6, 0.9, 1)
+`);
+    const byName = new Map<string, THREE.MeshBasicMaterial>();
+    let root: THREE.Object3D | null | undefined = (
+      renderer.scene as unknown as { children?: Array<{ instance?: THREE.Object3D }> }
+    ).children?.[0]?.instance;
+    while (root?.parent) root = root.parent;
+    root?.traverse((o) => {
+      if ((o as THREE.Mesh).isMesh && o.parent?.name) {
+        byName.set(o.parent.name, (o as THREE.Mesh).material as THREE.MeshBasicMaterial);
+      }
+    });
+
+    const lin = godotColorToLinear({ r: 0.4, g: 0.6, b: 0.9 });
+    expect(byName.get('Shaded')!.color.r).toBeCloseTo(lin.r, 3);
+    // The unshaded one keeps white — tinting it would be the bug.
+    expect(byName.get('Unshaded')!.color.r).toBeCloseTo(1, 3);
+    expect(byName.get('Unshaded')!.color.g).toBeCloseTo(1, 3);
+    expect(byName.get('Unshaded')!.color.b).toBeCloseTo(1, 3);
+  });
+
   it('a white (default) CanvasModulate is a no-op tint on its descendant', async () => {
     if (!requireComp()) return;
     const mat = firstMeshMaterial(await renderScene(tintScene('')));

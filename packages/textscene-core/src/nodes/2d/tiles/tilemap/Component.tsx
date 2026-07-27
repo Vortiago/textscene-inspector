@@ -12,6 +12,8 @@
 import { useMemo } from 'react';
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../../r3f/components/CanvasItem2D';
+import { canvasItemBlendState } from '../../../../resources/materials/canvasitemmaterial/renderer';
+import { CanvasItemBlendMode } from '../../../../resources/materials/canvasitemmaterial/types';
 import {
   multiplyModulate,
   type CanvasItemTint,
@@ -55,7 +57,7 @@ export function TileMap({ node, children }: NodeComponentProps) {
     <CanvasItem2D
       node={node}
       props={props}
-      body={(tint) =>
+      body={(tint, material) =>
         status === 'loaded' && model && meshEntries
           ? meshEntries.map((entry) => {
               const { color, opacity } = layerTint(tint, entry.layer);
@@ -69,6 +71,7 @@ export function TileMap({ node, children }: NodeComponentProps) {
                   color={color}
                   opacity={opacity}
                   name={node.name}
+                  blend={canvasItemBlendState(material?.blendMode ?? CanvasItemBlendMode.MIX)}
                 />
               );
             })

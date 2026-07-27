@@ -20,7 +20,7 @@
  * status explaining why not).
  */
 
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import type * as THREE from 'three';
 import type { TscnExternalResource, TscnInternalResource } from '../parser/types.js';
 import { resolveTexture2DPath } from './SubResourceResolver.js';
@@ -40,16 +40,13 @@ export function useTexture2D(
   internalResources: readonly TscnInternalResource[]
 ): Texture2DResult {
   // Procedural first: it is described entirely by the scene, so it needs no
-  // file and resolves in the same tick the property is read.
+  // file and resolves in the same tick the property is read. Shared and owned
+  // by the procedural cache, like any loader-supplied texture — borrowed here,
+  // never disposed.
   const procedural = useMemo(
     () => resolveGradientTexture2D(ref, internalResources),
     [ref, internalResources]
   );
-  // Rasterised HERE rather than fetched, so this consumer owns the pixel buffer
-  // and frees it. Nodes sharing one gradient each rasterise their own copy —
-  // wasteful at scale, but sharing needs a cache with real invalidation, not an
-  // ownerless one (see the follow-up issue).
-  useEffect(() => () => procedural?.dispose(), [procedural]);
 
   const path = useMemo(
     () => (procedural ? null : resolveTexture2DPath(ref, externalResources, internalResources)),

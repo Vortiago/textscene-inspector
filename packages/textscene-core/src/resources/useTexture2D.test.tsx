@@ -78,6 +78,57 @@ describe('useTexture2D — procedural cookies reach 2D canvas items', () => {
     expect(material.map!.image.height).toBe(64);
   });
 
+  it('rasterises ONE texture for every node pointing at the same gradient', async () => {
+    // A scene aims many nodes at one cookie; a copy per consumer costs
+    // width x height x 4 bytes and a GPU upload each time.
+    const renderer = await render(`[gd_scene format=3]
+
+[sub_resource type="Gradient" id="g"]
+offsets = PackedFloat32Array(0, 1)
+colors = PackedColorArray(1, 1, 1, 1, 0, 0, 0, 1)
+
+[sub_resource type="GradientTexture2D" id="t"]
+gradient = SubResource("g")
+width = 32
+height = 32
+
+[node name="Root" type="Node2D"]
+
+[node name="A" type="PointLight2D" parent="."]
+texture = SubResource("t")
+
+[node name="B" type="PointLight2D" parent="."]
+texture = SubResource("t")
+
+[node name="C" type="PointLight2D" parent="."]
+texture = SubResource("t")
+`);
+    const maps = renderer.scene
+      .findAllByType('Mesh')
+      .map((m) => ((m.instance as THREE.Mesh).material as THREE.MeshBasicMaterial).map);
+    expect(maps).toHaveLength(3);
+    expect(new Set(maps).size).toBe(1);
+  });
+
+  it('keeps the shared texture usable after one consumer unmounts', async () => {
+    // The cache owns it; a consumer that disposed on unmount would leave the
+    // others sampling a freed buffer.
+    const first = await render(LIGHT_WITH_GRADIENT_COOKIE);
+    const shared = (
+      (first.scene.findAllByType('Mesh')[0]!.instance as THREE.Mesh)
+        .material as THREE.MeshBasicMaterial
+    ).map!;
+    await first.unmount();
+
+    const second = await render(LIGHT_WITH_GRADIENT_COOKIE);
+    const after = (
+      (second.scene.findAllByType('Mesh')[0]!.instance as THREE.Mesh)
+        .material as THREE.MeshBasicMaterial
+    ).map!;
+    expect(after.image).toBeTruthy();
+    expect(shared.image).toBeTruthy();
+  });
+
   it('still resolves a plain image reference through the async loader', async () => {
     const fake = createFakeResourceLoader();
     const tex = new THREE.Texture();

@@ -12,6 +12,7 @@ import { useResource } from '../resources/useResource';
 import { buildTileGeometryArrays, type DrawableCell } from '../resources/tileset/tileGeometry';
 import type { AtlasSourceModel, TileGrid } from '../resources/tileset/tileSetModel';
 import { MissingResourcePlaceholder } from './components/MissingResourcePlaceholder';
+import type { CanvasItemBlendState } from '../resources/materials/canvasitemmaterial/renderer';
 
 export interface TileSourceMeshProps {
   source: AtlasSourceModel;
@@ -24,9 +25,11 @@ export interface TileSourceMeshProps {
   opacity: number;
   /** Group name for the per-source missing-texture placeholder. */
   name?: string;
+  /** Compositing state from the node's CanvasItemMaterial, if it carries one. */
+  blend?: CanvasItemBlendState;
 }
 
-export function TileSourceMesh({ source, cells, grid, z, color, opacity, name }: TileSourceMeshProps) {
+export function TileSourceMesh({ source, cells, grid, z, color, opacity, name, blend }: TileSourceMeshProps) {
   const texResult = useResource<THREE.Texture>(source.texturePath ?? '', 'Texture2D');
   const tex = texResult.value;
   const image = tex?.image as { width?: number; height?: number } | undefined;
@@ -67,6 +70,7 @@ export function TileSourceMesh({ source, cells, grid, z, color, opacity, name }:
         transparent
         depthWrite={false}
         side={THREE.DoubleSide}
+        {...blend}
       />
     </mesh>
   );

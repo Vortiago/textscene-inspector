@@ -43,9 +43,11 @@ short: a lit floor reads `[6, 58, 134]` where Godot has `[25, 82, 152]`, and a t
   `false`, so 2D never enters a linear working space. Ours accumulates the light in linear
   and encodes on output, which lands lower for the same authored values.
 - The rest of the light pass is absent: `light_mask` and the range/cull masks, so every light
-  reaches every item beneath it rather than the ones it is masked to;
-  `CanvasItemMaterial.light_mode`, so the scene's `Unshaded` shadow and torch-pool polygons
-  are still lit; and `LightOccluder2D` shadows, so light crosses walls it should not.
+  reaches every item beneath it rather than the ones it is masked to, and `LightOccluder2D`
+  shadows, so light crosses walls it should not. `CanvasItemMaterial.light_mode` is honoured
+  where a blend can express it — the scene's `Unshaded` shadow and torch-pool polygons keep
+  their authored colour instead of taking the blue canvas tint — but excluding them from a
+  light quad needs the same per-item pass.
 
 Not surfaced at all: the candle flames, their glow and their sparkles. Those are
 `CPUParticles2D`, which is unimplemented — animated emission with no meaningful static frame.

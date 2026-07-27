@@ -14,6 +14,7 @@ import type { Node2DProperties } from '../../nodes/base/node2d/types';
 import { node2dGroupProps, node2dGroupSpread, canvasItemZ } from '../node2dTransform';
 import { Modulate2DContext, useCanvasItemTint, type CanvasItemTint } from '../canvasItemModulate';
 import { useYSortZContext, useYSortSlot } from '../contexts/YSortContext';
+import { useCanvasModulateFor } from '../canvasModulate';
 import {
   CanvasItemMaterialProvider,
   useCanvasItemMaterial,
@@ -49,8 +50,10 @@ export function CanvasItem2D({ node, props, body, children }: CanvasItem2DProps)
     () => node2dGroupSpread(node2dGroupProps(props, z)),
     [props, z]
   );
-  const tint = useCanvasItemTint(props);
   const material = useCanvasItemMaterial(props);
+  // The canvas tint rides this item's own pixels only, and only when its light
+  // mode admits it — never the inherited modulate its children read.
+  const tint = useCanvasItemTint(props, useCanvasModulateFor(material));
 
   return (
     <group name={node.name} {...transform} visible={props.visible !== false}>

@@ -17,8 +17,13 @@
  * A `CanvasLayer` is its own canvas, so the walk does not descend into one.
  */
 
+import { createContext, useContext } from 'react';
 import type { TscnNode } from '../parser/types.js';
 import { WHITE_MODULATE, type RGBA } from './canvasItemModulate.js';
+import {
+  CanvasItemLightMode,
+  type CanvasItemMaterialProperties,
+} from '../resources/materials/canvasitemmaterial/types.js';
 
 interface CanvasModulateLike {
   color?: RGBA;
@@ -47,4 +52,29 @@ export function canvasModulateColor(nodes: readonly TscnNode[]): RGBA {
 
   for (const node of nodes) walk(node, true);
   return found ?? WHITE_MODULATE;
+}
+
+/**
+ * The canvas tint in force, kept OUT of the inherited-modulate chain.
+ *
+ * Godot applies it per item in the base pass, guarded by the item's light mode
+ * (`canvas.glsl`: `#elif !defined(MODE_UNSHADED) color *= canvas_modulation;`),
+ * so folding it into the modulate every child inherits would apply it to items
+ * that must not receive it — and apply it once per nesting level besides.
+ */
+export const CanvasModulateContext = createContext<RGBA>(WHITE_MODULATE);
+CanvasModulateContext.displayName = 'CanvasModulateContext';
+
+/**
+ * The canvas tint THIS item multiplies into its own pixels: the active
+ * CanvasModulate, or white for an item the canvas tint must skip.
+ *
+ * Both `Unshaded` and `LightOnly` skip it — Godot's guard excludes them
+ * together, since a light-only item shows nothing of its own base for the tint
+ * to act on.
+ */
+export function useCanvasModulateFor(material: CanvasItemMaterialProperties | null): RGBA {
+  const canvasModulate = useContext(CanvasModulateContext);
+  const shaded = (material?.lightMode ?? CanvasItemLightMode.NORMAL) === CanvasItemLightMode.NORMAL;
+  return shaded ? canvasModulate : WHITE_MODULATE;
 }

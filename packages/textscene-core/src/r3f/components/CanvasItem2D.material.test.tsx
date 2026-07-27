@@ -26,6 +26,14 @@ const TRI = 'PackedVector2Array(0, 0, 16, 0, 16, 16)';
 async function materialsByNodeName(tscn: string): Promise<Map<string, THREE.MeshBasicMaterial>> {
   const scene = new TscnParser().parse(tscn);
   const fake = createFakeResourceLoader();
+  // Sprite slices draw a placeholder without a texture, which carries no blend
+  // state — seed every external image the scene references.
+  for (const ext of scene.externalResources) {
+    if (ext.type !== 'Texture2D') continue;
+    const tex = new THREE.Texture();
+    (tex as unknown as { image: { width: number; height: number } }).image = { width: 8, height: 8 };
+    fake.textures.seed(ext.path, tex);
+  }
   const renderer = await ReactThreeTestRenderer.create(
     <CanvasWorkspaceProvider workspace="2d">
       <ResourceLoaderProvider loader={fake.loader}>
@@ -131,6 +139,38 @@ material = SubResource("1")
 polygon = ${TRI}
 `);
     expect(mats.get('Child')!.blending).toBe(THREE.NormalBlending);
+  });
+
+  it('applies the blend to EVERY canvas-item slice, not just Polygon2D', async () => {
+    // A blend that only reached one slice would silently mis-composite sprites,
+    // lines and tilemaps while looking implemented.
+    const mats = await materialsByNodeName(`[gd_scene format=3]
+
+[ext_resource type="Texture2D" path="res://textures/sprite2d-marker.png" id="tex"]
+
+[sub_resource type="CanvasItemMaterial" id="1"]
+blend_mode = 1
+
+[node name="Root" type="Node2D"]
+
+[node name="Sprite" type="Sprite2D" parent="."]
+material = SubResource("1")
+texture = ExtResource("tex")
+
+[node name="Line" type="Line2D" parent="."]
+material = SubResource("1")
+points = PackedVector2Array(0, 0, 32, 32)
+
+[node name="Poly" type="Polygon2D" parent="."]
+material = SubResource("1")
+polygon = ${TRI}
+`);
+    for (const name of ['Sprite', 'Line', 'Poly']) {
+      const mat = mats.get(name);
+      expect(mat, `${name} should render a mesh`).toBeDefined();
+      expect(mat!.blending, `${name} should blend additively`).toBe(THREE.CustomBlending);
+      expect(mat!.blendDst, `${name} should blend additively`).toBe(THREE.OneFactor);
+    }
   });
 
   it('ignores a material reference that is not a CanvasItemMaterial', async () => {
