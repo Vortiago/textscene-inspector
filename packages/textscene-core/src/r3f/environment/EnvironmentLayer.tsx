@@ -18,7 +18,7 @@ import { BackgroundMode } from '../../resources/environment/types';
 import type { EnvironmentSettings } from '../../resources/environment/renderer';
 import { applyToneMapping } from '../../resources/environment/toneMapping';
 import {
-  bloomableScanThreshold,
+  unexposedBrightPassThreshold,
   glowNeedsEveryPixel,
   glowParamsFor,
 } from '../../resources/environment/godotGlow';
@@ -62,7 +62,7 @@ export function EnvironmentLayer({ settings, sky }: EnvironmentLayerProps) {
   // Exposure-adjusted, because the scan measures unexposed material emissive
   // while the bright pass exposes before thresholding.
   const hasBloomable = useSceneHasBloomableEmissive(
-    glowParams ? bloomableScanThreshold(glowParams, settings.toneMapping.exposure) : 0,
+    glowParams ? unexposedBrightPassThreshold(glowParams, settings.toneMapping.exposure) : 0,
     !!glowParams && !alwaysGlows
   );
   const activeGlow = glowParams && (alwaysGlows || hasBloomable) ? glowParams : null;

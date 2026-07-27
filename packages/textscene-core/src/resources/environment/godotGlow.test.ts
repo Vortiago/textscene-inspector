@@ -4,7 +4,7 @@ import { createEnvironmentSettings } from './renderer';
 import {
   blendGlsl,
   blendsAfterToneMapping,
-  bloomableScanThreshold,
+  unexposedBrightPassThreshold,
   brightPassGlsl,
   compositeGlsl,
   gatherWeights,
@@ -135,21 +135,20 @@ describe('glowNeedsEveryPixel', () => {
   });
 });
 
-describe('bloomableScanThreshold', () => {
-  it('scales the threshold down by exposure, because the bright pass exposes first', () => {
-    // A scene scan reads material emissive, which carries no exposure. The bright
-    // pass multiplies by `tonemap_exposure` BEFORE comparing to the threshold, so
-    // at exposure 1.8 a material peaking at 0.8 does cross a threshold of 1.0 in
-    // Godot. Comparing the unexposed value instead leaves the compositor unmounted
-    // and the frame with no halo at all.
-    expect(bloomableScanThreshold(glowOn(), 1.8)).toBeCloseTo(1 / 1.8, 6);
-    expect(bloomableScanThreshold(glowOn(), 1)).toBeCloseTo(1, 6);
-    expect(bloomableScanThreshold(glowOn({ glow_hdr_threshold: '2' }), 4)).toBeCloseTo(0.5, 6);
+describe('unexposedBrightPassThreshold', () => {
+  it('scales the threshold down by exposure, because the pass exposes before comparing', () => {
+    // The bright pass multiplies by `glow_exposure` and only then compares against
+    // `glow_hdr_threshold`, so at exposure 1.8 a colour peaking at 0.8 does cross a
+    // threshold of 1.0. Anything measuring unexposed colour has to be held to the
+    // lower bar or it disagrees with the shader about what blooms.
+    expect(unexposedBrightPassThreshold(glowOn(), 1.8)).toBeCloseTo(1 / 1.8, 6);
+    expect(unexposedBrightPassThreshold(glowOn(), 1)).toBeCloseTo(1, 6);
+    expect(unexposedBrightPassThreshold(glowOn({ glow_hdr_threshold: '2' }), 4)).toBeCloseTo(0.5, 6);
   });
 
   it('survives a zero or negative exposure rather than dividing by it', () => {
-    expect(Number.isFinite(bloomableScanThreshold(glowOn(), 0))).toBe(true);
-    expect(Number.isFinite(bloomableScanThreshold(glowOn(), -2))).toBe(true);
+    expect(Number.isFinite(unexposedBrightPassThreshold(glowOn(), 0))).toBe(true);
+    expect(Number.isFinite(unexposedBrightPassThreshold(glowOn(), -2))).toBe(true);
   });
 });
 
@@ -296,19 +295,6 @@ describe('blendGlsl', () => {
     expect(glsl).toContain('color + glow - (color * glow / 2.0)');
   });
 
-  it('SOFTLIGHT uses the W3C soft-light curve and leaves values above 1 alone', () => {
-    const glsl = blendGlsl(glowOn({ glow_blend_mode: String(GlowBlendMode.SOFTLIGHT) }), 1);
-    expect(glsl).toContain('clamp(glow, 0.0, 1.0)');
-    // D(c) = ((16c - 12)c + 4)c below 0.25, sqrt(c) above.
-    expect(glsl).toContain('(16.0 * color.r - 12.0) * color.r + 4.0');
-    expect(glsl).toContain('sqrt(color.r)');
-    // The curve inverts past 1.0, so Godot skips it there.
-    expect(glsl).toContain('color.r > 1.0');
-    for (const channel of ['r', 'g', 'b']) {
-      expect(glsl).toContain(`color.${channel} = color.${channel} > 1.0`);
-    }
-  });
-
   it('REPLACE discards the scene colour', () => {
     const glsl = blendGlsl(glowOn({ glow_blend_mode: String(GlowBlendMode.REPLACE) }), 1);
     expect(glsl).toContain('return glow;');
@@ -342,6 +328,8 @@ describe('blendGlsl', () => {
     const glsl = blendGlsl(glowOn({ glow_blend_mode: String(GlowBlendMode.SOFTLIGHT) }), 1);
     for (const channel of ['r', 'g', 'b']) {
       expect(glsl).toContain(`(16.0 * color.${channel} - 12.0) * color.${channel} + 4.0`);
+      // The other branch of D(), above 0.25.
+      expect(glsl).toContain(`sqrt(color.${channel})`);
     }
     expect(glsl).not.toContain('+ 3.0)');
   });

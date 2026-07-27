@@ -82,7 +82,7 @@ const LEVEL_EPSILON = 0.0001;
  * than tight and bright. A chain that starts an octave too fine is wrong by a
  * whole level at every rung, so it misses by far more than a tuning error would.
  */
-export const GLOW_FIRST_LEVEL_DIVISOR = 4;
+const GLOW_FIRST_LEVEL_DIVISOR = 4;
 
 /**
  * The pixel size of one glow level, given the frame it is built from. Each level
@@ -171,18 +171,16 @@ export function blendsAfterToneMapping(params: GlowParams): boolean {
 }
 
 /**
- * The peak `emissive * emissiveIntensity` a material must exceed for the pass to
- * be worth mounting — the bright pass's threshold, moved into the space a scene
- * scan can actually measure.
+ * `glow_hdr_threshold` restated in the space of UNEXPOSED colour.
  *
- * A scan reads live materials, whose emissive carries no exposure; the bright pass
- * multiplies by `tonemap_exposure` BEFORE comparing against `glow_hdr_threshold`.
- * So the two only agree if the threshold is scaled down by the same exposure.
- * Comparing the raw value instead silently leaves the compositor unmounted for any
- * scene lifted over the threshold by exposure alone, and the frame renders with no
- * halo whatsoever rather than a slightly wrong one.
+ * The bright pass multiplies by `glow_exposure` before comparing against the
+ * threshold, so a value measured before exposure has to be held to a
+ * correspondingly lower bar to reach the same verdict. Anything that inspects
+ * colour upstream of the pass — Godot exposes inside it, so upstream means
+ * unexposed — needs this rather than the raw threshold, or it disagrees with the
+ * shader about what blooms.
  */
-export function bloomableScanThreshold(params: GlowParams, exposure: number): number {
+export function unexposedBrightPassThreshold(params: GlowParams, exposure: number): number {
   return params.hdrThreshold / Math.max(exposure, GLSL_EPSILON);
 }
 
