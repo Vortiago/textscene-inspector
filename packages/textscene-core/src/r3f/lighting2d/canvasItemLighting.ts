@@ -41,11 +41,18 @@ export interface CanvasItemLightingProps {
 }
 
 export interface CanvasItemLightingInput {
-  /** The accumulated light, or null when the scene has no lights. */
-  buffer: THREE.Texture | null;
-  resolution: THREE.Vector2;
-  /** The canvas tint already folded into the item's CPU-side colour. */
-  canvasModulate: { r: number; g: number; b: number };
+  /**
+   * Stable uniform objects, created once per item and MUTATED as the light
+   * state changes. They cannot be recreated: three captures whatever
+   * `onBeforeCompile` assigns at the material's first compile, and R3F never
+   * bumps `material.needsUpdate` when the prop changes (verified in the fiber
+   * 9.6.1 dist), so a later value would simply never reach the GPU.
+   */
+  uniforms: {
+    uLightBuffer: THREE.IUniform;
+    uLightResolution: THREE.IUniform;
+    uCanvasModulate: THREE.IUniform;
+  };
   lightMode: CanvasItemLightMode;
 }
 
@@ -55,23 +62,30 @@ export interface CanvasItemLightingInput {
  * nothing simply stays unlit, which is what every 3D and unlit-2D consumer
  * needs.
  *
- * Returns empty props when there is no buffer or the item is `Unshaded`, so the
- * common case compiles the stock shader and pays nothing.
+ * Returns empty props only for an `Unshaded` item, which Godot excludes from
+ * the light loop outright. Everything else compiles the light path whether or
+ * not the scene currently has lights — see the note in `onBeforeCompile`.
  */
 export function canvasItemLightingProps(
   input: CanvasItemLightingInput
 ): CanvasItemLightingProps {
-  const { buffer, resolution, canvasModulate, lightMode } = input;
-  if (!buffer || lightMode === CanvasItemLightMode.UNSHADED) return {};
+  const { uniforms, lightMode } = input;
+  if (lightMode === CanvasItemLightMode.UNSHADED) return {};
 
   const lightOnly = lightMode === CanvasItemLightMode.LIGHT_ONLY;
 
   return {
     customProgramCacheKey: () => `godot-canvas-light-${lightOnly ? 'light-only' : 'normal'}`,
     onBeforeCompile: (shader) => {
-      shader.uniforms.uLightBuffer = { value: buffer };
-      shader.uniforms.uLightResolution = { value: resolution };
-      shader.uniforms.uCanvasModulate = { value: canvasModulate };
+      // Compiled unconditionally, even with no lights in the scene: whether a
+      // light exists is DATA, carried by the buffer uniform, not a different
+      // program. Godot's canvas.glsl is shaped the same way — the light loop is
+      // always present and zero lights simply contribute nothing. Making it a
+      // compile-time choice is what left already-mounted items on a stock
+      // shader forever once a light appeared.
+      shader.uniforms.uLightBuffer = uniforms.uLightBuffer;
+      shader.uniforms.uLightResolution = uniforms.uLightResolution;
+      shader.uniforms.uCanvasModulate = uniforms.uCanvasModulate;
 
       shader.fragmentShader = shader.fragmentShader
         .replace(
