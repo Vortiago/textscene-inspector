@@ -315,6 +315,11 @@ export const GOLDEN_SCENES = [
   // threshold like the other 2D goldens (marker2d/path2d).
   { name: 'polygon-2d', file: 'unit-polygon2d.tscn', maxDiffPct: 0.5 },
   { name: 'line-2d', file: 'unit-line2d.tscn', maxDiffPct: 0.5 },
+  // A y-sorted node's OWN body, between the two children it merges into the
+  // same sort. Godot probes: (200,330) yellow — the bar covers the red block;
+  // (700,330) blue — the blue one covers the bar. Without the body the first
+  // is red, which no other golden would notice.
+  { name: 'ysort-own-body', file: 'unit-ysort-own-body.tscn', maxDiffPct: 0.5 },
   // The 2D light surface: ADD/SUB/MIX applied against a lit surface, and an
   // inline gradient cookie under a canvas tint with an unshaded item beside it.
   { name: 'pointlight2d-blend', file: 'unit-pointlight2d-blend.tscn', maxDiffPct: 0.5 },

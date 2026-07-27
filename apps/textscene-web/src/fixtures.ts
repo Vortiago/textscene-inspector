@@ -428,6 +428,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Ysort Own Body",
+    "file": "unit-ysort-own-body.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Animation Empty Library",
     "file": "edge-animation-empty-library.tscn",
     "category": "Edge Cases"
