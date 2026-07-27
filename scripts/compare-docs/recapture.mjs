@@ -70,14 +70,19 @@ function collectTargets() {
     if (!parsed) continue;
     const { meta } = parsed;
     const camera = meta.camera || '';
-    const markers = parseCompareMarkers(parsed.body);
-    if (markers.length) {
-      for (const attrs of markers) {
-        if (attrs.image && attrs.fixture) byImage.set(attrs.image, { fixture: attrs.fixture, camera });
-      }
-    } else if (meta.visual !== 'false' && meta.image && meta.fixture) {
+    // The frontmatter pair and the section markers are BOTH sources, never
+    // either/or: a sheet that gains its first section must not lose the image
+    // its own header still displays. Taking only the sections silently orphans
+    // that image — it stops being re-rendered, drifts from the renderer, and
+    // there is no failure to notice, because every OTHER image still updates.
+    // Sections are applied last so one may override the header for a shared
+    // name; the Map collapses the duplicate.
+    if (meta.visual !== 'false' && meta.image && meta.fixture) {
       // A no-visual sheet renders a "draws nothing" note, not its image — skip it.
       byImage.set(meta.image, { fixture: meta.fixture, camera });
+    }
+    for (const attrs of parseCompareMarkers(parsed.body)) {
+      if (attrs.image && attrs.fixture) byImage.set(attrs.image, { fixture: attrs.fixture, camera });
     }
   }
   return [...byImage.entries()].map(([image, t]) => ({ image, ...t })).sort((a, b) => a.image.localeCompare(b.image));
