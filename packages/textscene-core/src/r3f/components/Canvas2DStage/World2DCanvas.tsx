@@ -24,6 +24,7 @@ import { CanvasWorkspaceProvider } from '../../contexts/CanvasWorkspaceContext.j
 import { SceneResourcesProvider } from '../../SceneResourcesContext.js';
 import { NodeDispatcher } from '../../NodeDispatcher.js';
 import { world2DCameraPose } from './world2DCamera.js';
+import { CanvasLighting2DProvider } from '../../lighting2d/CanvasLighting2D.js';
 
 export interface World2DCanvasProps {
   nodes: readonly TscnNode[];
@@ -61,7 +62,9 @@ export function World2DContents({
         externalResources={externalResources}
       >
         <CameraRig pan={pan} zoom={zoom} />
-        <NodeDispatcher nodes={nodes} />
+        <CanvasLighting2DProvider>
+          <NodeDispatcher nodes={nodes} />
+        </CanvasLighting2DProvider>
       </SceneResourcesProvider>
     </CanvasWorkspaceProvider>
   );

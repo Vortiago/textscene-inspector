@@ -16,6 +16,10 @@ import { Modulate2DContext, useCanvasItemTint, type CanvasItemTint } from '../ca
 import { useYSortZContext, useYSortSlot } from '../contexts/YSortContext';
 import { useCanvasModulateFor } from '../canvasModulate';
 import {
+  useCanvasItemLighting,
+  type CanvasItemLightingProps,
+} from '../lighting2d/useCanvasItemLighting';
+import {
   CanvasItemMaterialProvider,
   useCanvasItemMaterial,
 } from './canvasItemMaterialContext';
@@ -31,7 +35,16 @@ export interface CanvasItem2DProps {
    * Godot's default MIX blending, which is what it did before the material
    * existed.
    */
-  body?: (tint: CanvasItemTint, material: CanvasItemMaterialProperties | null) => ReactNode;
+  body?: (
+    tint: CanvasItemTint,
+    material: CanvasItemMaterialProperties | null,
+    /**
+     * Material props that make this item sample the 2D light accumulation.
+     * Spread onto the item's material like the blend state; empty when the
+     * scene has no lights or the item is `Unshaded`.
+     */
+    lighting: CanvasItemLightingProps
+  ) => ReactNode;
   children?: ReactNode;
 }
 
@@ -53,11 +66,13 @@ export function CanvasItem2D({ node, props, body, children }: CanvasItem2DProps)
   const material = useCanvasItemMaterial(props);
   // The canvas tint rides this item's own pixels only, and only when its light
   // mode admits it — never the inherited modulate its children read.
-  const tint = useCanvasItemTint(props, useCanvasModulateFor(material));
+  const canvasModulate = useCanvasModulateFor(material);
+  const tint = useCanvasItemTint(props, canvasModulate);
+  const lighting = useCanvasItemLighting(material, canvasModulate);
 
   return (
     <group name={node.name} {...transform} visible={props.visible !== false}>
-      {body?.(tint, material)}
+      {body?.(tint, material, lighting)}
       <Modulate2DContext.Provider value={tint.inherited}>
         {/* Descendants inherit this node's material through `use_parent_material`,
             so the provider carries what THIS node resolved — including a null,

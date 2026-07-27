@@ -28,6 +28,7 @@ import type { Vector2 } from '../../base/node2d/types';
 import type { Polygon2DProperties } from './types';
 import { polygonRings, type PolygonRings } from './polygonShapes';
 import { canvasItemBlendState } from '../../../resources/materials/canvasitemmaterial/renderer';
+import type { CanvasItemLightingProps } from '../../../r3f/lighting2d/useCanvasItemLighting';
 import {
   CanvasItemBlendMode,
   type CanvasItemMaterialProperties,
@@ -75,7 +76,7 @@ export function Polygon2D({ node, children }: NodeComponentProps) {
     <CanvasItem2D
       node={node}
       props={props}
-      body={(tint, material) =>
+      body={(tint, material, lighting) =>
         geometry ? (
           <FilledPolygon
             geometry={geometry}
@@ -84,6 +85,7 @@ export function Polygon2D({ node, children }: NodeComponentProps) {
             texture={texture}
             vertexColors={geometry.hasAttribute('color')}
             material={material}
+            lighting={lighting}
           />
         ) : null
       }
@@ -100,6 +102,7 @@ function FilledPolygon({
   texture,
   vertexColors,
   material,
+  lighting,
 }: {
   geometry: THREE.BufferGeometry;
   tint: CanvasItemTint;
@@ -107,6 +110,7 @@ function FilledPolygon({
   texture: THREE.Texture | null;
   vertexColors: boolean;
   material: CanvasItemMaterialProperties | null;
+  lighting: CanvasItemLightingProps;
 }) {
   // Godot multiplies fill × modulate × self_modulate in one space, then converts
   // once: compose with the tint's sRGB `own` product before sRGB→linear.
@@ -129,6 +133,7 @@ function FilledPolygon({
         depthWrite={false}
         side={THREE.DoubleSide}
         {...blend}
+        {...lighting}
       />
     </mesh>
   );
