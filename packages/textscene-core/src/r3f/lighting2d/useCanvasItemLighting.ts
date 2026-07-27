@@ -9,9 +9,13 @@
  * uniforms is exactly the bug that left every item on a stock shader once a
  * light appeared after mount.
  *
- * The buffer's texture and the resolution vector are bound by REFERENCE to the
+ * The buffers' textures and the resolution vector are bound by REFERENCE to the
  * ones the provider owns, so a resize or a reallocation reaches every item
  * without a re-render.
+ *
+ * Godot's cull test, `light.range_item_cull_mask & item.light_mask != 0`,
+ * runs HERE, once per item per frame, and reaches the shader as a per-slot
+ * weight. See `canvasItemLighting.ts` for why it cannot run per fragment.
  */
 
 import { useMemo, useRef } from 'react';
@@ -21,15 +25,24 @@ import {
   CanvasItemLightMode,
   type CanvasItemMaterialProperties,
 } from '../../resources/materials/canvasitemmaterial/types.js';
-import { useCanvasLighting2D, useRegisterLightOnlyItem } from './CanvasLighting2D.js';
-import { canvasItemLightingProps, type CanvasItemLightingProps } from './canvasItemLighting.js';
+import {
+  MAX_LIGHT_CLASSES,
+  useCanvasLighting2D,
+  useRegisterLightOnlyItem,
+} from './CanvasLighting2D.js';
+import {
+  canvasItemLightingProps,
+  lightReachesItem,
+  type CanvasItemLightingProps,
+  type CanvasItemLightingUniforms,
+} from './canvasItemLighting.js';
 
 export type { CanvasItemLightingProps };
 
 /**
- * Bound while a canvas has no light. Never sampled — `uLightsActive` is 0 — but
- * a sampler uniform still has to point at a real texture, and one shared 1x1 is
- * cheaper than one per item.
+ * Bound to a class slot this item is culled from. Never sampled, since the
+ * slot's weight is 0, but a sampler uniform still has to point at a real
+ * texture, and one shared 1x1 is cheaper than one per item per slot.
  */
 const EMPTY_LIGHT_BUFFER: THREE.DataTexture = (() => {
   const texture = new THREE.DataTexture(new Uint8Array([0, 0, 0, 0]), 1, 1);
@@ -38,38 +51,56 @@ const EMPTY_LIGHT_BUFFER: THREE.DataTexture = (() => {
   return texture;
 })();
 
+function createUniforms(resolution: THREE.Vector2): CanvasItemLightingUniforms {
+  return {
+    classBuffers: Array.from({ length: MAX_LIGHT_CLASSES }, () => ({
+      value: EMPTY_LIGHT_BUFFER as THREE.Texture,
+    })),
+    classWeights: { value: new Array<number>(MAX_LIGHT_CLASSES).fill(0) },
+    resolution: { value: resolution },
+    canvasModulate: { value: new THREE.Vector3(1, 1, 1) },
+  };
+}
+
 export function useCanvasItemLighting(
-  material: CanvasItemMaterialProperties | null
+  material: CanvasItemMaterialProperties | null,
+  /** The item's CanvasItem `light_mask`; Godot's default 1 for a node without one. */
+  lightMask = 1
 ): CanvasItemLightingProps {
-  const { buffer, lightOnlyBuffer, resolution } = useCanvasLighting2D();
+  const { classes, resolution } = useCanvasLighting2D();
   // The RAW canvas tint, not the light-mode-gated one: the shader divides out
   // exactly what the CPU folded in, and the floor is applied on both sides.
   const canvasModulate = useCanvasModulate();
   const lightMode = material?.lightMode ?? CanvasItemLightMode.NORMAL;
   const lightOnly = lightMode === CanvasItemLightMode.LIGHT_ONLY;
 
-  // The unmodulated accumulation costs a second pre-pass, so it is allocated
-  // only once an item that reads it exists.
+  // The unmodulated accumulation costs a second pre-pass per class, so it is
+  // allocated only once an item that reads it exists.
   useRegisterLightOnlyItem(lightOnly);
-  const accumulation = lightOnly ? lightOnlyBuffer : buffer;
 
-  const uniforms = useRef({
-    uLightBuffer: { value: EMPTY_LIGHT_BUFFER as THREE.Texture },
-    uLightResolution: { value: resolution },
-    uCanvasModulate: { value: new THREE.Vector3(1, 1, 1) },
-    uLightsActive: { value: 0 },
-  }).current;
+  const uniforms = useRef<CanvasItemLightingUniforms | null>(null);
+  uniforms.current ??= createUniforms(resolution);
+  const bound = uniforms.current;
 
   // Mutating in render keeps the GPU in step without a recompile; these are
   // plain value writes, so re-running them is harmless.
-  uniforms.uLightBuffer.value = accumulation ?? EMPTY_LIGHT_BUFFER;
-  uniforms.uLightResolution.value = resolution;
-  uniforms.uLightsActive.value = accumulation ? 1 : 0;
-  (uniforms.uCanvasModulate.value as THREE.Vector3).set(
+  const weights = bound.classWeights.value as number[];
+  for (let slot = 0; slot < MAX_LIGHT_CLASSES; slot += 1) {
+    const lightClass = classes[slot];
+    const accumulation = lightOnly ? lightClass?.lightOnlyBuffer : lightClass?.buffer;
+    const lights =
+      !!accumulation &&
+      lightClass !== undefined &&
+      lightReachesItem(lightClass.cullMask, lightMask);
+    weights[slot] = lights ? 1 : 0;
+    bound.classBuffers[slot]!.value = lights ? accumulation : EMPTY_LIGHT_BUFFER;
+  }
+  bound.resolution.value = resolution;
+  (bound.canvasModulate.value as THREE.Vector3).set(
     canvasModulate.r,
     canvasModulate.g,
     canvasModulate.b
   );
 
-  return useMemo(() => canvasItemLightingProps({ uniforms, lightMode }), [uniforms, lightMode]);
+  return useMemo(() => canvasItemLightingProps({ uniforms: bound, lightMode }), [bound, lightMode]);
 }

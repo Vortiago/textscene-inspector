@@ -18,10 +18,10 @@
  *                 MIX: S  = mix(S, light.rgb, light.a)
  *
  * and `S` does not depend on the item — only on the SEED, which is the canvas
- * modulate for an ordinary item and an unmodulated white for a `Light Only` one.
- * That is the fact this module is built on: `S` is accumulated ONCE per distinct
- * seed into an offscreen buffer, and every canvas item multiplies its own albedo
- * by what that buffer holds beneath it.
+ * modulate for an ordinary item and an unmodulated white for a `Light Only` one,
+ * and on WHICH LIGHTS REACH THE ITEM. That is the fact this module is built on:
+ * `S` is accumulated ONCE per (seed, light set) into an offscreen buffer, and
+ * every canvas item multiplies its own albedo by what its buffer holds beneath it.
  *
  * MIX is why the seed cannot simply be added afterwards: it INTERPOLATES the
  * accumulator toward the light, so the seed has to be present while the lights
@@ -29,6 +29,18 @@
  * quads, the same blend state and the same layer, with only the seed quad's
  * uniform differing. The Light Only pass is allocated and run only when the
  * canvas actually holds a Light Only item.
+ *
+ * WHICH LIGHTS REACH AN ITEM is Godot's `RendererCanvasCull`:
+ *
+ *   if (light->item_mask & ci->light_mask) { ...apply light... }
+ *
+ * (`item_mask` is the `range_item_cull_mask` property; the light's own
+ * `light_mask` is its CanvasItem mask and says nothing about what it lights.)
+ * Two lights that share a `range_item_cull_mask` are therefore INDISTINGUISHABLE
+ * to every item on the canvas, so the lights partition into classes by that
+ * mask, and one accumulation per class covers every item exactly. An item then
+ * reads the classes its own `light_mask` selects, usually exactly one, which is
+ * the accumulation it would have got from a single-class canvas.
  *
  * The buffers are half-float, which is the load-bearing part. Godot clamps only
  * after multiplying the light into the albedo; a fragment blended straight onto
@@ -44,9 +56,15 @@
  * passes through no colour-management path on its way into a `NoColorSpace`
  * target, and the renderer's global clear state is never touched.
  *
- * Lights are drawn on their own camera layer, so collecting them needs no second
- * scene graph: the pre-pass just points the camera at that layer and renders the
- * tree that is already mounted.
+ * Lights are drawn on camera layers, so collecting them needs no second scene
+ * graph: each class's pre-pass points the camera at the seed layer plus that
+ * class's layer and renders the tree that is already mounted.
+ *
+ * SHADOWS plug in one level down, per light rather than per class: a
+ * `LightOccluder2D` shadow is a property of ONE light's cookie, so it belongs in
+ * `lightQuad`'s fragment (a shadow-coverage term multiplying the cookie) fed by
+ * a per-light shadow-volume texture rendered before the loop below. Nothing here
+ * has to change for it: the class passes already replay each light's quad once.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -65,41 +83,82 @@ import {
 } from 'react';
 import * as THREE from 'three';
 import { useFrame, useThree } from '@react-three/fiber';
+import { warn } from '../../logger';
 import type { RGBA } from '../canvasItemModulate.js';
 
 /**
- * The camera layer light quads live on. Nothing else may use it: the pre-pass
- * renders exactly this layer, and the main pass renders everything except it.
+ * How many distinct `range_item_cull_mask` classes one canvas may accumulate.
+ * The item-side injection unrolls one sampler per class, and GLSL ES 1.00
+ * (which is what three compiles an `onBeforeCompile` injection as) cannot index
+ * a sampler array by a runtime value, so the count has to be a compile-time
+ * constant. Four covers every scene in the corpus (the isometric dungeon needs
+ * one; its candle sub-scene adds two more).
+ */
+export const MAX_LIGHT_CLASSES = 4;
+
+/**
+ * The first camera layer light quads live on; class `i` uses `LIGHT_LAYER + i`.
+ * Nothing else may use these: a class pre-pass renders exactly its own layer
+ * (plus the seed), and the main pass renders neither.
  */
 export const LIGHT_LAYER = 1;
 
-/** Draw order within the light layer — the seed must land under every light. */
+/**
+ * The seed quad's own layer. Every class pass enables it, so the seed is written
+ * once per pass without belonging to any class.
+ */
+export const LIGHT_SEED_LAYER = LIGHT_LAYER + MAX_LIGHT_CLASSES;
+
+/**
+ * Where a light lands when its cull-mask class did not fit in
+ * `MAX_LIGHT_CLASSES`, or before the provider has classified it. No pass ever
+ * enables this layer, so such a quad is simply never drawn, which is the
+ * dropping the warning below announces.
+ */
+export const LIGHT_UNCLASSED_LAYER = LIGHT_SEED_LAYER + 1;
+
+/** Draw order within a light layer: the seed must land under every light. */
 const SEED_RENDER_ORDER = -1;
+
+/** One `range_item_cull_mask` value's accumulation. */
+export interface CanvasLightClass {
+  /** The `range_item_cull_mask` every light in this class shares. */
+  readonly cullMask: number;
+  /**
+   * `S` seeded from the canvas modulate in rgb, and this class's summed cookie
+   * coverage in alpha, in Godot's sRGB space and unclamped.
+   */
+  readonly buffer: THREE.Texture;
+  /** The same accumulation seeded from an unmodulated white, for Light Only items. */
+  readonly lightOnlyBuffer: THREE.Texture | null;
+  /** The camera layer this class's light quads draw on. */
+  readonly layer: number;
+}
 
 export interface CanvasLighting2D {
   /**
-   * `S` seeded from the canvas modulate in rgb, and the summed cookie coverage
-   * in alpha — in Godot's sRGB space and unclamped. Null when the canvas holds
-   * no light, in which case items fall back to the canvas modulate they know.
+   * The cull-mask classes in force, ascending by mask. Empty when the canvas
+   * holds no light, in which case items fall back to the canvas modulate they
+   * already know.
    */
-  readonly buffer: THREE.Texture | null;
-  /** The same accumulation seeded from an unmodulated white, for Light Only items. */
-  readonly lightOnlyBuffer: THREE.Texture | null;
+  readonly classes: readonly CanvasLightClass[];
   /**
    * The accumulators' size in DEVICE pixels, which is what `gl_FragCoord` is
    * measured in. MUTATED in place each frame, so an item that binds it as a
    * uniform value stays in step without re-rendering.
    */
   readonly resolution: THREE.Vector2;
-  /** Declares a light on the canvas; the returned callback withdraws it. */
-  register(): () => void;
+  /**
+   * Declares a light of this `range_item_cull_mask` on the canvas; the returned
+   * callback withdraws it.
+   */
+  register(cullMask: number): () => void;
   /** Declares an item that needs the unmodulated accumulation. */
   registerLightOnly(): () => void;
 }
 
 const INERT: CanvasLighting2D = {
-  buffer: null,
-  lightOnlyBuffer: null,
+  classes: [],
   resolution: new THREE.Vector2(1, 1),
   register: () => () => {},
   registerLightOnly: () => () => {},
@@ -122,21 +181,71 @@ function useDeclarationCount(): [number, () => () => void] {
   return [count, declare];
 }
 
+const EMPTY_MASKS: readonly number[] = [];
+
+function sameMasks(a: readonly number[], b: readonly number[]): boolean {
+  return a.length === b.length && a.every((mask, i) => mask === b[i]);
+}
+
 /**
- * Declares that a light is present. The count is what gates the accumulator —
- * with no lights it is never allocated and every canvas item reads its canvas
- * modulate straight from its uniform, which is the 3D workspace and most
- * fixtures.
+ * The distinct `range_item_cull_mask` values currently mounted, ascending.
+ *
+ * Ascending rather than mount-ordered so a class's index, and therefore its
+ * camera layer, depends only on WHICH masks are present, never on which light
+ * mounted first. A live count per mask is what makes the withdrawal of one of
+ * several lights sharing a mask leave the class standing.
+ */
+function useCullMaskRegistry(): [readonly number[], (cullMask: number) => () => void] {
+  const [masks, setMasks] = useState<readonly number[]>(EMPTY_MASKS);
+  const counts = useRef(new Map<number, number>()).current;
+
+  const publish = useCallback(() => {
+    const next = [...counts.keys()].sort((a, b) => a - b);
+    setMasks((previous) => (sameMasks(previous, next) ? previous : next));
+  }, [counts]);
+
+  const declare = useCallback(
+    (cullMask: number) => {
+      counts.set(cullMask, (counts.get(cullMask) ?? 0) + 1);
+      publish();
+      return () => {
+        const remaining = (counts.get(cullMask) ?? 0) - 1;
+        if (remaining > 0) counts.set(cullMask, remaining);
+        else counts.delete(cullMask);
+        publish();
+      };
+    },
+    [counts, publish]
+  );
+
+  return [masks, declare];
+}
+
+/**
+ * Declares that a light of this `range_item_cull_mask` is present. The classes
+ * are what gate the accumulators: with no lights none is allocated and every
+ * canvas item reads its canvas modulate straight from its uniform, which is the
+ * 3D workspace and most fixtures.
  *
  * Registration is an EFFECT: it has to unwind on unmount, and a provider
  * `setState` reached from a child's render is a React update-during-render.
  */
-export function useRegisterCanvasLight2D(enabled: boolean): void {
+export function useRegisterCanvasLight2D(enabled: boolean, cullMask: number): void {
   const { register } = useCanvasLighting2D();
   useEffect(() => {
     if (!enabled) return undefined;
-    return register();
-  }, [enabled, register]);
+    return register(cullMask);
+  }, [enabled, cullMask, register]);
+}
+
+/**
+ * The camera layer a light of this cull mask must draw its quad on: the layer
+ * of its class, or `LIGHT_UNCLASSED_LAYER` while it has none.
+ */
+export function useLightClassLayer(cullMask: number): number {
+  const { classes } = useCanvasLighting2D();
+  return classes.find((lightClass) => lightClass.cullMask === cullMask)?.layer
+    ?? LIGHT_UNCLASSED_LAYER;
 }
 
 /** Declares an item whose light mode needs the unmodulated accumulation. */
@@ -162,6 +271,18 @@ function createAccumulationTarget(): THREE.WebGLRenderTarget {
   rt.texture.wrapS = THREE.ClampToEdgeWrapping;
   rt.texture.wrapT = THREE.ClampToEdgeWrapping;
   return rt;
+}
+
+/** `count` accumulators, disposed together when the count changes. */
+function useAccumulationTargets(count: number): THREE.WebGLRenderTarget[] {
+  const targets = useMemo(
+    () => Array.from({ length: count }, createAccumulationTarget),
+    [count]
+  );
+  // A cleanup belongs to an effect: a useMemo factory's return value is the
+  // memoised VALUE, and React never calls it.
+  useEffect(() => () => targets.forEach((target) => target.dispose()), [targets]);
+  return targets;
 }
 
 const SEED_VERTEX = /* glsl */ `
@@ -198,13 +319,13 @@ function createSeedMaterial(): THREE.ShaderMaterial {
 
 /** Writes `S`'s starting value over the whole accumulator, under every light. */
 function LightAccumulatorSeed({ material }: { material: THREE.ShaderMaterial }) {
-  const toLightLayer = useCallback((mesh: THREE.Mesh | null) => {
-    mesh?.layers.set(LIGHT_LAYER);
+  const toSeedLayer = useCallback((mesh: THREE.Mesh | null) => {
+    mesh?.layers.set(LIGHT_SEED_LAYER);
   }, []);
 
   return (
     <mesh
-      ref={toLightLayer}
+      ref={toSeedLayer}
       material={material}
       renderOrder={SEED_RENDER_ORDER}
       // The quad ignores every matrix, so its bounds say nothing about where it
@@ -235,21 +356,25 @@ export function CanvasLighting2DProvider({
   const scene = useThree((s) => s.scene);
   const camera = useThree((s) => s.camera);
 
-  const [lightCount, register] = useDeclarationCount();
+  const [cullMasks, register] = useCullMaskRegistry();
   const [lightOnlyCount, registerLightOnly] = useDeclarationCount();
 
-  const lit = lightCount > 0;
+  const classCount = Math.min(cullMasks.length, MAX_LIGHT_CLASSES);
+  const lit = classCount > 0;
   const needsLightOnly = lit && lightOnlyCount > 0;
 
-  const target = useMemo(() => (lit ? createAccumulationTarget() : null), [lit]);
-  const lightOnlyTarget = useMemo(
-    () => (needsLightOnly ? createAccumulationTarget() : null),
-    [needsLightOnly]
-  );
-  // A cleanup belongs to an effect: a useMemo factory's return value is the
-  // memoised VALUE, and React never calls it.
-  useEffect(() => () => target?.dispose(), [target]);
-  useEffect(() => () => lightOnlyTarget?.dispose(), [lightOnlyTarget]);
+  const targets = useAccumulationTargets(classCount);
+  const lightOnlyTargets = useAccumulationTargets(needsLightOnly ? classCount : 0);
+
+  const overflow = cullMasks.length - MAX_LIGHT_CLASSES;
+  useEffect(() => {
+    if (overflow <= 0) return;
+    warn(
+      `[CanvasLighting2D] ${overflow + MAX_LIGHT_CLASSES} distinct range_item_cull_mask ` +
+        `values on one canvas; only ${MAX_LIGHT_CLASSES} can be accumulated, so lights ` +
+        `masked ${cullMasks.slice(MAX_LIGHT_CLASSES).join(', ')} are not drawn`
+    );
+  }, [overflow, cullMasks]);
 
   const seedMaterial = useMemo(createSeedMaterial, []);
   useEffect(() => () => seedMaterial.dispose(), [seedMaterial]);
@@ -258,34 +383,38 @@ export function CanvasLighting2DProvider({
 
   const { r, g, b } = canvasModulate;
 
-  // Before the main pass: point the camera at the light layer alone and let the
-  // already-mounted tree draw itself into the accumulators. Priority is negative
-  // so this runs ahead of R3F's own render, which still happens as usual —
-  // fiber only takes the loop over for POSITIVE priorities.
+  // Before the main pass: point the camera at one class's layer (plus the seed)
+  // and let the already-mounted tree draw itself into that class's accumulators.
+  // Priority is negative so this runs ahead of R3F's own render, which still
+  // happens as usual: fiber only takes the loop over for POSITIVE priorities.
   useFrame(() => {
-    if (!target) return;
+    if (targets.length === 0) return;
     // The targets and the lookup are all in device pixels, because that is what
     // `gl_FragCoord` is measured in. Sizing from the CSS size instead reads the
     // buffer at the wrong scale on any display where dpr is not 1.
     gl.getDrawingBufferSize(resolution);
     const previousTarget = gl.getRenderTarget();
     const previousMask = camera.layers.mask;
-    camera.layers.set(LIGHT_LAYER);
 
     const seed = seedMaterial.uniforms.uSeed!.value as THREE.Vector3;
-    for (const pass of [
-      { rt: target, seed: [r, g, b] as const },
-      // Light Only skips `color *= canvas_modulation`, so its accumulation is
-      // the same lights over an unmodulated seed.
-      { rt: lightOnlyTarget, seed: [1, 1, 1] as const },
-    ]) {
-      if (!pass.rt) continue;
-      if (pass.rt.width !== resolution.x || pass.rt.height !== resolution.y) {
-        pass.rt.setSize(resolution.x, resolution.y);
+    for (let index = 0; index < targets.length; index += 1) {
+      camera.layers.set(LIGHT_SEED_LAYER);
+      camera.layers.enable(LIGHT_LAYER + index);
+
+      for (const pass of [
+        { rt: targets[index], seed: [r, g, b] as const },
+        // Light Only skips `color *= canvas_modulation`, so its accumulation is
+        // the same lights over an unmodulated seed.
+        { rt: lightOnlyTargets[index], seed: [1, 1, 1] as const },
+      ]) {
+        if (!pass.rt) continue;
+        if (pass.rt.width !== resolution.x || pass.rt.height !== resolution.y) {
+          pass.rt.setSize(resolution.x, resolution.y);
+        }
+        seed.set(pass.seed[0], pass.seed[1], pass.seed[2]);
+        gl.setRenderTarget(pass.rt);
+        gl.render(scene, camera);
       }
-      seed.set(pass.seed[0], pass.seed[1], pass.seed[2]);
-      gl.setRenderTarget(pass.rt);
-      gl.render(scene, camera);
     }
 
     gl.setRenderTarget(previousTarget);
@@ -294,13 +423,17 @@ export function CanvasLighting2DProvider({
 
   const value = useMemo<CanvasLighting2D>(
     () => ({
-      buffer: target?.texture ?? null,
-      lightOnlyBuffer: lightOnlyTarget?.texture ?? null,
+      classes: targets.map((target, index) => ({
+        cullMask: cullMasks[index]!,
+        buffer: target.texture,
+        lightOnlyBuffer: lightOnlyTargets[index]?.texture ?? null,
+        layer: LIGHT_LAYER + index,
+      })),
       resolution,
       register,
       registerLightOnly,
     }),
-    [target, lightOnlyTarget, resolution, register, registerLightOnly]
+    [targets, lightOnlyTargets, cullMasks, resolution, register, registerLightOnly]
   );
 
   return (

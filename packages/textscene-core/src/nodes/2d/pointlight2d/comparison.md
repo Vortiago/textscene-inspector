@@ -79,6 +79,39 @@ Not shown, but measured against the engine: the coverage is the plain SUM of eve
 cookie alpha over the item, so overlapping lights saturate the mask instead of
 screening into it (three cookies at alpha 0.3 mask to 0.9, not 0.657).
 
+## Cull masks: which items a light reaches
+
+<!-- compare: image=unit-pointlight2d-cull-mask status=done fixture=unit-pointlight2d-cull-mask.tscn -->
+
+A Godot light does not reach every item beneath it. `RendererCanvasCull` applies
+one to a CanvasItem only when
+`light.range_item_cull_mask & item.light_mask != 0`, and both sides default to
+`1`, which is why an untouched light lights an untouched item, and why the rule
+is invisible until a scene sets either.
+
+Four panels under two lights, a warm one at the default cull mask and a cool one
+at `2`. Both cookies are wide enough to cover the whole row, so every panel is
+inside both and only the masks decide. The first panel leaves `light_mask` alone
+and takes only the warm light. Its NEIGHBOUR sets `light_mask = 2`, sits under
+the warm light's own centre, and still takes only the cool one. The third sets
+`3` and takes both. The fourth sets `512`, sits right beside the cool light, and
+stays at the bare canvas tint.
+
+Two lights that share a cull mask are indistinguishable to every item, so the
+lights partition into CLASSES by that mask and each class accumulates into its
+own buffer. One class is the ordinary canvas, and an item then reads the classes
+its own mask selects. Up to four classes are accumulated; past that the extra
+lights are dropped with a warning, because the item-side lookup unrolls one
+sampler per class and GLSL ES 1.00 cannot index a sampler by a runtime value.
+
+An item that reads SEVERAL classes sums their contributions over one shared seed,
+which is exactly Godot's loop for ADD and SUB lights (each contributes an
+independent `± light·a` term). A MIX light in one class over a light in another
+class reaching the same item is the one case that diverges, since MIX
+interpolates the accumulator and does not commute across the split.
+
+`shadow_item_cull_mask` parses and is reported, but nothing is shadowed yet.
+
 ## Divergences
 
 The light is no longer a quad on the canvas. Lights accumulate into an offscreen
@@ -95,14 +128,21 @@ Measured mean channel error against the engine, over the whole frame:
 | `unit-pointlight2d-blend` | 0.49/255 | 0.0% |
 | `unit-pointlight2d-gradient` | 0.09/255 | 0.0% |
 | `unit-pointlight2d-lightonly` | 0.43/255 | 0.0% |
+| `unit-pointlight2d-cull-mask` | 0.22/255 | 0.0% |
 
 What is left unimplemented:
 
-- `light_mask`, `range_item_cull_mask`, `range_layer_min/max` and
-  `range_z_min/max` are parsed but not applied, so every light reaches every
-  canvas item under it instead of only the ones it is masked to. Each distinct
-  cull-mask class needs its own accumulation.
-- `shadow_enabled` casts nothing. `LightOccluder2D` and `OccluderPolygon2D`
+- `range_layer_min/max` and `range_z_min/max` are not applied, so a light still
+  reaches items outside its layer and z window. `light_mask` and
+  `range_item_cull_mask` ARE applied (above).
+- A MIX light in one cull-mask class over a light in another class, both
+  reaching the same item, is summed rather than interpolated in Godot's order.
+  That is the one case the per-class split cannot reproduce, since MIX does not
+  commute. ADD and SUB across classes are exact.
+- Past four distinct `range_item_cull_mask` values on one canvas the extra
+  classes are dropped with a `logger.warn`; nothing in the corpus reaches three.
+- `shadow_enabled` casts nothing, and `shadow_item_cull_mask` is parsed and
+  reported but selects nothing. `LightOccluder2D` and `OccluderPolygon2D`
   parse and render their outline, but no light is occluded by them.
 - Normal-mapped and specular response (`Light2D` against a
   `CanvasTexture.normal_texture`) is not computed; every surface takes the light
@@ -114,7 +154,7 @@ What is left unimplemented:
 ## Linting
 
 <!-- lint:begin PointLight2D -->
-Strict parsing format-checks these `PointLight2D` properties, plus 17 inherited from Node2D. Every validator failure is an **error**.
+Strict parsing format-checks these `PointLight2D` properties, plus 18 inherited from Node2D. Every validator failure is an **error**.
 
 | Property |
 | --- |
@@ -123,6 +163,8 @@ Strict parsing format-checks these `PointLight2D` properties, plus 17 inherited 
 | `enabled` |
 | `energy` |
 | `offset` |
+| `range_item_cull_mask` |
+| `shadow_item_cull_mask` |
 | `texture` |
 | `texture_scale` |
 
@@ -140,14 +182,18 @@ present, with no resource-reference format check.
 
 ## Known limitations
 
-The previewer approximates a 2D light as its cookie quad; several parts of Godot's 2D
-lighting model are therefore not reproduced:
+The light term itself (falloff, tint, energy, all three blend modes, the canvas
+tint, both light modes and the item cull masks) is Godot's own arithmetic in
+Godot's own space, measured above. What the pass still does not do:
 
-- **No per-surface lighting** — the light does not modulate other CanvasItems, read their
-  normal maps, or respect `light_mask` / `range` layers; it is drawn as its own quad.
-- **No shadows** — `shadow_enabled` and any `LightOccluder2D` in range are ignored (see the
-  LightOccluder2D sheet); the light passes through occluders.
-- **`blend_mode` SUB/MIX** map onto three.js `SubtractiveBlending` / `NormalBlending`, which
-  approximate but do not match Godot's 2D blend math.
-- **Energy is unclamped**, so a bright light washes its core toward white rather than holding
-  the emitted colour.
+- **No shadows.** `shadow_enabled` and any `LightOccluder2D` in range are ignored
+  (see the LightOccluder2D sheet); the light passes through occluders.
+  `shadow_item_cull_mask` parses and is reported, but selects nothing.
+- **No range windows.** `range_layer_min/max` and `range_z_min/max` are not
+  applied, so a light reaches items outside its layer and z window.
+- **No normal-mapped or specular response.** A `CanvasTexture.normal_texture`
+  under a light is not read; every surface takes the light head-on.
+- **MIX across two cull-mask classes** on one item is summed rather than applied
+  in Godot's order (see Divergences).
+- **A `Control` draws in the DOM overlay** rather than on the WebGL canvas
+  (ADR-0024), so no 2D light reaches one.

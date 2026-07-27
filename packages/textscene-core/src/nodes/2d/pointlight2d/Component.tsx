@@ -22,7 +22,7 @@ import type { PointLight2DProperties } from './types';
 import type { Color } from '../../base/node2d/types';
 import { createLightQuadMaterial } from '../../../r3f/lighting2d/lightQuad';
 import {
-  LIGHT_LAYER,
+  useLightClassLayer,
   useRegisterCanvasLight2D,
 } from '../../../r3f/lighting2d/CanvasLighting2D';
 
@@ -41,7 +41,12 @@ export function PointLight2D({ node, children }: NodeComponentProps) {
   const showPlaceholder = missing || !props.texture;
 
   const lights = props.enabled && !!displayedTexture ? 1 : 0;
-  useRegisterCanvasLight2D(lights > 0);
+  // `range_item_cull_mask`, which items this light reaches, is what partitions
+  // the accumulation, so it is what the light registers under and what decides
+  // the layer its quad draws on. The node's own `light_mask` is its CanvasItem
+  // mask and has no bearing on either.
+  useRegisterCanvasLight2D(lights > 0, props.range_item_cull_mask);
+  const layer = useLightClassLayer(props.range_item_cull_mask);
 
   // When disabled: return null → no mesh in tree.
   if (!props.enabled) return null;
@@ -61,6 +66,7 @@ export function PointLight2D({ node, children }: NodeComponentProps) {
             scale={props.texture_scale}
             offset={props.offset}
             blendMode={props.blend_mode}
+            layer={layer}
           />
         ) : null
       }
@@ -77,6 +83,7 @@ function QuadMesh({
   scale,
   offset,
   blendMode,
+  layer,
 }: {
   texture: THREE.Texture;
   color: Color;
@@ -84,6 +91,8 @@ function QuadMesh({
   scale: number;
   offset: { x: number; y: number };
   blendMode: number;
+  /** The camera layer of this light's cull-mask class. */
+  layer: number;
 }) {
   const width = (texture.image as { width?: number } | null | undefined)?.width ?? 1;
   const height = (texture.image as { height?: number } | null | undefined)?.height ?? 1;
@@ -94,12 +103,15 @@ function QuadMesh({
   );
   useEffect(() => () => material.dispose(), [material]);
 
-  // The light layer is what keeps this quad out of the visible pass: the
-  // accumulation pre-pass renders that layer alone, the main pass renders
-  // everything else.
-  const toLightLayer = useCallback((mesh: THREE.Mesh | null) => {
-    mesh?.layers.set(LIGHT_LAYER);
-  }, []);
+  // The light layer is what keeps this quad out of the visible pass AND what
+  // sorts it into its cull-mask class: each class's accumulation pre-pass
+  // renders its own layer alone, and the main pass renders none of them.
+  const toLightLayer = useCallback(
+    (mesh: THREE.Mesh | null) => {
+      mesh?.layers.set(layer);
+    },
+    [layer]
+  );
 
   return (
     <mesh ref={toLightLayer} position={[offset.x, -offset.y, 0]} material={material}>

@@ -84,6 +84,35 @@ describe('parsePointLight2D', () => {
     expect(p.enabled).toBe(false);
   });
 
+  it('parses the two item cull masks', () => {
+    const p = parsePointLight2D(nodeHeading, {
+      range_item_cull_mask: '145',
+      shadow_item_cull_mask: '17',
+    });
+    expect(p.range_item_cull_mask).toBe(145);
+    expect(p.shadow_item_cull_mask).toBe(17);
+  });
+
+  it('defaults both cull masks to 1, so an untouched light reaches an untouched item', () => {
+    const p = parsePointLight2D(nodeHeading, {});
+    expect(p.range_item_cull_mask).toBe(1);
+    expect(p.shadow_item_cull_mask).toBe(1);
+  });
+
+  it('keeps range_item_cull_mask separate from the node\'s own light_mask', () => {
+    // A Light2D's `light_mask` is its CanvasItem mask, meaning which lights
+    // reach the light node itself. It says nothing about what the light lights.
+    // The dungeon's torches set it to 2 while culling items with the default 1.
+    const p = parsePointLight2D(nodeHeading, { light_mask: '2' });
+    expect(p.light_mask).toBe(2);
+    expect(p.range_item_cull_mask).toBe(1);
+  });
+
+  it('warns and falls back on an invalid cull mask', () => {
+    const p = parsePointLight2D(nodeHeading, { range_item_cull_mask: 'not_an_int' });
+    expect(p.range_item_cull_mask).toBe(1);
+  });
+
   it('inherits Node2D transform properties', () => {
     const p = parsePointLight2D(nodeHeading, {
       position: 'Vector2(50, 100)',

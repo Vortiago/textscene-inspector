@@ -65,7 +65,7 @@ import { SceneResourcesProvider } from '../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
 import { godotColorToLinear } from '../../r3f/godotColor';
-import { LIGHT_LAYER } from '../../r3f/lighting2d/CanvasLighting2D';
+import { CanvasLighting2DProvider, LIGHT_LAYER } from '../../r3f/lighting2d/CanvasLighting2D';
 import '../../r3f/nodes'; // side-effect: registers every node's r3f component
 import '../../linter/index'; // side-effect: registers every node's linter validators
 
@@ -121,7 +121,12 @@ async function renderScene(tscn: string) {
           externalResources={scene.externalResources}
         >
           <SelectionProvider>
-            <NodeDispatcher nodes={scene.nodes} />
+            {/* The light's camera layer is its cull-mask class's layer, and only
+                the provider assigns one. Mounted here so the quad these pins
+                look for lands where the real 2D stage puts it. */}
+            <CanvasLighting2DProvider canvasModulate={{ r: 1, g: 1, b: 1, a: 1 }}>
+              <NodeDispatcher nodes={scene.nodes} />
+            </CanvasLighting2DProvider>
           </SelectionProvider>
         </SceneResourcesProvider>
       </ResourceLoaderProvider>

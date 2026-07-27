@@ -62,6 +62,7 @@ export function parseNode2D(
     self_modulate: properties.self_modulate
       ? parseColor(properties.self_modulate)
       : { r: 1, g: 1, b: 1, a: 1 },
+    light_mask: intOr(properties.light_mask, 1, `${name || 'Node2D'}.light_mask`),
     y_sort_enabled: properties.y_sort_enabled === 'true',
     y_sort_origin: properties.y_sort_origin !== undefined
       ? floatOr(properties.y_sort_origin, 0)

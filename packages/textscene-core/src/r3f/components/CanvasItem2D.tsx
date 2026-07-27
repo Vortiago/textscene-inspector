@@ -70,7 +70,7 @@ export function CanvasItem2D({ node, props, body, children }: CanvasItem2DProps)
   // two must be resolved from the one hook.
   const canvasModulate = useCanvasModulateFor(material);
   const tint = useCanvasItemTint(props, canvasModulate);
-  const lighting = useCanvasItemLighting(material);
+  const lighting = useCanvasItemLighting(material, props.light_mask);
 
   return (
     <group name={node.name} {...transform} visible={props.visible !== false}>

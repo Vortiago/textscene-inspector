@@ -58,6 +58,11 @@ export function formatNode2DProperties(properties: Node2DProperties): PropertySe
   if (!isWhite(properties.self_modulate)) {
     canvasItems.push({ label: 'Self Modulate', value: formatColorRgba(properties.self_modulate) });
   }
+  // Only when it says something: 1 is every item's default, and a row repeating
+  // it on every node would bury the masks that actually cull a light.
+  if (properties.light_mask !== 1) {
+    canvasItems.push({ label: 'Light Mask', value: properties.light_mask.toString() });
+  }
   if (properties.y_sort_enabled) {
     canvasItems.push({ label: 'Y Sort Enabled', value: 'Yes' });
     if (properties.y_sort_origin !== 0) {

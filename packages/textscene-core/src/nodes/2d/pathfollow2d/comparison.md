@@ -40,7 +40,7 @@ directly.
 ## Linting
 
 <!-- lint:begin PathFollow2D -->
-Strict parsing format-checks these `PathFollow2D` properties, plus 17 inherited from Node2D. Every validator failure is an **error**.
+Strict parsing format-checks these `PathFollow2D` properties, plus 18 inherited from Node2D. Every validator failure is an **error**.
 
 | Property |
 | --- |

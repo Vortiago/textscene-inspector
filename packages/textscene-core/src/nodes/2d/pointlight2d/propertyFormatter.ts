@@ -20,6 +20,10 @@ export function formatPointLight2DProperties(props: PointLight2DProperties): Pro
         { label: 'Energy', value: props.energy.toFixed(2) },
         { label: 'Blend Mode', value: BLEND_MODE_LABELS[props.blend_mode] ?? String(props.blend_mode) },
         { label: 'Texture Scale', value: props.texture_scale.toFixed(2) },
+        // The mask that decides what this light LIGHTS, distinct from the
+        // node's own CanvasItem `light_mask`, which the Node2D section carries.
+        { label: 'Range Item Cull Mask', value: props.range_item_cull_mask.toString() },
+        { label: 'Shadow Item Cull Mask', value: props.shadow_item_cull_mask.toString() },
       ],
     },
   ];

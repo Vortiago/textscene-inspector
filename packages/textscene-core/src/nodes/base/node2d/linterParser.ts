@@ -12,7 +12,7 @@
  */
 
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
-import { v, makeFloatTupleRegex } from '../../../linter/validators/index.js';
+import { layerBitmask, v, makeFloatTupleRegex } from '../../../linter/validators/index.js';
 import { propertyError } from '../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 
@@ -51,6 +51,8 @@ validatorRegistry.registerAll('Node2D', {
   global_transform: v.transform2d('global_transform'),
   z_index: v.strictInt('z_index'),
   z_as_relative: v.boolean('z_as_relative'),
+  // CanvasItem light culling: ANDed against a 2D light's range_item_cull_mask.
+  light_mask: layerBitmask('light_mask'),
   y_sort_enabled: v.boolean('y_sort_enabled'),
   // CanvasItem material slot. The reference is format-checked; whether it names
   // a CanvasItemMaterial (the only kind the renderer applies) is not, because a

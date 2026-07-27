@@ -325,6 +325,13 @@ export const GOLDEN_SCENES = [
   { name: 'pointlight2d-blend', file: 'unit-pointlight2d-blend.tscn', maxDiffPct: 0.5 },
   { name: 'pointlight2d-gradient', file: 'unit-pointlight2d-gradient.tscn', maxDiffPct: 0.5 },
   { name: 'pointlight2d-lightonly', file: 'unit-pointlight2d-lightonly.tscn', maxDiffPct: 0.5 },
+  // Godot's light culling: `light.range_item_cull_mask & item.light_mask != 0`.
+  // Four panels under two lights of different cull masks: one panel takes only
+  // the warm light, its NEIGHBOUR only the cool one, the third both, and the
+  // fourth sits right under the cool light and takes neither. Nothing else in
+  // the goldens sets either mask, so without this a light that reached
+  // everything under it would move no baseline at all.
+  { name: 'pointlight2d-cull-mask', file: 'unit-pointlight2d-cull-mask.tscn', maxDiffPct: 0.5 },
   // Baseline corrected in the Y-flip fix: a NavigationPolygon's vertices are
   // Godot canvas pixels (+Y DOWN), and this overlay was the one 2D geometry
   // path that skipped the negation — so the navmesh used to sit ABOVE the
