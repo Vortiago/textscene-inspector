@@ -288,6 +288,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Pointlight2d Blend",
+    "file": "unit-pointlight2d-blend.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Pointlight2d Gradient",
+    "file": "unit-pointlight2d-gradient.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Pointlight2d",
     "file": "unit-pointlight2d.tscn",
     "category": "Other"

@@ -1,0 +1,39 @@
+[gd_scene load_steps=4 format=3]
+
+[sub_resource type="Gradient" id="Gradient_cookie"]
+offsets = PackedFloat32Array(0.02, 0.65)
+colors = PackedColorArray(0.85, 0.85, 0.85, 1, 0, 0, 0, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_cookie"]
+gradient = SubResource("Gradient_cookie")
+width = 400
+height = 400
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+
+[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_unshaded"]
+light_mode = 1
+
+[node name="Root" type="Node2D"]
+
+[node name="Floor" type="Polygon2D" parent="."]
+color = Color(0.8, 0.8, 0.85, 1)
+polygon = PackedVector2Array(32, 120, 1120, 120, 1120, 530, 32, 530)
+
+[node name="Unshaded" type="Polygon2D" parent="."]
+material = SubResource("CanvasItemMaterial_unshaded")
+color = Color(0.8, 0.8, 0.85, 1)
+polygon = PackedVector2Array(700, 180, 1060, 180, 1060, 470, 700, 470)
+
+[node name="TorchA" type="PointLight2D" parent="."]
+position = Vector2(300, 325)
+texture = SubResource("GradientTexture2D_cookie")
+color = Color(1, 0.55, 0.2, 1)
+
+[node name="TorchB" type="PointLight2D" parent="."]
+position = Vector2(880, 325)
+texture = SubResource("GradientTexture2D_cookie")
+color = Color(1, 0.55, 0.2, 1)
+
+[node name="CanvasModulate" type="CanvasModulate" parent="."]
+color = Color(0.4, 0.5, 0.85, 1)

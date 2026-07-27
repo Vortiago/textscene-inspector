@@ -25,6 +25,39 @@ not light other CanvasItems per-pixel. The fixture puts a warm radial cookie ove
 | `energy` | `2.0` | scales the emitted colour (unclamped, so the core over-brightens) |
 | `texture_scale` | `0.5` | halves the cookie to a ~512 px pool centred on the surface |
 
+## Blend modes
+
+<!-- compare: image=unit-pointlight2d-blend status=done fixture=unit-pointlight2d-blend.tscn -->
+
+Three identical warm lights over one mid-grey surface, one per `blend_mode`.
+ADD and SUB apply the light against the surface — `albedo × (1 ± light)` — so
+the left pool brightens the grey and the middle one darkens it by the same
+cookie, in the same places as Godot.
+
+Measured mean channel error 14.3/255, and the shape of the miss is the same in
+all three: our pools reach their plateau too early and hold a harder edge where
+Godot keeps falling off. The cookie is sampled and blended per pixel, but the
+blend clamps the light to [0, 1] BEFORE multiplying it into the surface, where
+Godot clamps only afterwards — so the top of the cookie's gradient flattens.
+MIX is additionally the one mode with no destination-blend identity, and reads
+warmer and more opaque than Godot's.
+
+## An inline gradient cookie, a canvas tint, and an unshaded item
+
+<!-- compare: image=unit-pointlight2d-gradient status=done fixture=unit-pointlight2d-gradient.tscn -->
+
+Real scenes rarely ship a light cookie as an image: they describe it inline as a
+`GradientTexture2D`, which is fully contained in the scene and rasterises
+without a file. Both torches here share one such cookie — rasterised once and
+shared, not once per light.
+
+The frame also carries a `CanvasModulate`, which tints the CANVAS rather than a
+subtree, and a right-hand panel whose `CanvasItemMaterial` sets `light_mode = 1`.
+That panel keeps its authored colour while the floor around it goes blue,
+because Godot's base pass guards the tint with the item's light mode. The panel
+IS still reached by the torch beside it, which Godot would exclude — that half
+of `light_mode` needs the per-item light pass.
+
 ## Divergences
 
 Both sides place a warm radial pool at the same spot and size over the same dark

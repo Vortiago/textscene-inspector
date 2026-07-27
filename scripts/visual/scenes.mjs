@@ -315,6 +315,10 @@ export const GOLDEN_SCENES = [
   // threshold like the other 2D goldens (marker2d/path2d).
   { name: 'polygon-2d', file: 'unit-polygon2d.tscn', maxDiffPct: 0.5 },
   { name: 'line-2d', file: 'unit-line2d.tscn', maxDiffPct: 0.5 },
+  // The 2D light surface: ADD/SUB/MIX applied against a lit surface, and an
+  // inline gradient cookie under a canvas tint with an unshaded item beside it.
+  { name: 'pointlight2d-blend', file: 'unit-pointlight2d-blend.tscn', maxDiffPct: 0.5 },
+  { name: 'pointlight2d-gradient', file: 'unit-pointlight2d-gradient.tscn', maxDiffPct: 0.5 },
   // Baseline corrected in the Y-flip fix: a NavigationPolygon's vertices are
   // Godot canvas pixels (+Y DOWN), and this overlay was the one 2D geometry
   // path that skipped the negation — so the navmesh used to sit ABOVE the
