@@ -20,6 +20,11 @@
  *     renders GREEN (the high-Y grandchild), so a y_sort_enabled child's
  *     subtree MERGES into the parent's flat sort. Probing 600,65 also returns
  *     the container's own YELLOW body, so a y-sorted node still draws itself.
+ *   ysort-nested-transform — a y-sorted container at Y=200 over a leaf at
+ *     Y=100, beside a Y=250 sibling. Probing 350,480 returns the leaf's GREEN
+ *     and 350,150 the background, so merging the leaf out of its parent does
+ *     not cost it the parent's transform; probing 350,380 returns GREEN too,
+ *     so it sorts on the accumulated Y=300, ahead of the sibling.
  *
  * The renderer maps draw order to `position.z` (higher accumulated z = drawn in
  * front, per `canvasItemZ`). These tests render real `.tscn` subtrees through
@@ -35,6 +40,8 @@
  * tilemap path builds on. Children use Polygon2D (renders a findable named group
  * from inline points, no external texture) as observable Y-sort participants.
  */
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -57,8 +64,13 @@ polygon = PackedVector2Array(0, 0, 8, 0, 8, 8)
 ${extra}`;
 }
 
-/** Render a `.tscn` subtree and map each named object to its accumulated world-Z. */
-async function worldZByName(tscn: string): Promise<Map<string, number>> {
+/** The measured probe scenes named in this file's header, read where Godot rendered them. */
+function probeScene(name: string): string {
+  return readFileSync(join(import.meta.dirname, '../../../../scripts/godot-ref/scenes', name), 'utf8');
+}
+
+/** Render a `.tscn` subtree and return the root of the resulting THREE tree. */
+async function renderTscnRoot(tscn: string): Promise<THREE.Object3D | null> {
   const scene = new TscnParser().parse(tscn);
   const fake = createFakeResourceLoader();
   const renderer = await ReactThreeTestRenderer.create(
@@ -76,18 +88,31 @@ async function worldZByName(tscn: string): Promise<Map<string, number>> {
     </CanvasWorkspaceProvider>
   );
   await new Promise<void>((r) => setTimeout(r, 10));
-  const map = new Map<string, number>();
-  const v = new THREE.Vector3();
   const first = (renderer.scene as unknown as { children?: Array<{ instance?: THREE.Object3D }> })
     .children?.[0]?.instance;
   let root: THREE.Object3D | null | undefined = first;
   while (root?.parent) root = root.parent;
-  root?.traverse((o: THREE.Object3D) => {
-    if (o.name) {
-      o.getWorldPosition(v);
-      map.set(o.name, v.z);
-    }
+  return root ?? null;
+}
+
+/** Every named object in the rendered tree, in traversal order (duplicates kept). */
+function namedObjects(root: THREE.Object3D | null): THREE.Object3D[] {
+  const found: THREE.Object3D[] = [];
+  root?.traverse((o) => {
+    if (o.name) found.push(o);
   });
+  return found;
+}
+
+/** Render a `.tscn` subtree and map each named object to its accumulated world-Z. */
+async function worldZByName(tscn: string): Promise<Map<string, number>> {
+  const root = await renderTscnRoot(tscn);
+  const map = new Map<string, number>();
+  const v = new THREE.Vector3();
+  for (const o of namedObjects(root)) {
+    o.getWorldPosition(v);
+    map.set(o.name, v.z);
+  }
   return map;
 }
 
@@ -235,5 +260,78 @@ ${poly('B1', 'SubB', -100)}
     // Tree order Root -> [SubA, Mid, SubB]: A1 behind Mid behind B1, regardless of Y.
     expect(z.get('A1')!).toBeLessThan(z.get('Mid')!);
     expect(z.get('Mid')!).toBeLessThan(z.get('B1')!);
+  });
+});
+
+/**
+ * The two container rules, asserted against the SAME `.tscn` files real Godot
+ * 4.6.3 rendered — read off disk rather than retyped, so a scene edit that
+ * invalidates a measurement cannot leave a green test behind. The probes and
+ * the colours they returned are in this file's header.
+ */
+describe('Y-sort container rules (issue #356) — measured against Godot 4.6.3', () => {
+  it('a y_sort_enabled node draws its OWN body, at its own rank in the merged sort', async () => {
+    // `--probe 600,65` → rgb(255,255,0): the y-sorted `Sub` container's yellow
+    // bar, which nothing else in the scene covers. Godot draws it, so must we.
+    const root = await renderTscnRoot(probeScene('ysort-nested-merge.tscn'));
+    const sub = namedObjects(root).filter((o) => o.name === 'Sub');
+    expect(sub).toHaveLength(1);
+    let bodies = 0;
+    sub[0]!.traverse((o) => {
+      if ((o as THREE.Mesh).isMesh) bodies++;
+    });
+    expect(bodies).toBe(1);
+  });
+
+  it('merging a y-sorted subtree draws it ONCE, not once per level', async () => {
+    // The container is now an item AND a recursion step; if the recursion were
+    // replaced by a whole-node dispatch, `SubLow`/`SubHigh` would render twice.
+    const root = await renderTscnRoot(probeScene('ysort-nested-merge.tscn'));
+    const names = namedObjects(root).map((o) => o.name);
+    for (const name of ['Root', 'YS', 'Sub', 'SubLow', 'SubHigh', 'Mid'])
+      expect(names.filter((n) => n === name)).toHaveLength(1);
+  });
+
+  it("a y-sorted child's subtree MERGES into the parent's flat sort", async () => {
+    // `--probe 400,250` → rgb(0,255,0): all three of `SubLow`, `Mid` and
+    // `SubHigh` cover that pixel, and the highest-Y one (the grandchild
+    // `SubHigh`, Y=200) wins — it sorted against `Mid` (Y=100), a node one
+    // level above it. Full order: Sub (Y=0, declared first) ▸ SubLow (Y=0)
+    // ▸ Mid (Y=100) ▸ SubHigh (Y=200).
+    const z = await worldZByName(probeScene('ysort-nested-merge.tscn'));
+    for (const n of ['Sub', 'SubLow', 'Mid', 'SubHigh']) expect(z.get(n)).toBeDefined();
+    expect(z.get('Sub')!).toBeLessThan(z.get('SubLow')!);
+    expect(z.get('SubLow')!).toBeLessThan(z.get('Mid')!);
+    expect(z.get('Mid')!).toBeLessThan(z.get('SubHigh')!);
+  });
+
+  it('a merged item keeps the transform of the y-sorted levels it was lifted past', async () => {
+    // `Leaf` sits under a y-sorted `Sub` at Y=200, itself at Y=100. Merging it
+    // into the sort root's flat list must not cost it Sub's 200:
+    //   --probe 350,480 → rgb(0,255,0)   its body reaches Y=480 …
+    //   --probe 350,150 → rgb(76,76,76)  … and NOT the Y=100..300 band it would
+    //                                    occupy if the lift dropped that 200.
+    //   --probe 350,380 → rgb(0,255,0)   and it sorts in FRONT of `Ref` (Y=250),
+    //                                    which only the accumulated Y=300 does.
+    const root = await renderTscnRoot(probeScene('ysort-nested-transform.tscn'));
+    const byName = new Map(namedObjects(root).map((o) => [o.name, o]));
+    const world = new THREE.Vector3();
+    byName.get('Leaf')!.getWorldPosition(world);
+    // Godot (0, 300) → three (0, −300): the whole Root→Sub→Leaf chain composed.
+    expect(world.y).toBeCloseTo(-300);
+    const leafZ = world.z;
+    byName.get('Ref')!.getWorldPosition(world);
+    expect(leafZ).toBeGreaterThan(world.z);
+  });
+
+  it('GUARDRAIL: a NON-y-sorted container stays one atomic unit at its own Y', async () => {
+    // Same tree, container not y-sorted: `--probe 400,250` → rgb(0,0,255), the
+    // mid-Y sibling. `Deco` sorts as one unit at ITS Y (0), so its high-Y child
+    // never escapes to overtake `Mid`. Inside the unit tree order rules, which
+    // an atomic subtree expresses by sharing one z (see the GUARDRAIL above).
+    const z = await worldZByName(probeScene('ysort-atomic-container.tscn'));
+    for (const n of ['Low', 'High', 'Mid']) expect(z.get(n)).toBeDefined();
+    expect(z.get('Low')!).toBeLessThanOrEqual(z.get('High')!);
+    expect(z.get('High')!).toBeLessThan(z.get('Mid')!);
   });
 });

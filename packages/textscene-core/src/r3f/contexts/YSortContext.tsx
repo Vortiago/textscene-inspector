@@ -6,10 +6,13 @@ import { createContext, useContext, type ReactNode } from 'react';
 import type { TscnNode } from '../../parser/types';
 import { YSORT_FINE_RANGE } from '../node2dTransform';
 
-// NOTE: no provider currently sets non-default values, so parentWorldY /
-// parentEffectiveZ are always 0 — a y-sort node nested inside another y-sort
-// node sorts by LOCAL Y only. Accumulating these across nesting is tracked as a
-// follow-up; the context is the seam that fix will write to.
+// NOTE: no provider currently sets non-default values, so a dispatcher always
+// starts its walk at 0/0. Nesting INSIDE one walk does accumulate — the y-sort
+// collection threads the derived value down as it merges a y_sort_enabled
+// child's subtree into the flat sort. What is still missing is accumulation
+// ACROSS walks: a y-sort node reached through a non-y-sorted container mounts a
+// fresh dispatcher, which restarts at 0. This context is the seam that fix will
+// write to.
 export interface YSortContextValue {
   parentWorldY: number;
   parentEffectiveZ: number;
