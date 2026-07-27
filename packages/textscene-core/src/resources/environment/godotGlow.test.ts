@@ -330,6 +330,49 @@ describe('blendGlsl', () => {
     expect(blendGlsl(params, 1)).toContain('color * (1.0 - 1.0) + glow');
   });
 
+  it('uses Godot\'s D() coefficients, not the Photoshop soft-light variant', () => {
+    // `apply_glow`'s SOFTLIGHT branch, verbatim from tonemap.glsl:
+    //   color.r + glow.r * ((color.r <= 0.25
+    //     ? ((16.0 * color.r - 12.0) * color.r + 4.0) * color.r
+    //     : sqrt(color.r)) - color.r)
+    // The trailing constant is 4.0. The widely-published Photoshop form factors
+    // the same curve differently and lands on 3.0, which is a plausible thing to
+    // copy from a blog post and is wrong here — it changes the low end of every
+    // soft-light halo. Pinned character-exact for that reason.
+    const glsl = blendGlsl(glowOn({ glow_blend_mode: String(GlowBlendMode.SOFTLIGHT) }), 1);
+    for (const channel of ['r', 'g', 'b']) {
+      expect(glsl).toContain(`(16.0 * color.${channel} - 12.0) * color.${channel} + 4.0`);
+    }
+    expect(glsl).not.toContain('+ 3.0)');
+  });
+
+  it('skips soft light above 1.0, where Godot leaves the colour alone', () => {
+    // `color.r > 1.0 ? color.r : ...` — the polynomial inverts past 1, and Godot's
+    // own comment says the discontinuity there is deliberate and unavoidable.
+    const glsl = blendGlsl(glowOn({ glow_blend_mode: String(GlowBlendMode.SOFTLIGHT) }), 1);
+    for (const channel of ['r', 'g', 'b']) {
+      expect(glsl).toContain(`color.${channel} = color.${channel} > 1.0`);
+    }
+  });
+
+  it('clamps the glow per Godot\'s own per-mode bounds', () => {
+    // SOFTLIGHT clamps to [0,1]; SCREEN clamps to [0,white]. Godot's comments say
+    // both exist because a negative light can drive the buffer below zero.
+    expect(blendGlsl(glowOn({ glow_blend_mode: String(GlowBlendMode.SOFTLIGHT) }), 4)).toContain(
+      'clamp(glow, 0.0, 1.0)'
+    );
+    expect(blendGlsl(glowOn({ glow_blend_mode: String(GlowBlendMode.SCREEN) }), 4)).toContain(
+      'clamp(glow, 0.0, 4.0)'
+    );
+    // ADDITIVE and REPLACE clamp nothing at all in Godot.
+    expect(blendGlsl(glowOn({ glow_blend_mode: String(GlowBlendMode.ADDITIVE) }), 4)).not.toContain(
+      'clamp('
+    );
+    expect(blendGlsl(glowOn({ glow_blend_mode: String(GlowBlendMode.REPLACE) }), 4)).not.toContain(
+      'clamp('
+    );
+  });
+
   it('falls back to ADDITIVE for a blend mode outside the enum', () => {
     // `glow_blend_mode` is parsed leniently, so a scene can carry anything.
     const glsl = blendGlsl(glowOn({ glow_blend_mode: '99' }), 1);

@@ -22,6 +22,9 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 |---|---|
 | `packages/textscene-core/src/r3f/sky/skyShaders.ts` | `scene/resources/3d/sky_material.cpp` |
 | `packages/textscene-core/src/resources/environment/godotToneMapping.ts` | `drivers/gles3/shaders/tonemap_inc.glsl` |
+| `packages/textscene-core/src/resources/environment/godotGlow.ts` | `servers/rendering/renderer_rd/shaders/effects/copy.glsl` (`MODE_GLOW` bright pass under `FLAG_GLOW_FIRST_PASS`) and `.../effects/tonemap.glsl` (`gather_glow`, `apply_glow`, and `main()`'s pre/post-tonemap glow ordering) |
+| `packages/textscene-core/src/utils/colorSpace.ts` | `core/math/color.h` (`Color::srgb_to_linear`) |
+| `packages/textscene-core/src/resources/materials/standardmaterial3d/emission.ts` | `scene/resources/material.cpp` (`BaseMaterial3D::_update_shader` emission block, `set_emission_energy_multiplier`) |
 | `packages/textscene-core/src/nodes/3d/csg/smoothNormals.ts` | `modules/csg/csg_shape.cpp` (`CSGShape3D::update_shape` normal accumulation, `flip_faces`) and `core/math/plane.h` (`Plane(p1, p2, p3)`) |
 | `packages/textscene-core/src/nodes/3d/csg/csgbox3d/boxGeometry.ts` | `modules/csg/csg_shape.cpp` (`CSGBox3D::_build_brush`) |
 | `packages/textscene-core/src/nodes/3d/csg/csgcylinder3d/cylinderGeometry.ts` | `modules/csg/csg_shape.cpp` (`CSGCylinder3D::_build_brush`) |
