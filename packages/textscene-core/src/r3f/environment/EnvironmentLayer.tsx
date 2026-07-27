@@ -17,11 +17,16 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { BackgroundMode } from '../../resources/environment/types';
 import type { EnvironmentSettings } from '../../resources/environment/renderer';
 import { applyToneMapping } from '../../resources/environment/toneMapping';
-import { glowNeedsEveryPixel, glowParamsFor } from '../../resources/environment/godotGlow';
+import {
+  bloomableScanThreshold,
+  glowNeedsEveryPixel,
+  glowParamsFor,
+} from '../../resources/environment/godotGlow';
 import type { SkyProperties } from '../../resources/sky/types';
 import { godotColorToLinear } from '../godotColor';
 import { LIGHT_INTENSITY_SCALE } from '../lightConstants';
 import { useOptionalHierarchy } from '../contexts/HierarchyContext';
+import { sceneHasBloomableEmissive } from './bloomableScan';
 import { SkyLayer } from '../sky/SkyLayer';
 import { GlowLayer } from './GlowLayer';
 
@@ -54,8 +59,10 @@ export function EnvironmentLayer({ settings, sky }: EnvironmentLayerProps) {
   // Some settings glow every pixel, in which case the scene's own contents cannot
   // answer whether the pass matters and the scan is not worth running.
   const alwaysGlows = !!glowParams && glowNeedsEveryPixel(glowParams);
+  // Exposure-adjusted, because the scan measures unexposed material emissive
+  // while the bright pass exposes before thresholding.
   const hasBloomable = useSceneHasBloomableEmissive(
-    glowParams?.hdrThreshold ?? 0,
+    glowParams ? bloomableScanThreshold(glowParams, settings.toneMapping.exposure) : 0,
     !!glowParams && !alwaysGlows
   );
   const activeGlow = glowParams && (alwaysGlows || hasBloomable) ? glowParams : null;
@@ -215,21 +222,7 @@ function useSceneHasBloomableEmissive(threshold: number, needsScan: boolean): bo
     setBloomable(false);
     if (!needsScan) return undefined;
     const check = () => {
-      let found = false;
-      scene.traverse((obj) => {
-        if (found) return;
-        const material = (obj as THREE.Mesh).material;
-        const mats = Array.isArray(material) ? material : material ? [material] : [];
-        for (const m of mats) {
-          const std = m as THREE.MeshStandardMaterial;
-          const e = std.emissive;
-          const intensity = std.emissiveIntensity ?? 0;
-          if (e && intensity > 0 && Math.max(e.r, e.g, e.b) * intensity > threshold) {
-            found = true;
-            break;
-          }
-        }
-      });
+      const found = sceneHasBloomableEmissive(scene, threshold);
       // LATCHES, and only resets when the deps below change. Mounting the
       // composer flips `gl.toneMapping` to `NoToneMapping`, which is part of
       // three's program-cache key for every tone-mapped material — so each

@@ -60,16 +60,26 @@ so they are never both live.
 The editor preview environment only ever flips `glow_enabled`, which left every other
 knob unreachable by measurement. Each now has a fixture that moves one thing, all
 measured with `ref:godot` against Godot 4.6.3 (floor 0.011–0.069%): coarse level
-weights under ADDITIVE 0.029%, `glow_strength` 0.000%, SOFTLIGHT over mid-grey
-0.010%, MIX 0.025%, REPLACE 0.006%, `glow_bloom` as a feedback floor 0.015%,
-`glow_normalized` 0.023%, and glow under AgX 0.143%. The AgX residual is the same
+weights under ADDITIVE 0.030%, `glow_strength` 0.000%, SOFTLIGHT over mid-grey
+0.010%, MIX 0.024%, REPLACE 0.000%, `glow_bloom` as a feedback floor 0.015%,
+`glow_normalized` 0.024%, glow under AgX 0.144%, and a non-default
+`tonemap_exposure` 0.023%. The AgX residual is the same
 float-precision one its own row records — glow puts a wide dim halo exactly where
 that curve's toe is steepest.
 
-Two of those fixtures exist because a default-valued scene cannot fail: `glow_strength`
-is inert at 1.0, and the level weights are unobservable while the halo is tight. The
-strength fixture caught the pyramid starting an octave too fine while it was being
-written.
+Three of those fixtures exist because a default-valued scene cannot fail:
+`glow_strength` is inert at 1.0, the level weights are unobservable while the halo is
+tight, and at `tonemap_exposure` 1.0 every plausible place to apply exposure
+coincides. Each caught a real defect while being written — the strength fixture found
+the pyramid starting an octave too fine, and the exposure fixture found the mount gate
+comparing unexposed emissive against the threshold, so a scene lifted over it by
+exposure alone rendered with no halo at all.
+
+Exposure reaches the glow through the bright pass, not the composite: Godot's
+`copy.glsl` multiplies by `glow_strength` and then `glow_exposure` BEFORE the knee
+decides what blooms, and `tonemap.glsl` exposes the scene colour separately before the
+blend. Anything downstream of that — including the scan that decides whether to mount
+the pass at all — has to use the same exposed values or it disagrees with the shader.
 
 ## Known limitations
 
@@ -78,4 +88,4 @@ written.
 - **Switching tone curves at runtime** — three's program cache keys on the tonemapping enum, not the ported chunk text, so a second Environment with a different curve reaching live materials (a hot-reload edit, or a late-loading instanced WorldEnvironment) keeps rendering with the first curve.
 - **AGX contrast** — the AgX curve contrast is fixed at Godot 4.6.3's built-in 1.25 (the engine exposes no per-Environment setter in this version); the ~2/255 residual on the controlled fixture is GPU float precision.
 - **glow_map** — Godot modulates the glow buffer by a screen-stretched "lens dirt" texture at `glow_map_strength`. The strength is parsed and validated, but the map itself is not resolved, so a scene supplying one gets unmodulated glow. Godot zeroes the strength when no map is set, which is every scene in the corpus.
-- **Glow blur kernel** — Godot's downsample is written against integer pixel coordinates and does not transplant onto a normalised-UV fullscreen pass, so the chain uses the standard 13-tap pyramid downsample with a 9-tap tent upsample. The per-level weighting and the pyramid's resolution are ported exactly, and those are what set the halo's shape and size.
+- **Glow blur kernel** — Godot ships two glow implementations that filter differently, and the one it runs depends on the GPU: the raster path box-samples four bilinear taps per 4x4 block, while the compute path (taken whenever storage buffers are supported, so on every desktop target) uses a separable gaussian. The chain here uses a 13-tap downsample with a 9-tap tent upsample, which measures closer than porting the raster gather did — that change moved the REPLACE fixture, which shows the glow buffer with nothing underneath it, from exact to 0.1% off. The per-level weighting and the pyramid's resolution are ported exactly, and those are what set the halo's shape and size.

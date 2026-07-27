@@ -24,14 +24,12 @@
 import { BlendFunction, Effect } from 'postprocessing';
 import * as THREE from 'three';
 import {
-  blendGlsl,
-  blendsAfterToneMapping,
   brightPassGlsl,
+  compositeGlsl,
   gatherWeights,
   glowLevelSize,
   type GlowParams,
 } from '../../resources/environment/godotGlow';
-import { toneMappingEffectGlsl } from '../../resources/environment/godotToneMapping';
 import { glslFloat } from '../../resources/environment/glslLiterals';
 
 export interface GodotGlowOptions {
@@ -65,7 +63,7 @@ export class GodotGlowEffect extends Effect {
   private readonly maxLevel: number;
 
   constructor({ glow, toneMapMode, toneMapExposure, toneMapWhite }: GodotGlowOptions) {
-    super('GodotGlowEffect', compositeFragmentShader(glow, toneMapMode, toneMapWhite), {
+    super('GodotGlowEffect', compositeGlsl(glow, { mode: toneMapMode, exposure: toneMapExposure, white: toneMapWhite }), {
       // This effect writes the finished frame — the glow blend and the tone
       // curve are both already applied — so the composer must not blend it into
       // the scene a second time.
@@ -232,10 +230,17 @@ function createTarget(name: string): THREE.WebGLRenderTarget {
 }
 
 /**
- * Level 0 is a quarter of the frame in each axis, so a single tap would read one
- * source texel in sixteen — enough for a small bright object to flicker in and out
- * of the halo as it moves, which a settled golden frame cannot show. It shares the
- * downsample kernel to gather the neighbourhood first, then applies the threshold.
+ * Level 0 skips a rung — it goes straight from the frame to a quarter of it — so
+ * this is a 4x reduction where every later level does 2x.
+ *
+ * Godot ships TWO glow implementations and they filter this step differently. The
+ * raster path (`blur_raster.glsl`, `MODE_GLOW_GATHER`) takes four bilinear taps at
+ * the quadrant centres of each 4x4 block; the compute path (`copy.glsl`, used
+ * whenever the GPU reports storage support, which is every desktop target this
+ * previewer runs on) uses its separable gaussian instead. Measured against a real
+ * Godot render, the wider kernel is the closer of the two — porting the raster
+ * gather moved the REPLACE fixture, which shows the glow buffer with nothing
+ * underneath it, from exact to 0.1% off. So this shares the downsample kernel.
  */
 function brightPassFragmentShader(glow: GlowParams, exposure: number): string {
   return /* glsl */ `
@@ -324,37 +329,3 @@ void main() {
 }
 `;
 
-/**
- * The composite, in Godot's order. `apply_glow` runs either side of the tone
- * curve depending on the blend mode, and SOFTLIGHT additionally tonemaps the
- * glow buffer before blending so both operands sit in the same compressed range.
- */
-function compositeFragmentShader(
-  glow: GlowParams,
-  toneMapMode: number,
-  toneMapWhite: number
-): string {
-  const curve = toneMappingEffectGlsl(toneMapMode, toneMapWhite);
-  // Godot exposes the SCENE colour before the blend and the GLOW in the bright
-  // pass, then tonemaps — so exposure reaches each operand exactly once and the
-  // tone curve runs on already-exposed values. Passing 1.0 leaves `godotToneMap`
-  // as the curve alone; applying `godotExposure` here as well would double it on
-  // the glow and, on the pre-tonemap path, scale the sum rather than the operands.
-  const composite = blendsAfterToneMapping(glow)
-    ? /* glsl */ `  vec3 color = godotToneMap(max(inputColor.rgb, 0.0) * godotExposure, 1.0);
-  color = godotGlowBlend(color, godotToneMap(glow, 1.0));`
-    : /* glsl */ `  vec3 color = godotGlowBlend(max(inputColor.rgb, 0.0) * godotExposure, glow);
-  color = godotToneMap(color, 1.0);`;
-
-  return /* glsl */ `
-uniform sampler2D godotGlowBuffer;
-uniform float godotExposure;
-${curve}
-${blendGlsl(glow, toneMapWhite)}
-void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
-  vec3 glow = texture2D(godotGlowBuffer, uv).rgb * ${glslFloat(glow.intensity)};
-${composite}
-  outputColor = vec4(color, inputColor.a);
-}
-`;
-}

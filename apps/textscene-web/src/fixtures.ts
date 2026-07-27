@@ -198,6 +198,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Glow Exposure",
+    "file": "unit-glow-exposure.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Glow Mix",
     "file": "unit-glow-mix.tscn",
     "category": "Other"

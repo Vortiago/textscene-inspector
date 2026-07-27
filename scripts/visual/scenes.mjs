@@ -114,6 +114,7 @@ export const GOLDEN_SCENES = [
   { name: 'glow-bloom-floor', file: 'unit-glow-bloom-floor.tscn' },
   { name: 'glow-normalized', file: 'unit-glow-normalized.tscn' },
   { name: 'glow-agx', file: 'unit-glow-agx.tscn' },
+  { name: 'glow-exposure', file: 'unit-glow-exposure.tscn' },
   // Raised threshold: a 4x4 checkerboard on two quads carries far more edge than
   // the silhouette-only scenes the default is tuned for.
   { name: 'material-emission-texture', file: 'unit-material-emission-texture.tscn', maxDiffPct: 0.6 },

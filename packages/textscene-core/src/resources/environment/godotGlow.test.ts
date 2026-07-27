@@ -4,7 +4,9 @@ import { createEnvironmentSettings } from './renderer';
 import {
   blendGlsl,
   blendsAfterToneMapping,
+  bloomableScanThreshold,
   brightPassGlsl,
+  compositeGlsl,
   gatherWeights,
   glowLevelSize,
   GlowBlendMode,
@@ -133,6 +135,24 @@ describe('glowNeedsEveryPixel', () => {
   });
 });
 
+describe('bloomableScanThreshold', () => {
+  it('scales the threshold down by exposure, because the bright pass exposes first', () => {
+    // A scene scan reads material emissive, which carries no exposure. The bright
+    // pass multiplies by `tonemap_exposure` BEFORE comparing to the threshold, so
+    // at exposure 1.8 a material peaking at 0.8 does cross a threshold of 1.0 in
+    // Godot. Comparing the unexposed value instead leaves the compositor unmounted
+    // and the frame with no halo at all.
+    expect(bloomableScanThreshold(glowOn(), 1.8)).toBeCloseTo(1 / 1.8, 6);
+    expect(bloomableScanThreshold(glowOn(), 1)).toBeCloseTo(1, 6);
+    expect(bloomableScanThreshold(glowOn({ glow_hdr_threshold: '2' }), 4)).toBeCloseTo(0.5, 6);
+  });
+
+  it('survives a zero or negative exposure rather than dividing by it', () => {
+    expect(Number.isFinite(bloomableScanThreshold(glowOn(), 0))).toBe(true);
+    expect(Number.isFinite(bloomableScanThreshold(glowOn(), -2))).toBe(true);
+  });
+});
+
 describe('gatherWeights', () => {
   it('is the authored weights, with glow_strength deliberately NOT folded in', () => {
     // Godot multiplies by glow_strength once per pyramid pass, and on the first
@@ -163,6 +183,53 @@ describe('brightPassGlsl exposure and strength', () => {
     // GLSL ES, so a driver-dependent halo is the failure mode.
     const glsl = brightPassGlsl(glowOn({ glow_hdr_threshold: '1', glow_hdr_scale: '0' }), 1);
     expect(glsl).not.toContain('smoothstep(1.0, 1.0,');
+  });
+});
+
+describe('compositeGlsl', () => {
+  // `tonemap.glsl` exposes the SCENE colour once before the blend; the GLOW was
+  // already exposed by the bright pass. Getting this wrong double-exposes the
+  // glow, or scales the blended SUM instead of its operands — and every glow
+  // fixture leaves `tonemap_exposure` at 1.0, where all three are identical.
+  it('exposes the scene colour and leaves the glow alone, pre-tonemap modes', () => {
+    const glsl = compositeGlsl(glowOn({ glow_blend_mode: String(GlowBlendMode.SCREEN) }), {
+      mode: 2,
+      exposure: 1.8,
+      white: 1,
+    });
+    // The scene gets exposure; the tone curve is then called with none left to apply.
+    expect(glsl).toContain('* godotExposure');
+    expect(glsl).toContain('godotToneMap(color, 1.0)');
+    // The glow term must never be multiplied by exposure a second time.
+    expect(glsl).not.toMatch(/glow[^;]*godotExposure/);
+  });
+
+  it('tonemaps both operands and neither twice, SOFTLIGHT', () => {
+    // Godot's post-tonemap branch runs `apply_tonemapping` on the glow buffer as
+    // well, because soft light needs both operands in the compressed range.
+    const glsl = compositeGlsl(glowOn({ glow_blend_mode: String(GlowBlendMode.SOFTLIGHT) }), {
+      mode: 2,
+      exposure: 1.8,
+      white: 1,
+    });
+    expect(glsl).toContain('godotToneMap(glow, 1.0)');
+    expect(glsl).not.toMatch(/glow[^;]*godotExposure/);
+  });
+
+  it('blends before the tone curve for SCREEN and after it for SOFTLIGHT', () => {
+    // Sliced to `mainImage`'s body on purpose: the emitted shader also DEFINES
+    // `godotToneMap` and `godotGlowBlend` above it, so an index over the whole
+    // string would compare declarations rather than the order they are called in.
+    const body = (params: Parameters<typeof compositeGlsl>[0]) => {
+      const glsl = compositeGlsl(params, { mode: 2, exposure: 1, white: 1 });
+      return glsl.slice(glsl.indexOf('void mainImage'));
+    };
+    const screen = body(glowOn({ glow_blend_mode: String(GlowBlendMode.SCREEN) }));
+    const softlight = body(glowOn({ glow_blend_mode: String(GlowBlendMode.SOFTLIGHT) }));
+    expect(screen.indexOf('godotGlowBlend')).toBeLessThan(screen.indexOf('godotToneMap(color'));
+    expect(softlight.indexOf('godotToneMap(max')).toBeLessThan(
+      softlight.indexOf('godotGlowBlend')
+    );
   });
 });
 

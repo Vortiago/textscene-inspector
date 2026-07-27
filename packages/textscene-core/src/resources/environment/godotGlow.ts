@@ -30,6 +30,7 @@
 
 import type { EnvironmentSettings } from './renderer';
 import { glslFloat } from './glslLiterals';
+import { toneMappingEffectGlsl } from './godotToneMapping';
 
 /** Godot `Environment.GlowBlendMode`. */
 export const GlowBlendMode = {
@@ -170,6 +171,22 @@ export function blendsAfterToneMapping(params: GlowParams): boolean {
 }
 
 /**
+ * The peak `emissive * emissiveIntensity` a material must exceed for the pass to
+ * be worth mounting — the bright pass's threshold, moved into the space a scene
+ * scan can actually measure.
+ *
+ * A scan reads live materials, whose emissive carries no exposure; the bright pass
+ * multiplies by `tonemap_exposure` BEFORE comparing against `glow_hdr_threshold`.
+ * So the two only agree if the threshold is scaled down by the same exposure.
+ * Comparing the raw value instead silently leaves the compositor unmounted for any
+ * scene lifted over the threshold by exposure alone, and the frame renders with no
+ * halo whatsoever rather than a slightly wrong one.
+ */
+export function bloomableScanThreshold(params: GlowParams, exposure: number): number {
+  return params.hdrThreshold / Math.max(exposure, GLSL_EPSILON);
+}
+
+/**
  * The gather weights, which are the authored ones unchanged.
  *
  * `glow_strength` is NOT folded in here. Godot multiplies by it once per pyramid
@@ -227,6 +244,40 @@ export function blendGlsl(params: GlowParams, white: number): string {
   return /* glsl */ `
 vec3 godotGlowBlend(vec3 color, vec3 glow) {
 ${body(params, white)}
+}
+`;
+}
+
+/**
+ * The whole composite, in `tonemap.glsl`'s order — the glow gather, the blend, and
+ * the tone curve in one shader, which is how Godot ships it.
+ *
+ * Exposure is the subtle part. Godot applies it to the SCENE colour once, before
+ * the blend (`color.rgb *= exposure` near the top of `main()`), while the GLOW
+ * buffer was already exposed by the bright pass. So the tone curve here is invoked
+ * with an exposure of 1.0: it is the curve alone, and each operand has been exposed
+ * exactly once. Multiplying by exposure again would double it on the glow and, on
+ * the pre-tonemap path, scale the blended sum instead of its operands.
+ */
+export function compositeGlsl(
+  params: GlowParams,
+  toneMapping: { mode: number; exposure: number; white: number }
+): string {
+  const blend = blendsAfterToneMapping(params)
+    ? /* glsl */ `  vec3 color = godotToneMap(max(inputColor.rgb, 0.0) * godotExposure, 1.0);
+  color = godotGlowBlend(color, godotToneMap(glow, 1.0));`
+    : /* glsl */ `  vec3 color = godotGlowBlend(max(inputColor.rgb, 0.0) * godotExposure, glow);
+  color = godotToneMap(color, 1.0);`;
+
+  return /* glsl */ `
+uniform sampler2D godotGlowBuffer;
+uniform float godotExposure;
+${toneMappingEffectGlsl(toneMapping.mode, toneMapping.white)}
+${blendGlsl(params, toneMapping.white)}
+void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
+  vec3 glow = texture2D(godotGlowBuffer, uv).rgb * ${glslFloat(params.intensity)};
+${blend}
+  outputColor = vec4(color, inputColor.a);
 }
 `;
 }
