@@ -65,8 +65,17 @@ describe('TileMap render parity', () => {
     const meshes = r.scene.findAllByType('Mesh');
     expect(meshes).toHaveLength(2);
     const [layer0, layer1] = meshes.map((m) => m.instance as THREE.Mesh);
-    expect(layer0!.position.z).toBeCloseTo(0, 8);
-    expect(layer1!.position.z).toBeCloseTo(1 * Z_INDEX_STEP + 1 * TILE_LAYER_STEP, 8);
+    // Atlas sources sit at a FRACTION of one layer step rather than at the
+    // layer base, so a layer's sources can never reach the layer above it.
+    // With one source per layer that fraction is the step's midpoint.
+    const sourceNudge = TILE_LAYER_STEP / 2;
+    expect(layer0!.position.z).toBeCloseTo(sourceNudge, 8);
+    expect(layer1!.position.z).toBeCloseTo(
+      1 * Z_INDEX_STEP + 1 * TILE_LAYER_STEP + sourceNudge,
+      8
+    );
+    // The ordering the rule exists for still holds.
+    expect(layer1!.position.z).toBeGreaterThan(layer0!.position.z);
   });
 
   it('renders an empty group for a TileMap with a tile_set but zero layers', async () => {

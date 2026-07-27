@@ -10,7 +10,8 @@ import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../../r3f/components/CanvasItem2D';
 import { canvasItemBlendState } from '../../../../resources/materials/canvasitemmaterial/renderer';
 import { CanvasItemBlendMode } from '../../../../resources/materials/canvasitemmaterial/types';
-import { TILE_SOURCE_STEP } from '../../../../r3f/node2dTransform';
+import { tileSourceZ } from '../../../../r3f/tileSourceZ';
+import { useYSortSlot } from '../../../../r3f/contexts/YSortContext';
 import { TileSourceMesh } from '../../../../r3f/TileSourceMesh';
 import { useTileSetModel } from '../../../../r3f/useTileSetModel';
 import type { TileMapLayerProperties } from './types';
@@ -22,6 +23,9 @@ export function TileMapLayer({ node, children }: NodeComponentProps) {
 
   // Stable per-source partition: parsed cells never change identity, so the
   // batched geometries survive unrelated re-renders (and only rebuild on data).
+  // The tree-order band this layer may spread its atlas sources across.
+  const slot = useYSortSlot();
+
   const cellsBySource = useMemo(() => {
     if (!model || !cells?.length) return null;
     return model.sourceOrder
@@ -46,7 +50,7 @@ export function TileMapLayer({ node, children }: NodeComponentProps) {
                 source={source}
                 cells={sourceCells}
                 grid={model}
-                z={sourceIndex * TILE_SOURCE_STEP}
+                z={tileSourceZ(sourceIndex, cellsBySource.length, slot.width)}
                 color={color}
                 opacity={opacity}
                 name={node.name}

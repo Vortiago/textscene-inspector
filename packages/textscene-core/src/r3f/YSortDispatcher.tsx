@@ -21,7 +21,8 @@ import { useCanvasItemMaterial } from './components/canvasItemMaterialContext.js
 import { useCanvasModulateFor } from './canvasModulate.js';
 import { canvasItemBlendState } from '../resources/materials/canvasitemmaterial/renderer.js';
 import { CanvasItemBlendMode } from '../resources/materials/canvasitemmaterial/types.js';
-import { Z_INDEX_STEP, TILE_SOURCE_STEP } from './node2dTransform.js';
+import { Z_INDEX_STEP } from './node2dTransform.js';
+import { tileSourceZ } from './tileSourceZ.js';
 import { nodeComponentRegistry } from './NodeComponentRegistry.js';
 import type { TileMapLayerProperties } from '../nodes/2d/tiles/tilemaplayer/types.js';
 import type { PlacedCell } from '../nodes/2d/tiles/shared/tileData.js';
@@ -206,6 +207,7 @@ export function YSortDispatcher({ node, children: _children }: { node: TscnNode;
               key={`tg-${item.node.name}-${item.treeOrder}`}
               item={item}
               z={fullZ}
+              band={slot.width / (K + 1)}
               node={item.node}
             />
           );
@@ -232,10 +234,12 @@ export function YSortDispatcher({ node, children: _children }: { node: TscnNode;
 
 
 /** Render a TileMapLayer Y-group as TileSourceMeshes at draw position `z`. */
-function TileGroupRenderer({ item, z, node }: {
+function TileGroupRenderer({ item, z, band, node }: {
   item: YSortItem;
   /** The Y-group's full draw position (z-index bucket + y-sort rank), carried by the group. */
   z: number;
+  /** Gap to the next rank — the room this group's atlas sources may use. */
+  band: number;
   node: TscnNode;
 }): ReactNode | null {
   const tileProps = node.properties as TileMapLayerProperties;
@@ -274,7 +278,7 @@ function TileGroupRenderer({ item, z, node }: {
           source={source}
           cells={sourceCells}
           grid={model}
-          z={sourceIndex * TILE_SOURCE_STEP}
+          z={tileSourceZ(sourceIndex, cellsBySource.length, band)}
           color={color}
           opacity={opacity}
           name={node.name}
