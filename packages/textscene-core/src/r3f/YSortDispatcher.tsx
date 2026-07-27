@@ -172,11 +172,15 @@ export function YSortDispatcher({ node, children: _children }: { node: TscnNode;
       else buckets.set(item.effectiveZ, [item]);
     }
 
-    const result: Array<{ item: YSortItem; rank: number }> = [];
+    // `bucketSize` rides each entry: the rank fraction below needs it, and
+    // recovering it per item by re-scanning the list is quadratic — a y-sorted
+    // TileMapLayer decomposes into one item per distinct tile row, so this list
+    // runs to the hundreds on a real map.
+    const result: Array<{ item: YSortItem; rank: number; bucketSize: number }> = [];
     for (const effZ of [...buckets.keys()].sort((a, b) => a - b)) {
       const bucket = buckets.get(effZ)!;
       for (let g = 0; g < bucket.length; g++) {
-        result.push({ item: bucket[g]!, rank: g });
+        result.push({ item: bucket[g]!, rank: g, bucketSize: bucket.length });
       }
     }
     return result;
@@ -184,9 +188,7 @@ export function YSortDispatcher({ node, children: _children }: { node: TscnNode;
 
   return (
     <>
-      {sorted.map(({ item, rank }) => {
-        const sameBucket = sorted.filter(s => s.item.effectiveZ === item.effectiveZ);
-        const K = sameBucket.length;
+      {sorted.map(({ item, rank, bucketSize: K }) => {
         const sortZ = ((rank + 1) / (K + 1)) * slot.width;
         const fullZ = item.effectiveZ * Z_INDEX_STEP + sortZ;
 

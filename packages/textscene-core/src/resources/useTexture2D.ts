@@ -45,7 +45,10 @@ export function useTexture2D(
     () => resolveGradientTexture2D(ref, internalResources),
     [ref, internalResources]
   );
-  // Unlike a loaded image, this one is created HERE and owned by this consumer.
+  // Rasterised HERE rather than fetched, so this consumer owns the pixel buffer
+  // and frees it. Nodes sharing one gradient each rasterise their own copy —
+  // wasteful at scale, but sharing needs a cache with real invalidation, not an
+  // ownerless one (see the follow-up issue).
   useEffect(() => () => procedural?.dispose(), [procedural]);
 
   const path = useMemo(

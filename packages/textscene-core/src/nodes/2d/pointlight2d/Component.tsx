@@ -116,22 +116,21 @@ function QuadMesh({
  * light's alpha, which needs the destination as a term on both sides), so it
  * stays an ordinary blend — see the slice's comparison sheet.
  */
-function lightBlendState(blendMode: number): THREE.MeshBasicMaterialParameters {
-  const againstSurface = {
-    blending: THREE.CustomBlending,
-    blendSrc: THREE.DstColorFactor,
-    blendDst: THREE.OneFactor,
-    blendSrcAlpha: THREE.ZeroFactor,
-    blendDstAlpha: THREE.OneFactor,
-    blendEquationAlpha: THREE.AddEquation,
-  } as const;
+const AGAINST_SURFACE = {
+  blending: THREE.CustomBlending,
+  blendSrc: THREE.DstColorFactor,
+  blendDst: THREE.OneFactor,
+  blendSrcAlpha: THREE.ZeroFactor,
+  blendDstAlpha: THREE.OneFactor,
+  blendEquationAlpha: THREE.AddEquation,
+} as const;
 
-  switch (blendMode) {
-    case 1:
-      return { ...againstSurface, blendEquation: THREE.ReverseSubtractEquation };
-    case 2:
-      return { blending: THREE.NormalBlending };
-    default:
-      return { ...againstSurface, blendEquation: THREE.AddEquation };
-  }
+const LIGHT_BLEND: Record<number, THREE.MeshBasicMaterialParameters> = {
+  0: { ...AGAINST_SURFACE, blendEquation: THREE.AddEquation },
+  1: { ...AGAINST_SURFACE, blendEquation: THREE.ReverseSubtractEquation },
+  2: { blending: THREE.NormalBlending },
+};
+
+function lightBlendState(blendMode: number): THREE.MeshBasicMaterialParameters {
+  return LIGHT_BLEND[blendMode] ?? LIGHT_BLEND[0]!;
 }
