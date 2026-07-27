@@ -65,8 +65,17 @@ export function emissionScalars(
   if (!enabled) return { emissive: [0, 0, 0], emissiveIntensity: 0 };
   const linear = color ? sRGBToLinearRGB(color.r, color.g, color.b) : null;
   const peak = linear ? Math.max(linear[0], linear[1], linear[2], 1) : 1;
+  // Floored at zero per channel: the peak is `max(..., 1)`, so dividing by it
+  // cannot lift a negative channel back up, and a negative emissive SUBTRACTS
+  // light from the surface rather than adding none.
   return {
-    emissive: linear ? [linear[0] / peak, linear[1] / peak, linear[2] / peak] : [0, 0, 0],
+    emissive: linear
+      ? [
+          Math.max(0, linear[0] / peak),
+          Math.max(0, linear[1] / peak),
+          Math.max(0, linear[2] / peak),
+        ]
+      : [0, 0, 0],
     emissiveIntensity: Math.max(0, energy * peak),
   };
 }

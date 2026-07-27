@@ -13,5 +13,9 @@
  */
 export function glslFloat(value: number): string {
   if (!Number.isFinite(value)) return '0.0';
-  return Number.isInteger(value) ? `${value}.0` : String(value);
+  const text = String(value);
+  // Past ~1e21 JavaScript stringifies integers in exponent form, and `1e+21.0`
+  // is not a float literal — GLSL wants the exponent to carry the type instead.
+  if (text.includes('e')) return text.replace('+', '');
+  return Number.isInteger(value) ? `${text}.0` : text;
 }

@@ -78,8 +78,8 @@ const LEVEL_EPSILON = 0.0001;
  * quarter resolution rather than stepping down one level at a time. So every
  * level sits one octave coarser than a half-resolution chain would put it, which
  * is why a halo built on the coarse levels reads wide and flat in Godot rather
- * than tight and bright. Measured: getting this wrong put a coarse-weighted
- * fixture 75.8% away from Godot's own render, against 0.029% with it right.
+ * than tight and bright. A chain that starts an octave too fine is wrong by a
+ * whole level at every rung, so it misses by far more than a tuning error would.
  */
 export const GLOW_FIRST_LEVEL_DIVISOR = 4;
 
@@ -130,7 +130,7 @@ export function glowParamsFor(settings: EnvironmentSettings): GlowParams | null 
     bloom: clamp01(glow.bloom),
     luminanceCap: Math.max(0, glow.luminanceCap),
     strength: Math.max(0, glow.strength),
-    intensity: blendMode === GlowBlendMode.MIX ? glow.mix : glow.intensity,
+    intensity: blendMode === GlowBlendMode.MIX ? clamp01(glow.mix) : glow.intensity,
     blendMode,
   };
 }
@@ -170,32 +170,40 @@ export function blendsAfterToneMapping(params: GlowParams): boolean {
 }
 
 /**
- * The level weights with `glow_strength` already folded in.
+ * The gather weights, which are the authored ones unchanged.
  *
- * Godot multiplies the glow buffer by `glow_strength` at EVERY pyramid pass, so
- * a level that has been through `n` passes carries `strength^n` — level `i` is
- * reached by the bright pass plus `i` downsamples, hence `strength^(i+1)`. Doing
- * that on the CPU is exactly equivalent to multiplying per pass on the GPU, and
- * it keeps the whole of `glow_strength`'s behaviour (including that it compounds,
- * which is why values above 1 grow so fast) in a place a unit test can read.
+ * `glow_strength` is NOT folded in here. Godot multiplies by it once per pyramid
+ * pass, and on the first pass that multiply lands before the knee and the
+ * luminance cap — so folding it into the gather would move it after both, and a
+ * strength above 1 could then carry a level past a cap Godot had already
+ * clamped. The bright pass and each downsample apply it instead, which reaches
+ * the same total (`strength^(i+1)` at level `i`) in the right order.
  */
-export function effectiveLevelWeights(params: GlowParams): number[] {
-  return params.levels.map((weight, index) => weight * Math.pow(params.strength, index + 1));
+export function gatherWeights(params: GlowParams): number[] {
+  return params.levels.slice();
 }
 
 /**
  * Godot's bright pass (`copy.glsl`, `MODE_GLOW` under `FLAG_GLOW_FIRST_PASS`).
- * Emits `godotGlowBrightPass(vec3) -> vec3`; the thresholds are baked as
- * constants because a change to any of them rebuilds the pass anyway.
+ *
+ * Order is load-bearing and is Godot's: `glow_strength` then `glow_exposure`
+ * multiply the colour BEFORE the knee is evaluated and before the luminance cap
+ * clamps it. Folding either in afterwards changes which pixels cross the
+ * threshold and lets a level exceed a cap Godot would have applied — the
+ * magnitude can come out the same while the halo's extent does not.
+ * `glow_exposure` is the Environment's own `tonemap_exposure`
+ * (`renderer_scene_render_rd.cpp` passes `environment_get_exposure`), which is
+ * why the composite must not apply exposure to the glow a second time.
  */
-export function brightPassGlsl(params: GlowParams): string {
+export function brightPassGlsl(params: GlowParams, exposure: number): string {
+  const kneeEnd = params.hdrThreshold + Math.max(params.hdrScale, GLSL_EPSILON);
   return /* glsl */ `
 vec3 godotGlowBrightPass(vec3 color) {
+  color *= ${glslFloat(params.strength)};
+  color *= ${glslFloat(exposure)};
   float luminance = max(color.r, max(color.g, color.b));
   float feedback = max(
-    smoothstep(${glslFloat(params.hdrThreshold)}, ${glslFloat(
-      params.hdrThreshold + params.hdrScale
-    )}, luminance),
+    smoothstep(${glslFloat(params.hdrThreshold)}, ${glslFloat(kneeEnd)}, luminance),
     ${glslFloat(params.bloom)}
   );
   return min(color * feedback, vec3(${glslFloat(params.luminanceCap)}));
@@ -227,6 +235,15 @@ function clamp01(value: number): number {
   return Math.max(0, Math.min(1, value));
 }
 
+/**
+ * Smallest value safe to bake where GLSL will divide by it or use it as a
+ * smoothstep edge. `smoothstep(e, e, x)` divides by `e1 - e0` and is undefined at
+ * zero width; SCREEN divides by the white point. Godot's own comment says white
+ * "cannot be smaller than the maximum output value", so zero is outside its
+ * contract rather than a case it handles — but a scene can still author it.
+ */
+const GLSL_EPSILON = 1e-4;
+
 const SOFTLIGHT_CHANNEL = (channel: string): string => /* glsl */ `
   color.${channel} = color.${channel} > 1.0
     ? color.${channel}
@@ -245,8 +262,11 @@ const BLEND_BODIES: Record<number, (params: GlowParams, white: number) => string
   // Screen, normalised to the white range and back — Godot ships the simplified
   // form, and clamps the glow to `white` because a negative light can drive the
   // buffer below zero.
-  [GlowBlendMode.SCREEN]: (_params, white) => /* glsl */ `  glow = clamp(glow, 0.0, ${glslFloat(white)});
-  return color + glow - (color * glow / ${glslFloat(white)});`,
+  [GlowBlendMode.SCREEN]: (_params, white) => {
+    const safeWhite = glslFloat(Math.max(white, GLSL_EPSILON));
+    return /* glsl */ `  glow = clamp(glow, 0.0, ${safeWhite});
+  return color + glow - (color * glow / ${safeWhite});`;
+  },
 
   [GlowBlendMode.SOFTLIGHT]: () => /* glsl */ `  glow = clamp(glow, 0.0, 1.0);
 ${SOFTLIGHT_CHANNEL('r')}
@@ -260,6 +280,6 @@ ${SOFTLIGHT_CHANNEL('b')}
   // IS the lerp factor and has already been multiplied into `glow` by the time
   // this runs — hence lerping against that same value rather than a second one.
   [GlowBlendMode.MIX]: (params) => /* glsl */ `  return color * (1.0 - ${glslFloat(
-    clamp01(params.intensity)
+    params.intensity
   )}) + glow;`,
 };

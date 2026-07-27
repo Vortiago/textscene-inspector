@@ -33,7 +33,7 @@ Godot uploads `emission` through a `source_color` uniform, so the authored Color
 converted sRGB→linear BEFORE `emission_energy_multiplier` multiplies it. That order
 matters for an HDR emission: the conversion is not linear, so normalising by the peak
 channel first and scaling after is a different mapping — `Color(2, 0.5, 0)` lands at
-`(5.10, 0.214, 0)` in Godot but at `(2, 0.102, 0)` if converted the other way round,
+`(4.954, 0.214, 0)` in Godot but at `(2, 0.102, 0)` if converted the other way round,
 wrong in magnitude and in hue. Godot's conversion extrapolates past 1.0 rather than
 clipping, so channels above 1 survive, which is what lets them cross the glow
 bright-pass. three carries emission as a `[0,1]` colour times an unbounded

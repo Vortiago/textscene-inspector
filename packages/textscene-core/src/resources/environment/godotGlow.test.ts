@@ -5,7 +5,7 @@ import {
   blendGlsl,
   blendsAfterToneMapping,
   brightPassGlsl,
-  effectiveLevelWeights,
+  gatherWeights,
   glowLevelSize,
   GlowBlendMode,
   glowNeedsEveryPixel,
@@ -133,32 +133,44 @@ describe('glowNeedsEveryPixel', () => {
   });
 });
 
-describe('effectiveLevelWeights', () => {
-  it('is the authored weights when glow_strength is 1', () => {
-    expect(effectiveLevelWeights(glowOn())).toEqual([0.0, 0.8, 0.4, 0.1, 0.0, 0.0, 0.0]);
+describe('gatherWeights', () => {
+  it('is the authored weights, with glow_strength deliberately NOT folded in', () => {
+    // Godot multiplies by glow_strength once per pyramid pass, and on the first
+    // pass that lands BEFORE the knee and the luminance cap. Folding it in here
+    // would move it after both, so the passes apply it instead.
+    expect(gatherWeights(glowOn())).toEqual([0.0, 0.8, 0.4, 0.1, 0.0, 0.0, 0.0]);
+    expect(gatherWeights(glowOn({ glow_strength: '2' }))).toEqual([
+      0.0, 0.8, 0.4, 0.1, 0.0, 0.0, 0.0,
+    ]);
+  });
+});
+
+describe('brightPassGlsl exposure and strength', () => {
+  it('multiplies strength then exposure BEFORE evaluating the knee', () => {
+    // `copy.glsl` order: strength, exposure, then the smoothstep and the cap. A
+    // knee evaluated on unexposed HDR blooms the wrong pixels entirely.
+    const glsl = brightPassGlsl(glowOn({ glow_strength: '1.5' }), 2);
+    const strengthAt = glsl.indexOf('color *= 1.5;');
+    const exposureAt = glsl.indexOf('color *= 2.0;');
+    const kneeAt = glsl.indexOf('smoothstep(');
+    expect(strengthAt).toBeGreaterThan(-1);
+    expect(exposureAt).toBeGreaterThan(strengthAt);
+    expect(kneeAt).toBeGreaterThan(exposureAt);
   });
 
-  it('compounds glow_strength once per pass reaching each level', () => {
-    // Level i is reached by the bright pass plus i downsamples, and Godot
-    // multiplies by glow_strength at every one of them.
-    const weights = effectiveLevelWeights(glowOn({ glow_strength: '2' }));
-    expect(weights[1]).toBeCloseTo(0.8 * 4, 6);
-    expect(weights[2]).toBeCloseTo(0.4 * 8, 6);
-    expect(weights[3]).toBeCloseTo(0.1 * 16, 6);
-  });
-
-  it('keeps zero-weight levels at zero whatever the strength', () => {
-    const weights = effectiveLevelWeights(glowOn({ glow_strength: '2' }));
-    expect(weights[0]).toBe(0);
-    expect(weights[6]).toBe(0);
+  it('never emits a zero-width smoothstep knee', () => {
+    // `smoothstep(e, e, x)` divides by the edge difference and is undefined in
+    // GLSL ES, so a driver-dependent halo is the failure mode.
+    const glsl = brightPassGlsl(glowOn({ glow_hdr_threshold: '1', glow_hdr_scale: '0' }), 1);
+    expect(glsl).not.toContain('smoothstep(1.0, 1.0,');
   });
 });
 
 describe('glowLevelSize', () => {
   it('puts level 0 at a QUARTER of the frame, not a half', () => {
     // Godot's glow buffer is half the internal size and its gather pass writes
-    // level 0 at half of that again. This is the value that, set to a half, put a
-    // coarse-weighted fixture 75.8% away from Godot's own render.
+    // level 0 at half of that again. Set to a half instead, every rung lands an
+    // octave too fine and a coarse-weighted halo comes out far too tight.
     expect(glowLevelSize(800, 600, 0)).toEqual({ width: 200, height: 150 });
   });
 
@@ -203,6 +215,14 @@ describe('blendGlsl', () => {
     expect(glsl).toContain('return color + glow;');
   });
 
+  it('never divides by a zero white point', () => {
+    // SCREEN is the default blend, and `tonemap_white` is only linted as
+    // non-negative — a literal 0.0 divisor makes every pixel NaN.
+    const glsl = blendGlsl(glowOn({ glow_blend_mode: String(GlowBlendMode.SCREEN) }), 0);
+    expect(glsl).not.toMatch(/\/ 0\.0\s*\)/);
+    expect(glsl).toContain('/ 0.0001');
+  });
+
   it('SCREEN normalises against the tonemap white point', () => {
     const glsl = blendGlsl(glowOn({ glow_blend_mode: String(GlowBlendMode.SCREEN) }), 2);
     expect(glsl).toContain('clamp(glow, 0.0, 2.0)');
@@ -233,6 +253,14 @@ describe('blendGlsl', () => {
       1
     );
     expect(glsl).toContain('color * (1.0 - 0.25) + glow');
+  });
+
+  it('clamps the MIX factor once, so the blend and the composite agree', () => {
+    // The composite multiplies the glow buffer by `intensity` and the blend lerps
+    // against it; clamping in only one of the two makes them disagree.
+    const params = glowOn({ glow_blend_mode: String(GlowBlendMode.MIX), glow_mix: '4' });
+    expect(params.intensity).toBe(1);
+    expect(blendGlsl(params, 1)).toContain('color * (1.0 - 1.0) + glow');
   });
 
   it('falls back to ADDITIVE for a blend mode outside the enum', () => {

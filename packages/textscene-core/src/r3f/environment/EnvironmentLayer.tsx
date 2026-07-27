@@ -209,10 +209,11 @@ function useSceneHasBloomableEmissive(threshold: number, needsScan: boolean): bo
   const [bloomable, setBloomable] = useState(false);
 
   useEffect(() => {
-    if (!needsScan) {
-      setBloomable(false);
-      return undefined;
-    }
+    // Clear on every re-run, not just when the scan is switched off: the deps
+    // below include the scene and its root, so a different scene must start from
+    // "nothing bloomed yet" rather than inherit the previous scene's latch.
+    setBloomable(false);
+    if (!needsScan) return undefined;
     const check = () => {
       let found = false;
       scene.traverse((obj) => {

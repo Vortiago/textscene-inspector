@@ -27,7 +27,7 @@ import {
   blendGlsl,
   blendsAfterToneMapping,
   brightPassGlsl,
-  effectiveLevelWeights,
+  gatherWeights,
   glowLevelSize,
   type GlowParams,
 } from '../../resources/environment/godotGlow';
@@ -79,12 +79,17 @@ export class GodotGlowEffect extends Effect {
     // `glowParamsFor` returns null rather than an empty pyramid, so a `GlowParams`
     // that exists always has at least one weighted level.
     this.maxLevel = glow.maxLevel;
-    this.weights = effectiveLevelWeights(glow);
+    this.weights = gatherWeights(glow);
 
-    this.brightPassMaterial = pyramidMaterial('BrightPass', brightPassFragmentShader(glow), {
-      inputBuffer: { value: null },
-    });
-    this.downsampleMaterial = pyramidMaterial('Downsample', DOWNSAMPLE_FRAGMENT_SHADER, {
+    this.brightPassMaterial = pyramidMaterial(
+      'BrightPass',
+      brightPassFragmentShader(glow, toneMapExposure),
+      {
+        inputBuffer: { value: null },
+        texelSize: { value: new THREE.Vector2() },
+      }
+    );
+    this.downsampleMaterial = pyramidMaterial('Downsample', downsampleFragmentShader(glow), {
       inputBuffer: { value: null },
       texelSize: { value: new THREE.Vector2() },
     });
@@ -136,7 +141,12 @@ export class GodotGlowEffect extends Effect {
     const previousTarget = renderer.getRenderTarget();
 
     this.screen.material = this.brightPassMaterial;
-    this.brightPassMaterial.uniforms['inputBuffer']!.value = inputBuffer.texture;
+    const brightUniforms = this.brightPassMaterial.uniforms;
+    brightUniforms['inputBuffer']!.value = inputBuffer.texture;
+    (brightUniforms['texelSize']!.value as THREE.Vector2).set(
+      1 / inputBuffer.width,
+      1 / inputBuffer.height
+    );
     this.renderTo(renderer, this.levelTargets[0]!);
 
     this.screen.material = this.downsampleMaterial;
@@ -221,14 +231,21 @@ function createTarget(name: string): THREE.WebGLRenderTarget {
   return target;
 }
 
-function brightPassFragmentShader(glow: GlowParams): string {
+/**
+ * Level 0 is a quarter of the frame in each axis, so a single tap would read one
+ * source texel in sixteen — enough for a small bright object to flicker in and out
+ * of the halo as it moves, which a settled golden frame cannot show. It shares the
+ * downsample kernel to gather the neighbourhood first, then applies the threshold.
+ */
+function brightPassFragmentShader(glow: GlowParams, exposure: number): string {
   return /* glsl */ `
 uniform sampler2D inputBuffer;
+uniform vec2 texelSize;
 varying vec2 vUv;
-${brightPassGlsl(glow)}
+${DOWNSAMPLE_TAPS}
+${brightPassGlsl(glow, exposure)}
 void main() {
-  vec3 color = max(texture2D(inputBuffer, vUv).rgb, 0.0);
-  gl_FragColor = vec4(godotGlowBrightPass(color), 1.0);
+  gl_FragColor = vec4(godotGlowBrightPass(max(downsample13(), 0.0)), 1.0);
 }
 `;
 }
@@ -236,19 +253,17 @@ void main() {
 /**
  * The standard 13-tap pyramid downsample: four inner diagonals carry half the
  * weight, a 3×3 ring at twice the spacing plus the centre carry the other half.
- * Its whole job is to halve resolution without the aliasing a box filter leaves,
+ * Its whole job is to halve resolution without the aliasing a single tap leaves,
  * which is what would otherwise make a small bright object flicker as it moves.
+ *
+ * Shared with the bright pass, which faces the same 2x reduction from the frame.
  */
-const DOWNSAMPLE_FRAGMENT_SHADER = /* glsl */ `
-uniform sampler2D inputBuffer;
-uniform vec2 texelSize;
-varying vec2 vUv;
-
+const DOWNSAMPLE_TAPS = /* glsl */ `
 vec3 tap(vec2 offset) {
   return texture2D(inputBuffer, vUv + offset * texelSize).rgb;
 }
 
-void main() {
+vec3 downsample13() {
   vec3 inner = tap(vec2(-1.0, -1.0)) + tap(vec2(1.0, -1.0))
              + tap(vec2(-1.0, 1.0)) + tap(vec2(1.0, 1.0));
   vec3 corners = tap(vec2(-2.0, -2.0)) + tap(vec2(2.0, -2.0))
@@ -256,12 +271,26 @@ void main() {
   vec3 edges = tap(vec2(0.0, -2.0)) + tap(vec2(-2.0, 0.0))
              + tap(vec2(2.0, 0.0)) + tap(vec2(0.0, 2.0));
   vec3 center = tap(vec2(0.0));
-  gl_FragColor = vec4(
-    inner * 0.125 + corners * 0.03125 + edges * 0.0625 + center * 0.125,
-    1.0
-  );
+  return inner * 0.125 + corners * 0.03125 + edges * 0.0625 + center * 0.125;
 }
 `;
+
+/**
+ * Godot multiplies the glow buffer by `glow_strength` at every pyramid pass, and
+ * the bright pass has already applied its own — so each downsample carries one
+ * more factor, reaching `strength^(i+1)` at level `i` in the order Godot does it.
+ */
+function downsampleFragmentShader(glow: GlowParams): string {
+  return /* glsl */ `
+uniform sampler2D inputBuffer;
+uniform vec2 texelSize;
+varying vec2 vUv;
+${DOWNSAMPLE_TAPS}
+void main() {
+  gl_FragColor = vec4(downsample13() * ${glslFloat(glow.strength)}, 1.0);
+}
+`;
+}
 
 /**
  * One rung of the coarse-to-fine sum: a 9-tap tent upsample of everything
@@ -306,11 +335,16 @@ function compositeFragmentShader(
   toneMapWhite: number
 ): string {
   const curve = toneMappingEffectGlsl(toneMapMode, toneMapWhite);
+  // Godot exposes the SCENE colour before the blend and the GLOW in the bright
+  // pass, then tonemaps — so exposure reaches each operand exactly once and the
+  // tone curve runs on already-exposed values. Passing 1.0 leaves `godotToneMap`
+  // as the curve alone; applying `godotExposure` here as well would double it on
+  // the glow and, on the pre-tonemap path, scale the sum rather than the operands.
   const composite = blendsAfterToneMapping(glow)
-    ? /* glsl */ `  vec3 color = godotToneMap(max(inputColor.rgb, 0.0), godotExposure);
-  color = godotGlowBlend(color, godotToneMap(glow, godotExposure));`
-    : /* glsl */ `  vec3 color = godotGlowBlend(max(inputColor.rgb, 0.0), glow);
-  color = godotToneMap(color, godotExposure);`;
+    ? /* glsl */ `  vec3 color = godotToneMap(max(inputColor.rgb, 0.0) * godotExposure, 1.0);
+  color = godotGlowBlend(color, godotToneMap(glow, 1.0));`
+    : /* glsl */ `  vec3 color = godotGlowBlend(max(inputColor.rgb, 0.0) * godotExposure, glow);
+  color = godotToneMap(color, 1.0);`;
 
   return /* glsl */ `
 uniform sampler2D godotGlowBuffer;
