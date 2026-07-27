@@ -51,22 +51,19 @@ export function EnvironmentLayer({ settings, sky }: EnvironmentLayerProps) {
   // is gated on the scene actually having bloomable content. When it is NOT
   // mounted the scene stays on the ordinary in-material tonemap path, unchanged.
   const glowParams = useMemo(() => glowParamsFor(settings), [settings]);
-  // A pyramid with no weight anywhere can never produce glow, whatever else is
-  // set, so it never needs the pass. `glowNeedsEveryPixel` covers the opposite
-  // case — the settings under which the emissive scan cannot answer the question
-  // at all and the pass has to mount regardless of what the scene holds.
-  const canGlow = !!glowParams && glowParams.maxLevel >= 0;
-  const alwaysGlows = canGlow && glowNeedsEveryPixel(glowParams!);
+  // Some settings glow every pixel, in which case the scene's own contents cannot
+  // answer whether the pass matters and the scan is not worth running.
+  const alwaysGlows = !!glowParams && glowNeedsEveryPixel(glowParams);
   const hasBloomable = useSceneHasBloomableEmissive(
     glowParams?.hdrThreshold ?? 0,
-    canGlow && !alwaysGlows
+    !!glowParams && !alwaysGlows
   );
-  const useComposer = canGlow && (alwaysGlows || hasBloomable);
+  const activeGlow = glowParams && (alwaysGlows || hasBloomable) ? glowParams : null;
 
   return (
     <>
-      <EnvironmentApplier settings={settings} hasSky={!!sky} suppressToneMapping={useComposer} />
-      {useComposer && <GlowLayer glow={glowParams!} toneMapping={settings.toneMapping} />}
+      <EnvironmentApplier settings={settings} hasSky={!!sky} suppressToneMapping={!!activeGlow} />
+      {activeGlow && <GlowLayer glow={activeGlow} toneMapping={settings.toneMapping} />}
       {sky && (showsSky || skyAmbient) && (
         <>
           <SkyLayer
@@ -196,7 +193,8 @@ function SkyDiffuseReflectionSplit({
  * Re-checked over a short window after each scene change so async content (GLB,
  * instanced sub-scenes) that mounts a beat later still turns the composer on;
  * it errs toward mounting (a false positive only costs a redundant pass, a false
- * negative would silently drop a real bloom). Diffuse-only brightness — lit
+ * negative would silently drop a real bloom), and having said so it LATCHES —
+ * once something has bloomed, the answer stays true until the scene changes. Diffuse-only brightness — lit
  * white floors, unshaded Label3D text near 1.0 — stays below the threshold and
  * does not trigger it, matching Godot (which does not bloom those either).
  *
@@ -231,7 +229,14 @@ function useSceneHasBloomableEmissive(threshold: number, needsScan: boolean): bo
           }
         }
       });
-      setBloomable((prev) => (prev === found ? prev : found));
+      // LATCHES, and only resets when the deps below change. Mounting the
+      // composer flips `gl.toneMapping` to `NoToneMapping`, which is part of
+      // three's program-cache key for every tone-mapped material — so each
+      // change of answer recompiles the whole scene's shaders. Content that
+      // settles across the probe window could otherwise flip this several times
+      // during one load. Latching caps that at one, and costs only a redundant
+      // pass in the case this hook already documents itself as erring toward.
+      if (found) setBloomable(true);
     };
     check();
     const timers = [150, 500, 1100].map((delay) => setTimeout(check, delay));

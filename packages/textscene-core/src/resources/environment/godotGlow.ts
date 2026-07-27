@@ -71,8 +71,43 @@ export interface GlowParams {
 const LEVEL_EPSILON = 0.0001;
 
 /**
- * `null` when this environment has no glow, so a caller can decide purely from
+ * How much smaller than the frame glow level 0 is.
+ *
+ * Godot allocates its glow buffer at half the internal render size, and the
+ * gather pass then writes level 0 at half of THAT — it box-samples straight to
+ * quarter resolution rather than stepping down one level at a time. So every
+ * level sits one octave coarser than a half-resolution chain would put it, which
+ * is why a halo built on the coarse levels reads wide and flat in Godot rather
+ * than tight and bright. Measured: getting this wrong put a coarse-weighted
+ * fixture 75.8% away from Godot's own render, against 0.029% with it right.
+ */
+export const GLOW_FIRST_LEVEL_DIVISOR = 4;
+
+/**
+ * The pixel size of one glow level, given the frame it is built from. Each level
+ * halves again from `GLOW_FIRST_LEVEL_DIVISOR`, and never collapses below 1px —
+ * a zero-sized render target is not renderable.
+ */
+export function glowLevelSize(
+  width: number,
+  height: number,
+  level: number
+): { width: number; height: number } {
+  const divisor = GLOW_FIRST_LEVEL_DIVISOR * Math.pow(2, level);
+  return {
+    width: Math.max(1, Math.floor(width / divisor)),
+    height: Math.max(1, Math.floor(height / divisor)),
+  };
+}
+
+/**
+ * `null` when this environment cannot glow, so a caller can decide purely from
  * the settings whether to mount the post-process at all.
+ *
+ * A pyramid whose every weight is at or below the cutoff produces nothing no
+ * matter what else is set, so it reads as "no glow" here rather than as params
+ * with an empty pyramid — which is what lets a consumer treat a non-null result
+ * as having a real `maxLevel` instead of promising it across files.
  */
 export function glowParamsFor(settings: EnvironmentSettings): GlowParams | null {
   const glow = settings.glow;
@@ -83,6 +118,8 @@ export function glowParamsFor(settings: EnvironmentSettings): GlowParams | null 
   for (let i = 0; i < levels.length; i++) {
     if ((levels[i] ?? 0) > LEVEL_EPSILON) maxLevel = i;
   }
+
+  if (maxLevel < 0) return null;
 
   const blendMode = glow.blendMode;
   return {

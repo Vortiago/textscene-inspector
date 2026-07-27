@@ -1,10 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { sRGBChannelToLinear as linear } from '../../../utils/colorSpace';
 import { EmissionOperator, emissionScalars, resolveEmission } from './emission';
-
-/** `((c + 0.055) / 1.055) ^ 2.4` — Godot's `Color::srgb_to_linear`, unclamped. */
-function linear(c: number): number {
-  return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
-}
 
 describe('emissionScalars', () => {
   it('is fully off when emission is disabled', () => {
@@ -18,6 +14,15 @@ describe('emissionScalars', () => {
     // Peak floors at 1, so an in-range colour keeps energy as the intensity.
     expect(s.emissiveIntensity).toBeCloseTo(3, 6);
     expect(s.emissive[0]).toBeCloseTo(linear(0.5), 6);
+  });
+
+  it('matches Godot for a known HDR channel', () => {
+    // The one assertion here that does not go through the same transfer function
+    // the code uses, so an error in the curve itself cannot hide: Godot's
+    // `Color::srgb_to_linear` takes the pow branch and extrapolates past 1.
+    //   ((2 + 0.055) / 1.055) ^ 2.4 = 4.9538458
+    const s = emissionScalars({ r: 2, g: 0, b: 0, a: 1 }, 1);
+    expect(s.emissiveIntensity).toBeCloseTo(4.9538458, 6);
   });
 
   it('converts BEFORE taking the peak, so an HDR colour keeps its hue', () => {

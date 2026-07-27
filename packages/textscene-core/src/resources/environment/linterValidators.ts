@@ -6,7 +6,6 @@ import { validatorRegistry } from '../../linter/ValidatorRegistry';
 import type { PropertyValidator } from '../../linter/ValidatorRegistry';
 import { COLOR_RE } from '../../parser/vectors.js';
 import { v } from '../../linter/validators/index.js';
-import { GLOW_LEVEL_COUNT } from './parser';
 
 /**
  * Validate boolean properties
@@ -116,28 +115,27 @@ validatorRegistry.registerAll('Environment', {
 
   // Glow — every knob the compositor pass reads, so a typo in one is reported
   // rather than silently falling back to a Godot default.
-  glow_enabled: validateBoolean,
-  glow_normalized: validateBoolean,
-  glow_intensity: validateNonNegativeNumber(),
-  glow_strength: validateNonNegativeNumber(),
-  glow_mix: validateNonNegativeNumber(),
-  glow_bloom: validateNonNegativeNumber(),
-  glow_blend_mode: validateEnumInt('glow_blend_mode', 0, 4),
-  glow_hdr_threshold: validateNonNegativeNumber(),
-  glow_hdr_scale: validateNonNegativeNumber(),
-  glow_hdr_luminance_cap: validateNonNegativeNumber(),
-  glow_map_strength: validateNonNegativeNumber(),
-  ...glowLevelValidators(),
+  glow_enabled: v.boolean('glow_enabled'),
+  glow_normalized: v.boolean('glow_normalized'),
+  glow_intensity: v.nonNegativeFloat('glow_intensity'),
+  glow_strength: v.nonNegativeFloat('glow_strength'),
+  glow_mix: v.nonNegativeFloat('glow_mix'),
+  glow_bloom: v.nonNegativeFloat('glow_bloom'),
+  glow_blend_mode: v.enumInt('glow_blend_mode', 0, 4, {
+    0: 'ADDITIVE',
+    1: 'SCREEN',
+    2: 'SOFTLIGHT',
+    3: 'REPLACE',
+    4: 'MIX',
+  }),
+  glow_hdr_threshold: v.nonNegativeFloat('glow_hdr_threshold'),
+  glow_hdr_scale: v.nonNegativeFloat('glow_hdr_scale'),
+  glow_hdr_luminance_cap: v.nonNegativeFloat('glow_hdr_luminance_cap'),
+  glow_map_strength: v.nonNegativeFloat('glow_map_strength'),
+  // `glow_levels/1`..`glow_levels/7` are seven independent float properties; the
+  // registry matches a `prefix/*` pattern, so they need no per-level entries.
+  'glow_levels/*': v.nonNegativeFloat('glow_levels'),
 });
-
-/** `glow_levels/1`..`glow_levels/7` are seven independent float properties. */
-function glowLevelValidators(): Record<string, ReturnType<typeof validateNonNegativeNumber>> {
-  const validators: Record<string, ReturnType<typeof validateNonNegativeNumber>> = {};
-  for (let level = 1; level <= GLOW_LEVEL_COUNT; level++) {
-    validators[`glow_levels/${level}`] = validateNonNegativeNumber();
-  }
-  return validators;
-}
 
 // Export validators for reuse
 export { validateBoolean, validateColor };

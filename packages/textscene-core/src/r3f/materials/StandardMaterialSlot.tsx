@@ -166,6 +166,7 @@ export function StandardMaterialSlot({
   // (see needsPhysicalMaterial for the authoritative set), keeping the common
   // path on the lighter standard material so existing behaviour — and the
   // material type the component tests assert on — is unchanged.
+  const emission = resolveEmission(scalars, scalars.emissionOperator, !!emissiveMap);
   const pbrProps = {
     attach,
     color: scalars.color,
@@ -188,7 +189,11 @@ export function StandardMaterialSlot({
     aoMap: aoMap ?? null,
     // Godot's `emission_operator` only becomes observable once a texture is in
     // play, and whether one resolved is knowable here and not at parse time.
-    ...resolveEmission(scalars, scalars.emissionOperator, !!emissiveMap),
+    // Read field-by-field rather than spread: `scalars` is far wider than
+    // `EmissionScalars`, so a future pass-through inside `resolveEmission` would
+    // otherwise splat every material scalar into the material props.
+    emissive: emission.emissive,
+    emissiveIntensity: emission.emissiveIntensity,
     // Godot heightmap (FEATURE_HEIGHT_MAPPING) → three.js vertex displacement.
     // PARITY LIMITATION: Godot uses texture-space parallax; three.js
     // displacement moves real vertices, so it needs a subdivided mesh and its

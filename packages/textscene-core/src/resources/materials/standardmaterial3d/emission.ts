@@ -33,7 +33,7 @@ export interface EmissionScalars {
    * number, so r3f applies it via `Color.fromArray` (already-linear, no decode).
    * A hex number would go through `Color.setHex(hex, SRGBColorSpace)`, decoding
    * these already-linear values sRGB→linear a SECOND time and rendering emission
-   * far too dark.
+   * far too dark. The albedo colour is an array for the same reason.
    */
   emissive: [number, number, number];
   emissiveIntensity: number;
@@ -41,6 +41,11 @@ export interface EmissionScalars {
 
 /**
  * The authored colour and energy as a linear colour plus an intensity.
+ *
+ * Deliberately separate from `resolveEmission`: the inline-SubResource path
+ * cannot resolve the operator until it knows whether a texture landed, which is
+ * only knowable in the component, so the two must stay independently callable
+ * even though the external-`.tres` path has both facts at once.
  *
  * The sRGB→linear conversion has to happen BEFORE the peak is taken, because it
  * is not a linear function: normalising first and scaling after is a different

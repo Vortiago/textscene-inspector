@@ -114,6 +114,6 @@ validatorRegistry.registerAll('StandardMaterial3D', {
   emission_operator: v.enumInt('emission_operator', 0, 1, { 0: 'ADD', 1: 'MULTIPLY' }),
   // Validated but not rendered (see the sheet's limitations): a malformed value
   // is still worth reporting, since the scene is wrong in Godot either way.
-  emission_on_uv2: validateBoolean,
+  emission_on_uv2: v.boolean('emission_on_uv2'),
   emission_intensity: v.nonNegativeFloat('emission_intensity'),
 });

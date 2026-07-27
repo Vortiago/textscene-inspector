@@ -28,6 +28,7 @@ import {
   blendsAfterToneMapping,
   brightPassGlsl,
   effectiveLevelWeights,
+  glowLevelSize,
   type GlowParams,
 } from '../../resources/environment/godotGlow';
 import { toneMappingEffectGlsl } from '../../resources/environment/godotToneMapping';
@@ -42,21 +43,6 @@ export interface GodotGlowOptions {
   /** Godot `tonemap_white` — also the white point SCREEN normalises against. */
   toneMapWhite: number;
 }
-
-/**
- * Godot's glow buffer is allocated at half the internal render size, and its
- * gather pass then writes level 0 at half of THAT — it box-samples straight to
- * quarter resolution rather than stepping down one level at a time. So every
- * level is one octave coarser than a half-resolution chain would make it, which
- * is why a halo built on the coarse levels reads wide and flat in Godot instead
- * of tight and bright.
- */
-const FIRST_LEVEL_DIVISOR = 4;
-
-/** LINEAR has no ported curve; exposure is all it applies. */
-const LINEAR_TONE_CURVE = /* glsl */ `vec3 godotToneMap(vec3 color, float exposure) {
-  return color * exposure;
-}`;
 
 /** Shared by every pyramid material so they agree on how `vUv` is derived. */
 const FULLSCREEN_VERTEX_SHADER = /* glsl */ `
@@ -90,48 +76,27 @@ export class GodotGlowEffect extends Effect {
       ]),
     });
 
-    // `EnvironmentLayer` only mounts this once it has checked some level carries
-    // weight, so `maxLevel` is a real index here rather than the -1 that means
-    // "nothing can glow" — clamping it would silently allocate a level and run a
-    // bright pass at weight zero.
+    // `glowParamsFor` returns null rather than an empty pyramid, so a `GlowParams`
+    // that exists always has at least one weighted level.
     this.maxLevel = glow.maxLevel;
     this.weights = effectiveLevelWeights(glow);
 
-    this.brightPassMaterial = new THREE.ShaderMaterial({
-      name: 'GodotGlow.BrightPass',
-      uniforms: { inputBuffer: { value: null } },
-      vertexShader: FULLSCREEN_VERTEX_SHADER,
-      fragmentShader: brightPassFragmentShader(glow),
-      depthWrite: false,
-      depthTest: false,
+    this.brightPassMaterial = pyramidMaterial('BrightPass', brightPassFragmentShader(glow), {
+      inputBuffer: { value: null },
     });
-    this.downsampleMaterial = new THREE.ShaderMaterial({
-      name: 'GodotGlow.Downsample',
-      uniforms: {
-        inputBuffer: { value: null },
-        texelSize: { value: new THREE.Vector2() },
-      },
-      vertexShader: FULLSCREEN_VERTEX_SHADER,
-      fragmentShader: DOWNSAMPLE_FRAGMENT_SHADER,
-      depthWrite: false,
-      depthTest: false,
+    this.downsampleMaterial = pyramidMaterial('Downsample', DOWNSAMPLE_FRAGMENT_SHADER, {
+      inputBuffer: { value: null },
+      texelSize: { value: new THREE.Vector2() },
     });
-    this.accumulateMaterial = new THREE.ShaderMaterial({
-      name: 'GodotGlow.Accumulate',
-      uniforms: {
-        coarserBuffer: { value: null },
-        levelBuffer: { value: null },
-        levelWeight: { value: 0 },
-        // Zero on the coarsest rung, which has nothing summed below it. A
-        // uniform rather than a `#define` so walking the pyramid does not
-        // recompile the shader once per level per frame.
-        coarserFactor: { value: 0 },
-        texelSize: { value: new THREE.Vector2() },
-      },
-      vertexShader: FULLSCREEN_VERTEX_SHADER,
-      fragmentShader: ACCUMULATE_FRAGMENT_SHADER,
-      depthWrite: false,
-      depthTest: false,
+    this.accumulateMaterial = pyramidMaterial('Accumulate', ACCUMULATE_FRAGMENT_SHADER, {
+      coarserBuffer: { value: null },
+      levelBuffer: { value: null },
+      levelWeight: { value: 0 },
+      // Zero on the coarsest rung, which has nothing summed below it. A uniform
+      // rather than a `#define` so walking the pyramid does not recompile the
+      // shader once per level per frame.
+      coarserFactor: { value: 0 },
+      texelSize: { value: new THREE.Vector2() },
     });
 
     // Two parallel chains, not a ping-pong pair: the coarse-to-fine sum writes
@@ -152,11 +117,9 @@ export class GodotGlowEffect extends Effect {
 
   override setSize(width: number, height: number): void {
     for (let level = 0; level < this.levelTargets.length; level++) {
-      const divisor = FIRST_LEVEL_DIVISOR * Math.pow(2, level);
-      const w = Math.max(1, Math.floor(width / divisor));
-      const h = Math.max(1, Math.floor(height / divisor));
-      this.levelTargets[level]?.setSize(w, h);
-      this.accumulationTargets[level]?.setSize(w, h);
+      const size = glowLevelSize(width, height, level);
+      this.levelTargets[level]!.setSize(size.width, size.height);
+      this.accumulationTargets[level]!.setSize(size.width, size.height);
     }
   }
 
@@ -177,9 +140,9 @@ export class GodotGlowEffect extends Effect {
     this.renderTo(renderer, this.levelTargets[0]!);
 
     this.screen.material = this.downsampleMaterial;
+    const downsampleUniforms = this.downsampleMaterial.uniforms;
     for (let level = 1; level <= this.maxLevel; level++) {
       const source = this.levelTargets[level - 1]!;
-      const downsampleUniforms = this.downsampleMaterial.uniforms;
       downsampleUniforms['inputBuffer']!.value = source.texture;
       (downsampleUniforms['texelSize']!.value as THREE.Vector2).set(
         1 / source.width,
@@ -199,7 +162,7 @@ export class GodotGlowEffect extends Effect {
       uniforms['coarserBuffer']!.value = (coarser ?? this.levelTargets[level]!).texture;
       uniforms['coarserFactor']!.value = coarser ? 1 : 0;
       uniforms['levelBuffer']!.value = this.levelTargets[level]!.texture;
-      uniforms['levelWeight']!.value = this.weights[level] ?? 0;
+      uniforms['levelWeight']!.value = this.weights[level]!;
       const source = coarser ?? this.levelTargets[level]!;
       (uniforms['texelSize']!.value as THREE.Vector2).set(1 / source.width, 1 / source.height);
       this.renderTo(renderer, this.accumulationTargets[level]!);
@@ -224,6 +187,26 @@ export class GodotGlowEffect extends Effect {
     this.screen.geometry.dispose();
     super.dispose();
   }
+}
+
+/**
+ * Every pyramid pass is the same fullscreen draw with a different fragment: same
+ * vertex shader (so they agree on how `vUv` is derived) and no depth, because
+ * none of them has geometry to sort. Only the uniforms and the fragment differ.
+ */
+function pyramidMaterial(
+  name: string,
+  fragmentShader: string,
+  uniforms: Record<string, THREE.IUniform>
+): THREE.ShaderMaterial {
+  return new THREE.ShaderMaterial({
+    name: `GodotGlow.${name}`,
+    uniforms,
+    vertexShader: FULLSCREEN_VERTEX_SHADER,
+    fragmentShader,
+    depthWrite: false,
+    depthTest: false,
+  });
 }
 
 function createTarget(name: string): THREE.WebGLRenderTarget {
@@ -322,7 +305,7 @@ function compositeFragmentShader(
   toneMapMode: number,
   toneMapWhite: number
 ): string {
-  const curve = toneMappingEffectGlsl(toneMapMode, toneMapWhite) ?? LINEAR_TONE_CURVE;
+  const curve = toneMappingEffectGlsl(toneMapMode, toneMapWhite);
   const composite = blendsAfterToneMapping(glow)
     ? /* glsl */ `  vec3 color = godotToneMap(max(inputColor.rgb, 0.0), godotExposure);
   color = godotGlowBlend(color, godotToneMap(glow, godotExposure));`

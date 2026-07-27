@@ -39,12 +39,12 @@ describe('material misc scalar parity', () => {
     });
     // Godot converts the `source_color` uniform sRGB→linear BEFORE energy, and
     // its `pow` branch extrapolates past 1 rather than clipping:
-    //   ((2 + 0.055) / 1.055) ^ 2.4     = 4.9538488…
+    //   ((2 + 0.055) / 1.055) ^ 2.4     = 4.9538457…
     //   ((0.5 + 0.055) / 1.055) ^ 2.4   = 0.2140411…
     // The peak goes into the intensity, so the colour keeps its ratio.
-    expect(s.emissiveIntensity).toBeCloseTo(4.9538488, 5);
+    expect(s.emissiveIntensity).toBeCloseTo(4.9538458, 6);
     expect(s.emissive[0]).toBeCloseTo(1, 5);
-    expect(s.emissive[1]).toBeCloseTo(0.2140411 / 4.9538488, 5);
+    expect(s.emissive[1]).toBeCloseTo(0.2140411 / 4.9538458, 5);
     expect(s.emissive[2]).toBe(0);
   });
 

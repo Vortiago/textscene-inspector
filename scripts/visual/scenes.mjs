@@ -104,33 +104,18 @@ export const GOLDEN_SCENES = [
   { name: 'navigation-region-3d', file: 'unit-navigation-region-3d.tscn' },
   { name: 'material-metallic', file: 'unit-material-metallic.tscn' },
   { name: 'material-emissive', file: 'unit-material-emissive.tscn' },
-  // Glow driven by an AUTHORED WorldEnvironment rather than the editor preview,
-  // which only ever flips glow_enabled: the weights sit on the two coarsest mip
-  // levels, so a level-weighting or pyramid-resolution regression reads here as
-  // a halo of visibly the wrong size.
+  // Glow and emission, one variable per scene. Each fixture's own header states
+  // which variable and why a regression in it would be invisible elsewhere.
   { name: 'glow-authored', file: 'unit-glow-authored.tscn' },
-  // glow_strength compounds once per pyramid pass, so it is inert at its 1.0
-  // default and any exponent would pass every other scene — this is the one that
-  // pins the count.
   { name: 'glow-strength', file: 'unit-glow-strength.tscn' },
-  // Soft light is the only mode Godot composites AFTER the tone curve, and the
-  // only one whose result depends on the surface under it, hence the grey ground.
   { name: 'glow-softlight', file: 'unit-glow-softlight.tscn' },
-  // The remaining glow configurations, one variable each: MIX (which reads
-  // glow_mix where every other mode reads glow_intensity), REPLACE (the frame
-  // becomes the glow buffer, so the pyramid is visible with nothing under it),
-  // glow_bloom as a feedback floor (this scene has no emissive at all, so it
-  // mounts the composer purely through that), sum-normalised level weights, and
-  // glow under AgX rather than the FILMIC every other glow fixture uses.
   { name: 'glow-mix', file: 'unit-glow-mix.tscn' },
   { name: 'glow-replace', file: 'unit-glow-replace.tscn' },
   { name: 'glow-bloom-floor', file: 'unit-glow-bloom-floor.tscn' },
   { name: 'glow-normalized', file: 'unit-glow-normalized.tscn' },
   { name: 'glow-agx', file: 'unit-glow-agx.tscn' },
-  // Emission's texture-dependent cases. Quads rather than spheres because a
-  // checkerboard is a UV discriminator and Godot's SphereMesh winds its UVs at a
-  // different phase than three's does — measurable on plain albedo, nothing to do
-  // with emission. maxDiffPct is raised for the checker's own edge count.
+  // Raised threshold: a 4x4 checkerboard on two quads carries far more edge than
+  // the silhouette-only scenes the default is tuned for.
   { name: 'material-emission-texture', file: 'unit-material-emission-texture.tscn', maxDiffPct: 0.6 },
   { name: 'material-emission-hdr', file: 'unit-material-emission-hdr.tscn' },
   // Height mapping: a local grayscale height SVG drives displacementMap on a

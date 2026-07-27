@@ -6,6 +6,7 @@ import {
   blendsAfterToneMapping,
   brightPassGlsl,
   effectiveLevelWeights,
+  glowLevelSize,
   GlowBlendMode,
   glowNeedsEveryPixel,
   glowParamsFor,
@@ -48,10 +49,13 @@ describe('glowParamsFor', () => {
     expect(glowOn({ 'glow_levels/7': '0.00005' }).maxLevel).toBe(3);
   });
 
-  it('maxLevel is -1 when every weight is zero, so nothing can glow', () => {
-    const off: Record<string, string> = {};
+  it('is null when every weight is zero, whatever else is set', () => {
+    // An empty pyramid produces nothing, so it reads as "no glow" rather than as
+    // params a consumer must re-check — that is what lets a non-null result carry
+    // a real `maxLevel` instead of a promise made across files.
+    const off: Record<string, string> = { glow_bloom: '1', glow_intensity: '4' };
     for (let level = 1; level <= GLOW_LEVEL_COUNT; level++) off[`glow_levels/${level}`] = '0';
-    expect(glowOn(off).maxLevel).toBe(-1);
+    expect(glowParamsFor(settings({ glow_enabled: 'true', ...off }))).toBeNull();
   });
 
   it('sum-normalises the level weights under glow_normalized', () => {
@@ -147,6 +151,27 @@ describe('effectiveLevelWeights', () => {
     const weights = effectiveLevelWeights(glowOn({ glow_strength: '2' }));
     expect(weights[0]).toBe(0);
     expect(weights[6]).toBe(0);
+  });
+});
+
+describe('glowLevelSize', () => {
+  it('puts level 0 at a QUARTER of the frame, not a half', () => {
+    // Godot's glow buffer is half the internal size and its gather pass writes
+    // level 0 at half of that again. This is the value that, set to a half, put a
+    // coarse-weighted fixture 75.8% away from Godot's own render.
+    expect(glowLevelSize(800, 600, 0)).toEqual({ width: 200, height: 150 });
+  });
+
+  it('halves again per level', () => {
+    expect(glowLevelSize(800, 600, 1)).toEqual({ width: 100, height: 75 });
+    expect(glowLevelSize(800, 600, 2)).toEqual({ width: 50, height: 37 });
+  });
+
+  it('never collapses below one pixel', () => {
+    // A zero-sized render target is not renderable, and the coarsest levels of a
+    // small frame reach zero quickly.
+    expect(glowLevelSize(8, 8, 6)).toEqual({ width: 1, height: 1 });
+    expect(glowLevelSize(1, 1, 0)).toEqual({ width: 1, height: 1 });
   });
 });
 

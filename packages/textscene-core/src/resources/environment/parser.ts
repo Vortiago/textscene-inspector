@@ -7,11 +7,11 @@ import { BackgroundMode } from './types';
 import { floatOr, intOr } from '../../parser/valueParsers';
 import { colorOr } from '../../utils/colorParser';
 
-/** Godot's `RS::MAX_GLOW_LEVELS`. */
-export const GLOW_LEVEL_COUNT = 7;
-
 /** `Environment`'s constructor weights, finest mip first. */
 const DEFAULT_GLOW_LEVELS = [0.0, 0.8, 0.4, 0.1, 0.0, 0.0, 0.0];
+
+/** Godot's `RS::MAX_GLOW_LEVELS`, derived so an eighth weight cannot outrun it. */
+export const GLOW_LEVEL_COUNT = DEFAULT_GLOW_LEVELS.length;
 
 /**
  * `glow_levels/1`..`glow_levels/7` are seven independent properties, 1-based in

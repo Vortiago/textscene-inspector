@@ -19,22 +19,16 @@
 import * as THREE from 'three';
 import { parseColor } from '../../utils/colorParser';
 import { sRGBToLinearRGB } from '../../utils/colorSpace';
-import { emissionScalars } from '../../resources/materials/standardmaterial3d/emission';
+import {
+  emissionScalars,
+  type EmissionScalars,
+} from '../../resources/materials/standardmaterial3d/emission';
 
-export interface StandardMaterial3DScalars {
+export interface StandardMaterial3DScalars extends EmissionScalars {
   color: [number, number, number];
   opacity: number;
   metalness: number;
   roughness: number;
-  /**
-   * Linear RGB in [0,1]; `[0,0,0]` means "no emission". An ARRAY, not a hex
-   * number, so r3f applies it via `Color.fromArray` (already-linear, no decode).
-   * A hex number would go through `Color.setHex(hex, SRGBColorSpace)`, decoding
-   * these already-linear values sRGB→linear a SECOND time and rendering emission
-   * far too dark — the albedo `color` path is an array for the same reason.
-   */
-  emissive: [number, number, number];
-  emissiveIntensity: number;
   /**
    * Godot `emission_operator`: 0 ADD (default), 1 MULTIPLY. Only observable
    * alongside an `emission_texture` — `resolveEmission` combines the two.
