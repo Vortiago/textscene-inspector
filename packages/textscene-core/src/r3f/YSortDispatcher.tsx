@@ -252,7 +252,7 @@ function TileGroupRenderer({ item, z, node }: {
   const material = useCanvasItemMaterial(tileProps);
   const canvasModulate = useCanvasModulateFor(material);
   const { color, opacity } = useCanvasItemTint(tileProps, canvasModulate);
-  const lighting = useCanvasItemLighting(material, canvasModulate);
+  const lighting = useCanvasItemLighting(material);
   const allCells = tileProps.cells ?? null;
   // When expanded by the y-sort pass, tileData.cells holds the filtered Y-group cells.
   const cells = item.tileData?.cells ?? allCells;

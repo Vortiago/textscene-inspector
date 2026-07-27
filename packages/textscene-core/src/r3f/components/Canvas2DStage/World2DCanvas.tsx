@@ -12,7 +12,7 @@
  * pattern).
  */
 
-import { useLayoutEffect } from 'react';
+import { useLayoutEffect, useMemo } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import type { OrthographicCamera } from 'three';
 import type {
@@ -25,6 +25,7 @@ import { SceneResourcesProvider } from '../../SceneResourcesContext.js';
 import { NodeDispatcher } from '../../NodeDispatcher.js';
 import { world2DCameraPose } from './world2DCamera.js';
 import { CanvasLighting2DProvider } from '../../lighting2d/CanvasLighting2D.js';
+import { canvasModulateColor } from '../../canvasModulate.js';
 
 export interface World2DCanvasProps {
   nodes: readonly TscnNode[];
@@ -55,6 +56,7 @@ export function World2DContents({
   pan,
   zoom,
 }: World2DCanvasProps) {
+  const canvasModulate = useMemo(() => canvasModulateColor(nodes), [nodes]);
   return (
     <CanvasWorkspaceProvider workspace="2d">
       <SceneResourcesProvider
@@ -62,7 +64,10 @@ export function World2DContents({
         externalResources={externalResources}
       >
         <CameraRig pan={pan} zoom={zoom} />
-        <CanvasLighting2DProvider>
+        {/* The light accumulator starts from the canvas tint, so it needs the
+            same colour the dispatcher publishes to the items — the one pure
+            function of `nodes` is the shared definition of it. */}
+        <CanvasLighting2DProvider canvasModulate={canvasModulate}>
           <NodeDispatcher nodes={nodes} />
         </CanvasLighting2DProvider>
       </SceneResourcesProvider>

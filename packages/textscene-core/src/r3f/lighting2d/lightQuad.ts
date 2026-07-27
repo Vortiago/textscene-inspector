@@ -1,19 +1,34 @@
 /**
- * The quad a PointLight2D contributes to the accumulation buffer.
+ * The quad a PointLight2D contributes to the canvas light accumulator.
  *
- * It emits Godot's light term and nothing else:
+ * It emits Godot's `light_color` and nothing else:
  *
- *   light = cookie.rgb * cookie.a * color * energy
+ *   rgb = cookie.rgb * light.color * energy      (sRGB, unclamped)
+ *   a   = cookie.a
  *
- * unclamped and in sRGB, because the buffer is half-float and the multiply
- * against each item's albedo happens later. `energy` is applied HERE, in sRGB,
- * which is the space Godot's canvas works in — scaling a linear colour instead
- * raises it by only `energy^(1/2.2)` once re-encoded, which is why lights read
- * dim when the multiply is folded into a material colour.
+ * `energy` is applied HERE, in sRGB, which is the space Godot's canvas works in
+ * — scaling a linear colour instead raises it by only `energy^(1/2.2)` once
+ * re-encoded, which is why lights read dim when the multiply is folded into a
+ * linear material colour.
  *
- * Blend mode selects how the term accumulates: ADD and SUB add and subtract it,
- * MIX is not expressible as an accumulation (it interpolates toward the light
- * colour against the destination) and is documented as an approximation.
+ * The alpha is emitted RAW rather than pre-multiplied into rgb, because the
+ * accumulator needs it twice over: as the blend factor that reproduces
+ * `light_blend_compute` (below) and, summed across lights, as the coverage mask
+ * a `light_mode = Light Only` item is drawn through.
+ *
+ * `light_blend_compute` in `canvas.glsl` is
+ *
+ *   ADD: S += light_color.rgb * light_color.a
+ *   SUB: S -= light_color.rgb * light_color.a
+ *   MIX: S  = mix(S, light_color.rgb, light_color.a)
+ *
+ * and each of the three is exactly one fixed-function blend against the
+ * accumulator, which is why all three are reproduced rather than approximated:
+ * SrcAlpha/One with add, SrcAlpha/One with reverse-subtract, and
+ * SrcAlpha/OneMinusSrcAlpha with add. Alpha always accumulates One/One, since
+ * `light_only_alpha` is a plain sum (measured against Godot 4.6.3: one, two and
+ * three overlapping cookies of alpha 0.3 mask to 0.3, 0.6 and 0.9, not to the
+ * 0.51/0.657 a screen combination would give).
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -22,6 +37,13 @@
 
 import * as THREE from 'three';
 import type { Color } from '../../nodes/base/node2d/types.js';
+
+/** Godot `Light2D.BlendMode`. */
+export enum Light2DBlendMode {
+  ADD = 0,
+  SUB = 1,
+  MIX = 2,
+}
 
 const VERTEX = /* glsl */ `
 varying vec2 vLightUv;
@@ -34,7 +56,8 @@ void main() {
 /**
  * The cookie arrives decoded to linear (three tags loaded textures
  * `SRGBColorSpace`), so it is re-encoded to recover Godot's texel before the
- * light maths. Nothing is clamped: the target is half-float.
+ * light maths. Nothing is clamped: the accumulator is half-float, and Godot
+ * clamps only after the light has been multiplied into an item's albedo.
  */
 const FRAGMENT = /* glsl */ `
 uniform sampler2D uCookie;
@@ -48,17 +71,29 @@ vec3 lightToSrgb(vec3 c) {
 
 void main() {
   vec4 cookie = texture2D(uCookie, vLightUv);
-  gl_FragColor = vec4(lightToSrgb(cookie.rgb) * cookie.a * uColor * uEnergy, 1.0);
+  gl_FragColor = vec4(lightToSrgb(cookie.rgb) * uColor * uEnergy, cookie.a);
 }
 `;
 
-/** Godot `Light2D.BlendMode`: 0 ADD, 1 SUB, 2 MIX. */
+/**
+ * One fixed-function blend per `Light2D.BlendMode`, against an accumulator whose
+ * rgb holds `S` and whose alpha holds the summed cookie coverage.
+ *
+ * `transparent` is load-bearing rather than cosmetic: it is what puts the quads
+ * in three's transparent list, which sorts farthest-first and so replays them in
+ * canvas draw order. In the opaque list they would sort nearest-first, and MIX —
+ * the one mode whose result depends on the order lights are applied — would come
+ * out reversed.
+ */
 function accumulationBlend(blendMode: number): Partial<THREE.ShaderMaterialParameters> {
   return {
+    transparent: true,
     blending: THREE.CustomBlending,
-    blendEquation: blendMode === 1 ? THREE.ReverseSubtractEquation : THREE.AddEquation,
-    blendSrc: THREE.OneFactor,
-    blendDst: THREE.OneFactor,
+    blendEquation:
+      blendMode === Light2DBlendMode.SUB ? THREE.ReverseSubtractEquation : THREE.AddEquation,
+    blendSrc: THREE.SrcAlphaFactor,
+    blendDst:
+      blendMode === Light2DBlendMode.MIX ? THREE.OneMinusSrcAlphaFactor : THREE.OneFactor,
     blendEquationAlpha: THREE.AddEquation,
     blendSrcAlpha: THREE.OneFactor,
     blendDstAlpha: THREE.OneFactor,

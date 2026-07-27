@@ -65,10 +65,12 @@ export function CanvasItem2D({ node, props, body, children }: CanvasItem2DProps)
   );
   const material = useCanvasItemMaterial(props);
   // The canvas tint rides this item's own pixels only, and only when its light
-  // mode admits it — never the inherited modulate its children read.
+  // mode admits it — never the inherited modulate its children read. The light
+  // injection divides this same value back out to recover the albedo, so the
+  // two must be resolved from the one hook.
   const canvasModulate = useCanvasModulateFor(material);
   const tint = useCanvasItemTint(props, canvasModulate);
-  const lighting = useCanvasItemLighting(material, canvasModulate);
+  const lighting = useCanvasItemLighting(material);
 
   return (
     <group name={node.name} {...transform} visible={props.visible !== false}>

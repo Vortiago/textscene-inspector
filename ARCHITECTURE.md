@@ -104,6 +104,9 @@ The render and linter pipelines are **separately bundleable** because the parse,
 │           │   ├── controls/               # 2D Control overlay subsystem (ADR-0003):
 │           │   │                           #   ControlComponentRegistry, ControlDispatcher,
 │           │   │                           #   ControlOverlay, layout/StyleBox→CSS mapping
+│           │   ├── lighting2d/             # Godot's canvas light pass (see below):
+│           │   │                           #   CanvasLighting2D (accumulator + pre-pass),
+│           │   │                           #   lightQuad (producer), canvasItemLighting (consumer)
 │           │   ├── components/{TscnPreviewShell,Canvas2DStage,
 │           │   │               SceneTreeViewer,NodeDetailsPanel,ViewportSelector,...}/
 │           │   │   # TscnPreviewShell is a thin composition root; ViewportArea,
@@ -212,6 +215,56 @@ decoders, which stay faithful readers of what the file says:
 A regression here is invisible to most fixtures — an untextured mesh, or a
 vertically symmetric texture, cannot show a V error at all. `unit-arraymesh-uv.tscn`
 exists to pin it: a four-band atlas whose green band must read at the TOP.
+
+### The 2D canvas light pass
+
+`r3f/lighting2d/` ports `drivers/gles3/shaders/canvas.glsl`. A Godot 2D light
+paints nothing on the canvas: it is multiplied into every lit CanvasItem
+beneath it. The shader captures each item's albedo BEFORE the canvas tint and
+folds it into every light term, which collapses the whole pass to
+
+    color.rgb = albedo × S
+
+where `S` starts at the CanvasModulate and each light applies one blend to it
+(`+= light·a` for ADD, `-= light·a` for SUB, `mix(S, light, a)` for MIX). `S`
+does not depend on the item, so it is accumulated ONCE, and the three modules
+split along that seam:
+
+- **`CanvasLighting2D`** owns the accumulator and the pre-pass. Lights live on
+  their own camera layer, so collecting them needs no second scene graph — the
+  pre-pass just points the camera at that layer. `S` is seeded by a full-NDC
+  quad rather than a clear colour, keeping the seed out of any colour-management
+  path and leaving the renderer's global clear state untouched.
+- **`lightQuad`** is the producer: one PointLight2D's cookie, emitting the light
+  term in rgb and the cookie coverage in alpha, with one fixed-function blend per
+  `Light2D.BlendMode`.
+- **`canvasItemLighting`** is the consumer: an `onBeforeCompile` injection that
+  makes an ordinary `meshBasicMaterial` read the accumulator.
+
+Three properties are load-bearing and easy to undo by accident:
+
+- **The accumulator is half-float and unclamped.** Godot clamps only after the
+  light is multiplied into the albedo. A light blended straight onto the canvas
+  is clamped to [0, 1] BEFORE that multiply, which flattens any `energy > 1`
+  light into a saturated disc with no falloff.
+- **The light path compiles unconditionally**, gated by a `uLightsActive`
+  uniform rather than by whether the scene has lights. A light registers only
+  once its cookie resolves, which is always after the items around it have
+  compiled — and R3F never bumps `material.needsUpdate` when `onBeforeCompile`
+  changes, so an item compiled without the path would never get it. Godot's own
+  shader is shaped the same way: zero lights is data, not a different program.
+- **The buffer is read in DEVICE pixels** (`gl.getDrawingBufferSize`), because
+  the lookup is `gl_FragCoord / resolution`. Sizing from the CSS size is correct
+  only at `devicePixelRatio` 1, which is exactly what the capture harness uses —
+  so the goldens cannot see that mistake.
+
+`light_mode = Light Only` skips the canvas tint, so it needs the same
+accumulation over a different seed. That is a second pass over the same quads
+with the seed quad's uniform changed, allocated only when such an item exists.
+
+Parity is measured, not derived: `pnpm ref:godot <scene> --probe x,y` prints the
+engine's exact pixels, and the `unit-pointlight2d*` comparison sheets carry the
+resulting numbers.
 
 ### Resource Loading
 
