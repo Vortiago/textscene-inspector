@@ -17,9 +17,10 @@
  * A `CanvasLayer` is its own canvas, so the walk does not descend into one.
  */
 
-import { createContext, useContext } from 'react';
+import { createContext, useContext, useMemo } from 'react';
 import type { TscnNode } from '../parser/types.js';
 import { WHITE_MODULATE, type RGBA } from './canvasItemModulate.js';
+import { CANVAS_MODULATE_FLOOR } from './lighting2d/canvasItemLighting.js';
 import {
   CanvasItemLightMode,
   type CanvasItemMaterialProperties,
@@ -65,6 +66,11 @@ export function canvasModulateColor(nodes: readonly TscnNode[]): RGBA {
 export const CanvasModulateContext = createContext<RGBA>(WHITE_MODULATE);
 CanvasModulateContext.displayName = 'CanvasModulateContext';
 
+/** The canvas tint in force, ungated by any item's light mode. */
+export function useCanvasModulate(): RGBA {
+  return useContext(CanvasModulateContext);
+}
+
 /**
  * The canvas tint THIS item multiplies into its own pixels: the active
  * CanvasModulate, or white for an item the canvas tint must skip.
@@ -72,9 +78,33 @@ CanvasModulateContext.displayName = 'CanvasModulateContext';
  * Both `Unshaded` and `LightOnly` skip it — Godot's guard excludes them
  * together, since a light-only item shows nothing of its own base for the tint
  * to act on.
+ *
+ * The tint is FLOORED at one 8-bit step per channel. The 2D light injection
+ * recovers an item's albedo by dividing this value back out (see
+ * `lighting2d/canvasItemLighting`), and a zero channel would make that albedo
+ * unrecoverable — a black CanvasModulate, the ordinary way to author night,
+ * would then swallow every light on the canvas. The floor is below what an
+ * 8-bit channel can show, and the lit result is unaffected either way because
+ * the accumulator carries the true tint.
  */
 export function useCanvasModulateFor(material: CanvasItemMaterialProperties | null): RGBA {
   const canvasModulate = useContext(CanvasModulateContext);
   const shaded = (material?.lightMode ?? CanvasItemLightMode.NORMAL) === CanvasItemLightMode.NORMAL;
-  return shaded ? canvasModulate : WHITE_MODULATE;
+  return useMemo(
+    () => (shaded ? floorCanvasModulate(canvasModulate) : WHITE_MODULATE),
+    [shaded, canvasModulate]
+  );
+}
+
+function floorCanvasModulate(color: RGBA): RGBA {
+  const { r, g, b } = color;
+  if (r >= CANVAS_MODULATE_FLOOR && g >= CANVAS_MODULATE_FLOOR && b >= CANVAS_MODULATE_FLOOR) {
+    return color;
+  }
+  return {
+    r: Math.max(r, CANVAS_MODULATE_FLOOR),
+    g: Math.max(g, CANVAS_MODULATE_FLOOR),
+    b: Math.max(b, CANVAS_MODULATE_FLOOR),
+    a: color.a,
+  };
 }

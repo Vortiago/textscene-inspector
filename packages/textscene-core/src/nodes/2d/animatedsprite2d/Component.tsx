@@ -192,7 +192,7 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
     <CanvasItem2D
       node={node}
       props={props}
-      body={({ color, opacity }, material) =>
+      body={({ color, opacity }, material, lighting) =>
         showPlaceholder ? (
           <MissingResourcePlaceholder shape="plane" name={node.name} />
         ) : displayedTexture ? (
@@ -206,6 +206,7 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
               depthWrite={false}
               side={THREE.DoubleSide}
               {...canvasItemBlendState(material?.blendMode ?? CanvasItemBlendMode.MIX)}
+              {...lighting}
             />
           </mesh>
         ) : null

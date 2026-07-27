@@ -59,7 +59,7 @@ export function TileMap({ node, children }: NodeComponentProps) {
     <CanvasItem2D
       node={node}
       props={props}
-      body={(tint, material) =>
+      body={(tint, material, lighting) =>
         status === 'loaded' && model && meshEntries
           ? meshEntries.map((entry) => {
               const { color, opacity } = layerTint(tint, entry.layer);
@@ -74,6 +74,7 @@ export function TileMap({ node, children }: NodeComponentProps) {
                   opacity={opacity}
                   name={node.name}
                   blend={canvasItemBlendState(material?.blendMode ?? CanvasItemBlendMode.MIX)}
+                  lighting={lighting}
                 />
               );
             })

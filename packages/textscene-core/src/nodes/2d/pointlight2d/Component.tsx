@@ -1,21 +1,30 @@
 /**
- * <PointLight2D> — a 2D point light that renders a textured quad
- * with additive/subtractive/normal blending, wrapped in a CanvasItem2D
- * group so the transform, z-index and visibility match the 2D canvas.
+ * <PointLight2D> — a 2D point light. It draws nothing on the canvas, as Godot's
+ * lights do not: it contributes its cookie to the accumulation buffer that
+ * every lit canvas item multiplies its albedo against (see
+ * `r3f/lighting2d/CanvasLighting2D`).
  *
- * When `enabled=false` the body callback returns null so no mesh
- * enters the tree at all (no additiveMaterials in the registry).
+ * The quad sits on the light camera layer, so the main pass never sees it and
+ * the light pre-pass sees nothing else. It is still wrapped in CanvasItem2D so
+ * its transform, `visible` and z come from the same ritual as any other node.
+ *
+ * When `enabled=false` the body returns null and the light does not register.
  */
 
-import { useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
-import { godotColorToLinear } from '../../../r3f/godotColor';
 import { useTexture2D } from '../../../resources/useTexture2D';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import type { PointLight2DProperties } from './types';
+import type { Color } from '../../base/node2d/types';
+import { createLightQuadMaterial } from '../../../r3f/lighting2d/lightQuad';
+import {
+  LIGHT_LAYER,
+  useRegisterCanvasLight2D,
+} from '../../../r3f/lighting2d/CanvasLighting2D';
 
 export function PointLight2D({ node, children }: NodeComponentProps) {
   const props = node.properties as PointLight2DProperties;
@@ -31,12 +40,8 @@ export function PointLight2D({ node, children }: NodeComponentProps) {
   );
   const showPlaceholder = missing || !props.texture;
 
-  // Emitted colour: Godot sRGB → linear, scaled by energy. NOT clamped — an
-  // additive light with energy > 1 is meant to over-brighten (bloom).
-  const litColor = useMemo(
-    () => godotColorToLinear(props.color).multiplyScalar(props.energy),
-    [props.color, props.energy]
-  );
+  const lights = props.enabled && !!displayedTexture ? 1 : 0;
+  useRegisterCanvasLight2D(lights > 0);
 
   // When disabled: return null → no mesh in tree.
   if (!props.enabled) return null;
@@ -51,7 +56,8 @@ export function PointLight2D({ node, children }: NodeComponentProps) {
         ) : displayedTexture ? (
           <QuadMesh
             texture={displayedTexture}
-            color={litColor}
+            color={props.color}
+            energy={props.energy}
             scale={props.texture_scale}
             offset={props.offset}
             blendMode={props.blend_mode}
@@ -67,12 +73,14 @@ export function PointLight2D({ node, children }: NodeComponentProps) {
 function QuadMesh({
   texture,
   color,
+  energy,
   scale,
   offset,
   blendMode,
 }: {
   texture: THREE.Texture;
-  color: THREE.Color;
+  color: Color;
+  energy: number;
   scale: number;
   offset: { x: number; y: number };
   blendMode: number;
@@ -80,57 +88,22 @@ function QuadMesh({
   const width = (texture.image as { width?: number } | null | undefined)?.width ?? 1;
   const height = (texture.image as { height?: number } | null | undefined)?.height ?? 1;
 
+  const material = useMemo(
+    () => createLightQuadMaterial(texture, color, energy, blendMode),
+    [texture, color, energy, blendMode]
+  );
+  useEffect(() => () => material.dispose(), [material]);
+
+  // The light layer is what keeps this quad out of the visible pass: the
+  // accumulation pre-pass renders that layer alone, the main pass renders
+  // everything else.
+  const toLightLayer = useCallback((mesh: THREE.Mesh | null) => {
+    mesh?.layers.set(LIGHT_LAYER);
+  }, []);
+
   return (
-    <mesh position={[offset.x, -offset.y, 0]}>
+    <mesh ref={toLightLayer} position={[offset.x, -offset.y, 0]} material={material}>
       <planeGeometry args={[width * scale, height * scale]} />
-      <meshBasicMaterial
-        map={texture}
-        color={color}
-        transparent
-        depthWrite={false}
-        side={THREE.DoubleSide}
-        {...lightBlendState(blendMode)}
-      />
     </mesh>
   );
-}
-
-/**
- * A 2D light is applied AGAINST the surface, not painted over it.
- *
- * Godot's canvas light pass computes `light = light_texture × color × energy`
- * and then combines it with the item's own albedo, so `Light2D.BlendMode.ADD`
- * leaves the framebuffer at `albedo × (1 + light)` — a dark floor stays dark
- * under a torch, a pale wall catches it. Painting the cookie on with plain
- * additive blending instead gives `albedo + light`, which washes the whole
- * neighbourhood toward white regardless of what is underneath. With 23 lights
- * over one dungeon that is the difference between torchlight and fog.
- *
- * `DstColorFactor` recovers Godot's equation exactly without a second pass or a
- * framebuffer read: the destination IS the albedo by the time the light draws,
- * so `src × DST + dst × ONE` is `albedo × (1 + light)`. SUB is the same product
- * subtracted. Alpha is left alone (`Zero`/`One`) — a light contributes colour,
- * never coverage.
- *
- * MIX has no such identity (it interpolates toward the light colour by the
- * light's alpha, which needs the destination as a term on both sides), so it
- * stays an ordinary blend — see the slice's comparison sheet.
- */
-const AGAINST_SURFACE = {
-  blending: THREE.CustomBlending,
-  blendSrc: THREE.DstColorFactor,
-  blendDst: THREE.OneFactor,
-  blendSrcAlpha: THREE.ZeroFactor,
-  blendDstAlpha: THREE.OneFactor,
-  blendEquationAlpha: THREE.AddEquation,
-} as const;
-
-const LIGHT_BLEND: Record<number, THREE.MeshBasicMaterialParameters> = {
-  0: { ...AGAINST_SURFACE, blendEquation: THREE.AddEquation },
-  1: { ...AGAINST_SURFACE, blendEquation: THREE.ReverseSubtractEquation },
-  2: { blending: THREE.NormalBlending },
-};
-
-function lightBlendState(blendMode: number): THREE.MeshBasicMaterialParameters {
-  return LIGHT_BLEND[blendMode] ?? LIGHT_BLEND[0]!;
 }

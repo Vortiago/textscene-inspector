@@ -27,6 +27,7 @@ import { useYSortContext, useYSortSlot, type YSortContextValue } from './context
 import { useCanvasItemTint } from './canvasItemModulate.js';
 import { useCanvasItemMaterial } from './components/canvasItemMaterialContext.js';
 import { useCanvasModulateFor } from './canvasModulate.js';
+import { useCanvasItemLighting } from './lighting2d/useCanvasItemLighting.js';
 import { canvasItemBlendState } from '../resources/materials/canvasitemmaterial/renderer.js';
 import { CanvasItemBlendMode } from '../resources/materials/canvasitemmaterial/types.js';
 import { Z_INDEX_STEP, node2dGroupProps, node2dGroupSpread } from './node2dTransform.js';
@@ -358,7 +359,9 @@ function TileGroupRenderer({ item, z, band, node }: {
   // This path bypasses <TileMapLayer>, so it reproduces the CanvasItem ritual's
   // material resolution and light-mode-gated canvas tint itself.
   const material = useCanvasItemMaterial(tileProps);
-  const { color, opacity } = useCanvasItemTint(tileProps, useCanvasModulateFor(material));
+  const canvasModulate = useCanvasModulateFor(material);
+  const { color, opacity } = useCanvasItemTint(tileProps, canvasModulate);
+  const lighting = useCanvasItemLighting(material);
   const allCells = tileProps.cells ?? null;
   // When expanded by the y-sort pass, tileData.cells holds the filtered Y-group cells.
   const cells = item.tileData?.cells ?? allCells;
@@ -388,6 +391,7 @@ function TileGroupRenderer({ item, z, band, node }: {
           opacity={opacity}
           name={node.name}
           blend={canvasItemBlendState(material?.blendMode ?? CanvasItemBlendMode.MIX)}
+          lighting={lighting}
         />
       ))}
     </group>

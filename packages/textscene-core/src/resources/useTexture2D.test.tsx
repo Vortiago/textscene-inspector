@@ -43,6 +43,16 @@ energy = 2.0
 texture = SubResource("t")
 `;
 
+/**
+ * The cookie a light quad actually samples. A PointLight2D emits Godot's light
+ * term through a ShaderMaterial rather than painting a textured quad on the
+ * canvas, so the texture arrives as the `uCookie` uniform, not as `map`.
+ */
+function cookieOf(mesh: unknown): THREE.Texture | undefined {
+  const material = (mesh as THREE.Mesh).material as THREE.ShaderMaterial;
+  return material.uniforms?.uCookie?.value as THREE.Texture | undefined;
+}
+
 async function render(tscn: string) {
   const scene = new TscnParser().parse(tscn);
   const fake = createFakeResourceLoader();
@@ -69,13 +79,13 @@ describe('useTexture2D — procedural cookies reach 2D canvas items', () => {
     const renderer = await render(LIGHT_WITH_GRADIENT_COOKIE);
     const meshes = renderer.scene.findAllByType('Mesh');
     expect(meshes.length).toBeGreaterThan(0);
-    const material = (meshes[0]!.instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
 
-    // The placeholder is a magenta plane with no map; the real light quad
-    // samples the rasterised gradient.
-    expect(material.map).toBeInstanceOf(THREE.DataTexture);
-    expect(material.map!.image.width).toBe(64);
-    expect(material.map!.image.height).toBe(64);
+    // The placeholder is a magenta plane with no cookie at all; the real light
+    // quad samples the rasterised gradient.
+    const cookie = cookieOf(meshes[0]!.instance);
+    expect(cookie).toBeInstanceOf(THREE.DataTexture);
+    expect(cookie!.image.width).toBe(64);
+    expect(cookie!.image.height).toBe(64);
   });
 
   it('rasterises ONE texture for every node pointing at the same gradient', async () => {
@@ -103,28 +113,20 @@ texture = SubResource("t")
 [node name="C" type="PointLight2D" parent="."]
 texture = SubResource("t")
 `);
-    const maps = renderer.scene
-      .findAllByType('Mesh')
-      .map((m) => ((m.instance as THREE.Mesh).material as THREE.MeshBasicMaterial).map);
-    expect(maps).toHaveLength(3);
-    expect(new Set(maps).size).toBe(1);
+    const cookies = renderer.scene.findAllByType('Mesh').map((m) => cookieOf(m.instance));
+    expect(cookies).toHaveLength(3);
+    expect(new Set(cookies).size).toBe(1);
   });
 
   it('keeps the shared texture usable after one consumer unmounts', async () => {
     // The cache owns it; a consumer that disposed on unmount would leave the
     // others sampling a freed buffer.
     const first = await render(LIGHT_WITH_GRADIENT_COOKIE);
-    const shared = (
-      (first.scene.findAllByType('Mesh')[0]!.instance as THREE.Mesh)
-        .material as THREE.MeshBasicMaterial
-    ).map!;
+    const shared = cookieOf(first.scene.findAllByType('Mesh')[0]!.instance)!;
     await first.unmount();
 
     const second = await render(LIGHT_WITH_GRADIENT_COOKIE);
-    const after = (
-      (second.scene.findAllByType('Mesh')[0]!.instance as THREE.Mesh)
-        .material as THREE.MeshBasicMaterial
-    ).map!;
+    const after = cookieOf(second.scene.findAllByType('Mesh')[0]!.instance)!;
     expect(after.image).toBeTruthy();
     expect(shared.image).toBeTruthy();
   });
@@ -161,7 +163,6 @@ texture = ExtResource("1")
       </CanvasWorkspaceProvider>
     );
     await new Promise<void>((r) => setTimeout(r, 10));
-    const mesh = renderer.scene.findAllByType('Mesh')[0]!.instance as THREE.Mesh;
-    expect((mesh.material as THREE.MeshBasicMaterial).map).toBe(tex);
+    expect(cookieOf(renderer.scene.findAllByType('Mesh')[0]!.instance)).toBe(tex);
   });
 });

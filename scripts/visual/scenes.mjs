@@ -319,6 +319,7 @@ export const GOLDEN_SCENES = [
   // inline gradient cookie under a canvas tint with an unshaded item beside it.
   { name: 'pointlight2d-blend', file: 'unit-pointlight2d-blend.tscn', maxDiffPct: 0.5 },
   { name: 'pointlight2d-gradient', file: 'unit-pointlight2d-gradient.tscn', maxDiffPct: 0.5 },
+  { name: 'pointlight2d-lightonly', file: 'unit-pointlight2d-lightonly.tscn', maxDiffPct: 0.5 },
   // Baseline corrected in the Y-flip fix: a NavigationPolygon's vertices are
   // Godot canvas pixels (+Y DOWN), and this overlay was the one 2D geometry
   // path that skipped the negation — so the navmesh used to sit ABOVE the
