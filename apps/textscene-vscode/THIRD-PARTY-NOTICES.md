@@ -28,8 +28,8 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/nodes/3d/csg/csgsphere3d/sphereGeometry.ts` | `modules/csg/csg_shape.cpp` (`CSGSphere3D::_build_brush`) |
 | `packages/textscene-core/src/nodes/3d/csg/csgpolygon3d/polygonGeometry.ts` | `modules/csg/csg_shape.cpp` (`CSGPolygon3D::_build_brush`) |
 | `packages/textscene-core/src/nodes/3d/csg/csgtorus3d/torusGeometry.ts` | `modules/csg/csg_shape.cpp` (`CSGTorus3D::_build_brush`) |
-| `packages/textscene-core/src/r3f/lighting2d/CanvasLighting2D.tsx` | `drivers/gles3/shaders/canvas.glsl` (the canvas light pass: `base_color`, `canvas_modulation`, the light loop) |
-| `packages/textscene-core/src/r3f/lighting2d/canvasItemLighting.ts` | `drivers/gles3/shaders/canvas.glsl` (`MODE_UNSHADED` / `MODE_LIGHT_ONLY` guards, `light_only_alpha`) |
+| `packages/textscene-core/src/r3f/lighting2d/CanvasLighting2D.tsx` | `drivers/gles3/shaders/canvas.glsl` (the canvas light pass: `base_color`, `canvas_modulation`, the light loop) and `servers/rendering/renderer_canvas_cull.cpp` (`light->item_mask & ci->light_mask`) |
+| `packages/textscene-core/src/r3f/lighting2d/canvasItemLighting.ts` | `drivers/gles3/shaders/canvas.glsl` (`MODE_UNSHADED` / `MODE_LIGHT_ONLY` guards, `light_only_alpha`) and `servers/rendering/renderer_canvas_cull.cpp` (the item cull-mask test) |
 | `packages/textscene-core/src/r3f/lighting2d/lightQuad.ts` | `drivers/gles3/shaders/canvas.glsl` (`light_blend_compute`, `light_base_color` energy packing) |
 | `scripts/godot-ref/run.mjs` | `editor/plugins/node_3d_editor_plugin.cpp` (`Node3DEditor::_node_added` yield rule, `_load_default_preview_settings`, `_preview_settings_changed`, `Node3DEditorViewport::Cursor()`) |
 

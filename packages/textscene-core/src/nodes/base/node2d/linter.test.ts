@@ -378,6 +378,40 @@ describe('Node2D Linter', () => {
   });
 });
 
+describe('Node2D Linter: light_mask, inherited by every CanvasItem', () => {
+  it('accepts the whole 32-bit range, including 0 and the sign bit', () => {
+    for (const mask of ['0', '1', '512', '2147483648', '4294967295']) {
+      expectClean(scene(node('Node2D', { light_mask: mask })));
+    }
+  });
+
+  it('rejects a negative mask', () => {
+    expectDiagnostic(scene(node('Node2D', { light_mask: '-1' })), {
+      ruleName: 'strict-parser',
+      severity: 'error',
+      contains: ['light_mask'],
+    });
+  });
+
+  it('rejects a mask past 32 bits', () => {
+    expectDiagnostic(scene(node('Node2D', { light_mask: '4294967296' })), {
+      ruleName: 'strict-parser',
+      severity: 'error',
+      contains: ['light_mask'],
+    });
+  });
+
+  it('reaches a Node2D SUBCLASS through the base walk', () => {
+    // The point of registering it here: every 2D slice inherits the validator
+    // rather than each one re-declaring it.
+    expectDiagnostic(scene(node('Sprite2D', { light_mask: '-1' })), {
+      ruleName: 'strict-parser',
+      severity: 'error',
+      contains: ['light_mask'],
+    });
+  });
+});
+
 describe('Node2D Linter — lenient float grammar (#190 #7 follow-up)', () => {
   it('accepts scale with leading-dot / trailing-dot / explicit-plus floats', () => {
     expectClean(scene(node('Node2D', { scale: 'Vector2(.5, 2.)' })));

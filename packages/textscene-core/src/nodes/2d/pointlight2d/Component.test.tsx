@@ -19,7 +19,11 @@ import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import type { TscnNode } from '../../../parser/types';
-import { LIGHT_LAYER } from '../../../r3f/lighting2d/CanvasLighting2D';
+import {
+  CanvasLighting2DProvider,
+  LIGHT_LAYER,
+  LIGHT_SEED_LAYER,
+} from '../../../r3f/lighting2d/CanvasLighting2D';
 
 const nodeHeading = { type: 'node' as const, attributes: { type: 'PointLight2D', name: 'Light' } };
 
@@ -40,6 +44,9 @@ async function render(rootNode: TscnNode) {
   (tex as unknown as { image: { width: number; height: number } }).image = { width: 64, height: 64 };
   fake.textures.seed(TEX, tex);
 
+  // The lighting provider is mounted because the light's camera LAYER is the
+  // layer of its cull-mask class, which only the provider can assign: an
+  // unclassified light deliberately draws nowhere.
   return ReactThreeTestRenderer.create(
     <CanvasWorkspaceProvider workspace="2d">
       <ResourceLoaderProvider loader={fake.loader}>
@@ -47,7 +54,9 @@ async function render(rootNode: TscnNode) {
           internalResources={[]}
           externalResources={[{ id: '1', type: 'Texture2D', path: TEX }]}
         >
-          <PointLight2D node={rootNode} />
+          <CanvasLighting2DProvider canvasModulate={{ r: 1, g: 1, b: 1, a: 1 }}>
+            <PointLight2D node={rootNode} />
+          </CanvasLighting2DProvider>
         </SceneResourcesProvider>
       </ResourceLoaderProvider>
     </CanvasWorkspaceProvider>
@@ -56,9 +65,14 @@ async function render(rootNode: TscnNode) {
 
 type Rendered = Awaited<ReturnType<typeof render>>;
 
+/** The cookie quad, skipping the accumulator's own seed quad. */
 function lightMesh(r: Rendered): THREE.Mesh | undefined {
-  const meshes = r.scene.findAllByType('Mesh');
-  return meshes[0] ? (meshes[0].instance as THREE.Mesh) : undefined;
+  const seedLayer = new THREE.Layers();
+  seedLayer.set(LIGHT_SEED_LAYER);
+  return r.scene
+    .findAllByType('Mesh')
+    .map((o) => o.instance as THREE.Mesh)
+    .find((m) => !m.layers.test(seedLayer));
 }
 
 function lightMaterial(r: Rendered): THREE.ShaderMaterial {

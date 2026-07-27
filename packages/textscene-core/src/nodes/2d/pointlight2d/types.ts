@@ -12,4 +12,16 @@ export interface PointLight2DProperties extends Node2DProperties {
   texture?: string;
   texture_scale: number;
   offset: Vector2;
+  /**
+   * `Light2D.range_item_cull_mask`: the mask ANDed against each CanvasItem's
+   * `light_mask` to decide whether this light reaches it. NOT the light's own
+   * `light_mask`, which is the light node's CanvasItem mask and says nothing
+   * about what it lights.
+   */
+  range_item_cull_mask: number;
+  /**
+   * `Light2D.shadow_item_cull_mask`: the same test for occluders, deciding
+   * which `LightOccluder2D`s cast a shadow from this light.
+   */
+  shadow_item_cull_mask: number;
 }

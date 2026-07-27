@@ -517,6 +517,10 @@
           "declaredOn": "Node2D"
         },
         {
+          "property": "light_mask",
+          "declaredOn": "Node2D"
+        },
+        {
           "property": "material",
           "declaredOn": "Node2D"
         },
@@ -2756,6 +2760,10 @@
           "declaredOn": "Node2D"
         },
         {
+          "property": "light_mask",
+          "declaredOn": "Node2D"
+        },
+        {
           "property": "material",
           "declaredOn": "Node2D"
         },
@@ -3426,6 +3434,10 @@
         },
         {
           "property": "global_transform",
+          "declaredOn": "Node2D"
+        },
+        {
+          "property": "light_mask",
           "declaredOn": "Node2D"
         },
         {

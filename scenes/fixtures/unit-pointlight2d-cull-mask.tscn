@@ -1,0 +1,42 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Texture2D" path="res://textures/light2d.png" id="1_light"]
+
+[node name="Root" type="Node2D"]
+
+[node name="LitByWarm" type="Polygon2D" parent="."]
+color = Color(0.72, 0.72, 0.76, 1)
+polygon = PackedVector2Array(40, 150, 300, 150, 300, 500, 40, 500)
+
+[node name="LitByCool" type="Polygon2D" parent="."]
+light_mask = 2
+color = Color(0.72, 0.72, 0.76, 1)
+polygon = PackedVector2Array(320, 150, 580, 150, 580, 500, 320, 500)
+
+[node name="LitByBoth" type="Polygon2D" parent="."]
+light_mask = 3
+color = Color(0.72, 0.72, 0.76, 1)
+polygon = PackedVector2Array(600, 150, 860, 150, 860, 500, 600, 500)
+
+[node name="LitByNeither" type="Polygon2D" parent="."]
+light_mask = 512
+color = Color(0.72, 0.72, 0.76, 1)
+polygon = PackedVector2Array(880, 150, 1140, 150, 1140, 500, 880, 500)
+
+[node name="Warm" type="PointLight2D" parent="."]
+position = Vector2(340, 325)
+texture = ExtResource("1_light")
+color = Color(1, 0.7, 0.35, 1)
+energy = 0.9
+texture_scale = 1.1
+
+[node name="Cool" type="PointLight2D" parent="."]
+position = Vector2(812, 325)
+texture = ExtResource("1_light")
+color = Color(0.4, 0.65, 1, 1)
+energy = 0.9
+range_item_cull_mask = 2
+texture_scale = 1.1
+
+[node name="CanvasModulate" type="CanvasModulate" parent="."]
+color = Color(0.3, 0.34, 0.55, 1)

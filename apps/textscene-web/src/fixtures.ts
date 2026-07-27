@@ -293,6 +293,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Pointlight2d Cull Mask",
+    "file": "unit-pointlight2d-cull-mask.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Pointlight2d Gradient",
     "file": "unit-pointlight2d-gradient.tscn",
     "category": "Other"
