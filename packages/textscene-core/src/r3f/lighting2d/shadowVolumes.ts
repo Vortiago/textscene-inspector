@@ -3,11 +3,24 @@
  * shadow pass, as plain vector math with no GL and no THREE.
  *
  * Godot builds a per-light polar depth map and samples it in `canvas.glsl`.
- * With `shadow_filter = SHADOW_FILTER_NONE` (the default, and what the whole
- * vendored corpus authors) that sampling is a `step()`, so the result is a
- * HARD in/out test — exactly what a stencil mask reproduces. This module emits
- * the mask geometry: for every occluder edge, the convex region of points whose
- * sightline to the light crosses that edge, extruded past the light's reach.
+ * Under `shadow_filter = SHADOW_FILTER_NONE` that sampling is a `step()`, so
+ * the result is a HARD in/out test — exactly what a stencil mask reproduces.
+ * This module emits the mask geometry: for every occluder edge, the convex
+ * region of points whose sightline to the light crosses that edge, extruded
+ * past the light's reach.
+ *
+ * A HARD MASK IS THE RIGHT APPROXIMATION, BUT NOT BECAUSE THE CORPUS IS HARD.
+ * NONE is only the property's default. Every 2D shadow-casting light in the
+ * vendored corpus overrides it: all 23 of the isometric dungeon's use PCF5 at
+ * `shadow_filter_smooth = 5.0`, and Godot's own lights-and-shadows demo uses
+ * PCF5 at 1.2. Those are real penumbrae — measured on one boundary at radius
+ * ~220, the lit→shadowed ramp is ~20 px wide at smooth 5.0 and ~11 px at 1.2,
+ * against a 1 px step with the filter off. What makes the hard mask fine is
+ * that the penumbra is a thin band around a large umbra: three Godot renders of
+ * the dungeon (as authored / filter forced to NONE / shadows off) put the whole
+ * shadow contribution at 8.59 mean of 255, of which a hard-edged version
+ * captures 8.44 — 97%. The soft/hard residual is 0.24 mean over 0.34% of
+ * pixels, which does not pay for a polar shadow map.
  *
  * SPACE. Everything here is the previewer's 2D world space: Godot pixels with
  * Y negated (three.js +Y up), which is what `polygonToSegments` already
@@ -15,9 +28,11 @@
  * signs are the negation of Godot's own Y-down convention.
  *
  * MEASURED, not derived (Godot 4.6.3, `pnpm ref:godot --probe`):
- *  - the lit/shadowed transition is one pixel wide, and lands on the
- *    light→endpoint ray to within ~1 px (Godot's shadow map quantises the
- *    boundary by angle, so its wedge is a fraction of a pixel narrower);
+ *  - with the filter off, the lit/shadowed transition is one pixel wide and
+ *    lands on the light→endpoint ray to within ~1 px (Godot's shadow map
+ *    quantises the boundary by angle, so its wedge is a fraction of a pixel
+ *    narrower). That boundary is the umbra edge under a filter too — PCF just
+ *    ramps across it — so it is the right thing for this module to emit;
  *  - a fully shadowed pixel reads back the unlit surface colour exactly,
  *    because `Light2D.shadow_color` defaults to `Color(0, 0, 0, 0)`;
  *  - `cull_mode` selects edges by winding relative to the light, so a closed
