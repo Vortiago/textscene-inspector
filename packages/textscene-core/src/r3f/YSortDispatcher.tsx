@@ -11,17 +11,25 @@
  * A y_sort_enabled TileMapLayer is decomposed per-Y-group via `groupBySortY`:
  * each distinct sort-Y becomes a separate tileGroup item at its own rank,
  * interleaving with sibling CanvasItem nodes in the parent's flat sort.
+ *
+ * The collection mirrors Godot's `_collect_ysort_children`: a y_sort_enabled
+ * child is appended as an item in its OWN right (its pixels draw at its own
+ * sort position) and THEN descended into, so its subtree merges into the same
+ * flat list behind it. Descending accumulates the child's transform and
+ * effective z-index onto everything it lifts out, which is what keeps a merged
+ * grandchild drawing where the tree put it rather than at the sort root.
  */
 
-import { useMemo, type ReactNode } from 'react';
+import { Fragment, useMemo, type ReactNode } from 'react';
 import type { TscnNode } from '../parser/types.js';
+import type { Node2DProperties } from '../nodes/base/node2d/types.js';
 import { useYSortContext, useYSortSlot, type YSortContextValue } from './contexts/YSortContext.js';
 import { useCanvasItemTint } from './canvasItemModulate.js';
 import { useCanvasItemMaterial } from './components/canvasItemMaterialContext.js';
 import { useCanvasModulateFor } from './canvasModulate.js';
 import { canvasItemBlendState } from '../resources/materials/canvasitemmaterial/renderer.js';
 import { CanvasItemBlendMode } from '../resources/materials/canvasitemmaterial/types.js';
-import { Z_INDEX_STEP } from './node2dTransform.js';
+import { Z_INDEX_STEP, node2dGroupProps, node2dGroupSpread } from './node2dTransform.js';
 import { tileSourceZ } from './tileSourceZ.js';
 import { nodeComponentRegistry } from './NodeComponentRegistry.js';
 import type { TileMapLayerProperties } from '../nodes/2d/tiles/tilemaplayer/types.js';
@@ -38,8 +46,28 @@ export interface YSortItem {
   kind: 'node' | 'tileGroup';
   /** For 'tileGroup': TileMapLayer tile props. */
   tileData?: { tileSetRef: string; worldY: number; cells?: readonly PlacedCell[] };
-  /** The raw TscnNode for this item (used to re-dispatch it). */
+  /**
+   * The TscnNode to re-dispatch. For a y_sort_enabled node this is its BODY
+   * ONLY (`ownBodyOf`): its children are items of their own in this same list,
+   * so dispatching the whole node would draw the subtree a second time.
+   */
   node?: TscnNode;
+  /**
+   * The y_sort_enabled ancestors this item was lifted past, outermost first.
+   * A merged subtree is re-rendered as a flat sibling list, so their local
+   * transforms and path segments have to be restored around the item.
+   */
+  liftedPast: readonly TscnNode[];
+}
+
+/**
+ * The node with its subtree removed. A y_sort_enabled node's children are
+ * separate entries in the parent's flat sort, so the node itself contributes
+ * nothing but its own pixels — which `CanvasItem2D` renders from `body`,
+ * independently of the `children` this strips.
+ */
+function ownBodyOf(node: TscnNode): TscnNode {
+  return { ...node, children: [] };
 }
 
 /** Compute the sortY and effectiveZ for a single CanvasItem node relative to parent context. */
@@ -60,13 +88,18 @@ function itemSortKey(node: TscnNode, parent: YSortContextValue): { sortY: number
 /**
  * Collect y-sorted items from a node's children.
  * - y_sort_enabled child TileMapLayer → tileGroup (decomposed by parent).
- * - y_sort_enabled non-TileMapLayer → recurse.
+ * - y_sort_enabled non-TileMapLayer → its own body, then its merged subtree.
  * - Non-y_sort child → single atomic unit.
+ *
+ * `liftedPast` is the chain of y_sort_enabled ancestors between the sort root
+ * and the current level; it grows on every descent and rides each item so the
+ * renderer can put back what the flattening took away.
  */
 export function collectYSortedItems(
   node: TscnNode,
   parent: YSortContextValue,
-  startOrder: number
+  startOrder: number,
+  liftedPast: readonly TscnNode[] = []
 ): YSortItem[] {
   const items: YSortItem[] = [];
   let order = startOrder;
@@ -85,19 +118,80 @@ export function collectYSortedItems(
         kind: 'tileGroup',
         tileData: { tileSetRef: tileProps.tile_set ?? '', worldY: tileProps.position?.y ?? 0 },
         node: child,
+        liftedPast,
       });
       continue;
     }
 
     if (isYSort) {
-      const subItems = collectYSortedItems(child, parent, order);
+      // Godot sorts a y_sort_enabled node ALONGSIDE the subtree it merges in —
+      // the node is appended first, then descended into. Skipping the append
+      // loses the node's own pixels, which is invisible on the container-only
+      // nodes that make up most y-sorted trees and total on the rest.
+      items.push({
+        sortY: key.sortY,
+        effectiveZ: key.effectiveZ,
+        treeOrder: order++,
+        kind: 'node',
+        node: ownBodyOf(child),
+        liftedPast,
+      });
+      // Its descendants sort against the child's accumulated position and
+      // z-index bucket, not the sort root's — the same `ysort_xform`/`abs_z`
+      // Godot threads through the recursion.
+      const childLocalY = (props.position as { y: number } | undefined)?.y ?? 0;
+      const subItems = collectYSortedItems(
+        child,
+        { parentWorldY: parent.parentWorldY + childLocalY, parentEffectiveZ: key.effectiveZ },
+        order,
+        [...liftedPast, child]
+      );
       items.push(...subItems);
       order += subItems.length;
     } else {
-      items.push({ sortY: key.sortY, effectiveZ: key.effectiveZ, treeOrder: order++, kind: 'node', node: child });
+      items.push({
+        sortY: key.sortY,
+        effectiveZ: key.effectiveZ,
+        treeOrder: order++,
+        kind: 'node',
+        node: child,
+        liftedPast,
+      });
     }
   }
   return items;
+}
+
+/**
+ * Rebuild the local `<group>` transforms of the y_sort_enabled ancestors an
+ * item was lifted past, outermost first, around `element`.
+ *
+ * Deliberately the SAME `node2dGroupProps` conjugation every CanvasItem renders
+ * through rather than a composed matrix of its own: `F·M1·F · F·M2·F =
+ * F·(M1·M2)·F`, so nesting the groups reproduces the tree's composition exactly
+ * (skew included) with no second transform path to keep in step.
+ */
+function liftedTransform(liftedPast: readonly TscnNode[], element: ReactNode): ReactNode {
+  let wrapped = element;
+  for (let i = liftedPast.length - 1; i >= 0; i--) {
+    const ancestor = liftedPast[i]!;
+    const props = ancestor.properties as Partial<Node2DProperties>;
+    const spread = node2dGroupSpread(
+      node2dGroupProps({
+        position: props.position ?? { x: 0, y: 0 },
+        rotation: props.rotation ?? 0,
+        scale: props.scale ?? { x: 1, y: 1 },
+        skew: props.skew,
+      })
+    );
+    wrapped = <group {...spread}>{wrapped}</group>;
+  }
+  return wrapped;
+}
+
+/** The item's true path in the scene tree, including the levels it was lifted past. */
+function liftedPath(basePath: string, liftedPast: readonly TscnNode[], name: string): string {
+  return joinPath(liftedPast.reduce((p, a) => joinPath(p, a.name), basePath), name);
 }
 
 /**
@@ -151,6 +245,7 @@ export function YSortDispatcher({ node, children: _children }: { node: TscnNode;
               kind: 'tileGroup',
               tileData: { ...item.tileData!, cells: group.cells },
               node: item.node,
+              liftedPast: item.liftedPast,
             });
           }
           continue;
@@ -203,13 +298,17 @@ export function YSortDispatcher({ node, children: _children }: { node: TscnNode;
           // group's `position` below), so the rank is applied ONCE. Key on the layer's
           // name so sibling y-sort TileMapLayers can't collide on a shared treeOrder.
           return (
-            <TileGroupRenderer
-              key={`tg-${item.node.name}-${item.treeOrder}`}
-              item={item}
-              z={fullZ}
-              band={slot.width / (K + 1)}
-              node={item.node}
-            />
+            <Fragment key={`tg-${item.node.name}-${item.treeOrder}`}>
+              {liftedTransform(
+                item.liftedPast,
+                <TileGroupRenderer
+                  item={item}
+                  z={fullZ}
+                  band={slot.width / (K + 1)}
+                  node={item.node}
+                />
+              )}
+            </Fragment>
           );
         }
 
@@ -221,7 +320,13 @@ export function YSortDispatcher({ node, children: _children }: { node: TscnNode;
           return (
             <YSortZProvider key={`n-${item.treeOrder}`} value={fullZ}>
               <YSortSlotProvider value={{ base: 0, width: slot.width / (K + 1) }}>
-                <DispatchedNode node={item.node} path={joinPath(basePath, item.node.name)} />
+                {liftedTransform(
+                  item.liftedPast,
+                  <DispatchedNode
+                    node={item.node}
+                    path={liftedPath(basePath, item.liftedPast, item.node.name)}
+                  />
+                )}
               </YSortSlotProvider>
             </YSortZProvider>
           );
