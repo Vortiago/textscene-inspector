@@ -7,10 +7,16 @@ import type { Node2DProperties } from '../../base/node2d/types';
 export interface LightOccluder2DProperties extends Node2DProperties {
   /** "SubResource(...)" or "ExtResource(...)" reference to an OccluderPolygon2D. */
   occluder?: string;
-  /** Bitmask of lights that cast shadows for this occluder. */
+  /**
+   * The inherited CanvasItem light mask. Measured against Godot 4.6.3: it does
+   * NOT gate shadow casting — only `occluder_light_mask` does.
+   */
   light_mask: number;
   /** Whether SDF collision is enabled. */
   sdf_collision: boolean;
-  /** Bitmask of lights affected by this occluder's SDF. */
+  /**
+   * Which lights this occluder casts shadows for: it casts when
+   * `occluder_light_mask & Light2D.shadow_item_cull_mask` is non-zero.
+   */
   occluder_light_mask: number;
 }

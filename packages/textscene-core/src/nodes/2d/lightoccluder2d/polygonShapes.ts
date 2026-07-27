@@ -1,3 +1,10 @@
+import { intOr } from '../../../parser/valueParsers';
+import {
+  OCCLUDER_CULL_COUNTER_CLOCKWISE,
+  OCCLUDER_CULL_DISABLED,
+  type OccluderCullMode,
+} from '../../../r3f/lighting2d/shadowVolumes';
+
 /**
  * Utility: convert a flat `PackedVector2Array` `[x0,y0, x1,y1, …]` + `closed`
  * flag into flat `[ax,ay,0, bx,by,0, …]` segment positions for <lineSegments>.
@@ -32,4 +39,19 @@ export function polygonToSegments(points: ArrayLike<number>, closed: boolean): F
   }
 
   return out;
+}
+
+/**
+ * `OccluderPolygon2D.cull_mode`, read from the raw sub-resource property.
+ *
+ * Godot's default is CULL_DISABLED, and the value is written as the bare enum
+ * ordinal. Anything outside 0..2 falls back to DISABLED — the mode that casts
+ * from every edge, so a scene with a garbled value still shadows rather than
+ * silently going transparent.
+ */
+export function parseOccluderCullMode(raw: string | undefined): OccluderCullMode {
+  const value = intOr(raw, OCCLUDER_CULL_DISABLED, 'OccluderPolygon2D.cull_mode');
+  return value >= OCCLUDER_CULL_DISABLED && value <= OCCLUDER_CULL_COUNTER_CLOCKWISE
+    ? (value as OccluderCullMode)
+    : OCCLUDER_CULL_DISABLED;
 }

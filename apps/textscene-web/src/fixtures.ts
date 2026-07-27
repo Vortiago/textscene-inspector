@@ -248,6 +248,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Lightoccluder2d Shadow",
+    "file": "unit-lightoccluder2d-shadow.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Lightoccluder2d",
     "file": "unit-lightoccluder2d.tscn",
     "category": "Other"
