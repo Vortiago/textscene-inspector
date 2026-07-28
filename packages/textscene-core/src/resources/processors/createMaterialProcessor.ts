@@ -29,6 +29,7 @@ export function createMaterialProcessor(
     eventBus,
     resourceType: 'material',
     shouldProcess: (path, data) => isMaterialPath(path) && typeof data === 'string',
+    addressesSubResources: true,
     process: async (path, data) => {
       const { subResourceId } = parseSubResourcePath(path);
       return createMaterialFromContent(data as string, loadTexture, subResourceId);

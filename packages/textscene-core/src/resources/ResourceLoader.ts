@@ -42,6 +42,7 @@ import { createSceneProcessor } from './processors/createSceneProcessor';
 import { createTresResourceProcessor } from './processors/createTresResourceProcessor';
 import { createArrayMeshProcessor, type ArrayMeshResource } from './processors/createArrayMeshProcessor';
 import { runClearCachesSequence } from './clearCachesSequence';
+import { resourceFilePath } from './subResourcePath';
 import type { ParsedTresFile } from '../parser/tresParser';
 import type { ResourceProcessor } from './createResourceProcessor';
 import * as logger from '../logger';
@@ -297,7 +298,14 @@ export class ResourceLoader {
    * dispatch is robust to paths that were referenced but never registered
    * as ExtResource.
    */
-  provideFile(path: string): void {
+  provideFile(rawPath: string): void {
+    // Bytes only ever belong to a FILE. A caller holding a **Sub-resource
+    // path** (a missing-resources row, say) is telling us about the file that
+    // owns it, so normalise before anything keys off it: clearing the file is
+    // what announces `invalidated` to every address inside it, and routing the
+    // address instead would miss the metadata and fan out to the wrong
+    // processors.
+    const path = resourceFilePath(rawPath);
     this._fileEventBus?.clearCache(path);
     this.clearCache(path);
 

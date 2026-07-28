@@ -145,6 +145,34 @@ describe('decodeArrayMesh', () => {
     expect(mesh.surfaces[0]!.materialPath).toBeUndefined();
     expect(mesh.surfaces[0]!.indexCount).toBe(3);
   });
+
+  it('warns when a sub-resource path names an id the file does not declare', () => {
+    // Silence here means a node that renders nothing with nothing said about
+    // why. The material path throws for the same class of error.
+    const mesh = decodeArrayMesh(
+      NESTED_MESH_TRES,
+      'res://vehicles/meshes/wheel.tres::ArrayMesh_absent'
+    );
+
+    expect(mesh.surfaces).toHaveLength(0);
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    const message = String(warnSpy.mock.calls[0]![0]);
+    expect(message).toContain('[ArrayMesh]');
+    expect(message).toContain('ArrayMesh_absent');
+    // The owning file, not the whole address — the address is not a file.
+    expect(message).toContain('res://vehicles/meshes/wheel.tres');
+    expect(message).not.toContain('::');
+  });
+
+  it('warns when a sub-resource path names something that is not a mesh', () => {
+    const mesh = decodeArrayMesh(
+      OWN_MATERIAL_TRES,
+      'res://vehicles/meshes/wheel.tres::StandardMaterial3D_shvqh'
+    );
+
+    expect(mesh.surfaces).toHaveLength(0);
+    expect(String(warnSpy.mock.calls[0]![0])).toContain('StandardMaterial3D');
+  });
 });
 
 /** The `[resource]` mesh (materialised, 6 indices) plus a bare `shadow_mesh` (3). */

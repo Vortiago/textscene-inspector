@@ -40,6 +40,8 @@ describe('createResourceProcessor with a sub-resource path', () => {
       eventBus,
       resourceType: 'resource',
       shouldProcess: shouldProcessSpy as (path: string, data: FileData) => boolean,
+      // This `process` reads its path, so it is allowed to be asked for one.
+      addressesSubResources: true,
       process: async (path, data) => `${String(data)}@${path}`,
     });
   });
@@ -123,5 +125,33 @@ describe('createResourceProcessor with a sub-resource path', () => {
     await flush();
 
     expect(processor.cachedPaths()).toEqual(['res://wheel.tres::StandardMaterial3D_shvqh']);
+  });
+
+  it('refuses an address when the processor has not opted in', async () => {
+    // The fetch/cache/dedupe plumbing is free for every processor, but the
+    // SEMANTICS are not: a `process` that ignores its path would return the
+    // whole file's resource and it would be cached under the address — a wrong
+    // resource under a right-looking name. Default to failing rather than
+    // guessing, so a processor whose author never heard of addresses is safe.
+    const failed = vi.fn();
+    eventBus.on<Error>('resource', 'failed', failed);
+    const unaware = createResourceProcessor<string>({
+      fileEventBus,
+      eventBus,
+      resourceType: 'resource',
+      shouldProcess: () => true,
+      process: async (_path, data) => String(data),
+    });
+
+    unaware.request('res://wheel.tres::StandardMaterial3D_shvqh');
+    await flush();
+
+    expect(failed).toHaveBeenCalledWith(
+      'res://wheel.tres::StandardMaterial3D_shvqh',
+      expect.objectContaining({
+        message: expect.stringContaining('cannot address the sub-resource'),
+      })
+    );
+    expect(unaware.getCached('res://wheel.tres::StandardMaterial3D_shvqh')).toBeNull();
   });
 });

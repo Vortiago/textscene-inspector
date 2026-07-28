@@ -25,6 +25,7 @@ import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
 import {
   createResourcePipeline,
+  resourceFilePath,
   ResourceLoaderProvider,
   TscnPreviewShell,
   useMissingResources,
@@ -347,8 +348,12 @@ export function R3FApp() {
   }
 
   function handleResourceUpload(path: string, file: File) {
-    provider.addUploadedFile(path, file);
-    loader.provideFile(path);
+    // A missing-resources row may name a resource INSIDE a `.tres`; the file the
+    // user picks is the owning file, so the provider must be keyed by that or
+    // the bytes land under a key nothing will ever ask for.
+    const filePath = resourceFilePath(path);
+    provider.addUploadedFile(filePath, file);
+    loader.provideFile(filePath);
   }
 
   // Surfaces one matching round's diagnostics and wires every matched file

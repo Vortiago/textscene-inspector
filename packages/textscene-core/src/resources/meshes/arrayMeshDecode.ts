@@ -389,12 +389,30 @@ export function decodeArrayMesh(content: string, selfPath: string): ArrayMeshDat
   const parsed = parseTresFile(content);
   const { filePath, subResourceId } = parseSubResourcePath(selfPath);
 
-  const surfacesRaw =
-    subResourceId === undefined
-      ? parsed.properties['_surfaces']
-      : (parsed.subResources.find((r) => r.id === subResourceId)?.data['_surfaces'] as
-          | string
-          | undefined);
+  let surfacesRaw: string | undefined;
+  if (subResourceId === undefined) {
+    surfacesRaw = parsed.properties['_surfaces'];
+  } else {
+    // An addressed sub-resource that is absent, or present but carrying no
+    // surfaces (a material, say), would otherwise decode to an empty mesh: a
+    // node that renders nothing and says nothing about why. The material path
+    // fails loudly for the same class of error; match it.
+    const sub = parsed.subResources.find((r) => r.id === subResourceId);
+    const raw = sub?.data['_surfaces'];
+    if (!sub) {
+      warn(
+        `[ArrayMesh] ${filePath} declares no sub-resource "${subResourceId}" — ` +
+          `the mesh addressing it renders nothing`
+      );
+    } else if (typeof raw !== 'string') {
+      warn(
+        `[ArrayMesh] sub-resource "${subResourceId}" in ${filePath} is a ${sub.type} ` +
+          `and carries no surfaces — the mesh addressing it renders nothing`
+      );
+    } else {
+      surfacesRaw = raw;
+    }
+  }
   if (!surfacesRaw) return { surfaces: [] };
 
   const extById = new Map(parsed.extResources.map((r) => [r.id, r.path]));

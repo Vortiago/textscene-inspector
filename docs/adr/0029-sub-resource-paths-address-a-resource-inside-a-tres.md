@@ -49,17 +49,28 @@ Two rules make it safe, and they are the whole of the design:
   sub-resource therefore share one `THREE.Material` by identity, as they already do for
   a whole-file material.
 - **Only `filePath` reaches the byte layer.** `createResourceProcessor` normalises the
-  address before calling `fileEventBus.request`, so no `ResourceProvider`, upload
-  (ADR-0022), hot-reload watcher or missing-resources row ever sees a string that is not
-  a real file. The bytes of a sub-resource *are* the bytes of the file that owns it.
+  address before calling `fileEventBus.request`, so no `ResourceProvider` or hot-reload
+  watcher is ever handed a string that is not a real file. The bytes of a sub-resource
+  *are* the bytes of the file that owns it. The rule holds going *down*; it does not hold
+  coming back *up*, because a failed address is reported under the address (see
+  Consequences), so anything that turns a reported path back into a fetch — `provideFile`,
+  a host's **Resource upload** (ADR-0022) — normalises at that boundary too.
 
 The normalisation lives in `createResourceProcessor`, not in `FileEventBus`, for three
 reasons: the byte bus is deliberately type-agnostic and must stay so; a `shouldProcess`
 predicate is a question about a FILE (`path.endsWith('.tres')`) and would break if handed
 an address; and one arrival can settle several addresses, which is bookkeeping the
-processor already owns. Doing it there also means **every** processor type gains the
-capability at once rather than the material one specially — which is what makes the seam
-invisible to a future slice author.
+processor already owns. Doing it there also means every processor type gains the
+fetch/cache/dedupe **plumbing** at once rather than the material one specially.
+
+It does NOT give them the **semantics**: a `process()` that ignores its path would hand
+back the whole file's resource and have it cached under the address — a wrong resource
+under a right-looking name, the same trap `decodeArrayMesh` had to close. So
+`addressesSubResources` is an opt-in flag and the factory refuses an address without it,
+loudly. Only the material and ArrayMesh processors declare it today. This bounds the
+"hidden" claim honestly: it is hidden from every **consumer** holding a path string, which
+is what GridMap demonstrates, but a **producer** minting addresses for a new resource type
+must both mint them and honour `subResourceId` in its own `process()`.
 
 (B) lost on the "hidden" criterion. It is more explicit, but every consumer would learn a
 new type, and the three kinds would stay three kinds in the type system — so a new slice
@@ -72,16 +83,21 @@ give kind 3 different ones.
 - `parseSubResourcePath` / `subResourcePath` / `resourceFilePath`
   (`resources/subResourcePath.ts`) are the only place the `::` grammar is written.
 - `decodeArrayMesh` and `meshLibraryFromTres` take the path they were loaded from,
-  because a sub-resource can only be addressed relative to its own file. Both then emit
-  ordinary path strings; `MeshInstance3D`, `ExternalMaterialSlot` and `GridMap` needed no
-  change at all, which is the check that the seam is genuinely hidden.
+  because a sub-resource can only be addressed relative to its own file. The parameter is
+  required rather than defaulted: a producer that forgets it is the trap this ADR exists
+  to close, so it fails at compile time. Both then emit ordinary path strings, and the
+  material consumers — `MeshInstance3D`, `ExternalMaterialSlot`, `GridMap` — needed no
+  change at all, which is the check that the seam is hidden from consumers.
 - A sub-resource's own texture `ExtResource`s resolve against the **owning `.tres`'s**
   table. Getting this wrong would silently sample the scene's texture of the same id, so
   it is pinned by its own test.
 - `decodeArrayMesh` honours an address too, so a `[sub_resource type="ArrayMesh"]` (a
   `shadow_mesh`, a MeshLibrary's embedded item mesh) reads its own `_surfaces`. Without
-  that it would have fallen through to the file's `[resource]` body and returned a
-  *different mesh* under the right-looking name — a wrong answer, not a missing one.
+  that it would have fallen through to the file's `[resource]` body: a *different mesh*
+  under the right-looking name for a `shadow_mesh`, and an empty one for a MeshLibrary
+  (whose `[resource]` has no `_surfaces` at all) — wrong or blank, but never diagnosed.
+  An address naming an id the file does not declare, or one that is not a mesh, now warns
+  rather than decoding silently to nothing.
 - A per-path `clearCache` now also drops, and announces `invalidated` for, the addresses
   into that file. A **Dependency hot-reload** re-requests only the file it knows about,
   so without the announcement a mounted consumer would keep serving a stale material
@@ -90,4 +106,14 @@ give kind 3 different ones.
 - Cost: nothing yet resolves a `uid://…::id` reference, and an address whose sub-resource
   id is absent from the file fails like a missing file (cached null → the slot's neutral
   default), which is the intended lenient behaviour but does put the `::` form in front
-  of the user in the missing-resources panel if it ever happens.
+  of the user in the missing-resources panel if it ever happens. Uploading a file against
+  such a row therefore normalises to the owning file; without that the bytes would be
+  stored under a key nothing ever asks for. Unreachable for a well-formed file — the owner
+  must load before anything inside it can be addressed — but a mesh carrying a
+  sub-resource type we do not build (an `ORMMaterial3D`, say) reaches it on real data.
+- Cost: this is one seam for resources fetched **through a processor**, not for every
+  reader of a `.tres`. `tileSetFromTres` keeps resolving its sources synchronously out of
+  an already-parsed `ParsedTresFile` — it has no path to key on and needs none — and a
+  `SubResource` of the previewed scene remains its own third mechanism
+  (`resolveStandardMaterial` over `SceneResourcesContext`). Unifying those was not worth
+  churning working code, so "one seam" means one seam for the case that had none.

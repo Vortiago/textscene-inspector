@@ -25,7 +25,7 @@
 import type { FileEventBus, FileData } from './FileEventBus';
 import type { ResourceEventBus, ResourceType } from './ResourceEventBus';
 import { LRUCache } from './LRUCache';
-import { resourceFilePath } from './subResourcePath';
+import { parseSubResourcePath, resourceFilePath } from './subResourcePath';
 import * as logger from '../logger';
 
 export type { ResourceType };
@@ -70,6 +70,18 @@ export interface ResourceProcessorConfig<T> {
   shouldProcess?: (path: string, data: FileData) => boolean;
   /** Process raw data into final resource (file-event-bus mode) */
   process?: (path: string, data: FileData) => Promise<T>;
+  /**
+   * Whether `process` reads a **Sub-resource path**'s `subResourceId` and builds
+   * THAT resource rather than the owning file's `[resource]` body.
+   *
+   * Normalising the address in this factory gives every processor the
+   * fetch/cache/dedupe plumbing for free but NOT the semantics: a `process` that
+   * ignores its path would return the whole file's resource and cache it under
+   * the address — a wrong resource under a right-looking name, the exact trap
+   * this grammar exists to avoid. So the capability is opt-in and the default
+   * refuses, loudly. A processor whose author never heard of addresses is safe.
+   */
+  addressesSubResources?: boolean;
   /**
    * Direct-load mode: skip FileEventBus and fetch+materialise the
    * resource in one step. Mutually exclusive with `process` + `shouldProcess`.
@@ -135,7 +147,16 @@ export interface ResourceProcessor<T> {
 export function createResourceProcessor<T>(
   config: ResourceProcessorConfig<T>
 ): ResourceProcessor<T> {
-  const { fileEventBus, eventBus, resourceType, shouldProcess, process, loadDirectly, dispose } = config;
+  const {
+    fileEventBus,
+    eventBus,
+    resourceType,
+    shouldProcess,
+    process,
+    addressesSubResources = false,
+    loadDirectly,
+    dispose,
+  } = config;
 
   // Bounded LRU: capacity eviction disposes the resource just like an
   // explicit clearCache() would, but skips `null` failure sentinels (no
@@ -216,6 +237,24 @@ export function createResourceProcessor<T>(
       // Already cached - skip
       if (cache.has(path)) {
         inflight.delete(path);
+        continue;
+      }
+
+      const { subResourceId } = parseSubResourcePath(path);
+      if (subResourceId !== undefined && !addressesSubResources) {
+        // This processor's `process` would hand back the whole file's resource
+        // and it would be cached under the address — silently wrong. Fail so the
+        // caller learns the type it addressed has no sub-resource semantics yet.
+        inflight.delete(path);
+        cache.set(path, null);
+        eventBus.emit<Error>(
+          resourceType,
+          'failed',
+          path,
+          new Error(
+            `${resourceType} processor cannot address the sub-resource "${subResourceId}" inside ${filePath}`
+          )
+        );
         continue;
       }
 
