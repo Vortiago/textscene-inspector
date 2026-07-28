@@ -29,6 +29,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { resourceFilePath } from '../../resources/subResourcePath.js';
 
 export interface MissingResourcesContextValue {
   /** Paths the dispatcher's resource hooks currently report as missing. */
@@ -127,9 +128,17 @@ export function MissingResourcesProvider({
   const removeUploaded = useCallback((path: string) => {
     if (!path) return;
     setUploadedPaths((prev) => {
-      if (!prev.has(path)) return prev;
+      // One stored file can back several rows: a `.tres` and any **Sub-resource
+      // path** into it are separate identities but share one uploaded byte
+      // entry, so removing that file retires every row it was standing in for.
+      // Dropping only the clicked row would leave the others claiming an upload
+      // that no longer exists — a "✓ uploaded" row beside "⚠ missing" for the
+      // same file.
+      const file = resourceFilePath(path);
+      const stale = [...prev].filter((p) => resourceFilePath(p) === file);
+      if (stale.length === 0) return prev;
       const next = new Set(prev);
-      next.delete(path);
+      for (const p of stale) next.delete(p);
       return next;
     });
   }, []);

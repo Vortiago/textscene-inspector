@@ -53,11 +53,14 @@ Two rules make it safe, and they are the whole of the design:
   watcher is ever handed a string that is not a real file. The bytes of a sub-resource
   *are* the bytes of the file that owns it. The rule holds going *down*; it does not hold
   coming back *up*, because a failed address is reported under the address (see
-  Consequences). So the two places a reported path turns back into a fetch normalise:
+  Consequences). So the places a reported path turns back into a fetch normalise:
   `provideFile`, and `MissingResourcesPanel` before it calls a host's upload OR remove
   callback (ADR-0022). Doing it in the panel rather than in each host is deliberate —
   those callbacks are a pair, and a host that normalised only the upload would store bytes
-  under the file and then try to remove them under the address.
+  under the file and then try to remove them under the address. The web host's
+  multi-file drop matcher is a third such route and does NOT normalise; it does not need
+  to, because it matches on case-insensitive basename equality and an address's basename
+  still carries its `::id`, so no plausibly-named file matches one.
 
 The normalisation lives in `createResourceProcessor`, not in `FileEventBus`, for three
 reasons: the byte bus is deliberately type-agnostic and must stay so; a `shouldProcess`
