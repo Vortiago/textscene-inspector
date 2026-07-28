@@ -57,7 +57,7 @@ export function proceduralTexture(
   subResourceId: string,
   rasterize: () => THREE.Texture | null
 ): THREE.Texture | null {
-  const key = `${sceneToken(internalResources)}:${subResourceId}`;
+  const key = proceduralTextureKey(internalResources, subResourceId);
   const cached = cache.get(key);
   if (cached) return cached;
 
@@ -65,6 +65,32 @@ export function proceduralTexture(
   if (!rasterized) return null;
   cache.set(key, rasterized);
   return rasterized;
+}
+
+/**
+ * The cache key a consumer must pin while it holds the texture.
+ *
+ * Sharing is only safe because the cache owns the lifetime, and it can only own
+ * it if it knows who is still borrowing. Without a pin, the 65th distinct
+ * gradient in one canvas evicts and DISPOSES the least-recently-used one while
+ * a mounted cookie or albedo slot is still sampling it — nothing re-rasterises,
+ * because the consumer's memo deps have not changed.
+ */
+export function proceduralTextureKey(
+  internalResources: readonly TscnInternalResource[],
+  subResourceId: string
+): string {
+  return `${sceneToken(internalResources)}:${subResourceId}`;
+}
+
+/** Hold `key` resident for as long as a consumer is mounted. */
+export function pinProceduralTexture(key: string): void {
+  cache.pin(key);
+}
+
+/** Release a pin taken by `pinProceduralTexture`. */
+export function unpinProceduralTexture(key: string): void {
+  cache.unpin(key);
 }
 
 /** Test seam: drop every entry, disposing each. */

@@ -16,9 +16,21 @@
  * front of the wall row that should hide it.
  *
  * Expressing the nudge as a FRACTION of the band makes that unrepresentable:
- * every source lands strictly between 0 and `band`, in index order, however
- * narrow the band gets.
+ * every source lands in `[0, band)`, in index order, however narrow the band
+ * gets.
+ *
+ * The FIRST source lands on 0, not above it. The band a layer is given is
+ * usually shared with its siblings rather than private to it, so lifting source
+ * 0 off zero would push the whole layer in front of a sibling drawing at the
+ * same `z_index` — which Godot resolves by tree order, and which three resolves
+ * the same way when the z values tie. Only the second and later sources need
+ * separating, and only from each other.
+ *
+ * `sourceIndex` must be the position among the sources ACTUALLY DRAWN, not the
+ * index into the tileset's full source list. Pairing a tileset-wide index with
+ * a drawn-only count is what lets the result exceed the band.
  */
 export function tileSourceZ(sourceIndex: number, sourceCount: number, band: number): number {
-  return ((sourceIndex + 1) / (sourceCount + 1)) * band;
+  if (sourceCount <= 0) return 0;
+  return (sourceIndex / sourceCount) * band;
 }

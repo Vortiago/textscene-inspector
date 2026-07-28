@@ -20,11 +20,18 @@
  * status explaining why not).
  */
 
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import type * as THREE from 'three';
 import type { TscnExternalResource, TscnInternalResource } from '../parser/types.js';
 import { resolveTexture2DPath } from './SubResourceResolver.js';
-import { resolveGradientTexture2D } from './textures/gradienttexture2d/resolveGradientTexture.js';
+import {
+  gradientTextureCacheKey,
+  resolveGradientTexture2D,
+} from './textures/gradienttexture2d/resolveGradientTexture.js';
+import {
+  pinProceduralTexture,
+  unpinProceduralTexture,
+} from './textures/proceduralTextureCache.js';
 import { useResource } from './useResource.js';
 
 export interface Texture2DResult {
@@ -47,6 +54,19 @@ export function useTexture2D(
     () => resolveGradientTexture2D(ref, internalResources),
     [ref, internalResources]
   );
+
+  // Borrowed, but the cache can only honour that if it knows we hold it: an
+  // unpinned entry is disposed outright once the cache overflows, leaving this
+  // consumer sampling a dead texture with no reason to re-rasterise.
+  const proceduralKey = useMemo(
+    () => (procedural ? gradientTextureCacheKey(ref, internalResources) : null),
+    [procedural, ref, internalResources]
+  );
+  useEffect(() => {
+    if (!proceduralKey) return undefined;
+    pinProceduralTexture(proceduralKey);
+    return () => unpinProceduralTexture(proceduralKey);
+  }, [proceduralKey]);
 
   const path = useMemo(
     () => (procedural ? null : resolveTexture2DPath(ref, externalResources, internalResources)),

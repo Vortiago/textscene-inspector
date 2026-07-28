@@ -23,8 +23,22 @@ import {
 } from '../../SubResourceResolver';
 import { parseGradient, parseGradientTexture2D } from './parser';
 import { rasterizeGradientTexture2D } from './renderer';
-import { proceduralTexture } from '../proceduralTextureCache';
+import { proceduralTexture, proceduralTextureKey } from '../proceduralTextureCache';
 import type * as THREE from 'three';
+
+/**
+ * The cache key backing `resolveGradientTexture2D(ref, …)`, or null when the
+ * reference is not a sub-resource. A mounted consumer pins this so capacity
+ * eviction cannot dispose a texture it is still sampling.
+ */
+export function gradientTextureCacheKey(
+  ref: string | undefined,
+  internalResources: readonly TscnInternalResource[]
+): string | null {
+  const parsed = parseResourceReference(ref ?? '');
+  if (!parsed || parsed.type !== 'SubResource') return null;
+  return proceduralTextureKey(internalResources, parsed.id);
+}
 
 export function resolveGradientTexture2D(
   ref: string | undefined,

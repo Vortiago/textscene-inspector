@@ -114,9 +114,15 @@ function FilledPolygon({
 }) {
   // Godot multiplies fill × modulate × self_modulate in one space, then converts
   // once: compose with the tint's sRGB `own` product before sRGB→linear.
-  const { fill, opacity } = useMemo(() => {
+  const { fill, tintOnlyFill, opacity } = useMemo(() => {
     const composed = multiplyModulate(tint.own, color);
-    return { fill: godotColorToLinear(composed), opacity: composed.a };
+    return {
+      fill: godotColorToLinear(composed),
+      // The same tint WITHOUT the node's own `color`, for the per-vertex path
+      // where Godot replaces `color` rather than combining with it.
+      tintOnlyFill: godotColorToLinear(tint.own),
+      opacity: composed.a,
+    };
   }, [tint.own, color]);
 
   const blend = canvasItemBlendState(material?.blendMode ?? CanvasItemBlendMode.MIX);
@@ -125,7 +131,13 @@ function FilledPolygon({
     <mesh>
       <primitive object={geometry} attach="geometry" />
       <meshBasicMaterial
-        color={fill}
+        // Godot's draw picks ONE of the two: `if (vertex_colors.size() ==
+        // points.size()) colors[i] = vertex_colors[i]; else colors.push_back(color)`.
+        // three multiplies whatever is here into vColor, so passing the fill as
+        // well would render `color x vertexColor` — invisible while `color` is
+        // its white default, and a darkened or hue-shifted fill the moment it
+        // is not. The node tint still applies; only the node's own `color` drops.
+        color={vertexColors ? tintOnlyFill : fill}
         map={texture}
         vertexColors={vertexColors}
         opacity={opacity}
@@ -192,7 +204,7 @@ function buildPolygonGeometry(
   }
 
   const colors = buildVertexColors(points.length, props.vertexColors);
-  if (colors) geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  if (colors) geometry.setAttribute('color', new THREE.BufferAttribute(colors, 4));
 
   return geometry;
 }
@@ -238,20 +250,25 @@ function buildUvs(
 /**
  * Per-vertex colors, but only when there is exactly one per vertex — Godot
  * falls back to the flat `color` for any other length, rather than padding.
- * Alpha is dropped: the material carries one opacity, as the flat fill does.
+ *
+ * RGBA, not RGB: alpha is per-vertex in Godot, and a gradient fade or a soft
+ * edge is the ordinary reason to author `vertex_colors` at all. itemSize 4 is
+ * what makes three define `USE_COLOR_ALPHA` and multiply `vColor.a` into the
+ * fragment, so a three-wide attribute renders the fade at flat opacity.
  */
 function buildVertexColors(vertexCount: number, vertexColors: Float32Array): Float32Array | null {
   if (vertexCount === 0 || vertexColors.length / 4 !== vertexCount) return null;
-  const out = new Float32Array(vertexCount * 3);
+  const out = new Float32Array(vertexCount * 4);
   for (let i = 0; i < vertexCount; i++) {
     const linear = godotColorToLinear({
       r: vertexColors[i * 4]!,
       g: vertexColors[i * 4 + 1]!,
       b: vertexColors[i * 4 + 2]!,
     });
-    out[i * 3] = linear.r;
-    out[i * 3 + 1] = linear.g;
-    out[i * 3 + 2] = linear.b;
+    out[i * 4] = linear.r;
+    out[i * 4 + 1] = linear.g;
+    out[i * 4 + 2] = linear.b;
+    out[i * 4 + 3] = vertexColors[i * 4 + 3]!;
   }
   return out;
 }

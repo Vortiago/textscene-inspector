@@ -67,8 +67,9 @@ describe('TileMap render parity', () => {
     const [layer0, layer1] = meshes.map((m) => m.instance as THREE.Mesh);
     // Atlas sources sit at a FRACTION of one layer step rather than at the
     // layer base, so a layer's sources can never reach the layer above it.
-    // With one source per layer that fraction is the step's midpoint.
-    const sourceNudge = TILE_LAYER_STEP / 2;
+    // The FIRST source takes no nudge at all — a lone source must not lift the
+    // layer off the z it shares with its siblings.
+    const sourceNudge = 0;
     expect(layer0!.position.z).toBeCloseTo(sourceNudge, 8);
     expect(layer1!.position.z).toBeCloseTo(
       1 * Z_INDEX_STEP + 1 * TILE_LAYER_STEP + sourceNudge,

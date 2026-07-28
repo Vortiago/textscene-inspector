@@ -24,7 +24,13 @@ import { Fragment, useMemo, type ReactNode } from 'react';
 import type { TscnNode } from '../parser/types.js';
 import type { Node2DProperties } from '../nodes/base/node2d/types.js';
 import { useYSortContext, useYSortSlot, type YSortContextValue } from './contexts/YSortContext.js';
-import { useCanvasItemTint } from './canvasItemModulate.js';
+import {
+  Modulate2DContext,
+  multiplyModulate,
+  useCanvasItemTint,
+  useParentModulate,
+  WHITE_MODULATE,
+} from './canvasItemModulate.js';
 import { useCanvasItemMaterial } from './components/canvasItemMaterialContext.js';
 import { useCanvasModulateFor } from './canvasModulate.js';
 import { useCanvasItemLighting } from './lighting2d/useCanvasItemLighting.js';
@@ -46,6 +52,13 @@ export interface YSortItem {
   treeOrder: number;
   kind: 'node' | 'tileGroup';
   /** For 'tileGroup': TileMapLayer tile props. */
+  /**
+   * `worldY` is the layer's ACCUMULATED world Y — every y_sort_enabled ancestor
+   * this item was lifted past, plus the layer's own `position.y`. The per-row
+   * expansion cannot recompute it: by then the only context available is the
+   * sort root's, so the ancestors' offsets would silently drop out and the
+   * layer's rows would sort against a different origin than its siblings.
+   */
   tileData?: { tileSetRef: string; worldY: number; cells?: readonly PlacedCell[] };
   /**
    * The TscnNode to re-dispatch. For a y_sort_enabled node this is its BODY
@@ -117,7 +130,10 @@ export function collectYSortedItems(
         effectiveZ: key.effectiveZ,
         treeOrder: order++,
         kind: 'tileGroup',
-        tileData: { tileSetRef: tileProps.tile_set ?? '', worldY: tileProps.position?.y ?? 0 },
+        tileData: {
+          tileSetRef: tileProps.tile_set ?? '',
+          worldY: parent.parentWorldY + (tileProps.position?.y ?? 0),
+        },
         node: child,
         liftedPast,
       });
@@ -172,8 +188,22 @@ export function collectYSortedItems(
  * F·(M1·M2)·F`, so nesting the groups reproduces the tree's composition exactly
  * (skew included) with no second transform path to keep in step.
  */
-function liftedTransform(liftedPast: readonly TscnNode[], element: ReactNode): ReactNode {
-  let wrapped = element;
+function LiftedAncestors({
+  liftedPast,
+  children,
+}: {
+  liftedPast: readonly TscnNode[];
+  children: ReactNode;
+}) {
+  // Flattening drops the ancestors' CanvasItem state along with their groups.
+  // `visible` and `modulate` both inherit down the tree in Godot, so an
+  // invisible or tinted y-sorted container has to keep hiding/tinting the
+  // descendants that were lifted out of it — otherwise half a subtree takes the
+  // tint (the ancestor's own body still goes through CanvasItem2D) and half
+  // does not.
+  const parentModulate = useParentModulate();
+
+  let wrapped = children;
   for (let i = liftedPast.length - 1; i >= 0; i--) {
     const ancestor = liftedPast[i]!;
     const props = ancestor.properties as Partial<Node2DProperties>;
@@ -185,9 +215,21 @@ function liftedTransform(liftedPast: readonly TscnNode[], element: ReactNode): R
         skew: props.skew,
       })
     );
-    wrapped = <group {...spread}>{wrapped}</group>;
+    wrapped = (
+      <group {...spread} visible={props.visible !== false}>
+        {wrapped}
+      </group>
+    );
   }
-  return wrapped;
+
+  // `modulate` inherits; `self_modulate` does not, so only the former is folded
+  // in here. Applied outside the groups because it is a colour, not a transform.
+  const inherited = liftedPast.reduce(
+    (acc, a) => multiplyModulate(acc, (a.properties as Partial<Node2DProperties>).modulate ?? WHITE_MODULATE),
+    parentModulate
+  );
+
+  return <Modulate2DContext.Provider value={inherited}>{wrapped}</Modulate2DContext.Provider>;
 }
 
 /** The item's true path in the scene tree, including the levels it was lifted past. */
@@ -234,7 +276,11 @@ export function YSortDispatcher({ node, children: _children }: { node: TscnNode;
           const layerYSortOrigin = (tp.y_sort_origin as number) ?? 0;
           // groupBySortY adds layerYSortOrigin to each cell's sort key itself, so the
           // layer world-Y passed in must NOT include it (else the origin double-counts).
-          const layerWorldY = parent.parentWorldY + (tp.position?.y ?? 0);
+          // Taken from the ITEM, which carries the Y accumulated through every
+          // y_sort_enabled ancestor. `parent` here is the sort root's context,
+          // so recomputing from it would drop those offsets and sort the layer's
+          // rows against a different origin than the siblings it interleaves with.
+          const layerWorldY = item.tileData?.worldY ?? 0;
           const groups: YSortGroup[] = groupBySortY(cells, grid, layerYSortOrigin, layerWorldY);
           for (let g = 0; g < groups.length; g++) {
             const group = groups[g]!;
@@ -255,7 +301,7 @@ export function YSortDispatcher({ node, children: _children }: { node: TscnNode;
       expanded.push(item);
     }
     return expanded;
-  }, [rawItems, model, status, parent.parentWorldY]);
+  }, [rawItems, model, status]);
 
   // Bucket by effectiveZ, sort within each bucket by sortY ascending (stable),
   // then assign rank-based z within each bucket.
@@ -300,15 +346,14 @@ export function YSortDispatcher({ node, children: _children }: { node: TscnNode;
           // name so sibling y-sort TileMapLayers can't collide on a shared treeOrder.
           return (
             <Fragment key={`tg-${item.node.name}-${item.treeOrder}`}>
-              {liftedTransform(
-                item.liftedPast,
+              <LiftedAncestors liftedPast={item.liftedPast}>
                 <TileGroupRenderer
                   item={item}
                   z={fullZ}
                   band={slot.width / (K + 1)}
                   node={item.node}
                 />
-              )}
+              </LiftedAncestors>
             </Fragment>
           );
         }
@@ -321,13 +366,12 @@ export function YSortDispatcher({ node, children: _children }: { node: TscnNode;
           return (
             <YSortZProvider key={`n-${item.treeOrder}`} value={fullZ}>
               <YSortSlotProvider value={{ base: 0, width: slot.width / (K + 1) }}>
-                {liftedTransform(
-                  item.liftedPast,
+                <LiftedAncestors liftedPast={item.liftedPast}>
                   <DispatchedNode
                     node={item.node}
                     path={liftedPath(basePath, item.liftedPast, item.node.name)}
                   />
-                )}
+                </LiftedAncestors>
               </YSortSlotProvider>
             </YSortZProvider>
           );
@@ -366,20 +410,44 @@ function TileGroupRenderer({ item, z, band, node }: {
   // When expanded by the y-sort pass, tileData.cells holds the filtered Y-group cells.
   const cells = item.tileData?.cells ?? allCells;
 
-  if (!cells?.length || status !== 'loaded' || !model) {
-    return <group name={`TileGroup_${node.name}_${item.treeOrder}`} position={[0, 0, z]} />;
+  // `visible` and `enabled` gate the ordinary path through <CanvasItem2D>'s
+  // group and the `props.enabled &&` in the body. This path bypasses both, so
+  // without these two a hidden or disabled y-sorted layer drew every tile.
+  const drawable =
+    tileProps.visible !== false && tileProps.enabled && !!cells?.length && status === 'loaded';
+
+  // The layer's own Node2D offset. <CanvasItem2D> applies it on the ordinary
+  // path; this one bypasses it, and `layerWorldY` above already folds
+  // `position.y` into the rows' sort keys — so dropping it here drew the whole
+  // map offset from where it sorted. Godot's +Y is DOWN, hence the negation.
+  const originX = tileProps.position?.x ?? 0;
+  const originY = -(tileProps.position?.y ?? 0);
+
+  if (!drawable || !model) {
+    return (
+      <group
+        name={`TileGroup_${node.name}_${item.treeOrder}`}
+        position={[originX, originY, z]}
+      />
+    );
   }
 
   // Partition cells by source (per-source batching), then render each Y-group.
-  const cellsBySource = model.sourceOrder.map((sourceId, sourceIdx) => ({
-    sourceId,
-    sourceIndex: sourceIdx,
-    source: model.sources.get(sourceId)!,
-    cells: cells.filter((c) => c.sourceId === sourceId),
-  })).filter((entry) => entry.cells.length > 0);
+  // `sourceIndex` is assigned AFTER the filter, so it is the position among the
+  // sources this Y-group actually draws. Keeping the tileset-wide index here
+  // while passing the drawn-only count to `tileSourceZ` is what let the nudge
+  // run past the band.
+  const cellsBySource = model.sourceOrder
+    .map((sourceId) => ({
+      sourceId,
+      source: model.sources.get(sourceId)!,
+      cells: cells.filter((c) => c.sourceId === sourceId),
+    }))
+    .filter((entry) => entry.cells.length > 0)
+    .map((entry, sourceIndex) => ({ ...entry, sourceIndex }));
 
   return (
-    <group name={`TileGroup_${node.name}_${item.treeOrder}`} position={[0, 0, z]}>
+    <group name={`TileGroup_${node.name}_${item.treeOrder}`} position={[originX, originY, z]}>
       {cellsBySource.map(({ sourceId, sourceIndex, source, cells: sourceCells }) => (
         <TileSourceMesh
           key={`${sourceId}_${item.treeOrder}`}

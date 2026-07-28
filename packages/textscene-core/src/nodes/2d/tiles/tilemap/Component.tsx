@@ -39,19 +39,23 @@ export function TileMap({ node, children }: NodeComponentProps) {
     return props.layers.flatMap((layer, layerIndex) => {
       if (!layer.enabled || !layer.cells?.length) return [];
       return model.sourceOrder
-        .map((sourceId, sourceIndex) => ({
+        .map((sourceId) => ({
           key: `${layerIndex}:${sourceId}`,
           source: model.sources.get(sourceId)!,
           cells: layer.cells!.filter((c) => c.sourceId === sourceId),
-          // The source nudge is scaled into ONE layer step, so a layer's
-          // atlas sources can never reach the layer stacked above it.
-          z:
-            layer.zIndex * Z_INDEX_STEP +
-            layerIndex * TILE_LAYER_STEP +
-            tileSourceZ(sourceIndex, model.sourceOrder.length, TILE_LAYER_STEP),
           layer,
         }))
-        .filter((entry) => entry.cells.length > 0);
+        .filter((entry) => entry.cells.length > 0)
+        .map((entry, sourceIndex, drawn) => ({
+          ...entry,
+          // The source nudge is scaled into ONE layer step, so a layer's atlas
+          // sources can never reach the layer stacked above it. Index and count
+          // both count the sources actually drawn.
+          z:
+            entry.layer.zIndex * Z_INDEX_STEP +
+            layerIndex * TILE_LAYER_STEP +
+            tileSourceZ(sourceIndex, drawn.length, TILE_LAYER_STEP),
+        }));
     });
   }, [model, props.layers]);
 

@@ -28,14 +28,17 @@ export function TileMapLayer({ node, children }: NodeComponentProps) {
 
   const cellsBySource = useMemo(() => {
     if (!model || !cells?.length) return null;
+    // `sourceIndex` is assigned AFTER the filter, so it is the position among
+    // the sources this layer actually draws. A tileset-wide index paired with
+    // the drawn-only count is what let the nudge run past the band.
     return model.sourceOrder
-      .map((sourceId, sourceIndex) => ({
+      .map((sourceId) => ({
         sourceId,
-        sourceIndex,
         source: model.sources.get(sourceId)!,
         cells: cells.filter((c) => c.sourceId === sourceId),
       }))
-      .filter((entry) => entry.cells.length > 0);
+      .filter((entry) => entry.cells.length > 0)
+      .map((entry, sourceIndex) => ({ ...entry, sourceIndex }));
   }, [model, cells]);
 
   return (

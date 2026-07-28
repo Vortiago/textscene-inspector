@@ -146,7 +146,16 @@ export function rasterizeGradientTexture2D(
     for (let x = 0; x < width; x++) {
       const offset = gradientOffsetAt(tex, x, y);
       const color = sampleGradientColor(gradient, offset);
-      const i = (x + y * width) * 4;
+      // Written BOTTOM-UP. A DataTexture is uploaded from a typed array, and
+      // WebGL's UNPACK_FLIP_Y only applies to image/canvas/video sources — so
+      // `flipY` cannot fix this at the texture level. Every 2D UV path in the
+      // repo is written for the flipY=true convention a file-backed texture
+      // gets (polygon2d emits `1 - godot_v`; the light cookie passes
+      // planeGeometry's uv straight through), so Godot's TOP row has to land at
+      // v = 1, which is the last row of the buffer. Left top-down, a linear
+      // gradient sampled here renders upside-down against the same gradient
+      // shipped as a PNG.
+      const i = (x + (height - 1 - y) * width) * 4;
       data[i] = to8(color.r);
       data[i + 1] = to8(color.g);
       data[i + 2] = to8(color.b);

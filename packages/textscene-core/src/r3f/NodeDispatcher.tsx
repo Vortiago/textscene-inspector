@@ -197,6 +197,18 @@ function PlainNode({
   // Memoized (before the early returns, for rules-of-hooks) so the recursive
   // subtree scan for the slot distributor runs once per node, not every render.
   const hasYSortChild = useMemo(() => hasYSortDescendant(node), [node]);
+  // A CanvasLayer is its OWN canvas: the root canvas's CanvasModulate does not
+  // reach it, and any CanvasModulate inside it tints only this layer. The
+  // subtree scan already refuses to descend into a CanvasLayer when LOOKING for
+  // the tint, but the value it produced was published once for the whole tree —
+  // so a HUD under a CanvasLayer took the world's night-time tint, and was lit
+  // by main-canvas lights, neither of which happens in Godot.
+  const isCanvasLayer = node.type === 'CanvasLayer';
+  const layerModulate = useMemo(
+    () => (isCanvasLayer ? canvasModulateColor(node.children) : null),
+    [isCanvasLayer, node.children]
+  );
+
   const rankZ = useYSortZContext();
   if (workspace === '3d' && isCanvasItem) return null;
   if (
@@ -251,7 +263,19 @@ function PlainNode({
     );
   }
   if (extraChildren) {
-    children.push(<Fragment key="__extra">{extraChildren}</Fragment>);
+    // Rank-cleared exactly like the inline children. These are an instance's
+    // injected sub-scene ROOTS; leaving the parent's rank readable made every
+    // root adopt it as its own z, collapsing a multi-root sub-scene onto one
+    // draw position and discarding each root's own `z_index`.
+    children.push(
+      consumedRank ? (
+        <YSortZProvider key="__extra" value={null}>
+          {extraChildren}
+        </YSortZProvider>
+      ) : (
+        <Fragment key="__extra">{extraChildren}</Fragment>
+      )
+    );
   }
 
   // The wrapper is registered (path <-> Object3D, both directions) so the
@@ -283,7 +307,15 @@ function PlainNode({
           )}
         >
           <Component node={node}>
-            {children.length > 0 ? <>{children}</> : null}
+            {children.length > 0 ? (
+              layerModulate ? (
+                <CanvasModulateContext.Provider value={layerModulate}>
+                  {children}
+                </CanvasModulateContext.Provider>
+              ) : (
+                <>{children}</>
+              )
+            ) : null}
           </Component>
         </ErrorBoundary>
       </group>

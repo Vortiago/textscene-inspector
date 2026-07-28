@@ -18,7 +18,7 @@
  */
 
 import * as THREE from 'three';
-import { useMemo, useRef, type ReactNode, type RefObject } from 'react';
+import { useEffect, useMemo, useRef, type ReactNode, type RefObject } from 'react';
 import type { MeshInstance3DProperties } from './types';
 import type {
   TscnExternalResource,
@@ -31,7 +31,14 @@ import {
   useSceneResources,
 } from '../../../r3f/SceneResourcesContext';
 import { parseResourceReference } from '../../../resources/SubResourceResolver';
-import { resolveGradientTexture2D } from '../../../resources/textures/gradienttexture2d/resolveGradientTexture';
+import {
+  gradientTextureCacheKey,
+  resolveGradientTexture2D,
+} from '../../../resources/textures/gradienttexture2d/resolveGradientTexture';
+import {
+  pinProceduralTexture,
+  unpinProceduralTexture,
+} from '../../../resources/textures/proceduralTextureCache';
 import { useResource } from '../../../resources/useResource';
 import type { ArrayMeshResource } from '../../../resources/processors/createArrayMeshProcessor';
 import { MeshGeometry } from './meshGeometry';
@@ -190,6 +197,21 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
   // Not disposed here: a procedural texture is shared by every node pointing at
   // the same sub-resource and owned by the procedural cache, which frees it on
   // eviction. Freeing it per consumer would pull it out from under the others.
+  // Pinned instead, so that eviction cannot free it while THIS node is still
+  // sampling it — borrowing only works if the owner knows the borrow exists.
+  const proceduralKeys = useMemo(() => {
+    if (!materialSubResource) return [] as string[];
+    const data = materialSubResource.data as Record<string, unknown>;
+    return TEXTURE_PROPERTIES.map((slot) => data[slot])
+      .filter((raw): raw is string => typeof raw === 'string')
+      .map((raw) => gradientTextureCacheKey(raw, internalResources))
+      .filter((key): key is string => key !== null);
+  }, [materialSubResource, internalResources]);
+
+  useEffect(() => {
+    proceduralKeys.forEach(pinProceduralTexture);
+    return () => proceduralKeys.forEach(unpinProceduralTexture);
+  }, [proceduralKeys]);
 
   // Apply the material's UV transform (`uv1_scale` / `uv1_offset`) to
   // every loaded texture. `applyUVTransform` clones the texture before
