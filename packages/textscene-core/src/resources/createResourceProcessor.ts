@@ -240,24 +240,6 @@ export function createResourceProcessor<T>(
         continue;
       }
 
-      const { subResourceId } = parseSubResourcePath(path);
-      if (subResourceId !== undefined && !addressesSubResources) {
-        // This processor's `process` would hand back the whole file's resource
-        // and it would be cached under the address — silently wrong. Fail so the
-        // caller learns the type it addressed has no sub-resource semantics yet.
-        inflight.delete(path);
-        cache.set(path, null);
-        eventBus.emit<Error>(
-          resourceType,
-          'failed',
-          path,
-          new Error(
-            `${resourceType} processor cannot address the sub-resource "${subResourceId}" inside ${filePath}`
-          )
-        );
-        continue;
-      }
-
       if (!process) {
         // File-event-bus mode requires a `process` function; without it
         // the processor can't materialise the resource. Treat as failure.
@@ -313,6 +295,26 @@ export function createResourceProcessor<T>(
       // Deduplicate in-flight requests
       if (inflight.has(path)) {
         logger.info(`[${resourceType}Processor] Already loading: ${path}`);
+        return;
+      }
+
+      const { subResourceId } = parseSubResourcePath(path);
+      if (subResourceId !== undefined && !addressesSubResources) {
+        // Refused before anything is fetched: whether this processor can read a
+        // sub-resource is a property of its `process`, not of the bytes, so
+        // there is nothing to learn by loading the file first. Answering here
+        // also covers `loadDirectly` mode and cannot leave the address stuck
+        // in-flight the way a post-arrival check can.
+        cache.set(path, null);
+        eventBus.emit<Error>(
+          resourceType,
+          'failed',
+          path,
+          new Error(
+            `${resourceType} processor cannot address the sub-resource ` +
+              `"${subResourceId}" inside ${resourceFilePath(path)}`
+          )
+        );
         return;
       }
 

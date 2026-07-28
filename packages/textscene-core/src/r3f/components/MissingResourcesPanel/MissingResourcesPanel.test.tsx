@@ -109,6 +109,55 @@ describe('<MissingResourcesPanel>', () => {
     expect(onRemove).toHaveBeenCalledWith('res://textures/shared.png');
   });
 
+  it('hands the host the OWNING FILE when a row names a resource inside a .tres', async () => {
+    // A failed load is reported under its whole **Sub-resource path**, so a row
+    // can carry `file::id` — but a host keys its provider by file, and what the
+    // user picked IS the file. Passing the address through would store the bytes
+    // under a key nothing ever asks for.
+    const onUpload = vi.fn();
+    render(
+      <MissingResourcesProvider>
+        <ReportMissingOnMount path="res://meshes/wheel.tres::ORMMaterial3D_x" />
+        <MissingResourcesPanel onUpload={onUpload} onRemove={vi.fn()} />
+      </MissingResourcesProvider>
+    );
+
+    const panel = await screen.findByTestId('missing-resources-panel');
+    const input = panel.querySelector('input[type="file"]') as HTMLInputElement;
+    const file = new File(['bytes'], 'wheel.tres', { type: 'text/plain' });
+    await act(async () => {
+      fireEvent.change(input, { target: { files: [file] } });
+    });
+
+    expect(onUpload).toHaveBeenCalledWith('res://meshes/wheel.tres', file);
+  });
+
+  it('removes under the same file key the upload stored, not the address', async () => {
+    // The pair has to agree: normalising only the upload would store bytes under
+    // the file and then try to delete them under the address, silently leaving
+    // the upload in place and breaking the "Remove → row reappears" round-trip.
+    const onRemove = vi.fn();
+    render(
+      <MissingResourcesProvider>
+        <MarkUploadedOnMount path="res://meshes/wheel.tres::ORMMaterial3D_x" />
+        <MissingResourcesPanel onUpload={vi.fn()} onRemove={onRemove} />
+      </MissingResourcesProvider>
+    );
+
+    const panel = await screen.findByTestId('missing-resources-panel');
+    const removeBtn = panel.querySelector(
+      '[data-state="uploaded"] button'
+    ) as HTMLButtonElement;
+    await act(async () => {
+      fireEvent.click(removeBtn);
+    });
+
+    expect(onRemove).toHaveBeenCalledWith('res://meshes/wheel.tres');
+    // The ROW still goes away: the panel's own bookkeeping keeps the address,
+    // which is the identity `useResource` reports it under.
+    expect(screen.queryByTestId('missing-resources-panel')).toBeNull();
+  });
+
   it('uploading a missing path moves it from missing to uploaded set', async () => {
     function MissingThenUpload({ path }: { path: string }) {
       const { report, markUploaded } = useMissingResources();

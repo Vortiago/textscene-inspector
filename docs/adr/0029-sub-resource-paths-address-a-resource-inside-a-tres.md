@@ -53,8 +53,11 @@ Two rules make it safe, and they are the whole of the design:
   watcher is ever handed a string that is not a real file. The bytes of a sub-resource
   *are* the bytes of the file that owns it. The rule holds going *down*; it does not hold
   coming back *up*, because a failed address is reported under the address (see
-  Consequences), so anything that turns a reported path back into a fetch — `provideFile`,
-  a host's **Resource upload** (ADR-0022) — normalises at that boundary too.
+  Consequences). So the two places a reported path turns back into a fetch normalise:
+  `provideFile`, and `MissingResourcesPanel` before it calls a host's upload OR remove
+  callback (ADR-0022). Doing it in the panel rather than in each host is deliberate —
+  those callbacks are a pair, and a host that normalised only the upload would store bytes
+  under the file and then try to remove them under the address.
 
 The normalisation lives in `createResourceProcessor`, not in `FileEventBus`, for three
 reasons: the byte bus is deliberately type-agnostic and must stay so; a `shouldProcess`
@@ -106,11 +109,10 @@ give kind 3 different ones.
 - Cost: nothing yet resolves a `uid://…::id` reference, and an address whose sub-resource
   id is absent from the file fails like a missing file (cached null → the slot's neutral
   default), which is the intended lenient behaviour but does put the `::` form in front
-  of the user in the missing-resources panel if it ever happens. Uploading a file against
-  such a row therefore normalises to the owning file; without that the bytes would be
-  stored under a key nothing ever asks for. Unreachable for a well-formed file — the owner
-  must load before anything inside it can be addressed — but a mesh carrying a
-  sub-resource type we do not build (an `ORMMaterial3D`, say) reaches it on real data.
+  of the user in the missing-resources panel if it ever happens. Unreachable for a
+  well-formed file — the owner must load before anything inside it can be addressed — but
+  a mesh carrying a sub-resource type we do not build (an `ORMMaterial3D`, say) reaches it
+  on real data, which is why the panel's normalisation is tested rather than assumed.
 - Cost: this is one seam for resources fetched **through a processor**, not for every
   reader of a `.tres`. `tileSetFromTres` keeps resolving its sources synchronously out of
   an already-parsed `ParsedTresFile` — it has no path to key on and needs none — and a

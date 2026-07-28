@@ -102,6 +102,23 @@ describe('ResourceLoader (loader-level gaps)', () => {
       expect(loader.getCached<TscnScene>('scene', SCENE_PATH)).toBe(scene);
     });
 
+    it('treats a sub-resource path as its owning file', () => {
+      // Bytes only ever belong to a file, and a caller holding a **Sub-resource
+      // path** (a missing-resources row, say) is telling us about the file that
+      // owns it. Routing the address instead would miss the metadata, fan out to
+      // the wrong processors, and skip the file-level clear that announces
+      // `invalidated` to every address inside that file.
+      const matSpy = vi.spyOn(loader.materials, 'request');
+      const resSpy = vi.spyOn(loader.resources, 'request');
+      const fileCacheSpy = vi.spyOn(fileEventBus, 'clearCache');
+
+      loader.provideFile('res://meshes/wheel.tres::StandardMaterial3D_x');
+
+      expect(fileCacheSpy).toHaveBeenCalledWith('res://meshes/wheel.tres');
+      expect(matSpy).toHaveBeenCalledWith('res://meshes/wheel.tres');
+      expect(resSpy).toHaveBeenCalledWith('res://meshes/wheel.tres');
+    });
+
     it('fans out to texture + material processors when the path has no registered metadata', () => {
       const texSpy = vi.spyOn(loader.textures, 'request');
       const matSpy = vi.spyOn(loader.materials, 'request');

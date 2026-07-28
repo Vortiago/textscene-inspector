@@ -85,7 +85,3 @@ export { FileEventBus } from './resources/FileEventBus';
 export type { FileData, FileLoadedHandler, FileFailedHandler } from './resources/FileEventBus';
 export { createResourcePipeline } from './resources/createResourcePipeline';
 export type { ResourcePipeline } from './resources/createResourcePipeline';
-// A host fulfilling a **Sub-resource path** by upload (ADR-0022) keys bytes in
-// its OWN provider, which core cannot normalise on its behalf — so the grammar's
-// file half is public.
-export { resourceFilePath } from './resources/subResourcePath';

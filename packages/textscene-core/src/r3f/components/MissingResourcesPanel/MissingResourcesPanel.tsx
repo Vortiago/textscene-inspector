@@ -10,21 +10,31 @@
  * The component is host-agnostic: it only knows about paths. The host
  * supplies `onUpload(path, file)` and `onRemove(path)` callbacks, which
  * in the web app wrap `provider.addUploadedFile` + `loader.provideFile`.
+ *
+ * A row may name a resource INSIDE a `.tres` (a **Sub-resource path**), because
+ * that is the identity a failed load is reported under. The file a user picks or
+ * removes is always the OWNING file, so both callbacks are handed the file half
+ * and no host has to know the grammar — the row keeps its own address so it
+ * still disappears and reappears under the identity `useResource` reports.
  */
 import { type ChangeEvent } from 'react';
 import { useMissingResources } from '../../contexts/MissingResourcesContext.js';
+import { resourceFilePath } from '../../../resources/subResourcePath.js';
 import styles from './MissingResourcesPanel.module.css';
 
 export interface MissingResourcesPanelProps {
   /**
    * Called when the user picks a file for a specific missing-row path.
    * The host wires the file into its resource provider and asks the
-   * loader to re-resolve dependents.
+   * loader to re-resolve dependents. Always a real file path, never a
+   * **Sub-resource path** — a host keys its provider by file.
    */
   onUpload: (path: string, file: File) => void;
   /**
    * Called when the user clicks "Remove" on an uploaded row. The host
-   * deletes the file from its provider's cache.
+   * deletes the file from its provider's cache. Also always a real file path,
+   * and necessarily the same one `onUpload` was given, or the removal would
+   * miss the bytes the upload stored.
    */
   onRemove: (path: string) => void;
 }
@@ -48,7 +58,9 @@ export function MissingResourcesPanel({ onUpload, onRemove }: MissingResourcesPa
     // provider + loader; if `useResource` re-resolves as `missing`
     // the path will reappear as a missing row on the next render.
     removeUploaded(path);
-    onRemove(path);
+    // The row keeps its own identity; the host is told the file, which is the
+    // key its provider stored the bytes under when the row was uploaded.
+    onRemove(resourceFilePath(path));
   };
 
   return (
@@ -104,7 +116,9 @@ function MissingRow({ path, onUpload }: MissingRowProps) {
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    onUpload(path, file);
+    // The row may name a resource inside a `.tres`; what the user picked is the
+    // owning file, which is the only thing a provider can be keyed by.
+    onUpload(resourceFilePath(path), file);
     // Reset the input so picking the same filename again would re-fire.
     e.target.value = '';
   };
