@@ -38,6 +38,10 @@ _Avoid_: implying we run Godot's importer, or that the source asset is what Godo
 An embedded resource written `SubResource("id")` and declared by a `[sub_resource]` heading stored in the scene's flat internal-resources list (meshes, materials, StyleBoxes, collision-shape resources).
 _Avoid_: "asset", "inline resource".
 
+**Sub-resource path** (`resources/subResourcePath.ts`):
+`res://file.tres::SubId` — Godot's own notation for a **SubResource** of some `.tres` OTHER than the previewed scene, and the one string that makes all three kinds of resource reference interchangeable to a consumer (an **ExtResource** `.tres`; a SubResource of the scene, resolved from its own internal-resources list via `SceneResourcesContext`; a SubResource of a `.tres` the scene pulled in). The WHOLE address is the resource identity — the processor cache key, the in-flight dedupe key, `useResource`'s LRU pin — while its `filePath` half is the only thing the **resource event bus**'s byte layer, a host `ResourceProvider`, a **Dependency hot-reload** or a **Resource upload** ever sees, because only real files can be fetched or supplied. Consumers hold it as an ordinary path (`ArrayMeshResource.materialPaths`, `MeshLibraryItem.meshPath`, `ExternalMaterialSlot`'s `path`), which is what keeps the third kind from being a category anyone has to know about. Decision: ADR-0029.
+_Avoid_: "composite path"/"synthetic path" (it is Godot's grammar, not an invention); treating it as a filename (nothing may `fetch` one); a per-consumer resolver for the third kind.
+
 **UID reference**:
 Godot 4's stable `uid://…` identifier; in this corpus every ExtResource pairs it with a `res://` path, so path resolution is authoritative and the uid is currently ignored. Uid-only resolution is unsupported.
 _Avoid_: "id" (overloaded with the per-scene resource `id=`).
@@ -337,7 +341,7 @@ _Avoid_: mounting the **AnimationTree driver** this way (it owns no clips — it
 ## Relationships
 
 - A **SceneGraph** holds many **Node**s; the active scene's root Nodes feed the **NodeDispatcher** (3D) or, in 2D **viewport mode**, the **ControlDispatcher**.
-- A **Node** references **ExtResource**s and **SubResource**s by id; the **resource event bus** resolves ExtResources to files.
+- A **Node** references **ExtResource**s and **SubResource**s by id; the **resource event bus** resolves ExtResources to files. A `.tres` the scene reached may itself reference its OWN SubResources, which the bus resolves under a **Sub-resource path** — fetching the owning file, then building the named body out of it (ADR-0029).
 - A **CollisionShape3D** Node references one **collision-shape resource**; the **collision gizmo** reads the latter through the former.
 - The three registries (**NodeRegistry**, **NodeComponentRegistry**, **ControlComponentRegistry**) are keyed by the same `typeName` but kept separate to preserve the **React-free linter boundary**.
 - A unified **vertical slice** exposes its behavior through three **slice entry points**, one per registry domain.

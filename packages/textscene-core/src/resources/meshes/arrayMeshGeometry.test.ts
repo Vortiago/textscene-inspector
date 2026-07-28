@@ -67,7 +67,7 @@ function triangle(overrides: Partial<ArrayMeshData['surfaces'][number]> = {}) {
 
 describe('buildArrayMeshGeometry', () => {
   it('builds a BufferGeometry with position, uv, index and Godot normals', () => {
-    const geo = buildArrayMeshGeometry(decodeArrayMesh(WALL_TRES));
+    const geo = buildArrayMeshGeometry(decodeArrayMesh(WALL_TRES, 'res://mesh.tres'));
 
     expect(geo).toBeInstanceOf(THREE.BufferGeometry);
     expect(geo.getAttribute('position').count).toBe(4);
@@ -130,7 +130,7 @@ describe('buildArrayMeshGeometry', () => {
   });
 
   it('adds one draw group per surface for per-surface materials', () => {
-    const geo = buildArrayMeshGeometry(decodeArrayMesh(WALL_TRES));
+    const geo = buildArrayMeshGeometry(decodeArrayMesh(WALL_TRES, 'res://mesh.tres'));
 
     expect(geo.groups).toHaveLength(1);
     expect(geo.groups[0]).toMatchObject({ start: 0, count: 6, materialIndex: 0 });
@@ -140,7 +140,7 @@ describe('buildArrayMeshGeometry', () => {
     // Reading a compressed surface at the uncompressed stride produced NaN
     // positions, and THREE reported "computeBoundingSphere(): Computed radius is
     // NaN" for the whole geometry — which also left the camera unable to frame it.
-    const geo = buildArrayMeshGeometry(decodeArrayMesh(MIXED_LAYOUT_TRES));
+    const geo = buildArrayMeshGeometry(decodeArrayMesh(MIXED_LAYOUT_TRES, 'res://mesh.tres'));
 
     geo.computeBoundingSphere();
     geo.computeBoundingBox();

@@ -18,28 +18,57 @@ export function isMaterialPath(path: string): boolean {
 
 /**
  * Create a THREE.Material from .tres file content.
+ *
  * @param content - The .tres file content
  * @param loadTexture - Function to load textures by resolved res:// path (optional for materials without textures)
+ * @param subResourceId - Build the `[sub_resource id="…"]` with this id instead
+ *   of the file's own `[resource]` body — the material a mesh's `.tres` carries
+ *   for one of its surfaces. The type switch then follows the SUB-RESOURCE's
+ *   type (the file's is whatever owns it, e.g. `ArrayMesh`), while texture
+ *   `ExtResource`s still resolve against the owning file's table, which is the
+ *   only scope those ids are declared in.
  */
 export async function createMaterialFromContent(
   content: string,
-  loadTexture?: TextureLoaderFn
+  loadTexture?: TextureLoaderFn,
+  subResourceId?: string
 ): Promise<THREE.Material> {
   const { parseTresFile } = await import('../../parser/tresParser');
   const { resolveExtResourcePath } = await import('../SubResourceResolver');
 
   // parseTresFile throws when [gd_resource] header is absent or typeless.
-  const { resourceType, properties, extResources } = parseTresFile(content);
+  const parsed = parseTresFile(content);
+  const extResources = parsed.extResources;
 
-  // A header-only .tres (no [resource] section) is valid enough to warn on
-  // rather than throw; yield a default StandardMaterial3D. Leading whitespace
-  // is tolerated because the scanning loop trims heading lines.
-  const hasResourceSection = /^[ \t]*\[resource\b/m.test(content);
-  if (!hasResourceSection) {
-    warn(
-      `[material] .tres has no [resource] section (type="${resourceType}") — using default StandardMaterial3D.`
-    );
-    return new THREE.MeshStandardMaterial();
+  let resourceType: string;
+  let properties: Record<string, string>;
+
+  if (subResourceId === undefined) {
+    resourceType = parsed.resourceType;
+    properties = parsed.properties;
+
+    // A header-only .tres (no [resource] section) is valid enough to warn on
+    // rather than throw; yield a default StandardMaterial3D. Leading whitespace
+    // is tolerated because the scanning loop trims heading lines.
+    const hasResourceSection = /^[ \t]*\[resource\b/m.test(content);
+    if (!hasResourceSection) {
+      warn(
+        `[material] .tres has no [resource] section (type="${resourceType}") — using default StandardMaterial3D.`
+      );
+      return new THREE.MeshStandardMaterial();
+    }
+  } else {
+    const sub = parsed.subResources.find((r) => r.id === subResourceId);
+    if (!sub) {
+      // An address naming a sub-resource the file does not declare is as
+      // unresolvable as a missing file, and reaches the consumer the same way:
+      // cached as a failure, so the slot renders its neutral default.
+      throw new Error(
+        `Sub-resource "${subResourceId}" is not declared in this ${parsed.resourceType} .tres`
+      );
+    }
+    resourceType = sub.type;
+    properties = sub.data as Record<string, string>;
   }
 
   switch (resourceType) {

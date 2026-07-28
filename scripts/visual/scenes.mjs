@@ -101,6 +101,15 @@ export const GOLDEN_SCENES = [
   // yield NaN positions, which NaNs the bounding sphere and the camera fit with
   // it, so the failure is a blank frame rather than a subtly wrong one.
   { name: 'arraymesh-compressed', file: 'unit-arraymesh-compressed.tscn' },
+  // A surface material declared as a `[sub_resource]` of the MESH's own `.tres`
+  // — the form Godot writes whenever a mesh carries its own materials, and the
+  // one kind of material reference nothing else in the bag exercises. Both
+  // fixtures above reference a shared material FILE by ExtResource, and every
+  // scene-level material is a sub-resource of the previewed `.tscn` (a different
+  // document, a different mechanism). Two identically-coloured plates: the left
+  // one's material is the ExtResource control, so a regression turns only the
+  // RIGHT plate white.
+  { name: 'arraymesh-own-material', file: 'unit-arraymesh-own-material.tscn' },
   { name: 'grid-map', file: 'unit-grid-map.tscn' },
   // `grid-map` above is GridMap-ONLY, so the camera auto-fit reframes any
   // uniform shift of the whole grid into an identical image — it cannot see a

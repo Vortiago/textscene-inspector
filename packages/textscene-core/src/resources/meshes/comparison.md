@@ -53,6 +53,28 @@ survives because every format Godot writes keeps its low 32 bits under 2^31, but
 `ARRAY_FLAG_FORMAT_VERSION_2` (bit 35) is unreachable that way — so bit 29 alone
 selects the layout, and the version flag is never consulted.
 
+## Surface materials
+
+A surface names its material either way Godot writes it, and both come back as one
+resource-path string, so the renderer attaches them the same way:
+
+- `"material": ExtResource("id")` — a shared material file, resolved through the
+  file's own `[ext_resource]` table.
+- `"material": SubResource("id")` — a material the mesh carries itself, which Godot
+  writes whenever a mesh is not referencing shared materials (every Truck Town
+  vehicle). It is addressed as `<this file>::<id>`, Godot's own notation for a
+  resource inside a resource file, and the material pipeline fetches the owning
+  file and builds that `[sub_resource]` body. The scene-level resolver cannot help
+  here — it searches the previewed `.tscn`'s sub-resources, and these live in a
+  different document.
+
+That sub-resource's own texture `ExtResource`s resolve against the **owning
+`.tres`'s** table, never the scene's: the ids are declared in the file that
+declares the material. The address is also what the ArrayMesh itself can be
+requested under, so a `[sub_resource type="ArrayMesh"]` (a `shadow_mesh`, or a
+MeshLibrary's embedded item mesh) reads its own `_surfaces` rather than silently
+falling through to the file's.
+
 ## Unreadable surfaces
 
 A surface whose `vertex_data` is shorter than its format requires, whose compressed
@@ -72,20 +94,10 @@ surface its UVs but not the surface: the positions are still exact.
 
 ## Known limitations
 
-- **A surface material declared as a `SubResource` of the mesh's own `.tres` is not
-  built yet.** Godot writes one when the mesh carries its own materials instead of
-  referencing shared ones — about half the corpus's ArrayMesh surfaces. Such a surface
-  gets the neutral placeholder material rather than its albedo; the geometry is correct,
-  only the tint is missing. This is unimplemented rather than unimplementable: the two
-  halves both exist and are simply not joined. `decodeArrayMesh` already receives that
-  file's `subResources` from `parseTresFile` and discards them, and `tileSetFromTres`
-  already resolves a sub-resource declared inside an external `.tres` the same way. What
-  has to widen is the seam: `ArrayMeshResource.materialPaths` is a `(string | null)[]`
-  and `ExternalMaterialSlot` takes a path, while the material pipeline is keyed on a
-  whole file being a material (`isMaterialPath`, `createMaterialFromContent` reading the
-  `[resource]` body) — an inline material has no path to key on. Note the scene-level
-  `resolveStandardMaterial` does not help here: it searches the previewed `.tscn`'s
-  sub-resources, and these live in a different document.
+- **Only surface 0's material loads its textures on a mesh built from scene
+  SubResources.** This is the pre-existing `SecondarySurfaceMaterial` limitation and
+  is unrelated to an EXTERNAL ArrayMesh, whose every surface gets a full
+  `ExternalMaterialSlot` (textures included) because each is its own component.
 - **Blend shapes, LODs and skins are ignored.** `lods` and blend-shape data are
   parsed past; a skinned mesh renders in its rest pose.
 - **A compressed surface with NORMAL but no TANGENT is unverified.** No mesh in the

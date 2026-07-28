@@ -25,6 +25,7 @@
 import type { FileEventBus, FileData } from './FileEventBus';
 import type { ResourceEventBus, ResourceType } from './ResourceEventBus';
 import { LRUCache } from './LRUCache';
+import { resourceFilePath } from './subResourcePath';
 import * as logger from '../logger';
 
 export type { ResourceType };
@@ -192,47 +193,56 @@ export function createResourceProcessor<T>(
       // (etc.) from being retained twice: once as raw bytes, once as the
       // decoded resource. `loadDirectly` mode has no `fileEventBus` (scenes
       // fetch text directly), so this is a no-op there.
-      fileEventBus?.clearCache(path);
+      fileEventBus?.clearCache(resourceFilePath(path));
     }
   };
+
+  /**
+   * Every in-flight resource one file's bytes can settle: the file itself plus
+   * any **Sub-resource path** addressed inside it. Snapshotted before use
+   * because `finishLoad` mutates `inflight`.
+   */
+  const awaitingFile = (filePath: string): string[] =>
+    [...inflight.keys()].filter((key) => resourceFilePath(key) === filePath);
 
   // Bound handler for FileEventBus events (stored once to allow proper unsubscription)
-  const handleFileLoaded = async (path: string, data: FileData): Promise<void> => {
-    // Only process if this processor should handle this path/data
-    if (shouldProcess && !shouldProcess(path, data)) return;
+  const handleFileLoaded = async (filePath: string, data: FileData): Promise<void> => {
+    // Only process if this processor should handle this file's data. Asked
+    // about the FILE, never a sub-resource path — the question is what these
+    // bytes are, which is exactly what an extension check can answer.
+    if (shouldProcess && !shouldProcess(filePath, data)) return;
 
-    // Only process if we're waiting for this path
-    if (!inflight.has(path)) return;
+    for (const path of awaitingFile(filePath)) {
+      // Already cached - skip
+      if (cache.has(path)) {
+        inflight.delete(path);
+        continue;
+      }
 
-    // Already cached - skip
-    if (cache.has(path)) {
-      inflight.delete(path);
-      return;
+      if (!process) {
+        // File-event-bus mode requires a `process` function; without it
+        // the processor can't materialise the resource. Treat as failure.
+        inflight.delete(path);
+        cache.set(path, null);
+        eventBus.emit<Error>(
+          resourceType,
+          'failed',
+          path,
+          new Error(`${resourceType} processor missing process() handler`)
+        );
+        continue;
+      }
+
+      await finishLoad(path, () => process(path, data));
     }
-
-    if (!process) {
-      // File-event-bus mode requires a `process` function; without it
-      // the processor can't materialise the resource. Treat as failure.
-      inflight.delete(path);
-      cache.set(path, null);
-      eventBus.emit<Error>(
-        resourceType,
-        'failed',
-        path,
-        new Error(`${resourceType} processor missing process() handler`)
-      );
-      return;
-    }
-
-    await finishLoad(path, () => process(path, data));
   };
 
-  const handleFileFailed = (path: string, error: Error): void => {
-    if (!inflight.has(path)) return;
-
-    inflight.delete(path);
-    cache.set(path, null);
-    eventBus.emit<Error>(resourceType, 'failed', path, error);
+  const handleFileFailed = (filePath: string, error: Error): void => {
+    for (const path of awaitingFile(filePath)) {
+      inflight.delete(path);
+      cache.set(path, null);
+      eventBus.emit<Error>(resourceType, 'failed', path, error);
+    }
   };
 
   // Subscribe to FileEventBus (if provided)
@@ -275,7 +285,10 @@ export function createResourceProcessor<T>(
         // Direct-load mode: no FileEventBus round-trip.
         void finishLoad(path, () => loadDirectly(path));
       } else if (fileEventBus) {
-        fileEventBus.request(path);
+        // The byte layer (and, through it, the host `ResourceProvider`, the
+        // hot-reload watcher and **Resource upload**s) only ever sees real
+        // files; a sub-resource's bytes are its owning file's bytes.
+        fileEventBus.request(resourceFilePath(path));
       } else {
         // Misconfigured — neither fetch mode available.
         inflight.delete(path);
@@ -312,6 +325,16 @@ export function createResourceProcessor<T>(
         // subscribed consumers.
         cache.delete(path);
         inflight.delete(path);
+        // A **Sub-resource path** into the cleared file went stale with it, and
+        // no caller re-requests one — `provideFile` knows only the file. So
+        // these are announced instead: `useResource` answers `invalidated` by
+        // re-requesting, which is the same healing path by a different door.
+        for (const key of new Set([...cache.keys(), ...inflight.keys()])) {
+          if (key === path || resourceFilePath(key) !== path) continue;
+          cache.delete(key);
+          inflight.delete(key);
+          eventBus.emit(resourceType, 'invalidated', key);
+        }
         logger.info(`[${resourceType}Processor] Cleared cache for: ${path}`);
       } else {
         // Silent by design: announcing dropped paths is the LOADER's job

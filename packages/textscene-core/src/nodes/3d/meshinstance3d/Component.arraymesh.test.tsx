@@ -120,7 +120,7 @@ function firstMeshGeometry(
 describe('<MeshInstance3D> external ArrayMesh (WI-1)', () => {
   it('renders the decoded ArrayMesh geometry (4 verts), not the placeholder box', async () => {
     const loader = makeLoader();
-    const mesh = decodeArrayMesh(WALL_TRES);
+    const mesh = decodeArrayMesh(WALL_TRES, 'res://stage/meshes/wall.tres');
     const resource: ArrayMeshResource = {
       geometry: buildArrayMeshGeometry(mesh),
       materialPaths: mesh.surfaces.map((s) => s.materialPath ?? null),
@@ -145,7 +145,7 @@ describe('<MeshInstance3D> external ArrayMesh (WI-1)', () => {
 
   it('renders a compressed-attribute ArrayMesh with finite bounds, not the placeholder', async () => {
     const loader = makeLoader();
-    const mesh = decodeArrayMesh(COMPRESSED_TRES);
+    const mesh = decodeArrayMesh(COMPRESSED_TRES, 'res://stage/meshes/wall.tres');
     const resource: ArrayMeshResource = {
       geometry: buildArrayMeshGeometry(mesh),
       materialPaths: mesh.surfaces.map((s) => s.materialPath ?? null),
@@ -193,5 +193,96 @@ describe('<MeshInstance3D> external ArrayMesh (WI-1)', () => {
       (m) => (m.instance as THREE.MeshBasicMaterial).wireframe
     );
     expect(placeholder).toBeDefined();
+  });
+});
+
+/**
+ * The mesh's own surface materials — `[sub_resource type="StandardMaterial3D"]`
+ * blocks inside the mesh's `.tres`, the form Godot writes for every Truck Town
+ * vehicle. Nothing is preloaded here: the whole path runs, from the provider
+ * handing over one file's bytes to two distinct materials attached at
+ * `material-0` / `material-1`.
+ */
+const OWN_MATERIALS_TRES = `[gd_resource type="ArrayMesh" format=4 uid="uid://ownmats"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_tire"]
+resource_name = "tire"
+albedo_color = Color(1, 0, 0, 1)
+roughness = 0.8
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_chrome"]
+resource_name = "chrome"
+albedo_color = Color(0, 0, 1, 1)
+metallic = 1.0
+
+[resource]
+resource_name = "meshes_wheel"
+_surfaces = [{
+"aabb": AABB(-1, -1, 1, 2, 2, 1.001358e-05),
+"attribute_data": PackedByteArray("AAAAAAAAgD4AAIA+AACAPgAAgD4AAAAAAAAAAAAAAAA="),
+"format": 34359742487,
+"index_count": 6,
+"index_data": PackedByteArray("AgAAAAMAAgABAAAA"),
+"material": SubResource("StandardMaterial3D_tire"),
+"name": "tire",
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 4,
+"vertex_data": PackedByteArray("AACAvwAAgL8AAIA/AACAPwAAgL8AAIA/AACAPwAAgD8AAIA/AACAvwAAgD8AAIA//3//f////7//f/9/////v/9//3////+//3//f////78=")
+}, {
+"aabb": AABB(-1, -1, 1, 2, 2, 1.001358e-05),
+"attribute_data": PackedByteArray("AAAAAAAAgD4AAIA+AACAPgAAgD4AAAAAAAAAAAAAAAA="),
+"format": 34359742487,
+"index_count": 6,
+"index_data": PackedByteArray("AgAAAAMAAgABAAAA"),
+"material": SubResource("StandardMaterial3D_chrome"),
+"name": "chrome",
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 4,
+"vertex_data": PackedByteArray("AACAvwAAgL8AAIA/AACAPwAAgL8AAIA/AACAPwAAgD8AAIA/AACAvwAAgD8AAIA//3//f////7//f/9/////v/9//3////+//3//f////78=")
+}]
+blend_shape_mode = 0
+`;
+
+class SingleFileProvider implements ResourceProvider {
+  constructor(private path: string, private content: string) {}
+  async loadResource(path: string): Promise<string | ArrayBuffer | null> {
+    return path === this.path ? this.content : null;
+  }
+}
+
+describe('<MeshInstance3D> ArrayMesh with its own surface materials', () => {
+  const MESH_PATH = 'res://stage/meshes/wall.tres';
+
+  it('builds each surface material out of the mesh’s own .tres', async () => {
+    const provider = new SingleFileProvider(MESH_PATH, OWN_MATERIALS_TRES);
+    const bus = new FileEventBus(provider);
+    const loader = new ResourceLoader(bus);
+    loader.setProvider(provider);
+
+    const renderer = await render(loader);
+    // Two chained loads (mesh bytes → decode → material bytes → build), each
+    // several microtask hops plus the material builder's dynamic imports.
+    for (let i = 0; i < 10; i++) {
+      await new Promise<void>((r) => setTimeout(r, 20));
+      await renderer.update(
+        <ResourceLoaderProvider loader={loader}>
+          <SceneResourcesProvider internalResources={[]} externalResources={EXT}>
+            <MeshInstance3D node={makeNode()} />
+          </SceneResourcesProvider>
+        </ResourceLoaderProvider>
+      );
+    }
+
+    const mesh = renderer.scene.findAllByType('Mesh')[0]?.instance as THREE.Mesh;
+    const materials = mesh.material as THREE.MeshStandardMaterial[];
+    expect(materials).toHaveLength(2);
+    // Straight off each sub-resource body: Color(1,0,0,1)/roughness 0.8 and
+    // Color(0,0,1,1)/metallic 1.0. Both primaries survive sRGB→linear exactly.
+    expect(materials[0]!.color.getHex()).toBe(0xff0000);
+    expect(materials[0]!.roughness).toBe(0.8);
+    expect(materials[1]!.color.getHex()).toBe(0x0000ff);
+    expect(materials[1]!.metalness).toBe(1);
   });
 });

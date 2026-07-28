@@ -27,6 +27,7 @@
 
 import { warn } from '../../logger.js';
 import { parseTresFile } from '../../parser/tresParser.js';
+import { parseSubResourcePath, subResourcePath } from '../subResourcePath.js';
 
 /** Godot Mesh.ArrayFormat flags. */
 const ARRAY_FORMAT_NORMAL = 1 << 1;
@@ -357,16 +358,43 @@ function decodeIndices(bytes: Uint8Array, indexCount: number): Uint16Array | Uin
   return out;
 }
 
-/** Resolve a surface's `"material": ExtResource("id")` to its res:// path. */
-function readMaterialPath(block: string, extById: Map<string, string>): string | undefined {
-  const match = /"material"\s*:\s*ExtResource\("([^"]+)"\)/.exec(block);
+/**
+ * Resolve a surface's `"material"` to the resource path that addresses it.
+ * Godot writes either form: an `ExtResource` when the surface points at a shared
+ * material file, or a `SubResource` when the mesh carries its own — in which
+ * case the material lives inside THIS file and is addressed by a **Sub-resource
+ * path** (`selfPath::id`). Both come back as one path string, so nothing
+ * downstream has to distinguish them.
+ */
+function readMaterialPath(
+  block: string,
+  extById: Map<string, string>,
+  selfPath: string
+): string | undefined {
+  const match = /"material"\s*:\s*(ExtResource|SubResource)\("([^"]+)"\)/.exec(block);
   if (!match) return undefined;
-  return extById.get(match[1]!);
+  const id = match[2]!;
+  return match[1] === 'ExtResource' ? extById.get(id) : subResourcePath(selfPath, id);
 }
 
-export function decodeArrayMesh(content: string): ArrayMeshData {
+/**
+ * @param selfPath - the resource path this mesh was requested under. A material
+ *   declared as a `[sub_resource]` here can only be addressed relative to its
+ *   own file, so this is an input, not a convenience. May itself be a
+ *   **Sub-resource path**, which selects a `[sub_resource type="ArrayMesh"]`
+ *   inside the file (a `shadow_mesh`, or a MeshLibrary's embedded item mesh)
+ *   rather than the file's own `[resource]` body.
+ */
+export function decodeArrayMesh(content: string, selfPath: string): ArrayMeshData {
   const parsed = parseTresFile(content);
-  const surfacesRaw = parsed.properties['_surfaces'];
+  const { filePath, subResourceId } = parseSubResourcePath(selfPath);
+
+  const surfacesRaw =
+    subResourceId === undefined
+      ? parsed.properties['_surfaces']
+      : (parsed.subResources.find((r) => r.id === subResourceId)?.data['_surfaces'] as
+          | string
+          | undefined);
   if (!surfacesRaw) return { surfaces: [] };
 
   const extById = new Map(parsed.extResources.map((r) => [r.id, r.path]));
@@ -416,7 +444,7 @@ export function decodeArrayMesh(content: string): ArrayMeshData {
       uvs,
       normals,
       indices,
-      materialPath: readMaterialPath(block, extById),
+      materialPath: readMaterialPath(block, extById, filePath),
     });
   }
   return { surfaces };

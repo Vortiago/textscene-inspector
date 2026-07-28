@@ -268,6 +268,20 @@ do the async I/O underneath — see the note below.)
    CLAUDE.md). Components branch on `status` and render placeholders for missing
    resources — the subtree never suspends.
 
+**A resource path is not always a file path.** A `.tres` can declare the resources it
+uses as its own `[sub_resource]` blocks — a mesh's per-surface materials, a
+MeshLibrary's embedded item meshes — and those are addressed with Godot's own
+`res://file.tres::SubId` notation (**Sub-resource path**, ADR-0029). The layers above
+split on that: the **whole address is the resource identity** (processor cache key,
+in-flight key, what `useResource` pins and subscribes to), while layer 3 normalises it
+to its `filePath` before touching layer 2. So the `FileEventBus`, the
+`ResourceProvider`s, the hot-reload watcher and the uploads flow (ADR-0022) only ever
+see real files — a sub-resource's bytes *are* its owning file's bytes — and one arrival
+settles every address waiting on that file. Because the normalisation sits in
+`createResourceProcessor`, every processor type has the capability, not just materials;
+`shouldProcess` is asked about the file, so extension checks read unchanged. The
+`resources/subResourcePath.ts` grammar is the only place `::` is written.
+
 **Late arrival — why it's events, not a one-shot promise.** When a load fails the
 hook flips to `missing` and reports the path to `MissingResourcesContext`, which
 lists it in the Inspector's **Resources** tab. **The hook keeps its subscription

@@ -30,8 +30,8 @@ export function createArrayMeshProcessor(
     eventBus,
     resourceType: 'arraymesh',
     shouldProcess: (path, data) => path.endsWith('.tres') && typeof data === 'string',
-    process: async (_path, data) => {
-      const mesh = decodeArrayMesh(data as string);
+    process: async (path, data) => {
+      const mesh = decodeArrayMesh(data as string, path);
       return {
         geometry: buildArrayMeshGeometry(mesh),
         materialPaths: mesh.surfaces.map((s) => s.materialPath ?? null),
