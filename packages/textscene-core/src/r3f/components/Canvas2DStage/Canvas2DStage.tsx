@@ -25,6 +25,14 @@ import type {
 } from '../../../parser/types.js';
 import { useOptionalCameraControl } from '../../contexts/CameraControlContext.js';
 import { readPersisted } from '../../hooks/usePersistedState.js';
+import {
+  pinchSpanRatio,
+  resolveTouchMode,
+  touchCentroid,
+  touchSpan,
+  type TouchPoint,
+} from '../../pointerGesture.js';
+import { wheelNotches } from '../../godotEditorCursor.js';
 import { World2DCanvas } from './World2DCanvas.js';
 import { CANVAS_2D_WIDTH, CANVAS_2D_HEIGHT, FIT_ON_OPEN_2D_STORAGE_KEY } from './viewport2d.js';
 import styles from './Canvas2DStage.module.css';
@@ -42,8 +50,16 @@ const ZOOM_MIN = 0.1;
 const ZOOM_MAX = 4;
 const clampZoom = (z: number) => Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, z));
 
-/** Below this span a pinch has no direction to read a scale from. */
-const DEGENERATE_SPAN_PX = 1e-3;
+/** CSS-scale step for one wheel notch — this stage's own feel, not Godot's. */
+const ZOOM_PER_NOTCH = 1.1;
+
+/** The −/+ HUD buttons' step. Coarser than a notch: one click, one visible jump. */
+const ZOOM_STEP_BUTTON = 1.2;
+
+/** Cap one event so a kinetic fling cannot cross the whole zoom range at once. */
+const MAX_NOTCHES_PER_EVENT = 4;
+const clampNotches = (n: number) =>
+  Math.max(-MAX_NOTCHES_PER_EVENT, Math.min(MAX_NOTCHES_PER_EVENT, n));
 
 /** Where the stage is looking: the CSS translate, and the CSS scale. */
 interface View2D {
@@ -64,23 +80,6 @@ function zoomViewAround(view: View2D, px: number, py: number, factor: number): V
   return { pan: { x: px - cx * zoom, y: py - cy * zoom }, zoom };
 }
 
-/** Midpoint and separation of the fingers currently down. */
-function touchGeometry(points: readonly { x: number; y: number }[]): {
-  cx: number;
-  cy: number;
-  span: number;
-} {
-  let cx = 0;
-  let cy = 0;
-  for (const point of points) {
-    cx += point.x;
-    cy += point.y;
-  }
-  const [first, second] = points;
-  const span = first && second ? Math.hypot(first.x - second.x, first.y - second.y) : 0;
-  return { cx: cx / points.length, cy: cy / points.length, span };
-}
-
 const isBoolean = (value: unknown): value is boolean => typeof value === 'boolean';
 
 export interface Canvas2DStageProps {
@@ -98,32 +97,20 @@ export function Canvas2DStage({
   externalResources,
 }: Canvas2DStageProps) {
   const stageRef = useRef<HTMLDivElement>(null);
-  const [zoom, setZoom] = useState(1);
-  const [pan, setPan] = useState({ x: 0, y: 0 });
-
-  // Current values mirrored into refs so the non-passive wheel listener (added
-  // once) reads fresh state without re-subscribing.
-  const zoomRef = useRef(zoom);
-  zoomRef.current = zoom;
-  const panRef = useRef(pan);
-  panRef.current = pan;
+  const [view, setView] = useState<View2D>({ pan: { x: 0, y: 0 }, zoom: 1 });
+  const { pan, zoom } = view;
 
   /**
-   * The view as of NOW, not as of the last render: a wheel burst or a pinch
-   * fires many events per frame, and reading React state would make every
-   * event after the first in a frame compute from a stale pan/zoom.
+   * The view as of NOW, not as of the last render. A wheel burst or a pinch
+   * fires several events per frame, and reading React state would make every
+   * event after the first in a frame compute from a stale view — so the ref is
+   * written ahead of the re-render and is what the handlers read.
    */
-  const currentView = useCallback(
-    (): View2D => ({ pan: panRef.current, zoom: zoomRef.current }),
-    []
-  );
+  const viewRef = useRef(view);
 
-  /** Commit a view, keeping the refs authoritative ahead of the re-render. */
-  const applyView = useCallback((view: View2D) => {
-    panRef.current = view.pan;
-    zoomRef.current = view.zoom;
-    setPan(view.pan);
-    setZoom(view.zoom);
+  const applyView = useCallback((next: View2D) => {
+    viewRef.current = next;
+    setView(next);
   }, []);
 
   const fit = useCallback(() => {
@@ -178,19 +165,26 @@ export function Canvas2DStage({
     if (!el) return;
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
+      // Per NOTCH, not per event (ADR-0029): a mouse wheel delivers one notch
+      // per event and still steps by ZOOM_PER_NOTCH, but a trackpad streams
+      // fractions of one and Firefox reports lines rather than pixels. Scaling
+      // by the event count instead would zoom a trackpad roughly an order of
+      // magnitude faster than a wheel for the same physical gesture.
+      const notches = clampNotches(wheelNotches(e));
+      if (notches === 0) return;
       const r = el.getBoundingClientRect();
       applyView(
         zoomViewAround(
-          currentView(),
+          viewRef.current,
           e.clientX - r.left,
           e.clientY - r.top,
-          e.deltaY < 0 ? 1.1 : 1 / 1.1
+          ZOOM_PER_NOTCH ** -notches
         )
       );
     };
     el.addEventListener('wheel', onWheel, { passive: false });
     return () => el.removeEventListener('wheel', onWheel);
-  }, [applyView, currentView]);
+  }, [applyView]);
 
   // Drag-to-pan via pointer capture (like <Splitter>): the drag keeps tracking
   // off the element with NO window listeners, so an unmount mid-drag can't leak
@@ -200,8 +194,13 @@ export function Canvas2DStage({
   // Touch takes its own path: one finger pans, two pan AND pinch together, so
   // a single drag slot cannot hold the gesture. Touch pointers are implicitly
   // captured to the target, so they need no explicit capture.
-  const touchPoints = useRef<Map<number, { x: number; y: number }>>(new Map());
-  const touchOrigin = useRef<{ cx: number; cy: number; span: number } | null>(null);
+  const touchPoints = useRef<Map<number, TouchPoint>>(new Map());
+  const touchOrigin = useRef<{ centroid: TouchPoint; span: number } | null>(null);
+  // The stage cannot move while fingers are on it, so its rect is read once per
+  // gesture rather than per move: the previous move committed new inline styles,
+  // so a getBoundingClientRect() here forces a synchronous layout of the whole
+  // stage — including the Control overlay — on every single pointermove.
+  const touchRect = useRef<DOMRect | null>(null);
 
   const onStagePointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
     if (e.pointerType === 'touch') {
@@ -209,6 +208,7 @@ export function Canvas2DStage({
       // A finger landing moves the midpoint discontinuously; drop the origin
       // so the next move re-seeds it instead of panning by the jump.
       touchOrigin.current = null;
+      touchRect.current = e.currentTarget.getBoundingClientRect();
       return;
     }
     if (e.button !== 0) return;
@@ -226,32 +226,37 @@ export function Canvas2DStage({
     points.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
     const active = [...points.values()];
-    // Three or more fingers is not a gesture we define; ignore it rather than
-    // panning by a midpoint the user is not thinking in terms of.
-    if (active.length > 2) {
+    // Both one and two fingers pan here — 2D has no orbit — but the shared
+    // resolver still decides what counts as a gesture at all, so the
+    // "three fingers is not a gesture" rule lives in one place.
+    if (resolveTouchMode(active.length) === null) {
       touchOrigin.current = null;
       return;
     }
 
-    const now = touchGeometry(active);
+    const now = { centroid: touchCentroid(active), span: touchSpan(active) };
     const origin = touchOrigin.current;
     touchOrigin.current = now;
     if (!origin) return;
 
+    const view = viewRef.current;
     const panned: View2D = {
       pan: {
-        x: panRef.current.x + (now.cx - origin.cx),
-        y: panRef.current.y + (now.cy - origin.cy),
+        x: view.pan.x + (now.centroid.x - origin.centroid.x),
+        y: view.pan.y + (now.centroid.y - origin.centroid.y),
       },
-      zoom: zoomRef.current,
+      zoom: view.zoom,
     };
-    if (origin.span <= DEGENERATE_SPAN_PX || now.span <= DEGENERATE_SPAN_PX) {
+    // Not inverted, unlike the 3D viewport: a CSS scale grows as the fingers
+    // spread, where an orbit radius shrinks.
+    const factor = pinchSpanRatio(origin.span, now.span);
+    if (factor === 1) {
       applyView(panned);
       return;
     }
-    const r = e.currentTarget.getBoundingClientRect();
+    const r = touchRect.current ?? e.currentTarget.getBoundingClientRect();
     applyView(
-      zoomViewAround(panned, now.cx - r.left, now.cy - r.top, now.span / origin.span)
+      zoomViewAround(panned, now.centroid.x - r.left, now.centroid.y - r.top, factor)
     );
   };
 
@@ -264,7 +269,7 @@ export function Canvas2DStage({
     if (!d.active) return;
     applyView({
       pan: { x: d.ox + (e.clientX - d.startX), y: d.oy + (e.clientY - d.startY) },
-      zoom: zoomRef.current,
+      zoom: viewRef.current.zoom,
     });
   };
 
@@ -274,6 +279,7 @@ export function Canvas2DStage({
       // Lifting one of two fingers leaves the other mid-gesture; re-seed so it
       // pans from where it is rather than from the old midpoint.
       touchOrigin.current = null;
+      if (touchPoints.current.size === 0) touchRect.current = null;
       return;
     }
     if (!pan2dDrag.current.active) return;
@@ -289,7 +295,7 @@ export function Canvas2DStage({
     const el = stageRef.current;
     if (!el) return;
     const r = el.getBoundingClientRect();
-    applyView(zoomViewAround(currentView(), r.width / 2, r.height / 2, factor));
+    applyView(zoomViewAround(viewRef.current, r.width / 2, r.height / 2, factor));
   }
 
   return (
@@ -370,11 +376,11 @@ export function Canvas2DStage({
       </div>
 
       <div className={styles.zoomHud} role="group" aria-label="Canvas zoom" data-testid="canvas-2d-zoom">
-        <button type="button" onClick={() => zoomAroundCentre(1 / 1.2)} aria-label="Zoom out">
+        <button type="button" onClick={() => zoomAroundCentre(1 / ZOOM_STEP_BUTTON)} aria-label="Zoom out">
           −
         </button>
         <span className={styles.zoomVal}>{Math.round(zoom * 100)}%</span>
-        <button type="button" onClick={() => zoomAroundCentre(1.2)} aria-label="Zoom in">
+        <button type="button" onClick={() => zoomAroundCentre(ZOOM_STEP_BUTTON)} aria-label="Zoom in">
           +
         </button>
         <button type="button" className={styles.zoomFit} onClick={fit}>

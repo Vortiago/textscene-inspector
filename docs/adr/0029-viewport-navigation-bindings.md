@@ -60,8 +60,14 @@ Godot does, because Godot does nothing here.
 
 **The bindings are surfaced in the app**, by `<ViewportControlsHelp>`: a summary pill always
 visible over the viewport, and a panel behind it grouping every binding by device. The rows
-live in `bindings.ts` as data, so the panel and the user guides cannot drift apart the way the
-previous arrangement did.
+live in `bindings.ts` as data, and each row a resolver governs carries the input that produces
+it, so `bindings.test.ts` can feed every one to the real resolver and fail when the table and
+the code disagree.
+
+That guard covers the app's own table only. `docs/user-guide-web.md`, this ADR's wheel table
+and `apps/textscene-vscode/README.md` are still hand-written prose and can still drift —
+generating them from `bindings.ts` (the marker-block pattern `scripts/compare-docs` already
+uses, with `--check` in `pnpm validate`) is the obvious next step and is not done here.
 
 ## Considered options
 
@@ -86,9 +92,15 @@ radius about the focus point, and no parity argument supports changing it.
 - The two viewports still disagree about what zoom *is* — a CSS scale factor in 2D, an orbit
   radius in 3D — and about the anchor (2D zooms to the cursor, 3D to the focus point). Both
   are recorded in CONTEXT.md's flagged ambiguities rather than papered over.
-- Wheel deltas must be normalised before use, by zoom **and** by pan: one notch is 100px in
-  Chrome but 3 lines in Firefox. `wheelDeltaPixels` is the single normalisation both paths
-  call; skipping it in either produces a ~33x cross-browser divergence.
+- Wheel deltas must be normalised before use — by zoom, by pan, and in **both** viewports:
+  one notch is 100px in Chrome but 3 lines in Firefox. `wheelDeltaPixels` / `wheelNotches` are
+  the single normalisation every path calls; skipping it produces a ~33x cross-browser
+  divergence, and scaling per EVENT rather than per notch zooms a trackpad roughly an order of
+  magnitude faster than a mouse for the same physical gesture.
+- Touch geometry lives in `pointerGesture.ts`, not `godotEditorCursor.ts`. Godot's editor has
+  no touch scheme, so putting fingers in the module whose contract is "constants are Godot's
+  own" would make that claim false — and it lets the 2D stage share the geometry without
+  importing the 3D navigation module.
 - Zoom scales exponentially in notches (`1.08 ** notches`), not linearly, so a trackpad's
   stream of small events zooms exactly as far as one large event over the same distance.
 - `touch-action: none` on the 3D canvas container is load-bearing — r3f sets none of its own,

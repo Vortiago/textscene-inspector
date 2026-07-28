@@ -31,13 +31,9 @@ import {
   orbitCursor,
   orthographicHeight,
   panCursor,
-  pinchZoomScale,
   resolveNavMode,
-  resolveTouchMode,
   resolveWheelMode,
   scaleCursorDistance,
-  touchCentroid,
-  touchSpan,
   viewSnapCursor,
   wheelDeltaPixels,
   wheelZoomScale,
@@ -256,54 +252,6 @@ describe('resolveWheelMode', () => {
     // A pinch reports ctrl; shift held at the same time must not turn it into
     // a pan, or a shift-pinch would fly the view off instead of zooming.
     expect(resolveWheelMode({ ctrlKey: true, shiftKey: true })).toBe('zoom');
-  });
-});
-
-describe('resolveTouchMode', () => {
-  it('orbits on one finger and pans on two', () => {
-    expect(resolveTouchMode(1)).toBe('orbit');
-    expect(resolveTouchMode(2)).toBe('pan');
-  });
-
-  it('claims nothing for no fingers or for three and up', () => {
-    expect(resolveTouchMode(0)).toBeNull();
-    expect(resolveTouchMode(3)).toBeNull();
-  });
-});
-
-describe('touchCentroid / touchSpan', () => {
-  it('takes the midpoint and the separation of two fingers', () => {
-    const points = [
-      { x: 0, y: 0 },
-      { x: 10, y: 20 },
-    ];
-    expect(touchCentroid(points)).toEqual({ x: 5, y: 10 });
-    expect(touchSpan(points)).toBeCloseTo(Math.hypot(10, 20), 9);
-  });
-
-  it('reports a single finger as its own centroid with no span', () => {
-    expect(touchCentroid([{ x: 7, y: 9 }])).toEqual({ x: 7, y: 9 });
-    expect(touchSpan([{ x: 7, y: 9 }])).toBe(0);
-  });
-
-  it('survives an empty pointer set', () => {
-    expect(touchCentroid([])).toEqual({ x: 0, y: 0 });
-    expect(touchSpan([])).toBe(0);
-  });
-});
-
-describe('pinchZoomScale', () => {
-  it('pulls the eye in as the fingers spread', () => {
-    expect(pinchZoomScale(100, 200)).toBeCloseTo(0.5, 9);
-  });
-
-  it('pushes the eye out as the fingers close', () => {
-    expect(pinchZoomScale(200, 100)).toBeCloseTo(2, 9);
-  });
-
-  it('is a no-op for a degenerate span rather than dividing by zero', () => {
-    expect(pinchZoomScale(0, 100)).toBe(1);
-    expect(pinchZoomScale(100, 0)).toBe(1);
   });
 });
 

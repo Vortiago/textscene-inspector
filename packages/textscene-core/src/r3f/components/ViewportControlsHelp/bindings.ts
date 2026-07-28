@@ -1,10 +1,15 @@
 /**
  * The viewport's input bindings, as data.
  *
- * One source of truth for the in-app help, so the panel, the summary pill and
- * the user guides cannot drift apart the way the previous arrangement did —
- * the bindings lived only in `docs/user-guide-web.md`, and the app said
- * nothing at all.
+ * One source for the in-app help: the summary pill and the panel are built
+ * from these rows, where previously the bindings lived only in
+ * `docs/user-guide-web.md` and the app said nothing at all.
+ *
+ * The rows a resolver governs carry a `trigger`, and `bindings.test.ts` feeds
+ * each one to the real resolver in `godotEditorCursor.ts` / `pointerGesture.ts`
+ * and fails if the answer differs. That is what stops the table claiming
+ * 'Orbit' for an input that actually pans. The prose in `docs/user-guide-web.md`
+ * and the VS Code README is still maintained by hand and is NOT covered.
  *
  * The mouse and keyboard rows are Godot 4.6's own editor bindings. The
  * trackpad rows are Godot's pan-gesture bindings, minus the unmodified one:
@@ -12,11 +17,35 @@
  * so the wheel's own Godot binding (zoom) keeps that slot. The touch rows have
  * no Godot equivalent at all — Godot's editor has no touch scheme.
  */
+import type { NavMode, NavModifiers } from '../../godotEditorCursor.js';
+
+/**
+ * What a row's input resolves to, for the rows a resolver decides. `null` means
+ * navigation deliberately declines it — plain left-drag, which selects.
+ */
+export type BindingOutcome = NavMode | null;
+
+/** How to ask a resolver what a row's input does. */
+export type BindingTrigger =
+  | {
+      readonly kind: 'drag';
+      readonly button: number;
+      readonly mods?: NavModifiers;
+    }
+  | { readonly kind: 'wheel'; readonly mods?: NavModifiers }
+  | { readonly kind: 'touch'; readonly pointers: number };
 
 /** One row: what the user does, and what the viewport does about it. */
 export interface Binding {
   readonly input: string;
   readonly action: string;
+  /**
+   * Present when a resolver owns this row, so the test can hold the table to
+   * the code. Absent for rows nothing resolves — the keyboard shortcuts, the
+   * zoom HUD buttons, and the taps/pinches handled outside the mode resolvers.
+   */
+  readonly trigger?: BindingTrigger;
+  readonly resolvesTo?: BindingOutcome;
 }
 
 /** Bindings for one input device, as the panel groups them. */
@@ -38,31 +67,105 @@ const CONTROLS_3D: ControlsHelp = {
     {
       device: 'Mouse',
       bindings: [
-        { input: 'Left-click', action: 'Select' },
-        { input: 'Middle-drag', action: 'Orbit' },
-        { input: 'Shift + middle-drag', action: 'Pan' },
-        { input: 'Ctrl + middle-drag', action: 'Zoom' },
-        { input: 'Wheel', action: 'Zoom' },
-        { input: 'Shift + wheel', action: 'Pan' },
-        { input: 'Right-drag', action: 'Freelook — turn the camera in place' },
-        { input: 'Alt + left-drag', action: 'Orbit, for a mouse with no middle button' },
-        { input: 'Alt + Shift + left-drag', action: 'Pan' },
+        {
+          input: 'Left-click',
+          action: 'Select',
+          trigger: { kind: 'drag', button: 0 },
+          resolvesTo: null,
+        },
+        {
+          input: 'Middle-drag',
+          action: 'Orbit',
+          trigger: { kind: 'drag', button: 1 },
+          resolvesTo: 'orbit',
+        },
+        {
+          input: 'Shift + middle-drag',
+          action: 'Pan',
+          trigger: { kind: 'drag', button: 1, mods: { shiftKey: true } },
+          resolvesTo: 'pan',
+        },
+        {
+          input: 'Ctrl + middle-drag',
+          action: 'Zoom',
+          trigger: { kind: 'drag', button: 1, mods: { ctrlKey: true } },
+          resolvesTo: 'zoom',
+        },
+        {
+          input: 'Wheel',
+          action: 'Zoom',
+          trigger: { kind: 'wheel' },
+          resolvesTo: 'zoom',
+        },
+        {
+          input: 'Shift + wheel',
+          action: 'Pan',
+          trigger: { kind: 'wheel', mods: { shiftKey: true } },
+          resolvesTo: 'pan',
+        },
+        {
+          input: 'Right-drag',
+          action: 'Freelook — turn the camera in place',
+          trigger: { kind: 'drag', button: 2 },
+          resolvesTo: 'freelook',
+        },
+        {
+          input: 'Alt + left-drag',
+          action: 'Orbit, for a mouse with no middle button',
+          trigger: { kind: 'drag', button: 0, mods: { altKey: true } },
+          resolvesTo: 'orbit',
+        },
+        {
+          input: 'Alt + Shift + left-drag',
+          action: 'Pan',
+          trigger: {
+            kind: 'drag',
+            button: 0,
+            mods: { altKey: true, shiftKey: true },
+          },
+          resolvesTo: 'pan',
+        },
       ],
     },
     {
       device: 'Trackpad',
       bindings: [
-        { input: 'Two-finger scroll', action: 'Zoom' },
-        { input: 'Shift + two-finger scroll', action: 'Pan' },
-        { input: 'Pinch', action: 'Zoom' },
+        {
+          input: 'Two-finger scroll',
+          action: 'Zoom',
+          trigger: { kind: 'wheel' },
+          resolvesTo: 'zoom',
+        },
+        {
+          input: 'Shift + two-finger scroll',
+          action: 'Pan',
+          trigger: { kind: 'wheel', mods: { shiftKey: true } },
+          resolvesTo: 'pan',
+        },
+        {
+          input: 'Pinch',
+          action: 'Zoom',
+          trigger: { kind: 'wheel', mods: { ctrlKey: true } },
+          resolvesTo: 'zoom',
+        },
       ],
     },
     {
       device: 'Touch',
       bindings: [
         { input: 'Tap', action: 'Select' },
-        { input: 'One-finger drag', action: 'Orbit' },
-        { input: 'Two-finger drag', action: 'Pan' },
+        {
+          input: 'One-finger drag',
+          action: 'Orbit',
+          trigger: { kind: 'touch', pointers: 1 },
+          resolvesTo: 'orbit',
+        },
+        {
+          input: 'Two-finger drag',
+          action: 'Pan',
+          trigger: { kind: 'touch', pointers: 2 },
+          resolvesTo: 'pan',
+        },
         { input: 'Pinch', action: 'Zoom' },
       ],
     },
@@ -70,9 +173,15 @@ const CONTROLS_3D: ControlsHelp = {
       device: 'Keyboard',
       bindings: [
         { input: 'F', action: 'Frame the selection, or the whole scene' },
-        { input: 'Numpad 1 / 3 / 7', action: 'Front / right / top view; Ctrl for the opposite' },
+        {
+          input: 'Numpad 1 / 3 / 7',
+          action: 'Front / right / top view; Ctrl for the opposite',
+        },
         { input: 'Numpad 5', action: 'Perspective ⇄ orthographic' },
-        { input: 'W A S D Q E', action: 'Fly while right-dragging (Shift sprints)' },
+        {
+          input: 'W A S D Q E',
+          action: 'Fly while right-dragging (Shift sprints)',
+        },
       ],
     },
   ],
@@ -86,7 +195,10 @@ const CONTROLS_2D: ControlsHelp = {
       bindings: [
         { input: 'Drag', action: 'Pan' },
         { input: 'Wheel', action: 'Zoom, anchored to the cursor' },
-        { input: '− / + / Fit', action: 'Zoom out, in, or fit the viewport rectangle' },
+        {
+          input: '− / + / Fit',
+          action: 'Zoom out, in, or fit the viewport rectangle',
+        },
       ],
     },
     {

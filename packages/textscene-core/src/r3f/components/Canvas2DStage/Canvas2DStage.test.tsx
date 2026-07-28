@@ -1,5 +1,5 @@
 /**
- * Canvas2DStage behavior: frame chrome (dimension badge + hints), the zoom
+ * Canvas2DStage behavior: frame chrome (dimension badge), the zoom
  * HUD (in/out/fit + clamping), wheel-to-zoom, and pointer-capture
  * drag-to-pan. The lazy ControlOverlay barrel is stubbed — overlay layout
  * has its own suites; this one only covers the stage chrome around it.
@@ -125,9 +125,6 @@ describe('<Canvas2DStage>', () => {
     expect(screen.getByText('1152 × 648')).toBeTruthy();
     expect(screen.getByRole('group', { name: 'Canvas zoom' })).toBeTruthy();
     expect(zoomLabel()).toBe('100%');
-    // The usage hint moved out to <ViewportControlsHelp>, which <ViewportArea>
-    // mounts for both viewport modes — the stage no longer carries its own.
-    expect(screen.queryByTestId('canvas-2d-hint')).toBeNull();
   });
 
   it('mounts the lazy ControlOverlay with the passed nodes', async () => {
@@ -167,9 +164,9 @@ describe('<Canvas2DStage>', () => {
 
   it('wheel-up zooms in, wheel-down zooms back out (native non-passive listener)', () => {
     const { stage } = renderStage();
-    wheelAt(stage, { deltaY: -1 });
+    wheelAt(stage, { deltaY: -100 });
     expect(zoomLabel()).toBe('110%');
-    wheelAt(stage, { deltaY: 1 });
+    wheelAt(stage, { deltaY: 100 });
     expect(zoomLabel()).toBe('100%');
   });
 
@@ -183,14 +180,14 @@ describe('<Canvas2DStage>', () => {
 
     // The stage origin is already the frame origin, so it is a fixed point:
     // zooming about it scales without translating.
-    wheelAt(stage, { deltaY: -1, clientX: 0, clientY: 0 });
+    wheelAt(stage, { deltaY: -100, clientX: 0, clientY: 0 });
     expect(frame.style.transform).toBe('translate(0px, 0px) scale(1.1)');
 
     // Anywhere else the frame must slide to keep that point put. Back at
     // scale 1, world (400, 300) sits under the cursor; at 1.1 it would drift
     // to (440, 330) unless the pan takes up the 40/30 difference.
-    wheelAt(stage, { deltaY: 1, clientX: 0, clientY: 0 });
-    wheelAt(stage, { deltaY: -1, clientX: 400, clientY: 300 });
+    wheelAt(stage, { deltaY: 100, clientX: 0, clientY: 0 });
+    wheelAt(stage, { deltaY: -100, clientX: 400, clientY: 300 });
     const [, x, y, scale] =
       /translate\((-?[\d.]+)px, (-?[\d.]+)px\) scale\(([\d.]+)\)/.exec(frame.style.transform) ?? [];
     expect(Number(scale)).toBeCloseTo(1.1, 9);

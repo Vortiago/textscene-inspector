@@ -240,49 +240,28 @@ describe('<GodotEditorControls> wheel navigation', () => {
   });
 });
 
-/** Drive `count` touch pointers from `from` to `to`, one move each. */
+/** Drive touch pointers from `from` to `to`, one move each, then lift them. */
 function touchDrag(
   element: HTMLCanvasElement,
   points: readonly { from: [number, number]; to: [number, number] }[]
 ): void {
   const common = { pointerType: 'touch', bubbles: true, cancelable: true, isPrimary: true };
-  points.forEach((point, index) => {
+  const fire = (type: string, index: number, at?: [number, number]) =>
     element.dispatchEvent(
-      new PointerEvent('pointerdown', {
+      new PointerEvent(type, {
         ...common,
         pointerId: index + 1,
-        clientX: point.from[0],
-        clientY: point.from[1],
+        clientX: at?.[0],
+        clientY: at?.[1],
       })
     );
-  });
+
+  points.forEach((point, index) => fire('pointerdown', index, point.from));
   // Every finger reports its start once, so the gesture has an origin before
   // any of them has moved — otherwise the first move reads as a jump.
-  points.forEach((point, index) => {
-    element.dispatchEvent(
-      new PointerEvent('pointermove', {
-        ...common,
-        pointerId: index + 1,
-        clientX: point.from[0],
-        clientY: point.from[1],
-      })
-    );
-  });
-  points.forEach((point, index) => {
-    element.dispatchEvent(
-      new PointerEvent('pointermove', {
-        ...common,
-        pointerId: index + 1,
-        clientX: point.to[0],
-        clientY: point.to[1],
-      })
-    );
-  });
-  points.forEach((_point, index) => {
-    element.dispatchEvent(
-      new PointerEvent('pointerup', { ...common, pointerId: index + 1 })
-    );
-  });
+  points.forEach((point, index) => fire('pointermove', index, point.from));
+  points.forEach((point, index) => fire('pointermove', index, point.to));
+  points.forEach((_point, index) => fire('pointerup', index));
 }
 
 describe('<GodotEditorControls> touch navigation', () => {

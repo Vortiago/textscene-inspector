@@ -57,8 +57,15 @@ const WHEEL_NOTCH_PIXELS = 100;
  */
 const WHEEL_LINE_PIXELS = WHEEL_NOTCH_PIXELS / 3;
 
-/** Pixels per page for `deltaMode === 2` — one page is one notch. */
-const WHEEL_PAGE_PIXELS = WHEEL_NOTCH_PIXELS;
+/**
+ * CSS pixels one unit of `deltaY` represents. `deltaMode` 0 already reports
+ * pixels; 1 reports lines (three to a notch); 2 reports pages (one to a notch).
+ */
+function wheelPixelsPerUnit(deltaMode: number | undefined): number {
+  if (deltaMode === 1) return WHEEL_LINE_PIXELS;
+  if (deltaMode === 2) return WHEEL_NOTCH_PIXELS;
+  return 1;
+}
 
 /**
  * `_nav_orbit` clamps the pitch to "roughly -90..90 degrees so the user can't
@@ -152,57 +159,6 @@ export function resolveNavMode(button: number, mods: NavModifiers): NavMode | nu
   if (button === 2) return 'freelook';
   if (button === 0 && mods.altKey) return mods.shiftKey ? 'pan' : 'orbit';
   return null;
-}
-
-/**
- * What a touch gesture drives, from how many fingers are down. Godot's editor
- * has no touch scheme to mirror, so this is the 3D-viewer convention instead:
- * one finger orbits, two pan (and pinch, which rides the same two pointers).
- * A tap is not a mode — it falls out of one-finger orbit, since viewport
- * selection already discriminates a tap from a drag by distance travelled.
- *
- * Freelook has no touch binding: it needs a held button plus WASD.
- */
-export function resolveTouchMode(pointerCount: number): 'orbit' | 'pan' | null {
-  if (pointerCount === 1) return 'orbit';
-  if (pointerCount === 2) return 'pan';
-  return null;
-}
-
-/** A pointer position, in client pixels. */
-export interface TouchPoint {
-  readonly x: number;
-  readonly y: number;
-}
-
-/** The midpoint the fingers pan about. */
-export function touchCentroid(points: readonly TouchPoint[]): TouchPoint {
-  if (points.length === 0) return { x: 0, y: 0 };
-  let x = 0;
-  let y = 0;
-  for (const point of points) {
-    x += point.x;
-    y += point.y;
-  }
-  return { x: x / points.length, y: y / points.length };
-}
-
-/** How far apart the first two fingers are — the quantity a pinch changes. */
-export function touchSpan(points: readonly TouchPoint[]): number {
-  const [first, second] = points;
-  if (!first || !second) return 0;
-  return Math.hypot(first.x - second.x, first.y - second.y);
-}
-
-/**
- * The distance scale for a pinch: spreading the fingers pulls the eye IN, so
- * the orbit radius scales by the INVERSE of the span's growth. Degenerate
- * spans (a frame where the fingers coincide, or the first move of a gesture
- * with no previous span yet) yield 1 rather than a division blow-up.
- */
-export function pinchZoomScale(previousSpan: number, span: number): number {
-  if (previousSpan <= DEGENERATE_DISTANCE || span <= DEGENERATE_DISTANCE) return 1;
-  return previousSpan / span;
 }
 
 /** Which keys freelook movement is currently holding down. */
@@ -357,9 +313,13 @@ export interface WheelEventLike {
  * `deltaY` would silently do nothing.
  */
 export function wheelDeltaPixels(event: WheelEventLike): WheelDelta {
-  const perUnit =
-    event.deltaMode === 1 ? WHEEL_LINE_PIXELS : event.deltaMode === 2 ? WHEEL_PAGE_PIXELS : 1;
+  const perUnit = wheelPixelsPerUnit(event.deltaMode);
   return { dx: (event.deltaX ?? 0) * perUnit, dy: event.deltaY * perUnit };
+}
+
+/** How many notches a wheel event's vertical delta is worth. */
+export function wheelNotches(event: WheelEventLike): number {
+  return (event.deltaY * wheelPixelsPerUnit(event.deltaMode)) / WHEEL_NOTCH_PIXELS;
 }
 
 /**
@@ -370,9 +330,11 @@ export function wheelDeltaPixels(event: WheelEventLike): WheelDelta {
  * instead of slightly further.
  */
 export function wheelZoomScale(event: WheelEventLike): number {
-  const notches = wheelDeltaPixels(event).dy / WHEEL_NOTCH_PIXELS;
+  const notches = wheelNotches(event);
   if (notches === 0) return 1;
-  return WHEEL_ZOOM_MULTIPLIER ** THREE.MathUtils.clamp(notches, -WHEEL_MAX_NOTCHES, WHEEL_MAX_NOTCHES);
+  return (
+    WHEEL_ZOOM_MULTIPLIER ** THREE.MathUtils.clamp(notches, -WHEEL_MAX_NOTCHES, WHEEL_MAX_NOTCHES)
+  );
 }
 
 /**

@@ -49,13 +49,9 @@ import {
   orbitCursor,
   orthographicHeight,
   panCursor,
-  pinchZoomScale,
   resolveNavMode,
-  resolveTouchMode,
   resolveWheelMode,
   scaleCursorDistance,
-  touchCentroid,
-  touchSpan,
   viewSnapCursor,
   wheelDeltaPixels,
   wheelZoomScale,
@@ -63,9 +59,15 @@ import {
   type EditorCursor,
   type FreelookKeys,
   type GodotViewAngle,
-  type TouchPoint,
   type ZoomRange,
 } from './godotEditorCursor.js';
+import {
+  pinchSpanRatio,
+  resolveTouchMode,
+  touchCentroid,
+  touchSpan,
+  type TouchPoint,
+} from './pointerGesture.js';
 
 /** Numpad view snaps. Ctrl inverts each to the opposite face. */
 const VIEW_SNAP_KEYS: Readonly<Record<string, GodotViewAngle>> = {
@@ -315,6 +317,16 @@ export function GodotEditorControls() {
     // `.current` happens to hold by then.
     const touchPoints = touchPointsRef.current;
 
+    /**
+     * The invariant every touch path maintains: no fingers, no gesture origin.
+     * A stale origin is what would make the next single-finger drag pan from
+     * wherever a two-finger gesture happened to end.
+     */
+    function resetTouch(): void {
+      touchPoints.clear();
+      touchGestureRef.current = null;
+    }
+
     function endDrag(): void {
       const drag = dragRef.current;
       if (!drag) return;
@@ -392,13 +404,10 @@ export function GodotEditorControls() {
         // Two fingers pan and pinch at once, exactly as they do on a map: the
         // centroid drives the pan, the span between them drives the zoom.
         const panned = panCursor(handle.cursor(), dx, dy);
-        handle.applyCursor(
-          scaleCursorDistance(
-            panned,
-            pinchZoomScale(previous.span, gesture.span),
-            handle.zoomRange()
-          )
-        );
+        // Inverted: spreading the fingers pulls the eye IN, so the orbit
+        // radius scales by the reciprocal of how far they spread.
+        const zoom = 1 / pinchSpanRatio(previous.span, gesture.span);
+        handle.applyCursor(scaleCursorDistance(panned, zoom, handle.zoomRange()));
       }
       invalidate();
     }
@@ -491,8 +500,7 @@ export function GodotEditorControls() {
     function handleBlur(): void {
       heldKeysRef.current.clear();
       sprintRef.current = false;
-      touchPoints.clear();
-      touchGestureRef.current = null;
+      resetTouch();
     }
 
     element.addEventListener('pointerdown', handlePointerDown);
@@ -519,8 +527,7 @@ export function GodotEditorControls() {
       window.removeEventListener('keyup', handleKeyUp);
       window.removeEventListener('blur', handleBlur);
       endDrag();
-      touchPoints.clear();
-      touchGestureRef.current = null;
+      resetTouch();
     };
   }, [gl, handle, invalidate]);
 
