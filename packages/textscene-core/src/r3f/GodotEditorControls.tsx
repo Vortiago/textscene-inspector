@@ -368,11 +368,10 @@ export function GodotEditorControls() {
     }
 
     function handleTouchMove(event: PointerEvent): void {
-      const points = touchPoints;
-      if (!points.has(event.pointerId)) return;
-      points.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      if (!touchPoints.has(event.pointerId)) return;
+      touchPoints.set(event.pointerId, { x: event.clientX, y: event.clientY });
 
-      const active = [...points.values()];
+      const active = [...touchPoints.values()];
       const mode = resolveTouchMode(active.length);
       if (!mode) {
         touchGestureRef.current = null;
