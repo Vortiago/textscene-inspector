@@ -214,7 +214,15 @@ export function createResourceProcessor<T>(
       // (etc.) from being retained twice: once as raw bytes, once as the
       // decoded resource. `loadDirectly` mode has no `fileEventBus` (scenes
       // fetch text directly), so this is a no-op there.
-      fileEventBus?.clearCache(resourceFilePath(path));
+      //
+      // But ONLY once nothing else still wants that file. `clearCache` drops the
+      // byte bus's in-flight token too, and a fetch whose token has gone is
+      // abandoned silently — neither `loaded` nor `failed`. Several
+      // **Sub-resource path**s of one file are separate resources that each
+      // request it, so clearing on the first one to finish would strand a
+      // sibling in `pending` for good.
+      const file = resourceFilePath(path);
+      if (awaitingFile(file).length === 0) fileEventBus?.clearCache(file);
     }
   };
 

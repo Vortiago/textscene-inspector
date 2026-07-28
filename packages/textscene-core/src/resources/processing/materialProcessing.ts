@@ -34,6 +34,17 @@ function parseMemoised(content: string, parse: (c: string) => ParsedTresFile): P
 }
 
 /**
+ * Release the memo. Without this the slot is only ever overwritten by the NEXT
+ * material file, so a teardown that drops every cache would still leave the last
+ * one's whole source text — megabytes, for a mesh that carries its own
+ * materials — reachable for the page's lifetime. Called from the loader's clear
+ * sequence, which exists to make that teardown complete.
+ */
+export function clearMaterialParseCache(): void {
+  lastParsed = null;
+}
+
+/**
  * Check if a path is a material file (.tres).
  */
 export function isMaterialPath(path: string): boolean {

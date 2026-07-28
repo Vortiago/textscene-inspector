@@ -27,7 +27,7 @@
 
 import { warn } from '../../logger.js';
 import { parseTresFile, type ParsedTresFile } from '../../parser/tresParser.js';
-import { findSubResource } from '../SubResourceResolver.js';
+import { findSubResource, parseResourceReference } from '../SubResourceResolver.js';
 import { parseSubResourcePath, resolveRefToResourcePath } from '../subResourcePath.js';
 
 /** Godot Mesh.ArrayFormat flags. */
@@ -264,12 +264,20 @@ function decodeUVs(
   uvScale: [number, number] | undefined,
   onMismatch: (actualStride: number) => void
 ): Float32Array | undefined {
-  const { uvOffset, attributeStride } = layout;
+  const { uvOffset } = layout;
   if (uvOffset < 0 || vertexCount === 0 || bytes.byteLength === 0) return undefined;
-  if (bytes.byteLength !== vertexCount * attributeStride) {
-    onMismatch(bytes.byteLength / vertexCount);
+
+  // Godot orders the record COLOR, UV1, UV2, CUSTOM0..3, so UV1 sits at its
+  // offset no matter what TRAILS it. A record WIDER than the format models is an
+  // unmodelled CUSTOM channel and reads fine at the actual stride; only a record
+  // too narrow, or one that does not divide evenly, means UV1 is not where this
+  // thinks and the UVs have to go.
+  const actualStride = bytes.byteLength / vertexCount;
+  if (!Number.isInteger(actualStride) || actualStride < layout.attributeStride) {
+    onMismatch(actualStride);
     return undefined;
   }
+  const attributeStride = actualStride;
 
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const out = new Float32Array(vertexCount * 2);
@@ -362,7 +370,11 @@ function decodeNormals(
     // rotation (Godot's `axis_angle_to_tbn`).
     const [ex, ey] = oct(normalBlock + i * stride);
     const [ax, ay, az] = octToVec3(ex, ey);
-    const angle = ((view.getUint16(i * positionStride + 6, true) / 65535) * 2 - 1) * Math.PI;
+    // ABSOLUTE value, as Godot's own `abs(angle * 2.0 - 1.0) * PI`: the stored
+    // value's sign carries the binormal's handedness, not the rotation's
+    // direction. Reading it signed rotates the frame the wrong way for every
+    // vertex below the midpoint, flipping the normal's x and y.
+    const angle = Math.abs((view.getUint16(i * positionStride + 6, true) / 65535) * 2 - 1) * Math.PI;
     const cos = Math.cos(angle);
     const sin = Math.sin(angle);
     const omc = 1 - cos;
@@ -377,11 +389,20 @@ function decodeNormals(
   return out;
 }
 
-/** uint16 when ≤ 65535 vertices, uint32 otherwise — detected from byte width. */
-function decodeIndices(bytes: Uint8Array, indexCount: number): Uint16Array | Uint32Array {
+/**
+ * uint16 when ≤ 65535 vertices, uint32 otherwise — detected from byte width.
+ * Undefined when `index_data` is too short for the count it declares, so the
+ * surface is dropped like any other unreadable one rather than throwing a
+ * RangeError that would take the whole mesh down.
+ */
+function decodeIndices(
+  bytes: Uint8Array,
+  indexCount: number
+): Uint16Array | Uint32Array | undefined {
   if (indexCount === 0) return new Uint16Array(0);
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  const width = bytes.byteLength / indexCount;
+  const width = bytes.byteLength >= indexCount * 4 ? 4 : 2;
+  if (bytes.byteLength < indexCount * width) return undefined;
   if (width === 4) {
     const out = new Uint32Array(indexCount);
     for (let i = 0; i < indexCount; i++) out[i] = view.getUint32(i * 4, true);
@@ -391,6 +412,9 @@ function decodeIndices(bytes: Uint8Array, indexCount: number): Uint16Array | Uin
   for (let i = 0; i < indexCount; i++) out[i] = view.getUint16(i * 2, true);
   return out;
 }
+
+/** The material types `createMaterialFromContent`'s switch actually builds. */
+const BUILDABLE_MATERIAL_TYPES = new Set(['StandardMaterial3D', 'ShaderMaterial']);
 
 /**
  * Resolve a surface's `"material"` to the resource path that addresses it.
@@ -402,11 +426,25 @@ function decodeIndices(bytes: Uint8Array, indexCount: number): Uint16Array | Uin
  */
 function readMaterialPath(
   block: string,
+  parsed: ParsedTresFile,
   extById: Map<string, string>,
   selfPath: string
 ): string | undefined {
   const match = /"material"\s*:\s*([^,\n}]+)/.exec(block);
-  return match ? (resolveRefToResourcePath(match[1]!.trim(), extById, selfPath) ?? undefined) : undefined;
+  if (!match) return undefined;
+  const ref = match[1]!.trim();
+
+  // A sub-resource this file carries is only worth addressing if the material
+  // pipeline can build its type. Minting an address for, say, an ORMMaterial3D
+  // would fail the load and put a permanent missing-resources row in front of the
+  // user for a file that is present and correct — where leaving it unaddressed
+  // just renders the surface with the default material, as it did before.
+  const parsedRef = parseResourceReference(ref);
+  if (parsedRef?.type === 'SubResource') {
+    const sub = findSubResource(parsed.subResources, parsedRef.id);
+    if (!sub || !BUILDABLE_MATERIAL_TYPES.has(sub.type)) return undefined;
+  }
+  return resolveRefToResourcePath(ref, extById, selfPath) ?? undefined;
 }
 
 /**
@@ -455,12 +493,24 @@ export function decodeArrayMesh(content: string, selfPath: string): ArrayMeshDat
   const parsed = parseTresFile(content);
   const { filePath, subResourceId } = parseSubResourcePath(selfPath);
   const surfacesRaw = readSurfacesRaw(parsed, filePath, subResourceId);
-  if (!surfacesRaw) return { surfaces: [] };
+  if (!surfacesRaw) {
+    // An ADDRESS names one specific sub-resource, so failing to find a mesh there
+    // is an error: it fails like a missing file and the consumer gets its
+    // placeholder. A bare file path is different — a `.tres` with no `_surfaces`
+    // may be a legitimately empty mesh, or not a mesh at all (a MeshLibrary), and
+    // neither deserves a placeholder for a file that is exactly as written.
+    if (subResourceId !== undefined) {
+      throw new Error(`ArrayMesh ${selfPath} names no readable mesh sub-resource`);
+    }
+    return { surfaces: [] };
+  }
 
   const extById = new Map(parsed.extResources.map((r) => [r.id, r.path]));
 
   const surfaces: ArrayMeshSurface[] = [];
+  let declared = 0;
   for (const [surfaceIndex, block] of [...iterateSurfaceBlocks(surfacesRaw)].entries()) {
+    declared++;
     const format = readInt(block, 'format');
     const vertexCount = readInt(block, 'vertex_count');
     const indexCount = readInt(block, 'index_count');
@@ -491,7 +541,15 @@ export function decodeArrayMesh(content: string, selfPath: string): ArrayMeshDat
             `not the ${layout.attributeStride} B format ${format} implies — dropping its UVs`
         )
     );
-    const indices = decodeIndices(readPackedBytes(block, 'index_data'), indexCount);
+    const indexData = readPackedBytes(block, 'index_data');
+    const indices = decodeIndices(indexData, indexCount);
+    if (!indices) {
+      warn(
+        `[ArrayMesh] surface ${surfaceIndex}'s index_data is ${indexData.byteLength} B for ` +
+          `${indexCount} indices — dropping the surface so the rest of the mesh still renders`
+      );
+      continue;
+    }
 
     surfaces.push({
       format,
@@ -502,8 +560,16 @@ export function decodeArrayMesh(content: string, selfPath: string): ArrayMeshDat
       uvs,
       normals,
       indices,
-      materialPath: readMaterialPath(block, extById, filePath),
+      materialPath: readMaterialPath(block, parsed, extById, filePath),
     });
+  }
+
+  // Dropping SOME surfaces keeps the mesh; dropping ALL of them means nothing
+  // was readable, and that has to fail rather than cache an empty geometry as a
+  // success — otherwise the node renders invisibly with no placeholder and the
+  // user gets no signal at all.
+  if (declared > 0 && surfaces.length === 0) {
+    throw new Error(`ArrayMesh ${selfPath}: none of its ${declared} surface(s) could be decoded`);
   }
   return { surfaces };
 }

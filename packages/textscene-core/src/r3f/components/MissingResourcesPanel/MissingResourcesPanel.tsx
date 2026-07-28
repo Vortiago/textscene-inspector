@@ -111,12 +111,18 @@ interface MissingRowProps {
 }
 
 function MissingRow({ path, onUpload }: MissingRowProps) {
+  // What a picked file actually REPLACES. For a row naming a resource inside a
+  // `.tres` these differ, and the row has to say so: it identifies a material,
+  // but the only thing a provider can be keyed by is the mesh file that carries
+  // it. A user who read the row as "pick this material" and got their material
+  // installed as the mesh's bytes would watch the mesh vanish.
+  const filePath = resourceFilePath(path);
+  const replacesOtherFile = filePath !== path;
+
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    // The row may name a resource inside a `.tres`; what the user picked is the
-    // owning file, which is the only thing a provider can be keyed by.
-    onUpload(resourceFilePath(path), file);
+    onUpload(filePath, file);
     // Reset the input so picking the same filename again would re-fire.
     e.target.value = '';
   };
@@ -131,7 +137,10 @@ function MissingRow({ path, onUpload }: MissingRowProps) {
         <div className={`${styles.icon} ${styles.missing}`} aria-hidden="true">
           ⚠
         </div>
-        <div className={styles.path} title={path}>
+        <div
+          className={styles.path}
+          title={replacesOtherFile ? `${path} — inside ${filePath}` : path}
+        >
           {path}
         </div>
       </div>
@@ -140,7 +149,8 @@ function MissingRow({ path, onUpload }: MissingRowProps) {
           type="file"
           className={styles.upload}
           onChange={handleChange}
-          aria-label={`Upload file for ${path}`}
+          aria-label={`Upload ${filePath}`}
+          title={replacesOtherFile ? `Replaces ${filePath}, which carries it` : undefined}
         />
       </div>
     </div>

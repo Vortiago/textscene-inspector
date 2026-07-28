@@ -146,15 +146,14 @@ describe('decodeArrayMesh', () => {
     expect(mesh.surfaces[0]!.indexCount).toBe(3);
   });
 
-  it('warns when a sub-resource path names an id the file does not declare', () => {
-    // Silence here means a node that renders nothing with nothing said about
-    // why. The material path throws for the same class of error.
-    const mesh = decodeArrayMesh(
-      NESTED_MESH_TRES,
-      'res://vehicles/meshes/wheel.tres::ArrayMesh_absent'
-    );
+  it('throws when a sub-resource path names an id the file does not declare', () => {
+    // Returning an empty mesh would be cached as a SUCCESS: an invisible node
+    // with no placeholder and no missing-resources row. Unreadable is not empty,
+    // so it fails like a missing file and the consumer gets its placeholder.
+    expect(() =>
+      decodeArrayMesh(NESTED_MESH_TRES, 'res://vehicles/meshes/wheel.tres::ArrayMesh_absent')
+    ).toThrow();
 
-    expect(mesh.surfaces).toHaveLength(0);
     expect(warnSpy).toHaveBeenCalledTimes(1);
     const message = String(warnSpy.mock.calls[0]![0]);
     expect(message).toContain('[ArrayMesh]');
@@ -164,13 +163,14 @@ describe('decodeArrayMesh', () => {
     expect(message).not.toContain('::');
   });
 
-  it('warns when a sub-resource path names something that is not a mesh', () => {
-    const mesh = decodeArrayMesh(
-      OWN_MATERIAL_TRES,
-      'res://vehicles/meshes/wheel.tres::StandardMaterial3D_shvqh'
-    );
+  it('throws when a sub-resource path names something that is not a mesh', () => {
+    expect(() =>
+      decodeArrayMesh(
+        OWN_MATERIAL_TRES,
+        'res://vehicles/meshes/wheel.tres::StandardMaterial3D_shvqh'
+      )
+    ).toThrow();
 
-    expect(mesh.surfaces).toHaveLength(0);
     expect(String(warnSpy.mock.calls[0]![0])).toContain('StandardMaterial3D');
   });
 });
@@ -288,15 +288,33 @@ describe('compressed attribute layout', () => {
     }
   });
 
+  it('decodes a compressed normal whose frame angle is below the midpoint', () => {
+    // The angle's stored sign carries the binormal's HANDEDNESS, not the
+    // rotation's direction, so Godot takes its absolute value. Reading it signed
+    // rotates the frame backwards for every vertex below the midpoint and flips
+    // the normal's x and y — invisible in a fixture that stores the midpoint
+    // exactly, where the absolute value is a no-op.
+    const surface = decodeArrayMesh(COMPRESSED_LOW_ANGLE_TRES, 'res://q.tres').surfaces[0]!;
+
+    for (let v = 0; v < 4; v++) {
+      expect(surface.normals![v * 3 + 0]).toBeCloseTo(0.113141, 5);
+      expect(surface.normals![v * 3 + 1]).toBeCloseTo(0.197363, 5);
+      expect(surface.normals![v * 3 + 2]).toBeCloseTo(0.97378, 5);
+    }
+  });
+
   it('drops a compressed surface that declares no aabb', () => {
     // The aabb IS the position scale for a compressed surface, so without it
-    // there is nothing to dequantise against.
+    // there is nothing to dequantise against. This mesh has only that surface,
+    // so nothing survives and the whole decode fails rather than yielding an
+    // empty mesh that would cache as a success.
     const noAabb = COMPRESSED_TRES.replace(
       '"aabb": AABB(0.416992, 0.114807, 1.339844, 0.102539, 0.06988499, 0.023437023),\n',
       ''
     );
 
-    expect(decodeArrayMesh(noAabb, 'res://mesh.tres').surfaces).toHaveLength(0);
+    expect(() => decodeArrayMesh(noAabb, 'res://mesh.tres')).toThrow();
+    expect(String(warnSpy.mock.calls[0]![0])).toContain('no decodable positions');
   });
 
   it('decodes compressed UVs as unorm16 when uv_scale is zero', () => {
@@ -340,6 +358,29 @@ describe('compressed attribute layout', () => {
     for (const p of surface.positions) expect(Number.isFinite(p)).toBe(true);
   });
 });
+
+/**
+ * A compressed quad saved by Godot 4.6.3 whose tangent handedness puts the stored
+ * frame angle at uint16 15684 — well below the midpoint, where reading the angle
+ * signed instead of absolute gives a visibly wrong normal. Expected values are
+ * Godot's own `surface_get_arrays()[ARRAY_NORMAL]` for these bytes.
+ */
+const COMPRESSED_LOW_ANGLE_TRES = `[gd_resource type="ArrayMesh" format=4]
+
+[resource]
+_surfaces = [{
+"aabb": AABB(-1, -1, 1, 2, 2, 1e-05),
+"format": 34896613383,
+"index_count": 6,
+"index_data": PackedByteArray("AgAAAAMAAgABAAAA"),
+"name": "low_angle",
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 4,
+"vertex_data": PackedByteArray("AAAAAAAARD3//wAAAABEPf////8AAEQ9AAD//wAARD1t7wMEbe8DBG3vAwRt7wME")
+}]
+blend_shape_mode = 0
+`;
 
 /**
  * scenes/demos/3d/truck_town/vehicles/meshes/truck_trailer.tres, its
@@ -461,20 +502,36 @@ blend_shape_mode = 0`
 );
 
 describe('undecodable surfaces', () => {
-  it('drops a surface whose vertex_data is shorter than its format requires', () => {
-    // Reading past the buffer used to throw out of the decoder, which failed the
-    // whole resource; the surface alone is the thing that cannot be read.
-    expect(decodeArrayMesh(TRUNCATED_TRES, 'res://mesh.tres').surfaces).toHaveLength(0);
+  it('fails a mesh whose ONLY surface has vertex_data shorter than its format requires', () => {
+    // Per-surface dropping is what keeps a mesh's readable surfaces; when nothing
+    // is left there is no mesh, and saying so is what earns the consumer its
+    // magenta placeholder and a missing-resources row. Returning an empty mesh
+    // would be cached as a success and render invisibly instead.
+    expect(() => decodeArrayMesh(TRUNCATED_TRES, 'res://mesh.tres')).toThrow();
   });
 
-  it('drops a surface whose decoded positions are not finite', () => {
+  it('fails a mesh whose ONLY surface decodes to non-finite positions', () => {
     // A single NaN reaches THREE.BufferGeometry and NaNs the merged bounding
     // sphere for every surface above it, which also breaks camera framing.
-    expect(decodeArrayMesh(NON_FINITE_TRES, 'res://mesh.tres').surfaces).toHaveLength(0);
+    expect(() => decodeArrayMesh(NON_FINITE_TRES, 'res://mesh.tres')).toThrow();
+  });
+
+  it('fails a mesh whose ONLY surface has index_data shorter than its index_count', () => {
+    // A short index buffer used to throw a RangeError from deep inside the read,
+    // bypassing the per-surface drop entirely.
+    const shortIndices = GOOD_THEN_BAD_TRES.replace(
+      '"index_data": PackedByteArray("AgAAAAMAAgABAAAA"),',
+      '"index_data": PackedByteArray("AgAA"),'
+    );
+
+    expect(() => decodeArrayMesh(shortIndices, 'res://mesh.tres')).toThrow();
+    expect(
+      warnSpy.mock.calls.some((c) => String(c[0]).includes('index_data'))
+    ).toBe(true);
   });
 
   it('warns with the surface name and format when it drops a surface', () => {
-    decodeArrayMesh(TRUNCATED_TRES, 'res://mesh.tres');
+    expect(() => decodeArrayMesh(TRUNCATED_TRES, 'res://mesh.tres')).toThrow();
 
     expect(warnSpy).toHaveBeenCalledTimes(1);
     const message = String(warnSpy.mock.calls[0]![0]);
