@@ -42,6 +42,45 @@ const ZOOM_MIN = 0.1;
 const ZOOM_MAX = 4;
 const clampZoom = (z: number) => Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, z));
 
+/** Below this span a pinch has no direction to read a scale from. */
+const DEGENERATE_SPAN_PX = 1e-3;
+
+/** Where the stage is looking: the CSS translate, and the CSS scale. */
+interface View2D {
+  pan: { x: number; y: number };
+  zoom: number;
+}
+
+/**
+ * Scale about a point in stage-local pixels, keeping whatever sits under that
+ * point pinned to it. Pure, so the three callers that need it — wheel (anchored
+ * to the cursor), pinch (to the fingers' midpoint), HUD buttons (to the stage
+ * centre) — share one implementation instead of three copies of the algebra.
+ */
+function zoomViewAround(view: View2D, px: number, py: number, factor: number): View2D {
+  const zoom = clampZoom(view.zoom * factor);
+  const cx = (px - view.pan.x) / view.zoom;
+  const cy = (py - view.pan.y) / view.zoom;
+  return { pan: { x: px - cx * zoom, y: py - cy * zoom }, zoom };
+}
+
+/** Midpoint and separation of the fingers currently down. */
+function touchGeometry(points: readonly { x: number; y: number }[]): {
+  cx: number;
+  cy: number;
+  span: number;
+} {
+  let cx = 0;
+  let cy = 0;
+  for (const point of points) {
+    cx += point.x;
+    cy += point.y;
+  }
+  const [first, second] = points;
+  const span = first && second ? Math.hypot(first.x - second.x, first.y - second.y) : 0;
+  return { cx: cx / points.length, cy: cy / points.length, span };
+}
+
 const isBoolean = (value: unknown): value is boolean => typeof value === 'boolean';
 
 export interface Canvas2DStageProps {
@@ -69,21 +108,41 @@ export function Canvas2DStage({
   const panRef = useRef(pan);
   panRef.current = pan;
 
+  /**
+   * The view as of NOW, not as of the last render: a wheel burst or a pinch
+   * fires many events per frame, and reading React state would make every
+   * event after the first in a frame compute from a stale pan/zoom.
+   */
+  const currentView = useCallback(
+    (): View2D => ({ pan: panRef.current, zoom: zoomRef.current }),
+    []
+  );
+
+  /** Commit a view, keeping the refs authoritative ahead of the re-render. */
+  const applyView = useCallback((view: View2D) => {
+    panRef.current = view.pan;
+    zoomRef.current = view.zoom;
+    setPan(view.pan);
+    setZoom(view.zoom);
+  }, []);
+
   const fit = useCallback(() => {
     const el = stageRef.current;
     if (!el) return;
     const r = el.getBoundingClientRect();
     if (r.width <= 0 || r.height <= 0) return;
     const margin = 56;
-    const z = clampZoom(
+    const zoom = clampZoom(
       Math.min((r.width - margin) / CANVAS_2D_WIDTH, (r.height - margin) / CANVAS_2D_HEIGHT)
     );
-    setZoom(z);
-    setPan({
-      x: (r.width - CANVAS_2D_WIDTH * z) / 2,
-      y: (r.height - CANVAS_2D_HEIGHT * z) / 2,
+    applyView({
+      zoom,
+      pan: {
+        x: (r.width - CANVAS_2D_WIDTH * zoom) / 2,
+        y: (r.height - CANVAS_2D_HEIGHT * zoom) / 2,
+      },
     });
-  }, []);
+  }, [applyView]);
 
   // Fit on mount, unless the view is pinned (read once — the preference decides
   // how this scene OPENS; the Fit button and pan/zoom stay live either way).
@@ -102,13 +161,15 @@ export function Canvas2DStage({
     if (!el) return;
     const r = el.getBoundingClientRect();
     if (r.width <= 0 || r.height <= 0) return;
-    const z = clampZoom(frame2D.zoom);
-    setZoom(z);
-    setPan({
-      x: r.width / 2 - frame2D.center.x * z,
-      y: r.height / 2 - frame2D.center.y * z,
+    const zoom = clampZoom(frame2D.zoom);
+    applyView({
+      zoom,
+      pan: {
+        x: r.width / 2 - frame2D.center.x * zoom,
+        y: r.height / 2 - frame2D.center.y * zoom,
+      },
     });
-  }, [frame2D]);
+  }, [frame2D, applyView]);
 
   // Wheel-to-zoom, anchored to the cursor. Added as a non-passive native
   // listener so preventDefault actually suppresses page scroll.
@@ -118,26 +179,38 @@ export function Canvas2DStage({
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
       const r = el.getBoundingClientRect();
-      const px = e.clientX - r.left;
-      const py = e.clientY - r.top;
-      const z = zoomRef.current;
-      const p = panRef.current;
-      const nz = clampZoom(z * (e.deltaY < 0 ? 1.1 : 1 / 1.1));
-      const cx = (px - p.x) / z;
-      const cy = (py - p.y) / z;
-      setPan({ x: px - cx * nz, y: py - cy * nz });
-      setZoom(nz);
+      applyView(
+        zoomViewAround(
+          currentView(),
+          e.clientX - r.left,
+          e.clientY - r.top,
+          e.deltaY < 0 ? 1.1 : 1 / 1.1
+        )
+      );
     };
     el.addEventListener('wheel', onWheel, { passive: false });
     return () => el.removeEventListener('wheel', onWheel);
-  }, []);
+  }, [applyView, currentView]);
 
   // Drag-to-pan via pointer capture (like <Splitter>): the drag keeps tracking
   // off the element with NO window listeners, so an unmount mid-drag can't leak
   // a listener or call setPan on an unmounted component.
   const pan2dDrag = useRef({ startX: 0, startY: 0, ox: 0, oy: 0, active: false });
 
+  // Touch takes its own path: one finger pans, two pan AND pinch together, so
+  // a single drag slot cannot hold the gesture. Touch pointers are implicitly
+  // captured to the target, so they need no explicit capture.
+  const touchPoints = useRef<Map<number, { x: number; y: number }>>(new Map());
+  const touchOrigin = useRef<{ cx: number; cy: number; span: number } | null>(null);
+
   const onStagePointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === 'touch') {
+      touchPoints.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      // A finger landing moves the midpoint discontinuously; drop the origin
+      // so the next move re-seeds it instead of panning by the jump.
+      touchOrigin.current = null;
+      return;
+    }
     if (e.button !== 0) return;
     pan2dDrag.current = { startX: e.clientX, startY: e.clientY, ox: pan.x, oy: pan.y, active: true };
     try {
@@ -146,12 +219,63 @@ export function Canvas2DStage({
       /* unsupported (test env) */
     }
   };
+
+  const onStageTouchMove = (e: ReactPointerEvent<HTMLDivElement>) => {
+    const points = touchPoints.current;
+    if (!points.has(e.pointerId)) return;
+    points.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    const active = [...points.values()];
+    // Three or more fingers is not a gesture we define; ignore it rather than
+    // panning by a midpoint the user is not thinking in terms of.
+    if (active.length > 2) {
+      touchOrigin.current = null;
+      return;
+    }
+
+    const now = touchGeometry(active);
+    const origin = touchOrigin.current;
+    touchOrigin.current = now;
+    if (!origin) return;
+
+    const panned: View2D = {
+      pan: {
+        x: panRef.current.x + (now.cx - origin.cx),
+        y: panRef.current.y + (now.cy - origin.cy),
+      },
+      zoom: zoomRef.current,
+    };
+    if (origin.span <= DEGENERATE_SPAN_PX || now.span <= DEGENERATE_SPAN_PX) {
+      applyView(panned);
+      return;
+    }
+    const r = e.currentTarget.getBoundingClientRect();
+    applyView(
+      zoomViewAround(panned, now.cx - r.left, now.cy - r.top, now.span / origin.span)
+    );
+  };
+
   const onStagePointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === 'touch') {
+      onStageTouchMove(e);
+      return;
+    }
     const d = pan2dDrag.current;
     if (!d.active) return;
-    setPan({ x: d.ox + (e.clientX - d.startX), y: d.oy + (e.clientY - d.startY) });
+    applyView({
+      pan: { x: d.ox + (e.clientX - d.startX), y: d.oy + (e.clientY - d.startY) },
+      zoom: zoomRef.current,
+    });
   };
+
   const endStageDrag = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === 'touch') {
+      touchPoints.current.delete(e.pointerId);
+      // Lifting one of two fingers leaves the other mid-gesture; re-seed so it
+      // pans from where it is rather than from the old midpoint.
+      touchOrigin.current = null;
+      return;
+    }
     if (!pan2dDrag.current.active) return;
     pan2dDrag.current.active = false;
     try {
@@ -165,15 +289,7 @@ export function Canvas2DStage({
     const el = stageRef.current;
     if (!el) return;
     const r = el.getBoundingClientRect();
-    const px = r.width / 2;
-    const py = r.height / 2;
-    const z = zoomRef.current;
-    const p = panRef.current;
-    const nz = clampZoom(z * factor);
-    const cx = (px - p.x) / z;
-    const cy = (py - p.y) / z;
-    setPan({ x: px - cx * nz, y: py - cy * nz });
-    setZoom(nz);
+    applyView(zoomViewAround(currentView(), r.width / 2, r.height / 2, factor));
   }
 
   return (
@@ -251,10 +367,6 @@ export function Canvas2DStage({
             externalResources={externalResources}
           />
         </Suspense>
-      </div>
-
-      <div className={styles.canvas2dHint} data-testid="canvas-2d-hint">
-        scroll = zoom · drag = pan
       </div>
 
       <div className={styles.zoomHud} role="group" aria-label="Canvas zoom" data-testid="canvas-2d-zoom">

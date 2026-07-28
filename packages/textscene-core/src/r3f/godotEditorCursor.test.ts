@@ -31,10 +31,18 @@ import {
   orbitCursor,
   orthographicHeight,
   panCursor,
+  pinchZoomScale,
   resolveNavMode,
+  resolveTouchMode,
+  resolveWheelMode,
   scaleCursorDistance,
+  touchCentroid,
+  touchSpan,
   viewSnapCursor,
+  wheelDeltaPixels,
   wheelZoomScale,
+  WHEEL_MAX_NOTCHES,
+  WHEEL_ZOOM_MULTIPLIER,
   type EditorCursor,
   type GodotViewAngle,
 } from './godotEditorCursor';
@@ -180,7 +188,10 @@ describe('wheelZoomScale', () => {
   });
 
   it('normalises line- and page-mode deltas to the same notch', () => {
-    expect(wheelZoomScale({ deltaY: 6.25, deltaMode: 1 })).toBeCloseTo(1.08, 9);
+    // A browser reporting lines sends three of them per notch — the figure
+    // Firefox uses. Reading a line as a ~16px text line would make this 0.48
+    // of a notch and zoom Firefox at roughly half of Chrome's rate.
+    expect(wheelZoomScale({ deltaY: 3, deltaMode: 1 })).toBeCloseTo(1.08, 9);
     expect(wheelZoomScale({ deltaY: 1, deltaMode: 2 })).toBeCloseTo(1.08, 9);
   });
 
@@ -190,8 +201,109 @@ describe('wheelZoomScale', () => {
     expect(scale).toBeLessThan(1.08);
   });
 
+  it('composes: a trackpad’s stream of small events zooms exactly as far as one big one', () => {
+    // The whole point of scaling exponentially rather than linearly in
+    // notches. A linear factor makes sixteen tiny events overshoot one
+    // equivalent event, which is precisely the mouse-vs-trackpad mismatch.
+    const streamed = Array.from({ length: 16 }, () => wheelZoomScale({ deltaY: 10 })).reduce(
+      (a, b) => a * b,
+      1
+    );
+    expect(streamed).toBeCloseTo(wheelZoomScale({ deltaY: 160 }), 9);
+  });
+
+  it('is symmetric: scrolling back undoes the zoom exactly', () => {
+    expect(wheelZoomScale({ deltaY: 37 }) * wheelZoomScale({ deltaY: -37 })).toBeCloseTo(1, 12);
+  });
+
+  it('caps a single event so a kinetic fling cannot teleport the eye', () => {
+    const capped = WHEEL_ZOOM_MULTIPLIER ** WHEEL_MAX_NOTCHES;
+    expect(wheelZoomScale({ deltaY: 100_000 })).toBeCloseTo(capped, 9);
+    expect(wheelZoomScale({ deltaY: -100_000 })).toBeCloseTo(1 / capped, 9);
+  });
+
   it('is a no-op for a zero delta', () => {
     expect(wheelZoomScale({ deltaY: 0 })).toBe(1);
+  });
+});
+
+describe('wheelDeltaPixels', () => {
+  it('passes pixel-mode deltas through on both axes', () => {
+    expect(wheelDeltaPixels({ deltaX: -12, deltaY: 34 })).toEqual({ dx: -12, dy: 34 });
+  });
+
+  it('scales line and page modes to the same pixel distance', () => {
+    expect(wheelDeltaPixels({ deltaY: 3, deltaMode: 1 }).dy).toBeCloseTo(100, 9);
+    expect(wheelDeltaPixels({ deltaY: 1, deltaMode: 2 }).dy).toBeCloseTo(100, 9);
+  });
+
+  it('defaults a missing horizontal axis to zero', () => {
+    expect(wheelDeltaPixels({ deltaY: 5 }).dx).toBe(0);
+  });
+});
+
+describe('resolveWheelMode', () => {
+  it('zooms unmodified — the mouse wheel’s own Godot binding owns that slot', () => {
+    expect(resolveWheelMode({})).toBe('zoom');
+  });
+
+  it('pans on shift, Godot’s pan-gesture modifier', () => {
+    expect(resolveWheelMode({ shiftKey: true })).toBe('pan');
+  });
+
+  it('zooms on ctrl, which is both Godot’s zoom modifier and a trackpad pinch', () => {
+    expect(resolveWheelMode({ ctrlKey: true })).toBe('zoom');
+    // A pinch reports ctrl; shift held at the same time must not turn it into
+    // a pan, or a shift-pinch would fly the view off instead of zooming.
+    expect(resolveWheelMode({ ctrlKey: true, shiftKey: true })).toBe('zoom');
+  });
+});
+
+describe('resolveTouchMode', () => {
+  it('orbits on one finger and pans on two', () => {
+    expect(resolveTouchMode(1)).toBe('orbit');
+    expect(resolveTouchMode(2)).toBe('pan');
+  });
+
+  it('claims nothing for no fingers or for three and up', () => {
+    expect(resolveTouchMode(0)).toBeNull();
+    expect(resolveTouchMode(3)).toBeNull();
+  });
+});
+
+describe('touchCentroid / touchSpan', () => {
+  it('takes the midpoint and the separation of two fingers', () => {
+    const points = [
+      { x: 0, y: 0 },
+      { x: 10, y: 20 },
+    ];
+    expect(touchCentroid(points)).toEqual({ x: 5, y: 10 });
+    expect(touchSpan(points)).toBeCloseTo(Math.hypot(10, 20), 9);
+  });
+
+  it('reports a single finger as its own centroid with no span', () => {
+    expect(touchCentroid([{ x: 7, y: 9 }])).toEqual({ x: 7, y: 9 });
+    expect(touchSpan([{ x: 7, y: 9 }])).toBe(0);
+  });
+
+  it('survives an empty pointer set', () => {
+    expect(touchCentroid([])).toEqual({ x: 0, y: 0 });
+    expect(touchSpan([])).toBe(0);
+  });
+});
+
+describe('pinchZoomScale', () => {
+  it('pulls the eye in as the fingers spread', () => {
+    expect(pinchZoomScale(100, 200)).toBeCloseTo(0.5, 9);
+  });
+
+  it('pushes the eye out as the fingers close', () => {
+    expect(pinchZoomScale(200, 100)).toBeCloseTo(2, 9);
+  });
+
+  it('is a no-op for a degenerate span rather than dividing by zero', () => {
+    expect(pinchZoomScale(0, 100)).toBe(1);
+    expect(pinchZoomScale(100, 0)).toBe(1);
   });
 });
 

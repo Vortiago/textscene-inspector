@@ -10,22 +10,58 @@ This guide walks through every user-visible feature against the verification sce
 
 ## Viewport navigation
 
-The 3D viewport uses Godot's own editor navigation, so muscle memory carries over:
+The 3D viewport uses Godot's own editor navigation, so muscle memory carries over. You never
+need this table in front of you: the viewport shows a summary pill, and clicking it — or
+pressing **?** or **F1** — opens the full list for whichever device you are on (ADR-0029).
+
+**Mouse**
 
 | Input | Action |
 | --- | --- |
+| Left-click | Select |
 | Middle-drag | Orbit |
 | Shift + middle-drag | Pan |
 | Ctrl + middle-drag, or the wheel | Zoom |
+| Shift + wheel | Pan |
 | Alt + left-drag / Alt + Shift + left-drag | Orbit / pan, for mice and trackpads without a middle button |
 | Right-drag | Freelook — turn the camera in place |
+
+**Trackpad**
+
+| Input | Action |
+| --- | --- |
+| Two-finger scroll | Zoom |
+| Shift + two-finger scroll | Pan |
+| Pinch | Zoom |
+
+A browser reports a two-finger scroll and a mouse wheel as the same event, so the unmodified
+one keeps the wheel's meaning (zoom) and Shift is what gives a trackpad its pan. Ctrl + wheel
+zooms the viewport rather than the page, because a pinch arrives as exactly that event.
+
+**Touch** (tablets — no Godot equivalent, so these follow the usual 3D-viewer conventions)
+
+| Input | Action |
+| --- | --- |
+| Tap | Select |
+| One-finger drag | Orbit |
+| Two-finger drag | Pan |
+| Pinch | Zoom |
+
+**Keyboard**
+
+| Input | Action |
+| --- | --- |
 | W A S D Q E while right-dragging | Fly (Shift sprints) |
 | Numpad 1 / 3 / 7 | Front / right / top view; Ctrl for the opposite face |
 | Numpad 5 | Perspective ⇄ orthographic |
 | F | Frame the selected node, or the whole scene when nothing is selected |
+| ? or F1 | Show every viewport control |
 
 Plain left-drag deliberately does nothing: left-click selects, as it does in Godot.
 There is no damping — the camera stops the moment you release.
+
+The 2D viewport pans on a drag (one finger or two) and zooms on the wheel or a pinch, anchored
+to the pointer, with a −/+/Fit HUD along the bottom.
 
 ---
 

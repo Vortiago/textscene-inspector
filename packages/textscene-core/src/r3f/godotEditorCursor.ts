@@ -40,6 +40,27 @@ export const DRAG_ZOOM_SPEED = 1 / 80;
 export const WHEEL_ZOOM_MULTIPLIER = 1.08;
 
 /**
+ * How many notches a single wheel event may be worth. A trackpad streams
+ * fractions of a notch; a kinetic fling or a coarse driver can deliver a
+ * whole screenful in one event, which without a cap would teleport the eye.
+ */
+export const WHEEL_MAX_NOTCHES = 4;
+
+/** Pixels of `deltaY` a browser reports for one wheel notch. */
+const WHEEL_NOTCH_PIXELS = 100;
+
+/**
+ * Pixels per line for `deltaMode === 1`. A browser reporting lines sends
+ * `deltaY = 3` for one notch, so a notch is three lines — not the ~16px of an
+ * actual text line, which would make one notch read as 0.48 and zoom Firefox
+ * at roughly half of Chrome's rate.
+ */
+const WHEEL_LINE_PIXELS = WHEEL_NOTCH_PIXELS / 3;
+
+/** Pixels per page for `deltaMode === 2` — one page is one notch. */
+const WHEEL_PAGE_PIXELS = WHEEL_NOTCH_PIXELS;
+
+/**
  * `_nav_orbit` clamps the pitch to "roughly -90..90 degrees so the user can't
  * look upside-down and end up disoriented" — deliberately just shy of a pole,
  * which is what keeps the derived basis non-degenerate mid-orbit.
@@ -131,6 +152,57 @@ export function resolveNavMode(button: number, mods: NavModifiers): NavMode | nu
   if (button === 2) return 'freelook';
   if (button === 0 && mods.altKey) return mods.shiftKey ? 'pan' : 'orbit';
   return null;
+}
+
+/**
+ * What a touch gesture drives, from how many fingers are down. Godot's editor
+ * has no touch scheme to mirror, so this is the 3D-viewer convention instead:
+ * one finger orbits, two pan (and pinch, which rides the same two pointers).
+ * A tap is not a mode — it falls out of one-finger orbit, since viewport
+ * selection already discriminates a tap from a drag by distance travelled.
+ *
+ * Freelook has no touch binding: it needs a held button plus WASD.
+ */
+export function resolveTouchMode(pointerCount: number): 'orbit' | 'pan' | null {
+  if (pointerCount === 1) return 'orbit';
+  if (pointerCount === 2) return 'pan';
+  return null;
+}
+
+/** A pointer position, in client pixels. */
+export interface TouchPoint {
+  readonly x: number;
+  readonly y: number;
+}
+
+/** The midpoint the fingers pan about. */
+export function touchCentroid(points: readonly TouchPoint[]): TouchPoint {
+  if (points.length === 0) return { x: 0, y: 0 };
+  let x = 0;
+  let y = 0;
+  for (const point of points) {
+    x += point.x;
+    y += point.y;
+  }
+  return { x: x / points.length, y: y / points.length };
+}
+
+/** How far apart the first two fingers are — the quantity a pinch changes. */
+export function touchSpan(points: readonly TouchPoint[]): number {
+  const [first, second] = points;
+  if (!first || !second) return 0;
+  return Math.hypot(first.x - second.x, first.y - second.y);
+}
+
+/**
+ * The distance scale for a pinch: spreading the fingers pulls the eye IN, so
+ * the orbit radius scales by the INVERSE of the span's growth. Degenerate
+ * spans (a frame where the fingers coincide, or the first move of a gesture
+ * with no previous span yet) yield 1 rather than a division blow-up.
+ */
+export function pinchZoomScale(previousSpan: number, span: number): number {
+  if (previousSpan <= DEGENERATE_DISTANCE || span <= DEGENERATE_DISTANCE) return 1;
+  return previousSpan / span;
 }
 
 /** Which keys freelook movement is currently holding down. */
@@ -261,19 +333,62 @@ export function dollyCursor(cursor: EditorCursor, dy: number, range: ZoomRange):
   return scaleCursorDistance(cursor, scale, range);
 }
 
+/** The axes of a wheel event, in CSS pixels whatever `deltaMode` it used. */
+export interface WheelDelta {
+  dx: number;
+  dy: number;
+}
+
+/** A wheel event's two axes and, on the rarer `deltaMode`s, their unit. */
+export interface WheelEventLike {
+  deltaX?: number;
+  deltaY: number;
+  deltaMode?: number;
+}
+
 /**
- * The distance scale for one wheel event. Godot zooms by a fixed multiplier
- * per notch; browsers report a notch as ~100px of `deltaY` (and in lines or
- * pages for the rarer `deltaMode`s), so the event is normalised to notches
- * first — otherwise a trackpad's stream of small deltas would zoom as if each
- * were a full notch.
+ * A wheel event's delta in CSS pixels. Browsers report a notch as ~100px, but
+ * in lines or pages for the rarer `deltaMode`s, so every consumer has to
+ * normalise before it can treat the number as a distance — zoom AND pan, which
+ * is why this is shared rather than inlined into `wheelZoomScale`.
+ *
+ * Both axes, always: with Shift held on a mouse wheel, Chrome and Firefox
+ * deliver the notch on `deltaX` instead of `deltaY`, so a pan that read only
+ * `deltaY` would silently do nothing.
  */
-export function wheelZoomScale(event: { deltaY: number; deltaMode?: number }): number {
-  const pixelsPerUnit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? 100 : 1;
-  const notches = (event.deltaY * pixelsPerUnit) / 100;
+export function wheelDeltaPixels(event: WheelEventLike): WheelDelta {
+  const perUnit =
+    event.deltaMode === 1 ? WHEEL_LINE_PIXELS : event.deltaMode === 2 ? WHEEL_PAGE_PIXELS : 1;
+  return { dx: (event.deltaX ?? 0) * perUnit, dy: event.deltaY * perUnit };
+}
+
+/**
+ * The distance scale for one wheel event. Godot applies its multiplier PER
+ * NOTCH, so the scale is exponential in notches rather than linear in them —
+ * which is what makes it composable: a trackpad's stream of sixteen small
+ * events zooms exactly as far as one big event covering the same distance,
+ * instead of slightly further.
+ */
+export function wheelZoomScale(event: WheelEventLike): number {
+  const notches = wheelDeltaPixels(event).dy / WHEEL_NOTCH_PIXELS;
   if (notches === 0) return 1;
-  const factor = 1 + (WHEEL_ZOOM_MULTIPLIER - 1) * Math.min(Math.abs(notches), 4);
-  return notches > 0 ? factor : 1 / factor;
+  return WHEEL_ZOOM_MULTIPLIER ** THREE.MathUtils.clamp(notches, -WHEEL_MAX_NOTCHES, WHEEL_MAX_NOTCHES);
+}
+
+/**
+ * Which navigation a wheel event drives. Godot has TWO bindings for what the
+ * browser collapses into one event: `WHEEL_UP`/`WHEEL_DOWN` zooms
+ * unconditionally, while `InputEventPanGesture` (a trackpad two-finger scroll)
+ * resolves by modifier — pan on Shift, zoom on Ctrl. The mouse-wheel binding
+ * takes the unmodified slot, since a browser cannot tell the two devices
+ * apart and a mouse wheel must not orbit; the gesture bindings take the
+ * modified ones.
+ *
+ * Ctrl lands on zoom from both directions: it is Godot's zoom modifier AND how
+ * every browser reports a trackpad pinch.
+ */
+export function resolveWheelMode(mods: NavModifiers): 'pan' | 'zoom' {
+  return mods.shiftKey && !mods.ctrlKey ? 'pan' : 'zoom';
 }
 
 /**

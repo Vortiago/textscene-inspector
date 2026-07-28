@@ -7,8 +7,14 @@
  *   shift + middle-drag     pan
  *   ctrl + middle-drag      zoom
  *   wheel                   zoom
+ *   shift + wheel           pan
  *   right-drag              freelook — the eye rotates in place
  *   alt + left-drag         orbit, alt + shift + left-drag pan
+ *
+ * Touch (no Godot equivalent — the 3D-viewer convention instead):
+ *   one-finger drag         orbit; a one-finger TAP selects, which viewport
+ *                           selection discriminates by distance travelled
+ *   two-finger drag         pan, with pinch zooming on the same two pointers
  *
  * The alt+left bindings are Godot's "Emulate 3 Button Mouse" made
  * unconditional, so a trackpad without a middle button can still navigate.
@@ -43,14 +49,21 @@ import {
   orbitCursor,
   orthographicHeight,
   panCursor,
+  pinchZoomScale,
   resolveNavMode,
+  resolveTouchMode,
+  resolveWheelMode,
   scaleCursorDistance,
+  touchCentroid,
+  touchSpan,
   viewSnapCursor,
+  wheelDeltaPixels,
   wheelZoomScale,
   OPPOSITE_VIEW,
   type EditorCursor,
   type FreelookKeys,
   type GodotViewAngle,
+  type TouchPoint,
   type ZoomRange,
 } from './godotEditorCursor.js';
 
@@ -242,6 +255,12 @@ interface DragState {
   y: number;
 }
 
+/** Where the fingers were on the previous move — a touch gesture's origin. */
+interface TouchGesture {
+  centroid: TouchPoint;
+  span: number;
+}
+
 export function GodotEditorControls() {
   const gl = useThree((s) => s.gl);
   const camera = useThree((s) => s.camera);
@@ -259,6 +278,10 @@ export function GodotEditorControls() {
   );
 
   const dragRef = useRef<DragState | null>(null);
+  // Every touch pointer currently down, in the order it landed — a pinch needs
+  // two at once, which a single drag slot cannot hold.
+  const touchPointsRef = useRef<Map<number, TouchPoint>>(new Map());
+  const touchGestureRef = useRef<TouchGesture | null>(null);
   const freelookRef = useRef(false);
   const heldKeysRef = useRef<Set<string>>(new Set());
   const sprintRef = useRef(false);
@@ -287,6 +310,10 @@ export function GodotEditorControls() {
 
   useEffect(() => {
     const element = gl.domElement;
+    // Captured once: the Map itself never changes identity, and the cleanup
+    // must clear the same one the handlers filled rather than whatever
+    // `.current` happens to hold by then.
+    const touchPoints = touchPointsRef.current;
 
     function endDrag(): void {
       const drag = dragRef.current;
@@ -300,7 +327,30 @@ export function GodotEditorControls() {
       }
     }
 
+    function endPointer(event: PointerEvent): void {
+      if (event.pointerType === 'touch') {
+        touchPoints.delete(event.pointerId);
+        // Lifting one of two fingers leaves the other mid-gesture; re-seed so
+        // the survivor orbits from where it is rather than from the centroid.
+        touchGestureRef.current = null;
+        return;
+      }
+      endDrag();
+    }
+
     function handlePointerDown(event: PointerEvent): void {
+      if (event.pointerType === 'touch') {
+        // Touch pointers are implicitly captured to the target, so no explicit
+        // capture — and no preventDefault, which would cost tap-to-select the
+        // pointerup R3F picks it out of. `touch-action: none` on the canvas is
+        // what stops the browser scrolling instead.
+        touchPoints.set(event.pointerId, { x: event.clientX, y: event.clientY });
+        // A finger landing or leaving changes the centroid and the span
+        // discontinuously; dropping the origin re-seeds both on the next move
+        // so the view doesn't jump.
+        touchGestureRef.current = null;
+        return;
+      }
       if (dragRef.current) return;
       const mode = resolveNavMode(event.button, event);
       if (!mode) return;
@@ -317,7 +367,48 @@ export function GodotEditorControls() {
       element.setPointerCapture?.(event.pointerId);
     }
 
+    function handleTouchMove(event: PointerEvent): void {
+      const points = touchPoints;
+      if (!points.has(event.pointerId)) return;
+      points.set(event.pointerId, { x: event.clientX, y: event.clientY });
+
+      const active = [...points.values()];
+      const mode = resolveTouchMode(active.length);
+      if (!mode) {
+        touchGestureRef.current = null;
+        return;
+      }
+
+      const gesture: TouchGesture = { centroid: touchCentroid(active), span: touchSpan(active) };
+      const previous = touchGestureRef.current;
+      touchGestureRef.current = gesture;
+      // The first move of a gesture only establishes where it started from.
+      if (!previous) return;
+
+      const dx = gesture.centroid.x - previous.centroid.x;
+      const dy = gesture.centroid.y - previous.centroid.y;
+      if (mode === 'orbit') {
+        handle.applyCursor(orbitCursor(handle.cursor(), dx, dy));
+      } else {
+        // Two fingers pan and pinch at once, exactly as they do on a map: the
+        // centroid drives the pan, the span between them drives the zoom.
+        const panned = panCursor(handle.cursor(), dx, dy);
+        handle.applyCursor(
+          scaleCursorDistance(
+            panned,
+            pinchZoomScale(previous.span, gesture.span),
+            handle.zoomRange()
+          )
+        );
+      }
+      invalidate();
+    }
+
     function handlePointerMove(event: PointerEvent): void {
+      if (event.pointerType === 'touch') {
+        handleTouchMove(event);
+        return;
+      }
       const drag = dragRef.current;
       if (!drag || event.pointerId !== drag.pointerId) return;
       const dx = event.clientX - drag.x;
@@ -342,6 +433,16 @@ export function GodotEditorControls() {
 
     function handleWheel(event: WheelEvent): void {
       event.preventDefault();
+      if (resolveWheelMode(event) === 'pan') {
+        // Godot pans by the NEGATED gesture delta, and the delta has to be
+        // normalised first: one notch is 100px in Chrome but 3 lines in
+        // Firefox, so raw deltas would pan 33x further in one than the other.
+        const { dx, dy } = wheelDeltaPixels(event);
+        if (dx === 0 && dy === 0) return;
+        handle.applyCursor(panCursor(handle.cursor(), -dx, -dy));
+        invalidate();
+        return;
+      }
       const scale = wheelZoomScale(event);
       if (scale === 1) return;
       handle.applyCursor(scaleCursorDistance(handle.cursor(), scale, handle.zoomRange()));
@@ -391,13 +492,15 @@ export function GodotEditorControls() {
     function handleBlur(): void {
       heldKeysRef.current.clear();
       sprintRef.current = false;
+      touchPoints.clear();
+      touchGestureRef.current = null;
     }
 
     element.addEventListener('pointerdown', handlePointerDown);
     element.addEventListener('pointermove', handlePointerMove);
-    element.addEventListener('pointerup', endDrag);
-    element.addEventListener('pointercancel', endDrag);
-    element.addEventListener('lostpointercapture', endDrag);
+    element.addEventListener('pointerup', endPointer);
+    element.addEventListener('pointercancel', endPointer);
+    element.addEventListener('lostpointercapture', endPointer);
     element.addEventListener('contextmenu', handleContextMenu);
     // Not passive: a zoom must not also scroll the page behind the canvas.
     element.addEventListener('wheel', handleWheel, { passive: false });
@@ -408,15 +511,17 @@ export function GodotEditorControls() {
     return () => {
       element.removeEventListener('pointerdown', handlePointerDown);
       element.removeEventListener('pointermove', handlePointerMove);
-      element.removeEventListener('pointerup', endDrag);
-      element.removeEventListener('pointercancel', endDrag);
-      element.removeEventListener('lostpointercapture', endDrag);
+      element.removeEventListener('pointerup', endPointer);
+      element.removeEventListener('pointercancel', endPointer);
+      element.removeEventListener('lostpointercapture', endPointer);
       element.removeEventListener('contextmenu', handleContextMenu);
       element.removeEventListener('wheel', handleWheel);
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
       window.removeEventListener('blur', handleBlur);
       endDrag();
+      touchPoints.clear();
+      touchGestureRef.current = null;
     };
   }, [gl, handle, invalidate]);
 

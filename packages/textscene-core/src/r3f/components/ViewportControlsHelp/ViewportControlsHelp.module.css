@@ -1,0 +1,149 @@
+/*
+ * Top-centre of the viewport: clear of the toolbar overlay (top-right), the
+ * "switch to 2D" hint and the 2D zoom HUD (both bottom-centre).
+ */
+.root {
+  position: absolute;
+  top: var(--tsi-space-3);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--tsi-space-2);
+  /* The viewport under this is one big drag surface — only the pill and the
+     panel may take pointer input, never the box that positions them. */
+  pointer-events: none;
+  max-width: calc(100% - var(--tsi-space-4) * 2);
+}
+
+.hint {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--tsi-space-2);
+  appearance: none;
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--tsi-font-sm);
+  color: var(--tsi-fg-muted);
+  background: var(--tsi-bg-elevated);
+  border: 1px solid var(--tsi-border);
+  border-radius: 999px;
+  padding: var(--tsi-space-1) var(--tsi-space-2) var(--tsi-space-1) var(--tsi-space-3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.hint:hover {
+  color: var(--tsi-fg-default);
+  border-color: var(--tsi-accent);
+}
+
+.summary {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.badge {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--tsi-bg-hover);
+  color: var(--tsi-fg-default);
+  font-size: var(--tsi-font-sm);
+  line-height: 18px;
+  text-align: center;
+}
+
+.panel {
+  pointer-events: auto;
+  width: max-content;
+  max-width: 100%;
+  /* Tall on a phone in landscape; scroll rather than run off the viewport. */
+  max-height: 60vh;
+  overflow-y: auto;
+  background: var(--tsi-bg-elevated);
+  border: 1px solid var(--tsi-border);
+  border-radius: var(--tsi-radius-md);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  padding: var(--tsi-space-3);
+}
+
+.panelHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--tsi-space-3);
+  margin-bottom: var(--tsi-space-2);
+}
+
+.panelTitle {
+  margin: 0;
+  font-size: var(--tsi-font-md);
+  color: var(--tsi-fg-default);
+}
+
+.close {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--tsi-fg-muted);
+  cursor: pointer;
+  font-size: var(--tsi-font-md);
+  line-height: 1;
+  padding: var(--tsi-space-1);
+  border-radius: var(--tsi-radius-sm);
+}
+
+.close:hover {
+  background: var(--tsi-bg-hover);
+  color: var(--tsi-fg-default);
+}
+
+.groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--tsi-space-3);
+}
+
+.group {
+  min-width: 0;
+}
+
+.device {
+  margin: 0 0 var(--tsi-space-1);
+  font-size: var(--tsi-font-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--tsi-fg-muted);
+}
+
+.bindings {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.binding {
+  display: grid;
+  grid-template-columns: minmax(0, auto) minmax(0, 1fr);
+  gap: var(--tsi-space-3);
+  align-items: baseline;
+}
+
+.input {
+  font-family: var(--tsi-font-mono);
+  font-size: var(--tsi-font-sm);
+  color: var(--tsi-fg-default);
+  white-space: nowrap;
+}
+
+.action {
+  margin: 0;
+  font-size: var(--tsi-font-sm);
+  color: var(--tsi-fg-muted);
+}

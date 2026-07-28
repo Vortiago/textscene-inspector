@@ -183,7 +183,6 @@ export const CANVAS_2D_TESTIDS = {
   stage: 'canvas-2d-stage',
   frame: 'canvas-2d-frame',
   captureFrame: 'canvas-2d-capture-frame',
-  hint: 'canvas-2d-hint',
   zoom: 'canvas-2d-zoom',
   originAxisX: 'origin-axis-x',
   originAxisY: 'origin-axis-y',
@@ -213,7 +212,7 @@ export const SETTLE_MAX_ATTEMPTS = 12;
  *
  * `canvas2D` prepares the 2D stage the same way for the 2D comparison frame:
  * its chrome (grid, viewport outline and dimension label, origin axes, the
- * pan/zoom hint, the zoom HUD) painted out, its background flattened to what
+ * zoom HUD) painted out, its background flattened to what
  * Godot clears a 2D viewport to, and its opening view pinned to zoom 1 at the
  * origin instead of "Fit" — so the frame is the game frame at 1:1 and sits at
  * the same integer pixels every run. It is OPT-IN because the golden gate
@@ -239,12 +238,13 @@ export async function createCaptureContext(browser, { frameOnOpen, canvas2D = fa
       [FIT_ON_OPEN_2D_STORAGE_KEY, 'false']
     );
   }
-  const hidden = ['viewport-toolbar-overlay'];
+  // Viewport chrome that floats over the canvas in BOTH modes, and so would
+  // composite into every capture the way the toolbar overlay does.
+  const hidden = ['viewport-toolbar-overlay', 'viewport-controls-help'];
   let css = '';
   if (canvas2D) {
     hidden.push(
       CANVAS_2D_TESTIDS.frame,
-      CANVAS_2D_TESTIDS.hint,
       CANVAS_2D_TESTIDS.zoom,
       CANVAS_2D_TESTIDS.originAxisX,
       CANVAS_2D_TESTIDS.originAxisY

@@ -13,6 +13,7 @@ import { isCanvasItemNode } from '../../workspaceForScene.js';
 import { useLiveSceneNodes } from '../../useLiveSceneTree.js';
 import { TscnCanvas } from '../../TscnCanvas.js';
 import { Canvas2DStage } from '../Canvas2DStage/Canvas2DStage.js';
+import { ViewportControlsHelp } from '../ViewportControlsHelp/ViewportControlsHelp.js';
 import styles from './TscnPreviewShell.module.css';
 
 export function ViewportArea({ sceneGraph }: { sceneGraph: SceneGraph | null }) {
@@ -25,11 +26,14 @@ export function ViewportArea({ sceneGraph }: { sceneGraph: SceneGraph | null }) 
 
   if (mode === '2D') {
     return (
-      <Canvas2DStage
-        nodes={rootScene?.nodes ?? []}
-        internalResources={rootScene?.internalResources ?? []}
-        externalResources={rootScene?.externalResources ?? []}
-      />
+      <>
+        <Canvas2DStage
+          nodes={rootScene?.nodes ?? []}
+          internalResources={rootScene?.internalResources ?? []}
+          externalResources={rootScene?.externalResources ?? []}
+        />
+        <ViewportControlsHelp mode="2D" />
+      </>
     );
   }
 
@@ -39,6 +43,7 @@ export function ViewportArea({ sceneGraph }: { sceneGraph: SceneGraph | null }) 
   return (
     <>
       <TscnCanvas />
+      <ViewportControlsHelp mode="3D" />
       {has2DContent && (
         <button
           type="button"
