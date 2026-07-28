@@ -76,11 +76,11 @@ Two traps this exposed, both of which produced confident wrong pictures:
 4. ~~**2D capture path**~~ — done; the contract is below. Then the 2D sheets.
 
 The viewport itself navigates like Godot's editor rather than like a web viewer
-(`GodotEditorControls.tsx`, maths in `godotEditorControls.ts`): middle-drag
-orbit, shift+middle pan, ctrl+middle and wheel zoom, right-drag freelook with
-WASD/QE flying, numpad 1/3/7 view snapping and 5 for orthographic, no damping.
-Left-drag is left free for selection, as Godot leaves it. drei remains a
-dependency for `Text` only.
+(`GodotEditorControls.tsx`, maths in `godotEditorCursor.ts`): middle-drag
+orbit, shift+middle pan, ctrl+middle and wheel zoom, shift+wheel pan, right-drag
+freelook with WASD/QE flying, numpad 1/3/7 view snapping and 5 for orthographic,
+no damping. Left-drag is left free for selection, as Godot leaves it. drei
+remains a dependency for `Text` only.
 
 ## The 2D contract — a rectangle, not a camera
 

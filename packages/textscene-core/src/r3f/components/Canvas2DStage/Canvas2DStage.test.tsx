@@ -1,5 +1,5 @@
 /**
- * Canvas2DStage behavior: frame chrome (dimension badge + hints), the zoom
+ * Canvas2DStage behavior: frame chrome (dimension badge), the zoom
  * HUD (in/out/fit + clamping), wheel-to-zoom, and pointer-capture
  * drag-to-pan. The lazy ControlOverlay barrel is stubbed — overlay layout
  * has its own suites; this one only covers the stage chrome around it.
@@ -85,11 +85,44 @@ function zoomLabel(): string {
   return screen.getByText(/%$/).textContent ?? '';
 }
 
+/**
+ * happy-dom drops the MouseEvent fields on a `WheelEvent` — `clientX`/`clientY`
+ * read back `undefined` however the init is spelled — which would silently make
+ * the zoom anchor `NaN`. Define them onto the instance so cursor-anchored zoom
+ * is actually exercised rather than accidentally skipped.
+ */
+function wheelAt(
+  target: Element,
+  init: { deltaY: number; clientX?: number; clientY?: number }
+): void {
+  const event = new WheelEvent('wheel', {
+    deltaY: init.deltaY,
+    bubbles: true,
+    cancelable: true,
+  });
+  Object.defineProperty(event, 'clientX', { value: init.clientX ?? 0 });
+  Object.defineProperty(event, 'clientY', { value: init.clientY ?? 0 });
+  fireEvent(target, event);
+}
+
+/** One finger's lifecycle step, as the stage's pointer handlers see it. */
+function touch(
+  target: Element,
+  phase: 'down' | 'move' | 'up',
+  pointerId: number,
+  clientX: number,
+  clientY: number
+): void {
+  const init = { pointerType: 'touch', pointerId, clientX, clientY, isPrimary: pointerId === 1 };
+  if (phase === 'down') fireEvent.pointerDown(target, init);
+  else if (phase === 'move') fireEvent.pointerMove(target, init);
+  else fireEvent.pointerUp(target, init);
+}
+
 describe('<Canvas2DStage>', () => {
-  it('renders the stage chrome: dimension badge, usage hint, and zoom HUD at 100%', () => {
+  it('renders the stage chrome: dimension badge and zoom HUD at 100%', () => {
     renderStage();
     expect(screen.getByText('1152 × 648')).toBeTruthy();
-    expect(screen.getByText('scroll = zoom · drag = pan')).toBeTruthy();
     expect(screen.getByRole('group', { name: 'Canvas zoom' })).toBeTruthy();
     expect(zoomLabel()).toBe('100%');
   });
@@ -131,10 +164,35 @@ describe('<Canvas2DStage>', () => {
 
   it('wheel-up zooms in, wheel-down zooms back out (native non-passive listener)', () => {
     const { stage } = renderStage();
-    fireEvent.wheel(stage, { deltaY: -1, clientX: 0, clientY: 0 });
+    wheelAt(stage, { deltaY: -100 });
     expect(zoomLabel()).toBe('110%');
-    fireEvent.wheel(stage, { deltaY: 1, clientX: 0, clientY: 0 });
+    wheelAt(stage, { deltaY: 100 });
     expect(zoomLabel()).toBe('100%');
+  });
+
+  it('anchors wheel zoom to the cursor: what is under it stays under it', () => {
+    // Opening pinned (fit off) so the arithmetic is about the anchor alone:
+    // world origin at the stage origin, one canvas pixel per screen pixel.
+    window.localStorage.setItem(FIT_ON_OPEN_2D_STORAGE_KEY, 'false');
+    sizeEveryElement(800, 600);
+    const { stage, frame } = renderStage();
+    expect(frame.style.transform).toBe('translate(0px, 0px) scale(1)');
+
+    // The stage origin is already the frame origin, so it is a fixed point:
+    // zooming about it scales without translating.
+    wheelAt(stage, { deltaY: -100, clientX: 0, clientY: 0 });
+    expect(frame.style.transform).toBe('translate(0px, 0px) scale(1.1)');
+
+    // Anywhere else the frame must slide to keep that point put. Back at
+    // scale 1, world (400, 300) sits under the cursor; at 1.1 it would drift
+    // to (440, 330) unless the pan takes up the 40/30 difference.
+    wheelAt(stage, { deltaY: 100, clientX: 0, clientY: 0 });
+    wheelAt(stage, { deltaY: -100, clientX: 400, clientY: 300 });
+    const [, x, y, scale] =
+      /translate\((-?[\d.]+)px, (-?[\d.]+)px\) scale\(([\d.]+)\)/.exec(frame.style.transform) ?? [];
+    expect(Number(scale)).toBeCloseTo(1.1, 9);
+    expect(400 * Number(scale) + Number(x)).toBeCloseTo(400, 9);
+    expect(300 * Number(scale) + Number(y)).toBeCloseTo(300, 9);
   });
 
   it('drag-to-pan translates the canvas frame by the pointer delta', () => {
@@ -149,6 +207,95 @@ describe('<Canvas2DStage>', () => {
     // After release, further moves no longer pan.
     fireEvent.pointerMove(stage, { clientX: 200, clientY: 200, pointerId: 1 });
     expect(frame.style.transform).toBe('translate(50px, 30px) scale(1)');
+  });
+
+  it('pans on a one-finger drag, the same as a mouse drag', () => {
+    const { stage, frame } = renderStage();
+    touch(stage, 'down', 1, 10, 10);
+    touch(stage, 'move', 1, 10, 10);
+    touch(stage, 'move', 1, 60, 40);
+    expect(frame.style.transform).toBe('translate(50px, 30px) scale(1)');
+
+    touch(stage, 'up', 1, 60, 40);
+    touch(stage, 'move', 1, 200, 200);
+    expect(frame.style.transform).toBe('translate(50px, 30px) scale(1)');
+  });
+
+  it('zooms on a pinch, without the fingers’ midpoint moving', () => {
+    sizeEveryElement(800, 600);
+    const { stage } = renderStage();
+    touch(stage, 'down', 1, 380, 300);
+    touch(stage, 'down', 2, 420, 300);
+    // Seed the gesture origin before anything moves.
+    touch(stage, 'move', 1, 380, 300);
+    touch(stage, 'move', 2, 420, 300);
+
+    // Spread from 40px apart to 160px — four times, so four times the zoom,
+    // clamped at ZOOM_MAX = 4 from an opening fit below 1.
+    touch(stage, 'move', 1, 320, 300);
+    touch(stage, 'move', 2, 480, 300);
+    const spread = Number.parseFloat(zoomLabel());
+
+    touch(stage, 'move', 1, 380, 300);
+    touch(stage, 'move', 2, 420, 300);
+    const pinched = Number.parseFloat(zoomLabel());
+
+    expect(spread).toBeGreaterThan(pinched);
+  });
+
+  it('leaves the zoom where it was after a pan whose pinch nets out', () => {
+    // The same mixed-time span excursion the 3D viewport sees, but this clamp
+    // is far tighter (ZOOM_MAX = 4), so an ordinary two-finger pan trips it:
+    // both fingers slide 200px left, and between the two per-pointer moves the
+    // span reads 300px instead of 100px. Accumulated, that 3x clamps at 4 and
+    // the 1/3 back leaves the stage at 133% instead of where it started.
+    window.localStorage.setItem(FIT_ON_OPEN_2D_STORAGE_KEY, 'false');
+    sizeEveryElement(800, 600);
+    const { stage } = renderStage();
+    wheelAt(stage, { deltaY: -400 });
+    wheelAt(stage, { deltaY: -400 });
+    const before = zoomLabel();
+
+    touch(stage, 'down', 1, 100, 300);
+    touch(stage, 'down', 2, 200, 300);
+    touch(stage, 'move', 1, 100, 300);
+    touch(stage, 'move', 2, 200, 300);
+    touch(stage, 'move', 1, -100, 300);
+    touch(stage, 'move', 2, 0, 300);
+
+    expect(zoomLabel()).toBe(before);
+  });
+
+  it('re-seeds the gesture when a finger lands or leaves, so the view never jumps', () => {
+    const { stage, frame } = renderStage();
+    touch(stage, 'down', 1, 100, 100);
+    touch(stage, 'move', 1, 100, 100);
+    touch(stage, 'move', 1, 150, 100);
+    const oneFinger = frame.style.transform;
+    expect(oneFinger).toBe('translate(50px, 0px) scale(1)');
+
+    // A second finger arriving moves the midpoint 50px in one step. Without a
+    // re-seed that delta would be applied as a pan.
+    touch(stage, 'down', 2, 250, 100);
+    touch(stage, 'move', 2, 250, 100);
+    expect(frame.style.transform).toBe(oneFinger);
+
+    // And the same on the way out.
+    touch(stage, 'up', 2, 250, 100);
+    touch(stage, 'move', 1, 150, 100);
+    expect(frame.style.transform).toBe(oneFinger);
+  });
+
+  it('ignores a third finger rather than guessing at a gesture', () => {
+    const { stage, frame } = renderStage();
+    touch(stage, 'down', 1, 100, 100);
+    touch(stage, 'down', 2, 200, 100);
+    touch(stage, 'down', 3, 300, 100);
+    touch(stage, 'move', 1, 100, 100);
+    touch(stage, 'move', 1, 160, 140);
+    touch(stage, 'move', 2, 260, 140);
+    touch(stage, 'move', 3, 360, 140);
+    expect(frame.style.transform).toBe('translate(0px, 0px) scale(1)');
   });
 
   it('frames a 2D camera view on request: centers the view point at the requested zoom', () => {

@@ -33,6 +33,7 @@ review, not pixel-exact validation.
 
 ### Interactive scene preview
 - Navigate the viewport exactly as you would in Godot's 3D editor: middle-drag orbits, Shift+middle-drag pans, Ctrl+middle-drag and the wheel zoom, right-drag freelooks (with WASD/QE flying while held), Numpad 1/3/7 snap to the front/right/top face (Ctrl for the opposite one), Numpad 5 toggles orthographic, and F frames the selection. Alt+left-drag orbits for a mouse or trackpad without a middle button. The camera position survives edits and reloads.
+- On a **trackpad**, Shift+two-finger scroll pans and pinch zooms; on a **tablet**, one finger (or a stylus) orbits, a tap selects, two fingers pan and pinch zooms. Press **?**, or click the summary pill over the viewport, for the full list on whichever device you are using.
 - Scene-tree and inspector panels beside the viewport: click an object in the 3D view to select it in the tree, inspect its parsed properties, and double-click a node to jump to its line in the source.
 - 2D/3D viewport toggle for scenes containing Control or Node2D content (UI overlays, sprites). The `textscene.defaultViewportMode` setting controls which mode a *new* preview starts in — `auto` (default) matches the Godot editor's own rule, or force every new preview to `2D`/`3D`.
 

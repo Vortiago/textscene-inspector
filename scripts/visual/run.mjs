@@ -45,6 +45,7 @@ import {
   findCanvas,
   gotoFixture,
   killPreviewGroup,
+  setDisplayToggle,
   settleCanvas,
   startPreview,
   waitForServer,
@@ -102,16 +103,11 @@ async function captureScene(page, baseUrl, scene) {
   if (!canvas) return { buffer: null, reason: canvasReason };
 
   if (scene.navigation) {
-    // The navmesh overlay has its own toolbar toggle. It defaults ON, but drive
-    // it explicitly so the scene's state does not depend on a default that a
-    // future change could flip out from under the baseline.
-    const toggle = page.locator('label:has-text("Navigation") input[type="checkbox"]').first();
-    try {
-      await toggle.waitFor({ state: 'attached', timeout: 10000 });
-    } catch {
-      return { buffer: null, reason: 'Navigation toggle not found in the toolbar' };
-    }
-    if (!(await toggle.isChecked())) await toggle.dispatchEvent('click');
+    // The navmesh overlay defaults ON, but drive it explicitly so the scene's
+    // state does not depend on a default a future change could flip out from
+    // under the baseline.
+    const reason = await setDisplayToggle(page, 'Navigation', true);
+    if (reason) return { buffer: null, reason };
     await page.waitForTimeout(PRE_SELECT_FIT_QUIESCENCE_MS);
     await page.mouse.move(0, 0);
   }
@@ -119,27 +115,11 @@ async function captureScene(page, baseUrl, scene) {
   if (scene.collisions) {
     // "Visible Collision Shapes" is OFF by default (ADR-0005/0006), so a
     // CollisionShape gizmo is invisible to every other golden — which is how
-    // capsule/sphere/cylinder shapes drew a unit box unnoticed. Drive the real
-    // toolbar checkbox, the same path a user takes.
-    // The toolbar wraps each checkbox in a <label> whose own `title` competes
-    // with the text node for the accessible name, so match the label text and
-    // reach for the input inside it rather than going through the role name.
-    const toggle = page.locator('label:has-text("Collisions") input[type="checkbox"]').first();
-    try {
-      // ATTACHED, not visible: this same context hides the toolbar overlay so
-      // it cannot composite into `canvas.screenshot()` (see the init script in
-      // `run`). The control is fully functional, just painted out.
-      await toggle.waitFor({ state: 'attached', timeout: 10000 });
-    } catch {
-      return { buffer: null, reason: 'Collisions toggle not found in the toolbar' };
-    }
-    // `click()`/`check()` refuse a display:none target (they scroll it into
-    // view first); dispatching the event directly still goes through React's
-    // synthetic onChange, which is the behaviour under test.
-    await toggle.dispatchEvent('click');
-    // Same reasoning as the `select` branch below: let CameraFit's load-time
-    // timers finish before changing what is on screen, and take the pointer
-    // off the toolbar so no hover state is captured.
+    // capsule/sphere/cylinder shapes drew a unit box unnoticed.
+    const reason = await setDisplayToggle(page, 'Collisions', true);
+    if (reason) return { buffer: null, reason };
+    // Let CameraFit's load-time timers finish before changing what is on
+    // screen, and take the pointer off the toolbar so no hover is captured.
     await page.waitForTimeout(PRE_SELECT_FIT_QUIESCENCE_MS);
     await page.mouse.move(0, 0);
   }

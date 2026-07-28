@@ -6,6 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import { act, fireEvent, render } from '@testing-library/react';
 import { SelectionProvider, useSelection } from '../../contexts/SelectionContext';
+import { ViewportControlsHelp } from '../ViewportControlsHelp/ViewportControlsHelp';
 import { EscapeDeselect } from './EscapeDeselect';
 
 function Harness() {
@@ -59,5 +60,28 @@ describe('<EscapeDeselect> (#224)', () => {
     const input = getByTestId('text-input');
     act(() => fireEvent.keyDown(input, { key: 'Escape' }));
     expect(getByTestId('selected').textContent).toBe('Root/Cube');
+  });
+
+  it('leaves the selection alone when Escape is dismissing a floating panel', () => {
+    // Both live on window, so without arbitration one Escape did both: the
+    // legend closed AND the node the user had selected before opening it was
+    // silently cleared.
+    const { getByText, getByTestId } = render(
+      <SelectionProvider>
+        <Harness />
+        <ViewportControlsHelp mode="3D" />
+      </SelectionProvider>
+    );
+    act(() => fireEvent.click(getByText('select')));
+    act(() => fireEvent.click(getByTestId('viewport-controls-hint')));
+    expect(getByTestId('viewport-controls-panel')).toBeTruthy();
+
+    act(() => fireEvent.keyDown(globalThis.window, { key: 'Escape' }));
+    expect(document.querySelector('[data-testid="viewport-controls-panel"]')).toBeNull();
+    expect(getByTestId('selected').textContent).toBe('Root/Cube');
+
+    // With the panel shut, Escape goes back to clearing the selection.
+    act(() => fireEvent.keyDown(globalThis.window, { key: 'Escape' }));
+    expect(getByTestId('selected').textContent).toBe('(none)');
   });
 });

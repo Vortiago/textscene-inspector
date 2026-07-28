@@ -7,8 +7,14 @@
  *   shift + middle-drag     pan
  *   ctrl + middle-drag      zoom
  *   wheel                   zoom
+ *   shift + wheel           pan
  *   right-drag              freelook — the eye rotates in place
  *   alt + left-drag         orbit, alt + shift + left-drag pan
+ *
+ * Touch (no Godot equivalent — the 3D-viewer convention instead):
+ *   one-finger drag         orbit; a one-finger TAP selects, which viewport
+ *                           selection discriminates by distance travelled
+ *   two-finger drag         pan, with pinch zooming on the same two pointers
  *
  * The alt+left bindings are Godot's "Emulate 3 Button Mouse" made
  * unconditional, so a trackpad without a middle button can still navigate.
@@ -24,15 +30,17 @@
  * `orbit_inertia` default is 0), and a viewport that never coasts also settles
  * instantly for the visual-regression and Godot-parity capture harnesses.
  *
- * The component itself only translates events into cursor edits — all the
- * navigation maths lives in `godotEditorCursor.ts`, and all the camera
- * bookkeeping in `EditorControlsHandle` below.
+ * The component itself only translates events into cursor edits. The maths
+ * lives in three modules, split by provenance: `godotEditorCursor.ts` is
+ * Godot's own, `pointerGesture.ts` is browser facts Godot has no analogue for
+ * (fingers, `deltaMode`), and `zoomToPointer.ts` is the one deliberate
+ * departure (ADR-0029). Camera bookkeeping is in `EditorControlsHandle` below.
  */
 import { useFrame, useThree, type Camera as R3FCamera } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { isTypingTarget } from './hooks/isTypingTarget.js';
-import { editorCameraPosition } from './godotEditorCamera.js';
+import { editorCameraPosition, EDITOR_CAMERA_FOV } from './godotEditorCamera.js';
 import {
   cursorCameraPosition,
   cursorFromCamera,
@@ -44,6 +52,7 @@ import {
   orthographicHeight,
   panCursor,
   resolveNavMode,
+  resolveWheelMode,
   scaleCursorDistance,
   viewSnapCursor,
   wheelZoomScale,
@@ -53,6 +62,16 @@ import {
   type GodotViewAngle,
   type ZoomRange,
 } from './godotEditorCursor.js';
+import {
+  isGesturePointer,
+  pinchSpanRatio,
+  resolveTouchMode,
+  touchCentroid,
+  touchSpan,
+  wheelDeltaPixels,
+  type TouchPoint,
+} from './pointerGesture.js';
+import { zoomCursorToPointer } from './zoomToPointer.js';
 
 /** Numpad view snaps. Ctrl inverts each to the opposite face. */
 const VIEW_SNAP_KEYS: Readonly<Record<string, GodotViewAngle>> = {
@@ -132,6 +151,21 @@ export class EditorControlsHandle extends THREE.EventDispatcher {
   /** The live cursor, always re-derived from the camera and the focus point. */
   cursor(): EditorCursor {
     return cursorFromCamera(this.camera.position, this.target);
+  }
+
+  /**
+   * The vertical fov the visible frustum is derived from.
+   *
+   * Re-derived from the ACTIVE camera, like `cursor()` and `zoomRange()` — an
+   * authored Camera3D becomes R3F's camera and carries its own fov (Godot
+   * defaults to 75, this editor camera to 70), and anchoring zoom-to-pointer
+   * against the wrong one drifts the subject off the cursor by the ratio of
+   * their half-angle tangents. Falls back to this component's own camera for
+   * orthographic, whose frustum `orthographicHeight` sizes from that fov.
+   */
+  fovDegrees(): number {
+    if (isPerspectiveCamera(this.camera)) return this.camera.fov;
+    return this.perspectiveCamera?.fov ?? EDITOR_CAMERA_FOV;
   }
 
   /** The zoom range Godot derives from the camera's clip planes. */
@@ -242,6 +276,26 @@ interface DragState {
   y: number;
 }
 
+/** Where the fingers were on the previous move — a touch gesture's origin. */
+interface TouchGesture {
+  /** Previous centroid. The pan is incremental, so this moves every event. */
+  centroid: TouchPoint;
+  /** Previous separation, kept only to recognise an event that changed nothing. */
+  span: number;
+  /**
+   * Separation and orbit radius when the gesture was seeded — the pinch's
+   * anchor, which is why the zoom is measured rather than accumulated. A
+   * browser fires one `pointermove` PER POINTER, so two fingers sliding
+   * together transit mixed-time states whose span swings hard: 100px apart,
+   * briefly 40px once one has moved, 100px again once the other catches up.
+   * Multiplying those ratios unwinds the excursion only while nothing clamps
+   * it, and `scaleCursorDistance` clamps on every call — so one clamped
+   * excursion never unwinds and a pure pan silently rescales the view.
+   */
+  startSpan: number;
+  startDistance: number;
+}
+
 export function GodotEditorControls() {
   const gl = useThree((s) => s.gl);
   const camera = useThree((s) => s.camera);
@@ -259,6 +313,10 @@ export function GodotEditorControls() {
   );
 
   const dragRef = useRef<DragState | null>(null);
+  // Every touch pointer currently down, in the order it landed — a pinch needs
+  // two at once, which a single drag slot cannot hold.
+  const touchPointsRef = useRef<Map<number, TouchPoint>>(new Map());
+  const touchGestureRef = useRef<TouchGesture | null>(null);
   const freelookRef = useRef(false);
   const heldKeysRef = useRef<Set<string>>(new Set());
   const sprintRef = useRef(false);
@@ -287,6 +345,20 @@ export function GodotEditorControls() {
 
   useEffect(() => {
     const element = gl.domElement;
+    // Captured once: the Map itself never changes identity, and the cleanup
+    // must clear the same one the handlers filled rather than whatever
+    // `.current` happens to hold by then.
+    const touchPoints = touchPointsRef.current;
+
+    /**
+     * The invariant every touch path maintains: no fingers, no gesture origin.
+     * A stale origin is what would make the next single-finger drag pan from
+     * wherever a two-finger gesture happened to end.
+     */
+    function resetTouch(): void {
+      touchPoints.clear();
+      touchGestureRef.current = null;
+    }
 
     function endDrag(): void {
       const drag = dragRef.current;
@@ -300,7 +372,30 @@ export function GodotEditorControls() {
       }
     }
 
+    function endPointer(event: PointerEvent): void {
+      if (isGesturePointer(event.pointerType)) {
+        touchPoints.delete(event.pointerId);
+        // Lifting one of two fingers leaves the other mid-gesture; re-seed so
+        // the survivor orbits from where it is rather than from the centroid.
+        touchGestureRef.current = null;
+        return;
+      }
+      endDrag();
+    }
+
     function handlePointerDown(event: PointerEvent): void {
+      if (isGesturePointer(event.pointerType)) {
+        // Touch pointers are implicitly captured to the target, so no explicit
+        // capture — and no preventDefault, which would cost tap-to-select the
+        // pointerup R3F picks it out of. `touch-action: none` on the canvas is
+        // what stops the browser scrolling instead.
+        touchPoints.set(event.pointerId, { x: event.clientX, y: event.clientY });
+        // A finger landing or leaving changes the centroid and the span
+        // discontinuously; dropping the origin re-seeds both on the next move
+        // so the view doesn't jump.
+        touchGestureRef.current = null;
+        return;
+      }
       if (dragRef.current) return;
       const mode = resolveNavMode(event.button, event);
       if (!mode) return;
@@ -317,7 +412,62 @@ export function GodotEditorControls() {
       element.setPointerCapture?.(event.pointerId);
     }
 
+    function handleTouchMove(event: PointerEvent): void {
+      if (!touchPoints.has(event.pointerId)) return;
+      touchPoints.set(event.pointerId, { x: event.clientX, y: event.clientY });
+
+      const active = [...touchPoints.values()];
+      const mode = resolveTouchMode(active.length);
+      if (!mode) {
+        touchGestureRef.current = null;
+        return;
+      }
+
+      const centroid = touchCentroid(active);
+      const span = touchSpan(active);
+      const previous = touchGestureRef.current;
+      // The first move of a gesture only establishes what it started from.
+      if (!previous) {
+        touchGestureRef.current = {
+          centroid,
+          span,
+          startSpan: span,
+          startDistance: handle.cursor().distance,
+        };
+        return;
+      }
+      touchGestureRef.current = { ...previous, centroid, span };
+
+      const dx = centroid.x - previous.centroid.x;
+      const dy = centroid.y - previous.centroid.y;
+      // One move per pointer means a two-finger gesture also delivers events
+      // in which nothing moved: nothing to apply, nothing to redraw. The
+      // mouse path guards the same way.
+      if (dx === 0 && dy === 0 && span === previous.span) return;
+
+      if (mode === 'orbit') {
+        handle.applyCursor(orbitCursor(handle.cursor(), dx, dy));
+      } else {
+        // Two fingers pan and pinch at once, exactly as they do on a map: the
+        // centroid drives the pan, the span between them drives the zoom.
+        //
+        // The zoom is measured from the anchor, never accumulated (see
+        // `TouchGesture`), which makes each event idempotent: a clamp on one
+        // cannot carry into the next. Inverted, because spreading the fingers
+        // pulls the eye IN — the radius goes as the reciprocal of the spread.
+        const spread = pinchSpanRatio(previous.startSpan, span);
+        const anchored: EditorCursor = { ...handle.cursor(), distance: previous.startDistance };
+        const zoomed = scaleCursorDistance(anchored, 1 / spread, handle.zoomRange());
+        handle.applyCursor(panCursor(zoomed, dx, dy));
+      }
+      invalidate();
+    }
+
     function handlePointerMove(event: PointerEvent): void {
+      if (isGesturePointer(event.pointerType)) {
+        handleTouchMove(event);
+        return;
+      }
       const drag = dragRef.current;
       if (!drag || event.pointerId !== drag.pointerId) return;
       const dx = event.clientX - drag.x;
@@ -342,9 +492,33 @@ export function GodotEditorControls() {
 
     function handleWheel(event: WheelEvent): void {
       event.preventDefault();
+      if (resolveWheelMode(event) === 'pan') {
+        // Godot pans by the NEGATED gesture delta, and the delta has to be
+        // normalised first: one notch is 100px in Chrome but 3 lines in
+        // Firefox, so raw deltas would pan 33x further in one than the other.
+        const { dx, dy } = wheelDeltaPixels(event);
+        if (dx === 0 && dy === 0) return;
+        handle.applyCursor(panCursor(handle.cursor(), -dx, -dy));
+        invalidate();
+        return;
+      }
       const scale = wheelZoomScale(event);
       if (scale === 1) return;
-      handle.applyCursor(scaleCursorDistance(handle.cursor(), scale, handle.zoomRange()));
+      // Zoom toward the pointer, not the focus point (ADR-0029's one departure
+      // from Godot). `offsetX`/`offsetY` DO force a style+layout flush, like
+      // `getBoundingClientRect` — but nothing on this path writes to the DOM
+      // (`invalidate()` only schedules a frame), so layout is already clean and
+      // the flush early-outs. Read through `get()` rather than a mirrored ref:
+      // the store is stable, so the listener stays subscribed once.
+      const view = get().size;
+      handle.applyCursor(
+        zoomCursorToPointer(handle.cursor(), scale, handle.zoomRange(), {
+          offsetX: event.offsetX - view.width / 2,
+          offsetY: event.offsetY - view.height / 2,
+          height: view.height,
+          fovDegrees: handle.fovDegrees(),
+        })
+      );
       invalidate();
     }
 
@@ -391,13 +565,14 @@ export function GodotEditorControls() {
     function handleBlur(): void {
       heldKeysRef.current.clear();
       sprintRef.current = false;
+      resetTouch();
     }
 
     element.addEventListener('pointerdown', handlePointerDown);
     element.addEventListener('pointermove', handlePointerMove);
-    element.addEventListener('pointerup', endDrag);
-    element.addEventListener('pointercancel', endDrag);
-    element.addEventListener('lostpointercapture', endDrag);
+    element.addEventListener('pointerup', endPointer);
+    element.addEventListener('pointercancel', endPointer);
+    element.addEventListener('lostpointercapture', endPointer);
     element.addEventListener('contextmenu', handleContextMenu);
     // Not passive: a zoom must not also scroll the page behind the canvas.
     element.addEventListener('wheel', handleWheel, { passive: false });
@@ -408,17 +583,18 @@ export function GodotEditorControls() {
     return () => {
       element.removeEventListener('pointerdown', handlePointerDown);
       element.removeEventListener('pointermove', handlePointerMove);
-      element.removeEventListener('pointerup', endDrag);
-      element.removeEventListener('pointercancel', endDrag);
-      element.removeEventListener('lostpointercapture', endDrag);
+      element.removeEventListener('pointerup', endPointer);
+      element.removeEventListener('pointercancel', endPointer);
+      element.removeEventListener('lostpointercapture', endPointer);
       element.removeEventListener('contextmenu', handleContextMenu);
       element.removeEventListener('wheel', handleWheel);
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
       window.removeEventListener('blur', handleBlur);
       endDrag();
+      resetTouch();
     };
-  }, [gl, handle, invalidate]);
+  }, [gl, handle, invalidate, get]);
 
   // Freelook flight is continuous while the keys are held, so it advances per
   // frame with the frame's own delta rather than per keydown repeat.

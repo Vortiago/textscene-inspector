@@ -1,8 +1,23 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { TscnSceneContents } from './TscnCanvas';
 import { frameSceneBounds } from './frameSceneBounds';
+
+describe('the canvas container CSS', () => {
+  it('claims every touch gesture, so touch navigation gets pointermove at all', () => {
+    // Read from source, because this is invisible to every other gate: the
+    // WebGL goldens do not see CSS, and happy-dom has neither a cascade nor
+    // layout. @react-three/fiber sets no touch-action of its own (checked
+    // against 9.x), so without this line the browser consumes a one-finger
+    // drag as a scroll and <GodotEditorControls> never sees the gesture.
+    const css = readFileSync(path.join(import.meta.dirname, 'TscnCanvas.module.css'), 'utf8');
+    const root = /\.root\s*\{[^}]*\}/.exec(css)?.[0] ?? '';
+    expect(root).toContain('touch-action: none');
+  });
+});
 
 describe('<TscnSceneContents> (preview lighting)', () => {
   it('mounts the preview sun for a scene that supplies no light of its own', async () => {
