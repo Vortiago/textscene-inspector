@@ -29,8 +29,8 @@ describe('StandardMaterial3D Linter Validators', () => {
 
       expect(result).not.toBeNull();
       expect(result!.severity).toBe('error');
-      expect(result!.message).toContain('must be "true" or "false"');
-      expect(result!.code).toBe('INVALID_BOOLEAN');
+      expect(result!.message).toContain('must be a boolean (true or false)');
+      expect(result!.code).toBe('INVALID_NORMAL_ENABLED_FORMAT');
     });
 
     it('should reject numeric value', () => {
@@ -57,8 +57,8 @@ describe('StandardMaterial3D Linter Validators', () => {
 
       expect(result).not.toBeNull();
       expect(result!.severity).toBe('error');
-      expect(result!.message).toContain('must be "true" or "false"');
-      expect(result!.code).toBe('INVALID_BOOLEAN');
+      expect(result!.message).toContain('must be a boolean (true or false)');
+      expect(result!.code).toBe('INVALID_EMISSION_ENABLED_FORMAT');
     });
   });
 
@@ -77,8 +77,8 @@ describe('StandardMaterial3D Linter Validators', () => {
 
       expect(result).not.toBeNull();
       expect(result!.severity).toBe('error');
-      expect(result!.message).toContain('must be "true" or "false"');
-      expect(result!.code).toBe('INVALID_BOOLEAN');
+      expect(result!.message).toContain('must be a boolean (true or false)');
+      expect(result!.code).toBe('INVALID_REFRACTION_ENABLED_FORMAT');
     });
   });
 
@@ -97,8 +97,8 @@ describe('StandardMaterial3D Linter Validators', () => {
 
       expect(result).not.toBeNull();
       expect(result!.severity).toBe('error');
-      expect(result!.message).toContain('must be "true" or "false"');
-      expect(result!.code).toBe('INVALID_BOOLEAN');
+      expect(result!.message).toContain('must be a boolean (true or false)');
+      expect(result!.code).toBe('INVALID_ANISOTROPY_ENABLED_FORMAT');
     });
   });
 
@@ -124,7 +124,7 @@ describe('StandardMaterial3D Linter Validators', () => {
       expect(result).not.toBeNull();
       expect(result!.severity).toBe('error');
       expect(result!.message).toContain('must be a resource reference');
-      expect(result!.code).toBe('INVALID_TEXTURE_REFERENCE');
+      expect(result!.code).toBe('INVALID_NORMAL_TEXTURE_REFERENCE');
     });
 
     it('should accept a SubResource reference (procedural/inline Texture2D)', () => {
@@ -232,8 +232,8 @@ describe('StandardMaterial3D Linter Validators', () => {
 
       expect(result).not.toBeNull();
       expect(result!.severity).toBe('error');
-      expect(result!.message).toContain('must be a Vector3');
-      expect(result!.code).toBe('INVALID_VECTOR3');
+      expect(result!.message).toContain('must be Vector3 with 3 numbers');
+      expect(result!.code).toBe('INVALID_UV1_SCALE_FORMAT');
     });
 
     it('should reject Vector3 with wrong number of components', () => {
@@ -242,7 +242,7 @@ describe('StandardMaterial3D Linter Validators', () => {
 
       expect(result).not.toBeNull();
       expect(result!.severity).toBe('error');
-      expect(result!.code).toBe('INVALID_VECTOR3');
+      expect(result!.code).toBe('INVALID_UV1_SCALE_FORMAT');
     });
 
     it('should reject Vector3 with non-numeric values', () => {
