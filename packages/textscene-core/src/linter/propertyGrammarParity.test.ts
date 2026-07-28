@@ -84,6 +84,25 @@ const LIGHT3D_LINTER_ONLY_KEYS = [
  * scrape of each audio player's parser.ts); each linterParser.ts registers
  * them explicitly.
  */
+/**
+ * CPUParticles2D's twelve parameter slots. `parser.ts` reads every one of
+ * `<prefix>_min` / `_max` / `_curve`, but through a TABLE
+ * (`properties[`${prefix}_min`]`) rather than a literal access, so the
+ * `properties.X` scrape sees none of them — the same blind spot as the audio
+ * base helper below. Rebuilt from the prefixes so the two lists cannot drift.
+ */
+const PARTICLE_PARAM_PREFIXES = [
+  'initial_velocity', 'angular_velocity', 'orbit_velocity', 'linear_accel',
+  'radial_accel', 'tangential_accel', 'damping', 'angle', 'scale_amount',
+  'hue_variation', 'anim_speed', 'anim_offset',
+] as const;
+
+const PARTICLE_PARAM_KEYS: readonly string[] = [
+  ...PARTICLE_PARAM_PREFIXES.flatMap((p) => [`${p}_min`, `${p}_max`]),
+  // Godot exposes a curve for every slot but the initial velocity.
+  ...PARTICLE_PARAM_PREFIXES.filter((p) => p !== 'initial_velocity').map((p) => `${p}_curve`),
+];
+
 const AUDIO_BASE_KEYS = [
   'stream', 'volume_db', 'pitch_scale', 'playing', 'autoplay',
   'stream_paused', 'bus', 'max_polyphony',
@@ -208,6 +227,26 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
       'antialiased',
     ],
     reason: 'polygon/polygons/vertex_colors are encoded packed arrays with no per-key grammar; antialiased is a display tweak the renderer has no equivalent for.',
+  },
+
+  CPUParticles2D: {
+    parserOnly: [
+      // Godot's setter takes ANY int and reads everything but 1 as Index — its
+      // own 2D platformer demo ships `draw_order = 215832976` — so a range
+      // validator would error on a scene the engine opens without complaint.
+      'draw_order',
+    ],
+    linterOnly: [
+      ...PARTICLE_PARAM_KEYS,
+      // Emission shapes the frozen pose cannot reproduce (they sample Godot's
+      // global RNG), so the parser has no reason to read their point data —
+      // but a malformed packed array is still worth reporting.
+      'emission_points', 'emission_normals',
+      // Per-axis scale curves, not implemented; a particle scales uniformly.
+      'split_scale', 'scale_curve_x', 'scale_curve_y',
+    ],
+    reason:
+      'The parameter min/max/curve keys ARE read, but through a table-driven `properties[`${prefix}_min`]` lookup the scrape cannot see; emission_points/normals and the split-scale curves are validated but deliberately unrendered; draw_order is validator-free because Godot accepts any int for it.',
   },
 
   TileMapLayer: {

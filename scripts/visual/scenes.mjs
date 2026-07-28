@@ -353,6 +353,21 @@ export const GOLDEN_SCENES = [
   // Two shadowed lights in one accumulation pass: each must clear the stencil
   // before it stamps, or the first light's volume also cuts the second's.
   { name: 'lightoccluder2d-two-lights', file: 'unit-lightoccluder2d-two-lights.tscn', maxDiffPct: 0.5 },
+  // CPUParticles2D renders a FROZEN pose, so these baselines are what prove it
+  // settles: a live emitter would never produce two identical frames and the
+  // harness would fail it as unstable rather than as changed. Each fixture pins
+  // `use_fixed_seed`/`seed`/`fixed_fps`/`preprocess` so the pose is one exact
+  // draw rather than a plausible one.
+  { name: 'cpuparticles2d', file: 'unit-cpuparticles2d.tscn', maxDiffPct: 0.5 },
+  { name: 'cpuparticles2d-emission-shapes', file: 'unit-cpuparticles2d-emission-shapes.tscn', maxDiffPct: 0.5 },
+  { name: 'cpuparticles2d-curves', file: 'unit-cpuparticles2d-curves.tscn', maxDiffPct: 0.5 },
+  { name: 'cpuparticles2d-color-ramp', file: 'unit-cpuparticles2d-color-ramp.tscn', maxDiffPct: 0.5 },
+  // A scaled emitter whose particles must NOT scale with it: Godot's default
+  // `local_coords = false` emits into world space, which the dungeon candle relies on.
+  { name: 'cpuparticles2d-local-coords', file: 'unit-cpuparticles2d-local-coords.tscn', maxDiffPct: 0.5 },
+  // `emitting = false` draws nothing. Six of the corpus's eleven emitters ship
+  // this way, so a regression that started drawing them would be widespread.
+  { name: 'cpuparticles2d-not-emitting', file: 'unit-cpuparticles2d-not-emitting.tscn', maxDiffPct: 0.5 },
   // Baseline corrected in the Y-flip fix: a NavigationPolygon's vertices are
   // Godot canvas pixels (+Y DOWN), and this overlay was the one 2D geometry
   // path that skipped the negation — so the navmesh used to sit ABOVE the

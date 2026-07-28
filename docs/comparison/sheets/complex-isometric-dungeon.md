@@ -30,8 +30,8 @@ framed by the 1152x648 project viewport.
 
 ## Divergences
 
-The whole frame is within a mean channel error of **5.31/255**, with 5.9 % of pixels over
-16/255 and 0.6 % over 64. Stone, floor and the lit regions all agree closely now:
+The whole frame is within a mean channel error of **5.02/255**, with 5.5 % of pixels over
+16/255. Stone, floor and the lit regions all agree closely now:
 
 | Sample | ours | Godot |
 | --- | --- | --- |
@@ -41,12 +41,13 @@ The whole frame is within a mean channel error of **5.31/255**, with 5.9 % of pi
 
 What remains is two things, and neither is draw order.
 
-**The candle particles.** The single worst pixel in the frame is `173,518`, where Godot has a
-saturated `[255, 232, 0]` and we have `[0, 0, 0]` — that is the candle's `flow front`
-emitter, a `CPUParticles2D` whose `modulate` is the yellow-green `Color(0.949, 1, 0, 1)`.
-`CPUParticles2D` is unimplemented, so every flame, glow and sparkle in the map is absent.
-This is the largest *visible* divergence and among the smallest by area; the Candle section
-below isolates it and measures 0.92/255 over the whole sub-scene.
+**The candles are lit, but not at Godot's instant.** `CPUParticles2D` now renders, so every
+flame, glow and sparkle in the map is present. What cannot match is the exact moment: the
+candle sets neither `use_fixed_seed` nor `preprocess`, so Godot randomises the seed at
+construction and never saves it, and its own two consecutive renders of the sub-scene differ
+by 187 pixels. The previewer substitutes a fixed seed and a fixed evaluation time, which makes
+OUR frame stable run to run and puts the particles in plausible places rather than the
+engine's. The Candle section below isolates it at 0.83/255.
 
 **A residual under-light.** Lit surfaces still sit a few units low in red and green (the
 floor sample above is 14 short in red). Godot's canvas composites in **sRGB, clamped to
@@ -71,25 +72,27 @@ the wrappers in `scenes/isometric/previews/` re-centre them; nothing else is cha
 <!-- compare: image=complex-isometric-dungeon-candle status=limitation fixture=previews/candle_preview.tscn -->
 
 A `Sprite2D` wick, four `CPUParticles2D` (`glow`, `Fire`, `Sparkle`, `flow front`) and two
-`PointLight2D`s. `CPUParticles2D` is unimplemented, so the flame body is missing: Godot draws
-a bright yellow teardrop over the wick, ours draws only the glow the lights produce. Mean
-channel error **0.92/255**, 0.2 % of pixels over 16 — the two light pools and the wick sprite
-agree, and the whole divergence is the ~1500 pixels of flame (worst pixel 172 at `563,383`).
+`PointLight2D`s. All four emitters render now, so the candle reads as a lit candle: flame body,
+warm glow and rising sparks. Mean channel error **0.83/255**, 0.1 % of pixels over 16.
 
-Worth stating plainly, because the missing flame is far more obvious to the eye than to the
-metric: `CPUParticles2D` is a large gap in *capability* and a small one in *pixels*. It is not
-where the dungeon's remaining whole-frame error comes from.
+The `Fire` and `Sparkle` emitters both carry a `CanvasItemMaterial` with
+`particles_animation = true` over an 11- and an 8-frame strip. Without that flipbook each
+particle draws the WHOLE strip, which renders as a row of eleven flames beside the wick —
+visibly worse than drawing nothing. It is implemented for `CPUParticles2D`; it remains inert
+for `GPUParticles2D`, which is still unimplemented.
 
 The Godot side of this pair is **not reproducible**, which is worth knowing before reading a
 number off it. The reference harness settles for six real process frames and deliberately does
 not freeze particles, and `CPUParticles2D` seeds itself from an unserialised global RNG unless
 the scene opts into `use_fixed_seed`, which this one does not. Two consecutive reference
-renders of this same scene differ by 187 pixels with a worst channel of 20 — small, but it
-means the flame has no probe number the way every other sample on this sheet does.
+renders of this same scene differ by 187 pixels with a worst channel of 20, so the flame has no
+probe number the way every other sample on this sheet does. The previewer pins a fixed seed and
+a fixed evaluation time, so OUR frame is stable run to run.
 
 That is a property of this scene, not of particles in general: `preprocess` IS serialised, and
 Godot evaluates it at a fixed 1/30 s step before the first visible frame, so an emitter that
-sets it has a well-defined at-rest pose. This candle leaves it at 0.
+sets it has a well-defined at-rest pose. This candle leaves it at 0. The `CPUParticles2D` sheet
+carries the fixtures that do pin it, where the two sides agree to within 0.6/255.
 
 ## Internal shadow
 <!-- compare: image=complex-isometric-dungeon-internal-shadow status=done fixture=previews/internal_shadow_preview.tscn -->

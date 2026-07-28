@@ -73,6 +73,7 @@ const NODE2D_LEAVES = [
   'CanvasModulate',
   'LightOccluder2D',
   'PointLight2D',
+  'CPUParticles2D',
 ] as const;
 
 /**

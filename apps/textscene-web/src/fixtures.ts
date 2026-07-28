@@ -168,6 +168,41 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Cpuparticles2d Color Ramp",
+    "file": "unit-cpuparticles2d-color-ramp.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Cpuparticles2d Curves",
+    "file": "unit-cpuparticles2d-curves.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Cpuparticles2d Emission Shapes",
+    "file": "unit-cpuparticles2d-emission-shapes.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Cpuparticles2d Local Coords",
+    "file": "unit-cpuparticles2d-local-coords.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Cpuparticles2d Not Emitting",
+    "file": "unit-cpuparticles2d-not-emitting.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Cpuparticles2d Unpreviewable",
+    "file": "unit-cpuparticles2d-unpreviewable.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Cpuparticles2d",
+    "file": "unit-cpuparticles2d.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Decal",
     "file": "unit-decal.tscn",
     "category": "Other"

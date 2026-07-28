@@ -28,9 +28,12 @@ export interface CanvasItemMaterialProperties {
   blendMode: CanvasItemBlendMode;
   lightMode: CanvasItemLightMode;
   /**
-   * Godot's particle-sheet animation, which only a particles node drives.
-   * Parsed so the inspector and linter see it; it has no renderer consumer
-   * because CPUParticles2D/GPUParticles2D are not implemented.
+   * Godot's particle-sheet animation: the texture is a sheet of `h × v` cells
+   * and each particle draws ONE of them, picked by the anim value the emitter
+   * carries (`INSTANCE_CUSTOM.z`). Consumed by CPUParticles2D's geometry
+   * builder, which shrinks the quad and windows its UVs exactly as the vertex
+   * shader `_update_shader()` generates does. GPUParticles2D does not render at
+   * all, so a sheet on one of those is still inert.
    */
   particlesAnimation: boolean;
   particlesAnimHFrames: number;

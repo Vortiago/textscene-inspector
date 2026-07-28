@@ -70,8 +70,11 @@ The render and linter pipelines are **separately bundleable** because the parse,
 │           │   ├── 2d/
 │           │   │   ├── ui/                  # 17 Control slices (control, label, button, containers, ...) — DOM overlay (ADR-0003)
 │           │   │   ├── tiles/{tilemap,tilemaplayer}/    # + shared/ — TileSet/atlas decoding
+│           │   │   ├── cpuparticles2d/      # frozen pose at `preprocess` — no clock (ADR-0008)
 │           │   │   └── {sprite2d,camera2d,animatedsprite2d,polygon2d,line2d,
-│           │   │        marker2d,path2d,pathfollow2d,navigationregion2d}/
+│           │   │        marker2d,path2d,pathfollow2d,navigationregion2d,
+│           │   │        pointlight2d,lightoccluder2d,canvasmodulate,
+│           │   │        remotetransform2d}/
 │           │   ├── 3d/
 │           │   │   ├── meshinstance3d/      # parser.ts, linter.ts, Component.tsx, index{,.linter,.r3f}.ts
 │           │   │   ├── camera3d/
@@ -120,6 +123,7 @@ The render and linter pipelines are **separately bundleable** because the parse,
 │               ├── useResource.ts         # React hook over the event bus
 │               ├── ResourceLoaderContext.tsx
 │               ├── meshes/                # Primitive mesh parsers
+│               ├── curve/                 # Godot's 1D Curve — cubic Bezier sample()
 │               └── materials/standardmaterial3d/  # Material parser + renderer
 └── apps/
     ├── textscene-vscode/         # VS Code extension (esbuild)

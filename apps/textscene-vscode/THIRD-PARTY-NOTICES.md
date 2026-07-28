@@ -31,6 +31,9 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/r3f/lighting2d/CanvasLighting2D.tsx` | `drivers/gles3/shaders/canvas.glsl` (the canvas light pass: `base_color`, `canvas_modulation`, the light loop) and `servers/rendering/renderer_canvas_cull.cpp` (`light->item_mask & ci->light_mask`) |
 | `packages/textscene-core/src/r3f/lighting2d/canvasItemLighting.ts` | `drivers/gles3/shaders/canvas.glsl` (`MODE_UNSHADED` / `MODE_LIGHT_ONLY` guards, `light_only_alpha`) and `servers/rendering/renderer_canvas_cull.cpp` (the item cull-mask test) |
 | `packages/textscene-core/src/r3f/lighting2d/lightQuad.ts` | `drivers/gles3/shaders/canvas.glsl` (`light_blend_compute`, `light_base_color` energy packing) |
+| `packages/textscene-core/src/resources/curve/sample.ts` | `scene/resources/curve.cpp` (`Curve::sample`, `Curve::sample_local_nocheck`, `Curve::get_index`) and `core/math/math_funcs.h` (`Math::bezier_interpolate`) |
+| `packages/textscene-core/src/nodes/2d/cpuparticles2d/godotRng.ts` | `core/math/random_pcg.h` (`RandomPCG::seed`, `RandomPCG::randf`), `thirdparty/misc/pcg.cpp` (`pcg32_random_r`, `pcg32_srandom_r` — see the PCG note below) and `scene/2d/cpu_particles_2d.cpp` (`idhash`, `rand_from_seed`) |
+| `packages/textscene-core/src/nodes/2d/cpuparticles2d/simulate.ts` | `scene/2d/cpu_particles_2d.cpp` (`CPUParticles2D::_particles_process`, the `_update_internal` preprocess loop, `_update_particle_data_buffer`) |
 | `scripts/godot-ref/run.mjs` | `editor/plugins/node_3d_editor_plugin.cpp` (`Node3DEditor::_node_added` yield rule, `_load_default_preview_settings`, `_preview_settings_changed`, `Node3DEditorViewport::Cursor()`) |
 
 ### Reproduced values
@@ -64,6 +67,35 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+```
+
+---
+
+## PCG random number generator
+
+<https://www.pcg-random.org>
+
+`packages/textscene-core/src/nodes/2d/cpuparticles2d/godotRng.ts` reproduces the minimal
+PCG32 generator (`pcg32_random_r` / `pcg32_srandom_r`), because CPUParticles2D's particle
+layout IS that generator's output and a statistically-equivalent substitute would put
+every particle somewhere else. Godot vendors the same implementation under
+`thirdparty/misc/pcg.cpp`; it is by Melissa O'Neill and is licensed Apache-2.0, separately
+from Godot's own MIT licence above.
+
+```
+Copyright 2014 Melissa O'Neill <oneill@pcg-random.org>
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 ```
 
 ---
