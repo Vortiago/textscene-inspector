@@ -37,6 +37,24 @@ _surfaces = [{
 blend_shape_mode = 0
 `;
 
+/** truck_cab.tres's `headlights` surface: ARRAY_FLAG_COMPRESS_ATTRIBUTES, 12 B/vertex. */
+const COMPRESSED_TRES = `[gd_resource type="ArrayMesh" format=4]
+
+[resource]
+_surfaces = [{
+"aabb": AABB(0.416992, 0.114807, 1.339844, 0.102539, 0.06988499, 0.023437023),
+"format": 34896613383,
+"index_count": 6,
+"index_data": PackedByteArray("AAABAAIAAAADAAEA"),
+"name": "headlights",
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 4,
+"vertex_data": PackedByteArray("//8B71UVpsQAAEkKqeqmxC4l//8AAKbEj/0AAP//psTYje2P2I3tj9iN7Y/Yje2P")
+}]
+blend_shape_mode = 0
+`;
+
 class NoopProvider implements ResourceProvider {
   async loadResource(): Promise<string | ArrayBuffer | null> {
     return null;
@@ -123,6 +141,37 @@ describe('<MeshInstance3D> external ArrayMesh (WI-1)', () => {
     expect(geo).toBe(resource.geometry);
     expect(geo!.getAttribute('position').count).toBe(4);
     expect(geo!.getIndex()!.count).toBe(6);
+  });
+
+  it('renders a compressed-attribute ArrayMesh with finite bounds, not the placeholder', async () => {
+    const loader = makeLoader();
+    const mesh = decodeArrayMesh(COMPRESSED_TRES);
+    const resource: ArrayMeshResource = {
+      geometry: buildArrayMeshGeometry(mesh),
+      materialPaths: mesh.surfaces.map((s) => s.materialPath ?? null),
+    };
+    preloadArrayMesh(loader, 'res://stage/meshes/wall.tres', resource);
+
+    const renderer = await render(loader);
+    await new Promise<void>((r) => setTimeout(r, 10));
+    await renderer.update(
+      <ResourceLoaderProvider loader={loader}>
+        <SceneResourcesProvider internalResources={[]} externalResources={EXT}>
+          <MeshInstance3D node={makeNode()} />
+        </SceneResourcesProvider>
+      </ResourceLoaderProvider>
+    );
+
+    const geo = firstMeshGeometry(renderer);
+    expect(geo).toBe(resource.geometry);
+    expect(geo!.getAttribute('position').count).toBe(4);
+    // A NaN here would leave the node unframeable, not merely misdrawn.
+    geo!.computeBoundingSphere();
+    expect(Number.isFinite(geo!.boundingSphere!.radius)).toBe(true);
+    const wireframes = renderer.scene
+      .findAllByType('MeshBasicMaterial')
+      .filter((m) => (m.instance as THREE.MeshBasicMaterial).wireframe);
+    expect(wireframes).toHaveLength(0);
   });
 
   it('shows the magenta wireframe placeholder when the ArrayMesh is unavailable', async () => {

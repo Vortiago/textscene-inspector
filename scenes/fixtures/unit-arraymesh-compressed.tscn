@@ -1,0 +1,34 @@
+[gd_scene load_steps=2 format=3 uid="uid://unitarraymeshcompscene"]
+
+; The same textured quad as unit-arraymesh-uv.tscn, its .tres surface stored with
+; ARRAY_FLAG_COMPRESS_ATTRIBUTES — positions as uint16 spanning the surface aabb, the
+; tangent frame as an axis-angle pair plus an angle, UVs as uint16. That flag is the ONE
+; variable: same four vertices, same aabb, same normals, same UVs, same material, same
+; transform, so this image must be indistinguishable from unit-arraymesh-uv.tscn's.
+; Every other fixture .tres in the bag is uncompressed, so no other scene reads a single
+; byte of the compressed layout, and the corpus meshes that do are not visual-gated. A
+; wrong position stride renders nothing at all, a normal read off the rotation axis
+; instead of through the axis-angle frame lights the quad from the wrong side, and a UV
+; read at the wrong width scrambles the bands.
+
+[ext_resource type="ArrayMesh" path="res://unit-arraymesh-compressed-quad.tres" id="1_quad"]
+
+[node name="Root" type="Node3D"]
+
+[node name="Quad" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+mesh = ExtResource("1_quad")
+
+[node name="Title" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.8, 0)
+text = "ArrayMesh compressed attributes"
+pixel_size = 0.008
+billboard = 1
+modulate = Color(1, 1, 0.7, 1)
+
+[node name="Description" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.8, 0)
+text = "Quantised layout decodes to the same quad: green band on TOP"
+pixel_size = 0.006
+billboard = 1
+modulate = Color(1, 1, 1, 1)

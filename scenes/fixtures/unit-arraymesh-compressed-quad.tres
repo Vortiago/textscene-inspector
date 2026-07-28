@@ -1,0 +1,19 @@
+[gd_resource type="ArrayMesh" format=4 load_steps=2 uid="uid://unitarraymeshcompquad"]
+
+[ext_resource type="Material" path="res://unit-arraymesh-uv-material.tres" id="1_mat"]
+
+[resource]
+resource_name = "unit_compressed_uv_quad"
+_surfaces = [{
+"aabb": AABB(-1, -1, 1, 2, 2, 1e-05),
+"attribute_data": PackedByteArray("AAD//////////wAAAAAAAA=="),
+"format": 34896613399,
+"index_count": 6,
+"index_data": PackedByteArray("AgAAAAMAAgABAAAA"),
+"material": ExtResource("1_mat"),
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 4,
+"vertex_data": PackedByteArray("AAAAAAAAAID//wAAAAAAgP////8AAACAAAD//wAAAID/f////3////9/////f///")
+}]
+blend_shape_mode = 0

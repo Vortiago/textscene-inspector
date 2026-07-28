@@ -5,8 +5,17 @@
  * tested against the actual on-disk layout (base64 PackedByteArray + the
  * uint64 vertex `format` bitfield), not an idealized stand-in.
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import * as logger from '../../logger';
 import { decodeArrayMesh } from './arrayMeshDecode';
+
+let warnSpy: ReturnType<typeof vi.spyOn>;
+beforeEach(() => {
+  warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+});
+afterEach(() => {
+  warnSpy.mockRestore();
+});
 
 /**
  * scenes/demos/3d/platformer/stage/meshes/wall.tres — a 4-vertex quad, one
@@ -141,6 +150,263 @@ _surfaces = [{
 blend_shape_mode = 0
 `;
 
+/**
+ * scenes/demos/3d/truck_town/vehicles/meshes/truck_cab.tres, the `headlights`
+ * surface verbatim — the smallest compressed surface in the corpus. format
+ * 34896613383 = VERTEX|NORMAL|TANGENT|INDEX + ARRAY_FLAG_COMPRESS_ATTRIBUTES +
+ * ARRAY_FLAG_FORMAT_VERSION_2, 12 B/vertex: 8 B of position record then a 4 B
+ * normal region.
+ *
+ * The expected values throughout are what Godot 4.6.3's own
+ * ArrayMesh.surface_get_arrays() returns for these exact bytes.
+ */
+const COMPRESSED_TRES = `[gd_resource type="ArrayMesh" format=4]
+
+[resource]
+_surfaces = [{
+"aabb": AABB(0.416992, 0.114807, 1.339844, 0.102539, 0.06988499, 0.023437023),
+"format": 34896613383,
+"index_count": 6,
+"index_data": PackedByteArray("AAABAAIAAAADAAEA"),
+"name": "headlights",
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 4,
+"vertex_data": PackedByteArray("//8B71UVpsQAAEkKqeqmxC4l//8AAKbEj/0AAP//psTYje2P2I3tj9iN7Y/Yje2P")
+}]
+blend_shape_mode = 0
+`;
+
+describe('compressed attribute layout', () => {
+  it('decodes compressed positions as uint16 normalised into the surface aabb', () => {
+    const surface = decodeArrayMesh(COMPRESSED_TRES).surfaces[0]!;
+
+    expect(surface.positions).toHaveLength(4 * 3);
+    expect(Array.from(surface.positions).map((p) => Number(p.toFixed(6)))).toEqual([
+      0.519531, 0.180053, 1.341797, 0.416992, 0.117615, 1.361328, 0.431884, 0.184692, 1.339844,
+      0.518555, 0.114807, 1.363281,
+    ]);
+  });
+
+  it('decodes a compressed normal from the axis-angle TBN, angle in the position record', () => {
+    // Compressed surfaces do not store the normal. The octahedral pair in the
+    // normal region is a rotation AXIS, and the angle is the 4th uint16 of the
+    // 8-byte position record — the slot a VERTEX-only surface leaves zeroed.
+    // Reading that pair as a normal yields a direction unrelated to the surface.
+    const surface = decodeArrayMesh(COMPRESSED_TRES).surfaces[0]!;
+
+    expect(surface.normals).toHaveLength(4 * 3);
+    for (let v = 0; v < 4; v++) {
+      expect(surface.normals![v * 3 + 0]).toBeCloseTo(-0.00742, 5);
+      expect(surface.normals![v * 3 + 1]).toBeCloseTo(0.30958, 5);
+      expect(surface.normals![v * 3 + 2]).toBeCloseTo(0.95085, 5);
+    }
+  });
+
+  it('drops a compressed surface that declares no aabb', () => {
+    // The aabb IS the position scale for a compressed surface, so without it
+    // there is nothing to dequantise against.
+    const noAabb = COMPRESSED_TRES.replace(
+      '"aabb": AABB(0.416992, 0.114807, 1.339844, 0.102539, 0.06988499, 0.023437023),\n',
+      ''
+    );
+
+    expect(decodeArrayMesh(noAabb).surfaces).toHaveLength(0);
+  });
+
+  it('decodes compressed UVs as unorm16 when uv_scale is zero', () => {
+    const surface = decodeArrayMesh(COMPRESSED_UV_TRES).surfaces[0]!;
+
+    expect(surface.uvs).toHaveLength(24 * 2);
+    expect(Array.from(surface.uvs!.slice(0, 8)).map((v) => Number(v.toFixed(7)))).toEqual([
+      0.0028687, 0.6605783, 0.9963531, 0.1297017, 0.9963531, 0.6605783, 0.0028687, 0.1297017,
+    ]);
+  });
+
+  it('reads compressed UV1 past the vertex colour', () => {
+    // The attribute record is COLOR then UV1, and compression halves UV1 to 4
+    // bytes but leaves RGBA8 at 4 — so the colour offset does not move.
+    const surface = decodeArrayMesh(COMPRESSED_COLOR_UV_TRES).surfaces[0]!;
+
+    expect(Array.from(surface.uvs!)).toEqual([0, 1, 1, 1, 1, 0, 0, 0]);
+  });
+
+  it('dequantises compressed UVs through a non-zero uv_scale', () => {
+    // Godot normalises UVs that leave [-1,1] into the uint16 range and records
+    // the divisor in uv_scale; a zero uv_scale means the stored value IS the UV.
+    // This quad's UVs run 0..4, which Godot stored against uv_scale 8.
+    const surface = decodeArrayMesh(COMPRESSED_UVSCALE_TRES).surfaces[0]!;
+
+    expect(Array.from(surface.uvs!).map((v) => Number(v.toFixed(6)))).toEqual([
+      -0.000061, 4, 4, 4, 4, -0.000061, -0.000061, -0.000061,
+    ]);
+  });
+
+  it('emits no UVs when attribute_data is not the size the format implies', () => {
+    // An unmodelled CUSTOM0..3 channel widens the record, so UV1 is no longer
+    // where the format says. That costs the UVs, not the surface.
+    const truncated = COMPRESSED_UV_TRES.replace(
+      /"attribute_data": PackedByteArray\("[^"]*"\)/,
+      '"attribute_data": PackedByteArray("vAAbqRD/NCEQ/xupvAA0IQ==")'
+    );
+    const surface = decodeArrayMesh(truncated).surfaces[0]!;
+
+    expect(surface.uvs).toBeUndefined();
+    for (const p of surface.positions) expect(Number.isFinite(p)).toBe(true);
+  });
+});
+
+/**
+ * scenes/demos/3d/truck_town/vehicles/meshes/truck_trailer.tres, its
+ * `truck_trailer` surface verbatim — the corpus's only compressed surface that
+ * also carries TEX_UV. format 34896613399 adds TEX_UV to the compressed set, so
+ * `attribute_data` is 4 B/vertex.
+ */
+const COMPRESSED_UV_TRES = `[gd_resource type="ArrayMesh" format=4]
+
+[resource]
+_surfaces = [{
+"aabb": AABB(-0.625, -0.00771, -2.005859, 1.240234, 1.121968, 4.199218),
+"attribute_data": PackedByteArray("vAAbqRD/NCEQ/xupvAA0IfnbeP/69pvO+vZ4//nbm87eABupuf/rILn/G6neAOsgVhqu+oMDN8hWGjfIgwOu+uB4ocfWHP791hyhx+B4/v3o2A/HS3zE/Ut8D8fo2MT9"),
+"format": 34896613399,
+"index_count": 36,
+"index_data": PackedByteArray("AAABAAIAAAADAAEABAAFAAYABAAHAAUACAAJAAoACAALAAkADAANAA4ADAAPAA0AEAARABIAEAATABEAFAAVABYAFAAXABUA"),
+"name": "truck_trailer",
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 24,
+"vertex_data": PackedByteArray("AAAAAAAA/78AAP//////vwAAAAD///+/AAD//wAA/7///wAAAAD//wAA//8AAP//AAAAAAAA////////AAD/////AAD///+//////wAA/7///wAAAAD/v/////////+/AAAAAP///7//////////v///AAD///+/AAD//////7///wAAAABU1QAAAAD//1TV//8AAP//VNUAAAAAAABU1QAA//8AAFTV////////VNUAAP////9U1f////8AAFTV/3////9//v//f/7//3////9/////f////3////9/////fwAA/38AAP9/AAD/fwAA/3//f/9//3//f/9//3//f1RVVFVVVVRVVVVUVVRVVFVU1aoqVNWqKlTVqipU1aoq")
+}]
+blend_shape_mode = 0
+`;
+
+/**
+ * The unit quad re-saved by Godot 4.6.3 with ARRAY_FLAG_COMPRESS_ATTRIBUTES and
+ * a vertex colour: format 34896613407, an 8 B attribute record of RGBA8 + 2×uint16.
+ */
+const COMPRESSED_COLOR_UV_TRES = `[gd_resource type="ArrayMesh" format=4]
+
+[resource]
+_surfaces = [{
+"aabb": AABB(-1, -1, 1, 2, 2, 1e-05),
+"attribute_data": PackedByteArray("/wAA/wAA//8A/wD//////wAA/////wAA/////wAAAAA="),
+"format": 34896613407,
+"index_count": 6,
+"index_data": PackedByteArray("AgAAAAMAAgABAAAA"),
+"name": "compressed_color_uv",
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 4,
+"vertex_data": PackedByteArray("AAAAAAAAAID//wAAAAAAgP////8AAACAAAD//wAAAID/f////3////9/////f///")
+}]
+blend_shape_mode = 0
+`;
+
+/** The same quad with its UVs running 0..4, which forces a non-zero uv_scale. */
+const COMPRESSED_UVSCALE_TRES = `[gd_resource type="ArrayMesh" format=4]
+
+[resource]
+_surfaces = [{
+"aabb": AABB(-1, -1, 1, 2, 2, 1e-05),
+"attribute_data": PackedByteArray("/3////////////9//3//fw=="),
+"format": 34896613399,
+"index_count": 6,
+"index_data": PackedByteArray("AgAAAAMAAgABAAAA"),
+"name": "compressed_uvscale",
+"primitive": 3,
+"uv_scale": Vector4(8, 8, 0, 0),
+"vertex_count": 4,
+"vertex_data": PackedByteArray("AAAAAAAAAID//wAAAAAAgP////8AAACAAAD//wAAAID/f////3////9/////f///")
+}]
+blend_shape_mode = 0
+`;
+
+/**
+ * A surface that declares 4 vertices but carries only 2 vertices' worth of
+ * `vertex_data`. format 4097 = VERTEX|INDEX, so positions are all there is.
+ */
+const TRUNCATED_TRES = `[gd_resource type="ArrayMesh" format=4]
+
+[resource]
+_surfaces = [{
+"aabb": AABB(-1, -1, 1, 2, 2, 0),
+"format": 4097,
+"index_count": 3,
+"index_data": PackedByteArray("AAABAAIA"),
+"name": "truncated",
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 4,
+"vertex_data": PackedByteArray("AACAvwAAgL8AAIA/AACAPwAAgL8AAIA/")
+}]
+`;
+
+/** Same shape, full length, but vertex 0's x is a float32 NaN bit pattern. */
+const NON_FINITE_TRES = `[gd_resource type="ArrayMesh" format=4]
+
+[resource]
+_surfaces = [{
+"aabb": AABB(-1, -1, 1, 2, 2, 0),
+"format": 4097,
+"index_count": 3,
+"index_data": PackedByteArray("AAABAAIA"),
+"name": "not_finite",
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 4,
+"vertex_data": PackedByteArray("AADAfwAAgL8AAIA/AACAPwAAgL8AAIA/AACAPwAAgD8AAIA/AACAvwAAgD8AAIA/")
+}]
+`;
+
+/** The wall quad followed by the truncated surface, in one `_surfaces` array. */
+const GOOD_THEN_BAD_TRES = WALL_TRES.replace(
+  '}]\nblend_shape_mode = 0',
+  `}, {
+"aabb": AABB(-1, -1, 1, 2, 2, 0),
+"format": 4097,
+"index_count": 3,
+"index_data": PackedByteArray("AAABAAIA"),
+"name": "truncated",
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 4,
+"vertex_data": PackedByteArray("AACAvwAAgL8AAIA/AACAPwAAgL8AAIA/")
+}]
+blend_shape_mode = 0`
+);
+
+describe('undecodable surfaces', () => {
+  it('drops a surface whose vertex_data is shorter than its format requires', () => {
+    // Reading past the buffer used to throw out of the decoder, which failed the
+    // whole resource; the surface alone is the thing that cannot be read.
+    expect(decodeArrayMesh(TRUNCATED_TRES).surfaces).toHaveLength(0);
+  });
+
+  it('drops a surface whose decoded positions are not finite', () => {
+    // A single NaN reaches THREE.BufferGeometry and NaNs the merged bounding
+    // sphere for every surface above it, which also breaks camera framing.
+    expect(decodeArrayMesh(NON_FINITE_TRES).surfaces).toHaveLength(0);
+  });
+
+  it('warns with the surface name and format when it drops a surface', () => {
+    decodeArrayMesh(TRUNCATED_TRES);
+
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    const message = String(warnSpy.mock.calls[0]![0]);
+    expect(message).toContain('[ArrayMesh]');
+    expect(message).toContain('truncated');
+    expect(message).toContain('4097');
+  });
+
+  it('keeps the surfaces it can read when a sibling surface is dropped', () => {
+    const mesh = decodeArrayMesh(GOOD_THEN_BAD_TRES);
+
+    expect(mesh.surfaces).toHaveLength(1);
+    expect(mesh.surfaces[0]!.materialPath).toBe('res://stage/tile_material.tres');
+    for (const p of mesh.surfaces[0]!.positions) expect(Number.isFinite(p)).toBe(true);
+  });
+});
+
 const COLOR_UV_TRES = `[gd_resource type="ArrayMesh" format=4]
 
 [resource]
@@ -164,13 +430,5 @@ describe('attribute_data layout', () => {
     const surface = decodeArrayMesh(COLOR_UV_TRES).surfaces[0]!;
 
     expect(Array.from(surface.uvs!)).toEqual([0.25, 0.5, 0.75, 1]);
-  });
-
-  it('emits no UVs for a compressed-attribute surface rather than garbage floats', () => {
-    // uint16-quantised UVs scaled by uv_scale are not decoded; reading them as
-    // float32 produced values like 6.7e37.
-    const compressed = COLOR_UV_TRES.replace('"format": 4121', '"format": 536875025');
-
-    expect(decodeArrayMesh(compressed).surfaces[0]!.uvs).toBeUndefined();
   });
 });

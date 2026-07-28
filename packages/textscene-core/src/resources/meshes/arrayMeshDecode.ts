@@ -1,13 +1,31 @@
 /**
  * Decodes a Godot 4 text ArrayMesh (`.tres`, format=4) into per-surface typed
  * arrays for a THREE.BufferGeometry. Godot stores geometry as base64
- * `PackedByteArray` blobs interleaved per the surface's uint64 `format`
- * bitfield — this turns that on-disk layout back into positions / uvs / indices.
+ * `PackedByteArray` blobs laid out per the surface's uint64 `format`
+ * bitfield — this turns that on-disk layout back into positions / uvs / normals
+ * / indices, recovering the same values Godot's own
+ * `ArrayMesh.surface_get_arrays()` returns.
  *
- * Scope (first pass): uncompressed vertex layout (no ARRAY_FLAG_COMPRESS_
- * ATTRIBUTES), triangle primitive. Blend shapes / LODs / skins are ignored.
+ * `vertex_data` is TWO concatenated regions, not one interleaved record: the
+ * positions, then the normal/tangent frame. `attribute_data` is a third,
+ * interleaved, ordered COLOR then UV1 then UV2. Bytes per vertex:
+ *
+ * |            | uncompressed | ARRAY_FLAG_COMPRESS_ATTRIBUTES |
+ * | ---------- | ------------ | ------------------------------ |
+ * | position   | 3×float32    | 3×uint16 spanning the surface `aabb`, + the frame angle |
+ * | normal     | 2×uint16 octahedral | shares 4 B with the tangent, as an axis-angle frame |
+ * | tangent    | 2×uint16 octahedral | folded into the normal's 4 B    |
+ * | UV1 / UV2  | 2×float32    | 2×uint16, re-expanded by `uv_scale` when non-zero |
+ * | colour     | RGBA8        | RGBA8                          |
+ *
+ * Dequantising through `aabb` / `uv_scale` is decoding, not conversion: it
+ * recovers Godot's own values. The Godot → three.js conversions (V flip,
+ * triangle winding) stay in `arrayMeshGeometry.ts`.
+ *
+ * Scope: triangle primitive. Blend shapes / LODs / skins are ignored.
  */
 
+import { warn } from '../../logger.js';
 import { parseTresFile } from '../../parser/tresParser.js';
 
 /** Godot Mesh.ArrayFormat flags. */
@@ -15,16 +33,69 @@ const ARRAY_FORMAT_NORMAL = 1 << 1;
 const ARRAY_FORMAT_TANGENT = 1 << 2;
 const ARRAY_FORMAT_COLOR = 1 << 3;
 const ARRAY_FORMAT_TEX_UV = 1 << 4;
-/** Attributes are quantised (UVs become normalised uint16 scaled by uv_scale). */
+const ARRAY_FORMAT_TEX_UV2 = 1 << 5;
+/**
+ * Attributes are quantised. Only bits below 32 can be tested with `&`, which
+ * coerces to int32 — every format Godot writes keeps its low 32 bits under 2^31
+ * so this one survives, but `ARRAY_FLAG_FORMAT_VERSION_2` (1 << 35) could never
+ * be read this way. Nothing here consults it: bit 29 alone selects the layout,
+ * which also lets a fixture omit the version flag and still decode.
+ */
 const ARRAY_FLAG_COMPRESS_ATTRIBUTES = 1 << 29;
 
 /** RGBA8 vertex colour, which Godot writes BEFORE UV1 in the attribute record. */
 const COLOR_BYTES = 4;
 
-/** Float32 position component size in the vertex buffer (uncompressed). */
-const POSITION_STRIDE = 12;
-/** Each of normal / tangent is a 2×uint16 octahedral pair (4 bytes). */
-const OCT_PAIR_BYTES = 4;
+/**
+ * Byte geometry of one surface's buffers, mirroring Godot's
+ * `RenderingServer::mesh_surface_make_offsets_from_format`. The single place any
+ * byte size is decided, so a format combination is described once.
+ */
+interface SurfaceLayout {
+  compressed: boolean;
+  /** Bytes per vertex in `vertex_data`'s leading position region. */
+  positionStride: number;
+  /** Byte offset of `vertex_data`'s normal/tangent region. */
+  normalRegionOffset: number;
+  /** Bytes per vertex there: normal + tangent, both halved when compressed. */
+  normalStride: number;
+  /** Bytes per vertex in `attribute_data`, from the format — never derived. */
+  attributeStride: number;
+  /** Byte offset of UV1 within one attribute record; -1 when the surface has none. */
+  uvOffset: number;
+}
+
+/** A surface's declared `AABB(px, py, pz, sx, sy, sz)` — a compressed surface's position scale. */
+interface SurfaceAabb {
+  position: [number, number, number];
+  size: [number, number, number];
+}
+
+function surfaceLayout(format: number, vertexCount: number): SurfaceLayout {
+  const compressed = (format & ARRAY_FLAG_COMPRESS_ATTRIBUTES) !== 0;
+  const hasNormal = (format & ARRAY_FORMAT_NORMAL) !== 0;
+  const hasTangent = (format & ARRAY_FORMAT_TANGENT) !== 0;
+  const hasColor = (format & ARRAY_FORMAT_COLOR) !== 0;
+  const hasUV = (format & ARRAY_FORMAT_TEX_UV) !== 0;
+  const hasUV2 = (format & ARRAY_FORMAT_TEX_UV2) !== 0;
+
+  // Compressed: 3×uint16 + the tangent-frame angle. Uncompressed: 3×float32.
+  const positionStride = compressed ? 8 : 12;
+  // Compressed folds the tangent into the normal's own 4 bytes (2 per octahedral
+  // pair); uncompressed gives each pair its own 4.
+  const normalStride = hasNormal ? (compressed ? 4 : 4 + (hasTangent ? 4 : 0)) : 0;
+  const uvBytes = compressed ? 4 : 8;
+
+  return {
+    compressed,
+    positionStride,
+    normalRegionOffset: vertexCount * positionStride,
+    normalStride,
+    attributeStride:
+      (hasColor ? COLOR_BYTES : 0) + (hasUV ? uvBytes : 0) + (hasUV2 ? uvBytes : 0),
+    uvOffset: hasUV ? (hasColor ? COLOR_BYTES : 0) : -1,
+  };
+}
 
 /** One decoded mesh surface. */
 export interface ArrayMeshSurface {
@@ -69,6 +140,27 @@ function readInt(block: string, key: string): number {
   return match ? Number(match[1]) : 0;
 }
 
+function readAabb(block: string): SurfaceAabb | undefined {
+  const match = /"aabb"\s*:\s*AABB\(([^)]*)\)/.exec(block);
+  if (!match) return undefined;
+  const n = match[1]!.split(',').map((v) => Number(v.trim()));
+  if (n.length < 6 || n.some((v) => !Number.isFinite(v))) return undefined;
+  return { position: [n[0]!, n[1]!, n[2]!], size: [n[3]!, n[4]!, n[5]!] };
+}
+
+function readVector4(block: string, key: string): [number, number, number, number] | undefined {
+  const match = new RegExp(`"${key}"\\s*:\\s*Vector4\\(([^)]*)\\)`).exec(block);
+  if (!match) return undefined;
+  const n = match[1]!.split(',').map((v) => Number(v.trim()));
+  if (n.length < 4 || n.some((v) => !Number.isFinite(v))) return undefined;
+  return [n[0]!, n[1]!, n[2]!, n[3]!];
+}
+
+function readName(block: string): string | undefined {
+  const match = /"name"\s*:\s*"([^"]*)"/.exec(block);
+  return match?.[1];
+}
+
 /** Extract the base64 payload of a `"<key>": PackedByteArray("…")` field. */
 function readPackedBytes(block: string, key: string): Uint8Array {
   const match = new RegExp(`"${key}"\\s*:\\s*PackedByteArray\\("([^"]*)"\\)`).exec(block);
@@ -76,29 +168,18 @@ function readPackedBytes(block: string, key: string): Uint8Array {
   return Uint8Array.from(atob(match[1]!), (c) => c.charCodeAt(0));
 }
 
-/**
- * Read `floatsPerVertex` float32s per vertex from a buffer region.
- *
- * Godot 4 `vertex_data` is NOT interleaved: full-float positions form a
- * contiguous `12 B/vert` block at the front (followed by the packed
- * normal/tangent block). `attribute_data` likewise leads with UV1. So
- * positions read at a fixed 12-byte stride; UV1 reads at the region's derived
- * stride (UV1 first, any UV2/color trailing). Pass `strideBytes` to force the
- * contiguous case, or omit to derive it from the buffer size.
- */
-function readLeadingFloats(
+/** Read `floatsPerVertex` float32s per vertex at a fixed stride. */
+function readFloats(
   bytes: Uint8Array,
   vertexCount: number,
   floatsPerVertex: number,
-  strideBytes?: number,
-  offsetBytes = 0
+  strideBytes: number
 ): Float32Array {
   const out = new Float32Array(vertexCount * floatsPerVertex);
   if (vertexCount === 0 || bytes.byteLength === 0) return out;
-  const stride = strideBytes ?? bytes.byteLength / vertexCount;
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   for (let i = 0; i < vertexCount; i++) {
-    const base = i * stride + offsetBytes;
+    const base = i * strideBytes;
     for (let f = 0; f < floatsPerVertex; f++) {
       out[i * floatsPerVertex + f] = view.getFloat32(base + f * 4, true);
     }
@@ -107,20 +188,126 @@ function readLeadingFloats(
 }
 
 /**
- * Decode Godot's packed normals from `vertex_data`. The buffer lays positions
- * first (`12 B/vert`), then an interleaved normal+tangent block where each is a
- * 2×uint16 octahedral pair: `[normal(4)][tangent(4)]` per vertex. Returns
- * undefined when no normal block is present (so the caller can recompute them).
+ * Read a surface's positions, or undefined when the surface cannot be read at
+ * all: `vertex_data` too short for the vertices it declares, a compressed
+ * surface with no `aabb` to dequantise against, or a component that is not
+ * finite. A non-finite position is not a local defect — surfaces merge into one
+ * THREE.BufferGeometry, so one NaN poisons the whole mesh's bounding sphere, and
+ * with it the camera framing.
+ *
+ * A compressed position is a uint16 per axis spanning the surface's own `aabb`,
+ * so the aabb is the scale, not just metadata.
+ */
+function decodePositions(
+  bytes: Uint8Array,
+  vertexCount: number,
+  layout: SurfaceLayout,
+  aabb: SurfaceAabb | undefined
+): Float32Array | undefined {
+  if (vertexCount === 0) return new Float32Array(0);
+  if (bytes.byteLength < vertexCount * layout.positionStride) return undefined;
+
+  let positions: Float32Array;
+  if (layout.compressed) {
+    if (!aabb) return undefined;
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    positions = new Float32Array(vertexCount * 3);
+    for (let i = 0; i < vertexCount; i++) {
+      const base = i * layout.positionStride;
+      for (let axis = 0; axis < 3; axis++) {
+        const unit = view.getUint16(base + axis * 2, true) / 65535;
+        positions[i * 3 + axis] = unit * aabb.size[axis]! + aabb.position[axis]!;
+      }
+    }
+  } else {
+    positions = readFloats(bytes, vertexCount, 3, layout.positionStride);
+  }
+
+  for (const p of positions) if (!Number.isFinite(p)) return undefined;
+  return positions;
+}
+
+/**
+ * Read UV1 out of `attribute_data`, whose record Godot orders COLOR, UV1, UV2 —
+ * so a surface with vertex colours puts 4 RGBA8 bytes ahead of UV1.
+ *
+ * Uncompressed UV1 is 2×float32. Compressed is 2×uint16 spanning the unit range,
+ * unless the surface declares a non-zero `uv_scale`: Godot normalises UVs that
+ * leave the unit range into the uint16 range and keeps the divisor there, so the
+ * stored value has to be re-expanded around 0.5.
+ *
+ * Returns undefined when the record is not the width the format implies — an
+ * unmodelled CUSTOM0..3 channel puts UV1 somewhere this cannot find, and wrong
+ * UVs are worse than none.
+ */
+function decodeUVs(
+  bytes: Uint8Array,
+  vertexCount: number,
+  layout: SurfaceLayout,
+  uvScale: [number, number, number, number] | undefined,
+  onMismatch: (actualStride: number) => void
+): Float32Array | undefined {
+  if (layout.uvOffset < 0 || vertexCount === 0 || bytes.byteLength === 0) return undefined;
+  if (bytes.byteLength !== vertexCount * layout.attributeStride) {
+    onMismatch(bytes.byteLength / vertexCount);
+    return undefined;
+  }
+
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const out = new Float32Array(vertexCount * 2);
+  const scaleU = uvScale?.[0] ?? 0;
+  const scaleV = uvScale?.[1] ?? 0;
+  const rescale = scaleU !== 0 || scaleV !== 0;
+
+  for (let i = 0; i < vertexCount; i++) {
+    const o = i * layout.attributeStride + layout.uvOffset;
+    if (!layout.compressed) {
+      out[i * 2 + 0] = view.getFloat32(o, true);
+      out[i * 2 + 1] = view.getFloat32(o + 4, true);
+      continue;
+    }
+    const u = view.getUint16(o, true) / 65535;
+    const v = view.getUint16(o + 2, true) / 65535;
+    out[i * 2 + 0] = rescale ? (u - 0.5) * scaleU : u;
+    out[i * 2 + 1] = rescale ? (v - 0.5) * scaleV : v;
+  }
+  return out;
+}
+
+/** Octahedron → unit vector, Godot's `Vector3::octahedron_decode`. */
+function octToVec3(ex: number, ey: number): [number, number, number] {
+  let nx = ex;
+  let ny = ey;
+  const nz = 1 - Math.abs(ex) - Math.abs(ey);
+  const t = Math.max(-nz, 0);
+  nx += nx >= 0 ? -t : t;
+  ny += ny >= 0 ? -t : t;
+  const len = Math.hypot(nx, ny, nz) || 1;
+  return [nx / len, ny / len, nz / len];
+}
+
+/**
+ * Decode Godot's packed normals from `vertex_data`, which lays the position
+ * region first and the normal/tangent region after it.
+ *
+ * Uncompressed stores the normal directly: a 2×uint16 octahedral pair, followed
+ * by the tangent's own pair.
+ *
+ * Compressed stores no normal at all. It keeps a rotation AXIS as the octahedral
+ * pair and the rotation ANGLE as the 4th uint16 of the position record (in
+ * half-turns), and the whole tangent frame follows from Godot's
+ * `axis_angle_to_tbn` — the normal is that rotation matrix's third row. Reading
+ * the pair as if it were a normal gives a direction unrelated to the surface.
+ *
+ * Returns undefined when there is no normal region, so the caller can recompute.
  */
 function decodeNormals(
   bytes: Uint8Array,
   vertexCount: number,
-  format: number
+  layout: SurfaceLayout
 ): Float32Array | undefined {
-  if ((format & ARRAY_FORMAT_NORMAL) === 0 || vertexCount === 0) return undefined;
-  const normalBlock = vertexCount * POSITION_STRIDE;
-  // normal + (tangent if present) per vertex.
-  const stride = OCT_PAIR_BYTES + ((format & ARRAY_FORMAT_TANGENT) !== 0 ? OCT_PAIR_BYTES : 0);
+  const { normalRegionOffset: normalBlock, normalStride: stride } = layout;
+  if (stride === 0 || vertexCount === 0) return undefined;
   if (bytes.byteLength < normalBlock + stride * vertexCount) return undefined;
 
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
@@ -130,13 +317,23 @@ function decodeNormals(
     // uint16 → [-1, 1] octahedral coordinates.
     const ex = (view.getUint16(o, true) / 65535) * 2 - 1;
     const ey = (view.getUint16(o + 2, true) / 65535) * 2 - 1;
-    // Octahedron → unit vector (Godot's oct_to_norm).
-    let nx = ex;
-    let ny = ey;
-    let nz = 1 - Math.abs(ex) - Math.abs(ey);
-    const t = Math.max(-nz, 0);
-    nx += nx >= 0 ? -t : t;
-    ny += ny >= 0 ? -t : t;
+    const [ax, ay, az] = octToVec3(ex, ey);
+
+    if (!layout.compressed) {
+      out[i * 3 + 0] = ax;
+      out[i * 3 + 1] = ay;
+      out[i * 3 + 2] = az;
+      continue;
+    }
+
+    const angle =
+      ((view.getUint16(i * layout.positionStride + 6, true) / 65535) * 2 - 1) * Math.PI;
+    const cos = Math.cos(angle);
+    const sin = Math.sin(angle);
+    const omc = 1 - cos;
+    const nx = omc * az * ax - sin * ay;
+    const ny = omc * az * ay + sin * ax;
+    const nz = omc * az * az + cos;
     const len = Math.hypot(nx, ny, nz) || 1;
     out[i * 3 + 0] = nx / len;
     out[i * 3 + 1] = ny / len;
@@ -175,32 +372,39 @@ export function decodeArrayMesh(content: string): ArrayMeshData {
   const extById = new Map(parsed.extResources.map((r) => [r.id, r.path]));
 
   const surfaces: ArrayMeshSurface[] = [];
+  let surfaceIndex = -1;
   for (const block of iterateSurfaceBlocks(surfacesRaw)) {
+    surfaceIndex++;
     const format = readInt(block, 'format');
     const vertexCount = readInt(block, 'vertex_count');
     const indexCount = readInt(block, 'index_count');
 
+    const layout = surfaceLayout(format, vertexCount);
     const vertexData = readPackedBytes(block, 'vertex_data');
-    // Positions: contiguous 3×float32 at the front of vertex_data.
-    const positions = readLeadingFloats(vertexData, vertexCount, 3, POSITION_STRIDE);
-    // Normals: octahedral pairs in the block following the positions.
-    const normals = decodeNormals(vertexData, vertexCount, format);
-    // UV1 within attribute_data. Godot orders the record COLOR, UV1, UV2, …, so
-    // a surface with vertex colours puts 4 bytes of RGBA8 ahead of UV1 — reading
-    // from offset 0 there decodes the colour as `u`. Compressed attributes store
-    // UVs as uint16 scaled by `uv_scale` and are not decoded; reading them as float32 yields garbage, so
-    // skip rather than emit nonsense UVs.
-    const uvs =
-      (format & ARRAY_FORMAT_TEX_UV) !== 0 &&
-      (format & ARRAY_FLAG_COMPRESS_ATTRIBUTES) === 0
-        ? readLeadingFloats(
-            readPackedBytes(block, 'attribute_data'),
-            vertexCount,
-            2,
-            undefined,
-            (format & ARRAY_FORMAT_COLOR) !== 0 ? COLOR_BYTES : 0
-          )
-        : undefined;
+    // Positions: a contiguous region at the front of vertex_data.
+    const positions = decodePositions(vertexData, vertexCount, layout, readAabb(block));
+    if (!positions) {
+      const name = readName(block);
+      warn(
+        `[ArrayMesh] surface ${surfaceIndex}${name ? ` "${name}"` : ''} has no decodable ` +
+          `positions (format ${format}, ${vertexCount} verts, ${vertexData.byteLength} B ` +
+          `vertex_data) — dropping the surface so the rest of the mesh still renders`
+      );
+      continue;
+    }
+    // Normals: octahedral pairs in the region following the positions.
+    const normals = decodeNormals(vertexData, vertexCount, layout);
+    const uvs = decodeUVs(
+      readPackedBytes(block, 'attribute_data'),
+      vertexCount,
+      layout,
+      readVector4(block, 'uv_scale'),
+      (actualStride) =>
+        warn(
+          `[ArrayMesh] surface ${surfaceIndex}'s attribute_data is ${actualStride} B/vertex, ` +
+            `not the ${layout.attributeStride} B format ${format} implies — dropping its UVs`
+        )
+    );
     const indices = decodeIndices(readPackedBytes(block, 'index_data'), indexCount);
 
     surfaces.push({
