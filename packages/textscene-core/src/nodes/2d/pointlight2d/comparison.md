@@ -164,6 +164,10 @@ Strict parsing format-checks these `PointLight2D` properties, plus 18 inherited 
 | `energy` |
 | `offset` |
 | `range_item_cull_mask` |
+| `shadow_color` |
+| `shadow_enabled` |
+| `shadow_filter` |
+| `shadow_filter_smooth` |
 | `shadow_item_cull_mask` |
 | `texture` |
 | `texture_scale` |

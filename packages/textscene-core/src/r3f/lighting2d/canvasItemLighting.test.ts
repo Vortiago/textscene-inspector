@@ -36,6 +36,9 @@ function uniforms(): CanvasItemLightingUniforms {
     classBuffers: Array.from({ length: MAX_LIGHT_CLASSES }, () => ({
       value: new THREE.Texture(),
     })),
+    shadowTintBuffers: Array.from({ length: MAX_LIGHT_CLASSES }, () => ({
+      value: new THREE.Texture(),
+    })),
     classWeights: { value: new Array<number>(MAX_LIGHT_CLASSES).fill(0) },
     resolution: { value: new THREE.Vector2(2, 2) },
     canvasModulate: { value: new THREE.Vector3(1, 1, 1) },
@@ -118,9 +121,11 @@ describe('canvasItemLightingProps', () => {
 
   it('clamps in Godot\'s space before handing the fragment back to three', () => {
     // Godot's framebuffer clamps AFTER the light is multiplied into the albedo,
-    // which is the whole reason the accumulation is unclamped half-float.
+    // which is the whole reason the accumulation is unclamped half-float. The
+    // shadow_color term joins INSIDE that clamp and outside the albedo multiply,
+    // which is where `light_shadow_compute` puts it.
     const { shader } = compile(CanvasItemLightMode.NORMAL);
-    expect(shader.fragmentShader).toContain('clamp(albedo * accum.rgb, 0.0, 1.0)');
+    expect(shader.fragmentShader).toContain('clamp(albedo * accum.rgb + shadowTint, 0.0, 1.0)');
     expect(shader.fragmentShader).toContain('#include <colorspace_fragment>');
   });
 

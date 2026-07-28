@@ -13,6 +13,7 @@
 import { existsSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { FLATTENED_CORPUS_ROOTS } from '../corpusRoots.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 export const REPO_ROOT = join(here, '../..');
@@ -108,16 +109,29 @@ let sceneIndex = null;
  * Resolve a `fixture:` value to an absolute path, or `null`.
  *
  * A value containing `/` names an exact path under `scenes/` and resolves ONLY
- * there. The basename index is for bare names alone: `scenes/` holds many
- * repeated basenames (`game.tscn`, `level.tscn`, `main.tscn` across the vendored
- * demos), so letting a stale `demos/…/game.tscn` fall through to it would
- * silently return an unrelated scene — and recapture would render that into the
+ * there, or under one of the corpus roots the web previewer flattens (below).
+ * The basename index is for bare names alone: `scenes/` holds many repeated
+ * basenames (`game.tscn`, `level.tscn`, `main.tscn` across the vendored demos),
+ * so letting a stale `demos/…/game.tscn` fall through to it would silently
+ * return an unrelated scene — and recapture would render that into the
  * committed parity baseline.
  */
 export function findScene(fixture) {
   const direct = join(SCENES_DIR, fixture);
   if (existsSync(direct)) return direct;
-  if (fixture.includes('/')) return null;
+  if (fixture.includes('/')) {
+    // A `fixture:` value is the previewer's `?fixture=` id, and copy-fixtures
+    // flattens these corpus roots onto the public/fixtures root so their scenes
+    // keep their own res:// subpaths as ids (`decorations/candle.tscn`). Godot
+    // needs the repo path, so undo that flattening the same way it was applied.
+    // No ambiguity to guard: two roots holding the same subpath would already
+    // have collided when copy-fixtures wrote them into one directory.
+    for (const root of FLATTENED_CORPUS_ROOTS) {
+      const inCorpus = join(SCENES_DIR, root, fixture);
+      if (existsSync(inCorpus)) return inCorpus;
+    }
+    return null;
+  }
 
   // A bare name is a unit fixture first; only then a corpus scene elsewhere in
   // the tree. Order matters when a basename occurs twice.

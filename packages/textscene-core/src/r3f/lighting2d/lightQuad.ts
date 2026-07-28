@@ -22,6 +22,23 @@
  *   SUB: S -= light_color.rgb * light_color.a
  *   MIX: S  = mix(S, light_color.rgb, light_color.a)
  *
+ * SHADOWS replace the whole term rather than dimming it. `canvas.glsl` does
+ *
+ *   shadow_color.a *= light_color.a;                  // .a is the cookie's
+ *   light_color = mix(light_color, shadow_color, shadow);
+ *
+ * so a fully shadowed pixel takes `vec4(shadow_color.rgb, shadow_color.a *
+ * cookie.a)`. At `Light2D`'s default `shadow_color = Color(0, 0, 0, 0)` the
+ * whole term vanishes, which is why withholding the quad — a stencil test — IS
+ * the shadow for almost every scene.
+ *
+ * An authored `shadow_color` is the same `mix` from its other side, so it is the
+ * same quad drawn through the complementary stencil test: `createLightQuadMaterial`
+ * covers where the volumes did NOT stamp, `createShadowColorQuadMaterial` covers
+ * where they did. Together they partition the light's rect exactly once. The
+ * second quad is skipped unless `shadowColorContributes`, so the default costs
+ * nothing.
+ *
  * and each of the three is exactly one fixed-function blend against the
  * accumulator, which is why all three are reproduced rather than approximated:
  * SrcAlpha/One with add, SrcAlpha/One with reverse-subtract, and
@@ -100,11 +117,68 @@ function accumulationBlend(blendMode: number): Partial<THREE.ShaderMaterialParam
   };
 }
 
+/**
+ * Stencil state for a light quad, spread verbatim onto the material.
+ * `litQuadStencilProps` for a shadowed light, empty for one that casts nothing.
+ */
+export type LightQuadStencil = Partial<THREE.ShaderMaterialParameters>;
+
+/**
+ * The shadowed half of `light_shadow_compute`. The cookie is sampled for its
+ * ALPHA alone — `mix` overwrites rgb outright, so the light's colour, its energy
+ * and the cookie's own rgb all drop out, and the albedo multiply that the lit
+ * branch applies never reaches this term either.
+ */
+const SHADOW_FRAGMENT = /* glsl */ `
+uniform sampler2D uCookie;
+uniform vec4 uShadowColor;
+varying vec2 vLightUv;
+
+void main() {
+  vec4 cookie = texture2D(uCookie, vLightUv);
+  gl_FragColor = vec4(uShadowColor.rgb, uShadowColor.a * cookie.a);
+}
+`;
+
+/**
+ * Whether a `shadow_color` puts anything into the accumulator. Alpha is the
+ * whole test: it multiplies the term twice over (once as the blend factor, once
+ * as `shadow_color.a`), so a transparent colour contributes nothing whatever its
+ * rgb, and Godot's default is exactly that.
+ */
+export function shadowColorContributes(shadowColor: Color): boolean {
+  return shadowColor.a > 0;
+}
+
+export function createShadowColorQuadMaterial(
+  cookie: THREE.Texture,
+  shadowColor: Color,
+  blendMode: number,
+  stencil: LightQuadStencil = {}
+): THREE.ShaderMaterial {
+  return new THREE.ShaderMaterial({
+    vertexShader: VERTEX,
+    fragmentShader: SHADOW_FRAGMENT,
+    uniforms: {
+      uCookie: { value: cookie },
+      uShadowColor: {
+        value: new THREE.Vector4(shadowColor.r, shadowColor.g, shadowColor.b, shadowColor.a),
+      },
+    },
+    depthWrite: false,
+    depthTest: false,
+    side: THREE.DoubleSide,
+    ...accumulationBlend(blendMode),
+    ...stencil,
+  });
+}
+
 export function createLightQuadMaterial(
   cookie: THREE.Texture,
   color: Color,
   energy: number,
-  blendMode: number
+  blendMode: number,
+  stencil: LightQuadStencil = {}
 ): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
     vertexShader: VERTEX,
@@ -118,5 +192,6 @@ export function createLightQuadMaterial(
     depthTest: false,
     side: THREE.DoubleSide,
     ...accumulationBlend(blendMode),
+    ...stencil,
   });
 }

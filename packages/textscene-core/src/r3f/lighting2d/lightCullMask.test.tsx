@@ -30,6 +30,7 @@ import {
   LIGHT_LAYER,
   LIGHT_SEED_LAYER,
   LIGHT_UNCLASSED_LAYER,
+  SHADOW_TINT_LAYER,
   MAX_LIGHT_CLASSES,
 } from './CanvasLighting2D';
 import { lightClassSampler, lightReachesItem } from './canvasItemLighting';
@@ -281,6 +282,21 @@ describe('2D light cull masks, through the dispatcher', () => {
     // No pass enables this layer, so the fifth class is dropped rather than
     // folded into someone else's accumulation.
     expect(layers[MAX_LIGHT_CLASSES]).toBe(LIGHT_UNCLASSED_LAYER);
-    expect(LIGHT_UNCLASSED_LAYER).not.toBe(LIGHT_SEED_LAYER);
+  });
+
+  it('gives every light layer a number of its own', async () => {
+    // The layers are derived from each other, so a new band inserted in the
+    // middle silently overlaps an existing one and that light starts drawing
+    // into someone else's pass. Enumerate them and assert the whole set is
+    // distinct rather than spot-checking one pair.
+    const assigned = [
+      ...Array.from({ length: MAX_LIGHT_CLASSES }, (_unused, index) => LIGHT_LAYER + index),
+      LIGHT_SEED_LAYER,
+      ...Array.from({ length: MAX_LIGHT_CLASSES }, (_unused, index) => SHADOW_TINT_LAYER + index),
+      LIGHT_UNCLASSED_LAYER,
+    ];
+    expect(new Set(assigned).size).toBe(assigned.length);
+    // three packs layers into a 32-bit mask, so the highest must still fit.
+    expect(Math.max(...assigned)).toBeLessThan(32);
   });
 });

@@ -60,11 +60,13 @@
  * graph: each class's pre-pass points the camera at the seed layer plus that
  * class's layer and renders the tree that is already mounted.
  *
- * SHADOWS plug in one level down, per light rather than per class: a
- * `LightOccluder2D` shadow is a property of ONE light's cookie, so it belongs in
- * `lightQuad`'s fragment (a shadow-coverage term multiplying the cookie) fed by
- * a per-light shadow-volume texture rendered before the loop below. Nothing here
- * has to change for it: the class passes already replay each light's quad once.
+ * SHADOWS sit one level down, per light rather than per class: a
+ * `LightOccluder2D` shadow is a property of ONE light's cookie, so each light
+ * stamps its own shadow volumes into the STENCIL buffer immediately before its
+ * quad and the quad rejects what it stamped (`ShadowVolumeMask`). Three things
+ * here serve that and nothing else: the accumulators carry a stencil buffer,
+ * each class pass clears it once, and `register` hands every light an ORDINAL
+ * so the stamps of the lights sharing a pass cannot be confused for each other.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -85,6 +87,7 @@ import * as THREE from 'three';
 import { useFrame, useThree } from '@react-three/fiber';
 import { warn } from '../../logger';
 import type { RGBA } from '../canvasItemModulate.js';
+import { ShadowCasterStage } from './ShadowCasterStage.js';
 
 /**
  * How many distinct `range_item_cull_mask` classes one canvas may accumulate.
@@ -110,12 +113,27 @@ export const LIGHT_LAYER = 1;
 export const LIGHT_SEED_LAYER = LIGHT_LAYER + MAX_LIGHT_CLASSES;
 
 /**
+ * Where class `i`'s `shadow_color` quads draw: `SHADOW_TINT_LAYER + i`.
+ *
+ * They need a pass of their own because their term is the one thing in the light
+ * pipeline that is NOT multiplied by the item's albedo. `light_shadow_compute`
+ * runs AFTER `light_color.rgb *= base_color.rgb`, and its `mix` overwrites rgb
+ * outright, so `shadow_color` reaches the canvas neat. The ordinary accumulator
+ * cannot carry it: every item multiplies that buffer by its own albedo.
+ *
+ * Measured on Godot 4.6.3 — one shadow over surfaces of 0.25 and 0.75 albedo, at
+ * equal distance from the light, adds the SAME 15/255 to each. An albedo-scaled
+ * term would have added 3x more to the second.
+ */
+export const SHADOW_TINT_LAYER = LIGHT_SEED_LAYER + 1;
+
+/**
  * Where a light lands when its cull-mask class did not fit in
  * `MAX_LIGHT_CLASSES`, or before the provider has classified it. No pass ever
  * enables this layer, so such a quad is simply never drawn, which is the
  * dropping the warning below announces.
  */
-export const LIGHT_UNCLASSED_LAYER = LIGHT_SEED_LAYER + 1;
+export const LIGHT_UNCLASSED_LAYER = SHADOW_TINT_LAYER + MAX_LIGHT_CLASSES;
 
 /** Draw order within a light layer: the seed must land under every light. */
 const SEED_RENDER_ORDER = -1;
@@ -131,8 +149,28 @@ export interface CanvasLightClass {
   readonly buffer: THREE.Texture;
   /** The same accumulation seeded from an unmodulated white, for Light Only items. */
   readonly lightOnlyBuffer: THREE.Texture | null;
+  /**
+   * The albedo-free `shadow_color` accumulation, added AFTER an item multiplies
+   * by its albedo. Null unless some light in this class tints its shadow, which
+   * is Godot's default and so the usual case.
+   */
+  readonly shadowTintBuffer: THREE.Texture | null;
   /** The camera layer this class's light quads draw on. */
   readonly layer: number;
+  /** The camera layer this class's `shadow_color` quads draw on. */
+  readonly shadowTintLayer: number;
+}
+
+/** One light's place in its class's pass, handed out by `register`. */
+export interface CanvasLightSlot {
+  /**
+   * This light's index among the lights of its class — dense, reused on
+   * withdrawal, and distinct only WITHIN the class, which is all the stencil
+   * needs since a class pass renders no other class's layer.
+   */
+  readonly ordinal: number;
+  /** Withdraws the light and frees the ordinal. Idempotent. */
+  release(): void;
 }
 
 export interface CanvasLighting2D {
@@ -149,19 +187,22 @@ export interface CanvasLighting2D {
    */
   readonly resolution: THREE.Vector2;
   /**
-   * Declares a light of this `range_item_cull_mask` on the canvas; the returned
-   * callback withdraws it.
+   * Declares a light of this `range_item_cull_mask` on the canvas and takes a
+   * slot in that class's pass.
    */
-  register(cullMask: number): () => void;
+  register(cullMask: number): CanvasLightSlot;
   /** Declares an item that needs the unmodulated accumulation. */
   registerLightOnly(): () => void;
+  /** Declares a light that tints its shadow, so the extra pass is worth running. */
+  registerShadowTint(): () => void;
 }
 
 const INERT: CanvasLighting2D = {
   classes: [],
   resolution: new THREE.Vector2(1, 1),
-  register: () => () => {},
+  register: () => ({ ordinal: 0, release: () => {} }),
   registerLightOnly: () => () => {},
+  registerShadowTint: () => () => {},
 };
 
 const CanvasLighting2DContext = createContext<CanvasLighting2D>(INERT);
@@ -187,35 +228,61 @@ function sameMasks(a: readonly number[], b: readonly number[]): boolean {
   return a.length === b.length && a.every((mask, i) => mask === b[i]);
 }
 
+/** The lowest ordinal `taken` has not handed out. */
+function freeOrdinal(taken: ReadonlySet<number>): number {
+  let ordinal = 0;
+  while (taken.has(ordinal)) ordinal += 1;
+  return ordinal;
+}
+
 /**
- * The distinct `range_item_cull_mask` values currently mounted, ascending.
+ * The distinct `range_item_cull_mask` values currently mounted, ascending, and
+ * a slot allocator within each.
  *
  * Ascending rather than mount-ordered so a class's index, and therefore its
  * camera layer, depends only on WHICH masks are present, never on which light
- * mounted first. A live count per mask is what makes the withdrawal of one of
- * several lights sharing a mask leave the class standing.
+ * mounted first. The live SLOTS per mask are what make the withdrawal of one of
+ * several lights sharing a mask leave the class standing, and reusing the
+ * lowest free ordinal keeps the numbering dense across a scene that mounts and
+ * unmounts lights — which matters because they index an 8-bit stencil.
  */
-function useCullMaskRegistry(): [readonly number[], (cullMask: number) => () => void] {
+function useCullMaskRegistry(): [readonly number[], (cullMask: number) => CanvasLightSlot] {
   const [masks, setMasks] = useState<readonly number[]>(EMPTY_MASKS);
-  const counts = useRef(new Map<number, number>()).current;
+  const taken = useRef(new Map<number, Set<number>>()).current;
 
   const publish = useCallback(() => {
-    const next = [...counts.keys()].sort((a, b) => a - b);
+    const next = [...taken.keys()].sort((a, b) => a - b);
     setMasks((previous) => (sameMasks(previous, next) ? previous : next));
-  }, [counts]);
+  }, [taken]);
 
   const declare = useCallback(
-    (cullMask: number) => {
-      counts.set(cullMask, (counts.get(cullMask) ?? 0) + 1);
+    (cullMask: number): CanvasLightSlot => {
+      let slots = taken.get(cullMask);
+      if (!slots) {
+        slots = new Set<number>();
+        taken.set(cullMask, slots);
+      }
+      const ordinal = freeOrdinal(slots);
+      slots.add(ordinal);
       publish();
-      return () => {
-        const remaining = (counts.get(cullMask) ?? 0) - 1;
-        if (remaining > 0) counts.set(cullMask, remaining);
-        else counts.delete(cullMask);
-        publish();
+
+      // A second release must not free the ordinal a LATER light has since been
+      // given: React's strict double-invoke replays the cleanup on its own.
+      let released = false;
+      return {
+        ordinal,
+        release: () => {
+          if (released) return;
+          released = true;
+          const live = taken.get(cullMask);
+          if (!live) return;
+          live.delete(ordinal);
+          if (live.size === 0) taken.delete(cullMask);
+          publish();
+        },
       };
     },
-    [counts, publish]
+    [taken, publish]
   );
 
   return [masks, declare];
@@ -229,13 +296,22 @@ function useCullMaskRegistry(): [readonly number[], (cullMask: number) => () => 
  *
  * Registration is an EFFECT: it has to unwind on unmount, and a provider
  * `setState` reached from a child's render is a React update-during-render.
+ *
+ * Returns the light's ordinal within its class, which is what its stencil ref
+ * and its draw order are derived from. It is 0 for the frame between mounting
+ * and the effect running, and 0 is a legitimate ordinal, so an unregistered
+ * light shares a ref with the first registered one for exactly that frame.
  */
-export function useRegisterCanvasLight2D(enabled: boolean, cullMask: number): void {
+export function useRegisterCanvasLight2D(enabled: boolean, cullMask: number): number {
   const { register } = useCanvasLighting2D();
+  const [ordinal, setOrdinal] = useState(0);
   useEffect(() => {
     if (!enabled) return undefined;
-    return register(cullMask);
+    const slot = register(cullMask);
+    setOrdinal(slot.ordinal);
+    return slot.release;
   }, [enabled, cullMask, register]);
+  return ordinal;
 }
 
 /**
@@ -246,6 +322,25 @@ export function useLightClassLayer(cullMask: number): number {
   const { classes } = useCanvasLighting2D();
   return classes.find((lightClass) => lightClass.cullMask === cullMask)?.layer
     ?? LIGHT_UNCLASSED_LAYER;
+}
+
+/**
+ * The camera layer a light draws its `shadow_color` quad on, or undefined while
+ * its class has none. Separate from `useLightClassLayer` because the tint pass
+ * must NOT see the cookie quads.
+ */
+export function useShadowTintLayer(cullMask: number): number | undefined {
+  const { classes } = useCanvasLighting2D();
+  return classes.find((lightClass) => lightClass.cullMask === cullMask)?.shadowTintLayer;
+}
+
+/** Declares a light that tints its shadow, so its class allocates the extra pass. */
+export function useRegisterShadowTint(enabled: boolean): void {
+  const { registerShadowTint } = useCanvasLighting2D();
+  useEffect(() => {
+    if (!enabled) return undefined;
+    return registerShadowTint();
+  }, [enabled, registerShadowTint]);
 }
 
 /** Declares an item whose light mode needs the unmodulated accumulation. */
@@ -260,10 +355,17 @@ export function useRegisterLightOnlyItem(enabled: boolean): void {
 function createAccumulationTarget(): THREE.WebGLRenderTarget {
   // Half-float so the accumulation stays unclamped, and NoColorSpace so three
   // writes the shader's raw sRGB-space value instead of re-encoding it.
+  //
+  // The stencil is what carries the shadows, and three defaults it OFF — the
+  // masks would then stamp nothing and every quad's test would pass, which
+  // renders as no shadows at all rather than as an error. WebGL2 allocates the
+  // pair as one DEPTH24_STENCIL8 attachment, which coexists with a half-float
+  // colour attachment, so the depth buffer comes along and is simply unused:
+  // everything in the pass draws with `depthTest` off.
   const rt = new THREE.WebGLRenderTarget(1, 1, {
     type: THREE.HalfFloatType,
-    depthBuffer: false,
-    stencilBuffer: false,
+    depthBuffer: true,
+    stencilBuffer: true,
   });
   rt.texture.colorSpace = THREE.NoColorSpace;
   rt.texture.minFilter = THREE.LinearFilter;
@@ -358,13 +460,16 @@ export function CanvasLighting2DProvider({
 
   const [cullMasks, register] = useCullMaskRegistry();
   const [lightOnlyCount, registerLightOnly] = useDeclarationCount();
+  const [shadowTintCount, registerShadowTint] = useDeclarationCount();
 
   const classCount = Math.min(cullMasks.length, MAX_LIGHT_CLASSES);
   const lit = classCount > 0;
   const needsLightOnly = lit && lightOnlyCount > 0;
+  const needsShadowTint = lit && shadowTintCount > 0;
 
   const targets = useAccumulationTargets(classCount);
   const lightOnlyTargets = useAccumulationTargets(needsLightOnly ? classCount : 0);
+  const shadowTintTargets = useAccumulationTargets(needsShadowTint ? classCount : 0);
 
   const overflow = cullMasks.length - MAX_LIGHT_CLASSES;
   useEffect(() => {
@@ -398,21 +503,35 @@ export function CanvasLighting2DProvider({
 
     const seed = seedMaterial.uniforms.uSeed!.value as THREE.Vector3;
     for (let index = 0; index < targets.length; index += 1) {
-      camera.layers.set(LIGHT_SEED_LAYER);
-      camera.layers.enable(LIGHT_LAYER + index);
-
       for (const pass of [
-        { rt: targets[index], seed: [r, g, b] as const },
+        { rt: targets[index], seed: [r, g, b] as const, layer: LIGHT_LAYER + index },
         // Light Only skips `color *= canvas_modulation`, so its accumulation is
         // the same lights over an unmodulated seed.
-        { rt: lightOnlyTargets[index], seed: [1, 1, 1] as const },
+        { rt: lightOnlyTargets[index], seed: [1, 1, 1] as const, layer: LIGHT_LAYER + index },
+        // The albedo-free term. Its layer carries the shadow_color quads and the
+        // volume masks (which sit on both layers) but NOT the cookie quads, so
+        // this buffer holds only what a shadowed pixel adds. The seed is black,
+        // which is how the target gets zeroed without touching the renderer's
+        // clear colour.
+        {
+          rt: shadowTintTargets[index],
+          seed: [0, 0, 0] as const,
+          layer: SHADOW_TINT_LAYER + index,
+        },
       ]) {
         if (!pass.rt) continue;
+        camera.layers.set(LIGHT_SEED_LAYER);
+        camera.layers.enable(pass.layer);
         if (pass.rt.width !== resolution.x || pass.rt.height !== resolution.y) {
           pass.rt.setSize(resolution.x, resolution.y);
         }
         seed.set(pass.seed[0], pass.seed[1], pass.seed[2]);
         gl.setRenderTarget(pass.rt);
+        // One clear per PASS, not per light: within a pass each light stamps its
+        // own ref, so last frame's stamps are the only ones that could be
+        // mistaken for this frame's. Leaving them would make a light that has
+        // stopped casting keep the hole it cut.
+        gl.clear(false, false, true);
         gl.render(scene, camera);
       }
     }
@@ -427,19 +546,33 @@ export function CanvasLighting2DProvider({
         cullMask: cullMasks[index]!,
         buffer: target.texture,
         lightOnlyBuffer: lightOnlyTargets[index]?.texture ?? null,
+        shadowTintBuffer: shadowTintTargets[index]?.texture ?? null,
         layer: LIGHT_LAYER + index,
+        shadowTintLayer: SHADOW_TINT_LAYER + index,
       })),
       resolution,
       register,
       registerLightOnly,
+      registerShadowTint,
     }),
-    [targets, lightOnlyTargets, cullMasks, resolution, register, registerLightOnly]
+    [
+      targets,
+      lightOnlyTargets,
+      shadowTintTargets,
+      cullMasks,
+      resolution,
+      register,
+      registerLightOnly,
+      registerShadowTint,
+    ]
   );
 
   return (
     <CanvasLighting2DContext.Provider value={value}>
       {lit && <LightAccumulatorSeed material={seedMaterial} />}
-      {children}
+      {/* Occluders only matter to lights, so the registry that finds them lives
+          with the pass that consumes them rather than in the stage above. */}
+      <ShadowCasterStage>{children}</ShadowCasterStage>
     </CanvasLighting2DContext.Provider>
   );
 }

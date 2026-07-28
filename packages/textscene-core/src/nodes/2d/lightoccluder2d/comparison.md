@@ -34,6 +34,45 @@ pool, which diverges the same way the PointLight2D sheet measures: at a lit poin
 the occluder ours reads `[246, 246, 255]` against Godot's `[151, 151, 178]`, the additive
 quad over-brightening the surface.
 
+## A single occluder edge
+<!-- compare: image=unit-lightoccluder2d-shadow status=done fixture=unit-lightoccluder2d-shadow.tscn -->
+
+## A closed occluder polygon
+<!-- compare: image=unit-lightoccluder2d-shadow-closed status=done fixture=unit-lightoccluder2d-shadow-closed.tscn -->
+
+## cull_mode
+<!-- compare: image=unit-lightoccluder2d-cull-mode status=done fixture=unit-lightoccluder2d-cull-mode.tscn -->
+
+## The same polygon, wound the other way
+<!-- compare: image=unit-lightoccluder2d-cull-mode-reversed status=done fixture=unit-lightoccluder2d-cull-mode-reversed.tscn -->
+
+## What does not cast
+<!-- compare: image=unit-lightoccluder2d-shadow-mask status=done fixture=unit-lightoccluder2d-shadow-mask.tscn -->
+
+## Two shadowed lights over one occluder
+<!-- compare: image=unit-lightoccluder2d-two-lights status=done fixture=unit-lightoccluder2d-two-lights.tscn -->
+
+## shadow_color
+<!-- compare: image=unit-lightoccluder2d-shadow-color status=done fixture=unit-lightoccluder2d-shadow-color.tscn -->
+
+`shadow_color` belongs to the LIGHT, not the occluder, and it replaces the light term
+instead of withholding it — `light_shadow_compute` is `mix(light_color, shadow_color,
+shadow)` after `shadow_color.a *= light_color.a`, so a fully shadowed pixel emits
+`vec4(shadow_color.rgb, shadow_color.a * cookie.a)`. The light's own colour, its energy
+and the cookie's rgb all drop out.
+
+It is also the only light term Godot does not multiply by the item's albedo: the mix runs
+after `light_color.rgb *= base_color.rgb` and overwrites rgb outright. Measured over two
+surfaces of 0.25 and 0.75 albedo inside one shadow at equal distance, Godot adds the same
+15/255 to each, where an albedo-scaled term would have added three times more to the
+second. So it accumulates into a buffer of its own and lands after the albedo multiply.
+
+The fixture puts a warm `energy = 1.5` lamp behind a blue `shadow_color`, which is what
+makes the three channels a proof rather than a coincidence: behind the occluder Godot reads
+`rgb(79, 101, 171)` over an unlit `rgb(63, 63, 63)`, and dividing each channel by its
+`shadow_color` component gives 0.418 / 0.426 / 0.424 — one cookie alpha, with no trace of
+the lamp's colour or its energy.
+
 ## Linting
 
 <!-- lint:begin LightOccluder2D -->

@@ -332,6 +332,27 @@ export const GOLDEN_SCENES = [
   // the goldens sets either mask, so without this a light that reached
   // everything under it would move no baseline at all.
   { name: 'pointlight2d-cull-mask', file: 'unit-pointlight2d-cull-mask.tscn', maxDiffPct: 0.5 },
+  // LightOccluder2D shadows, one behaviour per fixture. A shadow withholds a
+  // light from the geometry behind the occluder; it never darkens what the
+  // light did not reach, so an unlit surface is the same grey either way.
+  { name: 'lightoccluder2d-shadow-closed', file: 'unit-lightoccluder2d-shadow-closed.tscn', maxDiffPct: 0.5 },
+  // `cull_mode` 0/1/2: which winding of an occluder's edges casts. The reversed
+  // pair is the same two occluders with the polygon wound the other way, so
+  // CLOCKWISE and COUNTER_CLOCKWISE swap and DISABLED stays put — a cull test
+  // that read winding-independently would leave one of the two baselines flat.
+  { name: 'lightoccluder2d-cull-mode', file: 'unit-lightoccluder2d-cull-mode.tscn', maxDiffPct: 0.5 },
+  { name: 'lightoccluder2d-cull-mode-reversed', file: 'unit-lightoccluder2d-cull-mode-reversed.tscn', maxDiffPct: 0.5 },
+  // `shadow_color` is the light's, not the occluder's, and it REPLACES the light
+  // term rather than withholding it. It is also the one light term Godot does not
+  // multiply by the item's albedo, so it rides its own accumulator — a baseline
+  // that folded it into the ordinary one would sit a whole albedo out.
+  { name: 'lightoccluder2d-shadow-color', file: 'unit-lightoccluder2d-shadow-color.tscn', maxDiffPct: 0.5 },
+  // `shadow_item_cull_mask & occluder.light_mask`: one occluder casts, its twin
+  // is culled by the same light.
+  { name: 'lightoccluder2d-shadow-mask', file: 'unit-lightoccluder2d-shadow-mask.tscn', maxDiffPct: 0.5 },
+  // Two shadowed lights in one accumulation pass: each must clear the stencil
+  // before it stamps, or the first light's volume also cuts the second's.
+  { name: 'lightoccluder2d-two-lights', file: 'unit-lightoccluder2d-two-lights.tscn', maxDiffPct: 0.5 },
   // Baseline corrected in the Y-flip fix: a NavigationPolygon's vertices are
   // Godot canvas pixels (+Y DOWN), and this overlay was the one 2D geometry
   // path that skipped the negation — so the navmesh used to sit ABOVE the

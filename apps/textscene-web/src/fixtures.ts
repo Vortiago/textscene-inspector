@@ -248,8 +248,38 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Lightoccluder2d Cull Mode Reversed",
+    "file": "unit-lightoccluder2d-cull-mode-reversed.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Lightoccluder2d Cull Mode",
+    "file": "unit-lightoccluder2d-cull-mode.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Lightoccluder2d Shadow Closed",
+    "file": "unit-lightoccluder2d-shadow-closed.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Lightoccluder2d Shadow Color",
+    "file": "unit-lightoccluder2d-shadow-color.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Lightoccluder2d Shadow Mask",
+    "file": "unit-lightoccluder2d-shadow-mask.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Lightoccluder2d Shadow",
     "file": "unit-lightoccluder2d-shadow.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Lightoccluder2d Two Lights",
+    "file": "unit-lightoccluder2d-two-lights.tscn",
     "category": "Other"
   },
   {
@@ -1260,6 +1290,21 @@ export const fixtures: Fixture[] = [
   {
     "name": "Goblin",
     "file": "player/goblin.tscn",
+    "category": "Examples - Isometric Dungeon"
+  },
+  {
+    "name": "Candle Preview",
+    "file": "previews/candle_preview.tscn",
+    "category": "Examples - Isometric Dungeon"
+  },
+  {
+    "name": "Goblin Preview",
+    "file": "previews/goblin_preview.tscn",
+    "category": "Examples - Isometric Dungeon"
+  },
+  {
+    "name": "Internal Shadow Preview",
+    "file": "previews/internal_shadow_preview.tscn",
     "category": "Examples - Isometric Dungeon"
   },
   {

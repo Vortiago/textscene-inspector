@@ -56,6 +56,9 @@ function createUniforms(resolution: THREE.Vector2): CanvasItemLightingUniforms {
     classBuffers: Array.from({ length: MAX_LIGHT_CLASSES }, () => ({
       value: EMPTY_LIGHT_BUFFER as THREE.Texture,
     })),
+    shadowTintBuffers: Array.from({ length: MAX_LIGHT_CLASSES }, () => ({
+      value: EMPTY_LIGHT_BUFFER as THREE.Texture,
+    })),
     classWeights: { value: new Array<number>(MAX_LIGHT_CLASSES).fill(0) },
     resolution: { value: resolution },
     canvasModulate: { value: new THREE.Vector3(1, 1, 1) },
@@ -94,6 +97,10 @@ export function useCanvasItemLighting(
       lightReachesItem(lightClass.cullMask, lightMask);
     weights[slot] = lights ? 1 : 0;
     bound.classBuffers[slot]!.value = lights ? accumulation : EMPTY_LIGHT_BUFFER;
+    // The stand-in is transparent black, so a class with no shadow-tinting light
+    // contributes nothing and needs no separate branch in the shader.
+    bound.shadowTintBuffers[slot]!.value =
+      (lights ? lightClass?.shadowTintBuffer : null) ?? EMPTY_LIGHT_BUFFER;
   }
   bound.resolution.value = resolution;
   (bound.canvasModulate.value as THREE.Vector3).set(

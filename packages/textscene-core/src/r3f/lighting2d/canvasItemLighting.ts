@@ -83,6 +83,11 @@ export function lightClassSampler(index: number): string {
   return `uLightClass${index}`;
 }
 
+/** The GLSL sampler holding class slot `index`'s albedo-free `shadow_color` term. */
+export function shadowTintSampler(index: number): string {
+  return `uShadowTint${index}`;
+}
+
 /** sRGB transfer functions, matching three's own `sRGBTransferOETF`/`EOTF`. */
 const TRANSFER_GLSL = /* glsl */ `
 vec3 godotToSrgb(vec3 c) {
@@ -115,6 +120,8 @@ export interface CanvasItemLightingProps {
 export interface CanvasItemLightingUniforms {
   /** One accumulator sampler per class slot; unmatched slots hold a 1x1 stand-in. */
   readonly classBuffers: readonly THREE.IUniform[];
+  /** One `shadow_color` accumulator per class slot; a 1x1 black stand-in when unused. */
+  readonly shadowTintBuffers: readonly THREE.IUniform[];
   /** `1` in the slots whose cull mask this item's `light_mask` selects, else `0`. */
   readonly classWeights: THREE.IUniform;
   readonly resolution: THREE.IUniform;
@@ -157,6 +164,7 @@ export function canvasItemLightingProps(
       // shader forever once a light appeared.
       CLASS_SLOTS.forEach((index) => {
         shader.uniforms[lightClassSampler(index)] = uniforms.classBuffers[index]!;
+        shader.uniforms[shadowTintSampler(index)] = uniforms.shadowTintBuffers[index]!;
       });
       shader.uniforms.uLightClassWeight = uniforms.classWeights;
       shader.uniforms.uLightResolution = uniforms.resolution;
@@ -165,7 +173,10 @@ export function canvasItemLightingProps(
       shader.fragmentShader = shader.fragmentShader
         .replace(
           'void main() {',
-          `${CLASS_SLOTS.map((index) => `uniform sampler2D ${lightClassSampler(index)};`).join('\n')}
+          `${CLASS_SLOTS.map(
+  (index) =>
+    `uniform sampler2D ${lightClassSampler(index)};\nuniform sampler2D ${shadowTintSampler(index)};`
+).join('\n')}
 uniform float uLightClassWeight[${MAX_LIGHT_CLASSES}];
 uniform vec2 uLightResolution;
 uniform vec3 uCanvasModulate;
@@ -180,12 +191,16 @@ void main() {`
   // S is then just the seed its light mode would have started from.
   vec3 lightSeed = ${seed};
   vec4 accum = vec4(lightSeed, 0.0);
+  // shadow_color is the one light term Godot does NOT multiply by the albedo,
+  // so it accumulates apart and lands after the multiply below.
+  vec3 shadowTint = vec3(0.0);
   vec2 lightUv = gl_FragCoord.xy / uLightResolution;
 ${CLASS_SLOTS.map(
   (index) => `  if (uLightClassWeight[${index}] > 0.5) {
     vec4 lightClass = texture2D(${lightClassSampler(index)}, lightUv);
     accum.rgb += lightClass.rgb - lightSeed;
     accum.a += lightClass.a;
+    shadowTint += texture2D(${shadowTintSampler(index)}, lightUv).rgb;
   }`
 ).join('\n')}
   vec3 lit = godotToSrgb(gl_FragColor.rgb);
@@ -197,7 +212,7 @@ ${
   gl_FragColor.a = clamp(gl_FragColor.a * accum.a, 0.0, 1.0);`
     : `  vec3 albedo = lit / max(uCanvasModulate, vec3(${CANVAS_MODULATE_FLOOR}));`
 }
-  gl_FragColor.rgb = godotToLinear(clamp(albedo * accum.rgb, 0.0, 1.0));
+  gl_FragColor.rgb = godotToLinear(clamp(albedo * accum.rgb + shadowTint, 0.0, 1.0));
 }
 #include <colorspace_fragment>`
         );

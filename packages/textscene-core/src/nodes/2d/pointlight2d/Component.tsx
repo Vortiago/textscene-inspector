@@ -8,10 +8,15 @@
  * the light pre-pass sees nothing else. It is still wrapped in CanvasItem2D so
  * its transform, `visible` and z come from the same ritual as any other node.
  *
+ * A SHADOWED light is two meshes rather than one, in the order its ordinal
+ * fixes: its shadow volumes stamp the stencil, then its cookie draws only where
+ * they did not. Withholding the cookie IS the shadow, because Godot's default
+ * `shadow_color = Color(0, 0, 0, 0)` contributes nothing where it falls.
+ *
  * When `enabled=false` the body returns null and the light does not register.
  */
 
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
@@ -20,11 +25,28 @@ import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import type { PointLight2DProperties } from './types';
 import type { Color } from '../../base/node2d/types';
-import { createLightQuadMaterial } from '../../../r3f/lighting2d/lightQuad';
+import {
+  createLightQuadMaterial,
+  createShadowColorQuadMaterial,
+  shadowColorContributes,
+} from '../../../r3f/lighting2d/lightQuad';
 import {
   useLightClassLayer,
+  useRegisterShadowTint,
+  useShadowTintLayer,
   useRegisterCanvasLight2D,
 } from '../../../r3f/lighting2d/CanvasLighting2D';
+import { useWorldShadowCasters } from '../../../r3f/lighting2d/ShadowCasterStage';
+import { useShadowLightPose } from '../../../r3f/lighting2d/shadowLightPose';
+import {
+  litQuadRenderOrder,
+  litQuadStencilProps,
+  shadowColorQuadStencilProps,
+  ShadowVolumeMask,
+} from '../../../r3f/lighting2d/ShadowVolumeMask';
+import type { WorldShadowCaster } from '../../../r3f/lighting2d/shadowCasterRegistry';
+
+const NO_CASTERS: readonly WorldShadowCaster[] = [];
 
 export function PointLight2D({ node, children }: NodeComponentProps) {
   const props = node.properties as PointLight2DProperties;
@@ -45,8 +67,25 @@ export function PointLight2D({ node, children }: NodeComponentProps) {
   // the accumulation, so it is what the light registers under and what decides
   // the layer its quad draws on. The node's own `light_mask` is its CanvasItem
   // mask and has no bearing on either.
-  useRegisterCanvasLight2D(lights > 0, props.range_item_cull_mask);
+  const ordinal = useRegisterCanvasLight2D(lights > 0, props.range_item_cull_mask);
   const layer = useLightClassLayer(props.range_item_cull_mask);
+  // Godot's default shadow_color is transparent, so the extra albedo-free pass
+  // is allocated only for the rare light that actually tints its shadow.
+  const tintsShadow = props.shadow_enabled && shadowColorContributes(props.shadow_color);
+  useRegisterShadowTint(lights > 0 && tintsShadow);
+  const shadowTintLayer = useShadowTintLayer(props.range_item_cull_mask);
+
+  // Every occluder on the canvas, narrowed to the ones Godot lets THIS light
+  // see. The flatten is shared; only the mask test is per light.
+  const allCasters = useWorldShadowCasters();
+  const shadowItemCullMask = props.shadow_item_cull_mask;
+  const casters = useMemo(
+    () =>
+      props.shadow_enabled
+        ? allCasters.filter((caster) => (caster.occluderLightMask & shadowItemCullMask) !== 0)
+        : NO_CASTERS,
+    [props.shadow_enabled, allCasters, shadowItemCullMask]
+  );
 
   // When disabled: return null → no mesh in tree.
   if (!props.enabled) return null;
@@ -66,7 +105,11 @@ export function PointLight2D({ node, children }: NodeComponentProps) {
             scale={props.texture_scale}
             offset={props.offset}
             blendMode={props.blend_mode}
+            shadowColor={props.shadow_color}
             layer={layer}
+            shadowTintLayer={tintsShadow ? shadowTintLayer : undefined}
+            ordinal={ordinal}
+            casters={casters}
           />
         ) : null
       }
@@ -83,7 +126,11 @@ function QuadMesh({
   scale,
   offset,
   blendMode,
+  shadowColor,
   layer,
+  shadowTintLayer,
+  ordinal,
+  casters,
 }: {
   texture: THREE.Texture;
   color: Color;
@@ -91,17 +138,57 @@ function QuadMesh({
   scale: number;
   offset: { x: number; y: number };
   blendMode: number;
+  /** `Light2D.shadow_color` — what this light contributes where it IS blocked. */
+  shadowColor: Color;
+  /** The albedo-free pass's layer, set only when this light tints its shadow. */
+  shadowTintLayer: number | undefined;
   /** The camera layer of this light's cull-mask class. */
   layer: number;
+  /** This light's index within its class — its stencil ref and its draw order. */
+  ordinal: number;
+  /** The occluders this light is allowed to see, in world space. */
+  casters: readonly WorldShadowCaster[];
 }) {
   const width = (texture.image as { width?: number } | null | undefined)?.width ?? 1;
   const height = (texture.image as { height?: number } | null | undefined)?.height ?? 1;
 
+  // A callback ref (not useRef) so the pose sampler starts once the quad is in
+  // the tree — the world matrix it needs does not exist before that.
+  const [quad, setQuad] = useState<THREE.Mesh | null>(null);
+  const light = useShadowLightPose(quad, casters.length > 0);
+  const shadowed = !!light && casters.length > 0;
+
   const material = useMemo(
-    () => createLightQuadMaterial(texture, color, energy, blendMode),
-    [texture, color, energy, blendMode]
+    () =>
+      createLightQuadMaterial(
+        texture,
+        color,
+        energy,
+        blendMode,
+        shadowed ? litQuadStencilProps(ordinal) : {}
+      ),
+    [texture, color, energy, blendMode, shadowed, ordinal]
   );
   useEffect(() => () => material.dispose(), [material]);
+
+  // The other half of `light_shadow_compute`: what the light contributes where
+  // the volumes DID stamp. Null at Godot's transparent default, which is every
+  // ordinary shadow — there the withheld cookie is the entire effect.
+  const tintsShadow =
+    shadowed && shadowTintLayer !== undefined && shadowColorContributes(shadowColor);
+  const shadowMaterial = useMemo(
+    () =>
+      tintsShadow
+        ? createShadowColorQuadMaterial(
+            texture,
+            shadowColor,
+            blendMode,
+            shadowColorQuadStencilProps(ordinal)
+          )
+        : null,
+    [tintsShadow, texture, shadowColor, blendMode, ordinal]
+  );
+  useEffect(() => () => shadowMaterial?.dispose(), [shadowMaterial]);
 
   // The light layer is what keeps this quad out of the visible pass AND what
   // sorts it into its cull-mask class: each class's accumulation pre-pass
@@ -113,9 +200,54 @@ function QuadMesh({
     [layer]
   );
 
+  const toShadowTintLayer = useCallback(
+    (mesh: THREE.Mesh | null) => {
+      if (shadowTintLayer !== undefined) mesh?.layers.set(shadowTintLayer);
+    },
+    [shadowTintLayer]
+  );
+
+  const toLightQuad = useCallback(
+    (mesh: THREE.Mesh | null) => {
+      toLightLayer(mesh);
+      setQuad(mesh);
+    },
+    [toLightLayer]
+  );
+
   return (
-    <mesh ref={toLightLayer} position={[offset.x, -offset.y, 0]} material={material}>
-      <planeGeometry args={[width * scale, height * scale]} />
-    </mesh>
+    <>
+      {shadowed && (
+        <ShadowVolumeMask
+          light={light}
+          casters={casters}
+          ordinal={ordinal}
+          layer={layer}
+          tintLayer={tintsShadow ? shadowTintLayer : undefined}
+        />
+      )}
+      <mesh
+        ref={toLightQuad}
+        position={[offset.x, -offset.y, 0]}
+        material={material}
+        // Explicit rather than left to three's depth sort, because the mask
+        // above has to land between this quad and the previous light's.
+        renderOrder={litQuadRenderOrder(ordinal)}
+      >
+        <planeGeometry args={[width * scale, height * scale]} />
+      </mesh>
+      {shadowMaterial && (
+        <mesh
+          ref={toShadowTintLayer}
+          position={[offset.x, -offset.y, 0]}
+          material={shadowMaterial}
+          // Shares the lit quad's slot: the complementary stencil test means the
+          // two never cover the same pixel, so their relative order is moot.
+          renderOrder={litQuadRenderOrder(ordinal)}
+        >
+          <planeGeometry args={[width * scale, height * scale]} />
+        </mesh>
+      )}
+    </>
   );
 }

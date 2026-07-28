@@ -67,6 +67,18 @@ export function litQuadStencilProps(ordinal: number) {
   } as const;
 }
 
+/**
+ * Spread onto the `shadow_color` quad's material so it covers exactly the region
+ * the lit quad skips. Same ref, `Equal` where the lit quad is `NotEqual`, so the
+ * pair partitions the light's rect once — no seam, no doubled pixel.
+ */
+export function shadowColorQuadStencilProps(ordinal: number) {
+  return {
+    ...litQuadStencilProps(ordinal),
+    stencilFunc: THREE.EqualStencilFunc,
+  } as const;
+}
+
 export interface ShadowVolumeMaskProps {
   /** Shadow origin and the rect the light reaches, in the previewer's 2D world space. */
   light: ShadowLight;
@@ -79,9 +91,15 @@ export interface ShadowVolumeMaskProps {
   ordinal: number;
   /** The layer the light's cookie quad draws on — the mask must share it. */
   layer: number;
+  /**
+   * The `shadow_color` layer, when this light tints its shadow. The stamp has to
+   * exist in that pass too: it renders the tint quad WITHOUT the cookie quads,
+   * and the tint quad tests the very stencil this mesh writes.
+   */
+  tintLayer?: number | undefined;
 }
 
-export function ShadowVolumeMask({ light, casters, ordinal, layer }: ShadowVolumeMaskProps) {
+export function ShadowVolumeMask({ light, casters, ordinal, layer, tintLayer }: ShadowVolumeMaskProps) {
   const positions = useMemo(() => buildShadowVolumes(light, casters), [light, casters]);
 
   const geometry = useMemo(() => {
@@ -98,8 +116,14 @@ export function ShadowVolumeMask({ light, casters, ordinal, layer }: ShadowVolum
   return (
     <mesh
       renderOrder={shadowVolumeRenderOrder(ordinal)}
-      layers-mask={1 << layer}
+      layers-mask={(1 << layer) | (tintLayer === undefined ? 0 : 1 << tintLayer)}
       frustumCulled={false}
+      // `light` and `casters` are already WORLD coordinates, so the mesh must
+      // stay at the identity however deep in the light's CanvasItem chain it is
+      // mounted; inheriting that chain would apply the transform a second time.
+      // Nothing forces an update past this flag: three's `updateMatrixWorld`
+      // only recurses into a child that opts in.
+      matrixWorldAutoUpdate={false}
     >
       <primitive object={geometry} attach="geometry" />
       <meshBasicMaterial

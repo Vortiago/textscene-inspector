@@ -1,0 +1,51 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Texture2D" path="res://textures/light2d.png" id="1_light"]
+
+[sub_resource type="OccluderPolygon2D" id="1"]
+cull_mode = 0
+polygon = PackedVector2Array(-45, 45, 45, 45, 45, -45, -45, -45)
+
+[sub_resource type="OccluderPolygon2D" id="2"]
+cull_mode = 1
+polygon = PackedVector2Array(-45, 45, 45, 45, 45, -45, -45, -45)
+
+[sub_resource type="OccluderPolygon2D" id="3"]
+cull_mode = 2
+polygon = PackedVector2Array(-45, 45, 45, 45, 45, -45, -45, -45)
+
+[node name="Root" type="Node2D"]
+
+[node name="Surface" type="Polygon2D" parent="."]
+color = Color(0.25, 0.25, 0.25, 1)
+polygon = PackedVector2Array(0, 0, 1152, 0, 1152, 648, 0, 648)
+
+[node name="DisabledLamp" type="PointLight2D" parent="."]
+position = Vector2(152, 230)
+texture = ExtResource("1_light")
+texture_scale = 0.35
+shadow_enabled = true
+
+[node name="DisabledCaster" type="LightOccluder2D" parent="."]
+position = Vector2(192, 300)
+occluder = SubResource("1")
+
+[node name="ClockwiseLamp" type="PointLight2D" parent="."]
+position = Vector2(536, 230)
+texture = ExtResource("1_light")
+texture_scale = 0.35
+shadow_enabled = true
+
+[node name="ClockwiseCaster" type="LightOccluder2D" parent="."]
+position = Vector2(576, 300)
+occluder = SubResource("2")
+
+[node name="CounterClockwiseLamp" type="PointLight2D" parent="."]
+position = Vector2(920, 230)
+texture = ExtResource("1_light")
+texture_scale = 0.35
+shadow_enabled = true
+
+[node name="CounterClockwiseCaster" type="LightOccluder2D" parent="."]
+position = Vector2(960, 300)
+occluder = SubResource("3")

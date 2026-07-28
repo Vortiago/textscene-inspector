@@ -1,0 +1,22 @@
+; Not vendored — see previews/README.md.
+;
+; The internal shadow instanced at the middle of the project viewport over a
+; neutral backdrop. Its own polygon spans x -94..128, y -295..1, so captured
+; alone it is entirely above the top edge and both sides render an empty frame.
+; The offset below re-centres that box: its middle sits at about (17, -147).
+;
+; A backdrop is what makes this one legible at all — the shadow is a translucent
+; navy gradient, invisible against the empty-viewport grey.
+
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://decorations/internal_shadow.tscn" id="1"]
+
+[node name="InternalShadowPreview" type="Node2D"]
+
+[node name="Backdrop" type="Polygon2D" parent="."]
+color = Color(0.3, 0.3, 0.32, 1)
+polygon = PackedVector2Array(0, 0, 1152, 0, 1152, 648, 0, 648)
+
+[node name="InternalShadow" parent="." instance=ExtResource("1")]
+position = Vector2(559, 471)

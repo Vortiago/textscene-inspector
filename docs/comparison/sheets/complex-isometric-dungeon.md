@@ -30,27 +30,95 @@ framed by the 1152x648 project viewport.
 
 ## Divergences
 
-The whole frame is within a mean channel error of 14.7/255, and what remains is concentrated
-in the lit regions. Unlit stone already matches closely — a wall reads `[39, 77, 140]` against
-Godot's `[35, 71, 130]`.
+The whole frame is within a mean channel error of **5.31/255**, with 5.9 % of pixels over
+16/255 and 0.6 % over 64. Stone, floor and the lit regions all agree closely now:
 
-**Lit surfaces are under-lit.** A 2D light is now applied *against* the surface rather than
-painted over it, so a torch reads as torchlight instead of fog, but the contribution falls
-short: a lit floor reads `[6, 58, 134]` where Godot has `[25, 82, 152]`, and a torch pool
-`[140, 173, 229]` against `[193, 204, 239]`. Two known reasons, both tracked:
+| Sample | ours | Godot |
+| --- | --- | --- |
+| `300,120` unlit wall | `[29, 68, 129]` | `[35, 71, 130]` |
+| `420,300` lit floor | `[11, 76, 151]` | `[25, 82, 152]` |
+| `880,470` floor in shadow | `[3, 31, 84]` | `[7, 35, 84]` |
 
-- Godot's canvas composites in **sRGB, clamped to [0,1]** — `Viewport.hdr_2d` defaults to
-  `false`, so 2D never enters a linear working space. Ours accumulates the light in linear
-  and encodes on output, which lands lower for the same authored values.
-- The rest of the light pass is absent: `light_mask` and the range/cull masks, so every light
-  reaches every item beneath it rather than the ones it is masked to, and `LightOccluder2D`
-  shadows, so light crosses walls it should not. `CanvasItemMaterial.light_mode` is honoured
-  where a blend can express it — the scene's `Unshaded` shadow and torch-pool polygons keep
-  their authored colour instead of taking the blue canvas tint — but excluding them from a
-  light quad needs the same per-item pass.
+What remains is two things, and neither is draw order.
 
-Not surfaced at all: the candle flames, their glow and their sparkles. Those are
-`CPUParticles2D`, which is unimplemented — animated emission with no meaningful static frame.
+**The candle particles.** The single worst pixel in the frame is `173,518`, where Godot has a
+saturated `[255, 232, 0]` and we have `[0, 0, 0]` — that is the candle's `flow front`
+emitter, a `CPUParticles2D` whose `modulate` is the yellow-green `Color(0.949, 1, 0, 1)`.
+`CPUParticles2D` is unimplemented, so every flame, glow and sparkle in the map is absent.
+This is the largest *visible* divergence and among the smallest by area; the Candle section
+below isolates it and measures 0.92/255 over the whole sub-scene.
+
+**A residual under-light.** Lit surfaces still sit a few units low in red and green (the
+floor sample above is 14 short in red). Godot's canvas composites in **sRGB, clamped to
+[0,1]** — `Viewport.hdr_2d` defaults to `false`, so 2D never enters a linear working space,
+while ours accumulates unclamped and encodes on output.
+
+The rest of the light pass is now in: `light_mask` against `range_item_cull_mask`,
+`LightOccluder2D` shadow casting with `cull_mode` and `shadow_item_cull_mask`, an
+albedo-free `shadow_color`, and `CanvasItemMaterial.light_mode`, so the scene's `Unshaded`
+shadow and torch-pool polygons keep their authored colour rather than taking the blue canvas
+tint.
+
+## The pieces on their own
+
+The whole-frame number above averages every effect together, which hides which sub-scene
+is responsible for what. These three are the dungeon's own `PackedScene`s, each instanced
+on its own over a neutral backdrop, so a divergence has one owner. The demo authors them
+around the origin, which puts them off the top-left corner of a 1:1 viewport capture, so
+the wrappers in `scenes/isometric/previews/` re-centre them; nothing else is changed.
+
+## Candle
+<!-- compare: image=complex-isometric-dungeon-candle status=limitation fixture=previews/candle_preview.tscn -->
+
+A `Sprite2D` wick, four `CPUParticles2D` (`glow`, `Fire`, `Sparkle`, `flow front`) and two
+`PointLight2D`s. `CPUParticles2D` is unimplemented, so the flame body is missing: Godot draws
+a bright yellow teardrop over the wick, ours draws only the glow the lights produce. Mean
+channel error **0.92/255**, 0.2 % of pixels over 16 — the two light pools and the wick sprite
+agree, and the whole divergence is the ~1500 pixels of flame (worst pixel 172 at `563,383`).
+
+Worth stating plainly, because the missing flame is far more obvious to the eye than to the
+metric: `CPUParticles2D` is a large gap in *capability* and a small one in *pixels*. It is not
+where the dungeon's remaining whole-frame error comes from.
+
+The Godot side of this pair is **not reproducible**, which is worth knowing before reading a
+number off it. The reference harness settles for six real process frames and deliberately does
+not freeze particles, and `CPUParticles2D` seeds itself from an unserialised global RNG unless
+the scene opts into `use_fixed_seed`, which this one does not. Two consecutive reference
+renders of this same scene differ by 187 pixels with a worst channel of 20 — small, but it
+means the flame has no probe number the way every other sample on this sheet does.
+
+That is a property of this scene, not of particles in general: `preprocess` IS serialised, and
+Godot evaluates it at a fixed 1/30 s step before the first visible frame, so an emitter that
+sets it has a well-defined at-rest pose. This candle leaves it at 0.
+
+## Internal shadow
+<!-- compare: image=complex-isometric-dungeon-internal-shadow status=done fixture=previews/internal_shadow_preview.tscn -->
+
+One `Polygon2D` carrying `shadow_gradient.png` through a four-vertex `uv` in texel space that
+runs negative on two corners (`-2, -1`). This is the case that used to draw as a hard navy
+quadrilateral. Mean channel error **0.99/255** with **no pixel over 16** and a worst channel of
+3, so the UV normalisation, the wrap mode and the translucent fill all land.
+
+The 0.99 mean is a uniform near-zero offset across the backdrop rather than error concentrated
+in the shadow — the two sides differ by 1 unit of rounding over most of the frame.
+
+## Goblin
+<!-- compare: image=complex-isometric-dungeon-goblin status=limitation fixture=previews/goblin_preview.tscn -->
+
+A `CharacterBody2D` with a `Sprite2D` drop shadow, an `AnimatedSprite2D` over a 40-animation
+`SpriteFrames`, a `Camera2D` and a hidden `LightOccluder2D`. The sprite, the gradient shadow
+and the atlas region all match.
+
+The pose does not, and the cause is not the renderer: **the previewer does not execute
+GDScript**. The scene serialises `animation = "front_idle"`, `frame = 8`, and that is what we
+draw. Godot instantiates the scene, `goblin.gd`'s `_physics_process` runs, and its
+`last_direction = Vector2(1, 0)` resolves to `side_right_idle`, which it then `play()`s — so
+the reference shows a right-facing pose from a *different* animation, at whatever frame the
+clock reached. Mean channel error **1.32/255**, 0.5 % of pixels over 16, all of it inside the
+128x128 sprite.
+
+A previewer that ran the script would not be more correct here, only differently timed: the
+frame is a function of elapsed time. The authored state is the reproducible thing to draw.
 
 ## Fixed since the previous capture
 
