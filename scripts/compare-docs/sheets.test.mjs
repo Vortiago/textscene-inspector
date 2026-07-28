@@ -13,7 +13,11 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { readFile } from 'node:fs/promises';
+import { readFile, rm } from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import {
   LINT_EXEMPT_CATEGORIES as LINT_EXEMPT,
@@ -24,6 +28,8 @@ import {
   parseFrontmatter,
   sheetLabel,
 } from './sheetSources.mjs';
+
+const HERE = dirname(fileURLToPath(import.meta.url));
 
 const KNOWN_KEYS = new Set([
   'type',
@@ -112,6 +118,32 @@ describe('comparison sheets', () => {
       }
     }
     expect(missing.sort()).toEqual([]);
+  });
+
+  it('renders the header pair of a sheet that ALSO has sections', async () => {
+    // A sheet's own `image:` and its section markers are both sources, never
+    // either/or. The gallery used to resolve the header pair only when a sheet
+    // had no sections, so the first section silently swallowed the sheet's own
+    // comparison — on the whole-scene sheets that overview IS the subject. The
+    // loss was invisible: every other image on the page still rendered, and the
+    // build stayed green because nothing was missing, only unreferenced.
+    const sectionedWithHeader = sheets.filter(
+      (s) => s.meta.image && parseCompareMarkers(s.body).length > 0
+    );
+    expect(sectionedWithHeader.length).toBeGreaterThan(0);
+
+    // Generated in a SUBPROCESS: build-gallery.mjs parses argv at module scope,
+    // so importing it would run a full build as an import side effect.
+    const out = join(tmpdir(), `gallery-header-pair-${process.pid}.html`);
+    execFileSync(process.execPath, [join(HERE, 'build-gallery.mjs'), '--out', out], {
+      stdio: 'ignore',
+    });
+    const html = await readFile(out, 'utf8');
+    await rm(out, { force: true });
+    const dropped = sectionedWithHeader
+      .filter((s) => !html.includes(`${s.meta.image}-ours.png`))
+      .map((s) => `${s.label}: ${s.meta.image}`);
+    expect(dropped.sort()).toEqual([]);
   });
 
   it('has a matched, single lint block exactly where one belongs', () => {
