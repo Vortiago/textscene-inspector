@@ -142,7 +142,7 @@ describe('parseCPUParticles2D', () => {
     expect(result.gravity).toEqual({ x: 0, y: 980 });
   });
 
-  it('reads `emitting = false`, which is what six of the corpus emitters set', () => {
+  it('reads `emitting = false`, which a script-triggered one-shot ships with', () => {
     const result = parseCPUParticles2D(heading('CPUParticles2D', { name: 'Explosion' }), {
       emitting: 'false',
       one_shot: 'true',

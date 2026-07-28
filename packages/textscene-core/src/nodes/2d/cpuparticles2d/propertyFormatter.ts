@@ -3,7 +3,7 @@
  * above the shared Node2D sections.
  *
  * The twelve parameter slots are listed only when they are non-default: a
- * particle node has forty-odd properties and all but a handful are Godot's
+ * particle node has a large property surface and all but a handful are Godot's
  * defaults, so printing every range would bury the four the author changed.
  */
 
@@ -14,6 +14,7 @@ import {
   CPUParticles2DDrawOrder,
   CPUParticles2DEmissionShape,
   type CPUParticles2DProperties,
+  PARAM_SLOTS,
 } from './types';
 
 const SHAPE_LABELS: Record<number, string> = {
@@ -31,21 +32,6 @@ const DRAW_ORDER_LABELS: Record<number, string> = {
   [CPUParticles2DDrawOrder.Lifetime]: 'Lifetime',
 };
 
-/** Display label and Godot default for each parameter slot, in enum order. */
-const PARAM_LABELS: ReadonlyArray<{ label: string; def: number }> = [
-  { label: 'Initial Velocity', def: 0 },
-  { label: 'Angular Velocity', def: 0 },
-  { label: 'Orbit Velocity', def: 0 },
-  { label: 'Linear Accel', def: 0 },
-  { label: 'Radial Accel', def: 0 },
-  { label: 'Tangential Accel', def: 0 },
-  { label: 'Damping', def: 0 },
-  { label: 'Angle', def: 0 },
-  { label: 'Scale Amount', def: 1 },
-  { label: 'Hue Variation', def: 0 },
-  { label: 'Anim Speed', def: 0 },
-  { label: 'Anim Offset', def: 0 },
-];
 
 export function formatCPUParticles2DProperties(
   props: CPUParticles2DProperties
@@ -136,9 +122,9 @@ function formatParams(
   props: CPUParticles2DProperties
 ): Array<{ label: string; value: string }> {
   const items: Array<{ label: string; value: string }> = [];
-  for (let i = 0; i < PARAM_LABELS.length; i++) {
+  for (let i = 0; i < PARAM_SLOTS.length; i++) {
     const slot = props.params[i];
-    const meta = PARAM_LABELS[i]!;
+    const meta = PARAM_SLOTS[i]!;
     if (!slot) continue;
     const isDefault = slot.min === meta.def && slot.max === meta.def && !slot.curve;
     if (isDefault) continue;

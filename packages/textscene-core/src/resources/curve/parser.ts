@@ -15,7 +15,7 @@
  */
 
 import type { TscnInternalResource } from '../../parser/types';
-import { findSubResource, parseResourceReference } from '../SubResourceResolver';
+import { resolveSubResourceRef } from '../SubResourceResolver';
 import { CurveTangentMode, EMPTY_CURVE, type Curve, type CurvePoint } from './types';
 
 /** Entries per point in `_data`: position, left tangent, right tangent, two modes. */
@@ -55,13 +55,8 @@ export function resolveCurve(
   ref: string | undefined,
   internalResources: readonly TscnInternalResource[]
 ): Curve | null {
-  if (!ref) return null;
-  const parsed = parseResourceReference(ref);
-  if (!parsed || parsed.type !== 'SubResource') return null;
-
-  const resource = findSubResource(internalResources, parsed.id);
-  if (!resource || resource.type !== 'Curve') return null;
-
+  const resource = resolveSubResourceRef(ref, internalResources);
+  if (resource?.type !== 'Curve') return null;
   return parseCurve(resource.data as Record<string, string>);
 }
 

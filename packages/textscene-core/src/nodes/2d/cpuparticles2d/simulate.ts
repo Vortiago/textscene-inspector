@@ -24,8 +24,12 @@
  * does pin its seed and preprocess, the shared PCG32 port (godotRng.ts) puts
  * the particles in Godot's actual places rather than statistically similar ones.
  *
- * Pure `.ts` — no THREE, no React. `Component.tsx` turns the returned poses
- * into geometry.
+ * A pure function of its input, and React-free — `Component.tsx` turns the
+ * returned poses into geometry. Not THREE-free, though: `sampleGradientColor`
+ * lives beside the gradient rasteriser, which imports THREE at module scope.
+ * That costs nothing here (the linter entry point pulls only the parser and the
+ * rules, never this file), and reusing the canonical sampler beats a second
+ * implementation of `Gradient::get_color_at_offset`.
  *
  * ---------------------------------------------------------------------------
  * Derived from Godot Engine (`scene/2d/cpu_particles_2d.cpp`), used under the
@@ -191,7 +195,7 @@ export function simulateFrozenPose(input: ParticleSimInput): RenderedParticle[] 
   const { props } = input;
   // `_update_internal` bails before touching the buffer when the emitter is
   // neither active nor emitting, and a scene file cannot make `active` true
-  // without `emitting` — six of the eleven corpus emitters rely on this.
+  // without `emitting` — script-triggered one-shots ship this way.
   if (!props.emitting) return [];
 
   const pcount = props.amount;
@@ -352,8 +356,9 @@ function restartParticle(
   const texAngle = angleCurve ? sampleCurve(angleCurve, tv) : 1.0;
   // Godot samples the ANGLE curve here for the anim offset too — its own
   // copy-paste (`cpu_particles_2d.cpp:916-919`), reproduced so a scene that
-  // sets an angle curve gets the same anim offset it does in the engine.
-  const texAnimOffset = angleCurve ? sampleCurve(angleCurve, tv) : 1.0;
+  // sets an angle curve gets the same anim offset it does in the engine. Same
+  // curve, same `tv`, so it is the same value rather than a second search.
+  const texAnimOffset = texAngle;
 
   p.active = true;
   p.seed = (state.seed + index + index + state.cycle) >>> 0;
@@ -567,6 +572,10 @@ function applyAppearance(input: ParticleSimInput, p: Particle, tv: number): void
   const base = colorRamp
     ? multiplyColor(sampleGradientColor(colorRamp, tv), props.color)
     : { ...props.color };
+  // Called unconditionally, and NOT short-circuited at angle 0: Godot's basis is
+  // not quite the identity there. The blue column comes out at -0.001/-0.001/1,
+  // so every particle in every scene takes a slight tint, and skipping the call
+  // would silently diverge from the engine on the most common path of all.
   const rotated = rotateHue(base, hueRotAngle);
 
   p.color = multiplyColor(multiplyColor(rotated, p.baseColor), p.startColorRand);
@@ -666,30 +675,29 @@ function rotateHue(color: Color, angle: number): Color {
   const c = Math.cos(angle);
   const s = Math.sin(angle);
 
-  const m1 = [0.299, 0.587, 0.114];
-  const rows: number[][] = [
-    [
-      m1[0]! + 0.701 * c + 0.168 * s,
-      m1[1]! + -0.587 * c + 0.33 * s,
-      m1[2]! + -0.114 * c + -0.497 * s,
-    ],
-    [
-      m1[0]! + -0.299 * c + -0.328 * s,
-      m1[1]! + 0.413 * c + 0.035 * s,
-      m1[2]! + -0.114 * c + 0.292 * s,
-    ],
-    [
-      m1[0]! + -0.3 * c + 1.25 * s,
-      m1[1]! + -0.588 * c + -1.05 * s,
-      m1[2]! + 0.886 * c + -0.203 * s,
-    ],
-  ];
+  // The three luminance constants each basis row is built from.
+  const lr = 0.299;
+  const lg = 0.587;
+  const lb = 0.114;
 
-  const v = [color.r, color.g, color.b];
+  // Columns of the blended basis. Godot applies it with `Basis::xform_inv`, the
+  // TRANSPOSE, so each output channel reads down a column rather than across a row.
+  const xr = lr + 0.701 * c + 0.168 * s;
+  const xg = lg + -0.587 * c + 0.33 * s;
+  const xb = lb + -0.114 * c + -0.497 * s;
+
+  const yr = lr + -0.299 * c + -0.328 * s;
+  const yg = lg + 0.413 * c + 0.035 * s;
+  const yb = lb + -0.114 * c + 0.292 * s;
+
+  const zr = lr + -0.3 * c + 1.25 * s;
+  const zg = lg + -0.588 * c + -1.05 * s;
+  const zb = lb + 0.886 * c + -0.203 * s;
+
   return {
-    r: rows[0]![0]! * v[0]! + rows[1]![0]! * v[1]! + rows[2]![0]! * v[2]!,
-    g: rows[0]![1]! * v[0]! + rows[1]![1]! * v[1]! + rows[2]![1]! * v[2]!,
-    b: rows[0]![2]! * v[0]! + rows[1]![2]! * v[1]! + rows[2]![2]! * v[2]!,
+    r: xr * color.r + yr * color.g + zr * color.b,
+    g: xg * color.r + yg * color.g + zg * color.b,
+    b: xb * color.r + yb * color.g + zb * color.b,
     a: color.a,
   };
 }

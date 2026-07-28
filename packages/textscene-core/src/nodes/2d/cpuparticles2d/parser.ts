@@ -15,6 +15,7 @@ import {
   CPUParticles2DEmissionShape,
   type CPUParticles2DProperties,
   type ParticleParam,
+  PARAM_SLOTS,
 } from './types';
 
 /** Godot's inspector range for `amount` is `1,1000000,1,exp`. */
@@ -25,20 +26,6 @@ export const MAX_PARTICLE_AMOUNT = 1_000_000;
  * The curve property is `<prefix>_curve` — except InitialLinearVelocity, which
  * Godot exposes no curve for at all.
  */
-const PARAM_TABLE: ReadonlyArray<{ prefix: string; def: number; curve: boolean }> = [
-  { prefix: 'initial_velocity', def: 0, curve: false },
-  { prefix: 'angular_velocity', def: 0, curve: true },
-  { prefix: 'orbit_velocity', def: 0, curve: true },
-  { prefix: 'linear_accel', def: 0, curve: true },
-  { prefix: 'radial_accel', def: 0, curve: true },
-  { prefix: 'tangential_accel', def: 0, curve: true },
-  { prefix: 'damping', def: 0, curve: true },
-  { prefix: 'angle', def: 0, curve: true },
-  { prefix: 'scale_amount', def: 1, curve: true },
-  { prefix: 'hue_variation', def: 0, curve: true },
-  { prefix: 'anim_speed', def: 0, curve: true },
-  { prefix: 'anim_offset', def: 0, curve: true },
-];
 
 export function parseCPUParticles2D(
   heading: ParsedHeading,
@@ -94,7 +81,7 @@ export function parseCPUParticles2D(
     spread: floatOr(properties.spread, 45, `${context}.spread`),
     gravity: vec2Or(properties.gravity, { x: 0, y: 980 }, `${context}.gravity`),
 
-    params: PARAM_TABLE.map(({ prefix, def, curve }) => {
+    params: PARAM_SLOTS.map(({ prefix, def, curve }) => {
       const param: ParticleParam = {
         min: floatOr(properties[`${prefix}_min`], def, `${context}.${prefix}_min`),
         max: floatOr(properties[`${prefix}_max`], def, `${context}.${prefix}_max`),

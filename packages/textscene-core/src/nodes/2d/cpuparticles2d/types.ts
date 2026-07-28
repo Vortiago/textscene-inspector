@@ -4,7 +4,7 @@
  * Every default here is the one Godot's own constructor installs
  * (`scene/2d/cpu_particles_2d.h`), because a particle node in a real scene
  * writes only the handful of properties it changed: the candle's Fire emitter
- * sets five of the forty-odd, and the rest ARE the look.
+ * sets only a handful, and the rest ARE the look.
  */
 
 import type { Node2DProperties, Color, Vector2 } from '../../base/node2d/types';
@@ -52,6 +52,36 @@ export enum CPUParticles2DParam {
 
 /** `PARAM_MAX` — the length of every parameter array. */
 export const CPU_PARTICLES_2D_PARAM_COUNT = 12;
+
+/**
+ * The twelve parameter slots, in `CPUParticles2DParam` order: the serialised
+ * property prefix (`<prefix>_min` / `_max` / `_curve`), the Inspector label, the
+ * Godot default both `_min` and `_max` take, and whether Godot exposes a curve.
+ *
+ * ONE table because `def` is read from two directions: the parser applies it,
+ * and the formatter hides a slot that still holds it. Two copies drift into the
+ * Inspector silently hiding an authored value, or showing an untouched one, and
+ * no test would catch the disagreement.
+ */
+export const PARAM_SLOTS: ReadonlyArray<{
+  prefix: string;
+  label: string;
+  def: number;
+  curve: boolean;
+}> = [
+  { prefix: 'initial_velocity', label: 'Initial Velocity', def: 0, curve: false },
+  { prefix: 'angular_velocity', label: 'Angular Velocity', def: 0, curve: true },
+  { prefix: 'orbit_velocity', label: 'Orbit Velocity', def: 0, curve: true },
+  { prefix: 'linear_accel', label: 'Linear Accel', def: 0, curve: true },
+  { prefix: 'radial_accel', label: 'Radial Accel', def: 0, curve: true },
+  { prefix: 'tangential_accel', label: 'Tangential Accel', def: 0, curve: true },
+  { prefix: 'damping', label: 'Damping', def: 0, curve: true },
+  { prefix: 'angle', label: 'Angle', def: 0, curve: true },
+  { prefix: 'scale_amount', label: 'Scale Amount', def: 1, curve: true },
+  { prefix: 'hue_variation', label: 'Hue Variation', def: 0, curve: true },
+  { prefix: 'anim_speed', label: 'Anim Speed', def: 0, curve: true },
+  { prefix: 'anim_offset', label: 'Anim Offset', def: 0, curve: true },
+];
 
 /** One parameter slot: the random range plus the optional shaping curve. */
 export interface ParticleParam {

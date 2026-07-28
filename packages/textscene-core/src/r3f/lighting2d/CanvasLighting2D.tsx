@@ -94,8 +94,15 @@ import { ShadowCasterStage } from './ShadowCasterStage.js';
  * The item-side injection unrolls one sampler per class, and GLSL ES 1.00
  * (which is what three compiles an `onBeforeCompile` injection as) cannot index
  * a sampler array by a runtime value, so the count has to be a compile-time
- * constant. Four covers every scene in the corpus (the isometric dungeon needs
- * one; its candle sub-scene adds two more).
+ * constant.
+ *
+ * There is a SECOND ceiling, and it is the tighter one: every lit 2D item now
+ * binds two samplers per class (the accumulation and the `shadow_color` term)
+ * on top of its own texture. WebGL2 guarantees 16 fragment texture units, so
+ * the practical cap is around seven classes, not the fourteen the indexing rule
+ * alone would allow. Raising this constant costs two units per lit item, and
+ * overshooting shows up as a link-time sampler-limit failure rather than as a
+ * dropped light.
  */
 export const MAX_LIGHT_CLASSES = 4;
 

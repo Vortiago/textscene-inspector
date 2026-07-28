@@ -365,7 +365,7 @@ export const GOLDEN_SCENES = [
   // A scaled emitter whose particles must NOT scale with it: Godot's default
   // `local_coords = false` emits into world space, which the dungeon candle relies on.
   { name: 'cpuparticles2d-local-coords', file: 'unit-cpuparticles2d-local-coords.tscn', maxDiffPct: 0.5 },
-  // `emitting = false` draws nothing. Six of the corpus's eleven emitters ship
+  // `emitting = false` draws nothing. Script-triggered one-shot emitters ship
   // this way, so a regression that started drawing them would be widespread.
   { name: 'cpuparticles2d-not-emitting', file: 'unit-cpuparticles2d-not-emitting.tscn', maxDiffPct: 0.5 },
   // Baseline corrected in the Y-flip fix: a NavigationPolygon's vertices are

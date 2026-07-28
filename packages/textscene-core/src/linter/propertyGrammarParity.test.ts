@@ -28,6 +28,7 @@ import { readdirSync, readFileSync, existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { NODE_BASE_TYPES } from './nodeBaseTypes.js';
+import { PARAM_SLOTS } from '../nodes/2d/cpuparticles2d/types.js';
 import { validatorRegistry } from './ValidatorRegistry.js';
 import './index.js';
 
@@ -89,19 +90,15 @@ const LIGHT3D_LINTER_ONLY_KEYS = [
  * `<prefix>_min` / `_max` / `_curve`, but through a TABLE
  * (`properties[`${prefix}_min`]`) rather than a literal access, so the
  * `properties.X` scrape sees none of them — the same blind spot as the audio
- * base helper below. Rebuilt from the prefixes so the two lists cannot drift.
+ * base helper below. Derived from the parser's OWN table, so a renamed prefix or
+ * a dropped slot moves both sides at once instead of leaving the allowlist
+ * asserting coverage of a key nothing reads any more.
  */
-const PARTICLE_PARAM_PREFIXES = [
-  'initial_velocity', 'angular_velocity', 'orbit_velocity', 'linear_accel',
-  'radial_accel', 'tangential_accel', 'damping', 'angle', 'scale_amount',
-  'hue_variation', 'anim_speed', 'anim_offset',
-] as const;
-
-const PARTICLE_PARAM_KEYS: readonly string[] = [
-  ...PARTICLE_PARAM_PREFIXES.flatMap((p) => [`${p}_min`, `${p}_max`]),
-  // Godot exposes a curve for every slot but the initial velocity.
-  ...PARTICLE_PARAM_PREFIXES.filter((p) => p !== 'initial_velocity').map((p) => `${p}_curve`),
-];
+const PARTICLE_PARAM_KEYS: readonly string[] = PARAM_SLOTS.flatMap(({ prefix, curve }) => [
+  `${prefix}_min`,
+  `${prefix}_max`,
+  ...(curve ? [`${prefix}_curve`] : []),
+]);
 
 const AUDIO_BASE_KEYS = [
   'stream', 'volume_db', 'pitch_scale', 'playing', 'autoplay',

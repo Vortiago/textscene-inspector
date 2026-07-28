@@ -10,7 +10,7 @@
  *
  * `emitting = false` draws nothing — Godot's `_update_internal` returns before
  * it touches the multimesh buffer — while the node still positions its
- * children, which is what six of the corpus's eleven emitters rely on.
+ * children, which is what a script-triggered one-shot emitter relies on.
  */
 
 import { useEffect, useMemo, useState } from 'react';

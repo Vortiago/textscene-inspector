@@ -119,6 +119,42 @@ export function PointLight2D({ node, children }: NodeComponentProps) {
   );
 }
 
+/**
+ * The cookie quad and the `shadow_color` quad are the SAME quad: same size, same
+ * offset, same slot in the pass. Only the layer they land on and the material
+ * they carry differ, and the complementary stencil test means they never cover
+ * the same pixel, so their relative order is moot. Sharing one component is what
+ * stops the two drifting on geometry or offset.
+ */
+function LightQuad({
+  meshRef,
+  material,
+  offset,
+  width,
+  height,
+  ordinal,
+}: {
+  meshRef: (mesh: THREE.Mesh | null) => void;
+  material: THREE.Material;
+  offset: { x: number; y: number };
+  width: number;
+  height: number;
+  ordinal: number;
+}) {
+  return (
+    <mesh
+      ref={meshRef}
+      position={[offset.x, -offset.y, 0]}
+      material={material}
+      // Explicit rather than left to three's depth sort, because the volume mask
+      // has to land between this quad and the previous light's.
+      renderOrder={litQuadRenderOrder(ordinal)}
+    >
+      <planeGeometry args={[width, height]} />
+    </mesh>
+  );
+}
+
 function QuadMesh({
   texture,
   color,
@@ -174,8 +210,10 @@ function QuadMesh({
   // The other half of `light_shadow_compute`: what the light contributes where
   // the volumes DID stamp. Null at Godot's transparent default, which is every
   // ordinary shadow — there the withheld cookie is the entire effect.
-  const tintsShadow =
-    shadowed && shadowTintLayer !== undefined && shadowColorContributes(shadowColor);
+  // `shadowColorContributes` is NOT re-checked here: the node above passes a
+  // layer only for a light that tints, so a defined layer already means it does.
+  // Asking twice would let the two answers drift.
+  const tintsShadow = shadowed && shadowTintLayer !== undefined;
   const shadowMaterial = useMemo(
     () =>
       tintsShadow
@@ -226,27 +264,23 @@ function QuadMesh({
           tintLayer={tintsShadow ? shadowTintLayer : undefined}
         />
       )}
-      <mesh
-        ref={toLightQuad}
-        position={[offset.x, -offset.y, 0]}
+      <LightQuad
+        meshRef={toLightQuad}
         material={material}
-        // Explicit rather than left to three's depth sort, because the mask
-        // above has to land between this quad and the previous light's.
-        renderOrder={litQuadRenderOrder(ordinal)}
-      >
-        <planeGeometry args={[width * scale, height * scale]} />
-      </mesh>
+        offset={offset}
+        width={width * scale}
+        height={height * scale}
+        ordinal={ordinal}
+      />
       {shadowMaterial && (
-        <mesh
-          ref={toShadowTintLayer}
-          position={[offset.x, -offset.y, 0]}
+        <LightQuad
+          meshRef={toShadowTintLayer}
           material={shadowMaterial}
-          // Shares the lit quad's slot: the complementary stencil test means the
-          // two never cover the same pixel, so their relative order is moot.
-          renderOrder={litQuadRenderOrder(ordinal)}
-        >
-          <planeGeometry args={[width * scale, height * scale]} />
-        </mesh>
+          offset={offset}
+          width={width * scale}
+          height={height * scale}
+          ordinal={ordinal}
+        />
       )}
     </>
   );
