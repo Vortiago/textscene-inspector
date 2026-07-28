@@ -26,8 +26,9 @@
  */
 
 import { warn } from '../../logger.js';
-import { parseTresFile } from '../../parser/tresParser.js';
-import { parseSubResourcePath, subResourcePath } from '../subResourcePath.js';
+import { parseTresFile, type ParsedTresFile } from '../../parser/tresParser.js';
+import { findSubResource } from '../SubResourceResolver.js';
+import { parseSubResourcePath, resolveRefToResourcePath } from '../subResourcePath.js';
 
 /** Godot Mesh.ArrayFormat flags. */
 const ARRAY_FORMAT_NORMAL = 1 << 1;
@@ -56,9 +57,7 @@ interface SurfaceLayout {
   compressed: boolean;
   /** Bytes per vertex in `vertex_data`'s leading position region. */
   positionStride: number;
-  /** Byte offset of `vertex_data`'s normal/tangent region. */
-  normalRegionOffset: number;
-  /** Bytes per vertex there: normal + tangent, both halved when compressed. */
+  /** Bytes per vertex in the normal/tangent region: both halved when compressed. */
   normalStride: number;
   /** Bytes per vertex in `attribute_data`, from the format — never derived. */
   attributeStride: number;
@@ -72,7 +71,7 @@ interface SurfaceAabb {
   size: [number, number, number];
 }
 
-function surfaceLayout(format: number, vertexCount: number): SurfaceLayout {
+function surfaceLayout(format: number): SurfaceLayout {
   const compressed = (format & ARRAY_FLAG_COMPRESS_ATTRIBUTES) !== 0;
   const hasNormal = (format & ARRAY_FORMAT_NORMAL) !== 0;
   const hasTangent = (format & ARRAY_FORMAT_TANGENT) !== 0;
@@ -90,7 +89,6 @@ function surfaceLayout(format: number, vertexCount: number): SurfaceLayout {
   return {
     compressed,
     positionStride,
-    normalRegionOffset: vertexCount * positionStride,
     normalStride,
     attributeStride:
       (hasColor ? COLOR_BYTES : 0) + (hasUV ? uvBytes : 0) + (hasUV2 ? uvBytes : 0),
@@ -141,20 +139,34 @@ function readInt(block: string, key: string): number {
   return match ? Number(match[1]) : 0;
 }
 
-function readAabb(block: string): SurfaceAabb | undefined {
-  const match = /"aabb"\s*:\s*AABB\(([^)]*)\)/.exec(block);
+/**
+ * Read a `"<key>": <Type>(a, b, …)` field as at least `count` finite floats.
+ * Undefined when absent, short or unparseable, so the surface degrades rather
+ * than decoding against a partly-read scale.
+ */
+function readFloatTuple(
+  block: string,
+  key: string,
+  type: string,
+  count: number
+): number[] | undefined {
+  const match = new RegExp(`"${key}"\\s*:\\s*${type}\\(([^)]*)\\)`).exec(block);
   if (!match) return undefined;
-  const n = match[1]!.split(',').map((v) => Number(v.trim()));
-  if (n.length < 6 || n.some((v) => !Number.isFinite(v))) return undefined;
+  const values = match[1]!.split(',').map((v) => Number(v.trim()));
+  if (values.length < count || values.some((v) => !Number.isFinite(v))) return undefined;
+  return values;
+}
+
+function readAabb(block: string): SurfaceAabb | undefined {
+  const n = readFloatTuple(block, 'aabb', 'AABB', 6);
+  if (!n) return undefined;
   return { position: [n[0]!, n[1]!, n[2]!], size: [n[3]!, n[4]!, n[5]!] };
 }
 
-function readVector4(block: string, key: string): [number, number, number, number] | undefined {
-  const match = new RegExp(`"${key}"\\s*:\\s*Vector4\\(([^)]*)\\)`).exec(block);
-  if (!match) return undefined;
-  const n = match[1]!.split(',').map((v) => Number(v.trim()));
-  if (n.length < 4 || n.some((v) => !Number.isFinite(v))) return undefined;
-  return [n[0]!, n[1]!, n[2]!, n[3]!];
+function readUvScale(block: string): [number, number] | undefined {
+  // Only x and y are consulted; z/w scale UV2, which nothing decodes yet.
+  const n = readFloatTuple(block, 'uv_scale', 'Vector4', 4);
+  return n ? [n[0]!, n[1]!] : undefined;
 }
 
 function readName(block: string): string | undefined {
@@ -162,30 +174,20 @@ function readName(block: string): string | undefined {
   return match?.[1];
 }
 
-/** Extract the base64 payload of a `"<key>": PackedByteArray("…")` field. */
+/**
+ * Extract the base64 payload of a `"<key>": PackedByteArray("…")` field.
+ * A corrupt payload makes `atob` throw, which would fail the whole mesh; an
+ * empty buffer instead lets the caller drop just this surface.
+ */
 function readPackedBytes(block: string, key: string): Uint8Array {
   const match = new RegExp(`"${key}"\\s*:\\s*PackedByteArray\\("([^"]*)"\\)`).exec(block);
   if (!match) return new Uint8Array(0);
-  return Uint8Array.from(atob(match[1]!), (c) => c.charCodeAt(0));
-}
-
-/** Read `floatsPerVertex` float32s per vertex at a fixed stride. */
-function readFloats(
-  bytes: Uint8Array,
-  vertexCount: number,
-  floatsPerVertex: number,
-  strideBytes: number
-): Float32Array {
-  const out = new Float32Array(vertexCount * floatsPerVertex);
-  if (vertexCount === 0 || bytes.byteLength === 0) return out;
-  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  for (let i = 0; i < vertexCount; i++) {
-    const base = i * strideBytes;
-    for (let f = 0; f < floatsPerVertex; f++) {
-      out[i * floatsPerVertex + f] = view.getFloat32(base + f * 4, true);
-    }
+  try {
+    return Uint8Array.from(atob(match[1]!), (c) => c.charCodeAt(0));
+  } catch {
+    warn(`[ArrayMesh] ${key} is not valid base64 — ignoring the payload`);
+    return new Uint8Array(0);
   }
-  return out;
 }
 
 /**
@@ -207,24 +209,38 @@ function decodePositions(
 ): Float32Array | undefined {
   if (vertexCount === 0) return new Float32Array(0);
   if (bytes.byteLength < vertexCount * layout.positionStride) return undefined;
+  if (layout.compressed && !aabb) return undefined;
 
-  let positions: Float32Array;
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const positions = new Float32Array(vertexCount * 3);
+  const stride = layout.positionStride;
+
   if (layout.compressed) {
-    if (!aabb) return undefined;
-    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-    positions = new Float32Array(vertexCount * 3);
+    const [ox, oy, oz] = aabb!.position;
+    const [sx, sy, sz] = aabb!.size;
     for (let i = 0; i < vertexCount; i++) {
-      const base = i * layout.positionStride;
-      for (let axis = 0; axis < 3; axis++) {
-        const unit = view.getUint16(base + axis * 2, true) / 65535;
-        positions[i * 3 + axis] = unit * aabb.size[axis]! + aabb.position[axis]!;
-      }
+      const b = i * stride;
+      const o = i * 3;
+      positions[o] = (view.getUint16(b, true) / 65535) * sx + ox;
+      positions[o + 1] = (view.getUint16(b + 2, true) / 65535) * sy + oy;
+      positions[o + 2] = (view.getUint16(b + 4, true) / 65535) * sz + oz;
     }
-  } else {
-    positions = readFloats(bytes, vertexCount, 3, layout.positionStride);
+    // Quantised positions are finite by construction: a uint16 over a finite
+    // aabb cannot be NaN, and `readAabb` rejects a non-finite aabb.
+    return positions;
   }
 
-  for (const p of positions) if (!Number.isFinite(p)) return undefined;
+  // float32s straight out of the file can be anything, including a NaN bit
+  // pattern, so they are checked as they are read rather than in a second pass.
+  for (let i = 0; i < vertexCount; i++) {
+    const b = i * stride;
+    const o = i * 3;
+    for (let axis = 0; axis < 3; axis++) {
+      const value = view.getFloat32(b + axis * 4, true);
+      if (!Number.isFinite(value)) return undefined;
+      positions[o + axis] = value;
+    }
+  }
   return positions;
 }
 
@@ -245,31 +261,38 @@ function decodeUVs(
   bytes: Uint8Array,
   vertexCount: number,
   layout: SurfaceLayout,
-  uvScale: [number, number, number, number] | undefined,
+  uvScale: [number, number] | undefined,
   onMismatch: (actualStride: number) => void
 ): Float32Array | undefined {
-  if (layout.uvOffset < 0 || vertexCount === 0 || bytes.byteLength === 0) return undefined;
-  if (bytes.byteLength !== vertexCount * layout.attributeStride) {
+  const { uvOffset, attributeStride } = layout;
+  if (uvOffset < 0 || vertexCount === 0 || bytes.byteLength === 0) return undefined;
+  if (bytes.byteLength !== vertexCount * attributeStride) {
     onMismatch(bytes.byteLength / vertexCount);
     return undefined;
   }
 
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const out = new Float32Array(vertexCount * 2);
-  const scaleU = uvScale?.[0] ?? 0;
-  const scaleV = uvScale?.[1] ?? 0;
-  const rescale = scaleU !== 0 || scaleV !== 0;
 
-  for (let i = 0; i < vertexCount; i++) {
-    const o = i * layout.attributeStride + layout.uvOffset;
-    if (!layout.compressed) {
-      out[i * 2 + 0] = view.getFloat32(o, true);
+  if (!layout.compressed) {
+    for (let i = 0; i < vertexCount; i++) {
+      const o = i * attributeStride + uvOffset;
+      out[i * 2] = view.getFloat32(o, true);
       out[i * 2 + 1] = view.getFloat32(o + 4, true);
-      continue;
     }
+    return out;
+  }
+
+  // A zero `uv_scale` means the stored value already IS the UV; otherwise Godot
+  // normalised UVs that left the unit range into the uint16 range against that
+  // divisor, so they re-expand around 0.5.
+  const [scaleU, scaleV] = uvScale ?? [0, 0];
+  const rescale = scaleU !== 0 || scaleV !== 0;
+  for (let i = 0; i < vertexCount; i++) {
+    const o = i * attributeStride + uvOffset;
     const u = view.getUint16(o, true) / 65535;
     const v = view.getUint16(o + 2, true) / 65535;
-    out[i * 2 + 0] = rescale ? (u - 0.5) * scaleU : u;
+    out[i * 2] = rescale ? (u - 0.5) * scaleU : u;
     out[i * 2 + 1] = rescale ? (v - 0.5) * scaleV : v;
   }
   return out;
@@ -307,36 +330,47 @@ function decodeNormals(
   vertexCount: number,
   layout: SurfaceLayout
 ): Float32Array | undefined {
-  const { normalRegionOffset: normalBlock, normalStride: stride } = layout;
+  const { normalStride: stride, positionStride } = layout;
   if (stride === 0 || vertexCount === 0) return undefined;
+  const normalBlock = vertexCount * positionStride;
   if (bytes.byteLength < normalBlock + stride * vertexCount) return undefined;
 
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const out = new Float32Array(vertexCount * 3);
-  for (let i = 0; i < vertexCount; i++) {
-    const o = normalBlock + i * stride;
-    // uint16 → [-1, 1] octahedral coordinates.
-    const ex = (view.getUint16(o, true) / 65535) * 2 - 1;
-    const ey = (view.getUint16(o + 2, true) / 65535) * 2 - 1;
-    const [ax, ay, az] = octToVec3(ex, ey);
+  // uint16 → [-1, 1] octahedral coordinates. What that pair MEANS is the whole
+  // difference between the two layouts, so they get a loop each rather than a
+  // per-vertex test of something that cannot change.
+  const oct = (o: number): [number, number] => [
+    (view.getUint16(o, true) / 65535) * 2 - 1,
+    (view.getUint16(o + 2, true) / 65535) * 2 - 1,
+  ];
 
-    if (!layout.compressed) {
-      out[i * 3 + 0] = ax;
-      out[i * 3 + 1] = ay;
-      out[i * 3 + 2] = az;
-      continue;
+  if (!layout.compressed) {
+    for (let i = 0; i < vertexCount; i++) {
+      const [ex, ey] = oct(normalBlock + i * stride);
+      const [nx, ny, nz] = octToVec3(ex, ey);
+      out[i * 3] = nx;
+      out[i * 3 + 1] = ny;
+      out[i * 3 + 2] = nz;
     }
+    return out;
+  }
 
-    const angle =
-      ((view.getUint16(i * layout.positionStride + 6, true) / 65535) * 2 - 1) * Math.PI;
+  for (let i = 0; i < vertexCount; i++) {
+    // The pair is a rotation AXIS, and the ANGLE is the 4th uint16 of the
+    // position record, in half-turns. The normal is the third row of that
+    // rotation (Godot's `axis_angle_to_tbn`).
+    const [ex, ey] = oct(normalBlock + i * stride);
+    const [ax, ay, az] = octToVec3(ex, ey);
+    const angle = ((view.getUint16(i * positionStride + 6, true) / 65535) * 2 - 1) * Math.PI;
     const cos = Math.cos(angle);
     const sin = Math.sin(angle);
     const omc = 1 - cos;
     const nx = omc * az * ax - sin * ay;
     const ny = omc * az * ay + sin * ax;
     const nz = omc * az * az + cos;
-    const len = Math.hypot(nx, ny, nz) || 1;
-    out[i * 3 + 0] = nx / len;
+    const len = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1;
+    out[i * 3] = nx / len;
     out[i * 3 + 1] = ny / len;
     out[i * 3 + 2] = nz / len;
   }
@@ -371,10 +405,42 @@ function readMaterialPath(
   extById: Map<string, string>,
   selfPath: string
 ): string | undefined {
-  const match = /"material"\s*:\s*(ExtResource|SubResource)\("([^"]+)"\)/.exec(block);
-  if (!match) return undefined;
-  const id = match[2]!;
-  return match[1] === 'ExtResource' ? extById.get(id) : subResourcePath(selfPath, id);
+  const match = /"material"\s*:\s*([^,\n}]+)/.exec(block);
+  return match ? (resolveRefToResourcePath(match[1]!.trim(), extById, selfPath) ?? undefined) : undefined;
+}
+
+/**
+ * The `_surfaces` value of the mesh this path addresses: the file's own
+ * `[resource]` body, or a `[sub_resource type="ArrayMesh"]` inside it.
+ *
+ * An addressed sub-resource that is absent, or present but carrying no surfaces,
+ * would otherwise decode to an empty mesh — a node rendering nothing with nothing
+ * said about why. The material path fails loudly for the same class of error.
+ */
+function readSurfacesRaw(
+  parsed: ParsedTresFile,
+  filePath: string,
+  subResourceId: string | undefined
+): string | undefined {
+  if (subResourceId === undefined) return parsed.properties['_surfaces'];
+
+  const sub = findSubResource(parsed.subResources, subResourceId);
+  if (!sub) {
+    warn(
+      `[ArrayMesh] ${filePath} declares no sub-resource "${subResourceId}" — ` +
+        `the mesh addressing it renders nothing`
+    );
+    return undefined;
+  }
+  const raw = sub.data['_surfaces'];
+  if (typeof raw !== 'string') {
+    warn(
+      `[ArrayMesh] sub-resource "${subResourceId}" in ${filePath} is a ${sub.type} ` +
+        `and carries no surfaces — the mesh addressing it renders nothing`
+    );
+    return undefined;
+  }
+  return raw;
 }
 
 /**
@@ -388,44 +454,18 @@ function readMaterialPath(
 export function decodeArrayMesh(content: string, selfPath: string): ArrayMeshData {
   const parsed = parseTresFile(content);
   const { filePath, subResourceId } = parseSubResourcePath(selfPath);
-
-  let surfacesRaw: string | undefined;
-  if (subResourceId === undefined) {
-    surfacesRaw = parsed.properties['_surfaces'];
-  } else {
-    // An addressed sub-resource that is absent, or present but carrying no
-    // surfaces (a material, say), would otherwise decode to an empty mesh: a
-    // node that renders nothing and says nothing about why. The material path
-    // fails loudly for the same class of error; match it.
-    const sub = parsed.subResources.find((r) => r.id === subResourceId);
-    const raw = sub?.data['_surfaces'];
-    if (!sub) {
-      warn(
-        `[ArrayMesh] ${filePath} declares no sub-resource "${subResourceId}" — ` +
-          `the mesh addressing it renders nothing`
-      );
-    } else if (typeof raw !== 'string') {
-      warn(
-        `[ArrayMesh] sub-resource "${subResourceId}" in ${filePath} is a ${sub.type} ` +
-          `and carries no surfaces — the mesh addressing it renders nothing`
-      );
-    } else {
-      surfacesRaw = raw;
-    }
-  }
+  const surfacesRaw = readSurfacesRaw(parsed, filePath, subResourceId);
   if (!surfacesRaw) return { surfaces: [] };
 
   const extById = new Map(parsed.extResources.map((r) => [r.id, r.path]));
 
   const surfaces: ArrayMeshSurface[] = [];
-  let surfaceIndex = -1;
-  for (const block of iterateSurfaceBlocks(surfacesRaw)) {
-    surfaceIndex++;
+  for (const [surfaceIndex, block] of [...iterateSurfaceBlocks(surfacesRaw)].entries()) {
     const format = readInt(block, 'format');
     const vertexCount = readInt(block, 'vertex_count');
     const indexCount = readInt(block, 'index_count');
 
-    const layout = surfaceLayout(format, vertexCount);
+    const layout = surfaceLayout(format);
     const vertexData = readPackedBytes(block, 'vertex_data');
     // Positions: a contiguous region at the front of vertex_data.
     const positions = decodePositions(vertexData, vertexCount, layout, readAabb(block));
@@ -444,7 +484,7 @@ export function decodeArrayMesh(content: string, selfPath: string): ArrayMeshDat
       readPackedBytes(block, 'attribute_data'),
       vertexCount,
       layout,
-      readVector4(block, 'uv_scale'),
+      readUvScale(block),
       (actualStride) =>
         warn(
           `[ArrayMesh] surface ${surfaceIndex}'s attribute_data is ${actualStride} B/vertex, ` +

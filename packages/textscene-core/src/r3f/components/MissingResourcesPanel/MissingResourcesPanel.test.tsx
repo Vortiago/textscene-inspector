@@ -132,10 +132,11 @@ describe('<MissingResourcesPanel>', () => {
     expect(onUpload).toHaveBeenCalledWith('res://meshes/wheel.tres', file);
   });
 
-  it('removes under the same file key the upload stored, not the address', async () => {
-    // The pair has to agree: normalising only the upload would store bytes under
-    // the file and then try to delete them under the address, silently leaving
-    // the upload in place and breaking the "Remove → row reappears" round-trip.
+  it('shows one uploaded row per FILE and removes under that same key', async () => {
+    // An upload against an address row is recorded against the owning file, so
+    // the row the user sees — and removes — is the file. The pair has to agree on
+    // that key or the removal misses the bytes the upload stored, silently
+    // leaving it in place and breaking the "Remove → row reappears" round-trip.
     const onRemove = vi.fn();
     render(
       <MissingResourcesProvider>
@@ -145,16 +146,15 @@ describe('<MissingResourcesPanel>', () => {
     );
 
     const panel = await screen.findByTestId('missing-resources-panel');
-    const removeBtn = panel.querySelector(
-      '[data-state="uploaded"] button'
-    ) as HTMLButtonElement;
+    const uploadedRows = panel.querySelectorAll('[data-state="uploaded"]');
+    expect(uploadedRows).toHaveLength(1);
+    expect(uploadedRows[0]!.getAttribute('data-path')).toBe('res://meshes/wheel.tres');
+
     await act(async () => {
-      fireEvent.click(removeBtn);
+      fireEvent.click(uploadedRows[0]!.querySelector('button') as HTMLButtonElement);
     });
 
     expect(onRemove).toHaveBeenCalledWith('res://meshes/wheel.tres');
-    // The ROW still goes away: the panel's own bookkeeping keeps the address,
-    // which is the identity `useResource` reports it under.
     expect(screen.queryByTestId('missing-resources-panel')).toBeNull();
   });
 

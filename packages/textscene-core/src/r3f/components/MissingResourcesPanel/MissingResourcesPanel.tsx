@@ -11,11 +11,12 @@
  * supplies `onUpload(path, file)` and `onRemove(path)` callbacks, which
  * in the web app wrap `provider.addUploadedFile` + `loader.provideFile`.
  *
- * A row may name a resource INSIDE a `.tres` (a **Sub-resource path**), because
- * that is the identity a failed load is reported under. The file a user picks or
- * removes is always the OWNING file, so both callbacks are handed the file half
- * and no host has to know the grammar — the row keeps its own address so it
- * still disappears and reappears under the identity `useResource` reports.
+ * A MISSING row may name a resource INSIDE a `.tres` (a **Sub-resource path**),
+ * because that is the identity a failed load is reported under — so what the
+ * user picks against it is the OWNING file, and that is what the host is handed.
+ * An UPLOADED row is already a file (`markUploaded` keys that set by file), so
+ * the remove side needs no such translation. Either way no host learns the
+ * grammar.
  */
 import { type ChangeEvent } from 'react';
 import { useMissingResources } from '../../contexts/MissingResourcesContext.js';
@@ -32,9 +33,8 @@ export interface MissingResourcesPanelProps {
   onUpload: (path: string, file: File) => void;
   /**
    * Called when the user clicks "Remove" on an uploaded row. The host
-   * deletes the file from its provider's cache. Also always a real file path,
-   * and necessarily the same one `onUpload` was given, or the removal would
-   * miss the bytes the upload stored.
+   * deletes the file from its provider's cache. Necessarily the same path
+   * `onUpload` was given, or the removal would miss the bytes it stored.
    */
   onRemove: (path: string) => void;
 }
@@ -58,9 +58,7 @@ export function MissingResourcesPanel({ onUpload, onRemove }: MissingResourcesPa
     // provider + loader; if `useResource` re-resolves as `missing`
     // the path will reappear as a missing row on the next render.
     removeUploaded(path);
-    // The row keeps its own identity; the host is told the file, which is the
-    // key its provider stored the bytes under when the row was uploaded.
-    onRemove(resourceFilePath(path));
+    onRemove(path);
   };
 
   return (

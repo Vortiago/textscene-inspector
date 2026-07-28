@@ -20,6 +20,8 @@
  * round-trips untouched.
  */
 
+import { parseResourceReference } from './SubResourceResolver.js';
+
 /** What Godot's text saver writes between an owning file and one of its sub-resources. */
 const SEPARATOR = '::';
 
@@ -56,4 +58,29 @@ export function subResourcePath(filePath: string, subResourceId: string): string
 /** The fetchable file behind either form of path — what the byte layer is asked for. */
 export function resourceFilePath(path: string): string {
   return parseSubResourcePath(path).filePath;
+}
+
+/**
+ * A resource reference written inside a `.tres` as the one path string that
+ * addresses it, whichever form Godot used: an `ExtResource` pointing at a shared
+ * file, or a `SubResource` the file carries itself — the latter as a
+ * **Sub-resource path** into `selfPath`. Null when the reference is absent,
+ * malformed, or an `ExtResource` id the file never declared.
+ *
+ * Every producer of an address goes through here so the
+ * ExtResource-vs-SubResource policy is written once. Transcribing it per producer
+ * is how two of them come to disagree — on interior whitespace, on a future
+ * `uid://` form, on which branch wins.
+ */
+export function resolveRefToResourcePath(
+  ref: string | undefined,
+  extPathById: ReadonlyMap<string, string>,
+  selfPath: string
+): string | null {
+  if (!ref) return null;
+  const parsed = parseResourceReference(ref);
+  if (!parsed) return null;
+  return parsed.type === 'ExtResource'
+    ? (extPathById.get(parsed.id) ?? null)
+    : subResourcePath(selfPath, parsed.id);
 }

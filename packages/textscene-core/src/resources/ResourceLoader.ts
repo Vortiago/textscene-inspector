@@ -299,12 +299,13 @@ export class ResourceLoader {
    * as ExtResource.
    */
   provideFile(rawPath: string): void {
-    // Bytes only ever belong to a FILE. A caller holding a **Sub-resource
-    // path** (a missing-resources row, say) is telling us about the file that
-    // owns it, so normalise before anything keys off it: clearing the file is
-    // what announces `invalidated` to every address inside it, and routing the
-    // address instead would miss the metadata and fan out to the wrong
-    // processors.
+    // Bytes only ever belong to a FILE, so normalise before anything keys off
+    // this: clearing the file is what announces `invalidated` to every address
+    // inside it, while routing an address would miss the metadata and fan out to
+    // the wrong processors. `MissingResourcesPanel` already hands its host a
+    // file, so no in-repo caller needs this — it is the public-API backstop for
+    // an out-of-tree host that passes a row's identity straight through, not a
+    // second opinion about where that boundary lives.
     const path = resourceFilePath(rawPath);
     this._fileEventBus?.clearCache(path);
     this.clearCache(path);

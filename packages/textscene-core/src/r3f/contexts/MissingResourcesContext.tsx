@@ -111,10 +111,19 @@ export function MissingResourcesProvider({
 
   const markUploaded = useCallback((path: string) => {
     if (!path) return;
+    // The two sets are keyed differently and this is the ONE place that knows
+    // it. `missingPaths` holds resource IDENTITIES, because that is what a
+    // consumer asked for and will ask for again — a **Sub-resource path**
+    // included. `uploadedPaths` holds FILES, because a file is what the user
+    // supplied and what a host's provider stores against. So uploading one
+    // `.tres` that backs three surface materials clears three missing rows and
+    // shows ONE uploaded row with one Remove button, instead of three rows for
+    // one file picked once.
     setUploadedPaths((prev) => {
-      if (prev.has(path)) return prev;
+      const file = resourceFilePath(path);
+      if (prev.has(file)) return prev;
       const next = new Set(prev);
-      next.add(path);
+      next.add(file);
       return next;
     });
     setMissingPaths((prev) => {
@@ -125,20 +134,13 @@ export function MissingResourcesProvider({
     });
   }, []);
 
+  /** Takes a FILE — the key `markUploaded` stored, and what an uploaded row is. */
   const removeUploaded = useCallback((path: string) => {
     if (!path) return;
     setUploadedPaths((prev) => {
-      // One stored file can back several rows: a `.tres` and any **Sub-resource
-      // path** into it are separate identities but share one uploaded byte
-      // entry, so removing that file retires every row it was standing in for.
-      // Dropping only the clicked row would leave the others claiming an upload
-      // that no longer exists — a "✓ uploaded" row beside "⚠ missing" for the
-      // same file.
-      const file = resourceFilePath(path);
-      const stale = [...prev].filter((p) => resourceFilePath(p) === file);
-      if (stale.length === 0) return prev;
+      if (!prev.has(path)) return prev;
       const next = new Set(prev);
-      for (const p of stale) next.delete(p);
+      next.delete(path);
       return next;
     });
   }, []);

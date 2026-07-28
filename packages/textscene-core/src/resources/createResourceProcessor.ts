@@ -226,6 +226,13 @@ export function createResourceProcessor<T>(
   const awaitingFile = (filePath: string): string[] =>
     [...inflight.keys()].filter((key) => resourceFilePath(key) === filePath);
 
+  /** The permanent-failure protocol: no retry, and every subscriber told. */
+  const fail = (path: string, error: Error): void => {
+    inflight.delete(path);
+    cache.set(path, null); // Cache failure to prevent retries
+    eventBus.emit<Error>(resourceType, 'failed', path, error);
+  };
+
   // Bound handler for FileEventBus events (stored once to allow proper unsubscription)
   const handleFileLoaded = async (filePath: string, data: FileData): Promise<void> => {
     // Only process if this processor should handle this file's data. Asked
@@ -233,37 +240,32 @@ export function createResourceProcessor<T>(
     // bytes are, which is exactly what an extension check can answer.
     if (shouldProcess && !shouldProcess(filePath, data)) return;
 
-    for (const path of awaitingFile(filePath)) {
-      // Already cached - skip
-      if (cache.has(path)) {
-        inflight.delete(path);
-        continue;
-      }
+    // Concurrently, not in sequence: each address owns its own flight token and
+    // cache slot, so their transitions are independent — while `process` for a
+    // material ends in awaiting its textures, which is real network I/O. Serial
+    // iteration made surface 2's textures wait for surface 1's to land.
+    await Promise.all(
+      awaitingFile(filePath).map(async (path) => {
+        // Already cached - skip
+        if (cache.has(path)) {
+          inflight.delete(path);
+          return;
+        }
 
-      if (!process) {
-        // File-event-bus mode requires a `process` function; without it
-        // the processor can't materialise the resource. Treat as failure.
-        inflight.delete(path);
-        cache.set(path, null);
-        eventBus.emit<Error>(
-          resourceType,
-          'failed',
-          path,
-          new Error(`${resourceType} processor missing process() handler`)
-        );
-        continue;
-      }
+        if (!process) {
+          // File-event-bus mode requires a `process` function; without it
+          // the processor can't materialise the resource. Treat as failure.
+          fail(path, new Error(`${resourceType} processor missing process() handler`));
+          return;
+        }
 
-      await finishLoad(path, () => process(path, data));
-    }
+        await finishLoad(path, () => process(path, data));
+      })
+    );
   };
 
   const handleFileFailed = (filePath: string, error: Error): void => {
-    for (const path of awaitingFile(filePath)) {
-      inflight.delete(path);
-      cache.set(path, null);
-      eventBus.emit<Error>(resourceType, 'failed', path, error);
-    }
+    for (const path of awaitingFile(filePath)) fail(path, error);
   };
 
   // Subscribe to FileEventBus (if provided)
@@ -298,21 +300,18 @@ export function createResourceProcessor<T>(
         return;
       }
 
-      const { subResourceId } = parseSubResourcePath(path);
+      const { filePath, subResourceId } = parseSubResourcePath(path);
       if (subResourceId !== undefined && !addressesSubResources) {
         // Refused before anything is fetched: whether this processor can read a
         // sub-resource is a property of its `process`, not of the bytes, so
         // there is nothing to learn by loading the file first. Answering here
         // also covers `loadDirectly` mode and cannot leave the address stuck
         // in-flight the way a post-arrival check can.
-        cache.set(path, null);
-        eventBus.emit<Error>(
-          resourceType,
-          'failed',
+        fail(
           path,
           new Error(
             `${resourceType} processor cannot address the sub-resource ` +
-              `"${subResourceId}" inside ${resourceFilePath(path)}`
+              `"${subResourceId}" inside ${filePath}`
           )
         );
         return;
@@ -370,8 +369,11 @@ export function createResourceProcessor<T>(
         // no caller re-requests one — `provideFile` knows only the file. So
         // these are announced instead: `useResource` answers `invalidated` by
         // re-requesting, which is the same healing path by a different door.
+        // The file itself was already dropped above, so only its addresses
+        // remain to match. The Set dedupes a key held in both maps, which would
+        // otherwise be announced twice.
         for (const key of new Set([...cache.keys(), ...inflight.keys()])) {
-          if (key === path || resourceFilePath(key) !== path) continue;
+          if (resourceFilePath(key) !== path) continue;
           cache.delete(key);
           inflight.delete(key);
           eventBus.emit(resourceType, 'invalidated', key);

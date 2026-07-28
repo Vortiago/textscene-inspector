@@ -85,27 +85,34 @@ describe('MissingResourcesContext', () => {
     expect(result.current.uploadedPaths.size).toBe(0);
   });
 
-  it('removeUploaded retires every row the one removed file was backing', () => {
-    // A `.tres` and a **Sub-resource path** into it are separate identities
-    // sharing ONE uploaded byte entry, so a user can end up with a row for each:
-    // upload the file, its mesh then mints a failing address, upload again
-    // against that row. Removing the file has to retire both, or the survivor
-    // claims an upload that no longer exists — the panel would show
-    // "✓ uploaded res://m.tres" beside "⚠ missing res://m.tres".
+  it('records an upload against the owning FILE, so one file is one row', () => {
+    // The user picks one file. A `.tres` backing three surface materials heals
+    // three identities, so `markUploaded` fires three times — but they name one
+    // file, and three "✓ uploaded" rows with three Remove buttons for a single
+    // pick would be a lie about what happened.
     const { result } = renderHook(() => useMissingResources(), { wrapper: wrap });
     act(() => {
+      result.current.markUploaded('res://m.tres::StandardMaterial3D_a');
+      result.current.markUploaded('res://m.tres::StandardMaterial3D_b');
       result.current.markUploaded('res://m.tres');
-      result.current.markUploaded('res://m.tres::StandardMaterial3D_x');
     });
-    expect(result.current.uploadedPaths.size).toBe(2);
 
-    // The panel hands us the FILE, whichever row was clicked.
-    act(() => result.current.removeUploaded('res://m.tres'));
-
-    expect(result.current.uploadedPaths.size).toBe(0);
+    expect(Array.from(result.current.uploadedPaths)).toEqual(['res://m.tres']);
   });
 
-  it('removeUploaded leaves rows backed by a different file alone', () => {
+  it('clears the reported IDENTITY from missing, not just its file', () => {
+    // `missingPaths` is keyed by what a consumer asked for, so healing an
+    // address must retire that address — clearing only the file would leave the
+    // row up forever.
+    const { result } = renderHook(() => useMissingResources(), { wrapper: wrap });
+    act(() => result.current.report('res://m.tres::StandardMaterial3D_a'));
+    act(() => result.current.markUploaded('res://m.tres::StandardMaterial3D_a'));
+
+    expect(result.current.missingPaths.size).toBe(0);
+    expect(Array.from(result.current.uploadedPaths)).toEqual(['res://m.tres']);
+  });
+
+  it('removeUploaded leaves other files alone', () => {
     const { result } = renderHook(() => useMissingResources(), { wrapper: wrap });
     act(() => {
       result.current.markUploaded('res://m.tres::StandardMaterial3D_x');
@@ -114,9 +121,7 @@ describe('MissingResourcesContext', () => {
 
     act(() => result.current.removeUploaded('res://m.tres'));
 
-    expect(Array.from(result.current.uploadedPaths)).toEqual([
-      'res://other.tres::StandardMaterial3D_x',
-    ]);
+    expect(Array.from(result.current.uploadedPaths)).toEqual(['res://other.tres']);
   });
 
   it('state survives a provider re-render', () => {

@@ -12,8 +12,7 @@
 
 import { warn } from '../../logger';
 import type { ParsedTresFile } from '../../parser/tresParser';
-import { parseResourceReference } from '../SubResourceResolver';
-import { subResourcePath } from '../subResourcePath';
+import { resolveRefToResourcePath } from '../subResourcePath';
 import { parseTransform3D } from '../../utils/transform';
 import { unquoteString } from '../../parser/utils';
 import type { MeshLibraryModel, MeshLibraryItem } from './meshLibraryModel';
@@ -51,7 +50,7 @@ export function meshLibraryFromTres(
     if (field === 'name') {
       item.name = unquoteString(rawValue);
     } else if (field === 'mesh') {
-      item.meshPath = resolveItemMeshPath(rawValue, extPathById, selfPath);
+      item.meshPath = resolveRefToResourcePath(rawValue, extPathById, selfPath);
     } else if (field === 'mesh_transform') {
       try {
         item.meshTransform = parseTransform3D(rawValue);
@@ -64,18 +63,3 @@ export function meshLibraryFromTres(
   return items;
 }
 
-/**
- * An item's mesh reference as one resource path, whichever form Godot wrote:
- * an `ExtResource` to a shared `.tres`, or a `SubResource` the library embeds —
- * the latter addressed by a **Sub-resource path** into the library's own file.
- */
-function resolveItemMeshPath(
-  rawValue: string,
-  extPathById: Map<string, string>,
-  selfPath: string
-): string | null {
-  const ref = parseResourceReference(rawValue);
-  if (ref?.type === 'ExtResource') return extPathById.get(ref.id) ?? null;
-  if (ref?.type === 'SubResource' && selfPath) return subResourcePath(selfPath, ref.id);
-  return null;
-}

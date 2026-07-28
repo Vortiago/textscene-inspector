@@ -5,9 +5,33 @@
 
 import * as THREE from 'three';
 import { warn } from '../../logger';
+import type { ParsedTresFile } from '../../parser/tresParser';
 
 /** Function type for loading a texture by its resolved res:// path */
 export type TextureLoaderFn = (path: string) => Promise<THREE.Texture | null>;
+
+/**
+ * Last parse, memoised by string IDENTITY.
+ *
+ * One `.tres` that carries its own surface materials is built once per
+ * **Sub-resource path** into it, and every one of those calls is handed the same
+ * `content` instance by `createResourceProcessor`'s arrival loop. Re-parsing per
+ * address is O(file) each time, which on the corpus's largest mesh means four
+ * ~600 ms parses of one 5.4 MB file where one would do.
+ *
+ * A single slot is enough because those calls are consecutive, and it is keyed by
+ * `===` rather than by content equality so it can never mistake two files with
+ * equal text. The cost is that the most recent material file's text stays
+ * reachable until the next one replaces it.
+ */
+let lastParsed: { content: string; parsed: ParsedTresFile } | null = null;
+
+function parseMemoised(content: string, parse: (c: string) => ParsedTresFile): ParsedTresFile {
+  if (lastParsed?.content === content) return lastParsed.parsed;
+  const parsed = parse(content);
+  lastParsed = { content, parsed };
+  return parsed;
+}
 
 /**
  * Check if a path is a material file (.tres).
@@ -34,31 +58,17 @@ export async function createMaterialFromContent(
   subResourceId?: string
 ): Promise<THREE.Material> {
   const { parseTresFile } = await import('../../parser/tresParser');
-  const { resolveExtResourcePath } = await import('../SubResourceResolver');
+  const { resolveExtResourcePath, findSubResource } = await import('../SubResourceResolver');
 
   // parseTresFile throws when [gd_resource] header is absent or typeless.
-  const parsed = parseTresFile(content);
-  const extResources = parsed.extResources;
+  const parsed = parseMemoised(content, parseTresFile);
+  const { extResources } = parsed;
 
   let resourceType: string;
   let properties: Record<string, string>;
 
-  if (subResourceId === undefined) {
-    resourceType = parsed.resourceType;
-    properties = parsed.properties;
-
-    // A header-only .tres (no [resource] section) is valid enough to warn on
-    // rather than throw; yield a default StandardMaterial3D. Leading whitespace
-    // is tolerated because the scanning loop trims heading lines.
-    const hasResourceSection = /^[ \t]*\[resource\b/m.test(content);
-    if (!hasResourceSection) {
-      warn(
-        `[material] .tres has no [resource] section (type="${resourceType}") — using default StandardMaterial3D.`
-      );
-      return new THREE.MeshStandardMaterial();
-    }
-  } else {
-    const sub = parsed.subResources.find((r) => r.id === subResourceId);
+  if (subResourceId !== undefined) {
+    const sub = findSubResource(parsed.subResources, subResourceId);
     if (!sub) {
       // An address naming a sub-resource the file does not declare is as
       // unresolvable as a missing file, and reaches the consumer the same way:
@@ -69,6 +79,19 @@ export async function createMaterialFromContent(
     }
     resourceType = sub.type;
     properties = sub.data as Record<string, string>;
+  } else {
+    resourceType = parsed.resourceType;
+    properties = parsed.properties;
+
+    // A header-only .tres (no [resource] section) is valid enough to warn on
+    // rather than throw; yield a default StandardMaterial3D. Leading whitespace
+    // is tolerated because the scanning loop trims heading lines.
+    if (!/^[ \t]*\[resource\b/m.test(content)) {
+      warn(
+        `[material] .tres has no [resource] section (type="${resourceType}") — using default StandardMaterial3D.`
+      );
+      return new THREE.MeshStandardMaterial();
+    }
   }
 
   switch (resourceType) {

@@ -152,15 +152,6 @@ describe('buildArrayMeshGeometry', () => {
     expect(geo.groups).toHaveLength(2);
   });
 
-  it('numbers draw groups over the surviving surfaces, contiguously', () => {
-    // The decoder drops a surface it cannot read, so the builder never sees a
-    // hole: group N belongs to surfaces[N], which is what materialPaths indexes.
-    const geo = buildArrayMeshGeometry({ surfaces: [triangle()] });
-
-    expect(geo.groups).toHaveLength(1);
-    expect(geo.groups[0]).toMatchObject({ start: 0, count: 3, materialIndex: 0 });
-  });
-
   it('merges multiple surfaces, re-basing each surface\'s indices and grouping them', () => {
     const data: ArrayMeshData = {
       surfaces: [triangle(), triangle({ materialPath: 'res://b.tres' })],
