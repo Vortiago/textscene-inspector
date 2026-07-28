@@ -30,9 +30,11 @@
  * `orbit_inertia` default is 0), and a viewport that never coasts also settles
  * instantly for the visual-regression and Godot-parity capture harnesses.
  *
- * The component itself only translates events into cursor edits — all the
- * navigation maths lives in `godotEditorCursor.ts`, and all the camera
- * bookkeeping in `EditorControlsHandle` below.
+ * The component itself only translates events into cursor edits. The maths
+ * lives in three modules, split by provenance: `godotEditorCursor.ts` is
+ * Godot's own, `pointerGesture.ts` is browser facts Godot has no analogue for
+ * (fingers, `deltaMode`), and `zoomToPointer.ts` is the one deliberate
+ * departure (ADR-0029). Camera bookkeeping is in `EditorControlsHandle` below.
  */
 import { useFrame, useThree, type Camera as R3FCamera } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
@@ -152,11 +154,17 @@ export class EditorControlsHandle extends THREE.EventDispatcher {
   }
 
   /**
-   * The vertical fov the visible frustum is derived from — the perspective
-   * camera's, even in orthographic, since `orthographicHeight` sizes the ortho
-   * frustum from it.
+   * The vertical fov the visible frustum is derived from.
+   *
+   * Re-derived from the ACTIVE camera, like `cursor()` and `zoomRange()` — an
+   * authored Camera3D becomes R3F's camera and carries its own fov (Godot
+   * defaults to 75, this editor camera to 70), and anchoring zoom-to-pointer
+   * against the wrong one drifts the subject off the cursor by the ratio of
+   * their half-angle tangents. Falls back to this component's own camera for
+   * orthographic, whose frustum `orthographicHeight` sizes from that fov.
    */
   fovDegrees(): number {
+    if (isPerspectiveCamera(this.camera)) return this.camera.fov;
     return this.perspectiveCamera?.fov ?? EDITOR_CAMERA_FOV;
   }
 
@@ -316,11 +324,6 @@ export function GodotEditorControls() {
   useEffect(() => {
     handle.setCamera(camera);
   }, [handle, camera]);
-
-  // The wheel listener is attached once; a ref keeps it reading the current
-  // canvas size without re-subscribing on every resize.
-  const sizeRef = useRef(size);
-  sizeRef.current = size;
 
   useEffect(() => {
     handle.setAspect(size.width / size.height);
@@ -502,13 +505,17 @@ export function GodotEditorControls() {
       const scale = wheelZoomScale(event);
       if (scale === 1) return;
       // Zoom toward the pointer, not the focus point (ADR-0029's one departure
-      // from Godot). `offsetX/offsetY` are relative to the canvas and `size` is
-      // R3F's own measurement, so this costs no layout read on a hot path.
+      // from Godot). `offsetX`/`offsetY` DO force a style+layout flush, like
+      // `getBoundingClientRect` — but nothing on this path writes to the DOM
+      // (`invalidate()` only schedules a frame), so layout is already clean and
+      // the flush early-outs. Read through `get()` rather than a mirrored ref:
+      // the store is stable, so the listener stays subscribed once.
+      const view = get().size;
       handle.applyCursor(
         zoomCursorToPointer(handle.cursor(), scale, handle.zoomRange(), {
-          offsetX: event.offsetX - sizeRef.current.width / 2,
-          offsetY: event.offsetY - sizeRef.current.height / 2,
-          height: sizeRef.current.height,
+          offsetX: event.offsetX - view.width / 2,
+          offsetY: event.offsetY - view.height / 2,
+          height: view.height,
           fovDegrees: handle.fovDegrees(),
         })
       );
@@ -587,7 +594,7 @@ export function GodotEditorControls() {
       endDrag();
       resetTouch();
     };
-  }, [gl, handle, invalidate]);
+  }, [gl, handle, invalidate, get]);
 
   // Freelook flight is continuous while the keys are held, so it advances per
   // frame with the frame's own delta rather than per keydown repeat.

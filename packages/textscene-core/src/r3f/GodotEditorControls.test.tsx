@@ -248,6 +248,19 @@ describe('<GodotEditorControls> wheel navigation', () => {
     expect(controls.target.length()).toBeGreaterThan(0);
   });
 
+  it('anchors against the ACTIVE camera’s fov, not the one it was constructed with', async () => {
+    // An authored Camera3D becomes R3F's camera and carries its own fov (Godot
+    // defaults to 75 against this editor camera's 70). Anchoring on the stale
+    // one drifts the subject off the cursor as you keep zooming.
+    const { get, controls } = await mount();
+    const authored = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+    authored.position.copy(get().camera.position);
+    await act(async () => {
+      get().set({ camera: authored });
+    });
+    expect((controls as EditorControlsHandle).fovDegrees()).toBe(75);
+  });
+
   it('leaves the focus point alone when the pointer is dead centre', async () => {
     const { get, controls, element } = await mount();
     const size = get().size;

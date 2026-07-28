@@ -11,16 +11,7 @@ import { ViewportModeProvider } from '../../contexts/ViewportModeContext';
 import { HierarchyProvider } from '../../contexts/HierarchyContext';
 import { CameraControlProvider, useCameraControl } from '../../contexts/CameraControlContext';
 import { ViewportToolbar } from './ViewportToolbar';
-
-/**
- * The display toggles live behind the "Display" button now (the toolbar wrapped
- * to two rows and covered the scene with them inline), so a test that wants one
- * has to open the menu exactly as a user would.
- */
-function openDisplayMenu(): void {
-  fireEvent.click(screen.getByTestId('display-menu-button'));
-}
-
+import { openDisplayMenu } from './displayMenuTesting';
 
 function renderToolbar(initialMode?: '2D' | '3D', initialShowCollisions?: boolean) {
   return render(

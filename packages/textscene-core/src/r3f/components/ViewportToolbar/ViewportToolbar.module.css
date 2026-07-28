@@ -12,8 +12,11 @@
 }
 
 /* Ghost button: transparent by default, muted text, fills with bg-hover.
-   No heavy border or bright fill — quiet until interacted with. */
-.resetButton {
+   No heavy border or bright fill — quiet until interacted with. Shared by the
+   toolbar's plain buttons; each has its own class so restyling one cannot
+   silently restyle the others. */
+.resetButton,
+.displayButton {
   appearance: none;
   border: 1px solid transparent;
   background: transparent;
@@ -28,22 +31,26 @@
   transition: background 0.1s ease, color 0.1s ease, border-color 0.1s ease;
 }
 
-.resetButton:hover:not(:disabled) {
+.resetButton:hover:not(:disabled),
+.displayButton:hover:not(:disabled) {
   background: var(--tsi-bg-hover);
   color: var(--tsi-fg-default);
 }
 
-.resetButton:active:not(:disabled) {
+.resetButton:active:not(:disabled),
+.displayButton:active:not(:disabled) {
   background: var(--tsi-bg-active);
 }
 
-.resetButton:focus-visible {
+.resetButton:focus-visible,
+.displayButton:focus-visible {
   outline: none;
   border-color: var(--tsi-accent);
   box-shadow: 0 0 0 2px var(--tsi-focus-ring);
 }
 
-.resetButton:disabled {
+.resetButton:disabled,
+.displayButton:disabled {
   opacity: 0.4;
   cursor: default;
 }
@@ -150,5 +157,28 @@
   border: 1px solid var(--tsi-border);
   border-radius: var(--tsi-radius-md);
   background: var(--tsi-bg-elevated);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--tsi-shadow-popover);
+}
+
+/* The display toggles' popover. Anchored under the button and to its right
+   edge, since the toolbar itself is right-anchored in the viewport. */
+.displayMenu {
+  position: relative;
+}
+
+.displayPopover {
+  position: absolute;
+  top: calc(100% + var(--tsi-space-1));
+  right: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--tsi-space-1);
+  white-space: nowrap;
+  padding: var(--tsi-space-2);
+  border: 1px solid var(--tsi-border);
+  border-radius: var(--tsi-radius-md);
+  background: var(--tsi-bg-elevated);
+  box-shadow: var(--tsi-shadow-popover);
 }

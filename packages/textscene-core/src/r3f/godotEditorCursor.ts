@@ -228,9 +228,24 @@ export function orbitCursor(cursor: EditorCursor, dx: number, dy: number): Edito
  */
 export function panCursor(cursor: EditorCursor, dx: number, dy: number): EditorCursor {
   const speed = (PAN_PIXELS_TO_UNITS * cursor.distance) / DISTANCE_DEFAULT;
-  const translation = new THREE.Vector3(-dx * speed, dy * speed, 0).applyQuaternion(
-    cursorQuaternion(cursor)
-  );
+  return slideCursorInViewPlane(cursor, -dx * speed, dy * speed);
+}
+
+/**
+ * Slide the focus point in the camera's own screen plane, in world units:
+ * `+right` moves it right on screen, `+up` moves it up. The eye follows, since
+ * the rotations and radius are untouched.
+ *
+ * Shared because two things need it for different reasons — Godot's pan, and
+ * the zoom-to-pointer departure — and each spelling its own axis conversion
+ * invites the two to disagree about which way screen-y runs.
+ */
+export function slideCursorInViewPlane(
+  cursor: EditorCursor,
+  right: number,
+  up: number
+): EditorCursor {
+  const translation = new THREE.Vector3(right, up, 0).applyQuaternion(cursorQuaternion(cursor));
   return { ...cursor, target: cursor.target.clone().add(translation) };
 }
 

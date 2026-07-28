@@ -31,11 +31,15 @@ import { useEffect, useRef, type RefObject } from 'react';
  * same target run in registration order. An explicit registry is
  * order-independent and behaves identically in both.
  */
-const openPanels = new Set<object>();
+let openPanelCount = 0;
 
-/** True while any dismissable panel is open, so Escape belongs to it. */
+/**
+ * True while any dismissable panel is open, so Escape belongs to it.
+ * `useGlobalShortcut` consults this for every `escape` binding, so a new
+ * Escape consumer cannot forget to.
+ */
 export function hasOpenDismissable(): boolean {
-  return openPanels.size > 0;
+  return openPanelCount > 0;
 }
 
 export function useDismissable<T extends HTMLElement>(
@@ -46,12 +50,11 @@ export function useDismissable<T extends HTMLElement>(
   const onDismissRef = useRef(onDismiss);
   useEffect(() => {
     onDismissRef.current = onDismiss;
-  });
+  }, [onDismiss]);
 
   useEffect(() => {
     if (!open) return;
-    const token = {};
-    openPanels.add(token);
+    openPanelCount += 1;
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') onDismissRef.current();
     }
@@ -61,7 +64,7 @@ export function useDismissable<T extends HTMLElement>(
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('pointerdown', onPointerDown, { capture: true });
     return () => {
-      openPanels.delete(token);
+      openPanelCount -= 1;
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('pointerdown', onPointerDown, { capture: true });
     };

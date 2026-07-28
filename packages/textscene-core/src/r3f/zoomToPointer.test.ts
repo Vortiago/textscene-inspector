@@ -1,9 +1,11 @@
 /**
  * Zoom-to-pointer: the point under the pointer must stay under the pointer.
  *
- * Asserted by projecting it, rather than by pinning the numbers the formula
- * happens to produce — a test that recomputed the same algebra would pass for
- * a wrong formula too.
+ * The ASSERTION is independent — it projects through a real `PerspectiveCamera`
+ * rather than replaying the implementation's arithmetic. The anchor helper is
+ * not: it restates the focus-plane formula, which is deliberate, since that
+ * restatement is what catches a wrong constant (verified by doubling one in
+ * production — two cases fail).
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';

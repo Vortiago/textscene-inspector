@@ -26,8 +26,8 @@ import type {
 import { useOptionalCameraControl } from '../../contexts/CameraControlContext.js';
 import { readPersisted } from '../../hooks/usePersistedState.js';
 import {
-  isGesturePointer,
   clampWheelNotches,
+  isGesturePointer,
   pinchSpanRatio,
   resolveTouchMode,
   touchCentroid,

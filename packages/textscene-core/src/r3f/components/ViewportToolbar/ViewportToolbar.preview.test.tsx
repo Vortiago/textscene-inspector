@@ -17,18 +17,9 @@ import { HierarchyProvider } from '../../contexts/HierarchyContext';
 import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph';
 import { TscnParser } from '../../../parser/TscnParser';
 import { ViewportToolbar } from './ViewportToolbar';
+import { openDisplayMenu } from './displayMenuTesting';
 
-/**
- * The display toggles live behind the "Display" button now (the toolbar wrapped
- * to two rows and covered the scene with them inline), so a test that wants one
- * has to open the menu exactly as a user would.
- */
-function openDisplayMenu(): void {
-  fireEvent.click(screen.getByTestId('display-menu-button'));
-}
-
-
-function renderWithScene(body: string, openMenu = true) {
+function renderWithScene(body: string) {
   const graph = createSceneGraphFromTscnScene(
     new TscnParser().parse(`[gd_scene format=3]\n\n[node name="Root" type="Node3D"]\n${body}`)
   );
@@ -39,9 +30,7 @@ function renderWithScene(body: string, openMenu = true) {
       </ViewportModeProvider>
     </HierarchyProvider>
   );
-  // The toggles live behind the Display button now; open it so each test can
-  // query the control it is about.
-  if (openMenu) openDisplayMenu();
+  openDisplayMenu();
   return result;
 }
 

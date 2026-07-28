@@ -99,8 +99,10 @@ modifier a tablet cannot supply, and pan is the gesture most wanted.
 ## Consequences
 
 - The two viewports still disagree about what zoom *is* — a CSS scale factor in 2D, an orbit
-  radius in 3D — and about the anchor (2D zooms to the cursor, 3D to the focus point). Both
-  are recorded in CONTEXT.md's flagged ambiguities rather than papered over.
+  radius in 3D — but no longer about where a WHEEL zoom goes: both anchor to the pointer (see
+  the amendment). Recorded in CONTEXT.md's flagged ambiguities rather than papered over. What
+  still differs is touch **pinch** — 2D anchors it to the fingers' midpoint, 3D scales about
+  the focus point.
 - Wheel deltas must be normalised before use — by zoom, by pan, and in **both** viewports:
   one notch is 100px in Chrome but 3 lines in Firefox. `wheelDeltaPixels` / `wheelNotches` are
   the single normalisation every path calls; skipping it produces a ~33x cross-browser
@@ -109,10 +111,13 @@ modifier a tablet cannot supply, and pan is the gesture most wanted.
 - Browser input geometry — touch gestures AND wheel-delta normalisation — lives in
   `pointerGesture.ts`, not `godotEditorCursor.ts`. Godot's editor has no touch scheme, and its
   native input events carry no `deltaMode`, so putting either in the module whose contract is
-  "constants are Godot's own" would make that claim false. `godotEditorCursor.ts` keeps only
-  the parts that ARE Godot's: `WHEEL_ZOOM_MULTIPLIER`, and the modifier split in
-  `resolveWheelMode`. It also lets the 2D stage — which has no editor cursor — share the lot
-  without importing the 3D navigation module.
+  "constants are Godot's own" would make that claim false. Of the wheel path,
+  `godotEditorCursor.ts` keeps what IS Godot's — `WHEEL_ZOOM_MULTIPLIER` and the modifier
+  split in `resolveWheelMode` — and calls into `pointerGesture.ts` for the notch
+  normalisation, which is a browser fact rather than a Godot one. It also lets the 2D stage —
+  which has no editor cursor — share the lot without importing the 3D navigation module.
+  A third module, `zoomToPointer.ts`, holds deliberate departures from Godot's cursor maths;
+  the split is by provenance, and each module's header states which it is.
 - Zoom scales exponentially in notches (`1.08 ** notches`), not linearly, so a trackpad's
   stream of small events zooms exactly as far as one large event over the same distance.
 - `touch-action: none` on the 3D canvas container is load-bearing — r3f sets none of its own,
@@ -151,4 +156,10 @@ module's contract is that everything in it is Godot's.
 **Consequence:** this does not raise the zoom floor — it only makes the range you have land
 where you are looking. `F` on a selected node still reframes on that node's bounds, which
 recomputes `near` from its size and lowers the floor proportionally; that remains the answer
-for inspecting something small inside something large, and is worth surfacing in the UI.
+for inspecting something small inside something large, and the controls legend now says so.
+
+This covers the **wheel**, which is also how a trackpad pinch arrives (ctrl+wheel), so that
+anchors too. Touch pinch still scales about the focus point: it is measured from the gesture's
+own anchor rather than per-event, so reusing this would mean threading that anchor through.
+Left deliberately — fingers physically holding the screen make the drift far less noticeable
+than a wheel does.

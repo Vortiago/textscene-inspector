@@ -14,20 +14,21 @@
  * maths are: that module's contract is that everything in it is Godot's.
  *
  * The maths, without a raycast: hold fixed the point under the pointer ON THE
- * FOCUS PLANE (through the target, perpendicular to the view). That plane spans
- * `2 * d * tan(fov / 2)` vertically, so one CSS pixel is
- * `2 * tan(fov / 2) / viewportHeight` world units per unit of distance. Zooming
- * from `d` to `d'` shrinks the plane, and shifting the target by the difference
- * — along the camera's own right/up — pins that point in place. It needs no
- * scene geometry, so it behaves the same over empty space as over a mesh.
+ * FOCUS PLANE (through the target, perpendicular to the view). Zooming from `d`
+ * to `d'` shrinks that plane, and sliding the target by the difference pins the
+ * point in place. It needs no scene geometry, so it behaves the same over empty
+ * space as over a mesh.
  *
- * Orthographic works unchanged: `orthographicHeight` derives the frustum from
- * the same distance and fov, so the plane it spans is identical.
+ * Both halves are borrowed rather than restated: `orthographicHeight` already
+ * owns how far the plane spans for a distance and fov — which is also why
+ * orthographic needs no special case, since its frustum is sized by that same
+ * function — and `slideCursorInViewPlane` already owns moving the target across
+ * it.
  */
-import * as THREE from 'three';
 import {
-  cursorQuaternion,
+  orthographicHeight,
   scaleCursorDistance,
+  slideCursorInViewPlane,
   type EditorCursor,
   type ZoomRange,
 } from './godotEditorCursor.js';
@@ -60,27 +61,21 @@ export function zoomCursorToPointer(
 ): EditorCursor {
   const zoomed = scaleCursorDistance(cursor, scale, range);
   const travelled = cursor.distance - zoomed.distance;
-  // No usable pointer position (a synthesised event with no offsets, a
-  // zero-height viewport mid-layout) falls back to Godot's centre zoom rather
-  // than writing a NaN into the target — which the camera never recovers from,
-  // since every later gesture derives from it.
-  if (
-    travelled === 0 ||
-    !(view.height > 0) ||
-    !Number.isFinite(view.offsetX) ||
-    !Number.isFinite(view.offsetY) ||
-    !Number.isFinite(view.fovDegrees)
-  ) {
-    return zoomed;
-  }
+  // `!(height > 0)` rather than `<= 0`, so a NaN height is rejected too.
+  if (travelled === 0 || !(view.height > 0)) return zoomed;
 
-  const unitsPerPixel = (2 * Math.tan((view.fovDegrees * Math.PI) / 360)) / view.height;
-  const shift = travelled * unitsPerPixel;
-  const basis = cursorQuaternion(cursor);
-  const target = cursor.target
-    .clone()
-    .add(new THREE.Vector3(1, 0, 0).applyQuaternion(basis).multiplyScalar(view.offsetX * shift))
-    // Screen y runs down, world up runs up.
-    .add(new THREE.Vector3(0, 1, 0).applyQuaternion(basis).multiplyScalar(-view.offsetY * shift));
-  return { ...zoomed, target };
+  // The same formula the orthographic frustum is sized by: the focus plane
+  // spans `2 * d * tan(fov / 2)`, so shrinking it by `travelled` leaves this
+  // many world units per CSS pixel for the target to cross.
+  const shift = orthographicHeight(travelled, view.fovDegrees) / view.height;
+  const right = view.offsetX * shift;
+  // Screen y runs down, world up runs up.
+  const up = -view.offsetY * shift;
+  // One check covers a non-finite offset OR fov, since both reach the target
+  // only through here. Without it a pointer position the browser never
+  // supplied would write a NaN the camera could never recover from — every
+  // later gesture re-derives from that target.
+  if (!Number.isFinite(right) || !Number.isFinite(up)) return zoomed;
+
+  return slideCursorInViewPlane(zoomed, right, up);
 }

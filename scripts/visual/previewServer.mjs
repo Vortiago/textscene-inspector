@@ -268,6 +268,47 @@ export async function createCaptureContext(browser, { frameOnOpen, canvas2D = fa
   return context;
 }
 
+/**
+ * Set one of the viewport's display toggles, driving the real UI.
+ *
+ * App-structure knowledge lives here rather than at the call site for the
+ * reason this module exists: a second copy does not fail when the app changes,
+ * it silently measures the wrong pixels. The toggles moved behind a menu once
+ * already.
+ *
+ * ATTACHED, not visible, and `dispatchEvent` rather than `click()`: the capture
+ * context paints the whole toolbar overlay out with `display: none` so it
+ * cannot composite into `canvas.screenshot()`. The controls are fully
+ * functional, just unpainted, and Playwright refuses to click a hidden target.
+ *
+ * Returns null on success, or a reason string for the caller to fail with.
+ */
+export async function setDisplayToggle(page, label, wanted) {
+  const popover = page.locator('[data-testid="display-menu-popover"]');
+  // Idempotent: a scene may ask for two toggles, and a second click would shut
+  // the menu again.
+  if ((await popover.count()) === 0) {
+    const button = page.locator('[data-testid="display-menu-button"]');
+    try {
+      await button.waitFor({ state: 'attached', timeout: 10000 });
+    } catch {
+      return 'Display menu button not found in the toolbar';
+    }
+    await button.dispatchEvent('click');
+    await popover.waitFor({ state: 'attached', timeout: 10000 });
+  }
+  // By testid, so a re-layout fails loudly on a missing node instead of
+  // quietly substring-matching a different label.
+  const toggle = page.locator(`[data-testid="display-toggle-${label}"]`);
+  try {
+    await toggle.waitFor({ state: 'attached', timeout: 10000 });
+  } catch {
+    return `${label} toggle not found in the Display menu`;
+  }
+  if ((await toggle.isChecked()) !== wanted) await toggle.dispatchEvent('click');
+  return null;
+}
+
 /** Which workspace the app itself opened the scene in — its own decision, asked, not re-derived. */
 export async function readViewportMode(page) {
   const stage = page.locator(`[data-testid="${CANVAS_2D_TESTIDS.stage}"]`);

@@ -38,6 +38,92 @@ import styles from './ViewportToolbar.module.css';
 
 const MODES: ViewportMode[] = ['3D', '2D'];
 
+/** Everything `buildDisplayToggles` needs, so it can be exercised without a DOM. */
+export interface DisplayToggleState {
+  mode: ViewportMode;
+  showCollisions: boolean;
+  setShowCollisions: (show: boolean) => void;
+  showLabels: boolean;
+  setShowLabels: (show: boolean) => void;
+  showNavigation: boolean;
+  setShowNavigation: (show: boolean) => void;
+  showGrid: boolean;
+  setShowGrid: (show: boolean) => void;
+  showPreviewSun: boolean;
+  setShowPreviewSun: (show: boolean) => void;
+  showPreviewEnvironment: boolean;
+  setShowPreviewEnvironment: (show: boolean) => void;
+  frameOnOpen: boolean;
+  setFrameOnOpen: (frame: boolean) => void;
+  sceneHasSun: boolean;
+  sceneHasEnvironment: boolean;
+}
+
+/**
+ * Which overlays the Display menu offers, and their current state. At module
+ * scope so "which of these are 3D-only" is one readable list rather than a
+ * conditional buried in a render body.
+ */
+export function buildDisplayToggles(state: DisplayToggleState): readonly DisplayToggle[] {
+  return [
+    {
+      label: 'Collisions',
+      title: 'Show CollisionShape3D wireframes',
+      checked: state.showCollisions,
+      onChange: state.setShowCollisions,
+    },
+    {
+      label: 'Labels',
+      title: 'Show Label3D text in the viewport',
+      checked: state.showLabels,
+      onChange: state.setShowLabels,
+    },
+    {
+      label: 'Navigation',
+      title: 'Show NavigationRegion overlays',
+      checked: state.showNavigation,
+      onChange: state.setShowNavigation,
+    },
+    // 3D-only: the grid, the framing preference and both preview-lighting
+    // stand-ins have no meaning over the 2D Control overlay.
+    ...(state.mode === '3D'
+      ? ([
+          {
+            label: 'Frame on open',
+            title:
+              'Frame the whole scene when it loads. Off matches Godot, which opens at a fixed orbit — press F to frame.',
+            checked: state.frameOnOpen,
+            onChange: state.setFrameOnOpen,
+          },
+          {
+            label: 'Grid',
+            title: 'Show a ground-plane reference grid',
+            checked: state.showGrid,
+            onChange: state.setShowGrid,
+          },
+          {
+            label: 'Preview Sun',
+            title: state.sceneHasSun
+              ? 'Scene contains DirectionalLight3D. Preview disabled.'
+              : "Godot's editor preview sun, for a scene with no light of its own",
+            checked: state.showPreviewSun && !state.sceneHasSun,
+            disabled: state.sceneHasSun,
+            onChange: state.setShowPreviewSun,
+          },
+          {
+            label: 'Preview Sky',
+            title: state.sceneHasEnvironment
+              ? 'Scene contains WorldEnvironment. Preview disabled.'
+              : "Godot's editor preview sky, for a scene with no environment of its own",
+            checked: state.showPreviewEnvironment && !state.sceneHasEnvironment,
+            disabled: state.sceneHasEnvironment,
+            onChange: state.setShowPreviewEnvironment,
+          },
+        ] satisfies DisplayToggle[])
+      : []),
+  ];
+}
+
 /** Triggers a browser download of a data URL via a throwaway anchor element. */
 function downloadDataUrl(dataUrl: string, filename: string): void {
   const link = document.createElement('a');
@@ -103,64 +189,25 @@ export function ViewportToolbar() {
     writePersisted(FRAME_ON_OPEN_STORAGE_KEY, frame);
   }
 
-  // 3D-only entries drop out in 2D rather than sitting there inert — the grid,
-  // the framing preference and both preview-lighting stand-ins have no meaning
-  // over the Control overlay.
-  const displayToggles: DisplayToggle[] = [
-    {
-      label: 'Collisions',
-      title: 'Show CollisionShape3D wireframes',
-      checked: showCollisions,
-      onChange: setShowCollisions,
-    },
-    {
-      label: 'Labels',
-      title: 'Show Label3D text in the viewport',
-      checked: showLabels,
-      onChange: setShowLabels,
-    },
-    {
-      label: 'Navigation',
-      title: 'Show NavigationRegion overlays',
-      checked: showNavigation,
-      onChange: setShowNavigation,
-    },
-  ];
-  if (mode === '3D') {
-    displayToggles.push(
-      {
-        label: 'Frame on open',
-        title:
-          'Frame the whole scene when it loads. Off matches Godot, which opens at a fixed orbit — press F to frame.',
-        checked: frameOnOpen,
-        onChange: handleFrameOnOpenChange,
-      },
-      {
-        label: 'Grid',
-        title: 'Show a ground-plane reference grid',
-        checked: showGrid,
-        onChange: handleGridChange,
-      },
-      {
-        label: 'Preview Sun',
-        title: sceneHasSun
-          ? 'Scene contains DirectionalLight3D. Preview disabled.'
-          : "Godot's editor preview sun, for a scene with no light of its own",
-        checked: showPreviewSun && !sceneHasSun,
-        disabled: sceneHasSun,
-        onChange: setShowPreviewSun,
-      },
-      {
-        label: 'Preview Sky',
-        title: sceneHasEnvironment
-          ? 'Scene contains WorldEnvironment. Preview disabled.'
-          : "Godot's editor preview sky, for a scene with no environment of its own",
-        checked: showPreviewEnvironment && !sceneHasEnvironment,
-        disabled: sceneHasEnvironment,
-        onChange: setShowPreviewEnvironment,
-      }
-    );
-  }
+  const displayToggles = buildDisplayToggles({
+    mode,
+    showCollisions,
+    setShowCollisions,
+    showLabels,
+    setShowLabels,
+    showNavigation,
+    setShowNavigation,
+    showGrid,
+    setShowGrid: handleGridChange,
+    showPreviewSun,
+    setShowPreviewSun,
+    showPreviewEnvironment,
+    setShowPreviewEnvironment,
+    frameOnOpen,
+    setFrameOnOpen: handleFrameOnOpenChange,
+    sceneHasSun,
+    sceneHasEnvironment,
+  });
 
   return (
     <div className={styles.toolbar} role="toolbar" aria-label="Viewport controls">

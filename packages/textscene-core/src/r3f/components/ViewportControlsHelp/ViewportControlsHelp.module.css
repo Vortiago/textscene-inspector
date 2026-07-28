@@ -74,7 +74,7 @@
   background: var(--tsi-bg-elevated);
   border: 1px solid var(--tsi-border);
   border-radius: var(--tsi-radius-md);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--tsi-shadow-popover);
   padding: var(--tsi-space-3);
 }
 
