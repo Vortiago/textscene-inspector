@@ -172,7 +172,7 @@ const CONTROLS_3D: ControlsHelp = {
     {
       device: 'Keyboard',
       bindings: [
-        { input: 'F', action: 'Frame the selection, or the whole scene' },
+        { input: 'F', action: 'Frame the selection — also lets you zoom closer in' },
         {
           input: 'Numpad 1 / 3 / 7',
           action: 'Front / right / top view; Ctrl for the opposite',

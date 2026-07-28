@@ -38,7 +38,7 @@ import { useFrame, useThree, type Camera as R3FCamera } from '@react-three/fiber
 import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { isTypingTarget } from './hooks/isTypingTarget.js';
-import { editorCameraPosition } from './godotEditorCamera.js';
+import { editorCameraPosition, EDITOR_CAMERA_FOV } from './godotEditorCamera.js';
 import {
   cursorCameraPosition,
   cursorFromCamera,
@@ -69,6 +69,7 @@ import {
   wheelDeltaPixels,
   type TouchPoint,
 } from './pointerGesture.js';
+import { zoomCursorToPointer } from './zoomToPointer.js';
 
 /** Numpad view snaps. Ctrl inverts each to the opposite face. */
 const VIEW_SNAP_KEYS: Readonly<Record<string, GodotViewAngle>> = {
@@ -148,6 +149,15 @@ export class EditorControlsHandle extends THREE.EventDispatcher {
   /** The live cursor, always re-derived from the camera and the focus point. */
   cursor(): EditorCursor {
     return cursorFromCamera(this.camera.position, this.target);
+  }
+
+  /**
+   * The vertical fov the visible frustum is derived from — the perspective
+   * camera's, even in orthographic, since `orthographicHeight` sizes the ortho
+   * frustum from it.
+   */
+  fovDegrees(): number {
+    return this.perspectiveCamera?.fov ?? EDITOR_CAMERA_FOV;
   }
 
   /** The zoom range Godot derives from the camera's clip planes. */
@@ -306,6 +316,11 @@ export function GodotEditorControls() {
   useEffect(() => {
     handle.setCamera(camera);
   }, [handle, camera]);
+
+  // The wheel listener is attached once; a ref keeps it reading the current
+  // canvas size without re-subscribing on every resize.
+  const sizeRef = useRef(size);
+  sizeRef.current = size;
 
   useEffect(() => {
     handle.setAspect(size.width / size.height);
@@ -486,7 +501,17 @@ export function GodotEditorControls() {
       }
       const scale = wheelZoomScale(event);
       if (scale === 1) return;
-      handle.applyCursor(scaleCursorDistance(handle.cursor(), scale, handle.zoomRange()));
+      // Zoom toward the pointer, not the focus point (ADR-0029's one departure
+      // from Godot). `offsetX/offsetY` are relative to the canvas and `size` is
+      // R3F's own measurement, so this costs no layout read on a hot path.
+      handle.applyCursor(
+        zoomCursorToPointer(handle.cursor(), scale, handle.zoomRange(), {
+          offsetX: event.offsetX - sizeRef.current.width / 2,
+          offsetY: event.offsetY - sizeRef.current.height / 2,
+          height: sizeRef.current.height,
+          fovDegrees: handle.fovDegrees(),
+        })
+      );
       invalidate();
     }
 

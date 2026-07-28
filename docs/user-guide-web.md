@@ -38,6 +38,11 @@ A browser reports a two-finger scroll and a mouse wheel as the same event, so th
 one keeps the wheel's meaning (zoom) and Shift is what gives a trackpad its pan. Ctrl + wheel
 zooms the viewport rather than the page, because a pinch arrives as exactly that event.
 
+Zoom goes **toward the pointer** — what is under the cursor stays under it — rather than toward
+the middle of the scene, which is what Godot's editor does (ADR-0029). If zoom stops before you
+get close enough, select the node and press **F**: framing on it re-centres the pivot and moves
+the near plane in, which is what actually lifts the limit.
+
 **Touch and stylus** (tablets — no Godot equivalent, so these follow the usual 3D-viewer
 conventions; a stylus behaves as one finger does)
 

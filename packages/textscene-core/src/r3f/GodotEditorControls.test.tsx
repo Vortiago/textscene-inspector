@@ -130,7 +130,7 @@ describe('<GodotEditorControls> mouse navigation', () => {
     const dragged = camera.position.distanceTo(controls.target);
     expect(dragged).toBeGreaterThan(radius);
 
-    element.dispatchEvent(new WheelEvent('wheel', { deltaY: -100, cancelable: true }));
+    element.dispatchEvent(wheelEvent({ deltaY: -100 }));
     expect(camera.position.distanceTo(controls.target)).toBeLessThan(dragged);
   });
 
@@ -181,6 +181,8 @@ function wheelEvent(init: {
   deltaMode?: number;
   shiftKey?: boolean;
   ctrlKey?: boolean;
+  offsetX?: number;
+  offsetY?: number;
 }): WheelEvent {
   const event = new WheelEvent('wheel', {
     deltaX: init.deltaX ?? 0,
@@ -190,6 +192,11 @@ function wheelEvent(init: {
   });
   Object.defineProperty(event, 'shiftKey', { value: init.shiftKey ?? false });
   Object.defineProperty(event, 'ctrlKey', { value: init.ctrlKey ?? false });
+  // happy-dom drops these too. Left undefined unless a test is about the
+  // pointer position: zoom-to-pointer then falls back to Godot's centre zoom,
+  // which is what the non-pointer wheel tests are asserting.
+  if (init.offsetX !== undefined) Object.defineProperty(event, 'offsetX', { value: init.offsetX });
+  if (init.offsetY !== undefined) Object.defineProperty(event, 'offsetY', { value: init.offsetY });
   return event;
 }
 
@@ -226,6 +233,33 @@ describe('<GodotEditorControls> wheel navigation', () => {
 
     expect(camera.position.distanceTo(controls.target)).toBeLessThan(radius);
     expect(controls.target.length()).toBe(0);
+  });
+
+  it('zooms toward the pointer, sliding the focus point with it', async () => {
+    // ADR-0029's one departure from Godot: without it, zooming in on anything
+    // off-centre flies at the scene centre instead and the subject slides away.
+    const { get, controls, element } = await mount();
+    const camera = get().camera;
+    const radius = camera.position.distanceTo(controls.target);
+
+    element.dispatchEvent(wheelEvent({ deltaY: -100, offsetX: 900, offsetY: 40 }));
+
+    expect(camera.position.distanceTo(controls.target)).toBeLessThan(radius);
+    expect(controls.target.length()).toBeGreaterThan(0);
+  });
+
+  it('leaves the focus point alone when the pointer is dead centre', async () => {
+    const { get, controls, element } = await mount();
+    const size = get().size;
+    const camera = get().camera;
+    const radius = camera.position.distanceTo(controls.target);
+
+    element.dispatchEvent(
+      wheelEvent({ deltaY: -100, offsetX: size.width / 2, offsetY: size.height / 2 })
+    );
+
+    expect(camera.position.distanceTo(controls.target)).toBeLessThan(radius);
+    expect(controls.target.length()).toBeCloseTo(0, 9);
   });
 
   it('normalises line-mode deltas so Firefox zooms at Chrome’s rate', async () => {

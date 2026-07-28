@@ -58,6 +58,9 @@ drag orbits, a one-finger tap selects, two fingers pan, pinch zooms, and there i
 (it needs a held button plus WASD). This is the 3D-viewer convention rather than anything
 Godot does, because Godot does nothing here.
 
+**The wheel zooms toward the pointer, not the focus point.** This is the one place the
+previewer deliberately parts company with Godot; the reasoning is in the amendment below.
+
 **A stylus navigates as one finger does**, not as a mouse. It reports
 `pointerType: 'pen'`, and the mouse path would leave it inert on exactly the device class
 touch was added for: a pen drag is `button: 0` with no modifiers, which navigation declines in
@@ -91,8 +94,7 @@ is a mouse wheel that orbits.
 one finger is the left mouse button). Rejected: it leaves pan needing three fingers or a
 modifier a tablet cannot supply, and pan is the gesture most wanted.
 
-**Zoom-to-cursor in 3D**, to match the 2D stage. Not adopted: Godot's editor scales the orbit
-radius about the focus point, and no parity argument supports changing it.
+**Centre zoom, as Godot does it.** Reverted — see the amendment below.
 
 ## Consequences
 
@@ -118,3 +120,35 @@ radius about the focus point, and no parity argument supports changing it.
 - The controls pill is a DOM overlay over the viewport, so it falls under ADR-0024: the WebGL
   goldens cannot see it and happy-dom has no layout. It is painted out of every capture by
   testid, and its load-bearing CSS is asserted against the module source.
+
+## Amendment (2026-07-28): the wheel zooms toward the pointer
+
+Godot's `scale_cursor_distance` edits `cursor.distance` and nothing else, so zooming always
+flies at the focus point — which load-time framing put at the centre of the **whole scene**.
+Shipping that verbatim made close inspection of large scenes genuinely tedious, which is how it
+was reported: *"some scenes got very difficult to navigate around in when I had zoomed in."*
+
+The speeds were not the problem, and are unchanged: pan is `distance / 600` units per pixel,
+zoom is multiplicative, and orbit's on-screen sweep is proportional to distance — all three
+already scale with how far out you are. Two things did not:
+
+- **Zoom pulls toward the scene centre.** Zoom in on anything off-centre and it slides away,
+  and recovering costs a stack of pan drags precisely because pan has correctly gone slow.
+- **The zoom floor is proportional to the whole scene.** `frameSceneBounds` sets
+  `near = D/200` for a scene framed at `D`, and the clamp is `min = near * 4` — so the closest
+  approach is `D/50`, a fixed 50x from the opening view however small the detail. Godot has the
+  identical floor and considers it painful enough to show *"To zoom further, change the
+  camera's clipping planes"* after fifteen stuck attempts.
+
+**Decision:** `zoomCursorToPointer` keeps the point under the pointer, on the focus plane,
+under the pointer — shifting the target by the difference the shrinking plane leaves behind.
+No raycast, so it behaves the same over empty space as over a mesh, and orthographic works
+unchanged since its frustum derives from the same distance and fov. A clamped zoom moves the
+eye nowhere and therefore the target nowhere, so hitting the floor stops dead rather than
+creeping sideways. It lives in `zoomToPointer.ts`, not `godotEditorCursor.ts`, because that
+module's contract is that everything in it is Godot's.
+
+**Consequence:** this does not raise the zoom floor — it only makes the range you have land
+where you are looking. `F` on a selected node still reframes on that node's bounds, which
+recomputes `near` from its size and lowers the floor proportionally; that remains the answer
+for inspecting something small inside something large, and is worth surfacing in the UI.
