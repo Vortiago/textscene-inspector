@@ -1,6 +1,6 @@
 /**
  * The controls legend: the pill always states the three bindings worth reading
- * at a glance, the panel opens on click / ? / F1 and closes every way a floating
+ * at a glance, the panel opens on click or ? and closes every way a floating
  * panel over a drag surface has to, and each mode advertises its own bindings.
  *
  * The CSS that makes it not eat viewport drags is asserted against the module
@@ -57,15 +57,20 @@ describe('<ViewportControlsHelp>', () => {
     expect(screen.getByRole('dialog', { name: '2D viewport controls' })).toBeTruthy();
   });
 
-  it('opens on ? and on F1, and toggles back shut', () => {
+  it('opens on ?, and toggles back shut', () => {
     render(<ViewportControlsHelp mode="3D" />);
     fireEvent.keyDown(window, { key: '?' });
     expect(screen.getByTestId('viewport-controls-panel')).toBeTruthy();
     fireEvent.keyDown(window, { key: '?' });
     expect(screen.queryByTestId('viewport-controls-panel')).toBeNull();
+  });
 
+  it('leaves F1 alone — in a VS Code webview it is Show All Commands', () => {
+    // `useGlobalShortcut` never calls preventDefault, so binding F1 would open
+    // the command palette over the preview every time rather than instead of.
+    render(<ViewportControlsHelp mode="3D" />);
     fireEvent.keyDown(window, { key: 'F1' });
-    expect(screen.getByTestId('viewport-controls-panel')).toBeTruthy();
+    expect(screen.queryByTestId('viewport-controls-panel')).toBeNull();
   });
 
   it('does not hijack ? typed into a text field', () => {

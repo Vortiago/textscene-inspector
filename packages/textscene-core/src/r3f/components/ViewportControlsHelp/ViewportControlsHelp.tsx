@@ -25,8 +25,10 @@ export function ViewportControlsHelp({ mode }: ViewportControlsHelpProps) {
   const { summary, groups } = controlsFor(mode);
 
   const toggle = useCallback(() => setOpen((wasOpen) => !wasOpen), []);
+  // `?` only. F1 is NOT bound: `useGlobalShortcut` deliberately never calls
+  // preventDefault, and in a VS Code webview F1 is Show All Commands — the
+  // palette would open over the preview every time.
   useGlobalShortcut('?', toggle);
-  useGlobalShortcut('F1', toggle);
 
   // Escape closes, and so does a click anywhere else — the panel floats over a
   // viewport whose whole surface is draggable, so leaving it open would eat
@@ -54,7 +56,7 @@ export function ViewportControlsHelp({ mode }: ViewportControlsHelpProps) {
         className={styles.hint}
         onClick={toggle}
         aria-expanded={open}
-        title="Show every viewport control (? or F1)"
+        title="Show every viewport control (?)"
         data-testid="viewport-controls-hint"
       >
         <span className={styles.summary}>{summary}</span>

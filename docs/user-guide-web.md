@@ -12,7 +12,7 @@ This guide walks through every user-visible feature against the verification sce
 
 The 3D viewport uses Godot's own editor navigation, so muscle memory carries over. You never
 need this table in front of you: the viewport shows a summary pill, and clicking it — or
-pressing **?** or **F1** — opens the full list for whichever device you are on (ADR-0029).
+pressing **?** — opens the full list for whichever device you are on (ADR-0029).
 
 **Mouse**
 
@@ -55,7 +55,7 @@ zooms the viewport rather than the page, because a pinch arrives as exactly that
 | Numpad 1 / 3 / 7 | Front / right / top view; Ctrl for the opposite face |
 | Numpad 5 | Perspective ⇄ orthographic |
 | F | Frame the selected node, or the whole scene when nothing is selected |
-| ? or F1 | Show every viewport control |
+| ? | Show every viewport control |
 
 Plain left-drag deliberately does nothing: left-click selects, as it does in Godot.
 There is no damping — the camera stops the moment you release.
