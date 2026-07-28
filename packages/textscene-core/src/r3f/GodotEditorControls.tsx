@@ -53,7 +53,6 @@ import {
   resolveWheelMode,
   scaleCursorDistance,
   viewSnapCursor,
-  wheelDeltaPixels,
   wheelZoomScale,
   OPPOSITE_VIEW,
   type EditorCursor,
@@ -66,6 +65,7 @@ import {
   resolveTouchMode,
   touchCentroid,
   touchSpan,
+  wheelDeltaPixels,
   type TouchPoint,
 } from './pointerGesture.js';
 
@@ -259,8 +259,22 @@ interface DragState {
 
 /** Where the fingers were on the previous move — a touch gesture's origin. */
 interface TouchGesture {
+  /** Previous centroid. The pan is incremental, so this moves every event. */
   centroid: TouchPoint;
+  /** Previous separation, kept only to recognise an event that changed nothing. */
   span: number;
+  /**
+   * Separation and orbit radius when the gesture was seeded — the pinch's
+   * anchor, which is why the zoom is measured rather than accumulated. A
+   * browser fires one `pointermove` PER POINTER, so two fingers sliding
+   * together transit mixed-time states whose span swings hard: 100px apart,
+   * briefly 40px once one has moved, 100px again once the other catches up.
+   * Multiplying those ratios unwinds the excursion only while nothing clamps
+   * it, and `scaleCursorDistance` clamps on every call — so one clamped
+   * excursion never unwinds and a pure pan silently rescales the view.
+   */
+  startSpan: number;
+  startDistance: number;
 }
 
 export function GodotEditorControls() {
@@ -390,24 +404,42 @@ export function GodotEditorControls() {
         return;
       }
 
-      const gesture: TouchGesture = { centroid: touchCentroid(active), span: touchSpan(active) };
+      const centroid = touchCentroid(active);
+      const span = touchSpan(active);
       const previous = touchGestureRef.current;
-      touchGestureRef.current = gesture;
-      // The first move of a gesture only establishes where it started from.
-      if (!previous) return;
+      // The first move of a gesture only establishes what it started from.
+      if (!previous) {
+        touchGestureRef.current = {
+          centroid,
+          span,
+          startSpan: span,
+          startDistance: handle.cursor().distance,
+        };
+        return;
+      }
+      touchGestureRef.current = { ...previous, centroid, span };
 
-      const dx = gesture.centroid.x - previous.centroid.x;
-      const dy = gesture.centroid.y - previous.centroid.y;
+      const dx = centroid.x - previous.centroid.x;
+      const dy = centroid.y - previous.centroid.y;
+      // One move per pointer means a two-finger gesture also delivers events
+      // in which nothing moved: nothing to apply, nothing to redraw. The
+      // mouse path guards the same way.
+      if (dx === 0 && dy === 0 && span === previous.span) return;
+
       if (mode === 'orbit') {
         handle.applyCursor(orbitCursor(handle.cursor(), dx, dy));
       } else {
         // Two fingers pan and pinch at once, exactly as they do on a map: the
         // centroid drives the pan, the span between them drives the zoom.
-        const panned = panCursor(handle.cursor(), dx, dy);
-        // Inverted: spreading the fingers pulls the eye IN, so the orbit
-        // radius scales by the reciprocal of how far they spread.
-        const zoom = 1 / pinchSpanRatio(previous.span, gesture.span);
-        handle.applyCursor(scaleCursorDistance(panned, zoom, handle.zoomRange()));
+        //
+        // The zoom is measured from the anchor, never accumulated (see
+        // `TouchGesture`), which makes each event idempotent: a clamp on one
+        // cannot carry into the next. Inverted, because spreading the fingers
+        // pulls the eye IN — the radius goes as the reciprocal of the spread.
+        const spread = pinchSpanRatio(previous.startSpan, span);
+        const anchored: EditorCursor = { ...handle.cursor(), distance: previous.startDistance };
+        const zoomed = scaleCursorDistance(anchored, 1 / spread, handle.zoomRange());
+        handle.applyCursor(panCursor(zoomed, dx, dy));
       }
       invalidate();
     }

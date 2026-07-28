@@ -35,13 +35,12 @@ import {
   resolveWheelMode,
   scaleCursorDistance,
   viewSnapCursor,
-  wheelDeltaPixels,
   wheelZoomScale,
-  WHEEL_MAX_NOTCHES,
   WHEEL_ZOOM_MULTIPLIER,
   type EditorCursor,
   type GodotViewAngle,
 } from './godotEditorCursor';
+import { WHEEL_MAX_NOTCHES } from './pointerGesture';
 
 const ORIGIN = new THREE.Vector3();
 const WIDE_RANGE = { near: 0.001, far: 100000 };
@@ -220,21 +219,6 @@ describe('wheelZoomScale', () => {
 
   it('is a no-op for a zero delta', () => {
     expect(wheelZoomScale({ deltaY: 0 })).toBe(1);
-  });
-});
-
-describe('wheelDeltaPixels', () => {
-  it('passes pixel-mode deltas through on both axes', () => {
-    expect(wheelDeltaPixels({ deltaX: -12, deltaY: 34 })).toEqual({ dx: -12, dy: 34 });
-  });
-
-  it('scales line and page modes to the same pixel distance', () => {
-    expect(wheelDeltaPixels({ deltaY: 3, deltaMode: 1 }).dy).toBeCloseTo(100, 9);
-    expect(wheelDeltaPixels({ deltaY: 1, deltaMode: 2 }).dy).toBeCloseTo(100, 9);
-  });
-
-  it('defaults a missing horizontal axis to zero', () => {
-    expect(wheelDeltaPixels({ deltaY: 5 }).dx).toBe(0);
   });
 });
 

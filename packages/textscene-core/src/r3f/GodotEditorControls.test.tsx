@@ -296,6 +296,29 @@ describe('<GodotEditorControls> touch navigation', () => {
     expect(camera.position.distanceTo(controls.target)).toBeCloseTo(radius, 6);
   });
 
+  it('leaves the orbit radius where it was after a pan whose pinch nets out', async () => {
+    // A browser fires one pointermove PER POINTER, so two fingers sliding
+    // together transit a state where only one has moved and the span has
+    // collapsed — 100px, briefly 40px, 100px again. Measured incrementally
+    // that 0.4x/2.5x pair unwinds only while nothing clamps it, and
+    // `scaleCursorDistance` clamps every call: this radius is inside the
+    // clip-derived range but 2.5x it is not, so an accumulated pinch would
+    // land the eye somewhere the user never asked for.
+    const { get, controls, element } = await mount();
+    const camera = get().camera;
+    camera.position.set(0, 0, camera.far / 8);
+    controls.target.set(0, 0, 0);
+    const radius = camera.position.distanceTo(controls.target);
+    expect(radius * 2.5).toBeGreaterThan(camera.far / 4);
+
+    touchDrag(element, [
+      { from: [100, 100], to: [160, 100] },
+      { from: [200, 100], to: [260, 100] },
+    ]);
+
+    expect(camera.position.distanceTo(controls.target)).toBeCloseTo(radius, 6);
+  });
+
   it('zooms in as two fingers spread, about an unmoved midpoint', async () => {
     const { get, controls, element } = await mount();
     const camera = get().camera;

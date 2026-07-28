@@ -18,6 +18,7 @@
  * hard-coded speeds from `node_3d_editor_plugin.cpp`) — never tuned by feel.
  */
 import * as THREE from 'three';
+import { clampWheelNotches, wheelNotches, type WheelEventLike } from './pointerGesture.js';
 
 /** `editors/3d/navigation_feel/orbit_sensitivity`. */
 export const ORBIT_DEGREES_PER_PIXEL = 0.25;
@@ -38,34 +39,6 @@ export const DRAG_ZOOM_SPEED = 1 / 80;
 
 /** `ZOOM_FREELOOK_MULTIPLIER` — one wheel notch's distance scale. */
 export const WHEEL_ZOOM_MULTIPLIER = 1.08;
-
-/**
- * How many notches a single wheel event may be worth. A trackpad streams
- * fractions of a notch; a kinetic fling or a coarse driver can deliver a
- * whole screenful in one event, which without a cap would teleport the eye.
- */
-export const WHEEL_MAX_NOTCHES = 4;
-
-/** Pixels of `deltaY` a browser reports for one wheel notch. */
-const WHEEL_NOTCH_PIXELS = 100;
-
-/**
- * Pixels per line for `deltaMode === 1`. A browser reporting lines sends
- * `deltaY = 3` for one notch, so a notch is three lines — not the ~16px of an
- * actual text line, which would make one notch read as 0.48 and zoom Firefox
- * at roughly half of Chrome's rate.
- */
-const WHEEL_LINE_PIXELS = WHEEL_NOTCH_PIXELS / 3;
-
-/**
- * CSS pixels one unit of `deltaY` represents. `deltaMode` 0 already reports
- * pixels; 1 reports lines (three to a notch); 2 reports pages (one to a notch).
- */
-function wheelPixelsPerUnit(deltaMode: number | undefined): number {
-  if (deltaMode === 1) return WHEEL_LINE_PIXELS;
-  if (deltaMode === 2) return WHEEL_NOTCH_PIXELS;
-  return 1;
-}
 
 /**
  * `_nav_orbit` clamps the pitch to "roughly -90..90 degrees so the user can't
@@ -289,52 +262,18 @@ export function dollyCursor(cursor: EditorCursor, dy: number, range: ZoomRange):
   return scaleCursorDistance(cursor, scale, range);
 }
 
-/** The axes of a wheel event, in CSS pixels whatever `deltaMode` it used. */
-export interface WheelDelta {
-  dx: number;
-  dy: number;
-}
-
-/** A wheel event's two axes and, on the rarer `deltaMode`s, their unit. */
-export interface WheelEventLike {
-  deltaX?: number;
-  deltaY: number;
-  deltaMode?: number;
-}
-
-/**
- * A wheel event's delta in CSS pixels. Browsers report a notch as ~100px, but
- * in lines or pages for the rarer `deltaMode`s, so every consumer has to
- * normalise before it can treat the number as a distance — zoom AND pan, which
- * is why this is shared rather than inlined into `wheelZoomScale`.
- *
- * Both axes, always: with Shift held on a mouse wheel, Chrome and Firefox
- * deliver the notch on `deltaX` instead of `deltaY`, so a pan that read only
- * `deltaY` would silently do nothing.
- */
-export function wheelDeltaPixels(event: WheelEventLike): WheelDelta {
-  const perUnit = wheelPixelsPerUnit(event.deltaMode);
-  return { dx: (event.deltaX ?? 0) * perUnit, dy: event.deltaY * perUnit };
-}
-
-/** How many notches a wheel event's vertical delta is worth. */
-export function wheelNotches(event: WheelEventLike): number {
-  return (event.deltaY * wheelPixelsPerUnit(event.deltaMode)) / WHEEL_NOTCH_PIXELS;
-}
-
 /**
  * The distance scale for one wheel event. Godot applies its multiplier PER
  * NOTCH, so the scale is exponential in notches rather than linear in them —
  * which is what makes it composable: a trackpad's stream of sixteen small
  * events zooms exactly as far as one big event covering the same distance,
- * instead of slightly further.
+ * instead of slightly further. The browser-side normalisation and the
+ * per-event cap live in `pointerGesture.ts`; only the multiplier is Godot's.
  */
 export function wheelZoomScale(event: WheelEventLike): number {
-  const notches = wheelNotches(event);
+  const notches = clampWheelNotches(wheelNotches(event));
   if (notches === 0) return 1;
-  return (
-    WHEEL_ZOOM_MULTIPLIER ** THREE.MathUtils.clamp(notches, -WHEEL_MAX_NOTCHES, WHEEL_MAX_NOTCHES)
-  );
+  return WHEEL_ZOOM_MULTIPLIER ** notches;
 }
 
 /**

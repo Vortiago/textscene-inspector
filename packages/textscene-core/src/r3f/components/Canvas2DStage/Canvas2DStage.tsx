@@ -26,13 +26,14 @@ import type {
 import { useOptionalCameraControl } from '../../contexts/CameraControlContext.js';
 import { readPersisted } from '../../hooks/usePersistedState.js';
 import {
+  clampWheelNotches,
   pinchSpanRatio,
   resolveTouchMode,
   touchCentroid,
   touchSpan,
+  wheelNotches,
   type TouchPoint,
 } from '../../pointerGesture.js';
-import { wheelNotches } from '../../godotEditorCursor.js';
 import { World2DCanvas } from './World2DCanvas.js';
 import { CANVAS_2D_WIDTH, CANVAS_2D_HEIGHT, FIT_ON_OPEN_2D_STORAGE_KEY } from './viewport2d.js';
 import styles from './Canvas2DStage.module.css';
@@ -55,11 +56,6 @@ const ZOOM_PER_NOTCH = 1.1;
 
 /** The −/+ HUD buttons' step. Coarser than a notch: one click, one visible jump. */
 const ZOOM_STEP_BUTTON = 1.2;
-
-/** Cap one event so a kinetic fling cannot cross the whole zoom range at once. */
-const MAX_NOTCHES_PER_EVENT = 4;
-const clampNotches = (n: number) =>
-  Math.max(-MAX_NOTCHES_PER_EVENT, Math.min(MAX_NOTCHES_PER_EVENT, n));
 
 /** Where the stage is looking: the CSS translate, and the CSS scale. */
 interface View2D {
@@ -170,7 +166,7 @@ export function Canvas2DStage({
       // fractions of one and Firefox reports lines rather than pixels. Scaling
       // by the event count instead would zoom a trackpad roughly an order of
       // magnitude faster than a wheel for the same physical gesture.
-      const notches = clampNotches(wheelNotches(e));
+      const notches = clampWheelNotches(wheelNotches(e));
       if (notches === 0) return;
       const r = el.getBoundingClientRect();
       applyView(
@@ -195,7 +191,20 @@ export function Canvas2DStage({
   // a single drag slot cannot hold the gesture. Touch pointers are implicitly
   // captured to the target, so they need no explicit capture.
   const touchPoints = useRef<Map<number, TouchPoint>>(new Map());
-  const touchOrigin = useRef<{ centroid: TouchPoint; span: number } | null>(null);
+  // `startSpan`/`startZoom` are the pinch's anchor: the zoom is MEASURED from
+  // where the gesture began, not accumulated move-to-move. A browser fires one
+  // pointermove PER POINTER, so two fingers sliding together transit
+  // mixed-time states whose span swings hard — 100px apart, briefly 300px once
+  // one has moved, 100px again once the other catches up. Multiplying those
+  // ratios unwinds the excursion only while nothing clamps it, and `clampZoom`
+  // holds a tight [0.1, 4]: one clamped excursion never unwinds, so a plain
+  // two-finger pan would silently rescale the stage.
+  const touchOrigin = useRef<{
+    centroid: TouchPoint;
+    span: number;
+    startSpan: number;
+    startZoom: number;
+  } | null>(null);
   // The stage cannot move while fingers are on it, so its rect is read once per
   // gesture rather than per move: the previous move committed new inline styles,
   // so a getBoundingClientRect() here forces a synchronous layout of the whole
@@ -212,7 +221,17 @@ export function Canvas2DStage({
       return;
     }
     if (e.button !== 0) return;
-    pan2dDrag.current = { startX: e.clientX, startY: e.clientY, ox: pan.x, oy: pan.y, active: true };
+    // The origin comes from the ref, not the render: a wheel or pinch earlier
+    // in this same frame has already written `viewRef` and the rendered `pan`
+    // is one commit behind it, which would start the drag from a stale offset.
+    const origin = viewRef.current.pan;
+    pan2dDrag.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      ox: origin.x,
+      oy: origin.y,
+      active: true,
+    };
     try {
       e.currentTarget.setPointerCapture(e.pointerId);
     } catch {
@@ -234,29 +253,35 @@ export function Canvas2DStage({
       return;
     }
 
-    const now = { centroid: touchCentroid(active), span: touchSpan(active) };
+    const centroid = touchCentroid(active);
+    const span = touchSpan(active);
     const origin = touchOrigin.current;
-    touchOrigin.current = now;
-    if (!origin) return;
-
     const view = viewRef.current;
+    // The first move of a gesture only establishes what it started from.
+    if (!origin) {
+      touchOrigin.current = { centroid, span, startSpan: span, startZoom: view.zoom };
+      return;
+    }
+    touchOrigin.current = { ...origin, centroid, span };
+
     const panned: View2D = {
       pan: {
-        x: view.pan.x + (now.centroid.x - origin.centroid.x),
-        y: view.pan.y + (now.centroid.y - origin.centroid.y),
+        x: view.pan.x + (centroid.x - origin.centroid.x),
+        y: view.pan.y + (centroid.y - origin.centroid.y),
       },
       zoom: view.zoom,
     };
     // Not inverted, unlike the 3D viewport: a CSS scale grows as the fingers
-    // spread, where an orbit radius shrinks.
-    const factor = pinchSpanRatio(origin.span, now.span);
-    if (factor === 1) {
+    // spread, where an orbit radius shrinks. Measured from the anchor, so a
+    // clamp on one event cannot carry into the next.
+    const zoom = clampZoom(origin.startZoom * pinchSpanRatio(origin.startSpan, span));
+    if (zoom === view.zoom) {
       applyView(panned);
       return;
     }
     const r = touchRect.current ?? e.currentTarget.getBoundingClientRect();
     applyView(
-      zoomViewAround(panned, now.centroid.x - r.left, now.centroid.y - r.top, factor)
+      zoomViewAround(panned, centroid.x - r.left, centroid.y - r.top, zoom / view.zoom)
     );
   };
 

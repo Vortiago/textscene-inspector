@@ -97,10 +97,13 @@ radius about the focus point, and no parity argument supports changing it.
   the single normalisation every path calls; skipping it produces a ~33x cross-browser
   divergence, and scaling per EVENT rather than per notch zooms a trackpad roughly an order of
   magnitude faster than a mouse for the same physical gesture.
-- Touch geometry lives in `pointerGesture.ts`, not `godotEditorCursor.ts`. Godot's editor has
-  no touch scheme, so putting fingers in the module whose contract is "constants are Godot's
-  own" would make that claim false — and it lets the 2D stage share the geometry without
-  importing the 3D navigation module.
+- Browser input geometry — touch gestures AND wheel-delta normalisation — lives in
+  `pointerGesture.ts`, not `godotEditorCursor.ts`. Godot's editor has no touch scheme, and its
+  native input events carry no `deltaMode`, so putting either in the module whose contract is
+  "constants are Godot's own" would make that claim false. `godotEditorCursor.ts` keeps only
+  the parts that ARE Godot's: `WHEEL_ZOOM_MULTIPLIER`, and the modifier split in
+  `resolveWheelMode`. It also lets the 2D stage — which has no editor cursor — share the lot
+  without importing the 3D navigation module.
 - Zoom scales exponentially in notches (`1.08 ** notches`), not linearly, so a trackpad's
   stream of small events zooms exactly as far as one large event over the same distance.
 - `touch-action: none` on the 3D canvas container is load-bearing — r3f sets none of its own,

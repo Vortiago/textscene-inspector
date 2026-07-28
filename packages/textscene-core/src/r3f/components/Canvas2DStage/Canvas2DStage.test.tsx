@@ -243,6 +243,29 @@ describe('<Canvas2DStage>', () => {
     expect(spread).toBeGreaterThan(pinched);
   });
 
+  it('leaves the zoom where it was after a pan whose pinch nets out', () => {
+    // The same mixed-time span excursion the 3D viewport sees, but this clamp
+    // is far tighter (ZOOM_MAX = 4), so an ordinary two-finger pan trips it:
+    // both fingers slide 200px left, and between the two per-pointer moves the
+    // span reads 300px instead of 100px. Accumulated, that 3x clamps at 4 and
+    // the 1/3 back leaves the stage at 133% instead of where it started.
+    window.localStorage.setItem(FIT_ON_OPEN_2D_STORAGE_KEY, 'false');
+    sizeEveryElement(800, 600);
+    const { stage } = renderStage();
+    wheelAt(stage, { deltaY: -400 });
+    wheelAt(stage, { deltaY: -400 });
+    const before = zoomLabel();
+
+    touch(stage, 'down', 1, 100, 300);
+    touch(stage, 'down', 2, 200, 300);
+    touch(stage, 'move', 1, 100, 300);
+    touch(stage, 'move', 2, 200, 300);
+    touch(stage, 'move', 1, -100, 300);
+    touch(stage, 'move', 2, 0, 300);
+
+    expect(zoomLabel()).toBe(before);
+  });
+
   it('re-seeds the gesture when a finger lands or leaves, so the view never jumps', () => {
     const { stage, frame } = renderStage();
     touch(stage, 'down', 1, 100, 100);
