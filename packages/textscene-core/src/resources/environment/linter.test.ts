@@ -24,8 +24,10 @@ describe('Environment Linter Validators', () => {
 
       expect(result).not.toBeNull();
       expect(result!.severity).toBe('error');
-      expect(result!.message).toContain('must be an integer 0-5');
-      expect(result!.code).toBe('INVALID_BACKGROUND_MODE');
+      expect(result!.message).toContain('must be 0-5 (got 99)');
+      // The combinators name Godot's own constants rather than printing a bare range.
+      expect(result!.message).toContain('0=BG_CLEAR_COLOR');
+      expect(result!.code).toBe('INVALID_BACKGROUND_MODE_VALUE');
     });
 
     it('should reject negative mode', () => {
@@ -66,8 +68,8 @@ describe('Environment Linter Validators', () => {
 
       expect(result).not.toBeNull();
       expect(result!.severity).toBe('error');
-      expect(result!.message).toContain('Color(r, g, b, a)');
-      expect(result!.code).toBe('INVALID_COLOR_FORMAT');
+      expect(result!.message).toContain('Color with 4 numbers like Color(1, 1, 1, 1)');
+      expect(result!.code).toBe('INVALID_BACKGROUND_COLOR_FORMAT');
     });
 
     it('should reject Color with too many components', () => {
@@ -116,8 +118,8 @@ describe('Environment Linter Validators', () => {
 
       expect(result).not.toBeNull();
       expect(result!.severity).toBe('error');
-      expect(result!.message).toContain('must be "true" or "false"');
-      expect(result!.code).toBe('INVALID_BOOLEAN');
+      expect(result!.message).toContain('must be a boolean (true or false)');
+      expect(result!.code).toBe('INVALID_VOLUMETRIC_FOG_ENABLED_FORMAT');
     });
 
     it('should reject numeric value', () => {
@@ -150,8 +152,8 @@ describe('Environment Linter Validators', () => {
 
       expect(result).not.toBeNull();
       expect(result!.severity).toBe('error');
-      expect(result!.message).toContain('must be a number >= 0');
-      expect(result!.code).toBe('INVALID_NUMBER');
+      expect(result!.message).toContain('must be non-negative');
+      expect(result!.code).toBe('INVALID_VOLUMETRIC_FOG_DENSITY_VALUE');
     });
 
     it('should reject non-numeric density', () => {
@@ -202,8 +204,8 @@ describe('Environment Linter Validators', () => {
 
       expect(result).not.toBeNull();
       expect(result!.severity).toBe('error');
-      expect(result!.message).toContain('must be a number >= 0');
-      expect(result!.code).toBe('INVALID_NUMBER');
+      expect(result!.message).toContain('must be non-negative');
+      expect(result!.code).toBe('INVALID_ADJUSTMENT_BRIGHTNESS_VALUE');
     });
   });
 

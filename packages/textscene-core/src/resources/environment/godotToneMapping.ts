@@ -24,6 +24,8 @@
  * ---------------------------------------------------------------------------
  */
 
+import { glslFloat } from './glslLiterals';
+
 /** Godot `ToneMapper`. */
 export const GodotToneMapper = {
   LINEAR: 0,
@@ -97,7 +99,7 @@ export function toneMappingWhiteParam(mode: number, white: number): number {
  * `tonemap_exposure`.
  */
 export function toneMappingShaderChunk(mode: number): string {
-  const body = CURVES[mode] ?? 'return color;';
+  const body = CURVES[mode] ?? LINEAR_CURVE;
   return /* glsl */ `
 uniform float toneMappingExposure;
 uniform float godotToneMapWhite;
@@ -117,13 +119,13 @@ ${body}
  *
  * Emits a `godotToneMap(vec3, float exposure)` function with the white
  * normalisation baked in, exactly as `toneMapping.ts` bakes it into the chunk.
- * Only LINEAR has no ported curve here (it needs none) — callers treat a `null`
- * return as "no custom curve, apply exposure only". AGX is a real curve on both
- * paths, so it returns GLSL like the others.
+ * Total across every mode, LINEAR included: LINEAR is not "no curve" but the
+ * curve that applies exposure and nothing else, and saying so here keeps all five
+ * bodies in one place rather than leaving consumers to supply the fifth. AGX is a
+ * real curve on both paths, so it returns GLSL like the others.
  */
-export function toneMappingEffectGlsl(mode: number, white: number): string | null {
-  const body = CURVES[mode];
-  if (body === undefined) return null;
+export function toneMappingEffectGlsl(mode: number, white: number): string {
+  const body = CURVES[mode] ?? LINEAR_CURVE;
   const bakedWhite = glslFloat(toneMappingWhiteParam(mode, white));
   return /* glsl */ `
 vec3 godotToneMap(vec3 color, float exposure) {
@@ -134,10 +136,8 @@ ${body}
 `;
 }
 
-/** GLSL has no int→float coercion in constant initialisers. */
-function glslFloat(value: number): string {
-  return Number.isInteger(value) ? `${value}.0` : String(value);
-}
+/** LINEAR: exposure is the whole transform. */
+const LINEAR_CURVE = /* glsl */ `  return color;`;
 
 const CURVES: Record<number, string> = {
   // Reinhard's extended formula, equation 4 in https://doi.org/cjbgrt

@@ -1,0 +1,46 @@
+[gd_scene load_steps=5 format=3 uid="uid://unitglowstrength"]
+
+; Godot's default glow levels with a NON-DEFAULT glow_strength.
+;
+; glow_strength multiplies the glow buffer once per pyramid pass, so it compounds
+; with depth rather than scaling the halo uniformly. At the default 1.0 that is
+; inert and any exponent would pass, which is why this fixture exists: it is the
+; only thing that pins how many times the multiply lands.
+
+[sub_resource type="ProceduralSkyMaterial" id="Sky_dark"]
+sky_top_color = Color(0.02, 0.02, 0.04, 1)
+sky_horizon_color = Color(0.04, 0.04, 0.06, 1)
+ground_bottom_color = Color(0.02, 0.02, 0.02, 1)
+ground_horizon_color = Color(0.04, 0.04, 0.06, 1)
+
+[sub_resource type="Sky" id="Sky_1"]
+sky_material = SubResource("Sky_dark")
+
+[sub_resource type="Environment" id="Env_glow"]
+background_mode = 2
+sky = SubResource("Sky_1")
+tonemap_mode = 2
+glow_enabled = true
+glow_strength = 1.6
+
+[sub_resource type="SphereMesh" id="SphereMesh_1"]
+radius = 0.6
+height = 1.2
+radial_segments = 32
+rings = 16
+
+[sub_resource type="StandardMaterial3D" id="Mat_emissive"]
+albedo_color = Color(0.2, 0.6, 0.3, 1)
+roughness = 0.4
+emission_enabled = true
+emission = Color(0.2, 1.0, 0.4, 1)
+emission_energy_multiplier = 2.5
+
+[node name="GlowStrengthRoot" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env_glow")
+
+[node name="EmissiveSphere" type="MeshInstance3D" parent="."]
+mesh = SubResource("SphereMesh_1")
+surface_material_override/0 = SubResource("Mat_emissive")

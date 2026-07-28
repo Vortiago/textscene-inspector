@@ -15,6 +15,7 @@
  */
 
 import * as THREE from 'three';
+import { glslFloat } from './glslLiterals';
 import {
   GodotToneMapper,
   hasGodotCurve,
@@ -93,11 +94,6 @@ export function applyToneMapping(
     if (gl.toneMappingExposure !== previousExposure) gl.toneMappingExposure = previousExposure;
     if (changed) markMaterialsDirty(scene);
   };
-}
-
-/** GLSL has no integer→float coercion in constant initialisers. */
-function glslFloat(value: number): string {
-  return Number.isInteger(value) ? `${value}.0` : String(value);
 }
 
 function markMaterialsDirty(scene: THREE.Object3D | undefined): void {

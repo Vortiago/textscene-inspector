@@ -183,6 +183,51 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Glow Agx",
+    "file": "unit-glow-agx.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Glow Authored",
+    "file": "unit-glow-authored.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Glow Bloom Floor",
+    "file": "unit-glow-bloom-floor.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Glow Exposure",
+    "file": "unit-glow-exposure.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Glow Mix",
+    "file": "unit-glow-mix.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Glow Normalized",
+    "file": "unit-glow-normalized.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Glow Replace",
+    "file": "unit-glow-replace.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Glow Softlight",
+    "file": "unit-glow-softlight.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Glow Strength",
+    "file": "unit-glow-strength.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Gpuparticles3d",
     "file": "unit-gpuparticles3d.tscn",
     "category": "Other"
@@ -1125,6 +1170,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Material Clearcoat",
     "file": "unit-material-clearcoat.tscn",
+    "category": "Unit - Materials"
+  },
+  {
+    "name": "Material Emission Hdr",
+    "file": "unit-material-emission-hdr.tscn",
+    "category": "Unit - Materials"
+  },
+  {
+    "name": "Material Emission Texture",
+    "file": "unit-material-emission-texture.tscn",
     "category": "Unit - Materials"
   },
   {

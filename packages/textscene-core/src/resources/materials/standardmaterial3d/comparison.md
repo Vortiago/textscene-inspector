@@ -26,11 +26,38 @@ common grayscale / ORM packings are faithful.
 ## Emission
 <!-- compare: image=unit-material-emissive status=done fixture=unit-material-emissive.tscn -->
 
-An emissive sphere at `emission_energy = 2.0` glows cyan in both. The editor
-preview environment blooms it; ours blooms a little stronger and coarser than
-Godot's glow. With the default ADD emission operator plus BOTH a colored emission
-and an `emission_texture`, Godot computes `(emission + tex) * energy` — three.js's
-emissive map is multiply-only, so that combination can't be reproduced.
+An emissive sphere at `emission_energy = 2.0` glows cyan in both, and the editor
+preview environment blooms it (the glow itself is covered on the Environment sheet).
+
+Godot uploads `emission` through a `source_color` uniform, so the authored Color is
+converted sRGB→linear BEFORE `emission_energy_multiplier` multiplies it. That order
+matters for an HDR emission: the conversion is not linear, so normalising by the peak
+channel first and scaling after is a different mapping — `Color(2, 0.5, 0)` lands at
+`(4.954, 0.214, 0)` in Godot but at `(2, 0.102, 0)` if converted the other way round,
+wrong in magnitude and in hue. Godot's conversion extrapolates past 1.0 rather than
+clipping, so channels above 1 survive, which is what lets them cross the glow
+bright-pass. three carries emission as a `[0,1]` colour times an unbounded
+`emissiveIntensity`, so the linear colour is split at its peak and the hue is kept.
+
+`emission_operator` is honoured. The emission sampler carries `hint_default_black`, so
+an ABSENT texture reads as zero rather than white, which settles most of the
+combinations: MULTIPLY with no texture is no emission at all (a Godot content trap,
+reproduced), MULTIPLY with one is three's own multiply, and ADD with no texture is the
+colour at its energy. ADD with a texture over Godot's default BLACK emission colour
+reduces to `tex * energy`, which is spelled as a white emissive — getting that wrong
+renders nothing at all where Godot renders the whole texture.
+
+`shading_mode = unshaded` drops emission entirely in both: Godot's unshaded branch
+outputs `vec4(albedo, alpha)` and never reads its emission term.
+
+Measured with `ref:godot` against Godot 4.6.3: an HDR emission colour (a channel at
+2.0) lands at 0.023%, and the two texture-dependent operator cases side by side at
+0.498% — that residual is the checkerboard's own edge count under SVG rasterisation,
+with the square interiors matching. Those fixtures use flat quads rather than spheres
+on purpose: a checkerboard is a UV discriminator, and Godot's `SphereMesh` winds its
+UVs at a different phase than three's sphere does. That is measurable at 3.556% on
+plain albedo with no emission involved at all, so putting the operator test on a
+sphere would have measured the wrong thing.
 
 ## Clearcoat
 <!-- compare: image=unit-material-clearcoat status=done fixture=unit-material-clearcoat.tscn -->
@@ -77,5 +104,9 @@ units, a different space than Godot's).
 - **diffuse_mode** — Godot defaults to Burley; three's material is always Lambert. They agree near normal incidence; a rough sphere reads ~5/255 dark at grazing silhouette.
 - **metallic_specular** — three hard-wires dielectric F0 at 0.04 (Godot's 0.5 default). Authoring it away from 0.5 has no effect.
 - **uv1 V-anchoring** — Godot measures V from the image top, three from the bottom, so a non-integer `uv1_scale.y` or non-zero `uv1_offset.y` shifts V differently. Under `uv1_world_triplanar`, `uv1_offset` is in world units and is not converted.
+- **SphereMesh UV phase** — Godot winds a sphere's UVs at a different phase than three's `SphereGeometry`, so a patterned texture lands rotated relative to Godot's. Measured at 3.556% on a plain albedo checkerboard. Not a material property — it belongs to the mesh — but it is what makes any patterned-texture comparison on a sphere unreadable.
 - **billboard_mode** — orientation is faithful, but `billboard_keep_scale = false` (scale normalized away while billboarding) is not honored, and a billboarded mesh's child nodes inherit its rotation (Godot's per-surface effect does not turn children).
 - **Triplanar on curved meshes** — tiling density is exact for planar meshes; curved / GLB geometry falls back to the mesh's own UVs.
+- **emission_operator = Add with BOTH a lit colour and a texture** — Godot computes `(emission + tex) * energy`, a sum three's multiply-only emissive chain cannot express. The colour is applied as a multiply instead, so such a material reads darker and more tinted. The far more common cases — either term alone, and Add over the default black colour — are exact.
+- **emission_on_uv2** — Godot samples the emission texture from the second UV set. Nothing here produces one: the primitive meshes are stock three geometries carrying only `uv`, and the ArrayMesh decoder drops trailing UV2 data. Binding the flag would leave the attribute unbound, so the whole surface would sample one texel and read as flat colour — strictly worse than reading the texture through UV1, which is what happens. Validated, not rendered.
+- **emission_intensity** — the nits-valued property only reaches Godot's shader when the project enables physical light units, which is not modelled, so `emission_energy_multiplier` alone drives emission strength.

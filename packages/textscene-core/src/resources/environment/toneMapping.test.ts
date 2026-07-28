@@ -100,12 +100,18 @@ describe('Godot\u2019s curves', () => {
     // ported curve (baking the floored high-clip white) rather than the old
     // exposure-only fallback that deferred to three's AgX.
     const glsl = toneMappingEffectGlsl(4, 1);
-    expect(glsl).not.toBeNull();
     expect(glsl).toMatch(/0\.544814746488245/);
     expect(glsl).toMatch(/awp_crossover_point = 0\.18/);
     expect(glsl).toMatch(/const float godotToneMapWhite = 2\.0;/);
-    // LINEAR still has no ported curve on this path.
-    expect(toneMappingEffectGlsl(0, 1)).toBeNull();
+  });
+
+  it('LINEAR emits a real curve that applies exposure and nothing else', () => {
+    // Not a null sentinel a consumer has to substitute for — the builder owns all
+    // five modes, so the post-process path never re-invents the fifth.
+    const glsl = toneMappingEffectGlsl(0, 1);
+    expect(glsl).toContain('vec3 godotToneMap(vec3 color, float exposure)');
+    expect(glsl).toContain('color *= exposure;');
+    expect(glsl).toContain('return color;');
   });
 });
 

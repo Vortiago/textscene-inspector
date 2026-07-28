@@ -29,8 +29,8 @@ describe('PlaneMesh Linter Validators', () => {
 
       expect(result).not.toBeNull();
       expect(result!.severity).toBe('error');
-      expect(result!.message).toContain('must be "true" or "false"');
-      expect(result!.code).toBe('INVALID_BOOLEAN');
+      expect(result!.message).toContain('must be a boolean (true or false)');
+      expect(result!.code).toBe('INVALID_FLIP_FACES_FORMAT');
     });
 
     it('should reject numeric value "1"', () => {
@@ -39,8 +39,8 @@ describe('PlaneMesh Linter Validators', () => {
 
       expect(result).not.toBeNull();
       expect(result!.severity).toBe('error');
-      expect(result!.message).toContain('must be "true" or "false"');
-      expect(result!.code).toBe('INVALID_BOOLEAN');
+      expect(result!.message).toContain('must be a boolean (true or false)');
+      expect(result!.code).toBe('INVALID_FLIP_FACES_FORMAT');
     });
 
     it('should reject numeric value "0"', () => {
@@ -57,7 +57,7 @@ describe('PlaneMesh Linter Validators', () => {
 
       expect(result).not.toBeNull();
       expect(result!.severity).toBe('error');
-      expect(result!.message).toContain('must be "true" or "false"');
+      expect(result!.message).toContain('must be a boolean (true or false)');
     });
 
     it('should reject string "FALSE" (wrong capitalization)', () => {
@@ -120,7 +120,7 @@ flip_faces = yes
       const diagnostics = linter.lint(content);
 
       const flipFacesErrors = diagnostics.filter(d =>
-        d.message.includes('flip_faces') && d.message.includes('must be "true" or "false"')
+        d.message.includes('flip_faces') && d.message.includes('must be a boolean (true or false)')
       );
       expect(flipFacesErrors.length).toBeGreaterThan(0);
       expect(flipFacesErrors[0]!.severity).toBe('error');

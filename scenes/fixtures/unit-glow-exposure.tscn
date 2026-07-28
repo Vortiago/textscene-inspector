@@ -1,0 +1,54 @@
+[gd_scene load_steps=5 format=3 uid="uid://unitglowexposure"]
+
+; Glow with a NON-DEFAULT tonemap_exposure.
+;
+; Godot applies exposure to the glow buffer in the bright pass, BEFORE the knee
+; decides what blooms, and to the scene colour before the blend — so exposure
+; reaches each operand once and the threshold judges exposed values. At the 1.0
+; default every plausible ordering coincides, which is why every other glow
+; fixture is blind to it: applying exposure after the knee, or to the blended sum,
+; passes them all.
+;
+; The emissive sits just BELOW the threshold unexposed and above it once exposed,
+; so the halo exists here only if the ordering is right. Get it wrong and there is
+; no halo at all rather than a slightly wrong one.
+
+[sub_resource type="ProceduralSkyMaterial" id="Sky_dark"]
+sky_top_color = Color(0.03, 0.03, 0.05, 1)
+sky_horizon_color = Color(0.05, 0.05, 0.07, 1)
+ground_bottom_color = Color(0.03, 0.03, 0.03, 1)
+ground_horizon_color = Color(0.05, 0.05, 0.07, 1)
+
+[sub_resource type="Sky" id="Sky_1"]
+sky_material = SubResource("Sky_dark")
+
+[sub_resource type="Environment" id="Env_glow"]
+background_mode = 2
+sky = SubResource("Sky_1")
+tonemap_mode = 2
+tonemap_exposure = 1.8
+glow_enabled = true
+glow_blend_mode = 0
+glow_intensity = 0.8
+
+[sub_resource type="SphereMesh" id="SphereMesh_1"]
+radius = 0.6
+height = 1.2
+radial_segments = 32
+rings = 16
+
+[sub_resource type="StandardMaterial3D" id="Mat_emissive"]
+albedo_color = Color(0.6, 0.3, 0.8, 1)
+roughness = 0.4
+emission_enabled = true
+emission = Color(0.75, 0.4, 1.0, 1)
+emission_energy_multiplier = 0.8
+
+[node name="GlowExposureRoot" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env_glow")
+
+[node name="EmissiveSphere" type="MeshInstance3D" parent="."]
+mesh = SubResource("SphereMesh_1")
+surface_material_override/0 = SubResource("Mat_emissive")

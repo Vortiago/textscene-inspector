@@ -2,8 +2,12 @@
  * Godot stores Color literals in sRGB (matching its inspector colour picker).
  * three.js works in a linear space, so a Godot colour must be converted before
  * it reaches a material. `setRGB(..., SRGBColorSpace)` performs that conversion
- * (vs the number constructor, which treats its args as already-linear). This is
- * the one place the conversion lives, so a colour-space change is a single edit.
+ * (vs the number constructor, which treats its args as already-linear).
+ *
+ * This is where a Godot colour becomes a `THREE.Color`. The curve itself is
+ * three's, and `utils/colorSpace.ts` carries the same one for the callers that
+ * need raw channels rather than a `Color` — they agree to the bit, differing
+ * only in which side of 0.04045 the knee sits on.
  */
 
 import { useMemo } from 'react';

@@ -1,0 +1,49 @@
+[gd_scene load_steps=5 format=3 uid="uid://unitglowmix"]
+
+; MIX blend, with a NON-DEFAULT glow_mix.
+;
+; MIX is the one mode that reads glow_mix where the others read glow_intensity —
+; Godot fills a single shader uniform from whichever the mode uses, so getting the
+; substitution wrong shows up as the glow being 6x too strong at the defaults
+; (0.3 against 0.05) and nowhere else. The lerp darkens the scene toward the glow
+; buffer rather than adding to it, so the ground is mid-grey: against black, a
+; lerp and an add are indistinguishable.
+
+[sub_resource type="ProceduralSkyMaterial" id="Sky_mid"]
+sky_top_color = Color(0.3, 0.32, 0.36, 1)
+sky_horizon_color = Color(0.36, 0.36, 0.38, 1)
+ground_bottom_color = Color(0.28, 0.26, 0.24, 1)
+ground_horizon_color = Color(0.36, 0.36, 0.38, 1)
+
+[sub_resource type="Sky" id="Sky_1"]
+sky_material = SubResource("Sky_mid")
+
+[sub_resource type="Environment" id="Env_glow"]
+background_mode = 2
+sky = SubResource("Sky_1")
+tonemap_mode = 2
+glow_enabled = true
+glow_blend_mode = 4
+glow_mix = 0.35
+
+[sub_resource type="SphereMesh" id="SphereMesh_1"]
+radius = 0.6
+height = 1.2
+radial_segments = 32
+rings = 16
+
+[sub_resource type="StandardMaterial3D" id="Mat_emissive"]
+albedo_color = Color(0.8, 0.4, 0.6, 1)
+roughness = 0.4
+emission_enabled = true
+emission = Color(1.0, 0.3, 0.6, 1)
+emission_energy_multiplier = 3.0
+
+[node name="GlowMixRoot" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env_glow")
+
+[node name="EmissiveSphere" type="MeshInstance3D" parent="."]
+mesh = SubResource("SphereMesh_1")
+surface_material_override/0 = SubResource("Mat_emissive")
