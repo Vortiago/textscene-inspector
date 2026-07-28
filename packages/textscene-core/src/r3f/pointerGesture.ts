@@ -23,6 +23,20 @@ export interface TouchPoint {
 }
 
 /**
+ * Whether a pointer navigates by gesture rather than by button.
+ *
+ * A stylus counts. It reports `pointerType: 'pen'`, and routing it to the mouse
+ * path leaves it completely inert on the device class touch was added for: a
+ * pen drag is `button: 0` with no modifiers, which navigation deliberately
+ * declines in favour of selection, and a detached tablet has neither a middle
+ * button nor an Alt key to reach the fallbacks with. A pen is single-pointer,
+ * so it orbits and taps exactly as one finger does and never pinches.
+ */
+export function isGesturePointer(pointerType: string): boolean {
+  return pointerType === 'touch' || pointerType === 'pen';
+}
+
+/**
  * Below this the fingers are effectively coincident and a pinch has no
  * direction to read a scale from. Client pixels — the unit both viewports
  * receive, whatever their camera model measures in.

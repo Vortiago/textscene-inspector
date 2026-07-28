@@ -1,21 +1,27 @@
 /*
- * Top-centre of the viewport: clear of the toolbar overlay (top-right), the
- * "switch to 2D" hint and the 2D zoom HUD (both bottom-centre).
+ * Bottom-LEFT, which is the only corner nothing else claims. The toolbar
+ * overlay is top-right but grows leftward as toggles are added — with ten of
+ * them it wraps to two rows and spans most of the top edge, so a top-centre
+ * pill sat underneath it (it also outranks this at z-index 6). Bottom-centre
+ * is taken twice over: the "switch to 2D" hint in 3D, the zoom HUD in 2D.
+ *
+ * The panel opens UPWARD from the pill (column-reverse), so the pill never
+ * moves when it expands, and it outranks the toolbar so a tall panel is not
+ * clipped behind it.
  */
 .root {
   position: absolute;
-  top: var(--tsi-space-3);
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 3;
+  bottom: var(--tsi-space-3);
+  left: var(--tsi-space-3);
+  z-index: 7;
   display: flex;
-  flex-direction: column;
-  align-items: center;
+  flex-direction: column-reverse;
+  align-items: flex-start;
   gap: var(--tsi-space-2);
   /* The viewport under this is one big drag surface — only the pill and the
      panel may take pointer input, never the box that positions them. */
   pointer-events: none;
-  max-width: calc(100% - var(--tsi-space-4) * 2);
+  max-width: calc(100% - var(--tsi-space-3) * 2);
 }
 
 .hint {

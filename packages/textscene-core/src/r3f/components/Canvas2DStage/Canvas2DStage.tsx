@@ -26,6 +26,7 @@ import type {
 import { useOptionalCameraControl } from '../../contexts/CameraControlContext.js';
 import { readPersisted } from '../../hooks/usePersistedState.js';
 import {
+  isGesturePointer,
   clampWheelNotches,
   pinchSpanRatio,
   resolveTouchMode,
@@ -212,7 +213,7 @@ export function Canvas2DStage({
   const touchRect = useRef<DOMRect | null>(null);
 
   const onStagePointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
-    if (e.pointerType === 'touch') {
+    if (isGesturePointer(e.pointerType)) {
       touchPoints.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
       // A finger landing moves the midpoint discontinuously; drop the origin
       // so the next move re-seeds it instead of panning by the jump.
@@ -286,7 +287,7 @@ export function Canvas2DStage({
   };
 
   const onStagePointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
-    if (e.pointerType === 'touch') {
+    if (isGesturePointer(e.pointerType)) {
       onStageTouchMove(e);
       return;
     }
@@ -299,7 +300,7 @@ export function Canvas2DStage({
   };
 
   const endStageDrag = (e: ReactPointerEvent<HTMLDivElement>) => {
-    if (e.pointerType === 'touch') {
+    if (isGesturePointer(e.pointerType)) {
       touchPoints.current.delete(e.pointerId);
       // Lifting one of two fingers leaves the other mid-gesture; re-seed so it
       // pans from where it is rather than from the old midpoint.

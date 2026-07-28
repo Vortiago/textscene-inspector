@@ -38,7 +38,8 @@ A browser reports a two-finger scroll and a mouse wheel as the same event, so th
 one keeps the wheel's meaning (zoom) and Shift is what gives a trackpad its pan. Ctrl + wheel
 zooms the viewport rather than the page, because a pinch arrives as exactly that event.
 
-**Touch** (tablets — no Godot equivalent, so these follow the usual 3D-viewer conventions)
+**Touch and stylus** (tablets — no Godot equivalent, so these follow the usual 3D-viewer
+conventions; a stylus behaves as one finger does)
 
 | Input | Action |
 | --- | --- |

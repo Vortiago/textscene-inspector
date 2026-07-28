@@ -101,15 +101,42 @@ async function captureScene(page, baseUrl, scene) {
   const { canvas, reason: canvasReason } = await findCanvas(page);
   if (!canvas) return { buffer: null, reason: canvasReason };
 
+  /**
+   * The display toggles live behind the toolbar's "Display" button, so they are
+   * not in the DOM until it is opened. Idempotent: a scene can ask for two of
+   * them, and a second click would shut the menu again.
+   *
+   * `dispatchEvent`, not `click()`, for the same reason the toggles below use
+   * it — this context paints the toolbar overlay out with `display: none` so it
+   * cannot composite into `canvas.screenshot()`, and Playwright's `click()`
+   * refuses a hidden target. The React handler runs either way.
+   */
+  async function openDisplayMenu() {
+    const popover = page.locator('[data-testid="display-menu-popover"]');
+    if ((await popover.count()) > 0) return true;
+    const button = page.locator('[data-testid="display-menu-button"]');
+    try {
+      await button.waitFor({ state: 'attached', timeout: 10000 });
+    } catch {
+      return false;
+    }
+    await button.dispatchEvent('click');
+    await popover.waitFor({ state: 'attached', timeout: 10000 });
+    return true;
+  }
+
   if (scene.navigation) {
     // The navmesh overlay has its own toolbar toggle. It defaults ON, but drive
     // it explicitly so the scene's state does not depend on a default that a
     // future change could flip out from under the baseline.
+    if (!(await openDisplayMenu())) {
+      return { buffer: null, reason: 'Display menu button not found in the toolbar' };
+    }
     const toggle = page.locator('label:has-text("Navigation") input[type="checkbox"]').first();
     try {
       await toggle.waitFor({ state: 'attached', timeout: 10000 });
     } catch {
-      return { buffer: null, reason: 'Navigation toggle not found in the toolbar' };
+      return { buffer: null, reason: 'Navigation toggle not found in the Display menu' };
     }
     if (!(await toggle.isChecked())) await toggle.dispatchEvent('click');
     await page.waitForTimeout(PRE_SELECT_FIT_QUIESCENCE_MS);
@@ -121,9 +148,12 @@ async function captureScene(page, baseUrl, scene) {
     // CollisionShape gizmo is invisible to every other golden — which is how
     // capsule/sphere/cylinder shapes drew a unit box unnoticed. Drive the real
     // toolbar checkbox, the same path a user takes.
-    // The toolbar wraps each checkbox in a <label> whose own `title` competes
+    // The menu wraps each checkbox in a <label> whose own `title` competes
     // with the text node for the accessible name, so match the label text and
     // reach for the input inside it rather than going through the role name.
+    if (!(await openDisplayMenu())) {
+      return { buffer: null, reason: 'Display menu button not found in the toolbar' };
+    }
     const toggle = page.locator('label:has-text("Collisions") input[type="checkbox"]').first();
     try {
       // ATTACHED, not visible: this same context hides the toolbar overlay so
@@ -131,7 +161,7 @@ async function captureScene(page, baseUrl, scene) {
       // `run`). The control is fully functional, just painted out.
       await toggle.waitFor({ state: 'attached', timeout: 10000 });
     } catch {
-      return { buffer: null, reason: 'Collisions toggle not found in the toolbar' };
+      return { buffer: null, reason: 'Collisions toggle not found in the Display menu' };
     }
     // `click()`/`check()` refuse a display:none target (they scroll it into
     // view first); dispatching the event directly still goes through React's

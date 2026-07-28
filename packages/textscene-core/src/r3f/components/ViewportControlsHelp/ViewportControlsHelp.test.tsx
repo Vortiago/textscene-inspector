@@ -108,6 +108,18 @@ describe('<ViewportControlsHelp>', () => {
     expect(screen.queryByTestId('viewport-controls-panel')).toBeNull();
   });
 
+  it('moves focus into the panel, and back to the pill on close', () => {
+    // role="dialog" promises this. Without it, opening from ? announces
+    // nothing and Tab continues from wherever focus happened to be.
+    render(<ViewportControlsHelp mode="3D" />);
+    const hint = screen.getByTestId('viewport-controls-hint');
+    fireEvent.click(hint);
+    expect(document.activeElement).toBe(screen.getByTestId('viewport-controls-panel'));
+
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(document.activeElement).toBe(hint);
+  });
+
   it('lets viewport drags through everywhere except the pill and the panel', () => {
     // Read from source: the root is a full-width positioned box over a canvas
     // whose entire surface is draggable, so `pointer-events: none` on it — and
@@ -121,6 +133,30 @@ describe('<ViewportControlsHelp>', () => {
     expect(block('.root')).toContain('pointer-events: none');
     expect(block('.hint')).toContain('pointer-events: auto');
     expect(block('.panel')).toContain('pointer-events: auto');
+  });
+
+  it('sits clear of the toolbar overlay, which grows leftward and outranks it', () => {
+    // It shipped top-centre and was invisible: the toolbar is top-RIGHT but
+    // `max-width: calc(100% - …)`, so ten toggles wrap it to two rows across
+    // most of the top edge, at z-index 6. Bottom-left is the only corner
+    // nothing claims — bottom-centre holds the "switch to 2D" hint and the 2D
+    // zoom HUD. happy-dom has no layout, so this is asserted on the source.
+    const css = readFileSync(
+      path.join(import.meta.dirname, 'ViewportControlsHelp.module.css'),
+      'utf8'
+    );
+    const root = /\.root\s*\{[^}]*\}/.exec(css)?.[0] ?? '';
+    expect(root).toContain('bottom:');
+    expect(root).toContain('left:');
+    expect(root).not.toContain('top:');
+
+    const toolbar = readFileSync(
+      path.join(import.meta.dirname, '../TscnPreviewShell/TscnPreviewShell.module.css'),
+      'utf8'
+    );
+    const overlay = /\.viewportToolbarOverlay\s*\{[^}]*\}/.exec(toolbar)?.[0] ?? '';
+    const zIndexOf = (block: string) => Number(/z-index:\s*(\d+)/.exec(block)?.[1] ?? '0');
+    expect(zIndexOf(root)).toBeGreaterThan(zIndexOf(overlay));
   });
 });
 

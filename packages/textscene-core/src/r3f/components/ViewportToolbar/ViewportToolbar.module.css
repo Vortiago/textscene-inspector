@@ -130,3 +130,25 @@
   box-shadow: 0 0 0 2px var(--tsi-focus-ring);
   border-radius: var(--tsi-radius-sm);
 }
+/* The display toggles' button + popover. Anchored under the button and to its
+   right edge, since the toolbar itself is right-anchored in the viewport. */
+.displayMenu {
+  position: relative;
+}
+
+.displayPopover {
+  position: absolute;
+  top: calc(100% + var(--tsi-space-1));
+  right: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--tsi-space-1);
+  white-space: nowrap;
+  padding: var(--tsi-space-2);
+  border: 1px solid var(--tsi-border);
+  border-radius: var(--tsi-radius-md);
+  background: var(--tsi-bg-elevated);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}

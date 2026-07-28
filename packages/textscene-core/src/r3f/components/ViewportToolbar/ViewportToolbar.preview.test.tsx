@@ -18,17 +18,31 @@ import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph';
 import { TscnParser } from '../../../parser/TscnParser';
 import { ViewportToolbar } from './ViewportToolbar';
 
-function renderWithScene(body: string) {
+/**
+ * The display toggles live behind the "Display" button now (the toolbar wrapped
+ * to two rows and covered the scene with them inline), so a test that wants one
+ * has to open the menu exactly as a user would.
+ */
+function openDisplayMenu(): void {
+  fireEvent.click(screen.getByTestId('display-menu-button'));
+}
+
+
+function renderWithScene(body: string, openMenu = true) {
   const graph = createSceneGraphFromTscnScene(
     new TscnParser().parse(`[gd_scene format=3]\n\n[node name="Root" type="Node3D"]\n${body}`)
   );
-  return render(
+  const result = render(
     <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
       <ViewportModeProvider>
         <ViewportToolbar />
       </ViewportModeProvider>
     </HierarchyProvider>
   );
+  // The toggles live behind the Display button now; open it so each test can
+  // query the control it is about.
+  if (openMenu) openDisplayMenu();
+  return result;
 }
 
 const sun = () => screen.getByLabelText('Preview Sun') as HTMLInputElement;
@@ -80,6 +94,9 @@ describe('preview lighting toggles', () => {
         <ViewportToolbar />
       </ViewportModeProvider>
     );
+    // Opened, so this asserts they are absent from the MENU rather than merely
+    // absent from a closed popover — which would pass either way.
+    openDisplayMenu();
     expect(screen.queryByLabelText('Preview Sun')).toBeNull();
     expect(screen.queryByLabelText('Preview Sky')).toBeNull();
   });

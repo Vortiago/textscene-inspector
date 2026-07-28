@@ -61,6 +61,7 @@ import {
   type ZoomRange,
 } from './godotEditorCursor.js';
 import {
+  isGesturePointer,
   pinchSpanRatio,
   resolveTouchMode,
   touchCentroid,
@@ -354,7 +355,7 @@ export function GodotEditorControls() {
     }
 
     function endPointer(event: PointerEvent): void {
-      if (event.pointerType === 'touch') {
+      if (isGesturePointer(event.pointerType)) {
         touchPoints.delete(event.pointerId);
         // Lifting one of two fingers leaves the other mid-gesture; re-seed so
         // the survivor orbits from where it is rather than from the centroid.
@@ -365,7 +366,7 @@ export function GodotEditorControls() {
     }
 
     function handlePointerDown(event: PointerEvent): void {
-      if (event.pointerType === 'touch') {
+      if (isGesturePointer(event.pointerType)) {
         // Touch pointers are implicitly captured to the target, so no explicit
         // capture — and no preventDefault, which would cost tap-to-select the
         // pointerup R3F picks it out of. `touch-action: none` on the canvas is
@@ -445,7 +446,7 @@ export function GodotEditorControls() {
     }
 
     function handlePointerMove(event: PointerEvent): void {
-      if (event.pointerType === 'touch') {
+      if (isGesturePointer(event.pointerType)) {
         handleTouchMove(event);
         return;
       }

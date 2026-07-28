@@ -58,6 +58,13 @@ drag orbits, a one-finger tap selects, two fingers pan, pinch zooms, and there i
 (it needs a held button plus WASD). This is the 3D-viewer convention rather than anything
 Godot does, because Godot does nothing here.
 
+**A stylus navigates as one finger does**, not as a mouse. It reports
+`pointerType: 'pen'`, and the mouse path would leave it inert on exactly the device class
+touch was added for: a pen drag is `button: 0` with no modifiers, which navigation declines in
+favour of selection, and a detached tablet has no middle button or Alt key to reach the
+fallbacks with. `isGesturePointer` is the one place that decision lives. The cost is that on a
+tablet-plus-mouse setup a pen drag orbits rather than selecting; a tap still selects.
+
 **The bindings are surfaced in the app**, by `<ViewportControlsHelp>`: a summary pill always
 visible over the viewport, and a panel behind it grouping every binding by device. The rows
 live in `bindings.ts` as data, and each row a resolver governs carries the input that produces

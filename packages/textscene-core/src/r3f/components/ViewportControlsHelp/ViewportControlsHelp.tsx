@@ -8,9 +8,10 @@
  * I press" at a glance; the panel answers "what else is there".
  *
  * Both viewport modes mount it, from `<ViewportArea>`, and it reads its rows
- * from `bindings.ts` so the help, the pill and the user guides cannot drift.
+ * from `bindings.ts`, which `bindings.test.ts` holds to the real resolvers.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useDismissable } from '../../hooks/useDismissable.js';
 import { useGlobalShortcut } from '../../hooks/useGlobalShortcut.js';
 import { controlsFor } from './bindings.js';
 import styles from './ViewportControlsHelp.module.css';
@@ -21,8 +22,22 @@ export interface ViewportControlsHelpProps {
 
 export function ViewportControlsHelp({ mode }: ViewportControlsHelpProps) {
   const [open, setOpen] = useState(false);
-  const rootRef = useRef<HTMLDivElement>(null);
+  const close = useCallback(() => setOpen(false), []);
+  const rootRef = useDismissable<HTMLDivElement>(open, close);
   const { summary, groups } = controlsFor(mode);
+
+  // `role="dialog"` promises focus lives inside it: opening from `?` otherwise
+  // announces nothing and leaves Tab order wherever it was, so reaching the
+  // close button means tabbing the whole page. Focus returns to the pill on
+  // close, so keyboard users end up where they started.
+  const panelRef = useRef<HTMLDivElement>(null);
+  const hintRef = useRef<HTMLButtonElement>(null);
+  const wasOpenRef = useRef(false);
+  useEffect(() => {
+    if (open) panelRef.current?.focus();
+    else if (wasOpenRef.current) hintRef.current?.focus();
+    wasOpenRef.current = open;
+  }, [open]);
 
   const toggle = useCallback(() => setOpen((wasOpen) => !wasOpen), []);
   // `?` only. F1 is NOT bound: `useGlobalShortcut` deliberately never calls
@@ -30,30 +45,12 @@ export function ViewportControlsHelp({ mode }: ViewportControlsHelpProps) {
   // palette would open over the preview every time.
   useGlobalShortcut('?', toggle);
 
-  // Escape closes, and so does a click anywhere else — the panel floats over a
-  // viewport whose whole surface is draggable, so leaving it open would eat
-  // the first navigation gesture aimed at what is underneath it.
-  useEffect(() => {
-    if (!open) return;
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') setOpen(false);
-    }
-    function onPointerDown(event: PointerEvent) {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
-    }
-    window.addEventListener('keydown', onKeyDown);
-    window.addEventListener('pointerdown', onPointerDown, { capture: true });
-    return () => {
-      window.removeEventListener('keydown', onKeyDown);
-      window.removeEventListener('pointerdown', onPointerDown, { capture: true });
-    };
-  }, [open]);
-
   return (
     <div className={styles.root} ref={rootRef} data-testid="viewport-controls-help">
       <button
         type="button"
         className={styles.hint}
+        ref={hintRef}
         onClick={toggle}
         aria-expanded={open}
         title="Show every viewport control (?)"
@@ -68,7 +65,10 @@ export function ViewportControlsHelp({ mode }: ViewportControlsHelpProps) {
       {open && (
         <div
           className={styles.panel}
+          ref={panelRef}
+          tabIndex={-1}
           role="dialog"
+          aria-modal="false"
           aria-label={`${mode} viewport controls`}
           data-testid="viewport-controls-panel"
         >
@@ -77,7 +77,7 @@ export function ViewportControlsHelp({ mode }: ViewportControlsHelpProps) {
             <button
               type="button"
               className={styles.close}
-              onClick={() => setOpen(false)}
+              onClick={close}
               aria-label="Close viewport controls"
             >
               ✕

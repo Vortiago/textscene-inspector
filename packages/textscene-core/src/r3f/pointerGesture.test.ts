@@ -7,6 +7,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   clampWheelNotches,
+  isGesturePointer,
   pinchSpanRatio,
   resolveTouchMode,
   touchCentroid,
@@ -112,5 +113,19 @@ describe('clampWheelNotches', () => {
   it('caps a kinetic fling in both directions', () => {
     expect(clampWheelNotches(1000)).toBe(WHEEL_MAX_NOTCHES);
     expect(clampWheelNotches(-1000)).toBe(-WHEEL_MAX_NOTCHES);
+  });
+});
+
+describe('isGesturePointer', () => {
+  it('claims touch and pen', () => {
+    expect(isGesturePointer('touch')).toBe(true);
+    // A stylus is the device class touch exists for; routed to the mouse path
+    // it is inert, since pen-drag is button 0 with no modifiers.
+    expect(isGesturePointer('pen')).toBe(true);
+  });
+
+  it('leaves a mouse on the button/modifier path', () => {
+    expect(isGesturePointer('mouse')).toBe(false);
+    expect(isGesturePointer('')).toBe(false);
   });
 });

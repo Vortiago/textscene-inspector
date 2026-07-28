@@ -10,10 +10,17 @@
  * `<SelectionProvider>`.
  */
 import { useSelection } from '../../contexts/SelectionContext.js';
+import { hasOpenDismissable } from '../../hooks/useDismissable.js';
 import { useGlobalShortcut } from '../../hooks/useGlobalShortcut.js';
 
 export function EscapeDeselect() {
   const { setSelectedNodePath } = useSelection();
-  useGlobalShortcut('escape', () => setSelectedNodePath(null));
+  useGlobalShortcut('escape', () => {
+    // A floating panel gets first claim on Escape: dismissing the controls
+    // legend or the display menu must not also throw away the selection the
+    // user had made before opening it.
+    if (hasOpenDismissable()) return;
+    setSelectedNodePath(null);
+  });
   return null;
 }

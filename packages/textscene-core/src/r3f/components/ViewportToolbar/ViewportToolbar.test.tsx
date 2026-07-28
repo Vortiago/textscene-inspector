@@ -12,6 +12,16 @@ import { HierarchyProvider } from '../../contexts/HierarchyContext';
 import { CameraControlProvider, useCameraControl } from '../../contexts/CameraControlContext';
 import { ViewportToolbar } from './ViewportToolbar';
 
+/**
+ * The display toggles live behind the "Display" button now (the toolbar wrapped
+ * to two rows and covered the scene with them inline), so a test that wants one
+ * has to open the menu exactly as a user would.
+ */
+function openDisplayMenu(): void {
+  fireEvent.click(screen.getByTestId('display-menu-button'));
+}
+
+
 function renderToolbar(initialMode?: '2D' | '3D', initialShowCollisions?: boolean) {
   return render(
     <ViewportModeProvider initialMode={initialMode} initialShowCollisions={initialShowCollisions}>
@@ -41,6 +51,7 @@ describe('ViewportToolbar', () => {
 
   it('collision checkbox reflects + toggles showCollisions', () => {
     renderToolbar('3D', false);
+    openDisplayMenu();
     const checkbox = screen.getByRole('checkbox', { name: 'Collisions' }) as HTMLInputElement;
     expect(checkbox.checked).toBe(false);
     fireEvent.click(checkbox);
@@ -49,6 +60,7 @@ describe('ViewportToolbar', () => {
 
   it('renders a pre-checked collision toggle when initially on', () => {
     renderToolbar('3D', true);
+    openDisplayMenu();
     expect(
       (screen.getByRole('checkbox', { name: 'Collisions' }) as HTMLInputElement).checked
     ).toBe(true);
@@ -56,6 +68,7 @@ describe('ViewportToolbar', () => {
 
   it('labels checkbox reflects + toggles showLabels (on by default)', () => {
     renderToolbar('3D', false);
+    openDisplayMenu();
     const checkbox = screen.getByRole('checkbox', { name: 'Labels' }) as HTMLInputElement;
     expect(checkbox.checked).toBe(true);
     fireEvent.click(checkbox);
@@ -64,6 +77,7 @@ describe('ViewportToolbar', () => {
 
   it('grid checkbox is unchecked by default and toggles showGrid (#224)', () => {
     renderToolbar('3D', false);
+    openDisplayMenu();
     const checkbox = screen.getByRole('checkbox', { name: 'Grid' }) as HTMLInputElement;
     expect(checkbox.checked).toBe(false);
     fireEvent.click(checkbox);
@@ -72,6 +86,9 @@ describe('ViewportToolbar', () => {
 
   it('hides the grid checkbox in 2D mode (a 3D-only affordance)', () => {
     renderToolbar('2D');
+    // Opened, so this asserts the toggle is absent from the menu rather than
+    // just absent from a closed popover — which would pass either way.
+    openDisplayMenu();
     expect(screen.queryByRole('checkbox', { name: 'Grid' })).toBeNull();
   });
 });
