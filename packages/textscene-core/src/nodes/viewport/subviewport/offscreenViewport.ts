@@ -9,6 +9,7 @@
 
 import * as THREE from 'three';
 import type { Vector2 } from '../../base/node2d/types';
+import { camera2DView, type Camera2DTag } from '../../2d/camera2d/cameraView';
 
 /**
  * Godot's `rendering/environment/defaults/default_clear_color`, `Color(0.3,
@@ -116,6 +117,110 @@ export function selectViewportCamera(
   });
 
   return lastCurrent ?? first;
+}
+
+/**
+ * The Camera2D a sub-viewport's canvas renders through, or null when it has
+ * none — the FIRST enabled one in tree order.
+ *
+ * This is the exact inverse of the 3D rule above, and the asymmetry is in the
+ * engine, not here. `scene/2d/camera_2d.cpp`, `NOTIFICATION_ENTER_TREE`:
+ *
+ *     if (!_is_editing_in_editor() && enabled && !viewport->get_camera_2d()) {
+ *         make_current();
+ *     }
+ *
+ * The `!viewport->get_camera_2d()` guard is the whole difference: a Camera2D
+ * claims the viewport only while it is still VACANT, so a later camera cannot
+ * displace an incumbent — first enabled in tree order wins. `Camera3D` has no
+ * such guard (`_camera_3d_set` replaces unconditionally), so there the LAST
+ * current camera wins. `set_enabled` repeats the same guarded claim, so a
+ * disabled camera never becomes current and never blocks a later one.
+ *
+ * `_is_editing_in_editor()` is deliberately NOT modelled: in the editor Godot
+ * skips the claim entirely and the canvas keeps its identity transform. The
+ * previewer previews the scene as it RUNS — which is also what `pnpm ref:godot`
+ * captures — so the runtime branch is the one worth matching.
+ *
+ * Scope needs no path filter, unlike the 3D selector: a 2D sub-viewport's
+ * subtree is always portalled into its own detached scene (`rendersInline`
+ * requires 3D content), and a nested sub-viewport portals its children onward,
+ * so `root` already contains exactly this viewport's cameras.
+ */
+export function selectViewportCamera2D(root: THREE.Object3D): THREE.Object3D | null {
+  let chosen: THREE.Object3D | null = null;
+
+  // Depth-first pre-order, which is the order nodes enter the tree.
+  root.traverse((object) => {
+    if (chosen) return;
+    const tag = object.userData?.camera2d as Camera2DTag | undefined;
+    if (!tag || tag.enabled === false) return;
+    chosen = object;
+  });
+
+  return chosen;
+}
+
+/**
+ * An Object3D's position in Godot canvas pixels.
+ *
+ * `node2dTransform` conjugates every 2D local transform by `diag(1, -1, 1)`, so
+ * a node authored at Godot `(100, 50)` sits at three `(100, -50)` and the trip
+ * back is one negation. Reading the world matrix rather than walking the parsed
+ * tree is what makes a Camera2D inside an instanced sub-scene resolve for free.
+ */
+export function godotCanvasPosition(object: THREE.Object3D): { x: number; y: number } {
+  const world = object.getWorldPosition(new THREE.Vector3());
+  return { x: world.x, y: -world.y };
+}
+
+/**
+ * Frame the target rect through a Camera2D — `orthoFrameForSize` generalised
+ * from "the whole rect at the origin" to "the camera's view".
+ *
+ * The view rect itself (anchor mode, the scroll-limit clamp, `offset` applied
+ * after that clamp) is `camera2DView`, shared with the Cameras panel rather
+ * than re-derived. Only the projection is new: a view is `size / zoom` pixels
+ * wide, centred on the view centre, with z unchanged at 1000 so nothing about
+ * draw order shifts.
+ */
+export function orthoFrameForCamera2D(
+  framing: Camera2DTag,
+  worldPosition: { x: number; y: number },
+  size: Vector2
+): OrthoFrame {
+  const width = size.x > 0 ? size.x : 1;
+  const height = size.y > 0 ? size.y : 1;
+  const view = camera2DView(framing, worldPosition, { x: width, y: height });
+  const halfWidth = width / view.zoom / 2;
+  const halfHeight = height / view.zoom / 2;
+  return {
+    left: -halfWidth,
+    right: halfWidth,
+    top: halfHeight,
+    bottom: -halfHeight,
+    position: [view.center.x, -view.center.y, 1000],
+  };
+}
+
+/**
+ * Apply a frame to the persistent 2D camera, rebuilding the projection matrix
+ * only when the frustum actually moved — the pass recomputes the frame every
+ * rendered frame, but a static scene's camera never changes.
+ */
+export function applyOrthoFrame(camera: THREE.OrthographicCamera, frame: OrthoFrame): void {
+  const moved =
+    camera.left !== frame.left ||
+    camera.right !== frame.right ||
+    camera.top !== frame.top ||
+    camera.bottom !== frame.bottom;
+
+  camera.left = frame.left;
+  camera.right = frame.right;
+  camera.top = frame.top;
+  camera.bottom = frame.bottom;
+  camera.position.set(...frame.position);
+  if (moved) camera.updateProjectionMatrix();
 }
 
 /**

@@ -46,12 +46,17 @@ import { useViewportRect } from '../../../r3f/contexts/ViewportRectContext';
 import { Node } from '../../node/Component';
 import {
   DEFAULT_CLEAR_COLOR,
+  applyOrthoFrame,
   createOffscreenTarget,
+  godotCanvasPosition,
+  orthoFrameForCamera2D,
   orthoFrameForSize,
   selectViewportCamera,
+  selectViewportCamera2D,
   targetPixelsToImageData,
   viewportAspect,
 } from './offscreenViewport';
+import type { Camera2DTag } from '../../2d/camera2d/cameraView';
 import { useViewportContentKind } from './useViewportContentKind';
 import type { SubViewportProperties } from './types';
 
@@ -175,19 +180,15 @@ function OffscreenViewport({
     [registerViewportTexture, path, entry]
   );
 
-  // A persistent camera for 2D-world content: Godot draws a viewport's canvas
-  // through its canvas transform, with no camera node to borrow.
+  // A persistent camera for 2D-world content. Godot draws a viewport's canvas
+  // through its CANVAS TRANSFORM, which is the identity until a Camera2D in the
+  // subtree makes itself current — so this starts at the whole target rect and
+  // the pass narrows it to the current camera's view each frame.
   const orthoCamera = useMemo(() => new THREE.OrthographicCamera(), []);
   useEffect(() => {
-    const frame = orthoFrameForSize({ x: width, y: height });
-    orthoCamera.left = frame.left;
-    orthoCamera.right = frame.right;
-    orthoCamera.top = frame.top;
-    orthoCamera.bottom = frame.bottom;
     orthoCamera.near = 0.1;
     orthoCamera.far = 4000;
-    orthoCamera.position.set(...frame.position);
-    orthoCamera.updateProjectionMatrix();
+    applyOrthoFrame(orthoCamera, orthoFrameForSize({ x: width, y: height }));
   }, [orthoCamera, width, height]);
 
   // Default priority: a priority-0 subscriber runs BEFORE R3F's automatic main
@@ -195,6 +196,22 @@ function OffscreenViewport({
   // non-zero priority would also disable that automatic render entirely.
   useFrame(() => {
     const source = rendersInline ? mainScene : portalScene;
+
+    if (kind === '2d') {
+      // The camera's world matrix is what carries an instanced sub-scene's
+      // transform, and nothing has refreshed it yet this frame: `gl.render`
+      // updates matrices, and this pass runs BEFORE the main one.
+      source.updateMatrixWorld(true);
+      const camera2d = selectViewportCamera2D(source);
+      const tag = camera2d?.userData.camera2d as Camera2DTag | undefined;
+      applyOrthoFrame(
+        orthoCamera,
+        camera2d && tag
+          ? orthoFrameForCamera2D(tag, godotCanvasPosition(camera2d), { x: width, y: height })
+          : orthoFrameForSize({ x: width, y: height })
+      );
+    }
+
     const camera =
       kind === '3d' ? selectViewportCamera(source, path) : orthoCamera;
 

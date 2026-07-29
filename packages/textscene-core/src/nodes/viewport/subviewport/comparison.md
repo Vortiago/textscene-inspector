@@ -46,6 +46,29 @@ Godot. Its projection is rebuilt against the TARGET rect for the pass and
 restored afterwards, because `<Camera3D>` builds every camera at the canvas's
 16:9 default and the same object may be what the main canvas renders through.
 
+A 2D canvas is framed by its current **Camera2D**, and the selection rule is the
+**inverse** of the 3D one. `camera_2d.cpp`'s `NOTIFICATION_ENTER_TREE` claims the
+viewport only `if (!_is_editing_in_editor() && enabled && !viewport->get_camera_2d())`
+— the guard means the slot must be VACANT, so an incumbent is never displaced and
+the **first enabled** Camera2D in tree order wins; `Viewport::_camera_3d_set`
+overwrites, so in 3D the **last** current camera wins. With no Camera2D the
+canvas transform stays identity, which is the whole target rect at the origin.
+The view rect (anchor mode, the scroll-limit clamp, `offset` added *after* that
+clamp) is `camera2DView`, shared with the Cameras panel; the camera's position
+comes off its world matrix, so one inside an instanced sub-scene resolves for
+free. Measured on `game_splitscreen.tscn` against Godot 4.6.3 at 800x480: level
+geometry in the left sub-viewport aligns to **dy 0, dx 2 px**, the 2 px being our
+8 px `HSplitContainer` grabber against Godot's 2 px (a 396 vs 399 px viewport),
+not a framing error.
+
+`game_splitscreen`'s RIGHT sub-viewport cannot match Godot and this is a format
+limit, not a gap: its framing comes from `game_splitscreen.gd` doing
+`viewport_2.world_2d = viewport_1.world_2d` and
+`player_2.camera.custom_viewport = viewport_2` at runtime. `custom_viewport` is
+registered `PROPERTY_USAGE_NONE` (`camera_2d.cpp`), so it never serialises into a
+`.tscn`, and neither does a `world_2d` reassignment. Statically that viewport
+holds only a `ParallaxBackground` and no Camera2D, so it frames from the origin.
+
 The pass **tonemaps like Godot's viewport pass**. Godot runs the tonemap for
 every viewport render (`_render_buffers_post_process_and_tonemap` in
 `renderer_scene_render_rd.cpp`), through the environment the viewport's
