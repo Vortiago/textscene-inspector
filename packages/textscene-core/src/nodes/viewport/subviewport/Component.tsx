@@ -128,10 +128,16 @@ function OffscreenViewport({
       depthBuffer: true,
       stencilBuffer: false,
     });
-    // The pass writes display-referred pixels, and every consumer samples the
-    // result as a colour map — so the target stores sRGB and three's own
-    // output conversion runs on the way in, exactly as it does for the canvas.
-    created.texture.colorSpace = THREE.SRGBColorSpace;
+    // LINEAR, not sRGB, and this is measured rather than chosen: three renders
+    // into a non-XR target in the WORKING colour space and ignores the target
+    // texture's own — `WebGLPrograms.js` picks
+    //   `currentRenderTarget === null ? renderer.outputColorSpace
+    //      : (isXRRenderTarget ? texture.colorSpace : workingColorSpace)`.
+    // Tagging the target sRGB therefore installs a DECODE when a material
+    // samples it with no matching ENCODE on the way in, and the whole target
+    // renders about 0.6x too dark in linear terms — which is exactly what a
+    // Godot 4.6.3 probe of `unit-sub-viewport-texture.tscn` showed.
+    created.texture.colorSpace = THREE.LinearSRGBColorSpace;
     created.texture.name = `${node.name}::target`;
     // The sub-viewport's own filter enum is not reproduced; linear matches
     // Godot's default `canvas_item_default_texture_filter` (1, LINEAR).
