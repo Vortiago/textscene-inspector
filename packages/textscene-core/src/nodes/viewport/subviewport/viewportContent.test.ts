@@ -49,10 +49,9 @@ describe('viewportContentKind', () => {
   /**
    * An instance node has no type until its sub-scene resolves. Godot's own
    * viewport demos instance 3D sub-scenes (`3d_in_2d.tscn` instances
-   * `robot_3d.tscn`), so it is treated as 3D content — a Control sub-scene is
-   * the documented miss.
+   * `robot_3d.tscn`), so a bare one is assumed to be 3D content.
    */
-  it('treats an instanced sub-scene as 3d content', () => {
+  it('treats a bare instanced sub-scene as 3d content', () => {
     const scene = new TscnParser().parse(`[gd_scene format=3]
 
 [ext_resource type="PackedScene" path="res://robot.tscn" id="1"]
@@ -62,6 +61,112 @@ describe('viewportContentKind', () => {
 [node name="Viewport" type="SubViewport" parent="."]
 
 [node name="Robot" parent="Viewport" instance=ExtResource("1")]
+`);
+    const node = scene.nodes[0]!.children.find((child) => child.type === 'SubViewport')!;
+    expect(viewportContentKind(node)).toBe('3d');
+  });
+
+  /**
+   * …but that assumption is SPECULATIVE, and decisive evidence outranks it.
+   *
+   * A `.tscn` records an instance's own property overrides against the base
+   * class they belong to, so a CanvasItem-only key (`modulate`, `z_index`,
+   * `skew`, …) or a two-component `position` names the sub-scene's world even
+   * though its type is still unknown. `scenes/demos/2d/platformer/
+   * game_splitscreen.tscn` is the case: `Viewport1` holds three instances, and
+   * assuming 3D for all of them selected a `Camera3D` that does not exist and
+   * published a target holding nothing but the clear colour — a wrong picture,
+   * not a missing one, and one that looks exactly like a broken blit.
+   */
+  it('an instance carrying CanvasItem-only overrides is 2d content', () => {
+    const scene = new TscnParser().parse(`[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://player.tscn" id="1"]
+
+[node name="Root" type="Node2D"]
+
+[node name="Viewport" type="SubViewport" parent="."]
+
+[node name="Player" parent="Viewport" instance=ExtResource("1")]
+modulate = Color(1, 1.5, 2.5, 1)
+z_index = 3
+position = Vector2(100, 636.5)
+`);
+    const node = scene.nodes[0]!.children.find((child) => child.type === 'SubViewport')!;
+    expect(viewportContentKind(node)).toBe('2d');
+  });
+
+  it('a two-component position alone is enough — Node3D would carry three', () => {
+    const scene = new TscnParser().parse(`[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://player.tscn" id="1"]
+
+[node name="Root" type="Node2D"]
+
+[node name="Viewport" type="SubViewport" parent="."]
+
+[node name="Player" parent="Viewport" instance=ExtResource("1")]
+position = Vector2(100, 636.5)
+`);
+    const node = scene.nodes[0]!.children.find((child) => child.type === 'SubViewport')!;
+    expect(viewportContentKind(node)).toBe('2d');
+  });
+
+  it('a three-component position keeps the 3d assumption', () => {
+    const scene = new TscnParser().parse(`[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://robot.tscn" id="1"]
+
+[node name="Root" type="Node2D"]
+
+[node name="Viewport" type="SubViewport" parent="."]
+
+[node name="Robot" parent="Viewport" instance=ExtResource("1")]
+position = Vector3(1, 2, 3)
+`);
+    const node = scene.nodes[0]!.children.find((child) => child.type === 'SubViewport')!;
+    expect(viewportContentKind(node)).toBe('3d');
+  });
+
+  /**
+   * The whole point of calling the bare instance's claim speculative: one
+   * decisive 2D sibling settles the viewport for both. Godot's split-screen
+   * platformer instances an untouched `level.tscn` next to two positioned
+   * players, and the level is the content that matters.
+   */
+  it('a decisive 2D sibling outranks a bare instance’s speculative 3d claim', () => {
+    const scene = new TscnParser().parse(`[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://level.tscn" id="1"]
+[ext_resource type="PackedScene" path="res://player.tscn" id="2"]
+
+[node name="Root" type="Node2D"]
+
+[node name="Viewport" type="SubViewport" parent="."]
+
+[node name="Level" parent="Viewport" instance=ExtResource("1")]
+
+[node name="Player" parent="Viewport" instance=ExtResource("2")]
+z_index = 3
+`);
+    const node = scene.nodes[0]!.children.find((child) => child.type === 'SubViewport')!;
+    expect(viewportContentKind(node)).toBe('2d');
+  });
+
+  /** A REGISTERED 3D type is decisive, so it still wins over 2D evidence. */
+  it('a registered 3D node still outranks 2D evidence', () => {
+    const scene = new TscnParser().parse(`[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://player.tscn" id="1"]
+
+[node name="Root" type="Node2D"]
+
+[node name="Viewport" type="SubViewport" parent="."]
+
+[node name="Player" parent="Viewport" instance=ExtResource("1")]
+z_index = 3
+
+[node name="Box" type="MeshInstance3D" parent="Viewport"]
 `);
     const node = scene.nodes[0]!.children.find((child) => child.type === 'SubViewport')!;
     expect(viewportContentKind(node)).toBe('3d');

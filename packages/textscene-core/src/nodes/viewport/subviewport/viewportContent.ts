@@ -17,6 +17,49 @@ import type { TscnNode } from '../../../parser/types';
 import { TWO_D_UI_TYPES } from '../../../r3f/controls/has2DUIContent.js';
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry.js';
 
+/**
+ * CanvasItem-only property names. Each exists on `CanvasItem` or `Node2D` and
+ * on no Node3D class, so finding one among an instance node's own overrides
+ * names the world its sub-scene belongs to before the sub-scene has loaded.
+ * (`modulate`/`self_modulate`/`show_behind_parent`/`clip_children`/
+ * `texture_*`/`light_mask` are `CanvasItem`'s; `z_index`/`z_as_relative`/
+ * `y_sort_enabled`/`skew` are `Node2D`'s.)
+ */
+const CANVAS_ITEM_ONLY_PROPERTIES: ReadonlySet<string> = new Set([
+  'modulate',
+  'self_modulate',
+  'show_behind_parent',
+  'clip_children',
+  'texture_filter',
+  'texture_repeat',
+  'light_mask',
+  'z_index',
+  'z_as_relative',
+  'y_sort_enabled',
+  'skew',
+]);
+
+/**
+ * Which world an INSTANCE node's own overrides name, or null when they name
+ * neither.
+ *
+ * A `.tscn` records an instance's overrides verbatim against the base class
+ * they belong to, and the parser keeps them in `rawProperties` precisely
+ * because the node has no type until its sub-scene resolves. The constructor
+ * in a transform value is decisive on its own: `position = Vector2(…)` cannot
+ * be a Node3D and `Transform3D(…)` cannot be a CanvasItem.
+ */
+function instanceOverrideKind(node: TscnNode): '2d' | '3d' | null {
+  const raw = node.rawProperties;
+  if (!raw) return null;
+  for (const [key, value] of Object.entries(raw)) {
+    if (CANVAS_ITEM_ONLY_PROPERTIES.has(key)) return '2d';
+    if (/^\s*(Vector2|Transform2D|Rect2)\s*\(/.test(value)) return '2d';
+    if (/^\s*(Vector3|Transform3D|Basis|Quaternion|AABB)\s*\(/.test(value)) return '3d';
+  }
+  return null;
+}
+
 export type ViewportContentKind =
   /** Node3D content — rendered through a `Camera3D` descendant. */
   | '3d'
@@ -35,12 +78,20 @@ export type ViewportContentKind =
  * — a divergence from Godot, which composites all of them, and the reason
  * mixed-content viewports are called out in `comparison.md`.
  *
+ * An unresolved instance is the one claim that is SPECULATIVE rather than
+ * decisive. It has no type until its sub-scene loads, and Godot's own viewport
+ * demos instance 3D sub-scenes, so a bare one is still read as 3D — but only
+ * once nothing decisive has been found, so a positioned 2D sibling settles the
+ * viewport for an untouched instance next to it. Anything with a type, and any
+ * instance whose own overrides name a world, outranks it.
+ *
  * Nested sub-viewports are not descended into: their subtree draws into THEIR
  * target, which is where `Viewport` rasterisation stops.
  */
 export function viewportContentKind(node: TscnNode): ViewportContentKind {
   let sawCanvasItem = false;
   let sawDom = false;
+  let sawUntypedInstance = false;
 
   const hasNode3DContent = (nodes: readonly TscnNode[]): boolean =>
     nodes.some((child) => {
@@ -53,10 +104,16 @@ export function viewportContentKind(node: TscnNode): ViewportContentKind {
         sawCanvasItem = true;
         return hasNode3DContent(child.children);
       }
-      // An instance node has no type until its sub-scene resolves. Godot's own
-      // viewport demos instance 3D sub-scenes, so treat it as 3D content and
-      // let a Control sub-scene be the documented miss.
-      if (child.instance) return true;
+      if (child.instance) {
+        const override = instanceOverrideKind(child);
+        if (override === '2d') {
+          sawCanvasItem = true;
+          return false;
+        }
+        if (override === '3d') return true;
+        sawUntypedInstance = true;
+        return false;
+      }
       // A registered 3D node, or a plain container — descend through the
       // container, since a bare `Node` may hold either kind.
       if (nodeComponentRegistry.get(child.type)) return true;
@@ -65,5 +122,6 @@ export function viewportContentKind(node: TscnNode): ViewportContentKind {
 
   if (hasNode3DContent(node.children)) return '3d';
   if (sawCanvasItem) return '2d';
+  if (sawUntypedInstance) return '3d';
   return sawDom ? 'dom' : 'empty';
 }

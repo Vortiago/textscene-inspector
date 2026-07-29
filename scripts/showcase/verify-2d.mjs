@@ -114,7 +114,51 @@ const TARGETS = [
       ],
     },
   ],
+  /**
+   * A sub-viewport holding 2D-WORLD content: the only target whose pixels have
+   * to travel through `readPixels` → `<canvas>`, since a Control subtree
+   * renders as DOM and would look right with no blit at all. Nothing else in
+   * the repo can see this — the golden gate screenshots the WebGL canvas, and
+   * this canvas lives in the DOM overlay (ADR-0024).
+   *
+   * Every value below is a Godot 4.6.3 render of the same fixture:
+   *
+   *   pnpm ref:godot scenes/fixtures/unit-sub-viewport-container-2d-content.tscn \
+   *     --probe 200,100 --probe 130,160 --probe 280,210
+   *   → rgb(127, 127, 127) · rgb(255, 102, 0) · rgb(76, 76, 76)
+   *
+   * (probes there are stage coordinates: the surface's own top-left is the
+   * container's, at 100, 80.)
+   */
+  [
+    'sub-viewport-2d-content',
+    'unit-sub-viewport-container-2d-content.tscn',
+    {
+      minControls: 3,
+      types: ['SubViewportContainer', 'ColorRect'],
+      surface: {
+        node: 'SubViewport',
+        size: [200, 150],
+        probes: [
+          // The encode: stored 55, displayed 128. A raw blit reads 55 here and
+          // still looks like a plausible grey — this is the assertion that
+          // separates "the pixels arrived" from "the pixels arrived correct".
+          [100, 20, [128, 128, 128], 'Band, authored Color(0.5, 0.5, 0.5)'],
+          [30, 80, [255, 102, 0], 'Mark'],
+          [180, 130, [77, 77, 77], 'uncovered — the viewport clear colour'],
+          // Orientation. The readback is bottom-up and `ImageData` is top-down,
+          // so a missing (or doubled) row flip lands the Band at rows 110..149
+          // and the Mark at columns 150..189. Both must read clear.
+          [100, 130, [77, 77, 77], 'below the Band — where a vertical flip puts it'],
+          [170, 80, [77, 77, 77], 'right of the Mark — where a horizontal flip puts it'],
+        ],
+      },
+    },
+  ],
 ];
+
+/** Godot quantises before the sRGB curve; the 8-bit linear target quantises after. */
+const PROBE_TOLERANCE = 2;
 
 mkdirSync(OUT, { recursive: true });
 
@@ -153,6 +197,31 @@ for (const [name, file, expect = {}] of TARGETS) {
     /* overlay never mounted — captured as a failure below */
   }
   await page.waitForTimeout(900); // image load (TextureRect) + layout settle
+
+  // The surface blit samples on a bounded schedule (BLIT_ATTEMPTS × 350 ms in
+  // viewportBlit.ts), so a target that needed a late resource has to be given
+  // that long before its canvas is read.
+  if (expect.surface) await page.waitForTimeout(6000);
+
+  const surface = expect.surface
+    ? await page.evaluate((wanted) => {
+        const el = document.querySelector(
+          `[data-viewport-surface][data-node-name="${wanted.node}"]`
+        );
+        if (!el) return { reason: `no viewport surface named "${wanted.node}"` };
+        const canvas = el.querySelector('[data-viewport-pixels]');
+        if (!canvas) return { reason: 'the surface published no pixel canvas' };
+        const context = canvas.getContext('2d');
+        if (!context) return { reason: 'the pixel canvas has no 2D context' };
+        return {
+          reason: null,
+          size: [canvas.width, canvas.height],
+          samples: wanted.probes.map(([x, y]) => [
+            ...context.getImageData(x, y, 1, 1).data,
+          ].slice(0, 3)),
+        };
+      }, expect.surface)
+    : null;
 
   const stats = await page.evaluate(() => {
     const all = [...document.querySelectorAll('[data-control-type]')];
@@ -251,9 +320,39 @@ for (const [name, file, expect = {}] of TARGETS) {
   if (stats.fallbacks > maxFallbacks) {
     failures.push(`${stats.fallbacks} unresolved-texture fallback(s) > allowed ${maxFallbacks}`);
   }
+  if (expect.surface) {
+    if (!surface || surface.reason) {
+      failures.push(`surface: ${surface?.reason ?? 'not read'}`);
+    } else {
+      const [w, h] = expect.surface.size;
+      if (surface.size[0] !== w || surface.size[1] !== h) {
+        failures.push(
+          `surface canvas is ${surface.size.join('x')}, expected ${w}x${h} (the target's size)`
+        );
+      }
+      expect.surface.probes.forEach(([x, y, wantRgb, label], i) => {
+        const got = surface.samples[i];
+        if (got.some((c, ch) => Math.abs(c - wantRgb[ch]) > PROBE_TOLERANCE)) {
+          failures.push(
+            `surface (${x}, ${y}) [${label}] is rgb(${got.join(', ')}), ` +
+              `expected rgb(${wantRgb.join(', ')}) ±${PROBE_TOLERANCE}`
+          );
+        }
+      });
+    }
+  }
   if (errors.length > 0) failures.push(`${errors.length} console error(s)`);
 
-  results.push({ name, file, switched, overlay, ...stats, failures, errors: errors.slice(0, 5) });
+  results.push({
+    name,
+    file,
+    switched,
+    overlay,
+    ...stats,
+    ...(surface ? { surface } : {}),
+    failures,
+    errors: errors.slice(0, 5),
+  });
   console.log(
     `${failures.length ? '✗' : '✓'} ${name}: overlay=${overlay} controls=${stats.controls} ` +
       `fallbacks=${stats.fallbacks} types=[${stats.types.join(',')}] errors=${errors.length}` +
