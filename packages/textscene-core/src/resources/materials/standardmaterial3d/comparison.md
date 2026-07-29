@@ -100,10 +100,11 @@ single anisotropy vector by the map's R/G, on top of the lobe-shape difference t
 scalar fixture above already shows.
 
 Band edges differ too: ours steps hard (row 470 drops 15 levels across x = 663…666),
-Godot's has no step above 8 in that row. The imported Godot texture is mipmapped; the
-repacked map is a single-level `DataTexture`, so nothing filters its edges at this
-distance. One more consequence of the canvas readback: it stores premultiplied alpha,
-so R/G lose precision where alpha is near zero — the direction, at a strength already
+Godot's has no step above 8 anywhere in that row. Texture filtering is not the cause —
+the map is magnified at this framing, so both sides sample its top level; it is the same
+sharper lobe as above reacting to a hard strength boundary that Godot's softer one
+blurs. One more consequence of the canvas readback: it stores premultiplied alpha, so
+R/G lose precision where alpha is near zero — the direction, at a strength already
 scaled to nothing.
 
 ## Refraction

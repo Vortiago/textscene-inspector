@@ -98,6 +98,11 @@ export function repackAnisotropyFlowmap(
   out.wrapT = texture.wrapT;
   out.magFilter = texture.magFilter;
   out.minFilter = texture.minFilter;
+  // A DataTexture defaults to NO mipmaps, so carrying over a mipmapped minFilter alone leaves
+  // the map sampling level 0 at every distance: three allocates a single level, and a minified
+  // surface aliases where the source image would filter. Carry the source's intent, so the
+  // repack changes channels and nothing else.
+  out.generateMipmaps = texture.generateMipmaps;
   // anisotropyMap is non-color data (direction + strength) — three.js requires NoColorSpace.
   out.colorSpace = THREE.NoColorSpace;
   out.flipY = texture.flipY;

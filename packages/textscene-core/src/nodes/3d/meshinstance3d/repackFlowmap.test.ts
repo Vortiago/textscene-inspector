@@ -143,6 +143,29 @@ describe('repackAnisotropyFlowmap', () => {
     expect(out.flipY).toBe(false);
   });
 
+  it('takes mipmapping from the source rather than the DataTexture default', () => {
+    // A loaded image texture asks for mipmaps and a mipmapped minFilter; a
+    // DataTexture defaults to generateMipmaps=false, so without carrying this
+    // over the map would sample level 0 at every distance.
+    const loaded = new THREE.Texture(imageLike() as unknown as HTMLImageElement);
+    loaded.minFilter = THREE.LinearMipmapLinearFilter;
+    expect(loaded.generateMipmaps).toBe(true);
+
+    const out = repackAnisotropyFlowmap(loaded, () => ({
+      data: new Uint8ClampedArray(SOURCE),
+      width: 2,
+      height: 1,
+    }))!;
+
+    expect(out.generateMipmaps).toBe(true);
+    expect(out.minFilter).toBe(THREE.LinearMipmapLinearFilter);
+
+    // …and a source that does not want them still gets none.
+    const plain = dataTexture();
+    expect(plain.generateMipmaps).toBe(false);
+    expect(repackAnisotropyFlowmap(plain)!.generateMipmaps).toBe(false);
+  });
+
   it('returns undefined when no pixels can be read, so the caller wires no map', () => {
     const texture = new THREE.Texture(imageLike() as unknown as HTMLImageElement);
     // Default reader under happy-dom: no 2D context, nothing readable.
