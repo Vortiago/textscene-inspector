@@ -41,24 +41,3 @@ const POSITIONAL_LIGHT_TYPES = new Set(['PointLight2D']);
 export function isPositionalCanvasLight(node: TscnNode): boolean {
   return POSITIONAL_LIGHT_TYPES.has(node.type);
 }
-
-/**
- * `path -> sequence` for every positional light in preorder, numbered densely
- * from zero. Pure: the caller supplies the tree, so the live-tree walk and its
- * loader plumbing stay in the hook.
- */
-export function lightSequenceByPath(roots: readonly TscnNode[]): Map<string, number> {
-  const out = new Map<string, number>();
-  let seq = 0;
-
-  const walk = (nodes: readonly TscnNode[], parentPath: string): void => {
-    for (const node of nodes) {
-      const path = parentPath ? `${parentPath}/${node.name}` : node.name;
-      if (isPositionalCanvasLight(node)) out.set(path, seq++);
-      walk(node.children, path);
-    }
-  };
-
-  walk(roots, '');
-  return out;
-}
