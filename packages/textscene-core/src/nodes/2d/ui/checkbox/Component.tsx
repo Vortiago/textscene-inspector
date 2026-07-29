@@ -19,6 +19,7 @@ import type { ControlComponentProps } from '../../../../r3f/controls/ControlComp
 import { useControlParent } from '../../../../r3f/controls/ControlParentContext';
 import { controlStyle } from '../../../../r3f/controls/controlLayout';
 import { textThemeStyle } from '../../../../r3f/controls/textThemeStyle';
+import { useGodotTheme } from '../../../../r3f/controls/useGodotTheme';
 import type { CheckBoxProperties } from './types';
 
 export function CheckBox({ node, children }: ControlComponentProps) {
@@ -26,10 +27,18 @@ export function CheckBox({ node, children }: ControlComponentProps) {
   const parentKind = useControlParent();
   // The indicator sits inline before the label, so the row is a flex box —
   // `controlStyle` keeps a hidden Control's `display: none` on top of that.
+  const theme = useGodotTheme();
   const style: CSSProperties = controlStyle(
     props,
     parentKind,
-    { display: 'inline-flex', alignItems: 'center', gap: `${INDICATOR_GAP}px` },
+    {
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: `${INDICATOR_GAP}px`,
+      // The theme's `default_font_size` at the project's scale, set explicitly
+      // like Label's rather than inherited — see that component for why.
+      fontSize: `${theme.fontSize}px`,
+    },
     textThemeStyle(props, { sizeKey: 'font_size', colorKey: 'font_color' })
   );
 

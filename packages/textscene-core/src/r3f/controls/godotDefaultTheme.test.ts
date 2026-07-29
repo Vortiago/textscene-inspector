@@ -19,6 +19,7 @@ import {
   STYLE_NORMAL_FILL,
   STYLE_POPUP_FILL,
   STYLE_PRESSED_FILL,
+  scaledGodotTheme,
 } from './godotDefaultTheme';
 
 describe('godotDefaultTheme', () => {
@@ -54,5 +55,77 @@ describe('godotDefaultTheme', () => {
 
   it('pins the default container separation = 4', () => {
     expect(DEFAULT_SEPARATION).toBe(4);
+  });
+});
+
+/**
+ * `gui/theme/default_theme_scale`. Godot builds the default theme once from the
+ * scale and rounds each product independently — `scene/theme/default_theme.cpp`,
+ * `fill_default_theme`:
+ *
+ *     theme->set_default_font_size(Math::round(default_font_size * scale));
+ *
+ * `make_flat_stylebox`:
+ *
+ *     style->set_content_margin_individual(Math::round(p_margin_left * scale), …);
+ *     style->set_corner_radius_all(Math::round(p_corner_radius * scale));
+ *
+ * and `default_theme.cpp:1249`:
+ *
+ *     theme->set_constant("separation", "BoxContainer", Math::round(4 * scale));
+ */
+describe('scaledGodotTheme', () => {
+  it('returns exactly the scale-1 constants at scale 1', () => {
+    // The un-scaled path must stay byte-identical to the constants every
+    // `.ts`-only consumer still imports.
+    expect(scaledGodotTheme(1)).toEqual({
+      fontSize: DEFAULT_FONT_SIZE,
+      cornerRadius: DEFAULT_CORNER_RADIUS,
+      contentMargin: DEFAULT_CONTENT_MARGIN,
+      optionButtonMarginX: OPTION_BUTTON_CONTENT_MARGIN_X,
+      optionButtonMarginY: OPTION_BUTTON_CONTENT_MARGIN_Y,
+      separation: DEFAULT_SEPARATION,
+    });
+  });
+
+  it('scales every metric at the demo project’s 2.0', () => {
+    // scenes/demos/viewport/gui_in_3d/project.godot sets 2.0.
+    expect(scaledGodotTheme(2)).toEqual({
+      fontSize: 32,
+      cornerRadius: 6,
+      contentMargin: 8,
+      optionButtonMarginX: 16,
+      optionButtonMarginY: 8,
+      separation: 8,
+    });
+  });
+
+  it('rounds each metric independently, never the scale', () => {
+    // At 1.5 the font is round(16·1.5) = 24 while the corner radius is
+    // round(3·1.5) = 5 — a pre-rounded scale (1 or 2) could produce neither
+    // pairing, which is why the rounding is per metric.
+    const theme = scaledGodotTheme(1.5);
+    expect(theme.fontSize).toBe(24);
+    expect(theme.cornerRadius).toBe(5);
+    expect(theme.contentMargin).toBe(6);
+    expect(theme.separation).toBe(6);
+  });
+
+  it('rounds a half up, as Godot’s Math::round does for a positive scale', () => {
+    // round(3 · 1.25) = round(3.75) = 4; round(4 · 1.25) = 5.
+    expect(scaledGodotTheme(1.25).cornerRadius).toBe(4);
+    expect(scaledGodotTheme(1.25).contentMargin).toBe(5);
+  });
+
+  it('shrinks at a scale below 1', () => {
+    // Godot's minimum is 0.5: round(16·0.5) = 8, round(3·0.5) = 2 (half up).
+    expect(scaledGodotTheme(0.5)).toEqual({
+      fontSize: 8,
+      cornerRadius: 2,
+      contentMargin: 2,
+      optionButtonMarginX: 4,
+      optionButtonMarginY: 2,
+      separation: 2,
+    });
   });
 });
