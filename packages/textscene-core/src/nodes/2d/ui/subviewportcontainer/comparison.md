@@ -66,6 +66,18 @@ content drawn directly.
 
 ## Divergences
 
+- **3D content in a surface is about 10% too bright.**
+  `unit-sub-viewport-container-3d-content.tscn` is
+  `unit-sub-viewport-container-2d-content.tscn` with the same authored
+  `Color(0.5, 0.5, 0.5)` moved onto an unshaded box: Godot renders both at 127,
+  the previewer renders the 2D one at 128 and the 3D one at **140**. Geometry,
+  framing, clipping and the clear colour all match exactly — only the value
+  does. The blit is the same code on both paths, so the gap is upstream of it:
+  `<SubViewport>` suspends the tone curve for 2D-canvas content but leaves the
+  renderer's live curve in force for 3D, and every viewport surface is hosted by
+  the 2D stage's canvas, which has no `EnvironmentLayer` and so never configures
+  that curve for Godot parity (ADR-0025 lives in the 3D canvas). Issue #379.
+
 - **Content stops updating once it has settled.** `readRenderTargetPixels` is a
   synchronous GPU stall, so the surface samples the target on a bounded
   schedule (an opening animation frame, then `BLIT_ATTEMPTS` × 350 ms, the

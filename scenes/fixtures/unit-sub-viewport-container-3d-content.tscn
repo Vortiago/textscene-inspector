@@ -1,0 +1,63 @@
+; SubViewportContainer whose sub-viewport holds 3D content.
+;
+; The one variable against unit-sub-viewport-container-2d-content.tscn: the
+; content is a Node3D subtree instead of a Node2D one. Identical container and
+; sub-viewport geometry, identical authored albedo, so the two sheets differ in
+; exactly one thing — which pass filled the target.
+;
+; That matters because the two passes disagree about tonemapping and the blit
+; cannot tell them apart. `<SubViewport>` suspends the curve for 2D-canvas
+; content (Godot draws canvas items after its tonemap pass) but leaves the
+; renderer's live curve in force for 3D content, so a 3D target is
+; tonemap-then-linear where a 2D target is only linear. The blit applies the
+; same sRGB encode to both. A single-colour, UNSHADED box isolates that: with
+; no lighting term left in the picture, the probe measures the colour pipeline
+; and nothing else.
+;
+; Box is Color(0.5, 0.5, 0.5) — deliberately the same authored value as the 2D
+; fixture's Band, which measures 127 in Godot and 128 in the previewer. Any gap
+; here is the tonemap composition, localised.
+;
+; The box sits above centre and the bottom-right stays uncovered, so the target
+; is asymmetric both ways and one probe always reads the viewport's own clear
+; colour.
+
+[gd_scene format=3]
+
+[sub_resource type="BoxMesh" id="BoxMesh_1"]
+size = Vector3(2, 1.6, 2)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_1"]
+shading_mode = 0
+albedo_color = Color(0.5, 0.5, 0.5, 1)
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0.4, 1)
+
+[node name="Booth" type="SubViewportContainer" parent="."]
+offset_left = 100.0
+offset_top = 80.0
+offset_right = 400.0
+offset_bottom = 280.0
+
+[node name="SubViewport" type="SubViewport" parent="Booth"]
+size = Vector2i(200, 150)
+render_target_update_mode = 4
+
+[node name="Camera3D" type="Camera3D" parent="Booth/SubViewport"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3)
+fov = 75.0
+current = true
+
+[node name="Box" type="MeshInstance3D" parent="Booth/SubViewport"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.8, 0)
+mesh = SubResource("BoxMesh_1")
+surface_material_override/0 = SubResource("StandardMaterial3D_1")

@@ -1248,6 +1248,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Viewports"
   },
   {
+    "name": "Sub Viewport Container 3d Content",
+    "file": "unit-sub-viewport-container-3d-content.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
     "name": "Sub Viewport Container Stretch",
     "file": "unit-sub-viewport-container-stretch.tscn",
     "category": "Unit - Viewports"
