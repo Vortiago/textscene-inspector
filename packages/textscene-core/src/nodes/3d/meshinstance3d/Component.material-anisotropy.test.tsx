@@ -220,4 +220,53 @@ describe('<MeshInstance3D> anisotropy material (WI-68)', () => {
     expect(material.anisotropyMap).toBeNull();
     expect(material.anisotropy).toBeCloseTo(0.8, 5);
   });
+
+  it('disposes the UV-transformed flowmap the material actually samples', async () => {
+    // A non-identity `uv1_scale` makes the UV transform hand the material a
+    // CLONE of the repack rather than the repack itself, and three keys its GPU
+    // texture on the sampler parameters the clone changes — so the clone gets an
+    // upload of its own while the original never gets one. Disposing only the
+    // original frees nothing; the texture on the material is the one that has to
+    // be released on unmount.
+    const loader = makeLoader();
+    const path = 'res://textures/aniso_flow.png';
+    const flow = new THREE.DataTexture(new Uint8Array([128, 128, 0, 200]), 1, 1, THREE.RGBAFormat);
+    flow.needsUpdate = true;
+    preloadTexture(loader, path, flow);
+
+    const internal: TscnInternalResource[] = [
+      { id: 'box', type: 'BoxMesh', data: { id: 'box' } },
+      {
+        id: 'mat',
+        type: 'StandardMaterial3D',
+        data: {
+          id: 'mat',
+          anisotropy_enabled: 'true',
+          anisotropy: '0.8',
+          anisotropy_flowmap: 'ExtResource("2")',
+          uv1_scale: 'Vector3(3, 3, 1)',
+        } as Record<string, string>,
+      },
+    ];
+    const external: TscnExternalResource[] = [{ id: '2', path, type: 'Texture2D' }];
+
+    const renderer = await ReactThreeTestRenderer.create(tree(makeNode('mat'), internal, external, loader));
+    await new Promise<void>((r) => setTimeout(r, 10));
+    await renderer.update(tree(makeNode('mat'), internal, external, loader));
+
+    const material = renderer.scene.findAllByType('MeshPhysicalMaterial')[0]!
+      .instance as THREE.MeshPhysicalMaterial;
+    const sampled = material.anisotropyMap!;
+    // The clone, not the repack: only the UV transform sets `repeat`.
+    expect(sampled.repeat.x).toBeCloseTo(3, 5);
+
+    let disposed = false;
+    sampled.addEventListener('dispose', () => {
+      disposed = true;
+    });
+
+    await renderer.unmount();
+
+    expect(disposed).toBe(true);
+  });
 });

@@ -104,8 +104,13 @@ Godot's has no step above 8 anywhere in that row. Texture filtering is not the c
 the map is magnified at this framing, so both sides sample its top level; it is the same
 sharper lobe as above reacting to a hard strength boundary that Godot's softer one
 blurs. One more consequence of the canvas readback: it stores premultiplied alpha, so
-R/G lose precision where alpha is near zero — the direction, at a strength already
-scaled to nothing.
+R/G lose precision where alpha is near zero, and are lost outright where it is zero —
+the direction, at a strength already scaled to nothing. That costs nothing at this
+framing, but it does not stay free once the map is minified: the generated mip chain
+averages those zeroed directions into levels whose strength is not zero, so a
+half-transparent flowmap that holds one direction at every level in Godot turns 90° here
+from the first level that mixes the two alpha regimes. Removing that needs a decode which
+never premultiplies, not a 2D canvas.
 
 ## Refraction
 <!-- compare: image=unit-material-refraction status=limitation fixture=unit-material-refraction.tscn -->

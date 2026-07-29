@@ -21,9 +21,21 @@ export interface FlowmapPixels {
  * but it must degrade to "no map" rather than break the material.
  *
  * Canvas 2D stores premultiplied alpha, so a pixel with low alpha loses
- * precision in R/G on the round trip. Those are the direction vector, which is
- * scaled by that same alpha downstream, so the error stays proportional to a
- * strength that is already near zero.
+ * precision in R/G on the round trip, and one with alpha 0 loses them outright
+ * — the readback reports black where the source held a direction. At the base
+ * level that is inert: R/G are the direction vector, scaled downstream by that
+ * same alpha, so the error stays proportional to a strength that is already
+ * near zero.
+ *
+ * PARITY LIMITATION (minified flowmap): it stops being inert once mipmaps are
+ * in play. Averaging mixes a zero-alpha texel's zeroed direction into coarser
+ * levels whose strength is NOT zero, where Godot — mipmapping the intact image
+ * — averages the real direction. A half-transparent flowmap that reads one
+ * constant direction at every level in Godot holds that direction here only
+ * until the first level mixing the two alpha regimes, then turns 90 degrees at
+ * unchanged strength. Only a decode that never premultiplies (a WebGL upload
+ * read back with UNPACK_PREMULTIPLY_ALPHA_WEBGL off, rather than a 2D canvas)
+ * would remove it.
  */
 export function readFlowmapPixels(image: unknown): FlowmapPixels | undefined {
   const raw = (image as { data?: Uint8Array | Uint8ClampedArray } | null)?.data;

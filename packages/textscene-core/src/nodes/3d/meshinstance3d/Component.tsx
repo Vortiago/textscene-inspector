@@ -298,18 +298,26 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     return repackAnisotropyFlowmap(anisotropyFlowmap);
   }, [anisotropyStrength, anisotropyFlowmap]);
 
-  // The repack allocates its own pixel buffer, so it is disposed on the same
-  // terms as the procedural DataTextures above.
-  useEffect(() => {
-    return () => {
-      repackedFlowmap?.dispose();
-    };
-  }, [repackedFlowmap]);
-
   const anisotropyMap = useMemo(
     () => transformedTexture({ value: repackedFlowmap }, uvTransform),
     [repackedFlowmap, uvTransform]
   );
+
+  // The repack allocates its own pixel buffer, so it is disposed on the same
+  // terms as the procedural DataTextures above. Dispose the UV-transformed
+  // texture too, and not only the repack it came from: a non-identity uv1_scale
+  // makes `transformedTexture` hand back a CLONE, and the clone is what the
+  // material samples. three keys its GPU texture on the sampler parameters, and
+  // the clone changes wrapS/wrapT, so it gets an upload of its own while the
+  // original is never uploaded at all — disposing only the original frees
+  // nothing. Both are ours to release; when the transform is identity they are
+  // the same object and one dispose is enough.
+  useEffect(() => {
+    return () => {
+      repackedFlowmap?.dispose();
+      if (anisotropyMap !== repackedFlowmap) anisotropyMap?.dispose();
+    };
+  }, [repackedFlowmap, anisotropyMap]);
 
   // If any requested slot resolved to `unavailable`, surface the FIRST
   // such path as the placeholder label. Listing more than one would
