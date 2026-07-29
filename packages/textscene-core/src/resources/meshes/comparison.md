@@ -88,7 +88,10 @@ reads fine.
   placeholder is right; the panel row overstates the cause.
 - **Blend shapes, LODs and skins are ignored**; a skinned mesh renders in its rest pose.
 - **A compressed surface with NORMAL but no TANGENT is unverified** — absent from the
-  corpus, so the plain-octahedral reading is implemented by symmetry, not measured.
+  corpus. Compression folds the tangent INTO the normal's bytes, so with no tangent
+  there is no frame and the pair is the normal itself; the angle slot stays zero, and
+  reading it as an angle would mean a half-turn rather than the identity. Implemented
+  by symmetry and pinned by a hand-built fixture, not measured against Godot.
 - **A dropped surface renumbers the draw groups below it.** Group N means `surfaces[N]`,
   which is what the material paths index, so materials follow. It would matter if
   `surface_material_override/<n>`, which names Godot's ORIGINAL index, were wired here.

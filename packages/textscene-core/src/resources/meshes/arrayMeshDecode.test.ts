@@ -262,6 +262,36 @@ _surfaces = [{
 blend_shape_mode = 0
 `;
 
+/**
+ * A compressed surface with NORMAL but NO TANGENT — format 536875011 =
+ * VERTEX|NORMAL|INDEX + ARRAY_FLAG_COMPRESS_ATTRIBUTES. Hand-built, because no
+ * corpus mesh is in this state: compression only folds a tangent frame into the
+ * normal bytes when there IS a tangent, so here the octahedral pair is the
+ * normal itself and the position record's angle slot stays zero.
+ *
+ * The three normals are +Y, +X and +Z, octahedral-encoded as the inverse of
+ * `octToVec3` — the pair is (x, y) and z follows. Reading this through the
+ * axis-angle path instead would take
+ * that zero slot as `abs(0 * 2 - 1) * PI` — a half-turn, not the identity — and
+ * tilt every one of them.
+ */
+const COMPRESSED_NO_TANGENT_TRES = `[gd_resource type="ArrayMesh" format=4]
+
+[resource]
+_surfaces = [{
+"aabb": AABB(0, 0, 0, 1, 1, 1),
+"format": 536875011,
+"index_count": 3,
+"index_data": PackedByteArray("AAABAAIA"),
+"name": "no_tangent",
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 3,
+"vertex_data": PackedByteArray("AAAAgP//AAAAAACA//8AAAAAAID//wAAAID/////AIAAgACA")
+}]
+blend_shape_mode = 0
+`;
+
 describe('compressed attribute layout', () => {
   it('decodes compressed positions as uint16 normalised into the surface aabb', () => {
     const surface = decodeArrayMesh(COMPRESSED_TRES, 'res://mesh.tres').surfaces[0]!;
@@ -301,6 +331,16 @@ describe('compressed attribute layout', () => {
       expect(surface.normals![v * 3 + 1]).toBeCloseTo(0.197363, 5);
       expect(surface.normals![v * 3 + 2]).toBeCloseTo(0.97378, 5);
     }
+  });
+
+  it('reads a compressed NORMAL-without-TANGENT pair as the normal, not an axis-angle frame', () => {
+    const surface = decodeArrayMesh(COMPRESSED_NO_TANGENT_TRES, 'res://n.tres').surfaces[0]!;
+    const n = surface.normals!;
+    // Tolerance 4: a "zero" component is stored as 32768, which decodes to
+    // 1.5e-5 rather than 0 — the uint16 grid, not a decode error.
+    [0, 1, 0, 1, 0, 0, 0, 0, 1].forEach((expected, i) => {
+      expect(n[i]).toBeCloseTo(expected, 4);
+    });
   });
 
   it('drops a compressed surface that declares no aabb', () => {

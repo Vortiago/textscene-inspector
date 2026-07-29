@@ -62,6 +62,12 @@ const COLOR_BYTES = 4;
  */
 interface SurfaceLayout {
   compressed: boolean;
+  /**
+   * The normal region holds an axis-angle tangent frame rather than a plain
+   * octahedral normal. Compression folds the tangent INTO the normal's bytes,
+   * so this is true only when the surface actually declares a TANGENT.
+   */
+  tangentFrame: boolean;
   /** Bytes per vertex in `vertex_data`'s leading position region. */
   positionStride: number;
   /** Bytes per vertex in the normal/tangent region: both halved when compressed. */
@@ -95,6 +101,7 @@ function surfaceLayout(format: number): SurfaceLayout {
 
   return {
     compressed,
+    tangentFrame: compressed && hasTangent,
     positionStride,
     normalStride,
     attributeStride:
@@ -368,7 +375,7 @@ function decodeNormals(
     (view.getUint16(o + 2, true) / 65535) * 2 - 1,
   ];
 
-  if (!layout.compressed) {
+  if (!layout.tangentFrame) {
     for (let i = 0; i < vertexCount; i++) {
       const [ex, ey] = oct(normalBlock + i * stride);
       const [nx, ny, nz] = octToVec3(ex, ey);
