@@ -59,7 +59,10 @@ export interface ShadowLightPose extends ShadowLight, ShadowPolarLight {
  * `quad` must be the cookie mesh itself: its geometry's bounds give the rect
  * and its parent gives the shadow origin and the light-local frame.
  */
-export function sampleShadowLight(quad: THREE.Mesh | null): ShadowLightPose | null {
+export function sampleShadowLight(
+  quad: THREE.Mesh | null,
+  matricesFresh = false
+): ShadowLightPose | null {
   if (!quad || !quad.parent) return null;
   const geometry = quad.geometry;
   if (!geometry.boundingBox) geometry.computeBoundingBox();
@@ -67,8 +70,11 @@ export function sampleShadowLight(quad: THREE.Mesh | null): ShadowLightPose | nu
   if (!box) return null;
 
   // A pass running in `useFrame` executes BEFORE the renderer's own
-  // `updateMatrixWorld`, so the matrices are refreshed rather than trusted.
-  quad.updateWorldMatrix(true, false);
+  // `updateMatrixWorld`, so the matrices are refreshed rather than trusted —
+  // unless the caller has just done it. `updateWorldMatrix(true, …)` recomposes
+  // the whole ancestor chain, so on a light several Node2Ds deep a second walk
+  // costs more than the allocations the hook's guard saves.
+  if (!matricesFresh) quad.updateWorldMatrix(true, false);
   origin.setFromMatrixPosition(quad.parent.matrixWorld);
 
   const rect: LightRect = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
@@ -172,7 +178,11 @@ export function useShadowLightPose(
   const inputsRead = useRef(false);
 
   const sample = useCallback(() => {
+    // `readSampleInputs` is what refreshes the matrices, so the sample below
+    // does not walk the ancestor chain a second time.
+    let matricesFresh = false;
     if (enabled && quad && readSampleInputs(quad, inputScratch)) {
+      matricesFresh = true;
       const previous = inputs.current;
       if (inputsRead.current) {
         let moved = false;
@@ -190,7 +200,7 @@ export function useShadowLightPose(
       inputsRead.current = false;
     }
 
-    const next = enabled ? sampleShadowLight(quad) : null;
+    const next = enabled ? sampleShadowLight(quad, matricesFresh) : null;
     if (sameShadowLight(published.current, next)) return;
     published.current = next;
     setPose(next);

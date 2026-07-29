@@ -280,11 +280,13 @@ describe('createShadowColorQuadMaterial with a shadow filter', () => {
   const TINT = { r: 0.15, g: 0.35, b: 1, a: 0.5 };
 
   it('emits the fractional tint, reducing to the stencil path at s = 1', () => {
+    // The colour rides the sampling, so this quad and the cookie quad of the
+    // same light provably read one value — the options type forbids naming a
+    // second one here.
     const mat = createShadowColorQuadMaterial({
       cookie: new THREE.Texture(),
-      shadowColor: TINT,
       blendMode: 0,
-      shadow: sampling(),
+      shadow: sampling({ shadowColor: TINT }),
     });
     // s * ((1 - s) + s * a): at s = 1 this is `uShadowColor.a * cookie.a`, which
     // is byte-for-byte what the unfiltered tint quad emits inside its umbra.

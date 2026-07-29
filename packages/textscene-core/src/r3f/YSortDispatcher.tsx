@@ -449,18 +449,20 @@ function TileGroupRenderer({ item, z, band, node }: {
   const allCells = tileProps.cells ?? null;
   // When expanded by the y-sort pass, tileData.cells holds the filtered Y-group cells.
   const cells = item.tileData?.cells ?? allCells;
-  // One of these is mounted PER TILE ROW, so the partition is memoised: without
-  // it every row re-buckets its cells on every render of the whole sorted list.
-  const cellsBySource = useMemo(
-    () => (model && cells?.length ? drawnSources(model, cells) : null),
-    [model, cells]
-  );
-
   // `visible` and `enabled` gate the ordinary path through <CanvasItem2D>'s
   // group and the `props.enabled &&` in the body. This path bypasses both, so
   // without these two a hidden or disabled y-sorted layer drew every tile.
   const drawable =
     tileProps.visible !== false && tileProps.enabled && !!cells?.length && status === 'loaded';
+
+  // One of these is mounted PER TILE ROW, so the partition is memoised: without
+  // it every row re-buckets its cells on every render of the whole sorted list.
+  // Gated on `drawable` too — a hidden layer still mounts a renderer per row,
+  // and bucketing cells nothing will draw is the cost hiding it should remove.
+  const cellsBySource = useMemo(
+    () => (drawable && model && cells?.length ? drawnSources(model, cells) : null),
+    [drawable, model, cells]
+  );
 
   // The layer's own Node2D offset. <CanvasItem2D> applies it on the ordinary
   // path; this one bypasses it, and `layerWorldY` above already folds

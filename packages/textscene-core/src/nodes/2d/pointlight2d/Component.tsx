@@ -27,7 +27,7 @@
  * When `enabled=false` the body returns null and the light does not register.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
@@ -245,25 +245,35 @@ function QuadMesh({
 
   // The polar map is a pure function of the pose and the casters, so it is
   // rebuilt on exactly the events the volumes are and is byte-stable in between.
+  const bins = useMemo(
+    () => (filtered && light ? buildShadowPolarMap(light, casters) : null),
+    [filtered, light, casters]
+  );
+
   // The TEXTURE outlives each rebuild: its identity is what both quad materials
   // hold in `uShadowMap`, so refilling it in place is what stops an occluder
   // settling during load from rebuilding two ShaderMaterials per light.
-  const mapTexture = useRef<THREE.DataTexture | null>(null);
-  const shadowMap = useMemo(() => {
-    if (!filtered || !light) return null;
-    mapTexture.current = updateShadowPolarTexture(
-      mapTexture.current,
-      buildShadowPolarMap(light, casters)
-    );
-    return mapTexture.current;
-  }, [filtered, light, casters]);
-  useEffect(
-    () => () => {
-      mapTexture.current?.dispose();
-      mapTexture.current = null;
-    },
-    []
-  );
+  //
+  // Refilling is a COMMIT-phase job precisely BECAUSE the identity is stable.
+  // The materials already on screen sample this exact texture, so a write from
+  // a render React goes on to discard would put an abandoned occluder position
+  // on the GPU while the committed uniforms still describe the previous one.
+  // Building a fresh texture per render was self-correcting that way; refilling
+  // one is not.
+  const [shadowMap, setShadowMap] = useState<THREE.DataTexture | null>(null);
+  useLayoutEffect(() => {
+    if (!bins) {
+      setShadowMap(null);
+      return;
+    }
+    const next = updateShadowPolarTexture(shadowMap, bins);
+    if (next !== shadowMap) setShadowMap(next);
+  }, [bins, shadowMap]);
+
+  // Keyed on the texture, not on mount, so a light that stops being shadowed
+  // (its occluders hidden, or the sub-scene carrying them swapped out) gives
+  // the GL object back instead of holding it for the session.
+  useEffect(() => () => shadowMap?.dispose(), [shadowMap]);
 
   const sampling = useMemo<ShadowSampling | undefined>(() => {
     if (!shadowMap || !light) return undefined;
@@ -304,19 +314,19 @@ function QuadMesh({
   // layer only for a light that tints, so a defined layer already means it does.
   // Asking twice would let the two answers drift.
   const tintsShadow = shadowed && shadowTintLayer !== undefined;
-  const shadowMaterial = useMemo(
-    () =>
-      tintsShadow
-        ? createShadowColorQuadMaterial({
-            cookie: texture,
-            shadowColor,
-            blendMode,
-            stencil: filtered ? undefined : shadowColorQuadStencilProps(ordinal),
-            shadow: sampling,
-          })
-        : null,
-    [tintsShadow, texture, shadowColor, blendMode, filtered, ordinal, sampling]
-  );
+  const shadowMaterial = useMemo(() => {
+    if (!tintsShadow) return null;
+    // A sampling IS the filtered branch, and it carries the colour, so the two
+    // quads of one light cannot be handed different `shadow_color`s.
+    return sampling
+      ? createShadowColorQuadMaterial({ cookie: texture, blendMode, shadow: sampling })
+      : createShadowColorQuadMaterial({
+          cookie: texture,
+          blendMode,
+          shadowColor,
+          stencil: shadowColorQuadStencilProps(ordinal),
+        });
+  }, [tintsShadow, texture, shadowColor, blendMode, ordinal, sampling]);
   useEffect(() => () => shadowMaterial?.dispose(), [shadowMaterial]);
 
   // The light layer is what keeps this quad out of the visible pass AND what

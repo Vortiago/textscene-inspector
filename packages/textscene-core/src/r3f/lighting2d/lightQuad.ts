@@ -396,25 +396,40 @@ export function shadowColorContributes(shadowColor: Color): boolean {
   return shadowColor.a > 0;
 }
 
-/** The `shadow_color` quad: one light's albedo-free term. */
-export interface ShadowColorQuadOptions {
+/**
+ * The `shadow_color` quad: one light's albedo-free term.
+ *
+ * The two mechanisms name the colour in different places, and the union is what
+ * stops a light's two quads being built from two different colours. A FILTERED
+ * light's colour rides its `ShadowSampling`, which the cookie quad reads for the
+ * same light — one carrier, so the tint quad's rgb and the cookie quad's alpha
+ * term are provably the same value rather than two that happen to agree. An
+ * unfiltered light has no sampling, so it names the colour directly.
+ */
+export type ShadowColorQuadOptions = {
   readonly cookie: THREE.Texture;
-  /** `Light2D.shadow_color` — the whole colour, this quad's entire output. */
-  readonly shadowColor: Color;
   readonly blendMode: number;
-  /** The stencil test that confines it to where the volumes stamped. */
-  readonly stencil?: LightQuadStencil;
-  /** Set for a filtered light, whose fraction replaces the stencil. */
-  readonly shadow?: ShadowSampling;
-}
+} & (
+  | {
+      readonly shadow: ShadowSampling;
+      readonly shadowColor?: never;
+      readonly stencil?: never;
+    }
+  | {
+      readonly shadow?: undefined;
+      /** `Light2D.shadow_color` — the whole colour, this quad's entire output. */
+      readonly shadowColor: Color;
+      /** The stencil test that confines it to where the volumes stamped. */
+      readonly stencil?: LightQuadStencil;
+    }
+);
 
-export function createShadowColorQuadMaterial({
-  cookie,
-  shadowColor,
-  blendMode,
-  stencil,
-  shadow,
-}: ShadowColorQuadOptions): THREE.ShaderMaterial {
+export function createShadowColorQuadMaterial(
+  options: ShadowColorQuadOptions
+): THREE.ShaderMaterial {
+  const { cookie, blendMode, shadow } = options;
+  const shadowColor = shadow ? shadow.shadowColor : options.shadowColor;
+  const stencil = shadow ? undefined : options.stencil;
   const sampling = shadow ? shadowSamplingParameters(shadow) : null;
   return new THREE.ShaderMaterial({
     ...(sampling ? { defines: sampling.defines } : {}),

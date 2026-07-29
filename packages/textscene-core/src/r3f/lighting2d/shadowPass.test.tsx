@@ -33,7 +33,15 @@ import { SelectionProvider } from '../contexts/SelectionContext';
 import { SceneResourcesProvider } from '../SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
-import { CanvasLighting2DProvider, LIGHT_LAYER } from './CanvasLighting2D';
+import type { ReactNode } from 'react';
+import {
+  CanvasLighting2DProvider,
+  LIGHT_LAYER,
+  SHADOW_TINT_LAYER,
+  useCanvasLighting2D,
+  type CanvasLightClass,
+} from './CanvasLighting2D';
+import { lightCullKeyId } from './lightCullKey';
 import {
   litQuadRenderOrder,
   shadowStencilRef,
@@ -78,7 +86,7 @@ ${extra}occluder = SubResource("bar")
 `;
 }
 
-async function render(tscn: string) {
+async function render(tscn: string, probe?: ReactNode) {
   const parsed = new TscnParser().parse(tscn);
   const fake = createFakeResourceLoader();
   const cookie = new THREE.Texture();
@@ -100,6 +108,7 @@ async function render(tscn: string) {
           <SelectionProvider>
             <CanvasLighting2DProvider canvasModulate={{ r: 1, g: 1, b: 1, a: 1 }}>
               <NodeDispatcher nodes={parsed.nodes} />
+              {probe}
             </CanvasLighting2DProvider>
           </SelectionProvider>
         </SceneResourcesProvider>
@@ -112,6 +121,17 @@ async function render(tscn: string) {
   // GL context that happy-dom does not have.
   await new Promise<void>((resolve) => setTimeout(resolve, 10));
   return renderer;
+}
+
+/** The classes the provider settled on — what the lights actually read. */
+async function renderClasses(tscn: string): Promise<readonly CanvasLightClass[]> {
+  let latest: readonly CanvasLightClass[] = [];
+  function Probe() {
+    latest = useCanvasLighting2D().classes;
+    return null;
+  }
+  await render(tscn, <Probe />);
+  return latest;
 }
 
 type Rendered = Awaited<ReturnType<typeof render>>;
@@ -309,6 +329,62 @@ describe('shadow_color', () => {
       .map((quad) => quad.material as THREE.Material)
       .find((mat) => mat.stencilFunc === THREE.EqualStencilFunc);
     expect(tint?.stencilRef).toBe(shadowStencilRef(0));
+  });
+
+  it('gives the tint pass to the class that tints, and only that one', async () => {
+    // The albedo-free accumulation is allocated PER CLASS, so a canvas holding
+    // one tinting light and one that does not must run the extra pass for the
+    // first class alone. Two `range_item_cull_mask` windows make two classes;
+    // `compareLightCullKeys` sorts them by tuple, so mask 1 is class 0 and mask
+    // 2 is class 1 whatever order they mounted in.
+    const renderer = await render(
+      scene(
+        `${lamp('Plain', 300, 'range_item_cull_mask = 1\n')}` +
+          `${lamp('Tinting', 700, 'range_item_cull_mask = 2\nshadow_color = Color(0.15, 0.35, 1, 1)\n')}` +
+          `${caster('Caster', 500)}`
+      )
+    );
+
+    // A tint quad has `uShadowColor` but no `uColor` — it carries no light term.
+    const tintQuads = lightQuads(renderer).filter((mesh) => {
+      const uniforms = (mesh.material as THREE.ShaderMaterial).uniforms;
+      return !!uniforms?.uShadowColor && !uniforms?.uColor;
+    });
+    expect(tintQuads).toHaveLength(1);
+
+    // It must land on ITS OWN class's tint layer — class 1, since mask 2 sorts
+    // second. Landing on class 0's would draw into the wrong accumulator, and
+    // landing on a class with no target at all would draw into none.
+    const onClassOne = new THREE.Layers();
+    onClassOne.set(SHADOW_TINT_LAYER + 1);
+    expect(tintQuads[0]!.layers.test(onClassOne)).toBe(true);
+  });
+
+  it('publishes a tint LAYER for exactly the classes that got a tint BUFFER', async () => {
+    // The pairing is the invariant: a light told to draw its `shadow_color`
+    // quad onto a layer whose pass never runs would paint an untinted shadow.
+    // Asserted on the published classes rather than on the quads, because the
+    // node above already withholds the layer from a light that does not tint —
+    // so the quads look identical either way and only the classes show it.
+    const classes = await renderClasses(
+      scene(
+        `${lamp('Plain', 300, 'range_item_cull_mask = 1\n')}` +
+          `${lamp('Tinting', 700, 'range_item_cull_mask = 2\nshadow_color = Color(0.15, 0.35, 1, 1)\n')}` +
+          `${caster('Caster', 500)}`
+      )
+    );
+
+    expect(classes).toHaveLength(2);
+    for (const lightClass of classes) {
+      expect(
+        lightClass.shadowTintLayer !== undefined,
+        `class ${lightCullKeyId(lightClass.key)}`
+      ).toBe(lightClass.shadowTintBuffer !== null);
+    }
+    // And it is the mask-2 class that tints, not merely one of the two.
+    const tinting = classes.filter((c) => c.shadowTintLayer !== undefined);
+    expect(tinting).toHaveLength(1);
+    expect(tinting[0]!.key.itemCullMask).toBe(2);
   });
 
   it('draws no tint quad at the transparent default', async () => {

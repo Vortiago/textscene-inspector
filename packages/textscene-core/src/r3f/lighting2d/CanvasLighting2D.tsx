@@ -176,8 +176,14 @@ export interface CanvasLightClass {
   readonly shadowTintBuffer: THREE.Texture | null;
   /** The camera layer this class's light quads draw on. */
   readonly layer: number;
-  /** The camera layer this class's `shadow_color` quads draw on. */
-  readonly shadowTintLayer: number;
+  /**
+   * The camera layer this class's `shadow_color` quads draw on — set only while
+   * `shadowTintBuffer` is, so a light is never told to draw a tint quad into a
+   * pass that does not run. The two are allocated together and withdrawn
+   * together; splitting them would put an untinted frame on screen for the
+   * commit between a light declaring its tint and its class getting a target.
+   */
+  readonly shadowTintLayer: number | undefined;
 }
 
 /** One light's place in its class's pass, handed out by `register`. */
@@ -663,7 +669,7 @@ export function CanvasLighting2DProvider({
         lightOnlyBuffer: lightOnlyTargets[index]?.texture ?? null,
         shadowTintBuffer: shadowTintTargets[index]?.texture ?? null,
         layer: LIGHT_LAYER + index,
-        shadowTintLayer: SHADOW_TINT_LAYER + index,
+        shadowTintLayer: shadowTintTargets[index] ? SHADOW_TINT_LAYER + index : undefined,
       })),
       resolution,
       register,
