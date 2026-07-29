@@ -1243,6 +1243,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Navigation"
   },
   {
+    "name": "Sub Viewport",
+    "file": "unit-sub-viewport.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
     "name": "Bone Pile 1",
     "file": "decorations/bone_pile_1.tscn",
     "category": "Examples - Isometric Dungeon"

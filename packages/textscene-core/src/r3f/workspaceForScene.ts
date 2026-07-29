@@ -13,6 +13,7 @@ import type { ViewportMode } from './contexts/ViewportModeContext';
 import './nodes/index.js';
 import { nodeComponentRegistry } from './NodeComponentRegistry.js';
 import { TWO_D_UI_TYPES } from './controls/has2DUIContent.js';
+import { isViewportBoundary } from '../nodes/viewport/subviewport/viewportBoundary.js';
 
 /**
  * A node Godot's CanvasItemEditor would claim — 2D world content (Node2D,
@@ -34,6 +35,12 @@ export function workspaceForRoot(root: TscnNode | undefined): ViewportMode | nul
   if (!root) return null;
   if (isCanvasItemNode(root)) {
     return '2D';
+  }
+  // A viewport is a plain `Node` that neither editor plugin handles, so it
+  // claims nothing — but it IS registered and non-container, so without this
+  // it would fall through to the Node3D arm below and claim '3D' (ADR-0030).
+  if (isViewportBoundary(root.type)) {
+    return null;
   }
   if (nodeComponentRegistry.get(root.type) && !nodeComponentRegistry.isContainer(root.type)) {
     return '3D';

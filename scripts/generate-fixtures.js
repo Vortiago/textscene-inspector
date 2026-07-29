@@ -77,6 +77,10 @@ function detectCategory(filename) {
   ) {
     return 'Unit - 2D Canvas';
   }
+  // Nested viewports (ADR-0030) — a sub-viewport and the surfaces that display
+  // it. Its own category because it is neither 2D-canvas nor 2D-UI content: a
+  // sub-viewport hosts BOTH kinds and is a plain Node itself.
+  if (filename.startsWith('unit-sub-viewport')) return 'Unit - Viewports';
   if (filename.startsWith('edge-')) return 'Edge Cases';
   if (filename.startsWith('integration-external')) return 'Integration - External Scenes';
   if (filename.startsWith('integration-')) return 'Integration - Multi-Node';
