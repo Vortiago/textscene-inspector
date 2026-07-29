@@ -532,11 +532,10 @@ interface SecondarySurfaceMaterialProps {
 
 /**
  * Material attached at `material-N` (N > 0) for multi-surface meshes.
- * Scalar properties only — texture loading for slots N>0 would require
- * calling `useResource` from a render-time loop, which violates rules
- * of hooks. The pre-migration imperative renderer also only fully
- * supported texture-bearing materials on slot 0; secondary slots
- * default to scalar-only or default placeholder.
+ *
+ * Scalar properties only — texture slots are unwired, not unreachable. This is a
+ * component rendered once per surface, so it may call `useResource` itself, as
+ * `ExternalMaterialSlot` does for the external-ArrayMesh path.
  */
 function SecondarySurfaceMaterial({
   attach,

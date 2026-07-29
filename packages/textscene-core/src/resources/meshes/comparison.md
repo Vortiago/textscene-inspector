@@ -55,7 +55,7 @@ Three references, all rendered:
 | --- | --- |
 | `ExtResource` | the declaring document's `[ext_resource]` table |
 | `SubResource` of a `.tres` | addressed `<file>::<id>`; its own texture `ExtResource`s resolve against that **`.tres`'s** table, not the scene's |
-| `SubResource` of a `.tscn` | not addressable by any path — the surface takes the neutral default |
+| `SubResource` of a `.tscn` | read off the parsed scene's own resources — no path, nothing to fetch |
 
 ## Unreadable surfaces
 
@@ -75,12 +75,10 @@ reads fine.
 
 ## Known limitations
 
-- **Only surface 0's material loads textures on a mesh built from scene SubResources**
-  (pre-existing `SecondarySurfaceMaterial` limit). External ArrayMeshes are unaffected —
-  each surface is its own `ExternalMaterialSlot`.
-- **A scene SubResource surface material renders its scalars, not its textures.** Its
-  albedo, metallic and roughness apply; a texture slot on it does not load. No corpus
-  scene uses one.
+- **Texture slots on a scene SubResource material are unwired**, on every surface —
+  its scalars apply, its textures do not. `StandardMaterialSlot` already accepts the
+  maps and `ExternalMaterialSlot` already resolves them per surface one branch away in
+  the same loop; the scene branch passes only `scalars`. No corpus scene uses one.
 - **`material_override` / `surface_material_override/N` do not reach an ArrayMesh.**
   Both ArrayMesh paths render one slot per draw group from the surface's own material,
   so a node-level override is dropped where Godot would apply it. Pre-existing for an
