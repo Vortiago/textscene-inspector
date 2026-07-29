@@ -26,8 +26,58 @@ import {
   type KeyframeTrack,
 } from 'three';
 import type { GodotAnimation, GodotKeyframe, GodotTrack } from './animationResolver';
+import { warn } from '../../../logger';
 
 const DEG2RAD = Math.PI / 180;
+
+/**
+ * The node name THREE.PropertyBinding binds a Godot NodePath to, or undefined
+ * when the path names no node at all.
+ *
+ * PropertyBinding matches on the FINAL segment and searches the mixer root's
+ * whole subtree, discarding the ancestors — so `A/Target` and `B/Target` both
+ * reach `Target`, and a duplicated name binds to whichever is found first. That
+ * is also what makes `../Target` work: emit the final name only and root the
+ * mixer high enough to contain it (`parentHops` + `climbNamedAncestors`). A raw
+ * `..` never reaches a track name, which matters because THREE's track-name
+ * grammar cannot parse one and throws while the action is built.
+ *
+ * Undefined only for a path of pure `..` hops, which names an ancestor rather
+ * than a node reachable by name.
+ *
+ * The single source of truth for both the clip's track names and
+ * `resolveTrackTarget`; if they disagree, the Euler reorder and the
+ * base-transform snapshot silently miss a target the mixer is driving.
+ */
+export function bindableNodeName(targetPath: string): string | undefined {
+  const named = targetPath.split('/').filter((s) => s !== '' && s !== '.' && s !== '..');
+  return named.length === 0 ? undefined : named[named.length - 1];
+}
+
+/**
+ * Leading `..` hops in a track's NodePath — how far above the animation root the
+ * mixer must be rooted for PropertyBinding's subtree search to reach the target.
+ */
+export function parentHops(targetPath: string): number {
+  let hops = 0;
+  for (const segment of targetPath.split('/')) {
+    if (segment === '..') hops += 1;
+    else if (segment !== '' && segment !== '.') break;
+  }
+  return hops;
+}
+
+/** The deepest `parentHops` over every track of every animation. */
+export function maxParentHops(animations: GodotAnimation[]): number {
+  let max = 0;
+  for (const animation of animations) {
+    for (const track of animation.tracks) {
+      const hops = parentHops(track.targetPath);
+      if (hops > max) max = hops;
+    }
+  }
+  return max;
+}
 
 export interface LoopSettings {
   loop: AnimationActionLoopStyles;
@@ -59,6 +109,13 @@ export function buildClip(animation: GodotAnimation): AnimationClip {
 }
 
 function buildTracks(track: GodotTrack): KeyframeTrack[] {
+  if (track.targetPath !== '.' && bindableNodeName(track.targetPath) === undefined) {
+    warn(
+      `[AnimationPlayer] track target "${track.targetPath}" names an ancestor rather than a node ` +
+        `THREE can bind by name — dropping the track so the rest of the clip still plays`
+    );
+    return [];
+  }
   const built = buildTrackData(track);
   const interpolation = threeInterpolation(track);
   for (const t of built) t.setInterpolation(interpolation);
@@ -95,8 +152,10 @@ function buildTrackData(track: GodotTrack): KeyframeTrack[] {
   const times = track.keys.map((k) => k.time);
   // A track targeting the animation root itself (Godot `NodePath(".")`) binds
   // to the root via an empty node name — THREE.PropertyBinding resolves the
-  // empty/`.` node to the mixer root. A named target stays a descendant lookup.
-  const prefix = track.targetPath === '.' ? '' : track.targetPath;
+  // empty/`.` node to the mixer root. Every other target binds by its final
+  // name, which is all PropertyBinding reads; `../Sibling` therefore reaches
+  // `Sibling` once the mixer is rooted above it.
+  const prefix = track.targetPath === '.' ? '' : (bindableNodeName(track.targetPath) ?? '');
 
   switch (track.property) {
     case 'position':

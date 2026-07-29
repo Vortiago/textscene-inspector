@@ -37,6 +37,26 @@ function extractPath(rootNode: string): string {
   return (extractNodePathInner(rootNode) ?? rootNode).trim();
 }
 
+/**
+ * Climb `hops` named ancestors, for a track NodePath that points above the
+ * animation root. THREE.PropertyBinding only searches the mixer root's subtree,
+ * so a `../Target` track is reachable only if the mixer is rooted at least that
+ * far up; the track name itself stays the bare target name.
+ *
+ * Returns the highest ancestor reached when the scene runs out before `hops` —
+ * a target above the scene root cannot exist, and the remaining tracks still
+ * bind against the widest subtree available.
+ */
+export function climbNamedAncestors(object: Object3D, hops: number): Object3D {
+  let current = object;
+  for (let i = 0; i < hops; i += 1) {
+    const parent = nearestNamedAncestor(current);
+    if (parent === null) return current;
+    current = parent;
+  }
+  return current;
+}
+
 function nearestNamedAncestor(object: Object3D): Object3D | null {
   let node = object.parent;
   while (node && node.name === '') node = node.parent;

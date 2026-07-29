@@ -10,7 +10,8 @@
 
 import { describe, it, expect } from 'vitest';
 import { AnimationMixer, LoopOnce, LoopPingPong, LoopRepeat, Object3D } from 'three';
-import { buildClip, loopSettingsFor } from './clipBuilder';
+import { buildClip, loopSettingsFor, maxParentHops } from './clipBuilder';
+import { climbNamedAncestors } from './animationRoot';
 import type { GodotAnimation, GodotTrack } from './animationResolver';
 
 const DEG2RAD = Math.PI / 180;
@@ -174,6 +175,85 @@ describe('buildClip — quaternion (rotation_3d)', () => {
   it('drops a quaternion track whose first value is not a 4-tuple', () => {
     const clip = buildClip(anim('a', 1, [quatTrack([{ time: 0, value: [0, 0, 0], transition: 1 }])]));
     expect(clip.tracks).toEqual([]);
+  });
+});
+
+describe('buildClip — NodePaths that leave the animation root', () => {
+  it('names a parent-relative track by its target alone, so THREE can parse it', () => {
+    const clip = buildClip(
+      anim('a', 1, [
+        track('position', [{ time: 0, value: [1, 2, 3], transition: 1 }], '../Sibling'),
+      ])
+    );
+    // A raw "../Sibling.position" makes clipAction throw outright.
+    expect(findTrack(clip, 'Sibling.position')).toBeDefined();
+    expect(() => new AnimationMixer(new Object3D()).clipAction(clip)).not.toThrow();
+  });
+
+  it('drives a parent-relative target when the mixer is rooted above it', () => {
+    const grandparent = new Object3D();
+    grandparent.name = 'Grandparent';
+    const root = new Object3D();
+    root.name = 'Root';
+    const sibling = new Object3D();
+    sibling.name = 'Sibling';
+    grandparent.add(root);
+    grandparent.add(sibling);
+
+    const animation = anim('move', 2, [
+      track(
+        'position',
+        [
+          { time: 0, value: [0, 0, 0], transition: 1 },
+          { time: 2, value: [0, 0, 6], transition: 1 },
+        ],
+        '../Sibling'
+      ),
+    ]);
+    expect(maxParentHops([animation])).toBe(1);
+
+    const mixer = new AnimationMixer(climbNamedAncestors(root, maxParentHops([animation])));
+    mixer.clipAction(buildClip(animation)).play();
+    mixer.update(1);
+    expect(sibling.position.z).toBeCloseTo(3, 5);
+  });
+
+  it('drops a path of pure `..` hops, which names an ancestor rather than a node', () => {
+    const clip = buildClip(
+      anim('a', 1, [
+        track('position', [{ time: 0, value: [1, 2, 3], transition: 1 }], '..'),
+        track('position', [{ time: 0, value: [4, 5, 6], transition: 1 }], 'Target'),
+      ])
+    );
+    expect(findTrack(clip, 'Target.position')).toBeDefined();
+    expect(clip.tracks).toHaveLength(1);
+  });
+
+  it('binds a multi-level descending targetPath, which THREE resolves by final name', () => {
+    const root = new Object3D();
+    const child = new Object3D();
+    child.name = 'Child';
+    const target = new Object3D();
+    target.name = 'Target';
+    root.add(child);
+    child.add(target);
+
+    const clip = buildClip(
+      anim('move', 2, [
+        track(
+          'position',
+          [
+            { time: 0, value: [0, 0, 0], transition: 1 },
+            { time: 2, value: [0, 0, 8], transition: 1 },
+          ],
+          'Child/Target'
+        ),
+      ])
+    );
+    const mixer = new AnimationMixer(root);
+    mixer.clipAction(clip).play();
+    mixer.update(1);
+    expect(target.position.z).toBeCloseTo(4, 5);
   });
 });
 

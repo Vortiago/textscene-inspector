@@ -57,6 +57,36 @@ describe('resolveTrackTarget — root-targeting (NodePath ".")', () => {
   it('returns undefined for a missing target', () => {
     expect(resolveTrackTarget(new Object3D(), 'Ghost')).toBeUndefined();
   });
+
+  // These pin resolveTrackTarget to the SAME object THREE.PropertyBinding drives.
+  // Anything it fails to resolve silently loses the YXZ Euler reorder and the
+  // base-transform snapshot, so a mismatch is invisible until a rotation composes
+  // wrongly or a target is left displaced after stop.
+  it('resolves a multi-level descending path, which THREE binds by final name', () => {
+    const root = new Object3D();
+    const child = new Object3D();
+    child.name = 'Child';
+    const target = new Object3D();
+    target.name = 'Target';
+    root.add(child);
+    child.add(target);
+    expect(resolveTrackTarget(root, 'Child/Target')).toBe(target);
+  });
+
+  it('resolves a parent-relative path against the climbed mixer root', () => {
+    const grandparent = new Object3D();
+    const root = new Object3D();
+    const sibling = new Object3D();
+    sibling.name = 'Sibling';
+    grandparent.add(root);
+    grandparent.add(sibling);
+    // The mixer is rooted at the grandparent for exactly this reason.
+    expect(resolveTrackTarget(grandparent, '../Sibling')).toBe(sibling);
+  });
+
+  it('returns undefined for a path of pure `..` hops, which names no node', () => {
+    expect(resolveTrackTarget(new Object3D(), '..')).toBeUndefined();
+  });
 });
 
 describe('<AnimationPlayer>', () => {

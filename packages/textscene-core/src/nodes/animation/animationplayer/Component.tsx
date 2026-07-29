@@ -36,7 +36,7 @@ import { applyLoopOverride } from '../../../r3f/animation/loopOverride';
 import { useAnimationDriverMount } from '../../../r3f/animation/useAnimationDriverMount';
 import { useAnimatedValueRegistry } from '../../../r3f/contexts/AnimatedValueContext';
 import { resolveAnimations, type GodotAnimation } from './animationResolver';
-import { buildClip, loopSettingsFor } from './clipBuilder';
+import { bindableNodeName, buildClip, loopSettingsFor, maxParentHops } from './clipBuilder';
 import {
   sampleSteppedValue,
   sampleInterpolatedValue,
@@ -44,7 +44,7 @@ import {
   VALUE_PUSH_PROPERTIES,
 } from './valueTracks';
 
-import { resolveAnimationRoot } from './animationRoot';
+import { climbNamedAncestors, resolveAnimationRoot } from './animationRoot';
 import type { AnimationPlayerProperties } from './types';
 
 /** Godot composes Euler rotations in YXZ order; THREE objects default to XYZ. */
@@ -104,10 +104,16 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
 
   // Per-driver mixer root: AnimationPlayer resolves via root_node (sibling/
   // ancestor), while GLBSceneRoot roots on the object itself.
+  // A track NodePath may point ABOVE that root (`../Sibling`). PropertyBinding
+  // only searches the mixer root's subtree, so root the mixer as far up as the
+  // deepest such track needs; tracks that stay inside are unaffected, since
+  // binding is by name rather than by depth.
   const mixerRoot = useMemo<Object3D | null>(() => {
     if (!mountedGroup) return null;
-    return resolveAnimationRoot(mountedGroup, properties.root_node) ?? null;
-  }, [mountedGroup, properties.root_node]);
+    const root = resolveAnimationRoot(mountedGroup, properties.root_node);
+    if (!root) return null;
+    return climbNamedAncestors(root, maxParentHops(animations));
+  }, [mountedGroup, properties.root_node, animations]);
 
   // Loop modes indexed by clip name; configureAction below closes over the
   // memo (usePlaybackLoop reads the latest closure each frame).
@@ -253,12 +259,16 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
 }
 
 /**
- * Resolve a track's target node against the animation root. A `.` targetPath
- * (Godot `NodePath(".")`) is the root itself — `getObjectByName(".")` would miss
- * it (no child is named `.`), so map it to the root directly.
+ * Resolve a track's target node against the animation root — the object the
+ * mixer will drive, so the Euler reorder and the base-transform snapshot land on
+ * it. A `.` targetPath is the root itself; `getObjectByName(".")` would miss it
+ * since no child is named `.`. Every other path goes through
+ * `bindableNodeName`, which is what THREE binds on.
  */
 export function resolveTrackTarget(root: Object3D, targetPath: string): Object3D | undefined {
-  return targetPath === '.' ? root : root.getObjectByName(targetPath);
+  if (targetPath === '.') return root;
+  const nodeName = bindableNodeName(targetPath);
+  return nodeName === undefined ? undefined : root.getObjectByName(nodeName);
 }
 
 /**
