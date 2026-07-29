@@ -117,9 +117,13 @@ which display real content.
     *instances* of the same sub-scene would share one material and therefore one viewport
     binding.
   - A sub-viewport containing Controls has no WebGL source of its own; its texture comes
-    from a DOM raster (ADR-0003 as amended), which does not reproduce a *recursive*
-    ViewportTexture — a viewport sampling its own target, as `gui_in_3d`'s `TextureRect`
-    does.
+    from a DOM raster (ADR-0003 as amended). Its text cannot match Godot's, which bundles
+    Open Sans SemiBold while the overlay is system-fonts-only.
+  - A **recursive** ViewportTexture — a viewport sampling its own target — is unsolved and
+    unexercised: no scene in the corpus does it. (`gui_in_3d` looks like it does only
+    because its `TextureRect` carries `ExtResource("2")` = `res://icon.webp` while the
+    quad's material carries `SubResource("2")` = the ViewportTexture. Same number, two id
+    namespaces — a trap worth knowing when reading these scenes.)
   - `render_target_update_mode` does not gate rendering: the previewer derives the target
     from the scene, so there is no per-frame update to skip.
 
