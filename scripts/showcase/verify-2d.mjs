@@ -156,6 +156,38 @@ const TARGETS = [
     },
   ],
   /**
+   * `stretch` on: the container's rect, not the authored `size`, is what the
+   * viewport renders at (`recalc_force_viewport_sizes` →
+   * `set_size_force(get_size() / stretch_shrink)`).
+   *
+   *   pnpm ref:godot scenes/fixtures/unit-sub-viewport-container-stretch-2d-content.tscn \
+   *     --probe 200,100 --probe 350,255 --probe 150,250
+   *   → rgb(127, 127, 127) · rgb(255, 102, 0) · rgb(76, 76, 76)
+   *
+   * `size` asserts the target really is 300x200 rather than the authored
+   * 200x150, and the `Outside` probe asserts the consequence: that square is
+   * wholly outside a 200x150 rect, so it is drawn only if the content was laid
+   * out against the forced one. It is either there or it is not — no amount of
+   * scaling turns one into the other.
+   */
+  [
+    'sub-viewport-stretch-2d-content',
+    'unit-sub-viewport-container-stretch-2d-content.tscn',
+    {
+      minControls: 3,
+      types: ['SubViewportContainer', 'ColorRect'],
+      surface: {
+        node: 'SubViewport',
+        size: [300, 200],
+        probes: [
+          [150, 20, [128, 128, 128], 'Band — spans the forced rect’s full width'],
+          [250, 175, [255, 102, 0], 'Outside — beyond the authored 200x150 target'],
+          [50, 170, [77, 77, 77], 'uncovered — the viewport clear colour'],
+        ],
+      },
+    },
+  ],
+  /**
    * The same surface fed by the 3D pass instead of the 2D one — the sibling
    * that localises WHICH PASS filled the target. The two fixtures author the
    * same `Color(0.5, 0.5, 0.5)`, so a curve applied to one pass and not the

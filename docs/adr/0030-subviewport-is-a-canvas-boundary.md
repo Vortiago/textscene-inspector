@@ -72,6 +72,17 @@ content beyond it was never rendered. The DOM equivalent puts `overflow: hidden`
 **surface**, never the container — a surface may legitimately overflow the container's box,
 since Godot Controls clip only with `clip_contents`.
 
+**The seam runs both ways.** A second registry, `ViewportRectRegistry`, carries a
+measurement back: with `stretch` on, `recalc_force_viewport_sizes` makes the CONTAINER's
+rect the viewport's size, so the number the target is allocated from lives in the DOM
+overlay while the target lives in the R3F root. The surface measures its own box and
+publishes it under the same node path; `<SubViewport>` prefers it over the authored
+`size`, and falls back when none is published — which is Godot's early return for a
+non-stretching container, and the only behaviour for a sub-viewport with no container at
+all. Kept separate from the texture registry rather than widening
+`ViewportTextureEntry`: the two travel in opposite directions and have different
+lifetimes, and a consumer of one must not re-render because the other changed.
+
 **One registry serves both consumer kinds.** `ViewportTextureRegistry` (`nodePath → entry`)
 mirrors the **AnimationDriverRegistry**: a stable register function so a publisher's effect
 does not re-fire, a reactive map so a consumer re-renders when its target appears. The

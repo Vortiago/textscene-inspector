@@ -1263,6 +1263,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Viewports"
   },
   {
+    "name": "Sub Viewport Container Stretch 2d Content",
+    "file": "unit-sub-viewport-container-stretch-2d-content.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
     "name": "Sub Viewport Container Stretch",
     "file": "unit-sub-viewport-container-stretch.tscn",
     "category": "Unit - Viewports"

@@ -79,6 +79,29 @@ the 2D workspace, whose canvas mounts no `EnvironmentLayer` and so carried
 (`NoToneMapping`), which is Godot: `_render_buffers_post_process_and_tonemap`
 runs on the 3D buffers and canvas items are composited AFTER it.
 
+## `stretch` forces the viewport's size
+
+`recalc_force_viewport_sizes` runs `set_size_force(get_size() / stretch_shrink)`
+on every `SubViewport` child and returns early when `stretch` is off, so with it
+on the authored `size` is **dead** — the content lays out against the
+container's own rect. That number lives in the DOM (the surface is a `<div>` in
+the Control overlay) while the target is allocated in the R3F root, so the
+surface measures its box with a `ResizeObserver` and publishes it through
+`ViewportRectRegistry`; `<SubViewport>` prefers it over `properties.size`. No
+rect published is the ordinary case, not an error — a non-stretching container
+resizes nothing, and a sub-viewport with no container has nothing to be resized
+by. Both keep the authored size.
+
+The measurement cannot feed back on itself: with `stretch` off the surface is
+sized FROM `size` (so nothing is published), and with it on the surface is
+sized by the container's layout, which the target has no influence over.
+
+Measured on `unit-sub-viewport-container-stretch-2d-content.tscn` — the
+non-stretch sibling with `stretch` as the only variable. Its `Outside` square
+spans x 220..280, y 160..190: wholly outside the authored 200x150 target and
+wholly inside the forced 300x200 one, so it is drawn only if the forced rect
+won. Godot rgb(255, 102, 0), previewer rgb(255, 102, 0).
+
 ## Divergences
 
 - **Content stops updating once it has settled.** `readRenderTargetPixels` is a
@@ -88,14 +111,6 @@ runs on the 3D buffers and canvas items are composited AFTER it.
   target or a fresh parse. An `AnimationPlayer` running inside a sub-viewport
   therefore shows its settled frame in the surface, while the same animation
   drawn directly in the canvas keeps moving.
-- **`stretch = true` lays content out against the authored `SubViewport.size`,
-  not the container's rect.** Godot's `recalc_force_viewport_sizes` overwrites
-  the child viewport's size with `get_size() / stretch_shrink` before it
-  renders; the previewer's publisher sizes the target from the serialized
-  `size` and the surface scales the result to the container's box. The drawn
-  rect is right and the framing is not: a `399x480` sub-viewport in a `572x648`
-  container shows less of its world than Godot does, stretched to fit.
-  Issue #381.
 - **Clipping is a consequence, not an operation.** The container issues no clip;
   content outside the target simply was never rendered, because the texture is
   only `size` pixels. The DOM equivalent puts `overflow: hidden` on the

@@ -42,6 +42,7 @@ import {
   useRegisterViewportTexture,
   type ViewportTextureEntry,
 } from '../../../r3f/contexts/ViewportTextureContext';
+import { useViewportRect } from '../../../r3f/contexts/ViewportRectContext';
 import { Node } from '../../node/Component';
 import {
   DEFAULT_CLEAR_COLOR,
@@ -114,8 +115,15 @@ function OffscreenViewport({
 }: OffscreenViewportProps) {
   const properties = node.properties as SubViewportProperties;
   const { size, transparent_bg: transparentBg } = properties;
-  const width = Math.max(1, Math.round(size?.x ?? 512));
-  const height = Math.max(1, Math.round(size?.y ?? 512));
+  // A STRETCHING `SubViewportContainer` overwrites its child viewport's size
+  // with its own rect (`recalc_force_viewport_sizes` →
+  // `set_size_force(get_size() / stretch_shrink)`), so the authored `size` is
+  // dead for those. The container measures that rect in the DOM overlay and
+  // publishes it here; no rect means no stretching container, and the authored
+  // size stands — which is Godot's early return.
+  const forcedRect = useViewportRect(path);
+  const width = Math.max(1, Math.round(forcedRect?.x ?? size?.x ?? 512));
+  const height = Math.max(1, Math.round(forcedRect?.y ?? size?.y ?? 512));
 
   const gl = useThree((state) => state.gl);
   const mainScene = useThree((state) => state.scene);

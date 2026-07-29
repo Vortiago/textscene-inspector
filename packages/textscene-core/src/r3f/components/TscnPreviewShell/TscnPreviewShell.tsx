@@ -29,6 +29,7 @@ import { readPersisted, usePersistedState } from '../../hooks/usePersistedState.
 import { AnimatedValueProvider } from '../../contexts/AnimatedValueContext.js';
 import { AnimationDriverProvider } from '../../contexts/AnimationDriverContext.js';
 import { ViewportTextureProvider } from '../../contexts/ViewportTextureContext.js';
+import { ViewportRectProvider } from '../../contexts/ViewportRectContext.js';
 import {
   AnimationTransportProvider,
   useAnimationTransport,
@@ -255,6 +256,12 @@ export function TscnPreviewShell({
     // resolves it by NodePath. It wraps BOTH canvases and the DOM overlay
     // because consumers live on both sides of that split (ADR-0030).
     (children) => <ViewportTextureProvider>{children}</ViewportTextureProvider>,
+    // The return leg of the same seam: a stretching SubViewportContainer
+    // measures its own DOM box and the publisher sizes the target from it,
+    // because Godot's `recalc_force_viewport_sizes` makes the CONTAINER's rect
+    // the viewport's size. Wraps both canvases and the overlay for the same
+    // reason the texture registry does — the two ends live on either side.
+    (children) => <ViewportRectProvider>{children}</ViewportRectProvider>,
     (children) => <AnimatedValueProvider>{children}</AnimatedValueProvider>
   );
 

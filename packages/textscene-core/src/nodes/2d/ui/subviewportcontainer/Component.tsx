@@ -32,12 +32,13 @@
  *    cleared, empty surface rather than showing something wrong.
  */
 
-import { useEffect, useRef, type CSSProperties } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import type { ControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { ControlParentProvider, useControlParent } from '../../../../r3f/controls/ControlParentContext';
 import { controlLayoutStyle } from '../../../../r3f/controls/controlLayout';
 import { ControlDispatcher } from '../../../../r3f/controls/ControlDispatcher';
 import { useViewportTexture } from '../../../../r3f/contexts/ViewportTextureContext';
+import { useRegisterViewportRect } from '../../../../r3f/contexts/ViewportRectContext';
 import { joinPath } from '../../../../utils/nodePath';
 import type { TscnNode } from '../../../../parser/types';
 import type { SubViewportProperties } from '../../../viewport/subviewport/types';
@@ -133,6 +134,51 @@ function ViewportPixels({ viewport, path }: { viewport: TscnNode; path: string }
   );
 }
 
+/**
+ * Publish the rect a STRETCHING container forces onto its sub-viewport, so the
+ * offscreen pass lays content out against the same number Godot does.
+ *
+ * `recalc_force_viewport_sizes` runs `set_size_force(get_size() / stretch_shrink)`
+ * and returns early when `stretch` is off — so this measures only while it is
+ * on, and publishes nothing otherwise. That asymmetry is also what keeps the
+ * measurement from feeding back on itself: with `stretch` off the surface is
+ * sized FROM the authored `size`, and measuring it to set the size would be a
+ * loop; with it on the surface is sized by the container's own layout, which
+ * the target has no influence over.
+ *
+ * The surface element already IS `get_size() / stretch_shrink`: the shrink
+ * divides its percentage width and a `scale()` puts it back, and `offsetWidth`
+ * reports the pre-transform box. `Math.round` because a render target is an
+ * integer number of pixels and Godot's `Size2i` is too.
+ */
+function useForcedViewportRect(path: string, stretch: boolean) {
+  const registerViewportRect = useRegisterViewportRect();
+  const [element, setElement] = useState<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!element || !stretch) return undefined;
+    let release: (() => void) | undefined;
+    const publish = () => {
+      const x = Math.max(1, Math.round(element.offsetWidth));
+      const y = Math.max(1, Math.round(element.offsetHeight));
+      release?.();
+      release = registerViewportRect(path, { x, y });
+    };
+    publish();
+    // happy-dom and any non-layout host have no ResizeObserver; the one-shot
+    // measurement above still stands, which is all a test can observe anyway.
+    if (typeof ResizeObserver === 'undefined') return () => release?.();
+    const observer = new ResizeObserver(publish);
+    observer.observe(element);
+    return () => {
+      observer.disconnect();
+      release?.();
+    };
+  }, [element, stretch, path, registerViewportRect]);
+
+  return setElement;
+}
+
 /** One sub-viewport's drawn rect, as an absolutely-clipped surface. */
 function ViewportSurface({
   viewport,
@@ -147,6 +193,7 @@ function ViewportSurface({
 }) {
   const props = viewport.properties as SubViewportProperties;
   const size = props.size ?? { x: 512, y: 512 };
+  const surfaceRef = useForcedViewportRect(path, stretch);
 
   const style: CSSProperties = {
     position: 'relative',
@@ -167,7 +214,12 @@ function ViewportSurface({
   };
 
   return (
-    <div data-viewport-surface="true" data-node-name={viewport.name} style={style}>
+    <div
+      ref={surfaceRef}
+      data-viewport-surface="true"
+      data-node-name={viewport.name}
+      style={style}
+    >
       {/* Under the Control arm: a mixed sub-viewport's Controls are the LAST
           canvas items Godot composites into the same target. */}
       <ViewportPixels viewport={viewport} path={path} />
