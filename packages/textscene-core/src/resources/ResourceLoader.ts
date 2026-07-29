@@ -89,6 +89,45 @@ export class ResourceLoader {
 
   private _fileEventBus: FileEventBus | null;
 
+  /**
+   * How many mounted `useResource` consumers are still waiting. Lives here
+   * rather than in a context of its own so no host has to mount another
+   * provider — every consumer already reaches the loader.
+   *
+   * The point is a signal for "loading has actually finished", which a timer
+   * can only guess at: a scene whose meshes are big external `.tres` files
+   * settles long after one whose geometry is inline.
+   */
+  private pendingResources = 0;
+  private readonly pendingListeners = new Set<() => void>();
+
+  /** Called by `useResource` while a consumer is pending; returns the release. */
+  beginPending(): () => void {
+    this.pendingResources += 1;
+    this.notifyPending();
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true;
+      this.pendingResources -= 1;
+      this.notifyPending();
+    };
+  }
+
+  get pendingResourceCount(): number {
+    return this.pendingResources;
+  }
+
+  /** Subscribe to pending-count changes; returns the unsubscribe. */
+  subscribePending(listener: () => void): () => void {
+    this.pendingListeners.add(listener);
+    return () => this.pendingListeners.delete(listener);
+  }
+
+  private notifyPending(): void {
+    for (const listener of this.pendingListeners) listener();
+  }
+
   constructor(fileEventBus?: FileEventBus) {
     this._fileEventBus = fileEventBus || null;
     this.eventBus = new ResourceEventBus();
