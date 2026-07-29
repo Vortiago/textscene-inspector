@@ -86,6 +86,12 @@ const CONTROL_LEAVES = [
   'Button',
   'CheckBox',
   'OptionButton',
+  'LineEdit',
+  // Range → Slider → H/VSlider in Godot, but neither intermediate is
+  // authorable and neither carries a validator of its own, so the leaves link
+  // straight to Control for the inherited anchor/offset/layout rules.
+  'HSlider',
+  'VSlider',
   'ColorRect',
   'TextureRect',
   'Panel',
