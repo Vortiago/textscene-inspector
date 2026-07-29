@@ -11,6 +11,10 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
+import { renderHook } from '@testing-library/react';
+import type { ReactNode } from 'react';
+import { useTexture2D } from './useTexture2D';
+import type { TscnExternalResource, TscnInternalResource } from '../parser/types';
 import { TscnParser } from '../parser/TscnParser';
 import { NodeDispatcher } from '../r3f/NodeDispatcher';
 import { CanvasWorkspaceProvider } from '../r3f/contexts/CanvasWorkspaceContext';
@@ -164,5 +168,78 @@ texture = ExtResource("1")
     );
     await new Promise<void>((r) => setTimeout(r, 10));
     expect(cookieOf(renderer.scene.findAllByType('Mesh')[0]!.instance)).toBe(tex);
+  });
+});
+
+/**
+ * The hook's own three branches, without a node type in the way: every case
+ * above reaches it through PointLight2D, so a break anywhere in the 2D light
+ * pipeline takes this hook's coverage down with it.
+ */
+describe('useTexture2D — reference forms', () => {
+  const gradientResources: TscnInternalResource[] = [
+    {
+      id: 'Gradient_a',
+      type: 'Gradient',
+      data: { colors: 'PackedColorArray(1, 1, 1, 1, 0, 0, 0, 1)' },
+    },
+    {
+      id: 'GradientTexture2D_a',
+      type: 'GradientTexture2D',
+      data: { gradient: 'SubResource("Gradient_a")', width: '16', height: '16' },
+    },
+  ];
+
+  function withLoader(seeded?: { path: string; texture: THREE.Texture }) {
+    const fake = createFakeResourceLoader();
+    if (seeded) fake.textures.seed(seeded.path, seeded.texture);
+    return function Wrapper({ children }: { children: ReactNode }) {
+      return <ResourceLoaderProvider loader={fake.loader}>{children}</ResourceLoaderProvider>;
+    };
+  }
+
+  it('rasterises an inline GradientTexture2D with no file round trip', () => {
+    const { result } = renderHook(
+      () => useTexture2D('SubResource("GradientTexture2D_a")', [], gradientResources),
+      { wrapper: withLoader() }
+    );
+
+    expect(result.current.texture).toBeInstanceOf(THREE.DataTexture);
+    expect(result.current.texture!.image.width).toBe(16);
+    expect(result.current.missing).toBe(false);
+  });
+
+  it('loads an ExtResource image through the resource pipeline', () => {
+    const image = new THREE.Texture();
+    const externalResources: TscnExternalResource[] = [
+      { id: '1', type: 'Texture2D', path: 'res://cookie.png' },
+    ];
+
+    const { result } = renderHook(
+      () => useTexture2D('ExtResource("1")', externalResources, gradientResources),
+      { wrapper: withLoader({ path: 'res://cookie.png', texture: image }) }
+    );
+
+    expect(result.current.texture).toBe(image);
+    expect(result.current.missing).toBe(false);
+  });
+
+  it('reports a reference it cannot resolve as missing', () => {
+    const { result } = renderHook(
+      () => useTexture2D('ExtResource("404")', [], gradientResources),
+      { wrapper: withLoader() }
+    );
+
+    expect(result.current.texture).toBeNull();
+    expect(result.current.missing).toBe(true);
+  });
+
+  it('treats an absent reference as nothing to show, not as missing', () => {
+    const { result } = renderHook(() => useTexture2D(undefined, [], gradientResources), {
+      wrapper: withLoader(),
+    });
+
+    expect(result.current.texture).toBeNull();
+    expect(result.current.missing).toBe(false);
   });
 });

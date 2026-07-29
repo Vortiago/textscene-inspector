@@ -10,7 +10,7 @@ import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../../r3f/components/CanvasItem2D';
 import { canvasItemBlendState } from '../../../../resources/materials/canvasitemmaterial/renderer';
 import { CanvasItemBlendMode } from '../../../../resources/materials/canvasitemmaterial/types';
-import { tileSourceZ } from '../../../../r3f/tileSourceZ';
+import { drawnSources, tileSourceZ } from '../../../../r3f/tileSourceZ';
 import { useYSortSlot } from '../../../../r3f/contexts/YSortContext';
 import { TileSourceMesh } from '../../../../r3f/TileSourceMesh';
 import { useTileSetModel } from '../../../../r3f/useTileSetModel';
@@ -21,25 +21,15 @@ export function TileMapLayer({ node, children }: NodeComponentProps) {
   const { model, status } = useTileSetModel(props.tile_set);
   const cells = props.cells ?? null;
 
-  // Stable per-source partition: parsed cells never change identity, so the
-  // batched geometries survive unrelated re-renders (and only rebuild on data).
   // The tree-order band this layer may spread its atlas sources across.
   const slot = useYSortSlot();
 
-  const cellsBySource = useMemo(() => {
-    if (!model || !cells?.length) return null;
-    // `sourceIndex` is assigned AFTER the filter, so it is the position among
-    // the sources this layer actually draws. A tileset-wide index paired with
-    // the drawn-only count is what let the nudge run past the band.
-    return model.sourceOrder
-      .map((sourceId) => ({
-        sourceId,
-        source: model.sources.get(sourceId)!,
-        cells: cells.filter((c) => c.sourceId === sourceId),
-      }))
-      .filter((entry) => entry.cells.length > 0)
-      .map((entry, sourceIndex) => ({ ...entry, sourceIndex }));
-  }, [model, cells]);
+  // Stable per-source partition: parsed cells never change identity, so the
+  // batched geometries survive unrelated re-renders (and only rebuild on data).
+  const cellsBySource = useMemo(
+    () => (model && cells?.length ? drawnSources(model, cells) : null),
+    [model, cells]
+  );
 
   return (
     <CanvasItem2D
@@ -47,13 +37,13 @@ export function TileMapLayer({ node, children }: NodeComponentProps) {
       props={props}
       body={({ color, opacity }, material, lighting) =>
         props.enabled && status === 'loaded' && model && cellsBySource
-          ? cellsBySource.map(({ sourceId, sourceIndex, source, cells: sourceCells }) => (
+          ? cellsBySource.map(({ sourceId, sourceIndex, sourceCount, source, cells: sourceCells }) => (
               <TileSourceMesh
                 key={sourceId}
                 source={source}
                 cells={sourceCells}
                 grid={model}
-                z={tileSourceZ(sourceIndex, cellsBySource.length, slot.width)}
+                z={tileSourceZ(sourceIndex, sourceCount, slot.width)}
                 color={color}
                 opacity={opacity}
                 name={node.name}

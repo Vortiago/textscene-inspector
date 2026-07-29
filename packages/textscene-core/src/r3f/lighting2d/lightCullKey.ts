@@ -48,6 +48,8 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  */
 
+import { POINT_LIGHT_2D_RANGE_DEFAULTS } from '../../nodes/2d/pointlight2d/types.js';
+
 /**
  * Everything a light contributes to Godot's cull test — and therefore the whole
  * identity of an accumulation class.
@@ -70,28 +72,14 @@ export interface LightCullKey {
 }
 
 /**
- * The window an untouched `Light2D` carries. `scene/2d/light_2d.h:50-55`:
- *
- *   int z_min = -1024;
- *   int z_max = 1024;
- *   int layer_min = 0;
- *   int layer_max = 0;
- *   int item_mask = 1;
- *
- * Confirmed on the engine as well: a fresh `PointLight2D` in Godot 4.6.3 reports
- * exactly those five values.
+ * The window an untouched `Light2D` carries, as a cull key — the engine values
+ * live in `POINT_LIGHT_2D_RANGE_DEFAULTS`, beside the properties they parse.
  *
  * The z pair is wide enough to go unnoticed on a scene whose z stays small, but
  * it is a window like any other; the layer pair is not wide at all, and is why a
  * default light never lights a default CanvasLayer.
  */
-export const DEFAULT_LIGHT_CULL_KEY: LightCullKey = {
-  itemCullMask: 1,
-  zMin: -1024,
-  zMax: 1024,
-  layerMin: 0,
-  layerMax: 0,
-};
+export const DEFAULT_LIGHT_CULL_KEY: LightCullKey = POINT_LIGHT_2D_RANGE_DEFAULTS;
 
 /**
  * Does this light reach this item?

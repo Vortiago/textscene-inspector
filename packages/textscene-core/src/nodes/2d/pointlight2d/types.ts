@@ -62,3 +62,29 @@ export interface PointLight2DProperties extends Node2DProperties {
   /** `Light2D.shadow_filter_smooth`: the PCF kernel's width, in shadow-map texels. */
   shadow_filter_smooth: number;
 }
+
+/**
+ * The cull window an untouched `Light2D` carries. `scene/2d/light_2d.h:50-55`:
+ *
+ *   int item_mask = 1;
+ *   int z_min = -1024;
+ *   int z_max = 1024;
+ *   int layer_min = 0;
+ *   int layer_max = 0;
+ *
+ * Confirmed on the engine too: a fresh `PointLight2D` in Godot 4.6.3 reports
+ * exactly those five values.
+ *
+ * One record because three readers ask about the same engine constants — the
+ * parser's fallbacks, the linter's inverted-window test, and the renderer's
+ * default cull key. Transcribed separately, a change to one leaves the linter
+ * silent on exactly the scenes the renderer culls to black, and a MISSING
+ * warning is the failure no test asserts.
+ */
+export const POINT_LIGHT_2D_RANGE_DEFAULTS = {
+  itemCullMask: 1,
+  zMin: -1024,
+  zMax: 1024,
+  layerMin: 0,
+  layerMax: 0,
+} as const;

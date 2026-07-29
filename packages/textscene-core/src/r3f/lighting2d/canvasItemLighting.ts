@@ -56,6 +56,7 @@
 import type * as THREE from 'three';
 import { CanvasItemLightMode } from '../../resources/materials/canvasitemmaterial/types.js';
 import { MAX_LIGHT_CLASSES } from './CanvasLighting2D.js';
+import { GODOT_TO_LINEAR_GLSL, GODOT_TO_SRGB_GLSL } from './srgbTransfer.js';
 
 /**
  * The smallest canvas-modulate channel the CPU will fold into an item's colour.
@@ -74,15 +75,8 @@ export function shadowTintSampler(index: number): string {
   return `uShadowTint${index}`;
 }
 
-/** sRGB transfer functions, matching three's own `sRGBTransferOETF`/`EOTF`. */
-const TRANSFER_GLSL = /* glsl */ `
-vec3 godotToSrgb(vec3 c) {
-  return mix(c * 12.92, pow(max(c, vec3(0.0)), vec3(0.41666)) * 1.055 - 0.055, step(0.0031308, c));
-}
-vec3 godotToLinear(vec3 c) {
-  return mix(c / 12.92, pow((max(c, vec3(0.0)) + 0.055) / 1.055, vec3(2.4)), step(0.04045, c));
-}
-`;
+/** Both directions: the item side encodes to compare and decodes to write back. */
+const TRANSFER_GLSL = GODOT_TO_SRGB_GLSL + GODOT_TO_LINEAR_GLSL;
 
 const CLASS_SLOTS = Array.from({ length: MAX_LIGHT_CLASSES }, (_unused, index) => index);
 

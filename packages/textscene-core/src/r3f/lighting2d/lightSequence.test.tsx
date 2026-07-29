@@ -32,6 +32,10 @@ import { createFakeResourceLoader } from '../../resources/testing/createFakeReso
 import { CanvasLighting2DProvider } from './CanvasLighting2D';
 import { litQuadRenderOrder } from './ShadowVolumeMask';
 import { isPositionalCanvasLight } from './lightSequence';
+import { CanvasLightSequenceProvider, useLightSequence } from './useLightSequence';
+import { HierarchyProvider } from '../contexts/HierarchyContext';
+import { NodePathProvider } from '../contexts/NodePathContext';
+import { createSceneGraphFromTscnScene } from '../../core/SceneGraph';
 import '../nodes'; // side-effect: registers every node's r3f component
 
 const COOKIE = 'res://light.png';
@@ -100,6 +104,73 @@ describe('isPositionalCanvasLight', () => {
 
   it('claims none for an ordinary canvas item', () => {
     expect(isPositionalCanvasLight({ type: 'Sprite2D' } as never)).toBe(false);
+  });
+});
+
+/**
+ * The provider is what makes the numbering a property of the CANVAS: it walks
+ * once and every light reads the result. These drive it directly rather than
+ * through the dispatcher, because the dispatcher cases above cannot tell a
+ * sequence from an ordinal — with every cookie resolving in the same tick the
+ * two numbers coincide, which is the whole reason the walk exists.
+ */
+describe('CanvasLightSequenceProvider', () => {
+  const SCENE = `[gd_scene format=3]
+[node name="Root" type="Node2D"]
+[node name="A" type="PointLight2D" parent="."]
+[node name="Mid" type="Node2D" parent="."]
+[node name="B" type="PointLight2D" parent="Mid"]
+[node name="C" type="PointLight2D" parent="."]
+[node name="Prop" type="Sprite2D" parent="."]
+`;
+
+  function Probe({ path, ordinal, seen }: { path: string; ordinal: number; seen: number[] }) {
+    return (
+      <NodePathProvider path={path}>
+        <Read ordinal={ordinal} seen={seen} />
+      </NodePathProvider>
+    );
+  }
+
+  function Read({ ordinal, seen }: { ordinal: number; seen: number[] }) {
+    seen.push(useLightSequence(ordinal));
+    return null;
+  }
+
+  async function sequences(paths: readonly string[], ordinal = 99): Promise<number[]> {
+    const seen: number[] = [];
+    const sceneGraph = createSceneGraphFromTscnScene(new TscnParser().parse(SCENE));
+    await ReactThreeTestRenderer.create(
+      <HierarchyProvider value={{ sceneGraph, panelId: 'p' }}>
+        <CanvasLightSequenceProvider>
+          {paths.map((path) => (
+            <Probe key={path} path={path} ordinal={ordinal} seen={seen} />
+          ))}
+        </CanvasLightSequenceProvider>
+      </HierarchyProvider>
+    );
+    return seen;
+  }
+
+  it('numbers the canvas light list in preorder, whatever ordinal a light was given', async () => {
+    // Every probe passes ordinal 99, so a returned 0/1/2 can only have come from
+    // the walk. `Mid/B` is deeper than `C` but earlier in preorder.
+    expect(await sequences(['Root/A', 'Root/Mid/B', 'Root/C'])).toEqual([0, 1, 2]);
+  });
+
+  it('is dense across an unlit tree, so the pairing spends no empty slots', async () => {
+    // `Prop` is a Sprite2D between two lights and takes no slot.
+    expect(await sequences(['Root/C'])).toEqual([2]);
+  });
+
+  it('falls back to the ordinal for a path the walk never saw', async () => {
+    expect(await sequences(['Root/Nowhere'], 7)).toEqual([7]);
+  });
+
+  it('falls back to the ordinal with no canvas provider at all', async () => {
+    const seen: number[] = [];
+    await ReactThreeTestRenderer.create(<Probe path="Root/A" ordinal={4} seen={seen} />);
+    expect(seen).toEqual([4]);
   });
 });
 

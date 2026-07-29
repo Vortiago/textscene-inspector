@@ -72,6 +72,7 @@
 import * as THREE from 'three';
 import type { Color } from '../../nodes/base/node2d/types.js';
 import { SHADOW_MAP_BINS } from './shadowPolarMap.js';
+import { GODOT_TO_SRGB_GLSL } from './srgbTransfer.js';
 
 /** Godot `Light2D.BlendMode`. */
 export enum Light2DBlendMode {
@@ -120,14 +121,10 @@ uniform sampler2D uCookie;
 uniform vec3 uColor;
 uniform float uEnergy;
 varying vec2 vLightUv;
-
-vec3 lightToSrgb(vec3 c) {
-  return mix(c * 12.92, pow(max(c, vec3(0.0)), vec3(0.41666)) * 1.055 - 0.055, step(0.0031308, c));
-}
-
+${GODOT_TO_SRGB_GLSL}
 void main() {
   vec4 cookie = texture2D(uCookie, vLightUv);
-  gl_FragColor = vec4(lightToSrgb(cookie.rgb) * uColor * uEnergy, cookie.a);
+  gl_FragColor = vec4(godotToSrgb(cookie.rgb) * uColor * uEnergy, cookie.a);
 }
 `;
 
@@ -263,17 +260,13 @@ uniform vec3 uColor;
 uniform float uEnergy;
 uniform vec4 uShadowColor;
 varying vec2 vLightUv;
-
-vec3 lightToSrgb(vec3 c) {
-  return mix(c * 12.92, pow(max(c, vec3(0.0)), vec3(0.41666)) * 1.055 - 0.055, step(0.0031308, c));
-}
-
+${GODOT_TO_SRGB_GLSL}
 void main() {
   vec4 cookie = texture2D(uCookie, vLightUv);
   float s = shadowFraction();
   float lit = 1.0 - s;
   gl_FragColor = vec4(
-    lightToSrgb(cookie.rgb) * uColor * uEnergy * lit,
+    godotToSrgb(cookie.rgb) * uColor * uEnergy * lit,
     cookie.a * (lit + s * uShadowColor.a)
   );
 }
@@ -313,6 +306,13 @@ export interface ShadowSampling {
   readonly worldToLocal: THREE.Matrix3;
   /** `1 / (radius_cache * 1.1)`, the divisor the map was normalised by. */
   readonly zFarInv: number;
+  /**
+   * `Light2D.shadow_color`. It belongs to the sampling because only a FILTERED
+   * cookie quad reads one: the stencil mechanism partitions the two terms
+   * between two quads, so its cookie fragment has no `shadow_color` term at all.
+   * The tint quad carries the colour in its own right, filtered or not.
+   */
+  readonly shadowColor: Color;
 }
 
 /**
@@ -327,10 +327,8 @@ export interface ShadowSampling {
  * costs well under a tenth of a pixel of occluder distance.
  */
 export function createShadowPolarTexture(bins: Float32Array): THREE.DataTexture {
-  const data = new Uint16Array(bins.length);
-  for (let i = 0; i < bins.length; i += 1) data[i] = THREE.DataUtils.toHalfFloat(bins[i]!);
   const texture = new THREE.DataTexture(
-    data,
+    new Uint16Array(bins.length),
     bins.length,
     1,
     THREE.RedFormat,
@@ -342,8 +340,34 @@ export function createShadowPolarTexture(bins: Float32Array): THREE.DataTexture 
   texture.wrapT = THREE.ClampToEdgeWrapping;
   texture.colorSpace = THREE.NoColorSpace;
   texture.generateMipmaps = false;
-  texture.needsUpdate = true;
+  fillShadowPolarTexture(texture, bins);
   return texture;
+}
+
+function fillShadowPolarTexture(texture: THREE.DataTexture, bins: Float32Array): void {
+  const data = texture.image.data as Uint16Array;
+  for (let i = 0; i < bins.length; i += 1) data[i] = THREE.DataUtils.toHalfFloat(bins[i]!);
+  texture.needsUpdate = true;
+}
+
+/**
+ * `existing` refilled from `bins` where it can be, a fresh texture otherwise.
+ *
+ * A light rebuilds its map whenever an occluder settles or moves, which during
+ * load is several times per light. The texture is the only thing downstream of
+ * the map that costs a GPU allocation, and its IDENTITY is what the quad's
+ * material holds in `uShadowMap` — so replacing it would rebuild the material
+ * (and the shadow-tint material) to change nothing the shader can observe.
+ * Keeping it means a rebuild re-uploads 4 KB and stops there.
+ */
+export function updateShadowPolarTexture(
+  existing: THREE.DataTexture | null,
+  bins: Float32Array
+): THREE.DataTexture {
+  const data = existing?.image.data as ArrayLike<number> | undefined;
+  if (!existing || data?.length !== bins.length) return createShadowPolarTexture(bins);
+  fillShadowPolarTexture(existing, bins);
+  return existing;
 }
 
 function shadowSamplingParameters(
@@ -372,13 +396,25 @@ export function shadowColorContributes(shadowColor: Color): boolean {
   return shadowColor.a > 0;
 }
 
-export function createShadowColorQuadMaterial(
-  cookie: THREE.Texture,
-  shadowColor: Color,
-  blendMode: number,
-  stencil: LightQuadStencil = {},
-  shadow?: ShadowSampling | undefined
-): THREE.ShaderMaterial {
+/** The `shadow_color` quad: one light's albedo-free term. */
+export interface ShadowColorQuadOptions {
+  readonly cookie: THREE.Texture;
+  /** `Light2D.shadow_color` — the whole colour, this quad's entire output. */
+  readonly shadowColor: Color;
+  readonly blendMode: number;
+  /** The stencil test that confines it to where the volumes stamped. */
+  readonly stencil?: LightQuadStencil;
+  /** Set for a filtered light, whose fraction replaces the stencil. */
+  readonly shadow?: ShadowSampling;
+}
+
+export function createShadowColorQuadMaterial({
+  cookie,
+  shadowColor,
+  blendMode,
+  stencil,
+  shadow,
+}: ShadowColorQuadOptions): THREE.ShaderMaterial {
   const sampling = shadow ? shadowSamplingParameters(shadow) : null;
   return new THREE.ShaderMaterial({
     ...(sampling ? { defines: sampling.defines } : {}),
@@ -399,15 +435,28 @@ export function createShadowColorQuadMaterial(
   });
 }
 
-export function createLightQuadMaterial(
-  cookie: THREE.Texture,
-  color: Color,
-  energy: number,
-  blendMode: number,
-  stencil: LightQuadStencil = {},
-  shadow?: ShadowSampling | undefined,
-  shadowColor: Color = { r: 0, g: 0, b: 0, a: 0 }
-): THREE.ShaderMaterial {
+/** The cookie quad: one light's albedo-multiplied term. */
+export interface LightQuadOptions {
+  readonly cookie: THREE.Texture;
+  /** `Light2D.color`. */
+  readonly color: Color;
+  /** `Light2D.energy`. */
+  readonly energy: number;
+  readonly blendMode: number;
+  /** The stencil test that withholds it where the volumes stamped. */
+  readonly stencil?: LightQuadStencil;
+  /** Set for a filtered light, whose fraction replaces the stencil. */
+  readonly shadow?: ShadowSampling;
+}
+
+export function createLightQuadMaterial({
+  cookie,
+  color,
+  energy,
+  blendMode,
+  stencil,
+  shadow,
+}: LightQuadOptions): THREE.ShaderMaterial {
   const sampling = shadow ? shadowSamplingParameters(shadow) : null;
   return new THREE.ShaderMaterial({
     ...(sampling ? { defines: sampling.defines } : {}),
@@ -419,14 +468,14 @@ export function createLightQuadMaterial(
       uEnergy: { value: energy },
       // Only `.a` is read on this side — it is what carries the shadowed half of
       // the alpha the accumulator sums for `light_only_alpha`.
-      ...(sampling
+      ...(shadow
         ? {
             uShadowColor: {
               value: new THREE.Vector4(
-                shadowColor.r,
-                shadowColor.g,
-                shadowColor.b,
-                shadowColor.a
+                shadow.shadowColor.r,
+                shadow.shadowColor.g,
+                shadow.shadowColor.b,
+                shadow.shadowColor.a
               ),
             },
           }

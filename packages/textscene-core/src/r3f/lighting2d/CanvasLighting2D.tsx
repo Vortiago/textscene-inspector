@@ -93,6 +93,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { warn } from '../../logger';
 import type { RGBA } from '../canvasItemModulate.js';
 import { ShadowCasterStage } from './ShadowCasterStage.js';
+import { CanvasLightSequenceProvider } from './useLightSequence.js';
 import {
   compareLightCullKeys,
   lightCullKeyId,
@@ -211,8 +212,12 @@ export interface CanvasLighting2D {
   register(key: LightCullKey): CanvasLightSlot;
   /** Declares an item that needs the unmodulated accumulation. */
   registerLightOnly(): () => void;
-  /** Declares a light that tints its shadow, so the extra pass is worth running. */
-  registerShadowTint(): () => void;
+  /**
+   * Declares a light that tints its shadow, so ITS class allocates the extra
+   * pass. Keyed, unlike `registerLightOnly`: an item can read any class, but a
+   * light belongs to exactly one.
+   */
+  registerShadowTint(key: LightCullKey): () => void;
 }
 
 const INERT: CanvasLighting2D = {
@@ -220,7 +225,7 @@ const INERT: CanvasLighting2D = {
   resolution: new THREE.Vector2(1, 1),
   register: (_key: LightCullKey) => ({ ordinal: 0, release: () => {} }),
   registerLightOnly: () => () => {},
-  registerShadowTint: () => () => {},
+  registerShadowTint: (_key: LightCullKey) => () => {},
 };
 
 const CanvasLighting2DContext = createContext<CanvasLighting2D>(INERT);
@@ -244,6 +249,52 @@ const EMPTY_KEYS: readonly LightCullKey[] = [];
 
 function sameKeys(a: readonly LightCullKey[], b: readonly LightCullKey[]): boolean {
   return a.length === b.length && a.every((key, i) => sameLightCullKey(key, b[i]!));
+}
+
+const EMPTY_IDS: ReadonlySet<string> = new Set();
+
+/**
+ * The same counter as `useDeclarationCount`, but per cull tuple: it publishes
+ * WHICH tuples have a declaration rather than how many there are in total.
+ */
+function useKeyedDeclarationCount(): [
+  ReadonlySet<string>,
+  (key: LightCullKey) => () => void,
+] {
+  const [ids, setIds] = useState<ReadonlySet<string>>(EMPTY_IDS);
+  const counts = useRef(new Map<string, number>()).current;
+
+  const publish = useCallback(() => {
+    setIds((previous) => {
+      if (previous.size === counts.size && [...counts.keys()].every((id) => previous.has(id))) {
+        return previous;
+      }
+      return new Set(counts.keys());
+    });
+  }, [counts]);
+
+  const declare = useCallback(
+    (key: LightCullKey) => {
+      const id = lightCullKeyId(key);
+      counts.set(id, (counts.get(id) ?? 0) + 1);
+      publish();
+
+      // As in `useLightClassRegistry`: strict double-invoke replays a cleanup,
+      // and a second decrement would drop a live declaration's count.
+      let released = false;
+      return () => {
+        if (released) return;
+        released = true;
+        const remaining = (counts.get(id) ?? 0) - 1;
+        if (remaining > 0) counts.set(id, remaining);
+        else counts.delete(id);
+        publish();
+      };
+    },
+    [counts, publish]
+  );
+
+  return [ids, declare];
 }
 
 /** The lowest ordinal `taken` has not handed out. */
@@ -350,14 +401,18 @@ export function useRegisterCanvasLight2D(enabled: boolean, key: LightCullKey): n
   return ordinal;
 }
 
+/** The class accumulating this cull tuple, or undefined while it has none. */
+function useLightClass(key: LightCullKey): CanvasLightClass | undefined {
+  const { classes } = useCanvasLighting2D();
+  return classes.find((lightClass) => sameLightCullKey(lightClass.key, key));
+}
+
 /**
  * The camera layer a light of this cull tuple must draw its quad on: the layer
  * of its class, or `LIGHT_UNCLASSED_LAYER` while it has none.
  */
 export function useLightClassLayer(key: LightCullKey): number {
-  const { classes } = useCanvasLighting2D();
-  return classes.find((lightClass) => sameLightCullKey(lightClass.key, key))?.layer
-    ?? LIGHT_UNCLASSED_LAYER;
+  return useLightClass(key)?.layer ?? LIGHT_UNCLASSED_LAYER;
 }
 
 /**
@@ -366,17 +421,17 @@ export function useLightClassLayer(key: LightCullKey): number {
  * must NOT see the cookie quads.
  */
 export function useShadowTintLayer(key: LightCullKey): number | undefined {
-  const { classes } = useCanvasLighting2D();
-  return classes.find((lightClass) => sameLightCullKey(lightClass.key, key))?.shadowTintLayer;
+  return useLightClass(key)?.shadowTintLayer;
 }
 
 /** Declares a light that tints its shadow, so its class allocates the extra pass. */
-export function useRegisterShadowTint(enabled: boolean): void {
+export function useRegisterShadowTint(enabled: boolean, key: LightCullKey): void {
   const { registerShadowTint } = useCanvasLighting2D();
+  const { itemCullMask, zMin, zMax, layerMin, layerMax } = key;
   useEffect(() => {
     if (!enabled) return undefined;
-    return registerShadowTint();
-  }, [enabled, registerShadowTint]);
+    return registerShadowTint({ itemCullMask, zMin, zMax, layerMin, layerMax });
+  }, [enabled, itemCullMask, zMin, zMax, layerMin, layerMax, registerShadowTint]);
 }
 
 /** Declares an item whose light mode needs the unmodulated accumulation. */
@@ -420,6 +475,27 @@ function useAccumulationTargets(count: number): THREE.WebGLRenderTarget[] {
   // A cleanup belongs to an effect: a useMemo factory's return value is the
   // memoised VALUE, and React never calls it.
   useEffect(() => () => targets.forEach((target) => target.dispose()), [targets]);
+  return targets;
+}
+
+/**
+ * One accumulator per class `wanted` selects, aligned with the class indices and
+ * `null` for the rest.
+ *
+ * Per class rather than canvas-wide because a `shadow_color` belongs to ONE
+ * light and therefore to one class. Allocating for the others would spend a
+ * screen-sized half-float target and a full-scene render per frame on a buffer
+ * that can only ever come out black.
+ */
+function useSelectedAccumulationTargets(
+  wanted: readonly boolean[]
+): readonly (THREE.WebGLRenderTarget | null)[] {
+  const signature = wanted.map((on) => (on ? '1' : '0')).join('');
+  const targets = useMemo(
+    () => [...signature].map((on) => (on === '1' ? createAccumulationTarget() : null)),
+    [signature]
+  );
+  useEffect(() => () => targets.forEach((target) => target?.dispose()), [targets]);
   return targets;
 }
 
@@ -496,16 +572,18 @@ export function CanvasLighting2DProvider({
 
   const [cullKeys, register] = useLightClassRegistry();
   const [lightOnlyCount, registerLightOnly] = useDeclarationCount();
-  const [shadowTintCount, registerShadowTint] = useDeclarationCount();
+  const [shadowTintKeys, registerShadowTint] = useKeyedDeclarationCount();
 
   const classCount = Math.min(cullKeys.length, MAX_LIGHT_CLASSES);
   const lit = classCount > 0;
   const needsLightOnly = lit && lightOnlyCount > 0;
-  const needsShadowTint = lit && shadowTintCount > 0;
+  const shadowTintClasses = cullKeys
+    .slice(0, classCount)
+    .map((key) => shadowTintKeys.has(lightCullKeyId(key)));
 
   const targets = useAccumulationTargets(classCount);
   const lightOnlyTargets = useAccumulationTargets(needsLightOnly ? classCount : 0);
-  const shadowTintTargets = useAccumulationTargets(needsShadowTint ? classCount : 0);
+  const shadowTintTargets = useSelectedAccumulationTargets(shadowTintClasses);
 
   const overflow = cullKeys.length - MAX_LIGHT_CLASSES;
   useEffect(() => {
@@ -608,8 +686,12 @@ export function CanvasLighting2DProvider({
     <CanvasLighting2DContext.Provider value={value}>
       {lit && <LightAccumulatorSeed material={seedMaterial} />}
       {/* Occluders only matter to lights, so the registry that finds them lives
-          with the pass that consumes them rather than in the stage above. */}
-      <ShadowCasterStage>{children}</ShadowCasterStage>
+          with the pass that consumes them rather than in the stage above. The
+          light list's ORDER is the same kind of canvas-wide fact, derived once
+          here rather than by every light for itself. */}
+      <CanvasLightSequenceProvider>
+        <ShadowCasterStage>{children}</ShadowCasterStage>
+      </CanvasLightSequenceProvider>
     </CanvasLighting2DContext.Provider>
   );
 }

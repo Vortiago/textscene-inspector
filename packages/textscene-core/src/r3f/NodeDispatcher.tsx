@@ -208,19 +208,26 @@ function PlainNode({
   // the tint, but the value it produced was published once for the whole tree —
   // so a HUD under a CanvasLayer took the world's night-time tint, and was lit
   // by main-canvas lights, neither of which happens in Godot.
-  const isCanvasLayer = node.type === 'CanvasLayer';
-  const layerModulate = useMemo(
-    () => (isCanvasLayer ? canvasModulateColor(node.children) : null),
-    [isCanvasLayer, node.children]
-  );
+  //
   // A light is handed to a CANVAS only when the canvas's layer falls inside the
   // light's `range_layer_min/max` window, and Godot's default window is 0..0
   // while a CanvasLayer's own default `layer` is 1 — so an untouched light
   // reaches the world and no HUD. The subtree also starts a fresh z
   // accumulation, because `_cull_canvas_item` walks each canvas from z 0.
-  const canvasLayerIndex = isCanvasLayer
-    ? (node.properties as { layer?: number }).layer ?? DEFAULT_CANVAS_LAYER
-    : null;
+  //
+  // All three facts are one nullable, because they hold together: they are the
+  // whole of "this subtree is its own canvas", and splitting them would let a
+  // later change publish one without the others.
+  const canvasLayer = useMemo(
+    () =>
+      node.type === 'CanvasLayer'
+        ? {
+            modulate: canvasModulateColor(node.children),
+            index: (node.properties as { layer?: number }).layer ?? DEFAULT_CANVAS_LAYER,
+          }
+        : null,
+    [node]
+  );
 
   const rankZ = useYSortZContext();
   if (workspace === '3d' && isCanvasItem) return null;
@@ -321,9 +328,9 @@ function PlainNode({
         >
           <Component node={node}>
             {children.length > 0 ? (
-              layerModulate && canvasLayerIndex !== null ? (
-                <CanvasModulateContext.Provider value={layerModulate}>
-                  <CanvasLayerIndexProvider value={canvasLayerIndex}>
+              canvasLayer ? (
+                <CanvasModulateContext.Provider value={canvasLayer.modulate}>
+                  <CanvasLayerIndexProvider value={canvasLayer.index}>
                     <EffectiveZProvider value={0}>{children}</EffectiveZProvider>
                   </CanvasLayerIndexProvider>
                 </CanvasModulateContext.Provider>

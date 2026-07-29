@@ -7,6 +7,7 @@ import type { ParsedHeading } from '../../../parser/utils';
 import { parseNode2D } from '../../base/node2d/parser';
 import { floatOr, boolOr, enumOr, intOr, vec2Or } from '../../../parser/valueParsers';
 import { colorOr } from '../../../utils/colorParser';
+import { POINT_LIGHT_2D_RANGE_DEFAULTS } from './types';
 import type {
   PointLight2DProperties,
   PointLight2DBlendMode,
@@ -29,18 +30,29 @@ export function parsePointLight2D(
     offset: vec2Or(properties.offset, { x: 0, y: 0 }, 'PointLight2D'),
     // Both default to 1, so a light with nothing authored reaches exactly the
     // items that also left `light_mask` alone.
-    range_item_cull_mask: intOr(properties.range_item_cull_mask, 1, 'PointLight2D'),
+    range_item_cull_mask: intOr(
+      properties.range_item_cull_mask,
+      POINT_LIGHT_2D_RANGE_DEFAULTS.itemCullMask,
+      'PointLight2D'
+    ),
     shadow_item_cull_mask: intOr(properties.shadow_item_cull_mask, 1, 'PointLight2D'),
-    // `scene/2d/light_2d.h:50-53`, confirmed against a fresh PointLight2D in
-    // 4.6.3. The z pair is wide enough to go unnoticed on a scene whose z stays
-    // small; the layer pair is 0/0, which is why a default light reaches the
-    // world canvas and no CanvasLayer. `Light2D::set_z_range_min` and its three
+    // The z pair is wide enough to go unnoticed on a scene whose z stays small;
+    // the layer pair is 0/0, which is why a default light reaches the world
+    // canvas and no CanvasLayer. `Light2D::set_z_range_min` and its three
     // siblings assign and forward with no CLAMP and no reordering of the pair,
     // so neither happens here.
-    range_z_min: intOr(properties.range_z_min, -1024, 'PointLight2D'),
-    range_z_max: intOr(properties.range_z_max, 1024, 'PointLight2D'),
-    range_layer_min: intOr(properties.range_layer_min, 0, 'PointLight2D'),
-    range_layer_max: intOr(properties.range_layer_max, 0, 'PointLight2D'),
+    range_z_min: intOr(properties.range_z_min, POINT_LIGHT_2D_RANGE_DEFAULTS.zMin, 'PointLight2D'),
+    range_z_max: intOr(properties.range_z_max, POINT_LIGHT_2D_RANGE_DEFAULTS.zMax, 'PointLight2D'),
+    range_layer_min: intOr(
+      properties.range_layer_min,
+      POINT_LIGHT_2D_RANGE_DEFAULTS.layerMin,
+      'PointLight2D'
+    ),
+    range_layer_max: intOr(
+      properties.range_layer_max,
+      POINT_LIGHT_2D_RANGE_DEFAULTS.layerMax,
+      'PointLight2D'
+    ),
     shadow_enabled: boolOr(properties.shadow_enabled, false, 'PointLight2D'),
     // Transparent black: Godot subtracts nothing extra where a shadow falls, it
     // simply withholds the light, so the surface keeps its unlit colour.

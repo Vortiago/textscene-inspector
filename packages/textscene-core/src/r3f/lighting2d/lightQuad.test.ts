@@ -24,7 +24,7 @@ import { SHADOW_MAP_BINS, SHADOW_MAP_FAR } from './shadowPolarMap';
 const WARM = { r: 1, g: 0.75, b: 0.35, a: 1 };
 
 function material(blendMode: number, energy = 1) {
-  return createLightQuadMaterial(new THREE.Texture(), WARM, energy, blendMode);
+  return createLightQuadMaterial({ cookie: new THREE.Texture(), color: WARM, energy, blendMode });
 }
 
 function sampling(overrides: Partial<ShadowSampling> = {}): ShadowSampling {
@@ -34,8 +34,20 @@ function sampling(overrides: Partial<ShadowSampling> = {}): ShadowSampling {
     smooth: 0,
     worldToLocal: new THREE.Matrix3(),
     zFarInv: 1 / 1100,
+    shadowColor: { r: 0, g: 0, b: 0, a: 0 },
     ...overrides,
   };
+}
+
+/** A filtered cookie quad with everything but the sampling left at its default. */
+function filteredMaterial(shadow: ShadowSampling = sampling()) {
+  return createLightQuadMaterial({
+    cookie: new THREE.Texture(),
+    color: WARM,
+    energy: 1,
+    blendMode: 0,
+    shadow,
+  });
 }
 
 describe('createLightQuadMaterial', () => {
@@ -43,7 +55,7 @@ describe('createLightQuadMaterial', () => {
     const mat = material(Light2DBlendMode.ADD);
     // rgb is the light term; alpha stays raw because the accumulator needs it
     // both as the blend factor and, summed, as the Light Only mask.
-    expect(mat.fragmentShader).toContain('vec4(lightToSrgb(cookie.rgb) * uColor * uEnergy, cookie.a)');
+    expect(mat.fragmentShader).toContain('vec4(godotToSrgb(cookie.rgb) * uColor * uEnergy, cookie.a)');
     expect(mat.fragmentShader).not.toContain('clamp(');
   });
 
@@ -172,15 +184,8 @@ describe('createLightQuadMaterial with a shadow filter', () => {
   });
 
   it('selects the five-tap kernel for PCF5 and the thirteen-tap for PCF13', () => {
-    const pcf5 = createLightQuadMaterial(new THREE.Texture(), WARM, 1, 0, {}, sampling());
-    const pcf13 = createLightQuadMaterial(
-      new THREE.Texture(),
-      WARM,
-      1,
-      0,
-      {},
-      sampling({ filter: SHADOW_FILTER_PCF13 })
-    );
+    const pcf5 = filteredMaterial();
+    const pcf13 = filteredMaterial(sampling({ filter: SHADOW_FILTER_PCF13 }));
     expect(pcf5.defines?.SHADOW_FILTER).toBe(1);
     expect(pcf13.defines?.SHADOW_FILTER).toBe(2);
     // Both kernels are compiled into the one shader and chosen by the define, so
@@ -193,7 +198,7 @@ describe('createLightQuadMaterial with a shadow filter', () => {
   it('generates Godot\'s exact tap offsets, not a plausible kernel', () => {
     // canvas.glsl:471-475 and :479-491. A typo'd multiplier reads perfectly
     // sensibly and shifts the whole penumbra, so the literals are asserted.
-    const shader = createLightQuadMaterial(new THREE.Texture(), WARM, 1, 0, {}, sampling())
+    const shader = filteredMaterial()
       .fragmentShader;
     const taps = [...shader.matchAll(/SHADOW_TEST\(tex_ofs([^)]*)\);/g)].map(([, arg]) =>
       arg!.trim()
@@ -225,20 +230,13 @@ describe('createLightQuadMaterial with a shadow filter', () => {
   it('takes the SHADOW_TEST comparison from canvas.glsl:454, in that order', () => {
     // `step(sd, dist)` — 1 where the stored occluder depth is at or in FRONT of
     // the fragment. Swapping the arguments inverts every shadow.
-    const shader = createLightQuadMaterial(new THREE.Texture(), WARM, 1, 0, {}, sampling())
+    const shader = filteredMaterial()
       .fragmentShader;
     expect(shader).toContain('shadow += step(texture2D(uShadowMap, vec2(m_u, 0.5)).r, dist);');
   });
 
   it('offsets the taps along the map axis by (1 + smooth) / 2048', () => {
-    const mat = createLightQuadMaterial(
-      new THREE.Texture(),
-      WARM,
-      1,
-      0,
-      {},
-      sampling({ smooth: 8 })
-    );
+    const mat = filteredMaterial(sampling({ smooth: 8 }));
     expect(mat.uniforms.uShadowPixelSize!.value).toBe(9 / 2048);
     // The tap coordinate moves in u only — the map's second axis is the atlas
     // row, and a tap that wandered off it would sample another light's shadow.
@@ -247,14 +245,7 @@ describe('createLightQuadMaterial with a shadow filter', () => {
 
   it('carries the light-local transform and the z_far the map was built with', () => {
     const worldToLocal = new THREE.Matrix3().set(0, 1, -300, -1, 0, 400, 0, 0, 1);
-    const mat = createLightQuadMaterial(
-      new THREE.Texture(),
-      WARM,
-      1,
-      0,
-      {},
-      sampling({ worldToLocal, zFarInv: 1 / 1593 })
-    );
+    const mat = filteredMaterial(sampling({ worldToLocal, zFarInv: 1 / 1593 }));
     expect(mat.uniforms.uWorldToLight!.value).toBe(worldToLocal);
     expect(mat.uniforms.uShadowZFarInv!.value).toBe(1 / 1593);
     // The fragment's world position is what the transform is applied to, so the
@@ -263,15 +254,21 @@ describe('createLightQuadMaterial with a shadow filter', () => {
   });
 
   it('scales BOTH rgb and alpha by the lit fraction, which is the (1-s)^2 falloff', () => {
-    const mat = createLightQuadMaterial(new THREE.Texture(), WARM, 1, 0, {}, sampling());
-    expect(mat.fragmentShader).toContain('lightToSrgb(cookie.rgb) * uColor * uEnergy * lit');
+    const mat = filteredMaterial();
+    expect(mat.fragmentShader).toContain('godotToSrgb(cookie.rgb) * uColor * uEnergy * lit');
     expect(mat.fragmentShader).toContain('cookie.a * (lit + s * uShadowColor.a)');
   });
 
   it('keeps the accumulator blends the unfiltered quad uses', () => {
     for (const mode of [Light2DBlendMode.ADD, Light2DBlendMode.SUB, Light2DBlendMode.MIX]) {
       const plain = material(mode);
-      const filtered = createLightQuadMaterial(new THREE.Texture(), WARM, 1, mode, {}, sampling());
+      const filtered = createLightQuadMaterial({
+        cookie: new THREE.Texture(),
+        color: WARM,
+        energy: 1,
+        blendMode: mode,
+        shadow: sampling(),
+      });
       expect(filtered.blendEquation, `mode ${mode}`).toBe(plain.blendEquation);
       expect(filtered.blendSrc, `mode ${mode}`).toBe(plain.blendSrc);
       expect(filtered.blendDst, `mode ${mode}`).toBe(plain.blendDst);
@@ -283,7 +280,12 @@ describe('createShadowColorQuadMaterial with a shadow filter', () => {
   const TINT = { r: 0.15, g: 0.35, b: 1, a: 0.5 };
 
   it('emits the fractional tint, reducing to the stencil path at s = 1', () => {
-    const mat = createShadowColorQuadMaterial(new THREE.Texture(), TINT, 0, {}, sampling());
+    const mat = createShadowColorQuadMaterial({
+      cookie: new THREE.Texture(),
+      shadowColor: TINT,
+      blendMode: 0,
+      shadow: sampling(),
+    });
     // s * ((1 - s) + s * a): at s = 1 this is `uShadowColor.a * cookie.a`, which
     // is byte-for-byte what the unfiltered tint quad emits inside its umbra.
     expect(mat.fragmentShader).toContain(
@@ -294,7 +296,7 @@ describe('createShadowColorQuadMaterial with a shadow filter', () => {
   });
 
   it('leaves the unfiltered tint quad on the stencil-partitioned shader', () => {
-    const mat = createShadowColorQuadMaterial(new THREE.Texture(), TINT, 0);
+    const mat = createShadowColorQuadMaterial({ cookie: new THREE.Texture(), shadowColor: TINT, blendMode: 0 });
     expect(mat.fragmentShader).toContain('vec4(uShadowColor.rgb, uShadowColor.a * cookie.a)');
     expect(mat.fragmentShader).not.toContain('shadowFraction');
   });

@@ -21,22 +21,22 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
+import { POINT_LIGHT_2D_RANGE_DEFAULTS } from './types.js';
 
-/** `scene/2d/light_2d.h:50-53`, confirmed on a fresh PointLight2D in 4.6.3. */
 const WINDOWS = [
   {
     min: 'range_z_min',
     max: 'range_z_max',
-    minDefault: -1024,
-    maxDefault: 1024,
+    minDefault: POINT_LIGHT_2D_RANGE_DEFAULTS.zMin,
+    maxDefault: POINT_LIGHT_2D_RANGE_DEFAULTS.zMax,
     ruleName: 'pointlight2d-inverted-z-range',
     reaches: 'no item at any z_index',
   },
   {
     min: 'range_layer_min',
     max: 'range_layer_max',
-    minDefault: 0,
-    maxDefault: 0,
+    minDefault: POINT_LIGHT_2D_RANGE_DEFAULTS.layerMin,
+    maxDefault: POINT_LIGHT_2D_RANGE_DEFAULTS.layerMax,
     ruleName: 'pointlight2d-inverted-layer-range',
     reaches: 'no canvas at any layer',
   },

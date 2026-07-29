@@ -39,12 +39,24 @@ import {
   OCCLUDER_CULL_DISABLED,
   OCCLUDER_CULL_CLOCKWISE,
   OCCLUDER_CULL_COUNTER_CLOCKWISE,
+  type LightRect,
   type ShadowCasterEdges,
 } from './shadowVolumes';
 
+/**
+ * A rect no occluder can fall outside, so a test that is not ABOUT the occluder
+ * cull measures only the thing it names.
+ */
+const UNBOUNDED: LightRect = {
+  minX: -Infinity,
+  minY: -Infinity,
+  maxX: Infinity,
+  maxY: Infinity,
+};
+
 /** A light at the world origin with no rotation or scale, reach `radius`. */
 function lightAt(x: number, y: number, radius: number): ShadowPolarLight {
-  return { worldToLocal: [1, 0, -x, 0, 1, -y], radius };
+  return { worldToLocal: [1, 0, -x, 0, 1, -y], radius, rect: UNBOUNDED };
 }
 
 /** `tex_ofs * SHADOW_MAP_BINS` rounded to the bin whose centre is nearest. */
@@ -237,6 +249,27 @@ describe('buildShadowPolarMap', () => {
     expect(map[binOf(0.125)]).toBeCloseTo(100 / ZFAR, 6);
   });
 
+  it('drops an occluder whose bounds miss the light rect, as the stencil path does', () => {
+    // Godot culls occluders against `rect_cache` before the shadow map is drawn
+    // at all, so an occluder inside the far plane but outside the cookie's own
+    // extent casts nothing. Both mechanisms must answer this the same way or a
+    // light's shadow would change shape at `shadow_filter = NONE`.
+    const rect: LightRect = { minX: -200, minY: -200, maxX: 200, maxY: 200 };
+    const outside = buildShadowPolarMap(
+      { worldToLocal: [1, 0, 0, 0, 1, 0], radius: RADIUS, rect },
+      [segment(400, -50, 400, 50)]
+    );
+    expect(outside[binOf(0.125)]).toBe(SHADOW_MAP_FAR);
+
+    // The same occluder inside the rect still casts, so the rejection above is
+    // the rect and not the geometry.
+    const inside = buildShadowPolarMap(
+      { worldToLocal: [1, 0, 0, 0, 1, 0], radius: RADIUS, rect },
+      [segment(100, -50, 100, 50)]
+    );
+    expect(inside[binOf(0.125)]).toBeCloseTo(100 / ZFAR, 6);
+  });
+
   it('drops an occluder clipped away by the near or the far plane', () => {
     // near = radius / 1000 = 1, far = radius * 1.1 = 1100.
     const tooClose = buildShadowPolarMap(lightAt(0, 0, RADIUS), [segment(0.5, -50, 0.5, 50)]);
@@ -273,7 +306,7 @@ describe('buildShadowPolarMap', () => {
       c, s, -(c * 400 + s * 300),
       -s, c, -(-s * 400 + c * 300),
     ];
-    const map = buildShadowPolarMap({ worldToLocal, radius: RADIUS }, [
+    const map = buildShadowPolarMap({ worldToLocal, radius: RADIUS, rect: UNBOUNDED }, [
       segment(350, 400, 450, 400),
     ]);
     expect(map[binOf(0.125)]).toBeCloseTo(100 / ZFAR, 6);

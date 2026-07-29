@@ -68,12 +68,14 @@ perpendicular.
   kernels, selected by a `SHADOW_FILTER` define. The quads emit Godot's POST-shadow
   `light_color`, rgb and alpha both, so the existing fixed-function accumulator blends produce
   the (1−s)² falloff for free — no new pass, no new sampler on the item side.
-- An authored `shadow_color` COMPOSES rather than falling back. Expanding
+- An authored `shadow_color` COMPOSES rather than falling back. Expanding Godot's
   `mix(light_color, shadow_color, s)` with the albedo already folded in (`canvas.glsl:814` runs
-  first) gives `(C(1−s) + S.rgb·s) · cookie.a·((1−s) + S.a·s)`, which splits with **no cross
-  term** into an albedo-multiplied part and an albedo-free one — exactly the two accumulators
-  that already exist. At `s = 1` the tint term reduces to `cookie.a · S.a`, byte-identical to
-  what the stencil path emits inside its umbra.
+  first) splits with **no cross term** into an albedo-multiplied part and an albedo-free one —
+  exactly the two accumulators that already exist, so the split is EXACT rather than an
+  approximation, and at `s = 1` it reduces byte-identically to what the stencil path emits
+  inside its umbra. The algebra itself stays in `lightQuad.ts`'s header, which is where it will
+  be refined: an ADR is an immutable record, so restating a live derivation here would leave the
+  wrong one in the document a newcomer reads first.
 - A filtered light therefore draws NO stencil mask and carries NO stencil props: each quad
   computes its own fraction over the light's whole rect. The `Equal`/`NotEqual` pairing that
   `ShadowVolumeMask.tsx` documents applies to the unfiltered branch only.

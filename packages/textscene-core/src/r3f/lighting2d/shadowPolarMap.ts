@@ -57,7 +57,12 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  */
 
-import { edgeCastsShadow, type ShadowCasterEdges } from './shadowVolumes';
+import {
+  casterInLightRect,
+  edgeCastsShadow,
+  type LightRect,
+  type ShadowCasterEdges,
+} from './shadowVolumes';
 
 /**
  * Texels in one light's map. Godot's atlas row is
@@ -81,8 +86,23 @@ const NEAR_SCALE = 1 / 1000;
 /** `radius_cache * 1.1` — the same line's far plane, and the `z_far` divisor. */
 const FAR_SCALE = 1.1;
 
+/**
+ * The reciprocal of the far plane every stored bin is normalised by.
+ *
+ * Exported because the fragment shader must divide its own axis distance by the
+ * SAME `z_far` or the depth comparison is meaningless — and a mismatch neither
+ * throws nor fails a type check, it just slides the penumbra. One derivation,
+ * two readers.
+ */
+export function shadowMapZFarInv(radius: number): number {
+  return 1 / (radius * FAR_SCALE);
+}
+
 /** cos/sin of 45°, `canvas.glsl:824`'s quadrant-select rotation. */
 const SQRT1_2 = 0.7071067811865476;
+
+/** The four 90° frusta split the row evenly. */
+const BINS_PER_QUADRANT = SHADOW_MAP_BINS / 4;
 
 export interface ShadowPolarLight {
   /**
@@ -92,6 +112,11 @@ export interface ShadowPolarLight {
    * map and `offset` — which moves the cookie, not the node — does not.
    */
   readonly worldToLocal: ArrayLike<number>;
+  /**
+   * The light's `rect_cache` in previewer world space — the same occluder cull
+   * `buildShadowVolumes` applies, so both mechanisms see one occluder set.
+   */
+  rect: LightRect;
   /**
    * Godot's `radius_cache`: `local_rect.size.length()`
    * (`renderer_viewport.cpp:485`) — the FULL diagonal of the cookie's rect in
@@ -144,7 +169,7 @@ export function shadowMapCoord(x: number, yUp: number): number {
  */
 function binRay(index: number, out: { x: number; y: number }): void {
   const u = (index + 0.5) / SHADOW_MAP_BINS;
-  const quadrant = index >> 9;
+  const quadrant = Math.floor(index / BINS_PER_QUADRANT);
   if (quadrant === 0) {
     out.x = 1;
     out.y = 8 * u - 1;
@@ -165,8 +190,9 @@ function binRay(index: number, out: { x: number; y: number }): void {
  * with `SHADOW_MAP_FAR` where nothing casts.
  *
  * `casters` are the light's occluders in previewer WORLD space, already narrowed
- * by `shadow_item_cull_mask` — the same value `buildShadowVolumes` consumes, so
- * the two mechanisms can never disagree about which occluders exist.
+ * by `shadow_item_cull_mask` — the same value `buildShadowVolumes` consumes. It
+ * applies the same `casterInLightRect` cull too, so the two mechanisms cannot
+ * disagree about which occluders exist for a light.
  */
 export function buildShadowPolarMap(
   light: ShadowPolarLight,
@@ -177,7 +203,7 @@ export function buildShadowPolarMap(
   const near = light.radius * NEAR_SCALE;
   const far = light.radius * FAR_SCALE;
   if (!(far > near)) return map;
-  const zFarInv = 1 / far;
+  const zFarInv = shadowMapZFarInv(light.radius);
 
   const m = light.worldToLocal;
   const m00 = m[0]!;
@@ -190,6 +216,7 @@ export function buildShadowPolarMap(
   const ray = { x: 0, y: 0 };
 
   for (const { segments, cullMode } of casters) {
+    if (!casterInLightRect(segments, light.rect)) continue;
     for (let i = 0; i + 3 < segments.length; i += 4) {
       const wax = segments[i]!;
       const way = segments[i + 1]!;

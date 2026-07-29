@@ -12,7 +12,9 @@
  *
  * The result is SHARED and owned by `proceduralTextureCache` — many nodes point
  * at one gradient, so it is rasterised once per (scene, sub-resource). Callers
- * borrow it and must not dispose it.
+ * borrow it: they must not dispose it, and must pin the key it comes with for
+ * as long as they hold it. React consumers get both from `useProceduralTexture`
+ * rather than calling this directly.
  */
 
 import type { TscnInternalResource } from '../../../parser/types';
@@ -27,27 +29,28 @@ import { proceduralTexture, proceduralTextureKey } from '../proceduralTextureCac
 import type * as THREE from 'three';
 
 /**
- * The cache key backing `resolveGradientTexture2D(ref, …)`, or null when the
- * reference is not a sub-resource. A mounted consumer pins this so capacity
- * eviction cannot dispose a texture it is still sampling.
+ * A rasterised gradient and the procedural-cache key that keeps it resident.
+ *
+ * The two travel together because holding one without the other is the bug: a
+ * consumer that samples the texture without pinning the key is sampling
+ * something capacity eviction is free to dispose. Deriving the key separately
+ * also let it be minted for references that resolve to no texture at all — a
+ * key the cache never holds.
  */
-export function gradientTextureCacheKey(
-  ref: string | undefined,
-  internalResources: readonly TscnInternalResource[]
-): string | null {
-  const parsed = parseResourceReference(ref ?? '');
-  if (!parsed || parsed.type !== 'SubResource') return null;
-  return proceduralTextureKey(internalResources, parsed.id);
+export interface GradientTexture2DResolution {
+  texture: THREE.DataTexture;
+  /** Pinned for as long as a consumer holds `texture`. */
+  key: string;
 }
 
 export function resolveGradientTexture2D(
   ref: string | undefined,
   internalResources: readonly TscnInternalResource[]
-): THREE.DataTexture | null {
+): GradientTexture2DResolution | null {
   const parsed = parseResourceReference(ref ?? '');
   if (!parsed || parsed.type !== 'SubResource') return null;
 
-  return proceduralTexture(internalResources, parsed.id, () => {
+  const texture = proceduralTexture(internalResources, parsed.id, () => {
     const textureResource = findSubResource(internalResources, parsed.id);
     if (!textureResource || textureResource.type !== 'GradientTexture2D') return null;
 
@@ -59,4 +62,7 @@ export function resolveGradientTexture2D(
     const gradient = parseGradient(gradientResource.data as Record<string, string>);
     return rasterizeGradientTexture2D(texture, gradient);
   }) as THREE.DataTexture | null;
+  if (!texture) return null;
+
+  return { texture, key: proceduralTextureKey(internalResources, parsed.id) };
 }

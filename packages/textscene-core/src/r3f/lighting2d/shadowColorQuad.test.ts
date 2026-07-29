@@ -55,15 +55,15 @@ describe('shadowColorContributes', () => {
 
 describe('createShadowColorQuadMaterial', () => {
   it('emits shadow_color.rgb with no cookie rgb, no light colour and no energy', () => {
-    const mat = createShadowColorQuadMaterial(new THREE.Texture(), BLUE, Light2DBlendMode.ADD, {});
+    const mat = createShadowColorQuadMaterial({ cookie: new THREE.Texture(), shadowColor: BLUE, blendMode: Light2DBlendMode.ADD });
     // The cookie is sampled for its ALPHA only; its rgb never reaches the output.
     expect(mat.fragmentShader).toContain('vec4(uShadowColor.rgb, uShadowColor.a * cookie.a)');
     expect(mat.fragmentShader).not.toContain('uEnergy');
-    expect(mat.fragmentShader).not.toContain('lightToSrgb(cookie.rgb)');
+    expect(mat.fragmentShader).not.toContain('godotToSrgb(cookie.rgb)');
   });
 
   it('carries the shadow colour as a straight sRGB uniform', () => {
-    const mat = createShadowColorQuadMaterial(new THREE.Texture(), BLUE, Light2DBlendMode.ADD, {});
+    const mat = createShadowColorQuadMaterial({ cookie: new THREE.Texture(), shadowColor: BLUE, blendMode: Light2DBlendMode.ADD });
     const v = mat.uniforms.uShadowColor!.value as THREE.Vector4;
     expect([v.x, v.y, v.z, v.w]).toEqual([0.15, 0.35, 1, 1]);
   });
@@ -71,7 +71,7 @@ describe('createShadowColorQuadMaterial', () => {
   it('blends into the accumulator exactly as the lit quad does', () => {
     // `mix` replaces the light term in place, so `light_blend_compute` still
     // runs on it — a shadow under a SUB light subtracts.
-    const sub = createShadowColorQuadMaterial(new THREE.Texture(), BLUE, Light2DBlendMode.SUB, {});
+    const sub = createShadowColorQuadMaterial({ cookie: new THREE.Texture(), shadowColor: BLUE, blendMode: Light2DBlendMode.SUB });
     expect(sub.blendEquation).toBe(THREE.ReverseSubtractEquation);
     expect(sub.blendSrc).toBe(THREE.SrcAlphaFactor);
   });

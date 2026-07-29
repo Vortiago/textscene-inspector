@@ -23,7 +23,7 @@ import {
   TILE_LAYER_STEP,
   Z_INDEX_STEP,
 } from '../../../../r3f/node2dTransform';
-import { tileSourceZ } from '../../../../r3f/tileSourceZ';
+import { drawnSources, tileSourceZ } from '../../../../r3f/tileSourceZ';
 import { TileSourceMesh } from '../../../../r3f/TileSourceMesh';
 import { useTileSetModel } from '../../../../r3f/useTileSetModel';
 import type { TileMapLayerData, TileMapProperties } from './types';
@@ -38,24 +38,20 @@ export function TileMap({ node, children }: NodeComponentProps) {
     if (!model) return null;
     return props.layers.flatMap((layer, layerIndex) => {
       if (!layer.enabled || !layer.cells?.length) return [];
-      return model.sourceOrder
-        .map((sourceId) => ({
+      return drawnSources(model, layer.cells).map(
+        ({ sourceId, source, cells, sourceIndex, sourceCount }) => ({
           key: `${layerIndex}:${sourceId}`,
-          source: model.sources.get(sourceId)!,
-          cells: layer.cells!.filter((c) => c.sourceId === sourceId),
+          source,
+          cells,
           layer,
-        }))
-        .filter((entry) => entry.cells.length > 0)
-        .map((entry, sourceIndex, drawn) => ({
-          ...entry,
           // The source nudge is scaled into ONE layer step, so a layer's atlas
-          // sources can never reach the layer stacked above it. Index and count
-          // both count the sources actually drawn.
+          // sources can never reach the layer stacked above it.
           z:
-            entry.layer.zIndex * Z_INDEX_STEP +
+            layer.zIndex * Z_INDEX_STEP +
             layerIndex * TILE_LAYER_STEP +
-            tileSourceZ(sourceIndex, drawn.length, TILE_LAYER_STEP),
-        }));
+            tileSourceZ(sourceIndex, sourceCount, TILE_LAYER_STEP),
+        })
+      );
     });
   }, [model, props.layers]);
 

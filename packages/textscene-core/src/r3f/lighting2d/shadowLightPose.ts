@@ -27,6 +27,15 @@ const corner = new THREE.Vector3();
 const origin = new THREE.Vector3();
 const inverse = new THREE.Matrix4();
 
+/** Grow `rect` to cover one geometry corner placed by `matrix`. */
+function expandToCorner(rect: LightRect, x: number, y: number, matrix: THREE.Matrix4): void {
+  corner.set(x, y, 0).applyMatrix4(matrix);
+  if (corner.x < rect.minX) rect.minX = corner.x;
+  if (corner.x > rect.maxX) rect.maxX = corner.x;
+  if (corner.y < rect.minY) rect.minY = corner.y;
+  if (corner.y > rect.maxY) rect.maxY = corner.y;
+}
+
 /**
  * The pose both shadow mechanisms read: the origin and rect the stencil volumes
  * need, plus the light-local frame and reach the polar map needs.
@@ -39,8 +48,8 @@ const inverse = new THREE.Matrix4();
  * size and so is unaffected by where the light sits or how it is scaled.
  */
 export interface ShadowLightPose extends ShadowLight, ShadowPolarLight {
+  /** Narrows `ShadowPolarLight`'s `ArrayLike<number>` to the 2×3 it always is. */
   readonly worldToLocal: readonly [number, number, number, number, number, number];
-  readonly radius: number;
 }
 
 /**
@@ -63,15 +72,10 @@ export function sampleShadowLight(quad: THREE.Mesh | null): ShadowLightPose | nu
   origin.setFromMatrixPosition(quad.parent.matrixWorld);
 
   const rect: LightRect = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
-  for (const x of [box.min.x, box.max.x]) {
-    for (const y of [box.min.y, box.max.y]) {
-      corner.set(x, y, 0).applyMatrix4(quad.matrixWorld);
-      if (corner.x < rect.minX) rect.minX = corner.x;
-      if (corner.x > rect.maxX) rect.maxX = corner.x;
-      if (corner.y < rect.minY) rect.minY = corner.y;
-      if (corner.y > rect.maxY) rect.maxY = corner.y;
-    }
-  }
+  expandToCorner(rect, box.min.x, box.min.y, quad.matrixWorld);
+  expandToCorner(rect, box.min.x, box.max.y, quad.matrixWorld);
+  expandToCorner(rect, box.max.x, box.min.y, quad.matrixWorld);
+  expandToCorner(rect, box.max.x, box.max.y, quad.matrixWorld);
   if (!Number.isFinite(rect.minX) || !Number.isFinite(rect.minY)) return null;
 
   // The light NODE's frame, not the quad's: `offset` moves the cookie without
@@ -81,7 +85,9 @@ export function sampleShadowLight(quad: THREE.Mesh | null): ShadowLightPose | nu
     e[0]!, e[4]!, e[12]!,
     e[1]!, e[5]!, e[13]!,
   ];
-  if (worldToLocal.some((value) => !Number.isFinite(value))) return null;
+  for (const value of worldToLocal) {
+    if (!Number.isFinite(value)) return null;
+  }
 
   const radius = Math.hypot(box.max.x - box.min.x, box.max.y - box.min.y);
 
@@ -92,16 +98,54 @@ export function sampleShadowLight(quad: THREE.Mesh | null): ShadowLightPose | nu
 export function sameShadowLight(a: ShadowLightPose | null, b: ShadowLightPose | null): boolean {
   if (a === b) return true;
   if (!a || !b) return false;
-  return (
-    a.x === b.x &&
-    a.y === b.y &&
-    a.rect.minX === b.rect.minX &&
-    a.rect.minY === b.rect.minY &&
-    a.rect.maxX === b.rect.maxX &&
-    a.rect.maxY === b.rect.maxY &&
-    a.radius === b.radius &&
-    a.worldToLocal.every((value, index) => value === b.worldToLocal[index])
-  );
+  if (
+    a.x !== b.x ||
+    a.y !== b.y ||
+    a.rect.minX !== b.rect.minX ||
+    a.rect.minY !== b.rect.minY ||
+    a.rect.maxX !== b.rect.maxX ||
+    a.rect.maxY !== b.rect.maxY ||
+    a.radius !== b.radius
+  ) {
+    return false;
+  }
+  for (let i = 0; i < a.worldToLocal.length; i += 1) {
+    if (a.worldToLocal[i] !== b.worldToLocal[i]) return false;
+  }
+  return true;
+}
+
+/**
+ * Everything `sampleShadowLight` reads: the cookie quad's world matrix (which
+ * places the rect), the light node's world matrix (which gives the origin and
+ * the local frame), and the quad's own bounds. The pose is a pure function of
+ * these 36 numbers, so comparing them is the whole of "has anything moved".
+ */
+const SAMPLE_INPUTS = 36;
+
+/** Scratch for the current frame's read, compared against the previous frame's. */
+const inputScratch = new Float64Array(SAMPLE_INPUTS);
+
+function readSampleInputs(quad: THREE.Mesh, out: Float64Array): boolean {
+  const parent = quad.parent;
+  if (!parent) return false;
+  const geometry = quad.geometry;
+  if (!geometry.boundingBox) geometry.computeBoundingBox();
+  const box = geometry.boundingBox;
+  if (!box) return false;
+
+  quad.updateWorldMatrix(true, false);
+  const quadElements = quad.matrixWorld.elements;
+  const lightElements = parent.matrixWorld.elements;
+  for (let i = 0; i < 16; i += 1) {
+    out[i] = quadElements[i]!;
+    out[i + 16] = lightElements[i]!;
+  }
+  out[32] = box.min.x;
+  out[33] = box.min.y;
+  out[34] = box.max.x;
+  out[35] = box.max.y;
+  return true;
 }
 
 /**
@@ -112,6 +156,11 @@ export function sameShadowLight(a: ShadowLightPose | null, b: ShadowLightPose | 
  * The layout pass is what lets a still frame be correct without a render loop
  * having run; the frame callback is what keeps an animated light correct. See
  * ShadowCasterStage for the same split on the occluder side.
+ *
+ * The frame callback runs whether or not anything moved, so it compares the
+ * pose's INPUTS before building one. Sampling first and discarding the result
+ * would spend a 4×4 inverse and half a dozen short-lived objects per shadowed
+ * light per frame on a scene that has been still since load.
  */
 export function useShadowLightPose(
   quad: THREE.Mesh | null,
@@ -119,15 +168,40 @@ export function useShadowLightPose(
 ): ShadowLightPose | null {
   const [pose, setPose] = useState<ShadowLightPose | null>(null);
   const published = useRef(pose);
+  const inputs = useRef(new Float64Array(SAMPLE_INPUTS));
+  const inputsRead = useRef(false);
 
   const sample = useCallback(() => {
+    if (enabled && quad && readSampleInputs(quad, inputScratch)) {
+      const previous = inputs.current;
+      if (inputsRead.current) {
+        let moved = false;
+        for (let i = 0; i < SAMPLE_INPUTS; i += 1) {
+          if (previous[i] !== inputScratch[i]) {
+            moved = true;
+            break;
+          }
+        }
+        if (!moved) return;
+      }
+      previous.set(inputScratch);
+      inputsRead.current = true;
+    } else {
+      inputsRead.current = false;
+    }
+
     const next = enabled ? sampleShadowLight(quad) : null;
     if (sameShadowLight(published.current, next)) return;
     published.current = next;
     setPose(next);
   }, [quad, enabled]);
 
-  useLayoutEffect(sample, [sample]);
+  useLayoutEffect(() => {
+    // A new quad or a change of `enabled` makes the cached inputs another
+    // light's, so they are dropped rather than compared against.
+    inputsRead.current = false;
+    sample();
+  }, [sample]);
   useFrame(sample, SHADOW_SNAPSHOT_PRIORITY);
 
   return pose;

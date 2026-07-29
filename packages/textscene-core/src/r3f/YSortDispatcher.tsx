@@ -42,7 +42,7 @@ import {
 import { canvasItemBlendState } from '../resources/materials/canvasitemmaterial/renderer.js';
 import { CanvasItemBlendMode } from '../resources/materials/canvasitemmaterial/types.js';
 import { Z_INDEX_STEP, node2dGroupProps, node2dGroupSpread } from './node2dTransform.js';
-import { tileSourceZ } from './tileSourceZ.js';
+import { drawnSources, tileSourceZ } from './tileSourceZ.js';
 import { nodeComponentRegistry } from './NodeComponentRegistry.js';
 import type { TileMapLayerProperties } from '../nodes/2d/tiles/tilemaplayer/types.js';
 import type { PlacedCell } from '../nodes/2d/tiles/shared/tileData.js';
@@ -216,13 +216,17 @@ function LiftedAncestors({
   // down the tree, so an item lifted out of two nested containers has to be told
   // what those containers contributed before it adds its own.
   const parentEffectiveZ = useEffectiveZ();
-  const liftedZ = liftedPast.reduce((z, ancestor) => {
-    const props = ancestor.properties as Partial<Node2DProperties>;
-    return accumulateCanvasItemZ(z, {
-      z_index: props.z_index ?? 0,
-      z_as_relative: props.z_as_relative,
-    });
-  }, parentEffectiveZ);
+  const liftedZ = useMemo(
+    () =>
+      liftedPast.reduce((z, ancestor) => {
+        const props = ancestor.properties as Partial<Node2DProperties>;
+        return accumulateCanvasItemZ(z, {
+          z_index: props.z_index ?? 0,
+          z_as_relative: props.z_as_relative,
+        });
+      }, parentEffectiveZ),
+    [liftedPast, parentEffectiveZ]
+  );
 
   let wrapped = children;
   for (let i = liftedPast.length - 1; i >= 0; i--) {
@@ -245,9 +249,18 @@ function LiftedAncestors({
 
   // `modulate` inherits; `self_modulate` does not, so only the former is folded
   // in here. Applied outside the groups because it is a colour, not a transform.
-  const inherited = liftedPast.reduce(
-    (acc, a) => multiplyModulate(acc, (a.properties as Partial<Node2DProperties>).modulate ?? WHITE_MODULATE),
-    parentModulate
+  // Memoised for its IDENTITY, not its cost: `multiplyModulate` mints a fresh
+  // object, and this one feeds a context — an unmemoised fold re-renders every
+  // consumer in the lifted subtree on each render with the same four numbers.
+  // With no ancestors the fold returns `parentModulate` itself, so the ordinary
+  // unlifted item already pays nothing.
+  const inherited = useMemo(
+    () =>
+      liftedPast.reduce(
+        (acc, a) => multiplyModulate(acc, (a.properties as Partial<Node2DProperties>).modulate ?? WHITE_MODULATE),
+        parentModulate
+      ),
+    [liftedPast, parentModulate]
   );
 
   return (
@@ -436,6 +449,12 @@ function TileGroupRenderer({ item, z, band, node }: {
   const allCells = tileProps.cells ?? null;
   // When expanded by the y-sort pass, tileData.cells holds the filtered Y-group cells.
   const cells = item.tileData?.cells ?? allCells;
+  // One of these is mounted PER TILE ROW, so the partition is memoised: without
+  // it every row re-buckets its cells on every render of the whole sorted list.
+  const cellsBySource = useMemo(
+    () => (model && cells?.length ? drawnSources(model, cells) : null),
+    [model, cells]
+  );
 
   // `visible` and `enabled` gate the ordinary path through <CanvasItem2D>'s
   // group and the `props.enabled &&` in the body. This path bypasses both, so
@@ -450,7 +469,7 @@ function TileGroupRenderer({ item, z, band, node }: {
   const originX = tileProps.position?.x ?? 0;
   const originY = -(tileProps.position?.y ?? 0);
 
-  if (!drawable || !model) {
+  if (!drawable || !model || !cellsBySource) {
     return (
       <group
         name={`TileGroup_${node.name}_${item.treeOrder}`}
@@ -459,29 +478,15 @@ function TileGroupRenderer({ item, z, band, node }: {
     );
   }
 
-  // Partition cells by source (per-source batching), then render each Y-group.
-  // `sourceIndex` is assigned AFTER the filter, so it is the position among the
-  // sources this Y-group actually draws. Keeping the tileset-wide index here
-  // while passing the drawn-only count to `tileSourceZ` is what let the nudge
-  // run past the band.
-  const cellsBySource = model.sourceOrder
-    .map((sourceId) => ({
-      sourceId,
-      source: model.sources.get(sourceId)!,
-      cells: cells.filter((c) => c.sourceId === sourceId),
-    }))
-    .filter((entry) => entry.cells.length > 0)
-    .map((entry, sourceIndex) => ({ ...entry, sourceIndex }));
-
   return (
     <group name={`TileGroup_${node.name}_${item.treeOrder}`} position={[originX, originY, z]}>
-      {cellsBySource.map(({ sourceId, sourceIndex, source, cells: sourceCells }) => (
+      {cellsBySource.map(({ sourceId, sourceIndex, sourceCount, source, cells: sourceCells }) => (
         <TileSourceMesh
           key={`${sourceId}_${item.treeOrder}`}
           source={source}
           cells={sourceCells}
           grid={model}
-          z={tileSourceZ(sourceIndex, cellsBySource.length, band)}
+          z={tileSourceZ(sourceIndex, sourceCount, band)}
           color={color}
           opacity={opacity}
           name={node.name}

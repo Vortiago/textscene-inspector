@@ -20,18 +20,11 @@
  * status explaining why not).
  */
 
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import type * as THREE from 'three';
 import type { TscnExternalResource, TscnInternalResource } from '../parser/types.js';
 import { resolveTexture2DPath } from './SubResourceResolver.js';
-import {
-  gradientTextureCacheKey,
-  resolveGradientTexture2D,
-} from './textures/gradienttexture2d/resolveGradientTexture.js';
-import {
-  pinProceduralTexture,
-  unpinProceduralTexture,
-} from './textures/proceduralTextureCache.js';
+import { useProceduralTexture } from './useProceduralTexture.js';
 import { useResource } from './useResource.js';
 
 export interface Texture2DResult {
@@ -48,25 +41,9 @@ export function useTexture2D(
 ): Texture2DResult {
   // Procedural first: it is described entirely by the scene, so it needs no
   // file and resolves in the same tick the property is read. Shared and owned
-  // by the procedural cache, like any loader-supplied texture — borrowed here,
-  // never disposed.
-  const procedural = useMemo(
-    () => resolveGradientTexture2D(ref, internalResources),
-    [ref, internalResources]
-  );
-
-  // Borrowed, but the cache can only honour that if it knows we hold it: an
-  // unpinned entry is disposed outright once the cache overflows, leaving this
-  // consumer sampling a dead texture with no reason to re-rasterise.
-  const proceduralKey = useMemo(
-    () => (procedural ? gradientTextureCacheKey(ref, internalResources) : null),
-    [procedural, ref, internalResources]
-  );
-  useEffect(() => {
-    if (!proceduralKey) return undefined;
-    pinProceduralTexture(proceduralKey);
-    return () => unpinProceduralTexture(proceduralKey);
-  }, [proceduralKey]);
+  // by the procedural cache, like any loader-supplied texture — borrowed here
+  // (pinned by the hook while mounted), never disposed.
+  const procedural = useProceduralTexture(ref, internalResources);
 
   const path = useMemo(
     () => (procedural ? null : resolveTexture2DPath(ref, externalResources, internalResources)),

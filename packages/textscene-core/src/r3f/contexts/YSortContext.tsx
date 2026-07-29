@@ -13,6 +13,21 @@ import { YSORT_FINE_RANGE } from '../node2dTransform';
 // ACROSS walks: a y-sort node reached through a non-y-sorted container mounts a
 // fresh dispatcher, which restarts at 0. This context is the seam that fix will
 // write to.
+//
+// `parentEffectiveZ` is NOT the same carrier as `EffectiveZContext`, and seeding
+// one from the other would be wrong in both directions. The value derived here
+// feeds `fullZ = effectiveZ * Z_INDEX_STEP + sortZ`, a WORLD-SPACE offset on a
+// group already nested inside its ancestors' groups — which carry their own
+// `canvasItemZ` — so accumulating the inherited z here would count it twice.
+// `EffectiveZContext` carries Godot's integer `z_final`, which exists only to be
+// tested against a light's z window and must accumulate.
+//
+// The one place they meet is the tile-group lighting z, which reads the y-sort
+// value: a tile layer under a z_index'd ancestor is therefore culled against a
+// z that restarts at 0, where a plain CanvasItem is culled against the
+// accumulated one. Correcting that means carrying the two quantities separately
+// through the walk and measuring the result against Godot, not seeding one from
+// the other.
 export interface YSortContextValue {
   parentWorldY: number;
   parentEffectiveZ: number;

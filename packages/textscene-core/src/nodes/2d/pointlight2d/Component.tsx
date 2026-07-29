@@ -27,7 +27,7 @@
  * When `enabled=false` the body returns null and the light does not register.
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
@@ -39,12 +39,14 @@ import type { Color } from '../../base/node2d/types';
 import {
   createLightQuadMaterial,
   createShadowColorQuadMaterial,
-  createShadowPolarTexture,
+  updateShadowPolarTexture,
   shadowColorContributes,
   SHADOW_FILTER_NONE,
+  SHADOW_FILTER_PCF5,
+  SHADOW_FILTER_PCF13,
   type ShadowSampling,
 } from '../../../r3f/lighting2d/lightQuad';
-import { buildShadowPolarMap } from '../../../r3f/lighting2d/shadowPolarMap';
+import { buildShadowPolarMap, shadowMapZFarInv } from '../../../r3f/lighting2d/shadowPolarMap';
 import { useLightSequence } from '../../../r3f/lighting2d/useLightSequence';
 import {
   useLightClassLayer,
@@ -84,22 +86,17 @@ export function PointLight2D({ node, children }: NodeComponentProps) {
   // whole cull tuple is what the light registers under and what decides the
   // layer its quad draws on. The node's own `light_mask` is its CanvasItem mask
   // and has no bearing on either.
-  const cullKey = useMemo<LightCullKey>(
-    () => ({
-      itemCullMask: props.range_item_cull_mask,
-      zMin: props.range_z_min,
-      zMax: props.range_z_max,
-      layerMin: props.range_layer_min,
-      layerMax: props.range_layer_max,
-    }),
-    [
-      props.range_item_cull_mask,
-      props.range_z_min,
-      props.range_z_max,
-      props.range_layer_min,
-      props.range_layer_max,
-    ]
-  );
+  // Not memoised: every consumer compares it by value. `useRegisterCanvasLight2D`
+  // destructures the five numbers and depends on those, and the two class
+  // lookups run `sameLightCullKey` — so a stable identity would buy nothing and
+  // would add a second list of fields to keep in step.
+  const cullKey: LightCullKey = {
+    itemCullMask: props.range_item_cull_mask,
+    zMin: props.range_z_min,
+    zMax: props.range_z_max,
+    layerMin: props.range_layer_min,
+    layerMax: props.range_layer_max,
+  };
   const ordinal = useRegisterCanvasLight2D(lights > 0, cullKey);
   // Two different jobs, deliberately two different numbers: `ordinal` keeps the
   // shadow stencil stamps of one pass apart (dense, reused on unmount), while
@@ -110,7 +107,7 @@ export function PointLight2D({ node, children }: NodeComponentProps) {
   // Godot's default shadow_color is transparent, so the extra albedo-free pass
   // is allocated only for the rare light that actually tints its shadow.
   const tintsShadow = props.shadow_enabled && shadowColorContributes(props.shadow_color);
-  useRegisterShadowTint(lights > 0 && tintsShadow);
+  useRegisterShadowTint(lights > 0 && tintsShadow, cullKey);
   const shadowTintLayer = useShadowTintLayer(cullKey);
 
   // Every occluder on the canvas, narrowed to the ones Godot lets THIS light
@@ -248,11 +245,25 @@ function QuadMesh({
 
   // The polar map is a pure function of the pose and the casters, so it is
   // rebuilt on exactly the events the volumes are and is byte-stable in between.
-  const shadowMap = useMemo(
-    () => (filtered && light ? createShadowPolarTexture(buildShadowPolarMap(light, casters)) : null),
-    [filtered, light, casters]
+  // The TEXTURE outlives each rebuild: its identity is what both quad materials
+  // hold in `uShadowMap`, so refilling it in place is what stops an occluder
+  // settling during load from rebuilding two ShaderMaterials per light.
+  const mapTexture = useRef<THREE.DataTexture | null>(null);
+  const shadowMap = useMemo(() => {
+    if (!filtered || !light) return null;
+    mapTexture.current = updateShadowPolarTexture(
+      mapTexture.current,
+      buildShadowPolarMap(light, casters)
+    );
+    return mapTexture.current;
+  }, [filtered, light, casters]);
+  useEffect(
+    () => () => {
+      mapTexture.current?.dispose();
+      mapTexture.current = null;
+    },
+    []
   );
-  useEffect(() => () => shadowMap?.dispose(), [shadowMap]);
 
   const sampling = useMemo<ShadowSampling | undefined>(() => {
     if (!shadowMap || !light) return undefined;
@@ -261,28 +272,28 @@ function QuadMesh({
       map: shadowMap,
       // Anything the parser admits that is not NONE takes the wider kernel only
       // at PCF13; `shadow_filter` is a three-value enum, so this is exhaustive.
-      filter: shadowFilter === 2 ? 2 : 1,
+      filter: shadowFilter === SHADOW_FILTER_PCF13 ? SHADOW_FILTER_PCF13 : SHADOW_FILTER_PCF5,
       smooth: shadowFilterSmooth,
       worldToLocal: new THREE.Matrix3().set(m00, m01, m02, m10, m11, m12, 0, 0, 1),
-      zFarInv: 1 / (light.radius * 1.1),
+      zFarInv: shadowMapZFarInv(light.radius),
+      shadowColor,
     };
-  }, [shadowMap, light, shadowFilter, shadowFilterSmooth]);
+  }, [shadowMap, light, shadowFilter, shadowFilterSmooth, shadowColor]);
 
   const material = useMemo(
     () =>
-      createLightQuadMaterial(
-        texture,
+      createLightQuadMaterial({
+        cookie: texture,
         color,
         energy,
         blendMode,
         // A filtered light computes its own fraction per fragment, so it needs
         // no stencil ref and stamps nothing — the two mechanisms are never both
         // active on one light.
-        shadowed && !filtered ? litQuadStencilProps(ordinal) : {},
-        sampling,
-        shadowColor
-      ),
-    [texture, color, energy, blendMode, shadowed, filtered, ordinal, sampling, shadowColor]
+        stencil: shadowed && !filtered ? litQuadStencilProps(ordinal) : undefined,
+        shadow: sampling,
+      }),
+    [texture, color, energy, blendMode, shadowed, filtered, ordinal, sampling]
   );
   useEffect(() => () => material.dispose(), [material]);
 
@@ -296,13 +307,13 @@ function QuadMesh({
   const shadowMaterial = useMemo(
     () =>
       tintsShadow
-        ? createShadowColorQuadMaterial(
-            texture,
+        ? createShadowColorQuadMaterial({
+            cookie: texture,
             shadowColor,
             blendMode,
-            filtered ? {} : shadowColorQuadStencilProps(ordinal),
-            sampling
-          )
+            stencil: filtered ? undefined : shadowColorQuadStencilProps(ordinal),
+            shadow: sampling,
+          })
         : null,
     [tintsShadow, texture, shadowColor, blendMode, filtered, ordinal, sampling]
   );
@@ -342,7 +353,7 @@ function QuadMesh({
           ordinal={ordinal}
           sequence={sequence}
           layer={layer}
-          tintLayer={tintsShadow ? shadowTintLayer : undefined}
+          tintLayer={shadowTintLayer}
         />
       )}
       <LightQuad
