@@ -229,7 +229,11 @@ do the async I/O underneath — see the note below.)
    `string | ArrayBuffer | null` (async).
 2. **`FileEventBus`** — type-agnostic raw bytes: `request(path) →`
    `loaded(path, bytes) | failed(path, err)`. Calls the provider, caches bytes,
-   dedupes in-flight requests.
+   dedupes in-flight requests. `tryLoad(path)` is the same fetch for a file found
+   by CONVENTION rather than declared by a scene — the **Import sidecar**
+   (ADR-0028) and `project.godot` (**Project settings**) — answering the caller
+   alone and firing neither handler set, so a miss is an ordinary "use Godot's
+   defaults" instead of a **Missing resource**.
 3. **Per-type processors** (`createResourceProcessor`): one
    cache + in-flight + emit machine per type. On raw bytes it runs `process()`
    (async), caches the result (**failures cached as `null`** so they don't

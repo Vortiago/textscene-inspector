@@ -137,6 +137,32 @@ describe('default_theme_scale reaches the Controls', () => {
     expect(all(c, 'VBoxContainer')[1]!.style.gap).toBe('13px');
   });
 
+  it('scales every text Control together, so none is left at the inherited size', async () => {
+    // Label, RichTextLabel and CheckBox all draw at the theme's
+    // `default_font_size`; before the scale was read they agreed only because
+    // every ancestor happened to sit at 16px. One of them left inheriting would
+    // render 16 next to the others' 32 — a mismatch no scale-1 fixture can show.
+    const c = renderAtScale(
+      [
+        node('Label', 'Label', { text: 'label' }),
+        node('Rich', 'RichTextLabel', { text: 'rich' }),
+        node('Check', 'CheckBox', { text: 'check' }),
+      ],
+      PROJECT_AT_SCALE_2
+    );
+    await waitFor(() => expect(find(c, 'Label').style.fontSize).toBe('32px'));
+    expect(find(c, 'RichTextLabel').style.fontSize).toBe('32px');
+    expect(find(c, 'CheckBox').style.fontSize).toBe('32px');
+  });
+
+  it('keeps RichTextLabel’s normal_font_size override verbatim', async () => {
+    const c = renderAtScale(
+      [node('Rich', 'RichTextLabel', { text: 'rich', themeOverrideFontSizes: { normal_font_size: 9 } })],
+      PROJECT_AT_SCALE_2
+    );
+    await waitFor(() => expect(find(c, 'RichTextLabel').style.fontSize).toBe('9px'));
+  });
+
   it('scales the HBoxContainer and GridContainer separations too', async () => {
     const c = renderAtScale(
       [node('Row', 'HBoxContainer'), node('Grid', 'GridContainer', { columns: 2 })],

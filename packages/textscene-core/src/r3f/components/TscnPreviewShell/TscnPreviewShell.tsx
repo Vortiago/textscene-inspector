@@ -260,10 +260,17 @@ export function TscnPreviewShell({
     // The scene's `project.godot`. Outermost of the Control-facing providers
     // because BOTH consumers of the theme scale sit under it — the on-screen
     // overlay in `<Canvas2DStage>` and the off-screen `<ControlRasterHosts>`,
-    // which `<ViewportArea>` mounts side by side. Keyed on the root scene path
-    // so a corpus switch re-reads the incoming project's file.
+    // which `<ViewportArea>` mounts side by side.
+    //
+    // The key carries `panelId` as well as the scene's res:// identity because
+    // `rootScenePath` is relative to the **Corpus root**: two vendored projects
+    // can each hold a `res://main.tscn`, and on that swap the path alone would
+    // not change, so the settings would stay the outgoing project's while the
+    // byte layer had already been cleared for the incoming one.
     (children) => (
-      <ProjectSettingsProvider sceneKey={rootScenePath}>{children}</ProjectSettingsProvider>
+      <ProjectSettingsProvider sceneKey={`${panelId} ${rootScenePath}`}>
+        {children}
+      </ProjectSettingsProvider>
     )
   );
 
