@@ -243,6 +243,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Hslider",
+    "file": "unit-hslider.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Instance Child",
     "file": "unit-instance-child.tscn",
     "category": "Other"
@@ -295,6 +300,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Lightoccluder2d",
     "file": "unit-lightoccluder2d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Lineedit",
+    "file": "unit-lineedit.tscn",
     "category": "Other"
   },
   {
@@ -455,6 +465,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Uv Scale",
     "file": "unit-uv-scale.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Vslider",
+    "file": "unit-vslider.tscn",
     "category": "Other"
   },
   {

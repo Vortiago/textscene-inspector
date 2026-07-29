@@ -1532,7 +1532,120 @@
       ]
     },
     "HSlider": {
-      "validators": [],
+      "validators": [
+        {
+          "property": "anchor_bottom",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "anchor_left",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "anchor_right",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "anchor_top",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "anchors_preset",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "custom_minimum_size",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "grow_horizontal",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "grow_vertical",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "layout_mode",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "modulate",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "offset_bottom",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "offset_left",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "offset_right",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "offset_top",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "pivot_offset",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "pivot_offset_ratio",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "rotation",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "scale",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "self_modulate",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "size_flags_horizontal",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "size_flags_stretch_ratio",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "size_flags_vertical",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "theme_override_colors/*",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "theme_override_constants/*",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "theme_override_font_sizes/*",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "theme_override_fonts/*",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "theme_override_styles/*",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "visible",
+          "declaredOn": "Control"
+        }
+      ],
       "rules": [
         {
           "name": "binary-resource-reference",
@@ -1733,7 +1846,120 @@
       ]
     },
     "LineEdit": {
-      "validators": [],
+      "validators": [
+        {
+          "property": "anchor_bottom",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "anchor_left",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "anchor_right",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "anchor_top",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "anchors_preset",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "custom_minimum_size",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "grow_horizontal",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "grow_vertical",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "layout_mode",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "modulate",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "offset_bottom",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "offset_left",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "offset_right",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "offset_top",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "pivot_offset",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "pivot_offset_ratio",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "rotation",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "scale",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "self_modulate",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "size_flags_horizontal",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "size_flags_stretch_ratio",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "size_flags_vertical",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "theme_override_colors/*",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "theme_override_constants/*",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "theme_override_font_sizes/*",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "theme_override_fonts/*",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "theme_override_styles/*",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "visible",
+          "declaredOn": "Control"
+        }
+      ],
       "rules": [
         {
           "name": "binary-resource-reference",
@@ -4182,7 +4408,120 @@
       ]
     },
     "VSlider": {
-      "validators": [],
+      "validators": [
+        {
+          "property": "anchor_bottom",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "anchor_left",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "anchor_right",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "anchor_top",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "anchors_preset",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "custom_minimum_size",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "grow_horizontal",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "grow_vertical",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "layout_mode",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "modulate",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "offset_bottom",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "offset_left",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "offset_right",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "offset_top",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "pivot_offset",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "pivot_offset_ratio",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "rotation",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "scale",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "self_modulate",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "size_flags_horizontal",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "size_flags_stretch_ratio",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "size_flags_vertical",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "theme_override_colors/*",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "theme_override_constants/*",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "theme_override_font_sizes/*",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "theme_override_fonts/*",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "theme_override_styles/*",
+          "declaredOn": "Control"
+        },
+        {
+          "property": "visible",
+          "declaredOn": "Control"
+        }
+      ],
       "rules": [
         {
           "name": "binary-resource-reference",

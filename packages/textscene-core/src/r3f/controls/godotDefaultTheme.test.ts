@@ -14,6 +14,13 @@ import {
   DEFAULT_SEPARATION,
   OPTION_BUTTON_CONTENT_MARGIN_X,
   OPTION_BUTTON_CONTENT_MARGIN_Y,
+  SLIDER_CORNER_RADIUS,
+  SLIDER_GRABBER_RADIUS,
+  SLIDER_GRABBER_SIZE,
+  SLIDER_TICK_BOX,
+  SLIDER_TICK_LENGTH,
+  SLIDER_TICK_THICKNESS,
+  SLIDER_TRACK_THICKNESS,
   STYLE_DISABLED_FILL,
   STYLE_HOVER_FILL,
   STYLE_NORMAL_FILL,
@@ -85,6 +92,13 @@ describe('scaledGodotTheme', () => {
       optionButtonMarginX: OPTION_BUTTON_CONTENT_MARGIN_X,
       optionButtonMarginY: OPTION_BUTTON_CONTENT_MARGIN_Y,
       separation: DEFAULT_SEPARATION,
+      sliderTrackThickness: SLIDER_TRACK_THICKNESS,
+      sliderCornerRadius: SLIDER_CORNER_RADIUS,
+      sliderGrabberSize: SLIDER_GRABBER_SIZE,
+      sliderGrabberRadius: SLIDER_GRABBER_RADIUS,
+      sliderTickBox: SLIDER_TICK_BOX,
+      sliderTickThickness: SLIDER_TICK_THICKNESS,
+      sliderTickLength: SLIDER_TICK_LENGTH,
     });
   });
 
@@ -97,6 +111,16 @@ describe('scaledGodotTheme', () => {
       optionButtonMarginX: 16,
       optionButtonMarginY: 8,
       separation: 8,
+      // The sliders grow with everything else: the styleboxes through
+      // `make_flat_stylebox`, the grabber and tick because `generate_icon`
+      // rasterises each SVG at the scale.
+      sliderTrackThickness: 16,
+      sliderCornerRadius: 8,
+      sliderGrabberSize: 32,
+      sliderGrabberRadius: 14,
+      sliderTickBox: 8,
+      sliderTickThickness: 4,
+      sliderTickLength: 32,
     });
   });
 
@@ -126,6 +150,13 @@ describe('scaledGodotTheme', () => {
       optionButtonMarginX: 4,
       optionButtonMarginY: 2,
       separation: 2,
+      sliderTrackThickness: 4,
+      sliderCornerRadius: 2,
+      sliderGrabberSize: 8,
+      sliderGrabberRadius: 4,
+      sliderTickBox: 2,
+      sliderTickThickness: 1,
+      sliderTickLength: 8,
     });
   });
 });

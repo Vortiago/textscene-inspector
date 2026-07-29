@@ -275,6 +275,84 @@ const TARGETS = [
       ],
     },
   ],
+  // Which string a LineEdit paints, and in particular that a `secret` field
+  // echoes bullets rather than its plaintext.
+  [
+    'lineedit',
+    'unit-lineedit.tscn',
+    {
+      minControls: 7,
+      types: ['LineEdit'],
+      texts: ['Enter text here...', 'Ada Lovelace', 'Read only', '•••••••'],
+      absentTexts: ['hunter2'],
+    },
+  ],
+  // Godot places a grabber at `ratio * (size - grabber)`, a calc() the browser
+  // must resolve against the slider's laid-out size. The half-grabber (8px)
+  // terms below are the texture's own half-width, which Godot adds to reach
+  // the grabber's CENTRE.
+  //
+  // 16/8 are the grabber and its half at `gui/theme/default_theme_scale = 1`,
+  // which is what `scenes/fixtures/` resolves to — the corpus has no
+  // project.godot, and only `demos/viewport/gui_in_3d` sets a scale (2.0).
+  // Scale-free cross-check, true at any scale: AtMinimum.x + AtMaximum.x
+  // equals the track width, since the two sit one half-grabber from each end.
+  [
+    'hslider',
+    'unit-hslider.tscn',
+    {
+      minControls: 7,
+      types: ['HSlider'],
+      grabbers: [
+        ['AtMinimum', 'x', (x) => x === 8, 'the grabber centred one half-grabber from the LEFT edge'],
+        [
+          'AtMaximum',
+          'x',
+          (x, g) => Math.abs(x - (g.trackWidth - 8)) <= 1,
+          'the grabber centred one half-grabber from the RIGHT edge',
+        ],
+        [
+          'AtQuarter',
+          'x',
+          (x, g) => Math.abs(x - ((g.trackWidth - 16) * 0.25 + 8)) <= 1,
+          'a quarter of the way along the travel',
+        ],
+        // A -50..50 range holding 0 is ratio 0.5, not 0 — it must not collapse
+        // to the left end the way an unshifted default would.
+        [
+          'ShiftedRange',
+          'x',
+          (x, g) => Math.abs(x - ((g.trackWidth - 16) * 0.5 + 8)) <= 1,
+          'mid-track for a -50..50 range at value 0',
+        ],
+      ],
+    },
+  ],
+  // The axis that no other fixture can check: Godot measures a VSlider's
+  // grabber UP from the bottom edge, so min_value is at the bottom.
+  [
+    'vslider',
+    'unit-vslider.tscn',
+    {
+      minControls: 5,
+      types: ['VSlider'],
+      grabbers: [
+        [
+          'AtBottom',
+          'y',
+          (y, g) => Math.abs(y - (g.trackHeight - 8)) <= 1,
+          'the grabber at the BOTTOM for value = min_value',
+        ],
+        ['AtTop', 'y', (y) => y === 8, 'the grabber at the TOP for value = max_value'],
+        [
+          'AtMiddle',
+          'y',
+          (y, g) => Math.abs(y - g.trackHeight / 2) <= 1,
+          'the grabber mid-track for a half-range value',
+        ],
+      ],
+    },
+  ],
 ];
 
 /** Godot quantises before the sRGB curve; the 8-bit linear target quantises after. */
@@ -395,6 +473,32 @@ for (const [name, file, expect = {}] of TARGETS) {
             ];
           })
       ),
+      // A slider's grabber is placed by a calc() over the widget's OWN size,
+      // which only a real layout engine resolves — happy-dom returns nothing
+      // for it. Record each grabber's centre relative to its slider's box,
+      // which is the frame Godot's placement math is written in, so an
+      // inverted axis (a VSlider counting down from the top) is catchable.
+      //
+      // offsetLeft/offsetWidth, NOT getBoundingClientRect: the 2D stage paints
+      // the overlay under a zoom transform, which scales every client rect and
+      // would make these numbers depend on the fit-to-viewport factor rather
+      // than on the CSS the component emitted. The offset* family reports
+      // layout pixels, and an absolutely-positioned part's offsetParent is the
+      // Control root itself.
+      sliderGrabbers: Object.fromEntries(
+        all
+          .map((e) => [e, e.querySelector(':scope > [data-slider-part="grabber"]')])
+          .filter(([e, g]) => g && e.getAttribute('data-node-name'))
+          .map(([e, g]) => [
+            e.getAttribute('data-node-name'),
+            {
+              x: g.offsetLeft + g.offsetWidth / 2,
+              y: g.offsetTop + g.offsetHeight / 2,
+              trackWidth: e.offsetWidth,
+              trackHeight: e.offsetHeight,
+            },
+          ])
+      ),
       icons: [...document.querySelectorAll('[data-button-icon]')].map((e) =>
         e.getAttribute('data-button-icon')
       ),
@@ -441,6 +545,19 @@ for (const [name, file, expect = {}] of TARGETS) {
   }
   for (const text of expect.texts ?? []) {
     if (!stats.texts.some((t) => t.includes(text))) failures.push(`missing text "${text}"`);
+  }
+  // The inverse assertion: a string the overlay must NOT paint. A LineEdit
+  // with `secret` echoing its plaintext still satisfies every count-based
+  // check, so only naming the forbidden string catches it.
+  for (const text of expect.absentTexts ?? []) {
+    if (stats.texts.some((t) => t.includes(text))) failures.push(`text "${text}" must not be drawn`);
+  }
+  for (const [target, prop, predicate, label] of expect.grabbers ?? []) {
+    const grabber = stats.sliderGrabbers[target];
+    if (!grabber) failures.push(`node "${target}" rendered no slider grabber`);
+    else if (!predicate(grabber[prop], grabber)) {
+      failures.push(`${target}.grabber.${prop} = ${grabber[prop]} — expected ${label}`);
+    }
   }
   const maxFallbacks = expect.maxFallbacks ?? 0;
   if (stats.fallbacks > maxFallbacks) {
