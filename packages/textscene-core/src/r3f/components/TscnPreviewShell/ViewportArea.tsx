@@ -11,10 +11,15 @@ import type { SceneGraph } from '../../../core/SceneGraph.js';
 import { useViewportMode } from '../../contexts/ViewportModeContext.js';
 import { isCanvasItemNode } from '../../workspaceForScene.js';
 import { useLiveSceneNodes } from '../../useLiveSceneTree.js';
+import { isViewportBoundary } from '../../../nodes/viewport/subviewport/viewportBoundary.js';
+import type { TscnNode } from '../../../parser/types.js';
 import { TscnCanvas } from '../../TscnCanvas.js';
 import { Canvas2DStage } from '../Canvas2DStage/Canvas2DStage.js';
 import { ViewportControlsHelp } from '../ViewportControlsHelp/ViewportControlsHelp.js';
 import styles from './TscnPreviewShell.module.css';
+
+/** Stable prune so `useLiveSceneNodes`' memo doesn't recompute each render. */
+const NOT_A_VIEWPORT = (node: TscnNode): boolean => !isViewportBoundary(node.type);
 
 export function ViewportArea({ sceneGraph }: { sceneGraph: SceneGraph | null }) {
   const { mode, setMode } = useViewportMode();
@@ -22,7 +27,11 @@ export function ViewportArea({ sceneGraph }: { sceneGraph: SceneGraph | null }) 
   // From the LIVE scene tree, so 2D content INSIDE an instanced sub-scene (a
   // HUD, embedded sprites) is detected too — not just inline CanvasItems. Grows
   // when a sub-scene loads, so the hint appears once the instance resolves.
-  const has2DContent = useLiveSceneNodes(isCanvasItemNode).length > 0;
+  // Stops at a sub-viewport: its Controls are visible only through a viewport
+  // surface, so counting them would offer "switch to 2D" for a scene whose 2D
+  // workspace shows nothing. A SubViewportContainer is itself a Control and
+  // still counts, which is right — it DOES draw something there (ADR-0030).
+  const has2DContent = useLiveSceneNodes(isCanvasItemNode, NOT_A_VIEWPORT).length > 0;
 
   if (mode === '2D') {
     return (
