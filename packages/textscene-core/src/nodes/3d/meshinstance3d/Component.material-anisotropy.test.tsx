@@ -154,14 +154,14 @@ describe('<MeshInstance3D> anisotropy material (WI-68)', () => {
     expect(renderer.scene.findAllByType('MeshStandardMaterial')).toHaveLength(1);
   });
 
-  it('wires anisotropy_flowmap onto material.anisotropyMap, repacking Godot alpha-strength into three.js blue', async () => {
+  /**
+   * Render one anisotropic material whose `anisotropy_flowmap` resolves to
+   * `texture`, and hand back the physical material it produced.
+   */
+  async function renderWithFlowmap(texture: THREE.Texture): Promise<THREE.MeshPhysicalMaterial> {
     const loader = makeLoader();
-    // Known-pixel flowmap: R/G direction (128,128 = neutral), B unused (0),
-    // A = strength (200). three.js reads strength from BLUE, so a faithful map
-    // must end up with blue == the source alpha (200).
-    const flow = new THREE.DataTexture(new Uint8Array([128, 128, 0, 200]), 1, 1, THREE.RGBAFormat);
-    flow.needsUpdate = true;
-    preloadTexture(loader, 'res://textures/aniso_flow.png', flow);
+    const path = 'res://textures/aniso_flow.png';
+    preloadTexture(loader, path, texture);
 
     const internal: TscnInternalResource[] = [
       { id: 'box', type: 'BoxMesh', data: { id: 'box' } },
@@ -176,9 +176,7 @@ describe('<MeshInstance3D> anisotropy material (WI-68)', () => {
         } as Record<string, string>,
       },
     ];
-    const external: TscnExternalResource[] = [
-      { id: '2', path: 'res://textures/aniso_flow.png', type: 'Texture2D' },
-    ];
+    const external: TscnExternalResource[] = [{ id: '2', path, type: 'Texture2D' }];
 
     const renderer = await ReactThreeTestRenderer.create(tree(makeNode('mat'), internal, external, loader));
     await new Promise<void>((r) => setTimeout(r, 10));
@@ -186,7 +184,18 @@ describe('<MeshInstance3D> anisotropy material (WI-68)', () => {
 
     const physical = renderer.scene.findAllByType('MeshPhysicalMaterial');
     expect(physical).toHaveLength(1);
-    const material = physical[0]!.instance as THREE.MeshPhysicalMaterial;
+    return physical[0]!.instance as THREE.MeshPhysicalMaterial;
+  }
+
+  it('wires anisotropy_flowmap onto material.anisotropyMap, repacking Godot alpha-strength into three.js blue', async () => {
+    // Known-pixel flowmap: R/G direction (128,128 = neutral), B unused (0),
+    // A = strength (200). three.js reads strength from BLUE, so a faithful map
+    // must end up with blue == the source alpha (200).
+    const flow = new THREE.DataTexture(new Uint8Array([128, 128, 0, 200]), 1, 1, THREE.RGBAFormat);
+    flow.needsUpdate = true;
+
+    const material = await renderWithFlowmap(flow);
+
     expect(material.anisotropyMap).toBeTruthy();
     const data = (material.anisotropyMap!.image as { data: Uint8Array }).data;
     // Strength repacked from Godot ALPHA (200) into three.js BLUE.
@@ -204,36 +213,10 @@ describe('<MeshInstance3D> anisotropy material (WI-68)', () => {
     // needs a canvas readback, and this environment has no rasterizer. The
     // material must then carry NO map rather than a wrong-channel one: strength
     // survives, the per-pixel modulation is simply absent.
-    const loader = makeLoader();
-    const undecodable = new THREE.Texture({
-      width: 4,
-      height: 4,
-    } as unknown as HTMLImageElement);
-    preloadTexture(loader, 'res://textures/aniso_flow.png', undecodable);
+    const undecodable = new THREE.Texture({ width: 4, height: 4 } as HTMLImageElement);
 
-    const internal: TscnInternalResource[] = [
-      { id: 'box', type: 'BoxMesh', data: { id: 'box' } },
-      {
-        id: 'mat',
-        type: 'StandardMaterial3D',
-        data: {
-          id: 'mat',
-          anisotropy_enabled: 'true',
-          anisotropy: '0.8',
-          anisotropy_flowmap: 'ExtResource("2")',
-        } as Record<string, string>,
-      },
-    ];
-    const external: TscnExternalResource[] = [
-      { id: '2', path: 'res://textures/aniso_flow.png', type: 'Texture2D' },
-    ];
+    const material = await renderWithFlowmap(undecodable);
 
-    const renderer = await ReactThreeTestRenderer.create(tree(makeNode('mat'), internal, external, loader));
-    await new Promise<void>((r) => setTimeout(r, 10));
-    await renderer.update(tree(makeNode('mat'), internal, external, loader));
-
-    const material = renderer.scene.findAllByType('MeshPhysicalMaterial')[0]!
-      .instance as THREE.MeshPhysicalMaterial;
     expect(material.anisotropyMap).toBeNull();
     expect(material.anisotropy).toBeCloseTo(0.8, 5);
   });

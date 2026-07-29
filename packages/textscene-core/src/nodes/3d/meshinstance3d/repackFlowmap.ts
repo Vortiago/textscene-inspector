@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { imageSize, withImageCanvas } from '../../../r3f/controls/withImageCanvas';
 
 /** RGBA8 pixels of a flowmap image, first row = top row. */
 export interface FlowmapPixels {
@@ -7,24 +8,17 @@ export interface FlowmapPixels {
   height: number;
 }
 
-/** Reads RGBA8 bytes out of whatever `Texture.image` holds. */
-export type FlowmapPixelReader = (image: unknown) => FlowmapPixels | undefined;
-
 /**
  * Read a texture image's RGBA8 bytes.
  *
  * A `DataTexture` already carries them (`image.data`). Everything the resource
  * pipeline loads is decoded by `THREE.TextureLoader` into an `HTMLImageElement`
- * with no `.data`, so those are drawn to a 2D canvas and read back with
- * `getImageData` — the same extraction `r3f/controls/imageToDataUrl.ts` performs
- * for a different output (a data URL), kept separate because only the two
- * `drawImage` lines are common.
- *
- * Returns `undefined` when there is nothing to read: an undecoded or zero-sized
- * image, no DOM (node/happy-dom tests), no 2D context, or a `getImageData` that
- * throws because the canvas is cross-origin tainted. Textures reach both hosts
- * as blob URLs built from bytes the host already fetched, so a taint is not
- * expected — but it must degrade to "no map" rather than break the material.
+ * with no `.data`, so those go through `withImageCanvas` — which owns the
+ * drawable-image policy shared with `imageToDataUrl` — and come back via
+ * `getImageData`. `undefined` means no pixels were readable (undecoded image,
+ * no DOM, no 2D context, tainted canvas); textures reach both hosts as blob
+ * URLs built from bytes the host already fetched, so a taint is not expected,
+ * but it must degrade to "no map" rather than break the material.
  *
  * Canvas 2D stores premultiplied alpha, so a pixel with low alpha loses
  * precision in R/G on the round trip. Those are the direction vector, which is
@@ -32,37 +26,16 @@ export type FlowmapPixelReader = (image: unknown) => FlowmapPixels | undefined;
  * strength that is already near zero.
  */
 export function readFlowmapPixels(image: unknown): FlowmapPixels | undefined {
-  const img = image as
-    | {
-        data?: Uint8Array | Uint8ClampedArray;
-        width?: number;
-        height?: number;
-        naturalWidth?: number;
-        naturalHeight?: number;
-      }
-    | undefined;
-  if (!img) return undefined;
-
-  const width = img.naturalWidth || img.width || 0;
-  const height = img.naturalHeight || img.height || 0;
-  if (!width || !height) return undefined;
-  if (img.data) return { data: img.data, width, height };
-
-  const doc = globalThis.document;
-  if (!doc) return undefined;
-  try {
-    const canvas = doc.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
-    if (!ctx) return undefined;
-    ctx.drawImage(image as CanvasImageSource, 0, 0);
-    const pixels = ctx.getImageData(0, 0, width, height);
-    if (!pixels?.data || pixels.data.length < width * height * 4) return undefined;
-    return { data: pixels.data, width, height };
-  } catch {
-    return undefined; // tainted canvas / unsupported image source
+  const raw = (image as { data?: Uint8Array | Uint8ClampedArray } | null)?.data;
+  if (raw) {
+    const size = imageSize(image);
+    return size ? { data: raw, ...size } : undefined;
   }
+  return withImageCanvas(
+    image,
+    (ctx, { width, height }) => ({ data: ctx.getImageData(0, 0, width, height).data, width, height }),
+    { willReadFrequently: true }
+  );
 }
 
 /**
@@ -79,7 +52,9 @@ export function readFlowmapPixels(image: unknown): FlowmapPixels | undefined {
  */
 export function repackAnisotropyFlowmap(
   texture: THREE.Texture,
-  readPixels: FlowmapPixelReader = readFlowmapPixels
+  // Seam, not API: happy-dom cannot rasterize, so injecting the read is the only
+  // way a test reaches the image-backed branch. Production passes one argument.
+  readPixels: (image: unknown) => FlowmapPixels | undefined = readFlowmapPixels
 ): THREE.Texture | undefined {
   const pixels = readPixels(texture.image);
   if (!pixels) return undefined;

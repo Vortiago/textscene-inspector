@@ -10,7 +10,7 @@
  * a real browser (scripts/visual/scenes.mjs). A test that "passed" against a
  * happy-dom canvas stub would prove nothing about either.
  */
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import {
   readFlowmapPixels,
@@ -19,9 +19,23 @@ import {
 } from './repackFlowmap';
 
 /** A decoded-image-shaped object: dimensions but no raw `.data`. */
-function imageLike(width = 2, height = 1): Record<string, unknown> {
-  return { width, height, naturalWidth: width, naturalHeight: height };
+function imageLike(width = 2, height = 1): HTMLImageElement {
+  return { width, height, naturalWidth: width, naturalHeight: height } as HTMLImageElement;
 }
+
+/**
+ * Stand in for the 2D canvas happy-dom does not have. Only the CALL SHAPE can be
+ * pinned this way — real pixels need a real rasterizer, which is the golden's job.
+ */
+function stubCanvas(ctx: object): { width: number; height: number } {
+  const canvas = { width: 0, height: 0, getContext: () => ctx };
+  vi.spyOn(globalThis.document, 'createElement').mockReturnValue(canvas as unknown as HTMLElement);
+  return canvas;
+}
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 describe('readFlowmapPixels', () => {
   it('returns a DataTexture image buffer as-is, no canvas involved', () => {
@@ -32,28 +46,19 @@ describe('readFlowmapPixels', () => {
   });
 
   it('reads a decoded image through a 2D canvas when one is available', () => {
-    // happy-dom returns null from getContext('2d'), so the canvas is stubbed to
-    // pin the CALL SHAPE (drawImage + getImageData over the full image) — not
-    // the pixels, which only a real rasterizer produces.
     const drawImage = vi.fn();
     const getImageData = vi.fn(() => ({ data: new Uint8ClampedArray(2 * 1 * 4) }));
-    const canvas = { width: 0, height: 0, getContext: () => ({ drawImage, getImageData }) };
-    const createElement = vi
-      .spyOn(globalThis.document, 'createElement')
-      .mockReturnValue(canvas as unknown as HTMLElement);
+    const canvas = stubCanvas({ drawImage, getImageData });
 
-    try {
-      const image = imageLike();
-      const pixels = readFlowmapPixels(image);
-      expect(pixels?.width).toBe(2);
-      expect(pixels?.height).toBe(1);
-      expect(canvas.width).toBe(2);
-      expect(canvas.height).toBe(1);
-      expect(drawImage).toHaveBeenCalledWith(image, 0, 0);
-      expect(getImageData).toHaveBeenCalledWith(0, 0, 2, 1);
-    } finally {
-      createElement.mockRestore();
-    }
+    const image = imageLike();
+    const pixels = readFlowmapPixels(image);
+
+    expect(pixels?.width).toBe(2);
+    expect(pixels?.height).toBe(1);
+    expect(canvas.width).toBe(2);
+    expect(canvas.height).toBe(1);
+    expect(drawImage).toHaveBeenCalledWith(image, 0, 0);
+    expect(getImageData).toHaveBeenCalledWith(0, 0, 2, 1);
   });
 
   it('returns undefined for a decoded image when no 2D context exists (happy-dom)', () => {
@@ -61,24 +66,13 @@ describe('readFlowmapPixels', () => {
   });
 
   it('returns undefined when getImageData throws (cross-origin tainted canvas)', () => {
-    const canvas = {
-      width: 0,
-      height: 0,
-      getContext: () => ({
-        drawImage: () => undefined,
-        getImageData: () => {
-          throw new DOMException('Tainted canvases may not be read', 'SecurityError');
-        },
-      }),
-    };
-    const createElement = vi
-      .spyOn(globalThis.document, 'createElement')
-      .mockReturnValue(canvas as unknown as HTMLElement);
-    try {
-      expect(readFlowmapPixels(imageLike())).toBeUndefined();
-    } finally {
-      createElement.mockRestore();
-    }
+    stubCanvas({
+      drawImage: () => undefined,
+      getImageData: () => {
+        throw new DOMException('Tainted canvases may not be read', 'SecurityError');
+      },
+    });
+    expect(readFlowmapPixels(imageLike())).toBeUndefined();
   });
 
   it('returns undefined for a missing or not-yet-decoded image', () => {
@@ -111,7 +105,7 @@ describe('repackAnisotropyFlowmap', () => {
   it('repacks image-backed pixels the reader supplies (the real-asset path)', () => {
     // Stands in for what a real browser's getImageData returns for a decoded
     // PNG: a Uint8ClampedArray, no `.data` on the texture image itself.
-    const texture = new THREE.Texture(imageLike() as unknown as HTMLImageElement);
+    const texture = new THREE.Texture(imageLike());
     const read = vi.fn(
       (): FlowmapPixels => ({ data: new Uint8ClampedArray(SOURCE), width: 2, height: 1 })
     );
@@ -147,7 +141,7 @@ describe('repackAnisotropyFlowmap', () => {
     // A loaded image texture asks for mipmaps and a mipmapped minFilter; a
     // DataTexture defaults to generateMipmaps=false, so without carrying this
     // over the map would sample level 0 at every distance.
-    const loaded = new THREE.Texture(imageLike() as unknown as HTMLImageElement);
+    const loaded = new THREE.Texture(imageLike());
     loaded.minFilter = THREE.LinearMipmapLinearFilter;
     expect(loaded.generateMipmaps).toBe(true);
 
@@ -167,7 +161,7 @@ describe('repackAnisotropyFlowmap', () => {
   });
 
   it('returns undefined when no pixels can be read, so the caller wires no map', () => {
-    const texture = new THREE.Texture(imageLike() as unknown as HTMLImageElement);
+    const texture = new THREE.Texture(imageLike());
     // Default reader under happy-dom: no 2D context, nothing readable.
     expect(repackAnisotropyFlowmap(texture)).toBeUndefined();
     expect(repackAnisotropyFlowmap(texture, () => undefined)).toBeUndefined();

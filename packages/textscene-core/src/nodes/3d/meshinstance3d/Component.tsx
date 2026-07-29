@@ -283,16 +283,20 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
       ),
     [proceduralTextures.heightmap_texture, textureSlots.heightmap_texture, uvTransform]
   );
+  // Depend on the two values the repack actually reads, not on their wrappers:
+  // `materialScalars` and the slot object are re-created on every re-parse and
+  // every re-emit of the same cached texture, and a repack is now a canvas
+  // readback plus a full-buffer copy plus a GPU re-upload.
+  const anisotropyStrength = materialScalars?.anisotropy ?? 0;
+  const anisotropyFlowmap = textureSlots.anisotropy_flowmap?.value;
   const repackedFlowmap = useMemo(() => {
     // Only an anisotropy-enabled material renders as MeshPhysicalMaterial and
-    // samples anisotropyMap; skip the repack (a canvas readback, a full-buffer
-    // copy and a per-pixel pass) and the slotKey churn when the strength is 0 —
-    // the map would never be read on the standard-material fallback.
-    if (!materialScalars || materialScalars.anisotropy <= 0) return undefined;
-    const value = textureSlots.anisotropy_flowmap?.value;
-    if (!value) return undefined;
-    return repackAnisotropyFlowmap(value);
-  }, [materialScalars, textureSlots.anisotropy_flowmap]);
+    // samples anisotropyMap; skip the repack and the slotKey churn when the
+    // strength is 0 — the map would never be read on the standard-material
+    // fallback.
+    if (anisotropyStrength <= 0 || !anisotropyFlowmap) return undefined;
+    return repackAnisotropyFlowmap(anisotropyFlowmap);
+  }, [anisotropyStrength, anisotropyFlowmap]);
 
   // The repack allocates its own pixel buffer, so it is disposed on the same
   // terms as the procedural DataTextures above.
@@ -303,8 +307,7 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
   }, [repackedFlowmap]);
 
   const anisotropyMap = useMemo(
-    () =>
-      repackedFlowmap ? transformedTexture({ value: repackedFlowmap }, uvTransform) : undefined,
+    () => transformedTexture({ value: repackedFlowmap }, uvTransform),
     [repackedFlowmap, uvTransform]
   );
 
