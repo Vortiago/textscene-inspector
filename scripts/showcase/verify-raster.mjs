@@ -31,7 +31,7 @@
 /* global document, getComputedStyle, Image, XMLSerializer */ // page.evaluate callbacks run in the browser
 
 import { createServer } from 'node:http';
-import { readFileSync, mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { launchShowcaseBrowser } from './browser.mjs';
 
@@ -64,6 +64,12 @@ const GODOT_FONT_RGB = [223, 223, 223];
 
 mkdirSync(OUT, { recursive: true });
 
+if (!existsSync(MODULE_PATH)) {
+  console.error(
+    `[verify-raster] ${MODULE_PATH} is missing — run \`pnpm --filter @textscene/core build\` first.`
+  );
+  process.exit(1);
+}
 const moduleSource = readFileSync(MODULE_PATH, 'utf8');
 const failures = [];
 const report = {};
@@ -261,6 +267,25 @@ console.log('\n[A] sub-resource contract');
     const returned = await globalThis.__raster.rasterizeControlSubtree(subtree, { canvas: reused });
     out.canvasReused = returned === reused;
 
+    // How an off-screen host may hide itself. Inlining computed style carries
+    // every presentational property onto the clone root, and only position,
+    // margin and size are overridden — so most ways of hiding the host also
+    // hide the raster, and do it by returning a BLANK canvas rather than null.
+    // Measured here because it is a contract the wiring caller has to obey.
+    const hidden = {};
+    for (const [name, property, value] of [
+      ['offscreen', 'left', '-99999px'],
+      ['visibility', 'visibility', 'hidden'],
+      ['opacity', 'opacity', '0'],
+      ['clipPath', 'clipPath', 'inset(100%)'],
+    ]) {
+      subtree.style.setProperty(property.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`), value);
+      const canvas = await globalThis.__raster.rasterizeControlSubtree(subtree);
+      hidden[name] = canvas === null ? null : globalThis.__pixels(canvas).opaque();
+      subtree.style.removeProperty(property.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`));
+    }
+    out.hostHiding = hidden;
+
     // Guards, in the browser this time — real layout, so "no layout" here means
     // a genuinely zero-sized box rather than happy-dom's blanket zeros.
     out.guards = {
@@ -310,6 +335,19 @@ console.log('\n[A] sub-resource contract');
     `240x160 CSS px at pixelRatio 3 → ${stats.pixelRatio3.join('x')} backing px`
   );
   check('options.canvas is drawn into and returned', stats.canvasReused === true);
+  check(
+    'an OFF-SCREEN host still rasterises its content',
+    stats.hostHiding.offscreen > 1000,
+    `${stats.hostHiding.offscreen} opaque px at left:-99999px`
+  );
+  check(
+    'visibility/opacity/clip-path on the host blank the raster (documented contract)',
+    stats.hostHiding.visibility === 0 &&
+      stats.hostHiding.opacity === 0 &&
+      stats.hostHiding.clipPath === 0,
+    `visibility=${stats.hostHiding.visibility} opacity=${stats.hostHiding.opacity} ` +
+      `clip-path=${stats.hostHiding.clipPath} opaque px — hide the host by moving it off-screen`
+  );
   check('null element → null', stats.guards.nullElement === true);
   check('zero-size element → null', stats.guards.zeroSize === true);
   check('detached element → null', stats.guards.detached === true);
@@ -427,9 +465,7 @@ console.log('\n[B] real ControlOverlay');
     } else {
       const { dataUrl, ...loggable } = stats;
       report.realOverlay = loggable;
-      const png = Buffer.from(dataUrl.split(',')[1], 'base64');
-      const { writeFileSync } = await import('node:fs');
-      writeFileSync(join(OUT, 'raster-control-overlay.png'), png);
+      writeFileSync(join(OUT, 'raster-control-overlay.png'), Buffer.from(dataUrl.split(',')[1], 'base64'));
 
       check(
         'canvas matches the overlay box',
@@ -477,7 +513,6 @@ await ctx.close();
 await browser.close();
 server.close();
 
-const { writeFileSync } = await import('node:fs');
 writeFileSync(join(OUT, 'verify-raster.json'), JSON.stringify(report, null, 2));
 console.log(`\nWrote verify-raster.json + raster-control-overlay.png to ${OUT}`);
 

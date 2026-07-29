@@ -19,8 +19,16 @@
  * rasteriser correct for anything that is not.
  *
  * The element must be **laid out**: attached to the document with a non-zero
- * border box. `display: none` has no layout, so an off-screen host must hide
- * itself some other way (off-screen position, `visibility`, zero opacity).
+ * border box. Since every computed property is inlined and only position,
+ * margin and size are overridden, any *presentational* property on the element
+ * passed in is carried into the raster. So a host rendering off-screen must
+ * hide itself by MOVING off-screen (or behind an ancestor's `overflow: hidden`
+ * — ancestors are not cloned), never with `display`, `visibility`, `opacity` or
+ * `clip-path` on the element itself. Measured in `verify-raster.mjs`: at
+ * `left: -99999px` a fixture rasterises 5366 opaque px; `visibility: hidden`,
+ * `opacity: 0` and `clip-path: inset(100%)` each rasterise 0 — and the first
+ * three return a BLANK canvas rather than `null`, so the "not ready" signal
+ * below cannot warn about them.
  *
  * Every failure — no element, not laid out, zero size, no canvas support, the
  * SVG image refusing to load — returns `null`. Callers read `null` as
@@ -118,9 +126,11 @@ interface SubtreeRect {
  * no element, detached from a document, or zero-sized (not laid out yet,
  * `display: none`, or genuinely empty).
  *
- * `getBoundingClientRect` is the transformed box, so an element carrying its own
- * CSS transform falls back to `offsetWidth`/`offsetHeight` — the untransformed
- * layout size, which is what the raster should cover.
+ * `offsetWidth`/`offsetHeight` are read first because they are the UNTRANSFORMED
+ * border box, which is what the raster should cover — `getBoundingClientRect`
+ * would report a rotated element's larger axis-aligned bounds. The rect is the
+ * fallback, for the elements that have no offset box at all (SVG children, and
+ * anything under `display: contents`).
  */
 function measureSubtree(element: Element | null | undefined): SubtreeRect | null {
   if (!element || !element.ownerDocument?.defaultView) return null;
