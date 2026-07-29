@@ -16,6 +16,8 @@ export const TWO_D_UI_TYPES = new Set<string>([
   'Label',
   'VBoxContainer',
   'HBoxContainer',
+  'HSplitContainer',
+  'VSplitContainer',
   'GridContainer',
   'CenterContainer',
   'MarginContainer',

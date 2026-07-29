@@ -398,6 +398,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Split Container Vertical",
+    "file": "unit-split-container-vertical.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Split Container",
+    "file": "unit-split-container.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Spot Light 3d",
     "file": "unit-spot-light-3d.tscn",
     "category": "Other"

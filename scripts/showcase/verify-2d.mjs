@@ -13,7 +13,7 @@
  *   node scripts/showcase/verify-2d.mjs
  */
 
-/* global document, getComputedStyle */ // the page.evaluate callbacks below run in the browser
+/* global document, getComputedStyle, window */ // the page.evaluate callbacks below run in the browser
 
 import { launchShowcaseBrowser } from './browser.mjs';
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -190,6 +190,64 @@ const TARGETS = [
       },
     },
   ],
+  /**
+   * SplitContainer solves for ONE number and derives both rects from it, so
+   * the gate is the resulting BOX WIDTHS — the thing happy-dom cannot see and
+   * the WebGL golden gate does not draw. Every expectation is a Godot 4.6.3
+   * render of the same fixture, scanned for the colour edge:
+   *
+   *   pnpm ref:godot scenes/fixtures/unit-split-container.tscn
+   *   Both 194|12|194  Offset 254|12|134  Ratio 294|12|94  FirstOnly 388|12|0
+   *   Neither 120|12|268  SepZero 196|8|196  Collapsed 194|12|194  DragColl 200|0|200
+   */
+  [
+    'split-container',
+    'unit-split-container.tscn',
+    {
+      minControls: 9,
+      types: ['HSplitContainer', 'ColorRect'],
+      computed: [
+        ['BothLeft', 'width', (v) => v === 194, '194'],
+        ['BothRight', 'width', (v) => v === 194, '194'],
+        ['OffsetLeft', 'width', (v) => v === 254, '254'],
+        ['OffsetRight', 'width', (v) => v === 134, '134'],
+        ['RatioLeft', 'width', (v) => v === 294, '294'],
+        ['RatioRight', 'width', (v) => v === 94, '94'],
+        ['FirstOnlyLeft', 'width', (v) => v === 388, '388'],
+        ['NeitherLeft', 'width', (v) => v === 120, '120'],
+        ['NeitherRight', 'width', (v) => v === 268, '268'],
+        // The grabber's 8 px floor under an overridden separation.
+        ['SepZeroLeft', 'width', (v) => v === 196, '196'],
+        // `collapsed` reads split_offset as 0, so this matches Both.
+        ['CollapsedLeft', 'width', (v) => v === 194, '194'],
+        // HIDDEN_COLLAPSED is the only dragger state that removes the gap.
+        ['DraggerCollapsedLeft', 'width', (v) => v === 200, '200'],
+        ['DraggerCollapsedRight', 'width', (v) => v === 200, '200'],
+      ],
+    },
+  ],
+  /**
+   * The same solve on the other axis. A transposed implementation passes the
+   * horizontal fixture and fails here, because these children expand
+   * VERTICALLY: reading the horizontal flags takes the "neither expands"
+   * branch and pins the boundary at split_offset.
+   *
+   *   Both 144|12|144   Offset 194|12|94
+   */
+  [
+    'split-container-vertical',
+    'unit-split-container-vertical.tscn',
+    {
+      minControls: 5,
+      types: ['VSplitContainer', 'ColorRect'],
+      computed: [
+        ['BothTop', 'height', (v) => v === 144, '144'],
+        ['BothBottom', 'height', (v) => v === 144, '144'],
+        ['OffsetTop', 'height', (v) => v === 194, '194'],
+        ['OffsetBottom', 'height', (v) => v === 94, '94'],
+      ],
+    },
+  ],
 ];
 
 /** Godot quantises before the sRGB curve; the 8-bit linear target quantises after. */
@@ -201,6 +259,12 @@ mkdirSync(OUT, { recursive: true });
 
 const browser = await launchShowcaseBrowser();
 const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 });
+// Zoom 1, so a reported box is in the same units Godot's render is.
+// `getBoundingClientRect` reports POST-transform pixels, and the 2D stage
+// opens fitted — every measurement here was silently scaled by the fit factor,
+// which is invisible while the only assertions are "> 0".
+// (`FIT_ON_OPEN_2D_STORAGE_KEY` in r3f/components/Canvas2DStage/viewport2d.ts.)
+await ctx.addInitScript(() => window.localStorage.setItem('tsi.fitOnOpen2D', 'false'));
 
 const results = [];
 for (const [name, file, expect = {}] of TARGETS) {

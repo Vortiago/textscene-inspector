@@ -134,12 +134,9 @@ which display real content.
     synchronous GPU stall, so the blit samples on a bounded one-shot schedule and re-arms
     only on a new target or a fresh parse; an `AnimationPlayer` inside a sub-viewport
     shows its settled frame there.
-  - 3D content in a surface is ~10% too bright, because a surface is hosted by the 2D
-    stage's canvas, whose tone curve nothing configures for parity (issue #379).
-  - Which rasterizer owns a target is decided from the PARSED tree, where an `instance=`
-    child has no type. Its own overrides decide it when they name a world, and any typed
-    sibling outranks it, but a sub-viewport holding nothing but untouched instances is
-    still guessed as 3D (issue #378).
+  - Which rasterizer owns a target is decided from the RESOLVED tree, so an `instance=`
+    child that has not loaded yet is classified provisionally and re-classified when its
+    sub-scene lands. A cyclic sub-scene reference stops the resolver at 32 levels.
 
 Recorded because the shared-World3D half is genuinely counter-intuitive — it contradicts
 the issue's own framing, and a future reader would otherwise "fix" it into a uniform

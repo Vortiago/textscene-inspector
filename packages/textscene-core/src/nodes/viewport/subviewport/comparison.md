@@ -65,15 +65,15 @@ probe through the quad within 1.0% in linear terms (sky 177,194,212 vs
 - **One content kind per target.** Godot composites a viewport's 3D world and
   its 2D canvas into one target. The previewer's renderer draws one workspace at
   a time, so a mixed-content sub-viewport shows its 3D half only.
-- **A sub-viewport holding nothing but bare `instance=` children is assumed to
-  be 3D.** Which rasterizer owns the target has to be decided before the
-  sub-scenes load, and an instance node has no type until then. Anything with a
-  type decides it, and so does an instance whose own overrides name a world (a
-  CanvasItem-only key, or a `Vector2`/`Vector3` transform value) — but an
-  untouched instance of a 2D sub-scene is indistinguishable from an untouched
-  instance of a 3D one, and Godot's own viewport demos instance 3D sub-scenes.
-  Such a target renders the clear colour and nothing else, because the 3D pass
-  finds no `Camera3D`.
+- **An `instance=` child is classified provisionally until its sub-scene
+  loads.** Which rasterizer owns the target has to be decided before the
+  sub-scenes are in, and an instance node has no type until then, so
+  `useViewportContentKind` classifies the RESOLVED subtree and re-derives on the
+  live-tree tick. Between the parse and the load an untouched instance is
+  guessed — its own overrides decide it when they name a world (a CanvasItem-only
+  key, or a `Vector2`/`Vector3` transform value), and Godot's own viewport demos
+  instance 3D sub-scenes, so a bare one reads as 3D. The guess is corrected the
+  moment the sub-scene lands, not left standing.
 - **Editor gizmos and selection highlights leak into a shared-world target**,
   because that target is a render of the main scene and they live there.
 - **A consumer surface inside its own viewport's frustum is a GL feedback

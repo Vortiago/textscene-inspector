@@ -13,9 +13,10 @@
  * owns `'dom'`; nobody publishes for `'empty'`.
  */
 
-import type { TscnNode } from '../../../parser/types';
+import type { TscnExternalResource, TscnNode } from '../../../parser/types';
 import { TWO_D_UI_TYPES } from '../../../r3f/controls/has2DUIContent.js';
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry.js';
+import { liveChildGroups, type CachedSceneSource } from '../../../r3f/liveSceneTree.js';
 
 /**
  * CanvasItem-only property names. Each exists on `CanvasItem` or `Node2D` and
@@ -114,8 +115,16 @@ export function viewportContentKind(node: TscnNode): ViewportContentKind {
         sawUntypedInstance = true;
         return false;
       }
-      // A registered 3D node, or a plain container — descend through the
-      // container, since a bare `Node` may hold either kind.
+      // A workspace-neutral container (`Node`, `Timer`, `AnimationPlayer`, …)
+      // decides nothing by itself — it may hold either kind, so descend rather
+      // than claim. This is a REGISTRY question, not a "is it registered" one:
+      // `Node` is registered (with `container: true`), so testing `get()` first
+      // read every plain-Node-rooted sub-scene as 3D content.
+      if (nodeComponentRegistry.isContainer(child.type)) {
+        return hasNode3DContent(child.children);
+      }
+      // A registered non-container type is Node3D content by elimination —
+      // CanvasItems and Controls were both matched above.
       if (nodeComponentRegistry.get(child.type)) return true;
       return hasNode3DContent(child.children);
     });
@@ -124,4 +133,59 @@ export function viewportContentKind(node: TscnNode): ViewportContentKind {
   if (sawCanvasItem) return '2d';
   if (sawUntypedInstance) return '3d';
   return sawDom ? 'dom' : 'empty';
+}
+
+/**
+ * How deep the resolver follows instances-of-instances. Godot itself has no
+ * limit; this one exists so a cyclic sub-scene reference (a scene the parser
+ * accepts and Godot rejects at import) cannot hang the render.
+ */
+const MAX_RESOLVE_DEPTH = 32;
+
+/**
+ * The sub-viewport's subtree with its instances RESOLVED — the input
+ * `viewportContentKind` actually wants.
+ *
+ * Classification has to survive the gap between parse and load. In the parsed
+ * graph an `instance=` child is a childless node of type `Node`: an untouched
+ * instance of a 2D sub-scene and an untouched instance of a 3D one are the same
+ * three tokens, so no rule over the parsed graph can separate them. Once the
+ * sub-scene is cached, Instance root merge (ADR-0013) gives the node its real
+ * type and children, and the same classifier answers exactly.
+ *
+ * `liveChildGroups` is the seam because the resolution is not a plain tree
+ * walk: each group carries the ExtResource scope its children resolve their OWN
+ * instance refs against, so a sub-scene's internal instances resolve against
+ * the sub-scene's pool rather than this scene's.
+ *
+ * A nested sub-viewport is returned untouched — its subtree draws into ITS
+ * target, which is where the classifier stops looking anyway.
+ */
+export function resolveViewportSubtree(
+  node: TscnNode,
+  externalResources: readonly TscnExternalResource[],
+  sceneCache: CachedSceneSource
+): TscnNode {
+  const resolve = (
+    child: TscnNode,
+    scope: readonly TscnExternalResource[],
+    depth: number
+  ): TscnNode => {
+    if (depth >= MAX_RESOLVE_DEPTH || child.type === 'SubViewport') return child;
+    const groups = liveChildGroups(child, scope, sceneCache);
+    // A collapsed single-root instance BECOMES its sub-scene root; every other
+    // origin leaves the node's own identity alone.
+    const effective = groups.find((group) => group.origin === 'merged')?.mergedNode ?? child;
+    const children = groups.flatMap((group) =>
+      group.children.map((grandchild) =>
+        resolve(grandchild, group.externalResources, depth + 1)
+      )
+    );
+    return { ...effective, children };
+  };
+
+  return {
+    ...node,
+    children: node.children.map((child) => resolve(child, externalResources, 0)),
+  };
 }

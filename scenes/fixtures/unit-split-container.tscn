@@ -1,0 +1,169 @@
+; SplitContainer layout: where the boundary between the two children falls.
+;
+; The one variable: `_compute_split_offset`'s three branches, selected by which
+; children carry SIZE_EXPAND. Every other container fixture
+; (unit-control-containers.tscn) exercises box/grid/margin flow, which places
+; children one after another; a SplitContainer instead solves for ONE number —
+; `computed_split_offset` — and derives both rects from it, so a regression in
+; that solve is invisible in every other container.
+;
+;   both expanded    wished = size * ratio - sep * 0.5 + split_offset
+;   first expanded   wished = size - sep + split_offset
+;   neither          wished = split_offset
+;
+; Each row is 400 wide and 60 tall, at x = 20, stacked 80 apart. The children
+; are ColorRects so the boundary is a hard colour edge that a probe can find.
+;
+; Row 1  Both      both children expand, split_offset 0  -> even split
+; Row 2  Offset    both expand, split_offset = 60        -> boundary moves right
+; Row 3  Ratio     both expand, stretch_ratio 3 : 1      -> 3/4 of the width
+; Row 4  FirstOnly only the first expands                -> first eats the rest
+; Row 5  Neither   neither expands, split_offset = 120   -> first is exactly 120
+;
+; Vertical is the same solve on the other axis; unit-split-container-vertical
+; .tscn carries it so a transposed axis cannot pass here.
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0.4, 1)
+
+[node name="Both" type="HSplitContainer" parent="."]
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 420.0
+offset_bottom = 80.0
+
+[node name="BothLeft" type="ColorRect" parent="Both"]
+layout_mode = 2
+size_flags_horizontal = 3
+color = Color(1, 0, 0, 1)
+
+[node name="BothRight" type="ColorRect" parent="Both"]
+layout_mode = 2
+size_flags_horizontal = 3
+color = Color(0, 1, 0, 1)
+
+[node name="Offset" type="HSplitContainer" parent="."]
+offset_left = 20.0
+offset_top = 100.0
+offset_right = 420.0
+offset_bottom = 160.0
+split_offset = 60
+
+[node name="OffsetLeft" type="ColorRect" parent="Offset"]
+layout_mode = 2
+size_flags_horizontal = 3
+color = Color(1, 0, 0, 1)
+
+[node name="OffsetRight" type="ColorRect" parent="Offset"]
+layout_mode = 2
+size_flags_horizontal = 3
+color = Color(0, 1, 0, 1)
+
+[node name="Ratio" type="HSplitContainer" parent="."]
+offset_left = 20.0
+offset_top = 180.0
+offset_right = 420.0
+offset_bottom = 240.0
+
+[node name="RatioLeft" type="ColorRect" parent="Ratio"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 3.0
+color = Color(1, 0, 0, 1)
+
+[node name="RatioRight" type="ColorRect" parent="Ratio"]
+layout_mode = 2
+size_flags_horizontal = 3
+color = Color(0, 1, 0, 1)
+
+[node name="FirstOnly" type="HSplitContainer" parent="."]
+offset_left = 20.0
+offset_top = 260.0
+offset_right = 420.0
+offset_bottom = 320.0
+
+[node name="FirstOnlyLeft" type="ColorRect" parent="FirstOnly"]
+layout_mode = 2
+size_flags_horizontal = 3
+color = Color(1, 0, 0, 1)
+
+[node name="FirstOnlyRight" type="ColorRect" parent="FirstOnly"]
+layout_mode = 2
+color = Color(0, 1, 0, 1)
+
+[node name="Neither" type="HSplitContainer" parent="."]
+offset_left = 20.0
+offset_top = 340.0
+offset_right = 420.0
+offset_bottom = 400.0
+split_offset = 120
+
+[node name="NeitherLeft" type="ColorRect" parent="Neither"]
+layout_mode = 2
+color = Color(1, 0, 0, 1)
+
+[node name="NeitherRight" type="ColorRect" parent="Neither"]
+layout_mode = 2
+color = Color(0, 1, 0, 1)
+
+[node name="SepZero" type="HSplitContainer" parent="."]
+offset_left = 20.0
+offset_top = 420.0
+offset_right = 420.0
+offset_bottom = 480.0
+theme_override_constants/separation = 0
+
+[node name="SepZeroLeft" type="ColorRect" parent="SepZero"]
+layout_mode = 2
+size_flags_horizontal = 3
+color = Color(1, 0, 0, 1)
+
+[node name="SepZeroRight" type="ColorRect" parent="SepZero"]
+layout_mode = 2
+size_flags_horizontal = 3
+color = Color(0, 1, 0, 1)
+
+[node name="Collapsed" type="HSplitContainer" parent="."]
+offset_left = 20.0
+offset_top = 500.0
+offset_right = 420.0
+offset_bottom = 560.0
+split_offset = 60
+collapsed = true
+
+[node name="CollapsedLeft" type="ColorRect" parent="Collapsed"]
+layout_mode = 2
+size_flags_horizontal = 3
+color = Color(1, 0, 0, 1)
+
+[node name="CollapsedRight" type="ColorRect" parent="Collapsed"]
+layout_mode = 2
+size_flags_horizontal = 3
+color = Color(0, 1, 0, 1)
+
+[node name="DraggerCollapsed" type="HSplitContainer" parent="."]
+offset_left = 20.0
+offset_top = 580.0
+offset_right = 420.0
+offset_bottom = 640.0
+dragger_visibility = 2
+
+[node name="DraggerCollapsedLeft" type="ColorRect" parent="DraggerCollapsed"]
+layout_mode = 2
+size_flags_horizontal = 3
+color = Color(1, 0, 0, 1)
+
+[node name="DraggerCollapsedRight" type="ColorRect" parent="DraggerCollapsed"]
+layout_mode = 2
+size_flags_horizontal = 3
+color = Color(0, 1, 0, 1)

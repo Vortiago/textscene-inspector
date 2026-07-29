@@ -64,19 +64,22 @@ to its swap chain, while the target quantises before the curve expands the
 darks. Dark gradients inside a sub-viewport band slightly more than the same
 content drawn directly.
 
-## Divergences
+Both content kinds land on the same value.
+`unit-sub-viewport-container-3d-content.tscn` is
+`unit-sub-viewport-container-2d-content.tscn` with the same authored
+`Color(0.5, 0.5, 0.5)` moved onto an unshaded box, so the one variable is which
+pass filled the target: Godot renders both at 127 and the previewer renders both
+at 128.
 
-- **3D content in a surface is about 10% too bright.**
-  `unit-sub-viewport-container-3d-content.tscn` is
-  `unit-sub-viewport-container-2d-content.tscn` with the same authored
-  `Color(0.5, 0.5, 0.5)` moved onto an unshaded box: Godot renders both at 127,
-  the previewer renders the 2D one at 128 and the 3D one at **140**. Geometry,
-  framing, clipping and the clear colour all match exactly — only the value
-  does. The blit is the same code on both paths, so the gap is upstream of it:
-  `<SubViewport>` suspends the tone curve for 2D-canvas content but leaves the
-  renderer's live curve in force for 3D, and every viewport surface is hosted by
-  the 2D stage's canvas, which has no `EnvironmentLayer` and so never configures
-  that curve for Godot parity (ADR-0025 lives in the 3D canvas). Issue #379.
+That took fixing the canvas underneath. `<SubViewport>` deliberately leaves the
+renderer's live tone curve in force for 3D content — a shared world resolves to
+the parent viewport's environment — and a viewport surface only ever exists in
+the 2D workspace, whose canvas mounts no `EnvironmentLayer` and so carried
+@react-three/fiber's ACES default. The 2D canvas is now `flat`
+(`NoToneMapping`), which is Godot: `_render_buffers_post_process_and_tonemap`
+runs on the 3D buffers and canvas items are composited AFTER it.
+
+## Divergences
 
 - **Content stops updating once it has settled.** `readRenderTargetPixels` is a
   synchronous GPU stall, so the surface samples the target on a bounded
@@ -90,8 +93,9 @@ content drawn directly.
   the child viewport's size with `get_size() / stretch_shrink` before it
   renders; the previewer's publisher sizes the target from the serialized
   `size` and the surface scales the result to the container's box. The drawn
-  rect is right and the framing is not: a `399x480` sub-viewport in a `576x648`
+  rect is right and the framing is not: a `399x480` sub-viewport in a `572x648`
   container shows less of its world than Godot does, stretched to fit.
+  Issue #381.
 - **Clipping is a consequence, not an operation.** The container issues no clip;
   content outside the target simply was never rendered, because the texture is
   only `size` pixels. The DOM equivalent puts `overflow: hidden` on the
