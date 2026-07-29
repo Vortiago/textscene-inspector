@@ -335,6 +335,16 @@ export const GOLDEN_SCENES = [
   // path that skipped the negation — so the navmesh used to sit ABOVE the
   // region origin instead of below it.
   { name: 'navigation-region-2d', file: 'unit-navigation-region-2d.tscn', maxDiffPct: 0.5 },
+  // A ParallaxBackground is a CanvasLayer: its subtree hangs off the VIEWPORT,
+  // so the blue bar stays at the canvas origin while the red reference bar under
+  // the same displaced parent moves with it. Every other 2D golden composes
+  // transforms the ordinary way and would still match if that chain were
+  // re-attached.
+  { name: 'parallax-background', file: 'unit-parallax-background.tscn', maxDiffPct: 0.5 },
+  // `motion_mirroring` draws the layer a SECOND time, 200 px right — the only
+  // repeated canvas subtree in the corpus, and the only property of a
+  // ParallaxLayer a camera-less still frame can show at all.
+  { name: 'parallax-layer', file: 'unit-parallax-layer.tscn', maxDiffPct: 0.5 },
   // NOTE: AreaLight3D deliberately has no golden — its fixture is light-only
   // (no lit geometry), so the frame is blank. Add one once the fixture gains a
   // lit surface to show the emitter's effect.

@@ -68,6 +68,8 @@ import '../../nodes/2d/remotetransform2d/index.r3f';
 import '../../nodes/2d/canvasmodulate/index.r3f';
 import '../../nodes/2d/lightoccluder2d/index.r3f';
 import '../../nodes/2d/pointlight2d/index.r3f';
+import '../../nodes/2d/parallaxlayer/index.r3f';
+import '../../nodes/2d/parallaxbackground/index.r3f';
 import '../../nodes/timers/timer/index.r3f';
 import '../../nodes/viewport/subviewport/index.r3f';
 

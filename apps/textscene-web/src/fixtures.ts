@@ -788,6 +788,16 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D Canvas"
   },
   {
+    "name": "Parallax Background",
+    "file": "unit-parallax-background.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Parallax Layer",
+    "file": "unit-parallax-layer.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
     "name": "Path2d",
     "file": "unit-path2d.tscn",
     "category": "Unit - 2D Canvas"

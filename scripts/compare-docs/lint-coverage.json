@@ -2498,7 +2498,64 @@
       ]
     },
     "ParallaxBackground": {
-      "validators": [],
+      "validators": [
+        {
+          "property": "follow_viewport_enabled",
+          "declaredOn": "ParallaxBackground"
+        },
+        {
+          "property": "follow_viewport_scale",
+          "declaredOn": "ParallaxBackground"
+        },
+        {
+          "property": "layer",
+          "declaredOn": "ParallaxBackground"
+        },
+        {
+          "property": "offset",
+          "declaredOn": "ParallaxBackground"
+        },
+        {
+          "property": "rotation",
+          "declaredOn": "ParallaxBackground"
+        },
+        {
+          "property": "scale",
+          "declaredOn": "ParallaxBackground"
+        },
+        {
+          "property": "scroll_base_offset",
+          "declaredOn": "ParallaxBackground"
+        },
+        {
+          "property": "scroll_base_scale",
+          "declaredOn": "ParallaxBackground"
+        },
+        {
+          "property": "scroll_ignore_camera_zoom",
+          "declaredOn": "ParallaxBackground"
+        },
+        {
+          "property": "scroll_limit_begin",
+          "declaredOn": "ParallaxBackground"
+        },
+        {
+          "property": "scroll_limit_end",
+          "declaredOn": "ParallaxBackground"
+        },
+        {
+          "property": "scroll_offset",
+          "declaredOn": "ParallaxBackground"
+        },
+        {
+          "property": "transform",
+          "declaredOn": "ParallaxBackground"
+        },
+        {
+          "property": "visible",
+          "declaredOn": "ParallaxBackground"
+        }
+      ],
       "rules": [
         {
           "name": "binary-resource-reference",
@@ -2515,7 +2572,80 @@
       ]
     },
     "ParallaxLayer": {
-      "validators": [],
+      "validators": [
+        {
+          "property": "motion_mirroring",
+          "declaredOn": "ParallaxLayer"
+        },
+        {
+          "property": "motion_offset",
+          "declaredOn": "ParallaxLayer"
+        },
+        {
+          "property": "motion_scale",
+          "declaredOn": "ParallaxLayer"
+        },
+        {
+          "property": "global_position",
+          "declaredOn": "Node2D"
+        },
+        {
+          "property": "global_rotation",
+          "declaredOn": "Node2D"
+        },
+        {
+          "property": "global_rotation_degrees",
+          "declaredOn": "Node2D"
+        },
+        {
+          "property": "global_scale",
+          "declaredOn": "Node2D"
+        },
+        {
+          "property": "global_skew",
+          "declaredOn": "Node2D"
+        },
+        {
+          "property": "global_transform",
+          "declaredOn": "Node2D"
+        },
+        {
+          "property": "position",
+          "declaredOn": "Node2D"
+        },
+        {
+          "property": "rotation",
+          "declaredOn": "Node2D"
+        },
+        {
+          "property": "rotation_degrees",
+          "declaredOn": "Node2D"
+        },
+        {
+          "property": "scale",
+          "declaredOn": "Node2D"
+        },
+        {
+          "property": "skew",
+          "declaredOn": "Node2D"
+        },
+        {
+          "property": "transform",
+          "declaredOn": "Node2D"
+        },
+        {
+          "property": "y_sort_enabled",
+          "declaredOn": "Node2D"
+        },
+        {
+          "property": "z_as_relative",
+          "declaredOn": "Node2D"
+        },
+        {
+          "property": "z_index",
+          "declaredOn": "Node2D"
+        }
+      ],
       "rules": [
         {
           "name": "binary-resource-reference",
@@ -2525,6 +2655,18 @@
           "emits": [
             {
               "ruleName": "binary-resource-reference",
+              "severity": "warning"
+            }
+          ]
+        },
+        {
+          "name": "valid-parallaxlayer-parent",
+          "description": "Warns when a ParallaxLayer is not a direct child of a ParallaxBackground, where Godot never applies its motion properties",
+          "universal": false,
+          "viaMatcher": false,
+          "emits": [
+            {
+              "ruleName": "parallaxlayer-outside-parallaxbackground",
               "severity": "warning"
             }
           ]

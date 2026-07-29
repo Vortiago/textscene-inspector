@@ -84,6 +84,8 @@ import '../resources/meshes/quadmesh/linterValidators.js';
 import '../nodes/2d/tiles/tilemaplayer/index.linter.js';
 import '../nodes/2d/tiles/tilemap/index.linter.js';
 import '../nodes/2d/remotetransform2d/index.linter.js';
+import '../nodes/2d/parallaxlayer/index.linter.js';
+import '../nodes/2d/parallaxbackground/index.linter.js';
 import '../nodes/timers/timer/index.linter.js';
 
 // Re-export core linter classes

@@ -73,6 +73,7 @@ const NODE2D_LEAVES = [
   'CanvasModulate',
   'LightOccluder2D',
   'PointLight2D',
+  'ParallaxLayer',
 ] as const;
 
 /**
@@ -124,6 +125,10 @@ export const NODE_BASE_TYPES: Readonly<Record<string, string>> = Object.freeze({
   Node2D: 'Node',
   Control: 'Node',
   CanvasLayer: 'Node',
+  // A CanvasLayer, not a CanvasItem: `GDCLASS(ParallaxBackground, CanvasLayer)`.
+  // Chaining it here is what gives it CanvasLayer's `layer`/`visible` rules
+  // rather than Node2D's transform ones.
+  ParallaxBackground: 'CanvasLayer',
   WorldEnvironment: 'Node',
   AnimationPlayer: 'Node',
   AnimationTree: 'Node',

@@ -73,6 +73,10 @@ function detectCategory(filename) {
     filename.startsWith('unit-path2d') ||
     filename.startsWith('unit-pathfollow2d') ||
     filename.startsWith('unit-line2d') ||
+    // ParallaxBackground is a CanvasLayer, but it hosts world-canvas content
+    // (its ParallaxLayer children are Node2Ds), so both belong with the canvas
+    // fixtures rather than the DOM-overlay ones.
+    filename.startsWith('unit-parallax-') ||
     filename.startsWith('unit-2d')
   ) {
     return 'Unit - 2D Canvas';
