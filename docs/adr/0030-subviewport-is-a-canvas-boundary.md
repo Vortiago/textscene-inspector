@@ -141,6 +141,15 @@ which display real content.
     namespaces — a trap worth knowing when reading these scenes.)
   - `render_target_update_mode` does not gate rendering: the previewer derives the target
     from the scene, so there is no per-frame update to skip.
+  - **An opaque Control that Godot draws *behind* world content covers it.** Not specific
+    to sub-viewports — it is ADR-0003's DOM/WebGL split — but this work is where it
+    surfaced, and a viewport surface is a Control, so it is reachable here. `Canvas2DStage`
+    layers the whole Control overlay above the world canvas unconditionally, while Godot
+    orders all CanvasItems in one tree walk. `demos/2d/pong` renders as a flat rectangle
+    for exactly this reason: its `Background` ColorRect is the first child. Unfixable
+    within the split — interleaving `<div>`s and canvas draws by tree order is what two
+    rendering technologies cannot do — so it is evidence on issue #368 (native WebGL
+    Controls) rather than a limitation with a bounded fix.
   - A surface's pixels stop updating once they settle. `readRenderTargetPixels` is a
     synchronous GPU stall, so the blit samples on a bounded one-shot schedule and re-arms
     only on a new target or a fresh parse; an `AnimationPlayer` inside a sub-viewport
