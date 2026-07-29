@@ -26,7 +26,13 @@ export const CLEAR_MODE_ALWAYS = 0;
 export const CLEAR_MODE_NEVER = 1;
 export const CLEAR_MODE_ONCE = 2;
 
-export interface SubViewportProperties extends NodeProperties {
+/**
+ * `transform` is dropped from the base: a Viewport is not a spatial node, so
+ * Godot never serialises one. The base `parseNode` reads it for every Node, so
+ * the slice parser deletes it rather than passing through a field nothing can
+ * legitimately set — which also keeps parser/validator coverage symmetric.
+ */
+export interface SubViewportProperties extends Omit<NodeProperties, 'transform'> {
   /** Target size in pixels. Overwritten by a stretching SubViewportContainer. */
   size: Vector2;
   /** 2D-only size override; `(0, 0)` means unused. */

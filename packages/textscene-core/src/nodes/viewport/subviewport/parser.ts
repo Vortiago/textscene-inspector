@@ -41,7 +41,10 @@ export function parseSubViewport(
   heading: ParsedHeading,
   properties: Record<string, string>
 ): SubViewportProperties {
-  const baseProperties = parseNode(heading, properties);
+  // `transform` is discarded: a Viewport is not a spatial node, so Godot never
+  // writes one, and carrying the base parser's field would let a malformed scene
+  // put a transform on something that cannot have one.
+  const { transform: _transform, ...baseProperties } = parseNode(heading, properties);
   const context = `SubViewport ${baseProperties.name || '(unnamed)'}`;
 
   return {

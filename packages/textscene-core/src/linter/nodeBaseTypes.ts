@@ -96,6 +96,10 @@ const CONTROL_LEAVES = [
   'GridContainer',
   'HBoxContainer',
   'VBoxContainer',
+  // Displays its SubViewport children's targets (ADR-0030). Needs the Control
+  // chain like any other: without it every anchor/offset/layout validator
+  // silently skips this type while erroring on every sibling Control.
+  'SubViewportContainer',
 ] as const;
 
 export const NODE_BASE_TYPES: Readonly<Record<string, string>> = Object.freeze({
@@ -105,6 +109,10 @@ export const NODE_BASE_TYPES: Readonly<Record<string, string>> = Object.freeze({
   ...Object.fromEntries(CONTROL_LEAVES.map((t) => [t, 'Control'])),
   // Abstract/non-authorable intermediate classes.
   Light3D: 'Node3D',
+  // SubViewport < Viewport < Node. `Viewport` is not modelled as its own link
+  // because SubViewport is the only authorable subclass we support (`Window` is
+  // not), so its Viewport-level properties are validated on the leaf itself.
+  SubViewport: 'Node',
   // Base classes and non-spatial nodes collapse to the terminal Node.
   Node3D: 'Node',
   Node2D: 'Node',

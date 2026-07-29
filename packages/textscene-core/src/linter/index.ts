@@ -16,6 +16,8 @@
 // they gain type-specific validators or semantic rules.
 import '../nodes/node/index.linter.js';
 import '../nodes/2d/ui/control/index.linter.js';
+import '../nodes/2d/ui/subviewportcontainer/index.linter.js';
+import '../nodes/viewport/subviewport/index.linter.js';
 import '../nodes/base/node3d/index.linter.js';
 import '../nodes/base/node2d/index.linter.js';
 import '../nodes/3d/meshinstance3d/index.linter.js';

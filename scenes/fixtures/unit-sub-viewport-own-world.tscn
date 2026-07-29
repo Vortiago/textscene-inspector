@@ -1,0 +1,35 @@
+; SubViewport with own_world_3d = true.
+;
+; The one variable against unit-sub-viewport.tscn: own_world_3d. Same two
+; meshes, same transforms, same sizes — only the flag differs. Godot's
+; `Viewport::find_world_3d` returns the viewport's OWN world instead of walking
+; up to the parent, so InsideSphere stops drawing in the main view and only
+; OutsideBox remains. Verified against Godot 4.6.3.
+;
+; A regression in this flag is invisible in every other scene: nothing else in
+; the corpus sets own_world_3d, and getting it wrong looks exactly like a
+; correct render of the default case.
+
+[gd_scene format=3]
+
+[sub_resource type="BoxMesh" id="1"]
+size = Vector3(1, 1, 1)
+
+[sub_resource type="SphereMesh" id="2"]
+radius = 0.6
+height = 1.2
+
+[node name="Root" type="Node3D"]
+
+[node name="OutsideBox" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.2, 0, 0)
+mesh = SubResource("1")
+
+[node name="Viewport" type="SubViewport" parent="."]
+own_world_3d = true
+size = Vector2i(256, 256)
+render_target_update_mode = 4
+
+[node name="InsideSphere" type="MeshInstance3D" parent="Viewport"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.2, 0, 0)
+mesh = SubResource("2")

@@ -1243,6 +1243,26 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Navigation"
   },
   {
+    "name": "Sub Viewport Container Stretch",
+    "file": "unit-sub-viewport-container-stretch.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport Container",
+    "file": "unit-sub-viewport-container.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport Own World",
+    "file": "unit-sub-viewport-own-world.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport Texture",
+    "file": "unit-sub-viewport-texture.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
     "name": "Sub Viewport",
     "file": "unit-sub-viewport.tscn",
     "category": "Unit - Viewports"

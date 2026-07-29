@@ -59,6 +59,7 @@ import '../nodes/2d/ui/margincontainer/index.js';
 import '../nodes/2d/ui/scrollcontainer/index.js';
 import '../nodes/2d/ui/panel/index.js';
 import '../nodes/2d/ui/panelcontainer/index.js';
+import '../nodes/2d/ui/subviewportcontainer/index.js';
 import '../nodes/2d/ui/button/index.js';
 import '../nodes/2d/ui/checkbox/index.js';
 import '../nodes/2d/ui/optionbutton/index.js';
