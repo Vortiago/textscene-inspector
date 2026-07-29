@@ -14,11 +14,32 @@ pnpm vendor:games   # shallow-fetch each game at a pinned commit + regenerate th
 ```
 
 This populates `scenes/games/` (gitignored) and writes
-`apps/textscene-web/src/fixtures.games.ts` (gitignored), which the web
-previewer merges automatically — the games then appear in the scene selector
-under the **Games – …** categories. A fresh clone / CI has no games until you
-run the command. The pinned sources, commits, and licenses are listed in
-`scripts/vendor-godot-games.mjs`.
+`apps/textscene-web/src/fixtures.games.ts` (gitignored). A fresh clone / CI has
+no games until you run the command. The pinned sources, commits, and licenses
+are listed in `scripts/vendor-godot-games.mjs`.
+
+### Games are DEPLOY-ONLY, not local
+
+Vendoring is for *verifying* against real scene graphs, so having done it must
+not drop ~140 game scenes into your local scene selector. The corpus therefore
+appears **only** in the deployed site:
+
+| Command | Games |
+| --- | --- |
+| `pnpm dev`, `pnpm build` | excluded |
+| `pnpm build:deploy` | **included** |
+
+`build:deploy` (`scripts/build-deploy.mjs`) vendors the corpus and sets
+`VITE_INCLUDE_GAMES=1`. Two consumers read that variable and must agree, or the
+selector lists scenes whose files were never mirrored:
+`apps/textscene-web/scripts/copy-fixtures.js` (the `public/fixtures/games/`
+mirror) and `apps/textscene-web/src/fixturesAll.ts` (the manifest). A test pins
+the default-excluded arm.
+
+**Deploying:** point the Cloudflare Pages build command at `pnpm build:deploy`.
+There is no `wrangler.toml` and the Pages deploy in `.github/workflows/ci.yml`
+is commented out, so that build command lives in the Cloudflare dashboard and
+has to be changed there.
 
 ## Quick Start - Testing New Mesh Primitives
 

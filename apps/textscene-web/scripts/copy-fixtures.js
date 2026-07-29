@@ -1,4 +1,4 @@
-import { copyFileSync, mkdirSync, readdirSync, statSync } from 'node:fs';
+import { copyFileSync, mkdirSync, readdirSync, rmSync, statSync } from 'node:fs';
 import { join, dirname, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -113,16 +113,33 @@ try {
 // Mirror the vendored open-source games (scenes/games/**) the same way as the
 // demos corpora — each game keeps its own res:// namespace under
 // public/fixtures/games/<dir>/, resolved against the fixture's `root`.
+//
+// DEPLOY-ONLY. The games corpus is gitignored and vendored on demand, and a
+// developer who ran `pnpm vendor:games` (to verify against a real game) should
+// not thereby get ~140 game scenes in their local scene selector. The deployed
+// site does want them, so `pnpm build:deploy` sets the flag; `pnpm dev` and a
+// plain `pnpm build` leave them out. `fixturesAll.ts` gates the matching
+// manifest on the same variable, so the two halves cannot drift apart.
+const includeGames = process.env.VITE_INCLUDE_GAMES === '1';
 const gamesSource = join(scenesRoot, 'games');
 const gamesTarget = join(fixturesTarget, 'games');
-try {
-  if (statSync(gamesSource).isDirectory()) {
-    mkdirSync(gamesTarget, { recursive: true });
-    copyRecursive(gamesSource, gamesTarget);
-    console.log('Copied vendored Godot games to public/fixtures/games/');
+if (!includeGames) {
+  // Remove a copy left by an earlier deploy build, so toggling the flag off
+  // actually takes effect instead of serving a stale mirror.
+  rmSync(gamesTarget, { recursive: true, force: true });
+  console.log('Skipped vendored games (set VITE_INCLUDE_GAMES=1 to include them)');
+} else {
+  try {
+    if (statSync(gamesSource).isDirectory()) {
+      mkdirSync(gamesTarget, { recursive: true });
+      copyRecursive(gamesSource, gamesTarget);
+      console.log('Copied vendored Godot games to public/fixtures/games/');
+    }
+  } catch {
+    // No games directory — skip. A deploy build runs `pnpm vendor:games` first,
+    // so this only fires when the flag is set without vendoring.
+    console.warn('VITE_INCLUDE_GAMES=1 but scenes/games/ is absent — run `pnpm vendor:games`');
   }
-} catch {
-  // No games directory — skip.
 }
 
 // Copy materials directory from scenes/materials/
