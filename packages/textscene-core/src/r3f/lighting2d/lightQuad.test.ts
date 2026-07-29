@@ -9,12 +9,33 @@
 
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { createLightQuadMaterial, Light2DBlendMode } from './lightQuad';
+import {
+  createLightQuadMaterial,
+  createShadowColorQuadMaterial,
+  createShadowPolarTexture,
+  shadowPixelSize,
+  Light2DBlendMode,
+  SHADOW_FILTER_PCF5,
+  SHADOW_FILTER_PCF13,
+  type ShadowSampling,
+} from './lightQuad';
+import { SHADOW_MAP_BINS, SHADOW_MAP_FAR } from './shadowPolarMap';
 
 const WARM = { r: 1, g: 0.75, b: 0.35, a: 1 };
 
 function material(blendMode: number, energy = 1) {
   return createLightQuadMaterial(new THREE.Texture(), WARM, energy, blendMode);
+}
+
+function sampling(overrides: Partial<ShadowSampling> = {}): ShadowSampling {
+  return {
+    map: new THREE.Texture(),
+    filter: SHADOW_FILTER_PCF5,
+    smooth: 0,
+    worldToLocal: new THREE.Matrix3(),
+    zFarInv: 1 / 1100,
+    ...overrides,
+  };
 }
 
 describe('createLightQuadMaterial', () => {
@@ -95,5 +116,186 @@ describe('createLightQuadMaterial', () => {
     const mat = material(99);
     expect(mat.blendEquation).toBe(THREE.AddEquation);
     expect(mat.blendDst).toBe(THREE.OneFactor);
+  });
+});
+
+/**
+ * The filtered branch. Expected values are Godot's:
+ *  - `rasterizer_canvas_gles3.cpp:182` for the tap step,
+ *  - `canvas.glsl:469-493` for the two kernel widths,
+ *  - `canvas.glsl:500-502` for the `mix`, whose expansion over the accumulator's
+ *    own `src×srcAlpha` blend is the (1−s)² MEASURED on Godot 4.6.3
+ *    (167/129/100/80/67/63 of 255 over a 0.25 surface, PCF5 at smooth 8).
+ */
+describe('shadowPixelSize', () => {
+  it('is one atlas texel widened by shadow_filter_smooth', () => {
+    expect(shadowPixelSize(0)).toBe(1 / 2048);
+    expect(shadowPixelSize(8)).toBe(9 / 2048);
+    expect(shadowPixelSize(5)).toBe(6 / 2048);
+    // The dungeon's 23 lights all author smooth 5, so this row is its penumbra.
+    expect(shadowPixelSize(5) * SHADOW_MAP_BINS).toBe(6);
+  });
+});
+
+describe('createShadowPolarTexture', () => {
+  it('carries the atlas state Godot samples the map with', () => {
+    const texture = createShadowPolarTexture(new Float32Array(SHADOW_MAP_BINS));
+    // LINEAR is what rounds each PCF step's corner; REPEAT is what lets a tap
+    // cross the seam between the last bin and the first.
+    expect(texture.minFilter).toBe(THREE.LinearFilter);
+    expect(texture.magFilter).toBe(THREE.LinearFilter);
+    expect(texture.wrapS).toBe(THREE.RepeatWrapping);
+    expect(texture.image.width).toBe(SHADOW_MAP_BINS);
+    expect(texture.image.height).toBe(1);
+    expect(texture.colorSpace).toBe(THREE.NoColorSpace);
+    expect(texture.generateMipmaps).toBe(false);
+  });
+
+  it('round-trips the far sentinel and an occluder distance through half-float', () => {
+    const bins = new Float32Array(SHADOW_MAP_BINS).fill(SHADOW_MAP_FAR);
+    bins[7] = 176 / 1593;
+    const texture = createShadowPolarTexture(bins);
+    const data = texture.image.data as Uint16Array;
+    expect(THREE.DataUtils.fromHalfFloat(data[0]!)).toBe(1);
+    // Half-float relative precision is 2^-11, which at z_far 1593 is under a
+    // tenth of a pixel of occluder distance.
+    expect(THREE.DataUtils.fromHalfFloat(data[7]!)).toBeCloseTo(176 / 1593, 4);
+  });
+});
+
+describe('createLightQuadMaterial with a shadow filter', () => {
+  it('leaves the unfiltered material untouched', () => {
+    const mat = material(Light2DBlendMode.ADD);
+    expect(mat.defines?.SHADOW_FILTER).toBeUndefined();
+    expect(mat.uniforms.uShadowMap).toBeUndefined();
+    expect(mat.fragmentShader).not.toContain('shadowFraction');
+  });
+
+  it('selects the five-tap kernel for PCF5 and the thirteen-tap for PCF13', () => {
+    const pcf5 = createLightQuadMaterial(new THREE.Texture(), WARM, 1, 0, {}, sampling());
+    const pcf13 = createLightQuadMaterial(
+      new THREE.Texture(),
+      WARM,
+      1,
+      0,
+      {},
+      sampling({ filter: SHADOW_FILTER_PCF13 })
+    );
+    expect(pcf5.defines?.SHADOW_FILTER).toBe(1);
+    expect(pcf13.defines?.SHADOW_FILTER).toBe(2);
+    // Both kernels are compiled into the one shader and chosen by the define, so
+    // the divisors are what say the two branches exist and differ.
+    expect(pcf5.fragmentShader).toContain('shadow /= 5.0;');
+    expect(pcf5.fragmentShader).toContain('shadow /= 13.0;');
+    expect(pcf5.fragmentShader).toContain('#if SHADOW_FILTER == 2');
+  });
+
+  it('generates Godot\'s exact tap offsets, not a plausible kernel', () => {
+    // canvas.glsl:471-475 and :479-491. A typo'd multiplier reads perfectly
+    // sensibly and shifts the whole penumbra, so the literals are asserted.
+    const shader = createLightQuadMaterial(new THREE.Texture(), WARM, 1, 0, {}, sampling())
+      .fragmentShader;
+    const taps = [...shader.matchAll(/SHADOW_TEST\(tex_ofs([^)]*)\);/g)].map(([, arg]) =>
+      arg!.trim()
+    );
+    expect(taps).toEqual([
+      // PCF13 first — the `#if` branch is written in Godot's own order.
+      '- uShadowPixelSize * 6.0',
+      '- uShadowPixelSize * 5.0',
+      '- uShadowPixelSize * 4.0',
+      '- uShadowPixelSize * 3.0',
+      '- uShadowPixelSize * 2.0',
+      '- uShadowPixelSize',
+      '',
+      '+ uShadowPixelSize',
+      '+ uShadowPixelSize * 2.0',
+      '+ uShadowPixelSize * 3.0',
+      '+ uShadowPixelSize * 4.0',
+      '+ uShadowPixelSize * 5.0',
+      '+ uShadowPixelSize * 6.0',
+      // then PCF5.
+      '- uShadowPixelSize * 2.0',
+      '- uShadowPixelSize',
+      '',
+      '+ uShadowPixelSize',
+      '+ uShadowPixelSize * 2.0',
+    ]);
+  });
+
+  it('takes the SHADOW_TEST comparison from canvas.glsl:454, in that order', () => {
+    // `step(sd, dist)` — 1 where the stored occluder depth is at or in FRONT of
+    // the fragment. Swapping the arguments inverts every shadow.
+    const shader = createLightQuadMaterial(new THREE.Texture(), WARM, 1, 0, {}, sampling())
+      .fragmentShader;
+    expect(shader).toContain('shadow += step(texture2D(uShadowMap, vec2(m_u, 0.5)).r, dist);');
+  });
+
+  it('offsets the taps along the map axis by (1 + smooth) / 2048', () => {
+    const mat = createLightQuadMaterial(
+      new THREE.Texture(),
+      WARM,
+      1,
+      0,
+      {},
+      sampling({ smooth: 8 })
+    );
+    expect(mat.uniforms.uShadowPixelSize!.value).toBe(9 / 2048);
+    // The tap coordinate moves in u only — the map's second axis is the atlas
+    // row, and a tap that wandered off it would sample another light's shadow.
+    expect(mat.fragmentShader).toContain('vec2(m_u, 0.5)');
+  });
+
+  it('carries the light-local transform and the z_far the map was built with', () => {
+    const worldToLocal = new THREE.Matrix3().set(0, 1, -300, -1, 0, 400, 0, 0, 1);
+    const mat = createLightQuadMaterial(
+      new THREE.Texture(),
+      WARM,
+      1,
+      0,
+      {},
+      sampling({ worldToLocal, zFarInv: 1 / 1593 })
+    );
+    expect(mat.uniforms.uWorldToLight!.value).toBe(worldToLocal);
+    expect(mat.uniforms.uShadowZFarInv!.value).toBe(1 / 1593);
+    // The fragment's world position is what the transform is applied to, so the
+    // vertex stage has to publish it.
+    expect(mat.vertexShader).toContain('vWorld = world.xy');
+  });
+
+  it('scales BOTH rgb and alpha by the lit fraction, which is the (1-s)^2 falloff', () => {
+    const mat = createLightQuadMaterial(new THREE.Texture(), WARM, 1, 0, {}, sampling());
+    expect(mat.fragmentShader).toContain('lightToSrgb(cookie.rgb) * uColor * uEnergy * lit');
+    expect(mat.fragmentShader).toContain('cookie.a * (lit + s * uShadowColor.a)');
+  });
+
+  it('keeps the accumulator blends the unfiltered quad uses', () => {
+    for (const mode of [Light2DBlendMode.ADD, Light2DBlendMode.SUB, Light2DBlendMode.MIX]) {
+      const plain = material(mode);
+      const filtered = createLightQuadMaterial(new THREE.Texture(), WARM, 1, mode, {}, sampling());
+      expect(filtered.blendEquation, `mode ${mode}`).toBe(plain.blendEquation);
+      expect(filtered.blendSrc, `mode ${mode}`).toBe(plain.blendSrc);
+      expect(filtered.blendDst, `mode ${mode}`).toBe(plain.blendDst);
+    }
+  });
+});
+
+describe('createShadowColorQuadMaterial with a shadow filter', () => {
+  const TINT = { r: 0.15, g: 0.35, b: 1, a: 0.5 };
+
+  it('emits the fractional tint, reducing to the stencil path at s = 1', () => {
+    const mat = createShadowColorQuadMaterial(new THREE.Texture(), TINT, 0, {}, sampling());
+    // s * ((1 - s) + s * a): at s = 1 this is `uShadowColor.a * cookie.a`, which
+    // is byte-for-byte what the unfiltered tint quad emits inside its umbra.
+    expect(mat.fragmentShader).toContain(
+      'vec4(uShadowColor.rgb, cookie.a * s * ((1.0 - s) + s * uShadowColor.a))'
+    );
+    expect(mat.defines?.SHADOW_FILTER).toBe(1);
+    expect(mat.uniforms.uShadowMap).toBeDefined();
+  });
+
+  it('leaves the unfiltered tint quad on the stencil-partitioned shader', () => {
+    const mat = createShadowColorQuadMaterial(new THREE.Texture(), TINT, 0);
+    expect(mat.fragmentShader).toContain('vec4(uShadowColor.rgb, uShadowColor.a * cookie.a)');
+    expect(mat.fragmentShader).not.toContain('shadowFraction');
   });
 });

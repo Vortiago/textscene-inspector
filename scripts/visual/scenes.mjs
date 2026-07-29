@@ -360,6 +360,18 @@ export const GOLDEN_SCENES = [
   // Two shadowed lights in one accumulation pass: each must clear the stencil
   // before it stamps, or the first light's volume also cuts the second's.
   { name: 'lightoccluder2d-two-lights', file: 'unit-lightoccluder2d-two-lights.tscn', maxDiffPct: 0.5 },
+  // `shadow_filter`: the boundary is a STEPPED penumbra, not an edge, and every
+  // occluder fixture above leaves the property at NONE — so without these three
+  // the whole filtered mechanism is unpinned. The occluder's upper endpoint sits
+  // at the light's own y, which puts the umbra boundary on the horizontal ray
+  // and lets a vertical probe cross it perpendicular. Godot 4.6.3, transect at
+  // x=676: 167 / 129 / 100 / 80 / 67 / 63 of 255 — the five PCF5 levels under
+  // the (1-s)^2 falloff, with the step boundaries 19.4 px either side of the
+  // geometric edge. PCF13 spreads the same ramp over the wider kernel, and the
+  // colour fixture pins the fractional tint the two accumulators split.
+  { name: 'pointlight2d-shadow-pcf5', file: 'unit-pointlight2d-shadow-pcf5.tscn', maxDiffPct: 0.5 },
+  { name: 'pointlight2d-shadow-pcf13', file: 'unit-pointlight2d-shadow-pcf13.tscn', maxDiffPct: 0.5 },
+  { name: 'pointlight2d-shadow-pcf-color', file: 'unit-pointlight2d-shadow-pcf-color.tscn', maxDiffPct: 0.5 },
   // CPUParticles2D renders a FROZEN pose, so these baselines are what prove it
   // settles: a live emitter would never produce two identical frames and the
   // harness would fail it as unstable rather than as changed. Each fixture pins

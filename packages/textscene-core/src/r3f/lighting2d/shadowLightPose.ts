@@ -19,20 +19,38 @@ import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 import type { LightRect, ShadowLight } from './shadowVolumes';
+import type { ShadowPolarLight } from './shadowPolarMap';
 import { SHADOW_SNAPSHOT_PRIORITY } from './ShadowCasterStage';
 
 /** Reused across the sample so a per-frame read allocates nothing. */
 const corner = new THREE.Vector3();
 const origin = new THREE.Vector3();
+const inverse = new THREE.Matrix4();
+
+/**
+ * The pose both shadow mechanisms read: the origin and rect the stencil volumes
+ * need, plus the light-local frame and reach the polar map needs.
+ *
+ * The two extra fields are Godot's, from the same call site
+ * (`renderer_viewport.cpp:556`): `light_update_shadow(…,
+ * light->xform_cache.affine_inverse(), …, radius_cache / 1000, radius_cache * 1.1,
+ * …)`. `radius_cache` is `local_rect.size.length()` (line 485) — the cookie
+ * rect's FULL diagonal in light-local units, which is the quad geometry's own
+ * size and so is unaffected by where the light sits or how it is scaled.
+ */
+export interface ShadowLightPose extends ShadowLight, ShadowPolarLight {
+  readonly worldToLocal: readonly [number, number, number, number, number, number];
+  readonly radius: number;
+}
 
 /**
  * The pose of the light whose cookie `quad` draws, in the previewer's 2D world
  * space, or null while the quad is not yet in the tree.
  *
  * `quad` must be the cookie mesh itself: its geometry's bounds give the rect
- * and its parent gives the shadow origin.
+ * and its parent gives the shadow origin and the light-local frame.
  */
-export function sampleShadowLight(quad: THREE.Mesh | null): ShadowLight | null {
+export function sampleShadowLight(quad: THREE.Mesh | null): ShadowLightPose | null {
   if (!quad || !quad.parent) return null;
   const geometry = quad.geometry;
   if (!geometry.boundingBox) geometry.computeBoundingBox();
@@ -56,11 +74,22 @@ export function sampleShadowLight(quad: THREE.Mesh | null): ShadowLight | null {
   }
   if (!Number.isFinite(rect.minX) || !Number.isFinite(rect.minY)) return null;
 
-  return { x: origin.x, y: origin.y, rect };
+  // The light NODE's frame, not the quad's: `offset` moves the cookie without
+  // moving the space Godot states its shadow map in.
+  const e = inverse.copy(quad.parent.matrixWorld).invert().elements;
+  const worldToLocal: [number, number, number, number, number, number] = [
+    e[0]!, e[4]!, e[12]!,
+    e[1]!, e[5]!, e[13]!,
+  ];
+  if (worldToLocal.some((value) => !Number.isFinite(value))) return null;
+
+  const radius = Math.hypot(box.max.x - box.min.x, box.max.y - box.min.y);
+
+  return { x: origin.x, y: origin.y, rect, worldToLocal, radius };
 }
 
 /** Do two poses shadow identically? */
-export function sameShadowLight(a: ShadowLight | null, b: ShadowLight | null): boolean {
+export function sameShadowLight(a: ShadowLightPose | null, b: ShadowLightPose | null): boolean {
   if (a === b) return true;
   if (!a || !b) return false;
   return (
@@ -69,7 +98,9 @@ export function sameShadowLight(a: ShadowLight | null, b: ShadowLight | null): b
     a.rect.minX === b.rect.minX &&
     a.rect.minY === b.rect.minY &&
     a.rect.maxX === b.rect.maxX &&
-    a.rect.maxY === b.rect.maxY
+    a.rect.maxY === b.rect.maxY &&
+    a.radius === b.radius &&
+    a.worldToLocal.every((value, index) => value === b.worldToLocal[index])
   );
 }
 
@@ -82,8 +113,11 @@ export function sameShadowLight(a: ShadowLight | null, b: ShadowLight | null): b
  * having run; the frame callback is what keeps an animated light correct. See
  * ShadowCasterStage for the same split on the occluder side.
  */
-export function useShadowLightPose(quad: THREE.Mesh | null, enabled: boolean): ShadowLight | null {
-  const [pose, setPose] = useState<ShadowLight | null>(null);
+export function useShadowLightPose(
+  quad: THREE.Mesh | null,
+  enabled: boolean
+): ShadowLightPose | null {
+  const [pose, setPose] = useState<ShadowLightPose | null>(null);
   const published = useRef(pose);
 
   const sample = useCallback(() => {

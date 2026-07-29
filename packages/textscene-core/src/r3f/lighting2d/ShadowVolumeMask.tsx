@@ -1,11 +1,21 @@
 /**
- * <ShadowVolumeMask> — the stencil half of a shadowed 2D light.
+ * <ShadowVolumeMask> — the stencil half of a shadowed 2D light, and ONLY of an
+ * UNFILTERED one.
  *
  * Draws one light's extruded shadow volumes with colour writes off, stamping a
  * stencil value over everything that light cannot see. The light's own cookie
  * quad then draws with `litQuadStencilProps(ordinal)`, which rejects exactly
  * those pixels. Both sides take their ref and render order from the helpers
  * here, because the two MUST agree and a hand-written pair silently rots.
+ *
+ * SCOPE. `shadow_filter = PCF5/PCF13` makes Godot's shadow a FRACTION, which no
+ * stencil test can carry, so a filtered light mounts none of this: no mask, no
+ * ref, and neither `litQuadStencilProps` nor `shadowColorQuadStencilProps` on
+ * its quads. It samples `shadowPolarMap` per fragment instead (ADR-0029), and
+ * its cookie and `shadow_color` quads BOTH cover the light's whole rect — the
+ * `NotEqual`/`Equal` partition below is the unfiltered branch's answer to the
+ * same problem, not the only one. The render-order helpers are shared by both
+ * branches; the stencil helpers are not.
  *
  * WHY A PER-LIGHT REF AND NOT A CLEAR. Lights accumulate into one target in a
  * single pass, so a shared ref of 1 leaks: light N's cookie would reject every

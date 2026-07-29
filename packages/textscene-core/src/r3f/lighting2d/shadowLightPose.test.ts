@@ -64,6 +64,36 @@ describe('sampleShadowLight', () => {
     expect(pose.rect.minY).toBeCloseTo(-100 * Math.SQRT2, 4);
   });
 
+  it('reports Godot radius_cache: the cookie rect diagonal in light-local units', () => {
+    // `renderer_viewport.cpp:485` — `local_rect.size.length()`, so a 200×200
+    // cookie gives 200√2 wherever the light sits and however it is scaled (the
+    // scale is already in `local_rect` via `texture_scale`, not in the node).
+    const pose = sampleShadowLight(quadUnder({ x: 400, y: -324 }, { x: 0, y: 0 }, 200))!;
+    expect(pose.radius).toBeCloseTo(200 * Math.SQRT2, 9);
+    const moved = sampleShadowLight(quadUnder({ x: 0, y: 0 }, { x: 90, y: 30 }, 200))!;
+    expect(moved.radius).toBeCloseTo(200 * Math.SQRT2, 9);
+  });
+
+  it('inverts the light NODE frame, so offset never enters the shadow space', () => {
+    // The polar map is stated in the light's own space; `offset` moves the
+    // cookie inside that space and must leave the mapping alone.
+    const pose = sampleShadowLight(quadUnder({ x: 400, y: -324 }, { x: 50, y: 20 }))!;
+    const [m00, m01, m02, m10, m11, m12] = pose.worldToLocal;
+    expect([m00, m01, m10, m11]).toEqual([1, 0, 0, 1]);
+    expect([m02, m12]).toEqual([-400, 324]);
+  });
+
+  it('carries the light rotation into the inverse frame', () => {
+    // A quarter-turn light: its local +X points along world +Y, so a world point
+    // 100 above the light maps to local (100, 0).
+    const pose = sampleShadowLight(quadUnder({ x: 400, y: 300 }, { x: 0, y: 0 }, 200, (g) => {
+      g.rotation.z = Math.PI / 2;
+    }))!;
+    const [m00, m01, m02, m10, m11, m12] = pose.worldToLocal;
+    expect(m00 * 400 + m01 * 400 + m02).toBeCloseTo(100, 6);
+    expect(m10 * 400 + m11 * 400 + m12).toBeCloseTo(0, 6);
+  });
+
   it('accumulates every ancestor transform, not just the immediate parent', () => {
     const mesh = quadUnder({ x: 100, y: -50 });
     (mesh.parent!.parent as THREE.Group).position.set(300, -90, 0);

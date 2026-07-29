@@ -329,3 +329,102 @@ describe('shadow_color', () => {
     expect((litQuads(renderer)[0]!.material as THREE.Material).stencilWrite).toBe(false);
   });
 });
+
+/**
+ * `shadow_filter` picks the MECHANISM, not a parameter of one.
+ *
+ *   drivers/gles3/shaders/canvas.glsl, light_shadow_compute
+ *     NONE  : one SHADOW_TEST       -> shadow is 0 or 1
+ *     PCF5  : five taps / 5.0       -> a fraction with five steps
+ *     PCF13 : thirteen taps / 13.0
+ *
+ * A stencil is binary by construction, so only NONE is expressible as one. The
+ * gate below is what keeps the measured-at-parity stencil path untouched for
+ * every scene that leaves the property at its default.
+ */
+describe('shadow_filter selects the shadow mechanism', () => {
+  /** The light's polar map, wherever in the tree its quad ended up. */
+  function shadowMap(renderer: Rendered): THREE.DataTexture | undefined {
+    return lightQuads(renderer)
+      .map((quad) => (quad.material as THREE.ShaderMaterial).uniforms.uShadowMap?.value)
+      .find(Boolean) as THREE.DataTexture | undefined;
+  }
+
+  it('keeps the stencil mechanism at the NONE default', async () => {
+    const renderer = await render(scene(`${lamp('Lamp', 400)}${caster('Caster', 576)}`));
+    expect(maskMeshes(renderer)).toHaveLength(1);
+    const material = litQuads(renderer)[0]!.material as THREE.ShaderMaterial;
+    expect(material.stencilWrite).toBe(true);
+    expect(material.uniforms.uShadowMap).toBeUndefined();
+    expect(material.defines?.SHADOW_FILTER).toBeUndefined();
+  });
+
+  it('replaces it with the polar map under PCF5, stamping no stencil at all', async () => {
+    const renderer = await render(
+      scene(
+        `${lamp('Lamp', 400, 'shadow_filter = 1\nshadow_filter_smooth = 8.0\n')}${caster('Caster', 576)}`
+      )
+    );
+    expect(maskMeshes(renderer)).toHaveLength(0);
+
+    const material = litQuads(renderer)[0]!.material as THREE.ShaderMaterial;
+    expect(material.stencilWrite).toBeFalsy();
+    expect(material.defines?.SHADOW_FILTER).toBe(1);
+    expect(material.uniforms.uShadowMap!.value).toBeInstanceOf(THREE.DataTexture);
+    // rasterizer_canvas_gles3.cpp:182 — (1 / 2048) * (1 + shadow_smooth).
+    expect(material.uniforms.uShadowPixelSize!.value).toBe(9 / 2048);
+    // renderer_viewport.cpp:485,556 — z_far is radius_cache * 1.1, and
+    // radius_cache is the 1024x1024 cookie rect's diagonal.
+    expect(material.uniforms.uShadowZFarInv!.value).toBeCloseTo(1 / (1024 * Math.SQRT2 * 1.1), 9);
+  });
+
+  it('takes the thirteen-tap kernel under PCF13', async () => {
+    const renderer = await render(
+      scene(`${lamp('Lamp', 400, 'shadow_filter = 2\n')}${caster('Caster', 576)}`)
+    );
+    expect(maskMeshes(renderer)).toHaveLength(0);
+    const material = litQuads(renderer)[0]!.material as THREE.ShaderMaterial;
+    expect(material.defines?.SHADOW_FILTER).toBe(2);
+  });
+
+  it('carves the map from the same occluders the volumes would have used', async () => {
+    const renderer = await render(
+      scene(`${lamp('Lamp', 400, 'shadow_filter = 1\n')}${caster('Caster', 576)}`)
+    );
+    const data = shadowMap(renderer)!.image.data as Uint16Array;
+    const occluded = [...data].filter((half) => THREE.DataUtils.fromHalfFloat(half) < 1);
+    // The bar subtends a real arc from a light 176 px away, so the map is
+    // neither empty nor saturated.
+    expect(occluded.length).toBeGreaterThan(0);
+    expect(occluded.length).toBeLessThan(data.length);
+  });
+
+  it('leaves a filtered light with no occluders on the unshadowed material', async () => {
+    const renderer = await render(scene(lamp('Lamp', 400, 'shadow_filter = 1\n')));
+    const material = litQuads(renderer)[0]!.material as THREE.ShaderMaterial;
+    expect(material.uniforms.uShadowMap).toBeUndefined();
+    expect(material.stencilWrite).toBe(false);
+  });
+
+  it('carries an authored shadow_color through the filter, without a stencil', async () => {
+    // The `mix` expands to two terms with no cross term, so the tint keeps its
+    // own albedo-free quad — it just computes its own fraction instead of being
+    // stencilled into the umbra. Note the tint quad exists at all only because
+    // `shadowColorContributes` gates on `shadow_color.a > 0`.
+    const renderer = await render(
+      scene(
+        `${lamp('Lamp', 400, 'shadow_filter = 1\nshadow_color = Color(0.15, 0.35, 1, 1)\n')}${caster('Caster', 576)}`
+      )
+    );
+    expect(maskMeshes(renderer)).toHaveLength(0);
+
+    const tint = lightQuads(renderer)
+      .map((quad) => quad.material as THREE.ShaderMaterial)
+      .find((mat) => !mat.uniforms.uColor);
+    expect(tint).toBeDefined();
+    expect(tint!.defines?.SHADOW_FILTER).toBe(1);
+    expect(tint!.stencilWrite).toBeFalsy();
+    // One map, two consumers: a second build would be a second chance to drift.
+    expect(tint!.uniforms.uShadowMap!.value).toBe(shadowMap(renderer));
+  });
+});

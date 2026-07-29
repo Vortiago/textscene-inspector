@@ -73,6 +73,17 @@ makes the three channels a proof rather than a coincidence: behind the occluder 
 `shadow_color` component gives 0.418 / 0.426 / 0.424 — one cookie alpha, with no trace of
 the lamp's colour or its energy.
 
+## The boundary under a shadow_filter
+
+An occluder's boundary is only an EDGE while the light leaves `shadow_filter` at its
+`NONE` default. Under PCF5/PCF13 Godot averages five or thirteen `step()` taps offset in
+ANGLE around the light, so the same occluder casts a stepped penumbra that widens with
+distance — 19.4 px of half-width at axis distance 276 and 40.5 px at 576, for a PCF5 light
+at `shadow_filter_smooth = 8`. The property belongs to the LIGHT, so the measured transects
+and the mechanism live in the PointLight2D sheet; what matters here is that the occluder
+geometry is identical either way, and the fixtures on this sheet are all filter-NONE, which
+is why every wedge above reads as a one-pixel step.
+
 ## Linting
 
 <!-- lint:begin LightOccluder2D -->

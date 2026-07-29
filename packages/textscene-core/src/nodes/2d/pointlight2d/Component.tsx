@@ -8,10 +8,21 @@
  * the light pre-pass sees nothing else. It is still wrapped in CanvasItem2D so
  * its transform, `visible` and z come from the same ritual as any other node.
  *
- * A SHADOWED light is two meshes rather than one, in the order its ordinal
- * fixes: its shadow volumes stamp the stencil, then its cookie draws only where
- * they did not. Withholding the cookie IS the shadow, because Godot's default
- * `shadow_color = Color(0, 0, 0, 0)` contributes nothing where it falls.
+ * A SHADOWED light takes one of TWO mechanisms, chosen by `shadow_filter`,
+ * because Godot's own shadow is a fraction and only its unfiltered case happens
+ * to be binary:
+ *
+ *  - NONE — two meshes rather than one, in the order its sequence fixes: its
+ *    shadow volumes stamp the stencil, then its cookie draws only where they did
+ *    not. Withholding the cookie IS the shadow, because Godot's default
+ *    `shadow_color = Color(0, 0, 0, 0)` contributes nothing where it falls.
+ *  - PCF5 / PCF13 — no stencil at all. The quads cover the light's whole rect
+ *    and each fragment samples the light's polar shadow map (`shadowPolarMap`)
+ *    through Godot's tap kernel, so the boundary comes out as the stepped
+ *    penumbra Godot draws instead of a hard edge.
+ *
+ * The gate is what keeps the measured-at-parity stencil path untouched: an
+ * unfiltered light runs not one line of the filtered path.
  *
  * When `enabled=false` the body returns null and the light does not register.
  */
@@ -28,8 +39,12 @@ import type { Color } from '../../base/node2d/types';
 import {
   createLightQuadMaterial,
   createShadowColorQuadMaterial,
+  createShadowPolarTexture,
   shadowColorContributes,
+  SHADOW_FILTER_NONE,
+  type ShadowSampling,
 } from '../../../r3f/lighting2d/lightQuad';
+import { buildShadowPolarMap } from '../../../r3f/lighting2d/shadowPolarMap';
 import { useLightSequence } from '../../../r3f/lighting2d/useLightSequence';
 import {
   useLightClassLayer,
@@ -129,6 +144,8 @@ export function PointLight2D({ node, children }: NodeComponentProps) {
             offset={props.offset}
             blendMode={props.blend_mode}
             shadowColor={props.shadow_color}
+            shadowFilter={props.shadow_filter}
+            shadowFilterSmooth={props.shadow_filter_smooth}
             layer={layer}
             sequence={sequence}
             shadowTintLayer={tintsShadow ? shadowTintLayer : undefined}
@@ -188,6 +205,8 @@ function QuadMesh({
   offset,
   blendMode,
   shadowColor,
+  shadowFilter,
+  shadowFilterSmooth,
   layer,
   shadowTintLayer,
   ordinal,
@@ -202,6 +221,10 @@ function QuadMesh({
   blendMode: number;
   /** `Light2D.shadow_color` — what this light contributes where it IS blocked. */
   shadowColor: Color;
+  /** `Light2D.shadow_filter` — NONE picks the stencil, PCF5/PCF13 the polar map. */
+  shadowFilter: number;
+  /** `Light2D.shadow_filter_smooth` — how wide the PCF taps spread the boundary. */
+  shadowFilterSmooth: number;
   /** The albedo-free pass's layer, set only when this light tints its shadow. */
   shadowTintLayer: number | undefined;
   /** The camera layer of this light's cull-mask class. */
@@ -221,6 +244,29 @@ function QuadMesh({
   const [quad, setQuad] = useState<THREE.Mesh | null>(null);
   const light = useShadowLightPose(quad, casters.length > 0);
   const shadowed = !!light && casters.length > 0;
+  const filtered = shadowed && shadowFilter !== SHADOW_FILTER_NONE;
+
+  // The polar map is a pure function of the pose and the casters, so it is
+  // rebuilt on exactly the events the volumes are and is byte-stable in between.
+  const shadowMap = useMemo(
+    () => (filtered && light ? createShadowPolarTexture(buildShadowPolarMap(light, casters)) : null),
+    [filtered, light, casters]
+  );
+  useEffect(() => () => shadowMap?.dispose(), [shadowMap]);
+
+  const sampling = useMemo<ShadowSampling | undefined>(() => {
+    if (!shadowMap || !light) return undefined;
+    const [m00, m01, m02, m10, m11, m12] = light.worldToLocal;
+    return {
+      map: shadowMap,
+      // Anything the parser admits that is not NONE takes the wider kernel only
+      // at PCF13; `shadow_filter` is a three-value enum, so this is exhaustive.
+      filter: shadowFilter === 2 ? 2 : 1,
+      smooth: shadowFilterSmooth,
+      worldToLocal: new THREE.Matrix3().set(m00, m01, m02, m10, m11, m12, 0, 0, 1),
+      zFarInv: 1 / (light.radius * 1.1),
+    };
+  }, [shadowMap, light, shadowFilter, shadowFilterSmooth]);
 
   const material = useMemo(
     () =>
@@ -229,9 +275,14 @@ function QuadMesh({
         color,
         energy,
         blendMode,
-        shadowed ? litQuadStencilProps(ordinal) : {}
+        // A filtered light computes its own fraction per fragment, so it needs
+        // no stencil ref and stamps nothing — the two mechanisms are never both
+        // active on one light.
+        shadowed && !filtered ? litQuadStencilProps(ordinal) : {},
+        sampling,
+        shadowColor
       ),
-    [texture, color, energy, blendMode, shadowed, ordinal]
+    [texture, color, energy, blendMode, shadowed, filtered, ordinal, sampling, shadowColor]
   );
   useEffect(() => () => material.dispose(), [material]);
 
@@ -249,10 +300,11 @@ function QuadMesh({
             texture,
             shadowColor,
             blendMode,
-            shadowColorQuadStencilProps(ordinal)
+            filtered ? {} : shadowColorQuadStencilProps(ordinal),
+            sampling
           )
         : null,
-    [tintsShadow, texture, shadowColor, blendMode, ordinal]
+    [tintsShadow, texture, shadowColor, blendMode, filtered, ordinal, sampling]
   );
   useEffect(() => () => shadowMaterial?.dispose(), [shadowMaterial]);
 
@@ -283,7 +335,7 @@ function QuadMesh({
 
   return (
     <>
-      {shadowed && (
+      {shadowed && !filtered && (
         <ShadowVolumeMask
           light={light}
           casters={casters}

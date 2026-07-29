@@ -174,6 +174,51 @@ the accumulation classes partition by. Every light that leaves the four range
 properties at their defaults carries the same tail, so a scene that authors no
 window has exactly the classes it had before the windows existed; only an
 authored window mints a new one.
+## Soft shadows: shadow_filter and shadow_filter_smooth
+
+`shadow_filter` is not a parameter of the shadow — it is a second MECHANISM, and the
+default (`NONE`) is the only one a hard mask can express. Godot's 2D shadow is a per-light
+1D polar depth map, and `light_shadow_compute` averages one, five or thirteen `step()` taps
+offset along that map's ANGULAR axis:
+
+```glsl
+// PCF5:  taps at {-2,-1,0,+1,+2} * shadow_pixel_size;  shadow /= 5.0;
+shadow_color.a *= light_color.a;
+return mix(light_color, shadow_color, shadow);
+```
+
+with `shadow_pixel_size = (1 / 2048) * (1 + shadow_filter_smooth)`. So the boundary is a
+STEPPED ramp with five (or thirteen) levels, not an edge — and it matters in practice
+rather than in principle: every shadow-casting light in the vendored corpus overrides the
+default, including all 23 in the isometric dungeon (PCF5 at `shadow_filter_smooth = 5`).
+
+The fixture is a 0.25 surface under a PCF5 light at `shadow_filter_smooth = 8`, with the
+occluder's upper endpoint on the light's own y so the umbra boundary is a horizontal ray a
+vertical probe crosses perpendicular. Measured on Godot 4.6.3, `pnpm ref:godot --probe`,
+transect at x = 676 (axis distance 276):
+
+| y | 296–304 | 308–312 | 316–322 | 326–332 | 336–340 | 344+ |
+| --- | --- | --- | --- | --- | --- | --- |
+| shadow fraction | 0 | 0.2 | 0.4 | 0.6 | 0.8 | 1.0 |
+| Godot | 167 | 129 | 100 | 80 | 67 | 63 |
+| `0.25 + L(1−s)²`, L = 0.4049 | 167.0 | 129.8 | 100.9 | 80.3 | 67.9 | 63.8 |
+
+The square is the whole story of the falloff: at the default transparent `shadow_color` the
+`mix` scales `light_color`'s rgb AND its alpha by `(1 − s)`, and `light_blend_compute` then
+multiplies the two. A plain `(1 − s)` would have put the first step at 146.
+
+The taps step in ANGLE, so the penumbra widens with distance. Same fixture, transect at
+x = 976 (axis distance 576): the same six levels read 115 / 96 / 82 / 72 / 65 / 63, with
+step boundaries at 283.5 / 303.75 / 324 / 344.25 / 364.5 against 304.6 / 314.3 / 324 /
+333.7 / 343.4 at 276 — 40.5 px of half-width against 19.4, a ratio of 2.087 for a distance
+ratio of 2.087. Because the map's in-quadrant coordinate is a TANGENT, the growth is exactly
+linear in the box axis distance rather than in the Euclidean radius.
+
+We reproduce this by porting the mechanism: the polar map is built on the CPU
+(`r3f/lighting2d/shadowPolarMap.ts`) and tapped in the light quad's own fragment shader,
+gated so an unfiltered light keeps the analytic stencil path untouched (ADR-0029). PCF13 is
+the same ramp over the wider kernel; an authored `shadow_color` under a filter splits into
+the same two accumulators with no cross term.
 
 ## Divergences
 
