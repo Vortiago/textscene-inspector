@@ -19,8 +19,11 @@
 import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_THEME_SCALE,
+  DEFAULT_VIEWPORT_HEIGHT,
+  DEFAULT_VIEWPORT_WIDTH,
   parseProjectSettings,
   projectThemeScale,
+  projectViewportSize,
 } from './projectSettingsParser';
 
 /** The head of the real demo project, verbatim — comments, wrap and all. */
@@ -121,5 +124,65 @@ describe('projectThemeScale', () => {
     expect(projectThemeScale({ 'gui/theme/default_theme_scale': 'big' })).toBe(1);
     expect(projectThemeScale({ 'gui/theme/default_theme_scale': '' })).toBe(1);
     expect(projectThemeScale({ 'gui/theme/default_theme_scale': 'NaN' })).toBe(1);
+  });
+});
+
+/**
+ * `display/window/size/viewport_*` — the rect a 2D scene is composed against,
+ * and what a root Control resolves its anchors to. 23 of the corpus's 81
+ * projects set it: `demos/2d/platformer` is 800x480 and `demos/2d/pong` is
+ * 640x400, both of which were being composed against a hardcoded 1152x648.
+ */
+describe('projectViewportSize', () => {
+  it('reads both axes', () => {
+    expect(
+      projectViewportSize({
+        'display/window/size/viewport_width': '800',
+        'display/window/size/viewport_height': '480',
+      })
+    ).toEqual({ width: 800, height: 480 });
+  });
+
+  it('defaults to Godot’s 1152x648 without a project, and without the keys', () => {
+    expect([DEFAULT_VIEWPORT_WIDTH, DEFAULT_VIEWPORT_HEIGHT]).toEqual([1152, 648]);
+    expect(projectViewportSize(null)).toEqual({ width: 1152, height: 648 });
+    expect(projectViewportSize({})).toEqual({ width: 1152, height: 648 });
+  });
+
+  /** Godot falls back per SETTING, so one axis set must not drag the other. */
+  it('falls back per axis', () => {
+    expect(projectViewportSize({ 'display/window/size/viewport_width': '640' })).toEqual({
+      width: 640,
+      height: 648,
+    });
+    expect(projectViewportSize({ 'display/window/size/viewport_height': '400' })).toEqual({
+      width: 1152,
+      height: 400,
+    });
+  });
+
+  /**
+   * A zero-width viewport is not a smaller frame — it is a scene that cannot be
+   * laid out at all, and it divides by zero in the stage's fit.
+   */
+  it('rejects a non-positive or non-finite value', () => {
+    const width = (raw: string) =>
+      projectViewportSize({ 'display/window/size/viewport_width': raw }).width;
+    expect(width('0')).toBe(1152);
+    expect(width('-800')).toBe(1152);
+    expect(width('wide')).toBe(1152);
+    expect(width('')).toBe(1152);
+    expect(width('NaN')).toBe(1152);
+  });
+
+  it('rounds a fractional override — a capture frame is whole pixels', () => {
+    expect(projectViewportSize({ 'display/window/size/viewport_width': '800.6' }).width).toBe(801);
+  });
+
+  it('reads the keys as `parseProjectSettings` names them, section prefix and all', () => {
+    const settings = parseProjectSettings(
+      '[display]\n\nwindow/size/viewport_width=640\nwindow/size/viewport_height=400\n'
+    );
+    expect(projectViewportSize(settings)).toEqual({ width: 640, height: 400 });
   });
 });

@@ -112,3 +112,43 @@ export function projectThemeScale(settings: ProjectSettings | null): number {
   if (!Number.isFinite(scale)) return DEFAULT_THEME_SCALE;
   return Math.min(Math.max(scale, 0.5), 8);
 }
+
+/**
+ * Godot's own defaults for `display/window/size/viewport_width` / `_height`
+ * (`main/main.cpp`'s `GLOBAL_DEF_BASIC` pair). A scene with no `project.godot`
+ * — every loose unit fixture — is framed at these, which is what Godot does
+ * for a project that sets nothing.
+ */
+export const DEFAULT_VIEWPORT_WIDTH = 1152;
+export const DEFAULT_VIEWPORT_HEIGHT = 648;
+
+/** The project viewport rectangle, in pixels. */
+export interface ProjectViewportSize {
+  width: number;
+  height: number;
+}
+
+/**
+ * `display/window/size/viewport_*` — the rect a 2D scene is composed against,
+ * and what a root Control resolves its anchors to.
+ *
+ * Read per-axis rather than as a pair, because Godot falls back per-setting: a
+ * project may set one and leave the other. A non-finite or non-positive value
+ * takes the default too — a zero-width viewport is not a smaller frame, it is
+ * a scene that cannot be laid out at all.
+ */
+export function projectViewportSize(settings: ProjectSettings | null): ProjectViewportSize {
+  const axis = (key: string, fallback: number): number => {
+    const raw = settings?.[key];
+    if (raw === undefined || raw.trim() === '') return fallback;
+    const value = Number(raw);
+    if (!Number.isFinite(value) || value <= 0) return fallback;
+    // Godot stores these as ints; a fractional override would put the capture
+    // frame on a half pixel and resample every comparison made against it.
+    return Math.round(value);
+  };
+  return {
+    width: axis('display/window/size/viewport_width', DEFAULT_VIEWPORT_WIDTH),
+    height: axis('display/window/size/viewport_height', DEFAULT_VIEWPORT_HEIGHT),
+  };
+}

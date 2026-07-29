@@ -33,8 +33,12 @@ import {
 import {
   parseProjectSettings,
   projectThemeScale,
+  projectViewportSize,
   DEFAULT_THEME_SCALE,
+  DEFAULT_VIEWPORT_WIDTH,
+  DEFAULT_VIEWPORT_HEIGHT,
   type ProjectSettings,
+  type ProjectViewportSize,
 } from '../../parser/projectSettingsParser.js';
 import { useResourceLoader } from '../../resources/useResource.js';
 import * as logger from '../../logger.js';
@@ -47,11 +51,17 @@ export interface ProjectSettingsValue {
   settings: ProjectSettings | null;
   /** `gui/theme/default_theme_scale`, clamped; 1.0 without a project. */
   themeScale: number;
+  /** `display/window/size/viewport_*`; Godot's 1152x648 without a project. */
+  viewportSize: ProjectViewportSize;
 }
 
 const DEFAULT_VALUE: ProjectSettingsValue = {
   settings: null,
   themeScale: DEFAULT_THEME_SCALE,
+  viewportSize: {
+    width: DEFAULT_VIEWPORT_WIDTH,
+    height: DEFAULT_VIEWPORT_HEIGHT,
+  },
 };
 
 const ProjectSettingsContext = createContext<ProjectSettingsValue>(DEFAULT_VALUE);
@@ -108,7 +118,11 @@ export function ProjectSettingsProvider({ children, sceneKey }: ProjectSettingsP
   }, [loader, sceneKey]);
 
   const value = useMemo<ProjectSettingsValue>(
-    () => ({ settings, themeScale: projectThemeScale(settings) }),
+    () => ({
+      settings,
+      themeScale: projectThemeScale(settings),
+      viewportSize: projectViewportSize(settings),
+    }),
     [settings]
   );
 

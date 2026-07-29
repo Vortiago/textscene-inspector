@@ -228,6 +228,38 @@ export function resolveProjectRoot(scenePath) {
  * (msaa, shadow quality and friends change the picture) minus the two things
  * that must not vary: the default environment, and the viewport size.
  */
+/**
+ * The source project's `display/window/size/viewport_*`, or Godot's default
+ * pair — the rect a 2D scene is COMPOSED against, and what a root Control
+ * resolves its anchors to. 23 of the corpus's 81 projects set it
+ * (`demos/2d/platformer` is 800x480, `demos/2d/pong` 640x400).
+ *
+ * This is the case `projectConfig`'s "must not vary" rule does not cover. That
+ * rule is about 3D FRAME determinism: the 3D camera renders whatever aspect the
+ * harness asks for, so pinning it keeps a 3D reference comparable run to run.
+ * A 2D scene is different in kind — the viewport rect is part of the scene's
+ * layout, not of the camera, so overriding it composes the scene differently
+ * from how Godot would and no amount of matching frame sizes recovers that.
+ * The 2D path therefore takes its size from HERE and the 3D path keeps the
+ * override.
+ *
+ * `projectViewportSize` in `parser/projectSettingsParser.ts` is the authority;
+ * this is the same two keys read without a build step, as with the localStorage
+ * keys in `previewServer.mjs`.
+ */
+export function projectViewportSizeFromIni(sourceIni) {
+  const axis = (key, fallback) => {
+    const match = new RegExp(`^\\s*window/size/${key}\\s*=\\s*(\\S+)`, 'm').exec(sourceIni ?? '');
+    if (!match) return fallback;
+    const value = Number(match[1]);
+    return Number.isFinite(value) && value > 0 ? Math.round(value) : fallback;
+  };
+  return {
+    width: axis('viewport_width', CANVAS_2D_CAPTURE.width),
+    height: axis('viewport_height', CANVAS_2D_CAPTURE.height),
+  };
+}
+
 export function projectConfig(sourceIni, { width, height }) {
   const drop = [
     /^environment\/defaults\/default_environment\s*=/,
@@ -336,6 +368,7 @@ function bootstrapScript({
   modeOut,
   fov,
   fovExplicit,
+  canvas2DSize,
 }) {
   return `extends Node3D
 
@@ -347,7 +380,7 @@ const MODE_OUT := ${gdString(modeOut)}
 const MODE := "${mode}"
 const SCENE_CAMERA := ${sceneCamera ? 'true' : 'false'}
 const FOV := ${fov}
-const CANVAS_2D_SIZE := Vector2i(${CANVAS_2D_CAPTURE.width}, ${CANVAS_2D_CAPTURE.height})
+const CANVAS_2D_SIZE := Vector2i(${canvas2DSize.width}, ${canvas2DSize.height})
 const CLEAR_2D := ${gdColor(CANVAS_2D_CAPTURE.clearColor)}
 
 func _ready() -> void:
@@ -705,6 +738,7 @@ async function renderInto(
       boundsOut: boundsOut ? resolve(boundsOut) : null,
       modeOut,
       fov,
+      canvas2DSize: projectViewportSizeFromIni(sourceIni),
     })
   );
   await writeFile(join(work, '__ref_main.tscn'), MAIN_SCENE);
