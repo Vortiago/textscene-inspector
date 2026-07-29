@@ -40,8 +40,11 @@ is the question a UI regression actually poses.
 
 ## Consequences
 
-- Two browser harnesses exist on purpose. The split is by *what is being measured* — pixels
-  from the renderer (goldens) versus DOM facts from the overlay (verify-2d) — not by accident.
+- Browser harnesses exist on purpose, and there are three. The split is by *what is being
+  measured*, not by accident: pixels from the renderer (goldens), DOM facts from the overlay
+  (verify-2d), and pixels of a raster *derived* from the overlay (verify-raster — the
+  `rasterizeControlSubtree` gate added by ADR-0003's 2026-07-29 amendment, which needs a real
+  browser for the same reason this ADR does: happy-dom has neither layout nor a rasteriser).
 - The gate needs a preview server, so it is slower than `test:unit` and cannot run in-process.
 - Assertions are counts and types, so they catch "the subtree vanished" but not "it moved 10px".
   That is the intended trade: the failure this exists to catch is silent disappearance.
