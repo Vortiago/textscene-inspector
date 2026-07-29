@@ -150,6 +150,15 @@ const FRAME_ON_OPEN_STORAGE_KEY = 'tsi.frameOnOpen';
  * the one the Godot frame can be compared with.
  */
 export const FIT_ON_OPEN_2D_STORAGE_KEY = 'tsi.fitOnOpen2D';
+/**
+ * `VIEWPORT_MODE_STORAGE_KEY` in r3f/contexts/ViewportModeContext.tsx — the
+ * user's own workspace preference, which `WorkspaceAutoSelect` overrides only
+ * when the scene ROOT claims a workspace. A `Node`-rooted 2D scene
+ * (`game_splitscreen.tscn`: Node → ColorRect → SubViewportContainers) claims
+ * neither, exactly as in Godot's editor, so without this a 2D capture of one
+ * opens in the 3D workspace and finds no stage to shoot.
+ */
+export const VIEWPORT_MODE_STORAGE_KEY = 'tsi.viewportMode';
 
 export const VIEWPORT = { width: 1280, height: 800 };
 
@@ -236,6 +245,14 @@ export async function createCaptureContext(browser, { frameOnOpen, canvas2D = fa
     await context.addInitScript(
       ([key, value]) => window.localStorage.setItem(key, value),
       [FIT_ON_OPEN_2D_STORAGE_KEY, 'false']
+    );
+    // Seeds the preference the shell reads once at mount. A scene whose root
+    // DOES claim a workspace still wins here (WorkspaceAutoSelect applies its
+    // claim after), so a Node3D-rooted scene captured with --2d still reports
+    // the mismatch rather than silently shooting the wrong frame.
+    await context.addInitScript(
+      ([key, value]) => window.localStorage.setItem(key, value),
+      [VIEWPORT_MODE_STORAGE_KEY, JSON.stringify('2D')]
     );
   }
   // Viewport chrome that floats over the canvas in BOTH modes, and so would
