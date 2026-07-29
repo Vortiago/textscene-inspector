@@ -58,10 +58,12 @@ restored afterwards, because `<Camera3D>` builds every camera at the canvas's
   right. It is also NOT the target's colour space: three renders into a non-XR
   target in the WORKING space regardless of `texture.colorSpace`
   (`WebGLPrograms.js`), the target is tagged to match, and flipping that tag
-  moves no probe by more than one code value. The residual is unexplained.
-  `3d_in_2d.tscn`, whose sub-viewport is `transparent_bg` and lit from inside
-  its own subtree, matches closely — so the gap tracks the shared world's
-  environment contribution rather than the pass itself.
+  and rebuilding moves no probe by more than one code value. What localises it
+  is the other acceptance scene: `3d_in_2d.tscn`, whose sub-viewport sets
+  `transparent_bg` and is lit entirely from inside its own subtree, matches
+  closely. The gap therefore sits in what the SHARED world contributes to the
+  target — its environment and sky — not in the pass, the target format or the
+  camera.
 - **One content kind per target.** Godot composites a viewport's 3D world and
   its 2D canvas into one target. The previewer's renderer draws one workspace at
   a time, so a mixed-content sub-viewport shows its 3D half only.
