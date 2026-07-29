@@ -47,3 +47,8 @@ Strict parsing format-checks nothing on this node: no validators are registered 
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 <!-- lint:end -->
+
+Identical to HSplitContainer's, and for the same reason: the three properties
+it adds are plain scalars that Godot clamps or ignores at layout time rather
+than at load, so strict and lenient parsing have nothing to disagree about. A
+malformed value leaves the property undefined and the Godot default applies.

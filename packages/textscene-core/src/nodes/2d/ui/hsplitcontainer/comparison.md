@@ -103,3 +103,16 @@ Strict parsing format-checks nothing on this node: no validators are registered 
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 <!-- lint:end -->
+
+Strict and lenient parsing do not diverge here, because neither parser
+interprets these three properties beyond their scalar types: `split_offset` is
+any int (Godot clamps it at layout time, not at load), `collapsed` is a bool,
+and `dragger_visibility` is an enum Godot itself accepts out of range —
+`_get_separation` only tests it against `DRAGGER_HIDDEN_COLLAPSED`, so an
+unknown value behaves as VISIBLE on both sides. A malformed value leaves the
+property undefined and the Godot default applies.
+
+The layout has nothing structural to lint. "Fewer than two children" is not a
+defect — Godot fits a lone child to the whole container, and a
+SplitContainer is a perfectly ordinary single-child wrapper while a scene is
+being built up.

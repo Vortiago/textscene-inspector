@@ -157,19 +157,14 @@ const TARGETS = [
   ],
   /**
    * The same surface fed by the 3D pass instead of the 2D one — the sibling
-   * that localises which pass filled the target.
+   * that localises WHICH PASS filled the target. The two fixtures author the
+   * same `Color(0.5, 0.5, 0.5)`, so a curve applied to one pass and not the
+   * other shows up as a bare value difference between two otherwise identical
+   * scenes. It is the pair that caught the 2D canvas tonemapping.
    *
    *   pnpm ref:godot scenes/fixtures/unit-sub-viewport-container-3d-content.tscn \
    *     --probe 200,120 --probe 280,210
    *   → rgb(127, 127, 127) · rgb(76, 76, 76)
-   *
-   * The box is NOT gated on Godot's 127: we render 140 there, because
-   * `<SubViewport>` leaves the renderer's live tone curve in force for 3D
-   * content while the 2D canvas that hosts every viewport surface never
-   * configures one for parity (issue #379). The blit is not implicated — the
-   * same code path renders the 2D sibling's identical authored colour at 128.
-   * What is gated is everything that pass got right, plus the one thing a
-   * regression would take: content in the box's rect at all.
    */
   [
     'sub-viewport-3d-content',
@@ -181,12 +176,12 @@ const TARGETS = [
         node: 'SubViewport',
         size: [200, 150],
         probes: [
+          // The unshaded box: the SAME number the 2D sibling's band reads.
+          [100, 40, [128, 128, 128], 'the unshaded box, authored Color(0.5, 0.5, 0.5)'],
           [180, 130, [77, 77, 77], 'uncovered — the viewport clear colour'],
           [100, 130, [77, 77, 77], 'below the box — where a vertical flip puts it'],
           [20, 40, [77, 77, 77], 'left of the box — the camera frames it centred'],
         ],
-        // Godot renders rgb(127, 127, 127) here; see #379 for the gap.
-        notClear: [[100, 40, 'the unshaded box']],
       },
     },
   ],
@@ -252,8 +247,6 @@ const TARGETS = [
 
 /** Godot quantises before the sRGB curve; the 8-bit linear target quantises after. */
 const PROBE_TOLERANCE = 2;
-/** Godot's `default_clear_color` as the blit displays it — `viewportBlit.ts`. */
-const GODOT_CLEAR_RGB = 77;
 
 mkdirSync(OUT, { recursive: true });
 
@@ -318,9 +311,6 @@ for (const [name, file, expect = {}] of TARGETS) {
           reason: null,
           size: [canvas.width, canvas.height],
           samples: wanted.probes.map(([x, y]) => [
-            ...context.getImageData(x, y, 1, 1).data,
-          ].slice(0, 3)),
-          notClear: (wanted.notClear ?? []).map(([x, y]) => [
             ...context.getImageData(x, y, 1, 1).data,
           ].slice(0, 3)),
         };
@@ -440,16 +430,6 @@ for (const [name, file, expect = {}] of TARGETS) {
           failures.push(
             `surface (${x}, ${y}) [${label}] is rgb(${got.join(', ')}), ` +
               `expected rgb(${wantRgb.join(', ')}) ±${PROBE_TOLERANCE}`
-          );
-        }
-      });
-      // "Content arrived here", for a probe whose exact value is a known gap.
-      (expect.surface.notClear ?? []).forEach(([x, y, label], i) => {
-        const got = surface.notClear[i];
-        if (got.every((c) => Math.abs(c - GODOT_CLEAR_RGB) <= PROBE_TOLERANCE)) {
-          failures.push(
-            `surface (${x}, ${y}) [${label}] is the clear colour rgb(${got.join(', ')}) — ` +
-              'nothing was drawn there'
           );
         }
       });
