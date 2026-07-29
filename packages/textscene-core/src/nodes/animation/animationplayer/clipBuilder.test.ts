@@ -10,8 +10,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { AnimationMixer, LoopOnce, LoopPingPong, LoopRepeat, Object3D } from 'three';
-import { buildClip, loopSettingsFor, maxParentHops } from './clipBuilder';
-import { climbNamedAncestors } from './animationRoot';
+import { buildClip, loopSettingsFor, resolveTrackBinding } from './clipBuilder';
 import type { GodotAnimation, GodotTrack } from './animationResolver';
 
 const DEG2RAD = Math.PI / 180;
@@ -178,55 +177,75 @@ describe('buildClip — quaternion (rotation_3d)', () => {
   });
 });
 
+describe('resolveTrackBinding — Godot NodePath semantics', () => {
+  // `..` cancels the segment before it, as in Godot. Pinning these directly is
+  // what a leading-only hop count got wrong: it read `Child/../../Sibling` as
+  // descending and let the track bind to a node outside the root.
+  it.each([
+    ['.', { kind: 'root' }],
+    ['', { kind: 'root' }],
+    ['./Target', { kind: 'name', name: 'Target' }],
+    ['Target', { kind: 'name', name: 'Target' }],
+    ['Child/Target', { kind: 'name', name: 'Target' }],
+    ['Child/Target/', { kind: 'name', name: 'Target' }],
+    ['A/../B', { kind: 'name', name: 'B' }],
+    ['Sprite/..', { kind: 'root' }],
+    ['..', { kind: 'unbindable' }],
+    ['../Sibling', { kind: 'unbindable' }],
+    ['Child/../../Sibling', { kind: 'unbindable' }],
+  ])('resolves %j', (path, expected) => {
+    expect(resolveTrackBinding(path)).toEqual(expected);
+  });
+});
+
 describe('buildClip — NodePaths that leave the animation root', () => {
-  it('names a parent-relative track by its target alone, so THREE can parse it', () => {
+  it('drops a track that resolves above the animation root, keeping its siblings', () => {
     const clip = buildClip(
       anim('a', 1, [
         track('position', [{ time: 0, value: [1, 2, 3], transition: 1 }], '../Sibling'),
-      ])
-    );
-    // A raw "../Sibling.position" makes clipAction throw outright.
-    expect(findTrack(clip, 'Sibling.position')).toBeDefined();
-    expect(() => new AnimationMixer(new Object3D()).clipAction(clip)).not.toThrow();
-  });
-
-  it('drives a parent-relative target when the mixer is rooted above it', () => {
-    const grandparent = new Object3D();
-    grandparent.name = 'Grandparent';
-    const root = new Object3D();
-    root.name = 'Root';
-    const sibling = new Object3D();
-    sibling.name = 'Sibling';
-    grandparent.add(root);
-    grandparent.add(sibling);
-
-    const animation = anim('move', 2, [
-      track(
-        'position',
-        [
-          { time: 0, value: [0, 0, 0], transition: 1 },
-          { time: 2, value: [0, 0, 6], transition: 1 },
-        ],
-        '../Sibling'
-      ),
-    ]);
-    expect(maxParentHops([animation])).toBe(1);
-
-    const mixer = new AnimationMixer(climbNamedAncestors(root, maxParentHops([animation])));
-    mixer.clipAction(buildClip(animation)).play();
-    mixer.update(1);
-    expect(sibling.position.z).toBeCloseTo(3, 5);
-  });
-
-  it('drops a path of pure `..` hops, which names an ancestor rather than a node', () => {
-    const clip = buildClip(
-      anim('a', 1, [
-        track('position', [{ time: 0, value: [1, 2, 3], transition: 1 }], '..'),
         track('position', [{ time: 0, value: [4, 5, 6], transition: 1 }], 'Target'),
       ])
     );
     expect(findTrack(clip, 'Target.position')).toBeDefined();
     expect(clip.tracks).toHaveLength(1);
+    // A raw "../Sibling.position" would make clipAction throw outright.
+    expect(() => new AnimationMixer(new Object3D()).clipAction(clip)).not.toThrow();
+  });
+
+  it('binds the colon-only NodePath(":position") form to the root, not dropping it', () => {
+    const clip = buildClip(
+      anim('a', 1, [track('position', [{ time: 0, value: [1, 2, 3], transition: 1 }], '')])
+    );
+    expect(findTrack(clip, '.position')).toBeDefined();
+  });
+
+  it('keeps a "." track bound to the mixer root when a sibling track is unbindable', () => {
+    // The regression this pins: an unbindable track must not relocate what "."
+    // means for every other track in the same clip.
+    const root = new Object3D();
+    root.name = 'Root';
+    const parent = new Object3D();
+    parent.name = 'Parent';
+    parent.add(root);
+
+    const clip = buildClip(
+      anim('move', 2, [
+        track(
+          'position',
+          [
+            { time: 0, value: [0, 0, 0], transition: 1 },
+            { time: 2, value: [0, 0, 10], transition: 1 },
+          ],
+          '.'
+        ),
+        track('position', [{ time: 0, value: [1, 1, 1], transition: 1 }], '../Escapes'),
+      ])
+    );
+    const mixer = new AnimationMixer(root);
+    mixer.clipAction(clip).play();
+    mixer.update(1);
+    expect(root.position.z).toBeCloseTo(5, 5);
+    expect(parent.position.z).toBe(0);
   });
 
   it('binds a multi-level descending targetPath, which THREE resolves by final name', () => {

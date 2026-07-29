@@ -73,19 +73,28 @@ describe('resolveTrackTarget — root-targeting (NodePath ".")', () => {
     expect(resolveTrackTarget(root, 'Child/Target')).toBe(target);
   });
 
-  it('resolves a parent-relative path against the climbed mixer root', () => {
-    const grandparent = new Object3D();
+  it('returns undefined for a path that resolves above the root, which the mixer also drops', () => {
     const root = new Object3D();
     const sibling = new Object3D();
     sibling.name = 'Sibling';
-    grandparent.add(root);
-    grandparent.add(sibling);
-    // The mixer is rooted at the grandparent for exactly this reason.
-    expect(resolveTrackTarget(grandparent, '../Sibling')).toBe(sibling);
+    root.add(sibling);
+    // Named `Sibling` and present, but the path leaves the root — agreeing with
+    // buildClip is what matters, or the snapshot covers what the mixer does not.
+    expect(resolveTrackTarget(root, '../Sibling')).toBeUndefined();
+    expect(resolveTrackTarget(root, '..')).toBeUndefined();
   });
 
-  it('returns undefined for a path of pure `..` hops, which names no node', () => {
-    expect(resolveTrackTarget(new Object3D(), '..')).toBeUndefined();
+  it('maps an empty targetPath to the root, matching the colon-only NodePath form', () => {
+    const root = new Object3D();
+    expect(resolveTrackTarget(root, '')).toBe(root);
+  });
+
+  it('resolves a path that cancels back to the root', () => {
+    const root = new Object3D();
+    const child = new Object3D();
+    child.name = 'Sprite';
+    root.add(child);
+    expect(resolveTrackTarget(root, 'Sprite/..')).toBe(root);
   });
 });
 

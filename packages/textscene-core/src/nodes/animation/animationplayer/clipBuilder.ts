@@ -31,52 +31,51 @@ import { warn } from '../../../logger';
 const DEG2RAD = Math.PI / 180;
 
 /**
- * The node name THREE.PropertyBinding binds a Godot NodePath to, or undefined
- * when the path names no node at all.
+ * How a track's Godot NodePath binds against the animation root.
  *
- * PropertyBinding matches on the FINAL segment and searches the mixer root's
- * whole subtree, discarding the ancestors — so `A/Target` and `B/Target` both
- * reach `Target`, and a duplicated name binds to whichever is found first. That
- * is also what makes `../Target` work: emit the final name only and root the
- * mixer high enough to contain it (`parentHops` + `climbNamedAncestors`). A raw
- * `..` never reaches a track name, which matters because THREE's track-name
- * grammar cannot parse one and throws while the action is built.
+ * `root` — the path resolves to the animation root itself. THREE binds that
+ * through an EMPTY node name, so `NodePath(".")` and the colon-only
+ * `NodePath(":position")` form both land here, as does anything that cancels
+ * out (`Sprite/..`).
  *
- * Undefined only for a path of pure `..` hops, which names an ancestor rather
- * than a node reachable by name.
+ * `name` — bind by this name. THREE.PropertyBinding reads only the final
+ * segment and searches the root's whole subtree, so the ancestors buy nothing;
+ * `A/Target` and `B/Target` are indistinguishable to it, and a duplicated name
+ * binds to whichever it finds first (#371 proposes exact binding instead).
  *
- * The single source of truth for both the clip's track names and
- * `resolveTrackTarget`; if they disagree, the Euler reorder and the
- * base-transform snapshot silently miss a target the mixer is driving.
+ * `unbindable` — the path climbs above the animation root, which
+ * PropertyBinding cannot reach: its search never leaves the root's subtree, and
+ * a literal `..` in a track name is outside its grammar and throws while the
+ * action is built. Such a track is dropped with a warning. NOT supported, and
+ * #371 is what would actually support it.
  */
-export function bindableNodeName(targetPath: string): string | undefined {
-  const named = targetPath.split('/').filter((s) => s !== '' && s !== '.' && s !== '..');
-  return named.length === 0 ? undefined : named[named.length - 1];
-}
+export type TrackBinding =
+  | { kind: 'root' }
+  | { kind: 'name'; name: string }
+  | { kind: 'unbindable' };
 
 /**
- * Leading `..` hops in a track's NodePath — how far above the animation root the
- * mixer must be rooted for PropertyBinding's subtree search to reach the target.
+ * Resolve a NodePath the way Godot does — `..` cancels the segment before it —
+ * and report how THREE can bind the result.
+ *
+ * The single source of truth for both the clip's track names and
+ * `resolveTrackTarget`. Two functions computing this separately is how the
+ * Euler reorder and the base-transform snapshot come to miss a target the mixer
+ * is driving.
  */
-export function parentHops(targetPath: string): number {
-  let hops = 0;
+export function resolveTrackBinding(targetPath: string): TrackBinding {
+  const stack: string[] = [];
   for (const segment of targetPath.split('/')) {
-    if (segment === '..') hops += 1;
-    else if (segment !== '' && segment !== '.') break;
-  }
-  return hops;
-}
-
-/** The deepest `parentHops` over every track of every animation. */
-export function maxParentHops(animations: GodotAnimation[]): number {
-  let max = 0;
-  for (const animation of animations) {
-    for (const track of animation.tracks) {
-      const hops = parentHops(track.targetPath);
-      if (hops > max) max = hops;
+    if (segment === '' || segment === '.') continue;
+    if (segment !== '..') {
+      stack.push(segment);
+      continue;
     }
+    // Climbing above the animation root leaves what THREE can address.
+    if (stack.length === 0) return { kind: 'unbindable' };
+    stack.pop();
   }
-  return max;
+  return stack.length === 0 ? { kind: 'root' } : { kind: 'name', name: stack[stack.length - 1]! };
 }
 
 export interface LoopSettings {
@@ -109,10 +108,10 @@ export function buildClip(animation: GodotAnimation): AnimationClip {
 }
 
 function buildTracks(track: GodotTrack): KeyframeTrack[] {
-  if (track.targetPath !== '.' && bindableNodeName(track.targetPath) === undefined) {
+  if (resolveTrackBinding(track.targetPath).kind === 'unbindable') {
     warn(
-      `[AnimationPlayer] track target "${track.targetPath}" names an ancestor rather than a node ` +
-        `THREE can bind by name — dropping the track so the rest of the clip still plays`
+      `[AnimationPlayer] track target "${track.targetPath}" resolves above the animation root, ` +
+        `which THREE cannot bind — dropping the track so the rest of the clip still plays`
     );
     return [];
   }
@@ -150,12 +149,11 @@ function threeInterpolation(track: GodotTrack): InterpolationModes {
 
 function buildTrackData(track: GodotTrack): KeyframeTrack[] {
   const times = track.keys.map((k) => k.time);
-  // A track targeting the animation root itself (Godot `NodePath(".")`) binds
-  // to the root via an empty node name — THREE.PropertyBinding resolves the
-  // empty/`.` node to the mixer root. Every other target binds by its final
-  // name, which is all PropertyBinding reads; `../Sibling` therefore reaches
-  // `Sibling` once the mixer is rooted above it.
-  const prefix = track.targetPath === '.' ? '' : (bindableNodeName(track.targetPath) ?? '');
+  // A track targeting the animation root itself binds through an empty node
+  // name — THREE.PropertyBinding resolves that to the mixer root. Every other
+  // target binds by its final name, which is all PropertyBinding reads.
+  const binding = resolveTrackBinding(track.targetPath);
+  const prefix = binding.kind === 'name' ? binding.name : '';
 
   switch (track.property) {
     case 'position':
