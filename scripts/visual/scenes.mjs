@@ -402,4 +402,15 @@ export const GOLDEN_SCENES = [
   // driven to the relay's upper-right. Verified against real Godot 4.6.3.
   { name: 'remote-transform-3d', file: 'unit-remote-transform-3d.tscn' },
   { name: 'remote-transform-2d', file: 'unit-remote-transform-2d.tscn', maxDiffPct: 0.5 },
+
+  // --- ViewportTexture: content sampled THROUGH a SubViewport target ---
+  // The only golden that consumes a render target, so it alone pins the
+  // through-target colour pipeline: the offscreen pass must tonemap like
+  // Godot's viewport pass (shared environment in force inside the target,
+  // applied again on the consuming quad — curve squared), and the target's
+  // linear storage must survive the consumer re-tagging it sRGB. Both
+  // regressions are invisible in every other scene, where all content renders
+  // in the main pass exactly once. Probe-verified against Godot 4.6.3 to
+  // within 1% linear per sample.
+  { name: 'sub-viewport-texture', file: 'unit-sub-viewport-texture.tscn' },
 ];

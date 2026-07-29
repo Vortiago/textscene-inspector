@@ -9,6 +9,7 @@ import * as THREE from 'three';
 
 import {
   DEFAULT_CLEAR_COLOR,
+  createOffscreenTarget,
   orthoFrameForSize,
   selectViewportCamera,
   targetPixelsToImageData,
@@ -164,6 +165,77 @@ describe('targetPixelsToImageData', () => {
 
   it('returns null for a zero-area rect rather than constructing an empty ImageData', () => {
     expect(targetPixelsToImageData(new Uint8Array(0), 0, 0)).toBeNull();
+  });
+});
+
+describe('createOffscreenTarget', () => {
+  /**
+   * Godot tonemaps EVERY viewport render, a sub-viewport's included.
+   * `renderer_scene_render_rd.cpp`, `_render_buffers_post_process_and_tonemap`
+   * (Godot 4.4) reads the viewport's environment and runs the curve into the
+   * viewport's own target:
+   *
+   *     tonemap.tonemap_mode = environment_get_tone_mapper(p_render_data->environment);
+   *     ...
+   *     tone_mapper->tonemapper(color_texture, dest_fb, tonemap);
+   *
+   * A shared-world sub-viewport gets the SAME environment as the main view
+   * (`viewport.cpp`, `Viewport::find_world_3d()`: `return
+   * parent->find_world_3d();`), so its target stores POST-tonemap values and
+   * the main viewport tonemaps the consuming surface again — the curve applies
+   * twice to anything seen through a target. three structurally refuses the
+   * first application: `WebGLPrograms.js` grants `toneMapping =
+   * renderer.toneMapping` only when `currentRenderTarget === null ||
+   * currentRenderTarget.isXRRenderTarget === true`. The flag is the one switch
+   * that flips that decision, and it is a measured brightness contract, not a
+   * hint: without it, `unit-sub-viewport-texture.tscn` under the ADR-0025
+   * preview environment (FILMIC) sampled 0.60–0.65x of Godot in linear terms
+   * through the quad while matching the direct view exactly — and applying the
+   * ported FILMIC curve once to the previewer's own probes reproduced Godot's
+   * to within three code values (the sky sample exactly: rgb(177, 194, 212)).
+   */
+  it('marks the target so three tonemaps the offscreen pass like the main pass', () => {
+    const target = createOffscreenTarget(64, 64, 'Probe');
+    expect((target as { isXRRenderTarget?: boolean }).isXRRenderTarget).toBe(true);
+    target.dispose();
+  });
+
+  /**
+   * With `isXRRenderTarget` set, three takes the pass's output space from
+   * `texture.colorSpace` (`WebGLPrograms.js`, the same decision as above), so
+   * LINEAR is load-bearing twice over: the pass writes working-space values
+   * with no encode, and a consuming material samples them back with no decode
+   * — the identity round trip. Tagging the target sRGB would install a
+   * shader-side encode ON TOP of the SRGB8 hardware encode three allocates for
+   * sRGB target textures, and everything sampled through it would darken.
+   */
+  it('stores the working colour space, so write and sample round-trip exactly', () => {
+    const target = createOffscreenTarget(64, 64, 'Probe');
+    expect(target.texture.colorSpace).toBe(THREE.LinearSRGBColorSpace);
+    target.dispose();
+  });
+
+  /**
+   * Linear min/mag with no mipmaps matches Godot's default
+   * `canvas_item_default_texture_filter` (1, LINEAR); depth without stencil is
+   * what a 3D pass needs and nothing more.
+   */
+  it('samples linearly without mipmaps, and carries depth but no stencil', () => {
+    const target = createOffscreenTarget(64, 64, 'Probe');
+    expect(target.texture.minFilter).toBe(THREE.LinearFilter);
+    expect(target.texture.magFilter).toBe(THREE.LinearFilter);
+    expect(target.texture.generateMipmaps).toBe(false);
+    expect(target.depthBuffer).toBe(true);
+    expect(target.stencilBuffer).toBe(false);
+    target.dispose();
+  });
+
+  it('names the texture after the sub-viewport and sizes it to the rect', () => {
+    const target = createOffscreenTarget(320, 240, 'Viewport');
+    expect(target.texture.name).toBe('Viewport::target');
+    expect(target.width).toBe(320);
+    expect(target.height).toBe(240);
+    target.dispose();
   });
 });
 

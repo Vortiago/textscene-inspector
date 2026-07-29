@@ -46,24 +46,22 @@ Godot. Its projection is rebuilt against the TARGET rect for the pass and
 restored afterwards, because `<Camera3D>` builds every camera at the canvas's
 16:9 default and the same object may be what the main canvas renders through.
 
+The pass **tonemaps like Godot's viewport pass**. Godot runs the tonemap for
+every viewport render (`_render_buffers_post_process_and_tonemap` in
+`renderer_scene_render_rd.cpp`), through the environment the viewport's
+`find_world_3d()` resolves — so a shared-world target stores post-tonemap
+values and the main view tonemaps the consuming surface again, curve squared.
+three never tonemaps into an ordinary render target (`WebGLPrograms.js` grants
+`toneMapping` only to the canvas and to XR targets), so the target carries the
+XR flag to opt back in, scoped by Godot's own-world rule: a shared world keeps
+the renderer's live curve, an own world (a fresh `World3D`, no Environment —
+LINEAR) and 2D-canvas content (drawn after Godot's tonemap pass) render with
+none. Measured on `unit-sub-viewport-texture.tscn` against Godot 4.6.3: every
+probe through the quad within 1.0% in linear terms (sky 177,194,212 vs
+177,193,212; sphere 121,130,145 vs 121,130,144), with the direct view exact.
+
 ## Divergences (offscreen pass)
 
-- **Measured brightness gap on a shared-world target.** A Godot 4.6.3 render of
-  `unit-sub-viewport-texture.tscn` and the previewer's own capture agree
-  **exactly** in the main view (probe 630,240 → rgb(143, 150, 160) vs
-  rgb(143, 150, 161)) but not inside the target, where the previewer is about
-  0.6x in linear terms — probe 400,250 rgb(167, 188, 209) vs rgb(133, 153, 177),
-  probe 420,440 rgb(80, 60, 50) vs rgb(62, 52, 40). The sphere and the horizon
-  land in the right place and the target is not flipped, so the geometry is
-  right. It is also NOT the target's colour space: three renders into a non-XR
-  target in the WORKING space regardless of `texture.colorSpace`
-  (`WebGLPrograms.js`), the target is tagged to match, and flipping that tag
-  and rebuilding moves no probe by more than one code value. What localises it
-  is the other acceptance scene: `3d_in_2d.tscn`, whose sub-viewport sets
-  `transparent_bg` and is lit entirely from inside its own subtree, matches
-  closely. The gap therefore sits in what the SHARED world contributes to the
-  target — its environment and sky — not in the pass, the target format or the
-  camera.
 - **One content kind per target.** Godot composites a viewport's 3D world and
   its 2D canvas into one target. The previewer's renderer draws one workspace at
   a time, so a mixed-content sub-viewport shows its 3D half only.

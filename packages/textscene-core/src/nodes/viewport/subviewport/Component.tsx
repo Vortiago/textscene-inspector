@@ -45,6 +45,7 @@ import {
 import { Node } from '../../node/Component';
 import {
   DEFAULT_CLEAR_COLOR,
+  createOffscreenTarget,
   orthoFrameForSize,
   selectViewportCamera,
   targetPixelsToImageData,
@@ -123,29 +124,13 @@ function OffscreenViewport({
     return scene;
   }, [node.name]);
 
-  const target = useMemo(() => {
-    const created = new THREE.WebGLRenderTarget(width, height, {
-      depthBuffer: true,
-      stencilBuffer: false,
-    });
-    // LINEAR, not sRGB, and this is measured rather than chosen: three renders
-    // into a non-XR target in the WORKING colour space and ignores the target
-    // texture's own — `WebGLPrograms.js` picks
-    //   `currentRenderTarget === null ? renderer.outputColorSpace
-    //      : (isXRRenderTarget ? texture.colorSpace : workingColorSpace)`.
-    // Tagging the target sRGB therefore installs a DECODE when a material
-    // samples it with no matching ENCODE on the way in, and the whole target
-    // renders about 0.6x too dark in linear terms — which is exactly what a
-    // Godot 4.6.3 probe of `unit-sub-viewport-texture.tscn` showed.
-    created.texture.colorSpace = THREE.LinearSRGBColorSpace;
-    created.texture.name = `${node.name}::target`;
-    // The sub-viewport's own filter enum is not reproduced; linear matches
-    // Godot's default `canvas_item_default_texture_filter` (1, LINEAR).
-    created.texture.minFilter = THREE.LinearFilter;
-    created.texture.magFilter = THREE.LinearFilter;
-    created.texture.generateMipmaps = false;
-    return created;
-  }, [width, height, node.name]);
+  // Carries the storage contract AND the tonemap contract — Godot tonemaps a
+  // sub-viewport's render into its target exactly as it tonemaps the main
+  // view's, and `createOffscreenTarget` is where three is made to agree.
+  const target = useMemo(
+    () => createOffscreenTarget(width, height, node.name),
+    [width, height, node.name]
+  );
 
   useEffect(() => () => target.dispose(), [target]);
 
@@ -204,6 +189,7 @@ function OffscreenViewport({
 
     const previousTarget = gl.getRenderTarget();
     const previousAlpha = gl.getClearAlpha();
+    const previousToneMapping = gl.toneMapping;
     const previousColor = new THREE.Color();
     gl.getClearColor(previousColor);
 
@@ -219,6 +205,26 @@ function OffscreenViewport({
     }
 
     try {
+      // Godot tonemaps a viewport through ITS OWN world's environment
+      // (`_render_buffers_post_process_and_tonemap` reads the environment the
+      // viewport's `find_world_3d()` resolves). A shared world resolves to the
+      // parent's, whose curve IS the renderer's current tonemap — leave it in
+      // force. An own world is a fresh `World3D` with no Environment, and
+      // Godot's default `tonemap_mode` is LINEAR — no curve. A 2D canvas is
+      // never tonemapped at all: Godot draws canvas items into the target
+      // AFTER the 3D tonemap pass. Suspended before the bind (the test seam
+      // observes the bind), restored in `finally` for the main render.
+      if (properties.own_world_3d || kind === '2d') gl.toneMapping = THREE.NoToneMapping;
+      // The consumer side re-tags this texture: `@react-three/fiber`'s
+      // `applyProps` stamps `SRGBColorSpace` on any RGBA8/UnsignedByte texture
+      // assigned to a colour-map prop, and the published target lands on an
+      // albedo `map` exactly like a file texture. With `isXRRenderTarget` set,
+      // three reads THIS pass's output space from the tag per draw, so the
+      // stamp would bake an sRGB OETF into the offscreen render on top of the
+      // tonemap (measured: the whole target 1.5–6.5x too bright in linear
+      // terms). The stamp lands during React commits; re-asserting here, right
+      // before the bind, means no offscreen render ever runs under it.
+      target.texture.colorSpace = THREE.LinearSRGBColorSpace;
       gl.setRenderTarget(target);
       gl.setClearColor(DEFAULT_CLEAR_COLOR, transparentBg ? 0 : 1);
       gl.clear(true, true, true);
@@ -229,6 +235,7 @@ function OffscreenViewport({
     } finally {
       gl.setRenderTarget(previousTarget);
       gl.setClearColor(previousColor, previousAlpha);
+      gl.toneMapping = previousToneMapping;
       if (perspective?.isPerspectiveCamera && restoreAspect !== null) {
         perspective.aspect = restoreAspect;
         perspective.updateProjectionMatrix();

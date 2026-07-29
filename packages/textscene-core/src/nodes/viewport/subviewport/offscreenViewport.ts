@@ -27,6 +27,54 @@ export const DEFAULT_CLEAR_COLOR = new THREE.Color().setRGB(
 );
 
 /**
+ * The offscreen pass's render target — the storage contract AND the tonemap
+ * contract, which turn out to be two halves of one decision in three.
+ *
+ * Godot tonemaps every viewport render, a sub-viewport's included: the RD
+ * renderer's `_render_buffers_post_process_and_tonemap` reads the viewport's
+ * environment (`environment_get_tone_mapper`) and runs the curve into the
+ * viewport's own target, so a shared-world target stores POST-tonemap values
+ * and the main viewport applies the curve again to the consuming surface.
+ * three refuses that first application for an ordinary target:
+ * `WebGLPrograms.js` grants `toneMapping = renderer.toneMapping` only when
+ * `currentRenderTarget === null || currentRenderTarget.isXRRenderTarget ===
+ * true`. Without the flag the target held PRE-tonemap light and everything
+ * sampled through it missed one application of the environment's curve — a
+ * measured 0.60–0.65x linear gap under the ADR-0025 preview environment's
+ * FILMIC, while the same content matched Godot exactly in the direct view.
+ * Setting `isXRRenderTarget` makes the offscreen pass tonemap with the
+ * renderer's live curve exactly as the main pass does.
+ *
+ * The same three decision takes the pass's output space from
+ * `texture.colorSpace` once the flag is set, so LINEAR is load-bearing twice:
+ * the pass writes working-space values with no encode, and a consuming
+ * material samples them back with no decode — the identity round trip. An
+ * sRGB tag would stack a shader-side encode on the SRGB8 hardware encode
+ * three allocates for sRGB target textures and darken every sample.
+ */
+export function createOffscreenTarget(
+  width: number,
+  height: number,
+  name: string
+): THREE.WebGLRenderTarget {
+  const target = new THREE.WebGLRenderTarget(width, height, {
+    depthBuffer: true,
+    stencilBuffer: false,
+  });
+  target.texture.colorSpace = THREE.LinearSRGBColorSpace;
+  target.texture.name = `${name}::target`;
+  // The sub-viewport's own filter enum is not reproduced; linear matches
+  // Godot's default `canvas_item_default_texture_filter` (1, LINEAR).
+  target.texture.minFilter = THREE.LinearFilter;
+  target.texture.magFilter = THREE.LinearFilter;
+  target.texture.generateMipmaps = false;
+  // Not declared by @types/three; three itself toggles the flag on plain
+  // render targets the same way (`XRManager.js`).
+  (target as THREE.WebGLRenderTarget & { isXRRenderTarget: boolean }).isXRRenderTarget = true;
+  return target;
+}
+
+/**
  * The camera a sub-viewport renders through, or null when it has none.
  *
  * Godot binds a camera to the nearest Viewport ancestor: on
