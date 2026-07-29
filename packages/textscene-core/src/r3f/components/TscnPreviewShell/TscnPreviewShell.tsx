@@ -29,6 +29,7 @@ import { readPersisted, usePersistedState } from '../../hooks/usePersistedState.
 import { AnimatedValueProvider } from '../../contexts/AnimatedValueContext.js';
 import { AnimationDriverProvider } from '../../contexts/AnimationDriverContext.js';
 import { ViewportTextureProvider } from '../../contexts/ViewportTextureContext.js';
+import { ProjectSettingsProvider } from '../../contexts/ProjectSettingsContext.js';
 import {
   AnimationTransportProvider,
   useAnimationTransport,
@@ -255,7 +256,15 @@ export function TscnPreviewShell({
     // resolves it by NodePath. It wraps BOTH canvases and the DOM overlay
     // because consumers live on both sides of that split (ADR-0030).
     (children) => <ViewportTextureProvider>{children}</ViewportTextureProvider>,
-    (children) => <AnimatedValueProvider>{children}</AnimatedValueProvider>
+    (children) => <AnimatedValueProvider>{children}</AnimatedValueProvider>,
+    // The scene's `project.godot`. Outermost of the Control-facing providers
+    // because BOTH consumers of the theme scale sit under it — the on-screen
+    // overlay in `<Canvas2DStage>` and the off-screen `<ControlRasterHosts>`,
+    // which `<ViewportArea>` mounts side by side. Keyed on the root scene path
+    // so a corpus switch re-reads the incoming project's file.
+    (children) => (
+      <ProjectSettingsProvider sceneKey={rootScenePath}>{children}</ProjectSettingsProvider>
+    )
   );
 
   return withProviders(

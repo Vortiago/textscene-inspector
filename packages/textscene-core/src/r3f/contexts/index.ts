@@ -31,3 +31,10 @@ export {
 } from './MissingResourcesContext.js';
 export { Path2DCurveProvider, useParentPath2DCurve } from './Path2DCurveContext.js';
 export { Path3DCurveProvider, useParentPath3DCurve } from './Path3DCurveContext.js';
+export {
+  ProjectSettingsProvider,
+  useProjectSettings,
+  PROJECT_SETTINGS_PATH,
+  type ProjectSettingsValue,
+  type ProjectSettingsProviderProps,
+} from './ProjectSettingsContext.js';
