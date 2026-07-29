@@ -90,7 +90,7 @@ export function ProjectSettingsProvider({ children, sceneKey }: ProjectSettingsP
     setSettings(null);
 
     void (async () => {
-      const content = await bus.tryLoad(PROJECT_SETTINGS_PATH);
+      const content = await bus.tryLoad(PROJECT_SETTINGS_PATH, 'ProjectSettings');
       if (cancelled) return;
       if (typeof content !== 'string') return;
       const parsed = parseProjectSettings(content);
