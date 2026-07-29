@@ -73,6 +73,17 @@ export function World2DCanvas(props: World2DCanvasProps) {
       orthographic
       camera={{ position: [0, 0, 1000], near: 0.1, far: 4000 }}
       gl={{ alpha: true }}
+      // `flat` = `NoToneMapping`. Godot never tonemaps a canvas: the RD
+      // renderer runs `_render_buffers_post_process_and_tonemap` on the 3D
+      // buffers and composites canvas items into the viewport AFTER it, so a
+      // Sprite2D's albedo reaches the framebuffer as authored. Without this
+      // @react-three/fiber's default (ACES Filmic) applies to every 2D
+      // material, and — because a viewport surface only ever exists in this
+      // workspace — to the offscreen pass of a container's 3D sub-viewport
+      // too, which `<SubViewport>` deliberately leaves on the renderer's live
+      // curve. That is the one canvas where "the parent viewport's curve" has
+      // no Environment behind it, so the honest curve is none.
+      flat
       // Fill the stage and stay transparent to pointer input so the stage's
       // own drag-to-pan / wheel-to-zoom handlers keep working.
       style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}

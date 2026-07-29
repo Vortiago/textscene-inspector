@@ -98,7 +98,11 @@ which display real content.
   now correct on purpose with the `own_world_3d` flag honoured.
 - Control content inside a surface renders as DOM through a nested `ControlDispatcher` —
   cheaper and sharper than going through pixels, and it covers most of the committed
-  corpus. Only 2D-world and 3D content inside a *container* needs a pixel path.
+  corpus. 2D-world and 3D content inside a *container* takes the pixel path instead: the
+  surface snapshots the published target through `readPixels` and paints it into a
+  `<canvas>` stacked under the Control arm, applying the sRGB encode the target's
+  `LinearSRGBColorSpace` tag defers (measured against Godot 4.6.3 on
+  `unit-sub-viewport-container-2d-content.tscn`).
 - Node paths inside a sub-viewport stay in the one path space, so selection, the scene
   tree, and the inspector are unaffected by the boundary.
 - **Deliberate non-changes**, each of which looks like an inconsistency:
@@ -126,6 +130,13 @@ which display real content.
     namespaces — a trap worth knowing when reading these scenes.)
   - `render_target_update_mode` does not gate rendering: the previewer derives the target
     from the scene, so there is no per-frame update to skip.
+  - A surface's pixels stop updating once they settle. `readRenderTargetPixels` is a
+    synchronous GPU stall, so the blit samples on a bounded one-shot schedule and re-arms
+    only on a new target or a fresh parse; an `AnimationPlayer` inside a sub-viewport
+    shows its settled frame there.
+  - Which rasterizer owns a target is decided from the RESOLVED tree, so an `instance=`
+    child that has not loaded yet is classified provisionally and re-classified when its
+    sub-scene lands. A cyclic sub-scene reference stops the resolver at 32 levels.
 
 Recorded because the shared-World3D half is genuinely counter-intuitive — it contradicts
 the issue's own framing, and a future reader would otherwise "fix" it into a uniform

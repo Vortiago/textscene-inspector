@@ -13,7 +13,7 @@
  *   node scripts/showcase/verify-2d.mjs
  */
 
-/* global document, getComputedStyle */ // the page.evaluate callbacks below run in the browser
+/* global document, getComputedStyle, window */ // the page.evaluate callbacks below run in the browser
 
 import { launchShowcaseBrowser } from './browser.mjs';
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -114,12 +114,150 @@ const TARGETS = [
       ],
     },
   ],
+  /**
+   * A sub-viewport holding 2D-WORLD content: the only target whose pixels have
+   * to travel through `readPixels` → `<canvas>`, since a Control subtree
+   * renders as DOM and would look right with no blit at all. Nothing else in
+   * the repo can see this — the golden gate screenshots the WebGL canvas, and
+   * this canvas lives in the DOM overlay (ADR-0024).
+   *
+   * Every value below is a Godot 4.6.3 render of the same fixture:
+   *
+   *   pnpm ref:godot scenes/fixtures/unit-sub-viewport-container-2d-content.tscn \
+   *     --probe 200,100 --probe 130,160 --probe 280,210
+   *   → rgb(127, 127, 127) · rgb(255, 102, 0) · rgb(76, 76, 76)
+   *
+   * (probes there are stage coordinates: the surface's own top-left is the
+   * container's, at 100, 80.)
+   */
+  [
+    'sub-viewport-2d-content',
+    'unit-sub-viewport-container-2d-content.tscn',
+    {
+      minControls: 3,
+      types: ['SubViewportContainer', 'ColorRect'],
+      surface: {
+        node: 'SubViewport',
+        size: [200, 150],
+        probes: [
+          // The encode: stored 55, displayed 128. A raw blit reads 55 here and
+          // still looks like a plausible grey — this is the assertion that
+          // separates "the pixels arrived" from "the pixels arrived correct".
+          [100, 20, [128, 128, 128], 'Band, authored Color(0.5, 0.5, 0.5)'],
+          [30, 80, [255, 102, 0], 'Mark'],
+          [180, 130, [77, 77, 77], 'uncovered — the viewport clear colour'],
+          // Orientation. The readback is bottom-up and `ImageData` is top-down,
+          // so a missing (or doubled) row flip lands the Band at rows 110..149
+          // and the Mark at columns 150..189. Both must read clear.
+          [100, 130, [77, 77, 77], 'below the Band — where a vertical flip puts it'],
+          [170, 80, [77, 77, 77], 'right of the Mark — where a horizontal flip puts it'],
+        ],
+      },
+    },
+  ],
+  /**
+   * The same surface fed by the 3D pass instead of the 2D one — the sibling
+   * that localises WHICH PASS filled the target. The two fixtures author the
+   * same `Color(0.5, 0.5, 0.5)`, so a curve applied to one pass and not the
+   * other shows up as a bare value difference between two otherwise identical
+   * scenes. It is the pair that caught the 2D canvas tonemapping.
+   *
+   *   pnpm ref:godot scenes/fixtures/unit-sub-viewport-container-3d-content.tscn \
+   *     --probe 200,120 --probe 280,210
+   *   → rgb(127, 127, 127) · rgb(76, 76, 76)
+   */
+  [
+    'sub-viewport-3d-content',
+    'unit-sub-viewport-container-3d-content.tscn',
+    {
+      minControls: 3,
+      types: ['SubViewportContainer', 'ColorRect'],
+      surface: {
+        node: 'SubViewport',
+        size: [200, 150],
+        probes: [
+          // The unshaded box: the SAME number the 2D sibling's band reads.
+          [100, 40, [128, 128, 128], 'the unshaded box, authored Color(0.5, 0.5, 0.5)'],
+          [180, 130, [77, 77, 77], 'uncovered — the viewport clear colour'],
+          [100, 130, [77, 77, 77], 'below the box — where a vertical flip puts it'],
+          [20, 40, [77, 77, 77], 'left of the box — the camera frames it centred'],
+        ],
+      },
+    },
+  ],
+  /**
+   * SplitContainer solves for ONE number and derives both rects from it, so
+   * the gate is the resulting BOX WIDTHS — the thing happy-dom cannot see and
+   * the WebGL golden gate does not draw. Every expectation is a Godot 4.6.3
+   * render of the same fixture, scanned for the colour edge:
+   *
+   *   pnpm ref:godot scenes/fixtures/unit-split-container.tscn
+   *   Both 194|12|194  Offset 254|12|134  Ratio 294|12|94  FirstOnly 388|12|0
+   *   Neither 120|12|268  SepZero 196|8|196  Collapsed 194|12|194  DragColl 200|0|200
+   */
+  [
+    'split-container',
+    'unit-split-container.tscn',
+    {
+      minControls: 9,
+      types: ['HSplitContainer', 'ColorRect'],
+      computed: [
+        ['BothLeft', 'width', (v) => v === 194, '194'],
+        ['BothRight', 'width', (v) => v === 194, '194'],
+        ['OffsetLeft', 'width', (v) => v === 254, '254'],
+        ['OffsetRight', 'width', (v) => v === 134, '134'],
+        ['RatioLeft', 'width', (v) => v === 294, '294'],
+        ['RatioRight', 'width', (v) => v === 94, '94'],
+        ['FirstOnlyLeft', 'width', (v) => v === 388, '388'],
+        ['NeitherLeft', 'width', (v) => v === 120, '120'],
+        ['NeitherRight', 'width', (v) => v === 268, '268'],
+        // The grabber's 8 px floor under an overridden separation.
+        ['SepZeroLeft', 'width', (v) => v === 196, '196'],
+        // `collapsed` reads split_offset as 0, so this matches Both.
+        ['CollapsedLeft', 'width', (v) => v === 194, '194'],
+        // HIDDEN_COLLAPSED is the only dragger state that removes the gap.
+        ['DraggerCollapsedLeft', 'width', (v) => v === 200, '200'],
+        ['DraggerCollapsedRight', 'width', (v) => v === 200, '200'],
+      ],
+    },
+  ],
+  /**
+   * The same solve on the other axis. A transposed implementation passes the
+   * horizontal fixture and fails here, because these children expand
+   * VERTICALLY: reading the horizontal flags takes the "neither expands"
+   * branch and pins the boundary at split_offset.
+   *
+   *   Both 144|12|144   Offset 194|12|94
+   */
+  [
+    'split-container-vertical',
+    'unit-split-container-vertical.tscn',
+    {
+      minControls: 5,
+      types: ['VSplitContainer', 'ColorRect'],
+      computed: [
+        ['BothTop', 'height', (v) => v === 144, '144'],
+        ['BothBottom', 'height', (v) => v === 144, '144'],
+        ['OffsetTop', 'height', (v) => v === 194, '194'],
+        ['OffsetBottom', 'height', (v) => v === 94, '94'],
+      ],
+    },
+  ],
 ];
+
+/** Godot quantises before the sRGB curve; the 8-bit linear target quantises after. */
+const PROBE_TOLERANCE = 2;
 
 mkdirSync(OUT, { recursive: true });
 
 const browser = await launchShowcaseBrowser();
 const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 });
+// Zoom 1, so a reported box is in the same units Godot's render is.
+// `getBoundingClientRect` reports POST-transform pixels, and the 2D stage
+// opens fitted — every measurement here was silently scaled by the fit factor,
+// which is invisible while the only assertions are "> 0".
+// (`FIT_ON_OPEN_2D_STORAGE_KEY` in r3f/components/Canvas2DStage/viewport2d.ts.)
+await ctx.addInitScript(() => window.localStorage.setItem('tsi.fitOnOpen2D', 'false'));
 
 const results = [];
 for (const [name, file, expect = {}] of TARGETS) {
@@ -153,6 +291,31 @@ for (const [name, file, expect = {}] of TARGETS) {
     /* overlay never mounted — captured as a failure below */
   }
   await page.waitForTimeout(900); // image load (TextureRect) + layout settle
+
+  // The surface blit samples on a bounded schedule (BLIT_ATTEMPTS × 350 ms in
+  // viewportBlit.ts), so a target that needed a late resource has to be given
+  // that long before its canvas is read.
+  if (expect.surface) await page.waitForTimeout(6000);
+
+  const surface = expect.surface
+    ? await page.evaluate((wanted) => {
+        const el = document.querySelector(
+          `[data-viewport-surface][data-node-name="${wanted.node}"]`
+        );
+        if (!el) return { reason: `no viewport surface named "${wanted.node}"` };
+        const canvas = el.querySelector('[data-viewport-pixels]');
+        if (!canvas) return { reason: 'the surface published no pixel canvas' };
+        const context = canvas.getContext('2d');
+        if (!context) return { reason: 'the pixel canvas has no 2D context' };
+        return {
+          reason: null,
+          size: [canvas.width, canvas.height],
+          samples: wanted.probes.map(([x, y]) => [
+            ...context.getImageData(x, y, 1, 1).data,
+          ].slice(0, 3)),
+        };
+      }, expect.surface)
+    : null;
 
   const stats = await page.evaluate(() => {
     const all = [...document.querySelectorAll('[data-control-type]')];
@@ -251,9 +414,39 @@ for (const [name, file, expect = {}] of TARGETS) {
   if (stats.fallbacks > maxFallbacks) {
     failures.push(`${stats.fallbacks} unresolved-texture fallback(s) > allowed ${maxFallbacks}`);
   }
+  if (expect.surface) {
+    if (!surface || surface.reason) {
+      failures.push(`surface: ${surface?.reason ?? 'not read'}`);
+    } else {
+      const [w, h] = expect.surface.size;
+      if (surface.size[0] !== w || surface.size[1] !== h) {
+        failures.push(
+          `surface canvas is ${surface.size.join('x')}, expected ${w}x${h} (the target's size)`
+        );
+      }
+      expect.surface.probes.forEach(([x, y, wantRgb, label], i) => {
+        const got = surface.samples[i];
+        if (got.some((c, ch) => Math.abs(c - wantRgb[ch]) > PROBE_TOLERANCE)) {
+          failures.push(
+            `surface (${x}, ${y}) [${label}] is rgb(${got.join(', ')}), ` +
+              `expected rgb(${wantRgb.join(', ')}) ±${PROBE_TOLERANCE}`
+          );
+        }
+      });
+    }
+  }
   if (errors.length > 0) failures.push(`${errors.length} console error(s)`);
 
-  results.push({ name, file, switched, overlay, ...stats, failures, errors: errors.slice(0, 5) });
+  results.push({
+    name,
+    file,
+    switched,
+    overlay,
+    ...stats,
+    ...(surface ? { surface } : {}),
+    failures,
+    errors: errors.slice(0, 5),
+  });
   console.log(
     `${failures.length ? '✗' : '✓'} ${name}: overlay=${overlay} controls=${stats.controls} ` +
       `fallbacks=${stats.fallbacks} types=[${stats.types.join(',')}] errors=${errors.length}` +

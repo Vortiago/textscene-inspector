@@ -51,14 +51,17 @@ import {
   targetPixelsToImageData,
   viewportAspect,
 } from './offscreenViewport';
-import { viewportContentKind } from './viewportContent';
+import { useViewportContentKind } from './useViewportContentKind';
 import type { SubViewportProperties } from './types';
 
 export function SubViewport({ node, children }: NodeComponentProps) {
   const { own_world_3d: ownWorld3D } = node.properties as SubViewportProperties;
   const workspace = useCanvasWorkspace();
   const path = useNodePath() ?? node.name;
-  const kind = useMemo(() => viewportContentKind(node), [node]);
+  // Classified over the RESOLVED subtree: in the parsed graph an `instance=`
+  // child is a typeless, childless node, so an untouched 2D sub-scene and an
+  // untouched 3D one are indistinguishable until the sub-scene lands.
+  const kind = useViewportContentKind(node);
 
   // Only content this subsystem can rasterise gets an offscreen pass; Controls
   // are the DOM rasterizer's, and an empty viewport has nothing to draw.

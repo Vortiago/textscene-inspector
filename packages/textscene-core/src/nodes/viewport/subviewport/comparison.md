@@ -65,6 +65,15 @@ probe through the quad within 1.0% in linear terms (sky 177,194,212 vs
 - **One content kind per target.** Godot composites a viewport's 3D world and
   its 2D canvas into one target. The previewer's renderer draws one workspace at
   a time, so a mixed-content sub-viewport shows its 3D half only.
+- **An `instance=` child is classified provisionally until its sub-scene
+  loads.** Which rasterizer owns the target has to be decided before the
+  sub-scenes are in, and an instance node has no type until then, so
+  `useViewportContentKind` classifies the RESOLVED subtree and re-derives on the
+  live-tree tick. Between the parse and the load an untouched instance is
+  guessed — its own overrides decide it when they name a world (a CanvasItem-only
+  key, or a `Vector2`/`Vector3` transform value), and Godot's own viewport demos
+  instance 3D sub-scenes, so a bare one reads as 3D. The guess is corrected the
+  moment the sub-scene lands, not left standing.
 - **Editor gizmos and selection highlights leak into a shared-world target**,
   because that target is a render of the main scene and they live there.
 - **A consumer surface inside its own viewport's frustum is a GL feedback

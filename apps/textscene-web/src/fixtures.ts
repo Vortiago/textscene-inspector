@@ -398,6 +398,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Split Container Vertical",
+    "file": "unit-split-container-vertical.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Split Container",
+    "file": "unit-split-container.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Spot Light 3d",
     "file": "unit-spot-light-3d.tscn",
     "category": "Other"
@@ -1241,6 +1251,16 @@ export const fixtures: Fixture[] = [
     "name": "Navigation Region 3d",
     "file": "unit-navigation-region-3d.tscn",
     "category": "Unit - Navigation"
+  },
+  {
+    "name": "Sub Viewport Container 2d Content",
+    "file": "unit-sub-viewport-container-2d-content.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport Container 3d Content",
+    "file": "unit-sub-viewport-container-3d-content.tscn",
+    "category": "Unit - Viewports"
   },
   {
     "name": "Sub Viewport Container Stretch",

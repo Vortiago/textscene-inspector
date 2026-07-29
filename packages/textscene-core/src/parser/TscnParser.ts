@@ -53,6 +53,8 @@ import '../nodes/2d/ui/colorrect/index.js';
 import '../nodes/2d/ui/label/index.js';
 import '../nodes/2d/ui/vboxcontainer/index.js';
 import '../nodes/2d/ui/hboxcontainer/index.js';
+import '../nodes/2d/ui/hsplitcontainer/index.js';
+import '../nodes/2d/ui/vsplitcontainer/index.js';
 import '../nodes/2d/ui/gridcontainer/index.js';
 import '../nodes/2d/ui/centercontainer/index.js';
 import '../nodes/2d/ui/margincontainer/index.js';

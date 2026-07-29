@@ -10,6 +10,8 @@ import '../../nodes/2d/ui/colorrect/index.r3f';
 import '../../nodes/2d/ui/label/index.r3f';
 import '../../nodes/2d/ui/vboxcontainer/index.r3f';
 import '../../nodes/2d/ui/hboxcontainer/index.r3f';
+import '../../nodes/2d/ui/hsplitcontainer/index.r3f';
+import '../../nodes/2d/ui/vsplitcontainer/index.r3f';
 import '../../nodes/2d/ui/gridcontainer/index.r3f';
 import '../../nodes/2d/ui/centercontainer/index.r3f';
 import '../../nodes/2d/ui/margincontainer/index.r3f';
