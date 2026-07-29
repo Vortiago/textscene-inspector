@@ -343,6 +343,12 @@ export const GOLDEN_SCENES = [
   // light from the geometry behind the occluder; it never darkens what the
   // light did not reach, so an unlit surface is the same grey either way.
   { name: 'lightoccluder2d-shadow-closed', file: 'unit-lightoccluder2d-shadow-closed.tscn', maxDiffPct: 0.5 },
+  // These two had fixtures and comparison images but no baseline, so nothing
+  // guarded them — including `unit-lightoccluder2d-shadow`, the single-edge case
+  // the LightOccluder2D sheet leads with. Every other occluder behaviour was
+  // pinned, which is exactly why the gap was easy to miss.
+  { name: 'lightoccluder2d', file: 'unit-lightoccluder2d.tscn', maxDiffPct: 0.5 },
+  { name: 'lightoccluder2d-shadow', file: 'unit-lightoccluder2d-shadow.tscn', maxDiffPct: 0.5 },
   // `cull_mode` 0/1/2: which winding of an occluder's edges casts. The reversed
   // pair is the same two occluders with the polygon wound the other way, so
   // CLOCKWISE and COUNTER_CLOCKWISE swap and DISABLED stays put — a cull test

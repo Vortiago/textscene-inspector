@@ -5,15 +5,16 @@ fixture: unit-lightoccluder2d.tscn
 image: unit-lightoccluder2d
 status: limitation
 group: Lighting
-renders_as: a selection-gated outline of its occluder polygon; it casts no shadow
+renders_as: a selection-gated outline of its occluder polygon; it occludes 2D light
 ---
 
 # LightOccluder2D
 
 In Godot a LightOccluder2D is invisible on its own — it blocks a shadow-enabled `Light2D`,
-carving a shadow out of the lit surface. The previewer has no 2D shadow pass: it draws the
-occluder's polygon as a selection-gated outline gizmo (shown only when the node is selected)
-and otherwise renders nothing for it. The fixture lights a dark `Polygon2D` surface with a
+carving a shadow out of the lit surface. The previewer does the same: the occluder itself
+draws only a selection-gated outline gizmo, while the shadow it casts is withheld from the
+light's contribution (a stencilled volume at `shadow_filter = NONE`, a sampled polar map
+under PCF5/PCF13). The fixture lights a dark `Polygon2D` surface with a
 shadow-enabled `PointLight2D` and drops an 80×80 square occluder in the light's path, so the
 shadow is the whole point of the comparison.
 
@@ -74,6 +75,7 @@ makes the three channels a proof rather than a coincidence: behind the occluder 
 the lamp's colour or its energy.
 
 ## The boundary under a shadow_filter
+<!-- compare: image=unit-pointlight2d-shadow-pcf13 status=done fixture=unit-pointlight2d-shadow-pcf13.tscn -->
 
 An occluder's boundary is only an EDGE while the light leaves `shadow_filter` at its
 `NONE` default. Under PCF5/PCF13 Godot averages five or thirteen `step()` taps offset in
@@ -107,11 +109,13 @@ it is a resource reference at all, so a malformed value simply flows into render
 
 ## Known limitations
 
-- **No 2D shadow pass.** `LightOccluder2D` + `OccluderPolygon2D` are parsed but never occlude
-  light; every 2D light passes through them. Reproducing Godot's shadows needs a shadow-map
-  or SDF pass the previewer does not have.
+- **`sdf_collision` has no effect.** Godot's SDF path serves GPUParticles2D collision and
+  `light_mode = SDF` shading, neither of which the previewer implements. The property is
+  validated and otherwise inert.
 - **The outline is selection-gated**, so it appears only when the node is selected in the
   editor and never in a still render — matching Godot, which draws nothing for the occluder
   at runtime.
-- **`occluder_light_mask` / `sdf_collision`** are validated but have no visual effect, since
-  there is no shadow to mask.
+- **The umbra boundary is exact; the penumbra is quantised.** Under a `shadow_filter` the
+  previewer samples the same 2048-bin polar map Godot rasterises, so a tap lands in a bin
+  rather than on a continuous angle. The step POSITIONS match the engine; a boundary at a
+  glancing angle can differ by one bin.

@@ -30,7 +30,7 @@ framed by the 1152x648 project viewport.
 
 ## Divergences
 
-The whole frame is within a mean channel error of **5.02/255**, with 5.5 % of pixels over
+The whole frame is within a mean channel error of **4.93/255**, with 5.2 % of pixels over
 16/255. Stone, floor and the lit regions all agree closely now:
 
 | Sample | ours | Godot |
@@ -49,10 +49,29 @@ by 187 pixels. The previewer substitutes a fixed seed and a fixed evaluation tim
 OUR frame stable run to run and puts the particles in plausible places rather than the
 engine's. The Candle section below isolates it at 0.83/255.
 
-**A residual under-light.** Lit surfaces still sit a few units low in red and green (the
-floor sample above is 14 short in red). Godot's canvas composites in **sRGB, clamped to
-[0,1]** — `Viewport.hdr_2d` defaults to `false`, so 2D never enters a linear working space,
-while ours accumulates unclamped and encodes on output.
+**What is left is two opposite errors, not one.** Splitting the 5.2 % of pixels over
+16/255 by sign:
+
+| | share | mean delta (Godot − ours) | Godot's luminance there |
+| --- | --- | --- | --- |
+| ours too BRIGHT | 62 % | R −23, G −26, B −31 | 73/255 |
+| ours too dark | 38 % | R +20, G +11, B +7 | 119/255 |
+
+The dominant half is the previewer rendering light where Godot renders dark, clustered
+rather than spread — one region right of centre holds a sixth of all the over-threshold
+pixels. Its deltas are near-uniform across the channels, which points at coverage or alpha
+rather than colour space. The suspects are not the occluder shadows this PR implements (the
+scene has 7 `LightOccluder2D`) but the 38 gradient shadow `Polygon2D`s, which reach the
+canvas through `light_mode = 1` and an entirely different path.
+
+The minority half is the opposite sign and a lopsided signature — red roughly twice green,
+three times blue — on brighter pixels. That one is consistent with the sRGB residual:
+Godot's canvas composites in **sRGB, clamped to [0,1]** (`Viewport.hdr_2d` defaults to
+`false`, so 2D never enters a linear working space) while ours accumulates unclamped and
+encodes on output.
+
+Neither is in the light pass, which now agrees with the engine to within a unit or two per
+channel on every isolated fixture. Chasing the 62 % is the next parity win.
 
 The rest of the light pass is now in: `light_mask` against `range_item_cull_mask`,
 `LightOccluder2D` shadow casting with `cull_mode` and `shadow_item_cull_mask`, an

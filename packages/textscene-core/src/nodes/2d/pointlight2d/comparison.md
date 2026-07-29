@@ -113,6 +113,7 @@ interpolates the accumulator and does not commute across the split.
 `shadow_item_cull_mask` parses and is reported, but nothing is shadowed yet.
 
 ## The z window: which z planes a light reaches
+<!-- compare: image=unit-pointlight2d-range-z status=done fixture=unit-pointlight2d-range-z.tscn -->
 
 The cull mask is one of three tests. Godot's GLES3 rasterizer applies a light to
 an item only when
@@ -150,6 +151,7 @@ whose z stays small — but it is a bound like any other. `z_index`'s own
 outside a default light's window.
 
 ## The layer window: which canvases a light reaches
+<!-- compare: image=unit-pointlight2d-range-layer status=done fixture=unit-pointlight2d-range-layer.tscn -->
 
 The layer half is tested once per CANVAS rather than per item — the viewport
 hands a light to a canvas at all only when
@@ -175,6 +177,7 @@ properties at their defaults carries the same tail, so a scene that authors no
 window has exactly the classes it had before the windows existed; only an
 authored window mints a new one.
 ## Soft shadows: shadow_filter and shadow_filter_smooth
+<!-- compare: image=unit-pointlight2d-shadow-pcf5 status=done fixture=unit-pointlight2d-shadow-pcf5.tscn -->
 
 `shadow_filter` is not a parameter of the shadow — it is a second MECHANISM, and the
 default (`NONE`) is the only one a hard mask can express. Godot's 2D shadow is a per-light
@@ -314,12 +317,11 @@ tint, both light modes, the item cull masks and both range windows) is Godot's
 own arithmetic in Godot's own space, measured above. What the pass still does
 not do:
 
-- **No shadows.** `shadow_enabled` and any `LightOccluder2D` in range are ignored
-  (see the LightOccluder2D sheet); the light passes through occluders.
-  `shadow_item_cull_mask` parses and is reported, but selects nothing.
-- **No per-item shadow gating.** `shadow_item_cull_mask` is tested against each
-  ITEM's `light_mask` too, not only against occluders; the accumulator cannot
-  turn one light's shadow off for one item inside a class.
+- **No per-item shadow gating.** `shadow_item_cull_mask` selects which OCCLUDERS
+  a light sees, which is honoured. Godot also tests it against each lit ITEM's
+  `light_mask`, and that half is not reproduced: the accumulator is a
+  screen-space sum, so one light's shadow cannot be turned off for one item
+  inside a class without splitting the class.
 - **No normal-mapped or specular response.** A `CanvasTexture.normal_texture`
   under a light is not read; every surface takes the light head-on.
 - **MIX across two classes** on one item is summed rather than applied in Godot's
