@@ -55,6 +55,7 @@ export function Camera3D({ node, children }: NodeComponentProps) {
       <OrthographicCamera3D
         name={node.name}
         tscnPath={tscnPath}
+        current={properties.current}
         position={offsetPosition}
         rotation={rotation}
         scale={scale}
@@ -80,6 +81,7 @@ export function Camera3D({ node, children }: NodeComponentProps) {
     <PerspectiveCamera3D
       name={node.name}
       tscnPath={tscnPath}
+      current={properties.current}
       position={offsetPosition}
       rotation={rotation}
       scale={scale}
@@ -95,6 +97,8 @@ export function Camera3D({ node, children }: NodeComponentProps) {
 interface PerspectiveCamera3DProps {
   name: string;
   tscnPath: string;
+  /** Godot's `Camera3D.current` — which camera the owning viewport renders through. */
+  current: boolean;
   position: [number, number, number];
   rotation: [number, number, number];
   scale: [number, number, number];
@@ -104,14 +108,17 @@ interface PerspectiveCamera3DProps {
   children?: ReactNode;
 }
 
-function PerspectiveCamera3D({ name, tscnPath, position, rotation, scale, fov, near, far, children }: PerspectiveCamera3DProps) {
+function PerspectiveCamera3D({ name, tscnPath, current, position, rotation, scale, fov, near, far, children }: PerspectiveCamera3DProps) {
   const cameraRef = useRef<THREE.PerspectiveCamera>(null);
   useEffect(() => {
     if (cameraRef.current) {
-      // Tag the camera with its TSCN path so ActiveCameraSwitcher can find it.
+      // Tag the camera with its TSCN path so ActiveCameraSwitcher can find it,
+      // and with `current` so a SubViewport can apply Godot's own election rule
+      // (`camera_3d.cpp`: `if (current || first_camera)`) to its own cameras.
       cameraRef.current.userData.tscnPath = tscnPath;
+      cameraRef.current.userData.tscnCurrent = current;
     }
-  }, [tscnPath]);
+  }, [tscnPath, current]);
   return (
     <>
       <perspectiveCamera
@@ -135,6 +142,8 @@ function PerspectiveCamera3D({ name, tscnPath, position, rotation, scale, fov, n
 interface OrthographicCamera3DProps {
   name: string;
   tscnPath: string;
+  /** Godot's `Camera3D.current` — which camera the owning viewport renders through. */
+  current: boolean;
   position: [number, number, number];
   rotation: [number, number, number];
   scale: [number, number, number];
@@ -145,7 +154,7 @@ interface OrthographicCamera3DProps {
   children?: ReactNode;
 }
 
-function OrthographicCamera3D({ name, tscnPath, position, rotation, scale, size, keepAspect, near, far, children }: OrthographicCamera3DProps) {
+function OrthographicCamera3D({ name, tscnPath, current, position, rotation, scale, size, keepAspect, near, far, children }: OrthographicCamera3DProps) {
   const cameraRef = useRef<THREE.OrthographicCamera>(null);
   // Godot `size` is the FULL frustum dimension (diameter), so the half-extent
   // is size/2 (Projection::set_orthogonal divides by 2). KEEP_HEIGHT (1,
@@ -157,8 +166,9 @@ function OrthographicCamera3D({ name, tscnPath, position, rotation, scale, size,
   useEffect(() => {
     if (cameraRef.current) {
       cameraRef.current.userData.tscnPath = tscnPath;
+      cameraRef.current.userData.tscnCurrent = current;
     }
-  }, [tscnPath]);
+  }, [tscnPath, current]);
   return (
     <>
       <orthographicCamera

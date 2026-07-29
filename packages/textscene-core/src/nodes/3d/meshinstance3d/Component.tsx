@@ -32,6 +32,7 @@ import {
 } from '../../../r3f/SceneResourcesContext';
 import { parseResourceReference } from '../../../resources/SubResourceResolver';
 import { resolveGradientTexture2D } from '../../../resources/textures/gradienttexture2d/resolveGradientTexture';
+import { useViewportTextureSlot } from '../../../resources/textures/viewporttexture/useViewportTextureSlot';
 import { useResource } from '../../../resources/useResource';
 import type { ArrayMeshResource } from '../../../resources/processors/createArrayMeshProcessor';
 import { MeshGeometry } from './meshGeometry';
@@ -221,13 +222,25 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     return { scale, offset: materialScalars.uv1Offset };
   }, [materialScalars, meshResource]);
 
+  // A `SubResource(ViewportTexture)` albedo names a `<SubViewport>` rather than
+  // a file, so it resolves through the live registry instead of the loader —
+  // and it arrives AFTER first paint, once that sub-viewport has published.
+  // Highest precedence of the three: nothing else can be in the slot when the
+  // authored value is a ViewportTexture.
+  const viewportAlbedo = useViewportTextureSlot(
+    (materialSubResource?.data as { albedo_texture?: string } | undefined)?.albedo_texture,
+    internalResources
+  );
+
   const albedoMap = useMemo(
     () =>
       transformedTexture(
-        effectiveSlot(proceduralTextures.albedo_texture, textureSlots.albedo_texture),
+        viewportAlbedo
+          ? { value: viewportAlbedo }
+          : effectiveSlot(proceduralTextures.albedo_texture, textureSlots.albedo_texture),
         uvTransform
       ),
-    [proceduralTextures.albedo_texture, textureSlots.albedo_texture, uvTransform]
+    [viewportAlbedo, proceduralTextures.albedo_texture, textureSlots.albedo_texture, uvTransform]
   );
   const normalMap = useMemo(
     () =>

@@ -28,6 +28,7 @@ import {
 import { readPersisted, usePersistedState } from '../../hooks/usePersistedState.js';
 import { AnimatedValueProvider } from '../../contexts/AnimatedValueContext.js';
 import { AnimationDriverProvider } from '../../contexts/AnimationDriverContext.js';
+import { ViewportTextureProvider } from '../../contexts/ViewportTextureContext.js';
 import {
   AnimationTransportProvider,
   useAnimationTransport,
@@ -249,6 +250,11 @@ export function TscnPreviewShell({
     ),
     (children) => <AnimationTransportProvider>{children}</AnimationTransportProvider>,
     (children) => <AnimationDriverProvider>{children}</AnimationDriverProvider>,
+    // Same reason as the driver registry directly above: a `<SubViewport>`
+    // publishes its offscreen target here and a `ViewportTexture` consumer
+    // resolves it by NodePath. It wraps BOTH canvases and the DOM overlay
+    // because consumers live on both sides of that split (ADR-0030).
+    (children) => <ViewportTextureProvider>{children}</ViewportTextureProvider>,
     (children) => <AnimatedValueProvider>{children}</AnimatedValueProvider>
   );
 
