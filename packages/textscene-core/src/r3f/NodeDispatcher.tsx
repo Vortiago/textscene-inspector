@@ -40,7 +40,10 @@ import { GenericNodeFallback } from './internal/generic-node-fallback/index';
 import { useViewportSelection } from './hooks/useViewportSelection.js';
 import { useCanvasWorkspace } from './contexts/CanvasWorkspaceContext.js';
 import { TWO_D_UI_TYPES } from './controls/has2DUIContent.js';
-import { isViewportSurface } from '../nodes/viewport/subviewport/viewportBoundary.js';
+import {
+  isViewportBoundary,
+  isViewportSurface,
+} from '../nodes/viewport/subviewport/viewportBoundary.js';
 import { NodePathProvider } from './contexts/NodePathContext.js';
 import { useResource, useResourceLoader } from '../resources/useResource.js';
 import { collapseLiveNode, singleSceneCache } from './liveSceneTree.js';
@@ -192,6 +195,13 @@ function PlainNode({
   if (
     workspace === '2d' &&
     !isCanvasItem &&
+    // A sub-viewport is not drawn by either canvas — it renders OFFSCREEN, and
+    // a `ViewportTexture` consumer in this workspace (a Sprite2D showing a 3D
+    // sub-scene) needs that target. Dropping it here would mean the publisher
+    // never mounts, so the texture could never resolve. Its subtree still
+    // never reaches this canvas: the component portals it into a detached
+    // scene rather than rendering it inline. ADR-0030.
+    !isViewportBoundary(node.type) &&
     nodeComponentRegistry.get(node.type) &&
     !nodeComponentRegistry.isContainer(node.type)
   ) {
