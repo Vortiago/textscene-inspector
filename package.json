@@ -27,6 +27,7 @@
     "vendor:games": "node scripts/vendor-godot-games.mjs && node scripts/generate-fixtures.js",
     "vendor:ld58": "node scripts/vendor-ld58.mjs && node scripts/generate-fixtures.js",
     "build:site": "node scripts/vendor-godot-games.mjs && node scripts/vendor-ld58.mjs && node scripts/generate-fixtures.js && pnpm --filter @textscene/web-previewer build",
+    "build:deploy": "node scripts/build-deploy.mjs",
     "new:node": "node scripts/new-node-slice.mjs",
     "test:visual": "node scripts/visual/run.mjs",
     "test:visual:update": "node scripts/visual/run.mjs --update",

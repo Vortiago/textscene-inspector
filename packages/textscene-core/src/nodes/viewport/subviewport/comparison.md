@@ -95,6 +95,69 @@ probe through the quad within 1.0% in linear terms (sky 177,194,212 vs
 - **`msaa_3d`, `use_debanding` and `canvas_item_default_texture_filter` still do
   not affect the target**; it is rendered at `size` with linear filtering.
 
+## Control content: the DOM raster
+
+A sub-viewport holding only Controls has **no WebGL source at all** — Controls
+are DOM (ADR-0003) — so `viewportContentKind` classifies it `'dom'`, the
+offscreen pass declines it, and `ControlRasterHost` publishes instead. It mounts
+the subtree through `ControlDispatcher` into an off-screen host built at the
+sub-viewport's `size`, rasterises that host, and publishes the canvas as a
+`CanvasTexture` under the same node path any other target would use. Consumers
+never learn which publisher filled the slot.
+
+The host is hidden by **moving off-screen** (`position: fixed; left: -99999px`),
+not by `visibility`, `opacity` or `clip-path`: the rasteriser inlines every
+computed property onto its clone, so those three rasterise zero opaque pixels —
+and return a blank canvas rather than `null`, so nothing would report it
+(measured in `verify-raster.mjs` suite A: 5366 opaque px off-screen, 0 for each
+of the others). `overflow: hidden` on the host is Godot's clip: a viewport
+issues none, but its target is only `size` pixels, so anything past the edge was
+never rendered.
+
+**Colour: exactly one tonemap application, and it is not ours.** Godot draws a
+viewport's canvas AFTER that viewport's tonemap pass —
+`RendererViewport::_draw_viewport` runs `_draw_3d` (which ends in
+`_render_buffers_post_process_and_tonemap`) before its `render_canvas` loop — so
+a Control-only target stores the canvas's own sRGB values with no curve applied,
+and the curve runs once, on the consuming surface in the main viewport's pass.
+That makes this publisher the mirror image of the offscreen one above: a plain
+`CanvasTexture` tagged `SRGBColorSpace`, no `isXRRenderTarget`, no pre-tonemap.
+Measured on `unit-sub-viewport-control-texture.tscn` against Godot 4.6.3, both
+sides **exact**: a `Color(0.5, 0.5, 0.5)` ColorRect reaches the quad as
+rgb(162, 162, 162), and the default-theme Panel composited over it as
+rgb(84, 84, 84). A pre-tonemapped raster would land them near rgb(196)/rgb(107).
+
+Redraws are driven by a `MutationObserver` on the host rather than per frame:
+the subtree keeps changing after mount (a StyleBox resolves, a `TextureRect`'s
+`src` becomes a data: URL, an instanced sub-scene lands), and serialising an SVG
+every frame would be wasteful. One canvas and one texture live for the host's
+lifetime; a redraw flips `needsUpdate`.
+
+### Divergences (Control raster)
+
+- **Text does not match Godot's.** Godot bundles Open Sans SemiBold; the overlay
+  is system-fonts-only (ADR-0003), so glyph shapes and advance widths differ.
+  Colour, layout boxes and positions do match.
+- **Unimplemented Control types rasterise as nothing.** `LineEdit`, `HSlider`
+  and `VSlider` have no slice, so `GenericControlFallback`'s `display: contents`
+  leaves them absent from the raster — visible in `gui_panel_3d.tscn`, which
+  authors all three. Identical to what the on-screen 2D overlay shows for them.
+- **`ProjectSettings` is not read.** `demos/viewport/gui_in_3d` authors
+  `gui/theme/default_theme_scale = 2.0`, `renderer/rendering_method =
+  "gl_compatibility"`, `msaa_3d = 2` and `use_debanding = true`; none of them
+  reach the raster. `rendering_method` alone was isolated by re-rendering the
+  fixture above under a `gl_compatibility` project: the opaque backdrop stays
+  rgb(162) and the translucent Panel moves rgb(84) → rgb(82). Measured offsets
+  on the demo itself are Panel 55 (ours) vs 53 (Godot), Button 40 vs 33, and a
+  smaller font; the fixture above carries no project settings and matches
+  exactly.
+- **Blending is the browser's.** A translucent StyleBox composites in sRGB
+  space, which is what Godot's LDR canvas does too — the rgb(84) probe confirms
+  it — but a viewport with `use_hdr_2d` would blend in linear, and that is not
+  reproduced.
+- **`render_target_update_mode` does not gate the raster** any more than it
+  gates the offscreen pass.
+
 ## Properties exercised
 
 | Property | Value | Effect |

@@ -20,11 +20,25 @@
 import { warn } from '@textscene/core';
 import { fixtures as baseFixtures, type Fixture } from './fixtures';
 
+/**
+ * The games corpus is DEPLOY-ONLY (`pnpm build:deploy` sets the flag). A
+ * developer who vendored it to verify against a real game should not thereby
+ * get ~140 game scenes in their local scene selector, but the deployed site
+ * does want them. `copy-fixtures.js` gates the matching `public/fixtures/games/`
+ * mirror on the same variable, so the manifest and the files cannot drift.
+ *
+ * This controls VISIBILITY, not bundle size: `import.meta.glob({eager:true})`
+ * imports every matching manifest regardless, and the filter below drops the
+ * entries from the array rather than the module from the bundle.
+ */
+const INCLUDE_GAMES = import.meta.env.VITE_INCLUDE_GAMES === '1';
+
 const corpusModules = import.meta.glob<{ corpusFixtures?: Fixture[] }>(
   ['./fixtures.*.ts', '!./*.test.ts'],
   { eager: true }
 );
 const corpusFixtures: Fixture[] = Object.entries(corpusModules).flatMap(([path, m]) => {
+  if (!INCLUDE_GAMES && path.includes('.games.')) return [];
   if (!m.corpusFixtures) {
     // A manifest written by an older generator (different export name) would
     // otherwise vanish silently — make the stale-manifest case loud.
