@@ -1,11 +1,14 @@
 /**
  * Godot's 2D light culling, end to end through the real dispatcher.
  *
- * `light.range_item_cull_mask & item.light_mask != 0` decides whether a light
- * reaches an item, so lights partition into classes by that mask and each class
+ * A light reaches an item when its cull mask shares a bit with the item's
+ * `light_mask`, the item's accumulated `z_final` is inside the light's z window,
+ * and the item's CANVAS layer is inside the light's layer window. Lights
+ * therefore partition into classes by that whole tuple, and each class
  * accumulates into its own buffer. What these pin is the wiring that makes that
  * true: the class a light's quad is sorted into (its camera LAYER), and the
- * class slots each item is allowed to read (its per-slot WEIGHT).
+ * class slots each item is allowed to read (its per-slot WEIGHT). The rule
+ * itself is pinned by `lightCullKey.test.ts`.
  *
  * The weights are read back through `onBeforeCompile`, which is where the
  * uniform objects are handed to three. Happy-dom has no GPU, so the shader is
@@ -33,7 +36,7 @@ import {
   SHADOW_TINT_LAYER,
   MAX_LIGHT_CLASSES,
 } from './CanvasLighting2D';
-import { lightClassSampler, lightReachesItem } from './canvasItemLighting';
+import { lightClassSampler } from './canvasItemLighting';
 import '../nodes'; // side-effect: registers every node's r3f component
 
 const COOKIE = 'res://light.png';
@@ -168,36 +171,6 @@ function classBuffers(renderer: Rendered, name: string): (THREE.Texture | null)[
   );
 }
 
-describe('lightReachesItem', () => {
-  it('applies a default light to a default item', () => {
-    expect(lightReachesItem(1, 1)).toBe(true);
-  });
-
-  it('culls an item whose light_mask shares no bit with the cull mask', () => {
-    // The isometric dungeon's painted shadows: light_mask 512 against torches
-    // that left range_item_cull_mask at 1.
-    expect(lightReachesItem(1, 512)).toBe(false);
-    expect(lightReachesItem(17, 128)).toBe(false);
-  });
-
-  it('applies on ANY shared bit, not on equality', () => {
-    // The dungeon candle's own light: cull 145 = 128 | 16 | 1 over an item at 128.
-    expect(lightReachesItem(145, 128)).toBe(true);
-    expect(lightReachesItem(3, 2)).toBe(true);
-  });
-
-  it('lets light_mask 0 be reached by nothing, whatever the light asks for', () => {
-    expect(lightReachesItem(0xffffffff, 0)).toBe(false);
-  });
-
-  it('compares the full 32 bits, including the sign bit', () => {
-    // 2147483648 is bit 32; a signed-int shortcut that dropped it would report
-    // no intersection here.
-    expect(lightReachesItem(2147483648, 2147483648)).toBe(true);
-    expect(lightReachesItem(2147483648, 1)).toBe(false);
-  });
-});
-
 describe('2D light cull masks, through the dispatcher', () => {
   it('gives every light the SAME class when they share a cull mask', async () => {
     const renderer = await render(scene(`${panel('P', null, 0)}${light('A', null, 40)}${light('B', null, 90)}`));
@@ -298,5 +271,123 @@ describe('2D light cull masks, through the dispatcher', () => {
     expect(new Set(assigned).size).toBe(assigned.length);
     // three packs layers into a 32-bit mask, so the highest must still fit.
     expect(Math.max(...assigned)).toBeLessThan(32);
+  });
+});
+
+/** A lit panel with arbitrary extra property lines, under `parent`. */
+function windowPanel(name: string, properties: string, parent = '.'): string {
+  return `
+[node name="${name}" type="Polygon2D" parent="${parent}"]
+${properties}color = Color(0.7, 0.7, 0.7, 1)
+polygon = PackedVector2Array(0, 0, 100, 0, 100, 100, 0, 100)`;
+}
+
+/** A light covering the whole scene, with arbitrary extra property lines. */
+function windowLight(name: string, properties = ''): string {
+  return `
+[node name="${name}" type="PointLight2D" parent="."]
+position = Vector2(50, 50)
+${properties}texture = ExtResource("1")`;
+}
+
+/**
+ * The z and layer windows, through the dispatcher.
+ *
+ * Measured against Godot 4.6.3 by `unit-pointlight2d-range-z.tscn` and
+ * `unit-pointlight2d-range-layer.tscn`: a `range_z_max = 4` light leaves a
+ * z_index-5 panel at the bare canvas tint, and a default light leaves a panel
+ * inside a bare CanvasLayer at its raw albedo.
+ */
+describe('2D light range windows, through the dispatcher', () => {
+  it('culls an item whose z sits above the light\'s window', async () => {
+    const renderer = await render(
+      scene(
+        `${windowPanel('Inside', '')}${windowPanel('Above', 'z_index = 5\n')}` +
+          windowLight('Torch', 'range_z_max = 4\n')
+      )
+    );
+    expect(classWeights(renderer, 'Inside')).toEqual([1, 0, 0, 0]);
+    expect(classWeights(renderer, 'Above')).toEqual([0, 0, 0, 0]);
+  });
+
+  it('holds the window at its bounds, which are inclusive', async () => {
+    const renderer = await render(
+      scene(
+        `${windowPanel('AtMax', 'z_index = 4\n')}${windowPanel('AtMin', 'z_index = -2\n')}` +
+          `${windowPanel('BelowMin', 'z_index = -3\n')}` +
+          windowLight('Torch', 'range_z_min = -2\nrange_z_max = 4\n')
+      )
+    );
+    expect(classWeights(renderer, 'AtMax')).toEqual([1, 0, 0, 0]);
+    expect(classWeights(renderer, 'AtMin')).toEqual([1, 0, 0, 0]);
+    expect(classWeights(renderer, 'BelowMin')).toEqual([0, 0, 0, 0]);
+  });
+
+  it('accumulates z down the tree, the way _cull_canvas_item does', async () => {
+    // `renderer_canvas_cull.cpp:816-820`, and measured: under a Node2D at
+    // z_index 2 and a light at range_z_max = 4, a child at z_index 1 is lit and
+    // one at z_index 3 is not.
+    const renderer = await render(
+      scene(
+        `\n[node name="ZParent" type="Node2D" parent="."]\nz_index = 2\n` +
+          `${windowPanel('Rel1', 'z_index = 1\n', 'ZParent')}` +
+          `${windowPanel('Rel3', 'z_index = 3\n', 'ZParent')}` +
+          `${windowPanel('Abs3', 'z_index = 3\nz_as_relative = false\n', 'ZParent')}` +
+          windowLight('Torch', 'range_z_max = 4\n')
+      )
+    );
+    expect(classWeights(renderer, 'Rel1')).toEqual([1, 0, 0, 0]);
+    expect(classWeights(renderer, 'Rel3')).toEqual([0, 0, 0, 0]);
+    // z_as_relative = false discards the parent's contribution entirely.
+    expect(classWeights(renderer, 'Abs3')).toEqual([1, 0, 0, 0]);
+  });
+
+  it('withholds a default light from a default CanvasLayer', async () => {
+    // A CanvasLayer is its own canvas at `layer` 1, and Godot's default light
+    // window is 0..0 — so the HUD keeps its raw albedo while the world lights.
+    const renderer = await render(
+      scene(
+        `${windowPanel('WorldPanel', '')}\n[node name="Hud" type="CanvasLayer" parent="."]\n` +
+          `${windowPanel('HudPanel', '', 'Hud')}` +
+          windowLight('Torch')
+      )
+    );
+    expect(classWeights(renderer, 'WorldPanel')).toEqual([1, 0, 0, 0]);
+    expect(classWeights(renderer, 'HudPanel')).toEqual([0, 0, 0, 0]);
+  });
+
+  it('reaches a CanvasLayer once the light\'s layer window includes it', async () => {
+    const renderer = await render(
+      scene(
+        `${windowPanel('WorldPanel', '')}\n[node name="Hud" type="CanvasLayer" parent="."]\nlayer = 3\n` +
+          `${windowPanel('HudPanel', '', 'Hud')}` +
+          windowLight('Torch', 'range_layer_min = 3\nrange_layer_max = 3\n')
+      )
+    );
+    // The window moved off the world canvas, so the two swap.
+    expect(classWeights(renderer, 'WorldPanel')).toEqual([0, 0, 0, 0]);
+    expect(classWeights(renderer, 'HudPanel')).toEqual([1, 0, 0, 0]);
+  });
+
+  it('splits two lights of one cull mask into classes when their windows differ', async () => {
+    // The accumulation is a screen-space sum, so a light that reaches fewer
+    // items than its pass-mate cannot be excluded per fragment afterwards.
+    const renderer = await render(
+      scene(
+        `${windowPanel('P', '')}${windowLight('Wide')}${windowLight('Narrow', 'range_z_max = 4\n')}`
+      )
+    );
+    // Ordered by the tuple: both masks are 1, so the narrower zMax sorts first.
+    expect(lightQuadLayers(renderer)).toEqual([LIGHT_LAYER + 1, LIGHT_LAYER]);
+    // The panel is at z 0, inside both windows, so it reads both classes.
+    expect(classWeights(renderer, 'P')).toEqual([1, 1, 0, 0]);
+  });
+
+  it('keeps every default light in ONE class, so no existing scene gains one', async () => {
+    const renderer = await render(
+      scene(`${windowPanel('P', '')}${windowLight('A')}${windowLight('B')}${windowLight('C')}`)
+    );
+    expect(lightQuadLayers(renderer)).toEqual([LIGHT_LAYER, LIGHT_LAYER, LIGHT_LAYER]);
+    expect(classWeights(renderer, 'P')).toEqual([1, 0, 0, 0]);
   });
 });

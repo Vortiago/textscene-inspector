@@ -25,6 +25,10 @@ export function formatPointLight2DProperties(props: PointLight2DProperties): Pro
         // node's own CanvasItem `light_mask`, which the Node2D section carries.
         { label: 'Range Item Cull Mask', value: props.range_item_cull_mask.toString() },
         { label: 'Shadow Item Cull Mask', value: props.shadow_item_cull_mask.toString() },
+        // The two windows are inherently pairs, and an inverted one reaches
+        // nothing, so they read as intervals rather than four loose numbers.
+        { label: 'Range Z', value: `${props.range_z_min} to ${props.range_z_max}` },
+        { label: 'Range Layer', value: `${props.range_layer_min} to ${props.range_layer_max}` },
       ],
     },
     {

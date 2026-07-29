@@ -332,6 +332,13 @@ export const GOLDEN_SCENES = [
   // the goldens sets either mask, so without this a light that reached
   // everything under it would move no baseline at all.
   { name: 'pointlight2d-cull-mask', file: 'unit-pointlight2d-cull-mask.tscn', maxDiffPct: 0.5 },
+  // The two range windows, which are the other half of the same cull test.
+  // `range_z_max = 4` over panels at z_index 0, 4 and 5 pins the per-ITEM z
+  // window and its inclusive upper bound; a default light over a world panel and
+  // a bare CanvasLayer panel pins the per-CANVAS layer window, whose 0..0
+  // default is why Godot never lights an untouched HUD.
+  { name: 'pointlight2d-range-z', file: 'unit-pointlight2d-range-z.tscn', maxDiffPct: 0.5 },
+  { name: 'pointlight2d-range-layer', file: 'unit-pointlight2d-range-layer.tscn', maxDiffPct: 0.5 },
   // LightOccluder2D shadows, one behaviour per fixture. A shadow withholds a
   // light from the geometry behind the occluder; it never darkens what the
   // light did not reach, so an unlit surface is the same grey either way.

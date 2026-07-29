@@ -27,6 +27,25 @@ export interface PointLight2DProperties extends Node2DProperties {
    * which `LightOccluder2D`s cast a shadow from this light.
    */
   shadow_item_cull_mask: number;
+  /**
+   * `Light2D.range_z_min` / `range_z_max`, default -1024 / 1024: the window of
+   * ACCUMULATED `z_index` (Godot's `z_final`, clamped to +/-4096) this light
+   * reaches. Tested per ITEM, inclusive at both ends. The default is wide enough
+   * to go unnoticed on a scene whose z stays small, but it is a real bound:
+   * `z_index`'s own -4096..4096 is an inspector hint, not a setter guard, so an
+   * item can sit outside the window.
+   */
+  range_z_min: number;
+  range_z_max: number;
+  /**
+   * `Light2D.range_layer_min` / `range_layer_max`, default 0 / 0: the window of
+   * CANVAS layers this light is handed to. Tested per CANVAS rather than per
+   * item — the world canvas is layer 0 and a `CanvasLayer` is its own canvas at
+   * its `layer` (default 1), so a light that leaves these alone reaches the
+   * world and no HUD.
+   */
+  range_layer_min: number;
+  range_layer_max: number;
   /** `Light2D.shadow_enabled`: whether occluders in range carve this light. */
   shadow_enabled: boolean;
   /**

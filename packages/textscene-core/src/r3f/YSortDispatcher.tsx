@@ -34,6 +34,11 @@ import {
 import { useCanvasItemMaterial } from './components/canvasItemMaterialContext.js';
 import { useCanvasModulateFor } from './canvasModulate.js';
 import { useCanvasItemLighting } from './lighting2d/useCanvasItemLighting.js';
+import {
+  EffectiveZProvider,
+  accumulateCanvasItemZ,
+  useEffectiveZ,
+} from './lighting2d/canvasItemPlacement.js';
 import { canvasItemBlendState } from '../resources/materials/canvasitemmaterial/renderer.js';
 import { CanvasItemBlendMode } from '../resources/materials/canvasitemmaterial/types.js';
 import { Z_INDEX_STEP, node2dGroupProps, node2dGroupSpread } from './node2dTransform.js';
@@ -91,11 +96,16 @@ function itemSortKey(node: TscnNode, parent: YSortContextValue): { sortY: number
   const ySortOrigin = (props.y_sort_origin as number | undefined) ?? 0;
   const sortY = parent.parentWorldY + localY + ySortOrigin;
 
-  const zIndex = (props.z_index as number | undefined) ?? 0;
-  const zAsRelative = (props.z_as_relative as boolean | undefined);
-  const effectiveZ = zAsRelative !== false
-    ? parent.parentEffectiveZ + zIndex
-    : zIndex;
+  // The SAME accumulation the light cull uses, deliberately: Godot computes it
+  // once and reads it twice. `_collect_ysort_children` (renderer_canvas_cull.cpp
+  // 160-166) and `_cull_canvas_item` (816-820) both run
+  // `CLAMP(p_z + z_index, CANVAS_ITEM_Z_MIN, CANVAS_ITEM_Z_MAX)` under
+  // `z_relative` and assign `z_index` unclamped otherwise, so a second copy here
+  // could only ever drift from the one the lights are culled against.
+  const effectiveZ = accumulateCanvasItemZ(parent.parentEffectiveZ, {
+    z_index: (props.z_index as number | undefined) ?? 0,
+    z_as_relative: props.z_as_relative as boolean | undefined,
+  });
   return { sortY, effectiveZ };
 }
 
@@ -202,6 +212,17 @@ function LiftedAncestors({
   // tint (the ancestor's own body still goes through CanvasItem2D) and half
   // does not.
   const parentModulate = useParentModulate();
+  // The same goes for the z the lights are culled against: `z_index` accumulates
+  // down the tree, so an item lifted out of two nested containers has to be told
+  // what those containers contributed before it adds its own.
+  const parentEffectiveZ = useEffectiveZ();
+  const liftedZ = liftedPast.reduce((z, ancestor) => {
+    const props = ancestor.properties as Partial<Node2DProperties>;
+    return accumulateCanvasItemZ(z, {
+      z_index: props.z_index ?? 0,
+      z_as_relative: props.z_as_relative,
+    });
+  }, parentEffectiveZ);
 
   let wrapped = children;
   for (let i = liftedPast.length - 1; i >= 0; i--) {
@@ -229,7 +250,11 @@ function LiftedAncestors({
     parentModulate
   );
 
-  return <Modulate2DContext.Provider value={inherited}>{wrapped}</Modulate2DContext.Provider>;
+  return (
+    <Modulate2DContext.Provider value={inherited}>
+      <EffectiveZProvider value={liftedZ}>{wrapped}</EffectiveZProvider>
+    </Modulate2DContext.Provider>
+  );
 }
 
 /** The item's true path in the scene tree, including the levels it was lifted past. */
@@ -405,7 +430,9 @@ function TileGroupRenderer({ item, z, band, node }: {
   const material = useCanvasItemMaterial(tileProps);
   const canvasModulate = useCanvasModulateFor(material);
   const { color, opacity } = useCanvasItemTint(tileProps, canvasModulate);
-  const lighting = useCanvasItemLighting(material, tileProps.light_mask);
+  // This path bypasses CanvasItem2D, so the accumulated z the lights are culled
+  // against comes from the sort item, which already carries it.
+  const lighting = useCanvasItemLighting(material, tileProps.light_mask, item.effectiveZ);
   const allCells = tileProps.cells ?? null;
   // When expanded by the y-sort pass, tileData.cells holds the filtered Y-group cells.
   const cells = item.tileData?.cells ?? allCells;

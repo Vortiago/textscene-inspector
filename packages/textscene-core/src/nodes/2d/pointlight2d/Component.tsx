@@ -37,6 +37,7 @@ import {
   useShadowTintLayer,
   useRegisterCanvasLight2D,
 } from '../../../r3f/lighting2d/CanvasLighting2D';
+import type { LightCullKey } from '../../../r3f/lighting2d/lightCullKey';
 import { useWorldShadowCasters } from '../../../r3f/lighting2d/ShadowCasterStage';
 import { useShadowLightPose } from '../../../r3f/lighting2d/shadowLightPose';
 import {
@@ -64,22 +65,38 @@ export function PointLight2D({ node, children }: NodeComponentProps) {
   const showPlaceholder = missing || !props.texture;
 
   const lights = props.enabled && !!displayedTexture ? 1 : 0;
-  // `range_item_cull_mask`, which items this light reaches, is what partitions
-  // the accumulation, so it is what the light registers under and what decides
-  // the layer its quad draws on. The node's own `light_mask` is its CanvasItem
-  // mask and has no bearing on either.
-  const ordinal = useRegisterCanvasLight2D(lights > 0, props.range_item_cull_mask);
+  // WHICH ITEMS this light reaches is what partitions the accumulation, so the
+  // whole cull tuple is what the light registers under and what decides the
+  // layer its quad draws on. The node's own `light_mask` is its CanvasItem mask
+  // and has no bearing on either.
+  const cullKey = useMemo<LightCullKey>(
+    () => ({
+      itemCullMask: props.range_item_cull_mask,
+      zMin: props.range_z_min,
+      zMax: props.range_z_max,
+      layerMin: props.range_layer_min,
+      layerMax: props.range_layer_max,
+    }),
+    [
+      props.range_item_cull_mask,
+      props.range_z_min,
+      props.range_z_max,
+      props.range_layer_min,
+      props.range_layer_max,
+    ]
+  );
+  const ordinal = useRegisterCanvasLight2D(lights > 0, cullKey);
   // Two different jobs, deliberately two different numbers: `ordinal` keeps the
   // shadow stencil stamps of one pass apart (dense, reused on unmount), while
   // `sequence` is this light's position in the canvas light list, which is what
   // Godot applies lights in and what order-dependent MIX depends on.
   const sequence = useLightSequence(ordinal);
-  const layer = useLightClassLayer(props.range_item_cull_mask);
+  const layer = useLightClassLayer(cullKey);
   // Godot's default shadow_color is transparent, so the extra albedo-free pass
   // is allocated only for the rare light that actually tints its shadow.
   const tintsShadow = props.shadow_enabled && shadowColorContributes(props.shadow_color);
   useRegisterShadowTint(lights > 0 && tintsShadow);
-  const shadowTintLayer = useShadowTintLayer(props.range_item_cull_mask);
+  const shadowTintLayer = useShadowTintLayer(cullKey);
 
   // Every occluder on the canvas, narrowed to the ones Godot lets THIS light
   // see. The flatten is shared; only the mask test is per light.

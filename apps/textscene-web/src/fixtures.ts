@@ -378,6 +378,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Pointlight2d Range Layer",
+    "file": "unit-pointlight2d-range-layer.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Pointlight2d Range Z",
+    "file": "unit-pointlight2d-range-z.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Pointlight2d",
     "file": "unit-pointlight2d.tscn",
     "category": "Other"

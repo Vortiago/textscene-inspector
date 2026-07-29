@@ -13,9 +13,10 @@
  * ones the provider owns, so a resize or a reallocation reaches every item
  * without a re-render.
  *
- * Godot's cull test, `light.range_item_cull_mask & item.light_mask != 0`,
- * runs HERE, once per item per frame, and reaches the shader as a per-slot
- * weight. See `canvasItemLighting.ts` for why it cannot run per fragment.
+ * Godot's cull test — the item's `light_mask`, its accumulated `z_final` and its
+ * canvas's layer against the light class's window (`lightCullKey`) — runs HERE,
+ * once per item per frame, and reaches the shader as a per-slot weight. See
+ * `canvasItemLighting.ts` for why it cannot run per fragment.
  */
 
 import { useMemo, useRef } from 'react';
@@ -32,10 +33,11 @@ import {
 } from './CanvasLighting2D.js';
 import {
   canvasItemLightingProps,
-  lightReachesItem,
   type CanvasItemLightingProps,
   type CanvasItemLightingUniforms,
 } from './canvasItemLighting.js';
+import { lightReachesItem } from './lightCullKey.js';
+import { useCanvasLayerIndex, useEffectiveZ } from './canvasItemPlacement.js';
 
 export type { CanvasItemLightingProps };
 
@@ -68,9 +70,18 @@ function createUniforms(resolution: THREE.Vector2): CanvasItemLightingUniforms {
 export function useCanvasItemLighting(
   material: CanvasItemMaterialProperties | null,
   /** The item's CanvasItem `light_mask`; Godot's default 1 for a node without one. */
-  lightMask = 1
+  lightMask = 1,
+  /**
+   * The item's own `z_final`. Defaults to the enclosing item's accumulated z,
+   * which is what every ordinary slice wants; the y-sort pass renders items
+   * outside their tree position and so passes the z it computed for them.
+   */
+  effectiveZ?: number
 ): CanvasItemLightingProps {
   const { classes, resolution } = useCanvasLighting2D();
+  const inheritedZ = useEffectiveZ();
+  const itemZ = effectiveZ ?? inheritedZ;
+  const canvasLayer = useCanvasLayerIndex();
   // The RAW canvas tint, not the light-mode-gated one: the shader divides out
   // exactly what the CPU folded in, and the floor is applied on both sides.
   const canvasModulate = useCanvasModulate();
@@ -94,7 +105,7 @@ export function useCanvasItemLighting(
     const lights =
       !!accumulation &&
       lightClass !== undefined &&
-      lightReachesItem(lightClass.cullMask, lightMask);
+      lightReachesItem(lightClass.key, lightMask, itemZ, canvasLayer);
     weights[slot] = lights ? 1 : 0;
     bound.classBuffers[slot]!.value = lights ? accumulation : EMPTY_LIGHT_BUFFER;
     // The stand-in is transparent black, so a class with no shadow-tinting light

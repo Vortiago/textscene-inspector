@@ -92,4 +92,35 @@ describe('PointLight2D linterParser validators', () => {
       )
     ).toBeGreaterThan(0);
   });
+
+  it('accepts the four range-window properties as plain integers', () => {
+    expect(
+      lintErrors(
+        `[gd_scene format=3]\n[node name="L" type="PointLight2D"]\n` +
+          `range_z_min = -1024\nrange_z_max = 1024\nrange_layer_min = 0\nrange_layer_max = 0`
+      )
+    ).toBe(0);
+  });
+
+  it('accepts a window Godot itself would not clamp', () => {
+    // `Light2D::set_z_range_min` assigns and forwards, with no CLAMP and no
+    // reordering (`scene/2d/light_2d.cpp`), which 4.6.3 confirms; the layer pair
+    // is a full int32 range. An out-of-inspector-hint value is therefore legal
+    // input rather than a parse error.
+    expect(
+      lintErrors(
+        `[gd_scene format=3]\n[node name="L" type="PointLight2D"]\n` +
+          `range_z_min = -99999\nrange_layer_max = 2147483647`
+      )
+    ).toBe(0);
+  });
+
+  it('rejects a non-integer range window', () => {
+    expect(
+      lintErrors(`[gd_scene format=3]\n[node name="L" type="PointLight2D"]\nrange_z_max = "four"`)
+    ).toBeGreaterThan(0);
+    expect(
+      lintErrors(`[gd_scene format=3]\n[node name="L" type="PointLight2D"]\nrange_layer_min = abc`)
+    ).toBeGreaterThan(0);
+  });
 });

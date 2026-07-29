@@ -112,6 +112,69 @@ interpolates the accumulator and does not commute across the split.
 
 `shadow_item_cull_mask` parses and is reported, but nothing is shadowed yet.
 
+## The z window: which z planes a light reaches
+
+The cull mask is one of three tests. Godot's GLES3 rasterizer applies a light to
+an item only when
+
+```
+p_item->light_mask & light->item_mask
+  && p_item->z_final >= light->z_min && p_item->z_final <= light->z_max
+```
+
+Both bounds are inclusive, and Godot never swaps an inverted pair: `Light2D`'s
+setters assign and forward without clamping or reordering, so `min > max` is an
+empty window and the light reaches nothing.
+
+`z_final` is the ACCUMULATED `z_index`: `_cull_canvas_item` adds each node's own
+onto its parent's (clamped to Godot's ±4096), and `z_as_relative = false` resets
+it to the absolute value. Three panels under one `range_z_max = 4` light,
+measured on Godot 4.6.3:
+
+| Panel | `z_index` | Godot | Ours | Reached |
+| --- | --- | --- | --- | --- |
+| `InsideWindow` | 0 | rgb(141, 122, 138) | rgb(141, 123, 138) | yes |
+| `AtWindowMax` | 4 | rgb(213, 173, 165) | rgb(214, 174, 165) | yes, the bound is inclusive |
+| `AboveWindow` | 5 | rgb(55, 62, 106) | rgb(55, 62, 107) | no — albedo × CanvasModulate exactly |
+
+The same scene authored with `range_z_min = 4` instead inverts it: `z_index` 0
+falls to rgb(55, 62, 106) and `z_index` 4 stays at rgb(213, 173, 165). And with a
+`Node2D` at `z_index = 2` between the light and the panels, a child at
+`z_index 1` (effective 3) is lit at rgb(141, 122, 138), one at `z_index 3`
+(effective 5) is not, and the same child with `z_as_relative = false` is lit
+again at absolute 3.
+
+The default window, -1024 to 1024, is wide enough to go unnoticed on a scene
+whose z stays small — but it is a bound like any other. `z_index`'s own
+-4096..4096 is an inspector hint rather than a setter guard, so an item can sit
+outside a default light's window.
+
+## The layer window: which canvases a light reaches
+
+The layer half is tested once per CANVAS rather than per item — the viewport
+hands a light to a canvas at all only when
+`canvas.layer >= light->layer_min && canvas.layer <= light->layer_max` — and it
+is where the default bites. `range_layer_min` and `range_layer_max` both default
+to `0`, the world canvas's layer, while `CanvasLayer.layer` defaults to `1`, so
+an untouched light lights the world and never the HUD. One default light between
+a world `Polygon2D` and an identical one inside a bare `CanvasLayer`:
+
+| Panel | Canvas layer | Godot | Ours | Reached |
+| --- | --- | --- | --- | --- |
+| `WorldPanel` | 0 | rgb(181, 159, 145) | rgb(181, 159, 146) | yes |
+| `HudPanel` | 1 | rgb(107, 107, 117) | rgb(107, 107, 117) | no — the raw albedo, untinted |
+
+Widening the light to `range_layer_max = 1` lights the HUD panel to
+rgb(164, 147, 139) and leaves the world panel exactly where it was.
+
+Two lights that agree on the whole cull TUPLE —
+`(range_item_cull_mask, range_z_min, range_z_max, range_layer_min, range_layer_max)`
+— are indistinguishable to every item, so that tuple, not the mask alone, is what
+the accumulation classes partition by. Every light that leaves the four range
+properties at their defaults carries the same tail, so a scene that authors no
+window has exactly the classes it had before the windows existed; only an
+authored window mints a new one.
+
 ## Divergences
 
 The light is no longer a quad on the canvas. Lights accumulate into an offscreen
@@ -132,15 +195,24 @@ Measured mean channel error against the engine, over the whole frame:
 
 What is left unimplemented:
 
-- `range_layer_min/max` and `range_z_min/max` are not applied, so a light still
-  reaches items outside its layer and z window. `light_mask` and
-  `range_item_cull_mask` ARE applied (above).
+- `shadow_item_cull_mask` selects which occluders cast, which this sheet
+  documents — but in Godot the SAME mask is tested against each item's
+  `light_mask` a second time (`shadow_mask |= 1 << light_count` in the GLES3
+  rasterizer's light collection), deciding which ITEMS receive the shadowed
+  version of the light. The accumulator cannot express per-item shadow on/off
+  inside one class, so an item that Godot would exclude from the shadow still
+  sees it here.
+- A `CanvasLayer`'s own transform semantics are not reproduced: Godot draws a
+  CanvasLayer through its own canvas transform, which does not follow the 2D
+  camera. The layer WINDOW is applied (above); the parallax-free placement is
+  not.
 - A MIX light in one cull-mask class over a light in another class, both
   reaching the same item, is summed rather than interpolated in Godot's order.
   That is the one case the per-class split cannot reproduce, since MIX does not
   commute. ADD and SUB across classes are exact.
-- Past four distinct `range_item_cull_mask` values on one canvas the extra
-  classes are dropped with a `logger.warn`; nothing in the corpus reaches three.
+- Past four distinct cull TUPLES on one canvas the extra classes are dropped with
+  a `logger.warn`; nothing in the corpus reaches three, and no scene that leaves
+  the range windows alone can add one.
 - `shadow_enabled` casts nothing, and `shadow_item_cull_mask` is parsed and
   reported but selects nothing. `LightOccluder2D` and `OccluderPolygon2D`
   parse and render their outline, but no light is occluded by them.
@@ -164,6 +236,10 @@ Strict parsing format-checks these `PointLight2D` properties, plus 18 inherited 
 | `energy` |
 | `offset` |
 | `range_item_cull_mask` |
+| `range_layer_max` |
+| `range_layer_min` |
+| `range_z_max` |
+| `range_z_min` |
 | `shadow_color` |
 | `shadow_enabled` |
 | `shadow_filter` |
@@ -175,6 +251,8 @@ Strict parsing format-checks these `PointLight2D` properties, plus 18 inherited 
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `valid-pointlight2d-ranges` | `pointlight2d-inverted-z-range` | warning |
+|  | `pointlight2d-inverted-layer-range` | warning |
 <!-- lint:end -->
 
 `enabled` falls back to `true`, `energy` and `texture_scale` to `1.0`, `offset` to
@@ -187,17 +265,22 @@ present, with no resource-reference format check.
 ## Known limitations
 
 The light term itself (falloff, tint, energy, all three blend modes, the canvas
-tint, both light modes and the item cull masks) is Godot's own arithmetic in
-Godot's own space, measured above. What the pass still does not do:
+tint, both light modes, the item cull masks and both range windows) is Godot's
+own arithmetic in Godot's own space, measured above. What the pass still does
+not do:
 
 - **No shadows.** `shadow_enabled` and any `LightOccluder2D` in range are ignored
   (see the LightOccluder2D sheet); the light passes through occluders.
   `shadow_item_cull_mask` parses and is reported, but selects nothing.
-- **No range windows.** `range_layer_min/max` and `range_z_min/max` are not
-  applied, so a light reaches items outside its layer and z window.
+- **No per-item shadow gating.** `shadow_item_cull_mask` is tested against each
+  ITEM's `light_mask` too, not only against occluders; the accumulator cannot
+  turn one light's shadow off for one item inside a class.
 - **No normal-mapped or specular response.** A `CanvasTexture.normal_texture`
   under a light is not read; every surface takes the light head-on.
-- **MIX across two cull-mask classes** on one item is summed rather than applied
-  in Godot's order (see Divergences).
+- **MIX across two classes** on one item is summed rather than applied in Godot's
+  order (see Divergences).
+- **A `CanvasLayer` is not placed as its own canvas.** Its layer decides which
+  lights reach it (above), but it still follows the 2D camera, where Godot draws
+  it through a canvas transform of its own.
 - **A `Control` draws in the DOM overlay** rather than on the WebGL canvas
   (ADR-0024), so no 2D light reaches one.

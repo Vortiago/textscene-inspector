@@ -16,6 +16,16 @@ validatorRegistry.registerAll('PointLight2D', {
   // are ANDed against the item's own `light_mask`, and both are 32-bit.
   range_item_cull_mask: layerBitmask('range_item_cull_mask'),
   shadow_item_cull_mask: layerBitmask('shadow_item_cull_mask'),
+  // The z and layer windows. Format only, deliberately unbounded: the inspector
+  // hints are -4096..4096 and int32, but `Light2D::set_z_range_min` and its
+  // siblings only assign and forward — no CLAMP, no reordering — which 4.6.3
+  // confirms by keeping -99999. An out-of-hint value is therefore legal input
+  // rather than a malformed file. An inverted window is the real authoring
+  // mistake, and `linter.ts` warns about it.
+  range_z_min: v.int('range_z_min'),
+  range_z_max: v.int('range_z_max'),
+  range_layer_min: v.int('range_layer_min'),
+  range_layer_max: v.int('range_layer_max'),
   shadow_enabled: v.boolean('shadow_enabled'),
   shadow_color: v.color('shadow_color'),
   shadow_filter: v.enumInt('shadow_filter', 0, 2, { 0: 'NONE', 1: 'PCF5', 2: 'PCF13' }),

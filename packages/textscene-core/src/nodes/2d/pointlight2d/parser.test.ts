@@ -113,6 +113,48 @@ describe('parsePointLight2D', () => {
     expect(p.range_item_cull_mask).toBe(1);
   });
 
+  it('parses the z and layer range windows', () => {
+    const p = parsePointLight2D(nodeHeading, {
+      range_z_min: '-8',
+      range_z_max: '4',
+      range_layer_min: '1',
+      range_layer_max: '3',
+    });
+    expect(p.range_z_min).toBe(-8);
+    expect(p.range_z_max).toBe(4);
+    expect(p.range_layer_min).toBe(1);
+    expect(p.range_layer_max).toBe(3);
+  });
+
+  it('defaults the range windows to Godot\'s own', () => {
+    // `scene/2d/light_2d.h:50-53` — z_min = -1024, z_max = 1024, layer_min = 0,
+    // layer_max = 0 — and a fresh PointLight2D in 4.6.3 reports the same four.
+    // The layer pair is what stops a default light reaching a default
+    // CanvasLayer, whose `layer` is 1.
+    const p = parsePointLight2D(nodeHeading, {});
+    expect(p.range_z_min).toBe(-1024);
+    expect(p.range_z_max).toBe(1024);
+    expect(p.range_layer_min).toBe(0);
+    expect(p.range_layer_max).toBe(0);
+  });
+
+  it('keeps a window value Godot itself would keep, unclamped', () => {
+    // `Light2D::set_z_range_min` in `scene/2d/light_2d.cpp` is
+    //     z_min = p_min_z;
+    //     RS::get_singleton()->canvas_light_set_z_range(canvas_light, z_min, z_max);
+    // with no CLAMP and no swap of an inverted pair, and its three siblings match.
+    // 4.6.3 agrees: setting -99999 leaves -99999 on the node. Only the ITEM's
+    // accumulated z is clamped, at +/-4096, so nothing here may narrow the window.
+    const p = parsePointLight2D(nodeHeading, { range_z_min: '-99999' });
+    expect(p.range_z_min).toBe(-99999);
+  });
+
+  it('warns and falls back on an invalid range window value', () => {
+    const p = parsePointLight2D(nodeHeading, { range_z_max: 'not_an_int', range_layer_min: 'x' });
+    expect(p.range_z_max).toBe(1024);
+    expect(p.range_layer_min).toBe(0);
+  });
+
   it('inherits Node2D transform properties', () => {
     const p = parsePointLight2D(nodeHeading, {
       position: 'Vector2(50, 100)',

@@ -20,15 +20,16 @@
  * clamp Godot's framebuffer applies — and re-encodes; three's own
  * `colorspace_fragment` then converts once more on the way out.
  *
- * LIGHT CULLING. Godot applies a light to an item only when
- * `light.range_item_cull_mask & item.light_mask != 0`, so the accumulation is
- * split into one buffer per distinct cull mask and this item reads the ones its
- * own mask selects. WHICH ones is decided on the CPU, once per item per frame,
- * and arrives as a per-slot weight. GLSL ES 1.00, which is what three compiles
- * an `onBeforeCompile` injection as, has no bitwise operators at all, and a
- * per-fragment mask test would recompute a per-item constant at every pixel.
- * The slots are UNROLLED because the same GLSL version cannot index a sampler
- * array by anything but a constant expression.
+ * LIGHT CULLING. Godot applies a light to an item only when the item's
+ * `light_mask`, its accumulated `z_final` and its canvas's layer all pass the
+ * light's window (`lightCullKey`), so the accumulation is split into one buffer
+ * per distinct cull TUPLE and this item reads the ones it is not culled from.
+ * WHICH ones is decided on the CPU, once per item per frame, and arrives as a
+ * per-slot weight. GLSL ES 1.00, which is what three compiles an
+ * `onBeforeCompile` injection as, has no bitwise operators at all, and a
+ * per-fragment test would recompute a per-item constant at every pixel. The
+ * slots are UNROLLED because the same GLSL version cannot index a sampler array
+ * by anything but a constant expression.
  *
  * Combining several classes is `S = seed + Σ (S_class − seed)`, which is what
  * Godot's loop produces whenever the blends commute. One class (the ordinary
@@ -62,21 +63,6 @@ import { MAX_LIGHT_CLASSES } from './CanvasLighting2D.js';
  * but dividing by it still recovers the albedo the lights need.
  */
 export const CANVAS_MODULATE_FLOOR = 1 / 255;
-
-/**
- * Godot's whole 2D light-culling rule, from `RendererCanvasCull::_render_canvas_item`:
- *
- *   if (light->item_mask & ci->light_mask) { ...apply light... }
- *
- * `item_mask` is the light's `range_item_cull_mask`; the light's own
- * `light_mask` is its CanvasItem mask and says nothing about what it lights.
- * Both sides default to 1, which is why an untouched light reaches an untouched
- * item. JS `&` is a signed 32-bit operation over exactly the 32 bits Godot
- * compares, and `!== 0` reads the result the same way `if` does in C++.
- */
-export function lightReachesItem(rangeItemCullMask: number, itemLightMask: number): boolean {
-  return (rangeItemCullMask & itemLightMask) !== 0;
-}
 
 /** The GLSL sampler holding class slot `index`'s accumulation. */
 export function lightClassSampler(index: number): string {

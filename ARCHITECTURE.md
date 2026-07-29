@@ -268,17 +268,27 @@ target and one more seeded pass over the same quads:
 
 - `light_mode = Light Only` skips the canvas tint, so it needs the same lights
   over an unmodulated seed. Allocated only when such an item exists.
-- **Cull masks.** Godot applies a light to an item only when
-  `light.range_item_cull_mask & item.light_mask != 0`, so lights that share a
-  cull mask are indistinguishable to every item and the lights partition into
-  CLASSES by that mask: one accumulation per class, on its own camera layer,
-  with the seed quad on a layer of its own that every pass enables. An item
-  reads the classes its own mask selects, summed over one shared seed: exact for
-  a single class (the ordinary canvas) and for any number of ADD/SUB classes.
-  The item-side lookup unrolls one sampler per class because GLSL ES 1.00 (what
+- **The cull tuple.** Godot applies a light to an item only when the item's
+  `light_mask` shares a bit with the light's `range_item_cull_mask`, the item's
+  accumulated `z_final` is inside `range_z_min..max`, and the item's CANVAS layer
+  is inside `range_layer_min..max` (`lightCullKey`). Those five light-side values
+  are the whole test, so lights that agree on all five are indistinguishable to
+  every item and the lights partition into CLASSES by that TUPLE: one
+  accumulation per class, on its own camera layer, with the seed quad on a layer
+  of its own that every pass enables. The partition can be no finer, because the
+  buffer is a screen-space sum no fragment can subtract one light back out of;
+  and it is no coarser in practice, because every light that leaves the range
+  windows at their Godot defaults carries the same tail. An item reads the
+  classes it is not culled from, summed over one shared seed: exact for a single
+  class (the ordinary canvas) and for any number of ADD/SUB classes. The
+  item-side lookup unrolls one sampler per class because GLSL ES 1.00 (what
   three compiles an `onBeforeCompile` injection as) cannot index a sampler by a
   runtime value, which also caps the count (`MAX_LIGHT_CLASSES`) and is why the
   cull test itself runs on the CPU: that GLSL has no bitwise operators at all.
+  The item's two non-mask operands are threaded down the tree by
+  `canvasItemPlacement` — `z_index` accumulates through `CanvasItem2D`, and a
+  `CanvasLayer` publishes its own `layer` (Godot default 1) to its subtree, which
+  is why an untouched light lights the world canvas and never a HUD.
 
 Parity is measured, not derived: `pnpm ref:godot <scene> --probe x,y` prints the
 engine's exact pixels, and the `unit-pointlight2d*` comparison sheets carry the

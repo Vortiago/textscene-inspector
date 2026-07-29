@@ -60,6 +60,11 @@ import { ErrorBoundary } from './components/ErrorBoundary.js';
 import { transformFromNode3DProperties, type NodeTransform } from './nodeTransform.js';
 import { node2dGroupProps } from './node2dTransform.js';
 import { canvasModulateColor, CanvasModulateContext } from './canvasModulate.js';
+import {
+  CanvasLayerIndexProvider,
+  DEFAULT_CANVAS_LAYER,
+  EffectiveZProvider,
+} from './lighting2d/canvasItemPlacement.js';
 import type { Node3DProperties } from '../nodes/base/node3d/types.js';
 import type { Node2DProperties } from '../nodes/base/node2d/types.js';
 import { GlbOverridesProvider } from './internal/glb-scene-root/GlbOverridesContext.js';
@@ -208,6 +213,14 @@ function PlainNode({
     () => (isCanvasLayer ? canvasModulateColor(node.children) : null),
     [isCanvasLayer, node.children]
   );
+  // A light is handed to a CANVAS only when the canvas's layer falls inside the
+  // light's `range_layer_min/max` window, and Godot's default window is 0..0
+  // while a CanvasLayer's own default `layer` is 1 — so an untouched light
+  // reaches the world and no HUD. The subtree also starts a fresh z
+  // accumulation, because `_cull_canvas_item` walks each canvas from z 0.
+  const canvasLayerIndex = isCanvasLayer
+    ? (node.properties as { layer?: number }).layer ?? DEFAULT_CANVAS_LAYER
+    : null;
 
   const rankZ = useYSortZContext();
   if (workspace === '3d' && isCanvasItem) return null;
@@ -308,9 +321,11 @@ function PlainNode({
         >
           <Component node={node}>
             {children.length > 0 ? (
-              layerModulate ? (
+              layerModulate && canvasLayerIndex !== null ? (
                 <CanvasModulateContext.Provider value={layerModulate}>
-                  {children}
+                  <CanvasLayerIndexProvider value={canvasLayerIndex}>
+                    <EffectiveZProvider value={0}>{children}</EffectiveZProvider>
+                  </CanvasLayerIndexProvider>
                 </CanvasModulateContext.Provider>
               ) : (
                 <>{children}</>

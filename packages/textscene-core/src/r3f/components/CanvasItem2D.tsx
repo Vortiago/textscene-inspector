@@ -20,6 +20,11 @@ import {
   type CanvasItemLightingProps,
 } from '../lighting2d/useCanvasItemLighting';
 import {
+  EffectiveZProvider,
+  accumulateCanvasItemZ,
+  useEffectiveZ,
+} from '../lighting2d/canvasItemPlacement';
+import {
   CanvasItemMaterialProvider,
   useCanvasItemMaterial,
 } from './canvasItemMaterialContext';
@@ -70,7 +75,12 @@ export function CanvasItem2D({ node, props, body, children }: CanvasItem2DProps)
   // two must be resolved from the one hook.
   const canvasModulate = useCanvasModulateFor(material);
   const tint = useCanvasItemTint(props, canvasModulate);
-  const lighting = useCanvasItemLighting(material, props.light_mask);
+  // Godot's `z_final`: the integer z_index accumulated down the tree and clamped,
+  // which is what a light's z window is tested against. Unrelated to `z` above,
+  // which is a fractional draw-order offset in three's depth.
+  const parentEffectiveZ = useEffectiveZ();
+  const effectiveZ = accumulateCanvasItemZ(parentEffectiveZ, props);
+  const lighting = useCanvasItemLighting(material, props.light_mask, effectiveZ);
 
   return (
     <group name={node.name} {...transform} visible={props.visible !== false}>
@@ -79,7 +89,9 @@ export function CanvasItem2D({ node, props, body, children }: CanvasItem2DProps)
         {/* Descendants inherit this node's material through `use_parent_material`,
             so the provider carries what THIS node resolved — including a null,
             which correctly stops an inherited material at a node that clears it. */}
-        <CanvasItemMaterialProvider value={material}>{children}</CanvasItemMaterialProvider>
+        <EffectiveZProvider value={effectiveZ}>
+          <CanvasItemMaterialProvider value={material}>{children}</CanvasItemMaterialProvider>
+        </EffectiveZProvider>
       </Modulate2DContext.Provider>
     </group>
   );

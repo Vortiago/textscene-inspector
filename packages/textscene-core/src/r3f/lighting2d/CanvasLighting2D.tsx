@@ -30,17 +30,22 @@
  * uniform differing. The Light Only pass is allocated and run only when the
  * canvas actually holds a Light Only item.
  *
- * WHICH LIGHTS REACH AN ITEM is Godot's `RendererCanvasCull`:
+ * WHICH LIGHTS REACH AN ITEM is Godot's cull test — the item's `light_mask`
+ * against the light's `range_item_cull_mask`, the item's accumulated `z_final`
+ * against the light's z window, and the item's CANVAS layer against the light's
+ * layer window (see `lightCullKey`). Those five light-side values are the whole
+ * of it, so two lights that agree on all five are INDISTINGUISHABLE to every
+ * item on the canvas: the lights partition into classes by that TUPLE, and one
+ * accumulation per class covers every item exactly. An item then reads the
+ * classes it is not culled from, usually exactly one, which is the accumulation
+ * it would have got from a single-class canvas.
  *
- *   if (light->item_mask & ci->light_mask) { ...apply light... }
- *
- * (`item_mask` is the `range_item_cull_mask` property; the light's own
- * `light_mask` is its CanvasItem mask and says nothing about what it lights.)
- * Two lights that share a `range_item_cull_mask` are therefore INDISTINGUISHABLE
- * to every item on the canvas, so the lights partition into classes by that
- * mask, and one accumulation per class covers every item exactly. An item then
- * reads the classes its own `light_mask` selects, usually exactly one, which is
- * the accumulation it would have got from a single-class canvas.
+ * The partition cannot be finer-grained than a class, because the buffer is a
+ * screen-space SUM: once two lights land in it, no fragment can subtract one of
+ * them back out. It is also no coarser for free — but every light that leaves
+ * the four range properties alone carries the same tail
+ * `(mask, -1024, 1024, 0, 0)`, so a scene that authors no window has exactly the
+ * classes it had when the mask alone was the key.
  *
  * The buffers are half-float, which is the load-bearing part. Godot clamps only
  * after multiplying the light into the albedo; a fragment blended straight onto
@@ -88,9 +93,15 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { warn } from '../../logger';
 import type { RGBA } from '../canvasItemModulate.js';
 import { ShadowCasterStage } from './ShadowCasterStage.js';
+import {
+  compareLightCullKeys,
+  lightCullKeyId,
+  sameLightCullKey,
+  type LightCullKey,
+} from './lightCullKey.js';
 
 /**
- * How many distinct `range_item_cull_mask` classes one canvas may accumulate.
+ * How many distinct light classes one canvas may accumulate.
  * The item-side injection unrolls one sampler per class, and GLSL ES 1.00
  * (which is what three compiles an `onBeforeCompile` injection as) cannot index
  * a sampler array by a runtime value, so the count has to be a compile-time
@@ -145,10 +156,10 @@ export const LIGHT_UNCLASSED_LAYER = SHADOW_TINT_LAYER + MAX_LIGHT_CLASSES;
 /** Draw order within a light layer: the seed must land under every light. */
 const SEED_RENDER_ORDER = -1;
 
-/** One `range_item_cull_mask` value's accumulation. */
+/** One cull tuple's accumulation. */
 export interface CanvasLightClass {
-  /** The `range_item_cull_mask` every light in this class shares. */
-  readonly cullMask: number;
+  /** The cull tuple every light in this class shares — see `lightCullKey`. */
+  readonly key: LightCullKey;
   /**
    * `S` seeded from the canvas modulate in rgb, and this class's summed cookie
    * coverage in alpha, in Godot's sRGB space and unclamped.
@@ -182,9 +193,9 @@ export interface CanvasLightSlot {
 
 export interface CanvasLighting2D {
   /**
-   * The cull-mask classes in force, ascending by mask. Empty when the canvas
-   * holds no light, in which case items fall back to the canvas modulate they
-   * already know.
+   * The light classes in force, ordered by their cull tuple (cull mask first).
+   * Empty when the canvas holds no light, in which case items fall back to the
+   * canvas modulate they already know.
    */
   readonly classes: readonly CanvasLightClass[];
   /**
@@ -194,10 +205,10 @@ export interface CanvasLighting2D {
    */
   readonly resolution: THREE.Vector2;
   /**
-   * Declares a light of this `range_item_cull_mask` on the canvas and takes a
-   * slot in that class's pass.
+   * Declares a light of this cull tuple on the canvas and takes a slot in that
+   * class's pass.
    */
-  register(cullMask: number): CanvasLightSlot;
+  register(key: LightCullKey): CanvasLightSlot;
   /** Declares an item that needs the unmodulated accumulation. */
   registerLightOnly(): () => void;
   /** Declares a light that tints its shadow, so the extra pass is worth running. */
@@ -207,7 +218,7 @@ export interface CanvasLighting2D {
 const INERT: CanvasLighting2D = {
   classes: [],
   resolution: new THREE.Vector2(1, 1),
-  register: () => ({ ordinal: 0, release: () => {} }),
+  register: (_key: LightCullKey) => ({ ordinal: 0, release: () => {} }),
   registerLightOnly: () => () => {},
   registerShadowTint: () => () => {},
 };
@@ -229,10 +240,10 @@ function useDeclarationCount(): [number, () => () => void] {
   return [count, declare];
 }
 
-const EMPTY_MASKS: readonly number[] = [];
+const EMPTY_KEYS: readonly LightCullKey[] = [];
 
-function sameMasks(a: readonly number[], b: readonly number[]): boolean {
-  return a.length === b.length && a.every((mask, i) => mask === b[i]);
+function sameKeys(a: readonly LightCullKey[], b: readonly LightCullKey[]): boolean {
+  return a.length === b.length && a.every((key, i) => sameLightCullKey(key, b[i]!));
 }
 
 /** The lowest ordinal `taken` has not handed out. */
@@ -242,35 +253,46 @@ function freeOrdinal(taken: ReadonlySet<number>): number {
   return ordinal;
 }
 
+/** One live class: the tuple it accumulates for, and the ordinals in use. */
+interface LiveClass {
+  key: LightCullKey;
+  slots: Set<number>;
+}
+
 /**
- * The distinct `range_item_cull_mask` values currently mounted, ascending, and
- * a slot allocator within each.
+ * The distinct cull tuples currently mounted, in tuple order, and a slot
+ * allocator within each.
  *
- * Ascending rather than mount-ordered so a class's index, and therefore its
- * camera layer, depends only on WHICH masks are present, never on which light
- * mounted first. The live SLOTS per mask are what make the withdrawal of one of
- * several lights sharing a mask leave the class standing, and reusing the
+ * Sorted rather than mount-ordered so a class's index, and therefore its camera
+ * layer, depends only on WHICH tuples are present, never on which light mounted
+ * first. Keyed by the tuple's VALUE, since a light rebuilds its key object on
+ * every render. The live SLOTS per tuple are what make the withdrawal of one of
+ * several lights sharing a class leave the class standing, and reusing the
  * lowest free ordinal keeps the numbering dense across a scene that mounts and
  * unmounts lights — which matters because they index an 8-bit stencil.
  */
-function useCullMaskRegistry(): [readonly number[], (cullMask: number) => CanvasLightSlot] {
-  const [masks, setMasks] = useState<readonly number[]>(EMPTY_MASKS);
-  const taken = useRef(new Map<number, Set<number>>()).current;
+function useLightClassRegistry(): [
+  readonly LightCullKey[],
+  (key: LightCullKey) => CanvasLightSlot,
+] {
+  const [keys, setKeys] = useState<readonly LightCullKey[]>(EMPTY_KEYS);
+  const taken = useRef(new Map<string, LiveClass>()).current;
 
   const publish = useCallback(() => {
-    const next = [...taken.keys()].sort((a, b) => a - b);
-    setMasks((previous) => (sameMasks(previous, next) ? previous : next));
+    const next = [...taken.values()].map((live) => live.key).sort(compareLightCullKeys);
+    setKeys((previous) => (sameKeys(previous, next) ? previous : next));
   }, [taken]);
 
   const declare = useCallback(
-    (cullMask: number): CanvasLightSlot => {
-      let slots = taken.get(cullMask);
-      if (!slots) {
-        slots = new Set<number>();
-        taken.set(cullMask, slots);
+    (key: LightCullKey): CanvasLightSlot => {
+      const id = lightCullKeyId(key);
+      let live = taken.get(id);
+      if (!live) {
+        live = { key, slots: new Set<number>() };
+        taken.set(id, live);
       }
-      const ordinal = freeOrdinal(slots);
-      slots.add(ordinal);
+      const ordinal = freeOrdinal(live.slots);
+      live.slots.add(ordinal);
       publish();
 
       // A second release must not free the ordinal a LATER light has since been
@@ -281,10 +303,10 @@ function useCullMaskRegistry(): [readonly number[], (cullMask: number) => Canvas
         release: () => {
           if (released) return;
           released = true;
-          const live = taken.get(cullMask);
-          if (!live) return;
-          live.delete(ordinal);
-          if (live.size === 0) taken.delete(cullMask);
+          const current = taken.get(id);
+          if (!current) return;
+          current.slots.delete(ordinal);
+          if (current.slots.size === 0) taken.delete(id);
           publish();
         },
       };
@@ -292,42 +314,49 @@ function useCullMaskRegistry(): [readonly number[], (cullMask: number) => Canvas
     [taken, publish]
   );
 
-  return [masks, declare];
+  return [keys, declare];
 }
 
 /**
- * Declares that a light of this `range_item_cull_mask` is present. The classes
- * are what gate the accumulators: with no lights none is allocated and every
- * canvas item reads its canvas modulate straight from its uniform, which is the
- * 3D workspace and most fixtures.
+ * Declares that a light of this cull tuple is present. The classes are what
+ * gate the accumulators: with no lights none is allocated and every canvas item
+ * reads its canvas modulate straight from its uniform, which is the 3D
+ * workspace and most fixtures.
  *
  * Registration is an EFFECT: it has to unwind on unmount, and a provider
  * `setState` reached from a child's render is a React update-during-render.
  *
- * Returns the light's ordinal within its class, which is what its stencil ref
- * and its draw order are derived from. It is 0 for the frame between mounting
- * and the effect running, and 0 is a legitimate ordinal, so an unregistered
- * light shares a ref with the first registered one for exactly that frame.
+ * The effect depends on the tuple's five NUMBERS rather than on the key object,
+ * and rebuilds the key inside itself. A light rebuilds its key on any re-render,
+ * so an object dependency would withdraw and re-register the light — and
+ * therefore reshuffle every ordinal in its class — on a render that changed
+ * nothing.
+ *
+ * Returns the light's ordinal within its class, which is what its stencil ref is
+ * derived from. It is 0 for the frame between mounting and the effect running,
+ * and 0 is a legitimate ordinal, so an unregistered light shares a ref with the
+ * first registered one for exactly that frame.
  */
-export function useRegisterCanvasLight2D(enabled: boolean, cullMask: number): number {
+export function useRegisterCanvasLight2D(enabled: boolean, key: LightCullKey): number {
   const { register } = useCanvasLighting2D();
   const [ordinal, setOrdinal] = useState(0);
+  const { itemCullMask, zMin, zMax, layerMin, layerMax } = key;
   useEffect(() => {
     if (!enabled) return undefined;
-    const slot = register(cullMask);
+    const slot = register({ itemCullMask, zMin, zMax, layerMin, layerMax });
     setOrdinal(slot.ordinal);
     return slot.release;
-  }, [enabled, cullMask, register]);
+  }, [enabled, itemCullMask, zMin, zMax, layerMin, layerMax, register]);
   return ordinal;
 }
 
 /**
- * The camera layer a light of this cull mask must draw its quad on: the layer
+ * The camera layer a light of this cull tuple must draw its quad on: the layer
  * of its class, or `LIGHT_UNCLASSED_LAYER` while it has none.
  */
-export function useLightClassLayer(cullMask: number): number {
+export function useLightClassLayer(key: LightCullKey): number {
   const { classes } = useCanvasLighting2D();
-  return classes.find((lightClass) => lightClass.cullMask === cullMask)?.layer
+  return classes.find((lightClass) => sameLightCullKey(lightClass.key, key))?.layer
     ?? LIGHT_UNCLASSED_LAYER;
 }
 
@@ -336,9 +365,9 @@ export function useLightClassLayer(cullMask: number): number {
  * its class has none. Separate from `useLightClassLayer` because the tint pass
  * must NOT see the cookie quads.
  */
-export function useShadowTintLayer(cullMask: number): number | undefined {
+export function useShadowTintLayer(key: LightCullKey): number | undefined {
   const { classes } = useCanvasLighting2D();
-  return classes.find((lightClass) => lightClass.cullMask === cullMask)?.shadowTintLayer;
+  return classes.find((lightClass) => sameLightCullKey(lightClass.key, key))?.shadowTintLayer;
 }
 
 /** Declares a light that tints its shadow, so its class allocates the extra pass. */
@@ -465,11 +494,11 @@ export function CanvasLighting2DProvider({
   const scene = useThree((s) => s.scene);
   const camera = useThree((s) => s.camera);
 
-  const [cullMasks, register] = useCullMaskRegistry();
+  const [cullKeys, register] = useLightClassRegistry();
   const [lightOnlyCount, registerLightOnly] = useDeclarationCount();
   const [shadowTintCount, registerShadowTint] = useDeclarationCount();
 
-  const classCount = Math.min(cullMasks.length, MAX_LIGHT_CLASSES);
+  const classCount = Math.min(cullKeys.length, MAX_LIGHT_CLASSES);
   const lit = classCount > 0;
   const needsLightOnly = lit && lightOnlyCount > 0;
   const needsShadowTint = lit && shadowTintCount > 0;
@@ -478,15 +507,16 @@ export function CanvasLighting2DProvider({
   const lightOnlyTargets = useAccumulationTargets(needsLightOnly ? classCount : 0);
   const shadowTintTargets = useAccumulationTargets(needsShadowTint ? classCount : 0);
 
-  const overflow = cullMasks.length - MAX_LIGHT_CLASSES;
+  const overflow = cullKeys.length - MAX_LIGHT_CLASSES;
   useEffect(() => {
     if (overflow <= 0) return;
     warn(
-      `[CanvasLighting2D] ${overflow + MAX_LIGHT_CLASSES} distinct range_item_cull_mask ` +
-        `values on one canvas; only ${MAX_LIGHT_CLASSES} can be accumulated, so lights ` +
-        `masked ${cullMasks.slice(MAX_LIGHT_CLASSES).join(', ')} are not drawn`
+      `[CanvasLighting2D] ${overflow + MAX_LIGHT_CLASSES} distinct light cull tuples ` +
+        `(range_item_cull_mask + range_z + range_layer) on one canvas; only ` +
+        `${MAX_LIGHT_CLASSES} can be accumulated, so lights culling ` +
+        `${cullKeys.slice(MAX_LIGHT_CLASSES).map(lightCullKeyId).join(', ')} are not drawn`
     );
-  }, [overflow, cullMasks]);
+  }, [overflow, cullKeys]);
 
   const seedMaterial = useMemo(createSeedMaterial, []);
   useEffect(() => () => seedMaterial.dispose(), [seedMaterial]);
@@ -550,7 +580,7 @@ export function CanvasLighting2DProvider({
   const value = useMemo<CanvasLighting2D>(
     () => ({
       classes: targets.map((target, index) => ({
-        cullMask: cullMasks[index]!,
+        key: cullKeys[index]!,
         buffer: target.texture,
         lightOnlyBuffer: lightOnlyTargets[index]?.texture ?? null,
         shadowTintBuffer: shadowTintTargets[index]?.texture ?? null,
@@ -566,7 +596,7 @@ export function CanvasLighting2DProvider({
       targets,
       lightOnlyTargets,
       shadowTintTargets,
-      cullMasks,
+      cullKeys,
       resolution,
       register,
       registerLightOnly,
