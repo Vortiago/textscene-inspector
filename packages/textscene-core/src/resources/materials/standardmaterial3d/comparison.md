@@ -82,6 +82,16 @@ matches Godot, but the sheen is retroreflective — a crescent where view meets 
 metal streak, but ours reads sharper and more radial where Godot's is a soft,
 smoother lobe.
 
+`anisotropy_flowmap` is honoured as well, exercised by
+`unit-material-anisotropy-flowmap.tscn` (no captured pair here — that fixture is gated
+as a golden render instead). Godot keeps the per-pixel strength in the map's ALPHA
+channel while three.js reads it from BLUE, so the decoded image is read back through a
+canvas and repacked A → B before being wired to `anisotropyMap`; direction stays in R/G
+on both sides. Both engines then switch the streak on and off across the same bands of
+the surface, with the same lobe-shape difference as above inside the lit bands. One
+extra divergence: a canvas readback stores premultiplied alpha, so a pixel with low
+alpha loses precision in R/G — the direction, scaled by that same near-zero strength.
+
 ## Refraction
 <!-- compare: image=unit-material-refraction status=limitation fixture=unit-material-refraction.tscn -->
 

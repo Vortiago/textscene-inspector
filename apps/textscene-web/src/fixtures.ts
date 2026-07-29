@@ -1153,6 +1153,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - External Resources"
   },
   {
+    "name": "Material Anisotropy Flowmap",
+    "file": "unit-material-anisotropy-flowmap.tscn",
+    "category": "Unit - Materials"
+  },
+  {
     "name": "Material Anisotropy",
     "file": "unit-material-anisotropy.tscn",
     "category": "Unit - Materials"

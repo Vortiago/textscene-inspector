@@ -283,18 +283,30 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
       ),
     [proceduralTextures.heightmap_texture, textureSlots.heightmap_texture, uvTransform]
   );
-  const anisotropyMap = useMemo(() => {
+  const repackedFlowmap = useMemo(() => {
     // Only an anisotropy-enabled material renders as MeshPhysicalMaterial and
-    // samples anisotropyMap; skip the repack (a full-buffer copy + per-pixel
-    // pass) and the slotKey churn when the strength is 0 — the map would never
-    // be read on the standard-material fallback.
+    // samples anisotropyMap; skip the repack (a canvas readback, a full-buffer
+    // copy and a per-pixel pass) and the slotKey churn when the strength is 0 —
+    // the map would never be read on the standard-material fallback.
     if (!materialScalars || materialScalars.anisotropy <= 0) return undefined;
     const value = textureSlots.anisotropy_flowmap?.value;
     if (!value) return undefined;
-    const repacked = repackAnisotropyFlowmap(value);
-    if (!repacked) return undefined;
-    return transformedTexture({ value: repacked }, uvTransform);
-  }, [materialScalars, textureSlots.anisotropy_flowmap, uvTransform]);
+    return repackAnisotropyFlowmap(value);
+  }, [materialScalars, textureSlots.anisotropy_flowmap]);
+
+  // The repack allocates its own pixel buffer, so it is disposed on the same
+  // terms as the procedural DataTextures above.
+  useEffect(() => {
+    return () => {
+      repackedFlowmap?.dispose();
+    };
+  }, [repackedFlowmap]);
+
+  const anisotropyMap = useMemo(
+    () =>
+      repackedFlowmap ? transformedTexture({ value: repackedFlowmap }, uvTransform) : undefined,
+    [repackedFlowmap, uvTransform]
+  );
 
   // If any requested slot resolved to `unavailable`, surface the FIRST
   // such path as the placeholder label. Listing more than one would

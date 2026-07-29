@@ -18,7 +18,11 @@
  * source ALPHA into the BLUE channel; passing the texture straight through would
  * feed three.js an arbitrary blue channel as "strength" and break the effect.
  * This is pinned with a `DataTexture` of known RGBA so it is asserted on the raw
- * pixel array (no canvas / WebGL needed in the test environment).
+ * pixel array (no canvas / WebGL needed in the test environment). A real asset
+ * instead arrives image-backed and needs a canvas readback, which this
+ * environment cannot do — the last test pins that it degrades to scalar-only
+ * anisotropy, and the `material-anisotropy-flowmap` golden covers the readback
+ * itself in a real browser.
  *
  * Every non-anisotropy material stays on the lighter `MeshStandardMaterial` —
  * the type the rest of the suite asserts on.
@@ -193,5 +197,44 @@ describe('<MeshInstance3D> anisotropy material (WI-68)', () => {
     // The cached source texture must NOT be mutated in place (would clobber
     // every other consumer of that flowmap) — its blue stays 0.
     expect((flow.image as { data: Uint8Array }).data[2]).toBe(0);
+  });
+
+  it('keeps scalar anisotropy when the flowmap pixels cannot be read', async () => {
+    // An image-backed texture (what THREE.TextureLoader produces for a real PNG)
+    // needs a canvas readback, and this environment has no rasterizer. The
+    // material must then carry NO map rather than a wrong-channel one: strength
+    // survives, the per-pixel modulation is simply absent.
+    const loader = makeLoader();
+    const undecodable = new THREE.Texture({
+      width: 4,
+      height: 4,
+    } as unknown as HTMLImageElement);
+    preloadTexture(loader, 'res://textures/aniso_flow.png', undecodable);
+
+    const internal: TscnInternalResource[] = [
+      { id: 'box', type: 'BoxMesh', data: { id: 'box' } },
+      {
+        id: 'mat',
+        type: 'StandardMaterial3D',
+        data: {
+          id: 'mat',
+          anisotropy_enabled: 'true',
+          anisotropy: '0.8',
+          anisotropy_flowmap: 'ExtResource("2")',
+        } as Record<string, string>,
+      },
+    ];
+    const external: TscnExternalResource[] = [
+      { id: '2', path: 'res://textures/aniso_flow.png', type: 'Texture2D' },
+    ];
+
+    const renderer = await ReactThreeTestRenderer.create(tree(makeNode('mat'), internal, external, loader));
+    await new Promise<void>((r) => setTimeout(r, 10));
+    await renderer.update(tree(makeNode('mat'), internal, external, loader));
+
+    const material = renderer.scene.findAllByType('MeshPhysicalMaterial')[0]!
+      .instance as THREE.MeshPhysicalMaterial;
+    expect(material.anisotropyMap).toBeNull();
+    expect(material.anisotropy).toBeCloseTo(0.8, 5);
   });
 });
