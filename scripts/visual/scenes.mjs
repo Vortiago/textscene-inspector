@@ -208,6 +208,21 @@ export const GOLDEN_SCENES = [
   // texture (deterministic local SVG, gated by the two-identical-frames settle);
   // the projection edges are AA-sensitive, hence the relaxed threshold.
   { name: 'decal', file: 'unit-decal.tscn', maxDiffPct: 0.3 },
+  // `anisotropy_flowmap` as a real PNG — the ONLY scene where a decoded image
+  // reaches the anisotropy channel repack (Godot keeps per-pixel strength in
+  // ALPHA, three.js reads it from BLUE), which needs a canvas readback that no
+  // headless unit-test environment can perform. The right sphere carries the
+  // flowmap and must show alternating streaked / isotropic bands; the left one
+  // has the identical scalar-only material and is streaked all the way round.
+  // Both ways this can break move several times the threshold: lose the
+  // readback and the banded sphere becomes a copy of the uniform one, drop the
+  // repack and its highlight flattens everywhere. Specular highlights on a
+  // curved surface are AA-sensitive, hence the slightly relaxed threshold.
+  {
+    name: 'material-anisotropy-flowmap',
+    file: 'unit-material-anisotropy-flowmap.tscn',
+    maxDiffPct: 0.2,
+  },
   // PathFollow2D follow-offset: a Polygon2D follower placed at
   // progress_ratio 0.5 along the parent Path2D's Curve2D. The Marker2D cross
   // and Path2D curve gizmos are selection-gated (ADR-0018) and the harness

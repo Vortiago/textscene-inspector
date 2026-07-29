@@ -82,6 +82,36 @@ matches Godot, but the sheen is retroreflective — a crescent where view meets 
 metal streak, but ours reads sharper and more radial where Godot's is a soft,
 smoother lobe.
 
+## Anisotropy flowmap
+<!-- compare: image=unit-material-anisotropy-flowmap status=limitation fixture=unit-material-anisotropy-flowmap.tscn -->
+
+`anisotropy_flowmap` carries the direction in R/G and the per-pixel strength in ALPHA;
+three.js reads strength from BLUE, so the decoded image is read back through a canvas
+and repacked A → B before it is wired to `anisotropyMap`. The near sphere has the map —
+its ALPHA alternates in four bands of 0 and 255 — and the far sphere the same material
+with the scalar only. Both engines modulate per pixel: the mapped sphere is banded on
+both sides, the scalar sphere carries one unbroken streak.
+
+Where the bright lobe lands differs. Godot blows out left of the sphere's centre and
+falls away to the right — rgb(255, 255, 255) at (700, 380), rgb(193, 198, 209) at
+(820, 380) — while ours does the reverse, rgb(236, 239, 246) then rgb(255, 255, 255) at
+the same two pixels. Godot's flowmap offsets the tangent itself, where three rotates a
+single anisotropy vector by the map's R/G, on top of the lobe-shape difference the
+scalar fixture above already shows.
+
+Band edges differ too: ours steps hard (row 470 drops 15 levels across x = 663…666),
+Godot's has no step above 8 anywhere in that row. Texture filtering is not the cause —
+the map is magnified at this framing, so both sides sample its top level; it is the same
+sharper lobe as above reacting to a hard strength boundary that Godot's softer one
+blurs. One more consequence of the canvas readback: it stores premultiplied alpha, so
+R/G lose precision where alpha is near zero, and are lost outright where it is zero —
+the direction, at a strength already scaled to nothing. That costs nothing at this
+framing, but it does not stay free once the map is minified: the generated mip chain
+averages those zeroed directions into levels whose strength is not zero, so a
+half-transparent flowmap that holds one direction at every level in Godot turns 90° here
+from the first level that mixes the two alpha regimes. Removing that needs a decode which
+never premultiplies, not a 2D canvas.
+
 ## Refraction
 <!-- compare: image=unit-material-refraction status=limitation fixture=unit-material-refraction.tscn -->
 
