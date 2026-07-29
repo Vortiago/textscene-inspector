@@ -49,7 +49,7 @@ async function applySidecarRootScale(
 ): Promise<void> {
   if (!fileEventBus) return;
 
-  const raw = await fileEventBus.tryLoad(`${path}.import`);
+  const raw = await fileEventBus.tryLoad(`${path}.import`, 'ImportSidecar');
   if (typeof raw !== 'string') return;
 
   const rootScale = importRootScale(parseImportFile(raw));

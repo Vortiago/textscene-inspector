@@ -18,7 +18,7 @@ import { controlComponentRegistry } from '../../../../r3f/controls/ControlCompon
 import { useControlParent, ControlParentProvider } from '../../../../r3f/controls/ControlParentContext';
 import { controlStyle } from '../../../../r3f/controls/controlLayout';
 import { useOptionalSelection } from '../../../../r3f/contexts/SelectionContext';
-import { DEFAULT_SEPARATION } from '../../../../r3f/controls/godotDefaultTheme';
+import { useGodotTheme } from '../../../../r3f/controls/useGodotTheme';
 import { joinPath } from '../../../../utils/nodePath';
 import type { ControlProperties } from '../control/types';
 import type { TscnNode } from '../../../../parser/types';
@@ -32,6 +32,7 @@ export function GridContainer({ node, path, children }: ControlComponentProps) {
   const parentKind = useControlParent();
   const columns = Math.max(1, props.columns ?? 1);
   const hiddenNodePaths = useOptionalSelection()?.hiddenNodePaths ?? NO_HIDDEN;
+  const theme = useGodotTheme();
 
   // CSS grid auto-places only the children that ControlDispatcher actually
   // renders as grid cells: registered Control types that aren't hidden. Logic
@@ -50,8 +51,10 @@ export function GridContainer({ node, path, children }: ControlComponentProps) {
     // CSS-grid default (align-content: stretch) spreads the rows to fill the
     // container's height, so a full-rect grid's rows drift apart.
     alignContent: 'start',
-    columnGap: `${props.themeOverrideConstants?.h_separation ?? DEFAULT_SEPARATION}px`,
-    rowGap: `${props.themeOverrideConstants?.v_separation ?? DEFAULT_SEPARATION}px`,
+    // Theme overrides are used verbatim — Godot returns one as authored — so
+    // only the theme fallback follows `gui/theme/default_theme_scale`.
+    columnGap: `${props.themeOverrideConstants?.h_separation ?? theme.separation}px`,
+    rowGap: `${props.themeOverrideConstants?.v_separation ?? theme.separation}px`,
   });
 
   return (

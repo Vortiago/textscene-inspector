@@ -30,6 +30,10 @@ _Avoid_: "asset"; "import" (reserve that for the **Import sidecar**, which no sc
 The `.import` file Godot writes beside a source asset, recording which importer produced it and with what parameters. Never referenced by any scene — it is found by path convention (`scene.gltf` → `scene.gltf.import`), which is why it is not an **ExtResource** and why a missing one is an ordinary outcome rather than a **Missing resource**.
 _Avoid_: "import file" for the asset itself; treating absence as an error.
 
+**Project settings**:
+`project.godot` at a project's `res://` root — the engine configuration a scene is authored against, parsed into settings named as `ProjectSettings.get_setting()` names them (`[gui]` + `theme/default_theme_scale` → `gui/theme/default_theme_scale`). Like the **Import sidecar** it is found by path convention rather than referenced by any scene, so a scene without one is ordinary and renders at Godot's defaults, never a **Missing resource**. Only settings the previewer actually honours get a typed reader; today that is `gui/theme/default_theme_scale`, which scales every metric of the built-in default theme (font sizes, corner radii, content margins, container separations) and is the one setting any corpus project sets. A node's `theme_override_*` is NOT scaled — Godot returns an override as the scene authored it.
+_Avoid_: "config file" for a `.tscn`; treating absence as an error; growing it into a general settings store.
+
 **Asset re-import**:
 What this previewer does in place of Godot's import pipeline: load the *source* asset (`.gltf`/`.glb`/`.obj`) and re-derive the scene from it, honouring a deliberately small allowlist of **Import sidecar** parameters. Godot never loads the source at runtime — it loads a pre-baked artifact under `.godot/imported/`, which is gitignored, binary and hash-named, so it is not an input a text-scene previewer can have. Decision and allowlist: ADR-0028.
 _Avoid_: implying we run Godot's importer, or that the source asset is what Godot renders.

@@ -59,3 +59,66 @@ export const OPTION_BUTTON_CONTENT_MARGIN_Y = DEFAULT_CONTENT_MARGIN;
 
 /** BoxContainer `separation` and GridContainer `h_/v_separation` = 4 (px). */
 export const DEFAULT_SEPARATION = 4;
+
+// --- Project theme scale (gui/theme/default_theme_scale) ---
+
+/**
+ * The scale-dependent half of the default theme. Every metric above is the
+ * `scale = 1` case; a project that sets `gui/theme/default_theme_scale` gets
+ * these instead.
+ */
+export interface ScaledGodotTheme {
+  /** `default_font_size` after scaling — the theme's default font size in px. */
+  fontSize: number;
+  /** Every default flat stylebox's corner radius, in px. */
+  cornerRadius: number;
+  /** The Button "normal" stylebox content margin (all sides), in px. */
+  contentMargin: number;
+  /** OptionButton "normal" horizontal content margin, in px. */
+  optionButtonMarginX: number;
+  /** OptionButton "normal" vertical content margin, in px. */
+  optionButtonMarginY: number;
+  /** BoxContainer `separation` / GridContainer `h_/v_separation`, in px. */
+  separation: number;
+}
+
+/**
+ * The default theme's metrics at a project's `gui/theme/default_theme_scale`.
+ *
+ * Godot builds its default theme ONCE at startup from that scale rather than
+ * scaling at draw time, and it rounds each product independently —
+ * `scene/theme/default_theme.cpp`, `fill_default_theme`:
+ *
+ *     theme->set_default_font_size(Math::round(default_font_size * scale));
+ *
+ * and in `make_flat_stylebox`:
+ *
+ *     style->set_content_margin_individual(Math::round(p_margin_left * scale), …);
+ *     style->set_corner_radius_all(Math::round(p_corner_radius * scale));
+ *
+ * and for the box containers (`default_theme.cpp:1249-1251`):
+ *
+ *     theme->set_constant("separation", "BoxContainer", Math::round(4 * scale));
+ *
+ * Rounding therefore happens per metric, never once on the scale — at 1.5 the
+ * font is round(16·1.5) = 24 while the corner radius is round(3·1.5) = 5, which
+ * a single pre-rounded scale could not produce. JS `Math.round` and Godot's
+ * `Math::round` differ only on negative halves, which the caller's clamp to
+ * [0.5, 8] (see `projectThemeScale`) cannot produce.
+ *
+ * A theme OVERRIDE on a node (`theme_override_constants/separation = 13`) is
+ * not scaled: Godot returns an override verbatim, so it stays the px the scene
+ * declares. Callers keep the override-wins shape and use these only as the
+ * fallback.
+ */
+export function scaledGodotTheme(scale: number): ScaledGodotTheme {
+  const contentMargin = Math.round(DEFAULT_CONTENT_MARGIN * scale);
+  return {
+    fontSize: Math.round(DEFAULT_FONT_SIZE * scale),
+    cornerRadius: Math.round(DEFAULT_CORNER_RADIUS * scale),
+    contentMargin,
+    optionButtonMarginX: Math.round(2 * DEFAULT_CONTENT_MARGIN * scale),
+    optionButtonMarginY: contentMargin,
+    separation: Math.round(DEFAULT_SEPARATION * scale),
+  };
+}
