@@ -102,6 +102,29 @@ spans x 220..280, y 160..190: wholly outside the authored 200x150 target and
 wholly inside the forced 300x200 one, so it is drawn only if the forced rect
 won. Godot rgb(255, 102, 0), previewer rgb(255, 102, 0).
 
+## A Camera2D frames the forced rect
+
+The pixel arm draws whatever the sub-viewport's 2D pass rendered, and that pass
+frames through the viewport's current Camera2D over the rect `stretch` forced —
+not the authored `size`, and not the origin. `unit-sub-viewport-container-camera-2d.tscn`
+adds a Camera2D to the stretch fixture and changes nothing else: the forced rect
+stays 300x200 and the camera at (500, 400) makes the view world x 350..650,
+y 300..500.
+
+`Decoy` is what makes that falsifiable. It sits wholly outside the camera's view
+and wholly inside the whole-rect fallback; `Band` and `Mark` sit the other way
+round. The surface therefore holds one set or the other, never both — and
+"both, in horizontal bands" is what a paint covering only part of its canvas
+would look like, so the clear-colour probe where the fallback puts `Decoy` is
+also the blit's coverage guard. Measured through Godot 4.6.3 with
+`--scene-camera` (`ref:godot` disables a 2D scene's own cameras by default):
+
+| Surface pixel | What it is | Godot 4.6.3 | Previewer |
+| --- | --- | --- | --- |
+| (150, 20) | `Band`, authored `Color(0.5, 0.5, 0.5)` | rgb(127, 127, 127) | rgb(128, 128, 128) |
+| (40, 95) | `Mark` | rgb(255, 102, 0) | rgb(255, 102, 0) |
+| (80, 50) | where the whole-rect fallback puts `Decoy` | rgb(76, 76, 76) | rgb(77, 77, 77) |
+
 ## Divergences
 
 - **Content stops updating once it has settled.** `readRenderTargetPixels` is a
@@ -122,6 +145,31 @@ won. Godot rgb(255, 102, 0), previewer rgb(255, 102, 0).
 - **It mutates its children.** On enter-tree and visibility change it forces
   `render_target_update_mode = ALWAYS` and `handle_input_locally = false` on
   every `SubViewport` child, so those authored values never take effect here.
+- **A surface a script populates at runtime shows only what the `.tscn` holds.**
+  `demos/2d/platformer/game_splitscreen.tscn` has two surfaces and only the
+  first is comparable. Its `_ready()` runs
+  `viewport_2.world_2d = viewport_1.world_2d`,
+  `player_2.camera.custom_viewport = viewport_2`, `make_current()`. None of that
+  serialises — `custom_viewport` is registered `PROPERTY_USAGE_NONE`
+  (`camera_2d.cpp`) and a `world_2d` reassignment is not a property at all — so
+  statically `Viewport2` holds one `ParallaxBackground` and no Camera2D, and its
+  surface correctly shows that background framed from the origin. Godot's
+  reference render differs because `pnpm ref:godot` runs the game. The
+  static/runtime boundary, not a defect in the surface.
+- **`ParallaxBackground` does not follow the camera**, so its edge cuts a
+  horizontal line across a Camera2D-framed surface. In Godot it is a
+  `CanvasLayer` whose layer transform tracks the viewport's canvas transform
+  (`parallax_background.cpp::_camera_moved` → `set_scroll_offset`), so the
+  background covers the viewport wherever the camera goes. The previewer has no
+  slice for it, so its `ParallaxLayer`/`Sprite2D` descendants draw as ordinary
+  world-space Node2Ds at their authored coordinates and stay put while the
+  camera moves. On `game_splitscreen.tscn` the background art ends at world
+  y 429 and the left view's top is world y 260, so the edge lands at surface
+  row 169 with bare sky below it. It is content, not a blit artefact: the same
+  edge sits at the same world y in `level/background/parallax_background.tscn`
+  rendered alone, and every paint covers the whole canvas. The minimum that
+  removes the edge is a `ParallaxBackground`/`ParallaxLayer` pair carrying the
+  layer transform and `motion_scale`; anything less relocates or mis-scales it.
 
 ## Linting
 

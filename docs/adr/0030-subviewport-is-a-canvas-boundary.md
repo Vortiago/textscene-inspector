@@ -150,6 +150,22 @@ which display real content.
     within the split — interleaving `<div>`s and canvas draws by tree order is what two
     rendering technologies cannot do — so it is evidence on issue #368 (native WebGL
     Controls) rather than a limitation with a bounded fix.
+  - **`ParallaxBackground` stays put while the camera moves**, so its edge cuts a
+    horizontal line across a Camera2D-framed surface. In Godot it is a `CanvasLayer`
+    whose layer transform tracks the viewport's canvas transform
+    (`parallax_background.cpp::_camera_moved` → `set_scroll_offset`), so the background
+    covers the viewport wherever the camera goes; the previewer has no slice for it, so
+    its `ParallaxLayer`/`Sprite2D` descendants draw as world-space Node2Ds at their
+    authored coordinates. Reachable only through a sub-viewport today, because that is
+    the only canvas a Camera2D frames — the 2D stage frames the project viewport. On
+    `demos/2d/platformer/game_splitscreen.tscn` the art ends at world y 429 and the left
+    view's top is world y 260, so the edge lands at surface row 169. Not a blit artefact:
+    the same edge sits at the same world y in `level/background/parallax_background.tscn`
+    rendered alone, and every paint covers the whole canvas. The minimum that removes the
+    edge is a `ParallaxBackground`/`ParallaxLayer` pair carrying the layer transform and
+    `motion_scale`; anything less relocates or mis-scales it, and full parity additionally
+    wants `motion_offset`, `motion_mirroring`, `scroll_base_offset/scale` and
+    `ignore_camera_zoom`.
   - A surface's pixels stop updating once they settle. `readRenderTargetPixels` is a
     synchronous GPU stall, so the blit samples on a bounded one-shot schedule and re-arms
     only on a new target or a fresh parse; an `AnimationPlayer` inside a sub-viewport
