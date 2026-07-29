@@ -82,15 +82,29 @@ matches Godot, but the sheen is retroreflective — a crescent where view meets 
 metal streak, but ours reads sharper and more radial where Godot's is a soft,
 smoother lobe.
 
-`anisotropy_flowmap` is honoured as well, exercised by
-`unit-material-anisotropy-flowmap.tscn` (no captured pair here — that fixture is gated
-as a golden render instead). Godot keeps the per-pixel strength in the map's ALPHA
-channel while three.js reads it from BLUE, so the decoded image is read back through a
-canvas and repacked A → B before being wired to `anisotropyMap`; direction stays in R/G
-on both sides. Both engines then switch the streak on and off across the same bands of
-the surface, with the same lobe-shape difference as above inside the lit bands. One
-extra divergence: a canvas readback stores premultiplied alpha, so a pixel with low
-alpha loses precision in R/G — the direction, scaled by that same near-zero strength.
+## Anisotropy flowmap
+<!-- compare: image=unit-material-anisotropy-flowmap status=limitation fixture=unit-material-anisotropy-flowmap.tscn -->
+
+`anisotropy_flowmap` carries the direction in R/G and the per-pixel strength in ALPHA;
+three.js reads strength from BLUE, so the decoded image is read back through a canvas
+and repacked A → B before it is wired to `anisotropyMap`. The near sphere has the map —
+its ALPHA alternates in four bands of 0 and 255 — and the far sphere the same material
+with the scalar only. Both engines modulate per pixel: the mapped sphere is banded on
+both sides, the scalar sphere carries one unbroken streak.
+
+Where the bright lobe lands differs. Godot blows out left of the sphere's centre and
+falls away to the right — rgb(255, 255, 255) at (700, 380), rgb(193, 198, 209) at
+(820, 380) — while ours does the reverse, rgb(236, 239, 246) then rgb(255, 255, 255) at
+the same two pixels. Godot's flowmap offsets the tangent itself, where three rotates a
+single anisotropy vector by the map's R/G, on top of the lobe-shape difference the
+scalar fixture above already shows.
+
+Band edges differ too: ours steps hard (row 470 drops 15 levels across x = 663…666),
+Godot's has no step above 8 in that row. The imported Godot texture is mipmapped; the
+repacked map is a single-level `DataTexture`, so nothing filters its edges at this
+distance. One more consequence of the canvas readback: it stores premultiplied alpha,
+so R/G lose precision where alpha is near zero — the direction, at a strength already
+scaled to nothing.
 
 ## Refraction
 <!-- compare: image=unit-material-refraction status=limitation fixture=unit-material-refraction.tscn -->
