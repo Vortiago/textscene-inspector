@@ -91,12 +91,14 @@ trailer's lit side is `rgb(248, 251, 254)` in Godot against `rgb(49, 51, 54)` he
 while the cab roof — already in shadow in both — is `rgb(21, 18, 55)` against
 `rgb(27, 28, 30)`. The specular highlight along the trailer's top edge is ours alone.
 
-That split is the useful part: a surface reading only ambient lands within a few
-units of Godot, and a surface taking the sun is roughly a third of its brightness.
-So this is a direct-light shortfall on these scenes rather than a lost albedo — the
-material colours are arriving. The vehicles carry no light of their own, so both
-sides light them from an injected editor preview sun (ADR-0025). Which side's sun is
-wrong is not isolated.
+That split is the useful part, and it is the same on the tow truck below: a surface
+reading only ambient lands within a few units of Godot, and a surface taking the sun
+is roughly a third of its brightness with its hue washed toward neutral. The
+vehicles carry no DirectionalLight3D or WorldEnvironment — only SpotLight3D
+headlights — so both sides light them from an injected editor preview sun
+(ADR-0025). Not diagnosed: consistent with the sun's diffuse term being weak or
+missing, and not yet separated from the surface materials resolving differently on
+those faces.
 
 ## Tow truck
 <!-- compare: image=complex-truck-town-tow status=limitation fixture=demos/3d/truck_town/vehicles/tow_truck.tscn -->
@@ -107,12 +109,12 @@ per-surface dropping necessary, since one unreadable surface would otherwise poi
 the merged geometry's bounds and take the whole vehicle with it. The crane frame,
 the boom, both cabs and the wheels all sit where Godot puts them.
 
-**The same lit-versus-shaded split, and it pins the cause here.** The crane's
-shaded upright is `rgb(98, 91, 37)` in Godot against `rgb(100, 92, 35)` here — two
-units apart on a yellow-painted surface, so that material's albedo is exact. The
-sun-lit body flank of the same vehicle is `rgb(183, 173, 80)` against
-`rgb(60, 59, 47)`. Same paint, same frame: the one that matches is the one the sun
-does not reach.
+**The same lit-versus-shaded split, measured on one vehicle.** The crane's shaded
+upright is `rgb(98, 91, 37)` in Godot against `rgb(100, 92, 35)` here — two units
+apart, and yellow in both. The sun-lit body flank is `rgb(183, 173, 80)` against
+`rgb(60, 59, 47)`, which is both darker and close to neutral. The body's material
+(`albedo_color = Color(0.584, 0.527, 0.190)`, no metallic) is strongly yellow, so on
+the lit face the hue is being lost as well as the level.
 
 This scene additionally carries five `surface_material_override/0` slots, which per
 the ArrayMesh sheet do not reach an ArrayMesh at all — so its grey metallic parts
