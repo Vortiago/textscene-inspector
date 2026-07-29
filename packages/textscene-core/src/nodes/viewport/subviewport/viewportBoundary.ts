@@ -21,3 +21,25 @@ export const VIEWPORT_TYPES: ReadonlySet<string> = new Set(['SubViewport']);
 export function isViewportBoundary(type: string): boolean {
   return VIEWPORT_TYPES.has(type);
 }
+
+/**
+ * Controls that DISPLAY a sub-viewport's target — the viewport surfaces.
+ *
+ * These are the one exception to "the 3D workspace drops CanvasItem subtrees".
+ * A surface is a Control, so it belongs in `TWO_D_UI_TYPES` (which is defined as
+ * a mirror of the Control registry, and drives the 2D-content hint and the
+ * root-workspace rule). But dropping its SUBTREE in the 3D workspace would take
+ * a contained sub-viewport's 3D content with it, and that content really does
+ * draw in Godot's 3D view — a sub-viewport shares the parent's World3D unless
+ * `own_world_3d` (`Viewport::find_world_3d`).
+ *
+ * So the two questions `TWO_D_UI_TYPES` used to answer at once — "is this 2D UI"
+ * and "does the 3D canvas skip it" — diverge here for the first time, and the
+ * drop rule subtracts this set.
+ */
+export const VIEWPORT_SURFACE_TYPES: ReadonlySet<string> = new Set(['SubViewportContainer']);
+
+/** True when this Control displays a sub-viewport and must pass 3D content through. */
+export function isViewportSurface(type: string): boolean {
+  return VIEWPORT_SURFACE_TYPES.has(type);
+}

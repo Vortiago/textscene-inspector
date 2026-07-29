@@ -16,6 +16,7 @@ import '../../nodes/2d/ui/margincontainer/index.r3f';
 import '../../nodes/2d/ui/scrollcontainer/index.r3f';
 import '../../nodes/2d/ui/panel/index.r3f';
 import '../../nodes/2d/ui/panelcontainer/index.r3f';
+import '../../nodes/2d/ui/subviewportcontainer/index.r3f';
 import '../../nodes/2d/ui/button/index.r3f';
 import '../../nodes/2d/ui/checkbox/index.r3f';
 import '../../nodes/2d/ui/optionbutton/index.r3f';

@@ -28,6 +28,10 @@ export const TWO_D_UI_TYPES = new Set<string>([
   'TextureRect',
   'RichTextLabel',
   'CanvasLayer',
+  // A Control like any other for the purposes of this set (which mirrors the
+  // Control registry and drives the 2D hint + root-workspace rule). The 3D
+  // dispatcher subtracts it separately via `isViewportSurface` — see ADR-0030.
+  'SubViewportContainer',
 ]);
 
 /** True when any node in the subtree is a 2D-UI (Control/CanvasLayer) type. */

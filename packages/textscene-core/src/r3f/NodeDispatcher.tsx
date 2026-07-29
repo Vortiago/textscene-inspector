@@ -40,6 +40,7 @@ import { GenericNodeFallback } from './internal/generic-node-fallback/index';
 import { useViewportSelection } from './hooks/useViewportSelection.js';
 import { useCanvasWorkspace } from './contexts/CanvasWorkspaceContext.js';
 import { TWO_D_UI_TYPES } from './controls/has2DUIContent.js';
+import { isViewportSurface } from '../nodes/viewport/subviewport/viewportBoundary.js';
 import { NodePathProvider } from './contexts/NodePathContext.js';
 import { useResource, useResourceLoader } from '../resources/useResource.js';
 import { collapseLiveNode, singleSceneCache } from './liveSceneTree.js';
@@ -177,8 +178,13 @@ function PlainNode({
   // containers (e.g. a `Node` root) pass through in both so children of
   // either kind stay reachable. (After the hooks — the skip is deterministic
   // per mounted instance, but rules-of-hooks wants the call order static.)
+  // A viewport surface (SubViewportContainer) is a Control, so it is in
+  // TWO_D_UI_TYPES — but it must NOT be dropped here, or a contained
+  // sub-viewport's 3D content goes with it, and that content really does draw
+  // in Godot's 3D view (shared World3D unless `own_world_3d`). ADR-0030.
   const isCanvasItem =
-    nodeComponentRegistry.isCanvasItem(node.type) || TWO_D_UI_TYPES.has(node.type);
+    !isViewportSurface(node.type) &&
+    (nodeComponentRegistry.isCanvasItem(node.type) || TWO_D_UI_TYPES.has(node.type));
   // Memoized (before the early returns, for rules-of-hooks) so the recursive
   // subtree scan for the slot distributor runs once per node, not every render.
   const hasYSortChild = useMemo(() => hasYSortDescendant(node), [node]);

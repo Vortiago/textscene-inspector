@@ -99,4 +99,26 @@ describe('<SubViewport> as a world boundary', () => {
     expect(r.scene.findAllByProps({ name: 'InsideRect' })).toHaveLength(0);
     expect(r.scene.findAllByProps({ name: 'InsideSphere' })).toHaveLength(0);
   });
+
+  it('3D content inside a CONTAINED sub-viewport still reaches the 3D view', async () => {
+    // The regression this exists to catch: SubViewportContainer is a Control, so
+    // the obvious registration puts it in TWO_D_UI_TYPES — and `PlainNode` then
+    // drops its WHOLE subtree in the 3D workspace, taking the contained
+    // sub-viewport's 3D content with it. Godot draws that content (shared
+    // World3D), so the drop rule subtracts viewport surfaces. ADR-0030.
+    const r = await render(`[gd_scene format=3]
+
+[sub_resource type="BoxMesh" id="1"]
+
+[node name="Root" type="Node3D"]
+
+[node name="Booth" type="SubViewportContainer" parent="."]
+
+[node name="View" type="SubViewport" parent="Booth"]
+
+[node name="Contained" type="MeshInstance3D" parent="Booth/View"]
+mesh = SubResource("1")
+`);
+    expect(r.scene.findAllByProps({ name: 'Contained' }).length).toBeGreaterThan(0);
+  });
 });
