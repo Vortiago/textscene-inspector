@@ -27,6 +27,23 @@ describe('parseNode2D', () => {
     expect(p.scale).toEqual({ x: 1, y: 1 });
     expect(p.z_index).toBe(0);
     expect(p.z_as_relative).toBe(true);
+    // CanvasItem.light_mask is 1, which is what makes a default item take a
+    // default light.
+    expect(p.light_mask).toBe(1);
+  });
+
+  it('parses light_mask, the CanvasItem side of Godot 2D light culling', () => {
+    // The isometric dungeon's painted shadow polygons carry 512, which shares no
+    // bit with a torch's default range_item_cull_mask of 1.
+    expect(parseNode2D(heading('Node2D', { name: 'N' }), { light_mask: '512' }).light_mask).toBe(512);
+    // 0 is legal and means "no light reaches me".
+    expect(parseNode2D(heading('Node2D', { name: 'N' }), { light_mask: '0' }).light_mask).toBe(0);
+  });
+
+  it('warns and falls back to 1 on an invalid light_mask', () => {
+    expect(
+      parseNode2D(heading('Node2D', { name: 'N' }), { light_mask: 'nonsense' }).light_mask
+    ).toBe(1);
   });
 
   it('transform= wins over discrete props and is decomposed', () => {

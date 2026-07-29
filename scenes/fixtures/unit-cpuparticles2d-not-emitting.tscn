@@ -1,0 +1,35 @@
+[gd_scene load_steps=2 format=3]
+
+; `emitting = false` must draw NOTHING, however generous the rest of the
+; emitter is — Godot's `_update_internal` returns before it fills the multimesh
+; buffer. Six of the eleven CPUParticles2D nodes in the vendored demos rely on
+; it. The node must still position its child, so the marker below is visible
+; while the particles are not.
+
+[ext_resource type="Texture2D" path="res://textures/pong-ball.png" id="1_ball"]
+
+[node name="Root" type="Node2D"]
+
+[node name="Backdrop" type="Polygon2D" parent="."]
+color = Color(0.08, 0.08, 0.1, 1)
+polygon = PackedVector2Array(320, 68, 832, 68, 832, 580, 320, 580)
+
+[node name="Dormant" type="CPUParticles2D" parent="."]
+position = Vector2(576, 324)
+emitting = false
+amount = 64
+texture = ExtResource("1_ball")
+lifetime = 2.0
+preprocess = 2.0
+use_fixed_seed = true
+seed = 7
+fixed_fps = 30
+local_coords = true
+emission_shape = 1
+emission_sphere_radius = 120.0
+scale_amount_min = 6.0
+scale_amount_max = 6.0
+
+[node name="StillPlaced" type="Polygon2D" parent="Dormant"]
+color = Color(0.2, 0.9, 0.4, 1)
+polygon = PackedVector2Array(-24, -24, 24, -24, 24, 24, -24, 24)

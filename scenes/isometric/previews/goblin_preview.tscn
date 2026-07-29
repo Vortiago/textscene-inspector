@@ -1,0 +1,22 @@
+; Not vendored — see previews/README.md.
+;
+; The player instanced at the middle of the project viewport over a neutral
+; backdrop. The sub-scene sits at the origin, so captured alone it falls off the
+; top-left corner.
+;
+; Nothing here animates: the AnimatedSprite2D is parked on `front_idle` frame 8
+; with no autoplay, and the scene's Camera2D is disabled on both sides (the
+; previewer ignores a scene camera, and the reference harness matches it).
+
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://player/goblin.tscn" id="1"]
+
+[node name="GoblinPreview" type="Node2D"]
+
+[node name="Backdrop" type="Polygon2D" parent="."]
+color = Color(0.3, 0.3, 0.32, 1)
+polygon = PackedVector2Array(0, 0, 1152, 0, 1152, 648, 0, 648)
+
+[node name="Goblin" parent="." instance=ExtResource("1")]
+position = Vector2(576, 380)

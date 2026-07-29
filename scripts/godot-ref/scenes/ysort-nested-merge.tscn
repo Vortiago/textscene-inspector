@@ -1,0 +1,25 @@
+[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="YS" type="Node2D" parent="."]
+y_sort_enabled = true
+
+[node name="Sub" type="Polygon2D" parent="YS"]
+y_sort_enabled = true
+color = Color(1, 1, 0, 1)
+polygon = PackedVector2Array(50, 50, 700, 50, 700, 80, 50, 80)
+
+[node name="SubLow" type="Polygon2D" parent="YS/Sub"]
+color = Color(1, 0, 0, 1)
+polygon = PackedVector2Array(100, 100, 500, 100, 500, 300, 100, 300)
+
+[node name="SubHigh" type="Polygon2D" parent="YS/Sub"]
+position = Vector2(0, 200)
+color = Color(0, 1, 0, 1)
+polygon = PackedVector2Array(150, 0, 550, 0, 550, 200, 150, 200)
+
+[node name="Mid" type="Polygon2D" parent="YS"]
+position = Vector2(0, 100)
+color = Color(0, 0, 1, 1)
+polygon = PackedVector2Array(200, 0, 600, 0, 600, 200, 200, 200)

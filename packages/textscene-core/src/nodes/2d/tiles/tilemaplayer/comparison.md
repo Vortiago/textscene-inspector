@@ -32,7 +32,7 @@ blue background (~214 vs ~223 on the blue channel) all match.
 ## Linting
 
 <!-- lint:begin TileMapLayer -->
-Strict parsing format-checks these `TileMapLayer` properties, plus 15 inherited from Node2D. Every validator failure is an **error**.
+Strict parsing format-checks these `TileMapLayer` properties, plus 18 inherited from Node2D. Every validator failure is an **error**.
 
 | Property |
 | --- |

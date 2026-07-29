@@ -16,14 +16,16 @@ async function render(n: TscnNode) {
 }
 
 describe('<Polygon2D>', () => {
-  it('fills a ShapeGeometry from the polygon outline', async () => {
+  it('fills an indexed BufferGeometry holding one vertex per polygon point', async () => {
     const renderer = await render(
       node({ polygon: 'PackedVector2Array(0, 0, 100, 0, 100, 100, 0, 100)' })
     );
     const geom = renderer.scene.findByType('Mesh').instance.geometry as THREE.BufferGeometry;
-    expect(geom.type).toBe('ShapeGeometry');
-    // Four-vertex quad → ShapeGeometry triangulates it (non-empty index/positions).
-    expect(geom.attributes.position.count).toBeGreaterThanOrEqual(4);
+    // Exactly the authored vertices, triangulated by index — vertex identity is
+    // what keeps `uv` / `vertex_colors` aligned with the points Godot paired
+    // them against.
+    expect(geom.attributes.position.count).toBe(4);
+    expect(geom.getIndex()!.count).toBe(6);
   });
 
   it('negates Y so Godot +Y-down maps into the conjugated 2D frame', async () => {

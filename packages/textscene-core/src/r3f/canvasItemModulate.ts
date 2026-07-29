@@ -51,10 +51,19 @@ export interface CanvasItemTint {
 }
 
 /** Resolve a CanvasItem's modulate/self_modulate into a material tint + child-context value. */
-export function useCanvasItemTint(props: { modulate: RGBA; self_modulate: RGBA }): CanvasItemTint {
+export function useCanvasItemTint(
+  props: { modulate: RGBA; self_modulate: RGBA },
+  /**
+   * A tint applied to this item's OWN pixels and not passed on — the canvas
+   * modulate, which Godot multiplies in per item during the base pass rather
+   * than inheriting down the tree.
+   */
+  ownMultiplier: RGBA = WHITE_MODULATE
+): CanvasItemTint {
   const parent = useParentModulate();
   const inherited = useMemo(() => multiplyModulate(parent, props.modulate), [parent, props.modulate]);
-  const own = useMemo(() => multiplyModulate(inherited, props.self_modulate), [inherited, props.self_modulate]);
+  const self = useMemo(() => multiplyModulate(inherited, props.self_modulate), [inherited, props.self_modulate]);
+  const own = useMemo(() => multiplyModulate(self, ownMultiplier), [self, ownMultiplier]);
   const color = useGodotLinearColor(own);
   return { inherited, own, color, opacity: own.a };
 }

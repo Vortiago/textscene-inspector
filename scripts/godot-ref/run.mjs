@@ -55,6 +55,7 @@ import { tmpdir } from 'node:os';
 import { basename, dirname, join, relative, resolve, sep } from 'node:path';
 import { PNG } from 'pngjs';
 import { CANVAS_2D_CAPTURE, CANVAS_CAPTURE } from '../visual/previewServer.mjs';
+import { FLATTENED_CORPUS_ROOTS } from '../corpusRoots.mjs';
 
 /**
  * The frame `capture-ours.mjs` produces, taken from the one definition of it.
@@ -216,8 +217,13 @@ export function parseArgs(argv) {
 export function resolveProjectRoot(scenePath) {
   let dir = dirname(resolve(scenePath));
   const stop = resolve(join(import.meta.dirname, '..', '..'));
+  const unmarkedRoots = FLATTENED_CORPUS_ROOTS.map((r) => resolve(join(stop, 'scenes', r)));
   while (dir.startsWith(stop) && dir !== stop) {
     if (existsSync(join(dir, 'project.godot'))) return dir;
+    // A vendored closure that is a res:// root without saying so. Checked while
+    // walking, so a scene nested inside one resolves against the corpus rather
+    // than against its own folder.
+    if (unmarkedRoots.includes(dir)) return dir;
     dir = dirname(dir);
   }
   return dirname(resolve(scenePath));

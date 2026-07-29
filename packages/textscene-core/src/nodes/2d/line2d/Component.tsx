@@ -9,6 +9,9 @@ import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
+import { canvasItemBlendState, type CanvasItemBlendState } from '../../../resources/materials/canvasitemmaterial/renderer';
+import type { CanvasItemLightingProps } from '../../../r3f/lighting2d/useCanvasItemLighting';
+import { CanvasItemBlendMode } from '../../../resources/materials/canvasitemmaterial/types';
 import { multiplyModulate, type CanvasItemTint } from '../../../r3f/canvasItemModulate';
 import { godotColorToLinear } from '../../../r3f/godotColor';
 import type { Line2DProperties } from './types';
@@ -40,12 +43,18 @@ export function Line2D({ node, children }: NodeComponentProps) {
     <CanvasItem2D
       node={node}
       props={props}
-      body={(tint) => {
+      body={(tint, material, lighting) => {
         if (!geometry) {
           return null;
         }
         return (
-          <LineMesh geometry={geometry} tint={tint} color={props.defaultColor} />
+          <LineMesh
+            geometry={geometry}
+            tint={tint}
+            color={props.defaultColor}
+            blend={canvasItemBlendState(material?.blendMode ?? CanvasItemBlendMode.MIX)}
+            lighting={lighting}
+          />
         );
       }}
     >
@@ -58,10 +67,14 @@ function LineMesh({
   geometry,
   tint,
   color,
+  blend,
+  lighting,
 }: {
   geometry: THREE.BufferGeometry;
   tint: CanvasItemTint;
   color: Line2DProperties['defaultColor'];
+  blend: CanvasItemBlendState;
+  lighting: CanvasItemLightingProps;
 }) {
   const { fill, opacity } = useMemo(() => {
     const composed = multiplyModulate(tint.own, color);
@@ -80,6 +93,8 @@ function LineMesh({
         transparent
         depthWrite={false}
         side={THREE.DoubleSide}
+        {...blend}
+        {...lighting}
       />
     </mesh>
   );

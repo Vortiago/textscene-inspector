@@ -22,6 +22,9 @@ import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
+import { canvasItemBlendState, type CanvasItemBlendState } from '../../../resources/materials/canvasitemmaterial/renderer';
+import type { CanvasItemLightingProps } from '../../../r3f/lighting2d/useCanvasItemLighting';
+import { CanvasItemBlendMode } from '../../../resources/materials/canvasitemmaterial/types';
 import { composeFrameTexture, frameSizePx } from '../../../r3f/spriteFrame';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useAnimatedValue } from '../../../r3f/contexts/AnimatedValueContext';
@@ -69,7 +72,7 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
     <CanvasItem2D
       node={node}
       props={props}
-      body={({ color, opacity }) =>
+      body={({ color, opacity }, material, lighting) =>
         showPlaceholder ? (
           <MissingResourcePlaceholder shape="plane" name={node.name} />
         ) : displayedTexture ? (
@@ -80,6 +83,8 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
             width={width}
             height={height}
             props={props}
+            blend={canvasItemBlendState(material?.blendMode ?? CanvasItemBlendMode.MIX)}
+            lighting={lighting}
           />
         ) : null
       }
@@ -96,6 +101,8 @@ function QuadMesh({
   width,
   height,
   props,
+  blend,
+  lighting,
 }: {
   texture: THREE.Texture;
   color: THREE.Color;
@@ -103,6 +110,8 @@ function QuadMesh({
   width: number;
   height: number;
   props: Sprite2DProperties;
+  blend: CanvasItemBlendState;
+  lighting: CanvasItemLightingProps;
 }) {
   // Quad centre in Godot 2D space (+Y down), then Y-negated for the conjugated
   // group frame. centered ⇒ centre at `offset`; otherwise the quad's top-left
@@ -121,6 +130,8 @@ function QuadMesh({
         transparent
         depthWrite={false}
         side={THREE.DoubleSide}
+        {...blend}
+        {...lighting}
       />
     </mesh>
   );

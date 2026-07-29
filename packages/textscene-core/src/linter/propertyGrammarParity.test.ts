@@ -28,6 +28,7 @@ import { readdirSync, readFileSync, existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { NODE_BASE_TYPES } from './nodeBaseTypes.js';
+import { PARAM_SLOTS } from '../nodes/2d/cpuparticles2d/types.js';
 import { validatorRegistry } from './ValidatorRegistry.js';
 import './index.js';
 
@@ -84,6 +85,21 @@ const LIGHT3D_LINTER_ONLY_KEYS = [
  * scrape of each audio player's parser.ts); each linterParser.ts registers
  * them explicitly.
  */
+/**
+ * CPUParticles2D's twelve parameter slots. `parser.ts` reads every one of
+ * `<prefix>_min` / `_max` / `_curve`, but through a TABLE
+ * (`properties[`${prefix}_min`]`) rather than a literal access, so the
+ * `properties.X` scrape sees none of them — the same blind spot as the audio
+ * base helper below. Derived from the parser's OWN table, so a renamed prefix or
+ * a dropped slot moves both sides at once instead of leaving the allowlist
+ * asserting coverage of a key nothing reads any more.
+ */
+const PARTICLE_PARAM_KEYS: readonly string[] = PARAM_SLOTS.flatMap(({ prefix, curve }) => [
+  `${prefix}_min`,
+  `${prefix}_max`,
+  ...(curve ? [`${prefix}_curve`] : []),
+]);
+
 const AUDIO_BASE_KEYS = [
   'stream', 'volume_db', 'pitch_scale', 'playing', 'autoplay',
   'stream_paused', 'bus', 'max_polyphony',
@@ -196,16 +212,38 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
 
   Polygon2D: {
     parserOnly: [
-      // PackedVector2Array / Array-of-PackedInt32Array bodies (same pattern as
-      // Line2D.points above): opaque encoded data with no per-key grammar.
-      'polygon', 'polygons',
+      // PackedVector2Array / Array-of-PackedInt32Array / PackedColorArray
+      // bodies (same pattern as Line2D.points above): opaque encoded data with
+      // no per-key grammar. (`uv` used to sit here; it has one now.)
+      'polygon', 'polygons', 'vertex_colors',
     ],
     linterOnly: [
-      // Display tweaks with no rendering parity requirement. (`invert_enabled`
-      // and `invert_border` used to sit here; both are rendered now.)
-      'antialiased', 'texture_offset', 'texture_rotation', 'texture_scale',
+      // Display tweak with no rendering parity requirement. (`invert_enabled`,
+      // `invert_border` and the whole texture transform used to sit here; all
+      // are rendered now.)
+      'antialiased',
     ],
-    reason: 'polygon/polygons are encoded packed arrays with no per-key grammar; the remaining texture-transform properties affect visual output but the renderer reads color/offset only.',
+    reason: 'polygon/polygons/vertex_colors are encoded packed arrays with no per-key grammar; antialiased is a display tweak the renderer has no equivalent for.',
+  },
+
+  CPUParticles2D: {
+    parserOnly: [
+      // Godot's setter takes ANY int and reads everything but 1 as Index — its
+      // own 2D platformer demo ships `draw_order = 215832976` — so a range
+      // validator would error on a scene the engine opens without complaint.
+      'draw_order',
+    ],
+    linterOnly: [
+      ...PARTICLE_PARAM_KEYS,
+      // Emission shapes the frozen pose cannot reproduce (they sample Godot's
+      // global RNG), so the parser has no reason to read their point data —
+      // but a malformed packed array is still worth reporting.
+      'emission_points', 'emission_normals',
+      // Per-axis scale curves, not implemented; a particle scales uniformly.
+      'split_scale', 'scale_curve_x', 'scale_curve_y',
+    ],
+    reason:
+      'The parameter min/max/curve keys ARE read, but through a table-driven `properties[`${prefix}_min`]` lookup the scrape cannot see; emission_points/normals and the split-scale curves are validated but deliberately unrendered; draw_order is validator-free because Godot accepts any int for it.',
   },
 
   TileMapLayer: {

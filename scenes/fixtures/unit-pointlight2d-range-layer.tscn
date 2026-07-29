@@ -1,0 +1,22 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Texture2D" path="res://textures/light2d.png" id="1_light"]
+
+[node name="Root" type="Node2D"]
+
+[node name="WorldPanel" type="Polygon2D" parent="."]
+color = Color(0.42, 0.42, 0.46, 1)
+polygon = PackedVector2Array(100, 150, 500, 150, 500, 500, 100, 500)
+
+[node name="Torch" type="PointLight2D" parent="."]
+position = Vector2(576, 325)
+texture = ExtResource("1_light")
+color = Color(1, 0.7, 0.35, 1)
+energy = 0.9
+texture_scale = 1.4
+
+[node name="Hud" type="CanvasLayer" parent="."]
+
+[node name="HudPanel" type="Polygon2D" parent="Hud"]
+color = Color(0.42, 0.42, 0.46, 1)
+polygon = PackedVector2Array(652, 150, 1052, 150, 1052, 500, 652, 500)

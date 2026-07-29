@@ -28,6 +28,21 @@ export function parsePackedVector2Array(value: string): Float32Array {
   return new Float32Array(nums);
 }
 
+/** Parse Godot `PackedColorArray(r, g, b, a, r, g, b, a, ...)` into a flat Float32Array. */
+export function parsePackedColorArray(value: string): Float32Array {
+  const match = value.match(/^PackedColorArray\s*\(([\s\S]*)\)$/);
+  if (!match) {
+    throw new Error(`Invalid PackedColorArray format: ${value}`);
+  }
+  const inner = match[1]!.trim();
+  if (inner === '') return new Float32Array(0);
+  const nums = inner.split(',').map((s) => parseFloat(s.trim()));
+  if (nums.some((n) => Number.isNaN(n))) {
+    throw new Error(`Invalid number in PackedColorArray: ${value}`);
+  }
+  return new Float32Array(nums);
+}
+
 /**
  * Extract every `PackedInt32Array(...)` from a value, regardless of wrapper —
  * handles both the bare 3D form `[PackedInt32Array(...), ...]` and the 2D

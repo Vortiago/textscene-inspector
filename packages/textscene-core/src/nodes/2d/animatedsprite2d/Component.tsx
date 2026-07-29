@@ -22,6 +22,8 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
+import { canvasItemBlendState } from '../../../resources/materials/canvasitemmaterial/renderer';
+import { CanvasItemBlendMode } from '../../../resources/materials/canvasitemmaterial/types';
 import { composeFrameTexture, frameSizePx, type SpriteFrameProps } from '../../../r3f/spriteFrame';
 import { useResource } from '../../../resources/useResource';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
@@ -190,7 +192,7 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
     <CanvasItem2D
       node={node}
       props={props}
-      body={({ color, opacity }) =>
+      body={({ color, opacity }, material, lighting) =>
         showPlaceholder ? (
           <MissingResourcePlaceholder shape="plane" name={node.name} />
         ) : displayedTexture ? (
@@ -203,6 +205,8 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
               transparent
               depthWrite={false}
               side={THREE.DoubleSide}
+              {...canvasItemBlendState(material?.blendMode ?? CanvasItemBlendMode.MIX)}
+              {...lighting}
             />
           </mesh>
         ) : null

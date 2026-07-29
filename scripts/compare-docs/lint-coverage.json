@@ -517,6 +517,14 @@
           "declaredOn": "Node2D"
         },
         {
+          "property": "light_mask",
+          "declaredOn": "Node2D"
+        },
+        {
+          "property": "material",
+          "declaredOn": "Node2D"
+        },
+        {
           "property": "position",
           "declaredOn": "Node2D"
         },
@@ -538,6 +546,10 @@
         },
         {
           "property": "transform",
+          "declaredOn": "Node2D"
+        },
+        {
+          "property": "use_parent_material",
           "declaredOn": "Node2D"
         },
         {
@@ -857,23 +869,6 @@
             },
             {
               "ruleName": "valid-node3d-visibility",
-              "severity": "warning"
-            }
-          ]
-        }
-      ]
-    },
-    "CPUParticles2D": {
-      "validators": [],
-      "rules": [
-        {
-          "name": "binary-resource-reference",
-          "description": "Flags references to binary Godot resources (.scn/.res) the previewer cannot load",
-          "universal": true,
-          "viaMatcher": false,
-          "emits": [
-            {
-              "ruleName": "binary-resource-reference",
               "severity": "warning"
             }
           ]
@@ -2748,6 +2743,14 @@
           "declaredOn": "Node2D"
         },
         {
+          "property": "light_mask",
+          "declaredOn": "Node2D"
+        },
+        {
+          "property": "material",
+          "declaredOn": "Node2D"
+        },
+        {
           "property": "position",
           "declaredOn": "Node2D"
         },
@@ -2769,6 +2772,10 @@
         },
         {
           "property": "transform",
+          "declaredOn": "Node2D"
+        },
+        {
+          "property": "use_parent_material",
           "declaredOn": "Node2D"
         },
         {
@@ -3413,6 +3420,14 @@
           "declaredOn": "Node2D"
         },
         {
+          "property": "light_mask",
+          "declaredOn": "Node2D"
+        },
+        {
+          "property": "material",
+          "declaredOn": "Node2D"
+        },
+        {
           "property": "position",
           "declaredOn": "Node2D"
         },
@@ -3434,6 +3449,10 @@
         },
         {
           "property": "transform",
+          "declaredOn": "Node2D"
+        },
+        {
+          "property": "use_parent_material",
           "declaredOn": "Node2D"
         },
         {

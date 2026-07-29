@@ -711,7 +711,7 @@
       "name": "CPUParticles2D",
       "category": "2D",
       "group": "Particles",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node2D",
         "CanvasItem",

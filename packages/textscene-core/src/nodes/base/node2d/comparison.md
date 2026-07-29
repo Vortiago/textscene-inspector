@@ -42,12 +42,15 @@ Strict parsing format-checks these `Node2D` properties. Every validator failure 
 | `global_scale` |
 | `global_skew` |
 | `global_transform` |
+| `light_mask` |
+| `material` |
 | `position` |
 | `rotation` |
 | `rotation_degrees` |
 | `scale` |
 | `skew` |
 | `transform` |
+| `use_parent_material` |
 | `y_sort_enabled` |
 | `z_as_relative` |
 | `z_index` |

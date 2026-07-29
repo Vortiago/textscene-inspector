@@ -18,7 +18,7 @@
  */
 
 import * as THREE from 'three';
-import { useEffect, useMemo, useRef, type ReactNode, type RefObject } from 'react';
+import { useMemo, useRef, type ReactNode, type RefObject } from 'react';
 import type { MeshInstance3DProperties } from './types';
 import type {
   TscnExternalResource,
@@ -32,6 +32,7 @@ import {
 } from '../../../r3f/SceneResourcesContext';
 import { parseResourceReference } from '../../../resources/SubResourceResolver';
 import { resolveGradientTexture2D } from '../../../resources/textures/gradienttexture2d/resolveGradientTexture';
+import { useProceduralTexturePins } from '../../../resources/useProceduralTexture';
 import { useResource } from '../../../resources/useResource';
 import type { ArrayMeshResource } from '../../../resources/processors/createArrayMeshProcessor';
 import { MeshGeometry } from './meshGeometry';
@@ -195,19 +196,17 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
   // like an ExtResource image. This is what gives the platformer coin its
   // additive gradient glow. Any slot NOT carrying a procedural sub-resource
   // stays undefined and falls back to the async `textureSlots` above.
-  const proceduralTextures = useMemo(
+  //
+  // Not disposed here: a procedural texture is shared by every node pointing at
+  // the same sub-resource and owned by the procedural cache, which frees it on
+  // eviction. Freeing it per consumer would pull it out from under the others.
+  // Pinned instead, so that eviction cannot free it while THIS node is still
+  // sampling it — borrowing only works if the owner knows the borrow exists.
+  const { textures: proceduralTextures, keys: proceduralKeys } = useMemo(
     () => resolveProceduralTextures(materialSubResource, internalResources),
     [materialSubResource, internalResources]
   );
-
-  // Dispose the generated DataTextures when the material changes or the node
-  // unmounts — they own their pixel buffers (mirrors Label3D's CanvasTexture).
-  useEffect(() => {
-    const textures = Object.values(proceduralTextures);
-    return () => {
-      for (const texture of textures) texture?.dispose();
-    };
-  }, [proceduralTextures]);
+  useProceduralTexturePins(proceduralKeys);
 
   // Apply the material's UV transform (`uv1_scale` / `uv1_offset`) to
   // every loaded texture. `applyUVTransform` clones the texture before
@@ -628,24 +627,38 @@ function effectiveSlot(
   return procedural ? { value: procedural } : asyncSlot;
 }
 
+interface ProceduralTextureSlots {
+  textures: Partial<Record<TextureSlot, THREE.Texture>>;
+  /** Cache keys for the slots that resolved — exactly those, so a key is never
+   *  pinned for a texture the cache does not hold. */
+  keys: string[];
+}
+
 /**
  * Rasterise every material texture slot that references an inline procedural
- * texture (currently `SubResource(GradientTexture2D)`) into a THREE.Texture.
- * Slots carrying an ExtResource image, a non-gradient SubResource, or nothing
- * are omitted, leaving the async `useResource` path to handle them.
+ * texture (currently `SubResource(GradientTexture2D)`) into a THREE.Texture,
+ * collecting the cache keys those same slots must pin. Slots carrying an
+ * ExtResource image, a non-gradient SubResource, or nothing are omitted,
+ * leaving the async `useResource` path to handle them.
+ *
+ * One walk yields both: a second walk deriving keys on its own is free to
+ * disagree with this one about which references are procedural.
  */
 function resolveProceduralTextures(
   materialSubResource: TscnInternalResource | undefined,
   internalResources: readonly TscnInternalResource[]
-): Partial<Record<TextureSlot, THREE.Texture>> {
-  if (!materialSubResource) return {};
-  const out: Partial<Record<TextureSlot, THREE.Texture>> = {};
+): ProceduralTextureSlots {
+  const out: ProceduralTextureSlots = { textures: {}, keys: [] };
+  if (!materialSubResource) return out;
   const data = materialSubResource.data as Record<string, unknown>;
   for (const slot of TEXTURE_PROPERTIES) {
     const raw = data[slot];
     if (typeof raw !== 'string') continue;
-    const texture = resolveGradientTexture2D(raw, internalResources);
-    if (texture) out[slot] = texture;
+    const resolved = resolveGradientTexture2D(raw, internalResources);
+    if (resolved) {
+      out.textures[slot] = resolved.texture;
+      out.keys.push(resolved.key);
+    }
   }
   return out;
 }

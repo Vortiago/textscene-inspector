@@ -3,7 +3,7 @@
  * batched textured quads, one mesh per (layer × atlas source). Draw order:
  * the layer's own z_index moves a full Z_INDEX_STEP (interleaving with
  * sibling CanvasItems like Godot), layer index breaks ties with
- * TILE_LAYER_STEP, atlas-source order with TILE_SOURCE_STEP. A layer's
+ * TILE_LAYER_STEP, atlas-source order by a fraction of that step. A layer's
  * `modulate` multiplies onto its pixels (composed in sRGB like the rest of
  * the CanvasItem chain). Unresolvable TileSet or undecodable layer data
  * degrades to the transform-only group with children intact (ADR-0008).
@@ -12,6 +12,8 @@
 import { useMemo } from 'react';
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../../r3f/components/CanvasItem2D';
+import { canvasItemBlendState } from '../../../../resources/materials/canvasitemmaterial/renderer';
+import { CanvasItemBlendMode } from '../../../../resources/materials/canvasitemmaterial/types';
 import {
   multiplyModulate,
   type CanvasItemTint,
@@ -19,9 +21,9 @@ import {
 import { godotColorToLinear } from '../../../../r3f/godotColor';
 import {
   TILE_LAYER_STEP,
-  TILE_SOURCE_STEP,
   Z_INDEX_STEP,
 } from '../../../../r3f/node2dTransform';
+import { drawnSources, tileSourceZ } from '../../../../r3f/tileSourceZ';
 import { TileSourceMesh } from '../../../../r3f/TileSourceMesh';
 import { useTileSetModel } from '../../../../r3f/useTileSetModel';
 import type { TileMapLayerData, TileMapProperties } from './types';
@@ -36,18 +38,20 @@ export function TileMap({ node, children }: NodeComponentProps) {
     if (!model) return null;
     return props.layers.flatMap((layer, layerIndex) => {
       if (!layer.enabled || !layer.cells?.length) return [];
-      return model.sourceOrder
-        .map((sourceId, sourceIndex) => ({
+      return drawnSources(model, layer.cells).map(
+        ({ sourceId, source, cells, sourceIndex, sourceCount }) => ({
           key: `${layerIndex}:${sourceId}`,
-          source: model.sources.get(sourceId)!,
-          cells: layer.cells!.filter((c) => c.sourceId === sourceId),
+          source,
+          cells,
+          layer,
+          // The source nudge is scaled into ONE layer step, so a layer's atlas
+          // sources can never reach the layer stacked above it.
           z:
             layer.zIndex * Z_INDEX_STEP +
             layerIndex * TILE_LAYER_STEP +
-            sourceIndex * TILE_SOURCE_STEP,
-          layer,
-        }))
-        .filter((entry) => entry.cells.length > 0);
+            tileSourceZ(sourceIndex, sourceCount, TILE_LAYER_STEP),
+        })
+      );
     });
   }, [model, props.layers]);
 
@@ -55,7 +59,7 @@ export function TileMap({ node, children }: NodeComponentProps) {
     <CanvasItem2D
       node={node}
       props={props}
-      body={(tint) =>
+      body={(tint, material, lighting) =>
         status === 'loaded' && model && meshEntries
           ? meshEntries.map((entry) => {
               const { color, opacity } = layerTint(tint, entry.layer);
@@ -69,6 +73,8 @@ export function TileMap({ node, children }: NodeComponentProps) {
                   color={color}
                   opacity={opacity}
                   name={node.name}
+                  blend={canvasItemBlendState(material?.blendMode ?? CanvasItemBlendMode.MIX)}
+                  lighting={lighting}
                 />
               );
             })

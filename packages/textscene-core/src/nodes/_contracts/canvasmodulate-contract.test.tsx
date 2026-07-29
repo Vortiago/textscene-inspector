@@ -9,9 +9,12 @@
  * inherited Modulate2DContext so descendant CanvasItems are tinted) + a lint-clean
  * fixture + the property validator.
  *
- * DIVERGENCE (intended): Godot's CanvasModulate tints the WHOLE canvas; the
- * previewer models it as a SUBTREE modulate (it tints its descendants). So this
- * contract asserts only on a DESCENDANT CanvasItem — never a sibling.
+ * CANVAS-WIDE, not subtree: Godot applies the colour as
+ * `RS::canvas_set_modulate(canvas, color)` on ENTER_CANVAS, so tree position is
+ * irrelevant and a CHILDLESS CanvasModulate still tints the scene — which is
+ * exactly what the isometric dungeon authors. This contract therefore asserts
+ * on a SIBLING as well as a descendant; the sibling case is the one that a
+ * subtree-scoped implementation gets wrong.
  *
  * RED-lever notes (this repo's own lessons):
  *  - An UNREGISTERED type already parses to type === 'CanvasModulate' (base-Node
@@ -87,6 +90,20 @@ ${colorLine}
 
 [node name="Poly" type="Polygon2D" parent="CM"]
 polygon = PackedVector2Array(0, 0, 8, 0, 8, 8)
+`;
+}
+
+/** A CanvasModulate(color=extra) beside a WHITE Polygon2D — the dungeon's shape. */
+function siblingTintScene(colorLine: string): string {
+  return `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="Poly" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(0, 0, 8, 0, 8, 8)
+
+[node name="CM" type="CanvasModulate" parent="."]
+${colorLine}
 `;
 }
 
@@ -170,6 +187,71 @@ describe('CanvasModulate slice — behavioral contract (RED until shipped)', () 
     expect(mat!.color.g).toBeCloseTo(lin.g, 3);
     expect(mat!.color.b).toBeCloseTo(lin.b, 3);
     expect(mat!.color.r).not.toBeCloseTo(1, 2);
+  });
+
+  it('tints a SIBLING CanvasItem — a childless CanvasModulate still governs the canvas', async () => {
+    if (!requireComp()) return;
+    // The isometric dungeon's shape. A subtree-scoped modulate tints nothing
+    // here, leaving the white polygon at 1,1,1 → RED.
+    const mat = firstMeshMaterial(
+      await renderScene(siblingTintScene('color = Color(0.4, 0.6, 0.9, 1)'))
+    );
+    expect(mat, 'a sibling Polygon2D mesh should render beside CanvasModulate').toBeDefined();
+    const lin = godotColorToLinear({ r: 0.4, g: 0.6, b: 0.9 });
+    expect(mat!.color.r).toBeCloseTo(lin.r, 3);
+    expect(mat!.color.g).toBeCloseTo(lin.g, 3);
+    expect(mat!.color.b).toBeCloseTo(lin.b, 3);
+    expect(mat!.color.r).not.toBeCloseTo(1, 2);
+  });
+
+  it('does not square the tint on its own descendant — canvas-level, applied once', async () => {
+    if (!requireComp()) return;
+    const mat = firstMeshMaterial(await renderScene(tintScene('color = Color(0.4, 0.6, 0.9, 1)')));
+    const lin = godotColorToLinear({ r: 0.4, g: 0.6, b: 0.9 });
+    const squared = godotColorToLinear({ r: 0.16, g: 0.36, b: 0.81 });
+    expect(mat!.color.r).toBeCloseTo(lin.r, 3);
+    expect(mat!.color.r).not.toBeCloseTo(squared.r, 3);
+  });
+
+  it('an Unshaded item skips the canvas tint, as Godot\'s base pass does', async () => {
+    if (!requireComp()) return;
+    // canvas.glsl guards the multiply: `#elif !defined(MODE_UNSHADED)
+    // color *= canvas_modulation;` — so light_mode = 1 keeps its authored
+    // colour while its shaded sibling is tinted.
+    const renderer = await renderScene(`[gd_scene format=3]
+
+[sub_resource type="CanvasItemMaterial" id="unshaded"]
+light_mode = 1
+
+[node name="Root" type="Node2D"]
+
+[node name="Shaded" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(0, 0, 8, 0, 8, 8)
+
+[node name="Unshaded" type="Polygon2D" parent="."]
+material = SubResource("unshaded")
+polygon = PackedVector2Array(0, 0, 8, 0, 8, 8)
+
+[node name="CM" type="CanvasModulate" parent="."]
+color = Color(0.4, 0.6, 0.9, 1)
+`);
+    const byName = new Map<string, THREE.MeshBasicMaterial>();
+    let root: THREE.Object3D | null | undefined = (
+      renderer.scene as unknown as { children?: Array<{ instance?: THREE.Object3D }> }
+    ).children?.[0]?.instance;
+    while (root?.parent) root = root.parent;
+    root?.traverse((o) => {
+      if ((o as THREE.Mesh).isMesh && o.parent?.name) {
+        byName.set(o.parent.name, (o as THREE.Mesh).material as THREE.MeshBasicMaterial);
+      }
+    });
+
+    const lin = godotColorToLinear({ r: 0.4, g: 0.6, b: 0.9 });
+    expect(byName.get('Shaded')!.color.r).toBeCloseTo(lin.r, 3);
+    // The unshaded one keeps white — tinting it would be the bug.
+    expect(byName.get('Unshaded')!.color.r).toBeCloseTo(1, 3);
+    expect(byName.get('Unshaded')!.color.g).toBeCloseTo(1, 3);
+    expect(byName.get('Unshaded')!.color.b).toBeCloseTo(1, 3);
   });
 
   it('a white (default) CanvasModulate is a no-op tint on its descendant', async () => {
