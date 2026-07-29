@@ -23,7 +23,7 @@ primitive nodes.*
 
 ## What it renders
 
-Around 66 node types, each a self-registering vertical slice.
+Around 83 node types, each a self-registering vertical slice.
 
 | Category | Types |
 |---|---|
@@ -33,7 +33,8 @@ Around 66 node types, each a self-registering vertical slice.
 | Physics | Bodies plus collision-shape gizmos |
 | 2D | Sprite2D, AnimatedSprite2D, Polygon2D, Line2D, TileMap, TileMapLayer, NavigationRegion2D, Marker2D, Path2D, PathFollow2D |
 | 3D scene | Sprite3D, Label3D, Decal, GridMap, NavigationRegion3D, Marker3D, Path3D, PathFollow3D |
-| UI | 17 Control types, rendered as a DOM overlay |
+| Viewports | SubViewport, SubViewportContainer — nested viewports, with `ViewportTexture` composited onto 3D surfaces |
+| UI | 23 Control types, rendered as a DOM overlay |
 
 Beyond the node set:
 
