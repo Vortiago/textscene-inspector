@@ -30,6 +30,7 @@ import {
   createShadowColorQuadMaterial,
   shadowColorContributes,
 } from '../../../r3f/lighting2d/lightQuad';
+import { useLightSequence } from '../../../r3f/lighting2d/useLightSequence';
 import {
   useLightClassLayer,
   useRegisterShadowTint,
@@ -68,6 +69,11 @@ export function PointLight2D({ node, children }: NodeComponentProps) {
   // the layer its quad draws on. The node's own `light_mask` is its CanvasItem
   // mask and has no bearing on either.
   const ordinal = useRegisterCanvasLight2D(lights > 0, props.range_item_cull_mask);
+  // Two different jobs, deliberately two different numbers: `ordinal` keeps the
+  // shadow stencil stamps of one pass apart (dense, reused on unmount), while
+  // `sequence` is this light's position in the canvas light list, which is what
+  // Godot applies lights in and what order-dependent MIX depends on.
+  const sequence = useLightSequence(ordinal);
   const layer = useLightClassLayer(props.range_item_cull_mask);
   // Godot's default shadow_color is transparent, so the extra albedo-free pass
   // is allocated only for the rare light that actually tints its shadow.
@@ -107,6 +113,7 @@ export function PointLight2D({ node, children }: NodeComponentProps) {
             blendMode={props.blend_mode}
             shadowColor={props.shadow_color}
             layer={layer}
+            sequence={sequence}
             shadowTintLayer={tintsShadow ? shadowTintLayer : undefined}
             ordinal={ordinal}
             casters={casters}
@@ -132,14 +139,15 @@ function LightQuad({
   offset,
   width,
   height,
-  ordinal,
+  sequence,
 }: {
   meshRef: (mesh: THREE.Mesh | null) => void;
   material: THREE.Material;
   offset: { x: number; y: number };
   width: number;
   height: number;
-  ordinal: number;
+  /** The render-order slot: the light's place in the canvas light list. */
+  sequence: number;
 }) {
   return (
     <mesh
@@ -148,7 +156,7 @@ function LightQuad({
       material={material}
       // Explicit rather than left to three's depth sort, because the volume mask
       // has to land between this quad and the previous light's.
-      renderOrder={litQuadRenderOrder(ordinal)}
+      renderOrder={litQuadRenderOrder(sequence)}
     >
       <planeGeometry args={[width, height]} />
     </mesh>
@@ -166,6 +174,7 @@ function QuadMesh({
   layer,
   shadowTintLayer,
   ordinal,
+  sequence,
   casters,
 }: {
   texture: THREE.Texture;
@@ -180,8 +189,10 @@ function QuadMesh({
   shadowTintLayer: number | undefined;
   /** The camera layer of this light's cull-mask class. */
   layer: number;
-  /** This light's index within its class — its stencil ref and its draw order. */
+  /** This light's index within its class — its stencil ref. NOT its draw order. */
   ordinal: number;
+  /** This light's place in the canvas light list, which IS its draw order. */
+  sequence: number;
   /** The occluders this light is allowed to see, in world space. */
   casters: readonly WorldShadowCaster[];
 }) {
@@ -260,6 +271,7 @@ function QuadMesh({
           light={light}
           casters={casters}
           ordinal={ordinal}
+          sequence={sequence}
           layer={layer}
           tintLayer={tintsShadow ? shadowTintLayer : undefined}
         />
@@ -270,7 +282,7 @@ function QuadMesh({
         offset={offset}
         width={width * scale}
         height={height * scale}
-        ordinal={ordinal}
+        sequence={sequence}
       />
       {shadowMaterial && (
         <LightQuad
@@ -279,7 +291,7 @@ function QuadMesh({
           offset={offset}
           width={width * scale}
           height={height * scale}
-          ordinal={ordinal}
+          sequence={sequence}
         />
       )}
     </>

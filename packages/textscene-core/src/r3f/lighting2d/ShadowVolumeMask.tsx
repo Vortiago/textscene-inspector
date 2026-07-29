@@ -41,14 +41,22 @@ export function shadowStencilRef(ordinal: number): number {
   return n + 1;
 }
 
-/** Render order for light `ordinal`'s volumes — immediately before its quad. */
-export function shadowVolumeRenderOrder(ordinal: number): number {
-  return ordinal * 2;
+/**
+ * Render order for a light's volumes — immediately before its own quad.
+ *
+ * The argument is the light's SEQUENCE (its place in the canvas light list),
+ * not its stencil ordinal. Godot applies lights in attach order and MIX is
+ * order-dependent; the ordinal is reused on unmount and handed out in cookie-
+ * resolution order, so ordering by it made an overlap's colour depend on load
+ * timing. See `lightSequence.ts`.
+ */
+export function shadowVolumeRenderOrder(sequence: number): number {
+  return sequence * 2;
 }
 
-/** Render order for light `ordinal`'s cookie quad — immediately after its volumes. */
-export function litQuadRenderOrder(ordinal: number): number {
-  return ordinal * 2 + 1;
+/** Render order for a light's cookie quad — immediately after its own volumes. */
+export function litQuadRenderOrder(sequence: number): number {
+  return sequence * 2 + 1;
 }
 
 /**
@@ -89,6 +97,8 @@ export interface ShadowVolumeMaskProps {
    * density; two lights sharing an ordinal shadow each other.
    */
   ordinal: number;
+  /** This light's place in the canvas light list — its render-order slot. */
+  sequence: number;
   /** The layer the light's cookie quad draws on — the mask must share it. */
   layer: number;
   /**
@@ -99,7 +109,7 @@ export interface ShadowVolumeMaskProps {
   tintLayer?: number | undefined;
 }
 
-export function ShadowVolumeMask({ light, casters, ordinal, layer, tintLayer }: ShadowVolumeMaskProps) {
+export function ShadowVolumeMask({ light, casters, ordinal, sequence, layer, tintLayer }: ShadowVolumeMaskProps) {
   const positions = useMemo(() => buildShadowVolumes(light, casters), [light, casters]);
 
   const geometry = useMemo(() => {
@@ -115,7 +125,7 @@ export function ShadowVolumeMask({ light, casters, ordinal, layer, tintLayer }: 
 
   return (
     <mesh
-      renderOrder={shadowVolumeRenderOrder(ordinal)}
+      renderOrder={shadowVolumeRenderOrder(sequence)}
       layers-mask={(1 << layer) | (tintLayer === undefined ? 0 : 1 << tintLayer)}
       frustumCulled={false}
       // `light` and `casters` are already WORLD coordinates, so the mesh must

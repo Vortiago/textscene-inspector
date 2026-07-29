@@ -24,7 +24,7 @@ const CASTER: ShadowCasterEdges = {
 
 async function renderMask(props: Partial<Parameters<typeof ShadowVolumeMask>[0]> = {}) {
   return ReactThreeTestRenderer.create(
-    <ShadowVolumeMask light={LIGHT} casters={[CASTER]} ordinal={0} layer={1} {...props} />
+    <ShadowVolumeMask light={LIGHT} casters={[CASTER]} ordinal={0} sequence={0} layer={1} {...props} />
   );
 }
 
@@ -140,7 +140,19 @@ describe('<ShadowVolumeMask>', () => {
   });
 
   it('draws immediately before its own light quad', async () => {
-    expect(maskMesh(await renderMask({ ordinal: 6 }))!.renderOrder).toBe(shadowVolumeRenderOrder(6));
+    expect(maskMesh(await renderMask({ sequence: 6 }))!.renderOrder).toBe(shadowVolumeRenderOrder(6));
+  });
+
+  it('takes its ORDER from the sequence and its REF from the ordinal', async () => {
+    // The two numbers do different jobs and are deliberately allowed to differ:
+    // the ordinal is dense within a pass so the 8-bit stencil can hold it and is
+    // reused when a light unmounts, while the sequence is the light's position
+    // in the canvas light list, which is the order Godot applies lights in.
+    // Ordering by the ordinal made an overlap's colour depend on which cookie
+    // finished loading first.
+    const mesh = maskMesh(await renderMask({ ordinal: 2, sequence: 5 }))!;
+    expect(mesh.renderOrder).toBe(shadowVolumeRenderOrder(5));
+    expect((mesh.material as THREE.Material).stencilRef).toBe(shadowStencilRef(2));
   });
 
   it('shares the layer of the light it shadows', async () => {
