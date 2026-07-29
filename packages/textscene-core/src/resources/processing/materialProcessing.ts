@@ -6,6 +6,7 @@
 import * as THREE from 'three';
 import { warn } from '../../logger';
 import type { ParsedTresFile } from '../../parser/tresParser';
+import { BUILDABLE_MATERIAL_TYPES } from '../materials/buildableMaterialTypes';
 
 /** Function type for loading a texture by its resolved res:// path */
 export type TextureLoaderFn = (path: string) => Promise<THREE.Texture | null>;
@@ -103,6 +104,13 @@ export async function createMaterialFromContent(
       );
       return new THREE.MeshStandardMaterial();
     }
+  }
+
+  // Gate on the shared set rather than only on the switch's `default`, so a case
+  // added here without adding its type there fails loudly instead of becoming a
+  // type producers still refuse to address.
+  if (!BUILDABLE_MATERIAL_TYPES.has(resourceType)) {
+    throw new Error(`Unsupported material type: ${resourceType}`);
   }
 
   switch (resourceType) {

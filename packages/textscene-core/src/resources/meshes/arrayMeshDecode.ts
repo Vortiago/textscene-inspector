@@ -28,8 +28,14 @@
 import { warn } from '../../logger.js';
 import { parseTresFile, type ParsedTresFile } from '../../parser/tresParser.js';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types.js';
-import { findSubResource, parseResourceReference } from '../SubResourceResolver.js';
-import { parseSubResourcePath, resolveRefToResourcePath } from '../subResourcePath.js';
+import { BUILDABLE_MATERIAL_TYPES } from '../materials/buildableMaterialTypes.js';
+import { findSubResource } from '../SubResourceResolver.js';
+import {
+  parseSubResourcePath,
+  REJECT_SUB_RESOURCES,
+  resolveRefToResourcePath,
+  subResourceTypeGate,
+} from '../subResourcePath.js';
 
 /** Godot Mesh.ArrayFormat flags. */
 const ARRAY_FORMAT_NORMAL = 1 << 1;
@@ -414,9 +420,6 @@ function decodeIndices(
   return out;
 }
 
-/** The material types `createMaterialFromContent`'s switch actually builds. */
-const BUILDABLE_MATERIAL_TYPES = new Set(['StandardMaterial3D', 'ShaderMaterial']);
-
 /**
  * Resolve a surface's `"material"` to the resource path that addresses it.
  * Godot writes either form: an `ExtResource` when the surface points at a shared
@@ -431,21 +434,19 @@ function readMaterialPath(
   extById: Map<string, string>,
   selfPath: string
 ): string | undefined {
-  const match = /"material"\s*:\s*([^,\n}]+)/.exec(block);
-  if (!match) return undefined;
-  const ref = match[1]!.trim();
+  return (
+    resolveRefToResourcePath(
+      readMaterialRef(block),
+      extById,
+      selfPath,
+      subResourceTypeGate(parsed.subResources, BUILDABLE_MATERIAL_TYPES)
+    ) ?? undefined
+  );
+}
 
-  // A sub-resource this file carries is only worth addressing if the material
-  // pipeline can build its type. Minting an address for, say, an ORMMaterial3D
-  // would fail the load and put a permanent missing-resources row in front of the
-  // user for a file that is present and correct — where leaving it unaddressed
-  // just renders the surface with the default material, as it did before.
-  const parsedRef = parseResourceReference(ref);
-  if (parsedRef?.type === 'SubResource') {
-    const sub = findSubResource(parsed.subResources, parsedRef.id);
-    if (!sub || !BUILDABLE_MATERIAL_TYPES.has(sub.type)) return undefined;
-  }
-  return resolveRefToResourcePath(ref, extById, selfPath) ?? undefined;
+/** A surface's raw `"material"` value, whichever reference form it holds. */
+function readMaterialRef(block: string): string | undefined {
+  return /"material"\s*:\s*([^,\n}]+)/.exec(block)?.[1]?.trim();
 }
 
 /**
@@ -533,9 +534,16 @@ export function decodeSceneArrayMesh(
   }
   const extById = new Map(externalResources.map((r) => [r.id, r.path]));
   return decodeSurfaces(surfacesRaw, `SubResource("${resource.id}")`, (block) => {
-    const match = /"material"\s*:\s*([^,\n}]+)/.exec(block);
-    const ref = match && parseResourceReference(match[1]!.trim());
-    return ref?.type === 'ExtResource' ? extById.get(ref.id) : undefined;
+    // A scene's own materials are addressable by no resource path, so only the
+    // ExtResource form resolves; the rest take the neutral default.
+    return (
+      resolveRefToResourcePath(
+        readMaterialRef(block),
+        extById,
+        '',
+        REJECT_SUB_RESOURCES
+      ) ?? undefined
+    );
   });
 }
 

@@ -12,8 +12,7 @@
 
 import { warn } from '../../logger';
 import type { ParsedTresFile } from '../../parser/tresParser';
-import { findSubResource, parseResourceReference } from '../SubResourceResolver';
-import { resolveRefToResourcePath } from '../subResourcePath';
+import { resolveRefToResourcePath, subResourceTypeGate } from '../subResourcePath';
 import { parseTransform3D } from '../../utils/transform';
 import { unquoteString } from '../../parser/utils';
 import type { MeshLibraryModel, MeshLibraryItem } from './meshLibraryModel';
@@ -51,7 +50,12 @@ export function meshLibraryFromTres(
     if (field === 'name') {
       item.name = unquoteString(rawValue);
     } else if (field === 'mesh') {
-      item.meshPath = resolveItemMeshPath(rawValue, tres, extPathById, selfPath);
+      item.meshPath = resolveRefToResourcePath(
+        rawValue,
+        extPathById,
+        selfPath,
+        subResourceTypeGate(tres.subResources, ADDRESSABLE_ITEM_MESH_TYPES)
+      );
     } else if (field === 'mesh_transform') {
       try {
         item.meshTransform = parseTransform3D(rawValue);
@@ -65,26 +69,11 @@ export function meshLibraryFromTres(
 }
 
 /**
- * An item's mesh as one resource path, whichever form Godot wrote — but only when
- * the target is an ArrayMesh.
- *
  * A library written from a scene can embed a PRIMITIVE mesh (`BoxMesh`,
  * `CylinderMesh`, …) as its own `[sub_resource]`. Addressing one would hand the
- * ArrayMesh processor something with no `_surfaces`; null instead leaves the item
- * unresolved, which is what makes GridMap draw its placeholder cell rather than an
- * empty instanced mesh that looks like nothing is there.
+ * ArrayMesh processor something with no `_surfaces`; leaving it unresolved is what
+ * makes GridMap draw its placeholder cell rather than an empty instanced mesh that
+ * looks like nothing is there.
  */
-function resolveItemMeshPath(
-  rawValue: string,
-  tres: ParsedTresFile,
-  extPathById: ReadonlyMap<string, string>,
-  selfPath: string
-): string | null {
-  const ref = parseResourceReference(rawValue);
-  if (ref?.type === 'SubResource') {
-    const sub = findSubResource(tres.subResources, ref.id);
-    if (sub?.type !== 'ArrayMesh') return null;
-  }
-  return resolveRefToResourcePath(rawValue, extPathById, selfPath);
-}
+const ADDRESSABLE_ITEM_MESH_TYPES: ReadonlySet<string> = new Set(['ArrayMesh']);
 

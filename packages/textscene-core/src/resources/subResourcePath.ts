@@ -20,7 +20,8 @@
  * round-trips untouched.
  */
 
-import { parseResourceReference } from './SubResourceResolver.js';
+import type { TscnInternalResource } from '../parser/types.js';
+import { findSubResource, parseResourceReference } from './SubResourceResolver.js';
 
 /** What Godot's text saver writes between an owning file and one of its sub-resources. */
 const SEPARATOR = '::';
@@ -75,12 +76,40 @@ export function resourceFilePath(path: string): string {
 export function resolveRefToResourcePath(
   ref: string | undefined,
   extPathById: ReadonlyMap<string, string>,
-  selfPath: string
+  selfPath: string,
+  gate?: SubResourceGate
 ): string | null {
   if (!ref) return null;
   const parsed = parseResourceReference(ref);
   if (!parsed) return null;
-  return parsed.type === 'ExtResource'
-    ? (extPathById.get(parsed.id) ?? null)
-    : subResourcePath(selfPath, parsed.id);
+  if (parsed.type === 'ExtResource') return extPathById.get(parsed.id) ?? null;
+  if (gate && !gate.accepts(findSubResource(gate.declared, parsed.id))) return null;
+  return subResourcePath(selfPath, parsed.id);
 }
+
+/**
+ * Optional gate on the SubResource branch: an address is only worth minting when
+ * whatever loads it can build the thing at the other end.
+ *
+ * Minting one regardless is not harmless optimism — the load fails, the failure is
+ * cached, and the user gets a permanent missing-resources row for a file that is
+ * present and correct. Every producer needs that judgement, so it lives beside the
+ * minting instead of being transcribed next to each caller.
+ */
+export interface SubResourceGate {
+  /** The declaring document's `[sub_resource]`s. */
+  declared: readonly TscnInternalResource[];
+  /** `undefined` means the id names nothing declared. */
+  accepts: (sub: TscnInternalResource | undefined) => boolean;
+}
+
+/** Accept only sub-resources whose `type` is one of `types`. */
+export function subResourceTypeGate(
+  declared: readonly TscnInternalResource[],
+  types: ReadonlySet<string>
+): SubResourceGate {
+  return { declared, accepts: (sub) => sub !== undefined && types.has(sub.type) };
+}
+
+/** Accept nothing: a document whose sub-resources no resource path can address. */
+export const REJECT_SUB_RESOURCES: SubResourceGate = { declared: [], accepts: () => false };
