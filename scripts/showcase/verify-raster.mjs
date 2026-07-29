@@ -22,8 +22,16 @@
  *     This is the one that can catch "the module is fine but the real subtree
  *     rasterises blank".
  *
- * Requires the preview server at SHOWCASE_URL for suite B (as `pnpm verify:2d`
- * does), and `pnpm --filter @textscene/core build` for the injected module.
+ *  C. `Control-raster publisher` — the whole chain: the off-screen host a
+ *     Control-only `SubViewport` mounts, the raster it publishes, and the
+ *     pixels that reach the 3D quad consuming it as a `ViewportTexture`
+ *     (ADR-0030). Its two colour assertions are Godot 4.6.3's own numbers for
+ *     the same scene, so this is where the colour pipeline — one tonemap
+ *     application, on the surface, never on the raster — is pinned.
+ *
+ * Requires the preview server at SHOWCASE_URL for suites B and C (as
+ * `pnpm verify:2d` does), and `pnpm --filter @textscene/core build` for the
+ * injected module.
  *
  *   pnpm verify:raster
  */
@@ -33,6 +41,7 @@
 import { createServer } from 'node:http';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { PNG } from 'pngjs';
 import { launchShowcaseBrowser } from './browser.mjs';
 
 const BASE = process.env.SHOWCASE_URL || 'http://localhost:4173';
@@ -505,6 +514,246 @@ console.log('\n[B] real ControlOverlay');
       );
     }
     check('no page errors', consoleErrors.length === 0, `${consoleErrors.length}`);
+  }
+  await page.close();
+}
+
+// ---------------------------------------------------------------------------
+// Suite C — the Control-raster PUBLISHER, end to end onto a 3D surface
+// ---------------------------------------------------------------------------
+
+/**
+ * `unit-sub-viewport-control-texture.tscn`: a Control-only SubViewport behind a
+ * `ViewportTexture` on an unshaded quad, with a flat Color(0.5, 0.5, 0.5)
+ * ColorRect and a default-theme Panel over it.
+ *
+ * Both values below are Godot 4.6.3's, measured on this exact scene, and they
+ * are what makes this suite a PARITY gate rather than a smoke test. Godot draws
+ * a viewport's canvas AFTER that viewport's tonemap pass
+ * (`RendererViewport::_draw_viewport` runs `_draw_3d`, which ends in
+ * `_render_buffers_post_process_and_tonemap`, before its `render_canvas` loop),
+ * so a Control target stores untonemapped sRGB and the editor preview
+ * environment's FILMIC curve applies exactly ONCE — on the quad. A publisher
+ * that pre-tonemapped its raster would land the backdrop near rgb(196) and the
+ * panel near rgb(107); a publisher that tagged the texture LINEAR instead of
+ * sRGB would miss the decode and be brighter still.
+ */
+const PUBLISHER_FIXTURE = 'unit-sub-viewport-control-texture.tscn';
+/** Godot: the Color(0.5, 0.5, 0.5) backdrop, through one FILMIC application. */
+const GODOT_QUAD_BACKDROP_RGB = [162, 162, 162];
+/** Godot: `style_normal_color` Color(0.1, 0.1, 0.1, 0.6) composited over it. */
+const GODOT_QUAD_PANEL_RGB = [84, 84, 84];
+/** The committed demo this whole path exists for. */
+const DEMO_FIXTURE = 'demos/viewport/gui_in_3d/gui_panel_3d.tscn';
+
+console.log('\n[C] Control-raster publisher');
+{
+  const page = await ctx.newPage();
+  const consoleErrors = [];
+  page.on('pageerror', (e) => consoleErrors.push(String(e)));
+  page.on('console', (m) => m.type() === 'error' && consoleErrors.push(m.text()));
+
+  let loaded = true;
+  try {
+    await page.goto(`${BASE}/?fixture=${encodeURIComponent(PUBLISHER_FIXTURE)}`, {
+      waitUntil: 'load',
+      timeout: 20000,
+    });
+  } catch (e) {
+    loaded = false;
+    check(`preview server reachable at ${BASE}`, false, e.message.split('\n')[0]);
+  }
+
+  if (loaded) {
+    // Stays in 3D: the surface that consumes the target is the quad, and the
+    // host is mounted in both modes precisely because it belongs to neither.
+    await page.waitForSelector('canvas', { timeout: 20000 }).catch(() => {});
+    let mounted = true;
+    try {
+      await page.waitForSelector('[data-viewport-raster-host]', { timeout: 15000 });
+    } catch {
+      mounted = false;
+    }
+    check('off-screen raster host mounted in the 3D workspace', mounted);
+    await page.waitForTimeout(1500);
+
+    const host = await page.evaluate(() => {
+      const element = document.querySelector('[data-viewport-raster-host]');
+      if (!element) return null;
+      const style = getComputedStyle(element);
+      return {
+        path: element.getAttribute('data-viewport-raster-host'),
+        count: document.querySelectorAll('[data-viewport-raster-host]').length,
+        box: [element.offsetWidth, element.offsetHeight],
+        left: parseFloat(style.left),
+        position: style.position,
+        display: style.display,
+        visibility: style.visibility,
+        opacity: style.opacity,
+        clipPath: style.clipPath,
+        // A registered Control renders its own box; the fallback renders
+        // `display: contents` and rasterises as nothing, which is exactly the
+        // failure an empty ControlComponentRegistry produces.
+        fallbacks: element.querySelectorAll('[data-control-passthrough="true"]').length,
+        controls: element.querySelectorAll('[data-control-type]').length,
+      };
+    });
+
+    if (!host) {
+      check('raster host found', false, 'no [data-viewport-raster-host]');
+    } else {
+      report.publisherHost = host;
+      check(
+        'one host, keyed by the sub-viewport node path',
+        host.count === 1 && host.path === 'Root/SubViewport',
+        `${host.count} host(s), path "${host.path}"`
+      );
+      check(
+        'host is sized to SubViewport.size (never to the raster options)',
+        host.box[0] === 256 && host.box[1] === 256,
+        `${host.box.join('x')} CSS px`
+      );
+      check(
+        'host hides by moving OFF-SCREEN, the only hiding the rasteriser survives',
+        host.position === 'fixed' &&
+          host.left < -9999 &&
+          host.display !== 'none' &&
+          host.visibility === 'visible' &&
+          host.opacity === '1' &&
+          (host.clipPath === 'none' || !host.clipPath),
+        `${host.position} left:${host.left} display:${host.display} ` +
+          `visibility:${host.visibility} opacity:${host.opacity} clip-path:${host.clipPath}`
+      );
+      check(
+        'Controls resolved to real components, not the passthrough fallback',
+        host.controls > 0 && host.fallbacks === 0,
+        `${host.controls} controls, ${host.fallbacks} fallbacks ` +
+          `(a non-zero count means the Control registry never loaded)`
+      );
+    }
+
+    // The end of the chain: what the QUAD shows. Screenshotting the canvas
+    // element is the only way to read it — the context is not
+    // `preserveDrawingBuffer`, so `toDataURL` from the page comes back blank.
+    const canvas = page.locator('canvas').first();
+    const shot = (await canvas.count()) > 0 ? await canvas.screenshot() : null;
+    if (!shot) {
+      check('WebGL canvas captured', false, 'no canvas element');
+    } else {
+      writeFileSync(join(OUT, 'raster-viewport-texture.png'), shot);
+      const png = PNG.sync.read(shot);
+      const countNear = (rgb, tol) => {
+        let n = 0;
+        for (let i = 0; i < png.data.length; i += 4) {
+          if (
+            Math.abs(png.data[i] - rgb[0]) <= tol &&
+            Math.abs(png.data[i + 1] - rgb[1]) <= tol &&
+            Math.abs(png.data[i + 2] - rgb[2]) <= tol
+          )
+            n++;
+        }
+        return n;
+      };
+      const backdrop = countNear(GODOT_QUAD_BACKDROP_RGB, 2);
+      const panel = countNear(GODOT_QUAD_PANEL_RGB, 2);
+      report.publisherQuad = { backdrop, panel, size: [png.width, png.height] };
+      check(
+        `quad shows the raster backdrop at Godot's rgb(${GODOT_QUAD_BACKDROP_RGB.join(',')})`,
+        backdrop > 5000,
+        `${backdrop} px — a pre-tonemapped raster would sit near rgb(196)`
+      );
+      check(
+        `quad shows the theme Panel at Godot's rgb(${GODOT_QUAD_PANEL_RGB.join(',')})`,
+        panel > 1000,
+        `${panel} px — pins the StyleBox composite through the same one curve`
+      );
+    }
+    check('no page errors', consoleErrors.length === 0, `${consoleErrors.length}`);
+  }
+
+  // The committed demo: a real Control subtree, with an ExtResource image and a
+  // sub-viewport whose Controls the on-screen overlay never draws.
+  let demoLoaded = true;
+  try {
+    await page.goto(`${BASE}/?fixture=${encodeURIComponent(DEMO_FIXTURE)}`, {
+      waitUntil: 'load',
+      timeout: 20000,
+    });
+  } catch {
+    demoLoaded = false;
+  }
+  if (demoLoaded) {
+    await page.waitForSelector('[data-viewport-raster-host]', { timeout: 15000 }).catch(() => {});
+    await page.waitForTimeout(1800);
+    await installHarness(page, moduleSource);
+
+    const stats = await page.evaluate(async (clearRgb) => {
+      const element = document.querySelector('[data-viewport-raster-host]');
+      if (!element) return { missing: true };
+      const raster = await globalThis.__raster.rasterizeControlSubtree(element, {
+        backgroundColor: `rgb(${clearRgb.join(', ')})`,
+      });
+      if (!raster) return { missing: false, raster: null };
+      const p = globalThis.__pixels(raster);
+      return {
+        box: [element.offsetWidth, element.offsetHeight],
+        canvasSize: [p.width, p.height],
+        opaque: p.opaque(),
+        total: p.total,
+        clearPixels: p.matching(clearRgb, 0),
+        distinctColours: p.distinctColours(),
+        // Color(1, 0, 0, 1) ColorRect — the one saturated primary in the scene,
+        // so it separates "the subtree rasterised" from "the backdrop did".
+        redPixels: p.matching([255, 0, 0], 6),
+        imgSrcs: [...element.querySelectorAll('img')].map((i) => ({
+          scheme: (i.getAttribute('src') || '').slice(0, 5),
+          decoded: i.complete && i.naturalWidth > 0,
+        })),
+      };
+    }, GODOT_CLEAR_RGB);
+
+    if (stats.missing) {
+      check('demo raster host mounted', false, `no host for ${DEMO_FIXTURE}`);
+    } else if (!stats.canvasSize) {
+      check('demo host rasterised', false, 'rasterizeControlSubtree returned null');
+    } else {
+      report.demoRaster = stats;
+      check(
+        'demo host is the SubViewport size (560x360), and the raster follows it',
+        stats.box[0] === 560 &&
+          stats.box[1] === 360 &&
+          stats.canvasSize[0] === 560 &&
+          stats.canvasSize[1] === 360,
+        `host ${stats.box.join('x')} → raster ${stats.canvasSize.join('x')}`
+      );
+      check(
+        'demo raster is fully painted',
+        stats.opaque === stats.total,
+        `${stats.opaque}/${stats.total} px opaque`
+      );
+      check(
+        'demo Control content covers the clear colour',
+        stats.total - stats.clearPixels > 20000,
+        `${stats.total - stats.clearPixels} non-backdrop px`
+      );
+      check(
+        "demo ColorRect's Color(1, 0, 0, 1) rasterised",
+        stats.redPixels > 5000,
+        `${stats.redPixels} px of pure red`
+      );
+      check(
+        'demo raster is not a flat fill',
+        stats.distinctColours > 8,
+        `${stats.distinctColours} distinct opaque colours`
+      );
+      check(
+        'demo TextureRect resolved its sub-scene-scoped ExtResource to a data: URL',
+        stats.imgSrcs.length > 0 && stats.imgSrcs.every((i) => i.scheme === 'data:'),
+        stats.imgSrcs.map((i) => `${i.scheme}${i.decoded ? '' : '(undecoded)'}`).join(' ') || 'none'
+      );
+    }
+  } else {
+    check(`demo fixture ${DEMO_FIXTURE} reachable`, false);
   }
   await page.close();
 }
