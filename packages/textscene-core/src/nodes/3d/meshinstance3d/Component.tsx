@@ -36,6 +36,7 @@ import { useProceduralTexturePins } from '../../../resources/useProceduralTextur
 import { useResource } from '../../../resources/useResource';
 import type { ArrayMeshResource } from '../../../resources/processors/createArrayMeshProcessor';
 import { MeshGeometry } from './meshGeometry';
+import { resolveEmission } from '../../../resources/materials/standardmaterial3d/emission';
 import { parseStandardMaterial3DScalars } from '../../../r3f/materials/standardMaterialScalars';
 import { resolveStandardMaterial } from '../../../r3f/materials/resolveStandardMaterial';
 import { StandardMaterialSlot } from '../../../r3f/materials/StandardMaterialSlot';
@@ -549,6 +550,11 @@ function SecondarySurfaceMaterial({
   const scalars = parseStandardMaterial3DScalars(
     subResource.data as Record<string, string>
   );
+  // Through the same resolution slot 0 uses, so one mesh cannot show two results
+  // for the same material. These slots never load a texture (see above), which is
+  // exactly the case where `emission_operator = MULTIPLY` collapses to no emission
+  // at all — Godot's absent sampler reads black.
+  const emission = resolveEmission(scalars, scalars.emissionOperator, false);
   return (
     <meshStandardMaterial
       attach={attach}
@@ -560,8 +566,8 @@ function SecondarySurfaceMaterial({
       blending={scalars.blending}
       side={scalars.side}
       shadowSide={shadowSide ?? null}
-      emissive={scalars.emissive}
-      emissiveIntensity={scalars.emissiveIntensity}
+      emissive={emission.emissive}
+      emissiveIntensity={emission.emissiveIntensity}
     />
   );
 }

@@ -59,7 +59,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Vortiago/textscene-inspector.git"
+    "url": "git+https://github.com/Vortiago/textscene-inspector.git"
   },
   "homepage": "https://github.com/Vortiago/textscene-inspector#readme",
   "bugs": {

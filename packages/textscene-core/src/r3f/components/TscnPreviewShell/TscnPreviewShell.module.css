@@ -76,6 +76,9 @@
   /* Value-cell mono accent (transform values, monospace details) */
   --tsi-value-mono:    #6c9;
 
+  /* Elevation — the shadow a panel floating over the viewport casts. */
+  --tsi-shadow-popover: 0 8px 24px rgba(0, 0, 0, 0.5);
+
   /* Radii */
   --tsi-radius-sm:     3px;
   --tsi-radius-md:     6px;

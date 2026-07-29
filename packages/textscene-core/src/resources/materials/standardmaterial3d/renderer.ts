@@ -4,6 +4,7 @@
 
 import * as THREE from 'three';
 import type { StandardMaterial3DProperties } from './types';
+import { emissionScalars, resolveEmission } from './emission';
 import { info } from '../../../logger';
 
 /**
@@ -90,8 +91,25 @@ export function createStandardMaterial(properties: StandardMaterial3DProperties)
     materialOptions.aoMap = applyUVTransform(properties.ao_texture, properties);
   }
 
-  if (properties.emission_enabled && properties.emission_texture) {
-    materialOptions.emissiveMap = applyUVTransform(properties.emission_texture, properties);
+  if (properties.emission_enabled) {
+    if (properties.emission_texture) {
+      materialOptions.emissiveMap = applyUVTransform(properties.emission_texture, properties);
+    }
+    // An emission colour and energy reach the material the same way they do on
+    // the inline-SubResource path, through the one shared decomposition —
+    // otherwise an external material's emission is the texture alone, unlit and
+    // unmodulated, where Godot shows it at full energy.
+    const scalars = emissionScalars(
+      properties.emission,
+      properties.emission_energy_multiplier ?? 1
+    );
+    const resolved = resolveEmission(
+      scalars,
+      properties.emission_operator,
+      !!properties.emission_texture
+    );
+    materialOptions.emissive = new THREE.Color().fromArray(resolved.emissive);
+    materialOptions.emissiveIntensity = resolved.emissiveIntensity;
   }
 
   return new THREE.MeshStandardMaterial(materialOptions);

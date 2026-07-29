@@ -1,13 +1,16 @@
 /**
  * Regression contract for #141 — Color decoders reject scientific-notation channels.
  *
- * The material/Environment `parseColor` (and the Environment linter's validateColor)
+ * The material/Environment `parseColor` and the Environment linter's colour check
  * matched channels with `[\d.]+`, which excludes `e`/`E`/`+`/`-`. So a normal Godot
  * color like `Color(1.8771e-06, 0.751954, 0.25936, 1)` fails: the material silently
  * drops albedo to default (try/catch), Environment's parse throws outright, and the
- * Environment linter false-positives INVALID_COLOR_FORMAT. The decoders must accept
+ * Environment linter reports a bogus colour-format error. The decoders must accept
  * Godot's full float grammar (sci-notation + sign) — WITHOUT loosening to accept
  * garbage and WITHOUT changing the throw-on-invalid contract.
+ *
+ * The linter half of this now rides on the shared `v.color` combinator, so the
+ * guard lives in one float grammar rather than a per-resource regex.
  *
  * Also pins acceptance criterion 4: the StandardMaterial3D linter must actually
  * validate albedo_color (today no validator is registered).

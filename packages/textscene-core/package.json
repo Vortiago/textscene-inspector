@@ -66,7 +66,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Vortiago/textscene-inspector.git",
+    "url": "git+https://github.com/Vortiago/textscene-inspector.git",
     "directory": "packages/textscene-core"
   },
   "homepage": "https://github.com/Vortiago/textscene-inspector#readme",

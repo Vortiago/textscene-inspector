@@ -219,7 +219,7 @@ linear in the box axis distance rather than in the Euclidean radius.
 
 We reproduce this by porting the mechanism: the polar map is built on the CPU
 (`r3f/lighting2d/shadowPolarMap.ts`) and tapped in the light quad's own fragment shader,
-gated so an unfiltered light keeps the analytic stencil path untouched (ADR-0029). PCF13 is
+gated so an unfiltered light keeps the analytic stencil path untouched (ADR-0030). PCF13 is
 the same ramp over the wider kernel; an authored `shadow_color` under a filter splits into
 the same two accumulators with no cross term.
 

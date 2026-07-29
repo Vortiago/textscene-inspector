@@ -1,0 +1,51 @@
+[gd_scene load_steps=6 format=3 uid="uid://unitmaterialemissiontexture"]
+
+; The two emission_operator cases that need a texture to be observable at all.
+;
+; LEFT is ADD over Godot's DEFAULT emission colour, which is black and therefore
+; omitted from the file entirely: Godot computes (0 + tex) * energy, so the
+; checkerboard shows at full energy. Multiplying that absent black through instead
+; renders the quad unlit, which is the single most common way emission is authored
+; and was the worst of the defects here.
+;
+; RIGHT is MULTIPLY with a lit colour, which Godot computes as (colour * tex) *
+; energy — the one case three's multiply-only emissive chain expresses natively, so
+; the checkerboard arrives tinted rather than white.
+;
+; Flat quads rather than spheres on purpose. A checkerboard is a UV discriminator,
+; and Godot's SphereMesh winds its UVs at a different phase than three's sphere
+; does — measurably so on plain albedo, with no emission involved. On a quad the
+; mapping is unambiguous, so what is left to measure is the operator alone.
+
+[ext_resource type="Texture2D" path="res://textures/checkerboard.svg" id="1_checker"]
+
+[sub_resource type="QuadMesh" id="QuadMesh_1"]
+size = Vector2(1.4, 1.4)
+
+[sub_resource type="StandardMaterial3D" id="Mat_add"]
+albedo_color = Color(0.15, 0.15, 0.18, 1)
+roughness = 0.5
+emission_enabled = true
+emission_texture = ExtResource("1_checker")
+emission_energy_multiplier = 1.5
+
+[sub_resource type="StandardMaterial3D" id="Mat_multiply"]
+albedo_color = Color(0.15, 0.15, 0.18, 1)
+roughness = 0.5
+emission_enabled = true
+emission = Color(0.2, 0.9, 1.0, 1)
+emission_texture = ExtResource("1_checker")
+emission_operator = 1
+emission_energy_multiplier = 1.5
+
+[node name="EmissionTextureRoot" type="Node3D"]
+
+[node name="AddOperator" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.9, 0, 0)
+mesh = SubResource("QuadMesh_1")
+surface_material_override/0 = SubResource("Mat_add")
+
+[node name="MultiplyOperator" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.9, 0, 0)
+mesh = SubResource("QuadMesh_1")
+surface_material_override/0 = SubResource("Mat_multiply")

@@ -7,6 +7,23 @@ import { BackgroundMode } from './types';
 import { floatOr, intOr } from '../../parser/valueParsers';
 import { colorOr } from '../../utils/colorParser';
 
+/** `Environment`'s constructor weights, finest mip first. */
+const DEFAULT_GLOW_LEVELS = [0.0, 0.8, 0.4, 0.1, 0.0, 0.0, 0.0];
+
+/** Godot's `RS::MAX_GLOW_LEVELS`, derived so an eighth weight cannot outrun it. */
+export const GLOW_LEVEL_COUNT = DEFAULT_GLOW_LEVELS.length;
+
+/**
+ * `glow_levels/1`..`glow_levels/7` are seven independent properties, 1-based in
+ * the file and 0-based in the weight array Godot hands the shader.
+ */
+function parseGlowLevels(properties: Record<string, string>): number[] {
+  return DEFAULT_GLOW_LEVELS.map((fallback, index) => {
+    const key = `glow_levels/${index + 1}`;
+    return Math.max(0, floatOr(properties[key], fallback, key));
+  });
+}
+
 export function parseEnvironment(
   properties: Record<string, string>
 ): EnvironmentProperties {
@@ -46,11 +63,21 @@ export function parseEnvironment(
 
     // Glow / bloom (Godot Environment defaults)
     glow_enabled: properties.glow_enabled === 'true',
-    glow_intensity: floatOr(properties.glow_intensity, 0.8, 'glow_intensity'),
+    glow_levels: parseGlowLevels(properties),
+    glow_normalized: properties.glow_normalized === 'true',
+    glow_intensity: floatOr(properties.glow_intensity, 0.3, 'glow_intensity'),
     glow_strength: floatOr(properties.glow_strength, 1.0, 'glow_strength'),
+    glow_mix: floatOr(properties.glow_mix, 0.05, 'glow_mix'),
     glow_bloom: floatOr(properties.glow_bloom, 0.0, 'glow_bloom'),
+    glow_blend_mode: intOr(properties.glow_blend_mode, 1, 'glow_blend_mode'),
     glow_hdr_threshold: floatOr(properties.glow_hdr_threshold, 1.0, 'glow_hdr_threshold'),
-    glow_blend_mode: intOr(properties.glow_blend_mode, 2, 'glow_blend_mode'),
+    glow_hdr_scale: floatOr(properties.glow_hdr_scale, 2.0, 'glow_hdr_scale'),
+    glow_hdr_luminance_cap: floatOr(
+      properties.glow_hdr_luminance_cap,
+      12.0,
+      'glow_hdr_luminance_cap'
+    ),
+    glow_map_strength: floatOr(properties.glow_map_strength, 0.8, 'glow_map_strength'),
 
     // Adjustments
     adjustment_enabled: properties.adjustment_enabled === 'true',

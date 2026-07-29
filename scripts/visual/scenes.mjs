@@ -104,6 +104,21 @@ export const GOLDEN_SCENES = [
   { name: 'navigation-region-3d', file: 'unit-navigation-region-3d.tscn' },
   { name: 'material-metallic', file: 'unit-material-metallic.tscn' },
   { name: 'material-emissive', file: 'unit-material-emissive.tscn' },
+  // Glow and emission, one variable per scene. Each fixture's own header states
+  // which variable and why a regression in it would be invisible elsewhere.
+  { name: 'glow-authored', file: 'unit-glow-authored.tscn' },
+  { name: 'glow-strength', file: 'unit-glow-strength.tscn' },
+  { name: 'glow-softlight', file: 'unit-glow-softlight.tscn' },
+  { name: 'glow-mix', file: 'unit-glow-mix.tscn' },
+  { name: 'glow-replace', file: 'unit-glow-replace.tscn' },
+  { name: 'glow-bloom-floor', file: 'unit-glow-bloom-floor.tscn' },
+  { name: 'glow-normalized', file: 'unit-glow-normalized.tscn' },
+  { name: 'glow-agx', file: 'unit-glow-agx.tscn' },
+  { name: 'glow-exposure', file: 'unit-glow-exposure.tscn' },
+  // Raised threshold: a 4x4 checkerboard on two quads carries far more edge than
+  // the silhouette-only scenes the default is tuned for.
+  { name: 'material-emission-texture', file: 'unit-material-emission-texture.tscn', maxDiffPct: 0.6 },
+  { name: 'material-emission-hdr', file: 'unit-material-emission-hdr.tscn' },
   // Height mapping: a local grayscale height SVG drives displacementMap on a
   // finely-subdivided sphere — the baseline pins that the relief actually
   // renders (a normal map, or a missing displacementMap, reads as a flat ball).

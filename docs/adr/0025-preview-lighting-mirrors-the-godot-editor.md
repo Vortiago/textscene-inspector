@@ -109,5 +109,8 @@ Godot and our previous behaviour. The yield rule and the sky IBL have to land to
 - **The sky depends on the scene's directional lights** (Godot's shader takes `LIGHT0..3`),
   so sky generation reads the same live-tree query the yield rule uses. One query, two
   consumers.
-- Post-processing the preview environment enables — glow/bloom — is still not reproduced;
-  that needs a compositor pass this renderer does not have.
+- The glow the preview environment enables IS reproduced, by a compositor pass that
+  ports Godot's own bright pass, weighted mip pyramid and blend modes. The pass is
+  mounted only when the scene actually has content that can bloom, so a scene with
+  nothing bright pays nothing for it and renders identically either way — which is
+  also true in Godot.

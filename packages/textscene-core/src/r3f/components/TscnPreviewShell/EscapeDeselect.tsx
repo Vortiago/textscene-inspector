@@ -14,6 +14,8 @@ import { useGlobalShortcut } from '../../hooks/useGlobalShortcut.js';
 
 export function EscapeDeselect() {
   const { setSelectedNodePath } = useSelection();
+  // Yielding to an open floating panel is `useGlobalShortcut`'s job, not this
+  // one's — the same way the don't-hijack-typing guard is.
   useGlobalShortcut('escape', () => setSelectedNodePath(null));
   return null;
 }

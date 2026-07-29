@@ -183,7 +183,6 @@ export const CANVAS_2D_TESTIDS = {
   stage: 'canvas-2d-stage',
   frame: 'canvas-2d-frame',
   captureFrame: 'canvas-2d-capture-frame',
-  hint: 'canvas-2d-hint',
   zoom: 'canvas-2d-zoom',
   originAxisX: 'origin-axis-x',
   originAxisY: 'origin-axis-y',
@@ -213,7 +212,7 @@ export const SETTLE_MAX_ATTEMPTS = 12;
  *
  * `canvas2D` prepares the 2D stage the same way for the 2D comparison frame:
  * its chrome (grid, viewport outline and dimension label, origin axes, the
- * pan/zoom hint, the zoom HUD) painted out, its background flattened to what
+ * zoom HUD) painted out, its background flattened to what
  * Godot clears a 2D viewport to, and its opening view pinned to zoom 1 at the
  * origin instead of "Fit" — so the frame is the game frame at 1:1 and sits at
  * the same integer pixels every run. It is OPT-IN because the golden gate
@@ -239,12 +238,13 @@ export async function createCaptureContext(browser, { frameOnOpen, canvas2D = fa
       [FIT_ON_OPEN_2D_STORAGE_KEY, 'false']
     );
   }
-  const hidden = ['viewport-toolbar-overlay'];
+  // Viewport chrome that floats over the canvas in BOTH modes, and so would
+  // composite into every capture the way the toolbar overlay does.
+  const hidden = ['viewport-toolbar-overlay', 'viewport-controls-help'];
   let css = '';
   if (canvas2D) {
     hidden.push(
       CANVAS_2D_TESTIDS.frame,
-      CANVAS_2D_TESTIDS.hint,
       CANVAS_2D_TESTIDS.zoom,
       CANVAS_2D_TESTIDS.originAxisX,
       CANVAS_2D_TESTIDS.originAxisY
@@ -266,6 +266,47 @@ export async function createCaptureContext(browser, { frameOnOpen, canvas2D = fa
     else document.addEventListener('DOMContentLoaded', add, { once: true });
   }, css);
   return context;
+}
+
+/**
+ * Set one of the viewport's display toggles, driving the real UI.
+ *
+ * App-structure knowledge lives here rather than at the call site for the
+ * reason this module exists: a second copy does not fail when the app changes,
+ * it silently measures the wrong pixels. The toggles moved behind a menu once
+ * already.
+ *
+ * ATTACHED, not visible, and `dispatchEvent` rather than `click()`: the capture
+ * context paints the whole toolbar overlay out with `display: none` so it
+ * cannot composite into `canvas.screenshot()`. The controls are fully
+ * functional, just unpainted, and Playwright refuses to click a hidden target.
+ *
+ * Returns null on success, or a reason string for the caller to fail with.
+ */
+export async function setDisplayToggle(page, label, wanted) {
+  const popover = page.locator('[data-testid="display-menu-popover"]');
+  // Idempotent: a scene may ask for two toggles, and a second click would shut
+  // the menu again.
+  if ((await popover.count()) === 0) {
+    const button = page.locator('[data-testid="display-menu-button"]');
+    try {
+      await button.waitFor({ state: 'attached', timeout: 10000 });
+    } catch {
+      return 'Display menu button not found in the toolbar';
+    }
+    await button.dispatchEvent('click');
+    await popover.waitFor({ state: 'attached', timeout: 10000 });
+  }
+  // By testid, so a re-layout fails loudly on a missing node instead of
+  // quietly substring-matching a different label.
+  const toggle = page.locator(`[data-testid="display-toggle-${label}"]`);
+  try {
+    await toggle.waitFor({ state: 'attached', timeout: 10000 });
+  } catch {
+    return `${label} toggle not found in the Display menu`;
+  }
+  if ((await toggle.isChecked()) !== wanted) await toggle.dispatchEvent('click');
+  return null;
 }
 
 /** Which workspace the app itself opened the scene in — its own decision, asked, not re-derived. */

@@ -1,0 +1,50 @@
+[gd_scene load_steps=5 format=3 uid="uid://unitglowsoftlight"]
+
+; SOFTLIGHT glow over a MID-GREY ground.
+;
+; Soft light is the one blend mode Godot composites AFTER the tone curve, on
+; tonemapped operands with the glow buffer tonemapped too. It is also the only
+; mode whose effect depends on what it lands on: the curve is anchored at 0.25 and
+; leaves anything above 1.0 alone, so a mid-grey surface shifts where black or
+; blown-out ones would not move at all. Hence the grey ground rather than the dark
+; sky the other glow fixtures use — against black, soft light and additive would
+; be indistinguishable and the ordering would go untested.
+
+[sub_resource type="ProceduralSkyMaterial" id="Sky_grey"]
+sky_top_color = Color(0.28, 0.28, 0.3, 1)
+sky_horizon_color = Color(0.32, 0.32, 0.34, 1)
+ground_bottom_color = Color(0.26, 0.26, 0.26, 1)
+ground_horizon_color = Color(0.32, 0.32, 0.34, 1)
+
+[sub_resource type="Sky" id="Sky_1"]
+sky_material = SubResource("Sky_grey")
+
+[sub_resource type="Environment" id="Env_glow"]
+background_mode = 2
+sky = SubResource("Sky_1")
+tonemap_mode = 2
+glow_enabled = true
+glow_blend_mode = 2
+glow_intensity = 0.8
+
+[sub_resource type="SphereMesh" id="SphereMesh_1"]
+radius = 0.6
+height = 1.2
+radial_segments = 32
+rings = 16
+
+[sub_resource type="StandardMaterial3D" id="Mat_emissive"]
+albedo_color = Color(0.9, 0.8, 0.2, 1)
+roughness = 0.5
+emission_enabled = true
+emission = Color(1.0, 0.85, 0.2, 1)
+emission_energy_multiplier = 3.0
+
+[node name="GlowSoftlightRoot" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env_glow")
+
+[node name="EmissiveSphere" type="MeshInstance3D" parent="."]
+mesh = SubResource("SphereMesh_1")
+surface_material_override/0 = SubResource("Mat_emissive")

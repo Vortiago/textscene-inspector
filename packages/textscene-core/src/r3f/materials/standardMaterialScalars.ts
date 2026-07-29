@@ -18,21 +18,22 @@
 
 import * as THREE from 'three';
 import { parseColor } from '../../utils/colorParser';
+import { sRGBToLinearRGB } from '../../utils/colorSpace';
+import {
+  emissionScalars,
+  type EmissionScalars,
+} from '../../resources/materials/standardmaterial3d/emission';
 
-export interface StandardMaterial3DScalars {
+export interface StandardMaterial3DScalars extends EmissionScalars {
   color: [number, number, number];
   opacity: number;
   metalness: number;
   roughness: number;
   /**
-   * Linear RGB in [0,1]; `[0,0,0]` means "no emission". An ARRAY, not a hex
-   * number, so r3f applies it via `Color.fromArray` (already-linear, no decode).
-   * A hex number would go through `Color.setHex(hex, SRGBColorSpace)`, decoding
-   * these already-linear values sRGB→linear a SECOND time and rendering emission
-   * far too dark — the albedo `color` path is an array for the same reason.
+   * Godot `emission_operator`: 0 ADD (default), 1 MULTIPLY. Only observable
+   * alongside an `emission_texture` — `resolveEmission` combines the two.
    */
-  emissive: [number, number, number];
-  emissiveIntensity: number;
+  emissionOperator: number;
   /** Per-axis tiling factor for every texture map applied by this material. */
   uv1Scale: { x: number; y: number };
   /** Per-axis offset for every texture map applied by this material. */
@@ -117,6 +118,7 @@ const DEFAULT_SCALARS: StandardMaterial3DScalars = {
   roughness: 1,
   emissive: [0, 0, 0],
   emissiveIntensity: 1,
+  emissionOperator: 0,
   uv1Scale: { x: 1, y: 1 },
   uv1Offset: { x: 0, y: 0 },
   transparent: false,
@@ -159,6 +161,9 @@ export function parseStandardMaterial3DScalars(
   const emissionEnergy = numericOr(
     properties['emission_energy_multiplier'],
     DEFAULT_SCALARS.emissiveIntensity
+  );
+  const emissionOperator = Math.trunc(
+    numericOr(properties['emission_operator'], DEFAULT_SCALARS.emissionOperator)
   );
 
   const uv1Scale = parseVec2Components(properties['uv1_scale']) ?? DEFAULT_SCALARS.uv1Scale;
@@ -238,25 +243,7 @@ export function parseStandardMaterial3DScalars(
   // sRGB values. Convert at parse time so every downstream consumer
   // sees linear-space RGB.
   const linearAlbedo = albedo ? sRGBToLinearRGB(albedo.r, albedo.g, albedo.b) : null;
-  // PARITY LIMITATION (emission_operator = ADD): with the default ADD operator
-  // AND both a colored `emission` and an `emission_texture`, Godot computes
-  // (emission + tex) * energy, but three.js's emissiveMap is multiply-only
-  // (emissive * intensity * tex), so the additive form can't be reproduced.
-  // The MULTIPLY operator case is faithful.
-  // HDR emission: Godot allows emission channels > 1. three.js's emissive color
-  // is [0,1] with brightness carried by emissiveIntensity, so normalize the
-  // color by its peak channel and fold that peak into the energy — preserving
-  // both hue and total brightness instead of clamping the color to white.
-  const emissionPeak = emissionColor
-    ? Math.max(emissionColor.r, emissionColor.g, emissionColor.b, 1)
-    : 1;
-  const linearEmission = emissionColor
-    ? sRGBToLinearRGB(
-        emissionColor.r / emissionPeak,
-        emissionColor.g / emissionPeak,
-        emissionColor.b / emissionPeak
-      )
-    : null;
+  const emission = emissionScalars(emissionColor, emissionEnergy, emissionEnabled);
 
   const useVertexColors = properties['vertex_color_use_as_albedo'] === 'true';
   const aoEnabled = properties['ao_enabled'] === 'true';
@@ -268,11 +255,9 @@ export function parseStandardMaterial3DScalars(
     opacity,
     metalness: clamp01(metallic),
     roughness: clamp01(roughness),
-    emissive:
-      emissionEnabled && linearEmission
-        ? [clamp01(linearEmission[0]), clamp01(linearEmission[1]), clamp01(linearEmission[2])]
-        : [0, 0, 0],
-    emissiveIntensity: emissionEnabled ? Math.max(0, emissionEnergy * emissionPeak) : 0,
+    emissive: emission.emissive,
+    emissiveIntensity: emission.emissiveIntensity,
+    emissionOperator,
     uv1Scale,
     uv1Offset,
     transparent,
@@ -298,20 +283,6 @@ export function parseStandardMaterial3DScalars(
     transmission,
     refractionThickness,
   };
-}
-
-/**
- * Convert a single sRGB channel to its linear-space value.
- * Standard IEC 61966-2-1 inverse transfer function — same formula
- * `THREE.Color.convertSRGBToLinear` applies internally.
- */
-function sRGBChannelToLinear(c: number): number {
-  if (c <= 0.04045) return c / 12.92;
-  return Math.pow((c + 0.055) / 1.055, 2.4);
-}
-
-function sRGBToLinearRGB(r: number, g: number, b: number): [number, number, number] {
-  return [sRGBChannelToLinear(r), sRGBChannelToLinear(g), sRGBChannelToLinear(b)];
 }
 
 /** Godot Transparency enum value: 0 DISABLED, 1 ALPHA, 2 ALPHA_SCISSOR, 3 ALPHA_HASH, 4 DEPTH_PRE_PASS. */

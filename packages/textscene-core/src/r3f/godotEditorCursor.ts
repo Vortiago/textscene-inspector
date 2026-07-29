@@ -18,6 +18,7 @@
  * hard-coded speeds from `node_3d_editor_plugin.cpp`) — never tuned by feel.
  */
 import * as THREE from 'three';
+import { clampWheelNotches, wheelNotches, type WheelEventLike } from './pointerGesture.js';
 
 /** `editors/3d/navigation_feel/orbit_sensitivity`. */
 export const ORBIT_DEGREES_PER_PIXEL = 0.25;
@@ -227,9 +228,24 @@ export function orbitCursor(cursor: EditorCursor, dx: number, dy: number): Edito
  */
 export function panCursor(cursor: EditorCursor, dx: number, dy: number): EditorCursor {
   const speed = (PAN_PIXELS_TO_UNITS * cursor.distance) / DISTANCE_DEFAULT;
-  const translation = new THREE.Vector3(-dx * speed, dy * speed, 0).applyQuaternion(
-    cursorQuaternion(cursor)
-  );
+  return slideCursorInViewPlane(cursor, -dx * speed, dy * speed);
+}
+
+/**
+ * Slide the focus point in the camera's own screen plane, in world units:
+ * `+right` moves it right on screen, `+up` moves it up. The eye follows, since
+ * the rotations and radius are untouched.
+ *
+ * Shared because two things need it for different reasons — Godot's pan, and
+ * the zoom-to-pointer departure — and each spelling its own axis conversion
+ * invites the two to disagree about which way screen-y runs.
+ */
+export function slideCursorInViewPlane(
+  cursor: EditorCursor,
+  right: number,
+  up: number
+): EditorCursor {
+  const translation = new THREE.Vector3(right, up, 0).applyQuaternion(cursorQuaternion(cursor));
   return { ...cursor, target: cursor.target.clone().add(translation) };
 }
 
@@ -262,18 +278,33 @@ export function dollyCursor(cursor: EditorCursor, dy: number, range: ZoomRange):
 }
 
 /**
- * The distance scale for one wheel event. Godot zooms by a fixed multiplier
- * per notch; browsers report a notch as ~100px of `deltaY` (and in lines or
- * pages for the rarer `deltaMode`s), so the event is normalised to notches
- * first — otherwise a trackpad's stream of small deltas would zoom as if each
- * were a full notch.
+ * The distance scale for one wheel event. Godot applies its multiplier PER
+ * NOTCH, so the scale is exponential in notches rather than linear in them —
+ * which is what makes it composable: a trackpad's stream of sixteen small
+ * events zooms exactly as far as one big event covering the same distance,
+ * instead of slightly further. The browser-side normalisation and the
+ * per-event cap live in `pointerGesture.ts`; only the multiplier is Godot's.
  */
-export function wheelZoomScale(event: { deltaY: number; deltaMode?: number }): number {
-  const pixelsPerUnit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? 100 : 1;
-  const notches = (event.deltaY * pixelsPerUnit) / 100;
+export function wheelZoomScale(event: WheelEventLike): number {
+  const notches = clampWheelNotches(wheelNotches(event));
   if (notches === 0) return 1;
-  const factor = 1 + (WHEEL_ZOOM_MULTIPLIER - 1) * Math.min(Math.abs(notches), 4);
-  return notches > 0 ? factor : 1 / factor;
+  return WHEEL_ZOOM_MULTIPLIER ** notches;
+}
+
+/**
+ * Which navigation a wheel event drives. Godot has TWO bindings for what the
+ * browser collapses into one event: `WHEEL_UP`/`WHEEL_DOWN` zooms
+ * unconditionally, while `InputEventPanGesture` (a trackpad two-finger scroll)
+ * resolves by modifier — pan on Shift, zoom on Ctrl. The mouse-wheel binding
+ * takes the unmodified slot, since a browser cannot tell the two devices
+ * apart and a mouse wheel must not orbit; the gesture bindings take the
+ * modified ones.
+ *
+ * Ctrl lands on zoom from both directions: it is Godot's zoom modifier AND how
+ * every browser reports a trackpad pinch.
+ */
+export function resolveWheelMode(mods: NavModifiers): 'pan' | 'zoom' {
+  return mods.shiftKey && !mods.ctrlKey ? 'pan' : 'zoom';
 }
 
 /**

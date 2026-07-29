@@ -17,18 +17,21 @@ import { HierarchyProvider } from '../../contexts/HierarchyContext';
 import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph';
 import { TscnParser } from '../../../parser/TscnParser';
 import { ViewportToolbar } from './ViewportToolbar';
+import { openDisplayMenu } from './displayMenuTesting';
 
 function renderWithScene(body: string) {
   const graph = createSceneGraphFromTscnScene(
     new TscnParser().parse(`[gd_scene format=3]\n\n[node name="Root" type="Node3D"]\n${body}`)
   );
-  return render(
+  const result = render(
     <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
       <ViewportModeProvider>
         <ViewportToolbar />
       </ViewportModeProvider>
     </HierarchyProvider>
   );
+  openDisplayMenu();
+  return result;
 }
 
 const sun = () => screen.getByLabelText('Preview Sun') as HTMLInputElement;
@@ -80,6 +83,9 @@ describe('preview lighting toggles', () => {
         <ViewportToolbar />
       </ViewportModeProvider>
     );
+    // Opened, so this asserts they are absent from the MENU rather than merely
+    // absent from a closed popover — which would pass either way.
+    openDisplayMenu();
     expect(screen.queryByLabelText('Preview Sun')).toBeNull();
     expect(screen.queryByLabelText('Preview Sky')).toBeNull();
   });

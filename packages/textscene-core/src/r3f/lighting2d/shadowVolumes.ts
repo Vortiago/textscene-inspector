@@ -12,7 +12,7 @@
  * THIS IS THE UNFILTERED BRANCH ONLY, and unfiltered is only the property's
  * DEFAULT. PCF5/PCF13 average five or thirteen taps into a fraction, which a
  * stencil cannot carry, so a filtered light takes the other mechanism instead —
- * `shadowPolarMap.ts` plus the sampling variant in `lightQuad.ts` (ADR-0029).
+ * `shadowPolarMap.ts` plus the sampling variant in `lightQuad.ts` (ADR-0030).
  * The two are never both active on one light: `PointLight2D`'s gate picks one.
  *
  * What this module keeps is the case it is EXACT for, and it is exact rather

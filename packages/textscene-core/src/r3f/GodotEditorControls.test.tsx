@@ -130,7 +130,7 @@ describe('<GodotEditorControls> mouse navigation', () => {
     const dragged = camera.position.distanceTo(controls.target);
     expect(dragged).toBeGreaterThan(radius);
 
-    element.dispatchEvent(new WheelEvent('wheel', { deltaY: -100, cancelable: true }));
+    element.dispatchEvent(wheelEvent({ deltaY: -100 }));
     expect(camera.position.distanceTo(controls.target)).toBeLessThan(dragged);
   });
 
@@ -167,6 +167,251 @@ describe('<GodotEditorControls> mouse navigation', () => {
     const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
     element.dispatchEvent(event);
     expect(event.defaultPrevented).toBe(true);
+  });
+});
+
+/**
+ * happy-dom's `WheelEvent` drops the MouseEvent modifier flags — they read back
+ * `undefined` however the init is spelled — so the two the wheel bindings
+ * depend on are defined onto the instance. `deltaX`/`deltaY` do survive.
+ */
+function wheelEvent(init: {
+  deltaX?: number;
+  deltaY: number;
+  deltaMode?: number;
+  shiftKey?: boolean;
+  ctrlKey?: boolean;
+  offsetX?: number;
+  offsetY?: number;
+}): WheelEvent {
+  const event = new WheelEvent('wheel', {
+    deltaX: init.deltaX ?? 0,
+    deltaY: init.deltaY,
+    deltaMode: init.deltaMode,
+    cancelable: true,
+  });
+  Object.defineProperty(event, 'shiftKey', { value: init.shiftKey ?? false });
+  Object.defineProperty(event, 'ctrlKey', { value: init.ctrlKey ?? false });
+  // happy-dom drops these too. Left undefined unless a test is about the
+  // pointer position: zoom-to-pointer then falls back to Godot's centre zoom,
+  // which is what the non-pointer wheel tests are asserting.
+  if (init.offsetX !== undefined) Object.defineProperty(event, 'offsetX', { value: init.offsetX });
+  if (init.offsetY !== undefined) Object.defineProperty(event, 'offsetY', { value: init.offsetY });
+  return event;
+}
+
+describe('<GodotEditorControls> wheel navigation', () => {
+  it('pans on shift+wheel — Godot’s pan-gesture modifier, for trackpads', async () => {
+    const { get, controls, element } = await mount();
+    const camera = get().camera;
+    const cameraBefore = camera.position.clone();
+    const radius = camera.position.distanceTo(controls.target);
+
+    element.dispatchEvent(wheelEvent({ deltaY: 100, shiftKey: true }));
+
+    const targetDelta = controls.target.clone();
+    expect(targetDelta.length()).toBeGreaterThan(0);
+    // A pan moves eye and focus together and leaves the radius untouched.
+    expect(camera.position.clone().sub(cameraBefore).distanceTo(targetDelta)).toBeLessThan(1e-6);
+    expect(camera.position.distanceTo(controls.target)).toBeCloseTo(radius, 6);
+  });
+
+  it('reads BOTH axes on a shift+wheel pan', async () => {
+    // With shift held on a mouse wheel, Chrome and Firefox deliver the notch on
+    // deltaX; a handler reading only deltaY would silently do nothing.
+    const { controls, element } = await mount();
+    element.dispatchEvent(wheelEvent({ deltaX: 100, deltaY: 0, shiftKey: true }));
+    expect(controls.target.length()).toBeGreaterThan(0);
+  });
+
+  it('still zooms on ctrl+wheel, which is how a browser reports a trackpad pinch', async () => {
+    const { get, controls, element } = await mount();
+    const camera = get().camera;
+    const radius = camera.position.distanceTo(controls.target);
+
+    element.dispatchEvent(wheelEvent({ deltaY: -100, ctrlKey: true }));
+
+    expect(camera.position.distanceTo(controls.target)).toBeLessThan(radius);
+    expect(controls.target.length()).toBe(0);
+  });
+
+  it('zooms toward the pointer, sliding the focus point with it', async () => {
+    // ADR-0029's one departure from Godot: without it, zooming in on anything
+    // off-centre flies at the scene centre instead and the subject slides away.
+    const { get, controls, element } = await mount();
+    const camera = get().camera;
+    const radius = camera.position.distanceTo(controls.target);
+
+    element.dispatchEvent(wheelEvent({ deltaY: -100, offsetX: 900, offsetY: 40 }));
+
+    expect(camera.position.distanceTo(controls.target)).toBeLessThan(radius);
+    expect(controls.target.length()).toBeGreaterThan(0);
+  });
+
+  it('anchors against the ACTIVE camera’s fov, not the one it was constructed with', async () => {
+    // An authored Camera3D becomes R3F's camera and carries its own fov (Godot
+    // defaults to 75 against this editor camera's 70). Anchoring on the stale
+    // one drifts the subject off the cursor as you keep zooming.
+    const { get, controls } = await mount();
+    const authored = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+    authored.position.copy(get().camera.position);
+    await act(async () => {
+      get().set({ camera: authored });
+    });
+    expect((controls as EditorControlsHandle).fovDegrees()).toBe(75);
+  });
+
+  it('leaves the focus point alone when the pointer is dead centre', async () => {
+    const { get, controls, element } = await mount();
+    const size = get().size;
+    const camera = get().camera;
+    const radius = camera.position.distanceTo(controls.target);
+
+    element.dispatchEvent(
+      wheelEvent({ deltaY: -100, offsetX: size.width / 2, offsetY: size.height / 2 })
+    );
+
+    expect(camera.position.distanceTo(controls.target)).toBeLessThan(radius);
+    expect(controls.target.length()).toBeCloseTo(0, 9);
+  });
+
+  it('normalises line-mode deltas so Firefox zooms at Chrome’s rate', async () => {
+    const pixels = await mount();
+    const lines = await mount();
+    pixels.element.dispatchEvent(wheelEvent({ deltaY: 100 }));
+    lines.element.dispatchEvent(wheelEvent({ deltaY: 3, deltaMode: 1 }));
+    expect(pixels.get().camera.position.distanceTo(pixels.controls.target)).toBeCloseTo(
+      lines.get().camera.position.distanceTo(lines.controls.target),
+      6
+    );
+  });
+});
+
+/** Drive touch pointers from `from` to `to`, one move each, then lift them. */
+function touchDrag(
+  element: HTMLCanvasElement,
+  points: readonly { from: [number, number]; to: [number, number] }[]
+): void {
+  const common = { pointerType: 'touch', bubbles: true, cancelable: true, isPrimary: true };
+  const fire = (type: string, index: number, at?: [number, number]) =>
+    element.dispatchEvent(
+      new PointerEvent(type, {
+        ...common,
+        pointerId: index + 1,
+        clientX: at?.[0],
+        clientY: at?.[1],
+      })
+    );
+
+  points.forEach((point, index) => fire('pointerdown', index, point.from));
+  // Every finger reports its start once, so the gesture has an origin before
+  // any of them has moved — otherwise the first move reads as a jump.
+  points.forEach((point, index) => fire('pointermove', index, point.from));
+  points.forEach((point, index) => fire('pointermove', index, point.to));
+  points.forEach((_point, index) => fire('pointerup', index));
+}
+
+describe('<GodotEditorControls> touch navigation', () => {
+  it('orbits on a one-finger drag, keeping the focus point and the radius', async () => {
+    const { get, controls, element } = await mount();
+    const camera = get().camera;
+    const before = camera.position.clone();
+    const radius = before.distanceTo(controls.target);
+
+    touchDrag(element, [{ from: [100, 100], to: [180, 120] }]);
+
+    expect(camera.position.distanceTo(before)).toBeGreaterThan(0.01);
+    expect(camera.position.distanceTo(controls.target)).toBeCloseTo(radius, 6);
+    expect(controls.target.length()).toBe(0);
+  });
+
+  it('pans on a two-finger drag that keeps the fingers the same distance apart', async () => {
+    const { get, controls, element } = await mount();
+    const camera = get().camera;
+    const cameraBefore = camera.position.clone();
+    const radius = camera.position.distanceTo(controls.target);
+
+    touchDrag(element, [
+      { from: [100, 100], to: [160, 100] },
+      { from: [200, 100], to: [260, 100] },
+    ]);
+
+    const targetDelta = controls.target.clone();
+    expect(targetDelta.length()).toBeGreaterThan(0);
+    expect(camera.position.clone().sub(cameraBefore).distanceTo(targetDelta)).toBeLessThan(1e-6);
+    // The span never changed, so the pinch rode along as a no-op.
+    expect(camera.position.distanceTo(controls.target)).toBeCloseTo(radius, 6);
+  });
+
+  it('leaves the orbit radius where it was after a pan whose pinch nets out', async () => {
+    // A browser fires one pointermove PER POINTER, so two fingers sliding
+    // together transit a state where only one has moved and the span has
+    // collapsed — 100px, briefly 40px, 100px again. Measured incrementally
+    // that 0.4x/2.5x pair unwinds only while nothing clamps it, and
+    // `scaleCursorDistance` clamps every call: this radius is inside the
+    // clip-derived range but 2.5x it is not, so an accumulated pinch would
+    // land the eye somewhere the user never asked for.
+    const { get, controls, element } = await mount();
+    const camera = get().camera;
+    camera.position.set(0, 0, camera.far / 8);
+    controls.target.set(0, 0, 0);
+    const radius = camera.position.distanceTo(controls.target);
+    expect(radius * 2.5).toBeGreaterThan(camera.far / 4);
+
+    touchDrag(element, [
+      { from: [100, 100], to: [160, 100] },
+      { from: [200, 100], to: [260, 100] },
+    ]);
+
+    expect(camera.position.distanceTo(controls.target)).toBeCloseTo(radius, 6);
+  });
+
+  it('zooms in as two fingers spread, about an unmoved midpoint', async () => {
+    const { get, controls, element } = await mount();
+    const camera = get().camera;
+    const radius = camera.position.distanceTo(controls.target);
+
+    touchDrag(element, [
+      { from: [140, 100], to: [100, 100] },
+      { from: [160, 100], to: [200, 100] },
+    ]);
+
+    const zoomed = camera.position.distanceTo(controls.target);
+    expect(zoomed).toBeLessThan(radius / 2);
+    // The focus point barely moves, but not exactly not at all: a browser
+    // fires one pointermove PER POINTER, so the fingers pass through states
+    // where only one has moved and the midpoint is briefly off-centre. Those
+    // opposite nudges do not quite cancel, because pan speed scales with the
+    // orbit radius and the pinch is changing it in between.
+    expect(controls.target.length()).toBeLessThan((radius - zoomed) / 10);
+  });
+
+  it('ignores three fingers rather than guessing at a gesture', async () => {
+    const { get, element } = await mount();
+    const camera = get().camera;
+    const before = camera.position.clone();
+
+    touchDrag(element, [
+      { from: [100, 100], to: [160, 140] },
+      { from: [200, 100], to: [260, 140] },
+      { from: [300, 100], to: [360, 140] },
+    ]);
+
+    expect(camera.position.distanceTo(before)).toBe(0);
+  });
+
+  it('does not preventDefault a touch, so a tap still reaches viewport selection', async () => {
+    const { element } = await mount();
+    const event = new PointerEvent('pointerdown', {
+      pointerType: 'touch',
+      pointerId: 1,
+      clientX: 10,
+      clientY: 10,
+      bubbles: true,
+      cancelable: true,
+    });
+    element.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(false);
   });
 });
 
